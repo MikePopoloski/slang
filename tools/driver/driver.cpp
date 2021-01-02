@@ -626,7 +626,7 @@ int driverMain(int argc, TArgs argv, bool suppressColorsStdout, bool suppressCol
             Compiler compiler(compilation);
             compiler.quiet = quiet == true;
             compiler.onlyParse = onlyParse == true;
-            compiler.setDiagnosticOptions(warningOptions, errorLimit.value_or(2),
+            compiler.setDiagnosticOptions(warningOptions, errorLimit.value_or(20),
                                           ignoreUnknownModules == true, showColors);
             anyErrors |= !compiler.run();
 
