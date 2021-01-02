@@ -834,11 +834,11 @@ struct WaitOrderStatementSyntax;
 
 class WaitOrderStatement : public Statement {
 public:
-    span<const Symbol* const> events;
+    span<const Expression* const> events;
     const Statement* ifTrue;
     const Statement* ifFalse;
 
-    WaitOrderStatement(span<const Symbol* const> events, const Statement* ifTrue,
+    WaitOrderStatement(span<const Expression* const> events, const Statement* ifTrue,
                        const Statement* ifFalse, SourceRange sourceRange) :
         Statement(StatementKind::WaitOrder, sourceRange),
         events(events), ifTrue(ifTrue), ifFalse(ifFalse) {}
@@ -860,17 +860,23 @@ public:
         if (ifFalse)
             ifFalse->visit(visitor);
     }
+
+    template<typename TVisitor>
+    void visitExprs(TVisitor&& visitor) const {
+        for (auto ev : events)
+            ev->visit(visitor);
+    }
 };
 
 struct EventTriggerStatementSyntax;
 
 class EventTriggerStatement : public Statement {
 public:
-    const Symbol& target;
+    const Expression& target;
     const TimingControl* timing;
     bool isNonBlocking;
 
-    EventTriggerStatement(const Symbol& target, const TimingControl* timing, bool isNonBlocking,
+    EventTriggerStatement(const Expression& target, const TimingControl* timing, bool isNonBlocking,
                           SourceRange sourceRange) :
         Statement(StatementKind::EventTrigger, sourceRange),
         target(target), timing(timing), isNonBlocking(isNonBlocking) {}
@@ -885,6 +891,11 @@ public:
     void serializeTo(ASTSerializer& serializer) const;
 
     static bool isKind(StatementKind kind) { return kind == StatementKind::EventTrigger; }
+
+    template<typename TVisitor>
+    void visitExprs(TVisitor&& visitor) const {
+        target.visit(visitor);
+    }
 };
 
 struct ProceduralAssignStatementSyntax;

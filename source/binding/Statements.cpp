@@ -1982,22 +1982,19 @@ bool WaitForkStatement::verifyConstantImpl(EvalContext& context) const {
 Statement& WaitOrderStatement::fromSyntax(Compilation& compilation,
                                           const WaitOrderStatementSyntax& syntax,
                                           const BindContext& context, StatementContext& stmtCtx) {
-    SmallVectorSized<const Symbol*, 4> events;
+    SmallVectorSized<const Expression*, 4> events;
     for (auto name : syntax.names) {
-        LookupResult result;
-        Lookup::name(*name, context, LookupFlags::AllowDeclaredAfter, result);
-        result.reportErrors(context);
-
-        const Symbol* symbol = result.found;
-        if (!symbol)
+        auto& ev = Expression::bind(*name, context);
+        if (ev.bad())
             return badStmt(compilation, nullptr);
 
-        if (!symbol->isValue() || !symbol->as<ValueSymbol>().getType().isEvent()) {
-            context.addDiag(diag::NotAnEvent, name->sourceRange()) << symbol->name;
+        auto sym = ev.getSymbolReference();
+        if (!sym || !sym->isValue() || !sym->as<ValueSymbol>().getType().isEvent()) {
+            context.addDiag(diag::NotAnEvent, name->sourceRange());
             return badStmt(compilation, nullptr);
         }
 
-        events.append(symbol);
+        events.append(&ev);
     }
 
     const Statement* ifTrue = nullptr;
@@ -2027,7 +2024,7 @@ void WaitOrderStatement::serializeTo(ASTSerializer& serializer) const {
     serializer.startArray("events");
     for (auto ev : events) {
         serializer.startObject();
-        serializer.writeLink("target", *ev);
+        serializer.write("target", *ev);
         serializer.endObject();
     }
     serializer.endArray();
@@ -2041,16 +2038,13 @@ void WaitOrderStatement::serializeTo(ASTSerializer& serializer) const {
 Statement& EventTriggerStatement::fromSyntax(Compilation& compilation,
                                              const EventTriggerStatementSyntax& syntax,
                                              const BindContext& context) {
-    LookupResult result;
-    Lookup::name(*syntax.name, context, LookupFlags::AllowDeclaredAfter, result);
-    result.reportErrors(context);
-
-    const Symbol* symbol = result.found;
-    if (!symbol)
+    auto& target = Expression::bind(*syntax.name, context);
+    if (target.bad())
         return badStmt(compilation, nullptr);
 
-    if (!symbol->isValue() || !symbol->as<ValueSymbol>().getType().isEvent()) {
-        context.addDiag(diag::NotAnEvent, syntax.name->sourceRange()) << symbol->name;
+    auto sym = target.getSymbolReference();
+    if (!sym || !sym->isValue() || !sym->as<ValueSymbol>().getType().isEvent()) {
+        context.addDiag(diag::NotAnEvent, syntax.name->sourceRange());
         return badStmt(compilation, nullptr);
     }
 
@@ -2060,7 +2054,7 @@ Statement& EventTriggerStatement::fromSyntax(Compilation& compilation,
 
     bool isNonBlocking = syntax.kind == SyntaxKind::NonblockingEventTriggerStatement;
 
-    return *compilation.emplace<EventTriggerStatement>(*symbol, timing, isNonBlocking,
+    return *compilation.emplace<EventTriggerStatement>(target, timing, isNonBlocking,
                                                        syntax.sourceRange());
 }
 
@@ -2074,7 +2068,7 @@ bool EventTriggerStatement::verifyConstantImpl(EvalContext& context) const {
 }
 
 void EventTriggerStatement::serializeTo(ASTSerializer& serializer) const {
-    serializer.writeLink("target", target);
+    serializer.write("target", target);
     serializer.write("isNonBlocking", isNonBlocking);
     if (timing)
         serializer.write("timing", *timing);
