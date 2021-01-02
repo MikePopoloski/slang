@@ -32,7 +32,7 @@ produce a single compilation unit.
 
 Adds a file to the compilation, like a positional argument, except that the file is
 considered to be a Verilog library. Libraries are always their own compilation unit even
-when compiling with --single-unit, and modules within them are never automatically instantiated.
+when compiling with `--single-unit`, and modules within them are never automatically instantiated.
 
 @section Actions
 
@@ -111,7 +111,7 @@ The default is 64.
 `-y,--libdir <dir>`
 
 Add the given directory path to the list of directories searched when an unknown module instantiation
-is encountered. Combined with --libext, files are automatically included based on the name of the module
+is encountered. Combined with `--libext`, files are automatically included based on the name of the module
 being instantiated.
 
 `-Y,--libext <ext>`
