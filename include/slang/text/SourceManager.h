@@ -14,8 +14,8 @@
 #include <mutex>
 #include <set>
 #include <shared_mutex>
-#include <variant>
 #include <unordered_map>
+#include <variant>
 #include <vector>
 
 #include "slang/text/SourceLocation.h"
@@ -133,10 +133,13 @@ public:
                               SourceLocation includedFrom = SourceLocation());
 
     /// Read in a source file from disk.
-    SourceBuffer readSource(string_view path);
+    SourceBuffer readSource(const fs::path& path);
 
     /// Read in a header file from disk.
     SourceBuffer readHeader(string_view path, SourceLocation includedFrom, bool isSystemPath);
+
+    /// Returns true if the given file path is already loaded and cached in the source manager.
+    bool isCached(const fs::path& path) const;
 
     /// Adds a line directive at the given location.
     void addLineDirective(SourceLocation location, size_t lineNum, string_view name, uint8_t level);

@@ -322,9 +322,8 @@ SourceBuffer SourceManager::assignBuffer(string_view path, std::vector<char>&& b
     return createBufferEntry(fd, includedFrom, lock);
 }
 
-SourceBuffer SourceManager::readSource(string_view path) {
-    ASSERT(!path.empty());
-    return openCached(widen(path), SourceLocation());
+SourceBuffer SourceManager::readSource(const fs::path& path) {
+    return openCached(path, SourceLocation());
 }
 
 SourceBuffer SourceManager::readHeader(string_view path, SourceLocation includedFrom,
@@ -447,6 +446,17 @@ SourceBuffer SourceManager::createBufferEntry(FileData* fd, SourceLocation inclu
     bufferEntries.emplace_back(FileInfo(fd, includedFrom));
     return SourceBuffer{ string_view(fd->mem.data(), fd->mem.size()),
                          BufferID((uint32_t)(bufferEntries.size() - 1), fd->name) };
+}
+
+bool SourceManager::isCached(const fs::path& path) const {
+    std::error_code ec;
+    fs::path absPath = fs::canonical(path, ec);
+    if (ec)
+        return false;
+
+    std::shared_lock lock(mut);
+    auto it = lookupCache.find(absPath.u8string());
+    return it != lookupCache.end();
 }
 
 SourceBuffer SourceManager::openCached(const fs::path& fullPath, SourceLocation includedFrom) {

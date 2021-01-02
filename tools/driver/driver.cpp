@@ -102,6 +102,99 @@ void printMacros(SourceManager& sourceManager, const Bag& options,
     }
 }
 
+void loadAllSources(Compilation& compilation, SourceManager& sourceManager,
+                    const std::vector<SourceBuffer>& buffers, const Bag& options, bool singleUnit,
+                    const std::vector<std::string>& libDirs,
+                    const std::vector<std::string>& libExts) {
+    if (singleUnit) {
+        compilation.addSyntaxTree(SyntaxTree::fromBuffers(buffers, sourceManager, options));
+    }
+    else {
+        for (const SourceBuffer& buffer : buffers)
+            compilation.addSyntaxTree(SyntaxTree::fromBuffer(buffer, sourceManager, options));
+    }
+
+    if (libDirs.empty())
+        return;
+
+    std::vector<fs::path> directories;
+    for (auto& dir : libDirs)
+        directories.emplace_back(widen(dir));
+
+    flat_hash_set<string_view> uniqueExtensions;
+    uniqueExtensions.emplace(".v"sv);
+    uniqueExtensions.emplace(".sv"sv);
+    for (auto& ext : libExts)
+        uniqueExtensions.emplace(ext);
+
+    std::vector<fs::path> extensions;
+    for (auto ext : uniqueExtensions)
+        extensions.emplace_back(widen(ext));
+
+    // If library directories are specified, see if we have any unknown instantiations
+    // for which we should search for additional source files to load.
+    flat_hash_set<string_view> definitionNames;
+    auto addDefNames = [&](const std::shared_ptr<SyntaxTree>& tree) {
+        for (auto& [n, meta] : tree->getMetadata().nodeMap) {
+            auto decl = &n->as<ModuleDeclarationSyntax>();
+            string_view name = decl->header->name.valueText();
+            if (!name.empty())
+                definitionNames.emplace(name);
+        }
+    };
+
+    for (auto tree : compilation.getSyntaxTrees())
+        addDefNames(tree);
+
+    flat_hash_set<string_view> missingNames;
+    for (auto tree : compilation.getSyntaxTrees()) {
+        for (auto name : tree->getMetadata().globalInstances) {
+            if (definitionNames.find(name) == definitionNames.end())
+                missingNames.emplace(name);
+        }
+    }
+
+    // Keep loading new files as long as we are making forward progress.
+    flat_hash_set<string_view> nextMissingNames;
+    while (true) {
+        for (auto name : missingNames) {
+            SourceBuffer buffer;
+            for (auto& dir : directories) {
+                fs::path path(dir);
+                path /= name;
+
+                for (auto& ext : extensions) {
+                    path.replace_extension(ext);
+                    if (!sourceManager.isCached(path)) {
+                        buffer = sourceManager.readSource(path);
+                        if (buffer)
+                            break;
+                    }
+                }
+
+                if (buffer)
+                    break;
+            }
+
+            if (buffer) {
+                auto tree = SyntaxTree::fromBuffer(buffer, sourceManager, options);
+                compilation.addSyntaxTree(tree);
+
+                addDefNames(tree);
+                for (auto instName : tree->getMetadata().globalInstances) {
+                    if (definitionNames.find(instName) == definitionNames.end())
+                        nextMissingNames.emplace(instName);
+                }
+            }
+        }
+
+        if (nextMissingNames.empty())
+            break;
+
+        missingNames = std::move(nextMissingNames);
+    }
+}
+
 class Compiler {
 public:
     Compilation& compilation;
@@ -239,8 +332,13 @@ int driverMain(int argc, TArgs argv, bool suppressColorsStdout, bool suppressCol
     // Include paths
     std::vector<std::string> includeDirs;
     std::vector<std::string> includeSystemDirs;
+    std::vector<std::string> libDirs;
+    std::vector<std::string> libExts;
     cmdLine.add("-I,--include-directory", includeDirs, "Additional include search paths", "<dir>");
     cmdLine.add("--isystem", includeSystemDirs, "Additional system include search paths", "<dir>");
+    cmdLine.add("-y,--libdir", libDirs,
+                "Library search paths, which will be searched for missing modules", "<dir>");
+    cmdLine.add("-Y,--libext", libExts, "Additional library file extensions to search", ".ext");
 
     // Preprocessor
     optional<bool> includeComments;
@@ -456,7 +554,7 @@ int driverMain(int argc, TArgs argv, bool suppressColorsStdout, bool suppressCol
 
     std::vector<SourceBuffer> buffers;
     for (const std::string& file : sourceFiles) {
-        SourceBuffer buffer = sourceManager.readSource(file);
+        SourceBuffer buffer = sourceManager.readSource(widen(file));
         if (!buffer) {
             OS::printE(fg(errorColor), "error: ");
             OS::printE("no such file or directory: '{}'\n", file);
@@ -492,14 +590,8 @@ int driverMain(int argc, TArgs argv, bool suppressColorsStdout, bool suppressCol
         }
         else {
             Compilation compilation(options);
-            if (singleUnit == true) {
-                compilation.addSyntaxTree(SyntaxTree::fromBuffers(buffers, sourceManager, options));
-            }
-            else {
-                for (const SourceBuffer& buffer : buffers)
-                    compilation.addSyntaxTree(
-                        SyntaxTree::fromBuffer(buffer, sourceManager, options));
-            }
+            loadAllSources(compilation, sourceManager, buffers, options, singleUnit == true,
+                           libDirs, libExts);
 
             Compiler compiler(compilation);
             compiler.quiet = quiet == true;
