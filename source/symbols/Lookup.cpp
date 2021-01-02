@@ -512,11 +512,15 @@ bool checkVisibility(const Symbol& symbol, const Scope& scope, optional<SourceRa
 
     const Symbol* lookupParent = lp;
     if (lookupParent && targetParent.kind == SymbolKind::ClassType) {
+        auto genericTarget = targetParent.as<ClassType>().genericClass;
         if (visibility == Visibility::Local) {
             // Local members can only be accessed from the declaring class,
             // or from any nested classes within that class.
             do {
                 if (lookupParent == &targetParent)
+                    return true;
+
+                if (genericTarget && lookupParent->as<ClassType>().genericClass == genericTarget)
                     return true;
 
                 lookupParent = &lookupParent->getParentScope()->asSymbol();
@@ -527,8 +531,11 @@ bool checkVisibility(const Symbol& symbol, const Scope& scope, optional<SourceRa
             // in addition to nested classes within those derived classes.
             auto& targetType = targetParent.as<Type>();
             do {
-                auto& sourceType = lookupParent->as<Type>();
+                auto& sourceType = lookupParent->as<ClassType>();
                 if (targetType.isAssignmentCompatible(sourceType))
+                    return true;
+
+                if (genericTarget && sourceType.genericClass == genericTarget)
                     return true;
 
                 lookupParent = &lookupParent->getParentScope()->asSymbol();

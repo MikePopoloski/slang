@@ -2103,3 +2103,30 @@ endclass
     CHECK(diags[7].code == diag::InvalidRandType);
     CHECK(diags[8].code == diag::NameListWithScopeRandomize);
 }
+
+TEST_CASE("Local members in generic classes of same type") {
+    auto tree = SyntaxTree::fromText(R"(
+class A #(type T = int);
+    typedef A#(T) this_type;
+    local T bar;
+
+    function void foo;
+        this_type tt;
+        tt.bar = 1;
+    endfunction
+endclass
+
+module m;
+    A#(int) a1;
+    A#(real) a2;
+    initial begin
+        a1.foo();
+        a2.foo();
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
