@@ -9,7 +9,7 @@
 
 Display help text about command line options and exit.
 
-`-v,--version`
+`--version`
 
 Display slang version information and exit.
 
@@ -27,6 +27,12 @@ Causes the tool to treat all input files as being part of a single compilation u
 By default all files are considered to be separate compilation units and ordering between them
 does not matter. When this option is provided, all files are concatenated together, in order, to
 produce a single compilation unit.
+
+`-v <filename>`
+
+Adds a file to the compilation, like a positional argument, except that the file is
+considered to be a Verilog library. Libraries are always their own compilation unit even
+when compiling with --single-unit, and modules within them are never automatically instantiated.
 
 @section Actions
 
@@ -108,7 +114,7 @@ Add the given directory path to the list of directories searched when an unknown
 is encountered. Combined with --libext, files are automatically included based on the name of the module
 being instantiated.
 
-`-Y,--libext ".ext"`
+`-Y,--libext <ext>`
 
 Add the given extension to the list of extensions tried when searching for files to satisfy
 unknown module instantiations. This list automatically includes '.v' and '.sv' by default.

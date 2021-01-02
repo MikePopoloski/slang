@@ -102,8 +102,18 @@ void printMacros(SourceManager& sourceManager, const Bag& options,
     }
 }
 
-void loadAllSources(Compilation& compilation, SourceManager& sourceManager,
+SourceBuffer readSource(SourceManager& sourceManager, const std::string& file) {
+    SourceBuffer buffer = sourceManager.readSource(widen(file));
+    if (!buffer) {
+        OS::printE(fg(errorColor), "error: ");
+        OS::printE("no such file or directory: '{}'\n", file);
+    }
+    return buffer;
+}
+
+bool loadAllSources(Compilation& compilation, SourceManager& sourceManager,
                     const std::vector<SourceBuffer>& buffers, const Bag& options, bool singleUnit,
+                    const std::vector<std::string>& libraryFiles,
                     const std::vector<std::string>& libDirs,
                     const std::vector<std::string>& libExts) {
     if (singleUnit) {
@@ -114,8 +124,21 @@ void loadAllSources(Compilation& compilation, SourceManager& sourceManager,
             compilation.addSyntaxTree(SyntaxTree::fromBuffer(buffer, sourceManager, options));
     }
 
+    bool ok = true;
+    for (auto& file : libraryFiles) {
+        SourceBuffer buffer = readSource(sourceManager, file);
+        if (!buffer) {
+            ok = false;
+            continue;
+        }
+
+        auto tree = SyntaxTree::fromBuffer(buffer, sourceManager, options);
+        tree->isLibrary = true;
+        compilation.addSyntaxTree(tree);
+    }
+
     if (libDirs.empty())
-        return;
+        return ok;
 
     std::vector<fs::path> directories;
     for (auto& dir : libDirs)
@@ -194,6 +217,8 @@ void loadAllSources(Compilation& compilation, SourceManager& sourceManager,
 
         missingNames = std::move(nextMissingNames);
     }
+
+    return ok;
 }
 
 class Compiler {
@@ -317,7 +342,7 @@ int driverMain(int argc, TArgs argv, bool suppressColorsStdout, bool suppressCol
     optional<bool> showVersion;
     optional<bool> quiet;
     cmdLine.add("-h,--help", showHelp, "Display available options");
-    cmdLine.add("-v,--version", showVersion, "Display version information and exit");
+    cmdLine.add("--version", showVersion, "Display version information and exit");
     cmdLine.add("-q,--quiet", quiet, "Suppress non-essential output");
 
     // Output control
@@ -339,7 +364,7 @@ int driverMain(int argc, TArgs argv, bool suppressColorsStdout, bool suppressCol
     cmdLine.add("--isystem", includeSystemDirs, "Additional system include search paths", "<dir>");
     cmdLine.add("-y,--libdir", libDirs,
                 "Library search paths, which will be searched for missing modules", "<dir>");
-    cmdLine.add("-Y,--libext", libExts, "Additional library file extensions to search", ".ext");
+    cmdLine.add("-Y,--libext", libExts, "Additional library file extensions to search", "<ext>");
 
     // Preprocessor
     optional<bool> includeComments;
@@ -439,6 +464,12 @@ int driverMain(int argc, TArgs argv, bool suppressColorsStdout, bool suppressCol
     std::vector<std::string> sourceFiles;
     cmdLine.add("--single-unit", singleUnit, "Treat all input files as a single compilation unit");
     cmdLine.setPositional(sourceFiles, "files");
+
+    std::vector<std::string> libraryFiles;
+    cmdLine.add("-v", libraryFiles,
+                "One or more library files, which are separate compilation units "
+                "where modules are not automatically instantiated.",
+                "<filename>");
 
 #if defined(INCLUDE_SIM)
     // Simulation
@@ -555,10 +586,8 @@ int driverMain(int argc, TArgs argv, bool suppressColorsStdout, bool suppressCol
 
     std::vector<SourceBuffer> buffers;
     for (const std::string& file : sourceFiles) {
-        SourceBuffer buffer = sourceManager.readSource(widen(file));
+        SourceBuffer buffer = readSource(sourceManager, file);
         if (!buffer) {
-            OS::printE(fg(errorColor), "error: ");
-            OS::printE("no such file or directory: '{}'\n", file);
             anyErrors = true;
             continue;
         }
@@ -591,15 +620,15 @@ int driverMain(int argc, TArgs argv, bool suppressColorsStdout, bool suppressCol
         }
         else {
             Compilation compilation(options);
-            loadAllSources(compilation, sourceManager, buffers, options, singleUnit == true,
-                           libDirs, libExts);
+            anyErrors = !loadAllSources(compilation, sourceManager, buffers, options,
+                                        singleUnit == true, libraryFiles, libDirs, libExts);
 
             Compiler compiler(compilation);
             compiler.quiet = quiet == true;
             compiler.onlyParse = onlyParse == true;
             compiler.setDiagnosticOptions(warningOptions, errorLimit.value_or(2),
                                           ignoreUnknownModules == true, showColors);
-            anyErrors = !compiler.run();
+            anyErrors |= !compiler.run();
 
             if (astJsonFile) {
                 compiler.printJson(*astJsonFile, astJsonScopes);
