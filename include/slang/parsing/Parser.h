@@ -92,7 +92,11 @@ enum class FunctionOptions {
     AllowEmptyArgNames = 2,
 
     /// Allow the return type to be ommitted.
-    AllowImplicitReturn = 4
+    AllowImplicitReturn = 4,
+
+    /// The function header is for a prototype, so parsing rules
+    /// are slightly different.
+    IsPrototype = 8
 };
 BITMASK(FunctionOptions, AllowImplicitReturn);
 

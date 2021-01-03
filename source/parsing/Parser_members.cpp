@@ -383,7 +383,8 @@ MemberSyntax& Parser::parseModportSubroutinePortList(AttrList attributes) {
         if (peek(TokenKind::FunctionKeyword) || peek(TokenKind::TaskKeyword)) {
             auto& proto =
                 parseFunctionPrototype(SyntaxKind::Unknown, FunctionOptions::AllowEmptyArgNames |
-                                                                FunctionOptions::AllowTasks);
+                                                                FunctionOptions::AllowTasks |
+                                                                FunctionOptions::IsPrototype);
             buffer.append(&factory.modportSubroutinePort(proto));
         }
         else {
@@ -545,6 +546,8 @@ FunctionPrototypeSyntax& Parser::parseFunctionPrototype(SyntaxKind parentKind,
         keyword = expect(TokenKind::FunctionKeyword);
 
     auto lifetime = parseLifetime();
+    if (lifetime && options.has(FunctionOptions::IsPrototype))
+        addDiag(diag::LifetimeForPrototype, lifetime.location()) << lifetime.range();
 
     // Return type is optional for function declarations, and should not be given
     // for tasks and constructors (we'll check that below).
@@ -563,6 +566,9 @@ FunctionPrototypeSyntax& Parser::parseFunctionPrototype(SyntaxKind parentKind,
     auto& name = parseName();
     if (!checkSubroutineName(name))
         addDiag(diag::ExpectedSubroutineName, keyword.location()) << name.sourceRange();
+
+    if (options.has(FunctionOptions::IsPrototype) && name.kind == SyntaxKind::ScopedName)
+        addDiag(diag::SubroutinePrototypeScoped, name.getFirstToken().location());
 
     bool constructor = getLastConsumed().kind == TokenKind::NewKeyword;
     if (isConstructor)
@@ -1093,8 +1099,8 @@ MemberSyntax* Parser::parseClassMember(bool isIfaceClass) {
         if (isIfaceClass && !isPure)
             addDiag(diag::IfaceMethodPure, peek().location());
 
-        auto checkProto = [this, &qualifiers](auto& proto) {
-            if (proto.lifetime.kind == TokenKind::StaticKeyword) {
+        auto checkProto = [this, &qualifiers](auto& proto, bool checkLifetime) {
+            if (checkLifetime && proto.lifetime.kind == TokenKind::StaticKeyword) {
                 auto& diag = addDiag(diag::MethodStaticLifetime, proto.lifetime.location());
                 diag << proto.lifetime.range();
             }
@@ -1116,11 +1122,9 @@ MemberSyntax* Parser::parseClassMember(bool isIfaceClass) {
         // Pure or extern functions don't have bodies.
         if (isPureOrExtern) {
             auto& proto =
-                parseFunctionPrototype(SyntaxKind::ClassDeclaration, FunctionOptions::AllowTasks);
-            checkProto(proto);
-
-            if (proto.name->kind == SyntaxKind::ScopedName)
-                addDiag(diag::MethodPrototypeScoped, proto.name->getFirstToken().location());
+                parseFunctionPrototype(SyntaxKind::ClassDeclaration,
+                                       FunctionOptions::AllowTasks | FunctionOptions::IsPrototype);
+            checkProto(proto, false);
 
             return &factory.classMethodPrototype(attributes, qualifiers, proto,
                                                  expect(TokenKind::Semicolon));
@@ -1132,7 +1136,7 @@ MemberSyntax* Parser::parseClassMember(bool isIfaceClass) {
                                                           : TokenKind::EndFunctionKeyword;
             auto& funcDecl =
                 parseFunctionDeclaration({}, declKind, endKind, SyntaxKind::ClassDeclaration);
-            checkProto(*funcDecl.prototype);
+            checkProto(*funcDecl.prototype, true);
 
             // If this is a scoped name, it should be an out-of-block definition for
             // a method declared in a nested class. Qualifiers are not allowed here.
@@ -1786,7 +1790,8 @@ DPIImportSyntax& Parser::parseDPIImport(AttrList attributes) {
         equals = expect(TokenKind::Equals);
     }
 
-    bitmask<FunctionOptions> options = FunctionOptions::AllowEmptyArgNames;
+    bitmask<FunctionOptions> options =
+        FunctionOptions::AllowEmptyArgNames | FunctionOptions::IsPrototype;
     if (property.kind != TokenKind::PureKeyword)
         options |= FunctionOptions::AllowTasks;
 

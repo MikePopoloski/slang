@@ -520,3 +520,16 @@ endmodule
     CHECK(diagnostics[3].code == diag::DriveStrengthInvalid);
     CHECK(diagnostics[4].code == diag::DriveStrengthHighZ);
 }
+
+TEST_CASE("Subroutine prototype errors") {
+    auto& text = R"(
+import "DPI-C" function automatic void foo();
+import "DPI-C" function void foo::bar();
+)";
+
+    parseCompilationUnit(text);
+
+    REQUIRE(diagnostics.size() == 2);
+    CHECK(diagnostics[0].code == diag::LifetimeForPrototype);
+    CHECK(diagnostics[1].code == diag::SubroutinePrototypeScoped);
+}

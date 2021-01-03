@@ -379,6 +379,12 @@ void SubroutineSymbol::checkVirtualMethodMatch(const Scope& scope,
                                                const SubroutineSymbol& parentMethod,
                                                const SubroutineSymbol& derivedMethod,
                                                bool allowDerivedReturn) {
+    if (parentMethod.subroutineKind != derivedMethod.subroutineKind) {
+        auto& diag = scope.addDiag(diag::VirtualKindMismatch, derivedMethod.location);
+        diag.addNote(diag::NoteDeclarationHere, parentMethod.location);
+        return;
+    }
+
     auto& retType = derivedMethod.getReturnType();
     auto& parentRetType = parentMethod.getReturnType();
     if (retType.isError() || parentRetType.isError())
@@ -775,6 +781,12 @@ const SubroutineSymbol* MethodPrototypeSymbol::getSubroutine() const {
 
 bool MethodPrototypeSymbol::checkMethodMatch(const Scope& scope,
                                              const SubroutineSymbol& method) const {
+    if (method.subroutineKind != subroutineKind) {
+        auto& diag = scope.addDiag(diag::MethodKindMismatch, location);
+        diag.addNote(diag::NoteDeclarationHere, method.location);
+        return false;
+    }
+
     // Check that return type and arguments match what was declared in the prototype.
     auto& protoRetType = getReturnType();
     auto& defRetType = method.getReturnType();
