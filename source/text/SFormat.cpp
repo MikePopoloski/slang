@@ -88,7 +88,8 @@ bool parse(string_view str, function_ref<void(string_view)> onText,
 
         if (ptr == end) {
             err(diag::MissingFormatSpecifier, start);
-            return false;
+            text.append('%');
+            break;
         }
 
         bool widthAllowed = false;

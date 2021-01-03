@@ -31,7 +31,8 @@ public:
 
     static optional<std::string> formatArgs(string_view formatString, SourceLocation loc,
                                             const Scope& scope, EvalContext& context,
-                                            const span<const Expression* const>& args);
+                                            const span<const Expression* const>& args,
+                                            bool isStringLiteral);
 
     static optional<std::string> formatDisplay(const Scope& scope, EvalContext& context,
                                                const span<const Expression* const>& args);

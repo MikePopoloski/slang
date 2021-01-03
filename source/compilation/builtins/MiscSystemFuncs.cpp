@@ -42,7 +42,8 @@ public:
             return nullptr;
 
         auto result = FmtHelpers::formatArgs(formatStr.str(), args[0]->sourceRange.start(),
-                                             *callInfo.scope, context, args.subspan(1));
+                                             *callInfo.scope, context, args.subspan(1),
+                                             args[0]->kind == ExpressionKind::StringLiteral);
         if (!result)
             return nullptr;
 

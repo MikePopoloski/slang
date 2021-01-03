@@ -1087,6 +1087,11 @@ endfunction
     NO_SESSION_ERRORS;
 }
 
+TEST_CASE("sformatf with trailing percent") {
+    ScriptSession session;
+    CHECK(session.eval("$sformatf(\"a%\")"s).str() == "a%");
+}
+
 TEST_CASE("Concat assignments") {
     ScriptSession session;
     session.eval("logic [2:0] foo;");

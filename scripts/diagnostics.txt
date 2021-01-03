@@ -526,7 +526,6 @@ warning dup-import DuplicateImport "duplicate import declaration is redundant"
 subsystem SysFuncs
 error BadSystemSubroutineArg "invalid argument type {} to system {}"
 error UnknownFormatSpecifier "unknown format specifier '%{}'"
-error MissingFormatSpecifier "missing format specifier"
 error FormatSpecifierWidthNotAllowed "field width not allowed on '%{}' format specifiers"
 error FormatSpecifierInvalidWidth "field width is invalid"
 error FormatSpecifierNotFloat "floating point format specifier options used on non-floating point field"
@@ -554,6 +553,7 @@ error CastArgSingular "argument to $cast cannot be of aggregate type (type is {}
 error ArrayLocatorWithClause "'{}' requires 'with' expression for searching"
 warning format-real FormatRealInt "real value provided for integer format specifier '%{}'"
 warning finish-num BadFinishNum "finish argument must have value of 0, 1, or 2"
+warning missing-format MissingFormatSpecifier "missing format specifier"
 
 subsystem ConstEval
 note NoteInCallTo "in call to '{}'"
@@ -616,7 +616,7 @@ group default = { real-underflow real-overflow literal-overflow unconnected-port
                   extra-pragma-args expected-diag-arg unknown-diag-arg pragma-diag-level explicit-static
                   static-skipped elem-not-found dynarray-index dynarray-range queue-range empty-queue
                   unknown-escape-code no-top warning-task unsized-concat finish-num implicit-conv
-                  constraint-missing }
+                  constraint-missing missing-format }
 
 group extra = { empty-member empty-stmt dup-import pointless-void-cast case-gen-none case-gen-dup
                 unused-result format-real ignored-slice task-ignored width-trunc dup-attr }

@@ -10,9 +10,9 @@
 #include "slang/binding/LiteralExpressions.h"
 #include "slang/diagnostics/SysFuncsDiags.h"
 #include "slang/mir/Procedure.h"
-#include "slang/types/AllTypes.h"
 #include "slang/symbols/VariableSymbols.h"
 #include "slang/text/SFormat.h"
+#include "slang/types/AllTypes.h"
 
 namespace slang {
 
@@ -192,8 +192,13 @@ bool FmtHelpers::checkSFormatArgs(const BindContext& context, const Args& args) 
 
 optional<std::string> FmtHelpers::formatArgs(string_view formatString, SourceLocation loc,
                                              const Scope& scope, EvalContext& context,
-                                             const span<const Expression* const>& args) {
+                                             const span<const Expression* const>& args,
+                                             bool isStringLiteral) {
     auto getRange = [&](size_t offset, size_t len) {
+        // If this is not a string literal, we can't meaningfully get an offset.
+        if (!isStringLiteral)
+            return SourceRange{ loc, loc };
+
         SourceLocation sl = loc + offset;
         return SourceRange{ sl, sl + len };
     };
@@ -246,6 +251,11 @@ optional<std::string> FmtHelpers::formatArgs(string_view formatString, SourceLoc
             SFormat::formatArg(result, value, spec, options);
         },
         [&](DiagCode code, size_t offset, size_t len, optional<char> specifier) {
+            // If this is from a string literal format string, we already checked
+            // the string as expression binding time, so don't re-issue diagnostics.
+            if (isStringLiteral)
+                return;
+
             auto& diag = context.addDiag(code, getRange(offset, len));
             if (specifier)
                 diag << *specifier;
@@ -311,6 +321,7 @@ optional<std::string> FmtHelpers::formatDisplay(const Scope&, EvalContext& conte
             ok &= SFormat::parse(
                 fmt, [&](string_view text) { result += text; },
                 [&](char specifier, size_t, size_t, const SFormat::FormatOptions& options) {
+                    // TODO: handle non-consuming args
                     if (argIt != args.end()) {
                         auto currentArg = *argIt++;
                         auto&& value = currentArg->eval(context);
