@@ -1030,6 +1030,7 @@ TEST_CASE("Eval sformatf") {
     CHECK(sformatf("%d", "foo") == "                                     0");
     CHECK(sformatf("%0d", "foo") == "0");
     CHECK(sformatf("%2D", "foo") == " 0");
+    CHECK(sformatf("%-2D", "foo") == "0 ");
     CHECK(sformatf("%d", "bar") == "                                     -1");
     CHECK(sformatf("%D", "baz") == "                                      1");
 

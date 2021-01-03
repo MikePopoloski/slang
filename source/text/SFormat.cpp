@@ -131,12 +131,12 @@ bool parse(string_view str, function_ref<void(string_view)> onText,
                 return false;
         }
 
-        if (options.width && !widthAllowed) {
+        if ((options.width || options.leftJustify) && !widthAllowed) {
             err(diag::FormatSpecifierWidthNotAllowed, start, c);
             return false;
         }
 
-        if ((options.precision || options.leftJustify) && !floatAllowed) {
+        if (options.precision && !floatAllowed) {
             err(diag::FormatSpecifierNotFloat, start);
             return false;
         }
@@ -200,15 +200,21 @@ void formatInt(std::string& result, const SVInt& value, LiteralBase base,
         }
     }
 
-    if (buffer.size() < width) {
+    auto doPad = [&] {
         char pad = '0';
         if (base == LiteralBase::Decimal)
             pad = ' ';
 
         result.append(width - buffer.size(), pad);
-    }
+    };
+
+    if (buffer.size() < width && !options.leftJustify)
+        doPad();
 
     result.append(buffer.begin(), buffer.end());
+
+    if (buffer.size() < width && options.leftJustify)
+        doPad();
 }
 
 static void formatFloat(std::string& result, double value, char specifier,
