@@ -702,7 +702,8 @@ const Symbol* getCompilationUnit(const Symbol& symbol) {
     }
 }
 
-void unwrapResult(const Scope& scope, optional<SourceRange> range, LookupResult& result) {
+void unwrapResult(const Scope& scope, optional<SourceRange> range, LookupResult& result,
+                  bool unwrapGenericClasses = true) {
     if (!result.found)
         return;
 
@@ -716,7 +717,7 @@ void unwrapResult(const Scope& scope, optional<SourceRange> range, LookupResult&
 
     // If the found symbol is a generic class, unwrap into
     // the default specialization (if possible).
-    if (result.found->kind == SymbolKind::GenericClassDef) {
+    if (result.found->kind == SymbolKind::GenericClassDef && unwrapGenericClasses) {
         auto& genericClass = result.found->as<GenericClassDefSymbol>();
         result.found = genericClass.getDefaultSpecialization();
 
@@ -847,7 +848,7 @@ const Symbol* Lookup::unqualified(const Scope& scope, string_view name,
     LookupResult result;
     unqualifiedImpl(scope, name, LookupLocation::max, std::nullopt, flags, {}, result);
     ASSERT(result.selectors.empty());
-    unwrapResult(scope, std::nullopt, result);
+    unwrapResult(scope, std::nullopt, result, /* unwrapGenericClasses */ false);
 
     return result.found;
 }
@@ -860,7 +861,7 @@ const Symbol* Lookup::unqualifiedAt(const Scope& scope, string_view name, Lookup
     LookupResult result;
     unqualifiedImpl(scope, name, location, sourceRange, flags, {}, result);
     ASSERT(result.selectors.empty());
-    unwrapResult(scope, sourceRange, result);
+    unwrapResult(scope, sourceRange, result, /* unwrapGenericClasses */ false);
 
     if (!result.found && !result.hasError())
         reportUndeclared(scope, name, sourceRange, flags, false, result);

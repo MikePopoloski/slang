@@ -2130,3 +2130,21 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Speculative lookup does not default instantiate generic class") {
+    auto tree = SyntaxTree::fromText(R"(
+class A #(type T = event);
+    local T bar = 1;
+endclass
+
+module m;
+    initial begin
+        A#(int) a;
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
