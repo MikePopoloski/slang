@@ -15,7 +15,7 @@ namespace slang {
 class FormalArgumentSymbol;
 
 /// Specifies various flags that can apply to subroutines.
-enum class MethodFlags : uint8_t {
+enum class MethodFlags : uint16_t {
     /// No specific flags specified.
     None = 0,
 
@@ -39,18 +39,21 @@ enum class MethodFlags : uint8_t {
     /// The method is a DPI import.
     DPIImport = 1 << 5,
 
+    /// The method is a DPI import marked 'context'.
+    DPIContext = 1 << 6,
+
     /// The method is known not to be constant, even if it otherwise
     /// meets all of the requirements for a constant function. Used for
     /// built-in methods only.
-    NotConst = 1 << 6,
+    NotConst = 1 << 7,
 
     /// This method is a std::randomize built-in. These are declared as
     /// normal subroutines so they can be found via name lookup, and then
     /// a special case translates the calls into the appropriate system
     /// subroutine call.
-    Randomize = 1 << 7
+    Randomize = 1 << 8
 };
-BITMASK(MethodFlags, NotConst);
+BITMASK(MethodFlags, Randomize);
 
 class MethodPrototypeSymbol;
 struct ClassMethodDeclarationSyntax;

@@ -11,6 +11,7 @@
 #include "slang/diagnostics/DeclarationsDiags.h"
 #include "slang/symbols/ClassSymbols.h"
 #include "slang/symbols/Scope.h"
+#include "slang/symbols/SubroutineSymbols.h"
 #include "slang/symbols/Symbol.h"
 #include "slang/symbols/VariableSymbols.h"
 #include "slang/syntax/AllSyntax.h"
@@ -150,39 +151,93 @@ static bool isValidForUserDefinedNet(const Type& type) {
     return false;
 }
 
+static bool isValidForDPIReturn(const Type& type) {
+    switch (type.getCanonicalType().kind) {
+        case SymbolKind::VoidType:
+        case SymbolKind::FloatingType:
+        case SymbolKind::CHandleType:
+        case SymbolKind::StringType:
+        case SymbolKind::ScalarType:
+        case SymbolKind::PredefinedIntegerType:
+            return true;
+        default:
+            return false;
+    }
+}
+
+static bool isValidForDPIArg(const Type& type) {
+    auto& ct = type.getCanonicalType();
+    if (ct.isIntegral() || ct.isFloating() || ct.isString() || ct.isCHandle() || ct.isVoid())
+        return true;
+
+    if (ct.kind == SymbolKind::FixedSizeUnpackedArrayType)
+        return isValidForDPIArg(ct.as<FixedSizeUnpackedArrayType>().elementType);
+
+    if (ct.isUnpackedStruct()) {
+        for (auto& field : ct.as<UnpackedStructType>().membersOfType<FieldSymbol>()) {
+            if (!isValidForDPIArg(field.getType()))
+                return false;
+        }
+        return true;
+    }
+
+    return false;
+}
+
 void DeclaredType::checkType(const BindContext& context) const {
-    if (flags.has(DeclaredTypeFlags::Port)) {
-        // Ports cannot be chandles.
-        if (type->isCHandle())
-            context.addDiag(diag::InvalidPortType, parent.location) << *type;
-    }
-    else if (flags.has(DeclaredTypeFlags::NetType)) {
-        auto& net = parent.as<NetSymbol>();
-        if (net.netType.netKind != NetType::UserDefined && !isValidForNet(*type))
-            context.addDiag(diag::InvalidNetType, parent.location) << *type;
-        else if (type->getBitWidth() == 1 && net.expansionHint != NetSymbol::None)
-            context.addDiag(diag::SingleBitVectored, parent.location);
-    }
-    else if (flags.has(DeclaredTypeFlags::UserDefinedNetType)) {
-        if (!isValidForUserDefinedNet(*type))
-            context.addDiag(diag::InvalidUserDefinedNetType, parent.location) << *type;
-    }
-    else if (flags.has(DeclaredTypeFlags::FormalArgMergeVar)) {
-        if (auto var = parent.as<FormalArgumentSymbol>().getMergedVariable()) {
-            ASSERT(typeSyntax);
-            mergePortTypes(context, *var, typeSyntax->as<ImplicitTypeSyntax>(), parent.location,
-                           dimensions ? *dimensions : span<const VariableDimensionSyntax* const>{});
+    int masked = (flags & DeclaredTypeFlags::NeedsTypeCheck).bits();
+    ASSERT(countPopulation64(masked) == 1);
+
+    switch (masked) {
+        case int(DeclaredTypeFlags::Port):
+            // Ports cannot be chandles.
+            if (type->isCHandle())
+                context.addDiag(diag::InvalidPortType, parent.location) << *type;
+            break;
+        case int(DeclaredTypeFlags::NetType): {
+            auto& net = parent.as<NetSymbol>();
+            if (net.netType.netKind != NetType::UserDefined && !isValidForNet(*type))
+                context.addDiag(diag::InvalidNetType, parent.location) << *type;
+            else if (type->getBitWidth() == 1 && net.expansionHint != NetSymbol::None)
+                context.addDiag(diag::SingleBitVectored, parent.location);
+            break;
         }
-    }
-    else if (flags.has(DeclaredTypeFlags::Rand)) {
-        RandMode mode = parent.getRandMode();
-        if (!type->isValidForRand(mode)) {
-            auto& diag = context.addDiag(diag::InvalidRandType, parent.location) << *type;
-            if (mode == RandMode::Rand)
-                diag << "rand"sv;
-            else
-                diag << "randc"sv;
+        case int(DeclaredTypeFlags::UserDefinedNetType):
+            if (!isValidForUserDefinedNet(*type))
+                context.addDiag(diag::InvalidUserDefinedNetType, parent.location) << *type;
+            break;
+        case int(DeclaredTypeFlags::FormalArgMergeVar):
+            if (auto var = parent.as<FormalArgumentSymbol>().getMergedVariable()) {
+                ASSERT(typeSyntax);
+                mergePortTypes(context, *var, typeSyntax->as<ImplicitTypeSyntax>(), parent.location,
+                               dimensions ? *dimensions
+                                          : span<const VariableDimensionSyntax* const>{});
+            }
+            break;
+        case int(DeclaredTypeFlags::Rand): {
+            RandMode mode = parent.getRandMode();
+            if (!type->isValidForRand(mode)) {
+                auto& diag = context.addDiag(diag::InvalidRandType, parent.location) << *type;
+                if (mode == RandMode::Rand)
+                    diag << "rand"sv;
+                else
+                    diag << "randc"sv;
+            }
+            break;
         }
+        case int(DeclaredTypeFlags::DPIReturnType): {
+            if (!isValidForDPIReturn(*type))
+                context.addDiag(diag::InvalidDPIReturnType, parent.location) << *type;
+            else if (parent.as<SubroutineSymbol>().flags.has(MethodFlags::Pure) && type->isVoid())
+                context.addDiag(diag::DPIPureReturn, parent.location);
+            break;
+        }
+        case int(DeclaredTypeFlags::DPIArg):
+            if (!isValidForDPIArg(*type))
+                context.addDiag(diag::InvalidDPIArgType, parent.location) << *type;
+            break;
+        default:
+            THROW_UNREACHABLE;
     }
 }
 

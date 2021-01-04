@@ -1137,16 +1137,30 @@ endinterface
 TEST_CASE("DPI Imports") {
     auto tree = SyntaxTree::fromText(R"(
 module m;
-    import "DPI-C" pure \begin = function void f(input, output logic[3:0]);
+    import "DPI-C" context \begin = function void f1(input, output logic[3:0]);
+    import "asdf" function void f2();
+    import "DPI" function void f3();
+    import "DPI-C" function void f4(ref i);
+    import "DPI-C" pure function void f5(output i);
+    import "DPI-C" pure function event f6(event e);
 
     logic [3:0] r;
-    initial f(1, r);
+    initial f1(1, r);
 endmodule
 )");
 
     Compilation compilation;
     compilation.addSyntaxTree(tree);
-    NO_COMPILATION_ERRORS;
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 7);
+    CHECK(diags[0].code == diag::ExpectedDPISpecString);
+    CHECK(diags[1].code == diag::DPISpecDisallowed);
+    CHECK(diags[2].code == diag::DPIRefArg);
+    CHECK(diags[3].code == diag::DPIPureReturn);
+    CHECK(diags[4].code == diag::DPIPureArg);
+    CHECK(diags[5].code == diag::InvalidDPIReturnType);
+    CHECK(diags[6].code == diag::InvalidDPIArgType);
 }
 
 TEST_CASE("Non-const subroutine check failures") {

@@ -290,6 +290,11 @@ error InvalidRandType "{} is not a valid type for a '{}' property"
 error InvalidMethodOverride "cannot override built-in method '{}'"
 error InvalidRandomizeOverride "override for '{}' should be a public non-static function that returns void and takes no parameters"
 error MismatchStaticConstraint "mismatch of 'static' keyword between constraint prototype and declaration"
+error DPIRefArg "DPI subroutines cannot have 'ref' arguments"
+error DPIPureArg "DPI imports marked 'pure' cannot have 'output' or 'inout' arguments"
+error DPIPureReturn "DPI imports marked 'pure' cannot return 'void'"
+error InvalidDPIReturnType "{} is not a valid return type for a DPI subroutine"
+error InvalidDPIArgType "{} is not a valid argument type in a DPI subroutine"
 error FatalTask "$fatal encountered{}"
 error ErrorTask "$error encountered{}"
 warning warning-task WarningTask "$warning encountered{}"
@@ -304,6 +309,7 @@ warning dup-attr DuplicateAttribute "duplicate attribute definition '{}'; taking
 warning empty-member EmptyMember "extra ';' has no effect"
 warning ineffective-sign SignednessNoEffect "'{}' on I/O declaration has no effect on type {}"
 warning constraint-missing NoConstraintBody "no body for implicit constraint block '{}'"
+warning dpi-spec DPISpecDisallowed "'DPI' specified subroutines are not supported and will be treated as 'DPI-C'. Note that this may require changes to the application's C code."
 
 subsystem Expressions
 error BadUnaryExpression "invalid operand type {} to unary expression"
@@ -619,7 +625,7 @@ group default = { real-underflow real-overflow literal-overflow unconnected-port
                   extra-pragma-args expected-diag-arg unknown-diag-arg pragma-diag-level explicit-static
                   static-skipped elem-not-found dynarray-index dynarray-range queue-range empty-queue
                   unknown-escape-code no-top warning-task unsized-concat finish-num implicit-conv
-                  constraint-missing missing-format }
+                  constraint-missing missing-format dpi-spec }
 
 group extra = { empty-member empty-stmt dup-import pointless-void-cast case-gen-none case-gen-dup
                 unused-result format-real ignored-slice task-ignored width-trunc dup-attr }

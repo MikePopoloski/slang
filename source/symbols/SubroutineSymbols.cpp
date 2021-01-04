@@ -184,15 +184,49 @@ SubroutineSymbol& SubroutineSymbol::fromSyntax(Compilation& compilation,
     result->setAttributes(parent, syntax.attributes);
     result->flags = MethodFlags::DPIImport;
 
+    result->declaredReturnType.addFlags(DeclaredTypeFlags::DPIReturnType);
     if (subroutineKind == SubroutineKind::Function)
         result->declaredReturnType.setTypeSyntax(*proto.returnType);
     else
         result->declaredReturnType.setType(compilation.getVoidType());
 
+    bool isPure = false;
+    switch (syntax.property.kind) {
+        case TokenKind::PureKeyword:
+            isPure = true;
+            result->flags |= MethodFlags::Pure;
+            break;
+        case TokenKind::ContextKeyword:
+            result->flags |= MethodFlags::DPIContext;
+            break;
+        default:
+            break;
+    }
+
+    if (syntax.specString.valueText() == "DPI")
+        parent.addDiag(diag::DPISpecDisallowed, syntax.specString.range());
+
     SmallVectorSized<const FormalArgumentSymbol*, 8> arguments;
     if (proto.portList) {
         SubroutineSymbol::buildArguments(*result, *proto.portList, VariableLifetime::Automatic,
                                          arguments);
+    }
+
+    // Check arguments for extra rules imposed by DPI imports.
+    bool pureError = false;
+    for (auto arg : arguments) {
+        const_cast<FormalArgumentSymbol*>(arg)->getDeclaredType()->addFlags(
+            DeclaredTypeFlags::DPIArg);
+
+        if (arg->direction == ArgumentDirection::Ref)
+            parent.addDiag(diag::DPIRefArg, arg->location);
+        else if (arg->direction == ArgumentDirection::Out ||
+                 arg->direction == ArgumentDirection::InOut) {
+            if (isPure && !pureError) {
+                parent.addDiag(diag::DPIPureArg, arg->location);
+                pureError = true;
+            }
+        }
     }
 
     result->arguments = arguments.copy(compilation);
@@ -529,6 +563,28 @@ void SubroutineSymbol::serializeTo(ASTSerializer& serializer) const {
     for (auto arg : arguments)
         serializer.serialize(*arg);
     serializer.endArray();
+
+    if (flags) {
+        std::string str;
+        if (flags.has(MethodFlags::Virtual))
+            str += "virtual,";
+        if (flags.has(MethodFlags::Pure))
+            str += "pure,";
+        if (flags.has(MethodFlags::Static))
+            str += "static,";
+        if (flags.has(MethodFlags::Constructor))
+            str += "ctor,";
+        if (flags.has(MethodFlags::InterfaceImport))
+            str += "ifaceImport,";
+        if (flags.has(MethodFlags::DPIImport))
+            str += "dpi,";
+        if (flags.has(MethodFlags::DPIContext))
+            str += "context,";
+        if (!str.empty()) {
+            str.pop_back();
+            serializer.write("flags", str);
+        }
+    }
 }
 
 void SubroutineSymbol::addThisVar(const Type& type) {
