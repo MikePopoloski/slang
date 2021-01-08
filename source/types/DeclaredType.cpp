@@ -152,16 +152,16 @@ static bool isValidForUserDefinedNet(const Type& type) {
 }
 
 void DeclaredType::checkType(const BindContext& context) const {
-    int masked = (flags & DeclaredTypeFlags::NeedsTypeCheck).bits();
+    uint32_t masked = (flags & DeclaredTypeFlags::NeedsTypeCheck).bits();
     ASSERT(countPopulation64(masked) == 1);
 
     switch (masked) {
-        case int(DeclaredTypeFlags::Port):
+        case uint32_t(DeclaredTypeFlags::Port):
             // Ports cannot be chandles.
             if (type->isCHandle())
                 context.addDiag(diag::InvalidPortType, parent.location) << *type;
             break;
-        case int(DeclaredTypeFlags::NetType): {
+        case uint32_t(DeclaredTypeFlags::NetType): {
             auto& net = parent.as<NetSymbol>();
             if (net.netType.netKind != NetType::UserDefined && !isValidForNet(*type))
                 context.addDiag(diag::InvalidNetType, parent.location) << *type;
@@ -169,11 +169,11 @@ void DeclaredType::checkType(const BindContext& context) const {
                 context.addDiag(diag::SingleBitVectored, parent.location);
             break;
         }
-        case int(DeclaredTypeFlags::UserDefinedNetType):
+        case uint32_t(DeclaredTypeFlags::UserDefinedNetType):
             if (!isValidForUserDefinedNet(*type))
                 context.addDiag(diag::InvalidUserDefinedNetType, parent.location) << *type;
             break;
-        case int(DeclaredTypeFlags::FormalArgMergeVar):
+        case uint32_t(DeclaredTypeFlags::FormalArgMergeVar):
             if (auto var = parent.as<FormalArgumentSymbol>().getMergedVariable()) {
                 ASSERT(typeSyntax);
                 mergePortTypes(context, *var, typeSyntax->as<ImplicitTypeSyntax>(), parent.location,
@@ -181,7 +181,7 @@ void DeclaredType::checkType(const BindContext& context) const {
                                           : span<const VariableDimensionSyntax* const>{});
             }
             break;
-        case int(DeclaredTypeFlags::Rand): {
+        case uint32_t(DeclaredTypeFlags::Rand): {
             RandMode mode = parent.getRandMode();
             if (!type->isValidForRand(mode)) {
                 auto& diag = context.addDiag(diag::InvalidRandType, parent.location) << *type;
@@ -192,14 +192,14 @@ void DeclaredType::checkType(const BindContext& context) const {
             }
             break;
         }
-        case int(DeclaredTypeFlags::DPIReturnType): {
+        case uint32_t(DeclaredTypeFlags::DPIReturnType): {
             if (!type->isValidForDPIReturn())
                 context.addDiag(diag::InvalidDPIReturnType, parent.location) << *type;
             else if (parent.as<SubroutineSymbol>().flags.has(MethodFlags::Pure) && type->isVoid())
                 context.addDiag(diag::DPIPureReturn, parent.location);
             break;
         }
-        case int(DeclaredTypeFlags::DPIArg):
+        case uint32_t(DeclaredTypeFlags::DPIArg):
             if (!type->isValidForDPIArg())
                 context.addDiag(diag::InvalidDPIArgType, parent.location) << *type;
             break;
