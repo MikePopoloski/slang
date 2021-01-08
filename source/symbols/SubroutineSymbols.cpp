@@ -188,7 +188,7 @@ SubroutineSymbol& SubroutineSymbol::fromSyntax(Compilation& compilation,
     if (subroutineKind == SubroutineKind::Function)
         result->declaredReturnType.setTypeSyntax(*proto.returnType);
     else
-        result->declaredReturnType.setType(compilation.getVoidType());
+        result->declaredReturnType.setType(compilation.getIntType());
 
     bool isPure = false;
     switch (syntax.property.kind) {

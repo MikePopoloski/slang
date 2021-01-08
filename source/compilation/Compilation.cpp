@@ -10,6 +10,7 @@
 #include "slang/compilation/Definition.h"
 #include "slang/compilation/ScriptSession.h"
 #include "slang/diagnostics/CompilationDiags.h"
+#include "slang/diagnostics/DeclarationsDiags.h"
 #include "slang/diagnostics/DiagnosticEngine.h"
 #include "slang/diagnostics/LookupDiags.h"
 #include "slang/diagnostics/TextDiagnosticClient.h"
@@ -786,6 +787,10 @@ bool Compilation::noteBindDirective(const BindDirectiveSyntax& syntax,
     return true;
 }
 
+void Compilation::noteDPIExportDirective(const DPIExportSyntax& syntax, const Scope& scope) {
+    dpiExports.emplace_back(&syntax, &scope);
+}
+
 void Compilation::addOutOfBlockDecl(const Scope& scope, const ScopedNameSyntax& name,
                                     const SyntaxNode& syntax, SymbolIndex index) {
     string_view className = name.left->getLastToken().valueText();
@@ -857,6 +862,10 @@ const Diagnostics& Compilation::getSemanticDiagnostics() {
                               options.errorLimit == 0 ? UINT32_MAX : options.errorLimit);
     getRoot().visit(visitor);
     visitor.finalize();
+
+    // Check all DPI exports for correctness.
+    if (!dpiExports.empty())
+        checkDPIExports();
 
     // Report on unused out-of-block definitions. These are always a real error.
     for (auto& [key, val] : outOfBlockDecls) {
@@ -1115,6 +1124,75 @@ void Compilation::parseParamOverrides(flat_hash_map<string_view, const ConstantV
         }
 
         root->addDiag(diag::InvalidParamOverrideOpt, SourceLocation::NoLocation) << opt;
+    }
+}
+
+void Compilation::checkDPIExports() {
+    flat_hash_map<const SubroutineSymbol*, const DPIExportSyntax*> previousExports;
+    for (auto [syntax, scope] : dpiExports) {
+        if (syntax->specString.valueText() == "DPI")
+            scope->addDiag(diag::DPISpecDisallowed, syntax->specString.range());
+
+        auto name = syntax->name.valueText();
+        auto symbol =
+            Lookup::unqualifiedAt(*scope, name, LookupLocation::max, syntax->name.range());
+        if (!symbol)
+            continue;
+
+        if (symbol->kind != SymbolKind::Subroutine) {
+            auto& diag = scope->addDiag(diag::NotASubroutine, syntax->name.range()) << name;
+            diag.addNote(diag::NoteDeclarationHere, symbol->location);
+            continue;
+        }
+
+        // This check is a little verbose because we're avoiding issuing an error if the
+        // functionOrTask keyword is invalid, i.e. not 'function' or 'task'.
+        auto& sub = symbol->as<SubroutineSymbol>();
+        if ((sub.subroutineKind == SubroutineKind::Function &&
+             syntax->functionOrTask.kind == TokenKind::TaskKeyword) ||
+            (sub.subroutineKind == SubroutineKind::Task &&
+             syntax->functionOrTask.kind == TokenKind::FunctionKeyword)) {
+            auto& diag =
+                scope->addDiag(diag::DPIExportKindMismatch, syntax->functionOrTask.range());
+            diag.addNote(diag::NoteDeclarationHere, symbol->location);
+            continue;
+        }
+
+        if (sub.getParentScope() != scope) {
+            auto& diag = scope->addDiag(diag::DPIExportDifferentScope, syntax->name.range());
+            diag.addNote(diag::NoteDeclarationHere, sub.location);
+            continue;
+        }
+
+        auto& retType = sub.getReturnType();
+        if (!retType.isValidForDPIReturn() && !retType.isError()) {
+            auto& diag = scope->addDiag(diag::InvalidDPIReturnType, sub.location);
+            diag << retType;
+            diag.addNote(diag::NoteDeclarationHere, syntax->name.location());
+            continue;
+        }
+
+        for (auto arg : sub.getArguments()) {
+            // TODO: check input / output
+            auto& type = arg->getType();
+            if (!type.isValidForDPIArg() && !type.isError()) {
+                auto& diag = scope->addDiag(diag::InvalidDPIArgType, arg->location);
+                diag << type;
+                diag.addNote(diag::NoteDeclarationHere, syntax->name.location());
+                continue;
+            }
+        }
+
+        auto [it, inserted] = previousExports.emplace(&sub, syntax);
+        if (!inserted) {
+            auto& diag = scope->addDiag(diag::DPIExportDuplicate, syntax->name.range()) << sub.name;
+            diag.addNote(diag::NotePreviousDefinition, it->second->name.location());
+            continue;
+        }
+
+        // TODO:
+        // - check c_identifier
+        // - check no duplicate c_identifiers
     }
 }
 

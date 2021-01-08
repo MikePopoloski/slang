@@ -151,39 +151,6 @@ static bool isValidForUserDefinedNet(const Type& type) {
     return false;
 }
 
-static bool isValidForDPIReturn(const Type& type) {
-    switch (type.getCanonicalType().kind) {
-        case SymbolKind::VoidType:
-        case SymbolKind::FloatingType:
-        case SymbolKind::CHandleType:
-        case SymbolKind::StringType:
-        case SymbolKind::ScalarType:
-        case SymbolKind::PredefinedIntegerType:
-            return true;
-        default:
-            return false;
-    }
-}
-
-static bool isValidForDPIArg(const Type& type) {
-    auto& ct = type.getCanonicalType();
-    if (ct.isIntegral() || ct.isFloating() || ct.isString() || ct.isCHandle() || ct.isVoid())
-        return true;
-
-    if (ct.kind == SymbolKind::FixedSizeUnpackedArrayType)
-        return isValidForDPIArg(ct.as<FixedSizeUnpackedArrayType>().elementType);
-
-    if (ct.isUnpackedStruct()) {
-        for (auto& field : ct.as<UnpackedStructType>().membersOfType<FieldSymbol>()) {
-            if (!isValidForDPIArg(field.getType()))
-                return false;
-        }
-        return true;
-    }
-
-    return false;
-}
-
 void DeclaredType::checkType(const BindContext& context) const {
     int masked = (flags & DeclaredTypeFlags::NeedsTypeCheck).bits();
     ASSERT(countPopulation64(masked) == 1);
@@ -226,14 +193,14 @@ void DeclaredType::checkType(const BindContext& context) const {
             break;
         }
         case int(DeclaredTypeFlags::DPIReturnType): {
-            if (!isValidForDPIReturn(*type))
+            if (!type->isValidForDPIReturn())
                 context.addDiag(diag::InvalidDPIReturnType, parent.location) << *type;
             else if (parent.as<SubroutineSymbol>().flags.has(MethodFlags::Pure) && type->isVoid())
                 context.addDiag(diag::DPIPureReturn, parent.location);
             break;
         }
         case int(DeclaredTypeFlags::DPIArg):
-            if (!isValidForDPIArg(*type))
+            if (!type->isValidForDPIArg())
                 context.addDiag(diag::InvalidDPIArgType, parent.location) << *type;
             break;
         default:

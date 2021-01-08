@@ -671,6 +671,39 @@ bool Type::isValidForRand(RandMode mode) const {
     return false;
 }
 
+bool Type::isValidForDPIReturn() const {
+    switch (getCanonicalType().kind) {
+        case SymbolKind::VoidType:
+        case SymbolKind::FloatingType:
+        case SymbolKind::CHandleType:
+        case SymbolKind::StringType:
+        case SymbolKind::ScalarType:
+        case SymbolKind::PredefinedIntegerType:
+            return true;
+        default:
+            return false;
+    }
+}
+
+bool Type::isValidForDPIArg() const {
+    auto& ct = getCanonicalType();
+    if (ct.isIntegral() || ct.isFloating() || ct.isString() || ct.isCHandle() || ct.isVoid())
+        return true;
+
+    if (ct.kind == SymbolKind::FixedSizeUnpackedArrayType)
+        return ct.as<FixedSizeUnpackedArrayType>().elementType.isValidForDPIArg();
+
+    if (ct.isUnpackedStruct()) {
+        for (auto& field : ct.as<UnpackedStructType>().membersOfType<FieldSymbol>()) {
+            if (!field.getType().isValidForDPIArg())
+                return false;
+        }
+        return true;
+    }
+
+    return false;
+}
+
 ConstantValue Type::coerceValue(const ConstantValue& value) const {
     if (isIntegral())
         return value.convertToInt(getBitWidth(), isSigned(), isFourState());

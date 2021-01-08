@@ -1163,6 +1163,44 @@ endmodule
     CHECK(diags[6].code == diag::InvalidDPIArgType);
 }
 
+TEST_CASE("DPI Exports") {
+    auto tree = SyntaxTree::fromText(R"(
+function bar; endfunction
+
+module m;
+    int boo;
+    function foo; endfunction
+
+    export "DPI-C" \begin = function foo;
+    export "DPI" function baz;
+    export "DPI-C" function boo;
+    export "DPI-C" task foo;
+    export "DPI-C" function bar;
+
+    function event f1; endfunction
+    function int f2(event e); endfunction
+
+    export "DPI-C" function f1;
+    export "DPI-C" function f2;
+    export "DPI-C" function foo;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 8);
+    CHECK(diags[0].code == diag::DPISpecDisallowed);
+    CHECK(diags[1].code == diag::TypoIdentifier);
+    CHECK(diags[2].code == diag::NotASubroutine);
+    CHECK(diags[3].code == diag::DPIExportKindMismatch);
+    CHECK(diags[4].code == diag::DPIExportDifferentScope);
+    CHECK(diags[5].code == diag::InvalidDPIReturnType);
+    CHECK(diags[6].code == diag::InvalidDPIArgType);
+    CHECK(diags[7].code == diag::DPIExportDuplicate);
+}
+
 TEST_CASE("Non-const subroutine check failures") {
     auto tree = SyntaxTree::fromText(R"(
 module m;

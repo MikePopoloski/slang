@@ -36,6 +36,7 @@ class SystemSubroutine;
 struct BindDirectiveSyntax;
 struct CompilationUnitSyntax;
 struct DataTypeSyntax;
+struct DPIExportSyntax;
 struct FunctionDeclarationSyntax;
 struct ModuleDeclarationSyntax;
 struct ScopedNameSyntax;
@@ -216,6 +217,10 @@ public:
     /// and false if it's already been elaborated (thus constituting an error).
     bool noteBindDirective(const BindDirectiveSyntax& syntax, const Definition* targetDef);
 
+    /// Notes the presence of a DPI export directive. These will be checked for correctness
+    /// but are otherwise unused by SystemVerilog code.
+    void noteDPIExportDirective(const DPIExportSyntax& syntax, const Scope& scope);
+
     /// Tracks the existence of an out-of-block declaration (method or constraint) in the
     /// given scope. This can later be retrieved by calling findOutOfBlockDecl().
     void addOutOfBlockDecl(const Scope& scope, const ScopedNameSyntax& name,
@@ -349,6 +354,7 @@ private:
     Diagnostic& addDiag(Diagnostic diag);
 
     void parseParamOverrides(flat_hash_map<string_view, const ConstantValue*>& results);
+    void checkDPIExports();
 
     // Stored options object.
     CompilationOptions options;
@@ -496,6 +502,9 @@ private:
     // A set tracking all bind directives we've encountered during elaboration,
     // which is used to know when we've seen them all and can stop doing early scanning.
     flat_hash_set<const BindDirectiveSyntax*> seenBindDirectives;
+
+    // A list of DPI export directives we've encountered during elaboration.
+    std::vector<std::pair<const DPIExportSyntax*, const Scope*>> dpiExports;
 
     // The built-in std package.
     const PackageSymbol* stdPkg = nullptr;

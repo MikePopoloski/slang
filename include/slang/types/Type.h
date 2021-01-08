@@ -250,6 +250,12 @@ public:
     /// the given mode.
     bool isValidForRand(RandMode mode) const;
 
+    /// Returns true if the type is valid for use as a DPI return value.
+    bool isValidForDPIReturn() const;
+
+    /// Returns true if the type is valid for use as a DPI argument.
+    bool isValidForDPIArg() const;
+
     /// Coerces the given constant into one that is appropriate for this type.
     ConstantValue coerceValue(const ConstantValue& value) const;
 

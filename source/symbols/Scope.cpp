@@ -356,6 +356,9 @@ void Scope::addMembers(const SyntaxNode& syntax) {
             addMember(
                 SubroutineSymbol::fromSyntax(compilation, syntax.as<DPIImportSyntax>(), *this));
             break;
+        case SyntaxKind::DPIExport:
+            compilation.noteDPIExportDirective(syntax.as<DPIExportSyntax>(), *this);
+            break;
         case SyntaxKind::ConstraintDeclaration:
             if (auto sym = ConstraintBlockSymbol::fromSyntax(
                     *this, syntax.as<ConstraintDeclarationSyntax>())) {
