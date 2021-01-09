@@ -38,8 +38,6 @@ using std::uintptr_t;
 
 using namespace std::literals;
 
-#define span_CONFIG_INDEX_TYPE std::size_t
-#define span_FEATURE_COMPARISON 0
 #include <span.hpp>
 using nonstd::span;
 
