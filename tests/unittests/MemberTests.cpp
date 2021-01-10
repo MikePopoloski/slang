@@ -1183,6 +1183,17 @@ module m;
     export "DPI-C" function f1;
     export "DPI-C" function f2;
     export "DPI-C" function foo;
+
+    function void f3(ref r); endfunction
+    export "DPI-C" function f3;
+
+    import "DPI-C" function void f4;
+    export "DPI-C" function f4;
+
+    function void f5; endfunction
+    export "DPI-C" \0a = function f5;
+
+    import "DPI-C" a$ = function void f6;
 endmodule
 )");
 
@@ -1190,7 +1201,7 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 8);
+    REQUIRE(diags.size() == 12);
     CHECK(diags[0].code == diag::DPISpecDisallowed);
     CHECK(diags[1].code == diag::TypoIdentifier);
     CHECK(diags[2].code == diag::NotASubroutine);
@@ -1199,6 +1210,59 @@ endmodule
     CHECK(diags[5].code == diag::InvalidDPIReturnType);
     CHECK(diags[6].code == diag::InvalidDPIArgType);
     CHECK(diags[7].code == diag::DPIExportDuplicate);
+    CHECK(diags[8].code == diag::DPIRefArg);
+    CHECK(diags[9].code == diag::DPIExportImportedFunc);
+    CHECK(diags[10].code == diag::InvalidDPICIdentifier);
+    CHECK(diags[11].code == diag::InvalidDPICIdentifier);
+}
+
+TEST_CASE("DPI signature checking") {
+    auto tree = SyntaxTree::fromText(R"(
+import "DPI-C" function int foo(int a, output b);
+
+function longint bar; endfunction
+export "DPI-C" foo = function bar;
+
+import "DPI-C" foo = function longint f1;
+
+function int f2(int a, output b); endfunction
+export "DPI-C" asdf = function f2;
+
+module m1;
+    function int f3(longint a, output b); endfunction
+    export "DPI-C" asdf = function f3;
+endmodule
+
+module m2;
+    function int f4(longint a, output b, input c); endfunction
+    export "DPI-C" asdf = function f4;
+endmodule
+
+module m3;
+    function int f5(int a, input b); endfunction
+    export "DPI-C" asdf = function f5;
+endmodule
+
+module m4;
+    function int asdf(int a, output b); endfunction
+    export "DPI-C" function asdf;
+
+    function int blah(int a, output b); endfunction
+    export "DPI-C" asdf = function blah;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 6);
+    CHECK(diags[0].code == diag::DPISignatureMismatch);
+    CHECK(diags[1].code == diag::DPISignatureMismatch);
+    CHECK(diags[2].code == diag::DPISignatureMismatch);
+    CHECK(diags[3].code == diag::DPISignatureMismatch);
+    CHECK(diags[4].code == diag::DPISignatureMismatch);
+    CHECK(diags[5].code == diag::DPIExportDuplicateCId);
 }
 
 TEST_CASE("Non-const subroutine check failures") {

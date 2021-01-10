@@ -2051,11 +2051,11 @@ endclass
 TEST_CASE("Randomize 'with' clauses") {
     auto tree = SyntaxTree::fromText(R"(
 package p;
-	int i;
+    int i;
     class Base;
         typedef int IntT;
     endclass
-	class A extends Base;
+    class A extends Base;
         rand int j;
         int l[5];
         function int foo; return 1; endfunction

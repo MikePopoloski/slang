@@ -6,6 +6,8 @@
 //------------------------------------------------------------------------------
 #include "slang/compilation/Compilation.h"
 
+#include "../text/CharInfo.h"
+
 #include "slang/binding/SystemSubroutine.h"
 #include "slang/compilation/Definition.h"
 #include "slang/compilation/ScriptSession.h"
@@ -163,6 +165,14 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
         handleDefault(symbol);
     }
 
+    void handle(const SubroutineSymbol& symbol) {
+        if (!handleDefault(symbol))
+            return;
+
+        if (symbol.flags.has(MethodFlags::DPIImport))
+            dpiImports.append(&symbol);
+    }
+
     void finalize() {
         // Once everything has been visited, go back over and check things that might
         // have been influenced by visiting later symbols. Unfortunately visiting
@@ -204,6 +214,7 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
     uint32_t errorLimit;
     uint32_t hierarchyDepth = 0;
     SmallVectorSized<const GenericClassDefSymbol*, 8> genericClasses;
+    SmallVectorSized<const SubroutineSymbol*, 4> dpiImports;
 };
 
 // This visitor is for finding all bind directives in the hierarchy.
@@ -863,9 +874,9 @@ const Diagnostics& Compilation::getSemanticDiagnostics() {
     getRoot().visit(visitor);
     visitor.finalize();
 
-    // Check all DPI exports for correctness.
-    if (!dpiExports.empty())
-        checkDPIExports();
+    // Check all DPI methods for correctness.
+    if (!dpiExports.empty() || !visitor.dpiImports.empty())
+        checkDPIMethods(visitor.dpiImports);
 
     // Report on unused out-of-block definitions. These are always a real error.
     for (auto& [key, val] : outOfBlockDecls) {
@@ -1127,7 +1138,73 @@ void Compilation::parseParamOverrides(flat_hash_map<string_view, const ConstantV
     }
 }
 
-void Compilation::checkDPIExports() {
+static bool isValidCIdChar(char c) {
+    return isAlphaNumeric(c) || c == '_';
+}
+
+static bool checkSignaturesMatch(const SubroutineSymbol& a, const SubroutineSymbol& b) {
+    if (a.subroutineKind != b.subroutineKind || a.flags != b.flags)
+        return false;
+
+    if (!a.getReturnType().isEquivalent(b.getReturnType()))
+        return false;
+
+    auto aargs = a.getArguments();
+    auto bargs = b.getArguments();
+    if (aargs.size() != bargs.size())
+        return false;
+
+    for (auto ai = aargs.begin(), bi = bargs.begin(); ai != aargs.end(); ai++, bi++) {
+        auto aa = *ai;
+        auto bb = *bi;
+        if (!aa->getType().isEquivalent(bb->getType()))
+            return false;
+        if (aa->direction != bb->direction)
+            return false;
+    }
+
+    return true;
+}
+
+void Compilation::checkDPIMethods(span<const SubroutineSymbol* const> dpiImports) {
+    auto getCId = [&](const Scope& scope, Token cid, Token name) {
+        string_view text = cid ? cid.valueText() : name.valueText();
+        if (!text.empty()) {
+            auto tail = text.substr(1);
+            if (!isValidCIdChar(text[0]) || isDecimalDigit(text[0]) ||
+                std::any_of(tail.begin(), tail.end(), [](char c) { return !isValidCIdChar(c); })) {
+                scope.addDiag(diag::InvalidDPICIdentifier, cid ? cid.range() : name.range())
+                    << text;
+                return string_view();
+            }
+        }
+        return text;
+    };
+
+    flat_hash_map<string_view, const SubroutineSymbol*> nameMap;
+    for (auto sub : dpiImports) {
+        auto syntax = sub->getSyntax();
+        ASSERT(syntax);
+
+        auto scope = sub->getParentScope();
+        ASSERT(scope);
+
+        auto& dis = syntax->as<DPIImportSyntax>();
+        string_view cId = getCId(*scope, dis.c_identifier, dis.method->name->getLastToken());
+        if (cId.empty())
+            continue;
+
+        auto [it, inserted] = nameMap.emplace(cId, sub);
+        if (!inserted) {
+            if (!checkSignaturesMatch(*sub, *it->second)) {
+                auto& diag = scope->addDiag(diag::DPISignatureMismatch, sub->location);
+                diag << cId;
+                diag.addNote(diag::NotePreviousDefinition, it->second->location);
+            }
+        }
+    }
+
+    flat_hash_map<std::tuple<string_view, const Scope*>, const DPIExportSyntax*> exportsByScope;
     flat_hash_map<const SubroutineSymbol*, const DPIExportSyntax*> previousExports;
     for (auto [syntax, scope] : dpiExports) {
         if (syntax->specString.valueText() == "DPI")
@@ -1164,6 +1241,12 @@ void Compilation::checkDPIExports() {
             continue;
         }
 
+        if (sub.flags.has(MethodFlags::DPIImport)) {
+            auto& diag = scope->addDiag(diag::DPIExportImportedFunc, syntax->name.range());
+            diag.addNote(diag::NoteDeclarationHere, sub.location);
+            continue;
+        }
+
         auto& retType = sub.getReturnType();
         if (!retType.isValidForDPIReturn() && !retType.isError()) {
             auto& diag = scope->addDiag(diag::InvalidDPIReturnType, sub.location);
@@ -1173,7 +1256,9 @@ void Compilation::checkDPIExports() {
         }
 
         for (auto arg : sub.getArguments()) {
-            // TODO: check input / output
+            if (arg->direction == ArgumentDirection::Ref)
+                scope->addDiag(diag::DPIRefArg, arg->location);
+
             auto& type = arg->getType();
             if (!type.isValidForDPIArg() && !type.isError()) {
                 auto& diag = scope->addDiag(diag::InvalidDPIArgType, arg->location);
@@ -1183,16 +1268,38 @@ void Compilation::checkDPIExports() {
             }
         }
 
-        auto [it, inserted] = previousExports.emplace(&sub, syntax);
-        if (!inserted) {
-            auto& diag = scope->addDiag(diag::DPIExportDuplicate, syntax->name.range()) << sub.name;
-            diag.addNote(diag::NotePreviousDefinition, it->second->name.location());
-            continue;
+        {
+            auto [it, inserted] = previousExports.emplace(&sub, syntax);
+            if (!inserted) {
+                auto& diag = scope->addDiag(diag::DPIExportDuplicate, syntax->name.range())
+                             << sub.name;
+                diag.addNote(diag::NotePreviousDefinition, it->second->name.location());
+                continue;
+            }
         }
 
-        // TODO:
-        // - check c_identifier
-        // - check no duplicate c_identifiers
+        string_view cId = getCId(*scope, syntax->c_identifier, syntax->name);
+        if (!cId.empty()) {
+            {
+                auto [it, inserted] = nameMap.emplace(cId, &sub);
+                if (!inserted) {
+                    if (!checkSignaturesMatch(sub, *it->second)) {
+                        auto& diag =
+                            scope->addDiag(diag::DPISignatureMismatch, syntax->name.range());
+                        diag << cId;
+                        diag.addNote(diag::NotePreviousDefinition, it->second->location);
+                    }
+                }
+            }
+            {
+                auto [it, inserted] = exportsByScope.emplace(std::make_tuple(cId, scope), syntax);
+                if (!inserted) {
+                    auto& diag = scope->addDiag(diag::DPIExportDuplicateCId, syntax->name.range());
+                    diag << cId;
+                    diag.addNote(diag::NotePreviousDefinition, it->second->name.location());
+                }
+            }
+        }
     }
 }
 

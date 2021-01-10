@@ -30,6 +30,7 @@ class InstanceSymbol;
 class PackageSymbol;
 class RootSymbol;
 class Statement;
+class SubroutineSymbol;
 class SyntaxTree;
 class SystemSubroutine;
 
@@ -354,7 +355,7 @@ private:
     Diagnostic& addDiag(Diagnostic diag);
 
     void parseParamOverrides(flat_hash_map<string_view, const ConstantValue*>& results);
-    void checkDPIExports();
+    void checkDPIMethods(span<const SubroutineSymbol* const> dpiImports);
 
     // Stored options object.
     CompilationOptions options;
