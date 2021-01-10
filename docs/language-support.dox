@@ -203,7 +203,7 @@ LRM | Feature | Supported
 {{m-success}} 13.3 | Tasks | v0.2
 {{m-success}} 13.4 | Functions | v0.2
 {{m-warning}} 13.5 | Subroutine calls and argument passing | partial
-{{m-warning}} 13.6 | Import and export functions | partial
+{{m-success}} 13.6 | Import and export functions | v0.6
 {{m-success}} 13.7 | Task and function names | v0.2
 {{m-dim}}     13.8 | Parameterized tasks and functions | N/A
 
@@ -445,6 +445,19 @@ LRM | Feature | Supported
 {{m-danger}}  32 | Backannotation using the standard delay format | no
 {{m-danger}}  33 | Configuring the contents of a design | no
 {{m-danger}}  34 | Protected envelopes | no
+
+## 35. Direct programming interface
+
+LRM | Feature | Supported
+--- | ------- | ---------
+{{m-success}} 35.2 | Overview | v0.6
+{{m-dim}}     35.3 | Two layers of DPI | N/A
+{{m-success}} 35.4 | Global namespace of imported and exported functions | v0.6
+{{m-warning}} 35.5 | Imported tasks and functions | partial
+{{m-success}} 35.6 | Calling imported functions | v0.6
+{{m-success}} 35.7 | Exported functions | v0.6
+{{m-success}} 35.8 | Exported tasks | v0.6
+{{m-dim}}     35.9 | Disabling DPI tasks and functions | N/A
 
 @section simulation Simulation
 
