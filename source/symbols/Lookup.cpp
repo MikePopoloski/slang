@@ -989,9 +989,6 @@ std::pair<const ClassType*, bool> Lookup::getContainingClass(const Scope& scope)
             if (parent->as<SubroutineSymbol>().flags & MethodFlags::Static)
                 inStatic = true;
         }
-        else if (parent->kind == SymbolKind::ConstraintBlock) {
-            inStatic |= parent->as<ConstraintBlockSymbol>().isStatic;
-        }
 
         auto parentScope = parent->getParentScope();
         ASSERT(parentScope);

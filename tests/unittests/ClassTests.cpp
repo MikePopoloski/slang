@@ -1954,6 +1954,9 @@ class A;
     static function foo;
         c4.constraint_mode(1);
     endfunction
+
+    rand int a;
+    static constraint c5 { a > 1; }
 endclass
 
 module m;
