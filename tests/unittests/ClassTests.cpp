@@ -1909,6 +1909,11 @@ class D;
         foreach (A[i, j, k]) A[i][j][k] inside {2,4,8,16};
         foreach (B[q, r, , s]) B[q][r] inside {1,2,3};
     }
+
+    randc int b;
+    constraint c2 {
+        soft b > 4;
+    }
 endclass
 )");
 
@@ -1916,7 +1921,7 @@ endclass
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 17);
+    REQUIRE(diags.size() == 18);
     CHECK(diags[0].code == diag::UnknownConstraintLiteral);
     CHECK(diags[1].code == diag::UnknownConstraintLiteral);
     CHECK(diags[2].code == diag::NonIntegralConstraintExpr);
@@ -1934,6 +1939,7 @@ endclass
     CHECK(diags[14].code == diag::BadSolveBefore);
     CHECK(diags[15].code == diag::RandCInSolveBefore);
     CHECK(diags[16].code == diag::SolveBeforeDisallowed);
+    CHECK(diags[17].code == diag::RandCInSoft);
 }
 
 TEST_CASE("Constraint qualifiers") {

@@ -131,8 +131,10 @@ struct DistVarVisitor {
 struct ConstraintExprVisitor {
     const BindContext& context;
     bool failed = false;
+    bool isSoft;
 
-    ConstraintExprVisitor(const BindContext& context) : context(context) {}
+    ConstraintExprVisitor(const BindContext& context, bool isSoft) :
+        context(context), isSoft(isSoft) {}
 
     template<typename T>
     bool visit(const T& expr) {
@@ -219,6 +221,14 @@ struct ConstraintExprVisitor {
             return visitInvalid(expr);
         }
 
+        if (isSoft) {
+            if (auto sym = expr.getSymbolReference()) {
+                RandMode mode = sym->getRandMode();
+                if (mode == RandMode::RandC)
+                    context.addDiag(diag::RandCInSoft, expr.sourceRange);
+            }
+        }
+
         return true;
     }
 
@@ -237,7 +247,7 @@ Constraint& ExpressionConstraint::fromSyntax(const ExpressionConstraintSyntax& s
     if (expr.bad())
         return badConstraint(comp, result);
 
-    ConstraintExprVisitor visitor(context);
+    ConstraintExprVisitor visitor(context, isSoft);
     if (!expr.visit(visitor))
         return badConstraint(comp, result);
 
@@ -258,7 +268,7 @@ Constraint& ImplicationConstraint::fromSyntax(const ImplicationConstraintSyntax&
     if (pred.bad() || body.bad())
         return badConstraint(comp, result);
 
-    ConstraintExprVisitor visitor(context);
+    ConstraintExprVisitor visitor(context, /* isSoft */ false);
     if (!pred.visit(visitor))
         return badConstraint(comp, result);
 
@@ -284,7 +294,7 @@ Constraint& ConditionalConstraint::fromSyntax(const ConditionalConstraintSyntax&
     if (pred.bad() || ifBody.bad() || (elseBody && elseBody->bad()))
         return badConstraint(comp, result);
 
-    ConstraintExprVisitor visitor(context);
+    ConstraintExprVisitor visitor(context, /* isSoft */ false);
     if (!pred.visit(visitor))
         return badConstraint(comp, result);
 
@@ -375,7 +385,7 @@ Constraint& DisableSoftConstraint::fromSyntax(const DisableConstraintSyntax& syn
         return badConstraint(comp, result);
 
     auto sym = expr.getSymbolReference();
-    if (!sym || sym->getRandMode() == RandMode::None) {
+    if (!sym || sym->getRandMode() != RandMode::Rand) {
         context.addDiag(diag::BadDisableSoft, expr.sourceRange);
         return badConstraint(comp, result);
     }
