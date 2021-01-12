@@ -68,7 +68,7 @@ endmodule
     CHECK(compilation.getSemanticDiagnostics().empty());
 
     // Lookup at (2); should return the package parameter
-    context.lookupLocation = LookupLocation::before(param);
+    context.lookupIndex = LookupLocation::before(param).getIndex();
     Lookup::name(compilation.parseName("x"), context, LookupFlags::None, result);
     symbol = result.found;
 

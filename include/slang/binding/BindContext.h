@@ -101,7 +101,7 @@ public:
     const Scope& scope;
 
     /// The location to use when looking up names during binding.
-    LookupLocation lookupLocation;
+    SymbolIndex lookupIndex;
 
     /// Various flags that control how binding is performed.
     bitmask<BindFlags> flags;
@@ -140,9 +140,12 @@ public:
     BindContext(const Scope& scope, LookupLocation lookupLocation,
                 bitmask<BindFlags> flags = BindFlags::None) :
         scope(scope),
-        lookupLocation(lookupLocation), flags(flags) {}
+        lookupIndex(lookupLocation.getIndex()), flags(flags) {
+        ASSERT(!lookupLocation.getScope() || lookupLocation.getScope() == &scope);
+    }
 
     Compilation& getCompilation() const;
+    LookupLocation getLocation() const { return LookupLocation(&scope, uint32_t(lookupIndex)); }
     bool inUnevaluatedBranch() const { return (flags & BindFlags::UnevaluatedBranch) != 0; }
 
     void setAttributes(const Statement& stmt,

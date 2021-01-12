@@ -29,8 +29,7 @@ void BindContext::setAttributes(const Statement& stmt,
     if (syntax.empty())
         return;
 
-    getCompilation().setAttributes(stmt,
-                                   AttributeSymbol::fromSyntax(syntax, scope, lookupLocation));
+    getCompilation().setAttributes(stmt, AttributeSymbol::fromSyntax(syntax, scope, getLocation()));
 }
 
 void BindContext::setAttributes(const Expression& expr,
@@ -43,8 +42,7 @@ void BindContext::setAttributes(const Expression& expr,
         return;
     }
 
-    getCompilation().setAttributes(expr,
-                                   AttributeSymbol::fromSyntax(syntax, scope, lookupLocation));
+    getCompilation().setAttributes(expr, AttributeSymbol::fromSyntax(syntax, scope, getLocation()));
 }
 
 Diagnostic& BindContext::addDiag(DiagCode code, SourceLocation location) const {

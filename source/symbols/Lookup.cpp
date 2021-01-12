@@ -809,7 +809,7 @@ void Lookup::name(const NameSyntax& syntax, const BindContext& context, bitmask<
         return;
 
     // Perform the lookup.
-    unqualifiedImpl(scope, name.text(), context.lookupLocation, name.range(), flags, {}, result);
+    unqualifiedImpl(scope, name.text(), context.getLocation(), name.range(), flags, {}, result);
     if (!result.found && !result.hasError())
         reportUndeclared(scope, name.text(), name.range(), flags, false, result);
 
@@ -1385,7 +1385,7 @@ void Lookup::qualified(const ScopedNameSyntax& syntax, const BindContext& contex
         case SyntaxKind::IdentifierSelectName:
         case SyntaxKind::ClassName:
             // Start by trying to find the first name segment using normal unqualified lookup
-            unqualifiedImpl(scope, name, context.lookupLocation, first.range(), flags, {}, result);
+            unqualifiedImpl(scope, name, context.getLocation(), first.range(), flags, {}, result);
             break;
         case SyntaxKind::UnitScope:
             // Ignore hierarchical lookups that occur inside uninstantiated modules.

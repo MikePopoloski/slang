@@ -731,7 +731,7 @@ const Type* GenericClassDefSymbol::getSpecializationImpl(
     // We want to suppress errors about params not having values and just
     // return null so that the caller can figure out if this is actually a problem.
     bool isForDefault = syntax == nullptr;
-    if (!paramBuilder.createParams(*classType, context.lookupLocation, instanceLoc,
+    if (!paramBuilder.createParams(*classType, context.getLocation(), instanceLoc,
                                    forceInvalidParams, isForDefault)) {
         if (isForDefault)
             return nullptr;

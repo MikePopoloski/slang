@@ -271,7 +271,7 @@ const Expression& Expression::bindImplicitParam(const DataTypeSyntax& typeSyntax
     if (!it.dimensions.empty()) {
         // If we have a range provided, the result is always an integral value
         // of the provided width -- getType() will do what we want here.
-        lhsType = &comp.getType(typeSyntax, context.lookupLocation, context.scope);
+        lhsType = &comp.getType(typeSyntax, context.getLocation(), context.scope);
     }
     else if (it.signing) {
         // If signing is provided, the result is always integral but we infer the width.
@@ -827,7 +827,7 @@ Expression& Expression::bindLookupResult(Compilation& compilation, const LookupR
         // We looked up a named data type and we were allowed to do so, so return it.
         ASSERT(!invocation && !withClause);
         const Type& resultType = Type::fromLookupResult(compilation, result, syntax,
-                                                        context.lookupLocation, context.scope);
+                                                        context.getLocation(), context.scope);
         return *compilation.emplace<DataTypeExpression>(resultType, syntax.sourceRange());
     }
 

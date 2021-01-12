@@ -10,9 +10,9 @@
 #include "slang/diagnostics/ExpressionsDiags.h"
 #include "slang/diagnostics/LookupDiags.h"
 #include "slang/symbols/ASTSerializer.h"
-#include "slang/types/AllTypes.h"
 #include "slang/symbols/VariableSymbols.h"
 #include "slang/syntax/AllSyntax.h"
+#include "slang/types/AllTypes.h"
 #include "slang/util/StackContainer.h"
 
 namespace slang {
@@ -25,7 +25,7 @@ Expression& Expression::bindAssignmentPattern(Compilation& comp,
 
     if (syntax.type) {
         // TODO: allow type references here
-        assignmentTarget = &comp.getType(*syntax.type, context.lookupLocation, context.scope);
+        assignmentTarget = &comp.getType(*syntax.type, context.getLocation(), context.scope);
         if (assignmentTarget->kind != SymbolKind::TypeAlias &&
             assignmentTarget->kind != SymbolKind::PredefinedIntegerType) {
             if (!assignmentTarget->isError())
@@ -538,8 +538,8 @@ Expression& StructuredAssignmentPatternExpression::forStruct(
             }
         }
         else if (DataTypeSyntax::isKind(item->key->kind)) {
-            const Type& typeKey = comp.getType(item->key->as<DataTypeSyntax>(),
-                                               context.lookupLocation, context.scope);
+            const Type& typeKey =
+                comp.getType(item->key->as<DataTypeSyntax>(), context.getLocation(), context.scope);
             if (typeKey.isSimpleType()) {
                 auto& expr = bindRValue(typeKey, *item->expr,
                                         item->expr->getFirstToken().location(), context);
@@ -593,8 +593,8 @@ Expression& StructuredAssignmentPatternExpression::forFixedArray(
             bad |= defaultSetter->bad();
         }
         else if (DataTypeSyntax::isKind(item->key->kind)) {
-            const Type& typeKey = comp.getType(item->key->as<DataTypeSyntax>(),
-                                               context.lookupLocation, context.scope);
+            const Type& typeKey =
+                comp.getType(item->key->as<DataTypeSyntax>(), context.getLocation(), context.scope);
             if (typeKey.isSimpleType()) {
                 auto& expr = bindRValue(typeKey, *item->expr,
                                         item->expr->getFirstToken().location(), context);

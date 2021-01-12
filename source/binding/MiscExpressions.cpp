@@ -466,7 +466,7 @@ Expression& CallExpression::fromArgs(Compilation& compilation, const Subroutine&
 
     auto result = compilation.emplace<CallExpression>(&symbol, symbol.getReturnType(), thisClass,
                                                       boundArgs.copy(compilation),
-                                                      context.lookupLocation, range);
+                                                      context.getLocation(), range);
     if (bad)
         return badExpr(compilation, result);
 
@@ -711,7 +711,7 @@ Expression& CallExpression::createSystemCall(
 
     const Type& type = subroutine.checkArguments(context, buffer, range, iterOrThis);
     auto expr = compilation.emplace<CallExpression>(
-        callInfo, type, nullptr, buffer.copy(compilation), context.lookupLocation, range);
+        callInfo, type, nullptr, buffer.copy(compilation), context.getLocation(), range);
 
     if (type.isError())
         return badExpr(compilation, expr);
@@ -926,7 +926,7 @@ Expression& DataTypeExpression::fromSyntax(Compilation& compilation, const DataT
         return badExpr(compilation, nullptr);
     }
 
-    const Type& type = compilation.getType(syntax, context.lookupLocation, context.scope);
+    const Type& type = compilation.getType(syntax, context.getLocation(), context.scope);
     return *compilation.emplace<DataTypeExpression>(type, syntax.sourceRange());
 }
 

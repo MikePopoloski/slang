@@ -96,9 +96,9 @@ void DeclaredType::resolveType(const BindContext& initializerContext) const {
             typedefTarget = &parent.as<Type>();
 
         BindContext typeContext = getBindContext();
-        type = &comp.getType(*typeSyntax, typeContext.lookupLocation, scope, typedefTarget);
+        type = &comp.getType(*typeSyntax, typeContext.getLocation(), scope, typedefTarget);
         if (dimensions)
-            type = &comp.getType(*type, *dimensions, typeContext.lookupLocation, scope);
+            type = &comp.getType(*type, *dimensions, typeContext.getLocation(), scope);
     }
 
     if (flags.has(DeclaredTypeFlags::NeedsTypeCheck) && !type->isError())
