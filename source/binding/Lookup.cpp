@@ -4,7 +4,7 @@
 //
 // File is under the MIT license; see LICENSE for details
 //------------------------------------------------------------------------------
-#include "slang/symbols/Lookup.h"
+#include "slang/binding/Lookup.h"
 
 #include "slang/binding/Expression.h"
 #include "slang/compilation/Compilation.h"

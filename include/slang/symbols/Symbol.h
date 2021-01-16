@@ -6,7 +6,7 @@
 //------------------------------------------------------------------------------
 #pragma once
 
-#include "slang/symbols/Lookup.h"
+#include "slang/binding/Lookup.h"
 #include "slang/text/SourceLocation.h"
 #include "slang/util/Util.h"
 

@@ -8,7 +8,7 @@
 
 #include <flat_hash_map.hpp>
 
-#include "slang/symbols/Lookup.h"
+#include "slang/binding/Lookup.h"
 #include "slang/symbols/SemanticFacts.h"
 #include "slang/util/SmallVector.h"
 #include "slang/util/Util.h"

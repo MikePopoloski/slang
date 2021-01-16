@@ -6,8 +6,8 @@
 //------------------------------------------------------------------------------
 #pragma once
 
+#include "slang/binding/Lookup.h"
 #include "slang/numeric/ConstantValue.h"
-#include "slang/symbols/Lookup.h"
 #include "slang/util/Util.h"
 
 namespace slang {

@@ -119,6 +119,7 @@ add_library(slangcompiler
     binding/Expression.cpp
     binding/FormatHelpers.cpp
     binding/LiteralExpressions.cpp
+    binding/Lookup.cpp
     binding/LValue.cpp
     binding/MiscExpressions.cpp
     binding/OperatorExpressions.cpp
@@ -156,7 +157,6 @@ add_library(slangcompiler
     symbols/ClassSymbols.cpp
     symbols/CompilationUnitSymbols.cpp
     symbols/InstanceSymbols.cpp
-    symbols/Lookup.cpp
     symbols/MemberSymbols.cpp
     symbols/ParameterBuilder.cpp
     symbols/ParameterSymbols.cpp
