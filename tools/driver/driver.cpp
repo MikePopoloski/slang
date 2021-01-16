@@ -500,10 +500,11 @@ int driverMain(int argc, TArgs argv, bool suppressColorsStdout, bool suppressCol
     else
         showColors = !suppressColorsStderr && OS::fileSupportsColors(stderr);
 
-    if (showColors)
+    if (showColors) {
         OS::setStderrColorsEnabled(true);
-    if (!suppressColorsStdout && OS::fileSupportsColors(stdout))
-        OS::setStdoutColorsEnabled(true);
+        if (!suppressColorsStdout && OS::fileSupportsColors(stdout))
+            OS::setStdoutColorsEnabled(true);
+    }
 
     bool anyErrors = false;
     SourceManager sourceManager;
