@@ -45,6 +45,7 @@ class InstanceCache {
 public:
     const InstanceBodySymbol* find(const InstanceCacheKey& key) const;
     void insert(const InstanceBodySymbol& instance);
+    void disable() { disabled = true; }
 
     size_t getHitCount() const { return hits; }
     size_t getMissCount() const { return misses; }
@@ -57,6 +58,7 @@ private:
     flat_hash_map<InstanceCacheKey, const InstanceBodySymbol*, Hasher> cache;
     mutable size_t hits = 0;
     mutable size_t misses = 0;
+    bool disabled = false;
 };
 
 } // namespace slang

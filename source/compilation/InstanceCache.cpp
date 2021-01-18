@@ -91,6 +91,9 @@ bool InstanceCacheKey::operator==(const InstanceCacheKey& other) const {
 }
 
 const InstanceBodySymbol* InstanceCache::find(const InstanceCacheKey& key) const {
+    if (disabled)
+        return nullptr;
+
     auto it = cache.find(key);
     if (it == cache.end()) {
         misses++;
@@ -102,7 +105,8 @@ const InstanceBodySymbol* InstanceCache::find(const InstanceCacheKey& key) const
 }
 
 void InstanceCache::insert(const InstanceBodySymbol& instance) {
-    cache.emplace(instance.getCacheKey(), &instance);
+    if (!disabled)
+        cache.emplace(instance.getCacheKey(), &instance);
 }
 
 } // namespace slang

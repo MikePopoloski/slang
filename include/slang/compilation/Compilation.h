@@ -98,6 +98,10 @@ struct CompilationOptions {
     /// for tests; for end users, they can use warning flags to control output.
     bool suppressUnused = true;
 
+    /// If true, disable caching of instance bodies, so that each instance gets
+    /// its own copy of all body members.
+    bool disableInstanceCaching = false;
+
     /// If non-empty, specifies the list of modules that should serve as the
     /// top modules in the design. If empty, this will be automatically determined
     /// based on which modules are unreferenced elsewhere.

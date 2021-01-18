@@ -121,6 +121,8 @@ Compilation::Compilation(const Bag& options) :
 
     root = std::make_unique<RootSymbol>(*this);
     instanceCache = std::make_unique<InstanceCache>();
+    if (this->options.disableInstanceCaching)
+        instanceCache->disable();
 
     // Register all system tasks, functions, and methods.
     Builtins::registerArrayMethods(*this);

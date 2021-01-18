@@ -559,6 +559,8 @@ int driverMain(int argc, TArgs argv, bool suppressColorsStdout, bool suppressCol
         coptions.maxConstexprBacktrace = *maxConstexprBacktrace;
     if (errorLimit.has_value())
         coptions.errorLimit = *errorLimit * 2;
+    if (astJsonFile)
+        coptions.disableInstanceCaching = true;
 
     for (auto& name : topModules)
         coptions.topModules.emplace(name);
