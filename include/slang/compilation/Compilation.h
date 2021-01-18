@@ -222,6 +222,13 @@ public:
     /// but are otherwise unused by SystemVerilog code.
     void noteDPIExportDirective(const DPIExportSyntax& syntax, const Scope& scope);
 
+    /// Notes the fact that the given instance body has one or more upward hierarchical
+    /// names in its expressions or statements.
+    void noteUpwardNames(const InstanceBodySymbol& instance);
+
+    /// Returns true if the given instance body has at least one upward hierarchical name in it.
+    bool hasUpwardNames(const InstanceBodySymbol& instance) const;
+
     /// Tracks the existence of an out-of-block declaration (method or constraint) in the
     /// given scope. This can later be retrieved by calling findOutOfBlockDecl().
     void addOutOfBlockDecl(const Scope& scope, const ScopedNameSyntax& name,
@@ -341,6 +348,7 @@ private:
     // These functions are called by Scopes to create and track various members.
     friend class Scope;
     friend class Lookup;
+    friend struct DiagnosticVisitor;
 
     Scope::DeferredMemberData& getOrAddDeferredData(Scope::DeferredMemberIndex& index);
     void trackImport(Scope::ImportDataIndex& index, const WildcardImportSymbol& import);
@@ -503,6 +511,14 @@ private:
     // A set tracking all bind directives we've encountered during elaboration,
     // which is used to know when we've seen them all and can stop doing early scanning.
     flat_hash_set<const BindDirectiveSyntax*> seenBindDirectives;
+
+    // A set of all instance bodies that have upward hierarchical names.
+    flat_hash_set<const InstanceBodySymbol*> bodiesWithUpwardNames;
+
+    // The path of the current instance being elaborated. This is only set temporarily,
+    // during traversal of the AST to collect diagnostics, in order to allow upward
+    // names to resolve to specific instances.
+    span<const InstanceSymbol* const> currentInstancePath;
 
     // A list of DPI export directives we've encountered during elaboration.
     std::vector<std::pair<const DPIExportSyntax*, const Scope*>> dpiExports;

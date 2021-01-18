@@ -751,7 +751,8 @@ Statement& DisableStatement::fromSyntax(Compilation& compilation,
                                         const DisableStatementSyntax& syntax,
                                         const BindContext& context) {
     LookupResult result;
-    Lookup::name(*syntax.name, context, LookupFlags::AllowDeclaredAfter, result);
+    Lookup::name(*syntax.name, context,
+                 LookupFlags::AllowDeclaredAfter | LookupFlags::RegisterUpwardNames, result);
     result.errorIfSelectors(context);
     result.reportErrors(context);
 

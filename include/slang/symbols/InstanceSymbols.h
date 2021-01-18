@@ -86,6 +86,9 @@ private:
 
 class InstanceBodySymbol : public Symbol, public Scope {
 public:
+    /// A copy of all port parameter symbols used to construct the instance body.
+    span<const ParameterSymbolBase* const> parameters;
+
     /// Indicates whether the module isn't actually instantiated in the design.
     /// This might be because it was created with invalid parameters simply to
     /// check name lookup rules but it's never actually referenced elsewhere
@@ -93,7 +96,7 @@ public:
     bool isUninstantiated = false;
 
     InstanceBodySymbol(Compilation& compilation, const InstanceCacheKey& cacheKey,
-                       bool isUninstantiated);
+                       span<const ParameterSymbolBase* const> parameters, bool isUninstantiated);
 
     span<const Symbol* const> getPortList() const {
         ensureElaborated();
@@ -111,7 +114,10 @@ public:
 
     static const InstanceBodySymbol& fromDefinition(
         Compilation& compilation, const InstanceCacheKey& cacheKey,
-        span<const ParameterSymbolBase* const> parameters, bool isUninstantiated);
+        span<const ParameterSymbolBase* const> parameters, bool isUninstantiated,
+        bool forceUncached = false);
+
+    const InstanceBodySymbol& cloneUncached() const;
 
     void serializeTo(ASTSerializer& serializer) const;
 

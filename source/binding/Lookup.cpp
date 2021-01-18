@@ -187,15 +187,23 @@ bool isClassType(const Symbol& symbol) {
     return symbol.kind == SymbolKind::GenericClassDef;
 }
 
-bool isUninstantiated(const Scope& scope) {
+const InstanceBodySymbol* getInstanceBody(const Scope& scope) {
     auto currScope = &scope;
     while (currScope && currScope->asSymbol().kind != SymbolKind::InstanceBody)
         currScope = currScope->asSymbol().getParentScope();
 
     if (currScope)
-        return currScope->asSymbol().as<InstanceBodySymbol>().isUninstantiated;
+        return &currScope->asSymbol().as<InstanceBodySymbol>();
 
-    return false;
+    return nullptr;
+}
+
+bool isUninstantiated(const Scope& scope) {
+    auto body = getInstanceBody(scope);
+    if (!body)
+        return false;
+
+    return body->isUninstantiated;
 }
 
 const NameSyntax* splitScopedName(const ScopedNameSyntax& syntax,
@@ -1484,8 +1492,15 @@ void Lookup::qualified(const ScopedNameSyntax& syntax, const BindContext& contex
     if (!lookupUpward(compilation, nameParts, first, context, result, flags))
         return;
 
-    if (result.found)
+    if (result.found) {
+        result.isUpwardName = true;
+        if (flags.has(LookupFlags::RegisterUpwardNames)) {
+            auto body = getInstanceBody(scope);
+            if (body)
+                compilation.noteUpwardNames(*body);
+        }
         return;
+    }
 
     // We couldn't find anything. originalResult has any diagnostics issued by the first
     // downward lookup (if any), so it's fine to just return it as is. If we never found any

@@ -124,7 +124,7 @@ void createParams(Compilation& compilation, const Definition& definition,
     struct TempInstance : public InstanceBodySymbol {
         TempInstance(Compilation& compilation, const Definition& definition,
                      bool forceInvalidParams) :
-            InstanceBodySymbol(compilation, InstanceCacheKey(definition, {}, {}),
+            InstanceBodySymbol(compilation, InstanceCacheKey(definition, {}, {}), {},
                                forceInvalidParams) {
             setParent(definition.scope);
         }
@@ -456,11 +456,26 @@ void InstanceSymbol::serializeTo(ASTSerializer& serializer) const {
 }
 
 InstanceBodySymbol::InstanceBodySymbol(Compilation& compilation, const InstanceCacheKey& cacheKey,
+                                       span<const ParameterSymbolBase* const> parameters,
                                        bool isUninstantiated) :
     Symbol(SymbolKind::InstanceBody, cacheKey.getDefinition().name,
            cacheKey.getDefinition().location),
-    Scope(compilation, this), isUninstantiated(isUninstantiated), cacheKey(cacheKey) {
+    Scope(compilation, this), parameters(parameters), isUninstantiated(isUninstantiated),
+    cacheKey(cacheKey) {
     setParent(cacheKey.getDefinition().scope, cacheKey.getDefinition().indexInScope);
+}
+
+const InstanceBodySymbol& InstanceBodySymbol::cloneUncached() const {
+    auto& result = fromDefinition(getCompilation(), getCacheKey(), parameters, isUninstantiated,
+                                  /* forceUncached */ true);
+
+    // const_cast is ok here only because we pass forceUncached above, which ensures
+    // the function just created a new instance.
+    auto scope = getParentScope();
+    ASSERT(scope);
+    const_cast<InstanceBodySymbol&>(result).setParent(*scope, getIndex());
+
+    return result;
 }
 
 const InstanceBodySymbol& InstanceBodySymbol::fromDefinition(
@@ -479,16 +494,29 @@ const InstanceBodySymbol& InstanceBodySymbol::fromDefinition(
                           paramBuilder.paramSymbols, isUninstantiated);
 }
 
+static span<const ParameterSymbolBase* const> copyParams(
+    BumpAllocator& alloc, span<const ParameterSymbolBase* const> source) {
+    if (source.empty())
+        return {};
+
+    using PSB = const ParameterSymbolBase*;
+    PSB* ptr = reinterpret_cast<PSB*>(alloc.allocate(source.size() * sizeof(PSB), alignof(PSB)));
+    memcpy(ptr, source.data(), source.size() * sizeof(PSB));
+
+    return span<PSB const>(ptr, source.size());
+}
+
 const InstanceBodySymbol& InstanceBodySymbol::fromDefinition(
     Compilation& comp, const InstanceCacheKey& cacheKey,
-    span<const ParameterSymbolBase* const> parameters, bool isUninstantiated) {
+    span<const ParameterSymbolBase* const> parameters, bool isUninstantiated, bool forceUncached) {
 
     // If there's already a cached body for this key, return that instead of creating a new one.
-    if (auto cached = comp.getInstanceCache().find(cacheKey))
+    if (auto cached = comp.getInstanceCache().find(cacheKey); cached && !forceUncached)
         return *cached;
 
     auto& declSyntax = cacheKey.getDefinition().syntax;
-    auto result = comp.emplace<InstanceBodySymbol>(comp, cacheKey, isUninstantiated);
+    auto result = comp.emplace<InstanceBodySymbol>(comp, cacheKey, copyParams(comp, parameters),
+                                                   isUninstantiated);
     result->setSyntax(declSyntax);
 
     // Package imports from the header always come first.

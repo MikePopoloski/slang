@@ -32,32 +32,35 @@ enum class LookupFlags {
 
     /// The lookup is occurring in a constant context. This adds an additional
     /// restriction that the symbols cannot be referenced by hierarchical path.
-    Constant = 1,
+    Constant = 1 << 0,
 
     /// A lookup for a type name, as opposed to a value. These names cannot be hierarchical
     /// but can be package or class scoped.
-    Type = 2,
+    Type = 1 << 1,
 
     /// Usually lookups require that the found symbol be declared before the lookup
     /// location. This flag removes that restriction.
-    AllowDeclaredAfter = 4,
+    AllowDeclaredAfter = 1 << 2,
 
     /// Don't search through wildcard imports to satisfy the lookup.
-    DisallowWildcardImport = 8,
+    DisallowWildcardImport = 1 << 3,
 
     /// Don't report an error if the lookup is for a simple identifier that
     /// cannot be found.
-    NoUndeclaredError = 16,
+    NoUndeclaredError = 1 << 4,
 
     /// The lookup is for a typedef target type, which has a special exemption
     /// to allow scoped access to incomplete forward class types.
-    TypedefTarget = 32,
+    TypedefTarget = 1 << 5,
 
     /// The lookup should not continue looking into parent scopes if the name
     /// is not found in the initial search scope.
-    NoParentScope = 64
+    NoParentScope = 1 << 6,
+
+    /// The presence of upward name paths should be registered with the compilation.
+    RegisterUpwardNames = 1 << 7
 };
-BITMASK(LookupFlags, NoParentScope);
+BITMASK(LookupFlags, RegisterUpwardNames);
 
 /// This type denotes the ordering of symbols within a particular scope, for the purposes of
 /// determining whether a found symbol is visible compared to the given location.
@@ -113,6 +116,9 @@ struct LookupResult {
 
     /// Set to true if the lookup was hierarchical.
     bool isHierarchical = false;
+
+    /// Set to true if the symbol was found via upward name resolution.
+    bool isUpwardName = false;
 
     /// Set to true if we observed an invalid import statement somewhere during lookup.
     /// This means the lack of a found symbol should be treated with caution, because

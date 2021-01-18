@@ -22,11 +22,24 @@
 #include "slang/text/SourceManager.h"
 #include "slang/types/TypePrinter.h"
 
-namespace {
+namespace slang::Builtins {
+
+void registerArrayMethods(Compilation&);
+void registerConversionFuncs(Compilation&);
+void registerEnumMethods(Compilation&);
+void registerMathFuncs(Compilation&);
+void registerMiscSystemFuncs(Compilation&);
+void registerNonConstFuncs(Compilation&);
+void registerQueryFuncs(Compilation&);
+void registerStringMethods(Compilation&);
+void registerSystemTasks(Compilation&);
+const PackageSymbol& createStdPackage(Compilation&);
+
+} // namespace slang::Builtins
 
 static const string_view DefinitionKindStrs[3] = { "module"sv, "interface"sv, "program"sv };
 
-using namespace slang;
+namespace slang {
 
 // This visitor is used to touch every node in the AST to ensure that all lazily
 // evaluated members have been realized and we have recorded every diagnostic.
@@ -267,25 +280,6 @@ struct BindVisitor : public ASTVisitor<BindVisitor, false, false> {
     size_t expected;
     bool errored = false;
 };
-
-} // namespace
-
-namespace slang::Builtins {
-
-void registerArrayMethods(Compilation&);
-void registerConversionFuncs(Compilation&);
-void registerEnumMethods(Compilation&);
-void registerMathFuncs(Compilation&);
-void registerMiscSystemFuncs(Compilation&);
-void registerNonConstFuncs(Compilation&);
-void registerQueryFuncs(Compilation&);
-void registerStringMethods(Compilation&);
-void registerSystemTasks(Compilation&);
-const PackageSymbol& createStdPackage(Compilation&);
-
-} // namespace slang::Builtins
-
-namespace slang {
 
 Compilation::Compilation(const Bag& options) :
     options(options.getOrDefault<CompilationOptions>()), tempDiag({}, {}) {
@@ -800,6 +794,14 @@ bool Compilation::noteBindDirective(const BindDirectiveSyntax& syntax,
 
 void Compilation::noteDPIExportDirective(const DPIExportSyntax& syntax, const Scope& scope) {
     dpiExports.emplace_back(&syntax, &scope);
+}
+
+void Compilation::noteUpwardNames(const InstanceBodySymbol& instance) {
+    bodiesWithUpwardNames.emplace(&instance);
+}
+
+bool Compilation::hasUpwardNames(const InstanceBodySymbol& instance) const {
+    return bodiesWithUpwardNames.find(&instance) != bodiesWithUpwardNames.end();
 }
 
 void Compilation::addOutOfBlockDecl(const Scope& scope, const ScopedNameSyntax& name,
