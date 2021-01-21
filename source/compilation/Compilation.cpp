@@ -11,6 +11,7 @@
 
 #include "slang/binding/SystemSubroutine.h"
 #include "slang/compilation/Definition.h"
+#include "slang/compilation/DesignTree.h"
 #include "slang/compilation/ScriptSession.h"
 #include "slang/diagnostics/DiagnosticEngine.h"
 #include "slang/diagnostics/LookupDiags.h"
@@ -364,6 +365,15 @@ const RootSymbol& Compilation::getRoot() {
     return *root;
 }
 
+const DesignTreeNode& Compilation::getDesignTree() {
+    // Force creation of the tree by going through getSemanticDiagnostics
+    // which will ensure that the design is visited in the proper order first.
+    if (!designTree)
+        getSemanticDiagnostics();
+
+    return *designTree;
+}
+
 const CompilationUnitSymbol* Compilation::getCompilationUnit(
     const CompilationUnitSyntax& syntax) const {
 
@@ -633,6 +643,7 @@ const Diagnostics& Compilation::getSemanticDiagnostics() {
                               options.errorLimit == 0 ? UINT32_MAX : options.errorLimit);
     getRoot().visit(visitor);
     visitor.finalize();
+    designTree = &DesignTreeNode::build(*this);
 
     // Check all DPI methods for correctness.
     if (!dpiExports.empty() || !visitor.dpiImports.empty())

@@ -22,6 +22,7 @@ namespace slang {
 class AttributeSymbol;
 class CompilationUnitSymbol;
 class Definition;
+class DesignTreeNode;
 class Expression;
 class GenericClassDefSymbol;
 class InstanceBodySymbol;
@@ -143,6 +144,10 @@ public:
     /// no longer make any modifications to the compilation object; any attempts to do
     /// so will result in an exception.
     const RootSymbol& getRoot();
+
+    /// Gets the design tree. Like @a getRoot this will force elaboration the first time
+    /// it's called and the compilation will be finalized.
+    const DesignTreeNode& getDesignTree();
 
     /// Indicates whether the design has been compiled and can no longer accept modifications.
     bool isFinalized() const { return finalized; }
@@ -529,6 +534,9 @@ private:
 
     // The built-in std package.
     const PackageSymbol* stdPkg = nullptr;
+
+    // The design tree representing the elaborated design.
+    const DesignTreeNode* designTree = nullptr;
 };
 
 } // namespace slang
