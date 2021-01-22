@@ -1550,3 +1550,29 @@ endmodule
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::UnexpectedSelection);
 }
+
+TEST_CASE("Upward lookup with different resolutions") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    int i = foo.bar;
+endmodule
+
+module n;
+    m m1();
+    if (1) begin : foo
+        int bar;
+    end
+endmodule
+
+module o;
+    m m2();
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::UndeclaredIdentifier);
+}

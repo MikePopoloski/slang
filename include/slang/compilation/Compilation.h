@@ -212,6 +212,10 @@ public:
     /// instances point to which instance bodies.
     void addInstance(const InstanceSymbol& instance);
 
+    /// Registers a new instance with the compilation; used to keep track of which
+    /// instances point to which instance bodies.
+    void addInstance(const InstanceSymbol& instance, const InstanceBodySymbol& body);
+
     /// Returns the list of instances that share the same instance body.
     span<const InstanceSymbol* const> getParentInstances(const InstanceBodySymbol& body) const;
 
@@ -349,16 +353,27 @@ public:
         return genericClassAllocator.emplace(std::forward<Args>(args)...);
     }
 
+    /// Sets the hierarchical path of the current instance being elaborated.
+    /// This state is transistory during elaboration and is used to correctly
+    /// resolve upward name lookups.
+    void setCurrentInstancePath(span<const InstanceSymbol* const> path) {
+        currentInstancePath = path;
+    }
+
+    /// Gets the hierarchical path of the current instance being elaborated.
+    /// This state is transistory during elaboration and is used to correctly
+    /// resolve upward name lookups.
+    span<const InstanceSymbol* const> getCurrentInstancePath() const { return currentInstancePath; }
+
     int getNextEnumSystemId() { return nextEnumSystemId++; }
     int getNextStructSystemId() { return nextStructSystemId++; }
     int getNextUnionSystemId() { return nextUnionSystemId++; }
 
 private:
-    // These functions are called by Scopes to create and track various members.
-    friend class Scope;
     friend class Lookup;
-    friend struct DiagnosticVisitor;
+    friend class Scope;
 
+    // These functions are called by Scopes to create and track various members.
     Scope::DeferredMemberData& getOrAddDeferredData(Scope::DeferredMemberIndex& index);
     void trackImport(Scope::ImportDataIndex& index, const WildcardImportSymbol& import);
     span<const WildcardImportSymbol*> queryImports(Scope::ImportDataIndex index);

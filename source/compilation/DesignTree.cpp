@@ -11,52 +11,66 @@
 
 namespace slang {
 
-static DesignTreeNode& buildNode(Compilation& comp, const InstanceSymbol& inst,
-                                 uint32_t& hierarchyDepth);
+class ExpressionVisitor : public ASTVisitor<ExpressionVisitor, true, true> {
+public:
+};
 
-static DesignTreeNode& buildNode(Compilation& comp, const Scope& scope, uint32_t& hierarchyDepth) {
-    SmallVectorSized<const DesignTreeNode*, 8> childNodes;
-    for (auto& child : scope.members()) {
-        if (child.isScope())
-            childNodes.append(&buildNode(comp, child.as<Scope>(), hierarchyDepth));
-        else if (child.kind == SymbolKind::Instance)
-            childNodes.append(&buildNode(comp, child.as<InstanceSymbol>(), hierarchyDepth));
+class NodeBuilder {
+public:
+    NodeBuilder(Compilation& compilation) : comp(compilation) {}
+
+    DesignTreeNode& buildNode(const InstanceSymbol& inst) {
+        if (path.size() > comp.getOptions().maxInstanceDepth) {
+            return *comp.emplace<DesignTreeNode>(inst.body, span<const DesignTreeNode* const>{},
+                                                 span<const StorageElement* const>{});
+        }
+
+        // If the instance body has upward names we have to clone and re-check
+        // expressions for specific diagnostics. This is skipped for the first
+        // instance in the list of parents because that has for sure already been
+        // visited when collecting diagnostics.
+        const InstanceBodySymbol* body = &inst.body;
+        if (comp.hasUpwardNames(inst.body)) {
+            auto parents = comp.getParentInstances(*body);
+            if (parents.empty() || parents[0] != &inst) {
+                comp.setCurrentInstancePath(path);
+                body = &inst.body.cloneUncached();
+                comp.addInstance(inst, *body);
+            }
+        }
+
+        path.append(&inst);
+        auto& result = buildNode(*body);
+        path.pop();
+
+        return result;
     }
 
-    return *comp.emplace<DesignTreeNode>(scope, childNodes.copy(comp),
-                                         span<const StorageElement* const>{});
-}
+private:
+    DesignTreeNode& buildNode(const Scope& scope) {
+        SmallVectorSized<const DesignTreeNode*, 8> childNodes;
+        for (auto& child : scope.members()) {
+            if (child.isScope())
+                childNodes.append(&buildNode(child.as<Scope>()));
+            else if (child.kind == SymbolKind::Instance)
+                childNodes.append(&buildNode(child.as<InstanceSymbol>()));
+            else
+                child.visit(ExpressionVisitor());
+        }
 
-static DesignTreeNode& buildNode(Compilation& comp, const InstanceSymbol& inst,
-                                 uint32_t& hierarchyDepth) {
-    if (hierarchyDepth > comp.getOptions().maxInstanceDepth) {
-        return *comp.emplace<DesignTreeNode>(inst.body, span<const DesignTreeNode* const>{},
+        return *comp.emplace<DesignTreeNode>(scope, childNodes.copy(comp),
                                              span<const StorageElement* const>{});
     }
 
-    // If the instance body has upward names we have to clone and re-check
-    // expressions for specific diagnostics. This is skipped for the first
-    // instance in the list of parents because that has for sure already been
-    // visited when collecting diagnostics.
-    const InstanceBodySymbol* body = &inst.body;
-    if (comp.hasUpwardNames(inst.body)) {
-        auto parents = comp.getParentInstances(*body);
-        if (parents.empty() || parents[0] != &inst)
-            body = &inst.body.cloneUncached();
-    }
-
-    hierarchyDepth++;
-    auto& result = buildNode(comp, *body, hierarchyDepth);
-    hierarchyDepth--;
-
-    return result;
-}
+    Compilation& comp;
+    SmallVectorSized<const InstanceSymbol*, 8> path;
+};
 
 DesignTreeNode& DesignTreeNode::build(Compilation& comp) {
-    uint32_t hierarchyDepth = 0;
+    NodeBuilder builder(comp);
     SmallVectorSized<const DesignTreeNode*, 8> childNodes;
     for (auto inst : comp.getRoot().topInstances)
-        childNodes.append(&buildNode(comp, *inst, hierarchyDepth));
+        childNodes.append(&builder.buildNode(*inst));
 
     return *comp.emplace<DesignTreeNode>(comp.getRoot(), childNodes.copy(comp),
                                          span<const StorageElement* const>{});

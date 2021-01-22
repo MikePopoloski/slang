@@ -537,6 +537,10 @@ void Compilation::addInstance(const InstanceSymbol& instance) {
     instanceParents[&instance.body].push_back(&instance);
 }
 
+void Compilation::addInstance(const InstanceSymbol& instance, const InstanceBodySymbol& body) {
+    instanceParents[&body].push_back(&instance);
+}
+
 span<const InstanceSymbol* const> Compilation::getParentInstances(
     const InstanceBodySymbol& body) const {
     auto it = instanceParents.find(&body);

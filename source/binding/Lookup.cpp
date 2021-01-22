@@ -418,6 +418,7 @@ bool lookupDownward(span<const NamePlusLoc> nameParts, NameComponents name,
 bool lookupUpward(Compilation& compilation, span<const NamePlusLoc> nameParts,
                   const NameComponents& name, const BindContext& context, LookupResult& result,
                   bitmask<LookupFlags> flags) {
+    auto currentInstPath = compilation.getCurrentInstancePath();
 
     // Upward lookups can match either a scope name, or a module definition name (on any of the
     // instances). Imports are not considered.
@@ -482,14 +483,21 @@ bool lookupUpward(Compilation& compilation, span<const NamePlusLoc> nameParts,
                     scope = nullptr;
                     break;
                 case SymbolKind::InstanceBody: {
-                    // TODO: This will only look at one of our instance parents, but there
-                    // may be many, instantiated in such a way that some of them are invalid.
-                    // We need to check that somewhere at some point.
-                    //
-                    // TODO: if this is a nested module it may do the wrong thing...
-                    auto parents = compilation.getParentInstances(symbol->as<InstanceBodySymbol>());
-                    if (!parents.empty())
-                        nextInstance = parents[0]->getParentScope();
+                    // If our instance path is set, we can use a specific instance by
+                    // matching it up with the body that we found. Otherwise, this is
+                    // initial lookup and we should pick any arbitrary instance with
+                    // which to continue.
+                    if (!currentInstPath.empty() && &currentInstPath.back()->body == symbol) {
+                        nextInstance = currentInstPath.back()->getParentScope();
+                        currentInstPath = currentInstPath.subspan(0, currentInstPath.size() - 1);
+                    }
+                    else {
+                        // TODO: if this is a nested module it may do the wrong thing...
+                        auto parents =
+                            compilation.getParentInstances(symbol->as<InstanceBodySymbol>());
+                        if (!parents.empty())
+                            nextInstance = parents[0]->getParentScope();
+                    }
 
                     scope = symbol->getParentScope();
                     break;
