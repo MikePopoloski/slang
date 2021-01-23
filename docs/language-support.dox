@@ -365,7 +365,7 @@ LRM | Feature | Supported
 {{m-danger}}  23.5 | Extern modules | no
 {{m-success}} 23.6 | Hierarchical names | v0.2
 {{m-success}} 23.7 | Member selects and hierarchical names | v0.2
-{{m-warning}} 23.8 | Upwards name referencing | partial
+{{m-success}} 23.8 | Upwards name referencing | v0.7
 {{m-success}} 23.9 | Scope rules | v0.2
 {{m-success}} 23.10 | Overriding module parameters | v0.2
 {{m-danger}}  23.10.1 | defparam statement | no
