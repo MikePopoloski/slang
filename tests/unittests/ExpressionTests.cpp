@@ -1982,3 +1982,36 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Unbounded queue access") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    int q[$] = { 2, 4, 8 };
+    int e, pos;
+    initial begin
+        e = q[$];
+        q[$] = 1;
+        q[$+1] = 2;
+        q = q[1:$];
+        q = q[0:$-1];
+        q = { q[0:pos-1], e, q[pos:$] };
+        q = { q[0:pos], e, q[pos+1:$] };
+        q = q[2:$];
+        q = q[1:$-1'b1];
+        q = q[1:e ? $+1 : $-1];
+
+        // These are disallowed.
+        e = $;
+        q[-$] = 1;
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::UnboundedNotAllowed);
+    CHECK(diags[1].code == diag::UnboundedNotAllowed);
+}

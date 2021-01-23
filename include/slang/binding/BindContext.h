@@ -78,9 +78,12 @@ enum class BindFlags {
     /// This is the first expression appearing as an expression statement; potentially this
     /// indicates whether a subroutine invocation is as a task (if set) or as a function (unset).
     /// Cleared for nested subexpressions.
-    TopLevelStatement = 1 << 11
+    TopLevelStatement = 1 << 11,
+
+    /// Expression is allowed to be the unbounded literal '$' such as inside a queue select.
+    AllowUnboundedLiteral = 1 << 12
 };
-BITMASK(BindFlags, TopLevelStatement);
+BITMASK(BindFlags, AllowUnboundedLiteral);
 
 enum class DimensionKind { Unknown, Range, AbbreviatedRange, Dynamic, Associative, Queue };
 

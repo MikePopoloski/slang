@@ -151,8 +151,9 @@ Expression& ElementSelectExpression::fromSyntax(Compilation& compilation, Expres
     }
 
     if (!selector) {
-        selector = &selfDetermined(compilation, syntax, context);
-        if (!selector->bad() && !selector->type->isIntegral()) {
+        BindFlags flags = valueType.isQueue() ? BindFlags::AllowUnboundedLiteral : BindFlags::None;
+        selector = &selfDetermined(compilation, syntax, context, flags);
+        if (!selector->bad() && !selector->type->isIntegral() && !selector->type->isUnbounded()) {
             context.addDiag(diag::ExprMustBeIntegral, selector->sourceRange);
             return badExpr(compilation, nullptr);
         }
@@ -341,11 +342,12 @@ Expression& RangeSelectExpression::fromSyntax(Compilation& compilation, Expressi
     bool isQueue = value.type->isQueue();
     bool leftConst = !isQueue && selectionKind == RangeSelectionKind::Simple;
     bool rightConst = !isQueue;
+    BindFlags extraFlags = isQueue ? BindFlags::AllowUnboundedLiteral : BindFlags::None;
 
-    const Expression& left = leftConst ? bind(*syntax.left, context, BindFlags::Constant)
-                                       : selfDetermined(compilation, *syntax.left, context);
-    const Expression& right = rightConst ? bind(*syntax.right, context, BindFlags::Constant)
-                                         : selfDetermined(compilation, *syntax.right, context);
+    auto& left = leftConst ? bind(*syntax.left, context, BindFlags::Constant | extraFlags)
+                           : selfDetermined(compilation, *syntax.left, context, extraFlags);
+    auto& right = rightConst ? bind(*syntax.right, context, BindFlags::Constant | extraFlags)
+                             : selfDetermined(compilation, *syntax.right, context, extraFlags);
 
     auto result = compilation.emplace<RangeSelectExpression>(
         selectionKind, compilation.getErrorType(), value, left, right, fullRange);
@@ -353,11 +355,11 @@ Expression& RangeSelectExpression::fromSyntax(Compilation& compilation, Expressi
     if (value.bad() || left.bad() || right.bad())
         return badExpr(compilation, result);
 
-    if (!left.type->isIntegral()) {
+    if (!left.type->isIntegral() && !left.type->isUnbounded()) {
         context.addDiag(diag::ExprMustBeIntegral, left.sourceRange);
         return badExpr(compilation, result);
     }
-    if (!right.type->isIntegral()) {
+    if (!right.type->isIntegral() && !right.type->isUnbounded()) {
         context.addDiag(diag::ExprMustBeIntegral, right.sourceRange);
         return badExpr(compilation, result);
     }

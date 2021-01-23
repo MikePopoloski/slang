@@ -523,7 +523,7 @@ Expression& Expression::create(Compilation& compilation, const ExpressionSyntax&
             result = &NullLiteral::fromSyntax(compilation, syntax.as<LiteralExpressionSyntax>());
             break;
         case SyntaxKind::WildcardLiteralExpression:
-            result = &UnboundedLiteral::fromSyntax(compilation, syntax.as<LiteralExpressionSyntax>());
+            result = &UnboundedLiteral::fromSyntax(context, syntax.as<LiteralExpressionSyntax>());
             break;
         case SyntaxKind::StringLiteralExpression:
             result = &StringLiteral::fromSyntax(compilation, syntax.as<LiteralExpressionSyntax>());

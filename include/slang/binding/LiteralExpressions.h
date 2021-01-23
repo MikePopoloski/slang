@@ -137,7 +137,8 @@ public:
 
     void serializeTo(ASTSerializer&) const {}
 
-    static Expression& fromSyntax(Compilation& compilation, const LiteralExpressionSyntax& syntax);
+    static Expression& fromSyntax(const BindContext& context,
+                                  const LiteralExpressionSyntax& syntax);
 
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::UnboundedLiteral; }
 };

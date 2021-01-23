@@ -488,7 +488,7 @@ bool Type::isAssignmentCompatible(const Type& rhs) const {
     // Any integral or floating value can be implicitly converted to a packed integer
     // value or to a floating value.
     if ((l->isIntegral() && !l->isEnum()) || l->isFloating())
-        return r->isIntegral() || r->isFloating();
+        return r->isIntegral() || r->isFloating() || r->isUnbounded();
 
     if (l->isUnpackedArray() && r->isUnpackedArray()) {
         // Associative arrays are only compatible with each other.

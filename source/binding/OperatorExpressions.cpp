@@ -15,8 +15,8 @@
 #include "slang/diagnostics/ExpressionsDiags.h"
 #include "slang/parsing/LexerFacts.h"
 #include "slang/symbols/ASTSerializer.h"
-#include "slang/types/AllTypes.h"
 #include "slang/syntax/AllSyntax.h"
+#include "slang/types/AllTypes.h"
 
 namespace {
 
@@ -551,8 +551,13 @@ void UnaryExpression::serializeTo(ASTSerializer& serializer) const {
 Expression& BinaryExpression::fromSyntax(Compilation& compilation,
                                          const BinaryExpressionSyntax& syntax,
                                          const BindContext& context) {
-    Expression& lhs = create(compilation, *syntax.left, context);
-    Expression& rhs = create(compilation, *syntax.right, context);
+    // If we are allowed unbounded literals here, pass that along to subexpressions.
+    BindFlags flags = BindFlags::None;
+    if (context.flags.has(BindFlags::AllowUnboundedLiteral))
+        flags = BindFlags::AllowUnboundedLiteral;
+
+    Expression& lhs = create(compilation, *syntax.left, context, flags);
+    Expression& rhs = create(compilation, *syntax.right, context, flags);
 
     auto& result = fromComponents(lhs, rhs, getBinaryOperator(syntax.kind),
                                   syntax.operatorToken.location(), syntax.sourceRange(), context);
@@ -571,6 +576,11 @@ Expression& BinaryExpression::fromComponents(Expression& lhs, Expression& rhs, B
     auto result = compilation.emplace<BinaryExpression>(op, *lt, lhs, rhs, sourceRange);
     if (lhs.bad() || rhs.bad())
         return badExpr(compilation, result);
+
+    if (lt->isUnbounded())
+        lt = &compilation.getIntType();
+    if (rt->isUnbounded())
+        rt = &compilation.getIntType();
 
     bool bothIntegral = lt->isIntegral() && rt->isIntegral();
     bool bothNumeric = lt->isNumeric() && rt->isNumeric();
@@ -882,8 +892,8 @@ Expression& ConditionalExpression::fromSyntax(Compilation& compilation,
     auto& pred = selfDetermined(compilation, *syntax.predicate->conditions[0]->expr, context);
 
     // If the predicate is known at compile time, we can tell which branch will be unevaluated.
-    BindFlags leftFlags = BindFlags::None;
-    BindFlags rightFlags = BindFlags::None;
+    bitmask<BindFlags> leftFlags = BindFlags::None;
+    bitmask<BindFlags> rightFlags = BindFlags::None;
     ConstantValue predVal = context.tryEval(pred);
     if (predVal && (!predVal.isInteger() || !predVal.integer().hasUnknown())) {
         if (predVal.isTrue())
@@ -892,12 +902,24 @@ Expression& ConditionalExpression::fromSyntax(Compilation& compilation,
             leftFlags = BindFlags::UnevaluatedBranch;
     }
 
+    // Pass through the flag allowing unbounded literals.
+    if (context.flags.has(BindFlags::AllowUnboundedLiteral)) {
+        leftFlags |= BindFlags::AllowUnboundedLiteral;
+        rightFlags |= BindFlags::AllowUnboundedLiteral;
+    }
+
     auto& left = create(compilation, *syntax.left, context, leftFlags, assignmentTarget);
     auto& right = create(compilation, *syntax.right, context, rightFlags, assignmentTarget);
 
+    const Type* lt = left.type;
+    const Type* rt = right.type;
+    if (lt->isUnbounded())
+        lt = &compilation.getIntType();
+    if (rt->isUnbounded())
+        rt = &compilation.getIntType();
+
     // Force four-state return type for ambiguous condition case.
-    const Type* resultType =
-        binaryOperatorType(compilation, left.type, right.type, pred.type->isFourState());
+    const Type* resultType = binaryOperatorType(compilation, lt, rt, pred.type->isFourState());
     auto result = compilation.emplace<ConditionalExpression>(*resultType, pred, left, right,
                                                              syntax.sourceRange());
     if (pred.bad() || left.bad() || right.bad())
@@ -909,31 +931,29 @@ Expression& ConditionalExpression::fromSyntax(Compilation& compilation,
     // If both sides of the expression are numeric, we've already determined the correct
     // result type. Otherwise, follow the rules in [11.14.11].
     bool good = true;
-    const Type& lt = *left.type;
-    const Type& rt = *right.type;
-    if (!lt.isNumeric() || !rt.isNumeric()) {
-        if (lt.isNull() && rt.isNull()) {
+    if (!lt->isNumeric() || !rt->isNumeric()) {
+        if (lt->isNull() && rt->isNull()) {
             result->type = &compilation.getNullType();
         }
-        else if (lt.isClass() || rt.isClass() || lt.isCHandle() || rt.isCHandle() || lt.isEvent() ||
-                 rt.isEvent()) {
-            if (lt.isNull())
-                result->type = &rt;
-            else if (rt.isNull())
-                result->type = &lt;
-            else if (rt.isAssignmentCompatible(lt))
-                result->type = &rt;
-            else if (lt.isAssignmentCompatible(rt))
-                result->type = &lt;
-            else if (auto common = Type::getCommonBase(lt, rt))
+        else if (lt->isClass() || rt->isClass() || lt->isCHandle() || rt->isCHandle() ||
+                 lt->isEvent() || rt->isEvent()) {
+            if (lt->isNull())
+                result->type = rt;
+            else if (rt->isNull())
+                result->type = lt;
+            else if (rt->isAssignmentCompatible(*lt))
+                result->type = rt;
+            else if (lt->isAssignmentCompatible(*rt))
+                result->type = lt;
+            else if (auto common = Type::getCommonBase(*lt, *rt))
                 result->type = common;
-            else if (lt.isEquivalent(rt))
-                result->type = &lt;
+            else if (lt->isEquivalent(*rt))
+                result->type = lt;
             else
                 good = false;
         }
-        else if (lt.isEquivalent(rt)) {
-            result->type = &lt;
+        else if (lt->isEquivalent(*rt)) {
+            result->type = lt;
         }
         else if (left.isImplicitString() && right.isImplicitString()) {
             result->type = &compilation.getStringType();
@@ -945,7 +965,7 @@ Expression& ConditionalExpression::fromSyntax(Compilation& compilation,
 
     if (!good) {
         auto& diag = context.addDiag(diag::BadConditionalExpression, syntax.question.location());
-        diag << lt << rt;
+        diag << *lt << *rt;
         diag << left.sourceRange;
         diag << right.sourceRange;
         return badExpr(compilation, result);

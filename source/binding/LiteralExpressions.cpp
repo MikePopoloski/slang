@@ -7,6 +7,7 @@
 #include "slang/binding/LiteralExpressions.h"
 
 #include "slang/compilation/Compilation.h"
+#include "slang/diagnostics/ExpressionsDiags.h"
 #include "slang/symbols/ASTSerializer.h"
 #include "slang/syntax/AllSyntax.h"
 #include "slang/types/Type.h"
@@ -183,11 +184,17 @@ ConstantValue NullLiteral::evalImpl(EvalContext&) const {
     return ConstantValue::NullPlaceholder{};
 }
 
-Expression& UnboundedLiteral::fromSyntax(Compilation& compilation,
+Expression& UnboundedLiteral::fromSyntax(const BindContext& context,
                                          const LiteralExpressionSyntax& syntax) {
     ASSERT(syntax.kind == SyntaxKind::WildcardLiteralExpression);
-    return *compilation.emplace<UnboundedLiteral>(compilation.getUnboundedType(),
-                                                  syntax.sourceRange());
+
+    auto& comp = context.getCompilation();
+    if (!context.flags.has(BindFlags::AllowUnboundedLiteral)) {
+        context.addDiag(diag::UnboundedNotAllowed, syntax.sourceRange());
+        return badExpr(comp, nullptr);
+    }
+
+    return *comp.emplace<UnboundedLiteral>(comp.getUnboundedType(), syntax.sourceRange());
 }
 
 ConstantValue UnboundedLiteral::evalImpl(EvalContext&) const {
