@@ -8,8 +8,8 @@
 
 #include "slang/compilation/Compilation.h"
 #include "slang/symbols/ASTSerializer.h"
-#include "slang/types/Type.h"
 #include "slang/syntax/AllSyntax.h"
+#include "slang/types/Type.h"
 
 namespace slang {
 
@@ -181,6 +181,18 @@ Expression& NullLiteral::fromSyntax(Compilation& compilation,
 
 ConstantValue NullLiteral::evalImpl(EvalContext&) const {
     return ConstantValue::NullPlaceholder{};
+}
+
+Expression& UnboundedLiteral::fromSyntax(Compilation& compilation,
+                                         const LiteralExpressionSyntax& syntax) {
+    ASSERT(syntax.kind == SyntaxKind::WildcardLiteralExpression);
+    return *compilation.emplace<UnboundedLiteral>(compilation.getUnboundedType(),
+                                                  syntax.sourceRange());
+}
+
+ConstantValue UnboundedLiteral::evalImpl(EvalContext&) const {
+    // TODO: implement
+    return nullptr;
 }
 
 StringLiteral::StringLiteral(const Type& type, string_view value, string_view rawValue,

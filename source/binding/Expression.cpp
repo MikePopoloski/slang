@@ -522,6 +522,9 @@ Expression& Expression::create(Compilation& compilation, const ExpressionSyntax&
         case SyntaxKind::NullLiteralExpression:
             result = &NullLiteral::fromSyntax(compilation, syntax.as<LiteralExpressionSyntax>());
             break;
+        case SyntaxKind::WildcardLiteralExpression:
+            result = &UnboundedLiteral::fromSyntax(compilation, syntax.as<LiteralExpressionSyntax>());
+            break;
         case SyntaxKind::StringLiteralExpression:
             result = &StringLiteral::fromSyntax(compilation, syntax.as<LiteralExpressionSyntax>());
             break;
@@ -738,7 +741,6 @@ Expression& Expression::create(Compilation& compilation, const ExpressionSyntax&
         case SyntaxKind::UnarySequenceEventExpression:
         case SyntaxKind::UntilPropertyExpression:
         case SyntaxKind::UntilWithPropertyExpression:
-        case SyntaxKind::WildcardLiteralExpression:
         case SyntaxKind::WithClause:
         case SyntaxKind::WithinSequenceExpression:
             context.addDiag(diag::NotYetSupported, syntax.sourceRange());

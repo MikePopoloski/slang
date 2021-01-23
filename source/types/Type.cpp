@@ -940,6 +940,7 @@ bool Type::isKind(SymbolKind kind) {
         case SymbolKind::CHandleType:
         case SymbolKind::StringType:
         case SymbolKind::EventType:
+        case SymbolKind::UnboundedType:
         case SymbolKind::TypeAlias:
         case SymbolKind::ErrorType:
             return true;

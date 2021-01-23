@@ -126,6 +126,22 @@ public:
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::NullLiteral; }
 };
 
+/// Represents the unboudned queue or range literal.
+class UnboundedLiteral : public Expression {
+public:
+    UnboundedLiteral(const Type& type, SourceRange sourceRange) :
+        Expression(ExpressionKind::UnboundedLiteral, type, sourceRange) {}
+
+    ConstantValue evalImpl(EvalContext& context) const;
+    bool verifyConstantImpl(EvalContext&) const { return true; }
+
+    void serializeTo(ASTSerializer&) const {}
+
+    static Expression& fromSyntax(Compilation& compilation, const LiteralExpressionSyntax& syntax);
+
+    static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::UnboundedLiteral; }
+};
+
 /// Represents a string literal.
 class StringLiteral : public Expression {
 public:

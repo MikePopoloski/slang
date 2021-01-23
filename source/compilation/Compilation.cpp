@@ -62,6 +62,7 @@ Compilation::Compilation(const Bag& options) :
     voidType = emplace<VoidType>();
     nullType = emplace<NullType>();
     eventType = emplace<EventType>();
+    unboundedType = emplace<UnboundedType>();
     errorType = emplace<ErrorType>();
 
     // Register built-in types for lookup by syntax kind.

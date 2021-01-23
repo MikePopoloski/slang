@@ -288,6 +288,10 @@ void TypePrinter::visit(const EventType&, string_view) {
     buffer->append("event");
 }
 
+void TypePrinter::visit(const UnboundedType&, string_view) {
+    buffer->append("$");
+}
+
 void TypePrinter::visit(const ClassType& type, string_view) {
     buffer->append(type.name);
 }

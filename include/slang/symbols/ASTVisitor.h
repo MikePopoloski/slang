@@ -179,6 +179,7 @@ decltype(auto) Symbol::visit(TVisitor&& visitor, Args&&... args) const {
         TYPE(CHandleType);
         TYPE(StringType);
         TYPE(EventType);
+        TYPE(UnboundedType);
         TYPE(ErrorType);
         TYPE(NetType);
     }
@@ -259,6 +260,7 @@ decltype(auto) Expression::visitExpression(TExpression* expr, TVisitor&& visitor
         CASE(TimeLiteral, TimeLiteral);
         CASE(UnbasedUnsizedIntegerLiteral, UnbasedUnsizedIntegerLiteral);
         CASE(NullLiteral, NullLiteral);
+        CASE(UnboundedLiteral, UnboundedLiteral);
         CASE(StringLiteral, StringLiteral);
         CASE(NamedValue, NamedValueExpression);
         CASE(HierarchicalValue, HierarchicalValueExpression);

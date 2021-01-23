@@ -31,6 +31,7 @@ struct InvocationExpressionSyntax;
     x(TimeLiteral) \
     x(UnbasedUnsizedIntegerLiteral) \
     x(NullLiteral) \
+    x(UnboundedLiteral) \
     x(StringLiteral) \
     x(NamedValue) \
     x(HierarchicalValue) \

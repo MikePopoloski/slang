@@ -316,6 +316,17 @@ public:
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::EventType; }
 };
 
+/// Represents the '$' special token that is a standin for the unbounded end
+/// of a queue or range selection.
+class UnboundedType : public Type {
+public:
+    UnboundedType() : Type(SymbolKind::UnboundedType, "$", SourceLocation()) {}
+
+    ConstantValue getDefaultValueImpl() const { return nullptr; }
+
+    static bool isKind(SymbolKind kind) { return kind == SymbolKind::UnboundedType; }
+};
+
 struct ClassPropertyDeclarationSyntax;
 struct ForwardInterfaceClassTypedefDeclarationSyntax;
 struct ForwardTypedefDeclarationSyntax;

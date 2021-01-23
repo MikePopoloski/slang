@@ -50,6 +50,7 @@ enum class RandMode;
     x(CHandleType) \
     x(StringType) \
     x(EventType) \
+    x(UnboundedType) \
     x(TypeAlias) \
     x(ErrorType) \
     x(ForwardingTypedef) \

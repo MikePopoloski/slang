@@ -69,6 +69,7 @@ public:
     MIRValue visit(const TimeLiteral& expr) { return emitConst(expr); }
     MIRValue visit(const UnbasedUnsizedIntegerLiteral& expr) { return emitConst(expr); }
     MIRValue visit(const NullLiteral& expr) { return emitConst(expr); }
+    MIRValue visit(const UnboundedLiteral& expr) { return emitConst(expr); }
     MIRValue visit(const StringLiteral& expr) { return emitConst(expr); }
 
     MIRValue visit(const NamedValueExpression& expr) {
