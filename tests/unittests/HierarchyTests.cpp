@@ -1,5 +1,7 @@
 #include "Test.h"
 
+#include "slang/compilation/DesignTree.h"
+
 TEST_CASE("Finding top level") {
     auto file1 = SyntaxTree::fromText(
         "module A; endmodule\nmodule B; A a(); endmodule\nmodule C; endmodule");
@@ -1175,4 +1177,47 @@ endmodule
     Compilation compilation;
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Upward name by definition name -- design tree") {
+    auto tree = SyntaxTree::fromText(R"(
+module B();
+  parameter w = 10;
+  C c1();
+endmodule
+
+module C();
+    int i = B.w;
+endmodule
+
+module top();
+  B #(7) b1();
+  B #(11) b2();
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    auto dt = &compilation.getDesignTree();
+    CHECK(dt->astScope.asSymbol().name == "$root");
+
+    auto top = dt->childNodes[0];
+    CHECK(top->astScope.asSymbol().name == "top");
+
+    auto checkI = [&](int val) {
+        auto i = &dt->astScope.members().begin()->as<VariableSymbol>();
+        CHECK(i->name == "i");
+
+        auto sym = i->getInitializer()->as<ConversionExpression>().operand().getSymbolReference();
+        REQUIRE(sym);
+        CHECK(sym->as<ParameterSymbol>().getValue().integer() == val);
+    };
+
+    dt = top->childNodes[0]->childNodes[0];
+    checkI(7);
+
+    dt = top->childNodes[1]->childNodes[0];
+    checkI(11);
 }

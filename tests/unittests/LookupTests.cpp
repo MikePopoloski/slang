@@ -741,12 +741,12 @@ TEST_CASE("Upward name unit scope") {
     auto file1 = SyntaxTree::fromText(R"(
 module M;
     N n();
-endmodule
 
-function int foo;
-    static logic f = 1;
-    return 42;
-endfunction
+    function int foo;
+        static logic f = 1;
+        return 42;
+    endfunction
+endmodule
 )");
 
     auto file2 = SyntaxTree::fromText(R"(

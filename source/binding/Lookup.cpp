@@ -418,101 +418,86 @@ bool lookupDownward(span<const NamePlusLoc> nameParts, NameComponents name,
 bool lookupUpward(Compilation& compilation, span<const NamePlusLoc> nameParts,
                   const NameComponents& name, const BindContext& context, LookupResult& result,
                   bitmask<LookupFlags> flags) {
-    auto currentInstPath = compilation.getCurrentInstancePath();
-
     // Upward lookups can match either a scope name, or a module definition name (on any of the
     // instances). Imports are not considered.
     const Symbol* firstMatch = nullptr;
-    const Scope* scope = &context.scope;
-    while (true) {
-        const Scope* nextInstance = nullptr;
+    auto tryMatch = [&](const Symbol& symbol) {
+        // Keep track of the first match we find; if it turns out we can't
+        // resolve all of the name parts we'll move on and try elsewhere,
+        // but at the end if we couldn't find a full match we'll use this to
+        // provide a better error.
+        if (!firstMatch)
+            firstMatch = &symbol;
 
-        while (scope) {
-            auto symbol = scope->find(name.text());
-            if (!symbol || symbol->isValue() || symbol->isType() ||
-                (!symbol->isScope() && symbol->kind != SymbolKind::Instance)) {
-                // We didn't find an instance name, so now look at the definition types of each
-                // instance.
-                symbol = nullptr;
-                for (auto& instance : scope->membersOfType<InstanceSymbol>()) {
-                    if (instance.getDefinition().name == name.text()) {
-                        if (!symbol)
-                            symbol = &instance;
-                        else {
-                            // TODO: error
-                        }
-                    }
+        result.clear();
+        result.found = &symbol;
+        return lookupDownward(nameParts, name, context, result, flags);
+    };
+
+    auto currentInstPath = compilation.getCurrentInstancePath();
+    const Scope* scope = &context.scope;
+    while (scope) {
+        // Search for a scope or instance target within our current scope.
+        auto symbol = scope->find(name.text());
+        if (symbol && !symbol->isValue() && !symbol->isType() &&
+            (symbol->isScope() || symbol->kind == SymbolKind::Instance)) {
+            if (!tryMatch(*symbol))
+                return false;
+
+            if (result.found)
+                return true;
+        }
+
+        // Advance to the next scope, skipping to the parent instance when
+        // we hit an instance body instead of going on to the compilation unit.
+        symbol = &scope->asSymbol();
+        if (symbol->kind != SymbolKind::InstanceBody) {
+            scope = symbol->getParentScope();
+        }
+        else {
+            // If our instance path is set, we can use a specific instance by
+            // matching it up with the body that we found. Otherwise, this is
+            // initial lookup and we should pick any arbitrary instance with
+            // which to continue.
+            const InstanceSymbol* inst = nullptr;
+            if (!currentInstPath.empty() && &currentInstPath.back()->body == symbol) {
+                inst = currentInstPath.back();
+                scope = inst->getParentScope();
+                currentInstPath = currentInstPath.subspan(0, currentInstPath.size() - 1);
+            }
+            else {
+                // TODO: if this is a nested module it may do the wrong thing...
+                auto parents = compilation.getParentInstances(symbol->as<InstanceBodySymbol>());
+                if (!parents.empty()) {
+                    inst = parents[0];
+                    scope = inst->getParentScope();
+                }
+                else {
+                    scope = nullptr;
                 }
             }
 
-            if (symbol) {
-                // Keep track of the first match we find; if it turns out we can't
-                // resolve all of the name parts we'll move on and try elsewhere,
-                // but at the end if we couldn't find a full match we'll use this to
-                // provide a better error.
-                if (!firstMatch)
-                    firstMatch = symbol;
-
-                result.clear();
-                result.found = symbol;
-
-                if (!lookupDownward(nameParts, name, context, result, flags))
+            // If the instance's definition name matches our target name,
+            // try to match from the current instance.
+            if (inst && inst->getDefinition().name == name.text()) {
+                if (!tryMatch(*inst))
                     return false;
 
                 if (result.found)
                     return true;
             }
-
-            // Figure out which scope to look at next. If we're already at the root scope, we're
-            // done and should return. Otherwise, we want to keep going up until we hit the
-            // compilation unit, at which point we'll jump back to the instantiation scope of
-            // the last instance we hit.
-            symbol = &scope->asSymbol();
-            switch (symbol->kind) {
-                case SymbolKind::Root:
-                    result.clear();
-                    if (firstMatch) {
-                        // If we did find a match at some point, repeat that
-                        // lookup to provide a real error message.
-                        result.found = firstMatch;
-                        lookupDownward(nameParts, name, context, result, flags);
-                        return false;
-                    }
-                    return true;
-                case SymbolKind::CompilationUnit:
-                    scope = nullptr;
-                    break;
-                case SymbolKind::InstanceBody: {
-                    // If our instance path is set, we can use a specific instance by
-                    // matching it up with the body that we found. Otherwise, this is
-                    // initial lookup and we should pick any arbitrary instance with
-                    // which to continue.
-                    if (!currentInstPath.empty() && &currentInstPath.back()->body == symbol) {
-                        nextInstance = currentInstPath.back()->getParentScope();
-                        currentInstPath = currentInstPath.subspan(0, currentInstPath.size() - 1);
-                    }
-                    else {
-                        // TODO: if this is a nested module it may do the wrong thing...
-                        auto parents =
-                            compilation.getParentInstances(symbol->as<InstanceBodySymbol>());
-                        if (!parents.empty())
-                            nextInstance = parents[0]->getParentScope();
-                    }
-
-                    scope = symbol->getParentScope();
-                    break;
-                }
-                default:
-                    scope = symbol->getParentScope();
-                    break;
-            }
         }
-
-        if (nextInstance)
-            scope = nextInstance;
-        else
-            scope = &compilation.getRoot();
     }
+
+    result.clear();
+    if (firstMatch) {
+        // If we did find a match at some point, repeat that
+        // lookup to provide a real error message.
+        result.found = firstMatch;
+        lookupDownward(nameParts, name, context, result, flags);
+        return false;
+    }
+    return true;
 }
 
 bool checkVisibility(const Symbol& symbol, const Scope& scope, optional<SourceRange> sourceRange,

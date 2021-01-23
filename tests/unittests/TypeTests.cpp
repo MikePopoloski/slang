@@ -838,6 +838,10 @@ module top;
 endmodule
 )");
 
+    // Force the compilation to create top-level instances before we try to
+    // query their names via hierarchical path.
+    session.getCompilation().getRoot();
+
     auto tn = [&](auto& name) { return session.eval("$typename("s + name + ")"s).str(); };
 
     CHECK(tn("node") == "bit");
