@@ -201,8 +201,17 @@ Expression& ElementSelectExpression::fromConstant(Compilation& compilation, Expr
 
 ConstantValue ElementSelectExpression::evalImpl(EvalContext& context) const {
     ConstantValue cv = value().eval(context);
+    if (!cv)
+        return nullptr;
+
+    auto prevQ = context.getQueueTarget();
+    if (cv.isQueue())
+        context.setQueueTarget(&cv);
+
     ConstantValue cs = selector().eval(context);
-    if (!cv || !cs)
+
+    context.setQueueTarget(prevQ);
+    if (!cs)
         return nullptr;
 
     // Handling for packed and unpacked arrays, all integer types.
@@ -257,8 +266,20 @@ ConstantValue ElementSelectExpression::evalImpl(EvalContext& context) const {
 
 LValue ElementSelectExpression::evalLValueImpl(EvalContext& context) const {
     LValue lval = value().evalLValue(context);
+    if (!lval)
+        return nullptr;
+
+    auto prevQ = context.getQueueTarget();
+    ConstantValue queueVal;
+    if (value().type->isQueue()) {
+        queueVal = lval.load();
+        context.setQueueTarget(&queueVal);
+    }
+
     ConstantValue cs = selector().eval(context);
-    if (!lval || !cs)
+
+    context.setQueueTarget(prevQ);
+    if (!cs)
         return nullptr;
 
     // Handling for packed and unpacked arrays, all integer types.
@@ -531,9 +552,18 @@ Expression& RangeSelectExpression::fromConstant(Compilation& compilation, Expres
 
 ConstantValue RangeSelectExpression::evalImpl(EvalContext& context) const {
     ConstantValue cv = value().eval(context);
+    if (!cv)
+        return nullptr;
+
+    auto prevQ = context.getQueueTarget();
+    if (cv.isQueue())
+        context.setQueueTarget(&cv);
+
     ConstantValue cl = left().eval(context);
     ConstantValue cr = right().eval(context);
-    if (!cv || !cl || !cr)
+
+    context.setQueueTarget(prevQ);
+    if (!cl || !cr)
         return nullptr;
 
     if (value().type->hasFixedRange()) {
@@ -562,9 +592,21 @@ ConstantValue RangeSelectExpression::evalImpl(EvalContext& context) const {
 
 LValue RangeSelectExpression::evalLValueImpl(EvalContext& context) const {
     LValue lval = value().evalLValue(context);
+    if (!lval)
+        return nullptr;
+
+    auto prevQ = context.getQueueTarget();
+    ConstantValue queueVal;
+    if (value().type->isQueue()) {
+        queueVal = lval.load();
+        context.setQueueTarget(&queueVal);
+    }
+
     ConstantValue cl = left().eval(context);
     ConstantValue cr = right().eval(context);
-    if (!lval || !cl || !cr)
+
+    context.setQueueTarget(prevQ);
+    if (!cl || !cr)
         return nullptr;
 
     if (value().type->hasFixedRange()) {

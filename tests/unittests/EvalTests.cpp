@@ -2091,3 +2091,20 @@ TEST_CASE("Array locator methods") {
 
     NO_SESSION_ERRORS;
 }
+
+TEST_CASE("Queue unbounded expressions") {
+    ScriptSession session;
+    session.eval("int q[$] = {1, 2, 4};");
+
+    CHECK(session.eval("q[$]").integer() == 4);
+
+    session.eval("q[$-1*2+1] = 9");
+    CHECK(session.eval("q[1]").integer() == 9);
+
+    CHECK(session.eval("q[1:$]").toString() == "[9,4]");
+
+    session.eval("q[$-2:$-1] = {3, 6}");
+    CHECK(session.eval("q").toString() == "[3,6,4]");
+
+    NO_SESSION_ERRORS;
+}

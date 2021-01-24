@@ -197,9 +197,12 @@ Expression& UnboundedLiteral::fromSyntax(const BindContext& context,
     return *comp.emplace<UnboundedLiteral>(comp.getUnboundedType(), syntax.sourceRange());
 }
 
-ConstantValue UnboundedLiteral::evalImpl(EvalContext&) const {
-    // TODO: implement
-    return nullptr;
+ConstantValue UnboundedLiteral::evalImpl(EvalContext& context) const {
+    auto target = context.getQueueTarget();
+    ASSERT(target);
+
+    int32_t size = (int32_t)target->queue()->size();
+    return SVInt(32, uint64_t(size - 1), true);
 }
 
 StringLiteral::StringLiteral(const Type& type, string_view value, string_view rawValue,

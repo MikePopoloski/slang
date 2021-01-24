@@ -130,6 +130,14 @@ public:
         disableRange = range;
     }
 
+    /// Sets the target queue value for use with unbounded '$' expressions.
+    /// If set to nullptr, the target is cleared.
+    void setQueueTarget(const ConstantValue* cv) { queueTarget = cv; }
+
+    /// Gets the target queue value for use with unbounded '$' expressions.
+    /// Returns nullptr if there is no queue target active.
+    const ConstantValue* getQueueTarget() const { return queueTarget; }
+
     /// Dumps the contents of the call stack to a string for debugging.
     std::string dumpStack() const;
 
@@ -151,6 +159,7 @@ private:
     uint32_t steps = 0;
     bitmask<EvalFlags> flags;
     const Symbol* disableTarget = nullptr;
+    const ConstantValue* queueTarget = nullptr;
     SmallVectorSized<Frame, 4> stack;
     SmallVectorSized<LValue*, 2> lvalStack;
     Diagnostics diags;
