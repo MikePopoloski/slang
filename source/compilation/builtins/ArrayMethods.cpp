@@ -792,6 +792,7 @@ public:
         else
             q.push_back(std::move(cv));
 
+        q.resizeToBound();
         return nullptr;
     }
 
@@ -849,6 +850,7 @@ public:
         }
 
         q.insert(q.begin() + *index, std::move(cv));
+        q.resizeToBound();
         return nullptr;
     }
 

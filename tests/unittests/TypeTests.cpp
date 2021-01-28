@@ -482,12 +482,12 @@ endmodule
     auto& d = compilation.getRoot().lookupName<VariableSymbol>("m.d").getType();
     CHECK(d.kind == SymbolKind::QueueType);
     CHECK(d.getArrayElementType()->toString() == "real");
-    CHECK(d.as<QueueType>().maxSize == 0);
+    CHECK(d.as<QueueType>().maxBound == 0);
 
     auto& e = compilation.getRoot().lookupName<VariableSymbol>("m.e").getType();
     CHECK(e.kind == SymbolKind::QueueType);
     CHECK(e.getArrayElementType()->toString() == "real");
-    CHECK(e.as<QueueType>().maxSize == 9999);
+    CHECK(e.as<QueueType>().maxBound == 9999);
 }
 
 TEST_CASE("Associative array -- invalid index type") {

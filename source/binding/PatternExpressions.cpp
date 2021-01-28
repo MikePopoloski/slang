@@ -185,12 +185,14 @@ ConstantValue AssignmentPatternExpressionBase::evalImpl(EvalContext& context) co
     }
     else if (type->isQueue()) {
         SVQueue result;
+        result.maxBound = type->getCanonicalType().as<QueueType>().maxBound;
         for (auto elem : elements()) {
             result.emplace_back(elem->eval(context));
             if (result.back().bad())
                 return nullptr;
         }
 
+        result.resizeToBound();
         return result;
     }
     else {

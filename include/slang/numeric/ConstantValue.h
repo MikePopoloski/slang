@@ -169,7 +169,12 @@ struct AssociativeArray : public std::map<ConstantValue, ConstantValue> {
 /// Represents a SystemVerilog queue, for use during constant evaluation.
 struct SVQueue : public std::deque<ConstantValue> {
     using std::deque<ConstantValue>::deque;
-    uint32_t maxSize = 0;
+    uint32_t maxBound = 0;
+
+    void resizeToBound() {
+        if (maxBound && size() > maxBound + 1)
+            resize(maxBound + 1);
+    }
 };
 
 /// An iterator for child elements in a ConstantValue, if it represents an

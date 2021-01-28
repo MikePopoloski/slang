@@ -359,8 +359,8 @@ void TypePrinter::printUnpackedArrayDim(const Type& type) {
         }
         case SymbolKind::QueueType: {
             auto& at = type.as<QueueType>();
-            if (at.maxSize)
-                buffer->format("[$:{}]", at.maxSize);
+            if (at.maxBound)
+                buffer->format("[$:{}]", at.maxBound);
             else
                 buffer->append("[$]");
             break;

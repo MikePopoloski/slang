@@ -13,9 +13,9 @@
 #include "slang/diagnostics/ConstEvalDiags.h"
 #include "slang/diagnostics/ExpressionsDiags.h"
 #include "slang/diagnostics/NumericDiags.h"
-#include "slang/types/AllTypes.h"
 #include "slang/symbols/ClassSymbols.h"
 #include "slang/symbols/VariableSymbols.h"
+#include "slang/types/AllTypes.h"
 
 namespace slang {
 
@@ -235,13 +235,18 @@ static std::string formatWidth(const T& bitstream, BitstreamSizeMode mode) {
 }
 
 static ConstantValue constContainer(const Type& type, span<ConstantValue> elems) {
-    switch (type.getCanonicalType().kind) {
+    auto& ct = type.getCanonicalType();
+    switch (ct.kind) {
         case SymbolKind::FixedSizeUnpackedArrayType:
         case SymbolKind::DynamicArrayType:
         case SymbolKind::UnpackedStructType:
             return ConstantValue::Elements(elems.cbegin(), elems.cend());
-        case SymbolKind::QueueType:
-            return SVQueue(elems.cbegin(), elems.cend());
+        case SymbolKind::QueueType: {
+            SVQueue result(elems.cbegin(), elems.cend());
+            result.maxBound = ct.as<QueueType>().maxBound;
+            result.resizeToBound();
+            return result;
+        }
         default:
             THROW_UNREACHABLE;
     }

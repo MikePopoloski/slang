@@ -19,11 +19,11 @@
 #include "slang/diagnostics/NumericDiags.h"
 #include "slang/diagnostics/TypesDiags.h"
 #include "slang/symbols/ASTSerializer.h"
-#include "slang/types/AllTypes.h"
 #include "slang/symbols/ClassSymbols.h"
 #include "slang/symbols/InstanceSymbols.h"
 #include "slang/symbols/SubroutineSymbols.h"
 #include "slang/syntax/AllSyntax.h"
+#include "slang/types/AllTypes.h"
 
 namespace {
 
@@ -739,7 +739,10 @@ ConstantValue ConversionExpression::convert(EvalContext& context, const Type& fr
         if (to.isQueue() && !from.isQueue()) {
             // Convert from vector to queue.
             auto elems = value.elements();
-            return SVQueue(elems.begin(), elems.end());
+            SVQueue result(elems.begin(), elems.end());
+            result.maxBound = to.getCanonicalType().as<QueueType>().maxBound;
+            result.resizeToBound();
+            return result;
         }
 
         return std::move(value);

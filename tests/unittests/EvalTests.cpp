@@ -2106,5 +2106,28 @@ TEST_CASE("Queue unbounded expressions") {
     session.eval("q[$-2:$-1] = {3, 6}");
     CHECK(session.eval("q").toString() == "[3,6,4]");
 
+    session.eval("q[$+1] = -1;");
+    CHECK(session.eval("q").toString() == "[3,6,4,-1]");
+
+    NO_SESSION_ERRORS;
+}
+
+TEST_CASE("Queue max bound limitation") {
+    ScriptSession session;
+    session.eval("int q[$:3] = {1, 2, 4};");
+
+    session.eval("q.push_back(6)");
+    session.eval("q.push_back(8)");
+    CHECK(session.eval("q").toString() == "[1,2,4,6]");
+
+    session.eval("q[$+1] = -1;");
+    CHECK(session.eval("q").toString() == "[1,2,4,6]");
+
+    session.eval("q = {9, 8, 7, 6, 5}");
+    CHECK(session.eval("q").toString() == "[9,8,7,6]");
+
+    session.eval("q.insert(2, -1)");
+    CHECK(session.eval("q").toString() == "[9,8,-1,7]");
+
     NO_SESSION_ERRORS;
 }

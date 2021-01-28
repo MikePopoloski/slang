@@ -762,7 +762,7 @@ size_t Type::hash() const {
     }
     else if (ct.kind == SymbolKind::QueueType) {
         auto& qt = ct.as<QueueType>();
-        hash_combine(h, qt.elementType.hash(), qt.maxSize);
+        hash_combine(h, qt.elementType.hash(), qt.maxBound);
     }
     else {
         h = std::hash<const Type*>()(&ct);

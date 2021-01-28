@@ -1386,8 +1386,11 @@ ConstantValue ConcatenationExpression::evalImpl(EvalContext& context) const {
 
         if (type->isQueue()) {
             SVQueue result;
+            result.maxBound = type->getCanonicalType().as<QueueType>().maxBound;
             if (!build(result))
                 return nullptr;
+
+            result.resizeToBound();
             return result;
         }
         else {

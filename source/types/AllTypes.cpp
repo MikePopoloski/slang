@@ -593,13 +593,14 @@ ConstantValue AssociativeArrayType::getDefaultValueImpl() const {
     return AssociativeArray();
 }
 
-QueueType::QueueType(const Type& elementType, uint32_t maxSize) :
-    Type(SymbolKind::QueueType, "", SourceLocation()), elementType(elementType), maxSize(maxSize) {
+QueueType::QueueType(const Type& elementType, uint32_t maxBound) :
+    Type(SymbolKind::QueueType, "", SourceLocation()), elementType(elementType),
+    maxBound(maxBound) {
 }
 
 ConstantValue QueueType::getDefaultValueImpl() const {
     SVQueue result;
-    result.maxSize = maxSize;
+    result.maxBound = maxBound;
     return result;
 }
 

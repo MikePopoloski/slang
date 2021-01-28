@@ -192,9 +192,9 @@ public:
 class QueueType : public Type {
 public:
     const Type& elementType;
-    uint32_t maxSize;
+    uint32_t maxBound;
 
-    QueueType(const Type& elementType, uint32_t maxSize);
+    QueueType(const Type& elementType, uint32_t maxBound);
 
     ConstantValue getDefaultValueImpl() const;
 

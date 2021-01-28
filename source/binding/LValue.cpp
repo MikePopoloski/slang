@@ -120,6 +120,19 @@ void LValue::store(const ConstantValue& newValue) {
     // We have the final target, now assign to it.
     // If there is no range specified, we should be able to assign straight to the target.
     if (!range) {
+        // If this is a queue with a max bound make sure to limit the assigned value.
+        if (target->isQueue()) {
+            auto& dest = *target->queue();
+            if (dest.maxBound) {
+                auto& src = *newValue.queue();
+                size_t size = std::min<size_t>(dest.maxBound + 1, src.size());
+                dest.resize(size);
+                for (size_t i = 0; i < size; i++)
+                    dest[i] = src[i];
+                return;
+            }
+        }
+
         *target = newValue;
         return;
     }
@@ -184,7 +197,7 @@ ConstantValue* LValue::resolveInternal(optional<ConstantRange>& range) {
                     }
                     else if (target->isQueue()) {
                         auto& q = *target->queue();
-                        if (arg.index < 0)
+                        if (arg.index < 0 || (q.maxBound && uint32_t(arg.index) > q.maxBound))
                             target = nullptr;
                         else {
                             // Queues can reference one past the end to insert a new element.
