@@ -90,7 +90,7 @@ LRM | Feature | Supported
 {{m-success}} 7.7 | Arrays as arguments to subroutines | v0.2
 {{m-success}} 7.8 | Associative arrays | v0.4
 {{m-success}} 7.9 | Associative array methods | v0.6
-{{m-warning}} 7.10 | Queues | partial
+{{m-success}} 7.10 | Queues | v0.7
 {{m-success}} 7.11 | Array querying functions | v0.6
 {{m-success}} 7.12 | Array manipulation methods | v0.6
 
