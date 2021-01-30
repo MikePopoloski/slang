@@ -1071,6 +1071,7 @@ TEST_CASE("Eval sformatf") {
     CHECK(sformatf("%c", "999") == "\xe7");
 
     CHECK(session.eval("$sformatf(\"%m\")"s).str() == "$unit");
+    CHECK(session.eval("$sformatf(\"%l\")"s).str() == "$unit");
 
     session.eval(R"(
 function string func;

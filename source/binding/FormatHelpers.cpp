@@ -8,6 +8,7 @@
 
 #include "slang/binding/Expression.h"
 #include "slang/binding/LiteralExpressions.h"
+#include "slang/compilation/Definition.h"
 #include "slang/diagnostics/SysFuncsDiags.h"
 #include "slang/mir/Procedure.h"
 #include "slang/symbols/VariableSymbols.h"
@@ -190,6 +191,22 @@ bool FmtHelpers::checkSFormatArgs(const BindContext& context, const Args& args) 
     return true;
 }
 
+static bool formatSpecialArg(char spec, const Scope& scope, std::string& result) {
+    switch (::tolower(spec)) {
+        case 'l':
+            if (auto def = scope.asSymbol().getDeclaringDefinition())
+                result += def->name;
+            else
+                result += "$unit";
+            return true;
+        case 'm':
+            scope.asSymbol().getHierarchicalPath(result);
+            return true;
+        default:
+            return false;
+    }
+}
+
 optional<std::string> FmtHelpers::formatArgs(string_view formatString, SourceLocation loc,
                                              const Scope& scope, EvalContext& context,
                                              const span<const Expression* const>& args,
@@ -210,16 +227,8 @@ optional<std::string> FmtHelpers::formatArgs(string_view formatString, SourceLoc
     ok &= SFormat::parse(
         formatString, [&](string_view text) { result += text; },
         [&](char spec, size_t offset, size_t len, const SFormat::FormatOptions& options) {
-            switch (::tolower(spec)) {
-                case 'l':
-                    // TODO: support libraries
-                    return;
-                case 'm':
-                    scope.asSymbol().getHierarchicalPath(result);
-                    return;
-                default:
-                    break;
-            }
+            if (formatSpecialArg(spec, scope, result))
+                return;
 
             SourceRange range = getRange(offset, len);
             if (argIt == args.end()) {
@@ -321,16 +330,8 @@ optional<std::string> FmtHelpers::formatDisplay(const Scope& scope, EvalContext&
             ok &= SFormat::parse(
                 fmt, [&](string_view text) { result += text; },
                 [&](char specifier, size_t, size_t, const SFormat::FormatOptions& options) {
-                    switch (::tolower(specifier)) {
-                        case 'l':
-                            // TODO: support libraries
-                            return;
-                        case 'm':
-                            scope.asSymbol().getHierarchicalPath(result);
-                            return;
-                        default:
-                            break;
-                    }
+                    if (formatSpecialArg(specifier, scope, result))
+                        return;
 
                     if (argIt != args.end()) {
                         auto currentArg = *argIt++;

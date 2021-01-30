@@ -1033,7 +1033,7 @@ module m;
 
     localparam int foo = 12;
     if (foo == 12)
-        $info(4, 3.2, " %m Hello world %0d!", foo + 2);
+        $info(4, 3.2, " %m:%l Hello world %0d!", foo + 2);
     else begin
         $warning("ASDFASDF");
     end
@@ -1051,8 +1051,8 @@ endmodule
 source:7:5: error: $error encountered
     $error;
     ^
-source:11:9: note: $info encountered:           43.200000 top.asdf Hello world 14!
-        $info(4, 3.2, " %m Hello world %0d!", foo + 2);
+source:11:9: note: $info encountered:           43.200000 top.asdf:m Hello world 14!
+        $info(4, 3.2, " %m:%l Hello world %0d!", foo + 2);
         ^
 )");
 }
