@@ -297,7 +297,7 @@ static char getDefaultSpecifier(const Expression& expr, LiteralBase defaultBase)
     return 'p';
 }
 
-optional<std::string> FmtHelpers::formatDisplay(const Scope&, EvalContext& context,
+optional<std::string> FmtHelpers::formatDisplay(const Scope& scope, EvalContext& context,
                                                 const span<const Expression* const>& args) {
     std::string result;
     auto argIt = args.begin();
@@ -321,7 +321,17 @@ optional<std::string> FmtHelpers::formatDisplay(const Scope&, EvalContext& conte
             ok &= SFormat::parse(
                 fmt, [&](string_view text) { result += text; },
                 [&](char specifier, size_t, size_t, const SFormat::FormatOptions& options) {
-                    // TODO: handle non-consuming args
+                    switch (::tolower(specifier)) {
+                        case 'l':
+                            // TODO: support libraries
+                            return;
+                        case 'm':
+                            scope.asSymbol().getHierarchicalPath(result);
+                            return;
+                        default:
+                            break;
+                    }
+
                     if (argIt != args.end()) {
                         auto currentArg = *argIt++;
                         auto&& value = currentArg->eval(context);

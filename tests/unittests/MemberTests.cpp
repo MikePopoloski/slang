@@ -1024,12 +1024,16 @@ endmodule
 
 TEST_CASE("Elaboration system tasks") {
     auto tree = SyntaxTree::fromText(R"(
+module top;
+    m asdf();
+endmodule
+
 module m;
     $error;
 
     localparam int foo = 12;
     if (foo == 12)
-        $info(4, 3.2, "Hello world %d!", foo + 2);
+        $info(4, 3.2, " %m Hello world %0d!", foo + 2);
     else begin
         $warning("ASDFASDF");
     end
@@ -1044,11 +1048,11 @@ endmodule
     auto& diagnostics = compilation.getAllDiagnostics();
     std::string result = "\n" + report(diagnostics);
     CHECK(result == R"(
-source:3:5: error: $error encountered
+source:7:5: error: $error encountered
     $error;
     ^
-source:7:9: note: $info encountered:           43.200000Hello world          14!
-        $info(4, 3.2, "Hello world %d!", foo + 2);
+source:11:9: note: $info encountered:           43.200000 top.asdf Hello world 14!
+        $info(4, 3.2, " %m Hello world %0d!", foo + 2);
         ^
 )");
 }
