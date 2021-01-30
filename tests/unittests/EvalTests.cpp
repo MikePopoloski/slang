@@ -1098,6 +1098,11 @@ TEST_CASE("sformatf with trailing percent") {
     CHECK(session.eval("$sformatf(\"a%\")"s).str() == "a%");
 }
 
+TEST_CASE("sformatf with real conversion") {
+    ScriptSession session;
+    CHECK(session.eval("$sformatf(\"%0d\", 3.14)"s).str() == "3");
+}
+
 TEST_CASE("Concat assignments") {
     ScriptSession session;
     session.eval("logic [2:0] foo;");

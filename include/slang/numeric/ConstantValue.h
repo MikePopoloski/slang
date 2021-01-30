@@ -140,6 +140,7 @@ public:
     bool isFalse() const;
     bool hasUnknown() const;
 
+    ConstantValue convertToInt() const;
     ConstantValue convertToInt(bitwidth_t width, bool isSigned, bool isFourState) const;
     ConstantValue convertToReal() const;
     ConstantValue convertToShortReal() const;

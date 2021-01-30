@@ -278,6 +278,25 @@ bool ConstantValue::hasUnknown() const {
         value);
 }
 
+ConstantValue ConstantValue::convertToInt() const {
+    if (isReal())
+        return convertToInt(64, true, false);
+    if (isShortReal())
+        return convertToInt(32, true, false);
+    if (isString()) {
+        // TODO: overflow
+        bitwidth_t bits = bitwidth_t(str().length() * 8);
+        if (!bits)
+            bits = 8;
+
+        return convertToInt(bits, false, false);
+    }
+    if (!isInteger())
+        return nullptr;
+
+    return *this;
+}
+
 ConstantValue ConstantValue::convertToInt(bitwidth_t width, bool isSigned, bool isFourState) const {
     if (isReal())
         return SVInt::fromDouble(width, real(), isSigned);

@@ -351,16 +351,16 @@ void formatArg(std::string& result, const ConstantValue& arg, char specifier,
     switch (::tolower(specifier)) {
         case 'h':
         case 'x':
-            formatInt(result, arg.integer(), LiteralBase::Hex, options);
+            formatInt(result, arg.convertToInt().integer(), LiteralBase::Hex, options);
             return;
         case 'd':
-            formatInt(result, arg.integer(), LiteralBase::Decimal, options);
+            formatInt(result, arg.convertToInt().integer(), LiteralBase::Decimal, options);
             return;
         case 'o':
-            formatInt(result, arg.integer(), LiteralBase::Octal, options);
+            formatInt(result, arg.convertToInt().integer(), LiteralBase::Octal, options);
             return;
         case 'b':
-            formatInt(result, arg.integer(), LiteralBase::Binary, options);
+            formatInt(result, arg.convertToInt().integer(), LiteralBase::Binary, options);
             return;
         case 'u':
             formatRaw2(result, arg);
@@ -377,7 +377,7 @@ void formatArg(std::string& result, const ConstantValue& arg, char specifier,
             // TODO:
             return;
         case 'c':
-            formatChar(result, arg.integer());
+            formatChar(result, arg.convertToInt().integer());
             return;
         case 'v':
             formatStrength(result, arg.integer());
