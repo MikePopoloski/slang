@@ -845,6 +845,8 @@ TEST_CASE("Dynamic string ops") {
     session.eval("typedef byte asdf_t[];");
     CHECK(session.eval("asdf_t'(str1)").elements().size() == 1);
 
+    CHECK(session.eval("int'(str2)").integer() == 0x69427965);
+
     NO_SESSION_ERRORS;
 }
 

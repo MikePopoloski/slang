@@ -304,6 +304,19 @@ ConstantValue ConstantValue::convertToInt(bitwidth_t width, bool isSigned, bool 
     if (isShortReal())
         return SVInt::fromFloat(width, shortReal(), isSigned);
 
+    if (isString()) {
+        SmallVectorSized<byte, 8> buffer;
+        auto& s = str();
+        for (auto it = s.rbegin(); it != s.rend(); it++)
+            buffer.append(static_cast<byte>(*it));
+
+        SVInt result(width, buffer, isSigned);
+        if (!isFourState)
+            result.flattenUnknowns();
+
+        return result;
+    }
+
     if (!isInteger())
         return nullptr;
 

@@ -285,60 +285,28 @@ static SVInt slicePacked(PackIterator& iter, const PackIterator iterEnd, bitwidt
         bit += width;                  // Informs the caller how many zeros are appended.
         return SVInt(width, 0, false); // filling with zero bits on the right
     }
-    ConstantValue* cp = *iter;
 
-    if (cp->isInteger()) {
-        auto& ci = cp->integer();
-        ASSERT(bit < ci.getBitWidth());
-        bitwidth_t msb = ci.getBitWidth() - bit - 1;
-        bitwidth_t lsb = std::min(bit + width, ci.getBitWidth());
-        lsb = ci.getBitWidth() - lsb;
-        bit += msb - lsb + 1;
+    ConstantValue cp = **iter;
+    if (cp.isString())
+        cp = cp.convertToInt();
 
-        ASSERT(bit <= ci.getBitWidth());
-        if (bit == ci.getBitWidth()) {
-            iter++;
-            bit = 0;
-        }
+    auto& ci = cp.integer();
+    ASSERT(bit < ci.getBitWidth());
+    bitwidth_t msb = ci.getBitWidth() - bit - 1;
+    bitwidth_t lsb = std::min(bit + width, ci.getBitWidth());
+    lsb = ci.getBitWidth() - lsb;
+    bit += msb - lsb + 1;
 
-        if (lsb == 0 && msb == ci.getBitWidth() - 1)
-            return std::move(ci);
-        return ci.slice(static_cast<int32_t>(msb), static_cast<int32_t>(lsb));
-    }
-
-    string_view str = cp->str();
-    ASSERT(bit < str.length() * CHAR_BIT);
-    bitwidth_t firstByte = bit / CHAR_BIT;
-    bitwidth_t lastByte = (bit + width - 1) / CHAR_BIT;
-
-    bitwidth_t len;
-    if (lastByte < str.length())
-        len = lastByte - firstByte + 1;
-    else {
-        len = static_cast<bitwidth_t>(str.length() - firstByte);
-        width = len * CHAR_BIT - bit % CHAR_BIT;
-    }
-
-    SmallVectorSized<byte, 8> buffer;
-    auto substr = str.substr(firstByte, len);
-    for (auto it = substr.rbegin(); it != substr.rend(); it++)
-        buffer.append(static_cast<byte>(*it));
-
-    len *= CHAR_BIT;
-    auto ci = SVInt(len, buffer, false);
-    bitwidth_t msb = len - bit % CHAR_BIT - 1;
-    bitwidth_t lsb = CHAR_BIT - 1 - (bit + width - 1) % CHAR_BIT;
-
-    bit += width;
-    ASSERT(bit <= str.length() * CHAR_BIT);
-    if (bit == str.length() * CHAR_BIT) {
+    ASSERT(bit <= ci.getBitWidth());
+    if (bit == ci.getBitWidth()) {
         iter++;
         bit = 0;
     }
-    if (lsb > 0 || msb < len - 1)
-        return ci.slice(static_cast<int32_t>(msb), static_cast<int32_t>(lsb));
 
-    return ci;
+    if (lsb == 0 && msb == ci.getBitWidth() - 1)
+        return std::move(ci);
+
+    return ci.slice(static_cast<int32_t>(msb), static_cast<int32_t>(lsb));
 }
 
 /// Performs unpack operation on a bit-stream.
