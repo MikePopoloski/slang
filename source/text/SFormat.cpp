@@ -321,6 +321,31 @@ static void formatRaw4(std::string& result, const ConstantValue& value) {
     }
 }
 
+void formatStrength(std::string& result, const SVInt& value) {
+    // At compile time it's impossible to know strength values so
+    // we will always put "Strong" here.
+    result += "St";
+
+    // Only single-bit scalars are allowed to be formatted with %v
+    logic_t l = value[0];
+    switch (l.value) {
+        case 0:
+            result += "0";
+            break;
+        case 1:
+            result += "1";
+            break;
+        case logic_t::X_VALUE:
+            result += "X";
+            break;
+        case logic_t::Z_VALUE:
+            result += "Z";
+            break;
+        default:
+            THROW_UNREACHABLE;
+    }
+}
+
 void formatArg(std::string& result, const ConstantValue& arg, char specifier,
                const FormatOptions& options) {
     switch (::tolower(specifier)) {
@@ -355,7 +380,7 @@ void formatArg(std::string& result, const ConstantValue& arg, char specifier,
             formatChar(result, arg.integer());
             return;
         case 'v':
-            // TODO:
+            formatStrength(result, arg.integer());
             return;
         case 'p':
             // TODO:

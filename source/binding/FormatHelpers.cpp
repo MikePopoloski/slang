@@ -72,7 +72,8 @@ static bool checkArgType(TContext& context, const Expression& arg, char spec, So
                 return true;
             break;
         case 'v':
-            // TODO: support this
+            if (type.isIntegral() && type.getBitWidth() == 1)
+                return true;
             break;
         case 'u':
         case 'z':

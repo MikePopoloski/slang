@@ -1085,6 +1085,11 @@ endfunction
     CHECK(sformatf("%u", "14'ha2c") == "\x2c\x0a\0\0"s);
     CHECK(sformatf("%z", "14'hzX2c") == "\x2c\x0f\0\0\0\x3f\0\0"s);
 
+    CHECK(sformatf("%v", "1'b1") == "St1");
+    CHECK(sformatf("%v", "1'b0") == "St0");
+    CHECK(sformatf("%v", "1'bx") == "StX");
+    CHECK(sformatf("%v", "1'bz") == "StZ");
+
     NO_SESSION_ERRORS;
 }
 
