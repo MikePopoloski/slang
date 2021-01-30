@@ -56,7 +56,7 @@ static bool checkArgType(TContext& context, const Expression& arg, char spec, So
         case 'o':
         case 'b':
         case 'c':
-            if (type.isIntegral())
+            if (type.isIntegral() || type.isString())
                 return true;
             if (type.isFloating()) {
                 // Just a warning, we will implicitly convert.

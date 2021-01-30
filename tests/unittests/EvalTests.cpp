@@ -1067,6 +1067,7 @@ TEST_CASE("Eval sformatf") {
     CHECK(sformatf("%3s", "\"abc\"") == "abc");
     CHECK(sformatf("%3s", "\"abcdef\"") == "abcdef");
     CHECK(sformatf("%3s", "str") == "blah");
+    CHECK(sformatf("%0h", "str") == "626c6168");
 
     CHECK(sformatf("%c", "48") == "0");
     CHECK(sformatf("%c", "18'hx031") == "1");
