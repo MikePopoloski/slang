@@ -142,10 +142,11 @@ const Symbol& ClassType::fromSyntax(const Scope& scope, const ClassDeclarationSy
 
     auto& comp = scope.getCompilation();
     auto result = comp.emplace<ClassType>(comp, syntax.name.valueText(), syntax.name.location());
-    return result->populate(scope, syntax);
+    result->populate(scope, syntax);
+    return *result;
 }
 
-const Type& ClassType::populate(const Scope& scope, const ClassDeclarationSyntax& syntax) {
+void ClassType::populate(const Scope& scope, const ClassDeclarationSyntax& syntax) {
     // Save the current member index -- for generic classes, this is the location that
     // can see all parameter members but nothing else. This is needed to correctly
     // resolve type parameters used in extends and implements clauses.
@@ -230,8 +231,6 @@ const Type& ClassType::populate(const Scope& scope, const ClassDeclarationSyntax
     // trying to access the name map can cause infinite recursion.
     if (syntax.extendsClause || syntax.implementsClause)
         setNeedElaboration();
-
-    return *this;
 }
 
 void ClassType::inheritMembers(function_ref<void(const Symbol&)> insertCB) const {
@@ -746,10 +745,14 @@ const Type* GenericClassDefSymbol::getSpecializationImpl(
         return it->second;
 
     // Not found, so this is a new entry. Fill in its members and store the
-    // specialization for later lookup.
-    const Type& result = classType->populate(*scope, getSyntax()->as<ClassDeclarationSyntax>());
-    specMap.emplace(key, &result);
-    return &result;
+    // specialization for later lookup. If we have a specialization function,
+    // call that instead of trying to create from our syntax node.
+    if (specializeFunc)
+        specializeFunc(comp, *classType);
+    else
+        classType->populate(*scope, getSyntax()->as<ClassDeclarationSyntax>());
+    specMap.emplace(key, classType);
+    return classType;
 }
 
 void GenericClassDefSymbol::addForwardDecl(const ForwardingTypedefSymbol& decl) const {
@@ -766,6 +769,10 @@ void GenericClassDefSymbol::checkForwardDecls() const {
             category = ForwardingTypedefSymbol::InterfaceClass;
         firstForward->checkType(category, Visibility::Public, location);
     }
+}
+
+void GenericClassDefSymbol::addParameterDecl(const Definition::ParameterDecl& decl) {
+    paramDecls.append(decl);
 }
 
 void GenericClassDefSymbol::serializeTo(ASTSerializer& serializer) const {

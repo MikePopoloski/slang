@@ -8,6 +8,7 @@
 #include "slang/symbols/ClassSymbols.h"
 #include "slang/symbols/CompilationUnitSymbols.h"
 #include "slang/symbols/MemberSymbols.h"
+#include "slang/symbols/ParameterSymbols.h"
 #include "slang/symbols/SubroutineSymbols.h"
 #include "slang/symbols/SymbolBuilders.h"
 #include "slang/types/AllTypes.h"
@@ -82,6 +83,51 @@ static const Symbol& createSemaphoreClass(Compilation& c) {
     return builder.type;
 }
 
+static const Symbol& createMailboxClass(Compilation& c) {
+    auto specialize = [](Compilation& c, ClassType& ct) {
+        // Get a reference to the type parameter so we can use it
+        // for functions that we build.
+        auto& typeParam = ct.find<TypeParameterSymbol>("T");
+        auto& t = typeParam.targetType.getType();
+
+        ClassBuilder builder(c, ct);
+
+        auto& void_t = c.getVoidType();
+        auto& int_t = c.getIntType();
+        auto defaultZero = SVInt(32, 0u, true);
+        auto defaultOne = SVInt(32, 1u, true);
+
+        auto ctor = builder.addMethod("new", void_t);
+        ctor.addFlags(MethodFlags::Constructor);
+        ctor.addArg("bound", int_t, ArgumentDirection::In, defaultZero);
+
+        builder.addMethod("num", int_t);
+
+        auto put = builder.addMethod("put", void_t, SubroutineKind::Task);
+        put.addArg("message", t);
+
+        auto try_put = builder.addMethod("try_put", int_t);
+        try_put.addArg("message", t);
+
+        auto get = builder.addMethod("get", void_t, SubroutineKind::Task);
+        get.addArg("message", t, ArgumentDirection::Ref);
+
+        auto try_get = builder.addMethod("try_get", int_t);
+        try_get.addArg("message", t, ArgumentDirection::Ref);
+
+        auto peek = builder.addMethod("peek", void_t, SubroutineKind::Task);
+        peek.addArg("message", t, ArgumentDirection::Ref);
+
+        auto try_peek = builder.addMethod("try_peek", int_t);
+        try_peek.addArg("message", t, ArgumentDirection::Ref);
+    };
+
+    auto& mailbox = *c.allocGenericClass("mailbox", NL, specialize);
+    mailbox.addParameterDecl(Definition::ParameterDecl("T", NL, false, true, nullptr));
+
+    return mailbox;
+}
+
 static const Symbol& createRandomizeFunc(Compilation& c) {
     MethodBuilder builder(c, "randomize", c.getIntType());
     builder.addFlags(MethodFlags::Randomize);
@@ -92,6 +138,7 @@ const PackageSymbol& createStdPackage(Compilation& c) {
     auto pkg = c.emplace<PackageSymbol>(c, "std", NL, c.getWireNetType());
     pkg->addMember(createProcessClass(c));
     pkg->addMember(createSemaphoreClass(c));
+    pkg->addMember(createMailboxClass(c));
     pkg->addMember(createRandomizeFunc(c));
 
     return *pkg;

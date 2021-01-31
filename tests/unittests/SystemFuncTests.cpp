@@ -664,3 +664,31 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("std mailbox") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    typedef mailbox #(string) s_mbox;
+    string s;
+    int i;
+
+    initial begin
+        automatic s_mbox sm = new;
+        sm.put("hello");
+        sm.get(s);
+        i = sm.num;
+        i = sm.try_get(s);
+        i = sm.try_peek(s);
+        i = sm.try_put(s);
+        sm.peek("sdf");
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::InvalidRefArg);
+}

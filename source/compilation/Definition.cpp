@@ -22,7 +22,8 @@ Definition::ParameterDecl::ParameterDecl(const Scope& scope,
                                          const ParameterDeclarationSyntax& syntax,
                                          const DeclaratorSyntax& decl, bool isLocal, bool isPort) :
     valueSyntax(&syntax),
-    valueDecl(&decl), isTypeParam(false), isLocalParam(isLocal), isPortParam(isPort) {
+    valueDecl(&decl), isTypeParam(false), isLocalParam(isLocal), isPortParam(isPort),
+    hasSyntax(true) {
 
     name = decl.name.valueText();
     location = decl.name.location();
@@ -40,7 +41,8 @@ Definition::ParameterDecl::ParameterDecl(const Scope& scope,
                                          const TypeAssignmentSyntax& decl, bool isLocal,
                                          bool isPort) :
     typeSyntax(&syntax),
-    typeDecl(&decl), isTypeParam(true), isLocalParam(isLocal), isPortParam(isPort) {
+    typeDecl(&decl), isTypeParam(true), isLocalParam(isLocal), isPortParam(isPort),
+    hasSyntax(true) {
 
     name = decl.name.valueText();
     location = decl.name.location();
@@ -53,11 +55,36 @@ Definition::ParameterDecl::ParameterDecl(const Scope& scope,
     }
 }
 
+Definition::ParameterDecl::ParameterDecl(string_view name, SourceLocation location,
+                                         const Type& givenType, bool isLocal, bool isPort,
+                                         const Expression* givenInitializer) :
+    givenType(&givenType),
+    givenInitializer(givenInitializer), name(name), location(location), isTypeParam(false),
+    isLocalParam(isLocal), isPortParam(isPort), hasSyntax(false) {
+    ASSERT(givenInitializer || (isPort && !isLocal));
+}
+
+Definition::ParameterDecl::ParameterDecl(string_view name, SourceLocation location, bool isLocal,
+                                         bool isPort, const Type* defaultType) :
+    givenType(defaultType),
+    name(name), location(location), isTypeParam(true), isLocalParam(isLocal), isPortParam(isPort),
+    hasSyntax(false) {
+    ASSERT(givenType || (isPort && !isLocal));
+}
+
 bool Definition::ParameterDecl::hasDefault() const {
-    if (isTypeParam)
-        return typeDecl && typeDecl->assignment != nullptr;
-    else
-        return valueDecl && valueDecl->initializer != nullptr;
+    if (hasSyntax) {
+        if (isTypeParam)
+            return typeDecl && typeDecl->assignment != nullptr;
+        else
+            return valueDecl && valueDecl->initializer != nullptr;
+    }
+    else {
+        if (isTypeParam)
+            return givenType != nullptr;
+        else
+            return givenInitializer != nullptr;
+    }
 }
 
 Definition::Definition(const Scope& scope, LookupLocation lookupLocation,

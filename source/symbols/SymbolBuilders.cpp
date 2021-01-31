@@ -63,6 +63,10 @@ ClassBuilder::ClassBuilder(Compilation& compilation, string_view name) :
     compilation(compilation), type(*compilation.emplace<ClassType>(compilation, name, NL)) {
 }
 
+ClassBuilder::ClassBuilder(Compilation& compilation, ClassType& existing) :
+    compilation(compilation), type(existing) {
+}
+
 MethodBuilder ClassBuilder::addMethod(string_view name, const Type& retType, SubroutineKind kind) {
     MethodBuilder method(compilation, name, retType, kind);
     type.addMember(method.symbol);

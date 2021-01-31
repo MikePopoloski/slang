@@ -76,18 +76,27 @@ void ParameterSymbol::fromSyntax(const Scope& scope, const ParameterDeclarationS
 ParameterSymbol& ParameterSymbol::fromDecl(const Definition::ParameterDecl& decl, Scope& newScope,
                                            const BindContext& context,
                                            const ExpressionSyntax* newInitializer) {
+    ASSERT(!decl.isTypeParam);
+
     // Construct the result using the source's properties.
     auto result = context.getCompilation().emplace<ParameterSymbol>(
         decl.name, decl.location, decl.isLocalParam, decl.isPortParam);
 
     newScope.addMember(*result);
 
-    ASSERT(!decl.isTypeParam);
-    ASSERT(decl.valueSyntax);
-    ASSERT(decl.valueDecl);
+    if (!decl.hasSyntax) {
+        ASSERT(decl.givenType);
+        result->setType(*decl.givenType);
+        if (decl.givenInitializer)
+            result->setInitializer(*decl.givenInitializer);
+    }
+    else {
+        ASSERT(decl.valueSyntax);
+        ASSERT(decl.valueDecl);
 
-    result->setDeclaredType(*decl.valueSyntax->type);
-    result->setFromDeclarator(*decl.valueDecl);
+        result->setDeclaredType(*decl.valueSyntax->type);
+        result->setFromDeclarator(*decl.valueDecl);
+    }
 
     // If we have a new initializer set that now.
     if (newInitializer) {
@@ -202,15 +211,24 @@ void TypeParameterSymbol::fromSyntax(const Scope& scope,
 TypeParameterSymbol& TypeParameterSymbol::fromDecl(const Definition::ParameterDecl& decl,
                                                    Scope& newScope, const BindContext& context,
                                                    const ExpressionSyntax* newInitializer) {
+    ASSERT(decl.isTypeParam);
+
     // Construct the result using the source's properties.
     auto& comp = context.getCompilation();
     auto result = comp.emplace<TypeParameterSymbol>(decl.name, decl.location, decl.isLocalParam,
                                                     decl.isPortParam);
     newScope.addMember(*result);
 
-    ASSERT(decl.isTypeParam);
-    ASSERT(decl.typeDecl);
-    result->setSyntax(*decl.typeDecl);
+    if (!decl.hasSyntax) {
+        if (decl.givenType)
+            result->targetType.setType(*decl.givenType);
+    }
+    else {
+        ASSERT(decl.typeDecl);
+        result->setSyntax(*decl.typeDecl);
+        if (decl.typeDecl->assignment)
+            result->targetType.setTypeSyntax(*decl.typeDecl->assignment->type);
+    }
 
     auto& tt = result->targetType;
     if (newInitializer) {
@@ -234,9 +252,6 @@ TypeParameterSymbol& TypeParameterSymbol::fromDecl(const Definition::ParameterDe
             tt.setType(comp.getType(newInitializer->as<DataTypeSyntax>(), context.getLocation(),
                                     context.scope));
         }
-    }
-    else if (decl.typeDecl->assignment) {
-        result->targetType.setTypeSyntax(*decl.typeDecl->assignment->type);
     }
 
     return *result;

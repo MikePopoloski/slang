@@ -94,7 +94,7 @@ private:
     friend class Scope;
     friend class GenericClassDefSymbol;
 
-    const Type& populate(const Scope& scope, const ClassDeclarationSyntax& syntax);
+    void populate(const Scope& scope, const ClassDeclarationSyntax& syntax);
     void inheritMembers(function_ref<void(const Symbol&)> insertCB) const;
     void handleExtends(const ExtendsClauseSyntax& extendsClause, const BindContext& context,
                        function_ref<void(const Symbol&)> insertCB) const;
@@ -121,6 +121,10 @@ public:
 
     GenericClassDefSymbol(string_view name, SourceLocation loc) :
         Symbol(SymbolKind::GenericClassDef, name, loc) {}
+    GenericClassDefSymbol(string_view name, SourceLocation loc,
+                          function_ref<void(Compilation&, ClassType&)> specializeFunc) :
+        Symbol(SymbolKind::GenericClassDef, name, loc),
+        specializeFunc{ specializeFunc } {}
 
     /// Gets the default specialization for the class, or nullptr if the generic
     /// class has no default specialization (because some parameters are not defaulted).
@@ -144,6 +148,11 @@ public:
     /// Checks all forward declarations for validity when considering the target type
     /// of this alias. Any inconsistencies will issue diagnostics.
     void checkForwardDecls() const;
+
+    /// Adds a new parameter declaration to the generic class. This is only used for
+    /// programmatically constructed generic classes (not sourced from syntax).
+    /// Behavior is undefined if this generic class has already been instantiated and used.
+    void addParameterDecl(const Definition::ParameterDecl& decl);
 
     void serializeTo(ASTSerializer& serializer) const;
 
@@ -184,6 +193,7 @@ private:
     mutable SpecMap specMap;
     mutable optional<const Type*> defaultSpecialization;
     mutable const ForwardingTypedefSymbol* firstForward = nullptr;
+    function_ref<void(Compilation&, ClassType&)> specializeFunc;
 
 public:
     /// An iterator for specializations of the generic class.

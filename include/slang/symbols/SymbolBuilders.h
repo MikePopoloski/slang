@@ -50,6 +50,7 @@ public:
     ClassType& type;
 
     ClassBuilder(Compilation& compilation, string_view name);
+    ClassBuilder(Compilation& compilation, ClassType& existing);
 
     /// Adds a method to the class with the given properties. The returned builder
     /// object can be used to modify the method further.

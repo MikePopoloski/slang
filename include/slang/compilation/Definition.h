@@ -17,9 +17,11 @@ namespace slang {
 
 class AttributeSymbol;
 class Compilation;
+class Expression;
 class NetType;
 class Scope;
 class SyntaxTree;
+class Type;
 
 struct DeclaratorSyntax;
 struct ModuleDeclarationSyntax;
@@ -33,11 +35,13 @@ public:
         union {
             const ParameterDeclarationSyntax* valueSyntax;
             const TypeParameterDeclarationSyntax* typeSyntax;
+            const Type* givenType;
         };
 
         union {
             const DeclaratorSyntax* valueDecl;
             const TypeAssignmentSyntax* typeDecl;
+            const Expression* givenInitializer;
         };
 
         string_view name;
@@ -45,11 +49,16 @@ public:
         bool isTypeParam;
         bool isLocalParam;
         bool isPortParam;
+        bool hasSyntax;
 
         ParameterDecl(const Scope& scope, const ParameterDeclarationSyntax& syntax,
                       const DeclaratorSyntax& decl, bool isLocal, bool isPort);
         ParameterDecl(const Scope& scope, const TypeParameterDeclarationSyntax& syntax,
                       const TypeAssignmentSyntax& decl, bool isLocal, bool isPort);
+        ParameterDecl(string_view name, SourceLocation location, const Type& givenType,
+                      bool isLocal, bool isPort, const Expression* givenInitializer);
+        ParameterDecl(string_view name, SourceLocation location, bool isLocal, bool isPort,
+                      const Type* defaultType);
 
         bool hasDefault() const;
     };
