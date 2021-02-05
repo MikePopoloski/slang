@@ -912,6 +912,10 @@ ConstantValue EventType::getDefaultValueImpl() const {
     return ConstantValue::NullPlaceholder{};
 }
 
+ConstantValue VirtualInterfaceType::getDefaultValueImpl() const {
+    return ConstantValue::NullPlaceholder{};
+}
+
 ForwardingTypedefSymbol& ForwardingTypedefSymbol::fromSyntax(
     const Scope& scope, const ForwardTypedefDeclarationSyntax& syntax) {
 

@@ -13,6 +13,8 @@
 namespace slang {
 
 class Compilation;
+class InstanceBodySymbol;
+class ModportSymbol;
 
 struct IntegerTypeSyntax;
 
@@ -325,6 +327,22 @@ public:
     ConstantValue getDefaultValueImpl() const { return nullptr; }
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::UnboundedType; }
+};
+
+/// Represents a virtual interface type.
+class VirtualInterfaceType : public Type {
+public:
+    const InstanceBodySymbol& iface;
+    const ModportSymbol* modport;
+
+    VirtualInterfaceType(const InstanceBodySymbol& iface, const ModportSymbol* modport,
+                         SourceLocation loc) :
+        Type(SymbolKind::VirtualInterfaceType, "", loc),
+        iface(iface), modport(modport) {}
+
+    ConstantValue getDefaultValueImpl() const;
+
+    static bool isKind(SymbolKind kind) { return kind == SymbolKind::VirtualInterfaceType; }
 };
 
 struct ClassPropertyDeclarationSyntax;

@@ -183,6 +183,11 @@ public:
     /// Indicates whether this is the unbounded type.
     bool isUnbounded() const { return getCanonicalType().kind == SymbolKind::UnboundedType; }
 
+    /// Indicates whether this is a virtual interface type.
+    bool isVirtualInterface() const {
+        return getCanonicalType().kind == SymbolKind::VirtualInterfaceType;
+    }
+
     /// Indicates whether this is a type alias.
     /// Note that unlike other methods, this one does not unwrap to the canonical type.
     bool isAlias() const { return kind == SymbolKind::TypeAlias; }

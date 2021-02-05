@@ -180,6 +180,7 @@ decltype(auto) Symbol::visit(TVisitor&& visitor, Args&&... args) const {
         TYPE(StringType);
         TYPE(EventType);
         TYPE(UnboundedType);
+        TYPE(VirtualInterfaceType);
         TYPE(ErrorType);
         TYPE(NetType);
     }

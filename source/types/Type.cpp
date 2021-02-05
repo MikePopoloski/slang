@@ -205,6 +205,7 @@ bool Type::isBooleanConvertible() const {
         case SymbolKind::StringType:
         case SymbolKind::EventType:
         case SymbolKind::ClassType:
+        case SymbolKind::VirtualInterfaceType:
             return true;
         default:
             return isNumeric();
@@ -428,6 +429,12 @@ bool Type::isMatching(const Type& rhs) const {
     if (l->kind == SymbolKind::EnumType && r->kind == SymbolKind::EnumType)
         return isSameEnum(l->as<EnumType>(), r->as<EnumType>());
 
+    if (l->isVirtualInterface() && r->isVirtualInterface()) {
+        auto& lv = l->as<VirtualInterfaceType>();
+        auto& rv = r->as<VirtualInterfaceType>();
+        return &lv.iface == &rv.iface && lv.modport == rv.modport;
+    }
+
     return false;
 }
 
@@ -522,6 +529,23 @@ bool Type::isAssignmentCompatible(const Type& rhs) const {
         // Classes can also be assigned to interface classes that they implement.
         if (r->implements(*l))
             return true;
+    }
+
+    if (l->isVirtualInterface()) {
+        if (r->isNull())
+            return true;
+
+        if (!r->isVirtualInterface())
+            return false;
+
+        auto& lv = l->as<VirtualInterfaceType>();
+        auto& rv = r->as<VirtualInterfaceType>();
+        if (&lv.iface != &rv.iface)
+            return false;
+
+        // A virtual interface with no modport selected may be assigned to a
+        // virtual interface with a modport selected.
+        return (lv.modport == rv.modport) || (lv.modport && !rv.modport);
     }
 
     // Null can be assigned to chandles and events.
@@ -764,6 +788,11 @@ size_t Type::hash() const {
         auto& qt = ct.as<QueueType>();
         hash_combine(h, qt.elementType.hash(), qt.maxBound);
     }
+    else if (ct.kind == SymbolKind::VirtualInterfaceType) {
+        auto& vi = ct.as<VirtualInterfaceType>();
+        hash_combine(h, &vi.iface);
+        hash_combine(h, vi.modport);
+    }
     else {
         h = std::hash<const Type*>()(&ct);
     }
@@ -941,6 +970,7 @@ bool Type::isKind(SymbolKind kind) {
         case SymbolKind::StringType:
         case SymbolKind::EventType:
         case SymbolKind::UnboundedType:
+        case SymbolKind::VirtualInterfaceType:
         case SymbolKind::TypeAlias:
         case SymbolKind::ErrorType:
             return true;

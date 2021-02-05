@@ -296,6 +296,27 @@ void TypePrinter::visit(const ClassType& type, string_view) {
     buffer->append(type.name);
 }
 
+void TypePrinter::visit(const VirtualInterfaceType& type, string_view) {
+    buffer->append(type.iface.getDefinition().name);
+    if (!type.iface.parameters.empty()) {
+        buffer->append("#(");
+        for (auto param : type.iface.parameters) {
+            buffer->format("{}=", param->symbol.name);
+            if (param->symbol.kind == SymbolKind::TypeParameter)
+                append(param->symbol.as<TypeParameterSymbol>().targetType.getType());
+            else
+                buffer->append(param->symbol.as<ParameterSymbol>().getValue().toString());
+            buffer->append(",");
+        }
+
+        buffer->pop_back();
+        buffer->append(")");
+    }
+
+    if (type.modport)
+        buffer->format(".{}", type.modport->name);
+}
+
 void TypePrinter::visit(const TypeAliasType& type, string_view overrideName) {
     if (!overrideName.empty()) {
         type.targetType.getType().visit(*this, overrideName);
