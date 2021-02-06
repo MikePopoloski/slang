@@ -976,7 +976,8 @@ MemberSyntax* Parser::parseClassMember(bool isIfaceClass) {
                 errorIfIface(result);
                 return &result;
             }
-            case TokenKind::InterfaceKeyword: {
+            case TokenKind::InterfaceKeyword:
+            case TokenKind::Identifier: {
                 auto& result = factory.classPropertyDeclaration(attributes, nullptr,
                                                                 parseVariableDeclaration({}));
                 errorIfIface(result);
