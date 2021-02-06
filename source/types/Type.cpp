@@ -897,10 +897,12 @@ const Type& Type::fromSyntax(Compilation& compilation, const DataTypeSyntax& nod
                                           BindFlags::AllowDataType);
             return *expr.type;
         }
+        case SyntaxKind::VirtualInterfaceType:
+            return VirtualInterfaceType::fromSyntax(parent, location,
+                                                    node.as<VirtualInterfaceTypeSyntax>());
         case SyntaxKind::PropertyType:
         case SyntaxKind::SequenceType:
         case SyntaxKind::Untyped:
-        case SyntaxKind::VirtualInterfaceType:
             parent.addDiag(diag::NotYetSupported, node.sourceRange());
             return compilation.getErrorType();
         default:

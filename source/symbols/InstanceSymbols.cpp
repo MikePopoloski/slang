@@ -115,7 +115,7 @@ private:
     }
 };
 
-void createParams(Compilation& compilation, const Definition& definition,
+bool createParams(Compilation& compilation, const Definition& definition,
                   ParameterBuilder& paramBuilder, LookupLocation ll, SourceLocation instanceLoc,
                   bool forceInvalidParams) {
     // Construct a temporary scope that has the right parent to house instance parameters
@@ -136,8 +136,8 @@ void createParams(Compilation& compilation, const Definition& definition,
     for (auto import : definition.syntax.header->imports)
         tempDef.addMembers(*import);
 
-    paramBuilder.createParams(tempDef, ll, instanceLoc, forceInvalidParams,
-                              /* suppressErrors */ false);
+    return paramBuilder.createParams(tempDef, ll, instanceLoc, forceInvalidParams,
+                                     /* suppressErrors */ false);
 }
 
 void createImplicitNets(const HierarchicalInstanceSyntax& instance, const BindContext& context,
@@ -492,6 +492,27 @@ const InstanceBodySymbol& InstanceBodySymbol::fromDefinition(
 
     return fromDefinition(compilation, InstanceCacheKey(definition, {}, {}),
                           paramBuilder.paramSymbols, isUninstantiated);
+}
+
+const InstanceBodySymbol* InstanceBodySymbol::fromDefinition(
+    const Scope& scope, LookupLocation lookupLocation, SourceLocation sourceLoc,
+    const Definition& definition, const ParameterValueAssignmentSyntax* parameterSyntax) {
+
+    ParameterBuilder paramBuilder(scope, definition.name, definition.parameters);
+    if (parameterSyntax)
+        paramBuilder.setAssignments(*parameterSyntax);
+
+    auto& comp = scope.getCompilation();
+    if (!createParams(comp, definition, paramBuilder, lookupLocation, sourceLoc,
+                      /* isUninstantiated */ false)) {
+        return nullptr;
+    }
+
+    InstanceCacheKey cacheKey(definition, paramBuilder.paramValues.copy(comp),
+                              paramBuilder.typeParams.copy(comp));
+
+    return &fromDefinition(comp, cacheKey, paramBuilder.paramSymbols,
+                           /* isUninstantiated */ false);
 }
 
 static span<const ParameterSymbolBase* const> copyParams(

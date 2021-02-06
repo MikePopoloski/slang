@@ -2167,3 +2167,18 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Virtual interface as class member") {
+    auto tree = SyntaxTree::fromText(R"(
+interface I;
+endinterface
+
+class C;
+    virtual I i;
+endclass
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}

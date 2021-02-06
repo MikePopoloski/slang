@@ -9,9 +9,13 @@
 #include "slang/binding/BindContext.h"
 #include "slang/binding/Expression.h"
 #include "slang/compilation/Compilation.h"
+#include "slang/diagnostics/DeclarationsDiags.h"
+#include "slang/diagnostics/LookupDiags.h"
 #include "slang/diagnostics/TypesDiags.h"
 #include "slang/symbols/ASTSerializer.h"
 #include "slang/symbols/ClassSymbols.h"
+#include "slang/symbols/InstanceSymbols.h"
+#include "slang/symbols/MemberSymbols.h"
 #include "slang/symbols/VariableSymbols.h"
 #include "slang/syntax/AllSyntax.h"
 #include "slang/util/StackContainer.h"
@@ -910,6 +914,42 @@ ConstantValue StringType::getDefaultValueImpl() const {
 
 ConstantValue EventType::getDefaultValueImpl() const {
     return ConstantValue::NullPlaceholder{};
+}
+
+const Type& VirtualInterfaceType::fromSyntax(const Scope& scope, LookupLocation lookupLocation,
+                                             const VirtualInterfaceTypeSyntax& syntax) {
+    auto& comp = scope.getCompilation();
+    auto ifaceName = syntax.name.valueText();
+    if (ifaceName.empty())
+        return comp.getErrorType();
+
+    auto definition = comp.getDefinition(ifaceName, scope);
+    if (!definition || definition->definitionKind != DefinitionKind::Interface) {
+        scope.addDiag(diag::UnknownInterface, syntax.name.range()) << ifaceName;
+        return comp.getErrorType();
+    }
+
+    auto loc = syntax.name.location();
+    auto iface = InstanceBodySymbol::fromDefinition(scope, lookupLocation, loc, *definition,
+                                                    syntax.parameters);
+    if (!iface)
+        return comp.getErrorType();
+
+    const ModportSymbol* modport = nullptr;
+    string_view modportName = syntax.modport ? syntax.modport->member.valueText() : ""sv;
+    if (!modportName.empty()) {
+        auto sym = iface->find(modportName);
+        if (!sym || sym->kind != SymbolKind::Modport) {
+            auto& diag = scope.addDiag(diag::NotAModport, syntax.modport->member.range());
+            diag << modportName;
+            diag << definition->name;
+        }
+        else {
+            modport = &sym->as<ModportSymbol>();
+        }
+    }
+
+    return *comp.emplace<VirtualInterfaceType>(*iface, modport, loc);
 }
 
 ConstantValue VirtualInterfaceType::getDefaultValueImpl() const {

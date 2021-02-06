@@ -329,6 +329,8 @@ public:
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::UnboundedType; }
 };
 
+struct VirtualInterfaceTypeSyntax;
+
 /// Represents a virtual interface type.
 class VirtualInterfaceType : public Type {
 public:
@@ -341,6 +343,9 @@ public:
         iface(iface), modport(modport) {}
 
     ConstantValue getDefaultValueImpl() const;
+
+    static const Type& fromSyntax(const Scope& scope, LookupLocation lookupLocation,
+                                  const VirtualInterfaceTypeSyntax& syntax);
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::VirtualInterfaceType; }
 };

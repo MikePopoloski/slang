@@ -84,6 +84,8 @@ private:
     mutable PointerMap* connections = nullptr;
 };
 
+struct ParameterValueAssignmentSyntax;
+
 class InstanceBodySymbol : public Symbol, public Scope {
 public:
     /// A copy of all port parameter symbols used to construct the instance body.
@@ -111,6 +113,10 @@ public:
     static const InstanceBodySymbol& fromDefinition(
         Compilation& compilation, const Definition& definition, bool isUninstantiated,
         const flat_hash_map<string_view, const ConstantValue*>* paramOverrides);
+
+    static const InstanceBodySymbol* fromDefinition(
+        const Scope& scope, LookupLocation lookupLocation, SourceLocation sourceLoc,
+        const Definition& definition, const ParameterValueAssignmentSyntax* parameterSyntax);
 
     static const InstanceBodySymbol& fromDefinition(
         Compilation& compilation, const InstanceCacheKey& cacheKey,
