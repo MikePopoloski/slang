@@ -228,7 +228,7 @@ LRM | Feature | Supported
 LRM | Feature | Supported
 --- | ------- | ---------
 {{m-success}} 15.3 | Semaphores | v0.6
-{{m-danger}}  15.4 | Mailboxes | no
+{{m-warning}} 15.4 | Mailboxes | partial
 {{m-success}} 15.5 | Named events | v0.5
 
 ## 16. Assertions
@@ -393,7 +393,7 @@ LRM | Feature | Supported
 {{m-danger}}  25.6 | Interfaces and specify blocks | no
 {{m-warning}} 25.7 | Tasks and functions in interfaces | partial
 {{m-success}} 25.8 | Parameterized interfaces | v0.2
-{{m-danger}}  25.9 | Virtual interfaces | no
+{{m-warning}} 25.9 | Virtual interfaces | partial
 {{m-success}} 25.10 | Access to interface objects | v0.6
 
 ## 26. Packages
