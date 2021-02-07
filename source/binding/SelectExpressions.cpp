@@ -965,7 +965,8 @@ bool MemberAccessExpression::verifyAssignableImpl(const BindContext& context, bo
                                                   SourceLocation location) const {
     // If this is a selection of a class member, assignability depends only on the selected
     // member and not on the class handle itself. Otherwise, the opposite is true.
-    if (!value().type->isClass())
+    auto& valueType = *value().type;
+    if (!valueType.isClass() && !valueType.isVirtualInterface())
         return value().verifyAssignable(context, isNonBlocking, location);
 
     if (VariableSymbol::isKind(member.kind)) {
