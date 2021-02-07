@@ -1763,6 +1763,7 @@ interface Foo;
 endinterface
 
 module m;
+    Foo f();
     virtual interface Foo a = null;
     virtual Foo.m b = a;
 
@@ -1774,6 +1775,10 @@ module m;
             b = a ? a : null;
         end
 
+        a = f;
+        a = f.m;
+        b = f;
+        b = f.m;
         a.i = 1;
         b.i = 0;
     end
@@ -1798,6 +1803,12 @@ module m;
         c = d ? null : e;
         return i + (c ? 0 : 1);
     endfunction
+
+    function void baz(virtual Foo asdf);
+    endfunction
+
+    Foo farray[3] ();
+    initial baz(farray[1]);
 endmodule
 )");
 

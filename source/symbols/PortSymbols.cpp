@@ -909,7 +909,6 @@ private:
             child = array.elements[0];
         }
 
-        // TODO: handle interface/modport ports as well
         if (child->kind != SymbolKind::Instance || !child->as<InstanceSymbol>().isInterface()) {
             // If this is a variable with an errored type, an error is already emitted.
             if (child->kind != SymbolKind::Variable ||

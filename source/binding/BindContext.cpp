@@ -130,6 +130,7 @@ bool BindContext::requireAssignable(const VariableSymbol& var, bool isNonBlockin
         return false;
     }
 
+    // TODO: modport assignability checks
     return true;
 }
 

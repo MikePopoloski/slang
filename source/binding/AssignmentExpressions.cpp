@@ -411,17 +411,28 @@ Expression& AssignmentExpression::fromSyntax(Compilation& compilation,
 
     Expression& lhs = selfDetermined(compilation, *syntax.left, context, extraFlags);
 
-    // When LHS is a streaming concatenation which has no explicit type, RHS should be
-    // self-determined and we cannot pass lsh.type to it. When both LHS and RHS are streaming
-    // concatenations, pass lhs.type to notify RHS to exclude associative arrays for isBitstreamType
-    // check, while RHS can still be self-determined by ignoring lhs type information.
-    Expression& rhs = lhs.kind == ExpressionKind::Streaming &&
-                              rightExpr->kind != SyntaxKind::StreamingConcatenationExpression
-                          ? selfDetermined(compilation, *rightExpr, context, extraFlags)
-                          : create(compilation, *rightExpr, context, extraFlags, lhs.type);
+    Expression* rhs = nullptr;
+    if (lhs.type->isVirtualInterface())
+        rhs = tryBindInterfaceRef(context, *rightExpr, *lhs.type);
 
-    return fromComponents(compilation, op, isNonBlocking, lhs, rhs, syntax.operatorToken.location(),
-                          timingControl, syntax.sourceRange(), context);
+    if (!rhs) {
+        // When LHS is a streaming concatenation which has no explicit type, RHS should be
+        // self-determined and we cannot pass lsh.type to it. When both LHS and RHS are streaming
+        // concatenations, pass lhs.type to notify RHS to exclude associative arrays for
+        // isBitstreamType check, while RHS can still be self-determined by ignoring lhs type
+        // information.
+        if (lhs.kind == ExpressionKind::Streaming &&
+            rightExpr->kind != SyntaxKind::StreamingConcatenationExpression) {
+            rhs = &selfDetermined(compilation, *rightExpr, context, extraFlags);
+        }
+        else {
+            rhs = &create(compilation, *rightExpr, context, extraFlags, lhs.type);
+        }
+    }
+
+    return fromComponents(compilation, op, isNonBlocking, lhs, *rhs,
+                          syntax.operatorToken.location(), timingControl, syntax.sourceRange(),
+                          context);
 }
 
 Expression& AssignmentExpression::fromComponents(

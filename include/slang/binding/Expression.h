@@ -318,6 +318,9 @@ protected:
     static Expression* tryConnectPortArray(const BindContext& context, const Type& type,
                                            Expression& expr, const InstanceSymbol& instance);
 
+    static Expression* tryBindInterfaceRef(const BindContext& context,
+                                           const ExpressionSyntax& syntax, const Type& targetType);
+
     static Expression& badExpr(Compilation& compilation, const Expression* expr);
 
     // Perform type propagation and constant folding of a context-determined subexpression.

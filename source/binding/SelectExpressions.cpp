@@ -974,6 +974,10 @@ bool MemberAccessExpression::verifyAssignableImpl(const BindContext& context, bo
                                          sourceRange);
     }
 
+    // TODO: modport assignability checks
+    if (member.kind == SymbolKind::ModportPort)
+        return true;
+
     auto& diag = context.addDiag(diag::ExpressionNotAssignable, location);
     diag.addNote(diag::NoteDeclarationHere, member.location);
     diag << sourceRange;

@@ -201,6 +201,11 @@ const Expression& Expression::bindRValue(const Type& lhs, const ExpressionSyntax
                                          SourceLocation location, const BindContext& context) {
     Compilation& comp = context.scope.getCompilation();
 
+    if (lhs.isVirtualInterface()) {
+        if (auto ref = tryBindInterfaceRef(context, rhs, lhs))
+            return checkBindFlags(*ref, context);
+    }
+
     bitmask<BindFlags> extraFlags = context.instance && !context.instance->arrayPath.empty()
                                         ? BindFlags::None
                                         : BindFlags::StreamingAllowed;
@@ -929,6 +934,69 @@ Expression& Expression::bindSelector(Compilation& compilation, Expression& value
         default:
             THROW_UNREACHABLE;
     }
+}
+
+Expression* Expression::tryBindInterfaceRef(const BindContext& context,
+                                            const ExpressionSyntax& syntax,
+                                            const Type& targetType) {
+    const ExpressionSyntax* expr = &syntax;
+    while (expr->kind == SyntaxKind::ParenthesizedExpression)
+        expr = expr->as<ParenthesizedExpressionSyntax>().expression;
+
+    if (!NameSyntax::isKind(expr->kind))
+        return nullptr;
+
+    LookupResult result;
+    Lookup::name(expr->as<NameSyntax>(), context, LookupFlags::None, result);
+    if (!result.found)
+        return nullptr;
+
+    auto symbol = result.found;
+    if (symbol->kind == SymbolKind::InterfacePort) {
+        auto& ifacePort = symbol->as<InterfacePortSymbol>();
+        string_view modportName = ifacePort.modport;
+
+        symbol = ifacePort.getConnection();
+        if (symbol && !result.selectors.empty()) {
+            SmallVectorSized<const ElementSelectSyntax*, 4> selectors;
+            for (auto& sel : result.selectors)
+                selectors.append(std::get<0>(sel));
+
+            symbol = Lookup::selectChild(*symbol, selectors, context, result);
+            if (symbol && !modportName.empty()) {
+                // TODO: find modport
+            }
+        }
+    }
+    else if ((symbol->kind == SymbolKind::Instance && symbol->as<InstanceSymbol>().isInterface()) ||
+             symbol->kind == SymbolKind::Modport) {
+        result.errorIfSelectors(context);
+    }
+    else {
+        return nullptr;
+    }
+
+    const InstanceBodySymbol* iface = nullptr;
+    const ModportSymbol* modport = nullptr;
+    if (symbol->kind == SymbolKind::Modport) {
+        modport = &symbol->as<ModportSymbol>();
+        iface = &modport->getParentScope()->asSymbol().as<InstanceBodySymbol>();
+    }
+    else {
+        iface = &symbol->as<InstanceSymbol>().body;
+    }
+
+    // Now make sure the interface or modport we found matches the target type.
+    auto& vit = targetType.getCanonicalType().as<VirtualInterfaceType>();
+    if (&vit.iface != iface) {
+        // TODO: error
+    }
+    else if (modport && vit.modport != modport) {
+        // TODO: error
+    }
+
+    return context.getCompilation().emplace<HierarchicalReferenceExpression>(*symbol, targetType,
+                                                                             syntax.sourceRange());
 }
 
 void Expression::findPotentiallyImplicitNets(const ExpressionSyntax& expr,
