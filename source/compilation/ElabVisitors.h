@@ -70,6 +70,7 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
         if (!handleDefault(symbol))
             return;
         symbol.getAssignment();
+        symbol.getDelay();
     }
 
     void handle(const ElabSystemTaskSymbol& symbol) {

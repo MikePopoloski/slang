@@ -70,13 +70,30 @@ module Top;
     assign foo = 1, foo = 'z;
 
     logic bar;
-    assign bar = 1;
+    assign (strong1, supply0) #(3,2,1) bar = 1;
 endmodule
 )");
 
     Compilation compilation;
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Invalid continuous assign") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    logic foo[3];
+    wire i;
+    assign #(foo) i = 1;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::DelayNotNumeric);
 }
 
 TEST_CASE("User defined nettypes") {

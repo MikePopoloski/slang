@@ -14,6 +14,7 @@
 namespace slang {
 
 class PackageSymbol;
+class TimingControl;
 
 struct EmptyMemberSyntax;
 
@@ -143,6 +144,7 @@ public:
     ContinuousAssignSymbol(SourceLocation loc, const Expression& assignment);
 
     const Expression& getAssignment() const;
+    const TimingControl* getDelay() const;
 
     void serializeTo(ASTSerializer& serializer) const;
 
@@ -159,6 +161,7 @@ public:
 
 private:
     mutable const Expression* assign = nullptr;
+    mutable optional<const TimingControl*> delay;
 };
 
 struct GenvarDeclarationSyntax;

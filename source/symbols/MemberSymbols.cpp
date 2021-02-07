@@ -9,6 +9,7 @@
 #include "slang/binding/Expression.h"
 #include "slang/binding/FormatHelpers.h"
 #include "slang/binding/MiscExpressions.h"
+#include "slang/binding/TimingControl.h"
 #include "slang/compilation/Compilation.h"
 #include "slang/compilation/Definition.h"
 #include "slang/diagnostics/DeclarationsDiags.h"
@@ -302,17 +303,36 @@ const Expression& ContinuousAssignSymbol::getAssignment() const {
         return *assign;
 
     auto scope = getParentScope();
-    ASSERT(scope);
-
     auto syntax = getSyntax();
-    ASSERT(syntax);
+    ASSERT(scope && syntax);
 
-    // TODO: handle drive strengths, delays
     BindContext context(*scope, LookupLocation::before(*this));
     assign =
         &Expression::bind(syntax->as<ExpressionSyntax>(), context, BindFlags::AssignmentAllowed);
 
     return *assign;
+}
+
+const TimingControl* ContinuousAssignSymbol::getDelay() const {
+    if (delay)
+        return *delay;
+
+    auto scope = getParentScope();
+    auto syntax = getSyntax();
+    if (!scope || !syntax || !syntax->parent) {
+        delay = nullptr;
+        return nullptr;
+    }
+
+    auto delaySyntax = syntax->parent->as<ContinuousAssignSyntax>().delay;
+    if (!delaySyntax) {
+        delay = nullptr;
+        return nullptr;
+    }
+
+    BindContext context(*scope, LookupLocation::before(*this));
+    delay = &TimingControl::bind(*delaySyntax, context);
+    return *delay;
 }
 
 void ContinuousAssignSymbol::serializeTo(ASTSerializer& serializer) const {
