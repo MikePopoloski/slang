@@ -1755,6 +1755,57 @@ endmodule
     NO_COMPILATION_ERRORS;
 }
 
+TEST_CASE("Virtual interface data type") {
+    auto tree = SyntaxTree::fromText(R"(
+interface Foo;
+    logic i;
+    modport m(input i);
+endinterface
+
+module m;
+    virtual interface Foo a = null;
+    virtual Foo.m b = a;
+
+    initial begin
+        if (a == b || a == null || a !== null || b === a) begin
+        end
+
+        if (a) begin
+            b = a ? a : null;
+        end
+
+        a.i = 1;
+        b.i = 0;
+    end
+
+    typedef virtual Foo ft;
+    int arr[ft];
+    initial begin
+        arr[a] = 1;
+        arr[null] = 3;
+    end
+
+    localparam int foo = bar();
+    function automatic int bar;
+        ft c = null;
+        ft d, e;
+
+        int i = (c == null) ? 1 : 0;
+        if (c)
+            i++;
+
+        c = 'x ? d : e;
+        c = d ? null : e;
+        return i + (c ? 0 : 1);
+    endfunction
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
 TEST_CASE("string concat lvalue error") {
     auto tree = SyntaxTree::fromText(R"(
 module m;

@@ -14,6 +14,8 @@
 #include "slang/diagnostics/LookupDiags.h"
 #include "slang/symbols/ASTSerializer.h"
 #include "slang/symbols/ClassSymbols.h"
+#include "slang/symbols/InstanceSymbols.h"
+#include "slang/symbols/MemberSymbols.h"
 #include "slang/symbols/ParameterSymbols.h"
 #include "slang/symbols/SubroutineSymbols.h"
 #include "slang/symbols/VariableSymbols.h"
@@ -804,12 +806,14 @@ Expression& MemberAccessExpression::fromSelector(
 
     // This might look like a member access but actually be a built-in type method.
     const Type& type = expr.type->getCanonicalType();
+    const Scope* scope = nullptr;
     switch (type.kind) {
         case SymbolKind::PackedStructType:
         case SymbolKind::UnpackedStructType:
         case SymbolKind::PackedUnionType:
         case SymbolKind::UnpackedUnionType:
         case SymbolKind::ClassType:
+            scope = &type.as<Scope>();
             break;
         case SymbolKind::EnumType:
         case SymbolKind::StringType:
@@ -820,6 +824,14 @@ Expression& MemberAccessExpression::fromSelector(
         case SymbolKind::EventType:
             return CallExpression::fromSystemMethod(compilation, expr, selector, invocation,
                                                     withClause, context);
+        case SymbolKind::VirtualInterfaceType: {
+            auto& vi = type.as<VirtualInterfaceType>();
+            if (vi.modport)
+                scope = vi.modport;
+            else
+                scope = &vi.iface;
+            break;
+        }
         default: {
             if (auto result = tryBindSpecialMethod(compilation, expr, selector, invocation,
                                                    withClause, context)) {
@@ -834,7 +846,7 @@ Expression& MemberAccessExpression::fromSelector(
         }
     }
 
-    const Symbol* member = expr.type->getCanonicalType().as<Scope>().find(selector.name);
+    const Symbol* member = scope->find(selector.name);
     if (!member) {
         if (auto result = tryBindSpecialMethod(compilation, expr, selector, invocation, withClause,
                                                context)) {
@@ -864,20 +876,16 @@ Expression& MemberAccessExpression::fromSelector(
             Lookup::ensureVisible(*member, context, selector.nameRange);
             return CallExpression::fromLookup(compilation, &member->as<SubroutineSymbol>(), &expr,
                                               invocation, withClause, range, context);
-        case SymbolKind::EnumValue: {
-            auto& value = member->as<EnumValueSymbol>();
-            return *compilation.emplace<MemberAccessExpression>(value.getType(), expr, value, 0u,
-                                                                range);
-        }
-        case SymbolKind::Parameter: {
-            auto& value = member->as<ParameterSymbol>();
-            return *compilation.emplace<MemberAccessExpression>(value.getType(), expr, value, 0u,
-                                                                range);
-        }
         case SymbolKind::ConstraintBlock:
             return *compilation.emplace<MemberAccessExpression>(compilation.getVoidType(), expr,
                                                                 *member, 0u, range);
         default:
+            if (member->isValue()) {
+                auto& value = member->as<ValueSymbol>();
+                return *compilation.emplace<MemberAccessExpression>(value.getType(), expr, value,
+                                                                    0u, range);
+            }
+
             auto& diag = context.addDiag(diag::InvalidClassAccess, selector.dotLocation);
             diag << selector.nameRange;
             diag << expr.sourceRange;

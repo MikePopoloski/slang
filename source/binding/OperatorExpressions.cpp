@@ -745,6 +745,11 @@ Expression& BinaryExpression::fromComponents(Expression& lhs, Expression& rhs, B
                     good = true;
                     result->type = &compilation.getBitType();
                 }
+                else if ((lt->isVirtualInterface() && lt->isAssignmentCompatible(*rt)) ||
+                         (rt->isVirtualInterface() && rt->isAssignmentCompatible(*lt))) {
+                    good = true;
+                    result->type = &compilation.getBitType();
+                }
                 else {
                     good = false;
                 }
@@ -936,7 +941,8 @@ Expression& ConditionalExpression::fromSyntax(Compilation& compilation,
             result->type = &compilation.getNullType();
         }
         else if (lt->isClass() || rt->isClass() || lt->isCHandle() || rt->isCHandle() ||
-                 lt->isEvent() || rt->isEvent()) {
+                 lt->isEvent() || rt->isEvent() || lt->isVirtualInterface() ||
+                 rt->isVirtualInterface()) {
             if (lt->isNull())
                 result->type = rt;
             else if (rt->isNull())
