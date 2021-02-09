@@ -352,10 +352,16 @@ bool Expression::verifyAssignable(const BindContext& context, bool isNonBlocking
         }
         case ExpressionKind::ElementSelect: {
             auto& select = as<ElementSelectExpression>();
+            if (!context.flags.has(BindFlags::ProceduralStatement))
+                context.eval(select.selector());
             return select.value().verifyAssignable(context, isNonBlocking, location);
         }
         case ExpressionKind::RangeSelect: {
             auto& select = as<RangeSelectExpression>();
+            if (!context.flags.has(BindFlags::ProceduralStatement)) {
+                context.eval(select.left());
+                context.eval(select.right());
+            }
             return select.value().verifyAssignable(context, isNonBlocking, location);
         }
         case ExpressionKind::MemberAccess: {

@@ -85,6 +85,11 @@ module m;
     logic foo[3];
     wire i;
     assign #(foo) i = 1;
+
+    int j;
+    logic [7:0] baz;
+    assign foo[j] = 1;
+    assign baz[j+:3] = '0;
 endmodule
 )");
 
@@ -92,8 +97,10 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 1);
+    REQUIRE(diags.size() == 3);
     CHECK(diags[0].code == diag::DelayNotNumeric);
+    CHECK(diags[1].code == diag::ConstEvalNonConstVariable);
+    CHECK(diags[2].code == diag::ConstEvalNonConstVariable);
 }
 
 TEST_CASE("User defined nettypes") {
