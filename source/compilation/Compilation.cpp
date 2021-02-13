@@ -648,7 +648,11 @@ const Diagnostics& Compilation::getSemanticDiagnostics() {
                               options.errorLimit == 0 ? UINT32_MAX : options.errorLimit);
     getRoot().visit(visitor);
     visitor.finalize();
-    designTree = &DesignTreeNode::build(*this);
+
+    if (!visitor.hierarchyProblem)
+        designTree = &DesignTreeNode::build(*this);
+    else
+        designTree = &DesignTreeNode::empty(*this);
 
     // Check all DPI methods for correctness.
     if (!dpiExports.empty() || !visitor.dpiImports.empty())

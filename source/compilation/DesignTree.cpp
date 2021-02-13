@@ -20,11 +20,6 @@ public:
     NodeBuilder(Compilation& compilation) : comp(compilation) {}
 
     DesignTreeNode& buildNode(const InstanceSymbol& inst) {
-        if (path.size() > comp.getOptions().maxInstanceDepth) {
-            return *comp.emplace<DesignTreeNode>(inst.body, span<const DesignTreeNode* const>{},
-                                                 span<const StorageElement* const>{});
-        }
-
         // If the instance body has upward names we have to clone and re-check
         // expressions for specific diagnostics. This is skipped for the first
         // instance in the list of parents because that has for sure already been
@@ -73,6 +68,11 @@ DesignTreeNode& DesignTreeNode::build(Compilation& comp) {
         childNodes.append(&builder.buildNode(*inst));
 
     return *comp.emplace<DesignTreeNode>(comp.getRoot(), childNodes.copy(comp),
+                                         span<const StorageElement* const>{});
+}
+
+DesignTreeNode& DesignTreeNode::empty(Compilation& comp) {
+    return *comp.emplace<DesignTreeNode>(comp.getRoot(), span<const DesignTreeNode* const>{},
                                          span<const StorageElement* const>{});
 }
 

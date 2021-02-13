@@ -36,6 +36,7 @@ public:
         childNodes(childNodes), storageElements(storageElements) {}
 
     static DesignTreeNode& build(Compilation& compilation);
+    static DesignTreeNode& empty(Compilation& compilation);
 };
 
 } // namespace slang

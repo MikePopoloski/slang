@@ -608,6 +608,7 @@ warning task-ignored ConstSysTaskIgnored "system task '{}' is ignored in constan
 
 subsystem Compilation
 error MaxInstanceDepthExceeded "{} instantiation exceeded maximum depth of {}"
+error InfinitelyRecursiveHierarchy "infinitely recursive instantiation of {}"
 error InvalidTopModule "'{}' is not a valid top-level module"
 error NoDeclInClass "out-of-block definition of '{}' does not match any declaration in '{}'"
 error InvalidParamOverrideOpt "'{}' is not a valid form of parameter override"

@@ -126,25 +126,35 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
         for (auto attr : compilation.getAttributes(symbol))
             attr->getValue();
 
+        // Detect infinite recursion, which happens if we see this exact
+        // instance body somewhere higher up in the stack.
+        if (!activeInstanceBodies.emplace(&symbol.body).second) {
+            symbol.getParentScope()->addDiag(diag::InfinitelyRecursiveHierarchy, symbol.location)
+                << symbol.name;
+            hierarchyProblem = true;
+            return;
+        }
+
+        auto guard = ScopeGuard([this, &symbol] { activeInstanceBodies.erase(&symbol.body); });
+
         // Instance bodies are all the same, so if we've visited this one
         // already don't bother doing it again.
         if (!visitedInstanceBodies.emplace(&symbol.body).second)
             return;
 
-        // In order to avoid infinitely recursive instantiations, keep track
-        // of how deep we are in the hierarchy tree and report an error if we
-        // get too deep.
-        if (hierarchyDepth > compilation.getOptions().maxInstanceDepth) {
+        // In order to avoid "effectively infinite" recursions, where parameter values
+        // are changing but the numbers are so huge that we would run for almost forever,
+        // check the depth and bail out after a certain configurable point.
+        if (activeInstanceBodies.size() > compilation.getOptions().maxInstanceDepth) {
             auto& diag =
                 symbol.getParentScope()->addDiag(diag::MaxInstanceDepthExceeded, symbol.location);
             diag << DefinitionKindStrs[int(symbol.getDefinition().definitionKind)];
             diag << compilation.getOptions().maxInstanceDepth;
+            hierarchyProblem = true;
             return;
         }
 
-        hierarchyDepth++;
         visit(symbol.body);
-        hierarchyDepth--;
     }
 
     void handle(const GenerateBlockSymbol& symbol) {
@@ -199,10 +209,11 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
     const size_t& numErrors;
     flat_hash_map<const Definition*, size_t> instanceCount;
     flat_hash_set<const InstanceBodySymbol*> visitedInstanceBodies;
+    flat_hash_set<const InstanceBodySymbol*> activeInstanceBodies;
     uint32_t errorLimit;
-    uint32_t hierarchyDepth = 0;
     SmallVectorSized<const GenericClassDefSymbol*, 8> genericClasses;
     SmallVectorSized<const SubroutineSymbol*, 4> dpiImports;
+    bool hierarchyProblem = false;
 };
 
 // This visitor is for finding all bind directives in the hierarchy.
