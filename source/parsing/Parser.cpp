@@ -1053,7 +1053,7 @@ bool Parser::isVariableDeclaration() {
                 return false;
             if (peek(index).kind == TokenKind::Dot)
                 return true;
-            break;
+            return peek(index).kind == TokenKind::Identifier;
 
         // some cases might be a cast expression
         case TokenKind::StringKeyword:
