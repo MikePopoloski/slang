@@ -97,10 +97,12 @@ module m;
 
     class C;
         int i;
+        static int j;
     endclass
 
     C c;
     assign c.i = 1;
+    assign j = c.j;
 
     logic l;
     logic d[];

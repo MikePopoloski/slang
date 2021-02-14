@@ -829,12 +829,7 @@ Expression& MemberAccessExpression::fromSelector(
         case SymbolKind::UnpackedStructType:
         case SymbolKind::PackedUnionType:
         case SymbolKind::UnpackedUnionType:
-            scope = &type.as<Scope>();
-            break;
         case SymbolKind::ClassType:
-            if (errorIfNotProcedural())
-                return badExpr(compilation, &expr);
-
             scope = &type.as<Scope>();
             break;
         case SymbolKind::EnumType:
@@ -894,14 +889,24 @@ Expression& MemberAccessExpression::fromSelector(
         case SymbolKind::ClassProperty: {
             Lookup::ensureVisible(*member, context, selector.nameRange);
             auto& prop = member->as<ClassPropertySymbol>();
+            if (prop.lifetime == VariableLifetime::Automatic && errorIfNotProcedural())
+                return badExpr(compilation, &expr);
+
             return *compilation.emplace<MemberAccessExpression>(prop.getType(), expr, prop, 0u,
                                                                 range);
         }
-        case SymbolKind::Subroutine:
+        case SymbolKind::Subroutine: {
             Lookup::ensureVisible(*member, context, selector.nameRange);
-            return CallExpression::fromLookup(compilation, &member->as<SubroutineSymbol>(), &expr,
-                                              invocation, withClause, range, context);
+            auto& sub = member->as<SubroutineSymbol>();
+            if (!sub.flags.has(MethodFlags::Static) && errorIfNotProcedural())
+                return badExpr(compilation, &expr);
+
+            return CallExpression::fromLookup(compilation, &sub, &expr, invocation, withClause,
+                                              range, context);
+        }
         case SymbolKind::ConstraintBlock:
+            if (errorIfNotProcedural())
+                return badExpr(compilation, &expr);
             return *compilation.emplace<MemberAccessExpression>(compilation.getVoidType(), expr,
                                                                 *member, 0u, range);
         default:
