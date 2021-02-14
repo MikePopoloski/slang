@@ -6,6 +6,7 @@
 //------------------------------------------------------------------------------
 #include "slang/symbols/MemberSymbols.h"
 
+#include "slang/binding/AssignmentExpressions.h"
 #include "slang/binding/Expression.h"
 #include "slang/binding/FormatHelpers.h"
 #include "slang/binding/MiscExpressions.h"
@@ -16,6 +17,7 @@
 #include "slang/diagnostics/ExpressionsDiags.h"
 #include "slang/diagnostics/LookupDiags.h"
 #include "slang/symbols/ASTSerializer.h"
+#include "slang/symbols/ASTVisitor.h"
 #include "slang/symbols/CompilationUnitSymbols.h"
 #include "slang/symbols/SubroutineSymbols.h"
 #include "slang/symbols/VariableSymbols.h"
@@ -313,6 +315,36 @@ const Expression& ContinuousAssignSymbol::getAssignment() const {
     return *assign;
 }
 
+template<typename T, typename Arg>
+using visitExprs_t = decltype(std::declval<T>().visitExprs(std::declval<Arg>()));
+
+struct ExpressionVarVisitor {
+    bool anyVars = false;
+
+    template<typename T>
+    void visit(const T& expr) {
+        switch (expr.kind) {
+            case ExpressionKind::NamedValue:
+            case ExpressionKind::HierarchicalValue:
+            case ExpressionKind::MemberAccess:
+            case ExpressionKind::ElementSelect:
+            case ExpressionKind::RangeSelect: {
+                if (auto sym = expr.getSymbolReference()) {
+                    if (VariableSymbol::isKind(sym->kind))
+                        anyVars = true;
+                }
+                break;
+            }
+            default:
+                if constexpr (is_detected_v<visitExprs_t, T, ExpressionVarVisitor>)
+                    expr.visitExprs(*this);
+                break;
+        }
+    }
+
+    void visitInvalid(const Expression&) {}
+};
+
 const TimingControl* ContinuousAssignSymbol::getDelay() const {
     if (delay)
         return *delay;
@@ -332,6 +364,23 @@ const TimingControl* ContinuousAssignSymbol::getDelay() const {
 
     BindContext context(*scope, LookupLocation::before(*this), BindFlags::NonProcedural);
     delay = &TimingControl::bind(*delaySyntax, context);
+
+    // A multi-delay is disallowed if the lhs references variables.
+    auto& d = *delay.value();
+    if (d.kind == TimingControlKind::Delay3) {
+        auto& d3 = d.as<Delay3Control>();
+        if (d3.expr2) {
+            auto& expr = getAssignment();
+            if (expr.kind == ExpressionKind::Assignment) {
+                auto& left = expr.as<AssignmentExpression>().left();
+                ExpressionVarVisitor visitor;
+                left.visit(visitor);
+                if (visitor.anyVars)
+                    context.addDiag(diag::Delay3OnVar, left.sourceRange);
+            }
+        }
+    }
+
     return *delay;
 }
 

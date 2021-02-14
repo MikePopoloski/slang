@@ -69,7 +69,7 @@ module Top;
     wire foo;
     assign foo = 1, foo = 'z;
 
-    logic bar;
+    wire bar;
     assign (strong1, supply0) #(3,2,1) bar = 1;
 endmodule
 )");
@@ -114,6 +114,10 @@ module m;
 
     virtual I vif;
     assign vif.i = 1;
+
+    wire bux;
+    logic bix;
+    assign (strong1, supply0) #(3,2,1) {bux, bix} = 2;
 endmodule
 )");
 
@@ -121,7 +125,7 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 7);
+    REQUIRE(diags.size() == 8);
     CHECK(diags[0].code == diag::DelayNotNumeric);
     CHECK(diags[1].code == diag::ConstEvalNonConstVariable);
     CHECK(diags[2].code == diag::ConstEvalNonConstVariable);
@@ -129,6 +133,7 @@ endmodule
     CHECK(diags[4].code == diag::DynamicNotProcedural);
     CHECK(diags[5].code == diag::DynamicNotProcedural);
     CHECK(diags[6].code == diag::DynamicNotProcedural);
+    CHECK(diags[7].code == diag::Delay3OnVar);
 }
 
 TEST_CASE("User defined nettypes") {
