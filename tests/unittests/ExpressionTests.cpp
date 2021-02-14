@@ -186,7 +186,7 @@ TEST_CASE("Expression types") {
 
     auto typeof = [&](const std::string& source) {
         auto tree = SyntaxTree::fromText(string_view(source));
-        BindContext context(scope, LookupLocation::max);
+        BindContext context(scope, LookupLocation::max, BindFlags::ProceduralContext);
         return Expression::bind(tree->root().as<ExpressionSyntax>(), context).type->toString();
     };
 
@@ -1546,7 +1546,7 @@ TEST_CASE("Stream expression with") {
         { "byte b[3:0]; int a = {<<3{b with[2+:3]}};", diag::BadRangeExpression },
         { "byte b[0:3]; int a = {<<3{b with[2:5]}};", diag::IndexValueInvalid },
         { "byte b[]; int a = {<<3{b with[3:2]}};", diag::SelectEndianMismatch },
-        { "byte b[], c[4]; assign {>>{b, {<<3{c with[b[0]:b[1]]}}}} = 9;",
+        { "byte b[], c[4]; always {>>{b, {<<3{c with[b[0]:b[1]]}}}} = 9;",
           diag::BadStreamWithOrder },
         { "int a[],b[],c[];bit d;assign {>>{b}}={<<{a with [2+:3],c,d}};", diag::BadStreamSize },
     };

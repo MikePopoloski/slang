@@ -181,6 +181,10 @@ Expression& ElementSelectExpression::fromSyntax(Compilation& compilation, Expres
             }
         }
     }
+    else if (!context.flags.has(BindFlags::ProceduralContext)) {
+        context.addDiag(diag::DynamicNotProcedural, fullRange);
+        return badExpr(compilation, result);
+    }
 
     return *result;
 }
@@ -395,6 +399,11 @@ Expression& RangeSelectExpression::fromSyntax(Compilation& compilation, Expressi
 
     // Selects of vectored nets are disallowed.
     checkForVectoredSelect(value, fullRange, context);
+
+    if (!valueType.hasFixedRange() && !context.flags.has(BindFlags::ProceduralContext)) {
+        context.addDiag(diag::DynamicNotProcedural, fullRange);
+        return badExpr(compilation, result);
+    }
 
     // If this is selecting from a queue, the result is always a queue.
     if (isQueue) {
@@ -804,6 +813,14 @@ Expression& MemberAccessExpression::fromSelector(
         }
     }
 
+    auto errorIfNotProcedural = [&]() {
+        if (!context.flags.has(BindFlags::ProceduralContext)) {
+            context.addDiag(diag::DynamicNotProcedural, range);
+            return true;
+        }
+        return false;
+    };
+
     // This might look like a member access but actually be a built-in type method.
     const Type& type = expr.type->getCanonicalType();
     const Scope* scope = nullptr;
@@ -812,7 +829,12 @@ Expression& MemberAccessExpression::fromSelector(
         case SymbolKind::UnpackedStructType:
         case SymbolKind::PackedUnionType:
         case SymbolKind::UnpackedUnionType:
+            scope = &type.as<Scope>();
+            break;
         case SymbolKind::ClassType:
+            if (errorIfNotProcedural())
+                return badExpr(compilation, &expr);
+
             scope = &type.as<Scope>();
             break;
         case SymbolKind::EnumType:
@@ -825,6 +847,9 @@ Expression& MemberAccessExpression::fromSelector(
             return CallExpression::fromSystemMethod(compilation, expr, selector, invocation,
                                                     withClause, context);
         case SymbolKind::VirtualInterfaceType: {
+            if (errorIfNotProcedural())
+                return badExpr(compilation, &expr);
+
             auto& vi = type.as<VirtualInterfaceType>();
             if (vi.modport)
                 scope = vi.modport;

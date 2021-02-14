@@ -62,26 +62,30 @@ enum class BindFlags {
     /// for nested subexpressions, unless they are directly parenthesized.
     AssignmentAllowed = 1 << 7,
 
-    /// Expression is inside a procedural statement. This means that modifying
-    /// variables via assignments and increment/decrement expressions is allowed.
-    ProceduralStatement = 1 << 8,
+    /// Assignments are disallowed in this context. As opposed to the AssignmentAllowed
+    /// flag, this is not cleared and overrides that fact even if we are in a
+    /// procedural context and would otherwise be allowed to modify variables.
+    AssignmentDisallowed = 1 << 8,
+
+    /// Expression is inside a procedural context, as opposed to a continuous assignment.
+    ProceduralContext = 1 << 9,
 
     /// Expression is for a static variable's initializer. References to automatic
     /// variables will be disallowed.
-    StaticInitializer = 1 << 9,
+    StaticInitializer = 1 << 10,
 
     /// Streaming operator is allowed in assignment target, assignment source, bit-stream casting
     /// argument, or stream expressions of another streaming concatenation. This flag is cleared for
     /// nested subexpressions, unless they are directly parenthesized.
-    StreamingAllowed = 1 << 10,
+    StreamingAllowed = 1 << 11,
 
     /// This is the first expression appearing as an expression statement; potentially this
     /// indicates whether a subroutine invocation is as a task (if set) or as a function (unset).
     /// Cleared for nested subexpressions.
-    TopLevelStatement = 1 << 11,
+    TopLevelStatement = 1 << 12,
 
     /// Expression is allowed to be the unbounded literal '$' such as inside a queue select.
-    AllowUnboundedLiteral = 1 << 12
+    AllowUnboundedLiteral = 1 << 13
 };
 BITMASK(BindFlags, AllowUnboundedLiteral);
 

@@ -23,7 +23,7 @@ namespace slang {
 const Statement& StatementBlockSymbol::getBody() const {
     ensureElaborated();
     return binder.getStatement(
-        BindContext(*this, LookupLocation::max, BindFlags::ProceduralStatement));
+        BindContext(*this, LookupLocation::max, BindFlags::ProceduralContext));
 }
 
 static std::pair<string_view, SourceLocation> getLabel(const StatementSyntax& syntax,
@@ -147,7 +147,7 @@ void StatementBlockSymbol::elaborateVariables(function_ref<void(const Symbol&)> 
 
 const Statement& ProceduralBlockSymbol::getBody() const {
     return binder.getStatement(BindContext(*getParentScope(), LookupLocation::after(*this),
-                                           BindFlags::ProceduralStatement));
+                                           BindFlags::ProceduralContext));
 }
 
 ProceduralBlockSymbol& ProceduralBlockSymbol::fromSyntax(

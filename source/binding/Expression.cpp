@@ -352,13 +352,13 @@ bool Expression::verifyAssignable(const BindContext& context, bool isNonBlocking
         }
         case ExpressionKind::ElementSelect: {
             auto& select = as<ElementSelectExpression>();
-            if (!context.flags.has(BindFlags::ProceduralStatement))
+            if (!context.flags.has(BindFlags::ProceduralContext))
                 context.eval(select.selector());
             return select.value().verifyAssignable(context, isNonBlocking, location);
         }
         case ExpressionKind::RangeSelect: {
             auto& select = as<RangeSelectExpression>();
-            if (!context.flags.has(BindFlags::ProceduralStatement)) {
+            if (!context.flags.has(BindFlags::ProceduralContext)) {
                 context.eval(select.left());
                 context.eval(select.right());
             }
@@ -558,8 +558,10 @@ Expression& Expression::create(Compilation& compilation, const ExpressionSyntax&
             break;
         case SyntaxKind::ParenthesizedExpression:
             // Parenthesis re-allows assignments if we're in a procedural statement.
-            if (context.flags & BindFlags::ProceduralStatement)
+            if (context.flags.has(BindFlags::ProceduralContext) &&
+                !context.flags.has(BindFlags::AssignmentDisallowed)) {
                 extraFlags |= BindFlags::AssignmentAllowed;
+            }
 
             result = &create(compilation, *syntax.as<ParenthesizedExpressionSyntax>().expression,
                              context, extraFlags, assignmentTarget);

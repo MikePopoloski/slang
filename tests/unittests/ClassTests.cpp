@@ -54,7 +54,7 @@ TEST_CASE("Class handle expression types") {
 
     auto typeof = [&](const std::string& source) {
         auto tree = SyntaxTree::fromText(string_view(source));
-        BindContext context(scope, LookupLocation::max, BindFlags::ProceduralStatement);
+        BindContext context(scope, LookupLocation::max, BindFlags::ProceduralContext);
         return Expression::bind(tree->root().as<ExpressionSyntax>(), context).type->toString();
     };
 

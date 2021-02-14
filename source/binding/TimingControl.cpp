@@ -10,45 +10,41 @@
 #include "slang/compilation/Compilation.h"
 #include "slang/diagnostics/ExpressionsDiags.h"
 #include "slang/diagnostics/StatementsDiags.h"
-#include "slang/types/Type.h"
 #include "slang/syntax/AllSyntax.h"
+#include "slang/types/Type.h"
 
 namespace slang {
 
 const TimingControl& TimingControl::bind(const TimingControlSyntax& syntax,
                                          const BindContext& context) {
-    // Timing controls are not considered procedural statements.
-    BindContext timingCtx(context);
-    timingCtx.flags &= ~BindFlags::ProceduralStatement;
-
-    auto& comp = timingCtx.scope.getCompilation();
+    auto& comp = context.getCompilation();
     TimingControl* result;
     switch (syntax.kind) {
         case SyntaxKind::DelayControl:
-            result = &DelayControl::fromSyntax(comp, syntax.as<DelaySyntax>(), timingCtx);
+            result = &DelayControl::fromSyntax(comp, syntax.as<DelaySyntax>(), context);
             break;
         case SyntaxKind::Delay3:
-            result = &Delay3Control::fromSyntax(comp, syntax.as<Delay3Syntax>(), timingCtx);
+            result = &Delay3Control::fromSyntax(comp, syntax.as<Delay3Syntax>(), context);
             break;
         case SyntaxKind::EventControl:
             result =
-                &SignalEventControl::fromSyntax(comp, syntax.as<EventControlSyntax>(), timingCtx);
+                &SignalEventControl::fromSyntax(comp, syntax.as<EventControlSyntax>(), context);
             break;
         case SyntaxKind::EventControlWithExpression: {
             result = &EventListControl::fromSyntax(
-                comp, *syntax.as<EventControlWithExpressionSyntax>().expr, timingCtx);
+                comp, *syntax.as<EventControlWithExpressionSyntax>().expr, context);
             break;
         }
         case SyntaxKind::ImplicitEventControl:
             result = &ImplicitEventControl::fromSyntax(
-                comp, syntax.as<ImplicitEventControlSyntax>(), timingCtx);
+                comp, syntax.as<ImplicitEventControlSyntax>(), context);
             break;
         case SyntaxKind::RepeatedEventControl:
             result = &RepeatedEventControl::fromSyntax(
-                comp, syntax.as<RepeatedEventControlSyntax>(), timingCtx);
+                comp, syntax.as<RepeatedEventControlSyntax>(), context);
             break;
         case SyntaxKind::CycleDelay:
-            timingCtx.addDiag(diag::NotYetSupported, syntax.sourceRange());
+            context.addDiag(diag::NotYetSupported, syntax.sourceRange());
             result = &badCtrl(comp, nullptr);
             break;
         default:

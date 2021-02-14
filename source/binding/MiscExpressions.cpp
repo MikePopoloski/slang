@@ -68,7 +68,7 @@ bool ValueExpressionBase::verifyAssignableImpl(const BindContext& context, bool 
         return false;
     }
 
-    if (context.flags.has(BindFlags::ProceduralStatement)) {
+    if (context.flags.has(BindFlags::ProceduralContext)) {
         // Nets can't be assigned in procedural contexts.
         if (symbol.kind == SymbolKind::Net) {
             context.addDiag(diag::AssignToNet, sourceRange);

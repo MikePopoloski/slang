@@ -16,7 +16,7 @@ namespace slang {
 
 const Constraint& Constraint::bind(const ConstraintItemSyntax& syntax, const BindContext& context) {
     BindContext ctx(context);
-    ctx.flags &= ~BindFlags::ProceduralStatement;
+    ctx.flags |= BindFlags::AssignmentDisallowed;
 
     Constraint* result;
     switch (syntax.kind) {

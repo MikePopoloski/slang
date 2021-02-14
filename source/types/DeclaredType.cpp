@@ -380,7 +380,7 @@ T DeclaredType::getBindContext() const {
     if (flags & DeclaredTypeFlags::RequireConstant)
         bindFlags = BindFlags::Constant;
     if (flags & DeclaredTypeFlags::InProceduralContext)
-        bindFlags |= BindFlags::ProceduralStatement;
+        bindFlags |= BindFlags::ProceduralContext;
     if ((flags & DeclaredTypeFlags::AutomaticInitializer) == 0)
         bindFlags |= BindFlags::StaticInitializer;
 

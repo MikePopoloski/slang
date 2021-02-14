@@ -81,6 +81,10 @@ endmodule
 
 TEST_CASE("Invalid continuous assign") {
     auto tree = SyntaxTree::fromText(R"(
+interface I;
+    int i;
+endinterface
+
 module m;
     logic foo[3];
     wire i;
@@ -90,6 +94,24 @@ module m;
     logic [7:0] baz;
     assign foo[j] = 1;
     assign baz[j+:3] = '0;
+
+    class C;
+        int i;
+    endclass
+
+    C c;
+    assign c.i = 1;
+
+    logic l;
+    logic d[];
+    assign l = d[2];
+
+    logic q[$];
+    logic [1:0] qp;
+    assign qp = q[1:0];
+
+    virtual I vif;
+    assign vif.i = 1;
 endmodule
 )");
 
@@ -97,10 +119,14 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 3);
+    REQUIRE(diags.size() == 7);
     CHECK(diags[0].code == diag::DelayNotNumeric);
     CHECK(diags[1].code == diag::ConstEvalNonConstVariable);
     CHECK(diags[2].code == diag::ConstEvalNonConstVariable);
+    CHECK(diags[3].code == diag::DynamicNotProcedural);
+    CHECK(diags[4].code == diag::DynamicNotProcedural);
+    CHECK(diags[5].code == diag::DynamicNotProcedural);
+    CHECK(diags[6].code == diag::DynamicNotProcedural);
 }
 
 TEST_CASE("User defined nettypes") {

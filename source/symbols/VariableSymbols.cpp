@@ -101,9 +101,6 @@ void VariableSymbol::fromSyntax(Compilation& compilation, const DataDeclarationS
         variable->setAttributes(scope, syntax.attributes);
         results.append(variable);
 
-        if (inProceduralContext)
-            variable->getDeclaredType()->addFlags(DeclaredTypeFlags::InProceduralContext);
-
         // If this is a static variable in a procedural context and it has an initializer,
         // the spec requires that the static keyword must be explicitly provided.
         if (*lifetime == VariableLifetime::Static && !hasExplicitLifetime &&
@@ -143,11 +140,12 @@ VariableSymbol::VariableSymbol(SymbolKind childKind, string_view name, SourceLoc
                                VariableLifetime lifetime) :
     ValueSymbol(childKind, name, loc),
     lifetime(lifetime) {
-    // Automatic variables are always in a procedural context.
-    if (lifetime == VariableLifetime::Automatic) {
-        getDeclaredType()->addFlags(DeclaredTypeFlags::AutomaticInitializer |
-                                    DeclaredTypeFlags::InProceduralContext);
-    }
+
+    // Variables are always in a procedural context.
+    getDeclaredType()->addFlags(DeclaredTypeFlags::InProceduralContext);
+
+    if (lifetime == VariableLifetime::Automatic)
+        getDeclaredType()->addFlags(DeclaredTypeFlags::AutomaticInitializer);
 }
 
 void VariableSymbol::serializeTo(ASTSerializer& serializer) const {

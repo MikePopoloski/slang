@@ -324,8 +324,9 @@ Expression& UnaryExpression::fromSyntax(Compilation& compilation,
             break;
         case SyntaxKind::UnaryPreincrementExpression:
         case SyntaxKind::UnaryPredecrementExpression:
-            if ((context.flags & BindFlags::ProceduralStatement) == 0 &&
-                (context.flags & BindFlags::AssignmentAllowed) == 0) {
+            if ((!context.flags.has(BindFlags::ProceduralContext) &&
+                 !context.flags.has(BindFlags::AssignmentAllowed)) ||
+                context.flags.has(BindFlags::AssignmentDisallowed)) {
                 context.addDiag(diag::IncDecNotAllowed, syntax.sourceRange());
                 return badExpr(compilation, result);
             }
@@ -370,8 +371,9 @@ Expression& UnaryExpression::fromSyntax(Compilation& compilation,
         return badExpr(compilation, result);
     }
 
-    if ((context.flags & BindFlags::ProceduralStatement) == 0 &&
-        (context.flags & BindFlags::AssignmentAllowed) == 0) {
+    if ((!context.flags.has(BindFlags::ProceduralContext) &&
+         !context.flags.has(BindFlags::AssignmentAllowed)) ||
+        context.flags.has(BindFlags::AssignmentDisallowed)) {
         context.addDiag(diag::IncDecNotAllowed, syntax.sourceRange());
         return badExpr(compilation, result);
     }
