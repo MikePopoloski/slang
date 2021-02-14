@@ -375,10 +375,10 @@ Expression& AssignmentExpression::fromSyntax(Compilation& compilation,
     const ExpressionSyntax* rightExpr = syntax.right;
     bool isNonBlocking = syntax.kind == SyntaxKind::NonblockingAssignmentExpression;
 
-    // If we're in a procedural statement, check for an intra-assignment timing control.
+    // If we're in a top-level statement, check for an intra-assignment timing control.
     // Otherwise, we'll let this fall through to the default handler which will issue an error.
     const TimingControl* timingControl = nullptr;
-    if (!context.flags.has(BindFlags::NonProcedural) &&
+    if (context.flags.has(BindFlags::TopLevelStatement) &&
         rightExpr->kind == SyntaxKind::TimingControlExpression) {
 
         auto& tce = rightExpr->as<TimingControlExpressionSyntax>();
