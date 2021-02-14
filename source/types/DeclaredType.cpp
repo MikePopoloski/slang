@@ -377,15 +377,15 @@ void DeclaredType::setFromDeclarator(const DeclaratorSyntax& decl) {
 template<typename T>
 T DeclaredType::getBindContext() const {
     bitmask<BindFlags> bindFlags;
-    if (flags & DeclaredTypeFlags::RequireConstant)
-        bindFlags = BindFlags::Constant;
-    if (flags & DeclaredTypeFlags::InProceduralContext)
-        bindFlags |= BindFlags::ProceduralContext;
-    if ((flags & DeclaredTypeFlags::AutomaticInitializer) == 0)
+    if (flags.has(DeclaredTypeFlags::RequireConstant))
+        bindFlags |= BindFlags::Constant;
+    if (flags.has(DeclaredTypeFlags::Port | DeclaredTypeFlags::NetType))
+        bindFlags |= BindFlags::NonProcedural;
+    if (!flags.has(DeclaredTypeFlags::AutomaticInitializer))
         bindFlags |= BindFlags::StaticInitializer;
 
     LookupLocation location;
-    if (flags & DeclaredTypeFlags::LookupMax)
+    if (flags.has(DeclaredTypeFlags::LookupMax))
         location = LookupLocation::max;
     else
         location = LookupLocation::after(parent);

@@ -140,10 +140,6 @@ VariableSymbol::VariableSymbol(SymbolKind childKind, string_view name, SourceLoc
                                VariableLifetime lifetime) :
     ValueSymbol(childKind, name, loc),
     lifetime(lifetime) {
-
-    // Variables are always in a procedural context.
-    getDeclaredType()->addFlags(DeclaredTypeFlags::InProceduralContext);
-
     if (lifetime == VariableLifetime::Automatic)
         getDeclaredType()->addFlags(DeclaredTypeFlags::AutomaticInitializer);
 }
@@ -295,7 +291,7 @@ const TimingControl* NetSymbol::getDelay() const {
         return nullptr;
     }
 
-    BindContext context(*scope, LookupLocation::before(*this));
+    BindContext context(*scope, LookupLocation::before(*this), BindFlags::NonProcedural);
 
     auto& parent = *syntax->parent;
     if (parent.kind == SyntaxKind::NetDeclaration) {

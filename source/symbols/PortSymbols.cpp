@@ -707,7 +707,7 @@ private:
     PortConnection* createConnection(const PortSymbol& port, const ExpressionSyntax& syntax,
                                      span<const AttributeSymbol* const> attributes) {
         // TODO: if port is explicit, check that expression as well
-        BindContext context(scope, lookupLocation);
+        BindContext context(scope, lookupLocation, BindFlags::NonProcedural);
         context.instance = &instance;
 
         auto& expr = Expression::bindArgument(port.getType(), port.direction, syntax, context);
@@ -750,7 +750,7 @@ private:
         if (portType.isError())
             return emptyConnection(port);
 
-        BindContext context(scope, LookupLocation::max);
+        BindContext context(scope, LookupLocation::max, BindFlags::NonProcedural);
         auto expr = &ValueExpressionBase::fromSymbol(context, *symbol, false, range);
         if (expr->bad())
             return emptyConnection(port);
@@ -781,7 +781,7 @@ private:
         }
 
         LookupResult result;
-        BindContext context(scope, lookupLocation);
+        BindContext context(scope, lookupLocation, BindFlags::NonProcedural);
         Lookup::name(expr->as<NameSyntax>(), context, LookupFlags::None, result);
         result.reportErrors(context);
 
@@ -798,8 +798,7 @@ private:
                 for (auto& sel : result.selectors)
                     selectors.append(std::get<0>(sel));
 
-                symbol = Lookup::selectChild(*symbol, selectors, BindContext(scope, lookupLocation),
-                                             result);
+                symbol = Lookup::selectChild(*symbol, selectors, context, result);
             }
         }
         else {

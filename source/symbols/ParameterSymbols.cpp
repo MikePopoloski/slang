@@ -48,8 +48,7 @@ bool ParameterSymbolBase::hasDefault() const {
 
 ParameterSymbol::ParameterSymbol(string_view name, SourceLocation loc, bool isLocal, bool isPort) :
     ValueSymbol(SymbolKind::Parameter, name, loc,
-                DeclaredTypeFlags::InferImplicit | DeclaredTypeFlags::RequireConstant |
-                    DeclaredTypeFlags::InProceduralContext),
+                DeclaredTypeFlags::InferImplicit | DeclaredTypeFlags::RequireConstant),
     ParameterSymbolBase(*this, isLocal, isPort) {
 }
 

@@ -43,7 +43,9 @@ const ConstantValue& AttributeSymbol::getValue() const {
         ASSERT(bindScope);
         ASSERT(expr);
 
-        BindContext context(*bindScope, loc, BindFlags::Constant | BindFlags::NoAttributes);
+        BindContext context(*bindScope, loc,
+                            BindFlags::Constant | BindFlags::NoAttributes |
+                                BindFlags::NonProcedural);
         auto& bound = Expression::bind(*expr, context);
 
         value = bindScope->getCompilation().allocConstant(context.eval(bound));

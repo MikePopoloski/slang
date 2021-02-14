@@ -68,17 +68,17 @@ bool ValueExpressionBase::verifyAssignableImpl(const BindContext& context, bool 
         return false;
     }
 
-    if (context.flags.has(BindFlags::ProceduralContext)) {
-        // Nets can't be assigned in procedural contexts.
-        if (symbol.kind == SymbolKind::Net) {
-            context.addDiag(diag::AssignToNet, sourceRange);
+    if (context.flags.has(BindFlags::NonProcedural)) {
+        // chandles can only be assigned in procedural contexts.
+        if (symbol.getType().isCHandle()) {
+            context.addDiag(diag::AssignToCHandle, sourceRange);
             return false;
         }
     }
     else {
-        // chandles can only be assigned in procedural contexts.
-        if (symbol.getType().isCHandle()) {
-            context.addDiag(diag::AssignToCHandle, sourceRange);
+        // Nets can't be assigned in procedural contexts.
+        if (symbol.kind == SymbolKind::Net) {
+            context.addDiag(diag::AssignToNet, sourceRange);
             return false;
         }
     }

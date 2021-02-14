@@ -270,7 +270,7 @@ void ContinuousAssignSymbol::fromSyntax(Compilation& compilation,
                                         const ContinuousAssignSyntax& syntax, const Scope& scope,
                                         LookupLocation location,
                                         SmallVector<const Symbol*>& results) {
-    BindContext context(scope, location);
+    BindContext context(scope, location, BindFlags::NonProcedural);
     auto& netType = scope.getDefaultNetType();
 
     for (auto expr : syntax.assignments) {
@@ -306,7 +306,7 @@ const Expression& ContinuousAssignSymbol::getAssignment() const {
     auto syntax = getSyntax();
     ASSERT(scope && syntax);
 
-    BindContext context(*scope, LookupLocation::before(*this));
+    BindContext context(*scope, LookupLocation::before(*this), BindFlags::NonProcedural);
     assign =
         &Expression::bind(syntax->as<ExpressionSyntax>(), context, BindFlags::AssignmentAllowed);
 
@@ -330,7 +330,7 @@ const TimingControl* ContinuousAssignSymbol::getDelay() const {
         return nullptr;
     }
 
-    BindContext context(*scope, LookupLocation::before(*this));
+    BindContext context(*scope, LookupLocation::before(*this), BindFlags::NonProcedural);
     delay = &TimingControl::bind(*delaySyntax, context);
     return *delay;
 }

@@ -67,8 +67,8 @@ enum class BindFlags {
     /// procedural context and would otherwise be allowed to modify variables.
     AssignmentDisallowed = 1 << 8,
 
-    /// Expression is inside a procedural context, as opposed to a continuous assignment.
-    ProceduralContext = 1 << 9,
+    /// Expression is not inside a procedural context.
+    NonProcedural = 1 << 9,
 
     /// Expression is for a static variable's initializer. References to automatic
     /// variables will be disallowed.

@@ -924,7 +924,7 @@ const Constraint& ConstraintBlockSymbol::getConstraints() const {
     auto syntax = getSyntax();
     auto scope = getParentScope();
     ASSERT(syntax && scope);
-    BindContext context(*this, LookupLocation::max, BindFlags::ProceduralContext);
+    BindContext context(*this, LookupLocation::max);
 
     if (syntax->kind == SyntaxKind::ConstraintPrototype) {
         // The out-of-block definition must be in our parent scope.

@@ -248,10 +248,10 @@ void InstanceSymbol::fromSyntax(Compilation& compilation,
     createParams(compilation, *definition, paramBuilder, location,
                  syntax.getFirstToken().location(), isUninstantiated);
 
-    BindContext context(scope, location);
     InstanceCacheKey cacheKey(*definition, paramBuilder.paramValues.copy(compilation),
                               paramBuilder.typeParams.copy(compilation));
 
+    BindContext context(scope, location);
     InstanceBuilder builder(context, cacheKey, paramBuilder.paramSymbols, syntax.attributes,
                             isUninstantiated);
 
@@ -631,7 +631,7 @@ void UnknownModuleSymbol::fromSyntax(Compilation& compilation,
                                      LookupLocation location, const Scope& scope,
                                      SmallVector<const Symbol*>& results) {
     SmallVectorSized<const Expression*, 8> params;
-    BindContext context(scope, location);
+    BindContext context(scope, location, BindFlags::NonProcedural);
 
     if (syntax.parameters) {
         for (auto expr : syntax.parameters->assignments->parameters) {

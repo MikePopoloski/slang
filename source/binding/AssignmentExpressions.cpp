@@ -352,7 +352,7 @@ Expression& AssignmentExpression::fromSyntax(Compilation& compilation,
                                              const BinaryExpressionSyntax& syntax,
                                              const BindContext& context) {
     if (!context.flags.has(BindFlags::AssignmentAllowed)) {
-        if (context.flags.has(BindFlags::ProceduralContext) &&
+        if (!context.flags.has(BindFlags::NonProcedural) &&
             !context.flags.has(BindFlags::AssignmentDisallowed)) {
             context.addDiag(diag::AssignmentRequiresParens, syntax.sourceRange());
         }
@@ -378,7 +378,7 @@ Expression& AssignmentExpression::fromSyntax(Compilation& compilation,
     // If we're in a procedural statement, check for an intra-assignment timing control.
     // Otherwise, we'll let this fall through to the default handler which will issue an error.
     const TimingControl* timingControl = nullptr;
-    if ((context.flags & BindFlags::ProceduralContext) &&
+    if (!context.flags.has(BindFlags::NonProcedural) &&
         rightExpr->kind == SyntaxKind::TimingControlExpression) {
 
         auto& tce = rightExpr->as<TimingControlExpressionSyntax>();

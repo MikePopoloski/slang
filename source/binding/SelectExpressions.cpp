@@ -181,7 +181,7 @@ Expression& ElementSelectExpression::fromSyntax(Compilation& compilation, Expres
             }
         }
     }
-    else if (!context.flags.has(BindFlags::ProceduralContext)) {
+    else if (context.flags.has(BindFlags::NonProcedural)) {
         context.addDiag(diag::DynamicNotProcedural, fullRange);
         return badExpr(compilation, result);
     }
@@ -400,7 +400,7 @@ Expression& RangeSelectExpression::fromSyntax(Compilation& compilation, Expressi
     // Selects of vectored nets are disallowed.
     checkForVectoredSelect(value, fullRange, context);
 
-    if (!valueType.hasFixedRange() && !context.flags.has(BindFlags::ProceduralContext)) {
+    if (!valueType.hasFixedRange() && context.flags.has(BindFlags::NonProcedural)) {
         context.addDiag(diag::DynamicNotProcedural, fullRange);
         return badExpr(compilation, result);
     }
@@ -814,7 +814,7 @@ Expression& MemberAccessExpression::fromSelector(
     }
 
     auto errorIfNotProcedural = [&]() {
-        if (!context.flags.has(BindFlags::ProceduralContext)) {
+        if (context.flags.has(BindFlags::NonProcedural)) {
             context.addDiag(diag::DynamicNotProcedural, range);
             return true;
         }

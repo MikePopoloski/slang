@@ -324,7 +324,7 @@ Expression& UnaryExpression::fromSyntax(Compilation& compilation,
             break;
         case SyntaxKind::UnaryPreincrementExpression:
         case SyntaxKind::UnaryPredecrementExpression:
-            if ((!context.flags.has(BindFlags::ProceduralContext) &&
+            if ((context.flags.has(BindFlags::NonProcedural) &&
                  !context.flags.has(BindFlags::AssignmentAllowed)) ||
                 context.flags.has(BindFlags::AssignmentDisallowed)) {
                 context.addDiag(diag::IncDecNotAllowed, syntax.sourceRange());
@@ -371,7 +371,7 @@ Expression& UnaryExpression::fromSyntax(Compilation& compilation,
         return badExpr(compilation, result);
     }
 
-    if ((!context.flags.has(BindFlags::ProceduralContext) &&
+    if ((context.flags.has(BindFlags::NonProcedural) &&
          !context.flags.has(BindFlags::AssignmentAllowed)) ||
         context.flags.has(BindFlags::AssignmentDisallowed)) {
         context.addDiag(diag::IncDecNotAllowed, syntax.sourceRange());
