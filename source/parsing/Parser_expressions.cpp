@@ -183,7 +183,8 @@ ExpressionSyntax& Parser::parsePrefixExpression(SyntaxKind opKind) {
     auto attributes = parseAttributes();
 
     ExpressionSyntax& operand = parsePrimaryExpression(false);
-    return factory.prefixUnaryExpression(opKind, opToken, attributes, operand);
+    ExpressionSyntax& postfix = parsePostfixExpression(operand);
+    return factory.prefixUnaryExpression(opKind, opToken, attributes, postfix);
 }
 
 ExpressionSyntax& Parser::parsePrimaryExpression(bool disallowVector) {
@@ -822,15 +823,15 @@ ConditionalPredicateSyntax& Parser::parseConditionalPredicate(ExpressionSyntax& 
 
     buffer.append(&factory.conditionalPattern(first, matchesClause));
 
-    RequireItems require = RequireItems::False;
     if (peek(TokenKind::TripleAnd)) {
         buffer.append(consume());
-        require = RequireItems::True;
+        parseList<isPossibleExpressionOrTripleAnd, isEndOfConditionalPredicate>(
+            buffer, endKind, TokenKind::TripleAnd, end, RequireItems::True,
+            diag::ExpectedConditionalPattern, [this] { return &parseConditionalPattern(); });
     }
-
-    parseList<isPossibleExpressionOrTripleAnd, isEndOfConditionalPredicate>(
-        buffer, endKind, TokenKind::TripleAnd, end, require, diag::ExpectedConditionalPattern,
-        [this] { return &parseConditionalPattern(); });
+    else {
+        end = expect(endKind);
+    }
 
     return factory.conditionalPredicate(buffer.copy(alloc));
 }
