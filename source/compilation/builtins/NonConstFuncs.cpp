@@ -204,6 +204,40 @@ public:
     }
 };
 
+class DistributionFunc : public SystemSubroutine {
+public:
+    DistributionFunc(const std::string& name, size_t numArgs) :
+        SystemSubroutine(name, SubroutineKind::Function), numArgs(numArgs) {}
+
+    const Type& checkArguments(const BindContext& context, const Args& args, SourceRange range,
+                               const Expression*) const final {
+        auto& comp = context.getCompilation();
+        if (!checkArgCount(context, false, args, range, numArgs, numArgs))
+            return comp.getErrorType();
+
+        for (size_t i = 0; i < numArgs; i++) {
+            if (!args[i]->type->isIntegral())
+                return badArg(context, *args[i]);
+        }
+
+        if (!args[0]->verifyAssignable(context))
+            return comp.getErrorType();
+
+        return comp.getIntType();
+    }
+
+    ConstantValue eval(EvalContext&, const Args&,
+                       const CallExpression::SystemCallInfo&) const final {
+        return nullptr;
+    }
+    bool verifyConstant(EvalContext& context, const Args&, SourceRange range) const final {
+        return notConst(context, range);
+    }
+
+private:
+    size_t numArgs;
+};
+
 void registerNonConstFuncs(Compilation& c) {
 #define REGISTER(...) c.addSystemSubroutine(std::make_unique<NonConstantFunction>(__VA_ARGS__))
 
@@ -231,6 +265,16 @@ void registerNonConstFuncs(Compilation& c) {
     REGISTER("$test$plusargs", intType, 1, std::vector{ &c.getStringType() });
 
 #undef REGISTER
+
+#define FUNC(name, numArgs) c.addSystemSubroutine(std::make_unique<DistributionFunc>(name, numArgs))
+    FUNC("$dist_uniform", 3);
+    FUNC("$dist_normal", 3);
+    FUNC("$dist_exponential", 2);
+    FUNC("$dist_poisson", 2);
+    FUNC("$dist_chi_square", 2);
+    FUNC("$dist_t", 2);
+    FUNC("$dist_erlang", 3);
+#undef FUNC
 
     c.addSystemSubroutine(std::make_unique<FErrorFunc>());
     c.addSystemSubroutine(std::make_unique<FGetsFunc>());

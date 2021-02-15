@@ -711,3 +711,24 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Distribution functions") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    int seed, j;
+    initial begin
+        j = $dist_uniform(seed, 1, 2);
+        j = $dist_normal(seed, 1, 2);
+        j = $dist_exponential(seed, 5);
+        j = $dist_poisson(seed, 10);
+        j = $dist_chi_square(seed, 10);
+        j = $dist_t(seed, 10);
+        j = $dist_erlang(seed, 10, 20);
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
