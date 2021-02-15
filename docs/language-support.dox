@@ -155,10 +155,10 @@ LRM | Feature | Supported
 
 LRM | Feature | Supported
 --- | ------- | ---------
-{{m-warning}} 10.3 | Continuous assignments | partial
+{{m-success}} 10.3 | Continuous assignments | v0.7
 {{m-success}} 10.4 | Procedural assignments | v0.2
 {{m-success}} 10.5 | Variable declarations assignment | v0.2
-{{m-warning}} 10.6 | Procedural continuous assignments | partial
+{{m-success}} 10.6 | Procedural continuous assignments | v0.7
 {{m-success}} 10.7 | Assignment extension and truncation | v0.2
 {{m-success}} 10.8 | Assignment-like contexts | v0.2
 {{m-warning}} 10.9 | Assignment patterns | partial
