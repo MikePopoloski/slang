@@ -2075,15 +2075,79 @@ void EventTriggerStatement::serializeTo(ASTSerializer& serializer) const {
         serializer.write("timing", *timing);
 }
 
+static bool isValidAssignLVal(const Expression& expr) {
+    switch (expr.kind) {
+        case ExpressionKind::NamedValue:
+        case ExpressionKind::HierarchicalValue:
+            if (auto sym = expr.getSymbolReference()) {
+                if (!VariableSymbol::isKind(sym->kind))
+                    return false;
+            }
+            return true;
+        case ExpressionKind::Concatenation:
+            for (auto op : expr.as<ConcatenationExpression>().operands()) {
+                if (!isValidAssignLVal(*op))
+                    return false;
+            }
+            return true;
+        default:
+            return false;
+    }
+}
+
+static bool isValidForceLVal(const Expression& expr, const BindContext& context, bool inSelect) {
+    switch (expr.kind) {
+        case ExpressionKind::NamedValue:
+        case ExpressionKind::HierarchicalValue:
+            if (auto sym = expr.getSymbolReference()) {
+                if (inSelect && VariableSymbol::isKind(sym->kind))
+                    return false;
+
+                if (sym->kind == SymbolKind::Net && !sym->as<NetSymbol>().netType.isBuiltIn())
+                    context.addDiag(diag::BadForceNetType, expr.sourceRange);
+            }
+            return true;
+        case ExpressionKind::MemberAccess:
+            return isValidForceLVal(expr.as<MemberAccessExpression>().value(), context, true);
+        case ExpressionKind::ElementSelect:
+            return isValidForceLVal(expr.as<ElementSelectExpression>().value(), context, true);
+        case ExpressionKind::RangeSelect:
+            return isValidForceLVal(expr.as<RangeSelectExpression>().value(), context, true);
+        case ExpressionKind::Concatenation:
+            for (auto op : expr.as<ConcatenationExpression>().operands()) {
+                if (!isValidForceLVal(*op, context, false))
+                    return false;
+            }
+            return true;
+        default:
+            return false;
+    }
+}
+
 Statement& ProceduralAssignStatement::fromSyntax(Compilation& compilation,
                                                  const ProceduralAssignStatementSyntax& syntax,
                                                  const BindContext& context) {
-    // TODO: error checking on components here
     auto& assign = Expression::bind(*syntax.expr, context,
                                     BindFlags::NonProcedural | BindFlags::AssignmentAllowed);
     auto result = compilation.emplace<ProceduralAssignStatement>(assign, syntax.sourceRange());
     if (assign.bad())
         return badStmt(compilation, result);
+
+    if (assign.kind == ExpressionKind::Assignment) {
+        auto& lval = assign.as<AssignmentExpression>().left();
+        if (syntax.keyword.kind == TokenKind::AssignKeyword) {
+            if (!isValidAssignLVal(lval)) {
+                context.addDiag(diag::BadProceduralAssign, lval.sourceRange);
+                return badStmt(compilation, result);
+            }
+        }
+        else {
+            if (!isValidForceLVal(lval, context, false)) {
+                context.addDiag(diag::BadProceduralForce, lval.sourceRange);
+                return badStmt(compilation, result);
+            }
+        }
+    }
 
     return *result;
 }
@@ -2104,11 +2168,26 @@ void ProceduralAssignStatement::serializeTo(ASTSerializer& serializer) const {
 Statement& ProceduralDeassignStatement::fromSyntax(Compilation& compilation,
                                                    const ProceduralDeassignStatementSyntax& syntax,
                                                    const BindContext& context) {
-    // TODO: error checking on components here
     auto& lvalue = Expression::bind(*syntax.variable, context);
     auto result = compilation.emplace<ProceduralDeassignStatement>(lvalue, syntax.sourceRange());
     if (lvalue.bad())
         return badStmt(compilation, result);
+
+    if (!lvalue.verifyAssignable(context))
+        return badStmt(compilation, result);
+
+    if (syntax.keyword.kind == TokenKind::DeassignKeyword) {
+        if (!isValidAssignLVal(lvalue)) {
+            context.addDiag(diag::BadProceduralAssign, lvalue.sourceRange);
+            return badStmt(compilation, result);
+        }
+    }
+    else {
+        if (!isValidForceLVal(lvalue, context, false)) {
+            context.addDiag(diag::BadProceduralForce, lvalue.sourceRange);
+            return badStmt(compilation, result);
+        }
+    }
 
     return *result;
 }

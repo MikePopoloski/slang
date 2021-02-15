@@ -322,10 +322,7 @@ struct ExpressionVarVisitor {
     void visit(const T& expr) {
         switch (expr.kind) {
             case ExpressionKind::NamedValue:
-            case ExpressionKind::HierarchicalValue:
-            case ExpressionKind::MemberAccess:
-            case ExpressionKind::ElementSelect:
-            case ExpressionKind::RangeSelect: {
+            case ExpressionKind::HierarchicalValue: {
                 if (auto sym = expr.getSymbolReference()) {
                     if (VariableSymbol::isKind(sym->kind))
                         anyVars = true;

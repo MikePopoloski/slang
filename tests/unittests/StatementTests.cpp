@@ -1021,8 +1021,17 @@ TEST_CASE("Procedural assign / deassign errors") {
 module m;
     int i;
     logic l[3];
+    wire [2:0] w;
+
+    nettype int nt;
+    nt x;
+
     initial begin
-        assign l[i] = 1;
+        assign l[0] = 1;
+        deassign {i, l[0]};
+        force {w[1], i[1]} = 1;
+        release i[1];
+        force {w[1], x[1]} = 1;
     end
 endmodule
 )");
@@ -1031,8 +1040,12 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 1);
-    CHECK(diags[0].code == diag::ConstEvalNonConstVariable);
+    REQUIRE(diags.size() == 5);
+    CHECK(diags[0].code == diag::BadProceduralAssign);
+    CHECK(diags[1].code == diag::BadProceduralAssign);
+    CHECK(diags[2].code == diag::BadProceduralForce);
+    CHECK(diags[3].code == diag::BadProceduralForce);
+    CHECK(diags[4].code == diag::BadForceNetType);
 }
 
 TEST_CASE("Unexpected port decls") {
