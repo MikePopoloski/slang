@@ -126,6 +126,32 @@ Token Lexer::stringify(BumpAllocator& alloc, SourceLocation location, span<Trivi
     return token.clone(alloc, trivia, raw.substr(0, raw.length() - 1), location);
 }
 
+Trivia Lexer::commentify(BumpAllocator& alloc, Token* begin, Token* end) {
+    SmallVectorSized<char, 64> text;
+    while (begin != end) {
+        Token cur = *begin;
+        for (const Trivia& t : cur.trivia())
+            text.appendRange(t.getRawText());
+
+        if (cur.kind != TokenKind::EmptyMacroArgument)
+            text.appendRange(cur.rawText());
+
+        begin++;
+    }
+    text.append('\0');
+
+    string_view raw = toStringView(text.copy(alloc));
+
+    Diagnostics unused;
+    Lexer lexer{ BufferID(), raw, raw.data(), alloc, unused, LexerOptions{} };
+
+    auto token = lexer.lex();
+    ASSERT(token.kind == TokenKind::EndOfFile);
+    ASSERT(token.trivia().size() == 1);
+
+    return token.trivia()[0];
+}
+
 void Lexer::splitTokens(BumpAllocator& alloc, Diagnostics& diagnostics,
                         const SourceManager& sourceManager, Token sourceToken, size_t offset,
                         KeywordVersion keywordVersion, SmallVector<Token>& results) {
@@ -603,9 +629,10 @@ Token Lexer::lexStringLiteral() {
                     break;
                 default: {
                     // '\%' is not an actual escape code but other tools silently allow it
-                    // and major UVM headers use it, so we'll issue a (fairly quiet) warning about it.
-                    // Otherwise issue a louder warning (on by default).
-                    DiagCode code = c == '%' ? diag::NonstandardEscapeCode : diag::UnknownEscapeCode;
+                    // and major UVM headers use it, so we'll issue a (fairly quiet) warning about
+                    // it. Otherwise issue a louder warning (on by default).
+                    DiagCode code =
+                        c == '%' ? diag::NonstandardEscapeCode : diag::UnknownEscapeCode;
                     addDiag(code, offset) << c;
                     stringBuffer.append(c);
                     break;

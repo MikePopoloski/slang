@@ -94,7 +94,9 @@ MacroActualArgumentListSyntax* Preprocessor::handleTopLevelMacro(Token directive
 bool Preprocessor::applyMacroOps(span<Token const> tokens, SmallVector<Token>& dest) {
     SmallVectorSized<Trivia, 16> emptyArgTrivia;
     SmallVectorSized<Token, 16> stringifyBuffer;
+    SmallVectorSized<Token, 16> commentBuffer;
     Token stringify;
+    Token syntheticComment;
     bool anyNewMacros = false;
 
     for (size_t i = 0; i < tokens.size(); i++) {
@@ -144,15 +146,46 @@ bool Preprocessor::applyMacroOps(span<Token const> tokens, SmallVector<Token>& d
                         }
                     }
                 }
+                else if (syntheticComment) {
+                    // Check for a *``/ to end the synthetic comment. Otherwise ignore the paste,
+                    // since this is just going to become a comment anyway.
+                    if (commentBuffer.back().kind == TokenKind::Star &&
+                        tokens[i + 1].kind == TokenKind::Slash) {
+                        commentBuffer.append(tokens[i + 1]);
+                        i++;
+
+                        emptyArgTrivia.appendRange(syntheticComment.trivia());
+                        emptyArgTrivia.append(
+                            Lexer::commentify(alloc, commentBuffer.begin(), commentBuffer.end()));
+                        syntheticComment = Token();
+                    }
+                }
                 else {
-                    // Dest cannot be empty here.
-                    newToken = Lexer::concatenateTokens(alloc, dest.back(), tokens[i + 1]);
-                    if (newToken) {
+                    // Dest cannot be empty here, though it's not easy to see why at first glance.
+                    Token left = dest.back();
+                    Token right = tokens[i + 1];
+
+                    // Other tools allow concatenating a '/' with a '*' to form a block comment.
+                    // This seems like utter nonsense but real world code depends on it so
+                    // we have to support it as well.
+                    if (left.kind == TokenKind::Slash && right.kind == TokenKind::Star) {
+                        commentBuffer.clear();
+                        syntheticComment = left;
                         dest.pop();
                         ++i;
 
-                        anyNewMacros |= newToken.kind == TokenKind::Directive &&
-                                        newToken.directiveKind() == SyntaxKind::MacroUsage;
+                        commentBuffer.append(left.withTrivia(alloc, {}));
+                        newToken = right;
+                    }
+                    else {
+                        newToken = Lexer::concatenateTokens(alloc, dest.back(), tokens[i + 1]);
+                        if (newToken) {
+                            dest.pop();
+                            ++i;
+
+                            anyNewMacros |= newToken.kind == TokenKind::Directive &&
+                                            newToken.directiveKind() == SyntaxKind::MacroUsage;
+                        }
                     }
                 }
                 break;
@@ -179,7 +212,10 @@ bool Preprocessor::applyMacroOps(span<Token const> tokens, SmallVector<Token>& d
         }
 
         if (!stringify) {
-            dest.append(newToken);
+            if (syntheticComment)
+                commentBuffer.append(newToken);
+            else
+                dest.append(newToken);
             continue;
         }
 

@@ -1598,3 +1598,41 @@ TEST_CASE("Macro concat -- whitespace bug") {
     std::string result = preprocess(text);
     CHECK(result == "\nx port_width\n");
 }
+
+TEST_CASE("Macro concat into block comment") {
+    // This is a silly thing that other tools support and real code in the wild
+    // takes advantage of, so we must support it as well.
+    auto& text = R"(
+`define FFSR(__q, __d, __reset_value, __clk, __reset_clk) \
+  `ifndef FOOBAR                                          \
+  /``* synopsys sync_set_reset `"__reset_clk`" *``/       \
+    `endif                                                \
+  always_ff @(posedge (__clk)) begin                      \
+    __q <= (__reset_clk) ? (__reset_value) : (__d);       \
+  end
+
+module m;
+  logic q, d, clk, rst;
+  `FFSR(q, d, 0, clk, rst)
+endmodule
+)";
+
+    std::string result = preprocess(text);
+    CHECK(result == R"(
+module m;
+  logic q, d, clk, rst;
+  
+                                            
+  /* synopsys sync_set_reset "rst" */       
+                                                    
+  always_ff @(posedge (clk)) begin                      
+    q <= (rst) ? (0) : (d);       
+  end
+endmodule
+)");
+
+    auto tree = SyntaxTree::fromText(text);
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
