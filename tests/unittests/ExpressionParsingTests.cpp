@@ -645,3 +645,26 @@ TEST_CASE("Assignment pattern error recovery") {
     auto& text = "int i = '{ asdf bazf gfdgh }";
     parseCompilationUnit(text);
 }
+
+TEST_CASE("Unary expression parsing error") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+  reg res;
+  reg [1:0] in;
+  initial begin
+    res = ~ |in;
+    res = ~ &in;
+    res = ~ ^in;
+  end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 3);
+    CHECK(diags[0].code == diag::ExpectedExpression);
+    CHECK(diags[1].code == diag::ExpectedExpression);
+    CHECK(diags[2].code == diag::ExpectedExpression);
+}

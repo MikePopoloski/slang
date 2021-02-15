@@ -311,7 +311,7 @@ private:
     TransSetSyntax& parseTransSet();
     TransListCoverageBinInitializerSyntax& parseTransListInitializer();
     ExpressionSyntax& parseSubExpression(bitmask<ExpressionOptions> options, int precedence);
-    ExpressionSyntax& parsePrefixExpression(bitmask<ExpressionOptions> options, SyntaxKind opKind);
+    ExpressionSyntax& parsePrefixExpression(SyntaxKind opKind);
     BindDirectiveSyntax& parseBindDirective(AttrList attributes);
     // clang-format on
 

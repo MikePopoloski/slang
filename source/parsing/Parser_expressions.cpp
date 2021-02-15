@@ -61,7 +61,7 @@ ExpressionSyntax& Parser::parseSubExpression(bitmask<ExpressionOptions> options,
     ExpressionSyntax* leftOperand;
     SyntaxKind opKind = getUnaryPrefixExpression(current.kind);
     if (opKind != SyntaxKind::Unknown)
-        leftOperand = &parsePrefixExpression(options, opKind);
+        leftOperand = &parsePrefixExpression(opKind);
     else {
         leftOperand = &parsePrimaryExpression(false);
 
@@ -153,8 +153,7 @@ ExpressionSyntax& Parser::parseSubExpression(bitmask<ExpressionOptions> options,
     return *leftOperand;
 }
 
-ExpressionSyntax& Parser::parsePrefixExpression(bitmask<ExpressionOptions> options,
-                                                SyntaxKind opKind) {
+ExpressionSyntax& Parser::parsePrefixExpression(SyntaxKind opKind) {
     switch (opKind) {
         case SyntaxKind::UnarySequenceDelayExpression:
         case SyntaxKind::UnarySequenceEventExpression: {
@@ -183,7 +182,7 @@ ExpressionSyntax& Parser::parsePrefixExpression(bitmask<ExpressionOptions> optio
     auto opToken = consume();
     auto attributes = parseAttributes();
 
-    ExpressionSyntax& operand = parseSubExpression(options, getPrecedence(opKind));
+    ExpressionSyntax& operand = parsePrimaryExpression(false);
     return factory.prefixUnaryExpression(opKind, opToken, attributes, operand);
 }
 
