@@ -83,14 +83,12 @@ module m;
     parameter struct packed { logic [2:0] asdf; } foo2 = '0;
 
     enum logic [2:0] { SDF1 = 1 + 1 } e1;           // ok
-    enum logic [2:0] { SDF2 = 1'd1 + 1'd1 } e2;     // bad
+    enum logic [2:0] { SDF2 = 1'd1 } e2;            // bad
     enum logic [2:0] { SDF3 = 2.0 } e3;             // bad
     enum logic [2:0] { SDF4 = foo } e4;             // ok
     enum logic [2:0] { SDF5 = foo + 1 } e5;         // ok
-    enum logic [2:0] { SDF6 = foo + 1'd1 } e6;      // bad
-    enum logic [2:0] { SDF7 = 1 ? foo : 1'd1 } e7;  // bad
-    enum logic [2:0] { SDF8 = 1 ? foo : '1 } e8;    // ok
-    enum logic [2:0] { SDF9 = foo2.asdf } e9;       // ok
+    enum logic [2:0] { SDF8 = 1 ? foo : '1 } e6;    // ok
+    enum logic [2:0] { SDF9 = foo2.asdf } e7;       // ok
 
 endmodule
 )");
@@ -99,11 +97,9 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 4);
+    REQUIRE(diags.size() == 2);
     CHECK(diags[0].code == diag::EnumValueSizeMismatch);
     CHECK(diags[1].code == diag::ValueMustBeIntegral);
-    CHECK(diags[2].code == diag::EnumValueSizeMismatch);
-    CHECK(diags[3].code == diag::EnumValueSizeMismatch);
 }
 
 TEST_CASE("Enum value errors") {

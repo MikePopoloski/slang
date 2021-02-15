@@ -29,57 +29,18 @@ namespace {
 
 using namespace slang;
 
-bool recurseCheckEnum(const Expression& expr) {
-    switch (expr.kind) {
-        case ExpressionKind::UnbasedUnsizedIntegerLiteral:
-        case ExpressionKind::NamedValue:
-        case ExpressionKind::HierarchicalValue:
-        case ExpressionKind::MemberAccess:
-            return true;
-        case ExpressionKind::IntegerLiteral:
-            return expr.as<IntegerLiteral>().isDeclaredUnsized;
-        case ExpressionKind::UnaryOp:
-            return recurseCheckEnum(expr.as<UnaryExpression>().operand());
-        case ExpressionKind::BinaryOp: {
-            auto& bin = expr.as<BinaryExpression>();
-            return recurseCheckEnum(bin.left()) && recurseCheckEnum(bin.right());
-        }
-        case ExpressionKind::ConditionalOp: {
-            auto& cond = expr.as<ConditionalExpression>();
-            return recurseCheckEnum(cond.left()) && recurseCheckEnum(cond.right());
-        }
-        case ExpressionKind::Conversion: {
-            auto& conv = expr.as<ConversionExpression>();
-            return conv.isImplicit() && recurseCheckEnum(conv.operand());
-        }
-        case ExpressionKind::MinTypMax: {
-            auto& mtm = expr.as<MinTypMaxExpression>();
-            return recurseCheckEnum(mtm.selected());
-        }
-        default:
-            return false;
-    }
-}
-
 bool checkEnumInitializer(const BindContext& context, const Type& lt, const Expression& rhs) {
     // [6.19] says that the initializer for an enum value must be an integer expression that
     // does not truncate any bits. Furthermore, if a sized literal constant is used, it must
-    // be sized exactly to the size of the enum base type. It's not well defined what happens
-    // if the sized constant is used further down in some sub-expression, so what we check here
-    // is cases where it seems ok to suppress the error:
-    // - Unsized literals, variable references
-    // - Unary, binary, conditional expressions of the above
-
+    // be sized exactly to the size of the enum base type.
     const Type& rt = *rhs.type;
     if (!rt.isIntegral()) {
         context.addDiag(diag::ValueMustBeIntegral, rhs.sourceRange);
         return false;
     }
 
-    if (lt.getBitWidth() == rt.getBitWidth())
-        return true;
-
-    if (!recurseCheckEnum(rhs)) {
+    if (lt.getBitWidth() != rt.getBitWidth() && rhs.kind == ExpressionKind::IntegerLiteral &&
+        !rhs.as<IntegerLiteral>().isDeclaredUnsized) {
         auto& diag = context.addDiag(diag::EnumValueSizeMismatch, rhs.sourceRange);
         diag << rt.getBitWidth() << lt.getBitWidth();
         return false;
