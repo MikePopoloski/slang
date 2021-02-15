@@ -1636,3 +1636,27 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Escaped macro with arguments") {
+    auto& text = R"(
+`define \quote (x)  `"`\`"x`\`"`"
+module m;
+  initial begin
+    $display(`quote(text));
+    $display(`\quote (text));
+  end
+endmodule
+)";
+
+    auto& expected = R"(
+module m;
+  initial begin
+    $display("\"text\"");
+    $display("\"text\"");
+  end
+endmodule
+)";
+
+    std::string result = preprocess(text);
+    CHECK(result == expected);
+}

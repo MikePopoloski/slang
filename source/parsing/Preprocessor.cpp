@@ -417,11 +417,16 @@ Trivia Preprocessor::handleDefineDirective(Token directive) {
             bad = true;
         }
 
-        // check if this is a function-like macro, which requires an opening paren with no
-        // leading space
-        if (peek(TokenKind::OpenParenthesis) && peek().trivia().empty()) {
-            MacroParser parser(*this);
-            formalArguments = parser.parseFormalArgumentList();
+        // Check if this is a function-like macro, which requires an opening paren with no
+        // leading space unless the macro name is escaped, in which case we have to allow one space.
+        if (peek(TokenKind::OpenParenthesis)) {
+            bool isEscaped = !name.rawText().empty() && name.rawText()[0] == '\\';
+            auto trivia = peek().trivia();
+            if (trivia.empty() ||
+                (isEscaped && trivia.size() == 1 && trivia[0].getRawText() == " "sv)) {
+                MacroParser parser(*this);
+                formalArguments = parser.parseFormalArgumentList();
+            }
         }
     }
 
