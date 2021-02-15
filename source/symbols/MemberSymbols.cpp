@@ -315,9 +315,6 @@ const Expression& ContinuousAssignSymbol::getAssignment() const {
     return *assign;
 }
 
-template<typename T, typename Arg>
-using visitExprs_t = decltype(std::declval<T>().visitExprs(std::declval<Arg>()));
-
 struct ExpressionVarVisitor {
     bool anyVars = false;
 
@@ -336,7 +333,7 @@ struct ExpressionVarVisitor {
                 break;
             }
             default:
-                if constexpr (is_detected_v<visitExprs_t, T, ExpressionVarVisitor>)
+                if constexpr (is_detected_v<ASTDetectors::visitExprs_t, T, ExpressionVarVisitor>)
                     expr.visitExprs(*this);
                 break;
         }

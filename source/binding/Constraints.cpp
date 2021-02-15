@@ -92,9 +92,6 @@ void ConstraintList::serializeTo(ASTSerializer& serializer) const {
     serializer.endArray();
 }
 
-template<typename T, typename Arg>
-using visitExprs_t = decltype(std::declval<T>().visitExprs(std::declval<Arg>()));
-
 struct DistVarVisitor {
     const BindContext& context;
     bool anyRandVars = false;
@@ -119,7 +116,7 @@ struct DistVarVisitor {
                 break;
             }
             default:
-                if constexpr (is_detected_v<visitExprs_t, T, DistVarVisitor>)
+                if constexpr (is_detected_v<ASTDetectors::visitExprs_t, T, DistVarVisitor>)
                     expr.visitExprs(*this);
                 break;
         }
@@ -138,7 +135,7 @@ struct ConstraintExprVisitor {
 
     template<typename T>
     bool visit(const T& expr) {
-        if constexpr (is_detected_v<visitExprs_t, T, ConstraintExprVisitor>)
+        if constexpr (is_detected_v<ASTDetectors::visitExprs_t, T, ConstraintExprVisitor>)
             expr.visitExprs(*this);
 
         if (failed)

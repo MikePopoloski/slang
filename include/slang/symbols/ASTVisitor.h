@@ -31,11 +31,7 @@
 
 namespace slang {
 
-/// Use this type as a base class for AST visitors. It will default to
-/// traversing all children of each node. Add implementations for any specific
-/// node types you want to handle.
-template<typename TDerived, bool VisitStatements, bool VisitExpressions>
-struct ASTVisitor {
+struct ASTDetectors {
     template<typename T, typename Arg>
     using handle_t = decltype(std::declval<T>().handle(std::declval<Arg>()));
 
@@ -50,9 +46,14 @@ struct ASTVisitor {
 
     template<typename T, typename Arg>
     using visitStmts_t = decltype(std::declval<T>().visitStmts(std::declval<Arg>()));
+};
 
+/// Use this type as a base class for AST visitors. It will default to
+/// traversing all children of each node. Add implementations for any specific
+/// node types you want to handle.
+template<typename TDerived, bool VisitStatements, bool VisitExpressions>
+struct ASTVisitor : public ASTDetectors {
 #define DERIVED *static_cast<TDerived*>(this)
-
 public:
     template<typename T>
     void visit(const T& t) {
