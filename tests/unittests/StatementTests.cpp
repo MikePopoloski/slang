@@ -1071,3 +1071,23 @@ endmodule
     CHECK(diags[0].code == diag::UnexpectedPortDecl);
     CHECK(diags[1].code == diag::UnexpectedPortDecl);
 }
+
+TEST_CASE("fork-join return") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    task wait_20;
+        fork
+            # 20;
+            return; // Illegal: cannot return; task lives in another process
+        join_none
+    endtask
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::ReturnInParallel);
+}

@@ -597,9 +597,14 @@ void BlockStatement::serializeTo(ASTSerializer& serializer) const {
 }
 
 Statement& BlockStatement::fromSyntax(Compilation& compilation, const BlockStatementSyntax& syntax,
-                                      const BindContext& context, StatementContext& stmtCtx) {
+                                      const BindContext& sourceCtx, StatementContext& stmtCtx) {
     ASSERT(!syntax.blockName);
     ASSERT(!syntax.label);
+
+    auto blockKind = SemanticFacts::getStatementBlockKind(syntax);
+    BindContext context = sourceCtx;
+    if (blockKind != StatementBlockKind::Sequential)
+        context.flags |= BindFlags::ForkJoinBlock;
 
     bool anyBad = false;
     SmallVectorSized<const Statement*, 8> buffer;
@@ -611,8 +616,7 @@ Statement& BlockStatement::fromSyntax(Compilation& compilation, const BlockState
     }
 
     auto list = compilation.emplace<StatementList>(buffer.copy(compilation), syntax.sourceRange());
-    auto result = compilation.emplace<BlockStatement>(
-        *list, SemanticFacts::getStatementBlockKind(syntax), syntax.sourceRange());
+    auto result = compilation.emplace<BlockStatement>(*list, blockKind, syntax.sourceRange());
     if (anyBad)
         return badStmt(compilation, result);
 
@@ -657,7 +661,11 @@ bool BlockStatement::verifyConstantImpl(EvalContext& context) const {
 Statement& ReturnStatement::fromSyntax(Compilation& compilation,
                                        const ReturnStatementSyntax& syntax,
                                        const BindContext& context) {
-    // TODO: disallow in parallel blocks
+    if (context.flags.has(BindFlags::ForkJoinBlock)) {
+        context.addDiag(diag::ReturnInParallel, syntax.sourceRange());
+        return badStmt(compilation, nullptr);
+    }
+
     // Find the parent subroutine.
     const Scope* scope = &context.scope;
     while (scope->asSymbol().kind == SymbolKind::StatementBlock)

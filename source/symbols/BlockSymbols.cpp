@@ -22,7 +22,12 @@ namespace slang {
 
 const Statement& StatementBlockSymbol::getBody() const {
     ensureElaborated();
-    return binder.getStatement(BindContext(*this, LookupLocation::max));
+
+    BindContext context(*this, LookupLocation::max);
+    if (blockKind != StatementBlockKind::Sequential)
+        context.flags |= BindFlags::ForkJoinBlock;
+
+    return binder.getStatement(context);
 }
 
 static std::pair<string_view, SourceLocation> getLabel(const StatementSyntax& syntax,

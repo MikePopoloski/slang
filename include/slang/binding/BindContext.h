@@ -85,9 +85,12 @@ enum class BindFlags {
     TopLevelStatement = 1 << 12,
 
     /// Expression is allowed to be the unbounded literal '$' such as inside a queue select.
-    AllowUnboundedLiteral = 1 << 13
+    AllowUnboundedLiteral = 1 << 13,
+
+    /// Binding is happening within a fork-join block.
+    ForkJoinBlock = 1 << 14
 };
-BITMASK(BindFlags, AllowUnboundedLiteral);
+BITMASK(BindFlags, ForkJoinBlock);
 
 enum class DimensionKind { Unknown, Range, AbbreviatedRange, Dynamic, Associative, Queue };
 

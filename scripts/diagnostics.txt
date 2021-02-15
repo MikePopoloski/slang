@@ -417,6 +417,7 @@ warning implicit-conv ImplicitConvert "implicit conversion from {} to {}"
 
 subsystem Statements
 error ReturnNotInSubroutine "return statement is only valid inside task and function blocks"
+error ReturnInParallel "return statement is not allowed in fork-join block"
 error DelayNotNumeric "delay expression type {} is not numeric"
 error InvalidEventExpression "invalid type {} for event expression"
 error CoverStmtNoFail "cover statement cannot have a fail statement"
