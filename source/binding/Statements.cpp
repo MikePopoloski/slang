@@ -2079,11 +2079,10 @@ Statement& ProceduralAssignStatement::fromSyntax(Compilation& compilation,
                                                  const ProceduralAssignStatementSyntax& syntax,
                                                  const BindContext& context) {
     // TODO: error checking on components here
-    auto& lvalue = Expression::bind(*syntax.lvalue, context);
-    auto& rvalue = Expression::bind(*syntax.value, context);
-    auto result =
-        compilation.emplace<ProceduralAssignStatement>(lvalue, rvalue, syntax.sourceRange());
-    if (lvalue.bad() || rvalue.bad())
+    auto& assign = Expression::bind(*syntax.expr, context,
+                                    BindFlags::NonProcedural | BindFlags::AssignmentAllowed);
+    auto result = compilation.emplace<ProceduralAssignStatement>(assign, syntax.sourceRange());
+    if (assign.bad())
         return badStmt(compilation, result);
 
     return *result;
@@ -2099,8 +2098,7 @@ bool ProceduralAssignStatement::verifyConstantImpl(EvalContext& context) const {
 }
 
 void ProceduralAssignStatement::serializeTo(ASTSerializer& serializer) const {
-    serializer.write("lvalue", lvalue);
-    serializer.write("rvalue", rvalue);
+    serializer.write("assignment", assignment);
 }
 
 Statement& ProceduralDeassignStatement::fromSyntax(Compilation& compilation,

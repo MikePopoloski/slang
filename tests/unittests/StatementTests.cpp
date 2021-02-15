@@ -1016,6 +1016,25 @@ endmodule
     NO_COMPILATION_ERRORS;
 }
 
+TEST_CASE("Procedural assign / deassign errors") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    int i;
+    logic l[3];
+    initial begin
+        assign l[i] = 1;
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::ConstEvalNonConstVariable);
+}
+
 TEST_CASE("Unexpected port decls") {
     auto tree = SyntaxTree::fromText(R"(
 module m;

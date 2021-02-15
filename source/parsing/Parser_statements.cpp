@@ -404,12 +404,14 @@ ProceduralAssignStatementSyntax& Parser::parseProceduralAssignStatement(NamedLab
                                                                         AttrList attributes,
                                                                         SyntaxKind kind) {
     auto keyword = consume();
-    auto& lvalue = parsePrimaryExpression(/* disallowVector */ false);
-    auto equals = expect(TokenKind::Equals);
     auto& expr = parseExpression();
+    if (expr.kind != SyntaxKind::AssignmentExpression) {
+        addDiag(diag::ExpectedContinuousAssignment, expr.getFirstToken().location())
+            << expr.sourceRange();
+    }
+
     auto semi = expect(TokenKind::Semicolon);
-    return factory.proceduralAssignStatement(kind, label, attributes, keyword, lvalue, equals, expr,
-                                             semi);
+    return factory.proceduralAssignStatement(kind, label, attributes, keyword, expr, semi);
 }
 
 ProceduralDeassignStatementSyntax& Parser::parseProceduralDeassignStatement(NamedLabelSyntax* label,

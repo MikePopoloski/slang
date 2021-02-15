@@ -846,9 +846,7 @@ token semi
 
 ProceduralAssignStatement base=Statement multiKind=true
 token keyword
-Expression lvalue
-token equals
-Expression value
+Expression expr
 token semi
 
 kindmap<ProceduralAssignStatement>

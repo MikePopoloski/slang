@@ -902,13 +902,10 @@ struct ProceduralAssignStatementSyntax;
 
 class ProceduralAssignStatement : public Statement {
 public:
-    const Expression& lvalue;
-    const Expression& rvalue;
+    const Expression& assignment;
 
-    ProceduralAssignStatement(const Expression& lvalue, const Expression& rvalue,
-                              SourceRange sourceRange) :
-        Statement(StatementKind::ProceduralAssign, sourceRange),
-        lvalue(lvalue), rvalue(rvalue) {}
+    ProceduralAssignStatement(const Expression& assignment, SourceRange sourceRange) :
+        Statement(StatementKind::ProceduralAssign, sourceRange), assignment(assignment) {}
 
     EvalResult evalImpl(EvalContext& context) const;
     bool verifyConstantImpl(EvalContext& context) const;
@@ -923,8 +920,7 @@ public:
 
     template<typename TVisitor>
     void visitExprs(TVisitor&& visitor) const {
-        lvalue.visit(visitor);
-        rvalue.visit(visitor);
+        assignment.visit(visitor);
     }
 };
 
