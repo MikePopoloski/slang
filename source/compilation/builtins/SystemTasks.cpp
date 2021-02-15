@@ -447,6 +447,50 @@ private:
     bool isFullMethod;
 };
 
+class StochasticTask : public SystemSubroutine {
+public:
+    StochasticTask(const std::string& name, SubroutineKind subroutineKind, size_t inputArgs,
+                   size_t outputArgs) :
+        SystemSubroutine(name, subroutineKind),
+        inputArgs(inputArgs), outputArgs(outputArgs) {}
+
+    const Type& checkArguments(const BindContext& context, const Args& args, SourceRange range,
+                               const Expression*) const final {
+        auto& comp = context.getCompilation();
+        size_t totalArgs = inputArgs + outputArgs;
+        if (!checkArgCount(context, false, args, range, totalArgs, totalArgs))
+            return comp.getErrorType();
+
+        for (size_t i = 0; i < inputArgs; i++) {
+            if (!args[i]->type->isIntegral())
+                return badArg(context, *args[i]);
+        }
+
+        for (size_t i = inputArgs; i < totalArgs; i++) {
+            if (!args[i]->type->isIntegral())
+                return badArg(context, *args[i]);
+
+            if (!args[i]->verifyAssignable(context))
+                return comp.getErrorType();
+        }
+
+        return kind == SubroutineKind::Function ? comp.getIntType() : comp.getVoidType();
+    }
+
+    ConstantValue eval(EvalContext&, const Args&,
+                       const CallExpression::SystemCallInfo&) const final {
+        return nullptr;
+    }
+
+    bool verifyConstant(EvalContext& context, const Args&, SourceRange range) const final {
+        return notConst(context, range);
+    }
+
+private:
+    size_t inputArgs;
+    size_t outputArgs;
+};
+
 void registerSystemTasks(Compilation& c) {
 #define REGISTER(type, name, base) c.addSystemSubroutine(std::make_unique<type>(name, base))
     REGISTER(DisplayTask, "$display", LiteralBase::Decimal);
@@ -558,6 +602,16 @@ void registerSystemTasks(Compilation& c) {
     ASSERTCTRL("$assertvacuousoff");
 
 #undef ASSERTCTRL
+
+#define TASK(name, kind, input, output) \
+    c.addSystemSubroutine(std::make_unique<StochasticTask>(name, kind, input, output))
+    TASK("$q_initialize", SubroutineKind::Task, 3, 1);
+    TASK("$q_add", SubroutineKind::Task, 3, 1);
+    TASK("$q_remove", SubroutineKind::Task, 2, 2);
+    TASK("$q_exam", SubroutineKind::Task, 2, 2);
+    TASK("$q_full", SubroutineKind::Function, 1, 1);
+
+#undef TASK
 }
 
 } // namespace slang::Builtins

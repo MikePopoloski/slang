@@ -692,3 +692,22 @@ endmodule
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::InvalidRefArg);
 }
+
+TEST_CASE("Stochastic tasks") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    int i, j;
+    initial begin
+        $q_initialize(1, 2, 3, i);
+        $q_add(1, 2, 3, i);
+        $q_remove(1, 2, i, j);
+        j = $q_full(1, i);
+        $q_exam(1, 2, i, j);
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
