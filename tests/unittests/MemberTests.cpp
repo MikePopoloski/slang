@@ -971,6 +971,11 @@ module m;
     n n2(.a(asdf), .b(foobar));
 
     assign foo = 1, bar = 2;
+
+    reg i;
+    assign tmp = i;
+
+    int k = 5;
 endmodule
 )");
 

@@ -308,7 +308,7 @@ const Expression& ContinuousAssignSymbol::getAssignment() const {
     auto syntax = getSyntax();
     ASSERT(scope && syntax);
 
-    BindContext context(*scope, LookupLocation::before(*this), BindFlags::NonProcedural);
+    BindContext context(*scope, LookupLocation::after(*this), BindFlags::NonProcedural);
     assign =
         &Expression::bind(syntax->as<ExpressionSyntax>(), context, BindFlags::AssignmentAllowed);
 
