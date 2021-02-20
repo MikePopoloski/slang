@@ -389,6 +389,7 @@ private:
 
     void parseParamOverrides(flat_hash_map<string_view, const ConstantValue*>& results);
     void checkDPIMethods(span<const SubroutineSymbol* const> dpiImports);
+    void resolveDefParams(size_t numDefParams);
 
     // Stored options object.
     CompilationOptions options;

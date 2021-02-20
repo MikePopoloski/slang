@@ -1223,13 +1223,9 @@ ContinuousAssignSyntax& Parser::parseContinuousAssign(AttrList attributes) {
 
 DefParamAssignmentSyntax& Parser::parseDefParamAssignment() {
     auto& name = parseName();
-
-    EqualsValueClauseSyntax* initializer = nullptr;
-    if (peek(TokenKind::Equals)) {
-        auto equals = consume();
-        initializer = &factory.equalsValueClause(equals, parseMinTypMaxExpression());
-    }
-    return factory.defParamAssignment(name, initializer);
+    auto equals = expect(TokenKind::Equals);
+    auto& init = factory.equalsValueClause(equals, parseMinTypMaxExpression());
+    return factory.defParamAssignment(name, init);
 }
 
 DefParamSyntax& Parser::parseDefParam(AttrList attributes) {
@@ -1241,7 +1237,9 @@ DefParamSyntax& Parser::parseDefParam(AttrList attributes) {
         buffer, TokenKind::Semicolon, TokenKind::Comma, semi, RequireItems::True,
         diag::ExpectedVariableAssignment, [this] { return &parseDefParamAssignment(); });
 
-    return factory.defParam(attributes, defparam, buffer.copy(alloc), semi);
+    auto& result = factory.defParam(attributes, defparam, buffer.copy(alloc), semi);
+    meta.defparams.append(&result);
+    return result;
 }
 
 CoverageOptionSyntax* Parser::parseCoverageOption(AttrList attributes) {

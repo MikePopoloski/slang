@@ -235,6 +235,18 @@ const RootSymbol& Compilation::getRoot() {
     flat_hash_map<string_view, const ConstantValue*> paramOverrides;
     parseParamOverrides(paramOverrides);
 
+    // If there are defparams we need to fully resolve their values up front before
+    // we start elaborating any instances.
+    size_t numDefParams = 0, numBinds = 0;
+    for (auto& tree : syntaxTrees) {
+        auto& meta = tree->getMetadata();
+        numDefParams += meta.defparams.size();
+        numBinds += meta.bindDirectives.size();
+    }
+
+    if (numDefParams)
+        resolveDefParams(numDefParams);
+
     ASSERT(!finalizing);
     finalizing = true;
     auto guard = ScopeGuard([this] { finalizing = false; });
@@ -353,10 +365,6 @@ const RootSymbol& Compilation::getRoot() {
     // traverse the hierarchy now to find them (because they can modify the hierarchy and
     // accessing other nodes / expressions might not be valid without those bound
     // instances present).
-    size_t numBinds = 0;
-    for (auto& tree : syntaxTrees)
-        numBinds += tree->getMetadata().bindDirectives.size();
-
     if (numBinds) {
         BindVisitor visitor(seenBindDirectives, numBinds);
         root->visit(visitor);
@@ -1081,6 +1089,9 @@ void Compilation::checkDPIMethods(span<const SubroutineSymbol* const> dpiImports
             }
         }
     }
+}
+
+void Compilation::resolveDefParams(size_t) {
 }
 
 } // namespace slang

@@ -93,4 +93,29 @@ private:
     mutable const Type* typeAlias = nullptr;
 };
 
+struct DefParamSyntax;
+
+/// Represents a defparam directive.
+class DefParamSymbol : public Symbol {
+public:
+    explicit DefParamSymbol(SourceLocation loc) : Symbol(SymbolKind::DefParam, "", loc) {}
+
+    const Symbol* getTarget() const;
+    const Expression& getInitializer() const;
+    const ConstantValue& getValue() const;
+
+    static void fromSyntax(const Scope& scope, const DefParamSyntax& syntax,
+                           SmallVector<const DefParamSymbol*>& results);
+
+    static bool isKind(SymbolKind kind) { return kind == SymbolKind::DefParam; }
+
+    void serializeTo(ASTSerializer& serializer) const;
+
+private:
+    void resolve() const;
+
+    mutable const Expression* initializer = nullptr;
+    mutable const Symbol* target = nullptr;
+};
+
 } // namespace slang

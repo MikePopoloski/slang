@@ -1221,3 +1221,27 @@ endmodule
     dt = top->childNodes[1]->childNodes[0];
     checkI(11);
 }
+
+TEST_CASE("defparams") {
+    auto tree = SyntaxTree::fromText(R"(
+module top;
+  m m1();
+endmodule
+
+module m;
+  parameter a = 1;
+  parameter b = 2;
+  
+  logic [b-1:0] foo;
+  
+  defparam m1.a = $bits(foo);
+  defparam m1.b = 4;
+  
+  initial $display(a, b);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}

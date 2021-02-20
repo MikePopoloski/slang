@@ -159,6 +159,9 @@ public:
 
         /// A list of all bind directives parsed.
         SmallVectorSized<const BindDirectiveSyntax*, 4> bindDirectives;
+
+        /// A list of all defparams parsed.
+        SmallVectorSized<const DefParamSyntax*, 4> defparams;
     };
 
     /// Gets the current set of metadata collected during parsing.

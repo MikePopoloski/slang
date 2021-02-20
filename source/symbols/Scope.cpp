@@ -369,6 +369,13 @@ void Scope::addMembers(const SyntaxNode& syntax) {
             addMember(
                 ConstraintBlockSymbol::fromSyntax(*this, syntax.as<ConstraintPrototypeSyntax>()));
             break;
+        case SyntaxKind::DefParam: {
+            SmallVectorSized<const DefParamSymbol*, 4> defparams;
+            DefParamSymbol::fromSyntax(*this, syntax.as<DefParamSyntax>(), defparams);
+            for (auto defparam : defparams)
+                addMember(*defparam);
+            break;
+        }
         case SyntaxKind::ConcurrentAssertionMember:
         case SyntaxKind::ImmediateAssertionMember:
             // TODO: these aren't supported yet but we can compile everything else successfully

@@ -161,6 +161,7 @@ decltype(auto) Symbol::visit(TVisitor&& visitor, Args&&... args) const {
         SYMBOL(UnknownModule);
         SYMBOL(Iterator);
         SYMBOL(ConstraintBlock);
+        SYMBOL(DefParam);
         TYPE(PredefinedIntegerType);
         TYPE(ScalarType);
         TYPE(FloatingType);

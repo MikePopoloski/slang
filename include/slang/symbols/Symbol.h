@@ -88,7 +88,8 @@ enum class RandMode;
     x(MethodPrototype) \
     x(UnknownModule) \
     x(Iterator) \
-    x(ConstraintBlock)
+    x(ConstraintBlock) \
+    x(DefParam)
 // clang-format on
 
 ENUM(SymbolKind, SYMBOLKIND)

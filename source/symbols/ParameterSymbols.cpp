@@ -293,4 +293,76 @@ void TypeParameterSymbol::serializeTo(ASTSerializer& serializer) const {
     serializer.write("isBody", isBodyParam());
 }
 
+void DefParamSymbol::fromSyntax(const Scope& scope, const DefParamSyntax& syntax,
+                                SmallVector<const DefParamSymbol*>& results) {
+    auto& comp = scope.getCompilation();
+    for (auto assignment : syntax.assignments) {
+        auto sym = comp.emplace<DefParamSymbol>(assignment->getFirstToken().location());
+        sym->setSyntax(*assignment);
+        results.append(sym);
+    }
+}
+
+const Symbol* DefParamSymbol::getTarget() const {
+    if (!initializer)
+        resolve();
+    return target;
+}
+
+const Expression& DefParamSymbol::getInitializer() const {
+    if (!initializer)
+        resolve();
+    return *initializer;
+}
+
+const ConstantValue& DefParamSymbol::getValue() const {
+    auto v = getInitializer().constant;
+    ASSERT(v);
+    return *v;
+}
+
+void DefParamSymbol::resolve() const {
+    auto syntax = getSyntax();
+    auto scope = getParentScope();
+    ASSERT(syntax && scope);
+
+    auto& comp = scope->getCompilation();
+    auto& assignment = syntax->as<DefParamAssignmentSyntax>();
+
+    BindContext context(*scope, LookupLocation::before(*this));
+    LookupResult result;
+    Lookup::name(*assignment.name, context, LookupFlags::None, result);
+    result.reportErrors(context);
+
+    target = result.found;
+    if (target && target->kind != SymbolKind::Parameter) {
+        auto& diag = context.addDiag(diag::DefParamTarget, assignment.name->sourceRange());
+        diag.addNote(diag::NoteDeclarationHere, target->location);
+        target = nullptr;
+    }
+
+    if (!target) {
+        initializer = comp.emplace<InvalidExpression>(nullptr, comp.getErrorType());
+        return;
+    }
+
+    // We need to know the parameter's type (or lack thereof) in order to
+    // correctly bind a value for it.
+    auto& expr = *assignment.setter->expr;
+    auto equalsLoc = assignment.setter->equals.location();
+    auto declType = target->getDeclaredType();
+    auto typeSyntax = declType->getTypeSyntax();
+
+    if (typeSyntax && typeSyntax->kind == SyntaxKind::ImplicitType)
+        initializer = &Expression::bindImplicitParam(*typeSyntax, expr, equalsLoc, context);
+    else
+        initializer = &Expression::bindRValue(declType->getType(), expr, equalsLoc, context);
+}
+
+void DefParamSymbol::serializeTo(ASTSerializer& serializer) const {
+    if (auto t = getTarget())
+        serializer.writeLink("target", *t);
+    serializer.write("value", getValue());
+}
+
 } // namespace slang

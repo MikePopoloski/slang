@@ -1270,7 +1270,7 @@ token semi
 
 DefParamAssignment
 Name name
-EqualsValueClause? setter
+EqualsValueClause setter
 
 DefParam base=Member
 token defparam

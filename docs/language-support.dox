@@ -318,7 +318,7 @@ LRM | Feature | Supported
 {{m-danger}}  20.13 | Sampled value system functions | no
 {{m-danger}}  20.14 | Coverage control functions | no
 {{m-success}} 20.15 | Probabilistic distribution functions | v0.7
-{{m-success}}  20.16 | Stochastic analysis tasks and functions | v0.7
+{{m-success}} 20.16 | Stochastic analysis tasks and functions | v0.7
 {{m-danger}}  20.17 | PLA modeling tasks | no
 {{m-success}} 20.18 | Miscellaneous tasks and functions | v0.4
 
