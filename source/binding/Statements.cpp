@@ -2176,23 +2176,24 @@ void ProceduralAssignStatement::serializeTo(ASTSerializer& serializer) const {
 Statement& ProceduralDeassignStatement::fromSyntax(Compilation& compilation,
                                                    const ProceduralDeassignStatementSyntax& syntax,
                                                    const BindContext& context) {
-    auto& lvalue = Expression::bind(*syntax.variable, context);
+    BindContext ctx = context.resetFlags(BindFlags::NonProcedural);
+    auto& lvalue = Expression::bind(*syntax.variable, ctx);
     auto result = compilation.emplace<ProceduralDeassignStatement>(lvalue, syntax.sourceRange());
     if (lvalue.bad())
         return badStmt(compilation, result);
 
-    if (!lvalue.verifyAssignable(context))
+    if (!lvalue.verifyAssignable(ctx))
         return badStmt(compilation, result);
 
     if (syntax.keyword.kind == TokenKind::DeassignKeyword) {
         if (!isValidAssignLVal(lvalue)) {
-            context.addDiag(diag::BadProceduralAssign, lvalue.sourceRange);
+            ctx.addDiag(diag::BadProceduralAssign, lvalue.sourceRange);
             return badStmt(compilation, result);
         }
     }
     else {
-        if (!isValidForceLVal(lvalue, context, false)) {
-            context.addDiag(diag::BadProceduralForce, lvalue.sourceRange);
+        if (!isValidForceLVal(lvalue, ctx, false)) {
+            ctx.addDiag(diag::BadProceduralForce, lvalue.sourceRange);
             return badStmt(compilation, result);
         }
     }

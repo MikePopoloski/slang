@@ -1002,11 +1002,12 @@ TEST_CASE("Procedural assign / deassign statements") {
     auto tree = SyntaxTree::fromText(R"(
 module m;
     int a;
+    wire b;
     initial begin
         assign a = 5;
         deassign a;
-        force a = 5;
-        release a;
+        force b = 5;
+        release b;
     end
 endmodule
 )");
