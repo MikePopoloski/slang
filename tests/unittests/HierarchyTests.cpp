@@ -1242,4 +1242,8 @@ endmodule
     Compilation compilation;
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
+
+    auto& root = compilation.getRoot();
+    CHECK(root.lookupName<ParameterSymbol>("top.m1.a").getValue().integer() == 6);
+    CHECK(root.lookupName<ParameterSymbol>("top.m1.b").getValue().integer() == 4);
 }

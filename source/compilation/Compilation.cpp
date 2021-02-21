@@ -1113,10 +1113,46 @@ void Compilation::checkDPIMethods(span<const SubroutineSymbol* const> dpiImports
 }
 
 void Compilation::resolveDefParams(size_t) {
-    auto clone = [&](Compilation& c) {
+    SmallVectorSized<std::pair<std::string, ConstantValue>, 4> overrides;
+
+    auto copyOverrides = [&](Compilation& c) {
+        for (auto& [path, val] : overrides) {
+            ParamOverrideNode* node = &c.paramOverrides;
+            std::string curr = path;
+            while (true) {
+                size_t idx = curr.find('.');
+                if (idx == curr.npos) {
+                    node->overrides[curr] = val;
+                    break;
+                }
+
+                node = &node->childNodes[curr.substr(0, idx)];
+                curr = curr.substr(idx + 1);
+            }
+        }
+    };
+
+    auto createClone = [&](Compilation& c) {
         c.options = options;
+        c.options.disableInstanceCaching = true;
         for (auto& tree : syntaxTrees)
             c.addSyntaxTree(tree);
+
+        copyOverrides(c);
+    };
+
+    auto saveDefparams = [&](DefParamVisitor& visitor) {
+        overrides.clear();
+        for (auto defparam : visitor.found) {
+            auto target = defparam->getTarget();
+            if (!target)
+                overrides.emplace();
+            else {
+                std::string path;
+                target->getHierarchicalPath(path);
+                overrides.emplace(std::make_pair(std::move(path), defparam->getValue()));
+            }
+        }
     };
 
     // Traverse the design and find all defparams and their values.
@@ -1125,14 +1161,11 @@ void Compilation::resolveDefParams(size_t) {
     // hierarchy that gets instantiated. Cloning lets us do that in an isolated context
     // and throw that work away once we know the final parameter values.
     Compilation initialClone;
-    clone(initialClone);
+    createClone(initialClone);
 
     DefParamVisitor initialVisitor;
     initialClone.getRoot(/* skipDefParamResolution */ true).visit(initialVisitor);
-
-    SmallVectorSized<const ConstantValue*, 4> initialVals;
-    for (auto defparam : initialVisitor.found)
-        initialVals.append(&defparam->getValue());
+    saveDefparams(initialVisitor);
 
     // defparams can change the value of parameters, further affecting the value of
     // other defparams elsewhere in the design. This means we need to iterate,
@@ -1140,18 +1173,18 @@ void Compilation::resolveDefParams(size_t) {
     // give up due to the potential of cyclical references.
     for (uint32_t i = 0; i < options.maxDefParamSteps; i++) {
         Compilation c;
-        clone(c);
+        createClone(c);
 
         DefParamVisitor v;
         c.getRoot(/* skipDefParamResolution */ true).visit(v);
 
         // We're only done if we have the same set of defparams with the same set of values.
         bool allSame = true;
-        ASSERT(v.found.size() == initialVisitor.found.size());
+        ASSERT(v.found.size() == overrides.size());
         for (size_t j = 0; j < v.found.size(); j++) {
             // TODO: check same defparam target
 
-            if (*initialVals[j] != v.found[j]->getValue()) {
+            if (overrides[j].second != v.found[j]->getValue()) {
                 allSame = false;
                 break;
             }
@@ -1159,7 +1192,12 @@ void Compilation::resolveDefParams(size_t) {
 
         if (allSame)
             break;
+
+        saveDefparams(v);
     }
+
+    // We have our final overrides; copy them into the main compilation unit.
+    copyOverrides(*this);
 }
 
 } // namespace slang
