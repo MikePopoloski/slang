@@ -117,6 +117,16 @@ struct CompilationOptions {
     std::vector<std::string> paramOverrides;
 };
 
+/// A node in a tree representing specific parameters to override. These are
+/// assembled from defparam values and command-line specified overrides.
+struct ParamOverrideNode {
+    /// A map of parameters in the current scope to override.
+    flat_hash_map<std::string, ConstantValue> overrides;
+
+    /// A map of child scopes that also contain overrides.
+    flat_hash_map<std::string, ParamOverrideNode> childNodes;
+};
+
 /// A centralized location for creating and caching symbols. This includes
 /// creating symbols from syntax nodes as well as fabricating them synthetically.
 /// Common symbols such as built in types are exposed here as well.
@@ -547,6 +557,11 @@ private:
 
     // A set of all instance bodies that have upward hierarchical names.
     flat_hash_set<const InstanceBodySymbol*> bodiesWithUpwardNames;
+
+    // A tree of parameter overrides to apply when elaborating.
+    // Note that instances store pointers into this tree so it must not be
+    // modified after elaboration begins.
+    ParamOverrideNode paramOverrides;
 
     // The path of the current instance being elaborated. This is only set temporarily,
     // during traversal of the AST to collect diagnostics, in order to allow upward

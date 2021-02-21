@@ -25,6 +25,7 @@ class PortSymbol;
 struct BindDirectiveSyntax;
 struct HierarchicalInstanceSyntax;
 struct HierarchyInstantiationSyntax;
+struct ParamOverrideNode;
 
 /// Base class for module, interface, and program instance symbols.
 class InstanceSymbol : public Symbol {
@@ -36,7 +37,7 @@ public:
                    const InstanceBodySymbol& body);
 
     InstanceSymbol(Compilation& compilation, string_view name, SourceLocation loc,
-                   const InstanceCacheKey& cacheKey,
+                   const InstanceCacheKey& cacheKey, const ParamOverrideNode* paramOverrideNode,
                    span<const ParameterSymbolBase* const> parameters, bool isUninstantiated);
 
     const Definition& getDefinition() const;
@@ -67,9 +68,8 @@ public:
 
     /// Creates a default-instantiated instance of the given definition. All parameters must
     /// have defaults specified.
-    static InstanceSymbol& createDefault(
-        Compilation& compilation, const Definition& definition,
-        const flat_hash_map<string_view, const ConstantValue*>* paramOverrides = nullptr);
+    static InstanceSymbol& createDefault(Compilation& compilation, const Definition& definition,
+                                         const ParamOverrideNode* paramOverrideNode);
 
     /// Creates an intentionally invalid instance by forcing all parameters to null values.
     /// This allows type checking instance members as long as they don't depend on any parameters.
@@ -88,6 +88,10 @@ struct ParameterValueAssignmentSyntax;
 
 class InstanceBodySymbol : public Symbol, public Scope {
 public:
+    /// A pointer into the parameter override tree, if this instance or any
+    /// child instances have parameter overrides that need to be applied.
+    const ParamOverrideNode* paramOverrideNode;
+
     /// A copy of all port parameter symbols used to construct the instance body.
     span<const ParameterSymbolBase* const> parameters;
 
@@ -98,6 +102,7 @@ public:
     bool isUninstantiated = false;
 
     InstanceBodySymbol(Compilation& compilation, const InstanceCacheKey& cacheKey,
+                       const ParamOverrideNode* paramOverrideNode,
                        span<const ParameterSymbolBase* const> parameters, bool isUninstantiated);
 
     span<const Symbol* const> getPortList() const {
@@ -110,9 +115,10 @@ public:
     const Definition& getDefinition() const { return cacheKey.getDefinition(); }
     const InstanceCacheKey& getCacheKey() const { return cacheKey; }
 
-    static const InstanceBodySymbol& fromDefinition(
-        Compilation& compilation, const Definition& definition, bool isUninstantiated,
-        const flat_hash_map<string_view, const ConstantValue*>* paramOverrides);
+    static const InstanceBodySymbol& fromDefinition(Compilation& compilation,
+                                                    const Definition& definition,
+                                                    bool isUninstantiated,
+                                                    const ParamOverrideNode* paramOverrideNode);
 
     static const InstanceBodySymbol* fromDefinition(
         const Scope& scope, LookupLocation lookupLocation, SourceLocation sourceLoc,
@@ -120,6 +126,7 @@ public:
 
     static const InstanceBodySymbol& fromDefinition(
         Compilation& compilation, const InstanceCacheKey& cacheKey,
+        const ParamOverrideNode* paramOverrideNode,
         span<const ParameterSymbolBase* const> parameters, bool isUninstantiated,
         bool forceUncached = false);
 

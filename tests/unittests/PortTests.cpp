@@ -111,34 +111,34 @@ module m6(I.bar bar); endmodule
     Compilation compilation;
     compilation.addSyntaxTree(tree);
 
-#define checkWirePort(moduleName, name, dir, nt, type)                 \
-    {                                                                  \
-        auto def = compilation.getDefinition(moduleName);              \
-        REQUIRE(def);                                                  \
-        auto& inst = InstanceSymbol::createDefault(compilation, *def); \
-        auto& port = inst.body.findPort(name)->as<PortSymbol>();       \
-        CHECK(port.direction == ArgumentDirection::dir);               \
-        CHECK(port.getType().toString() == (type));                    \
-        if (nt) {                                                      \
-            auto& net = port.internalSymbol->as<NetSymbol>();          \
-            CHECK(&net.netType == (nt));                               \
-        }                                                              \
+#define checkWirePort(moduleName, name, dir, nt, type)                          \
+    {                                                                           \
+        auto def = compilation.getDefinition(moduleName);                       \
+        REQUIRE(def);                                                           \
+        auto& inst = InstanceSymbol::createDefault(compilation, *def, nullptr); \
+        auto& port = inst.body.findPort(name)->as<PortSymbol>();                \
+        CHECK(port.direction == ArgumentDirection::dir);                        \
+        CHECK(port.getType().toString() == (type));                             \
+        if (nt) {                                                               \
+            auto& net = port.internalSymbol->as<NetSymbol>();                   \
+            CHECK(&net.netType == (nt));                                        \
+        }                                                                       \
     };
 
-#define checkIfacePort(moduleName, portName, ifaceName, modportName)          \
-    {                                                                         \
-        auto def = compilation.getDefinition(moduleName);                     \
-        REQUIRE(def);                                                         \
-        auto& inst = InstanceSymbol::createDefault(compilation, *def);        \
-        auto& port = inst.body.findPort(portName)->as<InterfacePortSymbol>(); \
-        REQUIRE(port.interfaceDef);                                           \
-        CHECK(port.interfaceDef->name == (ifaceName));                        \
-        if (*(modportName)) {                                                 \
-            CHECK(port.modport == (modportName));                             \
-        }                                                                     \
-        else {                                                                \
-            CHECK(port.modport.empty());                                      \
-        }                                                                     \
+#define checkIfacePort(moduleName, portName, ifaceName, modportName)            \
+    {                                                                           \
+        auto def = compilation.getDefinition(moduleName);                       \
+        REQUIRE(def);                                                           \
+        auto& inst = InstanceSymbol::createDefault(compilation, *def, nullptr); \
+        auto& port = inst.body.findPort(portName)->as<InterfacePortSymbol>();   \
+        REQUIRE(port.interfaceDef);                                             \
+        CHECK(port.interfaceDef->name == (ifaceName));                          \
+        if (*(modportName)) {                                                   \
+            CHECK(port.modport == (modportName));                               \
+        }                                                                       \
+        else {                                                                  \
+            CHECK(port.modport.empty());                                        \
+        }                                                                       \
     };
 
     auto wire = &compilation.getWireNetType();

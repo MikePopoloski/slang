@@ -30,11 +30,13 @@ using namespace slang;
 class InstanceBuilder {
 public:
     InstanceBuilder(const BindContext& context, const InstanceCacheKey& cacheKeyBase,
+                    const ParamOverrideNode* paramOverrideNode,
                     span<const ParameterSymbolBase* const> parameters,
                     span<const AttributeInstanceSyntax* const> attributes, bool isUninstantiated) :
         compilation(context.getCompilation()),
         context(context), cacheKeyBase(cacheKeyBase), parameters(parameters),
-        attributes(attributes), isUninstantiated(isUninstantiated) {}
+        attributes(attributes), paramOverrideNode(paramOverrideNode),
+        isUninstantiated(isUninstantiated) {}
 
     Symbol* create(const HierarchicalInstanceSyntax& syntax) {
         path.clear();
@@ -52,6 +54,7 @@ private:
     SmallVectorSized<int32_t, 4> path;
     span<const ParameterSymbolBase* const> parameters;
     span<const AttributeInstanceSyntax* const> attributes;
+    const ParamOverrideNode* paramOverrideNode;
     bool isUninstantiated = false;
 
     Symbol* createInstance(const HierarchicalInstanceSyntax& syntax) {
@@ -67,9 +70,9 @@ private:
         if (!ifaceKeys.empty())
             cacheKey.setInterfacePortKeys(ifaceKeys.copy(compilation));
 
-        auto inst = compilation.emplace<InstanceSymbol>(compilation, syntax.name.valueText(),
-                                                        syntax.name.location(), cacheKey,
-                                                        parameters, isUninstantiated);
+        auto inst = compilation.emplace<InstanceSymbol>(
+            compilation, syntax.name.valueText(), syntax.name.location(), cacheKey,
+            paramOverrideNode, parameters, isUninstantiated);
 
         inst->arrayPath = path.copy(compilation);
         inst->setSyntax(syntax);
@@ -124,7 +127,7 @@ bool createParams(Compilation& compilation, const Definition& definition,
     struct TempInstance : public InstanceBodySymbol {
         TempInstance(Compilation& compilation, const Definition& definition,
                      bool forceInvalidParams) :
-            InstanceBodySymbol(compilation, InstanceCacheKey(definition, {}, {}), {},
+            InstanceBodySymbol(compilation, InstanceCacheKey(definition, {}, {}), nullptr, {},
                                forceInvalidParams) {
             setParent(definition.scope);
         }
@@ -190,20 +193,21 @@ InstanceSymbol::InstanceSymbol(Compilation& compilation, string_view name, Sourc
 
 InstanceSymbol::InstanceSymbol(Compilation& compilation, string_view name, SourceLocation loc,
                                const InstanceCacheKey& cacheKey,
+                               const ParamOverrideNode* paramOverrideNode,
                                span<const ParameterSymbolBase* const> parameters,
                                bool isUninstantiated) :
-    InstanceSymbol(
-        compilation, name, loc,
-        InstanceBodySymbol::fromDefinition(compilation, cacheKey, parameters, isUninstantiated)) {
+    InstanceSymbol(compilation, name, loc,
+                   InstanceBodySymbol::fromDefinition(compilation, cacheKey, paramOverrideNode,
+                                                      parameters, isUninstantiated)) {
 }
 
-InstanceSymbol& InstanceSymbol::createDefault(
-    Compilation& compilation, const Definition& definition,
-    const flat_hash_map<string_view, const ConstantValue*>* paramOverrides) {
+InstanceSymbol& InstanceSymbol::createDefault(Compilation& compilation,
+                                              const Definition& definition,
+                                              const ParamOverrideNode* paramOverrideNode) {
     return *compilation.emplace<InstanceSymbol>(
         compilation, definition.name, definition.location,
         InstanceBodySymbol::fromDefinition(compilation, definition,
-                                           /* isUninstantiated */ false, paramOverrides));
+                                           /* isUninstantiated */ false, paramOverrideNode));
 }
 
 InstanceSymbol& InstanceSymbol::createInvalid(Compilation& compilation,
@@ -224,9 +228,13 @@ void InstanceSymbol::fromSyntax(Compilation& compilation,
     while (currScope && currScope->asSymbol().kind != SymbolKind::InstanceBody)
         currScope = currScope->asSymbol().getParentScope();
 
+    const ParamOverrideNode* parentOverrideNode = nullptr;
     bool isUninstantiated = false;
-    if (currScope)
-        isUninstantiated = currScope->asSymbol().as<InstanceBodySymbol>().isUninstantiated;
+    if (currScope) {
+        auto& instanceBody = currScope->asSymbol().as<InstanceBodySymbol>();
+        parentOverrideNode = instanceBody.paramOverrideNode;
+        isUninstantiated = instanceBody.isUninstantiated;
+    }
 
     auto definition = compilation.getDefinition(syntax.type.valueText(), scope);
     if (!definition) {
@@ -237,32 +245,71 @@ void InstanceSymbol::fromSyntax(Compilation& compilation,
         return;
     }
 
-    ParameterBuilder paramBuilder(scope, definition->name, definition->parameters);
-    if (syntax.parameters)
-        paramBuilder.setAssignments(*syntax.parameters);
-
-    // Determine values for all parameters now so that they can be
-    // shared between instances, and so that we can use them to create
-    // a cache key to lookup any instance bodies that may already be
-    // suitable for the new instances we're about to create.
-    createParams(compilation, *definition, paramBuilder, location,
-                 syntax.getFirstToken().location(), isUninstantiated);
-
-    InstanceCacheKey cacheKey(*definition, paramBuilder.paramValues.copy(compilation),
-                              paramBuilder.typeParams.copy(compilation));
-
-    BindContext context(scope, location);
-    InstanceBuilder builder(context, cacheKey, paramBuilder.paramSymbols, syntax.attributes,
-                            isUninstantiated);
-
     // We have to check each port connection expression for any names that can't be resolved,
     // which represent implicit nets that need to be created now.
+    BindContext context(scope, location);
     SmallSet<string_view, 8> implicitNetNames;
     auto& netType = scope.getDefaultNetType();
 
-    for (auto instanceSyntax : syntax.instances) {
-        createImplicitNets(*instanceSyntax, context, netType, implicitNetNames, results);
-        results.append(builder.create(*instanceSyntax));
+    // The common case is that our parent doesn't have a parameter override node,
+    // which lets us evaluate all parameter assignments for this instance in a batch.
+    if (!parentOverrideNode) {
+        ParameterBuilder paramBuilder(scope, definition->name, definition->parameters);
+        if (syntax.parameters)
+            paramBuilder.setAssignments(*syntax.parameters);
+
+        // Determine values for all parameters now so that they can be
+        // shared between instances, and so that we can use them to create
+        // a cache key to lookup any instance bodies that may already be
+        // suitable for the new instances we're about to create.
+        createParams(compilation, *definition, paramBuilder, location,
+                     syntax.getFirstToken().location(), isUninstantiated);
+
+        InstanceCacheKey cacheKey(*definition, paramBuilder.paramValues.copy(compilation),
+                                  paramBuilder.typeParams.copy(compilation));
+
+        InstanceBuilder builder(context, cacheKey, nullptr, paramBuilder.paramSymbols,
+                                syntax.attributes, isUninstantiated);
+
+        for (auto instanceSyntax : syntax.instances) {
+            createImplicitNets(*instanceSyntax, context, netType, implicitNetNames, results);
+            results.append(builder.create(*instanceSyntax));
+        }
+    }
+    else {
+        // Otherwise we need to evaluate parameters separately for each child.
+        for (auto instanceSyntax : syntax.instances) {
+            const ParamOverrideNode* overrideNode = nullptr;
+            auto instName = instanceSyntax->name.valueText();
+            if (!instName.empty()) {
+                if (auto it = parentOverrideNode->childNodes.find(std::string(instName));
+                    it != parentOverrideNode->childNodes.end()) {
+                    overrideNode = &it->second;
+                }
+            }
+
+            ParameterBuilder paramBuilder(scope, definition->name, definition->parameters);
+            if (syntax.parameters)
+                paramBuilder.setAssignments(*syntax.parameters);
+            if (overrideNode)
+                paramBuilder.setOverrides(overrideNode->overrides);
+
+            // Determine values for all parameters now so that they can be
+            // shared between instances, and so that we can use them to create
+            // a cache key to lookup any instance bodies that may already be
+            // suitable for the new instances we're about to create.
+            createParams(compilation, *definition, paramBuilder, location,
+                         syntax.getFirstToken().location(), isUninstantiated);
+
+            InstanceCacheKey cacheKey(*definition, paramBuilder.paramValues.copy(compilation),
+                                      paramBuilder.typeParams.copy(compilation));
+
+            InstanceBuilder builder(context, cacheKey, overrideNode, paramBuilder.paramSymbols,
+                                    syntax.attributes, isUninstantiated);
+
+            createImplicitNets(*instanceSyntax, context, netType, implicitNetNames, results);
+            results.append(builder.create(*instanceSyntax));
+        }
     }
 }
 
@@ -456,18 +503,19 @@ void InstanceSymbol::serializeTo(ASTSerializer& serializer) const {
 }
 
 InstanceBodySymbol::InstanceBodySymbol(Compilation& compilation, const InstanceCacheKey& cacheKey,
+                                       const ParamOverrideNode* paramOverrideNode,
                                        span<const ParameterSymbolBase* const> parameters,
                                        bool isUninstantiated) :
     Symbol(SymbolKind::InstanceBody, cacheKey.getDefinition().name,
            cacheKey.getDefinition().location),
-    Scope(compilation, this), parameters(parameters), isUninstantiated(isUninstantiated),
-    cacheKey(cacheKey) {
+    Scope(compilation, this), paramOverrideNode(paramOverrideNode), parameters(parameters),
+    isUninstantiated(isUninstantiated), cacheKey(cacheKey) {
     setParent(cacheKey.getDefinition().scope, cacheKey.getDefinition().indexInScope);
 }
 
 const InstanceBodySymbol& InstanceBodySymbol::cloneUncached() const {
-    auto& result = fromDefinition(getCompilation(), getCacheKey(), parameters, isUninstantiated,
-                                  /* forceUncached */ true);
+    auto& result = fromDefinition(getCompilation(), getCacheKey(), paramOverrideNode, parameters,
+                                  isUninstantiated, /* forceUncached */ true);
 
     // const_cast is ok here only because we pass forceUncached above, which ensures
     // the function just created a new instance.
@@ -480,17 +528,16 @@ const InstanceBodySymbol& InstanceBodySymbol::cloneUncached() const {
 
 const InstanceBodySymbol& InstanceBodySymbol::fromDefinition(
     Compilation& compilation, const Definition& definition, bool isUninstantiated,
-    const flat_hash_map<string_view, const ConstantValue*>* paramOverrides) {
+    const ParamOverrideNode* paramOverrideNode) {
 
     ParameterBuilder paramBuilder(definition.scope, definition.name, definition.parameters);
-
-    if (paramOverrides)
-        paramBuilder.setGlobalOverrides(*paramOverrides);
+    if (paramOverrideNode)
+        paramBuilder.setOverrides(paramOverrideNode->overrides);
 
     createParams(compilation, definition, paramBuilder, LookupLocation::max, definition.location,
                  isUninstantiated);
 
-    return fromDefinition(compilation, InstanceCacheKey(definition, {}, {}),
+    return fromDefinition(compilation, InstanceCacheKey(definition, {}, {}), paramOverrideNode,
                           paramBuilder.paramSymbols, isUninstantiated);
 }
 
@@ -511,7 +558,7 @@ const InstanceBodySymbol* InstanceBodySymbol::fromDefinition(
     InstanceCacheKey cacheKey(definition, paramBuilder.paramValues.copy(comp),
                               paramBuilder.typeParams.copy(comp));
 
-    return &fromDefinition(comp, cacheKey, paramBuilder.paramSymbols,
+    return &fromDefinition(comp, cacheKey, nullptr, paramBuilder.paramSymbols,
                            /* isUninstantiated */ false);
 }
 
@@ -528,16 +575,18 @@ static span<const ParameterSymbolBase* const> copyParams(
 }
 
 const InstanceBodySymbol& InstanceBodySymbol::fromDefinition(
-    Compilation& comp, const InstanceCacheKey& cacheKey,
+    Compilation& comp, const InstanceCacheKey& cacheKey, const ParamOverrideNode* paramOverrideNode,
     span<const ParameterSymbolBase* const> parameters, bool isUninstantiated, bool forceUncached) {
 
     // If there's already a cached body for this key, return that instead of creating a new one.
-    if (auto cached = comp.getInstanceCache().find(cacheKey); cached && !forceUncached)
-        return *cached;
+    if (!paramOverrideNode && !forceUncached) {
+        if (auto cached = comp.getInstanceCache().find(cacheKey))
+            return *cached;
+    }
 
     auto& declSyntax = cacheKey.getDefinition().syntax;
-    auto result = comp.emplace<InstanceBodySymbol>(comp, cacheKey, copyParams(comp, parameters),
-                                                   isUninstantiated);
+    auto result = comp.emplace<InstanceBodySymbol>(comp, cacheKey, paramOverrideNode,
+                                                   copyParams(comp, parameters), isUninstantiated);
     result->setSyntax(declSyntax);
 
     // Package imports from the header always come first.

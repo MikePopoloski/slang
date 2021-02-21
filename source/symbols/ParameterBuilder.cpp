@@ -11,8 +11,8 @@
 #include "slang/diagnostics/DeclarationsDiags.h"
 #include "slang/symbols/ParameterSymbols.h"
 #include "slang/symbols/Scope.h"
-#include "slang/types/Type.h"
 #include "slang/syntax/AllSyntax.h"
+#include "slang/types/Type.h"
 
 namespace slang {
 
@@ -141,11 +141,12 @@ bool ParameterBuilder::createParams(Scope& newScope, LookupLocation lookupLocati
             auto& newParam = ParameterSymbol::fromDecl(param, newScope, context, newInitializer);
             paramSymbols.append(&newParam);
 
-            // If there is a global override map, see if this parameter is in it.
+            // If there is an override map, see if this parameter is in it.
             if (overrideMap) {
-                if (auto it = overrideMap->find(param.name); it != overrideMap->end()) {
-                    newParam.setValue(newParam.getType().coerceValue(*it->second));
-                    paramValues.append(it->second);
+                if (auto it = overrideMap->find(std::string(param.name));
+                    it != overrideMap->end()) {
+                    newParam.setValue(newParam.getType().coerceValue(it->second));
+                    paramValues.append(&newParam.getValue());
                     continue;
                 }
             }

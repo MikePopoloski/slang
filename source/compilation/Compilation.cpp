@@ -235,8 +235,8 @@ const RootSymbol& Compilation::getRoot(bool skipDefParamResolution) {
         return *root;
 
     // If any top-level parameter overrides were provided, parse them now.
-    flat_hash_map<string_view, const ConstantValue*> paramOverrides;
-    parseParamOverrides(paramOverrides);
+    flat_hash_map<string_view, const ConstantValue*> cliOverrides;
+    parseParamOverrides(cliOverrides);
 
     // If there are defparams we need to fully resolve their values up front before
     // we start elaborating any instances.
@@ -257,7 +257,7 @@ const RootSymbol& Compilation::getRoot(bool skipDefParamResolution) {
     auto isValidTop = [&](auto& definition) {
         // All parameters must have defaults.
         for (auto& param : definition.parameters) {
-            if (!param.hasDefault() && paramOverrides.find(param.name) == paramOverrides.end())
+            if (!param.hasDefault() && cliOverrides.find(param.name) == cliOverrides.end())
                 return false;
         }
 
@@ -344,9 +344,27 @@ const RootSymbol& Compilation::getRoot(bool skipDefParamResolution) {
     std::sort(topDefs.begin(), topDefs.end(), byName);
     std::sort(unreferencedDefs.begin(), unreferencedDefs.end(), byName);
 
+    // If we have any cli param overrides we should apply them to
+    // each top-level instance.
+    if (!cliOverrides.empty()) {
+        for (auto def : topDefs) {
+            auto& node = paramOverrides.childNodes[std::string(def->name)];
+            for (auto [name, value] : cliOverrides)
+                node.overrides.emplace(std::string(name), *value);
+        }
+    }
+
     SmallVectorSized<const InstanceSymbol*, 4> topList;
     for (auto def : topDefs) {
-        auto& instance = InstanceSymbol::createDefault(*this, *def, &paramOverrides);
+        const ParamOverrideNode* paramOverrideNode = nullptr;
+        if (!paramOverrides.childNodes.empty()) {
+            if (auto it = paramOverrides.childNodes.find(std::string(def->name));
+                it != paramOverrides.childNodes.end()) {
+                paramOverrideNode = &it->second;
+            }
+        }
+
+        auto& instance = InstanceSymbol::createDefault(*this, *def, paramOverrideNode);
         root->addMember(instance);
         topList.append(&instance);
     }

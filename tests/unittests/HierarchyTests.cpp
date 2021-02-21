@@ -1234,10 +1234,8 @@ module m;
   
   logic [b-1:0] foo;
   
-  defparam m1.a = $bits(foo);
+  defparam m1.a = $bits(foo) + 2;
   defparam m1.b = 4;
-  
-  initial $display(a, b);
 endmodule
 )");
 
