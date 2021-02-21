@@ -1155,45 +1155,65 @@ void Compilation::resolveDefParams(size_t) {
         }
     };
 
-    // Traverse the design and find all defparams and their values.
-    // defparam resolution happens in a cloned compilation unit because we will be
-    // constantly mucking with parameter values in ways that can change the actual
-    // hierarchy that gets instantiated. Cloning lets us do that in an isolated context
-    // and throw that work away once we know the final parameter values.
-    Compilation initialClone;
-    createClone(initialClone);
+    // [23.10.4.1] gives an algorithm for elaboration in the face of defparams.
+    // Specifically, we need to resolve all possible defparams at one "level" of
+    // hierarchy before moving on to a deeper level, where a "level" in this case
+    // is each successive set of nested generate blocks.
+    size_t generateLevel = 0;
+    size_t numBlocksSeen = 0;
+    while (true) {
+        // Traverse the design and find all defparams and their values.
+        // defparam resolution happens in a cloned compilation unit because we will be
+        // constantly mucking with parameter values in ways that can change the actual
+        // hierarchy that gets instantiated. Cloning lets us do that in an isolated context
+        // and throw that work away once we know the final parameter values.
+        Compilation initialClone;
+        createClone(initialClone);
 
-    DefParamVisitor initialVisitor;
-    initialClone.getRoot(/* skipDefParamResolution */ true).visit(initialVisitor);
-    saveDefparams(initialVisitor);
+        DefParamVisitor initialVisitor(generateLevel);
+        initialClone.getRoot(/* skipDefParamResolution */ true).visit(initialVisitor);
+        saveDefparams(initialVisitor);
 
-    // defparams can change the value of parameters, further affecting the value of
-    // other defparams elsewhere in the design. This means we need to iterate,
-    // reevaluating defparams until they all settle to a stable value or until we
-    // give up due to the potential of cyclical references.
-    for (uint32_t i = 0; i < options.maxDefParamSteps; i++) {
-        Compilation c;
-        createClone(c);
-
-        DefParamVisitor v;
-        c.getRoot(/* skipDefParamResolution */ true).visit(v);
-
-        // We're only done if we have the same set of defparams with the same set of values.
+        // defparams can change the value of parameters, further affecting the value of
+        // other defparams elsewhere in the design. This means we need to iterate,
+        // reevaluating defparams until they all settle to a stable value or until we
+        // give up due to the potential of cyclical references.
         bool allSame = true;
-        ASSERT(v.found.size() == overrides.size());
-        for (size_t j = 0; j < v.found.size(); j++) {
-            // TODO: check same defparam target
+        for (uint32_t i = 0; i < options.maxDefParamSteps; i++) {
+            Compilation c;
+            createClone(c);
 
-            if (overrides[j].second != v.found[j]->getValue()) {
-                allSame = false;
-                break;
+            DefParamVisitor v(generateLevel);
+            c.getRoot(/* skipDefParamResolution */ true).visit(v);
+
+            // We're only done if we have the same set of defparams with the same set of values.
+            allSame = true;
+            ASSERT(v.found.size() == overrides.size());
+            for (size_t j = 0; j < v.found.size(); j++) {
+                // TODO: check same defparam target
+
+                if (overrides[j].second != v.found[j]->getValue()) {
+                    allSame = false;
+                    break;
+                }
             }
+
+            if (allSame)
+                break;
+
+            saveDefparams(v);
         }
 
-        if (allSame)
+        // If we gave up due to a potential infinite loop, continue exiting.
+        if (!allSame)
             break;
 
-        saveDefparams(v);
+        ASSERT(initialVisitor.numBlocksSeen >= numBlocksSeen);
+        if (initialVisitor.numBlocksSeen == numBlocksSeen)
+            break;
+
+        generateLevel++;
+        numBlocksSeen = initialVisitor.numBlocksSeen;
     }
 
     // We have our final overrides; copy them into the main compilation unit.

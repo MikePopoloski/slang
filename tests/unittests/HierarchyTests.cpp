@@ -1182,8 +1182,8 @@ endmodule
 TEST_CASE("Upward name by definition name -- design tree") {
     auto tree = SyntaxTree::fromText(R"(
 module B();
-  parameter w = 10;
-  C c1();
+    parameter w = 10;
+    C c1();
 endmodule
 
 module C();
@@ -1191,8 +1191,8 @@ module C();
 endmodule
 
 module top();
-  B #(7) b1();
-  B #(11) b2();
+    B #(7) b1();
+    B #(11) b2();
 endmodule
 )");
 
@@ -1225,17 +1225,30 @@ endmodule
 TEST_CASE("defparams") {
     auto tree = SyntaxTree::fromText(R"(
 module top;
-  m m1();
+    m m1();
 endmodule
 
 module m;
-  parameter a = 1;
-  parameter b = 2;
+    parameter a = 1;
+    parameter b = 2;
   
-  logic [b-1:0] foo;
+    logic [b-1:0] foo;
   
-  defparam m1.a = $bits(foo) + 2;
-  defparam m1.b = 4;
+    defparam m1.a = $bits(foo) + 2;
+    defparam m1.b = 4;
+
+    if (a == 6) begin : q
+        n #(5) n1();
+        defparam n1.foo = 12;
+    end
+    defparam q.n1.bar.n2.foo = 99;
+endmodule
+
+module n #(parameter int foo = 0);
+    if (foo > 10) begin : bar
+        parameter baz = 6;
+        n #(baz) n2();
+    end
 endmodule
 )");
 
@@ -1243,7 +1256,13 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 
-    auto& root = compilation.getRoot();
-    CHECK(root.lookupName<ParameterSymbol>("top.m1.a").getValue().integer() == 6);
-    CHECK(root.lookupName<ParameterSymbol>("top.m1.b").getValue().integer() == 4);
+    auto param = [&](auto name) {
+        return compilation.getRoot().lookupName<ParameterSymbol>(name).getValue().integer();
+    };
+
+    CHECK(param("top.m1.a") == 6);
+    CHECK(param("top.m1.b") == 4);
+    CHECK(param("top.m1.q.n1.foo") == 12);
+    CHECK(param("top.m1.q.n1.bar.n2.foo") == 99);
+    CHECK(param("top.m1.q.n1.bar.n2.bar.n2.foo") == 6);
 }

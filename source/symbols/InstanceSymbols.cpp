@@ -219,11 +219,27 @@ InstanceSymbol& InstanceSymbol::createInvalid(Compilation& compilation,
                                            /* isUninstantiated */ true, nullptr));
 }
 
+static const ParamOverrideNode* findParentOverrideNode(const Scope& scope) {
+    auto& sym = scope.asSymbol();
+    if (sym.kind == SymbolKind::InstanceBody)
+        return sym.as<InstanceBodySymbol>().paramOverrideNode;
+
+    // Guaranteed to have a parent here since we never get called otherwise.
+    auto node = findParentOverrideNode(*sym.getParentScope());
+    if (!node)
+        return nullptr;
+
+    auto it = node->childNodes.find(std::string(sym.name));
+    if (it == node->childNodes.end())
+        return nullptr;
+
+    return &it->second;
+}
+
 void InstanceSymbol::fromSyntax(Compilation& compilation,
                                 const HierarchyInstantiationSyntax& syntax, LookupLocation location,
                                 const Scope& scope, SmallVector<const Symbol*>& results) {
-    // Figure out whether this instance is being created within
-    // an uninstantiated parent instance.
+    // Find our parent instance.
     auto currScope = &scope;
     while (currScope && currScope->asSymbol().kind != SymbolKind::InstanceBody)
         currScope = currScope->asSymbol().getParentScope();
@@ -232,8 +248,14 @@ void InstanceSymbol::fromSyntax(Compilation& compilation,
     bool isUninstantiated = false;
     if (currScope) {
         auto& instanceBody = currScope->asSymbol().as<InstanceBodySymbol>();
-        parentOverrideNode = instanceBody.paramOverrideNode;
         isUninstantiated = instanceBody.isUninstantiated;
+
+        // In the uncommon case that our parent instance has a param override
+        // node set, we need to go back and make sure we account for any
+        // generate blocks that might actually be along the parent path for
+        // the new instances we're creating.
+        if (instanceBody.paramOverrideNode)
+            parentOverrideNode = findParentOverrideNode(scope);
     }
 
     auto definition = compilation.getDefinition(syntax.type.valueText(), scope);

@@ -343,6 +343,7 @@ void DefParamSymbol::resolve() const {
 
     if (!target) {
         initializer = comp.emplace<InvalidExpression>(nullptr, comp.getErrorType());
+        initializer->constant = &ConstantValue::Invalid;
         return;
     }
 

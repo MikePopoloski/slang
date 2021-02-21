@@ -269,15 +269,39 @@ struct BindVisitor : public ASTVisitor<BindVisitor, false, false> {
 
 // This visitor is for finding all defparam directives in the hierarchy.
 struct DefParamVisitor : public ASTVisitor<DefParamVisitor, false, false> {
+    DefParamVisitor(size_t generateLevel) : generateLevel(generateLevel) {}
+
     void handle(const RootSymbol& symbol) { visitDefault(symbol); }
     void handle(const CompilationUnitSymbol& symbol) { visitDefault(symbol); }
-    void handle(const InstanceSymbol& symbol) { visitDefault(symbol.body); }
     void handle(const DefParamSymbol& symbol) { found.append(&symbol); }
+
+    void handle(const InstanceSymbol& symbol) {
+        numBlocksSeen++;
+        visitDefault(symbol.body);
+    }
+
+    void handle(const GenerateBlockSymbol& symbol) {
+        if (!symbol.isInstantiated || generateDepth >= generateLevel)
+            return;
+
+        numBlocksSeen++;
+        generateDepth++;
+        visitDefault(symbol);
+        generateDepth--;
+    }
+
+    void handle(const GenerateBlockArraySymbol& symbol) {
+        for (auto& member : symbol.members())
+            visit(member);
+    }
 
     template<typename T>
     void handle(const T&) {}
 
     SmallVectorSized<const DefParamSymbol*, 8> found;
+    size_t generateLevel = 0;
+    size_t numBlocksSeen = 0;
+    size_t generateDepth = 0;
 };
 
 } // namespace slang
