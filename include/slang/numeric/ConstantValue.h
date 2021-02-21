@@ -155,6 +155,7 @@ public:
 
     friend std::ostream& operator<<(std::ostream& os, const ConstantValue& cv);
     friend bool operator==(const ConstantValue& lhs, const ConstantValue& rhs);
+    friend bool operator!=(const ConstantValue& lhs, const ConstantValue& rhs);
     friend bool operator<(const ConstantValue& lhs, const ConstantValue& rhs);
 
 private:

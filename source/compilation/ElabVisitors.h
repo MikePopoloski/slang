@@ -267,4 +267,17 @@ struct BindVisitor : public ASTVisitor<BindVisitor, false, false> {
     bool errored = false;
 };
 
+// This visitor is for finding all defparam directives in the hierarchy.
+struct DefParamVisitor : public ASTVisitor<DefParamVisitor, false, false> {
+    void handle(const RootSymbol& symbol) { visitDefault(symbol); }
+    void handle(const CompilationUnitSymbol& symbol) { visitDefault(symbol); }
+    void handle(const InstanceSymbol& symbol) { visitDefault(symbol.body); }
+    void handle(const DefParamSymbol& symbol) { found.append(&symbol); }
+
+    template<typename T>
+    void handle(const T&) {}
+
+    SmallVectorSized<const DefParamSymbol*, 8> found;
+};
+
 } // namespace slang

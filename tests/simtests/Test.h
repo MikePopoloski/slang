@@ -14,8 +14,7 @@
 using namespace slang;
 using namespace slang::mir;
 
-inline Compilation compile(const std::string& text) {
-    Compilation compilation;
+inline void compile(Compilation& compilation, const std::string& text) {
     compilation.addSyntaxTree(SyntaxTree::fromText(text));
 
     auto& diags = compilation.getAllDiagnostics();
@@ -24,6 +23,4 @@ inline Compilation compile(const std::string& text) {
             DiagnosticEngine::reportAll(SyntaxTree::getDefaultSourceManager(), diags);
         FAIL_CHECK(report);
     }
-
-    return compilation;
 }

@@ -9,7 +9,8 @@
 [[clang::optnone]]
 #endif
 TEST_CASE("JIT test") {
-    Compilation compilation = compile(R"(
+    Compilation compilation;
+    compile(compilation, R"(
 module m;
     initial begin
         localparam int j = 4;

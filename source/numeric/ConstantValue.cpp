@@ -510,6 +510,10 @@ bool operator==(const ConstantValue& lhs, const ConstantValue& rhs) {
         lhs.value);
 }
 
+bool operator!=(const ConstantValue& lhs, const ConstantValue& rhs) {
+    return !(lhs == rhs);
+}
+
 bool operator<(const ConstantValue& lhs, const ConstantValue& rhs) {
     return std::visit(
         [&](auto&& arg) {

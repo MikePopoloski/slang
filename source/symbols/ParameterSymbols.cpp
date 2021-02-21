@@ -357,6 +357,10 @@ void DefParamSymbol::resolve() const {
         initializer = &Expression::bindImplicitParam(*typeSyntax, expr, equalsLoc, context);
     else
         initializer = &Expression::bindRValue(declType->getType(), expr, equalsLoc, context);
+
+    context.eval(*initializer);
+    if (!initializer->constant)
+        initializer->constant = &ConstantValue::Invalid;
 }
 
 void DefParamSymbol::serializeTo(ASTSerializer& serializer) const {

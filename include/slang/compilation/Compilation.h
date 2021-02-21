@@ -82,6 +82,10 @@ struct CompilationOptions {
     /// before abbreviating them.
     uint32_t maxConstexprBacktrace = 10;
 
+    /// The maximum number of iterations to try to resolve defparams before
+    /// giving up due to potentially cyclic dependencies in parameter values.
+    uint32_t maxDefParamSteps = 128;
+
     /// The maximum number of errors that can be found before we short circuit
     /// the tree walking process.
     uint32_t errorLimit = 64;
@@ -119,7 +123,8 @@ struct CompilationOptions {
 class Compilation : public BumpAllocator {
 public:
     explicit Compilation(const Bag& options = {});
-    Compilation(Compilation&& other);
+    Compilation(const Compilation& other) = delete;
+    Compilation(Compilation&& other) = delete;
     ~Compilation();
 
     /// Gets the set of options used to construct the compilation.
@@ -387,6 +392,7 @@ private:
 
     Diagnostic& addDiag(Diagnostic diag);
 
+    const RootSymbol& getRoot(bool skipDefParamResolution);
     void parseParamOverrides(flat_hash_map<string_view, const ConstantValue*>& results);
     void checkDPIMethods(span<const SubroutineSymbol* const> dpiImports);
     void resolveDefParams(size_t numDefParams);

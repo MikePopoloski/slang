@@ -157,7 +157,6 @@ Compilation::Compilation(const Bag& options) :
 }
 
 Compilation::~Compilation() = default;
-Compilation::Compilation(Compilation&&) = default;
 
 void Compilation::addSyntaxTree(std::shared_ptr<SyntaxTree> tree) {
     if (finalized)
@@ -228,6 +227,10 @@ span<const CompilationUnitSymbol* const> Compilation::getCompilationUnits() cons
 }
 
 const RootSymbol& Compilation::getRoot() {
+    return getRoot(/* skipDefParamResolution */ false);
+}
+
+const RootSymbol& Compilation::getRoot(bool skipDefParamResolution) {
     if (finalized)
         return *root;
 
@@ -244,7 +247,7 @@ const RootSymbol& Compilation::getRoot() {
         numBinds += meta.bindDirectives.size();
     }
 
-    if (numDefParams)
+    if (!skipDefParamResolution && numDefParams)
         resolveDefParams(numDefParams);
 
     ASSERT(!finalizing);
@@ -1092,6 +1095,53 @@ void Compilation::checkDPIMethods(span<const SubroutineSymbol* const> dpiImports
 }
 
 void Compilation::resolveDefParams(size_t) {
+    auto clone = [&](Compilation& c) {
+        c.options = options;
+        for (auto& tree : syntaxTrees)
+            c.addSyntaxTree(tree);
+    };
+
+    // Traverse the design and find all defparams and their values.
+    // defparam resolution happens in a cloned compilation unit because we will be
+    // constantly mucking with parameter values in ways that can change the actual
+    // hierarchy that gets instantiated. Cloning lets us do that in an isolated context
+    // and throw that work away once we know the final parameter values.
+    Compilation initialClone;
+    clone(initialClone);
+
+    DefParamVisitor initialVisitor;
+    initialClone.getRoot(/* skipDefParamResolution */ true).visit(initialVisitor);
+
+    SmallVectorSized<const ConstantValue*, 4> initialVals;
+    for (auto defparam : initialVisitor.found)
+        initialVals.append(&defparam->getValue());
+
+    // defparams can change the value of parameters, further affecting the value of
+    // other defparams elsewhere in the design. This means we need to iterate,
+    // reevaluating defparams until they all settle to a stable value or until we
+    // give up due to the potential of cyclical references.
+    for (uint32_t i = 0; i < options.maxDefParamSteps; i++) {
+        Compilation c;
+        clone(c);
+
+        DefParamVisitor v;
+        c.getRoot(/* skipDefParamResolution */ true).visit(v);
+
+        // We're only done if we have the same set of defparams with the same set of values.
+        bool allSame = true;
+        ASSERT(v.found.size() == initialVisitor.found.size());
+        for (size_t j = 0; j < v.found.size(); j++) {
+            // TODO: check same defparam target
+
+            if (*initialVals[j] != v.found[j]->getValue()) {
+                allSame = false;
+                break;
+            }
+        }
+
+        if (allSame)
+            break;
+    }
 }
 
 } // namespace slang
