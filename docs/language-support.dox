@@ -368,7 +368,7 @@ LRM | Feature | Supported
 {{m-success}} 23.8 | Upwards name referencing | v0.7
 {{m-success}} 23.9 | Scope rules | v0.2
 {{m-success}} 23.10 | Overriding module parameters | v0.2
-{{m-danger}}  23.10.1 | defparam statement | no
+{{m-warning}} 23.10.1 | defparam statement | partial
 {{m-warning}} 23.11 | Binding auxiliary code to scopes or instances | partial
 
 ## 24. Programs
