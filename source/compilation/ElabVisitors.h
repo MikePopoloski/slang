@@ -171,6 +171,14 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
             dpiImports.append(&symbol);
     }
 
+    void handle(const DefParamSymbol& symbol) {
+        if (!handleDefault(symbol))
+            return;
+
+        symbol.getTarget();
+        symbol.getValue();
+    }
+
     void finalize() {
         // Once everything has been visited, go back over and check things that might
         // have been influenced by visiting later symbols. Unfortunately visiting
