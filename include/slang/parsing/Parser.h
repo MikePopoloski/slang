@@ -316,6 +316,11 @@ private:
     ExpressionSyntax& parseSubExpression(bitmask<ExpressionOptions> options, int precedence);
     ExpressionSyntax& parsePrefixExpression(SyntaxKind opKind);
     BindDirectiveSyntax& parseBindDirective(AttrList attributes);
+    UdpPortListSyntax& parseUdpPortList();
+    UdpDeclarationSyntax& parseUdpDeclaration(AttrList attributes);
+    UdpPortDeclSyntax& parseUdpPortDecl();
+    UdpBodySyntax& parseUdpBody();
+    UdpEntrySyntax& parseUdpEntry();
     // clang-format on
 
     template<bool (*IsEnd)(TokenKind)>

@@ -1374,6 +1374,78 @@ token name
 ArgumentList? arguments
 token semi
 
+UdpPortDecl final=false
+list<AttributeInstance> attributes
+
+UdpOutputPortDecl base=UdpPortDecl
+token keyword
+token reg
+token name
+EqualsValueClause? initializer
+
+UdpInputPortDecl base=UdpPortDecl
+token keyword
+separated_list<IdentifierName> names
+
+UdpPortList final=false
+empty
+
+AnsiUdpPortList base=UdpPortList
+token openParen
+separated_list<UdpPortDecl> ports
+token closeParen
+token semi
+
+NonAnsiUdpPortList base=UdpPortList
+token openParen
+separated_list<IdentifierName> ports
+token closeParen
+token semi
+
+WildcardUdpPortList base=UdpPortList
+token openParen
+token dotStar
+token closeParen
+token semi
+
+UdpInitialStmt
+token initial
+token name
+token equals
+Expression value
+token semi
+
+UdpEdgeIndicator
+token openParen
+token first
+token second
+token closeParen
+
+UdpEntry
+tokenlist preInputs
+UdpEdgeIndicator? edgeIndicator
+tokenlist postInputs
+token colon1
+token current
+token colon2
+token next
+token semi
+
+UdpBody
+separated_list<UdpPortDecl> portDecls
+UdpInitialStmt? initialStmt
+token table
+list<UdpEntry> entries
+token endtable
+
+UdpDeclaration base=Member
+token primitive
+token name
+UdpPortList portList
+UdpBody body
+token endprimitive
+NamedBlockClause? endBlockName
+
 // ----- CONSTRAINTS -----
 
 ConstraintItem final=false

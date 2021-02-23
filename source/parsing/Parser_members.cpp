@@ -261,6 +261,8 @@ MemberSyntax* Parser::parseMember(SyntaxKind parentKind, bool& anyLocalModules) 
         }
         case TokenKind::ConstraintKeyword:
             return &parseConstraint(attributes, {});
+        case TokenKind::PrimitiveKeyword:
+            return &parseUdpDeclaration(attributes);
         default:
             break;
     }
@@ -2166,6 +2168,169 @@ BindDirectiveSyntax& Parser::parseBindDirective(AttrList attr) {
 
     meta.bindDirectives.append(&result);
     return result;
+}
+
+UdpPortDeclSyntax& Parser::parseUdpPortDecl() {
+    auto attrs = parseAttributes();
+
+    if (peek(TokenKind::OutputKeyword) || peek(TokenKind::RegKeyword)) {
+        auto output = consumeIf(TokenKind::OutputKeyword);
+        auto reg = consumeIf(TokenKind::RegKeyword);
+        auto name = expect(TokenKind::Identifier);
+
+        EqualsValueClauseSyntax* init = nullptr;
+        if (peek(TokenKind::Equals)) {
+            auto equals = consume();
+            init = &factory.equalsValueClause(equals, parseExpression());
+        }
+
+        return factory.udpOutputPortDecl(attrs, output, reg, name, init);
+    }
+
+    auto input = expect(TokenKind::InputKeyword);
+
+    SmallVectorSized<TokenOrSyntax, 4> ports;
+    while (true) {
+        auto name = expect(TokenKind::Identifier);
+        ports.append(&factory.identifierName(name));
+
+        if (!peek(TokenKind::Comma))
+            break;
+
+        ports.append(consume());
+    }
+
+    return factory.udpInputPortDecl(attrs, input, ports.copy(alloc));
+}
+
+UdpPortListSyntax& Parser::parseUdpPortList() {
+    auto openParen = expect(TokenKind::OpenParenthesis);
+
+    if (peek(TokenKind::DotStar)) {
+        auto dotStar = consume();
+        auto closeParen = expect(TokenKind::CloseParenthesis);
+        return factory.wildcardUdpPortList(openParen, dotStar, closeParen,
+                                           expect(TokenKind::Semicolon));
+    }
+    else if (peek(TokenKind::OutputKeyword) || peek(TokenKind::InputKeyword)) {
+        Token closeParen;
+        SmallVectorSized<TokenOrSyntax, 4> ports;
+        parseList<isPossibleUdpPort, isEndOfParenList>(
+            ports, TokenKind::CloseParenthesis, TokenKind::Comma, closeParen, RequireItems::True,
+            diag::ExpectedUdpPort, [this] { return &parseUdpPortDecl(); });
+
+        return factory.ansiUdpPortList(openParen, ports.copy(alloc), closeParen,
+                                       expect(TokenKind::Semicolon));
+    }
+    else {
+        Token closeParen;
+        SmallVectorSized<TokenOrSyntax, 4> ports;
+        parseList<isIdentifierOrComma, isEndOfParenList>(
+            ports, TokenKind::CloseParenthesis, TokenKind::Comma, closeParen, RequireItems::True,
+            diag::ExpectedUdpPort, [this] { return &factory.identifierName(consume()); });
+
+        return factory.nonAnsiUdpPortList(openParen, ports.copy(alloc), closeParen,
+                                          expect(TokenKind::Semicolon));
+    }
+}
+
+UdpEntrySyntax& Parser::parseUdpEntry() {
+    // TODO: additional error checking based on the kind of symbol we expect to see
+    auto nextSymbol = [&] {
+        switch (peek().kind) {
+            case TokenKind::IntegerLiteral:
+            case TokenKind::IntegerBase:
+            case TokenKind::Question:
+            case TokenKind::Star:
+            case TokenKind::Minus:
+            case TokenKind::Identifier:
+                return consume();
+            default:
+                return Token();
+        }
+    };
+
+    SmallVectorSized<Token, 4> preInputs;
+    SmallVectorSized<Token, 4> postInputs;
+    while (true) {
+        auto next = nextSymbol();
+        if (!next)
+            break;
+
+        preInputs.append(next);
+    }
+
+    UdpEdgeIndicatorSyntax* edgeIndicator = nullptr;
+    if (peek(TokenKind::OpenParenthesis)) {
+        // TODO: error if empty symbols
+        auto openParen = consume();
+        auto first = nextSymbol();
+        auto second = nextSymbol();
+        auto closeParen = expect(TokenKind::CloseParenthesis);
+        edgeIndicator = &factory.udpEdgeIndicator(openParen, first, second, closeParen);
+
+        while (true) {
+            auto next = nextSymbol();
+            if (!next)
+                break;
+
+            postInputs.append(next);
+        }
+    }
+
+    auto colon1 = expect(TokenKind::Colon);
+    auto current = nextSymbol(); // TODO: error if empty
+
+    Token colon2;
+    Token nextState;
+    if (peek(TokenKind::Colon)) {
+        colon2 = consume();
+        nextState = nextSymbol(); // TODO: error if empty
+    }
+
+    auto semi = expect(TokenKind::Semicolon);
+    return factory.udpEntry(preInputs.copy(alloc), edgeIndicator, postInputs.copy(alloc), colon1,
+                            current, colon2, nextState, semi);
+}
+
+UdpBodySyntax& Parser::parseUdpBody() {
+    SmallVectorSized<TokenOrSyntax, 4> portDecls;
+    while (isPossibleUdpPort(peek().kind)) {
+        portDecls.append(&parseUdpPortDecl());
+        portDecls.append(expect(TokenKind::Semicolon));
+    }
+
+    UdpInitialStmtSyntax* initial = nullptr;
+    if (peek(TokenKind::InitialKeyword)) {
+        auto keyword = consume();
+        auto name = expect(TokenKind::Identifier);
+        auto equals = expect(TokenKind::Equals);
+        auto& expr = parsePrimaryExpression(/* disallowVector */ false);
+        auto semi = expect(TokenKind::Semicolon);
+        initial = &factory.udpInitialStmt(keyword, name, equals, expr, semi);
+    }
+
+    auto table = expect(TokenKind::TableKeyword);
+
+    SmallVectorSized<UdpEntrySyntax*, 8> entries;
+    while (isPossibleUdpEntry(peek().kind))
+        entries.append(&parseUdpEntry());
+
+    auto endtable = expect(TokenKind::EndTableKeyword);
+    return factory.udpBody(portDecls.copy(alloc), initial, table, entries.copy(alloc), endtable);
+}
+
+UdpDeclarationSyntax& Parser::parseUdpDeclaration(AttrList attr) {
+    auto primitive = consume();
+    auto name = expect(TokenKind::Identifier);
+    auto& portList = parseUdpPortList();
+    auto& body = parseUdpBody();
+    auto endprim = expect(TokenKind::EndPrimitiveKeyword);
+
+    NamedBlockClauseSyntax* endBlockName = parseNamedBlockClause();
+    checkBlockNames(name, endBlockName);
+
+    return factory.udpDeclaration(attr, primitive, name, portList, body, endprim, endBlockName);
 }
 
 void Parser::checkMemberAllowed(const SyntaxNode& member, SyntaxKind parentKind) {

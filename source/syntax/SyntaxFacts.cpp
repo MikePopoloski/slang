@@ -650,6 +650,20 @@ bool SyntaxFacts::isPossibleAnsiPort(TokenKind kind) {
     }
 }
 
+bool SyntaxFacts::isPossibleUdpPort(TokenKind kind) {
+    switch (kind) {
+        case TokenKind::Identifier:
+        case TokenKind::InputKeyword:
+        case TokenKind::OutputKeyword:
+        case TokenKind::RegKeyword:
+        case TokenKind::Comma:
+        case TokenKind::OpenParenthesisStar:
+            return true;
+        default:
+            return false;
+    }
+}
+
 bool SyntaxFacts::isPossibleModportPort(TokenKind kind) {
     switch (kind) {
         case TokenKind::OpenParenthesisStar:
@@ -757,6 +771,23 @@ bool SyntaxFacts::isPossibleGateInstance(TokenKind kind) {
         case TokenKind::Identifier:
         case TokenKind::OpenParenthesis:
         case TokenKind::Comma:
+            return true;
+        default:
+            return false;
+    }
+}
+
+bool SyntaxFacts::isPossibleUdpEntry(TokenKind kind) {
+    switch (kind) {
+        case TokenKind::IntegerLiteral:
+        case TokenKind::IntegerBase:
+        case TokenKind::Question:
+        case TokenKind::Colon:
+        case TokenKind::Semicolon:
+        case TokenKind::Star:
+        case TokenKind::Minus:
+        case TokenKind::OpenParenthesis:
+        case TokenKind::Identifier:
             return true;
         default:
             return false;
@@ -1212,6 +1243,7 @@ bool SyntaxFacts::isAllowedInCompilationUnit(SyntaxKind kind) {
         case SyntaxKind::ProgramDeclaration:
         case SyntaxKind::PackageDeclaration:
         case SyntaxKind::BindDirective:
+        case SyntaxKind::UdpDeclaration:
             return true;
         default:
             return isAllowedInPackage(kind);

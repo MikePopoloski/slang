@@ -533,3 +533,31 @@ import "DPI-C" function void foo::bar();
     CHECK(diagnostics[0].code == diag::LifetimeForPrototype);
     CHECK(diagnostics[1].code == diag::SubroutinePrototypeScoped);
 }
+
+TEST_CASE("UDP parsing") {
+    auto& text = R"(
+primitive multiplexer (mux, control, dataA, dataB);
+  output mux;
+  input control, dataA, dataB;
+  table
+    0 1 0 : 1 ;
+    0 1 1 : 1 ;
+    0 1 x : 1 ;
+  endtable
+endprimitive
+
+primitive d_edge_ff (q, clock, data);
+  output q; reg q;
+  input clock, data;
+  table
+    (01) 0 : ? : 0 ;
+    (0?) 1 : 1 : 1 ;
+    (?0) ? : ? : - ;
+    ? (??) : ? : - ;
+  endtable
+endprimitive
+)";
+
+    parseCompilationUnit(text);
+    CHECK_DIAGNOSTICS_EMPTY;
+}

@@ -145,6 +145,9 @@ public:
     /// @return true if the given token represents a possible gate instance.
     static bool isPossibleGateInstance(TokenKind kind);
 
+    /// @return true if the given token represents a possible UDP body entry.
+    static bool isPossibleUdpEntry(TokenKind kind);
+
     /// @return true if the given token is an ending keyword (like "endmodule", "endfunction", etc).
     static bool isEndKeyword(TokenKind kind);
 
@@ -196,7 +199,7 @@ public:
     /// @return true if the given token represents the end of a parameter list.
     static bool isEndOfParameterList(TokenKind kind);
 
-    /// @return true if the given token represents a "trans" set.
+    /// @return true if the given token represents the end of a "trans" set.
     static bool isEndOfTransSet(TokenKind kind);
 
     /// @return true if the given token is not valid in a data type.
@@ -219,6 +222,9 @@ public:
 
     /// @return true if the given token represents a possible non-ansi port.
     static bool isPossibleNonAnsiPort(TokenKind kind);
+
+    /// @return true if the given token represents a possible UDP port.
+    static bool isPossibleUdpPort(TokenKind kind);
 
     /// @return true if the given token represents a possible modport port.
     static bool isPossibleModportPort(TokenKind kind);
