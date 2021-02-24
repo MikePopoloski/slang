@@ -139,6 +139,7 @@ MemberSyntax* Parser::parseMember(SyntaxKind parentKind, bool& anyLocalModules) 
         case TokenKind::BindKeyword:
             return &parseBindDirective(attributes);
         case TokenKind::SpecParamKeyword:
+            return &parseSpecparam(attributes);
         case TokenKind::AliasKeyword:
         case TokenKind::CheckerKeyword:
         case TokenKind::SpecifyKeyword:
@@ -2331,6 +2332,27 @@ UdpDeclarationSyntax& Parser::parseUdpDeclaration(AttrList attr) {
     checkBlockNames(name, endBlockName);
 
     return factory.udpDeclaration(attr, primitive, name, portList, body, endprim, endBlockName);
+}
+
+SpecparamDeclaratorSyntax& Parser::parseSpecparamDeclarator() {
+    auto name = expect(TokenKind::Identifier);
+    auto equals = expect(TokenKind::Equals);
+    auto& expr = parseMinTypMaxExpression();
+
+    return factory.specparamDeclarator(name, equals, expr);
+}
+
+SpecparamDeclarationSyntax& Parser::parseSpecparam(AttrList attr) {
+    auto keyword = consume();
+    auto dim = parseDimension();
+
+    Token semi;
+    SmallVectorSized<TokenOrSyntax, 4> buffer;
+    parseList<isIdentifierOrComma, isNotIdOrComma>(
+        buffer, TokenKind::Semicolon, TokenKind::Comma, semi, RequireItems::True,
+        diag::ExpectedDeclarator, [this] { return &parseSpecparamDeclarator(); });
+
+    return factory.specparamDeclaration(attr, keyword, dim, buffer.copy(alloc), semi);
 }
 
 void Parser::checkMemberAllowed(const SyntaxNode& member, SyntaxKind parentKind) {

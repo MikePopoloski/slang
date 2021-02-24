@@ -321,6 +321,8 @@ private:
     UdpPortDeclSyntax& parseUdpPortDecl();
     UdpBodySyntax& parseUdpBody();
     UdpEntrySyntax& parseUdpEntry();
+    SpecparamDeclaratorSyntax& parseSpecparamDeclarator();
+    SpecparamDeclarationSyntax& parseSpecparam(AttrList attributes);
     // clang-format on
 
     template<bool (*IsEnd)(TokenKind)>

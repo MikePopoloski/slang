@@ -1446,6 +1446,17 @@ UdpBody body
 token endprimitive
 NamedBlockClause? endBlockName
 
+SpecparamDeclarator
+token name
+token equals
+Expression value
+
+SpecparamDeclaration base=Member
+token keyword
+VariableDimension? dimension
+separated_list<SpecparamDeclarator> declarators
+token semi
+
 // ----- CONSTRAINTS -----
 
 ConstraintItem final=false
