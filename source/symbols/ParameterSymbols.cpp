@@ -299,6 +299,7 @@ void DefParamSymbol::fromSyntax(const Scope& scope, const DefParamSyntax& syntax
     for (auto assignment : syntax.assignments) {
         auto sym = comp.emplace<DefParamSymbol>(assignment->getFirstToken().location());
         sym->setSyntax(*assignment);
+        sym->setAttributes(scope, syntax.attributes);
         results.append(sym);
     }
 }
@@ -397,6 +398,7 @@ void SpecparamSymbol::fromSyntax(const Scope& scope, const SpecparamDeclarationS
         param->setSyntax(*decl);
         param->setDeclaredType(*syntax.type);
         param->setInitializerSyntax(*decl->value, decl->equals.location());
+        param->setAttributes(scope, syntax.attributes);
         results.append(param);
     }
 }
