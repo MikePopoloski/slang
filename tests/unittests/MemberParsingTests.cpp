@@ -569,6 +569,15 @@ module m;
         specparam f = 1, g = 2;
         showcancelled out;
         pulsestyle_ondetect out;
+        if (opcode == 2'b10) (i2 => o1) = (5.6, 8.0);
+        ( negedge clk => ( q[0] : data ) ) = (20, 12);
+        ifnone (i2 => o1) = 15.0, 15.0;
+        (s *> q) = 1;
+        (a, b, c *> q1, q2) = 10;
+        (In1 +=> q) = In_to_q;
+        (In1 -=> q) = In_to_q;
+        (In1 +*> q) = In_to_q;
+        (In1 -*> q) = In_to_q;
     endspecify
 endmodule
 )";

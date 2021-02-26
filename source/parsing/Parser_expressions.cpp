@@ -858,12 +858,7 @@ EventExpressionSyntax& Parser::parseEventExpression() {
         left = &factory.parenthesizedEventExpression(openParen, expr, closeParen);
     }
     else {
-        Token edge;
-        if (kind == TokenKind::PosEdgeKeyword || kind == TokenKind::NegEdgeKeyword ||
-            kind == TokenKind::EdgeKeyword) {
-            edge = consume();
-        }
-
+        Token edge = parseEdgeKeyword();
         auto& expr = parseSubExpression(ExpressionOptions::EventExpressionContext, 0);
 
         IffEventClauseSyntax* iffClause = nullptr;

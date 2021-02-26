@@ -1944,17 +1944,19 @@ SequenceDeclarationSyntax& Parser::parseSequenceDeclaration(AttrList attributes)
                                        declarations.copy(alloc), expr, semi2, end, blockName);
 }
 
-ClockingSkewSyntax* Parser::parseClockingSkew() {
-    Token edge;
+Token Parser::parseEdgeKeyword() {
     switch (peek().kind) {
         case TokenKind::EdgeKeyword:
         case TokenKind::PosEdgeKeyword:
         case TokenKind::NegEdgeKeyword:
-            edge = consume();
-            break;
+            return consume();
         default:
-            break;
+            return Token();
     }
+}
+
+ClockingSkewSyntax* Parser::parseClockingSkew() {
+    Token edge = parseEdgeKeyword();
 
     DelaySyntax* delay = nullptr;
     if (peek(TokenKind::Hash)) {
@@ -2363,28 +2365,106 @@ SpecparamDeclarationSyntax& Parser::parseSpecparam(AttrList attr) {
     return factory.specparamDeclaration(attr, keyword, type, buffer.copy(alloc), semi);
 }
 
-PulsestyleDeclarationSyntax& Parser::parsePulsestyleDecl() {
-    auto keyword = consume();
+span<TokenOrSyntax> Parser::parsePathTerminals() {
+    SmallVectorSized<TokenOrSyntax, 4> results;
+    while (true) {
+        results.append(&parseName());
+        if (!peek(TokenKind::Comma))
+            break;
 
-    Token semi;
-    SmallVectorSized<TokenOrSyntax, 8> buffer;
-    parseList<isPossibleExpressionOrComma, isSemicolon>(
-        buffer, TokenKind::Semicolon, TokenKind::Comma, semi, RequireItems::True,
-        diag::ExpectedPathName, [this] { return &parseName(); });
+        results.append(consume());
+    }
 
-    return factory.pulsestyleDeclaration(nullptr, keyword, buffer.copy(alloc), semi);
+    return results.copy(alloc);
 }
 
-ShowcancelledDeclarationSyntax& Parser::parseShowcancelledDecl() {
-    auto keyword = consume();
+PathDeclarationSyntax& Parser::parsePathDeclaration() {
+    auto parsePolarity = [&] {
+        switch (peek().kind) {
+            case TokenKind::Plus:
+            case TokenKind::Minus:
+                return consume();
+            default:
+                return Token();
+        }
+    };
+
+    auto openParen = expect(TokenKind::OpenParenthesis);
+    auto edge = parseEdgeKeyword();
+    auto inputs = parsePathTerminals();
+    auto polarity = parsePolarity();
+
+    // In specify blocks, +=> (and -=>) should be parsed as '+' and '=>',
+    // but of course the lexer tokenizes it as '+=' and '>' so we need to
+    // work around that here.
+    Token op;
+    if (!polarity && peek(TokenKind::PlusEqual) || peek(TokenKind::MinusEqual)) {
+        polarity = consume();
+        op = consumeIf(TokenKind::GreaterThan);
+        if (!op) {
+            addDiag(diag::ExpectedPathOp, polarity.location() + 1);
+            op = missingToken(TokenKind::GreaterThan, peek().location());
+        }
+        else if (!op.trivia().empty()) {
+            addDiag(diag::ExpectedPathOp, polarity.location() + 1);
+        }
+    }
+    else {
+        switch (peek().kind) {
+            case TokenKind::EqualsArrow:
+            case TokenKind::StarArrow:
+                op = consume();
+                break;
+            default:
+                addDiag(diag::ExpectedPathOp, peek().location());
+                op = missingToken(TokenKind::EqualsArrow, peek().location());
+                break;
+        }
+    }
+
+    PathSuffixSyntax* suffix;
+    if (peek(TokenKind::OpenParenthesis)) {
+        auto suffixOpenParen = consume();
+        auto outputs = parsePathTerminals();
+        auto polarity2 = parsePolarity();
+        auto colon = expect(TokenKind::Colon);
+        auto& expr = parseExpression();
+        auto suffixCloseParen = expect(TokenKind::CloseParenthesis);
+        suffix = &factory.edgeSensitivePathSuffix(suffixOpenParen, outputs, polarity2, colon, expr,
+                                                  suffixCloseParen);
+    }
+    else {
+        auto outputs = parsePathTerminals();
+        suffix = &factory.simplePathSuffix(outputs);
+    }
+
+    auto closeParen = expect(TokenKind::CloseParenthesis);
+    auto& desc =
+        factory.pathDescription(openParen, edge, inputs, polarity, op, *suffix, closeParen);
+
+    auto equals = expect(TokenKind::Equals);
 
     Token semi;
-    SmallVectorSized<TokenOrSyntax, 8> buffer;
-    parseList<isPossibleExpressionOrComma, isSemicolon>(
-        buffer, TokenKind::Semicolon, TokenKind::Comma, semi, RequireItems::True,
-        diag::ExpectedPathName, [this] { return &parseName(); });
+    Token valueOpenParen, valueCloseParen;
+    span<TokenOrSyntax> delays;
 
-    return factory.showcancelledDeclaration(nullptr, keyword, buffer.copy(alloc), semi);
+    if (peek(TokenKind::OpenParenthesis)) {
+        parseList<isPossibleExpressionOrComma, isEndOfParenList>(
+            TokenKind::OpenParenthesis, TokenKind::CloseParenthesis, TokenKind::Comma,
+            valueOpenParen, delays, valueCloseParen, RequireItems::True, diag::ExpectedExpression,
+            [this] { return &parseMinTypMaxExpression(); });
+        semi = expect(TokenKind::Semicolon);
+    }
+    else {
+        SmallVectorSized<TokenOrSyntax, 4> buffer;
+        parseList<isPossibleExpressionOrComma, isSemicolon>(
+            buffer, TokenKind::Semicolon, TokenKind::Comma, semi, RequireItems::True,
+            diag::ExpectedExpression, [this] { return &parseMinTypMaxExpression(); });
+        delays = buffer.copy(alloc);
+    }
+
+    return factory.pathDeclaration(nullptr, desc, equals, valueOpenParen, delays, valueCloseParen,
+                                   semi);
 }
 
 MemberSyntax* Parser::parseSpecifyItem() {
@@ -2393,10 +2473,28 @@ MemberSyntax* Parser::parseSpecifyItem() {
             return &parseSpecparam({});
         case TokenKind::PulseStyleOnDetectKeyword:
         case TokenKind::PulseStyleOnEventKeyword:
-            return &parsePulsestyleDecl();
         case TokenKind::ShowCancelledKeyword:
-        case TokenKind::NoShowCancelledKeyword:
-            return &parseShowcancelledDecl();
+        case TokenKind::NoShowCancelledKeyword: {
+            auto keyword = consume();
+            auto names = parsePathTerminals();
+            return &factory.pulseStyleDeclaration(nullptr, keyword, names,
+                                                  expect(TokenKind::Semicolon));
+        }
+        case TokenKind::OpenParenthesis:
+            return &parsePathDeclaration();
+        case TokenKind::IfNoneKeyword: {
+            auto keyword = consume();
+            return &factory.ifNonePathDeclaration(nullptr, keyword, parsePathDeclaration());
+        }
+        case TokenKind::IfKeyword: {
+            auto keyword = consume();
+            auto openParen = expect(TokenKind::OpenParenthesis);
+            auto& pred = parseExpression();
+            auto closeParen = expect(TokenKind::CloseParenthesis);
+            auto& path = parsePathDeclaration();
+            return &factory.conditionalPathDeclaration(nullptr, keyword, openParen, pred,
+                                                       closeParen, path);
+        }
         default:
             // Otherwise, we got nothing and should just return null so that our caller
             // will skip and try again.

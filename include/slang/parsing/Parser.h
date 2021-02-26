@@ -325,8 +325,7 @@ private:
     SpecparamDeclarationSyntax& parseSpecparam(AttrList attributes);
     MemberSyntax* parseSpecifyItem();
     SpecifyBlockSyntax& parseSpecifyBlock(AttrList attributes);
-    PulsestyleDeclarationSyntax& parsePulsestyleDecl();
-    ShowcancelledDeclarationSyntax& parseShowcancelledDecl();
+    PathDeclarationSyntax& parsePathDeclaration();
     // clang-format on
 
     template<bool (*IsEnd)(TokenKind)>
@@ -343,8 +342,11 @@ private:
     bool parseCaseItems(TokenKind caseKind, SmallVector<CaseItemSyntax*>& itemBuffer,
                         IsItemFunc&& isItem, ParseItemFunc&& parseItem);
 
+    span<TokenOrSyntax> parsePathTerminals();
+
     void checkClassQualifiers(span<const Token> qualifiers, bool isConstraint);
     Token parseDPISpecString();
+    Token parseEdgeKeyword();
 
     // ---- Lookahead routines, for determining which kind of syntax to parse ----
 

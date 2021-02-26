@@ -1499,12 +1499,7 @@ IfNonePathDeclaration base=Member
 token keyword
 PathDeclaration path
 
-PulsestyleDeclaration base=Member
-token keyword
-separated_list<Name> inputs
-token semi
-
-ShowcancelledDeclaration base=Member
+PulseStyleDeclaration base=Member
 token keyword
 separated_list<Name> inputs
 token semi
