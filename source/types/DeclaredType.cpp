@@ -383,6 +383,8 @@ T DeclaredType::getBindContext() const {
         bindFlags |= BindFlags::NonProcedural;
     if (!flags.has(DeclaredTypeFlags::AutomaticInitializer))
         bindFlags |= BindFlags::StaticInitializer;
+    if (flags.has(DeclaredTypeFlags::SpecparamsAllowed))
+        bindFlags |= BindFlags::SpecparamsAllowed;
 
     LookupLocation location;
     if (flags.has(DeclaredTypeFlags::LookupMax))

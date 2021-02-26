@@ -1428,3 +1428,23 @@ endmodule
     CHECK(diags[2].code == diag::InvalidRefArg);
     CHECK(diags[3].code == diag::RefTypeMismatch);
 }
+
+TEST_CASE("specparams") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    specparam s1 = 1:2:3;
+    specparam s2 = 3.14;
+    specparam [31:0] s3 = s1 + s2;
+
+    int i = s3;
+    localparam int j = s3;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::SpecparamInConstant);
+}

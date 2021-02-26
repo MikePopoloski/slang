@@ -118,4 +118,21 @@ private:
     mutable const Symbol* target = nullptr;
 };
 
+struct SpecparamDeclarationSyntax;
+
+/// Represents a specify parameter.
+class SpecparamSymbol : public ValueSymbol {
+public:
+    SpecparamSymbol(string_view name, SourceLocation loc);
+
+    const ConstantValue& getValue() const;
+
+    static void fromSyntax(const Scope& scope, const SpecparamDeclarationSyntax& syntax,
+                           SmallVector<const SpecparamSymbol*>& results);
+
+    static bool isKind(SymbolKind kind) { return kind == SymbolKind::Specparam; }
+
+    void serializeTo(ASTSerializer& serializer) const;
+};
+
 } // namespace slang

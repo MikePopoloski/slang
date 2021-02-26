@@ -39,7 +39,8 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
             }
 
             if constexpr (std::is_same_v<ParameterSymbol, T> ||
-                          std::is_same_v<EnumValueSymbol, T>) {
+                          std::is_same_v<EnumValueSymbol, T> ||
+                          std::is_same_v<SpecparamSymbol, T>) {
                 symbol.getValue();
             }
 

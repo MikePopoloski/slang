@@ -88,9 +88,12 @@ enum class BindFlags {
     AllowUnboundedLiteral = 1 << 13,
 
     /// Binding is happening within a fork-join block.
-    ForkJoinBlock = 1 << 14
+    ForkJoinBlock = 1 << 14,
+
+    /// Specparams are allowed even if this is also a constant expression.
+    SpecparamsAllowed = 1 << 15
 };
-BITMASK(BindFlags, ForkJoinBlock);
+BITMASK(BindFlags, SpecparamsAllowed);
 
 enum class DimensionKind { Unknown, Range, AbbreviatedRange, Dynamic, Associative, Queue };
 

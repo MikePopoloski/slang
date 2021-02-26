@@ -360,13 +360,48 @@ void DefParamSymbol::resolve() const {
         initializer = &Expression::bindRValue(declType->getType(), expr, equalsLoc, context);
 
     context.eval(*initializer);
-    if (!initializer->constant)
-        initializer->constant = &ConstantValue::Invalid;
 }
 
 void DefParamSymbol::serializeTo(ASTSerializer& serializer) const {
     if (auto t = getTarget())
         serializer.writeLink("target", *t);
+    serializer.write("value", getValue());
+}
+
+SpecparamSymbol::SpecparamSymbol(string_view name, SourceLocation loc) :
+    ValueSymbol(SymbolKind::Specparam, name, loc,
+                DeclaredTypeFlags::InferImplicit | DeclaredTypeFlags::RequireConstant |
+                    DeclaredTypeFlags::SpecparamsAllowed) {
+}
+
+const ConstantValue& SpecparamSymbol::getValue() const {
+    auto init = getDeclaredType()->getInitializer();
+    ASSERT(init);
+
+    if (!init->constant) {
+        auto scope = getParentScope();
+        ASSERT(scope);
+
+        BindContext context(*scope, LookupLocation::before(*this));
+        context.eval(*init);
+    }
+
+    return *init->constant;
+}
+
+void SpecparamSymbol::fromSyntax(const Scope& scope, const SpecparamDeclarationSyntax& syntax,
+                                 SmallVector<const SpecparamSymbol*>& results) {
+    for (auto decl : syntax.declarators) {
+        auto loc = decl->name.location();
+        auto param = scope.getCompilation().emplace<SpecparamSymbol>(decl->name.valueText(), loc);
+        param->setSyntax(*decl);
+        param->setDeclaredType(*syntax.type);
+        param->setInitializerSyntax(*decl->value, decl->equals.location());
+        results.append(param);
+    }
+}
+
+void SpecparamSymbol::serializeTo(ASTSerializer& serializer) const {
     serializer.write("value", getValue());
 }
 

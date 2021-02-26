@@ -382,6 +382,13 @@ void Scope::addMembers(const SyntaxNode& syntax) {
             // without them so warn instead of erroring.
             addDiag(diag::WarnNotYetSupported, syntax.sourceRange());
             break;
+        case SyntaxKind::SpecparamDeclaration: {
+            SmallVectorSized<const SpecparamSymbol*, 8> params;
+            SpecparamSymbol::fromSyntax(*this, syntax.as<SpecparamDeclarationSyntax>(), params);
+            for (auto param : params)
+                addMember(*param);
+            break;
+        }
         default:
             addDiag(diag::NotYetSupported, syntax.sourceRange());
             break;

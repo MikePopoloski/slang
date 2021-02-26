@@ -1453,7 +1453,7 @@ Expression value
 
 SpecparamDeclaration base=Member
 token keyword
-VariableDimension? dimension
+ImplicitType type
 separated_list<SpecparamDeclarator> declarators
 token semi
 

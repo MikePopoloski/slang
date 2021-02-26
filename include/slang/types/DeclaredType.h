@@ -38,11 +38,12 @@ enum class DeclaredTypeFlags {
     Rand = 1 << 9,
     DPIReturnType = 1 << 10,
     DPIArg = 1 << 11,
+    SpecparamsAllowed = 1 << 12,
 
     NeedsTypeCheck =
         Port | NetType | UserDefinedNetType | FormalArgMergeVar | Rand | DPIReturnType | DPIArg
 };
-BITMASK(DeclaredTypeFlags, DPIArg);
+BITMASK(DeclaredTypeFlags, SpecparamsAllowed);
 
 /// Ties together various syntax nodes that declare the type of some parent symbol
 /// along with the logic necessary to resolve that type.

@@ -23,8 +23,11 @@ using namespace slang;
 struct EvalVisitor {
     template<typename T>
     ConstantValue visit(const T& expr, EvalContext& context) {
-        if (expr.bad())
+        if (expr.bad()) {
+            if (context.cacheResults())
+                expr.constant = &ConstantValue::Invalid;
             return nullptr;
+        }
 
         if (expr.constant)
             return *expr.constant;

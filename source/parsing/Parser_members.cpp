@@ -2344,7 +2344,13 @@ SpecparamDeclaratorSyntax& Parser::parseSpecparamDeclarator() {
 
 SpecparamDeclarationSyntax& Parser::parseSpecparam(AttrList attr) {
     auto keyword = consume();
+
     auto dim = parseDimension();
+    SmallVectorSized<VariableDimensionSyntax*, 2> dims;
+    if (dim)
+        dims.append(dim);
+
+    auto& type = factory.implicitType(Token(), dims.copy(alloc));
 
     Token semi;
     SmallVectorSized<TokenOrSyntax, 4> buffer;
@@ -2352,7 +2358,7 @@ SpecparamDeclarationSyntax& Parser::parseSpecparam(AttrList attr) {
         buffer, TokenKind::Semicolon, TokenKind::Comma, semi, RequireItems::True,
         diag::ExpectedDeclarator, [this] { return &parseSpecparamDeclarator(); });
 
-    return factory.specparamDeclaration(attr, keyword, dim, buffer.copy(alloc), semi);
+    return factory.specparamDeclaration(attr, keyword, type, buffer.copy(alloc), semi);
 }
 
 void Parser::checkMemberAllowed(const SyntaxNode& member, SyntaxKind parentKind) {

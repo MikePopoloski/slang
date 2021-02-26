@@ -51,6 +51,11 @@ Expression& ValueExpressionBase::fromSymbol(const BindContext& context, const Sy
         if (!symbol.as<ConstraintBlockSymbol>().isStatic)
             Lookup::ensureAccessible(symbol, context, sourceRange);
     }
+    else if (symbol.kind == SymbolKind::Specparam && context.flags.has(BindFlags::Constant) &&
+             !context.flags.has(BindFlags::SpecparamsAllowed)) {
+        context.addDiag(diag::SpecparamInConstant, sourceRange);
+        return badExpr(compilation, nullptr);
+    }
 
     auto& value = symbol.as<ValueSymbol>();
     if (isHierarchical)
@@ -61,7 +66,8 @@ Expression& ValueExpressionBase::fromSymbol(const BindContext& context, const Sy
 
 bool ValueExpressionBase::verifyAssignableImpl(const BindContext& context, bool isNonBlocking,
                                                SourceLocation location) const {
-    if (symbol.kind == SymbolKind::Parameter || symbol.kind == SymbolKind::EnumValue) {
+    if (symbol.kind == SymbolKind::Parameter || symbol.kind == SymbolKind::EnumValue ||
+        symbol.kind == SymbolKind::Specparam) {
         auto& diag = context.addDiag(diag::ExpressionNotAssignable, location);
         diag.addNote(diag::NoteDeclarationHere, symbol.location);
         diag << sourceRange;
@@ -111,6 +117,8 @@ optional<bitwidth_t> ValueExpressionBase::getEffectiveWidthImpl() const {
             return cvToWidth(symbol.as<ParameterSymbol>().getValue());
         case SymbolKind::EnumValue:
             return cvToWidth(symbol.as<EnumValueSymbol>().getValue());
+        case SymbolKind::Specparam:
+            return cvToWidth(symbol.as<SpecparamSymbol>().getValue());
         default:
             return type->getBitWidth();
     }
@@ -129,6 +137,8 @@ ConstantValue NamedValueExpression::evalImpl(EvalContext& context) const {
             return symbol.as<ParameterSymbol>().getValue();
         case SymbolKind::EnumValue:
             return symbol.as<EnumValueSymbol>().getValue();
+        case SymbolKind::Specparam:
+            return symbol.as<SpecparamSymbol>().getValue();
         default:
             ConstantValue* v = context.findLocal(&symbol);
             if (v)
