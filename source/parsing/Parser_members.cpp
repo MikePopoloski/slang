@@ -142,9 +142,11 @@ MemberSyntax* Parser::parseMember(SyntaxKind parentKind, bool& anyLocalModules) 
             return &parseSpecparam(attributes);
         case TokenKind::AliasKeyword:
         case TokenKind::CheckerKeyword:
-        case TokenKind::SpecifyKeyword:
             // TODO: parse these
             break;
+        case TokenKind::SpecifyKeyword:
+            errorIfAttributes(attributes);
+            return &parseSpecifyBlock(attributes);
         case TokenKind::Identifier:
             // Declarations and instantiations have already been handled, so if we reach this point
             // we either have a labeled assertion, or this is some kind of error.
@@ -2361,6 +2363,58 @@ SpecparamDeclarationSyntax& Parser::parseSpecparam(AttrList attr) {
     return factory.specparamDeclaration(attr, keyword, type, buffer.copy(alloc), semi);
 }
 
+PulsestyleDeclarationSyntax& Parser::parsePulsestyleDecl() {
+    auto keyword = consume();
+
+    Token semi;
+    SmallVectorSized<TokenOrSyntax, 8> buffer;
+    parseList<isPossibleExpressionOrComma, isSemicolon>(
+        buffer, TokenKind::Semicolon, TokenKind::Comma, semi, RequireItems::True,
+        diag::ExpectedPathName, [this] { return &parseName(); });
+
+    return factory.pulsestyleDeclaration(nullptr, keyword, buffer.copy(alloc), semi);
+}
+
+ShowcancelledDeclarationSyntax& Parser::parseShowcancelledDecl() {
+    auto keyword = consume();
+
+    Token semi;
+    SmallVectorSized<TokenOrSyntax, 8> buffer;
+    parseList<isPossibleExpressionOrComma, isSemicolon>(
+        buffer, TokenKind::Semicolon, TokenKind::Comma, semi, RequireItems::True,
+        diag::ExpectedPathName, [this] { return &parseName(); });
+
+    return factory.showcancelledDeclaration(nullptr, keyword, buffer.copy(alloc), semi);
+}
+
+MemberSyntax* Parser::parseSpecifyItem() {
+    switch (peek().kind) {
+        case TokenKind::SpecParamKeyword:
+            return &parseSpecparam({});
+        case TokenKind::PulseStyleOnDetectKeyword:
+        case TokenKind::PulseStyleOnEventKeyword:
+            return &parsePulsestyleDecl();
+        case TokenKind::ShowCancelledKeyword:
+        case TokenKind::NoShowCancelledKeyword:
+            return &parseShowcancelledDecl();
+        default:
+            // Otherwise, we got nothing and should just return null so that our caller
+            // will skip and try again.
+            return nullptr;
+    }
+}
+
+SpecifyBlockSyntax& Parser::parseSpecifyBlock(AttrList attributes) {
+    auto specify = consume();
+
+    Token endspecify;
+    auto members = parseMemberList<MemberSyntax>(
+        TokenKind::EndSpecifyKeyword, endspecify, SyntaxKind::SpecifyBlock,
+        [this](SyntaxKind, bool&) { return parseSpecifyItem(); });
+
+    return factory.specifyBlock(attributes, specify, members, endspecify);
+}
+
 void Parser::checkMemberAllowed(const SyntaxNode& member, SyntaxKind parentKind) {
     // If this is an empty member with a missing semicolon, it was some kind
     // of error that has already been reported so don't pile on here.
@@ -2412,6 +2466,7 @@ void Parser::checkMemberAllowed(const SyntaxNode& member, SyntaxKind parentKind)
         case SyntaxKind::CovergroupDeclaration:
         case SyntaxKind::ConstraintBlock:
         case SyntaxKind::ClockingDeclaration:
+        case SyntaxKind::SpecifyBlock:
             return;
         default:
             THROW_UNREACHABLE;

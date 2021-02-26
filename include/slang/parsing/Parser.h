@@ -323,6 +323,10 @@ private:
     UdpEntrySyntax& parseUdpEntry();
     SpecparamDeclaratorSyntax& parseSpecparamDeclarator();
     SpecparamDeclarationSyntax& parseSpecparam(AttrList attributes);
+    MemberSyntax* parseSpecifyItem();
+    SpecifyBlockSyntax& parseSpecifyBlock(AttrList attributes);
+    PulsestyleDeclarationSyntax& parsePulsestyleDecl();
+    ShowcancelledDeclarationSyntax& parseShowcancelledDecl();
     // clang-format on
 
     template<bool (*IsEnd)(TokenKind)>

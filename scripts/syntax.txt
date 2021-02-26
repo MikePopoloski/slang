@@ -1457,6 +1457,63 @@ ImplicitType type
 separated_list<SpecparamDeclarator> declarators
 token semi
 
+PathSuffix final=false
+empty
+
+SimplePathSuffix base=PathSuffix
+separated_list<Name> outputs
+
+EdgeSensitivePathSuffix base=PathSuffix
+token openParen
+separated_list<Name> outputs
+token polarityOperator
+token colon
+Expression expr
+token closeParen
+
+PathDescription
+token openParen
+token edgeIdentifier
+separated_list<Name> inputs
+token polarityOperator
+token pathOperator
+PathSuffix suffix
+token closeParen
+
+PathDeclaration base=Member
+PathDescription desc
+token equals
+token openParen
+separated_list<Expression> delays
+token closeParen
+token semi
+
+ConditionalPathDeclaration base=Member
+token keyword
+token openParen
+Expression predicate
+token closeParen
+PathDeclaration path
+
+IfNonePathDeclaration base=Member
+token keyword
+PathDeclaration path
+
+PulsestyleDeclaration base=Member
+token keyword
+separated_list<Name> inputs
+token semi
+
+ShowcancelledDeclaration base=Member
+token keyword
+separated_list<Name> inputs
+token semi
+
+SpecifyBlock base=Member
+token specify
+list<Member> items
+token endspecify
+
 // ----- CONSTRAINTS -----
 
 ConstraintItem final=false

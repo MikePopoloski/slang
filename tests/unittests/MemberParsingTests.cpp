@@ -561,3 +561,18 @@ endprimitive
     parseCompilationUnit(text);
     CHECK_DIAGNOSTICS_EMPTY;
 }
+
+TEST_CASE("specify block") {
+    auto& text = R"(
+module m;
+    specify
+        specparam f = 1, g = 2;
+        showcancelled out;
+        pulsestyle_ondetect out;
+    endspecify
+endmodule
+)";
+
+    parseCompilationUnit(text);
+    CHECK_DIAGNOSTICS_EMPTY;
+}
