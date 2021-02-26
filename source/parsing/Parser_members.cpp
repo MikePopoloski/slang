@@ -2398,7 +2398,7 @@ PathDeclarationSyntax& Parser::parsePathDeclaration() {
     // but of course the lexer tokenizes it as '+=' and '>' so we need to
     // work around that here.
     Token op;
-    if (!polarity && peek(TokenKind::PlusEqual) || peek(TokenKind::MinusEqual)) {
+    if (!polarity && (peek(TokenKind::PlusEqual) || peek(TokenKind::MinusEqual))) {
         polarity = consume();
         op = consumeIf(TokenKind::GreaterThan);
         if (!op) {
