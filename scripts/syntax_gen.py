@@ -472,6 +472,8 @@ def generate(outf, name, tags, members, alltypes, kindmap):
 
     outf.write('    }\n\n')
 
+    outf.write('    explicit {}(const {}&) = default;\n\n'.format(name, name))
+
     if not members and final == '':
         outf.write('    static bool isKind(SyntaxKind kind);\n')
     else:
