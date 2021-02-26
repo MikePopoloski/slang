@@ -435,14 +435,58 @@ LRM | Feature | Supported
 {{m-dim}}     28.15 | Strengths of net types | N/A
 {{m-warning}} 28.16 | Gate and net delays | partial
 
-## Chapters 29-34
+## 29. User-defined primitives
 
 LRM | Feature | Supported
 --- | ------- | ---------
-{{m-danger}}  29 | User defined primitives | no
-{{m-danger}}  30 | Specify blocks | no
-{{m-danger}}  31 | Timing checks | no
-{{m-danger}}  32 | Backannotation using the standard delay format | no
+{{m-danger}}  29.3 | UDP definition | no
+{{m-danger}}  29.4 | Combinational UDPs | no
+{{m-danger}}  29.5 | Level-sensitive sequential UDPs | no
+{{m-danger}}  29.6 | Edge-sensitive sequential UDPs | no
+{{m-danger}}  29.7 | Sequential UDP initialization | no
+{{m-danger}}  29.8 | UDP instances | no
+{{m-dim}}     29.9 | Mixing level-sensitive and edge-sensitive descriptions | N/A
+{{m-dim}}     29.10 | Level-sensitive dominance | N/A
+
+## 30. Specify blocks
+
+LRM | Feature | Supported
+--- | ------- | ---------
+{{m-danger}}  30.3 | Specify block declaration | no
+{{m-danger}}  30.4 | Module path declarations | no
+{{m-danger}}  30.5 | Assigning delays to module paths | no
+{{m-dim}}     30.6 | Mixing module path delays and distributed delays | N/A
+{{m-danger}}  30.7 | Detailed control of pulse filtering behavior | no
+
+## 31. Timing checks
+
+LRM | Feature | Supported
+--- | ------- | ---------
+{{m-danger}}  31.2 | Overview | no
+{{m-danger}}  31.3 | Timing checks using a stability window | no
+{{m-danger}}  31.4 | Timing checks for clock and control signals | no
+{{m-danger}}  31.5 | Edge-control specifiers | no
+{{m-danger}}  31.6 | Notifiers: user-defined responses to timing violations | no
+{{m-danger}}  31.7 | Enabling timing checks with conditioned events | no
+{{m-danger}}  31.8 | Vector signals in timing checks | no
+{{m-danger}}  31.9 | Negative timing checks | no
+
+## 32. Backannotation using the standard delay format
+
+LRM | Feature | Supported
+--- | ------- | ---------
+{{m-dim}}     32.3 | The SDF annotator | N/A
+{{m-dim}}     32.4 | Mapping of SDF constructs to SystemVerilog | N/A
+{{m-dim}}     32.5 | Multiple annotations | N/A
+{{m-dim}}     32.6 | Multiple SDF files | N/A
+{{m-dim}}     32.7 | Pulse limit annotation | N/A
+{{m-dim}}     32.8 | SDF to SystemVerilog delay value mapping | N/A
+{{m-danger}}  32.9 | Loading timing data from an SDF file | no
+
+## Chapters 33-34
+
+LRM | Feature | Supported
+--- | ------- | ---------
 {{m-danger}}  33 | Configuring the contents of a design | no
 {{m-danger}}  34 | Protected envelopes | no
 
