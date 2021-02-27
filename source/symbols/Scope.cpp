@@ -378,6 +378,7 @@ void Scope::addMembers(const SyntaxNode& syntax) {
         }
         case SyntaxKind::ConcurrentAssertionMember:
         case SyntaxKind::ImmediateAssertionMember:
+        case SyntaxKind::SpecifyBlock:
             // TODO: these aren't supported yet but we can compile everything else successfully
             // without them so warn instead of erroring.
             addDiag(diag::WarnNotYetSupported, syntax.sourceRange());
