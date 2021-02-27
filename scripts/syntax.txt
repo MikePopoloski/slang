@@ -1504,6 +1504,48 @@ token keyword
 separated_list<Name> inputs
 token semi
 
+TimingCheckArg final=false
+empty
+
+EmptyTimingCheckArg base=TimingCheckArg
+token placeholder
+
+EdgeDescriptor
+token t1
+token t2
+
+EdgeControlSpecifier
+token openBracket
+separated_list<EdgeDescriptor> descriptors
+token closeBracket
+
+TimingCheckCondition
+token tripleAnd
+Expression expr
+
+TimingCheckEvent base=TimingCheckArg
+token edge
+EdgeControlSpecifier? controlSpecifier
+Name terminal
+TimingCheckCondition? condition
+
+DelayedTerminalArg base=TimingCheckArg
+token terminal
+token openBracket
+Expression expr
+token closeBracket
+
+ExpressionTimingCheckArg base=TimingCheckArg
+Expression expr
+TimingCheckCondition? condition
+
+SystemTimingCheck base=Member
+token name
+token openParen
+separated_list<TimingCheckArg> args
+token closeParen
+token semi
+
 SpecifyBlock base=Member
 token specify
 list<Member> items

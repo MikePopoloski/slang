@@ -578,6 +578,11 @@ module m;
         (In1 -=> q) = In_to_q;
         (In1 +*> q) = In_to_q;
         (In1 -*> q) = In_to_q;
+        $setuphold( posedge clk, data, tSU, tHLD );
+        $recrem( posedge clear, posedge clk, tREC, tREM );
+        $timeskew (posedge CP &&& MODE, negedge CPN, 50, , event_based_flag, remain_active_flag);
+        $setup( data, posedge clk &&& (clr===0), 10 );
+        $width(edge[01, 0x, x1] clr);
     endspecify
 endmodule
 )";

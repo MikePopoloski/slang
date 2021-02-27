@@ -326,6 +326,9 @@ private:
     MemberSyntax* parseSpecifyItem();
     SpecifyBlockSyntax& parseSpecifyBlock(AttrList attributes);
     PathDeclarationSyntax& parsePathDeclaration();
+    SystemTimingCheckSyntax& parseSystemTimingCheck();
+    TimingCheckArgSyntax& parseTimingCheckArg();
+    EdgeDescriptorSyntax& parseEdgeDescriptor();
     // clang-format on
 
     template<bool (*IsEnd)(TokenKind)>

@@ -1156,6 +1156,29 @@ bool SyntaxFacts::isPossibleTransSet(TokenKind kind) {
     }
 }
 
+bool SyntaxFacts::isPossibleTimingCheckArg(TokenKind kind) {
+    switch (kind) {
+        case TokenKind::PosEdgeKeyword:
+        case TokenKind::NegEdgeKeyword:
+        case TokenKind::EdgeKeyword:
+        case TokenKind::Comma:
+            return true;
+        default:
+            return isPossibleExpression(kind);
+    }
+}
+
+bool SyntaxFacts::isPossibleEdgeDescriptor(TokenKind kind) {
+    switch (kind) {
+        case TokenKind::IntegerLiteral:
+        case TokenKind::Identifier:
+        case TokenKind::Comma:
+            return true;
+        default:
+            return false;
+    }
+}
+
 bool SyntaxFacts::isBeforeOrSemicolon(TokenKind kind) {
     return kind == TokenKind::Semicolon || kind == TokenKind::BeforeKeyword;
 }

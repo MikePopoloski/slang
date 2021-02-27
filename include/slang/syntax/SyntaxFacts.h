@@ -247,6 +247,12 @@ public:
     /// @return true if the given token represents a possible "trans" set.
     static bool isPossibleTransSet(TokenKind kind);
 
+    /// @return true if the given token represents a possible timing check argument.
+    static bool isPossibleTimingCheckArg(TokenKind kind);
+
+    /// @return true if the given token represents a possible edge descriptor.
+    static bool isPossibleEdgeDescriptor(TokenKind kind);
+
     /// @return true if the given token is the "before" keyword or a semicolon.
     static bool isBeforeOrSemicolon(TokenKind kind);
 

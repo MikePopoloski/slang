@@ -2467,6 +2467,77 @@ PathDeclarationSyntax& Parser::parsePathDeclaration() {
                                    semi);
 }
 
+EdgeDescriptorSyntax& Parser::parseEdgeDescriptor() {
+    // TODO: enforce all the restrictions here
+    auto t1 = consume();
+
+    Token t2;
+    if (t1.kind == TokenKind::IntegerLiteral && peek(TokenKind::Identifier))
+        t2 = consume();
+
+    return factory.edgeDescriptor(t1, t2);
+}
+
+TimingCheckArgSyntax& Parser::parseTimingCheckArg() {
+    if (peek(TokenKind::Comma))
+        return factory.emptyTimingCheckArg(placeholderToken());
+
+    if (peek(TokenKind::Identifier) && peek(1).kind == TokenKind::OpenBracket) {
+        auto terminal = consume();
+        auto openBracket = consume();
+        auto& expr = parseMinTypMaxExpression();
+        return factory.delayedTerminalArg(terminal, openBracket, expr,
+                                          expect(TokenKind::CloseBracket));
+    }
+
+    auto parseCondition = [&]() -> TimingCheckConditionSyntax* {
+        if (!peek(TokenKind::TripleAnd))
+            return nullptr;
+
+        auto tripleAnd = consume();
+        auto& expr = parseExpression();
+        return &factory.timingCheckCondition(tripleAnd, expr);
+    };
+
+    auto edge = parseEdgeKeyword();
+    if (edge) {
+        EdgeControlSpecifierSyntax* control = nullptr;
+        if (peek(TokenKind::OpenBracket)) {
+            Token openBracket, closeBracket;
+            span<TokenOrSyntax> list;
+            parseList<isPossibleEdgeDescriptor, isEndOfBracketedList>(
+                TokenKind::OpenBracket, TokenKind::CloseBracket, TokenKind::Comma, openBracket,
+                list, closeBracket, RequireItems::True, diag::ExpectedEdgeDescriptor,
+                [this] { return &parseEdgeDescriptor(); });
+
+            control = &factory.edgeControlSpecifier(openBracket, list, closeBracket);
+        }
+
+        auto& terminal = parseName();
+        auto cond = parseCondition();
+        return factory.timingCheckEvent(edge, control, terminal, cond);
+    }
+
+    // TODO: enforce restrictions on kinds of expressions
+    auto& expr = parseMinTypMaxExpression();
+    auto cond = parseCondition();
+    return factory.expressionTimingCheckArg(expr, cond);
+}
+
+SystemTimingCheckSyntax& Parser::parseSystemTimingCheck() {
+    auto name = consume();
+
+    Token openParen, closeParen;
+    span<TokenOrSyntax> list;
+    parseList<isPossibleTimingCheckArg, isEndOfParenList>(
+        TokenKind::OpenParenthesis, TokenKind::CloseParenthesis, TokenKind::Comma, openParen, list,
+        closeParen, RequireItems::True, diag::ExpectedExpression,
+        [this] { return &parseTimingCheckArg(); }, AllowEmpty::True);
+
+    return factory.systemTimingCheck(nullptr, name, openParen, list, closeParen,
+                                     expect(TokenKind::Semicolon));
+}
+
 MemberSyntax* Parser::parseSpecifyItem() {
     switch (peek().kind) {
         case TokenKind::SpecParamKeyword:
@@ -2495,6 +2566,8 @@ MemberSyntax* Parser::parseSpecifyItem() {
             return &factory.conditionalPathDeclaration(nullptr, keyword, openParen, pred,
                                                        closeParen, path);
         }
+        case TokenKind::SystemIdentifier:
+            return &parseSystemTimingCheck();
         default:
             // Otherwise, we got nothing and should just return null so that our caller
             // will skip and try again.
