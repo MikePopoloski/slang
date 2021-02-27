@@ -491,6 +491,51 @@ private:
     size_t outputArgs;
 };
 
+class SdfAnnotateTask : public SystemTaskBase {
+public:
+    SdfAnnotateTask() : SystemTaskBase("$sdf_annotate") {}
+
+    const Expression& bindArgument(size_t argIndex, const BindContext& context,
+                                   const ExpressionSyntax& syntax, const Args& args) const final {
+        if (argIndex == 1) {
+            auto& comp = context.getCompilation();
+            if (!NameSyntax::isKind(syntax.kind)) {
+                context.addDiag(diag::ExpectedModuleInstance, syntax.sourceRange());
+                return *comp.emplace<InvalidExpression>(nullptr, comp.getErrorType());
+            }
+
+            auto& ref =
+                HierarchicalReferenceExpression::fromSyntax(comp, syntax.as<NameSyntax>(), context);
+
+            if (ref.kind == ExpressionKind::HierarchicalReference) {
+                auto& sym = *ref.as<HierarchicalReferenceExpression>().symbol;
+                if (sym.kind != SymbolKind::Instance || !sym.as<InstanceSymbol>().isModule()) {
+                    context.addDiag(diag::ExpectedModuleInstance, ref.sourceRange);
+                    return *comp.emplace<InvalidExpression>(&ref, comp.getErrorType());
+                }
+            }
+
+            return ref;
+        }
+
+        return SystemTaskBase::bindArgument(argIndex, context, syntax, args);
+    }
+
+    const Type& checkArguments(const BindContext& context, const Args& args, SourceRange range,
+                               const Expression*) const final {
+        auto& comp = context.getCompilation();
+        if (!checkArgCount(context, false, args, range, 1, 7))
+            return comp.getErrorType();
+
+        for (size_t i = 0; i < args.size(); i++) {
+            if (i != 1 && !args[0]->type->canBeStringLike())
+                return badArg(context, *args[i]);
+        }
+
+        return comp.getVoidType();
+    }
+};
+
 void registerSystemTasks(Compilation& c) {
 #define REGISTER(type, name, base) c.addSystemSubroutine(std::make_unique<type>(name, base))
     REGISTER(DisplayTask, "$display", LiteralBase::Decimal);
@@ -563,6 +608,7 @@ void registerSystemTasks(Compilation& c) {
     c.addSystemSubroutine(std::make_unique<ReadWriteMemTask>("$writememh", false));
     c.addSystemSubroutine(std::make_unique<SimpleSystemTask>("$system", *int_t, 0,
                                                              std::vector<const Type*>{ string_t }));
+    c.addSystemSubroutine(std::make_unique<SdfAnnotateTask>());
 
 #define TASK(name, required, ...)                             \
     c.addSystemSubroutine(std::make_unique<SimpleSystemTask>( \

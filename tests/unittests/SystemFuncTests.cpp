@@ -732,3 +732,26 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("sdf_annotate") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    string s;
+    initial begin
+        $sdf_annotate(s);
+        $sdf_annotate("sdf", m);
+        $sdf_annotate(s, m, "asdf", "test", "TOOL_CONTROL", "1.0:1.0:1.0", "FROM_MTM");
+        $sdf_annotate(s, 123);
+        $sdf_annotate(s, s);
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::ExpectedModuleInstance);
+    CHECK(diags[1].code == diag::ExpectedModuleInstance);
+}
