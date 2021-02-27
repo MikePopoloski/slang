@@ -2427,7 +2427,16 @@ PathDeclarationSyntax& Parser::parsePathDeclaration() {
         auto suffixOpenParen = consume();
         auto outputs = parsePathTerminals();
         auto polarity2 = parsePolarity();
-        auto colon = expect(TokenKind::Colon);
+
+        // The polarity we just tried to parse could have been a '+' or a '-' next
+        // to the expected colon, which would get lexed together as a single token.
+        // In that case don't bother trying to find another colon token.
+        Token colon;
+        if (!polarity2 && (peek(TokenKind::PlusColon) || peek(TokenKind::MinusColon)))
+            polarity2 = consume();
+        else
+            colon = expect(TokenKind::Colon);
+
         auto& expr = parseExpression();
         auto suffixCloseParen = expect(TokenKind::CloseParenthesis);
         suffix = &factory.edgeSensitivePathSuffix(suffixOpenParen, outputs, polarity2, colon, expr,
