@@ -113,15 +113,24 @@ SourceBuffer readSource(SourceManager& sourceManager, const std::string& file) {
 
 bool loadAllSources(Compilation& compilation, SourceManager& sourceManager,
                     const std::vector<SourceBuffer>& buffers, const Bag& options, bool singleUnit,
-                    const std::vector<std::string>& libraryFiles,
+                    bool onlyLint, const std::vector<std::string>& libraryFiles,
                     const std::vector<std::string>& libDirs,
                     const std::vector<std::string>& libExts) {
     if (singleUnit) {
-        compilation.addSyntaxTree(SyntaxTree::fromBuffers(buffers, sourceManager, options));
+        auto tree = SyntaxTree::fromBuffers(buffers, sourceManager, options);
+        if (onlyLint)
+            tree->isLibrary = true;
+
+        compilation.addSyntaxTree(tree);
     }
     else {
-        for (const SourceBuffer& buffer : buffers)
-            compilation.addSyntaxTree(SyntaxTree::fromBuffer(buffer, sourceManager, options));
+        for (const SourceBuffer& buffer : buffers) {
+            auto tree = SyntaxTree::fromBuffer(buffer, sourceManager, options);
+            if (onlyLint)
+                tree->isLibrary = true;
+
+            compilation.addSyntaxTree(tree);
+        }
     }
 
     bool ok = true;
@@ -349,11 +358,14 @@ int driverMain(int argc, TArgs argv, bool suppressColorsStdout, bool suppressCol
     optional<bool> onlyPreprocess;
     optional<bool> onlyParse;
     optional<bool> onlyMacros;
+    optional<bool> onlyLint;
     cmdLine.add("-E,--preprocess", onlyPreprocess,
                 "Only run the preprocessor (and print preprocessed files to stdout)");
     cmdLine.add("--macros-only", onlyMacros, "Print a list of found macros and exit");
     cmdLine.add("--parse-only", onlyParse,
                 "Stop after parsing input files, don't perform elaboration or type checking");
+    cmdLine.add("--lint-only", onlyLint,
+                "Only perform linting of code, don't try to elaborate a full hierarchy");
 
     // Include paths
     std::vector<std::string> includeDirs;
@@ -561,6 +573,8 @@ int driverMain(int argc, TArgs argv, bool suppressColorsStdout, bool suppressCol
         coptions.errorLimit = *errorLimit * 2;
     if (astJsonFile)
         coptions.disableInstanceCaching = true;
+    if (onlyLint == true)
+        coptions.suppressUnused = true;
 
     for (auto& name : topModules)
         coptions.topModules.emplace(name);
@@ -607,7 +621,9 @@ int driverMain(int argc, TArgs argv, bool suppressColorsStdout, bool suppressCol
         return 3;
     }
 
-    if (onlyParse.has_value() + onlyPreprocess.has_value() + onlyMacros.has_value() > 1) {
+    if (onlyParse.has_value() + onlyPreprocess.has_value() + onlyMacros.has_value() +
+            onlyLint.has_value() >
+        1) {
         OS::printE(fg(errorColor), "error: ");
         OS::printE("can only specify one of --preprocess, --macros-only, --parse-only");
         return 4;
@@ -623,8 +639,12 @@ int driverMain(int argc, TArgs argv, bool suppressColorsStdout, bool suppressCol
         }
         else {
             Compilation compilation(options);
-            anyErrors = !loadAllSources(compilation, sourceManager, buffers, options,
-                                        singleUnit == true, libraryFiles, libDirs, libExts);
+            anyErrors =
+                !loadAllSources(compilation, sourceManager, buffers, options, singleUnit == true,
+                                onlyLint == true, libraryFiles, libDirs, libExts);
+
+            if (onlyLint == true)
+                ignoreUnknownModules = true;
 
             Compiler compiler(compilation);
             compiler.quiet = quiet == true;

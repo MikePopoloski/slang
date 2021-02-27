@@ -287,14 +287,13 @@ const RootSymbol& Compilation::getRoot(bool skipDefParamResolution) {
             }
 
             // Library modules are never automatically instantiated in any capacity.
-            if (definition->syntaxTree && definition->syntaxTree->isLibrary)
-                continue;
-
-            if (definition->definitionKind == DefinitionKind::Module) {
-                if (isValidTop(*definition)) {
-                    // This module can be automatically instantiated.
-                    topDefs.append(definition.get());
-                    continue;
+            if (!definition->syntaxTree || !definition->syntaxTree->isLibrary) {
+                if (definition->definitionKind == DefinitionKind::Module) {
+                    if (isValidTop(*definition)) {
+                        // This module can be automatically instantiated.
+                        topDefs.append(definition.get());
+                        continue;
+                    }
                 }
             }
 
@@ -324,7 +323,6 @@ const RootSymbol& Compilation::getRoot(bool skipDefParamResolution) {
                     // Otherwise, issue an error because the user asked us to instantiate this.
                     definition->scope.addDiag(diag::InvalidTopModule, SourceLocation::NoLocation)
                         << definition->name;
-                    continue;
                 }
             }
 
