@@ -67,7 +67,7 @@ LRM | Feature | Supported
 {{m-danger}}  6.20.2.1 | $ as a parameter value | no
 {{m-success}} 6.20.3 | Type parameters | v0.2
 {{m-success}} 6.20.4 | Local parameters | v0.2
-{{m-danger}}  6.20.5 | Specify parameters | no
+{{m-success}} 6.20.5 | Specify parameters | v0.7
 {{m-success}} 6.20.6 | Const constants | v0.3
 {{m-success}} 6.21 | Scope and lifetime | v0.3
 {{m-success}} 6.22 | Type compatibility | v0.2
@@ -481,7 +481,7 @@ LRM | Feature | Supported
 {{m-dim}}     32.6 | Multiple SDF files | N/A
 {{m-dim}}     32.7 | Pulse limit annotation | N/A
 {{m-dim}}     32.8 | SDF to SystemVerilog delay value mapping | N/A
-{{m-danger}}  32.9 | Loading timing data from an SDF file | no
+{{m-success}} 32.9 | Loading timing data from an SDF file | v0.7
 
 ## Chapters 33-34
 
