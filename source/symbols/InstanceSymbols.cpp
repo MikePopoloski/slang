@@ -723,21 +723,37 @@ void UnknownModuleSymbol::fromSyntax(Compilation& compilation,
     for (auto instanceSyntax : syntax.instances) {
         createImplicitNets(*instanceSyntax, context, netType, implicitNetNames, results);
 
-        SmallVectorSized<const Expression*, 8> ports;
-        for (auto port : instanceSyntax->connections) {
+        auto name = instanceSyntax->name;
+        auto sym =
+            compilation.emplace<UnknownModuleSymbol>(name.valueText(), name.location(), paramSpan);
+        sym->setSyntax(*instanceSyntax);
+        sym->setAttributes(scope, syntax.attributes);
+        results.append(sym);
+    }
+}
+
+span<const Expression* const> UnknownModuleSymbol::getPortConnections() const {
+    if (!ports) {
+        auto syntax = getSyntax();
+        auto scope = getParentScope();
+        ASSERT(syntax && scope);
+
+        BindContext context(*scope, LookupLocation::after(*this));
+
+        SmallVectorSized<const Expression*, 8> results;
+        for (auto port : syntax->as<HierarchicalInstanceSyntax>().connections) {
             if (port->kind == SyntaxKind::OrderedPortConnection)
-                ports.append(
+                results.append(
                     &Expression::bind(*port->as<OrderedPortConnectionSyntax>().expr, context));
             else if (port->kind == SyntaxKind::NamedPortConnection) {
                 if (auto ex = port->as<NamedPortConnectionSyntax>().expr)
-                    ports.append(&Expression::bind(*ex, context));
+                    results.append(&Expression::bind(*ex, context));
             }
         }
 
-        auto name = instanceSyntax->name;
-        results.append(compilation.emplace<UnknownModuleSymbol>(
-            name.valueText(), name.location(), paramSpan, ports.copy(compilation)));
+        ports = results.copy(scope->getCompilation());
     }
+    return *ports;
 }
 
 void UnknownModuleSymbol::serializeTo(ASTSerializer& serializer) const {
@@ -747,7 +763,7 @@ void UnknownModuleSymbol::serializeTo(ASTSerializer& serializer) const {
     serializer.endArray();
 
     serializer.startArray("ports");
-    for (auto expr : portConnections)
+    for (auto expr : getPortConnections())
         serializer.serialize(*expr);
     serializer.endArray();
 }

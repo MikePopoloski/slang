@@ -960,7 +960,7 @@ module bar #(parameter int foo);
     end
     int k = {};
 
-    UnknownMod #(3, 4) m(j + 1);
+    UnknownMod #(3, 4) m(j + 1, l, {});
 endmodule
 
 module top;
@@ -971,9 +971,10 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 2);
+    REQUIRE(diags.size() == 3);
     CHECK(diags[0].code == diag::ConstEvalNonConstVariable);
     CHECK(diags[1].code == diag::EmptyConcatNotAllowed);
+    CHECK(diags[2].code == diag::EmptyConcatNotAllowed);
 }
 
 TEST_CASE("Diagnose unused modules / interfaces") {

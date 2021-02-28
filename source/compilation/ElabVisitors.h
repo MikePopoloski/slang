@@ -118,6 +118,13 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
         symbol.getConstraints();
     }
 
+    void handle(const UnknownModuleSymbol& symbol) {
+        if (!handleDefault(symbol))
+            return;
+
+        symbol.getPortConnections();
+    }
+
     void handle(const InstanceSymbol& symbol) {
         if (numErrors > errorLimit)
             return;

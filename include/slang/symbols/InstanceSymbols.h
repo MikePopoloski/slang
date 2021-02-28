@@ -174,15 +174,15 @@ public:
     /// since we can't know the destination type of each parameter.
     span<const Expression* const> paramExpressions;
 
-    /// The self-determined expressions that are assigned to the ports
+    UnknownModuleSymbol(string_view name, SourceLocation loc,
+                        span<const Expression* const> params) :
+        Symbol(SymbolKind::UnknownModule, name, loc),
+        paramExpressions(params) {}
+
+    /// Gets the self-determined expressions that are assigned to the ports
     /// in the instantiation. These aren't necessarily correctly typed
     /// since we can't know the destination type of each port.
-    span<const Expression* const> portConnections;
-
-    UnknownModuleSymbol(string_view name, SourceLocation loc, span<const Expression* const> params,
-                        span<const Expression* const> ports) :
-        Symbol(SymbolKind::UnknownModule, name, loc),
-        paramExpressions(params), portConnections(ports) {}
+    span<const Expression* const> getPortConnections() const;
 
     static void fromSyntax(Compilation& compilation, const HierarchyInstantiationSyntax& syntax,
                            LookupLocation location, const Scope& scope,
@@ -191,6 +191,9 @@ public:
     void serializeTo(ASTSerializer& serializer) const;
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::UnknownModule; }
+
+private:
+    mutable optional<span<const Expression* const>> ports;
 };
 
 } // namespace slang
