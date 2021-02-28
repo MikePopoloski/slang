@@ -99,6 +99,10 @@ struct CompilationOptions {
     /// be used during compilation.
     MinTypMax minTypMax = MinTypMax::Typ;
 
+    /// If true, compile in "linting" mode where we suppress errors that could
+    /// be caused by not having an elaborated design.
+    bool lintMode = false;
+
     /// If true, suppress warnings about unused code elements. This is intended
     /// for tests; for end users, they can use warning flags to control output.
     bool suppressUnused = true;

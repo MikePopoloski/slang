@@ -1371,10 +1371,6 @@ void Lookup::qualified(const ScopedNameSyntax& syntax, const BindContext& contex
             unqualifiedImpl(scope, name, context.getLocation(), first.range(), flags, {}, result);
             break;
         case SyntaxKind::UnitScope:
-            // Ignore hierarchical lookups that occur inside uninstantiated modules.
-            if (scope.isUninstantiated())
-                return;
-
             result.found = getCompilationUnit(scope.asSymbol());
             lookupDownward(nameParts, first, context, result, flags);
             return;

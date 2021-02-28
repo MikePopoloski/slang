@@ -1514,7 +1514,6 @@ TEST_CASE("Hierarchical name inside unused module") {
 module m #(parameter p);
     int i = $root.foo.baz;
     int j = foo.bar.baz;
-    int k = $unit::baz;
 endmodule
 
 module top;

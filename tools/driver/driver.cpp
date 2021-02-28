@@ -573,8 +573,10 @@ int driverMain(int argc, TArgs argv, bool suppressColorsStdout, bool suppressCol
         coptions.errorLimit = *errorLimit * 2;
     if (astJsonFile)
         coptions.disableInstanceCaching = true;
-    if (onlyLint == true)
+    if (onlyLint == true) {
         coptions.suppressUnused = true;
+        coptions.lintMode = true;
+    }
 
     for (auto& name : topModules)
         coptions.topModules.emplace(name);

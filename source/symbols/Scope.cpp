@@ -133,6 +133,10 @@ const InstanceBodySymbol* Scope::getContainingInstance() const {
 }
 
 bool Scope::isUninstantiated() const {
+    // In linting mode all contexts are considered uninstantiated.
+    if (getCompilation().getOptions().lintMode)
+        return true;
+
     auto inst = getContainingInstance();
     if (!inst)
         return false;
