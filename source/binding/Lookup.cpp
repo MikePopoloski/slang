@@ -187,25 +187,6 @@ bool isClassType(const Symbol& symbol) {
     return symbol.kind == SymbolKind::GenericClassDef;
 }
 
-const InstanceBodySymbol* getInstanceBody(const Scope& scope) {
-    auto currScope = &scope;
-    while (currScope && currScope->asSymbol().kind != SymbolKind::InstanceBody)
-        currScope = currScope->asSymbol().getParentScope();
-
-    if (currScope)
-        return &currScope->asSymbol().as<InstanceBodySymbol>();
-
-    return nullptr;
-}
-
-bool isUninstantiated(const Scope& scope) {
-    auto body = getInstanceBody(scope);
-    if (!body)
-        return false;
-
-    return body->isUninstantiated;
-}
-
 const NameSyntax* splitScopedName(const ScopedNameSyntax& syntax,
                                   SmallVector<NamePlusLoc>& nameParts, int& colonParts) {
     // Split the name into easier to manage chunks. The parser will always produce a
@@ -583,9 +564,10 @@ bool resolveColonNames(SmallVectorSized<NamePlusLoc, 8>& nameParts, int colonPar
     if (!symbol || !isClassType(*symbol)) {
         symbol = context.getCompilation().getPackage(name.text());
         if (!symbol) {
-            if (!isUninstantiated(context.scope))
+            if (!context.scope.isUninstantiated()) {
                 result.addDiag(context.scope, diag::UnknownClassOrPackage, name.range())
                     << name.text();
+            }
             return false;
         }
     }
@@ -1390,7 +1372,7 @@ void Lookup::qualified(const ScopedNameSyntax& syntax, const BindContext& contex
             break;
         case SyntaxKind::UnitScope:
             // Ignore hierarchical lookups that occur inside uninstantiated modules.
-            if (isUninstantiated(context.scope))
+            if (scope.isUninstantiated())
                 return;
 
             result.found = getCompilationUnit(scope.asSymbol());
@@ -1406,7 +1388,7 @@ void Lookup::qualified(const ScopedNameSyntax& syntax, const BindContext& contex
             }
 
             // Ignore hierarchical lookups that occur inside uninstantiated modules.
-            if (isUninstantiated(scope))
+            if (scope.isUninstantiated())
                 return;
 
             result.found = &compilation.getRoot();
@@ -1488,7 +1470,7 @@ void Lookup::qualified(const ScopedNameSyntax& syntax, const BindContext& contex
     if (result.found) {
         result.isUpwardName = true;
         if (flags.has(LookupFlags::RegisterUpwardNames)) {
-            auto body = getInstanceBody(scope);
+            auto body = scope.getContainingInstance();
             if (body)
                 compilation.noteUpwardNames(*body);
         }
@@ -1499,16 +1481,23 @@ void Lookup::qualified(const ScopedNameSyntax& syntax, const BindContext& contex
     // downward lookup (if any), so it's fine to just return it as is. If we never found any
     // symbol originally, issue an appropriate error for that.
     result.copyFrom(originalResult);
-    if (!result.found && !result.hasError() && !isUninstantiated(scope))
-        reportUndeclared(scope, name, first.range(), flags, true, result);
+    if (!result.found && !result.hasError()) {
+        reportUndeclared(scope, name, first.range(),
+                         flags | LookupFlags::NoUndeclaredErrorIfUninstantiated, true, result);
+    }
 }
 
 void Lookup::reportUndeclared(const Scope& initialScope, string_view name, SourceRange range,
                               bitmask<LookupFlags> flags, bool isHierarchical,
                               LookupResult& result) {
     // If the user doesn't want an error, don't give him one.
-    if ((flags & LookupFlags::NoUndeclaredError) != 0)
+    if (flags.has(LookupFlags::NoUndeclaredError))
         return;
+
+    if (flags.has(LookupFlags::NoUndeclaredErrorIfUninstantiated) &&
+        initialScope.isUninstantiated()) {
+        return;
+    }
 
     // If we observed a wildcard import we couldn't resolve, we shouldn't report an
     // error for undeclared identifier because maybe it's supposed to come from that package.

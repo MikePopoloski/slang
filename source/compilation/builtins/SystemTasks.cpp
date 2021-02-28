@@ -270,7 +270,8 @@ public:
         if (args.size() > 0) {
             auto& sym = *args[0]->as<HierarchicalReferenceExpression>().symbol;
             if (sym.kind != SymbolKind::Instance || !sym.as<InstanceSymbol>().isModule()) {
-                context.addDiag(diag::ExpectedModuleName, args[0]->sourceRange);
+                if (!context.scope.isUninstantiated())
+                    context.addDiag(diag::ExpectedModuleName, args[0]->sourceRange);
                 return comp.getErrorType();
             }
         }
@@ -299,7 +300,8 @@ public:
                 auto& sym = *ref.as<HierarchicalReferenceExpression>().symbol;
                 if (sym.kind != SymbolKind::Variable &&
                     (sym.kind != SymbolKind::Instance || !sym.as<InstanceSymbol>().isModule())) {
-                    context.addDiag(diag::ExpectedModOrVarName, ref.sourceRange);
+                    if (!context.scope.isUninstantiated())
+                        context.addDiag(diag::ExpectedModOrVarName, ref.sourceRange);
                     return *comp.emplace<InvalidExpression>(&ref, comp.getErrorType());
                 }
             }
@@ -363,7 +365,8 @@ public:
                     }
                 }
                 else if (sym.kind != SymbolKind::Instance || !sym.as<InstanceSymbol>().isModule()) {
-                    context.addDiag(diag::ExpectedModuleName, args[i]->sourceRange);
+                    if (!context.scope.isUninstantiated())
+                        context.addDiag(diag::ExpectedModuleName, args[i]->sourceRange);
                     return comp.getErrorType();
                 }
             }
@@ -434,7 +437,8 @@ public:
             else {
                 if (args[i]->kind != ExpressionKind::HierarchicalReference ||
                     !args[i]->as<HierarchicalReferenceExpression>().symbol->isScope()) {
-                    context.addDiag(diag::ExpectedScopeOrAssert, args[i]->sourceRange);
+                    if (!context.scope.isUninstantiated())
+                        context.addDiag(diag::ExpectedScopeOrAssert, args[i]->sourceRange);
                     return comp.getErrorType();
                 }
             }
@@ -510,7 +514,8 @@ public:
             if (ref.kind == ExpressionKind::HierarchicalReference) {
                 auto& sym = *ref.as<HierarchicalReferenceExpression>().symbol;
                 if (sym.kind != SymbolKind::Instance || !sym.as<InstanceSymbol>().isModule()) {
-                    context.addDiag(diag::ExpectedModuleInstance, ref.sourceRange);
+                    if (!context.scope.isUninstantiated())
+                        context.addDiag(diag::ExpectedModuleInstance, ref.sourceRange);
                     return *comp.emplace<InvalidExpression>(&ref, comp.getErrorType());
                 }
             }

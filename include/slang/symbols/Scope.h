@@ -20,6 +20,7 @@ namespace slang {
 class BindContext;
 class Compilation;
 class ForwardingTypedefSymbol;
+class InstanceBodySymbol;
 class NetType;
 class WildcardImportSymbol;
 struct AttributeInstanceSyntax;
@@ -59,6 +60,14 @@ public:
     /// Returns true if this scope represents a procedural context; that is,
     /// a procedural block, or a task/function scope.
     bool isProceduralContext() const;
+
+    /// Gets the instance body that contains this scope, if applicable.
+    /// Otherwise returns nullptr.
+    const InstanceBodySymbol* getContainingInstance() const;
+
+    /// Returns true if this scope is in an uninstantiated context, like if
+    /// in a module that is not used in the design.
+    bool isUninstantiated() const;
 
     Diagnostic& addDiag(DiagCode code, SourceLocation location) const;
     Diagnostic& addDiag(DiagCode code, SourceRange sourceRange) const;

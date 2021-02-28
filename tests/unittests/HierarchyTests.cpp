@@ -1031,10 +1031,11 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 3);
+    REQUIRE(diags.size() == 4);
     CHECK(diags[0].code == diag::UnusedDefinition);
-    CHECK(diags[1].code == diag::InvalidTopModule);
+    CHECK(diags[1].code == diag::UnusedDefinition);
     CHECK(diags[2].code == diag::InvalidTopModule);
+    CHECK(diags[3].code == diag::InvalidTopModule);
 }
 
 TEST_CASE("No top warning") {

@@ -49,16 +49,24 @@ enum class LookupFlags {
     /// cannot be found.
     NoUndeclaredError = 1 << 4,
 
+    /// Don't report an error if the lookup is for a simple identifier that
+    /// cannot be found *and* the context in which we are searching is an
+    /// uninstantiated module.
+    NoUndeclaredErrorIfUninstantiated = 1 << 5,
+
     /// The lookup is for a typedef target type, which has a special exemption
     /// to allow scoped access to incomplete forward class types.
-    TypedefTarget = 1 << 5,
+    TypedefTarget = 1 << 6,
 
     /// The lookup should not continue looking into parent scopes if the name
     /// is not found in the initial search scope.
-    NoParentScope = 1 << 6,
+    NoParentScope = 1 << 7,
 
     /// The presence of upward name paths should be registered with the compilation.
-    RegisterUpwardNames = 1 << 7
+    RegisterUpwardNames = 1 << 8,
+
+    /// Treat this lookup as hierarchical even if it's a simple name.
+    ForceHierarchical = AllowDeclaredAfter | RegisterUpwardNames | NoUndeclaredErrorIfUninstantiated
 };
 BITMASK(LookupFlags, RegisterUpwardNames);
 

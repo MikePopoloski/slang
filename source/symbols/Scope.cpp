@@ -121,6 +121,25 @@ bool Scope::isProceduralContext() const {
     }
 }
 
+const InstanceBodySymbol* Scope::getContainingInstance() const {
+    auto currScope = this;
+    while (currScope && currScope->asSymbol().kind != SymbolKind::InstanceBody)
+        currScope = currScope->asSymbol().getParentScope();
+
+    if (currScope)
+        return &currScope->asSymbol().as<InstanceBodySymbol>();
+
+    return nullptr;
+}
+
+bool Scope::isUninstantiated() const {
+    auto inst = getContainingInstance();
+    if (!inst)
+        return false;
+
+    return inst->isUninstantiated;
+}
+
 Diagnostic& Scope::addDiag(DiagCode code, SourceLocation location) const {
     return compilation.addDiag(Diagnostic(*thisSym, code, location));
 }
