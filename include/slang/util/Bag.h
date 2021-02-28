@@ -21,6 +21,13 @@ namespace slang {
 /// to have cross dependencies between them.
 class Bag {
 public:
+    Bag() = default;
+
+    template<typename... T>
+    Bag(T&&... items) {
+        (set(std::forward<decltype(items)>(items)), ...);
+    }
+
     /// Adds or overwrites an existing element of type T in the bag
     /// (making a copy in the process).
     template<typename T>

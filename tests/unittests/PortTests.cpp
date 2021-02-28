@@ -647,3 +647,40 @@ endmodule
     CHECK(diags[1].code == diag::InvalidModportAccess);
     CHECK(diags[2].code == diag::ModportConnMismatch);
 }
+
+TEST_CASE("Inconsistent port width regression") {
+    auto tree = SyntaxTree::fromText(R"(
+module counter(out, clk, reset);
+
+  parameter WIDTH = 8;
+
+  output [WIDTH-1 : 0] out;
+  input            clk, reset;
+
+  reg [WIDTH-1 : 0]   out;
+  wire         clk, reset;
+
+(* ivl_synthesis_on *)
+  always @(posedge clk)
+    out <= out + 1;
+
+  always @(posedge reset)
+    assign out = 0;
+
+  always @(negedge reset)
+    deassign out;
+(* ivl_synthesis_off *)
+
+initial $display("PASSED");
+
+endmodule // counter
+)");
+
+    CompilationOptions options;
+    options.lintMode = true;
+    tree->isLibrary = true;
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}

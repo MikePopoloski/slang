@@ -321,7 +321,7 @@ void DeclaredType::mergePortTypes(
                 it++;
             }
 
-            if (it != dims.end()) {
+            if (it != dims.end() && !destType->isError()) {
                 errorDims(**it);
                 return;
             }
