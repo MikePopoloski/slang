@@ -342,9 +342,20 @@ void DefParamSymbol::resolve() const {
         target = nullptr;
     }
 
-    if (!target) {
+    auto makeInvalid = [&] {
         initializer = comp.emplace<InvalidExpression>(nullptr, comp.getErrorType());
         initializer->constant = &ConstantValue::Invalid;
+    };
+
+    if (!target) {
+        makeInvalid();
+        return;
+    }
+
+    auto& param = target->as<ParameterSymbol>();
+    if (param.isLocalParam()) {
+        context.addDiag(diag::DefParamLocal, assignment.name->sourceRange()) << param.name;
+        makeInvalid();
         return;
     }
 
@@ -352,7 +363,7 @@ void DefParamSymbol::resolve() const {
     // correctly bind a value for it.
     auto& expr = *assignment.setter->expr;
     auto equalsLoc = assignment.setter->equals.location();
-    auto declType = target->getDeclaredType();
+    auto declType = param.getDeclaredType();
     auto typeSyntax = declType->getTypeSyntax();
 
     if (typeSyntax && typeSyntax->kind == SyntaxKind::ImplicitType)

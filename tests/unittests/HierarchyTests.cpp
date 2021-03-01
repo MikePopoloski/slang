@@ -1268,3 +1268,27 @@ endmodule
     CHECK(param("top.m1.q.n1.bar.n2.foo") == 99);
     CHECK(param("top.m1.q.n1.bar.n2.bar.n2.foo") == 6);
 }
+
+TEST_CASE("defparam error cases") {
+    auto tree = SyntaxTree::fromText(R"(
+module top;
+    m m1();
+endmodule
+
+module m;
+    parameter a = 6;
+    defparam q.foo = 1;
+    
+    if (a == 6) begin : q
+        parameter foo = 0;
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::DefParamLocal);
+}
