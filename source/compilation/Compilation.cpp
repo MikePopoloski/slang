@@ -1188,9 +1188,24 @@ void Compilation::resolveDefParams(size_t) {
             allSame = true;
             ASSERT(v.found.size() == overrides.size());
             for (size_t j = 0; j < v.found.size(); j++) {
-                // TODO: check same defparam target
+                // Check that the defparam resolved to the same target we saw previously.
+                // The spec declares it to be an error if a defparam target changes based
+                // on elaboration of other defparam values.
+                std::string path;
+                auto target = v.found[j]->getTarget();
+                if (target)
+                    target->getHierarchicalPath(path);
 
-                if (overrides[j].second != v.found[j]->getValue()) {
+                auto& [prevTarget, prevVal] = overrides[j];
+                if (!prevTarget.empty() && !path.empty() && prevTarget != path) {
+                    auto& diag = root->addDiag(diag::DefParamTargetChange,
+                                               v.found[j]->getSyntax()->sourceRange());
+                    diag << prevTarget;
+                    diag << path;
+                    return;
+                }
+
+                if (prevVal != v.found[j]->getValue()) {
                     allSame = false;
                     break;
                 }

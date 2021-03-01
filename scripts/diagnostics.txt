@@ -634,6 +634,7 @@ error DPIExportImportedFunc "cannot export an imported DPI subroutine"
 error InvalidDPICIdentifier "'{}' is not a valid C identifier for DPI subroutine"
 error DPISignatureMismatch "more than one DPI subroutine with C identifier '{}' declared with mismatching type signatures"
 error DPIExportDuplicateCId "more than one DPI export with the same C identifier '{}' in the same scope"
+error DefParamTargetChange "defparam target resolves differently post-elaboration; see '{}' vs '{}'"
 warning unused-def UnusedDefinition "{} definition is unused"
 warning no-top NoTopModules "no top-level modules found in design"
 
