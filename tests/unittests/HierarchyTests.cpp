@@ -1282,6 +1282,11 @@ module m;
     if (a == 6) begin : q
         parameter foo = 0;
     end
+
+    parameter b = 3;
+    parameter c = 4;
+    defparam b = c;
+    defparam c = b;
 endmodule
 )");
 
@@ -1289,8 +1294,9 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 1);
+    REQUIRE(diags.size() == 2);
     CHECK(diags[0].code == diag::DefParamLocal);
+    CHECK(diags[1].code == diag::DefParamCycle);
 }
 
 TEST_CASE("defparam conflicting resolution") {

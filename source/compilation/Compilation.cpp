@@ -1196,10 +1196,15 @@ void Compilation::resolveDefParams(size_t) {
                 if (target)
                     target->getHierarchicalPath(path);
 
+                auto getRange = [&] {
+                    auto syntax = v.found[j]->getSyntax();
+                    ASSERT(syntax);
+                    return syntax->sourceRange();
+                };
+
                 auto& [prevTarget, prevVal] = overrides[j];
                 if (!prevTarget.empty() && !path.empty() && prevTarget != path) {
-                    auto& diag = root->addDiag(diag::DefParamTargetChange,
-                                               v.found[j]->getSyntax()->sourceRange());
+                    auto& diag = root->addDiag(diag::DefParamTargetChange, getRange());
                     diag << prevTarget;
                     diag << path;
                     return;
@@ -1207,6 +1212,8 @@ void Compilation::resolveDefParams(size_t) {
 
                 if (prevVal != v.found[j]->getValue()) {
                     allSame = false;
+                    if (i == options.maxDefParamSteps - 1)
+                        root->addDiag(diag::DefParamCycle, getRange());
                     break;
                 }
             }
