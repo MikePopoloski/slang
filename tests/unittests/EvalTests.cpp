@@ -2145,3 +2145,14 @@ TEST_CASE("Queue max bound limitation") {
 
     NO_SESSION_ERRORS;
 }
+
+TEST_CASE("Assignment type propagation regression") {
+    ScriptSession session;
+    session.eval("logic [7:0] foo;");
+    session.eval("logic signed [5:0] a = -1;");
+    session.eval("logic signed [4:0] b = -2;");
+
+    CHECK(session.eval("foo = a + b").integer() == 253);
+
+    NO_SESSION_ERRORS;
+}

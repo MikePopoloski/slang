@@ -289,7 +289,10 @@ Expression& Expression::convertAssignment(const BindContext& context, const Type
             return badExpr(compilation, &expr);
         }
 
-        rt = binaryOperatorType(compilation, &type, rt, false);
+        // The "signednessFromRt" flag is important here; only the width of the lhs is
+        // propagated down to operands, not the sign flag. Once the expression is appropriately
+        // sized, the makeImplicit call down below will convert the sign for us.
+        rt = binaryOperatorType(compilation, &type, rt, false, /* signednessFromRt */ true);
         bool expanding = type.isEquivalent(*rt);
         if (expanding)
             rt = &type;

@@ -95,7 +95,7 @@ bool isShortCircuitOp(BinaryOperator op) {
 namespace slang {
 
 const Type* Expression::binaryOperatorType(Compilation& compilation, const Type* lt, const Type* rt,
-                                           bool forceFourState) {
+                                           bool forceFourState, bool signednessFromRt) {
     if (!lt->isNumeric() || !rt->isNumeric())
         return &compilation.getErrorType();
 
@@ -128,8 +128,11 @@ const Type* Expression::binaryOperatorType(Compilation& compilation, const Type*
         bitmask<IntegralFlags> rf = rt->getIntegralFlags();
 
         bitmask<IntegralFlags> flags;
-        if ((lf & IntegralFlags::Signed) && (rf & IntegralFlags::Signed))
-            flags |= IntegralFlags::Signed;
+        if (rf & IntegralFlags::Signed) {
+            if ((lf & IntegralFlags::Signed) || signednessFromRt)
+                flags |= IntegralFlags::Signed;
+        }
+
         if (forceFourState || (lf & IntegralFlags::FourState) || (rf & IntegralFlags::FourState))
             flags |= IntegralFlags::FourState;
         if ((lf & IntegralFlags::Reg) && (rf & IntegralFlags::Reg))

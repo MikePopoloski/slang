@@ -281,7 +281,7 @@ protected:
     static BinaryOperator getBinaryOperator(SyntaxKind kind);
 
     static const Type* binaryOperatorType(Compilation& compilation, const Type* lt, const Type* rt,
-                                          bool forceFourState);
+                                          bool forceFourState, bool signednessFromRt = false);
 
     static ConstantValue evalBinaryOperator(BinaryOperator op, const ConstantValue& cvl,
                                             const ConstantValue& cvr);
