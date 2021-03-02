@@ -399,13 +399,6 @@ void Scope::addMembers(const SyntaxNode& syntax) {
                 addMember(*defparam);
             break;
         }
-        case SyntaxKind::ConcurrentAssertionMember:
-        case SyntaxKind::ImmediateAssertionMember:
-        case SyntaxKind::SpecifyBlock:
-            // TODO: these aren't supported yet but we can compile everything else successfully
-            // without them so warn instead of erroring.
-            addDiag(diag::WarnNotYetSupported, syntax.sourceRange());
-            break;
         case SyntaxKind::SpecparamDeclaration: {
             SmallVectorSized<const SpecparamSymbol*, 8> params;
             SpecparamSymbol::fromSyntax(*this, syntax.as<SpecparamDeclarationSyntax>(), params);
@@ -413,6 +406,16 @@ void Scope::addMembers(const SyntaxNode& syntax) {
                 addMember(*param);
             break;
         }
+        case SyntaxKind::UdpDeclaration:
+            addMember(PrimitiveSymbol::fromSyntax(*this, syntax.as<UdpDeclarationSyntax>()));
+            break;
+        case SyntaxKind::ConcurrentAssertionMember:
+        case SyntaxKind::ImmediateAssertionMember:
+        case SyntaxKind::SpecifyBlock:
+            // TODO: these aren't supported yet but we can compile everything else successfully
+            // without them so warn instead of erroring.
+            addDiag(diag::WarnNotYetSupported, syntax.sourceRange());
+            break;
         default:
             addDiag(diag::NotYetSupported, syntax.sourceRange());
             break;

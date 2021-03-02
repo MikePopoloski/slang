@@ -90,7 +90,8 @@ enum class RandMode;
     x(Iterator) \
     x(ConstraintBlock) \
     x(DefParam) \
-    x(Specparam)
+    x(Specparam) \
+    x(Primitive)
 // clang-format on
 
 ENUM(SymbolKind, SYMBOLKIND)

@@ -1448,3 +1448,28 @@ endmodule
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::SpecparamInConstant);
 }
+
+TEST_CASE("user-defined primitives") {
+    auto tree = SyntaxTree::fromText(R"(
+primitive srff (q, s, r);
+    output q; reg q;
+    input s, r;
+    initial q = 1'b1;
+    table
+        // s r q q+
+        1 0 : ? : 1 ;
+        f 0 : 1 : - ;
+        0 r : ? : 0 ;
+        0 f : 0 : - ;
+        1 1 : ? : 0 ;
+    endtable
+endprimitive : srff
+
+module m;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}

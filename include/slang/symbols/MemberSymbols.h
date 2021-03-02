@@ -235,4 +235,18 @@ private:
     mutable optional<string_view> message;
 };
 
+struct UdpDeclarationSyntax;
+
+class PrimitiveSymbol : public Symbol, public Scope {
+public:
+    PrimitiveSymbol(Compilation& compilation, string_view name, SourceLocation loc) :
+        Symbol(SymbolKind::Primitive, name, loc), Scope(compilation, this) {}
+
+    static PrimitiveSymbol& fromSyntax(const Scope& scope, const UdpDeclarationSyntax& syntax);
+
+    void serializeTo(ASTSerializer& serializer) const;
+
+    static bool isKind(SymbolKind kind) { return kind == SymbolKind::Primitive; }
+};
+
 } // namespace slang

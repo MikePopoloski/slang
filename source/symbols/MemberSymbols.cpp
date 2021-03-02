@@ -615,4 +615,22 @@ void ElabSystemTaskSymbol::serializeTo(ASTSerializer& serializer) const {
     serializer.write("message", getMessage());
 }
 
+PrimitiveSymbol& PrimitiveSymbol::fromSyntax(const Scope& scope,
+                                             const UdpDeclarationSyntax& syntax) {
+    auto& comp = scope.getCompilation();
+    auto prim =
+        comp.emplace<PrimitiveSymbol>(comp, syntax.name.valueText(), syntax.name.location());
+    prim->setAttributes(scope, syntax.attributes);
+    prim->setSyntax(syntax);
+
+    // TODO: ports
+    // TODO: body
+
+    return *prim;
+}
+
+void PrimitiveSymbol::serializeTo(ASTSerializer&) const {
+    // TODO:
+}
+
 } // namespace slang
