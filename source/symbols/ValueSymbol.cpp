@@ -28,6 +28,7 @@ bool ValueSymbol::isKind(SymbolKind kind) {
         case SymbolKind::EnumValue:
         case SymbolKind::Parameter:
         case SymbolKind::Port:
+        case SymbolKind::PrimitivePort:
         case SymbolKind::ModportPort:
         case SymbolKind::ConstraintBlock:
         case SymbolKind::Specparam:

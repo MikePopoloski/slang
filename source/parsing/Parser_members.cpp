@@ -2184,7 +2184,7 @@ UdpPortDeclSyntax& Parser::parseUdpPortDecl() {
         auto name = expect(TokenKind::Identifier);
 
         EqualsValueClauseSyntax* init = nullptr;
-        if (peek(TokenKind::Equals)) {
+        if (output && reg && peek(TokenKind::Equals)) {
             auto equals = consume();
             init = &factory.equalsValueClause(equals, parseExpression());
         }
@@ -2199,7 +2199,7 @@ UdpPortDeclSyntax& Parser::parseUdpPortDecl() {
         auto name = expect(TokenKind::Identifier);
         ports.append(&factory.identifierName(name));
 
-        if (!peek(TokenKind::Comma))
+        if (!peek(TokenKind::Comma) || peek(1).kind != TokenKind::Identifier)
             break;
 
         ports.append(consume());

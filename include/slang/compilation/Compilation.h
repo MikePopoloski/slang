@@ -29,6 +29,7 @@ class InstanceBodySymbol;
 class InstanceCache;
 class InstanceSymbol;
 class PackageSymbol;
+class PrimitiveSymbol;
 class RootSymbol;
 class Statement;
 class SubroutineSymbol;
@@ -42,6 +43,7 @@ struct DPIExportSyntax;
 struct FunctionDeclarationSyntax;
 struct ModuleDeclarationSyntax;
 struct ScopedNameSyntax;
+struct UdpDeclarationSyntax;
 struct VariableDimensionSyntax;
 
 enum class IntegralFlags : uint8_t;
@@ -194,6 +196,12 @@ public:
 
     /// Creates a new package in the given scope based on the given syntax.
     const PackageSymbol& createPackage(const Scope& scope, const ModuleDeclarationSyntax& syntax);
+
+    /// Gets the primitive with the given name, or null if there is no such primitive.
+    const PrimitiveSymbol* getPrimitive(string_view name) const;
+
+    /// Creates a new primitive in the given scope based on the given syntax.
+    const PrimitiveSymbol& createPrimitive(const Scope& scope, const UdpDeclarationSyntax& syntax);
 
     /// Registers a system subroutine handler, which can be accessed by compiled code.
     void addSystemSubroutine(std::unique_ptr<SystemSubroutine> subroutine);
@@ -550,6 +558,9 @@ private:
 
     // A list of interface definitions used in interface ports.
     flat_hash_set<const Definition*> usedIfacePorts;
+
+    // The name map for all primitive definitions.
+    flat_hash_map<string_view, const PrimitiveSymbol*> primitiveMap;
 
     // A map from definitions to bind directives that will create
     // instances within those definitions.

@@ -504,6 +504,27 @@ const PackageSymbol& Compilation::createPackage(const Scope& scope,
     return package;
 }
 
+const PrimitiveSymbol* Compilation::getPrimitive(string_view lookupName) const {
+    if (auto it = primitiveMap.find(lookupName); it != primitiveMap.end())
+        return it->second;
+    return nullptr;
+}
+
+const PrimitiveSymbol& Compilation::createPrimitive(const Scope& scope,
+                                                    const UdpDeclarationSyntax& syntax) {
+    auto& prim = PrimitiveSymbol::fromSyntax(scope, syntax);
+    if (!prim.name.empty()) {
+        auto [it, inserted] = primitiveMap.emplace(prim.name, &prim);
+        if (!inserted) {
+            auto& diag = scope.addDiag(diag::Redefinition, prim.location);
+            diag << prim.name;
+            diag.addNote(diag::NotePreviousDefinition, it->second->location);
+        }
+    }
+
+    return prim;
+}
+
 void Compilation::addSystemSubroutine(std::unique_ptr<SystemSubroutine> subroutine) {
     subroutineMap.emplace(subroutine->name, std::move(subroutine));
 }

@@ -615,6 +615,18 @@ void ElabSystemTaskSymbol::serializeTo(ASTSerializer& serializer) const {
     serializer.write("message", getMessage());
 }
 
+PrimitivePortSymbol::PrimitivePortSymbol(Compilation& compilation, string_view name,
+                                         SourceLocation loc, PrimitivePortDirection direction) :
+    ValueSymbol(SymbolKind::PrimitivePort, name, loc),
+    direction(direction) {
+    // All primitive ports are single bit logic types.
+    setType(compilation.getLogicType());
+}
+
+void PrimitivePortSymbol::serializeTo(ASTSerializer& serializer) const {
+    serializer.write("direction", toString(direction));
+}
+
 PrimitiveSymbol& PrimitiveSymbol::fromSyntax(const Scope& scope,
                                              const UdpDeclarationSyntax& syntax) {
     auto& comp = scope.getCompilation();
@@ -623,9 +635,226 @@ PrimitiveSymbol& PrimitiveSymbol::fromSyntax(const Scope& scope,
     prim->setAttributes(scope, syntax.attributes);
     prim->setSyntax(syntax);
 
-    // TODO: ports
+    SmallVectorSized<const PrimitivePortSymbol*, 4> ports;
+    if (syntax.portList->kind == SyntaxKind::AnsiUdpPortList) {
+        for (auto decl : syntax.portList->as<AnsiUdpPortListSyntax>().ports) {
+            if (decl->kind == SyntaxKind::UdpOutputPortDecl) {
+                auto& outputDecl = decl->as<UdpOutputPortDeclSyntax>();
+                PrimitivePortDirection dir = PrimitivePortDirection::Out;
+                if (outputDecl.reg)
+                    dir = PrimitivePortDirection::OutReg;
+
+                auto port = comp.emplace<PrimitivePortSymbol>(comp, outputDecl.name.valueText(),
+                                                              outputDecl.name.location(), dir);
+                port->setSyntax(*decl);
+                port->setAttributes(scope, decl->attributes);
+                ports.append(port);
+                prim->addMember(*port);
+            }
+            else {
+                auto& inputDecl = decl->as<UdpInputPortDeclSyntax>();
+                for (auto nameSyntax : inputDecl.names) {
+                    auto name = nameSyntax->identifier;
+                    auto port = comp.emplace<PrimitivePortSymbol>(
+                        comp, name.valueText(), name.location(), PrimitivePortDirection::In);
+
+                    port->setSyntax(*nameSyntax);
+                    port->setAttributes(scope, decl->attributes);
+                    ports.append(port);
+                    prim->addMember(*port);
+                }
+            }
+        }
+
+        if (!syntax.body->portDecls.empty())
+            scope.addDiag(diag::PrimitiveAnsiMix, syntax.body->portDecls[0]->sourceRange());
+    }
+    else if (syntax.portList->kind == SyntaxKind::NonAnsiUdpPortList) {
+        // In the non-ansi case the port list only gives the ordering, we need to
+        // look through the body decls to get the rest of the port info.
+        SmallMap<string_view, PrimitivePortSymbol*, 4> portMap;
+        for (auto nameSyntax : syntax.portList->as<NonAnsiUdpPortListSyntax>().ports) {
+            auto name = nameSyntax->identifier;
+            auto port = comp.emplace<PrimitivePortSymbol>(comp, name.valueText(), name.location(),
+                                                          PrimitivePortDirection::In);
+            ports.append(port);
+            prim->addMember(*port);
+            if (!name.valueText().empty())
+                portMap.emplace(name.valueText(), port);
+        }
+
+        auto checkDup = [&](auto port, auto nameToken) {
+            // If this port already has a syntax node set it's a duplicate declaration.
+            if (auto prevSyntax = port->getSyntax()) {
+                auto& diag = scope.addDiag(diag::PrimitivePortDup, nameToken.range());
+                diag << nameToken.valueText();
+                diag.addNote(diag::NotePreviousDefinition, port->location);
+            }
+        };
+
+        const UdpOutputPortDeclSyntax* regSpecifier = nullptr;
+        for (auto decl : syntax.body->portDecls) {
+            if (decl->kind == SyntaxKind::UdpOutputPortDecl) {
+                auto& outputDecl = decl->as<UdpOutputPortDeclSyntax>();
+                if (auto it = portMap.find(outputDecl.name.valueText()); it != portMap.end()) {
+                    // Standalone "reg" specifiers should be saved and processed at the
+                    // end once we've handled all of the regular declarations.
+                    if (outputDecl.reg && !outputDecl.keyword) {
+                        if (regSpecifier) {
+                            auto& diag =
+                                scope.addDiag(diag::PrimitiveRegDup, outputDecl.reg.range());
+                            diag.addNote(diag::NotePreviousDefinition,
+                                         regSpecifier->reg.location());
+                        }
+                        regSpecifier = &outputDecl;
+                        continue;
+                    }
+
+                    auto port = it->second;
+                    checkDup(port, outputDecl.name);
+
+                    port->direction = PrimitivePortDirection::Out;
+                    if (outputDecl.reg)
+                        port->direction = PrimitivePortDirection::OutReg;
+
+                    port->location = outputDecl.name.location();
+                    port->setSyntax(outputDecl);
+                    port->setAttributes(scope, decl->attributes);
+                }
+                else {
+                    auto& diag = scope.addDiag(diag::PrimitivePortUnknown, outputDecl.name.range());
+                    diag << outputDecl.name.valueText();
+                }
+            }
+            else {
+                auto& inputDecl = decl->as<UdpInputPortDeclSyntax>();
+                for (auto nameSyntax : inputDecl.names) {
+                    auto name = nameSyntax->identifier;
+                    if (auto it = portMap.find(name.valueText()); it != portMap.end()) {
+                        auto port = it->second;
+                        checkDup(port, name);
+
+                        // Direction is already set to In here, so just update
+                        // our syntax, location, etc.
+                        port->location = name.location();
+                        port->setSyntax(*nameSyntax);
+                        port->setAttributes(scope, decl->attributes);
+                    }
+                    else {
+                        auto& diag = scope.addDiag(diag::PrimitivePortUnknown, name.range());
+                        diag << name.valueText();
+                    }
+                }
+            }
+        }
+
+        if (regSpecifier) {
+            auto name = regSpecifier->name;
+            auto it = portMap.find(name.valueText());
+            ASSERT(it != portMap.end());
+
+            auto port = it->second;
+            if (port->getSyntax()) {
+                if (port->direction == PrimitivePortDirection::OutReg) {
+                    checkDup(port, name);
+                }
+                else if (port->direction == PrimitivePortDirection::In) {
+                    auto& diag = scope.addDiag(diag::PrimitiveRegInput, name.range());
+                    diag << port->name;
+                }
+                else {
+                    port->direction = PrimitivePortDirection::OutReg;
+                }
+            }
+        }
+
+        for (auto port : ports) {
+            if (!port->getSyntax()) {
+                auto& diag = scope.addDiag(diag::PrimitivePortMissing, port->location);
+                diag << port->name;
+            }
+        }
+    }
+    else if (syntax.portList->kind == SyntaxKind::WildcardUdpPortList) {
+        // TODO:
+    }
+    else {
+        THROW_UNREACHABLE;
+    }
+
+    if (ports.size() < 2)
+        scope.addDiag(diag::PrimitiveTwoPorts, prim->location);
+    else if (ports[0]->direction == PrimitivePortDirection::In)
+        scope.addDiag(diag::PrimitiveOutputFirst, ports[0]->location);
+    else {
+        const ExpressionSyntax* initExpr = nullptr;
+        if (ports[0]->direction == PrimitivePortDirection::OutReg) {
+            prim->isSequential = true;
+
+            // If the first port is an 'output reg' check if it specifies
+            // the initial value inline.
+            auto portSyntax = ports[0]->getSyntax();
+            if (portSyntax && portSyntax->kind == SyntaxKind::UdpOutputPortDecl) {
+                auto& outSyntax = portSyntax->as<UdpOutputPortDeclSyntax>();
+                if (outSyntax.initializer)
+                    initExpr = outSyntax.initializer->expr;
+            }
+        }
+
+        // Make sure we have only one output port.
+        for (size_t i = 1; i < ports.size(); i++) {
+            if (ports[i]->direction != PrimitivePortDirection::In) {
+                scope.addDiag(diag::PrimitiveDupOutput, ports[i]->location);
+                break;
+            }
+        }
+
+        // If we have an initial statement check it for correctness.
+        if (auto initial = syntax.body->initialStmt) {
+            if (!prim->isSequential)
+                scope.addDiag(diag::PrimitiveInitialInComb, initial->sourceRange());
+            else if (initExpr) {
+                auto& diag = scope.addDiag(diag::PrimitiveDupInitial, initial->sourceRange());
+                diag.addNote(diag::NotePreviousDefinition, initExpr->getFirstToken().location());
+            }
+            else {
+                initExpr = initial->value;
+
+                auto initialName = initial->name.valueText();
+                if (!initialName.empty() && !ports[0]->name.empty() &&
+                    initialName != ports[0]->name) {
+                    auto& diag = scope.addDiag(diag::PrimitiveWrongInitial, initial->name.range());
+                    diag << initialName;
+                    diag.addNote(diag::NoteDeclarationHere, ports[0]->location);
+                }
+            }
+        }
+
+        if (initExpr) {
+            BindContext context(scope, LookupLocation::max);
+            auto& expr = Expression::bind(*initExpr, context, BindFlags::Constant);
+            if (!expr.bad()) {
+                if (expr.kind == ExpressionKind::IntegerLiteral &&
+                    (expr.type->getBitWidth() == 1 || expr.isUnsizedInteger())) {
+                    context.eval(expr);
+                    if (expr.constant) {
+                        auto& val = expr.constant->integer();
+                        if (val == 0 || val == 1 ||
+                            (val.getBitWidth() == 1 && exactlyEqual(val[0], logic_t::x))) {
+                            prim->initVal = expr.constant;
+                        }
+                    }
+                }
+
+                if (!prim->initVal)
+                    scope.addDiag(diag::PrimitiveInitVal, expr.sourceRange);
+            }
+        }
+    }
+
     // TODO: body
 
+    prim->ports = ports.copy(comp);
     return *prim;
 }
 

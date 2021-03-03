@@ -191,6 +191,10 @@ void Scope::addMembers(const SyntaxNode& syntax) {
             addMember(package);
             break;
         }
+        case SyntaxKind::UdpDeclaration:
+            // Primitives exist in their own namespace and are tracked in the Compilation.
+            addMember(compilation.createPrimitive(*this, syntax.as<UdpDeclarationSyntax>()));
+            break;
         case SyntaxKind::PackageImportDeclaration: {
             auto& importDecl = syntax.as<PackageImportDeclarationSyntax>();
             for (auto item : importDecl.items) {
@@ -406,9 +410,6 @@ void Scope::addMembers(const SyntaxNode& syntax) {
                 addMember(*param);
             break;
         }
-        case SyntaxKind::UdpDeclaration:
-            addMember(PrimitiveSymbol::fromSyntax(*this, syntax.as<UdpDeclarationSyntax>()));
-            break;
         case SyntaxKind::ConcurrentAssertionMember:
         case SyntaxKind::ImmediateAssertionMember:
         case SyntaxKind::SpecifyBlock:
@@ -463,6 +464,17 @@ Scope::DeferredMemberData& Scope::getOrAddDeferredData() const {
     return compilation.getOrAddDeferredData(deferredMemberIndex);
 }
 
+static bool canLookupByName(SymbolKind kind) {
+    switch (kind) {
+        case SymbolKind::Port:
+        case SymbolKind::Package:
+        case SymbolKind::Primitive:
+            return false;
+        default:
+            return true;
+    }
+}
+
 void Scope::insertMember(const Symbol* member, const Symbol* at, bool isElaborating) const {
     ASSERT(!member->parentScope);
     ASSERT(!member->nextInScope);
@@ -480,10 +492,9 @@ void Scope::insertMember(const Symbol* member, const Symbol* at, bool isElaborat
     if (!member->nextInScope)
         lastMember = member;
 
-    // Add to the name map if the symbol has a name, unless it's a port.
-    // Per the spec, ports exist in their own namespaces.
-    if (!member->name.empty() && member->kind != SymbolKind::Port &&
-        member->kind != SymbolKind::Package) {
+    // Add to the name map if the symbol has a name and can be looked up
+    // by name in the default namespace.
+    if (!member->name.empty() && canLookupByName(member->kind)) {
         auto pair = nameMap->emplace(member->name, member);
         if (!pair.second)
             handleNameConflict(*member, pair.first->second, isElaborating);

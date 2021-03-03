@@ -1465,6 +1465,10 @@ primitive srff (q, s, r);
     endtable
 endprimitive : srff
 
+primitive p2 (output reg a = 1'bx, input b, input c);
+    table 00:0; endtable
+endprimitive
+
 module m;
 endmodule
 )");
@@ -1472,4 +1476,106 @@ endmodule
     Compilation compilation;
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("UDP errors") {
+    auto tree = SyntaxTree::fromText(R"(
+primitive p1 (input a, b, output c);
+    output b;
+    table 00:0; endtable
+endprimitive
+
+primitive p1 (output a, input b);
+    table 00:0; endtable
+endprimitive
+
+primitive p2 (output a);
+    table 00:0; endtable
+endprimitive
+
+primitive p3 (a, b);
+    input b;
+    output a;
+    output reg a;
+    table 00:0; endtable
+endprimitive
+
+primitive p4 (a, b);
+    input b;
+    output a;
+    reg a;
+    reg a;
+    input c;
+    output d;
+    table 00:0; endtable
+endprimitive
+
+primitive p5 (a, b);
+    reg a;
+    input b;
+    output reg a;
+    table 00:0; endtable
+endprimitive
+
+primitive p6 (a, b, c);
+    input b;
+    output a;
+    reg b;
+    table 00:0; endtable
+endprimitive
+
+primitive p7 (a, b, c);
+    output b;
+    output a;
+    initial a = 1;
+    table 00:0; endtable
+endprimitive
+
+primitive p8 (a, b);
+    output reg a = 1;
+    input b;
+    initial a = 1'bx;
+    table 00:0; endtable
+endprimitive
+
+primitive p9 (a, b);
+    output reg a;
+    input b;
+    initial c = 1'bx;
+    table 00:0; endtable
+endprimitive
+
+primitive p10 (a, b);
+    output reg a;
+    input b;
+    initial a = 3;
+    table 00:0; endtable
+endprimitive
+
+module m;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 17);
+    CHECK(diags[0].code == diag::PrimitiveOutputFirst);
+    CHECK(diags[1].code == diag::PrimitiveAnsiMix);
+    CHECK(diags[2].code == diag::Redefinition);
+    CHECK(diags[3].code == diag::PrimitiveTwoPorts);
+    CHECK(diags[4].code == diag::PrimitivePortDup);
+    CHECK(diags[5].code == diag::PrimitiveRegDup);
+    CHECK(diags[6].code == diag::PrimitivePortUnknown);
+    CHECK(diags[7].code == diag::PrimitivePortUnknown);
+    CHECK(diags[8].code == diag::PrimitivePortDup);
+    CHECK(diags[9].code == diag::PrimitivePortMissing);
+    CHECK(diags[10].code == diag::PrimitiveRegInput);
+    CHECK(diags[11].code == diag::PrimitivePortMissing);
+    CHECK(diags[12].code == diag::PrimitiveDupOutput);
+    CHECK(diags[13].code == diag::PrimitiveInitialInComb);
+    CHECK(diags[14].code == diag::PrimitiveDupInitial);
+    CHECK(diags[15].code == diag::PrimitiveWrongInitial);
+    CHECK(diags[16].code == diag::PrimitiveInitVal);
 }

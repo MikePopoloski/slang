@@ -235,10 +235,26 @@ private:
     mutable optional<string_view> message;
 };
 
+class PrimitivePortSymbol : public ValueSymbol {
+public:
+    PrimitivePortDirection direction;
+
+    PrimitivePortSymbol(Compilation& compilation, string_view name, SourceLocation loc,
+                        PrimitivePortDirection direction);
+
+    void serializeTo(ASTSerializer& serializer) const;
+
+    static bool isKind(SymbolKind kind) { return kind == SymbolKind::PrimitivePort; }
+};
+
 struct UdpDeclarationSyntax;
 
 class PrimitiveSymbol : public Symbol, public Scope {
 public:
+    span<const PrimitivePortSymbol* const> ports;
+    const ConstantValue* initVal = nullptr;
+    bool isSequential = false;
+
     PrimitiveSymbol(Compilation& compilation, string_view name, SourceLocation loc) :
         Symbol(SymbolKind::Primitive, name, loc), Scope(compilation, this) {}
 
