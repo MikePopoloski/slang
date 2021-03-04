@@ -449,6 +449,13 @@ const Definition* Compilation::getDefinition(const ModuleDeclarationSyntax& synt
     return nullptr;
 }
 
+template<typename T, typename U>
+static void reportRedefinition(const Scope& scope, const T& newSym, const U& oldSym) {
+    auto& diag = scope.addDiag(diag::Redefinition, newSym.location);
+    diag << newSym.name;
+    diag.addNote(diag::NotePreviousDefinition, oldSym.location);
+}
+
 const Definition& Compilation::createDefinition(const Scope& scope, LookupLocation location,
                                                 const ModuleDeclarationSyntax& syntax) {
     auto& metadata = definitionMetadata[&syntax];
@@ -464,13 +471,12 @@ const Definition& Compilation::createDefinition(const Scope& scope, LookupLocati
     auto result = it->second.get();
     if (targetScope == root.get()) {
         auto& topDef = topDefinitions[result->name].first;
-        if (topDef) {
-            auto& diag = scope.addDiag(diag::Redefinition, result->location);
-            diag << result->name;
-            diag.addNote(diag::NotePreviousDefinition, topDef->location);
-        }
+        if (topDef)
+            reportRedefinition(scope, *result, *topDef);
         else {
             topDef = result;
+            if (auto primIt = primitiveMap.find(result->name); primIt != primitiveMap.end())
+                reportRedefinition(scope, *result, *primIt->second);
         }
     }
     else {
@@ -519,6 +525,9 @@ const PrimitiveSymbol& Compilation::createPrimitive(const Scope& scope,
             auto& diag = scope.addDiag(diag::Redefinition, prim.location);
             diag << prim.name;
             diag.addNote(diag::NotePreviousDefinition, it->second->location);
+        }
+        else if (auto defIt = topDefinitions.find(prim.name); defIt != topDefinitions.end()) {
+            reportRedefinition(scope, prim, *defIt->second.first);
         }
     }
 

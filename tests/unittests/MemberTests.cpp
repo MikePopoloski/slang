@@ -1552,15 +1552,21 @@ primitive p10 (a, b);
     table 00:0; endtable
 endprimitive
 
+module p10; endmodule
+
 module m;
 endmodule
+
+primitive m(output a, input b);
+    table 00:0; endtable
+endprimitive
 )");
 
     Compilation compilation;
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 17);
+    REQUIRE(diags.size() == 19);
     CHECK(diags[0].code == diag::PrimitiveOutputFirst);
     CHECK(diags[1].code == diag::PrimitiveAnsiMix);
     CHECK(diags[2].code == diag::Redefinition);
@@ -1578,4 +1584,6 @@ endmodule
     CHECK(diags[14].code == diag::PrimitiveDupInitial);
     CHECK(diags[15].code == diag::PrimitiveWrongInitial);
     CHECK(diags[16].code == diag::PrimitiveInitVal);
+    CHECK(diags[17].code == diag::Redefinition);
+    CHECK(diags[18].code == diag::Redefinition);
 }
