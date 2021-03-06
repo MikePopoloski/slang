@@ -125,6 +125,13 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
         symbol.getPortConnections();
     }
 
+    void handle(const PrimitiveInstanceSymbol& symbol) {
+        if (!handleDefault(symbol))
+            return;
+
+        symbol.getPortConnections();
+    }
+
     void handle(const InstanceSymbol& symbol) {
         if (numErrors > errorLimit)
             return;

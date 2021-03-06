@@ -212,6 +212,8 @@ public:
         Symbol(SymbolKind::PrimitiveInstance, name, loc),
         primitiveType(primitiveType) {}
 
+    span<const Expression* const> getPortConnections() const;
+
     static void fromSyntax(const PrimitiveSymbol& primitive,
                            const HierarchyInstantiationSyntax& syntax, LookupLocation location,
                            const Scope& scope, SmallVector<const Symbol*>& results);
@@ -222,6 +224,9 @@ public:
     void serializeTo(ASTSerializer& serializer) const;
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::PrimitiveInstance; }
+
+private:
+    mutable optional<span<const Expression* const>> ports;
 };
 
 class PrimitiveInstanceArraySymbol : public Symbol, public Scope {

@@ -232,6 +232,8 @@ error MixingOrderedAndNamedPorts "mixing ordered and named port connections is n
 error DuplicateWildcardPortConnection "duplicate wildcard port connection"
 error DuplicatePortConnection "duplicate connection for port '{}'"
 error TooManyPortConnections "too many port connections given to instantiation of module '{}' ({} given, expected {})"
+error PrimitivePortCountWrong "wrong number of port connections for '{}' instance ({} given, expected {})"
+error InvalidPrimitivePortConn "only simple expressions are allowed for primitive port connections"
 error PortDoesNotExist "port '{}' does not exist in module '{}'"
 error PortConnDimensionsMismatch "dimensions of connection for port '{}' do not match its declaration"
 error InterfacePortNotConnected "interface port '{}' not connected"

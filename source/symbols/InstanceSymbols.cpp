@@ -817,7 +817,6 @@ PrimitiveInstanceSymbol* createPrimInst(Compilation& compilation, const Scope& s
                                         const PrimitiveSymbol& primitive,
                                         const HierarchicalInstanceSyntax& syntax,
                                         span<const AttributeInstanceSyntax* const> attributes) {
-    // TODO: ports!
     auto [name, loc] = getNameLoc(syntax);
     auto result = compilation.emplace<PrimitiveInstanceSymbol>(name, loc, primitive);
     result->setSyntax(syntax);
@@ -913,6 +912,7 @@ void PrimitiveInstanceSymbol::fromSyntax(const PrimitiveInstantiationSyntax& syn
         bool isUninstantiated =
             currScope && currScope->asSymbol().as<InstanceBodySymbol>().isUninstantiated;
 
+        // TODO: new error UnknownPrimitive
         if (!isUninstantiated)
             scope.addDiag(diag::UnknownModule, syntax.type.range()) << syntax.type.valueText();
 
@@ -925,8 +925,57 @@ void PrimitiveInstanceSymbol::fromSyntax(const PrimitiveInstantiationSyntax& syn
     createPrimitives(*prim, syntax, location, scope, results);
 }
 
+span<const Expression* const> PrimitiveInstanceSymbol::getPortConnections() const {
+    if (!ports) {
+        auto syntax = getSyntax();
+        auto scope = getParentScope();
+        ASSERT(syntax && scope);
+
+        // TODO: support array slicing connections
+        auto& comp = scope->getCompilation();
+        BindContext context(*scope, LookupLocation::after(*this));
+
+        SmallVectorSized<const ExpressionSyntax*, 8> conns;
+        auto& his = syntax->as<HierarchicalInstanceSyntax>();
+        for (auto port : his.connections) {
+            if (port->kind == SyntaxKind::OrderedPortConnection)
+                conns.append(port->as<OrderedPortConnectionSyntax>().expr);
+            else {
+                context.addDiag(diag::InvalidPrimitivePortConn, port->sourceRange());
+                ports.emplace();
+                return *ports;
+            }
+        }
+
+        if (conns.size() != primitiveType.ports.size()) {
+            auto& diag = context.addDiag(diag::PrimitivePortCountWrong, his.openParen.location());
+            diag << primitiveType.name;
+            diag << conns.size() << primitiveType.ports.size();
+            ports.emplace();
+            return *ports;
+        }
+
+        SmallVectorSized<const Expression*, 8> results;
+        for (size_t i = 0; i < conns.size(); i++) {
+            // TODO: support inout
+            auto dir = primitiveType.ports[i]->direction == PrimitivePortDirection::In
+                           ? ArgumentDirection::In
+                           : ArgumentDirection::Out;
+
+            results.append(&Expression::bindArgument(comp.getLogicType(), dir, *conns[i], context));
+        }
+
+        ports = results.copy(scope->getCompilation());
+    }
+    return *ports;
+}
+
 void PrimitiveInstanceSymbol::serializeTo(ASTSerializer& serializer) const {
     serializer.writeLink("primitiveType", primitiveType);
+    serializer.startArray("ports");
+    for (auto expr : getPortConnections())
+        serializer.serialize(*expr);
+    serializer.endArray();
 }
 
 void PrimitiveInstanceArraySymbol::serializeTo(ASTSerializer& serializer) const {

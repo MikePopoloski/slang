@@ -949,9 +949,12 @@ endmodule
 TEST_CASE("Gates") {
     auto tree = SyntaxTree::fromText(R"(
 module m;
-    pullup (supply0, pull1) (1);
-    cmos #3 asdf [3:0][4][5] (1, 2, 3), blah (4, 5), (5, 6);
-    rtranif1 (1), asdf2(2);
+    logic foo;
+    pullup (supply0, pull1) (foo);
+    pmos #3 asdf [3:0][4][5] (foo, 2, 3), blah (foo, 4, 5), (foo, 5, 6);
+    rtranif1 (foo, foo, 1), asdf2(foo, foo, 2);
+
+    logic a, b, c;
     pmos #6 (a, b, c);
 endmodule
 )");
@@ -1470,7 +1473,8 @@ primitive p2 (output reg a = 1'bx, input b, input c);
 endprimitive
 
 module m;
-    srff sf1();
+    logic q;
+    srff sf1(q, 1, 0);
 endmodule
 )");
 
