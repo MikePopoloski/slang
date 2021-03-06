@@ -213,6 +213,7 @@ void Scope::addMembers(const SyntaxNode& syntax) {
             break;
         }
         case SyntaxKind::HierarchyInstantiation:
+        case SyntaxKind::PrimitiveInstantiation:
         case SyntaxKind::AnsiPortList:
         case SyntaxKind::NonAnsiPortList:
         case SyntaxKind::IfGenerate:
@@ -687,8 +688,7 @@ void Scope::elaborate() const {
 
     // Go through deferred instances and elaborate them now. We skip generate blocks in
     // the initial pass because evaluating their conditions may depend on other members
-    // that have yet to be elaborated. This implicitly implements the elaboration algorithm
-    // described in [23.10.4.1].
+    // that have yet to be elaborated.
     bool usedPorts = false;
     auto deferred = deferredData.getMembers();
     for (auto symbol : deferred) {
@@ -700,6 +700,14 @@ void Scope::elaborate() const {
                 InstanceSymbol::fromSyntax(compilation,
                                            member.node.as<HierarchyInstantiationSyntax>(), location,
                                            *this, instances);
+                insertMembers(instances, symbol);
+                break;
+            }
+            case SyntaxKind::PrimitiveInstantiation: {
+                SmallVectorSized<const Symbol*, 8> instances;
+                LookupLocation location = LookupLocation::before(*symbol);
+                PrimitiveInstanceSymbol::fromSyntax(member.node.as<PrimitiveInstantiationSyntax>(),
+                                                    location, *this, instances);
                 insertMembers(instances, symbol);
                 break;
             }

@@ -165,6 +165,8 @@ public:
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::InstanceArray; }
 };
 
+struct PrimitiveInstantiationSyntax;
+
 /// Represents an instance of some unknown module (or interface / program).
 /// This is a placeholder in the AST so that we don't record further errors
 /// after the initial one about the unknown module itself.
@@ -189,6 +191,10 @@ public:
                            LookupLocation location, const Scope& scope,
                            SmallVector<const Symbol*>& results);
 
+    static void fromSyntax(Compilation& compilation, const PrimitiveInstantiationSyntax& syntax,
+                           LookupLocation location, const Scope& scope,
+                           SmallVector<const Symbol*>& results);
+
     void serializeTo(ASTSerializer& serializer) const;
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::UnknownModule; }
@@ -208,6 +214,9 @@ public:
 
     static void fromSyntax(const PrimitiveSymbol& primitive,
                            const HierarchyInstantiationSyntax& syntax, LookupLocation location,
+                           const Scope& scope, SmallVector<const Symbol*>& results);
+
+    static void fromSyntax(const PrimitiveInstantiationSyntax& syntax, LookupLocation location,
                            const Scope& scope, SmallVector<const Symbol*>& results);
 
     void serializeTo(ASTSerializer& serializer) const;

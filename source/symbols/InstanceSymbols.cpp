@@ -726,6 +726,23 @@ void InstanceArraySymbol::serializeTo(ASTSerializer& serializer) const {
     serializer.write("range", range.toString());
 }
 
+template<typename TSyntax>
+static void createUnknownModules(Compilation& compilation, const TSyntax& syntax,
+                                 const BindContext& context, span<const Expression* const> params,
+                                 SmallVector<const Symbol*>& results) {
+    SmallSet<string_view, 8> implicitNetNames;
+    auto& netType = context.scope.getDefaultNetType();
+    for (auto instanceSyntax : syntax.instances) {
+        createImplicitNets(*instanceSyntax, context, netType, implicitNetNames, results);
+
+        auto [name, loc] = getNameLoc(*instanceSyntax);
+        auto sym = compilation.emplace<UnknownModuleSymbol>(name, loc, params);
+        sym->setSyntax(*instanceSyntax);
+        sym->setAttributes(context.scope, syntax.attributes);
+        results.append(sym);
+    }
+}
+
 void UnknownModuleSymbol::fromSyntax(Compilation& compilation,
                                      const HierarchyInstantiationSyntax& syntax,
                                      LookupLocation location, const Scope& scope,
@@ -745,19 +762,17 @@ void UnknownModuleSymbol::fromSyntax(Compilation& compilation,
         }
     }
 
-    SmallSet<string_view, 8> implicitNetNames;
-    auto& netType = scope.getDefaultNetType();
     auto paramSpan = params.copy(compilation);
+    createUnknownModules(compilation, syntax, context, paramSpan, results);
+}
 
-    for (auto instanceSyntax : syntax.instances) {
-        createImplicitNets(*instanceSyntax, context, netType, implicitNetNames, results);
-
-        auto [name, loc] = getNameLoc(*instanceSyntax);
-        auto sym = compilation.emplace<UnknownModuleSymbol>(name, loc, paramSpan);
-        sym->setSyntax(*instanceSyntax);
-        sym->setAttributes(scope, syntax.attributes);
-        results.append(sym);
-    }
+void UnknownModuleSymbol::fromSyntax(Compilation& compilation,
+                                     const PrimitiveInstantiationSyntax& syntax,
+                                     LookupLocation location, const Scope& scope,
+                                     SmallVector<const Symbol*>& results) {
+    // TODO: strength, delays
+    BindContext context(scope, location, BindFlags::NonProcedural);
+    createUnknownModules(compilation, syntax, context, {}, results);
 }
 
 span<const Expression* const> UnknownModuleSymbol::getPortConnections() const {
@@ -853,14 +868,10 @@ Symbol* recursePrimArray(Compilation& compilation, const PrimitiveSymbol& primit
     return result;
 }
 
-} // namespace
-
-void PrimitiveInstanceSymbol::fromSyntax(const PrimitiveSymbol& primitive,
-                                         const HierarchyInstantiationSyntax& syntax,
-                                         LookupLocation location, const Scope& scope,
-                                         SmallVector<const Symbol*>& results) {
-    // TODO: strengths and delays
-    // TODO: error checking, ports, etc
+template<typename TSyntax>
+void createPrimitives(const PrimitiveSymbol& primitive, const TSyntax& syntax,
+                      LookupLocation location, const Scope& scope,
+                      SmallVector<const Symbol*>& results) {
     auto& comp = scope.getCompilation();
     BindContext context(scope, location, BindFlags::Constant);
     for (auto instance : syntax.instances) {
@@ -874,6 +885,44 @@ void PrimitiveInstanceSymbol::fromSyntax(const PrimitiveSymbol& primitive,
             results.append(symbol);
         }
     }
+}
+
+} // namespace
+
+void PrimitiveInstanceSymbol::fromSyntax(const PrimitiveSymbol& primitive,
+                                         const HierarchyInstantiationSyntax& syntax,
+                                         LookupLocation location, const Scope& scope,
+                                         SmallVector<const Symbol*>& results) {
+    // TODO: strengths and delays
+    // TODO: error checking, ports, etc
+    createPrimitives(primitive, syntax, location, scope, results);
+}
+
+void PrimitiveInstanceSymbol::fromSyntax(const PrimitiveInstantiationSyntax& syntax,
+                                         LookupLocation location, const Scope& scope,
+                                         SmallVector<const Symbol*>& results) {
+    auto& comp = scope.getCompilation();
+    auto prim = comp.getPrimitive(syntax.type.valueText());
+
+    if (!prim) {
+        // Find our parent instance.
+        auto currScope = &scope;
+        while (currScope && currScope->asSymbol().kind != SymbolKind::InstanceBody)
+            currScope = currScope->asSymbol().getParentScope();
+
+        bool isUninstantiated =
+            currScope && currScope->asSymbol().as<InstanceBodySymbol>().isUninstantiated;
+
+        if (!isUninstantiated)
+            scope.addDiag(diag::UnknownModule, syntax.type.range()) << syntax.type.valueText();
+
+        UnknownModuleSymbol::fromSyntax(comp, syntax, location, scope, results);
+        return;
+    }
+
+    // TODO: strengths and delays
+    // TODO: error checking, ports, etc
+    createPrimitives(*prim, syntax, location, scope, results);
 }
 
 void PrimitiveInstanceSymbol::serializeTo(ASTSerializer& serializer) const {

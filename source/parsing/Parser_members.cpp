@@ -271,7 +271,7 @@ MemberSyntax* Parser::parseMember(SyntaxKind parentKind, bool& anyLocalModules) 
     }
 
     if (isGateType(token.kind))
-        return &parseHierarchyInstantiation(attributes);
+        return &parsePrimitiveInstantiation(attributes);
 
     // If this is a class qualifier, maybe they accidentally put them
     // on an out-of-block method definition.
@@ -2067,12 +2067,7 @@ MemberSyntax& Parser::parseClockingDeclaration(AttrList attributes) {
 }
 
 HierarchyInstantiationSyntax& Parser::parseHierarchyInstantiation(AttrList attributes) {
-    Token type;
-    if (isGateType(peek().kind))
-        type = consume();
-    else
-        type = expect(TokenKind::Identifier);
-
+    auto type = expect(TokenKind::Identifier);
     auto parameters = parseParameterValueAssignment();
 
     // If this is an instantiation of a global module/interface/program,
@@ -2097,6 +2092,29 @@ HierarchyInstantiationSyntax& Parser::parseHierarchyInstantiation(AttrList attri
         diag::ExpectedHierarchicalInstantiation, [this] { return &parseHierarchicalInstance(); });
 
     return factory.hierarchyInstantiation(attributes, type, parameters, items.copy(alloc), semi);
+}
+
+PrimitiveInstantiationSyntax& Parser::parsePrimitiveInstantiation(AttrList attributes) {
+    Token type;
+    if (isGateType(peek().kind))
+        type = consume();
+    else
+        type = expect(TokenKind::Identifier);
+
+    DriveStrengthSyntax* strength = nullptr;
+    if (peek(TokenKind::OpenParenthesis) && isDriveStrength(peek(1).kind))
+        strength = parseDriveStrength(); // TODO: also pulldown strength
+
+    auto delay = parseDelay3();
+
+    Token semi;
+    SmallVectorSized<TokenOrSyntax, 8> items;
+    parseList<isPossibleInstance, isSemicolon>(
+        items, TokenKind::Semicolon, TokenKind::Comma, semi, RequireItems::True,
+        diag::ExpectedHierarchicalInstantiation, [this] { return &parseHierarchicalInstance(); });
+
+    return factory.primitiveInstantiation(attributes, type, strength, delay, items.copy(alloc),
+                                          semi);
 }
 
 HierarchicalInstanceSyntax& Parser::parseHierarchicalInstance() {
