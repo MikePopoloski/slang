@@ -203,6 +203,9 @@ public:
     /// Creates a new primitive in the given scope based on the given syntax.
     const PrimitiveSymbol& createPrimitive(const Scope& scope, const UdpDeclarationSyntax& syntax);
 
+    /// Registers a previously created primitive with the compilation.
+    void addPrimitive(const PrimitiveSymbol& primitive);
+
     /// Registers a system subroutine handler, which can be accessed by compiled code.
     void addSystemSubroutine(std::unique_ptr<SystemSubroutine> subroutine);
 

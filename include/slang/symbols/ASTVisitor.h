@@ -153,8 +153,6 @@ decltype(auto) Symbol::visit(TVisitor&& visitor, Args&&... args) const {
         SYMBOL(ModportPort);
         SYMBOL(ContinuousAssign);
         SYMBOL(Genvar);
-        SYMBOL(Gate);
-        SYMBOL(GateArray);
         SYMBOL(ElabSystemTask);
         SYMBOL(GenericClassDef);
         SYMBOL(MethodPrototype);

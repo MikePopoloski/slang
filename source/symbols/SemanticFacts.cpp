@@ -72,38 +72,6 @@ AssertionKind SemanticFacts::getAssertKind(SyntaxKind kind) {
     }
 }
 
-GateType SemanticFacts::getGateType(TokenKind kind) {
-    switch (kind) {
-        case TokenKind::CmosKeyword: return GateType::Cmos;
-        case TokenKind::RcmosKeyword: return GateType::Rcmos;
-        case TokenKind::NmosKeyword: return GateType::Nmos;
-        case TokenKind::PmosKeyword: return GateType::Pmos;
-        case TokenKind::RnmosKeyword: return GateType::Rnmos;
-        case TokenKind::RpmosKeyword: return GateType::Rpmos;
-        case TokenKind::BufIf0Keyword: return GateType::BufIf0;
-        case TokenKind::BufIf1Keyword: return GateType::BufIf1;
-        case TokenKind::NotIf0Keyword: return GateType::NotIf0;
-        case TokenKind::NotIf1Keyword: return GateType::NotIf1;
-        case TokenKind::AndKeyword: return GateType::And;
-        case TokenKind::NandKeyword: return GateType::Nand;
-        case TokenKind::OrKeyword: return GateType::Or;
-        case TokenKind::NorKeyword: return GateType::Nor;
-        case TokenKind::XorKeyword: return GateType::Xor;
-        case TokenKind::XnorKeyword: return GateType::Xnor;
-        case TokenKind::BufKeyword: return GateType::Buf;
-        case TokenKind::NotKeyword: return GateType::Not;
-        case TokenKind::TranIf0Keyword: return GateType::TranIf0;
-        case TokenKind::TranIf1Keyword: return GateType::TranIf1;
-        case TokenKind::RtranIf0Keyword: return GateType::RtranIf0;
-        case TokenKind::RtranIf1Keyword: return GateType::RtranIf1;
-        case TokenKind::TranKeyword: return GateType::Tran;
-        case TokenKind::RtranKeyword: return GateType::Rtran;
-        case TokenKind::PullDownKeyword: return GateType::PullDown;
-        case TokenKind::PullUpKeyword: return GateType::PullUp;
-        default: THROW_UNREACHABLE;
-    }
-}
-
 ElabSystemTaskKind SemanticFacts::getElabSystemTaskKind(Token token) {
     auto name = token.valueText();
     if (name == "$fatal"sv)

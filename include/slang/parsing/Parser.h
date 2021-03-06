@@ -276,8 +276,6 @@ private:
     TimingControlSyntax* parseDelay3();
     HierarchyInstantiationSyntax& parseHierarchyInstantiation(AttrList attributes);
     HierarchicalInstanceSyntax& parseHierarchicalInstance();
-    GateInstantiationSyntax& parseGateInstantiation(AttrList attributes);
-    GateInstanceSyntax& parseGateInstance();
     PortConnectionSyntax& parsePortConnection();
     FunctionPortSyntax& parseFunctionPort(bool allowEmptyName);
     FunctionPrototypeSyntax& parseFunctionPrototype(SyntaxKind parentKind, bitmask<FunctionOptions> options, bool* isConstructor = nullptr);

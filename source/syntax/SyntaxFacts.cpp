@@ -1276,7 +1276,6 @@ bool SyntaxFacts::isAllowedInCompilationUnit(SyntaxKind kind) {
 bool SyntaxFacts::isAllowedInGenerate(SyntaxKind kind) {
     switch (kind) {
         case SyntaxKind::DefParam:
-        case SyntaxKind::GateInstantiation:
             return true;
         default:
             return isModuleCommonItem(kind);

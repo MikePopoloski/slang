@@ -219,7 +219,6 @@ void Scope::addMembers(const SyntaxNode& syntax) {
         case SyntaxKind::CaseGenerate:
         case SyntaxKind::LoopGenerate:
         case SyntaxKind::GenerateBlock:
-        case SyntaxKind::GateInstantiation:
         case SyntaxKind::ContinuousAssign:
         case SyntaxKind::ModportDeclaration:
         case SyntaxKind::UserDefinedNetDeclaration:
@@ -701,14 +700,6 @@ void Scope::elaborate() const {
                 InstanceSymbol::fromSyntax(compilation,
                                            member.node.as<HierarchyInstantiationSyntax>(), location,
                                            *this, instances);
-                insertMembers(instances, symbol);
-                break;
-            }
-            case SyntaxKind::GateInstantiation: {
-                SmallVectorSized<const Symbol*, 8> instances;
-                LookupLocation location = LookupLocation::before(*symbol);
-                GateSymbol::fromSyntax(compilation, member.node.as<GateInstantiationSyntax>(),
-                                       location, *this, instances);
                 insertMembers(instances, symbol);
                 break;
             }

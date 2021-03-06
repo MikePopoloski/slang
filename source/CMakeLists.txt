@@ -132,6 +132,7 @@ add_library(slangcompiler
     compilation/builtins/ArrayMethods.cpp
     compilation/builtins/ConversionFuncs.cpp
     compilation/builtins/EnumMethods.cpp
+    compilation/builtins/GateTypes.cpp
     compilation/builtins/MathFuncs.cpp
     compilation/builtins/MiscSystemFuncs.cpp
     compilation/builtins/NonConstFuncs.cpp

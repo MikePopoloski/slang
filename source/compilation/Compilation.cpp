@@ -32,6 +32,7 @@ void registerNonConstFuncs(Compilation&);
 void registerQueryFuncs(Compilation&);
 void registerStringMethods(Compilation&);
 void registerSystemTasks(Compilation&);
+void registerGateTypes(Compilation&);
 const PackageSymbol& createStdPackage(Compilation&);
 
 } // namespace slang::Builtins
@@ -140,6 +141,9 @@ Compilation::Compilation(const Bag& options) :
     // Register the built-in std package.
     stdPkg = &Builtins::createStdPackage(*this);
     packageMap.emplace(stdPkg->name, stdPkg);
+
+    // Register the built-in gate types.
+    Builtins::registerGateTypes(*this);
 
     // Set a default handler for printing types and symbol paths, for convenience.
     DiagnosticEngine::setDefaultFormatter<const Type*>(std::make_unique<TypeArgFormatter>());
@@ -519,19 +523,22 @@ const PrimitiveSymbol* Compilation::getPrimitive(string_view lookupName) const {
 const PrimitiveSymbol& Compilation::createPrimitive(const Scope& scope,
                                                     const UdpDeclarationSyntax& syntax) {
     auto& prim = PrimitiveSymbol::fromSyntax(scope, syntax);
+    addPrimitive(prim);
+    return prim;
+}
+
+void Compilation::addPrimitive(const PrimitiveSymbol& prim) {
     if (!prim.name.empty()) {
         auto [it, inserted] = primitiveMap.emplace(prim.name, &prim);
         if (!inserted) {
-            auto& diag = scope.addDiag(diag::Redefinition, prim.location);
+            auto& diag = root->addDiag(diag::Redefinition, prim.location);
             diag << prim.name;
             diag.addNote(diag::NotePreviousDefinition, it->second->location);
         }
         else if (auto defIt = topDefinitions.find(prim.name); defIt != topDefinitions.end()) {
-            reportRedefinition(scope, prim, *defIt->second.first);
+            reportRedefinition(*root, prim, *defIt->second.first);
         }
     }
-
-    return prim;
 }
 
 void Compilation::addSystemSubroutine(std::unique_ptr<SystemSubroutine> subroutine) {

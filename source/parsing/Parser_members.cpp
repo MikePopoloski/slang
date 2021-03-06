@@ -271,7 +271,7 @@ MemberSyntax* Parser::parseMember(SyntaxKind parentKind, bool& anyLocalModules) 
     }
 
     if (isGateType(token.kind))
-        return &parseGateInstantiation(attributes);
+        return &parseHierarchyInstantiation(attributes);
 
     // If this is a class qualifier, maybe they accidentally put them
     // on an out-of-block method definition.
@@ -2067,13 +2067,18 @@ MemberSyntax& Parser::parseClockingDeclaration(AttrList attributes) {
 }
 
 HierarchyInstantiationSyntax& Parser::parseHierarchyInstantiation(AttrList attributes) {
-    auto type = expect(TokenKind::Identifier);
+    Token type;
+    if (isGateType(peek().kind))
+        type = consume();
+    else
+        type = expect(TokenKind::Identifier);
+
     auto parameters = parseParameterValueAssignment();
 
     // If this is an instantiation of a global module/interface/program,
     // keep track of it in our instantiatedModules set.
     string_view name = type.valueText();
-    if (!name.empty()) {
+    if (!name.empty() && type.kind == TokenKind::Identifier) {
         bool found = false;
         for (auto& set : moduleDeclStack) {
             if (set.find(name) != set.end()) {
@@ -2111,44 +2116,6 @@ HierarchicalInstanceSyntax& Parser::parseHierarchicalInstance() {
         [this] { return &parsePortConnection(); }, AllowEmpty::True);
 
     return factory.hierarchicalInstance(decl, openParen, items, closeParen);
-}
-
-GateInstantiationSyntax& Parser::parseGateInstantiation(AttrList attributes) {
-    auto type = consume();
-
-    DriveStrengthSyntax* strength = nullptr;
-    if (peek(TokenKind::OpenParenthesis) && isDriveStrength(peek(1).kind))
-        strength = parseDriveStrength(); // TODO: also pulldown strength
-
-    auto delay = parseDelay3();
-
-    Token semi;
-    SmallVectorSized<TokenOrSyntax, 8> items;
-    parseList<isPossibleInstance, isSemicolon>(
-        items, TokenKind::Semicolon, TokenKind::Comma, semi, RequireItems::True,
-        diag::ExpectedGateInstance, [this] { return &parseGateInstance(); });
-
-    return factory.gateInstantiation(attributes, type, strength, delay, items.copy(alloc), semi);
-}
-
-GateInstanceSyntax& Parser::parseGateInstance() {
-    InstanceNameSyntax* decl = nullptr;
-    if (peek(TokenKind::Identifier)) {
-        auto name = expect(TokenKind::Identifier);
-        auto dimensions = parseDimensionList();
-        decl = &factory.instanceName(name, dimensions);
-    }
-
-    Token openParen;
-    Token closeParen;
-    span<TokenOrSyntax> items;
-
-    parseList<isPossibleExpressionOrComma, isEndOfParenList>(
-        TokenKind::OpenParenthesis, TokenKind::CloseParenthesis, TokenKind::Comma, openParen, items,
-        closeParen, RequireItems::True, diag::ExpectedPortConnection,
-        [this] { return &parseExpression(); });
-
-    return factory.gateInstance(decl, openParen, items, closeParen);
 }
 
 BindDirectiveSyntax& Parser::parseBindDirective(AttrList attr) {

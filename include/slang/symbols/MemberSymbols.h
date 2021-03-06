@@ -179,39 +179,6 @@ public:
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::Genvar; }
 };
 
-struct GateInstantiationSyntax;
-
-class GateSymbol : public Symbol {
-public:
-    GateType gateType;
-
-    GateSymbol(string_view name, SourceLocation loc, GateType gateType) :
-        Symbol(SymbolKind::Gate, name, loc), gateType(gateType) {}
-
-    void serializeTo(ASTSerializer& serializer) const;
-
-    static void fromSyntax(Compilation& compilation, const GateInstantiationSyntax& syntax,
-                           LookupLocation location, const Scope& scope,
-                           SmallVector<const Symbol*>& results);
-
-    static bool isKind(SymbolKind kind) { return kind == SymbolKind::Gate; }
-};
-
-class GateArraySymbol : public Symbol, public Scope {
-public:
-    span<const Symbol* const> elements;
-    ConstantRange range;
-
-    GateArraySymbol(Compilation& compilation, string_view name, SourceLocation loc,
-                    span<const Symbol* const> elements, ConstantRange range) :
-        Symbol(SymbolKind::GateArray, name, loc),
-        Scope(compilation, this), elements(elements), range(range) {}
-
-    void serializeTo(ASTSerializer& serializer) const;
-
-    static bool isKind(SymbolKind kind) { return kind == SymbolKind::GateArray; }
-};
-
 struct ElabSystemTaskSyntax;
 
 /// Represents an elaboration system task, such as $error or $warning.

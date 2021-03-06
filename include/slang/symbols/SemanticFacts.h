@@ -68,39 +68,6 @@ ENUM(SubroutineKind, SRK);
 ENUM(AssertionKind, ASK);
 #undef ASK
 
-// clang-format off
-#define GATE(x) \
-    x(Cmos) \
-    x(Rcmos) \
-    x(Nmos) \
-    x(Pmos) \
-    x(Rnmos) \
-    x(Rpmos) \
-    x(BufIf0) \
-    x(BufIf1) \
-    x(NotIf0) \
-    x(NotIf1) \
-    x(And) \
-    x(Nand) \
-    x(Or) \
-    x(Nor) \
-    x(Xor) \
-    x(Xnor) \
-    x(Buf) \
-    x(Not) \
-    x(TranIf0) \
-    x(TranIf1) \
-    x(RtranIf0) \
-    x(RtranIf1) \
-    x(Tran) \
-    x(Rtran) \
-    x(PullDown) \
-    x(PullUp)
-// clang-format on
-
-ENUM(GateType, GATE)
-#undef GATE
-
 #define ELAB(x) x(Fatal) x(Error) x(Warning) x(Info)
 /// Specifies possible elaboration system task kinds.
 ENUM(ElabSystemTaskKind, ELAB);
@@ -133,8 +100,6 @@ public:
     static AssertionKind getAssertKind(SyntaxKind kind);
 
     static StatementBlockKind getStatementBlockKind(const BlockStatementSyntax& syntax);
-
-    static GateType getGateType(TokenKind kind);
 
     static ElabSystemTaskKind getElabSystemTaskKind(Token token);
 

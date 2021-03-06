@@ -81,8 +81,6 @@ enum class RandMode;
     x(ClassProperty) \
     x(Subroutine) \
     x(ContinuousAssign) \
-    x(Gate) \
-    x(GateArray) \
     x(ElabSystemTask) \
     x(GenericClassDef) \
     x(MethodPrototype) \
