@@ -142,8 +142,8 @@ public:
     /// @return true if the given token represents a possible delay or event control.
     static bool isPossibleDelayOrEventControl(TokenKind kind);
 
-    /// @return true if the given token represents a possible gate instance.
-    static bool isPossibleGateInstance(TokenKind kind);
+    /// @return true if the given token represents a possible instance.
+    static bool isPossibleInstance(TokenKind kind);
 
     /// @return true if the given token represents a possible UDP body entry.
     static bool isPossibleUdpEntry(TokenKind kind);

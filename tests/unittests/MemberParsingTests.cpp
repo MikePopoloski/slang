@@ -298,12 +298,11 @@ endmodule
 
     parseCompilationUnit(text);
 
-    REQUIRE(diagnostics.size() == 5);
+    REQUIRE(diagnostics.size() == 4);
     CHECK(diagnostics[0].code == diag::ExpectedToken);
     CHECK(diagnostics[1].code == diag::ExpectedToken);
     CHECK(diagnostics[2].code == diag::ExpectedHierarchicalInstantiation);
-    CHECK(diagnostics[3].code == diag::ExpectedHierarchicalInstantiation);
-    CHECK(diagnostics[4].code == diag::ExpectedHierarchicalInstantiation);
+    CHECK(diagnostics[3].code == diag::ExpectedToken);
 }
 
 TEST_CASE("Decl modifier errors") {

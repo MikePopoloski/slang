@@ -1115,9 +1115,12 @@ token closeParen
 WildcardPortConnection base=PortConnection
 token dotStar
 
-HierarchicalInstance
+InstanceName
 token name
 list<VariableDimension> dimensions
+
+HierarchicalInstance
+InstanceName? decl
 token openParen
 separated_list<PortConnection> connections
 token closeParen
@@ -1138,12 +1141,8 @@ Name target
 BindTargetList? targetInstances
 HierarchyInstantiation instantiation
 
-GateInstanceName
-token name
-list<VariableDimension> dimensions
-
 GateInstance
-GateInstanceName? decl
+InstanceName? decl
 token openParen
 separated_list<Expression> connections
 token closeParen

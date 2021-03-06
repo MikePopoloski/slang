@@ -19,7 +19,7 @@ Parser::Parser(Preprocessor& preprocessor, const Bag& options) :
 SyntaxNode& Parser::parseGuess() {
     // First try to parse as some kind of declaration.
     auto attributes = parseAttributes();
-    if (isHierarchyInstantiation())
+    if (isHierarchyInstantiation(/* requireName */ true))
         return parseHierarchyInstantiation(attributes);
     if (isNetDeclaration())
         return parseNetDeclaration(attributes);
@@ -1104,7 +1104,7 @@ bool Parser::isVariableDeclaration() {
     return peek(index).kind == TokenKind::Identifier;
 }
 
-bool Parser::isHierarchyInstantiation() {
+bool Parser::isHierarchyInstantiation(bool requireName) {
     uint32_t index = 0;
     if (peek(index++).kind != TokenKind::Identifier)
         return false;
@@ -1121,12 +1121,14 @@ bool Parser::isHierarchyInstantiation() {
         }
     }
 
-    if (peek(index++).kind != TokenKind::Identifier)
+    if (peek(index).kind == TokenKind::Identifier) {
+        index++;
+        if (!scanDimensionList(index))
+            return false;
+    }
+    else if (requireName) {
         return false;
-
-    // might be a list of dimensions here
-    if (!scanDimensionList(index))
-        return false;
+    }
 
     // a parenthesis here means we're definitely doing an instantiation
     return peek(index).kind == TokenKind::OpenParenthesis;

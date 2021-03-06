@@ -766,7 +766,7 @@ bool SyntaxFacts::isPossibleDelayOrEventControl(TokenKind kind) {
     }
 }
 
-bool SyntaxFacts::isPossibleGateInstance(TokenKind kind) {
+bool SyntaxFacts::isPossibleInstance(TokenKind kind) {
     switch (kind) {
         case TokenKind::Identifier:
         case TokenKind::OpenParenthesis:

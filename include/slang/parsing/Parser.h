@@ -356,7 +356,7 @@ private:
     bool isPortDeclaration();
     bool isNetDeclaration();
     bool isVariableDeclaration();
-    bool isHierarchyInstantiation();
+    bool isHierarchyInstantiation(bool requireName);
     bool isNonAnsiPort();
     bool isPlainPortName();
     bool isConditionalExpression();

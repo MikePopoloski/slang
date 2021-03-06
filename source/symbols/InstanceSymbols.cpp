@@ -27,6 +27,20 @@ namespace {
 
 using namespace slang;
 
+std::pair<string_view, SourceLocation> getNameLoc(const HierarchicalInstanceSyntax& syntax) {
+    string_view name;
+    SourceLocation loc;
+    if (syntax.decl) {
+        name = syntax.decl->name.valueText();
+        loc = syntax.decl->name.location();
+    }
+    else {
+        name = "";
+        loc = syntax.getFirstToken().location();
+    }
+    return std::make_pair(name, loc);
+}
+
 class InstanceBuilder {
 public:
     InstanceBuilder(const BindContext& context, const InstanceCacheKey& cacheKeyBase,
@@ -41,7 +55,12 @@ public:
     Symbol* create(const HierarchicalInstanceSyntax& syntax) {
         path.clear();
 
-        auto dims = syntax.dimensions;
+        if (!syntax.decl) {
+            context.addDiag(diag::InstanceNameRequired, syntax.sourceRange());
+            return createInstance(syntax);
+        }
+
+        auto dims = syntax.decl->dimensions;
         return recurse(syntax, dims.begin(), dims.end());
     }
 
@@ -70,9 +89,9 @@ private:
         if (!ifaceKeys.empty())
             cacheKey.setInterfacePortKeys(ifaceKeys.copy(compilation));
 
+        auto [name, loc] = getNameLoc(syntax);
         auto inst = compilation.emplace<InstanceSymbol>(
-            compilation, syntax.name.valueText(), syntax.name.location(), cacheKey,
-            paramOverrideNode, parameters, isUninstantiated);
+            compilation, name, loc, cacheKey, paramOverrideNode, parameters, isUninstantiated);
 
         inst->arrayPath = path.copy(compilation);
         inst->setSyntax(syntax);
@@ -87,7 +106,8 @@ private:
         // Evaluate the dimensions of the array. If this fails for some reason,
         // make up an empty array so that we don't get further errors when
         // things try to reference this symbol.
-        auto nameToken = syntax.name;
+        ASSERT(syntax.decl);
+        auto nameToken = syntax.decl->name;
         auto dim = context.evalDimension(**it, /* requireRange */ true, /* isPacked */ false);
         if (!dim.isRange()) {
             return compilation.emplace<InstanceArraySymbol>(
@@ -308,11 +328,14 @@ void InstanceSymbol::fromSyntax(Compilation& compilation,
         // Otherwise we need to evaluate parameters separately for each child.
         for (auto instanceSyntax : syntax.instances) {
             const ParamOverrideNode* overrideNode = nullptr;
-            auto instName = instanceSyntax->name.valueText();
-            if (!instName.empty()) {
-                if (auto it = parentOverrideNode->childNodes.find(std::string(instName));
-                    it != parentOverrideNode->childNodes.end()) {
-                    overrideNode = &it->second;
+
+            if (instanceSyntax->decl) {
+                auto instName = instanceSyntax->decl->name.valueText();
+                if (!instName.empty()) {
+                    if (auto it = parentOverrideNode->childNodes.find(std::string(instName));
+                        it != parentOverrideNode->childNodes.end()) {
+                        overrideNode = &it->second;
+                    }
                 }
             }
 
@@ -729,9 +752,8 @@ void UnknownModuleSymbol::fromSyntax(Compilation& compilation,
     for (auto instanceSyntax : syntax.instances) {
         createImplicitNets(*instanceSyntax, context, netType, implicitNetNames, results);
 
-        auto name = instanceSyntax->name;
-        auto sym =
-            compilation.emplace<UnknownModuleSymbol>(name.valueText(), name.location(), paramSpan);
+        auto [name, loc] = getNameLoc(*instanceSyntax);
+        auto sym = compilation.emplace<UnknownModuleSymbol>(name, loc, paramSpan);
         sym->setSyntax(*instanceSyntax);
         sym->setAttributes(scope, syntax.attributes);
         results.append(sym);
@@ -781,8 +803,7 @@ PrimitiveInstanceSymbol* createPrimInst(Compilation& compilation, const Scope& s
                                         const HierarchicalInstanceSyntax& syntax,
                                         span<const AttributeInstanceSyntax* const> attributes) {
     // TODO: ports!
-    auto name = syntax.name.valueText();
-    auto loc = syntax.name.location();
+    auto [name, loc] = getNameLoc(syntax);
     auto result = compilation.emplace<PrimitiveInstanceSymbol>(name, loc, primitive);
     result->setSyntax(syntax);
     result->setAttributes(scope, attributes);
@@ -801,7 +822,8 @@ Symbol* recursePrimArray(Compilation& compilation, const PrimitiveSymbol& primit
     // Evaluate the dimensions of the array. If this fails for some reason,
     // make up an empty array so that we don't get further errors when
     // things try to reference this symbol.
-    auto nameToken = instance.name;
+    ASSERT(instance.decl);
+    auto nameToken = instance.decl->name;
     auto dim = context.evalDimension(**it, /* requireRange */
                                      true, /* isPacked */ false);
     if (!dim.isRange()) {
@@ -839,13 +861,18 @@ void PrimitiveInstanceSymbol::fromSyntax(const PrimitiveSymbol& primitive,
                                          SmallVector<const Symbol*>& results) {
     // TODO: strengths and delays
     // TODO: error checking, ports, etc
-
+    auto& comp = scope.getCompilation();
     BindContext context(scope, location, BindFlags::Constant);
     for (auto instance : syntax.instances) {
-        auto dims = instance->dimensions;
-        auto symbol = recursePrimArray(scope.getCompilation(), primitive, *instance, context,
-                                       dims.begin(), dims.end(), syntax.attributes);
-        results.append(symbol);
+        if (!instance->decl) {
+            results.append(createPrimInst(comp, scope, primitive, *instance, syntax.attributes));
+        }
+        else {
+            auto dims = instance->decl->dimensions;
+            auto symbol = recursePrimArray(comp, primitive, *instance, context, dims.begin(),
+                                           dims.end(), syntax.attributes);
+            results.append(symbol);
+        }
     }
 }
 

@@ -167,6 +167,24 @@ endmodule
     CHECK(diags[6].notes[0].code == diag::NotePreviousUsage);
 }
 
+TEST_CASE("Instance missing name") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+endmodule
+
+module n;
+    m();
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::InstanceNameRequired);
+}
+
 TEST_CASE("Module children (simple)") {
     auto tree = SyntaxTree::fromText(R"(
 module Top;

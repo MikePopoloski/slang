@@ -86,7 +86,7 @@ ClassDeclarationSyntax& Parser::parseClass() {
 MemberSyntax* Parser::parseMember(SyntaxKind parentKind, bool& anyLocalModules) {
     auto attributes = parseAttributes();
 
-    if (isHierarchyInstantiation())
+    if (isHierarchyInstantiation(/* requireName */ false))
         return &parseHierarchyInstantiation(attributes);
     if (isPortDeclaration())
         return &parsePortDeclaration(attributes);
@@ -2087,7 +2087,7 @@ HierarchyInstantiationSyntax& Parser::parseHierarchyInstantiation(AttrList attri
 
     Token semi;
     SmallVectorSized<TokenOrSyntax, 8> items;
-    parseList<isIdentifierOrComma, isSemicolon>(
+    parseList<isPossibleInstance, isSemicolon>(
         items, TokenKind::Semicolon, TokenKind::Comma, semi, RequireItems::True,
         diag::ExpectedHierarchicalInstantiation, [this] { return &parseHierarchicalInstance(); });
 
@@ -2095,19 +2095,22 @@ HierarchyInstantiationSyntax& Parser::parseHierarchyInstantiation(AttrList attri
 }
 
 HierarchicalInstanceSyntax& Parser::parseHierarchicalInstance() {
-    auto name = expect(TokenKind::Identifier);
-    auto dimensions = parseDimensionList();
+    InstanceNameSyntax* decl = nullptr;
+    if (!peek(TokenKind::OpenParenthesis)) {
+        auto name = expect(TokenKind::Identifier);
+        auto dimensions = parseDimensionList();
+        decl = &factory.instanceName(name, dimensions);
+    }
 
     Token openParen;
     Token closeParen;
     span<TokenOrSyntax> items;
-
     parseList<isPossiblePortConnection, isEndOfParenList>(
         TokenKind::OpenParenthesis, TokenKind::CloseParenthesis, TokenKind::Comma, openParen, items,
         closeParen, RequireItems::False, diag::ExpectedPortConnection,
         [this] { return &parsePortConnection(); }, AllowEmpty::True);
 
-    return factory.hierarchicalInstance(name, dimensions, openParen, items, closeParen);
+    return factory.hierarchicalInstance(decl, openParen, items, closeParen);
 }
 
 GateInstantiationSyntax& Parser::parseGateInstantiation(AttrList attributes) {
@@ -2121,7 +2124,7 @@ GateInstantiationSyntax& Parser::parseGateInstantiation(AttrList attributes) {
 
     Token semi;
     SmallVectorSized<TokenOrSyntax, 8> items;
-    parseList<isPossibleGateInstance, isSemicolon>(
+    parseList<isPossibleInstance, isSemicolon>(
         items, TokenKind::Semicolon, TokenKind::Comma, semi, RequireItems::True,
         diag::ExpectedGateInstance, [this] { return &parseGateInstance(); });
 
@@ -2129,11 +2132,11 @@ GateInstantiationSyntax& Parser::parseGateInstantiation(AttrList attributes) {
 }
 
 GateInstanceSyntax& Parser::parseGateInstance() {
-    GateInstanceNameSyntax* decl = nullptr;
+    InstanceNameSyntax* decl = nullptr;
     if (peek(TokenKind::Identifier)) {
         auto name = expect(TokenKind::Identifier);
         auto dimensions = parseDimensionList();
-        decl = &factory.gateInstanceName(name, dimensions);
+        decl = &factory.instanceName(name, dimensions);
     }
 
     Token openParen;
