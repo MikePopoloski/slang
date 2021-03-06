@@ -260,10 +260,16 @@ void InstanceSymbol::fromSyntax(Compilation& compilation,
 
     auto definition = compilation.getDefinition(syntax.type.valueText(), scope);
     if (!definition) {
-        if (!isUninstantiated)
-            scope.addDiag(diag::UnknownModule, syntax.type.range()) << syntax.type.valueText();
+        // This might actually be a user-defined primitive instantiation.
+        if (auto prim = compilation.getPrimitive(syntax.type.valueText())) {
+            PrimitiveInstanceSymbol::fromSyntax(*prim, syntax, location, scope, results);
+        }
+        else {
+            if (!isUninstantiated)
+                scope.addDiag(diag::UnknownModule, syntax.type.range()) << syntax.type.valueText();
 
-        UnknownModuleSymbol::fromSyntax(compilation, syntax, location, scope, results);
+            UnknownModuleSymbol::fromSyntax(compilation, syntax, location, scope, results);
+        }
         return;
     }
 
@@ -766,6 +772,89 @@ void UnknownModuleSymbol::serializeTo(ASTSerializer& serializer) const {
     for (auto expr : getPortConnections())
         serializer.serialize(*expr);
     serializer.endArray();
+}
+
+namespace {
+
+PrimitiveInstanceSymbol* createPrimInst(Compilation& compilation, const Scope& scope,
+                                        const PrimitiveSymbol& primitive,
+                                        const HierarchicalInstanceSyntax& syntax,
+                                        span<const AttributeInstanceSyntax* const> attributes) {
+    // TODO: ports!
+    auto name = syntax.name.valueText();
+    auto loc = syntax.name.location();
+    auto result = compilation.emplace<PrimitiveInstanceSymbol>(name, loc, primitive);
+    result->setSyntax(syntax);
+    result->setAttributes(scope, attributes);
+    return result;
+}
+
+using DimIterator = span<VariableDimensionSyntax*>::iterator;
+
+Symbol* recursePrimArray(Compilation& compilation, const PrimitiveSymbol& primitive,
+                         const HierarchicalInstanceSyntax& instance, const BindContext& context,
+                         DimIterator it, DimIterator end,
+                         span<const AttributeInstanceSyntax* const> attributes) {
+    if (it == end)
+        return createPrimInst(compilation, context.scope, primitive, instance, attributes);
+
+    // Evaluate the dimensions of the array. If this fails for some reason,
+    // make up an empty array so that we don't get further errors when
+    // things try to reference this symbol.
+    auto nameToken = instance.name;
+    auto dim = context.evalDimension(**it, /* requireRange */
+                                     true, /* isPacked */ false);
+    if (!dim.isRange()) {
+        return compilation.emplace<PrimitiveInstanceArraySymbol>(
+            compilation, nameToken.valueText(), nameToken.location(), span<const Symbol* const>{},
+            ConstantRange());
+    }
+
+    ++it;
+
+    ConstantRange range = dim.range;
+    SmallVectorSized<const Symbol*, 8> elements;
+    for (int32_t i = range.lower(); i <= range.upper(); i++) {
+        auto symbol =
+            recursePrimArray(compilation, primitive, instance, context, it, end, attributes);
+        symbol->name = "";
+        elements.append(symbol);
+    }
+
+    auto result = compilation.emplace<PrimitiveInstanceArraySymbol>(
+        compilation, nameToken.valueText(), nameToken.location(), elements.copy(compilation),
+        range);
+
+    for (auto element : elements)
+        result->addMember(*element);
+
+    return result;
+}
+
+} // namespace
+
+void PrimitiveInstanceSymbol::fromSyntax(const PrimitiveSymbol& primitive,
+                                         const HierarchyInstantiationSyntax& syntax,
+                                         LookupLocation location, const Scope& scope,
+                                         SmallVector<const Symbol*>& results) {
+    // TODO: strengths and delays
+    // TODO: error checking, ports, etc
+
+    BindContext context(scope, location, BindFlags::Constant);
+    for (auto instance : syntax.instances) {
+        auto dims = instance->dimensions;
+        auto symbol = recursePrimArray(scope.getCompilation(), primitive, *instance, context,
+                                       dims.begin(), dims.end(), syntax.attributes);
+        results.append(symbol);
+    }
+}
+
+void PrimitiveInstanceSymbol::serializeTo(ASTSerializer& serializer) const {
+    serializer.writeLink("primitiveType", primitiveType);
+}
+
+void PrimitiveInstanceArraySymbol::serializeTo(ASTSerializer& serializer) const {
+    serializer.write("range", range.toString());
 }
 
 } // namespace slang

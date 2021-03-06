@@ -1470,6 +1470,7 @@ primitive p2 (output reg a = 1'bx, input b, input c);
 endprimitive
 
 module m;
+    srff sf1();
 endmodule
 )");
 

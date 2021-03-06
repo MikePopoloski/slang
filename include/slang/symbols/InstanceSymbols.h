@@ -21,6 +21,7 @@ class InterfacePortSymbol;
 class ParameterSymbolBase;
 class PortConnection;
 class PortSymbol;
+class PrimitiveSymbol;
 
 struct BindDirectiveSyntax;
 struct HierarchicalInstanceSyntax;
@@ -194,6 +195,39 @@ public:
 
 private:
     mutable optional<span<const Expression* const>> ports;
+};
+
+class PrimitiveInstanceSymbol : public Symbol {
+public:
+    const PrimitiveSymbol& primitiveType;
+
+    PrimitiveInstanceSymbol(string_view name, SourceLocation loc,
+                            const PrimitiveSymbol& primitiveType) :
+        Symbol(SymbolKind::PrimitiveInstance, name, loc),
+        primitiveType(primitiveType) {}
+
+    static void fromSyntax(const PrimitiveSymbol& primitive,
+                           const HierarchyInstantiationSyntax& syntax, LookupLocation location,
+                           const Scope& scope, SmallVector<const Symbol*>& results);
+
+    void serializeTo(ASTSerializer& serializer) const;
+
+    static bool isKind(SymbolKind kind) { return kind == SymbolKind::PrimitiveInstance; }
+};
+
+class PrimitiveInstanceArraySymbol : public Symbol, public Scope {
+public:
+    span<const Symbol* const> elements;
+    ConstantRange range;
+
+    PrimitiveInstanceArraySymbol(Compilation& compilation, string_view name, SourceLocation loc,
+                                 span<const Symbol* const> elements, ConstantRange range) :
+        Symbol(SymbolKind::PrimitiveInstanceArray, name, loc),
+        Scope(compilation, this), elements(elements), range(range) {}
+
+    void serializeTo(ASTSerializer& serializer) const;
+
+    static bool isKind(SymbolKind kind) { return kind == SymbolKind::PrimitiveInstanceArray; }
 };
 
 } // namespace slang

@@ -92,7 +92,9 @@ enum class RandMode;
     x(DefParam) \
     x(Specparam) \
     x(Primitive) \
-    x(PrimitivePort)
+    x(PrimitivePort) \
+    x(PrimitiveInstance) \
+    x(PrimitiveInstanceArray)
 // clang-format on
 
 ENUM(SymbolKind, SYMBOLKIND)
