@@ -949,7 +949,7 @@ endmodule
 TEST_CASE("Gates") {
     auto tree = SyntaxTree::fromText(R"(
 module m;
-    logic foo;
+    /*logic foo;
     pullup (supply0, pull1) (foo);
     pmos #3 asdf [3:0][4][5] (foo, 2, 3), blah (foo, 4, 5), (foo, 5, 6);
     rtranif1 (foo, foo, 1), asdf2(foo, foo, 2);
@@ -957,7 +957,10 @@ module m;
     pmos #6 (a, b, c);
 
     and (a, 1, 2, 3, 4, 5, 6, 7, 8);
-    buf (a, b, c, 1);
+    buf (a, b, c, 1);*/
+
+    logic [3:0] out, in, en;
+    bufif0 ar[3:0] (out, in, en);
 endmodule
 )");
 

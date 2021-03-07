@@ -173,7 +173,7 @@ public:
     /// assigned (without a cast) to a left hand side of the specified type.
     static Expression& convertAssignment(const BindContext& context, const Type& type,
                                          Expression& expr, SourceLocation location,
-                                         optional<SourceRange> lhsRange = std::nullopt);
+                                         Expression** lhsExpr = nullptr);
 
     /// Specialized method for binding all of the expressions in a set membership check.
     /// This is used for case statements and the 'inside' operator.

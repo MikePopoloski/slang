@@ -219,7 +219,7 @@ bool Expression::isImplicitlyAssignableTo(const Type& targetType) const {
 
 Expression& Expression::convertAssignment(const BindContext& context, const Type& type,
                                           Expression& expr, SourceLocation location,
-                                          optional<SourceRange> lhsRange) {
+                                          Expression** lhsExpr) {
     if (expr.bad())
         return expr;
 
@@ -237,10 +237,26 @@ Expression& Expression::convertAssignment(const BindContext& context, const Type
     // If this is a port connection to an array of instances, check if the provided
     // expression represents an array that should be sliced on a per-instance basis.
     if (context.instance && !context.instance->arrayPath.empty()) {
-        Expression* conn = tryConnectPortArray(context, type, expr, *context.instance);
-        if (conn) {
-            selfDetermined(context, conn);
-            return *conn;
+        // If we have an lhsExpr here, this is an output (or inout) port being connected.
+        // We need to pass the lhs in as the expression to be connected, since we can't
+        // slice the port side. If lhsExpr is null, this is an input port and we should
+        // slice the incoming expression as an rvalue.
+        if (lhsExpr) {
+            Expression* conn = tryConnectPortArray(context, *rt, **lhsExpr, *context.instance);
+            if (conn) {
+                selfDetermined(context, conn);
+                *lhsExpr = conn;
+
+                selfDetermined(context, result);
+                return *result;
+            }
+        }
+        else {
+            Expression* conn = tryConnectPortArray(context, type, expr, *context.instance);
+            if (conn) {
+                selfDetermined(context, conn);
+                return *conn;
+            }
         }
     }
 
@@ -275,8 +291,8 @@ Expression& Expression::convertAssignment(const BindContext& context, const Type
                             : diag::BadAssignment;
         auto& diag = context.addDiag(code, location);
         diag << *rt << type;
-        if (lhsRange)
-            diag << *lhsRange;
+        if (lhsExpr)
+            diag << (*lhsExpr)->sourceRange;
 
         diag << expr.sourceRange;
         return badExpr(compilation, &expr);
@@ -433,7 +449,7 @@ Expression& AssignmentExpression::fromComponents(
     }
 
     result->right_ =
-        &convertAssignment(context, *lhs.type, *result->right_, assignLoc, lhs.sourceRange);
+        &convertAssignment(context, *lhs.type, *result->right_, assignLoc, &result->left_);
     if (result->right_->bad())
         return badExpr(compilation, result);
 
