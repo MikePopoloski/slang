@@ -871,9 +871,14 @@ template<typename TSyntax>
 void createPrimitives(const PrimitiveSymbol& primitive, const TSyntax& syntax,
                       LookupLocation location, const Scope& scope,
                       SmallVector<const Symbol*>& results) {
+    SmallSet<string_view, 8> implicitNetNames;
     auto& comp = scope.getCompilation();
+    auto& netType = scope.getDefaultNetType();
+
     BindContext context(scope, location, BindFlags::Constant);
     for (auto instance : syntax.instances) {
+        createImplicitNets(*instance, context, netType, implicitNetNames, results);
+
         if (!instance->decl) {
             results.append(createPrimInst(comp, scope, primitive, *instance, syntax.attributes));
         }
@@ -933,7 +938,7 @@ span<const Expression* const> PrimitiveInstanceSymbol::getPortConnections() cons
 
         // TODO: support array slicing connections
         auto& comp = scope->getCompilation();
-        BindContext context(*scope, LookupLocation::after(*this));
+        BindContext context(*scope, LookupLocation::after(*this), BindFlags::NonProcedural);
 
         SmallVectorSized<const ExpressionSyntax*, 8> conns;
         auto& his = syntax->as<HierarchicalInstanceSyntax>();

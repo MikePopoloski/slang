@@ -954,7 +954,6 @@ module m;
     pmos #3 asdf [3:0][4][5] (foo, 2, 3), blah (foo, 4, 5), (foo, 5, 6);
     rtranif1 (foo, foo, 1), asdf2(foo, foo, 2);
 
-    logic a, b, c;
     pmos #6 (a, b, c);
 
     and (a, 1, 2, 3, 4, 5, 6, 7, 8);
