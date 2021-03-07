@@ -78,7 +78,7 @@ ENUM(ElabSystemTaskKind, ELAB);
 ENUM(RandMode, MODE);
 #undef MODE
 
-#define DIRECTION(x) x(In) x(Out) x(OutReg)
+#define DIRECTION(x) x(In) x(Out) x(OutReg) x(InOut)
 /// Specifies behavior of a primitive port.
 ENUM(PrimitivePortDirection, DIRECTION);
 #undef DIRECTION

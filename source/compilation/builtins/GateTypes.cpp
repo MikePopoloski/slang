@@ -28,9 +28,9 @@ static void gate(Compilation& c, string_view name,
 
 #define in PrimitivePortDirection::In
 #define out PrimitivePortDirection::Out
+#define inout PrimitivePortDirection::InOut
 
 void registerGateTypes(Compilation& c) {
-    // TODO: some of these should be inout instead of out
     gate(c, "cmos", { out, in, in, in });
     gate(c, "rcmos", { out, in, in, in });
     gate(c, "bufif0", { out, in, in });
@@ -41,12 +41,12 @@ void registerGateTypes(Compilation& c) {
     gate(c, "pmos", { out, in, in });
     gate(c, "rnmos", { out, in, in });
     gate(c, "rpmos", { out, in, in });
-    gate(c, "tranif0", { out, out, in });
-    gate(c, "tranif1", { out, out, in });
-    gate(c, "rtranif0", { out, out, in });
-    gate(c, "rtranif1", { out, out, in });
-    gate(c, "tran", { out, out });
-    gate(c, "rtran", { out, out });
+    gate(c, "tranif0", { inout, inout, in });
+    gate(c, "tranif1", { inout, inout, in });
+    gate(c, "rtranif0", { inout, inout, in });
+    gate(c, "rtranif1", { inout, inout, in });
+    gate(c, "tran", { inout, inout });
+    gate(c, "rtran", { inout, inout });
     gate(c, "pullup", { out });
     gate(c, "pulldown", { out });
 

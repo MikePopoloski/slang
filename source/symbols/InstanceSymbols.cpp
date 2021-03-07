@@ -957,11 +957,19 @@ span<const Expression* const> PrimitiveInstanceSymbol::getPortConnections() cons
 
         SmallVectorSized<const Expression*, 8> results;
         for (size_t i = 0; i < conns.size(); i++) {
-            // TODO: support inout
-            auto dir = primitiveType.ports[i]->direction == PrimitivePortDirection::In
-                           ? ArgumentDirection::In
-                           : ArgumentDirection::Out;
-
+            ArgumentDirection dir = ArgumentDirection::In;
+            switch (primitiveType.ports[i]->direction) {
+                case PrimitivePortDirection::In:
+                    dir = ArgumentDirection::In;
+                    break;
+                case PrimitivePortDirection::InOut:
+                    dir = ArgumentDirection::InOut;
+                    break;
+                case PrimitivePortDirection::Out:
+                case PrimitivePortDirection::OutReg:
+                    dir = ArgumentDirection::Out;
+                    break;
+            }
             results.append(&Expression::bindArgument(comp.getLogicType(), dir, *conns[i], context));
         }
 
