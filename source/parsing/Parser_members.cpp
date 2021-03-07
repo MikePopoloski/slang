@@ -2105,11 +2105,73 @@ PrimitiveInstantiationSyntax& Parser::parsePrimitiveInstantiation(AttrList attri
     if (peek(TokenKind::OpenParenthesis) && isDriveStrength(peek(1).kind)) {
         if (type.kind == TokenKind::PullUpKeyword || type.kind == TokenKind::PullDownKeyword)
             strength = parsePullStrength(type);
-        else
+        else {
             strength = parseDriveStrength();
+            ASSERT(strength);
+            switch (type.kind) {
+                case TokenKind::CmosKeyword:
+                case TokenKind::RcmosKeyword:
+                case TokenKind::NmosKeyword:
+                case TokenKind::PmosKeyword:
+                case TokenKind::RnmosKeyword:
+                case TokenKind::RpmosKeyword:
+                case TokenKind::TranIf0Keyword:
+                case TokenKind::TranIf1Keyword:
+                case TokenKind::RtranIf0Keyword:
+                case TokenKind::RtranIf1Keyword:
+                case TokenKind::TranKeyword:
+                case TokenKind::RtranKeyword:
+                    addDiag(diag::DriveStrengthNotAllowed, type.location())
+                        << type.valueText() << type.range() << strength->sourceRange();
+                    break;
+                default:
+                    break;
+            }
+        }
     }
 
     auto delay = parseDelay3();
+    if (delay) {
+        switch (type.kind) {
+            case TokenKind::PullDownKeyword:
+            case TokenKind::PullUpKeyword:
+            case TokenKind::TranKeyword:
+            case TokenKind::RtranKeyword: {
+                auto range = delay->sourceRange();
+                addDiag(diag::DelaysNotAllowed, range.start())
+                    << type.valueText() << type.range() << range;
+                break;
+            }
+            case TokenKind::AndKeyword:
+            case TokenKind::NandKeyword:
+            case TokenKind::OrKeyword:
+            case TokenKind::NorKeyword:
+            case TokenKind::XorKeyword:
+            case TokenKind::XnorKeyword:
+            case TokenKind::BufKeyword:
+            case TokenKind::NotKeyword:
+            case TokenKind::TranIf0Keyword:
+            case TokenKind::TranIf1Keyword:
+            case TokenKind::RtranIf0Keyword:
+            case TokenKind::RtranIf1Keyword:
+            case TokenKind::Identifier:
+                if (delay->kind == SyntaxKind::Delay3) {
+                    if (auto d3 = delay->as<Delay3Syntax>().delay3) {
+                        auto range = d3->sourceRange();
+                        if (type.kind == TokenKind::Identifier) {
+                            addDiag(diag::Delay3UdpNotAllowed, range.start()) << range;
+                        }
+                        else {
+                            addDiag(diag::Delay3NotAllowed, range.start())
+                                << type.valueText() << type.range() << range;
+                        }
+                    }
+                }
+                break;
+            default:
+                break;
+        }
+    }
 
     Token semi;
     SmallVectorSized<TokenOrSyntax, 8> items;

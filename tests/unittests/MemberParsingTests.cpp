@@ -520,22 +520,28 @@ endmodule
     CHECK(diagnostics[4].code == diag::DriveStrengthHighZ);
 }
 
-TEST_CASE("Pull strength errors") {
+TEST_CASE("Gate strength errors") {
     auto& text = R"(
 module m;
     pullup (supply0, highz1) a(foo);
     pullup (highz1) b(foo);
     pullup (strong0) c(foo);
     pullup (strong1) d(foo);
+    cmos (supply0, highz1) e(foo);
+    tran #1 f(foo);
+    and #(1,2,3) g(foo, 1, 1);
 endmodule
 )";
 
     parseCompilationUnit(text);
 
-    REQUIRE(diagnostics.size() == 3);
+    REQUIRE(diagnostics.size() == 6);
     CHECK(diagnostics[0].code == diag::PullStrengthHighZ);
     CHECK(diagnostics[1].code == diag::PullStrengthHighZ);
     CHECK(diagnostics[2].code == diag::InvalidPullStrength);
+    CHECK(diagnostics[3].code == diag::DriveStrengthNotAllowed);
+    CHECK(diagnostics[4].code == diag::DelaysNotAllowed);
+    CHECK(diagnostics[5].code == diag::Delay3NotAllowed);
 }
 
 TEST_CASE("Subroutine prototype errors") {
