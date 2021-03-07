@@ -135,6 +135,34 @@ TimingControl& Delay3Control::fromSyntax(Compilation& compilation, const Delay3S
     return *result;
 }
 
+TimingControl& Delay3Control::fromArguments(Compilation& compilation,
+                                            const ArgumentListSyntax& exprs,
+                                            const BindContext& context) {
+    auto& items = exprs.parameters;
+    if (items.size() < 1 || items.size() > 3) {
+        context.addDiag(diag::ExpectedNetDelay, exprs.sourceRange());
+        return badCtrl(compilation, nullptr);
+    }
+
+    const Expression* delays[3] = { nullptr };
+    for (size_t i = 0; i < items.size(); i++) {
+        if (items[i]->kind != SyntaxKind::OrderedArgument) {
+            context.addDiag(diag::ExpectedNetDelay, items[i]->sourceRange());
+            return badCtrl(compilation, nullptr);
+        }
+
+        delays[i] = &Expression::bind(*items[i]->as<OrderedArgumentSyntax>().expr, context);
+
+        if (!delays[i]->type->isNumeric()) {
+            context.addDiag(diag::DelayNotNumeric, delays[i]->sourceRange) << *delays[i]->type;
+            return badCtrl(compilation, nullptr);
+        }
+    }
+
+    ASSERT(delays[0]);
+    return *compilation.emplace<Delay3Control>(*delays[0], delays[1], delays[2]);
+}
+
 void Delay3Control::serializeTo(ASTSerializer& serializer) const {
     serializer.write("expr1", expr1);
     if (expr2)

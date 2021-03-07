@@ -1601,3 +1601,28 @@ endprimitive
     CHECK(diags[17].code == diag::Redefinition);
     CHECK(diags[18].code == diag::Redefinition);
 }
+
+TEST_CASE("UDP instances error checking") {
+    auto tree = SyntaxTree::fromText(R"(
+primitive p1 (output a, input b);
+    table 00:0; endtable
+endprimitive
+
+module m;
+    logic foo[3];
+    p1 #(3, 4) (a, b);
+    p1 #(foo) (a, b);
+    p1 #(.baz(1), .bar(2)) (a, b);
+    p1 #(3, 4, 5) (a, b);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 3);
+    CHECK(diags[0].code == diag::DelayNotNumeric);
+    CHECK(diags[1].code == diag::ExpectedNetDelay);
+    CHECK(diags[2].code == diag::Delay3UdpNotAllowed);
+}

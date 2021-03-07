@@ -22,6 +22,7 @@ class ParameterSymbolBase;
 class PortConnection;
 class PortSymbol;
 class PrimitiveSymbol;
+class TimingControl;
 
 struct BindDirectiveSyntax;
 struct HierarchicalInstanceSyntax;
@@ -220,6 +221,7 @@ public:
         primitiveType(primitiveType) {}
 
     span<const Expression* const> getPortConnections() const;
+    const TimingControl* getDelay() const;
 
     static void fromSyntax(const PrimitiveSymbol& primitive,
                            const HierarchyInstantiationSyntax& syntax, LookupLocation location,
@@ -234,6 +236,7 @@ public:
 
 private:
     mutable optional<span<const Expression* const>> ports;
+    mutable optional<const TimingControl*> delay;
 };
 
 } // namespace slang

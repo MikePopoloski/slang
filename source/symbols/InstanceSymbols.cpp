@@ -9,10 +9,12 @@
 #include "ParameterBuilder.h"
 
 #include "slang/binding/Expression.h"
+#include "slang/binding/TimingControl.h"
 #include "slang/compilation/Compilation.h"
 #include "slang/compilation/Definition.h"
 #include "slang/diagnostics/DeclarationsDiags.h"
 #include "slang/diagnostics/LookupDiags.h"
+#include "slang/diagnostics/ParserDiags.h"
 #include "slang/symbols/ASTSerializer.h"
 #include "slang/symbols/MemberSymbols.h"
 #include "slang/symbols/ParameterSymbols.h"
@@ -904,8 +906,6 @@ void PrimitiveInstanceSymbol::fromSyntax(const PrimitiveSymbol& primitive,
                                          const HierarchyInstantiationSyntax& syntax,
                                          LookupLocation location, const Scope& scope,
                                          SmallVector<const Symbol*>& results) {
-    // TODO: strengths and delays
-    // TODO: error checking, ports, etc
     createPrimitives(primitive, syntax, location, scope, results);
 }
 
@@ -932,8 +932,6 @@ void PrimitiveInstanceSymbol::fromSyntax(const PrimitiveInstantiationSyntax& syn
         return;
     }
 
-    // TODO: strengths and delays
-    // TODO: error checking, ports, etc
     createPrimitives(*prim, syntax, location, scope, results);
 }
 
@@ -1015,12 +1013,53 @@ span<const Expression* const> PrimitiveInstanceSymbol::getPortConnections() cons
     return *ports;
 }
 
+const TimingControl* PrimitiveInstanceSymbol::getDelay() const {
+    if (delay)
+        return *delay;
+
+    auto scope = getParentScope();
+    auto syntax = getSyntax();
+    if (!scope || !syntax || !syntax->parent) {
+        delay = nullptr;
+        return nullptr;
+    }
+
+    BindContext context(*scope, LookupLocation::before(*this), BindFlags::NonProcedural);
+
+    auto& parent = *syntax->parent;
+    if (parent.kind == SyntaxKind::HierarchyInstantiation) {
+        if (auto params = parent.as<HierarchyInstantiationSyntax>().parameters) {
+            auto exprs = params->assignments;
+            delay = &Delay3Control::fromArguments(scope->getCompilation(), *exprs, context);
+            if (delay.value()->kind == TimingControlKind::Delay3) {
+                if (auto d3 = delay.value()->as<Delay3Control>().expr3)
+                    context.addDiag(diag::Delay3UdpNotAllowed, d3->sourceRange);
+            }
+            return *delay;
+        }
+    }
+    else {
+        auto delaySyntax = parent.as<PrimitiveInstantiationSyntax>().delay;
+        if (delaySyntax) {
+            delay = &TimingControl::bind(*delaySyntax, context);
+            return *delay;
+        }
+    }
+
+    delay = nullptr;
+    return nullptr;
+}
+
 void PrimitiveInstanceSymbol::serializeTo(ASTSerializer& serializer) const {
     serializer.writeLink("primitiveType", primitiveType);
+
     serializer.startArray("ports");
     for (auto expr : getPortConnections())
         serializer.serialize(*expr);
     serializer.endArray();
+
+    if (auto delayCtrl = getDelay())
+        serializer.write("delay", *delayCtrl);
 }
 
 } // namespace slang

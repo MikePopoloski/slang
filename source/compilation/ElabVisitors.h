@@ -130,6 +130,7 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
             return;
 
         symbol.getPortConnections();
+        symbol.getDelay();
     }
 
     void handle(const InstanceSymbol& symbol) {
