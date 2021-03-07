@@ -772,7 +772,6 @@ void UnknownModuleSymbol::fromSyntax(Compilation& compilation,
                                      const PrimitiveInstantiationSyntax& syntax,
                                      LookupLocation location, const Scope& scope,
                                      SmallVector<const Symbol*>& results) {
-    // TODO: strength, delays
     BindContext context(scope, location, BindFlags::NonProcedural);
     createUnknownModules(compilation, syntax, context, {}, results);
 }
@@ -913,20 +912,34 @@ void PrimitiveInstanceSymbol::fromSyntax(const PrimitiveInstantiationSyntax& syn
                                          LookupLocation location, const Scope& scope,
                                          SmallVector<const Symbol*>& results) {
     auto& comp = scope.getCompilation();
-    auto prim = comp.getPrimitive(syntax.type.valueText());
+    auto name = syntax.type.valueText();
+    auto prim = comp.getPrimitive(name);
 
     if (!prim) {
-        // Find our parent instance.
-        auto currScope = &scope;
-        while (currScope && currScope->asSymbol().kind != SymbolKind::InstanceBody)
-            currScope = currScope->asSymbol().getParentScope();
+        // See if there is a definition with this name, which indicates an error
+        // in providing a drive strength or net delay.
+        if (comp.getDefinition(name, scope)) {
+            ASSERT(syntax.strength || syntax.delay);
+            if (syntax.strength) {
+                scope.addDiag(diag::InstanceWithStrength, syntax.strength->sourceRange()) << name;
+            }
+            else {
+                scope.addDiag(diag::InstanceWithDelay,
+                              syntax.delay->getFirstToken().location() + 1);
+            }
+        }
+        else {
+            // Find our parent instance to see if it is uninstantiated.
+            auto currScope = &scope;
+            while (currScope && currScope->asSymbol().kind != SymbolKind::InstanceBody)
+                currScope = currScope->asSymbol().getParentScope();
 
-        bool isUninstantiated =
-            currScope && currScope->asSymbol().as<InstanceBodySymbol>().isUninstantiated;
+            bool isUninstantiated =
+                currScope && currScope->asSymbol().as<InstanceBodySymbol>().isUninstantiated;
 
-        // TODO: new error UnknownPrimitive
-        if (!isUninstantiated)
-            scope.addDiag(diag::UnknownModule, syntax.type.range()) << syntax.type.valueText();
+            if (!isUninstantiated)
+                scope.addDiag(diag::UnknownPrimitive, syntax.type.range()) << name;
+        }
 
         UnknownModuleSymbol::fromSyntax(comp, syntax, location, scope, results);
         return;

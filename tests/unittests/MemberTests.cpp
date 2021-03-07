@@ -1621,11 +1621,30 @@ endmodule
 
     Compilation compilation;
     compilation.addSyntaxTree(tree);
-    NO_COMPILATION_ERRORS;
 
     auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 3);
     CHECK(diags[0].code == diag::DelayNotNumeric);
     CHECK(diags[1].code == diag::ExpectedNetDelay);
     CHECK(diags[2].code == diag::Delay3UdpNotAllowed);
+}
+
+TEST_CASE("Module mixup with primitive instance") {
+    auto tree = SyntaxTree::fromText(R"(
+module n;
+endmodule
+
+module m;
+    n #  3 n1();
+    n (supply0, strong1) n2();
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::InstanceWithDelay);
+    CHECK(diags[1].code == diag::InstanceWithStrength);
 }
