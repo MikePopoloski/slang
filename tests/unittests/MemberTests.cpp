@@ -1614,11 +1614,14 @@ module m;
     p1 #(foo) (a, b);
     p1 #(.baz(1), .bar(2)) (a, b);
     p1 #(3, 4, 5) (a, b);
+    p1 #3 (a, b);
+    p1 (supply0, strong1) #(1:2:3, 3:2:1) asdf(a, b);
 endmodule
 )");
 
     Compilation compilation;
     compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
 
     auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 3);

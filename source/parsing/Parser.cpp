@@ -1163,8 +1163,12 @@ bool Parser::isHierarchyInstantiation(bool requireName) {
         return false;
     }
 
-    // a parenthesis here means we're definitely doing an instantiation
-    return peek(index).kind == TokenKind::OpenParenthesis;
+    // A parenthesis here indicates a start of a hierarchical instantiation,
+    // unless there's a drive strength token immediately after it.
+    if (peek(index++).kind != TokenKind::OpenParenthesis)
+        return false;
+
+    return !isDriveStrength(peek(index).kind);
 }
 
 bool Parser::scanDimensionList(uint32_t& index) {

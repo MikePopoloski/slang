@@ -171,11 +171,9 @@ MemberSyntax* Parser::parseMember(SyntaxKind parentKind, bool& anyLocalModules) 
                 }
             }
 
-            // If there's a hash symbol here, it's probably a malformed instantiation.
-            // Call into that handler to get a better error message than just skipping
-            // the identifier token.
+            // If there's a hash or parenthesis here this is likely a primitive instantiation.
             if (peek(1).kind == TokenKind::Hash || peek(1).kind == TokenKind::OpenParenthesis)
-                return &parseHierarchyInstantiation(attributes);
+                return &parsePrimitiveInstantiation(attributes);
 
             // Otherwise, assume it's an attempt at a variable declaration.
             return &parseVariableDeclaration(attributes);
