@@ -237,25 +237,30 @@ Expression& Expression::convertAssignment(const BindContext& context, const Type
     // If this is a port connection to an array of instances, check if the provided
     // expression represents an array that should be sliced on a per-instance basis.
     if (context.instance && !context.instance->arrayPath.empty()) {
-        // If we have an lhsExpr here, this is an output (or inout) port being connected.
-        // We need to pass the lhs in as the expression to be connected, since we can't
-        // slice the port side. If lhsExpr is null, this is an input port and we should
-        // slice the incoming expression as an rvalue.
-        if (lhsExpr) {
-            Expression* conn = tryConnectPortArray(context, *rt, **lhsExpr, *context.instance);
-            if (conn) {
-                selfDetermined(context, conn);
-                *lhsExpr = conn;
+        // If the connection is already of the right size and simply differs in
+        // terms of four-statedness or signedness, don't bother trying to slice
+        // out the connection.
+        if (type.getBitWidth() != rt->getBitWidth() || !type.isAssignmentCompatible(*rt)) {
+            // If we have an lhsExpr here, this is an output (or inout) port being connected.
+            // We need to pass the lhs in as the expression to be connected, since we can't
+            // slice the port side. If lhsExpr is null, this is an input port and we should
+            // slice the incoming expression as an rvalue.
+            if (lhsExpr) {
+                Expression* conn = tryConnectPortArray(context, *rt, **lhsExpr, *context.instance);
+                if (conn) {
+                    selfDetermined(context, conn);
+                    *lhsExpr = conn;
 
-                selfDetermined(context, result);
-                return *result;
+                    selfDetermined(context, result);
+                    return *result;
+                }
             }
-        }
-        else {
-            Expression* conn = tryConnectPortArray(context, type, expr, *context.instance);
-            if (conn) {
-                selfDetermined(context, conn);
-                return *conn;
+            else {
+                Expression* conn = tryConnectPortArray(context, type, expr, *context.instance);
+                if (conn) {
+                    selfDetermined(context, conn);
+                    return *conn;
+                }
             }
         }
     }

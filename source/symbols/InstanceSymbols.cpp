@@ -841,8 +841,7 @@ Symbol* recursePrimArray(Compilation& compilation, const PrimitiveSymbol& primit
     // things try to reference this symbol.
     ASSERT(instance.decl);
     auto nameToken = instance.decl->name;
-    auto dim = context.evalDimension(**it, /* requireRange */
-                                     true, /* isPacked */ false);
+    auto dim = context.evalDimension(**it, /* requireRange */ true, /* isPacked */ false);
     if (!dim.isRange()) {
         return compilation.emplace<InstanceArraySymbol>(
             compilation, nameToken.valueText(), nameToken.location(), span<const Symbol* const>{},
