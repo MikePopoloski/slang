@@ -12,8 +12,9 @@ namespace slang::Builtins {
 #define NL SourceLocation::NoLocation
 
 static void gate(Compilation& c, string_view name,
-                 std::initializer_list<PrimitivePortDirection> portDirs) {
-    auto& prim = *c.emplace<PrimitiveSymbol>(c, name, NL);
+                 std::initializer_list<PrimitivePortDirection> portDirs,
+                 PrimitiveSymbol::PrimitiveKind primitiveKind = PrimitiveSymbol::Fixed) {
+    auto& prim = *c.emplace<PrimitiveSymbol>(c, name, NL, primitiveKind);
     c.addPrimitive(prim);
 
     SmallVectorSized<const PrimitivePortSymbol*, 4> ports;
@@ -50,17 +51,16 @@ void registerGateTypes(Compilation& c) {
     gate(c, "pullup", { out });
     gate(c, "pulldown", { out });
 
-    // TODO:
     // These are special in that they support an arbitrary number of
     // either inputs or outputs.
-    gate(c, "and", { out });
-    gate(c, "or", { out });
-    gate(c, "nand", { out });
-    gate(c, "nor", { out });
-    gate(c, "xor", { out });
-    gate(c, "xnor", { out });
-    gate(c, "buf", { out });
-    gate(c, "not", { out });
+    gate(c, "and", { out, in }, PrimitiveSymbol::NInput);
+    gate(c, "or", { out, in }, PrimitiveSymbol::NInput);
+    gate(c, "nand", { out, in }, PrimitiveSymbol::NInput);
+    gate(c, "nor", { out, in }, PrimitiveSymbol::NInput);
+    gate(c, "xor", { out, in }, PrimitiveSymbol::NInput);
+    gate(c, "xnor", { out, in }, PrimitiveSymbol::NInput);
+    gate(c, "buf", { out, in }, PrimitiveSymbol::NOutput);
+    gate(c, "not", { out, in }, PrimitiveSymbol::NOutput);
 }
 
 } // namespace slang::Builtins

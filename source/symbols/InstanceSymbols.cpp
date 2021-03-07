@@ -947,30 +947,55 @@ span<const Expression* const> PrimitiveInstanceSymbol::getPortConnections() cons
             }
         }
 
-        if (conns.size() != primitiveType.ports.size()) {
-            auto& diag = context.addDiag(diag::PrimitivePortCountWrong, his.openParen.location());
-            diag << primitiveType.name;
-            diag << conns.size() << primitiveType.ports.size();
-            ports.emplace();
-            return *ports;
-        }
-
         SmallVectorSized<const Expression*, 8> results;
-        for (size_t i = 0; i < conns.size(); i++) {
-            ArgumentDirection dir = ArgumentDirection::In;
-            switch (primitiveType.ports[i]->direction) {
-                case PrimitivePortDirection::In:
-                    dir = ArgumentDirection::In;
-                    break;
-                case PrimitivePortDirection::InOut:
-                    dir = ArgumentDirection::InOut;
-                    break;
-                case PrimitivePortDirection::Out:
-                case PrimitivePortDirection::OutReg:
-                    dir = ArgumentDirection::Out;
-                    break;
+        if (primitiveType.primitiveKind == PrimitiveSymbol::NInput ||
+            primitiveType.primitiveKind == PrimitiveSymbol::NOutput) {
+            // Some of the built-in gates allow n-inputs or n-outputs; handle those specially.
+            if (conns.size() < 2) {
+                auto& diag = context.addDiag(diag::InvalidNGateCount, his.openParen.location());
+                diag << primitiveType.name;
+                ports.emplace();
+                return *ports;
             }
-            results.append(&Expression::bindArgument(comp.getLogicType(), dir, *conns[i], context));
+
+            for (size_t i = 0; i < conns.size(); i++) {
+                ArgumentDirection dir;
+                if (primitiveType.primitiveKind == PrimitiveSymbol::NInput)
+                    dir = i == 0 ? ArgumentDirection::Out : ArgumentDirection::In;
+                else
+                    dir = conns.size() - 1 ? ArgumentDirection::In : ArgumentDirection::Out;
+
+                results.append(
+                    &Expression::bindArgument(comp.getLogicType(), dir, *conns[i], context));
+            }
+        }
+        else {
+            if (conns.size() != primitiveType.ports.size()) {
+                auto& diag =
+                    context.addDiag(diag::PrimitivePortCountWrong, his.openParen.location());
+                diag << primitiveType.name;
+                diag << conns.size() << primitiveType.ports.size();
+                ports.emplace();
+                return *ports;
+            }
+
+            for (size_t i = 0; i < conns.size(); i++) {
+                ArgumentDirection dir = ArgumentDirection::In;
+                switch (primitiveType.ports[i]->direction) {
+                    case PrimitivePortDirection::In:
+                        dir = ArgumentDirection::In;
+                        break;
+                    case PrimitivePortDirection::InOut:
+                        dir = ArgumentDirection::InOut;
+                        break;
+                    case PrimitivePortDirection::Out:
+                    case PrimitivePortDirection::OutReg:
+                        dir = ArgumentDirection::Out;
+                        break;
+                }
+                results.append(
+                    &Expression::bindArgument(comp.getLogicType(), dir, *conns[i], context));
+            }
         }
 
         ports = results.copy(scope->getCompilation());

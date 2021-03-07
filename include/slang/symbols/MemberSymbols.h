@@ -221,9 +221,12 @@ public:
     span<const PrimitivePortSymbol* const> ports;
     const ConstantValue* initVal = nullptr;
     bool isSequential = false;
+    enum PrimitiveKind { UserDefined, Fixed, NInput, NOutput } primitiveKind;
 
-    PrimitiveSymbol(Compilation& compilation, string_view name, SourceLocation loc) :
-        Symbol(SymbolKind::Primitive, name, loc), Scope(compilation, this) {}
+    PrimitiveSymbol(Compilation& compilation, string_view name, SourceLocation loc,
+                    PrimitiveKind primitiveKind) :
+        Symbol(SymbolKind::Primitive, name, loc),
+        Scope(compilation, this), primitiveKind(primitiveKind) {}
 
     static PrimitiveSymbol& fromSyntax(const Scope& scope, const UdpDeclarationSyntax& syntax);
 

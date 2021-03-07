@@ -956,6 +956,9 @@ module m;
 
     logic a, b, c;
     pmos #6 (a, b, c);
+
+    and (a, 1, 2, 3, 4, 5, 6, 7, 8);
+    buf (a, b, c, 1);
 endmodule
 )");
 

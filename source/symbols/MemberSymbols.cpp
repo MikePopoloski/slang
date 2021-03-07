@@ -535,8 +535,8 @@ void PrimitivePortSymbol::serializeTo(ASTSerializer& serializer) const {
 PrimitiveSymbol& PrimitiveSymbol::fromSyntax(const Scope& scope,
                                              const UdpDeclarationSyntax& syntax) {
     auto& comp = scope.getCompilation();
-    auto prim =
-        comp.emplace<PrimitiveSymbol>(comp, syntax.name.valueText(), syntax.name.location());
+    auto prim = comp.emplace<PrimitiveSymbol>(comp, syntax.name.valueText(), syntax.name.location(),
+                                              PrimitiveSymbol::UserDefined);
     prim->setAttributes(scope, syntax.attributes);
     prim->setSyntax(syntax);
 
