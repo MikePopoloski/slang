@@ -200,13 +200,36 @@ void createImplicitNets(const HierarchicalInstanceSyntax& instance, const BindCo
     }
 }
 
+void getInstanceArrayDimensions(const InstanceArraySymbol& array,
+                                SmallVector<ConstantRange>& dimensions) {
+    auto scope = array.getParentScope();
+    if (scope && scope->asSymbol().kind == SymbolKind::InstanceArray)
+        getInstanceArrayDimensions(scope->asSymbol().as<InstanceArraySymbol>(), dimensions);
+
+    dimensions.append(array.range);
+}
+
 } // namespace
 
 namespace slang {
 
+string_view InstanceSymbolBase::getArrayName() const {
+    auto scope = getParentScope();
+    if (scope && scope->asSymbol().kind == SymbolKind::InstanceArray)
+        return scope->asSymbol().as<InstanceArraySymbol>().getArrayName();
+
+    return name;
+}
+
+void InstanceSymbolBase::getArrayDimensions(SmallVector<ConstantRange>& dimensions) const {
+    auto scope = getParentScope();
+    if (scope && scope->asSymbol().kind == SymbolKind::InstanceArray)
+        getInstanceArrayDimensions(scope->asSymbol().as<InstanceArraySymbol>(), dimensions);
+}
+
 InstanceSymbol::InstanceSymbol(Compilation& compilation, string_view name, SourceLocation loc,
                                const InstanceBodySymbol& body) :
-    Symbol(SymbolKind::Instance, name, loc),
+    InstanceSymbolBase(SymbolKind::Instance, name, loc),
     body(body) {
     compilation.addInstance(*this);
 }
@@ -450,15 +473,6 @@ void InstanceSymbol::fromBindDirective(const Scope& scope, const BindDirectiveSy
     }
 }
 
-static void getInstanceArrayDimensions(const InstanceArraySymbol& array,
-                                       SmallVector<ConstantRange>& dimensions) {
-    auto scope = array.getParentScope();
-    if (scope && scope->asSymbol().kind == SymbolKind::InstanceArray)
-        getInstanceArrayDimensions(scope->asSymbol().as<InstanceArraySymbol>(), dimensions);
-
-    dimensions.append(array.range);
-}
-
 const Definition& InstanceSymbol::getDefinition() const {
     return body.getDefinition();
 }
@@ -524,20 +538,6 @@ void InstanceSymbol::resolvePortConnections() const {
 
     PortConnection::makeConnections(
         *this, portList, syntax->as<HierarchicalInstanceSyntax>().connections, *connections);
-}
-
-string_view InstanceSymbol::getArrayName() const {
-    auto scope = getParentScope();
-    if (scope && scope->asSymbol().kind == SymbolKind::InstanceArray)
-        return scope->asSymbol().as<InstanceArraySymbol>().getArrayName();
-
-    return name;
-}
-
-void InstanceSymbol::getArrayDimensions(SmallVector<ConstantRange>& dimensions) const {
-    auto scope = getParentScope();
-    if (scope && scope->asSymbol().kind == SymbolKind::InstanceArray)
-        getInstanceArrayDimensions(scope->asSymbol().as<InstanceArraySymbol>(), dimensions);
 }
 
 void InstanceSymbol::serializeTo(ASTSerializer& serializer) const {
@@ -816,9 +816,11 @@ namespace {
 PrimitiveInstanceSymbol* createPrimInst(Compilation& compilation, const Scope& scope,
                                         const PrimitiveSymbol& primitive,
                                         const HierarchicalInstanceSyntax& syntax,
-                                        span<const AttributeInstanceSyntax* const> attributes) {
+                                        span<const AttributeInstanceSyntax* const> attributes,
+                                        SmallVector<int32_t>& path) {
     auto [name, loc] = getNameLoc(syntax);
     auto result = compilation.emplace<PrimitiveInstanceSymbol>(name, loc, primitive);
+    result->arrayPath = path.copy(compilation);
     result->setSyntax(syntax);
     result->setAttributes(scope, attributes);
     return result;
@@ -829,9 +831,10 @@ using DimIterator = span<VariableDimensionSyntax*>::iterator;
 Symbol* recursePrimArray(Compilation& compilation, const PrimitiveSymbol& primitive,
                          const HierarchicalInstanceSyntax& instance, const BindContext& context,
                          DimIterator it, DimIterator end,
-                         span<const AttributeInstanceSyntax* const> attributes) {
+                         span<const AttributeInstanceSyntax* const> attributes,
+                         SmallVector<int32_t>& path) {
     if (it == end)
-        return createPrimInst(compilation, context.scope, primitive, instance, attributes);
+        return createPrimInst(compilation, context.scope, primitive, instance, attributes, path);
 
     // Evaluate the dimensions of the array. If this fails for some reason,
     // make up an empty array so that we don't get further errors when
@@ -841,7 +844,7 @@ Symbol* recursePrimArray(Compilation& compilation, const PrimitiveSymbol& primit
     auto dim = context.evalDimension(**it, /* requireRange */
                                      true, /* isPacked */ false);
     if (!dim.isRange()) {
-        return compilation.emplace<PrimitiveInstanceArraySymbol>(
+        return compilation.emplace<InstanceArraySymbol>(
             compilation, nameToken.valueText(), nameToken.location(), span<const Symbol* const>{},
             ConstantRange());
     }
@@ -851,16 +854,18 @@ Symbol* recursePrimArray(Compilation& compilation, const PrimitiveSymbol& primit
     ConstantRange range = dim.range;
     SmallVectorSized<const Symbol*, 8> elements;
     for (int32_t i = range.lower(); i <= range.upper(); i++) {
+        path.append(i);
         auto symbol =
-            recursePrimArray(compilation, primitive, instance, context, it, end, attributes);
+            recursePrimArray(compilation, primitive, instance, context, it, end, attributes, path);
+        path.pop();
+
         symbol->name = "";
         elements.append(symbol);
     }
 
-    auto result = compilation.emplace<PrimitiveInstanceArraySymbol>(
-        compilation, nameToken.valueText(), nameToken.location(), elements.copy(compilation),
-        range);
-
+    auto result = compilation.emplace<InstanceArraySymbol>(compilation, nameToken.valueText(),
+                                                           nameToken.location(),
+                                                           elements.copy(compilation), range);
     for (auto element : elements)
         result->addMember(*element);
 
@@ -872,20 +877,23 @@ void createPrimitives(const PrimitiveSymbol& primitive, const TSyntax& syntax,
                       LookupLocation location, const Scope& scope,
                       SmallVector<const Symbol*>& results) {
     SmallSet<string_view, 8> implicitNetNames;
+    SmallVectorSized<int32_t, 4> path;
     auto& comp = scope.getCompilation();
     auto& netType = scope.getDefaultNetType();
 
     BindContext context(scope, location, BindFlags::Constant);
     for (auto instance : syntax.instances) {
+        path.clear();
         createImplicitNets(*instance, context, netType, implicitNetNames, results);
 
         if (!instance->decl) {
-            results.append(createPrimInst(comp, scope, primitive, *instance, syntax.attributes));
+            results.append(
+                createPrimInst(comp, scope, primitive, *instance, syntax.attributes, path));
         }
         else {
             auto dims = instance->decl->dimensions;
             auto symbol = recursePrimArray(comp, primitive, *instance, context, dims.begin(),
-                                           dims.end(), syntax.attributes);
+                                           dims.end(), syntax.attributes, path);
             results.append(symbol);
         }
     }
@@ -936,9 +944,9 @@ span<const Expression* const> PrimitiveInstanceSymbol::getPortConnections() cons
         auto scope = getParentScope();
         ASSERT(syntax && scope);
 
-        // TODO: support array slicing connections
         auto& comp = scope->getCompilation();
         BindContext context(*scope, LookupLocation::after(*this), BindFlags::NonProcedural);
+        context.instance = this;
 
         SmallVectorSized<const ExpressionSyntax*, 8> conns;
         auto& his = syntax->as<HierarchicalInstanceSyntax>();
@@ -1014,10 +1022,6 @@ void PrimitiveInstanceSymbol::serializeTo(ASTSerializer& serializer) const {
     for (auto expr : getPortConnections())
         serializer.serialize(*expr);
     serializer.endArray();
-}
-
-void PrimitiveInstanceArraySymbol::serializeTo(ASTSerializer& serializer) const {
-    serializer.write("range", range.toString());
 }
 
 } // namespace slang

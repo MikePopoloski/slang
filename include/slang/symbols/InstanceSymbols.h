@@ -28,11 +28,26 @@ struct HierarchicalInstanceSyntax;
 struct HierarchyInstantiationSyntax;
 struct ParamOverrideNode;
 
-/// Base class for module, interface, and program instance symbols.
-class InstanceSymbol : public Symbol {
+/// Common functionality for module, interface, program, and primitive instances.
+class InstanceSymbolBase : public Symbol {
+public:
+    span<const int32_t> arrayPath;
+
+    /// If this instance is part of an array, walk upward to find the array's name.
+    /// Otherwise returns the name of the instance itself.
+    string_view getArrayName() const;
+
+    /// Gets the set of dimensions describing the instance array that contains this instance.
+    /// If this instance is not part of an array, does not add any dimensions to the given list.
+    void getArrayDimensions(SmallVector<ConstantRange>& dimensions) const;
+
+protected:
+    using Symbol::Symbol;
+};
+
+class InstanceSymbol : public InstanceSymbolBase {
 public:
     const InstanceBodySymbol& body;
-    span<const int32_t> arrayPath;
 
     InstanceSymbol(Compilation& compilation, string_view name, SourceLocation loc,
                    const InstanceBodySymbol& body);
@@ -48,14 +63,6 @@ public:
     const PortConnection* getPortConnection(const PortSymbol& port) const;
     const PortConnection* getPortConnection(const InterfacePortSymbol& port) const;
     void resolvePortConnections() const;
-
-    /// If this instance is part of an array, walk upward to find the array's name.
-    /// Otherwise returns the name of the instance itself.
-    string_view getArrayName() const;
-
-    /// Gets the set of dimensions describing the instance array that contains this instance.
-    /// If this instance is not part of an array, does not add any dimensions to the given list.
-    void getArrayDimensions(SmallVector<ConstantRange>& dimensions) const;
 
     void serializeTo(ASTSerializer& serializer) const;
 
@@ -203,13 +210,13 @@ private:
     mutable optional<span<const Expression* const>> ports;
 };
 
-class PrimitiveInstanceSymbol : public Symbol {
+class PrimitiveInstanceSymbol : public InstanceSymbolBase {
 public:
     const PrimitiveSymbol& primitiveType;
 
     PrimitiveInstanceSymbol(string_view name, SourceLocation loc,
                             const PrimitiveSymbol& primitiveType) :
-        Symbol(SymbolKind::PrimitiveInstance, name, loc),
+        InstanceSymbolBase(SymbolKind::PrimitiveInstance, name, loc),
         primitiveType(primitiveType) {}
 
     span<const Expression* const> getPortConnections() const;
@@ -227,21 +234,6 @@ public:
 
 private:
     mutable optional<span<const Expression* const>> ports;
-};
-
-class PrimitiveInstanceArraySymbol : public Symbol, public Scope {
-public:
-    span<const Symbol* const> elements;
-    ConstantRange range;
-
-    PrimitiveInstanceArraySymbol(Compilation& compilation, string_view name, SourceLocation loc,
-                                 span<const Symbol* const> elements, ConstantRange range) :
-        Symbol(SymbolKind::PrimitiveInstanceArray, name, loc),
-        Scope(compilation, this), elements(elements), range(range) {}
-
-    void serializeTo(ASTSerializer& serializer) const;
-
-    static bool isKind(SymbolKind kind) { return kind == SymbolKind::PrimitiveInstanceArray; }
 };
 
 } // namespace slang

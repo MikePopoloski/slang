@@ -14,7 +14,7 @@
 namespace slang {
 
 class ASTSerializer;
-class InstanceSymbol;
+class InstanceSymbolBase;
 class Type;
 struct ArrayOrRandomizeMethodExpressionSyntax;
 struct AssignmentPatternExpressionSyntax;
@@ -316,7 +316,7 @@ protected:
                                              const Type* assignmentTarget);
 
     static Expression* tryConnectPortArray(const BindContext& context, const Type& type,
-                                           Expression& expr, const InstanceSymbol& instance);
+                                           Expression& expr, const InstanceSymbolBase& instance);
 
     static Expression* tryBindInterfaceRef(const BindContext& context,
                                            const ExpressionSyntax& syntax, const Type& targetType);

@@ -69,7 +69,7 @@ bool isSameEnum(const Expression& expr, const Type& enumType) {
 namespace slang {
 
 Expression* Expression::tryConnectPortArray(const BindContext& context, const Type& portType,
-                                            Expression& expr, const InstanceSymbol& instance) {
+                                            Expression& expr, const InstanceSymbolBase& instance) {
     // This lambda is shared code for reporting an error and returning an invalid expression.
     auto& comp = context.getCompilation();
     auto bad = [&]() {

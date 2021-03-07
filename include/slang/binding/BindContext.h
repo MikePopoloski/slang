@@ -15,7 +15,7 @@ namespace slang {
 class Compilation;
 class EvalContext;
 class Expression;
-class InstanceSymbol;
+class InstanceSymbolBase;
 class IteratorSymbol;
 class Scope;
 class Statement;
@@ -126,7 +126,7 @@ public:
 
     /// If the expression being bound is for an instance port connection, this is
     /// a pointer to that instance; otherwise, it's nullptr.
-    const InstanceSymbol* instance = nullptr;
+    const InstanceSymbolBase* instance = nullptr;
 
     /// If an array iteration expression is being bound, this contains the symbol
     /// representing the first iterator, along with a linked list of any others

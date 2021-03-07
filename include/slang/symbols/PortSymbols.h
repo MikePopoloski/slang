@@ -16,6 +16,7 @@ namespace slang {
 class AttributeSymbol;
 class Definition;
 class InstanceBodySymbol;
+class InstanceSymbol;
 class InstanceCacheKey;
 
 struct ImplicitTypeSyntax;
