@@ -520,6 +520,24 @@ endmodule
     CHECK(diagnostics[4].code == diag::DriveStrengthHighZ);
 }
 
+TEST_CASE("Pull strength errors") {
+    auto& text = R"(
+module m;
+    pullup (supply0, highz1) a(foo);
+    pullup (highz1) b(foo);
+    pullup (strong0) c(foo);
+    pullup (strong1) d(foo);
+endmodule
+)";
+
+    parseCompilationUnit(text);
+
+    REQUIRE(diagnostics.size() == 3);
+    CHECK(diagnostics[0].code == diag::PullStrengthHighZ);
+    CHECK(diagnostics[1].code == diag::PullStrengthHighZ);
+    CHECK(diagnostics[2].code == diag::InvalidPullStrength);
+}
+
 TEST_CASE("Subroutine prototype errors") {
     auto& text = R"(
 import "DPI-C" function automatic void foo();

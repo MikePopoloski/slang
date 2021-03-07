@@ -530,6 +530,11 @@ token comma
 token strength1
 token closeParen
 
+PullStrength base=NetStrength
+token openParen
+token strength
+token closeParen
+
 NetDeclaration base=Member
 token netType
 NetStrength? strength
@@ -1133,7 +1138,7 @@ token semi
 
 PrimitiveInstantiation base=Member
 token type
-DriveStrength? strength
+NetStrength? strength
 TimingControl? delay
 separated_list<HierarchicalInstance> instances
 token semi

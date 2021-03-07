@@ -544,6 +544,10 @@ DataTypeSyntax& Parser::parseDataType(bitmask<TypeOptions> options) {
     return factory.implicitType(signing, dimensions);
 }
 
+static bool isHighZ(Token t) {
+    return t.kind == TokenKind::HighZ0Keyword || t.kind == TokenKind::HighZ1Keyword;
+}
+
 DriveStrengthSyntax* Parser::parseDriveStrength() {
     if (!peek(TokenKind::OpenParenthesis))
         return nullptr;
@@ -567,15 +571,44 @@ DriveStrengthSyntax* Parser::parseDriveStrength() {
         addDiag(diag::DriveStrengthInvalid, strength1.location())
             << strength0.range() << strength1.range();
     }
-    else if ((strength0.kind == TokenKind::HighZ0Keyword ||
-              strength0.kind == TokenKind::HighZ1Keyword) &&
-             (strength1.kind == TokenKind::HighZ0Keyword ||
-              strength1.kind == TokenKind::HighZ1Keyword)) {
+    else if (isHighZ(strength0) && isHighZ(strength1)) {
         addDiag(diag::DriveStrengthHighZ, strength1.location())
             << strength0.range() << strength1.range();
     }
 
     return &factory.driveStrength(openParen, strength0, comma, strength1, closeParen);
+}
+
+NetStrengthSyntax* Parser::parsePullStrength(Token type) {
+    if (!peek(TokenKind::OpenParenthesis) || !isDriveStrength(peek(1).kind))
+        return nullptr;
+
+    auto errorIfHighZ = [&](Token t) {
+        if (isHighZ(t))
+            addDiag(diag::PullStrengthHighZ, t.location()) << t.range();
+    };
+
+    if (peek(2).kind == TokenKind::Comma) {
+        auto strength = parseDriveStrength();
+        errorIfHighZ(strength->strength0);
+        errorIfHighZ(strength->strength1);
+        return strength;
+    }
+
+    auto openParen = consume();
+    auto strength = consume();
+    auto closeParen = expect(TokenKind::CloseParenthesis);
+
+    errorIfHighZ(strength);
+    if (!isHighZ(strength)) {
+        bool isPulldown = type.kind == TokenKind::PullDownKeyword;
+        if (isStrength0(strength.kind) != isPulldown) {
+            addDiag(diag::InvalidPullStrength, strength.location())
+                << type.valueText() << strength.range();
+        }
+    }
+
+    return &factory.pullStrength(openParen, strength, closeParen);
 }
 
 TimingControlSyntax* Parser::parseDelay3() {

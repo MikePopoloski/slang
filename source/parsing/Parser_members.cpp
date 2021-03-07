@@ -2101,9 +2101,13 @@ PrimitiveInstantiationSyntax& Parser::parsePrimitiveInstantiation(AttrList attri
     else
         type = expect(TokenKind::Identifier);
 
-    DriveStrengthSyntax* strength = nullptr;
-    if (peek(TokenKind::OpenParenthesis) && isDriveStrength(peek(1).kind))
-        strength = parseDriveStrength(); // TODO: also pulldown strength
+    NetStrengthSyntax* strength = nullptr;
+    if (peek(TokenKind::OpenParenthesis) && isDriveStrength(peek(1).kind)) {
+        if (type.kind == TokenKind::PullUpKeyword || type.kind == TokenKind::PullDownKeyword)
+            strength = parsePullStrength(type);
+        else
+            strength = parseDriveStrength();
+    }
 
     auto delay = parseDelay3();
 

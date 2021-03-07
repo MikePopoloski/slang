@@ -273,6 +273,7 @@ private:
     MemberSyntax& parseVariableDeclaration(AttrList attributes);
     MemberSyntax& parseNetDeclaration(AttrList attributes);
     DriveStrengthSyntax* parseDriveStrength();
+    NetStrengthSyntax* parsePullStrength(Token type);
     TimingControlSyntax* parseDelay3();
     HierarchyInstantiationSyntax& parseHierarchyInstantiation(AttrList attributes);
     HierarchicalInstanceSyntax& parseHierarchicalInstance();
