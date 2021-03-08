@@ -420,31 +420,31 @@ LRM | Feature | Supported
 
 LRM | Feature | Supported
 --- | ------- | ---------
-{{m-warning}} 28.3 | Gate and switch declaration syntax | partial
-{{m-warning}} 28.4 | and, nand, nor, or, xor, and xnor gates | partial
-{{m-warning}} 28.5 | buf and not gates | partial
-{{m-warning}} 28.6 | bufif1, bufif0, notif1, and notif0 gates | partial
-{{m-warning}} 28.7 | MOS switches | partial
-{{m-warning}} 28.8 | Bidirectional pass switches | partial
-{{m-warning}} 28.9 | CMOS switches | partial
-{{m-warning}} 28.10 | pullup and pulldown sources | partial
+{{m-success}} 28.3 | Gate and switch declaration syntax | v0.7
+{{m-success}} 28.4 | and, nand, nor, or, xor, and xnor gates | v0.7
+{{m-success}} 28.5 | buf and not gates | v0.7
+{{m-success}} 28.6 | bufif1, bufif0, notif1, and notif0 gates | v0.7
+{{m-success}} 28.7 | MOS switches | v0.7
+{{m-success}} 28.8 | Bidirectional pass switches | v0.7
+{{m-success}} 28.9 | CMOS switches | v0.7
+{{m-success}} 28.10 | pullup and pulldown sources | v0.7
 {{m-dim}}     28.11 | Logic strength modeling | N/A
 {{m-dim}}     28.12 | Strengths and values of combined signals | N/A
 {{m-dim}}     28.13 | Strength reduction by nonresistive devices | N/A
 {{m-dim}}     28.14 | Strength reduction by resistive devices | N/A
 {{m-dim}}     28.15 | Strengths of net types | N/A
-{{m-warning}} 28.16 | Gate and net delays | partial
+{{m-success}} 28.16 | Gate and net delays | v0.7
 
 ## 29. User-defined primitives
 
 LRM | Feature | Supported
 --- | ------- | ---------
-{{m-danger}}  29.3 | UDP definition | no
-{{m-danger}}  29.4 | Combinational UDPs | no
-{{m-danger}}  29.5 | Level-sensitive sequential UDPs | no
-{{m-danger}}  29.6 | Edge-sensitive sequential UDPs | no
-{{m-danger}}  29.7 | Sequential UDP initialization | no
-{{m-danger}}  29.8 | UDP instances | no
+{{m-warning}} 29.3 | UDP definition | partial
+{{m-warning}} 29.4 | Combinational UDPs | partial
+{{m-warning}} 29.5 | Level-sensitive sequential UDPs | partial
+{{m-warning}} 29.6 | Edge-sensitive sequential UDPs | partial
+{{m-success}} 29.7 | Sequential UDP initialization | v0.7
+{{m-success}} 29.8 | UDP instances | v0.7
 {{m-dim}}     29.9 | Mixing level-sensitive and edge-sensitive descriptions | N/A
 {{m-dim}}     29.10 | Level-sensitive dominance | N/A
 
