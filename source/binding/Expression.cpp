@@ -33,7 +33,7 @@ struct EvalVisitor {
             return *expr.constant;
 
         ConstantValue cv = expr.evalImpl(context);
-        if (cv && context.cacheResults()) {
+        if (context.cacheResults()) {
             expr.constant = context.compilation.allocConstant(std::move(cv));
             return *expr.constant;
         }
