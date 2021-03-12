@@ -36,6 +36,7 @@ public:
 
         path.append(&inst);
         auto& result = buildNode(*body);
+        result.instance = &inst;
         path.pop();
 
         return result;
@@ -53,7 +54,7 @@ private:
                 child.visit(ExpressionVisitor());
         }
 
-        return *comp.emplace<DesignTreeNode>(scope, childNodes.copy(comp),
+        return *comp.emplace<DesignTreeNode>(scope.asSymbol(), childNodes.copy(comp),
                                              span<const StorageElement* const>{});
     }
 

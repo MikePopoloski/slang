@@ -1148,16 +1148,21 @@ void Compilation::checkDPIMethods(span<const SubroutineSymbol* const> dpiImports
 }
 
 void Compilation::resolveDefParams(size_t) {
-    SmallVectorSized<std::pair<std::string, ConstantValue>, 4> overrides;
+    struct OverrideEntry {
+        std::string path;
+        const SyntaxNode* node = nullptr;
+        ConstantValue value;
+    };
+    SmallVectorSized<OverrideEntry, 4> overrides;
 
     auto copyOverrides = [&](Compilation& c) {
-        for (auto& [path, val] : overrides) {
+        for (auto& entry : overrides) {
             ParamOverrideNode* node = &c.paramOverrides;
-            std::string curr = path;
+            std::string curr = entry.path;
             while (true) {
                 size_t idx = curr.find('.');
                 if (idx == curr.npos) {
-                    node->overrides[curr] = val;
+                    node->overrides[curr] = entry.value;
                     break;
                 }
 
@@ -1185,7 +1190,7 @@ void Compilation::resolveDefParams(size_t) {
             else {
                 std::string path;
                 target->getHierarchicalPath(path);
-                overrides.emplace(std::make_pair(std::move(path), defparam->getValue()));
+                overrides.append({ std::move(path), target->getSyntax(), defparam->getValue() });
             }
         }
     };
@@ -1228,10 +1233,10 @@ void Compilation::resolveDefParams(size_t) {
                 // Check that the defparam resolved to the same target we saw previously.
                 // The spec declares it to be an error if a defparam target changes based
                 // on elaboration of other defparam values.
-                std::string path;
+                const SyntaxNode* targetNode = nullptr;
                 auto target = v.found[j]->getTarget();
                 if (target)
-                    target->getHierarchicalPath(path);
+                    targetNode = target->getSyntax();
 
                 auto getRange = [&] {
                     auto syntax = v.found[j]->getSyntax();
@@ -1239,15 +1244,18 @@ void Compilation::resolveDefParams(size_t) {
                     return syntax->sourceRange();
                 };
 
-                auto& [prevTarget, prevVal] = overrides[j];
-                if (!prevTarget.empty() && !path.empty() && prevTarget != path) {
+                auto& prevEntry = overrides[j];
+                if (prevEntry.node && targetNode && prevEntry.node != targetNode) {
+                    std::string path;
+                    target->getHierarchicalPath(path);
+
                     auto& diag = root->addDiag(diag::DefParamTargetChange, getRange());
-                    diag << prevTarget;
+                    diag << prevEntry.path;
                     diag << path;
                     return;
                 }
 
-                if (prevVal != v.found[j]->getValue()) {
+                if (prevEntry.value != v.found[j]->getValue()) {
                     allSame = false;
                     if (i == options.maxDefParamSteps - 1)
                         root->addDiag(diag::DefParamCycle, getRange());

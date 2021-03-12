@@ -11,6 +11,7 @@
 namespace slang {
 
 class Compilation;
+class InstanceSymbol;
 class Scope;
 class Symbol;
 
@@ -26,13 +27,14 @@ public:
 /// used for final upward-name resolution and multi-driver checks.
 class DesignTreeNode {
 public:
-    const Scope& astScope;
+    const Symbol& symbol;
+    const InstanceSymbol* instance = nullptr;
     span<const DesignTreeNode* const> childNodes;
     span<const StorageElement* const> storageElements;
 
-    DesignTreeNode(const Scope& astScope, span<const DesignTreeNode* const> childNodes,
+    DesignTreeNode(const Symbol& symbol, span<const DesignTreeNode* const> childNodes,
                    span<const StorageElement* const> storageElements) :
-        astScope(astScope),
+        symbol(symbol),
         childNodes(childNodes), storageElements(storageElements) {}
 
     static DesignTreeNode& build(Compilation& compilation);

@@ -1221,13 +1221,14 @@ endmodule
     NO_COMPILATION_ERRORS;
 
     auto dt = &compilation.getDesignTree();
-    CHECK(dt->astScope.asSymbol().name == "$root");
+    CHECK(dt->symbol.name == "$root");
 
     auto top = dt->childNodes[0];
-    CHECK(top->astScope.asSymbol().name == "top");
+    CHECK(top->symbol.name == "top");
 
     auto checkI = [&](int val) {
-        auto i = &dt->astScope.members().begin()->as<VariableSymbol>();
+        auto& body = dt->symbol.as<InstanceBodySymbol>();
+        auto i = &body.members().begin()->as<VariableSymbol>();
         CHECK(i->name == "i");
 
         auto sym = i->getInitializer()->as<ConversionExpression>().operand().getSymbolReference();
@@ -1345,4 +1346,40 @@ endmodule
     auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::DefParamTargetChange);
+}
+
+TEST_CASE("defparam with cached target") {
+    auto tree = SyntaxTree::fromText(R"(
+module dut;
+   parameter int foo = 1234;
+endmodule
+
+module main;
+   dut dut0 ();
+   dut #(.foo(12345)) dut1 ();
+
+   defparam dut2.foo = 5678;
+   dut dut2 ();
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    auto& root = *compilation.getDesignTree().childNodes[0];
+    REQUIRE(root.childNodes.size() == 3);
+
+    auto checkChild = [&](int index, const std::string& name, int val) {
+        REQUIRE(root.childNodes[index]->instance);
+        auto& inst = *root.childNodes[index]->instance;
+        CHECK(inst.name == name);
+
+        auto& param = root.childNodes[index]->symbol.as<Scope>().memberAt<ParameterSymbol>(0);
+        CHECK(param.getValue().integer() == val);
+    };
+
+    checkChild(0, "dut0", 1234);
+    checkChild(1, "dut1", 12345);
+    checkChild(2, "dut2", 5678);
 }
