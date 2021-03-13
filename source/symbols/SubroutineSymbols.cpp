@@ -20,7 +20,11 @@
 namespace slang {
 
 const Statement& SubroutineSymbol::getBody(EvalContext* evalContext) const {
-    BindContext context(*this, LookupLocation::max);
+    bitmask<BindFlags> bindFlags = BindFlags::None;
+    if (subroutineKind == SubroutineKind::Function)
+        bindFlags |= BindFlags::FunctionBody;
+
+    BindContext context(*this, LookupLocation::max, bindFlags);
     context.evalContext = evalContext;
     return binder.getStatement(context);
 }

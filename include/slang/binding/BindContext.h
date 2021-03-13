@@ -91,9 +91,12 @@ enum class BindFlags {
     ForkJoinBlock = 1 << 14,
 
     /// Specparams are allowed even if this is also a constant expression.
-    SpecparamsAllowed = 1 << 15
+    SpecparamsAllowed = 1 << 15,
+
+    /// Binding is happening within a function body.
+    FunctionBody = 1 << 16
 };
-BITMASK(BindFlags, SpecparamsAllowed);
+BITMASK(BindFlags, FunctionBody);
 
 enum class DimensionKind { Unknown, Range, AbbreviatedRange, Dynamic, Associative, Queue };
 

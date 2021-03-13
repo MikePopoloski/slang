@@ -615,10 +615,11 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 3);
+    REQUIRE(diags.size() == 4);
     CHECK(diags[0].code == diag::TimingControlNotAllowed);
     CHECK(diags[1].code == diag::TimingControlNotAllowed);
     CHECK(diags[2].code == diag::ConstEvalTimedStmtNotConst);
+    CHECK(diags[3].code == diag::TimingInFuncNotAllowed);
 }
 
 TEST_CASE("Statement labels") {
@@ -715,8 +716,9 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 1);
+    REQUIRE(diags.size() == 2);
     CHECK(diags[0].code == diag::ConstEvalParallelBlockNotConst);
+    CHECK(diags[1].code == diag::TimingInFuncNotAllowed);
 }
 
 TEST_CASE("Statement blocks -- decl after statements") {
@@ -1091,4 +1093,32 @@ endmodule
     auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::ReturnInParallel);
+}
+
+TEST_CASE("Statement restrictions inside functions") {
+    auto tree = SyntaxTree::fromText(R"(
+event a, b, c;
+function f;
+    int i;
+    i = #1 3;
+    @(posedge i) i = 1;
+    fork
+        static int j = i;
+        i++;
+    join_any
+    wait (3) i = 1;
+    wait_order(a, b, c);
+endfunction
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 5);
+    CHECK(diags[0].code == diag::TimingInFuncNotAllowed);
+    CHECK(diags[1].code == diag::TimingInFuncNotAllowed);
+    CHECK(diags[2].code == diag::TimingInFuncNotAllowed);
+    CHECK(diags[3].code == diag::TimingInFuncNotAllowed);
+    CHECK(diags[4].code == diag::TimingInFuncNotAllowed);
 }

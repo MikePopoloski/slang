@@ -18,6 +18,11 @@ namespace slang {
 const TimingControl& TimingControl::bind(const TimingControlSyntax& syntax,
                                          const BindContext& context) {
     auto& comp = context.getCompilation();
+    if (context.flags.has(BindFlags::FunctionBody)) {
+        context.addDiag(diag::TimingInFuncNotAllowed, syntax.sourceRange());
+        return badCtrl(comp, nullptr);
+    }
+
     TimingControl* result;
     switch (syntax.kind) {
         case SyntaxKind::DelayControl:
