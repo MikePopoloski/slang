@@ -703,7 +703,7 @@ endmodule
 TEST_CASE("Functions -- body params") {
     auto tree = SyntaxTree::fromText(R"(
 module m;
-    function foo;
+    function automatic foo;
         input i;
         output logic [1:0] baz;
         const ref int asdf;
@@ -728,7 +728,7 @@ TEST_CASE("Functions -- body params -- port merging") {
     auto tree = SyntaxTree::fromText(R"(
 module m;
     typedef logic[31:0] foo_t;
-    function foo;
+    function automatic foo;
         input unsigned a;
         int a;
         input signed b;
@@ -1262,7 +1262,7 @@ module m;
     export "DPI-C" function f2;
     export "DPI-C" function foo;
 
-    function void f3(ref r); endfunction
+    function automatic void f3(ref r); endfunction
     export "DPI-C" function f3;
 
     import "DPI-C" function void f4;
@@ -1386,7 +1386,7 @@ endmodule
 TEST_CASE("Subroutine ref arguments") {
     auto tree = SyntaxTree::fromText(R"(
 module m;
-    function void foo;
+    function automatic void foo;
         ref int a;
         const ref int b;
         ref int c;
@@ -1413,7 +1413,7 @@ endmodule
 TEST_CASE("Subroutine ref argument errors") {
     auto tree = SyntaxTree::fromText(R"(
 module m;
-    function void foo;
+    function automatic void foo;
         ref int a;
         const ref int b;
         ref int c;
@@ -1427,6 +1427,12 @@ module m;
     initial begin
         foo(a, a + 2, b, c);
     end
+
+    function void bar;
+        ref r;
+    endfunction
+    function void baz(ref r);
+    endfunction
 endmodule
 )");
 
@@ -1434,11 +1440,13 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 4);
+    REQUIRE(diags.size() == 6);
     CHECK(diags[0].code == diag::ConstVarToRef);
     CHECK(diags[1].code == diag::InvalidRefArg);
     CHECK(diags[2].code == diag::InvalidRefArg);
     CHECK(diags[3].code == diag::RefTypeMismatch);
+    CHECK(diags[4].code == diag::RefArgAutomaticFunc);
+    CHECK(diags[5].code == diag::RefArgAutomaticFunc);
 }
 
 TEST_CASE("specparams") {

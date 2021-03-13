@@ -121,7 +121,11 @@ SubroutineSymbol* SubroutineSymbol::fromSyntax(Compilation& compilation,
                 portListError = true;
             }
 
-            arguments.append(&last->as<FormalArgumentSymbol>());
+            auto& arg = last->as<FormalArgumentSymbol>();
+            arguments.append(&arg);
+
+            if (lifetime == VariableLifetime::Static && arg.direction == ArgumentDirection::Ref)
+                parent.addDiag(diag::RefArgAutomaticFunc, last->location);
         }
         last = last->getNextSibling();
     }
@@ -517,6 +521,9 @@ void SubroutineSymbol::buildArguments(Scope& scope, const FunctionPortListSyntax
         if (portSyntax->direction) {
             directionSpecified = true;
             direction = SemanticFacts::getDirection(portSyntax->direction.kind);
+
+            if (direction == ArgumentDirection::Ref && defaultLifetime == VariableLifetime::Static)
+                scope.addDiag(diag::RefArgAutomaticFunc, portSyntax->direction.range());
         }
         else {
             // Otherwise, we "inherit" the previous argument
