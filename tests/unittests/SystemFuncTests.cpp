@@ -755,3 +755,25 @@ endmodule
     CHECK(diags[0].code == diag::ExpectedModuleInstance);
     CHECK(diags[1].code == diag::ExpectedModuleInstance);
 }
+
+TEST_CASE("Tracing automatic vars") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    initial begin
+        automatic int i;
+        $monitor("%d", i);
+        $fstrobe(i, i);
+        $dumpvars(0, i);
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 3);
+    CHECK(diags[0].code == diag::AutoVarTraced);
+    CHECK(diags[1].code == diag::AutoVarTraced);
+    CHECK(diags[2].code == diag::AutoVarTraced);
+}

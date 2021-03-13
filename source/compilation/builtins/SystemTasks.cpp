@@ -10,6 +10,7 @@
 #include "slang/compilation/Compilation.h"
 #include "slang/diagnostics/SysFuncsDiags.h"
 #include "slang/mir/Procedure.h"
+#include "slang/symbols/ASTVisitor.h"
 #include "slang/symbols/InstanceSymbols.h"
 #include "slang/syntax/AllSyntax.h"
 
@@ -54,7 +55,7 @@ public:
     bool allowEmptyArgument(size_t) const final { return true; }
 
     const Type& checkArguments(const BindContext& context, const Args& args, SourceRange,
-                               const Expression*) const final {
+                               const Expression*) const override {
         auto& comp = context.getCompilation();
         if (!FmtHelpers::checkDisplayArgs(context, args))
             return comp.getErrorType();
@@ -64,6 +65,38 @@ public:
 
     void lower(mir::Procedure& proc, const Args& args) const final {
         FmtHelpers::lowerFormatArgs(proc, args, defaultIntFmt, /* newline */ true);
+    }
+};
+
+struct MonitorVisitor : public ASTVisitor<MonitorVisitor, true, true> {
+    const BindContext& context;
+
+    MonitorVisitor(const BindContext& context) : context(context) {}
+
+    void handle(const ValueExpressionBase& expr) {
+        if (VariableSymbol::isKind(expr.symbol.kind) &&
+            expr.symbol.as<VariableSymbol>().lifetime == VariableLifetime::Automatic) {
+            context.addDiag(diag::AutoVarTraced, expr.sourceRange) << expr.symbol.name;
+        }
+    }
+};
+
+class MonitorTask : public DisplayTask {
+public:
+    using DisplayTask::DisplayTask;
+
+    const Type& checkArguments(const BindContext& context, const Args& args, SourceRange range,
+                               const Expression* iterOrThis) const final {
+        auto& result = DisplayTask::checkArguments(context, args, range, iterOrThis);
+        if (result.isError())
+            return result;
+
+        // Additional restriction for monitor tasks: automatic variables cannot be referenced.
+        MonitorVisitor visitor(context);
+        for (auto arg : args)
+            arg->visit(visitor);
+
+        return result;
     }
 };
 
@@ -117,7 +150,7 @@ public:
     bool allowEmptyArgument(size_t index) const final { return index != 0; }
 
     const Type& checkArguments(const BindContext& context, const Args& args, SourceRange range,
-                               const Expression*) const final {
+                               const Expression*) const override {
         auto& comp = context.getCompilation();
         if (!checkArgCount(context, false, args, range, 1, INT32_MAX))
             return comp.getErrorType();
@@ -129,6 +162,25 @@ public:
             return comp.getErrorType();
 
         return comp.getVoidType();
+    }
+};
+
+class FileMonitorTask : public FileDisplayTask {
+public:
+    using FileDisplayTask::FileDisplayTask;
+
+    const Type& checkArguments(const BindContext& context, const Args& args, SourceRange range,
+                               const Expression* iterOrThis) const final {
+        auto& result = FileDisplayTask::checkArguments(context, args, range, iterOrThis);
+        if (result.isError())
+            return result;
+
+        // Additional restriction for monitor tasks: automatic variables cannot be referenced.
+        MonitorVisitor visitor(context);
+        for (auto arg : args.subspan(1))
+            arg->visit(visitor);
+
+        return result;
     }
 };
 
@@ -303,6 +355,10 @@ public:
                     if (!context.scope.isUninstantiated())
                         context.addDiag(diag::ExpectedModOrVarName, ref.sourceRange);
                     return *comp.emplace<InvalidExpression>(&ref, comp.getErrorType());
+                }
+                else if (VariableSymbol::isKind(sym.kind) &&
+                         sym.as<VariableSymbol>().lifetime == VariableLifetime::Automatic) {
+                    context.addDiag(diag::AutoVarTraced, ref.sourceRange) << sym.name;
                 }
             }
 
@@ -551,14 +607,14 @@ void registerSystemTasks(Compilation& c) {
     REGISTER(DisplayTask, "$writeb", LiteralBase::Binary);
     REGISTER(DisplayTask, "$writeo", LiteralBase::Octal);
     REGISTER(DisplayTask, "$writeh", LiteralBase::Hex);
-    REGISTER(DisplayTask, "$strobe", LiteralBase::Decimal);
-    REGISTER(DisplayTask, "$strobeb", LiteralBase::Binary);
-    REGISTER(DisplayTask, "$strobeo", LiteralBase::Octal);
-    REGISTER(DisplayTask, "$strobeh", LiteralBase::Hex);
-    REGISTER(DisplayTask, "$monitor", LiteralBase::Decimal);
-    REGISTER(DisplayTask, "$monitorb", LiteralBase::Binary);
-    REGISTER(DisplayTask, "$monitoro", LiteralBase::Octal);
-    REGISTER(DisplayTask, "$monitorh", LiteralBase::Hex);
+    REGISTER(MonitorTask, "$strobe", LiteralBase::Decimal);
+    REGISTER(MonitorTask, "$strobeb", LiteralBase::Binary);
+    REGISTER(MonitorTask, "$strobeo", LiteralBase::Octal);
+    REGISTER(MonitorTask, "$strobeh", LiteralBase::Hex);
+    REGISTER(MonitorTask, "$monitor", LiteralBase::Decimal);
+    REGISTER(MonitorTask, "$monitorb", LiteralBase::Binary);
+    REGISTER(MonitorTask, "$monitoro", LiteralBase::Octal);
+    REGISTER(MonitorTask, "$monitorh", LiteralBase::Hex);
 
     REGISTER(DisplayTask, "$error", LiteralBase::Decimal);
     REGISTER(DisplayTask, "$warning", LiteralBase::Decimal);
@@ -574,14 +630,14 @@ void registerSystemTasks(Compilation& c) {
     REGISTER(FileDisplayTask, "$fwriteb");
     REGISTER(FileDisplayTask, "$fwriteo");
     REGISTER(FileDisplayTask, "$fwriteh");
-    REGISTER(FileDisplayTask, "$fstrobe");
-    REGISTER(FileDisplayTask, "$fstrobeb");
-    REGISTER(FileDisplayTask, "$fstrobeo");
-    REGISTER(FileDisplayTask, "$fstrobeh");
-    REGISTER(FileDisplayTask, "$fmonitor");
-    REGISTER(FileDisplayTask, "$fmonitorb");
-    REGISTER(FileDisplayTask, "$fmonitoro");
-    REGISTER(FileDisplayTask, "$fmonitorh");
+    REGISTER(FileMonitorTask, "$fstrobe");
+    REGISTER(FileMonitorTask, "$fstrobeb");
+    REGISTER(FileMonitorTask, "$fstrobeo");
+    REGISTER(FileMonitorTask, "$fstrobeh");
+    REGISTER(FileMonitorTask, "$fmonitor");
+    REGISTER(FileMonitorTask, "$fmonitorb");
+    REGISTER(FileMonitorTask, "$fmonitoro");
+    REGISTER(FileMonitorTask, "$fmonitorh");
 
     REGISTER(StringOutputTask, "$swrite");
     REGISTER(StringOutputTask, "$swriteb");
