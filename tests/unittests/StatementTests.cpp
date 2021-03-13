@@ -1030,11 +1030,13 @@ module m;
     nt x;
 
     initial begin
+        automatic int q;
         assign l[0] = 1;
         deassign {i, l[0]};
         force {w[1], i[1]} = 1;
         release i[1];
         force {w[1], x[1]} = 1;
+        assign q = 1;
     end
 endmodule
 )");
@@ -1043,12 +1045,13 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 5);
+    REQUIRE(diags.size() == 6);
     CHECK(diags[0].code == diag::BadProceduralAssign);
     CHECK(diags[1].code == diag::BadProceduralAssign);
     CHECK(diags[2].code == diag::BadProceduralForce);
     CHECK(diags[3].code == diag::BadProceduralForce);
     CHECK(diags[4].code == diag::BadForceNetType);
+    CHECK(diags[5].code == diag::AutoFromNonProcedural);
 }
 
 TEST_CASE("Unexpected port decls") {
