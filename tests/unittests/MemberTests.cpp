@@ -118,6 +118,9 @@ module m;
     wire bux;
     logic bix;
     assign (strong1, supply0) #(3,2,1) {bux, bix} = 2;
+
+    function automatic blah(ref int i); endfunction
+    assign bix = blah(j);
 endmodule
 )");
 
@@ -125,7 +128,7 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 8);
+    REQUIRE(diags.size() == 9);
     CHECK(diags[0].code == diag::DelayNotNumeric);
     CHECK(diags[1].code == diag::ConstEvalNonConstVariable);
     CHECK(diags[2].code == diag::ConstEvalNonConstVariable);
@@ -134,6 +137,7 @@ endmodule
     CHECK(diags[5].code == diag::DynamicNotProcedural);
     CHECK(diags[6].code == diag::DynamicNotProcedural);
     CHECK(diags[7].code == diag::Delay3OnVar);
+    CHECK(diags[8].code == diag::NonProceduralFuncArg);
 }
 
 TEST_CASE("User defined nettypes") {

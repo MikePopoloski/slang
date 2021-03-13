@@ -486,6 +486,16 @@ Expression& CallExpression::fromArgs(Compilation& compilation, const Subroutine&
         return badExpr(compilation, result);
     }
 
+    if (context.flags.has(BindFlags::NonProcedural)) {
+        for (auto arg : symbol.getArguments()) {
+            if (arg->direction != ArgumentDirection::In &&
+                (arg->direction != ArgumentDirection::Ref || !arg->isConstant)) {
+                context.addDiag(diag::NonProceduralFuncArg, range);
+                return badExpr(compilation, result);
+            }
+        }
+    }
+
     return *result;
 }
 
