@@ -203,6 +203,10 @@ module m;
     always @(foo or posedge r);
     always @(i iff foo);
 
+    function bar(output o); endfunction
+    logic o;
+    always @(bar(o));
+
 endmodule
 )");
 
@@ -210,13 +214,14 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 6);
+    REQUIRE(diags.size() == 7);
     CHECK(diags[0].code == diag::EventExpressionConstant);
     CHECK(diags[1].code == diag::EventExpressionConstant);
     CHECK(diags[2].code == diag::ExpectedIdentifier);
     CHECK(diags[3].code == diag::InvalidEventExpression);
     CHECK(diags[4].code == diag::ExprMustBeIntegral);
     CHECK(diags[5].code == diag::NotBooleanConvertible);
+    CHECK(diags[6].code == diag::EventExpressionFuncArg);
 }
 
 TEST_CASE("Conditional event control") {

@@ -98,9 +98,12 @@ enum class BindFlags {
 
     /// Binding is happening within the intra-assignment timing control of
     /// a non-blocking assignment expression.
-    NonBlockingTimingControl = 1 << 17
+    NonBlockingTimingControl = 1 << 17,
+
+    /// Binding is happening within an event expression.
+    EventExpression = 1 << 18
 };
-BITMASK(BindFlags, NonBlockingTimingControl);
+BITMASK(BindFlags, EventExpression);
 
 enum class DimensionKind { Unknown, Range, AbbreviatedRange, Dynamic, Associative, Queue };
 

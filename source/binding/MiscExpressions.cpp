@@ -494,14 +494,24 @@ Expression& CallExpression::fromArgs(Compilation& compilation, const Subroutine&
         return badExpr(compilation, result);
     }
 
-    if (context.flags.has(BindFlags::NonProcedural)) {
+    auto hasOutputArgs = [&] {
         for (auto arg : symbol.getArguments()) {
             if (arg->direction != ArgumentDirection::In &&
                 (arg->direction != ArgumentDirection::Ref || !arg->isConstant)) {
-                context.addDiag(diag::NonProceduralFuncArg, range);
-                return badExpr(compilation, result);
+                return true;
             }
         }
+        return false;
+    };
+
+    if (context.flags.has(BindFlags::NonProcedural) && hasOutputArgs()) {
+        context.addDiag(diag::NonProceduralFuncArg, range);
+        return badExpr(compilation, result);
+    }
+
+    if (context.flags.has(BindFlags::EventExpression) && hasOutputArgs()) {
+        context.addDiag(diag::EventExpressionFuncArg, range);
+        return badExpr(compilation, result);
     }
 
     return *result;

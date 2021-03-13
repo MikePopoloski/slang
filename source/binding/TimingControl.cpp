@@ -180,11 +180,11 @@ TimingControl& SignalEventControl::fromSyntax(Compilation& compilation,
                                               const SignalEventExpressionSyntax& syntax,
                                               const BindContext& context) {
     auto edge = SemanticFacts::getEdgeKind(syntax.edge.kind);
-    auto& expr = Expression::bind(*syntax.expr, context);
+    auto& expr = Expression::bind(*syntax.expr, context, BindFlags::EventExpression);
 
     const Expression* iffCond = nullptr;
     if (syntax.iffClause)
-        iffCond = &Expression::bind(*syntax.iffClause->expr, context);
+        iffCond = &Expression::bind(*syntax.iffClause->expr, context, BindFlags::EventExpression);
 
     return fromExpr(compilation, edge, expr, iffCond, context);
 }
@@ -192,7 +192,7 @@ TimingControl& SignalEventControl::fromSyntax(Compilation& compilation,
 TimingControl& SignalEventControl::fromSyntax(Compilation& compilation,
                                               const EventControlSyntax& syntax,
                                               const BindContext& context) {
-    auto& expr = Expression::bind(*syntax.eventName, context);
+    auto& expr = Expression::bind(*syntax.eventName, context, BindFlags::EventExpression);
     return fromExpr(compilation, EdgeKind::None, expr, nullptr, context);
 }
 
