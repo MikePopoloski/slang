@@ -50,6 +50,10 @@ Expression& ValueExpressionBase::fromSymbol(const BindContext& context, const Sy
             context.addDiag(diag::AutoFromNonProcedural, sourceRange) << symbol.name;
             return badExpr(compilation, nullptr);
         }
+        else if (context.flags.has(BindFlags::NonBlockingTimingControl)) {
+            context.addDiag(diag::AutoFromNonBlockingTiming, sourceRange) << symbol.name;
+            return badExpr(compilation, nullptr);
+        }
     }
     else if (symbol.kind == SymbolKind::ConstraintBlock) {
         if (!symbol.as<ConstraintBlockSymbol>().isStatic)

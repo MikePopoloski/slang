@@ -366,8 +366,12 @@ Expression& AssignmentExpression::fromSyntax(Compilation& compilation,
     if (context.flags.has(BindFlags::TopLevelStatement) &&
         rightExpr->kind == SyntaxKind::TimingControlExpression) {
 
+        BindContext timingCtx = context;
+        if (isNonBlocking)
+            timingCtx.flags |= BindFlags::NonBlockingTimingControl;
+
         auto& tce = rightExpr->as<TimingControlExpressionSyntax>();
-        timingControl = &TimingControl::bind(*tce.timing, context);
+        timingControl = &TimingControl::bind(*tce.timing, timingCtx);
         rightExpr = tce.expr;
     }
 

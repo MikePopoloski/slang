@@ -94,9 +94,13 @@ enum class BindFlags {
     SpecparamsAllowed = 1 << 15,
 
     /// Binding is happening within a function body.
-    FunctionBody = 1 << 16
+    FunctionBody = 1 << 16,
+
+    /// Binding is happening within the intra-assignment timing control of
+    /// a non-blocking assignment expression.
+    NonBlockingTimingControl = 1 << 17
 };
-BITMASK(BindFlags, FunctionBody);
+BITMASK(BindFlags, NonBlockingTimingControl);
 
 enum class DimensionKind { Unknown, Range, AbbreviatedRange, Dynamic, Associative, Queue };
 

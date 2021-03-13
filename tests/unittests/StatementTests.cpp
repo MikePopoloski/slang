@@ -1128,3 +1128,22 @@ endfunction
     CHECK(diags[4].code == diag::TimingInFuncNotAllowed);
     CHECK(diags[5].code == diag::TaskFromFunction);
 }
+
+TEST_CASE("Non-blocking timing control reference to auto") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    initial begin
+        automatic int i;
+        int j;
+        j <= #i 1;
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::AutoFromNonBlockingTiming);
+}
