@@ -442,6 +442,7 @@ error NameListWithScopeRandomize "lookup restriction list not allowed for std::r
 error UnboundedNotAllowed "unbounded literal '$' not allowed here"
 error DynamicNotProcedural "cannot refer to an element or member of a dynamic type outside of a procedural context"
 error SpecparamInConstant "specparams cannot be used in general constant expressions"
+error TaskFromFunction "cannot invoke a task from within a function"
 warning ignored-slice IgnoredSlice "slice size ignored for left-to-right streaming operator"
 warning unsized-concat UnsizedInConcat "unsized integer in concat; using a width of {}"
 warning width-expand WidthExpand "implicit conversion expands from {} to {} bits"

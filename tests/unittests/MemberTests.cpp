@@ -1378,7 +1378,7 @@ endmodule
     REQUIRE(diags.size() == 5);
     CHECK(diags[0].code == diag::ConstEvalDPINotConstant);
     CHECK(diags[1].code == diag::ConstEvalVoidNotConstant);
-    CHECK(diags[2].code == diag::ConstEvalTaskNotConstant);
+    CHECK(diags[2].code == diag::TaskFromFunction);
     CHECK(diags[3].code == diag::ConstEvalFunctionArgDirection);
     CHECK(diags[4].code == diag::ConstEvalFunctionInsideGenerate);
 }

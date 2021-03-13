@@ -1098,6 +1098,7 @@ endmodule
 TEST_CASE("Statement restrictions inside functions") {
     auto tree = SyntaxTree::fromText(R"(
 event a, b, c;
+task t; endtask
 function f;
     int i;
     i = #1 3;
@@ -1108,6 +1109,7 @@ function f;
     join_any
     wait (3) i = 1;
     wait_order(a, b, c);
+    t();
 endfunction
 )");
 
@@ -1115,10 +1117,11 @@ endfunction
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 5);
+    REQUIRE(diags.size() == 6);
     CHECK(diags[0].code == diag::TimingInFuncNotAllowed);
     CHECK(diags[1].code == diag::TimingInFuncNotAllowed);
     CHECK(diags[2].code == diag::TimingInFuncNotAllowed);
     CHECK(diags[3].code == diag::TimingInFuncNotAllowed);
     CHECK(diags[4].code == diag::TimingInFuncNotAllowed);
+    CHECK(diags[5].code == diag::TaskFromFunction);
 }

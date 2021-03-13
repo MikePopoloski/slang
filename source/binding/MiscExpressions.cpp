@@ -480,6 +480,12 @@ Expression& CallExpression::fromArgs(Compilation& compilation, const Subroutine&
     if (bad)
         return badExpr(compilation, result);
 
+    if (context.flags.has(BindFlags::FunctionBody) &&
+        symbol.subroutineKind == SubroutineKind::Task) {
+        context.addDiag(diag::TaskFromFunction, range);
+        return badExpr(compilation, result);
+    }
+
     return *result;
 }
 
@@ -838,10 +844,7 @@ bool CallExpression::checkConstant(EvalContext& context, const SubroutineSymbol&
     if (context.isScriptEval())
         return true;
 
-    if (subroutine.subroutineKind == SubroutineKind::Task) {
-        context.addDiag(diag::ConstEvalTaskNotConstant, range);
-        return false;
-    }
+    ASSERT(subroutine.subroutineKind != SubroutineKind::Task);
 
     if (subroutine.flags.has(MethodFlags::DPIImport)) {
         context.addDiag(diag::ConstEvalDPINotConstant, range);
