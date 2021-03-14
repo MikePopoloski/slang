@@ -121,7 +121,7 @@ ParameterSymbol& ParameterSymbol::clone(Compilation& compilation) const {
     if (auto init = declared->getInitializerSyntax())
         result->setInitializerSyntax(*init, declared->getInitializerLocation());
 
-    if (declared->hasInitializer())
+    if (declared->hasResolvedInitializer())
         result->setInitializer(*declared->getInitializer());
 
     result->value = value;
