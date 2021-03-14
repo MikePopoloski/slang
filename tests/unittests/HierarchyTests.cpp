@@ -444,7 +444,6 @@ endmodule
 
 TEST_CASE("Interface port param") {
     auto tree = SyntaxTree::fromText(R"(
-
 interface I #(parameter int i) ();
 endinterface
 
@@ -453,10 +452,8 @@ module M(I iface, input logic [iface.i - 1 : 0] foo);
 endmodule
 
 module test;
-
     I #(17) i();
     M m(i, 1);
-
 endmodule
 )");
 

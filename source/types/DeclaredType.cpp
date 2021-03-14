@@ -29,7 +29,7 @@ DeclaredType::DeclaredType(const Symbol& parent, bitmask<DeclaredTypeFlags> flag
 
 const Type& DeclaredType::getType() const {
     if (!type)
-        resolveType(getBindContext());
+        resolveType(getBindContext<true>());
     return *type;
 }
 
@@ -51,7 +51,7 @@ void DeclaredType::copyTypeFrom(const DeclaredType& source) {
 void DeclaredType::mergeImplicitPort(
     const ImplicitTypeSyntax& implicit, SourceLocation location,
     span<const VariableDimensionSyntax* const> unpackedDimensions) {
-    mergePortTypes(getBindContext(), parent.as<ValueSymbol>(), implicit, location,
+    mergePortTypes(getBindContext<false>(), parent.as<ValueSymbol>(), implicit, location,
                    unpackedDimensions);
 }
 
@@ -95,7 +95,7 @@ void DeclaredType::resolveType(const BindContext& initializerContext) const {
         if (flags.has(DeclaredTypeFlags::TypedefTarget))
             typedefTarget = &parent.as<Type>();
 
-        BindContext typeContext = getBindContext();
+        BindContext typeContext = getBindContext<false>();
         type = &comp.getType(*typeSyntax, typeContext.getLocation(), scope, typedefTarget);
         if (dimensions)
             type = &comp.getType(*type, *dimensions, typeContext.getLocation(), scope);
@@ -363,7 +363,7 @@ const Expression* DeclaredType::getInitializer() const {
     if (initializer)
         return initializer;
 
-    resolveAt(getBindContext());
+    resolveAt(getBindContext<true>());
     return initializer;
 }
 
@@ -374,7 +374,7 @@ void DeclaredType::setFromDeclarator(const DeclaratorSyntax& decl) {
         setInitializerSyntax(*decl.initializer->expr, decl.initializer->equals.location());
 }
 
-template<typename T>
+template<bool IsInitializer, typename T>
 T DeclaredType::getBindContext() const {
     bitmask<BindFlags> bindFlags;
     if (flags.has(DeclaredTypeFlags::RequireConstant))
@@ -386,11 +386,17 @@ T DeclaredType::getBindContext() const {
     if (flags.has(DeclaredTypeFlags::SpecparamsAllowed))
         bindFlags |= BindFlags::SpecparamsAllowed;
 
+    // Unless overriden by the LookupMax flag, the location depends on whether
+    // we are binding the initializer or the type. Initializer lookup happens *after*
+    // the parent symbol, so that it can reference the symbol itself. Type lookup
+    // happens *before*, since it can't yet see the symbol declaration.
     LookupLocation location;
     if (flags.has(DeclaredTypeFlags::LookupMax))
         location = LookupLocation::max;
-    else
+    else if (IsInitializer)
         location = LookupLocation::after(parent);
+    else
+        location = LookupLocation::before(parent);
 
     return BindContext(getScope(), location, bindFlags);
 }

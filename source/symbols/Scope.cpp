@@ -45,6 +45,8 @@ public:
 
 namespace slang {
 
+static size_t countMembers(const SyntaxNode& syntax);
+
 Scope::Scope(Compilation& compilation_, const Symbol* thisSym_) :
     compilation(compilation_), thisSym(thisSym_), nameMap(compilation.allocSymbolMap()) {
 }
@@ -172,7 +174,7 @@ void Scope::addMember(const Symbol& symbol) {
             getOrAddDeferredData().registerTransparentType(lastMember, symbol);
     }
 
-    insertMember(&symbol, lastMember, false);
+    insertMember(&symbol, lastMember, false, true);
 }
 
 void Scope::addMembers(const SyntaxNode& syntax) {
@@ -223,13 +225,11 @@ void Scope::addMembers(const SyntaxNode& syntax) {
         case SyntaxKind::ContinuousAssign:
         case SyntaxKind::ModportDeclaration:
         case SyntaxKind::UserDefinedNetDeclaration:
-        case SyntaxKind::BindDirective: {
-            auto sym = compilation.emplace<DeferredMemberSymbol>(syntax);
-            addMember(*sym);
-            getOrAddDeferredData().addMember(sym);
+        case SyntaxKind::BindDirective:
+            addDeferredMembers(syntax);
             break;
-        }
         case SyntaxKind::PortDeclaration:
+            addDeferredMembers(syntax);
             getOrAddDeferredData().addPortDeclaration(syntax.as<PortDeclarationSyntax>(),
                                                       lastMember);
             break;
@@ -246,9 +246,7 @@ void Scope::addMembers(const SyntaxNode& syntax) {
             // because that type name may actually resolve to a net type or interface instance.
             auto& dataDecl = syntax.as<DataDeclarationSyntax>();
             if (dataDecl.type->kind == SyntaxKind::NamedType && dataDecl.modifiers.empty()) {
-                auto sym = compilation.emplace<DeferredMemberSymbol>(syntax);
-                addMember(*sym);
-                getOrAddDeferredData().addMember(sym);
+                addDeferredMembers(syntax);
             }
             else {
                 SmallVectorSized<const ValueSymbol*, 4> symbols;
@@ -464,6 +462,17 @@ Scope::DeferredMemberData& Scope::getOrAddDeferredData() const {
     return compilation.getOrAddDeferredData(deferredMemberIndex);
 }
 
+void Scope::addDeferredMembers(const SyntaxNode& syntax) {
+    auto sym = compilation.emplace<DeferredMemberSymbol>(syntax);
+    addMember(*sym);
+    getOrAddDeferredData().addMember(sym);
+
+    // We need to figure out how many new symbols could be inserted when we
+    // later elaborate this deferred member, so that we can make room in the
+    // index space such that no symbols need to overlap.
+    sym->indexInScope += (uint32_t)countMembers(syntax);
+}
+
 static bool canLookupByName(SymbolKind kind) {
     switch (kind) {
         case SymbolKind::Port:
@@ -475,7 +484,8 @@ static bool canLookupByName(SymbolKind kind) {
     }
 }
 
-void Scope::insertMember(const Symbol* member, const Symbol* at, bool isElaborating) const {
+void Scope::insertMember(const Symbol* member, const Symbol* at, bool isElaborating,
+                         bool incrementIndex) const {
     ASSERT(!member->parentScope);
     ASSERT(!member->nextInScope);
 
@@ -484,7 +494,7 @@ void Scope::insertMember(const Symbol* member, const Symbol* at, bool isElaborat
         member->nextInScope = std::exchange(firstMember, member);
     }
     else {
-        member->indexInScope = getInsertionIndex(*at);
+        member->indexInScope = at->indexInScope + (incrementIndex ? 1 : 0);
         member->nextInScope = std::exchange(at->nextInScope, member);
     }
 
@@ -643,10 +653,6 @@ void Scope::reportNameConflict(const Symbol& member, const Symbol& existing) con
     diag->addNote(diag::NotePreviousDefinition, existing.location);
 }
 
-SymbolIndex Scope::getInsertionIndex(const Symbol& at) const {
-    return SymbolIndex{ (uint32_t)at.indexInScope + (&at == lastMember) };
-}
-
 void Scope::elaborate() const {
     ASSERT(deferredMemberIndex != DeferredMemberIndex::Invalid);
     auto deferredData = compilation.getOrAddDeferredData(deferredMemberIndex);
@@ -660,7 +666,7 @@ void Scope::elaborate() const {
     // If this is a class type being elaborated, let it inherit members from parent classes.
     if (thisSym->kind == SymbolKind::ClassType) {
         thisSym->as<ClassType>().inheritMembers(
-            [this](const Symbol& member) { insertMember(&member, nullptr, true); });
+            [this](const Symbol& member) { insertMember(&member, nullptr, true, true); });
     }
 
     SmallSet<const SyntaxNode*, 8> enumDecls;
@@ -672,7 +678,7 @@ void Scope::elaborate() const {
             if (!type.getSyntax() || enumDecls.insert(type.getSyntax()).second) {
                 for (const auto& value : type.as<EnumType>().values()) {
                     auto wrapped = compilation.emplace<TransparentMemberSymbol>(value);
-                    insertMember(wrapped, insertAt, true);
+                    insertMember(wrapped, insertAt, true, false);
                     insertAt = wrapped;
                 }
             }
@@ -680,8 +686,13 @@ void Scope::elaborate() const {
     }
 
     auto insertMembers = [this](auto& members, const Symbol* at) {
+        // When we originally inserted the DeferredMemberSymbol we made room
+        // in the index space for these new members. Back the index up by
+        // the number of new members to make sure we insert in order.
+        ASSERT(at);
+        at->indexInScope -= (uint32_t)members.size();
         for (auto member : members) {
-            insertMember(member, at, true);
+            insertMember(member, at, true, true);
             at = member;
         }
     };
@@ -717,15 +728,10 @@ void Scope::elaborate() const {
                 SmallVectorSized<std::pair<Symbol*, const Symbol*>, 8> implicitMembers;
                 PortSymbol::fromSyntax(member.node.as<PortListSyntax>(), *this, ports,
                                        implicitMembers, deferredData.getPortDeclarations());
-
-                const Symbol* last = symbol;
-                for (auto port : ports) {
-                    insertMember(port, last, true);
-                    last = port;
-                }
+                insertMembers(ports, symbol);
 
                 for (auto [implicitMember, insertionPoint] : implicitMembers)
-                    insertMember(implicitMember, insertionPoint, true);
+                    insertMember(implicitMember, insertionPoint, true, false);
 
                 // Let the instance know its list of ports. This is kind of annoying because it
                 // inverts the dependency tree but it's better than giving all symbols a virtual
@@ -804,12 +810,7 @@ void Scope::elaborate() const {
                 GenerateBlockSymbol::fromSyntax(compilation, member.node.as<IfGenerateSyntax>(),
                                                 location, *this, constructIndex, true, blocks);
                 constructIndex++;
-
-                const Symbol* last = symbol;
-                for (auto block : blocks) {
-                    insertMember(block, last, true);
-                    last = block;
-                }
+                insertMembers(blocks, symbol);
                 break;
             }
             case SyntaxKind::CaseGenerate: {
@@ -817,19 +818,14 @@ void Scope::elaborate() const {
                 GenerateBlockSymbol::fromSyntax(compilation, member.node.as<CaseGenerateSyntax>(),
                                                 location, *this, constructIndex, true, blocks);
                 constructIndex++;
-
-                const Symbol* last = symbol;
-                for (auto block : blocks) {
-                    insertMember(block, last, true);
-                    last = block;
-                }
+                insertMembers(blocks, symbol);
                 break;
             }
             case SyntaxKind::LoopGenerate:
                 insertMember(&GenerateBlockArraySymbol::fromSyntax(
                                  compilation, member.node.as<LoopGenerateSyntax>(),
-                                 getInsertionIndex(*symbol), location, *this, constructIndex),
-                             symbol, true);
+                                 symbol->getIndex(), location, *this, constructIndex),
+                             symbol, true, true);
                 constructIndex++;
                 break;
             case SyntaxKind::GenerateBlock:
@@ -837,7 +833,7 @@ void Scope::elaborate() const {
                 // since some existing code does this anyway.
                 insertMember(&GenerateBlockSymbol::fromSyntax(
                                  *this, member.node.as<GenerateBlockSyntax>(), constructIndex),
-                             symbol, true);
+                             symbol, true, true);
                 constructIndex++;
                 break;
             default:
@@ -892,7 +888,7 @@ void Scope::elaborate() const {
     // list before allowing anyone else to access to the contained statements.
     if (thisSym->kind == SymbolKind::StatementBlock) {
         thisSym->as<StatementBlockSymbol>().elaborateVariables(
-            [this](const Symbol& member) { insertMember(&member, nullptr, true); });
+            [this](const Symbol& member) { insertMember(&member, nullptr, true, true); });
     }
 
     ASSERT(deferredMemberIndex == DeferredMemberIndex::Invalid);
@@ -967,6 +963,39 @@ void Scope::DeferredMemberData::addNameConflict(const Symbol& member) {
 
 span<const Symbol* const> Scope::DeferredMemberData::getNameConflicts() const {
     return nameConflicts;
+}
+
+static size_t countMembers(const SyntaxNode& syntax) {
+    switch (syntax.kind) {
+        case SyntaxKind::HierarchyInstantiation:
+            return syntax.as<HierarchyInstantiationSyntax>().instances.size();
+        case SyntaxKind::PrimitiveInstantiation:
+            return syntax.as<PrimitiveInstantiationSyntax>().instances.size();
+        case SyntaxKind::AnsiPortList:
+            return syntax.as<AnsiPortListSyntax>().ports.size();
+        case SyntaxKind::NonAnsiPortList:
+            return syntax.as<NonAnsiPortListSyntax>().ports.size();
+        case SyntaxKind::IfGenerate:
+            return syntax.as<IfGenerateSyntax>().elseClause ? 2 : 1;
+        case SyntaxKind::CaseGenerate:
+            return syntax.as<CaseGenerateSyntax>().items.size();
+        case SyntaxKind::ContinuousAssign:
+            return syntax.as<ContinuousAssignSyntax>().assignments.size();
+        case SyntaxKind::ModportDeclaration:
+            return syntax.as<ModportDeclarationSyntax>().items.size();
+        case SyntaxKind::UserDefinedNetDeclaration:
+            return syntax.as<UserDefinedNetDeclarationSyntax>().declarators.size();
+        case SyntaxKind::DataDeclaration:
+            return syntax.as<DataDeclarationSyntax>().declarators.size();
+        case SyntaxKind::PortDeclaration:
+            return syntax.as<PortDeclarationSyntax>().declarators.size();
+        case SyntaxKind::LoopGenerate:
+        case SyntaxKind::GenerateBlock:
+        case SyntaxKind::BindDirective:
+            return 1;
+        default:
+            THROW_UNREACHABLE;
+    }
 }
 
 } // namespace slang

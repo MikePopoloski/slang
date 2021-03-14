@@ -187,7 +187,8 @@ private:
                         const ImplicitTypeSyntax& implicit, SourceLocation location,
                         span<const VariableDimensionSyntax* const> unpackedDimensions) const;
 
-    template<typename T = BindContext> // templated to avoid having to include BindContext.h
+    template<bool IsInitializer,
+             typename T = BindContext> // templated to avoid having to include BindContext.h
     T getBindContext() const;
 
     const Symbol& parent;

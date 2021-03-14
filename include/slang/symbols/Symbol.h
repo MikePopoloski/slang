@@ -222,4 +222,22 @@ private:
     const SyntaxNode* originatingSyntax = nullptr;
 };
 
+inline SymbolIndex operator+(SymbolIndex si, uint32_t offset) {
+    return SymbolIndex(uint32_t(si) + offset);
+}
+
+inline SymbolIndex& operator+=(SymbolIndex& si, uint32_t offset) {
+    si = si + offset;
+    return si;
+}
+
+inline SymbolIndex operator-(SymbolIndex si, uint32_t offset) {
+    return SymbolIndex(uint32_t(si) - offset);
+}
+
+inline SymbolIndex& operator-=(SymbolIndex& si, uint32_t offset) {
+    si = si - offset;
+    return si;
+}
+
 } // namespace slang

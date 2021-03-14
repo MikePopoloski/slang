@@ -151,7 +151,7 @@ void ClassType::populate(const Scope& scope, const ClassDeclarationSyntax& synta
     // can see all parameter members but nothing else. This is needed to correctly
     // resolve type parameters used in extends and implements clauses.
     if (auto last = getLastMember())
-        headerIndex = SymbolIndex(uint32_t(last->getIndex()) + 1);
+        headerIndex = last->getIndex() + 1;
     else
         headerIndex = SymbolIndex(1);
 

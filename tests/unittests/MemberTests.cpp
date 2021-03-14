@@ -1660,3 +1660,21 @@ endmodule
     CHECK(diags[0].code == diag::InstanceWithDelay);
     CHECK(diags[1].code == diag::InstanceWithStrength);
 }
+
+TEST_CASE("Subroutine return lookup location regress") {
+    auto tree = SyntaxTree::fromText(R"(
+module test;
+    localparam w = 8;
+    function [w-1:0] copy;
+        input [w-1:0] w;
+        begin
+            copy = w;
+        end
+    endfunction
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}

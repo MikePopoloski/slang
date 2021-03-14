@@ -292,7 +292,8 @@ private:
 
     // Inserts the given member symbol into our own list of members, right after
     // the given symbol. If `at` is null, it will insert at the head of the list.
-    void insertMember(const Symbol* member, const Symbol* at, bool isElaborating) const;
+    void insertMember(const Symbol* member, const Symbol* at, bool isElaborating,
+                      bool incrementIndex) const;
 
     // Gets or creates deferred member data in the Compilation object's sideband table.
     DeferredMemberData& getOrAddDeferredData() const;
@@ -312,8 +313,8 @@ private:
     void addWildcardImport(const PackageImportItemSyntax& item,
                            span<const AttributeInstanceSyntax* const> attributes);
 
-    // Gets the index of a new symbol inserted after the given symbol within this scope.
-    SymbolIndex getInsertionIndex(const Symbol& at) const;
+    // Helper for adding in one or more deferred members from a syntax node.
+    void addDeferredMembers(const SyntaxNode& syntax);
 
     // The compilation that owns this scope.
     Compilation& compilation;
