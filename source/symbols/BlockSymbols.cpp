@@ -38,7 +38,11 @@ const Statement& StatementBlockSymbol::getBody() const {
 
         if (sym->kind == SymbolKind::Subroutine &&
             sym->as<SubroutineSymbol>().subroutineKind == SubroutineKind::Function) {
-            context.flags |= BindFlags::FunctionBody;
+
+            // The "function body" flag does not propagate through fork-join_none
+            // blocks, as all statements are allowed in those.
+            if (blockKind != StatementBlockKind::JoinNone)
+                context.flags |= BindFlags::FunctionBody;
 
             // fork-join and fork-join_any blocks are not allowed in functions, so check that here.
             if (blockKind == StatementBlockKind::JoinAll ||

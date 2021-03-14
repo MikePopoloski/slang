@@ -1118,6 +1118,9 @@ function f;
     wait (3) i = 1;
     wait_order(a, b, c);
     t();
+    fork
+    	t();    // this is ok inside a fork-join_none
+    join_none
 endfunction
 )");
 

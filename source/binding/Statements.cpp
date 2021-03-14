@@ -606,6 +606,18 @@ Statement& BlockStatement::fromSyntax(Compilation& compilation, const BlockState
     if (blockKind != StatementBlockKind::Sequential)
         context.flags |= BindFlags::ForkJoinBlock;
 
+    if (context.flags.has(BindFlags::FunctionBody)) {
+        if (blockKind == StatementBlockKind::JoinAll || blockKind == StatementBlockKind::JoinAny) {
+            context.addDiag(diag::TimingInFuncNotAllowed, syntax.end.range());
+            return badStmt(compilation, nullptr);
+        }
+        else if (blockKind == StatementBlockKind::JoinNone) {
+            // The "function body" flag does not propagate through fork-join_none
+            // blocks, as all statements are allowed in those.
+            context.flags &= ~BindFlags::FunctionBody;
+        }
+    }
+
     bool anyBad = false;
     SmallVectorSized<const Statement*, 8> buffer;
     for (auto item : syntax.items) {
@@ -619,12 +631,6 @@ Statement& BlockStatement::fromSyntax(Compilation& compilation, const BlockState
     auto result = compilation.emplace<BlockStatement>(*list, blockKind, syntax.sourceRange());
     if (anyBad)
         return badStmt(compilation, result);
-
-    if (context.flags.has(BindFlags::FunctionBody) &&
-        (blockKind == StatementBlockKind::JoinAll || blockKind == StatementBlockKind::JoinAny)) {
-        context.addDiag(diag::TimingInFuncNotAllowed, syntax.end.range());
-        return badStmt(compilation, result);
-    }
 
     return *result;
 }
