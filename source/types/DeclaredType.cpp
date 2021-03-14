@@ -22,7 +22,7 @@
 namespace slang {
 
 DeclaredType::DeclaredType(const Symbol& parent, bitmask<DeclaredTypeFlags> flags) :
-    parent(parent), flags(flags) {
+    parent(parent), flags(flags), initializerIndex(0), evaluating(false) {
     // If this assert fires you need to update Symbol::getDeclaredType
     ASSERT(parent.getDeclaredType() == this);
 }
@@ -391,12 +391,16 @@ T DeclaredType::getBindContext() const {
     // the parent symbol, so that it can reference the symbol itself. Type lookup
     // happens *before*, since it can't yet see the symbol declaration.
     LookupLocation location;
-    if (flags.has(DeclaredTypeFlags::LookupMax))
+    if (flags.has(DeclaredTypeFlags::LookupMax)) {
         location = LookupLocation::max;
-    else if (IsInitializer)
-        location = LookupLocation::after(parent);
-    else
+    }
+    else if (IsInitializer) {
+        location = initializerIndex ? LookupLocation(parent.getParentScope(), initializerIndex)
+                                    : LookupLocation::after(parent);
+    }
+    else {
         location = LookupLocation::before(parent);
+    }
 
     return BindContext(getScope(), location, bindFlags);
 }

@@ -669,3 +669,17 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Merged port initializer location") {
+    auto tree = SyntaxTree::fromText(R"(
+module m(out, in);
+    output out;
+    input in;
+    wire out = in;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}

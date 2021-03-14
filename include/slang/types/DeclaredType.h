@@ -24,6 +24,8 @@ struct ExpressionSyntax;
 struct ImplicitTypeSyntax;
 struct VariableDimensionSyntax;
 
+enum class SymbolIndex : uint32_t;
+
 /// Various flags that control declared type resolution.
 enum class DeclaredTypeFlags {
     /// No special flags specified.
@@ -155,6 +157,11 @@ public:
     /// initializer has not being resolved yet, returns false.
     bool hasResolvedInitializer() const { return initializer != nullptr; }
 
+    /// Sets a separate, later position in the parent scope for binding the
+    /// declared initializer expression. This is used for merged port symbols
+    /// because their declared location and initializer location may differ.
+    void setSeparateInitializerIndex(SymbolIndex index) { initializerIndex = uint32_t(index); }
+
     /// Adds additional type resolution flags to constraint resolution behavior.
     /// This will clear any resolved type to force resolution again with the
     /// new flags set.
@@ -201,8 +208,9 @@ private:
     const ExpressionSyntax* initializerSyntax = nullptr;
     SourceLocation initializerLocation;
 
-    mutable bool evaluating = false;
     bitmask<DeclaredTypeFlags> flags;
+    uint32_t initializerIndex : 31;
+    mutable uint32_t evaluating : 1;
 };
 
 } // namespace slang

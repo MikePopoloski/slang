@@ -424,8 +424,10 @@ private:
                     // its index so that lookups in between will resolve correctly.
                     uint32_t ioIndex =
                         insertionPoint ? uint32_t(insertionPoint->getIndex()) + 1 : 1;
-                    if (uint32_t(symbol->getIndex()) > ioIndex)
+                    if (uint32_t(symbol->getIndex()) > ioIndex) {
+                        val.getDeclaredType()->setSeparateInitializerIndex(symbol->getIndex());
                         val.setIndex(SymbolIndex(ioIndex));
+                    }
 
                     val.getDeclaredType()->mergeImplicitPort(
                         varHeader.dataType->as<ImplicitTypeSyntax>(), declLoc, decl.dimensions);
