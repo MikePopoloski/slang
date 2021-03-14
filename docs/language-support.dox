@@ -201,8 +201,10 @@ LRM | Feature | Supported
 LRM | Feature | Supported
 --- | ------- | ---------
 {{m-success}} 13.3 | Tasks | v0.2
+{{m-success}} 13.3.2 | Task memory usage and concurrent activation | v0.7
 {{m-success}} 13.4 | Functions | v0.2
-{{m-warning}} 13.5 | Subroutine calls and argument passing | partial
+{{m-success}} 13.4.4 | Background processes spawned by function calls | v0.7
+{{m-success}} 13.5 | Subroutine calls and argument passing | v0.7
 {{m-success}} 13.6 | Import and export functions | v0.6
 {{m-success}} 13.7 | Task and function names | v0.2
 {{m-dim}}     13.8 | Parameterized tasks and functions | N/A
