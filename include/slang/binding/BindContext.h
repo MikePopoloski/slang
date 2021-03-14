@@ -87,21 +87,18 @@ enum class BindFlags {
     /// Expression is allowed to be the unbounded literal '$' such as inside a queue select.
     AllowUnboundedLiteral = 1 << 13,
 
-    /// Binding is happening within a fork-join block.
-    ForkJoinBlock = 1 << 14,
-
     /// Specparams are allowed even if this is also a constant expression.
-    SpecparamsAllowed = 1 << 15,
+    SpecparamsAllowed = 1 << 14,
 
     /// Binding is happening within a function body.
-    FunctionBody = 1 << 16,
+    FunctionBody = 1 << 15,
 
     /// Binding is happening within the intra-assignment timing control of
     /// a non-blocking assignment expression.
-    NonBlockingTimingControl = 1 << 17,
+    NonBlockingTimingControl = 1 << 16,
 
     /// Binding is happening within an event expression.
-    EventExpression = 1 << 18
+    EventExpression = 1 << 17
 };
 BITMASK(BindFlags, EventExpression);
 

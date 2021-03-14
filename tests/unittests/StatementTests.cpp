@@ -1118,8 +1118,21 @@ function f;
     wait (3) i = 1;
     wait_order(a, b, c);
     t();
+    begin
+        static int j = i;
+        t();
+    end
     fork
-    	t();    // this is ok inside a fork-join_none
+        begin
+            int q;
+    	    t();    // this is ok inside a fork-join_none
+        end
+        fork
+            static int z = i;
+            z++;
+            t();
+        join_any
+        t();
     join_none
 endfunction
 )");
@@ -1128,13 +1141,14 @@ endfunction
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 6);
+    REQUIRE(diags.size() == 7);
     CHECK(diags[0].code == diag::TimingInFuncNotAllowed);
     CHECK(diags[1].code == diag::TimingInFuncNotAllowed);
     CHECK(diags[2].code == diag::TimingInFuncNotAllowed);
     CHECK(diags[3].code == diag::TimingInFuncNotAllowed);
     CHECK(diags[4].code == diag::TimingInFuncNotAllowed);
     CHECK(diags[5].code == diag::TaskFromFunction);
+    CHECK(diags[6].code == diag::TaskFromFunction);
 }
 
 TEST_CASE("Non-blocking timing control reference to auto") {

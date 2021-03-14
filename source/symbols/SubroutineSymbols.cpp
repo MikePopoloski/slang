@@ -20,11 +20,7 @@
 namespace slang {
 
 const Statement& SubroutineSymbol::getBody(EvalContext* evalContext) const {
-    bitmask<BindFlags> bindFlags = BindFlags::None;
-    if (subroutineKind == SubroutineKind::Function)
-        bindFlags |= BindFlags::FunctionBody;
-
-    BindContext context(*this, LookupLocation::max, bindFlags);
+    BindContext context(*this, LookupLocation::max);
     context.evalContext = evalContext;
     return binder.getStatement(context);
 }
@@ -101,8 +97,11 @@ SubroutineSymbol* SubroutineSymbol::fromSyntax(Compilation& compilation,
     }
 
     // Set statement body and collect all declared local variables.
+    StatementFlags stmtFlags = subroutineKind == SubroutineKind::Function
+                                   ? StatementFlags::InFunction
+                                   : StatementFlags::None;
     const Symbol* last = result->getLastMember();
-    result->binder.setItems(*result, syntax.items, syntax.sourceRange(), /* inLoop */ false);
+    result->binder.setItems(*result, syntax.items, syntax.sourceRange(), stmtFlags);
 
     // Subroutines can also declare arguments inside their bodies as port declarations.
     // Find them by walking through members that were added by setItems().

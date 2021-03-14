@@ -23,39 +23,7 @@ namespace slang {
 
 const Statement& StatementBlockSymbol::getBody() const {
     ensureElaborated();
-
-    BindContext context(*this, LookupLocation::max);
-    if (!binder.isResolved()) {
-        if (blockKind != StatementBlockKind::Sequential)
-            context.flags |= BindFlags::ForkJoinBlock;
-
-        const Symbol* sym = this;
-        while (sym->kind == SymbolKind::StatementBlock) {
-            auto parent = sym->getParentScope();
-            ASSERT(parent);
-            sym = &parent->asSymbol();
-        }
-
-        if (sym->kind == SymbolKind::Subroutine &&
-            sym->as<SubroutineSymbol>().subroutineKind == SubroutineKind::Function) {
-
-            // The "function body" flag does not propagate through fork-join_none
-            // blocks, as all statements are allowed in those.
-            if (blockKind != StatementBlockKind::JoinNone)
-                context.flags |= BindFlags::FunctionBody;
-
-            // fork-join and fork-join_any blocks are not allowed in functions, so check that here.
-            if (blockKind == StatementBlockKind::JoinAll ||
-                blockKind == StatementBlockKind::JoinAny) {
-                auto syntax = getSyntax();
-                ASSERT(syntax);
-                getParentScope()->addDiag(diag::TimingInFuncNotAllowed,
-                                          syntax->as<BlockStatementSyntax>().end.range());
-            }
-        }
-    }
-
-    return binder.getStatement(context);
+    return binder.getStatement(BindContext(*this, LookupLocation::max));
 }
 
 static std::pair<string_view, SourceLocation> getLabel(const StatementSyntax& syntax,
@@ -70,7 +38,7 @@ static std::pair<string_view, SourceLocation> getLabel(const StatementSyntax& sy
 
 StatementBlockSymbol& StatementBlockSymbol::fromSyntax(const Scope& scope,
                                                        const BlockStatementSyntax& syntax,
-                                                       bool inLoop) {
+                                                       bitmask<StatementFlags> flags) {
     string_view name;
     SourceLocation loc;
     if (syntax.blockName) {
@@ -83,11 +51,22 @@ StatementBlockSymbol& StatementBlockSymbol::fromSyntax(const Scope& scope,
     }
 
     StatementBlockKind blockKind = SemanticFacts::getStatementBlockKind(syntax);
+    if (flags.has(StatementFlags::InFunction) && !flags.has(StatementFlags::InForkJoinNone)) {
+        // fork-join and fork-join_any blocks are not allowed in functions, so check that here.
+        if (blockKind == StatementBlockKind::JoinAll || blockKind == StatementBlockKind::JoinAny)
+            scope.addDiag(diag::TimingInFuncNotAllowed, syntax.end.range());
+    }
+
+    if (blockKind != StatementBlockKind::Sequential) {
+        flags |= StatementFlags::InForkJoin;
+        if (blockKind == StatementBlockKind::JoinNone)
+            flags |= StatementFlags::InForkJoinNone;
+    }
 
     auto& comp = scope.getCompilation();
     auto result =
         comp.emplace<StatementBlockSymbol>(comp, name, loc, blockKind, scope.getDefaultLifetime());
-    result->binder.setItems(*result, syntax.items, syntax.sourceRange(), inLoop);
+    result->binder.setItems(*result, syntax.items, syntax.sourceRange(), flags);
     result->setSyntax(syntax);
     result->setAttributes(scope, syntax.attributes);
     return *result;
@@ -105,7 +84,7 @@ static StatementBlockSymbol* createBlock(const Scope& scope, const StatementSynt
 
 StatementBlockSymbol& StatementBlockSymbol::fromSyntax(const Scope& scope,
                                                        const ForLoopStatementSyntax& syntax,
-                                                       bool inLoop) {
+                                                       bitmask<StatementFlags> flags) {
     auto [name, loc] = getLabel(syntax, syntax.forKeyword.location());
     auto result = createBlock(scope, syntax, name, loc);
 
@@ -120,7 +99,7 @@ StatementBlockSymbol& StatementBlockSymbol::fromSyntax(const Scope& scope,
         result->addMember(var);
     }
 
-    result->binder.setSyntax(*result, syntax, inLoop);
+    result->binder.setSyntax(*result, syntax, flags);
     for (auto block : result->binder.getBlocks())
         result->addMember(*block);
 
@@ -129,11 +108,11 @@ StatementBlockSymbol& StatementBlockSymbol::fromSyntax(const Scope& scope,
 
 StatementBlockSymbol& StatementBlockSymbol::fromSyntax(const Scope& scope,
                                                        const ForeachLoopStatementSyntax& syntax,
-                                                       bool inLoop) {
+                                                       bitmask<StatementFlags> flags) {
     auto [name, loc] = getLabel(syntax, syntax.keyword.location());
     auto result = createBlock(scope, syntax, name, loc);
 
-    result->binder.setSyntax(*result, syntax, /* labelHandled */ true, inLoop);
+    result->binder.setSyntax(*result, syntax, /* labelHandled */ true, flags);
     for (auto block : result->binder.getBlocks())
         result->addMember(*block);
 
@@ -145,11 +124,11 @@ StatementBlockSymbol& StatementBlockSymbol::fromSyntax(const Scope& scope,
 
 StatementBlockSymbol& StatementBlockSymbol::fromLabeledStmt(const Scope& scope,
                                                             const StatementSyntax& syntax,
-                                                            bool inLoop) {
+                                                            bitmask<StatementFlags> flags) {
     auto [name, loc] = getLabel(syntax, {});
     auto result = createBlock(scope, syntax, name, loc);
 
-    result->binder.setSyntax(*result, syntax, /* labelHandled */ true, inLoop);
+    result->binder.setSyntax(*result, syntax, /* labelHandled */ true, flags);
     for (auto block : result->binder.getBlocks())
         result->addMember(*block);
 
@@ -189,7 +168,7 @@ ProceduralBlockSymbol& ProceduralBlockSymbol::fromSyntax(
     auto result = comp.emplace<ProceduralBlockSymbol>(syntax.keyword.location(), kind);
 
     result->binder.setSyntax(scope, *syntax.statement, /* labelHandled */ false,
-                             /* inLoop */ false);
+                             StatementFlags::None);
     result->setSyntax(syntax);
     result->setAttributes(scope, syntax.attributes);
 

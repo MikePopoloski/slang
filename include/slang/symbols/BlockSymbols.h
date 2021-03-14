@@ -29,13 +29,15 @@ public:
     void serializeTo(ASTSerializer&) const {}
 
     static StatementBlockSymbol& fromSyntax(const Scope& scope, const BlockStatementSyntax& syntax,
-                                            bool inLoop);
+                                            bitmask<StatementFlags> flags);
     static StatementBlockSymbol& fromSyntax(const Scope& scope,
-                                            const ForLoopStatementSyntax& syntax, bool inLoop);
+                                            const ForLoopStatementSyntax& syntax,
+                                            bitmask<StatementFlags> flags);
     static StatementBlockSymbol& fromSyntax(const Scope& scope,
-                                            const ForeachLoopStatementSyntax& syntax, bool inLoop);
+                                            const ForeachLoopStatementSyntax& syntax,
+                                            bitmask<StatementFlags> flags);
     static StatementBlockSymbol& fromLabeledStmt(const Scope& scope, const StatementSyntax& syntax,
-                                                 bool inLoop);
+                                                 bitmask<StatementFlags> flags);
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::StatementBlock; }
 

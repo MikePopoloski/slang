@@ -9,6 +9,7 @@
 #include "slang/binding/EvalContext.h"
 #include "slang/binding/Expression.h"
 #include "slang/symbols/SemanticFacts.h"
+#include "slang/util/Enum.h"
 #include "slang/util/ScopeGuard.h"
 
 namespace slang {
@@ -54,20 +55,30 @@ ENUM(StatementKind, STATEMENT);
 #undef STATEMENT
 
 #define CASE_CONDITION(x) \
- x(Normal) \
- x(WildcardXOrZ) \
- x(WildcardJustZ) \
- x(Inside)
+    x(Normal) \
+    x(WildcardXOrZ) \
+    x(WildcardJustZ) \
+    x(Inside)
 ENUM(CaseStatementCondition, CASE_CONDITION)
 #undef CASE_CONDITION
+
 #define CASE_CHECK(x) \
- x(None) \
- x(Unique) \
- x(Unique0) \
- x(Priority)
+    x(None) \
+    x(Unique) \
+    x(Unique0) \
+    x(Priority)
 ENUM(CaseStatementCheck, CASE_CHECK)
 #undef CASE_CHECK
 // clang-format on
+
+enum class StatementFlags {
+    None = 0,
+    InLoop = 1 << 0,
+    InFunction = 1 << 1,
+    InForkJoin = 1 << 2,
+    InForkJoinNone = 1 << 3
+};
+BITMASK(StatementFlags, InForkJoinNone);
 
 /// The base class for all statements in SystemVerilog.
 class Statement {
@@ -119,9 +130,8 @@ public:
         /// can pop blocks off the beginning of this list.
         span<const StatementBlockSymbol* const> blocks;
 
-        /// Tracks whether we're currently within a loop (which can control,
-        /// for example, whether a break or continue statement is allowed).
-        bool inLoop = false;
+        /// Tracks various bits of context about where we are in statement binding.
+        bitmask<StatementFlags> flags;
 
         /// Attempts to match up the head of the block list with the given
         /// statement syntax node. If they match, the block symbol is popped
@@ -130,10 +140,15 @@ public:
         BlockStatement* tryGetBlock(Compilation& compilation, const SyntaxNode& syntax);
 
         /// Records that we've entered a loop, and returns a guard that will
-        /// revert back to the previous inLoop state on destruction.
+        /// revert back to the previous state on destruction.
         [[nodiscard]] auto enterLoop() {
-            auto guard = ScopeGuard([this, saved = inLoop] { inLoop = saved; });
-            inLoop = true;
+            auto guard = ScopeGuard([this, saved = flags.has(StatementFlags::InLoop)] {
+                if (saved)
+                    flags |= StatementFlags::InLoop;
+                else
+                    flags &= ~StatementFlags::InLoop;
+            });
+            flags |= StatementFlags::InLoop;
             return guard;
         }
     };
@@ -170,13 +185,11 @@ protected:
 class StatementBinder {
 public:
     void setSyntax(const Scope& scope, const StatementSyntax& syntax, bool labelHandled,
-                   bool inLoop);
+                   bitmask<StatementFlags> flags);
     void setSyntax(const StatementBlockSymbol& scope, const ForLoopStatementSyntax& syntax,
-                   bool inLoop);
+                   bitmask<StatementFlags> flags);
     void setItems(Scope& scope, const SyntaxList<SyntaxNode>& syntax, SourceRange sourceRange,
-                  bool inLoop);
-
-    bool isResolved() const { return stmt != nullptr; }
+                  bitmask<StatementFlags> flags);
 
     const Statement& getStatement(const BindContext& context) const;
     span<const StatementBlockSymbol* const> getBlocks() const { return blocks; }
@@ -189,9 +202,9 @@ private:
     span<const StatementBlockSymbol* const> blocks;
     mutable const Statement* stmt = nullptr;
     SourceRange sourceRange;
+    bitmask<StatementFlags> flags;
     mutable bool isBinding = false;
     bool labelHandled = false;
-    bool inLoop = false;
 };
 
 /// Represents an invalid statement, which is usually generated and inserted
@@ -294,7 +307,7 @@ public:
     bool verifyConstantImpl(EvalContext& context) const;
 
     static Statement& fromSyntax(Compilation& compilation, const ReturnStatementSyntax& syntax,
-                                 const BindContext& context);
+                                 const BindContext& context, StatementContext& stmtCtx);
 
     void serializeTo(ASTSerializer& serializer) const;
 

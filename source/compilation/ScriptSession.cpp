@@ -76,7 +76,7 @@ ConstantValue ScriptSession::evalExpression(const ExpressionSyntax& expr) {
 
 void ScriptSession::evalStatement(const StatementSyntax& stmt) {
     StatementBinder binder;
-    binder.setSyntax(scope, stmt, false, false);
+    binder.setSyntax(scope, stmt, false, StatementFlags::None);
     for (auto block : binder.getBlocks())
         scope.addMember(*block);
 
