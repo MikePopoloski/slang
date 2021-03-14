@@ -21,26 +21,35 @@
 
 namespace slang {
 
-static bool isInFunction(const Symbol& symbol) {
-    const Symbol* sym = &symbol;
-    while (sym->kind == SymbolKind::StatementBlock) {
-        auto parent = sym->getParentScope();
-        ASSERT(parent);
-        sym = &parent->asSymbol();
-    }
-
-    return sym->kind == SymbolKind::Subroutine &&
-           sym->as<SubroutineSymbol>().subroutineKind == SubroutineKind::Function;
-}
-
 const Statement& StatementBlockSymbol::getBody() const {
     ensureElaborated();
 
     BindContext context(*this, LookupLocation::max);
-    if (blockKind != StatementBlockKind::Sequential)
-        context.flags |= BindFlags::ForkJoinBlock;
-    if (isInFunction(*this))
-        context.flags |= BindFlags::FunctionBody;
+    if (!binder.isResolved()) {
+        if (blockKind != StatementBlockKind::Sequential)
+            context.flags |= BindFlags::ForkJoinBlock;
+
+        const Symbol* sym = this;
+        while (sym->kind == SymbolKind::StatementBlock) {
+            auto parent = sym->getParentScope();
+            ASSERT(parent);
+            sym = &parent->asSymbol();
+        }
+
+        if (sym->kind == SymbolKind::Subroutine &&
+            sym->as<SubroutineSymbol>().subroutineKind == SubroutineKind::Function) {
+            context.flags |= BindFlags::FunctionBody;
+
+            // fork-join and fork-join_any blocks are not allowed in functions, so check that here.
+            if (blockKind == StatementBlockKind::JoinAll ||
+                blockKind == StatementBlockKind::JoinAny) {
+                auto syntax = getSyntax();
+                ASSERT(syntax);
+                getParentScope()->addDiag(diag::TimingInFuncNotAllowed,
+                                          syntax->as<BlockStatementSyntax>().end.range());
+            }
+        }
+    }
 
     return binder.getStatement(context);
 }
@@ -77,13 +86,6 @@ StatementBlockSymbol& StatementBlockSymbol::fromSyntax(const Scope& scope,
     result->binder.setItems(*result, syntax.items, syntax.sourceRange(), inLoop);
     result->setSyntax(syntax);
     result->setAttributes(scope, syntax.attributes);
-
-    // fork-join and fork-join_any blocks are not allowed in functions, so check that here.
-    if (blockKind == StatementBlockKind::JoinAll || blockKind == StatementBlockKind::JoinAny) {
-        if (isInFunction(scope.asSymbol()))
-            scope.addDiag(diag::TimingInFuncNotAllowed, syntax.end.range());
-    }
-
     return *result;
 }
 

@@ -176,6 +176,8 @@ public:
     void setItems(Scope& scope, const SyntaxList<SyntaxNode>& syntax, SourceRange sourceRange,
                   bool inLoop);
 
+    bool isResolved() const { return stmt != nullptr; }
+
     const Statement& getStatement(const BindContext& context) const;
     span<const StatementBlockSymbol* const> getBlocks() const { return blocks; }
     const StatementSyntax* getSyntax() const;
