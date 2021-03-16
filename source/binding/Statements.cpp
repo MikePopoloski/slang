@@ -1321,8 +1321,8 @@ Statement& RepeatLoopStatement::fromSyntax(Compilation& compilation,
     auto& countExpr = Expression::bind(*syntax.expr, context);
 
     bool bad = countExpr.bad();
-    if (!bad && !countExpr.type->isIntegral()) {
-        context.addDiag(diag::ExprMustBeIntegral, countExpr.sourceRange);
+    if (!bad && !countExpr.type->isNumeric()) {
+        context.addDiag(diag::RepeatNotNumeric, countExpr.sourceRange);
         bad = true;
     }
 

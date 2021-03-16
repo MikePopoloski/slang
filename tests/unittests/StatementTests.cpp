@@ -434,7 +434,7 @@ endmodule
 
     auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 6);
-    CHECK(diags[0].code == diag::ExprMustBeIntegral);
+    CHECK(diags[0].code == diag::RepeatNotNumeric);
     CHECK(diags[1].code == diag::NotBooleanConvertible);
     CHECK(diags[2].code == diag::NotBooleanConvertible);
     CHECK(diags[3].code == diag::ReturnNotInSubroutine);

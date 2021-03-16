@@ -277,11 +277,11 @@ public:
             return badArg(context, *args[1]);
 
         if (args.size() >= 3) {
-            if (!args[2]->type->isIntegral())
+            if (!args[2]->type->isNumeric())
                 return badArg(context, *args[2]);
 
             if (args.size() == 4) {
-                if (!args[3]->type->isIntegral())
+                if (!args[3]->type->isNumeric())
                     return badArg(context, *args[3]);
             }
         }

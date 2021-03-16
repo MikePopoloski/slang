@@ -74,7 +74,7 @@ public:
         if (!checkArgCount(context, false, args, range, 1, 1))
             return comp.getErrorType();
 
-        if (!args[0]->type->isIntegral())
+        if (!args[0]->type->isNumeric())
             return badArg(context, *args[0]);
 
         return comp.getRealType();
