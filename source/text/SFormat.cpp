@@ -325,7 +325,7 @@ void formatStrength(std::string& result, const SVInt& value) {
     for (bitwidth_t i = value.getBitWidth(); i > 0; i--) {
         // At compile time it's impossible to know strength values so
         // we will always put "Strong" here, or "Hi" if it's high impedance.
-        logic_t l = value[i - 1];
+        logic_t l = value[int32_t(i) - 1];
         switch (l.value) {
             case 0:
                 result += "St0";
