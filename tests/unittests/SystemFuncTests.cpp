@@ -41,8 +41,6 @@ module m;
 
     localparam string fmt = "%3.2d";
 
-    logic [1:0] l;
-    
     initial begin
         $display("asdf %s%d", , 5);
         $display("%s", foo);
@@ -68,7 +66,6 @@ module m;
         void'($sformatf("%d"));
         void'($sformatf("%d", 1, 2));
         void'($sformatf("%d", 3.2));
-        void'($sformatf("%v", l));
     end
 endmodule
 )");
@@ -77,7 +74,7 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 22);
+    REQUIRE(diags.size() == 21);
     CHECK(diags[0].code == diag::FormatEmptyArg);
     CHECK(diags[1].code == diag::FormatMismatchedType);
     CHECK(diags[2].code == diag::FormatUnspecifiedType);
@@ -99,7 +96,6 @@ endmodule
     CHECK(diags[18].code == diag::FormatNoArgument);
     CHECK(diags[19].code == diag::FormatTooManyArgs);
     CHECK(diags[20].code == diag::FormatRealInt);
-    CHECK(diags[21].code == diag::FormatMismatchedType);
 }
 
 TEST_CASE("String output task - not an lvalue error") {

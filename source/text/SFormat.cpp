@@ -322,27 +322,29 @@ static void formatRaw4(std::string& result, const ConstantValue& value) {
 }
 
 void formatStrength(std::string& result, const SVInt& value) {
-    // At compile time it's impossible to know strength values so
-    // we will always put "Strong" here.
-    result += "St";
+    for (bitwidth_t i = value.getBitWidth(); i > 0; i--) {
+        // At compile time it's impossible to know strength values so
+        // we will always put "Strong" here, or "Hi" if it's high impedance.
+        logic_t l = value[i - 1];
+        switch (l.value) {
+            case 0:
+                result += "St0";
+                break;
+            case 1:
+                result += "St1";
+                break;
+            case logic_t::X_VALUE:
+                result += "StX";
+                break;
+            case logic_t::Z_VALUE:
+                result += "HiZ";
+                break;
+            default:
+                THROW_UNREACHABLE;
+        }
 
-    // Only single-bit scalars are allowed to be formatted with %v
-    logic_t l = value[0];
-    switch (l.value) {
-        case 0:
-            result += "0";
-            break;
-        case 1:
-            result += "1";
-            break;
-        case logic_t::X_VALUE:
-            result += "X";
-            break;
-        case logic_t::Z_VALUE:
-            result += "Z";
-            break;
-        default:
-            THROW_UNREACHABLE;
+        if (i != 1)
+            result += " ";
     }
 }
 

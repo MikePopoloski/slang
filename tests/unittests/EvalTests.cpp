@@ -1091,7 +1091,8 @@ endfunction
     CHECK(sformatf("%v", "1'b1") == "St1");
     CHECK(sformatf("%v", "1'b0") == "St0");
     CHECK(sformatf("%v", "1'bx") == "StX");
-    CHECK(sformatf("%v", "1'bz") == "StZ");
+    CHECK(sformatf("%v", "1'bz") == "HiZ");
+    CHECK(sformatf("%v", "3'b1z0") == "St1 HiZ St0");
 
     NO_SESSION_ERRORS;
 }
