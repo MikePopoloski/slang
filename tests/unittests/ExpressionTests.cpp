@@ -2077,3 +2077,21 @@ endmodule
     CHECK(diags[0].code == diag::UnboundedNotAllowed);
     CHECK(diags[1].code == diag::UnboundedNotAllowed);
 }
+
+TEST_CASE("Selects with negative bounds") {
+    auto tree = SyntaxTree::fromText(R"(
+module foo;
+   wire [-1:0] fred;
+   assign      fred = 1;
+
+   initial begin
+      if (fred[0] !== 1) begin end
+      if (fred[-1] !== 0) begin end
+   end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}

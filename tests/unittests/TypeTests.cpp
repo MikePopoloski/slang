@@ -831,6 +831,7 @@ module top;
     end
     typedef enum{J,K} e_t;
     e_t baz;
+    wire [-1:0] asdf;
 endmodule
 )");
 
@@ -850,6 +851,7 @@ endmodule
     CHECK(tn("foo") == "logic[3:0][1:4]$[$][][0:3][*][logic[3:0]][2:1][$:99]");
     CHECK(tn("top.baz") == "enum{J=32'sd0,K=32'sd1}top.e_t");
     CHECK(tn("top.J") == "enum{J=32'sd0,K=32'sd1}top.e_t");
+    CHECK(tn("top.asdf") == "logic[-1:0]");
 
     NO_SESSION_ERRORS;
 }

@@ -176,7 +176,7 @@ const Type& IntegralType::fromSyntax(Compilation& compilation, SyntaxKind intege
     if (integerKind != SyntaxKind::BitType)
         flags |= IntegralFlags::FourState;
 
-    if (dims.size() == 1 && dims[0].first.right == 0) {
+    if (dims.size() == 1 && dims[0].first.right == 0 && dims[0].first.left >= 0) {
         // if we have the common case of only one dimension and lsb == 0
         // then we can use the shared representation
         return compilation.getType(dims[0].first.width(), flags);
