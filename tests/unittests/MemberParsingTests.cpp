@@ -369,6 +369,9 @@ TEST_CASE("Error for disallowed members") {
     auto& text = R"(
 interface I;
     module m; endmodule
+    if (1) begin
+        and (1, 2);
+    end
 endinterface
 
 assign foo = 3;
@@ -393,14 +396,15 @@ endpackage
 
     parseCompilationUnit(text);
 
-    REQUIRE(diagnostics.size() == 7);
+    REQUIRE(diagnostics.size() == 8);
     CHECK(diagnostics[0].code == diag::NotAllowedInInterface);
-    CHECK(diagnostics[1].code == diag::NotAllowedInCU);
-    CHECK(diagnostics[2].code == diag::NotAllowedInGenerate);
-    CHECK(diagnostics[3].code == diag::NotAllowedInModule);
-    CHECK(diagnostics[4].code == diag::NotAllowedInProgram);
-    CHECK(diagnostics[5].code == diag::NotAllowedInClocking);
-    CHECK(diagnostics[6].code == diag::NotAllowedInPackage);
+    CHECK(diagnostics[1].code == diag::NotAllowedInInterface);
+    CHECK(diagnostics[2].code == diag::NotAllowedInCU);
+    CHECK(diagnostics[3].code == diag::NotAllowedInGenerate);
+    CHECK(diagnostics[4].code == diag::NotAllowedInModule);
+    CHECK(diagnostics[5].code == diag::NotAllowedInProgram);
+    CHECK(diagnostics[6].code == diag::NotAllowedInClocking);
+    CHECK(diagnostics[7].code == diag::NotAllowedInPackage);
 }
 
 TEST_CASE("Task / constructor parse errors") {

@@ -55,12 +55,16 @@ ModuleDeclarationSyntax& Parser::parseModule(AttrList attributes, SyntaxKind par
     SyntaxKind declKind = getModuleDeclarationKind(header.moduleKeyword.kind);
     Metadata::Node node{ pp.getDefaultNetType(), pp.getUnconnectedDrive(), pp.getTimeScale() };
 
+    auto savedDefinitionKind = currentDefinitionKind;
+    currentDefinitionKind = declKind;
+
     Token endmodule;
     auto members = parseMemberList<MemberSyntax>(
         endKind, endmodule, declKind, [this](SyntaxKind parentKind, bool& anyLocalModules) {
             return parseMember(parentKind, anyLocalModules);
         });
 
+    currentDefinitionKind = savedDefinitionKind;
     pp.popDesignElementStack();
 
     auto endName = parseNamedBlockClause();
@@ -2667,8 +2671,22 @@ void Parser::checkMemberAllowed(const SyntaxNode& member, SyntaxKind parentKind)
             return;
         case SyntaxKind::GenerateBlock:
         case SyntaxKind::GenerateRegion:
-            if (!isAllowedInGenerate(member.kind))
+            if (!isAllowedInGenerate(member.kind)) {
                 error(diag::NotAllowedInGenerate);
+                return;
+            }
+
+            // Items in generate blocks must also be valid as items in
+            // their parent definition kinds.
+            switch (currentDefinitionKind) {
+                case SyntaxKind::ModuleDeclaration:
+                case SyntaxKind::InterfaceDeclaration:
+                case SyntaxKind::ProgramDeclaration:
+                    checkMemberAllowed(member, currentDefinitionKind);
+                    break;
+                default:
+                    break;
+            }
             return;
         case SyntaxKind::ModuleDeclaration:
             if (!isAllowedInModule(member.kind))

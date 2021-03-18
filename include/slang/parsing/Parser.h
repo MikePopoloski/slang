@@ -427,6 +427,10 @@ private:
     // The current depth of recursion in the parser.
     size_t recursionDepth = 0;
 
+    // The kind of definition currently being parsed, which could be a module,
+    // interface, program, etc.
+    SyntaxKind currentDefinitionKind = SyntaxKind::Unknown;
+
     // The held EOF token, if we've encountered it.
     Token eofToken;
 };
