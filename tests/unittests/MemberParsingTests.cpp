@@ -612,3 +612,23 @@ endmodule
     parseCompilationUnit(text);
     CHECK_DIAGNOSTICS_EMPTY;
 }
+
+TEST_CASE("Invalid package decls") {
+    auto& text = R"(
+package p1 import p::*;;
+endpackage
+
+package p2 #(parameter int foo);
+endpackage
+
+package p3 ();
+endpackage
+)";
+
+    parseCompilationUnit(text);
+
+    REQUIRE(diagnostics.size() == 3);
+    CHECK(diagnostics[0].code == diag::InvalidPackageDecl);
+    CHECK(diagnostics[1].code == diag::InvalidPackageDecl);
+    CHECK(diagnostics[2].code == diag::InvalidPackageDecl);
+}

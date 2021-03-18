@@ -116,6 +116,19 @@ ModuleHeaderSyntax& Parser::parseModuleHeader() {
         }
     }
 
+    if (moduleKeyword.kind == TokenKind::PackageKeyword) {
+        optional<SourceRange> errorRange;
+        if (!imports.empty())
+            errorRange = imports[0]->sourceRange();
+        else if (parameterList)
+            errorRange = parameterList->sourceRange();
+        else if (ports)
+            errorRange = ports->sourceRange();
+
+        if (errorRange)
+            addDiag(diag::InvalidPackageDecl, errorRange->start()) << *errorRange;
+    }
+
     auto semi = expect(TokenKind::Semicolon);
     return factory.moduleHeader(getModuleHeaderKind(moduleKeyword.kind), moduleKeyword, lifetime,
                                 name, imports, parameterList, ports, semi);
