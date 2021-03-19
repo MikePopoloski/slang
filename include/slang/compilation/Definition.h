@@ -98,6 +98,14 @@ public:
         return ports;
     }
 
+    /// Returns a string description of the definition kind, such as "module",
+    /// "interface", or "program".
+    string_view getKindString() const;
+
+    /// Returns a string description of the definition kind, including an
+    /// indefinite article. e.g. "a module", "an interface".
+    string_view getArticleKindString() const;
+
 private:
     void resolvePorts() const;
 

@@ -204,4 +204,30 @@ void Definition::resolvePorts() const {
     }
 }
 
+string_view Definition::getKindString() const {
+    switch (definitionKind) {
+        case DefinitionKind::Module:
+            return "module"sv;
+        case DefinitionKind::Interface:
+            return "interface"sv;
+        case DefinitionKind::Program:
+            return "program"sv;
+        default:
+            THROW_UNREACHABLE;
+    }
+}
+
+string_view Definition::getArticleKindString() const {
+    switch (definitionKind) {
+        case DefinitionKind::Module:
+            return "a module"sv;
+        case DefinitionKind::Interface:
+            return "an interface"sv;
+        case DefinitionKind::Program:
+            return "a program"sv;
+        default:
+            THROW_UNREACHABLE;
+    }
+}
+
 } // namespace slang

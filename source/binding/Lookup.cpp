@@ -1609,22 +1609,9 @@ void Lookup::reportUndeclared(const Scope& initialScope, string_view name, Sourc
     // Otherwise, check if this names a definition, in which case we can give a nicer error.
     auto def = initialScope.getCompilation().getDefinition(name, initialScope);
     if (def) {
-        string_view kindStr;
-        switch (def->definitionKind) {
-            case DefinitionKind::Module:
-                kindStr = "a module";
-                break;
-            case DefinitionKind::Interface:
-                kindStr = "an interface";
-                break;
-            case DefinitionKind::Program:
-                kindStr = "a program";
-                break;
-        }
-
-        DiagCode code =
+        auto code =
             (flags & LookupFlags::Type) ? diag::DefinitionUsedAsType : diag::DefinitionUsedAsValue;
-        result.addDiag(initialScope, code, range) << name << kindStr;
+        result.addDiag(initialScope, code, range) << name << def->getArticleKindString();
         return;
     }
 

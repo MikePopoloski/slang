@@ -289,11 +289,13 @@ void InstanceSymbol::fromSyntax(Compilation& compilation,
     while (currScope && currScope->asSymbol().kind != SymbolKind::InstanceBody)
         currScope = currScope->asSymbol().getParentScope();
 
+    const Definition* owningDefinition = nullptr;
     const ParamOverrideNode* parentOverrideNode = nullptr;
     bool isUninstantiated = false;
     if (currScope) {
         auto& instanceBody = currScope->asSymbol().as<InstanceBodySymbol>();
         isUninstantiated = instanceBody.isUninstantiated;
+        owningDefinition = &instanceBody.getDefinition();
 
         // In the uncommon case that our parent instance has a param override
         // node set, we need to go back and make sure we account for any
@@ -308,6 +310,10 @@ void InstanceSymbol::fromSyntax(Compilation& compilation,
         // This might actually be a user-defined primitive instantiation.
         if (auto prim = compilation.getPrimitive(syntax.type.valueText())) {
             PrimitiveInstanceSymbol::fromSyntax(*prim, syntax, location, scope, results);
+            if (!results.empty() &&
+                (!owningDefinition || owningDefinition->definitionKind != DefinitionKind::Module)) {
+                scope.addDiag(diag::InvalidPrimInstanceForParent, syntax.type.range());
+            }
         }
         else {
             if (!isUninstantiated)
@@ -316,6 +322,16 @@ void InstanceSymbol::fromSyntax(Compilation& compilation,
             UnknownModuleSymbol::fromSyntax(compilation, syntax, location, scope, results);
         }
         return;
+    }
+
+    if (owningDefinition) {
+        auto owningKind = owningDefinition->definitionKind;
+        if (owningKind == DefinitionKind::Program ||
+            (owningKind == DefinitionKind::Interface &&
+             definition->definitionKind == DefinitionKind::Module)) {
+            scope.addDiag(diag::InvalidInstanceForParent, syntax.type.range())
+                << definition->getArticleKindString() << owningDefinition->getArticleKindString();
+        }
     }
 
     // We have to check each port connection expression for any names that can't be resolved,

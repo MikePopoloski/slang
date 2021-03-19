@@ -13,8 +13,6 @@
 
 namespace slang {
 
-static const string_view DefinitionKindStrs[3] = { "module"sv, "interface"sv, "program"sv };
-
 // This visitor is used to touch every node in the AST to ensure that all lazily
 // evaluated members have been realized and we have recorded every diagnostic.
 struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
@@ -164,7 +162,7 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
         if (activeInstanceBodies.size() > compilation.getOptions().maxInstanceDepth) {
             auto& diag =
                 symbol.getParentScope()->addDiag(diag::MaxInstanceDepthExceeded, symbol.location);
-            diag << DefinitionKindStrs[int(symbol.getDefinition().definitionKind)];
+            diag << symbol.getDefinition().getKindString();
             diag << compilation.getOptions().maxInstanceDepth;
             hierarchyProblem = true;
             return;

@@ -752,8 +752,7 @@ const Diagnostics& Compilation::getSemanticDiagnostics() {
             if (usedIfacePorts.find(def) != usedIfacePorts.end())
                 continue;
 
-            def->scope.addDiag(diag::UnusedDefinition, def->location)
-                << DefinitionKindStrs[int(def->definitionKind)];
+            def->scope.addDiag(diag::UnusedDefinition, def->location) << def->getKindString();
         }
     }
 

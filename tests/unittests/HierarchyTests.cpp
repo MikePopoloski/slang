@@ -1380,3 +1380,30 @@ endmodule
     checkChild(1, "dut1", 12345);
     checkChild(2, "dut2", 5678);
 }
+
+TEST_CASE("Invalid instance parents") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+endmodule
+
+primitive foo(output a, input b);
+    table 0 : 0;
+    endtable
+endprimitive
+
+interface I;
+    if (1) begin
+        m m1();
+    end
+    foo (a, b);
+endinterface
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::InvalidInstanceForParent);
+    CHECK(diags[1].code == diag::InvalidPrimInstanceForParent);
+}
