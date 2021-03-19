@@ -1093,8 +1093,6 @@ endfunction
     CHECK(sformatf("%v", "1'bx") == "StX");
     CHECK(sformatf("%v", "1'bz") == "HiZ");
     CHECK(sformatf("%v", "3'b1z0") == "St1 HiZ St0");
-
-    NO_SESSION_ERRORS;
 }
 
 TEST_CASE("sformatf with trailing percent") {

@@ -617,6 +617,7 @@ error AutoVarTraced "automatic variable '{}' cannot be traced"
 warning format-real FormatRealInt "real value provided for integer format specifier '%{}'"
 warning finish-num BadFinishNum "finish argument must have value of 0, 1, or 2"
 warning missing-format MissingFormatSpecifier "missing format specifier"
+warning format-multibit-strength FormatMultibitStrength "formatting strength values for multi-bit nets is non-standard"
 
 subsystem ConstEval
 note NoteInCallTo "in call to '{}'"
@@ -694,6 +695,6 @@ group default = { real-underflow real-overflow literal-overflow unconnected-port
 group extra = { empty-member empty-stmt dup-import pointless-void-cast case-gen-none case-gen-dup
                 unused-result format-real ignored-slice task-ignored width-trunc dup-attr }
 
-group pedantic = { empty-pattern implicit-net-port nonstandard-escape-code nonstandard-generate }
+group pedantic = { empty-pattern implicit-net-port nonstandard-escape-code nonstandard-generate format-multibit-strength }
 
 group conversion = { width-trunc width-expand implicit-conv }
