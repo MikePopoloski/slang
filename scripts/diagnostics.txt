@@ -525,6 +525,7 @@ error PackedArrayTooLarge "packed array of {} bits is too large; maximum width i
 error ArrayDimTooLarge "array dimension of {} is too large; maximum number of elements is {}"
 error UnpackedSigned "unpacked type cannot have signedness declared"
 error InvalidUnionMember "untagged unions cannot have members of type {}"
+warning enum-range EnumRangeLiteral "enum element ranges must be integer literals"
 
 subsystem Lookup
 error Redefinition "redefinition of '{}'"
@@ -690,7 +691,7 @@ group default = { real-underflow real-overflow literal-overflow unconnected-port
                   extra-pragma-args expected-diag-arg unknown-diag-arg pragma-diag-level explicit-static
                   static-skipped elem-not-found dynarray-index dynarray-range queue-range empty-queue
                   unknown-escape-code no-top warning-task unsized-concat finish-num implicit-conv
-                  constraint-missing missing-format dpi-spec }
+                  constraint-missing missing-format dpi-spec enum-range }
 
 group extra = { empty-member empty-stmt dup-import pointless-void-cast case-gen-none case-gen-dup
                 unused-result format-real ignored-slice task-ignored width-trunc dup-attr }

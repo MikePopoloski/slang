@@ -203,6 +203,23 @@ endmodule
     NO_COMPILATION_ERRORS;
 }
 
+TEST_CASE("Enum range literal check") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    localparam int foo = 3;
+    enum { A[foo:1], B[foo] } asdf;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::EnumRangeLiteral);
+    CHECK(diags[1].code == diag::EnumRangeLiteral);
+}
+
 TEST_CASE("Packed structs") {
     auto tree = SyntaxTree::fromText(R"(
 module Top;
