@@ -1628,6 +1628,7 @@ module m;
     p1 #(3, 4, 5) (a, b);
     p1 #3 (a, b);
     p1 (supply0, strong1) #(1:2:3, 3:2:1) asdf(a, b);
+    p1 (,);
 endmodule
 )");
 
@@ -1635,10 +1636,12 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 3);
+    REQUIRE(diags.size() == 5);
     CHECK(diags[0].code == diag::DelayNotNumeric);
     CHECK(diags[1].code == diag::ExpectedNetDelay);
     CHECK(diags[2].code == diag::Delay3UdpNotAllowed);
+    CHECK(diags[3].code == diag::EmptyUdpPort);
+    CHECK(diags[4].code == diag::EmptyUdpPort);
 }
 
 TEST_CASE("Module mixup with primitive instance") {

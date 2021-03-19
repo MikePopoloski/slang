@@ -348,6 +348,7 @@ warning empty-member EmptyMember "extra ';' has no effect"
 warning ineffective-sign SignednessNoEffect "'{}' on I/O declaration has no effect on type {}"
 warning constraint-missing NoConstraintBody "no body for implicit constraint block '{}'"
 warning dpi-spec DPISpecDisallowed "'DPI' specified subroutines are not supported and will be treated as 'DPI-C'. Note that this may require changes to the application's C code."
+warning udp-port-empty EmptyUdpPort "primitive port connection is empty"
 
 subsystem Expressions
 error BadUnaryExpression "invalid operand type {} to unary expression"
@@ -691,7 +692,7 @@ group default = { real-underflow real-overflow literal-overflow unconnected-port
                   extra-pragma-args expected-diag-arg unknown-diag-arg pragma-diag-level explicit-static
                   static-skipped elem-not-found dynarray-index dynarray-range queue-range empty-queue
                   unknown-escape-code no-top warning-task unsized-concat finish-num implicit-conv
-                  constraint-missing missing-format dpi-spec enum-range }
+                  constraint-missing missing-format dpi-spec enum-range udp-port-empty }
 
 group extra = { empty-member empty-stmt dup-import pointless-void-cast case-gen-none case-gen-dup
                 unused-result format-real ignored-slice task-ignored width-trunc dup-attr }

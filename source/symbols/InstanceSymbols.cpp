@@ -979,10 +979,15 @@ span<const Expression* const> PrimitiveInstanceSymbol::getPortConnections() cons
         for (auto port : his.connections) {
             if (port->kind == SyntaxKind::OrderedPortConnection)
                 conns.append(port->as<OrderedPortConnectionSyntax>().expr);
-            else {
+            else if (port->kind != SyntaxKind::EmptyPortConnection ||
+                     primitiveType.primitiveKind != PrimitiveSymbol::UserDefined) {
                 context.addDiag(diag::InvalidPrimitivePortConn, port->sourceRange());
                 ports.emplace();
                 return *ports;
+            }
+            else {
+                context.addDiag(diag::EmptyUdpPort, port->sourceRange());
+                conns.append(nullptr);
             }
         }
 
@@ -1004,6 +1009,7 @@ span<const Expression* const> PrimitiveInstanceSymbol::getPortConnections() cons
                 else
                     dir = conns.size() - 1 ? ArgumentDirection::In : ArgumentDirection::Out;
 
+                ASSERT(conns[i]);
                 results.append(
                     &Expression::bindArgument(comp.getLogicType(), dir, *conns[i], context));
             }
@@ -1019,6 +1025,9 @@ span<const Expression* const> PrimitiveInstanceSymbol::getPortConnections() cons
             }
 
             for (size_t i = 0; i < conns.size(); i++) {
+                if (!conns[i])
+                    continue;
+
                 ArgumentDirection dir = ArgumentDirection::In;
                 switch (primitiveType.ports[i]->direction) {
                     case PrimitivePortDirection::In:
