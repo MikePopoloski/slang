@@ -636,3 +636,15 @@ endpackage
     CHECK(diagnostics[1].code == diag::InvalidPackageDecl);
     CHECK(diagnostics[2].code == diag::InvalidPackageDecl);
 }
+
+TEST_CASE("Invalid imports in def header") {
+    auto& text = R"(
+module m import p::*;;
+endmodule
+)";
+
+    parseCompilationUnit(text);
+
+    REQUIRE(diagnostics.size() == 1);
+    CHECK(diagnostics[0].code == diag::ExpectedPortList);
+}

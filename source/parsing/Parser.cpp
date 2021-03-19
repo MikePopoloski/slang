@@ -128,6 +128,9 @@ ModuleHeaderSyntax& Parser::parseModuleHeader() {
         if (errorRange)
             addDiag(diag::InvalidPackageDecl, errorRange->start()) << *errorRange;
     }
+    else if (!imports.empty() && !parameterList && !ports) {
+        addDiag(diag::ExpectedPortList, peek().location());
+    }
 
     auto semi = expect(TokenKind::Semicolon);
     return factory.moduleHeader(getModuleHeaderKind(moduleKeyword.kind), moduleKeyword, lifetime,
