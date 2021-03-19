@@ -235,4 +235,17 @@ public:
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::Primitive; }
 };
 
+struct SpecifyBlockSyntax;
+
+class SpecifyBlockSymbol : public Symbol, public Scope {
+public:
+    SpecifyBlockSymbol(Compilation& compilation, SourceLocation loc);
+
+    static SpecifyBlockSymbol& fromSyntax(Scope& scope, const SpecifyBlockSyntax& syntax);
+
+    void serializeTo(ASTSerializer&) const {}
+
+    static bool isKind(SymbolKind kind) { return kind == SymbolKind::SpecifyBlock; }
+};
+
 } // namespace slang

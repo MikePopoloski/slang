@@ -767,4 +767,25 @@ void PrimitiveSymbol::serializeTo(ASTSerializer&) const {
     // TODO:
 }
 
+SpecifyBlockSymbol::SpecifyBlockSymbol(Compilation& compilation, SourceLocation loc) :
+    Symbol(SymbolKind::SpecifyBlock, "", loc), Scope(compilation, this) {
+}
+
+SpecifyBlockSymbol& SpecifyBlockSymbol::fromSyntax(Scope& scope, const SpecifyBlockSyntax& syntax) {
+    auto& comp = scope.getCompilation();
+    auto result = comp.emplace<SpecifyBlockSymbol>(comp, syntax.specify.location());
+    result->setSyntax(syntax);
+
+    for (auto member : syntax.items)
+        result->addMembers(*member);
+
+    // specparams inside specify blocks get visibility in the parent scope as well.
+    for (auto member = result->getFirstMember(); member; member = member->getNextSibling()) {
+        if (member->kind == SymbolKind::Specparam)
+            scope.addMember(*comp.emplace<TransparentMemberSymbol>(*member));
+    }
+
+    return *result;
+}
+
 } // namespace slang

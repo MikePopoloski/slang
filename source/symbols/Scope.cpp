@@ -408,9 +408,16 @@ void Scope::addMembers(const SyntaxNode& syntax) {
                 addMember(*param);
             break;
         }
+        case SyntaxKind::SpecifyBlock:
+            addMember(SpecifyBlockSymbol::fromSyntax(*this, syntax.as<SpecifyBlockSyntax>()));
+            break;
         case SyntaxKind::ConcurrentAssertionMember:
         case SyntaxKind::ImmediateAssertionMember:
-        case SyntaxKind::SpecifyBlock:
+        case SyntaxKind::PulseStyleDeclaration:
+        case SyntaxKind::PathDeclaration:
+        case SyntaxKind::IfNonePathDeclaration:
+        case SyntaxKind::ConditionalPathDeclaration:
+        case SyntaxKind::SystemTimingCheck:
             // TODO: these aren't supported yet but we can compile everything else successfully
             // without them so warn instead of erroring.
             addDiag(diag::WarnNotYetSupported, syntax.sourceRange());

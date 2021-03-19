@@ -1462,6 +1462,12 @@ module m;
 
     int i = s3;
     localparam int j = s3;
+
+    specify 
+        specparam s4 = 2:3:4;
+    endspecify
+
+    int k = s4;
 endmodule
 )");
 
