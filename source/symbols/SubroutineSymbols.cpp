@@ -98,7 +98,7 @@ SubroutineSymbol* SubroutineSymbol::fromSyntax(Compilation& compilation,
 
     // Set statement body and collect all declared local variables.
     StatementFlags stmtFlags = subroutineKind == SubroutineKind::Function
-                                   ? StatementFlags::InFunction
+                                   ? StatementFlags::FuncOrFinal
                                    : StatementFlags::None;
     const Symbol* last = result->getLastMember();
     result->binder.setItems(*result, syntax.items, syntax.sourceRange(), stmtFlags);

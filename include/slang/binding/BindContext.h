@@ -90,8 +90,8 @@ enum class BindFlags {
     /// Specparams are allowed even if this is also a constant expression.
     SpecparamsAllowed = 1 << 14,
 
-    /// Binding is happening within a function body.
-    FunctionBody = 1 << 15,
+    /// Binding is happening within a function body or a final block.
+    FunctionOrFinal = 1 << 15,
 
     /// Binding is happening within the intra-assignment timing control of
     /// a non-blocking assignment expression.

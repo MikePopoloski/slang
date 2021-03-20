@@ -499,8 +499,8 @@ const Statement& StatementBinder::getStatement(const BindContext& context) const
         auto guard = ScopeGuard([this] { isBinding = false; });
 
         BindContext ctx = context;
-        if (flags.has(StatementFlags::InFunction) && !flags.has(StatementFlags::InForkJoinNone))
-            ctx.flags |= BindFlags::FunctionBody;
+        if (flags.has(StatementFlags::FuncOrFinal) && !flags.has(StatementFlags::InForkJoinNone))
+            ctx.flags |= BindFlags::FunctionOrFinal;
 
         stmt = &bindStatement(ctx);
     }
@@ -617,7 +617,7 @@ Statement& BlockStatement::fromSyntax(Compilation& compilation, const BlockState
 
     BindContext context = sourceCtx;
     auto blockKind = SemanticFacts::getStatementBlockKind(syntax);
-    if (context.flags.has(BindFlags::FunctionBody)) {
+    if (context.flags.has(BindFlags::FunctionOrFinal)) {
         if (blockKind == StatementBlockKind::JoinAll || blockKind == StatementBlockKind::JoinAny) {
             context.addDiag(diag::TimingInFuncNotAllowed, syntax.end.range());
             return badStmt(compilation, nullptr);
@@ -625,7 +625,7 @@ Statement& BlockStatement::fromSyntax(Compilation& compilation, const BlockState
         else if (blockKind == StatementBlockKind::JoinNone) {
             // The "function body" flag does not propagate through fork-join_none
             // blocks, as all statements are allowed in those.
-            context.flags &= ~BindFlags::FunctionBody;
+            context.flags &= ~BindFlags::FunctionOrFinal;
         }
     }
 
@@ -1987,7 +1987,7 @@ Statement& WaitStatement::fromSyntax(Compilation& compilation, const WaitStateme
     if (!context.requireBooleanConvertible(cond))
         return badStmt(compilation, result);
 
-    if (context.flags.has(BindFlags::FunctionBody)) {
+    if (context.flags.has(BindFlags::FunctionOrFinal)) {
         context.addDiag(diag::TimingInFuncNotAllowed, syntax.sourceRange());
         return badStmt(compilation, result);
     }
@@ -2053,7 +2053,7 @@ Statement& WaitOrderStatement::fromSyntax(Compilation& compilation,
 
     auto result = compilation.emplace<WaitOrderStatement>(events.copy(compilation), ifTrue, ifFalse,
                                                           syntax.sourceRange());
-    if (context.flags.has(BindFlags::FunctionBody)) {
+    if (context.flags.has(BindFlags::FunctionOrFinal)) {
         context.addDiag(diag::TimingInFuncNotAllowed, syntax.sourceRange());
         return badStmt(compilation, result);
     }

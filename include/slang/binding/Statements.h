@@ -74,7 +74,7 @@ ENUM(CaseStatementCheck, CASE_CHECK)
 enum class StatementFlags {
     None = 0,
     InLoop = 1 << 0,
-    InFunction = 1 << 1,
+    FuncOrFinal = 1 << 1,
     InForkJoin = 1 << 2,
     InForkJoinNone = 1 << 3
 };

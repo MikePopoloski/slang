@@ -1151,6 +1151,31 @@ endfunction
     CHECK(diags[6].code == diag::TaskFromFunction);
 }
 
+TEST_CASE("Statement restrictions inside final blocks") {
+    auto tree = SyntaxTree::fromText(R"(
+task t; endtask
+module m;
+    final begin
+        int i;
+        i = #1 3;
+        @(posedge i) i = 1;
+        fork join_any
+        t();
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 4);
+    CHECK(diags[0].code == diag::TimingInFuncNotAllowed);
+    CHECK(diags[1].code == diag::TimingInFuncNotAllowed);
+    CHECK(diags[2].code == diag::TimingInFuncNotAllowed);
+    CHECK(diags[3].code == diag::TaskFromFinal);
+}
+
 TEST_CASE("Non-blocking timing control reference to auto") {
     auto tree = SyntaxTree::fromText(R"(
 module m;

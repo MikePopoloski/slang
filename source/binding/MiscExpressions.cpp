@@ -488,9 +488,17 @@ Expression& CallExpression::fromArgs(Compilation& compilation, const Subroutine&
     if (bad)
         return badExpr(compilation, result);
 
-    if (context.flags.has(BindFlags::FunctionBody) &&
+    if (context.flags.has(BindFlags::FunctionOrFinal) &&
         symbol.subroutineKind == SubroutineKind::Task) {
-        context.addDiag(diag::TaskFromFunction, range);
+        auto scope = &context.scope;
+        while (scope && scope->asSymbol().kind == SymbolKind::StatementBlock)
+            scope = scope->asSymbol().getParentScope();
+
+        if (scope && scope->asSymbol().kind == SymbolKind::Subroutine)
+            context.addDiag(diag::TaskFromFunction, range);
+        else
+            context.addDiag(diag::TaskFromFinal, range);
+
         return badExpr(compilation, result);
     }
 

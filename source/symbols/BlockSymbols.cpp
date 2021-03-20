@@ -51,7 +51,7 @@ StatementBlockSymbol& StatementBlockSymbol::fromSyntax(const Scope& scope,
     }
 
     StatementBlockKind blockKind = SemanticFacts::getStatementBlockKind(syntax);
-    if (flags.has(StatementFlags::InFunction) && !flags.has(StatementFlags::InForkJoinNone)) {
+    if (flags.has(StatementFlags::FuncOrFinal) && !flags.has(StatementFlags::InForkJoinNone)) {
         // fork-join and fork-join_any blocks are not allowed in functions, so check that here.
         if (blockKind == StatementBlockKind::JoinAll || blockKind == StatementBlockKind::JoinAny)
             scope.addDiag(diag::TimingInFuncNotAllowed, syntax.end.range());
@@ -167,8 +167,11 @@ ProceduralBlockSymbol& ProceduralBlockSymbol::fromSyntax(
     auto kind = SemanticFacts::getProceduralBlockKind(syntax.kind);
     auto result = comp.emplace<ProceduralBlockSymbol>(syntax.keyword.location(), kind);
 
-    result->binder.setSyntax(scope, *syntax.statement, /* labelHandled */ false,
-                             StatementFlags::None);
+    StatementFlags flags = StatementFlags::None;
+    if (kind == ProceduralBlockKind::Final)
+        flags = StatementFlags::FuncOrFinal;
+
+    result->binder.setSyntax(scope, *syntax.statement, /* labelHandled */ false, flags);
     result->setSyntax(syntax);
     result->setAttributes(scope, syntax.attributes);
 
