@@ -123,7 +123,8 @@ bool BindContext::requireAssignable(const VariableSymbol& var, bool isNonBlockin
         }
     }
 
-    if (isNonBlocking && var.lifetime == VariableLifetime::Automatic) {
+    if (isNonBlocking && var.lifetime == VariableLifetime::Automatic &&
+        var.kind != SymbolKind::ClassProperty) {
         auto& diag = addDiag(diag::NonblockingAssignmentToAuto, assignLoc);
         diag.addNote(diag::NoteDeclarationHere, var.location);
         diag << var.name << varRange;

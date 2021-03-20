@@ -2182,3 +2182,23 @@ endclass
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Non-blocking assign to class properties") {
+    auto tree = SyntaxTree::fromText(R"(
+class C;
+    int f;
+    function foo; f <= 2; endfunction
+endclass
+
+module m;
+    initial begin
+        automatic C c = new;
+        c.f <= 3;
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
