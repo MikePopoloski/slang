@@ -32,6 +32,7 @@ public:
     WithClauseMode withClauseMode = WithClauseMode::None;
 
     virtual bool allowEmptyArgument(size_t argIndex) const;
+    virtual bool allowClockingArgument(size_t argIndex) const;
     virtual const Expression& bindArgument(size_t argIndex, const BindContext& context,
                                            const ExpressionSyntax& syntax,
                                            const Args& previousArgs) const;

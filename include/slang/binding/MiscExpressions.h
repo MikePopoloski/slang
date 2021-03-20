@@ -12,6 +12,7 @@
 namespace slang {
 
 class Constraint;
+class TimingControl;
 
 /// Common base class for both NamedValueExpression and HierarchicalValueExpression.
 class ValueExpressionBase : public Expression {
@@ -251,6 +252,30 @@ public:
     void serializeTo(ASTSerializer&) const {}
 
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::EmptyArgument; }
+};
+
+struct ClockingEventArgumentSyntax;
+
+/// Represents a clocking event argument. This is a special kind of argument that is only
+/// allowed with the sampled value system functions.
+class ClockingArgumentExpression : public Expression {
+public:
+    const TimingControl& timingControl;
+
+    ClockingArgumentExpression(const Type& type, const TimingControl& timingControl,
+                               SourceRange sourceRange) :
+        Expression(ExpressionKind::ClockingArgument, type, sourceRange),
+        timingControl(timingControl) {}
+
+    ConstantValue evalImpl(EvalContext&) const { return nullptr; }
+    bool verifyConstantImpl(EvalContext&) const { return true; }
+
+    static Expression& fromSyntax(const ClockingEventArgumentSyntax& syntax,
+                                  const BindContext& context);
+
+    void serializeTo(ASTSerializer& serializer) const;
+
+    static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::ClockingArgument; }
 };
 
 struct MinTypMaxExpressionSyntax;

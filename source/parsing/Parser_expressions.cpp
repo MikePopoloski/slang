@@ -527,9 +527,12 @@ ExpressionSyntax& Parser::parsePostfixExpression(ExpressionSyntax& lhs) {
                 expr = &factory.memberAccessExpression(*expr, dot, name);
                 break;
             }
-            case TokenKind::OpenParenthesis:
-                expr = &factory.invocationExpression(*expr, nullptr, &parseArgumentList());
+            case TokenKind::OpenParenthesis: {
+                bool allowClocking = expr->kind == SyntaxKind::SystemName;
+                auto& args = parseArgumentList(/* isParamAssignment */ false, allowClocking);
+                expr = &factory.invocationExpression(*expr, nullptr, &args);
                 break;
+            }
             case TokenKind::DoublePlus:
             case TokenKind::DoubleMinus: {
                 // can't have any other postfix expressions after inc/dec
@@ -556,8 +559,10 @@ ExpressionSyntax& Parser::parsePostfixExpression(ExpressionSyntax& lhs) {
                                                               *expr, attributes, op);
                     }
                     case TokenKind::OpenParenthesis:
-                        expr =
-                            &factory.invocationExpression(*expr, attributes, &parseArgumentList());
+                        expr = &factory.invocationExpression(
+                            *expr, attributes,
+                            &parseArgumentList(/* isParamAssignment */ false,
+                                               /* allowClocking */ false));
                         break;
                     default:
                         // otherwise, this has to be a function call without any arguments
@@ -746,10 +751,11 @@ ParameterValueAssignmentSyntax* Parser::parseParameterValueAssignment() {
         return nullptr;
 
     auto hash = consume();
-    return &factory.parameterValueAssignment(hash, parseArgumentList(/* isParamAssignment */ true));
+    auto& args = parseArgumentList(/* isParamAssignment */ true, /* allowClocking */ false);
+    return &factory.parameterValueAssignment(hash, args);
 }
 
-ArgumentListSyntax& Parser::parseArgumentList(bool isParamAssignment) {
+ArgumentListSyntax& Parser::parseArgumentList(bool isParamAssignment, bool allowClocking) {
     Token openParen;
     Token closeParen;
     span<TokenOrSyntax> list;
@@ -759,12 +765,15 @@ ArgumentListSyntax& Parser::parseArgumentList(bool isParamAssignment) {
     parseList<isPossibleArgument, isEndOfParenList>(
         TokenKind::OpenParenthesis, TokenKind::CloseParenthesis, TokenKind::Comma, openParen, list,
         closeParen, RequireItems::False, diag::ExpectedArgument,
-        [this, isParamAssignment] { return &parseArgument(isParamAssignment); }, allowEmpty);
+        [this, isParamAssignment, allowClocking] {
+            return &parseArgument(isParamAssignment, allowClocking);
+        },
+        allowEmpty);
 
     return factory.argumentList(openParen, list, closeParen);
 }
 
-ArgumentSyntax& Parser::parseArgument(bool isParamAssignment) {
+ArgumentSyntax& Parser::parseArgument(bool isParamAssignment, bool allowClocking) {
     // check for empty arguments
     if (!isParamAssignment && (peek(TokenKind::Comma) || peek(TokenKind::CloseParenthesis)))
         return factory.emptyArgument(placeholderToken());
@@ -780,6 +789,12 @@ ArgumentSyntax& Parser::parseArgument(bool isParamAssignment) {
             });
 
         return factory.namedArgument(dot, name, innerOpenParen, expr, innerCloseParen);
+    }
+
+    if (allowClocking && peek(TokenKind::At)) {
+        auto timing = parseTimingControl(/* isSequenceExpr */ false);
+        ASSERT(timing);
+        return factory.clockingEventArgument(*timing);
     }
 
     return factory.orderedArgument(isParamAssignment ? parseMinTypMaxExpression()
@@ -915,8 +930,11 @@ ExpressionSyntax& Parser::parseNewExpression(NameSyntax& newKeyword,
     // new-class has an optional argument list, copy-class has a required expression.
     // An open paren here would be ambiguous between an arg list and a parenthesized
     // expression -- we resolve by always taking the arg list.
-    if (kind == TokenKind::OpenParenthesis)
-        return factory.newClassExpression(newKeyword, &parseArgumentList());
+    if (kind == TokenKind::OpenParenthesis) {
+        return factory.newClassExpression(
+            newKeyword,
+            &parseArgumentList(/* isParamAssignment */ false, /* allowClocking */ false));
+    }
 
     if (isPossibleExpression(kind)) {
         if (newKeyword.kind != SyntaxKind::ConstructorName)

@@ -4,6 +4,9 @@ empty
 DataType base=Expression final=false
 empty
 
+TimingControl final=false
+empty
+
 // ----- ATTRIBUTES -----
 
 EqualsValueClause
@@ -47,6 +50,9 @@ token name
 token openParen
 Expression? expr
 token closeParen
+
+ClockingEventArgument base=Argument
+TimingControl event
 
 ArgumentList
 token openParen
@@ -381,9 +387,6 @@ token apostrophe
 ParenthesizedExpression inner
 
 // ----- TIMING CONTROL -----
-
-TimingControl final=false
-empty
 
 Delay base=TimingControl multiKind=true
 token hash

@@ -9,6 +9,7 @@
 #include "slang/binding/Constraints.h"
 #include "slang/binding/SelectExpressions.h"
 #include "slang/binding/SystemSubroutine.h"
+#include "slang/binding/TimingControl.h"
 #include "slang/compilation/Compilation.h"
 #include "slang/diagnostics/ConstEvalDiags.h"
 #include "slang/diagnostics/ExpressionsDiags.h"
@@ -754,6 +755,18 @@ Expression& CallExpression::createSystemCall(
                             return badExpr(compilation, nullptr);
                         }
                         break;
+                    case SyntaxKind::ClockingEventArgument:
+                        if (subroutine.allowClockingArgument(index)) {
+                            auto& arg = ClockingArgumentExpression::fromSyntax(
+                                actualArgs[i]->as<ClockingEventArgumentSyntax>(), context);
+                            buffer.append(&arg);
+                        }
+                        else {
+                            argContext.addDiag(diag::TimingControlNotAllowed,
+                                               actualArgs[i]->sourceRange());
+                            return badExpr(compilation, nullptr);
+                        }
+                        break;
                     default:
                         THROW_UNREACHABLE;
                 }
@@ -1006,6 +1019,19 @@ ConstantValue LValueReferenceExpression::evalImpl(EvalContext& context) const {
         return nullptr;
 
     return lvalue->load();
+}
+
+Expression& ClockingArgumentExpression::fromSyntax(const ClockingEventArgumentSyntax& syntax,
+                                                   const BindContext& context) {
+    auto& comp = context.getCompilation();
+    auto& timing = TimingControl::bind(*syntax.event, context);
+
+    return *comp.emplace<ClockingArgumentExpression>(comp.getVoidType(), timing,
+                                                     syntax.sourceRange());
+}
+
+void ClockingArgumentExpression::serializeTo(ASTSerializer& serializer) const {
+    serializer.write("timingControl", timingControl);
 }
 
 Expression& MinTypMaxExpression::fromSyntax(Compilation& compilation,
