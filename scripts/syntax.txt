@@ -950,8 +950,11 @@ token openBrace
 separated_list<PortReference> references
 token closeBrace
 
+EmptyNonAnsiPort base=NonAnsiPort
+token placeholder
+
 ImplicitNonAnsiPort base=NonAnsiPort
-PortExpression? expr
+PortExpression expr
 
 ExplicitNonAnsiPort base=NonAnsiPort
 token dot

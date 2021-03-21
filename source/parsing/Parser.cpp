@@ -181,7 +181,7 @@ PortExpressionSyntax& Parser::parsePortExpression() {
 
 NonAnsiPortSyntax& Parser::parseNonAnsiPort() {
     if (peek(TokenKind::Comma) || peek(TokenKind::CloseParenthesis))
-        return factory.implicitNonAnsiPort(nullptr);
+        return factory.emptyNonAnsiPort(placeholderToken());
 
     if (peek(TokenKind::Dot)) {
         auto dot = consume();
@@ -196,7 +196,7 @@ NonAnsiPortSyntax& Parser::parseNonAnsiPort() {
                                            expect(TokenKind::CloseParenthesis));
     }
 
-    return factory.implicitNonAnsiPort(&parsePortExpression());
+    return factory.implicitNonAnsiPort(parsePortExpression());
 }
 
 PortHeaderSyntax& Parser::parsePortHeader(Token constKeyword, Token direction) {
@@ -319,7 +319,7 @@ bool Parser::isPlainPortName() {
 
 bool Parser::isNonAnsiPort() {
     auto kind = peek().kind;
-    if (kind == TokenKind::Dot || kind == TokenKind::OpenBrace)
+    if (kind == TokenKind::Dot || kind == TokenKind::OpenBrace || kind == TokenKind::Comma)
         return true;
 
     if (kind != TokenKind::Identifier)
