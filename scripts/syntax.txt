@@ -679,6 +679,7 @@ DotMemberClause? modport
 ImplicitType base=DataType
 token signing
 list<VariableDimension> dimensions
+token placeholder
 
 // ----- ASSERTIONS -----
 

@@ -567,7 +567,7 @@ FunctionPrototypeSyntax& Parser::parseFunctionPrototype(SyntaxKind parentKind,
         if (next.kind != TokenKind::Semicolon && next.kind != TokenKind::OpenParenthesis)
             returnType = &parseDataType(TypeOptions::AllowImplicit | TypeOptions::AllowVoid);
         else
-            returnType = &factory.implicitType(Token(), nullptr);
+            returnType = &factory.implicitType(Token(), nullptr, placeholderToken());
     }
 
     auto& name = parseName();
@@ -2413,7 +2413,7 @@ SpecparamDeclarationSyntax& Parser::parseSpecparam(AttrList attr) {
     if (dim)
         dims.append(dim);
 
-    auto& type = factory.implicitType(Token(), dims.copy(alloc));
+    auto& type = factory.implicitType(Token(), dims.copy(alloc), placeholderToken());
 
     Token semi;
     SmallVectorSized<TokenOrSyntax, 4> buffer;

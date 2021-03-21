@@ -284,7 +284,7 @@ private:
     static const ImplicitTypeSyntax UnsetType;
 };
 
-const ImplicitTypeSyntax AnsiPortListBuilder::UnsetType{ Token(), nullptr };
+const ImplicitTypeSyntax AnsiPortListBuilder::UnsetType{ Token(), nullptr, Token() };
 
 class NonAnsiPortListBuilder {
 public:

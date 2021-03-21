@@ -18,6 +18,7 @@
 #include "slang/symbols/InstanceSymbols.h"
 #include "slang/syntax/SyntaxPrinter.h"
 #include "slang/syntax/SyntaxTree.h"
+#include "slang/syntax/SyntaxVisitor.h"
 #include "slang/text/Json.h"
 #include "slang/text/SourceManager.h"
 #include "slang/util/CommandLine.h"
@@ -110,6 +111,15 @@ SourceBuffer readSource(SourceManager& sourceManager, const std::string& file) {
     }
     return buffer;
 }
+
+struct RangeVisitor : public SyntaxVisitor<RangeVisitor> {
+    template<typename T>
+    void visit(const T& t) {
+        if (t.getChildCount())
+            t.sourceRange();
+        visitDefault(t);
+    }
+};
 
 bool loadAllSources(Compilation& compilation, SourceManager& sourceManager,
                     const std::vector<SourceBuffer>& buffers, const Bag& options, bool singleUnit,
@@ -263,6 +273,10 @@ public:
     }
 
     bool run() {
+        RangeVisitor visitor;
+        for (auto& tree : compilation.getSyntaxTrees())
+            tree->root().visit(visitor);
+
         if (onlyParse) {
             for (auto& diag : compilation.getParseDiagnostics())
                 diagEngine.issue(diag);

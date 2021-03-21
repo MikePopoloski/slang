@@ -221,7 +221,7 @@ PortHeaderSyntax& Parser::parsePortHeader(Token constKeyword, Token direction) {
             auto keyword = consume();
             auto signing = parseSigning();
             auto dimensions = parseDimensionList();
-            auto& type = factory.implicitType(signing, dimensions);
+            auto& type = factory.implicitType(signing, dimensions, placeholderToken());
             return factory.interconnectPortHeader(direction, keyword, type);
         }
     }
@@ -244,7 +244,7 @@ PortHeaderSyntax& Parser::parsePortHeader(Token constKeyword, Token direction) {
         if (!isPlainPortName())
             type = &parseDataType();
         else
-            type = &factory.implicitType(Token(), nullptr);
+            type = &factory.implicitType(Token(), nullptr, placeholderToken());
 
         return factory.variablePortHeader(constKeyword, direction, Token(), *type);
     }
@@ -547,7 +547,7 @@ DataTypeSyntax& Parser::parseDataType(bitmask<TypeOptions> options) {
                 return factory.namedType(parseName());
             }
 
-            return factory.implicitType(Token(), nullptr);
+            return factory.implicitType(Token(), nullptr, placeholderToken());
         }
     }
 
@@ -557,7 +557,7 @@ DataTypeSyntax& Parser::parseDataType(bitmask<TypeOptions> options) {
     if ((options & TypeOptions::AllowImplicit) == 0)
         addDiag(diag::ImplicitNotAllowed, peek().location());
 
-    return factory.implicitType(signing, dimensions);
+    return factory.implicitType(signing, dimensions, placeholderToken());
 }
 
 static bool isHighZ(Token t) {
