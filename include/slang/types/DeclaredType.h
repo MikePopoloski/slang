@@ -39,42 +39,38 @@ enum class DeclaredTypeFlags {
     /// The bound initializer is required to be a constant expression.
     RequireConstant = 1 << 1,
 
-    /// The lookup location for binding the type and initializer should
-    /// permit all symbols regardless of relative location.
-    LookupMax = 1 << 2,
-
     /// The initializer is for an automatic variable.
-    AutomaticInitializer = 1 << 3,
+    AutomaticInitializer = 1 << 2,
 
     /// The type being bound is for a port.
-    Port = 1 << 4,
+    Port = 1 << 3,
 
     /// The type being bound is the target of a typedef.
-    TypedefTarget = 1 << 5,
+    TypedefTarget = 1 << 4,
 
     /// The type being bound is a net type.
-    NetType = 1 << 6,
+    NetType = 1 << 5,
 
     /// The type being bound is a user-defined net type.
-    UserDefinedNetType = 1 << 7,
+    UserDefinedNetType = 1 << 6,
 
     /// The type being bound is part of port I/O declaration
     /// and should be merged with the formal argument declared
     /// elsewhere in the scope.
-    FormalArgMergeVar = 1 << 8,
+    FormalArgMergeVar = 1 << 7,
 
     /// The type being bound is for a random variable
-    Rand = 1 << 9,
+    Rand = 1 << 8,
 
     /// The type being bound is a DPI return type.
-    DPIReturnType = 1 << 10,
+    DPIReturnType = 1 << 9,
 
     /// The type being bound is for a DPI argument.
-    DPIArg = 1 << 11,
+    DPIArg = 1 << 10,
 
     /// Specparams are allowed in the initializer expression, even if
     /// the expression is otherwise not constant.
-    SpecparamsAllowed = 1 << 12,
+    SpecparamsAllowed = 1 << 11,
 
     /// A mask of flags that indicate additional type rules are needed to
     /// be checked after the type itself is resolved.
@@ -158,9 +154,9 @@ public:
     bool hasResolvedInitializer() const { return initializer != nullptr; }
 
     /// Sets a separate, later position in the parent scope for binding the
-    /// declared initializer expression. This is used for merged port symbols
-    /// because their declared location and initializer location may differ.
-    void setSeparateInitializerIndex(SymbolIndex index) { initializerIndex = uint32_t(index); }
+    /// declared type and initializer. This is used for merged port symbols
+    /// because their declared I/O location and symbol location may differ.
+    void setOverrideIndex(SymbolIndex index) { overrideIndex = uint32_t(index); }
 
     /// Adds additional type resolution flags to constraint resolution behavior.
     /// This will clear any resolved type to force resolution again with the
@@ -209,7 +205,7 @@ private:
     SourceLocation initializerLocation;
 
     bitmask<DeclaredTypeFlags> flags;
-    uint32_t initializerIndex : 31;
+    uint32_t overrideIndex : 31;
     mutable uint32_t evaluating : 1;
 };
 

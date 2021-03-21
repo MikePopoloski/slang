@@ -174,8 +174,7 @@ public:
 
     Symbol* createPort(const ExplicitAnsiPortSyntax& syntax) {
         auto port = compilation.emplace<PortSymbol>(syntax.name.valueText(), syntax.name.location(),
-                                                    DeclaredTypeFlags::LookupMax |
-                                                        DeclaredTypeFlags::InferImplicit);
+                                                    DeclaredTypeFlags::InferImplicit);
         port->direction = getDirection(syntax.direction);
         port->setSyntax(syntax);
         port->setDeclaredType(UnsetType);
@@ -318,8 +317,7 @@ public:
 
     Symbol* createPort(const ImplicitNonAnsiPortSyntax& syntax) {
         // TODO: location for empty ports?
-        auto port =
-            compilation.emplace<PortSymbol>("", SourceLocation(), DeclaredTypeFlags::LookupMax);
+        auto port = compilation.emplace<PortSymbol>("", SourceLocation());
         port->setSyntax(syntax);
 
         // Unnamed empty port is allowed.
@@ -425,7 +423,7 @@ private:
                     uint32_t ioIndex =
                         insertionPoint ? uint32_t(insertionPoint->getIndex()) + 1 : 1;
                     if (uint32_t(symbol->getIndex()) > ioIndex) {
-                        val.getDeclaredType()->setSeparateInitializerIndex(symbol->getIndex());
+                        val.getDeclaredType()->setOverrideIndex(symbol->getIndex());
                         val.setIndex(SymbolIndex(ioIndex));
                     }
 
@@ -478,6 +476,9 @@ private:
         symbol.setAttributes(scope, info.attrs);
         implicitMembers.emplace(&symbol, insertionPoint);
         info.internalSymbol = &symbol;
+
+        if (insertionPoint)
+            symbol.getDeclaredType()->setOverrideIndex(insertionPoint->getIndex());
     }
 };
 
