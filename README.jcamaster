@@ -1,0 +1,12 @@
+
+git checkout remotes/origin/atomicc1 -b atomicc1
+
+
+
+// According to the latest C++20 draft,
+// a span is a non-owning view over a contiguous sequence of objects
+
+
+mkdir build && cd build
+cmake -DCMAKE_CXX_COMPILER=g++-9 -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=/usr/local/bin ..
+make -j4
