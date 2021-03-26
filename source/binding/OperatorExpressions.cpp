@@ -10,6 +10,7 @@
 #include "slang/binding/Bitstream.h"
 #include "slang/binding/LiteralExpressions.h"
 #include "slang/binding/SelectExpressions.h"
+#include "slang/binding/TimingControl.h"
 #include "slang/compilation/Compilation.h"
 #include "slang/diagnostics/ConstEvalDiags.h"
 #include "slang/diagnostics/ExpressionsDiags.h"
@@ -765,6 +766,13 @@ Expression& BinaryExpression::fromComponents(Expression& lhs, Expression& rhs, B
                 }
             }
             break;
+        case BinaryOperator::NonOverlappedImplicationProperty:
+printf("[%s:%d]sssNonOverlappedImplicationPropertyjj\n", __FUNCTION__, __LINE__);
+            good = true; //bothNumeric;
+            result->type = singleBitType(compilation, lt, rt);
+            selfDetermined(context, result->left_);
+            selfDetermined(context, result->right_);
+            break;
         default:
             THROW_UNREACHABLE;
     }
@@ -819,6 +827,26 @@ bool BinaryExpression::propagateType(const BindContext& context, const Type& new
             // Only the left hand side gets propagated; the rhs is self determined.
             type = &newType;
             contextDetermined(context, left_, newType);
+            return true;
+        case BinaryOperator::AndSequence:
+        case BinaryOperator::BinarySequenceDelay:
+        case BinaryOperator::IffProperty:
+        case BinaryOperator::ImpliesProperty:
+        case BinaryOperator::IntersectSequence:
+        case BinaryOperator::NonOverlappedFollowedByProperty:
+        case BinaryOperator::NonOverlappedImplicationProperty:
+        case BinaryOperator::OrSequence:
+        case BinaryOperator::OverlappedFollowedByProperty:
+        case BinaryOperator::OverlappedImplicationProperty:
+        case BinaryOperator::SUntilProperty:
+        case BinaryOperator::SUntilWithProperty:
+        case BinaryOperator::ThroughoutSequence:
+        case BinaryOperator::UntilProperty:
+        case BinaryOperator::UntilWithProperty:
+        case BinaryOperator::WithinSequence:
+            type = &newType;
+            contextDetermined(context, left_, newType);
+            contextDetermined(context, right_, newType);
             return true;
     }
     THROW_UNREACHABLE;
@@ -1928,6 +1956,261 @@ void OpenRangeExpression::serializeTo(ASTSerializer& serializer) const {
     serializer.write("right", right());
 }
 
+Expression& TimingControlExpression::fromSyntax(Compilation& compilation,
+                                                const TimingControlExpressionSyntax& syntax,
+                                                const BindContext& context) {
+    bool bad = false;
+    SmallVectorSized<Expression*, 8> buffer;
+
+    bitmask<BindFlags> extraFlags = BindFlags::AllowUnboundedLiteral; //BindFlags::None;
+    Expression& arg = selfDetermined(compilation, *syntax.expr, context, extraFlags);
+    if (arg.bad()) {
+        bad = true;
+    }
+    buffer.append(&arg);
+
+    auto result = compilation.emplace<TimingControlExpression>(
+        compilation.getVoidType()//type
+        , buffer.ccopy(compilation), syntax.sourceRange());
+    if (bad)
+        return badExpr(compilation, result);
+
+    result->timing = &TimingControl::bind(*syntax.timing, context);
+    return *result;
+}
+
+ConstantValue TimingControlExpression::evalImpl(EvalContext& context) const {
+    if (type->isUnpackedArray()) {
+        auto& elemType = *type->getArrayElementType();
+        auto build = [&](auto&& result) {
+            for (auto op : operands()) {
+                ConstantValue cv = op->eval(context);
+                if (!cv)
+                    return false;
+
+                // Check if we can take this element as-is or if we need to
+                // unwrap it into constituents.
+                if (elemType.isEquivalent(*op->type))
+                    result.emplace_back(std::move(cv));
+                else {
+                    ASSERT(cv.isContainer());
+                    const Type& from = *op->type->getArrayElementType();
+                    for (auto& elem : cv) {
+                        result.emplace_back(ConversionExpression::convert(
+                            context, from, elemType, op->sourceRange, std::move(elem),
+                            ConversionKind::Implicit));
+                    }
+                }
+            }
+            return true;
+        };
+
+        if (type->isQueue()) {
+            SVQueue result;
+            result.maxBound = type->getCanonicalType().as<QueueType>().maxBound;
+            if (!build(result))
+                return nullptr;
+
+            result.resizeToBound();
+            return result;
+        }
+        else {
+            std::vector<ConstantValue> result;
+            if (!build(result))
+                return nullptr;
+
+            // If we have a fixed size target, check that they match in size.
+            if (type->hasFixedRange() && type->getFixedRange().width() != result.size()) {
+                context.addDiag(diag::UnpackedConcatSize, sourceRange)
+                    << *type << type->getFixedRange().width() << result.size();
+                return nullptr;
+            }
+
+            return result;
+        }
+    }
+
+    if (type->isString()) {
+        std::string result;
+        for (auto operand : operands()) {
+            ConstantValue v = operand->eval(context);
+            if (!v)
+                return nullptr;
+
+            // Skip zero-width replication operands.
+            if (operand->type->isVoid())
+                continue;
+
+            result.append(v.str());
+        }
+
+        return result;
+    }
+
+    SmallVectorSized<SVInt, 8> values;
+    for (auto operand : operands()) {
+        ConstantValue v = operand->eval(context);
+        if (!v)
+            return nullptr;
+
+        // Skip zero-width replication operands.
+        if (operand->type->isVoid())
+            continue;
+
+        values.append(v.integer());
+    }
+
+    return SVInt::concat(values);
+}
+
+bool TimingControlExpression::verifyConstantImpl(EvalContext& context) const {
+    for (auto operand : operands()) {
+        if (!operand->verifyConstant(context))
+            return false;
+    }
+    return true;
+}
+
+void TimingControlExpression::serializeTo(ASTSerializer& serializer) const {
+    serializer.write("timingControl", *timing);
+    if (!operands().empty()) {
+        serializer.startArray("operands");
+        for (auto op : operands())
+            serializer.serialize(*op);
+        serializer.endArray();
+    }
+}
+
+Expression& TimingControlExpressionConcatenationExpression::fromSyntax(Compilation& compilation,
+                                                const TimingControlExpressionConcatenationSyntax& syntax,
+                                                const BindContext& context) {
+    bool bad = false;
+    SmallVectorSized<Expression*, 8> buffer;
+    bitmask<BindFlags> extraFlags = BindFlags::AllowUnboundedLiteral; //BindFlags::None;
+
+    Expression& argl = selfDetermined(compilation, *syntax.left, context, extraFlags);
+    if (argl.bad())
+        bad = true;
+    else
+        buffer.append(&argl);
+    Expression& argr = selfDetermined(compilation, *syntax.right, context, extraFlags);
+    if (argr.bad())
+        bad = true;
+    else
+        buffer.append(&argr);
+
+    auto result = compilation.emplace<TimingControlExpressionConcatenationExpression>(
+        compilation.getVoidType()//type
+        , buffer.ccopy(compilation), syntax.sourceRange());
+    if (bad)
+        return badExpr(compilation, result);
+
+    result->timing = &TimingControl::bind(*syntax.timing, context);
+    return *result;
+}
+
+ConstantValue TimingControlExpressionConcatenationExpression::evalImpl(EvalContext& context) const {
+    if (type->isUnpackedArray()) {
+        auto& elemType = *type->getArrayElementType();
+        auto build = [&](auto&& result) {
+            for (auto op : operands()) {
+                ConstantValue cv = op->eval(context);
+                if (!cv)
+                    return false;
+
+                // Check if we can take this element as-is or if we need to
+                // unwrap it into constituents.
+                if (elemType.isEquivalent(*op->type))
+                    result.emplace_back(std::move(cv));
+                else {
+                    ASSERT(cv.isContainer());
+                    const Type& from = *op->type->getArrayElementType();
+                    for (auto& elem : cv) {
+                        result.emplace_back(ConversionExpression::convert(
+                            context, from, elemType, op->sourceRange, std::move(elem),
+                            ConversionKind::Implicit));
+                    }
+                }
+            }
+            return true;
+        };
+
+        if (type->isQueue()) {
+            SVQueue result;
+            result.maxBound = type->getCanonicalType().as<QueueType>().maxBound;
+            if (!build(result))
+                return nullptr;
+
+            result.resizeToBound();
+            return result;
+        }
+        else {
+            std::vector<ConstantValue> result;
+            if (!build(result))
+                return nullptr;
+
+            // If we have a fixed size target, check that they match in size.
+            if (type->hasFixedRange() && type->getFixedRange().width() != result.size()) {
+                context.addDiag(diag::UnpackedConcatSize, sourceRange)
+                    << *type << type->getFixedRange().width() << result.size();
+                return nullptr;
+            }
+
+            return result;
+        }
+    }
+
+    if (type->isString()) {
+        std::string result;
+        for (auto operand : operands()) {
+            ConstantValue v = operand->eval(context);
+            if (!v)
+                return nullptr;
+
+            // Skip zero-width replication operands.
+            if (operand->type->isVoid())
+                continue;
+
+            result.append(v.str());
+        }
+
+        return result;
+    }
+
+    SmallVectorSized<SVInt, 8> values;
+    for (auto operand : operands()) {
+        ConstantValue v = operand->eval(context);
+        if (!v)
+            return nullptr;
+
+        // Skip zero-width replication operands.
+        if (operand->type->isVoid())
+            continue;
+
+        values.append(v.integer());
+    }
+
+    return SVInt::concat(values);
+}
+
+bool TimingControlExpressionConcatenationExpression::verifyConstantImpl(EvalContext& context) const {
+    for (auto operand : operands()) {
+        if (!operand->verifyConstant(context))
+            return false;
+    }
+    return true;
+}
+
+void TimingControlExpressionConcatenationExpression::serializeTo(ASTSerializer& serializer) const {
+    serializer.write("timingControl", *timing);
+    if (!operands().empty()) {
+        serializer.startArray("operands");
+        for (auto op : operands())
+            serializer.serialize(*op);
+        serializer.endArray();
+    }
+}
+
 UnaryOperator Expression::getUnaryOperator(SyntaxKind kind) {
     switch (kind) {
         case SyntaxKind::UnaryPlusExpression:
@@ -2045,6 +2328,38 @@ BinaryOperator Expression::getBinaryOperator(SyntaxKind kind) {
             return BinaryOperator::ArithmeticShiftLeft;
         case SyntaxKind::ArithmeticRightShiftAssignmentExpression:
             return BinaryOperator::ArithmeticShiftRight;
+        case SyntaxKind::AndSequenceExpression:
+            return BinaryOperator::AndSequence;
+        case SyntaxKind::BinarySequenceDelayExpression:
+            return BinaryOperator::BinarySequenceDelay;
+        case SyntaxKind::IffPropertyExpression:
+            return BinaryOperator::IffProperty;
+        case SyntaxKind::ImpliesPropertyExpression:
+            return BinaryOperator::ImpliesProperty;
+        case SyntaxKind::IntersectSequenceExpression:
+            return BinaryOperator::IntersectSequence;
+        case SyntaxKind::NonOverlappedFollowedByPropertyExpression:
+            return BinaryOperator::NonOverlappedFollowedByProperty;
+        case SyntaxKind::NonOverlappedImplicationPropertyExpression:
+            return BinaryOperator::NonOverlappedImplicationProperty;
+        case SyntaxKind::OrSequenceExpression:
+            return BinaryOperator::OrSequence;
+        case SyntaxKind::OverlappedFollowedByPropertyExpression:
+            return BinaryOperator::OverlappedFollowedByProperty;
+        case SyntaxKind::OverlappedImplicationPropertyExpression:
+            return BinaryOperator::OverlappedImplicationProperty;
+        case SyntaxKind::SUntilPropertyExpression:
+            return BinaryOperator::SUntilProperty;
+        case SyntaxKind::SUntilWithPropertyExpression:
+            return BinaryOperator::SUntilWithProperty;
+        case SyntaxKind::ThroughoutSequenceExpression:
+            return BinaryOperator::ThroughoutSequence;
+        case SyntaxKind::UntilPropertyExpression:
+            return BinaryOperator::UntilProperty;
+        case SyntaxKind::UntilWithPropertyExpression:
+            return BinaryOperator::UntilWithProperty;
+        case SyntaxKind::WithinSequenceExpression:
+            return BinaryOperator::WithinSequence;
         default:
             THROW_UNREACHABLE;
     }
@@ -2093,6 +2408,22 @@ ConstantValue Expression::evalBinaryOperator(BinaryOperator op, const ConstantVa
                 OP(LogicalImplication, SVInt(SVInt::logicalImpl(l, r)));
                 OP(LogicalEquivalence, SVInt(SVInt::logicalEquiv(l, r)));
                 OP(Power, l.pow(r));
+                OP(AndSequence, 0);
+                OP(BinarySequenceDelay, 0);
+                OP(IffProperty, 0);
+                OP(ImpliesProperty, 0);
+                OP(IntersectSequence, 0);
+                OP(NonOverlappedFollowedByProperty, 0);
+                OP(NonOverlappedImplicationProperty, 0);
+                OP(OrSequence, 0);
+                OP(OverlappedFollowedByProperty, 0);
+                OP(OverlappedImplicationProperty, 0);
+                OP(SUntilProperty, 0);
+                OP(SUntilWithProperty, 0);
+                OP(ThroughoutSequence, 0);
+                OP(UntilProperty, 0);
+                OP(UntilWithProperty, 0);
+                OP(WithinSequence, 0);
             }
         }
         else if (cvr.isReal()) {

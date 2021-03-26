@@ -50,6 +50,66 @@ public:
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::TransparentMember; }
 };
 
+struct PropertyDeclarationSyntax;
+
+class PropertyDeclarationSymbol : public Symbol {
+public:
+    explicit PropertyDeclarationSymbol(SourceLocation location) :
+        Symbol(SymbolKind::PropertyDeclaration, "", location) {}
+
+    void serializeTo(ASTSerializer&) const;
+
+    static PropertyDeclarationSymbol& fromSyntax(Compilation& compilation, const Scope& scope,
+                                         const PropertyDeclarationSyntax& syntax);
+
+    static bool isKind(SymbolKind kind) { return kind == SymbolKind::PropertyDeclaration; }
+};
+
+struct SequenceDeclarationSyntax;
+
+class SequenceDeclarationSymbol : public Symbol {
+public:
+    explicit SequenceDeclarationSymbol(SourceLocation location) :
+        Symbol(SymbolKind::SequenceDeclaration, "", location) {}
+
+    void serializeTo(ASTSerializer&) const;
+
+    static SequenceDeclarationSymbol& fromSyntax(Compilation& compilation, const Scope& scope,
+                                         const SequenceDeclarationSyntax& syntax);
+
+    static bool isKind(SymbolKind kind) { return kind == SymbolKind::SequenceDeclaration; }
+};
+
+struct ImmediateAssertionMemberSyntax;
+
+class ImmediateAssertionMemberSymbol : public Symbol {
+public:
+    explicit ImmediateAssertionMemberSymbol(SourceLocation location) :
+        Symbol(SymbolKind::ImmediateAssertionMember, "", location) {}
+
+    void serializeTo(ASTSerializer&) const;
+
+    static ImmediateAssertionMemberSymbol& fromSyntax(Compilation& compilation, const Scope& scope,
+                                         const ImmediateAssertionMemberSyntax& syntax);
+
+    static bool isKind(SymbolKind kind) { return kind == SymbolKind::ImmediateAssertionMember; }
+};
+
+struct ConcurrentAssertionMemberSyntax;
+
+class ConcurrentAssertionMemberSymbol : public Symbol {
+public:
+    explicit ConcurrentAssertionMemberSymbol(SourceLocation location) :
+        Symbol(SymbolKind::ConcurrentAssertionMember, "", location) {}
+
+    void serializeTo(ASTSerializer&) const;
+
+    static ConcurrentAssertionMemberSymbol& fromSyntax(Compilation& compilation, const Scope& scope,
+                                         const ConcurrentAssertionMemberSyntax& syntax);
+
+    static bool isKind(SymbolKind kind) { return kind == SymbolKind::ConcurrentAssertionMember; }
+};
+
 /// Represents an explicit import from a package.
 class ExplicitImportSymbol : public Symbol {
 public:

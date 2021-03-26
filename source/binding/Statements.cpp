@@ -226,13 +226,17 @@ const Statement& Statement::bind(const StatementSyntax& syntax, const BindContex
             result = &ProceduralDeassignStatement::fromSyntax(
                 comp, syntax.as<ProceduralDeassignStatementSyntax>(), context);
             break;
-        case SyntaxKind::RandCaseStatement:
         case SyntaxKind::AssertPropertyStatement:
         case SyntaxKind::AssumePropertyStatement:
         case SyntaxKind::CoverSequenceStatement:
         case SyntaxKind::CoverPropertyStatement:
         case SyntaxKind::RestrictPropertyStatement:
         case SyntaxKind::ExpectPropertyStatement:
+printf("[%s:%d] missing AssertProperty/AssumeProperty/CoverSequence/CoverProperty/RestrictProperty/ExpectProperty\n", __FUNCTION__, __LINE__);
+            //context.addDiag(diag::NotYetSupported, syntax.sourceRange());
+            result = &badStmt(comp, nullptr);
+            break;
+        case SyntaxKind::RandCaseStatement:
             context.addDiag(diag::NotYetSupported, syntax.sourceRange());
             result = &badStmt(comp, nullptr);
             break;
@@ -408,7 +412,7 @@ static void findBlocks(const Scope& scope, const StatementSyntax& syntax,
         case SyntaxKind::CoverPropertyStatement:
         case SyntaxKind::RestrictPropertyStatement:
         case SyntaxKind::ExpectPropertyStatement:
-            scope.addDiag(diag::NotYetSupported, syntax.sourceRange());
+            //scope.addDiag(diag::NotYetSupported, syntax.sourceRange());
             return;
         default:
             THROW_UNREACHABLE;

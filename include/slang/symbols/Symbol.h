@@ -30,6 +30,10 @@ enum class RandMode;
     x(DeferredMember) \
     x(TransparentMember) \
     x(EmptyMember) \
+    x(PropertyDeclaration) \
+    x(SequenceDeclaration) \
+    x(ImmediateAssertionMember) \
+    x(ConcurrentAssertionMember) \
     x(PredefinedIntegerType) \
     x(ScalarType) \
     x(FloatingType) \

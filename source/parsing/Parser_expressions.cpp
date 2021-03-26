@@ -211,6 +211,25 @@ ExpressionSyntax& Parser::parsePrimaryExpression(bool disallowVector) {
             auto openParen = consume();
             auto expr = &parseMinTypMaxExpression();
 
+            if (peek(TokenKind::Comma)) {  // handle sequence_match_item in sequence expressions (local assign or call)
+printf("[%s:%d]COMMA LOCAL\n", __FUNCTION__, __LINE__);
+                consume();
+                auto current = peek();
+                bool wasDisplay = current.toString() == " $display";
+                consume();
+                if (wasDisplay || expect(TokenKind::Equals)) {
+                    current = peek();
+                    int closeCount = 0;
+                    while (closeCount != 0 || current.kind != TokenKind::CloseParenthesis) {
+                        if (current.kind == TokenKind::OpenParenthesis)
+                            closeCount++;
+                        else if (current.kind == TokenKind::CloseParenthesis)
+                            closeCount--;
+                        consume();
+                        current = peek();
+                    }
+                }
+            }
             auto closeParen = expect(TokenKind::CloseParenthesis);
             return factory.parenthesizedExpression(openParen, *expr, closeParen);
         }
@@ -483,6 +502,15 @@ AssignmentPatternItemSyntax& Parser::parseAssignmentPatternItem(ExpressionSyntax
 
 ElementSelectSyntax& Parser::parseElementSelect() {
     auto openBracket = expect(TokenKind::OpenBracket);
+    auto current = peek();
+    Token repetition;
+    if (current.kind == TokenKind::Star        // handle boolean_abbrev in sequence_expr
+     || current.kind == TokenKind::Equals
+     || current.kind == TokenKind::MinusArrow) {
+printf("[%s:%d]GOTOREP\n", __FUNCTION__, __LINE__);
+       repetition = consume();
+    }
+    (void)repetition;
     auto selector = parseElementSelector();
     auto closeBracket = expect(TokenKind::CloseBracket);
     return factory.elementSelect(openBracket, selector, closeBracket);
@@ -722,8 +750,12 @@ NameSyntax& Parser::parseNamePart(bitmask<NameOptions> options) {
         case TokenKind::OpenBracket: {
             uint32_t index = 1;
             scanTypePart<isSemicolon>(index, TokenKind::OpenBracket, TokenKind::CloseBracket);
-            if ((options & NameOptions::ForeachName) == 0 ||
-                peek(index).kind != TokenKind::CloseParenthesis) {
+            auto lookAhead = peek(1).kind;
+            bool delayMe = (lookAhead == TokenKind::Star
+                         || lookAhead == TokenKind::MinusArrow
+                         || lookAhead == TokenKind::Equals);
+            if (!delayMe && ((options & NameOptions::ForeachName) == 0 ||
+                peek(index).kind != TokenKind::CloseParenthesis)) {
 
                 SmallVectorSized<ElementSelectSyntax*, 4> buffer;
                 do {

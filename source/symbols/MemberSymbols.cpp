@@ -53,6 +53,146 @@ EmptyMemberSymbol& EmptyMemberSymbol::fromSyntax(Compilation& compilation, const
     return *result;
 }
 
+PropertyDeclarationSymbol& PropertyDeclarationSymbol::fromSyntax(Compilation& compilation, const Scope& scope,
+                                                 const PropertyDeclarationSyntax& syntax) {
+    auto result = compilation.emplace<PropertyDeclarationSymbol>(syntax.keyword.location());
+    result->setAttributes(scope, syntax.attributes);
+    result->setSyntax(syntax);
+
+    // Report a warning if this is just an empty semicolon hanging out for no reason,
+    // but don't report if this was inserted due to an error elsewhere.
+    if (syntax.attributes.empty() && !syntax.keyword.isMissing()) {
+        // If there are skipped nodes behind this semicolon don't report the warning,
+        // as it's likely it's due to the error itself.
+        bool anySkipped = false;
+        for (auto trivia : syntax.getFirstToken().trivia()) {
+            if (trivia.kind == TriviaKind::SkippedTokens) {
+                anySkipped = true;
+                break;
+            }
+        }
+
+        (void)anySkipped;
+        //if (!anySkipped)
+            //scope.addDiag(diag::PropertyDeclaration, syntax.sourceRange());
+    }
+
+    return *result;
+}
+void PropertyDeclarationSymbol::serializeTo(ASTSerializer& serializer) const {
+    auto scope = getParentScope();
+    auto &dsyntax = getSyntax()->as<PropertyDeclarationSyntax>();
+    auto syntax = dsyntax.propertySpec->expr.get();
+    ASSERT(scope && syntax);
+
+    BindContext context(*scope, LookupLocation::after(*this), BindFlags::NonProcedural);
+    serializer.write("DECLLL", Expression::bind(syntax->as<ExpressionSyntax>(), context, BindFlags::AssignmentDisallowed));
+}
+
+SequenceDeclarationSymbol& SequenceDeclarationSymbol::fromSyntax(Compilation& compilation, const Scope& scope,
+                                                 const SequenceDeclarationSyntax& syntax) {
+    auto result = compilation.emplace<SequenceDeclarationSymbol>(syntax.keyword.location());
+    result->setAttributes(scope, syntax.attributes);
+    result->setSyntax(syntax);
+
+    // Report a warning if this is just an empty semicolon hanging out for no reason,
+    // but don't report if this was inserted due to an error elsewhere.
+    if (syntax.attributes.empty() && !syntax.keyword.isMissing()) {
+        // If there are skipped nodes behind this semicolon don't report the warning,
+        // as it's likely it's due to the error itself.
+        bool anySkipped = false;
+        for (auto trivia : syntax.getFirstToken().trivia()) {
+            if (trivia.kind == TriviaKind::SkippedTokens) {
+                anySkipped = true;
+                break;
+            }
+        }
+
+        (void)anySkipped;
+        //if (!anySkipped)
+            //scope.addDiag(diag::SequenceDeclaration, syntax.sourceRange());
+    }
+
+    return *result;
+}
+void SequenceDeclarationSymbol::serializeTo(ASTSerializer& serializer) const {
+    auto scope = getParentScope();
+    auto &dsyntax = getSyntax()->as<SequenceDeclarationSyntax>();
+    auto syntax = dsyntax.seqExpr;
+    ASSERT(scope && syntax);
+
+    BindContext context(*scope, LookupLocation::after(*this), BindFlags::NonProcedural);
+    serializer.write("SEQQ", Expression::bind(syntax->as<ExpressionSyntax>(), context, BindFlags::AssignmentDisallowed));
+}
+
+ImmediateAssertionMemberSymbol& ImmediateAssertionMemberSymbol::fromSyntax(Compilation& compilation, const Scope& scope,
+                                                 const ImmediateAssertionMemberSyntax& syntax) {
+    auto result = compilation.emplace<ImmediateAssertionMemberSymbol>(syntax.statement->keyword.location());
+    result->setAttributes(scope, syntax.attributes);
+    result->setSyntax(syntax);
+
+    // Report a warning if this is just an empty semicolon hanging out for no reason,
+    // but don't report if this was inserted due to an error elsewhere.
+    if (syntax.attributes.empty() && !syntax.statement->keyword.isMissing()) {
+        // If there are skipped nodes behind this semicolon don't report the warning,
+        // as it's likely it's due to the error itself.
+        bool anySkipped = false;
+        for (auto trivia : syntax.getFirstToken().trivia()) {
+            if (trivia.kind == TriviaKind::SkippedTokens) {
+                anySkipped = true;
+                break;
+            }
+        }
+
+        (void)anySkipped;
+        //if (!anySkipped)
+            //scope.addDiag(diag::ImmediateAssertionMember, syntax.sourceRange());
+    }
+
+    return *result;
+}
+void ImmediateAssertionMemberSymbol::serializeTo(ASTSerializer& serializer) const {
+(void)serializer;
+    //serializer.write("DECLLL", getAssignment());
+}
+
+ConcurrentAssertionMemberSymbol& ConcurrentAssertionMemberSymbol::fromSyntax(Compilation& compilation, const Scope& scope,
+                                                 const ConcurrentAssertionMemberSyntax& syntax) {
+    auto result = compilation.emplace<ConcurrentAssertionMemberSymbol>(syntax.statement->keyword.location());
+    result->setAttributes(scope, syntax.attributes);
+    result->setSyntax(syntax);
+
+    // Report a warning if this is just an empty semicolon hanging out for no reason,
+    // but don't report if this was inserted due to an error elsewhere.
+    if (syntax.attributes.empty() && !syntax.statement->keyword.isMissing()) {
+        // If there are skipped nodes behind this semicolon don't report the warning,
+        // as it's likely it's due to the error itself.
+        bool anySkipped = false;
+        for (auto trivia : syntax.getFirstToken().trivia()) {
+            if (trivia.kind == TriviaKind::SkippedTokens) {
+                anySkipped = true;
+                break;
+            }
+        }
+
+        (void)anySkipped;
+        //if (!anySkipped)
+            //scope.addDiag(diag::ConcurrentAssertionMember, syntax.sourceRange());
+    }
+
+    return *result;
+}
+void ConcurrentAssertionMemberSymbol::serializeTo(ASTSerializer& serializer) const {
+    auto scope = getParentScope();
+    auto &dsyntax = getSyntax()->as<ConcurrentAssertionMemberSyntax>();
+    ASSERT(scope);
+
+    BindContext context(*scope, LookupLocation::after(*this), BindFlags::NonProcedural);
+    auto syntax = dsyntax.statement->propertySpec;
+    ASSERT(syntax);
+    serializer.write("spec", Expression::bind(syntax->expr.get()->as<ExpressionSyntax>(), context, BindFlags::AssignmentDisallowed));
+}
+
 const PackageSymbol* ExplicitImportSymbol::package() const {
     importedSymbol();
     return package_;

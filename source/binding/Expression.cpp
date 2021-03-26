@@ -153,6 +153,8 @@ struct Expression::PropagationVisitor {
                     context, newType, ConversionKind::Implicit, expr, assignmentLoc);
             }
             else {
+                if (expr.kind == ExpressionKind::TimingControlExpressionConcatenation)
+                    return *result;
                 result = &ConversionExpression::makeImplicit(
                     context, newType, ConversionKind::Propagated, expr, expr.sourceRange.start());
             }
@@ -698,8 +700,8 @@ Expression& Expression::create(Compilation& compilation, const ExpressionSyntax&
         case SyntaxKind::TimingControlExpression:
             // Valid cases of this expression type are handled in AssignmentExpression. If we reach
             // this block here, the expression is invalid so always report an error.
-            context.addDiag(diag::TimingControlNotAllowed, syntax.sourceRange());
-            result = &badExpr(compilation, nullptr);
+            result = &TimingControlExpression::fromSyntax(
+                compilation, syntax.as<TimingControlExpressionSyntax>(), context);
             break;
         case SyntaxKind::NewArrayExpression:
             result = &NewArrayExpression::fromSyntax(
@@ -728,40 +730,48 @@ Expression& Expression::create(Compilation& compilation, const ExpressionSyntax&
             break;
         case SyntaxKind::AcceptOnPropertyExpression:
         case SyntaxKind::AlwaysPropertyExpression:
-        case SyntaxKind::AndSequenceExpression:
-        case SyntaxKind::BinarySequenceDelayExpression:
         case SyntaxKind::EventuallyPropertyExpression:
-        case SyntaxKind::IffPropertyExpression:
-        case SyntaxKind::ImpliesPropertyExpression:
-        case SyntaxKind::IntersectSequenceExpression:
         case SyntaxKind::NextTimePropertyExpression:
-        case SyntaxKind::NonOverlappedFollowedByPropertyExpression:
-        case SyntaxKind::NonOverlappedImplicationPropertyExpression:
-        case SyntaxKind::OneStepLiteralExpression:
-        case SyntaxKind::OrSequenceExpression:
-        case SyntaxKind::OverlappedFollowedByPropertyExpression:
-        case SyntaxKind::OverlappedImplicationPropertyExpression:
         case SyntaxKind::RejectOnPropertyExpression:
         case SyntaxKind::SAlwaysPropertyExpression:
         case SyntaxKind::SEventuallyPropertyExpression:
         case SyntaxKind::SNextTimePropertyExpression:
-        case SyntaxKind::SUntilPropertyExpression:
-        case SyntaxKind::SUntilWithPropertyExpression:
         case SyntaxKind::SyncAcceptOnPropertyExpression:
         case SyntaxKind::SyncRejectOnPropertyExpression:
-        case SyntaxKind::TaggedUnionExpression:
-        case SyntaxKind::ThroughoutSequenceExpression:
-        case SyntaxKind::TimingControlExpressionConcatenation:
         case SyntaxKind::UnaryNotPropertyExpression:
         case SyntaxKind::UnarySequenceDelayExpression:
         case SyntaxKind::UnarySequenceEventExpression:
+            result = &UnaryExpression::fromSyntax(
+                compilation, syntax.as<PrefixUnaryExpressionSyntax>(), context);
+            break;
+        case SyntaxKind::AndSequenceExpression:
+        case SyntaxKind::BinarySequenceDelayExpression:
+        case SyntaxKind::IffPropertyExpression:
+        case SyntaxKind::ImpliesPropertyExpression:
+        case SyntaxKind::IntersectSequenceExpression:
+        case SyntaxKind::NonOverlappedFollowedByPropertyExpression:
+        case SyntaxKind::NonOverlappedImplicationPropertyExpression:
+        case SyntaxKind::OrSequenceExpression:
+        case SyntaxKind::OverlappedFollowedByPropertyExpression:
+        case SyntaxKind::OverlappedImplicationPropertyExpression:
+        case SyntaxKind::SUntilPropertyExpression:
+        case SyntaxKind::SUntilWithPropertyExpression:
+        case SyntaxKind::ThroughoutSequenceExpression:
         case SyntaxKind::UntilPropertyExpression:
         case SyntaxKind::UntilWithPropertyExpression:
-        case SyntaxKind::WithClause:
         case SyntaxKind::WithinSequenceExpression:
-            context.addDiag(diag::NotYetSupported, syntax.sourceRange());
-            result = &badExpr(compilation, nullptr);
+            result = &BinaryExpression::fromSyntax(
+                compilation, syntax.as<BinaryExpressionSyntax>(), context);
             break;
+        case SyntaxKind::OneStepLiteralExpression:
+            result = &OneStepLiteral::fromSyntax(compilation, syntax.as<LiteralExpressionSyntax>());
+            break;
+        case SyntaxKind::TimingControlExpressionConcatenation:
+            result = &TimingControlExpressionConcatenationExpression::fromSyntax(
+                compilation, syntax.as<TimingControlExpressionConcatenationSyntax>(), context);
+            break;
+        case SyntaxKind::TaggedUnionExpression:
+        case SyntaxKind::WithClause:
         default:
             if (NameSyntax::isKind(syntax.kind)) {
                 result = &bindName(compilation, syntax.as<NameSyntax>(), nullptr, nullptr, context);

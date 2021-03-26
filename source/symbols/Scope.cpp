@@ -409,7 +409,21 @@ void Scope::addMembers(const SyntaxNode& syntax) {
             break;
         }
         case SyntaxKind::ConcurrentAssertionMember:
+            addMember(
+                ConcurrentAssertionMemberSymbol::fromSyntax(compilation, *this, syntax.as<ConcurrentAssertionMemberSyntax>()));
+            break;
         case SyntaxKind::ImmediateAssertionMember:
+            addMember(
+                ImmediateAssertionMemberSymbol::fromSyntax(compilation, *this, syntax.as<ImmediateAssertionMemberSyntax>()));
+            break;
+        case SyntaxKind::PropertyDeclaration:
+            addMember(
+                PropertyDeclarationSymbol::fromSyntax(compilation, *this, syntax.as<PropertyDeclarationSyntax>()));
+            break;
+        case SyntaxKind::SequenceDeclaration:
+            addMember(
+                SequenceDeclarationSymbol::fromSyntax(compilation, *this, syntax.as<SequenceDeclarationSyntax>()));
+            break;
         case SyntaxKind::SpecifyBlock:
             // TODO: these aren't supported yet but we can compile everything else successfully
             // without them so warn instead of erroring.

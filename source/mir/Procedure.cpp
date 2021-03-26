@@ -163,6 +163,9 @@ public:
     MIRValue visit(const EmptyArgumentExpression&) { return {}; }
     MIRValue visit(const OpenRangeExpression&) { return {}; }
     MIRValue visit(const DistExpression&) { return {}; }
+    MIRValue visit(const OneStepLiteral&) { return {}; }
+    MIRValue visit(const TimingControlExpression&) { return {}; }
+    MIRValue visit(const TimingControlExpressionConcatenationExpression&) { return {}; }
 
     void visitInvalid(const Statement&) {}
     MIRValue visitInvalid(const Expression&) { return {}; }

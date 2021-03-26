@@ -127,6 +127,10 @@ decltype(auto) Symbol::visit(TVisitor&& visitor, Args&&... args) const {
         SYMBOL(Attribute);
         SYMBOL(TransparentMember);
         SYMBOL(EmptyMember);
+        SYMBOL(PropertyDeclaration);
+        SYMBOL(SequenceDeclaration);
+        SYMBOL(ImmediateAssertionMember);
+        SYMBOL(ConcurrentAssertionMember);
         SYMBOL(EnumValue);
         SYMBOL(ForwardingTypedef);
         SYMBOL(Parameter);
@@ -295,6 +299,9 @@ decltype(auto) Expression::visitExpression(TExpression* expr, TVisitor&& visitor
         CASE(NewClass, NewClassExpression);
         CASE(CopyClass, CopyClassExpression);
         CASE(MinTypMax, MinTypMaxExpression);
+        CASE(OneStepLiteral, OneStepLiteral);
+        CASE(TimingControlExpressionConcatenation, TimingControlExpressionConcatenationExpression);
+        CASE(TimingControlExpression, TimingControlExpression);
     }
 #undef CASE
     // clang-format on

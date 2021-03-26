@@ -7,6 +7,7 @@
 #pragma once
 
 #include "slang/binding/Expression.h"
+#include "slang/binding/TimingControl.h"
 
 namespace slang {
 
@@ -356,6 +357,60 @@ public:
 private:
     Expression* left_;
     Expression* right_;
+};
+
+struct TimingControlExpressionSyntax;
+
+/// Represents a timing control expression concatenation expression.
+class TimingControlExpression : public Expression {
+public:
+    TimingControlExpression(const Type& type, span<const Expression* const> operands,
+                            SourceRange sourceRange) :
+        Expression(ExpressionKind::TimingControlExpression, type, sourceRange),
+        operands_(operands), timing(nullptr) {}
+
+    span<const Expression* const> operands() const { return operands_; }
+
+    ConstantValue evalImpl(EvalContext& context) const;
+    bool verifyConstantImpl(EvalContext& context) const;
+
+    void serializeTo(ASTSerializer& serializer) const;
+
+    static Expression& fromSyntax(Compilation& compilation,
+                                  const TimingControlExpressionSyntax& syntax,
+                                  const BindContext& context);
+
+    static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::TimingControlExpression; }
+private:
+    span<const Expression* const> operands_;
+    const TimingControl* timing;
+};
+
+struct TimingControlExpressionConcatenationSyntax;
+
+/// Represents a timing control expression concatenation expression.
+class TimingControlExpressionConcatenationExpression : public Expression {
+public:
+    TimingControlExpressionConcatenationExpression(const Type& type, span<const Expression* const> operands,
+                            SourceRange sourceRange) :
+        Expression(ExpressionKind::TimingControlExpressionConcatenation, type, sourceRange),
+        operands_(operands), timing(nullptr) {}
+
+    span<const Expression* const> operands() const { return operands_; }
+
+    ConstantValue evalImpl(EvalContext& context) const;
+    bool verifyConstantImpl(EvalContext& context) const;
+
+    void serializeTo(ASTSerializer& serializer) const;
+
+    static Expression& fromSyntax(Compilation& compilation,
+                                  const TimingControlExpressionConcatenationSyntax& syntax,
+                                  const BindContext& context);
+
+    static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::TimingControlExpressionConcatenation; }
+private:
+    span<const Expression* const> operands_;
+    const TimingControl* timing;
 };
 
 } // namespace slang

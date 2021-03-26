@@ -168,4 +168,30 @@ private:
     ConstantValue* intStorage;
 };
 
+/// Represents an oneStep literal.
+class OneStepLiteral : public Expression {
+public:
+    /// Indicates whether the original token in the source text was declared
+    /// unsized; if false, an explicit size was given.
+    bool isDeclaredUnsized;
+
+    OneStepLiteral(BumpAllocator& alloc, const Type& type, const SVInt& value,
+                   bool isDeclaredUnsized, SourceRange sourceRange);
+
+    SVInt getValue() const { return valueStorage; }
+
+    ConstantValue evalImpl(EvalContext& context) const;
+    bool verifyConstantImpl(EvalContext&) const { return true; }
+    optional<bitwidth_t> getEffectiveWidthImpl() const;
+
+    void serializeTo(ASTSerializer&) const;
+
+    static Expression& fromSyntax(Compilation& compilation, const LiteralExpressionSyntax& syntax);
+
+    static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::OneStepLiteral; }
+
+private:
+    SVIntStorage valueStorage;
+};
+
 } // namespace slang

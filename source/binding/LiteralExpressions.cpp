@@ -253,4 +253,51 @@ void StringLiteral::serializeTo(ASTSerializer& serializer) const {
     serializer.write("literal", value);
 }
 
+OneStepLiteral::OneStepLiteral(BumpAllocator& alloc, const Type& type, const SVInt& value,
+                               bool isDeclaredUnsized, SourceRange sourceRange) :
+    Expression(ExpressionKind::OneStepLiteral, type, sourceRange),
+    isDeclaredUnsized(isDeclaredUnsized),
+    valueStorage(value.getBitWidth(), value.isSigned(), value.hasUnknown()) {
+
+    if (value.isSingleWord())
+        valueStorage.val = *value.getRawPtr();
+    else {
+        valueStorage.pVal =
+            (uint64_t*)alloc.allocate(sizeof(uint64_t) * value.getNumWords(), alignof(uint64_t));
+        memcpy(valueStorage.pVal, value.getRawPtr(), sizeof(uint64_t) * value.getNumWords());
+    }
+}
+
+Expression& OneStepLiteral::fromSyntax(Compilation& compilation,
+                                       const LiteralExpressionSyntax& syntax) {
+    ASSERT(syntax.kind == SyntaxKind::OneStepLiteralExpression);
+
+    SVInt val = syntax.literal.intValue().resize(32);
+    val.setSigned(true);
+
+    return *compilation.emplace<OneStepLiteral>(compilation, compilation.getIntType(),
+                                                std::move(val), true, syntax.sourceRange());
+}
+
+ConstantValue OneStepLiteral::evalImpl(EvalContext&) const {
+    SVInt result = getValue();
+    ASSERT(result.getBitWidth() == type->getBitWidth());
+    return result;
+}
+
+optional<bitwidth_t> OneStepLiteral::getEffectiveWidthImpl() const {
+    auto&& val = getValue();
+    if (val.hasUnknown())
+        return val.getBitWidth();
+
+    if (val.isNegative())
+        return val.getMinRepresentedBits();
+
+    return val.getActiveBits();
+}
+
+void OneStepLiteral::serializeTo(ASTSerializer& serializer) const {
+    serializer.write("value", getValue());
+}
+
 } // namespace slang

@@ -60,7 +60,10 @@ struct InvocationExpressionSyntax;
     x(NewArray) \
     x(NewClass) \
     x(CopyClass) \
-    x(MinTypMax)
+    x(MinTypMax) \
+    x(OneStepLiteral) \
+    x(TimingControlExpression) \
+    x(TimingControlExpressionConcatenation)
 ENUM(ExpressionKind, EXPRESSION);
 #undef EXPRESSION
 
@@ -110,7 +113,23 @@ ENUM(UnaryOperator, OP);
     x(LogicalShiftRight) \
     x(ArithmeticShiftLeft) \
     x(ArithmeticShiftRight) \
-    x(Power)
+    x(Power) \
+    x(AndSequence) \
+    x(BinarySequenceDelay) \
+    x(IffProperty) \
+    x(ImpliesProperty) \
+    x(IntersectSequence) \
+    x(NonOverlappedFollowedByProperty) \
+    x(NonOverlappedImplicationProperty) \
+    x(OrSequence) \
+    x(OverlappedFollowedByProperty) \
+    x(OverlappedImplicationProperty) \
+    x(SUntilProperty) \
+    x(SUntilWithProperty) \
+    x(ThroughoutSequence) \
+    x(UntilProperty) \
+    x(UntilWithProperty) \
+    x(WithinSequence)
 ENUM(BinaryOperator, OP);
 #undef OP
 

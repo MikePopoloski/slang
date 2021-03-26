@@ -1293,6 +1293,7 @@ bool SyntaxFacts::isAllowedInModule(SyntaxKind kind) {
         case SyntaxKind::TimeUnitsDeclaration:
         case SyntaxKind::SpecparamDeclaration:
         case SyntaxKind::SpecifyBlock:
+        case SyntaxKind::ImmediateAssertionMember:
             return true;
         default:
             return isAllowedInGenerate(kind);
