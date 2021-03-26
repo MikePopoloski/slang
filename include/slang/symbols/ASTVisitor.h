@@ -185,6 +185,7 @@ decltype(auto) Symbol::visit(TVisitor&& visitor, Args&&... args) const {
         TYPE(StringType);
         TYPE(EventType);
         TYPE(UnboundedType);
+        TYPE(TypeRefType);
         TYPE(VirtualInterfaceType);
         TYPE(ErrorType);
         TYPE(NetType);
@@ -284,6 +285,7 @@ decltype(auto) Expression::visitExpression(TExpression* expr, TVisitor&& visitor
         CASE(Call, CallExpression);
         CASE(Conversion, ConversionExpression);
         CASE(DataType, DataTypeExpression);
+        CASE(TypeReference, TypeReferenceExpression);
         CASE(HierarchicalReference, HierarchicalReferenceExpression);
         CASE(LValueReference, LValueReferenceExpression);
         CASE(SimpleAssignmentPattern, SimpleAssignmentPatternExpression);

@@ -1020,9 +1020,11 @@ Statement& CaseStatement::fromSyntax(Compilation& compilation, const CaseStateme
     SmallVectorSized<const Expression*, 8> bound;
     TokenKind keyword = syntax.caseKeyword.kind;
     bool isInside = syntax.matchesOrInside.kind == TokenKind::InsideKeyword;
-    bad |= !Expression::bindMembershipExpressions(context, keyword,
-                                                  !isInside && keyword != TokenKind::CaseKeyword,
-                                                  isInside, *syntax.expr, expressions, bound);
+    bool wildcard = !isInside && keyword != TokenKind::CaseKeyword;
+    bool allowTypeRefs = !isInside && keyword == TokenKind::CaseKeyword;
+
+    bad |= !Expression::bindMembershipExpressions(context, keyword, wildcard, isInside,
+                                                  allowTypeRefs, *syntax.expr, expressions, bound);
 
     if (isInside && condition != CaseStatementCondition::Normal) {
         context.addDiag(diag::CaseInsideKeyword, syntax.matchesOrInside.range())
@@ -1097,9 +1099,14 @@ static bool checkMatch(CaseStatementCondition condition, const ConstantValue& cv
 }
 
 ER CaseStatement::evalImpl(EvalContext& context) const {
+    const Type* condType = nullptr;
     auto cv = expr.eval(context);
-    if (!cv)
-        return ER::Fail;
+    if (!cv) {
+        if (expr.kind == ExpressionKind::TypeReference)
+            condType = &expr.as<TypeReferenceExpression>().targetType;
+        else
+            return ER::Fail;
+    }
 
     const Statement* matchedStmt = nullptr;
     SourceRange matchRange;
@@ -1117,10 +1124,12 @@ ER CaseStatement::evalImpl(EvalContext& context) const {
             }
             else {
                 auto val = item->eval(context);
-                if (!val)
+                if (val)
+                    matched = checkMatch(condition, cv, val);
+                else if (condType && item->kind == ExpressionKind::TypeReference)
+                    matched = item->as<TypeReferenceExpression>().targetType.isMatching(*condType);
+                else
                     return ER::Fail;
-
-                matched = checkMatch(condition, cv, val);
             }
 
             if (matched) {

@@ -973,6 +973,7 @@ bool Type::isKind(SymbolKind kind) {
         case SymbolKind::StringType:
         case SymbolKind::EventType:
         case SymbolKind::UnboundedType:
+        case SymbolKind::TypeRefType:
         case SymbolKind::VirtualInterfaceType:
         case SymbolKind::TypeAlias:
         case SymbolKind::ErrorType:

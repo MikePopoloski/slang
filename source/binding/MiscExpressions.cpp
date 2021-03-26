@@ -983,13 +983,23 @@ void CallExpression::serializeTo(ASTSerializer& serializer) const {
 
 Expression& DataTypeExpression::fromSyntax(Compilation& compilation, const DataTypeSyntax& syntax,
                                            const BindContext& context) {
-    if ((context.flags & BindFlags::AllowDataType) == 0) {
+    const Type& type = compilation.getType(syntax, context.getLocation(), context.scope);
+    if (syntax.kind == SyntaxKind::TypeReference &&
+        context.flags.has(BindFlags::AllowTypeReferences)) {
+        return *compilation.emplace<TypeReferenceExpression>(compilation.getTypeRefType(), type,
+                                                             syntax.sourceRange());
+    }
+
+    if (!context.flags.has(BindFlags::AllowDataType)) {
         context.addDiag(diag::ExpectedExpression, syntax.sourceRange());
         return badExpr(compilation, nullptr);
     }
 
-    const Type& type = compilation.getType(syntax, context.getLocation(), context.scope);
     return *compilation.emplace<DataTypeExpression>(type, syntax.sourceRange());
+}
+
+void TypeReferenceExpression::serializeTo(ASTSerializer& serializer) const {
+    serializer.write("targetType", targetType);
 }
 
 Expression& HierarchicalReferenceExpression::fromSyntax(Compilation& compilation,

@@ -198,6 +198,26 @@ public:
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::DataType; }
 };
 
+/// An expression that gets the type of a nested expression using the type() operator.
+/// The result is only allowed in a few places in the grammar, namely in comparisons
+/// with other type reference expressions.
+class TypeReferenceExpression : public Expression {
+public:
+    const Type& targetType;
+
+    TypeReferenceExpression(const Type& typeRefType, const Type& targetType,
+                            SourceRange sourceRange) :
+        Expression(ExpressionKind::TypeReference, typeRefType, sourceRange),
+        targetType(targetType) {}
+
+    ConstantValue evalImpl(EvalContext&) const { return nullptr; }
+    bool verifyConstantImpl(EvalContext&) const { return true; }
+
+    void serializeTo(ASTSerializer& serializer) const;
+
+    static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::TypeReference; }
+};
+
 /// Adapts a hierarchical symbol reference for use in an expression tree. This is for cases
 /// like the $printtimescale system function that require a module name to be passed.
 /// Note that the type of this expression is always void.

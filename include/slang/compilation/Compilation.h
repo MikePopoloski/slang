@@ -356,6 +356,7 @@ public:
     const Type& getNullType() const { return *nullType; }
     const Type& getEventType() const { return *eventType; }
     const Type& getUnboundedType() const { return *unboundedType; }
+    const Type& getTypeRefType() const { return *typeRefType; }
     const Type& getErrorType() const { return *errorType; }
     const Type& getUnsignedIntType();
 
@@ -457,6 +458,7 @@ private:
     Type* nullType;
     Type* eventType;
     Type* unboundedType;
+    Type* typeRefType;
     Type* errorType;
     NetType* wireNetType;
 

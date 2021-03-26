@@ -51,6 +51,7 @@ enum class RandMode;
     x(StringType) \
     x(EventType) \
     x(UnboundedType) \
+    x(TypeRefType) \
     x(VirtualInterfaceType) \
     x(TypeAlias) \
     x(ErrorType) \

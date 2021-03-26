@@ -7,6 +7,7 @@
 #include "slang/symbols/BlockSymbols.h"
 
 #include "slang/binding/Expression.h"
+#include "slang/binding/MiscExpressions.h"
 #include "slang/compilation/Compilation.h"
 #include "slang/diagnostics/DeclarationsDiags.h"
 #include "slang/diagnostics/LookupDiags.h"
@@ -298,15 +299,22 @@ void GenerateBlockSymbol::fromSyntax(Compilation& compilation, const CaseGenerat
     SmallVectorSized<const Expression*, 8> bound;
     if (!Expression::bindMembershipExpressions(
             bindContext, TokenKind::CaseKeyword, /* wildcard */ false,
-            /* unwrapUnpacked */ false, *syntax.condition, expressions, bound)) {
+            /* unwrapUnpacked */ false, /* allowTypeReferences */ true, *syntax.condition,
+            expressions, bound)) {
         return;
     }
 
     auto boundIt = bound.begin();
     auto condExpr = *boundIt++;
+
+    const Type* condType = nullptr;
     ConstantValue condVal = bindContext.eval(*condExpr);
-    if (!condVal)
-        return;
+    if (!condVal) {
+        if (condExpr->kind == ExpressionKind::TypeReference)
+            condType = &condExpr->as<TypeReferenceExpression>().targetType;
+        else
+            return;
+    }
 
     SourceRange matchRange;
     bool found = false;
@@ -324,7 +332,12 @@ void GenerateBlockSymbol::fromSyntax(Compilation& compilation, const CaseGenerat
             // Have to keep incrementing the iterator here so that we stay in sync.
             auto expr = *boundIt++;
             ConstantValue val = bindContext.eval(*expr);
-            if (!currentFound && val && val == condVal) {
+
+            bool match = val && val == condVal;
+            if (!val && condType && expr->kind == ExpressionKind::TypeReference)
+                match = expr->as<TypeReferenceExpression>().targetType.isMatching(*condType);
+
+            if (!currentFound && match) {
                 currentFound = true;
                 currentMatchRange = expr->sourceRange;
             }

@@ -98,9 +98,12 @@ enum class BindFlags {
     NonBlockingTimingControl = 1 << 16,
 
     /// Binding is happening within an event expression.
-    EventExpression = 1 << 17
+    EventExpression = 1 << 17,
+
+    /// Binding is in a context where type reference expressions are allowed.
+    AllowTypeReferences = 1 << 18
 };
-BITMASK(BindFlags, EventExpression);
+BITMASK(BindFlags, AllowTypeReferences);
 
 enum class DimensionKind { Unknown, Range, AbbreviatedRange, Dynamic, Associative, Queue };
 
