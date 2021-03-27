@@ -203,8 +203,11 @@ public:
     /// Creates a new primitive in the given scope based on the given syntax.
     const PrimitiveSymbol& createPrimitive(const Scope& scope, const UdpDeclarationSyntax& syntax);
 
-    /// Registers a previously created primitive with the compilation.
-    void addPrimitive(const PrimitiveSymbol& primitive);
+    /// Registers a built-in gate symbol.
+    void addGateType(const PrimitiveSymbol& primitive);
+
+    /// Gets the built-in gate type with the given name, or null if there is no such gate.
+    const PrimitiveSymbol* getGateType(string_view name) const;
 
     /// Registers a system subroutine handler, which can be accessed by compiled code.
     void addSystemSubroutine(std::unique_ptr<SystemSubroutine> subroutine);
@@ -564,8 +567,13 @@ private:
     // A list of interface definitions used in interface ports.
     flat_hash_set<const Definition*> usedIfacePorts;
 
-    // The name map for all primitive definitions.
-    flat_hash_map<string_view, const PrimitiveSymbol*> primitiveMap;
+    // The name map for user-defined primitive definitions.
+    flat_hash_map<string_view, const PrimitiveSymbol*> udpMap;
+
+    // The name map for built-in primitive definitions. These are stored in a separate
+    // map because they are distinguished by keyword names that may otherwise collide
+    // with escaped identifiers used by user code.
+    flat_hash_map<string_view, const PrimitiveSymbol*> gateMap;
 
     // A map from definitions to bind directives that will create
     // instances within those definitions.

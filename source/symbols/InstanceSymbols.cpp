@@ -929,7 +929,8 @@ void PrimitiveInstanceSymbol::fromSyntax(const PrimitiveInstantiationSyntax& syn
                                          SmallVector<const Symbol*>& results) {
     auto& comp = scope.getCompilation();
     auto name = syntax.type.valueText();
-    auto prim = comp.getPrimitive(name);
+    auto prim = syntax.type.kind == TokenKind::Identifier ? comp.getPrimitive(name)
+                                                          : comp.getGateType(name);
 
     if (!prim) {
         // See if there is a definition with this name, which indicates an error
