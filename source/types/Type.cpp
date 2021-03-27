@@ -892,8 +892,7 @@ const Type& Type::fromSyntax(Compilation& compilation, const DataTypeSyntax& nod
                                             location, parent);
         }
         case SyntaxKind::TypeReference: {
-            BindContext context(parent, location,
-                                BindFlags::NoHierarchicalNames | BindFlags::NonProcedural);
+            BindContext context(parent, location, BindFlags::NoHierarchicalNames);
             auto& expr = Expression::bind(*node.as<TypeReferenceSyntax>().expr, context,
                                           BindFlags::AllowDataType);
             return *expr.type;
