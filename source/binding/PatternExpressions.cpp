@@ -24,10 +24,8 @@ Expression& Expression::bindAssignmentPattern(Compilation& comp,
     SourceRange range = syntax.sourceRange();
 
     if (syntax.type) {
-        // TODO: allow type references here
         assignmentTarget = &comp.getType(*syntax.type, context.getLocation(), context.scope);
-        if (assignmentTarget->kind != SymbolKind::TypeAlias &&
-            assignmentTarget->kind != SymbolKind::PredefinedIntegerType) {
+        if (!assignmentTarget->isSimpleType() && syntax.type->kind != SyntaxKind::TypeReference) {
             if (!assignmentTarget->isError())
                 context.addDiag(diag::BadAssignmentPatternType, range) << *assignmentTarget;
             return badExpr(comp, nullptr);

@@ -2136,3 +2136,32 @@ endmodule
     auto& e = root.lookupName<ParameterSymbol>("m.e");
     CHECK(e.getValue().integer() == 8);
 }
+
+TEST_CASE("Casting with type references") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    bit [12:0] a, b;
+    var type(a+b) c, d;
+    initial c = type(a+13'd3)'(d[7:0]);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Assignment pattern with type references") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    struct { int a; int b; int c; } a;
+    parameter bar = type(a)'{1, 2, 3};
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
+

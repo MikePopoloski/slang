@@ -530,7 +530,8 @@ Expression& ConversionExpression::fromSyntax(Compilation& compilation,
 
     if (targetExpr.kind == ExpressionKind::DataType) {
         type = targetExpr.type;
-        if (!type->isSimpleType() && !type->isError() && !type->isString()) {
+        if (!type->isSimpleType() && !type->isError() && !type->isString() &&
+            syntax.left->kind != SyntaxKind::TypeReference) {
             context.addDiag(diag::BadCastType, targetExpr.sourceRange) << *type;
             return badExpr(compilation, result());
         }
