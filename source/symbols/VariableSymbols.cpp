@@ -317,6 +317,15 @@ const TimingControl* NetSymbol::getDelay() const {
     return nullptr;
 }
 
+void NetSymbol::checkInitializer() const {
+    // Disallow initializers inside packages. Enforcing this check requires knowing
+    // about user-defined nettypes, which is why we can't just do it in the parser.
+    auto init = getInitializer();
+    auto parent = getParentScope();
+    if (init && parent && parent->asSymbol().kind == SymbolKind::Package)
+        parent->addDiag(diag::PackageNetInit, init->sourceRange);
+}
+
 void NetSymbol::serializeTo(ASTSerializer& serializer) const {
     serializer.write("netType", netType);
 

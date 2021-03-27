@@ -334,6 +334,7 @@ error RefArgAutomaticFunc "'ref' arguments can only be used in 'automatic' subro
 error InvalidInstanceForParent "cannot instantiate {} in {}"
 error InvalidPrimInstanceForParent "cannot instantiate a primitive in this scope"
 error NullPortExpression "expression given for null port"
+error PackageNetInit "net declarations in packages cannot have assignments"
 error FatalTask "$fatal encountered{}"
 error ErrorTask "$error encountered{}"
 warning warning-task WarningTask "$warning encountered{}"

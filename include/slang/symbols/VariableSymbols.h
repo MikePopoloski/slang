@@ -111,6 +111,11 @@ public:
 
     const TimingControl* getDelay() const;
 
+    /// If the net has an initializer, checks it for correctness and issues a
+    /// diagnostic if there are problems. Currently this only checks that the
+    /// net isn't within a package, as initializers are disallowed there.
+    void checkInitializer() const;
+
     void serializeTo(ASTSerializer& serializer) const;
 
     static void fromSyntax(const Scope& scope, const NetDeclarationSyntax& syntax,
