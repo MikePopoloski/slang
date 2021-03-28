@@ -26,7 +26,7 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
 
     template<typename T>
     bool handleDefault(const T& symbol) {
-        if (numErrors > errorLimit)
+        if (numErrors > errorLimit || hierarchyProblem)
             return false;
 
         if constexpr (std::is_base_of_v<Symbol, T>) {
@@ -133,7 +133,7 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
     }
 
     void handle(const InstanceSymbol& symbol) {
-        if (numErrors > errorLimit)
+        if (numErrors > errorLimit || hierarchyProblem)
             return;
 
         instanceCount[&symbol.getDefinition()]++;
@@ -292,19 +292,30 @@ struct BindVisitor : public ASTVisitor<BindVisitor, false, false> {
 
 // This visitor is for finding all defparam directives in the hierarchy.
 struct DefParamVisitor : public ASTVisitor<DefParamVisitor, false, false> {
-    DefParamVisitor(size_t generateLevel) : generateLevel(generateLevel) {}
+    DefParamVisitor(size_t maxInstanceDepth, size_t generateLevel) :
+        maxInstanceDepth(maxInstanceDepth), generateLevel(generateLevel) {}
 
     void handle(const RootSymbol& symbol) { visitDefault(symbol); }
     void handle(const CompilationUnitSymbol& symbol) { visitDefault(symbol); }
     void handle(const DefParamSymbol& symbol) { found.append(&symbol); }
 
     void handle(const InstanceSymbol& symbol) {
+        if (hierarchyProblem)
+            return;
+
+        if (instanceDepth > maxInstanceDepth) {
+            hierarchyProblem = &symbol;
+            return;
+        }
+
         numBlocksSeen++;
+        instanceDepth++;
         visitDefault(symbol.body);
+        instanceDepth--;
     }
 
     void handle(const GenerateBlockSymbol& symbol) {
-        if (!symbol.isInstantiated || generateDepth >= generateLevel)
+        if (!symbol.isInstantiated || generateDepth >= generateLevel || hierarchyProblem)
             return;
 
         numBlocksSeen++;
@@ -322,9 +333,12 @@ struct DefParamVisitor : public ASTVisitor<DefParamVisitor, false, false> {
     void handle(const T&) {}
 
     SmallVectorSized<const DefParamSymbol*, 8> found;
+    size_t instanceDepth = 0;
+    size_t maxInstanceDepth = 0;
     size_t generateLevel = 0;
     size_t numBlocksSeen = 0;
     size_t generateDepth = 0;
+    const InstanceSymbol* hierarchyProblem = nullptr;
 };
 
 } // namespace slang

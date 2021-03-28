@@ -66,7 +66,7 @@ enum class MinTypMax {
 struct CompilationOptions {
     /// The maximum depth of nested module instances (and interfaces/programs),
     /// to detect infinite recursion.
-    uint32_t maxInstanceDepth = 512;
+    uint32_t maxInstanceDepth = 128;
 
     /// The maximum number of steps that will be taken when expanding a single
     /// generate construct, to detect infinite loops.

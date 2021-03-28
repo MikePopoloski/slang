@@ -1381,6 +1381,32 @@ endmodule
     checkChild(2, "dut2", 5678);
 }
 
+TEST_CASE("defparam in infinite recursion") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    m1 n();
+endmodule
+
+module m1;
+    parameter p = 2;
+    defparam p = 1;
+    if (p == 1) begin : f
+        m1 n();
+    end
+endmodule
+)");
+
+    CompilationOptions options;
+    options.maxInstanceDepth = 16;
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::MaxInstanceDepthExceeded);
+}
+
 TEST_CASE("Invalid instance parents") {
     auto tree = SyntaxTree::fromText(R"(
 module m;

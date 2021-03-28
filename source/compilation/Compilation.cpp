@@ -1203,6 +1203,17 @@ void Compilation::resolveDefParams(size_t) {
         }
     };
 
+    auto checkProblem = [&](const DefParamVisitor& visitor) {
+        if (visitor.hierarchyProblem) {
+            auto& diag =
+                root->addDiag(diag::MaxInstanceDepthExceeded, visitor.hierarchyProblem->location);
+            diag << visitor.hierarchyProblem->getDefinition().getKindString();
+            diag << options.maxInstanceDepth;
+            return true;
+        }
+        return false;
+    };
+
     // [23.10.4.1] gives an algorithm for elaboration in the face of defparams.
     // Specifically, we need to resolve all possible defparams at one "level" of
     // hierarchy before moving on to a deeper level, where a "level" in this case
@@ -1218,9 +1229,11 @@ void Compilation::resolveDefParams(size_t) {
         Compilation initialClone;
         createClone(initialClone);
 
-        DefParamVisitor initialVisitor(generateLevel);
+        DefParamVisitor initialVisitor(options.maxInstanceDepth, generateLevel);
         initialClone.getRoot(/* skipDefParamResolution */ true).visit(initialVisitor);
         saveDefparams(initialVisitor);
+        if (checkProblem(initialVisitor))
+            return;
 
         // defparams can change the value of parameters, further affecting the value of
         // other defparams elsewhere in the design. This means we need to iterate,
@@ -1231,8 +1244,10 @@ void Compilation::resolveDefParams(size_t) {
             Compilation c;
             createClone(c);
 
-            DefParamVisitor v(generateLevel);
+            DefParamVisitor v(options.maxInstanceDepth, generateLevel);
             c.getRoot(/* skipDefParamResolution */ true).visit(v);
+            if (checkProblem(v))
+                return;
 
             // We're only done if we have the same set of defparams with the same set of values.
             allSame = true;
