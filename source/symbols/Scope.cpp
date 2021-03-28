@@ -704,6 +704,21 @@ void Scope::elaborate() const {
         }
     };
 
+    auto insertMembersAndNets = [this](auto& members, auto& implicitNets, const Symbol* at) {
+        ASSERT(at);
+        at->indexInScope -= (uint32_t)members.size() + 1;
+        for (auto net : implicitNets) {
+            insertMember(net, at, true, false);
+            at = net;
+        }
+
+        at->indexInScope += 1;
+        for (auto member : members) {
+            insertMember(member, at, true, true);
+            at = member;
+        }
+    };
+
     // Go through deferred instances and elaborate them now. We skip generate blocks in
     // the initial pass because evaluating their conditions may depend on other members
     // that have yet to be elaborated.
@@ -714,19 +729,21 @@ void Scope::elaborate() const {
         switch (member.node.kind) {
             case SyntaxKind::HierarchyInstantiation: {
                 SmallVectorSized<const Symbol*, 8> instances;
+                SmallVectorSized<const Symbol*, 8> implicitNets;
                 LookupLocation location = LookupLocation::before(*symbol);
                 InstanceSymbol::fromSyntax(compilation,
                                            member.node.as<HierarchyInstantiationSyntax>(), location,
-                                           *this, instances);
-                insertMembers(instances, symbol);
+                                           *this, instances, implicitNets);
+                insertMembersAndNets(instances, implicitNets, symbol);
                 break;
             }
             case SyntaxKind::PrimitiveInstantiation: {
                 SmallVectorSized<const Symbol*, 8> instances;
+                SmallVectorSized<const Symbol*, 8> implicitNets;
                 LookupLocation location = LookupLocation::before(*symbol);
                 PrimitiveInstanceSymbol::fromSyntax(member.node.as<PrimitiveInstantiationSyntax>(),
-                                                    location, *this, instances);
-                insertMembers(instances, symbol);
+                                                    location, *this, instances, implicitNets);
+                insertMembersAndNets(instances, implicitNets, symbol);
                 break;
             }
             case SyntaxKind::AnsiPortList:
@@ -756,11 +773,12 @@ void Scope::elaborate() const {
             }
             case SyntaxKind::ContinuousAssign: {
                 SmallVectorSized<const Symbol*, 4> symbols;
+                SmallVectorSized<const Symbol*, 8> implicitNets;
                 LookupLocation location = LookupLocation::before(*symbol);
                 ContinuousAssignSymbol::fromSyntax(compilation,
                                                    member.node.as<ContinuousAssignSyntax>(), *this,
-                                                   location, symbols);
-                insertMembers(symbols, symbol);
+                                                   location, symbols, implicitNets);
+                insertMembersAndNets(symbols, implicitNets, symbol);
                 break;
             }
             case SyntaxKind::ModportDeclaration: {
@@ -973,11 +991,15 @@ span<const Symbol* const> Scope::DeferredMemberData::getNameConflicts() const {
 }
 
 static size_t countMembers(const SyntaxNode& syntax) {
+    // Note that the +1s on some of these are to make a slot for implicit
+    // nets that get created to live.
     switch (syntax.kind) {
         case SyntaxKind::HierarchyInstantiation:
-            return syntax.as<HierarchyInstantiationSyntax>().instances.size();
+            return syntax.as<HierarchyInstantiationSyntax>().instances.size() + 1;
         case SyntaxKind::PrimitiveInstantiation:
-            return syntax.as<PrimitiveInstantiationSyntax>().instances.size();
+            return syntax.as<PrimitiveInstantiationSyntax>().instances.size() + 1;
+        case SyntaxKind::ContinuousAssign:
+            return syntax.as<ContinuousAssignSyntax>().assignments.size() + 1;
         case SyntaxKind::AnsiPortList:
             return syntax.as<AnsiPortListSyntax>().ports.size();
         case SyntaxKind::NonAnsiPortList:
@@ -986,8 +1008,6 @@ static size_t countMembers(const SyntaxNode& syntax) {
             return syntax.as<IfGenerateSyntax>().elseClause ? 2 : 1;
         case SyntaxKind::CaseGenerate:
             return syntax.as<CaseGenerateSyntax>().items.size();
-        case SyntaxKind::ContinuousAssign:
-            return syntax.as<ContinuousAssignSyntax>().assignments.size();
         case SyntaxKind::ModportDeclaration:
             return syntax.as<ModportDeclarationSyntax>().items.size();
         case SyntaxKind::UserDefinedNetDeclaration:

@@ -150,7 +150,8 @@ public:
 
     static void fromSyntax(Compilation& compilation, const ContinuousAssignSyntax& syntax,
                            const Scope& scope, LookupLocation location,
-                           SmallVector<const Symbol*>& results);
+                           SmallVector<const Symbol*>& results,
+                           SmallVector<const Symbol*>& implicitNets);
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::ContinuousAssign; }
 

@@ -283,7 +283,8 @@ static const ParamOverrideNode* findParentOverrideNode(const Scope& scope) {
 
 void InstanceSymbol::fromSyntax(Compilation& compilation,
                                 const HierarchyInstantiationSyntax& syntax, LookupLocation location,
-                                const Scope& scope, SmallVector<const Symbol*>& results) {
+                                const Scope& scope, SmallVector<const Symbol*>& results,
+                                SmallVector<const Symbol*>& implicitNets) {
     // Find our parent instance.
     auto currScope = &scope;
     while (currScope && currScope->asSymbol().kind != SymbolKind::InstanceBody)
@@ -309,7 +310,8 @@ void InstanceSymbol::fromSyntax(Compilation& compilation,
     if (!definition) {
         // This might actually be a user-defined primitive instantiation.
         if (auto prim = compilation.getPrimitive(syntax.type.valueText())) {
-            PrimitiveInstanceSymbol::fromSyntax(*prim, syntax, location, scope, results);
+            PrimitiveInstanceSymbol::fromSyntax(*prim, syntax, location, scope, results,
+                                                implicitNets);
             if (!results.empty() &&
                 (!owningDefinition || owningDefinition->definitionKind != DefinitionKind::Module)) {
                 scope.addDiag(diag::InvalidPrimInstanceForParent, syntax.type.range());
@@ -319,7 +321,8 @@ void InstanceSymbol::fromSyntax(Compilation& compilation,
             if (!isUninstantiated)
                 scope.addDiag(diag::UnknownModule, syntax.type.range()) << syntax.type.valueText();
 
-            UnknownModuleSymbol::fromSyntax(compilation, syntax, location, scope, results);
+            UnknownModuleSymbol::fromSyntax(compilation, syntax, location, scope, results,
+                                            implicitNets);
         }
         return;
     }
@@ -361,7 +364,7 @@ void InstanceSymbol::fromSyntax(Compilation& compilation,
                                 syntax.attributes, isUninstantiated);
 
         for (auto instanceSyntax : syntax.instances) {
-            createImplicitNets(*instanceSyntax, context, netType, implicitNetNames, results);
+            createImplicitNets(*instanceSyntax, context, netType, implicitNetNames, implicitNets);
             results.append(builder.create(*instanceSyntax));
         }
     }
@@ -399,7 +402,7 @@ void InstanceSymbol::fromSyntax(Compilation& compilation,
             InstanceBuilder builder(context, cacheKey, overrideNode, paramBuilder.paramSymbols,
                                     syntax.attributes, isUninstantiated);
 
-            createImplicitNets(*instanceSyntax, context, netType, implicitNetNames, results);
+            createImplicitNets(*instanceSyntax, context, netType, implicitNetNames, implicitNets);
             results.append(builder.create(*instanceSyntax));
         }
     }
@@ -414,7 +417,9 @@ void InstanceSymbol::fromBindDirective(const Scope& scope, const BindDirectiveSy
 
     auto createInstances = [&](const Scope& targetScope) {
         SmallVectorSized<const Symbol*, 4> instances;
-        fromSyntax(comp, *syntax.instantiation, LookupLocation::max, targetScope, instances);
+        SmallVectorSized<const Symbol*, 4> implicitNets;
+        fromSyntax(comp, *syntax.instantiation, LookupLocation::max, targetScope, instances,
+                   implicitNets);
 
         // If instances is an empty array, an error must have occurred and we should
         // not attempt creating more instances later.
@@ -426,6 +431,8 @@ void InstanceSymbol::fromBindDirective(const Scope& scope, const BindDirectiveSy
         // object search through all instances and find bind directives up front before
         // handing off access to any nodes.
         Scope& newScope = const_cast<Scope&>(targetScope);
+        for (auto net : implicitNets)
+            newScope.addMember(*net);
         for (auto inst : instances)
             newScope.addMember(*inst);
 
@@ -747,11 +754,12 @@ void InstanceArraySymbol::serializeTo(ASTSerializer& serializer) const {
 template<typename TSyntax>
 static void createUnknownModules(Compilation& compilation, const TSyntax& syntax,
                                  const BindContext& context, span<const Expression* const> params,
-                                 SmallVector<const Symbol*>& results) {
+                                 SmallVector<const Symbol*>& results,
+                                 SmallVector<const Symbol*>& implicitNets) {
     SmallSet<string_view, 8> implicitNetNames;
     auto& netType = context.scope.getDefaultNetType();
     for (auto instanceSyntax : syntax.instances) {
-        createImplicitNets(*instanceSyntax, context, netType, implicitNetNames, results);
+        createImplicitNets(*instanceSyntax, context, netType, implicitNetNames, implicitNets);
 
         auto [name, loc] = getNameLoc(*instanceSyntax);
         auto sym = compilation.emplace<UnknownModuleSymbol>(name, loc, params);
@@ -764,7 +772,8 @@ static void createUnknownModules(Compilation& compilation, const TSyntax& syntax
 void UnknownModuleSymbol::fromSyntax(Compilation& compilation,
                                      const HierarchyInstantiationSyntax& syntax,
                                      LookupLocation location, const Scope& scope,
-                                     SmallVector<const Symbol*>& results) {
+                                     SmallVector<const Symbol*>& results,
+                                     SmallVector<const Symbol*>& implicitNets) {
     SmallVectorSized<const Expression*, 8> params;
     BindContext context(scope, location, BindFlags::NonProcedural);
 
@@ -781,15 +790,16 @@ void UnknownModuleSymbol::fromSyntax(Compilation& compilation,
     }
 
     auto paramSpan = params.copy(compilation);
-    createUnknownModules(compilation, syntax, context, paramSpan, results);
+    createUnknownModules(compilation, syntax, context, paramSpan, results, implicitNets);
 }
 
 void UnknownModuleSymbol::fromSyntax(Compilation& compilation,
                                      const PrimitiveInstantiationSyntax& syntax,
                                      LookupLocation location, const Scope& scope,
-                                     SmallVector<const Symbol*>& results) {
+                                     SmallVector<const Symbol*>& results,
+                                     SmallVector<const Symbol*>& implicitNets) {
     BindContext context(scope, location, BindFlags::NonProcedural);
-    createUnknownModules(compilation, syntax, context, {}, results);
+    createUnknownModules(compilation, syntax, context, {}, results, implicitNets);
 }
 
 span<const Expression* const> UnknownModuleSymbol::getPortConnections() const {
@@ -891,7 +901,8 @@ Symbol* recursePrimArray(Compilation& compilation, const PrimitiveSymbol& primit
 template<typename TSyntax>
 void createPrimitives(const PrimitiveSymbol& primitive, const TSyntax& syntax,
                       LookupLocation location, const Scope& scope,
-                      SmallVector<const Symbol*>& results) {
+                      SmallVector<const Symbol*>& results,
+                      SmallVector<const Symbol*>& implicitNets) {
     SmallSet<string_view, 8> implicitNetNames;
     SmallVectorSized<int32_t, 4> path;
     auto& comp = scope.getCompilation();
@@ -900,7 +911,7 @@ void createPrimitives(const PrimitiveSymbol& primitive, const TSyntax& syntax,
     BindContext context(scope, location, BindFlags::Constant);
     for (auto instance : syntax.instances) {
         path.clear();
-        createImplicitNets(*instance, context, netType, implicitNetNames, results);
+        createImplicitNets(*instance, context, netType, implicitNetNames, implicitNets);
 
         if (!instance->decl) {
             results.append(
@@ -920,13 +931,15 @@ void createPrimitives(const PrimitiveSymbol& primitive, const TSyntax& syntax,
 void PrimitiveInstanceSymbol::fromSyntax(const PrimitiveSymbol& primitive,
                                          const HierarchyInstantiationSyntax& syntax,
                                          LookupLocation location, const Scope& scope,
-                                         SmallVector<const Symbol*>& results) {
-    createPrimitives(primitive, syntax, location, scope, results);
+                                         SmallVector<const Symbol*>& results,
+                                         SmallVector<const Symbol*>& implicitNets) {
+    createPrimitives(primitive, syntax, location, scope, results, implicitNets);
 }
 
 void PrimitiveInstanceSymbol::fromSyntax(const PrimitiveInstantiationSyntax& syntax,
                                          LookupLocation location, const Scope& scope,
-                                         SmallVector<const Symbol*>& results) {
+                                         SmallVector<const Symbol*>& results,
+                                         SmallVector<const Symbol*>& implicitNets) {
     auto& comp = scope.getCompilation();
     auto name = syntax.type.valueText();
     auto prim = syntax.type.kind == TokenKind::Identifier ? comp.getPrimitive(name)
@@ -958,11 +971,11 @@ void PrimitiveInstanceSymbol::fromSyntax(const PrimitiveInstantiationSyntax& syn
                 scope.addDiag(diag::UnknownPrimitive, syntax.type.range()) << name;
         }
 
-        UnknownModuleSymbol::fromSyntax(comp, syntax, location, scope, results);
+        UnknownModuleSymbol::fromSyntax(comp, syntax, location, scope, results, implicitNets);
         return;
     }
 
-    createPrimitives(*prim, syntax, location, scope, results);
+    createPrimitives(*prim, syntax, location, scope, results, implicitNets);
 }
 
 span<const Expression* const> PrimitiveInstanceSymbol::getPortConnections() const {

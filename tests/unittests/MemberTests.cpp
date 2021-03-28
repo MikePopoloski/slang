@@ -1676,7 +1676,6 @@ module \and (output a, input b, c);
 endmodule
 
 module m;
-    wire a1, a2, b1, b2, c1, c2;
     \and a(a1, b1, c1);
     and (a2, b2, c2);
 endmodule

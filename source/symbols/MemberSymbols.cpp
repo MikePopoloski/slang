@@ -271,7 +271,8 @@ ContinuousAssignSymbol::ContinuousAssignSymbol(SourceLocation loc, const Express
 void ContinuousAssignSymbol::fromSyntax(Compilation& compilation,
                                         const ContinuousAssignSyntax& syntax, const Scope& scope,
                                         LookupLocation location,
-                                        SmallVector<const Symbol*>& results) {
+                                        SmallVector<const Symbol*>& results,
+                                        SmallVector<const Symbol*>& implicitNets) {
     BindContext context(scope, location, BindFlags::NonProcedural);
     auto& netType = scope.getDefaultNetType();
 
@@ -282,14 +283,14 @@ void ContinuousAssignSymbol::fromSyntax(Compilation& compilation,
             // The expression here should always be an assignment expression unless
             // the program is already ill-formed (diagnosed by the parser).
             if (expr->kind == SyntaxKind::AssignmentExpression) {
-                SmallVectorSized<Token, 8> implicitNets;
+                SmallVectorSized<Token, 8> implicitNetNames;
                 Expression::findPotentiallyImplicitNets(*expr->as<BinaryExpressionSyntax>().left,
-                                                        context, implicitNets);
+                                                        context, implicitNetNames);
 
-                for (Token t : implicitNets) {
+                for (Token t : implicitNetNames) {
                     auto net = compilation.emplace<NetSymbol>(t.valueText(), t.location(), netType);
                     net->setType(compilation.getLogicType());
-                    results.append(net);
+                    implicitNets.append(net);
                 }
             }
         }
