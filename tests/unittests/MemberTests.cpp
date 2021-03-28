@@ -1718,3 +1718,43 @@ endpackage
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::PackageNetInit);
 }
+
+TEST_CASE("Default lifetimes for subroutines") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    function foo; endfunction
+    initial begin : baz
+        int bar;
+    end
+endmodule
+
+module automatic n;
+    function foo; endfunction
+    initial begin : baz
+        int bar;
+    end
+endmodule
+
+package automatic p;
+    function foo; endfunction
+endpackage
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    auto& root = compilation.getRoot();
+    auto func = [&](string_view name) {
+        return root.lookupName<SubroutineSymbol>(name).defaultLifetime;
+    };
+
+    CHECK(func("m.foo") == VariableLifetime::Static);
+    CHECK(func("n.foo") == VariableLifetime::Automatic);
+    CHECK(func("p::foo") == VariableLifetime::Automatic);
+
+    CHECK(root.lookupName<VariableSymbol>("m.baz.bar").lifetime == VariableLifetime::Static);
+
+    auto& block = root.lookupName<StatementBlockSymbol>("n.baz");
+    CHECK(block.memberAt<VariableSymbol>(0).lifetime == VariableLifetime::Automatic);
+}

@@ -53,10 +53,6 @@ public:
     /// Gets the time scale for delay values expressed within this scope.
     TimeScale getTimeScale() const;
 
-    /// Gets the default lifetime that should apply to variables
-    /// declared in this scope.
-    VariableLifetime getDefaultLifetime() const;
-
     /// Returns true if this scope represents a procedural context; that is,
     /// a procedural block, or a task/function scope.
     bool isProceduralContext() const;

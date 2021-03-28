@@ -135,7 +135,7 @@ static const Symbol& createRandomizeFunc(Compilation& c) {
 }
 
 const PackageSymbol& createStdPackage(Compilation& c) {
-    auto pkg = c.emplace<PackageSymbol>(c, "std", NL, c.getWireNetType());
+    auto pkg = c.emplace<PackageSymbol>(c, "std", NL, c.getWireNetType(), VariableLifetime::Static);
     pkg->addMember(createProcessClass(c));
     pkg->addMember(createSemaphoreClass(c));
     pkg->addMember(createMailboxClass(c));

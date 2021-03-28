@@ -21,7 +21,8 @@ CompilationUnitSymbol::CompilationUnitSymbol(Compilation& compilation) :
 
     // All compilation units import the std package automatically.
     auto& stdPkg = compilation.getStdPackage();
-    auto import = compilation.emplace<WildcardImportSymbol>(stdPkg.name, SourceLocation::NoLocation);
+    auto import =
+        compilation.emplace<WildcardImportSymbol>(stdPkg.name, SourceLocation::NoLocation);
     import->setPackage(stdPkg);
     addWildcardImport(*import);
 }
@@ -46,17 +47,19 @@ void CompilationUnitSymbol::addMembers(const SyntaxNode& syntax) {
 }
 
 PackageSymbol::PackageSymbol(Compilation& compilation, string_view name, SourceLocation loc,
-                             const NetType& defaultNetType) :
+                             const NetType& defaultNetType, VariableLifetime defaultLifetime) :
     Symbol(SymbolKind::Package, name, loc),
-    Scope(compilation, this), defaultNetType(defaultNetType) {
+    Scope(compilation, this), defaultNetType(defaultNetType), defaultLifetime(defaultLifetime) {
 }
 
 PackageSymbol& PackageSymbol::fromSyntax(const Scope& scope, const ModuleDeclarationSyntax& syntax,
                                          const NetType& defaultNetType,
                                          optional<TimeScale> directiveTimeScale) {
     auto& comp = scope.getCompilation();
+    auto lifetime = SemanticFacts::getVariableLifetime(syntax.header->lifetime);
     auto result = comp.emplace<PackageSymbol>(comp, syntax.header->name.valueText(),
-                                              syntax.header->name.location(), defaultNetType);
+                                              syntax.header->name.location(), defaultNetType,
+                                              lifetime.value_or(VariableLifetime::Static));
     result->setSyntax(syntax);
     result->setAttributes(scope, syntax.attributes);
 

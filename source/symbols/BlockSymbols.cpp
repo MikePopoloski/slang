@@ -64,9 +64,10 @@ StatementBlockSymbol& StatementBlockSymbol::fromSyntax(const Scope& scope,
             flags |= StatementFlags::InForkJoinNone;
     }
 
+    auto lifetime = flags.has(StatementFlags::AutoLifetime) ? VariableLifetime::Automatic
+                                                            : VariableLifetime::Static;
     auto& comp = scope.getCompilation();
-    auto result =
-        comp.emplace<StatementBlockSymbol>(comp, name, loc, blockKind, scope.getDefaultLifetime());
+    auto result = comp.emplace<StatementBlockSymbol>(comp, name, loc, blockKind, lifetime);
     result->binder.setItems(*result, syntax.items, syntax.sourceRange(), flags);
     result->setSyntax(syntax);
     result->setAttributes(scope, syntax.attributes);
@@ -74,10 +75,13 @@ StatementBlockSymbol& StatementBlockSymbol::fromSyntax(const Scope& scope,
 }
 
 static StatementBlockSymbol* createBlock(const Scope& scope, const StatementSyntax& syntax,
-                                         string_view name, SourceLocation loc) {
+                                         string_view name, SourceLocation loc,
+                                         bitmask<StatementFlags> flags) {
+    auto lifetime = flags.has(StatementFlags::AutoLifetime) ? VariableLifetime::Automatic
+                                                            : VariableLifetime::Static;
     auto& comp = scope.getCompilation();
-    auto result = comp.emplace<StatementBlockSymbol>(
-        comp, name, loc, StatementBlockKind::Sequential, scope.getDefaultLifetime());
+    auto result = comp.emplace<StatementBlockSymbol>(comp, name, loc,
+                                                     StatementBlockKind::Sequential, lifetime);
     result->setSyntax(syntax);
     result->setAttributes(scope, syntax.attributes);
     return result;
@@ -87,7 +91,7 @@ StatementBlockSymbol& StatementBlockSymbol::fromSyntax(const Scope& scope,
                                                        const ForLoopStatementSyntax& syntax,
                                                        bitmask<StatementFlags> flags) {
     auto [name, loc] = getLabel(syntax, syntax.forKeyword.location());
-    auto result = createBlock(scope, syntax, name, loc);
+    auto result = createBlock(scope, syntax, name, loc, flags);
 
     // If one entry is a variable declaration, they must all be.
     auto& comp = scope.getCompilation();
@@ -111,7 +115,7 @@ StatementBlockSymbol& StatementBlockSymbol::fromSyntax(const Scope& scope,
                                                        const ForeachLoopStatementSyntax& syntax,
                                                        bitmask<StatementFlags> flags) {
     auto [name, loc] = getLabel(syntax, syntax.keyword.location());
-    auto result = createBlock(scope, syntax, name, loc);
+    auto result = createBlock(scope, syntax, name, loc, flags);
 
     result->binder.setSyntax(*result, syntax, /* labelHandled */ true, flags);
     for (auto block : result->binder.getBlocks())
@@ -127,7 +131,7 @@ StatementBlockSymbol& StatementBlockSymbol::fromLabeledStmt(const Scope& scope,
                                                             const StatementSyntax& syntax,
                                                             bitmask<StatementFlags> flags) {
     auto [name, loc] = getLabel(syntax, {});
-    auto result = createBlock(scope, syntax, name, loc);
+    auto result = createBlock(scope, syntax, name, loc, flags);
 
     result->binder.setSyntax(*result, syntax, /* labelHandled */ true, flags);
     for (auto block : result->binder.getBlocks())
@@ -164,13 +168,21 @@ ProceduralBlockSymbol& ProceduralBlockSymbol::fromSyntax(
     const Scope& scope, const ProceduralBlockSyntax& syntax,
     span<const StatementBlockSymbol* const>& additionalBlocks) {
 
+    // Figure out our default variable lifetime by looking for the
+    // parent instance and using its default.
+    VariableLifetime lifetime = VariableLifetime::Static;
+    if (auto def = scope.asSymbol().getDeclaringDefinition())
+        lifetime = def->defaultLifetime;
+
     auto& comp = scope.getCompilation();
     auto kind = SemanticFacts::getProceduralBlockKind(syntax.kind);
     auto result = comp.emplace<ProceduralBlockSymbol>(syntax.keyword.location(), kind);
 
-    StatementFlags flags = StatementFlags::None;
+    bitmask<StatementFlags> flags;
     if (kind == ProceduralBlockKind::Final)
-        flags = StatementFlags::FuncOrFinal;
+        flags |= StatementFlags::FuncOrFinal;
+    if (lifetime == VariableLifetime::Automatic)
+        flags |= StatementFlags::AutoLifetime;
 
     result->binder.setSyntax(scope, *syntax.statement, /* labelHandled */ false, flags);
     result->setSyntax(syntax);

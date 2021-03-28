@@ -96,22 +96,6 @@ TimeScale Scope::getTimeScale() const {
     return getCompilation().getDefaultTimeScale();
 }
 
-VariableLifetime Scope::getDefaultLifetime() const {
-    // If we're not in a procedural context, the default lifetime
-    // is always just static (it's the only lifetime allowed).
-    const Symbol* sym = &asSymbol();
-    switch (sym->kind) {
-        case SymbolKind::StatementBlock:
-            return sym->as<StatementBlockSymbol>().defaultLifetime;
-        case SymbolKind::Subroutine:
-            return sym->as<SubroutineSymbol>().defaultLifetime;
-        case SymbolKind::MethodPrototype:
-            return VariableLifetime::Automatic;
-        default:
-            return VariableLifetime::Static;
-    }
-}
-
 bool Scope::isProceduralContext() const {
     switch (asSymbol().kind) {
         case SymbolKind::ProceduralBlock:

@@ -39,9 +39,10 @@ class PackageSymbol : public Symbol, public Scope {
 public:
     const NetType& defaultNetType;
     TimeScale timeScale;
+    VariableLifetime defaultLifetime;
 
     PackageSymbol(Compilation& compilation, string_view name, SourceLocation loc,
-                  const NetType& defaultNetType);
+                  const NetType& defaultNetType, VariableLifetime defaultLifetime);
 
     void serializeTo(ASTSerializer&) const {}
 
