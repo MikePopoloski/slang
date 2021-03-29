@@ -71,8 +71,7 @@ LRM | Feature | Supported
 {{m-success}} 6.20.6 | Const constants | v0.3
 {{m-success}} 6.21 | Scope and lifetime | v0.3
 {{m-success}} 6.22 | Type compatibility | v0.2
-{{m-danger}}  6.22.6 | Matching nettypes | no
-{{m-warning}} 6.23 | Type operator | partial
+{{m-success}} 6.23 | Type operator | v0.7
 {{m-success}} 6.24.1 | Static casting | v0.2
 {{m-success}} 6.24.2 | Dynamic casting | v0.5
 {{m-success}} 6.24.3 | Bit-stream casting | v0.5

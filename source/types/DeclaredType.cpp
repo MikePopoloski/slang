@@ -22,7 +22,7 @@
 namespace slang {
 
 DeclaredType::DeclaredType(const Symbol& parent, bitmask<DeclaredTypeFlags> flags) :
-    parent(parent), flags(flags), initializerIndex(0), evaluating(false) {
+    parent(parent), flags(flags), overrideIndex(0), evaluating(false) {
     // If this assert fires you need to update Symbol::getDeclaredType
     ASSERT(parent.getDeclaredType() == this);
 }
@@ -46,6 +46,7 @@ void DeclaredType::copyTypeFrom(const DeclaredType& source) {
     }
 
     type = source.type;
+    overrideIndex = source.overrideIndex;
 }
 
 void DeclaredType::mergeImplicitPort(
@@ -386,21 +387,17 @@ T DeclaredType::getBindContext() const {
     if (flags.has(DeclaredTypeFlags::SpecparamsAllowed))
         bindFlags |= BindFlags::SpecparamsAllowed;
 
-    // Unless overriden by the LookupMax flag, the location depends on whether
-    // we are binding the initializer or the type. Initializer lookup happens *after*
-    // the parent symbol, so that it can reference the symbol itself. Type lookup
-    // happens *before*, since it can't yet see the symbol declaration.
+    // The location depends on whether we are binding the initializer or the type.
+    // Initializer lookup happens *after* the parent symbol, so that it can reference
+    // the symbol itself. Type lookup happens *before*, since it can't yet see the
+    // symbol declaration.
     LookupLocation location;
-    if (flags.has(DeclaredTypeFlags::LookupMax)) {
-        location = LookupLocation::max;
-    }
-    else if (IsInitializer) {
-        location = initializerIndex ? LookupLocation(parent.getParentScope(), initializerIndex)
-                                    : LookupLocation::after(parent);
-    }
-    else {
+    if (overrideIndex)
+        location = LookupLocation(parent.getParentScope(), overrideIndex);
+    else if (IsInitializer)
+        location = LookupLocation::after(parent);
+    else
         location = LookupLocation::before(parent);
-    }
 
     return BindContext(getScope(), location, bindFlags);
 }

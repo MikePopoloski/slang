@@ -12,8 +12,10 @@
 #include "slang/diagnostics/DeclarationsDiags.h"
 #include "slang/diagnostics/ParserDiags.h"
 #include "slang/symbols/ASTSerializer.h"
+#include "slang/symbols/BlockSymbols.h"
 #include "slang/symbols/PortSymbols.h"
 #include "slang/symbols/Scope.h"
+#include "slang/symbols/SubroutineSymbols.h"
 #include "slang/syntax/AllSyntax.h"
 #include "slang/syntax/SyntaxFacts.h"
 #include "slang/types/NetType.h"
@@ -31,6 +33,20 @@ static string_view getPotentialNetTypeName(const DataTypeSyntax& syntax) {
             return namedType.name->as<ClassNameSyntax>().identifier.valueText();
     }
     return "";
+}
+
+static VariableLifetime getDefaultLifetime(const Scope& scope) {
+    const Symbol& sym = scope.asSymbol();
+    switch (sym.kind) {
+        case SymbolKind::StatementBlock:
+            return sym.as<StatementBlockSymbol>().defaultLifetime;
+        case SymbolKind::Subroutine:
+            return sym.as<SubroutineSymbol>().defaultLifetime;
+        case SymbolKind::MethodPrototype:
+            return VariableLifetime::Automatic;
+        default:
+            return VariableLifetime::Static;
+    }
 }
 
 void VariableSymbol::fromSyntax(Compilation& compilation, const DataDeclarationSyntax& syntax,
@@ -90,7 +106,7 @@ void VariableSymbol::fromSyntax(Compilation& compilation, const DataDeclarationS
     // If no explicit lifetime is provided, find the default one for this scope.
     bool hasExplicitLifetime = lifetime.has_value();
     if (!hasExplicitLifetime)
-        lifetime = scope.getDefaultLifetime();
+        lifetime = getDefaultLifetime(scope);
 
     for (auto declarator : syntax.declarators) {
         auto variable = compilation.emplace<VariableSymbol>(declarator->name.valueText(),
@@ -166,7 +182,7 @@ void FormalArgumentSymbol::fromSyntax(const Scope& scope, const PortDeclarationS
     auto& comp = scope.getCompilation();
     auto& header = syntax.header->as<VariablePortHeaderSyntax>();
     ArgumentDirection direction = SemanticFacts::getDirection(header.direction.kind);
-    VariableLifetime lifetime = scope.getDefaultLifetime();
+    VariableLifetime lifetime = getDefaultLifetime(scope);
 
     bool isConst = false;
     if (header.constKeyword) {
@@ -315,6 +331,15 @@ const TimingControl* NetSymbol::getDelay() const {
 
     delay = nullptr;
     return nullptr;
+}
+
+void NetSymbol::checkInitializer() const {
+    // Disallow initializers inside packages. Enforcing this check requires knowing
+    // about user-defined nettypes, which is why we can't just do it in the parser.
+    auto init = getInitializer();
+    auto parent = getParentScope();
+    if (init && parent && parent->asSymbol().kind == SymbolKind::Package)
+        parent->addDiag(diag::PackageNetInit, init->sourceRange);
 }
 
 void NetSymbol::serializeTo(ASTSerializer& serializer) const {

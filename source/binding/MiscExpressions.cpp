@@ -9,6 +9,7 @@
 #include "slang/binding/Constraints.h"
 #include "slang/binding/SelectExpressions.h"
 #include "slang/binding/SystemSubroutine.h"
+#include "slang/binding/TimingControl.h"
 #include "slang/compilation/Compilation.h"
 #include "slang/diagnostics/ConstEvalDiags.h"
 #include "slang/diagnostics/ExpressionsDiags.h"
@@ -488,9 +489,17 @@ Expression& CallExpression::fromArgs(Compilation& compilation, const Subroutine&
     if (bad)
         return badExpr(compilation, result);
 
-    if (context.flags.has(BindFlags::FunctionBody) &&
+    if (context.flags.has(BindFlags::FunctionOrFinal) &&
         symbol.subroutineKind == SubroutineKind::Task) {
-        context.addDiag(diag::TaskFromFunction, range);
+        auto scope = &context.scope;
+        while (scope && scope->asSymbol().kind == SymbolKind::StatementBlock)
+            scope = scope->asSymbol().getParentScope();
+
+        if (scope && scope->asSymbol().kind == SymbolKind::Subroutine)
+            context.addDiag(diag::TaskFromFunction, range);
+        else
+            context.addDiag(diag::TaskFromFinal, range);
+
         return badExpr(compilation, result);
     }
 
@@ -746,6 +755,18 @@ Expression& CallExpression::createSystemCall(
                             return badExpr(compilation, nullptr);
                         }
                         break;
+                    case SyntaxKind::ClockingEventArgument:
+                        if (subroutine.allowClockingArgument(index)) {
+                            auto& arg = ClockingArgumentExpression::fromSyntax(
+                                actualArgs[i]->as<ClockingEventArgumentSyntax>(), context);
+                            buffer.append(&arg);
+                        }
+                        else {
+                            argContext.addDiag(diag::TimingControlNotAllowed,
+                                               actualArgs[i]->sourceRange());
+                            return badExpr(compilation, nullptr);
+                        }
+                        break;
                     default:
                         THROW_UNREACHABLE;
                 }
@@ -965,13 +986,23 @@ void CallExpression::serializeTo(ASTSerializer& serializer) const {
 
 Expression& DataTypeExpression::fromSyntax(Compilation& compilation, const DataTypeSyntax& syntax,
                                            const BindContext& context) {
-    if ((context.flags & BindFlags::AllowDataType) == 0) {
+    const Type& type = compilation.getType(syntax, context.getLocation(), context.scope);
+    if (syntax.kind == SyntaxKind::TypeReference &&
+        context.flags.has(BindFlags::AllowTypeReferences)) {
+        return *compilation.emplace<TypeReferenceExpression>(compilation.getTypeRefType(), type,
+                                                             syntax.sourceRange());
+    }
+
+    if (!context.flags.has(BindFlags::AllowDataType)) {
         context.addDiag(diag::ExpectedExpression, syntax.sourceRange());
         return badExpr(compilation, nullptr);
     }
 
-    const Type& type = compilation.getType(syntax, context.getLocation(), context.scope);
     return *compilation.emplace<DataTypeExpression>(type, syntax.sourceRange());
+}
+
+void TypeReferenceExpression::serializeTo(ASTSerializer& serializer) const {
+    serializer.write("targetType", targetType);
 }
 
 Expression& HierarchicalReferenceExpression::fromSyntax(Compilation& compilation,
@@ -1001,6 +1032,19 @@ ConstantValue LValueReferenceExpression::evalImpl(EvalContext& context) const {
         return nullptr;
 
     return lvalue->load();
+}
+
+Expression& ClockingArgumentExpression::fromSyntax(const ClockingEventArgumentSyntax& syntax,
+                                                   const BindContext& context) {
+    auto& comp = context.getCompilation();
+    auto& timing = TimingControl::bind(*syntax.event, context);
+
+    return *comp.emplace<ClockingArgumentExpression>(comp.getVoidType(), timing,
+                                                     syntax.sourceRange());
+}
+
+void ClockingArgumentExpression::serializeTo(ASTSerializer& serializer) const {
+    serializer.write("timingControl", timingControl);
 }
 
 Expression& MinTypMaxExpression::fromSyntax(Compilation& compilation,

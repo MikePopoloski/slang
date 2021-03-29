@@ -4,6 +4,9 @@ empty
 DataType base=Expression final=false
 empty
 
+TimingControl final=false
+empty
+
 // ----- ATTRIBUTES -----
 
 EqualsValueClause
@@ -47,6 +50,9 @@ token name
 token openParen
 Expression? expr
 token closeParen
+
+ClockingEventArgument base=Argument
+TimingControl event
 
 ArgumentList
 token openParen
@@ -382,9 +388,6 @@ ParenthesizedExpression inner
 
 // ----- TIMING CONTROL -----
 
-TimingControl final=false
-empty
-
 Delay base=TimingControl multiKind=true
 token hash
 Expression delayValue
@@ -676,6 +679,7 @@ DotMemberClause? modport
 ImplicitType base=DataType
 token signing
 list<VariableDimension> dimensions
+token placeholder
 
 // ----- ASSERTIONS -----
 
@@ -947,8 +951,11 @@ token openBrace
 separated_list<PortReference> references
 token closeBrace
 
+EmptyNonAnsiPort base=NonAnsiPort
+token placeholder
+
 ImplicitNonAnsiPort base=NonAnsiPort
-PortExpression? expr
+PortExpression expr
 
 ExplicitNonAnsiPort base=NonAnsiPort
 token dot

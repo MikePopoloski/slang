@@ -168,6 +168,7 @@ decltype(auto) Symbol::visit(TVisitor&& visitor, Args&&... args) const {
         SYMBOL(Primitive);
         SYMBOL(PrimitivePort);
         SYMBOL(PrimitiveInstance);
+        SYMBOL(SpecifyBlock);
         TYPE(PredefinedIntegerType);
         TYPE(ScalarType);
         TYPE(FloatingType);
@@ -188,6 +189,7 @@ decltype(auto) Symbol::visit(TVisitor&& visitor, Args&&... args) const {
         TYPE(StringType);
         TYPE(EventType);
         TYPE(UnboundedType);
+        TYPE(TypeRefType);
         TYPE(VirtualInterfaceType);
         TYPE(ErrorType);
         TYPE(NetType);
@@ -287,6 +289,7 @@ decltype(auto) Expression::visitExpression(TExpression* expr, TVisitor&& visitor
         CASE(Call, CallExpression);
         CASE(Conversion, ConversionExpression);
         CASE(DataType, DataTypeExpression);
+        CASE(TypeReference, TypeReferenceExpression);
         CASE(HierarchicalReference, HierarchicalReferenceExpression);
         CASE(LValueReference, LValueReferenceExpression);
         CASE(SimpleAssignmentPattern, SimpleAssignmentPatternExpression);
@@ -299,6 +302,7 @@ decltype(auto) Expression::visitExpression(TExpression* expr, TVisitor&& visitor
         CASE(NewClass, NewClassExpression);
         CASE(CopyClass, CopyClassExpression);
         CASE(MinTypMax, MinTypMaxExpression);
+        CASE(ClockingArgument, ClockingArgumentExpression);
         CASE(OneStepLiteral, OneStepLiteral);
         CASE(TimingControlExpressionConcatenation, TimingControlExpressionConcatenationExpression);
         CASE(TimingControlExpression, TimingControlExpression);

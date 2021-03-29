@@ -107,6 +107,7 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
             return;
 
         symbol.getDelay();
+        symbol.checkInitializer();
     }
 
     void handle(const ConstraintBlockSymbol& symbol) {

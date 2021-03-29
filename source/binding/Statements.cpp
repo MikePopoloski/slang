@@ -503,8 +503,8 @@ const Statement& StatementBinder::getStatement(const BindContext& context) const
         auto guard = ScopeGuard([this] { isBinding = false; });
 
         BindContext ctx = context;
-        if (flags.has(StatementFlags::InFunction) && !flags.has(StatementFlags::InForkJoinNone))
-            ctx.flags |= BindFlags::FunctionBody;
+        if (flags.has(StatementFlags::FuncOrFinal) && !flags.has(StatementFlags::InForkJoinNone))
+            ctx.flags |= BindFlags::FunctionOrFinal;
 
         stmt = &bindStatement(ctx);
     }
@@ -621,7 +621,7 @@ Statement& BlockStatement::fromSyntax(Compilation& compilation, const BlockState
 
     BindContext context = sourceCtx;
     auto blockKind = SemanticFacts::getStatementBlockKind(syntax);
-    if (context.flags.has(BindFlags::FunctionBody)) {
+    if (context.flags.has(BindFlags::FunctionOrFinal)) {
         if (blockKind == StatementBlockKind::JoinAll || blockKind == StatementBlockKind::JoinAny) {
             context.addDiag(diag::TimingInFuncNotAllowed, syntax.end.range());
             return badStmt(compilation, nullptr);
@@ -629,7 +629,7 @@ Statement& BlockStatement::fromSyntax(Compilation& compilation, const BlockState
         else if (blockKind == StatementBlockKind::JoinNone) {
             // The "function body" flag does not propagate through fork-join_none
             // blocks, as all statements are allowed in those.
-            context.flags &= ~BindFlags::FunctionBody;
+            context.flags &= ~BindFlags::FunctionOrFinal;
         }
     }
 
@@ -1024,9 +1024,11 @@ Statement& CaseStatement::fromSyntax(Compilation& compilation, const CaseStateme
     SmallVectorSized<const Expression*, 8> bound;
     TokenKind keyword = syntax.caseKeyword.kind;
     bool isInside = syntax.matchesOrInside.kind == TokenKind::InsideKeyword;
-    bad |= !Expression::bindMembershipExpressions(context, keyword,
-                                                  !isInside && keyword != TokenKind::CaseKeyword,
-                                                  isInside, *syntax.expr, expressions, bound);
+    bool wildcard = !isInside && keyword != TokenKind::CaseKeyword;
+    bool allowTypeRefs = !isInside && keyword == TokenKind::CaseKeyword;
+
+    bad |= !Expression::bindMembershipExpressions(context, keyword, wildcard, isInside,
+                                                  allowTypeRefs, *syntax.expr, expressions, bound);
 
     if (isInside && condition != CaseStatementCondition::Normal) {
         context.addDiag(diag::CaseInsideKeyword, syntax.matchesOrInside.range())
@@ -1101,9 +1103,14 @@ static bool checkMatch(CaseStatementCondition condition, const ConstantValue& cv
 }
 
 ER CaseStatement::evalImpl(EvalContext& context) const {
+    const Type* condType = nullptr;
     auto cv = expr.eval(context);
-    if (!cv)
-        return ER::Fail;
+    if (!cv) {
+        if (expr.kind == ExpressionKind::TypeReference)
+            condType = &expr.as<TypeReferenceExpression>().targetType;
+        else
+            return ER::Fail;
+    }
 
     const Statement* matchedStmt = nullptr;
     SourceRange matchRange;
@@ -1121,10 +1128,12 @@ ER CaseStatement::evalImpl(EvalContext& context) const {
             }
             else {
                 auto val = item->eval(context);
-                if (!val)
+                if (val)
+                    matched = checkMatch(condition, cv, val);
+                else if (condType && item->kind == ExpressionKind::TypeReference)
+                    matched = item->as<TypeReferenceExpression>().targetType.isMatching(*condType);
+                else
                     return ER::Fail;
-
-                matched = checkMatch(condition, cv, val);
             }
 
             if (matched) {
@@ -1991,7 +2000,7 @@ Statement& WaitStatement::fromSyntax(Compilation& compilation, const WaitStateme
     if (!context.requireBooleanConvertible(cond))
         return badStmt(compilation, result);
 
-    if (context.flags.has(BindFlags::FunctionBody)) {
+    if (context.flags.has(BindFlags::FunctionOrFinal)) {
         context.addDiag(diag::TimingInFuncNotAllowed, syntax.sourceRange());
         return badStmt(compilation, result);
     }
@@ -2057,7 +2066,7 @@ Statement& WaitOrderStatement::fromSyntax(Compilation& compilation,
 
     auto result = compilation.emplace<WaitOrderStatement>(events.copy(compilation), ifTrue, ifFalse,
                                                           syntax.sourceRange());
-    if (context.flags.has(BindFlags::FunctionBody)) {
+    if (context.flags.has(BindFlags::FunctionOrFinal)) {
         context.addDiag(diag::TimingInFuncNotAllowed, syntax.sourceRange());
         return badStmt(compilation, result);
     }

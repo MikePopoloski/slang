@@ -55,6 +55,7 @@ enum class RandMode;
     x(StringType) \
     x(EventType) \
     x(UnboundedType) \
+    x(TypeRefType) \
     x(VirtualInterfaceType) \
     x(TypeAlias) \
     x(ErrorType) \
@@ -95,7 +96,8 @@ enum class RandMode;
     x(Specparam) \
     x(Primitive) \
     x(PrimitivePort) \
-    x(PrimitiveInstance)
+    x(PrimitiveInstance) \
+    x(SpecifyBlock)
 // clang-format on
 
 ENUM(SymbolKind, SYMBOLKIND)

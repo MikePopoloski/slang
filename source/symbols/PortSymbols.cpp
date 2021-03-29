@@ -174,8 +174,7 @@ public:
 
     Symbol* createPort(const ExplicitAnsiPortSyntax& syntax) {
         auto port = compilation.emplace<PortSymbol>(syntax.name.valueText(), syntax.name.location(),
-                                                    DeclaredTypeFlags::LookupMax |
-                                                        DeclaredTypeFlags::InferImplicit);
+                                                    DeclaredTypeFlags::InferImplicit);
         port->direction = getDirection(syntax.direction);
         port->setSyntax(syntax);
         port->setDeclaredType(UnsetType);
@@ -217,10 +216,12 @@ private:
         port->setDeclaredType(type, decl.dimensions);
         port->setAttributes(scope, attrs);
 
-        if (port->direction == ArgumentDirection::InOut && !netType)
-            scope.addDiag(diag::InOutPortCannotBeVariable, port->location) << port->name;
-        else if (port->direction == ArgumentDirection::Ref && netType)
-            scope.addDiag(diag::RefPortMustBeVariable, port->location) << port->name;
+        if (!port->name.empty()) {
+            if (port->direction == ArgumentDirection::InOut && !netType)
+                scope.addDiag(diag::InOutPortCannotBeVariable, port->location) << port->name;
+            else if (port->direction == ArgumentDirection::Ref && netType)
+                scope.addDiag(diag::RefPortMustBeVariable, port->location) << port->name;
+        }
 
         // Create a new symbol to represent this port internally to the instance.
         ValueSymbol* symbol;
@@ -283,7 +284,7 @@ private:
     static const ImplicitTypeSyntax UnsetType;
 };
 
-const ImplicitTypeSyntax AnsiPortListBuilder::UnsetType{ Token(), nullptr };
+const ImplicitTypeSyntax AnsiPortListBuilder::UnsetType{ Token(), nullptr, Token() };
 
 class NonAnsiPortListBuilder {
 public:
@@ -317,20 +318,13 @@ public:
     }
 
     Symbol* createPort(const ImplicitNonAnsiPortSyntax& syntax) {
-        // TODO: location for empty ports?
-        auto port =
-            compilation.emplace<PortSymbol>("", SourceLocation(), DeclaredTypeFlags::LookupMax);
+        auto port = compilation.emplace<PortSymbol>("", syntax.getFirstToken().location());
         port->setSyntax(syntax);
-
-        // Unnamed empty port is allowed.
-        if (!syntax.expr)
-            return port;
 
         switch (syntax.expr->kind) {
             case SyntaxKind::PortReference: {
                 auto& ref = syntax.expr->as<PortReferenceSyntax>();
                 port->name = ref.name.valueText();
-                port->location = ref.name.location();
 
                 auto info = getInfo(port->name, port->location);
                 if (!info)
@@ -351,6 +345,13 @@ public:
             default:
                 THROW_UNREACHABLE;
         }
+    }
+
+    Symbol* createPort(const EmptyNonAnsiPortSyntax& syntax) {
+        auto port = compilation.emplace<PortSymbol>("", syntax.placeholder.location());
+        port->setSyntax(syntax);
+        port->setType(compilation.getVoidType()); // indicator that this is an empty port
+        return port;
     }
 
     void finalize() {
@@ -398,6 +399,8 @@ private:
         auto name = decl.name.valueText();
         auto declLoc = decl.name.location();
 
+        ASSERT(!name.empty());
+
         switch (header.kind) {
             case SyntaxKind::VariablePortHeader: {
                 auto& varHeader = header.as<VariablePortHeaderSyntax>();
@@ -425,7 +428,7 @@ private:
                     uint32_t ioIndex =
                         insertionPoint ? uint32_t(insertionPoint->getIndex()) + 1 : 1;
                     if (uint32_t(symbol->getIndex()) > ioIndex) {
-                        val.getDeclaredType()->setSeparateInitializerIndex(symbol->getIndex());
+                        val.getDeclaredType()->setOverrideIndex(symbol->getIndex());
                         val.setIndex(SymbolIndex(ioIndex));
                     }
 
@@ -478,6 +481,9 @@ private:
         symbol.setAttributes(scope, info.attrs);
         implicitMembers.emplace(&symbol, insertionPoint);
         info.internalSymbol = &symbol;
+
+        if (insertionPoint)
+            symbol.getDeclaredType()->setOverrideIndex(insertionPoint->getIndex());
     }
 };
 
@@ -709,6 +715,13 @@ private:
 
     PortConnection* createConnection(const PortSymbol& port, const ExpressionSyntax& syntax,
                                      span<const AttributeSymbol* const> attributes) {
+        // If this is an empty port, it's an error to provide an expression.
+        if (port.name.empty() && port.getType().isVoid()) {
+            auto& diag = scope.addDiag(diag::NullPortExpression, syntax.sourceRange());
+            diag.addNote(diag::NoteDeclarationHere, port.location);
+            return emptyConnection(port);
+        }
+
         // TODO: if port is explicit, check that expression as well
         BindContext context(scope, lookupLocation, BindFlags::NonProcedural);
         context.instance = &instance;
@@ -1033,6 +1046,9 @@ void PortSymbol::fromSyntax(
                         break;
                     case SyntaxKind::ExplicitNonAnsiPort:
                         scope.addDiag(diag::NotYetSupported, port->sourceRange());
+                        break;
+                    case SyntaxKind::EmptyNonAnsiPort:
+                        results.append(builder.createPort(port->as<EmptyNonAnsiPortSyntax>()));
                         break;
                     default:
                         THROW_UNREACHABLE;

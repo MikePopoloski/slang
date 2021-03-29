@@ -254,6 +254,27 @@ EnumType::EnumType(Compilation& compilation, SourceLocation loc, const Type& bas
     setParent(scope, lookupLocation.getIndex());
 }
 
+static void checkEnumRange(const BindContext& context, const VariableDimensionSyntax& syntax) {
+    auto checkExpr = [&](const ExpressionSyntax& expr) {
+        if (expr.kind != SyntaxKind::IntegerLiteralExpression &&
+            expr.kind != SyntaxKind::IntegerVectorExpression) {
+            context.addDiag(diag::EnumRangeLiteral, expr.sourceRange());
+        }
+    };
+
+    ASSERT(syntax.specifier && syntax.specifier->kind == SyntaxKind::RangeDimensionSpecifier);
+    auto& sel = *syntax.specifier->as<RangeDimensionSpecifierSyntax>().selector;
+    if (sel.kind == SyntaxKind::BitSelect) {
+        auto& expr = *sel.as<BitSelectSyntax>().expr;
+        checkExpr(expr);
+    }
+    else if (sel.kind == SyntaxKind::SimpleRangeSelect) {
+        auto& range = sel.as<RangeSelectSyntax>();
+        checkExpr(*range.left);
+        checkExpr(*range.right);
+    }
+}
+
 const Type& EnumType::fromSyntax(Compilation& compilation, const EnumTypeSyntax& syntax,
                                  LookupLocation location, const Scope& scope,
                                  const Type* typedefTarget) {
@@ -431,6 +452,9 @@ const Type& EnumType::fromSyntax(Compilation& compilation, const EnumTypeSyntax&
                 !context.requirePositive(range->right, member->dimensions[0]->sourceRange())) {
                 return compilation.getErrorType();
             }
+
+            // Enum ranges must be integer literals.
+            checkEnumRange(context, *member->dimensions[0]);
 
             // Set up the first element using the initializer. All other elements (if there are any)
             // don't get the initializer.

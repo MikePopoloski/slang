@@ -333,6 +333,8 @@ error PrimitiveInitVal "initial value for a primitive output must be a single-bi
 error RefArgAutomaticFunc "'ref' arguments can only be used in 'automatic' subroutines"
 error InvalidInstanceForParent "cannot instantiate {} in {}"
 error InvalidPrimInstanceForParent "cannot instantiate a primitive in this scope"
+error NullPortExpression "expression given for null port"
+error PackageNetInit "net declarations in packages cannot have assignments"
 error FatalTask "$fatal encountered{}"
 error ErrorTask "$error encountered{}"
 warning warning-task WarningTask "$warning encountered{}"
@@ -348,6 +350,7 @@ warning empty-member EmptyMember "extra ';' has no effect"
 warning ineffective-sign SignednessNoEffect "'{}' on I/O declaration has no effect on type {}"
 warning constraint-missing NoConstraintBody "no body for implicit constraint block '{}'"
 warning dpi-spec DPISpecDisallowed "'DPI' specified subroutines are not supported and will be treated as 'DPI-C'. Note that this may require changes to the application's C code."
+warning udp-port-empty EmptyUdpPort "primitive port connection is empty"
 
 subsystem Expressions
 error BadUnaryExpression "invalid operand type {} to unary expression"
@@ -450,6 +453,7 @@ error UnboundedNotAllowed "unbounded literal '$' not allowed here"
 error DynamicNotProcedural "cannot refer to an element or member of a dynamic type outside of a procedural context"
 error SpecparamInConstant "specparams cannot be used in general constant expressions"
 error TaskFromFunction "cannot invoke a task from within a function"
+error TaskFromFinal "cannot invoke a task from within a final block"
 error NonProceduralFuncArg "cannot call a function with output, inout, or ref arguments outside of a procedural context"
 error EventExpressionFuncArg "cannot call a function with output, inout, or ref arguments from an event expression"
 warning ignored-slice IgnoredSlice "slice size ignored for left-to-right streaming operator"
@@ -525,6 +529,7 @@ error PackedArrayTooLarge "packed array of {} bits is too large; maximum width i
 error ArrayDimTooLarge "array dimension of {} is too large; maximum number of elements is {}"
 error UnpackedSigned "unpacked type cannot have signedness declared"
 error InvalidUnionMember "untagged unions cannot have members of type {}"
+warning enum-range EnumRangeLiteral "enum element ranges must be integer literals"
 
 subsystem Lookup
 error Redefinition "redefinition of '{}'"
@@ -617,6 +622,7 @@ error AutoVarTraced "automatic variable '{}' cannot be traced"
 warning format-real FormatRealInt "real value provided for integer format specifier '%{}'"
 warning finish-num BadFinishNum "finish argument must have value of 0, 1, or 2"
 warning missing-format MissingFormatSpecifier "missing format specifier"
+warning format-multibit-strength FormatMultibitStrength "formatting strength values for multi-bit nets is non-standard"
 
 subsystem ConstEval
 note NoteInCallTo "in call to '{}'"
@@ -689,11 +695,11 @@ group default = { real-underflow real-overflow literal-overflow unconnected-port
                   extra-pragma-args expected-diag-arg unknown-diag-arg pragma-diag-level explicit-static
                   static-skipped elem-not-found dynarray-index dynarray-range queue-range empty-queue
                   unknown-escape-code no-top warning-task unsized-concat finish-num implicit-conv
-                  constraint-missing missing-format dpi-spec }
+                  constraint-missing missing-format dpi-spec enum-range udp-port-empty }
 
 group extra = { empty-member empty-stmt dup-import pointless-void-cast case-gen-none case-gen-dup
                 unused-result format-real ignored-slice task-ignored width-trunc dup-attr }
 
-group pedantic = { empty-pattern implicit-net-port nonstandard-escape-code nonstandard-generate }
+group pedantic = { empty-pattern implicit-net-port nonstandard-escape-code nonstandard-generate format-multibit-strength }
 
 group conversion = { width-trunc width-expand implicit-conv }

@@ -12,6 +12,7 @@
 namespace slang {
 
 class Constraint;
+class TimingControl;
 
 /// Common base class for both NamedValueExpression and HierarchicalValueExpression.
 class ValueExpressionBase : public Expression {
@@ -197,6 +198,26 @@ public:
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::DataType; }
 };
 
+/// An expression that gets the type of a nested expression using the type() operator.
+/// The result is only allowed in a few places in the grammar, namely in comparisons
+/// with other type reference expressions.
+class TypeReferenceExpression : public Expression {
+public:
+    const Type& targetType;
+
+    TypeReferenceExpression(const Type& typeRefType, const Type& targetType,
+                            SourceRange sourceRange) :
+        Expression(ExpressionKind::TypeReference, typeRefType, sourceRange),
+        targetType(targetType) {}
+
+    ConstantValue evalImpl(EvalContext&) const { return nullptr; }
+    bool verifyConstantImpl(EvalContext&) const { return true; }
+
+    void serializeTo(ASTSerializer& serializer) const;
+
+    static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::TypeReference; }
+};
+
 /// Adapts a hierarchical symbol reference for use in an expression tree. This is for cases
 /// like the $printtimescale system function that require a module name to be passed.
 /// Note that the type of this expression is always void.
@@ -251,6 +272,30 @@ public:
     void serializeTo(ASTSerializer&) const {}
 
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::EmptyArgument; }
+};
+
+struct ClockingEventArgumentSyntax;
+
+/// Represents a clocking event argument. This is a special kind of argument that is only
+/// allowed with the sampled value system functions.
+class ClockingArgumentExpression : public Expression {
+public:
+    const TimingControl& timingControl;
+
+    ClockingArgumentExpression(const Type& type, const TimingControl& timingControl,
+                               SourceRange sourceRange) :
+        Expression(ExpressionKind::ClockingArgument, type, sourceRange),
+        timingControl(timingControl) {}
+
+    ConstantValue evalImpl(EvalContext&) const { return nullptr; }
+    bool verifyConstantImpl(EvalContext&) const { return true; }
+
+    static Expression& fromSyntax(const ClockingEventArgumentSyntax& syntax,
+                                  const BindContext& context);
+
+    void serializeTo(ASTSerializer& serializer) const;
+
+    static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::ClockingArgument; }
 };
 
 struct MinTypMaxExpressionSyntax;

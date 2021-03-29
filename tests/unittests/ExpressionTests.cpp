@@ -2095,3 +2095,73 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Type reference expressions") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    bit [12:0] a, b;
+    parameter type b_t = type(a);
+    case (type(b_t))
+        type(bit[12:0]): begin: b1 initial $display("asdf"); end
+        type(real): begin: b2 initial $display("foo"); end
+    endcase
+
+    function int foo;
+        case (type(b_t))
+            type(bit[12:0]) : return 8;
+            default         : return -1;
+        endcase
+    endfunction
+
+    localparam int c = type(b_t) == type(bit[12:0]);
+    localparam int d = type(b_t) !== type(bit[12:0]);
+    localparam int e = foo();
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    auto& root = compilation.getRoot();
+    CHECK(root.lookupName<GenerateBlockSymbol>("m.b1").isInstantiated);
+    CHECK(!root.lookupName<GenerateBlockSymbol>("m.b2").isInstantiated);
+
+    auto& c = root.lookupName<ParameterSymbol>("m.c");
+    CHECK(c.getValue().integer() == 1);
+
+    auto& d = root.lookupName<ParameterSymbol>("m.d");
+    CHECK(d.getValue().integer() == 0);
+
+    auto& e = root.lookupName<ParameterSymbol>("m.e");
+    CHECK(e.getValue().integer() == 8);
+}
+
+TEST_CASE("Casting with type references") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    bit [12:0] a, b;
+    var type(a+b) c, d;
+    initial c = type(a+13'd3)'(d[7:0]);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Assignment pattern with type references") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    struct { int a; int b; int c; } a;
+    parameter bar = type(a)'{1, 2, 3};
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
+

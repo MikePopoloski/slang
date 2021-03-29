@@ -193,8 +193,8 @@ private:
     NameSyntax& parseName(bitmask<NameOptions> options);
     NameSyntax& parseNamePart(bitmask<NameOptions> options);
     ParameterValueAssignmentSyntax* parseParameterValueAssignment();
-    ArgumentListSyntax& parseArgumentList(bool isParamAssignment = false);
-    ArgumentSyntax& parseArgument(bool isParamAssignment);
+    ArgumentListSyntax& parseArgumentList(bool isParamAssignment, bool allowClocking);
+    ArgumentSyntax& parseArgument(bool isParamAssignment, bool allowClocking);
     PatternSyntax& parsePattern();
     AssignmentPatternExpressionSyntax& parseAssignmentPatternExpression(DataTypeSyntax* type);
     AssignmentPatternItemSyntax& parseAssignmentPatternItem(ExpressionSyntax* key);

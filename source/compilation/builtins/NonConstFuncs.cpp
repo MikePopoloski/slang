@@ -238,6 +238,100 @@ private:
     size_t numArgs;
 };
 
+class SampledFunc : public SystemSubroutine {
+public:
+    SampledFunc() : SystemSubroutine("$sampled", SubroutineKind::Function) {}
+
+    const Type& checkArguments(const BindContext& context, const Args& args, SourceRange range,
+                               const Expression*) const final {
+        auto& comp = context.getCompilation();
+        if (!checkArgCount(context, false, args, range, 1, 1))
+            return comp.getErrorType();
+
+        // TODO: require valid assertion expression
+
+        return *args[0]->type;
+    }
+
+    ConstantValue eval(EvalContext&, const Args&,
+                       const CallExpression::SystemCallInfo&) const final {
+        return nullptr;
+    }
+    bool verifyConstant(EvalContext& context, const Args&, SourceRange range) const final {
+        return notConst(context, range);
+    }
+};
+
+class ValueChangeFunc : public SystemSubroutine {
+public:
+    ValueChangeFunc(const std::string& name) : SystemSubroutine(name, SubroutineKind::Function) {}
+
+    bool allowClockingArgument(size_t argIndex) const final { return argIndex == 1; }
+
+    const Type& checkArguments(const BindContext& context, const Args& args, SourceRange range,
+                               const Expression*) const final {
+        auto& comp = context.getCompilation();
+        if (!checkArgCount(context, false, args, range, 1, 2))
+            return comp.getErrorType();
+
+        // TODO: require valid assertion expression
+        // TODO: check rules for inferring clocking
+
+        if (args.size() == 2 && args[1]->kind != ExpressionKind::ClockingArgument)
+            return badArg(context, *args[1]);
+
+        return comp.getBitType();
+    }
+
+    ConstantValue eval(EvalContext&, const Args&,
+                       const CallExpression::SystemCallInfo&) const final {
+        return nullptr;
+    }
+    bool verifyConstant(EvalContext& context, const Args&, SourceRange range) const final {
+        return notConst(context, range);
+    }
+};
+
+class PastFunc : public SystemSubroutine {
+public:
+    PastFunc() : SystemSubroutine("$past", SubroutineKind::Function) {}
+
+    bool allowEmptyArgument(size_t argIndex) const final { return argIndex == 1 || argIndex == 2; }
+    bool allowClockingArgument(size_t argIndex) const final { return argIndex == 3; }
+
+    const Type& checkArguments(const BindContext& context, const Args& args, SourceRange range,
+                               const Expression*) const final {
+        auto& comp = context.getCompilation();
+        if (!checkArgCount(context, false, args, range, 1, 4))
+            return comp.getErrorType();
+
+        // TODO: require valid assertion expression
+        // TODO: check rules for inferring clocking
+
+        if (args.size() > 1 && args[1]->kind != ExpressionKind::EmptyArgument) {
+            // TODO: check number of ticks argument
+        }
+
+        if (args.size() > 2 && args[2]->kind != ExpressionKind::EmptyArgument) {
+            if (!context.requireBooleanConvertible(*args[2]))
+                return comp.getErrorType();
+        }
+
+        if (args.size() > 3 && args[3]->kind != ExpressionKind::ClockingArgument)
+            return badArg(context, *args[3]);
+
+        return *args[0]->type;
+    }
+
+    ConstantValue eval(EvalContext&, const Args&,
+                       const CallExpression::SystemCallInfo&) const final {
+        return nullptr;
+    }
+    bool verifyConstant(EvalContext& context, const Args&, SourceRange range) const final {
+        return notConst(context, range);
+    }
+};
+
 void registerNonConstFuncs(Compilation& c) {
 #define REGISTER(...) c.addSystemSubroutine(std::make_unique<NonConstantFunction>(__VA_ARGS__))
 
@@ -276,11 +370,20 @@ void registerNonConstFuncs(Compilation& c) {
     FUNC("$dist_erlang", 3);
 #undef FUNC
 
+#define FUNC(name) c.addSystemSubroutine(std::make_unique<ValueChangeFunc>(name))
+    FUNC("$rose");
+    FUNC("$fell");
+    FUNC("$stable");
+    FUNC("$changed");
+#undef FUNC
+
     c.addSystemSubroutine(std::make_unique<FErrorFunc>());
     c.addSystemSubroutine(std::make_unique<FGetsFunc>());
     c.addSystemSubroutine(std::make_unique<ScanfFunc>(true));
     c.addSystemSubroutine(std::make_unique<ScanfFunc>(false));
     c.addSystemSubroutine(std::make_unique<FReadFunc>());
+    c.addSystemSubroutine(std::make_unique<SampledFunc>());
+    c.addSystemSubroutine(std::make_unique<PastFunc>());
 
     c.addSystemMethod(SymbolKind::EventType,
                       std::make_unique<NonConstantFunction>("triggered", c.getBitType(), 0,

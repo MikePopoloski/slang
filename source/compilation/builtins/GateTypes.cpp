@@ -15,7 +15,7 @@ static void gate(Compilation& c, string_view name,
                  std::initializer_list<PrimitivePortDirection> portDirs,
                  PrimitiveSymbol::PrimitiveKind primitiveKind = PrimitiveSymbol::Fixed) {
     auto& prim = *c.emplace<PrimitiveSymbol>(c, name, NL, primitiveKind);
-    c.addPrimitive(prim);
+    c.addGateType(prim);
 
     SmallVectorSized<const PrimitivePortSymbol*, 4> ports;
     for (auto dir : portDirs) {

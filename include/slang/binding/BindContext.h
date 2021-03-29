@@ -90,17 +90,20 @@ enum class BindFlags {
     /// Specparams are allowed even if this is also a constant expression.
     SpecparamsAllowed = 1 << 14,
 
-    /// Binding is happening within a function body.
-    FunctionBody = 1 << 15,
+    /// Binding is happening within a function body or a final block.
+    FunctionOrFinal = 1 << 15,
 
     /// Binding is happening within the intra-assignment timing control of
     /// a non-blocking assignment expression.
     NonBlockingTimingControl = 1 << 16,
 
     /// Binding is happening within an event expression.
-    EventExpression = 1 << 17
+    EventExpression = 1 << 17,
+
+    /// Binding is in a context where type reference expressions are allowed.
+    AllowTypeReferences = 1 << 18
 };
-BITMASK(BindFlags, EventExpression);
+BITMASK(BindFlags, AllowTypeReferences);
 
 enum class DimensionKind { Unknown, Range, AbbreviatedRange, Dynamic, Associative, Queue };
 

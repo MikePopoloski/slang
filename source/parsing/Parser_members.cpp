@@ -567,7 +567,7 @@ FunctionPrototypeSyntax& Parser::parseFunctionPrototype(SyntaxKind parentKind,
         if (next.kind != TokenKind::Semicolon && next.kind != TokenKind::OpenParenthesis)
             returnType = &parseDataType(TypeOptions::AllowImplicit | TypeOptions::AllowVoid);
         else
-            returnType = &factory.implicitType(Token(), nullptr);
+            returnType = &factory.implicitType(Token(), nullptr, placeholderToken());
     }
 
     auto& name = parseName();
@@ -855,8 +855,11 @@ ClassDeclarationSyntax& Parser::parseClassDeclaration(AttrList attributes,
             auto& baseName = parseName();
 
             ArgumentListSyntax* arguments = nullptr;
-            if (peek(TokenKind::OpenParenthesis))
-                arguments = &parseArgumentList();
+            if (peek(TokenKind::OpenParenthesis)) {
+                arguments =
+                    &parseArgumentList(/* isParamAssignment */ false, /* allowClocking */ false);
+            }
+
             extendsClause = &factory.extendsClause(extends, baseName, arguments);
         }
         implementsClause = parseImplementsClause(TokenKind::ImplementsKeyword, semi);
@@ -1837,7 +1840,7 @@ ElabSystemTaskSyntax* Parser::parseElabSystemTask(AttrList attributes) {
     auto nameToken = consume();
     ArgumentListSyntax* argList = nullptr;
     if (peek(TokenKind::OpenParenthesis))
-        argList = &parseArgumentList();
+        argList = &parseArgumentList(/* isParamAssignment */ false, /* allowClocking */ false);
 
     return &factory.elabSystemTask(attributes, nameToken, argList, expect(TokenKind::Semicolon));
 }
@@ -2410,7 +2413,7 @@ SpecparamDeclarationSyntax& Parser::parseSpecparam(AttrList attr) {
     if (dim)
         dims.append(dim);
 
-    auto& type = factory.implicitType(Token(), dims.copy(alloc));
+    auto& type = factory.implicitType(Token(), dims.copy(alloc), placeholderToken());
 
     Token semi;
     SmallVectorSized<TokenOrSyntax, 4> buffer;

@@ -123,7 +123,8 @@ bool BindContext::requireAssignable(const VariableSymbol& var, bool isNonBlockin
         }
     }
 
-    if (isNonBlocking && var.lifetime == VariableLifetime::Automatic) {
+    if (isNonBlocking && var.lifetime == VariableLifetime::Automatic &&
+        var.kind != SymbolKind::ClassProperty) {
         auto& diag = addDiag(diag::NonblockingAssignmentToAuto, assignLoc);
         diag.addNote(diag::NoteDeclarationHere, var.location);
         diag << var.name << varRange;
@@ -360,9 +361,10 @@ void BindContext::evalRangeDimension(const SelectorSyntax& syntax, bool isPacked
 BindContext BindContext::resetFlags(bitmask<BindFlags> addedFlags) const {
     // Remove non-sticky flags, add in any extras specified by addedFlags
     BindContext result(*this);
-    result.flags &= ~(BindFlags::InsideConcatenation | BindFlags::AllowDataType |
-                      BindFlags::AssignmentAllowed | BindFlags::StreamingAllowed |
-                      BindFlags::TopLevelStatement | BindFlags::AllowUnboundedLiteral);
+    result.flags &=
+        ~(BindFlags::InsideConcatenation | BindFlags::AllowDataType | BindFlags::AssignmentAllowed |
+          BindFlags::StreamingAllowed | BindFlags::TopLevelStatement |
+          BindFlags::AllowUnboundedLiteral | BindFlags::AllowTypeReferences);
     result.flags |= addedFlags;
     return result;
 }

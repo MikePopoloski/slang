@@ -329,6 +329,16 @@ public:
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::UnboundedType; }
 };
 
+/// Represents the result of a type reference expression, i.e. the type() operator.
+class TypeRefType : public Type {
+public:
+    TypeRefType() : Type(SymbolKind::TypeRefType, "type reference", SourceLocation()) {}
+
+    ConstantValue getDefaultValueImpl() const { return nullptr; }
+
+    static bool isKind(SymbolKind kind) { return kind == SymbolKind::TypeRefType; }
+};
+
 struct VirtualInterfaceTypeSyntax;
 
 /// Represents a virtual interface type.

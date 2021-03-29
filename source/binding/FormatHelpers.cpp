@@ -72,8 +72,11 @@ static bool checkArgType(TContext& context, const Expression& arg, char spec, So
                 return true;
             break;
         case 'v':
-            if (type.isIntegral())
+            if (type.isIntegral()) {
+                if (type.getBitWidth() > 1)
+                    context.addDiag(diag::FormatMultibitStrength, arg.sourceRange) << range;
                 return true;
+            }
             break;
         case 'u':
         case 'z':

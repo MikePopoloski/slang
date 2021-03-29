@@ -49,6 +49,7 @@ struct InvocationExpressionSyntax;
     x(Call) \
     x(Conversion) \
     x(DataType) \
+    x(TypeReference) \
     x(HierarchicalReference) \
     x(LValueReference) \
     x(SimpleAssignmentPattern) \
@@ -61,6 +62,7 @@ struct InvocationExpressionSyntax;
     x(NewClass) \
     x(CopyClass) \
     x(MinTypMax) \
+    x(ClockingArgument) \
     x(OneStepLiteral) \
     x(TimingControlExpression) \
     x(TimingControlExpressionConcatenation)
@@ -210,10 +212,14 @@ public:
     /// their element types to find the type to check against. Otherwise, all aggregates
     /// are illegal.
     ///
+    /// If @param allowTypeReferences is true the bound expressions are allowed to
+    /// be type reference expressions. Otherwise an error will be issued.
+    ///
     /// @returns true if all expressions are legal, otherwise false and appropriate
     /// diagnostics are issued.
     static bool bindMembershipExpressions(const BindContext& context, TokenKind keyword,
                                           bool wildcard, bool unwrapUnpacked,
+                                          bool allowTypeReferences,
                                           const ExpressionSyntax& valueExpr,
                                           span<const ExpressionSyntax* const> expressions,
                                           SmallVector<const Expression*>& results);

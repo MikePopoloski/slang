@@ -55,7 +55,15 @@ Diagnostic& LookupResult::addDiag(const Scope& scope, DiagCode code, SourceRange
 
 bool LookupResult::hasError() const {
     // We have an error if we have any diagnostics or if there was a missing explicit import.
-    return !diagnostics.empty() || (!found && wasImported);
+    if (!found && wasImported)
+        return true;
+
+    for (auto& diag : diagnostics) {
+        if (diag.isError())
+            return true;
+    }
+
+    return false;
 }
 
 void LookupResult::clear() {

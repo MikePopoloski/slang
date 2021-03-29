@@ -683,3 +683,23 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Empty non-ansi port") {
+    auto tree = SyntaxTree::fromText(R"(
+module m(,);
+endmodule
+
+module n;
+    m m1(,);
+    m m2(a);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::UnconnectedUnnamedPort);
+    CHECK(diags[1].code == diag::NullPortExpression);
+}

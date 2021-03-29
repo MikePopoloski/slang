@@ -69,7 +69,8 @@ public:
 
     static void fromSyntax(Compilation& compilation, const HierarchyInstantiationSyntax& syntax,
                            LookupLocation location, const Scope& scope,
-                           SmallVector<const Symbol*>& results);
+                           SmallVector<const Symbol*>& results,
+                           SmallVector<const Symbol*>& implicitNets);
 
     /// Creates one or more instances and binds them into a target scoped, based on the
     /// provided syntax directive.
@@ -197,11 +198,13 @@ public:
 
     static void fromSyntax(Compilation& compilation, const HierarchyInstantiationSyntax& syntax,
                            LookupLocation location, const Scope& scope,
-                           SmallVector<const Symbol*>& results);
+                           SmallVector<const Symbol*>& results,
+                           SmallVector<const Symbol*>& implicitNets);
 
     static void fromSyntax(Compilation& compilation, const PrimitiveInstantiationSyntax& syntax,
                            LookupLocation location, const Scope& scope,
-                           SmallVector<const Symbol*>& results);
+                           SmallVector<const Symbol*>& results,
+                           SmallVector<const Symbol*>& implicitNets);
 
     void serializeTo(ASTSerializer& serializer) const;
 
@@ -225,10 +228,12 @@ public:
 
     static void fromSyntax(const PrimitiveSymbol& primitive,
                            const HierarchyInstantiationSyntax& syntax, LookupLocation location,
-                           const Scope& scope, SmallVector<const Symbol*>& results);
+                           const Scope& scope, SmallVector<const Symbol*>& results,
+                           SmallVector<const Symbol*>& implicitNets);
 
     static void fromSyntax(const PrimitiveInstantiationSyntax& syntax, LookupLocation location,
-                           const Scope& scope, SmallVector<const Symbol*>& results);
+                           const Scope& scope, SmallVector<const Symbol*>& results,
+                           SmallVector<const Symbol*>& implicitNets);
 
     void serializeTo(ASTSerializer& serializer) const;
 

@@ -181,7 +181,7 @@ PortExpressionSyntax& Parser::parsePortExpression() {
 
 NonAnsiPortSyntax& Parser::parseNonAnsiPort() {
     if (peek(TokenKind::Comma) || peek(TokenKind::CloseParenthesis))
-        return factory.implicitNonAnsiPort(nullptr);
+        return factory.emptyNonAnsiPort(placeholderToken());
 
     if (peek(TokenKind::Dot)) {
         auto dot = consume();
@@ -196,7 +196,7 @@ NonAnsiPortSyntax& Parser::parseNonAnsiPort() {
                                            expect(TokenKind::CloseParenthesis));
     }
 
-    return factory.implicitNonAnsiPort(&parsePortExpression());
+    return factory.implicitNonAnsiPort(parsePortExpression());
 }
 
 PortHeaderSyntax& Parser::parsePortHeader(Token constKeyword, Token direction) {
@@ -221,7 +221,7 @@ PortHeaderSyntax& Parser::parsePortHeader(Token constKeyword, Token direction) {
             auto keyword = consume();
             auto signing = parseSigning();
             auto dimensions = parseDimensionList();
-            auto& type = factory.implicitType(signing, dimensions);
+            auto& type = factory.implicitType(signing, dimensions, placeholderToken());
             return factory.interconnectPortHeader(direction, keyword, type);
         }
     }
@@ -244,7 +244,7 @@ PortHeaderSyntax& Parser::parsePortHeader(Token constKeyword, Token direction) {
         if (!isPlainPortName())
             type = &parseDataType();
         else
-            type = &factory.implicitType(Token(), nullptr);
+            type = &factory.implicitType(Token(), nullptr, placeholderToken());
 
         return factory.variablePortHeader(constKeyword, direction, Token(), *type);
     }
@@ -319,7 +319,7 @@ bool Parser::isPlainPortName() {
 
 bool Parser::isNonAnsiPort() {
     auto kind = peek().kind;
-    if (kind == TokenKind::Dot || kind == TokenKind::OpenBrace)
+    if (kind == TokenKind::Dot || kind == TokenKind::OpenBrace || kind == TokenKind::Comma)
         return true;
 
     if (kind != TokenKind::Identifier)
@@ -547,7 +547,7 @@ DataTypeSyntax& Parser::parseDataType(bitmask<TypeOptions> options) {
                 return factory.namedType(parseName());
             }
 
-            return factory.implicitType(Token(), nullptr);
+            return factory.implicitType(Token(), nullptr, placeholderToken());
         }
     }
 
@@ -557,7 +557,7 @@ DataTypeSyntax& Parser::parseDataType(bitmask<TypeOptions> options) {
     if ((options & TypeOptions::AllowImplicit) == 0)
         addDiag(diag::ImplicitNotAllowed, peek().location());
 
-    return factory.implicitType(signing, dimensions);
+    return factory.implicitType(signing, dimensions, placeholderToken());
 }
 
 static bool isHighZ(Token t) {

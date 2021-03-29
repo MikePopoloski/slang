@@ -74,11 +74,12 @@ ENUM(CaseStatementCheck, CASE_CHECK)
 enum class StatementFlags {
     None = 0,
     InLoop = 1 << 0,
-    InFunction = 1 << 1,
+    FuncOrFinal = 1 << 1,
     InForkJoin = 1 << 2,
-    InForkJoinNone = 1 << 3
+    InForkJoinNone = 1 << 3,
+    AutoLifetime = 1 << 4
 };
-BITMASK(StatementFlags, InForkJoinNone);
+BITMASK(StatementFlags, AutoLifetime);
 
 /// The base class for all statements in SystemVerilog.
 class Statement {

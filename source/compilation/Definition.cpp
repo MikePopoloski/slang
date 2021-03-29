@@ -194,9 +194,13 @@ void Definition::resolvePorts() const {
                     }
                 }
             }
-            else {
+            else if (port->kind == SyntaxKind::ExplicitNonAnsiPort) {
                 auto& eap = port->as<ExplicitNonAnsiPortSyntax>();
                 ports.emplace(eap.name.valueText(), index, /* isIface */ false);
+            }
+            else {
+                ASSERT(port->kind == SyntaxKind::EmptyNonAnsiPort);
+                ports.emplace("", index, /* isIface */ false);
             }
 
             index++;

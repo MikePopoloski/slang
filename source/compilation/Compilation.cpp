@@ -64,6 +64,7 @@ Compilation::Compilation(const Bag& options) :
     nullType = emplace<NullType>();
     eventType = emplace<EventType>();
     unboundedType = emplace<UnboundedType>();
+    typeRefType = emplace<TypeRefType>();
     errorType = emplace<ErrorType>();
 
     // Register built-in types for lookup by syntax kind.
@@ -479,7 +480,7 @@ const Definition& Compilation::createDefinition(const Scope& scope, LookupLocati
             reportRedefinition(scope, *result, *topDef);
         else {
             topDef = result;
-            if (auto primIt = primitiveMap.find(result->name); primIt != primitiveMap.end())
+            if (auto primIt = udpMap.find(result->name); primIt != udpMap.end())
                 reportRedefinition(scope, *result, *primIt->second);
         }
     }
@@ -515,7 +516,7 @@ const PackageSymbol& Compilation::createPackage(const Scope& scope,
 }
 
 const PrimitiveSymbol* Compilation::getPrimitive(string_view lookupName) const {
-    if (auto it = primitiveMap.find(lookupName); it != primitiveMap.end())
+    if (auto it = udpMap.find(lookupName); it != udpMap.end())
         return it->second;
     return nullptr;
 }
@@ -523,13 +524,8 @@ const PrimitiveSymbol* Compilation::getPrimitive(string_view lookupName) const {
 const PrimitiveSymbol& Compilation::createPrimitive(const Scope& scope,
                                                     const UdpDeclarationSyntax& syntax) {
     auto& prim = PrimitiveSymbol::fromSyntax(scope, syntax);
-    addPrimitive(prim);
-    return prim;
-}
-
-void Compilation::addPrimitive(const PrimitiveSymbol& prim) {
     if (!prim.name.empty()) {
-        auto [it, inserted] = primitiveMap.emplace(prim.name, &prim);
+        auto [it, inserted] = udpMap.emplace(prim.name, &prim);
         if (!inserted) {
             auto& diag = root->addDiag(diag::Redefinition, prim.location);
             diag << prim.name;
@@ -539,6 +535,19 @@ void Compilation::addPrimitive(const PrimitiveSymbol& prim) {
             reportRedefinition(*root, prim, *defIt->second.first);
         }
     }
+
+    return prim;
+}
+
+const PrimitiveSymbol* Compilation::getGateType(string_view lookupName) const {
+    if (auto it = gateMap.find(lookupName); it != gateMap.end())
+        return it->second;
+    return nullptr;
+}
+
+void Compilation::addGateType(const PrimitiveSymbol& prim) {
+    ASSERT(!prim.name.empty());
+    gateMap.emplace(prim.name, &prim);
 }
 
 void Compilation::addSystemSubroutine(std::unique_ptr<SystemSubroutine> subroutine) {

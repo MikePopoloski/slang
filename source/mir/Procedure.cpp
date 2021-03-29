@@ -155,6 +155,7 @@ public:
     MIRValue visit(const CopyClassExpression&) { return {}; }
     MIRValue visit(const MinTypMaxExpression&) { return {}; }
     MIRValue visit(const DataTypeExpression&) { return {}; }
+    MIRValue visit(const TypeReferenceExpression&) { return {}; }
     MIRValue visit(const HierarchicalReferenceExpression&) { return {}; }
     MIRValue visit(const LValueReferenceExpression&) { return {}; }
     MIRValue visit(const SimpleAssignmentPatternExpression&) { return {}; }
@@ -163,6 +164,7 @@ public:
     MIRValue visit(const EmptyArgumentExpression&) { return {}; }
     MIRValue visit(const OpenRangeExpression&) { return {}; }
     MIRValue visit(const DistExpression&) { return {}; }
+    MIRValue visit(const ClockingArgumentExpression&) { return {}; }
     MIRValue visit(const OneStepLiteral&) { return {}; }
     MIRValue visit(const TimingControlExpression&) { return {}; }
     MIRValue visit(const TimingControlExpressionConcatenationExpression&) { return {}; }

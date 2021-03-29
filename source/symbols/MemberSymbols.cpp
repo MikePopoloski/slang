@@ -411,7 +411,8 @@ ContinuousAssignSymbol::ContinuousAssignSymbol(SourceLocation loc, const Express
 void ContinuousAssignSymbol::fromSyntax(Compilation& compilation,
                                         const ContinuousAssignSyntax& syntax, const Scope& scope,
                                         LookupLocation location,
-                                        SmallVector<const Symbol*>& results) {
+                                        SmallVector<const Symbol*>& results,
+                                        SmallVector<const Symbol*>& implicitNets) {
     BindContext context(scope, location, BindFlags::NonProcedural);
     auto& netType = scope.getDefaultNetType();
 
@@ -422,14 +423,14 @@ void ContinuousAssignSymbol::fromSyntax(Compilation& compilation,
             // The expression here should always be an assignment expression unless
             // the program is already ill-formed (diagnosed by the parser).
             if (expr->kind == SyntaxKind::AssignmentExpression) {
-                SmallVectorSized<Token, 8> implicitNets;
+                SmallVectorSized<Token, 8> implicitNetNames;
                 Expression::findPotentiallyImplicitNets(*expr->as<BinaryExpressionSyntax>().left,
-                                                        context, implicitNets);
+                                                        context, implicitNetNames);
 
-                for (Token t : implicitNets) {
+                for (Token t : implicitNetNames) {
                     auto net = compilation.emplace<NetSymbol>(t.valueText(), t.location(), netType);
                     net->setType(compilation.getLogicType());
-                    results.append(net);
+                    implicitNets.append(net);
                 }
             }
         }
@@ -905,6 +906,27 @@ PrimitiveSymbol& PrimitiveSymbol::fromSyntax(const Scope& scope,
 
 void PrimitiveSymbol::serializeTo(ASTSerializer&) const {
     // TODO:
+}
+
+SpecifyBlockSymbol::SpecifyBlockSymbol(Compilation& compilation, SourceLocation loc) :
+    Symbol(SymbolKind::SpecifyBlock, "", loc), Scope(compilation, this) {
+}
+
+SpecifyBlockSymbol& SpecifyBlockSymbol::fromSyntax(Scope& scope, const SpecifyBlockSyntax& syntax) {
+    auto& comp = scope.getCompilation();
+    auto result = comp.emplace<SpecifyBlockSymbol>(comp, syntax.specify.location());
+    result->setSyntax(syntax);
+
+    for (auto member : syntax.items)
+        result->addMembers(*member);
+
+    // specparams inside specify blocks get visibility in the parent scope as well.
+    for (auto member = result->getFirstMember(); member; member = member->getNextSibling()) {
+        if (member->kind == SymbolKind::Specparam)
+            scope.addMember(*comp.emplace<TransparentMemberSymbol>(*member));
+    }
+
+    return *result;
 }
 
 } // namespace slang

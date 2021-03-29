@@ -7,6 +7,7 @@
 #include "slang/symbols/BlockSymbols.h"
 
 #include "slang/binding/Expression.h"
+#include "slang/binding/MiscExpressions.h"
 #include "slang/compilation/Compilation.h"
 #include "slang/diagnostics/DeclarationsDiags.h"
 #include "slang/diagnostics/LookupDiags.h"
@@ -51,7 +52,7 @@ StatementBlockSymbol& StatementBlockSymbol::fromSyntax(const Scope& scope,
     }
 
     StatementBlockKind blockKind = SemanticFacts::getStatementBlockKind(syntax);
-    if (flags.has(StatementFlags::InFunction) && !flags.has(StatementFlags::InForkJoinNone)) {
+    if (flags.has(StatementFlags::FuncOrFinal) && !flags.has(StatementFlags::InForkJoinNone)) {
         // fork-join and fork-join_any blocks are not allowed in functions, so check that here.
         if (blockKind == StatementBlockKind::JoinAll || blockKind == StatementBlockKind::JoinAny)
             scope.addDiag(diag::TimingInFuncNotAllowed, syntax.end.range());
@@ -63,9 +64,10 @@ StatementBlockSymbol& StatementBlockSymbol::fromSyntax(const Scope& scope,
             flags |= StatementFlags::InForkJoinNone;
     }
 
+    auto lifetime = flags.has(StatementFlags::AutoLifetime) ? VariableLifetime::Automatic
+                                                            : VariableLifetime::Static;
     auto& comp = scope.getCompilation();
-    auto result =
-        comp.emplace<StatementBlockSymbol>(comp, name, loc, blockKind, scope.getDefaultLifetime());
+    auto result = comp.emplace<StatementBlockSymbol>(comp, name, loc, blockKind, lifetime);
     result->binder.setItems(*result, syntax.items, syntax.sourceRange(), flags);
     result->setSyntax(syntax);
     result->setAttributes(scope, syntax.attributes);
@@ -73,10 +75,13 @@ StatementBlockSymbol& StatementBlockSymbol::fromSyntax(const Scope& scope,
 }
 
 static StatementBlockSymbol* createBlock(const Scope& scope, const StatementSyntax& syntax,
-                                         string_view name, SourceLocation loc) {
+                                         string_view name, SourceLocation loc,
+                                         bitmask<StatementFlags> flags) {
+    auto lifetime = flags.has(StatementFlags::AutoLifetime) ? VariableLifetime::Automatic
+                                                            : VariableLifetime::Static;
     auto& comp = scope.getCompilation();
-    auto result = comp.emplace<StatementBlockSymbol>(
-        comp, name, loc, StatementBlockKind::Sequential, scope.getDefaultLifetime());
+    auto result = comp.emplace<StatementBlockSymbol>(comp, name, loc,
+                                                     StatementBlockKind::Sequential, lifetime);
     result->setSyntax(syntax);
     result->setAttributes(scope, syntax.attributes);
     return result;
@@ -86,7 +91,7 @@ StatementBlockSymbol& StatementBlockSymbol::fromSyntax(const Scope& scope,
                                                        const ForLoopStatementSyntax& syntax,
                                                        bitmask<StatementFlags> flags) {
     auto [name, loc] = getLabel(syntax, syntax.forKeyword.location());
-    auto result = createBlock(scope, syntax, name, loc);
+    auto result = createBlock(scope, syntax, name, loc, flags);
 
     // If one entry is a variable declaration, they must all be.
     auto& comp = scope.getCompilation();
@@ -110,7 +115,7 @@ StatementBlockSymbol& StatementBlockSymbol::fromSyntax(const Scope& scope,
                                                        const ForeachLoopStatementSyntax& syntax,
                                                        bitmask<StatementFlags> flags) {
     auto [name, loc] = getLabel(syntax, syntax.keyword.location());
-    auto result = createBlock(scope, syntax, name, loc);
+    auto result = createBlock(scope, syntax, name, loc, flags);
 
     result->binder.setSyntax(*result, syntax, /* labelHandled */ true, flags);
     for (auto block : result->binder.getBlocks())
@@ -126,7 +131,7 @@ StatementBlockSymbol& StatementBlockSymbol::fromLabeledStmt(const Scope& scope,
                                                             const StatementSyntax& syntax,
                                                             bitmask<StatementFlags> flags) {
     auto [name, loc] = getLabel(syntax, {});
-    auto result = createBlock(scope, syntax, name, loc);
+    auto result = createBlock(scope, syntax, name, loc, flags);
 
     result->binder.setSyntax(*result, syntax, /* labelHandled */ true, flags);
     for (auto block : result->binder.getBlocks())
@@ -163,12 +168,23 @@ ProceduralBlockSymbol& ProceduralBlockSymbol::fromSyntax(
     const Scope& scope, const ProceduralBlockSyntax& syntax,
     span<const StatementBlockSymbol* const>& additionalBlocks) {
 
+    // Figure out our default variable lifetime by looking for the
+    // parent instance and using its default.
+    VariableLifetime lifetime = VariableLifetime::Static;
+    if (auto def = scope.asSymbol().getDeclaringDefinition())
+        lifetime = def->defaultLifetime;
+
     auto& comp = scope.getCompilation();
     auto kind = SemanticFacts::getProceduralBlockKind(syntax.kind);
     auto result = comp.emplace<ProceduralBlockSymbol>(syntax.keyword.location(), kind);
 
-    result->binder.setSyntax(scope, *syntax.statement, /* labelHandled */ false,
-                             StatementFlags::None);
+    bitmask<StatementFlags> flags;
+    if (kind == ProceduralBlockKind::Final)
+        flags |= StatementFlags::FuncOrFinal;
+    if (lifetime == VariableLifetime::Automatic)
+        flags |= StatementFlags::AutoLifetime;
+
+    result->binder.setSyntax(scope, *syntax.statement, /* labelHandled */ false, flags);
     result->setSyntax(syntax);
     result->setAttributes(scope, syntax.attributes);
 
@@ -295,15 +311,22 @@ void GenerateBlockSymbol::fromSyntax(Compilation& compilation, const CaseGenerat
     SmallVectorSized<const Expression*, 8> bound;
     if (!Expression::bindMembershipExpressions(
             bindContext, TokenKind::CaseKeyword, /* wildcard */ false,
-            /* unwrapUnpacked */ false, *syntax.condition, expressions, bound)) {
+            /* unwrapUnpacked */ false, /* allowTypeReferences */ true, *syntax.condition,
+            expressions, bound)) {
         return;
     }
 
     auto boundIt = bound.begin();
     auto condExpr = *boundIt++;
+
+    const Type* condType = nullptr;
     ConstantValue condVal = bindContext.eval(*condExpr);
-    if (!condVal)
-        return;
+    if (!condVal) {
+        if (condExpr->kind == ExpressionKind::TypeReference)
+            condType = &condExpr->as<TypeReferenceExpression>().targetType;
+        else
+            return;
+    }
 
     SourceRange matchRange;
     bool found = false;
@@ -321,7 +344,12 @@ void GenerateBlockSymbol::fromSyntax(Compilation& compilation, const CaseGenerat
             // Have to keep incrementing the iterator here so that we stay in sync.
             auto expr = *boundIt++;
             ConstantValue val = bindContext.eval(*expr);
-            if (!currentFound && val && val == condVal) {
+
+            bool match = val && val == condVal;
+            if (!val && condType && expr->kind == ExpressionKind::TypeReference)
+                match = expr->as<TypeReferenceExpression>().targetType.isMatching(*condType);
+
+            if (!currentFound && match) {
                 currentFound = true;
                 currentMatchRange = expr->sourceRange;
             }

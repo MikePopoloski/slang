@@ -773,3 +773,42 @@ endmodule
     CHECK(diags[1].code == diag::AutoVarTraced);
     CHECK(diags[2].code == diag::AutoVarTraced);
 }
+
+TEST_CASE("Invalid clocking argument") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    wire clk;
+    int i = $bits(@(posedge clk));
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::TimingControlNotAllowed);
+}
+
+TEST_CASE("Sampled value functions") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    wire clk;
+    reg a, b;
+    always @(posedge clk) begin
+        a <= b & $rose(b);
+        a <= b & $fell(b, @clk);
+        a <= b & $changed(b, @(posedge clk));
+        a <= b & $stable(b, @(posedge clk));
+        a <= $sampled(b);
+        a <= $past(b, , , @(posedge clk));
+        a <= $past(b, 5);
+        a <= $past(b, 5, a | b);
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}

@@ -9,6 +9,7 @@
 #include "slang/binding/AssignmentExpressions.h"
 #include "slang/binding/Bitstream.h"
 #include "slang/binding/LiteralExpressions.h"
+#include "slang/binding/MiscExpressions.h"
 #include "slang/binding/SelectExpressions.h"
 #include "slang/binding/TimingControl.h"
 #include "slang/compilation/Compilation.h"
@@ -158,11 +159,13 @@ const Type* Expression::binaryOperatorType(Compilation& compilation, const Type*
 
 bool Expression::bindMembershipExpressions(const BindContext& context, TokenKind keyword,
                                            bool wildcard, bool unwrapUnpacked,
+                                           bool allowTypeReferences,
                                            const ExpressionSyntax& valueExpr,
                                            span<const ExpressionSyntax* const> expressions,
                                            SmallVector<const Expression*>& results) {
+    auto extraFlags = allowTypeReferences ? BindFlags::AllowTypeReferences : BindFlags::None;
     Compilation& comp = context.scope.getCompilation();
-    Expression& valueRes = create(comp, valueExpr, context);
+    Expression& valueRes = create(comp, valueExpr, context, extraFlags);
     results.append(&valueRes);
 
     const Type* type = valueRes.type;
@@ -191,6 +194,9 @@ bool Expression::bindMembershipExpressions(const BindContext& context, TokenKind
         else if ((bt.isEvent() || bt.isNull()) && (type->isEvent() || type->isNull())) {
             // ok
         }
+        else if (bt.isTypeRefType() && type->isTypeRefType()) {
+            // ok
+        }
         else if (canBeStrings) {
             // If canBeStrings is still true, it means either this specific type or
             // the common type (or both) are of type string. This is ok, but force
@@ -215,7 +221,7 @@ bool Expression::bindMembershipExpressions(const BindContext& context, TokenKind
     // We need to find a common type across all expressions. If this is for a wildcard
     // case statement, the types can only be integral. Otherwise all singular types are allowed.
     for (auto expr : expressions) {
-        Expression* bound = &create(comp, *expr, context);
+        Expression* bound = &create(comp, *expr, context, extraFlags);
         results.append(bound);
         bad |= bound->bad();
         if (bad)
@@ -558,15 +564,21 @@ Expression& BinaryExpression::fromSyntax(Compilation& compilation,
                                          const BinaryExpressionSyntax& syntax,
                                          const BindContext& context) {
     // If we are allowed unbounded literals here, pass that along to subexpressions.
-    BindFlags flags = BindFlags::None;
+    bitmask<BindFlags> flags = BindFlags::None;
     if (context.flags.has(BindFlags::AllowUnboundedLiteral))
         flags = BindFlags::AllowUnboundedLiteral;
+
+    auto op = getBinaryOperator(syntax.kind);
+    if (op == BinaryOperator::Equality || op == BinaryOperator::Inequality ||
+        op == BinaryOperator::CaseEquality || op == BinaryOperator::CaseInequality) {
+        flags |= BindFlags::AllowTypeReferences;
+    }
 
     Expression& lhs = create(compilation, *syntax.left, context, flags);
     Expression& rhs = create(compilation, *syntax.right, context, flags);
 
-    auto& result = fromComponents(lhs, rhs, getBinaryOperator(syntax.kind),
-                                  syntax.operatorToken.location(), syntax.sourceRange(), context);
+    auto& result = fromComponents(lhs, rhs, op, syntax.operatorToken.location(),
+                                  syntax.sourceRange(), context);
     context.setAttributes(result, syntax.attributes);
 
     return result;
@@ -756,6 +768,10 @@ Expression& BinaryExpression::fromComponents(Expression& lhs, Expression& rhs, B
                     good = true;
                     result->type = &compilation.getBitType();
                 }
+                else if (lt->isTypeRefType() && rt->isTypeRefType()) {
+                    good = !isWildcard;
+                    result->type = &compilation.getBitType();
+                }
                 else {
                     good = false;
                 }
@@ -876,6 +892,17 @@ optional<bitwidth_t> BinaryExpression::getEffectiveWidthImpl() const {
 }
 
 ConstantValue BinaryExpression::evalImpl(EvalContext& context) const {
+    if (left().kind == ExpressionKind::TypeReference &&
+        right().kind == ExpressionKind::TypeReference) {
+        auto& lt = left().as<TypeReferenceExpression>().targetType;
+        auto& rt = right().as<TypeReferenceExpression>().targetType;
+        bool val = lt.isMatching(rt);
+        if (op == BinaryOperator::Inequality || op == BinaryOperator::CaseInequality)
+            val = !val;
+
+        return SVInt(1, val, false);
+    }
+
     ConstantValue cvl = left().eval(context);
     if (!cvl)
         return nullptr;
@@ -1112,7 +1139,8 @@ Expression& InsideExpression::fromSyntax(Compilation& compilation,
     SmallVectorSized<const Expression*, 8> bound;
     bool bad =
         !bindMembershipExpressions(context, TokenKind::InsideKeyword, /* wildcard */ false,
-                                   /* unwrapUnpacked */ true, *syntax.expr, expressions, bound);
+                                   /* unwrapUnpacked */ true, /* allowTypeReferences */ false,
+                                   *syntax.expr, expressions, bound);
 
     auto boundSpan = bound.copy(compilation);
     auto result = compilation.emplace<InsideExpression>(compilation.getLogicType(), *boundSpan[0],

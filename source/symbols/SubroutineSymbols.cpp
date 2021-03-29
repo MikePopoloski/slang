@@ -11,6 +11,7 @@
 #include "slang/diagnostics/LookupDiags.h"
 #include "slang/symbols/ASTSerializer.h"
 #include "slang/symbols/ClassSymbols.h"
+#include "slang/symbols/CompilationUnitSymbols.h"
 #include "slang/symbols/InstanceSymbols.h"
 #include "slang/symbols/VariableSymbols.h"
 #include "slang/syntax/AllSyntax.h"
@@ -62,6 +63,10 @@ SubroutineSymbol* SubroutineSymbol::fromSyntax(Compilation& compilation,
                 lifetime = VariableLifetime::Automatic;
                 break;
             }
+            else if (sym.kind == SymbolKind::Package) {
+                lifetime = sym.as<PackageSymbol>().defaultLifetime;
+                break;
+            }
             scope = sym.getParentScope();
         } while (scope);
     }
@@ -97,9 +102,12 @@ SubroutineSymbol* SubroutineSymbol::fromSyntax(Compilation& compilation,
     }
 
     // Set statement body and collect all declared local variables.
-    StatementFlags stmtFlags = subroutineKind == SubroutineKind::Function
-                                   ? StatementFlags::InFunction
-                                   : StatementFlags::None;
+    bitmask<StatementFlags> stmtFlags;
+    if (subroutineKind == SubroutineKind::Function)
+        stmtFlags |= StatementFlags::FuncOrFinal;
+    if (*lifetime == VariableLifetime::Automatic)
+        stmtFlags |= StatementFlags::AutoLifetime;
+
     const Symbol* last = result->getLastMember();
     result->binder.setItems(*result, syntax.items, syntax.sourceRange(), stmtFlags);
 

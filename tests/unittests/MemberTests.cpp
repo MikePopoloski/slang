@@ -1462,6 +1462,12 @@ module m;
 
     int i = s3;
     localparam int j = s3;
+
+    specify 
+        specparam s4 = 2:3:4;
+    endspecify
+
+    int k = s4;
 endmodule
 )");
 
@@ -1628,6 +1634,7 @@ module m;
     p1 #(3, 4, 5) (a, b);
     p1 #3 (a, b);
     p1 (supply0, strong1) #(1:2:3, 3:2:1) asdf(a, b);
+    p1 (,);
 endmodule
 )");
 
@@ -1635,10 +1642,12 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 3);
+    REQUIRE(diags.size() == 5);
     CHECK(diags[0].code == diag::DelayNotNumeric);
     CHECK(diags[1].code == diag::ExpectedNetDelay);
     CHECK(diags[2].code == diag::Delay3UdpNotAllowed);
+    CHECK(diags[3].code == diag::EmptyUdpPort);
+    CHECK(diags[4].code == diag::EmptyUdpPort);
 }
 
 TEST_CASE("Module mixup with primitive instance") {
@@ -1661,6 +1670,22 @@ endmodule
     CHECK(diags[1].code == diag::InstanceWithStrength);
 }
 
+TEST_CASE("Module escaped name instead of primitive") {
+    auto tree = SyntaxTree::fromText(R"(
+module \and (output a, input b, c);
+endmodule
+
+module m;
+    \and a(a1, b1, c1);
+    and (a2, b2, c2);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
 TEST_CASE("Subroutine return lookup location regress") {
     auto tree = SyntaxTree::fromText(R"(
 module test;
@@ -1677,4 +1702,59 @@ endmodule
     Compilation compilation;
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Net initializer in package") {
+    auto tree = SyntaxTree::fromText(R"(
+package p;
+    wire w = 1;
+endpackage
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::PackageNetInit);
+}
+
+TEST_CASE("Default lifetimes for subroutines") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    function foo; endfunction
+    initial begin : baz
+        int bar;
+    end
+endmodule
+
+module automatic n;
+    function foo; endfunction
+    initial begin : baz
+        int bar;
+    end
+endmodule
+
+package automatic p;
+    function foo; endfunction
+endpackage
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    auto& root = compilation.getRoot();
+    auto func = [&](string_view name) {
+        return root.lookupName<SubroutineSymbol>(name).defaultLifetime;
+    };
+
+    CHECK(func("m.foo") == VariableLifetime::Static);
+    CHECK(func("n.foo") == VariableLifetime::Automatic);
+    CHECK(func("p::foo") == VariableLifetime::Automatic);
+
+    CHECK(root.lookupName<VariableSymbol>("m.baz.bar").lifetime == VariableLifetime::Static);
+
+    auto& block = root.lookupName<StatementBlockSymbol>("n.baz");
+    CHECK(block.memberAt<VariableSymbol>(0).lifetime == VariableLifetime::Automatic);
 }
