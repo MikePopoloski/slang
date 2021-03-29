@@ -872,7 +872,10 @@ bool CallExpression::checkConstant(EvalContext& context, const SubroutineSymbol&
     if (context.isScriptEval())
         return true;
 
-    ASSERT(subroutine.subroutineKind != SubroutineKind::Task);
+if(subroutine.subroutineKind == SubroutineKind::Task) {
+printf("[%s:%d] subroutine.subroutineKind == SubroutineKind::Task !!!\n", __FUNCTION__, __LINE__);
+}
+    //ASSERT(subroutine.subroutineKind != SubroutineKind::Task);
 
     if (subroutine.flags.has(MethodFlags::DPIImport)) {
         context.addDiag(diag::ConstEvalDPINotConstant, range);
