@@ -411,7 +411,6 @@ void Scope::addMembers(const SyntaxNode& syntax) {
             addMember(
                 SequenceDeclarationSymbol::fromSyntax(compilation, *this, syntax.as<SequenceDeclarationSyntax>()));
             break;
-        case SyntaxKind::SpecifyBlock:
         case SyntaxKind::PulseStyleDeclaration:
         case SyntaxKind::PathDeclaration:
         case SyntaxKind::IfNonePathDeclaration:
