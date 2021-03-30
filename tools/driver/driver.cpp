@@ -748,7 +748,7 @@ void writeToFile(string_view fileName, string_view contents) {
 
 #    ifndef FUZZ_TARGET
 int main(int argc, char** argv) {
-    return driverMain(argc, argv, true, true); //false, false);
+    return driverMain(argc, argv, false, false);
 }
 #    endif
 

@@ -458,14 +458,7 @@ const Symbol* Expression::getSymbolReference() const {
 }
 
 bool Expression::bad() const {
-    auto jca = kind == ExpressionKind::Invalid || type->isError();
-    //return kind == ExpressionKind::Invalid || type->isError();
-if(jca) {
-printf("[%s:%d]BADBBDBDBDBD inv %d err %d\n", __FUNCTION__, __LINE__, kind == ExpressionKind::Invalid, type->isError());
-int *jcap = nullptr;
-*jcap = 0;
-}
-    return jca;
+    return kind == ExpressionKind::Invalid || type->isError();
 }
 
 bool Expression::isImplicitString() const {
@@ -537,7 +530,6 @@ Expression& Expression::create(Compilation& compilation, const ExpressionSyntax&
                                const Type* assignmentTarget) {
     BindContext context = ctx.resetFlags(extraFlags);
     Expression* result;
-//printf("[%s:%d]START %s contextflag %x\n", __FUNCTION__, __LINE__, std::string(toString(syntax.kind)).c_str(), context.flags.bits());
     switch (syntax.kind) {
         case SyntaxKind::BadExpression:
             result = &badExpr(compilation, nullptr);
@@ -791,8 +783,6 @@ Expression& Expression::create(Compilation& compilation, const ExpressionSyntax&
             }
             THROW_UNREACHABLE;
     }
-//printf("[%s:%d]SYNTAX %s RESULT %s\n", __FUNCTION__, __LINE__, std::string(toString(syntax.kind)).c_str(), std::string(toString(result->kind)).c_str());
-//printf("[%s:%d] BADD %d\n", __FUNCTION__, __LINE__, result->bad());
 
     result->syntax = &syntax;
     return *result;
@@ -830,7 +820,6 @@ Expression& Expression::bindName(Compilation& compilation, const NameSyntax& syn
         }
         else if (result.hasError()) {
             result.reportErrors(context);
-printf("[%s:%d]NAMEERR\n", __FUNCTION__, __LINE__);
             return badExpr(compilation, nullptr);
         }
     }
@@ -859,10 +848,7 @@ Expression& Expression::bindLookupResult(Compilation& compilation, const LookupR
                                          const BindContext& context) {
     const Symbol* symbol = result.found;
     if (!symbol)
-{
-printf("[%s:%d]BADNOTFOUND\n", __FUNCTION__, __LINE__);
         return badExpr(compilation, nullptr);
-}
 
     if (symbol->isType() && (context.flags & BindFlags::AllowDataType) != 0) {
         // We looked up a named data type and we were allowed to do so, so return it.
@@ -901,10 +887,7 @@ printf("[%s:%d]BADNOTFOUND\n", __FUNCTION__, __LINE__);
     // Drill down into member accesses.
     for (const auto& selector : result.selectors) {
         if (expr->bad())
-{
-printf("[%s:%d]NAMEERR\n", __FUNCTION__, __LINE__);
             return *expr;
-}
 
         auto memberSelect = std::get_if<LookupResult::MemberSelector>(&selector);
         if (memberSelect) {
@@ -931,7 +914,6 @@ printf("[%s:%d]NAMEERR\n", __FUNCTION__, __LINE__);
                                                    : sourceRange.start();
         auto& diag = context.addDiag(diag::ExpressionNotCallable, loc);
         diag << sourceRange;
-printf("[%s:%d]NAMEERR\n", __FUNCTION__, __LINE__);
         return badExpr(compilation, nullptr);
     }
     else if (withClause && !expr->bad()) {

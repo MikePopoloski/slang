@@ -232,8 +232,7 @@ const Statement& Statement::bind(const StatementSyntax& syntax, const BindContex
         case SyntaxKind::CoverPropertyStatement:
         case SyntaxKind::RestrictPropertyStatement:
         case SyntaxKind::ExpectPropertyStatement:
-printf("[%s:%d] missing AssertProperty/AssumeProperty/CoverSequence/CoverProperty/RestrictProperty/ExpectProperty\n", __FUNCTION__, __LINE__);
-            //context.addDiag(diag::NotYetSupported, syntax.sourceRange());
+            context.addDiag(diag::NotYetSupported, syntax.sourceRange());
             result = &badStmt(comp, nullptr);
             break;
         case SyntaxKind::RandCaseStatement:
@@ -412,7 +411,7 @@ static void findBlocks(const Scope& scope, const StatementSyntax& syntax,
         case SyntaxKind::CoverPropertyStatement:
         case SyntaxKind::RestrictPropertyStatement:
         case SyntaxKind::ExpectPropertyStatement:
-            //scope.addDiag(diag::NotYetSupported, syntax.sourceRange());
+            scope.addDiag(diag::NotYetSupported, syntax.sourceRange());
             return;
         default:
             THROW_UNREACHABLE;

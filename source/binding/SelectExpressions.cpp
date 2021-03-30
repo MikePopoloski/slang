@@ -394,11 +394,8 @@ Expression& RangeSelectExpression::fromSyntax(Compilation& compilation, Expressi
     const Type& valueType = *value.type;
     const Type& elementType = getIndexedType(compilation, context, valueType, syntax.sourceRange(),
                                              value.sourceRange, true);
-    if (elementType.isError()) {
-        printf("[%s:%d]EDITBADBDBangeSelectExpression::fromSyntaJJJJ\n", __FUNCTION__, __LINE__);
-        result->type = &compilation.getLogicType();
-        return *result; //jca
-    }
+    if (elementType.isError())
+        return badExpr(compilation, result);
 
     // Selects of vectored nets are disallowed.
     checkForVectoredSelect(value, fullRange, context);
