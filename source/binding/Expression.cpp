@@ -135,7 +135,8 @@ struct Expression::PropagationVisitor {
         // conversion. Otherwise if both types are integral or both are real, we have to
         // check if the conversion should be pushed further down the tree. Otherwise we
         // should insert the implicit conversion here.
-        bool needConversion = !newType.isEquivalent(*expr.type);
+        bool needConversion = !newType.isEquivalent(*expr.type)
+                && expr.kind != ExpressionKind::TimingControlExpressionConcatenation;
         if constexpr (is_detected_v<propagate_t, T, const BindContext&, const Type&>) {
             if ((newType.isFloating() && expr.type->isFloating()) ||
                 (newType.isIntegral() && expr.type->isIntegral()) || newType.isString() ||
@@ -153,8 +154,6 @@ struct Expression::PropagationVisitor {
                     context, newType, ConversionKind::Implicit, expr, assignmentLoc);
             }
             else {
-                if (expr.kind == ExpressionKind::TimingControlExpressionConcatenation)
-                    return *result;
                 result = &ConversionExpression::makeImplicit(
                     context, newType, ConversionKind::Propagated, expr, expr.sourceRange.start());
             }

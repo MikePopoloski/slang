@@ -144,7 +144,7 @@ void ASTSerializer::visit(const T& elem) {
 
         EvalContext ctx(compilation, EvalFlags::CacheResults);
         if (elem.kind == ExpressionKind::UnboundedLiteral) {
-            printf("[%s:%d]UNBIOUUUDUDUUDUDUD\n", __FUNCTION__, __LINE__);
+            printf("[%s:%d]UnboundedLiteral in ASTSerializer\n", __FUNCTION__, __LINE__);
             //write("constant", constant);
         }
         else {

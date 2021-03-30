@@ -783,8 +783,7 @@ Expression& BinaryExpression::fromComponents(Expression& lhs, Expression& rhs, B
             }
             break;
         case BinaryOperator::NonOverlappedImplicationProperty:
-printf("[%s:%d]sssNonOverlappedImplicationPropertyjj\n", __FUNCTION__, __LINE__);
-            good = true; //bothNumeric;
+            good = true;
             result->type = singleBitType(compilation, lt, rt);
             selfDetermined(context, result->left_);
             selfDetermined(context, result->right_);
