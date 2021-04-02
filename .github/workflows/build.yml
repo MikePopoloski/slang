@@ -54,7 +54,7 @@ jobs:
         wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
         sudo add-apt-repository "deb http://apt.llvm.org/focal/ llvm-toolchain-focal-10 main"
         sudo apt-get update
-        sudo apt-get install -y g++-10 clang++-10 clang-tidy-10
+        sudo apt-get install -y g++-10 g++-8 clang++-10 clang-tidy-10
     - name: Build
       run: |
         export PATH="$HOME/.local/bin:$PATH"
