@@ -726,39 +726,9 @@ Expression& Expression::create(Compilation& compilation, const ExpressionSyntax&
             result = &CallExpression::fromSyntax(
                 compilation, syntax.as<ArrayOrRandomizeMethodExpressionSyntax>(), context);
             break;
-        case SyntaxKind::AcceptOnPropertyExpression:
-        case SyntaxKind::AlwaysPropertyExpression:
-        case SyntaxKind::AndSequenceExpression:
-        case SyntaxKind::BinarySequenceDelayExpression:
-        case SyntaxKind::EventuallyPropertyExpression:
-        case SyntaxKind::IffPropertyExpression:
-        case SyntaxKind::ImpliesPropertyExpression:
-        case SyntaxKind::IntersectSequenceExpression:
-        case SyntaxKind::NextTimePropertyExpression:
-        case SyntaxKind::NonOverlappedFollowedByPropertyExpression:
-        case SyntaxKind::NonOverlappedImplicationPropertyExpression:
         case SyntaxKind::OneStepLiteralExpression:
-        case SyntaxKind::OrSequenceExpression:
-        case SyntaxKind::OverlappedFollowedByPropertyExpression:
-        case SyntaxKind::OverlappedImplicationPropertyExpression:
-        case SyntaxKind::RejectOnPropertyExpression:
-        case SyntaxKind::SAlwaysPropertyExpression:
-        case SyntaxKind::SEventuallyPropertyExpression:
-        case SyntaxKind::SNextTimePropertyExpression:
-        case SyntaxKind::SUntilPropertyExpression:
-        case SyntaxKind::SUntilWithPropertyExpression:
-        case SyntaxKind::SyncAcceptOnPropertyExpression:
-        case SyntaxKind::SyncRejectOnPropertyExpression:
         case SyntaxKind::TaggedUnionExpression:
-        case SyntaxKind::ThroughoutSequenceExpression:
-        case SyntaxKind::TimingControlExpressionConcatenation:
-        case SyntaxKind::UnaryNotPropertyExpression:
-        case SyntaxKind::UnarySequenceDelayExpression:
-        case SyntaxKind::UnarySequenceEventExpression:
-        case SyntaxKind::UntilPropertyExpression:
-        case SyntaxKind::UntilWithPropertyExpression:
         case SyntaxKind::WithClause:
-        case SyntaxKind::WithinSequenceExpression:
             context.addDiag(diag::NotYetSupported, syntax.sourceRange());
             result = &badExpr(compilation, nullptr);
             break;

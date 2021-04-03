@@ -69,7 +69,7 @@ StatementSyntax& Parser::parseStatement(bool allowEmpty, bool allowSuperNew) {
         case TokenKind::Hash:
         case TokenKind::DoubleHash:
         case TokenKind::At: {
-            auto timingControl = parseTimingControl(/* isSequenceExpr */ false);
+            auto timingControl = parseTimingControl();
             ASSERT(timingControl);
             return factory.timingControlStatement(label, attributes, *timingControl,
                                                   parseStatement());
@@ -418,7 +418,7 @@ ProceduralDeassignStatementSyntax& Parser::parseProceduralDeassignStatement(Name
                                                                             AttrList attributes,
                                                                             SyntaxKind kind) {
     auto keyword = consume();
-    auto& variable = parsePrimaryExpression(/* disallowVector */ false);
+    auto& variable = parsePrimaryExpression(ExpressionOptions::None);
     auto semi = expect(TokenKind::Semicolon);
     return factory.proceduralDeassignStatement(kind, label, attributes, keyword, variable, semi);
 }
@@ -531,7 +531,7 @@ ConcurrentAssertionStatementSyntax& Parser::parseConcurrentAssertion(NamedLabelS
 PropertySpecSyntax& Parser::parsePropertySpec() {
     TimingControlSyntax* timing = nullptr;
     if (peek(TokenKind::At))
-        timing = parseTimingControl(/* isSequenceExpr */ true);
+        timing = parseTimingControl();
 
     DisableIffSyntax* disable = nullptr;
     if (peek(TokenKind::DisableKeyword)) {
@@ -542,8 +542,8 @@ PropertySpecSyntax& Parser::parsePropertySpec() {
         disable =
             &factory.disableIff(keyword, iff, openParen, expr, expect(TokenKind::CloseParenthesis));
     }
-    // TODO: Parse all property expressions
-    return factory.propertySpec(timing, disable, parseExpression());
+
+    return factory.propertySpec(timing, disable, parsePropertyExpr(0));
 }
 
 ActionBlockSyntax& Parser::parseActionBlock() {
@@ -714,7 +714,7 @@ EventTriggerStatementSyntax& Parser::parseEventTriggerStatement(NamedLabelSyntax
     TimingControlSyntax* timing = nullptr;
     if (trigger.kind == TokenKind::MinusDoubleArrow) {
         kind = SyntaxKind::NonblockingEventTriggerStatement;
-        timing = parseTimingControl(/* isSequenceExpr */ false);
+        timing = parseTimingControl();
     }
 
     auto& name = parseName();

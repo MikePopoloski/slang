@@ -36,6 +36,14 @@ public:
     static SyntaxKind getBinaryExpression(TokenKind kind);
 
     /// @return the kind of syntax that should be created for the given
+    /// binary sequence operator token.
+    static SyntaxKind getBinarySequenceExpr(TokenKind kind);
+
+    /// @return the kind of syntax that should be created for the given
+    /// binary property operator token.
+    static SyntaxKind getBinaryPropertyExpr(TokenKind kind);
+
+    /// @return the kind of syntax that should be created for the given
     /// name keyword token (like "this" or "super").
     static SyntaxKind getKeywordNameExpression(TokenKind kind);
 

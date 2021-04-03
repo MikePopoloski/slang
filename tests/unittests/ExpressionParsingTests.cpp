@@ -668,3 +668,44 @@ endmodule
     CHECK(diags[1].code == diag::ExpectedExpression);
     CHECK(diags[2].code == diag::ExpectedExpression);
 }
+
+TEST_CASE("Sequence expression parsing") {
+    auto& text = R"(
+module m;
+  sequence s;
+    ##[0:3]a ##1 (a ##1 b ##1 c) ##0 (d ##1 e ##1 f)
+        ##1 (!frame && (data==data_bus)) || foo;
+  endsequence
+endmodule
+)";
+    parseCompilationUnit(text);
+    CHECK_DIAGNOSTICS_EMPTY;
+}
+
+TEST_CASE("Property expression parsing") {
+    auto& text = R"(
+module m;
+  property p1;
+    @(posedge clk) a[*2] |-> ((##[1:3] c) or (d |=> e));
+  endproperty
+
+  property p2;
+    a ##1 (b || c)[->1] |->
+      if (b)
+        (##1 d |-> e)
+      else // c
+        f ;
+  endproperty
+
+  property p3;
+    (a + b) -> c;
+  endproperty
+
+  property p4;
+    @(posedge clk) (valid, x = in) |-> ##4 (out == x + 4);
+  endproperty
+endmodule
+)";
+    parseCompilationUnit(text);
+    CHECK_DIAGNOSTICS_EMPTY;
+}

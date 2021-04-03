@@ -27,23 +27,27 @@ enum class ExpressionOptions {
     None = 0,
 
     /// Inside a pattern expression we don't allow a nested pattern expression.
-    PatternContext = 1,
+    PatternContext = 1 << 0,
 
     /// In a procedural assignment context, <= is a non-blocking assignment, not the less
     /// than or equal to operator.
-    ProceduralAssignmentContext = 2,
-
-    /// In an event expression context, the "or" operator has special meaning.
-    EventExpressionContext = 4,
+    ProceduralAssignmentContext = 1 << 1,
 
     /// In a constraint block context, the -> operator has special meaning.
-    ConstraintContext = 8,
+    ConstraintContext = 1 << 2,
 
     /// This expression is in a context where "super.new" calls are allowed.
     /// They are restricted to the first statement in a class constructor.
-    AllowSuperNewCall = 16
+    AllowSuperNewCall = 1 << 3,
+
+    /// This expression is inside a sequence expression.
+    SequenceExpr = 1 << 4,
+
+    /// When parsing a primary expression, don't parse a full integer vector
+    /// but instead just the first integer literal token.
+    DisallowVectors = 1 << 5
 };
-BITMASK(ExpressionOptions, ConstraintContext);
+BITMASK(ExpressionOptions, DisallowVectors);
 
 /// Various options for parsing names.
 enum class NameOptions {
@@ -63,9 +67,12 @@ enum class NameOptions {
     PreviousWasLocal = 1 << 3,
 
     /// We are expecting an expression while parsing this name.
-    ExpectingExpression = 1 << 4
+    ExpectingExpression = 1 << 4,
+
+    /// This name is inside a sequence expression.
+    SequenceExpr = 1 << 5
 };
-BITMASK(NameOptions, ExpectingExpression);
+BITMASK(NameOptions, SequenceExpr);
 
 /// Various options for parsing types.
 enum class TypeOptions {
@@ -178,10 +185,10 @@ private:
 
     // clang-format off
     ExpressionSyntax& parseMinTypMaxExpression();
-    ExpressionSyntax& parsePrimaryExpression(bool disallowVector);
+    ExpressionSyntax& parsePrimaryExpression(bitmask<ExpressionOptions> options);
     ExpressionSyntax& parseIntegerExpression(bool disallowVector);
     ExpressionSyntax& parseInsideExpression(ExpressionSyntax& expr);
-    ExpressionSyntax& parsePostfixExpression(ExpressionSyntax& expr);
+    ExpressionSyntax& parsePostfixExpression(ExpressionSyntax& expr, bitmask<ExpressionOptions> options);
     ExpressionSyntax& parseNewExpression(NameSyntax& expr, bitmask<ExpressionOptions> options);
     ConcatenationExpressionSyntax& parseConcatenation(Token openBrace, ExpressionSyntax* first);
     StreamingConcatenationExpressionSyntax& parseStreamConcatenation(Token openBrace);
@@ -200,7 +207,7 @@ private:
     AssignmentPatternItemSyntax& parseAssignmentPatternItem(ExpressionSyntax* key);
     EventExpressionSyntax& parseEventExpression();
     NamedBlockClauseSyntax* parseNamedBlockClause();
-    TimingControlSyntax* parseTimingControl(bool isSequenceExpr);
+    TimingControlSyntax* parseTimingControl();
     ConditionalPredicateSyntax& parseConditionalPredicate(ExpressionSyntax& first, TokenKind endKind, Token& end);
     ConditionalPatternSyntax& parseConditionalPattern();
     ConditionalStatementSyntax& parseConditionalStatement(NamedLabelSyntax* label, AttrList attributes, Token uniqueOrPriority);
@@ -309,12 +316,12 @@ private:
     ExpressionSyntax& parseArrayOrRandomizeMethod(ExpressionSyntax& expr);
     DefParamAssignmentSyntax& parseDefParamAssignment();
     DefParamSyntax& parseDefParam(AttrList attributes);
-    ExpressionSyntax& parseExpressionOrDist();
+    ExpressionSyntax& parseExpressionOrDist(bitmask<ExpressionOptions> options = {});
     TransRangeSyntax& parseTransRange();
     TransSetSyntax& parseTransSet();
     TransListCoverageBinInitializerSyntax& parseTransListInitializer();
     ExpressionSyntax& parseSubExpression(bitmask<ExpressionOptions> options, int precedence);
-    ExpressionSyntax& parsePrefixExpression(SyntaxKind opKind);
+    ExpressionSyntax& parseBinaryExpression(ExpressionSyntax* left, bitmask<ExpressionOptions> options, int precedence);
     BindDirectiveSyntax& parseBindDirective(AttrList attributes);
     UdpPortListSyntax& parseUdpPortList();
     UdpDeclarationSyntax& parseUdpDeclaration(AttrList attributes);
@@ -329,6 +336,14 @@ private:
     SystemTimingCheckSyntax& parseSystemTimingCheck();
     TimingCheckArgSyntax& parseTimingCheckArg();
     EdgeDescriptorSyntax& parseEdgeDescriptor();
+    SequenceExprSyntax& parseDelayedSequenceExpr(SequenceExprSyntax* first);
+    SequenceExprSyntax& parseSequencePrimary();
+    SequenceExprSyntax& parseSequenceExpr(int precedence, bool isInProperty);
+    PropertyExprSyntax& parseCasePropertyExpr();
+    PropertyExprSyntax& parsePropertyPrimary();
+    PropertyExprSyntax& parsePropertyExpr(int precedence);
+    SequenceMatchListSyntax* parseSequenceMatchList(Token& closeParen);
+    SequenceRepetitionSyntax* parseSequenceRepetition();
     // clang-format on
 
     template<bool (*IsEnd)(TokenKind)>
@@ -360,6 +375,7 @@ private:
     bool isNonAnsiPort();
     bool isPlainPortName();
     bool isConditionalExpression();
+    bool isSequenceRepetition();
     bool scanDimensionList(uint32_t& index);
     bool scanQualifiedName(uint32_t& index, bool allowNew);
     bool scanAttributes(uint32_t& index);
@@ -394,6 +410,11 @@ private:
 
     // Handle splitting out an exponent from a token that was otherwise miscategorized by the lexer.
     void handleExponentSplit(Token token, size_t offset);
+
+    // Fixes up a previously parsed parenthesized sequence or property expression that
+    // actually should have been a normal expression followed by a binary or postfix.
+    ExpressionSyntax& fixParenthesizedExpression(const SimpleSequenceExprSyntax& source,
+                                                 Token openParen);
 
     // Report errors for incorrectly specified block names.
     void checkBlockNames(string_view begin, string_view end, SourceLocation loc);

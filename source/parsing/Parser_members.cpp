@@ -1609,15 +1609,6 @@ ConstraintBlockSyntax& Parser::parseConstraintBlock(bool isTopLevel) {
     return factory.constraintBlock(openBrace, members, closeBrace);
 }
 
-ExpressionSyntax& Parser::parseExpressionOrDist() {
-    auto& expr = parseExpression();
-    if (!peek(TokenKind::DistKeyword))
-        return expr;
-
-    auto& dist = parseDistConstraintList();
-    return factory.expressionOrDist(expr, dist);
-}
-
 ConstraintItemSyntax* Parser::parseConstraintItem(bool allowBlock, bool isTopLevel) {
     switch (peek().kind) {
         case TokenKind::SolveKeyword: {
@@ -1630,14 +1621,14 @@ ConstraintItemSyntax* Parser::parseConstraintItem(bool allowBlock, bool isTopLev
             parseList<isPossibleExpressionOrComma, isBeforeOrSemicolon>(
                 beforeBuffer, TokenKind::BeforeKeyword, TokenKind::Comma, before,
                 RequireItems::True, diag::ExpectedExpression,
-                [this] { return &parsePrimaryExpression(/* disallowVector */ false); });
+                [this] { return &parsePrimaryExpression(ExpressionOptions::None); });
 
             Token semi;
             SmallVectorSized<TokenOrSyntax, 4> afterBuffer;
             parseList<isPossibleExpressionOrComma, isSemicolon>(
                 afterBuffer, TokenKind::Semicolon, TokenKind::Comma, semi, RequireItems::True,
                 diag::ExpectedExpression,
-                [this] { return &parsePrimaryExpression(/* disallowVector */ false); });
+                [this] { return &parsePrimaryExpression(ExpressionOptions::None); });
 
             return &factory.solveBeforeConstraint(solve, beforeBuffer.copy(alloc), before,
                                                   afterBuffer.copy(alloc), semi);
@@ -1905,7 +1896,6 @@ AssertionItemPortListSyntax* Parser::parseAssertionItemPortList(TokenKind declar
 }
 
 PropertyDeclarationSyntax& Parser::parsePropertyDeclaration(AttrList attributes) {
-
     auto keyword = consume();
     auto name = expect(TokenKind::Identifier);
     auto portList = parseAssertionItemPortList(keyword.kind);
@@ -1927,7 +1917,6 @@ PropertyDeclarationSyntax& Parser::parsePropertyDeclaration(AttrList attributes)
 }
 
 SequenceDeclarationSyntax& Parser::parseSequenceDeclaration(AttrList attributes) {
-
     auto keyword = consume();
     auto name = expect(TokenKind::Identifier);
     auto portList = parseAssertionItemPortList(keyword.kind);
@@ -1937,10 +1926,9 @@ SequenceDeclarationSyntax& Parser::parseSequenceDeclaration(AttrList attributes)
     while (isVariableDeclaration())
         declarations.append(&parseVariableDeclaration({}));
 
-    // TODO: Parse all sequence expressions
-    auto& expr = parseExpression();
-    Token semi2 = expect(TokenKind::Semicolon);
-    Token end = expect(TokenKind::EndSequenceKeyword);
+    auto& expr = parseSequenceExpr(0, /* isInProperty */ false);
+    auto semi2 = expect(TokenKind::Semicolon);
+    auto end = expect(TokenKind::EndSequenceKeyword);
 
     auto blockName = parseNamedBlockClause();
     checkBlockNames(name, blockName);
@@ -1967,7 +1955,7 @@ ClockingSkewSyntax* Parser::parseClockingSkew() {
     if (peek(TokenKind::Hash)) {
         Token hash = consume();
         delay = &factory.delay(SyntaxKind::DelayControl, hash,
-                               parsePrimaryExpression(/* disallowVector */ true));
+                               parsePrimaryExpression(ExpressionOptions::DisallowVectors));
     }
 
     if (!edge && !delay)
@@ -2369,7 +2357,7 @@ UdpBodySyntax& Parser::parseUdpBody() {
         auto keyword = consume();
         auto name = expect(TokenKind::Identifier);
         auto equals = expect(TokenKind::Equals);
-        auto& expr = parsePrimaryExpression(/* disallowVector */ false);
+        auto& expr = parsePrimaryExpression(ExpressionOptions::None);
         auto semi = expect(TokenKind::Semicolon);
         initial = &factory.udpInitialStmt(keyword, name, equals, expr, semi);
     }

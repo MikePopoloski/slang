@@ -7,6 +7,9 @@ empty
 TimingControl final=false
 empty
 
+PropertyExpr final=false
+empty
+
 // ----- ATTRIBUTES -----
 
 EqualsValueClause
@@ -154,11 +157,6 @@ UnaryPlusExpression UnaryMinusExpression UnaryBitwiseAndExpression
 UnaryBitwiseNandExpression UnaryBitwiseOrExpression UnaryBitwiseNorExpression
 UnaryBitwiseXorExpression UnaryBitwiseXnorExpression UnaryPreincrementExpression
 UnaryPredecrementExpression UnaryLogicalNotExpression UnaryBitwiseNotExpression
-UnarySequenceDelayExpression UnarySequenceEventExpression UnaryNotPropertyExpression
-AcceptOnPropertyExpression RejectOnPropertyExpression SyncAcceptOnPropertyExpression
-SyncRejectOnPropertyExpression NextTimePropertyExpression SNextTimePropertyExpression
-AlwaysPropertyExpression SAlwaysPropertyExpression EventuallyPropertyExpression
-SEventuallyPropertyExpression
 
 PostfixUnaryExpression base=Expression multiKind=true
 Expression operand
@@ -182,13 +180,7 @@ LessThanExpression LessThanEqualExpression GreaterThanExpression GreaterThanEqua
 LogicalAndExpression LogicalOrExpression BinaryAndExpression BinaryOrExpression
 BinaryXorExpression BinaryXnorExpression LogicalImplicationExpression
 LogicalEquivalenceExpression LogicalShiftLeftExpression LogicalShiftRightExpression
-ArithmeticShiftLeftExpression ArithmeticShiftRightExpression BinarySequenceDelayExpression
-OrSequenceExpression AndSequenceExpression IntersectSequenceExpression
-WithinSequenceExpression ThroughoutSequenceExpression IffPropertyExpression
-UntilPropertyExpression SUntilPropertyExpression UntilWithPropertyExpression
-SUntilWithPropertyExpression ImpliesPropertyExpression
-OverlappedImplicationPropertyExpression NonOverlappedImplicationPropertyExpression
-OverlappedFollowedByPropertyExpression NonOverlappedFollowedByPropertyExpression
+ArithmeticShiftLeftExpression ArithmeticShiftRightExpression
 AssignmentExpression AddAssignmentExpression SubtractAssignmentExpression
 MultiplyAssignmentExpression DivideAssignmentExpression ModAssignmentExpression
 AndAssignmentExpression OrAssignmentExpression XorAssignmentExpression
@@ -452,17 +444,6 @@ TimingControlExpression base=Expression
 TimingControl timing
 Expression expr
 
-TimingControlExpressionConcatenation base=Expression
-Expression left
-TimingControl timing
-Expression right
-
-ShortcutCycleDelayRange base=TimingControl
-token doubleHash
-token openBracket
-token op
-token closeBracket
-
 // ----- DECLARATIONS -----
 
 DimensionSpecifier final=false
@@ -715,7 +696,7 @@ token closeParen
 PropertySpec
 TimingControl? clocking
 DisableIff? disable
-Expression expr
+PropertyExpr expr
 
 ConcurrentAssertionStatement base=Statement multiKind=true
 token keyword
@@ -1208,28 +1189,6 @@ token identifier
 AssertionItemPortList? portList
 EqualsValueClause initializer
 token semi
-
-PropertyDeclaration base=Member
-token keyword
-token name
-AssertionItemPortList? portList
-token semi
-list<Member> assertionVariables
-PropertySpec propertySpec
-token optionalSemi
-token end
-NamedBlockClause? endBlockName
-
-SequenceDeclaration base=Member
-token keyword
-token name
-AssertionItemPortList? portList
-token semi
-list<Member> assertionVariables
-Expression seqExpr
-token optionalSemi
-token end
-NamedBlockClause? endBlockName
 
 ExtendsClause
 token keyword
@@ -1761,6 +1720,168 @@ token equals
 CoverageBinInitializer initializer
 CoverageIffClause? iff
 token semi
+
+// ----- ASSERTIONS -----
+
+SequenceExpr final=false
+empty
+
+SequenceRepetition
+token openBracket
+token op
+Selector? selector
+token closeBracket
+
+SimpleSequenceExpr base=SequenceExpr
+Expression expr
+SequenceRepetition? repetition
+
+SequenceMatchList
+token comma
+separated_list<Expression> items
+
+ParenthesizedSequenceExpr base=SequenceExpr
+token openParen
+SequenceExpr expr
+SequenceMatchList? matchList
+token closeParen
+SequenceRepetition? repetition
+
+BinarySequenceExpr base=SequenceExpr multiKind=true
+SequenceExpr left
+token op
+SequenceExpr right
+
+kindmap<BinarySequenceExpr>
+AndSequenceExpr OrSequenceExpr IntersectSequenceExpr
+ThroughoutSequenceExpr WithinSequenceExpr
+
+FirstMatchSequenceExpr base=SequenceExpr
+token first_match
+token openParen
+SequenceExpr expr
+SequenceMatchList? matchList
+token closeParen
+
+ClockingSequenceExpr base=SequenceExpr
+TimingControl event
+SequenceExpr expr
+
+DelayedSequenceElement
+token doubleHash
+Expression? delayVal
+token openBracket
+token op
+Selector? range
+token closeBracket
+SequenceExpr expr
+
+DelayedSequenceExpr base=SequenceExpr
+SequenceExpr? first
+list<DelayedSequenceElement> elements
+
+SimplePropertyExpr base=PropertyExpr
+SequenceExpr expr
+
+ParenthesizedPropertyExpr base=PropertyExpr
+token openParen
+PropertyExpr expr
+token closeParen
+
+StrongWeakPropertyExpr base=PropertyExpr
+token keyword
+token openParen
+SequenceExpr expr
+token closeParen
+
+UnaryPropertyExpr base=PropertyExpr
+token op
+PropertyExpr expr
+
+UnarySelectPropertyExpr base=PropertyExpr
+token op
+token openBracket
+Selector? selector
+token closeBracket
+PropertyExpr expr
+
+BinaryPropertyExpr base=PropertyExpr multiKind=true
+PropertyExpr left
+token op
+PropertyExpr right
+
+kindmap<BinaryPropertyExpr>
+AndPropertyExpr OrPropertyExpr IffPropertyExpr UntilPropertyExpr
+SUntilPropertyExpr UntilWithPropertyExpr SUntilWithPropertyExpr
+ImpliesPropertyExpr ImplicationPropertyExpr FollowedByPropertyExpr
+
+ClockingPropertyExpr base=PropertyExpr
+TimingControl event
+PropertyExpr expr
+
+AcceptOnPropertyExpr base=PropertyExpr
+token keyword
+token openParen
+Expression condition
+token closeParen
+PropertyExpr expr
+
+ElsePropertyClause
+token elseKeyword
+PropertyExpr expr
+
+ConditionalPropertyExpr base=PropertyExpr
+token ifKeyword
+token openParen
+Expression condition
+token closeParen
+PropertyExpr expr
+ElsePropertyClause? elseClause
+
+PropertyCaseItem final=false
+empty
+
+DefaultPropertyCaseItem base=PropertyCaseItem
+token defaultKeyword
+token colon
+PropertyExpr expr
+token semi
+
+StandardPropertyCaseItem base=PropertyCaseItem
+separated_list<Expression> expressions
+token colon
+PropertyExpr expr
+token semi
+
+CasePropertyExpr base=PropertyExpr
+token caseKeyword
+token openParen
+Expression expr
+token closeParen
+list<PropertyCaseItem> items
+token endcase
+
+PropertyDeclaration base=Member
+token keyword
+token name
+AssertionItemPortList? portList
+token semi
+list<Member> variables
+PropertySpec propertySpec
+token optionalSemi
+token end
+NamedBlockClause? endBlockName
+
+SequenceDeclaration base=Member
+token keyword
+token name
+AssertionItemPortList? portList
+token semi
+list<Member> variables
+SequenceExpr seqExpr
+token optionalSemi
+token end
+NamedBlockClause? endBlockName
 
 // ----- TOP LEVEL -----
 

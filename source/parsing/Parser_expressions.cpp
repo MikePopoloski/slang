@@ -28,6 +28,15 @@ ExpressionSyntax& Parser::parseMinTypMaxExpression() {
     return factory.minTypMaxExpression(first, colon1, typ, colon2, max);
 }
 
+ExpressionSyntax& Parser::parseExpressionOrDist(bitmask<ExpressionOptions> options) {
+    auto& expr = parseSubExpression(options, 0);
+    if (!peek(TokenKind::DistKeyword))
+        return expr;
+
+    auto& dist = parseDistConstraintList();
+    return factory.expressionOrDist(expr, dist);
+}
+
 static bool isNewExpr(const ExpressionSyntax* expr) {
     while (true) {
         if (expr->kind == SyntaxKind::ConstructorName)
@@ -45,11 +54,11 @@ ExpressionSyntax& Parser::parseSubExpression(bitmask<ExpressionOptions> options,
 
     auto current = peek();
     if (isPossibleDelayOrEventControl(current.kind)) {
-        auto timingControl = parseTimingControl(/* isSequenceExpr */ false);
+        auto timingControl = parseTimingControl();
         ASSERT(timingControl);
 
         auto& expr = factory.timingControlExpression(*timingControl, parseExpression());
-        return parsePostfixExpression(expr);
+        return parsePostfixExpression(expr, options);
     }
     else if (current.kind == TokenKind::TaggedKeyword) {
         // TODO: check for trailing expression
@@ -60,46 +69,50 @@ ExpressionSyntax& Parser::parseSubExpression(bitmask<ExpressionOptions> options,
 
     ExpressionSyntax* leftOperand;
     SyntaxKind opKind = getUnaryPrefixExpression(current.kind);
-    if (opKind != SyntaxKind::Unknown)
-        leftOperand = &parsePrefixExpression(opKind);
+    if (opKind != SyntaxKind::Unknown) {
+        auto opToken = consume();
+        auto attributes = parseAttributes();
+
+        auto& operand = parsePrimaryExpression(options);
+        auto& postfix = parsePostfixExpression(operand, options);
+        leftOperand = &factory.prefixUnaryExpression(opKind, opToken, attributes, postfix);
+    }
     else {
-        leftOperand = &parsePrimaryExpression(false);
+        leftOperand = &parsePrimaryExpression(options);
 
         // If the primary is a new or scoped new operator we should handle
         // that separately (it doesn't participate in postfix expression parsing).
         if (isNewExpr(leftOperand))
             return parseNewExpression(leftOperand->as<NameSyntax>(), options);
 
-        leftOperand = &parsePostfixExpression(*leftOperand);
+        leftOperand = &parsePostfixExpression(*leftOperand, options);
     }
 
     options &= ~ExpressionOptions::AllowSuperNewCall;
+    return parseBinaryExpression(leftOperand, options, precedence);
+}
 
+ExpressionSyntax& Parser::parseBinaryExpression(ExpressionSyntax* left,
+                                                bitmask<ExpressionOptions> options,
+                                                int precedence) {
+    Token current;
     while (true) {
         // either a binary operator, or we're done
         current = peek();
-        opKind = getBinaryExpression(current.kind);
+        auto opKind = getBinaryExpression(current.kind);
         if (opKind == SyntaxKind::Unknown)
             break;
 
-        // the "or" operator and "iff" clause in event expressions are special,
-        // we don't handle them here
-        if ((opKind == SyntaxKind::OrSequenceExpression ||
-             opKind == SyntaxKind::IffPropertyExpression) &&
-            options.has(ExpressionOptions::EventExpressionContext)) {
-            break;
-        }
-
         // the implication operator in constraint blocks is special, we don't handle it here
         if (opKind == SyntaxKind::LogicalImplicationExpression &&
-            (options & ExpressionOptions::ConstraintContext)) {
+            options.has(ExpressionOptions::ConstraintContext)) {
             break;
         }
 
         // we have to special case '<=', which can be less than or nonblocking assignment depending
         // on context
         if (opKind == SyntaxKind::LessThanEqualExpression &&
-            (options & ExpressionOptions::ProceduralAssignmentContext)) {
+            options.has(ExpressionOptions::ProceduralAssignmentContext)) {
             opKind = SyntaxKind::NonblockingAssignmentExpression;
         }
         options &= ~ExpressionOptions::ProceduralAssignmentContext;
@@ -115,13 +128,12 @@ ExpressionSyntax& Parser::parseSubExpression(bitmask<ExpressionOptions> options,
 
         // take the operator
         if (opKind == SyntaxKind::InsideExpression)
-            leftOperand = &parseInsideExpression(*leftOperand);
+            left = &parseInsideExpression(*left);
         else {
             auto opToken = consume();
             auto attributes = parseAttributes();
             auto& rightOperand = parseSubExpression(options, newPrecedence);
-            leftOperand =
-                &factory.binaryExpression(opKind, *leftOperand, opToken, attributes, rightOperand);
+            left = &factory.binaryExpression(opKind, *left, opToken, attributes, rightOperand);
         }
     }
 
@@ -129,7 +141,7 @@ ExpressionSyntax& Parser::parseSubExpression(bitmask<ExpressionOptions> options,
     // Only do this if we're not already within a conditional pattern context, and if
     // we're at the right precedence level (one lower than a logical-or) to take it.
     int logicalOrPrecedence = getPrecedence(SyntaxKind::LogicalOrExpression);
-    if ((options & ExpressionOptions::PatternContext) == 0 && precedence < logicalOrPrecedence) {
+    if (!options.has(ExpressionOptions::PatternContext) && precedence < logicalOrPrecedence) {
         // If this is the start of a pattern predicate, check whether there's actually a
         // question mark coming up. Otherwise we might be a predicate inside a
         // statement which doesn't need the question.
@@ -139,55 +151,19 @@ ExpressionSyntax& Parser::parseSubExpression(bitmask<ExpressionOptions> options,
 
         if (takeConditional) {
             Token question;
-            auto& predicate =
-                parseConditionalPredicate(*leftOperand, TokenKind::Question, question);
+            auto& predicate = parseConditionalPredicate(*left, TokenKind::Question, question);
             auto attributes = parseAttributes();
-            auto& left = parseSubExpression(options, logicalOrPrecedence - 1);
+            auto& lhs = parseSubExpression(options, logicalOrPrecedence - 1);
             auto colon = expect(TokenKind::Colon);
-            auto& right = parseSubExpression(options, logicalOrPrecedence - 1);
-            leftOperand =
-                &factory.conditionalExpression(predicate, question, attributes, left, colon, right);
+            auto& rhs = parseSubExpression(options, logicalOrPrecedence - 1);
+            left = &factory.conditionalExpression(predicate, question, attributes, lhs, colon, rhs);
         }
     }
 
-    return *leftOperand;
+    return *left;
 }
 
-ExpressionSyntax& Parser::parsePrefixExpression(SyntaxKind opKind) {
-    switch (opKind) {
-        case SyntaxKind::UnarySequenceDelayExpression:
-        case SyntaxKind::UnarySequenceEventExpression: {
-            auto timing = parseTimingControl(/* isSequenceExpr */ true);
-            ASSERT(timing);
-            return factory.timingControlExpression(*timing, parseExpression());
-        }
-        case SyntaxKind::NextTimePropertyExpression:
-        case SyntaxKind::SNextTimePropertyExpression:
-        case SyntaxKind::AlwaysPropertyExpression:
-        case SyntaxKind::SAlwaysPropertyExpression:
-        case SyntaxKind::EventuallyPropertyExpression:
-        case SyntaxKind::SEventuallyPropertyExpression:
-            // TODO:
-            break;
-        case SyntaxKind::AcceptOnPropertyExpression:
-        case SyntaxKind::RejectOnPropertyExpression:
-        case SyntaxKind::SyncAcceptOnPropertyExpression:
-        case SyntaxKind::SyncRejectOnPropertyExpression:
-            // TODO:
-            break;
-        default:
-            break;
-    }
-
-    auto opToken = consume();
-    auto attributes = parseAttributes();
-
-    ExpressionSyntax& operand = parsePrimaryExpression(false);
-    ExpressionSyntax& postfix = parsePostfixExpression(operand);
-    return factory.prefixUnaryExpression(opKind, opToken, attributes, postfix);
-}
-
-ExpressionSyntax& Parser::parsePrimaryExpression(bool disallowVector) {
+ExpressionSyntax& Parser::parsePrimaryExpression(bitmask<ExpressionOptions> options) {
     TokenKind kind = peek().kind;
     switch (kind) {
         case TokenKind::StringLiteral:
@@ -206,7 +182,7 @@ ExpressionSyntax& Parser::parsePrimaryExpression(bool disallowVector) {
                                              numberParser.parseReal(*this));
         case TokenKind::IntegerLiteral:
         case TokenKind::IntegerBase:
-            return parseIntegerExpression(disallowVector);
+            return parseIntegerExpression(options.has(ExpressionOptions::DisallowVectors));
         case TokenKind::OpenParenthesis: {
             auto openParen = consume();
             auto expr = &parseMinTypMaxExpression();
@@ -274,8 +250,12 @@ ExpressionSyntax& Parser::parsePrimaryExpression(bool disallowVector) {
                     return type;
             }
             else {
+                bitmask<NameOptions> nameOptions = NameOptions::ExpectingExpression;
+                if (options.has(ExpressionOptions::SequenceExpr))
+                    nameOptions |= NameOptions::SequenceExpr;
+
                 // parseName() will insert a missing identifier token for the error case
-                auto& name = parseName(NameOptions::ExpectingExpression);
+                auto& name = parseName(nameOptions);
                 if (peek(TokenKind::ApostropheOpenBrace))
                     return parseAssignmentPatternExpression(&factory.namedType(name));
                 else {
@@ -514,11 +494,28 @@ SelectorSyntax* Parser::parseElementSelector() {
     }
 }
 
-ExpressionSyntax& Parser::parsePostfixExpression(ExpressionSyntax& lhs) {
+bool Parser::isSequenceRepetition() {
+    switch (peek(1).kind) {
+        case TokenKind::Star:
+        case TokenKind::Equals:
+        case TokenKind::MinusArrow:
+            return true;
+        case TokenKind::Plus:
+            return peek(2).kind == TokenKind::CloseBracket;
+        default:
+            return false;
+    }
+}
+
+ExpressionSyntax& Parser::parsePostfixExpression(ExpressionSyntax& lhs,
+                                                 bitmask<ExpressionOptions> options) {
     ExpressionSyntax* expr = &lhs;
     while (true) {
         switch (peek().kind) {
             case TokenKind::OpenBracket:
+                if (options.has(ExpressionOptions::SequenceExpr) && isSequenceRepetition())
+                    return *expr;
+
                 expr = &factory.elementSelectExpression(*expr, parseElementSelect());
                 break;
             case TokenKind::Dot: {
@@ -578,13 +575,9 @@ ExpressionSyntax& Parser::parsePostfixExpression(ExpressionSyntax& lhs) {
                     return *expr;
                 expr = &parseArrayOrRandomizeMethod(*expr);
                 break;
-            case TokenKind::DoubleHash: {
-                auto timing = parseTimingControl(/* isSequenceExpr */ true);
-                ASSERT(timing);
-                expr = &factory.timingControlExpressionConcatenation(*expr, *timing,
-                                                                     parseExpression());
-                break;
-            }
+
+                // NOTE: If you add a case here, check whether it needs to be added to
+                // isBinaryOrPostfixExpression as well.
             default:
                 return *expr;
         }
@@ -709,7 +702,7 @@ NameSyntax& Parser::parseNamePart(bitmask<NameOptions> options) {
         identifier = consume();
     }
     else if (next != TokenKind::Dot && next != TokenKind::DoubleColon &&
-             (options & NameOptions::ExpectingExpression)) {
+             options.has(NameOptions::ExpectingExpression)) {
         if (!haveDiagAtCurrentLoc())
             addDiag(diag::ExpectedExpression, peek().location());
         identifier = Token::createMissing(alloc, TokenKind::Identifier, peek().location());
@@ -725,9 +718,12 @@ NameSyntax& Parser::parseNamePart(bitmask<NameOptions> options) {
             return factory.className(identifier, *parameterValues);
         }
         case TokenKind::OpenBracket: {
+            if (options.has(NameOptions::SequenceExpr) && isSequenceRepetition())
+                return factory.identifierName(identifier);
+
             uint32_t index = 1;
             scanTypePart<isSemicolon>(index, TokenKind::OpenBracket, TokenKind::CloseBracket);
-            if ((options & NameOptions::ForeachName) == 0 ||
+            if (!options.has(NameOptions::ForeachName) ||
                 peek(index).kind != TokenKind::CloseParenthesis) {
 
                 SmallVectorSized<ElementSelectSyntax*, 4> buffer;
@@ -792,7 +788,7 @@ ArgumentSyntax& Parser::parseArgument(bool isParamAssignment, bool allowClocking
     }
 
     if (allowClocking && peek(TokenKind::At)) {
-        auto timing = parseTimingControl(/* isSequenceExpr */ false);
+        auto timing = parseTimingControl();
         ASSERT(timing);
         return factory.clockingEventArgument(*timing);
     }
@@ -874,12 +870,12 @@ EventExpressionSyntax& Parser::parseEventExpression() {
     }
     else {
         Token edge = parseEdgeKeyword();
-        auto& expr = parseSubExpression(ExpressionOptions::EventExpressionContext, 0);
+        auto& expr = parseExpression();
 
         IffEventClauseSyntax* iffClause = nullptr;
         if (peek(TokenKind::IffKeyword)) {
             auto iff = consume();
-            auto& iffExpr = parseSubExpression(ExpressionOptions::EventExpressionContext, 0);
+            auto& iffExpr = parseExpression();
             iffClause = &factory.iffEventClause(iff, iffExpr);
         }
 
@@ -945,30 +941,16 @@ ExpressionSyntax& Parser::parseNewExpression(NameSyntax& newKeyword,
     return factory.newClassExpression(newKeyword, nullptr);
 }
 
-TimingControlSyntax* Parser::parseTimingControl(bool isSequenceExpr) {
+TimingControlSyntax* Parser::parseTimingControl() {
     switch (peek().kind) {
         case TokenKind::Hash:
         case TokenKind::DoubleHash: {
             auto hash = consume();
-            ExpressionSyntax* delay;
-            if (hash.kind == TokenKind::DoubleHash && peek(TokenKind::OpenBracket)) {
-                if (peek(1).kind == TokenKind::Star || peek(1).kind == TokenKind::Plus) {
-                    Token openBracket = consume();
-                    Token op = consume();
-                    return &factory.shortcutCycleDelayRange(hash, openBracket, op,
-                                                            expect(TokenKind::CloseBracket));
-                }
-                else {
-                    delay = &parseOpenRangeElement();
-                }
-            }
-            else {
-                delay = &parsePrimaryExpression(!isSequenceExpr);
-            }
-
-            SyntaxKind kind =
+            auto& delay = parsePrimaryExpression(ExpressionOptions::DisallowVectors);
+            auto kind =
                 hash.kind == TokenKind::Hash ? SyntaxKind::DelayControl : SyntaxKind::CycleDelay;
-            return &factory.delay(kind, hash, *delay);
+
+            return &factory.delay(kind, hash, delay);
         }
         case TokenKind::At: {
             auto at = consume();
@@ -1004,7 +986,7 @@ TimingControlSyntax* Parser::parseTimingControl(bool isSequenceExpr) {
             auto& expr = parseExpression();
             auto closeParen = expect(TokenKind::CloseParenthesis);
             return &factory.repeatedEventControl(repeat, openParen, expr, closeParen,
-                                                 parseTimingControl(/* isSequenceExpr */ false));
+                                                 parseTimingControl());
         }
         default:
             return nullptr;
@@ -1066,6 +1048,408 @@ bool Parser::isConditionalExpression() {
                 break;
         }
     }
+}
+
+SequenceExprSyntax& Parser::parseDelayedSequenceExpr(SequenceExprSyntax* first) {
+    SmallVectorSized<DelayedSequenceElementSyntax*, 4> elements;
+    do {
+        Token op, openBracket, closeBracket;
+        SelectorSyntax* selector = nullptr;
+        ExpressionSyntax* delayVal = nullptr;
+
+        auto hash = expect(TokenKind::DoubleHash);
+
+        if (peek(TokenKind::OpenBracket)) {
+            openBracket = consume();
+            if ((peek(TokenKind::Star) || peek(TokenKind::Plus)) &&
+                peek(1).kind == TokenKind::CloseBracket) {
+                op = consume();
+            }
+            else {
+                selector = parseElementSelector();
+            }
+            closeBracket = expect(TokenKind::CloseBracket);
+        }
+        else {
+            delayVal = &parsePrimaryExpression(ExpressionOptions::None);
+        }
+
+        auto& expr = parseSequencePrimary();
+        elements.append(&factory.delayedSequenceElement(hash, delayVal, openBracket, op, selector,
+                                                        closeBracket, expr));
+
+    } while (peek(TokenKind::DoubleHash));
+
+    return factory.delayedSequenceExpr(first, elements.copy(alloc));
+}
+
+static bool isBinaryOrPostfixExpression(TokenKind kind) {
+    // NOTE: This deliberately does not include the open bracket because
+    // this function is only called on tokens that occur right after a
+    // parenthesized expression ends, in a sequence or property context.
+    // In those places, an open bracket means something else.
+    switch (kind) {
+        case TokenKind::Dot:
+        case TokenKind::OpenParenthesis:
+        case TokenKind::OpenParenthesisStar:
+        case TokenKind::Apostrophe:
+        case TokenKind::DistKeyword:
+        case TokenKind::Question:
+            return true;
+        default:
+            return SyntaxFacts::getBinaryExpression(kind) != SyntaxKind::Unknown;
+    }
+}
+
+ExpressionSyntax& Parser::fixParenthesizedExpression(const SimpleSequenceExprSyntax& source,
+                                                     Token openParen) {
+    ExpressionSyntax* result = source.expr;
+    result =
+        &factory.parenthesizedExpression(openParen, *result, expect(TokenKind::CloseParenthesis));
+    result = &parsePostfixExpression(*result, ExpressionOptions::SequenceExpr);
+    result = &parseBinaryExpression(result, ExpressionOptions::SequenceExpr, 0);
+
+    if (!peek(TokenKind::DistKeyword))
+        return *result;
+
+    auto& dist = parseDistConstraintList();
+    return factory.expressionOrDist(*result, dist);
+}
+
+SequenceMatchListSyntax* Parser::parseSequenceMatchList(Token& closeParen) {
+    if (!peek(TokenKind::Comma)) {
+        closeParen = expect(TokenKind::CloseParenthesis);
+        return nullptr;
+    }
+
+    Token comma;
+    span<TokenOrSyntax> list;
+    parseList<isPossibleExpressionOrComma, isEndOfParenList>(
+        TokenKind::Comma, TokenKind::CloseParenthesis, TokenKind::Comma, comma, list, closeParen,
+        RequireItems::True, diag::ExpectedExpression, [this] { return &parseExpression(); });
+
+    return &factory.sequenceMatchList(comma, list);
+}
+
+SequenceRepetitionSyntax* Parser::parseSequenceRepetition() {
+    if (!peek(TokenKind::OpenBracket))
+        return nullptr;
+
+    auto openBracket = consume();
+
+    Token op;
+    switch (peek().kind) {
+        case TokenKind::Plus:
+        case TokenKind::Equals:
+        case TokenKind::MinusArrow:
+            op = consume();
+            break;
+        default:
+            op = expect(TokenKind::Star);
+            break;
+    }
+
+    auto selector = parseElementSelector();
+    auto closeBracket = expect(TokenKind::CloseBracket);
+    return &factory.sequenceRepetition(openBracket, op, selector, closeBracket);
+}
+
+SequenceExprSyntax& Parser::parseSequencePrimary() {
+    auto current = peek();
+    switch (current.kind) {
+        case TokenKind::DoubleHash:
+            return parseDelayedSequenceExpr(nullptr);
+        case TokenKind::At: {
+            auto event = parseTimingControl();
+            ASSERT(event);
+            return factory.clockingSequenceExpr(*event,
+                                                parseSequenceExpr(0, /* isInProperty */ false));
+        }
+        case TokenKind::FirstMatchKeyword: {
+            auto keyword = consume();
+            auto openParen = consume();
+            auto& expr = parseSequenceExpr(0, /* isInProperty */ false);
+
+            Token closeParen;
+            auto matchList = parseSequenceMatchList(closeParen);
+            return factory.firstMatchSequenceExpr(keyword, openParen, expr, matchList, closeParen);
+        }
+        case TokenKind::OpenParenthesis: {
+            auto openParen = consume();
+            auto& expr = parseSequenceExpr(0, /* isInProperty */ false);
+
+            // There is ambiguity between parenthesized sequence expressions and normal
+            // expressions. To resolve, we need to see if we are at the end of the
+            // parenthesis and what comes after can only be another piece of the expression.
+            if (expr.kind == SyntaxKind::SimpleSequenceExpr && peek(TokenKind::CloseParenthesis) &&
+                isBinaryOrPostfixExpression(peek(1).kind)) {
+                auto& fixed =
+                    fixParenthesizedExpression(expr.as<SimpleSequenceExprSyntax>(), openParen);
+
+                auto repetition = parseSequenceRepetition();
+                return factory.simpleSequenceExpr(fixed, repetition);
+            }
+
+            Token closeParen;
+            auto matchList = parseSequenceMatchList(closeParen);
+
+            auto repetition = parseSequenceRepetition();
+            return factory.parenthesizedSequenceExpr(openParen, expr, matchList, closeParen,
+                                                     repetition);
+        }
+        default: {
+            auto& expr = parseExpressionOrDist(ExpressionOptions::SequenceExpr);
+            auto repetition = parseSequenceRepetition();
+            return factory.simpleSequenceExpr(expr, repetition);
+        }
+    }
+}
+
+SequenceExprSyntax& Parser::parseSequenceExpr(int precedence, bool isInProperty) {
+    auto dg = setDepthGuard();
+
+    auto left = &parseSequencePrimary();
+    if (peek(TokenKind::DoubleHash))
+        left = &parseDelayedSequenceExpr(left);
+
+    while (true) {
+        // either a binary operator, or we're done
+        auto opKind = getBinarySequenceExpr(peek().kind);
+        if (opKind == SyntaxKind::Unknown)
+            break;
+
+        // Inside a property, we don't consume an "and" or "or" expression because
+        // we want the parent property parser to get a chance at it.
+        if (isInProperty &&
+            (opKind == SyntaxKind::AndSequenceExpr || opKind == SyntaxKind::OrSequenceExpr)) {
+            break;
+        }
+
+        // see if we should take this operator or if it's part of our parent due to precedence
+        int newPrecedence = getPrecedence(opKind);
+        if (newPrecedence < precedence)
+            break;
+
+        // if we have a precedence tie, check associativity
+        if (newPrecedence == precedence && !isRightAssociative(opKind))
+            break;
+
+        // take the operator
+        auto opToken = consume();
+        auto& right = parseSequenceExpr(newPrecedence, isInProperty);
+        left = &factory.binarySequenceExpr(opKind, *left, opToken, right);
+    }
+
+    return *left;
+}
+
+PropertyExprSyntax& Parser::parseCasePropertyExpr() {
+    auto keyword = consume();
+    auto openParen = expect(TokenKind::OpenParenthesis);
+    auto& condition = parseExpressionOrDist();
+    auto closeParen = expect(TokenKind::CloseParenthesis);
+
+    SmallVectorSized<PropertyCaseItemSyntax*, 8> itemBuffer;
+    SourceLocation lastDefault;
+    bool errored = false;
+
+    while (true) {
+        auto kind = peek().kind;
+        if (kind == TokenKind::DefaultKeyword) {
+            if (lastDefault && !errored) {
+                auto& diag = addDiag(diag::MultipleDefaultCases, peek().location()) << "case"sv;
+                diag.addNote(diag::NotePreviousDefinition, lastDefault);
+                errored = true;
+            }
+
+            lastDefault = peek().location();
+
+            auto def = consume();
+            auto colon = consumeIf(TokenKind::Colon);
+            auto& expr = parsePropertyExpr(0);
+            auto semi = expect(TokenKind::Semicolon);
+            itemBuffer.append(&factory.defaultPropertyCaseItem(def, colon, expr, semi));
+        }
+        else if (isPossibleExpression(kind)) {
+            Token colon;
+            SmallVectorSized<TokenOrSyntax, 8> buffer;
+            parseList<isPossibleExpressionOrComma, isEndOfCaseItem>(
+                buffer, TokenKind::Colon, TokenKind::Comma, colon, RequireItems::True,
+                diag::ExpectedExpression, [this] { return &parseExpressionOrDist(); });
+
+            auto& expr = parsePropertyExpr(0);
+            auto semi = expect(TokenKind::Semicolon);
+            itemBuffer.append(
+                &factory.standardPropertyCaseItem(buffer.copy(alloc), colon, expr, semi));
+        }
+        else {
+            break;
+        }
+    }
+
+    if (itemBuffer.empty())
+        addDiag(diag::CaseStatementEmpty, keyword.location()) << "case"sv;
+
+    auto endcase = expect(TokenKind::EndCaseKeyword);
+    return factory.casePropertyExpr(keyword, openParen, condition, closeParen,
+                                    itemBuffer.copy(alloc), endcase);
+}
+
+PropertyExprSyntax& Parser::parsePropertyPrimary() {
+    auto current = peek();
+    switch (current.kind) {
+        case TokenKind::At: {
+            auto event = parseTimingControl();
+            ASSERT(event);
+            return factory.clockingPropertyExpr(*event, parsePropertyExpr(0));
+        }
+        case TokenKind::OpenParenthesis: {
+            auto openParen = consume();
+            auto& expr = parsePropertyExpr(0);
+
+            // There is ambiguity between parenthesized property expressions and normal
+            // expressions. To resolve, we need to see if we are at the end of the
+            // parenthesis and what comes after can only be another piece of the expression.
+            if (expr.kind == SyntaxKind::SimplePropertyExpr && peek(TokenKind::CloseParenthesis) &&
+                isBinaryOrPostfixExpression(peek(1).kind)) {
+                auto& simpProp = expr.as<SimplePropertyExprSyntax>();
+                if (simpProp.expr->kind == SyntaxKind::SimpleSequenceExpr) {
+                    auto& fixed = fixParenthesizedExpression(
+                        simpProp.expr->as<SimpleSequenceExprSyntax>(), openParen);
+
+                    auto& simpSeq = factory.simpleSequenceExpr(fixed, nullptr);
+                    return factory.simplePropertyExpr(simpSeq);
+                }
+            }
+
+            // Similarly, this could have been a parenthesized sequence expression
+            // instead, in which case we would fail if there is sequence-specific
+            // tokens up next instead of a closing parenthesis.
+            if (expr.kind == SyntaxKind::SimplePropertyExpr &&
+                (peek(TokenKind::Comma) ||
+                 (peek(TokenKind::CloseParenthesis) && peek(1).kind == TokenKind::OpenBracket))) {
+                auto& seqExpr = *expr.as<SimplePropertyExprSyntax>().expr;
+
+                Token closeParen;
+                auto matchList = parseSequenceMatchList(closeParen);
+                auto repetition = parseSequenceRepetition();
+                auto& parenSeqExpr = factory.parenthesizedSequenceExpr(
+                    openParen, seqExpr, matchList, closeParen, repetition);
+
+                return factory.simplePropertyExpr(parenSeqExpr);
+            }
+
+            auto closeParen = expect(TokenKind::CloseParenthesis);
+            return factory.parenthesizedPropertyExpr(openParen, expr, closeParen);
+        }
+        case TokenKind::StrongKeyword:
+        case TokenKind::WeakKeyword: {
+            auto keyword = consume();
+            auto openParen = consume();
+            auto& expr = parseSequenceExpr(0, /* isInProperty */ false);
+            auto closeParen = expect(TokenKind::CloseParenthesis);
+            return factory.strongWeakPropertyExpr(keyword, openParen, expr, closeParen);
+        }
+        case TokenKind::NotKeyword: {
+            auto op = consume();
+            auto& expr = parsePropertyPrimary();
+            return factory.unaryPropertyExpr(op, expr);
+        }
+        case TokenKind::NextTimeKeyword:
+        case TokenKind::SNextTimeKeyword: {
+            auto op = consume();
+            if (peek(TokenKind::OpenBracket)) {
+                auto openBracket = consume();
+                auto selector = parseElementSelector();
+                auto closeBracket = expect(TokenKind::CloseBracket);
+                auto& expr = parsePropertyPrimary();
+                return factory.unarySelectPropertyExpr(op, openBracket, selector, closeBracket,
+                                                       expr);
+            }
+
+            auto& expr = parsePropertyPrimary();
+            return factory.unaryPropertyExpr(op, expr);
+        }
+        case TokenKind::AlwaysKeyword:
+        case TokenKind::SAlwaysKeyword:
+        case TokenKind::EventuallyKeyword:
+        case TokenKind::SEventuallyKeyword: {
+            auto op = consume();
+            if (peek(TokenKind::OpenBracket)) {
+                auto openBracket = consume();
+                auto selector = parseElementSelector();
+                auto closeBracket = expect(TokenKind::CloseBracket);
+                auto& expr = parsePropertyExpr(0);
+                return factory.unarySelectPropertyExpr(op, openBracket, selector, closeBracket,
+                                                       expr);
+            }
+
+            auto& expr = parsePropertyExpr(0);
+            return factory.unaryPropertyExpr(op, expr);
+        }
+        case TokenKind::AcceptOnKeyword:
+        case TokenKind::RejectOnKeyword:
+        case TokenKind::SyncAcceptOnKeyword:
+        case TokenKind::SyncRejectOnKeyword: {
+            auto keyword = consume();
+            auto openParen = consume();
+            auto& condition = parseExpressionOrDist();
+            auto closeParen = expect(TokenKind::CloseParenthesis);
+            auto& expr = parsePropertyExpr(0);
+            return factory.acceptOnPropertyExpr(keyword, openParen, condition, closeParen, expr);
+        }
+        case TokenKind::IfKeyword: {
+            auto keyword = consume();
+            auto openParen = consume();
+            auto& condition = parseExpressionOrDist();
+            auto closeParen = expect(TokenKind::CloseParenthesis);
+            auto& expr = parsePropertyExpr(0);
+
+            ElsePropertyClauseSyntax* elseClause = nullptr;
+            if (peek(TokenKind::ElseKeyword)) {
+                auto elseKeyword = consume();
+                auto& elseExpr = parsePropertyExpr(0);
+                elseClause = &factory.elsePropertyClause(elseKeyword, elseExpr);
+            }
+
+            return factory.conditionalPropertyExpr(keyword, openParen, condition, closeParen, expr,
+                                                   elseClause);
+        }
+        case TokenKind::CaseKeyword:
+            return parseCasePropertyExpr();
+        default: {
+            auto& expr = parseSequenceExpr(0, /* isInProperty */ true);
+            return factory.simplePropertyExpr(expr);
+        }
+    }
+}
+
+PropertyExprSyntax& Parser::parsePropertyExpr(int precedence) {
+    auto dg = setDepthGuard();
+
+    auto left = &parsePropertyPrimary();
+    while (true) {
+        // either a binary operator, or we're done
+        auto opKind = getBinaryPropertyExpr(peek().kind);
+        if (opKind == SyntaxKind::Unknown)
+            break;
+
+        // see if we should take this operator or if it's part of our parent due to precedence
+        int newPrecedence = getPrecedence(opKind);
+        if (newPrecedence < precedence)
+            break;
+
+        // if we have a precedence tie, check associativity
+        if (newPrecedence == precedence && !isRightAssociative(opKind))
+            break;
+
+        // take the operator
+        auto opToken = consume();
+        auto& right = parsePropertyExpr(newPrecedence);
+        left = &factory.binaryPropertyExpr(opKind, *left, opToken, right);
+    }
+
+    return *left;
 }
 
 } // namespace slang

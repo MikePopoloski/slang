@@ -632,7 +632,7 @@ TimingControlSyntax* Parser::parseDelay3() {
         return nullptr;
 
     if (peek(1).kind != TokenKind::OpenParenthesis)
-        return parseTimingControl(/* isSequenceExpr */ false);
+        return parseTimingControl();
 
     auto hash = consume();
     auto openParen = consume();
@@ -659,7 +659,7 @@ TimingControlSyntax* Parser::parseDelay3() {
 MemberSyntax& Parser::parseNetDeclaration(AttrList attributes) {
     auto netType = consume();
     if (netType.kind == TokenKind::Identifier) {
-        auto delay = parseTimingControl(/* isSequenceExpr */ false);
+        auto delay = parseTimingControl();
         ASSERT(delay);
 
         Token semi;
