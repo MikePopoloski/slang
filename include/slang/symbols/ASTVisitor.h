@@ -165,6 +165,8 @@ decltype(auto) Symbol::visit(TVisitor&& visitor, Args&&... args) const {
         SYMBOL(PrimitivePort);
         SYMBOL(PrimitiveInstance);
         SYMBOL(SpecifyBlock);
+        SYMBOL(Sequence);
+        SYMBOL(Property);
         TYPE(PredefinedIntegerType);
         TYPE(ScalarType);
         TYPE(FloatingType);

@@ -395,6 +395,12 @@ void Scope::addMembers(const SyntaxNode& syntax) {
         case SyntaxKind::SpecifyBlock:
             addMember(SpecifyBlockSymbol::fromSyntax(*this, syntax.as<SpecifyBlockSyntax>()));
             break;
+        case SyntaxKind::SequenceDeclaration:
+            addMember(SequenceSymbol::fromSyntax(*this, syntax.as<SequenceDeclarationSyntax>()));
+            break;
+        case SyntaxKind::PropertyDeclaration:
+            addMember(PropertySymbol::fromSyntax(*this, syntax.as<PropertyDeclarationSyntax>()));
+            break;
         case SyntaxKind::ConcurrentAssertionMember:
         case SyntaxKind::ImmediateAssertionMember:
         case SyntaxKind::PulseStyleDeclaration:

@@ -249,4 +249,32 @@ public:
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::SpecifyBlock; }
 };
 
+struct SequenceDeclarationSyntax;
+
+/// Represents a named sequence object.
+class SequenceSymbol : public Symbol, public Scope {
+public:
+    SequenceSymbol(Compilation& compilation, string_view name, SourceLocation loc);
+
+    static SequenceSymbol& fromSyntax(Scope& scope, const SequenceDeclarationSyntax& syntax);
+
+    void serializeTo(ASTSerializer& serializer) const;
+
+    static bool isKind(SymbolKind kind) { return kind == SymbolKind::Sequence; }
+};
+
+struct PropertyDeclarationSyntax;
+
+/// Represents a named property object.
+class PropertySymbol : public Symbol, public Scope {
+public:
+    PropertySymbol(Compilation& compilation, string_view name, SourceLocation loc);
+
+    static PropertySymbol& fromSyntax(Scope& scope, const PropertyDeclarationSyntax& syntax);
+
+    void serializeTo(ASTSerializer& serializer) const;
+
+    static bool isKind(SymbolKind kind) { return kind == SymbolKind::Property; }
+};
+
 } // namespace slang

@@ -789,4 +789,40 @@ SpecifyBlockSymbol& SpecifyBlockSymbol::fromSyntax(Scope& scope, const SpecifyBl
     return *result;
 }
 
+SequenceSymbol::SequenceSymbol(Compilation& compilation, string_view name, SourceLocation loc) :
+    Symbol(SymbolKind::Sequence, name, loc), Scope(compilation, this) {
+}
+
+SequenceSymbol& SequenceSymbol::fromSyntax(Scope& scope, const SequenceDeclarationSyntax& syntax) {
+    // TODO: fill in body
+    auto& comp = scope.getCompilation();
+    auto result =
+        comp.emplace<SequenceSymbol>(comp, syntax.name.valueText(), syntax.name.location());
+    result->setSyntax(syntax);
+
+    return *result;
+}
+
+void SequenceSymbol::serializeTo(ASTSerializer&) const {
+    // TODO:
+}
+
+PropertySymbol::PropertySymbol(Compilation& compilation, string_view name, SourceLocation loc) :
+    Symbol(SymbolKind::Property, name, loc), Scope(compilation, this) {
+}
+
+PropertySymbol& PropertySymbol::fromSyntax(Scope& scope, const PropertyDeclarationSyntax& syntax) {
+    // TODO: fill in body
+    auto& comp = scope.getCompilation();
+    auto result =
+        comp.emplace<PropertySymbol>(comp, syntax.name.valueText(), syntax.name.location());
+    result->setSyntax(syntax);
+
+    return *result;
+}
+
+void PropertySymbol::serializeTo(ASTSerializer&) const {
+    // TODO:
+}
+
 } // namespace slang

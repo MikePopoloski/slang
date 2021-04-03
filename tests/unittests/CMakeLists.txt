@@ -1,4 +1,5 @@
 add_executable(unittests
+    AssertionTests.cpp
     ClassTests.cpp
     DiagnosticTests.cpp
     EvalTests.cpp
@@ -21,7 +22,7 @@ add_executable(unittests
     TypeTests.cpp
     UtilTests.cpp
     VisitorTests.cpp
-)
+ "AssertionTests.cpp")
 
 target_link_libraries(unittests PRIVATE slangcompiler)
 
