@@ -57,6 +57,8 @@ const DeclaredType* Symbol::getDeclaredType() const {
             return &as<NetType>().declaredType;
         case SymbolKind::TypeParameter:
             return &as<TypeParameterSymbol>().targetType;
+        case SymbolKind::AssertionPort:
+            return &as<AssertionPortSymbol>().declaredType;
         default:
             if (isValue())
                 return as<ValueSymbol>().getDeclaredType();

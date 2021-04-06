@@ -167,6 +167,7 @@ decltype(auto) Symbol::visit(TVisitor&& visitor, Args&&... args) const {
         SYMBOL(SpecifyBlock);
         SYMBOL(Sequence);
         SYMBOL(Property);
+        SYMBOL(AssertionPort);
         TYPE(PredefinedIntegerType);
         TYPE(ScalarType);
         TYPE(FloatingType);
@@ -188,6 +189,7 @@ decltype(auto) Symbol::visit(TVisitor&& visitor, Args&&... args) const {
         TYPE(EventType);
         TYPE(UnboundedType);
         TYPE(TypeRefType);
+        TYPE(UntypedType);
         TYPE(VirtualInterfaceType);
         TYPE(ErrorType);
         TYPE(NetType);

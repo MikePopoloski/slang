@@ -65,6 +65,7 @@ Compilation::Compilation(const Bag& options) :
     eventType = emplace<EventType>();
     unboundedType = emplace<UnboundedType>();
     typeRefType = emplace<TypeRefType>();
+    untypedType = emplace<UntypedType>();
     errorType = emplace<ErrorType>();
 
     // Register built-in types for lookup by syntax kind.
@@ -84,6 +85,7 @@ Compilation::Compilation(const Bag& options) :
     knownTypes[SyntaxKind::CHandleType] = chandleType;
     knownTypes[SyntaxKind::VoidType] = voidType;
     knownTypes[SyntaxKind::EventType] = eventType;
+    knownTypes[SyntaxKind::Untyped] = untypedType;
     knownTypes[SyntaxKind::Unknown] = errorType;
 
 #define MAKE_NETTYPE(type)                                               \

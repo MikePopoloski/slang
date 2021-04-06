@@ -789,17 +789,67 @@ SpecifyBlockSymbol& SpecifyBlockSymbol::fromSyntax(Scope& scope, const SpecifyBl
     return *result;
 }
 
+AssertionPortSymbol::AssertionPortSymbol(string_view name, SourceLocation loc) :
+    Symbol(SymbolKind::AssertionPort, name, loc), declaredType(*this) {
+}
+
+void AssertionPortSymbol::buildPorts(Scope& scope, const AssertionItemPortListSyntax& syntax,
+                                     SmallVector<const AssertionPortSymbol*>& results) {
+    auto isEmpty = [](const DataTypeSyntax& syntax) {
+        if (syntax.kind != SyntaxKind::ImplicitType)
+            return false;
+
+        auto& implicit = syntax.as<ImplicitTypeSyntax>();
+        return !implicit.signing && implicit.dimensions.empty();
+    };
+
+    auto& comp = scope.getCompilation();
+    const DataTypeSyntax* lastType = nullptr;
+    for (auto item : syntax.ports) {
+        // TODO: local / direction
+        auto nameToken = item->declarator->name;
+        auto port = comp.emplace<AssertionPortSymbol>(nameToken.valueText(), nameToken.location());
+        port->setSyntax(*item);
+        port->setAttributes(scope, item->attributes);
+        port->declaredType.setFromDeclarator(*item->declarator);
+
+        if (isEmpty(*item->type)) {
+            if (lastType)
+                port->declaredType.setTypeSyntax(*lastType);
+            else
+                port->declaredType.setType(comp.getUntypedType());
+        }
+        else {
+            port->declaredType.setTypeSyntax(*item->type);
+            lastType = item->type;
+        }
+
+        scope.addMember(*port);
+        results.append(port);
+    }
+}
+
+void AssertionPortSymbol::serializeTo(ASTSerializer&) const {
+    // TODO:
+}
+
 SequenceSymbol::SequenceSymbol(Compilation& compilation, string_view name, SourceLocation loc) :
     Symbol(SymbolKind::Sequence, name, loc), Scope(compilation, this) {
 }
 
-SequenceSymbol& SequenceSymbol::fromSyntax(Scope& scope, const SequenceDeclarationSyntax& syntax) {
+SequenceSymbol& SequenceSymbol::fromSyntax(const Scope& scope,
+                                           const SequenceDeclarationSyntax& syntax) {
     // TODO: fill in body
     auto& comp = scope.getCompilation();
     auto result =
         comp.emplace<SequenceSymbol>(comp, syntax.name.valueText(), syntax.name.location());
     result->setSyntax(syntax);
 
+    SmallVectorSized<const AssertionPortSymbol*, 4> ports;
+    if (syntax.portList)
+        AssertionPortSymbol::buildPorts(*result, *syntax.portList, ports);
+
+    result->ports = ports.copy(comp);
     return *result;
 }
 
@@ -811,13 +861,19 @@ PropertySymbol::PropertySymbol(Compilation& compilation, string_view name, Sourc
     Symbol(SymbolKind::Property, name, loc), Scope(compilation, this) {
 }
 
-PropertySymbol& PropertySymbol::fromSyntax(Scope& scope, const PropertyDeclarationSyntax& syntax) {
+PropertySymbol& PropertySymbol::fromSyntax(const Scope& scope,
+                                           const PropertyDeclarationSyntax& syntax) {
     // TODO: fill in body
     auto& comp = scope.getCompilation();
     auto result =
         comp.emplace<PropertySymbol>(comp, syntax.name.valueText(), syntax.name.location());
     result->setSyntax(syntax);
 
+    SmallVectorSized<const AssertionPortSymbol*, 4> ports;
+    if (syntax.portList)
+        AssertionPortSymbol::buildPorts(*result, *syntax.portList, ports);
+
+    result->ports = ports.copy(comp);
     return *result;
 }
 

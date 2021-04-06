@@ -1836,61 +1836,61 @@ ElabSystemTaskSyntax* Parser::parseElabSystemTask(AttrList attributes) {
     return &factory.elabSystemTask(attributes, nameToken, argList, expect(TokenKind::Semicolon));
 }
 
+AssertionItemPortSyntax& Parser::parseAssertionItemPort(TokenKind declarationKind) {
+    auto attributes = parseAttributes();
+    Token local;
+    Token direction;
+    if (declarationKind == TokenKind::PropertyKeyword ||
+        declarationKind == TokenKind::SequenceKeyword) {
+        local = consumeIf(TokenKind::LocalKeyword);
+        if (local && (peek(TokenKind::InputKeyword) ||
+                      (declarationKind == TokenKind::SequenceKeyword &&
+                       (peek(TokenKind::OutputKeyword) || peek(TokenKind::InOutKeyword))))) {
+            direction = consume();
+        }
+    }
+
+    DataTypeSyntax* type;
+    switch (peek().kind) {
+        case TokenKind::PropertyKeyword:
+            if (declarationKind != TokenKind::PropertyKeyword) {
+                type = &parseDataType(TypeOptions::AllowImplicit);
+                break;
+            }
+            type = &factory.keywordType(SyntaxKind::PropertyType, consume());
+            break;
+        case TokenKind::SequenceKeyword:
+            if (declarationKind == TokenKind::LetKeyword) {
+                type = &parseDataType(TypeOptions::AllowImplicit);
+                break;
+            }
+            type = &factory.keywordType(SyntaxKind::SequenceType, consume());
+            break;
+        case TokenKind::UntypedKeyword:
+            type = &factory.keywordType(SyntaxKind::Untyped, consume());
+            break;
+        default:
+            type = &parseDataType(TypeOptions::AllowImplicit);
+            break;
+    }
+    ASSERT(type);
+
+    auto& declarator = parseDeclarator();
+    return factory.assertionItemPort(attributes, local, direction, *type, declarator);
+}
+
 AssertionItemPortListSyntax* Parser::parseAssertionItemPortList(TokenKind declarationKind) {
-    if (!peek(TokenKind::OpenParenthesis) ||
-        (declarationKind != TokenKind::PropertyKeyword &&
-         declarationKind != TokenKind::SequenceKeyword && declarationKind != TokenKind::LetKeyword))
+    if (!peek(TokenKind::OpenParenthesis))
         return nullptr;
 
     auto openParen = consume();
+
     SmallVectorSized<TokenOrSyntax, 4> buffer;
     Token closeParen;
-
     parseList<isPossiblePropertyPortItem, isEndOfParenList>(
         buffer, TokenKind::CloseParenthesis, TokenKind::Comma, closeParen, RequireItems::True,
-        diag::ExpectedAssertionItemPort, [this, declarationKind] {
-            auto attributes = parseAttributes();
-            Token local;
-            Token direction;
-            if (declarationKind == TokenKind::PropertyKeyword ||
-                declarationKind == TokenKind::SequenceKeyword) {
-                local = consumeIf(TokenKind::LocalKeyword);
-                if (local &&
-                    (peek(TokenKind::InputKeyword) ||
-                     (declarationKind == TokenKind::SequenceKeyword &&
-                      (peek(TokenKind::OutputKeyword) || peek(TokenKind::InOutKeyword))))) {
-                    direction = consume();
-                }
-            }
-
-            DataTypeSyntax* type;
-            switch (peek().kind) {
-                case TokenKind::PropertyKeyword:
-                    if (declarationKind != TokenKind::PropertyKeyword) {
-                        type = &parseDataType(TypeOptions::AllowImplicit);
-                        break;
-                    }
-                    type = &factory.keywordType(SyntaxKind::PropertyType, consume());
-                    break;
-                case TokenKind::SequenceKeyword:
-                    if (declarationKind == TokenKind::LetKeyword) {
-                        type = &parseDataType(TypeOptions::AllowImplicit);
-                        break;
-                    }
-                    type = &factory.keywordType(SyntaxKind::SequenceType, consume());
-                    break;
-                case TokenKind::UntypedKeyword:
-                    type = &factory.keywordType(SyntaxKind::Untyped, consume());
-                    break;
-                default:
-                    type = &parseDataType(TypeOptions::AllowImplicit);
-                    break;
-            }
-            ASSERT(type);
-
-            auto& declarator = parseDeclarator();
-            return &factory.assertionItemPort(attributes, local, direction, *type, declarator);
-        });
+        diag::ExpectedAssertionItemPort,
+        [this, declarationKind] { return &parseAssertionItemPort(declarationKind); });
 
     return &factory.assertionItemPortList(openParen, buffer.copy(alloc), closeParen);
 }

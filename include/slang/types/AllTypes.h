@@ -339,6 +339,16 @@ public:
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::TypeRefType; }
 };
 
+/// Represents an 'untyped' type, which is used for e.g. arguments of sequences.
+class UntypedType : public Type {
+public:
+    UntypedType() : Type(SymbolKind::UntypedType, "untyped", SourceLocation()) {}
+
+    ConstantValue getDefaultValueImpl() const { return nullptr; }
+
+    static bool isKind(SymbolKind kind) { return kind == SymbolKind::UntypedType; }
+};
+
 struct VirtualInterfaceTypeSyntax;
 
 /// Represents a virtual interface type.

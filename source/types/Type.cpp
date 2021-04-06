@@ -866,6 +866,7 @@ const Type& Type::fromSyntax(Compilation& compilation, const DataTypeSyntax& nod
         case SyntaxKind::CHandleType:
         case SyntaxKind::EventType:
         case SyntaxKind::VoidType:
+        case SyntaxKind::Untyped:
             return compilation.getType(node.kind);
         case SyntaxKind::EnumType:
             return EnumType::fromSyntax(compilation, node.as<EnumTypeSyntax>(), location, parent,
@@ -902,7 +903,6 @@ const Type& Type::fromSyntax(Compilation& compilation, const DataTypeSyntax& nod
                                                     node.as<VirtualInterfaceTypeSyntax>());
         case SyntaxKind::PropertyType:
         case SyntaxKind::SequenceType:
-        case SyntaxKind::Untyped:
             parent.addDiag(diag::NotYetSupported, node.sourceRange());
             return compilation.getErrorType();
         default:
@@ -973,6 +973,7 @@ bool Type::isKind(SymbolKind kind) {
         case SymbolKind::EventType:
         case SymbolKind::UnboundedType:
         case SymbolKind::TypeRefType:
+        case SymbolKind::UntypedType:
         case SymbolKind::VirtualInterfaceType:
         case SymbolKind::TypeAlias:
         case SymbolKind::ErrorType:

@@ -186,6 +186,9 @@ public:
     /// Indicates whether this is the type reference type.
     bool isTypeRefType() const { return getCanonicalType().kind == SymbolKind::TypeRefType; }
 
+    /// Indicates whether this is the untyped type.
+    bool isUntypedType() const { return getCanonicalType().kind == SymbolKind::UntypedType; }
+
     /// Indicates whether this is a virtual interface type.
     bool isVirtualInterface() const {
         return getCanonicalType().kind == SymbolKind::VirtualInterfaceType;

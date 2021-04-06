@@ -360,6 +360,7 @@ public:
     const Type& getEventType() const { return *eventType; }
     const Type& getUnboundedType() const { return *unboundedType; }
     const Type& getTypeRefType() const { return *typeRefType; }
+    const Type& getUntypedType() const { return *untypedType; }
     const Type& getErrorType() const { return *errorType; }
     const Type& getUnsignedIntType();
 
@@ -462,6 +463,7 @@ private:
     Type* eventType;
     Type* unboundedType;
     Type* typeRefType;
+    Type* untypedType;
     Type* errorType;
     NetType* wireNetType;
 

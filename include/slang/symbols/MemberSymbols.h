@@ -249,14 +249,34 @@ public:
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::SpecifyBlock; }
 };
 
+struct AssertionItemPortListSyntax;
+
+/// Represents a formal argument / port of an assertion construct, such
+/// as a sequence, property, or let construct.
+class AssertionPortSymbol : public Symbol {
+public:
+    DeclaredType declaredType;
+
+    AssertionPortSymbol(string_view name, SourceLocation loc);
+
+    static void buildPorts(Scope& scope, const AssertionItemPortListSyntax& syntax,
+                           SmallVector<const AssertionPortSymbol*>& results);
+
+    void serializeTo(ASTSerializer& serializer) const;
+
+    static bool isKind(SymbolKind kind) { return kind == SymbolKind::AssertionPort; }
+};
+
 struct SequenceDeclarationSyntax;
 
 /// Represents a named sequence object.
 class SequenceSymbol : public Symbol, public Scope {
 public:
+    span<const AssertionPortSymbol* const> ports;
+
     SequenceSymbol(Compilation& compilation, string_view name, SourceLocation loc);
 
-    static SequenceSymbol& fromSyntax(Scope& scope, const SequenceDeclarationSyntax& syntax);
+    static SequenceSymbol& fromSyntax(const Scope& scope, const SequenceDeclarationSyntax& syntax);
 
     void serializeTo(ASTSerializer& serializer) const;
 
@@ -268,9 +288,11 @@ struct PropertyDeclarationSyntax;
 /// Represents a named property object.
 class PropertySymbol : public Symbol, public Scope {
 public:
+    span<const AssertionPortSymbol* const> ports;
+
     PropertySymbol(Compilation& compilation, string_view name, SourceLocation loc);
 
-    static PropertySymbol& fromSyntax(Scope& scope, const PropertyDeclarationSyntax& syntax);
+    static PropertySymbol& fromSyntax(const Scope& scope, const PropertyDeclarationSyntax& syntax);
 
     void serializeTo(ASTSerializer& serializer) const;
 

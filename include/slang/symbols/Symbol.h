@@ -52,6 +52,7 @@ enum class RandMode;
     x(EventType) \
     x(UnboundedType) \
     x(TypeRefType) \
+    x(UntypedType) \
     x(VirtualInterfaceType) \
     x(TypeAlias) \
     x(ErrorType) \
@@ -95,7 +96,8 @@ enum class RandMode;
     x(PrimitiveInstance) \
     x(SpecifyBlock) \
     x(Sequence) \
-    x(Property)
+    x(Property) \
+    x(AssertionPort)
 // clang-format on
 
 ENUM(SymbolKind, SYMBOLKIND)

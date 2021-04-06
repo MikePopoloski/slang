@@ -54,6 +54,7 @@ public:
     void visit(const EventType& type, string_view overrideName);
     void visit(const UnboundedType& type, string_view overrideName);
     void visit(const TypeRefType& type, string_view overrideName);
+    void visit(const UntypedType& type, string_view overrideName);
     void visit(const VirtualInterfaceType& type, string_view overrideName);
     void visit(const ClassType& type, string_view overrideName);
     void visit(const TypeAliasType& type, string_view overrideName);

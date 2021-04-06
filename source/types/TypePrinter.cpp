@@ -296,6 +296,10 @@ void TypePrinter::visit(const TypeRefType&, string_view) {
     buffer->append("type reference");
 }
 
+void TypePrinter::visit(const UntypedType&, string_view) {
+    buffer->append("untyped");
+}
+
 void TypePrinter::visit(const ClassType& type, string_view) {
     buffer->append(type.name);
 }
