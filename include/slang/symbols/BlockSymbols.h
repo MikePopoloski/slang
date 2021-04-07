@@ -49,7 +49,11 @@ private:
     StatementBinder binder;
 };
 
+struct ConcurrentAssertionMemberSyntax;
+struct ImmediateAssertionMemberSyntax;
+struct MemberSyntax;
 struct ProceduralBlockSyntax;
+struct StatementSyntax;
 
 class ProceduralBlockSymbol : public Symbol {
 public:
@@ -65,6 +69,14 @@ public:
         const Scope& scope, const ProceduralBlockSyntax& syntax,
         span<const StatementBlockSymbol* const>& additionalBlocks);
 
+    static ProceduralBlockSymbol& fromSyntax(
+        const Scope& scope, const ImmediateAssertionMemberSyntax& syntax,
+        span<const StatementBlockSymbol* const>& additionalBlocks);
+
+    static ProceduralBlockSymbol& fromSyntax(
+        const Scope& scope, const ConcurrentAssertionMemberSyntax& syntax,
+        span<const StatementBlockSymbol* const>& additionalBlocks);
+
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::ProceduralBlock; }
 
     template<typename TVisitor>
@@ -74,6 +86,11 @@ public:
 
 private:
     StatementBinder binder;
+
+    static ProceduralBlockSymbol& createProceduralBlock(
+        const Scope& scope, ProceduralBlockKind kind, SourceLocation location,
+        const MemberSyntax& syntax, const StatementSyntax& stmtSyntax,
+        span<const StatementBlockSymbol* const>& additionalBlocks);
 };
 
 struct CaseGenerateSyntax;

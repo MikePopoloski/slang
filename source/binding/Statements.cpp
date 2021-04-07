@@ -396,6 +396,16 @@ static void findBlocks(const Scope& scope, const StatementSyntax& syntax,
                 recurse(&ias.action->elseClause->clause->as<StatementSyntax>());
             return;
         }
+        case SyntaxKind::AssertPropertyStatement:
+        case SyntaxKind::AssumePropertyStatement:
+        case SyntaxKind::CoverPropertyStatement: {
+            auto& ias = syntax.as<ConcurrentAssertionStatementSyntax>();
+            if (ias.action->statement)
+                recurse(ias.action->statement);
+            if (ias.action->elseClause)
+                recurse(&ias.action->elseClause->clause->as<StatementSyntax>());
+            return;
+        }
         case SyntaxKind::WaitOrderStatement: {
             auto& wos = syntax.as<WaitOrderStatementSyntax>();
             if (wos.action->statement)
@@ -404,11 +414,7 @@ static void findBlocks(const Scope& scope, const StatementSyntax& syntax,
                 recurse(&wos.action->elseClause->clause->as<StatementSyntax>());
             return;
         }
-
-        case SyntaxKind::AssertPropertyStatement:
-        case SyntaxKind::AssumePropertyStatement:
         case SyntaxKind::CoverSequenceStatement:
-        case SyntaxKind::CoverPropertyStatement:
         case SyntaxKind::RestrictPropertyStatement:
         case SyntaxKind::ExpectPropertyStatement:
             scope.addDiag(diag::NotYetSupported, syntax.sourceRange());

@@ -164,8 +164,9 @@ const Statement& ProceduralBlockSymbol::getBody() const {
     return binder.getStatement(BindContext(*getParentScope(), LookupLocation::after(*this)));
 }
 
-ProceduralBlockSymbol& ProceduralBlockSymbol::fromSyntax(
-    const Scope& scope, const ProceduralBlockSyntax& syntax,
+ProceduralBlockSymbol& ProceduralBlockSymbol::createProceduralBlock(
+    const Scope& scope, ProceduralBlockKind kind, SourceLocation location,
+    const MemberSyntax& syntax, const StatementSyntax& stmtSyntax,
     span<const StatementBlockSymbol* const>& additionalBlocks) {
 
     // Figure out our default variable lifetime by looking for the
@@ -175,8 +176,7 @@ ProceduralBlockSymbol& ProceduralBlockSymbol::fromSyntax(
         lifetime = def->defaultLifetime;
 
     auto& comp = scope.getCompilation();
-    auto kind = SemanticFacts::getProceduralBlockKind(syntax.kind);
-    auto result = comp.emplace<ProceduralBlockSymbol>(syntax.keyword.location(), kind);
+    auto result = comp.emplace<ProceduralBlockSymbol>(location, kind);
 
     bitmask<StatementFlags> flags;
     if (kind == ProceduralBlockKind::Final)
@@ -184,13 +184,37 @@ ProceduralBlockSymbol& ProceduralBlockSymbol::fromSyntax(
     if (lifetime == VariableLifetime::Automatic)
         flags |= StatementFlags::AutoLifetime;
 
-    result->binder.setSyntax(scope, *syntax.statement, /* labelHandled */ false, flags);
+    result->binder.setSyntax(scope, stmtSyntax, /* labelHandled */ false, flags);
     result->setSyntax(syntax);
     result->setAttributes(scope, syntax.attributes);
 
     additionalBlocks = result->binder.getBlocks();
 
     return *result;
+}
+
+ProceduralBlockSymbol& ProceduralBlockSymbol::fromSyntax(
+    const Scope& scope, const ProceduralBlockSyntax& syntax,
+    span<const StatementBlockSymbol* const>& additionalBlocks) {
+    return createProceduralBlock(scope, SemanticFacts::getProceduralBlockKind(syntax.kind),
+                                 syntax.keyword.location(), syntax, *syntax.statement,
+                                 additionalBlocks);
+}
+
+ProceduralBlockSymbol& ProceduralBlockSymbol::fromSyntax(
+    const Scope& scope, const ImmediateAssertionMemberSyntax& syntax,
+    span<const StatementBlockSymbol* const>& additionalBlocks) {
+    return createProceduralBlock(scope, ProceduralBlockKind::Always,
+                                 syntax.getFirstToken().location(), syntax, *syntax.statement,
+                                 additionalBlocks);
+}
+
+ProceduralBlockSymbol& ProceduralBlockSymbol::fromSyntax(
+    const Scope& scope, const ConcurrentAssertionMemberSyntax& syntax,
+    span<const StatementBlockSymbol* const>& additionalBlocks) {
+    return createProceduralBlock(scope, ProceduralBlockKind::Always,
+                                 syntax.getFirstToken().location(), syntax, *syntax.statement,
+                                 additionalBlocks);
 }
 
 void ProceduralBlockSymbol::serializeTo(ASTSerializer& serializer) const {

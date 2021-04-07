@@ -270,6 +270,26 @@ void Scope::addMembers(const SyntaxNode& syntax) {
             addMember(block);
             break;
         }
+        case SyntaxKind::ConcurrentAssertionMember: {
+            span<const StatementBlockSymbol* const> additional;
+            auto& block = ProceduralBlockSymbol::fromSyntax(
+                *this, syntax.as<ConcurrentAssertionMemberSyntax>(), additional);
+
+            for (auto b : additional)
+                addMember(*b);
+            addMember(block);
+            break;
+        }
+        case SyntaxKind::ImmediateAssertionMember: {
+            span<const StatementBlockSymbol* const> additional;
+            auto& block = ProceduralBlockSymbol::fromSyntax(
+                *this, syntax.as<ImmediateAssertionMemberSyntax>(), additional);
+
+            for (auto b : additional)
+                addMember(*b);
+            addMember(block);
+            break;
+        }
         case SyntaxKind::EmptyMember:
             addMember(
                 EmptyMemberSymbol::fromSyntax(compilation, *this, syntax.as<EmptyMemberSyntax>()));
@@ -401,8 +421,6 @@ void Scope::addMembers(const SyntaxNode& syntax) {
         case SyntaxKind::PropertyDeclaration:
             addMember(PropertySymbol::fromSyntax(*this, syntax.as<PropertyDeclarationSyntax>()));
             break;
-        case SyntaxKind::ConcurrentAssertionMember:
-        case SyntaxKind::ImmediateAssertionMember:
         case SyntaxKind::PulseStyleDeclaration:
         case SyntaxKind::PathDeclaration:
         case SyntaxKind::IfNonePathDeclaration:
