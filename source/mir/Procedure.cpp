@@ -56,6 +56,7 @@ public:
     void visit(const ForeverLoopStatement&) {}
     void visit(const TimedStatement&) {}
     void visit(const ImmediateAssertionStatement&) {}
+    void visit(const ConcurrentAssertionStatement&) {}
     void visit(const DisableForkStatement&) {}
     void visit(const WaitStatement&) {}
     void visit(const WaitForkStatement&) {}

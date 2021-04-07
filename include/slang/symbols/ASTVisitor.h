@@ -227,6 +227,7 @@ decltype(auto) Statement::visit(TVisitor&& visitor, Args&&... args) const {
         CASE(ForeverLoop, ForeverLoopStatement);
         CASE(Timed, TimedStatement);
         CASE(ImmediateAssertion, ImmediateAssertionStatement);
+        CASE(ConcurrentAssertion, ConcurrentAssertionStatement);
         CASE(DisableFork, DisableForkStatement);
         CASE(Wait, WaitStatement);
         CASE(WaitFork, WaitForkStatement);

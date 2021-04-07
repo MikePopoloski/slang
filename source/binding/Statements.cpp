@@ -226,11 +226,14 @@ const Statement& Statement::bind(const StatementSyntax& syntax, const BindContex
             result = &ProceduralDeassignStatement::fromSyntax(
                 comp, syntax.as<ProceduralDeassignStatementSyntax>(), context);
             break;
-        case SyntaxKind::RandCaseStatement:
         case SyntaxKind::AssertPropertyStatement:
         case SyntaxKind::AssumePropertyStatement:
-        case SyntaxKind::CoverSequenceStatement:
         case SyntaxKind::CoverPropertyStatement:
+            result = &ConcurrentAssertionStatement::fromSyntax(
+                comp, syntax.as<ConcurrentAssertionStatementSyntax>(), context, stmtCtx);
+            break;
+        case SyntaxKind::RandCaseStatement:
+        case SyntaxKind::CoverSequenceStatement:
         case SyntaxKind::RestrictPropertyStatement:
         case SyntaxKind::ExpectPropertyStatement:
             context.addDiag(diag::NotYetSupported, syntax.sourceRange());
@@ -1970,6 +1973,56 @@ void ImmediateAssertionStatement::serializeTo(ASTSerializer& serializer) const {
     serializer.write("assertionKind", toString(assertionKind));
     serializer.write("isDeferred", isDeferred);
     serializer.write("isFinal", isFinal);
+}
+
+Statement& ConcurrentAssertionStatement::fromSyntax(
+    Compilation& compilation, const ConcurrentAssertionStatementSyntax& syntax,
+    const BindContext& context, StatementContext& stmtCtx) {
+
+    // TODO: restrict, cover sequence, other property spec items
+    AssertionKind assertKind = SemanticFacts::getAssertKind(syntax.kind);
+    auto& prop = AssertionExpr::bind(*syntax.propertySpec->expr, context);
+    bool bad = prop.bad();
+
+    const Statement* ifTrue = nullptr;
+    const Statement* ifFalse = nullptr;
+    if (syntax.action->statement)
+        ifTrue = &Statement::bind(*syntax.action->statement, context, stmtCtx);
+
+    if (syntax.action->elseClause) {
+        ifFalse = &Statement::bind(syntax.action->elseClause->clause->as<StatementSyntax>(),
+                                   context, stmtCtx);
+    }
+
+    if (assertKind == AssertionKind::Cover && ifFalse) {
+        context.addDiag(diag::CoverStmtNoFail, syntax.action->elseClause->sourceRange());
+        bad = true;
+    }
+
+    auto result = compilation.emplace<ConcurrentAssertionStatement>(assertKind, prop, ifTrue,
+                                                                    ifFalse, syntax.sourceRange());
+    if (bad || (ifTrue && ifTrue->bad()) || (ifFalse && ifFalse->bad()))
+        return badStmt(compilation, result);
+
+    return *result;
+}
+
+ER ConcurrentAssertionStatement::evalImpl(EvalContext&) const {
+    return ER::Fail;
+}
+
+bool ConcurrentAssertionStatement::verifyConstantImpl(EvalContext& context) const {
+    context.addDiag(diag::ConstEvalTimedStmtNotConst, sourceRange);
+    return false;
+}
+
+void ConcurrentAssertionStatement::serializeTo(ASTSerializer& serializer) const {
+    serializer.write("propertySpec", propertySpec);
+    if (ifTrue)
+        serializer.write("ifTrue", *ifTrue);
+    if (ifFalse)
+        serializer.write("ifFalse", *ifFalse);
+    serializer.write("assertionKind", toString(assertionKind));
 }
 
 Statement& DisableForkStatement::fromSyntax(Compilation& compilation,

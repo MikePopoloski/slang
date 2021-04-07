@@ -14,6 +14,7 @@
 
 namespace slang {
 
+class AssertionExpr;
 class BlockStatement;
 class StatementBlockSymbol;
 class TimingControl;
@@ -44,6 +45,7 @@ struct StatementSyntax;
     x(ForeverLoop) \
     x(Timed) \
     x(ImmediateAssertion) \
+    x(ConcurrentAssertion) \
     x(DisableFork) \
     x(Wait) \
     x(WaitFork) \
@@ -770,6 +772,48 @@ public:
     void visitExprs(TVisitor&& visitor) const {
         cond.visit(visitor);
     }
+
+    template<typename TVisitor>
+    void visitStmts(TVisitor&& visitor) const {
+        if (ifTrue)
+            ifTrue->visit(visitor);
+        if (ifFalse)
+            ifFalse->visit(visitor);
+    }
+};
+
+struct ConcurrentAssertionStatementSyntax;
+
+class ConcurrentAssertionStatement : public Statement {
+public:
+    const AssertionExpr& propertySpec;
+    const Statement* ifTrue;
+    const Statement* ifFalse;
+    AssertionKind assertionKind;
+
+    ConcurrentAssertionStatement(AssertionKind assertionKind, const AssertionExpr& propertySpec,
+                                 const Statement* ifTrue, const Statement* ifFalse,
+                                 SourceRange sourceRange) :
+        Statement(StatementKind::ConcurrentAssertion, sourceRange),
+        propertySpec(propertySpec), ifTrue(ifTrue), ifFalse(ifFalse), assertionKind(assertionKind) {
+    }
+
+    EvalResult evalImpl(EvalContext& context) const;
+    bool verifyConstantImpl(EvalContext& context) const;
+
+    static Statement& fromSyntax(Compilation& compilation,
+                                 const ConcurrentAssertionStatementSyntax& syntax,
+                                 const BindContext& context, StatementContext& stmtCtx);
+
+    void serializeTo(ASTSerializer& serializer) const;
+
+    static bool isKind(StatementKind kind) { return kind == StatementKind::ConcurrentAssertion; }
+
+    // TODO:
+    /*template<typename TVisitor>
+    void visitExprs(TVisitor&& visitor) const {
+        cond.visit(visitor);
+    }*/
 
     template<typename TVisitor>
     void visitStmts(TVisitor&& visitor) const {
