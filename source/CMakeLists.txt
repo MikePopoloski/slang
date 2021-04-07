@@ -111,6 +111,7 @@ target_link_libraries(slangparser INTERFACE slangcore)
 
 #-------- Compiler library
 add_library(slangcompiler
+    binding/AssertionExpr.cpp
     binding/AssignmentExpressions.cpp
     binding/Bitstream.cpp
     binding/Constraints.cpp

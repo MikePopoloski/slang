@@ -6,6 +6,7 @@
 //------------------------------------------------------------------------------
 #pragma once
 
+#include "slang/binding/AssertionExpr.h"
 #include "slang/binding/AssignmentExpressions.h"
 #include "slang/binding/Constraints.h"
 #include "slang/binding/LiteralExpressions.h"
@@ -100,6 +101,7 @@ public:
     void visitInvalid(const Statement&) {}
     void visitInvalid(const TimingControl&) {}
     void visitInvalid(const Constraint&) {}
+    void visitInvalid(const AssertionExpr&) {}
 
 #undef DERIVED
 };
@@ -343,6 +345,18 @@ decltype(auto) Constraint::visit(TVisitor& visitor, Args&&... args) const {
         CASE(DisableSoft, DisableSoftConstraint);
         CASE(SolveBefore, SolveBeforeConstraint);
         CASE(Foreach, ForeachConstraint);
+    }
+#undef CASE
+    // clang-format on
+    THROW_UNREACHABLE;
+}
+
+template<typename TVisitor, typename... Args>
+decltype(auto) AssertionExpr::visit(TVisitor& visitor, Args&&... args) const {
+    // clang-format off
+#define CASE(k, n) case AssertionExprKind::k: return visitor.visit(*static_cast<const n*>(this), std::forward<Args>(args)...)
+    switch (kind) {
+        case AssertionExprKind::Invalid: return visitor.visit(*this, std::forward<Args>(args)...);
     }
 #undef CASE
     // clang-format on
