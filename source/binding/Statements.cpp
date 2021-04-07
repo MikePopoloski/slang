@@ -193,7 +193,7 @@ const Statement& Statement::bind(const StatementSyntax& syntax, const BindContex
         case SyntaxKind::ImmediateAssertStatement:
         case SyntaxKind::ImmediateAssumeStatement:
         case SyntaxKind::ImmediateCoverStatement:
-            result = &AssertionStatement::fromSyntax(
+            result = &ImmediateAssertionStatement::fromSyntax(
                 comp, syntax.as<ImmediateAssertionStatementSyntax>(), context, stmtCtx);
             break;
         case SyntaxKind::DisableForkStatement:
@@ -1881,9 +1881,10 @@ void TimedStatement::serializeTo(ASTSerializer& serializer) const {
     serializer.write("stmt", stmt);
 }
 
-Statement& AssertionStatement::fromSyntax(Compilation& compilation,
-                                          const ImmediateAssertionStatementSyntax& syntax,
-                                          const BindContext& context, StatementContext& stmtCtx) {
+Statement& ImmediateAssertionStatement::fromSyntax(Compilation& compilation,
+                                                   const ImmediateAssertionStatementSyntax& syntax,
+                                                   const BindContext& context,
+                                                   StatementContext& stmtCtx) {
     AssertionKind assertKind = SemanticFacts::getAssertKind(syntax.kind);
     auto& cond = Expression::bind(*syntax.expr->expression, context);
     bool bad = cond.bad();
@@ -1913,7 +1914,7 @@ Statement& AssertionStatement::fromSyntax(Compilation& compilation,
 
     // TODO: add checking for requirements on deferred assertion actions
 
-    auto result = compilation.emplace<AssertionStatement>(
+    auto result = compilation.emplace<ImmediateAssertionStatement>(
         assertKind, cond, ifTrue, ifFalse, isDeferred, isFinal, syntax.sourceRange());
     if (bad || (ifTrue && ifTrue->bad()) || (ifFalse && ifFalse->bad()))
         return badStmt(compilation, result);
@@ -1921,7 +1922,7 @@ Statement& AssertionStatement::fromSyntax(Compilation& compilation,
     return *result;
 }
 
-ER AssertionStatement::evalImpl(EvalContext& context) const {
+ER ImmediateAssertionStatement::evalImpl(EvalContext& context) const {
     auto result = cond.eval(context);
     if (result.bad())
         return ER::Fail;
@@ -1942,7 +1943,7 @@ ER AssertionStatement::evalImpl(EvalContext& context) const {
     return ER::Fail;
 }
 
-bool AssertionStatement::verifyConstantImpl(EvalContext& context) const {
+bool ImmediateAssertionStatement::verifyConstantImpl(EvalContext& context) const {
     if (!cond.verifyConstant(context))
         return false;
 
@@ -1960,7 +1961,7 @@ bool AssertionStatement::verifyConstantImpl(EvalContext& context) const {
     return true;
 }
 
-void AssertionStatement::serializeTo(ASTSerializer& serializer) const {
+void ImmediateAssertionStatement::serializeTo(ASTSerializer& serializer) const {
     serializer.write("cond", cond);
     if (ifTrue)
         serializer.write("ifTrue", *ifTrue);

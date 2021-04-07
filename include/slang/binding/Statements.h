@@ -43,7 +43,7 @@ struct StatementSyntax;
     x(DoWhileLoop) \
     x(ForeverLoop) \
     x(Timed) \
-    x(Assertion) \
+    x(ImmediateAssertion) \
     x(DisableFork) \
     x(Wait) \
     x(WaitFork) \
@@ -739,7 +739,7 @@ public:
 
 struct ImmediateAssertionStatementSyntax;
 
-class AssertionStatement : public Statement {
+class ImmediateAssertionStatement : public Statement {
 public:
     const Expression& cond;
     const Statement* ifTrue;
@@ -748,10 +748,10 @@ public:
     bool isDeferred;
     bool isFinal;
 
-    AssertionStatement(AssertionKind assertionKind, const Expression& cond, const Statement* ifTrue,
-                       const Statement* ifFalse, bool isDeferred, bool isFinal,
-                       SourceRange sourceRange) :
-        Statement(StatementKind::Assertion, sourceRange),
+    ImmediateAssertionStatement(AssertionKind assertionKind, const Expression& cond,
+                                const Statement* ifTrue, const Statement* ifFalse, bool isDeferred,
+                                bool isFinal, SourceRange sourceRange) :
+        Statement(StatementKind::ImmediateAssertion, sourceRange),
         cond(cond), ifTrue(ifTrue), ifFalse(ifFalse), assertionKind(assertionKind),
         isDeferred(isDeferred), isFinal(isFinal) {}
 
@@ -764,7 +764,7 @@ public:
 
     void serializeTo(ASTSerializer& serializer) const;
 
-    static bool isKind(StatementKind kind) { return kind == StatementKind::Assertion; }
+    static bool isKind(StatementKind kind) { return kind == StatementKind::ImmediateAssertion; }
 
     template<typename TVisitor>
     void visitExprs(TVisitor&& visitor) const {
