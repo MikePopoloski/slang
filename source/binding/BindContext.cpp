@@ -80,6 +80,17 @@ bool BindContext::requirePositive(const SVInt& value, SourceRange range) const {
     return true;
 }
 
+bool BindContext::requirePositive(optional<int32_t> value, SourceRange range) const {
+    if (!value)
+        return false;
+
+    if (*value < 0) {
+        addDiag(diag::ValueMustBePositive, range);
+        return false;
+    }
+    return true;
+}
+
 bool BindContext::requireGtZero(optional<int32_t> value, SourceRange range) const {
     if (!value)
         return false;

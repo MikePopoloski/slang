@@ -1067,6 +1067,14 @@ SequenceExprSyntax& Parser::parseDelayedSequenceExpr(SequenceExprSyntax* first) 
             }
             else {
                 selector = parseElementSelector();
+                if (!selector) {
+                    addDiag(diag::ExpectedExpression, peek().location());
+                }
+                else if (selector->kind == SyntaxKind::AscendingRangeSelect ||
+                         selector->kind == SyntaxKind::DescendingRangeSelect) {
+                    auto& rs = selector->as<RangeSelectSyntax>();
+                    addDiag(diag::InvalidSequenceRange, rs.range.location()) << rs.range.range();
+                }
             }
             closeBracket = expect(TokenKind::CloseBracket);
         }
@@ -1150,6 +1158,20 @@ SequenceRepetitionSyntax* Parser::parseSequenceRepetition() {
     }
 
     auto selector = parseElementSelector();
+    if (!selector) {
+        if (op.kind == TokenKind::Equals || op.kind == TokenKind::MinusArrow)
+            addDiag(diag::ExpectedExpression, peek().location());
+    }
+    else if (op.kind == TokenKind::Plus) {
+        addDiag(diag::InvalidSequenceRange, selector->getFirstToken().location())
+            << selector->sourceRange();
+    }
+    else if (selector->kind == SyntaxKind::AscendingRangeSelect ||
+             selector->kind == SyntaxKind::DescendingRangeSelect) {
+        auto& rs = selector->as<RangeSelectSyntax>();
+        addDiag(diag::InvalidSequenceRange, rs.range.location()) << rs.range.range();
+    }
+
     auto closeBracket = expect(TokenKind::CloseBracket);
     return &factory.sequenceRepetition(openBracket, op, selector, closeBracket);
 }

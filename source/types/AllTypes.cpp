@@ -448,8 +448,10 @@ const Type& EnumType::fromSyntax(Compilation& compilation, const EnumTypeSyntax&
                 return compilation.getErrorType();
 
             // Range must be positive.
-            if (!context.requirePositive(range->left, member->dimensions[0]->sourceRange()) ||
-                !context.requirePositive(range->right, member->dimensions[0]->sourceRange())) {
+            if (!context.requirePositive(optional(range->left),
+                                         member->dimensions[0]->sourceRange()) ||
+                !context.requirePositive(optional(range->right),
+                                         member->dimensions[0]->sourceRange())) {
                 return compilation.getErrorType();
             }
 

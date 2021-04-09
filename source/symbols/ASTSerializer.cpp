@@ -140,6 +140,10 @@ void ASTSerializer::endObject() {
     writer.endObject();
 }
 
+void ASTSerializer::writeProperty(string_view name) {
+    writer.writeProperty(name);
+}
+
 template<typename T>
 void ASTSerializer::visit(const T& elem) {
     if constexpr (std::is_base_of_v<Expression, T>) {

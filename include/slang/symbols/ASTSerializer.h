@@ -40,6 +40,7 @@ public:
     void endArray();
     void startObject();
     void endObject();
+    void writeProperty(string_view name);
 
     void write(string_view name, string_view value);
     void write(string_view name, int64_t value);

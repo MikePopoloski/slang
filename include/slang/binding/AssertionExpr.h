@@ -14,7 +14,8 @@ namespace slang {
 // clang-format off
 #define EXPR(x) \
     x(Invalid) \
-    x(Simple)
+    x(Simple) \
+    x(SequenceConcat)
 ENUM(AssertionExprKind, EXPR);
 #undef EXPR
 // clang-format on
@@ -69,15 +70,53 @@ public:
     void serializeTo(ASTSerializer& serializer) const;
 };
 
+struct RangeSelectSyntax;
+struct SequenceRepetitionSyntax;
+
+/// Represents a range of potential sequence matches.
+struct SequenceRange {
+    /// The minimum length of the range.
+    uint32_t min = 0;
+
+    /// The maximum length of the range. If unset, the maximum is unbounded.
+    optional<uint32_t> max;
+
+    static SequenceRange fromSyntax(const RangeSelectSyntax& syntax, const BindContext& context);
+};
+
+/// Encodes a repetition of some sub-sequence.
+struct SequenceRepetition {
+    /// The kind of repetition.
+    enum Kind {
+        /// A repetition with a match on each consecutive cycle.
+        Consecutive,
+
+        /// A nonconsecutive repetition that does not necessarily end
+        /// at the last iterative match.
+        Nonconsecutive,
+
+        /// A nonconsecutive repetition which ends at the last iterative match.
+        GoTo
+    } kind = Consecutive;
+
+    /// The range of cycles over which to repeat.
+    SequenceRange range;
+
+    SequenceRepetition(const SequenceRepetitionSyntax& syntax, const BindContext& context);
+
+    void serializeTo(ASTSerializer& serializer) const;
+};
+
 struct SimpleSequenceExprSyntax;
 
 /// Represents an assertion expression defined as a simple regular expression.
 class SimpleAssertionExpr : public AssertionExpr {
 public:
     const Expression& expr;
+    optional<SequenceRepetition> repetition;
 
-    explicit SimpleAssertionExpr(const Expression& expr) :
-        AssertionExpr(AssertionExprKind::Simple), expr(expr) {}
+    SimpleAssertionExpr(const Expression& expr, optional<SequenceRepetition> repetition) :
+        AssertionExpr(AssertionExprKind::Simple), expr(expr), repetition(repetition) {}
 
     static AssertionExpr& fromSyntax(const SimpleSequenceExprSyntax& syntax,
                                      const BindContext& context);
@@ -85,6 +124,29 @@ public:
     void serializeTo(ASTSerializer& serializer) const;
 
     static bool isKind(AssertionExprKind kind) { return kind == AssertionExprKind::Simple; }
+};
+
+struct DelayedSequenceExprSyntax;
+
+/// Represents an assertion expression defined as a simple regular expression.
+class SequenceConcatExpr : public AssertionExpr {
+public:
+    struct Element {
+        SequenceRange delay;
+        const AssertionExpr& sequence;
+    };
+
+    span<const Element> elements;
+
+    explicit SequenceConcatExpr(span<const Element> elements) :
+        AssertionExpr(AssertionExprKind::SequenceConcat), elements(elements) {}
+
+    static AssertionExpr& fromSyntax(const DelayedSequenceExprSyntax& syntax,
+                                     const BindContext& context);
+
+    void serializeTo(ASTSerializer& serializer) const;
+
+    static bool isKind(AssertionExprKind kind) { return kind == AssertionExprKind::SequenceConcat; }
 };
 
 } // namespace slang

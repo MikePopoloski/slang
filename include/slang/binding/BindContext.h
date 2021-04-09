@@ -186,6 +186,7 @@ public:
     bool requireIntegral(const ConstantValue& cv, SourceRange range) const;
     bool requireNoUnknowns(const SVInt& value, SourceRange range) const;
     bool requirePositive(const SVInt& value, SourceRange range) const;
+    bool requirePositive(optional<int32_t> value, SourceRange range) const;
     bool requireGtZero(optional<int32_t> value, SourceRange range) const;
     bool requireBooleanConvertible(const Expression& expr) const;
     bool requireAssignable(const VariableSymbol& var, bool isNonBlocking, SourceLocation assignLoc,

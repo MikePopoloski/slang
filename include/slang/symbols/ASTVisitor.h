@@ -359,6 +359,7 @@ decltype(auto) AssertionExpr::visit(TVisitor& visitor, Args&&... args) const {
     switch (kind) {
         case AssertionExprKind::Invalid: return visitor.visit(*this, std::forward<Args>(args)...);
         CASE(Simple, SimpleAssertionExpr);
+        CASE(SequenceConcat, SequenceConcatExpr);
     }
 #undef CASE
     // clang-format on

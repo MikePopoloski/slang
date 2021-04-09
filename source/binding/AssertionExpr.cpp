@@ -40,6 +40,8 @@ const AssertionExpr& AssertionExpr::bind(const SequenceExprSyntax& syntax,
             result = &SimpleAssertionExpr::fromSyntax(syntax.as<SimpleSequenceExprSyntax>(), ctx);
             break;
         case SyntaxKind::DelayedSequenceExpr:
+            result = &SequenceConcatExpr::fromSyntax(syntax.as<DelayedSequenceExprSyntax>(), ctx);
+            break;
         case SyntaxKind::ClockingSequenceExpr:
         case SyntaxKind::FirstMatchSequenceExpr:
         case SyntaxKind::ParenthesizedSequenceExpr:
@@ -108,16 +110,161 @@ void InvalidAssertionExpr::serializeTo(ASTSerializer& serializer) const {
         serializer.write("child", *child);
 }
 
+SequenceRange SequenceRange::fromSyntax(const RangeSelectSyntax& syntax,
+                                        const BindContext& context) {
+    SequenceRange range;
+    auto l = context.evalInteger(*syntax.left);
+    auto r = context.evalInteger(*syntax.right);
+
+    if (context.requirePositive(l, syntax.left->sourceRange()) &&
+        context.requirePositive(r, syntax.right->sourceRange())) {
+        range.min = uint32_t(*l);
+        range.max = uint32_t(*r);
+
+        if (*l > *r) {
+            auto& diag = context.addDiag(diag::SeqRangeMinMax, syntax.left->sourceRange());
+            diag << syntax.right->sourceRange();
+            diag << *l << *r;
+        }
+    }
+
+    return range;
+}
+
+SequenceRepetition::SequenceRepetition(const SequenceRepetitionSyntax& syntax,
+                                       const BindContext& context) {
+    switch (syntax.op.kind) {
+        case TokenKind::Equals:
+            kind = Nonconsecutive;
+            break;
+        case TokenKind::MinusArrow:
+            kind = GoTo;
+            break;
+        case TokenKind::Plus:
+            // No expressions allowed for plus.
+            kind = Consecutive;
+            range.min = 1;
+            return;
+        default:
+            kind = Consecutive;
+            break;
+    }
+
+    if (!syntax.selector)
+        return;
+
+    if (syntax.selector->kind == SyntaxKind::BitSelect) {
+        auto val = context.evalInteger(*syntax.selector->as<BitSelectSyntax>().expr);
+        if (context.requirePositive(val, syntax.selector->sourceRange()))
+            range.max = range.min = uint32_t(*val);
+    }
+    else {
+        auto& rs = syntax.selector->as<RangeSelectSyntax>();
+        range = SequenceRange::fromSyntax(rs, context);
+    }
+}
+
+void SequenceRepetition::serializeTo(ASTSerializer& serializer) const {
+    serializer.startObject();
+
+    switch (kind) {
+        case Consecutive:
+            serializer.write("kind", "Consecutive"sv);
+            break;
+        case Nonconsecutive:
+            serializer.write("kind", "Nonconsecutive"sv);
+            break;
+        case GoTo:
+            serializer.write("kind", "GoTo"sv);
+            break;
+    }
+
+    serializer.write("min", range.min);
+    if (range.max)
+        serializer.write("max", *range.max);
+    else
+        serializer.write("max", "$"sv);
+
+    serializer.endObject();
+}
+
 AssertionExpr& SimpleAssertionExpr::fromSyntax(const SimpleSequenceExprSyntax& syntax,
                                                const BindContext& context) {
-    // TODO: repetition
     auto& comp = context.getCompilation();
     auto& expr = bindExpr(*syntax.expr, context);
-    return *comp.emplace<SimpleAssertionExpr>(expr);
+
+    optional<SequenceRepetition> repetition;
+    if (syntax.repetition)
+        repetition.emplace(*syntax.repetition, context);
+
+    return *comp.emplace<SimpleAssertionExpr>(expr, repetition);
 }
 
 void SimpleAssertionExpr::serializeTo(ASTSerializer& serializer) const {
     serializer.write("expr", expr);
+    if (repetition) {
+        serializer.writeProperty("repetition");
+        repetition->serializeTo(serializer);
+    }
+}
+
+AssertionExpr& SequenceConcatExpr::fromSyntax(const DelayedSequenceExprSyntax& syntax,
+                                              const BindContext& context) {
+    bool ok = true;
+    SmallVectorSized<Element, 8> elems;
+    if (syntax.first) {
+        auto& seq = bind(*syntax.first, context);
+        ok &= !seq.bad();
+
+        SequenceRange delay{ 0, 0 };
+        elems.append(Element{ delay, seq });
+    }
+
+    for (auto es : syntax.elements) {
+        SequenceRange delay;
+        auto& seq = bind(*es->expr, context);
+        ok &= !seq.bad();
+
+        if (es->delayVal) {
+            auto val = context.evalInteger(*es->delayVal);
+            if (!context.requirePositive(val, es->delayVal->sourceRange()))
+                ok = false;
+            else
+                delay.max = delay.min = uint32_t(*val);
+        }
+        else if (es->range && es->range->kind == SyntaxKind::SimpleRangeSelect) {
+            delay = SequenceRange::fromSyntax(es->range->as<RangeSelectSyntax>(), context);
+        }
+        else if (es->op.kind == TokenKind::Plus) {
+            delay.min = 1;
+        }
+
+        elems.append(Element{ delay, seq });
+    }
+
+    auto& comp = context.getCompilation();
+    auto result = comp.emplace<SequenceConcatExpr>(elems.copy(comp));
+    if (!ok)
+        return badExpr(comp, result);
+
+    return *result;
+}
+
+void SequenceConcatExpr::serializeTo(ASTSerializer& serializer) const {
+    serializer.startArray("elements");
+
+    for (auto& elem : elements) {
+        serializer.startObject();
+        serializer.write("sequence", elem.sequence);
+        serializer.write("minDelay", elem.delay.min);
+        if (elem.delay.max)
+            serializer.write("maxDelay", *elem.delay.max);
+        else
+            serializer.write("maxDelay", "$"sv);
+        serializer.endObject();
+    }
+
+    serializer.endArray();
 }
 
 } // namespace slang
