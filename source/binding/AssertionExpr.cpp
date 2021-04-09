@@ -222,7 +222,7 @@ AssertionExpr& SequenceConcatExpr::fromSyntax(const DelayedSequenceExprSyntax& s
         ok &= !seq.bad();
 
         SequenceRange delay{ 0, 0 };
-        elems.append(Element{ delay, seq });
+        elems.append(Element{ delay, &seq });
     }
 
     for (auto es : syntax.elements) {
@@ -244,7 +244,7 @@ AssertionExpr& SequenceConcatExpr::fromSyntax(const DelayedSequenceExprSyntax& s
             delay.min = 1;
         }
 
-        elems.append(Element{ delay, seq });
+        elems.append(Element{ delay, &seq });
     }
 
     auto& comp = context.getCompilation();
@@ -260,7 +260,7 @@ void SequenceConcatExpr::serializeTo(ASTSerializer& serializer) const {
 
     for (auto& elem : elements) {
         serializer.startObject();
-        serializer.write("sequence", elem.sequence);
+        serializer.write("sequence", *elem.sequence);
         serializer.write("minDelay", elem.delay.min);
         if (elem.delay.max)
             serializer.write("maxDelay", *elem.delay.max);

@@ -133,7 +133,7 @@ class SequenceConcatExpr : public AssertionExpr {
 public:
     struct Element {
         SequenceRange delay;
-        const AssertionExpr& sequence;
+        not_null<const AssertionExpr*> sequence;
     };
 
     span<const Element> elements;
