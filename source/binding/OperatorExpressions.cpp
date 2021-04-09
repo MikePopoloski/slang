@@ -564,8 +564,10 @@ Expression& BinaryExpression::fromSyntax(Compilation& compilation,
                                          const BindContext& context) {
     // If we are allowed unbounded literals here, pass that along to subexpressions.
     bitmask<BindFlags> flags = BindFlags::None;
-    if (context.flags.has(BindFlags::AllowUnboundedLiteral))
+    if (context.flags.has(BindFlags::AllowUnboundedLiteral) &&
+        !context.flags.has(BindFlags::AssertionExpr)) {
         flags = BindFlags::AllowUnboundedLiteral;
+    }
 
     auto op = getBinaryOperator(syntax.kind);
     if (op == BinaryOperator::Equality || op == BinaryOperator::Inequality ||
@@ -940,7 +942,8 @@ Expression& ConditionalExpression::fromSyntax(Compilation& compilation,
     }
 
     // Pass through the flag allowing unbounded literals.
-    if (context.flags.has(BindFlags::AllowUnboundedLiteral)) {
+    if (context.flags.has(BindFlags::AllowUnboundedLiteral) &&
+        !context.flags.has(BindFlags::AssertionExpr)) {
         leftFlags |= BindFlags::AllowUnboundedLiteral;
         rightFlags |= BindFlags::AllowUnboundedLiteral;
     }

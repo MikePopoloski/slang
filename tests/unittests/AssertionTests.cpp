@@ -46,6 +46,7 @@ module m;
     foo: assert property (a);
     assert property (a ##1 b ##[+] c ##[*] d ##[1:5] e);
     assert property (##0 a[*0:4] ##0 b[=4] ##0 c[->1:2] ##0 c[*] ##1 d[+]);
+    assert property (##[0:$] a[*0:$]);
 endmodule
 )");
 

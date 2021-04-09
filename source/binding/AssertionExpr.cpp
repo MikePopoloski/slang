@@ -114,13 +114,18 @@ SequenceRange SequenceRange::fromSyntax(const RangeSelectSyntax& syntax,
                                         const BindContext& context) {
     SequenceRange range;
     auto l = context.evalInteger(*syntax.left);
-    auto r = context.evalInteger(*syntax.right);
-
-    if (context.requirePositive(l, syntax.left->sourceRange()) &&
-        context.requirePositive(r, syntax.right->sourceRange())) {
+    if (context.requirePositive(l, syntax.left->sourceRange()))
         range.min = uint32_t(*l);
-        range.max = uint32_t(*r);
 
+    // The rhs can be an unbounded '$' so we need extra bind flags.
+    auto& re = Expression::bind(*syntax.right, context,
+                                BindFlags::AllowUnboundedLiteral | BindFlags::AssertionExpr);
+    if (re.type->isUnbounded())
+        return range;
+
+    auto r = context.evalInteger(re);
+    if (context.requirePositive(r, syntax.right->sourceRange())) {
+        range.max = uint32_t(*r);
         if (*l > *r) {
             auto& diag = context.addDiag(diag::SeqRangeMinMax, syntax.left->sourceRange());
             diag << syntax.right->sourceRange();
