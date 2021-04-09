@@ -66,7 +66,13 @@ Expression& ValueExpressionBase::fromSymbol(const BindContext& context, const Sy
         return badExpr(compilation, nullptr);
     }
 
+    // chandles can't be referenced in sequence expressions
     auto& value = symbol.as<ValueSymbol>();
+    if (context.flags.has(BindFlags::AssertionExpr) && value.getType().isCHandle()) {
+        context.addDiag(diag::CHandleInAssertion, sourceRange);
+        return badExpr(compilation, nullptr);
+    }
+
     if (isHierarchical)
         return *compilation.emplace<HierarchicalValueExpression>(value, sourceRange);
     else
@@ -520,6 +526,11 @@ Expression& CallExpression::fromArgs(Compilation& compilation, const Subroutine&
 
     if (context.flags.has(BindFlags::EventExpression) && hasOutputArgs()) {
         context.addDiag(diag::EventExpressionFuncArg, range);
+        return badExpr(compilation, result);
+    }
+
+    if (context.flags.has(BindFlags::AssertionExpr) && hasOutputArgs()) {
+        context.addDiag(diag::AssertionFuncArg, range);
         return badExpr(compilation, result);
     }
 

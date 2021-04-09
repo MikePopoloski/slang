@@ -270,6 +270,9 @@ public:
     /// Returns true if the type is valid for use as a DPI argument.
     bool isValidForDPIArg() const;
 
+    /// Returns true if the type is valid for use in sequence expressions.
+    bool isValidForSequence() const;
+
     /// Coerces the given constant into one that is appropriate for this type.
     ConstantValue coerceValue(const ConstantValue& value) const;
 

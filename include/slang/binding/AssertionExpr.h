@@ -13,7 +13,8 @@ namespace slang {
 
 // clang-format off
 #define EXPR(x) \
-    x(Invalid)
+    x(Invalid) \
+    x(Simple)
 ENUM(AssertionExprKind, EXPR);
 #undef EXPR
 // clang-format on
@@ -66,6 +67,24 @@ public:
     static bool isKind(AssertionExprKind kind) { return kind == AssertionExprKind::Invalid; }
 
     void serializeTo(ASTSerializer& serializer) const;
+};
+
+struct SimpleSequenceExprSyntax;
+
+/// Represents an assertion expression defined as a simple regular expression.
+class SimpleAssertionExpr : public AssertionExpr {
+public:
+    const Expression& expr;
+
+    explicit SimpleAssertionExpr(const Expression& expr) :
+        AssertionExpr(AssertionExprKind::Simple), expr(expr) {}
+
+    static AssertionExpr& fromSyntax(const SimpleSequenceExprSyntax& syntax,
+                                     const BindContext& context);
+
+    void serializeTo(ASTSerializer& serializer) const;
+
+    static bool isKind(AssertionExprKind kind) { return kind == AssertionExprKind::Simple; }
 };
 
 } // namespace slang

@@ -728,6 +728,12 @@ bool Type::isValidForDPIArg() const {
     return false;
 }
 
+bool Type::isValidForSequence() const {
+    // Type must be cast compatible with an integral type to be valid.
+    auto& ct = getCanonicalType();
+    return ct.isIntegral() || ct.isString() || ct.isFloating();
+}
+
 ConstantValue Type::coerceValue(const ConstantValue& value) const {
     if (isIntegral())
         return value.convertToInt(getBitWidth(), isSigned(), isFourState());

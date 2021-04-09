@@ -813,9 +813,16 @@ Expression& MemberAccessExpression::fromSelector(
         }
     }
 
-    auto errorIfNotProcedural = [&]() {
+    auto errorIfNotProcedural = [&] {
         if (context.flags.has(BindFlags::NonProcedural)) {
             context.addDiag(diag::DynamicNotProcedural, range);
+            return true;
+        }
+        return false;
+    };
+    auto errorIfAssertion = [&] {
+        if (context.flags.has(BindFlags::AssertionExpr)) {
+            context.addDiag(diag::ClassMemberInAssertion, range);
             return true;
         }
         return false;
@@ -889,8 +896,10 @@ Expression& MemberAccessExpression::fromSelector(
         case SymbolKind::ClassProperty: {
             Lookup::ensureVisible(*member, context, selector.nameRange);
             auto& prop = member->as<ClassPropertySymbol>();
-            if (prop.lifetime == VariableLifetime::Automatic && errorIfNotProcedural())
+            if (prop.lifetime == VariableLifetime::Automatic &&
+                (errorIfNotProcedural() || errorIfAssertion())) {
                 return badExpr(compilation, &expr);
+            }
 
             return *compilation.emplace<MemberAccessExpression>(prop.getType(), expr, prop, 0u,
                                                                 range);
@@ -898,8 +907,10 @@ Expression& MemberAccessExpression::fromSelector(
         case SymbolKind::Subroutine: {
             Lookup::ensureVisible(*member, context, selector.nameRange);
             auto& sub = member->as<SubroutineSymbol>();
-            if (!sub.flags.has(MethodFlags::Static) && errorIfNotProcedural())
+            if (!sub.flags.has(MethodFlags::Static) &&
+                (errorIfNotProcedural() || errorIfAssertion())) {
                 return badExpr(compilation, &expr);
+            }
 
             return CallExpression::fromLookup(compilation, &sub, &expr, invocation, withClause,
                                               range, context);
