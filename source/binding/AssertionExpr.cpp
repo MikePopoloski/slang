@@ -116,4 +116,8 @@ AssertionExpr& SimpleAssertionExpr::fromSyntax(const SimpleSequenceExprSyntax& s
     return *comp.emplace<SimpleAssertionExpr>(expr);
 }
 
+void SimpleAssertionExpr::serializeTo(ASTSerializer& serializer) const {
+    serializer.write("expr", expr);
+}
+
 } // namespace slang
