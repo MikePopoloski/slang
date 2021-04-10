@@ -1351,7 +1351,17 @@ PropertyExprSyntax& Parser::parsePropertyPrimary() {
         case TokenKind::At: {
             auto event = parseTimingControl();
             ASSERT(event);
-            return factory.clockingPropertyExpr(*event, parsePropertyExpr(0));
+
+            // If the parsed property expression *can* be a sequence expression,
+            // treat it as one, since that's more permissive.
+            auto& propExpr = parsePropertyExpr(0);
+            if (propExpr.kind == SyntaxKind::SimplePropertyExpr) {
+                SequenceExprSyntax* seqExpr = propExpr.as<SimplePropertyExprSyntax>().expr;
+                seqExpr = &factory.clockingSequenceExpr(*event, *seqExpr);
+                return factory.simplePropertyExpr(*seqExpr);
+            }
+
+            return factory.clockingPropertyExpr(*event, propExpr);
         }
         case TokenKind::OpenParenthesis: {
             auto openParen = consume();

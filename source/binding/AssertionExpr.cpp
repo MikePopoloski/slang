@@ -8,6 +8,7 @@
 
 #include "slang/binding/BindContext.h"
 #include "slang/binding/Expression.h"
+#include "slang/binding/TimingControl.h"
 #include "slang/compilation/Compilation.h"
 #include "slang/diagnostics/StatementsDiags.h"
 #include "slang/syntax/AllSyntax.h"
@@ -52,10 +53,13 @@ const AssertionExpr& AssertionExpr::bind(const SequenceExprSyntax& syntax,
         case SyntaxKind::ParenthesizedSequenceExpr:
             // TODO: handle body
             return bind(*syntax.as<ParenthesizedSequenceExprSyntax>().expr, context);
-        case SyntaxKind::ClockingSequenceExpr:
         case SyntaxKind::FirstMatchSequenceExpr:
-            context.addDiag(diag::NotYetSupported, syntax.sourceRange());
-            result = &badExpr(ctx.getCompilation(), nullptr);
+            result = &FirstMatchAssertionExpr::fromSyntax(syntax.as<FirstMatchSequenceExprSyntax>(),
+                                                          ctx);
+            break;
+        case SyntaxKind::ClockingSequenceExpr:
+            result =
+                &ClockingAssertionExpr::fromSyntax(syntax.as<ClockingSequenceExprSyntax>(), ctx);
             break;
         default:
             THROW_UNREACHABLE;
@@ -91,6 +95,9 @@ const AssertionExpr& AssertionExpr::bind(const PropertyExprSyntax& syntax,
         case SyntaxKind::ParenthesizedPropertyExpr:
             return bind(*syntax.as<ParenthesizedPropertyExprSyntax>().expr, context);
         case SyntaxKind::ClockingPropertyExpr:
+            result =
+                &ClockingAssertionExpr::fromSyntax(syntax.as<ClockingPropertyExprSyntax>(), ctx);
+            break;
         case SyntaxKind::StrongWeakPropertyExpr:
         case SyntaxKind::UnaryPropertyExpr:
         case SyntaxKind::UnarySelectPropertyExpr:
@@ -330,6 +337,39 @@ void BinaryAssertionExpr::serializeTo(ASTSerializer& serializer) const {
     serializer.write("op", toString(op));
     serializer.write("left", left);
     serializer.write("right", right);
+}
+
+AssertionExpr& FirstMatchAssertionExpr::fromSyntax(const FirstMatchSequenceExprSyntax& syntax,
+                                                   const BindContext& context) {
+    // TODO: match items
+    auto& comp = context.getCompilation();
+    auto& seq = bind(*syntax.expr, context);
+    return *comp.emplace<FirstMatchAssertionExpr>(seq);
+}
+
+void FirstMatchAssertionExpr::serializeTo(ASTSerializer& serializer) const {
+    serializer.write("seq", seq);
+}
+
+AssertionExpr& ClockingAssertionExpr::fromSyntax(const ClockingSequenceExprSyntax& syntax,
+                                                 const BindContext& context) {
+    auto& comp = context.getCompilation();
+    auto& clocking = TimingControl::bind(*syntax.event, context);
+    auto& expr = bind(*syntax.expr, context);
+    return *comp.emplace<ClockingAssertionExpr>(clocking, expr);
+}
+
+AssertionExpr& ClockingAssertionExpr::fromSyntax(const ClockingPropertyExprSyntax& syntax,
+                                                 const BindContext& context) {
+    auto& comp = context.getCompilation();
+    auto& clocking = TimingControl::bind(*syntax.event, context);
+    auto& expr = bind(*syntax.expr, context);
+    return *comp.emplace<ClockingAssertionExpr>(clocking, expr);
+}
+
+void ClockingAssertionExpr::serializeTo(ASTSerializer& serializer) const {
+    serializer.write("clocking", clocking);
+    serializer.write("expr", expr);
 }
 
 } // namespace slang

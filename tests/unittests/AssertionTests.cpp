@@ -52,6 +52,9 @@ module m;
     assert property (a iff b until d s_until e until_with c s_until_with d);
     assert property (a |-> b |=> (d implies (e #-# (d #=# a))));
     assert property ((a within b) within c);
+    assert property ((@(posedge b) a and b) intersect c);
+    assert property ((@(posedge b) a iff b) implies c);
+    assert property (first_match(a and b));
 endmodule
 )");
 

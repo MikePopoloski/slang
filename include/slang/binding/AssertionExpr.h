@@ -16,7 +16,9 @@ namespace slang {
     x(Invalid) \
     x(Simple) \
     x(SequenceConcat) \
-    x(Binary)
+    x(Binary) \
+    x(FirstMatch) \
+    x(Clocking)
 ENUM(AssertionExprKind, EXPR);
 #undef EXPR
 
@@ -41,6 +43,7 @@ ENUM(BinaryAssertionOperator, OP);
 class BindContext;
 class Compilation;
 class SyntaxNode;
+class TimingControl;
 struct PropertyExprSyntax;
 struct SequenceExprSyntax;
 
@@ -191,6 +194,47 @@ public:
     void serializeTo(ASTSerializer& serializer) const;
 
     static bool isKind(AssertionExprKind kind) { return kind == AssertionExprKind::Binary; }
+};
+
+struct FirstMatchSequenceExprSyntax;
+
+/// Represents a first_match operator in a sequence expression.
+class FirstMatchAssertionExpr : public AssertionExpr {
+public:
+    const AssertionExpr& seq;
+
+    FirstMatchAssertionExpr(const AssertionExpr& seq) :
+        AssertionExpr(AssertionExprKind::FirstMatch), seq(seq) {}
+
+    static AssertionExpr& fromSyntax(const FirstMatchSequenceExprSyntax& syntax,
+                                     const BindContext& context);
+
+    void serializeTo(ASTSerializer& serializer) const;
+
+    static bool isKind(AssertionExprKind kind) { return kind == AssertionExprKind::FirstMatch; }
+};
+
+struct ClockingSequenceExprSyntax;
+struct ClockingPropertyExprSyntax;
+
+/// Represents an assertion expression with attached clocking control.
+class ClockingAssertionExpr : public AssertionExpr {
+public:
+    const TimingControl& clocking;
+    const AssertionExpr& expr;
+
+    ClockingAssertionExpr(const TimingControl& clocking, const AssertionExpr& expr) :
+        AssertionExpr(AssertionExprKind::Clocking), clocking(clocking), expr(expr) {}
+
+    static AssertionExpr& fromSyntax(const ClockingSequenceExprSyntax& syntax,
+                                     const BindContext& context);
+
+    static AssertionExpr& fromSyntax(const ClockingPropertyExprSyntax& syntax,
+                                     const BindContext& context);
+
+    void serializeTo(ASTSerializer& serializer) const;
+
+    static bool isKind(AssertionExprKind kind) { return kind == AssertionExprKind::Clocking; }
 };
 
 } // namespace slang

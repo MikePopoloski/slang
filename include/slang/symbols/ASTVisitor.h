@@ -361,6 +361,8 @@ decltype(auto) AssertionExpr::visit(TVisitor& visitor, Args&&... args) const {
         CASE(Simple, SimpleAssertionExpr);
         CASE(SequenceConcat, SequenceConcatExpr);
         CASE(Binary, BinaryAssertionExpr);
+        CASE(FirstMatch, FirstMatchAssertionExpr);
+        CASE(Clocking, ClockingAssertionExpr);
     }
 #undef CASE
     // clang-format on
