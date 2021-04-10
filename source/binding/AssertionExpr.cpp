@@ -42,14 +42,18 @@ const AssertionExpr& AssertionExpr::bind(const SequenceExprSyntax& syntax,
         case SyntaxKind::DelayedSequenceExpr:
             result = &SequenceConcatExpr::fromSyntax(syntax.as<DelayedSequenceExprSyntax>(), ctx);
             break;
-        case SyntaxKind::ClockingSequenceExpr:
-        case SyntaxKind::FirstMatchSequenceExpr:
-        case SyntaxKind::ParenthesizedSequenceExpr:
         case SyntaxKind::AndSequenceExpr:
         case SyntaxKind::OrSequenceExpr:
         case SyntaxKind::IntersectSequenceExpr:
         case SyntaxKind::ThroughoutSequenceExpr:
         case SyntaxKind::WithinSequenceExpr:
+            result = &BinaryAssertionExpr::fromSyntax(syntax.as<BinarySequenceExprSyntax>(), ctx);
+            break;
+        case SyntaxKind::ParenthesizedSequenceExpr:
+            // TODO: handle body
+            return bind(*syntax.as<ParenthesizedSequenceExprSyntax>().expr, context);
+        case SyntaxKind::ClockingSequenceExpr:
+        case SyntaxKind::FirstMatchSequenceExpr:
             context.addDiag(diag::NotYetSupported, syntax.sourceRange());
             result = &badExpr(ctx.getCompilation(), nullptr);
             break;
@@ -72,14 +76,6 @@ const AssertionExpr& AssertionExpr::bind(const PropertyExprSyntax& syntax,
             // Just a simple passthrough to binding the sequence expression
             // contained within.
             return bind(*syntax.as<SimplePropertyExprSyntax>().expr, context);
-        case SyntaxKind::ClockingPropertyExpr:
-        case SyntaxKind::ParenthesizedPropertyExpr:
-        case SyntaxKind::StrongWeakPropertyExpr:
-        case SyntaxKind::UnaryPropertyExpr:
-        case SyntaxKind::UnarySelectPropertyExpr:
-        case SyntaxKind::AcceptOnPropertyExpr:
-        case SyntaxKind::ConditionalPropertyExpr:
-        case SyntaxKind::CasePropertyExpr:
         case SyntaxKind::AndPropertyExpr:
         case SyntaxKind::OrPropertyExpr:
         case SyntaxKind::IffPropertyExpr:
@@ -90,6 +86,17 @@ const AssertionExpr& AssertionExpr::bind(const PropertyExprSyntax& syntax,
         case SyntaxKind::ImpliesPropertyExpr:
         case SyntaxKind::ImplicationPropertyExpr:
         case SyntaxKind::FollowedByPropertyExpr:
+            result = &BinaryAssertionExpr::fromSyntax(syntax.as<BinaryPropertyExprSyntax>(), ctx);
+            break;
+        case SyntaxKind::ParenthesizedPropertyExpr:
+            return bind(*syntax.as<ParenthesizedPropertyExprSyntax>().expr, context);
+        case SyntaxKind::ClockingPropertyExpr:
+        case SyntaxKind::StrongWeakPropertyExpr:
+        case SyntaxKind::UnaryPropertyExpr:
+        case SyntaxKind::UnarySelectPropertyExpr:
+        case SyntaxKind::AcceptOnPropertyExpr:
+        case SyntaxKind::ConditionalPropertyExpr:
+        case SyntaxKind::CasePropertyExpr:
             context.addDiag(diag::NotYetSupported, syntax.sourceRange());
             result = &badExpr(ctx.getCompilation(), nullptr);
             break;
@@ -270,6 +277,59 @@ void SequenceConcatExpr::serializeTo(ASTSerializer& serializer) const {
     }
 
     serializer.endArray();
+}
+
+AssertionExpr& BinaryAssertionExpr::fromSyntax(const BinarySequenceExprSyntax& syntax,
+                                               const BindContext& context) {
+    auto& comp = context.getCompilation();
+    auto& left = bind(*syntax.left, context);
+    auto& right = bind(*syntax.right, context);
+
+    // clang-format off
+    BinaryAssertionOperator op;
+    switch (syntax.kind) {
+        case SyntaxKind::AndSequenceExpr: op = BinaryAssertionOperator::And; break;
+        case SyntaxKind::OrSequenceExpr: op = BinaryAssertionOperator::Or; break;
+        case SyntaxKind::IntersectSequenceExpr: op = BinaryAssertionOperator::Intersect; break;
+        case SyntaxKind::ThroughoutSequenceExpr: op = BinaryAssertionOperator::Throughout; break;
+        case SyntaxKind::WithinSequenceExpr: op = BinaryAssertionOperator::Within; break;
+        default: THROW_UNREACHABLE;
+    }
+    // clang-format on
+
+    return *comp.emplace<BinaryAssertionExpr>(op, left, right);
+}
+
+AssertionExpr& BinaryAssertionExpr::fromSyntax(const BinaryPropertyExprSyntax& syntax,
+                                               const BindContext& context) {
+    auto& comp = context.getCompilation();
+    auto& left = bind(*syntax.left, context);
+    auto& right = bind(*syntax.right, context);
+
+    // clang-format off
+    BinaryAssertionOperator op;
+    switch (syntax.kind) {
+        case SyntaxKind::AndPropertyExpr: op = BinaryAssertionOperator::And; break;
+        case SyntaxKind::OrPropertyExpr: op = BinaryAssertionOperator::Or; break;
+        case SyntaxKind::IffPropertyExpr: op = BinaryAssertionOperator::Iff; break;
+        case SyntaxKind::UntilPropertyExpr: op = BinaryAssertionOperator::Until; break;
+        case SyntaxKind::SUntilPropertyExpr: op = BinaryAssertionOperator::SUntil; break;
+        case SyntaxKind::UntilWithPropertyExpr: op = BinaryAssertionOperator::UntilWith; break;
+        case SyntaxKind::SUntilWithPropertyExpr: op = BinaryAssertionOperator::SUntilWith; break;
+        case SyntaxKind::ImpliesPropertyExpr: op = BinaryAssertionOperator::Implies; break;
+        case SyntaxKind::ImplicationPropertyExpr: op = BinaryAssertionOperator::Implication; break;
+        case SyntaxKind::FollowedByPropertyExpr: op = BinaryAssertionOperator::FollowedBy; break;
+        default: THROW_UNREACHABLE;
+    }
+    // clang-format on
+
+    return *comp.emplace<BinaryAssertionExpr>(op, left, right);
+}
+
+void BinaryAssertionExpr::serializeTo(ASTSerializer& serializer) const {
+    serializer.write("op", toString(op));
+    serializer.write("left", left);
+    serializer.write("right", right);
 }
 
 } // namespace slang

@@ -205,6 +205,8 @@ error SolveBeforeDisallowed "constraint ordering directive is not allowed within
 error LifetimeForPrototype "lifetime specifier is not allowed on prototype declaration"
 error InvalidPackageDecl "invalid package declaration"
 error InvalidSequenceRange "invalid sequence range"
+error ThroughoutLhsInvalid "left-hand side of 'throughout' operator must be a simple sequence expression"
+error PropertyLhsInvalid "left-hand side of '{}' operator must be a simple sequence expression"
 warning nonstandard-generate NonStandardGenBlock "standalone generate block without loop or condition is not allowed in SystemVerilog"
 warning empty-pattern EmptyAssignmentPattern "empty assignment patterns are disallowed by SystemVerilog"
 note NoteToMatchThis "to match this '{}'"

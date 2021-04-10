@@ -360,6 +360,7 @@ decltype(auto) AssertionExpr::visit(TVisitor& visitor, Args&&... args) const {
         case AssertionExprKind::Invalid: return visitor.visit(*this, std::forward<Args>(args)...);
         CASE(Simple, SimpleAssertionExpr);
         CASE(SequenceConcat, SequenceConcatExpr);
+        CASE(Binary, BinaryAssertionExpr);
     }
 #undef CASE
     // clang-format on

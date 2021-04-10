@@ -15,9 +15,27 @@ namespace slang {
 #define EXPR(x) \
     x(Invalid) \
     x(Simple) \
-    x(SequenceConcat)
+    x(SequenceConcat) \
+    x(Binary)
 ENUM(AssertionExprKind, EXPR);
 #undef EXPR
+
+#define OP(x) \
+    x(And) \
+    x(Or) \
+    x(Intersect) \
+    x(Throughout) \
+    x(Within) \
+    x(Iff) \
+    x(Until) \
+    x(SUntil) \
+    x(UntilWith) \
+    x(SUntilWith) \
+    x(Implies) \
+    x(Implication) \
+    x(FollowedBy)
+ENUM(BinaryAssertionOperator, OP);
+#undef OP
 // clang-format on
 
 class BindContext;
@@ -147,6 +165,32 @@ public:
     void serializeTo(ASTSerializer& serializer) const;
 
     static bool isKind(AssertionExprKind kind) { return kind == AssertionExprKind::SequenceConcat; }
+};
+
+struct BinarySequenceExprSyntax;
+struct BinaryPropertyExprSyntax;
+
+/// Represents a binary operator in a sequence or property expression.
+class BinaryAssertionExpr : public AssertionExpr {
+public:
+    BinaryAssertionOperator op;
+    const AssertionExpr& left;
+    const AssertionExpr& right;
+
+    BinaryAssertionExpr(BinaryAssertionOperator op, const AssertionExpr& left,
+                        const AssertionExpr& right) :
+        AssertionExpr(AssertionExprKind::Binary),
+        op(op), left(left), right(right) {}
+
+    static AssertionExpr& fromSyntax(const BinarySequenceExprSyntax& syntax,
+                                     const BindContext& context);
+
+    static AssertionExpr& fromSyntax(const BinaryPropertyExprSyntax& syntax,
+                                     const BindContext& context);
+
+    void serializeTo(ASTSerializer& serializer) const;
+
+    static bool isKind(AssertionExprKind kind) { return kind == AssertionExprKind::Binary; }
 };
 
 } // namespace slang

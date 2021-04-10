@@ -1258,6 +1258,16 @@ SequenceExprSyntax& Parser::parseSequenceExpr(int precedence, bool isInProperty)
 
         // take the operator
         auto opToken = consume();
+        if (opKind == SyntaxKind::ThroughoutSequenceExpr) {
+            if (left->kind != SyntaxKind::SimpleSequenceExpr) {
+                addDiag(diag::ThroughoutLhsInvalid, opToken.location()) << left->sourceRange();
+            }
+            else if (left->as<SimpleSequenceExprSyntax>().repetition) {
+                addDiag(diag::ThroughoutLhsInvalid, opToken.location())
+                    << left->as<SimpleSequenceExprSyntax>().repetition->sourceRange();
+            }
+        }
+
         auto& right = parseSequenceExpr(newPrecedence, isInProperty);
         left = &factory.binarySequenceExpr(opKind, *left, opToken, right);
     }
@@ -1467,6 +1477,14 @@ PropertyExprSyntax& Parser::parsePropertyExpr(int precedence) {
 
         // take the operator
         auto opToken = consume();
+        if (opKind == SyntaxKind::ImplicationPropertyExpr ||
+            opKind == SyntaxKind::FollowedByPropertyExpr) {
+            if (left->kind != SyntaxKind::SimplePropertyExpr) {
+                addDiag(diag::PropertyLhsInvalid, opToken.location())
+                    << left->sourceRange() << opToken.valueText();
+            }
+        }
+
         auto& right = parsePropertyExpr(newPrecedence);
         left = &factory.binaryPropertyExpr(opKind, *left, opToken, right);
     }
