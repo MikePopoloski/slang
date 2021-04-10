@@ -340,6 +340,7 @@ private:
     SequenceExprSyntax& parseDelayedSequenceExpr(SequenceExprSyntax* first);
     SequenceExprSyntax& parseSequencePrimary();
     SequenceExprSyntax& parseSequenceExpr(int precedence, bool isInProperty);
+    SequenceExprSyntax& parseBinarySequenceExpr(SequenceExprSyntax* left, int precedence, bool isInProperty);
     PropertyExprSyntax& parseCasePropertyExpr();
     PropertyExprSyntax& parsePropertyPrimary();
     PropertyExprSyntax& parsePropertyExpr(int precedence);

@@ -51,6 +51,7 @@ module m;
     assert property (a intersect b and d throughout e within c);
     assert property (a iff b until d s_until e until_with c s_until_with d);
     assert property (a |-> b |=> (d implies (e #-# (d #=# a))));
+    assert property ((a within b) within c);
 endmodule
 )");
 
@@ -86,6 +87,8 @@ module m;
     assert property (##0 b[*3-:4] ##0 b[=]);
     assert property (##[] b ##[1+:5] b);
     assert property ((b and b) |-> b);
+    assert property ((b and b)[*3] throughout b);
+    assert property (b[*3] throughout b);
 endmodule
 )");
 
@@ -93,7 +96,7 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 13);
+    REQUIRE(diags.size() == 15);
     CHECK(diags[0].code == diag::AssertionExprType);
     CHECK(diags[1].code == diag::IncDecNotAllowed);
     CHECK(diags[2].code == diag::CHandleInAssertion);
@@ -107,4 +110,6 @@ endmodule
     CHECK(diags[10].code == diag::ExpectedExpression);
     CHECK(diags[11].code == diag::InvalidSequenceRange);
     CHECK(diags[12].code == diag::PropertyLhsInvalid);
+    CHECK(diags[13].code == diag::ThroughoutLhsInvalid);
+    CHECK(diags[14].code == diag::ThroughoutLhsInvalid);
 }

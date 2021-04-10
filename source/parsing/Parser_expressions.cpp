@@ -1109,6 +1109,19 @@ static bool isBinaryOrPostfixExpression(TokenKind kind) {
     }
 }
 
+static bool isBinarySequenceExpression(TokenKind kind) {
+    switch (kind) {
+        case TokenKind::DoubleHash:
+        case TokenKind::OpenBracket:
+        case TokenKind::IntersectKeyword:
+        case TokenKind::ThroughoutKeyword:
+        case TokenKind::WithinKeyword:
+            return true;
+        default:
+            return false;
+    }
+}
+
 ExpressionSyntax& Parser::fixParenthesizedExpression(const SimpleSequenceExprSyntax& source,
                                                      Token openParen) {
     ExpressionSyntax* result = source.expr;
@@ -1231,6 +1244,11 @@ SequenceExprSyntax& Parser::parseSequenceExpr(int precedence, bool isInProperty)
     auto dg = setDepthGuard();
 
     auto left = &parseSequencePrimary();
+    return parseBinarySequenceExpr(left, precedence, isInProperty);
+}
+
+SequenceExprSyntax& Parser::parseBinarySequenceExpr(SequenceExprSyntax* left, int precedence,
+                                                    bool isInProperty) {
     if (peek(TokenKind::DoubleHash))
         left = &parseDelayedSequenceExpr(left);
 
@@ -1359,16 +1377,17 @@ PropertyExprSyntax& Parser::parsePropertyPrimary() {
             // tokens up next instead of a closing parenthesis.
             if (expr.kind == SyntaxKind::SimplePropertyExpr &&
                 (peek(TokenKind::Comma) ||
-                 (peek(TokenKind::CloseParenthesis) && peek(1).kind == TokenKind::OpenBracket))) {
+                 (peek(TokenKind::CloseParenthesis) && isBinarySequenceExpression(peek(1).kind)))) {
                 auto& seqExpr = *expr.as<SimplePropertyExprSyntax>().expr;
 
                 Token closeParen;
                 auto matchList = parseSequenceMatchList(closeParen);
                 auto repetition = parseSequenceRepetition();
-                auto& parenSeqExpr = factory.parenthesizedSequenceExpr(
+                SequenceExprSyntax* left = &factory.parenthesizedSequenceExpr(
                     openParen, seqExpr, matchList, closeParen, repetition);
 
-                return factory.simplePropertyExpr(parenSeqExpr);
+                left = &parseBinarySequenceExpr(left, 0, /* isInProperty */ true);
+                return factory.simplePropertyExpr(*left);
             }
 
             auto closeParen = expect(TokenKind::CloseParenthesis);
@@ -1486,7 +1505,24 @@ PropertyExprSyntax& Parser::parsePropertyExpr(int precedence) {
         }
 
         auto& right = parsePropertyExpr(newPrecedence);
-        left = &factory.binaryPropertyExpr(opKind, *left, opToken, right);
+
+        // If this could have been an 'and' or 'or' sequence expression, convert it into that
+        // instead of continuing with it as a property expression.
+        if ((opKind == SyntaxKind::AndPropertyExpr || opKind == SyntaxKind::OrPropertyExpr) &&
+            left->kind == SyntaxKind::SimplePropertyExpr &&
+            right.kind == SyntaxKind::SimplePropertyExpr) {
+
+            auto& seqExpr = factory.binarySequenceExpr(
+                opKind == SyntaxKind::AndPropertyExpr ? SyntaxKind::AndSequenceExpr
+                                                      : SyntaxKind::OrSequenceExpr,
+                *left->as<SimplePropertyExprSyntax>().expr, opToken,
+                *right.as<SimplePropertyExprSyntax>().expr);
+
+            left = &factory.simplePropertyExpr(seqExpr);
+        }
+        else {
+            left = &factory.binaryPropertyExpr(opKind, *left, opToken, right);
+        }
     }
 
     return *left;
