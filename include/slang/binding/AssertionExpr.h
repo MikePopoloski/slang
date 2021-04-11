@@ -20,7 +20,9 @@ namespace slang {
     x(Binary) \
     x(FirstMatch) \
     x(Clocking) \
-    x(StrongWeak)
+    x(StrongWeak) \
+    x(Abort) \
+    x(Conditional)
 ENUM(AssertionExprKind, EXPR);
 #undef EXPR
 
@@ -299,6 +301,51 @@ public:
     void serializeTo(ASTSerializer& serializer) const;
 
     static bool isKind(AssertionExprKind kind) { return kind == AssertionExprKind::StrongWeak; }
+};
+
+struct AcceptOnPropertyExprSyntax;
+
+/// Represents an abort (accept_on / reject_on) property expression.
+class AbortAssertionExpr : public AssertionExpr {
+public:
+    const Expression& condition;
+    const AssertionExpr& expr;
+    enum Action { Accept, Reject } action;
+    bool isSync;
+
+    AbortAssertionExpr(const Expression& condition, const AssertionExpr& expr, Action action,
+                       bool isSync) :
+        AssertionExpr(AssertionExprKind::Abort),
+        condition(condition), expr(expr), action(action), isSync(isSync) {}
+
+    static AssertionExpr& fromSyntax(const AcceptOnPropertyExprSyntax& syntax,
+                                     const BindContext& context);
+
+    void serializeTo(ASTSerializer& serializer) const;
+
+    static bool isKind(AssertionExprKind kind) { return kind == AssertionExprKind::Abort; }
+};
+
+struct ConditionalPropertyExprSyntax;
+
+/// Represents a conditional operator in a property expression.
+class ConditionalAssertionExpr : public AssertionExpr {
+public:
+    const Expression& condition;
+    const AssertionExpr& ifExpr;
+    const AssertionExpr* elseExpr;
+
+    ConditionalAssertionExpr(const Expression& condition, const AssertionExpr& ifExpr,
+                             const AssertionExpr* elseExpr) :
+        AssertionExpr(AssertionExprKind::Conditional),
+        condition(condition), ifExpr(ifExpr), elseExpr(elseExpr) {}
+
+    static AssertionExpr& fromSyntax(const ConditionalPropertyExprSyntax& syntax,
+                                     const BindContext& context);
+
+    void serializeTo(ASTSerializer& serializer) const;
+
+    static bool isKind(AssertionExprKind kind) { return kind == AssertionExprKind::Conditional; }
 };
 
 } // namespace slang

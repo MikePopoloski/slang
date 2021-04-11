@@ -60,6 +60,8 @@ module m;
     assert property ((nexttime [3] b) and (s_nexttime b));
     assert property (strong(a ##1 b) and weak(a intersect b));
     assert property (not a ##1 b);
+    assert property (accept_on(b) sync_reject_on(c) sync_accept_on(d) reject_on(e) b ##1 c);
+    assert property (if (b) a ##1 c else d ##1 e);
 endmodule
 )");
 

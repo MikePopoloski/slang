@@ -110,7 +110,12 @@ const AssertionExpr& AssertionExpr::bind(const PropertyExprSyntax& syntax,
                 &UnaryAssertionExpr::fromSyntax(syntax.as<UnarySelectPropertyExprSyntax>(), ctx);
             break;
         case SyntaxKind::AcceptOnPropertyExpr:
+            result = &AbortAssertionExpr::fromSyntax(syntax.as<AcceptOnPropertyExprSyntax>(), ctx);
+            break;
         case SyntaxKind::ConditionalPropertyExpr:
+            result = &ConditionalAssertionExpr::fromSyntax(
+                syntax.as<ConditionalPropertyExprSyntax>(), ctx);
+            break;
         case SyntaxKind::CasePropertyExpr:
             context.addDiag(diag::NotYetSupported, syntax.sourceRange());
             result = &badExpr(ctx.getCompilation(), nullptr);
@@ -445,6 +450,65 @@ AssertionExpr& StrongWeakAssertionExpr::fromSyntax(const StrongWeakPropertyExprS
 void StrongWeakAssertionExpr::serializeTo(ASTSerializer& serializer) const {
     serializer.write("expr", expr);
     serializer.write("strength", strength == Strong ? "strong"sv : "weak"sv);
+}
+
+AssertionExpr& AbortAssertionExpr::fromSyntax(const AcceptOnPropertyExprSyntax& syntax,
+                                              const BindContext& context) {
+    auto& comp = context.getCompilation();
+    auto& cond = bindExpr(*syntax.condition, context);
+    auto& expr = bind(*syntax.expr, context);
+
+    Action action;
+    bool isSync;
+    switch (syntax.keyword.kind) {
+        case TokenKind::AcceptOnKeyword:
+            action = Accept;
+            isSync = false;
+            break;
+        case TokenKind::SyncAcceptOnKeyword:
+            action = Accept;
+            isSync = true;
+            break;
+        case TokenKind::RejectOnKeyword:
+            action = Reject;
+            isSync = false;
+            break;
+        case TokenKind::SyncRejectOnKeyword:
+            action = Reject;
+            isSync = true;
+            break;
+        default:
+            THROW_UNREACHABLE;
+    }
+
+    return *comp.emplace<AbortAssertionExpr>(cond, expr, action, isSync);
+}
+
+void AbortAssertionExpr::serializeTo(ASTSerializer& serializer) const {
+    serializer.write("condition", condition);
+    serializer.write("expr", expr);
+    serializer.write("action", action == Accept ? "accept"sv : "reject"sv);
+    serializer.write("isSync", isSync);
+}
+
+AssertionExpr& ConditionalAssertionExpr::fromSyntax(const ConditionalPropertyExprSyntax& syntax,
+                                                    const BindContext& context) {
+    auto& comp = context.getCompilation();
+    auto& cond = bindExpr(*syntax.condition, context);
+    auto& ifExpr = bind(*syntax.expr, context);
+
+    const AssertionExpr* elseExpr = nullptr;
+    if (syntax.elseClause)
+        elseExpr = &bind(*syntax.elseClause->expr, context);
+
+    return *comp.emplace<ConditionalAssertionExpr>(cond, ifExpr, elseExpr);
+}
+
+void ConditionalAssertionExpr::serializeTo(ASTSerializer& serializer) const {
+    serializer.write("condition", condition);
+    serializer.write("if", ifExpr);
+    if (elseExpr)
+        serializer.write("else", *elseExpr);
 }
 
 } // namespace slang
