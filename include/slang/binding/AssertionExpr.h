@@ -22,7 +22,8 @@ namespace slang {
     x(Clocking) \
     x(StrongWeak) \
     x(Abort) \
-    x(Conditional)
+    x(Conditional) \
+    x(Case)
 ENUM(AssertionExprKind, EXPR);
 #undef EXPR
 
@@ -346,6 +347,33 @@ public:
     void serializeTo(ASTSerializer& serializer) const;
 
     static bool isKind(AssertionExprKind kind) { return kind == AssertionExprKind::Conditional; }
+};
+
+struct CasePropertyExprSyntax;
+
+/// Represents a case operator in a property expression.
+class CaseAssertionExpr : public AssertionExpr {
+public:
+    struct ItemGroup {
+        span<const Expression* const> expressions;
+        not_null<const AssertionExpr*> body;
+    };
+
+    const Expression& expr;
+    span<const ItemGroup> items;
+    const AssertionExpr* defaultCase = nullptr;
+
+    CaseAssertionExpr(const Expression& expr, span<const ItemGroup> items,
+                      const AssertionExpr* defaultCase) :
+        AssertionExpr(AssertionExprKind::Case),
+        expr(expr), items(items), defaultCase(defaultCase) {}
+
+    static AssertionExpr& fromSyntax(const CasePropertyExprSyntax& syntax,
+                                     const BindContext& context);
+
+    void serializeTo(ASTSerializer& serializer) const;
+
+    static bool isKind(AssertionExprKind kind) { return kind == AssertionExprKind::Case; }
 };
 
 } // namespace slang

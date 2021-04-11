@@ -62,6 +62,7 @@ module m;
     assert property (not a ##1 b);
     assert property (accept_on(b) sync_reject_on(c) sync_accept_on(d) reject_on(e) b ##1 c);
     assert property (if (b) a ##1 c else d ##1 e);
+    assert property (case (b) 1, 2, 3: 1 ##1 b; 4: a and b; default: 1 |-> b; endcase);
 endmodule
 )");
 

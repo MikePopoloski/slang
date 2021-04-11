@@ -117,8 +117,7 @@ const AssertionExpr& AssertionExpr::bind(const PropertyExprSyntax& syntax,
                 syntax.as<ConditionalPropertyExprSyntax>(), ctx);
             break;
         case SyntaxKind::CasePropertyExpr:
-            context.addDiag(diag::NotYetSupported, syntax.sourceRange());
-            result = &badExpr(ctx.getCompilation(), nullptr);
+            result = &CaseAssertionExpr::fromSyntax(syntax.as<CasePropertyExprSyntax>(), ctx);
             break;
         default:
             THROW_UNREACHABLE;
@@ -509,6 +508,59 @@ void ConditionalAssertionExpr::serializeTo(ASTSerializer& serializer) const {
     serializer.write("if", ifExpr);
     if (elseExpr)
         serializer.write("else", *elseExpr);
+}
+
+AssertionExpr& CaseAssertionExpr::fromSyntax(const CasePropertyExprSyntax& syntax,
+                                             const BindContext& context) {
+    auto& comp = context.getCompilation();
+    auto& expr = bindExpr(*syntax.expr, context);
+
+    const AssertionExpr* defCase = nullptr;
+    SmallVectorSized<ItemGroup, 4> items;
+    for (auto item : syntax.items) {
+        if (item->kind == SyntaxKind::StandardPropertyCaseItem) {
+            auto& sci = item->as<StandardPropertyCaseItemSyntax>();
+            auto& body = AssertionExpr::bind(*sci.expr, context);
+
+            SmallVectorSized<const Expression*, 4> exprs;
+            for (auto es : sci.expressions)
+                exprs.append(&bindExpr(*es, context));
+
+            items.append(ItemGroup{ exprs.copy(comp), &body });
+        }
+        else {
+            // The parser already errored for duplicate defaults,
+            // so just ignore if it happens here.
+            if (!defCase) {
+                defCase =
+                    &AssertionExpr::bind(*item->as<DefaultPropertyCaseItemSyntax>().expr, context);
+            }
+        }
+    }
+
+    return *comp.emplace<CaseAssertionExpr>(expr, items.copy(comp), defCase);
+}
+
+void CaseAssertionExpr::serializeTo(ASTSerializer& serializer) const {
+    serializer.write("expr", expr);
+
+    serializer.startArray("items");
+    for (auto const& item : items) {
+        serializer.startObject();
+
+        serializer.startArray("expressions");
+        for (auto ex : item.expressions)
+            serializer.serialize(*ex);
+        serializer.endArray();
+
+        serializer.write("body", *item.body);
+
+        serializer.endObject();
+    }
+    serializer.endArray();
+
+    if (defaultCase)
+        serializer.write("defaultCase", *defaultCase);
 }
 
 } // namespace slang
