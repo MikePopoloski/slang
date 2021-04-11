@@ -310,13 +310,13 @@ void SequenceConcatExpr::serializeTo(ASTSerializer& serializer) const {
 static UnaryAssertionOperator getUnaryOp(TokenKind kind) {
     // clang-format off
     switch (kind) {
-        case TokenKind::NotKeyword: return UnaryAssertionOperator::Not; break;
-        case TokenKind::NextTimeKeyword: return UnaryAssertionOperator::NextTime; break;
-        case TokenKind::SNextTimeKeyword: return UnaryAssertionOperator::SNextTime; break;
-        case TokenKind::AlwaysKeyword: return UnaryAssertionOperator::Always; break;
-        case TokenKind::SAlwaysKeyword: return UnaryAssertionOperator::SAlways; break;
-        case TokenKind::EventuallyKeyword: return UnaryAssertionOperator::Eventually; break;
-        case TokenKind::SEventuallyKeyword: return UnaryAssertionOperator::SEventually; break;
+        case TokenKind::NotKeyword: return UnaryAssertionOperator::Not;
+        case TokenKind::NextTimeKeyword: return UnaryAssertionOperator::NextTime;
+        case TokenKind::SNextTimeKeyword: return UnaryAssertionOperator::SNextTime;
+        case TokenKind::AlwaysKeyword: return UnaryAssertionOperator::Always;
+        case TokenKind::SAlwaysKeyword: return UnaryAssertionOperator::SAlways;
+        case TokenKind::EventuallyKeyword: return UnaryAssertionOperator::Eventually;
+        case TokenKind::SEventuallyKeyword: return UnaryAssertionOperator::SEventually;
         default: THROW_UNREACHABLE;
     }
     // clang-format on

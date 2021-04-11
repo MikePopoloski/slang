@@ -947,6 +947,9 @@ Expression* Expression::tryBindInterfaceRef(const BindContext& context,
                 // TODO: find modport
             }
         }
+
+        if (!symbol)
+            return nullptr;
     }
     else if ((symbol->kind == SymbolKind::Instance && symbol->as<InstanceSymbol>().isInterface()) ||
              symbol->kind == SymbolKind::Modport) {
