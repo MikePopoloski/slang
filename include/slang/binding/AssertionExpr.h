@@ -16,11 +16,24 @@ namespace slang {
     x(Invalid) \
     x(Simple) \
     x(SequenceConcat) \
+    x(Unary) \
     x(Binary) \
     x(FirstMatch) \
-    x(Clocking)
+    x(Clocking) \
+    x(StrongWeak)
 ENUM(AssertionExprKind, EXPR);
 #undef EXPR
+
+#define OP(x) \
+    x(Not) \
+    x(NextTime) \
+    x(SNextTime) \
+    x(Always) \
+    x(SAlways) \
+    x(Eventually) \
+    x(SEventually)
+ENUM(UnaryAssertionOperator, OP);
+#undef OP
 
 #define OP(x) \
     x(And) \
@@ -92,6 +105,7 @@ public:
 };
 
 struct RangeSelectSyntax;
+struct SelectorSyntax;
 struct SequenceRepetitionSyntax;
 
 /// Represents a range of potential sequence matches.
@@ -102,7 +116,12 @@ struct SequenceRange {
     /// The maximum length of the range. If unset, the maximum is unbounded.
     optional<uint32_t> max;
 
-    static SequenceRange fromSyntax(const RangeSelectSyntax& syntax, const BindContext& context);
+    static SequenceRange fromSyntax(const SelectorSyntax& syntax, const BindContext& context,
+                                    bool allowUnbounded);
+    static SequenceRange fromSyntax(const RangeSelectSyntax& syntax, const BindContext& context,
+                                    bool allowUnbounded);
+
+    void serializeTo(ASTSerializer& serializer) const;
 };
 
 /// Encodes a repetition of some sub-sequence.
@@ -170,6 +189,32 @@ public:
     static bool isKind(AssertionExprKind kind) { return kind == AssertionExprKind::SequenceConcat; }
 };
 
+struct UnaryPropertyExprSyntax;
+struct UnarySelectPropertyExprSyntax;
+
+/// Represents a unary operator in a property expression.
+class UnaryAssertionExpr : public AssertionExpr {
+public:
+    UnaryAssertionOperator op;
+    const AssertionExpr& expr;
+    optional<SequenceRange> range;
+
+    UnaryAssertionExpr(UnaryAssertionOperator op, const AssertionExpr& expr,
+                       optional<SequenceRange> range) :
+        AssertionExpr(AssertionExprKind::Unary),
+        op(op), expr(expr), range(range) {}
+
+    static AssertionExpr& fromSyntax(const UnaryPropertyExprSyntax& syntax,
+                                     const BindContext& context);
+
+    static AssertionExpr& fromSyntax(const UnarySelectPropertyExprSyntax& syntax,
+                                     const BindContext& context);
+
+    void serializeTo(ASTSerializer& serializer) const;
+
+    static bool isKind(AssertionExprKind kind) { return kind == AssertionExprKind::Unary; }
+};
+
 struct BinarySequenceExprSyntax;
 struct BinaryPropertyExprSyntax;
 
@@ -235,6 +280,25 @@ public:
     void serializeTo(ASTSerializer& serializer) const;
 
     static bool isKind(AssertionExprKind kind) { return kind == AssertionExprKind::Clocking; }
+};
+
+struct StrongWeakPropertyExprSyntax;
+
+/// Represents a strong or weak operator in a property expression.
+class StrongWeakAssertionExpr : public AssertionExpr {
+public:
+    const AssertionExpr& expr;
+    enum Strength { Strong, Weak } strength;
+
+    StrongWeakAssertionExpr(const AssertionExpr& expr, Strength strength) :
+        AssertionExpr(AssertionExprKind::StrongWeak), expr(expr), strength(strength) {}
+
+    static AssertionExpr& fromSyntax(const StrongWeakPropertyExprSyntax& syntax,
+                                     const BindContext& context);
+
+    void serializeTo(ASTSerializer& serializer) const;
+
+    static bool isKind(AssertionExprKind kind) { return kind == AssertionExprKind::StrongWeak; }
 };
 
 } // namespace slang

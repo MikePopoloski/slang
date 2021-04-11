@@ -99,8 +99,16 @@ const AssertionExpr& AssertionExpr::bind(const PropertyExprSyntax& syntax,
                 &ClockingAssertionExpr::fromSyntax(syntax.as<ClockingPropertyExprSyntax>(), ctx);
             break;
         case SyntaxKind::StrongWeakPropertyExpr:
+            result = &StrongWeakAssertionExpr::fromSyntax(syntax.as<StrongWeakPropertyExprSyntax>(),
+                                                          ctx);
+            break;
         case SyntaxKind::UnaryPropertyExpr:
+            result = &UnaryAssertionExpr::fromSyntax(syntax.as<UnaryPropertyExprSyntax>(), ctx);
+            break;
         case SyntaxKind::UnarySelectPropertyExpr:
+            result =
+                &UnaryAssertionExpr::fromSyntax(syntax.as<UnarySelectPropertyExprSyntax>(), ctx);
+            break;
         case SyntaxKind::AcceptOnPropertyExpr:
         case SyntaxKind::ConditionalPropertyExpr:
         case SyntaxKind::CasePropertyExpr:
@@ -124,16 +132,35 @@ void InvalidAssertionExpr::serializeTo(ASTSerializer& serializer) const {
         serializer.write("child", *child);
 }
 
-SequenceRange SequenceRange::fromSyntax(const RangeSelectSyntax& syntax,
-                                        const BindContext& context) {
+SequenceRange SequenceRange::fromSyntax(const SelectorSyntax& syntax, const BindContext& context,
+                                        bool allowUnbounded) {
+    if (syntax.kind == SyntaxKind::BitSelect) {
+        SequenceRange range;
+        auto val = context.evalInteger(*syntax.as<BitSelectSyntax>().expr);
+        if (context.requirePositive(val, syntax.sourceRange()))
+            range.max = range.min = uint32_t(*val);
+
+        return range;
+    }
+    else {
+        auto& rs = syntax.as<RangeSelectSyntax>();
+        return fromSyntax(rs, context, allowUnbounded);
+    }
+}
+
+SequenceRange SequenceRange::fromSyntax(const RangeSelectSyntax& syntax, const BindContext& context,
+                                        bool allowUnbounded) {
     SequenceRange range;
     auto l = context.evalInteger(*syntax.left);
     if (context.requirePositive(l, syntax.left->sourceRange()))
         range.min = uint32_t(*l);
 
     // The rhs can be an unbounded '$' so we need extra bind flags.
-    auto& re = Expression::bind(*syntax.right, context,
-                                BindFlags::AllowUnboundedLiteral | BindFlags::AssertionExpr);
+    bitmask<BindFlags> flags = BindFlags::AssertionExpr;
+    if (allowUnbounded)
+        flags |= BindFlags::AllowUnboundedLiteral;
+
+    auto& re = Expression::bind(*syntax.right, context, flags);
     if (re.type->isUnbounded())
         return range;
 
@@ -148,6 +175,14 @@ SequenceRange SequenceRange::fromSyntax(const RangeSelectSyntax& syntax,
     }
 
     return range;
+}
+
+void SequenceRange::serializeTo(ASTSerializer& serializer) const {
+    serializer.write("min", min);
+    if (max)
+        serializer.write("max", *max);
+    else
+        serializer.write("max", "$"sv);
 }
 
 SequenceRepetition::SequenceRepetition(const SequenceRepetitionSyntax& syntax,
@@ -169,18 +204,8 @@ SequenceRepetition::SequenceRepetition(const SequenceRepetitionSyntax& syntax,
             break;
     }
 
-    if (!syntax.selector)
-        return;
-
-    if (syntax.selector->kind == SyntaxKind::BitSelect) {
-        auto val = context.evalInteger(*syntax.selector->as<BitSelectSyntax>().expr);
-        if (context.requirePositive(val, syntax.selector->sourceRange()))
-            range.max = range.min = uint32_t(*val);
-    }
-    else {
-        auto& rs = syntax.selector->as<RangeSelectSyntax>();
-        range = SequenceRange::fromSyntax(rs, context);
-    }
+    if (syntax.selector)
+        range = SequenceRange::fromSyntax(*syntax.selector, context, /* allowUnbounded */ true);
 }
 
 void SequenceRepetition::serializeTo(ASTSerializer& serializer) const {
@@ -198,12 +223,7 @@ void SequenceRepetition::serializeTo(ASTSerializer& serializer) const {
             break;
     }
 
-    serializer.write("min", range.min);
-    if (range.max)
-        serializer.write("max", *range.max);
-    else
-        serializer.write("max", "$"sv);
-
+    range.serializeTo(serializer);
     serializer.endObject();
 }
 
@@ -252,7 +272,8 @@ AssertionExpr& SequenceConcatExpr::fromSyntax(const DelayedSequenceExprSyntax& s
                 delay.max = delay.min = uint32_t(*val);
         }
         else if (es->range && es->range->kind == SyntaxKind::SimpleRangeSelect) {
-            delay = SequenceRange::fromSyntax(es->range->as<RangeSelectSyntax>(), context);
+            delay = SequenceRange::fromSyntax(es->range->as<RangeSelectSyntax>(), context,
+                                              /* allowUnbounded */ true);
         }
         else if (es->op.kind == TokenKind::Plus) {
             delay.min = 1;
@@ -275,15 +296,56 @@ void SequenceConcatExpr::serializeTo(ASTSerializer& serializer) const {
     for (auto& elem : elements) {
         serializer.startObject();
         serializer.write("sequence", *elem.sequence);
-        serializer.write("minDelay", elem.delay.min);
-        if (elem.delay.max)
-            serializer.write("maxDelay", *elem.delay.max);
-        else
-            serializer.write("maxDelay", "$"sv);
+        elem.delay.serializeTo(serializer);
         serializer.endObject();
     }
 
     serializer.endArray();
+}
+
+static UnaryAssertionOperator getUnaryOp(TokenKind kind) {
+    // clang-format off
+    switch (kind) {
+        case TokenKind::NotKeyword: return UnaryAssertionOperator::Not; break;
+        case TokenKind::NextTimeKeyword: return UnaryAssertionOperator::NextTime; break;
+        case TokenKind::SNextTimeKeyword: return UnaryAssertionOperator::SNextTime; break;
+        case TokenKind::AlwaysKeyword: return UnaryAssertionOperator::Always; break;
+        case TokenKind::SAlwaysKeyword: return UnaryAssertionOperator::SAlways; break;
+        case TokenKind::EventuallyKeyword: return UnaryAssertionOperator::Eventually; break;
+        case TokenKind::SEventuallyKeyword: return UnaryAssertionOperator::SEventually; break;
+        default: THROW_UNREACHABLE;
+    }
+    // clang-format on
+}
+
+AssertionExpr& UnaryAssertionExpr::fromSyntax(const UnaryPropertyExprSyntax& syntax,
+                                              const BindContext& context) {
+    auto& comp = context.getCompilation();
+    auto& expr = bind(*syntax.expr, context);
+    return *comp.emplace<UnaryAssertionExpr>(getUnaryOp(syntax.op.kind), expr, std::nullopt);
+}
+
+AssertionExpr& UnaryAssertionExpr::fromSyntax(const UnarySelectPropertyExprSyntax& syntax,
+                                              const BindContext& context) {
+    auto& comp = context.getCompilation();
+    auto& expr = bind(*syntax.expr, context);
+    auto op = getUnaryOp(syntax.op.kind);
+
+    optional<SequenceRange> range;
+    if (syntax.selector) {
+        bool allowUnbounded =
+            op == UnaryAssertionOperator::Always || op == UnaryAssertionOperator::SEventually;
+        range = SequenceRange::fromSyntax(*syntax.selector, context, allowUnbounded);
+    }
+
+    return *comp.emplace<UnaryAssertionExpr>(op, expr, range);
+}
+
+void UnaryAssertionExpr::serializeTo(ASTSerializer& serializer) const {
+    serializer.write("op", toString(op));
+    serializer.write("expr", expr);
+    if (range)
+        range->serializeTo(serializer);
 }
 
 AssertionExpr& BinaryAssertionExpr::fromSyntax(const BinarySequenceExprSyntax& syntax,
@@ -370,6 +432,19 @@ AssertionExpr& ClockingAssertionExpr::fromSyntax(const ClockingPropertyExprSynta
 void ClockingAssertionExpr::serializeTo(ASTSerializer& serializer) const {
     serializer.write("clocking", clocking);
     serializer.write("expr", expr);
+}
+
+AssertionExpr& StrongWeakAssertionExpr::fromSyntax(const StrongWeakPropertyExprSyntax& syntax,
+                                                   const BindContext& context) {
+    auto& comp = context.getCompilation();
+    auto& expr = bind(*syntax.expr, context);
+    return *comp.emplace<StrongWeakAssertionExpr>(
+        expr, syntax.keyword.kind == TokenKind::StrongKeyword ? Strong : Weak);
+}
+
+void StrongWeakAssertionExpr::serializeTo(ASTSerializer& serializer) const {
+    serializer.write("expr", expr);
+    serializer.write("strength", strength == Strong ? "strong"sv : "weak"sv);
 }
 
 } // namespace slang

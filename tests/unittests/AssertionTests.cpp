@@ -55,6 +55,11 @@ module m;
     assert property ((@(posedge b) a and b) intersect c);
     assert property ((@(posedge b) a iff b) implies c);
     assert property (first_match(a and b));
+    assert property (always b and c);
+    assert property ((s_always [3:4] b and c) and (s_eventually [1:$] b) and (eventually [1:2] c));
+    assert property ((nexttime [3] b) and (s_nexttime b));
+    assert property (strong(a ##1 b) and weak(a intersect b));
+    assert property (not a ##1 b);
 endmodule
 )");
 
@@ -92,6 +97,11 @@ module m;
     assert property ((b and b) |-> b);
     assert property ((b and b)[*3] throughout b);
     assert property (b[*3] throughout b);
+    assert property (always [] b);
+    assert property (always [4] b);
+    assert property (s_always b);
+    assert property (nexttime [1:2] b);
+    assert property (eventually [1:$] b);
 endmodule
 )");
 
@@ -99,7 +109,7 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 15);
+    REQUIRE(diags.size() == 20);
     CHECK(diags[0].code == diag::AssertionExprType);
     CHECK(diags[1].code == diag::IncDecNotAllowed);
     CHECK(diags[2].code == diag::CHandleInAssertion);
@@ -115,4 +125,9 @@ endmodule
     CHECK(diags[12].code == diag::PropertyLhsInvalid);
     CHECK(diags[13].code == diag::ThroughoutLhsInvalid);
     CHECK(diags[14].code == diag::ThroughoutLhsInvalid);
+    CHECK(diags[15].code == diag::ExpectedExpression);
+    CHECK(diags[16].code == diag::InvalidPropertyRange);
+    CHECK(diags[17].code == diag::InvalidPropertyRange);
+    CHECK(diags[18].code == diag::InvalidPropertyIndex);
+    CHECK(diags[19].code == diag::UnboundedNotAllowed);
 }

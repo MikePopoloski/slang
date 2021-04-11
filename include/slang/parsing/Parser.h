@@ -337,6 +337,7 @@ private:
     SystemTimingCheckSyntax& parseSystemTimingCheck();
     TimingCheckArgSyntax& parseTimingCheckArg();
     EdgeDescriptorSyntax& parseEdgeDescriptor();
+    SelectorSyntax* parseSequenceRange();
     SequenceExprSyntax& parseDelayedSequenceExpr(SequenceExprSyntax* first);
     SequenceExprSyntax& parseSequencePrimary();
     SequenceExprSyntax& parseSequenceExpr(int precedence, bool isInProperty);

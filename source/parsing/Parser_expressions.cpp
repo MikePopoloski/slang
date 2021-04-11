@@ -1050,6 +1050,19 @@ bool Parser::isConditionalExpression() {
     }
 }
 
+SelectorSyntax* Parser::parseSequenceRange() {
+    auto result = parseElementSelector();
+    if (!result) {
+        addDiag(diag::ExpectedExpression, peek().location());
+    }
+    else if (result->kind == SyntaxKind::AscendingRangeSelect ||
+             result->kind == SyntaxKind::DescendingRangeSelect) {
+        auto& rs = result->as<RangeSelectSyntax>();
+        addDiag(diag::InvalidSequenceRange, rs.range.location()) << rs.range.range();
+    }
+    return result;
+}
+
 SequenceExprSyntax& Parser::parseDelayedSequenceExpr(SequenceExprSyntax* first) {
     SmallVectorSized<DelayedSequenceElementSyntax*, 4> elements;
     do {
@@ -1066,15 +1079,7 @@ SequenceExprSyntax& Parser::parseDelayedSequenceExpr(SequenceExprSyntax* first) 
                 op = consume();
             }
             else {
-                selector = parseElementSelector();
-                if (!selector) {
-                    addDiag(diag::ExpectedExpression, peek().location());
-                }
-                else if (selector->kind == SyntaxKind::AscendingRangeSelect ||
-                         selector->kind == SyntaxKind::DescendingRangeSelect) {
-                    auto& rs = selector->as<RangeSelectSyntax>();
-                    addDiag(diag::InvalidSequenceRange, rs.range.location()) << rs.range.range();
-                }
+                selector = parseSequenceRange();
             }
             closeBracket = expect(TokenKind::CloseBracket);
         }
@@ -1421,9 +1426,16 @@ PropertyExprSyntax& Parser::parsePropertyPrimary() {
             auto op = consume();
             if (peek(TokenKind::OpenBracket)) {
                 auto openBracket = consume();
-                auto selector = parseElementSelector();
+                auto selector = parseSequenceRange();
                 auto closeBracket = expect(TokenKind::CloseBracket);
                 auto& expr = parsePropertyPrimary();
+
+                if (selector && selector->kind != SyntaxKind::BitSelect) {
+                    auto range = selector->sourceRange();
+                    addDiag(diag::InvalidPropertyIndex, range.start())
+                        << range << op.valueText() << op.range();
+                }
+
                 return factory.unarySelectPropertyExpr(op, openBracket, selector, closeBracket,
                                                        expr);
             }
@@ -1438,11 +1450,24 @@ PropertyExprSyntax& Parser::parsePropertyPrimary() {
             auto op = consume();
             if (peek(TokenKind::OpenBracket)) {
                 auto openBracket = consume();
-                auto selector = parseElementSelector();
+                auto selector = parseSequenceRange();
                 auto closeBracket = expect(TokenKind::CloseBracket);
                 auto& expr = parsePropertyExpr(0);
+
+                if (selector && selector->kind != SyntaxKind::SimpleRangeSelect) {
+                    auto range = selector->sourceRange();
+                    addDiag(diag::InvalidPropertyRange, range.start())
+                        << range << op.valueText() << op.range();
+                }
+
                 return factory.unarySelectPropertyExpr(op, openBracket, selector, closeBracket,
                                                        expr);
+            }
+
+            if (current.kind == TokenKind::SAlwaysKeyword ||
+                current.kind == TokenKind::EventuallyKeyword) {
+                auto range = op.range();
+                addDiag(diag::InvalidPropertyRange, range.start()) << range << op.valueText();
             }
 
             auto& expr = parsePropertyExpr(0);

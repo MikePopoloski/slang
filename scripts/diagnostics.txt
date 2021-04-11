@@ -205,6 +205,8 @@ error SolveBeforeDisallowed "constraint ordering directive is not allowed within
 error LifetimeForPrototype "lifetime specifier is not allowed on prototype declaration"
 error InvalidPackageDecl "invalid package declaration"
 error InvalidSequenceRange "invalid sequence range"
+error InvalidPropertyIndex "only a single count of cycles is allowed for '{}' expression"
+error InvalidPropertyRange "expected a range of cycles for '{}' expression"
 error ThroughoutLhsInvalid "left-hand side of 'throughout' operator must be a simple expression"
 error PropertyLhsInvalid "left-hand side of '{}' operator must be a sequence expression"
 warning nonstandard-generate NonStandardGenBlock "standalone generate block without loop or condition is not allowed in SystemVerilog"
