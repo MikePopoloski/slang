@@ -1221,10 +1221,21 @@ SequenceExprSyntax& Parser::parseSequencePrimary() {
             // There is ambiguity between parenthesized sequence expressions and normal
             // expressions. To resolve, we need to see if we are at the end of the
             // parenthesis and what comes after can only be another piece of the expression.
-            if (expr.kind == SyntaxKind::SimpleSequenceExpr && peek(TokenKind::CloseParenthesis) &&
-                isBinaryOrPostfixExpression(peek(1).kind)) {
+            auto currExpr = &expr;
+            while (currExpr->kind == SyntaxKind::ParenthesizedSequenceExpr) {
+                auto& paren = currExpr->as<ParenthesizedSequenceExprSyntax>();
+                if (paren.matchList || paren.repetition) {
+                    currExpr = nullptr;
+                    break;
+                }
+
+                currExpr = paren.expr;
+            }
+
+            if (currExpr && currExpr->kind == SyntaxKind::SimpleSequenceExpr &&
+                peek(TokenKind::CloseParenthesis) && isBinaryOrPostfixExpression(peek(1).kind)) {
                 auto& fixed =
-                    fixParenthesizedExpression(expr.as<SimpleSequenceExprSyntax>(), openParen);
+                    fixParenthesizedExpression(currExpr->as<SimpleSequenceExprSyntax>(), openParen);
 
                 auto repetition = parseSequenceRepetition();
                 return factory.simpleSequenceExpr(fixed, repetition);
@@ -1282,12 +1293,25 @@ SequenceExprSyntax& Parser::parseBinarySequenceExpr(SequenceExprSyntax* left, in
         // take the operator
         auto opToken = consume();
         if (opKind == SyntaxKind::ThroughoutSequenceExpr) {
-            if (left->kind != SyntaxKind::SimpleSequenceExpr) {
-                addDiag(diag::ThroughoutLhsInvalid, opToken.location()) << left->sourceRange();
+            bool bad = false;
+            auto lhs = left;
+            while (lhs->kind == SyntaxKind::ParenthesizedSequenceExpr) {
+                auto& paren = lhs->as<ParenthesizedSequenceExprSyntax>();
+                lhs = paren.expr;
+
+                if (paren.matchList || paren.repetition) {
+                    bad = true;
+                    break;
+                }
             }
-            else if (left->as<SimpleSequenceExprSyntax>().repetition) {
-                addDiag(diag::ThroughoutLhsInvalid, opToken.location())
-                    << left->as<SimpleSequenceExprSyntax>().repetition->sourceRange();
+
+            if (lhs->kind != SyntaxKind::SimpleSequenceExpr ||
+                lhs->as<SimpleSequenceExprSyntax>().repetition) {
+                bad = true;
+            }
+
+            if (bad) {
+                addDiag(diag::ThroughoutLhsInvalid, opToken.location()) << left->sourceRange();
             }
         }
 
@@ -1375,9 +1399,13 @@ PropertyExprSyntax& Parser::parsePropertyPrimary() {
             // There is ambiguity between parenthesized property expressions and normal
             // expressions. To resolve, we need to see if we are at the end of the
             // parenthesis and what comes after can only be another piece of the expression.
-            if (expr.kind == SyntaxKind::SimplePropertyExpr && peek(TokenKind::CloseParenthesis) &&
-                isBinaryOrPostfixExpression(peek(1).kind)) {
-                auto& simpProp = expr.as<SimplePropertyExprSyntax>();
+            auto currExpr = &expr;
+            while (currExpr->kind == SyntaxKind::ParenthesizedPropertyExpr)
+                currExpr = currExpr->as<ParenthesizedPropertyExprSyntax>().expr;
+
+            if (currExpr->kind == SyntaxKind::SimplePropertyExpr &&
+                peek(TokenKind::CloseParenthesis) && isBinaryOrPostfixExpression(peek(1).kind)) {
+                auto& simpProp = currExpr->as<SimplePropertyExprSyntax>();
                 if (simpProp.expr->kind == SyntaxKind::SimpleSequenceExpr) {
                     auto& fixed = fixParenthesizedExpression(
                         simpProp.expr->as<SimpleSequenceExprSyntax>(), openParen);
@@ -1390,10 +1418,10 @@ PropertyExprSyntax& Parser::parsePropertyPrimary() {
             // Similarly, this could have been a parenthesized sequence expression
             // instead, in which case we would fail if there is sequence-specific
             // tokens up next instead of a closing parenthesis.
-            if (expr.kind == SyntaxKind::SimplePropertyExpr &&
+            if (currExpr->kind == SyntaxKind::SimplePropertyExpr &&
                 (peek(TokenKind::Comma) ||
                  (peek(TokenKind::CloseParenthesis) && isBinarySequenceExpression(peek(1).kind)))) {
-                auto& seqExpr = *expr.as<SimplePropertyExprSyntax>().expr;
+                auto& seqExpr = *currExpr->as<SimplePropertyExprSyntax>().expr;
 
                 Token closeParen;
                 auto matchList = parseSequenceMatchList(closeParen);
@@ -1533,7 +1561,11 @@ PropertyExprSyntax& Parser::parsePropertyExpr(int precedence) {
         auto opToken = consume();
         if (opKind == SyntaxKind::ImplicationPropertyExpr ||
             opKind == SyntaxKind::FollowedByPropertyExpr) {
-            if (left->kind != SyntaxKind::SimplePropertyExpr) {
+            auto lhs = left;
+            while (lhs->kind == SyntaxKind::ParenthesizedPropertyExpr)
+                lhs = lhs->as<ParenthesizedPropertyExprSyntax>().expr;
+
+            if (lhs->kind != SyntaxKind::SimplePropertyExpr) {
                 addDiag(diag::PropertyLhsInvalid, opToken.location())
                     << left->sourceRange() << opToken.valueText();
             }
