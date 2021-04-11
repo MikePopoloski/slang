@@ -1205,7 +1205,7 @@ static bool isModuleCommonDecl(SyntaxKind kind) {
 static bool isModuleCommonItem(SyntaxKind kind) {
     switch (kind) {
         case SyntaxKind::HierarchyInstantiation:
-        case SyntaxKind::DeferredAssertion:
+        case SyntaxKind::ImmediateAssertionMember:
         case SyntaxKind::ConcurrentAssertionMember:
         case SyntaxKind::ContinuousAssign:
         case SyntaxKind::InitialBlock:
