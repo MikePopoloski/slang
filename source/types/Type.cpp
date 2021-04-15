@@ -540,6 +540,8 @@ bool Type::isAssignmentCompatible(const Type& rhs) const {
 
         auto& lv = l->as<VirtualInterfaceType>();
         auto& rv = r->as<VirtualInterfaceType>();
+        // the following check fails when disableInstanceCaching set from tools/driver astJsonFile flag
+        // (even though the getDefinition() values and parameters match)
         if (&lv.iface != &rv.iface)
             return false;
 
