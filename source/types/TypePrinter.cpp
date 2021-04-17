@@ -268,36 +268,36 @@ void TypePrinter::visit(const UnpackedUnionType& type, string_view overrideName)
     }
 }
 
-void TypePrinter::visit(const VoidType&, string_view) {
-    buffer->append("void");
+void TypePrinter::visit(const VoidType& type, string_view) {
+    buffer->append(type.name);
 }
 
-void TypePrinter::visit(const NullType&, string_view) {
-    buffer->append("null");
+void TypePrinter::visit(const NullType& type, string_view) {
+    buffer->append(type.name);
 }
 
-void TypePrinter::visit(const CHandleType&, string_view) {
-    buffer->append("chandle");
+void TypePrinter::visit(const CHandleType& type, string_view) {
+    buffer->append(type.name);
 }
 
-void TypePrinter::visit(const StringType&, string_view) {
-    buffer->append("string");
+void TypePrinter::visit(const StringType& type, string_view) {
+    buffer->append(type.name);
 }
 
-void TypePrinter::visit(const EventType&, string_view) {
-    buffer->append("event");
+void TypePrinter::visit(const EventType& type, string_view) {
+    buffer->append(type.name);
 }
 
-void TypePrinter::visit(const UnboundedType&, string_view) {
-    buffer->append("$");
+void TypePrinter::visit(const UnboundedType& type, string_view) {
+    buffer->append(type.name);
 }
 
-void TypePrinter::visit(const TypeRefType&, string_view) {
-    buffer->append("type reference");
+void TypePrinter::visit(const TypeRefType& type, string_view) {
+    buffer->append(type.name);
 }
 
-void TypePrinter::visit(const UntypedType&, string_view) {
-    buffer->append("untyped");
+void TypePrinter::visit(const UntypedType& type, string_view) {
+    buffer->append(type.name);
 }
 
 void TypePrinter::visit(const ClassType& type, string_view) {
@@ -416,7 +416,7 @@ void TypePrinter::printAKA(const Type& type) {
     const Type* target = &type;
     while (target->isAlias()) {
         const Type& newTarget = target->as<TypeAliasType>().targetType.getType();
-        if (newTarget.name.empty() && !newTarget.isArray())
+        if (newTarget.name.empty() && !newTarget.isArray() && !newTarget.isVirtualInterface())
             break;
 
         target = &newTarget;
