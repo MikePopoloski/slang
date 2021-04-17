@@ -490,6 +490,9 @@ EnumTypeSyntax& Parser::parseEnum() {
 }
 
 DataTypeSyntax& Parser::parseDataType(bitmask<TypeOptions> options) {
+    if (peek(TokenKind::WireKeyword))
+        skipToken(diag::WireDataType);
+
     auto kind = peek().kind;
     auto type = getIntegerType(kind);
     if (type != SyntaxKind::Unknown) {

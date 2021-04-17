@@ -648,3 +648,15 @@ endmodule
     REQUIRE(diagnostics.size() == 1);
     CHECK(diagnostics[0].code == diag::ExpectedPortList);
 }
+
+TEST_CASE("Misplaced wire keyword in data type") {
+    auto& text = R"(
+function wire [3:0] asdf;
+endfunction
+)";
+
+    parseCompilationUnit(text);
+
+    REQUIRE(diagnostics.size() == 1);
+    CHECK(diagnostics[0].code == diag::WireDataType);
+}

@@ -209,6 +209,7 @@ error InvalidPropertyIndex "only a single count of cycles is allowed for '{}' ex
 error InvalidPropertyRange "expected a range of cycles for '{}' expression"
 error ThroughoutLhsInvalid "left-hand side of 'throughout' operator must be a simple expression"
 error PropertyLhsInvalid "left-hand side of '{}' operator must be a sequence expression"
+error WireDataType "expected a data type here; 'wire' is not a data type, it's a net type"
 warning nonstandard-generate NonStandardGenBlock "standalone generate block without loop or condition is not allowed in SystemVerilog"
 warning empty-pattern EmptyAssignmentPattern "empty assignment patterns are disallowed by SystemVerilog"
 note NoteToMatchThis "to match this '{}'"
