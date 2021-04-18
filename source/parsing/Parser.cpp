@@ -760,9 +760,9 @@ MemberSyntax& Parser::parseVariableDeclaration(AttrList attributes) {
             auto let = consume();
             auto identifier = expect(TokenKind::Identifier);
             auto portList = parseAssertionItemPortList();
-            auto& initializer =
-                factory.equalsValueClause(expect(TokenKind::Equals), parseExpression());
-            return factory.letDeclaration(attributes, let, identifier, portList, initializer,
+            auto equals = expect(TokenKind::Equals);
+            auto& expr = parseExpression();
+            return factory.letDeclaration(attributes, let, identifier, portList, equals, expr,
                                           expect(TokenKind::Semicolon));
         }
         case TokenKind::ImportKeyword:
