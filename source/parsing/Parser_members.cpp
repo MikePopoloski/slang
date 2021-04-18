@@ -145,7 +145,6 @@ MemberSyntax* Parser::parseMember(SyntaxKind parentKind, bool& anyLocalModules) 
         case TokenKind::SpecParamKeyword:
             return &parseSpecparam(attributes);
         case TokenKind::AliasKeyword:
-        case TokenKind::CheckerKeyword:
             // TODO: parse these
             break;
         case TokenKind::SpecifyKeyword:
@@ -250,6 +249,8 @@ MemberSyntax* Parser::parseMember(SyntaxKind parentKind, bool& anyLocalModules) 
             return &parsePropertyDeclaration(attributes);
         case TokenKind::SequenceKeyword:
             return &parseSequenceDeclaration(attributes);
+        case TokenKind::CheckerKeyword:
+            return &parseCheckerDeclaration(attributes);
         case TokenKind::GlobalKeyword:
         case TokenKind::DefaultKeyword:
             if (peek(1).kind == TokenKind::ClockingKeyword) {
@@ -1836,34 +1837,20 @@ ElabSystemTaskSyntax* Parser::parseElabSystemTask(AttrList attributes) {
     return &factory.elabSystemTask(attributes, nameToken, argList, expect(TokenKind::Semicolon));
 }
 
-AssertionItemPortSyntax& Parser::parseAssertionItemPort(TokenKind declarationKind) {
+AssertionItemPortSyntax& Parser::parseAssertionItemPort() {
     auto attributes = parseAttributes();
-    Token local;
+    auto local = consumeIf(TokenKind::LocalKeyword);
+
     Token direction;
-    if (declarationKind == TokenKind::PropertyKeyword ||
-        declarationKind == TokenKind::SequenceKeyword) {
-        local = consumeIf(TokenKind::LocalKeyword);
-        if (local && (peek(TokenKind::InputKeyword) ||
-                      (declarationKind == TokenKind::SequenceKeyword &&
-                       (peek(TokenKind::OutputKeyword) || peek(TokenKind::InOutKeyword))))) {
-            direction = consume();
-        }
-    }
+    if (isPortDirection(peek().kind))
+        direction = consume();
 
     DataTypeSyntax* type;
     switch (peek().kind) {
         case TokenKind::PropertyKeyword:
-            if (declarationKind != TokenKind::PropertyKeyword) {
-                type = &parseDataType(TypeOptions::AllowImplicit);
-                break;
-            }
             type = &factory.keywordType(SyntaxKind::PropertyType, consume());
             break;
         case TokenKind::SequenceKeyword:
-            if (declarationKind == TokenKind::LetKeyword) {
-                type = &parseDataType(TypeOptions::AllowImplicit);
-                break;
-            }
             type = &factory.keywordType(SyntaxKind::SequenceType, consume());
             break;
         case TokenKind::UntypedKeyword:
@@ -1873,13 +1860,12 @@ AssertionItemPortSyntax& Parser::parseAssertionItemPort(TokenKind declarationKin
             type = &parseDataType(TypeOptions::AllowImplicit);
             break;
     }
-    ASSERT(type);
 
     auto& declarator = parseDeclarator();
     return factory.assertionItemPort(attributes, local, direction, *type, declarator);
 }
 
-AssertionItemPortListSyntax* Parser::parseAssertionItemPortList(TokenKind declarationKind) {
+AssertionItemPortListSyntax* Parser::parseAssertionItemPortList() {
     if (!peek(TokenKind::OpenParenthesis))
         return nullptr;
 
@@ -1889,8 +1875,7 @@ AssertionItemPortListSyntax* Parser::parseAssertionItemPortList(TokenKind declar
     Token closeParen;
     parseList<isPossiblePropertyPortItem, isEndOfParenList>(
         buffer, TokenKind::CloseParenthesis, TokenKind::Comma, closeParen, RequireItems::True,
-        diag::ExpectedAssertionItemPort,
-        [this, declarationKind] { return &parseAssertionItemPort(declarationKind); });
+        diag::ExpectedAssertionItemPort, [this] { return &parseAssertionItemPort(); });
 
     return &factory.assertionItemPortList(openParen, buffer.copy(alloc), closeParen);
 }
@@ -1898,7 +1883,7 @@ AssertionItemPortListSyntax* Parser::parseAssertionItemPortList(TokenKind declar
 PropertyDeclarationSyntax& Parser::parsePropertyDeclaration(AttrList attributes) {
     auto keyword = consume();
     auto name = expect(TokenKind::Identifier);
-    auto portList = parseAssertionItemPortList(keyword.kind);
+    auto portList = parseAssertionItemPortList();
     auto semi = expect(TokenKind::Semicolon);
 
     SmallVectorSized<MemberSyntax*, 4> declarations;
@@ -1919,7 +1904,7 @@ PropertyDeclarationSyntax& Parser::parsePropertyDeclaration(AttrList attributes)
 SequenceDeclarationSyntax& Parser::parseSequenceDeclaration(AttrList attributes) {
     auto keyword = consume();
     auto name = expect(TokenKind::Identifier);
-    auto portList = parseAssertionItemPortList(keyword.kind);
+    auto portList = parseAssertionItemPortList();
     auto semi = expect(TokenKind::Semicolon);
 
     SmallVectorSized<MemberSyntax*, 4> declarations;
@@ -1935,6 +1920,31 @@ SequenceDeclarationSyntax& Parser::parseSequenceDeclaration(AttrList attributes)
 
     return factory.sequenceDeclaration(attributes, keyword, name, portList, semi,
                                        declarations.copy(alloc), expr, semi2, end, blockName);
+}
+
+CheckerDeclarationSyntax& Parser::parseCheckerDeclaration(AttrList attributes) {
+    auto keyword = consume();
+    auto name = expect(TokenKind::Identifier);
+    auto portList = parseAssertionItemPortList();
+    auto semi = expect(TokenKind::Semicolon);
+
+    auto savedDefinitionKind = currentDefinitionKind;
+    currentDefinitionKind = SyntaxKind::CheckerDeclaration;
+
+    Token end;
+    auto members = parseMemberList<MemberSyntax>(
+        TokenKind::EndCheckerKeyword, end, SyntaxKind::CheckerDeclaration,
+        [this](SyntaxKind parentKind, bool& anyLocalModules) {
+            return parseMember(parentKind, anyLocalModules);
+        });
+
+    currentDefinitionKind = savedDefinitionKind;
+
+    auto blockName = parseNamedBlockClause();
+    checkBlockNames(name, blockName);
+
+    return factory.checkerDeclaration(attributes, keyword, name, portList, semi, members, end,
+                                      blockName);
 }
 
 Token Parser::parseEdgeKeyword() {
@@ -2673,6 +2683,7 @@ void Parser::checkMemberAllowed(const SyntaxNode& member, SyntaxKind parentKind)
                 case SyntaxKind::ModuleDeclaration:
                 case SyntaxKind::InterfaceDeclaration:
                 case SyntaxKind::ProgramDeclaration:
+                case SyntaxKind::CheckerDeclaration:
                     checkMemberAllowed(member, currentDefinitionKind);
                     break;
                 default:
@@ -2698,6 +2709,10 @@ void Parser::checkMemberAllowed(const SyntaxNode& member, SyntaxKind parentKind)
         case SyntaxKind::ClockingItem:
             if (!isAllowedInClocking(member.kind))
                 error(diag::NotAllowedInClocking);
+            return;
+        case SyntaxKind::CheckerDeclaration:
+            if (!isAllowedInChecker(member.kind))
+                error(diag::NotAllowedInChecker);
             return;
 
         // Some kinds of parents already restrict the members they will parse

@@ -1883,6 +1883,15 @@ token optionalSemi
 token end
 NamedBlockClause? endBlockName
 
+CheckerDeclaration base=Member
+token keyword
+token name
+AssertionItemPortList? portList
+token semi
+list<Member> members
+token end
+NamedBlockClause? endBlockName
+
 // ----- TOP LEVEL -----
 
 CompilationUnit

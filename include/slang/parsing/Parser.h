@@ -268,10 +268,11 @@ private:
     DPIImportSyntax& parseDPIImport(AttrList attributes);
     DPIExportSyntax& parseDPIExport(AttrList attributes);
     ElabSystemTaskSyntax* parseElabSystemTask(AttrList attributes);
-    AssertionItemPortSyntax& parseAssertionItemPort(TokenKind declarationKind);
-    AssertionItemPortListSyntax* parseAssertionItemPortList(TokenKind declarationKind);
+    AssertionItemPortSyntax& parseAssertionItemPort();
+    AssertionItemPortListSyntax* parseAssertionItemPortList();
     PropertyDeclarationSyntax& parsePropertyDeclaration(AttrList attributes);
     SequenceDeclarationSyntax& parseSequenceDeclaration(AttrList attributes);
+    CheckerDeclarationSyntax& parseCheckerDeclaration(AttrList attributes);
     ParameterDeclarationBaseSyntax& parseParameterPort();
     ParameterDeclarationBaseSyntax& parseParameterDecl(Token keyword, Token* semi);
     TypeAssignmentSyntax& parseTypeAssignment();

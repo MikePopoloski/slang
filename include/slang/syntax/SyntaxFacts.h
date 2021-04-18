@@ -291,6 +291,9 @@ public:
     /// @return true if the given syntax node is allowed within a clocking block.
     static bool isAllowedInClocking(SyntaxKind kind);
 
+    /// @return true if the given syntax node is allowed within a checker declaration.
+    static bool isAllowedInChecker(SyntaxKind kind);
+
     /// @return true if the given token kind is a drive strength for value '0'.
     static bool isStrength0(TokenKind kind);
 

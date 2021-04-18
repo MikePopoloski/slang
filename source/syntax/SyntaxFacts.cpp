@@ -1106,6 +1106,10 @@ bool SyntaxFacts::isPossiblePropertyPortItem(TokenKind kind) {
         case TokenKind::PropertyKeyword:
         case TokenKind::SequenceKeyword:
         case TokenKind::Comma:
+        case TokenKind::InputKeyword:
+        case TokenKind::OutputKeyword:
+        case TokenKind::InOutKeyword:
+        case TokenKind::RefKeyword:
             return true;
         default:
             return isPossibleDataType(kind);
@@ -1185,6 +1189,7 @@ static bool isModuleOrPackageDecl(SyntaxKind kind) {
         case SyntaxKind::SequenceDeclaration:
         case SyntaxKind::LetDeclaration:
         case SyntaxKind::ConstraintDeclaration:
+        case SyntaxKind::CheckerDeclaration:
             return true;
         default:
             return false;
@@ -1315,6 +1320,46 @@ bool SyntaxFacts::isAllowedInClocking(SyntaxKind kind) {
         case SyntaxKind::PropertyDeclaration:
         case SyntaxKind::SequenceDeclaration:
         case SyntaxKind::LetDeclaration:
+            return true;
+        default:
+            return false;
+    }
+}
+
+bool SyntaxFacts::isAllowedInChecker(SyntaxKind kind) {
+    switch (kind) {
+        case SyntaxKind::InitialBlock:
+        case SyntaxKind::FinalBlock:
+        case SyntaxKind::AlwaysBlock:
+        case SyntaxKind::AlwaysCombBlock:
+        case SyntaxKind::AlwaysFFBlock:
+        case SyntaxKind::AlwaysLatchBlock:
+        case SyntaxKind::ImmediateAssertionMember:
+        case SyntaxKind::ConcurrentAssertionMember:
+        case SyntaxKind::ContinuousAssign:
+        case SyntaxKind::LoopGenerate:
+        case SyntaxKind::CaseGenerate:
+        case SyntaxKind::IfGenerate:
+        case SyntaxKind::GenerateBlock:
+        case SyntaxKind::GenerateRegion:
+        case SyntaxKind::ElabSystemTask:
+        case SyntaxKind::ParameterDeclarationStatement:
+        case SyntaxKind::CovergroupDeclaration:
+        case SyntaxKind::EmptyMember:
+        case SyntaxKind::PropertyDeclaration:
+        case SyntaxKind::SequenceDeclaration:
+        case SyntaxKind::LetDeclaration:
+        case SyntaxKind::GenvarDeclaration:
+        case SyntaxKind::ClockingDeclaration:
+        case SyntaxKind::DefaultClockingReference:
+        case SyntaxKind::NetTypeDeclaration:
+        case SyntaxKind::TypedefDeclaration:
+        case SyntaxKind::ForwardTypedefDeclaration:
+        case SyntaxKind::ForwardInterfaceClassTypedefDeclaration:
+        case SyntaxKind::PackageImportDeclaration:
+        case SyntaxKind::DataDeclaration:
+        case SyntaxKind::TaskDeclaration:
+        case SyntaxKind::CheckerDeclaration:
             return true;
         default:
             return false;

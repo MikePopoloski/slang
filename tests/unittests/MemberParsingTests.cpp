@@ -660,3 +660,19 @@ endfunction
     REQUIRE(diagnostics.size() == 1);
     CHECK(diagnostics[0].code == diag::WireDataType);
 }
+
+TEST_CASE("Checker declaration parsing") {
+    auto& text = R"(
+module m;
+  checker check(input in1, input sequence s_f);
+    default clocking cb_checker;
+    always @(s_f)
+      $display("sequence triggered");
+    a4: assert property (a |=> in1);
+  endchecker : check
+endmodule
+)";
+
+    parseCompilationUnit(text);
+    CHECK_DIAGNOSTICS_EMPTY;
+}

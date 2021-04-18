@@ -759,7 +759,7 @@ MemberSyntax& Parser::parseVariableDeclaration(AttrList attributes) {
         case TokenKind::LetKeyword: {
             auto let = consume();
             auto identifier = expect(TokenKind::Identifier);
-            auto portList = parseAssertionItemPortList(TokenKind::LetKeyword);
+            auto portList = parseAssertionItemPortList();
             auto& initializer =
                 factory.equalsValueClause(expect(TokenKind::Equals), parseExpression());
             return factory.letDeclaration(attributes, let, identifier, portList, initializer,
