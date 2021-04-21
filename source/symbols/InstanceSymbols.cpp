@@ -778,12 +778,13 @@ void UnknownModuleSymbol::fromSyntax(Compilation& compilation,
     BindContext context(scope, location, BindFlags::NonProcedural);
 
     if (syntax.parameters) {
-        for (auto expr : syntax.parameters->assignments->parameters) {
+        for (auto expr : syntax.parameters->parameters) {
             // Empty expressions are just ignored here.
-            if (expr->kind == SyntaxKind::OrderedArgument)
-                params.append(&Expression::bind(*expr->as<OrderedArgumentSyntax>().expr, context));
-            else if (expr->kind == SyntaxKind::NamedArgument) {
-                if (auto ex = expr->as<NamedArgumentSyntax>().expr)
+            if (expr->kind == SyntaxKind::OrderedParamAssignment)
+                params.append(
+                    &Expression::bind(*expr->as<OrderedParamAssignmentSyntax>().expr, context));
+            else if (expr->kind == SyntaxKind::NamedParamAssignment) {
+                if (auto ex = expr->as<NamedParamAssignmentSyntax>().expr)
                     params.append(&Expression::bind(*ex, context));
             }
         }
@@ -1081,8 +1082,7 @@ const TimingControl* PrimitiveInstanceSymbol::getDelay() const {
     auto& parent = *syntax->parent;
     if (parent.kind == SyntaxKind::HierarchyInstantiation) {
         if (auto params = parent.as<HierarchyInstantiationSyntax>().parameters) {
-            auto exprs = params->assignments;
-            delay = &Delay3Control::fromArguments(scope->getCompilation(), *exprs, context);
+            delay = &Delay3Control::fromParams(scope->getCompilation(), *params, context);
             if (delay.value()->kind == TimingControlKind::Delay3) {
                 if (auto d3 = delay.value()->as<Delay3Control>().expr3)
                     context.addDiag(diag::Delay3UdpNotAllowed, d3->sourceRange);

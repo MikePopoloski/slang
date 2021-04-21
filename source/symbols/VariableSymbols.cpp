@@ -322,8 +322,8 @@ const TimingControl* NetSymbol::getDelay() const {
         if (type->kind == SyntaxKind::NamedType) {
             auto& nt = type->as<NamedTypeSyntax>();
             if (nt.name->kind == SyntaxKind::ClassName) {
-                auto exprs = nt.name->as<ClassNameSyntax>().parameters->assignments;
-                delay = &DelayControl::fromArguments(scope->getCompilation(), *exprs, context);
+                auto params = nt.name->as<ClassNameSyntax>().parameters;
+                delay = &DelayControl::fromParams(scope->getCompilation(), *params, context);
                 return *delay;
             }
         }

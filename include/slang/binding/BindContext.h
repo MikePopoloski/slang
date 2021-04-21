@@ -23,6 +23,7 @@ class Type;
 class VariableSymbol;
 struct AttributeInstanceSyntax;
 struct ExpressionSyntax;
+struct PropertyExprSyntax;
 struct SelectorSyntax;
 struct VariableDimensionSyntax;
 
@@ -205,6 +206,11 @@ public:
     optional<ConstantRange> evalPackedDimension(const VariableDimensionSyntax& syntax) const;
     optional<ConstantRange> evalPackedDimension(const ElementSelectSyntax& syntax) const;
     optional<ConstantRange> evalUnpackedDimension(const VariableDimensionSyntax& syntax) const;
+
+    /// Subroutine argument expressions are parsed as property expressions, since we don't know
+    /// up front whether they will be used to instantiate a property or a sequence or are actually
+    /// for a subroutine. This method unwraps for the case where we are calling a subroutine.
+    const ExpressionSyntax* requireSimpleExpr(const PropertyExprSyntax& expr) const;
 
     BindContext resetFlags(bitmask<BindFlags> addedFlags) const;
 

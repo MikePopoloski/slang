@@ -2164,4 +2164,18 @@ endmodule
     NO_COMPILATION_ERRORS;
 }
 
+TEST_CASE("Invalid property expression in normal subroutine call") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    function f(int i); endfunction
+    int i = f(3 iff 4);
+endmodule
+)");
 
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::InvalidArgumentExpr);
+}

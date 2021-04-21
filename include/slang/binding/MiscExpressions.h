@@ -274,7 +274,7 @@ public:
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::EmptyArgument; }
 };
 
-struct ClockingEventArgumentSyntax;
+struct ClockingPropertyExprSyntax;
 
 /// Represents a clocking event argument. This is a special kind of argument that is only
 /// allowed with the sampled value system functions.
@@ -290,7 +290,7 @@ public:
     ConstantValue evalImpl(EvalContext&) const { return nullptr; }
     bool verifyConstantImpl(EvalContext&) const { return true; }
 
-    static Expression& fromSyntax(const ClockingEventArgumentSyntax& syntax,
+    static Expression& fromSyntax(const ClockingPropertyExprSyntax& syntax,
                                   const BindContext& context);
 
     void serializeTo(ASTSerializer& serializer) const;

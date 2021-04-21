@@ -45,26 +45,38 @@ EmptyArgument base=Argument
 token placeholder
 
 OrderedArgument base=Argument
-Expression expr
+PropertyExpr expr
 
 NamedArgument base=Argument
 token dot
 token name
 token openParen
-Expression? expr
+PropertyExpr? expr
 token closeParen
-
-ClockingEventArgument base=Argument
-TimingControl event
 
 ArgumentList
 token openParen
 separated_list<Argument> parameters
 token closeParen
 
+ParamAssignment final=false
+empty
+
+OrderedParamAssignment base=ParamAssignment
+Expression expr
+
+NamedParamAssignment base=ParamAssignment
+token dot
+token name
+token openParen
+Expression? expr
+token closeParen
+
 ParameterValueAssignment
 token hash
-ArgumentList assignments
+token openParen
+separated_list<ParamAssignment> parameters
+token closeParen
 
 // ----- PATTERNS -----
 
@@ -1818,7 +1830,7 @@ ImpliesPropertyExpr ImplicationPropertyExpr FollowedByPropertyExpr
 
 ClockingPropertyExpr base=PropertyExpr
 TimingControl event
-PropertyExpr expr
+PropertyExpr? expr
 
 AcceptOnPropertyExpr base=PropertyExpr
 token keyword

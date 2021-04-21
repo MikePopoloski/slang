@@ -429,6 +429,13 @@ AssertionExpr& ClockingAssertionExpr::fromSyntax(const ClockingPropertyExprSynta
                                                  const BindContext& context) {
     auto& comp = context.getCompilation();
     auto& clocking = TimingControl::bind(*syntax.event, context);
+
+    if (!syntax.expr) {
+        auto last = syntax.getLastToken();
+        context.addDiag(diag::ExpectedExpression, last.location() + last.rawText().length());
+        return badExpr(comp, nullptr);
+    }
+
     auto& expr = bind(*syntax.expr, context);
     return *comp.emplace<ClockingAssertionExpr>(clocking, expr);
 }

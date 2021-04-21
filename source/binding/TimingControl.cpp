@@ -84,16 +84,16 @@ TimingControl& DelayControl::fromSyntax(Compilation& compilation, const DelaySyn
     return *result;
 }
 
-TimingControl& DelayControl::fromArguments(Compilation& compilation,
-                                           const ArgumentListSyntax& exprs,
-                                           const BindContext& context) {
+TimingControl& DelayControl::fromParams(Compilation& compilation,
+                                        const ParameterValueAssignmentSyntax& exprs,
+                                        const BindContext& context) {
     auto& items = exprs.parameters;
-    if (items.size() != 1 || items[0]->kind != SyntaxKind::OrderedArgument) {
+    if (items.size() != 1 || items[0]->kind != SyntaxKind::OrderedParamAssignment) {
         context.addDiag(diag::ExpectedNetDelay, exprs.sourceRange());
         return badCtrl(compilation, nullptr);
     }
 
-    auto& expr = Expression::bind(*items[0]->as<OrderedArgumentSyntax>().expr, context);
+    auto& expr = Expression::bind(*items[0]->as<OrderedParamAssignmentSyntax>().expr, context);
     auto result = compilation.emplace<DelayControl>(expr);
     if (expr.bad())
         return badCtrl(compilation, result);
@@ -140,9 +140,9 @@ TimingControl& Delay3Control::fromSyntax(Compilation& compilation, const Delay3S
     return *result;
 }
 
-TimingControl& Delay3Control::fromArguments(Compilation& compilation,
-                                            const ArgumentListSyntax& exprs,
-                                            const BindContext& context) {
+TimingControl& Delay3Control::fromParams(Compilation& compilation,
+                                         const ParameterValueAssignmentSyntax& exprs,
+                                         const BindContext& context) {
     auto& items = exprs.parameters;
     if (items.size() < 1 || items.size() > 3) {
         context.addDiag(diag::ExpectedNetDelay, exprs.sourceRange());
@@ -151,12 +151,12 @@ TimingControl& Delay3Control::fromArguments(Compilation& compilation,
 
     const Expression* delays[3] = { nullptr };
     for (size_t i = 0; i < items.size(); i++) {
-        if (items[i]->kind != SyntaxKind::OrderedArgument) {
+        if (items[i]->kind != SyntaxKind::OrderedParamAssignment) {
             context.addDiag(diag::ExpectedNetDelay, items[i]->sourceRange());
             return badCtrl(compilation, nullptr);
         }
 
-        delays[i] = &Expression::bind(*items[i]->as<OrderedArgumentSyntax>().expr, context);
+        delays[i] = &Expression::bind(*items[i]->as<OrderedParamAssignmentSyntax>().expr, context);
 
         if (!delays[i]->type->isNumeric()) {
             context.addDiag(diag::DelayNotNumeric, delays[i]->sourceRange) << *delays[i]->type;

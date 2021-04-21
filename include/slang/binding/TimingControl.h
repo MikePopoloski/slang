@@ -73,8 +73,8 @@ public:
     void serializeTo(ASTSerializer& serializer) const;
 };
 
-struct ArgumentListSyntax;
 struct DelaySyntax;
+struct ParameterValueAssignmentSyntax;
 
 class DelayControl : public TimingControl {
 public:
@@ -86,8 +86,9 @@ public:
     static TimingControl& fromSyntax(Compilation& compilation, const DelaySyntax& syntax,
                                      const BindContext& context);
 
-    static TimingControl& fromArguments(Compilation& compilation, const ArgumentListSyntax& exprs,
-                                        const BindContext& context);
+    static TimingControl& fromParams(Compilation& compilation,
+                                     const ParameterValueAssignmentSyntax& exprs,
+                                     const BindContext& context);
 
     static bool isKind(TimingControlKind kind) { return kind == TimingControlKind::Delay; }
 
@@ -108,8 +109,9 @@ public:
     static TimingControl& fromSyntax(Compilation& compilation, const Delay3Syntax& syntax,
                                      const BindContext& context);
 
-    static TimingControl& fromArguments(Compilation& compilation, const ArgumentListSyntax& exprs,
-                                        const BindContext& context);
+    static TimingControl& fromParams(Compilation& compilation,
+                                     const ParameterValueAssignmentSyntax& exprs,
+                                     const BindContext& context);
 
     static bool isKind(TimingControlKind kind) { return kind == TimingControlKind::Delay3; }
 

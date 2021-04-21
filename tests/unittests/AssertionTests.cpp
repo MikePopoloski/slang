@@ -107,6 +107,7 @@ module m;
     assert property (s_always b);
     assert property (nexttime [1:2] b);
     assert property (eventually [1:$] b);
+    assert property (b or @o);
 endmodule
 )");
 
@@ -114,7 +115,7 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 20);
+    REQUIRE(diags.size() == 21);
     CHECK(diags[0].code == diag::AssertionExprType);
     CHECK(diags[1].code == diag::IncDecNotAllowed);
     CHECK(diags[2].code == diag::CHandleInAssertion);
@@ -135,4 +136,5 @@ endmodule
     CHECK(diags[17].code == diag::InvalidPropertyRange);
     CHECK(diags[18].code == diag::InvalidPropertyIndex);
     CHECK(diags[19].code == diag::UnboundedNotAllowed);
+    CHECK(diags[20].code == diag::ExpectedExpression);
 }

@@ -269,6 +269,20 @@ optional<ConstantRange> BindContext::evalUnpackedDimension(
     return result.range;
 }
 
+const ExpressionSyntax* BindContext::requireSimpleExpr(const PropertyExprSyntax& expr) const {
+    if (expr.kind == SyntaxKind::SimplePropertyExpr) {
+        auto& simpProp = expr.as<SimplePropertyExprSyntax>();
+        if (simpProp.expr->kind == SyntaxKind::SimpleSequenceExpr) {
+            auto& simpSeq = simpProp.expr->as<SimpleSequenceExprSyntax>();
+            if (!simpSeq.repetition)
+                return simpSeq.expr;
+        }
+    }
+
+    addDiag(diag::InvalidArgumentExpr, expr.sourceRange());
+    return nullptr;
+}
+
 static bool checkIndexType(const Type& type) {
     auto& ct = type.getCanonicalType();
     if (ct.isFloating())

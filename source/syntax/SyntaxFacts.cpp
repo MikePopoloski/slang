@@ -587,6 +587,17 @@ bool SyntaxFacts::isPossibleArgument(TokenKind kind) {
     }
 }
 
+bool SyntaxFacts::isPossibleParamAssignment(TokenKind kind) {
+    // allow a comma here to handle cases like:  foo #(, 3);
+    switch (kind) {
+        case TokenKind::Dot:
+        case TokenKind::Comma:
+            return true;
+        default:
+            return isPossibleExpression(kind);
+    }
+}
+
 bool SyntaxFacts::isPossibleNonAnsiPort(TokenKind kind) {
     switch (kind) {
         case TokenKind::Dot:

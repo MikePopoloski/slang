@@ -466,6 +466,8 @@ error EventExpressionFuncArg "cannot call a function with output, inout, or ref 
 error AssertionFuncArg "cannot call a function with output, inout, or ref arguments from a concurrent assertion expression"
 error CHandleInAssertion "cannot reference variable of type 'chandle' in concurrent assertion expressions"
 error ClassMemberInAssertion "cannot reference non-static class members in concurrent assertion expressions"
+error InvalidArgumentExpr "invalid argument expression"
+error UnexpectedClockingExpr "unexpected expression after clocking event"
 warning ignored-slice IgnoredSlice "slice size ignored for left-to-right streaming operator"
 warning unsized-concat UnsizedInConcat "unsized integer in concat; using a width of {}"
 warning width-expand WidthExpand "implicit conversion expands from {} to {} bits"

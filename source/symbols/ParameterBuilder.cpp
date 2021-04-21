@@ -22,11 +22,11 @@ void ParameterBuilder::setAssignments(const ParameterValueAssignmentSyntax& synt
     // use one method or the other.
     bool hasParamAssignments = false;
     bool orderedAssignments = true;
-    SmallVectorSized<const OrderedArgumentSyntax*, 8> orderedParams;
-    SmallMap<string_view, std::pair<const NamedArgumentSyntax*, bool>, 8> namedParams;
+    SmallVectorSized<const OrderedParamAssignmentSyntax*, 8> orderedParams;
+    SmallMap<string_view, std::pair<const NamedParamAssignmentSyntax*, bool>, 8> namedParams;
 
-    for (auto paramBase : syntax.assignments->parameters) {
-        bool isOrdered = paramBase->kind == SyntaxKind::OrderedArgument;
+    for (auto paramBase : syntax.parameters) {
+        bool isOrdered = paramBase->kind == SyntaxKind::OrderedParamAssignment;
         if (!hasParamAssignments) {
             hasParamAssignments = true;
             orderedAssignments = isOrdered;
@@ -37,9 +37,9 @@ void ParameterBuilder::setAssignments(const ParameterValueAssignmentSyntax& synt
         }
 
         if (isOrdered)
-            orderedParams.append(&paramBase->as<OrderedArgumentSyntax>());
+            orderedParams.append(&paramBase->as<OrderedParamAssignmentSyntax>());
         else {
-            const NamedArgumentSyntax& nas = paramBase->as<NamedArgumentSyntax>();
+            auto& nas = paramBase->as<NamedParamAssignmentSyntax>();
             auto name = nas.name.valueText();
             if (!name.empty()) {
                 auto pair = namedParams.emplace(name, std::make_pair(&nas, false));
@@ -82,7 +82,7 @@ void ParameterBuilder::setAssignments(const ParameterValueAssignmentSyntax& synt
             if (it == namedParams.end())
                 continue;
 
-            const NamedArgumentSyntax* arg = it->second.first;
+            auto arg = it->second.first;
             it->second.second = true;
             if (param.isLocalParam) {
                 // Can't assign to localparams, so this is an error.

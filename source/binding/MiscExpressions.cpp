@@ -411,10 +411,9 @@ Expression& CallExpression::fromArgs(Compilation& compilation, const Subroutine&
                 if (!expr)
                     context.addDiag(diag::ArgCannotBeEmpty, arg->sourceRange()) << formal->name;
             }
-            else {
-                expr = &Expression::bindArgument(formal->getType(), formal->direction,
-                                                 arg->as<ExpressionSyntax>(), context,
-                                                 formal->isConstant);
+            else if (auto exSyn = context.requireSimpleExpr(arg->as<PropertyExprSyntax>())) {
+                expr = &Expression::bindArgument(formal->getType(), formal->direction, *exSyn,
+                                                 context, formal->isConstant);
             }
 
             // Make sure there isn't also a named value for this argument.
@@ -441,8 +440,8 @@ Expression& CallExpression::fromArgs(Compilation& compilation, const Subroutine&
                         << formal->name;
                 }
             }
-            else {
-                expr = &Expression::bindArgument(formal->getType(), formal->direction, *arg,
+            else if (auto exSyn = context.requireSimpleExpr(*arg)) {
+                expr = &Expression::bindArgument(formal->getType(), formal->direction, *exSyn,
                                                  context, formal->isConstant);
             }
         }
@@ -605,12 +604,17 @@ static const Expression* bindIteratorExpr(Compilation& compilation,
         auto actualArgs = invocation->arguments->parameters;
         if (actualArgs.size() == 1 && actualArgs[0]->kind == SyntaxKind::OrderedArgument) {
             auto& arg = actualArgs[0]->as<OrderedArgumentSyntax>();
-            if (arg.expr->kind == SyntaxKind::IdentifierName) {
-                auto id = arg.expr->as<IdentifierNameSyntax>().identifier;
-                iteratorLoc = id.location();
-                iteratorName = id.valueText();
-                if (iteratorName.empty())
-                    return nullptr;
+            if (auto exSyn = context.requireSimpleExpr(*arg.expr)) {
+                if (exSyn->kind == SyntaxKind::IdentifierName) {
+                    auto id = exSyn->as<IdentifierNameSyntax>().identifier;
+                    iteratorLoc = id.location();
+                    iteratorName = id.valueText();
+                    if (iteratorName.empty())
+                        return nullptr;
+                }
+            }
+            else {
+                return nullptr;
             }
         }
 
@@ -748,8 +752,24 @@ Expression& CallExpression::createSystemCall(
                 switch (actualArgs[i]->kind) {
                     case SyntaxKind::OrderedArgument: {
                         const auto& arg = actualArgs[i]->as<OrderedArgumentSyntax>();
-                        buffer.append(
-                            &subroutine.bindArgument(index, argContext, *arg.expr, buffer));
+                        if (arg.expr->kind == SyntaxKind::ClockingPropertyExpr) {
+                            if (subroutine.allowClockingArgument(index)) {
+                                buffer.append(&ClockingArgumentExpression::fromSyntax(
+                                    arg.expr->as<ClockingPropertyExprSyntax>(), context));
+                            }
+                            else {
+                                argContext.addDiag(diag::TimingControlNotAllowed,
+                                                   actualArgs[i]->sourceRange());
+                                return badExpr(compilation, nullptr);
+                            }
+                        }
+                        else if (auto exSyn = context.requireSimpleExpr(*arg.expr)) {
+                            buffer.append(
+                                &subroutine.bindArgument(index, argContext, *exSyn, buffer));
+                        }
+                        else {
+                            return badExpr(compilation, nullptr);
+                        }
                         break;
                     }
                     case SyntaxKind::NamedArgument:
@@ -762,18 +782,6 @@ Expression& CallExpression::createSystemCall(
                         }
                         else {
                             argContext.addDiag(diag::EmptyArgNotAllowed,
-                                               actualArgs[i]->sourceRange());
-                            return badExpr(compilation, nullptr);
-                        }
-                        break;
-                    case SyntaxKind::ClockingEventArgument:
-                        if (subroutine.allowClockingArgument(index)) {
-                            auto& arg = ClockingArgumentExpression::fromSyntax(
-                                actualArgs[i]->as<ClockingEventArgumentSyntax>(), context);
-                            buffer.append(&arg);
-                        }
-                        else {
-                            argContext.addDiag(diag::TimingControlNotAllowed,
                                                actualArgs[i]->sourceRange());
                             return badExpr(compilation, nullptr);
                         }
@@ -1042,10 +1050,13 @@ ConstantValue LValueReferenceExpression::evalImpl(EvalContext& context) const {
     return lvalue->load();
 }
 
-Expression& ClockingArgumentExpression::fromSyntax(const ClockingEventArgumentSyntax& syntax,
+Expression& ClockingArgumentExpression::fromSyntax(const ClockingPropertyExprSyntax& syntax,
                                                    const BindContext& context) {
     auto& comp = context.getCompilation();
     auto& timing = TimingControl::bind(*syntax.event, context);
+
+    if (syntax.expr)
+        context.addDiag(diag::UnexpectedClockingExpr, syntax.expr->sourceRange());
 
     return *comp.emplace<ClockingArgumentExpression>(comp.getVoidType(), timing,
                                                      syntax.sourceRange());

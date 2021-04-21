@@ -779,6 +779,7 @@ TEST_CASE("Invalid clocking argument") {
 module m;
     wire clk;
     int i = $bits(@(posedge clk));
+    logic j = $rose(clk, @clk (a or b));
 endmodule
 )");
 
@@ -786,8 +787,9 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 1);
+    REQUIRE(diags.size() == 2);
     CHECK(diags[0].code == diag::TimingControlNotAllowed);
+    CHECK(diags[1].code == diag::UnexpectedClockingExpr);
 }
 
 TEST_CASE("Sampled value functions") {

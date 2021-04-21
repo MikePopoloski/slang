@@ -107,6 +107,9 @@ public:
     /// @return true if the given token represents a possible argument.
     static bool isPossibleArgument(TokenKind kind);
 
+    /// @return true if the given token represents a possible parameter assignment.
+    static bool isPossibleParamAssignment(TokenKind kind);
+
     /// @return true if the given token represents an opening delimiter.
     static bool isOpenDelimOrKeyword(TokenKind kind);
 

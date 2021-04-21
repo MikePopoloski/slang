@@ -443,7 +443,10 @@ string_view ElabSystemTaskSymbol::getMessage() const {
         switch (arg->kind) {
             case SyntaxKind::OrderedArgument: {
                 const auto& oa = arg->as<OrderedArgumentSyntax>();
-                args.append(&Expression::bind(*oa.expr, bindCtx));
+                if (auto exSyn = bindCtx.requireSimpleExpr(*oa.expr))
+                    args.append(&Expression::bind(*exSyn, bindCtx));
+                else
+                    return empty();
                 break;
             }
             case SyntaxKind::NamedArgument:

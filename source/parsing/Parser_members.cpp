@@ -856,10 +856,8 @@ ClassDeclarationSyntax& Parser::parseClassDeclaration(AttrList attributes,
             auto& baseName = parseName();
 
             ArgumentListSyntax* arguments = nullptr;
-            if (peek(TokenKind::OpenParenthesis)) {
-                arguments =
-                    &parseArgumentList(/* isParamAssignment */ false, /* allowClocking */ false);
-            }
+            if (peek(TokenKind::OpenParenthesis))
+                arguments = &parseArgumentList();
 
             extendsClause = &factory.extendsClause(extends, baseName, arguments);
         }
@@ -1832,7 +1830,7 @@ ElabSystemTaskSyntax* Parser::parseElabSystemTask(AttrList attributes) {
     auto nameToken = consume();
     ArgumentListSyntax* argList = nullptr;
     if (peek(TokenKind::OpenParenthesis))
-        argList = &parseArgumentList(/* isParamAssignment */ false, /* allowClocking */ false);
+        argList = &parseArgumentList();
 
     return &factory.elabSystemTask(attributes, nameToken, argList, expect(TokenKind::Semicolon));
 }
