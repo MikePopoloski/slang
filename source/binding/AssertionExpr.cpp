@@ -11,6 +11,7 @@
 #include "slang/binding/TimingControl.h"
 #include "slang/compilation/Compilation.h"
 #include "slang/diagnostics/StatementsDiags.h"
+#include "slang/symbols/MemberSymbols.h"
 #include "slang/syntax/AllSyntax.h"
 #include "slang/types/Type.h"
 
@@ -233,6 +234,25 @@ void SequenceRepetition::serializeTo(ASTSerializer& serializer) const {
 
 AssertionExpr& SimpleAssertionExpr::fromSyntax(const SimpleSequenceExprSyntax& syntax,
                                                const BindContext& context) {
+    // This might be a reference to a sequence or property instead of an actual
+    // expression, so check for that up front.
+    const ExpressionSyntax* es = syntax.expr;
+    const InvocationExpressionSyntax* invoc = nullptr;
+    if (es->kind == SyntaxKind::InvocationExpression) {
+        invoc = &es->as<InvocationExpressionSyntax>();
+        es = invoc->left;
+    }
+
+    if (NameSyntax::isKind(es->kind)) {
+        LookupResult result;
+        Lookup::name(es->as<NameSyntax>(), context, LookupFlags::AllowDeclaredAfter, result);
+        if (result.found && (result.found->kind == SymbolKind::Sequence ||
+                             result.found->kind == SymbolKind::Property)) {
+            result.reportErrors(context);
+            return InstanceAssertionExpr::fromSyntax(*result.found, invoc, context);
+        }
+    }
+
     auto& comp = context.getCompilation();
     auto& expr = bindExpr(*syntax.expr, context);
 
@@ -568,6 +588,30 @@ void CaseAssertionExpr::serializeTo(ASTSerializer& serializer) const {
 
     if (defaultCase)
         serializer.write("defaultCase", *defaultCase);
+}
+
+AssertionExpr& InstanceAssertionExpr::fromSyntax(const Symbol& symbol,
+                                                 const InvocationExpressionSyntax*,
+                                                 const BindContext& context) {
+    const AssertionExpr* body;
+    switch (symbol.kind) {
+        case SymbolKind::Sequence:
+            body = &symbol.as<SequenceSymbol>().instantiate();
+            break;
+        case SymbolKind::Property:
+            body = &symbol.as<PropertySymbol>().instantiate();
+            break;
+        default:
+            THROW_UNREACHABLE;
+    }
+
+    auto& comp = context.getCompilation();
+    return *comp.emplace<InstanceAssertionExpr>(symbol, *body);
+}
+
+void InstanceAssertionExpr::serializeTo(ASTSerializer& serializer) const {
+    serializer.writeLink("symbol", symbol);
+    serializer.write("expanded", expanded);
 }
 
 } // namespace slang

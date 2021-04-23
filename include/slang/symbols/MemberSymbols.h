@@ -13,6 +13,7 @@
 
 namespace slang {
 
+class AssertionExpr;
 class PackageSymbol;
 class TimingControl;
 
@@ -276,6 +277,8 @@ public:
 
     SequenceSymbol(Compilation& compilation, string_view name, SourceLocation loc);
 
+    const AssertionExpr& instantiate() const;
+
     static SequenceSymbol& fromSyntax(const Scope& scope, const SequenceDeclarationSyntax& syntax);
 
     void serializeTo(ASTSerializer& serializer) const;
@@ -291,6 +294,8 @@ public:
     span<const AssertionPortSymbol* const> ports;
 
     PropertySymbol(Compilation& compilation, string_view name, SourceLocation loc);
+
+    const AssertionExpr& instantiate() const;
 
     static PropertySymbol& fromSyntax(const Scope& scope, const PropertyDeclarationSyntax& syntax);
 

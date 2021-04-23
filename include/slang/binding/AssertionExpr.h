@@ -23,7 +23,8 @@ namespace slang {
     x(StrongWeak) \
     x(Abort) \
     x(Conditional) \
-    x(Case)
+    x(Case) \
+    x(Instance)
 ENUM(AssertionExprKind, EXPR);
 #undef EXPR
 
@@ -374,6 +375,25 @@ public:
     void serializeTo(ASTSerializer& serializer) const;
 
     static bool isKind(AssertionExprKind kind) { return kind == AssertionExprKind::Case; }
+};
+
+struct InvocationExpressionSyntax;
+
+/// Represents an instance of a named sequence or property within an assertion expression.
+class InstanceAssertionExpr : public AssertionExpr {
+public:
+    const Symbol& symbol;
+    const AssertionExpr& expanded;
+
+    InstanceAssertionExpr(const Symbol& symbol, const AssertionExpr& expanded) :
+        AssertionExpr(AssertionExprKind::Instance), symbol(symbol), expanded(expanded) {}
+
+    static AssertionExpr& fromSyntax(const Symbol& symbol, const InvocationExpressionSyntax* invoc,
+                                     const BindContext& context);
+
+    void serializeTo(ASTSerializer& serializer) const;
+
+    static bool isKind(AssertionExprKind kind) { return kind == AssertionExprKind::Instance; }
 };
 
 } // namespace slang

@@ -138,3 +138,28 @@ endmodule
     CHECK(diags[19].code == diag::UnboundedNotAllowed);
     CHECK(diags[20].code == diag::ExpectedExpression);
 }
+
+TEST_CASE("Sequence & property instances") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    assert property (n.a);
+    assert property (b);
+
+    int c, d;
+    sequence b;
+        ##1 c ##1 d;
+    endsequence
+endmodule
+
+module n;
+    int c, d;
+    property a;
+        ##1 c ##1 d;
+    endproperty
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}

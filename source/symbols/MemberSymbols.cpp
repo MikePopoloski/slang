@@ -6,6 +6,7 @@
 //------------------------------------------------------------------------------
 #include "slang/symbols/MemberSymbols.h"
 
+#include "slang/binding/AssertionExpr.h"
 #include "slang/binding/AssignmentExpressions.h"
 #include "slang/binding/Expression.h"
 #include "slang/binding/FormatHelpers.h"
@@ -856,6 +857,15 @@ SequenceSymbol& SequenceSymbol::fromSyntax(const Scope& scope,
     return *result;
 }
 
+const AssertionExpr& SequenceSymbol::instantiate() const {
+    auto scope = getParentScope();
+    auto syntax = getSyntax();
+    ASSERT(scope && syntax);
+
+    BindContext context(*scope, LookupLocation::before(*this));
+    return AssertionExpr::bind(*syntax->as<SequenceDeclarationSyntax>().seqExpr, context);
+}
+
 void SequenceSymbol::serializeTo(ASTSerializer&) const {
     // TODO:
 }
@@ -878,6 +888,16 @@ PropertySymbol& PropertySymbol::fromSyntax(const Scope& scope,
 
     result->ports = ports.copy(comp);
     return *result;
+}
+
+const AssertionExpr& PropertySymbol::instantiate() const {
+    auto scope = getParentScope();
+    auto syntax = getSyntax();
+    ASSERT(scope && syntax);
+
+    BindContext context(*scope, LookupLocation::before(*this));
+    return AssertionExpr::bind(*syntax->as<PropertyDeclarationSyntax>().propertySpec->expr,
+                               context);
 }
 
 void PropertySymbol::serializeTo(ASTSerializer&) const {
