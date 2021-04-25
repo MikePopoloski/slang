@@ -2169,6 +2169,7 @@ TEST_CASE("Invalid property expression in normal subroutine call") {
 module m;
     function f(int i); endfunction
     int i = f(3 iff 4);
+    int j = f((((4)[*3])));
 endmodule
 )");
 
@@ -2176,6 +2177,20 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 1);
+    REQUIRE(diags.size() == 2);
     CHECK(diags[0].code == diag::InvalidArgumentExpr);
+    CHECK(diags[1].code == diag::InvalidArgumentExpr);
+}
+
+TEST_CASE("Subroutine invocation") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    function f(int i); endfunction
+    int i = f((3));
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
 }
