@@ -1048,13 +1048,11 @@ const Type& Type::getPredefinedType(Compilation& compilation, SyntaxKind kind, b
     if (isSigned == predef.isSigned)
         return predef;
 
-    auto flags = predef.getIntegralFlags();
-    if (isSigned)
-        flags |= IntegralFlags::Signed;
-    else
-        flags &= ~IntegralFlags::Signed;
+    if (predef.kind == SymbolKind::ScalarType)
+        return *compilation.emplace<ScalarType>(predef.as<ScalarType>().scalarKind, isSigned);
 
-    return compilation.getType(predef.bitWidth, flags);
+    return *compilation.emplace<PredefinedIntegerType>(
+        predef.as<PredefinedIntegerType>().integerKind, isSigned);
 }
 
 Diagnostic& operator<<(Diagnostic& diag, const Type& arg) {

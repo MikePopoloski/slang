@@ -1225,6 +1225,7 @@ module m;
     import "DPI-C" function void f4(ref i);
     import "DPI-C" pure function void f5(output i);
     import "DPI-C" pure function event f6(event e);
+    import "DPI-C" function byte unsigned f7();
 
     logic [3:0] r;
     initial f1(1, r);
