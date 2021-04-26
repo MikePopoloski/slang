@@ -161,7 +161,7 @@ const ConstantValue& ParameterSymbol::getValue() const {
 bool ParameterSymbol::isImplicitString() const {
     if (!value)
         getValue();
-    return fromStringLit;
+    return fromStringLit || value->bad();
 }
 
 void ParameterSymbol::setValue(ConstantValue newValue) {
