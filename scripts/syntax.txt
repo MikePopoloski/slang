@@ -304,7 +304,7 @@ token literal
 kindmap<LiteralExpression>
 NullLiteralExpression StringLiteralExpression IntegerLiteralExpression
 UnbasedUnsizedLiteralExpression RealLiteralExpression
-TimeLiteralExpression WildcardLiteralExpression OneStepLiteralExpression
+TimeLiteralExpression WildcardLiteralExpression
 DefaultPatternKeyExpression
 
 IntegerVectorExpression base=PrimaryExpression
@@ -408,6 +408,10 @@ Expression? delay2
 token comma2
 Expression? delay3
 token closeParen
+
+OneStepDelay base=TimingControl
+token hash
+token oneStep
 
 EventControl base=TimingControl
 token at

@@ -164,6 +164,8 @@ module m;
         #foo i++;
     end
 
+    wire #1step j = 1;
+
 endmodule
 )");
 

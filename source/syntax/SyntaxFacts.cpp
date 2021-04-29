@@ -58,7 +58,6 @@ SyntaxKind SyntaxFacts::getLiteralExpression(TokenKind kind) {
         case TokenKind::TimeLiteral: return SyntaxKind::TimeLiteralExpression;
         case TokenKind::NullKeyword: return SyntaxKind::NullLiteralExpression;
         case TokenKind::Dollar: return SyntaxKind::WildcardLiteralExpression;
-        case TokenKind::OneStep: return SyntaxKind::OneStepLiteralExpression;
         default: return SyntaxKind::Unknown;
     }
 }

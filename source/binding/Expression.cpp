@@ -726,7 +726,6 @@ Expression& Expression::create(Compilation& compilation, const ExpressionSyntax&
             result = &CallExpression::fromSyntax(
                 compilation, syntax.as<ArrayOrRandomizeMethodExpressionSyntax>(), context);
             break;
-        case SyntaxKind::OneStepLiteralExpression:
         case SyntaxKind::TaggedUnionExpression:
             context.addDiag(diag::NotYetSupported, syntax.sourceRange());
             result = &badExpr(compilation, nullptr);

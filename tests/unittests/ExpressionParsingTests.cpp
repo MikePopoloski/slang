@@ -709,3 +709,21 @@ endmodule
     parseCompilationUnit(text);
     CHECK_DIAGNOSTICS_EMPTY;
 }
+
+TEST_CASE("Invalid delay value expression parsing") {
+    auto& text = R"(
+module m;
+    int i;
+    initial begin
+        #{1,2} i = 1;
+        ##{1,2} i = 1;
+    end
+endmodule
+)";
+
+    parseCompilationUnit(text);
+
+    REQUIRE(diagnostics.size() == 2);
+    CHECK(diagnostics[0].code == diag::InvalidDelayValue);
+    CHECK(diagnostics[1].code == diag::InvalidDelayValue);
+}

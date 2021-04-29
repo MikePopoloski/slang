@@ -48,6 +48,9 @@ const TimingControl& TimingControl::bind(const TimingControlSyntax& syntax,
             result = &RepeatedEventControl::fromSyntax(
                 comp, syntax.as<RepeatedEventControlSyntax>(), context);
             break;
+        case SyntaxKind::OneStepDelay:
+            result = comp.emplace<OneStepDelayControl>();
+            break;
         case SyntaxKind::CycleDelay:
             context.addDiag(diag::NotYetSupported, syntax.sourceRange());
             result = &badCtrl(comp, nullptr);

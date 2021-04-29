@@ -662,6 +662,9 @@ TimingControlSyntax* Parser::parseDelay3() {
 MemberSyntax& Parser::parseNetDeclaration(AttrList attributes) {
     auto netType = consume();
     if (netType.kind == TokenKind::Identifier) {
+        // We will only be called in this case if isNetDeclaration returns true, which
+        // itself will only do so for an identifier if the following token is a hash,
+        // indicating a timing control.
         auto delay = parseTimingControl();
         ASSERT(delay);
 

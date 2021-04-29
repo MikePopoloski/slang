@@ -169,7 +169,6 @@ ExpressionSyntax& Parser::parsePrimaryExpression(bitmask<ExpressionOptions> opti
         case TokenKind::StringLiteral:
         case TokenKind::UnbasedUnsizedLiteral:
         case TokenKind::NullKeyword:
-        case TokenKind::OneStep:
         case TokenKind::Dollar: {
             auto literal = consume();
             return factory.literalExpression(getLiteralExpression(literal.kind), literal);
@@ -946,16 +945,54 @@ ExpressionSyntax& Parser::parseNewExpression(NameSyntax& newKeyword,
     return factory.newClassExpression(newKeyword, nullptr);
 }
 
+static bool isValidDelayExpr(SyntaxKind kind) {
+    switch (kind) {
+        case SyntaxKind::IntegerLiteralExpression:
+        case SyntaxKind::TimeLiteralExpression:
+        case SyntaxKind::RealLiteralExpression:
+        case SyntaxKind::ParenthesizedExpression:
+            return true;
+        default:
+            return NameSyntax::isKind(kind);
+    }
+}
+
+static bool isValidCycleDelay(SyntaxKind kind) {
+    switch (kind) {
+        case SyntaxKind::IntegerLiteralExpression:
+        case SyntaxKind::IntegerVectorExpression:
+        case SyntaxKind::IdentifierName:
+        case SyntaxKind::ParenthesizedExpression:
+            return true;
+        default:
+            return false;
+    }
+}
+
 TimingControlSyntax* Parser::parseTimingControl() {
     switch (peek().kind) {
-        case TokenKind::Hash:
+        case TokenKind::Hash: {
+            auto hash = consume();
+            if (peek(TokenKind::OneStep))
+                return &factory.oneStepDelay(hash, consume());
+
+            auto& delay = parsePrimaryExpression(ExpressionOptions::DisallowVectors);
+            if (!isValidDelayExpr(delay.kind)) {
+                auto range = delay.sourceRange();
+                addDiag(diag::InvalidDelayValue, range.start()) << range;
+            }
+
+            return &factory.delay(SyntaxKind::DelayControl, hash, delay);
+        }
         case TokenKind::DoubleHash: {
             auto hash = consume();
-            auto& delay = parsePrimaryExpression(ExpressionOptions::DisallowVectors);
-            auto kind =
-                hash.kind == TokenKind::Hash ? SyntaxKind::DelayControl : SyntaxKind::CycleDelay;
+            auto& delay = parsePrimaryExpression(ExpressionOptions::None);
+            if (!isValidCycleDelay(delay.kind)) {
+                auto range = delay.sourceRange();
+                addDiag(diag::InvalidDelayValue, range.start()) << range;
+            }
 
-            return &factory.delay(kind, hash, delay);
+            return &factory.delay(SyntaxKind::CycleDelay, hash, delay);
         }
         case TokenKind::At: {
             auto at = consume();

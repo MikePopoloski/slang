@@ -129,7 +129,7 @@ void testTimingControl(string_view text, SyntaxKind kind) {
 
 TEST_CASE("Timing control statements") {
     testTimingControl("# 52 ;", SyntaxKind::DelayControl);
-    testTimingControl("#1step ;", SyntaxKind::DelayControl);
+    testTimingControl("#1step ;", SyntaxKind::OneStepDelay);
     testTimingControl("# (3:4:5) ;", SyntaxKind::DelayControl);
     testTimingControl("## (3+2) ;", SyntaxKind::CycleDelay);
     testTimingControl("## foo ;", SyntaxKind::CycleDelay);
