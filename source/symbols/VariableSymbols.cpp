@@ -384,4 +384,27 @@ IteratorSymbol::IteratorSymbol(string_view name, SourceLocation loc, const Type&
     setType(indexType);
 }
 
+ClockVarSymbol::ClockVarSymbol(string_view name, SourceLocation loc) :
+    VariableSymbol(SymbolKind::ClockVar, name, loc, VariableLifetime::Static) {
+}
+
+void ClockVarSymbol::fromSyntax(const Scope& scope, const ClockingItemSyntax& syntax,
+                                SmallVector<const ClockVarSymbol*>& results) {
+    // TODO: direction, skew, type
+    auto& comp = scope.getCompilation();
+    for (auto decl : syntax.decls) {
+        auto arg = comp.emplace<ClockVarSymbol>(decl->name.valueText(), decl->name.location());
+        arg->setSyntax(*decl);
+        arg->setAttributes(scope, syntax.attributes);
+        results.append(arg);
+
+        if (decl->value)
+            arg->setInitializerSyntax(*decl->value->expr, decl->value->equals.location());
+    }
+}
+
+void ClockVarSymbol::serializeTo(ASTSerializer& serializer) const {
+    VariableSymbol::serializeTo(serializer);
+}
+
 } // namespace slang

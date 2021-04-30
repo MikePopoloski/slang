@@ -1759,3 +1759,23 @@ endpackage
     auto& block = root.lookupName<StatementBlockSymbol>("n.baz");
     CHECK(block.memberAt<VariableSymbol>(0).lifetime == VariableLifetime::Automatic);
 }
+
+TEST_CASE("Clocking blocks") {
+    auto tree = SyntaxTree::fromText(R"(
+module test;
+    wire clk;
+    int foo;
+    clocking cb @clk;
+        input a, b = foo;
+    endclocking
+
+    initial begin
+        cb.b = 32;
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}

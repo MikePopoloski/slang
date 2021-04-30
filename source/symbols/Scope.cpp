@@ -247,6 +247,13 @@ void Scope::addMembers(const SyntaxNode& syntax) {
                 addMember(*net);
             break;
         }
+        case SyntaxKind::ClockingItem: {
+            SmallVectorSized<const ClockVarSymbol*, 4> vars;
+            ClockVarSymbol::fromSyntax(*this, syntax.as<ClockingItemSyntax>(), vars);
+            for (auto var : vars)
+                addMember(*var);
+            break;
+        }
         case SyntaxKind::ParameterDeclarationStatement: {
             SmallVectorSized<Symbol*, 8> params;
             ParameterSymbolBase::fromLocalSyntax(
@@ -420,6 +427,10 @@ void Scope::addMembers(const SyntaxNode& syntax) {
             break;
         case SyntaxKind::PropertyDeclaration:
             addMember(PropertySymbol::fromSyntax(*this, syntax.as<PropertyDeclarationSyntax>()));
+            break;
+        case SyntaxKind::ClockingDeclaration:
+            addMember(
+                ClockingBlockSymbol::fromSyntax(*this, syntax.as<ClockingDeclarationSyntax>()));
             break;
         case SyntaxKind::PulseStyleDeclaration:
         case SyntaxKind::PathDeclaration:

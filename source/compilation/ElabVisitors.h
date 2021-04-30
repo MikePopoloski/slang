@@ -132,6 +132,13 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
         symbol.getDelay();
     }
 
+    void handle(const ClockingBlockSymbol& symbol) {
+        if (!handleDefault(symbol))
+            return;
+
+        symbol.getEvent();
+    }
+
     void handle(const InstanceSymbol& symbol) {
         if (numErrors > errorLimit || hierarchyProblem)
             return;

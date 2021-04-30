@@ -904,4 +904,41 @@ void PropertySymbol::serializeTo(ASTSerializer&) const {
     // TODO:
 }
 
+ClockingBlockSymbol::ClockingBlockSymbol(Compilation& compilation, string_view name,
+                                         SourceLocation loc) :
+    Symbol(SymbolKind::ClockingBlock, name, loc),
+    Scope(compilation, this) {
+}
+
+ClockingBlockSymbol& ClockingBlockSymbol::fromSyntax(const Scope& scope,
+                                                     const ClockingDeclarationSyntax& syntax) {
+    // TODO: global or default
+    auto& comp = scope.getCompilation();
+    auto result = comp.emplace<ClockingBlockSymbol>(comp, syntax.blockName.valueText(),
+                                                    syntax.blockName.location());
+    result->setSyntax(syntax);
+
+    for (auto item : syntax.items)
+        result->addMembers(*item);
+
+    return *result;
+}
+
+const TimingControl& ClockingBlockSymbol::getEvent() const {
+    if (!event) {
+        auto scope = getParentScope();
+        auto syntax = getSyntax();
+        ASSERT(scope && syntax);
+
+        BindContext context(*scope, LookupLocation::before(*this));
+        event = &EventListControl::fromSyntax(
+            getCompilation(), *syntax->as<ClockingDeclarationSyntax>().event, context);
+    }
+    return *event;
+}
+
+void ClockingBlockSymbol::serializeTo(ASTSerializer& serializer) const {
+    serializer.write("event", getEvent());
+}
+
 } // namespace slang

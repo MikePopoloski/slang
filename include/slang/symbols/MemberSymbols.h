@@ -304,4 +304,24 @@ public:
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::Property; }
 };
 
+struct ClockingDeclarationSyntax;
+
+/// Represents a clocking block.
+class ClockingBlockSymbol : public Symbol, public Scope {
+public:
+    ClockingBlockSymbol(Compilation& compilation, string_view name, SourceLocation loc);
+
+    const TimingControl& getEvent() const;
+
+    static ClockingBlockSymbol& fromSyntax(const Scope& scope,
+                                           const ClockingDeclarationSyntax& syntax);
+
+    void serializeTo(ASTSerializer& serializer) const;
+
+    static bool isKind(SymbolKind kind) { return kind == SymbolKind::ClockingBlock; }
+
+private:
+    mutable const TimingControl* event = nullptr;
+};
+
 } // namespace slang

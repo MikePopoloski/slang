@@ -97,7 +97,9 @@ enum class RandMode;
     x(SpecifyBlock) \
     x(Sequence) \
     x(Property) \
-    x(AssertionPort)
+    x(AssertionPort) \
+    x(ClockingBlock) \
+    x(ClockVar)
 // clang-format on
 
 ENUM(SymbolKind, SYMBOLKIND)

@@ -45,9 +45,17 @@ public:
                                       const VariableSymbol* lastVar);
 
     static bool isKind(SymbolKind kind) {
-        return kind == SymbolKind::Variable || kind == SymbolKind::FormalArgument ||
-               kind == SymbolKind::Field || kind == SymbolKind::ClassProperty ||
-               kind == SymbolKind::Iterator;
+        switch (kind) {
+            case SymbolKind::Variable:
+            case SymbolKind::FormalArgument:
+            case SymbolKind::Field:
+            case SymbolKind::ClassProperty:
+            case SymbolKind::Iterator:
+            case SymbolKind::ClockVar:
+                return true;
+            default:
+                return false;
+        }
     }
 
 protected:
@@ -149,6 +157,21 @@ public:
     void serializeTo(ASTSerializer&) const {};
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::Iterator; }
+};
+
+struct ClockingItemSyntax;
+
+/// Represents a clocking block signal.
+class ClockVarSymbol : public VariableSymbol {
+public:
+    ClockVarSymbol(string_view name, SourceLocation loc);
+
+    static void fromSyntax(const Scope& scope, const ClockingItemSyntax& syntax,
+                           SmallVector<const ClockVarSymbol*>& results);
+
+    void serializeTo(ASTSerializer& serializer) const;
+
+    static bool isKind(SymbolKind kind) { return kind == SymbolKind::ClockVar; }
 };
 
 } // namespace slang
