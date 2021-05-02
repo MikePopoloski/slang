@@ -816,7 +816,6 @@ void Scope::elaborate() const {
             }
             case SyntaxKind::ClockingItem: {
                 SmallVectorSized<const ClockVarSymbol*, 4> vars;
-                LookupLocation location = LookupLocation::before(*symbol);
                 ClockVarSymbol::fromSyntax(*this, member.node.as<ClockingItemSyntax>(), vars);
                 insertMembers(vars, symbol);
                 break;
