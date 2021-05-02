@@ -361,14 +361,6 @@ bool Type::isMatching(const Type& rhs) const {
     if (l == r || (l->getSyntax() && l->getSyntax() == r->getSyntax()))
         return true;
 
-    // Special casing for type synonyms: logic/reg
-    if (l->isScalar() && r->isScalar()) {
-        auto ls = l->as<ScalarType>().scalarKind;
-        auto rs = r->as<ScalarType>().scalarKind;
-        return (ls == ScalarType::Logic || ls == ScalarType::Reg) &&
-               (rs == ScalarType::Logic || rs == ScalarType::Reg) && l->isSigned() == r->isSigned();
-    }
-
     // Special casing for type synonyms: real/realtime
     if (l->isFloating() && r->isFloating()) {
         auto lf = l->as<FloatingType>().floatKind;
@@ -378,8 +370,9 @@ bool Type::isMatching(const Type& rhs) const {
     }
 
     // Handle check (e) and (f): matching predefined integers and matching vector types
+    // This also handles built-in scalar synonyms and multiple instances of predefined types.
     if (l->isSimpleBitVector() && r->isSimpleBitVector() &&
-        l->isPredefinedInteger() != r->isPredefinedInteger()) {
+        (!l->isPackedArray() || !r->isPackedArray())) {
         auto& li = l->as<IntegralType>();
         auto& ri = r->as<IntegralType>();
         return li.isSigned == ri.isSigned && li.isFourState == ri.isFourState &&

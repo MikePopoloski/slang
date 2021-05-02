@@ -714,6 +714,15 @@ TEST_CASE("Type matching") {
     declare("some_type st2;");
     CHECK(matching("p::st", "st2"));
 
+    // Special case for keyword integer types that have signing applied.
+    declare("byte signed byteSigned2;");
+    declare("byte unsigned byteUnsigned2;");
+    declare("bit signed ls2;");
+    declare("bit signed ls3;");
+    CHECK(matching("stillRealByte", "byteSigned2"));
+    CHECK(matching("byteUnsigned2", "notRealByte"));
+    CHECK(matching("ls2", "ls3"));
+
     NO_COMPILATION_ERRORS;
 }
 
