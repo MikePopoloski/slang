@@ -1812,3 +1812,46 @@ endmodule
     CHECK(diags[2].code == diag::ExpressionNotAssignable);
     CHECK(diags[3].code == diag::InvalidClockingSignal);
 }
+
+TEST_CASE("Multiple clocking blocks with ifaces") {
+    auto tree = SyntaxTree::fromText(R"(
+interface bus_A (input clk);
+    logic [15:0] data;
+    logic write;
+    modport test (input clk, input data, output write);
+    modport dut (output data, input write);
+endinterface
+
+interface bus_B (input clk);
+    logic [8:1] cmd;
+    logic enable;
+    modport test (input clk, enable, cmd);
+    modport dut (output enable);
+endinterface
+
+program test( bus_A.test a, bus_B.test b );
+    clocking cd1 @(posedge a.clk);
+        input data = a.data;
+        output write = a.write;
+        inout state = top.state;
+    endclocking
+
+    clocking cd2 @(posedge b.clk);
+        input #2 output #4ps cmd = b.cmd;
+        input en = b.enable;
+    endclocking
+endprogram
+
+module top;
+    logic phi1, phi2;
+    logic state;
+    bus_A a (phi1);
+    bus_B b (phi2);
+    test main (a, b);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}

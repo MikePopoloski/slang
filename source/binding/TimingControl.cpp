@@ -183,7 +183,8 @@ TimingControl& SignalEventControl::fromSyntax(Compilation& compilation,
                                               const SignalEventExpressionSyntax& syntax,
                                               const BindContext& context) {
     auto edge = SemanticFacts::getEdgeKind(syntax.edge.kind);
-    auto& expr = Expression::bind(*syntax.expr, context, BindFlags::EventExpression);
+    auto& expr = Expression::bind(*syntax.expr, context,
+                                  BindFlags::EventExpression | BindFlags::AllowClockingBlock);
 
     const Expression* iffCond = nullptr;
     if (syntax.iffClause)
@@ -195,7 +196,8 @@ TimingControl& SignalEventControl::fromSyntax(Compilation& compilation,
 TimingControl& SignalEventControl::fromSyntax(Compilation& compilation,
                                               const EventControlSyntax& syntax,
                                               const BindContext& context) {
-    auto& expr = Expression::bind(*syntax.eventName, context, BindFlags::EventExpression);
+    auto& expr = Expression::bind(*syntax.eventName, context,
+                                  BindFlags::EventExpression | BindFlags::AllowClockingBlock);
     return fromExpr(compilation, EdgeKind::None, expr, nullptr, context);
 }
 
@@ -206,6 +208,9 @@ TimingControl& SignalEventControl::fromExpr(Compilation& compilation, EdgeKind e
     if (expr.bad())
         return badCtrl(compilation, result);
 
+    // Note: `expr` here can be a void-typed HierarchicalReferenceExpression if it's
+    // referring to a clocking block.
+
     if (edge == EdgeKind::None) {
         if (expr.type->isAggregate() || expr.type->isCHandle()) {
             context.addDiag(diag::InvalidEventExpression, expr.sourceRange) << *expr.type;
@@ -213,7 +218,10 @@ TimingControl& SignalEventControl::fromExpr(Compilation& compilation, EdgeKind e
         }
     }
     else if (!expr.type->isIntegral()) {
-        context.addDiag(diag::ExprMustBeIntegral, expr.sourceRange);
+        if (expr.type->isVoid())
+            context.addDiag(diag::ClockingBlockEventEdge, expr.sourceRange);
+        else
+            context.addDiag(diag::ExprMustBeIntegral, expr.sourceRange);
         return badCtrl(compilation, result);
     }
 

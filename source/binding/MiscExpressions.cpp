@@ -27,10 +27,17 @@ namespace slang {
 
 Expression& ValueExpressionBase::fromSymbol(const BindContext& context, const Symbol& symbol,
                                             bool isHierarchical, SourceRange sourceRange) {
-    Compilation& compilation = context.getCompilation();
+    Compilation& comp = context.getCompilation();
     if (!symbol.isValue()) {
+        if (symbol.kind == SymbolKind::ClockingBlock &&
+            context.flags.has(BindFlags::AllowClockingBlock)) {
+            // Special case for event expressions.
+            return *comp.emplace<HierarchicalReferenceExpression>(symbol, comp.getVoidType(),
+                                                                  sourceRange);
+        }
+
         context.addDiag(diag::NotAValue, sourceRange) << symbol.name;
-        return badExpr(compilation, nullptr);
+        return badExpr(comp, nullptr);
     }
 
     // Automatic variables have additional restrictions.
@@ -41,19 +48,19 @@ Expression& ValueExpressionBase::fromSymbol(const BindContext& context, const Sy
         // initializers, or nested classes are accessing it.
         if (symbol.kind == SymbolKind::ClassProperty) {
             if (!Lookup::ensureAccessible(symbol, context, sourceRange))
-                return badExpr(compilation, nullptr);
+                return badExpr(comp, nullptr);
         }
         else if (context.flags.has(BindFlags::StaticInitializer)) {
             context.addDiag(diag::AutoFromStaticInit, sourceRange) << symbol.name;
-            return badExpr(compilation, nullptr);
+            return badExpr(comp, nullptr);
         }
         else if (context.flags.has(BindFlags::NonProcedural)) {
             context.addDiag(diag::AutoFromNonProcedural, sourceRange) << symbol.name;
-            return badExpr(compilation, nullptr);
+            return badExpr(comp, nullptr);
         }
         else if (context.flags.has(BindFlags::NonBlockingTimingControl)) {
             context.addDiag(diag::AutoFromNonBlockingTiming, sourceRange) << symbol.name;
-            return badExpr(compilation, nullptr);
+            return badExpr(comp, nullptr);
         }
     }
     else if (symbol.kind == SymbolKind::ConstraintBlock) {
@@ -63,20 +70,20 @@ Expression& ValueExpressionBase::fromSymbol(const BindContext& context, const Sy
     else if (symbol.kind == SymbolKind::Specparam && context.flags.has(BindFlags::Constant) &&
              !context.flags.has(BindFlags::SpecparamsAllowed)) {
         context.addDiag(diag::SpecparamInConstant, sourceRange);
-        return badExpr(compilation, nullptr);
+        return badExpr(comp, nullptr);
     }
 
     // chandles can't be referenced in sequence expressions
     auto& value = symbol.as<ValueSymbol>();
     if (context.flags.has(BindFlags::AssertionExpr) && value.getType().isCHandle()) {
         context.addDiag(diag::CHandleInAssertion, sourceRange);
-        return badExpr(compilation, nullptr);
+        return badExpr(comp, nullptr);
     }
 
     if (isHierarchical)
-        return *compilation.emplace<HierarchicalValueExpression>(value, sourceRange);
+        return *comp.emplace<HierarchicalValueExpression>(value, sourceRange);
     else
-        return *compilation.emplace<NamedValueExpression>(value, sourceRange);
+        return *comp.emplace<NamedValueExpression>(value, sourceRange);
 }
 
 bool ValueExpressionBase::verifyAssignableImpl(const BindContext& context, bool isNonBlocking,

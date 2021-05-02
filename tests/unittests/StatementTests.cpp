@@ -1196,3 +1196,26 @@ endmodule
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::AutoFromNonBlockingTiming);
 }
+
+TEST_CASE("Clocking block as event control") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    wire clk;
+    clocking cb @clk; endclocking
+
+    int i;
+    initial begin
+        @cb i++;
+        @(cb) i++;
+        @(cb or posedge cb) i++;
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::ClockingBlockEventEdge);
+}

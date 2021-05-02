@@ -105,9 +105,12 @@ enum class BindFlags {
     AllowTypeReferences = 1 << 18,
 
     /// Binding is happening within an assertion expression (sequence or property).
-    AssertionExpr = 1 << 19
+    AssertionExpr = 1 << 19,
+
+    /// Allow binding a clocking block as part of a top-level event expression.
+    AllowClockingBlock = 1 << 20
 };
-BITMASK(BindFlags, AssertionExpr);
+BITMASK(BindFlags, AllowClockingBlock);
 
 enum class DimensionKind { Unknown, Range, AbbreviatedRange, Dynamic, Associative, Queue };
 

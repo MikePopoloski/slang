@@ -390,6 +390,8 @@ bool Expression::verifyAssignable(const BindContext& context, bool isNonBlocking
             }
             return true;
         }
+        case ExpressionKind::Invalid:
+            return false;
         default:
             break;
     }
@@ -809,7 +811,7 @@ Expression& Expression::bindLookupResult(Compilation& compilation, const LookupR
     if (!symbol)
         return badExpr(compilation, nullptr);
 
-    if (symbol->isType() && (context.flags & BindFlags::AllowDataType) != 0) {
+    if (symbol->isType() && context.flags.has(BindFlags::AllowDataType)) {
         // We looked up a named data type and we were allowed to do so, so return it.
         ASSERT(!invocation && !withClause);
         const Type& resultType = Type::fromLookupResult(compilation, result, syntax,
