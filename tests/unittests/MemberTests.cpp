@@ -1764,11 +1764,13 @@ TEST_CASE("Clocking blocks") {
     auto tree = SyntaxTree::fromText(R"(
 module test;
     wire clk;
-    int foo;
+    int foo, a;
     clocking cb @clk;
         input a, b = foo;
         default input posedge #3;
         default output edge;
+        inout foo;
+        input #1step output #1step asdf = foo;
     endclocking
 
     clocking cb2 @clk; endclocking
@@ -1787,11 +1789,15 @@ endmodule
 TEST_CASE("Clocking block errors") {
     auto tree = SyntaxTree::fromText(R"(
 module test;
-    wire clk;
+    function f; endfunction
+
+    wire clk, b;
     clocking cb @clk;
         default input #1step output #0;
         default input posedge #3;
         default output edge;
+        output a = b + 1;
+        input f;
     endclocking
 endmodule
 )");
@@ -1800,7 +1806,9 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 2);
+    REQUIRE(diags.size() == 4);
     CHECK(diags[0].code == diag::MultipleDefaultInputSkew);
     CHECK(diags[1].code == diag::MultipleDefaultOutputSkew);
+    CHECK(diags[2].code == diag::ExpressionNotAssignable);
+    CHECK(diags[3].code == diag::InvalidClockingSignal);
 }

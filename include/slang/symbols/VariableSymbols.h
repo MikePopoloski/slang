@@ -164,7 +164,12 @@ struct ClockingItemSyntax;
 /// Represents a clocking block signal.
 class ClockVarSymbol : public VariableSymbol {
 public:
-    ClockVarSymbol(string_view name, SourceLocation loc);
+    ArgumentDirection direction;
+    ClockingSkew inputSkew;
+    ClockingSkew outputSkew;
+
+    ClockVarSymbol(string_view name, SourceLocation loc, ArgumentDirection direction,
+                   ClockingSkew inputSkew, ClockingSkew outputSkew);
 
     static void fromSyntax(const Scope& scope, const ClockingItemSyntax& syntax,
                            SmallVector<const ClockVarSymbol*>& results);

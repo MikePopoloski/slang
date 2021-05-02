@@ -210,6 +210,7 @@ void Scope::addMembers(const SyntaxNode& syntax) {
         case SyntaxKind::ModportDeclaration:
         case SyntaxKind::UserDefinedNetDeclaration:
         case SyntaxKind::BindDirective:
+        case SyntaxKind::ClockingItem:
             addDeferredMembers(syntax);
             break;
         case SyntaxKind::PortDeclaration:
@@ -245,13 +246,6 @@ void Scope::addMembers(const SyntaxNode& syntax) {
             NetSymbol::fromSyntax(*this, syntax.as<NetDeclarationSyntax>(), nets);
             for (auto net : nets)
                 addMember(*net);
-            break;
-        }
-        case SyntaxKind::ClockingItem: {
-            SmallVectorSized<const ClockVarSymbol*, 4> vars;
-            ClockVarSymbol::fromSyntax(*this, syntax.as<ClockingItemSyntax>(), vars);
-            for (auto var : vars)
-                addMember(*var);
             break;
         }
         case SyntaxKind::ParameterDeclarationStatement: {
@@ -819,6 +813,13 @@ void Scope::elaborate() const {
                 insertMembers(results, symbol);
                 break;
             }
+            case SyntaxKind::ClockingItem: {
+                SmallVectorSized<const ClockVarSymbol*, 4> vars;
+                LookupLocation location = LookupLocation::before(*symbol);
+                ClockVarSymbol::fromSyntax(*this, member.node.as<ClockingItemSyntax>(), vars);
+                insertMembers(vars, symbol);
+                break;
+            }
             default:
                 break;
         }
@@ -1035,6 +1036,8 @@ static size_t countMembers(const SyntaxNode& syntax) {
             return syntax.as<DataDeclarationSyntax>().declarators.size();
         case SyntaxKind::PortDeclaration:
             return syntax.as<PortDeclarationSyntax>().declarators.size();
+        case SyntaxKind::ClockingItem:
+            return syntax.as<ClockingItemSyntax>().decls.size();
         case SyntaxKind::LoopGenerate:
         case SyntaxKind::GenerateBlock:
         case SyntaxKind::BindDirective:

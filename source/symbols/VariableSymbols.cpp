@@ -384,27 +384,99 @@ IteratorSymbol::IteratorSymbol(string_view name, SourceLocation loc, const Type&
     setType(indexType);
 }
 
-ClockVarSymbol::ClockVarSymbol(string_view name, SourceLocation loc) :
-    VariableSymbol(SymbolKind::ClockVar, name, loc, VariableLifetime::Static) {
+ClockVarSymbol::ClockVarSymbol(string_view name, SourceLocation loc, ArgumentDirection direction,
+                               ClockingSkew inputSkew, ClockingSkew outputSkew) :
+    VariableSymbol(SymbolKind::ClockVar, name, loc, VariableLifetime::Static),
+    direction(direction), inputSkew(inputSkew), outputSkew(outputSkew) {
 }
 
 void ClockVarSymbol::fromSyntax(const Scope& scope, const ClockingItemSyntax& syntax,
                                 SmallVector<const ClockVarSymbol*>& results) {
-    // TODO: direction, skew, type
+    // Lookups should happen in the parent of the clocking block, since other
+    // clocking block members cannot reference each other.
     auto& comp = scope.getCompilation();
+    auto parent = scope.asSymbol().getParentScope();
+    ASSERT(parent);
+
+    LookupLocation ll = LookupLocation::before(scope.asSymbol());
+    BindContext context(*parent, ll);
+
+    ArgumentDirection dir;
+    ClockingSkew inputSkew, outputSkew;
+    if (syntax.direction->input.kind == TokenKind::InOutKeyword) {
+        dir = ArgumentDirection::InOut;
+    }
+    else {
+        if (syntax.direction->input) {
+            dir = ArgumentDirection::In;
+            if (syntax.direction->inputSkew)
+                inputSkew = ClockingSkew::fromSyntax(*syntax.direction->inputSkew, context);
+        }
+
+        if (syntax.direction->output) {
+            dir = syntax.direction->input ? ArgumentDirection::InOut : ArgumentDirection::Out;
+            if (syntax.direction->outputSkew)
+                outputSkew = ClockingSkew::fromSyntax(*syntax.direction->outputSkew, context);
+        }
+    }
+
     for (auto decl : syntax.decls) {
-        auto arg = comp.emplace<ClockVarSymbol>(decl->name.valueText(), decl->name.location());
+        auto name = decl->name;
+        auto arg = comp.emplace<ClockVarSymbol>(name.valueText(), name.location(), dir, inputSkew,
+                                                outputSkew);
         arg->setSyntax(*decl);
-        arg->setAttributes(scope, syntax.attributes);
+        arg->setAttributes(*parent, syntax.attributes);
         results.append(arg);
 
-        if (decl->value)
-            arg->setInitializerSyntax(*decl->value->expr, decl->value->equals.location());
+        // If there is an initializer expression we take our type from that.
+        // Otherwise we need to lookup the signal in our parent scope and
+        // take the type from that.
+        if (decl->value) {
+            auto& expr = Expression::bind(*decl->value->expr, context, BindFlags::NonProcedural);
+            arg->setType(*expr.type);
+            arg->setInitializer(expr);
+
+            if (dir != ArgumentDirection::In) {
+                expr.verifyAssignable(context, /* nonBlocking */ false,
+                                      decl->value->equals.location());
+            }
+        }
+        else {
+            auto sym = Lookup::unqualifiedAt(*parent, name.valueText(), ll, name.range());
+            if (sym && sym->kind != SymbolKind::Net && sym->kind != SymbolKind::Variable) {
+                auto& diag = context.addDiag(diag::InvalidClockingSignal, name.range());
+                diag << name.valueText();
+                diag.addNote(diag::NoteDeclarationHere, sym->location);
+                sym = nullptr;
+            }
+
+            if (sym) {
+                auto sourceType = sym->getDeclaredType();
+                ASSERT(sourceType);
+                arg->getDeclaredType()->copyTypeFrom(*sourceType);
+            }
+        }
     }
 }
 
 void ClockVarSymbol::serializeTo(ASTSerializer& serializer) const {
     VariableSymbol::serializeTo(serializer);
+
+    serializer.write("direction", toString(direction));
+
+    if (inputSkew.hasValue()) {
+        serializer.writeProperty("inputSkew");
+        serializer.startObject();
+        inputSkew.serializeTo(serializer);
+        serializer.endObject();
+    }
+
+    if (outputSkew.hasValue()) {
+        serializer.writeProperty("outputSkew");
+        serializer.startObject();
+        outputSkew.serializeTo(serializer);
+        serializer.endObject();
+    }
 }
 
 } // namespace slang
