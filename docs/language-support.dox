@@ -212,16 +212,19 @@ LRM | Feature | Supported
 
 LRM | Feature | Supported
 --- | ------- | ---------
-{{m-danger}}  14.3 | Clocking block declaration | no
-{{m-danger}}  14.4 | Input and output skews | no
-{{m-danger}}  14.5 | Hierarchical expressions | no
-{{m-danger}}  14.6 | Signals in multiple clocking blocks | no
-{{m-danger}}  14.7 | Clocking block scope and lifetime | no
-{{m-danger}}  14.10 | Clocking block events | no
+{{m-success}} 14.3 | Clocking block declaration | v0.8
+{{m-success}} 14.4 | Input and output skews | v0.8
+{{m-success}} 14.5 | Hierarchical expressions | v0.8
+{{m-success}} 14.6 | Signals in multiple clocking blocks | v0.8
+{{m-success}} 14.7 | Clocking block scope and lifetime | v0.8
+{{m-success}} 14.8 | Multiple clocking blocks example | v0.8
+{{m-success}} 14.9 | Interfaces and clocking blocks | v0.8
+{{m-success}} 14.10 | Clocking block events | v0.8
 {{m-danger}}  14.11 | Cycle delay | no
-{{m-danger}}  14.12 | Default clocking | no
-{{m-danger}}  14.13 | Input sampling | no
+{{m-success}} 14.12 | Default clocking | v0.8
+{{m-dim}}     14.13 | Input sampling | N/A
 {{m-danger}}  14.14 | Global clocking | no
+{{m-danger}}  14.15 | Synchronous events | no
 {{m-danger}}  14.16 | Synchronous drives | no
 
 ## 15. Interprocess synchronization and communication
