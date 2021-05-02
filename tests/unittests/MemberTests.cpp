@@ -1775,6 +1775,8 @@ module test;
 
     clocking cb2 @clk; endclocking
 
+    default clocking @clk; endclocking
+
     initial begin
         cb.b = 32;
     end
@@ -1792,13 +1794,16 @@ module test;
     function f; endfunction
 
     wire clk, b;
-    clocking cb @clk;
+    default clocking cb @clk;
         default input #1step output #0;
         default input posedge #3;
         default output edge;
         output a = b + 1;
         input f;
     endclocking
+
+    default clocking cb;
+    default clocking f;
 endmodule
 )");
 
@@ -1806,11 +1811,13 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 4);
+    REQUIRE(diags.size() == 6);
     CHECK(diags[0].code == diag::MultipleDefaultInputSkew);
     CHECK(diags[1].code == diag::MultipleDefaultOutputSkew);
     CHECK(diags[2].code == diag::ExpressionNotAssignable);
     CHECK(diags[3].code == diag::InvalidClockingSignal);
+    CHECK(diags[4].code == diag::MultipleDefaultClocking);
+    CHECK(diags[5].code == diag::NotAClockingBlock);
 }
 
 TEST_CASE("Multiple clocking blocks with ifaces") {

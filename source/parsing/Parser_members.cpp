@@ -2038,6 +2038,12 @@ MemberSyntax& Parser::parseClockingDeclaration(AttrList attributes) {
                                                 consume());
     }
 
+    if (!blockName)
+        blockName = Token::createMissing(alloc, TokenKind::Identifier, peek().location());
+
+    if (globalOrDefault.kind != TokenKind::DefaultKeyword && blockName.valueText().empty())
+        addDiag(diag::ClockingNameEmpty, peek().location());
+
     Token at = expect(TokenKind::At);
 
     EventExpressionSyntax* event;

@@ -137,6 +137,7 @@ error ConstFunctionPortRequiresRef "'const' in subroutine formal port requires '
 error ExpectedClockingSkew "expected clocking skew"
 error InOutDefaultSkew "inout direction for default skew not allowed"
 error GlobalClockingEmpty "global clocking block cannot declare items"
+error ClockingNameEmpty "expected clocking block name"
 error ExpectedDPISpecString "expected DPI spec string"
 error ParseTreeTooDeep "language constructs are too deeply nested"
 error MissingModportPortDirection "modport port declaration is missing direction specifier"
@@ -698,6 +699,8 @@ error DPISignatureMismatch "more than one DPI subroutine with C identifier '{}' 
 error DPIExportDuplicateCId "more than one DPI export with the same C identifier '{}' in the same scope"
 error DefParamTargetChange "defparam target resolves differently post-elaboration; see '{}' vs '{}'"
 error DefParamCycle "cyclic dependency found when resolving defparam"
+error MultipleDefaultClocking "scope already has a default clocking block"
+error NotAClockingBlock "'{}' is not a clocking block"
 warning unused-def UnusedDefinition "{} definition is unused"
 warning no-top NoTopModules "no top-level modules found in design"
 

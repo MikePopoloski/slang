@@ -672,6 +672,45 @@ std::tuple<const SyntaxNode*, SymbolIndex, bool*> Compilation::findOutOfBlockDec
     return { nullptr, SymbolIndex(), nullptr };
 }
 
+void Compilation::noteDefaultClocking(const Scope& scope, const Symbol& clocking,
+                                      SourceRange range) {
+    auto [it, inserted] = defaultClockingMap.emplace(&scope, &clocking);
+    if (!inserted) {
+        auto& diag = scope.addDiag(diag::MultipleDefaultClocking, range);
+        diag.addNote(diag::NotePreviousDefinition, it->second->location);
+    }
+}
+
+void Compilation::noteDefaultClocking(const Scope& scope, LookupLocation location,
+                                      const DefaultClockingReferenceSyntax& syntax) {
+    auto name = syntax.name.valueText();
+    auto range = syntax.name.range();
+    auto sym = Lookup::unqualifiedAt(scope, name, location, range);
+    if (!sym)
+        return;
+
+    if (sym->kind != SymbolKind::ClockingBlock) {
+        auto& diag = scope.addDiag(diag::NotAClockingBlock, range);
+        diag << name;
+        diag.addNote(diag::NoteDeclarationHere, sym->location);
+        return;
+    }
+
+    noteDefaultClocking(scope, *sym, range);
+}
+
+const Symbol* Compilation::getDefaultClocking(const Scope& scope) const {
+    auto curr = &scope;
+    while (true) {
+        if (auto it = defaultClockingMap.find(curr); it != defaultClockingMap.end())
+            return it->second;
+
+        curr = curr->asSymbol().getParentScope();
+        if (!curr || curr->asSymbol().kind == SymbolKind::CompilationUnit)
+            return nullptr;
+    }
+}
+
 const NameSyntax& Compilation::parseName(string_view name) {
     Diagnostics localDiags;
     auto& result = tryParseName(name, localDiags);

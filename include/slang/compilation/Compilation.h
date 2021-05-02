@@ -39,6 +39,7 @@ class SystemSubroutine;
 struct BindDirectiveSyntax;
 struct CompilationUnitSyntax;
 struct DataTypeSyntax;
+struct DefaultClockingReferenceSyntax;
 struct DPIExportSyntax;
 struct FunctionDeclarationSyntax;
 struct ModuleDeclarationSyntax;
@@ -286,6 +287,17 @@ public:
     /// the resulting decl is considered "used". If not found, the syntax pointer will be null.
     std::tuple<const SyntaxNode*, SymbolIndex, bool*> findOutOfBlockDecl(
         const Scope& scope, string_view className, string_view declName) const;
+
+    /// Notes that there is a default clocking block associated with the specified scope.
+    void noteDefaultClocking(const Scope& scope, const Symbol& clocking, SourceRange range);
+
+    /// Notes that there is a default clocking block associated with the specified scope.
+    void noteDefaultClocking(const Scope& scope, LookupLocation location,
+                             const DefaultClockingReferenceSyntax& syntax);
+
+    /// Finds an applicable default clocking block for the given scope, or returns nullptr
+    /// if no default clocking is in effect.
+    const Symbol* getDefaultClocking(const Scope& scope) const;
 
     /// A convenience method for parsing a name string and turning it into a set
     /// of syntax nodes. This is mostly for testing and API purposes; normal
@@ -600,6 +612,9 @@ private:
 
     // A list of DPI export directives we've encountered during elaboration.
     std::vector<std::pair<const DPIExportSyntax*, const Scope*>> dpiExports;
+
+    // A map of scopes to default clocking blocks.
+    flat_hash_map<const Scope*, const Symbol*> defaultClockingMap;
 
     // The built-in std package.
     const PackageSymbol* stdPkg = nullptr;

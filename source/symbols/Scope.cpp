@@ -211,6 +211,7 @@ void Scope::addMembers(const SyntaxNode& syntax) {
         case SyntaxKind::UserDefinedNetDeclaration:
         case SyntaxKind::BindDirective:
         case SyntaxKind::ClockingItem:
+        case SyntaxKind::DefaultClockingReference:
             addDeferredMembers(syntax);
             break;
         case SyntaxKind::PortDeclaration:
@@ -820,6 +821,14 @@ void Scope::elaborate() const {
                 insertMembers(vars, symbol);
                 break;
             }
+            case SyntaxKind::DefaultClockingReference: {
+                // No symbol to create here; instead, try to look up the clocking block
+                // and register it as a default.
+                LookupLocation location = LookupLocation::before(*symbol);
+                compilation.noteDefaultClocking(*this, location,
+                                                member.node.as<DefaultClockingReferenceSyntax>());
+                break;
+            }
             default:
                 break;
         }
@@ -1041,6 +1050,7 @@ static size_t countMembers(const SyntaxNode& syntax) {
         case SyntaxKind::LoopGenerate:
         case SyntaxKind::GenerateBlock:
         case SyntaxKind::BindDirective:
+        case SyntaxKind::DefaultClockingReference:
             return 1;
         default:
             THROW_UNREACHABLE;

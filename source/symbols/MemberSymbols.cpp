@@ -912,11 +912,14 @@ ClockingBlockSymbol::ClockingBlockSymbol(Compilation& compilation, string_view n
 
 ClockingBlockSymbol& ClockingBlockSymbol::fromSyntax(const Scope& scope,
                                                      const ClockingDeclarationSyntax& syntax) {
-    // TODO: global or default
+    // TODO: global clocking
     auto& comp = scope.getCompilation();
     auto result = comp.emplace<ClockingBlockSymbol>(comp, syntax.blockName.valueText(),
                                                     syntax.blockName.location());
     result->setSyntax(syntax);
+
+    if (syntax.globalOrDefault.kind == TokenKind::DefaultKeyword)
+        comp.noteDefaultClocking(scope, *result, syntax.clocking.range());
 
     const ClockingSkewSyntax* inputSkew = nullptr;
     const ClockingSkewSyntax* outputSkew = nullptr;
