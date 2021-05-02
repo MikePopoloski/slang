@@ -676,3 +676,23 @@ endmodule
     parseCompilationUnit(text);
     CHECK_DIAGNOSTICS_EMPTY;
 }
+
+TEST_CASE("Clocking block skew errors") {
+    auto& text = R"(
+module m;
+    clocking cb @(posedge clk);
+        default input output;
+        default;
+        default inout;
+    endclocking
+endmodule
+)";
+
+    parseCompilationUnit(text);
+
+    REQUIRE(diagnostics.size() == 4);
+    CHECK(diagnostics[0].code == diag::ExpectedClockingSkew);
+    CHECK(diagnostics[1].code == diag::ExpectedClockingSkew);
+    CHECK(diagnostics[2].code == diag::ExpectedClockingSkew);
+    CHECK(diagnostics[3].code == diag::InOutDefaultSkew);
+}

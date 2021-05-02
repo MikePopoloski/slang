@@ -1297,13 +1297,13 @@ token semi
 
 ClockingSkew
 token edge
-Delay? delay
+TimingControl? delay
 
 ClockingDirection
 token input
 ClockingSkew? inputSkew
 token output
-ClockingSkew? ouputSkew
+ClockingSkew? outputSkew
 
 DefaultSkewItem base=Member
 token keyword

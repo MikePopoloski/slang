@@ -1959,12 +1959,9 @@ Token Parser::parseEdgeKeyword() {
 ClockingSkewSyntax* Parser::parseClockingSkew() {
     Token edge = parseEdgeKeyword();
 
-    DelaySyntax* delay = nullptr;
-    if (peek(TokenKind::Hash)) {
-        Token hash = consume();
-        delay = &factory.delay(SyntaxKind::DelayControl, hash,
-                               parsePrimaryExpression(ExpressionOptions::DisallowVectors));
-    }
+    TimingControlSyntax* delay = nullptr;
+    if (peek(TokenKind::Hash))
+        delay = parseTimingControl();
 
     if (!edge && !delay)
         return nullptr;

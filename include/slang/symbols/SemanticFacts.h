@@ -13,7 +13,10 @@
 
 namespace slang {
 
+class ASTSerializer;
+class BindContext;
 class Scope;
+class TimingControl;
 enum class SymbolKind;
 struct BlockStatementSyntax;
 struct TimeUnitsDeclarationSyntax;
@@ -116,6 +119,26 @@ public:
 
 private:
     SemanticFacts() = default;
+};
+
+struct ClockingSkewSyntax;
+
+/// Represents a skew value that is applied to clocking block signals.
+class ClockingSkew {
+public:
+    /// The edge on which the signal should be sampled.
+    EdgeKind edge = EdgeKind::None;
+
+    /// An optional delay to apply when sampling the signal.
+    const TimingControl* delay = nullptr;
+
+    /// Returns true if any explicit skew information is specified; this method
+    /// will return false on a default constructed object.
+    bool hasValue() const { return delay || edge != EdgeKind::None; }
+
+    void serializeTo(ASTSerializer& serializer) const;
+
+    static ClockingSkew fromSyntax(const ClockingSkewSyntax& syntax, const BindContext& context);
 };
 
 } // namespace slang

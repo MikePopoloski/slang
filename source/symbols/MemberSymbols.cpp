@@ -918,8 +918,43 @@ ClockingBlockSymbol& ClockingBlockSymbol::fromSyntax(const Scope& scope,
                                                     syntax.blockName.location());
     result->setSyntax(syntax);
 
-    for (auto item : syntax.items)
-        result->addMembers(*item);
+    const ClockingSkewSyntax* inputSkew = nullptr;
+    const ClockingSkewSyntax* outputSkew = nullptr;
+
+    for (auto item : syntax.items) {
+        if (item->kind == SyntaxKind::DefaultSkewItem) {
+            auto& dir = *item->as<DefaultSkewItemSyntax>().direction;
+            if (dir.inputSkew) {
+                if (inputSkew) {
+                    auto& diag =
+                        scope.addDiag(diag::MultipleDefaultInputSkew, dir.inputSkew->sourceRange());
+                    diag.addNote(diag::NotePreviousDefinition,
+                                 inputSkew->getFirstToken().location());
+                }
+                else {
+                    inputSkew = dir.inputSkew;
+                }
+            }
+
+            if (dir.outputSkew) {
+                if (outputSkew) {
+                    auto& diag = scope.addDiag(diag::MultipleDefaultOutputSkew,
+                                               dir.outputSkew->sourceRange());
+                    diag.addNote(diag::NotePreviousDefinition,
+                                 outputSkew->getFirstToken().location());
+                }
+                else {
+                    outputSkew = dir.outputSkew;
+                }
+            }
+        }
+        else {
+            result->addMembers(*item);
+        }
+    }
+
+    result->inputSkewSyntax = inputSkew;
+    result->outputSkewSyntax = outputSkew;
 
     return *result;
 }
@@ -937,8 +972,54 @@ const TimingControl& ClockingBlockSymbol::getEvent() const {
     return *event;
 }
 
+ClockingSkew ClockingBlockSymbol::getDefaultInputSkew() const {
+    if (!defaultInputSkew) {
+        if (inputSkewSyntax) {
+            auto scope = getParentScope();
+            ASSERT(scope);
+
+            BindContext context(*scope, LookupLocation::before(*this));
+            defaultInputSkew = ClockingSkew::fromSyntax(*inputSkewSyntax, context);
+        }
+        else {
+            defaultInputSkew.emplace();
+        }
+    }
+    return *defaultInputSkew;
+}
+
+ClockingSkew ClockingBlockSymbol::getDefaultOutputSkew() const {
+    if (!defaultOutputSkew) {
+        if (outputSkewSyntax) {
+            auto scope = getParentScope();
+            ASSERT(scope);
+
+            BindContext context(*scope, LookupLocation::before(*this));
+            defaultOutputSkew = ClockingSkew::fromSyntax(*outputSkewSyntax, context);
+        }
+        else {
+            defaultOutputSkew.emplace();
+        }
+    }
+    return *defaultOutputSkew;
+}
+
 void ClockingBlockSymbol::serializeTo(ASTSerializer& serializer) const {
     serializer.write("event", getEvent());
+
+    if (auto skew = getDefaultInputSkew(); skew.hasValue()) {
+        serializer.writeProperty("defaultInputSkew");
+        serializer.startObject();
+        skew.serializeTo(serializer);
+        serializer.endObject();
+    }
+
+    if (auto skew = getDefaultOutputSkew(); skew.hasValue()) {
+        serializer.writeProperty("defaultOutputSkew");
+        serializer.startObject();
+        skew.serializeTo(serializer);
+        serializer.endObject();
+    }
 }
 
 } // namespace slang

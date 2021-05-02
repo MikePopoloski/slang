@@ -1767,7 +1767,11 @@ module test;
     int foo;
     clocking cb @clk;
         input a, b = foo;
+        default input posedge #3;
+        default output edge;
     endclocking
+
+    clocking cb2 @clk; endclocking
 
     initial begin
         cb.b = 32;
@@ -1778,4 +1782,25 @@ endmodule
     Compilation compilation;
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Clocking block errors") {
+    auto tree = SyntaxTree::fromText(R"(
+module test;
+    wire clk;
+    clocking cb @clk;
+        default input #1step output #0;
+        default input posedge #3;
+        default output edge;
+    endclocking
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::MultipleDefaultInputSkew);
+    CHECK(diags[1].code == diag::MultipleDefaultOutputSkew);
 }

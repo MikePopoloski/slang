@@ -6,6 +6,7 @@
 //------------------------------------------------------------------------------
 #include "slang/symbols/SemanticFacts.h"
 
+#include "slang/binding/TimingControl.h"
 #include "slang/diagnostics/DeclarationsDiags.h"
 #include "slang/diagnostics/PreprocessorDiags.h"
 #include "slang/symbols/Scope.h"
@@ -192,6 +193,24 @@ bool SemanticFacts::isAllowedInModport(SymbolKind kind) {
         default:
             return false;
     }
+}
+
+ClockingSkew ClockingSkew::fromSyntax(const ClockingSkewSyntax& syntax,
+                                      const BindContext& context) {
+    ClockingSkew result;
+    result.edge = SemanticFacts::getEdgeKind(syntax.edge.kind);
+
+    if (syntax.delay)
+        result.delay = &TimingControl::bind(*syntax.delay, context);
+
+    return result;
+}
+
+void ClockingSkew::serializeTo(ASTSerializer& serializer) const {
+    if (edge != EdgeKind::None)
+        serializer.write("edge", toString(edge));
+    if (delay)
+        serializer.write("delay", *delay);
 }
 
 } // namespace slang

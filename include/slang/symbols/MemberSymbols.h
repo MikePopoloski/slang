@@ -305,6 +305,7 @@ public:
 };
 
 struct ClockingDeclarationSyntax;
+struct ClockingSkewSyntax;
 
 /// Represents a clocking block.
 class ClockingBlockSymbol : public Symbol, public Scope {
@@ -312,6 +313,8 @@ public:
     ClockingBlockSymbol(Compilation& compilation, string_view name, SourceLocation loc);
 
     const TimingControl& getEvent() const;
+    ClockingSkew getDefaultInputSkew() const;
+    ClockingSkew getDefaultOutputSkew() const;
 
     static ClockingBlockSymbol& fromSyntax(const Scope& scope,
                                            const ClockingDeclarationSyntax& syntax);
@@ -322,6 +325,10 @@ public:
 
 private:
     mutable const TimingControl* event = nullptr;
+    mutable optional<ClockingSkew> defaultInputSkew;
+    mutable optional<ClockingSkew> defaultOutputSkew;
+    const ClockingSkewSyntax* inputSkewSyntax = nullptr;
+    const ClockingSkewSyntax* outputSkewSyntax = nullptr;
 };
 
 } // namespace slang

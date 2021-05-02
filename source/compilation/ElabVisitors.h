@@ -137,6 +137,8 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
             return;
 
         symbol.getEvent();
+        symbol.getDefaultInputSkew();
+        symbol.getDefaultOutputSkew();
     }
 
     void handle(const InstanceSymbol& symbol) {
