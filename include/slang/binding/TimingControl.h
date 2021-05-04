@@ -21,7 +21,8 @@ namespace slang {
     x(ImplicitEvent) \
     x(RepeatedEvent) \
     x(Delay3) \
-    x(OneStepDelay)
+    x(OneStepDelay) \
+    x(CycleDelay)
 ENUM(TimingControlKind, CONTROL);
 #undef CONTROL
 // clang-format on
@@ -206,6 +207,21 @@ public:
     static bool isKind(TimingControlKind kind) { return kind == TimingControlKind::OneStepDelay; }
 
     void serializeTo(ASTSerializer&) const {}
+};
+
+class CycleDelayControl : public TimingControl {
+public:
+    const Expression& expr;
+
+    explicit CycleDelayControl(const Expression& expr) :
+        TimingControl(TimingControlKind::CycleDelay), expr(expr) {}
+
+    static TimingControl& fromSyntax(Compilation& compilation, const DelaySyntax& syntax,
+                                     const BindContext& context);
+
+    static bool isKind(TimingControlKind kind) { return kind == TimingControlKind::CycleDelay; }
+
+    void serializeTo(ASTSerializer& serializer) const;
 };
 
 } // namespace slang

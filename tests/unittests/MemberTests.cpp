@@ -1778,7 +1778,8 @@ module test;
     default clocking @clk; endclocking
 
     initial begin
-        cb.b = 32;
+        ##1 cb.b = 32;
+        ##(foo + 1) cb.b = 32;
     end
 endmodule
 )");

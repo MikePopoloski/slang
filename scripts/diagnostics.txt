@@ -521,6 +521,7 @@ error TimingInFuncNotAllowed "statements that pass time are not allowed in this 
 error AssertionExprType "expression of type {} is not valid in concurrent assertions; type must be cast compatible with an integral type"
 error SeqRangeMinMax "sequence range minimum '{}' is greater than specified maximum '{}'"
 error ClockingBlockEventEdge "cannot specify an edge when waiting on a clocking block"
+error NoDefaultClocking "cycle delay cannot be used because no default clocking has been specified"
 warning event-const EventExpressionConstant "edge expression is constant"
 warning empty-stmt EmptyStatement "extra ';' has no effect"
 warning pointless-void-cast PointlessVoidCast "cast to void for void-returning function '{}' has no effect"

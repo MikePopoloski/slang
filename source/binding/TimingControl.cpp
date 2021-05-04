@@ -52,8 +52,7 @@ const TimingControl& TimingControl::bind(const TimingControlSyntax& syntax,
             result = comp.emplace<OneStepDelayControl>();
             break;
         case SyntaxKind::CycleDelay:
-            context.addDiag(diag::NotYetSupported, syntax.sourceRange());
-            result = &badCtrl(comp, nullptr);
+            result = &CycleDelayControl::fromSyntax(comp, syntax.as<DelaySyntax>(), context);
             break;
         default:
             THROW_UNREACHABLE;
@@ -328,6 +327,28 @@ TimingControl& RepeatedEventControl::fromSyntax(Compilation& compilation,
 void RepeatedEventControl::serializeTo(ASTSerializer& serializer) const {
     serializer.write("expr", expr);
     serializer.write("event", event);
+}
+
+TimingControl& CycleDelayControl::fromSyntax(Compilation& compilation, const DelaySyntax& syntax,
+                                             const BindContext& context) {
+    auto& expr = Expression::bind(*syntax.delayValue, context);
+    auto result = compilation.emplace<DelayControl>(expr);
+    if (expr.bad())
+        return badCtrl(compilation, result);
+
+    if (!expr.type->isIntegral()) {
+        context.addDiag(diag::ExprMustBeIntegral, expr.sourceRange);
+        return badCtrl(compilation, result);
+    }
+
+    if (!compilation.getDefaultClocking(context.scope))
+        context.addDiag(diag::NoDefaultClocking, syntax.sourceRange());
+
+    return *result;
+}
+
+void CycleDelayControl::serializeTo(ASTSerializer& serializer) const {
+    serializer.write("expr", expr);
 }
 
 } // namespace slang

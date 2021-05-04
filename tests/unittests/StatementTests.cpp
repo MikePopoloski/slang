@@ -1219,3 +1219,24 @@ endmodule
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::ClockingBlockEventEdge);
 }
+
+TEST_CASE("Cycle delay errors") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    int i;
+    real r;
+    initial begin
+        ##r i = 1;
+        ##1 i = 1;
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::ExprMustBeIntegral);
+    CHECK(diags[1].code == diag::NoDefaultClocking);
+}
