@@ -11,6 +11,7 @@
 #include "slang/diagnostics/DeclarationsDiags.h"
 #include "slang/diagnostics/ExpressionsDiags.h"
 #include "slang/diagnostics/NumericDiags.h"
+#include "slang/diagnostics/StatementsDiags.h"
 #include "slang/diagnostics/TypesDiags.h"
 #include "slang/symbols/AttributeSymbol.h"
 #include "slang/symbols/SubroutineSymbols.h"
@@ -115,6 +116,16 @@ bool BindContext::requireBooleanConvertible(const Expression& expr) const {
 
 bool BindContext::requireAssignable(const VariableSymbol& var, bool isNonBlocking,
                                     SourceLocation assignLoc, SourceRange varRange) const {
+    auto reportErr = [&](DiagCode code) {
+        if (!assignLoc)
+            assignLoc = varRange.start();
+
+        auto& diag = addDiag(code, assignLoc);
+        diag.addNote(diag::NoteDeclarationHere, var.location);
+        diag << var.name << varRange;
+        return false;
+    };
+
     if (var.isConstant) {
         // If we are in a class constructor and this variable does not have an initializer,
         // it's ok to assign to it.
@@ -127,19 +138,22 @@ bool BindContext::requireAssignable(const VariableSymbol& var, bool isNonBlockin
 
         if (var.getInitializer() || parent->kind != SymbolKind::Subroutine ||
             (parent->as<SubroutineSymbol>().flags & MethodFlags::Constructor) == 0) {
-            auto& diag = addDiag(diag::AssignmentToConst, assignLoc);
-            diag.addNote(diag::NoteDeclarationHere, var.location);
-            diag << var.name << varRange;
-            return false;
+            return reportErr(diag::AssignmentToConst);
         }
     }
 
     if (isNonBlocking && var.lifetime == VariableLifetime::Automatic &&
         var.kind != SymbolKind::ClassProperty) {
-        auto& diag = addDiag(diag::NonblockingAssignmentToAuto, assignLoc);
-        diag.addNote(diag::NoteDeclarationHere, var.location);
-        diag << var.name << varRange;
-        return false;
+        return reportErr(diag::NonblockingAssignmentToAuto);
+    }
+
+    if (var.kind == SymbolKind::ClockVar) {
+        auto& cv = var.as<ClockVarSymbol>();
+        if (cv.direction == ArgumentDirection::In)
+            return reportErr(diag::WriteToInputClockVar);
+
+        if (!isNonBlocking)
+            return reportErr(diag::ClockVarSyncDrive);
     }
 
     // TODO: modport assignability checks

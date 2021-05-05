@@ -1201,13 +1201,16 @@ TEST_CASE("Clocking block as event control") {
     auto tree = SyntaxTree::fromText(R"(
 module m;
     wire clk;
-    clocking cb @clk; endclocking
+    clocking cb @clk;
+        input clk;
+    endclocking
 
     int i;
     initial begin
         @cb i++;
         @(cb) i++;
         @(cb or posedge cb) i++;
+        @(cb.clk) i++;
     end
 endmodule
 )");
@@ -1239,4 +1242,43 @@ endmodule
     REQUIRE(diags.size() == 2);
     CHECK(diags[0].code == diag::ExprMustBeIntegral);
     CHECK(diags[1].code == diag::NoDefaultClocking);
+}
+
+TEST_CASE("Synchronous drives") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    int i;
+    wire clk;
+    default clocking cb @clk;
+        output i;
+        input a = i;
+    endclocking
+
+    initial begin
+        cb.i <= 1;
+        cb.a <= 2;
+        cb.i = 3;
+
+        cb.i <= #3 1;   // bad
+        cb.i[1] <= ##3 1'b1;  // ok
+
+        i <= ##3 1; // bad
+        {cb.i, cb.i[1]} <= 3; // bad
+    end
+
+    assign cb.i = 3;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 6);
+    CHECK(diags[0].code == diag::WriteToInputClockVar);
+    CHECK(diags[1].code == diag::ClockVarSyncDrive);
+    CHECK(diags[2].code == diag::ClockVarBadTiming);
+    CHECK(diags[3].code == diag::CycleDelayNonClock);
+    CHECK(diags[4].code == diag::ClockVarAssignConcat);
+    CHECK(diags[5].code == diag::ClockVarSyncDrive);
 }

@@ -342,22 +342,22 @@ bool Expression::verifyConstant(EvalContext& context) const {
     return visit(visitor, context);
 }
 
-bool Expression::verifyAssignable(const BindContext& context, bool isNonBlocking,
-                                  SourceLocation location) const {
+bool Expression::verifyAssignable(const BindContext& context, SourceLocation location,
+                                  bool isNonBlocking, bool inConcat) const {
     switch (kind) {
         case ExpressionKind::NamedValue: {
             auto& nv = as<NamedValueExpression>();
-            return nv.verifyAssignableImpl(context, isNonBlocking, location);
+            return nv.verifyAssignableImpl(context, location, isNonBlocking, inConcat);
         }
         case ExpressionKind::HierarchicalValue: {
             auto& hv = as<HierarchicalValueExpression>();
-            return hv.verifyAssignableImpl(context, isNonBlocking, location);
+            return hv.verifyAssignableImpl(context, location, isNonBlocking, inConcat);
         }
         case ExpressionKind::ElementSelect: {
             auto& select = as<ElementSelectExpression>();
             if (context.flags.has(BindFlags::NonProcedural))
                 context.eval(select.selector());
-            return select.value().verifyAssignable(context, isNonBlocking, location);
+            return select.value().verifyAssignable(context, location, isNonBlocking, inConcat);
         }
         case ExpressionKind::RangeSelect: {
             auto& select = as<RangeSelectExpression>();
@@ -365,11 +365,11 @@ bool Expression::verifyAssignable(const BindContext& context, bool isNonBlocking
                 context.eval(select.left());
                 context.eval(select.right());
             }
-            return select.value().verifyAssignable(context, isNonBlocking, location);
+            return select.value().verifyAssignable(context, location, isNonBlocking, inConcat);
         }
         case ExpressionKind::MemberAccess: {
             auto& access = as<MemberAccessExpression>();
-            return access.verifyAssignableImpl(context, isNonBlocking, location);
+            return access.verifyAssignableImpl(context, location, isNonBlocking, inConcat);
         }
         case ExpressionKind::Concatenation: {
             auto& concat = as<ConcatenationExpression>();
@@ -377,7 +377,7 @@ bool Expression::verifyAssignable(const BindContext& context, bool isNonBlocking
                 break;
 
             for (auto op : concat.operands()) {
-                if (!op->verifyAssignable(context, isNonBlocking, location))
+                if (!op->verifyAssignable(context, location, isNonBlocking, true))
                     return false;
             }
             return true;
@@ -385,7 +385,7 @@ bool Expression::verifyAssignable(const BindContext& context, bool isNonBlocking
         case ExpressionKind::Streaming: {
             auto& stream = as<StreamingConcatenationExpression>();
             for (auto op : stream.streams()) {
-                if (!op->operand->verifyAssignable(context, isNonBlocking, location))
+                if (!op->operand->verifyAssignable(context, location, isNonBlocking, true))
                     return false;
             }
             return true;

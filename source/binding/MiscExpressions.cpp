@@ -86,8 +86,11 @@ Expression& ValueExpressionBase::fromSymbol(const BindContext& context, const Sy
         return *comp.emplace<NamedValueExpression>(value, sourceRange);
 }
 
-bool ValueExpressionBase::verifyAssignableImpl(const BindContext& context, bool isNonBlocking,
-                                               SourceLocation location) const {
+bool ValueExpressionBase::verifyAssignableImpl(const BindContext& context, SourceLocation location,
+                                               bool isNonBlocking, bool inConcat) const {
+    if (!location)
+        location = sourceRange.start();
+
     if (symbol.kind == SymbolKind::Parameter || symbol.kind == SymbolKind::EnumValue ||
         symbol.kind == SymbolKind::Specparam) {
         auto& diag = context.addDiag(diag::ExpressionNotAssignable, location);
@@ -112,6 +115,12 @@ bool ValueExpressionBase::verifyAssignableImpl(const BindContext& context, bool 
     }
 
     if (VariableSymbol::isKind(symbol.kind)) {
+        if (symbol.kind == SymbolKind::ClockVar && inConcat) {
+            auto& diag = context.addDiag(diag::ClockVarAssignConcat, location);
+            diag.addNote(diag::NoteDeclarationHere, symbol.location);
+            diag << symbol.name << sourceRange;
+        }
+
         return context.requireAssignable(symbol.as<VariableSymbol>(), isNonBlocking, location,
                                          sourceRange);
     }

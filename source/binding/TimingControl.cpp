@@ -332,7 +332,7 @@ void RepeatedEventControl::serializeTo(ASTSerializer& serializer) const {
 TimingControl& CycleDelayControl::fromSyntax(Compilation& compilation, const DelaySyntax& syntax,
                                              const BindContext& context) {
     auto& expr = Expression::bind(*syntax.delayValue, context);
-    auto result = compilation.emplace<DelayControl>(expr);
+    auto result = compilation.emplace<CycleDelayControl>(expr);
     if (expr.bad())
         return badCtrl(compilation, result);
 

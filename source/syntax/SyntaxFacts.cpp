@@ -736,6 +736,7 @@ bool SyntaxFacts::isPossiblePattern(TokenKind kind) {
 bool SyntaxFacts::isPossibleDelayOrEventControl(TokenKind kind) {
     switch (kind) {
         case TokenKind::Hash:
+        case TokenKind::DoubleHash:
         case TokenKind::At:
         case TokenKind::RepeatKeyword:
             return true;

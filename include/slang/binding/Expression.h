@@ -238,8 +238,8 @@ public:
     /// Verifies that this expression is a valid lvalue and that each element
     /// of that lvalue can be assigned to. If it's not, appropriate diagnostics
     /// will be issued.
-    bool verifyAssignable(const BindContext& context, bool isNonBlocking = false,
-                          SourceLocation location = {}) const;
+    bool verifyAssignable(const BindContext& context, SourceLocation location = {},
+                          bool isNonBlocking = false, bool isConcat = false) const;
 
     /// Checks whether this kind of expression can be connected to a ref argument
     /// for a subroutine or module port.

@@ -124,8 +124,8 @@ public:
     ConstantValue evalImpl(EvalContext& context) const;
     LValue evalLValueImpl(EvalContext& context) const;
     bool verifyConstantImpl(EvalContext& context) const;
-    bool verifyAssignableImpl(const BindContext& context, bool isNonBlocking,
-                              SourceLocation location) const;
+    bool verifyAssignableImpl(const BindContext& context, SourceLocation location,
+                              bool isNonBlocking, bool inConcat) const;
 
     void serializeTo(ASTSerializer& serializer) const;
 

@@ -1002,13 +1002,14 @@ bool MemberAccessExpression::verifyConstantImpl(EvalContext& context) const {
     return value().verifyConstant(context);
 }
 
-bool MemberAccessExpression::verifyAssignableImpl(const BindContext& context, bool isNonBlocking,
-                                                  SourceLocation location) const {
+bool MemberAccessExpression::verifyAssignableImpl(const BindContext& context,
+                                                  SourceLocation location, bool isNonBlocking,
+                                                  bool inConcat) const {
     // If this is a selection of a class member, assignability depends only on the selected
     // member and not on the class handle itself. Otherwise, the opposite is true.
     auto& valueType = *value().type;
     if (!valueType.isClass() && !valueType.isVirtualInterface())
-        return value().verifyAssignable(context, isNonBlocking, location);
+        return value().verifyAssignable(context, location, isNonBlocking, inConcat);
 
     if (VariableSymbol::isKind(member.kind)) {
         return context.requireAssignable(member.as<VariableSymbol>(), isNonBlocking, location,
@@ -1018,6 +1019,9 @@ bool MemberAccessExpression::verifyAssignableImpl(const BindContext& context, bo
     // TODO: modport assignability checks
     if (member.kind == SymbolKind::ModportPort)
         return true;
+
+    if (!location)
+        location = sourceRange.start();
 
     auto& diag = context.addDiag(diag::ExpressionNotAssignable, location);
     diag.addNote(diag::NoteDeclarationHere, member.location);

@@ -19,8 +19,8 @@ class ValueExpressionBase : public Expression {
 public:
     const ValueSymbol& symbol;
 
-    bool verifyAssignableImpl(const BindContext& context, bool isNonBlocking,
-                              SourceLocation location) const;
+    bool verifyAssignableImpl(const BindContext& context, SourceLocation location,
+                              bool isNonBlocking, bool inConcat) const;
     optional<bitwidth_t> getEffectiveWidthImpl() const;
 
     void serializeTo(ASTSerializer& serializer) const;
