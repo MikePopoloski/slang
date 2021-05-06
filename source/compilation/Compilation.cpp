@@ -711,6 +711,47 @@ const Symbol* Compilation::getDefaultClocking(const Scope& scope) const {
     }
 }
 
+void Compilation::noteGlobalClocking(const Scope& scope, const Symbol& clocking,
+                                     SourceRange range) {
+    auto [it, inserted] = globalClockingMap.emplace(&scope, &clocking);
+    if (!inserted) {
+        auto& diag = scope.addDiag(diag::MultipleGlobalClocking, range);
+        diag.addNote(diag::NotePreviousDefinition, it->second->location);
+    }
+}
+
+const Symbol* Compilation::getGlobalClocking(const Scope& scope) const {
+    auto currInstPath = getCurrentInstancePath();
+    auto curr = &scope;
+    do {
+        if (auto it = globalClockingMap.find(curr); it != globalClockingMap.end())
+            return it->second;
+
+        auto& sym = curr->asSymbol();
+        if (sym.kind != SymbolKind::InstanceBody)
+            curr = sym.getParentScope();
+        else {
+            // Go up to the next parent instance. If there is a current instance
+            // path use that specific instance, otherwise grab any old parent
+            // for the current instance body.
+            // TODO: make sure this works with nested modules
+            if (!currInstPath.empty() && &currInstPath.back()->body == &sym) {
+                curr = currInstPath.back()->getParentScope();
+                currInstPath = currInstPath.subspan(0, currInstPath.size() - 1);
+            }
+            else {
+                auto parents = getParentInstances(sym.as<InstanceBodySymbol>());
+                if (!parents.empty())
+                    curr = parents[0]->getParentScope();
+                else
+                    curr = nullptr;
+            }
+        }
+    } while (curr);
+
+    return nullptr;
+}
+
 const NameSyntax& Compilation::parseName(string_view name) {
     Diagnostics localDiags;
     auto& result = tryParseName(name, localDiags);

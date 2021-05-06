@@ -299,6 +299,13 @@ public:
     /// if no default clocking is in effect.
     const Symbol* getDefaultClocking(const Scope& scope) const;
 
+    /// Notes that there is a global clocking block associated with the specified scope.
+    void noteGlobalClocking(const Scope& scope, const Symbol& clocking, SourceRange range);
+
+    /// Finds an applicable global clocking block for the given scope, or returns nullptr
+    /// if no global clocking is in effect.
+    const Symbol* getGlobalClocking(const Scope& scope) const;
+
     /// A convenience method for parsing a name string and turning it into a set
     /// of syntax nodes. This is mostly for testing and API purposes; normal
     /// compilation never does this.
@@ -615,6 +622,9 @@ private:
 
     // A map of scopes to default clocking blocks.
     flat_hash_map<const Scope*, const Symbol*> defaultClockingMap;
+
+    // A map of scopes to global clocking blocks.
+    flat_hash_map<const Scope*, const Symbol*> globalClockingMap;
 
     // The built-in std package.
     const PackageSymbol* stdPkg = nullptr;

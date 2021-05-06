@@ -1805,6 +1805,13 @@ module test;
 
     default clocking cb;
     default clocking f;
+
+    global clocking gb @clk; endclocking
+    global clocking gb2 @clk; endclocking
+
+    if (1) begin
+        global clocking gb @clk; endclocking
+    end
 endmodule
 )");
 
@@ -1812,13 +1819,15 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 6);
+    REQUIRE(diags.size() == 8);
     CHECK(diags[0].code == diag::MultipleDefaultInputSkew);
     CHECK(diags[1].code == diag::MultipleDefaultOutputSkew);
     CHECK(diags[2].code == diag::ExpressionNotAssignable);
     CHECK(diags[3].code == diag::InvalidClockingSignal);
     CHECK(diags[4].code == diag::MultipleDefaultClocking);
     CHECK(diags[5].code == diag::NotAClockingBlock);
+    CHECK(diags[6].code == diag::MultipleGlobalClocking);
+    CHECK(diags[7].code == diag::GlobalClockingGenerate);
 }
 
 TEST_CASE("Multiple clocking blocks with ifaces") {

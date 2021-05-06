@@ -912,7 +912,6 @@ ClockingBlockSymbol::ClockingBlockSymbol(Compilation& compilation, string_view n
 
 ClockingBlockSymbol& ClockingBlockSymbol::fromSyntax(const Scope& scope,
                                                      const ClockingDeclarationSyntax& syntax) {
-    // TODO: global clocking
     auto& comp = scope.getCompilation();
     auto result = comp.emplace<ClockingBlockSymbol>(comp, syntax.blockName.valueText(),
                                                     syntax.blockName.location());
@@ -920,6 +919,11 @@ ClockingBlockSymbol& ClockingBlockSymbol::fromSyntax(const Scope& scope,
 
     if (syntax.globalOrDefault.kind == TokenKind::DefaultKeyword)
         comp.noteDefaultClocking(scope, *result, syntax.clocking.range());
+    else if (syntax.globalOrDefault.kind == TokenKind::GlobalKeyword) {
+        comp.noteGlobalClocking(scope, *result, syntax.clocking.range());
+        if (scope.asSymbol().kind == SymbolKind::GenerateBlock)
+            scope.addDiag(diag::GlobalClockingGenerate, syntax.clocking.range());
+    }
 
     const ClockingSkewSyntax* inputSkew = nullptr;
     const ClockingSkewSyntax* outputSkew = nullptr;
