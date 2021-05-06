@@ -220,12 +220,12 @@ LRM | Feature | Supported
 {{m-success}} 14.8 | Multiple clocking blocks example | v0.8
 {{m-success}} 14.9 | Interfaces and clocking blocks | v0.8
 {{m-success}} 14.10 | Clocking block events | v0.8
-{{m-danger}}  14.11 | Cycle delay | no
+{{m-success}} 14.11 | Cycle delay | v0.8
 {{m-success}} 14.12 | Default clocking | v0.8
 {{m-dim}}     14.13 | Input sampling | N/A
-{{m-danger}}  14.14 | Global clocking | no
-{{m-danger}}  14.15 | Synchronous events | no
-{{m-danger}}  14.16 | Synchronous drives | no
+{{m-success}} 14.14 | Global clocking | v0.8
+{{m-success}} 14.15 | Synchronous events | v0.8
+{{m-success}} 14.16 | Synchronous drives | v0.8
 
 ## 15. Interprocess synchronization and communication
 
