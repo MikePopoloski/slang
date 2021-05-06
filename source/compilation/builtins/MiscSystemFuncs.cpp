@@ -188,11 +188,44 @@ public:
     }
 };
 
+class GlobalClockFunction : public SystemSubroutine {
+public:
+    GlobalClockFunction() : SystemSubroutine("$global_clock", SubroutineKind::Function) {}
+
+    const Type& checkArguments(const BindContext& context, const Args& args, SourceRange range,
+                               const Expression*) const final {
+        auto& comp = context.getCompilation();
+        if (!checkArgCount(context, false, args, range, 0, 0))
+            return comp.getErrorType();
+
+        if (!context.flags.has(BindFlags::AllowClockingBlock)) {
+            context.addDiag(diag::GlobalClockEventExpr, range);
+            return comp.getErrorType();
+        }
+
+        if (!comp.getGlobalClocking(context.scope)) {
+            context.addDiag(diag::NoGlobalClocking, range);
+            return comp.getErrorType();
+        }
+
+        return comp.getVoidType();
+    }
+
+    ConstantValue eval(EvalContext&, const Args&,
+                       const CallExpression::SystemCallInfo&) const final {
+        return nullptr;
+    }
+    bool verifyConstant(EvalContext& context, const Args&, SourceRange range) const final {
+        return notConst(context, range);
+    }
+};
+
 void registerMiscSystemFuncs(Compilation& c) {
 #define REGISTER(name) c.addSystemSubroutine(std::make_unique<name##Function>())
     REGISTER(SFormat);
     REGISTER(ValuePlusArgs);
     REGISTER(ScopeRandomize);
+    REGISTER(GlobalClock);
 #undef REGISTER
 
     c.addSystemMethod(SymbolKind::ClassType, std::make_unique<ClassRandomizeFunction>());

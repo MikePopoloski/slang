@@ -814,3 +814,36 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Global clock sys func") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    n n1();
+
+    wire clk;
+    global clocking cb @clk; endclocking
+endmodule
+
+module n;
+    int i = $global_clock;
+    initial begin
+        @($global_clock) i++;
+    end
+endmodule
+
+module o;
+    int i;
+    initial begin
+        @($global_clock) i++;
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::GlobalClockEventExpr);
+    CHECK(diags[1].code == diag::NoGlobalClocking);
+}
