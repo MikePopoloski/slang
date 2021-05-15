@@ -410,9 +410,16 @@ AssertionExpr& BinaryAssertionExpr::fromSyntax(const BinaryPropertyExprSyntax& s
         case SyntaxKind::UntilWithPropertyExpr: op = BinaryAssertionOperator::UntilWith; break;
         case SyntaxKind::SUntilWithPropertyExpr: op = BinaryAssertionOperator::SUntilWith; break;
         case SyntaxKind::ImpliesPropertyExpr: op = BinaryAssertionOperator::Implies; break;
-        case SyntaxKind::ImplicationPropertyExpr: op = BinaryAssertionOperator::Implication; break;
-        case SyntaxKind::FollowedByPropertyExpr: op = BinaryAssertionOperator::FollowedBy; break;
-        default: THROW_UNREACHABLE;
+        case SyntaxKind::ImplicationPropertyExpr:
+            op = syntax.op.kind == TokenKind::OrMinusArrow ? BinaryAssertionOperator::OverlappedImplication :
+                                                             BinaryAssertionOperator::NonOverlappedImplication;
+            break;
+        case SyntaxKind::FollowedByPropertyExpr:
+            op = syntax.op.kind == TokenKind::HashMinusHash ? BinaryAssertionOperator::OverlappedFollowedBy :
+                                                              BinaryAssertionOperator::NonOverlappedFollowedBy;
+            break;
+        default:
+            THROW_UNREACHABLE;
     }
     // clang-format on
 

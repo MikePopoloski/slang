@@ -51,8 +51,10 @@ ENUM(UnaryAssertionOperator, OP);
     x(UntilWith) \
     x(SUntilWith) \
     x(Implies) \
-    x(Implication) \
-    x(FollowedBy)
+    x(OverlappedImplication) \
+    x(NonOverlappedImplication) \
+    x(OverlappedFollowedBy) \
+    x(NonOverlappedFollowedBy)
 ENUM(BinaryAssertionOperator, OP);
 #undef OP
 // clang-format on
@@ -172,7 +174,7 @@ public:
 
 struct DelayedSequenceExprSyntax;
 
-/// Represents an assertion expression defined as a simple regular expression.
+/// Represents an assertion expression defined as a delayed concatenation of other expressions.
 class SequenceConcatExpr : public AssertionExpr {
 public:
     struct Element {
