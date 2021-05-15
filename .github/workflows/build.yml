@@ -39,8 +39,8 @@ jobs:
     strategy:
       matrix:
         include:
-          - compiler: clang++-10
-            flags: '-DCMAKE_BUILD_TYPE=Debug -DSLANG_COVERAGE=ON -DSLANG_SANITIZERS=undefined,address "-DCMAKE_CXX_CLANG_TIDY=/usr/lib/llvm-10/bin/clang-tidy;-quiet;-checks=-*,clang-analyzer-*,bugprone-*,performance-*,modernize-*,-modernize-use-auto,-modernize-use-trailing-return-type,-modernize-raw-string-literal,-modernize-use-nodiscard,-bugprone-suspicious-semicolon,-bugprone-branch-clone,-bugprone-sizeof-expression,-clang-analyzer-cplusplus.NewDelete*,-clang-analyzer-cplusplus.InnerPointer,misc-*,-misc-non-private-member-variables-in-classes,-modernize-avoid-c-arrays"'
+          - compiler: clang++-12
+            flags: '-DCMAKE_BUILD_TYPE=Debug -DSLANG_COVERAGE=ON -DSLANG_SANITIZERS=undefined,address "-DCMAKE_CXX_CLANG_TIDY=/usr/lib/llvm-12/bin/clang-tidy;-quiet;-checks=-*,clang-analyzer-*,bugprone-*,performance-*,modernize-*,-modernize-use-auto,-modernize-use-trailing-return-type,-modernize-raw-string-literal,-modernize-use-nodiscard,-bugprone-suspicious-semicolon,-bugprone-branch-clone,-bugprone-sizeof-expression,-clang-analyzer-cplusplus.NewDelete*,-clang-analyzer-cplusplus.InnerPointer,misc-*,-misc-non-private-member-variables-in-classes,-modernize-avoid-c-arrays"'
           - compiler: g++-10
             flags: '-DCMAKE_BUILD_TYPE=Release'
           - compiler: g++-8
@@ -52,9 +52,9 @@ jobs:
       run: |
         export PATH="$HOME/.local/bin:$PATH"
         wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
-        sudo add-apt-repository "deb http://apt.llvm.org/focal/ llvm-toolchain-focal-10 main"
+        sudo add-apt-repository "deb http://apt.llvm.org/focal/ llvm-toolchain-focal-12 main"
         sudo apt-get update
-        sudo apt-get install -y g++-10 g++-8 clang++-10 clang-tidy-10
+        sudo apt-get install -y g++-10 g++-8 clang++-12 clang-tidy-12
     - name: Build
       run: |
         export PATH="$HOME/.local/bin:$PATH"
@@ -68,11 +68,11 @@ jobs:
         cd build
         ctest --output-on-failure
     - name: Upload code coverage
-      if: matrix.compiler == 'clang++-10'
+      if: matrix.compiler == 'clang++-12'
       run: |
         cd build
-        find . -name *.profraw -exec llvm-profdata-10 merge -o merged.profdata -sparse {} + ;
-        llvm-cov-10 show bin/unittests -instr-profile=merged.profdata > coverage.txt
+        find . -name *.profraw -exec llvm-profdata-12 merge -o merged.profdata -sparse {} + ;
+        llvm-cov-12 show bin/unittests -instr-profile=merged.profdata > coverage.txt
         bash <(curl -s https://codecov.io/bash) || echo 'Codecov failed to upload'
     - name: Archive binaries
       if: matrix.compiler == 'g++-10'
