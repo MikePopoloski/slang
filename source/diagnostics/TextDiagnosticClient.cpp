@@ -43,12 +43,12 @@ TextDiagnosticClient::TextDiagnosticClient() :
 
 TextDiagnosticClient::~TextDiagnosticClient() = default;
 
-void TextDiagnosticClient::setColorsEnabled(bool enabled) {
-    buffer->setColorsEnabled(enabled);
+void TextDiagnosticClient::showColors(bool show) {
+    buffer->setColorsEnabled(show);
 }
 
 void TextDiagnosticClient::report(const ReportedDiagnostic& diag) {
-    if (diag.shouldShowIncludeStack) {
+    if (diag.shouldShowIncludeStack && includeFileStack) {
         SmallVectorSized<SourceLocation, 8> includeStack;
         getIncludeStack(diag.location.buffer(), includeStack);
 
@@ -62,7 +62,7 @@ void TextDiagnosticClient::report(const ReportedDiagnostic& diag) {
 
     // Print out the hierarchy where the diagnostic occurred, if we know it.
     auto& od = diag.originalDiagnostic;
-    if (od.coalesceCount && od.symbol && symbolPathCB) {
+    if (od.coalesceCount && od.symbol && symbolPathCB && includeHierarchy) {
         if (od.coalesceCount == 1)
             buffer->append("  in instance: "sv);
         else
@@ -81,18 +81,20 @@ void TextDiagnosticClient::report(const ReportedDiagnostic& diag) {
                engine->getOptionName(diag.originalDiagnostic.code));
 
     // Write out macro expansions, if we have any, in reverse order.
-    for (auto it = diag.expansionLocs.rbegin(); it != diag.expansionLocs.rend(); it++) {
-        SourceLocation loc = *it;
-        std::string name(sourceManager->getMacroName(loc));
-        if (name.empty())
-            name = "expanded from here";
-        else
-            name = fmt::format("expanded from macro '{}'", name);
+    if (includeExpansion) {
+        for (auto it = diag.expansionLocs.rbegin(); it != diag.expansionLocs.rend(); it++) {
+            SourceLocation loc = *it;
+            std::string name(sourceManager->getMacroName(loc));
+            if (name.empty())
+                name = "expanded from here";
+            else
+                name = fmt::format("expanded from macro '{}'", name);
 
-        SmallVectorSized<SourceRange, 8> macroRanges;
-        engine->mapSourceRanges(loc, diag.ranges, macroRanges);
-        formatDiag(sourceManager->getFullyOriginalLoc(loc), macroRanges, DiagnosticSeverity::Note,
-                   name, "");
+            SmallVectorSized<SourceRange, 8> macroRanges;
+            engine->mapSourceRanges(loc, diag.ranges, macroRanges);
+            formatDiag(sourceManager->getFullyOriginalLoc(loc), macroRanges,
+                       DiagnosticSeverity::Note, name, "");
+        }
     }
 }
 
@@ -144,10 +146,14 @@ void TextDiagnosticClient::formatDiag(SourceLocation loc, span<const SourceRange
     size_t col = 0;
     if (loc != SourceLocation::NoLocation) {
         col = sourceManager->getColumnNumber(loc);
-        buffer->append(fg(filenameColor), sourceManager->getFileName(loc));
-        buffer->append(":");
-        buffer->format(fg(locationColor), "{}:{}", sourceManager->getLineNumber(loc), col);
-        buffer->append(": ");
+        if (includeLocation) {
+            buffer->append(fg(filenameColor), sourceManager->getFileName(loc));
+            buffer->append(":");
+            buffer->format(fg(locationColor), "{}", sourceManager->getLineNumber(loc));
+            if (includeColumn)
+                buffer->format(fg(locationColor), ":{}", col);
+            buffer->append(": ");
+        }
     }
 
     buffer->format(fg(getSeverityColor(severity)), "{}: ", getSeverityString(severity));
@@ -157,10 +163,10 @@ void TextDiagnosticClient::formatDiag(SourceLocation loc, span<const SourceRange
     else
         buffer->append(message);
 
-    if (!optionName.empty())
+    if (!optionName.empty() && includeOptionName)
         buffer->format(" [-W{}]", optionName);
 
-    if (loc != SourceLocation::NoLocation) {
+    if (loc != SourceLocation::NoLocation && includeSource) {
         string_view line = getSourceLine(loc, col);
         if (!line.empty()) {
             buffer->format("\n{}\n", line);

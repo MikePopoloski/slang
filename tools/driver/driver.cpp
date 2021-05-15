@@ -244,16 +244,12 @@ public:
         diagEngine.addClient(diagClient);
     }
 
-    void setDiagnosticOptions(const std::vector<std::string>& warningOptions, uint32_t errorLimit,
-                              bool ignoreUnknownModules, bool showColors) {
+    void setDiagnosticOptions(const std::vector<std::string>& warningOptions,
+                              bool ignoreUnknownModules) {
         Diagnostics optionDiags = diagEngine.setWarningOptions(warningOptions);
         Diagnostics pragmaDiags = diagEngine.setMappingsFromPragmas();
-        diagEngine.setErrorLimit(errorLimit);
-
         if (ignoreUnknownModules)
             diagEngine.setSeverity(diag::UnknownModule, DiagnosticSeverity::Ignored);
-
-        diagClient->setColorsEnabled(showColors);
 
         for (auto& diag : optionDiags)
             diagEngine.issue(diag);
@@ -455,6 +451,13 @@ int driverMain(int argc, TArgs argv, bool suppressColorsStdout, bool suppressCol
 
     // Diagnostics control
     optional<bool> colorDiags;
+    optional<bool> diagColumn;
+    optional<bool> diagLocation;
+    optional<bool> diagSourceLine;
+    optional<bool> diagOptionName;
+    optional<bool> diagIncludeStack;
+    optional<bool> diagMacroExpansion;
+    optional<bool> diagHierarchy;
     optional<bool> ignoreUnknownModules;
     optional<uint32_t> errorLimit;
     std::vector<std::string> warningOptions;
@@ -463,6 +466,17 @@ int driverMain(int argc, TArgs argv, bool suppressColorsStdout, bool suppressCol
                 "Always print diagnostics in color."
                 "If this option is unset, colors will be enabled if a color-capable "
                 "terminal is detected.");
+    cmdLine.add("--diag-column", diagColumn, "Show column numbers in diagnostic output.");
+    cmdLine.add("--diag-location", diagLocation, "Show location information in diagnostic output.");
+    cmdLine.add("--diag-source", diagSourceLine,
+                "Show source line or caret info in diagnostic output.");
+    cmdLine.add("--diag-option", diagOptionName, "Show option names in diagnostic output.");
+    cmdLine.add("--diag-include-stack", diagIncludeStack,
+                "Show include stacks in diagnostic output.");
+    cmdLine.add("--diag-macro-expansion", diagMacroExpansion,
+                "Show macro expansion backtraces in diagnostic output.");
+    cmdLine.add("--diag-hierarchy", diagHierarchy,
+                "Show hierarchy locations in diagnostic output.");
     cmdLine.add("--error-limit", errorLimit,
                 "Limit on the number of errors that will be printed. Setting this to zero will "
                 "disable the limit.",
@@ -651,8 +665,20 @@ int driverMain(int argc, TArgs argv, bool suppressColorsStdout, bool suppressCol
             Compiler compiler(compilation);
             compiler.quiet = quiet == true;
             compiler.onlyParse = onlyParse == true;
-            compiler.setDiagnosticOptions(warningOptions, errorLimit.value_or(20),
-                                          ignoreUnknownModules == true, showColors);
+
+            auto& diag = *compiler.diagClient;
+            diag.showColors(showColors);
+            diag.showColumn(diagColumn.value_or(true));
+            diag.showLocation(diagLocation.value_or(true));
+            diag.showSourceLine(diagSourceLine.value_or(true));
+            diag.showOptionName(diagOptionName.value_or(true));
+            diag.showIncludeStack(diagIncludeStack.value_or(true));
+            diag.showMacroExpansion(diagMacroExpansion.value_or(true));
+            diag.showHierarchyInstance(diagHierarchy.value_or(true));
+
+            compiler.diagEngine.setErrorLimit(errorLimit.value_or(20));
+            compiler.setDiagnosticOptions(warningOptions, ignoreUnknownModules == true);
+
             anyErrors |= !compiler.run();
 
             if (astJsonFile) {

@@ -21,7 +21,14 @@ public:
     TextDiagnosticClient();
     ~TextDiagnosticClient();
 
-    void setColorsEnabled(bool enabled);
+    void showColors(bool show);
+    void showColumn(bool show) { includeColumn = show; }
+    void showLocation(bool show) { includeLocation = show; }
+    void showSourceLine(bool show) { includeSource = show; }
+    void showOptionName(bool show) { includeOptionName = show; }
+    void showIncludeStack(bool show) { includeFileStack = show; }
+    void showMacroExpansion(bool show) { includeExpansion = show; }
+    void showHierarchyInstance(bool show) { includeHierarchy = show; }
 
     template<typename TFunc>
     void setSymbolPathCB(TFunc&& func) {
@@ -40,6 +47,13 @@ public:
 
 private:
     std::unique_ptr<FormatBuffer> buffer;
+    bool includeColumn = true;
+    bool includeLocation = true;
+    bool includeSource = true;
+    bool includeOptionName = true;
+    bool includeFileStack = true;
+    bool includeExpansion = true;
+    bool includeHierarchy = true;
 
     using SymbolPathCB = std::function<std::string(const Symbol&)>;
     SymbolPathCB symbolPathCB;

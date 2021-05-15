@@ -186,6 +186,34 @@ This option can be specified more than once to override multiple parameters.
 Always print diagnostics in color. If this option is unset, colors will be enabled
 if a color-capable terminal is detected.
 
+`--diag-column`
+
+Show or hide column numbers in diagnostic output. The default is to show.
+
+`--diag-location`
+
+Show or hide location information (file name, line and column numbers) in diagnostic output. The default is to show.
+
+`--diag-source`
+
+Show or hide source code and caret location in diagnostic output. The default is to show.
+
+`--diag-option`
+
+Show or hide warning option names in diagnostic output. The default is to show.
+
+`--diag-include-stack`
+
+Show or hide file include stacks in diagnostic output. The default is to show.
+
+`--diag-macro-expansion`
+
+Show or hide macro expansion backtraces in diagnostic output. The default is to show.
+
+`--diag-hierarchy`
+
+Show or hide hierarchy locations in diagnostic output. The default is to show.
+
 `--error-limit`
 
 Set a limit on the number of errors that will be printed. Setting this to zero will
