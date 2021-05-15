@@ -341,6 +341,7 @@ private:
     EdgeDescriptorSyntax& parseEdgeDescriptor();
     SelectorSyntax* parseSequenceRange();
     SequenceExprSyntax& parseDelayedSequenceExpr(SequenceExprSyntax* first);
+    SequenceExprSyntax& parseParenthesizedSeqExpr(Token openParen, SequenceExprSyntax& expr);
     SequenceExprSyntax& parseSequencePrimary();
     SequenceExprSyntax& parseSequenceExpr(int precedence, bool isInProperty);
     SequenceExprSyntax& parseBinarySequenceExpr(SequenceExprSyntax* left, int precedence, bool isInProperty);
@@ -415,11 +416,6 @@ private:
 
     // Handle splitting out an exponent from a token that was otherwise miscategorized by the lexer.
     void handleExponentSplit(Token token, size_t offset);
-
-    // Fixes up a previously parsed parenthesized sequence or property expression that
-    // actually should have been a normal expression followed by a binary or postfix.
-    ExpressionSyntax& fixParenthesizedExpression(const SimpleSequenceExprSyntax& source,
-                                                 Token openParen);
 
     // Report errors for incorrectly specified block names.
     void checkBlockNames(string_view begin, string_view end, SourceLocation loc);

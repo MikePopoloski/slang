@@ -779,7 +779,7 @@ TEST_CASE("Invalid clocking argument") {
 module m;
     wire clk;
     int i = $bits(@(posedge clk));
-    logic j = $rose(clk, @clk (a or b));
+    logic j = $rose(clk, @clk strong(a));
 endmodule
 )");
 

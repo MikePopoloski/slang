@@ -285,26 +285,9 @@ optional<ConstantRange> BindContext::evalUnpackedDimension(
 
 const ExpressionSyntax* BindContext::requireSimpleExpr(
     const PropertyExprSyntax& initialExpr) const {
-
-    auto error = [&] {
-        addDiag(diag::InvalidArgumentExpr, initialExpr.sourceRange());
-        return nullptr;
-    };
-
     const SyntaxNode* expr = &initialExpr;
-    while (expr->kind == SyntaxKind::ParenthesizedPropertyExpr)
-        expr = expr->as<ParenthesizedPropertyExprSyntax>().expr;
-
     if (expr->kind == SyntaxKind::SimplePropertyExpr) {
         expr = expr->as<SimplePropertyExprSyntax>().expr;
-        while (expr->kind == SyntaxKind::ParenthesizedSequenceExpr) {
-            auto& pse = expr->as<ParenthesizedSequenceExprSyntax>();
-            if (pse.matchList || pse.repetition)
-                return error();
-
-            expr = pse.expr;
-        }
-
         if (expr->kind == SyntaxKind::SimpleSequenceExpr) {
             auto& simpSeq = expr->as<SimpleSequenceExprSyntax>();
             if (!simpSeq.repetition)
@@ -312,7 +295,8 @@ const ExpressionSyntax* BindContext::requireSimpleExpr(
         }
     }
 
-    return error();
+    addDiag(diag::InvalidArgumentExpr, initialExpr.sourceRange());
+    return nullptr;
 }
 
 static bool checkIndexType(const Type& type) {
