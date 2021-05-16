@@ -68,6 +68,8 @@ Compilation::Compilation(const Bag& options) :
     auto unboundedType = emplace<UnboundedType>();
     auto typeRefType = emplace<TypeRefType>();
     auto untypedType = emplace<UntypedType>();
+    auto sequenceType = emplace<SequenceType>();
+    auto propertyType = emplace<PropertyType>();
 
     // Register built-in types for lookup by syntax kind.
     knownTypes[SyntaxKind::ShortIntType] = shortIntType;
@@ -90,6 +92,8 @@ Compilation::Compilation(const Bag& options) :
     knownTypes[SyntaxKind::WildcardLiteralExpression] = unboundedType;
     knownTypes[SyntaxKind::TypeReference] = typeRefType;
     knownTypes[SyntaxKind::Untyped] = untypedType;
+    knownTypes[SyntaxKind::SequenceType] = sequenceType;
+    knownTypes[SyntaxKind::PropertyType] = propertyType;
     knownTypes[SyntaxKind::Unknown] = errorType;
 
 #define MAKE_NETTYPE(type)                                               \

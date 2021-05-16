@@ -349,6 +349,26 @@ public:
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::UntypedType; }
 };
 
+/// Represents the type of sequence instances and arguments.
+class SequenceType : public Type {
+public:
+    SequenceType() : Type(SymbolKind::SequenceType, "sequence", SourceLocation()) {}
+
+    ConstantValue getDefaultValueImpl() const { return nullptr; }
+
+    static bool isKind(SymbolKind kind) { return kind == SymbolKind::SequenceType; }
+};
+
+/// Represents the type of property instances and arguments.
+class PropertyType : public Type {
+public:
+    PropertyType() : Type(SymbolKind::PropertyType, "property", SourceLocation()) {}
+
+    ConstantValue getDefaultValueImpl() const { return nullptr; }
+
+    static bool isKind(SymbolKind kind) { return kind == SymbolKind::PropertyType; }
+};
+
 struct VirtualInterfaceTypeSyntax;
 
 /// Represents a virtual interface type.

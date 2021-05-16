@@ -189,6 +189,12 @@ public:
     /// Indicates whether this is the untyped type.
     bool isUntypedType() const { return getCanonicalType().kind == SymbolKind::UntypedType; }
 
+    /// Indicates whether this is the sequence type.
+    bool isSequenceType() const { return getCanonicalType().kind == SymbolKind::SequenceType; }
+
+    /// Indicates whether this is the property type.
+    bool isPropertyType() const { return getCanonicalType().kind == SymbolKind::PropertyType; }
+
     /// Indicates whether this is a virtual interface type.
     bool isVirtualInterface() const {
         return getCanonicalType().kind == SymbolKind::VirtualInterfaceType;

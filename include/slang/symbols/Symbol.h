@@ -53,6 +53,8 @@ enum class RandMode;
     x(UnboundedType) \
     x(TypeRefType) \
     x(UntypedType) \
+    x(SequenceType) \
+    x(PropertyType) \
     x(VirtualInterfaceType) \
     x(TypeAlias) \
     x(ErrorType) \

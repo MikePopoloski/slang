@@ -300,6 +300,14 @@ void TypePrinter::visit(const UntypedType& type, string_view) {
     buffer->append(type.name);
 }
 
+void TypePrinter::visit(const SequenceType& type, string_view) {
+    buffer->append(type.name);
+}
+
+void TypePrinter::visit(const PropertyType& type, string_view) {
+    buffer->append(type.name);
+}
+
 void TypePrinter::visit(const ClassType& type, string_view) {
     buffer->append(type.name);
 }

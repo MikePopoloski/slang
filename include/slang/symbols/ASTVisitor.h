@@ -194,6 +194,8 @@ decltype(auto) Symbol::visit(TVisitor&& visitor, Args&&... args) const {
         TYPE(UnboundedType);
         TYPE(TypeRefType);
         TYPE(UntypedType);
+        TYPE(SequenceType);
+        TYPE(PropertyType);
         TYPE(VirtualInterfaceType);
         TYPE(ErrorType);
         TYPE(NetType);
