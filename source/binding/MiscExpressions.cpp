@@ -6,6 +6,7 @@
 //------------------------------------------------------------------------------
 #include "slang/binding/MiscExpressions.h"
 
+#include "slang/binding/AssertionExpr.h"
 #include "slang/binding/Constraints.h"
 #include "slang/binding/SelectExpressions.h"
 #include "slang/binding/SystemSubroutine.h"
@@ -17,6 +18,7 @@
 #include "slang/diagnostics/ParserDiags.h"
 #include "slang/symbols/ASTSerializer.h"
 #include "slang/symbols/ClassSymbols.h"
+#include "slang/symbols/MemberSymbols.h"
 #include "slang/symbols/ParameterSymbols.h"
 #include "slang/symbols/SubroutineSymbols.h"
 #include "slang/symbols/VariableSymbols.h"
@@ -1080,6 +1082,34 @@ Expression& ClockingArgumentExpression::fromSyntax(const ClockingPropertyExprSyn
 
 void ClockingArgumentExpression::serializeTo(ASTSerializer& serializer) const {
     serializer.write("timingControl", timingControl);
+}
+
+Expression& AssertionInstanceExpression::fromLookup(const Symbol& symbol,
+                                                    const InvocationExpressionSyntax*,
+                                                    SourceRange range, const BindContext& context) {
+    // TODO: arguments
+    auto& comp = context.getCompilation();
+    const Type* type;
+    const AssertionExpr* body;
+    switch (symbol.kind) {
+        case SymbolKind::Sequence:
+            type = &comp.getType(SyntaxKind::SequenceType);
+            body = &symbol.as<SequenceSymbol>().instantiate();
+            break;
+        case SymbolKind::Property:
+            type = &comp.getType(SyntaxKind::PropertyType);
+            body = &symbol.as<PropertySymbol>().instantiate();
+            break;
+        default:
+            THROW_UNREACHABLE;
+    }
+
+    return *comp.emplace<AssertionInstanceExpression>(*type, symbol, *body, range);
+}
+
+void AssertionInstanceExpression::serializeTo(ASTSerializer& serializer) const {
+    serializer.writeLink("instance", instance);
+    serializer.write("body", body);
 }
 
 Expression& MinTypMaxExpression::fromSyntax(Compilation& compilation,

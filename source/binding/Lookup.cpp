@@ -1200,6 +1200,11 @@ void Lookup::unqualifiedImpl(const Scope& scope, string_view name, LookupLocatio
                         // Same as above.
                         locationGood = symbol->as<MethodPrototypeSymbol>().getReturnType().isVoid();
                         break;
+                    case SymbolKind::Sequence:
+                    case SymbolKind::Property:
+                        // Sequences and properties can always be referenced before declaration.
+                        locationGood = true;
+                        break;
                     default:
                         break;
                 }
@@ -1536,10 +1541,20 @@ void Lookup::reportUndeclared(const Scope& initialScope, string_view name, Sourc
                 }
             }
             else {
-                if (!s->isValue() && s->kind != SymbolKind::Subroutine &&
-                    s->kind != SymbolKind::InstanceArray &&
-                    (s->kind != SymbolKind::Instance || !s->as<InstanceSymbol>().isInterface())) {
-                    return false;
+                switch (s->kind) {
+                    case SymbolKind::Subroutine:
+                    case SymbolKind::InstanceArray:
+                    case SymbolKind::Sequence:
+                    case SymbolKind::Property:
+                        break;
+                    case SymbolKind::Instance:
+                        if (!s->as<InstanceSymbol>().isInterface())
+                            return false;
+                        break;
+                    default:
+                        if (!s->isValue())
+                            return false;
+                        break;
                 }
             }
 

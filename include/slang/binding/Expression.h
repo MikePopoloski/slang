@@ -62,7 +62,8 @@ struct InvocationExpressionSyntax;
     x(NewClass) \
     x(CopyClass) \
     x(MinTypMax) \
-    x(ClockingArgument)
+    x(ClockingArgument) \
+    x(AssertionInstance)
 ENUM(ExpressionKind, EXPRESSION);
 #undef EXPRESSION
 

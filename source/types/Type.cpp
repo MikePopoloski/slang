@@ -866,6 +866,8 @@ const Type& Type::fromSyntax(Compilation& compilation, const DataTypeSyntax& nod
         case SyntaxKind::EventType:
         case SyntaxKind::VoidType:
         case SyntaxKind::Untyped:
+        case SyntaxKind::PropertyType:
+        case SyntaxKind::SequenceType:
             return compilation.getType(node.kind);
         case SyntaxKind::EnumType:
             return EnumType::fromSyntax(compilation, node.as<EnumTypeSyntax>(), location, parent,
@@ -900,10 +902,6 @@ const Type& Type::fromSyntax(Compilation& compilation, const DataTypeSyntax& nod
         case SyntaxKind::VirtualInterfaceType:
             return VirtualInterfaceType::fromSyntax(parent, location,
                                                     node.as<VirtualInterfaceTypeSyntax>());
-        case SyntaxKind::PropertyType:
-        case SyntaxKind::SequenceType:
-            parent.addDiag(diag::NotYetSupported, node.sourceRange());
-            return compilation.getErrorType();
         default:
             THROW_UNREACHABLE;
     }

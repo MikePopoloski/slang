@@ -312,6 +312,7 @@ decltype(auto) Expression::visitExpression(TExpression* expr, TVisitor&& visitor
         CASE(CopyClass, CopyClassExpression);
         CASE(MinTypMax, MinTypMaxExpression);
         CASE(ClockingArgument, ClockingArgumentExpression);
+        CASE(AssertionInstance, AssertionInstanceExpression);
     }
 #undef CASE
     // clang-format on
@@ -374,7 +375,6 @@ decltype(auto) AssertionExpr::visit(TVisitor& visitor, Args&&... args) const {
         CASE(Abort, AbortAssertionExpr);
         CASE(Conditional, ConditionalAssertionExpr);
         CASE(Case, CaseAssertionExpr);
-        CASE(Instance, InstanceAssertionExpr);
     }
 #undef CASE
     // clang-format on

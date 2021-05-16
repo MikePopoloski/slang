@@ -11,6 +11,7 @@
 
 namespace slang {
 
+class AssertionExpr;
 class Constraint;
 class TimingControl;
 
@@ -296,6 +297,28 @@ public:
     void serializeTo(ASTSerializer& serializer) const;
 
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::ClockingArgument; }
+};
+
+/// Represents an instance of an assertion item, either a sequence or a property.
+class AssertionInstanceExpression : public Expression {
+public:
+    const Symbol& instance;
+    const AssertionExpr& body;
+
+    AssertionInstanceExpression(const Type& type, const Symbol& instance, const AssertionExpr& body,
+                                SourceRange sourceRange) :
+        Expression(ExpressionKind::AssertionInstance, type, sourceRange),
+        instance(instance), body(body) {}
+
+    ConstantValue evalImpl(EvalContext&) const { return nullptr; }
+    bool verifyConstantImpl(EvalContext&) const { return true; }
+
+    static Expression& fromLookup(const Symbol& symbol, const InvocationExpressionSyntax* syntax,
+                                  SourceRange range, const BindContext& context);
+
+    void serializeTo(ASTSerializer& serializer) const;
+
+    static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::AssertionInstance; }
 };
 
 struct MinTypMaxExpressionSyntax;

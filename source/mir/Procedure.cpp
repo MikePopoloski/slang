@@ -166,6 +166,7 @@ public:
     MIRValue visit(const OpenRangeExpression&) { return {}; }
     MIRValue visit(const DistExpression&) { return {}; }
     MIRValue visit(const ClockingArgumentExpression&) { return {}; }
+    MIRValue visit(const AssertionInstanceExpression&) { return {}; }
 
     void visitInvalid(const Statement&) {}
     MIRValue visitInvalid(const Expression&) { return {}; }

@@ -833,16 +833,25 @@ Expression& Expression::bindLookupResult(Compilation& compilation, const LookupR
 
     Expression* expr;
     SourceRange sourceRange = syntax.sourceRange();
-    if (symbol->kind == SymbolKind::Subroutine) {
-        SourceRange callRange = invocation ? invocation->sourceRange() : sourceRange;
-        expr = &CallExpression::fromLookup(compilation, &symbol->as<SubroutineSymbol>(), nullptr,
-                                           invocation, withClause, callRange, context);
-        invocation = nullptr;
-        withClause = nullptr;
-    }
-    else {
-        expr =
-            &ValueExpressionBase::fromSymbol(context, *symbol, result.isHierarchical, sourceRange);
+    switch (symbol->kind) {
+        case SymbolKind::Subroutine: {
+            SourceRange callRange = invocation ? invocation->sourceRange() : sourceRange;
+            expr = &CallExpression::fromLookup(compilation, &symbol->as<SubroutineSymbol>(),
+                                               nullptr, invocation, withClause, callRange, context);
+            invocation = nullptr;
+            withClause = nullptr;
+            break;
+        }
+        case SymbolKind::Sequence:
+        case SymbolKind::Property:
+            expr =
+                &AssertionInstanceExpression::fromLookup(*symbol, invocation, sourceRange, context);
+            invocation = nullptr;
+            break;
+        default:
+            expr = &ValueExpressionBase::fromSymbol(context, *symbol, result.isHierarchical,
+                                                    sourceRange);
+            break;
     }
 
     // Drill down into member accesses.
