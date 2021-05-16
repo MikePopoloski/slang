@@ -339,9 +339,9 @@ void registerNonConstFuncs(Compilation& c) {
     auto& uintType = c.getUnsignedIntType();
     std::vector<const Type*> intArg = { &intType };
 
-    REGISTER("$time", c.getTimeType());
+    REGISTER("$time", c.getType(SyntaxKind::TimeType));
     REGISTER("$stime", c.getUnsignedIntType());
-    REGISTER("$realtime", c.getRealTimeType());
+    REGISTER("$realtime", c.getType(SyntaxKind::RealTimeType));
     REGISTER("$random", intType, 0, intArg);
     REGISTER("$urandom", uintType, 0, intArg);
     REGISTER("$urandom_range", uintType, 1, std::vector<const Type*>{ &uintType, &uintType });

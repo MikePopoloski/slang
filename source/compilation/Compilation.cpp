@@ -45,28 +45,29 @@ Compilation::Compilation(const Bag& options) :
     // Construct all built-in types.
     bitType = emplace<ScalarType>(ScalarType::Bit);
     logicType = emplace<ScalarType>(ScalarType::Logic);
-    regType = emplace<ScalarType>(ScalarType::Reg);
-    signedBitType = emplace<ScalarType>(ScalarType::Bit, true);
-    signedLogicType = emplace<ScalarType>(ScalarType::Logic, true);
-    signedRegType = emplace<ScalarType>(ScalarType::Reg, true);
-    shortIntType = emplace<PredefinedIntegerType>(PredefinedIntegerType::ShortInt);
     intType = emplace<PredefinedIntegerType>(PredefinedIntegerType::Int);
-    longIntType = emplace<PredefinedIntegerType>(PredefinedIntegerType::LongInt);
     byteType = emplace<PredefinedIntegerType>(PredefinedIntegerType::Byte);
     integerType = emplace<PredefinedIntegerType>(PredefinedIntegerType::Integer);
-    timeType = emplace<PredefinedIntegerType>(PredefinedIntegerType::Time);
     realType = emplace<FloatingType>(FloatingType::Real);
-    realTimeType = emplace<FloatingType>(FloatingType::RealTime);
     shortRealType = emplace<FloatingType>(FloatingType::ShortReal);
     stringType = emplace<StringType>();
-    chandleType = emplace<CHandleType>();
     voidType = emplace<VoidType>();
-    nullType = emplace<NullType>();
-    eventType = emplace<EventType>();
-    unboundedType = emplace<UnboundedType>();
-    typeRefType = emplace<TypeRefType>();
-    untypedType = emplace<UntypedType>();
     errorType = emplace<ErrorType>();
+
+    auto regType = emplace<ScalarType>(ScalarType::Reg);
+    auto signedBitType = emplace<ScalarType>(ScalarType::Bit, true);
+    auto signedLogicType = emplace<ScalarType>(ScalarType::Logic, true);
+    auto signedRegType = emplace<ScalarType>(ScalarType::Reg, true);
+    auto shortIntType = emplace<PredefinedIntegerType>(PredefinedIntegerType::ShortInt);
+    auto longIntType = emplace<PredefinedIntegerType>(PredefinedIntegerType::LongInt);
+    auto timeType = emplace<PredefinedIntegerType>(PredefinedIntegerType::Time);
+    auto realTimeType = emplace<FloatingType>(FloatingType::RealTime);
+    auto chandleType = emplace<CHandleType>();
+    auto nullType = emplace<NullType>();
+    auto eventType = emplace<EventType>();
+    auto unboundedType = emplace<UnboundedType>();
+    auto typeRefType = emplace<TypeRefType>();
+    auto untypedType = emplace<UntypedType>();
 
     // Register built-in types for lookup by syntax kind.
     knownTypes[SyntaxKind::ShortIntType] = shortIntType;
@@ -83,8 +84,11 @@ Compilation::Compilation(const Bag& options) :
     knownTypes[SyntaxKind::ShortRealType] = shortRealType;
     knownTypes[SyntaxKind::StringType] = stringType;
     knownTypes[SyntaxKind::CHandleType] = chandleType;
+    knownTypes[SyntaxKind::NullLiteralExpression] = nullType;
     knownTypes[SyntaxKind::VoidType] = voidType;
     knownTypes[SyntaxKind::EventType] = eventType;
+    knownTypes[SyntaxKind::WildcardLiteralExpression] = unboundedType;
+    knownTypes[SyntaxKind::TypeReference] = typeRefType;
     knownTypes[SyntaxKind::Untyped] = untypedType;
     knownTypes[SyntaxKind::Unknown] = errorType;
 
@@ -1009,6 +1013,18 @@ const NetType& Compilation::getNetType(TokenKind kind) const {
 
 const Type& Compilation::getUnsignedIntType() {
     return getType(32, IntegralFlags::Unsigned | IntegralFlags::TwoState);
+}
+
+const Type& Compilation::getNullType() {
+    return getType(SyntaxKind::NullLiteralExpression);
+}
+
+const Type& Compilation::getUnboundedType() {
+    return getType(SyntaxKind::WildcardLiteralExpression);
+}
+
+const Type& Compilation::getTypeRefType() {
+    return getType(SyntaxKind::TypeReference);
 }
 
 InstanceCache& Compilation::getInstanceCache() {

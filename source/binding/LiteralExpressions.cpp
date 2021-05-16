@@ -112,7 +112,8 @@ Expression& TimeLiteral::fromSyntax(const BindContext& context,
     value = scale.apply(value, unit);
 
     auto& comp = context.getCompilation();
-    return *comp.emplace<TimeLiteral>(comp.getRealTimeType(), value, syntax.sourceRange());
+    return *comp.emplace<TimeLiteral>(comp.getType(SyntaxKind::RealTimeType), value,
+                                      syntax.sourceRange());
 }
 
 ConstantValue TimeLiteral::evalImpl(EvalContext&) const {

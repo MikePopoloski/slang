@@ -362,26 +362,18 @@ public:
     /// Various built-in type symbols for easy access.
     const Type& getBitType() const { return *bitType; }
     const Type& getLogicType() const { return *logicType; }
-    const Type& getRegType() const { return *regType; }
-    const Type& getShortIntType() const { return *shortIntType; }
     const Type& getIntType() const { return *intType; }
-    const Type& getLongIntType() const { return *longIntType; }
     const Type& getByteType() const { return *byteType; }
     const Type& getIntegerType() const { return *integerType; }
-    const Type& getTimeType() const { return *timeType; }
     const Type& getRealType() const { return *realType; }
-    const Type& getRealTimeType() const { return *realTimeType; }
     const Type& getShortRealType() const { return *shortRealType; }
     const Type& getStringType() const { return *stringType; }
-    const Type& getCHandleType() const { return *chandleType; }
     const Type& getVoidType() const { return *voidType; }
-    const Type& getNullType() const { return *nullType; }
-    const Type& getEventType() const { return *eventType; }
-    const Type& getUnboundedType() const { return *unboundedType; }
-    const Type& getTypeRefType() const { return *typeRefType; }
-    const Type& getUntypedType() const { return *untypedType; }
     const Type& getErrorType() const { return *errorType; }
     const Type& getUnsignedIntType();
+    const Type& getNullType();
+    const Type& getUnboundedType();
+    const Type& getTypeRefType();
 
     /// Get the 'wire' built in net type. The rest of the built-in net types are rare enough
     /// that we don't bother providing dedicated accessors for them.
@@ -462,27 +454,13 @@ private:
     // Instances of all the built-in types.
     Type* bitType;
     Type* logicType;
-    Type* regType;
-    Type* signedBitType;
-    Type* signedLogicType;
-    Type* signedRegType;
-    Type* shortIntType;
     Type* intType;
-    Type* longIntType;
     Type* byteType;
     Type* integerType;
-    Type* timeType;
     Type* realType;
-    Type* realTimeType;
     Type* shortRealType;
     Type* stringType;
-    Type* chandleType;
     Type* voidType;
-    Type* nullType;
-    Type* eventType;
-    Type* unboundedType;
-    Type* typeRefType;
-    Type* untypedType;
     Type* errorType;
     NetType* wireNetType;
 

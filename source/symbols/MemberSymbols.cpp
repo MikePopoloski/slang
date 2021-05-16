@@ -808,6 +808,7 @@ void AssertionPortSymbol::buildPorts(Scope& scope, const AssertionItemPortListSy
     };
 
     auto& comp = scope.getCompilation();
+    auto& untyped = comp.getType(SyntaxKind::Untyped);
     const DataTypeSyntax* lastType = nullptr;
     for (auto item : syntax.ports) {
         // TODO: local / direction
@@ -821,7 +822,7 @@ void AssertionPortSymbol::buildPorts(Scope& scope, const AssertionItemPortListSy
             if (lastType)
                 port->declaredType.setTypeSyntax(*lastType);
             else
-                port->declaredType.setType(comp.getUntypedType());
+                port->declaredType.setType(untyped);
         }
         else {
             port->declaredType.setTypeSyntax(*item->type);
