@@ -1187,12 +1187,18 @@ NamedBlockClause? endBlockName
 kindmap<FunctionDeclaration>
 FunctionDeclaration TaskDeclaration
 
+EqualsAssertionArgClause
+token equals
+PropertyExpr expr
+
 AssertionItemPort
 list<AttributeInstance> attributes
 token local
 token direction
 DataType type
-Declarator declarator
+token name
+list<VariableDimension> dimensions
+EqualsAssertionArgClause? defaultValue
 
 AssertionItemPortList
 token openParen

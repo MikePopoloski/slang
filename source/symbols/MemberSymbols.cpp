@@ -812,11 +812,13 @@ void AssertionPortSymbol::buildPorts(Scope& scope, const AssertionItemPortListSy
     const DataTypeSyntax* lastType = nullptr;
     for (auto item : syntax.ports) {
         // TODO: local / direction
-        auto nameToken = item->declarator->name;
-        auto port = comp.emplace<AssertionPortSymbol>(nameToken.valueText(), nameToken.location());
+        auto port =
+            comp.emplace<AssertionPortSymbol>(item->name.valueText(), item->name.location());
         port->setSyntax(*item);
         port->setAttributes(scope, item->attributes);
-        port->declaredType.setFromDeclarator(*item->declarator);
+
+        if (!item->dimensions.empty())
+            port->declaredType.setDimensionSyntax(item->dimensions);
 
         if (isEmpty(*item->type)) {
             if (lastType)
@@ -828,6 +830,9 @@ void AssertionPortSymbol::buildPorts(Scope& scope, const AssertionItemPortListSy
             port->declaredType.setTypeSyntax(*item->type);
             lastType = item->type;
         }
+
+        if (item->defaultValue)
+            port->defaultValueSyntax = item->defaultValue->expr;
 
         scope.addMember(*port);
         results.append(port);

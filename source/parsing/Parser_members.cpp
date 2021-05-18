@@ -1859,8 +1859,17 @@ AssertionItemPortSyntax& Parser::parseAssertionItemPort() {
             break;
     }
 
-    auto& declarator = parseDeclarator();
-    return factory.assertionItemPort(attributes, local, direction, *type, declarator);
+    auto name = expect(TokenKind::Identifier);
+    auto dimensions = parseDimensionList();
+
+    EqualsAssertionArgClauseSyntax* defaultValue = nullptr;
+    if (peek(TokenKind::Equals)) {
+        auto equals = consume();
+        defaultValue = &factory.equalsAssertionArgClause(equals, parsePropertyExpr(0));
+    }
+
+    return factory.assertionItemPort(attributes, local, direction, *type, name, dimensions,
+                                     defaultValue);
 }
 
 AssertionItemPortListSyntax* Parser::parseAssertionItemPortList() {

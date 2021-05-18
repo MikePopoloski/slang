@@ -251,12 +251,14 @@ public:
 };
 
 struct AssertionItemPortListSyntax;
+struct PropertyExprSyntax;
 
 /// Represents a formal argument / port of an assertion construct, such
 /// as a sequence, property, or let construct.
 class AssertionPortSymbol : public Symbol {
 public:
     DeclaredType declaredType;
+    const PropertyExprSyntax* defaultValueSyntax = nullptr;
 
     AssertionPortSymbol(string_view name, SourceLocation loc);
 
