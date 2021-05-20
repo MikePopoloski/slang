@@ -969,6 +969,7 @@ Expression& NewClassExpression::fromSyntax(Compilation& compilation,
     }
     else if (syntax.argList && !syntax.argList->parameters.empty()) {
         auto& diag = context.addDiag(diag::TooManyArguments, syntax.argList->sourceRange());
+        diag << "new"sv;
         diag << 0;
         diag << syntax.argList->parameters.size();
     }

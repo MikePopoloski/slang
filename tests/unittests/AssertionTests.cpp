@@ -143,7 +143,7 @@ endmodule
 TEST_CASE("Sequence & property instances") {
     auto tree = SyntaxTree::fromText(R"(
 module m;
-    assert property (n.a);
+    assert property (n.a(3));
     assert property (b);
 
     int c, d;
@@ -154,7 +154,7 @@ endmodule
 
 module n;
     int c, d;
-    property a;
+    property a(int i, foo = 1);
         ##1 c ##1 d;
     endproperty
 endmodule
@@ -163,4 +163,31 @@ endmodule
     Compilation compilation;
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Assertion instance arg errors") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    assert property (a(, .a(1), .b(), .d(1)));
+    assert property (a(1, 2));
+    assert property (a(1, 2, 3, 4));
+
+    sequence a(a, b, c);
+        1;
+    endsequence
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 7);
+    CHECK(diags[0].code == diag::UnconnectedArg);
+    CHECK(diags[1].code == diag::ArgCannotBeEmpty);
+    CHECK(diags[2].code == diag::DuplicateArgAssignment);
+    CHECK(diags[3].code == diag::ArgCannotBeEmpty);
+    CHECK(diags[4].code == diag::ArgDoesNotExist);
+    CHECK(diags[5].code == diag::TooFewArguments);
+    CHECK(diags[6].code == diag::TooManyArguments);
 }

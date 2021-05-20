@@ -6,6 +6,8 @@
 //------------------------------------------------------------------------------
 #pragma once
 
+#include <flat_hash_map.hpp>
+
 #include "slang/binding/Lookup.h"
 #include "slang/numeric/ConstantValue.h"
 #include "slang/util/Util.h"
@@ -125,6 +127,9 @@ struct EvaluatedDimension {
     }
 };
 
+/// Contains required context for binding syntax nodes with symbols to form
+/// an AST. Expressions, statements, timing controls, constraints, and assertion
+/// items all use this for binding.
 class BindContext {
 public:
     /// The scope where the binding is occurring.
@@ -166,6 +171,16 @@ public:
     /// function call, this points to information about the class scope. Name lookups
     /// happen inside the class scope before going through the normal local lookup.
     const ClassRandomizeScope* classRandomizeScope = nullptr;
+
+    /// Information required to instantiate a sequence or property instance.
+    struct AssertionInstanceDetails {
+        /// A map of formal argument symbols to their actual replacements.
+        flat_hash_map<const Symbol*, const PropertyExprSyntax*> argumentMap;
+    };
+
+    /// If this context is for binding an instantiation of a sequence or
+    /// property instance this points to information about that instantiation.
+    const AssertionInstanceDetails* assertionInstance = nullptr;
 
     BindContext(const Scope& scope, LookupLocation lookupLocation,
                 bitmask<BindFlags> flags = BindFlags::None) :

@@ -460,6 +460,7 @@ void ClassType::handleExtends(const ExtendsClauseSyntax& extendsClause, const Bi
         }
         else if (!extendsArgs->parameters.empty()) {
             auto& diag = context.addDiag(diag::TooManyArguments, extendsArgs->sourceRange());
+            diag << baseClass->name;
             diag << 0;
             diag << extendsArgs->parameters.size();
         }

@@ -864,11 +864,10 @@ SequenceSymbol& SequenceSymbol::fromSyntax(const Scope& scope,
 }
 
 const AssertionExpr& SequenceSymbol::instantiate() const {
-    auto scope = getParentScope();
     auto syntax = getSyntax();
-    ASSERT(scope && syntax);
+    ASSERT(syntax);
 
-    BindContext context(*scope, LookupLocation::before(*this));
+    BindContext context(*this, LookupLocation::max);
     return AssertionExpr::bind(*syntax->as<SequenceDeclarationSyntax>().seqExpr, context);
 }
 
@@ -897,11 +896,10 @@ PropertySymbol& PropertySymbol::fromSyntax(const Scope& scope,
 }
 
 const AssertionExpr& PropertySymbol::instantiate() const {
-    auto scope = getParentScope();
     auto syntax = getSyntax();
-    ASSERT(scope && syntax);
+    ASSERT(syntax);
 
-    BindContext context(*scope, LookupLocation::before(*this));
+    BindContext context(*this, LookupLocation::max);
     return AssertionExpr::bind(*syntax->as<PropertyDeclarationSyntax>().propertySpec->expr,
                                context);
 }

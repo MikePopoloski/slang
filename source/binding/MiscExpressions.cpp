@@ -371,46 +371,52 @@ Expression& CallExpression::fromLookup(Compilation& compilation, const Subroutin
     return result;
 }
 
+using NamedArgMap = SmallMap<string_view, std::pair<const NamedArgumentSyntax*, bool>, 8>;
+
+static bool collectArgs(const BindContext& context, const ArgumentListSyntax& syntax,
+                        SmallVector<const SyntaxNode*>& orderedArgs, NamedArgMap& namedArgs) {
+    // Collect all arguments into a list of ordered expressions (which can
+    // optionally be nullptr to indicate an empty argument) and a map of
+    // named argument assignments.
+    for (auto arg : syntax.parameters) {
+        if (arg->kind == SyntaxKind::NamedArgument) {
+            const NamedArgumentSyntax& nas = arg->as<NamedArgumentSyntax>();
+            auto name = nas.name.valueText();
+            if (!name.empty()) {
+                auto pair = namedArgs.emplace(name, std::make_pair(&nas, false));
+                if (!pair.second) {
+                    auto& diag = context.addDiag(diag::DuplicateArgAssignment, nas.name.location());
+                    diag << name;
+                    diag.addNote(diag::NotePreviousUsage,
+                                 pair.first->second.first->name.location());
+                }
+            }
+        }
+        else {
+            // Once a named argument has been seen, no more ordered arguments are allowed.
+            if (!namedArgs.empty()) {
+                context.addDiag(diag::MixingOrderedAndNamedArgs, arg->getFirstToken().location());
+                return false;
+            }
+
+            if (arg->kind == SyntaxKind::EmptyArgument)
+                orderedArgs.append(arg);
+            else
+                orderedArgs.append(arg->as<OrderedArgumentSyntax>().expr);
+        }
+    }
+    return true;
+}
+
 Expression& CallExpression::fromArgs(Compilation& compilation, const Subroutine& subroutine,
                                      const Expression* thisClass,
                                      const ArgumentListSyntax* argSyntax, SourceRange range,
                                      const BindContext& context) {
-    // Collect all arguments into a list of ordered expressions (which can
-    // optionally be nullptr to indicate an empty argument) and a map of
-    // named argument assignments.
     SmallVectorSized<const SyntaxNode*, 8> orderedArgs;
-    SmallMap<string_view, std::pair<const NamedArgumentSyntax*, bool>, 8> namedArgs;
-
+    NamedArgMap namedArgs;
     if (argSyntax) {
-        for (auto arg : argSyntax->parameters) {
-            if (arg->kind == SyntaxKind::NamedArgument) {
-                const NamedArgumentSyntax& nas = arg->as<NamedArgumentSyntax>();
-                auto name = nas.name.valueText();
-                if (!name.empty()) {
-                    auto pair = namedArgs.emplace(name, std::make_pair(&nas, false));
-                    if (!pair.second) {
-                        auto& diag =
-                            context.addDiag(diag::DuplicateArgAssignment, nas.name.location());
-                        diag << name;
-                        diag.addNote(diag::NotePreviousUsage,
-                                     pair.first->second.first->name.location());
-                    }
-                }
-            }
-            else {
-                // Once a named argument has been seen, no more ordered arguments are allowed.
-                if (!namedArgs.empty()) {
-                    context.addDiag(diag::MixingOrderedAndNamedArgs,
-                                    arg->getFirstToken().location());
-                    return badExpr(compilation, nullptr);
-                }
-
-                if (arg->kind == SyntaxKind::EmptyArgument)
-                    orderedArgs.append(arg);
-                else
-                    orderedArgs.append(arg->as<OrderedArgumentSyntax>().expr);
-            }
-        }
+        if (!collectArgs(context, *argSyntax, orderedArgs, namedArgs))
+            return badExpr(compilation, nullptr);
     }
 
     // Now bind all arguments.
@@ -468,6 +474,7 @@ Expression& CallExpression::fromArgs(Compilation& compilation, const Subroutine&
             if (!expr) {
                 if (namedArgs.empty()) {
                     auto& diag = context.addDiag(diag::TooFewArguments, range);
+                    diag << symbol.name;
                     diag << symbol.getArguments().size() << orderedArgs.size();
                     bad = true;
                     break;
@@ -490,6 +497,7 @@ Expression& CallExpression::fromArgs(Compilation& compilation, const Subroutine&
     // Make sure there weren't too many ordered arguments provided.
     if (orderedIndex < orderedArgs.size()) {
         auto& diag = context.addDiag(diag::TooManyArguments, range);
+        diag << symbol.name;
         diag << symbol.getArguments().size();
         diag << orderedArgs.size();
         bad = true;
@@ -1085,26 +1093,125 @@ void ClockingArgumentExpression::serializeTo(ASTSerializer& serializer) const {
 }
 
 Expression& AssertionInstanceExpression::fromLookup(const Symbol& symbol,
-                                                    const InvocationExpressionSyntax*,
+                                                    const InvocationExpressionSyntax* syntax,
                                                     SourceRange range, const BindContext& context) {
-    // TODO: arguments
     auto& comp = context.getCompilation();
     const Type* type;
     const AssertionExpr* body;
+    span<const AssertionPortSymbol* const> formalPorts;
     switch (symbol.kind) {
         case SymbolKind::Sequence:
             type = &comp.getType(SyntaxKind::SequenceType);
+            formalPorts = symbol.as<SequenceSymbol>().ports;
             body = &symbol.as<SequenceSymbol>().instantiate();
             break;
         case SymbolKind::Property:
             type = &comp.getType(SyntaxKind::PropertyType);
+            formalPorts = symbol.as<PropertySymbol>().ports;
             body = &symbol.as<PropertySymbol>().instantiate();
             break;
         default:
             THROW_UNREACHABLE;
     }
 
-    return *comp.emplace<AssertionInstanceExpression>(*type, symbol, *body, range);
+    SmallVectorSized<const SyntaxNode*, 8> orderedArgs;
+    NamedArgMap namedArgs;
+    if (syntax && syntax->arguments) {
+        if (!collectArgs(context, *syntax->arguments, orderedArgs, namedArgs))
+            return badExpr(comp, nullptr);
+    }
+
+    // Now map all arguments to their formal ports.
+    bool bad = false;
+    uint32_t orderedIndex = 0;
+    BindContext::AssertionInstanceDetails instance;
+
+    for (auto formal : formalPorts) {
+        const PropertyExprSyntax* expr = nullptr;
+        if (orderedIndex < orderedArgs.size()) {
+            auto arg = orderedArgs[orderedIndex++];
+            if (arg->kind == SyntaxKind::EmptyArgument) {
+                // Empty arguments are allowed as long as a default is provided.
+                expr = formal->defaultValueSyntax;
+                if (!expr)
+                    context.addDiag(diag::ArgCannotBeEmpty, arg->sourceRange()) << formal->name;
+            }
+            else {
+                expr = &arg->as<PropertyExprSyntax>();
+            }
+
+            // Make sure there isn't also a named value for this argument.
+            if (auto it = namedArgs.find(formal->name); it != namedArgs.end()) {
+                auto& diag = context.addDiag(diag::DuplicateArgAssignment,
+                                             it->second.first->name.location());
+                diag << formal->name;
+                diag.addNote(diag::NotePreviousUsage, arg->getFirstToken().location());
+                it->second.second = true;
+                bad = true;
+            }
+        }
+        else if (auto it = namedArgs.find(formal->name); it != namedArgs.end()) {
+            // Mark this argument as used so that we can later detect if
+            // any were unused.
+            it->second.second = true;
+
+            auto arg = it->second.first->expr;
+            if (!arg) {
+                // Empty arguments are allowed as long as a default is provided.
+                expr = formal->defaultValueSyntax;
+                if (!expr) {
+                    context.addDiag(diag::ArgCannotBeEmpty, it->second.first->sourceRange())
+                        << formal->name;
+                }
+            }
+        }
+        else {
+            expr = formal->defaultValueSyntax;
+            if (!expr) {
+                if (namedArgs.empty()) {
+                    auto& diag = context.addDiag(diag::TooFewArguments, range);
+                    diag << symbol.name;
+                    diag << formalPorts.size() << orderedArgs.size();
+                    bad = true;
+                    break;
+                }
+                else {
+                    context.addDiag(diag::UnconnectedArg, range) << formal->name;
+                }
+            }
+        }
+
+        if (expr)
+            instance.argumentMap.emplace(formal, expr);
+        else
+            bad = true;
+    }
+
+    // Make sure there weren't too many ordered arguments provided.
+    if (orderedIndex < orderedArgs.size()) {
+        auto& diag = context.addDiag(diag::TooManyArguments, range);
+        diag << symbol.name;
+        diag << formalPorts.size();
+        diag << orderedArgs.size();
+        bad = true;
+    }
+
+    for (const auto& pair : namedArgs) {
+        // We marked all the args that we used, so anything left over is an arg assignment
+        // for a non-existent arg.
+        if (!pair.second.second) {
+            auto& diag = context.addDiag(diag::ArgDoesNotExist, pair.second.first->name.location());
+            diag << pair.second.first->name.valueText();
+            diag << symbol.name;
+            bad = true;
+        }
+    }
+
+    auto result = comp.emplace<AssertionInstanceExpression>(*type, symbol, *body, range);
+    if (bad)
+        return badExpr(comp, result);
+
+    return *result;
 }
 
 void AssertionInstanceExpression::serializeTo(ASTSerializer& serializer) const {

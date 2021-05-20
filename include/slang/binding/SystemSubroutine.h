@@ -53,8 +53,8 @@ protected:
 
     bool notConst(EvalContext& context, SourceRange range) const;
 
-    static bool checkArgCount(const BindContext& context, bool isMethod, const Args& args,
-                              SourceRange callRange, size_t min, size_t max);
+    bool checkArgCount(const BindContext& context, bool isMethod, const Args& args,
+                       SourceRange callRange, size_t min, size_t max) const;
 
     static BindContext makeNonConst(const BindContext& context);
 };
