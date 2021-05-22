@@ -1092,24 +1092,86 @@ void ClockingArgumentExpression::serializeTo(ASTSerializer& serializer) const {
     serializer.write("timingControl", timingControl);
 }
 
+static bool checkAssertionArgType(const PropertyExprSyntax& propExpr,
+                                  const AssertionPortSymbol& formal, const BindContext& context) {
+    const SequenceExprSyntax* seqExpr = nullptr;
+    const ExpressionSyntax* regExpr = nullptr;
+    if (propExpr.kind == SyntaxKind::SimplePropertyExpr) {
+        seqExpr = propExpr.as<SimplePropertyExprSyntax>().expr;
+        if (seqExpr->kind == SyntaxKind::SimpleSequenceExpr) {
+            auto& simpSeq = seqExpr->as<SimpleSequenceExprSyntax>();
+            if (!simpSeq.repetition)
+                regExpr = simpSeq.expr;
+        }
+    }
+
+    auto& type = formal.declaredType.getType();
+    switch (type.getCanonicalType().kind) {
+        case SymbolKind::UntypedType:
+            // Untyped formals allow everything. Bind here just so we notice things like
+            // name resolution errors even if the argument ends up being unused in the
+            // body of the sequence / property.
+            if (regExpr)
+                return !Expression::bind(*regExpr, context).bad();
+            else
+                return !AssertionExpr::bind(propExpr, context).bad();
+        case SymbolKind::SequenceType:
+            if (!seqExpr) {
+                context.addDiag(diag::AssertionArgTypeSequence, propExpr.sourceRange());
+                return false;
+            }
+            return !AssertionExpr::bind(*seqExpr, context).bad();
+        case SymbolKind::PropertyType:
+            return !AssertionExpr::bind(propExpr, context).bad();
+        case SymbolKind::EventType:
+            // TODO: handle these
+        default:
+            break;
+    }
+
+    // For all other types, we need a normal expression that
+    // is cast compatible with the target type.
+    if (!regExpr) {
+        context.addDiag(diag::AssertionArgNeedsRegExpr, propExpr.sourceRange()) << type;
+        return false;
+    }
+
+    auto& bound = Expression::bind(*regExpr, context);
+    if (bound.bad())
+        return false;
+
+    if (!type.isCastCompatible(*bound.type)) {
+        context.addDiag(diag::AssertionArgTypeMismatch, propExpr.sourceRange())
+            << *bound.type << type;
+        return false;
+    }
+
+    return true;
+}
+
 Expression& AssertionInstanceExpression::fromLookup(const Symbol& symbol,
                                                     const InvocationExpressionSyntax* syntax,
                                                     SourceRange range, const BindContext& context) {
     auto& comp = context.getCompilation();
     const Type* type;
-    const AssertionExpr* body;
+    const Scope* symbolScope;
     span<const AssertionPortSymbol* const> formalPorts;
+
     switch (symbol.kind) {
-        case SymbolKind::Sequence:
+        case SymbolKind::Sequence: {
+            auto& seq = symbol.as<SequenceSymbol>();
             type = &comp.getType(SyntaxKind::SequenceType);
-            formalPorts = symbol.as<SequenceSymbol>().ports;
-            body = &symbol.as<SequenceSymbol>().instantiate();
+            formalPorts = seq.ports;
+            symbolScope = &seq;
             break;
-        case SymbolKind::Property:
+        }
+        case SymbolKind::Property: {
+            auto& prop = symbol.as<PropertySymbol>();
             type = &comp.getType(SyntaxKind::PropertyType);
-            formalPorts = symbol.as<PropertySymbol>().ports;
-            body = &symbol.as<PropertySymbol>().instantiate();
+            formalPorts = prop.ports;
+            symbolScope = &prop;
             break;
+        }
         default:
             THROW_UNREACHABLE;
     }
@@ -1127,12 +1189,21 @@ Expression& AssertionInstanceExpression::fromLookup(const Symbol& symbol,
     BindContext::AssertionInstanceDetails instance;
 
     for (auto formal : formalPorts) {
+        const BindContext* argCtx = &context;
         const PropertyExprSyntax* expr = nullptr;
+        optional<BindContext> defValCtx;
+
+        auto setDefault = [&] {
+            expr = formal->defaultValueSyntax;
+            defValCtx.emplace(*symbolScope, LookupLocation::after(*formal));
+            argCtx = &defValCtx.value();
+        };
+
         if (orderedIndex < orderedArgs.size()) {
             auto arg = orderedArgs[orderedIndex++];
             if (arg->kind == SyntaxKind::EmptyArgument) {
                 // Empty arguments are allowed as long as a default is provided.
-                expr = formal->defaultValueSyntax;
+                setDefault();
                 if (!expr)
                     context.addDiag(diag::ArgCannotBeEmpty, arg->sourceRange()) << formal->name;
             }
@@ -1158,7 +1229,7 @@ Expression& AssertionInstanceExpression::fromLookup(const Symbol& symbol,
             auto arg = it->second.first->expr;
             if (!arg) {
                 // Empty arguments are allowed as long as a default is provided.
-                expr = formal->defaultValueSyntax;
+                setDefault();
                 if (!expr) {
                     context.addDiag(diag::ArgCannotBeEmpty, it->second.first->sourceRange())
                         << formal->name;
@@ -1166,7 +1237,7 @@ Expression& AssertionInstanceExpression::fromLookup(const Symbol& symbol,
             }
         }
         else {
-            expr = formal->defaultValueSyntax;
+            setDefault();
             if (!expr) {
                 if (namedArgs.empty()) {
                     auto& diag = context.addDiag(diag::TooFewArguments, range);
@@ -1181,10 +1252,24 @@ Expression& AssertionInstanceExpression::fromLookup(const Symbol& symbol,
             }
         }
 
-        if (expr)
-            instance.argumentMap.emplace(formal, expr);
-        else
+        if (!expr) {
             bad = true;
+            continue;
+        }
+
+        // Map the expression to the port symbol; this will be looked up later
+        // when we encounter uses in the sequence / property body.
+        instance.argumentMap.emplace(formal, expr);
+
+        // Do type checking for all arguments now, even though the actuals will remain as
+        // syntax nodes and be rebound when we actually encounter uses of them in the body.
+        // This is because the arguments might not actually be used anywhere in the body,
+        // so the only place to detect mismatches is here, but we can't save the bound
+        // form because assertion item arguments are replaced as-is for each usage.
+        // TODO: correct context for default args
+        if (!checkAssertionArgType(*expr, *formal, *argCtx)) {
+            bad = true;
+        }
     }
 
     // Make sure there weren't too many ordered arguments provided.
@@ -1196,7 +1281,7 @@ Expression& AssertionInstanceExpression::fromLookup(const Symbol& symbol,
         bad = true;
     }
 
-    for (const auto& pair : namedArgs) {
+    for (auto& pair : namedArgs) {
         // We marked all the args that we used, so anything left over is an arg assignment
         // for a non-existent arg.
         if (!pair.second.second) {
@@ -1207,11 +1292,27 @@ Expression& AssertionInstanceExpression::fromLookup(const Symbol& symbol,
         }
     }
 
-    auto result = comp.emplace<AssertionInstanceExpression>(*type, symbol, *body, range);
     if (bad)
-        return badExpr(comp, result);
+        return badExpr(comp, nullptr);
 
-    return *result;
+    // Now instantiate by binding the assertion expression of the sequence / property body.
+    auto bodySyntax = symbol.getSyntax();
+    ASSERT(bodySyntax);
+
+    BindContext bodyContext(*symbolScope, LookupLocation::max);
+    bodyContext.assertionInstance = &instance;
+
+    const AssertionExpr* body;
+    if (symbol.kind == SymbolKind::Sequence) {
+        body =
+            &AssertionExpr::bind(*bodySyntax->as<SequenceDeclarationSyntax>().seqExpr, bodyContext);
+    }
+    else {
+        body = &AssertionExpr::bind(*bodySyntax->as<PropertyDeclarationSyntax>().propertySpec->expr,
+                                    bodyContext);
+    }
+
+    return *comp.emplace<AssertionInstanceExpression>(*type, symbol, *body, range);
 }
 
 void AssertionInstanceExpression::serializeTo(ASTSerializer& serializer) const {

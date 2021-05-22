@@ -863,14 +863,6 @@ SequenceSymbol& SequenceSymbol::fromSyntax(const Scope& scope,
     return *result;
 }
 
-const AssertionExpr& SequenceSymbol::instantiate() const {
-    auto syntax = getSyntax();
-    ASSERT(syntax);
-
-    BindContext context(*this, LookupLocation::max);
-    return AssertionExpr::bind(*syntax->as<SequenceDeclarationSyntax>().seqExpr, context);
-}
-
 void SequenceSymbol::serializeTo(ASTSerializer&) const {
     // TODO:
 }
@@ -893,15 +885,6 @@ PropertySymbol& PropertySymbol::fromSyntax(const Scope& scope,
 
     result->ports = ports.copy(comp);
     return *result;
-}
-
-const AssertionExpr& PropertySymbol::instantiate() const {
-    auto syntax = getSyntax();
-    ASSERT(syntax);
-
-    BindContext context(*this, LookupLocation::max);
-    return AssertionExpr::bind(*syntax->as<PropertyDeclarationSyntax>().propertySpec->expr,
-                               context);
 }
 
 void PropertySymbol::serializeTo(ASTSerializer&) const {

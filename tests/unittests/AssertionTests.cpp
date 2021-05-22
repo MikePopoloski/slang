@@ -191,3 +191,28 @@ endmodule
     CHECK(diags[5].code == diag::TooFewArguments);
     CHECK(diags[6].code == diag::TooManyArguments);
 }
+
+TEST_CASE("Assertion instance arg type checking") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    int foo[];
+    assert property (a(1, 1 iff 2, foo, 1 and 2));
+    assert property (a(1 iff 2, 1, 1));
+    assert property (a(1, 1, foo[*]));
+
+    int e;
+    sequence a(sequence a, property b, int c[], untyped d = e);
+        1;
+    endsequence
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 3);
+    CHECK(diags[0].code == diag::AssertionArgTypeSequence);
+    CHECK(diags[1].code == diag::AssertionArgTypeMismatch);
+    CHECK(diags[2].code == diag::AssertionArgNeedsRegExpr);
+}
