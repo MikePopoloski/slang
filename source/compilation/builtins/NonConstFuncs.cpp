@@ -349,6 +349,44 @@ public:
     }
 };
 
+class GlobalValueChangeFunc : public SystemSubroutine {
+public:
+    GlobalValueChangeFunc(const std::string& name, bool isFuture) :
+        SystemSubroutine(name, SubroutineKind::Function), isFuture(isFuture) {}
+
+    const Expression& bindArgument(size_t, const BindContext& context,
+                                   const ExpressionSyntax& syntax, const Args&) const final {
+        return Expression::bind(syntax, context, BindFlags::AssertionExpr);
+    }
+
+    const Type& checkArguments(const BindContext& context, const Args& args, SourceRange range,
+                               const Expression*) const final {
+        auto& comp = context.getCompilation();
+        if (!checkArgCount(context, false, args, range, 1, 1))
+            return comp.getErrorType();
+
+        if (!comp.getGlobalClocking(context.scope)) {
+            context.addDiag(diag::NoGlobalClocking, range);
+            return comp.getErrorType();
+        }
+
+        // TODO: enforce rules for future sampled value functions
+
+        return comp.getBitType();
+    }
+
+    ConstantValue eval(EvalContext&, const Args&,
+                       const CallExpression::SystemCallInfo&) const final {
+        return nullptr;
+    }
+    bool verifyConstant(EvalContext& context, const Args&, SourceRange range) const final {
+        return notConst(context, range);
+    }
+
+private:
+    bool isFuture;
+};
+
 void registerNonConstFuncs(Compilation& c) {
 #define REGISTER(...) c.addSystemSubroutine(std::make_unique<NonConstantFunction>(__VA_ARGS__))
 
@@ -392,6 +430,19 @@ void registerNonConstFuncs(Compilation& c) {
     FUNC("$fell");
     FUNC("$stable");
     FUNC("$changed");
+#undef FUNC
+
+#define FUNC(name, isFuture) c.addSystemSubroutine(std::make_unique<GlobalValueChangeFunc>(name, isFuture))
+    FUNC("$past_gclk", false);
+    FUNC("$rose_gclk", false);
+    FUNC("$fell_gclk", false);
+    FUNC("$stable_gclk", false);
+    FUNC("$changed_gclk", false);
+    FUNC("$future_gclk", true);
+    FUNC("$rising_gclk", true);
+    FUNC("$falling_gclk", true);
+    FUNC("$steady_gclk", true);
+    FUNC("$changing_gclk", true);
 #undef FUNC
 
     c.addSystemSubroutine(std::make_unique<FErrorFunc>());

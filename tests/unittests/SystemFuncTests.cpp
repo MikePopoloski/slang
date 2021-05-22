@@ -807,6 +807,17 @@ module m;
         a <= $past(b, 5);
         a <= $past(b, 5, a | b);
         a <= $past(b, 0);
+        a <= $past_gclk(b);
+    end
+endmodule
+
+module n;
+    wire clk;
+    global clocking @(posedge clk); endclocking
+
+    reg a, b;
+    always @(posedge clk) begin
+        a <= $changed_gclk(b);
     end
 endmodule
 )");
@@ -815,8 +826,9 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 1);
+    REQUIRE(diags.size() == 2);
     CHECK(diags[0].code == diag::PastNumTicksInvalid);
+    CHECK(diags[1].code == diag::NoGlobalClocking);
 }
 
 TEST_CASE("Global clock sys func") {
