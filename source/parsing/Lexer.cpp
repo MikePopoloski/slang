@@ -773,7 +773,7 @@ Token Lexer::lexNumericLiteral() {
             floatChars.append('0');
         else {
             for (auto d : digits)
-                floatChars.append((char)d.value + '0');
+                floatChars.append(char((char)d.value + '0'));
         }
     };
 

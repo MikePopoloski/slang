@@ -790,7 +790,7 @@ void SVInt::writeTo(SmallVector<char>& buffer, LiteralBase base, bool includeBas
             // this shift might shift away the unknown digits, at which point
             // it converts back to being a normal 2-state value
             tmp = tmp.lshr(shiftAmount);
-            bitsLeft -= shiftAmount;
+            bitsLeft -= int(shiftAmount);
             x = tmp != 0;
         }
     }

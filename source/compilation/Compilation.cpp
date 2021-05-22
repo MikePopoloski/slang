@@ -411,8 +411,10 @@ const RootSymbol& Compilation::getRoot(bool skipDefParamResolution) {
 const DesignTreeNode& Compilation::getDesignTree() {
     // Force creation of the tree by going through getSemanticDiagnostics
     // which will ensure that the design is visited in the proper order first.
-    if (!designTree)
+    if (!designTree) {
         getSemanticDiagnostics();
+        ASSERT(designTree);
+    }
 
     return *designTree;
 }
