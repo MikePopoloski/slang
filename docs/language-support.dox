@@ -241,16 +241,16 @@ LRM | Feature | Supported
 --- | ------- | ---------
 {{m-success}} 16.3 | Immediate assertions | v0.2
 {{m-warning}} 16.4 | Deferred assertions | partial
-{{m-danger}}  16.5 | Concurrent assertions overview | no
-{{m-danger}}  16.6 | Boolean expression | no
-{{m-danger}}  16.7 | Sequences | no
-{{m-danger}}  16.8 | Declaring sequences | no
-{{m-danger}}  16.9 | Sequence operations | no
+{{m-success}} 16.5 | Concurrent assertions overview | v0.8
+{{m-success}} 16.6 | Boolean expressions | v0.8
+{{m-success}} 16.7 | Sequences | v0.8
+{{m-warning}} 16.8 | Declaring sequences | partial
+{{m-warning}} 16.9 | Sequence operations | partial
 {{m-danger}}  16.10 | Local variables | no
 {{m-danger}}  16.11 | Calling subroutines on match of sequence | no
-{{m-danger}}  16.12 | Declaring properties | no
+{{m-warning}} 16.12 | Declaring properties | partial
 {{m-danger}}  16.13 | Multiclock support | no
-{{m-danger}}  16.14 | Concurrent assertions | no
+{{m-warning}} 16.14 | Concurrent assertions | partial
 {{m-danger}}  16.15 | Disable iff resolution | no
 {{m-danger}}  16.16 | Clock resolution | no
 {{m-danger}}  16.17 | Expect statement | no
@@ -319,7 +319,7 @@ LRM | Feature | Supported
 {{m-success}} 20.10 | Severity tasks | v0.2
 {{m-success}} 20.11 | Elaboration tasks | v0.5
 {{m-success}} 20.12 | Assertion control tasks | v0.6
-{{m-danger}}  20.13 | Sampled value system functions | no
+{{m-success}} 20.13 | Sampled value system functions | v0.8
 {{m-danger}}  20.14 | Coverage control functions | no
 {{m-success}} 20.15 | Probabilistic distribution functions | v0.7
 {{m-success}} 20.16 | Stochastic analysis tasks and functions | v0.7
