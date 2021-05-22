@@ -806,13 +806,17 @@ module m;
         a <= $past(b, , , @(posedge clk));
         a <= $past(b, 5);
         a <= $past(b, 5, a | b);
+        a <= $past(b, 0);
     end
 endmodule
 )");
 
     Compilation compilation;
     compilation.addSyntaxTree(tree);
-    NO_COMPILATION_ERRORS;
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::PastNumTicksInvalid);
 }
 
 TEST_CASE("Global clock sys func") {

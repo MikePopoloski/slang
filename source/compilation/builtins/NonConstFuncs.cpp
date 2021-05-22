@@ -242,13 +242,16 @@ class SampledFunc : public SystemSubroutine {
 public:
     SampledFunc() : SystemSubroutine("$sampled", SubroutineKind::Function) {}
 
+    const Expression& bindArgument(size_t, const BindContext& context,
+                                   const ExpressionSyntax& syntax, const Args&) const final {
+        return Expression::bind(syntax, context, BindFlags::AssertionExpr);
+    }
+
     const Type& checkArguments(const BindContext& context, const Args& args, SourceRange range,
                                const Expression*) const final {
         auto& comp = context.getCompilation();
         if (!checkArgCount(context, false, args, range, 1, 1))
             return comp.getErrorType();
-
-        // TODO: require valid assertion expression
 
         return *args[0]->type;
     }
@@ -266,6 +269,11 @@ class ValueChangeFunc : public SystemSubroutine {
 public:
     ValueChangeFunc(const std::string& name) : SystemSubroutine(name, SubroutineKind::Function) {}
 
+    const Expression& bindArgument(size_t, const BindContext& context,
+                                   const ExpressionSyntax& syntax, const Args&) const final {
+        return Expression::bind(syntax, context, BindFlags::AssertionExpr);
+    }
+
     bool allowClockingArgument(size_t argIndex) const final { return argIndex == 1; }
 
     const Type& checkArguments(const BindContext& context, const Args& args, SourceRange range,
@@ -274,7 +282,6 @@ public:
         if (!checkArgCount(context, false, args, range, 1, 2))
             return comp.getErrorType();
 
-        // TODO: require valid assertion expression
         // TODO: check rules for inferring clocking
 
         if (args.size() == 2 && args[1]->kind != ExpressionKind::ClockingArgument)
@@ -296,6 +303,15 @@ class PastFunc : public SystemSubroutine {
 public:
     PastFunc() : SystemSubroutine("$past", SubroutineKind::Function) {}
 
+    const Expression& bindArgument(size_t argIndex, const BindContext& context,
+                                   const ExpressionSyntax& syntax, const Args&) const final {
+        bitmask<BindFlags> extraFlags = BindFlags::None;
+        if (argIndex == 0 || argIndex == 2)
+            extraFlags = BindFlags::AssertionExpr;
+
+        return Expression::bind(syntax, context, extraFlags);
+    }
+
     bool allowEmptyArgument(size_t argIndex) const final { return argIndex == 1 || argIndex == 2; }
     bool allowClockingArgument(size_t argIndex) const final { return argIndex == 3; }
 
@@ -305,11 +321,12 @@ public:
         if (!checkArgCount(context, false, args, range, 1, 4))
             return comp.getErrorType();
 
-        // TODO: require valid assertion expression
         // TODO: check rules for inferring clocking
 
         if (args.size() > 1 && args[1]->kind != ExpressionKind::EmptyArgument) {
-            // TODO: check number of ticks argument
+            auto numTicks = context.evalInteger(*args[1]);
+            if (numTicks && *numTicks < 1)
+                context.addDiag(diag::PastNumTicksInvalid, args[1]->sourceRange);
         }
 
         if (args.size() > 2 && args[2]->kind != ExpressionKind::EmptyArgument) {
