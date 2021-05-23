@@ -1338,6 +1338,13 @@ token clocking
 token name
 token semi
 
+DefaultDisableDeclaration base=Member
+token defaultKeyword
+token disableKeyword
+token iffKeyword
+Expression expr
+token semi
+
 DPIImport base=Member
 token keyword
 token specString

@@ -212,6 +212,7 @@ void Scope::addMembers(const SyntaxNode& syntax) {
         case SyntaxKind::BindDirective:
         case SyntaxKind::ClockingItem:
         case SyntaxKind::DefaultClockingReference:
+        case SyntaxKind::DefaultDisableDeclaration:
             addDeferredMembers(syntax);
             break;
         case SyntaxKind::PortDeclaration:
@@ -828,6 +829,19 @@ void Scope::elaborate() const {
                                                 member.node.as<DefaultClockingReferenceSyntax>());
                 break;
             }
+            case SyntaxKind::DefaultDisableDeclaration: {
+                // No symbol to create here; instead, bind the expression and hand it
+                // off to the compilation for tracking.
+                BindContext context(*this, LookupLocation::before(*symbol));
+                auto& expr = Expression::bind(
+                    *member.node.as<DefaultDisableDeclarationSyntax>().expr, context);
+
+                if (!expr.type->isVoid())
+                    context.requireBooleanConvertible(expr);
+
+                compilation.noteDefaultDisable(*this, expr);
+                break;
+            }
             default:
                 break;
         }
@@ -1050,6 +1064,7 @@ static size_t countMembers(const SyntaxNode& syntax) {
         case SyntaxKind::GenerateBlock:
         case SyntaxKind::BindDirective:
         case SyntaxKind::DefaultClockingReference:
+        case SyntaxKind::DefaultDisableDeclaration:
             return 1;
         default:
             THROW_UNREACHABLE;

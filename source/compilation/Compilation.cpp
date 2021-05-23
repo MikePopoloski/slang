@@ -762,6 +762,26 @@ const Symbol* Compilation::getGlobalClocking(const Scope& scope) const {
     return nullptr;
 }
 
+void Compilation::noteDefaultDisable(const Scope& scope, const Expression& expr) {
+    auto [it, inserted] = defaultDisableMap.emplace(&scope, &expr);
+    if (!inserted) {
+        auto& diag = scope.addDiag(diag::MultipleDefaultDisable, expr.sourceRange);
+        diag.addNote(diag::NotePreviousDefinition, it->second->sourceRange.start());
+    }
+}
+
+const Expression* Compilation::getDefaultDisable(const Scope& scope) const {
+    auto curr = &scope;
+    while (true) {
+        if (auto it = defaultDisableMap.find(curr); it != defaultDisableMap.end())
+            return it->second;
+
+        curr = curr->asSymbol().getParentScope();
+        if (!curr || curr->asSymbol().kind == SymbolKind::CompilationUnit)
+            return nullptr;
+    }
+}
+
 const NameSyntax& Compilation::parseName(string_view name) {
     Diagnostics localDiags;
     auto& result = tryParseName(name, localDiags);

@@ -1212,6 +1212,7 @@ static bool isModuleCommonDecl(SyntaxKind kind) {
         case SyntaxKind::GenvarDeclaration:
         case SyntaxKind::ClockingDeclaration:
         case SyntaxKind::DefaultClockingReference:
+        case SyntaxKind::DefaultDisableDeclaration:
             return true;
         default:
             return isModuleOrPackageDecl(kind);
@@ -1363,6 +1364,7 @@ bool SyntaxFacts::isAllowedInChecker(SyntaxKind kind) {
         case SyntaxKind::GenvarDeclaration:
         case SyntaxKind::ClockingDeclaration:
         case SyntaxKind::DefaultClockingReference:
+        case SyntaxKind::DefaultDisableDeclaration:
         case SyntaxKind::NetTypeDeclaration:
         case SyntaxKind::TypedefDeclaration:
         case SyntaxKind::ForwardTypedefDeclaration:

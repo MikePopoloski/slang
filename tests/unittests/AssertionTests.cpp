@@ -216,3 +216,25 @@ endmodule
     CHECK(diags[1].code == diag::AssertionArgTypeMismatch);
     CHECK(diags[2].code == diag::AssertionArgNeedsRegExpr);
 }
+
+TEST_CASE("Default disable declarations") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    int i;
+    default disable iff i > 1;
+endmodule
+
+module n;
+    int a, b;
+    default disable iff a;
+    default disable iff b;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::MultipleDefaultDisable);
+}

@@ -280,6 +280,7 @@ private:
     ClockingSkewSyntax* parseClockingSkew();
     MemberSyntax* parseClockingItem();
     MemberSyntax& parseClockingDeclaration(AttrList attributes);
+    MemberSyntax& parseDefaultDisable(AttrList attributes);
     MemberSyntax& parseVariableDeclaration(AttrList attributes);
     MemberSyntax& parseNetDeclaration(AttrList attributes);
     DriveStrengthSyntax* parseDriveStrength();

@@ -306,6 +306,13 @@ public:
     /// if no global clocking is in effect.
     const Symbol* getGlobalClocking(const Scope& scope) const;
 
+    /// Notes that there is a default disable associated with the specified scope.
+    void noteDefaultDisable(const Scope& scope, const Expression& expr);
+
+    /// Finds an applicable default disable expression for the given scope, or returns nullptr
+    /// if no such declaration is in effect.
+    const Expression* getDefaultDisable(const Scope& scope) const;
+
     /// A convenience method for parsing a name string and turning it into a set
     /// of syntax nodes. This is mostly for testing and API purposes; normal
     /// compilation never does this.
@@ -603,6 +610,9 @@ private:
 
     // A map of scopes to global clocking blocks.
     flat_hash_map<const Scope*, const Symbol*> globalClockingMap;
+
+    // A map of scopes to default disable declarations.
+    flat_hash_map<const Scope*, const Expression*> defaultDisableMap;
 
     // The built-in std package.
     const PackageSymbol* stdPkg = nullptr;

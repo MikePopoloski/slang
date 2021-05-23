@@ -256,6 +256,10 @@ MemberSyntax* Parser::parseMember(SyntaxKind parentKind, bool& anyLocalModules) 
             if (peek(1).kind == TokenKind::ClockingKeyword) {
                 return &parseClockingDeclaration(attributes);
             }
+            else if (peek(1).kind == TokenKind::DisableKeyword &&
+                     token.kind == TokenKind::DefaultKeyword) {
+                return &parseDefaultDisable(attributes);
+            }
             break;
         case TokenKind::ClockingKeyword:
             return &parseClockingDeclaration(attributes);
@@ -2077,6 +2081,15 @@ MemberSyntax& Parser::parseClockingDeclaration(AttrList attributes) {
 
     return factory.clockingDeclaration(attributes, globalOrDefault, clocking, blockName, at, *event,
                                        semi, members, endClocking, endBlockName);
+}
+
+MemberSyntax& Parser::parseDefaultDisable(AttrList attributes) {
+    auto def = expect(TokenKind::DefaultKeyword);
+    auto disable = expect(TokenKind::DisableKeyword);
+    auto iff = expect(TokenKind::IffKeyword);
+    auto& expr = parseExpressionOrDist();
+    auto semi = expect(TokenKind::Semicolon);
+    return factory.defaultDisableDeclaration(attributes, def, disable, iff, expr, semi);
 }
 
 HierarchyInstantiationSyntax& Parser::parseHierarchyInstantiation(AttrList attributes) {

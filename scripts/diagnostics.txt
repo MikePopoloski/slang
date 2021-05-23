@@ -714,6 +714,7 @@ error DefParamTargetChange "defparam target resolves differently post-elaboratio
 error DefParamCycle "cyclic dependency found when resolving defparam"
 error MultipleDefaultClocking "scope already has a default clocking block"
 error MultipleGlobalClocking "scope already has a global clocking block"
+error MultipleDefaultDisable "scope already has a default disable declaration"
 error NotAClockingBlock "'{}' is not a clocking block"
 warning unused-def UnusedDefinition "{} definition is unused"
 warning no-top NoTopModules "no top-level modules found in design"
