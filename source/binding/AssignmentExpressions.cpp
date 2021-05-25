@@ -223,7 +223,7 @@ Expression& Expression::convertAssignment(const BindContext& context, const Type
     if (expr.bad())
         return expr;
 
-    Compilation& compilation = context.scope.getCompilation();
+    Compilation& compilation = context.getCompilation();
     if (type.isError())
         return badExpr(compilation, &expr);
 
@@ -921,7 +921,7 @@ Expression& NewClassExpression::fromSyntax(Compilation& compilation,
             // This is a super.new invocation, so find the base class's
             // constructor. This is relative to our current context, not
             // any particular assignment target.
-            auto [ct, _] = Lookup::getContainingClass(context.scope);
+            auto [ct, _] = Lookup::getContainingClass(*context.scope);
             classType = ct;
             if (!classType) {
                 // Parser already emitted an error for this case.

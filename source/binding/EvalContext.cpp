@@ -125,7 +125,7 @@ void EvalContext::addDiags(const Diagnostics& additional) {
 }
 
 void EvalContext::reportDiags(const BindContext& context) {
-    context.scope.addDiags(diags);
+    context.scope->addDiags(diags);
 }
 
 static void reportFrame(const EvalContext& context, Diagnostic& diag,

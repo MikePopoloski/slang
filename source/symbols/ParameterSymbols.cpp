@@ -241,7 +241,7 @@ TypeParameterSymbol& TypeParameterSymbol::fromDecl(const Definition::ParameterDe
             auto namedType = comp.emplace<NamedTypeSyntax>(nameSyntax);
 
             tt.setTypeSyntax(*namedType);
-            tt.setType(comp.getType(*namedType, context.getLocation(), context.scope));
+            tt.setType(comp.getType(*namedType, context.getLocation(), *context.scope));
         }
         else if (!DataTypeSyntax::isKind(newInitializer->kind)) {
             context.addDiag(diag::BadTypeParamExpr, newInitializer->getFirstToken().location())
@@ -250,7 +250,7 @@ TypeParameterSymbol& TypeParameterSymbol::fromDecl(const Definition::ParameterDe
         else {
             tt.setTypeSyntax(newInitializer->as<DataTypeSyntax>());
             tt.setType(comp.getType(newInitializer->as<DataTypeSyntax>(), context.getLocation(),
-                                    context.scope));
+                                    *context.scope));
         }
     }
 

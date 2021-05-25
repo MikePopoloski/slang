@@ -169,14 +169,14 @@ const InvalidExpression InvalidExpression::Instance(nullptr, ErrorType::Instance
 const Expression& Expression::bind(const ExpressionSyntax& syntax, const BindContext& context,
                                    bitmask<BindFlags> extraFlags) {
     const Expression& result =
-        selfDetermined(context.scope.getCompilation(), syntax, context, extraFlags);
+        selfDetermined(context.getCompilation(), syntax, context, extraFlags);
     return checkBindFlags(result, context.resetFlags(extraFlags));
 }
 
 const Expression& Expression::bindLValue(const ExpressionSyntax& lhs, const Type& rhs,
                                          SourceLocation location, const BindContext& context,
                                          bool isInout) {
-    Compilation& comp = context.scope.getCompilation();
+    Compilation& comp = context.getCompilation();
 
     // Create a placeholder expression that will carry the type of the rhs.
     // Nothing will ever actually look at this expression, it's there only
@@ -202,7 +202,7 @@ const Expression& Expression::bindLValue(const ExpressionSyntax& lhs, const Type
 
 const Expression& Expression::bindRValue(const Type& lhs, const ExpressionSyntax& rhs,
                                          SourceLocation location, const BindContext& context) {
-    Compilation& comp = context.scope.getCompilation();
+    Compilation& comp = context.getCompilation();
 
     if (lhs.isVirtualInterface()) {
         if (auto ref = tryBindInterfaceRef(context, rhs, lhs))
@@ -221,7 +221,7 @@ const Expression& Expression::bindRValue(const Type& lhs, const ExpressionSyntax
 const Expression& Expression::bindRefArg(const Type& lhs, bool isConstRef,
                                          const ExpressionSyntax& rhs, SourceLocation location,
                                          const BindContext& context) {
-    Compilation& comp = context.scope.getCompilation();
+    Compilation& comp = context.getCompilation();
     Expression& expr = selfDetermined(comp, rhs, context);
     if (expr.bad())
         return expr;
@@ -270,7 +270,7 @@ const Expression& Expression::bindImplicitParam(const DataTypeSyntax& typeSyntax
                                                 const ExpressionSyntax& rhs,
                                                 SourceLocation location,
                                                 const BindContext& context) {
-    Compilation& comp = context.scope.getCompilation();
+    Compilation& comp = context.getCompilation();
     Expression& expr = create(comp, rhs, context);
     const Type* lhsType = expr.type;
 
@@ -279,7 +279,7 @@ const Expression& Expression::bindImplicitParam(const DataTypeSyntax& typeSyntax
     if (!it.dimensions.empty()) {
         // If we have a range provided, the result is always an integral value
         // of the provided width -- getType() will do what we want here.
-        lhsType = &comp.getType(typeSyntax, context.getLocation(), context.scope);
+        lhsType = &comp.getType(typeSyntax, context.getLocation(), *context.scope);
     }
     else if (it.signing) {
         // If signing is provided, the result is always integral but we infer the width.
@@ -758,7 +758,7 @@ Expression& Expression::bindName(Compilation& compilation, const NameSyntax& syn
     // its name here.
     if (context.firstIterator) {
         LookupResult result;
-        if (Lookup::findIterator(context.scope, *context.firstIterator, syntax, result))
+        if (Lookup::findIterator(*context.scope, *context.firstIterator, syntax, result))
             return bindLookupResult(compilation, result, syntax, invocation, withClause, context);
     }
 
@@ -794,7 +794,7 @@ Expression& Expression::bindName(Compilation& compilation, const NameSyntax& syn
         ASSERT(result.selectors.empty());
 
         SourceRange callRange = invocation ? invocation->sourceRange() : syntax.sourceRange();
-        CallExpression::SystemCallInfo callInfo{ result.systemSubroutine, &context.scope, {} };
+        CallExpression::SystemCallInfo callInfo{ result.systemSubroutine, context.scope, {} };
         return CallExpression::fromLookup(compilation, callInfo, nullptr, invocation, withClause,
                                           callRange, context);
     }
@@ -815,7 +815,7 @@ Expression& Expression::bindLookupResult(Compilation& compilation, const LookupR
         // We looked up a named data type and we were allowed to do so, so return it.
         ASSERT(!invocation && !withClause);
         const Type& resultType = Type::fromLookupResult(compilation, result, syntax,
-                                                        context.getLocation(), context.scope);
+                                                        context.getLocation(), *context.scope);
         return *compilation.emplace<DataTypeExpression>(resultType, syntax.sourceRange());
     }
 
@@ -1004,7 +1004,7 @@ void Expression::findPotentiallyImplicitNets(const ExpressionSyntax& expr,
                 return;
 
             LookupResult result;
-            BindContext ctx(context.scope, LookupLocation::max);
+            BindContext ctx(*context.scope, LookupLocation::max);
             Lookup::name(nameSyntax, ctx, LookupFlags::NoUndeclaredError, result);
 
             if (!result.found && !result.hasError())

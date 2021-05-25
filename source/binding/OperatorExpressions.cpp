@@ -163,7 +163,7 @@ bool Expression::bindMembershipExpressions(const BindContext& context, TokenKind
                                            span<const ExpressionSyntax* const> expressions,
                                            SmallVector<const Expression*>& results) {
     auto extraFlags = allowTypeReferences ? BindFlags::AllowTypeReferences : BindFlags::None;
-    Compilation& comp = context.scope.getCompilation();
+    Compilation& comp = context.getCompilation();
     Expression& valueRes = create(comp, valueExpr, context, extraFlags);
     results.append(&valueRes);
 

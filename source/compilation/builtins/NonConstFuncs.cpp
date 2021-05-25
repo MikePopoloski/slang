@@ -365,7 +365,7 @@ public:
         if (!checkArgCount(context, false, args, range, 1, 1))
             return comp.getErrorType();
 
-        if (!comp.getGlobalClocking(context.scope)) {
+        if (!comp.getGlobalClocking(*context.scope)) {
             context.addDiag(diag::NoGlobalClocking, range);
             return comp.getErrorType();
         }

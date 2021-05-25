@@ -22,7 +22,7 @@
 namespace slang {
 
 Compilation& BindContext::getCompilation() const {
-    return scope.getCompilation();
+    return scope->getCompilation();
 }
 
 void BindContext::setAttributes(const Statement& stmt,
@@ -30,7 +30,8 @@ void BindContext::setAttributes(const Statement& stmt,
     if (syntax.empty())
         return;
 
-    getCompilation().setAttributes(stmt, AttributeSymbol::fromSyntax(syntax, scope, getLocation()));
+    getCompilation().setAttributes(stmt,
+                                   AttributeSymbol::fromSyntax(syntax, *scope, getLocation()));
 }
 
 void BindContext::setAttributes(const Expression& expr,
@@ -43,15 +44,16 @@ void BindContext::setAttributes(const Expression& expr,
         return;
     }
 
-    getCompilation().setAttributes(expr, AttributeSymbol::fromSyntax(syntax, scope, getLocation()));
+    getCompilation().setAttributes(expr,
+                                   AttributeSymbol::fromSyntax(syntax, *scope, getLocation()));
 }
 
 Diagnostic& BindContext::addDiag(DiagCode code, SourceLocation location) const {
-    return scope.addDiag(code, location);
+    return scope->addDiag(code, location);
 }
 
 Diagnostic& BindContext::addDiag(DiagCode code, SourceRange sourceRange) const {
-    return scope.addDiag(code, sourceRange);
+    return scope->addDiag(code, sourceRange);
 }
 
 bool BindContext::requireIntegral(const ConstantValue& cv, SourceRange range) const {
@@ -129,7 +131,7 @@ bool BindContext::requireAssignable(const VariableSymbol& var, bool isNonBlockin
     if (var.isConstant) {
         // If we are in a class constructor and this variable does not have an initializer,
         // it's ok to assign to it.
-        const Symbol* parent = &scope.asSymbol();
+        const Symbol* parent = &scope->asSymbol();
         while (parent->kind == SymbolKind::StatementBlock) {
             auto parentScope = parent->getParentScope();
             ASSERT(parentScope);

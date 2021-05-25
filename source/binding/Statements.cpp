@@ -93,7 +93,7 @@ static bool hasSimpleLabel(const StatementSyntax& syntax) {
 
 const Statement& Statement::bind(const StatementSyntax& syntax, const BindContext& context,
                                  StatementContext& stmtCtx, bool inList, bool labelHandled) {
-    auto& comp = context.scope.getCompilation();
+    auto& comp = context.getCompilation();
     Statement* result;
 
     if (!labelHandled && hasSimpleLabel(syntax)) {
@@ -522,7 +522,7 @@ const StatementSyntax* StatementBinder::getSyntax() const {
 }
 
 const Statement& StatementBinder::bindStatement(const BindContext& context) const {
-    auto& scope = context.scope;
+    auto& scope = *context.scope;
     auto& comp = scope.getCompilation();
     SmallVectorSized<const Statement*, 8> buffer;
 
@@ -707,7 +707,7 @@ Statement& ReturnStatement::fromSyntax(Compilation& compilation,
     }
 
     // Find the parent subroutine.
-    const Scope* scope = &context.scope;
+    const Scope* scope = context.scope;
     while (scope->asSymbol().kind == SymbolKind::StatementBlock)
         scope = scope->asSymbol().getParentScope();
 

@@ -24,7 +24,7 @@ Expression& Expression::bindAssignmentPattern(Compilation& comp,
     SourceRange range = syntax.sourceRange();
 
     if (syntax.type) {
-        assignmentTarget = &comp.getType(*syntax.type, context.getLocation(), context.scope);
+        assignmentTarget = &comp.getType(*syntax.type, context.getLocation(), *context.scope);
         if (!assignmentTarget->isSimpleType() && syntax.type->kind != SyntaxKind::TypeReference) {
             if (!assignmentTarget->isError())
                 context.addDiag(diag::BadAssignmentPatternType, range) << *assignmentTarget;
@@ -521,7 +521,7 @@ Expression& StructuredAssignmentPatternExpression::forStruct(
                 memberSetters.emplace(MemberSetter{ member, &expr });
             }
             else {
-                auto found = Lookup::unqualified(context.scope, name, LookupFlags::Type);
+                auto found = Lookup::unqualified(*context.scope, name, LookupFlags::Type);
                 if (found && found->isType()) {
                     auto& expr =
                         bindRValue(found->as<Type>(), *item->expr, nameToken.location(), context);
@@ -538,8 +538,8 @@ Expression& StructuredAssignmentPatternExpression::forStruct(
             }
         }
         else if (DataTypeSyntax::isKind(item->key->kind)) {
-            const Type& typeKey =
-                comp.getType(item->key->as<DataTypeSyntax>(), context.getLocation(), context.scope);
+            const Type& typeKey = comp.getType(item->key->as<DataTypeSyntax>(),
+                                               context.getLocation(), *context.scope);
             if (typeKey.isSimpleType()) {
                 auto& expr = bindRValue(typeKey, *item->expr,
                                         item->expr->getFirstToken().location(), context);
@@ -593,8 +593,8 @@ Expression& StructuredAssignmentPatternExpression::forFixedArray(
             bad |= defaultSetter->bad();
         }
         else if (DataTypeSyntax::isKind(item->key->kind)) {
-            const Type& typeKey =
-                comp.getType(item->key->as<DataTypeSyntax>(), context.getLocation(), context.scope);
+            const Type& typeKey = comp.getType(item->key->as<DataTypeSyntax>(),
+                                               context.getLocation(), *context.scope);
             if (typeKey.isSimpleType()) {
                 auto& expr = bindRValue(typeKey, *item->expr,
                                         item->expr->getFirstToken().location(), context);

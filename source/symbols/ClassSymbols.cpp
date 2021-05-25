@@ -375,7 +375,7 @@ void ClassType::handleExtends(const ExtendsClauseSyntax& extendsClause, const Bi
             if (auto baseSub = proto.getOverride()) {
                 if (auto protoSub = proto.getSubroutine()) {
                     SubroutineSymbol::checkVirtualMethodMatch(
-                        context.scope, baseSub->as<SubroutineSymbol>(), *protoSub,
+                        *context.scope, baseSub->as<SubroutineSymbol>(), *protoSub,
                         /* allowDerivedReturn */ true);
                 }
             }
@@ -723,7 +723,7 @@ const Type* GenericClassDefSymbol::getSpecializationImpl(
     classType->genericClass = this;
     classType->setParent(*scope, getIndex());
 
-    ParameterBuilder paramBuilder(context.scope, name, paramDecls);
+    ParameterBuilder paramBuilder(*context.scope, name, paramDecls);
     if (syntax)
         paramBuilder.setAssignments(*syntax);
 

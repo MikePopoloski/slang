@@ -227,7 +227,7 @@ bool lookupDownward(span<const NamePlusLoc> nameParts, NameComponents name,
     // incorrectly supplied for a non-class symbol.
     auto checkClassParams = [&](NameComponents& nc) {
         if (symbol && symbol->kind != SymbolKind::GenericClassDef && nc.paramAssignments) {
-            auto& diag = result.addDiag(context.scope, diag::NotAGenericClass,
+            auto& diag = result.addDiag(*context.scope, diag::NotAGenericClass,
                                         nc.paramAssignments->getFirstToken().location());
             diag << nc.range();
             diag << symbol->name;
@@ -270,7 +270,7 @@ bool lookupDownward(span<const NamePlusLoc> nameParts, NameComponents name,
         result.isHierarchical = true;
         if (it == nameParts.rbegin()) {
             if (symbol->kind == SymbolKind::InstanceArray || symbol->kind == SymbolKind::Instance) {
-                result.isHierarchical = symbol->getParentScope() != &context.scope;
+                result.isHierarchical = symbol->getParentScope() != context.scope;
             }
             else {
                 result.isHierarchical = symbol->kind != SymbolKind::InterfacePort &&
@@ -301,7 +301,7 @@ bool lookupDownward(span<const NamePlusLoc> nameParts, NameComponents name,
 
             bool isType = symbol->isType() || isClassType(*symbol);
             auto code = isType ? diag::DotOnType : diag::NotAHierarchicalScope;
-            auto& diag = result.addDiag(context.scope, code, it->dotLocation);
+            auto& diag = result.addDiag(*context.scope, code, it->dotLocation);
             diag << name.range();
             diag << it->name->sourceRange();
 
@@ -313,7 +313,7 @@ bool lookupDownward(span<const NamePlusLoc> nameParts, NameComponents name,
         }
 
         if (result.isHierarchical && (flags & LookupFlags::Constant) != 0) {
-            auto& diag = result.addDiag(context.scope, diag::HierarchicalNotAllowedInConstant,
+            auto& diag = result.addDiag(*context.scope, diag::HierarchicalNotAllowedInConstant,
                                         it->dotLocation);
             diag << name.range();
             return false;
@@ -358,8 +358,8 @@ bool lookupDownward(span<const NamePlusLoc> nameParts, NameComponents name,
                         auto def = prevSym.getDeclaringDefinition();
                         ASSERT(def);
 
-                        auto& diag =
-                            result.addDiag(context.scope, diag::InvalidModportAccess, name.range());
+                        auto& diag = result.addDiag(*context.scope, diag::InvalidModportAccess,
+                                                    name.range());
                         diag << name.text();
                         diag << def->name;
                         diag << prevSym.name;
@@ -377,7 +377,7 @@ bool lookupDownward(span<const NamePlusLoc> nameParts, NameComponents name,
             if (prevSym.kind == SymbolKind::CompilationUnit)
                 code = diag::UnknownUnitMember;
 
-            auto& diag = result.addDiag(context.scope, code, it->dotLocation);
+            auto& diag = result.addDiag(*context.scope, code, it->dotLocation);
             diag << name.text();
             diag << name.range();
             return true;
@@ -390,7 +390,7 @@ bool lookupDownward(span<const NamePlusLoc> nameParts, NameComponents name,
     // If we found an automatic variable check that we didn't try to reference it hierarchically.
     if (result.isHierarchical && symbol && VariableSymbol::isKind(symbol->kind) &&
         symbol->as<VariableSymbol>().lifetime == VariableLifetime::Automatic) {
-        result.addDiag(context.scope, diag::AutoVariableHierarchical, name.range());
+        result.addDiag(*context.scope, diag::AutoVariableHierarchical, name.range());
         return false;
     }
 
@@ -424,7 +424,7 @@ bool lookupUpward(Compilation& compilation, span<const NamePlusLoc> nameParts,
     };
 
     auto currentInstPath = compilation.getCurrentInstancePath();
-    const Scope* scope = &context.scope;
+    const Scope* scope = context.scope;
     while (scope) {
         // Search for a scope or instance target within our current scope.
         auto symbol = scope->find(name.text());
@@ -572,8 +572,8 @@ bool resolveColonNames(SmallVectorSized<NamePlusLoc, 8>& nameParts, int colonPar
     if (!symbol || !isClassType(*symbol)) {
         symbol = context.getCompilation().getPackage(name.text());
         if (!symbol) {
-            if (!context.scope.isUninstantiated()) {
-                result.addDiag(context.scope, diag::UnknownClassOrPackage, name.range())
+            if (!context.scope->isUninstantiated()) {
+                result.addDiag(*context.scope, diag::UnknownClassOrPackage, name.range())
                     << name.text();
             }
             return false;
@@ -583,7 +583,7 @@ bool resolveColonNames(SmallVectorSized<NamePlusLoc, 8>& nameParts, int colonPar
     // The initial symbol found cannot be resolved via a forward typedef (i.e. "incomplete")
     // unless this is within a typedef declaration.
     if (result.fromForwardTypedef && (flags & LookupFlags::TypedefTarget) == 0)
-        result.addDiag(context.scope, diag::ScopeIncompleteTypedef, name.range());
+        result.addDiag(*context.scope, diag::ScopeIncompleteTypedef, name.range());
 
     auto validateSymbol = [&] {
         // Handle generic classes and parameter assignments. If this is a generic class,
@@ -603,23 +603,23 @@ bool resolveColonNames(SmallVectorSized<NamePlusLoc, 8>& nameParts, int colonPar
                 // The unadorned generic class name here is an error if we're outside the context
                 // of the class itself. If we're within the class, it refers to the "current"
                 // specialization, not the default specialization.
-                auto [parent, _] = Lookup::getContainingClass(context.scope);
+                auto [parent, _] = Lookup::getContainingClass(*context.scope);
                 if (!parent || parent->genericClass != symbol) {
-                    result.addDiag(context.scope, diag::GenericClassScopeResolution, name.range());
+                    result.addDiag(*context.scope, diag::GenericClassScopeResolution, name.range());
                     return false;
                 }
                 symbol = parent;
             }
         }
         else if (name.paramAssignments) {
-            auto& diag = result.addDiag(context.scope, diag::NotAGenericClass, name.range());
+            auto& diag = result.addDiag(*context.scope, diag::NotAGenericClass, name.range());
             diag << symbol->name;
             diag.addNote(diag::NoteDeclarationHere, symbol->location);
             return false;
         }
 
         // If this is a type alias, check its visibility.
-        checkVisibility(*symbol, context.scope, name.range(), result);
+        checkVisibility(*symbol, *context.scope, name.range(), result);
 
         return true;
     };
@@ -627,7 +627,7 @@ bool resolveColonNames(SmallVectorSized<NamePlusLoc, 8>& nameParts, int colonPar
     bool isClass = false;
     while (colonParts--) {
         if (name.selectors) {
-            result.addDiag(context.scope, diag::InvalidScopeIndexExpression,
+            result.addDiag(*context.scope, diag::InvalidScopeIndexExpression,
                            name.selectors->sourceRange());
             return false;
         }
@@ -639,7 +639,7 @@ bool resolveColonNames(SmallVectorSized<NamePlusLoc, 8>& nameParts, int colonPar
 
         isClass = isClassType(*symbol);
         if (symbol->kind != SymbolKind::Package && !isClass) {
-            auto& diag = result.addDiag(context.scope, diag::NotAClass, part.dotLocation);
+            auto& diag = result.addDiag(*context.scope, diag::NotAClass, part.dotLocation);
             diag << name.range();
             diag << symbol->name;
             diag.addNote(diag::NoteDeclarationHere, symbol->location);
@@ -663,7 +663,7 @@ bool resolveColonNames(SmallVectorSized<NamePlusLoc, 8>& nameParts, int colonPar
             if (savedSymbol->kind == SymbolKind::Package)
                 code = diag::UnknownPackageMember;
 
-            auto& diag = result.addDiag(context.scope, code, part.dotLocation);
+            auto& diag = result.addDiag(*context.scope, code, part.dotLocation);
             diag << name.text();
             diag << name.range();
             diag << savedSymbol->name;
@@ -762,7 +762,7 @@ const Symbol* findSuperHandle(const Scope& scope, SourceRange range, LookupResul
 
 void Lookup::name(const NameSyntax& syntax, const BindContext& context, bitmask<LookupFlags> flags,
                   LookupResult& result) {
-    auto& scope = context.scope;
+    auto& scope = *context.scope;
     NameComponents name;
     switch (syntax.kind) {
         case SyntaxKind::IdentifierName:
@@ -869,7 +869,8 @@ const Symbol* Lookup::selectChild(const Symbol& initialSymbol,
     const Symbol* symbol = &initialSymbol;
     for (const ElementSelectSyntax* syntax : selectors) {
         if (!syntax->selector || syntax->selector->kind != SyntaxKind::BitSelect) {
-            result.addDiag(context.scope, diag::InvalidScopeIndexExpression, syntax->sourceRange());
+            result.addDiag(*context.scope, diag::InvalidScopeIndexExpression,
+                           syntax->sourceRange());
             return nullptr;
         }
 
@@ -884,7 +885,7 @@ const Symbol* Lookup::selectChild(const Symbol& initialSymbol,
                     return nullptr;
 
                 if (!array.range.containsPoint(*index)) {
-                    auto& diag = result.addDiag(context.scope, diag::ScopeIndexOutOfRange,
+                    auto& diag = result.addDiag(*context.scope, diag::ScopeIndexOutOfRange,
                                                 syntax->sourceRange());
                     diag << *index;
                     diag.addNote(diag::NoteDeclarationHere, symbol->location);
@@ -909,7 +910,7 @@ const Symbol* Lookup::selectChild(const Symbol& initialSymbol,
                 }
 
                 if (!found) {
-                    auto& diag = result.addDiag(context.scope, diag::ScopeIndexOutOfRange,
+                    auto& diag = result.addDiag(*context.scope, diag::ScopeIndexOutOfRange,
                                                 syntax->sourceRange());
                     diag << *index;
                     diag.addNote(diag::NoteDeclarationHere, symbol->location);
@@ -921,7 +922,7 @@ const Symbol* Lookup::selectChild(const Symbol& initialSymbol,
                 // I think it's safe to assume that the symbol name here will not be empty
                 // because if it was, it'd be an instance array or generate array.
                 auto& diag =
-                    result.addDiag(context.scope, diag::ScopeNotIndexable, syntax->sourceRange());
+                    result.addDiag(*context.scope, diag::ScopeNotIndexable, syntax->sourceRange());
                 diag << symbol->name;
                 diag.addNote(diag::NoteDeclarationHere, symbol->location);
                 return nullptr;
@@ -1028,7 +1029,7 @@ bool Lookup::isAccessibleFrom(const Symbol& target, const Symbol& sourceScope) {
 bool Lookup::ensureVisible(const Symbol& symbol, const BindContext& context,
                            optional<SourceRange> sourceRange) {
     LookupResult result;
-    if (checkVisibility(symbol, context.scope, sourceRange, result))
+    if (checkVisibility(symbol, *context.scope, sourceRange, result))
         return true;
 
     result.reportErrors(context);
@@ -1042,7 +1043,7 @@ bool Lookup::ensureAccessible(const Symbol& symbol, const BindContext& context,
         return true;
     }
 
-    auto [parent, inStatic] = getContainingClass(context.scope);
+    auto [parent, inStatic] = getContainingClass(*context.scope);
     if (parent && !isAccessibleFrom(symbol, *parent)) {
         if (sourceRange) {
             auto& diag = context.addDiag(diag::NestedNonStaticClassProperty, *sourceRange);
@@ -1351,7 +1352,7 @@ void Lookup::qualified(const ScopedNameSyntax& syntax, const BindContext& contex
     if (name.empty())
         return;
 
-    auto& scope = context.scope;
+    auto& scope = *context.scope;
     auto& compilation = context.getCompilation();
     if (compilation.isFinalizing())
         flags |= LookupFlags::Constant;

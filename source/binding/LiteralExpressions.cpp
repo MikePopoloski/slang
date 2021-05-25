@@ -108,7 +108,7 @@ Expression& TimeLiteral::fromSyntax(const BindContext& context,
     // and then rounded to the current scope's time precision.
     double value = syntax.literal.realValue();
     TimeUnit unit = syntax.literal.numericFlags().unit();
-    TimeScale scale = context.scope.getTimeScale();
+    TimeScale scale = context.scope->getTimeScale();
     value = scale.apply(value, unit);
 
     auto& comp = context.getCompilation();

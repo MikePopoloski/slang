@@ -101,7 +101,7 @@ const Type& createPackedDims(const BindContext& context, const Type* type,
         if (!dim)
             return context.getCompilation().getErrorType();
 
-        type = &PackedArrayType::fromSyntax(context.scope, *type, *dim, dimSyntax);
+        type = &PackedArrayType::fromSyntax(*context.scope, *type, *dim, dimSyntax);
     }
 
     return *type;

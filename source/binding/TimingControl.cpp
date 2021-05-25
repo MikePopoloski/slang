@@ -249,7 +249,7 @@ static void collectEvents(const BindContext& context, const EventExpressionSynta
             break;
         case SyntaxKind::SignalEventExpression:
             results.append(&SignalEventControl::fromSyntax(
-                context.scope.getCompilation(), expr.as<SignalEventExpressionSyntax>(), context));
+                context.getCompilation(), expr.as<SignalEventExpressionSyntax>(), context));
             break;
         case SyntaxKind::BinaryEventExpression: {
             auto& bin = expr.as<BinaryEventExpressionSyntax>();
@@ -341,7 +341,7 @@ TimingControl& CycleDelayControl::fromSyntax(Compilation& compilation, const Del
         return badCtrl(compilation, result);
     }
 
-    if (!compilation.getDefaultClocking(context.scope))
+    if (!compilation.getDefaultClocking(*context.scope))
         context.addDiag(diag::NoDefaultClocking, syntax.sourceRange());
 
     return *result;

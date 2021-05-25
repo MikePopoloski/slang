@@ -119,7 +119,7 @@ public:
         if (thisExpr)
             ct = &thisExpr->type->getCanonicalType().as<ClassType>();
         else
-            ct = Lookup::getContainingClass(context.scope).first;
+            ct = Lookup::getContainingClass(*context.scope).first;
 
         if (!ct)
             return comp.getErrorType();
@@ -203,7 +203,7 @@ public:
             return comp.getErrorType();
         }
 
-        if (!comp.getGlobalClocking(context.scope)) {
+        if (!comp.getGlobalClocking(*context.scope)) {
             context.addDiag(diag::NoGlobalClocking, range);
             return comp.getErrorType();
         }

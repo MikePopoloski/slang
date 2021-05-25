@@ -348,7 +348,7 @@ void DeclaredType::resolveAt(const BindContext& context) const {
     // Enums are special in that their initializers target the base type of the enum
     // instead of the actual enum type (which doesn't allow implicit conversions from
     // normal integral values).
-    auto& scope = context.scope;
+    auto& scope = *context.scope;
     bitmask<BindFlags> bindFlags = context.flags;
     const Type* targetType = type;
     if (targetType->isEnum() && scope.asSymbol().kind == SymbolKind::EnumType) {

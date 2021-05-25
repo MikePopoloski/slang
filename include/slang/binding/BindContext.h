@@ -6,6 +6,8 @@
 //------------------------------------------------------------------------------
 #pragma once
 
+#include <tuple>
+
 #include <flat_hash_map.hpp>
 
 #include "slang/binding/Lookup.h"
@@ -133,7 +135,7 @@ struct EvaluatedDimension {
 class BindContext {
 public:
     /// The scope where the binding is occurring.
-    const Scope& scope;
+    not_null<const Scope*> scope;
 
     /// The location to use when looking up names during binding.
     SymbolIndex lookupIndex;
@@ -175,7 +177,8 @@ public:
     /// Information required to instantiate a sequence or property instance.
     struct AssertionInstanceDetails {
         /// A map of formal argument symbols to their actual replacements.
-        flat_hash_map<const Symbol*, const PropertyExprSyntax*> argumentMap;
+        flat_hash_map<const Symbol*, std::tuple<const PropertyExprSyntax*, BindContext>>
+            argumentMap;
     };
 
     /// If this context is for binding an instantiation of a sequence or
@@ -184,13 +187,13 @@ public:
 
     BindContext(const Scope& scope, LookupLocation lookupLocation,
                 bitmask<BindFlags> flags = BindFlags::None) :
-        scope(scope),
+        scope(&scope),
         lookupIndex(lookupLocation.getIndex()), flags(flags) {
         ASSERT(!lookupLocation.getScope() || lookupLocation.getScope() == &scope);
     }
 
     Compilation& getCompilation() const;
-    LookupLocation getLocation() const { return LookupLocation(&scope, uint32_t(lookupIndex)); }
+    LookupLocation getLocation() const { return LookupLocation(scope, uint32_t(lookupIndex)); }
     bool inUnevaluatedBranch() const { return (flags & BindFlags::UnevaluatedBranch) != 0; }
 
     void setAttributes(const Statement& stmt,

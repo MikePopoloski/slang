@@ -83,7 +83,7 @@ private:
         // extract their cache keys.
         auto& def = cacheKeyBase.getDefinition();
         SmallVectorSized<std::pair<const InstanceCacheKey*, string_view>, 8> ifaceKeys;
-        InterfacePortSymbol::findInterfaceInstanceKeys(context.scope, def, syntax.connections,
+        InterfacePortSymbol::findInterfaceInstanceKeys(*context.scope, def, syntax.connections,
                                                        ifaceKeys);
 
         // Try to look up a cached instance using our own key to avoid redoing work.
@@ -97,7 +97,7 @@ private:
 
         inst->arrayPath = path.copy(compilation);
         inst->setSyntax(syntax);
-        inst->setAttributes(context.scope, attributes);
+        inst->setAttributes(*context.scope, attributes);
         return inst;
     }
 
@@ -757,14 +757,14 @@ static void createUnknownModules(Compilation& compilation, const TSyntax& syntax
                                  SmallVector<const Symbol*>& results,
                                  SmallVector<const Symbol*>& implicitNets) {
     SmallSet<string_view, 8> implicitNetNames;
-    auto& netType = context.scope.getDefaultNetType();
+    auto& netType = context.scope->getDefaultNetType();
     for (auto instanceSyntax : syntax.instances) {
         createImplicitNets(*instanceSyntax, context, netType, implicitNetNames, implicitNets);
 
         auto [name, loc] = getNameLoc(*instanceSyntax);
         auto sym = compilation.emplace<UnknownModuleSymbol>(name, loc, params);
         sym->setSyntax(*instanceSyntax);
-        sym->setAttributes(context.scope, syntax.attributes);
+        sym->setAttributes(*context.scope, syntax.attributes);
         results.append(sym);
     }
 }
@@ -862,7 +862,7 @@ Symbol* recursePrimArray(Compilation& compilation, const PrimitiveSymbol& primit
                          span<const AttributeInstanceSyntax* const> attributes,
                          SmallVector<int32_t>& path) {
     if (it == end)
-        return createPrimInst(compilation, context.scope, primitive, instance, attributes, path);
+        return createPrimInst(compilation, *context.scope, primitive, instance, attributes, path);
 
     // Evaluate the dimensions of the array. If this fails for some reason,
     // make up an empty array so that we don't get further errors when

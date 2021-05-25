@@ -320,7 +320,7 @@ Expression& CallExpression::fromLookup(Compilation& compilation, const Subroutin
         if (!context.classRandomizeScope ||
             context.classRandomizeScope->classType != sub->getParentScope()) {
 
-            auto [parent, inStatic] = Lookup::getContainingClass(context.scope);
+            auto [parent, inStatic] = Lookup::getContainingClass(*context.scope);
             if (parent && !Lookup::isAccessibleFrom(*sub, *parent)) {
                 auto& diag = context.addDiag(diag::NestedNonStaticClassMethod, range);
                 diag << parent->name;
@@ -522,7 +522,7 @@ Expression& CallExpression::fromArgs(Compilation& compilation, const Subroutine&
 
     if (context.flags.has(BindFlags::FunctionOrFinal) &&
         symbol.subroutineKind == SubroutineKind::Task) {
-        auto scope = &context.scope;
+        const Scope* scope = context.scope;
         while (scope && scope->asSymbol().kind == SymbolKind::StatementBlock)
             scope = scope->asSymbol().getParentScope();
 
@@ -656,7 +656,7 @@ static const Expression* bindIteratorExpr(Compilation& compilation,
     // Create the iterator variable and set it up with a bind context so that it
     // can be found by the iteration expression.
     auto it =
-        compilation.emplace<IteratorSymbol>(context.scope, iteratorName, iteratorLoc, arrayType);
+        compilation.emplace<IteratorSymbol>(*context.scope, iteratorName, iteratorLoc, arrayType);
     iterVar = it;
 
     BindContext iterCtx = context;
@@ -704,7 +704,7 @@ Expression& CallExpression::createSystemCall(
     const ArrayOrRandomizeMethodExpressionSyntax* withClause, SourceRange range,
     const BindContext& context, const Scope* randomizeScope) {
 
-    SystemCallInfo callInfo{ &subroutine, &context.scope, {} };
+    SystemCallInfo callInfo{ &subroutine, context.scope, {} };
     SmallVectorSized<const Expression*, 8> buffer;
     if (firstArg)
         buffer.append(firstArg);
@@ -1028,7 +1028,7 @@ void CallExpression::serializeTo(ASTSerializer& serializer) const {
 
 Expression& DataTypeExpression::fromSyntax(Compilation& compilation, const DataTypeSyntax& syntax,
                                            const BindContext& context) {
-    const Type& type = compilation.getType(syntax, context.getLocation(), context.scope);
+    const Type& type = compilation.getType(syntax, context.getLocation(), *context.scope);
     if (syntax.kind == SyntaxKind::TypeReference &&
         context.flags.has(BindFlags::AllowTypeReferences)) {
         return *compilation.emplace<TypeReferenceExpression>(compilation.getTypeRefType(), type,
@@ -1196,6 +1196,7 @@ Expression& AssertionInstanceExpression::fromLookup(const Symbol& symbol,
         auto setDefault = [&] {
             expr = formal->defaultValueSyntax;
             defValCtx.emplace(*symbolScope, LookupLocation::after(*formal));
+            defValCtx->assertionInstance = &instance;
             argCtx = &defValCtx.value();
         };
 
@@ -1259,7 +1260,7 @@ Expression& AssertionInstanceExpression::fromLookup(const Symbol& symbol,
 
         // Map the expression to the port symbol; this will be looked up later
         // when we encounter uses in the sequence / property body.
-        instance.argumentMap.emplace(formal, expr);
+        instance.argumentMap.emplace(formal, std::make_tuple(expr, *argCtx));
 
         // Do type checking for all arguments now, even though the actuals will remain as
         // syntax nodes and be rebound when we actually encounter uses of them in the body.
