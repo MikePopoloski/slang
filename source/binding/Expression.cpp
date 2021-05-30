@@ -849,10 +849,7 @@ Expression& Expression::bindLookupResult(Compilation& compilation, const LookupR
             invocation = nullptr;
             break;
         case SymbolKind::AssertionPort:
-            // This function takes invocation and withClause by reference, nulling them
-            // out if they get used.
-            expr = &AssertionInstanceExpression::bindPort(*symbol, invocation, withClause,
-                                                          sourceRange, context);
+            expr = &AssertionInstanceExpression::bindPort(*symbol, sourceRange, context);
             break;
         default:
             expr = &ValueExpressionBase::fromSymbol(context, *symbol, result.isHierarchical,

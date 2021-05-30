@@ -317,9 +317,8 @@ public:
     static Expression& fromLookup(const Symbol& symbol, const InvocationExpressionSyntax* syntax,
                                   SourceRange range, const BindContext& context);
 
-    static Expression& bindPort(const Symbol& symbol, const InvocationExpressionSyntax*& syntax,
-                                const ArrayOrRandomizeMethodExpressionSyntax*& withClause,
-                                SourceRange range, const BindContext& context);
+    static Expression& bindPort(const Symbol& symbol, SourceRange range,
+                                const BindContext& context);
 
     void serializeTo(ASTSerializer& serializer) const;
 
