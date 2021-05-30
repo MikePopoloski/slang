@@ -155,7 +155,7 @@ endmodule
 module n;
     int c, d;
     property a(int i, foo = 1);
-        ##1 c ##1 d;
+        ##1 c ##1 d ##1 i;
     endproperty
 endmodule
 )");

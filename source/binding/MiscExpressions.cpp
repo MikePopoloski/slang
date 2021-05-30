@@ -7,6 +7,7 @@
 #include "slang/binding/MiscExpressions.h"
 
 #include "slang/binding/AssertionExpr.h"
+#include "slang/binding/AssignmentExpressions.h"
 #include "slang/binding/Constraints.h"
 #include "slang/binding/SelectExpressions.h"
 #include "slang/binding/SystemSubroutine.h"
@@ -1092,8 +1093,9 @@ void ClockingArgumentExpression::serializeTo(ASTSerializer& serializer) const {
     serializer.write("timingControl", timingControl);
 }
 
-static bool checkAssertionArgType(const PropertyExprSyntax& propExpr,
-                                  const AssertionPortSymbol& formal, const BindContext& context) {
+static std::tuple<const SequenceExprSyntax*, const ExpressionSyntax*> decomposePropExpr(
+    const PropertyExprSyntax& propExpr) {
+
     const SequenceExprSyntax* seqExpr = nullptr;
     const ExpressionSyntax* regExpr = nullptr;
     if (propExpr.kind == SyntaxKind::SimplePropertyExpr) {
@@ -1104,6 +1106,13 @@ static bool checkAssertionArgType(const PropertyExprSyntax& propExpr,
                 regExpr = simpSeq.expr;
         }
     }
+
+    return { seqExpr, regExpr };
+}
+
+static bool checkAssertionArgType(const PropertyExprSyntax& propExpr,
+                                  const AssertionPortSymbol& formal, const BindContext& context) {
+    auto [seqExpr, regExpr] = decomposePropExpr(propExpr);
 
     auto& type = formal.declaredType.getType();
     switch (type.getCanonicalType().kind) {
@@ -1316,8 +1325,98 @@ Expression& AssertionInstanceExpression::fromLookup(const Symbol& symbol,
     return *comp.emplace<AssertionInstanceExpression>(*type, symbol, *body, range);
 }
 
+Expression& AssertionInstanceExpression::bindPort(
+    const Symbol& symbol, const InvocationExpressionSyntax*& invocation,
+    const ArrayOrRandomizeMethodExpressionSyntax*& withClause, SourceRange range,
+    const BindContext& instanceCtx) {
+
+    Compilation& comp = instanceCtx.getCompilation();
+    ASSERT(instanceCtx.assertionInstance);
+    auto& inst = *instanceCtx.assertionInstance;
+
+    // The only way to reference an assertion port should be from within
+    // an assertion instance, so we should always find it here.
+    auto it = inst.argumentMap.find(&symbol);
+    ASSERT(it != inst.argumentMap.end());
+
+    auto& [propExpr, argCtx] = it->second;
+    auto [seqExpr, regExpr] = decomposePropExpr(*propExpr);
+
+    auto doBindName = [&]() -> Expression& {
+        auto& result = bindName(comp, regExpr->as<NameSyntax>(), invocation, withClause, argCtx);
+        invocation = nullptr;
+        withClause = nullptr;
+        return result;
+    };
+
+    auto& formal = symbol.as<AssertionPortSymbol>();
+    auto& type = formal.declaredType.getType();
+    auto typeKind = type.getCanonicalType().kind;
+
+    switch (typeKind) {
+        case SymbolKind::UntypedType:
+            // Untyped formals allow everything. Bind as a regular expression
+            // if possible and fall back to an assertion expression if not.
+            if (regExpr) {
+                if (NameSyntax::isKind(regExpr->kind))
+                    return doBindName();
+
+                return selfDetermined(comp, *regExpr, argCtx);
+            }
+            else {
+                auto& result = AssertionExpr::bind(*propExpr, argCtx);
+                auto& resultType = seqExpr ? comp.getType(SyntaxKind::SequenceType)
+                                           : comp.getType(SyntaxKind::PropertyType);
+                return *comp.emplace<AssertionInstanceExpression>(resultType, formal, result,
+                                                                  range);
+            }
+        case SymbolKind::SequenceType:
+        case SymbolKind::PropertyType: {
+            auto& resultType = typeKind == SymbolKind::SequenceType
+                                   ? comp.getType(SyntaxKind::SequenceType)
+                                   : comp.getType(SyntaxKind::PropertyType);
+
+            // If this is a name bind it directly so that it can consume any
+            // invocation syntax we may have.
+            if (regExpr && NameSyntax::isKind(regExpr->kind)) {
+                // If this is an assertion instance then we're already done.
+                // Otherwise, we need to wrap it up so that this argument
+                // can only be used in places that accept sequences / properties.
+                auto& expr = doBindName();
+                if (expr.kind == ExpressionKind::AssertionInstance)
+                    return expr;
+
+                auto& result = *comp.emplace<SimpleAssertionExpr>(expr, std::nullopt);
+
+                return *comp.emplace<AssertionInstanceExpression>(resultType, formal, result,
+                                                                  range);
+            }
+
+            auto& result = AssertionExpr::bind(*propExpr, argCtx);
+            return *comp.emplace<AssertionInstanceExpression>(resultType, formal, result, range);
+        }
+        case SymbolKind::EventType:
+            // TODO: handle this
+        default: {
+            // Arguments should have already been checked for type correctness.
+            if (!regExpr)
+                return badExpr(comp, nullptr);
+
+            // TODO: LRM says we treat this argument as if it was cast to the formal type
+            // unless it's a variable_lvalue, in which case we take it as-is.
+            auto& expr = selfDetermined(comp, *regExpr, argCtx);
+            if (!expr.type->isMatching(type)) {
+                return *comp.emplace<ConversionExpression>(type, ConversionKind::Explicit, expr,
+                                                           range);
+            }
+
+            return expr;
+        }
+    }
+}
+
 void AssertionInstanceExpression::serializeTo(ASTSerializer& serializer) const {
-    serializer.writeLink("instance", instance);
+    serializer.writeLink("symbol", symbol);
     serializer.write("body", body);
 }
 

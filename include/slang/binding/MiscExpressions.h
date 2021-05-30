@@ -299,22 +299,27 @@ public:
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::ClockingArgument; }
 };
 
-/// Represents an instance of an assertion item, either a sequence or a property.
+/// Represents an instance of an assertion item, either a sequence, a property,
+/// or a formal argument that is being referenced and expanded.
 class AssertionInstanceExpression : public Expression {
 public:
-    const Symbol& instance;
+    const Symbol& symbol;
     const AssertionExpr& body;
 
-    AssertionInstanceExpression(const Type& type, const Symbol& instance, const AssertionExpr& body,
+    AssertionInstanceExpression(const Type& type, const Symbol& symbol, const AssertionExpr& body,
                                 SourceRange sourceRange) :
         Expression(ExpressionKind::AssertionInstance, type, sourceRange),
-        instance(instance), body(body) {}
+        symbol(symbol), body(body) {}
 
     ConstantValue evalImpl(EvalContext&) const { return nullptr; }
     bool verifyConstantImpl(EvalContext&) const { return true; }
 
     static Expression& fromLookup(const Symbol& symbol, const InvocationExpressionSyntax* syntax,
                                   SourceRange range, const BindContext& context);
+
+    static Expression& bindPort(const Symbol& symbol, const InvocationExpressionSyntax*& syntax,
+                                const ArrayOrRandomizeMethodExpressionSyntax*& withClause,
+                                SourceRange range, const BindContext& context);
 
     void serializeTo(ASTSerializer& serializer) const;
 

@@ -848,6 +848,12 @@ Expression& Expression::bindLookupResult(Compilation& compilation, const LookupR
                 &AssertionInstanceExpression::fromLookup(*symbol, invocation, sourceRange, context);
             invocation = nullptr;
             break;
+        case SymbolKind::AssertionPort:
+            // This function takes invocation and withClause by reference, nulling them
+            // out if they get used.
+            expr = &AssertionInstanceExpression::bindPort(*symbol, invocation, withClause,
+                                                          sourceRange, context);
+            break;
         default:
             expr = &ValueExpressionBase::fromSymbol(context, *symbol, result.isHierarchical,
                                                     sourceRange);
@@ -855,7 +861,7 @@ Expression& Expression::bindLookupResult(Compilation& compilation, const LookupR
     }
 
     // Drill down into member accesses.
-    for (const auto& selector : result.selectors) {
+    for (auto& selector : result.selectors) {
         if (expr->bad())
             return *expr;
 
@@ -871,8 +877,7 @@ Expression& Expression::bindLookupResult(Compilation& compilation, const LookupR
         }
         else {
             // Element / range selectors.
-            const ElementSelectSyntax* selectSyntax =
-                std::get<const ElementSelectSyntax*>(selector);
+            auto selectSyntax = std::get<const ElementSelectSyntax*>(selector);
             expr = &bindSelector(compilation, *expr, *selectSyntax, context);
         }
     }
