@@ -223,8 +223,9 @@ module m;
     logic [7:0] bar;
 
     assert property (s1($, 5));
-    assert property (s1(bar, 9));
+    assert property (s1(bar, 9.2));
     assert property (s3(9));
+    assert property (s4(1 and 2));
 
     sequence s1(a, int b);
         s2(a) ##1 bar[b:0];
@@ -237,6 +238,10 @@ module m;
     sequence s3(sequence a);
         1 ##[0:a] 2;
     endsequence
+
+    sequence s4(foo);
+        foo ##1 1 + foo;
+    endsequence
 endmodule
 )");
 
@@ -244,11 +249,12 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 4);
+    REQUIRE(diags.size() == 5);
     CHECK(diags[0].code == diag::UnboundedNotAllowed);
     CHECK(diags[1].code == diag::BadRangeExpression);
     CHECK(diags[2].code == diag::ConstEvalNonConstVariable);
     CHECK(diags[3].code == diag::ExprMustBeIntegral);
+    CHECK(diags[4].code == diag::BadBinaryExpression);
 }
 
 TEST_CASE("Default disable declarations") {

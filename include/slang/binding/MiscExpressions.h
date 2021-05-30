@@ -289,7 +289,7 @@ public:
         timingControl(timingControl) {}
 
     ConstantValue evalImpl(EvalContext&) const { return nullptr; }
-    bool verifyConstantImpl(EvalContext&) const { return true; }
+    bool verifyConstantImpl(EvalContext&) const { return false; }
 
     static Expression& fromSyntax(const ClockingPropertyExprSyntax& syntax,
                                   const BindContext& context);
@@ -312,7 +312,7 @@ public:
         symbol(symbol), body(body) {}
 
     ConstantValue evalImpl(EvalContext&) const { return nullptr; }
-    bool verifyConstantImpl(EvalContext&) const { return true; }
+    bool verifyConstantImpl(EvalContext&) const { return false; }
 
     static Expression& fromLookup(const Symbol& symbol, const InvocationExpressionSyntax* syntax,
                                   SourceRange range, const BindContext& context);
