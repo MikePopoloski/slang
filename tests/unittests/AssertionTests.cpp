@@ -217,6 +217,34 @@ endmodule
     CHECK(diags[2].code == diag::AssertionArgNeedsRegExpr);
 }
 
+TEST_CASE("Assertion instance arg expansion") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    logic [7:0] bar;
+
+    assert property (s1($, 5));
+    assert property (s1(bar, 9));
+
+    sequence s1(a, int b);
+        s2(a) ##1 bar[b:0];
+    endsequence
+
+    sequence s2(foo);
+        1 ##[0:foo] 2 ##1 foo;
+    endsequence
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 3);
+    CHECK(diags[0].code == diag::UnboundedNotAllowed);
+    CHECK(diags[1].code == diag::ConstEvalNonConstVariable);
+    CHECK(diags[2].code == diag::BadRangeExpression);
+}
+
 TEST_CASE("Default disable declarations") {
     auto tree = SyntaxTree::fromText(R"(
 module m;

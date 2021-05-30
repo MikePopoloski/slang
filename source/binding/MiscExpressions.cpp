@@ -1121,7 +1121,7 @@ static bool checkAssertionArgType(const PropertyExprSyntax& propExpr,
             // name resolution errors even if the argument ends up being unused in the
             // body of the sequence / property.
             if (regExpr)
-                return !Expression::bind(*regExpr, context).bad();
+                return !Expression::bind(*regExpr, context, BindFlags::AllowUnboundedLiteral).bad();
             else
                 return !AssertionExpr::bind(propExpr, context).bad();
         case SymbolKind::SequenceType:
@@ -1145,7 +1145,7 @@ static bool checkAssertionArgType(const PropertyExprSyntax& propExpr,
         return false;
     }
 
-    auto& bound = Expression::bind(*regExpr, context);
+    auto& bound = Expression::bind(*regExpr, context, BindFlags::AllowUnboundedLiteral);
     if (bound.bad())
         return false;
 
@@ -1339,8 +1339,11 @@ Expression& AssertionInstanceExpression::bindPort(
     auto it = inst.argumentMap.find(&symbol);
     ASSERT(it != inst.argumentMap.end());
 
-    auto& [propExpr, argCtx] = it->second;
+    auto [propExpr, argCtx] = it->second;
     auto [seqExpr, regExpr] = decomposePropExpr(*propExpr);
+
+    // Inherit any binding flags that are specific to this argument's instantiation.
+    argCtx.flags = instanceCtx.flags;
 
     auto doBindName = [&]() -> Expression& {
         auto& result = bindName(comp, regExpr->as<NameSyntax>(), invocation, withClause, argCtx);
@@ -1361,7 +1364,7 @@ Expression& AssertionInstanceExpression::bindPort(
                 if (NameSyntax::isKind(regExpr->kind))
                     return doBindName();
 
-                return selfDetermined(comp, *regExpr, argCtx);
+                return selfDetermined(comp, *regExpr, argCtx, argCtx.flags);
             }
             else {
                 auto& result = AssertionExpr::bind(*propExpr, argCtx);
@@ -1387,7 +1390,6 @@ Expression& AssertionInstanceExpression::bindPort(
                     return expr;
 
                 auto& result = *comp.emplace<SimpleAssertionExpr>(expr, std::nullopt);
-
                 return *comp.emplace<AssertionInstanceExpression>(resultType, formal, result,
                                                                   range);
             }
@@ -1404,7 +1406,7 @@ Expression& AssertionInstanceExpression::bindPort(
 
             // TODO: LRM says we treat this argument as if it was cast to the formal type
             // unless it's a variable_lvalue, in which case we take it as-is.
-            auto& expr = selfDetermined(comp, *regExpr, argCtx);
+            auto& expr = selfDetermined(comp, *regExpr, argCtx, argCtx.flags);
             if (!expr.type->isMatching(type)) {
                 return *comp.emplace<ConversionExpression>(type, ConversionKind::Explicit, expr,
                                                            range);
