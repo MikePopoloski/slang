@@ -1599,7 +1599,8 @@ MemberSyntax& Parser::parseConstraint(AttrList attributes, span<Token> qualifier
         addDiag(diag::ExpectedIdentifier, range.start()) << range;
     }
 
-    return factory.constraintPrototype(attributes, qualifiers, keyword, name, consume());
+    return factory.constraintPrototype(attributes, qualifiers, keyword, name,
+                                       expect(TokenKind::Semicolon));
 }
 
 ConstraintBlockSyntax& Parser::parseConstraintBlock(bool isTopLevel) {
