@@ -1380,9 +1380,6 @@ Expression& AssertionInstanceExpression::bindPort(const Symbol& symbol, SourceRa
 
             auto& expr = selfDetermined(comp, *regExpr, argCtx, argCtx.flags);
             expr.sourceRange = range;
-
-            // TODO: LRM says we treat this argument as if it was cast to the formal type
-            // unless it's a variable_lvalue, in which case we take it as-is.
             if (!expr.type->isMatching(type)) {
                 return *comp.emplace<ConversionExpression>(type, ConversionKind::Explicit, expr,
                                                            range);
