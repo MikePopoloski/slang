@@ -124,7 +124,7 @@ endmodule
     CHECK(diags[4].code == diag::AssertionFuncArg);
     CHECK(diags[5].code == diag::ValueMustBePositive);
     CHECK(diags[6].code == diag::SeqRangeMinMax);
-    CHECK(diags[7].code == diag::ValueMustBeIntegral);
+    CHECK(diags[7].code == diag::ExprMustBeIntegral);
     CHECK(diags[8].code == diag::InvalidSequenceRange);
     CHECK(diags[9].code == diag::ExpectedExpression);
     CHECK(diags[10].code == diag::ExpectedExpression);
@@ -224,6 +224,7 @@ module m;
 
     assert property (s1($, 5));
     assert property (s1(bar, 9));
+    assert property (s3(9));
 
     sequence s1(a, int b);
         s2(a) ##1 bar[b:0];
@@ -232,6 +233,10 @@ module m;
     sequence s2(foo);
         1 ##[0:foo] 2 ##1 foo;
     endsequence
+
+    sequence s3(sequence a);
+        1 ##[0:a] 2;
+    endsequence
 endmodule
 )");
 
@@ -239,10 +244,11 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 3);
+    REQUIRE(diags.size() == 4);
     CHECK(diags[0].code == diag::UnboundedNotAllowed);
     CHECK(diags[1].code == diag::BadRangeExpression);
     CHECK(diags[2].code == diag::ConstEvalNonConstVariable);
+    CHECK(diags[3].code == diag::ExprMustBeIntegral);
 }
 
 TEST_CASE("Default disable declarations") {

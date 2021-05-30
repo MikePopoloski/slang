@@ -197,6 +197,14 @@ optional<int32_t> BindContext::evalInteger(const ExpressionSyntax& syntax) const
 }
 
 optional<int32_t> BindContext::evalInteger(const Expression& expr) const {
+    if (expr.bad())
+        return std::nullopt;
+
+    if (!expr.type->isIntegral()) {
+        addDiag(diag::ExprMustBeIntegral, expr.sourceRange) << *expr.type;
+        return std::nullopt;
+    }
+
     ConstantValue cv = eval(expr);
     if (!requireIntegral(cv, expr.sourceRange))
         return std::nullopt;
