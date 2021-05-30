@@ -1347,6 +1347,7 @@ Expression& AssertionInstanceExpression::bindPort(
 
     auto doBindName = [&]() -> Expression& {
         auto& result = bindName(comp, regExpr->as<NameSyntax>(), invocation, withClause, argCtx);
+        result.sourceRange = range;
         invocation = nullptr;
         withClause = nullptr;
         return result;
@@ -1364,7 +1365,9 @@ Expression& AssertionInstanceExpression::bindPort(
                 if (NameSyntax::isKind(regExpr->kind))
                     return doBindName();
 
-                return selfDetermined(comp, *regExpr, argCtx, argCtx.flags);
+                auto& result = selfDetermined(comp, *regExpr, argCtx, argCtx.flags);
+                result.sourceRange = range;
+                return result;
             }
             else {
                 auto& result = AssertionExpr::bind(*propExpr, argCtx);
@@ -1404,9 +1407,11 @@ Expression& AssertionInstanceExpression::bindPort(
             if (!regExpr)
                 return badExpr(comp, nullptr);
 
+            auto& expr = selfDetermined(comp, *regExpr, argCtx, argCtx.flags);
+            expr.sourceRange = range;
+
             // TODO: LRM says we treat this argument as if it was cast to the formal type
             // unless it's a variable_lvalue, in which case we take it as-is.
-            auto& expr = selfDetermined(comp, *regExpr, argCtx, argCtx.flags);
             if (!expr.type->isMatching(type)) {
                 return *comp.emplace<ConversionExpression>(type, ConversionKind::Explicit, expr,
                                                            range);

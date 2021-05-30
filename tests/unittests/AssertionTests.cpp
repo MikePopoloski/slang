@@ -237,12 +237,13 @@ endmodule
 
     Compilation compilation;
     compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
 
     auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 3);
     CHECK(diags[0].code == diag::UnboundedNotAllowed);
-    CHECK(diags[1].code == diag::ConstEvalNonConstVariable);
-    CHECK(diags[2].code == diag::BadRangeExpression);
+    CHECK(diags[1].code == diag::BadRangeExpression);
+    CHECK(diags[2].code == diag::ConstEvalNonConstVariable);
 }
 
 TEST_CASE("Default disable declarations") {
