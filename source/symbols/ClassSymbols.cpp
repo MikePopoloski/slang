@@ -836,8 +836,7 @@ bool GenericClassDefSymbol::SpecializationKey::operator==(const SpecializationKe
 }
 
 ConstraintBlockSymbol::ConstraintBlockSymbol(Compilation& c, string_view name, SourceLocation loc) :
-    ValueSymbol(SymbolKind::ConstraintBlock, name, loc), Scope(c, this) {
-    setType(c.getVoidType());
+    Symbol(SymbolKind::ConstraintBlock, name, loc), Scope(c, this) {
 }
 
 ConstraintBlockSymbol* ConstraintBlockSymbol::fromSyntax(

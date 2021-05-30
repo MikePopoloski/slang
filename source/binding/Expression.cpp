@@ -453,6 +453,8 @@ const Symbol* Expression::getSymbolReference() const {
                 return &access.member;
             return nullptr;
         }
+        case ExpressionKind::HierarchicalReference:
+            return as<HierarchicalReferenceExpression>().symbol;
         default:
             return nullptr;
     }
@@ -851,6 +853,14 @@ Expression& Expression::bindLookupResult(Compilation& compilation, const LookupR
         case SymbolKind::AssertionPort:
             expr = &AssertionInstanceExpression::bindPort(*symbol, sourceRange, context);
             break;
+        case SymbolKind::ConstraintBlock: {
+            // If there are selectors then this is ok -- either they will be valid because
+            // they're accessing a built-in method or they will issue an error.
+            bool constraintAllowed = !result.selectors.empty();
+            expr = &ValueExpressionBase::fromSymbol(context, *symbol, result.isHierarchical,
+                                                    sourceRange, constraintAllowed);
+            break;
+        }
         default:
             expr = &ValueExpressionBase::fromSymbol(context, *symbol, result.isHierarchical,
                                                     sourceRange);

@@ -29,21 +29,10 @@
 namespace slang {
 
 Expression& ValueExpressionBase::fromSymbol(const BindContext& context, const Symbol& symbol,
-                                            bool isHierarchical, SourceRange sourceRange) {
-    Compilation& comp = context.getCompilation();
-    if (!symbol.isValue()) {
-        if (symbol.kind == SymbolKind::ClockingBlock &&
-            context.flags.has(BindFlags::AllowClockingBlock)) {
-            // Special case for event expressions.
-            return *comp.emplace<HierarchicalReferenceExpression>(symbol, comp.getVoidType(),
-                                                                  sourceRange);
-        }
-
-        context.addDiag(diag::NotAValue, sourceRange) << symbol.name;
-        return badExpr(comp, nullptr);
-    }
-
+                                            bool isHierarchical, SourceRange sourceRange,
+                                            bool constraintAllowed) {
     // Automatic variables have additional restrictions.
+    Compilation& comp = context.getCompilation();
     if (VariableSymbol::isKind(symbol.kind) &&
         symbol.as<VariableSymbol>().lifetime == VariableLifetime::Automatic) {
 
@@ -73,6 +62,19 @@ Expression& ValueExpressionBase::fromSymbol(const BindContext& context, const Sy
     else if (symbol.kind == SymbolKind::Specparam && context.flags.has(BindFlags::Constant) &&
              !context.flags.has(BindFlags::SpecparamsAllowed)) {
         context.addDiag(diag::SpecparamInConstant, sourceRange);
+        return badExpr(comp, nullptr);
+    }
+
+    if (!symbol.isValue()) {
+        if ((symbol.kind == SymbolKind::ClockingBlock &&
+             context.flags.has(BindFlags::AllowClockingBlock)) ||
+            (symbol.kind == SymbolKind::ConstraintBlock && constraintAllowed)) {
+            // Special case for event expressions and constraint block built-in methods.
+            return *comp.emplace<HierarchicalReferenceExpression>(symbol, comp.getVoidType(),
+                                                                  sourceRange);
+        }
+
+        context.addDiag(diag::NotAValue, sourceRange) << symbol.name;
         return badExpr(comp, nullptr);
     }
 

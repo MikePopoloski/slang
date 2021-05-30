@@ -237,7 +237,7 @@ struct ConstraintDeclarationSyntax;
 struct ConstraintPrototypeSyntax;
 
 /// Represents a named constraint block declaration within a class.
-class ConstraintBlockSymbol : public ValueSymbol, public Scope {
+class ConstraintBlockSymbol : public Symbol, public Scope {
 public:
     /// If this is a non-static constraint block, this is a variable
     /// that represents the 'this' class handle.

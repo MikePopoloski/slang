@@ -27,7 +27,8 @@ public:
     void serializeTo(ASTSerializer& serializer) const;
 
     static Expression& fromSymbol(const BindContext& context, const Symbol& symbol,
-                                  bool isHierarchical, SourceRange sourceRange);
+                                  bool isHierarchical, SourceRange sourceRange,
+                                  bool constraintAllowed = false);
 
     static bool isKind(ExpressionKind kind) {
         return kind == ExpressionKind::NamedValue || kind == ExpressionKind::HierarchicalValue;
