@@ -156,7 +156,7 @@ Expression& ElementSelectExpression::fromSyntax(Compilation& compilation, Expres
         BindFlags flags = valueType.isQueue() ? BindFlags::AllowUnboundedLiteral : BindFlags::None;
         selector = &selfDetermined(compilation, syntax, context, flags);
         if (!selector->bad() && !selector->type->isIntegral() && !selector->type->isUnbounded()) {
-            context.addDiag(diag::ExprMustBeIntegral, selector->sourceRange);
+            context.addDiag(diag::ExprMustBeIntegral, selector->sourceRange) << *selector->type;
             return badExpr(compilation, nullptr);
         }
     }
@@ -383,11 +383,11 @@ Expression& RangeSelectExpression::fromSyntax(Compilation& compilation, Expressi
         return badExpr(compilation, result);
 
     if (!left.type->isIntegral() && !left.type->isUnbounded()) {
-        context.addDiag(diag::ExprMustBeIntegral, left.sourceRange);
+        context.addDiag(diag::ExprMustBeIntegral, left.sourceRange) << *left.type;
         return badExpr(compilation, result);
     }
     if (!right.type->isIntegral() && !right.type->isUnbounded()) {
-        context.addDiag(diag::ExprMustBeIntegral, right.sourceRange);
+        context.addDiag(diag::ExprMustBeIntegral, right.sourceRange) << *right.type;
         return badExpr(compilation, result);
     }
 

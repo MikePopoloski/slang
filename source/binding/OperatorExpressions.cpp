@@ -1754,7 +1754,7 @@ Expression& StreamingConcatenationExpression::fromSyntax(
                     return badExpr(compilation, badResult());
 
                 if (!expr->type->isIntegral()) {
-                    context.addDiag(diag::ExprMustBeIntegral, expr->sourceRange);
+                    context.addDiag(diag::ExprMustBeIntegral, expr->sourceRange) << *expr->type;
                     return badExpr(compilation, badResult());
                 }
 

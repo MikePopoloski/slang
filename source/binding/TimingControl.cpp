@@ -220,7 +220,7 @@ TimingControl& SignalEventControl::fromExpr(Compilation& compilation, EdgeKind e
         if (expr.type->isVoid())
             context.addDiag(diag::ClockingBlockEventEdge, expr.sourceRange);
         else
-            context.addDiag(diag::ExprMustBeIntegral, expr.sourceRange);
+            context.addDiag(diag::ExprMustBeIntegral, expr.sourceRange) << *expr.type;
         return badCtrl(compilation, result);
     }
 
@@ -337,7 +337,7 @@ TimingControl& CycleDelayControl::fromSyntax(Compilation& compilation, const Del
         return badCtrl(compilation, result);
 
     if (!expr.type->isIntegral()) {
-        context.addDiag(diag::ExprMustBeIntegral, expr.sourceRange);
+        context.addDiag(diag::ExprMustBeIntegral, expr.sourceRange) << *expr.type;
         return badCtrl(compilation, result);
     }
 

@@ -1502,7 +1502,7 @@ Expression& DistExpression::fromSyntax(Compilation& comp, const ExpressionOrDist
     bool bad = left.bad();
 
     if (!left.bad() && !left.type->isIntegral()) {
-        context.addDiag(diag::ExprMustBeIntegral, left.sourceRange);
+        context.addDiag(diag::ExprMustBeIntegral, left.sourceRange) << *left.type;
         bad = true;
     }
 
@@ -1514,7 +1514,7 @@ Expression& DistExpression::fromSyntax(Compilation& comp, const ExpressionOrDist
 
         if (!value->bad() && value->kind != ExpressionKind::OpenRange &&
             !value->type->isIntegral()) {
-            context.addDiag(diag::ExprMustBeIntegral, value->sourceRange);
+            context.addDiag(diag::ExprMustBeIntegral, value->sourceRange) << *value->type;
             bad = true;
         }
 
@@ -1527,7 +1527,8 @@ Expression& DistExpression::fromSyntax(Compilation& comp, const ExpressionOrDist
             bad |= weightExpr.bad();
 
             if (!weightExpr.bad() && !weightExpr.type->isIntegral()) {
-                context.addDiag(diag::ExprMustBeIntegral, weightExpr.sourceRange);
+                context.addDiag(diag::ExprMustBeIntegral, weightExpr.sourceRange)
+                    << *weightExpr.type;
                 bad = true;
             }
         }
