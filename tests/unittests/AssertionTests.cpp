@@ -278,3 +278,22 @@ endmodule
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::MultipleDefaultDisable);
 }
+
+TEST_CASE("Hierarchical access to assertion ports") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    sequence s(int i);
+        i;
+    endsequence
+
+    int i = s.i;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::TooFewArguments);
+}
