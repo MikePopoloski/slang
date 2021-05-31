@@ -11,6 +11,7 @@
 #include "slang/compilation/Definition.h"
 #include "slang/diagnostics/ConstEvalDiags.h"
 #include "slang/diagnostics/LookupDiags.h"
+#include "slang/diagnostics/NumericDiags.h"
 #include "slang/parsing/LexerFacts.h"
 #include "slang/symbols/BlockSymbols.h"
 #include "slang/symbols/ClassSymbols.h"
@@ -864,70 +865,148 @@ const Symbol* Lookup::unqualifiedAt(const Scope& scope, string_view name, Lookup
     return result.found;
 }
 
+static const Symbol* selectSingleChild(const Symbol& symbol, const BitSelectSyntax& syntax,
+                                       const BindContext& context, LookupResult& result) {
+    auto index = context.evalInteger(*syntax.expr);
+    if (!index)
+        return nullptr;
+
+    if (symbol.kind == SymbolKind::InstanceArray) {
+        auto& array = symbol.as<InstanceArraySymbol>();
+        if (array.elements.empty())
+            return nullptr;
+
+        if (!array.range.containsPoint(*index)) {
+            auto& diag =
+                result.addDiag(*context.scope, diag::ScopeIndexOutOfRange, syntax.sourceRange());
+            diag << *index;
+            diag.addNote(diag::NoteDeclarationHere, symbol.location);
+            return nullptr;
+        }
+
+        return array.elements[size_t(array.range.translateIndex(*index))];
+    }
+    else {
+        auto& array = symbol.as<GenerateBlockArraySymbol>();
+        if (!array.valid)
+            return nullptr;
+
+        for (auto& entry : array.entries) {
+            if (*entry.index == *index)
+                return entry.block;
+        }
+
+        auto& diag =
+            result.addDiag(*context.scope, diag::ScopeIndexOutOfRange, syntax.sourceRange());
+        diag << *index;
+        diag.addNote(diag::NoteDeclarationHere, symbol.location);
+        return nullptr;
+    }
+}
+
+static const Symbol* selectChildRange(const InstanceArraySymbol& array,
+                                      const RangeSelectSyntax& syntax, const BindContext& context,
+                                      LookupResult& result) {
+    if (array.elements.empty())
+        return nullptr;
+
+    // Evaluate both sides of the range.
+    auto left = context.evalInteger(*syntax.left);
+    auto right = context.evalInteger(*syntax.right);
+    if (!left || !right)
+        return nullptr;
+
+    ConstantRange selRange;
+    if (syntax.kind == SyntaxKind::SimpleRangeSelect) {
+        selRange = { *left, *right };
+        if (selRange.isLittleEndian() != array.range.isLittleEndian() && selRange.width() > 1) {
+            auto& diag = result.addDiag(*context.scope, diag::InstanceArrayEndianMismatch,
+                                        syntax.sourceRange());
+            diag << selRange.left << selRange.right;
+            diag << array.range.left << array.range.right;
+            return nullptr;
+        }
+    }
+    else {
+        if (*right <= 0) {
+            result.addDiag(*context.scope, diag::ValueMustBePositive, syntax.right->sourceRange());
+            return nullptr;
+        }
+
+        selRange = ConstantRange::getIndexedRange(*left, *right, array.range.isLittleEndian(),
+                                                  syntax.kind == SyntaxKind::AscendingRangeSelect);
+    }
+
+    if (!array.range.containsPoint(selRange.left) || !array.range.containsPoint(selRange.right)) {
+        auto& diag =
+            result.addDiag(*context.scope, diag::BadInstanceArrayRange, syntax.sourceRange());
+        diag << selRange.left << selRange.right;
+        diag << array.range.left << array.range.right;
+        return nullptr;
+    }
+
+    int32_t begin = array.range.translateIndex(selRange.left);
+    int32_t end = array.range.translateIndex(selRange.right);
+    if (begin > end)
+        std::swap(begin, end);
+
+    auto elems = array.elements.subspan(begin, end - begin + 1);
+
+    ConstantRange newRange{ int32_t(selRange.width()) - 1, 0 };
+    if (!selRange.isLittleEndian())
+        newRange = newRange.reverse();
+
+    // Create a placeholder array symbol that will hold this new sliced array.
+    auto& comp = context.getCompilation();
+    return comp.emplace<InstanceArraySymbol>(comp, array.name, array.location, elems, newRange);
+}
+
 const Symbol* Lookup::selectChild(const Symbol& initialSymbol,
                                   span<const ElementSelectSyntax* const> selectors,
                                   const BindContext& context, LookupResult& result) {
     const Symbol* symbol = &initialSymbol;
     for (const ElementSelectSyntax* syntax : selectors) {
-        if (!syntax->selector || syntax->selector->kind != SyntaxKind::BitSelect) {
-            result.addDiag(*context.scope, diag::InvalidScopeIndexExpression,
-                           syntax->sourceRange());
+        if (symbol->kind != SymbolKind::InstanceArray &&
+            symbol->kind != SymbolKind::GenerateBlockArray) {
+            // I think it's safe to assume that the symbol name here will not be empty
+            // because if it was, it'd be an instance array or generate array.
+            auto& diag =
+                result.addDiag(*context.scope, diag::ScopeNotIndexable, syntax->sourceRange());
+            diag << symbol->name;
+            diag.addNote(diag::NoteDeclarationHere, symbol->location);
             return nullptr;
         }
 
-        auto index = context.evalInteger(*syntax->selector->as<BitSelectSyntax>().expr);
-        if (!index)
+        auto selectorError = [&]() -> const Symbol* {
+            result.addDiag(*context.scope, diag::InvalidScopeIndexExpression,
+                           syntax->sourceRange());
             return nullptr;
+        };
 
-        switch (symbol->kind) {
-            case SymbolKind::InstanceArray: {
-                auto& array = symbol->as<InstanceArraySymbol>();
-                if (array.elements.empty())
+        if (!syntax->selector)
+            return selectorError();
+
+        switch (syntax->selector->kind) {
+            case SyntaxKind::BitSelect:
+                symbol = selectSingleChild(*symbol, syntax->selector->as<BitSelectSyntax>(),
+                                           context, result);
+                if (!symbol)
                     return nullptr;
-
-                if (!array.range.containsPoint(*index)) {
-                    auto& diag = result.addDiag(*context.scope, diag::ScopeIndexOutOfRange,
-                                                syntax->sourceRange());
-                    diag << *index;
-                    diag.addNote(diag::NoteDeclarationHere, symbol->location);
-                    return nullptr;
-                }
-
-                symbol = array.elements[size_t(array.range.translateIndex(*index))];
                 break;
-            }
-            case SymbolKind::GenerateBlockArray: {
-                bool found = false;
-                auto& array = symbol->as<GenerateBlockArraySymbol>();
-                if (!array.valid)
-                    return nullptr;
+            case SyntaxKind::SimpleRangeSelect:
+            case SyntaxKind::AscendingRangeSelect:
+            case SyntaxKind::DescendingRangeSelect:
+                if (symbol->kind != SymbolKind::InstanceArray)
+                    return selectorError();
 
-                for (auto& entry : array.entries) {
-                    if (*entry.index == *index) {
-                        found = true;
-                        symbol = entry.block;
-                        break;
-                    }
-                }
-
-                if (!found) {
-                    auto& diag = result.addDiag(*context.scope, diag::ScopeIndexOutOfRange,
-                                                syntax->sourceRange());
-                    diag << *index;
-                    diag.addNote(diag::NoteDeclarationHere, symbol->location);
+                symbol =
+                    selectChildRange(symbol->as<InstanceArraySymbol>(),
+                                     syntax->selector->as<RangeSelectSyntax>(), context, result);
+                if (!symbol)
                     return nullptr;
-                }
                 break;
-            }
-            default: {
-                // I think it's safe to assume that the symbol name here will not be empty
-                // because if it was, it'd be an instance array or generate array.
-                auto& diag =
-                    result.addDiag(*context.scope, diag::ScopeNotIndexable, syntax->sourceRange());
-                diag << symbol->name;
-                diag.addNote(diag::NoteDeclarationHere, symbol->location);
-                return nullptr;
-            }
+            default:
+                THROW_UNREACHABLE;
         }
     }
 

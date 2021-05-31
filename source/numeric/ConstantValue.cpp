@@ -731,6 +731,33 @@ bool ConstantRange::containsPoint(int32_t index) const {
     return index >= lower() && index <= upper();
 }
 
+ConstantRange ConstantRange::getIndexedRange(int32_t l, int32_t r, bool littleEndian,
+                                             bool indexedUp) {
+    ConstantRange result;
+    int32_t count = r - 1;
+    if (indexedUp) {
+        auto upper = checkedAddS32(l, count);
+        if (!upper)
+            upper = INT32_MAX;
+
+        result.left = *upper;
+        result.right = l;
+    }
+    else {
+        auto lower = checkedSubS32(l, count);
+        if (!lower)
+            lower = INT32_MIN;
+
+        result.left = l;
+        result.right = *lower;
+    }
+
+    if (!littleEndian)
+        return result.reverse();
+
+    return result;
+}
+
 std::string ConstantRange::toString() const {
     return fmt::format("[{}:{}]", left, right);
 }

@@ -870,10 +870,9 @@ bool Bitstream::validStreamWithRange(const Type& arrayType, WithRangeKind kind,
             }
 
             if (left && arrayType.hasFixedRange()) {
-                auto selection = RangeSelectExpression::getIndexedRange(
-                    kind == WithRangeKind::IndexedUp ? RangeSelectionKind::IndexedUp
-                                                     : RangeSelectionKind::IndexedDown,
-                    *left, width, arrayType.getFixedRange().isLittleEndian());
+                auto selection = ConstantRange::getIndexedRange(
+                    *left, width, arrayType.getFixedRange().isLittleEndian(),
+                    kind == WithRangeKind::IndexedUp);
 
                 auto bound = selection.right == *left ? selection.left : selection.right;
                 if (!arrayType.getFixedRange().containsPoint(bound)) {
@@ -964,11 +963,10 @@ optional<ConstantRange> Bitstream::evaluateWith(
 
     ConstantRange result = { *cl, *cr };
     if (with.kind == WithRangeKind::IndexedUp || with.kind == WithRangeKind::IndexedDown) {
-        result = RangeSelectExpression::getIndexedRange(
-            with.kind == WithRangeKind::IndexedUp ? RangeSelectionKind::IndexedUp
-                                                  : RangeSelectionKind::IndexedDown,
+        result = ConstantRange::getIndexedRange(
             result.left, result.right,
-            arrayType.hasFixedRange() ? arrayType.getFixedRange().isLittleEndian() : false);
+            arrayType.hasFixedRange() ? arrayType.getFixedRange().isLittleEndian() : false,
+            with.kind == WithRangeKind::IndexedUp);
     }
 
     if (arrayType.hasFixedRange()) {

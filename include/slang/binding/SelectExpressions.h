@@ -90,9 +90,6 @@ public:
         right().visit(visitor);
     }
 
-    static ConstantRange getIndexedRange(RangeSelectionKind kind, int32_t l, int32_t r,
-                                         bool littleEndian);
-
 private:
     optional<ConstantRange> getFixedRange(EvalContext& context, const ConstantValue& cl,
                                           const ConstantValue& cr) const;

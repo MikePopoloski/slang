@@ -481,6 +481,25 @@ endmodule
     CHECK(foo->as<VariableSymbol>().getType().isMatching(compilation.getLogicType()));
 }
 
+TEST_CASE("Interface array slicing") {
+    auto tree = SyntaxTree::fromText(R"(
+interface I;
+endinterface
+
+module m(I i[3]);
+endmodule
+
+module n;
+    I i[8] ();
+    m m1(i[1:3]);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
 TEST_CASE("Instance array indexing errors") {
     auto tree = SyntaxTree::fromText(R"(
 interface I;
@@ -493,9 +512,17 @@ module m;
     I notArray ();
 
     always_comb array[0].foo = 1;
-    always_comb array[-4:-3].foo = 1;
+    always_comb array[].foo = 1;
     always_comb notArray[0].foo = 1;
 
+    I arrayInv [-4:a] ();
+    always_comb arrayInv[-4:-1][0].foo = 1;
+    always_comb array[-4:a][0].foo = 1;
+
+    always_comb array[-1:-4][0].foo = 1;
+    always_comb array[-1+:-4][0].foo = 1;
+    always_comb array[-1+:4][0].foo = 1;
+    
 endmodule
 )");
 
@@ -507,6 +534,11 @@ endmodule
     CHECK((it++)->code == diag::ScopeIndexOutOfRange);
     CHECK((it++)->code == diag::InvalidScopeIndexExpression);
     CHECK((it++)->code == diag::ScopeNotIndexable);
+    CHECK((it++)->code == diag::UndeclaredIdentifier);
+    CHECK((it++)->code == diag::UndeclaredIdentifier);
+    CHECK((it++)->code == diag::InstanceArrayEndianMismatch);
+    CHECK((it++)->code == diag::ValueMustBePositive);
+    CHECK((it++)->code == diag::BadInstanceArrayRange);
     CHECK(it == diags.end());
 }
 
@@ -537,6 +569,7 @@ module m;
     end
 
     always_comb array[7].foo = 1;
+    always_comb array[3:7].foo = 1;
 endmodule
 )");
 
@@ -546,6 +579,7 @@ endmodule
     auto& diags = compilation.getAllDiagnostics();
     auto it = diags.begin();
     CHECK((it++)->code == diag::ScopeIndexOutOfRange);
+    CHECK((it++)->code == diag::InvalidScopeIndexExpression);
     CHECK(it == diags.end());
 }
 
@@ -952,9 +986,9 @@ source:79:20: error: hierarchical scope 'array1' is not indexable
 source:54:12: note: declared here
     if (1) begin : array1
            ^
-source:81:20: error: hierarchical index 3 is out of scope's declared range
+source:81:21: error: hierarchical index 3 is out of scope's declared range
     wire p = array3[3].foo;     // no upward because indexing fails
-                   ^~~
+                    ^
 source:57:7: note: declared here
     I array3 [2] ();
       ^
