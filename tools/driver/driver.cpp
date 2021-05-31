@@ -11,6 +11,7 @@
 #include "slang/compilation/Compilation.h"
 #include "slang/diagnostics/DeclarationsDiags.h"
 #include "slang/diagnostics/DiagnosticEngine.h"
+#include "slang/diagnostics/LookupDiags.h"
 #include "slang/diagnostics/TextDiagnosticClient.h"
 #include "slang/parsing/Preprocessor.h"
 #include "slang/symbols/ASTSerializer.h"
@@ -245,11 +246,13 @@ public:
     }
 
     void setDiagnosticOptions(const std::vector<std::string>& warningOptions,
-                              bool ignoreUnknownModules) {
+                              bool ignoreUnknownModules, bool allowUseBeforeDeclare) {
         Diagnostics optionDiags = diagEngine.setWarningOptions(warningOptions);
         Diagnostics pragmaDiags = diagEngine.setMappingsFromPragmas();
         if (ignoreUnknownModules)
             diagEngine.setSeverity(diag::UnknownModule, DiagnosticSeverity::Ignored);
+        if (allowUseBeforeDeclare)
+            diagEngine.setSeverity(diag::UsedBeforeDeclared, DiagnosticSeverity::Ignored);
 
         for (auto& diag : optionDiags)
             diagEngine.issue(diag);
@@ -459,6 +462,7 @@ int driverMain(int argc, TArgs argv, bool suppressColorsStdout, bool suppressCol
     optional<bool> diagMacroExpansion;
     optional<bool> diagHierarchy;
     optional<bool> ignoreUnknownModules;
+    optional<bool> allowUseBeforeDeclare;
     optional<uint32_t> errorLimit;
     std::vector<std::string> warningOptions;
     cmdLine.add("-W", warningOptions, "Control the specified warning", "<warning>");
@@ -484,6 +488,8 @@ int driverMain(int argc, TArgs argv, bool suppressColorsStdout, bool suppressCol
     cmdLine.add("--ignore-unknown-modules", ignoreUnknownModules,
                 "Don't issue an error for instantiations of unknown modules, "
                 "interface, and programs.");
+    cmdLine.add("--allow-use-before-declare", allowUseBeforeDeclare,
+                "Don't issue an error for use of names before their declarations.");
 
     // File list
     optional<bool> singleUnit;
@@ -677,7 +683,8 @@ int driverMain(int argc, TArgs argv, bool suppressColorsStdout, bool suppressCol
             diag.showHierarchyInstance(diagHierarchy.value_or(true));
 
             compiler.diagEngine.setErrorLimit(errorLimit.value_or(20));
-            compiler.setDiagnosticOptions(warningOptions, ignoreUnknownModules == true);
+            compiler.setDiagnosticOptions(warningOptions, ignoreUnknownModules == true,
+                                          allowUseBeforeDeclare == true);
 
             anyErrors |= !compiler.run();
 
