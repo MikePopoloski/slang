@@ -557,6 +557,7 @@ bool SyntaxFacts::isNetType(TokenKind kind) {
         case TokenKind::WireKeyword:
         case TokenKind::WAndKeyword:
         case TokenKind::WOrKeyword:
+        case TokenKind::InterconnectKeyword:
             return true;
         default:
             return false;
@@ -611,7 +612,6 @@ bool SyntaxFacts::isPossibleNonAnsiPort(TokenKind kind) {
 
 bool SyntaxFacts::isPossibleAnsiPort(TokenKind kind) {
     switch (kind) {
-        case TokenKind::InterconnectKeyword:
         case TokenKind::InterfaceKeyword:
         case TokenKind::Identifier:
         case TokenKind::Dot:

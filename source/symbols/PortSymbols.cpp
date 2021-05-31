@@ -164,9 +164,6 @@ public:
 
                 return add(decl, definition, modport, syntax.attributes);
             }
-            case SyntaxKind::InterconnectPortHeader:
-                scope.addDiag(diag::NotYetSupported, syntax.header->sourceRange());
-                return addInherited(decl, syntax.attributes);
             default:
                 THROW_UNREACHABLE;
         }
@@ -464,7 +461,6 @@ private:
                 setInternalSymbol(*net, decl, *netHeader.dataType, info, insertionPoint);
                 break;
             }
-            case SyntaxKind::InterconnectPortHeader:
             case SyntaxKind::InterfacePortHeader:
                 scope.addDiag(diag::NotYetSupported, header.sourceRange());
                 break;

@@ -216,14 +216,6 @@ PortHeaderSyntax& Parser::parsePortHeader(Token constKeyword, Token direction) {
             auto keyword = consume();
             return factory.interfacePortHeader(keyword, parseDotMemberClause());
         }
-
-        if (kind == TokenKind::InterconnectKeyword) {
-            auto keyword = consume();
-            auto signing = parseSigning();
-            auto dimensions = parseDimensionList();
-            auto& type = factory.implicitType(signing, dimensions, placeholderToken());
-            return factory.interconnectPortHeader(direction, keyword, type);
-        }
     }
 
     if (kind == TokenKind::VarKeyword) {

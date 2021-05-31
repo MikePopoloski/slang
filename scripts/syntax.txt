@@ -976,11 +976,6 @@ token direction
 token varKeyword
 DataType dataType
 
-InterconnectPortHeader base=PortHeader
-token direction
-token interconnect
-ImplicitType type
-
 NetPortHeader base=PortHeader
 token direction
 token netType
