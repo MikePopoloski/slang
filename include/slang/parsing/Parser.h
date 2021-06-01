@@ -336,6 +336,7 @@ private:
     SpecparamDeclarationSyntax& parseSpecparam(AttrList attributes);
     MemberSyntax* parseSpecifyItem();
     SpecifyBlockSyntax& parseSpecifyBlock(AttrList attributes);
+    NetAliasSyntax& parseNetAlias(AttrList attributes);
     PathDeclarationSyntax& parsePathDeclaration();
     SystemTimingCheckSyntax& parseSystemTimingCheck();
     TimingCheckArgSyntax& parseTimingCheckArg();

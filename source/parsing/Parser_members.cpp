@@ -145,8 +145,7 @@ MemberSyntax* Parser::parseMember(SyntaxKind parentKind, bool& anyLocalModules) 
         case TokenKind::SpecParamKeyword:
             return &parseSpecparam(attributes);
         case TokenKind::AliasKeyword:
-            // TODO: parse these
-            break;
+            return &parseNetAlias(attributes);
         case TokenKind::SpecifyKeyword:
             errorIfAttributes(attributes);
             return &parseSpecifyBlock(attributes);
@@ -2674,6 +2673,18 @@ SpecifyBlockSyntax& Parser::parseSpecifyBlock(AttrList attributes) {
         [this](SyntaxKind, bool&) { return parseSpecifyItem(); });
 
     return factory.specifyBlock(attributes, specify, members, endspecify);
+}
+
+NetAliasSyntax& Parser::parseNetAlias(AttrList attributes) {
+    auto keyword = consume();
+
+    Token semi;
+    SmallVectorSized<TokenOrSyntax, 8> buffer;
+    parseList<isPossibleExpressionOrEquals, isSemicolon>(
+        buffer, TokenKind::Semicolon, TokenKind::Equals, semi, RequireItems::True,
+        diag::ExpectedExpression, [this] { return &parseExpression(); });
+
+    return factory.netAlias(attributes, keyword, buffer.copy(alloc), semi);
 }
 
 void Parser::checkMemberAllowed(const SyntaxNode& member, SyntaxKind parentKind) {

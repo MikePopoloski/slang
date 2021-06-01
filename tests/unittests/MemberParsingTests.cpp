@@ -730,3 +730,14 @@ endmodule : rlMod
     parseCompilationUnit(text);
     CHECK_DIAGNOSTICS_EMPTY;
 }
+
+TEST_CASE("Net alias parsing") {
+    auto& text = R"(
+module m;
+    alias {A[7:0],A[15:8],A[23:16],A[31:24]} = B = {C, A};
+endmodule
+)";
+
+    parseCompilationUnit(text);
+    CHECK_DIAGNOSTICS_EMPTY;
+}

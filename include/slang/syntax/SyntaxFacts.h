@@ -141,6 +141,9 @@ public:
     /// @return true if the given token represents a possible expression or "&&&" token.
     static bool isPossibleExpressionOrTripleAnd(TokenKind kind);
 
+    /// @return true if the given token represents a possible expression or an equals sign.
+    static bool isPossibleExpressionOrEquals(TokenKind kind);
+
     /// @return true if the given token represents a possible for-statement variable initializer.
     static bool isPossibleForInitializer(TokenKind kind);
 

@@ -1540,6 +1540,11 @@ token specify
 list<Member> items
 token endspecify
 
+NetAlias base=Member
+token keyword
+separated_list<Expression> nets
+token semi
+
 // ----- CONSTRAINTS -----
 
 ConstraintItem final=false

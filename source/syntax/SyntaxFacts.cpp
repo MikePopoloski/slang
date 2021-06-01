@@ -708,6 +708,10 @@ bool SyntaxFacts::isPossibleExpressionOrTripleAnd(TokenKind kind) {
     return kind == TokenKind::TripleAnd || isPossibleExpression(kind);
 }
 
+bool SyntaxFacts::isPossibleExpressionOrEquals(TokenKind kind) {
+    return kind == TokenKind::Equals || isPossibleExpression(kind);
+}
+
 bool SyntaxFacts::isPossibleForInitializer(TokenKind kind) {
     return kind == TokenKind::Comma || kind == TokenKind::VarKeyword || isPossibleExpression(kind);
 }
@@ -1225,6 +1229,7 @@ static bool isModuleCommonItem(SyntaxKind kind) {
         case SyntaxKind::ImmediateAssertionMember:
         case SyntaxKind::ConcurrentAssertionMember:
         case SyntaxKind::ContinuousAssign:
+        case SyntaxKind::NetAlias:
         case SyntaxKind::InitialBlock:
         case SyntaxKind::FinalBlock:
         case SyntaxKind::AlwaysBlock:
