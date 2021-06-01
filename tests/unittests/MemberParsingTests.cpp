@@ -741,3 +741,15 @@ endmodule
     parseCompilationUnit(text);
     CHECK_DIAGNOSTICS_EMPTY;
 }
+
+TEST_CASE("Package export parsing") {
+    auto& text = R"(
+package p;
+    export a::b, a::*;
+    export *::*;
+endpackage
+)";
+
+    parseCompilationUnit(text);
+    CHECK_DIAGNOSTICS_EMPTY;
+}

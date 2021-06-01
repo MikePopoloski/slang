@@ -571,6 +571,18 @@ token keyword
 separated_list<PackageImportItem> items
 token semi
 
+PackageExportDeclaration base=Member
+token keyword
+separated_list<PackageImportItem> items
+token semi
+
+PackageExportAllDeclaration base=Member
+token keyword
+token star1
+token doubleColon
+token star2
+token semi
+
 ParameterDeclarationBase final=false
 token keyword
 

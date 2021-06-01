@@ -949,7 +949,6 @@ TEST_CASE("All Punctuation") {
     testPunctuation(TokenKind::ColonEquals);
     testPunctuation(TokenKind::ColonSlash);
     testPunctuation(TokenKind::DoubleColon);
-    testPunctuation(TokenKind::StarDoubleColonStar);
     testPunctuation(TokenKind::Comma);
     testPunctuation(TokenKind::DotStar);
     testPunctuation(TokenKind::Dot);

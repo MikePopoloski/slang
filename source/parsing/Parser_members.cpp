@@ -241,7 +241,10 @@ MemberSyntax* Parser::parseMember(SyntaxKind parentKind, bool& anyLocalModules) 
             }
             return &parseImportDeclaration(attributes);
         case TokenKind::ExportKeyword:
-            return &parseDPIExport(attributes);
+            if (peek(1).kind == TokenKind::StringLiteral) {
+                return &parseDPIExport(attributes);
+            }
+            return &parseExportDeclaration(attributes);
         case TokenKind::Semicolon:
             return &factory.emptyMember(attributes, nullptr, consume());
         case TokenKind::PropertyKeyword:
@@ -1770,6 +1773,27 @@ PackageImportItemSyntax& Parser::parsePackageImportItem() {
         item = expect(TokenKind::Identifier);
 
     return factory.packageImportItem(package, doubleColon, item);
+}
+
+MemberSyntax& Parser::parseExportDeclaration(AttrList attributes) {
+    auto keyword = consume();
+
+    if (peek(TokenKind::Star)) {
+        auto star1 = consume();
+        auto doubleColon = expect(TokenKind::DoubleColon);
+        auto star2 = expect(TokenKind::Star);
+        auto semi = expect(TokenKind::Semicolon);
+        return factory.packageExportAllDeclaration(attributes, keyword, star1, doubleColon, star2,
+                                                   semi);
+    }
+
+    Token semi;
+    SmallVectorSized<TokenOrSyntax, 4> items;
+    parseList<isIdentifierOrComma, isSemicolon>(items, TokenKind::Semicolon, TokenKind::Comma, semi,
+                                                RequireItems::True, diag::ExpectedPackageImport,
+                                                [this] { return &parsePackageImportItem(); });
+
+    return factory.packageExportDeclaration(attributes, keyword, items.copy(alloc), semi);
 }
 
 Token Parser::parseDPISpecString() {

@@ -264,6 +264,7 @@ private:
     TimeUnitsDeclarationSyntax& parseTimeUnitsDeclaration(AttrList attributes);
     span<PackageImportDeclarationSyntax*> parsePackageImports();
     PackageImportDeclarationSyntax& parseImportDeclaration(AttrList attributes);
+    MemberSyntax& parseExportDeclaration(AttrList attributes);
     PackageImportItemSyntax& parsePackageImportItem();
     NetTypeDeclarationSyntax& parseNetTypeDecl(AttrList attributes);
     DPIImportSyntax& parseDPIImport(AttrList attributes);

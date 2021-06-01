@@ -237,7 +237,6 @@ enum class TokenKind : uint16_t {
     ColonEquals,
     ColonSlash,
     DoubleColon,
-    StarDoubleColonStar,
     Comma,
     DotStar,
     Dot,

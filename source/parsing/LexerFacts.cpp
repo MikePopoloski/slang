@@ -694,7 +694,6 @@ string_view LexerFacts::getTokenKindText(TokenKind kind) {
         case TokenKind::ColonEquals: return ":=";
         case TokenKind::ColonSlash: return ":/";
         case TokenKind::DoubleColon: return "::";
-        case TokenKind::StarDoubleColonStar: return "*::*";
         case TokenKind::Comma: return ",";
         case TokenKind::DotStar: return ".*";
         case TokenKind::Dot: return ".";

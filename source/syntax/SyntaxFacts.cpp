@@ -1326,6 +1326,8 @@ bool SyntaxFacts::isAllowedInProgram(SyntaxKind kind) {
 bool SyntaxFacts::isAllowedInPackage(SyntaxKind kind) {
     switch (kind) {
         case SyntaxKind::TimeUnitsDeclaration:
+        case SyntaxKind::PackageExportDeclaration:
+        case SyntaxKind::PackageExportAllDeclaration:
             return true;
         default:
             return isModuleOrPackageDecl(kind);

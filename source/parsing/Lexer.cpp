@@ -296,12 +296,6 @@ Token Lexer::lexToken(KeywordVersion keywordVersion) {
                 case ')':
                     advance();
                     return create(TokenKind::StarCloseParenthesis);
-                case ':':
-                    if (peek(1) == ':' && peek(2) == '*') {
-                        advance(3);
-                        return create(TokenKind::StarDoubleColonStar);
-                    }
-                    return create(TokenKind::Star);
             }
             return create(TokenKind::Star);
         case '+':
