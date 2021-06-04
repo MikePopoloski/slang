@@ -1659,7 +1659,7 @@ WithFunctionSample
 token with
 token function
 token sample
-AnsiPortList portList
+FunctionPortList? portList
 
 BlockEventExpression final=false
 empty
@@ -1682,7 +1682,7 @@ token closeParen
 CovergroupDeclaration base=Member
 token covergroup
 token name
-AnsiPortList? portList
+FunctionPortList? portList
 SyntaxNode? event
 token semi
 list<Member> members
@@ -1697,11 +1697,18 @@ token equals
 Expression expr
 token semi
 
+CoverageIffClause
+token iff
+token openParen
+Expression expr
+token closeParen
+
 Coverpoint base=Member
 DataType? type
 NamedLabel? label
 token coverpoint
 Expression expr
+CoverageIffClause? iff
 token openBrace
 list<Member> members
 token closeBrace
@@ -1722,7 +1729,6 @@ token closeParen
 
 ExpressionCoverageBinInitializer base=CoverageBinInitializer
 Expression expr
-WithClause? withClause
 
 RangeCoverageBinInitializer base=CoverageBinInitializer
 OpenRangeList ranges
@@ -1745,13 +1751,6 @@ token closeParen
 
 TransListCoverageBinInitializer base=CoverageBinInitializer
 separated_list<TransSet> sets
-WithClause? withClause
-
-CoverageIffClause
-token iff
-token openParen
-Expression expr
-token closeParen
 
 CoverageBins base=Member
 token wildcard
@@ -1760,6 +1759,56 @@ token name
 ElementSelect? selector
 token equals
 CoverageBinInitializer initializer
+CoverageIffClause? iff
+token semi
+
+CoverCross base=Member
+NamedLabel? label
+token cross
+separated_list<IdentifierName> items
+CoverageIffClause? iff
+token openBrace
+list<Member> members
+token closeBrace
+token emptySemi
+
+BinsSelectExpression final=false
+empty
+
+IntersectClause
+token intersect
+OpenRangeList ranges
+
+BinsSelectConditionExpr base=BinsSelectExpression
+token binsof
+token openParen
+Name name
+token closeParen
+IntersectClause? intersects
+
+UnaryBinsSelectExpr base=BinsSelectExpression
+token op
+BinsSelectConditionExpr expr
+
+BinaryBinsSelectExpr base=BinsSelectExpression
+BinsSelectExpression left
+token op
+BinsSelectExpression right
+
+ParenthesizedBinsSelectExpr base=BinsSelectExpression
+token openParen
+BinsSelectExpression expr
+token closeParen
+
+SimpleBinsSelectExpr base=BinsSelectExpression
+Expression expr
+MatchesClause? matchesClause
+
+BinsSelection base=Member
+token keyword
+token name
+token equals
+BinsSelectExpression expr
 CoverageIffClause? iff
 token semi
 

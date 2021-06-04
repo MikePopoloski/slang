@@ -45,9 +45,13 @@ enum class ExpressionOptions {
 
     /// When parsing a primary expression, don't parse a full integer vector
     /// but instead just the first integer literal token.
-    DisallowVectors = 1 << 5
+    DisallowVectors = 1 << 5,
+
+    /// In a bins select context the && and || operators should be left
+    /// to the bins parsing instead of being part of the expression itself.
+    BinsSelectContext = 1 << 6
 };
-BITMASK(ExpressionOptions, DisallowVectors);
+BITMASK(ExpressionOptions, BinsSelectContext);
 
 /// Various options for parsing names.
 enum class NameOptions {
@@ -292,6 +296,7 @@ private:
     PrimitiveInstantiationSyntax& parsePrimitiveInstantiation(AttrList attributes);
     PortConnectionSyntax& parsePortConnection();
     FunctionPortSyntax& parseFunctionPort(bool allowEmptyName);
+    FunctionPortListSyntax* parseFunctionPortList(bool allowEmptyNames);
     FunctionPrototypeSyntax& parseFunctionPrototype(SyntaxKind parentKind, bitmask<FunctionOptions> options, bool* isConstructor = nullptr);
     FunctionDeclarationSyntax& parseFunctionDeclaration(AttrList attributes, SyntaxKind functionKind, TokenKind endKind, SyntaxKind parentKind);
     Token parseLifetime();
@@ -311,8 +316,13 @@ private:
     WithClauseSyntax* parseWithClause();
     CovergroupDeclarationSyntax& parseCovergroupDeclaration(AttrList attributes);
     CoverpointSyntax* parseCoverpoint(AttrList attributes, DataTypeSyntax* type, NamedLabelSyntax* label);
+    CoverCrossSyntax* parseCoverCross(AttrList attributes, NamedLabelSyntax* label);
     CoverageOptionSyntax* parseCoverageOption(AttrList attributes);
+    CoverageIffClauseSyntax* parseCoverageIffClause();
     MemberSyntax* parseCoverpointMember();
+    MemberSyntax* parseCoverCrossMember();
+    BinsSelectExpressionSyntax& parseBinsSelectPrimary();
+    BinsSelectExpressionSyntax& parseBinsSelectExpression();
     MemberSyntax& parseConstraint(AttrList attributes, span<Token> qualifiers);
     ConstraintBlockSyntax& parseConstraintBlock(bool isTopLevel);
     ConstraintItemSyntax* parseConstraintItem(bool allowBlock, bool isTopLevel);

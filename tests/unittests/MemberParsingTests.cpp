@@ -753,3 +753,91 @@ endpackage
     parseCompilationUnit(text);
     CHECK_DIAGNOSTICS_EMPTY;
 }
+
+TEST_CASE("Covergroup parsing") {
+    auto& text = R"(
+class cg_cls;
+	covergroup cg (ref logic [0:3] x, ref logic [0:7] y, ref logic [0:2] a);
+	    xy: coverpoint {x,y};
+	    coverpoint y;
+	    XYA: cross xy, a { }
+	endgroup
+	
+	covergroup cg;
+	    coverpoint a { bins x[] = {[0:10]}; }
+	    coverpoint b { bins y[] = {[0:20]}; }
+	    aXb : cross a, b
+	    {
+	        bins one = '{ '{1,2}, '{3,4}, '{5,6} };
+	    }
+	endgroup
+endclass
+
+module top;
+	bit [7:0] v_a, v_b;
+	covergroup cg @(posedge clk);
+	    a: coverpoint v_a
+	    {
+		    bins a1 = { [0:63] };
+		    bins a2 = { [64:127] };
+		    bins a3 = { [128:191] };
+		    bins a4 = { [192:255] };
+	    }
+	    b: coverpoint v_b
+	    {
+		    bins b1 = {0};
+		    bins b2 = { [1:84] };
+		    bins b3 = { [85:169] };
+		    bins b4 = { [170:255] };
+	    }
+	    c : cross a, b
+	    {
+		    bins c1 = ! binsof(a) intersect {[100:200]};
+		    bins c2 = binsof(a.a2) || binsof(b.b2);
+		    bins c3 = binsof(a.a1) && binsof(b.b4);
+	    }
+	endgroup
+endmodule
+
+module mod_m;
+	logic [31:0] a, b;
+	covergroup cg(int cg_lim);
+	    coverpoint a;
+	    coverpoint b;
+	    aXb : cross a, b
+	    {
+		    function CrossQueueType myFunc1(int f_lim);
+			    for (int i = 0; i < f_lim; ++i)
+			    myFunc1.push_back('{i,i});
+		    endfunction
+		    bins one = myFunc1(cg_lim);
+		    bins two = myFunc2(cg_lim);
+		    function CrossQueueType myFunc2(logic [31:0] f_lim);
+			    for (logic [31:0] i = 0; i < f_lim; ++i)
+			    myFunc2.push_back('{2*i,2*i});
+		    endfunction
+	    }
+	endgroup
+	cg cg_inst = new(3);
+	
+	covergroup yy;
+	    cross a, b
+	    {
+	        ignore_bins ignore = binsof(a) intersect { 5, [1:3] };
+	    }
+	endgroup
+endmodule
+
+covergroup g1 (int w, string instComment) @(posedge clk) ;
+    option.per_instance = 1;
+    option.comment = instComment;
+    a : coverpoint a_var
+    { option.auto_bin_max = 128; }
+    b : coverpoint b_var { option.weight = w; }
+    c1 : cross a_var, b_var ;
+endgroup
+)";
+
+    parseCompilationUnit(text);
+    CHECK_DIAGNOSTICS_EMPTY;
+}

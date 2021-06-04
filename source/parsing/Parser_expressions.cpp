@@ -102,19 +102,26 @@ ExpressionSyntax& Parser::parseBinaryExpression(ExpressionSyntax* left,
         auto opKind = getBinaryExpression(current.kind);
         if (opKind == SyntaxKind::Unknown)
             break;
-
-        // the implication operator in constraint blocks is special, we don't handle it here
-        if (opKind == SyntaxKind::LogicalImplicationExpression &&
-            options.has(ExpressionOptions::ConstraintContext)) {
+        else if (opKind == SyntaxKind::LogicalImplicationExpression &&
+                 options.has(ExpressionOptions::ConstraintContext)) {
+            // the implication operator in constraint blocks is special, we don't handle it here
             break;
         }
-
-        // we have to special case '<=', which can be less than or nonblocking assignment depending
-        // on context
-        if (opKind == SyntaxKind::LessThanEqualExpression &&
-            options.has(ExpressionOptions::ProceduralAssignmentContext)) {
+        else if ((opKind == SyntaxKind::LogicalAndExpression ||
+                  opKind == SyntaxKind::LogicalOrExpression) &&
+                 options.has(ExpressionOptions::BinsSelectContext)) {
+            // The && and || operators in a bins select expression are part of the bins select
+            // and not part of this nested sub expression.
+            break;
+        }
+        else if (opKind == SyntaxKind::LessThanEqualExpression &&
+                 options.has(ExpressionOptions::ProceduralAssignmentContext)) {
+            // we have to special case '<=', which can be less than or nonblocking assignment
+            // depending
+            // on context
             opKind = SyntaxKind::NonblockingAssignmentExpression;
         }
+
         options &= ~ExpressionOptions::ProceduralAssignmentContext;
 
         // see if we should take this operator or if it's part of our parent due to precedence

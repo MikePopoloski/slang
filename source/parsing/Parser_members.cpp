@@ -550,6 +550,21 @@ static bool checkSubroutineName(const NameSyntax& name) {
     return checkKind(name);
 }
 
+FunctionPortListSyntax* Parser::parseFunctionPortList(bool allowEmptyNames) {
+    if (!peek(TokenKind::OpenParenthesis))
+        return nullptr;
+
+    auto openParen = consume();
+    Token closeParen;
+    SmallVectorSized<TokenOrSyntax, 8> buffer;
+    parseList<isPossibleFunctionPort, isEndOfParenList>(
+        buffer, TokenKind::CloseParenthesis, TokenKind::Comma, closeParen, RequireItems::False,
+        diag::ExpectedFunctionPort,
+        [this, allowEmptyNames] { return &parseFunctionPort(allowEmptyNames); });
+
+    return &factory.functionPortList(openParen, buffer.copy(alloc), closeParen);
+}
+
 FunctionPrototypeSyntax& Parser::parseFunctionPrototype(SyntaxKind parentKind,
                                                         bitmask<FunctionOptions> options,
                                                         bool* isConstructor) {
@@ -607,20 +622,7 @@ FunctionPrototypeSyntax& Parser::parseFunctionPrototype(SyntaxKind parentKind,
         addDiag(diag::ImplicitNotAllowed, name.getFirstToken().location());
     }
 
-    const bool allowEmptyNames = options.has(FunctionOptions::AllowEmptyArgNames);
-    FunctionPortListSyntax* portList = nullptr;
-    if (peek(TokenKind::OpenParenthesis)) {
-        auto openParen = consume();
-        Token closeParen;
-        SmallVectorSized<TokenOrSyntax, 8> buffer;
-        parseList<isPossibleFunctionPort, isEndOfParenList>(
-            buffer, TokenKind::CloseParenthesis, TokenKind::Comma, closeParen, RequireItems::False,
-            diag::ExpectedFunctionPort,
-            [this, allowEmptyNames] { return &parseFunctionPort(allowEmptyNames); });
-
-        portList = &factory.functionPortList(openParen, buffer.copy(alloc), closeParen);
-    }
-
+    auto portList = parseFunctionPortList(options.has(FunctionOptions::AllowEmptyArgNames));
     return factory.functionPrototype(keyword, lifetime, *returnType, name, portList);
 }
 
@@ -1285,7 +1287,10 @@ MemberSyntax* Parser::parseCoverageMember() {
     if (token.kind == TokenKind::Identifier && peek(1).kind == TokenKind::Colon) {
         auto name = consume();
         auto& label = factory.namedLabel(name, consume());
-        return parseCoverpoint(attributes, nullptr, &label);
+        if (peek(TokenKind::CrossKeyword))
+            return parseCoverCross(attributes, &label);
+        else
+            return parseCoverpoint(attributes, nullptr, &label);
     }
 
     if (isPossibleDataType(token.kind)) {
@@ -1298,6 +1303,8 @@ MemberSyntax* Parser::parseCoverageMember() {
     switch (token.kind) {
         case TokenKind::CoverPointKeyword:
             return parseCoverpoint(attributes, nullptr, nullptr);
+        case TokenKind::CrossKeyword:
+            return parseCoverCross(attributes, nullptr);
         default:
             break;
     }
@@ -1314,15 +1321,21 @@ MemberSyntax* Parser::parseCoverageMember() {
     return nullptr;
 }
 
-CoverpointSyntax* Parser::parseCoverpoint(AttrList attributes, DataTypeSyntax* type,
-                                          NamedLabelSyntax* label) {
-    // if we have total junk here don't bother trying to fabricate a working tree
-    if (attributes.empty() && !type && !label && !peek(TokenKind::CoverPointKeyword))
+CoverageIffClauseSyntax* Parser::parseCoverageIffClause() {
+    if (!peek(TokenKind::IffKeyword))
         return nullptr;
 
-    Token keyword = expect(TokenKind::CoverPointKeyword);
+    auto iff = consume();
+    auto openParen = expect(TokenKind::OpenParenthesis);
     auto& expr = parseExpression();
-    // TODO: handle iff clause separately?
+    return &factory.coverageIffClause(iff, openParen, expr, expect(TokenKind::CloseParenthesis));
+}
+
+CoverpointSyntax* Parser::parseCoverpoint(AttrList attributes, DataTypeSyntax* type,
+                                          NamedLabelSyntax* label) {
+    auto keyword = expect(TokenKind::CoverPointKeyword);
+    auto& expr = parseExpression();
+    auto iff = parseCoverageIffClause();
 
     if (peek(TokenKind::OpenBrace)) {
         auto openBrace = consume();
@@ -1332,13 +1345,13 @@ CoverpointSyntax* Parser::parseCoverpoint(AttrList attributes, DataTypeSyntax* t
             TokenKind::CloseBrace, closeBrace, SyntaxKind::Coverpoint,
             [this](SyntaxKind, bool&) { return parseCoverpointMember(); });
 
-        return &factory.coverpoint(attributes, type, label, keyword, expr, openBrace, members,
+        return &factory.coverpoint(attributes, type, label, keyword, expr, iff, openBrace, members,
                                    closeBrace, Token());
     }
 
     // no brace, so this is an empty list, expect a semicolon
-    return &factory.coverpoint(attributes, type, label, keyword, expr, Token(), nullptr, Token(),
-                               expect(TokenKind::Semicolon));
+    return &factory.coverpoint(attributes, type, label, keyword, expr, iff, Token(), nullptr,
+                               Token(), expect(TokenKind::Semicolon));
 }
 
 WithClauseSyntax* Parser::parseWithClause() {
@@ -1369,11 +1382,6 @@ MemberSyntax* Parser::parseCoverpointMember() {
             break;
         default:
             break;
-    }
-
-    if (peek(TokenKind::Semicolon)) {
-        errorIfAttributes(attributes);
-        return &factory.emptyMember(attributes, nullptr, consume());
     }
 
     // error out if we have total junk here
@@ -1408,23 +1416,14 @@ MemberSyntax* Parser::parseCoverpointMember() {
             break;
         default: {
             auto& expr = parseExpression();
-            auto with = parseWithClause();
-            initializer = &factory.expressionCoverageBinInitializer(expr, with);
+            initializer = &factory.expressionCoverageBinInitializer(expr);
             break;
         }
     }
 
-    CoverageIffClauseSyntax* iffClause = nullptr;
-    if (peek(TokenKind::IffKeyword)) {
-        auto iff = consume();
-        auto openParen = expect(TokenKind::OpenParenthesis);
-        auto& expr = parseExpression();
-        iffClause =
-            &factory.coverageIffClause(iff, openParen, expr, expect(TokenKind::CloseParenthesis));
-    }
-
+    auto iff = parseCoverageIffClause();
     return &factory.coverageBins(attributes, wildcard, bins, name, selector, equals, *initializer,
-                                 iffClause, expect(TokenKind::Semicolon));
+                                 iff, expect(TokenKind::Semicolon));
 }
 
 TransRangeSyntax& Parser::parseTransRange() {
@@ -1484,7 +1483,7 @@ TransListCoverageBinInitializerSyntax& Parser::parseTransListInitializer() {
         buffer.append(consume());
     }
 
-    return factory.transListCoverageBinInitializer(buffer.copy(alloc), parseWithClause());
+    return factory.transListCoverageBinInitializer(buffer.copy(alloc));
 }
 
 BlockEventExpressionSyntax& Parser::parseBlockEventExpression() {
@@ -1510,14 +1509,135 @@ BlockEventExpressionSyntax& Parser::parseBlockEventExpression() {
     return left;
 }
 
-CovergroupDeclarationSyntax& Parser::parseCovergroupDeclaration(AttrList attributes) {
+CoverCrossSyntax* Parser::parseCoverCross(AttrList attributes, NamedLabelSyntax* label) {
+    auto keyword = expect(TokenKind::CrossKeyword);
 
+    SmallVectorSized<TokenOrSyntax, 8> buffer;
+    while (true) {
+        auto name = expect(TokenKind::Identifier);
+        buffer.append(&factory.identifierName(name));
+        if (!peek(TokenKind::Comma))
+            break;
+
+        buffer.append(consume());
+    }
+
+    auto iff = parseCoverageIffClause();
+
+    if (peek(TokenKind::OpenBrace)) {
+        auto openBrace = consume();
+
+        Token closeBrace;
+        auto members = parseMemberList<MemberSyntax>(
+            TokenKind::CloseBrace, closeBrace, SyntaxKind::CoverCross,
+            [this](SyntaxKind, bool&) { return parseCoverCrossMember(); });
+
+        return &factory.coverCross(attributes, label, keyword, buffer.copy(alloc), iff, openBrace,
+                                   members, closeBrace, Token());
+    }
+
+    // no brace, so this is an empty list, expect a semicolon
+    return &factory.coverCross(attributes, label, keyword, buffer.copy(alloc), iff, Token(),
+                               nullptr, Token(), expect(TokenKind::Semicolon));
+}
+
+BinsSelectExpressionSyntax& Parser::parseBinsSelectPrimary() {
+    auto parseCondition = [&]() -> BinsSelectConditionExprSyntax& {
+        auto binsof = expect(TokenKind::BinsOfKeyword);
+        auto openParen = expect(TokenKind::OpenParenthesis);
+        auto& name = parseName();
+        auto closeParen = expect(TokenKind::CloseParenthesis);
+
+        IntersectClauseSyntax* intersectClause = nullptr;
+        if (peek(TokenKind::IntersectKeyword)) {
+            auto intersect = consume();
+            auto& ranges = parseOpenRangeList();
+            intersectClause = &factory.intersectClause(intersect, ranges);
+        }
+
+        return factory.binsSelectConditionExpr(binsof, openParen, name, closeParen,
+                                               intersectClause);
+    };
+
+    switch (peek().kind) {
+        case TokenKind::BinsOfKeyword:
+            return parseCondition();
+        case TokenKind::Exclamation: {
+            auto op = consume();
+            return factory.unaryBinsSelectExpr(op, parseCondition());
+        }
+        case TokenKind::OpenParenthesis: {
+            auto openParen = consume();
+            auto& expr = parseBinsSelectExpression();
+            auto closeParen = expect(TokenKind::CloseParenthesis);
+            return factory.parenthesizedBinsSelectExpr(openParen, expr, closeParen);
+        }
+        default: {
+            auto& expr = parseSubExpression(ExpressionOptions::BinsSelectContext, 0);
+
+            MatchesClauseSyntax* matchesClause = nullptr;
+            if (peek(TokenKind::MatchesKeyword)) {
+                auto matches = consume();
+                auto& matchExpr = parseSubExpression(ExpressionOptions::BinsSelectContext, 0);
+                matchesClause =
+                    &factory.matchesClause(matches, factory.expressionPattern(matchExpr));
+            }
+
+            return factory.simpleBinsSelectExpr(expr, matchesClause);
+        }
+    }
+}
+
+BinsSelectExpressionSyntax& Parser::parseBinsSelectExpression() {
+    auto curr = &parseBinsSelectPrimary();
+    while (peek(TokenKind::DoubleAnd) || peek(TokenKind::DoubleOr)) {
+        auto op = consume();
+        curr = &factory.binaryBinsSelectExpr(*curr, op, parseBinsSelectPrimary());
+    }
+    return *curr;
+}
+
+MemberSyntax* Parser::parseCoverCrossMember() {
+    auto attributes = parseAttributes();
+
+    if (peek(TokenKind::FunctionKeyword)) {
+        return &parseFunctionDeclaration(attributes, SyntaxKind::FunctionDeclaration,
+                                         TokenKind::EndFunctionKeyword, SyntaxKind::CoverCross);
+    }
+
+    // check for coverage option
+    auto option = parseCoverageOption(attributes);
+    if (option)
+        return option;
+
+    Token bins;
+    switch (peek().kind) {
+        case TokenKind::BinsKeyword:
+        case TokenKind::IllegalBinsKeyword:
+        case TokenKind::IgnoreBinsKeyword:
+            bins = consume();
+            break;
+        default:
+            break;
+    }
+
+    // error out if we have total junk here
+    if (!bins && attributes.empty())
+        return nullptr;
+
+    auto name = expect(TokenKind::Identifier);
+    auto equals = expect(TokenKind::Equals);
+    auto& expr = parseBinsSelectExpression();
+    auto iff = parseCoverageIffClause();
+
+    return &factory.binsSelection(attributes, bins, name, equals, expr, iff,
+                                  expect(TokenKind::Semicolon));
+}
+
+CovergroupDeclarationSyntax& Parser::parseCovergroupDeclaration(AttrList attributes) {
     auto keyword = consume();
     auto name = expect(TokenKind::Identifier);
-
-    AnsiPortListSyntax* portList = nullptr;
-    if (peek(TokenKind::OpenParenthesis))
-        portList = &parseAnsiPortList(consume());
+    auto portList = parseFunctionPortList(/* allowEmptyNames */ false);
 
     SyntaxNode* event = nullptr;
     switch (peek().kind) {
@@ -1526,19 +1646,23 @@ CovergroupDeclarationSyntax& Parser::parseCovergroupDeclaration(AttrList attribu
             event = &factory.eventControlWithExpression(at, parseEventExpression());
             break;
         }
-        case TokenKind::DoubleAt:
-            event = &parseBlockEventExpression();
+        case TokenKind::DoubleAt: {
+            auto atat = consume();
+            auto openParen = expect(TokenKind::OpenParenthesis);
+            auto& expr = parseBlockEventExpression();
+            auto closeParen = expect(TokenKind::CloseParenthesis);
+            event = &factory.blockCoverageEvent(atat, openParen, expr, closeParen);
             break;
+        }
         case TokenKind::WithKeyword: {
             auto with = consume();
             auto function = expect(TokenKind::FunctionKeyword);
 
-            // TODO: make sure this is "sample" (maybe in the binder?)
             auto sample = expect(TokenKind::Identifier);
             if (!sample.isMissing() && sample.valueText() != "sample"sv)
                 addDiag(diag::ExpectedSampleKeyword, sample.location());
 
-            auto& samplePortList = parseAnsiPortList(expect(TokenKind::OpenParenthesis));
+            auto samplePortList = parseFunctionPortList(/* allowEmptyNames */ false);
             event = &factory.withFunctionSample(with, function, sample, samplePortList);
             break;
         }
@@ -2778,6 +2902,7 @@ void Parser::checkMemberAllowed(const SyntaxNode& member, SyntaxKind parentKind)
         // so there's no need to check them here.
         case SyntaxKind::ClassDeclaration:
         case SyntaxKind::Coverpoint:
+        case SyntaxKind::CoverCross:
         case SyntaxKind::CovergroupDeclaration:
         case SyntaxKind::ConstraintBlock:
         case SyntaxKind::ClockingDeclaration:
