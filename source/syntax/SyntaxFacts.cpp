@@ -777,6 +777,21 @@ bool SyntaxFacts::isPossibleUdpEntry(TokenKind kind) {
     }
 }
 
+bool SyntaxFacts::isPossibleRsRule(TokenKind kind) {
+    switch (kind) {
+        case TokenKind::OpenBrace:
+        case TokenKind::IfKeyword:
+        case TokenKind::RepeatKeyword:
+        case TokenKind::CaseKeyword:
+        case TokenKind::Identifier:
+        case TokenKind::RandKeyword:
+        case TokenKind::Or:
+            return true;
+        default:
+            return false;
+    }
+}
+
 bool SyntaxFacts::isPossibleParameter(TokenKind kind) {
     switch (kind) {
         case TokenKind::ParameterKeyword:

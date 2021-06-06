@@ -619,6 +619,19 @@ token keyword
 separated_list<IdentifierName> identifiers
 token semi
 
+FunctionPort
+list<AttributeInstance> attributes
+token constKeyword
+token direction
+token varKeyword
+DataType? dataType
+Declarator declarator
+
+FunctionPortList
+token openParen
+separated_list<FunctionPort> ports
+token closeParen
+
 // ----- TYPES -----
 
 IntegerType base=DataType multiKind=true
@@ -931,6 +944,91 @@ token randCase
 list<RandCaseItem> items
 token endCase
 
+RsProd final=false
+empty
+
+RsProdItem base=RsProd
+token name
+ArgumentList? argList
+
+RsCodeBlock base=RsProd
+token openBrace
+list<SyntaxNode> items
+token closeBrace
+
+RsElseClause
+token keyword
+RsProdItem item
+
+RsIfElse base=RsProd
+token keyword
+token openParen
+Expression condition
+token closeParen
+RsProdItem ifItem
+RsElseClause? elseClause
+
+RsRepeat base=RsProd
+token keyword
+token openParen
+Expression expr
+token closeParen
+RsProdItem item
+
+RsCaseItem final=false
+empty
+
+DefaultRsCaseItem base=RsCaseItem
+token defaultKeyword
+token colon
+RsProdItem item
+token semi
+
+StandardRsCaseItem base=RsCaseItem
+separated_list<Expression> expressions
+token colon
+RsProdItem item
+token semi
+
+RsCase base=RsProd
+token keyword
+token openParen
+Expression expr
+token closeParen
+list<RsCaseItem> items
+token endcase
+
+RandJoinClause
+token rand
+token join
+ParenthesizedExpression? expr
+
+RsWeightClause
+token colonEqual
+Expression weight
+RsProd? codeBlock
+
+RsRule
+RandJoinClause? randJoin
+list<RsProd> prods
+RsWeightClause? weightClause
+
+Production
+DataType? dataType
+token name
+FunctionPortList? portList
+token colon
+separated_list<RsRule> rules
+token semi
+
+RandSequenceStatement base=Statement
+token randsequence
+token openParen
+token firstProduction
+token closeParen
+list<Production> productions
+token endsequence
+
 EventTriggerStatement base=Statement multiKind=true
 token trigger
 TimingControl? timing
@@ -1163,19 +1261,6 @@ token bind
 Name target
 BindTargetList? targetInstances
 HierarchyInstantiation instantiation
-
-FunctionPort
-list<AttributeInstance> attributes
-token constKeyword
-token direction
-token varKeyword
-DataType? dataType
-Declarator declarator
-
-FunctionPortList
-token openParen
-separated_list<FunctionPort> ports
-token closeParen
 
 FunctionPrototype
 token keyword

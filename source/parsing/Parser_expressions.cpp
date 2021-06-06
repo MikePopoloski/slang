@@ -1275,7 +1275,7 @@ SequenceExprSyntax& Parser::parseSequencePrimary() {
         }
         case TokenKind::FirstMatchKeyword: {
             auto keyword = consume();
-            auto openParen = consume();
+            auto openParen = expect(TokenKind::OpenParenthesis);
             auto& expr = parseSequenceExpr(0, /* isInProperty */ false);
 
             Token closeParen;
@@ -1448,7 +1448,7 @@ PropertyExprSyntax& Parser::parsePropertyPrimary() {
         case TokenKind::StrongKeyword:
         case TokenKind::WeakKeyword: {
             auto keyword = consume();
-            auto openParen = consume();
+            auto openParen = expect(TokenKind::OpenParenthesis);
             auto& expr = parseSequenceExpr(0, /* isInProperty */ false);
             auto closeParen = expect(TokenKind::CloseParenthesis);
             return factory.strongWeakPropertyExpr(keyword, openParen, expr, closeParen);
@@ -1515,7 +1515,7 @@ PropertyExprSyntax& Parser::parsePropertyPrimary() {
         case TokenKind::SyncAcceptOnKeyword:
         case TokenKind::SyncRejectOnKeyword: {
             auto keyword = consume();
-            auto openParen = consume();
+            auto openParen = expect(TokenKind::OpenParenthesis);
             auto& condition = parseExpressionOrDist();
             auto closeParen = expect(TokenKind::CloseParenthesis);
             auto& expr = parsePropertyExpr(0);
@@ -1523,7 +1523,7 @@ PropertyExprSyntax& Parser::parsePropertyPrimary() {
         }
         case TokenKind::IfKeyword: {
             auto keyword = consume();
-            auto openParen = consume();
+            auto openParen = expect(TokenKind::OpenParenthesis);
             auto& condition = parseExpressionOrDist();
             auto closeParen = expect(TokenKind::CloseParenthesis);
             auto& expr = parsePropertyExpr(0);

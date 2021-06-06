@@ -233,6 +233,7 @@ private:
     StatementSyntax& parseDisableStatement(NamedLabelSyntax* label, AttrList attributes);
     StatementSyntax& parseAssertionStatement(NamedLabelSyntax* label, AttrList attributes);
     StatementSyntax& parseVoidCallStatement(NamedLabelSyntax* label, AttrList attributes);
+    StatementSyntax& parseRandSequenceStatement(NamedLabelSyntax* label, AttrList attributes);
     ConcurrentAssertionStatementSyntax& parseConcurrentAssertion(NamedLabelSyntax* label, AttrList attributes);
     PropertySpecSyntax& parsePropertySpec();
     ActionBlockSyntax& parseActionBlock();
@@ -363,6 +364,12 @@ private:
     PropertyExprSyntax& parsePropertyExpr(int precedence);
     SequenceMatchListSyntax* parseSequenceMatchList(Token& closeParen);
     SequenceRepetitionSyntax* parseSequenceRepetition();
+    ProductionSyntax& parseProduction();
+    RsRuleSyntax& parseRsRule();
+    RsProdSyntax* parseRsProd();
+    RsProdItemSyntax& parseRsProdItem();
+    RsCodeBlockSyntax& parseRsCodeBlock();
+    RsCaseSyntax& parseRsCase();
     // clang-format on
 
     template<bool (*IsEnd)(TokenKind)>

@@ -236,6 +236,7 @@ const Statement& Statement::bind(const StatementSyntax& syntax, const BindContex
         case SyntaxKind::CoverSequenceStatement:
         case SyntaxKind::RestrictPropertyStatement:
         case SyntaxKind::ExpectPropertyStatement:
+        case SyntaxKind::RandSequenceStatement:
             context.addDiag(diag::NotYetSupported, syntax.sourceRange());
             result = &badStmt(comp, nullptr);
             break;
@@ -417,6 +418,7 @@ static void findBlocks(const Scope& scope, const StatementSyntax& syntax,
         case SyntaxKind::CoverSequenceStatement:
         case SyntaxKind::RestrictPropertyStatement:
         case SyntaxKind::ExpectPropertyStatement:
+        case SyntaxKind::RandSequenceStatement:
             scope.addDiag(diag::NotYetSupported, syntax.sourceRange());
             return;
         default:

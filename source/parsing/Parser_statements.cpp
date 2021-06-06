@@ -107,6 +107,8 @@ StatementSyntax& Parser::parseStatement(bool allowEmpty, bool allowSuperNew) {
             return parseWaitOrderStatement(label, attributes);
         case TokenKind::RandCaseKeyword:
             return parseRandCaseStatement(label, attributes);
+        case TokenKind::RandSequenceKeyword:
+            return parseRandSequenceStatement(label, attributes);
         case TokenKind::Semicolon:
             if (label)
                 addDiag(diag::NoLabelOnSemicolon, peek().location());
@@ -731,6 +733,199 @@ StatementSyntax& Parser::parseVoidCallStatement(NamedLabelSyntax* label, AttrLis
     auto semi = expect(TokenKind::Semicolon);
     return factory.voidCastedCallStatement(label, attributes, keyword, apostrophe, openParen, expr,
                                            closeParen, semi);
+}
+
+RsProdItemSyntax& Parser::parseRsProdItem() {
+    auto name = expect(TokenKind::Identifier);
+
+    ArgumentListSyntax* args = nullptr;
+    if (peek(TokenKind::OpenParenthesis))
+        args = &parseArgumentList();
+
+    return factory.rsProdItem(name, args);
+}
+
+RsCodeBlockSyntax& Parser::parseRsCodeBlock() {
+    auto openBrace = expect(TokenKind::OpenBrace);
+
+    Token closeBrace;
+    auto items = parseBlockItems(TokenKind::CloseBrace, closeBrace, /* inConstructor */ false);
+
+    return factory.rsCodeBlock(openBrace, items, closeBrace);
+}
+
+RsCaseSyntax& Parser::parseRsCase() {
+    auto keyword = consume();
+    auto openParen = expect(TokenKind::OpenParenthesis);
+    auto& condition = parseExpression();
+    auto closeParen = expect(TokenKind::CloseParenthesis);
+
+    SmallVectorSized<RsCaseItemSyntax*, 8> itemBuffer;
+    SourceLocation lastDefault;
+    bool errored = false;
+
+    while (true) {
+        auto kind = peek().kind;
+        if (kind == TokenKind::DefaultKeyword) {
+            if (lastDefault && !errored) {
+                auto& diag = addDiag(diag::MultipleDefaultCases, peek().location()) << "case"sv;
+                diag.addNote(diag::NotePreviousDefinition, lastDefault);
+                errored = true;
+            }
+
+            lastDefault = peek().location();
+
+            auto def = consume();
+            auto colon = consumeIf(TokenKind::Colon);
+            auto& item = parseRsProdItem();
+            auto semi = expect(TokenKind::Semicolon);
+            itemBuffer.append(&factory.defaultRsCaseItem(def, colon, item, semi));
+        }
+        else if (isPossibleExpression(kind)) {
+            Token colon;
+            SmallVectorSized<TokenOrSyntax, 8> buffer;
+            parseList<isPossibleExpressionOrComma, isEndOfCaseItem>(
+                buffer, TokenKind::Colon, TokenKind::Comma, colon, RequireItems::True,
+                diag::ExpectedExpression, [this] { return &parseExpression(); });
+
+            auto& item = parseRsProdItem();
+            auto semi = expect(TokenKind::Semicolon);
+            itemBuffer.append(&factory.standardRsCaseItem(buffer.copy(alloc), colon, item, semi));
+        }
+        else {
+            break;
+        }
+    }
+
+    if (itemBuffer.empty())
+        addDiag(diag::CaseStatementEmpty, keyword.location()) << "case"sv;
+
+    auto endcase = expect(TokenKind::EndCaseKeyword);
+    return factory.rsCase(keyword, openParen, condition, closeParen, itemBuffer.copy(alloc),
+                          endcase);
+}
+
+RsProdSyntax* Parser::parseRsProd() {
+    switch (peek().kind) {
+        case TokenKind::Identifier:
+            return &parseRsProdItem();
+        case TokenKind::IfKeyword: {
+            auto keyword = consume();
+            auto openParen = expect(TokenKind::OpenParenthesis);
+            auto& condition = parseExpression();
+            auto closeParen = expect(TokenKind::CloseParenthesis);
+            auto& ifItem = parseRsProdItem();
+
+            RsElseClauseSyntax* elseClause = nullptr;
+            if (peek(TokenKind::ElseKeyword)) {
+                auto elseKeyword = consume();
+                auto& elseItem = parseRsProdItem();
+                elseClause = &factory.rsElseClause(elseKeyword, elseItem);
+            }
+
+            return &factory.rsIfElse(keyword, openParen, condition, closeParen, ifItem, elseClause);
+        }
+        case TokenKind::RepeatKeyword: {
+            auto keyword = consume();
+            auto openParen = expect(TokenKind::OpenParenthesis);
+            auto& expr = parseExpression();
+            auto closeParen = expect(TokenKind::CloseParenthesis);
+            auto& item = parseRsProdItem();
+
+            return &factory.rsRepeat(keyword, openParen, expr, closeParen, item);
+        }
+        case TokenKind::CaseKeyword:
+            return &parseRsCase();
+        case TokenKind::OpenBrace:
+            return &parseRsCodeBlock();
+        default:
+            return nullptr;
+    }
+}
+
+RsRuleSyntax& Parser::parseRsRule() {
+    RandJoinClauseSyntax* randJoin = nullptr;
+    if (peek(TokenKind::RandKeyword)) {
+        auto rand = consume();
+        auto join = expect(TokenKind::JoinKeyword);
+
+        ParenthesizedExpressionSyntax* parenExpr = nullptr;
+        if (peek(TokenKind::OpenParenthesis)) {
+            auto openParen = consume();
+            auto& expr = parseExpression();
+            auto closeParen = expect(TokenKind::CloseParenthesis);
+            parenExpr = &factory.parenthesizedExpression(openParen, expr, closeParen);
+        }
+
+        randJoin = &factory.randJoinClause(rand, join, parenExpr);
+    }
+
+    SmallVectorSized<RsProdSyntax*, 16> prods;
+    while (true) {
+        auto prod = parseRsProd();
+        if (!prod)
+            break;
+
+        prods.append(prod);
+    }
+
+    RsWeightClauseSyntax* weightClause = nullptr;
+    if (peek(TokenKind::ColonEquals)) {
+        auto colonEqual = consume();
+        auto& weight = parsePrimaryExpression(ExpressionOptions::DisallowVectors);
+
+        RsCodeBlockSyntax* codeBlock = nullptr;
+        if (peek(TokenKind::OpenBrace))
+            codeBlock = &parseRsCodeBlock();
+
+        weightClause = &factory.rsWeightClause(colonEqual, weight, codeBlock);
+    }
+
+    return factory.rsRule(randJoin, prods.copy(alloc), weightClause);
+}
+
+ProductionSyntax& Parser::parseProduction() {
+    // Data type is optional so we have to scan ahead to disambiguate the production name.
+    DataTypeSyntax* dataType = nullptr;
+    if (!peek(TokenKind::Identifier))
+        dataType = &parseDataType(TypeOptions::AllowVoid);
+    else {
+        auto next = peek(1);
+        if (next.kind != TokenKind::OpenParenthesis && next.kind != TokenKind::Colon)
+            dataType = &parseDataType(TypeOptions::AllowVoid);
+    }
+
+    auto name = expect(TokenKind::Identifier);
+    auto ports = parseFunctionPortList(/* allowEmptyNames */ false);
+    auto colon = expect(TokenKind::Colon);
+
+    Token semi;
+    SmallVectorSized<TokenOrSyntax, 8> buffer;
+    parseList<isPossibleRsRule, isSemicolon>(buffer, TokenKind::Semicolon, TokenKind::Or, semi,
+                                             RequireItems::True, diag::ExpectedRsRule,
+                                             [this] { return &parseRsRule(); });
+
+    return factory.production(dataType, name, ports, colon, buffer.copy(alloc), semi);
+}
+
+StatementSyntax& Parser::parseRandSequenceStatement(NamedLabelSyntax* label, AttrList attributes) {
+    auto keyword = consume();
+    auto openParen = expect(TokenKind::OpenParenthesis);
+    auto firstProd = consumeIf(TokenKind::Identifier);
+    auto closeParen = expect(TokenKind::CloseParenthesis);
+
+    SmallVectorSized<ProductionSyntax*, 16> productions;
+    while (true) {
+        auto kind = peek().kind;
+        if (kind == TokenKind::EndOfFile || kind == TokenKind::EndSequenceKeyword)
+            break;
+
+        productions.append(&parseProduction());
+    }
+
+    auto endsequence = expect(TokenKind::EndSequenceKeyword);
+    return factory.randSequenceStatement(label, attributes, keyword, openParen, firstProd,
+                                         closeParen, productions.copy(alloc), endsequence);
 }
 
 } // namespace slang
