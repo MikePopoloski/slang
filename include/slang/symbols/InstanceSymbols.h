@@ -181,20 +181,28 @@ struct PrimitiveInstantiationSyntax;
 /// after the initial one about the unknown module itself.
 class UnknownModuleSymbol : public Symbol {
 public:
+    /// The name of the unknown module being instantiated.
+    string_view moduleName;
+
     /// The self-determined expressions that are assigned to the parameters
     /// in the instantiation. These aren't necessarily correctly typed
     /// since we can't know the destination type of each parameter.
     span<const Expression* const> paramExpressions;
 
-    UnknownModuleSymbol(string_view name, SourceLocation loc,
+    UnknownModuleSymbol(string_view name, SourceLocation loc, string_view moduleName,
                         span<const Expression* const> params) :
         Symbol(SymbolKind::UnknownModule, name, loc),
-        paramExpressions(params) {}
+        moduleName(moduleName), paramExpressions(params) {}
 
     /// Gets the self-determined expressions that are assigned to the ports
     /// in the instantiation. These aren't necessarily correctly typed
     /// since we can't know the destination type of each port.
     span<const Expression* const> getPortConnections() const;
+
+    /// The names of the ports that were connected in the instance. If the names
+    /// are not known, because ordered connection syntax was used, the associated
+    /// port name will be the empty string.
+    span<string_view const> getPortNames() const;
 
     static void fromSyntax(Compilation& compilation, const HierarchyInstantiationSyntax& syntax,
                            LookupLocation location, const Scope& scope,
@@ -212,6 +220,7 @@ public:
 
 private:
     mutable optional<span<const Expression* const>> ports;
+    mutable span<string_view const> portNames;
 };
 
 class PrimitiveInstanceSymbol : public InstanceSymbolBase {

@@ -753,7 +753,8 @@ void InstanceArraySymbol::serializeTo(ASTSerializer& serializer) const {
 
 template<typename TSyntax>
 static void createUnknownModules(Compilation& compilation, const TSyntax& syntax,
-                                 const BindContext& context, span<const Expression* const> params,
+                                 string_view moduleName, const BindContext& context,
+                                 span<const Expression* const> params,
                                  SmallVector<const Symbol*>& results,
                                  SmallVector<const Symbol*>& implicitNets) {
     SmallSet<string_view, 8> implicitNetNames;
@@ -762,7 +763,7 @@ static void createUnknownModules(Compilation& compilation, const TSyntax& syntax
         createImplicitNets(*instanceSyntax, context, netType, implicitNetNames, implicitNets);
 
         auto [name, loc] = getNameLoc(*instanceSyntax);
-        auto sym = compilation.emplace<UnknownModuleSymbol>(name, loc, params);
+        auto sym = compilation.emplace<UnknownModuleSymbol>(name, loc, moduleName, params);
         sym->setSyntax(*instanceSyntax);
         sym->setAttributes(*context.scope, syntax.attributes);
         results.append(sym);
@@ -791,7 +792,8 @@ void UnknownModuleSymbol::fromSyntax(Compilation& compilation,
     }
 
     auto paramSpan = params.copy(compilation);
-    createUnknownModules(compilation, syntax, context, paramSpan, results, implicitNets);
+    createUnknownModules(compilation, syntax, syntax.type.valueText(), context, paramSpan, results,
+                         implicitNets);
 }
 
 void UnknownModuleSymbol::fromSyntax(Compilation& compilation,
@@ -800,7 +802,8 @@ void UnknownModuleSymbol::fromSyntax(Compilation& compilation,
                                      SmallVector<const Symbol*>& results,
                                      SmallVector<const Symbol*>& implicitNets) {
     BindContext context(scope, location, BindFlags::NonProcedural);
-    createUnknownModules(compilation, syntax, context, {}, results, implicitNets);
+    createUnknownModules(compilation, syntax, syntax.type.valueText(), context, {}, results,
+                         implicitNets);
 }
 
 span<const Expression* const> UnknownModuleSymbol::getPortConnections() const {
@@ -809,33 +812,59 @@ span<const Expression* const> UnknownModuleSymbol::getPortConnections() const {
         auto scope = getParentScope();
         ASSERT(syntax && scope);
 
+        auto& comp = scope->getCompilation();
         BindContext context(*scope, LookupLocation::after(*this));
 
         SmallVectorSized<const Expression*, 8> results;
+        SmallVectorSized<string_view, 8> names;
         for (auto port : syntax->as<HierarchicalInstanceSyntax>().connections) {
-            if (port->kind == SyntaxKind::OrderedPortConnection)
+            if (port->kind == SyntaxKind::OrderedPortConnection) {
+                names.append(""sv);
                 results.append(
                     &Expression::bind(*port->as<OrderedPortConnectionSyntax>().expr, context));
+            }
             else if (port->kind == SyntaxKind::NamedPortConnection) {
-                if (auto ex = port->as<NamedPortConnectionSyntax>().expr)
+                auto& npc = port->as<NamedPortConnectionSyntax>();
+                names.append(npc.name.valueText());
+
+                if (auto ex = npc.expr)
                     results.append(&Expression::bind(*ex, context));
             }
         }
 
-        ports = results.copy(scope->getCompilation());
+        ports = results.copy(comp);
+        portNames = names.copy(comp);
     }
     return *ports;
 }
 
+span<string_view const> UnknownModuleSymbol::getPortNames() const {
+    if (!ports)
+        getPortConnections();
+    return portNames;
+}
+
 void UnknownModuleSymbol::serializeTo(ASTSerializer& serializer) const {
+    serializer.write("moduleName", moduleName);
+
     serializer.startArray("parameters");
     for (auto expr : paramExpressions)
         serializer.serialize(*expr);
     serializer.endArray();
 
+    auto conns = getPortConnections();
+    auto names = getPortNames();
+    ASSERT(conns.size() == names.size());
+
     serializer.startArray("ports");
-    for (auto expr : getPortConnections())
-        serializer.serialize(*expr);
+    for (size_t i = 0; i < conns.size(); i++) {
+        serializer.startObject();
+        if (!names[i].empty())
+            serializer.write("name", names[i]);
+
+        serializer.write("expr", *conns[i]);
+        serializer.endObject();
+    }
     serializer.endArray();
 }
 
