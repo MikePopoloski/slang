@@ -1433,3 +1433,35 @@ endinterface
     CHECK(diags[0].code == diag::InvalidInstanceForParent);
     CHECK(diags[1].code == diag::InvalidPrimInstanceForParent);
 }
+
+TEST_CASE("Regression test for assigning lookup indices to generate blocks") {
+    auto tree = SyntaxTree::fromText(R"(
+interface I; endinterface
+module n (I i); endmodule
+
+module m;
+    for (genvar i = 0; i < 5; i++) begin : loop
+        I iface();
+        if (i == 0) begin : a
+            n n1(iface);
+        end
+        else if (i == 1) begin : b
+            n n2(iface);
+        end
+        else if (i == 2) begin : c
+            n n3(iface);
+        end
+        else if (i == 3) begin : d
+            n n4(iface);
+        end
+        else begin : e
+            n n5(iface);
+        end
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}

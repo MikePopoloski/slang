@@ -950,7 +950,6 @@ static const Symbol* selectChildRange(const InstanceArraySymbol& array,
     if (begin > end)
         std::swap(begin, end);
 
-    ASSERT(begin);
     auto elems = array.elements.subspan(size_t(begin), size_t(end - begin + 1));
 
     ConstantRange newRange{ int32_t(selRange.width()) - 1, 0 };

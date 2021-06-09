@@ -734,18 +734,19 @@ void Scope::elaborate() const {
         }
     };
 
-    // Go through deferred instances and elaborate them now. We skip generate blocks in
-    // the initial pass because evaluating their conditions may depend on other members
-    // that have yet to be elaborated.
+    // Go through deferred instances and elaborate them now.
     bool usedPorts = false;
     auto deferred = deferredData.getMembers();
+    uint32_t constructIndex = 1;
+
     for (auto symbol : deferred) {
+        LookupLocation location = LookupLocation::before(*symbol);
         auto& member = symbol->as<DeferredMemberSymbol>();
+
         switch (member.node.kind) {
             case SyntaxKind::HierarchyInstantiation: {
                 SmallVectorSized<const Symbol*, 8> instances;
                 SmallVectorSized<const Symbol*, 8> implicitNets;
-                LookupLocation location = LookupLocation::before(*symbol);
                 InstanceSymbol::fromSyntax(compilation,
                                            member.node.as<HierarchyInstantiationSyntax>(), location,
                                            *this, instances, implicitNets);
@@ -755,123 +756,11 @@ void Scope::elaborate() const {
             case SyntaxKind::PrimitiveInstantiation: {
                 SmallVectorSized<const Symbol*, 8> instances;
                 SmallVectorSized<const Symbol*, 8> implicitNets;
-                LookupLocation location = LookupLocation::before(*symbol);
                 PrimitiveInstanceSymbol::fromSyntax(member.node.as<PrimitiveInstantiationSyntax>(),
                                                     location, *this, instances, implicitNets);
                 insertMembersAndNets(instances, implicitNets, symbol);
                 break;
             }
-            case SyntaxKind::AnsiPortList:
-            case SyntaxKind::NonAnsiPortList: {
-                SmallVectorSized<const Symbol*, 8> ports;
-                SmallVectorSized<std::pair<Symbol*, const Symbol*>, 8> implicitMembers;
-                PortSymbol::fromSyntax(member.node.as<PortListSyntax>(), *this, ports,
-                                       implicitMembers, deferredData.getPortDeclarations());
-                insertMembers(ports, symbol);
-
-                for (auto [implicitMember, insertionPoint] : implicitMembers)
-                    insertMember(implicitMember, insertionPoint, true, false);
-
-                // Let the instance know its list of ports. This is kind of annoying because it
-                // inverts the dependency tree but it's better than giving all symbols a virtual
-                // method just for this.
-                asSymbol().as<InstanceBodySymbol>().setPorts(ports.copy(compilation));
-                usedPorts = true;
-                break;
-            }
-            case SyntaxKind::DataDeclaration: {
-                SmallVectorSized<const ValueSymbol*, 4> symbols;
-                VariableSymbol::fromSyntax(compilation, member.node.as<DataDeclarationSyntax>(),
-                                           *this, symbols);
-                insertMembers(symbols, symbol);
-                break;
-            }
-            case SyntaxKind::ContinuousAssign: {
-                SmallVectorSized<const Symbol*, 4> symbols;
-                SmallVectorSized<const Symbol*, 8> implicitNets;
-                LookupLocation location = LookupLocation::before(*symbol);
-                ContinuousAssignSymbol::fromSyntax(compilation,
-                                                   member.node.as<ContinuousAssignSyntax>(), *this,
-                                                   location, symbols, implicitNets);
-                insertMembersAndNets(symbols, implicitNets, symbol);
-                break;
-            }
-            case SyntaxKind::ModportDeclaration: {
-                SmallVectorSized<const ModportSymbol*, 4> results;
-                LookupLocation location = LookupLocation::before(*symbol);
-                ModportSymbol::fromSyntax(*this, member.node.as<ModportDeclarationSyntax>(),
-                                          location, results);
-                insertMembers(results, symbol);
-                break;
-            }
-            case SyntaxKind::BindDirective:
-                InstanceSymbol::fromBindDirective(*this, member.node.as<BindDirectiveSyntax>());
-                break;
-            case SyntaxKind::UserDefinedNetDeclaration: {
-                SmallVectorSized<const NetSymbol*, 4> results;
-                LookupLocation location = LookupLocation::before(*symbol);
-                NetSymbol::fromSyntax(*this, member.node.as<UserDefinedNetDeclarationSyntax>(),
-                                      location, results);
-                insertMembers(results, symbol);
-                break;
-            }
-            case SyntaxKind::ClockingItem: {
-                SmallVectorSized<const ClockVarSymbol*, 4> vars;
-                ClockVarSymbol::fromSyntax(*this, member.node.as<ClockingItemSyntax>(), vars);
-                insertMembers(vars, symbol);
-                break;
-            }
-            case SyntaxKind::DefaultClockingReference: {
-                // No symbol to create here; instead, try to look up the clocking block
-                // and register it as a default.
-                LookupLocation location = LookupLocation::before(*symbol);
-                compilation.noteDefaultClocking(*this, location,
-                                                member.node.as<DefaultClockingReferenceSyntax>());
-                break;
-            }
-            case SyntaxKind::DefaultDisableDeclaration: {
-                // No symbol to create here; instead, bind the expression and hand it
-                // off to the compilation for tracking.
-                BindContext context(*this, LookupLocation::before(*symbol));
-                auto& expr = Expression::bind(
-                    *member.node.as<DefaultDisableDeclarationSyntax>().expr, context);
-
-                if (!expr.type->isVoid())
-                    context.requireBooleanConvertible(expr);
-
-                compilation.noteDefaultDisable(*this, expr);
-                break;
-            }
-            default:
-                break;
-        }
-    }
-
-    // Issue an error if port I/Os were declared but the module doesn't have a port list.
-    if (!usedPorts) {
-        for (auto [syntax, symbol] : deferredData.getPortDeclarations()) {
-            for (auto decl : syntax->declarators) {
-                // We'll report an error for just the first decl in each syntax entry,
-                // because it should be clear to the user that there aren't any ports
-                // at all in the module header.
-                auto name = decl->name.valueText();
-                if (!name.empty()) {
-                    addDiag(diag::UnusedPortDecl, decl->sourceRange()) << name;
-                    break;
-                }
-            }
-        }
-    }
-
-    // Now that all instances have been inserted, go back through and elaborate generate
-    // blocks. The spec requires that we give each generate construct an index, starting
-    // from one. This index is used to generate external names for unnamed generate blocks.
-    uint32_t constructIndex = 1;
-    for (auto symbol : deferred) {
-        auto& member = symbol->as<DeferredMemberSymbol>();
-        LookupLocation location = LookupLocation::before(*symbol);
-
-        switch (member.node.kind) {
             case SyntaxKind::IfGenerate: {
                 SmallVectorSized<GenerateBlockSymbol*, 8> blocks;
                 GenerateBlockSymbol::fromSyntax(compilation, member.node.as<IfGenerateSyntax>(),
@@ -903,8 +792,101 @@ void Scope::elaborate() const {
                              symbol, true, true);
                 constructIndex++;
                 break;
+            case SyntaxKind::AnsiPortList:
+            case SyntaxKind::NonAnsiPortList: {
+                SmallVectorSized<const Symbol*, 8> ports;
+                SmallVectorSized<std::pair<Symbol*, const Symbol*>, 8> implicitMembers;
+                PortSymbol::fromSyntax(member.node.as<PortListSyntax>(), *this, ports,
+                                       implicitMembers, deferredData.getPortDeclarations());
+                insertMembers(ports, symbol);
+
+                for (auto [implicitMember, insertionPoint] : implicitMembers)
+                    insertMember(implicitMember, insertionPoint, true, false);
+
+                // Let the instance know its list of ports. This is kind of annoying because it
+                // inverts the dependency tree but it's better than giving all symbols a virtual
+                // method just for this.
+                asSymbol().as<InstanceBodySymbol>().setPorts(ports.copy(compilation));
+                usedPorts = true;
+                break;
+            }
+            case SyntaxKind::DataDeclaration: {
+                SmallVectorSized<const ValueSymbol*, 4> symbols;
+                VariableSymbol::fromSyntax(compilation, member.node.as<DataDeclarationSyntax>(),
+                                           *this, symbols);
+                insertMembers(symbols, symbol);
+                break;
+            }
+            case SyntaxKind::ContinuousAssign: {
+                SmallVectorSized<const Symbol*, 4> symbols;
+                SmallVectorSized<const Symbol*, 8> implicitNets;
+                ContinuousAssignSymbol::fromSyntax(compilation,
+                                                   member.node.as<ContinuousAssignSyntax>(), *this,
+                                                   location, symbols, implicitNets);
+                insertMembersAndNets(symbols, implicitNets, symbol);
+                break;
+            }
+            case SyntaxKind::ModportDeclaration: {
+                SmallVectorSized<const ModportSymbol*, 4> results;
+                ModportSymbol::fromSyntax(*this, member.node.as<ModportDeclarationSyntax>(),
+                                          location, results);
+                insertMembers(results, symbol);
+                break;
+            }
+            case SyntaxKind::BindDirective:
+                InstanceSymbol::fromBindDirective(*this, member.node.as<BindDirectiveSyntax>());
+                break;
+            case SyntaxKind::UserDefinedNetDeclaration: {
+                SmallVectorSized<const NetSymbol*, 4> results;
+                NetSymbol::fromSyntax(*this, member.node.as<UserDefinedNetDeclarationSyntax>(),
+                                      location, results);
+                insertMembers(results, symbol);
+                break;
+            }
+            case SyntaxKind::ClockingItem: {
+                SmallVectorSized<const ClockVarSymbol*, 4> vars;
+                ClockVarSymbol::fromSyntax(*this, member.node.as<ClockingItemSyntax>(), vars);
+                insertMembers(vars, symbol);
+                break;
+            }
+            case SyntaxKind::DefaultClockingReference: {
+                // No symbol to create here; instead, try to look up the clocking block
+                // and register it as a default.
+                compilation.noteDefaultClocking(*this, location,
+                                                member.node.as<DefaultClockingReferenceSyntax>());
+                break;
+            }
+            case SyntaxKind::DefaultDisableDeclaration: {
+                // No symbol to create here; instead, bind the expression and hand it
+                // off to the compilation for tracking.
+                BindContext context(*this, location);
+                auto& expr = Expression::bind(
+                    *member.node.as<DefaultDisableDeclarationSyntax>().expr, context);
+
+                if (!expr.type->isVoid())
+                    context.requireBooleanConvertible(expr);
+
+                compilation.noteDefaultDisable(*this, expr);
+                break;
+            }
             default:
                 break;
+        }
+    }
+
+    // Issue an error if port I/Os were declared but the module doesn't have a port list.
+    if (!usedPorts) {
+        for (auto [syntax, symbol] : deferredData.getPortDeclarations()) {
+            for (auto decl : syntax->declarators) {
+                // We'll report an error for just the first decl in each syntax entry,
+                // because it should be clear to the user that there aren't any ports
+                // at all in the module header.
+                auto name = decl->name.valueText();
+                if (!name.empty()) {
+                    addDiag(diag::UnusedPortDecl, decl->sourceRange()) << name;
+                    break;
+                }
+            }
         }
     }
 
@@ -952,7 +934,7 @@ void Scope::elaborate() const {
     }
 
     // Allow statement blocks containing variables to include them in their member
-    // list before allowing anyone else to access to the contained statements.
+    // list before allowing anyone else to access the contained statements.
     if (thisSym->kind == SymbolKind::StatementBlock) {
         thisSym->as<StatementBlockSymbol>().elaborateVariables(
             [this](const Symbol& member) { insertMember(&member, nullptr, true, true); });
@@ -1032,6 +1014,39 @@ span<const Symbol* const> Scope::DeferredMemberData::getNameConflicts() const {
     return nameConflicts;
 }
 
+static size_t countGenMembers(const SyntaxNode& syntax) {
+    switch (syntax.kind) {
+        case SyntaxKind::IfGenerate: {
+            auto& ifGen = syntax.as<IfGenerateSyntax>();
+            size_t count = countGenMembers(*ifGen.block);
+            if (ifGen.elseClause)
+                count += countGenMembers(*ifGen.elseClause->clause);
+
+            return count;
+        }
+        case SyntaxKind::CaseGenerate: {
+            auto& caseGen = syntax.as<CaseGenerateSyntax>();
+            size_t count = 0;
+            for (auto item : caseGen.items) {
+                switch (item->kind) {
+                    case SyntaxKind::StandardCaseItem:
+                        count += countGenMembers(*item->as<StandardCaseItemSyntax>().clause);
+                        break;
+                    case SyntaxKind::DefaultCaseItem:
+                        count += countGenMembers(*item->as<DefaultCaseItemSyntax>().clause);
+                        break;
+                    default:
+                        THROW_UNREACHABLE;
+                }
+            }
+            return count;
+        }
+        default: {
+            return 1;
+        }
+    }
+}
+
 static size_t countMembers(const SyntaxNode& syntax) {
     // Note that the +1s on some of these are to make a slot for implicit
     // nets that get created to live.
@@ -1046,10 +1061,6 @@ static size_t countMembers(const SyntaxNode& syntax) {
             return syntax.as<AnsiPortListSyntax>().ports.size();
         case SyntaxKind::NonAnsiPortList:
             return syntax.as<NonAnsiPortListSyntax>().ports.size();
-        case SyntaxKind::IfGenerate:
-            return syntax.as<IfGenerateSyntax>().elseClause ? 2 : 1;
-        case SyntaxKind::CaseGenerate:
-            return syntax.as<CaseGenerateSyntax>().items.size();
         case SyntaxKind::ModportDeclaration:
             return syntax.as<ModportDeclarationSyntax>().items.size();
         case SyntaxKind::UserDefinedNetDeclaration:
@@ -1060,6 +1071,9 @@ static size_t countMembers(const SyntaxNode& syntax) {
             return syntax.as<PortDeclarationSyntax>().declarators.size();
         case SyntaxKind::ClockingItem:
             return syntax.as<ClockingItemSyntax>().decls.size();
+        case SyntaxKind::IfGenerate:
+        case SyntaxKind::CaseGenerate:
+            return countGenMembers(syntax);
         case SyntaxKind::LoopGenerate:
         case SyntaxKind::GenerateBlock:
         case SyntaxKind::BindDirective:

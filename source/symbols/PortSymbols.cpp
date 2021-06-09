@@ -924,7 +924,8 @@ private:
             // If this is a variable with an errored type, an error is already emitted.
             if (child->kind != SymbolKind::Variable ||
                 !child->as<VariableSymbol>().getType().isError()) {
-                scope.addDiag(diag::NotAnInterface, range) << symbol->name;
+                auto& diag = scope.addDiag(diag::NotAnInterface, range) << symbol->name;
+                diag.addNote(diag::NoteDeclarationHere, symbol->location);
             }
             return nullptr;
         }
