@@ -332,19 +332,19 @@ endmodule
 TEST_CASE("Assertion statements") {
     auto tree = SyntaxTree::fromText(R"(
 module m;
-
     int i;
     logic foo [3];
 
     initial begin
         assert (i > 0) i++; else i--;
-        assume #0 (i < 0) else i--;
-        cover final (i) i++;
+        assume #0 (i < 0) else bar();
+        cover final (i) bar();
 
         assert (foo);                      // not boolean
         cover (i) else $fatal(1, "SDF");   // fail stmt not allowed
     end
 
+    function void bar(); endfunction
 endmodule
 )");
 
@@ -382,6 +382,35 @@ endmodule
     auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::ConstEvalAssertionFailed);
+}
+
+TEST_CASE("Deferred assertion error cases") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    function void f1; endfunction
+    function void f2(int i, output int o); endfunction
+    function automatic void f3(int i, ref r); endfunction
+
+    int i;
+    initial begin
+        automatic logic r;
+        assume #0 (i < 0) i++; else f1();
+        assert #0 (i < 0) void'($bits(i));
+        assert #0 (i < 0) f2(i, i);
+        assert #0 (i < 0) f3(i, r);
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 4);
+    CHECK(diags[0].code == diag::InvalidDeferredAssertAction);
+    CHECK(diags[1].code == diag::DeferredAssertSysTask);
+    CHECK(diags[2].code == diag::DeferredAssertOutArg);
+    CHECK(diags[3].code == diag::DeferredAssertAutoRefArg);
 }
 
 TEST_CASE("Break statement check -- regression") {

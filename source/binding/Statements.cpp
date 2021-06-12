@@ -7,6 +7,7 @@
 #include "slang/binding/Statements.h"
 
 #include "slang/binding/Expression.h"
+#include "slang/binding/SystemSubroutine.h"
 #include "slang/binding/TimingControl.h"
 #include "slang/compilation/Compilation.h"
 #include "slang/diagnostics/ConstEvalDiags.h"
@@ -1892,6 +1893,57 @@ void TimedStatement::serializeTo(ASTSerializer& serializer) const {
     serializer.write("stmt", stmt);
 }
 
+static void checkDeferredAssertAction(const Statement& stmt, const BindContext& context) {
+    // The statement inside a deferred assertion action block must be a subroutine call.
+    if (stmt.kind != StatementKind::ExpressionStatement ||
+        stmt.as<ExpressionStatement>().expr.kind != ExpressionKind::Call) {
+        context.addDiag(diag::InvalidDeferredAssertAction, stmt.sourceRange);
+        return;
+    }
+
+    // The subroutine being called has some restrictions:
+    // - No output or inout arguments
+    // - If a system call, must be a task
+    // - Any ref arguments cannot reference automatic or dynamic variables
+    auto& call = stmt.as<ExpressionStatement>().expr.as<CallExpression>();
+    if (call.isSystemCall()) {
+        auto& sub = *std::get<1>(call.subroutine).subroutine;
+        if (sub.kind == SubroutineKind::Function) {
+            context.addDiag(diag::DeferredAssertSysTask, stmt.sourceRange);
+            return;
+        }
+    }
+    else {
+        auto& sub = *std::get<0>(call.subroutine);
+        auto args = call.arguments();
+        size_t index = 0;
+        for (auto& formal : sub.getArguments()) {
+            if (formal->direction == ArgumentDirection::Out ||
+                formal->direction == ArgumentDirection::InOut) {
+                auto& diag = context.addDiag(diag::DeferredAssertOutArg, stmt.sourceRange);
+                diag.addNote(diag::NoteDeclarationHere, formal->location);
+                return;
+            }
+
+            if (formal->direction == ArgumentDirection::Ref) {
+                ASSERT(index < args.size());
+                if (auto sym = args[index]->getSymbolReference()) {
+                    if (VariableSymbol::isKind(sym->kind) &&
+                        sym->as<VariableSymbol>().lifetime == VariableLifetime::Automatic) {
+                        auto& diag = context.addDiag(diag::DeferredAssertAutoRefArg,
+                                                     args[index]->sourceRange);
+                        diag << sym->name << formal->name;
+                        diag.addNote(diag::NoteDeclarationHere, sym->location);
+                        return;
+                    }
+                }
+            }
+
+            index++;
+        }
+    }
+}
+
 Statement& ImmediateAssertionStatement::fromSyntax(Compilation& compilation,
                                                    const ImmediateAssertionStatementSyntax& syntax,
                                                    const BindContext& context,
@@ -1923,7 +1975,12 @@ Statement& ImmediateAssertionStatement::fromSyntax(Compilation& compilation,
         bad = true;
     }
 
-    // TODO: add checking for requirements on deferred assertion actions
+    if (isDeferred) {
+        if (ifTrue)
+            checkDeferredAssertAction(*ifTrue, context);
+        if (ifFalse)
+            checkDeferredAssertAction(*ifFalse, context);
+    }
 
     auto result = compilation.emplace<ImmediateAssertionStatement>(
         assertKind, cond, ifTrue, ifFalse, isDeferred, isFinal, syntax.sourceRange());
