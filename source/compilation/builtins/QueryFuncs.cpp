@@ -8,6 +8,7 @@
 #include "slang/compilation/Compilation.h"
 #include "slang/diagnostics/ConstEvalDiags.h"
 #include "slang/diagnostics/SysFuncsDiags.h"
+#include "slang/symbols/ParameterSymbols.h"
 #include "slang/types/TypePrinter.h"
 
 namespace slang::Builtins {
@@ -91,6 +92,43 @@ public:
         printer.append(*args[0]->type);
 
         return printer.toString();
+    }
+
+    bool verifyConstant(EvalContext&, const Args&, SourceRange) const final { return true; }
+};
+
+class IsUnboundedFunction : public SystemSubroutine {
+public:
+    IsUnboundedFunction() : SystemSubroutine("$isunbounded", SubroutineKind::Function) {}
+
+    const Expression& bindArgument(size_t, const BindContext& context,
+                                   const ExpressionSyntax& syntax, const Args&) const final {
+        return Expression::bind(syntax, context,
+                                BindFlags::Constant | BindFlags::AllowUnboundedLiteral);
+    }
+
+    const Type& checkArguments(const BindContext& context, const Args& args, SourceRange range,
+                               const Expression*) const final {
+        auto& comp = context.getCompilation();
+        if (!checkArgCount(context, false, args, range, 1, 1))
+            return comp.getErrorType();
+
+        return comp.getBitType();
+    }
+
+    ConstantValue eval(EvalContext&, const Args& args,
+                       const CallExpression::SystemCallInfo&) const final {
+        if (args[0]->type->isUnbounded())
+            return SVInt(1, 1, false);
+
+        if (args[0]->kind == ExpressionKind::NamedValue) {
+            auto sym = args[0]->getSymbolReference();
+            if (sym && sym->kind == SymbolKind::Parameter &&
+                sym->as<ParameterSymbol>().getValue().isUnbounded())
+                return SVInt(1, 1, false);
+        }
+
+        return SVInt(1, 0, false);
     }
 
     bool verifyConstant(EvalContext&, const Args&, SourceRange) const final { return true; }
@@ -483,6 +521,7 @@ void registerQueryFuncs(Compilation& c) {
 #define REGISTER(name) c.addSystemSubroutine(std::make_unique<name##Function>())
     REGISTER(Bits);
     REGISTER(Typename);
+    REGISTER(IsUnbounded);
     REGISTER(Low);
     REGISTER(High);
     REGISTER(Left);

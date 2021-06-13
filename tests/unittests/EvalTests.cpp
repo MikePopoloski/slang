@@ -2127,6 +2127,12 @@ TEST_CASE("Queue unbounded expressions") {
     CHECK(session.eval("q[p1]").integer() == -1);
     CHECK(session.eval("q[p2-1]").integer() == 4);
 
+    CHECK(session.eval("$isunbounded($)").integer() == 1);
+    CHECK(session.eval("$isunbounded(p1)").integer() == 1);
+    CHECK(session.eval("$isunbounded(p2)").integer() == 1);
+    CHECK(session.eval("$isunbounded(0)").integer() == 0);
+    CHECK(session.eval("$isunbounded(3.14)").integer() == 0);
+
     NO_SESSION_ERRORS;
 }
 
