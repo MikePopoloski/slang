@@ -12,7 +12,9 @@ namespace slang::Builtins {
 
 class FErrorFunc : public SystemSubroutine {
 public:
-    FErrorFunc() : SystemSubroutine("$ferror", SubroutineKind::Function) {}
+    FErrorFunc() : SystemSubroutine("$ferror", SubroutineKind::Function) {
+        hasOutputArgs = true;
+    }
 
     const Type& checkArguments(const BindContext& context, const Args& args, SourceRange range,
                                const Expression*) const final {
@@ -46,7 +48,9 @@ public:
 
 class FGetsFunc : public SystemSubroutine {
 public:
-    FGetsFunc() : SystemSubroutine("$fgets", SubroutineKind::Function) {}
+    FGetsFunc() : SystemSubroutine("$fgets", SubroutineKind::Function) {
+        hasOutputArgs = true;
+    }
 
     const Type& checkArguments(const BindContext& context, const Args& args, SourceRange range,
                                const Expression*) const final {
@@ -82,7 +86,9 @@ class ScanfFunc : public SystemSubroutine {
 public:
     explicit ScanfFunc(bool isFscanf) :
         SystemSubroutine(isFscanf ? "$fscanf" : "$sscanf", SubroutineKind::Function),
-        isFscanf(isFscanf) {}
+        isFscanf(isFscanf) {
+        hasOutputArgs = true;
+    }
 
     const Type& checkArguments(const BindContext& context, const Args& args, SourceRange range,
                                const Expression*) const final {
@@ -128,7 +134,9 @@ private:
 
 class FReadFunc : public SystemSubroutine {
 public:
-    FReadFunc() : SystemSubroutine("$fread", SubroutineKind::Function) {}
+    FReadFunc() : SystemSubroutine("$fread", SubroutineKind::Function) {
+        hasOutputArgs = true;
+    }
 
     bool allowEmptyArgument(size_t argIndex) const final { return argIndex == 2; }
 
@@ -207,7 +215,9 @@ public:
 class DistributionFunc : public SystemSubroutine {
 public:
     DistributionFunc(const std::string& name, size_t numArgs) :
-        SystemSubroutine(name, SubroutineKind::Function), numArgs(numArgs) {}
+        SystemSubroutine(name, SubroutineKind::Function), numArgs(numArgs) {
+        hasOutputArgs = true;
+    }
 
     const Type& checkArguments(const BindContext& context, const Args& args, SourceRange range,
                                const Expression*) const final {

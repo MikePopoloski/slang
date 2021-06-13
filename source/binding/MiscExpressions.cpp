@@ -411,6 +411,25 @@ static bool collectArgs(const BindContext& context, const ArgumentListSyntax& sy
     return true;
 }
 
+static bool checkOutputArgs(const BindContext& context, bool hasOutputArgs, SourceRange range) {
+    if (context.flags.has(BindFlags::NonProcedural) && hasOutputArgs) {
+        context.addDiag(diag::NonProceduralFuncArg, range);
+        return false;
+    }
+
+    if (context.flags.has(BindFlags::EventExpression) && hasOutputArgs) {
+        context.addDiag(diag::EventExpressionFuncArg, range);
+        return false;
+    }
+
+    if (context.flags.has(BindFlags::AssertionExpr) && hasOutputArgs) {
+        context.addDiag(diag::AssertionFuncArg, range);
+        return false;
+    }
+
+    return true;
+}
+
 Expression& CallExpression::fromArgs(Compilation& compilation, const Subroutine& subroutine,
                                      const Expression* thisClass,
                                      const ArgumentListSyntax* argSyntax, SourceRange range,
@@ -537,30 +556,8 @@ Expression& CallExpression::fromArgs(Compilation& compilation, const Subroutine&
         return badExpr(compilation, result);
     }
 
-    auto hasOutputArgs = [&] {
-        for (auto arg : symbol.getArguments()) {
-            if (arg->direction != ArgumentDirection::In &&
-                (arg->direction != ArgumentDirection::Ref || !arg->isConstant)) {
-                return true;
-            }
-        }
-        return false;
-    };
-
-    if (context.flags.has(BindFlags::NonProcedural) && hasOutputArgs()) {
-        context.addDiag(diag::NonProceduralFuncArg, range);
+    if (!checkOutputArgs(context, symbol.hasOutputArgs(), range))
         return badExpr(compilation, result);
-    }
-
-    if (context.flags.has(BindFlags::EventExpression) && hasOutputArgs()) {
-        context.addDiag(diag::EventExpressionFuncArg, range);
-        return badExpr(compilation, result);
-    }
-
-    if (context.flags.has(BindFlags::AssertionExpr) && hasOutputArgs()) {
-        context.addDiag(diag::AssertionFuncArg, range);
-        return badExpr(compilation, result);
-    }
 
     return *result;
 }
@@ -833,6 +830,9 @@ Expression& CallExpression::createSystemCall(
         if (arg->bad())
             return badExpr(compilation, expr);
     }
+
+    if (!checkOutputArgs(context, subroutine.hasOutputArgs, range))
+        return badExpr(compilation, expr);
 
     if (syntax)
         context.setAttributes(*expr, syntax->attributes);

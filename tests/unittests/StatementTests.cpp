@@ -392,12 +392,14 @@ module m;
     function automatic void f3(int i, ref r); endfunction
 
     int i;
+    string s;
     initial begin
         automatic logic r;
         assume #0 (i < 0) i++; else f1();
         assert #0 (i < 0) void'($bits(i));
         assert #0 (i < 0) f2(i, i);
         assert #0 (i < 0) f3(i, r);
+        assert #0 (i < 0) $swrite(s, "%d", i);
     end
 endmodule
 )");
@@ -406,11 +408,12 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 4);
+    REQUIRE(diags.size() == 5);
     CHECK(diags[0].code == diag::InvalidDeferredAssertAction);
     CHECK(diags[1].code == diag::DeferredAssertSysTask);
     CHECK(diags[2].code == diag::DeferredAssertOutArg);
     CHECK(diags[3].code == diag::DeferredAssertAutoRefArg);
+    CHECK(diags[4].code == diag::DeferredAssertOutArg);
 }
 
 TEST_CASE("Break statement check -- regression") {

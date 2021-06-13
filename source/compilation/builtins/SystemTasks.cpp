@@ -186,7 +186,9 @@ public:
 
 class StringOutputTask : public SystemTaskBase {
 public:
-    using SystemTaskBase::SystemTaskBase;
+    explicit StringOutputTask(const std::string& name) : SystemTaskBase(name) {
+        hasOutputArgs = true;
+    }
 
     bool allowEmptyArgument(size_t index) const final { return index != 0; }
 
@@ -214,7 +216,9 @@ public:
 
 class StringFormatTask : public SystemTaskBase {
 public:
-    using SystemTaskBase::SystemTaskBase;
+    explicit StringFormatTask(const std::string& name) : SystemTaskBase(name) {
+        hasOutputArgs = true;
+    }
 
     const Type& checkArguments(const BindContext& context, const Args& args, SourceRange range,
                                const Expression*) const final {
@@ -243,7 +247,9 @@ public:
 class ReadWriteMemTask : public SystemTaskBase {
 public:
     ReadWriteMemTask(const std::string& name, bool isInput) :
-        SystemTaskBase(name), isInput(isInput) {}
+        SystemTaskBase(name), isInput(isInput) {
+        hasOutputArgs = isInput;
+    }
 
     const Type& checkArguments(const BindContext& context, const Args& args, SourceRange range,
                                const Expression*) const final {
@@ -438,7 +444,7 @@ public:
 
 class CastTask : public SystemTaskBase {
 public:
-    using SystemTaskBase::SystemTaskBase;
+    explicit CastTask(const std::string& name) : SystemTaskBase(name) { hasOutputArgs = true; }
 
     const Type& checkArguments(const BindContext& context, const Args& args, SourceRange range,
                                const Expression*) const final {
@@ -455,6 +461,9 @@ public:
             context.addDiag(diag::CastArgSingular, args[1]->sourceRange) << *args[1]->type;
             return comp.getErrorType();
         }
+
+        if (!args[0]->verifyAssignable(context))
+            return comp.getErrorType();
 
         return comp.getIntType();
     }
@@ -512,7 +521,9 @@ public:
     StochasticTask(const std::string& name, SubroutineKind subroutineKind, size_t inputArgs,
                    size_t outputArgs) :
         SystemSubroutine(name, subroutineKind),
-        inputArgs(inputArgs), outputArgs(outputArgs) {}
+        inputArgs(inputArgs), outputArgs(outputArgs) {
+        hasOutputArgs = outputArgs > 0;
+    }
 
     const Type& checkArguments(const BindContext& context, const Args& args, SourceRange range,
                                const Expression*) const final {

@@ -87,7 +87,13 @@ public:
         return arguments;
     }
 
-    void setArguments(ArgList args) { arguments = args; }
+    void setArguments(ArgList args) {
+        arguments = args;
+        cachedHasOutputArgs.reset();
+    }
+
+    /// Returns true if the subroutine has output, inout, or non-const ref arguments.
+    bool hasOutputArgs() const;
 
     const Statement& getBody(EvalContext* evalContext = nullptr) const;
     const Type& getReturnType() const { return declaredReturnType.getType(); }
@@ -141,6 +147,7 @@ private:
     StatementBinder binder;
     ArgList arguments;
     mutable const SubroutineSymbol* overrides = nullptr;
+    mutable optional<bool> cachedHasOutputArgs;
 };
 
 struct ClassMethodPrototypeSyntax;

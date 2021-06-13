@@ -55,7 +55,9 @@ public:
 
 class ValuePlusArgsFunction : public SystemSubroutine {
 public:
-    ValuePlusArgsFunction() : SystemSubroutine("$value$plusargs", SubroutineKind::Function) {}
+    ValuePlusArgsFunction() : SystemSubroutine("$value$plusargs", SubroutineKind::Function) {
+        hasOutputArgs = true;
+    }
 
     const Type& checkArguments(const BindContext& context, const Args& args, SourceRange range,
                                const Expression*) const final {

@@ -1912,6 +1912,11 @@ static void checkDeferredAssertAction(const Statement& stmt, const BindContext& 
             context.addDiag(diag::DeferredAssertSysTask, stmt.sourceRange);
             return;
         }
+
+        if (sub.hasOutputArgs) {
+            context.addDiag(diag::DeferredAssertOutArg, stmt.sourceRange);
+            return;
+        }
     }
     else {
         auto& sub = *std::get<0>(call.subroutine);

@@ -570,6 +570,20 @@ void SubroutineSymbol::buildArguments(Scope& scope, const FunctionPortListSyntax
     }
 }
 
+bool SubroutineSymbol::hasOutputArgs() const {
+    if (!cachedHasOutputArgs.has_value()) {
+        cachedHasOutputArgs = false;
+        for (auto arg : getArguments()) {
+            if (arg->direction != ArgumentDirection::In &&
+                (arg->direction != ArgumentDirection::Ref || !arg->isConstant)) {
+                cachedHasOutputArgs = true;
+                break;
+            }
+        }
+    }
+    return *cachedHasOutputArgs;
+}
+
 void SubroutineSymbol::serializeTo(ASTSerializer& serializer) const {
     serializer.write("returnType", getReturnType());
     serializer.write("defaultLifetime", toString(defaultLifetime));

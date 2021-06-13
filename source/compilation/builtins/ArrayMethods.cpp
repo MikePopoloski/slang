@@ -666,7 +666,9 @@ public:
 class AssocArrayTraversalMethod : public SystemSubroutine {
 public:
     explicit AssocArrayTraversalMethod(const std::string& name) :
-        SystemSubroutine(name, SubroutineKind::Function) {}
+        SystemSubroutine(name, SubroutineKind::Function) {
+        hasOutputArgs = true;
+    }
 
     const Expression& bindArgument(size_t argIndex, const BindContext& context,
                                    const ExpressionSyntax& syntax, const Args& args) const final {

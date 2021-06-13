@@ -863,3 +863,19 @@ endmodule
     CHECK(diags[0].code == diag::GlobalClockEventExpr);
     CHECK(diags[1].code == diag::NoGlobalClocking);
 }
+
+TEST_CASE("System call output args in disallowed context") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    int i;
+    assign j = $ferror(i, i);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::NonProceduralFuncArg);
+}

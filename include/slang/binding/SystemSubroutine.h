@@ -27,6 +27,7 @@ public:
 
     std::string name;
     SubroutineKind kind;
+    bool hasOutputArgs = false;
 
     enum class WithClauseMode { None, Iterator, Randomize };
     WithClauseMode withClauseMode = WithClauseMode::None;
