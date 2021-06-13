@@ -281,7 +281,7 @@ public:
 
     static SequenceSymbol& fromSyntax(const Scope& scope, const SequenceDeclarationSyntax& syntax);
 
-    void serializeTo(ASTSerializer& serializer) const;
+    void serializeTo(ASTSerializer&) const {}
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::Sequence; }
 };
@@ -297,7 +297,7 @@ public:
 
     static PropertySymbol& fromSyntax(const Scope& scope, const PropertyDeclarationSyntax& syntax);
 
-    void serializeTo(ASTSerializer& serializer) const;
+    void serializeTo(ASTSerializer&) const {}
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::Property; }
 };

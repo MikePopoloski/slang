@@ -298,6 +298,7 @@ private:
     MemberSyntax& parseClockingDeclaration(AttrList attributes);
     MemberSyntax& parseDefaultDisable(AttrList attributes);
     MemberSyntax& parseVariableDeclaration(AttrList attributes);
+    LocalVariableDeclarationSyntax& parseLocalVariableDeclaration();
     MemberSyntax& parseNetDeclaration(AttrList attributes);
     DriveStrengthSyntax* parseDriveStrength();
     NetStrengthSyntax* parsePullStrength(Token type);
@@ -407,6 +408,7 @@ private:
     bool isPortDeclaration();
     bool isNetDeclaration();
     bool isVariableDeclaration();
+    bool isLocalVariableDeclaration();
     bool isHierarchyInstantiation(bool requireName);
     bool isNonAnsiPort();
     bool isPlainPortName();

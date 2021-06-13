@@ -825,6 +825,18 @@ MemberSyntax& Parser::parseVariableDeclaration(AttrList attributes) {
     return factory.dataDeclaration(attributes, modifiers.copy(alloc), dataType, declarators, semi);
 }
 
+LocalVariableDeclarationSyntax& Parser::parseLocalVariableDeclaration() {
+    auto var = consumeIf(TokenKind::VarKeyword);
+    auto& dataType = parseDataType(var ? TypeOptions::AllowImplicit : TypeOptions::None);
+    if (dataType.kind == SyntaxKind::TypeReference && !var)
+        addDiag(diag::TypeRefDeclVar, dataType.getFirstToken().location());
+
+    Token semi;
+    auto declarators = parseDeclarators(semi);
+
+    return factory.localVariableDeclaration(nullptr, var, dataType, declarators, semi);
+}
+
 DeclaratorSyntax& Parser::parseDeclarator(bool allowMinTypMax, bool requireInitializers) {
     auto name = expect(TokenKind::Identifier);
     auto dimensions = parseDimensionList();
@@ -1105,6 +1117,67 @@ bool Parser::isVariableDeclaration() {
         // some cases might be a cast expression
         case TokenKind::StringKeyword:
         case TokenKind::ConstKeyword:
+        case TokenKind::BitKeyword:
+        case TokenKind::LogicKeyword:
+        case TokenKind::RegKeyword:
+        case TokenKind::ByteKeyword:
+        case TokenKind::ShortIntKeyword:
+        case TokenKind::IntKeyword:
+        case TokenKind::LongIntKeyword:
+        case TokenKind::IntegerKeyword:
+        case TokenKind::TimeKeyword:
+        case TokenKind::ShortRealKeyword:
+        case TokenKind::RealKeyword:
+        case TokenKind::RealTimeKeyword: {
+            auto next = peek(++index).kind;
+            return next != TokenKind::Apostrophe && next != TokenKind::ApostropheOpenBrace;
+        }
+
+        // if this is the type operator it's technically not allowed to be a variable
+        // declaration without a "var" prefix, but we'll try to allow it anyway and
+        // diagnose it later with a better error message.
+        case TokenKind::TypeKeyword: {
+            if (peek(++index).kind != TokenKind::OpenParenthesis)
+                return false;
+
+            index++;
+            if (!scanTypePart<isNotInType>(index, TokenKind::OpenParenthesis,
+                                           TokenKind::CloseParenthesis)) {
+                return false;
+            }
+            return peek(index).kind == TokenKind::Identifier;
+        }
+
+        default:
+            break;
+    }
+
+    if (!scanQualifiedName(index, /* allowNew */ false))
+        return false;
+
+    // might be a list of dimensions here
+    if (!scanDimensionList(index))
+        return false;
+
+    // next token is the decider; declarations must have an identifier here
+    return peek(index).kind == TokenKind::Identifier;
+}
+
+bool Parser::isLocalVariableDeclaration() {
+    uint32_t index = 0;
+    auto kind = peek(index).kind;
+    switch (kind) {
+        case TokenKind::VarKeyword:
+        case TokenKind::CHandleKeyword:
+        case TokenKind::EventKeyword:
+        case TokenKind::StructKeyword:
+        case TokenKind::UnionKeyword:
+        case TokenKind::EnumKeyword:
+        case TokenKind::VirtualKeyword:
+            return true;
+
+        // some cases might be a cast expression
+        case TokenKind::StringKeyword:
         case TokenKind::BitKeyword:
         case TokenKind::LogicKeyword:
         case TokenKind::RegKeyword:

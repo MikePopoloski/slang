@@ -297,3 +297,24 @@ endmodule
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::TooFewArguments);
 }
+
+TEST_CASE("Local vars in assertions") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    sequence s(int i);
+        int j, k = j;
+        i && j;
+    endsequence
+
+    typedef int Foo;
+    property p;
+        Foo u, v;
+        s(u) && v;
+    endproperty
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}

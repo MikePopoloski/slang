@@ -130,6 +130,20 @@ void VariableSymbol::fromSyntax(Compilation& compilation, const DataDeclarationS
     }
 }
 
+void VariableSymbol::fromSyntax(const Scope& scope, const LocalVariableDeclarationSyntax& syntax,
+                                SmallVector<const ValueSymbol*>& results) {
+    auto& comp = scope.getCompilation();
+    for (auto declarator : syntax.declarators) {
+        auto variable = comp.emplace<VariableSymbol>(
+            declarator->name.valueText(), declarator->name.location(), VariableLifetime::Automatic);
+        variable->isLocalAssertionVar = true;
+        variable->setDeclaredType(*syntax.type);
+        variable->setFromDeclarator(*declarator);
+        variable->setAttributes(scope, syntax.attributes);
+        results.append(variable);
+    }
+}
+
 VariableSymbol& VariableSymbol::fromSyntax(Compilation& compilation,
                                            const ForVariableDeclarationSyntax& syntax,
                                            const VariableSymbol* lastVar) {

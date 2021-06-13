@@ -2037,12 +2037,18 @@ token closeParen
 list<PropertyCaseItem> items
 token endcase
 
+LocalVariableDeclaration base=Member
+token var
+DataType type
+separated_list<Declarator> declarators
+token semi
+
 PropertyDeclaration base=Member
 token keyword
 token name
 AssertionItemPortList? portList
 token semi
-list<Member> variables
+list<LocalVariableDeclaration> variables
 PropertySpec propertySpec
 token optionalSemi
 token end
@@ -2053,7 +2059,7 @@ token keyword
 token name
 AssertionItemPortList? portList
 token semi
-list<Member> variables
+list<LocalVariableDeclaration> variables
 SequenceExpr seqExpr
 token optionalSemi
 token end

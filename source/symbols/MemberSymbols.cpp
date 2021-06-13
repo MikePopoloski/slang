@@ -849,7 +849,6 @@ SequenceSymbol::SequenceSymbol(Compilation& compilation, string_view name, Sourc
 
 SequenceSymbol& SequenceSymbol::fromSyntax(const Scope& scope,
                                            const SequenceDeclarationSyntax& syntax) {
-    // TODO: fill in body
     auto& comp = scope.getCompilation();
     auto result =
         comp.emplace<SequenceSymbol>(comp, syntax.name.valueText(), syntax.name.location());
@@ -858,13 +857,16 @@ SequenceSymbol& SequenceSymbol::fromSyntax(const Scope& scope,
     SmallVectorSized<const AssertionPortSymbol*, 4> ports;
     if (syntax.portList)
         AssertionPortSymbol::buildPorts(*result, *syntax.portList, ports);
-
     result->ports = ports.copy(comp);
-    return *result;
-}
 
-void SequenceSymbol::serializeTo(ASTSerializer&) const {
-    // TODO:
+    for (auto varSyntax : syntax.variables) {
+        SmallVectorSized<const ValueSymbol*, 4> vars;
+        VariableSymbol::fromSyntax(scope, *varSyntax, vars);
+        for (auto var : vars)
+            result->addMember(*var);
+    }
+
+    return *result;
 }
 
 PropertySymbol::PropertySymbol(Compilation& compilation, string_view name, SourceLocation loc) :
@@ -873,7 +875,6 @@ PropertySymbol::PropertySymbol(Compilation& compilation, string_view name, Sourc
 
 PropertySymbol& PropertySymbol::fromSyntax(const Scope& scope,
                                            const PropertyDeclarationSyntax& syntax) {
-    // TODO: fill in body
     auto& comp = scope.getCompilation();
     auto result =
         comp.emplace<PropertySymbol>(comp, syntax.name.valueText(), syntax.name.location());
@@ -882,13 +883,16 @@ PropertySymbol& PropertySymbol::fromSyntax(const Scope& scope,
     SmallVectorSized<const AssertionPortSymbol*, 4> ports;
     if (syntax.portList)
         AssertionPortSymbol::buildPorts(*result, *syntax.portList, ports);
-
     result->ports = ports.copy(comp);
-    return *result;
-}
 
-void PropertySymbol::serializeTo(ASTSerializer&) const {
-    // TODO:
+    for (auto varSyntax : syntax.variables) {
+        SmallVectorSized<const ValueSymbol*, 4> vars;
+        VariableSymbol::fromSyntax(scope, *varSyntax, vars);
+        for (auto var : vars)
+            result->addMember(*var);
+    }
+
+    return *result;
 }
 
 ClockingBlockSymbol::ClockingBlockSymbol(Compilation& compilation, string_view name,

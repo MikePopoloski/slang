@@ -2049,9 +2049,9 @@ PropertyDeclarationSyntax& Parser::parsePropertyDeclaration(AttrList attributes)
     auto portList = parseAssertionItemPortList();
     auto semi = expect(TokenKind::Semicolon);
 
-    SmallVectorSized<MemberSyntax*, 4> declarations;
-    while (isVariableDeclaration())
-        declarations.append(&parseVariableDeclaration({}));
+    SmallVectorSized<LocalVariableDeclarationSyntax*, 4> declarations;
+    while (isLocalVariableDeclaration())
+        declarations.append(&parseLocalVariableDeclaration());
 
     auto& spec = parsePropertySpec();
     Token optSemi = consumeIf(TokenKind::Semicolon);
@@ -2070,9 +2070,9 @@ SequenceDeclarationSyntax& Parser::parseSequenceDeclaration(AttrList attributes)
     auto portList = parseAssertionItemPortList();
     auto semi = expect(TokenKind::Semicolon);
 
-    SmallVectorSized<MemberSyntax*, 4> declarations;
-    while (isVariableDeclaration())
-        declarations.append(&parseVariableDeclaration({}));
+    SmallVectorSized<LocalVariableDeclarationSyntax*, 4> declarations;
+    while (isLocalVariableDeclaration())
+        declarations.append(&parseLocalVariableDeclaration());
 
     auto& expr = parseSequenceExpr(0, /* isInProperty */ false);
     auto semi2 = expect(TokenKind::Semicolon);
