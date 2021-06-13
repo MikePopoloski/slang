@@ -77,7 +77,7 @@ void DeclaredType::resolveType(const BindContext& initializerContext) const {
     // If we are configured to infer implicit types, bind the initializer expression
     // first so that we can derive our type from whatever that happens to be.
     if (typeSyntax->kind == SyntaxKind::ImplicitType &&
-        (flags & DeclaredTypeFlags::InferImplicit) != 0) {
+        flags.has(DeclaredTypeFlags::InferImplicit)) {
         if (dimensions) {
             scope.addDiag(diag::UnpackedArrayParamType, dimensions->sourceRange());
             type = &comp.getErrorType();
@@ -86,8 +86,13 @@ void DeclaredType::resolveType(const BindContext& initializerContext) const {
             type = &comp.getErrorType();
         }
         else {
-            initializer = &Expression::bindImplicitParam(*typeSyntax, *initializerSyntax,
-                                                         initializerLocation, initializerContext);
+            bitmask<BindFlags> extraFlags;
+            if (flags.has(DeclaredTypeFlags::AllowUnboundedLiteral))
+                extraFlags = BindFlags::AllowUnboundedLiteral;
+
+            initializer =
+                &Expression::bindImplicitParam(*typeSyntax, *initializerSyntax, initializerLocation,
+                                               initializerContext, extraFlags);
             type = initializer->type;
         }
     }
@@ -349,15 +354,18 @@ void DeclaredType::resolveAt(const BindContext& context) const {
     // instead of the actual enum type (which doesn't allow implicit conversions from
     // normal integral values).
     auto& scope = *context.scope;
-    bitmask<BindFlags> bindFlags = context.flags;
+    bitmask<BindFlags> extraFlags;
     const Type* targetType = type;
     if (targetType->isEnum() && scope.asSymbol().kind == SymbolKind::EnumType) {
         targetType = &targetType->as<EnumType>().baseType;
-        bindFlags |= BindFlags::EnumInitializer;
+        extraFlags = BindFlags::EnumInitializer;
+    }
+    else if (flags.has(DeclaredTypeFlags::AllowUnboundedLiteral)) {
+        extraFlags = BindFlags::AllowUnboundedLiteral;
     }
 
     initializer = &Expression::bindRValue(*targetType, *initializerSyntax, initializerLocation,
-                                          context.resetFlags(bindFlags));
+                                          context, extraFlags);
 }
 
 const Expression* DeclaredType::getInitializer() const {

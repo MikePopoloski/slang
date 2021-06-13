@@ -32,6 +32,8 @@ std::string ConstantValue::toString() const {
                 return fmt::format("{}", float(arg));
             else if constexpr (std::is_same_v<T, ConstantValue::NullPlaceholder>)
                 return "null"s;
+            else if constexpr (std::is_same_v<T, ConstantValue::UnboundedPlaceholder>)
+                return "$"s;
             else if constexpr (std::is_same_v<T, Elements>) {
                 FormatBuffer buffer;
                 buffer.append("[");
@@ -95,6 +97,8 @@ size_t ConstantValue::hash() const {
                 hash_combine(h, std::hash<float>()(arg));
             else if constexpr (std::is_same_v<T, ConstantValue::NullPlaceholder>)
                 hash_combine(h, 0);
+            else if constexpr (std::is_same_v<T, ConstantValue::UnboundedPlaceholder>)
+                hash_combine(h, '$');
             else if constexpr (std::is_same_v<T, Elements>) {
                 for (auto& element : arg)
                     hash_combine(h, element.hash());
@@ -217,6 +221,8 @@ bool ConstantValue::isTrue() const {
                 return (bool)arg;
             else if constexpr (std::is_same_v<T, shortreal_t>)
                 return (bool)arg;
+            else if constexpr (std::is_same_v<T, ConstantValue::UnboundedPlaceholder>)
+                return true;
             else
                 return false;
         },
@@ -316,6 +322,9 @@ ConstantValue ConstantValue::convertToInt(bitwidth_t width, bool isSigned, bool 
 
         return result;
     }
+
+    if (isUnbounded())
+        return *this;
 
     if (!isInteger())
         return nullptr;
@@ -483,6 +492,8 @@ bool operator==(const ConstantValue& lhs, const ConstantValue& rhs) {
                 return rhs.isShortReal() && arg == float(rhs.shortReal());
             else if constexpr (std::is_same_v<T, ConstantValue::NullPlaceholder>)
                 return rhs.isNullHandle();
+            else if constexpr (std::is_same_v<T, ConstantValue::UnboundedPlaceholder>)
+                return rhs.isUnbounded();
             else if constexpr (std::is_same_v<T, ConstantValue::Elements>) {
                 if (!rhs.isUnpacked())
                     return false;
@@ -527,6 +538,8 @@ bool operator<(const ConstantValue& lhs, const ConstantValue& rhs) {
             else if constexpr (std::is_same_v<T, shortreal_t>)
                 return rhs.isShortReal() && arg < float(rhs.shortReal());
             else if constexpr (std::is_same_v<T, ConstantValue::NullPlaceholder>)
+                return false;
+            else if constexpr (std::is_same_v<T, ConstantValue::UnboundedPlaceholder>)
                 return false;
             else if constexpr (std::is_same_v<T, ConstantValue::Elements>) {
                 if (!rhs.isUnpacked())

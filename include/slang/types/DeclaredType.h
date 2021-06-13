@@ -72,12 +72,15 @@ enum class DeclaredTypeFlags {
     /// the expression is otherwise not constant.
     SpecparamsAllowed = 1 << 11,
 
+    /// Allow use of the unbounded literal '$' in the initializer expression.
+    AllowUnboundedLiteral = 1 << 12,
+
     /// A mask of flags that indicate additional type rules are needed to
     /// be checked after the type itself is resolved.
     NeedsTypeCheck =
         Port | NetType | UserDefinedNetType | FormalArgMergeVar | Rand | DPIReturnType | DPIArg
 };
-BITMASK(DeclaredTypeFlags, SpecparamsAllowed);
+BITMASK(DeclaredTypeFlags, AllowUnboundedLiteral);
 
 /// Ties together various syntax nodes that declare the type of some parent symbol
 /// along with the logic necessary to resolve that type. Optionally includes an

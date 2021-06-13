@@ -64,6 +64,12 @@ Expression& ValueExpressionBase::fromSymbol(const BindContext& context, const Sy
         context.addDiag(diag::SpecparamInConstant, sourceRange);
         return badExpr(comp, nullptr);
     }
+    else if (symbol.kind == SymbolKind::Parameter &&
+             !context.flags.has(BindFlags::AllowUnboundedLiteral) &&
+             symbol.as<ParameterSymbol>().getValue().isUnbounded()) {
+        context.addDiag(diag::UnboundedNotAllowed, sourceRange);
+        return badExpr(comp, nullptr);
+    }
 
     if (!symbol.isValue()) {
         if ((symbol.kind == SymbolKind::ClockingBlock &&
@@ -169,8 +175,17 @@ ConstantValue NamedValueExpression::evalImpl(EvalContext& context) const {
         return nullptr;
 
     switch (symbol.kind) {
-        case SymbolKind::Parameter:
-            return symbol.as<ParameterSymbol>().getValue();
+        case SymbolKind::Parameter: {
+            auto v = symbol.as<ParameterSymbol>().getValue();
+            if (v.isUnbounded()) {
+                auto target = context.getQueueTarget();
+                ASSERT(target);
+
+                int32_t size = (int32_t)target->queue()->size();
+                return SVInt(32, uint64_t(size - 1), true);
+            }
+            return v;
+        }
         case SymbolKind::EnumValue:
             return symbol.as<EnumValueSymbol>().getValue();
         case SymbolKind::Specparam:

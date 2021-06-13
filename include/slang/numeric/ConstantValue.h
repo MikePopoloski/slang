@@ -51,12 +51,16 @@ class ConstantValue {
 public:
     /// This type represents the null value (class handles, etc) in expressions.
     struct NullPlaceholder : std::monostate {};
+
+    /// This type represents the unbounded value ($) in expressions.
+    struct UnboundedPlaceholder : std::monostate {};
+
     using Elements = std::vector<ConstantValue>;
     using Map = CopyPtr<AssociativeArray>;
     using Queue = CopyPtr<SVQueue>;
 
     using Variant = std::variant<std::monostate, SVInt, real_t, shortreal_t, NullPlaceholder,
-                                 Elements, std::string, Map, Queue>;
+                                 Elements, std::string, Map, Queue, UnboundedPlaceholder>;
 
     ConstantValue() = default;
     ConstantValue(nullptr_t) {}
@@ -67,6 +71,7 @@ public:
     ConstantValue(shortreal_t real) : value(real) {}
 
     ConstantValue(NullPlaceholder nul) : value(nul) {}
+    ConstantValue(UnboundedPlaceholder unbounded) : value(unbounded) {}
     ConstantValue(const Elements& elements) : value(elements) {}
     ConstantValue(Elements&& elements) : value(std::move(elements)) {}
     ConstantValue(const std::string& str) : value(str) {}
@@ -89,6 +94,7 @@ public:
     bool isReal() const { return std::holds_alternative<real_t>(value); }
     bool isShortReal() const { return std::holds_alternative<shortreal_t>(value); }
     bool isNullHandle() const { return std::holds_alternative<NullPlaceholder>(value); }
+    bool isUnbounded() const { return std::holds_alternative<UnboundedPlaceholder>(value); }
     bool isUnpacked() const { return std::holds_alternative<Elements>(value); }
     bool isString() const { return std::holds_alternative<std::string>(value); }
     bool isMap() const { return std::holds_alternative<Map>(value); }

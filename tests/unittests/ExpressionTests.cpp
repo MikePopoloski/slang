@@ -2048,6 +2048,9 @@ endmodule
 TEST_CASE("Unbounded queue access") {
     auto tree = SyntaxTree::fromText(R"(
 module m;
+    parameter int u = $;
+    parameter v = $;
+
     int q[$] = { 2, 4, 8 };
     int e, pos;
     initial begin
@@ -2060,11 +2063,13 @@ module m;
         q = { q[0:pos], e, q[pos+1:$] };
         q = q[2:$];
         q = q[1:$-1'b1];
-        q = q[1:e ? $+1 : $-1];
+        q = q[1:e ? u+1 : v-1];
 
         // These are disallowed.
         e = $;
         q[-$] = 1;
+        e = u;
+        e = v;
     end
 endmodule
 )");
@@ -2073,9 +2078,11 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 2);
+    REQUIRE(diags.size() == 4);
     CHECK(diags[0].code == diag::UnboundedNotAllowed);
     CHECK(diags[1].code == diag::UnboundedNotAllowed);
+    CHECK(diags[2].code == diag::UnboundedNotAllowed);
+    CHECK(diags[3].code == diag::UnboundedNotAllowed);
 }
 
 TEST_CASE("Selects with negative bounds") {

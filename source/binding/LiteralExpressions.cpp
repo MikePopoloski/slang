@@ -199,8 +199,12 @@ Expression& UnboundedLiteral::fromSyntax(const BindContext& context,
 }
 
 ConstantValue UnboundedLiteral::evalImpl(EvalContext& context) const {
+    // If we're evaluating in a context with a queue target expression, use the
+    // max bound of that queue. Otherwise assume we're assigning to a constant (parameter)
+    // and use a placeholder value to indicate that.
     auto target = context.getQueueTarget();
-    ASSERT(target);
+    if (!target)
+        return ConstantValue::UnboundedPlaceholder{};
 
     int32_t size = (int32_t)target->queue()->size();
     return SVInt(32, uint64_t(size - 1), true);

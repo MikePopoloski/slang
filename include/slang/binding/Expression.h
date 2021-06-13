@@ -154,7 +154,8 @@ public:
 
     /// Binds the right hand side of an assignment-like expression from the given syntax nodes.
     static const Expression& bindRValue(const Type& lhs, const ExpressionSyntax& rhs,
-                                        SourceLocation location, const BindContext& context);
+                                        SourceLocation location, const BindContext& context,
+                                        bitmask<BindFlags> extraFlags = BindFlags::None);
 
     /// Binds a connection to a ref argument from the given syntax nodes.
     static const Expression& bindRefArg(const Type& lhs, bool isConstRef,
@@ -170,7 +171,8 @@ public:
     /// There are special inference rules for parameters.
     static const Expression& bindImplicitParam(const DataTypeSyntax& implicitType,
                                                const ExpressionSyntax& rhs, SourceLocation location,
-                                               const BindContext& context);
+                                               const BindContext& context,
+                                               bitmask<BindFlags> extraFlags = BindFlags::None);
 
     /// Converts the given expression to the specified type, as if the right hand side had been
     /// assigned (without a cast) to a left hand side of the specified type.

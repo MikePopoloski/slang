@@ -201,21 +201,23 @@ const Expression& Expression::bindLValue(const ExpressionSyntax& lhs, const Type
 }
 
 const Expression& Expression::bindRValue(const Type& lhs, const ExpressionSyntax& rhs,
-                                         SourceLocation location, const BindContext& context) {
+                                         SourceLocation location, const BindContext& context,
+                                         bitmask<BindFlags> extraFlags) {
     Compilation& comp = context.getCompilation();
 
+    BindContext ctx = context.resetFlags(extraFlags);
     if (lhs.isVirtualInterface()) {
-        if (auto ref = tryBindInterfaceRef(context, rhs, lhs))
-            return checkBindFlags(*ref, context);
+        if (auto ref = tryBindInterfaceRef(ctx, rhs, lhs))
+            return checkBindFlags(*ref, ctx);
     }
 
-    bitmask<BindFlags> extraFlags = context.instance && !context.instance->arrayPath.empty()
-                                        ? BindFlags::None
-                                        : BindFlags::StreamingAllowed;
-    Expression& expr = create(comp, rhs, context, extraFlags, &lhs);
+    if (!ctx.instance || ctx.instance->arrayPath.empty())
+        extraFlags |= BindFlags::StreamingAllowed;
 
-    const Expression& result = convertAssignment(context, lhs, expr, location);
-    return checkBindFlags(result, context);
+    Expression& expr = create(comp, rhs, ctx, extraFlags, &lhs);
+
+    const Expression& result = convertAssignment(ctx, lhs, expr, location);
+    return checkBindFlags(result, ctx);
 }
 
 const Expression& Expression::bindRefArg(const Type& lhs, bool isConstRef,
@@ -268,10 +270,10 @@ const Expression& Expression::bindArgument(const Type& argType, ArgumentDirectio
 
 const Expression& Expression::bindImplicitParam(const DataTypeSyntax& typeSyntax,
                                                 const ExpressionSyntax& rhs,
-                                                SourceLocation location,
-                                                const BindContext& context) {
+                                                SourceLocation location, const BindContext& context,
+                                                bitmask<BindFlags> extraFlags) {
     Compilation& comp = context.getCompilation();
-    Expression& expr = create(comp, rhs, context);
+    Expression& expr = create(comp, rhs, context, extraFlags);
     const Type* lhsType = expr.type;
 
     // Rules are described in [6.20.2].
