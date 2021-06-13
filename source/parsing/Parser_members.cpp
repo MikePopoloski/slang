@@ -880,9 +880,11 @@ ClassDeclarationSyntax& Parser::parseClassDeclaration(AttrList attributes,
     auto endBlockName = parseNamedBlockClause();
     checkBlockNames(name, endBlockName);
 
-    return factory.classDeclaration(attributes, virtualOrInterface, classKeyword, lifetime, name,
-                                    parameterList, extendsClause, implementsClause, semi, members,
-                                    endClass, endBlockName);
+    auto& result = factory.classDeclaration(attributes, virtualOrInterface, classKeyword, lifetime,
+                                            name, parameterList, extendsClause, implementsClause,
+                                            semi, members, endClass, endBlockName);
+    meta.classDecls.append(&result);
+    return result;
 }
 
 void Parser::checkClassQualifiers(span<const Token> qualifiers, bool isConstraint) {
@@ -1883,7 +1885,9 @@ PackageImportDeclarationSyntax& Parser::parseImportDeclaration(AttrList attribut
                                                 RequireItems::True, diag::ExpectedPackageImport,
                                                 [this] { return &parsePackageImportItem(); });
 
-    return factory.packageImportDeclaration(attributes, keyword, items.copy(alloc), semi);
+    auto& result = factory.packageImportDeclaration(attributes, keyword, items.copy(alloc), semi);
+    meta.packageImports.append(&result);
+    return result;
 }
 
 PackageImportItemSyntax& Parser::parsePackageImportItem() {

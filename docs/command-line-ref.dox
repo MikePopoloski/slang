@@ -111,13 +111,19 @@ The default is 64.
 `-y,--libdir <dir>`
 
 Add the given directory path to the list of directories searched when an unknown module instantiation
-is encountered. Combined with `--libext`, files are automatically included based on the name of the module
-being instantiated.
+or package import is encountered. Combined with `--libext`, files are automatically included based on the
+name that is unknown. This list is empty by default.
+
+The search works as follows: all known modules, interfaces, programs, packages, and classes add their
+names to a list of known definitions. Any instantiations, package import directives, or double colon-scoped
+names that reference a name not in the list of known definitions will trigger a search in all library
+directories, trying all specified library extensions. If a matching file is found it will be loaded and
+parsed in its entirety, and the algorithm will be triggered again on any new names found.
 
 `-Y,--libext <ext>`
 
 Add the given extension to the list of extensions tried when searching for files to satisfy
-unknown module instantiations. This list automatically includes '.v' and '.sv' by default.
+unknown module instantiations and package imports. This list automatically includes '.v' and '.sv' by default.
 
 @section json-output JSON Output
 

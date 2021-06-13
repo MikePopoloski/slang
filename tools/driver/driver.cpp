@@ -165,27 +165,53 @@ bool loadAllSources(Compilation& compilation, SourceManager& sourceManager,
         extensions.emplace_back(widen(ext));
 
     // If library directories are specified, see if we have any unknown instantiations
-    // for which we should search for additional source files to load.
-    flat_hash_set<string_view> definitionNames;
-    auto addDefNames = [&](const std::shared_ptr<SyntaxTree>& tree) {
-        for (auto& [n, meta] : tree->getMetadata().nodeMap) {
+    // or package names for which we should search for additional source files to load.
+    flat_hash_set<string_view> knownNames;
+    auto addKnownNames = [&](const std::shared_ptr<SyntaxTree>& tree) {
+        auto& meta = tree->getMetadata();
+        for (auto& [n, meta] : meta.nodeMap) {
             auto decl = &n->as<ModuleDeclarationSyntax>();
             string_view name = decl->header->name.valueText();
             if (!name.empty())
-                definitionNames.emplace(name);
+                knownNames.emplace(name);
+        }
+
+        for (auto classDecl : meta.classDecls) {
+            string_view name = classDecl->name.valueText();
+            if (!name.empty())
+                knownNames.emplace(name);
+        }
+    };
+
+    auto findMissingNames = [&](const std::shared_ptr<SyntaxTree>& tree,
+                                flat_hash_set<string_view>& missing) {
+        auto& meta = tree->getMetadata();
+        for (auto name : meta.globalInstances) {
+            if (knownNames.find(name) == knownNames.end())
+                missing.emplace(name);
+        }
+
+        for (auto idName : meta.classPackageNames) {
+            string_view name = idName->identifier.valueText();
+            if (!name.empty() && knownNames.find(name) == knownNames.end())
+                missing.emplace(name);
+        }
+
+        for (auto importDecl : meta.packageImports) {
+            for (auto importItem : importDecl->items) {
+                string_view name = importItem->package.valueText();
+                if (!name.empty() && knownNames.find(name) == knownNames.end())
+                    missing.emplace(name);
+            }
         }
     };
 
     for (auto tree : compilation.getSyntaxTrees())
-        addDefNames(tree);
+        addKnownNames(tree);
 
     flat_hash_set<string_view> missingNames;
-    for (auto tree : compilation.getSyntaxTrees()) {
-        for (auto name : tree->getMetadata().globalInstances) {
-            if (definitionNames.find(name) == definitionNames.end())
-                missingNames.emplace(name);
-        }
-    }
+    for (auto tree : compilation.getSyntaxTrees())
+        findMissingNames(tree, missingNames);
 
     // Keep loading new files as long as we are making forward progress.
     flat_hash_set<string_view> nextMissingNames;
@@ -214,11 +240,8 @@ bool loadAllSources(Compilation& compilation, SourceManager& sourceManager,
                 tree->isLibrary = true;
                 compilation.addSyntaxTree(tree);
 
-                addDefNames(tree);
-                for (auto instName : tree->getMetadata().globalInstances) {
-                    if (definitionNames.find(instName) == definitionNames.end())
-                        nextMissingNames.emplace(instName);
-                }
+                addKnownNames(tree);
+                findMissingNames(tree, nextMissingNames);
             }
         }
 

@@ -168,11 +168,21 @@ public:
         /// roots of the design.
         flat_hash_set<string_view> globalInstances;
 
-        /// A list of all bind directives parsed.
-        SmallVectorSized<const BindDirectiveSyntax*, 4> bindDirectives;
+        /// A list of all names parsed that could represent a package or class name,
+        /// since they are simple names that appear on the left-hand side of a double colon.
+        SmallVectorSized<const IdentifierNameSyntax*, 4> classPackageNames;
+
+        /// A list of all package import declarations parsed.
+        SmallVectorSized<const PackageImportDeclarationSyntax*, 4> packageImports;
 
         /// A list of all defparams parsed.
         SmallVectorSized<const DefParamSyntax*, 4> defparams;
+
+        /// A list of all class declarations parsed.
+        SmallVectorSized<const ClassDeclarationSyntax*, 4> classDecls;
+
+        /// A list of all bind directives parsed.
+        SmallVectorSized<const BindDirectiveSyntax*, 4> bindDirectives;
     };
 
     /// Gets the current set of metadata collected during parsing.

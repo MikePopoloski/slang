@@ -610,6 +610,9 @@ NameSyntax& Parser::parseName(bitmask<NameOptions> options) {
                                                                        << "."sv;
         }
 
+        if (kind == TokenKind::DoubleColon && name->kind == SyntaxKind::IdentifierName)
+            meta.classPackageNames.append(&name->as<IdentifierNameSyntax>());
+
         switch (previousKind) {
             case SyntaxKind::UnitScope:
             case SyntaxKind::LocalScope:
