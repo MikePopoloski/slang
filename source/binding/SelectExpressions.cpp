@@ -153,7 +153,10 @@ Expression& ElementSelectExpression::fromSyntax(Compilation& compilation, Expres
     }
 
     if (!selector) {
-        BindFlags flags = valueType.isQueue() ? BindFlags::AllowUnboundedLiteral : BindFlags::None;
+        bitmask<BindFlags> flags;
+        if (valueType.isQueue())
+            flags = BindFlags::AllowUnboundedLiteral | BindFlags::AllowUnboundedLiteralArithmetic;
+
         selector = &selfDetermined(compilation, syntax, context, flags);
         if (!selector->bad() && !selector->type->isIntegral() && !selector->type->isUnbounded()) {
             context.addDiag(diag::ExprMustBeIntegral, selector->sourceRange) << *selector->type;
@@ -369,7 +372,9 @@ Expression& RangeSelectExpression::fromSyntax(Compilation& compilation, Expressi
     bool isQueue = value.type->isQueue();
     bool leftConst = !isQueue && selectionKind == RangeSelectionKind::Simple;
     bool rightConst = !isQueue;
-    BindFlags extraFlags = isQueue ? BindFlags::AllowUnboundedLiteral : BindFlags::None;
+    bitmask<BindFlags> extraFlags;
+    if (isQueue)
+        extraFlags = BindFlags::AllowUnboundedLiteral | BindFlags::AllowUnboundedLiteralArithmetic;
 
     auto& left = leftConst ? bind(*syntax.left, context, BindFlags::Constant | extraFlags)
                            : selfDetermined(compilation, *syntax.left, context, extraFlags);

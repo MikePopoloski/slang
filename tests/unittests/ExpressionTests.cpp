@@ -2050,6 +2050,7 @@ TEST_CASE("Unbounded queue access") {
 module m;
     parameter int u = $;
     parameter v = $;
+    parameter w = $+1;
 
     int q[$] = { 2, 4, 8 };
     int e, pos;
@@ -2078,11 +2079,12 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 4);
+    REQUIRE(diags.size() == 5);
     CHECK(diags[0].code == diag::UnboundedNotAllowed);
     CHECK(diags[1].code == diag::UnboundedNotAllowed);
     CHECK(diags[2].code == diag::UnboundedNotAllowed);
     CHECK(diags[3].code == diag::UnboundedNotAllowed);
+    CHECK(diags[4].code == diag::UnboundedNotAllowed);
 }
 
 TEST_CASE("Selects with negative bounds") {

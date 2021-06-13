@@ -92,27 +92,30 @@ enum class BindFlags {
     /// Expression is allowed to be the unbounded literal '$' such as inside a queue select.
     AllowUnboundedLiteral = 1 << 13,
 
+    /// Expression is allowed to do arithmetic with an unbounded literal.
+    AllowUnboundedLiteralArithmetic = 1 << 14,
+
     /// Specparams are allowed even if this is also a constant expression.
-    SpecparamsAllowed = 1 << 14,
+    SpecparamsAllowed = 1 << 15,
 
     /// Binding is happening within a function body or a final block.
-    FunctionOrFinal = 1 << 15,
+    FunctionOrFinal = 1 << 16,
 
     /// Binding is happening within the intra-assignment timing control of
     /// a non-blocking assignment expression.
-    NonBlockingTimingControl = 1 << 16,
+    NonBlockingTimingControl = 1 << 17,
 
     /// Binding is happening within an event expression.
-    EventExpression = 1 << 17,
+    EventExpression = 1 << 18,
 
     /// Binding is in a context where type reference expressions are allowed.
-    AllowTypeReferences = 1 << 18,
+    AllowTypeReferences = 1 << 19,
 
     /// Binding is happening within an assertion expression (sequence or property).
-    AssertionExpr = 1 << 19,
+    AssertionExpr = 1 << 20,
 
     /// Allow binding a clocking block as part of a top-level event expression.
-    AllowClockingBlock = 1 << 20
+    AllowClockingBlock = 1 << 21
 };
 BITMASK(BindFlags, AllowClockingBlock);
 

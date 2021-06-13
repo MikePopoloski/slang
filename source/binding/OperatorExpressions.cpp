@@ -562,7 +562,7 @@ Expression& BinaryExpression::fromSyntax(Compilation& compilation,
     // If we are allowed unbounded literals here, pass that along to subexpressions.
     bitmask<BindFlags> flags = BindFlags::None;
     if (context.flags.has(BindFlags::AllowUnboundedLiteral) &&
-        !context.flags.has(BindFlags::AssertionExpr)) {
+        context.flags.has(BindFlags::AllowUnboundedLiteralArithmetic)) {
         flags = BindFlags::AllowUnboundedLiteral;
     }
 
@@ -940,7 +940,7 @@ Expression& ConditionalExpression::fromSyntax(Compilation& compilation,
 
     // Pass through the flag allowing unbounded literals.
     if (context.flags.has(BindFlags::AllowUnboundedLiteral) &&
-        !context.flags.has(BindFlags::AssertionExpr)) {
+        context.flags.has(BindFlags::AllowUnboundedLiteralArithmetic)) {
         leftFlags |= BindFlags::AllowUnboundedLiteral;
         rightFlags |= BindFlags::AllowUnboundedLiteral;
     }
