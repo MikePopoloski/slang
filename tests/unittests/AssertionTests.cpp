@@ -303,18 +303,32 @@ TEST_CASE("Local vars in assertions") {
 module m;
     sequence s(int i);
         int j, k = j;
-        i && j;
+        (i && j, j = 1, j++)[*0:1];
+    endsequence
+
+    int baz;
+    sequence s2;
+        int j, k = j;
+        first_match(j, !j, j + k, baz = 1, baz++);
     endsequence
 
     typedef int Foo;
     property p;
         Foo u, v;
-        s(u) && v;
+        s(u) and v and s2;
     endproperty
+
+    assert property (p);
 endmodule
 )");
 
     Compilation compilation;
     compilation.addSyntaxTree(tree);
-    NO_COMPILATION_ERRORS;
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 4);
+    CHECK(diags[0].code == diag::InvalidMatchItem);
+    CHECK(diags[1].code == diag::InvalidMatchItem);
+    CHECK(diags[2].code == diag::LocalVarMatchItem);
+    CHECK(diags[3].code == diag::LocalVarMatchItem);
 }

@@ -6,12 +6,15 @@
 //------------------------------------------------------------------------------
 #include "slang/binding/AssertionExpr.h"
 
+#include "slang/binding/AssignmentExpressions.h"
 #include "slang/binding/BindContext.h"
 #include "slang/binding/Expression.h"
+#include "slang/binding/OperatorExpressions.h"
 #include "slang/binding/TimingControl.h"
 #include "slang/compilation/Compilation.h"
 #include "slang/diagnostics/StatementsDiags.h"
 #include "slang/symbols/MemberSymbols.h"
+#include "slang/symbols/VariableSymbols.h"
 #include "slang/syntax/AllSyntax.h"
 #include "slang/types/Type.h"
 
@@ -55,9 +58,13 @@ const AssertionExpr& AssertionExpr::bind(const SequenceExprSyntax& syntax,
         case SyntaxKind::WithinSequenceExpr:
             result = &BinaryAssertionExpr::fromSyntax(syntax.as<BinarySequenceExprSyntax>(), ctx);
             break;
-        case SyntaxKind::ParenthesizedSequenceExpr:
-            // TODO: handle body
-            return bind(*syntax.as<ParenthesizedSequenceExprSyntax>().expr, context);
+        case SyntaxKind::ParenthesizedSequenceExpr: {
+            auto& pse = syntax.as<ParenthesizedSequenceExprSyntax>();
+            if (pse.matchList || pse.repetition)
+                return SequenceWithMatchExpr::fromSyntax(pse, ctx);
+
+            return bind(*pse.expr, context);
+        }
         case SyntaxKind::FirstMatchSequenceExpr:
             result = &FirstMatchAssertionExpr::fromSyntax(syntax.as<FirstMatchSequenceExprSyntax>(),
                                                           ctx);
@@ -312,6 +319,88 @@ void SequenceConcatExpr::serializeTo(ASTSerializer& serializer) const {
     serializer.endArray();
 }
 
+static span<const Expression* const> bindMatchItems(const SequenceMatchListSyntax& syntax,
+                                                    const BindContext& context) {
+    auto checkLocalVar = [&](const Expression& expr) {
+        auto sym = expr.getSymbolReference();
+        if (!sym || sym->kind != SymbolKind::Variable ||
+            !sym->as<VariableSymbol>().isLocalAssertionVar) {
+            context.addDiag(diag::LocalVarMatchItem, expr.sourceRange);
+        }
+    };
+
+    BindContext ctx = context;
+    ctx.flags &= ~BindFlags::AssignmentDisallowed;
+    ctx.flags |= BindFlags::AssertionExpr;
+
+    SmallVectorSized<const Expression*, 4> results;
+    for (auto item : syntax.items) {
+        auto& expr = Expression::bind(*item, ctx, BindFlags::AssignmentAllowed);
+        results.append(&expr);
+
+        switch (expr.kind) {
+            case ExpressionKind::Assignment: {
+                auto& assign = expr.as<AssignmentExpression>();
+                checkLocalVar(assign.left());
+                break;
+            }
+            case ExpressionKind::UnaryOp: {
+                auto& unary = expr.as<UnaryExpression>();
+                switch (unary.op) {
+                    case UnaryOperator::Preincrement:
+                    case UnaryOperator::Predecrement:
+                    case UnaryOperator::Postincrement:
+                    case UnaryOperator::Postdecrement:
+                        checkLocalVar(unary.operand());
+                        break;
+                    default:
+                        context.addDiag(diag::InvalidMatchItem, expr.sourceRange);
+                        break;
+                }
+                break;
+            }
+            case ExpressionKind::Call:
+                // TODO:
+                break;
+            case ExpressionKind::Invalid:
+                break;
+            default:
+                context.addDiag(diag::InvalidMatchItem, expr.sourceRange);
+                break;
+        }
+    }
+
+    return results.copy(context.getCompilation());
+}
+
+AssertionExpr& SequenceWithMatchExpr::fromSyntax(const ParenthesizedSequenceExprSyntax& syntax,
+                                                 const BindContext& context) {
+    auto& expr = bind(*syntax.expr, context);
+
+    optional<SequenceRepetition> repetition;
+    if (syntax.repetition)
+        repetition.emplace(*syntax.repetition, context);
+
+    span<const Expression* const> matchItems;
+    if (syntax.matchList)
+        matchItems = bindMatchItems(*syntax.matchList, context);
+
+    return *context.getCompilation().emplace<SequenceWithMatchExpr>(expr, repetition, matchItems);
+}
+
+void SequenceWithMatchExpr::serializeTo(ASTSerializer& serializer) const {
+    serializer.write("expr", expr);
+    if (repetition) {
+        serializer.writeProperty("repetition");
+        repetition->serializeTo(serializer);
+    }
+
+    serializer.startArray("matchItems");
+    for (auto item : matchItems)
+        serializer.serialize(*item);
+    serializer.endArray();
+}
+
 static UnaryAssertionOperator getUnaryOp(TokenKind kind) {
     // clang-format off
     switch (kind) {
@@ -419,14 +508,23 @@ void BinaryAssertionExpr::serializeTo(ASTSerializer& serializer) const {
 
 AssertionExpr& FirstMatchAssertionExpr::fromSyntax(const FirstMatchSequenceExprSyntax& syntax,
                                                    const BindContext& context) {
-    // TODO: match items
     auto& comp = context.getCompilation();
     auto& seq = bind(*syntax.expr, context);
-    return *comp.emplace<FirstMatchAssertionExpr>(seq);
+
+    span<const Expression* const> matchItems;
+    if (syntax.matchList)
+        matchItems = bindMatchItems(*syntax.matchList, context);
+
+    return *comp.emplace<FirstMatchAssertionExpr>(seq, matchItems);
 }
 
 void FirstMatchAssertionExpr::serializeTo(ASTSerializer& serializer) const {
     serializer.write("seq", seq);
+
+    serializer.startArray("matchItems");
+    for (auto item : matchItems)
+        serializer.serialize(*item);
+    serializer.endArray();
 }
 
 AssertionExpr& ClockingAssertionExpr::fromSyntax(const ClockingSequenceExprSyntax& syntax,

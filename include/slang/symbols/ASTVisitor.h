@@ -367,6 +367,7 @@ decltype(auto) AssertionExpr::visit(TVisitor& visitor, Args&&... args) const {
         case AssertionExprKind::Invalid: return visitor.visit(*this, std::forward<Args>(args)...);
         CASE(Simple, SimpleAssertionExpr);
         CASE(SequenceConcat, SequenceConcatExpr);
+        CASE(SequenceWithMatch, SequenceWithMatchExpr);
         CASE(Unary, UnaryAssertionExpr);
         CASE(Binary, BinaryAssertionExpr);
         CASE(FirstMatch, FirstMatchAssertionExpr);

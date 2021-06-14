@@ -16,6 +16,7 @@ namespace slang {
     x(Invalid) \
     x(Simple) \
     x(SequenceConcat) \
+    x(SequenceWithMatch) \
     x(Unary) \
     x(Binary) \
     x(FirstMatch) \
@@ -194,6 +195,31 @@ public:
     static bool isKind(AssertionExprKind kind) { return kind == AssertionExprKind::SequenceConcat; }
 };
 
+struct ParenthesizedSequenceExprSyntax;
+
+/// Represents a sequence expression along with a list of actions to perform upon matching
+/// and/or instructions for repetition.
+class SequenceWithMatchExpr : public AssertionExpr {
+public:
+    const AssertionExpr& expr;
+    optional<SequenceRepetition> repetition;
+    span<const Expression* const> matchItems;
+
+    SequenceWithMatchExpr(const AssertionExpr& expr, optional<SequenceRepetition> repetition,
+                          span<const Expression* const> matchItems) :
+        AssertionExpr(AssertionExprKind::SequenceWithMatch),
+        expr(expr), repetition(repetition), matchItems(matchItems) {}
+
+    static AssertionExpr& fromSyntax(const ParenthesizedSequenceExprSyntax& syntax,
+                                     const BindContext& context);
+
+    void serializeTo(ASTSerializer& serializer) const;
+
+    static bool isKind(AssertionExprKind kind) {
+        return kind == AssertionExprKind::SequenceWithMatch;
+    }
+};
+
 struct UnaryPropertyExprSyntax;
 struct UnarySelectPropertyExprSyntax;
 
@@ -252,9 +278,10 @@ struct FirstMatchSequenceExprSyntax;
 class FirstMatchAssertionExpr : public AssertionExpr {
 public:
     const AssertionExpr& seq;
+    span<const Expression* const> matchItems;
 
-    FirstMatchAssertionExpr(const AssertionExpr& seq) :
-        AssertionExpr(AssertionExprKind::FirstMatch), seq(seq) {}
+    FirstMatchAssertionExpr(const AssertionExpr& seq, span<const Expression* const> matchItems) :
+        AssertionExpr(AssertionExprKind::FirstMatch), seq(seq), matchItems(matchItems) {}
 
     static AssertionExpr& fromSyntax(const FirstMatchSequenceExprSyntax& syntax,
                                      const BindContext& context);
