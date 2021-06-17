@@ -966,6 +966,7 @@ const Type& VirtualInterfaceType::fromSyntax(const Scope& scope, LookupLocation 
     if (!modportName.empty()) {
         auto sym = iface->find(modportName);
         if (!sym || sym->kind != SymbolKind::Modport) {
+            ASSERT(syntax.modport);
             auto& diag = scope.addDiag(diag::NotAModport, syntax.modport->member.range());
             diag << modportName;
             diag << definition->name;

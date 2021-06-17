@@ -399,6 +399,8 @@ const ConstantValue& SpecparamSymbol::getValue() const {
 
         BindContext context(*scope, LookupLocation::before(*this));
         context.eval(*init);
+
+        ASSERT(init->constant);
     }
 
     return *init->constant;

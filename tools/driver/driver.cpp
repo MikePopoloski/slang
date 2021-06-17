@@ -151,6 +151,7 @@ bool loadAllSources(Compilation& compilation, SourceManager& sourceManager,
         return ok;
 
     std::vector<fs::path> directories;
+    directories.reserve(libDirs.size());
     for (auto& dir : libDirs)
         directories.emplace_back(widen(dir));
 
@@ -169,7 +170,7 @@ bool loadAllSources(Compilation& compilation, SourceManager& sourceManager,
     flat_hash_set<string_view> knownNames;
     auto addKnownNames = [&](const std::shared_ptr<SyntaxTree>& tree) {
         auto& meta = tree->getMetadata();
-        for (auto& [n, meta] : meta.nodeMap) {
+        for (auto& [n, _] : meta.nodeMap) {
             auto decl = &n->as<ModuleDeclarationSyntax>();
             string_view name = decl->header->name.valueText();
             if (!name.empty())
@@ -206,11 +207,11 @@ bool loadAllSources(Compilation& compilation, SourceManager& sourceManager,
         }
     };
 
-    for (auto tree : compilation.getSyntaxTrees())
+    for (auto& tree : compilation.getSyntaxTrees())
         addKnownNames(tree);
 
     flat_hash_set<string_view> missingNames;
-    for (auto tree : compilation.getSyntaxTrees())
+    for (auto& tree : compilation.getSyntaxTrees())
         findMissingNames(tree, missingNames);
 
     // Keep loading new files as long as we are making forward progress.
@@ -249,6 +250,7 @@ bool loadAllSources(Compilation& compilation, SourceManager& sourceManager,
             break;
 
         missingNames = std::move(nextMissingNames);
+        nextMissingNames.clear();
     }
 
     return ok;
@@ -705,7 +707,7 @@ int driverMain(int argc, TArgs argv, bool suppressColorsStdout, bool suppressCol
             diag.showMacroExpansion(diagMacroExpansion.value_or(true));
             diag.showHierarchyInstance(diagHierarchy.value_or(true));
 
-            compiler.diagEngine.setErrorLimit(errorLimit.value_or(20));
+            compiler.diagEngine.setErrorLimit((int)errorLimit.value_or(20));
             compiler.setDiagnosticOptions(warningOptions, ignoreUnknownModules == true,
                                           allowUseBeforeDeclare == true);
 

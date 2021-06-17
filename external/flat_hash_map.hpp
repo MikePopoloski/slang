@@ -720,6 +720,7 @@ public:
         }
     }
 
+    [[clang::reinitializes]]
     void clear()
     {
         for (EntryPointer it = entries, end = it + static_cast<ptrdiff_t>(num_slots_minus_one + max_lookups); it != end; ++it)

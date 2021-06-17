@@ -415,14 +415,13 @@ void ClockVarSymbol::fromSyntax(const Scope& scope, const ClockingItemSyntax& sy
     LookupLocation ll = LookupLocation::before(scope.asSymbol());
     BindContext context(*parent, ll);
 
-    ArgumentDirection dir;
+    ArgumentDirection dir = ArgumentDirection::In;
     ClockingSkew inputSkew, outputSkew;
     if (syntax.direction->input.kind == TokenKind::InOutKeyword) {
         dir = ArgumentDirection::InOut;
     }
     else {
         if (syntax.direction->input) {
-            dir = ArgumentDirection::In;
             if (syntax.direction->inputSkew)
                 inputSkew = ClockingSkew::fromSyntax(*syntax.direction->inputSkew, context);
         }
