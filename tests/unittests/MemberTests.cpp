@@ -1135,6 +1135,23 @@ source:11:9: note: $info encountered:           43.200000 top.asdf:m Hello world
 )");
 }
 
+TEST_CASE("Elaboration task non-const args") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    int foo = 4;
+    $info("%d %d", 3, foo);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::InfoTask);
+    CHECK(diags[1].code == diag::ConstEvalNonConstVariable);
+}
+
 TEST_CASE("Const variable must provide initializer") {
     auto tree = SyntaxTree::fromText(R"(
 module m;

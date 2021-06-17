@@ -410,7 +410,7 @@ ElabSystemTaskSymbol::ElabSystemTaskSymbol(ElabSystemTaskKind taskKind, SourceLo
 ElabSystemTaskSymbol& ElabSystemTaskSymbol::fromSyntax(Compilation& compilation,
                                                        const ElabSystemTaskSyntax& syntax) {
     // Just create the symbol now. The diagnostic will be issued later
-    // when someone visit the symbol and asks for it.
+    // when someone visits the symbol and asks for it.
     auto taskKind = SemanticFacts::getElabSystemTaskKind(syntax.name);
     auto result = compilation.emplace<ElabSystemTaskSymbol>(taskKind, syntax.name.location());
     result->setSyntax(syntax);
@@ -482,6 +482,8 @@ string_view ElabSystemTaskSymbol::getMessage() const {
     // Format the message to string.
     EvalContext evalCtx(comp);
     optional<std::string> str = FmtHelpers::formatDisplay(*scope, evalCtx, argSpan);
+    evalCtx.reportDiags(bindCtx);
+
     if (!str)
         return empty();
 
