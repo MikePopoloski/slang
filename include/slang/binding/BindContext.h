@@ -6,9 +6,8 @@
 //------------------------------------------------------------------------------
 #pragma once
 
-#include <tuple>
-
 #include <flat_hash_map.hpp>
+#include <tuple>
 
 #include "slang/binding/Lookup.h"
 #include "slang/numeric/ConstantValue.h"
@@ -179,6 +178,17 @@ public:
 
     /// Information required to instantiate a sequence or property instance.
     struct AssertionInstanceDetails {
+        /// The assertion member being instantiated.
+        const Symbol* symbol = nullptr;
+
+        /// The previous binding context used to start the instantiation.
+        /// This effectively forms a linked list when expanding a nested
+        /// stack of sequence and property instances.
+        const BindContext* prevContext = nullptr;
+
+        /// The location where the instance is being instantiated.
+        SourceLocation instanceLoc;
+
         /// A map of formal argument symbols to their actual replacements.
         flat_hash_map<const Symbol*, std::tuple<const PropertyExprSyntax*, BindContext>>
             argumentMap;
@@ -241,6 +251,8 @@ public:
 private:
     void evalRangeDimension(const SelectorSyntax& syntax, bool isPacked,
                             EvaluatedDimension& result) const;
+
+    void addAssertionBacktrace(Diagnostic& diag) const;
 };
 
 } // namespace slang

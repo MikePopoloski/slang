@@ -542,6 +542,7 @@ warning event-const EventExpressionConstant "edge expression is constant"
 warning empty-stmt EmptyStatement "extra ';' has no effect"
 warning pointless-void-cast PointlessVoidCast "cast to void for void-returning function '{}' has no effect"
 warning unused-result UnusedResult "ignoring return value of '{}', cast to void to suppress"
+note NoteWhileExpanding "while expanding {} '{}'"
 
 subsystem Types
 error InvalidEnumBase "invalid enum base type {} (must be a single dimensional integer type)"

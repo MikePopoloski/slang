@@ -49,11 +49,17 @@ void BindContext::setAttributes(const Expression& expr,
 }
 
 Diagnostic& BindContext::addDiag(DiagCode code, SourceLocation location) const {
-    return scope->addDiag(code, location);
+    auto& diag = scope->addDiag(code, location);
+    if (assertionInstance)
+        addAssertionBacktrace(diag);
+    return diag;
 }
 
 Diagnostic& BindContext::addDiag(DiagCode code, SourceRange sourceRange) const {
-    return scope->addDiag(code, sourceRange);
+    auto& diag = scope->addDiag(code, sourceRange);
+    if (assertionInstance)
+        addAssertionBacktrace(diag);
+    return diag;
 }
 
 bool BindContext::requireIntegral(const ConstantValue& cv, SourceRange range) const {
@@ -421,6 +427,29 @@ BindContext BindContext::resetFlags(bitmask<BindFlags> addedFlags) const {
     result.flags &= ~NonSticky;
     result.flags |= addedFlags;
     return result;
+}
+
+void BindContext::addAssertionBacktrace(Diagnostic& diag) const {
+    if (!assertionInstance)
+        return;
+
+    ASSERT(assertionInstance->symbol);
+    ASSERT(assertionInstance->prevContext);
+
+    auto& note = diag.addNote(diag::NoteWhileExpanding, assertionInstance->instanceLoc);
+    switch (assertionInstance->symbol->kind) {
+        case SymbolKind::Sequence:
+            note << "sequence"sv;
+            break;
+        case SymbolKind::Property:
+            note << "property"sv;
+            break;
+        default:
+            THROW_UNREACHABLE;
+    }
+    note << assertionInstance->symbol->name;
+
+    assertionInstance->prevContext->addAssertionBacktrace(diag);
 }
 
 } // namespace slang

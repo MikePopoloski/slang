@@ -257,6 +257,27 @@ endmodule
     CHECK(diags[4].code == diag::BadBinaryExpression);
 }
 
+TEST_CASE("More complex sequence arg expansion") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    sequence s1;
+        int foo;
+        s2(s2(foo));
+    endsequence
+
+    sequence s2(a);
+        a;
+    endsequence
+
+    assert property (s1);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
 TEST_CASE("Default disable declarations") {
     auto tree = SyntaxTree::fromText(R"(
 module m;

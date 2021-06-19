@@ -1209,11 +1209,14 @@ Expression& AssertionInstanceExpression::fromLookup(const Symbol& symbol,
             return badExpr(comp, nullptr);
     }
 
+    BindContext::AssertionInstanceDetails instance;
+    instance.symbol = &symbol;
+    instance.prevContext = &context;
+    instance.instanceLoc = range.start();
+
     // Now map all arguments to their formal ports.
     bool bad = false;
     uint32_t orderedIndex = 0;
-    BindContext::AssertionInstanceDetails instance;
-
     for (auto formal : formalPorts) {
         const BindContext* argCtx = &context;
         const PropertyExprSyntax* expr = nullptr;
@@ -1293,7 +1296,6 @@ Expression& AssertionInstanceExpression::fromLookup(const Symbol& symbol,
         // This is because the arguments might not actually be used anywhere in the body,
         // so the only place to detect mismatches is here, but we can't save the bound
         // form because assertion item arguments are replaced as-is for each usage.
-        // TODO: correct context for default args
         if (!checkAssertionArgType(*expr, *formal, *argCtx)) {
             bad = true;
         }
