@@ -49,7 +49,7 @@ LRM | Feature | Supported
 {{m-success}} 6.5 | Nets and variables | v0.2
 {{m-success}} 6.6 | Net types | v0.2
 {{m-warning}} 6.6.7 | User-defined nettypes | partial
-{{m-danger}}  6.6.8 | Generic interconnect | no
+{{m-warning}} 6.6.8 | Generic interconnect | partial
 {{m-success}} 6.7 | Net declarations | v0.6
 {{m-success}} 6.8 | Variable declarations | v0.2
 {{m-success}} 6.9 | Vector declarations | v0.2
@@ -140,9 +140,9 @@ LRM | Feature | Supported
 {{m-success}} 9.4.1 | Delay control | v0.2
 {{m-success}} 9.4.2 | Event control | v0.2
 {{m-success}} 9.4.2.3 | Conditional event controls | v0.6
-{{m-danger}}  9.4.2.4 | Sequence events | no
+{{m-success}} 9.4.2.4 | Sequence events | v0.8
 {{m-success}} 9.4.3 | Level-sensitive event control | v0.6
-{{m-danger}}  9.4.4 | Level-sensitive sequence controls | no
+{{m-success}} 9.4.4 | Level-sensitive sequence controls | v0.8
 {{m-success}} 9.4.5 | Intra-assignment timing controls | v0.6
 {{m-dim}}     9.5 | Process execution threads | N/A
 {{m-success}} 9.6.1 | Wait fork statement | v0.4
@@ -246,12 +246,12 @@ LRM | Feature | Supported
 {{m-success}} 16.7 | Sequences | v0.8
 {{m-warning}} 16.8 | Declaring sequences | partial
 {{m-warning}} 16.9 | Sequence operations | partial
-{{m-danger}}  16.10 | Local variables | no
-{{m-danger}}  16.11 | Calling subroutines on match of sequence | no
+{{m-warning}} 16.10 | Local variables | partial
+{{m-warning}} 16.11 | Calling subroutines on match of sequence | partial
 {{m-warning}} 16.12 | Declaring properties | partial
 {{m-danger}}  16.13 | Multiclock support | no
 {{m-warning}} 16.14 | Concurrent assertions | partial
-{{m-danger}}  16.15 | Disable iff resolution | no
+{{m-success}} 16.15 | Disable iff resolution | v0.8
 {{m-danger}}  16.16 | Clock resolution | no
 {{m-danger}}  16.17 | Expect statement | no
 {{m-dim}}     16.18 | Clocking blocks and concurrent assertions | N/A
