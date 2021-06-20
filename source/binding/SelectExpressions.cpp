@@ -828,6 +828,7 @@ Expression& MemberAccessExpression::fromSelector(
         case SymbolKind::AssociativeArrayType:
         case SymbolKind::QueueType:
         case SymbolKind::EventType:
+        case SymbolKind::SequenceType:
             return CallExpression::fromSystemMethod(compilation, expr, selector, invocation,
                                                     withClause, context);
         case SymbolKind::VirtualInterfaceType: {

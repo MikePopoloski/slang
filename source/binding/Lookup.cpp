@@ -245,7 +245,8 @@ bool lookupDownward(span<const NamePlusLoc> nameParts, NameComponents name,
 
         // If we found a value, the remaining dots are member access expressions.
         if (symbol->isValue() || symbol->kind == SymbolKind::ConstraintBlock ||
-            symbol->kind == SymbolKind::Sequence || symbol->kind == SymbolKind::Property) {
+            symbol->kind == SymbolKind::Sequence || symbol->kind == SymbolKind::Property ||
+            symbol->kind == SymbolKind::AssertionPort) {
             if (name.selectors)
                 result.selectors.appendRange(*name.selectors);
 

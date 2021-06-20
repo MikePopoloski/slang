@@ -231,6 +231,10 @@ void registerMiscSystemFuncs(Compilation& c) {
 #undef REGISTER
 
     c.addSystemMethod(SymbolKind::ClassType, std::make_unique<ClassRandomizeFunction>());
+
+    c.addSystemMethod(SymbolKind::SequenceType,
+                      std::make_unique<NonConstantFunction>("triggered", c.getBitType(), 0,
+                                                            std::vector<const Type*>{}, true));
 }
 
 } // namespace slang::Builtins

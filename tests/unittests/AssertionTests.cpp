@@ -353,3 +353,43 @@ endmodule
     CHECK(diags[2].code == diag::LocalVarMatchItem);
     CHECK(diags[3].code == diag::LocalVarMatchItem);
 }
+
+TEST_CASE("Sequence triggered method") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    wire clk, ready;
+    sequence e1;
+        @(posedge clk) $rose(ready) ##1 1 ##1 2;
+    endsequence
+
+    sequence rule;
+        @(posedge clk) e1.triggered ##1 1;
+    endsequence
+
+    sequence e2(a,b,c);
+        @(posedge clk) $rose(a) ##1 b ##1 c;
+    endsequence
+
+    wire proc1, proc2;
+    sequence rule2;
+        @(posedge clk) e2(ready,proc1,proc2).triggered ##1 1;
+    endsequence
+
+    sequence e3(sequence a, untyped b);
+        @(posedge clk) a.triggered ##1 b;
+    endsequence
+
+    sequence rule3;
+        @(posedge clk) e3(ready ##1 proc1, proc2) ##1 1;
+    endsequence
+
+    assert property (rule);
+    assert property (rule2);
+    assert property (rule3);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
