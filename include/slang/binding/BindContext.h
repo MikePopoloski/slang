@@ -192,6 +192,10 @@ public:
         /// A map of formal argument symbols to their actual replacements.
         flat_hash_map<const Symbol*, std::tuple<const PropertyExprSyntax*, BindContext>>
             argumentMap;
+
+        /// If an argument to a sequence or property is being expanded, this
+        /// member contains the source location where the argument was referenced.
+        SourceLocation argExpansionLoc;
     };
 
     /// If this context is for binding an instantiation of a sequence or
@@ -246,13 +250,15 @@ public:
     /// for a subroutine. This method unwraps for the case where we are calling a subroutine.
     const ExpressionSyntax* requireSimpleExpr(const PropertyExprSyntax& expr) const;
 
+    /// If this context is within an assertion instance, report a backtrace of how that
+    /// instance was expanded to the given diagnostic; otherwise, do nothing.
+    void addAssertionBacktrace(Diagnostic& diag) const;
+
     BindContext resetFlags(bitmask<BindFlags> addedFlags) const;
 
 private:
     void evalRangeDimension(const SelectorSyntax& syntax, bool isPacked,
                             EvaluatedDimension& result) const;
-
-    void addAssertionBacktrace(Diagnostic& diag) const;
 };
 
 } // namespace slang

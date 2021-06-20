@@ -433,23 +433,29 @@ void BindContext::addAssertionBacktrace(Diagnostic& diag) const {
     if (!assertionInstance)
         return;
 
-    ASSERT(assertionInstance->symbol);
-    ASSERT(assertionInstance->prevContext);
-
-    auto& note = diag.addNote(diag::NoteWhileExpanding, assertionInstance->instanceLoc);
-    switch (assertionInstance->symbol->kind) {
-        case SymbolKind::Sequence:
-            note << "sequence"sv;
-            break;
-        case SymbolKind::Property:
-            note << "property"sv;
-            break;
-        default:
-            THROW_UNREACHABLE;
+    auto& inst = *assertionInstance;
+    if (inst.argExpansionLoc) {
+        diag.addNote(diag::NoteExpandedHere, inst.argExpansionLoc);
     }
-    note << assertionInstance->symbol->name;
+    else {
+        ASSERT(inst.symbol);
 
-    assertionInstance->prevContext->addAssertionBacktrace(diag);
+        auto& note = diag.addNote(diag::NoteWhileExpanding, inst.instanceLoc);
+        switch (inst.symbol->kind) {
+            case SymbolKind::Sequence:
+                note << "sequence"sv;
+                break;
+            case SymbolKind::Property:
+                note << "property"sv;
+                break;
+            default:
+                THROW_UNREACHABLE;
+        }
+        note << inst.symbol->name;
+    }
+
+    ASSERT(inst.prevContext);
+    inst.prevContext->addAssertionBacktrace(diag);
 }
 
 } // namespace slang

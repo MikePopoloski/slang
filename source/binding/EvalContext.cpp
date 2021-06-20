@@ -125,6 +125,12 @@ void EvalContext::addDiags(const Diagnostics& additional) {
 }
 
 void EvalContext::reportDiags(const BindContext& context) {
+    if (diags.empty())
+        return;
+
+    if (context.assertionInstance)
+        context.addAssertionBacktrace(diags[0]);
+
     context.scope->addDiags(diags);
 }
 

@@ -1347,19 +1347,28 @@ Expression& AssertionInstanceExpression::fromLookup(const Symbol& symbol,
 Expression& AssertionInstanceExpression::bindPort(const Symbol& symbol, SourceRange range,
                                                   const BindContext& instanceCtx) {
     Compilation& comp = instanceCtx.getCompilation();
-    ASSERT(instanceCtx.assertionInstance);
-    auto& inst = *instanceCtx.assertionInstance;
+    auto inst = instanceCtx.assertionInstance;
+    ASSERT(inst);
 
     // The only way to reference an assertion port should be from within
     // an assertion instance, so we should always find it here.
-    auto it = inst.argumentMap.find(&symbol);
-    ASSERT(it != inst.argumentMap.end());
+    auto it = inst->argumentMap.find(&symbol);
+    ASSERT(it != inst->argumentMap.end());
 
-    auto [propExpr, argCtx] = it->second;
+    auto [propExpr, savedCtx] = it->second;
     auto [seqExpr, regExpr] = decomposePropExpr(*propExpr);
 
     // Inherit any binding flags that are specific to this argument's instantiation.
+    BindContext argCtx = savedCtx;
     argCtx.flags = instanceCtx.flags;
+
+    BindContext::AssertionInstanceDetails details;
+    details.argExpansionLoc = range.start();
+    details.prevContext = &instanceCtx;
+    argCtx.assertionInstance = &details;
+
+    if (savedCtx.assertionInstance)
+        details.argumentMap = savedCtx.assertionInstance->argumentMap;
 
     auto& formal = symbol.as<AssertionPortSymbol>();
     auto& type = formal.declaredType.getType();
