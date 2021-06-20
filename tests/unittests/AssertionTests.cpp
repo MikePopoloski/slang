@@ -393,3 +393,50 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Sequence event control") {
+    auto tree = SyntaxTree::fromText(R"(
+wire a, b, c, clk;
+sequence abc;
+    @(posedge clk) a ##1 b ##1 c;
+endsequence
+
+module m;
+    initial begin
+        @ abc $display("Saw a-b-c");
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Level-sensitive sequence control") {
+    auto tree = SyntaxTree::fromText(R"(
+wire a, b, c, clk;
+sequence abc;
+    @(posedge clk) a ##1 b ##1 c;
+endsequence
+
+wire d, e;
+sequence de;
+    @(negedge clk) d ##[2:5] e;
+endsequence
+
+program check;
+    initial begin
+        wait (abc.triggered || de.triggered);
+        if (abc.triggered)
+            $display("abc succeeded");
+        if (de.triggered)
+            $display("de succeeded");
+    end
+endprogram
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
