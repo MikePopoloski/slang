@@ -204,6 +204,12 @@ module m;
     sequence a(sequence a, property b, int c[], untyped d = e);
         1;
     endsequence
+
+    sequence b(int i, untyped j);
+        1 ##[i:j] 1;
+    endsequence
+
+    assert property (b($, $));
 endmodule
 )");
 
@@ -211,10 +217,11 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 3);
+    REQUIRE(diags.size() == 4);
     CHECK(diags[0].code == diag::AssertionArgTypeSequence);
     CHECK(diags[1].code == diag::AssertionArgTypeMismatch);
     CHECK(diags[2].code == diag::AssertionArgNeedsRegExpr);
+    CHECK(diags[3].code == diag::UnboundedNotAllowed);
 }
 
 TEST_CASE("Assertion instance arg expansion") {

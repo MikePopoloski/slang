@@ -1162,7 +1162,7 @@ static bool checkAssertionArgType(const PropertyExprSyntax& propExpr,
         return false;
     }
 
-    auto& bound = Expression::bind(*regExpr, context, BindFlags::AllowUnboundedLiteral);
+    auto& bound = Expression::bind(*regExpr, context);
     if (bound.bad())
         return false;
 
