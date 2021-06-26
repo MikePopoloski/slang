@@ -1324,6 +1324,37 @@ Expression& AssertionInstanceExpression::fromLookup(const Symbol& symbol,
     if (bad)
         return badExpr(comp, nullptr);
 
+    // Check for recursive instantiation. This is illegal for sequences, and allowed in
+    // some forms for properties.
+    auto currInst = context.assertionInstance;
+    while (currInst) {
+        if (currInst->symbol == &symbol) {
+            if (symbol.kind == SymbolKind::Sequence) {
+                context.addDiag(diag::RecursiveSequence, range) << symbol.name;
+                return badExpr(comp, nullptr);
+            }
+
+            // Properties are allowed to be recursive, but we should avoid trying
+            // to expand them because that will continue forever. Instead, we want
+            // to expand one time for each unique invocation of the property and when
+            // we encounter it again we should mark a placeholder and return to stop
+            // the recursion.
+            if (currInst->isRecursive) {
+                auto& body = *comp.emplace<InvalidAssertionExpr>(nullptr);
+                return *comp.emplace<AssertionInstanceExpression>(
+                    *type, symbol, body, /* isRecursiveProperty */ true, range);
+            }
+            instance.isRecursive = true;
+        }
+
+        if (currInst->argDetails)
+            currInst = currInst->argDetails;
+        else {
+            ASSERT(currInst->prevContext);
+            currInst = currInst->prevContext->assertionInstance;
+        }
+    }
+
     // Now instantiate by binding the assertion expression of the sequence / property body.
     auto bodySyntax = symbol.getSyntax();
     ASSERT(bodySyntax);
@@ -1341,7 +1372,8 @@ Expression& AssertionInstanceExpression::fromLookup(const Symbol& symbol,
                                     bodyContext);
     }
 
-    return *comp.emplace<AssertionInstanceExpression>(*type, symbol, *body, range);
+    return *comp.emplace<AssertionInstanceExpression>(*type, symbol, *body,
+                                                      /* isRecursiveProperty */ false, range);
 }
 
 Expression& AssertionInstanceExpression::bindPort(const Symbol& symbol, SourceRange range,
@@ -1350,25 +1382,27 @@ Expression& AssertionInstanceExpression::bindPort(const Symbol& symbol, SourceRa
     auto inst = instanceCtx.assertionInstance;
     ASSERT(inst);
 
+    // When looking up an argument reference from within another expanded
+    // argument, use that original location's context.
+    if (inst->argDetails)
+        inst = inst->argDetails;
+
     // The only way to reference an assertion port should be from within
     // an assertion instance, so we should always find it here.
     auto it = inst->argumentMap.find(&symbol);
     ASSERT(it != inst->argumentMap.end());
 
-    auto [propExpr, savedCtx] = it->second;
+    auto [propExpr, argCtx] = it->second;
     auto [seqExpr, regExpr] = decomposePropExpr(*propExpr);
 
     // Inherit any binding flags that are specific to this argument's instantiation.
-    BindContext argCtx = savedCtx;
     argCtx.flags = instanceCtx.flags;
 
     BindContext::AssertionInstanceDetails details;
     details.argExpansionLoc = range.start();
     details.prevContext = &instanceCtx;
+    details.argDetails = argCtx.assertionInstance;
     argCtx.assertionInstance = &details;
-
-    if (savedCtx.assertionInstance)
-        details.argumentMap = savedCtx.assertionInstance->argumentMap;
 
     auto& formal = symbol.as<AssertionPortSymbol>();
     auto& type = formal.declaredType.getType();
@@ -1387,8 +1421,8 @@ Expression& AssertionInstanceExpression::bindPort(const Symbol& symbol, SourceRa
                 auto& result = AssertionExpr::bind(*propExpr, argCtx);
                 auto& resultType = seqExpr ? comp.getType(SyntaxKind::SequenceType)
                                            : comp.getType(SyntaxKind::PropertyType);
-                return *comp.emplace<AssertionInstanceExpression>(resultType, formal, result,
-                                                                  range);
+                return *comp.emplace<AssertionInstanceExpression>(
+                    resultType, formal, result, /* isRecursiveProperty */ false, range);
             }
         case SymbolKind::SequenceType:
         case SymbolKind::PropertyType: {
@@ -1397,7 +1431,8 @@ Expression& AssertionInstanceExpression::bindPort(const Symbol& symbol, SourceRa
                                    ? comp.getType(SyntaxKind::SequenceType)
                                    : comp.getType(SyntaxKind::PropertyType);
 
-            return *comp.emplace<AssertionInstanceExpression>(resultType, formal, result, range);
+            return *comp.emplace<AssertionInstanceExpression>(
+                resultType, formal, result, /* isRecursiveProperty */ false, range);
         }
         case SymbolKind::EventType:
             // TODO: handle this
@@ -1421,6 +1456,7 @@ Expression& AssertionInstanceExpression::bindPort(const Symbol& symbol, SourceRa
 void AssertionInstanceExpression::serializeTo(ASTSerializer& serializer) const {
     serializer.writeLink("symbol", symbol);
     serializer.write("body", body);
+    serializer.write("isRecursiveProperty", isRecursiveProperty);
 }
 
 Expression& MinTypMaxExpression::fromSyntax(Compilation& compilation,

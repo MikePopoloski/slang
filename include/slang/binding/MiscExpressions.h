@@ -306,11 +306,12 @@ class AssertionInstanceExpression : public Expression {
 public:
     const Symbol& symbol;
     const AssertionExpr& body;
+    bool isRecursiveProperty;
 
     AssertionInstanceExpression(const Type& type, const Symbol& symbol, const AssertionExpr& body,
-                                SourceRange sourceRange) :
+                                bool isRecursiveProperty, SourceRange sourceRange) :
         Expression(ExpressionKind::AssertionInstance, type, sourceRange),
-        symbol(symbol), body(body) {}
+        symbol(symbol), body(body), isRecursiveProperty(isRecursiveProperty) {}
 
     ConstantValue evalImpl(EvalContext&) const { return nullptr; }
     bool verifyConstantImpl(EvalContext&) const { return false; }

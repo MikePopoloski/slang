@@ -481,6 +481,7 @@ error ClockVarBadTiming "clocking signals cannot be driven with a timing control
 error AssertionArgNeedsRegExpr "cannot pass a sequence or property expression to an argument of type {}"
 error AssertionArgTypeMismatch "argument of type {} is not cast compatible with formal port type {}"
 error AssertionArgTypeSequence "expected a sequence expression for port of type 'sequence'"
+error RecursiveSequence "sequence '{}' is recursive"
 warning ignored-slice IgnoredSlice "slice size ignored for left-to-right streaming operator"
 warning unsized-concat UnsizedInConcat "unsized integer in concat; using a width of {}"
 warning width-expand WidthExpand "implicit conversion expands from {} to {} bits"

@@ -196,6 +196,16 @@ public:
         /// If an argument to a sequence or property is being expanded, this
         /// member contains the source location where the argument was referenced.
         SourceLocation argExpansionLoc;
+
+        /// If an argument is being expanded, this is the context in which the
+        /// argument was originally being bound (as opposed to where it is being
+        /// expanded now).
+        const AssertionInstanceDetails* argDetails = nullptr;
+
+        /// Indicates whether this particular instance has already been seen
+        /// previously in the stack of assertion instances being expanded.
+        /// Only applicable to properties, since this is illegal for sequences.
+        bool isRecursive = false;
     };
 
     /// If this context is for binding an instantiation of a sequence or

@@ -447,3 +447,81 @@ endprogram
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Recursive sequence expansion") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    sequence s1;
+        s2;
+    endsequence
+
+    sequence s2;
+        s1;
+    endsequence
+
+    assert property (s1);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::RecursiveSequence);
+}
+
+TEST_CASE("Recursive property") {
+    auto tree = SyntaxTree::fromText(R"(
+logic write_request, write_request_ack;
+logic [0:127] data, model_data;
+logic [3:0] write_request_ack_tag, data_valid_tag, retry_tag;
+logic data_valid;
+logic retry;
+logic last_data_valid;
+
+property check_write;
+    logic [0:127] expected_data;
+    logic [3:0] tag;
+    disable iff (reset) (
+        write_request && write_request_ack,
+        expected_data = model_data,
+        tag = write_request_ack_tag
+    )
+    |=> check_write_data_beat(expected_data, tag, 4'h0);
+endproperty
+
+property check_write_data_beat(
+    local input logic [0:127] expected_data,
+    local input logic [3:0]   tag, i
+);
+    (
+        (data_valid && (data_valid_tag == tag)) ||
+        (retry && (retry_tag == tag))
+    )[->1]
+    |-> ((
+            (data_valid && (data_valid_tag == tag))
+            |-> (data == expected_data[i*8+:8])
+        )
+        and (
+            if (retry && (retry_tag == tag)) (
+                1'b1 |=> check_write_data_beat(expected_data, tag, 4'h0)
+            ) else if (!last_data_valid) (
+                1'b1 |=> check_write_data_beat(expected_data, tag, i+4'h1)
+            ) else (
+                ##1 (retry && (retry_tag == tag))
+                |=> check_write_data_beat(expected_data, tag, 4'h0)
+            )
+        )
+    );
+endproperty
+
+module m;
+    assert property (check_write);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
