@@ -17,6 +17,8 @@ endmodule
 TEST_CASE("Named properties") {
     auto tree = SyntaxTree::fromText(R"(
 module m;
+    logic a,b,c,d,e,f;
+
     property p1(x,y);
         ##1 x |-> y;
     endproperty
@@ -467,8 +469,9 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 1);
+    REQUIRE(diags.size() == 2);
     CHECK(diags[0].code == diag::RecursiveSequence);
+    CHECK(diags[1].code == diag::RecursiveSequence);
 }
 
 TEST_CASE("Recursive property") {

@@ -1376,6 +1376,77 @@ Expression& AssertionInstanceExpression::fromLookup(const Symbol& symbol,
                                                       /* isRecursiveProperty */ false, range);
 }
 
+Expression& AssertionInstanceExpression::makeDefault(const Symbol& symbol) {
+    auto parentScope = symbol.getParentScope();
+    ASSERT(parentScope);
+
+    BindContext context(*parentScope, LookupLocation::before(symbol));
+    auto& comp = context.getCompilation();
+    const Type* type;
+    const Scope* symbolScope;
+    span<const AssertionPortSymbol* const> formalPorts;
+
+    switch (symbol.kind) {
+        case SymbolKind::Sequence: {
+            auto& seq = symbol.as<SequenceSymbol>();
+            type = &comp.getType(SyntaxKind::SequenceType);
+            formalPorts = seq.ports;
+            symbolScope = &seq;
+            break;
+        }
+        case SymbolKind::Property: {
+            auto& prop = symbol.as<PropertySymbol>();
+            type = &comp.getType(SyntaxKind::PropertyType);
+            formalPorts = prop.ports;
+            symbolScope = &prop;
+            break;
+        }
+        default:
+            THROW_UNREACHABLE;
+    }
+
+    BindContext::AssertionInstanceDetails instance;
+    instance.symbol = &symbol;
+    instance.prevContext = &context;
+    instance.instanceLoc = symbol.location;
+
+    // Bind default args, make placeholder entries for args that don't have defaults.
+    for (auto formal : formalPorts) {
+        if (!formal->defaultValueSyntax) {
+            instance.argumentMap.emplace(formal,
+                                         std::make_tuple((PropertyExprSyntax*)nullptr, context));
+        }
+        else {
+            BindContext ctx(*symbolScope, LookupLocation::after(*formal));
+            ctx.assertionInstance = &instance;
+
+            auto expr = formal->defaultValueSyntax;
+            instance.argumentMap.emplace(formal, std::make_tuple(expr, ctx));
+            checkAssertionArgType(*expr, *formal, ctx);
+        }
+    }
+
+    auto bodySyntax = symbol.getSyntax();
+    ASSERT(bodySyntax);
+
+    BindContext bodyContext(*symbolScope, LookupLocation::max);
+    bodyContext.assertionInstance = &instance;
+
+    const AssertionExpr* body;
+    if (symbol.kind == SymbolKind::Sequence) {
+        body =
+            &AssertionExpr::bind(*bodySyntax->as<SequenceDeclarationSyntax>().seqExpr, bodyContext);
+    }
+    else {
+        body = &AssertionExpr::bind(*bodySyntax->as<PropertyDeclarationSyntax>().propertySpec->expr,
+                                    bodyContext);
+    }
+
+    SourceRange range{ symbol.location, symbol.location + 1 };
+    return *comp.emplace<AssertionInstanceExpression>(*type, symbol, *body,
+                                                      /* isRecursiveProperty */ false, range);
+}
+
 Expression& AssertionInstanceExpression::bindPort(const Symbol& symbol, SourceRange range,
                                                   const BindContext& instanceCtx) {
     Compilation& comp = instanceCtx.getCompilation();
@@ -1393,6 +1464,12 @@ Expression& AssertionInstanceExpression::bindPort(const Symbol& symbol, SourceRa
     ASSERT(it != inst->argumentMap.end());
 
     auto [propExpr, argCtx] = it->second;
+    if (!propExpr) {
+        // The expression can be null when making default instances of
+        // sequences and properties. Just return an invalid expression.
+        return badExpr(comp, nullptr);
+    }
+
     auto [seqExpr, regExpr] = decomposePropExpr(*propExpr);
 
     // Inherit any binding flags that are specific to this argument's instantiation.

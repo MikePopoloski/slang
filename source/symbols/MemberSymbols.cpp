@@ -871,6 +871,10 @@ SequenceSymbol& SequenceSymbol::fromSyntax(const Scope& scope,
     return *result;
 }
 
+void SequenceSymbol::makeDefaultInstance() const {
+    AssertionInstanceExpression::makeDefault(*this);
+}
+
 PropertySymbol::PropertySymbol(Compilation& compilation, string_view name, SourceLocation loc) :
     Symbol(SymbolKind::Property, name, loc), Scope(compilation, this) {
 }
@@ -895,6 +899,10 @@ PropertySymbol& PropertySymbol::fromSyntax(const Scope& scope,
     }
 
     return *result;
+}
+
+void PropertySymbol::makeDefaultInstance() const {
+    AssertionInstanceExpression::makeDefault(*this);
 }
 
 ClockingBlockSymbol::ClockingBlockSymbol(Compilation& compilation, string_view name,

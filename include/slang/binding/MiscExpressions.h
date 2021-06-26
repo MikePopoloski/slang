@@ -319,6 +319,8 @@ public:
     static Expression& fromLookup(const Symbol& symbol, const InvocationExpressionSyntax* syntax,
                                   SourceRange range, const BindContext& context);
 
+    static Expression& makeDefault(const Symbol& symbol);
+
     static Expression& bindPort(const Symbol& symbol, SourceRange range,
                                 const BindContext& context);
 
