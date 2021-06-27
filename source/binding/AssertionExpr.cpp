@@ -335,7 +335,11 @@ static span<const Expression* const> bindMatchItems(const SequenceMatchListSynta
 
     SmallVectorSized<const Expression*, 4> results;
     for (auto item : syntax.items) {
-        auto& expr = Expression::bind(*item, ctx, BindFlags::AssignmentAllowed);
+        auto exprSyn = context.requireSimpleExpr(*item, diag::InvalidMatchItem);
+        if (!exprSyn)
+            continue;
+
+        auto& expr = Expression::bind(*exprSyn, ctx, BindFlags::AssignmentAllowed);
         results.append(&expr);
 
         switch (expr.kind) {

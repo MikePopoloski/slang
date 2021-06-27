@@ -876,6 +876,20 @@ ConditionalPatternSyntax& Parser::parseConditionalPattern() {
     return factory.conditionalPattern(expr, matchesClause);
 }
 
+EventExpressionSyntax& Parser::parseSignalEvent() {
+    Token edge = parseEdgeKeyword();
+    auto& expr = parseExpression();
+
+    IffEventClauseSyntax* iffClause = nullptr;
+    if (peek(TokenKind::IffKeyword)) {
+        auto iff = consume();
+        auto& iffExpr = parseExpression();
+        iffClause = &factory.iffEventClause(iff, iffExpr);
+    }
+
+    return factory.signalEventExpression(edge, expr, iffClause);
+}
+
 EventExpressionSyntax& Parser::parseEventExpression() {
     EventExpressionSyntax* left;
     auto kind = peek().kind;
@@ -886,17 +900,7 @@ EventExpressionSyntax& Parser::parseEventExpression() {
         left = &factory.parenthesizedEventExpression(openParen, expr, closeParen);
     }
     else {
-        Token edge = parseEdgeKeyword();
-        auto& expr = parseExpression();
-
-        IffEventClauseSyntax* iffClause = nullptr;
-        if (peek(TokenKind::IffKeyword)) {
-            auto iff = consume();
-            auto& iffExpr = parseExpression();
-            iffClause = &factory.iffEventClause(iff, iffExpr);
-        }
-
-        left = &factory.signalEventExpression(edge, expr, iffClause);
+        left = &parseSignalEvent();
     }
 
     kind = peek().kind;
@@ -1187,9 +1191,9 @@ SequenceMatchListSyntax* Parser::parseSequenceMatchList(Token& closeParen) {
 
     Token comma;
     span<TokenOrSyntax> list;
-    parseList<isPossibleExpressionOrComma, isEndOfParenList>(
+    parseList<isPossibleArgument, isEndOfParenList>(
         TokenKind::Comma, TokenKind::CloseParenthesis, TokenKind::Comma, comma, list, closeParen,
-        RequireItems::True, diag::ExpectedExpression, [this] { return &parseExpression(); });
+        RequireItems::True, diag::ExpectedExpression, [this] { return &parsePropertyExpr(0); });
 
     return &factory.sequenceMatchList(comma, list);
 }
@@ -1290,6 +1294,10 @@ SequenceExprSyntax& Parser::parseSequencePrimary() {
             auto& expr = parseSequenceExpr(0, /* isInProperty */ false);
             return parseParenthesizedSeqExpr(openParen, expr);
         }
+        case TokenKind::EdgeKeyword:
+        case TokenKind::NegEdgeKeyword:
+        case TokenKind::PosEdgeKeyword:
+            return parseSignalEvent();
         default: {
             auto& expr = parseExpressionOrDist(ExpressionOptions::SequenceExpr);
             auto repetition = parseSequenceRepetition();

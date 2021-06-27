@@ -301,6 +301,11 @@ optional<ConstantRange> BindContext::evalUnpackedDimension(
 
 const ExpressionSyntax* BindContext::requireSimpleExpr(
     const PropertyExprSyntax& initialExpr) const {
+    return requireSimpleExpr(initialExpr, diag::InvalidArgumentExpr);
+}
+
+const ExpressionSyntax* BindContext::requireSimpleExpr(const PropertyExprSyntax& initialExpr,
+                                                       DiagCode code) const {
     const SyntaxNode* expr = &initialExpr;
     if (expr->kind == SyntaxKind::SimplePropertyExpr) {
         expr = expr->as<SimplePropertyExprSyntax>().expr;
@@ -311,7 +316,7 @@ const ExpressionSyntax* BindContext::requireSimpleExpr(
         }
     }
 
-    addDiag(diag::InvalidArgumentExpr, initialExpr.sourceRange());
+    addDiag(code, initialExpr.sourceRange());
     return nullptr;
 }
 

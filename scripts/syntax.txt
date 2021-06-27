@@ -7,6 +7,9 @@ empty
 TimingControl final=false
 empty
 
+SequenceExpr final=false
+empty
+
 PropertyExpr final=false
 empty
 
@@ -421,7 +424,7 @@ IffEventClause
 token iff
 Expression expr
 
-EventExpression final=false
+EventExpression base=SequenceExpr final=false
 empty
 
 SignalEventExpression base=EventExpression
@@ -1899,9 +1902,6 @@ token semi
 
 // ----- ASSERTIONS -----
 
-SequenceExpr final=false
-empty
-
 SequenceRepetition
 token openBracket
 token op
@@ -1914,7 +1914,7 @@ SequenceRepetition? repetition
 
 SequenceMatchList
 token comma
-separated_list<Expression> items
+separated_list<PropertyExpr> items
 
 ParenthesizedSequenceExpr base=SequenceExpr
 token openParen

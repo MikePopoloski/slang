@@ -259,6 +259,7 @@ public:
     /// up front whether they will be used to instantiate a property or a sequence or are actually
     /// for a subroutine. This method unwraps for the case where we are calling a subroutine.
     const ExpressionSyntax* requireSimpleExpr(const PropertyExprSyntax& expr) const;
+    const ExpressionSyntax* requireSimpleExpr(const PropertyExprSyntax& expr, DiagCode code) const;
 
     /// If this context is within an assertion instance, report a backtrace of how that
     /// instance was expanded to the given diagnostic; otherwise, do nothing.

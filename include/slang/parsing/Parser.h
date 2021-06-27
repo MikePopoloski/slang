@@ -220,6 +220,7 @@ private:
     PatternSyntax& parsePattern();
     AssignmentPatternExpressionSyntax& parseAssignmentPatternExpression(DataTypeSyntax* type);
     AssignmentPatternItemSyntax& parseAssignmentPatternItem(ExpressionSyntax* key);
+    EventExpressionSyntax& parseSignalEvent();
     EventExpressionSyntax& parseEventExpression();
     NamedBlockClauseSyntax* parseNamedBlockClause();
     TimingControlSyntax* parseTimingControl();

@@ -581,6 +581,25 @@ bool SyntaxFacts::isPossibleArgument(TokenKind kind) {
     switch (kind) {
         case TokenKind::Dot:
         case TokenKind::Comma:
+        case TokenKind::FirstMatchKeyword:
+        case TokenKind::StrongKeyword:
+        case TokenKind::WeakKeyword:
+        case TokenKind::NotKeyword:
+        case TokenKind::IfKeyword:
+        case TokenKind::CaseKeyword:
+        case TokenKind::NextTimeKeyword:
+        case TokenKind::SNextTimeKeyword:
+        case TokenKind::AlwaysKeyword:
+        case TokenKind::SAlwaysKeyword:
+        case TokenKind::EventuallyKeyword:
+        case TokenKind::SEventuallyKeyword:
+        case TokenKind::AcceptOnKeyword:
+        case TokenKind::SyncAcceptOnKeyword:
+        case TokenKind::RejectOnKeyword:
+        case TokenKind::SyncRejectOnKeyword:
+        case TokenKind::EdgeKeyword:
+        case TokenKind::PosEdgeKeyword:
+        case TokenKind::NegEdgeKeyword:
             return true;
         default:
             return isPossibleExpression(kind);
