@@ -539,6 +539,8 @@ error DeferredAssertOutArg "cannot invoke a subroutine with 'output' or 'inout' 
 error DeferredAssertAutoRefArg "cannot pass automatic variable '{}' to 'ref' argument '{}' in a deferred assertion action"
 error InvalidMatchItem "sequence match item must be a local variable assignment, increment/decrement operator, or subroutine call"
 error LocalVarMatchItem "sequence match items can only modify local variables"
+error InvalidSignalEventInSeq "invalid use of event expression in sequence"
+error InvalidSyntaxInEventExpr "expression is not valid in an event expression"
 warning event-const EventExpressionConstant "edge expression is constant"
 warning empty-stmt EmptyStatement "extra ';' has no effect"
 warning pointless-void-cast PointlessVoidCast "cast to void for void-returning function '{}' has no effect"

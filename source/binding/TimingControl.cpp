@@ -15,8 +15,7 @@
 
 namespace slang {
 
-const TimingControl& TimingControl::bind(const TimingControlSyntax& syntax,
-                                         const BindContext& context) {
+TimingControl& TimingControl::bind(const TimingControlSyntax& syntax, const BindContext& context) {
     auto& comp = context.getCompilation();
     if (context.flags.has(BindFlags::FunctionOrFinal)) {
         context.addDiag(diag::TimingInFuncNotAllowed, syntax.sourceRange());
@@ -35,11 +34,10 @@ const TimingControl& TimingControl::bind(const TimingControlSyntax& syntax,
             result =
                 &SignalEventControl::fromSyntax(comp, syntax.as<EventControlSyntax>(), context);
             break;
-        case SyntaxKind::EventControlWithExpression: {
+        case SyntaxKind::EventControlWithExpression:
             result = &EventListControl::fromSyntax(
                 comp, *syntax.as<EventControlWithExpressionSyntax>().expr, context);
             break;
-        }
         case SyntaxKind::ImplicitEventControl:
             result = &ImplicitEventControl::fromSyntax(
                 comp, syntax.as<ImplicitEventControlSyntax>(), context);
@@ -56,6 +54,69 @@ const TimingControl& TimingControl::bind(const TimingControlSyntax& syntax,
             break;
         default:
             THROW_UNREACHABLE;
+    }
+
+    result->syntax = &syntax;
+    return *result;
+}
+
+// This function is called when binding event expression arguments for a sequence or
+// property instantiation. We don't know enough information at parse time to parse this
+// into an actual EventExpressionSyntax, so instead we end up with a PropertyExprSyntax
+// that we need to try to fit into an event expression (or report an error if we cannot).
+TimingControl& TimingControl::bind(const PropertyExprSyntax& syntax, const BindContext& context) {
+    auto& comp = context.getCompilation();
+    if (context.flags.has(BindFlags::FunctionOrFinal)) {
+        context.addDiag(diag::TimingInFuncNotAllowed, syntax.sourceRange());
+        return badCtrl(comp, nullptr);
+    }
+
+    TimingControl* result;
+    switch (syntax.kind) {
+        case SyntaxKind::SimplePropertyExpr:
+            return bind(*syntax.as<SimplePropertyExprSyntax>().expr, context);
+        case SyntaxKind::ParenthesizedPropertyExpr:
+            return bind(*syntax.as<ParenthesizedPropertyExprSyntax>().expr, context);
+        case SyntaxKind::OrPropertyExpr:
+            result =
+                &EventListControl::fromSyntax(comp, syntax.as<BinaryPropertyExprSyntax>(), context);
+            break;
+        case SyntaxKind::IffPropertyExpr:
+            result = &SignalEventControl::fromSyntax(comp, syntax.as<BinaryPropertyExprSyntax>(),
+                                                     context);
+            break;
+        default:
+            context.addDiag(diag::InvalidSyntaxInEventExpr, syntax.sourceRange());
+            return badCtrl(comp, nullptr);
+    }
+
+    result->syntax = &syntax;
+    return *result;
+}
+
+TimingControl& TimingControl::bind(const SequenceExprSyntax& syntax, const BindContext& context) {
+    auto& comp = context.getCompilation();
+    TimingControl* result;
+    switch (syntax.kind) {
+        case SyntaxKind::SimpleSequenceExpr:
+            result = &SignalEventControl::fromSyntax(comp, syntax.as<SimpleSequenceExprSyntax>(),
+                                                     context);
+            break;
+        case SyntaxKind::ParenthesizedSequenceExpr:
+            result = &EventListControl::fromSyntax(
+                comp, syntax.as<ParenthesizedSequenceExprSyntax>(), context);
+            break;
+        case SyntaxKind::OrSequenceExpr:
+            result =
+                &EventListControl::fromSyntax(comp, syntax.as<BinarySequenceExprSyntax>(), context);
+            break;
+        case SyntaxKind::SignalEventExpression:
+            result = &SignalEventControl::fromSyntax(comp, syntax.as<SignalEventExpressionSyntax>(),
+                                                     context);
+            break;
+        default:
+            context.addDiag(diag::InvalidSyntaxInEventExpr, syntax.sourceRange());
+            return badCtrl(comp, nullptr);
     }
 
     result->syntax = &syntax;
@@ -200,6 +261,40 @@ TimingControl& SignalEventControl::fromSyntax(Compilation& compilation,
     return fromExpr(compilation, EdgeKind::None, expr, nullptr, context);
 }
 
+TimingControl& SignalEventControl::fromSyntax(Compilation& compilation,
+                                              const BinaryPropertyExprSyntax& syntax,
+                                              const BindContext& context) {
+    // We can hit this case for 'iff' binary property expressions that are actually
+    // just a signal event with an 'iff' clause.
+    ASSERT(syntax.kind == SyntaxKind::IffPropertyExpr);
+
+    auto left = context.requireSimpleExpr(*syntax.left, diag::InvalidSyntaxInEventExpr);
+    auto right = context.requireSimpleExpr(*syntax.left, diag::InvalidSyntaxInEventExpr);
+    if (!left || !right)
+        return badCtrl(compilation, nullptr);
+
+    auto& expr = Expression::bind(*left, context,
+                                  BindFlags::EventExpression | BindFlags::AllowClockingBlock);
+
+    auto& iffCond = Expression::bind(*right, context, BindFlags::EventExpression);
+
+    return fromExpr(compilation, EdgeKind::None, expr, &iffCond, context);
+}
+
+TimingControl& SignalEventControl::fromSyntax(Compilation& compilation,
+                                              const SimpleSequenceExprSyntax& syntax,
+                                              const BindContext& context) {
+    if (syntax.repetition) {
+        context.addDiag(diag::InvalidSyntaxInEventExpr, syntax.sourceRange());
+        return badCtrl(compilation, nullptr);
+    }
+
+    auto& expr = Expression::bind(*syntax.expr, context,
+                                  BindFlags::EventExpression | BindFlags::AllowClockingBlock);
+
+    return fromExpr(compilation, EdgeKind::None, expr, nullptr, context);
+}
+
 TimingControl& SignalEventControl::fromExpr(Compilation& compilation, EdgeKind edge,
                                             const Expression& expr, const Expression* iffCondition,
                                             const BindContext& context) {
@@ -241,15 +336,14 @@ void SignalEventControl::serializeTo(ASTSerializer& serializer) const {
     serializer.write("edge", toString(edge));
 }
 
-static void collectEvents(const BindContext& context, const EventExpressionSyntax& expr,
+static void collectEvents(const BindContext& context, const SyntaxNode& expr,
                           SmallVector<TimingControl*>& results) {
     switch (expr.kind) {
         case SyntaxKind::ParenthesizedEventExpression:
             collectEvents(context, *expr.as<ParenthesizedEventExpressionSyntax>().expr, results);
             break;
-        case SyntaxKind::SignalEventExpression:
-            results.append(&SignalEventControl::fromSyntax(
-                context.getCompilation(), expr.as<SignalEventExpressionSyntax>(), context));
+        case SyntaxKind::ParenthesizedPropertyExpr:
+            collectEvents(context, *expr.as<ParenthesizedPropertyExprSyntax>().expr, results);
             break;
         case SyntaxKind::BinaryEventExpression: {
             auto& bin = expr.as<BinaryEventExpressionSyntax>();
@@ -257,13 +351,47 @@ static void collectEvents(const BindContext& context, const EventExpressionSynta
             collectEvents(context, *bin.right, results);
             break;
         }
+        case SyntaxKind::OrPropertyExpr: {
+            auto& bin = expr.as<BinaryPropertyExprSyntax>();
+            collectEvents(context, *bin.left, results);
+            collectEvents(context, *bin.right, results);
+            break;
+        }
+        case SyntaxKind::OrSequenceExpr: {
+            auto& bin = expr.as<BinarySequenceExprSyntax>();
+            collectEvents(context, *bin.left, results);
+            collectEvents(context, *bin.right, results);
+            break;
+        }
+        case SyntaxKind::SimplePropertyExpr:
+        case SyntaxKind::IffPropertyExpr:
+            results.append(&TimingControl::bind(expr.as<PropertyExprSyntax>(), context));
+            break;
+        case SyntaxKind::SimpleSequenceExpr:
+        case SyntaxKind::SignalEventExpression:
+            results.append(&TimingControl::bind(expr.as<SequenceExprSyntax>(), context));
+            break;
+        case SyntaxKind::ParenthesizedSequenceExpr: {
+            auto& pse = expr.as<ParenthesizedSequenceExprSyntax>();
+            if (pse.repetition) {
+                context.addDiag(diag::InvalidSyntaxInEventExpr, expr.sourceRange());
+                results.append(context.getCompilation().emplace<InvalidTimingControl>(nullptr));
+            }
+            else {
+                collectEvents(context, *pse.expr, results);
+                if (pse.matchList) {
+                    for (auto item : pse.matchList->items)
+                        collectEvents(context, *item, results);
+                }
+            }
+            break;
+        }
         default:
             THROW_UNREACHABLE;
     }
 }
 
-TimingControl& EventListControl::fromSyntax(Compilation& compilation,
-                                            const EventExpressionSyntax& syntax,
+TimingControl& EventListControl::fromSyntax(Compilation& compilation, const SyntaxNode& syntax,
                                             const BindContext& context) {
     SmallVectorSized<TimingControl*, 4> events;
     collectEvents(context, syntax, events);

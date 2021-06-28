@@ -528,3 +528,48 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Event argument to sequence instance") {
+    auto tree = SyntaxTree::fromText(R"(
+logic x,y;
+sequence event_arg_example (event ev);
+    @(ev) x ##1 y;
+endsequence
+
+module m;
+    logic clk;
+
+    cover property (event_arg_example(clk));
+    cover property (event_arg_example(posedge clk));
+    cover property (event_arg_example((posedge clk iff x or edge clk, x iff y, negedge clk)));
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Sequence event expr errors") {
+    auto tree = SyntaxTree::fromText(R"(
+logic x,y;
+sequence event_arg_example (event ev);
+    @(ev) x ##1 y;
+endsequence
+
+module m;
+    logic clk;
+    sequence s;
+        ##1 (1, posedge clk) ##1 posedge clk;
+    endsequence
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::InvalidMatchItem);
+    CHECK(diags[1].code == diag::InvalidSignalEventInSeq);
+}

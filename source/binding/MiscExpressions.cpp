@@ -1150,7 +1150,7 @@ static bool checkAssertionArgType(const PropertyExprSyntax& propExpr,
         case SymbolKind::PropertyType:
             return !AssertionExpr::bind(propExpr, context).bad();
         case SymbolKind::EventType:
-            // TODO: handle these
+            return !TimingControl::bind(propExpr, context).bad();
         default:
             break;
     }

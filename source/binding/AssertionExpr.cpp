@@ -73,6 +73,10 @@ const AssertionExpr& AssertionExpr::bind(const SequenceExprSyntax& syntax,
             result =
                 &ClockingAssertionExpr::fromSyntax(syntax.as<ClockingSequenceExprSyntax>(), ctx);
             break;
+        case SyntaxKind::SignalEventExpression:
+            ctx.addDiag(diag::InvalidSignalEventInSeq, syntax.sourceRange());
+            result = &badExpr(ctx.getCompilation(), nullptr);
+            break;
         default:
             THROW_UNREACHABLE;
     }

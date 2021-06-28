@@ -30,17 +30,21 @@ ENUM(TimingControlKind, CONTROL);
 class BindContext;
 class Compilation;
 class Expression;
+struct PropertyExprSyntax;
+struct SequenceExprSyntax;
 struct TimingControlSyntax;
 
 class TimingControl {
 public:
     TimingControlKind kind;
 
-    const TimingControlSyntax* syntax = nullptr;
+    const SyntaxNode* syntax = nullptr;
 
     bool bad() const { return kind == TimingControlKind::Invalid; }
 
-    static const TimingControl& bind(const TimingControlSyntax& syntax, const BindContext& context);
+    static TimingControl& bind(const TimingControlSyntax& syntax, const BindContext& context);
+    static TimingControl& bind(const PropertyExprSyntax& syntax, const BindContext& context);
+    static TimingControl& bind(const SequenceExprSyntax& syntax, const BindContext& context);
 
     template<typename T>
     T& as() {
@@ -120,8 +124,10 @@ public:
     void serializeTo(ASTSerializer& serializer) const;
 };
 
+struct BinaryPropertyExprSyntax;
 struct EventControlSyntax;
 struct SignalEventExpressionSyntax;
+struct SimpleSequenceExprSyntax;
 
 class SignalEventControl : public TimingControl {
 public:
@@ -138,6 +144,14 @@ public:
                                      const BindContext& context);
 
     static TimingControl& fromSyntax(Compilation& compilation, const EventControlSyntax& syntax,
+                                     const BindContext& context);
+
+    static TimingControl& fromSyntax(Compilation& compilation,
+                                     const BinaryPropertyExprSyntax& syntax,
+                                     const BindContext& context);
+
+    static TimingControl& fromSyntax(Compilation& compilation,
+                                     const SimpleSequenceExprSyntax& syntax,
                                      const BindContext& context);
 
     static bool isKind(TimingControlKind kind) { return kind == TimingControlKind::SignalEvent; }
@@ -158,7 +172,7 @@ public:
     explicit EventListControl(span<const TimingControl* const> events) :
         TimingControl(TimingControlKind::EventList), events(events) {}
 
-    static TimingControl& fromSyntax(Compilation& compilation, const EventExpressionSyntax& syntax,
+    static TimingControl& fromSyntax(Compilation& compilation, const SyntaxNode& syntax,
                                      const BindContext& context);
 
     static bool isKind(TimingControlKind kind) { return kind == TimingControlKind::EventList; }
