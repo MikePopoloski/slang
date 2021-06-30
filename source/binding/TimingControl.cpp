@@ -76,7 +76,9 @@ TimingControl& TimingControl::bind(const PropertyExprSyntax& syntax, const BindC
         case SyntaxKind::SimplePropertyExpr:
             return bind(*syntax.as<SimplePropertyExprSyntax>().expr, context);
         case SyntaxKind::ParenthesizedPropertyExpr:
-            return bind(*syntax.as<ParenthesizedPropertyExprSyntax>().expr, context);
+            result = &EventListControl::fromSyntax(
+                comp, syntax.as<ParenthesizedPropertyExprSyntax>(), context);
+            break;
         case SyntaxKind::OrPropertyExpr:
             result =
                 &EventListControl::fromSyntax(comp, syntax.as<BinaryPropertyExprSyntax>(), context);
@@ -342,9 +344,6 @@ static void collectEvents(const BindContext& context, const SyntaxNode& expr,
         case SyntaxKind::ParenthesizedEventExpression:
             collectEvents(context, *expr.as<ParenthesizedEventExpressionSyntax>().expr, results);
             break;
-        case SyntaxKind::ParenthesizedPropertyExpr:
-            collectEvents(context, *expr.as<ParenthesizedPropertyExprSyntax>().expr, results);
-            break;
         case SyntaxKind::BinaryEventExpression: {
             auto& bin = expr.as<BinaryEventExpressionSyntax>();
             collectEvents(context, *bin.left, results);
@@ -371,6 +370,15 @@ static void collectEvents(const BindContext& context, const SyntaxNode& expr,
         case SyntaxKind::SignalEventExpression:
             results.append(&TimingControl::bind(expr.as<SequenceExprSyntax>(), context));
             break;
+        case SyntaxKind::ParenthesizedPropertyExpr: {
+            auto& ppe = expr.as<ParenthesizedPropertyExprSyntax>();
+            collectEvents(context, *ppe.expr, results);
+            if (ppe.matchList) {
+                for (auto item : ppe.matchList->items)
+                    collectEvents(context, *item, results);
+            }
+            break;
+        }
         case SyntaxKind::ParenthesizedSequenceExpr: {
             auto& pse = expr.as<ParenthesizedSequenceExprSyntax>();
             if (pse.repetition) {

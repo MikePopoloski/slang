@@ -74,6 +74,7 @@ const AssertionExpr& AssertionExpr::bind(const SequenceExprSyntax& syntax,
                 &ClockingAssertionExpr::fromSyntax(syntax.as<ClockingSequenceExprSyntax>(), ctx);
             break;
         case SyntaxKind::SignalEventExpression:
+            // TODO: untyped arg binding?
             ctx.addDiag(diag::InvalidSignalEventInSeq, syntax.sourceRange());
             result = &badExpr(ctx.getCompilation(), nullptr);
             break;
@@ -109,6 +110,7 @@ const AssertionExpr& AssertionExpr::bind(const PropertyExprSyntax& syntax,
             result = &BinaryAssertionExpr::fromSyntax(syntax.as<BinaryPropertyExprSyntax>(), ctx);
             break;
         case SyntaxKind::ParenthesizedPropertyExpr:
+            // TODO: check for invalid match list
             return bind(*syntax.as<ParenthesizedPropertyExprSyntax>().expr, context);
         case SyntaxKind::ClockingPropertyExpr:
             result =

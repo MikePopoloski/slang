@@ -1453,8 +1453,16 @@ PropertyExprSyntax& Parser::parsePropertyPrimary() {
                 return factory.simplePropertyExpr(*result);
             }
 
-            auto closeParen = expect(TokenKind::CloseParenthesis);
-            return factory.parenthesizedPropertyExpr(openParen, expr, closeParen);
+            // In a parenthesized property expression a comma is not valid here. However,
+            // when parsing a property instance argument, we may be looking at an event
+            // expression here. The first term of an event expression may be an `iff`
+            // expression that gets parsed as a property expression, and we want to allow
+            // a comma separated list of events to follow. Binding will disambiguate this
+            // later when we learn what kind of expression we're actually being used in.
+            Token closeParen;
+            auto matchList = parseSequenceMatchList(closeParen);
+
+            return factory.parenthesizedPropertyExpr(openParen, expr, matchList, closeParen);
         }
         case TokenKind::StrongKeyword:
         case TokenKind::WeakKeyword: {

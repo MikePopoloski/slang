@@ -542,6 +542,7 @@ module m;
     cover property (event_arg_example(clk));
     cover property (event_arg_example(posedge clk));
     cover property (event_arg_example((posedge clk iff x or edge clk, x iff y, negedge clk)));
+    cover property (event_arg_example((x iff y, negedge clk)));
 endmodule
 )");
 

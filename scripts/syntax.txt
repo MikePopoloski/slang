@@ -1962,6 +1962,7 @@ SequenceExpr expr
 ParenthesizedPropertyExpr base=PropertyExpr
 token openParen
 PropertyExpr expr
+SequenceMatchList? matchList
 token closeParen
 
 StrongWeakPropertyExpr base=PropertyExpr
