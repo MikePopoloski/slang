@@ -543,6 +543,7 @@ module m;
     cover property (event_arg_example(posedge clk));
     cover property (event_arg_example((posedge clk iff x or edge clk, x iff y, negedge clk)));
     cover property (event_arg_example((x iff y, negedge clk)));
+    cover property (event_arg_example(((x iff y) or negedge clk)));
 endmodule
 )");
 
@@ -554,15 +555,21 @@ endmodule
 TEST_CASE("Sequence event expr errors") {
     auto tree = SyntaxTree::fromText(R"(
 logic x,y;
-sequence event_arg_example (event ev);
+sequence s1 (event ev);
     @(ev) x ##1 y;
 endsequence
 
 module m;
     logic clk;
-    sequence s;
+    sequence s2;
         ##1 (1, posedge clk) ##1 posedge clk;
     endsequence
+
+    assert property (s1((x and y) iff clk));
+    assert property (s1((x and y)[*0:1]));
+    assert property (s1(x[*0:1]));
+    assert property (s1(x |-> y));
+    assert property (s1(x throughout y));
 endmodule
 )");
 
@@ -570,7 +577,12 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 2);
+    REQUIRE(diags.size() == 7);
     CHECK(diags[0].code == diag::InvalidMatchItem);
     CHECK(diags[1].code == diag::InvalidSignalEventInSeq);
+    CHECK(diags[2].code == diag::InvalidSyntaxInEventExpr);
+    CHECK(diags[3].code == diag::InvalidSyntaxInEventExpr);
+    CHECK(diags[4].code == diag::InvalidSyntaxInEventExpr);
+    CHECK(diags[5].code == diag::InvalidSyntaxInEventExpr);
+    CHECK(diags[6].code == diag::InvalidSyntaxInEventExpr);
 }
