@@ -278,15 +278,15 @@ public:
 
 struct ClockingPropertyExprSyntax;
 
-/// Represents a clocking event argument. This is a special kind of argument that is only
-/// allowed with the sampled value system functions.
-class ClockingArgumentExpression : public Expression {
+/// Represents a clocking event expression. This is a special kind of expression that is only
+/// allowed with the sampled value system functions and assertion instance arguments.
+class ClockingEventExpression : public Expression {
 public:
     const TimingControl& timingControl;
 
-    ClockingArgumentExpression(const Type& type, const TimingControl& timingControl,
-                               SourceRange sourceRange) :
-        Expression(ExpressionKind::ClockingArgument, type, sourceRange),
+    ClockingEventExpression(const Type& type, const TimingControl& timingControl,
+                            SourceRange sourceRange) :
+        Expression(ExpressionKind::ClockingEvent, type, sourceRange),
         timingControl(timingControl) {}
 
     ConstantValue evalImpl(EvalContext&) const { return nullptr; }
@@ -297,7 +297,7 @@ public:
 
     void serializeTo(ASTSerializer& serializer) const;
 
-    static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::ClockingArgument; }
+    static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::ClockingEvent; }
 };
 
 /// Represents an instance of an assertion item, either a sequence, a property,

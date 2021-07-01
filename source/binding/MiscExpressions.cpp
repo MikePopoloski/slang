@@ -795,7 +795,7 @@ Expression& CallExpression::createSystemCall(
                         const auto& arg = actualArgs[i]->as<OrderedArgumentSyntax>();
                         if (arg.expr->kind == SyntaxKind::ClockingPropertyExpr) {
                             if (subroutine.allowClockingArgument(index)) {
-                                buffer.append(&ClockingArgumentExpression::fromSyntax(
+                                buffer.append(&ClockingEventExpression::fromSyntax(
                                     arg.expr->as<ClockingPropertyExprSyntax>(), context));
                             }
                             else {
@@ -1094,19 +1094,18 @@ ConstantValue LValueReferenceExpression::evalImpl(EvalContext& context) const {
     return lvalue->load();
 }
 
-Expression& ClockingArgumentExpression::fromSyntax(const ClockingPropertyExprSyntax& syntax,
-                                                   const BindContext& context) {
+Expression& ClockingEventExpression::fromSyntax(const ClockingPropertyExprSyntax& syntax,
+                                                const BindContext& context) {
     auto& comp = context.getCompilation();
     auto& timing = TimingControl::bind(*syntax.event, context);
 
     if (syntax.expr)
         context.addDiag(diag::UnexpectedClockingExpr, syntax.expr->sourceRange());
 
-    return *comp.emplace<ClockingArgumentExpression>(comp.getVoidType(), timing,
-                                                     syntax.sourceRange());
+    return *comp.emplace<ClockingEventExpression>(comp.getVoidType(), timing, syntax.sourceRange());
 }
 
-void ClockingArgumentExpression::serializeTo(ASTSerializer& serializer) const {
+void ClockingEventExpression::serializeTo(ASTSerializer& serializer) const {
     serializer.write("timingControl", timingControl);
 }
 
@@ -1512,7 +1511,17 @@ Expression& AssertionInstanceExpression::bindPort(const Symbol& symbol, SourceRa
                 resultType, formal, result, /* isRecursiveProperty */ false, range);
         }
         case SymbolKind::EventType:
-            // TODO: handle this
+            // If an event expression is allowed here, bind and return. Otherwise issue
+            // an error, since an 'event' argument can only be used where event expressions
+            // are allowed, regardless of what the actual argument expression looks like.
+            if (instanceCtx.flags.has(BindFlags::EventExpression) &&
+                instanceCtx.flags.has(BindFlags::AllowClockingBlock)) {
+                auto& timing = TimingControl::bind(*propExpr, argCtx);
+                return *comp.emplace<ClockingEventExpression>(comp.getVoidType(), timing, range);
+            }
+
+            instanceCtx.addDiag(diag::EventExprAssertionArg, range);
+            return badExpr(comp, nullptr);
         default: {
             // Arguments should have already been checked for type correctness.
             if (!regExpr)

@@ -565,11 +565,16 @@ module m;
         ##1 (1, posedge clk) ##1 posedge clk;
     endsequence
 
+    sequence s3(event ev);
+        ##1 ev;
+    endsequence
+
     assert property (s1((x and y) iff clk));
     assert property (s1((x and y)[*0:1]));
     assert property (s1(x[*0:1]));
     assert property (s1(x |-> y));
     assert property (s1(x throughout y));
+    assert property (s3(x));
 endmodule
 )");
 
@@ -577,12 +582,13 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 7);
+    REQUIRE(diags.size() == 8);
     CHECK(diags[0].code == diag::InvalidMatchItem);
     CHECK(diags[1].code == diag::InvalidSignalEventInSeq);
-    CHECK(diags[2].code == diag::InvalidSyntaxInEventExpr);
+    CHECK(diags[2].code == diag::EventExprAssertionArg);
     CHECK(diags[3].code == diag::InvalidSyntaxInEventExpr);
     CHECK(diags[4].code == diag::InvalidSyntaxInEventExpr);
     CHECK(diags[5].code == diag::InvalidSyntaxInEventExpr);
     CHECK(diags[6].code == diag::InvalidSyntaxInEventExpr);
+    CHECK(diags[7].code == diag::InvalidSyntaxInEventExpr);
 }

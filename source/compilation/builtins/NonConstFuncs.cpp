@@ -294,7 +294,7 @@ public:
 
         // TODO: check rules for inferring clocking
 
-        if (args.size() == 2 && args[1]->kind != ExpressionKind::ClockingArgument)
+        if (args.size() == 2 && args[1]->kind != ExpressionKind::ClockingEvent)
             return badArg(context, *args[1]);
 
         return comp.getBitType();
@@ -344,7 +344,7 @@ public:
                 return comp.getErrorType();
         }
 
-        if (args.size() > 3 && args[3]->kind != ExpressionKind::ClockingArgument)
+        if (args.size() > 3 && args[3]->kind != ExpressionKind::ClockingEvent)
             return badArg(context, *args[3]);
 
         return *args[0]->type;

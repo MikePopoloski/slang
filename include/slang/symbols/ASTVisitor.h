@@ -311,7 +311,7 @@ decltype(auto) Expression::visitExpression(TExpression* expr, TVisitor&& visitor
         CASE(NewClass, NewClassExpression);
         CASE(CopyClass, CopyClassExpression);
         CASE(MinTypMax, MinTypMaxExpression);
-        CASE(ClockingArgument, ClockingArgumentExpression);
+        CASE(ClockingEvent, ClockingEventExpression);
         CASE(AssertionInstance, AssertionInstanceExpression);
     }
 #undef CASE
