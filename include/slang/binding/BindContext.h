@@ -114,9 +114,13 @@ enum class BindFlags {
     AssertionExpr = 1 << 20,
 
     /// Allow binding a clocking block as part of a top-level event expression.
-    AllowClockingBlock = 1 << 21
+    AllowClockingBlock = 1 << 21,
+
+    /// Binding is for checking an assertion argument, prior to it being expanded as
+    /// part of an actual instance.
+    AssertionInstanceArgCheck = 1 << 22
 };
-BITMASK(BindFlags, AllowClockingBlock);
+BITMASK(BindFlags, AssertionInstanceArgCheck);
 
 enum class DimensionKind { Unknown, Range, AbbreviatedRange, Dynamic, Associative, Queue };
 

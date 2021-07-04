@@ -536,6 +536,10 @@ sequence event_arg_example (event ev);
     @(ev) x ##1 y;
 endsequence
 
+sequence s2 (ev);
+    @(ev) x ##1 y;
+endsequence
+
 module m;
     logic clk;
 
@@ -544,6 +548,12 @@ module m;
     cover property (event_arg_example((posedge clk iff x or edge clk, x iff y, negedge clk)));
     cover property (event_arg_example((x iff y, negedge clk)));
     cover property (event_arg_example(((x iff y) or negedge clk)));
+
+    cover property (s2(clk));
+    cover property (s2(posedge clk));
+    cover property (s2((posedge clk iff x or edge clk, x iff y, negedge clk)));
+    cover property (s2((x iff y, negedge clk)));
+    cover property (s2(((x iff y) or negedge clk)));
 endmodule
 )");
 
@@ -569,6 +579,10 @@ module m;
         ##1 ev;
     endsequence
 
+    property s4;
+        (x iff y, 1);
+    endproperty
+
     assert property (s1((x and y) iff clk));
     assert property (s1((x and y)[*0:1]));
     assert property (s1(x[*0:1]));
@@ -582,13 +596,14 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 8);
+    REQUIRE(diags.size() == 9);
     CHECK(diags[0].code == diag::InvalidMatchItem);
     CHECK(diags[1].code == diag::InvalidSignalEventInSeq);
     CHECK(diags[2].code == diag::EventExprAssertionArg);
-    CHECK(diags[3].code == diag::InvalidSyntaxInEventExpr);
+    CHECK(diags[3].code == diag::InvalidCommaInPropExpr);
     CHECK(diags[4].code == diag::InvalidSyntaxInEventExpr);
     CHECK(diags[5].code == diag::InvalidSyntaxInEventExpr);
     CHECK(diags[6].code == diag::InvalidSyntaxInEventExpr);
     CHECK(diags[7].code == diag::InvalidSyntaxInEventExpr);
+    CHECK(diags[8].code == diag::InvalidSyntaxInEventExpr);
 }

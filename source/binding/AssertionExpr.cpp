@@ -74,9 +74,8 @@ const AssertionExpr& AssertionExpr::bind(const SequenceExprSyntax& syntax,
                 &ClockingAssertionExpr::fromSyntax(syntax.as<ClockingSequenceExprSyntax>(), ctx);
             break;
         case SyntaxKind::SignalEventExpression:
-            // TODO: untyped arg binding?
-            ctx.addDiag(diag::InvalidSignalEventInSeq, syntax.sourceRange());
-            result = &badExpr(ctx.getCompilation(), nullptr);
+            result =
+                &ClockingAssertionExpr::fromSyntax(syntax.as<SignalEventExpressionSyntax>(), ctx);
             break;
         default:
             THROW_UNREACHABLE;
@@ -109,9 +108,22 @@ const AssertionExpr& AssertionExpr::bind(const PropertyExprSyntax& syntax,
         case SyntaxKind::FollowedByPropertyExpr:
             result = &BinaryAssertionExpr::fromSyntax(syntax.as<BinaryPropertyExprSyntax>(), ctx);
             break;
-        case SyntaxKind::ParenthesizedPropertyExpr:
-            // TODO: check for invalid match list
-            return bind(*syntax.as<ParenthesizedPropertyExprSyntax>().expr, context);
+        case SyntaxKind::ParenthesizedPropertyExpr: {
+            auto& ppe = syntax.as<ParenthesizedPropertyExprSyntax>();
+            if (ppe.matchList) {
+                // Similarly to the match list in a parenthesized sequence expression, during
+                // argument checking this can be part of an event expression instead.
+                if (ctx.flags.has(BindFlags::AssertionInstanceArgCheck)) {
+                    for (auto item : ppe.matchList->items)
+                        AssertionExpr::bind(*item, ctx);
+                }
+                else {
+                    ctx.addDiag(diag::InvalidCommaInPropExpr, ppe.matchList->sourceRange());
+                    return badExpr(ctx.getCompilation(), nullptr);
+                }
+            }
+            return bind(*ppe.expr, context);
+        }
         case SyntaxKind::ClockingPropertyExpr:
             result =
                 &ClockingAssertionExpr::fromSyntax(syntax.as<ClockingPropertyExprSyntax>(), ctx);
@@ -339,6 +351,15 @@ static span<const Expression* const> bindMatchItems(const SequenceMatchListSynta
     ctx.flags &= ~BindFlags::AssignmentDisallowed;
     ctx.flags |= BindFlags::AssertionExpr;
 
+    // If we are binding an argument, these "match items" might actually be part of
+    // a comma-separated event expression. We need to avoid erroring in that case.
+    // Just do the bare minimum to check the expressions here.
+    if (ctx.flags.has(BindFlags::AssertionInstanceArgCheck)) {
+        for (auto item : syntax.items)
+            AssertionExpr::bind(*item, ctx);
+        return {};
+    }
+
     SmallVectorSized<const Expression*, 4> results;
     for (auto item : syntax.items) {
         auto exprSyn = context.requireSimpleExpr(*item, diag::InvalidMatchItem);
@@ -558,6 +579,21 @@ AssertionExpr& ClockingAssertionExpr::fromSyntax(const ClockingPropertyExprSynta
 
     auto& expr = bind(*syntax.expr, context);
     return *comp.emplace<ClockingAssertionExpr>(clocking, expr);
+}
+
+AssertionExpr& ClockingAssertionExpr::fromSyntax(const SignalEventExpressionSyntax& syntax,
+                                                 const BindContext& context) {
+    // If we are binding an argument then assume it's possible it could be used in an
+    // event expression and allow this. Actual usage later on will report an error if
+    // this ends up not being true. Otherwise this is just an error.
+    auto& comp = context.getCompilation();
+    if (!context.flags.has(BindFlags::AssertionInstanceArgCheck)) {
+        context.addDiag(diag::InvalidSignalEventInSeq, syntax.sourceRange());
+        return badExpr(comp, nullptr);
+    }
+
+    auto& clocking = TimingControl::bind(syntax, context);
+    return *comp.emplace<ClockingAssertionExpr>(clocking, badExpr(comp, nullptr));
 }
 
 void ClockingAssertionExpr::serializeTo(ASTSerializer& serializer) const {

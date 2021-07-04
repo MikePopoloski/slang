@@ -293,6 +293,7 @@ public:
 
 struct ClockingSequenceExprSyntax;
 struct ClockingPropertyExprSyntax;
+struct SignalEventExpressionSyntax;
 
 /// Represents an assertion expression with attached clocking control.
 class ClockingAssertionExpr : public AssertionExpr {
@@ -307,6 +308,9 @@ public:
                                      const BindContext& context);
 
     static AssertionExpr& fromSyntax(const ClockingPropertyExprSyntax& syntax,
+                                     const BindContext& context);
+
+    static AssertionExpr& fromSyntax(const SignalEventExpressionSyntax& syntax,
                                      const BindContext& context);
 
     void serializeTo(ASTSerializer& serializer) const;

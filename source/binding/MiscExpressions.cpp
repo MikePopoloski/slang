@@ -1136,10 +1136,13 @@ static bool checkAssertionArgType(const PropertyExprSyntax& propExpr,
             // Untyped formals allow everything. Bind here just so we notice things like
             // name resolution errors even if the argument ends up being unused in the
             // body of the sequence / property.
-            if (regExpr)
+            if (regExpr) {
                 return !Expression::bind(*regExpr, context, BindFlags::AllowUnboundedLiteral).bad();
-            else
-                return !AssertionExpr::bind(propExpr, context).bad();
+            }
+            else {
+                auto ctx = context.resetFlags(context.flags | BindFlags::AssertionInstanceArgCheck);
+                return !AssertionExpr::bind(propExpr, ctx).bad();
+            }
         case SymbolKind::SequenceType:
             if (!seqExpr) {
                 context.addDiag(diag::AssertionArgTypeSequence, propExpr.sourceRange());
@@ -1492,6 +1495,13 @@ Expression& AssertionInstanceExpression::bindPort(const Symbol& symbol, SourceRa
                 auto& result = selfDetermined(comp, *regExpr, argCtx, argCtx.flags);
                 result.sourceRange = range;
                 return result;
+            }
+            else if (instanceCtx.flags.has(BindFlags::EventExpression) &&
+                     instanceCtx.flags.has(BindFlags::AllowClockingBlock)) {
+                // In an event expression, a referenced argument gets interpreted
+                // as an event expression itself and not as an assertion expression.
+                auto& timing = TimingControl::bind(*propExpr, argCtx);
+                return *comp.emplace<ClockingEventExpression>(comp.getVoidType(), timing, range);
             }
             else {
                 auto& result = AssertionExpr::bind(*propExpr, argCtx);
