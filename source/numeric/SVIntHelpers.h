@@ -6,8 +6,27 @@
 //------------------------------------------------------------------------------
 #pragma once
 
-#ifdef __GNUC__
-#    include <x86intrin.h>
+#if defined(__x86_64__) || defined(_M_X64)
+#    ifdef __GNUC__
+#        include <x86intrin.h>
+#    endif
+#    define addcarry64(c, a, b, out) _addcarry_u64(c, a, b, out)
+#    define subborrow64(c, a, b, out) _subborrow_u64(c, a, b, out)
+#else
+// On other platforms, define the intrinsics ourselves.
+static uint8_t addcarry64(uint8_t c, uint64_t a, uint64_t b, uint64_t* out) {
+    uint64_t tmp = b + (c != 0 ? 1 : 0);
+    uint64_t result = a + tmp;
+    *out = result;
+    return (a > result) | (b > tmp);
+}
+
+static uint8_t subborrow64(uint8_t c, uint64_t a, uint64_t b, uint64_t* out) {
+    uint64_t tmp = b + (c != 0 ? 1 : 0);
+    uint64_t result = a - tmp;
+    *out = result;
+    return (result > a) | (b > tmp);
+}
 #endif
 
 namespace slang {
@@ -158,7 +177,7 @@ static bool addOne(uint64_t* dst, uint64_t* src, uint32_t len, uint64_t value) {
     uint8_t carry = 0;
     for (uint32_t i = 0; i < len; i++) {
         unsigned long long result;
-        carry = _addcarry_u64(carry, src[i], value, &result);
+        carry = addcarry64(carry, src[i], value, &result);
         dst[i] = result;
 
         if (!carry)
@@ -172,7 +191,7 @@ static bool subOne(uint64_t* dst, uint64_t* src, uint32_t len, uint64_t value) {
     uint8_t borrow = 0;
     for (uint32_t i = 0; i < len; i++) {
         unsigned long long result;
-        borrow = _subborrow_u64(borrow, src[i], value, &result);
+        borrow = subborrow64(borrow, src[i], value, &result);
         dst[i] = result;
 
         if (!borrow)
@@ -187,7 +206,7 @@ static bool addGeneral(uint64_t* dst, const uint64_t* x, const uint64_t* y, uint
     uint8_t carry = 0;
     for (uint32_t i = 0; i < len; i++) {
         unsigned long long result;
-        carry = _addcarry_u64(carry, x[i], y[i], &result);
+        carry = addcarry64(carry, x[i], y[i], &result);
         dst[i] = result;
     }
     return carry;
@@ -199,7 +218,7 @@ static bool subGeneral(uint64_t* dst, const uint64_t* x, const uint64_t* y, uint
     uint8_t borrow = 0;
     for (uint32_t i = 0; i < len; i++) {
         unsigned long long result;
-        borrow = _subborrow_u64(borrow, x[i], y[i], &result);
+        borrow = subborrow64(borrow, x[i], y[i], &result);
         dst[i] = result;
     }
     return borrow;
@@ -211,7 +230,7 @@ static uint64_t mulTerm(uint64_t x, uint64_t y, uint64_t& carry) {
 #ifdef _MSC_VER
     uint64_t high;
     uint64_t low = _umul128(x, y, &high);
-    carry = high + _addcarry_u64(0, low, carry, &low);
+    carry = high + addcarry64(0, low, carry, &low);
     return low;
 #else
     using uint128_t = unsigned __int128;
@@ -245,7 +264,7 @@ static void mul(uint64_t* dst, const uint64_t* x, uint32_t xlen, const uint64_t*
         uint64_t carry = 0;
         for (uint32_t j = 0; j < xlen; j++) {
             unsigned long long result;
-            uint8_t c = _addcarry_u64(0, mulTerm(x[j], y[i], carry), dst[i + j], &result);
+            uint8_t c = addcarry64(0, mulTerm(x[j], y[i], carry), dst[i + j], &result);
 
             dst[i + j] = result;
             carry += c;
@@ -265,12 +284,12 @@ static void unevenAdd(uint64_t* dst, const uint64_t* x, uint32_t xlen, const uin
     uint8_t carry = 0;
     for (i = 0; i < ylen; ++i) {
         unsigned long long result;
-        carry = _addcarry_u64(carry, x[i], y[i], &result);
+        carry = addcarry64(carry, x[i], y[i], &result);
         dst[i] = result;
     }
     for (; i < xlen; ++i) {
         unsigned long long result;
-        carry = _addcarry_u64(carry, x[i], 0, &result);
+        carry = addcarry64(carry, x[i], 0, &result);
         dst[i] = result;
     }
     dst[i] = carry;
