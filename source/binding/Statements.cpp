@@ -1894,6 +1894,9 @@ void TimedStatement::serializeTo(ASTSerializer& serializer) const {
 }
 
 static void checkDeferredAssertAction(const Statement& stmt, const BindContext& context) {
+    if (stmt.kind == StatementKind::Empty)
+        return;
+
     // The statement inside a deferred assertion action block must be a subroutine call.
     if (stmt.kind != StatementKind::ExpressionStatement ||
         stmt.as<ExpressionStatement>().expr.kind != ExpressionKind::Call) {

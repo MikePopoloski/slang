@@ -338,6 +338,7 @@ module m;
     initial begin
         assert (i > 0) i++; else i--;
         assume #0 (i < 0) else bar();
+        assume #0 (i < 0);
         cover final (i) bar();
 
         assert (foo);                      // not boolean
