@@ -607,3 +607,26 @@ endmodule
     CHECK(diags[7].code == diag::InvalidSyntaxInEventExpr);
     CHECK(diags[8].code == diag::InvalidSyntaxInEventExpr);
 }
+
+TEST_CASE("Restrict / expect / cover statements") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    logic clk, i;
+    initial begin
+        cover property (@(posedge clk) i);
+        cover sequence (@(posedge clk) i);
+        restrict property (@(posedge clk) i);
+        expect (@(posedge clk) i);
+
+        restrict property (@(posedge clk) i) i++;
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::RestrictStmtNoFail);
+}

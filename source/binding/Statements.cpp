@@ -230,13 +230,13 @@ const Statement& Statement::bind(const StatementSyntax& syntax, const BindContex
         case SyntaxKind::AssertPropertyStatement:
         case SyntaxKind::AssumePropertyStatement:
         case SyntaxKind::CoverPropertyStatement:
+        case SyntaxKind::ExpectPropertyStatement:
+        case SyntaxKind::CoverSequenceStatement:
+        case SyntaxKind::RestrictPropertyStatement:
             result = &ConcurrentAssertionStatement::fromSyntax(
                 comp, syntax.as<ConcurrentAssertionStatementSyntax>(), context, stmtCtx);
             break;
         case SyntaxKind::RandCaseStatement:
-        case SyntaxKind::CoverSequenceStatement:
-        case SyntaxKind::RestrictPropertyStatement:
-        case SyntaxKind::ExpectPropertyStatement:
         case SyntaxKind::RandSequenceStatement:
             context.addDiag(diag::NotYetSupported, syntax.sourceRange());
             result = &badStmt(comp, nullptr);
@@ -400,7 +400,10 @@ static void findBlocks(const Scope& scope, const StatementSyntax& syntax,
         }
         case SyntaxKind::AssertPropertyStatement:
         case SyntaxKind::AssumePropertyStatement:
-        case SyntaxKind::CoverPropertyStatement: {
+        case SyntaxKind::CoverPropertyStatement:
+        case SyntaxKind::CoverSequenceStatement:
+        case SyntaxKind::RestrictPropertyStatement:
+        case SyntaxKind::ExpectPropertyStatement: {
             auto& ias = syntax.as<ConcurrentAssertionStatementSyntax>();
             if (ias.action->statement)
                 recurse(ias.action->statement);
@@ -416,9 +419,6 @@ static void findBlocks(const Scope& scope, const StatementSyntax& syntax,
                 recurse(&wos.action->elseClause->clause->as<StatementSyntax>());
             return;
         }
-        case SyntaxKind::CoverSequenceStatement:
-        case SyntaxKind::RestrictPropertyStatement:
-        case SyntaxKind::ExpectPropertyStatement:
         case SyntaxKind::RandSequenceStatement:
             scope.addDiag(diag::NotYetSupported, syntax.sourceRange());
             return;
@@ -1978,7 +1978,9 @@ Statement& ImmediateAssertionStatement::fromSyntax(Compilation& compilation,
     if (isDeferred)
         isFinal = syntax.delay->finalKeyword.valid();
 
-    if (assertKind == AssertionKind::Cover && ifFalse) {
+    bool isCover =
+        assertKind == AssertionKind::CoverProperty || assertKind == AssertionKind::CoverSequence;
+    if (isCover && ifFalse) {
         context.addDiag(diag::CoverStmtNoFail, syntax.action->elseClause->sourceRange());
         bad = true;
     }
@@ -2012,7 +2014,9 @@ ER ImmediateAssertionStatement::evalImpl(EvalContext& context) const {
     if (ifFalse)
         return ifFalse->eval(context);
 
-    if (assertionKind == AssertionKind::Cover)
+    bool isCover = assertionKind == AssertionKind::CoverProperty ||
+                   assertionKind == AssertionKind::CoverSequence;
+    if (isCover)
         return ER::Success;
 
     context.addDiag(diag::ConstEvalAssertionFailed, sourceRange);
@@ -2052,7 +2056,7 @@ Statement& ConcurrentAssertionStatement::fromSyntax(
     Compilation& compilation, const ConcurrentAssertionStatementSyntax& syntax,
     const BindContext& context, StatementContext& stmtCtx) {
 
-    // TODO: restrict, cover sequence, other property spec items
+    // TODO: other property spec items
     AssertionKind assertKind = SemanticFacts::getAssertKind(syntax.kind);
     auto& prop = AssertionExpr::bind(*syntax.propertySpec->expr, context);
     bool bad = prop.bad();
@@ -2067,8 +2071,15 @@ Statement& ConcurrentAssertionStatement::fromSyntax(
                                    context, stmtCtx);
     }
 
-    if (assertKind == AssertionKind::Cover && ifFalse) {
+    bool isCover =
+        assertKind == AssertionKind::CoverProperty || assertKind == AssertionKind::CoverSequence;
+    if (isCover && ifFalse) {
         context.addDiag(diag::CoverStmtNoFail, syntax.action->elseClause->sourceRange());
+        bad = true;
+    }
+    else if (assertKind == AssertionKind::Restrict &&
+             (ifFalse || (ifTrue && ifTrue->kind != StatementKind::Empty))) {
+        context.addDiag(diag::RestrictStmtNoFail, syntax.action->sourceRange());
         bad = true;
     }
 

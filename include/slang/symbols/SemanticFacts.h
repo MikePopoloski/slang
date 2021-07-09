@@ -66,7 +66,7 @@ ENUM(EdgeKind, EDGE);
 ENUM(SubroutineKind, SRK);
 #undef SRK
 
-#define ASK(x) x(Assert) x(Assume) x(Cover)
+#define ASK(x) x(Assert) x(Assume) x(CoverProperty) x(CoverSequence) x(Restrict) x(Expect)
 /// Specifies possible assertion kinds.
 ENUM(AssertionKind, ASK);
 #undef ASK
