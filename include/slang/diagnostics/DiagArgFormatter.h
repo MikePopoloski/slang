@@ -7,6 +7,7 @@
 #pragma once
 
 #include <any>
+#include <fmt/args.h>
 #include <fmt/core.h>
 
 namespace slang {

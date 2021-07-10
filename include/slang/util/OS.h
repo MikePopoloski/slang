@@ -7,6 +7,7 @@
 #pragma once
 
 #include <fmt/color.h>
+#include <fmt/xchar.h>
 
 #include "slang/util/String.h"
 

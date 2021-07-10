@@ -18,19 +18,19 @@ public:
 
     void append(const fmt::text_style& style, std::string_view str) { format(style, "{}", str); }
 
-    template<typename String, typename... Args>
-    void format(const String& format, Args&&... args) {
-        fmt::format_to(buf, format, std::forward<Args>(args)...);
+    template<typename... Args>
+    void format(fmt::format_string<Args...> fmt, Args&&... args) {
+        fmt::detail::vformat_to(buf, fmt::string_view(fmt), fmt::make_format_args(args...));
     }
 
-    template<typename String, typename... Args>
-    void format(const fmt::text_style& style, const String& format, Args&&... args) {
+    template<typename... Args>
+    void format(const fmt::text_style& style, fmt::format_string<Args...> fmt, Args&&... args) {
         if (!showColors) {
-            fmt::format_to(buf, format, std::forward<Args>(args)...);
+            fmt::detail::vformat_to(buf, fmt::string_view(fmt), fmt::make_format_args(args...));
         }
         else {
-            fmt::format_to(fmt::detail::buffer_appender(buf), style, format,
-                           std::forward<Args>(args)...);
+            fmt::detail::vformat_to(buf, style, fmt::string_view(fmt),
+                                    fmt::make_format_args(args...));
         }
     }
 
