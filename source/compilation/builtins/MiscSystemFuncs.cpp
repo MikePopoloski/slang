@@ -210,7 +210,7 @@ public:
             return comp.getErrorType();
         }
 
-        return comp.getVoidType();
+        return comp.getType(SyntaxKind::EventType);
     }
 
     ConstantValue eval(EvalContext&, const Args&,

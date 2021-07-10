@@ -630,3 +630,21 @@ endmodule
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::RestrictStmtNoFail);
 }
+
+TEST_CASE("Property in event expression error") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    property p; 1; endproperty
+    initial begin
+        @(p);
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::InvalidEventExpression);
+}

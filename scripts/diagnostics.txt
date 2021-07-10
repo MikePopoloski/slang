@@ -531,7 +531,7 @@ error BadForceNetType "force and release cannot be applied to nets with a user-d
 error TimingInFuncNotAllowed "statements that pass time are not allowed in this context"
 error AssertionExprType "expression of type {} is not valid in concurrent assertions; type must be cast compatible with an integral type"
 error SeqRangeMinMax "sequence range minimum '{}' is greater than specified maximum '{}'"
-error ClockingBlockEventEdge "cannot specify an edge when waiting on a clocking block"
+error ClockingBlockEventEdge "cannot specify an edge when waiting on a clocking item"
 error NoDefaultClocking "cycle delay cannot be used because no default clocking has been specified"
 error WriteToInputClockVar "cannot write to input clocking signal '{}'"
 error ClockVarSyncDrive "clocking signal '{}' can only be written via a synchronous drive (with the '<=' operator)"

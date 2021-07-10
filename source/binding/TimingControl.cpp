@@ -306,15 +306,19 @@ TimingControl& SignalEventControl::fromExpr(Compilation& compilation, EdgeKind e
 
     // Note: `expr` here can be a void-typed HierarchicalReferenceExpression if it's
     // referring to a clocking block.
+    auto symRef = expr.getSymbolReference();
+    bool isClocking = (symRef && symRef->kind == SymbolKind::ClockingBlock) ||
+                      expr.kind == ExpressionKind::ClockingEvent;
 
     if (edge == EdgeKind::None) {
-        if (expr.type->isAggregate() || expr.type->isCHandle()) {
+        if (expr.type->isAggregate() || expr.type->isCHandle() || expr.type->isPropertyType() ||
+            (expr.type->isVoid() && !isClocking)) {
             context.addDiag(diag::InvalidEventExpression, expr.sourceRange) << *expr.type;
             return badCtrl(compilation, result);
         }
     }
     else if (!expr.type->isIntegral()) {
-        if (expr.type->isVoid())
+        if (isClocking)
             context.addDiag(diag::ClockingBlockEventEdge, expr.sourceRange);
         else
             context.addDiag(diag::ExprMustBeIntegral, expr.sourceRange) << *expr.type;
