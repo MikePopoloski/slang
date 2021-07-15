@@ -6,22 +6,31 @@
 //------------------------------------------------------------------------------
 #pragma once
 
+#include <cstdint>
+#include <cstring>
+
+#include "slang/numeric/SVInt.h"
+
 #if defined(__x86_64__) || defined(_M_X64)
+using calc_out_t = long long unsigned;
+
 #    ifdef __GNUC__
 #        include <x86intrin.h>
 #    endif
 #    define addcarry64(c, a, b, out) _addcarry_u64(c, a, b, out)
 #    define subborrow64(c, a, b, out) _subborrow_u64(c, a, b, out)
 #else
+using calc_out_t = uint64_t;
+
 // On other platforms, define the intrinsics ourselves.
-static uint8_t addcarry64(uint8_t c, uint64_t a, uint64_t b, uint64_t* out) {
+static uint8_t addcarry64(uint8_t c, uint64_t a, uint64_t b, calc_out_t* out) {
     uint64_t tmp = b + (c != 0 ? 1 : 0);
     uint64_t result = a + tmp;
     *out = result;
     return (a > result) | (b > tmp);
 }
 
-static uint8_t subborrow64(uint8_t c, uint64_t a, uint64_t b, uint64_t* out) {
+static uint8_t subborrow64(uint8_t c, uint64_t a, uint64_t b, calc_out_t* out) {
     uint64_t tmp = b + (c != 0 ? 1 : 0);
     uint64_t result = a - tmp;
     *out = result;
@@ -176,7 +185,7 @@ static void signExtend(uint64_t* input, uint32_t numWords, uint32_t word, uint32
 static bool addOne(uint64_t* dst, uint64_t* src, uint32_t len, uint64_t value) {
     uint8_t carry = 0;
     for (uint32_t i = 0; i < len; i++) {
-        unsigned long long result;
+        calc_out_t result;
         carry = addcarry64(carry, src[i], value, &result);
         dst[i] = result;
 
@@ -190,7 +199,7 @@ static bool addOne(uint64_t* dst, uint64_t* src, uint32_t len, uint64_t value) {
 static bool subOne(uint64_t* dst, uint64_t* src, uint32_t len, uint64_t value) {
     uint8_t borrow = 0;
     for (uint32_t i = 0; i < len; i++) {
-        unsigned long long result;
+        calc_out_t result;
         borrow = subborrow64(borrow, src[i], value, &result);
         dst[i] = result;
 
@@ -205,7 +214,7 @@ NO_SANITIZE("unsigned-integer-overflow")
 static bool addGeneral(uint64_t* dst, const uint64_t* x, const uint64_t* y, uint32_t len) {
     uint8_t carry = 0;
     for (uint32_t i = 0; i < len; i++) {
-        unsigned long long result;
+        calc_out_t result;
         carry = addcarry64(carry, x[i], y[i], &result);
         dst[i] = result;
     }
@@ -217,7 +226,7 @@ NO_SANITIZE("unsigned-integer-overflow")
 static bool subGeneral(uint64_t* dst, const uint64_t* x, const uint64_t* y, uint32_t len) {
     uint8_t borrow = 0;
     for (uint32_t i = 0; i < len; i++) {
-        unsigned long long result;
+        calc_out_t result;
         borrow = subborrow64(borrow, x[i], y[i], &result);
         dst[i] = result;
     }
@@ -263,7 +272,7 @@ static void mul(uint64_t* dst, const uint64_t* x, uint32_t xlen, const uint64_t*
     for (uint32_t i = 1; i < ylen; i++) {
         uint64_t carry = 0;
         for (uint32_t j = 0; j < xlen; j++) {
-            unsigned long long result;
+            calc_out_t result;
             uint8_t c = addcarry64(0, mulTerm(x[j], y[i], carry), dst[i + j], &result);
 
             dst[i + j] = result;
@@ -283,12 +292,12 @@ static void unevenAdd(uint64_t* dst, const uint64_t* x, uint32_t xlen, const uin
     uint32_t i;
     uint8_t carry = 0;
     for (i = 0; i < ylen; ++i) {
-        unsigned long long result;
+        calc_out_t result;
         carry = addcarry64(carry, x[i], y[i], &result);
         dst[i] = result;
     }
     for (; i < xlen; ++i) {
-        unsigned long long result;
+        calc_out_t result;
         carry = addcarry64(carry, x[i], 0, &result);
         dst[i] = result;
     }
