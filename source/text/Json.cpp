@@ -4,6 +4,8 @@
 //
 // File is under the MIT license; see LICENSE for details
 //------------------------------------------------------------------------------
+#include <climits>
+
 #include "slang/text/Json.h"
 
 #include "FormatBuffer.h"
@@ -128,7 +130,11 @@ void JsonWriter::writeQuoted(string_view str) {
                 vec.append('t');
                 break;
             default:
+#if CHAR_MIN < 0
                 if (c >= 0x00 and c <= 0x1f) {
+#else
+                if (c <= 0x1f) {
+#endif
                     // print character c as \uxxxx
                     char buf[5];
                     snprintf(buf, sizeof(buf), "%04x", int(c));
