@@ -915,6 +915,16 @@ const Type& Type::fromSyntax(Compilation& compilation, const Type& elementType,
 
     BindContext context(scope, location);
 
+    switch (elementType.getCanonicalType().kind) {
+        case SymbolKind::SequenceType:
+        case SymbolKind::PropertyType:
+        case SymbolKind::UntypedType:
+            context.addDiag(diag::InvalidArrayElemType, dimensions.sourceRange()) << elementType;
+            return compilation.getErrorType();
+        default:
+            break;
+    }
+
     const Type* result = &elementType;
     size_t count = dimensions.size();
     for (size_t i = 0; i < count; i++) {

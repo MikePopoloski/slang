@@ -17,6 +17,7 @@
 #include "slang/diagnostics/DeclarationsDiags.h"
 #include "slang/diagnostics/ExpressionsDiags.h"
 #include "slang/diagnostics/LookupDiags.h"
+#include "slang/diagnostics/TypesDiags.h"
 #include "slang/symbols/ASTSerializer.h"
 #include "slang/symbols/ASTVisitor.h"
 #include "slang/symbols/CompilationUnitSymbols.h"
@@ -825,8 +826,13 @@ void AssertionPortSymbol::buildPorts(Scope& scope, const AssertionItemPortListSy
         if (isEmpty(*item->type)) {
             if (lastType)
                 port->declaredType.setTypeSyntax(*lastType);
-            else
+            else {
                 port->declaredType.setType(untyped);
+                if (!item->dimensions.empty()) {
+                    scope.addDiag(diag::InvalidArrayElemType, item->dimensions.sourceRange())
+                        << untyped;
+                }
+            }
         }
         else {
             port->declaredType.setTypeSyntax(*item->type);

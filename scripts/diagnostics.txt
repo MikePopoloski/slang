@@ -574,6 +574,7 @@ error PackedArrayTooLarge "packed array of {} bits is too large; maximum width i
 error ArrayDimTooLarge "array dimension of {} is too large; maximum number of elements is {}"
 error UnpackedSigned "unpacked type cannot have signedness declared"
 error InvalidUnionMember "untagged unions cannot have members of type {}"
+error InvalidArrayElemType "cannot declare an array with elements of type {}"
 warning enum-range EnumRangeLiteral "enum element ranges must be integer literals"
 
 subsystem Lookup

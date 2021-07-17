@@ -648,3 +648,18 @@ endmodule
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::InvalidEventExpression);
 }
+
+TEST_CASE("Invalid assertion port array types") {
+    auto tree = SyntaxTree::fromText(R"(
+property p(a, b[3], untyped c[2], sequence d, e[4]); 1; endproperty
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 3);
+    CHECK(diags[0].code == diag::InvalidArrayElemType);
+    CHECK(diags[1].code == diag::InvalidArrayElemType);
+    CHECK(diags[2].code == diag::InvalidArrayElemType);
+}
