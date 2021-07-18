@@ -541,6 +541,24 @@ AssertionExpr& BinaryAssertionExpr::fromSyntax(const BinarySequenceExprSyntax& s
     }
     // clang-format on
 
+    if (op == BinaryAssertionOperator::Throughout) {
+        auto check = [&] {
+            if (left.kind != AssertionExprKind::Simple)
+                return false;
+
+            auto& simple = left.as<SimpleAssertionExpr>();
+            if (simple.repetition)
+                return false;
+
+            return simple.expr.kind != ExpressionKind::AssertionInstance;
+        };
+
+        if (!check()) {
+            context.addDiag(diag::ThroughoutLhsInvalid, syntax.left->sourceRange())
+                << syntax.op.range();
+        }
+    }
+
     return *comp.emplace<BinaryAssertionExpr>(op, left, right);
 }
 

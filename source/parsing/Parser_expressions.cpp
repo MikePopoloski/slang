@@ -1342,15 +1342,6 @@ SequenceExprSyntax& Parser::parseBinarySequenceExpr(SequenceExprSyntax* left, in
 
         // take the operator
         auto opToken = consume();
-
-        // Enforce the rule that the lhs of a throughout expr must be a simple
-        // (non-sequence) expression.
-        if (opKind == SyntaxKind::ThroughoutSequenceExpr &&
-            (left->kind != SyntaxKind::SimpleSequenceExpr ||
-             left->as<SimpleSequenceExprSyntax>().repetition)) {
-            addDiag(diag::ThroughoutLhsInvalid, opToken.location()) << left->sourceRange();
-        }
-
         auto& right = parseSequenceExpr(newPrecedence, isInProperty);
         left = &factory.binarySequenceExpr(opKind, *left, opToken, right);
     }
