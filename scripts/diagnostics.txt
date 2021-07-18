@@ -349,6 +349,7 @@ error MultipleDefaultInputSkew "default input skew already defined for this cloc
 error MultipleDefaultOutputSkew "default output skew already defined for this clocking block"
 error InvalidClockingSignal "clocking signal '{}' must refer to a net or variable"
 error GlobalClockingGenerate "global clocking cannot be declared in a generate block"
+error PropertyPortInSeq "port of type 'property' is not allowed in a sequence"
 error FatalTask "$fatal encountered{}"
 error ErrorTask "$error encountered{}"
 warning warning-task WarningTask "$warning encountered{}"

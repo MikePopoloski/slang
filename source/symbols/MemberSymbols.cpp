@@ -837,6 +837,12 @@ void AssertionPortSymbol::buildPorts(Scope& scope, const AssertionItemPortListSy
         else {
             port->declaredType.setTypeSyntax(*item->type);
             lastType = item->type;
+
+            // Ports of type 'property' are not allowed in sequences.
+            if (item->type->kind == SyntaxKind::PropertyType &&
+                scope.asSymbol().kind == SymbolKind::Sequence) {
+                scope.addDiag(diag::PropertyPortInSeq, item->type->sourceRange());
+            }
         }
 
         if (item->defaultValue)

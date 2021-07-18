@@ -203,9 +203,9 @@ module m;
     assert property (a(1, 1, foo[*]));
 
     int e;
-    sequence a(sequence a, property b, int c[], untyped d = e);
+    property a(sequence a, property b, int c[], untyped d = e);
         1;
-    endsequence
+    endproperty
 
     sequence b(int i, untyped j);
         1 ##[i:j] 1;
@@ -662,4 +662,19 @@ property p(a, b[3], untyped c[2], sequence d, e[4]); 1; endproperty
     CHECK(diags[0].code == diag::InvalidArrayElemType);
     CHECK(diags[1].code == diag::InvalidArrayElemType);
     CHECK(diags[2].code == diag::InvalidArrayElemType);
+}
+
+TEST_CASE("Sequence with property port") {
+    auto tree = SyntaxTree::fromText(R"(
+sequence s(property p);
+    1;
+endsequence
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::PropertyPortInSeq);
 }
