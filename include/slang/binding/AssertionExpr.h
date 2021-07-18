@@ -72,6 +72,7 @@ public:
 
     const SyntaxNode* syntax = nullptr;
 
+    void requireSequence(const BindContext& context) const;
     bool bad() const { return kind == AssertionExprKind::Invalid; }
 
     static const AssertionExpr& bind(const SequenceExprSyntax& syntax, const BindContext& context);
@@ -163,6 +164,8 @@ public:
 
     SimpleAssertionExpr(const Expression& expr, optional<SequenceRepetition> repetition) :
         AssertionExpr(AssertionExprKind::Simple), expr(expr), repetition(repetition) {}
+
+    void requireSequence(const BindContext& context) const;
 
     static AssertionExpr& fromSyntax(const SimpleSequenceExprSyntax& syntax,
                                      const BindContext& context);
@@ -260,6 +263,8 @@ public:
                         const AssertionExpr& right) :
         AssertionExpr(AssertionExprKind::Binary),
         op(op), left(left), right(right) {}
+
+    void requireSequence(const BindContext& context) const;
 
     static AssertionExpr& fromSyntax(const BinarySequenceExprSyntax& syntax,
                                      const BindContext& context);

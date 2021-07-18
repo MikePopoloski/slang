@@ -1143,12 +1143,19 @@ static bool checkAssertionArgType(const PropertyExprSyntax& propExpr,
                 auto ctx = context.resetFlags(context.flags | BindFlags::AssertionInstanceArgCheck);
                 return !AssertionExpr::bind(propExpr, ctx).bad();
             }
-        case SymbolKind::SequenceType:
+        case SymbolKind::SequenceType: {
             if (!seqExpr) {
                 context.addDiag(diag::AssertionArgTypeSequence, propExpr.sourceRange());
                 return false;
             }
-            return !AssertionExpr::bind(*seqExpr, context).bad();
+
+            auto& bound = AssertionExpr::bind(*seqExpr, context);
+            if (bound.bad())
+                return false;
+
+            bound.requireSequence(context);
+            return true;
+        }
         case SymbolKind::PropertyType:
             return !AssertionExpr::bind(propExpr, context).bad();
         case SymbolKind::EventType:
@@ -1175,6 +1182,20 @@ static bool checkAssertionArgType(const PropertyExprSyntax& propExpr,
     }
 
     return true;
+}
+
+static const AssertionExpr& bindAssertionBody(const Symbol& symbol, const SyntaxNode& syntax,
+                                              const BindContext& context) {
+    if (symbol.kind == SymbolKind::Sequence) {
+        auto& result =
+            AssertionExpr::bind(*syntax.as<SequenceDeclarationSyntax>().seqExpr, context);
+        result.requireSequence(context);
+        return result;
+    }
+    else {
+        return AssertionExpr::bind(*syntax.as<PropertyDeclarationSyntax>().propertySpec->expr,
+                                   context);
+    }
 }
 
 Expression& AssertionInstanceExpression::fromLookup(const Symbol& symbol,
@@ -1364,17 +1385,8 @@ Expression& AssertionInstanceExpression::fromLookup(const Symbol& symbol,
     BindContext bodyContext(*symbolScope, LookupLocation::max);
     bodyContext.assertionInstance = &instance;
 
-    const AssertionExpr* body;
-    if (symbol.kind == SymbolKind::Sequence) {
-        body =
-            &AssertionExpr::bind(*bodySyntax->as<SequenceDeclarationSyntax>().seqExpr, bodyContext);
-    }
-    else {
-        body = &AssertionExpr::bind(*bodySyntax->as<PropertyDeclarationSyntax>().propertySpec->expr,
-                                    bodyContext);
-    }
-
-    return *comp.emplace<AssertionInstanceExpression>(*type, symbol, *body,
+    auto& body = bindAssertionBody(symbol, *bodySyntax, bodyContext);
+    return *comp.emplace<AssertionInstanceExpression>(*type, symbol, body,
                                                       /* isRecursiveProperty */ false, range);
 }
 
@@ -1434,18 +1446,9 @@ Expression& AssertionInstanceExpression::makeDefault(const Symbol& symbol) {
     BindContext bodyContext(*symbolScope, LookupLocation::max);
     bodyContext.assertionInstance = &instance;
 
-    const AssertionExpr* body;
-    if (symbol.kind == SymbolKind::Sequence) {
-        body =
-            &AssertionExpr::bind(*bodySyntax->as<SequenceDeclarationSyntax>().seqExpr, bodyContext);
-    }
-    else {
-        body = &AssertionExpr::bind(*bodySyntax->as<PropertyDeclarationSyntax>().propertySpec->expr,
-                                    bodyContext);
-    }
-
+    auto& body = bindAssertionBody(symbol, *bodySyntax, bodyContext);
     SourceRange range{ symbol.location, symbol.location + 1 };
-    return *comp.emplace<AssertionInstanceExpression>(*type, symbol, *body,
+    return *comp.emplace<AssertionInstanceExpression>(*type, symbol, body,
                                                       /* isRecursiveProperty */ false, range);
 }
 

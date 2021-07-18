@@ -678,3 +678,27 @@ endsequence
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::PropertyPortInSeq);
 }
+
+TEST_CASE("Prop expressions inside sequences") {
+    auto tree = SyntaxTree::fromText(R"(
+property p; 1; endproperty
+
+sequence s(a, sequence b, untyped c);
+    p() or a or c;
+endsequence
+
+module m;
+    wire clk, a;
+    assert property (s(@(posedge clk) a |-> clk, p, p within clk));
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 3);
+    CHECK(diags[0].code == diag::PropExprInSequence);
+    CHECK(diags[1].code == diag::PropExprInSequence);
+    CHECK(diags[2].code == diag::PropExprInSequence);
+}

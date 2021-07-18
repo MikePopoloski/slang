@@ -9,6 +9,7 @@
 #include "slang/binding/AssignmentExpressions.h"
 #include "slang/binding/BindContext.h"
 #include "slang/binding/Expression.h"
+#include "slang/binding/MiscExpressions.h"
 #include "slang/binding/OperatorExpressions.h"
 #include "slang/binding/TimingControl.h"
 #include "slang/compilation/Compilation.h"
@@ -157,6 +158,34 @@ const AssertionExpr& AssertionExpr::bind(const PropertyExprSyntax& syntax,
     return *result;
 }
 
+void AssertionExpr::requireSequence(const BindContext& context) const {
+    switch (kind) {
+        case AssertionExprKind::Simple:
+            as<SimpleAssertionExpr>().requireSequence(context);
+            return;
+        case AssertionExprKind::Binary:
+            as<BinaryAssertionExpr>().requireSequence(context);
+            return;
+        case AssertionExprKind::Clocking:
+            as<ClockingAssertionExpr>().expr.requireSequence(context);
+            return;
+        case AssertionExprKind::Unary:
+        case AssertionExprKind::StrongWeak:
+        case AssertionExprKind::Abort:
+        case AssertionExprKind::Conditional:
+        case AssertionExprKind::Case:
+            ASSERT(syntax);
+            context.addDiag(diag::PropExprInSequence, syntax->sourceRange());
+            return;
+        case AssertionExprKind::SequenceConcat:
+        case AssertionExprKind::SequenceWithMatch:
+        case AssertionExprKind::FirstMatch:
+        case AssertionExprKind::Invalid:
+            return;
+    }
+    THROW_UNREACHABLE;
+}
+
 AssertionExpr& AssertionExpr::badExpr(Compilation& compilation, const AssertionExpr* expr) {
     return *compilation.emplace<InvalidAssertionExpr>(expr);
 }
@@ -271,6 +300,19 @@ AssertionExpr& SimpleAssertionExpr::fromSyntax(const SimpleSequenceExprSyntax& s
         repetition.emplace(*syntax.repetition, context);
 
     return *comp.emplace<SimpleAssertionExpr>(expr, repetition);
+}
+
+void SimpleAssertionExpr::requireSequence(const BindContext& context) const {
+    if (expr.kind == ExpressionKind::AssertionInstance) {
+        auto& aie = expr.as<AssertionInstanceExpression>();
+        if (aie.type->isPropertyType()) {
+            ASSERT(syntax);
+            context.addDiag(diag::PropExprInSequence, syntax->sourceRange());
+            return;
+        }
+
+        aie.body.requireSequence(context);
+    }
 }
 
 void SimpleAssertionExpr::serializeTo(ASTSerializer& serializer) const {
@@ -529,6 +571,34 @@ AssertionExpr& BinaryAssertionExpr::fromSyntax(const BinaryPropertyExprSyntax& s
     // clang-format on
 
     return *comp.emplace<BinaryAssertionExpr>(op, left, right);
+}
+
+void BinaryAssertionExpr::requireSequence(const BindContext& context) const {
+    switch (op) {
+        case BinaryAssertionOperator::And:
+        case BinaryAssertionOperator::Or:
+            left.requireSequence(context);
+            right.requireSequence(context);
+            return;
+        case BinaryAssertionOperator::Intersect:
+        case BinaryAssertionOperator::Throughout:
+        case BinaryAssertionOperator::Within:
+            return;
+        case BinaryAssertionOperator::Iff:
+        case BinaryAssertionOperator::Until:
+        case BinaryAssertionOperator::SUntil:
+        case BinaryAssertionOperator::UntilWith:
+        case BinaryAssertionOperator::SUntilWith:
+        case BinaryAssertionOperator::Implies:
+        case BinaryAssertionOperator::OverlappedImplication:
+        case BinaryAssertionOperator::NonOverlappedImplication:
+        case BinaryAssertionOperator::OverlappedFollowedBy:
+        case BinaryAssertionOperator::NonOverlappedFollowedBy:
+            ASSERT(syntax);
+            context.addDiag(diag::PropExprInSequence, syntax->sourceRange());
+            return;
+    }
+    THROW_UNREACHABLE;
 }
 
 void BinaryAssertionExpr::serializeTo(ASTSerializer& serializer) const {
