@@ -463,8 +463,11 @@ AssertionExpr& SequenceWithMatchExpr::fromSyntax(const ParenthesizedSequenceExpr
     auto& expr = bind(*syntax.expr, context);
 
     optional<SequenceRepetition> repetition;
-    if (syntax.repetition)
+    if (syntax.repetition) {
         repetition.emplace(*syntax.repetition, context);
+        if (repetition->kind != SequenceRepetition::Consecutive)
+            context.addDiag(diag::SeqInstanceRepetition, syntax.repetition->sourceRange());
+    }
 
     span<const Expression* const> matchItems;
     if (syntax.matchList)

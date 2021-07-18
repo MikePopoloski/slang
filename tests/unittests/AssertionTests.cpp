@@ -711,6 +711,7 @@ sequence s; 1; endsequence
 module m;
     assert property (p [*3]);
     assert property (s [=3]);
+    assert property ((1 ##1 1) [-> 3]);
 endmodule
 )");
 
@@ -718,7 +719,8 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 2);
+    REQUIRE(diags.size() == 3);
     CHECK(diags[0].code == diag::PropInstanceRepetition);
     CHECK(diags[1].code == diag::SeqInstanceRepetition);
+    CHECK(diags[2].code == diag::SeqInstanceRepetition);
 }
