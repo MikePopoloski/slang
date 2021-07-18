@@ -300,8 +300,16 @@ AssertionExpr& SimpleAssertionExpr::fromSyntax(const SimpleSequenceExprSyntax& s
     auto& expr = bindExpr(*syntax.expr, context, /* allowInstances */ true);
 
     optional<SequenceRepetition> repetition;
-    if (syntax.repetition)
+    if (syntax.repetition) {
         repetition.emplace(*syntax.repetition, context);
+
+        if (expr.kind == ExpressionKind::AssertionInstance) {
+            if (expr.type->isPropertyType())
+                context.addDiag(diag::PropInstanceRepetition, syntax.repetition->sourceRange());
+            else if (repetition->kind != SequenceRepetition::Consecutive)
+                context.addDiag(diag::SeqInstanceRepetition, syntax.repetition->sourceRange());
+        }
+    }
 
     return *comp.emplace<SimpleAssertionExpr>(expr, repetition);
 }

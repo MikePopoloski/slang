@@ -702,3 +702,23 @@ endmodule
     CHECK(diags[1].code == diag::PropExprInSequence);
     CHECK(diags[2].code == diag::PropExprInSequence);
 }
+
+TEST_CASE("Invalid assertion instance repetitions") {
+    auto tree = SyntaxTree::fromText(R"(
+property p; 1; endproperty
+sequence s; 1; endsequence
+
+module m;
+    assert property (p [*3]);
+    assert property (s [=3]);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::PropInstanceRepetition);
+    CHECK(diags[1].code == diag::SeqInstanceRepetition);
+}
