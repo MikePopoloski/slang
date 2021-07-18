@@ -1587,15 +1587,6 @@ PropertyExprSyntax& Parser::parsePropertyExpr(int precedence) {
 
         // take the operator
         auto opToken = consume();
-
-        // Enforce that the lhs of implication / followed-by ops are sequence exprs.
-        if ((opKind == SyntaxKind::ImplicationPropertyExpr ||
-             opKind == SyntaxKind::FollowedByPropertyExpr) &&
-            left->kind != SyntaxKind::SimplePropertyExpr) {
-            addDiag(diag::PropertyLhsInvalid, opToken.location())
-                << left->sourceRange() << opToken.valueText();
-        }
-
         auto& right = parsePropertyExpr(newPrecedence);
 
         // If this could have been an 'and' or 'or' sequence expression, convert it into that

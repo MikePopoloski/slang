@@ -6,6 +6,7 @@
 //------------------------------------------------------------------------------
 #pragma once
 
+#include "slang/diagnostics/Diagnostics.h"
 #include "slang/symbols/ASTSerializer.h"
 #include "slang/util/Util.h"
 
@@ -73,6 +74,7 @@ public:
     const SyntaxNode* syntax = nullptr;
 
     void requireSequence(const BindContext& context) const;
+    void requireSequence(const BindContext& context, DiagCode code) const;
     bool bad() const { return kind == AssertionExprKind::Invalid; }
 
     static const AssertionExpr& bind(const SequenceExprSyntax& syntax, const BindContext& context);
@@ -165,7 +167,7 @@ public:
     SimpleAssertionExpr(const Expression& expr, optional<SequenceRepetition> repetition) :
         AssertionExpr(AssertionExprKind::Simple), expr(expr), repetition(repetition) {}
 
-    void requireSequence(const BindContext& context) const;
+    void requireSequence(const BindContext& context, DiagCode code) const;
 
     static AssertionExpr& fromSyntax(const SimpleSequenceExprSyntax& syntax,
                                      const BindContext& context);
@@ -264,7 +266,7 @@ public:
         AssertionExpr(AssertionExprKind::Binary),
         op(op), left(left), right(right) {}
 
-    void requireSequence(const BindContext& context) const;
+    void requireSequence(const BindContext& context, DiagCode code) const;
 
     static AssertionExpr& fromSyntax(const BinarySequenceExprSyntax& syntax,
                                      const BindContext& context);

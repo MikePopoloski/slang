@@ -159,15 +159,19 @@ const AssertionExpr& AssertionExpr::bind(const PropertyExprSyntax& syntax,
 }
 
 void AssertionExpr::requireSequence(const BindContext& context) const {
+    requireSequence(context, diag::PropExprInSequence);
+}
+
+void AssertionExpr::requireSequence(const BindContext& context, DiagCode code) const {
     switch (kind) {
         case AssertionExprKind::Simple:
-            as<SimpleAssertionExpr>().requireSequence(context);
+            as<SimpleAssertionExpr>().requireSequence(context, code);
             return;
         case AssertionExprKind::Binary:
-            as<BinaryAssertionExpr>().requireSequence(context);
+            as<BinaryAssertionExpr>().requireSequence(context, code);
             return;
         case AssertionExprKind::Clocking:
-            as<ClockingAssertionExpr>().expr.requireSequence(context);
+            as<ClockingAssertionExpr>().expr.requireSequence(context, code);
             return;
         case AssertionExprKind::Unary:
         case AssertionExprKind::StrongWeak:
@@ -175,7 +179,7 @@ void AssertionExpr::requireSequence(const BindContext& context) const {
         case AssertionExprKind::Conditional:
         case AssertionExprKind::Case:
             ASSERT(syntax);
-            context.addDiag(diag::PropExprInSequence, syntax->sourceRange());
+            context.addDiag(code, syntax->sourceRange());
             return;
         case AssertionExprKind::SequenceConcat:
         case AssertionExprKind::SequenceWithMatch:
@@ -302,16 +306,16 @@ AssertionExpr& SimpleAssertionExpr::fromSyntax(const SimpleSequenceExprSyntax& s
     return *comp.emplace<SimpleAssertionExpr>(expr, repetition);
 }
 
-void SimpleAssertionExpr::requireSequence(const BindContext& context) const {
+void SimpleAssertionExpr::requireSequence(const BindContext& context, DiagCode code) const {
     if (expr.kind == ExpressionKind::AssertionInstance) {
         auto& aie = expr.as<AssertionInstanceExpression>();
         if (aie.type->isPropertyType()) {
             ASSERT(syntax);
-            context.addDiag(diag::PropExprInSequence, syntax->sourceRange());
+            context.addDiag(code, syntax->sourceRange());
             return;
         }
 
-        aie.body.requireSequence(context);
+        aie.body.requireSequence(context, code);
     }
 }
 
@@ -558,10 +562,12 @@ AssertionExpr& BinaryAssertionExpr::fromSyntax(const BinaryPropertyExprSyntax& s
         case SyntaxKind::SUntilWithPropertyExpr: op = BinaryAssertionOperator::SUntilWith; break;
         case SyntaxKind::ImpliesPropertyExpr: op = BinaryAssertionOperator::Implies; break;
         case SyntaxKind::ImplicationPropertyExpr:
+            left.requireSequence(context, diag::PropertyLhsInvalid);
             op = syntax.op.kind == TokenKind::OrMinusArrow ? BinaryAssertionOperator::OverlappedImplication :
                                                              BinaryAssertionOperator::NonOverlappedImplication;
             break;
         case SyntaxKind::FollowedByPropertyExpr:
+            left.requireSequence(context, diag::PropertyLhsInvalid);
             op = syntax.op.kind == TokenKind::HashMinusHash ? BinaryAssertionOperator::OverlappedFollowedBy :
                                                               BinaryAssertionOperator::NonOverlappedFollowedBy;
             break;
@@ -573,12 +579,12 @@ AssertionExpr& BinaryAssertionExpr::fromSyntax(const BinaryPropertyExprSyntax& s
     return *comp.emplace<BinaryAssertionExpr>(op, left, right);
 }
 
-void BinaryAssertionExpr::requireSequence(const BindContext& context) const {
+void BinaryAssertionExpr::requireSequence(const BindContext& context, DiagCode code) const {
     switch (op) {
         case BinaryAssertionOperator::And:
         case BinaryAssertionOperator::Or:
-            left.requireSequence(context);
-            right.requireSequence(context);
+            left.requireSequence(context, code);
+            right.requireSequence(context, code);
             return;
         case BinaryAssertionOperator::Intersect:
         case BinaryAssertionOperator::Throughout:
@@ -595,7 +601,7 @@ void BinaryAssertionExpr::requireSequence(const BindContext& context) const {
         case BinaryAssertionOperator::OverlappedFollowedBy:
         case BinaryAssertionOperator::NonOverlappedFollowedBy:
             ASSERT(syntax);
-            context.addDiag(diag::PropExprInSequence, syntax->sourceRange());
+            context.addDiag(code, syntax->sourceRange());
             return;
     }
     THROW_UNREACHABLE;
@@ -675,6 +681,8 @@ AssertionExpr& StrongWeakAssertionExpr::fromSyntax(const StrongWeakPropertyExprS
                                                    const BindContext& context) {
     auto& comp = context.getCompilation();
     auto& expr = bind(*syntax.expr, context);
+    expr.requireSequence(context);
+
     return *comp.emplace<StrongWeakAssertionExpr>(
         expr, syntax.keyword.kind == TokenKind::StrongKeyword ? Strong : Weak);
 }
