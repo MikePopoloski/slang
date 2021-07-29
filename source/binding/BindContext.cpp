@@ -198,8 +198,9 @@ optional<bitwidth_t> BindContext::requireValidBitWidth(const SVInt& value,
     return result;
 }
 
-optional<int32_t> BindContext::evalInteger(const ExpressionSyntax& syntax) const {
-    return evalInteger(Expression::bind(syntax, resetFlags(BindFlags::Constant)));
+optional<int32_t> BindContext::evalInteger(const ExpressionSyntax& syntax,
+                                           bitmask<BindFlags> extraFlags) const {
+    return evalInteger(Expression::bind(syntax, resetFlags(BindFlags::Constant | extraFlags)));
 }
 
 optional<int32_t> BindContext::evalInteger(const Expression& expr) const {

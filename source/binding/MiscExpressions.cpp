@@ -1468,6 +1468,29 @@ Expression& AssertionInstanceExpression::bindPort(const Symbol& symbol, SourceRa
     auto it = inst->argumentMap.find(&symbol);
     ASSERT(it != inst->argumentMap.end());
 
+    auto& formal = symbol.as<AssertionPortSymbol>();
+    auto& type = formal.declaredType.getType();
+    auto typeKind = type.getCanonicalType().kind;
+
+    if (instanceCtx.flags.has(BindFlags::AssertionDelayOrRepetition) &&
+        typeKind != SymbolKind::ErrorType && typeKind != SymbolKind::UntypedType) {
+        auto isAllowedIntType = [&] {
+            if (typeKind != SymbolKind::PredefinedIntegerType)
+                return false;
+
+            auto ik = type.getCanonicalType().as<PredefinedIntegerType>().integerKind;
+            return ik == PredefinedIntegerType::Int || ik == PredefinedIntegerType::ShortInt ||
+                   ik == PredefinedIntegerType::LongInt;
+        };
+
+        if (!isAllowedIntType()) {
+            auto& diag = instanceCtx.addDiag(diag::AssertionDelayFormalType, range);
+            diag << type;
+            diag.addNote(diag::NoteDeclarationHere, formal.location);
+            return badExpr(comp, nullptr);
+        }
+    }
+
     auto [propExpr, argCtx] = it->second;
     if (!propExpr) {
         // The expression can be null when making default instances of
@@ -1485,10 +1508,6 @@ Expression& AssertionInstanceExpression::bindPort(const Symbol& symbol, SourceRa
     details.prevContext = &instanceCtx;
     details.argDetails = argCtx.assertionInstance;
     argCtx.assertionInstance = &details;
-
-    auto& formal = symbol.as<AssertionPortSymbol>();
-    auto& type = formal.declaredType.getType();
-    auto typeKind = type.getCanonicalType().kind;
 
     switch (typeKind) {
         case SymbolKind::UntypedType:
@@ -1542,6 +1561,7 @@ Expression& AssertionInstanceExpression::bindPort(const Symbol& symbol, SourceRa
 
             auto& expr = selfDetermined(comp, *regExpr, argCtx, argCtx.flags);
             expr.sourceRange = range;
+
             if (!expr.type->isMatching(type)) {
                 return *comp.emplace<ConversionExpression>(type, ConversionKind::Explicit, expr,
                                                            range);

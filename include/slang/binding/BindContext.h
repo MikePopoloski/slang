@@ -118,9 +118,13 @@ enum class BindFlags {
 
     /// Binding is for checking an assertion argument, prior to it being expanded as
     /// part of an actual instance.
-    AssertionInstanceArgCheck = 1 << 22
+    AssertionInstanceArgCheck = 1 << 22,
+
+    /// Binding is for a cycle delay or sequence repetition, where references to
+    /// assertion formal ports have specific type requirements.
+    AssertionDelayOrRepetition = 1 << 23
 };
-BITMASK(BindFlags, AssertionInstanceArgCheck);
+BITMASK(BindFlags, AssertionDelayOrRepetition);
 
 enum class DimensionKind { Unknown, Range, AbbreviatedRange, Dynamic, Associative, Queue };
 
@@ -250,7 +254,8 @@ public:
     ConstantValue eval(const Expression& expr) const;
     ConstantValue tryEval(const Expression& expr) const;
 
-    optional<int32_t> evalInteger(const ExpressionSyntax& syntax) const;
+    optional<int32_t> evalInteger(const ExpressionSyntax& syntax,
+                                  bitmask<BindFlags> extraFlags = {}) const;
     optional<int32_t> evalInteger(const Expression& expr) const;
     EvaluatedDimension evalDimension(const VariableDimensionSyntax& syntax, bool requireRange,
                                      bool isPacked) const;

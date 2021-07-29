@@ -262,7 +262,7 @@ endmodule
     CHECK(diags[0].code == diag::UnboundedNotAllowed);
     CHECK(diags[1].code == diag::BadRangeExpression);
     CHECK(diags[2].code == diag::ConstEvalNonConstVariable);
-    CHECK(diags[3].code == diag::ExprMustBeIntegral);
+    CHECK(diags[3].code == diag::AssertionDelayFormalType);
     CHECK(diags[4].code == diag::BadBinaryExpression);
 }
 
@@ -723,4 +723,22 @@ endmodule
     CHECK(diags[0].code == diag::PropInstanceRepetition);
     CHECK(diags[1].code == diag::SeqInstanceRepetition);
     CHECK(diags[2].code == diag::SeqInstanceRepetition);
+}
+
+TEST_CASE("Formal arg types for sequence delay / abbrev") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    sequence s(shortint x, logic [31:0] y, byte z);
+        1 ##x 1 ##y 1 ##z 1;
+    endsequence
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::AssertionDelayFormalType);
+    CHECK(diags[1].code == diag::AssertionDelayFormalType);
 }

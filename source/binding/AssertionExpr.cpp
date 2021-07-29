@@ -202,8 +202,10 @@ void InvalidAssertionExpr::serializeTo(ASTSerializer& serializer) const {
 SequenceRange SequenceRange::fromSyntax(const SelectorSyntax& syntax, const BindContext& context,
                                         bool allowUnbounded) {
     if (syntax.kind == SyntaxKind::BitSelect) {
+        auto val = context.evalInteger(*syntax.as<BitSelectSyntax>().expr,
+                                       BindFlags::AssertionDelayOrRepetition);
+
         SequenceRange range;
-        auto val = context.evalInteger(*syntax.as<BitSelectSyntax>().expr);
         if (context.requirePositive(val, syntax.sourceRange()))
             range.max = range.min = uint32_t(*val);
 
@@ -218,12 +220,12 @@ SequenceRange SequenceRange::fromSyntax(const SelectorSyntax& syntax, const Bind
 SequenceRange SequenceRange::fromSyntax(const RangeSelectSyntax& syntax, const BindContext& context,
                                         bool allowUnbounded) {
     SequenceRange range;
-    auto l = context.evalInteger(*syntax.left);
+    auto l = context.evalInteger(*syntax.left, BindFlags::AssertionDelayOrRepetition);
     if (context.requirePositive(l, syntax.left->sourceRange()))
         range.min = uint32_t(*l);
 
     // The rhs can be an unbounded '$' so we need extra bind flags.
-    bitmask<BindFlags> flags = BindFlags::AssertionExpr;
+    bitmask<BindFlags> flags = BindFlags::AssertionExpr | BindFlags::AssertionDelayOrRepetition;
     if (allowUnbounded)
         flags |= BindFlags::AllowUnboundedLiteral;
 
@@ -353,7 +355,7 @@ AssertionExpr& SequenceConcatExpr::fromSyntax(const DelayedSequenceExprSyntax& s
         ok &= !seq.bad();
 
         if (es->delayVal) {
-            auto val = context.evalInteger(*es->delayVal);
+            auto val = context.evalInteger(*es->delayVal, BindFlags::AssertionDelayOrRepetition);
             if (!context.requirePositive(val, es->delayVal->sourceRange()))
                 ok = false;
             else
