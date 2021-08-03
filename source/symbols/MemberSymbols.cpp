@@ -874,8 +874,8 @@ SequenceSymbol& SequenceSymbol::fromSyntax(const Scope& scope,
     result->ports = ports.copy(comp);
 
     for (auto varSyntax : syntax.variables) {
-        SmallVectorSized<const ValueSymbol*, 4> vars;
-        VariableSymbol::fromSyntax(scope, *varSyntax, vars);
+        SmallVectorSized<const LocalAssertionVarSymbol*, 4> vars;
+        LocalAssertionVarSymbol::fromSyntax(scope, *varSyntax, vars);
         for (auto var : vars)
             result->addMember(*var);
     }
@@ -904,8 +904,8 @@ PropertySymbol& PropertySymbol::fromSyntax(const Scope& scope,
     result->ports = ports.copy(comp);
 
     for (auto varSyntax : syntax.variables) {
-        SmallVectorSized<const ValueSymbol*, 4> vars;
-        VariableSymbol::fromSyntax(scope, *varSyntax, vars);
+        SmallVectorSized<const LocalAssertionVarSymbol*, 4> vars;
+        LocalAssertionVarSymbol::fromSyntax(scope, *varSyntax, vars);
         for (auto var : vars)
             result->addMember(*var);
     }

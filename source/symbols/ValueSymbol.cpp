@@ -30,7 +30,6 @@ bool ValueSymbol::isKind(SymbolKind kind) {
         case SymbolKind::Port:
         case SymbolKind::PrimitivePort:
         case SymbolKind::ModportPort:
-        //case SymbolKind::ConstraintBlock:
         case SymbolKind::Specparam:
             return true;
         default:

@@ -172,6 +172,7 @@ decltype(auto) Symbol::visit(TVisitor&& visitor, Args&&... args) const {
         SYMBOL(AssertionPort);
         SYMBOL(ClockingBlock);
         SYMBOL(ClockVar);
+        SYMBOL(LocalAssertionVar);
         TYPE(PredefinedIntegerType);
         TYPE(ScalarType);
         TYPE(FloatingType);

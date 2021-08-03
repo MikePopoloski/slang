@@ -17,7 +17,6 @@ class TimingControl;
 struct IdentifierNameSyntax;
 struct DataDeclarationSyntax;
 struct ForVariableDeclarationSyntax;
-struct LocalVariableDeclarationSyntax;
 
 /// Represents a variable declaration.
 class VariableSymbol : public ValueSymbol {
@@ -31,10 +30,6 @@ public:
     /// it being declared in the user's source code.
     bool isCompilerGenerated = false;
 
-    /// Set to true for local variables declared inside assertion items,
-    /// i.e. sequences and properties.
-    bool isLocalAssertionVar = false;
-
     VariableSymbol(string_view name, SourceLocation loc, VariableLifetime lifetime);
 
     void serializeTo(ASTSerializer& serializer) const;
@@ -44,9 +39,6 @@ public:
     /// a user defined net type or alias.
     static void fromSyntax(Compilation& compilation, const DataDeclarationSyntax& syntax,
                            const Scope& scope, SmallVector<const ValueSymbol*>& results);
-
-    static void fromSyntax(const Scope& scope, const LocalVariableDeclarationSyntax& syntax,
-                           SmallVector<const ValueSymbol*>& results);
 
     static VariableSymbol& fromSyntax(Compilation& compilation,
                                       const ForVariableDeclarationSyntax& syntax,
@@ -60,6 +52,7 @@ public:
             case SymbolKind::ClassProperty:
             case SymbolKind::Iterator:
             case SymbolKind::ClockVar:
+            case SymbolKind::LocalAssertionVar:
                 return true;
             default:
                 return false;
@@ -185,6 +178,22 @@ public:
     void serializeTo(ASTSerializer& serializer) const;
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::ClockVar; }
+};
+
+struct LocalVariableDeclarationSyntax;
+
+/// Represents a local variable declared inside an assertion item,
+/// such as a sequence or property.
+class LocalAssertionVarSymbol : public VariableSymbol {
+public:
+    const ExpressionSyntax* defaultValueSyntax = nullptr;
+
+    LocalAssertionVarSymbol(string_view name, SourceLocation loc);
+
+    static void fromSyntax(const Scope& scope, const LocalVariableDeclarationSyntax& syntax,
+                           SmallVector<const LocalAssertionVarSymbol*>& results);
+
+    static bool isKind(SymbolKind kind) { return kind == SymbolKind::LocalAssertionVar; }
 };
 
 } // namespace slang

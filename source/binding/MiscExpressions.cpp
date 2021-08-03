@@ -1184,15 +1184,29 @@ static bool checkAssertionArgType(const PropertyExprSyntax& propExpr,
     return true;
 }
 
-static const AssertionExpr& bindAssertionBody(const Symbol& symbol, const SyntaxNode& syntax,
-                                              const BindContext& context) {
+static const AssertionExpr& bindAssertionBody(
+    const Symbol& symbol, const SyntaxNode& syntax, const BindContext& context,
+    SmallVector<std::tuple<const Symbol*, const Expression*>>& localVarInitializers) {
+
+    auto collectInitializers = [&](auto& sym) {
+        for (auto& local : sym.membersOfType<LocalAssertionVarSymbol>()) {
+            if (local.defaultValueSyntax) {
+                auto& expr =
+                    Expression::bind(*local.defaultValueSyntax, context, BindFlags::AssertionExpr);
+                localVarInitializers.append(std::make_tuple(&local, &expr));
+            }
+        }
+    };
+
     if (symbol.kind == SymbolKind::Sequence) {
         auto& result =
             AssertionExpr::bind(*syntax.as<SequenceDeclarationSyntax>().seqExpr, context);
         result.requireSequence(context);
+        collectInitializers(symbol.as<SequenceSymbol>());
         return result;
     }
     else {
+        collectInitializers(symbol.as<PropertySymbol>());
         return AssertionExpr::bind(*syntax.as<PropertyDeclarationSyntax>().propertySpec->expr,
                                    context);
     }
@@ -1385,9 +1399,13 @@ Expression& AssertionInstanceExpression::fromLookup(const Symbol& symbol,
     BindContext bodyContext(*symbolScope, LookupLocation::max);
     bodyContext.assertionInstance = &instance;
 
-    auto& body = bindAssertionBody(symbol, *bodySyntax, bodyContext);
-    return *comp.emplace<AssertionInstanceExpression>(*type, symbol, body,
-                                                      /* isRecursiveProperty */ false, range);
+    SmallVectorSized<std::tuple<const Symbol*, const Expression*>, 8> localVarInitializers;
+    auto& body = bindAssertionBody(symbol, *bodySyntax, bodyContext, localVarInitializers);
+
+    auto result = comp.emplace<AssertionInstanceExpression>(*type, symbol, body,
+                                                            /* isRecursiveProperty */ false, range);
+    result->localVarInitializers = localVarInitializers.copy(comp);
+    return *result;
 }
 
 Expression& AssertionInstanceExpression::makeDefault(const Symbol& symbol) {
@@ -1446,10 +1464,14 @@ Expression& AssertionInstanceExpression::makeDefault(const Symbol& symbol) {
     BindContext bodyContext(*symbolScope, LookupLocation::max);
     bodyContext.assertionInstance = &instance;
 
-    auto& body = bindAssertionBody(symbol, *bodySyntax, bodyContext);
+    SmallVectorSized<std::tuple<const Symbol*, const Expression*>, 8> localVarInitializers;
+    auto& body = bindAssertionBody(symbol, *bodySyntax, bodyContext, localVarInitializers);
+
     SourceRange range{ symbol.location, symbol.location + 1 };
-    return *comp.emplace<AssertionInstanceExpression>(*type, symbol, body,
-                                                      /* isRecursiveProperty */ false, range);
+    auto result = comp.emplace<AssertionInstanceExpression>(*type, symbol, body,
+                                                            /* isRecursiveProperty */ false, range);
+    result->localVarInitializers = localVarInitializers.copy(comp);
+    return *result;
 }
 
 Expression& AssertionInstanceExpression::bindPort(const Symbol& symbol, SourceRange range,
@@ -1576,6 +1598,15 @@ void AssertionInstanceExpression::serializeTo(ASTSerializer& serializer) const {
     serializer.writeLink("symbol", symbol);
     serializer.write("body", body);
     serializer.write("isRecursiveProperty", isRecursiveProperty);
+
+    serializer.startArray("localVarInitializers");
+    for (auto [var, expr] : localVarInitializers) {
+        serializer.startObject();
+        serializer.write("local", *var);
+        serializer.write("expr", *expr);
+        serializer.endObject();
+    }
+    serializer.endArray();
 }
 
 Expression& MinTypMaxExpression::fromSyntax(Compilation& compilation,

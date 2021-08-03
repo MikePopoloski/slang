@@ -306,6 +306,7 @@ class AssertionInstanceExpression : public Expression {
 public:
     const Symbol& symbol;
     const AssertionExpr& body;
+    span<std::tuple<const Symbol*, const Expression*> const> localVarInitializers;
     bool isRecursiveProperty;
 
     AssertionInstanceExpression(const Type& type, const Symbol& symbol, const AssertionExpr& body,

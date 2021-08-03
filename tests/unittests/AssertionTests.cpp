@@ -363,6 +363,25 @@ endmodule
     CHECK(diags[3].code == diag::LocalVarMatchItem);
 }
 
+TEST_CASE("Local vars default values") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    sequence s(i);
+        int j, k = j, l = i, m = baz;
+        (i && j, j = 1, j++)[*0:1];
+    endsequence
+    assert property (s(3));
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::UndeclaredIdentifier);
+}
+
 TEST_CASE("Sequence triggered method") {
     auto tree = SyntaxTree::fromText(R"(
 module m;

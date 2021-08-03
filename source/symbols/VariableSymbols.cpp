@@ -130,20 +130,6 @@ void VariableSymbol::fromSyntax(Compilation& compilation, const DataDeclarationS
     }
 }
 
-void VariableSymbol::fromSyntax(const Scope& scope, const LocalVariableDeclarationSyntax& syntax,
-                                SmallVector<const ValueSymbol*>& results) {
-    auto& comp = scope.getCompilation();
-    for (auto declarator : syntax.declarators) {
-        auto variable = comp.emplace<VariableSymbol>(
-            declarator->name.valueText(), declarator->name.location(), VariableLifetime::Automatic);
-        variable->isLocalAssertionVar = true;
-        variable->setDeclaredType(*syntax.type);
-        variable->setFromDeclarator(*declarator);
-        variable->setAttributes(scope, syntax.attributes);
-        results.append(variable);
-    }
-}
-
 VariableSymbol& VariableSymbol::fromSyntax(Compilation& compilation,
                                            const ForVariableDeclarationSyntax& syntax,
                                            const VariableSymbol* lastVar) {
@@ -487,6 +473,35 @@ void ClockVarSymbol::serializeTo(ASTSerializer& serializer) const {
         serializer.startObject();
         outputSkew.serializeTo(serializer);
         serializer.endObject();
+    }
+}
+
+LocalAssertionVarSymbol::LocalAssertionVarSymbol(string_view name, SourceLocation loc) :
+    VariableSymbol(SymbolKind::LocalAssertionVar, name, loc, VariableLifetime::Static) {
+}
+
+void LocalAssertionVarSymbol::fromSyntax(const Scope& scope,
+                                         const LocalVariableDeclarationSyntax& syntax,
+                                         SmallVector<const LocalAssertionVarSymbol*>& results) {
+    auto& comp = scope.getCompilation();
+    for (auto declarator : syntax.declarators) {
+        // Note that we don't use setFromDeclarator here as we can't let DeclaredType do its
+        // usual handling of initializers / default values. The expressions for local vars can
+        // depend on assertion ports, which aren't known until bind time and are handled specially
+        // later when instantiating the sequence.
+        auto var = comp.emplace<LocalAssertionVarSymbol>(declarator->name.valueText(),
+                                                         declarator->name.location());
+        var->setDeclaredType(*syntax.type);
+        var->setSyntax(*declarator);
+        var->setAttributes(scope, syntax.attributes);
+
+        if (!declarator->dimensions.empty())
+            var->getDeclaredType()->setDimensionSyntax(declarator->dimensions);
+
+        if (declarator->initializer)
+            var->defaultValueSyntax = declarator->initializer->expr;
+
+        results.append(var);
     }
 }
 

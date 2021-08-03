@@ -397,10 +397,8 @@ static span<const Expression* const> bindMatchItems(const SequenceMatchListSynta
                                                     const BindContext& context) {
     auto checkLocalVar = [&](const Expression& expr) {
         auto sym = expr.getSymbolReference();
-        if (!sym || sym->kind != SymbolKind::Variable ||
-            !sym->as<VariableSymbol>().isLocalAssertionVar) {
+        if (!sym || sym->kind != SymbolKind::LocalAssertionVar)
             context.addDiag(diag::LocalVarMatchItem, expr.sourceRange);
-        }
     };
 
     BindContext ctx = context;
