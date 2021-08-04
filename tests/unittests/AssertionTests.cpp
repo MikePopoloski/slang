@@ -795,9 +795,10 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 4);
+    REQUIRE(diags.size() == 5);
     CHECK(diags[0].code == diag::AssertionPortDirNoLocal);
     CHECK(diags[1].code == diag::AssertionPortOutputDefault);
     CHECK(diags[2].code == diag::LocalVarTypeRequired);
-    CHECK(diags[3].code == diag::UsedBeforeDeclared);
+    CHECK(diags[3].code == diag::AssertionExprType);
+    CHECK(diags[4].code == diag::UsedBeforeDeclared);
 }

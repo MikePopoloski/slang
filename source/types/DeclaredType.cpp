@@ -9,6 +9,7 @@
 #include "slang/binding/Expression.h"
 #include "slang/compilation/Compilation.h"
 #include "slang/diagnostics/DeclarationsDiags.h"
+#include "slang/diagnostics/StatementsDiags.h"
 #include "slang/symbols/ClassSymbols.h"
 #include "slang/symbols/Scope.h"
 #include "slang/symbols/SubroutineSymbols.h"
@@ -208,6 +209,10 @@ void DeclaredType::checkType(const BindContext& context) const {
         case uint32_t(DeclaredTypeFlags::DPIArg):
             if (!type->isValidForDPIArg())
                 context.addDiag(diag::InvalidDPIArgType, parent.location) << *type;
+            break;
+        case uint32_t(DeclaredTypeFlags::RequireSequenceType):
+            if (!type->isValidForSequence())
+                context.addDiag(diag::AssertionExprType, parent.location) << *type;
             break;
         default:
             THROW_UNREACHABLE;

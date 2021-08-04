@@ -872,6 +872,9 @@ void AssertionPortSymbol::buildPorts(Scope& scope, const AssertionItemPortListSy
             }
         }
 
+        if (port->localVarDirection)
+            port->declaredType.addFlags(DeclaredTypeFlags::RequireSequenceType);
+
         scope.addMember(*port);
         results.append(port);
     }
