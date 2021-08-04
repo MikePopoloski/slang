@@ -813,8 +813,9 @@ void AssertionPortSymbol::buildPorts(Scope& scope, const AssertionItemPortListSy
     auto& comp = scope.getCompilation();
     auto& untyped = comp.getType(SyntaxKind::Untyped);
     const DataTypeSyntax* lastType = nullptr;
+    optional<ArgumentDirection> lastLocalDir;
+
     for (auto item : syntax.ports) {
-        // TODO: local / direction
         auto port =
             comp.emplace<AssertionPortSymbol>(item->name.valueText(), item->name.location());
         port->setSyntax(*item);
@@ -822,6 +823,15 @@ void AssertionPortSymbol::buildPorts(Scope& scope, const AssertionItemPortListSy
 
         if (!item->dimensions.empty())
             port->declaredType.setDimensionSyntax(item->dimensions);
+
+        if (item->local) {
+            port->localVarDirection = item->direction
+                                          ? SemanticFacts::getDirection(item->direction.kind)
+                                          : ArgumentDirection::In;
+
+            // If we have a local keyword we can never inherit the previous type.
+            lastType = nullptr;
+        }
 
         if (isEmpty(*item->type)) {
             if (lastType)
@@ -832,7 +842,13 @@ void AssertionPortSymbol::buildPorts(Scope& scope, const AssertionItemPortListSy
                     scope.addDiag(diag::InvalidArrayElemType, item->dimensions.sourceRange())
                         << untyped;
                 }
+
+                if (item->local)
+                    scope.addDiag(diag::LocalVarTypeRequired, item->local.range());
             }
+
+            if (!item->local)
+                port->localVarDirection = lastLocalDir;
         }
         else {
             port->declaredType.setTypeSyntax(*item->type);
@@ -845,16 +861,25 @@ void AssertionPortSymbol::buildPorts(Scope& scope, const AssertionItemPortListSy
             }
         }
 
-        if (item->defaultValue)
+        lastLocalDir = port->localVarDirection;
+        if (item->defaultValue) {
             port->defaultValueSyntax = item->defaultValue->expr;
+
+            if (port->localVarDirection == ArgumentDirection::Out ||
+                port->localVarDirection == ArgumentDirection::InOut) {
+                scope.addDiag(diag::AssertionPortOutputDefault,
+                              port->defaultValueSyntax->sourceRange());
+            }
+        }
 
         scope.addMember(*port);
         results.append(port);
     }
 }
 
-void AssertionPortSymbol::serializeTo(ASTSerializer&) const {
-    // TODO:
+void AssertionPortSymbol::serializeTo(ASTSerializer& serializer) const {
+    if (localVarDirection)
+        serializer.write("localVarDirection", toString(*localVarDirection));
 }
 
 SequenceSymbol::SequenceSymbol(Compilation& compilation, string_view name, SourceLocation loc) :

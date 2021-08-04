@@ -286,8 +286,8 @@ private:
     DPIImportSyntax& parseDPIImport(AttrList attributes);
     DPIExportSyntax& parseDPIExport(AttrList attributes);
     ElabSystemTaskSyntax* parseElabSystemTask(AttrList attributes);
-    AssertionItemPortSyntax& parseAssertionItemPort();
-    AssertionItemPortListSyntax* parseAssertionItemPortList();
+    AssertionItemPortSyntax& parseAssertionItemPort(SyntaxKind parentKind);
+    AssertionItemPortListSyntax* parseAssertionItemPortList(SyntaxKind parentKind);
     PropertyDeclarationSyntax& parsePropertyDeclaration(AttrList attributes);
     SequenceDeclarationSyntax& parseSequenceDeclaration(AttrList attributes);
     CheckerDeclarationSyntax& parseCheckerDeclaration(AttrList attributes);

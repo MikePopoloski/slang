@@ -259,8 +259,11 @@ class AssertionPortSymbol : public Symbol {
 public:
     DeclaredType declaredType;
     const PropertyExprSyntax* defaultValueSyntax = nullptr;
+    optional<ArgumentDirection> localVarDirection;
 
     AssertionPortSymbol(string_view name, SourceLocation loc);
+
+    bool isLocalVar() const { return localVarDirection.has_value(); }
 
     static void buildPorts(Scope& scope, const AssertionItemPortListSyntax& syntax,
                            SmallVector<const AssertionPortSymbol*>& results);

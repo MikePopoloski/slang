@@ -1991,13 +1991,19 @@ ElabSystemTaskSyntax* Parser::parseElabSystemTask(AttrList attributes) {
     return &factory.elabSystemTask(attributes, nameToken, argList, expect(TokenKind::Semicolon));
 }
 
-AssertionItemPortSyntax& Parser::parseAssertionItemPort() {
+AssertionItemPortSyntax& Parser::parseAssertionItemPort(SyntaxKind parentKind) {
     auto attributes = parseAttributes();
     auto local = consumeIf(TokenKind::LocalKeyword);
 
     Token direction;
-    if (isPortDirection(peek().kind))
+    if (isPortDirection(peek().kind)) {
         direction = consume();
+
+        bool isSeqOrProp = parentKind == SyntaxKind::SequenceDeclaration ||
+                           parentKind == SyntaxKind::PropertyDeclaration;
+        if (!local && isSeqOrProp)
+            addDiag(diag::AssertionPortDirNoLocal, direction.location()) << direction.range();
+    }
 
     DataTypeSyntax* type;
     switch (peek().kind) {
@@ -2028,7 +2034,7 @@ AssertionItemPortSyntax& Parser::parseAssertionItemPort() {
                                      defaultValue);
 }
 
-AssertionItemPortListSyntax* Parser::parseAssertionItemPortList() {
+AssertionItemPortListSyntax* Parser::parseAssertionItemPortList(SyntaxKind parentKind) {
     if (!peek(TokenKind::OpenParenthesis))
         return nullptr;
 
@@ -2038,7 +2044,8 @@ AssertionItemPortListSyntax* Parser::parseAssertionItemPortList() {
     Token closeParen;
     parseList<isPossiblePropertyPortItem, isEndOfParenList>(
         buffer, TokenKind::CloseParenthesis, TokenKind::Comma, closeParen, RequireItems::True,
-        diag::ExpectedAssertionItemPort, [this] { return &parseAssertionItemPort(); });
+        diag::ExpectedAssertionItemPort,
+        [this, parentKind] { return &parseAssertionItemPort(parentKind); });
 
     return &factory.assertionItemPortList(openParen, buffer.copy(alloc), closeParen);
 }
@@ -2046,7 +2053,7 @@ AssertionItemPortListSyntax* Parser::parseAssertionItemPortList() {
 PropertyDeclarationSyntax& Parser::parsePropertyDeclaration(AttrList attributes) {
     auto keyword = consume();
     auto name = expect(TokenKind::Identifier);
-    auto portList = parseAssertionItemPortList();
+    auto portList = parseAssertionItemPortList(SyntaxKind::PropertyDeclaration);
     auto semi = expect(TokenKind::Semicolon);
 
     SmallVectorSized<LocalVariableDeclarationSyntax*, 4> declarations;
@@ -2067,7 +2074,7 @@ PropertyDeclarationSyntax& Parser::parsePropertyDeclaration(AttrList attributes)
 SequenceDeclarationSyntax& Parser::parseSequenceDeclaration(AttrList attributes) {
     auto keyword = consume();
     auto name = expect(TokenKind::Identifier);
-    auto portList = parseAssertionItemPortList();
+    auto portList = parseAssertionItemPortList(SyntaxKind::SequenceDeclaration);
     auto semi = expect(TokenKind::Semicolon);
 
     SmallVectorSized<LocalVariableDeclarationSyntax*, 4> declarations;
@@ -2088,7 +2095,7 @@ SequenceDeclarationSyntax& Parser::parseSequenceDeclaration(AttrList attributes)
 CheckerDeclarationSyntax& Parser::parseCheckerDeclaration(AttrList attributes) {
     auto keyword = consume();
     auto name = expect(TokenKind::Identifier);
-    auto portList = parseAssertionItemPortList();
+    auto portList = parseAssertionItemPortList(SyntaxKind::CheckerDeclaration);
     auto semi = expect(TokenKind::Semicolon);
 
     auto savedDefinitionKind = currentDefinitionKind;

@@ -761,3 +761,43 @@ endmodule
     CHECK(diags[0].code == diag::AssertionDelayFormalType);
     CHECK(diags[1].code == diag::AssertionDelayFormalType);
 }
+
+TEST_CASE("Local var formal arg errors") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    logic b_d, d_d;
+    sequence legal_loc_var_formal (
+        local inout logic a,
+        local logic b = b_d,
+                    c,
+                    d = d_d,
+        logic e, f
+    );
+        logic g = c, h = g || d;
+        1;
+    endsequence
+
+    sequence illegal_loc_var_formal (
+        output logic a,
+        local inout logic b,
+                          c = 1'b0,
+        local             d = 1 + 2,
+        local event e,
+        local logic f = g
+    );
+        logic g = b;
+        1;
+    endsequence
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 4);
+    CHECK(diags[0].code == diag::AssertionPortDirNoLocal);
+    CHECK(diags[1].code == diag::AssertionPortOutputDefault);
+    CHECK(diags[2].code == diag::LocalVarTypeRequired);
+    CHECK(diags[3].code == diag::UsedBeforeDeclared);
+}
