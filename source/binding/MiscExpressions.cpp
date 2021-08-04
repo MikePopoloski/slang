@@ -1188,7 +1188,7 @@ static const AssertionExpr& bindAssertionBody(
     const Symbol& symbol, const SyntaxNode& syntax, const BindContext& context,
     SmallVector<std::tuple<const Symbol*, const Expression*>>& localVarInitializers) {
 
-    auto collectInitializers = [&](auto& sym) {
+    auto collectInitializers = [&](const Scope& sym) {
         for (auto& local : sym.membersOfType<LocalAssertionVarSymbol>()) {
             if (local.defaultValueSyntax) {
                 auto& expr =
