@@ -762,6 +762,31 @@ endmodule
     CHECK(diags[1].code == diag::AssertionDelayFormalType);
 }
 
+TEST_CASE("Local var formal arg") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    int a,b,c;
+    int data_in, data_out;
+
+    sequence sub_seq2(local inout int lv);
+        (a ##1 !a, lv += data_in)
+        ##1 !b[*0:$] ##1 b && (data_out == lv);
+    endsequence
+
+    sequence seq2;
+        int v1;
+        (c, v1 = data_in)
+        ##1 sub_seq2(v1)
+        ##1 (data_out == v1);
+    endsequence
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
 TEST_CASE("Local var formal arg errors") {
     auto tree = SyntaxTree::fromText(R"(
 module m;
@@ -788,6 +813,8 @@ module m;
         logic g = b;
         1;
     endsequence
+
+    assert property (legal_loc_var_formal(1, 1, 1, 1, 1, 1));
 endmodule
 )");
 
@@ -795,10 +822,11 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 5);
+    REQUIRE(diags.size() == 6);
     CHECK(diags[0].code == diag::AssertionPortDirNoLocal);
     CHECK(diags[1].code == diag::AssertionPortOutputDefault);
     CHECK(diags[2].code == diag::LocalVarTypeRequired);
     CHECK(diags[3].code == diag::AssertionExprType);
     CHECK(diags[4].code == diag::UsedBeforeDeclared);
+    CHECK(diags[5].code == diag::AssertionOutputLocalVar);
 }

@@ -863,12 +863,13 @@ void AssertionPortSymbol::buildPorts(Scope& scope, const AssertionItemPortListSy
 
         lastLocalDir = port->localVarDirection;
         if (item->defaultValue) {
-            port->defaultValueSyntax = item->defaultValue->expr;
-
             if (port->localVarDirection == ArgumentDirection::Out ||
                 port->localVarDirection == ArgumentDirection::InOut) {
                 scope.addDiag(diag::AssertionPortOutputDefault,
-                              port->defaultValueSyntax->sourceRange());
+                              item->defaultValue->expr->sourceRange());
+            }
+            else {
+                port->defaultValueSyntax = item->defaultValue->expr;
             }
         }
 

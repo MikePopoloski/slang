@@ -1183,6 +1183,15 @@ static bool checkAssertionArgType(const PropertyExprSyntax& propExpr,
         return false;
     }
 
+    // Local var formals that are output or inout must bind only to another local var.
+    if (formal.localVarDirection == ArgumentDirection::InOut ||
+        formal.localVarDirection == ArgumentDirection::Out) {
+        auto sym = bound.getSymbolReference();
+        if (!sym || sym->kind != SymbolKind::LocalAssertionVar)
+            context.addDiag(diag::AssertionOutputLocalVar, bound.sourceRange);
+        return false;
+    }
+
     return true;
 }
 

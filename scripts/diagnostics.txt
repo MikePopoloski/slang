@@ -486,6 +486,7 @@ error AssertionArgTypeSequence "expected a sequence expression for port of type 
 error RecursiveSequence "sequence '{}' is recursive"
 error EventExprAssertionArg "argument of type 'event' can only be used in places where event expressions are allowed"
 error AssertionDelayFormalType "a typed formal argument used in a cycle delay or sequence repetition must be of type 'shortint', 'int', or 'longint', not {}"
+error AssertionOutputLocalVar "an argument bound to an 'inout' or 'output' local variable formal argument must itself be a reference to a local variable"
 warning ignored-slice IgnoredSlice "slice size ignored for left-to-right streaming operator"
 warning unsized-concat UnsizedInConcat "unsized integer in concat; using a width of {}"
 warning width-expand WidthExpand "implicit conversion expands from {} to {} bits"
