@@ -808,7 +808,13 @@ module m;
         a <= $past(b, 5, a | b);
         a <= $past(b, 0);
         a <= $past_gclk(b);
+        a <= $rose(s.matched);
     end
+
+    sequence s;
+        int i;
+        $past(i);
+    endsequence
 endmodule
 
 module n;
@@ -826,9 +832,11 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 2);
+    REQUIRE(diags.size() == 4);
     CHECK(diags[0].code == diag::PastNumTicksInvalid);
     CHECK(diags[1].code == diag::NoGlobalClocking);
+    CHECK(diags[2].code == diag::SampledValueMatched);
+    CHECK(diags[3].code == diag::SampledValueLocalVar);
 }
 
 TEST_CASE("Global clock sys func") {

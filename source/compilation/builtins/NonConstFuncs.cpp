@@ -7,14 +7,14 @@
 #include "slang/binding/SystemSubroutine.h"
 #include "slang/compilation/Compilation.h"
 #include "slang/diagnostics/SysFuncsDiags.h"
+#include "slang/symbols/ASTVisitor.h"
+#include "slang/symbols/MemberSymbols.h"
 
 namespace slang::Builtins {
 
 class FErrorFunc : public SystemSubroutine {
 public:
-    FErrorFunc() : SystemSubroutine("$ferror", SubroutineKind::Function) {
-        hasOutputArgs = true;
-    }
+    FErrorFunc() : SystemSubroutine("$ferror", SubroutineKind::Function) { hasOutputArgs = true; }
 
     const Type& checkArguments(const BindContext& context, const Args& args, SourceRange range,
                                const Expression*) const final {
@@ -48,9 +48,7 @@ public:
 
 class FGetsFunc : public SystemSubroutine {
 public:
-    FGetsFunc() : SystemSubroutine("$fgets", SubroutineKind::Function) {
-        hasOutputArgs = true;
-    }
+    FGetsFunc() : SystemSubroutine("$fgets", SubroutineKind::Function) { hasOutputArgs = true; }
 
     const Type& checkArguments(const BindContext& context, const Args& args, SourceRange range,
                                const Expression*) const final {
@@ -134,9 +132,7 @@ private:
 
 class FReadFunc : public SystemSubroutine {
 public:
-    FReadFunc() : SystemSubroutine("$fread", SubroutineKind::Function) {
-        hasOutputArgs = true;
-    }
+    FReadFunc() : SystemSubroutine("$fread", SubroutineKind::Function) { hasOutputArgs = true; }
 
     bool allowEmptyArgument(size_t argIndex) const final { return argIndex == 2; }
 
@@ -248,6 +244,48 @@ private:
     size_t numArgs;
 };
 
+struct SampledValueExprVisitor {
+    const BindContext& context;
+
+    SampledValueExprVisitor(const BindContext& context) : context(context) {}
+
+    template<typename T>
+    void visit(const T& expr) {
+        switch (expr.kind) {
+            case ExpressionKind::NamedValue:
+                if (auto sym = expr.getSymbolReference()) {
+                    if (sym->kind == SymbolKind::LocalAssertionVar ||
+                        (sym->kind == SymbolKind::AssertionPort &&
+                         sym->as<AssertionPortSymbol>().isLocalVar())) {
+                        context.addDiag(diag::SampledValueLocalVar, expr.sourceRange);
+                    }
+                }
+                break;
+            case ExpressionKind::Call: {
+                auto& call = expr.as<CallExpression>();
+                if (call.isSystemCall() && call.getSubroutineName() == "matched"sv &&
+                    !call.arguments().empty() && call.arguments()[0]->type->isSequenceType()) {
+                    context.addDiag(diag::SampledValueMatched, expr.sourceRange);
+                }
+                break;
+            }
+            default:
+                if constexpr (is_detected_v<ASTDetectors::visitExprs_t, T, SampledValueExprVisitor>)
+                    expr.visitExprs(*this);
+                break;
+        }
+    }
+
+    void visitInvalid(const Expression&) {}
+};
+
+static void checkSampledValueExpr(const Expression& expr, const BindContext& context) {
+    // Local variables and the sequence method "matched" are not allowed in the
+    // expressions passed to sampled value functions.
+    SampledValueExprVisitor visitor(context);
+    expr.visit(visitor);
+}
+
 class SampledFunc : public SystemSubroutine {
 public:
     SampledFunc() : SystemSubroutine("$sampled", SubroutineKind::Function) {}
@@ -262,6 +300,8 @@ public:
         auto& comp = context.getCompilation();
         if (!checkArgCount(context, false, args, range, 1, 1))
             return comp.getErrorType();
+
+        checkSampledValueExpr(*args[0], context);
 
         return *args[0]->type;
     }
@@ -291,6 +331,8 @@ public:
         auto& comp = context.getCompilation();
         if (!checkArgCount(context, false, args, range, 1, 2))
             return comp.getErrorType();
+
+        checkSampledValueExpr(*args[0], context);
 
         // TODO: check rules for inferring clocking
 
@@ -330,6 +372,9 @@ public:
         auto& comp = context.getCompilation();
         if (!checkArgCount(context, false, args, range, 1, 4))
             return comp.getErrorType();
+
+        for (size_t i = 0; i < args.size() && i < 3; i++)
+            checkSampledValueExpr(*args[i], context);
 
         // TODO: check rules for inferring clocking
 
