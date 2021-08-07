@@ -422,6 +422,27 @@ endmodule
     NO_COMPILATION_ERRORS;
 }
 
+TEST_CASE("Sequence matched method") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    wire clk;
+    sequence e1(a,b,c); 
+        @(posedge clk) $rose(a) ##1 b ##1 c ;
+    endsequence
+
+    wire reset, inst, ready, proc1, proc2, branch_back;
+    sequence e2;
+        @(posedge clk) reset ##1 inst ##1 e1(ready,proc1,proc2).matched [->1] 
+        ##1 branch_back;
+    endsequence
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
 TEST_CASE("Sequence event control") {
     auto tree = SyntaxTree::fromText(R"(
 wire a, b, c, clk;

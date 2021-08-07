@@ -222,6 +222,28 @@ public:
     }
 };
 
+class SequenceMethod : public SystemSubroutine {
+public:
+    SequenceMethod(const std::string& name) : SystemSubroutine(name, SubroutineKind::Function) {}
+
+    const Type& checkArguments(const BindContext& context, const Args& args, SourceRange range,
+                               const Expression*) const final {
+        auto& comp = context.getCompilation();
+        if (!checkArgCount(context, true, args, range, 0, 0))
+            return comp.getErrorType();
+
+        return comp.getBitType();
+    }
+
+    ConstantValue eval(EvalContext&, const Args&,
+                       const CallExpression::SystemCallInfo&) const final {
+        return nullptr;
+    }
+    bool verifyConstant(EvalContext& context, const Args&, SourceRange range) const final {
+        return notConst(context, range);
+    }
+};
+
 void registerMiscSystemFuncs(Compilation& c) {
 #define REGISTER(name) c.addSystemSubroutine(std::make_unique<name##Function>())
     REGISTER(SFormat);
@@ -231,10 +253,8 @@ void registerMiscSystemFuncs(Compilation& c) {
 #undef REGISTER
 
     c.addSystemMethod(SymbolKind::ClassType, std::make_unique<ClassRandomizeFunction>());
-
-    c.addSystemMethod(SymbolKind::SequenceType,
-                      std::make_unique<NonConstantFunction>("triggered", c.getBitType(), 0,
-                                                            std::vector<const Type*>{}, true));
+    c.addSystemMethod(SymbolKind::SequenceType, std::make_unique<SequenceMethod>("triggered"));
+    c.addSystemMethod(SymbolKind::SequenceType, std::make_unique<SequenceMethod>("matched"));
 }
 
 } // namespace slang::Builtins
