@@ -4,12 +4,14 @@
 //
 // File is under the MIT license; see LICENSE for details
 //------------------------------------------------------------------------------
+#include "slang/binding/AssertionExpr.h"
 #include "slang/binding/FormatHelpers.h"
 #include "slang/binding/SystemSubroutine.h"
 #include "slang/compilation/Compilation.h"
 #include "slang/diagnostics/DeclarationsDiags.h"
 #include "slang/diagnostics/SysFuncsDiags.h"
 #include "slang/symbols/ClassSymbols.h"
+#include "slang/symbols/MemberSymbols.h"
 
 namespace slang::Builtins {
 
@@ -232,6 +234,8 @@ public:
         if (!checkArgCount(context, true, args, range, 0, 0))
             return comp.getErrorType();
 
+        checkLocalVars(*args[0], context, range);
+
         return comp.getBitType();
     }
 
@@ -241,6 +245,30 @@ public:
     }
     bool verifyConstant(EvalContext& context, const Args&, SourceRange range) const final {
         return notConst(context, range);
+    }
+
+private:
+    void checkLocalVars(const Expression& expr, const BindContext& context,
+                        SourceRange range) const {
+        if (expr.kind == ExpressionKind::AssertionInstance) {
+            auto& aie = expr.as<AssertionInstanceExpression>();
+            if (aie.symbol.kind == SymbolKind::AssertionPort) {
+                if (aie.body.kind == AssertionExprKind::Simple)
+                    checkLocalVars(aie.body.as<SimpleAssertionExpr>().expr, context, range);
+            }
+            else {
+                auto& seq = aie.symbol.as<SequenceSymbol>();
+                for (auto& arg : seq.membersOfType<AssertionPortSymbol>()) {
+                    if (arg.localVarDirection == ArgumentDirection::In ||
+                        arg.localVarDirection == ArgumentDirection::InOut) {
+                        auto& diag = context.addDiag(diag::SeqMethodInputLocalVar, range);
+                        diag << name;
+                        diag.addNote(diag::NoteDeclarationHere, arg.location);
+                        break;
+                    }
+                }
+            }
+        }
     }
 };
 

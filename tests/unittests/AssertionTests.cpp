@@ -443,6 +443,29 @@ endmodule
     NO_COMPILATION_ERRORS;
 }
 
+TEST_CASE("Sequence triggered local var formals") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    sequence s1(sequence a);
+        ##1 a.triggered;
+    endsequence
+
+    sequence s2(a);
+        s1(a);
+    endsequence
+
+    sequence s3(local int foo); 1; endsequence
+    sequence s4;
+        s2(s3(1));
+    endsequence
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
 TEST_CASE("Sequence event control") {
     auto tree = SyntaxTree::fromText(R"(
 wire a, b, c, clk;
