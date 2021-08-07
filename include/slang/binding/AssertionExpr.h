@@ -77,6 +77,10 @@ public:
     void requireSequence(const BindContext& context, DiagCode code) const;
     bool bad() const { return kind == AssertionExprKind::Invalid; }
 
+    /// Returns true if this is a sequence expression that admits an empty match,
+    /// and false otherwise.
+    bool admitsEmpty() const;
+
     static const AssertionExpr& bind(const SequenceExprSyntax& syntax, const BindContext& context);
     static const AssertionExpr& bind(const PropertyExprSyntax& syntax, const BindContext& context);
 
@@ -130,6 +134,8 @@ struct SequenceRange {
     static SequenceRange fromSyntax(const RangeSelectSyntax& syntax, const BindContext& context,
                                     bool allowUnbounded);
 
+    bool admitsEmpty() const;
+
     void serializeTo(ASTSerializer& serializer) const;
 };
 
@@ -153,6 +159,13 @@ struct SequenceRepetition {
 
     SequenceRepetition(const SequenceRepetitionSyntax& syntax, const BindContext& context);
 
+    enum class AdmitsEmpty {
+        Yes,
+        No,
+        Depends
+    };
+    AdmitsEmpty admitsEmpty() const;
+
     void serializeTo(ASTSerializer& serializer) const;
 };
 
@@ -168,6 +181,7 @@ public:
         AssertionExpr(AssertionExprKind::Simple), expr(expr), repetition(repetition) {}
 
     void requireSequence(const BindContext& context, DiagCode code) const;
+    bool admitsEmptyImpl() const;
 
     static AssertionExpr& fromSyntax(const SimpleSequenceExprSyntax& syntax,
                                      const BindContext& context);
@@ -192,6 +206,8 @@ public:
     explicit SequenceConcatExpr(span<const Element> elements) :
         AssertionExpr(AssertionExprKind::SequenceConcat), elements(elements) {}
 
+    bool admitsEmptyImpl() const;
+
     static AssertionExpr& fromSyntax(const DelayedSequenceExprSyntax& syntax,
                                      const BindContext& context);
 
@@ -214,6 +230,8 @@ public:
                           span<const Expression* const> matchItems) :
         AssertionExpr(AssertionExprKind::SequenceWithMatch),
         expr(expr), repetition(repetition), matchItems(matchItems) {}
+
+    bool admitsEmptyImpl() const;
 
     static AssertionExpr& fromSyntax(const ParenthesizedSequenceExprSyntax& syntax,
                                      const BindContext& context);
@@ -239,6 +257,8 @@ public:
                        optional<SequenceRange> range) :
         AssertionExpr(AssertionExprKind::Unary),
         op(op), expr(expr), range(range) {}
+
+    bool admitsEmptyImpl() const { return false; }
 
     static AssertionExpr& fromSyntax(const UnaryPropertyExprSyntax& syntax,
                                      const BindContext& context);
@@ -267,6 +287,7 @@ public:
         op(op), left(left), right(right) {}
 
     void requireSequence(const BindContext& context, DiagCode code) const;
+    bool admitsEmptyImpl() const;
 
     static AssertionExpr& fromSyntax(const BinarySequenceExprSyntax& syntax,
                                      const BindContext& context);
@@ -290,6 +311,8 @@ public:
     FirstMatchAssertionExpr(const AssertionExpr& seq, span<const Expression* const> matchItems) :
         AssertionExpr(AssertionExprKind::FirstMatch), seq(seq), matchItems(matchItems) {}
 
+    bool admitsEmptyImpl() const;
+
     static AssertionExpr& fromSyntax(const FirstMatchSequenceExprSyntax& syntax,
                                      const BindContext& context);
 
@@ -310,6 +333,8 @@ public:
 
     ClockingAssertionExpr(const TimingControl& clocking, const AssertionExpr& expr) :
         AssertionExpr(AssertionExprKind::Clocking), clocking(clocking), expr(expr) {}
+
+    bool admitsEmptyImpl() const;
 
     static AssertionExpr& fromSyntax(const ClockingSequenceExprSyntax& syntax,
                                      const BindContext& context);
@@ -336,6 +361,8 @@ public:
     StrongWeakAssertionExpr(const AssertionExpr& expr, Strength strength) :
         AssertionExpr(AssertionExprKind::StrongWeak), expr(expr), strength(strength) {}
 
+    bool admitsEmptyImpl() const { return false; }
+
     static AssertionExpr& fromSyntax(const StrongWeakPropertyExprSyntax& syntax,
                                      const BindContext& context);
 
@@ -359,6 +386,8 @@ public:
         AssertionExpr(AssertionExprKind::Abort),
         condition(condition), expr(expr), action(action), isSync(isSync) {}
 
+    bool admitsEmptyImpl() const { return false; }
+
     static AssertionExpr& fromSyntax(const AcceptOnPropertyExprSyntax& syntax,
                                      const BindContext& context);
 
@@ -380,6 +409,8 @@ public:
                              const AssertionExpr* elseExpr) :
         AssertionExpr(AssertionExprKind::Conditional),
         condition(condition), ifExpr(ifExpr), elseExpr(elseExpr) {}
+
+    bool admitsEmptyImpl() const { return false; }
 
     static AssertionExpr& fromSyntax(const ConditionalPropertyExprSyntax& syntax,
                                      const BindContext& context);
@@ -407,6 +438,8 @@ public:
                       const AssertionExpr* defaultCase) :
         AssertionExpr(AssertionExprKind::Case),
         expr(expr), items(items), defaultCase(defaultCase) {}
+
+    bool admitsEmptyImpl() const { return false; }
 
     static AssertionExpr& fromSyntax(const CasePropertyExprSyntax& syntax,
                                      const BindContext& context);

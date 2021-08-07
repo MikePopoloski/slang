@@ -811,7 +811,7 @@ module m;
         local logic f = g
     );
         logic g = b;
-        1;
+        1[*0];
     endsequence
 
     assert property (legal_loc_var_formal(1, 1, 1, 1, 1, 1));
@@ -822,11 +822,12 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 6);
+    REQUIRE(diags.size() == 7);
     CHECK(diags[0].code == diag::AssertionPortDirNoLocal);
     CHECK(diags[1].code == diag::AssertionPortOutputDefault);
     CHECK(diags[2].code == diag::LocalVarTypeRequired);
     CHECK(diags[3].code == diag::AssertionExprType);
     CHECK(diags[4].code == diag::UsedBeforeDeclared);
-    CHECK(diags[5].code == diag::AssertionOutputLocalVar);
+    CHECK(diags[5].code == diag::LocalVarOutputEmptyMatch);
+    CHECK(diags[6].code == diag::AssertionOutputLocalVar);
 }

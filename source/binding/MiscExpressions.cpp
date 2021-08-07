@@ -1197,6 +1197,7 @@ static bool checkAssertionArgType(const PropertyExprSyntax& propExpr,
 
 static const AssertionExpr& bindAssertionBody(
     const Symbol& symbol, const SyntaxNode& syntax, const BindContext& context,
+    SourceLocation outputLocalVarArgLoc,
     SmallVector<std::tuple<const Symbol*, const Expression*>>& localVarInitializers) {
 
     auto collectInitializers = [&](const Scope& sym) {
@@ -1210,10 +1211,17 @@ static const AssertionExpr& bindAssertionBody(
     };
 
     if (symbol.kind == SymbolKind::Sequence) {
-        auto& result =
-            AssertionExpr::bind(*syntax.as<SequenceDeclarationSyntax>().seqExpr, context);
+        auto& seqExpr = *syntax.as<SequenceDeclarationSyntax>().seqExpr;
+        auto& result = AssertionExpr::bind(seqExpr, context);
         result.requireSequence(context);
         collectInitializers(symbol.as<SequenceSymbol>());
+
+        if (outputLocalVarArgLoc && result.admitsEmpty()) {
+            auto& diag = context.addDiag(diag::LocalVarOutputEmptyMatch, seqExpr.sourceRange());
+            diag << symbol.name;
+            diag.addNote(diag::NoteDeclarationHere, outputLocalVarArgLoc);
+        }
+
         return result;
     }
     else {
@@ -1265,6 +1273,7 @@ Expression& AssertionInstanceExpression::fromLookup(const Symbol& symbol,
     // Now map all arguments to their formal ports.
     bool bad = false;
     uint32_t orderedIndex = 0;
+    SourceLocation outputLocalVarArgLoc;
     for (auto formal : formalPorts) {
         const BindContext* argCtx = &context;
         const PropertyExprSyntax* expr = nullptr;
@@ -1347,6 +1356,11 @@ Expression& AssertionInstanceExpression::fromLookup(const Symbol& symbol,
         if (!checkAssertionArgType(*expr, *formal, *argCtx)) {
             bad = true;
         }
+
+        if (!outputLocalVarArgLoc && (formal->localVarDirection == ArgumentDirection::InOut ||
+                                      formal->localVarDirection == ArgumentDirection::Out)) {
+            outputLocalVarArgLoc = formal->location;
+        }
     }
 
     // Make sure there weren't too many ordered arguments provided.
@@ -1411,7 +1425,8 @@ Expression& AssertionInstanceExpression::fromLookup(const Symbol& symbol,
     bodyContext.assertionInstance = &instance;
 
     SmallVectorSized<std::tuple<const Symbol*, const Expression*>, 8> localVarInitializers;
-    auto& body = bindAssertionBody(symbol, *bodySyntax, bodyContext, localVarInitializers);
+    auto& body = bindAssertionBody(symbol, *bodySyntax, bodyContext, outputLocalVarArgLoc,
+                                   localVarInitializers);
 
     auto result = comp.emplace<AssertionInstanceExpression>(*type, symbol, body,
                                                             /* isRecursiveProperty */ false, range);
@@ -1454,6 +1469,7 @@ Expression& AssertionInstanceExpression::makeDefault(const Symbol& symbol) {
     instance.instanceLoc = symbol.location;
 
     // Bind default args, make placeholder entries for args that don't have defaults.
+    SourceLocation outputLocalVarArgLoc;
     for (auto formal : formalPorts) {
         if (!formal->defaultValueSyntax) {
             instance.argumentMap.emplace(formal,
@@ -1467,6 +1483,11 @@ Expression& AssertionInstanceExpression::makeDefault(const Symbol& symbol) {
             instance.argumentMap.emplace(formal, std::make_tuple(expr, ctx));
             checkAssertionArgType(*expr, *formal, ctx);
         }
+
+        if (!outputLocalVarArgLoc && (formal->localVarDirection == ArgumentDirection::InOut ||
+                                      formal->localVarDirection == ArgumentDirection::Out)) {
+            outputLocalVarArgLoc = formal->location;
+        }
     }
 
     auto bodySyntax = symbol.getSyntax();
@@ -1476,7 +1497,8 @@ Expression& AssertionInstanceExpression::makeDefault(const Symbol& symbol) {
     bodyContext.assertionInstance = &instance;
 
     SmallVectorSized<std::tuple<const Symbol*, const Expression*>, 8> localVarInitializers;
-    auto& body = bindAssertionBody(symbol, *bodySyntax, bodyContext, localVarInitializers);
+    auto& body = bindAssertionBody(symbol, *bodySyntax, bodyContext, outputLocalVarArgLoc,
+                                   localVarInitializers);
 
     SourceRange range{ symbol.location, symbol.location + 1 };
     auto result = comp.emplace<AssertionInstanceExpression>(*type, symbol, body,

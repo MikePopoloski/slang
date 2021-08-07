@@ -365,7 +365,7 @@ decltype(auto) AssertionExpr::visit(TVisitor& visitor, Args&&... args) const {
     // clang-format off
 #define CASE(k, n) case AssertionExprKind::k: return visitor.visit(*static_cast<const n*>(this), std::forward<Args>(args)...)
     switch (kind) {
-        case AssertionExprKind::Invalid: return visitor.visit(*this, std::forward<Args>(args)...);
+        case AssertionExprKind::Invalid: return visitor.visitInvalid(*this, std::forward<Args>(args)...);
         CASE(Simple, SimpleAssertionExpr);
         CASE(SequenceConcat, SequenceConcatExpr);
         CASE(SequenceWithMatch, SequenceWithMatchExpr);

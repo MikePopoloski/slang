@@ -14,10 +14,29 @@
 #include "slang/binding/TimingControl.h"
 #include "slang/compilation/Compilation.h"
 #include "slang/diagnostics/StatementsDiags.h"
+#include "slang/symbols/ASTVisitor.h"
 #include "slang/symbols/MemberSymbols.h"
 #include "slang/symbols/VariableSymbols.h"
 #include "slang/syntax/AllSyntax.h"
 #include "slang/types/Type.h"
+
+namespace {
+
+using namespace slang;
+
+struct AdmitsEmptyVisitor {
+    template<typename T>
+    bool visit(const T& expr) {
+        if (expr.bad())
+            return false;
+
+        return expr.admitsEmptyImpl();
+    }
+
+    bool visitInvalid(const AssertionExpr&) { return false; }
+};
+
+} // namespace
 
 namespace slang {
 
@@ -190,6 +209,11 @@ void AssertionExpr::requireSequence(const BindContext& context, DiagCode code) c
     THROW_UNREACHABLE;
 }
 
+bool AssertionExpr::admitsEmpty() const {
+    AdmitsEmptyVisitor visitor;
+    return visit(visitor);
+}
+
 AssertionExpr& AssertionExpr::badExpr(Compilation& compilation, const AssertionExpr* expr) {
     return *compilation.emplace<InvalidAssertionExpr>(expr);
 }
@@ -277,6 +301,21 @@ SequenceRepetition::SequenceRepetition(const SequenceRepetitionSyntax& syntax,
         range = SequenceRange::fromSyntax(*syntax.selector, context, /* allowUnbounded */ true);
 }
 
+SequenceRepetition::AdmitsEmpty SequenceRepetition::admitsEmpty() const {
+    switch (kind) {
+        case Consecutive:
+            if (range.min == 0)
+                return AdmitsEmpty::Yes;
+            return AdmitsEmpty::Depends;
+        case GoTo:
+        case Nonconsecutive:
+            if (range.min == 0)
+                return AdmitsEmpty::Yes;
+            return AdmitsEmpty::No;
+    }
+    THROW_UNREACHABLE;
+}
+
 void SequenceRepetition::serializeTo(ASTSerializer& serializer) const {
     serializer.startObject();
 
@@ -329,6 +368,24 @@ void SimpleAssertionExpr::requireSequence(const BindContext& context, DiagCode c
     }
 }
 
+bool SimpleAssertionExpr::admitsEmptyImpl() const {
+    if (repetition) {
+        auto result = repetition->admitsEmpty();
+        if (result == SequenceRepetition::AdmitsEmpty::Yes)
+            return true;
+        if (result == SequenceRepetition::AdmitsEmpty::No)
+            return false;
+    }
+
+    if (expr.kind == ExpressionKind::AssertionInstance) {
+        auto& aie = expr.as<AssertionInstanceExpression>();
+        if (aie.type->isSequenceType())
+            return aie.body.admitsEmpty();
+    }
+
+    return false;
+}
+
 void SimpleAssertionExpr::serializeTo(ASTSerializer& serializer) const {
     serializer.write("expr", expr);
     if (repetition) {
@@ -378,6 +435,28 @@ AssertionExpr& SequenceConcatExpr::fromSyntax(const DelayedSequenceExprSyntax& s
         return badExpr(comp, result);
 
     return *result;
+}
+
+bool SequenceConcatExpr::admitsEmptyImpl() const {
+    auto it = elements.begin();
+    ASSERT(it != elements.end());
+
+    // See F.3.4.2.2 for the rules here.
+    if (it->delay.min != 0 || !it->sequence->admitsEmpty())
+        return false;
+
+    while (++it != elements.end()) {
+        if (!it->sequence->admitsEmpty())
+            return false;
+
+        if (it->delay.min == 0 && it->delay.max == 0)
+            return false;
+
+        if (it->delay.min > 1)
+            return false;
+    }
+
+    return true;
 }
 
 void SequenceConcatExpr::serializeTo(ASTSerializer& serializer) const {
@@ -474,6 +553,12 @@ AssertionExpr& SequenceWithMatchExpr::fromSyntax(const ParenthesizedSequenceExpr
         matchItems = bindMatchItems(*syntax.matchList, context);
 
     return *context.getCompilation().emplace<SequenceWithMatchExpr>(expr, repetition, matchItems);
+}
+
+bool SequenceWithMatchExpr::admitsEmptyImpl() const {
+    if (repetition && repetition->admitsEmpty() == SequenceRepetition::AdmitsEmpty::Yes)
+        return true;
+    return false;
 }
 
 void SequenceWithMatchExpr::serializeTo(ASTSerializer& serializer) const {
@@ -636,6 +721,21 @@ void BinaryAssertionExpr::requireSequence(const BindContext& context, DiagCode c
     THROW_UNREACHABLE;
 }
 
+bool BinaryAssertionExpr::admitsEmptyImpl() const {
+    switch (op) {
+        case BinaryAssertionOperator::Or:
+            return left.admitsEmpty() || right.admitsEmpty();
+        case BinaryAssertionOperator::And:
+        case BinaryAssertionOperator::Intersect:
+        case BinaryAssertionOperator::Within:
+            return left.admitsEmpty() && right.admitsEmpty();
+        case BinaryAssertionOperator::Throughout:
+            return right.admitsEmpty();
+        default:
+            return false;
+    }
+}
+
 void BinaryAssertionExpr::serializeTo(ASTSerializer& serializer) const {
     serializer.write("op", toString(op));
     serializer.write("left", left);
@@ -652,6 +752,13 @@ AssertionExpr& FirstMatchAssertionExpr::fromSyntax(const FirstMatchSequenceExprS
         matchItems = bindMatchItems(*syntax.matchList, context);
 
     return *comp.emplace<FirstMatchAssertionExpr>(seq, matchItems);
+}
+
+bool FirstMatchAssertionExpr::admitsEmptyImpl() const {
+    if (!matchItems.empty())
+        return false;
+
+    return seq.admitsEmpty();
 }
 
 void FirstMatchAssertionExpr::serializeTo(ASTSerializer& serializer) const {
@@ -699,6 +806,10 @@ AssertionExpr& ClockingAssertionExpr::fromSyntax(const SignalEventExpressionSynt
 
     auto& clocking = TimingControl::bind(syntax, context);
     return *comp.emplace<ClockingAssertionExpr>(clocking, badExpr(comp, nullptr));
+}
+
+bool ClockingAssertionExpr::admitsEmptyImpl() const {
+    return expr.admitsEmpty();
 }
 
 void ClockingAssertionExpr::serializeTo(ASTSerializer& serializer) const {
