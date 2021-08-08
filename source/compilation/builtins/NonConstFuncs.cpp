@@ -246,8 +246,10 @@ private:
 
 struct SampledValueExprVisitor {
     const BindContext& context;
+    bool isFutureGlobal;
 
-    SampledValueExprVisitor(const BindContext& context) : context(context) {}
+    SampledValueExprVisitor(const BindContext& context, bool isFutureGlobal) :
+        context(context), isFutureGlobal(isFutureGlobal) {}
 
     template<typename T>
     void visit(const T& expr) {
@@ -263,9 +265,15 @@ struct SampledValueExprVisitor {
                 break;
             case ExpressionKind::Call: {
                 auto& call = expr.template as<CallExpression>();
-                if (call.isSystemCall() && call.getSubroutineName() == "matched"sv &&
-                    !call.arguments().empty() && call.arguments()[0]->type->isSequenceType()) {
-                    context.addDiag(diag::SampledValueMatched, expr.sourceRange);
+                if (call.isSystemCall()) {
+                    if (call.getSubroutineName() == "matched"sv && !call.arguments().empty() &&
+                        call.arguments()[0]->type->isSequenceType()) {
+                        context.addDiag(diag::SampledValueMatched, expr.sourceRange);
+                    }
+
+                    if (isFutureGlobal && FutureGlobalNames.count(call.getSubroutineName())) {
+                        context.addDiag(diag::GlobalSampledValueNested, expr.sourceRange);
+                    }
                 }
                 break;
             }
@@ -277,12 +285,17 @@ struct SampledValueExprVisitor {
     }
 
     void visitInvalid(const Expression&) {}
+
+    static inline const flat_hash_set<std::string_view> FutureGlobalNames = {
+        "$future_gclk"sv, "$rising_gclk"sv, "$falling_gclk"sv, "$steady_gclk"sv, "$changing_gclk"sv
+    };
 };
 
-static void checkSampledValueExpr(const Expression& expr, const BindContext& context) {
+static void checkSampledValueExpr(const Expression& expr, const BindContext& context,
+                                  bool isFutureGlobal) {
     // Local variables and the sequence method "matched" are not allowed in the
     // expressions passed to sampled value functions.
-    SampledValueExprVisitor visitor(context);
+    SampledValueExprVisitor visitor(context, isFutureGlobal);
     expr.visit(visitor);
 }
 
@@ -301,7 +314,7 @@ public:
         if (!checkArgCount(context, false, args, range, 1, 1))
             return comp.getErrorType();
 
-        checkSampledValueExpr(*args[0], context);
+        checkSampledValueExpr(*args[0], context, false);
 
         return *args[0]->type;
     }
@@ -332,7 +345,7 @@ public:
         if (!checkArgCount(context, false, args, range, 1, 2))
             return comp.getErrorType();
 
-        checkSampledValueExpr(*args[0], context);
+        checkSampledValueExpr(*args[0], context, false);
 
         // TODO: check rules for inferring clocking
 
@@ -374,7 +387,7 @@ public:
             return comp.getErrorType();
 
         for (size_t i = 0; i < args.size() && i < 3; i++)
-            checkSampledValueExpr(*args[i], context);
+            checkSampledValueExpr(*args[i], context, false);
 
         // TODO: check rules for inferring clocking
 
@@ -406,8 +419,8 @@ public:
 
 class GlobalValueChangeFunc : public SystemSubroutine {
 public:
-    GlobalValueChangeFunc(const std::string& name, bool) :
-        SystemSubroutine(name, SubroutineKind::Function) {}
+    GlobalValueChangeFunc(const std::string& name, bool isFuture) :
+        SystemSubroutine(name, SubroutineKind::Function), isFuture(isFuture) {}
 
     const Expression& bindArgument(size_t, const BindContext& context,
                                    const ExpressionSyntax& syntax, const Args&) const final {
@@ -425,6 +438,13 @@ public:
             return comp.getErrorType();
         }
 
+        if (!context.flags.has(BindFlags::AssertionExpr) && isFuture) {
+            context.addDiag(diag::GlobalSampledValueAssertionExpr, range);
+            return comp.getErrorType();
+        }
+
+        checkSampledValueExpr(*args[0], context, isFuture);
+
         // TODO: enforce rules for future sampled value functions
 
         return comp.getBitType();
@@ -437,6 +457,9 @@ public:
     bool verifyConstant(EvalContext& context, const Args&, SourceRange range) const final {
         return notConst(context, range);
     }
+
+private:
+    bool isFuture;
 };
 
 void registerNonConstFuncs(Compilation& c) {

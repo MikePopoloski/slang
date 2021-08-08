@@ -824,7 +824,10 @@ module n;
     reg a, b;
     always @(posedge clk) begin
         a <= $changed_gclk(b);
+        a <= $changing_gclk(b);
     end
+
+    assert property (@clk $future_gclk(a || $rising_gclk(b)));
 endmodule
 )");
 
@@ -832,11 +835,13 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 4);
+    REQUIRE(diags.size() == 6);
     CHECK(diags[0].code == diag::PastNumTicksInvalid);
     CHECK(diags[1].code == diag::NoGlobalClocking);
     CHECK(diags[2].code == diag::SampledValueMatched);
     CHECK(diags[3].code == diag::SampledValueLocalVar);
+    CHECK(diags[4].code == diag::GlobalSampledValueAssertionExpr);
+    CHECK(diags[5].code == diag::GlobalSampledValueNested);
 }
 
 TEST_CASE("Global clock sys func") {

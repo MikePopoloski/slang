@@ -684,6 +684,8 @@ error PastNumTicksInvalid "'number_of_ticks' argument must be greater than or eq
 error SeqMethodInputLocalVar "cannot call '{}' on a sequence that has 'input' or 'inout' local variable formal arguments"
 error SampledValueLocalVar "local variables cannot be used in sampled value system functions"
 error SampledValueMatched "'matched' method cannot be used in sampled value system functions"
+error GlobalSampledValueAssertionExpr "global clocking future sampled value functions may be invoked only in sequence and property expressions"
+error GlobalSampledValueNested "global clocking future sampled value functions may not be nested"
 warning format-real FormatRealInt "real value provided for integer format specifier '%{}'"
 warning finish-num BadFinishNum "finish argument must have value of 0, 1, or 2"
 warning missing-format MissingFormatSpecifier "missing format specifier"
