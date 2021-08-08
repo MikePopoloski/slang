@@ -401,7 +401,8 @@ Expression& AssignmentExpression::fromSyntax(Compilation& compilation,
         }
     }
 
-    Expression& lhs = selfDetermined(compilation, *syntax.left, context, extraFlags);
+    auto& lhs =
+        selfDetermined(compilation, *syntax.left, context, extraFlags | BindFlags::VariableLValue);
 
     Expression* rhs = nullptr;
     if (lhs.type->isVirtualInterface())

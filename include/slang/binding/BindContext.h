@@ -122,9 +122,12 @@ enum class BindFlags {
 
     /// Binding is for a cycle delay or sequence repetition, where references to
     /// assertion formal ports have specific type requirements.
-    AssertionDelayOrRepetition = 1 << 23
+    AssertionDelayOrRepetition = 1 << 23,
+
+    /// Binding is in a context that requires a variable lvalue.
+    VariableLValue = 1 << 24
 };
-BITMASK(BindFlags, AssertionDelayOrRepetition);
+BITMASK(BindFlags, VariableLValue);
 
 enum class DimensionKind { Unknown, Range, AbbreviatedRange, Dynamic, Associative, Queue };
 

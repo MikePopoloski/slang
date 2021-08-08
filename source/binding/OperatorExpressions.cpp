@@ -289,11 +289,15 @@ bool Expression::bindMembershipExpressions(const BindContext& context, TokenKind
 Expression& UnaryExpression::fromSyntax(Compilation& compilation,
                                         const PrefixUnaryExpressionSyntax& syntax,
                                         const BindContext& context) {
-    Expression& operand = create(compilation, *syntax.operand, context);
+    auto op = getUnaryOperator(syntax.kind);
+    bitmask<BindFlags> extraFlags;
+    if (isLValueOp(op))
+        extraFlags = BindFlags::VariableLValue;
+
+    Expression& operand = create(compilation, *syntax.operand, context, extraFlags);
     const Type* type = operand.type;
 
-    auto result = compilation.emplace<UnaryExpression>(getUnaryOperator(syntax.kind), *type,
-                                                       operand, syntax.sourceRange());
+    auto result = compilation.emplace<UnaryExpression>(op, *type, operand, syntax.sourceRange());
     if (operand.bad())
         return badExpr(compilation, result);
 
@@ -367,11 +371,11 @@ Expression& UnaryExpression::fromSyntax(Compilation& compilation,
 Expression& UnaryExpression::fromSyntax(Compilation& compilation,
                                         const PostfixUnaryExpressionSyntax& syntax,
                                         const BindContext& context) {
-    Expression& operand = create(compilation, *syntax.operand, context);
-    const Type* type = operand.type;
-
     // This method is only ever called for postincrement and postdecrement operators, so
     // the operand must be an lvalue.
+    Expression& operand = create(compilation, *syntax.operand, context, BindFlags::VariableLValue);
+    const Type* type = operand.type;
+
     Expression* result = compilation.emplace<UnaryExpression>(getUnaryOperator(syntax.kind), *type,
                                                               operand, syntax.sourceRange());
     if (operand.bad() || !operand.verifyAssignable(context, syntax.operatorToken.location()))

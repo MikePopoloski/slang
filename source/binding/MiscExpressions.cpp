@@ -1527,22 +1527,27 @@ Expression& AssertionInstanceExpression::bindPort(const Symbol& symbol, SourceRa
     auto& type = formal.declaredType.getType();
     auto typeKind = type.getCanonicalType().kind;
 
-    if (instanceCtx.flags.has(BindFlags::AssertionDelayOrRepetition) &&
-        typeKind != SymbolKind::ErrorType && typeKind != SymbolKind::UntypedType) {
-        auto isAllowedIntType = [&] {
-            if (typeKind != SymbolKind::PredefinedIntegerType)
-                return false;
+    if (typeKind != SymbolKind::ErrorType && typeKind != SymbolKind::UntypedType) {
+        if (instanceCtx.flags.has(BindFlags::AssertionDelayOrRepetition)) {
+            auto isAllowedIntType = [&] {
+                if (typeKind != SymbolKind::PredefinedIntegerType)
+                    return false;
 
-            auto ik = type.getCanonicalType().as<PredefinedIntegerType>().integerKind;
-            return ik == PredefinedIntegerType::Int || ik == PredefinedIntegerType::ShortInt ||
-                   ik == PredefinedIntegerType::LongInt;
-        };
+                auto ik = type.getCanonicalType().as<PredefinedIntegerType>().integerKind;
+                return ik == PredefinedIntegerType::Int || ik == PredefinedIntegerType::ShortInt ||
+                       ik == PredefinedIntegerType::LongInt;
+            };
 
-        if (!isAllowedIntType()) {
-            auto& diag = instanceCtx.addDiag(diag::AssertionDelayFormalType, range);
-            diag << type;
-            diag.addNote(diag::NoteDeclarationHere, formal.location);
-            return badExpr(comp, nullptr);
+            if (!isAllowedIntType()) {
+                auto& diag = instanceCtx.addDiag(diag::AssertionDelayFormalType, range);
+                diag << type;
+                diag.addNote(diag::NoteDeclarationHere, formal.location);
+                return badExpr(comp, nullptr);
+            }
+        }
+
+        if (instanceCtx.flags.has(BindFlags::VariableLValue) && !formal.localVarDirection) {
+            instanceCtx.addDiag(diag::AssertionPortTypedLValue, range) << formal.name;
         }
     }
 

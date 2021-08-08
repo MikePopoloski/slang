@@ -846,7 +846,7 @@ module m;
         logic e, f
     );
         logic g = c, h = g || d;
-        1;
+        (1, e = 1);
     endsequence
 
     sequence illegal_loc_var_formal (
@@ -869,12 +869,13 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 7);
-    CHECK(diags[0].code == diag::AssertionPortDirNoLocal);
-    CHECK(diags[1].code == diag::AssertionPortOutputDefault);
-    CHECK(diags[2].code == diag::LocalVarTypeRequired);
-    CHECK(diags[3].code == diag::AssertionExprType);
-    CHECK(diags[4].code == diag::UsedBeforeDeclared);
-    CHECK(diags[5].code == diag::LocalVarOutputEmptyMatch);
-    CHECK(diags[6].code == diag::AssertionOutputLocalVar);
+    REQUIRE(diags.size() == 8);
+    CHECK(diags[0].code == diag::AssertionPortTypedLValue);
+    CHECK(diags[1].code == diag::AssertionPortDirNoLocal);
+    CHECK(diags[2].code == diag::AssertionPortOutputDefault);
+    CHECK(diags[3].code == diag::LocalVarTypeRequired);
+    CHECK(diags[4].code == diag::AssertionExprType);
+    CHECK(diags[5].code == diag::UsedBeforeDeclared);
+    CHECK(diags[6].code == diag::LocalVarOutputEmptyMatch);
+    CHECK(diags[7].code == diag::AssertionOutputLocalVar);
 }
