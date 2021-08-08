@@ -256,13 +256,13 @@ struct SampledValueExprVisitor {
                 if (auto sym = expr.getSymbolReference()) {
                     if (sym->kind == SymbolKind::LocalAssertionVar ||
                         (sym->kind == SymbolKind::AssertionPort &&
-                         sym->as<AssertionPortSymbol>().isLocalVar())) {
+                         sym->template as<AssertionPortSymbol>().isLocalVar())) {
                         context.addDiag(diag::SampledValueLocalVar, expr.sourceRange);
                     }
                 }
                 break;
             case ExpressionKind::Call: {
-                auto& call = expr.as<CallExpression>();
+                auto& call = expr.template as<CallExpression>();
                 if (call.isSystemCall() && call.getSubroutineName() == "matched"sv &&
                     !call.arguments().empty() && call.arguments()[0]->type->isSequenceType()) {
                     context.addDiag(diag::SampledValueMatched, expr.sourceRange);
