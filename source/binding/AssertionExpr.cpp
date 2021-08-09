@@ -400,6 +400,7 @@ AssertionExpr& SequenceConcatExpr::fromSyntax(const DelayedSequenceExprSyntax& s
     SmallVectorSized<Element, 8> elems;
     if (syntax.first) {
         auto& seq = bind(*syntax.first, context);
+        seq.requireSequence(context);
         ok &= !seq.bad();
 
         SequenceRange delay{ 0, 0 };
@@ -409,6 +410,7 @@ AssertionExpr& SequenceConcatExpr::fromSyntax(const DelayedSequenceExprSyntax& s
     for (auto es : syntax.elements) {
         SequenceRange delay;
         auto& seq = bind(*es->expr, context);
+        seq.requireSequence(context);
         ok &= !seq.bad();
 
         if (es->delayVal) {
@@ -547,6 +549,7 @@ static span<const Expression* const> bindMatchItems(const SequenceMatchListSynta
 AssertionExpr& SequenceWithMatchExpr::fromSyntax(const ParenthesizedSequenceExprSyntax& syntax,
                                                  const BindContext& context) {
     auto& expr = bind(*syntax.expr, context);
+    expr.requireSequence(context);
 
     optional<SequenceRepetition> repetition;
     if (syntax.repetition) {
@@ -661,7 +664,11 @@ AssertionExpr& BinaryAssertionExpr::fromSyntax(const BinarySequenceExprSyntax& s
                 << syntax.op.range();
         }
     }
+    else {
+        left.requireSequence(context);
+    }
 
+    right.requireSequence(context);
     return *comp.emplace<BinaryAssertionExpr>(op, left, right);
 }
 
@@ -753,6 +760,7 @@ AssertionExpr& FirstMatchAssertionExpr::fromSyntax(const FirstMatchSequenceExprS
                                                    const BindContext& context) {
     auto& comp = context.getCompilation();
     auto& seq = bind(*syntax.expr, context);
+    seq.requireSequence(context);
 
     span<const Expression* const> matchItems;
     if (syntax.matchList)

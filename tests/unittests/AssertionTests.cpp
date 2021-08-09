@@ -763,10 +763,11 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 3);
+    REQUIRE(diags.size() == 4);
     CHECK(diags[0].code == diag::PropExprInSequence);
     CHECK(diags[1].code == diag::PropExprInSequence);
     CHECK(diags[2].code == diag::PropExprInSequence);
+    CHECK(diags[3].code == diag::PropExprInSequence);
 }
 
 TEST_CASE("Invalid assertion instance repetitions") {
