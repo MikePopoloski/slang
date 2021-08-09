@@ -477,7 +477,7 @@ void ClockVarSymbol::serializeTo(ASTSerializer& serializer) const {
 }
 
 LocalAssertionVarSymbol::LocalAssertionVarSymbol(string_view name, SourceLocation loc) :
-    VariableSymbol(SymbolKind::LocalAssertionVar, name, loc, VariableLifetime::Static) {
+    VariableSymbol(SymbolKind::LocalAssertionVar, name, loc, VariableLifetime::Automatic) {
     getDeclaredType()->addFlags(DeclaredTypeFlags::RequireSequenceType);
 }
 

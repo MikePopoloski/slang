@@ -555,6 +555,7 @@ error PropertyLhsInvalid "left-hand side of operator must be a sequence expressi
 error ThroughoutLhsInvalid "left-hand side of 'throughout' operator must be a simple expression"
 error PropInstanceRepetition "property instances cannot specify a repetition"
 error SeqInstanceRepetition "sequences cannot specify a non-consecutive or go-to repetition"
+error MatchItemsAdmitEmpty "sequences with match items cannot admit an empty match"
 warning event-const EventExpressionConstant "edge expression is constant"
 warning empty-stmt EmptyStatement "extra ';' has no effect"
 warning pointless-void-cast PointlessVoidCast "cast to void for void-returning function '{}' has no effect"

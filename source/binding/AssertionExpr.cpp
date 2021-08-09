@@ -473,7 +473,8 @@ void SequenceConcatExpr::serializeTo(ASTSerializer& serializer) const {
 }
 
 static span<const Expression* const> bindMatchItems(const SequenceMatchListSyntax& syntax,
-                                                    const BindContext& context) {
+                                                    const BindContext& context,
+                                                    const AssertionExpr& sequence) {
     auto checkLocalVar = [&](const Expression& expr) {
         auto sym = expr.getSymbolReference();
         if (!sym || sym->kind != SymbolKind::LocalAssertionVar)
@@ -534,6 +535,12 @@ static span<const Expression* const> bindMatchItems(const SequenceMatchListSynta
         }
     }
 
+    if (sequence.admitsEmpty()) {
+        auto& diag = context.addDiag(diag::MatchItemsAdmitEmpty, syntax.items.sourceRange());
+        if (sequence.syntax)
+            diag << sequence.syntax->sourceRange();
+    }
+
     return results.copy(context.getCompilation());
 }
 
@@ -550,7 +557,7 @@ AssertionExpr& SequenceWithMatchExpr::fromSyntax(const ParenthesizedSequenceExpr
 
     span<const Expression* const> matchItems;
     if (syntax.matchList)
-        matchItems = bindMatchItems(*syntax.matchList, context);
+        matchItems = bindMatchItems(*syntax.matchList, context, expr);
 
     return *context.getCompilation().emplace<SequenceWithMatchExpr>(expr, repetition, matchItems);
 }
@@ -749,7 +756,7 @@ AssertionExpr& FirstMatchAssertionExpr::fromSyntax(const FirstMatchSequenceExprS
 
     span<const Expression* const> matchItems;
     if (syntax.matchList)
-        matchItems = bindMatchItems(*syntax.matchList, context);
+        matchItems = bindMatchItems(*syntax.matchList, context, seq);
 
     return *comp.emplace<FirstMatchAssertionExpr>(seq, matchItems);
 }

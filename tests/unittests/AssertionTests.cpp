@@ -879,3 +879,22 @@ endmodule
     CHECK(diags[6].code == diag::LocalVarOutputEmptyMatch);
     CHECK(diags[7].code == diag::AssertionOutputLocalVar);
 }
+
+TEST_CASE("Match items + empty match") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    int a,b,c;
+    sequence s;
+        int x,e;
+        a ##1 (b[*0:1], x = e) ##1 c[*];
+    endsequence
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::MatchItemsAdmitEmpty);
+}
