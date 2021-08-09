@@ -6,6 +6,8 @@
 //------------------------------------------------------------------------------
 #pragma once
 
+#include "slang/binding/Expression.h"
+#include "slang/binding/TimingControl.h"
 #include "slang/diagnostics/Diagnostics.h"
 #include "slang/symbols/ASTSerializer.h"
 #include "slang/util/Util.h"
@@ -63,7 +65,6 @@ ENUM(BinaryAssertionOperator, OP);
 class BindContext;
 class Compilation;
 class SyntaxNode;
-class TimingControl;
 struct PropertyExprSyntax;
 struct SequenceExprSyntax;
 
@@ -159,11 +160,7 @@ struct SequenceRepetition {
 
     SequenceRepetition(const SequenceRepetitionSyntax& syntax, const BindContext& context);
 
-    enum class AdmitsEmpty {
-        Yes,
-        No,
-        Depends
-    };
+    enum class AdmitsEmpty { Yes, No, Depends };
     AdmitsEmpty admitsEmpty() const;
 
     void serializeTo(ASTSerializer& serializer) const;
@@ -189,6 +186,11 @@ public:
     void serializeTo(ASTSerializer& serializer) const;
 
     static bool isKind(AssertionExprKind kind) { return kind == AssertionExprKind::Simple; }
+
+    template<typename TVisitor>
+    void visitExprs(TVisitor&& visitor) const {
+        expr.visit(visitor);
+    }
 };
 
 struct DelayedSequenceExprSyntax;
@@ -214,6 +216,12 @@ public:
     void serializeTo(ASTSerializer& serializer) const;
 
     static bool isKind(AssertionExprKind kind) { return kind == AssertionExprKind::SequenceConcat; }
+
+    template<typename TVisitor>
+    void visitExprs(TVisitor&& visitor) const {
+        for (auto& elem : elements)
+            elem.sequence->visit(visitor);
+    }
 };
 
 struct ParenthesizedSequenceExprSyntax;
@@ -240,6 +248,13 @@ public:
 
     static bool isKind(AssertionExprKind kind) {
         return kind == AssertionExprKind::SequenceWithMatch;
+    }
+
+    template<typename TVisitor>
+    void visitExprs(TVisitor&& visitor) const {
+        expr.visit(visitor);
+        for (auto item : matchItems)
+            item->visit(visitor);
     }
 };
 
@@ -269,6 +284,11 @@ public:
     void serializeTo(ASTSerializer& serializer) const;
 
     static bool isKind(AssertionExprKind kind) { return kind == AssertionExprKind::Unary; }
+
+    template<typename TVisitor>
+    void visitExprs(TVisitor&& visitor) const {
+        expr.visit(visitor);
+    }
 };
 
 struct BinarySequenceExprSyntax;
@@ -298,6 +318,12 @@ public:
     void serializeTo(ASTSerializer& serializer) const;
 
     static bool isKind(AssertionExprKind kind) { return kind == AssertionExprKind::Binary; }
+
+    template<typename TVisitor>
+    void visitExprs(TVisitor&& visitor) const {
+        left.visit(visitor);
+        right.visit(visitor);
+    }
 };
 
 struct FirstMatchSequenceExprSyntax;
@@ -319,6 +345,13 @@ public:
     void serializeTo(ASTSerializer& serializer) const;
 
     static bool isKind(AssertionExprKind kind) { return kind == AssertionExprKind::FirstMatch; }
+
+    template<typename TVisitor>
+    void visitExprs(TVisitor&& visitor) const {
+        seq.visit(visitor);
+        for (auto item : matchItems)
+            item->visit(visitor);
+    }
 };
 
 struct ClockingSequenceExprSyntax;
@@ -348,6 +381,12 @@ public:
     void serializeTo(ASTSerializer& serializer) const;
 
     static bool isKind(AssertionExprKind kind) { return kind == AssertionExprKind::Clocking; }
+
+    template<typename TVisitor>
+    void visitExprs(TVisitor&& visitor) const {
+        clocking.visit(visitor);
+        expr.visit(visitor);
+    }
 };
 
 struct StrongWeakPropertyExprSyntax;
@@ -369,6 +408,11 @@ public:
     void serializeTo(ASTSerializer& serializer) const;
 
     static bool isKind(AssertionExprKind kind) { return kind == AssertionExprKind::StrongWeak; }
+
+    template<typename TVisitor>
+    void visitExprs(TVisitor&& visitor) const {
+        expr.visit(visitor);
+    }
 };
 
 struct AcceptOnPropertyExprSyntax;
@@ -394,6 +438,12 @@ public:
     void serializeTo(ASTSerializer& serializer) const;
 
     static bool isKind(AssertionExprKind kind) { return kind == AssertionExprKind::Abort; }
+
+    template<typename TVisitor>
+    void visitExprs(TVisitor&& visitor) const {
+        condition.visit(visitor);
+        expr.visit(visitor);
+    }
 };
 
 struct ConditionalPropertyExprSyntax;
@@ -418,6 +468,14 @@ public:
     void serializeTo(ASTSerializer& serializer) const;
 
     static bool isKind(AssertionExprKind kind) { return kind == AssertionExprKind::Conditional; }
+
+    template<typename TVisitor>
+    void visitExprs(TVisitor&& visitor) const {
+        condition.visit(visitor);
+        ifExpr.visit(visitor);
+        if (elseExpr)
+            elseExpr->visit(visitor);
+    }
 };
 
 struct CasePropertyExprSyntax;
@@ -447,6 +505,19 @@ public:
     void serializeTo(ASTSerializer& serializer) const;
 
     static bool isKind(AssertionExprKind kind) { return kind == AssertionExprKind::Case; }
+
+    template<typename TVisitor>
+    void visitExprs(TVisitor&& visitor) const {
+        expr.visit(visitor);
+        for (auto& item : items) {
+            for (auto e : item.expressions)
+                e->visit(visitor);
+            item.body->visit(visitor);
+        }
+
+        if (defaultCase)
+            defaultCase->visit(visitor);
+    }
 };
 
 } // namespace slang

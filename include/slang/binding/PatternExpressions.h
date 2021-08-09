@@ -167,6 +167,12 @@ public:
         return kind == ExpressionKind::ReplicatedAssignmentPattern;
     }
 
+    template<typename TVisitor>
+    void visitExprs(TVisitor&& visitor) const {
+        count().visit(visitor);
+        AssignmentPatternExpressionBase::visitExprs(visitor);
+    }
+
 private:
     static const Expression& bindReplCount(Compilation& comp, const ExpressionSyntax& syntax,
                                            const BindContext& context, size_t& count);

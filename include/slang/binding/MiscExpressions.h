@@ -6,13 +6,12 @@
 //------------------------------------------------------------------------------
 #pragma once
 
+#include "slang/binding/AssertionExpr.h"
 #include "slang/binding/Expression.h"
+#include "slang/binding/TimingControl.h"
 #include "slang/symbols/ValueSymbol.h"
 
 namespace slang {
-
-class AssertionExpr;
-class TimingControl;
 
 /// Common base class for both NamedValueExpression and HierarchicalValueExpression.
 class ValueExpressionBase : public Expression {
@@ -180,6 +179,11 @@ public:
     void serializeTo(ASTSerializer& serializer) const;
 
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::ClockingEvent; }
+
+    template<typename TVisitor>
+    void visitExprs(TVisitor&& visitor) const {
+        timingControl.visit(visitor);
+    }
 };
 
 /// Represents an instance of an assertion item, either a sequence, a property,
@@ -210,6 +214,13 @@ public:
     void serializeTo(ASTSerializer& serializer) const;
 
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::AssertionInstance; }
+
+    template<typename TVisitor>
+    void visitExprs(TVisitor&& visitor) const {
+        body.visit(visitor);
+        for (auto [sym, expr] : localVarInitializers)
+            expr->visit(visitor);
+    }
 };
 
 struct MinTypMaxExpressionSyntax;

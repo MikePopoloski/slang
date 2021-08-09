@@ -6,18 +6,18 @@
 //------------------------------------------------------------------------------
 #pragma once
 
+#include "slang/binding/AssertionExpr.h"
 #include "slang/binding/EvalContext.h"
 #include "slang/binding/Expression.h"
+#include "slang/binding/TimingControl.h"
 #include "slang/symbols/SemanticFacts.h"
 #include "slang/util/Enum.h"
 #include "slang/util/ScopeGuard.h"
 
 namespace slang {
 
-class AssertionExpr;
 class BlockStatement;
 class StatementBlockSymbol;
-class TimingControl;
 class VariableSymbol;
 struct ForLoopStatementSyntax;
 struct ForeachLoopStatementSyntax;
@@ -588,6 +588,11 @@ public:
     static bool isKind(StatementKind kind) { return kind == StatementKind::ForeachLoop; }
 
     template<typename TVisitor>
+    void visitExprs(TVisitor&& visitor) const {
+        arrayRef.visit(visitor);
+    }
+
+    template<typename TVisitor>
     void visitStmts(TVisitor&& visitor) const {
         body.visit(visitor);
     }
@@ -734,6 +739,11 @@ public:
     static bool isKind(StatementKind kind) { return kind == StatementKind::Timed; }
 
     template<typename TVisitor>
+    void visitExprs(TVisitor&& visitor) const {
+        timing.visit(visitor);
+    }
+
+    template<typename TVisitor>
     void visitStmts(TVisitor&& visitor) const {
         stmt.visit(visitor);
     }
@@ -809,11 +819,10 @@ public:
 
     static bool isKind(StatementKind kind) { return kind == StatementKind::ConcurrentAssertion; }
 
-    // TODO:
-    /*template<typename TVisitor>
+    template<typename TVisitor>
     void visitExprs(TVisitor&& visitor) const {
-        cond.visit(visitor);
-    }*/
+        propertySpec.visit(visitor);
+    }
 
     template<typename TVisitor>
     void visitStmts(TVisitor&& visitor) const {
@@ -955,6 +964,8 @@ public:
     template<typename TVisitor>
     void visitExprs(TVisitor&& visitor) const {
         target.visit(visitor);
+        if (timing)
+            timing->visit(visitor);
     }
 };
 

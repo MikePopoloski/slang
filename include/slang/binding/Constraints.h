@@ -90,6 +90,12 @@ public:
     void serializeTo(ASTSerializer& serializer) const;
 
     static bool isKind(ConstraintKind kind) { return kind == ConstraintKind::List; }
+
+    template<typename TVisitor>
+    void visitExprs(TVisitor&& visitor) const {
+        for (auto item : list)
+            item->visit(visitor);
+    }
 };
 
 struct ExpressionConstraintSyntax;
@@ -109,6 +115,11 @@ public:
     void serializeTo(ASTSerializer& serializer) const;
 
     static bool isKind(ConstraintKind kind) { return kind == ConstraintKind::Expression; }
+
+    template<typename TVisitor>
+    void visitExprs(TVisitor&& visitor) const {
+        expr.visit(visitor);
+    }
 };
 
 struct ImplicationConstraintSyntax;
@@ -128,6 +139,12 @@ public:
     void serializeTo(ASTSerializer& serializer) const;
 
     static bool isKind(ConstraintKind kind) { return kind == ConstraintKind::Implication; }
+
+    template<typename TVisitor>
+    void visitExprs(TVisitor&& visitor) const {
+        predicate.visit(visitor);
+        body.visit(visitor);
+    }
 };
 
 struct ConditionalConstraintSyntax;
@@ -150,6 +167,14 @@ public:
     void serializeTo(ASTSerializer& serializer) const;
 
     static bool isKind(ConstraintKind kind) { return kind == ConstraintKind::Conditional; }
+
+    template<typename TVisitor>
+    void visitExprs(TVisitor&& visitor) const {
+        predicate.visit(visitor);
+        ifBody.visit(visitor);
+        if (elseBody)
+            elseBody->visit(visitor);
+    }
 };
 
 struct UniquenessConstraintSyntax;
@@ -168,6 +193,12 @@ public:
     void serializeTo(ASTSerializer& serializer) const;
 
     static bool isKind(ConstraintKind kind) { return kind == ConstraintKind::Uniqueness; }
+
+    template<typename TVisitor>
+    void visitExprs(TVisitor&& visitor) const {
+        for (auto item : items)
+            item->visit(visitor);
+    }
 };
 
 struct DisableConstraintSyntax;
@@ -186,6 +217,11 @@ public:
     void serializeTo(ASTSerializer& serializer) const;
 
     static bool isKind(ConstraintKind kind) { return kind == ConstraintKind::DisableSoft; }
+
+    template<typename TVisitor>
+    void visitExprs(TVisitor&& visitor) const {
+        target.visit(visitor);
+    }
 };
 
 struct SolveBeforeConstraintSyntax;
@@ -207,6 +243,14 @@ public:
     void serializeTo(ASTSerializer& serializer) const;
 
     static bool isKind(ConstraintKind kind) { return kind == ConstraintKind::SolveBefore; }
+
+    template<typename TVisitor>
+    void visitExprs(TVisitor&& visitor) const {
+        for (auto item : solve)
+            item->visit(visitor);
+        for (auto item : before)
+            item->visit(visitor);
+    }
 };
 
 struct LoopConstraintSyntax;
@@ -228,6 +272,12 @@ public:
     void serializeTo(ASTSerializer& serializer) const;
 
     static bool isKind(ConstraintKind kind) { return kind == ConstraintKind::Foreach; }
+
+    template<typename TVisitor>
+    void visitExprs(TVisitor&& visitor) const {
+        arrayRef.visit(visitor);
+        body.visit(visitor);
+    }
 };
 
 } // namespace slang

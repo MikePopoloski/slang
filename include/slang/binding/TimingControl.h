@@ -6,6 +6,7 @@
 //------------------------------------------------------------------------------
 #pragma once
 
+#include "slang/binding/Expression.h"
 #include "slang/symbols/ASTSerializer.h"
 #include "slang/symbols/SemanticFacts.h"
 #include "slang/util/Util.h"
@@ -29,7 +30,6 @@ ENUM(TimingControlKind, CONTROL);
 
 class BindContext;
 class Compilation;
-class Expression;
 struct PropertyExprSyntax;
 struct SequenceExprSyntax;
 struct TimingControlSyntax;
@@ -99,6 +99,11 @@ public:
     static bool isKind(TimingControlKind kind) { return kind == TimingControlKind::Delay; }
 
     void serializeTo(ASTSerializer& serializer) const;
+
+    template<typename TVisitor>
+    void visitExprs(TVisitor&& visitor) const {
+        expr.visit(visitor);
+    }
 };
 
 struct Delay3Syntax;
@@ -122,6 +127,15 @@ public:
     static bool isKind(TimingControlKind kind) { return kind == TimingControlKind::Delay3; }
 
     void serializeTo(ASTSerializer& serializer) const;
+
+    template<typename TVisitor>
+    void visitExprs(TVisitor&& visitor) const {
+        expr1.visit(visitor);
+        if (expr2)
+            expr2->visit(visitor);
+        if (expr3)
+            expr3->visit(visitor);
+    }
 };
 
 struct BinaryPropertyExprSyntax;
@@ -158,6 +172,13 @@ public:
 
     void serializeTo(ASTSerializer& serializer) const;
 
+    template<typename TVisitor>
+    void visitExprs(TVisitor&& visitor) const {
+        expr.visit(visitor);
+        if (iffCondition)
+            iffCondition->visit(visitor);
+    }
+
 private:
     static TimingControl& fromExpr(Compilation& compilation, EdgeKind edge, const Expression& expr,
                                    const Expression* iffCondition, const BindContext& context);
@@ -178,6 +199,12 @@ public:
     static bool isKind(TimingControlKind kind) { return kind == TimingControlKind::EventList; }
 
     void serializeTo(ASTSerializer& serializer) const;
+
+    template<typename TVisitor>
+    void visitExprs(TVisitor&& visitor) const {
+        for (auto ev : events)
+            ev->visit(visitor);
+    }
 };
 
 struct ImplicitEventControlSyntax;
@@ -212,6 +239,12 @@ public:
     static bool isKind(TimingControlKind kind) { return kind == TimingControlKind::RepeatedEvent; }
 
     void serializeTo(ASTSerializer& serializer) const;
+
+    template<typename TVisitor>
+    void visitExprs(TVisitor&& visitor) const {
+        expr.visit(visitor);
+        event.visit(visitor);
+    }
 };
 
 class OneStepDelayControl : public TimingControl {
@@ -236,6 +269,11 @@ public:
     static bool isKind(TimingControlKind kind) { return kind == TimingControlKind::CycleDelay; }
 
     void serializeTo(ASTSerializer& serializer) const;
+
+    template<typename TVisitor>
+    void visitExprs(TVisitor&& visitor) const {
+        expr.visit(visitor);
+    }
 };
 
 } // namespace slang

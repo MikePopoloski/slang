@@ -6,11 +6,10 @@
 //------------------------------------------------------------------------------
 #pragma once
 
+#include "slang/binding/Constraints.h"
 #include "slang/binding/Expression.h"
 
 namespace slang {
-
-class Constraint;
 
 /// Represents a subroutine call.
 class CallExpression : public Expression {
@@ -98,6 +97,18 @@ public:
     void visitExprs(TVisitor&& visitor) const {
         if (thisClass())
             thisClass()->visit(visitor);
+
+        if (isSystemCall()) {
+            auto& extra = std::get<1>(subroutine).extraInfo;
+            if (extra.index() == 1) {
+                if (auto iterExpr = std::get<1>(extra).iterExpr)
+                    iterExpr->visit(visitor);
+            }
+            else if (extra.index() == 2) {
+                if (auto constraints = std::get<2>(extra).inlineConstraints)
+                    constraints->visit(visitor);
+            }
+        }
 
         for (auto arg : arguments())
             arg->visit(visitor);

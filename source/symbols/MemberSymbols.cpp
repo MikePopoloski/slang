@@ -323,23 +323,28 @@ struct ExpressionVarVisitor {
 
     template<typename T>
     void visit(const T& expr) {
-        switch (expr.kind) {
-            case ExpressionKind::NamedValue:
-            case ExpressionKind::HierarchicalValue: {
-                if (auto sym = expr.getSymbolReference()) {
-                    if (VariableSymbol::isKind(sym->kind))
-                        anyVars = true;
+        if constexpr (std::is_base_of_v<Expression, T>) {
+            switch (expr.kind) {
+                case ExpressionKind::NamedValue:
+                case ExpressionKind::HierarchicalValue: {
+                    if (auto sym = expr.getSymbolReference()) {
+                        if (VariableSymbol::isKind(sym->kind))
+                            anyVars = true;
+                    }
+                    break;
                 }
-                break;
+                default:
+                    if constexpr (is_detected_v<ASTDetectors::visitExprs_t, T,
+                                                ExpressionVarVisitor>) {
+                        expr.visitExprs(*this);
+                    }
+                    break;
             }
-            default:
-                if constexpr (is_detected_v<ASTDetectors::visitExprs_t, T, ExpressionVarVisitor>)
-                    expr.visitExprs(*this);
-                break;
         }
     }
 
     void visitInvalid(const Expression&) {}
+    void visitInvalid(const AssertionExpr&) {}
 };
 
 const TimingControl* ContinuousAssignSymbol::getDelay() const {
