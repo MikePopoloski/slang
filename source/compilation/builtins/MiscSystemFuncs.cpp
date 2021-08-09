@@ -6,6 +6,7 @@
 //------------------------------------------------------------------------------
 #include "slang/binding/AssertionExpr.h"
 #include "slang/binding/FormatHelpers.h"
+#include "slang/binding/MiscExpressions.h"
 #include "slang/binding/SystemSubroutine.h"
 #include "slang/compilation/Compilation.h"
 #include "slang/diagnostics/DeclarationsDiags.h"

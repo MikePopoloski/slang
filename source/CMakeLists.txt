@@ -114,6 +114,7 @@ add_library(slangcompiler
     binding/AssertionExpr.cpp
     binding/AssignmentExpressions.cpp
     binding/Bitstream.cpp
+    binding/CallExpression.cpp
     binding/Constraints.cpp
     binding/BindContext.cpp
     binding/EvalContext.cpp

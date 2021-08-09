@@ -10,18 +10,21 @@
 #include "slang/binding/EvalContext.h"
 #include "slang/binding/LValue.h"
 #include "slang/symbols/SemanticFacts.h"
+#include "slang/util/StackContainer.h"
 
 namespace slang {
 
 class ASTSerializer;
 class InstanceSymbolBase;
 class Type;
+struct ArgumentListSyntax;
 struct ArrayOrRandomizeMethodExpressionSyntax;
 struct AssignmentPatternExpressionSyntax;
 struct DataTypeSyntax;
 struct ElementSelectExpressionSyntax;
 struct ExpressionSyntax;
 struct InvocationExpressionSyntax;
+struct NamedArgumentSyntax;
 
 // clang-format off
 #define EXPRESSION(x) \
@@ -345,6 +348,10 @@ protected:
 
     template<typename TExpression, typename TVisitor, typename... Args>
     decltype(auto) visitExpression(TExpression* expr, TVisitor&& visitor, Args&&... args) const;
+
+    using NamedArgMap = SmallMap<string_view, std::pair<const NamedArgumentSyntax*, bool>, 8>;
+    static bool collectArgs(const BindContext& context, const ArgumentListSyntax& syntax,
+                            SmallVector<const SyntaxNode*>& orderedArgs, NamedArgMap& namedArgs);
 };
 
 /// Represents an invalid expression, which is usually generated and inserted

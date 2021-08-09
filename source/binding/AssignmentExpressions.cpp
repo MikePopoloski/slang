@@ -7,6 +7,7 @@
 #include "slang/binding/AssignmentExpressions.h"
 
 #include "slang/binding/Bitstream.h"
+#include "slang/binding/CallExpression.h"
 #include "slang/binding/LiteralExpressions.h"
 #include "slang/binding/MiscExpressions.h"
 #include "slang/binding/OperatorExpressions.h"

@@ -9,28 +9,15 @@
 #include <catch2/catch.hpp>
 #include <sstream>
 
-#include "slang/binding/AssignmentExpressions.h"
-#include "slang/binding/LiteralExpressions.h"
-#include "slang/binding/MiscExpressions.h"
-#include "slang/binding/OperatorExpressions.h"
-#include "slang/binding/PatternExpressions.h"
-#include "slang/binding/Statements.h"
 #include "slang/compilation/Compilation.h"
 #include "slang/diagnostics/AllDiags.h"
 #include "slang/diagnostics/DiagnosticEngine.h"
 #include "slang/parsing/Parser.h"
 #include "slang/parsing/Preprocessor.h"
-#include "slang/types/AllTypes.h"
-#include "slang/symbols/BlockSymbols.h"
-#include "slang/symbols/CompilationUnitSymbols.h"
-#include "slang/symbols/InstanceSymbols.h"
-#include "slang/symbols/MemberSymbols.h"
-#include "slang/symbols/ParameterSymbols.h"
-#include "slang/symbols/PortSymbols.h"
-#include "slang/symbols/SubroutineSymbols.h"
-#include "slang/symbols/VariableSymbols.h"
+#include "slang/symbols/ASTVisitor.h"
 #include "slang/syntax/SyntaxTree.h"
 #include "slang/text/SourceManager.h"
+#include "slang/types/AllTypes.h"
 #include "slang/util/BumpAllocator.h"
 
 namespace slang {

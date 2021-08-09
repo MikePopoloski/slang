@@ -9,8 +9,8 @@
 #include "ParameterBuilder.h"
 
 #include "slang/binding/AssignmentExpressions.h"
+#include "slang/binding/CallExpression.h"
 #include "slang/binding/Constraints.h"
-#include "slang/binding/MiscExpressions.h"
 #include "slang/compilation/Compilation.h"
 #include "slang/diagnostics/DeclarationsDiags.h"
 #include "slang/diagnostics/ExpressionsDiags.h"

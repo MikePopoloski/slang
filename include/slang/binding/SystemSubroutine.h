@@ -6,8 +6,8 @@
 //------------------------------------------------------------------------------
 #pragma once
 
+#include "slang/binding/CallExpression.h"
 #include "slang/binding/Expression.h"
-#include "slang/binding/MiscExpressions.h"
 #include "slang/symbols/SemanticFacts.h"
 #include "slang/types/AllTypes.h"
 #include "slang/util/SmallVector.h"

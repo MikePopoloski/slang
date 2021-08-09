@@ -6,6 +6,7 @@
 //------------------------------------------------------------------------------
 #include "slang/binding/SelectExpressions.h"
 
+#include "slang/binding/CallExpression.h"
 #include "slang/binding/LiteralExpressions.h"
 #include "slang/binding/MiscExpressions.h"
 #include "slang/compilation/Compilation.h"
