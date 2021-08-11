@@ -942,3 +942,30 @@ endmodule
     CHECK(diags[0].code == diag::SubroutineMatchAutoRefArg);
     CHECK(diags[1].code == diag::SubroutineMatchOutArg);
 }
+
+TEST_CASE("Illegal disable iff instantiations") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    wire clk;
+    property p;
+        @(posedge clk) disable iff (clk) 1;
+    endproperty
+
+    property q;
+        disable iff (clk) p();
+    endproperty
+
+    property r;
+        1 |-> p();
+    endproperty
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::NestedDisableIff);
+    CHECK(diags[1].code == diag::NestedDisableIff);
+}

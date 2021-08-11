@@ -85,8 +85,12 @@ public:
     /// and false otherwise.
     bool admitsEmpty() const;
 
-    static const AssertionExpr& bind(const SequenceExprSyntax& syntax, const BindContext& context);
-    static const AssertionExpr& bind(const PropertyExprSyntax& syntax, const BindContext& context);
+    static const AssertionExpr& bind(const SequenceExprSyntax& syntax, const BindContext& context,
+                                     bool allowDisable = false);
+
+    static const AssertionExpr& bind(const PropertyExprSyntax& syntax, const BindContext& context,
+                                     bool allowDisable = false);
+
     static const AssertionExpr& bind(const PropertySpecSyntax& syntax, const BindContext& context);
 
     static bool checkAssertionCall(const CallExpression& call, const BindContext& context,
@@ -189,7 +193,7 @@ public:
     bool admitsEmptyImpl() const;
 
     static AssertionExpr& fromSyntax(const SimpleSequenceExprSyntax& syntax,
-                                     const BindContext& context);
+                                     const BindContext& context, bool allowDisable);
 
     void serializeTo(ASTSerializer& serializer) const;
 

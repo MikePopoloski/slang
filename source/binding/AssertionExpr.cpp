@@ -61,14 +61,15 @@ static const Expression& bindExpr(const ExpressionSyntax& syntax, const BindCont
 }
 
 const AssertionExpr& AssertionExpr::bind(const SequenceExprSyntax& syntax,
-                                         const BindContext& context) {
+                                         const BindContext& context, bool allowDisable) {
     BindContext ctx(context);
     ctx.flags |= BindFlags::AssignmentDisallowed;
 
     AssertionExpr* result;
     switch (syntax.kind) {
         case SyntaxKind::SimpleSequenceExpr:
-            result = &SimpleAssertionExpr::fromSyntax(syntax.as<SimpleSequenceExprSyntax>(), ctx);
+            result = &SimpleAssertionExpr::fromSyntax(syntax.as<SimpleSequenceExprSyntax>(), ctx,
+                                                      allowDisable);
             break;
         case SyntaxKind::DelayedSequenceExpr:
             result = &SequenceConcatExpr::fromSyntax(syntax.as<DelayedSequenceExprSyntax>(), ctx);
@@ -108,7 +109,7 @@ const AssertionExpr& AssertionExpr::bind(const SequenceExprSyntax& syntax,
 }
 
 const AssertionExpr& AssertionExpr::bind(const PropertyExprSyntax& syntax,
-                                         const BindContext& context) {
+                                         const BindContext& context, bool allowDisable) {
     BindContext ctx(context);
     ctx.flags |= BindFlags::AssignmentDisallowed;
 
@@ -117,7 +118,7 @@ const AssertionExpr& AssertionExpr::bind(const PropertyExprSyntax& syntax,
         case SyntaxKind::SimplePropertyExpr:
             // Just a simple passthrough to binding the sequence expression
             // contained within.
-            return bind(*syntax.as<SimplePropertyExprSyntax>().expr, context);
+            return bind(*syntax.as<SimplePropertyExprSyntax>().expr, context, allowDisable);
         case SyntaxKind::AndPropertyExpr:
         case SyntaxKind::OrPropertyExpr:
         case SyntaxKind::IffPropertyExpr:
@@ -184,7 +185,9 @@ const AssertionExpr& AssertionExpr::bind(const PropertySpecSyntax& syntax,
     BindContext ctx(context);
     ctx.flags |= BindFlags::AssignmentDisallowed;
 
-    auto result = &bind(*syntax.expr, context);
+    bool allowDisable = syntax.disable == nullptr;
+    auto result = &bind(*syntax.expr, context, allowDisable);
+
     if (syntax.disable) {
         auto& disable = DisableIffAssertionExpr::fromSyntax(*syntax.disable, *result, context);
         disable.syntax = syntax.disable;
@@ -406,7 +409,7 @@ void SequenceRepetition::serializeTo(ASTSerializer& serializer) const {
 }
 
 AssertionExpr& SimpleAssertionExpr::fromSyntax(const SimpleSequenceExprSyntax& syntax,
-                                               const BindContext& context) {
+                                               const BindContext& context, bool allowDisable) {
     auto& comp = context.getCompilation();
     auto& expr = bindExpr(*syntax.expr, context, /* allowInstances */ true);
 
@@ -419,6 +422,22 @@ AssertionExpr& SimpleAssertionExpr::fromSyntax(const SimpleSequenceExprSyntax& s
                 context.addDiag(diag::PropInstanceRepetition, syntax.repetition->sourceRange());
             else if (repetition->kind != SequenceRepetition::Consecutive)
                 context.addDiag(diag::SeqInstanceRepetition, syntax.repetition->sourceRange());
+        }
+    }
+    else if (expr.kind == ExpressionKind::AssertionInstance && !allowDisable) {
+        auto& aie = expr.as<AssertionInstanceExpression>();
+        auto targetExpr = &aie.body;
+        if (targetExpr->kind == AssertionExprKind::Clocking)
+            targetExpr = &targetExpr->as<ClockingAssertionExpr>().expr;
+
+        if (targetExpr->kind == AssertionExprKind::DisableIff) {
+            auto& diag = context.addDiag(diag::NestedDisableIff, syntax.sourceRange());
+            diag << aie.symbol.name;
+
+            if (targetExpr->syntax) {
+                diag.addNote(diag::NoteDeclarationHere,
+                             targetExpr->syntax->getFirstToken().location());
+            }
         }
     }
 
