@@ -319,7 +319,7 @@ private:
                         }
                         else if constexpr (std::is_same_v<T, const AssertionExpr*>) {
                             if (arg->kind == AssertionExprKind::Simple) {
-                                auto& sae = arg->as<SimpleAssertionExpr>();
+                                auto& sae = arg->template as<SimpleAssertionExpr>();
                                 if (sae.repetition || sae.expr.kind != ExpressionKind::NamedValue)
                                     arg->visit(visitor);
                             }
@@ -329,7 +329,7 @@ private:
                         }
                         else if constexpr (std::is_same_v<T, const TimingControl*>) {
                             if (arg->kind == TimingControlKind::SignalEvent) {
-                                auto& sec = arg->as<SignalEventControl>();
+                                auto& sec = arg->template as<SignalEventControl>();
                                 if (sec.edge != EdgeKind::None || sec.iffCondition ||
                                     sec.expr.kind != ExpressionKind::NamedValue) {
                                     arg->visit(visitor);
