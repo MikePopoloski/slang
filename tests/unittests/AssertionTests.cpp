@@ -911,3 +911,32 @@ endmodule
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::MatchItemsAdmitEmpty);
 }
+
+TEST_CASE("Subroutine match items") {
+    auto tree = SyntaxTree::fromText(R"(
+function automatic int foo(logic v, ref logic w);
+endfunction
+
+function int bar(output v);
+endfunction
+
+module m;
+    logic a,e,b,f;
+    sequence s1;
+        logic v, w;
+        (a, v = e) ##1
+        (b[->1], w = f, $display("%h,%h\n", v, w)) ##1
+        (a, foo(v, w)) ##1
+        (a, bar(v));
+    endsequence
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::SubroutineMatchAutoRefArg);
+    CHECK(diags[1].code == diag::SubroutineMatchOutArg);
+}

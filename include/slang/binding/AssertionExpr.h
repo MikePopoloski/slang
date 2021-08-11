@@ -63,6 +63,7 @@ ENUM(BinaryAssertionOperator, OP);
 // clang-format on
 
 class BindContext;
+class CallExpression;
 class Compilation;
 class SyntaxNode;
 struct PropertyExprSyntax;
@@ -84,6 +85,10 @@ public:
 
     static const AssertionExpr& bind(const SequenceExprSyntax& syntax, const BindContext& context);
     static const AssertionExpr& bind(const PropertyExprSyntax& syntax, const BindContext& context);
+
+    static bool checkAssertionCall(const CallExpression& call, const BindContext& context,
+                                   DiagCode outArgCode, DiagCode refArgCode,
+                                   optional<DiagCode> sysTaskCode, SourceRange range);
 
     template<typename T>
     T& as() {

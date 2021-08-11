@@ -1909,47 +1909,9 @@ static void checkDeferredAssertAction(const Statement& stmt, const BindContext& 
     // - If a system call, must be a task
     // - Any ref arguments cannot reference automatic or dynamic variables
     auto& call = stmt.as<ExpressionStatement>().expr.as<CallExpression>();
-    if (call.isSystemCall()) {
-        auto& sub = *std::get<1>(call.subroutine).subroutine;
-        if (sub.kind == SubroutineKind::Function) {
-            context.addDiag(diag::DeferredAssertSysTask, stmt.sourceRange);
-            return;
-        }
-
-        if (sub.hasOutputArgs) {
-            context.addDiag(diag::DeferredAssertOutArg, stmt.sourceRange);
-            return;
-        }
-    }
-    else {
-        auto& sub = *std::get<0>(call.subroutine);
-        auto args = call.arguments();
-        size_t index = 0;
-        for (auto& formal : sub.getArguments()) {
-            if (formal->direction == ArgumentDirection::Out ||
-                formal->direction == ArgumentDirection::InOut) {
-                auto& diag = context.addDiag(diag::DeferredAssertOutArg, stmt.sourceRange);
-                diag.addNote(diag::NoteDeclarationHere, formal->location);
-                return;
-            }
-
-            if (formal->direction == ArgumentDirection::Ref) {
-                ASSERT(index < args.size());
-                if (auto sym = args[index]->getSymbolReference()) {
-                    if (VariableSymbol::isKind(sym->kind) &&
-                        sym->as<VariableSymbol>().lifetime == VariableLifetime::Automatic) {
-                        auto& diag = context.addDiag(diag::DeferredAssertAutoRefArg,
-                                                     args[index]->sourceRange);
-                        diag << sym->name << formal->name;
-                        diag.addNote(diag::NoteDeclarationHere, sym->location);
-                        return;
-                    }
-                }
-            }
-
-            index++;
-        }
-    }
+    AssertionExpr::checkAssertionCall(call, context, diag::DeferredAssertOutArg,
+                                      diag::DeferredAssertAutoRefArg, diag::DeferredAssertSysTask,
+                                      stmt.sourceRange);
 }
 
 Statement& ImmediateAssertionStatement::fromSyntax(Compilation& compilation,

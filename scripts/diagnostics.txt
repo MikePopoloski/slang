@@ -556,6 +556,8 @@ error ThroughoutLhsInvalid "left-hand side of 'throughout' operator must be a si
 error PropInstanceRepetition "property instances cannot specify a repetition"
 error SeqInstanceRepetition "sequences cannot specify a non-consecutive or go-to repetition"
 error MatchItemsAdmitEmpty "sequences with match items cannot admit an empty match"
+error SubroutineMatchOutArg "cannot invoke a subroutine with 'output' or 'inout' arguments from a sequence match item"
+error SubroutineMatchAutoRefArg "cannot pass automatic variable '{}' to 'ref' argument '{}' in a subroutine invoked from a sequence match item"
 warning event-const EventExpressionConstant "edge expression is constant"
 warning empty-stmt EmptyStatement "extra ';' has no effect"
 warning pointless-void-cast PointlessVoidCast "cast to void for void-returning function '{}' has no effect"

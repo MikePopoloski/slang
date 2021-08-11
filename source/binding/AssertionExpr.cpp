@@ -8,9 +8,11 @@
 
 #include "slang/binding/AssignmentExpressions.h"
 #include "slang/binding/BindContext.h"
+#include "slang/binding/CallExpression.h"
 #include "slang/binding/Expression.h"
 #include "slang/binding/MiscExpressions.h"
 #include "slang/binding/OperatorExpressions.h"
+#include "slang/binding/SystemSubroutine.h"
 #include "slang/binding/TimingControl.h"
 #include "slang/compilation/Compilation.h"
 #include "slang/diagnostics/StatementsDiags.h"
@@ -216,6 +218,53 @@ bool AssertionExpr::admitsEmpty() const {
 
 AssertionExpr& AssertionExpr::badExpr(Compilation& compilation, const AssertionExpr* expr) {
     return *compilation.emplace<InvalidAssertionExpr>(expr);
+}
+
+bool AssertionExpr::checkAssertionCall(const CallExpression& call, const BindContext& context,
+                                       DiagCode outArgCode, DiagCode refArgCode,
+                                       optional<DiagCode> sysTaskCode, SourceRange range) {
+    if (call.isSystemCall()) {
+        auto& sub = *std::get<1>(call.subroutine).subroutine;
+        if (sub.kind == SubroutineKind::Function && sysTaskCode) {
+            context.addDiag(*sysTaskCode, range);
+            return false;
+        }
+
+        if (sub.hasOutputArgs) {
+            context.addDiag(outArgCode, range);
+            return false;
+        }
+    }
+    else {
+        auto& sub = *std::get<0>(call.subroutine);
+        auto args = call.arguments();
+        size_t index = 0;
+        for (auto& formal : sub.getArguments()) {
+            if (formal->direction == ArgumentDirection::Out ||
+                formal->direction == ArgumentDirection::InOut) {
+                auto& diag = context.addDiag(outArgCode, range);
+                diag.addNote(diag::NoteDeclarationHere, formal->location);
+                return false;
+            }
+
+            if (formal->direction == ArgumentDirection::Ref) {
+                ASSERT(index < args.size());
+                if (auto sym = args[index]->getSymbolReference()) {
+                    if (VariableSymbol::isKind(sym->kind) &&
+                        sym->as<VariableSymbol>().lifetime == VariableLifetime::Automatic) {
+                        auto& diag = context.addDiag(refArgCode, args[index]->sourceRange);
+                        diag << sym->name << formal->name;
+                        diag.addNote(diag::NoteDeclarationHere, sym->location);
+                        return false;
+                    }
+                }
+            }
+
+            index++;
+        }
+    }
+
+    return true;
 }
 
 void InvalidAssertionExpr::serializeTo(ASTSerializer& serializer) const {
@@ -485,7 +534,6 @@ static span<const Expression* const> bindMatchItems(const SequenceMatchListSynta
 
     BindContext ctx = context;
     ctx.flags &= ~BindFlags::AssignmentDisallowed;
-    ctx.flags |= BindFlags::AssertionExpr;
 
     // If we are binding an argument, these "match items" might actually be part of
     // a comma-separated event expression. We need to avoid erroring in that case.
@@ -526,9 +574,12 @@ static span<const Expression* const> bindMatchItems(const SequenceMatchListSynta
                 }
                 break;
             }
-            case ExpressionKind::Call:
-                // TODO:
+            case ExpressionKind::Call: {
+                AssertionExpr::checkAssertionCall(
+                    expr.as<CallExpression>(), context, diag::SubroutineMatchOutArg,
+                    diag::SubroutineMatchAutoRefArg, std::nullopt, expr.sourceRange);
                 break;
+            }
             case ExpressionKind::Invalid:
                 break;
             default:
