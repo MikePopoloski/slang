@@ -23,6 +23,7 @@ module m;
         ##1 x |-> y;
     endproperty
 
+    wire clk;
     property p2;
         @(posedge clk)
         a ##1 (b || c)[->1] |->
@@ -560,6 +561,7 @@ logic [3:0] write_request_ack_tag, data_valid_tag, retry_tag;
 logic data_valid;
 logic retry;
 logic last_data_valid;
+logic reset;
 
 property check_write;
     logic [0:127] expected_data;

@@ -466,8 +466,7 @@ static const AssertionExpr& bindAssertionBody(
     }
     else {
         collectInitializers(symbol.as<PropertySymbol>());
-        return AssertionExpr::bind(*syntax.as<PropertyDeclarationSyntax>().propertySpec->expr,
-                                   context);
+        return AssertionExpr::bind(*syntax.as<PropertyDeclarationSyntax>().propertySpec, context);
     }
 }
 

@@ -27,7 +27,8 @@ namespace slang {
     x(StrongWeak) \
     x(Abort) \
     x(Conditional) \
-    x(Case)
+    x(Case) \
+    x(DisableIff)
 ENUM(AssertionExprKind, EXPR);
 #undef EXPR
 
@@ -67,6 +68,7 @@ class CallExpression;
 class Compilation;
 class SyntaxNode;
 struct PropertyExprSyntax;
+struct PropertySpecSyntax;
 struct SequenceExprSyntax;
 
 class AssertionExpr {
@@ -85,6 +87,7 @@ public:
 
     static const AssertionExpr& bind(const SequenceExprSyntax& syntax, const BindContext& context);
     static const AssertionExpr& bind(const PropertyExprSyntax& syntax, const BindContext& context);
+    static const AssertionExpr& bind(const PropertySpecSyntax& syntax, const BindContext& context);
 
     static bool checkAssertionCall(const CallExpression& call, const BindContext& context,
                                    DiagCode outArgCode, DiagCode refArgCode,
@@ -383,6 +386,9 @@ public:
     static AssertionExpr& fromSyntax(const SignalEventExpressionSyntax& syntax,
                                      const BindContext& context);
 
+    static AssertionExpr& fromSyntax(const TimingControlSyntax& syntax, const AssertionExpr& expr,
+                                     const BindContext& context);
+
     void serializeTo(ASTSerializer& serializer) const;
 
     static bool isKind(AssertionExprKind kind) { return kind == AssertionExprKind::Clocking; }
@@ -522,6 +528,33 @@ public:
 
         if (defaultCase)
             defaultCase->visit(visitor);
+    }
+};
+
+struct DisableIffSyntax;
+
+/// Represents a disable iff condition in a property spec.
+class DisableIffAssertionExpr : public AssertionExpr {
+public:
+    const Expression& condition;
+    const AssertionExpr& expr;
+
+    DisableIffAssertionExpr(const Expression& condition, const AssertionExpr& expr) :
+        AssertionExpr(AssertionExprKind::DisableIff), condition(condition), expr(expr) {}
+
+    bool admitsEmptyImpl() const { return false; }
+
+    static AssertionExpr& fromSyntax(const DisableIffSyntax& syntax, const AssertionExpr& expr,
+                                     const BindContext& context);
+
+    void serializeTo(ASTSerializer& serializer) const;
+
+    static bool isKind(AssertionExprKind kind) { return kind == AssertionExprKind::DisableIff; }
+
+    template<typename TVisitor>
+    void visitExprs(TVisitor&& visitor) const {
+        condition.visit(visitor);
+        expr.visit(visitor);
     }
 };
 

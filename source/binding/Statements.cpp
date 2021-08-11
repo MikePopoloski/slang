@@ -2018,9 +2018,8 @@ Statement& ConcurrentAssertionStatement::fromSyntax(
     Compilation& compilation, const ConcurrentAssertionStatementSyntax& syntax,
     const BindContext& context, StatementContext& stmtCtx) {
 
-    // TODO: other property spec items
     AssertionKind assertKind = SemanticFacts::getAssertKind(syntax.kind);
-    auto& prop = AssertionExpr::bind(*syntax.propertySpec->expr, context);
+    auto& prop = AssertionExpr::bind(*syntax.propertySpec, context);
     bool bad = prop.bad();
 
     const Statement* ifTrue = nullptr;

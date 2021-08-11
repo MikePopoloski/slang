@@ -179,6 +179,27 @@ const AssertionExpr& AssertionExpr::bind(const PropertyExprSyntax& syntax,
     return *result;
 }
 
+const AssertionExpr& AssertionExpr::bind(const PropertySpecSyntax& syntax,
+                                         const BindContext& context) {
+    BindContext ctx(context);
+    ctx.flags |= BindFlags::AssignmentDisallowed;
+
+    auto result = &bind(*syntax.expr, context);
+    if (syntax.disable) {
+        auto& disable = DisableIffAssertionExpr::fromSyntax(*syntax.disable, *result, context);
+        disable.syntax = syntax.disable;
+        result = &disable;
+    }
+
+    if (syntax.clocking) {
+        auto& clocking = ClockingAssertionExpr::fromSyntax(*syntax.clocking, *result, context);
+        clocking.syntax = syntax.clocking;
+        result = &clocking;
+    }
+
+    return *result;
+}
+
 void AssertionExpr::requireSequence(const BindContext& context) const {
     requireSequence(context, diag::PropExprInSequence);
 }
@@ -874,6 +895,14 @@ AssertionExpr& ClockingAssertionExpr::fromSyntax(const SignalEventExpressionSynt
     return *comp.emplace<ClockingAssertionExpr>(clocking, badExpr(comp, nullptr));
 }
 
+AssertionExpr& ClockingAssertionExpr::fromSyntax(const TimingControlSyntax& syntax,
+                                                 const AssertionExpr& expr,
+                                                 const BindContext& context) {
+    auto& comp = context.getCompilation();
+    auto& clocking = TimingControl::bind(syntax, context);
+    return *comp.emplace<ClockingAssertionExpr>(clocking, expr);
+}
+
 bool ClockingAssertionExpr::admitsEmptyImpl() const {
     return expr.admitsEmpty();
 }
@@ -1008,6 +1037,19 @@ void CaseAssertionExpr::serializeTo(ASTSerializer& serializer) const {
 
     if (defaultCase)
         serializer.write("defaultCase", *defaultCase);
+}
+
+AssertionExpr& DisableIffAssertionExpr::fromSyntax(const DisableIffSyntax& syntax,
+                                                   const AssertionExpr& expr,
+                                                   const BindContext& context) {
+    auto& comp = context.getCompilation();
+    auto& cond = bindExpr(*syntax.expr, context);
+    return *comp.emplace<DisableIffAssertionExpr>(cond, expr);
+}
+
+void DisableIffAssertionExpr::serializeTo(ASTSerializer& serializer) const {
+    serializer.write("condition", condition);
+    serializer.write("expr", expr);
 }
 
 } // namespace slang
