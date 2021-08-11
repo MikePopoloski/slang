@@ -246,14 +246,14 @@ LRM | Feature | Supported
 {{m-success}} 16.7 | Sequences | v0.8
 {{m-success}} 16.8 | Declaring sequences | v0.8
 {{m-success}} 16.9 | Sequence operations | v0.8
-{{m-warning}} 16.10 | Local variables | partial
-{{m-warning}} 16.11 | Calling subroutines on match of sequence | partial
+{{m-success}} 16.10 | Local variables | v0.8
+{{m-success}} 16.11 | Calling subroutines on match of sequence | v0.8
 {{m-warning}} 16.12 | Declaring properties | partial
-{{m-danger}}  16.13 | Multiclock support | no
+{{m-warning}} 16.13 | Multiclock support | partial
 {{m-warning}} 16.14 | Concurrent assertions | partial
 {{m-success}} 16.15 | Disable iff resolution | v0.8
 {{m-danger}}  16.16 | Clock resolution | no
-{{m-danger}}  16.17 | Expect statement | no
+{{m-success}} 16.17 | Expect statement | v0.8
 {{m-dim}}     16.18 | Clocking blocks and concurrent assertions | N/A
 
 ## 17. Checkers
