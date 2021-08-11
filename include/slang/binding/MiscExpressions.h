@@ -190,8 +190,11 @@ public:
 /// or a formal argument that is being referenced and expanded.
 class AssertionInstanceExpression : public Expression {
 public:
+    using ActualArg = std::variant<const Expression*, const AssertionExpr*, const TimingControl*>;
+
     const Symbol& symbol;
     const AssertionExpr& body;
+    span<std::tuple<const Symbol*, ActualArg> const> arguments;
     span<std::tuple<const Symbol*, const Expression*> const> localVarInitializers;
     bool isRecursiveProperty;
 

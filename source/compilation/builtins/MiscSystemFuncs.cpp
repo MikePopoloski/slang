@@ -11,6 +11,7 @@
 #include "slang/compilation/Compilation.h"
 #include "slang/diagnostics/DeclarationsDiags.h"
 #include "slang/diagnostics/SysFuncsDiags.h"
+#include "slang/symbols/ASTVisitor.h"
 #include "slang/symbols/ClassSymbols.h"
 #include "slang/symbols/MemberSymbols.h"
 
@@ -225,6 +226,35 @@ public:
     }
 };
 
+struct SequenceMethodExprVisitor {
+    const BindContext& context;
+    std::string name;
+
+    SequenceMethodExprVisitor(const BindContext& context, const std::string& name) :
+        context(context), name(name) {}
+
+    template<typename T>
+    void visit(const T& expr) {
+        if constexpr (std::is_base_of_v<Expression, T>) {
+            if (expr.kind == ExpressionKind::NamedValue) {
+                if (auto sym = expr.getSymbolReference()) {
+                    if (sym->kind == SymbolKind::LocalAssertionVar ||
+                        (sym->kind == SymbolKind::AssertionPort &&
+                         sym->template as<AssertionPortSymbol>().isLocalVar())) {
+                        context.addDiag(diag::SequenceMethodLocalVar, expr.sourceRange) << name;
+                    }
+                }
+            }
+        }
+
+        if constexpr (is_detected_v<ASTDetectors::visitExprs_t, T, SequenceMethodExprVisitor>)
+            expr.visitExprs(*this);
+    }
+
+    void visitInvalid(const Expression&) {}
+    void visitInvalid(const AssertionExpr&) {}
+};
+
 class SequenceMethod : public SystemSubroutine {
 public:
     SequenceMethod(const std::string& name) : SystemSubroutine(name, SubroutineKind::Function) {}
@@ -249,6 +279,9 @@ public:
     }
 
 private:
+    template<typename T>
+    struct always_false : std::false_type {};
+
     void checkLocalVars(const Expression& expr, const BindContext& context,
                         SourceRange range) const {
         if (expr.kind == ExpressionKind::AssertionInstance) {
@@ -256,18 +289,61 @@ private:
             if (aie.symbol.kind == SymbolKind::AssertionPort) {
                 if (aie.body.kind == AssertionExprKind::Simple)
                     checkLocalVars(aie.body.as<SimpleAssertionExpr>().expr, context, range);
+                return;
             }
-            else {
-                auto& seq = aie.symbol.as<SequenceSymbol>();
-                for (auto& arg : seq.membersOfType<AssertionPortSymbol>()) {
-                    if (arg.localVarDirection == ArgumentDirection::In ||
-                        arg.localVarDirection == ArgumentDirection::InOut) {
-                        auto& diag = context.addDiag(diag::SeqMethodInputLocalVar, range);
-                        diag << name;
-                        diag.addNote(diag::NoteDeclarationHere, arg.location);
-                        break;
-                    }
+
+            auto& seq = aie.symbol.as<SequenceSymbol>();
+            for (auto& arg : seq.membersOfType<AssertionPortSymbol>()) {
+                if (arg.localVarDirection == ArgumentDirection::In ||
+                    arg.localVarDirection == ArgumentDirection::InOut) {
+                    auto& diag = context.addDiag(diag::SeqMethodInputLocalVar, range);
+                    diag << name;
+                    diag.addNote(diag::NoteDeclarationHere, arg.location);
+                    return;
                 }
+            }
+
+            // Arguments to sequence instances that have triggered invoked can only
+            // reference local variables if that is the entire argument.
+            SequenceMethodExprVisitor visitor(context, name);
+            for (auto& [formal, arg] : aie.arguments) {
+                std::visit(
+                    [&visitor](auto&& arg) {
+                        // Local vars are allowed at the top level, so we need to check if
+                        // the entire argument is a named value and if so don't bother
+                        // checking it.
+                        using T = std::decay_t<decltype(arg)>;
+                        if constexpr (std::is_same_v<T, const Expression*>) {
+                            if (arg->kind != ExpressionKind::NamedValue)
+                                arg->visit(visitor);
+                        }
+                        else if constexpr (std::is_same_v<T, const AssertionExpr*>) {
+                            if (arg->kind == AssertionExprKind::Simple) {
+                                auto& sae = arg->as<SimpleAssertionExpr>();
+                                if (sae.repetition || sae.expr.kind != ExpressionKind::NamedValue)
+                                    arg->visit(visitor);
+                            }
+                            else {
+                                arg->visit(visitor);
+                            }
+                        }
+                        else if constexpr (std::is_same_v<T, const TimingControl*>) {
+                            if (arg->kind == TimingControlKind::SignalEvent) {
+                                auto& sec = arg->as<SignalEventControl>();
+                                if (sec.edge != EdgeKind::None || sec.iffCondition ||
+                                    sec.expr.kind != ExpressionKind::NamedValue) {
+                                    arg->visit(visitor);
+                                }
+                            }
+                            else {
+                                arg->visit(visitor);
+                            }
+                        }
+                        else {
+                            static_assert(always_false<T>::value, "Missing case");
+                        }
+                    },
+                    arg);
             }
         }
     }

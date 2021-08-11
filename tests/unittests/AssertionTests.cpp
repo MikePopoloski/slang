@@ -443,7 +443,7 @@ endmodule
     NO_COMPILATION_ERRORS;
 }
 
-TEST_CASE("Sequence triggered local var formals") {
+TEST_CASE("Sequence triggered local vars") {
     auto tree = SyntaxTree::fromText(R"(
 module m;
     sequence s1(sequence a);
@@ -458,6 +458,15 @@ module m;
     sequence s4;
         s2(s3(1));
     endsequence
+
+    sequence s5(a, event b, sequence c);
+        a ##1 c ##1 @b 1;
+    endsequence
+
+    sequence s6;
+        int i;
+        s5(i + 1, i + 1, i + 1).triggered ##1 s5(i, i, i).triggered;
+    endsequence
 endmodule
 )");
 
@@ -465,8 +474,11 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 1);
+    REQUIRE(diags.size() == 4);
     CHECK(diags[0].code == diag::SeqMethodInputLocalVar);
+    CHECK(diags[1].code == diag::SequenceMethodLocalVar);
+    CHECK(diags[2].code == diag::SequenceMethodLocalVar);
+    CHECK(diags[3].code == diag::SequenceMethodLocalVar);
 }
 
 TEST_CASE("Sequence event control") {

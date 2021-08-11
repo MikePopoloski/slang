@@ -353,8 +353,9 @@ static std::tuple<const SequenceExprSyntax*, const ExpressionSyntax*> decomposeP
     return { seqExpr, regExpr };
 }
 
-static bool checkAssertionArgType(const PropertyExprSyntax& propExpr,
-                                  const AssertionPortSymbol& formal, const BindContext& context) {
+static bool checkAssertionArg(const PropertyExprSyntax& propExpr, const AssertionPortSymbol& formal,
+                              const BindContext& context,
+                              AssertionInstanceExpression::ActualArg& result) {
     auto [seqExpr, regExpr] = decomposePropExpr(propExpr);
 
     auto& type = formal.declaredType.getType();
@@ -364,11 +365,15 @@ static bool checkAssertionArgType(const PropertyExprSyntax& propExpr,
             // name resolution errors even if the argument ends up being unused in the
             // body of the sequence / property.
             if (regExpr) {
-                return !Expression::bind(*regExpr, context, BindFlags::AllowUnboundedLiteral).bad();
+                auto& bound = Expression::bind(*regExpr, context, BindFlags::AllowUnboundedLiteral);
+                result = &bound;
+                return !bound.bad();
             }
             else {
                 auto ctx = context.resetFlags(context.flags | BindFlags::AssertionInstanceArgCheck);
-                return !AssertionExpr::bind(propExpr, ctx).bad();
+                auto& bound = AssertionExpr::bind(propExpr, ctx);
+                result = &bound;
+                return !bound.bad();
             }
         case SymbolKind::SequenceType: {
             if (!seqExpr) {
@@ -381,12 +386,19 @@ static bool checkAssertionArgType(const PropertyExprSyntax& propExpr,
                 return false;
 
             bound.requireSequence(context);
+            result = &bound;
             return true;
         }
-        case SymbolKind::PropertyType:
-            return !AssertionExpr::bind(propExpr, context).bad();
-        case SymbolKind::EventType:
-            return !TimingControl::bind(propExpr, context).bad();
+        case SymbolKind::PropertyType: {
+            auto& bound = AssertionExpr::bind(propExpr, context);
+            result = &bound;
+            return !bound.bad();
+        }
+        case SymbolKind::EventType: {
+            auto& bound = TimingControl::bind(propExpr, context);
+            result = &bound;
+            return !bound.bad();
+        }
         case SymbolKind::ErrorType:
             return false;
         default:
@@ -419,6 +431,7 @@ static bool checkAssertionArgType(const PropertyExprSyntax& propExpr,
         return false;
     }
 
+    result = &bound;
     return true;
 }
 
@@ -501,6 +514,8 @@ Expression& AssertionInstanceExpression::fromLookup(const Symbol& symbol,
     bool bad = false;
     uint32_t orderedIndex = 0;
     SourceLocation outputLocalVarArgLoc;
+    SmallVectorSized<std::tuple<const Symbol*, ActualArg>, 8> actualArgs;
+
     for (auto formal : formalPorts) {
         const BindContext* argCtx = &context;
         const PropertyExprSyntax* expr = nullptr;
@@ -580,9 +595,11 @@ Expression& AssertionInstanceExpression::fromLookup(const Symbol& symbol,
         // This is because the arguments might not actually be used anywhere in the body,
         // so the only place to detect mismatches is here, but we can't save the bound
         // form because assertion item arguments are replaced as-is for each usage.
-        if (!checkAssertionArgType(*expr, *formal, *argCtx)) {
+        ActualArg arg;
+        if (!checkAssertionArg(*expr, *formal, *argCtx, arg))
             bad = true;
-        }
+        else
+            actualArgs.append({ formal, arg });
 
         if (!outputLocalVarArgLoc && (formal->localVarDirection == ArgumentDirection::InOut ||
                                       formal->localVarDirection == ArgumentDirection::Out)) {
@@ -657,6 +674,7 @@ Expression& AssertionInstanceExpression::fromLookup(const Symbol& symbol,
 
     auto result = comp.emplace<AssertionInstanceExpression>(*type, symbol, body,
                                                             /* isRecursiveProperty */ false, range);
+    result->arguments = actualArgs.copy(comp);
     result->localVarInitializers = localVarInitializers.copy(comp);
     return *result;
 }
@@ -708,7 +726,9 @@ Expression& AssertionInstanceExpression::makeDefault(const Symbol& symbol) {
 
             auto expr = formal->defaultValueSyntax;
             instance.argumentMap.emplace(formal, std::make_tuple(expr, ctx));
-            checkAssertionArgType(*expr, *formal, ctx);
+
+            ActualArg arg;
+            checkAssertionArg(*expr, *formal, ctx, arg);
         }
 
         if (!outputLocalVarArgLoc && (formal->localVarDirection == ArgumentDirection::InOut ||
