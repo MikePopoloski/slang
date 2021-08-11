@@ -244,65 +244,6 @@ private:
     size_t numArgs;
 };
 
-struct SampledValueExprVisitor {
-    const BindContext& context;
-    bool isFutureGlobal;
-
-    SampledValueExprVisitor(const BindContext& context, bool isFutureGlobal) :
-        context(context), isFutureGlobal(isFutureGlobal) {}
-
-    template<typename T>
-    void visit(const T& expr) {
-        if constexpr (std::is_base_of_v<Expression, T>) {
-            switch (expr.kind) {
-                case ExpressionKind::NamedValue:
-                    if (auto sym = expr.getSymbolReference()) {
-                        if (sym->kind == SymbolKind::LocalAssertionVar ||
-                            (sym->kind == SymbolKind::AssertionPort &&
-                             sym->template as<AssertionPortSymbol>().isLocalVar())) {
-                            context.addDiag(diag::SampledValueLocalVar, expr.sourceRange);
-                        }
-                    }
-                    break;
-                case ExpressionKind::Call: {
-                    auto& call = expr.template as<CallExpression>();
-                    if (call.isSystemCall()) {
-                        if (call.getSubroutineName() == "matched"sv && !call.arguments().empty() &&
-                            call.arguments()[0]->type->isSequenceType()) {
-                            context.addDiag(diag::SampledValueMatched, expr.sourceRange);
-                        }
-
-                        if (isFutureGlobal && FutureGlobalNames.count(call.getSubroutineName())) {
-                            context.addDiag(diag::GlobalSampledValueNested, expr.sourceRange);
-                        }
-                    }
-                    break;
-                }
-                default:
-                    if constexpr (is_detected_v<ASTDetectors::visitExprs_t, T,
-                                                SampledValueExprVisitor>)
-                        expr.visitExprs(*this);
-                    break;
-            }
-        }
-    }
-
-    void visitInvalid(const Expression&) {}
-    void visitInvalid(const AssertionExpr&) {}
-
-    static inline const flat_hash_set<std::string_view> FutureGlobalNames = {
-        "$future_gclk"sv, "$rising_gclk"sv, "$falling_gclk"sv, "$steady_gclk"sv, "$changing_gclk"sv
-    };
-};
-
-static void checkSampledValueExpr(const Expression& expr, const BindContext& context,
-                                  bool isFutureGlobal) {
-    // Local variables and the sequence method "matched" are not allowed in the
-    // expressions passed to sampled value functions.
-    SampledValueExprVisitor visitor(context, isFutureGlobal);
-    expr.visit(visitor);
-}
-
 class SampledFunc : public SystemSubroutine {
 public:
     SampledFunc() : SystemSubroutine("$sampled", SubroutineKind::Function) {}
@@ -318,7 +259,8 @@ public:
         if (!checkArgCount(context, false, args, range, 1, 1))
             return comp.getErrorType();
 
-        checkSampledValueExpr(*args[0], context, false);
+        AssertionExpr::checkSampledValueExpr(*args[0], context, false, diag::SampledValueLocalVar,
+                                             diag::SampledValueMatched);
 
         return *args[0]->type;
     }
@@ -349,7 +291,8 @@ public:
         if (!checkArgCount(context, false, args, range, 1, 2))
             return comp.getErrorType();
 
-        checkSampledValueExpr(*args[0], context, false);
+        AssertionExpr::checkSampledValueExpr(*args[0], context, false, diag::SampledValueLocalVar,
+                                             diag::SampledValueMatched);
 
         // TODO: check rules for inferring clocking
 
@@ -390,8 +333,10 @@ public:
         if (!checkArgCount(context, false, args, range, 1, 4))
             return comp.getErrorType();
 
-        for (size_t i = 0; i < args.size() && i < 3; i++)
-            checkSampledValueExpr(*args[i], context, false);
+        for (size_t i = 0; i < args.size() && i < 3; i++) {
+            AssertionExpr::checkSampledValueExpr(
+                *args[i], context, false, diag::SampledValueLocalVar, diag::SampledValueMatched);
+        }
 
         // TODO: check rules for inferring clocking
 
@@ -447,7 +392,8 @@ public:
             return comp.getErrorType();
         }
 
-        checkSampledValueExpr(*args[0], context, isFuture);
+        AssertionExpr::checkSampledValueExpr(*args[0], context, isFuture,
+                                             diag::SampledValueLocalVar, diag::SampledValueMatched);
 
         // TODO: enforce rules for future sampled value functions
 

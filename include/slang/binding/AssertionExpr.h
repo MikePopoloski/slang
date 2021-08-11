@@ -97,6 +97,10 @@ public:
                                    DiagCode outArgCode, DiagCode refArgCode,
                                    optional<DiagCode> sysTaskCode, SourceRange range);
 
+    static void checkSampledValueExpr(const Expression& expr, const BindContext& context,
+                                      bool isFutureGlobal, DiagCode localVarCode,
+                                      DiagCode matchedCode);
+
     template<typename T>
     T& as() {
         ASSERT(T::isKind(kind));

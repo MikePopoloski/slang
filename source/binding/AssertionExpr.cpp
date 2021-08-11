@@ -291,6 +291,68 @@ bool AssertionExpr::checkAssertionCall(const CallExpression& call, const BindCon
     return true;
 }
 
+struct SampledValueExprVisitor {
+    const BindContext& context;
+    bool isFutureGlobal;
+    DiagCode localVarCode;
+    DiagCode matchedCode;
+
+    SampledValueExprVisitor(const BindContext& context, bool isFutureGlobal, DiagCode localVarCode,
+                            DiagCode matchedCode) :
+        context(context),
+        isFutureGlobal(isFutureGlobal), localVarCode(localVarCode), matchedCode(matchedCode) {}
+
+    template<typename T>
+    void visit(const T& expr) {
+        if constexpr (std::is_base_of_v<Expression, T>) {
+            switch (expr.kind) {
+                case ExpressionKind::NamedValue:
+                    if (auto sym = expr.getSymbolReference()) {
+                        if (sym->kind == SymbolKind::LocalAssertionVar ||
+                            (sym->kind == SymbolKind::AssertionPort &&
+                             sym->template as<AssertionPortSymbol>().isLocalVar())) {
+                            context.addDiag(localVarCode, expr.sourceRange);
+                        }
+                    }
+                    break;
+                case ExpressionKind::Call: {
+                    auto& call = expr.template as<CallExpression>();
+                    if (call.isSystemCall()) {
+                        if (call.getSubroutineName() == "matched"sv && !call.arguments().empty() &&
+                            call.arguments()[0]->type->isSequenceType()) {
+                            context.addDiag(matchedCode, expr.sourceRange);
+                        }
+
+                        if (isFutureGlobal && FutureGlobalNames.count(call.getSubroutineName())) {
+                            context.addDiag(diag::GlobalSampledValueNested, expr.sourceRange);
+                        }
+                    }
+                    break;
+                }
+                default:
+                    if constexpr (is_detected_v<ASTDetectors::visitExprs_t, T,
+                                                SampledValueExprVisitor>)
+                        expr.visitExprs(*this);
+                    break;
+            }
+        }
+    }
+
+    void visitInvalid(const Expression&) {}
+    void visitInvalid(const AssertionExpr&) {}
+
+    static inline const flat_hash_set<std::string_view> FutureGlobalNames = {
+        "$future_gclk"sv, "$rising_gclk"sv, "$falling_gclk"sv, "$steady_gclk"sv, "$changing_gclk"sv
+    };
+};
+
+void AssertionExpr::checkSampledValueExpr(const Expression& expr, const BindContext& context,
+                                          bool isFutureGlobal, DiagCode localVarCode,
+                                          DiagCode matchedCode) {
+    SampledValueExprVisitor visitor(context, isFutureGlobal, localVarCode, matchedCode);
+    expr.visit(visitor);
+}
+
 void InvalidAssertionExpr::serializeTo(ASTSerializer& serializer) const {
     if (child)
         serializer.write("child", *child);
@@ -1063,6 +1125,9 @@ AssertionExpr& DisableIffAssertionExpr::fromSyntax(const DisableIffSyntax& synta
                                                    const BindContext& context) {
     auto& comp = context.getCompilation();
     auto& cond = bindExpr(*syntax.expr, context);
+
+    checkSampledValueExpr(cond, context, false, diag::DisableIffLocalVar, diag::DisableIffMatched);
+
     return *comp.emplace<DisableIffAssertionExpr>(cond, expr);
 }
 

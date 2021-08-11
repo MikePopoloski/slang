@@ -969,3 +969,27 @@ endmodule
     CHECK(diags[0].code == diag::NestedDisableIff);
     CHECK(diags[1].code == diag::NestedDisableIff);
 }
+
+TEST_CASE("disable iff condition restrictions") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    sequence s;
+        1;
+    endsequence
+
+    wire clk;
+    property p;
+        int a;
+        @(posedge clk) disable iff (a || s.matched) 1;
+    endproperty
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::DisableIffLocalVar);
+    CHECK(diags[1].code == diag::DisableIffMatched);
+}
