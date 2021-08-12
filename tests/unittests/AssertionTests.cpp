@@ -49,7 +49,7 @@ module m;
     foo: assert property (a);
     assert property (a ##1 b ##[+] c ##[*] d ##[1:5] e);
     assert property (##0 a[*0:4] ##0 b[=4] ##0 c[->1:2] ##0 c[*] ##1 d[+]);
-    assert property (##[0:$] a[*0:$]);
+    assert property (##[1:$] a[*0:$]);
     assert property ((a ##0 b) and (c or d));
     assert property ((a ##0 b) and (c or d));
     assert property (a intersect b and d throughout e within c);
@@ -369,7 +369,7 @@ TEST_CASE("Local vars default values") {
 module m;
     sequence s(i);
         int j, k = j, l = i, m = baz;
-        (i && j, j = 1, j++)[*0:1];
+        (i && j, j = 1, j++)[*1:2];
     endsequence
     assert property (s(3));
 endmodule
@@ -992,4 +992,26 @@ endmodule
     REQUIRE(diags.size() == 2);
     CHECK(diags[0].code == diag::DisableIffLocalVar);
     CHECK(diags[1].code == diag::DisableIffMatched);
+}
+
+TEST_CASE("Sequence properties with empty matches") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    sequence s;
+        1[*0];
+    endsequence
+
+    property p;
+        strong(s) and s;
+    endproperty
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::SeqPropAdmitEmpty);
+    CHECK(diags[1].code == diag::SeqPropAdmitEmpty);
 }

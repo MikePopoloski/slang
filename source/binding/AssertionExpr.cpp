@@ -109,16 +109,22 @@ const AssertionExpr& AssertionExpr::bind(const SequenceExprSyntax& syntax,
 }
 
 const AssertionExpr& AssertionExpr::bind(const PropertyExprSyntax& syntax,
-                                         const BindContext& context, bool allowDisable) {
+                                         const BindContext& context, bool allowDisable,
+                                         bool allowSeqAdmitEmpty) {
     BindContext ctx(context);
     ctx.flags |= BindFlags::AssignmentDisallowed;
 
     AssertionExpr* result;
     switch (syntax.kind) {
-        case SyntaxKind::SimplePropertyExpr:
+        case SyntaxKind::SimplePropertyExpr: {
             // Just a simple passthrough to binding the sequence expression
             // contained within.
-            return bind(*syntax.as<SimplePropertyExprSyntax>().expr, context, allowDisable);
+            auto& seq = bind(*syntax.as<SimplePropertyExprSyntax>().expr, ctx, allowDisable);
+            if (!allowSeqAdmitEmpty && seq.admitsEmpty())
+                context.addDiag(diag::SeqPropAdmitEmpty, syntax.sourceRange());
+
+            return seq;
+        }
         case SyntaxKind::AndPropertyExpr:
         case SyntaxKind::OrPropertyExpr:
         case SyntaxKind::IffPropertyExpr:
@@ -827,8 +833,11 @@ AssertionExpr& BinaryAssertionExpr::fromSyntax(const BinarySequenceExprSyntax& s
 
 AssertionExpr& BinaryAssertionExpr::fromSyntax(const BinaryPropertyExprSyntax& syntax,
                                                const BindContext& context) {
+    bool allowSeqAdmitEmpty = syntax.kind == SyntaxKind::ImplicationPropertyExpr ||
+                              syntax.kind == SyntaxKind::FollowedByPropertyExpr;
+
     auto& comp = context.getCompilation();
-    auto& left = bind(*syntax.left, context);
+    auto& left = bind(*syntax.left, context, false, allowSeqAdmitEmpty);
     auto& right = bind(*syntax.right, context);
 
     // clang-format off
@@ -998,6 +1007,9 @@ AssertionExpr& StrongWeakAssertionExpr::fromSyntax(const StrongWeakPropertyExprS
     auto& comp = context.getCompilation();
     auto& expr = bind(*syntax.expr, context);
     expr.requireSequence(context);
+
+    if (expr.admitsEmpty())
+        context.addDiag(diag::SeqPropAdmitEmpty, syntax.expr->sourceRange());
 
     return *comp.emplace<StrongWeakAssertionExpr>(
         expr, syntax.keyword.kind == TokenKind::StrongKeyword ? Strong : Weak);

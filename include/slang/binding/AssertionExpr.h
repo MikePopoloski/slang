@@ -89,7 +89,7 @@ public:
                                      bool allowDisable = false);
 
     static const AssertionExpr& bind(const PropertyExprSyntax& syntax, const BindContext& context,
-                                     bool allowDisable = false);
+                                     bool allowDisable = false, bool allowSeqAdmitEmpty = false);
 
     static const AssertionExpr& bind(const PropertySpecSyntax& syntax, const BindContext& context);
 
@@ -141,7 +141,7 @@ struct SequenceRepetitionSyntax;
 /// Represents a range of potential sequence matches.
 struct SequenceRange {
     /// The minimum length of the range.
-    uint32_t min = 0;
+    uint32_t min = 1;
 
     /// The maximum length of the range. If unset, the maximum is unbounded.
     optional<uint32_t> max;
