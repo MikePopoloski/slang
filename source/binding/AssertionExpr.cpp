@@ -229,6 +229,7 @@ void AssertionExpr::requireSequence(const BindContext& context, DiagCode code) c
         case AssertionExprKind::Abort:
         case AssertionExprKind::Conditional:
         case AssertionExprKind::Case:
+        case AssertionExprKind::DisableIff:
             ASSERT(syntax);
             context.addDiag(code, syntax->sourceRange());
             return;
