@@ -562,6 +562,8 @@ error NestedDisableIff "cannot instantiate '{}' here because it has a disable if
 error GlobalSampledValueNested "global clocking future sampled value functions may not be nested"
 error DisableIffLocalVar "local variables cannot be used in disable iff conditions"
 error DisableIffMatched "'matched' method cannot be used in disable iff conditions"
+error PropAbortLocalVar "local variables cannot be used in property abort conditions"
+error PropAbortMatched "'matched' method cannot be used in property abort conditions"
 error SeqPropAdmitEmpty "sequence properties cannot admit an empty match"
 warning event-const EventExpressionConstant "edge expression is constant"
 warning empty-stmt EmptyStatement "extra ';' has no effect"

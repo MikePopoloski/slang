@@ -1050,6 +1050,8 @@ AssertionExpr& AbortAssertionExpr::fromSyntax(const AcceptOnPropertyExprSyntax& 
             THROW_UNREACHABLE;
     }
 
+    checkSampledValueExpr(cond, context, false, diag::PropAbortLocalVar, diag::PropAbortMatched);
+
     return *comp.emplace<AbortAssertionExpr>(cond, expr, action, isSync);
 }
 

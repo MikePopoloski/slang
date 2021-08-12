@@ -994,6 +994,30 @@ endmodule
     CHECK(diags[1].code == diag::DisableIffMatched);
 }
 
+TEST_CASE("abort property condition restrictions") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    sequence s;
+        1;
+    endsequence
+
+    wire clk;
+    property p;
+        int a;
+        @(posedge clk) accept_on (a || s.matched) 1;
+    endproperty
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::PropAbortLocalVar);
+    CHECK(diags[1].code == diag::PropAbortMatched);
+}
+
 TEST_CASE("Sequence properties with empty matches") {
     auto tree = SyntaxTree::fromText(R"(
 module m;
