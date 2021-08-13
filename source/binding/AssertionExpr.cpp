@@ -759,17 +759,36 @@ static UnaryAssertionOperator getUnaryOp(TokenKind kind) {
     // clang-format on
 }
 
+static bool isNegationOp(UnaryAssertionOperator op) {
+    switch (op) {
+        case UnaryAssertionOperator::Not:
+        case UnaryAssertionOperator::SAlways:
+        case UnaryAssertionOperator::SEventually:
+        case UnaryAssertionOperator::SNextTime:
+            return true;
+        default:
+            return false;
+    }
+}
+
 AssertionExpr& UnaryAssertionExpr::fromSyntax(const UnaryPropertyExprSyntax& syntax,
                                               const BindContext& context) {
+    auto op = getUnaryOp(syntax.op.kind);
+
+    bitmask<BindFlags> extraFlags;
+    if (op == UnaryAssertionOperator::NextTime)
+        extraFlags = BindFlags::PropertyTimeAdvance;
+    else if (isNegationOp(op))
+        extraFlags = BindFlags::PropertyNegation;
+
     auto& comp = context.getCompilation();
-    auto& expr = bind(*syntax.expr, context);
-    return *comp.emplace<UnaryAssertionExpr>(getUnaryOp(syntax.op.kind), expr, std::nullopt);
+    auto& expr = bind(*syntax.expr, context.resetFlags(extraFlags));
+    return *comp.emplace<UnaryAssertionExpr>(op, expr, std::nullopt);
 }
 
 AssertionExpr& UnaryAssertionExpr::fromSyntax(const UnarySelectPropertyExprSyntax& syntax,
                                               const BindContext& context) {
     auto& comp = context.getCompilation();
-    auto& expr = bind(*syntax.expr, context);
     auto op = getUnaryOp(syntax.op.kind);
 
     optional<SequenceRange> range;
@@ -778,6 +797,18 @@ AssertionExpr& UnaryAssertionExpr::fromSyntax(const UnarySelectPropertyExprSynta
             op == UnaryAssertionOperator::Always || op == UnaryAssertionOperator::SEventually;
         range = SequenceRange::fromSyntax(*syntax.selector, context, allowUnbounded);
     }
+
+    bitmask<BindFlags> extraFlags;
+    if ((op == UnaryAssertionOperator::Always || op == UnaryAssertionOperator::NextTime ||
+         op == UnaryAssertionOperator::Eventually) &&
+        range && range->min > 0) {
+        extraFlags = BindFlags::PropertyTimeAdvance;
+    }
+    else if (isNegationOp(op)) {
+        extraFlags = BindFlags::PropertyNegation;
+    }
+
+    auto& expr = bind(*syntax.expr, context.resetFlags(extraFlags));
 
     return *comp.emplace<UnaryAssertionExpr>(op, expr, range);
 }
@@ -837,9 +868,18 @@ AssertionExpr& BinaryAssertionExpr::fromSyntax(const BinaryPropertyExprSyntax& s
     bool allowSeqAdmitEmpty = syntax.kind == SyntaxKind::ImplicationPropertyExpr ||
                               syntax.kind == SyntaxKind::FollowedByPropertyExpr;
 
+    bitmask<BindFlags> lflags, rflags;
+    if (syntax.op.kind == TokenKind::OrEqualsArrow || syntax.op.kind == TokenKind::HashEqualsHash) {
+        rflags = BindFlags::PropertyTimeAdvance;
+    }
+    else if (syntax.kind == SyntaxKind::SUntilPropertyExpr ||
+             syntax.kind == SyntaxKind::SUntilWithPropertyExpr) {
+        lflags = rflags = BindFlags::PropertyNegation;
+    }
+
     auto& comp = context.getCompilation();
-    auto& left = bind(*syntax.left, context, false, allowSeqAdmitEmpty);
-    auto& right = bind(*syntax.right, context);
+    auto& left = bind(*syntax.left, context.resetFlags(lflags), false, allowSeqAdmitEmpty);
+    auto& right = bind(*syntax.right, context.resetFlags(rflags));
 
     // clang-format off
     BinaryAssertionOperator op;
@@ -1142,6 +1182,9 @@ AssertionExpr& DisableIffAssertionExpr::fromSyntax(const DisableIffSyntax& synta
     auto& cond = bindExpr(*syntax.expr, context);
 
     checkSampledValueExpr(cond, context, false, diag::DisableIffLocalVar, diag::DisableIffMatched);
+
+    if (context.assertionInstance && context.assertionInstance->isRecursive)
+        context.addDiag(diag::RecursivePropDisableIff, syntax.sourceRange());
 
     return *comp.emplace<DisableIffAssertionExpr>(cond, expr);
 }

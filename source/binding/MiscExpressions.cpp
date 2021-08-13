@@ -355,8 +355,30 @@ static std::tuple<const SequenceExprSyntax*, const ExpressionSyntax*> decomposeP
 
 static bool checkAssertionArg(const PropertyExprSyntax& propExpr, const AssertionPortSymbol& formal,
                               const BindContext& context,
-                              AssertionInstanceExpression::ActualArg& result) {
+                              AssertionInstanceExpression::ActualArg& result,
+                              bool isRecursiveProp) {
     auto [seqExpr, regExpr] = decomposePropExpr(propExpr);
+
+    BindContext ctx = context;
+    if (isRecursiveProp && !formal.isLocalVar()) {
+        // For every recursive instance of property q in the declaration of property p,
+        // each actual argument expression e of the instance must satisfy at least one
+        // of the following conditions:
+        // 1. e is itself a formal argument of p.
+        // 2. No formal argument of p appears in e.
+        // 3. e is bound to a local variable formal argument of q.
+        if (!regExpr)
+            ctx.flags |= BindFlags::RecursivePropertyArg;
+        else {
+            auto expr = regExpr;
+            while (expr->kind == SyntaxKind::ParenthesizedExpression)
+                expr = expr->as<ParenthesizedExpressionSyntax>().expression;
+
+            // This check filters out cases where the entire argument is a formal argument.
+            if (expr->kind != SyntaxKind::IdentifierName)
+                ctx.flags |= BindFlags::RecursivePropertyArg;
+        }
+    }
 
     auto& type = formal.declaredType.getType();
     switch (type.getCanonicalType().kind) {
@@ -365,37 +387,37 @@ static bool checkAssertionArg(const PropertyExprSyntax& propExpr, const Assertio
             // name resolution errors even if the argument ends up being unused in the
             // body of the sequence / property.
             if (regExpr) {
-                auto& bound = Expression::bind(*regExpr, context, BindFlags::AllowUnboundedLiteral);
+                auto& bound = Expression::bind(*regExpr, ctx, BindFlags::AllowUnboundedLiteral);
                 result = &bound;
                 return !bound.bad();
             }
             else {
-                auto ctx = context.resetFlags(context.flags | BindFlags::AssertionInstanceArgCheck);
+                ctx.flags |= BindFlags::AssertionInstanceArgCheck;
                 auto& bound = AssertionExpr::bind(propExpr, ctx);
                 result = &bound;
                 return !bound.bad();
             }
         case SymbolKind::SequenceType: {
             if (!seqExpr) {
-                context.addDiag(diag::AssertionArgTypeSequence, propExpr.sourceRange());
+                ctx.addDiag(diag::AssertionArgTypeSequence, propExpr.sourceRange());
                 return false;
             }
 
-            auto& bound = AssertionExpr::bind(*seqExpr, context);
+            auto& bound = AssertionExpr::bind(*seqExpr, ctx);
             if (bound.bad())
                 return false;
 
-            bound.requireSequence(context);
+            bound.requireSequence(ctx);
             result = &bound;
             return true;
         }
         case SymbolKind::PropertyType: {
-            auto& bound = AssertionExpr::bind(propExpr, context);
+            auto& bound = AssertionExpr::bind(propExpr, ctx);
             result = &bound;
             return !bound.bad();
         }
         case SymbolKind::EventType: {
-            auto& bound = TimingControl::bind(propExpr, context);
+            auto& bound = TimingControl::bind(propExpr, ctx);
             result = &bound;
             return !bound.bad();
         }
@@ -408,17 +430,16 @@ static bool checkAssertionArg(const PropertyExprSyntax& propExpr, const Assertio
     // For all other types, we need a normal expression that
     // is cast compatible with the target type.
     if (!regExpr) {
-        context.addDiag(diag::AssertionArgNeedsRegExpr, propExpr.sourceRange()) << type;
+        ctx.addDiag(diag::AssertionArgNeedsRegExpr, propExpr.sourceRange()) << type;
         return false;
     }
 
-    auto& bound = Expression::bind(*regExpr, context);
+    auto& bound = Expression::bind(*regExpr, ctx);
     if (bound.bad())
         return false;
 
     if (!type.isCastCompatible(*bound.type)) {
-        context.addDiag(diag::AssertionArgTypeMismatch, propExpr.sourceRange())
-            << *bound.type << type;
+        ctx.addDiag(diag::AssertionArgTypeMismatch, propExpr.sourceRange()) << *bound.type << type;
         return false;
     }
 
@@ -427,7 +448,7 @@ static bool checkAssertionArg(const PropertyExprSyntax& propExpr, const Assertio
         formal.localVarDirection == ArgumentDirection::Out) {
         auto sym = bound.getSymbolReference();
         if (!sym || sym->kind != SymbolKind::LocalAssertionVar)
-            context.addDiag(diag::AssertionOutputLocalVar, bound.sourceRange);
+            ctx.addDiag(diag::AssertionOutputLocalVar, bound.sourceRange);
         return false;
     }
 
@@ -508,6 +529,37 @@ Expression& AssertionInstanceExpression::fromLookup(const Symbol& symbol,
     instance.symbol = &symbol;
     instance.prevContext = &context;
     instance.instanceLoc = range.start();
+
+    // Check for recursive instantiation. This is illegal for sequences, and allowed in
+    // some forms for properties.
+    auto currInst = context.assertionInstance;
+    while (currInst) {
+        if (currInst->symbol == &symbol) {
+            if (symbol.kind == SymbolKind::Sequence) {
+                context.addDiag(diag::RecursiveSequence, range) << symbol.name;
+                return badExpr(comp, nullptr);
+            }
+
+            // Properties are allowed to be recursive, but we should avoid trying
+            // to expand them because that will continue forever. Instead, we want
+            // to expand one time for each unique invocation of the property and when
+            // we encounter it again we should mark a placeholder and return to stop
+            // the recursion.
+            if (currInst->isRecursive) {
+                auto& body = *comp.emplace<InvalidAssertionExpr>(nullptr);
+                return *comp.emplace<AssertionInstanceExpression>(
+                    *type, symbol, body, /* isRecursiveProperty */ true, range);
+            }
+            instance.isRecursive = true;
+        }
+
+        if (currInst->argDetails)
+            currInst = currInst->argDetails;
+        else {
+            ASSERT(currInst->prevContext);
+            currInst = currInst->prevContext->assertionInstance;
+        }
+    }
 
     // Now map all arguments to their formal ports.
     bool bad = false;
@@ -595,7 +647,7 @@ Expression& AssertionInstanceExpression::fromLookup(const Symbol& symbol,
         // so the only place to detect mismatches is here, but we can't save the bound
         // form because assertion item arguments are replaced as-is for each usage.
         ActualArg arg;
-        if (!checkAssertionArg(*expr, *formal, *argCtx, arg))
+        if (!checkAssertionArg(*expr, *formal, *argCtx, arg, instance.isRecursive))
             bad = true;
         else
             actualArgs.append({ formal, arg });
@@ -626,40 +678,6 @@ Expression& AssertionInstanceExpression::fromLookup(const Symbol& symbol,
         }
     }
 
-    if (bad)
-        return badExpr(comp, nullptr);
-
-    // Check for recursive instantiation. This is illegal for sequences, and allowed in
-    // some forms for properties.
-    auto currInst = context.assertionInstance;
-    while (currInst) {
-        if (currInst->symbol == &symbol) {
-            if (symbol.kind == SymbolKind::Sequence) {
-                context.addDiag(diag::RecursiveSequence, range) << symbol.name;
-                return badExpr(comp, nullptr);
-            }
-
-            // Properties are allowed to be recursive, but we should avoid trying
-            // to expand them because that will continue forever. Instead, we want
-            // to expand one time for each unique invocation of the property and when
-            // we encounter it again we should mark a placeholder and return to stop
-            // the recursion.
-            if (currInst->isRecursive) {
-                auto& body = *comp.emplace<InvalidAssertionExpr>(nullptr);
-                return *comp.emplace<AssertionInstanceExpression>(
-                    *type, symbol, body, /* isRecursiveProperty */ true, range);
-            }
-            instance.isRecursive = true;
-        }
-
-        if (currInst->argDetails)
-            currInst = currInst->argDetails;
-        else {
-            ASSERT(currInst->prevContext);
-            currInst = currInst->prevContext->assertionInstance;
-        }
-    }
-
     // Now instantiate by binding the assertion expression of the sequence / property body.
     auto bodySyntax = symbol.getSyntax();
     ASSERT(bodySyntax);
@@ -675,6 +693,17 @@ Expression& AssertionInstanceExpression::fromLookup(const Symbol& symbol,
                                                             /* isRecursiveProperty */ false, range);
     result->arguments = actualArgs.copy(comp);
     result->localVarInitializers = localVarInitializers.copy(comp);
+
+    if (instance.isRecursive) {
+        if (!context.flags.has(BindFlags::PropertyTimeAdvance))
+            context.addDiag(diag::RecursivePropTimeAdvance, range);
+        else if (context.flags.has(BindFlags::PropertyNegation))
+            context.addDiag(diag::RecursivePropNegation, range);
+    }
+
+    if (bad || body.bad())
+        return badExpr(comp, result);
+
     return *result;
 }
 
@@ -727,7 +756,7 @@ Expression& AssertionInstanceExpression::makeDefault(const Symbol& symbol) {
             instance.argumentMap.emplace(formal, std::make_tuple(expr, ctx));
 
             ActualArg arg;
-            checkAssertionArg(*expr, *formal, ctx, arg);
+            checkAssertionArg(*expr, *formal, ctx, arg, false);
         }
 
         if (!outputLocalVarArgLoc && (formal->localVarDirection == ArgumentDirection::InOut ||
@@ -767,7 +796,8 @@ Expression& AssertionInstanceExpression::bindPort(const Symbol& symbol, SourceRa
     // The only way to reference an assertion port should be from within
     // an assertion instance, so we should always find it here.
     auto it = inst->argumentMap.find(&symbol);
-    ASSERT(it != inst->argumentMap.end());
+    if (it == inst->argumentMap.end())
+        return badExpr(comp, nullptr);
 
     auto& formal = symbol.as<AssertionPortSymbol>();
     auto& type = formal.declaredType.getType();
@@ -794,7 +824,13 @@ Expression& AssertionInstanceExpression::bindPort(const Symbol& symbol, SourceRa
 
         if (instanceCtx.flags.has(BindFlags::VariableLValue) && !formal.localVarDirection) {
             instanceCtx.addDiag(diag::AssertionPortTypedLValue, range) << formal.name;
+            return badExpr(comp, nullptr);
         }
+    }
+
+    if (instanceCtx.flags.has(BindFlags::RecursivePropertyArg)) {
+        instanceCtx.addDiag(diag::RecursivePropArgExpr, range) << formal.name;
+        return badExpr(comp, nullptr);
     }
 
     auto [propExpr, argCtx] = it->second;

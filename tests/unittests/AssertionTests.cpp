@@ -1039,3 +1039,63 @@ endmodule
     CHECK(diags[0].code == diag::SeqPropAdmitEmpty);
     CHECK(diags[1].code == diag::SeqPropAdmitEmpty);
 }
+
+TEST_CASE("Illegal property recursion cases") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    property prop_always(p);
+        p and (1'b1 |=> prop_always(p));
+    endproperty
+
+    property illegal_recursion_1(p);
+        not prop_always(not p);
+    endproperty
+
+    property illegal_recursion_2(p);
+        p and (1'b1 |=> not illegal_recursion_2(p));
+    endproperty
+
+    logic b;
+    property illegal_recursion_3(p);
+        disable iff (b)
+        p and (1'b1 |=> illegal_recursion_3(p));
+    endproperty
+
+    property illegal_recursion_4(p);
+        p and (1'b1 |-> illegal_recursion_4(p));
+    endproperty
+
+    property fibonacci1 (local input int a, b, n, int fib_sig);
+        (n > 0)
+        |->
+        (
+            (fib_sig == a)
+            and 
+            (1'b1 |=> fibonacci1(b, a + b, n - 1, fib_sig))
+        );
+    endproperty
+
+    property fibonacci2 (int a, b, n, fib_sig);
+        (n > 0)
+        |->
+        (
+            (fib_sig == a)
+            and 
+            (1'b1 |=> fibonacci2(b, a + b, n - 1, fib_sig))
+        );
+    endproperty
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 6);
+    CHECK(diags[0].code == diag::RecursivePropNegation);
+    CHECK(diags[1].code == diag::RecursivePropDisableIff);
+    CHECK(diags[2].code == diag::RecursivePropTimeAdvance);
+    CHECK(diags[3].code == diag::RecursivePropArgExpr);
+    CHECK(diags[4].code == diag::RecursivePropArgExpr);
+    CHECK(diags[5].code == diag::RecursivePropArgExpr);
+}

@@ -125,9 +125,20 @@ enum class BindFlags {
     AssertionDelayOrRepetition = 1 << 23,
 
     /// Binding is in a context that requires a variable lvalue.
-    VariableLValue = 1 << 24
+    VariableLValue = 1 << 24,
+
+    /// Binding is for the negation of a property, which disallows recursive
+    /// instantiations.
+    PropertyNegation = 1 << 25,
+
+    /// Binding is for a property that has come after a positive advancement
+    /// of time within the parent property definition.
+    PropertyTimeAdvance = 1 << 26,
+
+    /// Binding is for an argument passed to a recursive property instance.
+    RecursivePropertyArg = 1 << 27
 };
-BITMASK(BindFlags, VariableLValue);
+BITMASK(BindFlags, RecursivePropertyArg);
 
 enum class DimensionKind { Unknown, Range, AbbreviatedRange, Dynamic, Associative, Queue };
 
