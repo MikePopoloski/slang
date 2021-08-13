@@ -877,6 +877,10 @@ module m;
     endsequence
 
     assert property (legal_loc_var_formal(1, 1, 1, 1, 1, 1));
+
+    property p(local inout logic a, local output logic b);
+        1;
+    endproperty
 endmodule
 )");
 
@@ -884,7 +888,7 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 8);
+    REQUIRE(diags.size() == 10);
     CHECK(diags[0].code == diag::AssertionPortTypedLValue);
     CHECK(diags[1].code == diag::AssertionPortDirNoLocal);
     CHECK(diags[2].code == diag::AssertionPortOutputDefault);
@@ -893,6 +897,8 @@ endmodule
     CHECK(diags[5].code == diag::UsedBeforeDeclared);
     CHECK(diags[6].code == diag::LocalVarOutputEmptyMatch);
     CHECK(diags[7].code == diag::AssertionOutputLocalVar);
+    CHECK(diags[8].code == diag::AssertionPortPropOutput);
+    CHECK(diags[9].code == diag::AssertionPortPropOutput);
 }
 
 TEST_CASE("Match items + empty match") {

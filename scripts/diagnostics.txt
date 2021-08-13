@@ -351,6 +351,7 @@ error GlobalClockingGenerate "global clocking cannot be declared in a generate b
 error PropertyPortInSeq "port of type 'property' is not allowed in a sequence"
 error LocalVarTypeRequired "local variable argument must specify an explicit type"
 error AssertionPortOutputDefault "assertion port with 'output' or 'inout' direction cannot specify a default value"
+error AssertionPortPropOutput "local variable formal arguments in properties cannot have direction 'output' or 'inout'"
 error FatalTask "$fatal encountered{}"
 error ErrorTask "$error encountered{}"
 warning warning-task WarningTask "$warning encountered{}"

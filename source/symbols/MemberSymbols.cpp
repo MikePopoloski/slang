@@ -836,6 +836,11 @@ void AssertionPortSymbol::buildPorts(Scope& scope, const AssertionItemPortListSy
 
             // If we have a local keyword we can never inherit the previous type.
             lastType = nullptr;
+
+            if (scope.asSymbol().kind == SymbolKind::Property &&
+                port->localVarDirection != ArgumentDirection::In) {
+                scope.addDiag(diag::AssertionPortPropOutput, item->direction.range());
+            }
         }
 
         if (isEmpty(*item->type)) {
@@ -878,8 +883,9 @@ void AssertionPortSymbol::buildPorts(Scope& scope, const AssertionItemPortListSy
             }
         }
 
-        if (port->localVarDirection)
+        if (port->localVarDirection) {
             port->declaredType.addFlags(DeclaredTypeFlags::RequireSequenceType);
+        }
 
         scope.addMember(*port);
         results.append(port);
