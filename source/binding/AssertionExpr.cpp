@@ -51,7 +51,7 @@ static const Expression& bindExpr(const ExpressionSyntax& syntax, const BindCont
     if (allowInstances && (expr.type->isSequenceType() || expr.type->isPropertyType()))
         return expr;
 
-    if (!expr.type->isValidForSequence()) {
+    if (!expr.type->isValidForSequence() && expr.kind != ExpressionKind::Dist) {
         auto& comp = context.getCompilation();
         context.addDiag(diag::AssertionExprType, expr.sourceRange) << *expr.type;
         return *comp.emplace<InvalidExpression>(&expr, comp.getErrorType());

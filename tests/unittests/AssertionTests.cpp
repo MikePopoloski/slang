@@ -1121,3 +1121,16 @@ endmodule
     CHECK(diags[0].code == diag::ConcurrentAssertActionBlock);
     CHECK(diags[1].code == diag::ConcurrentAssertActionBlock);
 }
+
+TEST_CASE("Sequence with dist expression") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    wire clk, req;
+    assume property (@(posedge clk) req dist {0:=40, 1:=60});
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
