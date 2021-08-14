@@ -136,9 +136,12 @@ enum class BindFlags {
     PropertyTimeAdvance = 1 << 26,
 
     /// Binding is for an argument passed to a recursive property instance.
-    RecursivePropertyArg = 1 << 27
+    RecursivePropertyArg = 1 << 27,
+
+    /// Binding is inside a concurrent assertion's action block.
+    ConcurrentAssertActionBlock = 1 << 28
 };
-BITMASK(BindFlags, RecursivePropertyArg);
+BITMASK(BindFlags, ConcurrentAssertActionBlock);
 
 enum class DimensionKind { Unknown, Range, AbbreviatedRange, Dynamic, Associative, Queue };
 

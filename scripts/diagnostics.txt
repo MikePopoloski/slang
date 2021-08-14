@@ -570,6 +570,7 @@ error PropAbortLocalVar "local variables cannot be used in property abort condit
 error PropAbortMatched "'matched' method cannot be used in property abort conditions"
 error SeqPropAdmitEmpty "sequence properties cannot admit an empty match"
 error RecursivePropDisableIff "recursive properties cannot have disable iff conditions"
+error ConcurrentAssertActionBlock "cannot have '{}' statement in the action block of another concurrent assertion"
 warning event-const EventExpressionConstant "edge expression is constant"
 warning empty-stmt EmptyStatement "extra ';' has no effect"
 warning pointless-void-cast PointlessVoidCast "cast to void for void-returning function '{}' has no effect"

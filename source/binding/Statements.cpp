@@ -2018,18 +2018,25 @@ Statement& ConcurrentAssertionStatement::fromSyntax(
     Compilation& compilation, const ConcurrentAssertionStatementSyntax& syntax,
     const BindContext& context, StatementContext& stmtCtx) {
 
+    if (context.flags.has(BindFlags::ConcurrentAssertActionBlock)) {
+        context.addDiag(diag::ConcurrentAssertActionBlock, syntax.sourceRange())
+            << syntax.keyword.valueText();
+        return badStmt(compilation, nullptr);
+    }
+
     AssertionKind assertKind = SemanticFacts::getAssertKind(syntax.kind);
     auto& prop = AssertionExpr::bind(*syntax.propertySpec, context);
     bool bad = prop.bad();
 
+    BindContext ctx = context.resetFlags(BindFlags::ConcurrentAssertActionBlock);
     const Statement* ifTrue = nullptr;
     const Statement* ifFalse = nullptr;
     if (syntax.action->statement)
-        ifTrue = &Statement::bind(*syntax.action->statement, context, stmtCtx);
+        ifTrue = &Statement::bind(*syntax.action->statement, ctx, stmtCtx);
 
     if (syntax.action->elseClause) {
-        ifFalse = &Statement::bind(syntax.action->elseClause->clause->as<StatementSyntax>(),
-                                   context, stmtCtx);
+        ifFalse = &Statement::bind(syntax.action->elseClause->clause->as<StatementSyntax>(), ctx,
+                                   stmtCtx);
     }
 
     bool isCover =

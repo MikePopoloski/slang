@@ -1105,3 +1105,19 @@ endmodule
     CHECK(diags[4].code == diag::RecursivePropArgExpr);
     CHECK(diags[5].code == diag::RecursivePropArgExpr);
 }
+
+TEST_CASE("Illegal oncurrent assertions in action blocks") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    assert property (1) begin assume property (1); end else cover property (1);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::ConcurrentAssertActionBlock);
+    CHECK(diags[1].code == diag::ConcurrentAssertActionBlock);
+}
