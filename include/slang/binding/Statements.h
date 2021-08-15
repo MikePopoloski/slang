@@ -76,10 +76,11 @@ ENUM(CaseStatementCheck, CASE_CHECK)
 enum class StatementFlags {
     None = 0,
     InLoop = 1 << 0,
-    FuncOrFinal = 1 << 1,
-    InForkJoin = 1 << 2,
-    InForkJoinNone = 1 << 3,
-    AutoLifetime = 1 << 4
+    Func = 1 << 1,
+    Final = 1 << 2,
+    InForkJoin = 1 << 3,
+    InForkJoinNone = 1 << 4,
+    AutoLifetime = 1 << 5
 };
 BITMASK(StatementFlags, AutoLifetime);
 

@@ -104,7 +104,7 @@ SubroutineSymbol* SubroutineSymbol::fromSyntax(Compilation& compilation,
     // Set statement body and collect all declared local variables.
     bitmask<StatementFlags> stmtFlags;
     if (subroutineKind == SubroutineKind::Function)
-        stmtFlags |= StatementFlags::FuncOrFinal;
+        stmtFlags |= StatementFlags::Func;
     if (*lifetime == VariableLifetime::Automatic)
         stmtFlags |= StatementFlags::AutoLifetime;
 

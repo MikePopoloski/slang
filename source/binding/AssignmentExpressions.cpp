@@ -337,8 +337,14 @@ Expression& Expression::convertAssignment(const BindContext& context, const Type
 Expression& AssignmentExpression::fromSyntax(Compilation& compilation,
                                              const BinaryExpressionSyntax& syntax,
                                              const BindContext& context) {
-    if (!context.flags.has(BindFlags::AssignmentAllowed)) {
-        if (!context.flags.has(BindFlags::NonProcedural) &&
+
+    bool isNonBlocking = syntax.kind == SyntaxKind::NonblockingAssignmentExpression;
+    bool nonBlockInFinal = context.flags.has(BindFlags::Final) && isNonBlocking;
+
+    if (!context.flags.has(BindFlags::AssignmentAllowed) || nonBlockInFinal) {
+        if (nonBlockInFinal) {
+            context.addDiag(diag::NonblockingInFinal, syntax.sourceRange());
+        } else if (!context.flags.has(BindFlags::NonProcedural) &&
             !context.flags.has(BindFlags::AssignmentDisallowed)) {
             context.addDiag(diag::AssignmentRequiresParens, syntax.sourceRange());
         }
@@ -359,7 +365,6 @@ Expression& AssignmentExpression::fromSyntax(Compilation& compilation,
     }
 
     const ExpressionSyntax* rightExpr = syntax.right;
-    bool isNonBlocking = syntax.kind == SyntaxKind::NonblockingAssignmentExpression;
 
     // If we're in a top-level statement, check for an intra-assignment timing control.
     // Otherwise, we'll let this fall through to the default handler which will issue an error.

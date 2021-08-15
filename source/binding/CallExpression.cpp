@@ -301,7 +301,7 @@ Expression& CallExpression::fromArgs(Compilation& compilation, const Subroutine&
     if (bad)
         return badExpr(compilation, result);
 
-    if (context.flags.has(BindFlags::FunctionOrFinal) &&
+    if ((context.flags.has(BindFlags::Function) || context.flags.has(BindFlags::Final)) &&
         symbol.subroutineKind == SubroutineKind::Task) {
         const Scope* scope = context.scope;
         while (scope && scope->asSymbol().kind == SymbolKind::StatementBlock)
