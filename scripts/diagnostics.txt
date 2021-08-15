@@ -432,7 +432,6 @@ error MissingReturnValue "must provide a return value for non-void function"
 error AssignmentNotAllowed "assignment expressions are not allowed in this context"
 error IncDecNotAllowed "increment and decrement expressions are not allowed in this context"
 error AssignmentRequiresParens "assignment expressions must be parenthesized"
-error NonblockingInFinal "nonblocking assignments are not allowed in final blocks"
 error PortConnArrayMismatch "cannot connect {} to each port of type {} in '{}'"
 error AutoFromStaticInit "cannot refer to automatic variable '{}' from static initializer"
 error NonblockingAssignmentToAuto "nonblocking assignment to automatic variable '{}' is not allowed"
@@ -499,6 +498,7 @@ warning unsized-concat UnsizedInConcat "unsized integer in concat; using a width
 warning width-expand WidthExpand "implicit conversion expands from {} to {} bits"
 warning width-trunc WidthTruncate "implicit conversion truncates from {} to {} bits"
 warning implicit-conv ImplicitConvert "implicit conversion from {} to {}"
+warning nonblocking-final NonblockingInFinal "nonblocking assignments in final blocks have no effect"
 
 subsystem Statements
 error ReturnNotInSubroutine "return statement is only valid inside task and function blocks"
@@ -782,7 +782,7 @@ group default = { real-underflow real-overflow literal-overflow unconnected-port
                   unconnected-unnamed-port event-const redef-macro not-supported unknown-pragma
                   extra-pragma-args expected-diag-arg unknown-diag-arg pragma-diag-level explicit-static
                   static-skipped elem-not-found dynarray-index dynarray-range queue-range empty-queue
-                  unknown-escape-code no-top warning-task unsized-concat finish-num implicit-conv
+                  unknown-escape-code no-top warning-task unsized-concat finish-num implicit-conv nonblocking-final
                   constraint-missing missing-format dpi-spec enum-range udp-port-empty }
 
 group extra = { empty-member empty-stmt dup-import pointless-void-cast case-gen-none case-gen-dup
