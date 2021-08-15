@@ -52,7 +52,7 @@ StatementBlockSymbol& StatementBlockSymbol::fromSyntax(const Scope& scope,
     }
 
     StatementBlockKind blockKind = SemanticFacts::getStatementBlockKind(syntax);
-    if ((flags.has(StatementFlags::Func) || flags.has(StatementFlags::Final)) && !flags.has(StatementFlags::InForkJoinNone)) {
+    if ((flags.has(StatementFlags::Func | StatementFlags::Final)) && !flags.has(StatementFlags::InForkJoinNone)) {
         // fork-join and fork-join_any blocks are not allowed in functions, so check that here.
         if (blockKind == StatementBlockKind::JoinAll || blockKind == StatementBlockKind::JoinAny)
             scope.addDiag(diag::TimingInFuncNotAllowed, syntax.end.range());

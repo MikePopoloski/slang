@@ -17,7 +17,7 @@ namespace slang {
 
 TimingControl& TimingControl::bind(const TimingControlSyntax& syntax, const BindContext& context) {
     auto& comp = context.getCompilation();
-    if (context.flags.has(BindFlags::Function) || context.flags.has(BindFlags::Final)) {
+    if (context.flags.has(BindFlags::Function | BindFlags::Final)) {
         context.addDiag(diag::TimingInFuncNotAllowed, syntax.sourceRange());
         return badCtrl(comp, nullptr);
     }
@@ -66,7 +66,7 @@ TimingControl& TimingControl::bind(const TimingControlSyntax& syntax, const Bind
 // that we need to try to fit into an event expression (or report an error if we cannot).
 TimingControl& TimingControl::bind(const PropertyExprSyntax& syntax, const BindContext& context) {
     auto& comp = context.getCompilation();
-    if (context.flags.has(BindFlags::Function) || context.flags.has(BindFlags::Final)) {
+    if (context.flags.has(BindFlags::Function | BindFlags::Final)) {
         context.addDiag(diag::TimingInFuncNotAllowed, syntax.sourceRange());
         return badCtrl(comp, nullptr);
     }

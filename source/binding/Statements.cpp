@@ -633,7 +633,7 @@ Statement& BlockStatement::fromSyntax(Compilation& compilation, const BlockState
 
     BindContext context = sourceCtx;
     auto blockKind = SemanticFacts::getStatementBlockKind(syntax);
-    if (context.flags.has(BindFlags::Function) || context.flags.has(BindFlags::Final)) {
+    if (context.flags.has(BindFlags::Function | BindFlags::Final)) {
         if (blockKind == StatementBlockKind::JoinAll || blockKind == StatementBlockKind::JoinAny) {
             context.addDiag(diag::TimingInFuncNotAllowed, syntax.end.range());
             return badStmt(compilation, nullptr);
@@ -2106,7 +2106,7 @@ Statement& WaitStatement::fromSyntax(Compilation& compilation, const WaitStateme
     if (!context.requireBooleanConvertible(cond))
         return badStmt(compilation, result);
 
-    if (context.flags.has(BindFlags::Function) || context.flags.has(BindFlags::Final)) {
+    if (context.flags.has(BindFlags::Function | BindFlags::Final)) {
         context.addDiag(diag::TimingInFuncNotAllowed, syntax.sourceRange());
         return badStmt(compilation, result);
     }

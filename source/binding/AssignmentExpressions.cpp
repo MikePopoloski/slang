@@ -339,12 +339,14 @@ Expression& AssignmentExpression::fromSyntax(Compilation& compilation,
                                              const BindContext& context) {
 
     bool isNonBlocking = syntax.kind == SyntaxKind::NonblockingAssignmentExpression;
-    bool nonBlockInFinal = context.flags.has(BindFlags::Final) && isNonBlocking;
 
-    if (!context.flags.has(BindFlags::AssignmentAllowed) || nonBlockInFinal) {
-        if (nonBlockInFinal) {
-            context.addDiag(diag::NonblockingInFinal, syntax.sourceRange());
-        } else if (!context.flags.has(BindFlags::NonProcedural) &&
+    if (isNonBlocking && context.flags.has(BindFlags::Final)) {
+        context.addDiag(diag::NonblockingInFinal, syntax.sourceRange());
+        return badExpr(compilation, nullptr);
+    }
+
+    if (!context.flags.has(BindFlags::AssignmentAllowed)) {
+        if (!context.flags.has(BindFlags::NonProcedural) &&
             !context.flags.has(BindFlags::AssignmentDisallowed)) {
             context.addDiag(diag::AssignmentRequiresParens, syntax.sourceRange());
         }
