@@ -896,6 +896,10 @@ module m;
 
         func.k = 4; // ok, param is static
     end
+
+    final begin
+        i <= 5;
+    end
 endmodule
 )");
 
@@ -903,7 +907,7 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 7);
+    REQUIRE(diags.size() == 8);
     CHECK(diags[0].code == diag::ConstEvalNonConstVariable);
     CHECK(diags[1].code == diag::AssignmentNotAllowed);
     CHECK(diags[2].code == diag::AssignmentRequiresParens);
@@ -911,6 +915,7 @@ endmodule
     CHECK(diags[4].code == diag::IncDecNotAllowed);
     CHECK(diags[5].code == diag::IncDecNotAllowed);
     CHECK(diags[6].code == diag::AutoFromStaticInit);
+    CHECK(diags[7].code == diag::NonblockingInFinal);
 }
 
 TEST_CASE("Assignment error checking") {

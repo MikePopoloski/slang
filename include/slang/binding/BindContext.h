@@ -97,49 +97,52 @@ enum class BindFlags {
     /// Specparams are allowed even if this is also a constant expression.
     SpecparamsAllowed = 1 << 15,
 
-    /// Binding is happening within a function body or a final block.
-    FunctionOrFinal = 1 << 16,
+    /// Binding is happening within a function body
+    Function = 1 << 16,
+
+    /// Binding is happening within a final block.
+    Final = 1 << 17,
 
     /// Binding is happening within the intra-assignment timing control of
     /// a non-blocking assignment expression.
-    NonBlockingTimingControl = 1 << 17,
+    NonBlockingTimingControl = 1 << 18,
 
     /// Binding is happening within an event expression.
-    EventExpression = 1 << 18,
+    EventExpression = 1 << 19,
 
     /// Binding is in a context where type reference expressions are allowed.
-    AllowTypeReferences = 1 << 19,
+    AllowTypeReferences = 1 << 20,
 
     /// Binding is happening within an assertion expression (sequence or property).
-    AssertionExpr = 1 << 20,
+    AssertionExpr = 1 << 21,
 
     /// Allow binding a clocking block as part of a top-level event expression.
-    AllowClockingBlock = 1 << 21,
+    AllowClockingBlock = 1 << 22,
 
     /// Binding is for checking an assertion argument, prior to it being expanded as
     /// part of an actual instance.
-    AssertionInstanceArgCheck = 1 << 22,
+    AssertionInstanceArgCheck = 1 << 23,
 
     /// Binding is for a cycle delay or sequence repetition, where references to
     /// assertion formal ports have specific type requirements.
-    AssertionDelayOrRepetition = 1 << 23,
+    AssertionDelayOrRepetition = 1 << 24,
 
     /// Binding is in a context that requires a variable lvalue.
-    VariableLValue = 1 << 24,
+    VariableLValue = 1 << 25,
 
     /// Binding is for the negation of a property, which disallows recursive
     /// instantiations.
-    PropertyNegation = 1 << 25,
+    PropertyNegation = 1 << 26,
 
     /// Binding is for a property that has come after a positive advancement
     /// of time within the parent property definition.
-    PropertyTimeAdvance = 1 << 26,
+    PropertyTimeAdvance = 1 << 27,
 
     /// Binding is for an argument passed to a recursive property instance.
-    RecursivePropertyArg = 1 << 27,
+    RecursivePropertyArg = 1 << 28,
 
     /// Binding is inside a concurrent assertion's action block.
-    ConcurrentAssertActionBlock = 1 << 28
+    ConcurrentAssertActionBlock = 1 << 29
 };
 BITMASK(BindFlags, ConcurrentAssertActionBlock);
 
