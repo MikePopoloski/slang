@@ -892,3 +892,38 @@ endmodule
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::NonProceduralFuncArg);
 }
+
+TEST_CASE("Coverage system functions") {
+    auto tree = SyntaxTree::fromText(R"(
+`undef SV_COV_START
+
+module top;
+    string bad;
+
+    initial begin
+        int unsigned result, max;
+        real r;
+        result = $coverage_control(`SV_COV_RESET, `SV_COV_TOGGLE, `SV_COV_MODULE, "a", "b");
+        result = $coverage_control(`SV_COV_RESET, `SV_COV_TOGGLE, `SV_COV_MODULE, "a");
+        bad = $coverage_get_max(23, 10, "top");
+        result = $coverage_get_max(23, 10, "top");
+        result = $coverage_get(23, 10, "top");
+        result = $coverage_merge(23, "merged_cov");
+        result = $coverage_save(23, "merged_cov");
+        r = $get_coverage();
+        $set_coverage_db_name("coverage.db");
+        $load_coverage_db("coverage.db");
+    end
+
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 3);
+    CHECK(diags[0].code == diag::UndefineBuiltinDirective);
+    CHECK(diags[1].code == diag::TooManyArguments);
+    CHECK(diags[2].code == diag::NoImplicitConversion);
+}
