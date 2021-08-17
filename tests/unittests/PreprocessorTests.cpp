@@ -1098,6 +1098,34 @@ TEST_CASE("Invalid `line directive") {
     CHECK(diagnostics[0].code == diag::InvalidLineDirectiveLevel);
 }
 
+TEST_CASE("Coverage macros") {
+    PreprocessorOptions ppOptions;
+    Bag options;
+    options.set(ppOptions);
+    Preprocessor pp(getSourceManager(), alloc, diagnostics, options);
+
+    CHECK(pp.isDefined("SV_COV_START"));
+    CHECK(pp.isDefined("SV_COV_STOP"));
+    CHECK(pp.isDefined("SV_COV_RESET"));
+    CHECK(pp.isDefined("SV_COV_CHECK"));
+    CHECK(pp.isDefined("SV_COV_MODULE"));
+    CHECK(pp.isDefined("SV_COV_HIER"));
+    CHECK(pp.isDefined("SV_COV_ASSERTION"));
+    CHECK(pp.isDefined("SV_COV_FSM_STATE"));
+    CHECK(pp.isDefined("SV_COV_STATEMENT"));
+    CHECK(pp.isDefined("SV_COV_TOGGLE"));
+    CHECK(pp.isDefined("SV_COV_OVERFLOW"));
+    CHECK(pp.isDefined("SV_COV_ERROR"));
+    CHECK(pp.isDefined("SV_COV_NOCOV"));
+    CHECK(pp.isDefined("SV_COV_OK"));
+    CHECK(pp.isDefined("SV_COV_PARTIAL"));
+
+    auto& text = "`SV_COV_OK\n";
+    Token token = lexToken(text);
+    REQUIRE(token.kind == TokenKind::IntegerLiteral);
+    CHECK_DIAGNOSTICS_EMPTY;
+}
+
 TEST_CASE("undef Directive") {
     auto& text = "`define FOO 45\n"
                  "`undef FOO\n"
@@ -1337,7 +1365,7 @@ TEST_CASE("Preprocessor API") {
     CHECK(!pp.isDefined("BUZ"));
 
     pp.setKeywordVersion(KeywordVersion::v1364_2001);
-    CHECK(pp.getDefinedMacros().size() == 5);
+    CHECK(pp.getDefinedMacros().size() == 20);
 }
 
 TEST_CASE("Undef builtin") {

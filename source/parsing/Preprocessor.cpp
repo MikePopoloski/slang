@@ -87,6 +87,22 @@ void Preprocessor::undefineAll() {
               options.predefineSource);
     predefine("__slang_rev__ "s + std::string(VersionInfo::getRevision()), options.predefineSource);
 
+    predefine("SV_COV_START 0"s,      options.predefineSource);
+    predefine("SV_COV_STOP 1"s,       options.predefineSource);
+    predefine("SV_COV_RESET 2"s,      options.predefineSource);
+    predefine("SV_COV_CHECK 3"s,      options.predefineSource);
+    predefine("SV_COV_MODULE 10"s,    options.predefineSource);
+    predefine("SV_COV_HIER 11"s,      options.predefineSource);
+    predefine("SV_COV_ASSERTION 20"s, options.predefineSource);
+    predefine("SV_COV_FSM_STATE 21"s, options.predefineSource);
+    predefine("SV_COV_STATEMENT 22"s, options.predefineSource);
+    predefine("SV_COV_TOGGLE 23"s,    options.predefineSource);
+    predefine("SV_COV_OVERFLOW -2"s,  options.predefineSource);
+    predefine("SV_COV_ERROR -1"s,     options.predefineSource);
+    predefine("SV_COV_NOCOV 0"s,      options.predefineSource);
+    predefine("SV_COV_OK 1"s,         options.predefineSource);
+    predefine("SV_COV_PARTIAL 2"s,    options.predefineSource);
+
     // All macros we've defined thus far should be marked as built-ins so they can't be undefined.
     for (auto& [name, macro] : macros)
         macro.builtIn = true;
