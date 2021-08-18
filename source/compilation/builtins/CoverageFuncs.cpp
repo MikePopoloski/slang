@@ -8,6 +8,7 @@
 #include "slang/binding/SystemSubroutine.h"
 #include "slang/compilation/Compilation.h"
 #include "slang/diagnostics/SysFuncsDiags.h"
+#include "slang/symbols/InstanceSymbols.h"
 #include "slang/syntax/AllSyntax.h"
 
 namespace slang::Builtins {
@@ -45,6 +46,23 @@ public:
         if (!checkArgCount(context, false, args, range, requiredArgs, argTypes.size()))
             return comp.getErrorType();
 
+        auto& arg = args[nameOrHierIndex];
+        if (arg->kind == ExpressionKind::HierarchicalReference) {
+            auto& sym = *arg->as<HierarchicalReferenceExpression>().symbol;
+            if (sym.isValue()) {
+                auto& type = sym.as<ValueSymbol>().getType();
+                if (!type.canBeStringLike()) {
+                    context.addDiag(diag::BadSystemSubroutineArg, arg->sourceRange)
+                        << type << kindStr();
+                    return comp.getErrorType();
+                }
+            } else if (sym.kind != SymbolKind::Instance || !sym.as<InstanceSymbol>().isModule()) {
+                if (!context.scope->isUninstantiated())
+                    context.addDiag(diag::ExpectedModuleName, arg->sourceRange);
+                return comp.getErrorType();
+            }
+        }
+
         return *returnType;
     }
 
@@ -71,14 +89,14 @@ void registerCoverageFuncs(Compilation& c) {
              std::vector{ &c.getIntType(), &c.getIntType(), &c.getIntType(), &c.getStringType() });
     REGISTER(CoverageNameOrHierFunc, "$coverage_get_max", c.getIntType(), 2, 3,
              std::vector{ &c.getIntType(), &c.getIntType(), &c.getStringType() });
+    REGISTER(CoverageNameOrHierFunc, "$coverage_get", c.getIntType(), 2, 3,
+             std::vector{ &c.getIntType(), &c.getIntType(), &c.getStringType() });
 
-    REGISTER(NonConstantFunction, "$coverage_get", c.getIntType(), 3,
-             std::vector{ &c.getIntType(), &c.getIntType(), &c.getIntType() });
     REGISTER(NonConstantFunction, "$coverage_merge", c.getIntType(), 2,
              std::vector{ &c.getIntType(), &c.getStringType() });
     REGISTER(NonConstantFunction, "$coverage_save", c.getIntType(), 2,
              std::vector{ &c.getIntType(), &c.getStringType() });
-    REGISTER(NonConstantFunction, "$get_coverage", c.getIntType());
+    REGISTER(NonConstantFunction, "$get_coverage", c.getRealType());
     REGISTER(NonConstantFunction, "$set_coverage_db_name", c.getVoidType(), 1,
              std::vector{ &c.getStringType() });
     REGISTER(NonConstantFunction, "$load_coverage_db", c.getVoidType(), 1,
