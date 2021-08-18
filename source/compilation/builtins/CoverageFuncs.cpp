@@ -31,11 +31,9 @@ public:
         if (argIndex >= argTypes.size())
             return SystemSubroutine::bindArgument(argIndex, *ctx, syntax, args);
 
-        if (argIndex == nameOrHierIndex) {
-            if (NameSyntax::isKind(syntax.kind)) {
-                return HierarchicalReferenceExpression::fromSyntax(context.getCompilation(),
-                    syntax.as<NameSyntax>(), context);
-            }
+        if (argIndex == nameOrHierIndex && NameSyntax::isKind(syntax.kind)) {
+            return HierarchicalReferenceExpression::fromSyntax(context.getCompilation(),
+               syntax.as<NameSyntax>(), context);
         }
 
         return Expression::bindArgument(*argTypes[argIndex], ArgumentDirection::In, syntax, *ctx);
