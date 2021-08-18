@@ -897,14 +897,23 @@ TEST_CASE("Coverage system functions") {
     auto tree = SyntaxTree::fromText(R"(
 `undef SV_COV_START
 
+module A(input logic x, input logic y);
+endmodule
+
 module top;
     string bad;
+    logic x, y;
+
+    A a(.*);
 
     initial begin
         int unsigned result, max;
         real r;
-        result = $coverage_control(`SV_COV_RESET, `SV_COV_TOGGLE, `SV_COV_MODULE, "a", "b");
-        result = $coverage_control(`SV_COV_RESET, `SV_COV_TOGGLE, `SV_COV_MODULE, "a");
+        result = $coverage_control(`SV_COV_RESET, `SV_COV_TOGGLE, `SV_COV_MODULE, "A", "B");
+        result = $coverage_control(`SV_COV_RESET, `SV_COV_TOGGLE, `SV_COV_MODULE, "A");
+        result = $coverage_control(`SV_COV_RESET, `SV_COV_TOGGLE, `SV_COV_MODULE, 4);
+        result = $coverage_control(`SV_COV_RESET, `SV_COV_TOGGLE, `SV_COV_MODULE, top.a);
+        result = $coverage_control(`SV_COV_RESET, `SV_COV_TOGGLE, `SV_COV_MODULE, top.b);
         bad = $coverage_get_max(23, 10, "top");
         result = $coverage_get_max(23, 10, "top");
         result = $coverage_get(23, 10, "top");
@@ -922,8 +931,10 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 3);
+    REQUIRE(diags.size() == 5);
     CHECK(diags[0].code == diag::UndefineBuiltinDirective);
     CHECK(diags[1].code == diag::TooManyArguments);
     CHECK(diags[2].code == diag::NoImplicitConversion);
+    CHECK(diags[3].code == diag::CouldNotResolveHierarchicalPath);
+    CHECK(diags[4].code == diag::NoImplicitConversion);
 }
