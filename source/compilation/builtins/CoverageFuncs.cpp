@@ -51,7 +51,7 @@ public:
             auto& sym = *arg->as<HierarchicalReferenceExpression>().symbol;
             if (sym.isValue()) {
                 auto& type = sym.as<ValueSymbol>().getType();
-                if (!type.canBeStringLike()) {
+                if (!type.isString()) {
                     context.addDiag(diag::BadSystemSubroutineArg, arg->sourceRange)
                         << type << kindStr();
                     return comp.getErrorType();
