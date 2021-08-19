@@ -27,7 +27,7 @@ jobs:
       run: |
         Compress-Archive $HOME/slang/ slang-windows.zip
     - name: Upload artifacts
-      if: github.event_name == 'push'
+      #if: github.event_name == 'push'
       uses: actions/upload-artifact@v2
       with:
         name: SLANG_ARTIFACT_WIN
@@ -80,7 +80,7 @@ jobs:
         strip --strip-unneeded $HOME/slang/lib/*
         tar -czvf slang-linux.tar.gz -C $HOME slang/
     - name: Upload artifacts
-      if: matrix.compiler == 'g++-10' && github.event_name == 'push'
+      if: matrix.compiler == 'g++-10' #&& github.event_name == 'push'
       uses: actions/upload-artifact@v2
       with:
         name: SLANG_ARTIFACT_LINUX
