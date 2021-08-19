@@ -25,6 +25,7 @@ namespace slang::Builtins {
 
 void registerArrayMethods(Compilation&);
 void registerConversionFuncs(Compilation&);
+void registerCoverageFuncs(Compilation&);
 void registerEnumMethods(Compilation&);
 void registerMathFuncs(Compilation&);
 void registerMiscSystemFuncs(Compilation&);
@@ -141,6 +142,7 @@ Compilation::Compilation(const Bag& options) :
     // Register all system tasks, functions, and methods.
     Builtins::registerArrayMethods(*this);
     Builtins::registerConversionFuncs(*this);
+    Builtins::registerCoverageFuncs(*this);
     Builtins::registerEnumMethods(*this);
     Builtins::registerMathFuncs(*this);
     Builtins::registerMiscSystemFuncs(*this);

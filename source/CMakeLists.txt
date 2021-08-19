@@ -133,6 +133,7 @@ add_library(slangcompiler
 
     compilation/builtins/ArrayMethods.cpp
     compilation/builtins/ConversionFuncs.cpp
+    compilation/builtins/CoverageFuncs.cpp
     compilation/builtins/EnumMethods.cpp
     compilation/builtins/GateTypes.cpp
     compilation/builtins/MathFuncs.cpp
