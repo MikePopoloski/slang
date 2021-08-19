@@ -900,6 +900,9 @@ TEST_CASE("Coverage system functions") {
 module A(input logic x, input logic y);
 endmodule
 
+interface Z(input logic x);
+endinterface
+
 module top;
     string modName = "A";
     string hierString = "top.a";
@@ -908,6 +911,7 @@ module top;
 
     A a(.*);
     A b(.*);
+    Z z(.*);
 
     initial begin
         int unsigned result, max;
@@ -924,7 +928,8 @@ module top;
         result = $coverage_control(`SV_COV_RESET, `SV_COV_TOGGLE, `SV_COV_MODULE, top.a);
         result = $coverage_control(`SV_COV_RESET, `SV_COV_TOGGLE, `SV_COV_MODULE, top.b);
         result = $coverage_control(`SV_COV_RESET, `SV_COV_TOGGLE, `SV_COV_MODULE, top.c);   // bad hierarchy
-        result = $coverage_control(`SV_COV_RESET, `SV_COV_TOGGLE, `SV_COV_MODULE, d);   // bad hierarchy
+        result = $coverage_control(`SV_COV_RESET, `SV_COV_TOGGLE, `SV_COV_MODULE, d);       // undeclared
+        result = $coverage_control(`SV_COV_RESET, `SV_COV_TOGGLE, `SV_COV_MODULE, z);       // not a module instance
         bad = $coverage_get_max(23, 10, "top"); // bad return type
         result = $coverage_get_max(23, 10, a);
         result = $coverage_get(23, 10, b);
@@ -942,11 +947,12 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 6);
+    REQUIRE(diags.size() == 7);
     CHECK(diags[0].code == diag::UndefineBuiltinDirective);
     CHECK(diags[1].code == diag::TooManyArguments);
     CHECK(diags[2].code == diag::NoImplicitConversion);
     CHECK(diags[3].code == diag::CouldNotResolveHierarchicalPath);
     CHECK(diags[4].code == diag::UndeclaredIdentifier);
-    CHECK(diags[5].code == diag::NoImplicitConversion);
+    CHECK(diags[5].code == diag::ExpectedModuleInstance);
+    CHECK(diags[6].code == diag::NoImplicitConversion);
 }
