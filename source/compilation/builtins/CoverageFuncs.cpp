@@ -27,17 +27,15 @@ public:
 
     virtual const Expression& bindArgument(size_t argIndex, const BindContext& context,
                                            const ExpressionSyntax& syntax, const Args& args) const final {
-        const BindContext* ctx = &context;
-
         if (argIndex >= argTypes.size())
-            return SystemSubroutine::bindArgument(argIndex, *ctx, syntax, args);
+            return SystemSubroutine::bindArgument(argIndex, context, syntax, args);
 
         if (argIndex == nameOrHierIndex && NameSyntax::isKind(syntax.kind)) {
             return HierarchicalReferenceExpression::fromSyntax(context.getCompilation(),
                syntax.as<NameSyntax>(), context);
         }
 
-        return Expression::bindArgument(*argTypes[argIndex], ArgumentDirection::In, syntax, *ctx);
+        return Expression::bindArgument(*argTypes[argIndex], ArgumentDirection::In, syntax, context);
     }
 
     const Type& checkArguments(const BindContext& context, const Args& args,
@@ -46,7 +44,7 @@ public:
         if (!checkArgCount(context, false, args, range, requiredArgs, argTypes.size()))
             return comp.getErrorType();
 
-        auto& arg = args[nameOrHierIndex];
+        auto arg = args[nameOrHierIndex];
         if (arg->kind == ExpressionKind::HierarchicalReference) {
             auto& sym = *arg->as<HierarchicalReferenceExpression>().symbol;
             if (sym.isValue()) {
@@ -58,7 +56,7 @@ public:
                 }
             } else if (sym.kind != SymbolKind::Instance || !sym.as<InstanceSymbol>().isModule()) {
                 if (!context.scope->isUninstantiated())
-                    context.addDiag(diag::ExpectedModuleName, arg->sourceRange);
+                    context.addDiag(diag::ExpectedModuleInstance, arg->sourceRange);
                 return comp.getErrorType();
             }
         }
