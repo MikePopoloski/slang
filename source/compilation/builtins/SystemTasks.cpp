@@ -611,13 +611,13 @@ public:
 class PlaTask : public SystemTaskBase {
 public:
     PlaTask(const std::string& name) :
-        SystemTaskBase(name), requiredArgs(3) {};
+        SystemTaskBase(name) {};
 
     const Type& checkArguments(const BindContext& context, const Args& args, SourceRange range,
-                               const Expression*) const {
+                               const Expression*) const override {
         auto& comp = context.getCompilation();
 
-        if (!checkArgCount(context, false, args, range, requiredArgs, requiredArgs))
+        if (!checkArgCount(context, false, args, range, 3, 3))
             return comp.getErrorType();
 
         for (size_t i = 0; i < args.size(); i++) {
@@ -628,36 +628,39 @@ public:
                     return badArg(context, *args[i]);
                 }
 
-                // TODO: Check that array dimensions are in ascending order
+                auto& elemType = *type.getArrayElementType();
+                if (!elemType.isSimpleBitVector() || elemType.isPredefinedInteger()) {
+                    return badArg(context, *args[i]);
+                }
 
-                auto& arrayType = *type.getArrayElementType();
-                if (arrayType.isSimpleBitVector()) {
-                    auto range = arrayType.getCanonicalType().as<IntegralType>().getBitVectorRange();
-                    if (range.left > range.right) {
-                        context.addDiag(diag::PlaRangeInAscendingOrder, args[i]->sourceRange) << arrayType;
-                        return context.getCompilation().getErrorType();
-                    }
+                if (elemType.hasFixedRange() && !isValidRange(elemType)) {
+                    return badRange(context, *args[i]);
                 }
             }
             else {
                 if (!type.isSimpleBitVector() || type.isPredefinedInteger()) {
                     return badArg(context, *args[i]);
                 }
-
-                auto range = type.getCanonicalType().as<IntegralType>().getBitVectorRange();
-                if (range.left > range.right) {
-                    context.addDiag(diag::PlaRangeInAscendingOrder, args[i]->sourceRange) << type;
-                    return context.getCompilation().getErrorType();
-                }
             }
 
+            if (type.hasFixedRange() && !isValidRange(type)) {
+                return badRange(context, *args[i]);
+            }
         }
 
         return comp.getVoidType();
     }
 
-private:
-    size_t requiredArgs;
+protected:
+    bool isValidRange(const Type& type) const {
+        ConstantRange range = type.getFixedRange();
+        return range.right >= range.left;
+    }
+
+    const Type& badRange(const BindContext& context, const Expression& arg) const {
+        context.addDiag(diag::PlaRangeInAscendingOrder, arg.sourceRange) << *arg.type;
+        return context.getCompilation().getErrorType();
+    }
 };
 
 void registerSystemTasks(Compilation& c) {
@@ -784,13 +787,13 @@ void registerSystemTasks(Compilation& c) {
 #undef TASK
 
 #define PLA_TASK(name) c.addSystemSubroutine(std::make_unique<PlaTask>(name))
-    std::vector<std::string> arrayType = {"$async", "$sync"};
-    std::vector<std::string> gateType  = {"$and", "$or", "$nand", "$nor"};
-    std::vector<std::string> format    = {"$array", "$plane"};
+    std::array<std::string, 2> arrayType = {"$async", "$sync"};
+    std::array<std::string, 4> gateType  = {"$and", "$or", "$nand", "$nor"};
+    std::array<std::string, 2> format    = {"$array", "$plane"};
 
-    for (auto fmt : format) {
-        for (auto gate : gateType) {
-            for (auto type : arrayType) {
+    for (auto& fmt : format) {
+        for (auto& gate : gateType) {
+            for (auto& type : arrayType) {
                 PLA_TASK(type + gate + fmt);
             }
         }
