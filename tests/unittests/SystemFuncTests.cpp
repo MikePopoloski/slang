@@ -956,3 +956,46 @@ endmodule
     CHECK(diags[5].code == diag::ExpectedModuleInstance);
     CHECK(diags[6].code == diag::NoImplicitConversion);
 }
+
+TEST_CASE("PLA system tasks") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    logic [0:7] mem[0:3];
+    logic [0:7] in;
+    logic [0:3] out;
+    logic [7:0] memBadOrder1[0:3];
+    logic [0:7] memBadOrder2[3:0];
+    logic [7:0] inBadOrder;
+    logic [3:0] outBadOrder;
+    string error;
+    int i;
+    real r;
+    logic a;
+
+    // TODO: memory, input, and output terms must be specified in ascending order
+    //       need an error if they are not.
+    initial begin
+        $async$and$array(mem, in, out);
+        $async$and$array(a, in, out);            // Bad arg (mem)
+        $async$and$array(mem, i, out);           // Bad arg (input)
+        $async$and$array(mem, in, r);            // Bad arg (output)
+        $async$and$array(memBadOrder1, in, out); // Bad mem bit ordering
+        // $async$and$array(memBadOrder2, in, out); // Bad mem bit ordering
+        $async$and$array(mem, inBadOrder, out);  // Bad input bit ordering
+        $async$and$array(mem, in, outBadOrder);  // Bad output bit ordering
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 6);
+    CHECK(diags[0].code == diag::BadSystemSubroutineArg);
+    CHECK(diags[1].code == diag::BadSystemSubroutineArg);
+    CHECK(diags[2].code == diag::BadSystemSubroutineArg);
+    CHECK(diags[3].code == diag::PlaRangeInAscendingOrder);
+    CHECK(diags[4].code == diag::PlaRangeInAscendingOrder);
+    CHECK(diags[5].code == diag::PlaRangeInAscendingOrder);
+}

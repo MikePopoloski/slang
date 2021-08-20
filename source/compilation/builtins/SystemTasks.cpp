@@ -608,6 +608,58 @@ public:
     }
 };
 
+class PlaTask : public SystemTaskBase {
+public:
+    PlaTask(const std::string& name) :
+        SystemTaskBase(name), requiredArgs(3) {};
+
+    const Type& checkArguments(const BindContext& context, const Args& args, SourceRange range,
+                               const Expression*) const {
+        auto& comp = context.getCompilation();
+
+        if (!checkArgCount(context, false, args, range, requiredArgs, requiredArgs))
+            return comp.getErrorType();
+
+        for (size_t i = 0; i < args.size(); i++) {
+            auto& type = *args[i]->type;
+
+            if (i == 0) {
+                if (!type.isUnpackedArray()) {
+                    return badArg(context, *args[i]);
+                }
+
+                // TODO: Check that array dimensions are in ascending order
+
+                auto& arrayType = *type.getArrayElementType();
+                if (arrayType.isSimpleBitVector()) {
+                    auto range = arrayType.getCanonicalType().as<IntegralType>().getBitVectorRange();
+                    if (range.left > range.right) {
+                        context.addDiag(diag::PlaRangeInAscendingOrder, args[i]->sourceRange) << arrayType;
+                        return context.getCompilation().getErrorType();
+                    }
+                }
+            }
+            else {
+                if (!type.isSimpleBitVector() || type.isPredefinedInteger()) {
+                    return badArg(context, *args[i]);
+                }
+
+                auto range = type.getCanonicalType().as<IntegralType>().getBitVectorRange();
+                if (range.left > range.right) {
+                    context.addDiag(diag::PlaRangeInAscendingOrder, args[i]->sourceRange) << type;
+                    return context.getCompilation().getErrorType();
+                }
+            }
+
+        }
+
+        return comp.getVoidType();
+    }
+
+private:
+    size_t requiredArgs;
+};
+
 void registerSystemTasks(Compilation& c) {
 #define REGISTER(type, name, base) c.addSystemSubroutine(std::make_unique<type>(name, base))
     REGISTER(DisplayTask, "$display", LiteralBase::Decimal);
@@ -730,6 +782,21 @@ void registerSystemTasks(Compilation& c) {
     TASK("$q_full", SubroutineKind::Function, 1, 1);
 
 #undef TASK
+
+#define PLA_TASK(name) c.addSystemSubroutine(std::make_unique<PlaTask>(name))
+    std::vector<std::string> arrayType = {"$async", "$sync"};
+    std::vector<std::string> gateType  = {"$and", "$or", "$nand", "$nor"};
+    std::vector<std::string> format    = {"$array", "$plane"};
+
+    for (auto fmt : format) {
+        for (auto gate : gateType) {
+            for (auto type : arrayType) {
+                PLA_TASK(type + gate + fmt);
+            }
+        }
+    }
+
+#undef PLA_TASK
 }
 
 } // namespace slang::Builtins

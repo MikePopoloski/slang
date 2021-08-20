@@ -703,6 +703,7 @@ error SampledValueLocalVar "local variables cannot be used in sampled value syst
 error SampledValueMatched "'matched' method cannot be used in sampled value system functions"
 error GlobalSampledValueAssertionExpr "global clocking future sampled value functions may be invoked only in sequence and property expressions"
 error SequenceMethodLocalVar "local variables can only be passed to sequences on which '{}' is called if they are the entire argument and not a sub-expression"
+error PlaRangeInAscendingOrder "Must specify dimensions in ascending order for PLA input type {}"
 warning format-real FormatRealInt "real value provided for integer format specifier '%{}'"
 warning finish-num BadFinishNum "finish argument must have value of 0, 1, or 2"
 warning missing-format MissingFormatSpecifier "missing format specifier"
