@@ -956,3 +956,49 @@ endmodule
     CHECK(diags[5].code == diag::ExpectedModuleInstance);
     CHECK(diags[6].code == diag::NoImplicitConversion);
 }
+
+TEST_CASE("PLA system tasks") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    logic [0:7] mem[0:3];
+    logic [0:7] in;
+    logic [0:3] out;
+    logic [7:0] memBadOrder1[0:3];
+    logic [0:7] memBadOrder2[3:0];
+    string      memString[0:3];
+    logic [7:0] inBadOrder;
+    logic [3:0] outBadOrder;
+    int i;
+    real r;
+    logic a;
+
+    initial begin
+        $async$and$plane(mem, in, out);
+        $sync$and$array(mem, in, out, r);         // Too many arguments
+        $sync$or$array(a, in, out);               // Bad mem type
+        $async$nand$plane(memString, in, out);    // Bad mem type
+        $sync$nor$array(mem, i, out);             // Bad input type
+        $async$and$plane(mem, in, r);             // Bad output type
+        $sync$or$array(memBadOrder1, in, out);    // Bad mem bit ordering
+        $async$nand$plane(memBadOrder2, in, out); // Bad mem bit ordering
+        $sync$nor$array(mem, inBadOrder, out);    // Bad input bit ordering
+        $async$and$plane(mem, in, outBadOrder);   // Bad output bit ordering
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 9);
+    CHECK(diags[0].code == diag::TooManyArguments);
+    CHECK(diags[1].code == diag::BadSystemSubroutineArg);
+    CHECK(diags[2].code == diag::BadSystemSubroutineArg);
+    CHECK(diags[3].code == diag::BadSystemSubroutineArg);
+    CHECK(diags[4].code == diag::BadSystemSubroutineArg);
+    CHECK(diags[5].code == diag::PlaRangeInAscendingOrder);
+    CHECK(diags[6].code == diag::PlaRangeInAscendingOrder);
+    CHECK(diags[7].code == diag::PlaRangeInAscendingOrder);
+    CHECK(diags[8].code == diag::PlaRangeInAscendingOrder);
+}
