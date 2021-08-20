@@ -51,7 +51,7 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
             if (body.bad())
                 return true;
 
-            visit(*this);
+            body.visit(*this);
         }
 
         visitDefault(symbol);
