@@ -230,8 +230,8 @@ struct SequenceMethodExprVisitor {
     const BindContext& context;
     std::string name;
 
-    SequenceMethodExprVisitor(const BindContext& context, const std::string& name) :
-        context(context), name(name) {}
+    SequenceMethodExprVisitor(const BindContext& context, std::string name) :
+        context(context), name(std::move(name)) {}
 
     template<typename T>
     void visit(const T& expr) {

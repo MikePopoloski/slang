@@ -610,8 +610,7 @@ public:
 
 class PlaTask : public SystemTaskBase {
 public:
-    PlaTask(const std::string& name) :
-        SystemTaskBase(name) {};
+    PlaTask(const std::string& name) : SystemTaskBase(name){};
 
     const Type& checkArguments(const BindContext& context, const Args& args, SourceRange range,
                                const Expression*) const final {
@@ -787,14 +786,13 @@ void registerSystemTasks(Compilation& c) {
 #undef TASK
 
 #define PLA_TASK(name) c.addSystemSubroutine(std::make_unique<PlaTask>(name))
-    std::array<std::string, 2> arrayType = {"$async", "$sync"};
-    std::array<std::string, 4> gateType  = {"$and", "$or", "$nand", "$nor"};
-    std::array<std::string, 2> format    = {"$array", "$plane"};
-
-    for (auto& fmt : format) {
-        for (auto& gate : gateType) {
-            for (auto& type : arrayType) {
-                PLA_TASK(type + gate + fmt);
+    for (auto& fmt : { "$array", "$plane" }) {
+        for (auto& gate : { "$and", "$or", "$nand", "$nor" }) {
+            for (auto& type : { "$async", "$sync" }) {
+                std::string name(type);
+                name.append(gate);
+                name.append(fmt);
+                PLA_TASK(name);
             }
         }
     }

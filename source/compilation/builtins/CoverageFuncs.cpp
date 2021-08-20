@@ -15,31 +15,32 @@ namespace slang::Builtins {
 
 class CoverageNameOrHierFunc : public SystemSubroutine {
 public:
-
-    CoverageNameOrHierFunc(const std::string& name, const Type& returnType, unsigned int nameOrHierIndex,
-                           size_t requiredArgs = 0, const std::vector<const Type*>& argTypes = {}) :
+    CoverageNameOrHierFunc(const std::string& name, const Type& returnType,
+                           unsigned int nameOrHierIndex, size_t requiredArgs = 0,
+                           const std::vector<const Type*>& argTypes = {}) :
         SystemSubroutine(name, SubroutineKind::Function),
-        argTypes(argTypes), returnType(&returnType),
-        nameOrHierIndex(nameOrHierIndex), requiredArgs(requiredArgs) {
+        argTypes(argTypes), returnType(&returnType), nameOrHierIndex(nameOrHierIndex),
+        requiredArgs(requiredArgs) {
         ASSERT(requiredArgs <= argTypes.size());
         ASSERT(nameOrHierIndex <= argTypes.size());
     };
 
-    virtual const Expression& bindArgument(size_t argIndex, const BindContext& context,
-                                           const ExpressionSyntax& syntax, const Args& args) const final {
+    const Expression& bindArgument(size_t argIndex, const BindContext& context,
+                                   const ExpressionSyntax& syntax, const Args& args) const final {
         if (argIndex >= argTypes.size())
             return SystemSubroutine::bindArgument(argIndex, context, syntax, args);
 
         if (argIndex == nameOrHierIndex && NameSyntax::isKind(syntax.kind)) {
             return HierarchicalReferenceExpression::fromSyntax(context.getCompilation(),
-               syntax.as<NameSyntax>(), context);
+                                                               syntax.as<NameSyntax>(), context);
         }
 
-        return Expression::bindArgument(*argTypes[argIndex], ArgumentDirection::In, syntax, context);
+        return Expression::bindArgument(*argTypes[argIndex], ArgumentDirection::In, syntax,
+                                        context);
     }
 
-    const Type& checkArguments(const BindContext& context, const Args& args,
-                               SourceRange range, const Expression*) const {
+    const Type& checkArguments(const BindContext& context, const Args& args, SourceRange range,
+                               const Expression*) const final {
         auto& comp = context.getCompilation();
         if (!checkArgCount(context, false, args, range, requiredArgs, argTypes.size()))
             return comp.getErrorType();
@@ -54,7 +55,8 @@ public:
                         << type << kindStr();
                     return comp.getErrorType();
                 }
-            } else if (sym.kind != SymbolKind::Instance || !sym.as<InstanceSymbol>().isModule()) {
+            }
+            else if (sym.kind != SymbolKind::Instance || !sym.as<InstanceSymbol>().isModule()) {
                 if (!context.scope->isUninstantiated())
                     context.addDiag(diag::ExpectedModuleInstance, arg->sourceRange);
                 return comp.getErrorType();
@@ -81,8 +83,7 @@ private:
 };
 
 void registerCoverageFuncs(Compilation& c) {
-#define REGISTER(name, ...) \
-    c.addSystemSubroutine(std::make_unique<name>(__VA_ARGS__))
+#define REGISTER(name, ...) c.addSystemSubroutine(std::make_unique<name>(__VA_ARGS__))
     REGISTER(CoverageNameOrHierFunc, "$coverage_control", c.getIntType(), 3, 4,
              std::vector{ &c.getIntType(), &c.getIntType(), &c.getIntType(), &c.getStringType() });
     REGISTER(CoverageNameOrHierFunc, "$coverage_get_max", c.getIntType(), 2, 3,
