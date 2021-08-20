@@ -974,6 +974,7 @@ module m;
 
     initial begin
         $async$and$plane(mem, in, out);
+        $sync$and$array(mem, in, out, r);         // Too many arguments
         $sync$or$array(a, in, out);               // Bad mem type
         $async$nand$plane(memString, in, out);    // Bad mem type
         $sync$nor$array(mem, i, out);             // Bad input type
@@ -990,13 +991,14 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 8);
-    CHECK(diags[0].code == diag::BadSystemSubroutineArg);
+    REQUIRE(diags.size() == 9);
+    CHECK(diags[0].code == diag::TooManyArguments);
     CHECK(diags[1].code == diag::BadSystemSubroutineArg);
     CHECK(diags[2].code == diag::BadSystemSubroutineArg);
     CHECK(diags[3].code == diag::BadSystemSubroutineArg);
-    CHECK(diags[4].code == diag::PlaRangeInAscendingOrder);
+    CHECK(diags[4].code == diag::BadSystemSubroutineArg);
     CHECK(diags[5].code == diag::PlaRangeInAscendingOrder);
     CHECK(diags[6].code == diag::PlaRangeInAscendingOrder);
     CHECK(diags[7].code == diag::PlaRangeInAscendingOrder);
+    CHECK(diags[8].code == diag::PlaRangeInAscendingOrder);
 }

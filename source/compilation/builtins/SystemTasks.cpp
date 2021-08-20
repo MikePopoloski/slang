@@ -614,7 +614,7 @@ public:
         SystemTaskBase(name) {};
 
     const Type& checkArguments(const BindContext& context, const Args& args, SourceRange range,
-                               const Expression*) const override {
+                               const Expression*) const final {
         auto& comp = context.getCompilation();
 
         if (!checkArgCount(context, false, args, range, 3, 3))
@@ -651,13 +651,13 @@ public:
         return comp.getVoidType();
     }
 
-protected:
-    bool isValidRange(const Type& type) const {
+private:
+    static bool isValidRange(const Type& type) {
         ConstantRange range = type.getFixedRange();
         return range.right >= range.left;
     }
 
-    const Type& badRange(const BindContext& context, const Expression& arg) const {
+    static const Type& badRange(const BindContext& context, const Expression& arg) {
         context.addDiag(diag::PlaRangeInAscendingOrder, arg.sourceRange) << *arg.type;
         return context.getCompilation().getErrorType();
     }
