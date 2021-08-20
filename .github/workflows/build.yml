@@ -73,7 +73,9 @@ jobs:
         cd build
         find . -name *.profraw -exec llvm-profdata-12 merge -o merged.profdata -sparse {} + ;
         llvm-cov-12 show bin/unittests -instr-profile=merged.profdata > coverage.txt
-        bash <(curl -s https://codecov.io/bash) || echo 'Codecov failed to upload'
+        curl -Os https://uploader.codecov.io/latest/linux/codecov
+        chmod +x codecov
+        ./codecov
     - name: Archive binaries
       if: matrix.compiler == 'g++-10'
       run: |
