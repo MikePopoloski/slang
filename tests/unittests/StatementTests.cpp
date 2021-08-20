@@ -49,6 +49,27 @@ endmodule
     NO_COMPILATION_ERRORS;
 }
 
+TEST_CASE("Foreach loop iterator regression #410") {
+    auto tree = SyntaxTree::fromText(R"(
+module m #(
+    int  N,
+    int	 VEC[N]
+)();
+    always_comb begin
+        foreach(VEC[i]) begin
+            automatic int v = VEC[i];
+            
+            $display(i);
+        end
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
 TEST_CASE("Foreach loop errors") {
     auto tree = SyntaxTree::fromText(R"(
 module m;
@@ -1153,6 +1174,10 @@ function f;
     wait (3) i = 1;
     wait_order(a, b, c);
     t();
+endfunction
+
+function g;
+    int i;
     begin
         static int j = i;
         t();
