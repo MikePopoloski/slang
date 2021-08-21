@@ -19,6 +19,7 @@ coverage:
     - "external/**/*"
     - "tests/**/*"
     - "tools/**/*"
+    - "build/**/*"
 
 parsers:
   gcov:
