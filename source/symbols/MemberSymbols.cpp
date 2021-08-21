@@ -853,7 +853,7 @@ void AssertionPortSymbol::buildPorts(Scope& scope, const AssertionItemPortListSy
                         << untyped;
                 }
 
-                if (item->local)
+                if (item->local && scope.asSymbol().kind != SymbolKind::LetDecl)
                     scope.addDiag(diag::LocalVarTypeRequired, item->local.range());
             }
 
@@ -864,10 +864,18 @@ void AssertionPortSymbol::buildPorts(Scope& scope, const AssertionItemPortListSy
             port->declaredType.setTypeSyntax(*item->type);
             lastType = item->type;
 
-            // Ports of type 'property' are not allowed in sequences.
-            if (item->type->kind == SyntaxKind::PropertyType &&
+            // Ports of type 'property' are not allowed in sequences,
+            // and let declarations cannot have ports of type 'sequence' or 'property'.
+            auto itemKind = item->type->kind;
+            if (itemKind == SyntaxKind::PropertyType &&
                 scope.asSymbol().kind == SymbolKind::Sequence) {
                 scope.addDiag(diag::PropertyPortInSeq, item->type->sourceRange());
+            }
+            else if ((itemKind == SyntaxKind::PropertyType ||
+                      itemKind == SyntaxKind::SequenceType) &&
+                     scope.asSymbol().kind == SymbolKind::LetDecl) {
+                scope.addDiag(diag::PropertyPortInLet, item->type->sourceRange())
+                    << item->type->getFirstToken().valueText();
             }
         }
 
@@ -954,6 +962,30 @@ PropertySymbol& PropertySymbol::fromSyntax(const Scope& scope,
 }
 
 void PropertySymbol::makeDefaultInstance() const {
+    AssertionInstanceExpression::makeDefault(*this);
+}
+
+LetDeclSymbol::LetDeclSymbol(Compilation& compilation, const ExpressionSyntax& exprSyntax,
+                             string_view name, SourceLocation loc) :
+    Symbol(SymbolKind::LetDecl, name, loc),
+    Scope(compilation, this), exprSyntax(&exprSyntax) {
+}
+
+LetDeclSymbol& LetDeclSymbol::fromSyntax(const Scope& scope, const LetDeclarationSyntax& syntax) {
+    auto& comp = scope.getCompilation();
+    auto result = comp.emplace<LetDeclSymbol>(comp, *syntax.expr, syntax.identifier.valueText(),
+                                              syntax.identifier.location());
+    result->setSyntax(syntax);
+
+    SmallVectorSized<const AssertionPortSymbol*, 4> ports;
+    if (syntax.portList)
+        AssertionPortSymbol::buildPorts(*result, *syntax.portList, ports);
+    result->ports = ports.copy(comp);
+
+    return *result;
+}
+
+void LetDeclSymbol::makeDefaultInstance() const {
     AssertionInstanceExpression::makeDefault(*this);
 }
 

@@ -2005,6 +2005,17 @@ AssertionItemPortSyntax& Parser::parseAssertionItemPort(SyntaxKind parentKind) {
             addDiag(diag::AssertionPortDirNoLocal, direction.location()) << direction.range();
     }
 
+    if (parentKind == SyntaxKind::LetDeclaration) {
+        if (local) {
+            addDiag(diag::UnexpectedLetPortKeyword, local.location())
+                << local.range() << local.valueText();
+        }
+        else if (direction) {
+            addDiag(diag::UnexpectedLetPortKeyword, direction.location())
+                << direction.range() << direction.valueText();
+        }
+    }
+
     DataTypeSyntax* type;
     switch (peek().kind) {
         case TokenKind::PropertyKeyword:

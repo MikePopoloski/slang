@@ -243,10 +243,21 @@ bool lookupDownward(span<const NamePlusLoc> nameParts, NameComponents name,
         if (!checkClassParams(name))
             return false;
 
+        auto isValueLike = [](const Symbol& symbol) {
+            switch (symbol.kind) {
+                case SymbolKind::ConstraintBlock:
+                case SymbolKind::Sequence:
+                case SymbolKind::Property:
+                case SymbolKind::LetDecl:
+                case SymbolKind::AssertionPort:
+                    return true;
+                default:
+                    return symbol.isValue();
+            }
+        };
+
         // If we found a value, the remaining dots are member access expressions.
-        if (symbol->isValue() || symbol->kind == SymbolKind::ConstraintBlock ||
-            symbol->kind == SymbolKind::Sequence || symbol->kind == SymbolKind::Property ||
-            symbol->kind == SymbolKind::AssertionPort) {
+        if (isValueLike(*symbol)) {
             if (name.selectors)
                 result.selectors.appendRange(*name.selectors);
 

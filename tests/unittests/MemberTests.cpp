@@ -1889,3 +1889,20 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Let declaration errors") {
+    auto tree = SyntaxTree::fromText(R"(
+module test;
+    let foo(a, local b, input c, sequence d, int e) = a || b; 
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 3);
+    CHECK(diags[0].code == diag::UnexpectedLetPortKeyword);
+    CHECK(diags[1].code == diag::UnexpectedLetPortKeyword);
+    CHECK(diags[2].code == diag::PropertyPortInLet);
+}

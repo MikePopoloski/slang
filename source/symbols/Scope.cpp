@@ -428,6 +428,9 @@ void Scope::addMembers(const SyntaxNode& syntax) {
             addMember(
                 ClockingBlockSymbol::fromSyntax(*this, syntax.as<ClockingDeclarationSyntax>()));
             break;
+        case SyntaxKind::LetDeclaration:
+            addMember(LetDeclSymbol::fromSyntax(*this, syntax.as<LetDeclarationSyntax>()));
+            break;
         case SyntaxKind::PulseStyleDeclaration:
         case SyntaxKind::PathDeclaration:
         case SyntaxKind::IfNonePathDeclaration:

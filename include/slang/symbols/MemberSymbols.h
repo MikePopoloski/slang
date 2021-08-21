@@ -309,6 +309,26 @@ public:
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::Property; }
 };
 
+struct LetDeclarationSyntax;
+
+/// Represents a let declaration.
+class LetDeclSymbol : public Symbol, public Scope {
+public:
+    span<const AssertionPortSymbol* const> ports;
+    not_null<const ExpressionSyntax*> exprSyntax;
+
+    LetDeclSymbol(Compilation& compilation, const ExpressionSyntax& exprSyntax, string_view name,
+                  SourceLocation loc);
+
+    static LetDeclSymbol& fromSyntax(const Scope& scope, const LetDeclarationSyntax& syntax);
+
+    void makeDefaultInstance() const;
+
+    void serializeTo(ASTSerializer&) const {}
+
+    static bool isKind(SymbolKind kind) { return kind == SymbolKind::LetDecl; }
+};
+
 struct ClockingDeclarationSyntax;
 struct ClockingSkewSyntax;
 
