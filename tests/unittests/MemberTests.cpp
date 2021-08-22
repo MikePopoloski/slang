@@ -1890,10 +1890,113 @@ endmodule
     NO_COMPILATION_ERRORS;
 }
 
+TEST_CASE("Let declarations") {
+    auto tree = SyntaxTree::fromText(R"(
+module m1;
+    logic clk, a, b;
+    logic p, q, r;
+
+    // let with formal arguments and default value on y
+    let eq(x, y = b) = x == y;
+
+    // without parameters, binds to a, b above
+    let tmp = a && b;
+    a1: assert property (@(posedge clk) eq(p,q));
+    always_comb begin 
+        a2: assert (eq(r)); // use default for y
+        a3: assert (tmp);
+    end 
+endmodule : m1
+
+module m2;
+    logic x = 1'b1;
+    logic a, b;
+    let y = x;
+
+    always_comb begin 
+        // y binds to preceding definition of x
+        // in the declarative context of let
+        automatic bit x = 1'b0;
+        b = a | y;
+    end 
+endmodule : m2
+
+module m3;
+    logic a, b;
+    let x = a || b;
+    sequence s;
+        x ##1 b;
+    endsequence : s
+endmodule : m3
+
+module m4;
+    wire a, b;
+    wire [2:0] c;
+    wire [2:0] d;
+    wire e;
+    for (genvar i = 0; i < 3; i++) begin : L0
+        if (i != 1) begin : L1
+            let my_let(x) = !x || b && c[i];
+            assign d[2 - i] = my_let(a); // OK
+        end : L1
+    end : L0
+endmodule : m4
+
+module m5(input clock);
+    logic [15:0] a, b;
+    logic c, d;
+    typedef bit [15:0] bits;
+    
+    let ones_match(bits x, y) = x == y;
+    let same(logic x, y) = x === y;
+    always_comb a1: assert(ones_match(a, b));
+
+    property toggles(bit x, y);
+        same(x, y) |=> !same(x, y);
+    endproperty
+
+    a2: assert property (@(posedge clock) toggles(c, d));
+endmodule : m5
+
+module m6(input clock);
+    logic a;
+    let p1(x) = $past(x);
+    let p2(x) = $past(x,,,@(posedge clock));
+    let s(x) = $sampled(x);
+    always_comb begin 
+        a1: assert(p1(a));
+        a2: assert(p2(a));
+        a3: assert(s(a));
+    end 
+    a4: assert property(@(posedge clock) p1(a));
+endmodule : m6
+
+package pex_gen9_common_expressions;
+    let valid_arb(request, valid, override) = |(request & valid) || override;
+endpackage
+
+module my_checker;
+    import pex_gen9_common_expressions::*;
+    logic a, b;
+    wire [1:0] req;
+    wire [1:0] vld;
+    logic ovr;
+    if (valid_arb(.request(req), .valid(vld), .override(ovr))) begin 
+    end 
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
 TEST_CASE("Let declaration errors") {
     auto tree = SyntaxTree::fromText(R"(
 module test;
-    let foo(a, local b, input c, sequence d, int e) = a || b; 
+    let foo(a, local b, input c, sequence d, int e) = a || b;
+    let bar = bar;
+    let baz = a + 1;
 endmodule
 )");
 
@@ -1901,8 +2004,10 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 3);
+    REQUIRE(diags.size() == 5);
     CHECK(diags[0].code == diag::UnexpectedLetPortKeyword);
     CHECK(diags[1].code == diag::UnexpectedLetPortKeyword);
     CHECK(diags[2].code == diag::PropertyPortInLet);
+    CHECK(diags[3].code == diag::RecursiveLet);
+    CHECK(diags[4].code == diag::UndeclaredIdentifier);
 }

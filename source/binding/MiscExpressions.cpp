@@ -514,6 +514,13 @@ Expression& AssertionInstanceExpression::fromLookup(const Symbol& symbol,
             symbolScope = &prop;
             break;
         }
+        case SymbolKind::LetDecl: {
+            auto& let = symbol.as<LetDeclSymbol>();
+            type = &comp.getVoidType();
+            formalPorts = let.ports;
+            symbolScope = &let;
+            break;
+        }
         default:
             THROW_UNREACHABLE;
     }
@@ -537,6 +544,10 @@ Expression& AssertionInstanceExpression::fromLookup(const Symbol& symbol,
         if (currInst->symbol == &symbol) {
             if (symbol.kind == SymbolKind::Sequence) {
                 context.addDiag(diag::RecursiveSequence, range) << symbol.name;
+                return badExpr(comp, nullptr);
+            }
+            else if (symbol.kind == SymbolKind::LetDecl) {
+                context.addDiag(diag::RecursiveLet, range) << symbol.name;
                 return badExpr(comp, nullptr);
             }
 
@@ -678,12 +689,16 @@ Expression& AssertionInstanceExpression::fromLookup(const Symbol& symbol,
         }
     }
 
+    BindContext bodyContext(*symbolScope, LookupLocation::max);
+    bodyContext.assertionInstance = &instance;
+
+    // Let declarations expand directly to an expression.
+    if (symbol.kind == SymbolKind::LetDecl)
+        return create(comp, *symbol.as<LetDeclSymbol>().exprSyntax, bodyContext);
+
     // Now instantiate by binding the assertion expression of the sequence / property body.
     auto bodySyntax = symbol.getSyntax();
     ASSERT(bodySyntax);
-
-    BindContext bodyContext(*symbolScope, LookupLocation::max);
-    bodyContext.assertionInstance = &instance;
 
     SmallVectorSized<std::tuple<const Symbol*, const Expression*>, 8> localVarInitializers;
     auto& body = bindAssertionBody(symbol, *bodySyntax, bodyContext, outputLocalVarArgLoc,
@@ -732,6 +747,13 @@ Expression& AssertionInstanceExpression::makeDefault(const Symbol& symbol) {
             symbolScope = &prop;
             break;
         }
+        case SymbolKind::LetDecl: {
+            auto& let = symbol.as<LetDeclSymbol>();
+            type = &comp.getVoidType();
+            formalPorts = let.ports;
+            symbolScope = &let;
+            break;
+        }
         default:
             THROW_UNREACHABLE;
     }
@@ -765,11 +787,15 @@ Expression& AssertionInstanceExpression::makeDefault(const Symbol& symbol) {
         }
     }
 
-    auto bodySyntax = symbol.getSyntax();
-    ASSERT(bodySyntax);
-
     BindContext bodyContext(*symbolScope, LookupLocation::max);
     bodyContext.assertionInstance = &instance;
+
+    // Let declarations expand directly to an expression.
+    if (symbol.kind == SymbolKind::LetDecl)
+        return create(comp, *symbol.as<LetDeclSymbol>().exprSyntax, bodyContext);
+
+    auto bodySyntax = symbol.getSyntax();
+    ASSERT(bodySyntax);
 
     SmallVectorSized<std::tuple<const Symbol*, const Expression*>, 8> localVarInitializers;
     auto& body = bindAssertionBody(symbol, *bodySyntax, bodyContext, outputLocalVarArgLoc,

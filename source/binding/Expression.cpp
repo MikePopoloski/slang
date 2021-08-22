@@ -848,6 +848,7 @@ Expression& Expression::bindLookupResult(Compilation& compilation, const LookupR
         }
         case SymbolKind::Sequence:
         case SymbolKind::Property:
+        case SymbolKind::LetDecl:
             expr =
                 &AssertionInstanceExpression::fromLookup(*symbol, invocation, sourceRange, context);
             invocation = nullptr;

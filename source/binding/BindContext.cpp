@@ -454,6 +454,9 @@ void BindContext::addAssertionBacktrace(Diagnostic& diag) const {
             case SymbolKind::Property:
                 note << "property"sv;
                 break;
+            case SymbolKind::LetDecl:
+                note << "let declaration"sv;
+                break;
             default:
                 THROW_UNREACHABLE;
         }
