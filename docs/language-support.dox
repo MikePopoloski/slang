@@ -178,7 +178,7 @@ LRM | Feature | Supported
 {{m-danger}}  11.9 | Tagged union expressions | no
 {{m-success}} 11.10 | String literal expressions | v0.5
 {{m-success}} 11.11 | Min/typ/max expressions | v0.4
-{{m-danger}}  11.12 | Let construct | no
+{{m-success}} 11.12 | Let construct | v0.9
 
 ## 12. Procedural programming statements
 
@@ -301,7 +301,7 @@ LRM | Feature | Supported
 {{m-danger}} 19.6 | Defining cross coverage | no
 {{m-danger}} 19.7 | Specifying coverage options | no
 {{m-danger}} 19.8 | Predefined coverage methods | no
-{{m-danger}} 19.9 | Predefined coverage system tasks | no
+{{m-success}} 19.9 | Predefined coverage system tasks | v0.9
 {{m-danger}} 19.10 | Organization of option members | no
 {{m-dim}}    19.11 | Coverage computation | N/A
 
@@ -322,10 +322,10 @@ LRM | Feature | Supported
 {{m-success}} 20.11 | Elaboration tasks | v0.5
 {{m-success}} 20.12 | Assertion control tasks | v0.6
 {{m-success}} 20.13 | Sampled value system functions | v0.8
-{{m-danger}}  20.14 | Coverage control functions | no
+{{m-success}} 20.14 | Coverage control functions | v0.9
 {{m-success}} 20.15 | Probabilistic distribution functions | v0.7
 {{m-success}} 20.16 | Stochastic analysis tasks and functions | v0.7
-{{m-danger}}  20.17 | PLA modeling tasks | no
+{{m-success}} 20.17 | PLA modeling tasks | v0.9
 {{m-success}} 20.18 | Miscellaneous tasks and functions | v0.4
 
 ## 21. Input/output system tasks and system functions
