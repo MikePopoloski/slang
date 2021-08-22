@@ -815,7 +815,7 @@ Expression& Expression::bindLookupResult(Compilation& compilation, const LookupR
     if (!symbol)
         return badExpr(compilation, nullptr);
 
-    if (symbol->isType() && context.flags.has(BindFlags::AllowDataType)) {
+    if (context.flags.has(BindFlags::AllowDataType) && symbol->isType()) {
         // We looked up a named data type and we were allowed to do so, so return it.
         ASSERT(!invocation && !withClause);
         const Type& resultType = Type::fromLookupResult(compilation, result, syntax,
@@ -848,9 +848,18 @@ Expression& Expression::bindLookupResult(Compilation& compilation, const LookupR
         }
         case SymbolKind::Sequence:
         case SymbolKind::Property:
+            expr =
+                &AssertionInstanceExpression::fromLookup(*symbol, invocation, sourceRange, context);
+            invocation = nullptr;
+            break;
         case SymbolKind::LetDecl:
             expr =
                 &AssertionInstanceExpression::fromLookup(*symbol, invocation, sourceRange, context);
+            if (result.isHierarchical) {
+                SourceRange callRange = invocation ? invocation->sourceRange() : sourceRange;
+                context.addDiag(diag::LetHierarchical, callRange);
+            }
+
             invocation = nullptr;
             break;
         case SymbolKind::AssertionPort:

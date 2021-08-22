@@ -1998,16 +1998,31 @@ module test;
     let bar = bar;
     let baz = a + 1;
 endmodule
+
+module m;
+    wire a, b;
+    wire [2:0] c;
+    wire [2:0] d;
+    wire e;
+    for (genvar i = 0; i < 3; i++) begin : L0
+        if (i !=1) begin : L1
+            let my_let(x) = !x || b && c[i];
+            assign d[2 - i] = my_let(a); // OK
+        end : L1
+    end : L0
+    assign e = L0[0].L1.my_let(a); // Illegal
+endmodule : m
 )");
 
     Compilation compilation;
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 5);
+    REQUIRE(diags.size() == 6);
     CHECK(diags[0].code == diag::UnexpectedLetPortKeyword);
     CHECK(diags[1].code == diag::UnexpectedLetPortKeyword);
     CHECK(diags[2].code == diag::PropertyPortInLet);
     CHECK(diags[3].code == diag::RecursiveLet);
     CHECK(diags[4].code == diag::UndeclaredIdentifier);
+    CHECK(diags[5].code == diag::LetHierarchical);
 }

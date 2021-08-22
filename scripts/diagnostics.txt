@@ -496,6 +496,7 @@ error AssertionPortTypedLValue "typed formal argument '{}' cannot be modified be
 error RecursivePropTimeAdvance "recursive property instance must occur after a positive advance in time to avoid infinite recursion"
 error RecursivePropNegation "recursive property instance cannot have the operators 'not', 's_nexttime', 's_eventually', 's_always', 's_until', or 's_until_with' applied to it"
 error RecursivePropArgExpr "cannot refer to argument '{}' in an argument to a recursive property unless it is the entire argument expression or bound to a local variable formal argument"
+error LetHierarchical "hierarchical references to let declarations are not allowed"
 warning ignored-slice IgnoredSlice "slice size ignored for left-to-right streaming operator"
 warning unsized-concat UnsizedInConcat "unsized integer in concat; using a width of {}"
 warning width-expand WidthExpand "implicit conversion expands from {} to {} bits"
