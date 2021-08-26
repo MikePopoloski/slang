@@ -637,6 +637,21 @@ span<const InstanceSymbol* const> Compilation::getParentInstances(
     return it->second;
 }
 
+void Compilation::notePackageExportCandidate(const PackageSymbol& packageScope,
+                                             const Symbol& symbol) {
+    packageExportCandidateMap[&packageScope][symbol.name] = &symbol;
+}
+
+const Symbol* Compilation::findPackageExportCandidate(const PackageSymbol& packageScope,
+                                                      string_view name) const {
+    if (auto it = packageExportCandidateMap.find(&packageScope);
+        it != packageExportCandidateMap.end()) {
+        if (auto symIt = it->second.find(name); symIt != it->second.end())
+            return symIt->second;
+    }
+    return nullptr;
+}
+
 void Compilation::noteInterfacePort(const Definition& definition) {
     usedIfacePorts.emplace(&definition);
 }
@@ -995,6 +1010,12 @@ Diagnostic& Compilation::addDiag(Diagnostic diag) {
 
     auto [it, inserted] = diagMap.emplace(key, std::move(newEntry));
     return it->second.back();
+}
+
+void Compilation::forceElaborate(const Symbol& symbol) {
+    DiagnosticVisitor visitor(*this, numErrors,
+                              options.errorLimit == 0 ? UINT32_MAX : options.errorLimit);
+    symbol.visit(visitor);
 }
 
 const Type& Compilation::getType(SyntaxKind typeKind) const {

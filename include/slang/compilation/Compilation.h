@@ -253,6 +253,16 @@ public:
     /// Returns the list of instances that share the same instance body.
     span<const InstanceSymbol* const> getParentInstances(const InstanceBodySymbol& body) const;
 
+    /// Notes that the given symbol was imported into the current scope via a package import,
+    /// and further that the current scope is within a package declaration. These symbols are
+    /// candidates for being exported from this package.
+    void notePackageExportCandidate(const PackageSymbol& packageScope, const Symbol& symbol);
+
+    /// Tries to find a symbol that can be exported from the given package to satisfy an import
+    /// of a given name from that package. Returns nullptr if no such symbol can be found.
+    const Symbol* findPackageExportCandidate(const PackageSymbol& packageScope,
+                                             string_view name) const;
+
     /// Notes the fact that the given definition has been used in an interface port.
     /// This prevents warning about that interface definition being unused in the design.
     void noteInterfacePort(const Definition& definition);
@@ -418,6 +428,10 @@ public:
     /// This state is transistory during elaboration and is used to correctly
     /// resolve upward name lookups.
     span<const InstanceSymbol* const> getCurrentInstancePath() const { return currentInstancePath; }
+
+    /// Forces the given symbol and all children underneath it in the hierarchy to
+    /// be elaborated and any relevant diagnostics to be issued.
+    void forceElaborate(const Symbol& symbol);
 
     int getNextEnumSystemId() { return nextEnumSystemId++; }
     int getNextStructSystemId() { return nextStructSystemId++; }
@@ -604,6 +618,11 @@ private:
 
     // A list of DPI export directives we've encountered during elaboration.
     std::vector<std::pair<const DPIExportSyntax*, const Scope*>> dpiExports;
+
+    // A map of packages to the set of names that are candidates for being
+    // exported from those packages.
+    flat_hash_map<const PackageSymbol*, flat_hash_map<string_view, const Symbol*>>
+        packageExportCandidateMap;
 
     // A map of scopes to default clocking blocks.
     flat_hash_map<const Scope*, const Symbol*> defaultClockingMap;

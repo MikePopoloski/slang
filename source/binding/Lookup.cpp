@@ -671,7 +671,11 @@ bool resolveColonNames(SmallVectorSized<NamePlusLoc, 8>& nameParts, int colonPar
             symbol = &symbol->as<Type>().getCanonicalType();
 
         const Symbol* savedSymbol = symbol;
-        symbol = symbol->as<Scope>().find(name.text());
+        if (symbol->kind == SymbolKind::Package)
+            symbol = symbol->as<PackageSymbol>().findForImport(name.text());
+        else
+            symbol = symbol->as<Scope>().find(name.text());
+
         if (!symbol) {
             DiagCode code = diag::UnknownClassMember;
             if (savedSymbol->kind == SymbolKind::Package)
@@ -1355,50 +1359,75 @@ void Lookup::unqualifiedImpl(const Scope& scope, string_view name, LookupLocatio
 
     // Look through any wildcard imports prior to the lookup point and see if their packages
     // contain the name we're looking for.
-    struct Import {
-        const Symbol* imported;
-        const WildcardImportSymbol* import;
-    };
-    SmallVectorSized<Import, 8> imports;
+    auto wildcardImports = scope.getWildcardImports();
+    if (!wildcardImports.empty()) {
+        struct Import {
+            const Symbol* imported;
+            const WildcardImportSymbol* import;
+        };
+        SmallVectorSized<Import, 8> imports;
+        SmallSet<const Symbol*, 2> importDedup;
 
-    for (auto import : scope.getWildcardImports()) {
-        if (location < LookupLocation::after(*import))
-            break;
+        for (auto import : wildcardImports) {
+            if (location < LookupLocation::after(*import))
+                break;
 
-        auto package = import->getPackage();
-        if (!package) {
-            result.sawBadImport = true;
-            continue;
+            auto package = import->getPackage();
+            if (!package) {
+                result.sawBadImport = true;
+                continue;
+            }
+
+            const Symbol* imported = package->findForImport(name);
+            if (imported && importDedup.emplace(imported).second)
+                imports.emplace(Import{ imported, import });
         }
 
-        const Symbol* imported = package->find(name);
-        if (imported)
-            imports.emplace(Import{ imported, import });
-    }
+        if (!imports.empty()) {
+            if (imports.size() > 1) {
+                if (sourceRange) {
+                    auto& diag = result.addDiag(scope, diag::AmbiguousWildcardImport, *sourceRange);
+                    diag << name;
+                    for (const auto& pair : imports) {
+                        diag.addNote(diag::NoteImportedFrom, pair.import->location);
+                        diag.addNote(diag::NoteDeclarationHere, pair.imported->location);
+                    }
+                }
+                return;
+            }
 
-    if (!imports.empty()) {
-        if (imports.size() > 1) {
-            if (sourceRange) {
-                auto& diag = result.addDiag(scope, diag::AmbiguousWildcardImport, *sourceRange);
-                diag << name;
-                for (const auto& pair : imports) {
-                    diag.addNote(diag::NoteImportedFrom, pair.import->location);
-                    diag.addNote(diag::NoteDeclarationHere, pair.imported->location);
+            if (symbol && sourceRange) {
+                // The existing symbol might be an import for the thing we just imported
+                // via wildcard, which is fine so don't error for that case.
+                if (symbol->kind != SymbolKind::ExplicitImport ||
+                    symbol->as<ExplicitImportSymbol>().importedSymbol() != imports[0].imported) {
+
+                    auto& diag = result.addDiag(scope, diag::ImportNameCollision, *sourceRange);
+                    diag << name;
+                    diag.addNote(diag::NoteDeclarationHere, symbol->location);
+                    diag.addNote(diag::NoteImportedFrom, imports[0].import->location);
+                    diag.addNote(diag::NoteDeclarationHere, imports[0].imported->location);
                 }
             }
+
+            result.wasImported = true;
+            result.found = imports[0].imported;
+
+            // If we are doing this lookup from a scope that is within a package declaration
+            // we should note that fact so that it can later be exported if desired.
+            auto currScope = &scope;
+            do {
+                auto& sym = currScope->asSymbol();
+                if (sym.kind == SymbolKind::Package) {
+                    sym.as<PackageSymbol>().noteImport(*result.found);
+                    break;
+                }
+
+                currScope = sym.getParentScope();
+            } while (currScope);
+
             return;
         }
-
-        if (symbol && sourceRange) {
-            auto& diag = result.addDiag(scope, diag::ImportNameCollision, *sourceRange) << name;
-            diag.addNote(diag::NoteDeclarationHere, symbol->location);
-            diag.addNote(diag::NoteImportedFrom, imports[0].import->location);
-            diag.addNote(diag::NoteDeclarationHere, imports[0].imported->location);
-        }
-
-        result.wasImported = true;
-        result.found = imports[0].imported;
-        return;
     }
 
     // Continue up the scope chain via our parent.

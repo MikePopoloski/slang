@@ -56,6 +56,7 @@ class ExplicitImportSymbol : public Symbol {
 public:
     string_view packageName;
     string_view importName;
+    bool isFromExport = false;
 
     ExplicitImportSymbol(string_view packageName, string_view importName, SourceLocation location) :
         Symbol(SymbolKind::ExplicitImport, importName, location), packageName(packageName),
@@ -81,6 +82,7 @@ private:
 class WildcardImportSymbol : public Symbol {
 public:
     string_view packageName;
+    bool isFromExport = false;
 
     WildcardImportSymbol(string_view packageName, SourceLocation location) :
         Symbol(SymbolKind::WildcardImport, "", location), packageName(packageName) {}

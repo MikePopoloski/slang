@@ -305,6 +305,10 @@ private:
     // Reports an error for a name conflict between two symbols.
     void reportNameConflict(const Symbol& member, const Symbol& existing) const;
 
+    // Checks for a conflict when multiple imports (or exports) target symbols
+    // with the same name.
+    void checkImportConflict(const Symbol& member, const Symbol& existing) const;
+
     // Add a wildcard import to this scope.
     void addWildcardImport(const PackageImportItemSyntax& item,
                            span<const AttributeInstanceSyntax* const> attributes);

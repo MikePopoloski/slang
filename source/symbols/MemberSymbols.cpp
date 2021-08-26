@@ -60,6 +60,14 @@ const PackageSymbol* ExplicitImportSymbol::package() const {
     return package_;
 }
 
+static const PackageSymbol* findPackage(string_view packageName, const Scope& lookupScope,
+                                        SourceLocation errorLoc) {
+    auto package = lookupScope.getCompilation().getPackage(packageName);
+    if (!package && !packageName.empty())
+        lookupScope.addDiag(diag::UnknownPackage, errorLoc) << packageName;
+    return package;
+}
+
 const Symbol* ExplicitImportSymbol::importedSymbol() const {
     if (!initialized) {
         initialized = true;
@@ -67,36 +75,44 @@ const Symbol* ExplicitImportSymbol::importedSymbol() const {
         const Scope* scope = getParentScope();
         ASSERT(scope);
 
-        if (packageName.empty())
+        auto loc = location;
+        if (auto syntax = getSyntax())
+            loc = syntax->as<PackageImportItemSyntax>().package.location();
+
+        package_ = findPackage(packageName, *scope, loc);
+        if (!package_)
             return nullptr;
 
-        package_ = scope->getCompilation().getPackage(packageName);
-        if (!package_) {
-            auto loc = location;
-            if (auto syntax = getSyntax(); syntax)
-                loc = syntax->as<PackageImportItemSyntax>().package.location();
-
-            scope->addDiag(diag::UnknownPackage, loc) << packageName;
-        }
-        else if (importName.empty()) {
-            return nullptr;
-        }
-        else {
-            import = package_->find(importName);
-            if (!import) {
-                auto loc = location;
+        import = package_->findForImport(importName);
+        if (!import) {
+            if (!importName.empty()) {
+                loc = location;
                 if (auto syntax = getSyntax())
                     loc = syntax->as<PackageImportItemSyntax>().item.location();
 
                 auto& diag = scope->addDiag(diag::UnknownPackageMember, loc);
-                diag << importName << packageName;
+                diag << importName << name;
             }
+        }
+        else {
+            // If we are doing this lookup from a scope that is within a package declaration
+            // we should note that fact so that it can later be exported if desired.
+            do {
+                auto& sym = scope->asSymbol();
+                if (sym.kind == SymbolKind::Package) {
+                    sym.as<PackageSymbol>().noteImport(*import);
+                    break;
+                }
+
+                scope = sym.getParentScope();
+            } while (scope);
         }
     }
     return import;
 }
 
 void ExplicitImportSymbol::serializeTo(ASTSerializer& serializer) const {
+    serializer.write("isFromExport", isFromExport);
     if (auto pkg = package())
         serializer.writeLink("package", *pkg);
 
@@ -113,24 +129,17 @@ const PackageSymbol* WildcardImportSymbol::getPackage() const {
         const Scope* scope = getParentScope();
         ASSERT(scope);
 
-        if (packageName.empty()) {
-            package = nullptr;
-        }
-        else {
-            package = scope->getCompilation().getPackage(packageName);
-            if (!package.value()) {
-                auto loc = location;
-                if (auto syntax = getSyntax(); syntax)
-                    loc = syntax->as<PackageImportItemSyntax>().package.location();
+        auto loc = location;
+        if (auto syntax = getSyntax(); syntax)
+            loc = syntax->as<PackageImportItemSyntax>().package.location();
 
-                scope->addDiag(diag::UnknownPackage, loc) << packageName;
-            }
-        }
+        package = findPackage(packageName, *scope, loc);
     }
     return *package;
 }
 
 void WildcardImportSymbol::serializeTo(ASTSerializer& serializer) const {
+    serializer.write("isFromExport", isFromExport);
     if (auto pkg = getPackage())
         serializer.writeLink("package", *pkg);
 }

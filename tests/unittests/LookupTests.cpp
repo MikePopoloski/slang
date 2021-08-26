@@ -1609,3 +1609,113 @@ endmodule
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::UndeclaredIdentifier);
 }
+
+TEST_CASE("Package export lookup") {
+    auto tree = SyntaxTree::fromText(R"(
+package p1;
+    int x, y;
+endpackage
+
+package p2;
+    import p1::x;
+    export p1::*; // exports p1::x as the name "x"; 
+                  // p1::x and p2::x are the same declaration
+endpackage 
+
+package p3; 
+    import p1::*; 
+    import p2::*; 
+    export p2::*;
+    int q = x; 
+    // p1::x and q are made available from p3. Although p1::y 
+    // is a candidate for import, it is not actually imported 
+    // since it is not referenced. Since p1::y is not imported, 
+    // it is not made available by the export. 
+endpackage
+
+package p4;
+    import p1::*;
+    export p1::*;
+
+    function void foo;
+        static int y = x; // p1::x is made available by the export
+    endfunction
+endpackage
+
+package p5;
+    import p4::*;
+    import p1::*;
+    export p1::x;   
+    export p4::x; // p4::x refers to the same declaration 
+                  // as p1::x so this is legal.
+endpackage
+
+package p6;
+    import p1::*;
+    export p1::x;
+    int x; // Error. export p1::x is considered to                      
+           // be a reference to "x" so a subsequent 
+           // declaration of x is illegal.
+endpackage
+
+package p7;
+    int y;
+endpackage
+
+package p8;
+    export *::*; // Exports both p7::y and p1::x.
+    import p7::y;
+    import p1::x;
+endpackage
+
+package p9;
+    export foo::*;
+    export p8::baz;
+    export p1::x;
+    export p6::x;
+    export p1::x;
+endpackage
+
+package p10;
+    import p1::*;
+    export p6::x;
+    int foo = x;
+endpackage
+
+package p11;
+    import p1::*;
+    int foo = x;
+    export p6::x;
+endpackage
+
+package p12;
+    int x;
+endpackage
+
+package p13;
+    import p1::*;
+    int foo = x;
+    export p12::x;
+endpackage
+
+module top;
+    import p2::*;
+    import p4::*;
+    int y = x; // x is p1::x
+    int z = p5::x;
+    int w = p8::y;
+    int r = p3::y;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 5);
+    CHECK(diags[0].code == diag::RedefinitionDifferentSymbolKind);
+    CHECK(diags[1].code == diag::UnknownPackage);
+    CHECK(diags[2].code == diag::UnknownPackageMember);
+    CHECK(diags[3].code == diag::ImportNameCollision);
+    CHECK(diags[4].code == diag::UnknownPackageMember);
+}

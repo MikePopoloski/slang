@@ -198,6 +198,34 @@ void Scope::addMembers(const SyntaxNode& syntax) {
             }
             break;
         }
+        case SyntaxKind::PackageExportDeclaration: {
+            auto& exportDecl = syntax.as<PackageExportDeclarationSyntax>();
+            for (auto item : exportDecl.items) {
+                if (item->item.kind == TokenKind::Star) {
+                    // These are handled manually as "wildcard imports" but don't get
+                    // added to the import list. This is done just so that the package
+                    // name itself gets validated and the attributes have somewhere to live.
+                    // The actual export functionality is handled in PackageSymbol.
+                    auto import = compilation.emplace<WildcardImportSymbol>(
+                        item->package.valueText(), item->item.location());
+
+                    import->setSyntax(*item);
+                    import->setAttributes(*this, exportDecl.attributes);
+                    import->isFromExport = true;
+                    addMember(*import);
+                }
+                else {
+                    auto import = compilation.emplace<ExplicitImportSymbol>(
+                        item->package.valueText(), item->item.valueText(), item->item.location());
+
+                    import->setSyntax(*item);
+                    import->setAttributes(*this, exportDecl.attributes);
+                    import->isFromExport = true;
+                    addMember(*import);
+                }
+            }
+            break;
+        }
         case SyntaxKind::HierarchyInstantiation:
         case SyntaxKind::PrimitiveInstantiation:
         case SyntaxKind::AnsiPortList:
@@ -322,6 +350,7 @@ void Scope::addMembers(const SyntaxNode& syntax) {
             addMember(NetType::fromSyntax(*this, syntax.as<NetTypeDeclarationSyntax>()));
             break;
         case SyntaxKind::TimeUnitsDeclaration:
+        case SyntaxKind::PackageExportAllDeclaration:
             // These are handled elsewhere; just ignore here.
             break;
         case SyntaxKind::GenvarDeclaration: {
@@ -592,13 +621,15 @@ void Scope::handleNameConflict(const Symbol& member, const Symbol*& existing,
         }
     }
 
-    if (existing->kind == SymbolKind::ExplicitImport && member.kind == SymbolKind::ExplicitImport &&
-        existing->as<ExplicitImportSymbol>().packageName ==
-            member.as<ExplicitImportSymbol>().packageName) {
-        // Duplicate explicit imports are specifically allowed,
-        // so just ignore the other one (with a warning).
-        auto& diag = addDiag(diag::DuplicateImport, member.location);
-        diag.addNote(diag::NotePreviousDefinition, existing->location);
+    if (existing->kind == SymbolKind::ExplicitImport && member.kind == SymbolKind::ExplicitImport) {
+        if (!isElaborating) {
+            // These can't be checked until we can resolve the imports and see if they point to
+            // the same symbol.
+            getOrAddDeferredData().addNameConflict(member);
+        }
+        else {
+            checkImportConflict(member, *existing);
+        }
         return;
     }
 
@@ -678,6 +709,28 @@ void Scope::reportNameConflict(const Symbol& member, const Symbol& existing) con
     diag->addNote(diag::NotePreviousDefinition, existing.location);
 }
 
+void Scope::checkImportConflict(const Symbol& member, const Symbol& existing) const {
+    auto& mei = member.as<ExplicitImportSymbol>();
+    auto& eei = existing.as<ExplicitImportSymbol>();
+
+    auto s1 = mei.importedSymbol();
+    auto s2 = eei.importedSymbol();
+    if (!s1 || !s2)
+        return;
+
+    if (s1 == s2) {
+        if (!mei.isFromExport && !eei.isFromExport) {
+            // Duplicate explicit imports are specifically allowed,
+            // so just ignore the other one (with a warning).
+            auto& diag = addDiag(diag::DuplicateImport, member.location);
+            diag.addNote(diag::NotePreviousDefinition, existing.location);
+        }
+    }
+    else {
+        reportNameConflict(member, existing);
+    }
+}
+
 void Scope::elaborate() const {
     ASSERT(deferredMemberIndex != DeferredMemberIndex::Invalid);
     auto deferredData = compilation.getOrAddDeferredData(deferredMemberIndex);
@@ -685,7 +738,10 @@ void Scope::elaborate() const {
 
     for (auto member : deferredData.getNameConflicts()) {
         auto existing = nameMap->find(member->name)->second;
-        reportNameConflict(*member, *existing);
+        if (member->kind == SymbolKind::ExplicitImport)
+            checkImportConflict(*member, *existing);
+        else
+            reportNameConflict(*member, *existing);
     }
 
     // If this is a class type being elaborated, let it inherit members from parent classes.
