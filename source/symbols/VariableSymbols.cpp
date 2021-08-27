@@ -338,7 +338,7 @@ void NetSymbol::checkInitializer() const {
     // about user-defined nettypes, which is why we can't just do it in the parser.
     auto init = getInitializer();
     auto parent = getParentScope();
-    if (init && parent && parent->asSymbol().kind == SymbolKind::Package)
+    if (init && parent && parent->asSymbol().kind == SymbolKind::Package && !init->bad())
         parent->addDiag(diag::PackageNetInit, init->sourceRange);
 }
 
