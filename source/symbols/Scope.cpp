@@ -154,8 +154,14 @@ void Scope::addMember(const Symbol& symbol) {
     const DeclaredType* declaredType = symbol.getDeclaredType();
     if (declaredType) {
         auto syntax = declaredType->getTypeSyntax();
-        if (syntax && syntax->kind == SyntaxKind::EnumType)
+        if (syntax && syntax->kind == SyntaxKind::EnumType) {
             getOrAddDeferredData().registerTransparentType(lastMember, symbol);
+            insertMember(&symbol, lastMember, false, true);
+
+            // Make extra space in the scope for the enum members to be inserted.
+            symbol.indexInScope += 1;
+            return;
+        }
     }
 
     insertMember(&symbol, lastMember, false, true);

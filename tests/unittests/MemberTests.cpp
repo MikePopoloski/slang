@@ -2029,3 +2029,16 @@ endmodule : m
     CHECK(diags[4].code == diag::UndeclaredIdentifier);
     CHECK(diags[5].code == diag::LetHierarchical);
 }
+
+TEST_CASE("Param initialize self-reference") {
+    auto tree = SyntaxTree::fromText(R"(
+parameter int foo = foo;
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::UsedBeforeDeclared);
+}

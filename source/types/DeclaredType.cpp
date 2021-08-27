@@ -403,14 +403,21 @@ T DeclaredType::getBindContext() const {
     // The location depends on whether we are binding the initializer or the type.
     // Initializer lookup happens *after* the parent symbol, so that it can reference
     // the symbol itself. Type lookup happens *before*, since it can't yet see the
-    // symbol declaration.
+    // symbol declaration. There is an exception for parameters, which also can't
+    // see its own declaration (which would result in infinite recursion).
     LookupLocation location;
-    if (overrideIndex)
+    if (overrideIndex) {
         location = LookupLocation(parent.getParentScope(), overrideIndex);
-    else if (IsInitializer)
-        location = LookupLocation::after(parent);
-    else
+    }
+    else if (IsInitializer) {
+        if (flags.has(DeclaredTypeFlags::RequireConstant))
+            location = LookupLocation::before(parent);
+        else
+            location = LookupLocation::after(parent);
+    }
+    else {
         location = LookupLocation::before(parent);
+    }
 
     return BindContext(getScope(), location, bindFlags);
 }
