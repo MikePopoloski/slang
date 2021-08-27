@@ -2220,3 +2220,17 @@ specparam[] asasa = 1;
     // Just check no assertion.
     compilation.getAllDiagnostics();
 }
+
+TEST_CASE("Invalid argument regress GH #418") {
+    auto tree = SyntaxTree::fromText(R"(
+byte i_data [ ] ;
+initial
+i_data [ 12 : 9
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    // Just check no assertion.
+    compilation.getAllDiagnostics();
+}

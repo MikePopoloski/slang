@@ -517,6 +517,7 @@ Expression& RangeSelectExpression::fromSyntax(Compilation& compilation, Expressi
             selectionRange = { *lv, *rv };
             if (selectionRange.isLittleEndian() && selectionRange.width() > 1) {
                 auto& diag = context.addDiag(diag::SelectEndianDynamic, errorRange);
+                diag << selectionRange.left << selectionRange.right;
                 diag << valueType;
                 return badExpr(compilation, result);
             }
