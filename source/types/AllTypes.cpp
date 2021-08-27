@@ -291,10 +291,13 @@ const Type& EnumType::fromSyntax(Compilation& compilation, const EnumTypeSyntax&
     else {
         base = &compilation.getType(*syntax.baseType, location, scope);
         cb = &base->getCanonicalType();
-        if (!cb->isError() && !cb->isSimpleBitVector()) {
+        if (cb->isError())
+            return *cb;
+
+        if (!cb->isSimpleBitVector()) {
             scope.addDiag(diag::InvalidEnumBase, syntax.baseType->getFirstToken().location())
                 << *base;
-            cb = &compilation.getErrorType();
+            return compilation.getErrorType();
         }
 
         bitWidth = cb->getBitWidth();

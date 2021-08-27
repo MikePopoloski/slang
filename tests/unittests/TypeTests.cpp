@@ -1093,3 +1093,16 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Enum base error regress GH #414") {
+    auto tree = SyntaxTree::fromText(R"(
+enum DataWidth { CORE_STATUS, TEST_RESULT, WRITE_GPR } signature_type_t;
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::UndeclaredIdentifier);
+}
