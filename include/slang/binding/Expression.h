@@ -174,7 +174,8 @@ public:
     /// There are special inference rules for parameters.
     static const Expression& bindImplicitParam(const DataTypeSyntax& implicitType,
                                                const ExpressionSyntax& rhs, SourceLocation location,
-                                               const BindContext& context,
+                                               const BindContext& exprContext,
+                                               const BindContext& typeContext,
                                                bitmask<BindFlags> extraFlags = BindFlags::None);
 
     /// Converts the given expression to the specified type, as if the right hand side had been

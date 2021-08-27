@@ -268,12 +268,12 @@ const Expression& Expression::bindArgument(const Type& argType, ArgumentDirectio
     THROW_UNREACHABLE;
 }
 
-const Expression& Expression::bindImplicitParam(const DataTypeSyntax& typeSyntax,
-                                                const ExpressionSyntax& rhs,
-                                                SourceLocation location, const BindContext& context,
-                                                bitmask<BindFlags> extraFlags) {
-    Compilation& comp = context.getCompilation();
-    Expression& expr = create(comp, rhs, context, extraFlags);
+const Expression& Expression::bindImplicitParam(
+    const DataTypeSyntax& typeSyntax, const ExpressionSyntax& rhs, SourceLocation location,
+    const BindContext& exprContext, const BindContext& typeContext, bitmask<BindFlags> extraFlags) {
+
+    Compilation& comp = exprContext.getCompilation();
+    Expression& expr = create(comp, rhs, exprContext, extraFlags);
     const Type* lhsType = expr.type;
 
     // Rules are described in [6.20.2].
@@ -281,7 +281,7 @@ const Expression& Expression::bindImplicitParam(const DataTypeSyntax& typeSyntax
     if (!it.dimensions.empty()) {
         // If we have a range provided, the result is always an integral value
         // of the provided width -- getType() will do what we want here.
-        lhsType = &comp.getType(typeSyntax, context.getLocation(), *context.scope);
+        lhsType = &comp.getType(typeSyntax, typeContext.getLocation(), *typeContext.scope);
     }
     else if (it.signing) {
         // If signing is provided, the result is always integral but we infer the width.
@@ -312,8 +312,8 @@ const Expression& Expression::bindImplicitParam(const DataTypeSyntax& typeSyntax
         }
     }
 
-    const Expression& result = convertAssignment(context, *lhsType, expr, location);
-    return checkBindFlags(result, context);
+    const Expression& result = convertAssignment(exprContext, *lhsType, expr, location);
+    return checkBindFlags(result, exprContext);
 }
 
 const Expression& Expression::checkBindFlags(const Expression& expr, const BindContext& context) {

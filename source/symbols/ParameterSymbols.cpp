@@ -367,10 +367,14 @@ void DefParamSymbol::resolve() const {
     auto declType = param.getDeclaredType();
     auto typeSyntax = declType->getTypeSyntax();
 
-    if (typeSyntax && typeSyntax->kind == SyntaxKind::ImplicitType)
-        initializer = &Expression::bindImplicitParam(*typeSyntax, expr, equalsLoc, context);
-    else
+    if (typeSyntax && typeSyntax->kind == SyntaxKind::ImplicitType) {
+        BindContext typeContext(*param.getParentScope(), LookupLocation::before(param));
+        initializer =
+            &Expression::bindImplicitParam(*typeSyntax, expr, equalsLoc, context, typeContext);
+    }
+    else {
         initializer = &Expression::bindRValue(declType->getType(), expr, equalsLoc, context);
+    }
 
     context.eval(*initializer);
     if (!initializer->constant)

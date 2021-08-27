@@ -2042,3 +2042,19 @@ parameter int foo = foo;
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::UsedBeforeDeclared);
 }
+
+TEST_CASE("Param reference in implicit dimension specification") {
+    auto tree = SyntaxTree::fromText(R"(
+module m #(parameter foo = 1, parameter [foo-1:0] bar = '0)();
+    localparam p = bar;
+endmodule
+
+module n;
+    m #(.bar(50)) m1();
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}

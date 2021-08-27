@@ -77,6 +77,7 @@ void DeclaredType::resolveType(const BindContext& initializerContext) const {
 
     // If we are configured to infer implicit types, bind the initializer expression
     // first so that we can derive our type from whatever that happens to be.
+    BindContext typeContext = getBindContext<false>();
     if (typeSyntax->kind == SyntaxKind::ImplicitType &&
         flags.has(DeclaredTypeFlags::InferImplicit)) {
         if (dimensions) {
@@ -93,7 +94,7 @@ void DeclaredType::resolveType(const BindContext& initializerContext) const {
 
             initializer =
                 &Expression::bindImplicitParam(*typeSyntax, *initializerSyntax, initializerLocation,
-                                               initializerContext, extraFlags);
+                                               initializerContext, typeContext, extraFlags);
             type = initializer->type;
         }
     }
@@ -102,7 +103,6 @@ void DeclaredType::resolveType(const BindContext& initializerContext) const {
         if (flags.has(DeclaredTypeFlags::TypedefTarget))
             typedefTarget = &parent.as<Type>();
 
-        BindContext typeContext = getBindContext<false>();
         type = &comp.getType(*typeSyntax, typeContext.getLocation(), scope, typedefTarget);
         if (dimensions)
             type = &comp.getType(*type, *dimensions, typeContext.getLocation(), scope);
