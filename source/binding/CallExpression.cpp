@@ -700,7 +700,10 @@ bool CallExpression::checkConstant(EvalContext& context, const SubroutineSymbol&
     if (context.isScriptEval())
         return true;
 
-    ASSERT(subroutine.subroutineKind != SubroutineKind::Task);
+    if (subroutine.subroutineKind == SubroutineKind::Task) {
+        context.addDiag(diag::ConstEvalTaskNotConstant, range);
+        return false;
+    }
 
     if (subroutine.flags.has(MethodFlags::DPIImport)) {
         context.addDiag(diag::ConstEvalDPINotConstant, range);

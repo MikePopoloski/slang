@@ -1390,6 +1390,8 @@ module m;
         return u(l);
     endfunction
     function int f5; return asdf.v(); endfunction
+
+    if (t()) begin end
 endmodule
 )");
 
@@ -1397,12 +1399,13 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 5);
+    REQUIRE(diags.size() == 6);
     CHECK(diags[0].code == diag::ConstEvalDPINotConstant);
     CHECK(diags[1].code == diag::ConstEvalVoidNotConstant);
     CHECK(diags[2].code == diag::TaskFromFunction);
     CHECK(diags[3].code == diag::ConstEvalFunctionArgDirection);
     CHECK(diags[4].code == diag::ConstEvalFunctionInsideGenerate);
+    CHECK(diags[5].code == diag::ConstEvalTaskNotConstant);
 }
 
 TEST_CASE("Subroutine ref arguments") {
