@@ -174,11 +174,10 @@ ConstantValue NamedValueExpression::evalImpl(EvalContext& context) const {
         case SymbolKind::Parameter: {
             auto v = symbol.as<ParameterSymbol>().getValue();
             if (v.isUnbounded()) {
-                auto target = context.getQueueTarget();
-                ASSERT(target);
-
-                int32_t size = (int32_t)target->queue()->size();
-                return SVInt(32, uint64_t(size - 1), true);
+                if (auto target = context.getQueueTarget()) {
+                    int32_t size = (int32_t)target->queue()->size();
+                    return SVInt(32, uint64_t(size - 1), true);
+                }
             }
             return v;
         }

@@ -2234,3 +2234,21 @@ i_data [ 12 : 9
     // Just check no assertion.
     compilation.getAllDiagnostics();
 }
+
+TEST_CASE("Invalid param assign regress GH #420") {
+    auto tree = SyntaxTree::fromText(R"(
+typedef ctrl_reg_t;
+parameter CTRL_RESET = $;
+endpackage
+module shadow # (
+  RESVAL
+endmodule;
+shadow # (CTRL_RESET) (
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    // Just check no assertion.
+    compilation.getAllDiagnostics();
+}
