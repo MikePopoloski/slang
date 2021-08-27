@@ -1340,3 +1340,16 @@ endmodule
     CHECK(diags[4].code == diag::ClockVarAssignConcat);
     CHECK(diags[5].code == diag::ClockVarSyncDrive);
 }
+
+TEST_CASE("Invalid case statement regress GH #422") {
+    auto tree = SyntaxTree::fromText(R"(
+initial casez       matches
+       a
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    // Just check no assertion.
+    compilation.getAllDiagnostics();
+}

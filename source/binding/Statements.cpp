@@ -1018,6 +1018,9 @@ Statement& CaseStatement::fromSyntax(Compilation& compilation, const CaseStateme
                 bad |= stmt.bad();
                 break;
             }
+            case SyntaxKind::PatternCaseItem:
+                // TODO: support pattern case statements
+                break;
             case SyntaxKind::DefaultCaseItem:
                 // The parser already errored for duplicate defaults,
                 // so just ignore if it happens here.
