@@ -390,20 +390,22 @@ SpecparamSymbol::SpecparamSymbol(string_view name, SourceLocation loc) :
 }
 
 const ConstantValue& SpecparamSymbol::getValue() const {
-    auto init = getDeclaredType()->getInitializer();
-    ASSERT(init);
+    if (!value) {
+        // If no value has been explicitly set, try to set it
+        // from our initializer.
+        auto init = getInitializer();
+        if (init) {
+            auto scope = getParentScope();
+            ASSERT(scope);
 
-    if (!init->constant) {
-        auto scope = getParentScope();
-        ASSERT(scope);
-
-        BindContext context(*scope, LookupLocation::before(*this));
-        context.eval(*init);
-
-        ASSERT(init->constant);
+            BindContext ctx(*scope, LookupLocation::before(*this));
+            value = scope->getCompilation().allocConstant(ctx.eval(*init));
+        }
+        else {
+            value = &ConstantValue::Invalid;
+        }
     }
-
-    return *init->constant;
+    return *value;
 }
 
 void SpecparamSymbol::fromSyntax(const Scope& scope, const SpecparamDeclarationSyntax& syntax,

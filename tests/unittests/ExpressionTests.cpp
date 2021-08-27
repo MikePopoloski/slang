@@ -2208,3 +2208,15 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Invalid specparam regress GH #417") {
+    auto tree = SyntaxTree::fromText(R"(
+specparam[] asasa = 1;
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    // Just check no assertion.
+    compilation.getAllDiagnostics();
+}

@@ -133,6 +133,9 @@ public:
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::Specparam; }
 
     void serializeTo(ASTSerializer& serializer) const;
+
+private:
+    mutable const ConstantValue* value = nullptr;
 };
 
 } // namespace slang
