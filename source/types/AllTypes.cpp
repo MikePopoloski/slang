@@ -889,7 +889,9 @@ ConstantValue UnpackedUnionType::getDefaultValueImpl() const {
     if (it == range.end())
         return nullptr;
 
-    return it->getType().getDefaultValue();
+    SVUnion u;
+    u.value = it->getType().getDefaultValue();
+    return u;
 }
 
 const Type& UnpackedUnionType::fromSyntax(const Scope& scope, LookupLocation location,

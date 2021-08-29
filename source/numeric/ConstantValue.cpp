@@ -76,8 +76,15 @@ std::string ConstantValue::toString() const {
                 buffer.append("]");
                 return buffer.str();
             }
-            else
+            else if constexpr (std::is_same_v<T, Union>) {
+                if (!arg->activeMember)
+                    return "(unset)"s;
+
+                return fmt::format("({}) {}", *arg->activeMember, arg->value.toString());
+            }
+            else {
                 static_assert(always_false<T>::value, "Missing case");
+            }
         },
         value);
 }
@@ -114,6 +121,14 @@ size_t ConstantValue::hash() const {
             else if constexpr (std::is_same_v<T, Queue>) {
                 for (auto& element : *arg)
                     hash_combine(h, element.hash());
+            }
+            else if constexpr (std::is_same_v<T, Union>) {
+                if (!arg->activeMember)
+                    hash_combine(h, 1);
+                else {
+                    hash_combine(h, 3);
+                    hash_combine(h, arg->value.hash());
+                }
             }
             else {
                 static_assert(always_false<T>::value, "Missing case");
@@ -514,6 +529,13 @@ bool operator==(const ConstantValue& lhs, const ConstantValue& rhs) {
 
                 return *arg == *rhs.queue();
             }
+            else if constexpr (std::is_same_v<T, ConstantValue::Union>) {
+                if (!rhs.isUnion())
+                    return false;
+
+                auto& ru = rhs.unionVal();
+                return arg->activeMember == ru->activeMember && arg->value == ru->value;
+            }
             else {
                 static_assert(always_false<T>::value, "Missing case");
             }
@@ -560,6 +582,13 @@ bool operator<(const ConstantValue& lhs, const ConstantValue& rhs) {
                     return false;
 
                 return *arg < *rhs.queue();
+            }
+            else if constexpr (std::is_same_v<T, ConstantValue::Union>) {
+                if (!rhs.isUnion())
+                    return false;
+
+                auto& ru = rhs.unionVal();
+                return arg->activeMember < ru->activeMember && arg->value < ru->value;
             }
             else {
                 static_assert(always_false<T>::value, "Missing case");
