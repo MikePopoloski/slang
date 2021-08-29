@@ -1070,8 +1070,7 @@ ConstantValue ConditionalExpression::evalImpl(EvalContext& context) const {
             // Sizes here might differ for dynamic arrays.
             span<const ConstantValue> la = cvl.elements();
             span<const ConstantValue> ra = cvr.elements();
-            if (la.size() == ra.size()) {
-                // TODO: what if this is an unpacked struct?
+            if (la.size() == ra.size() && type->isArray()) {
                 std::vector<ConstantValue> result(la.size());
                 return combineArrays(result, la, ra);
             }

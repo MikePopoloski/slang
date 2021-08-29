@@ -773,6 +773,7 @@ const Type& UnpackedStructType::fromSyntax(const Scope& scope, LookupLocation lo
             // Force resolution of the type right away, otherwise nothing
             // is required to force it later.
             variable->getType();
+            variable->getInitializer();
         }
     }
 
@@ -914,6 +915,7 @@ const Type& UnpackedUnionType::fromSyntax(const Scope& scope, LookupLocation loc
             // Force resolution of the type right away, otherwise nothing
             // is required to force it later.
             variable->getType();
+            variable->getInitializer();
         }
     }
 

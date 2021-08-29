@@ -747,6 +747,11 @@ TEST_CASE("Unpacked struct eval") {
     CHECK_THAT(session.eval("foo == foo").integer(), exactlyEquals(SVInt(logic_t::x)));
     CHECK(session.eval("foo === foo").integer() == 1);
 
+    session.eval("var type(foo) bar;");
+    CHECK(session.eval("foo === bar").integer() == 0);
+    CHECK(session.eval("(1 ? foo : bar) === foo").integer() == 1);
+    CHECK(session.eval("('x ? foo : bar) === bar").integer() == 1);
+
     NO_SESSION_ERRORS;
 }
 
