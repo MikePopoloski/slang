@@ -748,7 +748,7 @@ Expression& BinaryExpression::fromComponents(Expression& lhs, Expression& rhs, B
                     contextDetermined(context, result->left_, compilation.getStringType());
                     contextDetermined(context, result->right_, compilation.getStringType());
                 }
-                else if (lt->isAggregate() && lt->isEquivalent(*rt)) {
+                else if (lt->isAggregate() && lt->isEquivalent(*rt) && !lt->isUnpackedUnion()) {
                     good = !isWildcard;
                     result->type = singleBitType(compilation, lt, rt);
                 }
@@ -994,7 +994,7 @@ Expression& ConditionalExpression::fromSyntax(Compilation& compilation,
             else
                 good = false;
         }
-        else if (lt->isEquivalent(*rt)) {
+        else if (lt->isEquivalent(*rt) && !lt->isUnpackedUnion()) {
             result->type = lt;
         }
         else if (left.isImplicitString() && right.isImplicitString()) {

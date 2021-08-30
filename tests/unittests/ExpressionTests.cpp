@@ -336,8 +336,14 @@ TEST_CASE("Expression types") {
     // Min-typ-max
     CHECK(typeof("(arr1[99]:3'd4:99'd4) + 2'd1") == "bit[2:0]");
 
+    // Unpacked unions
+    declare("union { int i; real r; } uu1, uu2;");
+    CHECK(typeof("uu1 == uu2") == "<error>");
+    CHECK(typeof("uu1 !== uu2") == "<error>");
+    CHECK(typeof("1 ? uu1 : uu2") == "<error>");
+
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 8);
+    REQUIRE(diags.size() == 11);
     CHECK(diags[0].code == diag::BadUnaryExpression);
     CHECK(diags[1].code == diag::BadBinaryExpression);
     CHECK(diags[2].code == diag::BadBinaryExpression);
@@ -346,6 +352,9 @@ TEST_CASE("Expression types") {
     CHECK(diags[5].code == diag::BadBinaryExpression);
     CHECK(diags[6].code == diag::BadConditionalExpression);
     CHECK(diags[7].code == diag::NotBooleanConvertible);
+    CHECK(diags[8].code == diag::BadBinaryExpression);
+    CHECK(diags[9].code == diag::BadBinaryExpression);
+    CHECK(diags[10].code == diag::BadConditionalExpression);
 }
 
 TEST_CASE("Expression - bad name references") {
