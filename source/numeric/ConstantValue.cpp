@@ -48,7 +48,7 @@ std::string ConstantValue::toString() const {
                 return buffer.str();
             }
             else if constexpr (std::is_same_v<T, std::string>)
-                return arg;
+                return fmt::format("\"{}\"", arg);
             else if constexpr (std::is_same_v<T, Map>) {
                 FormatBuffer buffer;
                 buffer.append("[");

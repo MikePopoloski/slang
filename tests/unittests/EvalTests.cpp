@@ -2089,7 +2089,7 @@ TEST_CASE("Array ordering methods") {
     session.eval("d.reverse");
 
     CHECK(session.eval("c").toString() == "[3,4,9,1]");
-    CHECK(session.eval("d").toString() == "[bar,baz,asdf]");
+    CHECK(session.eval("d").toString() == "[\"bar\",\"baz\",\"asdf\"]");
 
     NO_SESSION_ERRORS;
 }
@@ -2104,7 +2104,7 @@ TEST_CASE("Array locator methods") {
     CHECK(session.eval("a.find with (item > 7)").toString() == "[9,8,8]");
     CHECK(session.eval("b.find_index with (item < 0)").toString() == "[2,3,4]");
     CHECK(session.eval("c.find_first with (item == 4)").toString() == "[4]");
-    CHECK(session.eval("c.find_first_index with (item == 4)").toString() == "[good]");
+    CHECK(session.eval("c.find_first_index with (item == 4)").toString() == "[\"good\"]");
     CHECK(session.eval("c.find_last with (item < 100)").toString() == "[1]");
     CHECK(session.eval("b.find_last_index with (item > 10)").toString() == "[]");
     CHECK(session.eval("a.find_last_index with (item == 8)").toString() == "[5]");
@@ -2122,8 +2122,8 @@ TEST_CASE("Array locator methods") {
     CHECK(session.eval("e.unique_index with (item == 4 ? 1 : item)").toString() == "[0,3,4,6]");
 
     session.eval("int f[string] = '{\"a\":1, \"b\":5, \"c\":1, \"d\":1};");
-    CHECK(session.eval("f.unique_index").toString() == "[a,b]");
-    CHECK(session.eval("f.unique_index with (item == 5 ? 1 : item)").toString() == "[a]");
+    CHECK(session.eval("f.unique_index").toString() == "[\"a\",\"b\"]");
+    CHECK(session.eval("f.unique_index with (item == 5 ? 1 : item)").toString() == "[\"a\"]");
 
     NO_SESSION_ERRORS;
 }
