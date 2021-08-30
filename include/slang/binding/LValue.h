@@ -48,7 +48,7 @@ private:
         ConstantRange range;
     };
 
-    // A selection of a single element from an array, string, or struct.
+    // A selection of a single element from an array, string, struct, or union.
     struct ElementIndex {
         int32_t index = 0;
         ConstantValue defaultValue;

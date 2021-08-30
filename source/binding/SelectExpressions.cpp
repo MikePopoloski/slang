@@ -956,9 +956,18 @@ ConstantValue MemberAccessExpression::evalImpl(EvalContext& context) const {
     if (!cv)
         return nullptr;
 
-    // TODO: handle unpacked unions
-    if (value().type->isUnpackedStruct())
+    auto& valueType = *value().type;
+    if (valueType.isUnpackedStruct()) {
         return cv.elements()[offset];
+    }
+    else if (valueType.isUnpackedUnion()) {
+        auto& unionVal = cv.unionVal();
+        if (unionVal->activeMember != offset) {
+            // TODO: error
+            return type->getDefaultValue();
+        }
+        return unionVal->value;
+    }
 
     int32_t io = (int32_t)offset;
     int32_t width = (int32_t)type->getBitWidth();
@@ -970,10 +979,13 @@ LValue MemberAccessExpression::evalLValueImpl(EvalContext& context) const {
     if (!lval)
         return nullptr;
 
-    // TODO: handle unpacked unions
     int32_t io = (int32_t)offset;
-    if (value().type->isUnpackedStruct()) {
+    auto& valueType = *value().type;
+    if (valueType.isUnpackedStruct()) {
         lval.addIndex(io, nullptr);
+    }
+    else if (valueType.isUnpackedUnion()) {
+        lval.addIndex(io, type->getDefaultValue());
     }
     else {
         int32_t width = (int32_t)type->getBitWidth();

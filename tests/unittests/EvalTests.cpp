@@ -755,6 +755,24 @@ TEST_CASE("Unpacked struct eval") {
     NO_SESSION_ERRORS;
 }
 
+TEST_CASE("Unpacked union eval") {
+    ScriptSession session;
+    session.eval("union { integer a[2:0]; bit b; } foo, bar;");
+    session.eval("foo.a[0] = 42;");
+    session.eval("foo.b = 1;");
+
+    CHECK(session.eval("foo").toString() == "(1) 1'b1");
+
+    session.eval("foo.a[0] = 42;");
+    session.eval("foo.a[2:1] = '{3,4};");
+    CHECK(session.eval("foo").toString() == "(0) [3,4,42]");
+
+    session.eval("bar = foo;");
+    CHECK(session.eval("bar").toString() == "(0) [3,4,42]");
+
+    NO_SESSION_ERRORS;
+}
+
 TEST_CASE("String literal ops") {
     ScriptSession session;
     session.eval("bit [8*14:1] str;");

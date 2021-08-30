@@ -901,10 +901,11 @@ const Type& UnpackedUnionType::fromSyntax(const Scope& scope, LookupLocation loc
     auto& comp = scope.getCompilation();
     auto result = comp.emplace<UnpackedUnionType>(comp, syntax.keyword.location(), location, scope);
 
+    uint32_t fieldIndex = 0;
     for (auto member : syntax.members) {
         for (auto decl : member->declarators) {
-            auto variable =
-                comp.emplace<FieldSymbol>(decl->name.valueText(), decl->name.location(), 0u);
+            auto variable = comp.emplace<FieldSymbol>(decl->name.valueText(), decl->name.location(),
+                                                      fieldIndex++);
             variable->setDeclaredType(*member->type);
             variable->setFromDeclarator(*decl);
             variable->setAttributes(scope, member->attributes);

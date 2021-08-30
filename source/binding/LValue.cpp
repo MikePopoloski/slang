@@ -54,6 +54,13 @@ ConstantValue LValue::load() const {
                     if (result.isString()) {
                         result = SVInt(8, (uint64_t)result.str()[size_t(arg.index)], false);
                     }
+                    else if (result.isUnion()) {
+                        // If we're selecting the active member all is well. If not,
+                        // we need to return the default value because we have no
+                        // idea what type this should be.
+                        if (arg.index < 0 || result.unionVal()->activeMember != uint32_t(arg.index))
+                            result = arg.defaultValue;
+                    }
                     else if (arg.index < 0 || size_t(arg.index) >= result.size()) {
                         result = arg.defaultValue;
                     }
@@ -174,7 +181,6 @@ void LValue::store(const ConstantValue& newValue) {
 }
 
 ConstantValue* LValue::resolveInternal(optional<ConstantRange>& range) {
-    // Otherwise, we have an lvalue path. Walk the path and apply each element.
     auto& path = std::get<Path>(value);
     ConstantValue* target = path.base;
 
@@ -210,6 +216,16 @@ ConstantValue* LValue::resolveInternal(optional<ConstantRange>& range) {
                             else
                                 target = &q[size_t(arg.index)];
                         }
+                    }
+                    else if (target->isUnion()) {
+                        ASSERT(arg.index >= 0);
+
+                        auto& unionVal = target->unionVal();
+                        if (unionVal->activeMember != uint32_t(arg.index)) {
+                            unionVal->activeMember = uint32_t(arg.index);
+                            unionVal->value = arg.defaultValue;
+                        }
+                        target = &unionVal->value;
                     }
                     else {
                         auto elems = target->elements();
