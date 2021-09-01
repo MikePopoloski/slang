@@ -239,9 +239,11 @@ public:
 class PackedUnionType : public IntegralType, public Scope {
 public:
     int systemId;
+    bool isTagged;
 
     PackedUnionType(Compilation& compilation, bitwidth_t bitWidth, bool isSigned, bool isFourState,
-                    SourceLocation loc, LookupLocation lookupLocation, const Scope& scope);
+                    bool isTagged, SourceLocation loc, LookupLocation lookupLocation,
+                    const Scope& scope);
 
     static const Type& fromSyntax(Compilation& compilation, const StructUnionTypeSyntax& syntax,
                                   LookupLocation location, const Scope& scope);
@@ -253,9 +255,10 @@ public:
 class UnpackedUnionType : public Type, public Scope {
 public:
     int systemId;
+    bool isTagged;
 
-    UnpackedUnionType(Compilation& compilation, SourceLocation loc, LookupLocation lookupLocation,
-                      const Scope& scope);
+    UnpackedUnionType(Compilation& compilation, bool isTagged, SourceLocation loc,
+                      LookupLocation lookupLocation, const Scope& scope);
 
     static const Type& fromSyntax(const Scope& scope, LookupLocation location,
                                   const StructUnionTypeSyntax& syntax);

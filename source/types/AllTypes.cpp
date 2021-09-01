@@ -777,23 +777,15 @@ const Type& UnpackedStructType::fromSyntax(const Scope& scope, LookupLocation lo
         }
     }
 
-    if (!syntax.dimensions.empty())
-        scope.addDiag(diag::PackedDimsOnUnpacked, syntax.dimensions.sourceRange());
-
-    if (syntax.signing)
-        scope.addDiag(diag::UnpackedSigned, syntax.signing.range());
-
-    // TODO: check for void types
-
     result->setSyntax(syntax);
     return *result;
 }
 
 PackedUnionType::PackedUnionType(Compilation& compilation, bitwidth_t bitWidth, bool isSigned,
-                                 bool isFourState, SourceLocation loc,
+                                 bool isFourState, bool isTagged, SourceLocation loc,
                                  LookupLocation lookupLocation, const Scope& scope) :
     IntegralType(SymbolKind::PackedUnionType, "", loc, bitWidth, isSigned, isFourState),
-    Scope(compilation, this), systemId(compilation.getNextUnionSystemId()) {
+    Scope(compilation, this), systemId(compilation.getNextUnionSystemId()), isTagged(isTagged) {
 
     // Union types don't live as members of the parent scope (they're "owned" by the declaration
     // containing them) but we hook up the parent pointer so that it can participate in name
@@ -806,6 +798,7 @@ const Type& PackedUnionType::fromSyntax(Compilation& compilation,
                                         LookupLocation location, const Scope& scope) {
     ASSERT(syntax.packed);
     bool isSigned = syntax.signing.kind == TokenKind::SignedKeyword;
+    bool isTagged = syntax.tagged.valid();
     bool isFourState = false;
     bool issuedError = false;
     bitwidth_t bitWidth = 0;
@@ -817,7 +810,7 @@ const Type& PackedUnionType::fromSyntax(Compilation& compilation,
         isFourState |= type.isFourState();
         issuedError |= type.isError();
 
-        if (!issuedError && !type.isIntegral()) {
+        if (!issuedError && !type.isIntegral() && (!isTagged || !type.isVoid())) {
             issuedError = true;
             auto& diag = scope.addDiag(diag::PackedMemberNotIntegral,
                                        member->type->getFirstToken().location());
@@ -843,8 +836,13 @@ const Type& PackedUnionType::fromSyntax(Compilation& compilation,
                 issuedError = true;
             }
 
-            if (!bitWidth)
+            if (!bitWidth) {
                 bitWidth = type.getBitWidth();
+            }
+            else if (isTagged) {
+                // In tagged unions the members don't all have to have the same width.
+                bitWidth = std::max(bitWidth, type.getBitWidth());
+            }
             else if (bitWidth != type.getBitWidth() && !issuedError && !name.valueText().empty()) {
                 auto& diag = scope.addDiag(diag::PackedUnionWidthMismatch, name.range());
                 diag << name.valueText() << type.getBitWidth() << bitWidth;
@@ -859,11 +857,16 @@ const Type& PackedUnionType::fromSyntax(Compilation& compilation,
         }
     }
 
+    // In tagged unions the tag contributes to the total number of packed bits.
+    if (isTagged)
+        bitWidth += clog2(members.size());
+
     if (!bitWidth || issuedError)
         return compilation.getErrorType();
 
-    auto unionType = compilation.emplace<PackedUnionType>(
-        compilation, bitWidth, isSigned, isFourState, syntax.keyword.location(), location, scope);
+    auto unionType =
+        compilation.emplace<PackedUnionType>(compilation, bitWidth, isSigned, isFourState, isTagged,
+                                             syntax.keyword.location(), location, scope);
     unionType->setSyntax(syntax);
 
     for (auto member : members)
@@ -872,10 +875,10 @@ const Type& PackedUnionType::fromSyntax(Compilation& compilation,
     return createPackedDims(BindContext(scope, location), unionType, syntax.dimensions);
 }
 
-UnpackedUnionType::UnpackedUnionType(Compilation& compilation, SourceLocation loc,
+UnpackedUnionType::UnpackedUnionType(Compilation& compilation, bool isTagged, SourceLocation loc,
                                      LookupLocation lookupLocation, const Scope& scope) :
     Type(SymbolKind::UnpackedUnionType, "", loc),
-    Scope(compilation, this), systemId(compilation.getNextUnionSystemId()) {
+    Scope(compilation, this), systemId(compilation.getNextUnionSystemId()), isTagged(isTagged) {
 
     // Union types don't live as members of the parent scope (they're "owned" by the declaration
     // containing them) but we hook up the parent pointer so that it can participate in name
@@ -900,7 +903,9 @@ const Type& UnpackedUnionType::fromSyntax(const Scope& scope, LookupLocation loc
     ASSERT(!syntax.packed);
 
     auto& comp = scope.getCompilation();
-    auto result = comp.emplace<UnpackedUnionType>(comp, syntax.keyword.location(), location, scope);
+    bool isTagged = syntax.tagged.valid();
+    auto result =
+        comp.emplace<UnpackedUnionType>(comp, isTagged, syntax.keyword.location(), location, scope);
 
     uint32_t fieldIndex = 0;
     for (auto member : syntax.members) {
@@ -914,7 +919,7 @@ const Type& UnpackedUnionType::fromSyntax(const Scope& scope, LookupLocation loc
             result->addMember(*variable);
 
             auto& varType = variable->getType();
-            if (varType.isCHandle() || varType.isDynamicallySizedArray())
+            if (!isTagged && (varType.isCHandle() || varType.isDynamicallySizedArray()))
                 scope.addDiag(diag::InvalidUnionMember, decl->name.range()) << varType;
             else if (varType.isVirtualInterface())
                 scope.addDiag(diag::VirtualInterfaceUnionMember, decl->name.range());
@@ -924,14 +929,6 @@ const Type& UnpackedUnionType::fromSyntax(const Scope& scope, LookupLocation loc
             variable->getInitializer();
         }
     }
-
-    if (!syntax.dimensions.empty())
-        scope.addDiag(diag::PackedDimsOnUnpacked, syntax.dimensions.sourceRange());
-
-    if (syntax.signing)
-        scope.addDiag(diag::UnpackedSigned, syntax.signing.range());
-
-    // TODO: check for void types
 
     result->setSyntax(syntax);
     return *result;

@@ -966,6 +966,7 @@ module m;
     union unsigned { int j; } u1;
     union { int i; } [3:0] u2;
     union { virtual interface I i; int j[]; } u3;
+    struct tagged { int i; } s3;
 endmodule
 )");
 
@@ -973,13 +974,14 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 6);
+    REQUIRE(diags.size() == 7);
     CHECK(diags[0].code == diag::UnpackedSigned);
     CHECK(diags[1].code == diag::PackedDimsOnUnpacked);
     CHECK(diags[2].code == diag::UnpackedSigned);
     CHECK(diags[3].code == diag::PackedDimsOnUnpacked);
     CHECK(diags[4].code == diag::VirtualInterfaceUnionMember);
     CHECK(diags[5].code == diag::InvalidUnionMember);
+    CHECK(diags[6].code == diag::TaggedStruct);
 }
 
 TEST_CASE("Array elements max size") {
@@ -1110,4 +1112,52 @@ enum DataWidth { CORE_STATUS, TEST_RESULT, WRITE_GPR } signature_type_t;
     auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::UndeclaredIdentifier);
+}
+
+TEST_CASE("Tagged unions") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    typedef union tagged {
+        struct {
+            bit [4:0] reg1, reg2, regd;
+        } Add;
+        union tagged {
+            bit [9:0] JmpU;
+            struct {
+                bit [1:0] cc; 
+                bit [9:0] addr;
+            } JmpC;
+        } Jmp;
+        chandle baz;
+        int bar[];
+    } Instr;
+
+    typedef union tagged {
+        void Invalid;
+        int Valid;
+    } VInt;
+
+    typedef union tagged packed {
+        struct packed {
+            bit [4:0] reg1, reg2, regd;
+        } Add;
+        union tagged packed {
+            bit [9:0] JmpU;
+            struct packed {
+                bit [1:0] cc; 
+                bit [9:0] addr;
+            } JmpC;
+        } Jmp;
+    } InstrPacked;
+
+    typedef union tagged packed {
+        void Invalid;
+        int Valid;
+    } VIntPacked;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
 }

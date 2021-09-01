@@ -435,7 +435,11 @@ StructUnionTypeSyntax& Parser::parseStructUnion(SyntaxKind syntaxKind) {
                     break;
             }
 
-            auto& type = parseDataType();
+            bitmask<TypeOptions> typeOptions;
+            if (tagged.valid() && keyword.kind == TokenKind::UnionKeyword)
+                typeOptions = TypeOptions::AllowVoid;
+
+            auto& type = parseDataType(typeOptions);
 
             Token semi;
             auto declarators = parseDeclarators(semi);
@@ -454,8 +458,23 @@ StructUnionTypeSyntax& Parser::parseStructUnion(SyntaxKind syntaxKind) {
             addDiag(diag::ExpectedMember, closeBrace.location());
     }
 
+    auto dims = parseDimensionList();
+    if (!packed) {
+        if (!dims.empty()) {
+            SourceRange range{ dims.front()->getFirstToken().location(),
+                               dims.back()->getLastToken().range().end() };
+            addDiag(diag::PackedDimsOnUnpacked, range.start()) << range;
+        }
+
+        if (signing)
+            addDiag(diag::UnpackedSigned, signing.location()) << signing.range();
+    }
+
+    if (keyword.kind == TokenKind::StructKeyword && tagged.valid())
+        addDiag(diag::TaggedStruct, tagged.location()) << tagged.range();
+
     return factory.structUnionType(syntaxKind, keyword, tagged, packed, signing, openBrace,
-                                   buffer.copy(alloc), closeBrace, parseDimensionList());
+                                   buffer.copy(alloc), closeBrace, dims);
 }
 
 EnumTypeSyntax& Parser::parseEnum() {
