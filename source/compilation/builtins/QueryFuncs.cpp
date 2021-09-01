@@ -29,7 +29,7 @@ public:
         if (!checkArgCount(context, false, args, range, 1, 1))
             return comp.getErrorType();
 
-        if (!args[0]->type->isBitstreamType())
+        if (!args[0]->type->isBitstreamType() && !args[0]->type->isUnpackedUnion())
             return badArg(context, *args[0]);
 
         if (args[0]->kind == ExpressionKind::DataType && !args[0]->type->isFixedSize()) {
@@ -44,20 +44,19 @@ public:
     ConstantValue eval(EvalContext& context, const Args& args,
                        const CallExpression::SystemCallInfo&) const final {
         size_t width;
-        if (args[0]->type->isFixedSize())
+        if (args[0]->type->isFixedSize()) {
             width = args[0]->type->bitstreamWidth();
+        }
+        else if (args[0]->kind == ExpressionKind::DataType) {
+            auto& diag = context.addDiag(diag::ConstEvalBitsNotFixedSize, args[0]->sourceRange);
+            diag << *args[0]->type;
+            return nullptr;
+        }
         else {
-            if (args[0]->kind == ExpressionKind::DataType) {
-                auto& diag = context.addDiag(diag::ConstEvalBitsNotFixedSize, args[0]->sourceRange);
-                diag << *args[0]->type;
+            ConstantValue cv = args[0]->eval(context);
+            if (!cv)
                 return nullptr;
-            }
-            else {
-                ConstantValue cv = args[0]->eval(context);
-                if (!cv)
-                    return nullptr;
-                width = cv.bitstreamWidth();
-            }
+            width = cv.bitstreamWidth();
         }
 
         // TODO: width > INT_MAX

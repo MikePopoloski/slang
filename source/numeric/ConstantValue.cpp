@@ -485,6 +485,9 @@ size_t ConstantValue::bitstreamWidth() const {
         for (const auto& cv : *queue())
             width += cv.bitstreamWidth();
     }
+    else if (isUnion()) {
+        width = unionVal()->value.bitstreamWidth();
+    }
 
     return width;
 }

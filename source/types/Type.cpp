@@ -118,6 +118,14 @@ size_t Type::bitstreamWidth() const {
             width += field.getType().bitstreamWidth();
     }
 
+    if (isUnpackedUnion()) {
+        // Unpacked unions are not bitstream types but we support
+        // getting a bit width out of them anyway.
+        auto& us = getCanonicalType().as<UnpackedUnionType>();
+        for (const auto& field : us.membersOfType<FieldSymbol>())
+            width = std::max(width, field.getType().bitstreamWidth());
+    }
+
     if (isClass()) {
         auto& ct = getCanonicalType().as<ClassType>();
         if (ct.isInterface)
@@ -288,6 +296,15 @@ bool Type::isFixedSize() const {
 
     if (isUnpackedStruct()) {
         auto& us = getCanonicalType().as<UnpackedStructType>();
+        for (auto& field : us.membersOfType<FieldSymbol>()) {
+            if (!field.getType().isFixedSize())
+                return false;
+        }
+        return true;
+    }
+
+    if (isUnpackedUnion()) {
+        auto& us = getCanonicalType().as<UnpackedUnionType>();
         for (auto& field : us.membersOfType<FieldSymbol>()) {
             if (!field.getType().isFixedSize())
                 return false;

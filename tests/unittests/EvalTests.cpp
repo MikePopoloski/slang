@@ -1730,6 +1730,7 @@ struct { time a; enum bit [0:1] {red, yellow, blue} b; } record;
 localparam bit dynamic[] = '{1, 0};
 localparam shortint queue[$] = '{8, 1, 3};
 localparam byte asso[string] = '{ "Jon": 20, "Paul":22, "Al":23, default:-1 };
+union { int i[4]; bit [18:0] j; } u;
 )");
 
     CHECK(session.eval("$bits(str)").integer() == 40);
@@ -1740,6 +1741,7 @@ localparam byte asso[string] = '{ "Jon": 20, "Paul":22, "Al":23, default:-1 };
     CHECK(session.eval("$bits(asso)").integer() == 24);
     CHECK(session.eval("$bits(\"abcefghijk\")").integer() == 80);
     CHECK(session.eval("$bits(0)").integer() == 32);
+    CHECK(session.eval("$bits(u)").integer() == 128);
 
     NO_SESSION_ERRORS;
 }
