@@ -782,10 +782,12 @@ const Type& UnpackedStructType::fromSyntax(const Scope& scope, LookupLocation lo
 }
 
 PackedUnionType::PackedUnionType(Compilation& compilation, bitwidth_t bitWidth, bool isSigned,
-                                 bool isFourState, bool isTagged, SourceLocation loc,
-                                 LookupLocation lookupLocation, const Scope& scope) :
+                                 bool isFourState, bool isTagged, uint32_t tagBits,
+                                 SourceLocation loc, LookupLocation lookupLocation,
+                                 const Scope& scope) :
     IntegralType(SymbolKind::PackedUnionType, "", loc, bitWidth, isSigned, isFourState),
-    Scope(compilation, this), systemId(compilation.getNextUnionSystemId()), isTagged(isTagged) {
+    Scope(compilation, this), systemId(compilation.getNextUnionSystemId()), isTagged(isTagged),
+    tagBits(tagBits) {
 
     // Union types don't live as members of the parent scope (they're "owned" by the declaration
     // containing them) but we hook up the parent pointer so that it can participate in name
@@ -858,15 +860,18 @@ const Type& PackedUnionType::fromSyntax(Compilation& compilation,
     }
 
     // In tagged unions the tag contributes to the total number of packed bits.
-    if (isTagged)
-        bitWidth += clog2(members.size());
+    uint32_t tagBits = 0;
+    if (isTagged) {
+        tagBits = clog2(members.size());
+        bitWidth += tagBits;
+    }
 
     if (!bitWidth || issuedError)
         return compilation.getErrorType();
 
     auto unionType =
         compilation.emplace<PackedUnionType>(compilation, bitWidth, isSigned, isFourState, isTagged,
-                                             syntax.keyword.location(), location, scope);
+                                             tagBits, syntax.keyword.location(), location, scope);
     unionType->setSyntax(syntax);
 
     for (auto member : members)

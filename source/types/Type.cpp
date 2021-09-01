@@ -376,6 +376,18 @@ bool Type::isDynamicallySizedArray() const {
     }
 }
 
+bool Type::isTaggedUnion() const {
+    auto& ct = getCanonicalType();
+    switch (ct.kind) {
+        case SymbolKind::PackedUnionType:
+            return ct.as<PackedUnionType>().isTagged;
+        case SymbolKind::UnpackedUnionType:
+            return ct.as<UnpackedUnionType>().isTagged;
+        default:
+            return false;
+    }
+}
+
 bool Type::isMatching(const Type& rhs) const {
     // See [6.22.1] for Matching Types.
     const Type* l = &getCanonicalType();

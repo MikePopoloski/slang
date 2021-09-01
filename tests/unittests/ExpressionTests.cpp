@@ -2261,3 +2261,45 @@ shadow # (CTRL_RESET) (
     // Just check no assertion.
     compilation.getAllDiagnostics();
 }
+
+TEST_CASE("Tagged union expressions") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    union tagged { int a; int b[]; void c; } foo;
+    initial begin
+        foo = tagged a 1;
+        foo = tagged b '{1,2};
+        foo = tagged c;
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Tagged union expression errors") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    union tagged { int a; int b[]; void c; } foo;
+    initial begin
+        static int i = 1 + tagged a;
+
+        foo = tagged baz 1;
+        foo = tagged b;
+        foo = tagged c 52;
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 4);
+    CHECK(diags[0].code == diag::TaggedUnionTarget);
+    CHECK(diags[1].code == diag::UnknownMember);
+    CHECK(diags[2].code == diag::TaggedUnionMissingInit);
+    CHECK(diags[3].code == diag::BadAssignment);
+}

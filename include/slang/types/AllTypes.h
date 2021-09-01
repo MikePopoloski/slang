@@ -240,10 +240,11 @@ class PackedUnionType : public IntegralType, public Scope {
 public:
     int systemId;
     bool isTagged;
+    uint32_t tagBits;
 
     PackedUnionType(Compilation& compilation, bitwidth_t bitWidth, bool isSigned, bool isFourState,
-                    bool isTagged, SourceLocation loc, LookupLocation lookupLocation,
-                    const Scope& scope);
+                    bool isTagged, uint32_t tagBits, SourceLocation loc,
+                    LookupLocation lookupLocation, const Scope& scope);
 
     static const Type& fromSyntax(Compilation& compilation, const StructUnionTypeSyntax& syntax,
                                   LookupLocation location, const Scope& scope);

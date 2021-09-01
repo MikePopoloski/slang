@@ -733,8 +733,8 @@ Expression& Expression::create(Compilation& compilation, const ExpressionSyntax&
                 compilation, syntax.as<ArrayOrRandomizeMethodExpressionSyntax>(), context);
             break;
         case SyntaxKind::TaggedUnionExpression:
-            context.addDiag(diag::NotYetSupported, syntax.sourceRange());
-            result = &badExpr(compilation, nullptr);
+            result = &TaggedUnionExpression::fromSyntax(
+                compilation, syntax.as<TaggedUnionExpressionSyntax>(), context, assignmentTarget);
             break;
         default:
             if (NameSyntax::isKind(syntax.kind)) {

@@ -353,4 +353,35 @@ private:
     span<DistItem> items_;
 };
 
+struct TaggedUnionExpressionSyntax;
+
+/// Represents a tagged union member setter expression.
+class TaggedUnionExpression : public Expression {
+public:
+    const Symbol& member;
+    const Expression* valueExpr;
+
+    TaggedUnionExpression(const Type& type, const Symbol& member, const Expression* valueExpr,
+                          SourceRange sourceRange) :
+        Expression(ExpressionKind::TaggedUnion, type, sourceRange),
+        member(member), valueExpr(valueExpr) {}
+
+    ConstantValue evalImpl(EvalContext& context) const;
+    bool verifyConstantImpl(EvalContext& context) const;
+
+    void serializeTo(ASTSerializer& serializer) const;
+
+    static Expression& fromSyntax(Compilation& compilation,
+                                  const TaggedUnionExpressionSyntax& syntax,
+                                  const BindContext& context, const Type* assignmentTarget);
+
+    static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::TaggedUnion; }
+
+    template<typename TVisitor>
+    void visitExprs(TVisitor&& visitor) const {
+        if (valueExpr)
+            valueExpr->visit(visitor);
+    }
+};
+
 } // namespace slang

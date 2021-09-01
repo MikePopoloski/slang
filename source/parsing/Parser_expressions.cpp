@@ -61,10 +61,14 @@ ExpressionSyntax& Parser::parseSubExpression(bitmask<ExpressionOptions> options,
         return parsePostfixExpression(expr, options);
     }
     else if (current.kind == TokenKind::TaggedKeyword) {
-        // TODO: check for trailing expression
         auto tagged = consume();
         auto member = expect(TokenKind::Identifier);
-        return factory.taggedUnionExpression(tagged, member, nullptr);
+
+        ExpressionSyntax* expr = nullptr;
+        if (isPossibleExpression(peek().kind))
+            expr = &parseExpression();
+
+        return factory.taggedUnionExpression(tagged, member, expr);
     }
 
     ExpressionSyntax* leftOperand;

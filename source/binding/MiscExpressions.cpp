@@ -1116,4 +1116,95 @@ void DistExpression::serializeTo(ASTSerializer& serializer) const {
     serializer.endArray();
 }
 
+Expression& TaggedUnionExpression::fromSyntax(Compilation& compilation,
+                                              const TaggedUnionExpressionSyntax& syntax,
+                                              const BindContext& context,
+                                              const Type* assignmentTarget) {
+    if (!assignmentTarget || !assignmentTarget->isTaggedUnion()) {
+        if (!assignmentTarget || !assignmentTarget->isError())
+            context.addDiag(diag::TaggedUnionTarget, syntax.sourceRange());
+        return badExpr(compilation, nullptr);
+    }
+
+    auto memberName = syntax.member.valueText();
+    auto member = assignmentTarget->getCanonicalType().as<Scope>().find(memberName);
+    if (!member) {
+        if (!memberName.empty()) {
+            auto& diag = context.addDiag(diag::UnknownMember, syntax.member.range());
+            diag << memberName << *assignmentTarget;
+        }
+        return badExpr(compilation, nullptr);
+    }
+
+    auto& field = member->as<FieldSymbol>();
+
+    const Expression* valueExpr = nullptr;
+    if (syntax.expr) {
+        valueExpr = &bindRValue(field.getType(), *syntax.expr,
+                                syntax.expr->getFirstToken().location(), context);
+    }
+    else if (!field.getType().isVoid()) {
+        context.addDiag(diag::TaggedUnionMissingInit, syntax.sourceRange()) << field.name;
+        return badExpr(compilation, nullptr);
+    }
+
+    auto result = compilation.emplace<TaggedUnionExpression>(*assignmentTarget, *member, valueExpr,
+                                                             syntax.sourceRange());
+    if (valueExpr && valueExpr->bad())
+        return badExpr(compilation, result);
+
+    return *result;
+}
+
+ConstantValue TaggedUnionExpression::evalImpl(EvalContext& context) const {
+    ConstantValue initVal;
+    if (valueExpr) {
+        initVal = valueExpr->eval(context);
+        if (!initVal)
+            return nullptr;
+    }
+
+    auto& field = member.as<FieldSymbol>();
+
+    auto& ct = type->getCanonicalType();
+    if (ct.isUnpackedUnion()) {
+        SVUnion u;
+        u.activeMember = field.offset;
+        u.value = std::move(initVal);
+        return u;
+    }
+    else {
+        uint32_t tagBits = ct.as<PackedUnionType>().tagBits;
+        if (tagBits == 0)
+            return nullptr;
+
+        ConstantValue result = type->getDefaultValue();
+        auto& resultInt = result.integer();
+
+        // The tag lives in the upper bits and the value is in the lower bits.
+        // Any bits in between are undefined.
+        bitwidth_t bits = resultInt.getBitWidth();
+        resultInt.set(bits - 1, bits - tagBits, SVInt(tagBits, field.offset, false));
+
+        if (initVal) {
+            auto& valInt = initVal.integer();
+            resultInt.set(valInt.getBitWidth() - 1, 0, valInt);
+        }
+
+        return result;
+    }
+}
+
+bool TaggedUnionExpression::verifyConstantImpl(EvalContext& context) const {
+    if (valueExpr)
+        return valueExpr->verifyConstant(context);
+    return true;
+}
+
+void TaggedUnionExpression::serializeTo(ASTSerializer& serializer) const {
+    serializer.writeLink("member", member);
+    if (valueExpr)
+        serializer.write("valueExpr", *valueExpr);
+}
+
 } // namespace slang

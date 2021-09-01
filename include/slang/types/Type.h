@@ -141,6 +141,9 @@ public:
     /// Indicates whether this is a dynamic array, associative array, or a queue.
     bool isDynamicallySizedArray() const;
 
+    /// Indicates whether this is a tagged union, packed or unpacked.
+    bool isTaggedUnion() const;
+
     /// Indicates whether this is an unpacked structure type.
     bool isUnpackedStruct() const {
         return getCanonicalType().kind == SymbolKind::UnpackedStructType;

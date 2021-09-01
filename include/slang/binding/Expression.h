@@ -66,7 +66,8 @@ struct NamedArgumentSyntax;
     x(CopyClass) \
     x(MinTypMax) \
     x(ClockingEvent) \
-    x(AssertionInstance)
+    x(AssertionInstance) \
+    x(TaggedUnion)
 ENUM(ExpressionKind, EXPRESSION);
 #undef EXPRESSION
 

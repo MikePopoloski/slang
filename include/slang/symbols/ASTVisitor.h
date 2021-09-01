@@ -316,6 +316,7 @@ decltype(auto) Expression::visitExpression(TExpression* expr, TVisitor&& visitor
         CASE(MinTypMax, MinTypMaxExpression);
         CASE(ClockingEvent, ClockingEventExpression);
         CASE(AssertionInstance, AssertionInstanceExpression);
+        CASE(TaggedUnion, TaggedUnionExpression);
     }
 #undef CASE
     // clang-format on
