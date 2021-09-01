@@ -958,11 +958,14 @@ endmodule
 
 TEST_CASE("Unpacked struct/union errors") {
     auto tree = SyntaxTree::fromText(R"(
+interface I; endinterface
+
 module m;
     struct signed { int i; } s1;
     struct { int i; } [3:0] s2;
     union unsigned { int j; } u1;
     union { int i; } [3:0] u2;
+    union { virtual interface I i; int j[]; } u3;
 endmodule
 )");
 
@@ -970,11 +973,13 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 4);
+    REQUIRE(diags.size() == 6);
     CHECK(diags[0].code == diag::UnpackedSigned);
     CHECK(diags[1].code == diag::PackedDimsOnUnpacked);
     CHECK(diags[2].code == diag::UnpackedSigned);
     CHECK(diags[3].code == diag::PackedDimsOnUnpacked);
+    CHECK(diags[4].code == diag::VirtualInterfaceUnionMember);
+    CHECK(diags[5].code == diag::InvalidUnionMember);
 }
 
 TEST_CASE("Array elements max size") {

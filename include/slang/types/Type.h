@@ -138,6 +138,9 @@ public:
     /// fixed size, dynamic, associative, or a queue.
     bool isUnpackedArray() const;
 
+    /// Indicates whether this is a dynamic array, associative array, or a queue.
+    bool isDynamicallySizedArray() const;
+
     /// Indicates whether this is an unpacked structure type.
     bool isUnpackedStruct() const {
         return getCanonicalType().kind == SymbolKind::UnpackedStructType;

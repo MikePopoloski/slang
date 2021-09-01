@@ -913,12 +913,14 @@ const Type& UnpackedUnionType::fromSyntax(const Scope& scope, LookupLocation loc
 
             result->addMember(*variable);
 
-            if (variable->getType().isCHandle())
-                scope.addDiag(diag::InvalidUnionMember, decl->name.range()) << variable->getType();
+            auto& varType = variable->getType();
+            if (varType.isCHandle() || varType.isDynamicallySizedArray())
+                scope.addDiag(diag::InvalidUnionMember, decl->name.range()) << varType;
+            else if (varType.isVirtualInterface())
+                scope.addDiag(diag::VirtualInterfaceUnionMember, decl->name.range());
 
-            // Force resolution of the type right away, otherwise nothing
+            // Force resolution of the initializer right away, otherwise nothing
             // is required to force it later.
-            variable->getType();
             variable->getInitializer();
         }
     }

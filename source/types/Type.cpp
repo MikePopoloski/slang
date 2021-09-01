@@ -348,6 +348,17 @@ bool Type::isUnpackedArray() const {
     }
 }
 
+bool Type::isDynamicallySizedArray() const {
+    switch (getCanonicalType().kind) {
+        case SymbolKind::DynamicArrayType:
+        case SymbolKind::AssociativeArrayType:
+        case SymbolKind::QueueType:
+            return true;
+        default:
+            return false;
+    }
+}
+
 bool Type::isMatching(const Type& rhs) const {
     // See [6.22.1] for Matching Types.
     const Type* l = &getCanonicalType();
