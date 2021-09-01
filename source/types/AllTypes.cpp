@@ -890,6 +890,7 @@ ConstantValue UnpackedUnionType::getDefaultValueImpl() const {
         return nullptr;
 
     SVUnion u;
+    u.activeMember = 0;
     u.value = it->getType().getDefaultValue();
     return u;
 }

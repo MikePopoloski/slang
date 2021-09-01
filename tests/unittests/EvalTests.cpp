@@ -770,6 +770,46 @@ TEST_CASE("Unpacked union eval") {
     session.eval("bar = foo;");
     CHECK(session.eval("bar").toString() == "(0) [3,4,42]");
 
+    // Accessing wrong member just gets you the default.
+    CHECK(session.eval("foo.b").integer() == 0);
+
+    // Inspecting common initial sequence across values is allowed.
+    session.eval(R"(
+union {
+    struct {
+        int s1;
+        struct {
+            int n1;
+            real n2;
+        } s2;
+    } a;
+    struct {
+        struct {
+            int v;
+        } s1;
+        int s2;
+        int s3;
+    } b;
+    int c;
+} baz;
+)");
+
+    session.eval("baz.a = '{42, '{55, 3.14}};");
+    CHECK(session.eval("baz.a.s1").integer() == 42);
+    CHECK(session.eval("baz.b.s1.v").integer() == 42);
+    CHECK(session.eval("baz.b.s2").integer() == 55);
+    CHECK(session.eval("baz.b.s3").integer() == 0);
+    CHECK(session.eval("baz.c").integer() == 42);
+
+    session.eval("baz.b = '{'{1}, 2, 3};");
+    CHECK(session.eval("baz.a.s1").integer() == 1);
+    CHECK(session.eval("baz.a.s2.n1").integer() == 2);
+    CHECK(session.eval("baz.a.s2.n2").real() == 0.0);
+    CHECK(session.eval("baz.c").integer() == 1);
+
+    session.eval("baz.c = 123;");
+    CHECK(session.eval("baz.a.s1").integer() == 123);
+
     NO_SESSION_ERRORS;
 }
 

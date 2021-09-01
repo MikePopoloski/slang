@@ -951,6 +951,119 @@ Expression& MemberAccessExpression::fromSyntax(
     return result;
 }
 
+// This iterator is used when translating values between different union members.
+// It walks recursively down through unpacked struct members and allows retrieving
+// corresponding constant values in member order, as long as they are equivalent
+// with the next expected type.
+class RecursiveStructMemberIterator {
+public:
+    RecursiveStructMemberIterator(const ConstantValue& startVal, const Type& startType) {
+        curr.val = &startVal;
+        curr.type = &startType;
+
+        if (curr.type->isUnpackedStruct()) {
+            auto range =
+                curr.type->getCanonicalType().as<UnpackedStructType>().membersOfType<FieldSymbol>();
+            curr.fieldIt = range.begin();
+            curr.fieldEnd = range.end();
+            prepNext();
+        }
+    }
+
+    const ConstantValue* tryConsume(const Type& targetType) {
+        if (!curr.type)
+            return nullptr;
+
+        if (!curr.type->isUnpackedStruct()) {
+            if (!curr.type->isEquivalent(targetType))
+                return nullptr;
+
+            curr.type = nullptr;
+            return curr.val;
+        }
+
+        if (!curr.fieldIt->getType().isEquivalent(targetType))
+            return nullptr;
+
+        auto result = &curr.val->at(curr.valIndex);
+        curr.next();
+        prepNext();
+        return result;
+    }
+
+private:
+    void prepNext() {
+        if (curr.fieldIt == curr.fieldEnd) {
+            if (stack.empty()) {
+                curr.type = nullptr;
+                return;
+            }
+
+            curr = stack.back();
+            stack.pop();
+
+            curr.next();
+            prepNext();
+        }
+        else {
+            auto& type = curr.fieldIt->getType();
+            if (type.isUnpackedStruct()) {
+                stack.emplace(curr);
+
+                auto range =
+                    type.getCanonicalType().as<UnpackedStructType>().membersOfType<FieldSymbol>();
+                curr.type = &type;
+                curr.val = &curr.val->at(curr.valIndex);
+                curr.fieldIt = range.begin();
+                curr.fieldEnd = range.end();
+                curr.valIndex = 0;
+                prepNext();
+            }
+        }
+    }
+
+    using FieldIt = Scope::specific_symbol_iterator<FieldSymbol>;
+
+    struct State {
+        const ConstantValue* val = nullptr;
+        const Type* type = nullptr;
+        size_t valIndex = 0;
+        FieldIt fieldIt;
+        FieldIt fieldEnd;
+
+        void next() {
+            fieldIt++;
+            valIndex++;
+        }
+    };
+
+    State curr;
+    SmallVectorSized<State, 4> stack;
+};
+
+static bool translateUnionMembers(ConstantValue& result, const Type& targetType,
+                                  RecursiveStructMemberIterator& rsmi) {
+    // If the target type is still an unpacked struct then recurse deeper until we
+    // reach a non-struct member that can be assigned a value.
+    if (targetType.isUnpackedStruct()) {
+        size_t i = 0;
+        for (auto& member : targetType.as<UnpackedStructType>().membersOfType<FieldSymbol>()) {
+            if (!translateUnionMembers(result.at(i++), member.getType().getCanonicalType(), rsmi)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    auto val = rsmi.tryConsume(targetType);
+    if (val) {
+        result = *val;
+        return true;
+    }
+
+    return false;
+}
+
 ConstantValue MemberAccessExpression::evalImpl(EvalContext& context) const {
     ConstantValue cv = value().eval(context);
     if (!cv)
@@ -963,8 +1076,23 @@ ConstantValue MemberAccessExpression::evalImpl(EvalContext& context) const {
     else if (valueType.isUnpackedUnion()) {
         auto& unionVal = cv.unionVal();
         if (unionVal->activeMember != offset) {
-            // TODO: error
-            return type->getDefaultValue();
+            // This member isn't active, so in general it's not safe (or even
+            // possible) to access it. An exception is made for the common initial
+            // sequence of equivalent types, so check for that here and if found
+            // translate the values across.
+            ConstantValue result = type->getDefaultValue();
+            if (unionVal->activeMember) {
+                // Get the type of the member that is currently active.
+                auto& currType = valueType.getCanonicalType()
+                                     .as<UnpackedUnionType>()
+                                     .memberAt<FieldSymbol>(*unionVal->activeMember)
+                                     .getType()
+                                     .getCanonicalType();
+
+                RecursiveStructMemberIterator rsmi(unionVal->value, currType);
+                translateUnionMembers(result, type->getCanonicalType(), rsmi);
+            }
+            return result;
         }
         return unionVal->value;
     }
