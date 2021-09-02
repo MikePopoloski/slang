@@ -82,7 +82,7 @@ LRM | Feature | Supported
 LRM | Feature | Supported
 --- | ------- | ---------
 {{m-success}} 7.2 | Structures | v0.2
-{{m-warning}} 7.3 | Unions | partial
+{{m-success}} 7.3 | Unions | v0.9
 {{m-success}} 7.4 | Packed and unpacked arrays | v0.2
 {{m-success}} 7.5 | Dynamic arrays | v0.4
 {{m-success}} 7.6 | Array assignments | v0.2
@@ -175,7 +175,7 @@ LRM | Feature | Supported
 {{m-success}} 11.6 | Expression bit lengths | v0.2
 {{m-success}} 11.7 | Signed expressions | v0.2
 {{m-success}} 11.8 | Expression evaluation rules | v0.2
-{{m-danger}}  11.9 | Tagged union expressions | no
+{{m-success}} 11.9 | Tagged union expressions | v0.9
 {{m-success}} 11.10 | String literal expressions | v0.5
 {{m-success}} 11.11 | Min/typ/max expressions | v0.4
 {{m-success}} 11.12 | Let construct | v0.9
@@ -410,7 +410,7 @@ LRM | Feature | Supported
 {{m-success}} 26.3 | Referencing data in packages | v0.2
 {{m-success}} 26.4 | Using packages in module headers | v0.2
 {{m-success}} 26.5 | Search order rules | v0.2
-{{m-danger}}  26.6 | Exporting imported names from packages | no
+{{m-success}} 26.6 | Exporting imported names from packages | v0.9
 {{m-success}} 26.7 | The std built-in package | v0.6
 
 ## 27. Generate constructs
