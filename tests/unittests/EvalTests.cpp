@@ -1903,7 +1903,26 @@ typedef struct {
     bit [3:0] addr;
     bit [3:0] data;
 } packet_t;
-localparam packet_t value2  = {<<4{ {<<2{array2}} }};
+localparam packet_t value2 = {<<4{ {<<2{array2}} }};
+
+typedef union {
+    byte b;
+    logic[63:0] r;
+} u_t;
+
+function u_t f;
+    f.b = 8'b10011100;
+endfunction
+
+function u_t g;
+    g.r = 123456789;
+endfunction
+
+localparam u_t value3 = f();
+localparam logic[7:0] value4 = {<<4{ {<<2{value3}} }};
+
+localparam u_t value5 = g();
+localparam logic[7:0] value6 = {<<4{ {<<2{value5}} }};
 )");
 
     CHECK(session.eval("s0").integer() == session.eval("{\"A\", \"B\", \"C\", \"D\"}").integer());
@@ -1930,9 +1949,12 @@ localparam packet_t value2  = {<<4{ {<<2{array2}} }};
     CHECK(value2.elements()[0].integer() == "4'b0110"_si);
     CHECK(value2.elements()[1].integer() == "4'b0011"_si);
 
+    CHECK(session.eval("value4").integer() == "8'b01100011"_si);
+
     auto diags = session.getDiagnostics();
-    REQUIRE(diags.size() == 1);
+    REQUIRE(diags.size() == 2);
     CHECK(diags[0].code == diag::IgnoredSlice);
+    CHECK(diags[1].code == diag::BadStreamSize);
 }
 
 TEST_CASE("streaming operator target evaluation") {

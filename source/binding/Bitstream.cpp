@@ -274,6 +274,9 @@ static void packBitstream(ConstantValue& value, SmallVector<ConstantValue*>& pac
         for (auto& cv : *value.queue())
             packBitstream(cv, packed);
     }
+    else if (value.isUnion()) {
+        packBitstream(value.unionVal()->value, packed);
+    }
 }
 
 using PackIterator = ConstantValue* const*;
@@ -558,6 +561,8 @@ ConstantValue Bitstream::reOrder(ConstantValue&& value, size_t sliceSize, size_t
 
     SmallVectorSized<ConstantValue*, 8> packed;
     packBitstream(value, packed);
+    if (packed.empty())
+        return std::move(value);
 
     size_t rightIndex = packed.size() - 1; // Right-to-left
     bitwidth_t rightWidth = static_cast<bitwidth_t>(packed.back()->bitstreamWidth());

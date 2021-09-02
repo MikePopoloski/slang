@@ -1792,10 +1792,16 @@ Expression& StreamingConcatenationExpression::fromSyntax(
             return badExpr(compilation, badResult());
 
         if (argSyntax->expression->kind != SyntaxKind::StreamingConcatenationExpression) {
-            // TODO: first-declared member of untagged union
-            const Type& type = *arg->type;
-            if (!type.isBitstreamType(!assignmentTarget)) {
-                context.addDiag(diag::BadStreamExprType, arg->sourceRange) << type;
+            const Type* type = arg->type;
+            if (type->isUnpackedUnion() && !type->isTaggedUnion()) {
+                auto& uu = type->getCanonicalType().as<UnpackedUnionType>();
+                auto members = uu.members();
+                if (members.begin() != members.end())
+                    type = &members.begin()->as<ValueSymbol>().getType();
+            }
+
+            if (!type->isBitstreamType(!assignmentTarget)) {
+                context.addDiag(diag::BadStreamExprType, arg->sourceRange) << *arg->type;
                 return badExpr(compilation, badResult());
             }
         }
@@ -1898,6 +1904,12 @@ size_t StreamingConcatenationExpression::bitstreamWidth() const {
         else if (stream->with) {
             size_t count = stream->with->width ? static_cast<size_t>(*stream->with->width) : 1;
             width += count * operand.type->getArrayElementType()->bitstreamWidth();
+        }
+        else if (operand.type->isUnpackedUnion()) {
+            auto& uu = operand.type->getCanonicalType().as<UnpackedUnionType>();
+            auto members = uu.members();
+            if (members.begin() != members.end())
+                width += members.begin()->as<ValueSymbol>().getType().bitstreamWidth();
         }
         else {
             width += operand.type->bitstreamWidth();
