@@ -1064,18 +1064,42 @@ static bool translateUnionMembers(ConstantValue& result, const Type& targetType,
     return false;
 }
 
+static bool checkPackedUnionTag(const Type& valueType, const SVInt& val, uint32_t expectedTag,
+                                EvalContext& context, SourceRange sourceRange,
+                                string_view memberName) {
+    uint32_t tagBits = valueType.as<PackedUnionType>().tagBits;
+    if (tagBits) {
+        bitwidth_t bits = val.getBitWidth();
+        auto tag = val.slice(int32_t(bits - 1), int32_t(bits - tagBits)).as<uint32_t>();
+        if (tag.value() != expectedTag) {
+            context.addDiag(diag::ConstEvalTaggedUnion, sourceRange) << memberName;
+            return false;
+        }
+    }
+
+    return true;
+}
+
 ConstantValue MemberAccessExpression::evalImpl(EvalContext& context) const {
     ConstantValue cv = value().eval(context);
     if (!cv)
         return nullptr;
 
-    auto& valueType = *value().type;
+    auto& valueType = value().type->getCanonicalType();
     if (valueType.isUnpackedStruct()) {
         return cv.elements()[offset];
     }
     else if (valueType.isUnpackedUnion()) {
         auto& unionVal = cv.unionVal();
-        if (unionVal->activeMember != offset) {
+        if (unionVal->activeMember == offset)
+            return unionVal->value;
+
+        if (valueType.isTaggedUnion()) {
+            // Tagged unions can only be accessed via their active member.
+            context.addDiag(diag::ConstEvalTaggedUnion, sourceRange) << member.name;
+            return nullptr;
+        }
+        else {
             // This member isn't active, so in general it's not safe (or even
             // possible) to access it. An exception is made for the common initial
             // sequence of equivalent types, so check for that here and if found
@@ -1083,8 +1107,7 @@ ConstantValue MemberAccessExpression::evalImpl(EvalContext& context) const {
             ConstantValue result = type->getDefaultValue();
             if (unionVal->activeMember) {
                 // Get the type of the member that is currently active.
-                auto& currType = valueType.getCanonicalType()
-                                     .as<UnpackedUnionType>()
+                auto& currType = valueType.as<UnpackedUnionType>()
                                      .memberAt<FieldSymbol>(*unionVal->activeMember)
                                      .getType()
                                      .getCanonicalType();
@@ -1094,12 +1117,20 @@ ConstantValue MemberAccessExpression::evalImpl(EvalContext& context) const {
             }
             return result;
         }
-        return unionVal->value;
     }
+    else if (valueType.isPackedUnion()) {
+        auto& cvi = cv.integer();
+        if (!checkPackedUnionTag(valueType, cvi, offset, context, sourceRange, member.name)) {
+            return nullptr;
+        }
 
-    int32_t io = (int32_t)offset;
-    int32_t width = (int32_t)type->getBitWidth();
-    return cv.integer().slice(width + io - 1, io);
+        return cvi.slice(int32_t(type->getBitWidth() - 1), 0);
+    }
+    else {
+        int32_t io = (int32_t)offset;
+        int32_t width = (int32_t)type->getBitWidth();
+        return cv.integer().slice(width + io - 1, io);
+    }
 }
 
 LValue MemberAccessExpression::evalLValueImpl(EvalContext& context) const {
@@ -1108,12 +1139,31 @@ LValue MemberAccessExpression::evalLValueImpl(EvalContext& context) const {
         return nullptr;
 
     int32_t io = (int32_t)offset;
-    auto& valueType = *value().type;
+    auto& valueType = value().type->getCanonicalType();
     if (valueType.isUnpackedStruct()) {
         lval.addIndex(io, nullptr);
     }
     else if (valueType.isUnpackedUnion()) {
+        if (valueType.isTaggedUnion()) {
+            auto target = lval.resolve();
+            ASSERT(target);
+
+            if (target->unionVal()->activeMember != offset) {
+                context.addDiag(diag::ConstEvalTaggedUnion, sourceRange) << member.name;
+                return nullptr;
+            }
+        }
         lval.addIndex(io, type->getDefaultValue());
+    }
+    else if (valueType.isPackedUnion()) {
+        auto cv = lval.load();
+        if (!checkPackedUnionTag(valueType, cv.integer(), offset, context, sourceRange,
+                                 member.name)) {
+            return nullptr;
+        }
+
+        int32_t width = (int32_t)type->getBitWidth();
+        lval.addBitSlice({ width - 1, 0 });
     }
     else {
         int32_t width = (int32_t)type->getBitWidth();

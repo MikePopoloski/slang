@@ -804,6 +804,7 @@ const Type& PackedUnionType::fromSyntax(Compilation& compilation,
     bool isFourState = false;
     bool issuedError = false;
     bitwidth_t bitWidth = 0;
+    uint32_t fieldIndex = 0;
 
     // We have to look at all the members up front to know our width and four-statedness.
     SmallVectorSized<const Symbol*, 8> members;
@@ -822,7 +823,8 @@ const Type& PackedUnionType::fromSyntax(Compilation& compilation,
 
         for (auto decl : member->declarators) {
             auto name = decl->name;
-            auto variable = compilation.emplace<FieldSymbol>(name.valueText(), name.location(), 0u);
+            auto variable =
+                compilation.emplace<FieldSymbol>(name.valueText(), name.location(), fieldIndex++);
             variable->setType(type);
             variable->setSyntax(*decl);
             variable->setAttributes(scope, member->attributes);
@@ -898,8 +900,12 @@ ConstantValue UnpackedUnionType::getDefaultValueImpl() const {
         return nullptr;
 
     SVUnion u;
-    u.activeMember = 0;
     u.value = it->getType().getDefaultValue();
+
+    // Tagged unions start out with no active member.
+    if (!isTagged)
+        u.activeMember = 0;
+
     return u;
 }
 

@@ -2231,3 +2231,35 @@ TEST_CASE("Assignment type propagation regression") {
 
     NO_SESSION_ERRORS;
 }
+
+TEST_CASE("Tagged union eval") {
+    ScriptSession session;
+
+    session.eval("union tagged { int a; real b; } u;");
+    CHECK(session.eval("u").toString() == "(unset)");
+
+    session.eval("u = tagged b 3.14;");
+    CHECK(session.eval("u").toString() == "(1) 3.14");
+    session.eval("u.a");
+    session.eval("u.a = 1;");
+
+    session.eval("union tagged packed { byte a; byte unsigned b; } v;");
+    CHECK(session.eval("v").toString() == "9'h0");
+
+    session.eval("v = tagged b 200;");
+    CHECK(session.eval("v").toString() == "9'h1c8");
+    CHECK(session.eval("v.b").integer() == 200);
+    CHECK(session.eval("v.b = 5").integer() == 5);
+    session.eval("v.a");
+    session.eval("v.a = 1;");
+
+    session.eval("v = tagged a -1;");
+    CHECK(session.eval("v.a").integer().as<int8_t>() == -1);
+
+    auto diags = session.getDiagnostics();
+    REQUIRE(diags.size() == 4);
+    CHECK(diags[0].code == diag::ConstEvalTaggedUnion);
+    CHECK(diags[1].code == diag::ConstEvalTaggedUnion);
+    CHECK(diags[2].code == diag::ConstEvalTaggedUnion);
+    CHECK(diags[3].code == diag::ConstEvalTaggedUnion);
+}

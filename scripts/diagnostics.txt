@@ -747,6 +747,7 @@ error ConstEvalAssociativeIndexInvalid "index {} has x or z bits which is invali
 error ConstEvalDisableTarget "disable statement in a constant function cannot target a block that is not currently executing"
 error ConstEvalClassType "class types are not allowed in constant expressions"
 error ConstEvalProceduralAssign "procedural assign and deassign statements are not allowed in constant functions"
+error ConstEvalTaggedUnion "cannot access '{}' because it is not the currently active member of the tagged union"
 warning elem-not-found ConstEvalAssociativeElementNotFound "element {} does not exist in associative array"
 warning static-skipped ConstEvalStaticSkipped "static variable initialization is skipped in constant function calls"
 warning dynarray-index ConstEvalDynamicArrayIndex "invalid index {} for {} of length {}"

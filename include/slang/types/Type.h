@@ -149,6 +149,9 @@ public:
         return getCanonicalType().kind == SymbolKind::UnpackedStructType;
     }
 
+    /// Indicates whether this is a packed union type.
+    bool isPackedUnion() const { return getCanonicalType().kind == SymbolKind::PackedUnionType; }
+
     /// Indicates whether this is an unpacked union type.
     bool isUnpackedUnion() const {
         return getCanonicalType().kind == SymbolKind::UnpackedUnionType;
