@@ -715,7 +715,7 @@ bool Type::isIterable() const {
 }
 
 bool Type::isValidForRand(RandMode mode) const {
-    if (isIntegral() || isNull())
+    if ((isIntegral() || isNull()) && !isTaggedUnion())
         return true;
 
     if (isArray())
@@ -724,7 +724,6 @@ bool Type::isValidForRand(RandMode mode) const {
     if (isClass() || isUnpackedStruct())
         return mode == RandMode::Rand;
 
-    // TODO: rules for tagged unions
     return false;
 }
 
