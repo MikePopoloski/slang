@@ -29,13 +29,14 @@ public:
         if (!checkArgCount(context, false, args, range, 1, 1))
             return comp.getErrorType();
 
-        if (!args[0]->type->isBitstreamType() && !args[0]->type->isUnpackedUnion())
+        auto& type = *args[0]->type;
+        if (!type.isBitstreamType() && !type.isFloating() && !type.isUnpackedUnion())
             return badArg(context, *args[0]);
 
-        if (args[0]->kind == ExpressionKind::DataType && !args[0]->type->isFixedSize()) {
+        if (args[0]->kind == ExpressionKind::DataType && !type.isFixedSize()) {
             auto& diag = context.addDiag(diag::QueryOnDynamicType, args[0]->sourceRange) << name;
-            if (args[0]->type->location)
-                diag.addNote(diag::NoteDeclarationHere, args[0]->type->location);
+            if (type.location)
+                diag.addNote(diag::NoteDeclarationHere, type.location);
             return comp.getErrorType();
         }
         return comp.getIntegerType();

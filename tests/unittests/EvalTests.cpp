@@ -2256,6 +2256,13 @@ TEST_CASE("Tagged union eval") {
     session.eval("v = tagged a -1;");
     CHECK(session.eval("v.a").integer().as<int8_t>() == -1);
 
+    CHECK(session.eval("$bits(v)").integer() == 9);
+    CHECK(session.eval("$bits(u)").integer() == 64);
+
+    session.eval("union tagged { int a[]; real b; } w;");
+    session.eval("w = tagged a '{1, 2, 3, 4}");
+    CHECK(session.eval("$bits(w)").integer() == 128);
+
     auto diags = session.getDiagnostics();
     REQUIRE(diags.size() == 4);
     CHECK(diags[0].code == diag::ConstEvalTaggedUnion);

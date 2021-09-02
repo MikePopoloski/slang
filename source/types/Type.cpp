@@ -283,7 +283,7 @@ bool Type::isBitstreamType(bool destination) const {
 }
 
 bool Type::isFixedSize() const {
-    if (isIntegral())
+    if (isIntegral() || isFloating())
         return true;
 
     if (isUnpackedArray()) {
