@@ -218,6 +218,7 @@ private:
     ParamAssignmentSyntax& parseParamValue();
     ArgumentSyntax& parseArgument();
     PatternSyntax& parsePattern();
+    StructurePatternMemberSyntax& parseMemberPattern();
     AssignmentPatternExpressionSyntax& parseAssignmentPatternExpression(DataTypeSyntax* type);
     AssignmentPatternItemSyntax& parseAssignmentPatternItem(ExpressionSyntax* key);
     EventExpressionSyntax& parseSignalEvent();

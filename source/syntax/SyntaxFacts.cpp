@@ -756,6 +756,10 @@ bool SyntaxFacts::isPossiblePattern(TokenKind kind) {
     }
 }
 
+bool SyntaxFacts::isPossiblePatternOrComma(TokenKind kind) {
+    return kind == TokenKind::Comma || isPossiblePattern(kind);
+}
+
 bool SyntaxFacts::isPossibleDelayOrEventControl(TokenKind kind) {
     switch (kind) {
         case TokenKind::Hash:

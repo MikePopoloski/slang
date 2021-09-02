@@ -727,3 +727,35 @@ endmodule
     CHECK(diagnostics[0].code == diag::InvalidDelayValue);
     CHECK(diagnostics[1].code == diag::InvalidDelayValue);
 }
+
+TEST_CASE("Pattern expression parsing") {
+    auto& text = R"(
+module m;
+    initial begin
+        case (instr) matches 
+            tagged Add '{.r1, .r2, .rd} &&& (rd != 0) : rf[rd] = rf[r1] + rf[r2]; 
+            tagged Jmp .j : case (j) matches 
+                                tagged JmpU .a : pc = pc + a;
+                                tagged JmpC '{.c, .a}: if (rf[c]) pc = a;
+                            endcase 
+        endcase
+
+        case (instr) matches 
+            tagged Add s: case (s) matches 
+                                '{.*, .*, 0} : ; // no op 
+                                '{.r1, .r2, .rd} : rf[rd] = rf[r1] + rf[r2];
+                          endcase 
+            tagged Jmp .j: case (j) matches 
+                                tagged JmpU .a : pc = pc + a;
+                                tagged JmpC '{.c, .a} : if (rf[c]) pc = a;
+                           endcase 
+        endcase
+
+        if (e matches (tagged Jmp (tagged JmpC '{cc:.c,addr:.a}))) begin
+        end
+    end
+endmodule
+)";
+    parseCompilationUnit(text);
+    CHECK_DIAGNOSTICS_EMPTY;
+}

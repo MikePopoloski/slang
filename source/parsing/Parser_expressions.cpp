@@ -820,6 +820,12 @@ ArgumentSyntax& Parser::parseArgument() {
 
 PatternSyntax& Parser::parsePattern() {
     switch (peek().kind) {
+        case TokenKind::OpenParenthesis: {
+            auto openParen = consume();
+            auto& pattern = parsePattern();
+            return factory.parenthesizedPattern(openParen, pattern,
+                                                expect(TokenKind::CloseParenthesis));
+        }
         case TokenKind::DotStar:
             return factory.wildcardPattern(consume());
         case TokenKind::Dot: {
@@ -829,18 +835,47 @@ PatternSyntax& Parser::parsePattern() {
         case TokenKind::TaggedKeyword: {
             auto tagged = consume();
             auto name = expect(TokenKind::Identifier);
-            // TODO: optional trailing pattern
-            return factory.taggedPattern(tagged, name, nullptr);
+
+            PatternSyntax* pattern = nullptr;
+            if (isPossiblePattern(peek().kind))
+                pattern = &parsePattern();
+
+            return factory.taggedPattern(tagged, name, pattern);
         }
-        case TokenKind::ApostropheOpenBrace:
-            // TODO: assignment pattern
-            break;
+        case TokenKind::ApostropheOpenBrace: {
+            auto openBrace = consume();
+            Token closeBrace;
+            SmallVectorSized<TokenOrSyntax, 4> buffer;
+
+            if (peek(TokenKind::Identifier) && peek(1).kind == TokenKind::Colon) {
+                parseList<isIdentifierOrComma, isCloseBrace>(
+                    buffer, TokenKind::CloseBrace, TokenKind::Comma, closeBrace, RequireItems::True,
+                    diag::ExpectedPattern, [this]() { return &parseMemberPattern(); });
+            }
+            else {
+                parseList<isPossiblePatternOrComma, isCloseBrace>(
+                    buffer, TokenKind::CloseBrace, TokenKind::Comma, closeBrace, RequireItems::True,
+                    diag::ExpectedPattern, [this]() {
+                        auto& pattern = parsePattern();
+                        return &factory.orderedStructurePatternMember(pattern);
+                    });
+            }
+
+            return factory.structurePattern(openBrace, buffer.copy(alloc), closeBrace);
+        }
         default:
             break;
     }
 
     // otherwise, it's either an expression or an error (parseExpression will handle that for us)
     return factory.expressionPattern(parseSubExpression(ExpressionOptions::PatternContext, 0));
+}
+
+StructurePatternMemberSyntax& Parser::parseMemberPattern() {
+    auto name = expect(TokenKind::Identifier);
+    auto colon = expect(TokenKind::Colon);
+    auto& pattern = parsePattern();
+    return factory.namedStructurePatternMember(name, colon, pattern);
 }
 
 ConditionalPredicateSyntax& Parser::parseConditionalPredicate(ExpressionSyntax& first,

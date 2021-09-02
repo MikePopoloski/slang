@@ -86,6 +86,11 @@ token closeParen
 Pattern final=false
 empty
 
+ParenthesizedPattern base=Pattern
+token openParen
+Pattern pattern
+token closeParen
+
 VariablePattern base=Pattern
 token dot
 token variableName

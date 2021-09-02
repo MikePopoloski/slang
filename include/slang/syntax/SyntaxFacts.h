@@ -153,6 +153,9 @@ public:
     /// @return true if the given token represents a possible conditional pattern.
     static bool isPossiblePattern(TokenKind kind);
 
+    /// @return true if the given token represents a possible conditional pattern or a comma.
+    static bool isPossiblePatternOrComma(TokenKind kind);
+
     /// @return true if the given token represents a possible delay or event control.
     static bool isPossibleDelayOrEventControl(TokenKind kind);
 
