@@ -1184,11 +1184,12 @@ ConstantValue TaggedUnionExpression::evalImpl(EvalContext& context) const {
         // The tag lives in the upper bits and the value is in the lower bits.
         // Any bits in between are undefined.
         bitwidth_t bits = resultInt.getBitWidth();
-        resultInt.set(bits - 1, bits - tagBits, SVInt(tagBits, field.offset, false));
+        resultInt.set(int32_t(bits - 1), int32_t(bits - tagBits),
+                      SVInt(tagBits, field.offset, false));
 
         if (initVal) {
             auto& valInt = initVal.integer();
-            resultInt.set(valInt.getBitWidth() - 1, 0, valInt);
+            resultInt.set(int32_t(valInt.getBitWidth() - 1), 0, valInt);
         }
 
         return result;
