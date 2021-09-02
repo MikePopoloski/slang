@@ -2080,6 +2080,10 @@ list<Member> members
 token end
 NamedBlockClause? endBlockName
 
+CheckerDataDeclaration base=Member
+token rand
+DataDeclaration data
+
 // ----- TOP LEVEL -----
 
 CompilationUnit

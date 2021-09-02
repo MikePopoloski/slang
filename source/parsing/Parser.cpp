@@ -784,9 +784,11 @@ MemberSyntax& Parser::parseVariableDeclaration(AttrList attributes) {
         case TokenKind::NetTypeKeyword:
             return parseNetTypeDecl(attributes);
         default:
-            break;
+            return parseDataDeclaration(attributes);
     }
+}
 
+DataDeclarationSyntax& Parser::parseDataDeclaration(AttrList attributes) {
     SmallVectorSized<Token, 4> modifiers;
     SmallMap<TokenKind, Token, 4> modifierSet;
     Token lastLifetime;

@@ -668,7 +668,15 @@ module m;
     default clocking cb_checker;
     always @(s_f)
       $display("sequence triggered");
+
     a4: assert property (a |=> in1);
+
+    function bit next_window (bit win);
+        if (reset || win && end_flag)
+            return 1'b0;
+    endfunction
+
+    rand const bit [$bits(in_data)-1:0] mem_data;
   endchecker : check
 endmodule
 )";

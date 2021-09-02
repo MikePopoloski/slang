@@ -275,6 +275,10 @@ MemberSyntax* Parser::parseMember(SyntaxKind parentKind, bool& anyLocalModules) 
             return &parseConstraint(attributes, {});
         case TokenKind::PrimitiveKeyword:
             return &parseUdpDeclaration(attributes);
+        case TokenKind::RandKeyword: {
+            auto rand = consume();
+            return &factory.checkerDataDeclaration(attributes, rand, parseDataDeclaration({}));
+        }
         default:
             break;
     }

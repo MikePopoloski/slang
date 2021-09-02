@@ -300,6 +300,7 @@ private:
     MemberSyntax& parseClockingDeclaration(AttrList attributes);
     MemberSyntax& parseDefaultDisable(AttrList attributes);
     MemberSyntax& parseVariableDeclaration(AttrList attributes);
+    DataDeclarationSyntax& parseDataDeclaration(AttrList attributes);
     LocalVariableDeclarationSyntax& parseLocalVariableDeclaration();
     MemberSyntax& parseNetDeclaration(AttrList attributes);
     DriveStrengthSyntax* parseDriveStrength();

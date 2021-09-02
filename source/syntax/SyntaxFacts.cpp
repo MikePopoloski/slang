@@ -1416,8 +1416,9 @@ bool SyntaxFacts::isAllowedInChecker(SyntaxKind kind) {
         case SyntaxKind::ForwardInterfaceClassTypedefDeclaration:
         case SyntaxKind::PackageImportDeclaration:
         case SyntaxKind::DataDeclaration:
-        case SyntaxKind::TaskDeclaration:
+        case SyntaxKind::FunctionDeclaration:
         case SyntaxKind::CheckerDeclaration:
+        case SyntaxKind::CheckerDataDeclaration:
             return true;
         default:
             return false;
