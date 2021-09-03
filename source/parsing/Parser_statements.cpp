@@ -607,7 +607,7 @@ span<SyntaxNode*> Parser::parseBlockItems(TokenKind endKind, Token& end, bool in
     bool sawStatement = false;
     bool erroredAboutDecls = false;
 
-    while (!isEndKeyword(kind) && kind != TokenKind::EndOfFile) {
+    while (!isEndKeyword(kind) && kind != endKind && kind != TokenKind::EndOfFile) {
         SourceLocation loc = peek().location();
         SyntaxNode* newNode = nullptr;
         bool isStmt = false;
