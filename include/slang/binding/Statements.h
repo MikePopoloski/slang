@@ -52,7 +52,8 @@ struct StatementSyntax;
     x(WaitOrder) \
     x(EventTrigger) \
     x(ProceduralAssign) \
-    x(ProceduralDeassign)
+    x(ProceduralDeassign) \
+    x(RandCase)
 ENUM(StatementKind, STATEMENT);
 #undef STATEMENT
 
@@ -1019,6 +1020,43 @@ public:
     template<typename TVisitor>
     void visitExprs(TVisitor&& visitor) const {
         lvalue.visit(visitor);
+    }
+};
+
+struct RandCaseStatementSyntax;
+
+class RandCaseStatement : public Statement {
+public:
+    struct Item {
+        not_null<const Expression*> expr;
+        not_null<const Statement*> stmt;
+    };
+
+    span<Item const> items;
+
+    RandCaseStatement(span<Item const> items, SourceRange sourceRange) :
+        Statement(StatementKind::RandCase, sourceRange), items(items) {}
+
+    EvalResult evalImpl(EvalContext& context) const;
+    bool verifyConstantImpl(EvalContext& context) const;
+
+    static Statement& fromSyntax(Compilation& compilation, const RandCaseStatementSyntax& syntax,
+                                 const BindContext& context, StatementContext& stmtCtx);
+
+    void serializeTo(ASTSerializer& serializer) const;
+
+    static bool isKind(StatementKind kind) { return kind == StatementKind::RandCase; }
+
+    template<typename TVisitor>
+    void visitExprs(TVisitor&& visitor) const {
+        for (auto& item : items)
+            item.expr->visit(visitor);
+    }
+
+    template<typename TVisitor>
+    void visitStmts(TVisitor&& visitor) const {
+        for (auto& item : items)
+            item.stmt->visit(visitor);
     }
 };
 

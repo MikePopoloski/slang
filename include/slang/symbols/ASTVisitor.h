@@ -242,6 +242,7 @@ decltype(auto) Statement::visit(TVisitor&& visitor, Args&&... args) const {
         CASE(EventTrigger, EventTriggerStatement);
         CASE(ProceduralAssign, ProceduralAssignStatement);
         CASE(ProceduralDeassign, ProceduralDeassignStatement);
+        CASE(RandCase, RandCaseStatement);
     }
 #undef CASE
     // clang-format on

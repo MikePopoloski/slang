@@ -1353,3 +1353,28 @@ initial casez       matches
     // Just check no assertion.
     compilation.getAllDiagnostics();
 }
+
+TEST_CASE("randcase statements") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    int foo[];
+    initial begin
+        byte a, b, x;
+        randcase 
+            a + b : x = 1;
+            a - b : x = 2;
+            a ^ ~b : x = 3;
+            12'h800 : x = 4;
+            foo : x = 5;
+        endcase
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::ExprMustBeIntegral);
+}

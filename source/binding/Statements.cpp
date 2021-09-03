@@ -237,6 +237,9 @@ const Statement& Statement::bind(const StatementSyntax& syntax, const BindContex
                 comp, syntax.as<ConcurrentAssertionStatementSyntax>(), context, stmtCtx);
             break;
         case SyntaxKind::RandCaseStatement:
+            result = &RandCaseStatement::fromSyntax(comp, syntax.as<RandCaseStatementSyntax>(),
+                                                    context, stmtCtx);
+            break;
         case SyntaxKind::RandSequenceStatement:
             context.addDiag(diag::NotYetSupported, syntax.sourceRange());
             result = &badStmt(comp, nullptr);
@@ -2375,6 +2378,51 @@ bool ProceduralDeassignStatement::verifyConstantImpl(EvalContext& context) const
 
 void ProceduralDeassignStatement::serializeTo(ASTSerializer& serializer) const {
     serializer.write("lvalue", lvalue);
+}
+
+Statement& RandCaseStatement::fromSyntax(Compilation& compilation,
+                                         const RandCaseStatementSyntax& syntax,
+                                         const BindContext& context, StatementContext& stmtCtx) {
+    bool bad = false;
+    SmallVectorSized<Item, 8> items;
+    for (auto item : syntax.items) {
+        auto& expr = Expression::bind(*item->expr, context);
+        auto& stmt = Statement::bind(*item->statement, context, stmtCtx);
+        items.append({ &expr, &stmt });
+
+        bad |= expr.bad() | stmt.bad();
+        if (!expr.bad() && !expr.type->isIntegral()) {
+            context.addDiag(diag::ExprMustBeIntegral, expr.sourceRange) << *expr.type;
+            bad = true;
+        }
+    }
+
+    auto result =
+        compilation.emplace<RandCaseStatement>(items.copy(compilation), syntax.sourceRange());
+    if (bad)
+        return badStmt(compilation, result);
+
+    return *result;
+}
+
+ER RandCaseStatement::evalImpl(EvalContext&) const {
+    return ER::Fail;
+}
+
+bool RandCaseStatement::verifyConstantImpl(EvalContext& context) const {
+    context.addDiag(diag::ConstEvalRandValue, sourceRange);
+    return false;
+}
+
+void RandCaseStatement::serializeTo(ASTSerializer& serializer) const {
+    serializer.startArray("items");
+    for (auto& item : items) {
+        serializer.startObject();
+        serializer.write("expr", *item.expr);
+        serializer.write("stmt", *item.stmt);
+        serializer.endObject();
+    }
+    serializer.endArray();
 }
 
 } // namespace slang
