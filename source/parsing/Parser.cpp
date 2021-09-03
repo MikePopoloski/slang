@@ -1016,19 +1016,19 @@ PortConnectionSyntax& Parser::parsePortConnection() {
         auto dot = consume();
         auto name = expect(TokenKind::Identifier);
 
-        ExpressionSyntax* expr = nullptr;
+        PropertyExprSyntax* expr = nullptr;
         Token openParen, closeParen;
 
         if (peek(TokenKind::OpenParenthesis)) {
             openParen = consume();
             if (!peek(TokenKind::CloseParenthesis))
-                expr = &parseExpression();
+                expr = &parsePropertyExpr(0);
 
             closeParen = expect(TokenKind::CloseParenthesis);
         }
         return factory.namedPortConnection(attributes, dot, name, openParen, expr, closeParen);
     }
-    return factory.orderedPortConnection(attributes, parseExpression());
+    return factory.orderedPortConnection(attributes, parsePropertyExpr(0));
 }
 
 bool Parser::isPortDeclaration() {

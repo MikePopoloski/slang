@@ -480,7 +480,7 @@ error EventExpressionFuncArg "cannot call a function with output, inout, or ref 
 error AssertionFuncArg "cannot call a function with output, inout, or ref arguments from a concurrent assertion expression"
 error CHandleInAssertion "cannot reference variable of type 'chandle' in concurrent assertion expressions"
 error ClassMemberInAssertion "cannot reference non-static class members in concurrent assertion expressions"
-error InvalidArgumentExpr "invalid argument expression"
+error InvalidArgumentExpr "sequence and property expressions are not valid in this context"
 error UnexpectedClockingExpr "unexpected expression after clocking event"
 error ClockVarAssignConcat "clocking signal '{}' cannot be part of a concatenation lvalue"
 error CycleDelayNonClock "intra-assignment cycle delays can only be used with clocking signals"

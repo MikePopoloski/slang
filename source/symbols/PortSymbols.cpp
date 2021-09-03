@@ -628,7 +628,7 @@ public:
         };
 
         if (usingOrdered) {
-            const ExpressionSyntax* expr = nullptr;
+            const PropertyExprSyntax* expr = nullptr;
             span<const AttributeSymbol* const> attributes;
 
             if (orderedIndex < orderedConns.size()) {
@@ -709,7 +709,7 @@ private:
         return comp.emplace<PortConnection>(port, expr, attributes);
     }
 
-    PortConnection* createConnection(const PortSymbol& port, const ExpressionSyntax& syntax,
+    PortConnection* createConnection(const PortSymbol& port, const PropertyExprSyntax& syntax,
                                      span<const AttributeSymbol* const> attributes) {
         // If this is an empty port, it's an error to provide an expression.
         if (port.name.empty() && port.getType().isVoid()) {
@@ -722,7 +722,11 @@ private:
         BindContext context(scope, lookupLocation, BindFlags::NonProcedural);
         context.instance = &instance;
 
-        auto& expr = Expression::bindArgument(port.getType(), port.direction, syntax, context);
+        auto exprSyntax = context.requireSimpleExpr(syntax);
+        if (!exprSyntax)
+            return emptyConnection(port);
+
+        auto& expr = Expression::bindArgument(port.getType(), port.direction, *exprSyntax, context);
         return createConnection(port, &expr, attributes);
     }
 
@@ -781,9 +785,13 @@ private:
     }
 
     PortConnection* getInterfaceExpr(const InterfacePortSymbol& port,
-                                     const ExpressionSyntax& syntax,
+                                     const PropertyExprSyntax& syntax,
                                      span<const AttributeSymbol* const> attributes) {
-        const ExpressionSyntax* expr = &syntax;
+        BindContext context(scope, lookupLocation, BindFlags::NonProcedural);
+        auto expr = context.requireSimpleExpr(syntax);
+        if (!expr)
+            return emptyConnection(port);
+
         while (expr->kind == SyntaxKind::ParenthesizedExpression)
             expr = expr->as<ParenthesizedExpressionSyntax>().expression;
 
@@ -793,7 +801,6 @@ private:
         }
 
         LookupResult result;
-        BindContext context(scope, lookupLocation, BindFlags::NonProcedural);
         Lookup::name(expr->as<NameSyntax>(), context, LookupFlags::None, result);
         result.reportErrors(context);
 
@@ -1151,17 +1158,29 @@ void InterfacePortSymbol::findInterfaceInstanceKeys(
         }
     };
 
-    auto findIface = [&](const ExpressionSyntax& syntax) {
-        const ExpressionSyntax* expr = &syntax;
+    auto findIface = [&](const PropertyExprSyntax& syntax) {
+        if (syntax.kind != SyntaxKind::SimplePropertyExpr)
+            return;
+
+        auto seqExpr = syntax.as<SimplePropertyExprSyntax>().expr;
+        if (seqExpr->kind != SyntaxKind::SimpleSequenceExpr)
+            return;
+
+        auto& sse = seqExpr->as<SimpleSequenceExprSyntax>();
+        if (sse.repetition)
+            return;
+
+        const ExpressionSyntax* expr = sse.expr;
         while (expr->kind == SyntaxKind::ParenthesizedExpression)
             expr = expr->as<ParenthesizedExpressionSyntax>().expression;
 
-        if (NameSyntax::isKind(expr->kind)) {
-            LookupResult result;
-            BindContext context(scope, LookupLocation::max);
-            Lookup::name(expr->as<NameSyntax>(), context, LookupFlags::None, result);
-            unwrap(result.found);
-        }
+        if (!NameSyntax::isKind(expr->kind))
+            return;
+
+        LookupResult result;
+        BindContext context(scope, LookupLocation::max);
+        Lookup::name(expr->as<NameSyntax>(), context, LookupFlags::None, result);
+        unwrap(result.found);
     };
 
     if (portConnections[0]->kind == SyntaxKind::OrderedPortConnection) {

@@ -14,6 +14,7 @@
 
 namespace slang {
 
+class AssertionExpr;
 class Definition;
 class Expression;
 class InstanceBodySymbol;
@@ -197,12 +198,16 @@ public:
     /// Gets the self-determined expressions that are assigned to the ports
     /// in the instantiation. These aren't necessarily correctly typed
     /// since we can't know the destination type of each port.
-    span<const Expression* const> getPortConnections() const;
+    span<const AssertionExpr* const> getPortConnections() const;
 
     /// The names of the ports that were connected in the instance. If the names
     /// are not known, because ordered connection syntax was used, the associated
     /// port name will be the empty string.
     span<string_view const> getPortNames() const;
+
+    /// Returns true if we've determined this must be a checker instance
+    /// based on the syntax used to instantiate it.
+    bool isChecker() const;
 
     static void fromSyntax(Compilation& compilation, const HierarchyInstantiationSyntax& syntax,
                            LookupLocation location, const Scope& scope,
@@ -219,8 +224,9 @@ public:
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::UnknownModule; }
 
 private:
-    mutable optional<span<const Expression* const>> ports;
+    mutable optional<span<const AssertionExpr* const>> ports;
     mutable span<string_view const> portNames;
+    mutable bool mustBeChecker = false;
 };
 
 class PrimitiveInstanceSymbol : public InstanceSymbolBase {

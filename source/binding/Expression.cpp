@@ -1016,8 +1016,7 @@ Expression* Expression::tryBindInterfaceRef(const BindContext& context,
                                                                              syntax.sourceRange());
 }
 
-void Expression::findPotentiallyImplicitNets(const ExpressionSyntax& expr,
-                                             const BindContext& context,
+void Expression::findPotentiallyImplicitNets(const SyntaxNode& expr, const BindContext& context,
                                              SmallVector<Token>& results) {
     struct Visitor : public SyntaxVisitor<Visitor> {
         Visitor(const BindContext& context, SmallVector<Token>& results) :

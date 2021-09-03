@@ -8,6 +8,7 @@
 
 #include "ParameterBuilder.h"
 
+#include "slang/binding/AssertionExpr.h"
 #include "slang/binding/Expression.h"
 #include "slang/binding/TimingControl.h"
 #include "slang/compilation/Compilation.h"
@@ -173,7 +174,7 @@ void createImplicitNets(const HierarchicalInstanceSyntax& instance, const BindCo
         return;
 
     for (auto conn : instance.connections) {
-        const ExpressionSyntax* expr = nullptr;
+        const PropertyExprSyntax* expr = nullptr;
         switch (conn->kind) {
             case SyntaxKind::OrderedPortConnection:
                 expr = conn->as<OrderedPortConnectionSyntax>().expr;
@@ -806,7 +807,7 @@ void UnknownModuleSymbol::fromSyntax(Compilation& compilation,
                          implicitNets);
 }
 
-span<const Expression* const> UnknownModuleSymbol::getPortConnections() const {
+span<const AssertionExpr* const> UnknownModuleSymbol::getPortConnections() const {
     if (!ports) {
         auto syntax = getSyntax();
         auto scope = getParentScope();
@@ -815,25 +816,33 @@ span<const Expression* const> UnknownModuleSymbol::getPortConnections() const {
         auto& comp = scope->getCompilation();
         BindContext context(*scope, LookupLocation::after(*this));
 
-        SmallVectorSized<const Expression*, 8> results;
+        SmallVectorSized<const AssertionExpr*, 8> results;
         SmallVectorSized<string_view, 8> names;
         for (auto port : syntax->as<HierarchicalInstanceSyntax>().connections) {
             if (port->kind == SyntaxKind::OrderedPortConnection) {
                 names.append(""sv);
                 results.append(
-                    &Expression::bind(*port->as<OrderedPortConnectionSyntax>().expr, context));
+                    &AssertionExpr::bind(*port->as<OrderedPortConnectionSyntax>().expr, context));
             }
             else if (port->kind == SyntaxKind::NamedPortConnection) {
                 auto& npc = port->as<NamedPortConnectionSyntax>();
                 names.append(npc.name.valueText());
 
                 if (auto ex = npc.expr)
-                    results.append(&Expression::bind(*ex, context));
+                    results.append(&AssertionExpr::bind(*ex, context));
             }
         }
 
         ports = results.copy(comp);
         portNames = names.copy(comp);
+
+        for (auto port : *ports) {
+            if (port->kind != AssertionExprKind::Simple ||
+                port->as<SimpleAssertionExpr>().repetition) {
+                mustBeChecker = true;
+                break;
+            }
+        }
     }
     return *ports;
 }
@@ -862,7 +871,13 @@ void UnknownModuleSymbol::serializeTo(ASTSerializer& serializer) const {
         if (!names[i].empty())
             serializer.write("name", names[i]);
 
-        serializer.write("expr", *conns[i]);
+        if (mustBeChecker) {
+            serializer.write("expr", *conns[i]);
+        }
+        else {
+            serializer.write("expr", conns[i]->as<SimpleAssertionExpr>().expr);
+        }
+
         serializer.endObject();
     }
     serializer.endArray();
@@ -1021,8 +1036,16 @@ span<const Expression* const> PrimitiveInstanceSymbol::getPortConnections() cons
         SmallVectorSized<const ExpressionSyntax*, 8> conns;
         auto& his = syntax->as<HierarchicalInstanceSyntax>();
         for (auto port : his.connections) {
-            if (port->kind == SyntaxKind::OrderedPortConnection)
-                conns.append(port->as<OrderedPortConnectionSyntax>().expr);
+            if (port->kind == SyntaxKind::OrderedPortConnection) {
+                auto expr =
+                    context.requireSimpleExpr(*port->as<OrderedPortConnectionSyntax>().expr);
+                if (!expr) {
+                    ports.emplace();
+                    return *ports;
+                }
+
+                conns.append(expr);
+            }
             else if (port->kind != SyntaxKind::EmptyPortConnection ||
                      primitiveType.primitiveKind != PrimitiveSymbol::UserDefined) {
                 context.addDiag(diag::InvalidPrimitivePortConn, port->sourceRange());

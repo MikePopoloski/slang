@@ -1225,13 +1225,13 @@ EmptyPortConnection base=PortConnection
 token placeholder
 
 OrderedPortConnection base=PortConnection
-Expression expr
+PropertyExpr expr
 
 NamedPortConnection base=PortConnection
 token dot
 token name
 token openParen
-Expression? expr
+PropertyExpr? expr
 token closeParen
 
 WildcardPortConnection base=PortConnection
