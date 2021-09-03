@@ -208,7 +208,7 @@ private:
     StreamingConcatenationExpressionSyntax& parseStreamConcatenation(Token openBrace);
     StreamExpressionSyntax& parseStreamExpression();
     OpenRangeListSyntax& parseOpenRangeList();
-    ExpressionSyntax& parseOpenRangeElement();
+    ExpressionSyntax& parseOpenRangeElement(bitmask<ExpressionOptions> options = {});
     ElementSelectSyntax& parseElementSelect();
     SelectorSyntax* parseElementSelector();
     NameSyntax& parseName(bitmask<NameOptions> options);

@@ -1453,7 +1453,7 @@ MemberSyntax* Parser::parseCoverpointMember() {
 TransRangeSyntax& Parser::parseTransRange() {
     SmallVectorSized<TokenOrSyntax, 8> buffer;
     while (true) {
-        buffer.append(&parseOpenRangeElement());
+        buffer.append(&parseOpenRangeElement(ExpressionOptions::SequenceExpr));
         if (!peek(TokenKind::Comma))
             break;
 

@@ -313,9 +313,9 @@ OpenRangeListSyntax& Parser::parseOpenRangeList() {
     return factory.openRangeList(openBrace, list, closeBrace);
 }
 
-ExpressionSyntax& Parser::parseOpenRangeElement() {
+ExpressionSyntax& Parser::parseOpenRangeElement(bitmask<ExpressionOptions> options) {
     if (!peek(TokenKind::OpenBracket))
-        return parseExpression();
+        return parseSubExpression(options, 0);
 
     auto openBracket = consume();
     auto& left = parseExpression();
