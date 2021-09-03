@@ -150,9 +150,9 @@ MemberSyntax* Parser::parseMember(SyntaxKind parentKind, bool& anyLocalModules) 
             errorIfAttributes(attributes);
             return &parseSpecifyBlock(attributes);
         case TokenKind::Identifier:
-            // Declarations and instantiations have already been handled, so if we reach this point
-            // we either have a labeled assertion, or this is some kind of error.
             if (peek(1).kind == TokenKind::Colon) {
+                // Declarations and instantiations have already been handled, so if we reach this
+                // point we either have a labeled assertion, or this is some kind of error.
                 TokenKind next = peek(2).kind;
                 if (next == TokenKind::AssertKeyword || next == TokenKind::AssumeKeyword ||
                     next == TokenKind::CoverKeyword) {
@@ -174,11 +174,29 @@ MemberSyntax* Parser::parseMember(SyntaxKind parentKind, bool& anyLocalModules) 
             }
 
             // If there's a hash or parenthesis here this is likely a primitive instantiation.
-            if (peek(1).kind == TokenKind::Hash || peek(1).kind == TokenKind::OpenParenthesis)
+            if (peek(1).kind == TokenKind::Hash || peek(1).kind == TokenKind::OpenParenthesis) {
                 return &parsePrimitiveInstantiation(attributes);
+            }
 
-            // Otherwise, assume it's an attempt at a variable declaration.
+            // A double colon could be a package-scoped checker instantiation.
+            if (peek(1).kind == TokenKind::DoubleColon && peek(2).kind == TokenKind::Identifier &&
+                peek(3).kind == TokenKind::Identifier) {
+                return &parseCheckerInstantiation(attributes);
+            }
+
+            // Otherwise, assume it's an (erroneous) attempt at a variable declaration.
             return &parseVariableDeclaration(attributes);
+        case TokenKind::UnitSystemName: {
+            // The only valid thing this can be is a checker instantiation, since
+            // variable declarations would have been handled previously. Because these
+            // are rare, disambiguate for a bit and then fall back to parsing as a
+            // variable decl anyway for a better error message.
+            if (peek(1).kind == TokenKind::DoubleColon && peek(2).kind == TokenKind::Identifier &&
+                peek(3).kind == TokenKind::Identifier) {
+                return &parseCheckerInstantiation(attributes);
+            }
+            return &parseVariableDeclaration(attributes);
+        }
         case TokenKind::AssertKeyword:
         case TokenKind::AssumeKeyword:
         case TokenKind::CoverKeyword:
@@ -2381,6 +2399,19 @@ PrimitiveInstantiationSyntax& Parser::parsePrimitiveInstantiation(AttrList attri
 
     return factory.primitiveInstantiation(attributes, type, strength, delay, items.copy(alloc),
                                           semi);
+}
+
+CheckerInstantiationSyntax& Parser::parseCheckerInstantiation(AttrList attributes) {
+    auto& type = parseName();
+    auto parameters = parseParameterValueAssignment();
+
+    Token semi;
+    SmallVectorSized<TokenOrSyntax, 8> items;
+    parseList<isPossibleInstance, isSemicolon>(
+        items, TokenKind::Semicolon, TokenKind::Comma, semi, RequireItems::True,
+        diag::ExpectedHierarchicalInstantiation, [this] { return &parseHierarchicalInstance(); });
+
+    return factory.checkerInstantiation(attributes, type, parameters, items.copy(alloc), semi);
 }
 
 HierarchicalInstanceSyntax& Parser::parseHierarchicalInstance() {

@@ -1181,7 +1181,9 @@ bool Parser::isVariableDeclaration() {
         return false;
 
     // next token is the decider; declarations must have an identifier here
-    return peek(index).kind == TokenKind::Identifier;
+    // and there can't be an open parenthesis right after it.
+    return peek(index).kind == TokenKind::Identifier &&
+           peek(index + 1).kind != TokenKind::OpenParenthesis;
 }
 
 bool Parser::isLocalVariableDeclaration() {

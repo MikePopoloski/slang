@@ -309,6 +309,7 @@ private:
     HierarchyInstantiationSyntax& parseHierarchyInstantiation(AttrList attributes);
     HierarchicalInstanceSyntax& parseHierarchicalInstance();
     PrimitiveInstantiationSyntax& parsePrimitiveInstantiation(AttrList attributes);
+    CheckerInstantiationSyntax& parseCheckerInstantiation(AttrList attributes);
     PortConnectionSyntax& parsePortConnection();
     FunctionPortSyntax& parseFunctionPort(bool allowEmptyName);
     FunctionPortListSyntax* parseFunctionPortList(bool allowEmptyNames);

@@ -849,3 +849,20 @@ endgroup
     parseCompilationUnit(text);
     CHECK_DIAGNOSTICS_EMPTY;
 }
+
+TEST_CASE("Package-scoped checker instance parsing") {
+    auto& text = R"(
+package p;
+    checker c; endchecker
+endpackage
+
+checker c1; p::c foo(); endchecker
+
+module m;
+    $unit::c1 bar();
+endmodule
+)";
+
+    parseCompilationUnit(text);
+    CHECK_DIAGNOSTICS_EMPTY;
+}

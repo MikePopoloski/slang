@@ -1264,6 +1264,7 @@ static bool isModuleCommonDecl(SyntaxKind kind) {
 static bool isModuleCommonItem(SyntaxKind kind) {
     switch (kind) {
         case SyntaxKind::HierarchyInstantiation:
+        case SyntaxKind::CheckerInstantiation:
         case SyntaxKind::ImmediateAssertionMember:
         case SyntaxKind::ConcurrentAssertionMember:
         case SyntaxKind::ContinuousAssign:
@@ -1348,6 +1349,8 @@ bool SyntaxFacts::isAllowedInProgram(SyntaxKind kind) {
         case SyntaxKind::InitialBlock:
         case SyntaxKind::FinalBlock:
         case SyntaxKind::ConcurrentAssertionMember:
+        case SyntaxKind::HierarchyInstantiation:
+        case SyntaxKind::CheckerInstantiation:
         case SyntaxKind::TimeUnitsDeclaration:
         case SyntaxKind::LoopGenerate:
         case SyntaxKind::CaseGenerate:
@@ -1419,6 +1422,8 @@ bool SyntaxFacts::isAllowedInChecker(SyntaxKind kind) {
         case SyntaxKind::FunctionDeclaration:
         case SyntaxKind::CheckerDeclaration:
         case SyntaxKind::CheckerDataDeclaration:
+        case SyntaxKind::HierarchyInstantiation:
+        case SyntaxKind::CheckerInstantiation:
             return true;
         default:
             return false;

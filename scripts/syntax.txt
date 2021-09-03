@@ -1260,6 +1260,12 @@ TimingControl? delay
 separated_list<HierarchicalInstance> instances
 token semi
 
+CheckerInstantiation base=Member
+Name type
+ParameterValueAssignment? parameters
+separated_list<HierarchicalInstance> instances
+token semi
+
 BindTargetList
 token colon
 separated_list<Name> targets
