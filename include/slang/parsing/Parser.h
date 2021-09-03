@@ -246,6 +246,7 @@ private:
     StatementSyntax& parseAssertionStatement(NamedLabelSyntax* label, AttrList attributes);
     StatementSyntax& parseVoidCallStatement(NamedLabelSyntax* label, AttrList attributes);
     StatementSyntax& parseRandSequenceStatement(NamedLabelSyntax* label, AttrList attributes);
+    StatementSyntax& parseCheckerStatement(NamedLabelSyntax* label, AttrList attributes);
     ConcurrentAssertionStatementSyntax& parseConcurrentAssertion(NamedLabelSyntax* label, AttrList attributes);
     PropertySpecSyntax& parsePropertySpec();
     ActionBlockSyntax& parseActionBlock();

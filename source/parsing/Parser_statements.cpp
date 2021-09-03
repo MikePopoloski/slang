@@ -120,6 +120,28 @@ StatementSyntax& Parser::parseStatement(bool allowEmpty, bool allowSuperNew) {
             return parseEventTriggerStatement(label, attributes);
         case TokenKind::VoidKeyword:
             return parseVoidCallStatement(label, attributes);
+        case TokenKind::Identifier: {
+            // This could be a checker instantiation.
+            uint32_t index = 1;
+            if (peek(index).kind == TokenKind::DoubleColon &&
+                peek(index + 1).kind == TokenKind::Identifier) {
+                index = 3;
+            }
+
+            if (peek(index).kind == TokenKind::Identifier &&
+                peek(index + 1).kind == TokenKind::OpenParenthesis) {
+                return parseCheckerStatement(label, attributes);
+            }
+
+            break;
+        }
+        case TokenKind::UnitSystemName:
+            if (peek(1).kind == TokenKind::DoubleColon && peek(2).kind == TokenKind::Identifier &&
+                peek(3).kind == TokenKind::Identifier &&
+                peek(4).kind == TokenKind::OpenParenthesis) {
+                return parseCheckerStatement(label, attributes);
+            }
+            break;
         default:
             break;
     }
@@ -926,6 +948,11 @@ StatementSyntax& Parser::parseRandSequenceStatement(NamedLabelSyntax* label, Att
     auto endsequence = expect(TokenKind::EndSequenceKeyword);
     return factory.randSequenceStatement(label, attributes, keyword, openParen, firstProd,
                                          closeParen, productions.copy(alloc), endsequence);
+}
+
+StatementSyntax& Parser::parseCheckerStatement(NamedLabelSyntax* label, AttrList attributes) {
+    auto& instance = parseCheckerInstantiation({});
+    return factory.checkerInstanceStatement(label, attributes, instance);
 }
 
 } // namespace slang

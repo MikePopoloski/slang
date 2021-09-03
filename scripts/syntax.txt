@@ -1266,6 +1266,9 @@ ParameterValueAssignment? parameters
 separated_list<HierarchicalInstance> instances
 token semi
 
+CheckerInstanceStatement base=Statement
+CheckerInstantiation instance
+
 BindTargetList
 token colon
 separated_list<Name> targets

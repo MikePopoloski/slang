@@ -835,7 +835,7 @@ bool SyntaxFacts::isPossiblePortConnection(TokenKind kind) {
         case TokenKind::Comma:
             return true;
         default:
-            return isPossibleExpression(kind);
+            return isPossibleArgument(kind);
     }
 }
 
