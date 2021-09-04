@@ -358,4 +358,18 @@ private:
     const ClockingSkewSyntax* outputSkewSyntax = nullptr;
 };
 
+struct ProductionSyntax;
+
+class RandSeqProductionSymbol : public Symbol {
+public:
+    RandSeqProductionSymbol(string_view name, SourceLocation loc);
+
+    void serializeTo(ASTSerializer&) const {}
+
+    static RandSeqProductionSymbol& fromSyntax(Compilation& compilation,
+                                               const ProductionSyntax& syntax);
+
+    static bool isKind(SymbolKind kind) { return kind == SymbolKind::RandSeqProduction; }
+};
+
 } // namespace slang

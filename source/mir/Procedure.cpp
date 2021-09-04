@@ -65,6 +65,7 @@ public:
     void visit(const ProceduralAssignStatement&) {}
     void visit(const ProceduralDeassignStatement&) {}
     void visit(const RandCaseStatement&) {}
+    void visit(const RandSequenceStatement&) {}
 
     MIRValue visit(const IntegerLiteral& expr) { return emitConst(expr); }
     MIRValue visit(const RealLiteral& expr) { return emitConst(expr); }

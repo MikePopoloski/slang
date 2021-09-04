@@ -53,7 +53,8 @@ struct StatementSyntax;
     x(EventTrigger) \
     x(ProceduralAssign) \
     x(ProceduralDeassign) \
-    x(RandCase)
+    x(RandCase) \
+    x(RandSequence)
 ENUM(StatementKind, STATEMENT);
 #undef STATEMENT
 
@@ -1058,6 +1059,32 @@ public:
         for (auto& item : items)
             item.stmt->visit(visitor);
     }
+};
+
+struct RandSequenceStatementSyntax;
+
+class RandSequenceStatement : public Statement {
+public:
+    RandSequenceStatement(SourceRange sourceRange) :
+        Statement(StatementKind::RandSequence, sourceRange) {}
+
+    EvalResult evalImpl(EvalContext& context) const;
+    bool verifyConstantImpl(EvalContext& context) const;
+
+    static Statement& fromSyntax(Compilation& compilation,
+                                 const RandSequenceStatementSyntax& syntax,
+                                 const BindContext& context, StatementContext& stmtCtx);
+
+    static void collectSymbols(Compilation& compilation, StatementBlockSymbol& block,
+                               const RandSequenceStatementSyntax& syntax);
+
+    static void collectBlocks(const Scope& scope, const RandSequenceStatementSyntax& syntax,
+                              SmallVector<const StatementBlockSymbol*>& results,
+                              bitmask<StatementFlags> flags);
+
+    void serializeTo(ASTSerializer& serializer) const;
+
+    static bool isKind(StatementKind kind) { return kind == StatementKind::RandSequence; }
 };
 
 } // namespace slang

@@ -52,7 +52,8 @@ StatementBlockSymbol& StatementBlockSymbol::fromSyntax(const Scope& scope,
     }
 
     StatementBlockKind blockKind = SemanticFacts::getStatementBlockKind(syntax);
-    if ((flags.has(StatementFlags::Func | StatementFlags::Final)) && !flags.has(StatementFlags::InForkJoinNone)) {
+    if ((flags.has(StatementFlags::Func | StatementFlags::Final)) &&
+        !flags.has(StatementFlags::InForkJoinNone)) {
         // fork-join and fork-join_any blocks are not allowed in functions, so check that here.
         if (blockKind == StatementBlockKind::JoinAll || blockKind == StatementBlockKind::JoinAny)
             scope.addDiag(diag::TimingInFuncNotAllowed, syntax.end.range());
@@ -124,6 +125,33 @@ StatementBlockSymbol& StatementBlockSymbol::fromSyntax(const Scope& scope,
     // This block needs elaboration to collect iteration variables.
     result->setNeedElaboration();
 
+    return *result;
+}
+
+StatementBlockSymbol& StatementBlockSymbol::fromSyntax(const Scope& scope,
+                                                       const RandSequenceStatementSyntax& syntax,
+                                                       bitmask<StatementFlags> flags) {
+    auto [name, loc] = getLabel(syntax, syntax.randsequence.location());
+    auto result = createBlock(scope, syntax, name, loc, flags);
+
+    RandSequenceStatement::collectSymbols(scope.getCompilation(), *result, syntax);
+
+    result->binder.setSyntax(*result, syntax, /* labelHandled */ true, flags);
+    for (auto block : result->binder.getBlocks())
+        result->addMember(*block);
+
+    return *result;
+}
+
+StatementBlockSymbol& StatementBlockSymbol::fromSyntax(const Scope& scope,
+                                                       const RsCodeBlockSyntax& syntax,
+                                                       bitmask<StatementFlags> flags) {
+    auto& comp = scope.getCompilation();
+    auto result = comp.emplace<StatementBlockSymbol>(comp, ""sv, syntax.getFirstToken().location(),
+                                                     StatementBlockKind::Sequential,
+                                                     VariableLifetime::Automatic);
+    result->binder.setItems(*result, syntax.items, syntax.sourceRange(), flags);
+    result->setSyntax(syntax);
     return *result;
 }
 

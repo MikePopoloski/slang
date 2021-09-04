@@ -13,6 +13,8 @@
 
 namespace slang {
 
+struct RsCodeBlockSyntax;
+
 class StatementBlockSymbol : public Symbol, public Scope {
 public:
     StatementBlockKind blockKind;
@@ -35,6 +37,11 @@ public:
                                             bitmask<StatementFlags> flags);
     static StatementBlockSymbol& fromSyntax(const Scope& scope,
                                             const ForeachLoopStatementSyntax& syntax,
+                                            bitmask<StatementFlags> flags);
+    static StatementBlockSymbol& fromSyntax(const Scope& scope,
+                                            const RandSequenceStatementSyntax& syntax,
+                                            bitmask<StatementFlags> flags);
+    static StatementBlockSymbol& fromSyntax(const Scope& scope, const RsCodeBlockSyntax& syntax,
                                             bitmask<StatementFlags> flags);
     static StatementBlockSymbol& fromLabeledStmt(const Scope& scope, const StatementSyntax& syntax,
                                                  bitmask<StatementFlags> flags);

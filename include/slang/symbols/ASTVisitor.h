@@ -175,6 +175,7 @@ decltype(auto) Symbol::visit(TVisitor&& visitor, Args&&... args) const {
         SYMBOL(ClockVar);
         SYMBOL(LocalAssertionVar);
         SYMBOL(LetDecl);
+        SYMBOL(RandSeqProduction);
         TYPE(PredefinedIntegerType);
         TYPE(ScalarType);
         TYPE(FloatingType);
@@ -243,6 +244,7 @@ decltype(auto) Statement::visit(TVisitor&& visitor, Args&&... args) const {
         CASE(ProceduralAssign, ProceduralAssignStatement);
         CASE(ProceduralDeassign, ProceduralDeassignStatement);
         CASE(RandCase, RandCaseStatement);
+        CASE(RandSequence, RandSequenceStatement);
     }
 #undef CASE
     // clang-format on

@@ -89,7 +89,8 @@ static bool hasSimpleLabel(const StatementSyntax& syntax) {
     return syntax.kind != SyntaxKind::SequentialBlockStatement &&
            syntax.kind != SyntaxKind::ParallelBlockStatement &&
            syntax.kind != SyntaxKind::ForLoopStatement &&
-           syntax.kind != SyntaxKind::ForeachLoopStatement;
+           syntax.kind != SyntaxKind::ForeachLoopStatement &&
+           syntax.kind != SyntaxKind::RandSequenceStatement;
 }
 
 const Statement& Statement::bind(const StatementSyntax& syntax, const BindContext& context,
@@ -241,8 +242,12 @@ const Statement& Statement::bind(const StatementSyntax& syntax, const BindContex
                                                     context, stmtCtx);
             break;
         case SyntaxKind::RandSequenceStatement:
-            context.addDiag(diag::NotYetSupported, syntax.sourceRange());
-            result = &badStmt(comp, nullptr);
+            // We might have an implicit block here; check for that first.
+            result = stmtCtx.tryGetBlock(comp, syntax);
+            if (!result) {
+                result = &RandSequenceStatement::fromSyntax(
+                    comp, syntax.as<RandSequenceStatementSyntax>(), context, stmtCtx);
+            }
             break;
         default:
             THROW_UNREACHABLE;
@@ -423,7 +428,16 @@ static void findBlocks(const Scope& scope, const StatementSyntax& syntax,
             return;
         }
         case SyntaxKind::RandSequenceStatement:
-            scope.addDiag(diag::NotYetSupported, syntax.sourceRange());
+            // A randsequence statement always creates a block, but we need to check
+            // labelHandled here to make sure we don't infinitely recurse.
+            if (!labelHandled) {
+                results.append(&StatementBlockSymbol::fromSyntax(
+                    scope, syntax.as<RandSequenceStatementSyntax>(), flags));
+            }
+            else {
+                RandSequenceStatement::collectBlocks(
+                    scope, syntax.as<RandSequenceStatementSyntax>(), results, flags);
+            }
             return;
         default:
             THROW_UNREACHABLE;
@@ -2423,6 +2437,65 @@ void RandCaseStatement::serializeTo(ASTSerializer& serializer) const {
         serializer.endObject();
     }
     serializer.endArray();
+}
+
+Statement& RandSequenceStatement::fromSyntax(Compilation& compilation,
+                                             const RandSequenceStatementSyntax& syntax,
+                                             const BindContext&, StatementContext& stmtCtx) {
+    for (auto prod : syntax.productions) {
+        for (auto rule : prod->rules) {
+            for (auto p : rule->prods) {
+                if (p->kind == SyntaxKind::RsCodeBlock) {
+                    auto block = stmtCtx.tryGetBlock(compilation, *p);
+                    ASSERT(block);
+                }
+            }
+        }
+    }
+
+    bool bad = false;
+    auto result = compilation.emplace<RandSequenceStatement>(syntax.sourceRange());
+    if (bad)
+        return badStmt(compilation, result);
+
+    return *result;
+}
+
+void RandSequenceStatement::collectSymbols(Compilation& compilation, StatementBlockSymbol& block,
+                                           const RandSequenceStatementSyntax& syntax) {
+    for (auto prod : syntax.productions) {
+        auto& symbol = RandSeqProductionSymbol::fromSyntax(compilation, *prod);
+        block.addMember(symbol);
+    }
+}
+
+void RandSequenceStatement::collectBlocks(const Scope& scope,
+                                          const RandSequenceStatementSyntax& syntax,
+                                          SmallVector<const StatementBlockSymbol*>& results,
+                                          bitmask<StatementFlags> flags) {
+    for (auto prod : syntax.productions) {
+        for (auto rule : prod->rules) {
+            for (auto p : rule->prods) {
+                if (p->kind == SyntaxKind::RsCodeBlock) {
+                    results.append(&StatementBlockSymbol::fromSyntax(
+                        scope, p->as<RsCodeBlockSyntax>(), flags));
+                }
+            }
+        }
+    }
+}
+
+ER RandSequenceStatement::evalImpl(EvalContext&) const {
+    return ER::Fail;
+}
+
+bool RandSequenceStatement::verifyConstantImpl(EvalContext& context) const {
+    context.addDiag(diag::ConstEvalRandValue, sourceRange);
+    return false;
+}
+
+void RandSequenceStatement::serializeTo(ASTSerializer&) const {
+    // TODO:
 }
 
 } // namespace slang

@@ -103,7 +103,8 @@ enum class RandMode;
     x(ClockingBlock) \
     x(ClockVar) \
     x(LocalAssertionVar) \
-    x(LetDecl)
+    x(LetDecl) \
+    x(RandSeqProduction)
 // clang-format on
 
 ENUM(SymbolKind, SYMBOLKIND)
