@@ -937,13 +937,11 @@ StatementSyntax& Parser::parseRandSequenceStatement(NamedLabelSyntax* label, Att
     auto closeParen = expect(TokenKind::CloseParenthesis);
 
     SmallVectorSized<ProductionSyntax*, 16> productions;
-    while (true) {
-        auto kind = peek().kind;
-        if (kind == TokenKind::EndOfFile || kind == TokenKind::EndSequenceKeyword)
-            break;
-
+    while (isPossibleDataType(peek().kind))
         productions.append(&parseProduction());
-    }
+
+    if (productions.empty())
+        addDiag(diag::ExpectedRsRule, peek().location());
 
     auto endsequence = expect(TokenKind::EndSequenceKeyword);
     return factory.randSequenceStatement(label, attributes, keyword, openParen, firstProd,

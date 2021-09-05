@@ -297,3 +297,22 @@ endmodule
     parseCompilationUnit(text);
     CHECK_DIAGNOSTICS_EMPTY;
 }
+
+TEST_CASE("randsequence parsing error cases") {
+    auto& text = R"(
+module rand_sequence1(); 
+  initial begin
+    randsequence()
+        foo: case(x) default: a; default: b; endcase;
+    endsequence
+
+	randsequence( bin_op )
+  end
+endmodule
+)";
+    parseCompilationUnit(text);
+
+    REQUIRE(diagnostics.size() == 2);
+    CHECK(diagnostics[0].code == diag::MultipleDefaultCases);
+    CHECK(diagnostics[1].code == diag::ExpectedRsRule);
+}
