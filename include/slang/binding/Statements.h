@@ -17,6 +17,7 @@
 namespace slang {
 
 class BlockStatement;
+class RandSeqProductionSymbol;
 class StatementBlockSymbol;
 class VariableSymbol;
 struct ForLoopStatementSyntax;
@@ -1062,11 +1063,79 @@ public:
 };
 
 struct RandSequenceStatementSyntax;
+struct RsCaseSyntax;
+struct RsProdItemSyntax;
 
 class RandSequenceStatement : public Statement {
 public:
-    RandSequenceStatement(SourceRange sourceRange) :
-        Statement(StatementKind::RandSequence, sourceRange) {}
+    enum class ProdKind { Item, CodeBlock, IfElse, Repeat, Case };
+
+    struct ProdBase {
+        ProdKind kind;
+
+        explicit ProdBase(ProdKind kind) : kind(kind) {}
+    };
+
+    struct ProdItem : public ProdBase {
+        const RandSeqProductionSymbol* target;
+
+        explicit ProdItem(const RandSeqProductionSymbol* target) :
+            ProdBase(ProdKind::Item), target(target) {}
+    };
+
+    struct CodeBlockProd : public ProdBase {
+        not_null<const Statement*> stmt;
+
+        explicit CodeBlockProd(const Statement& stmt) :
+            ProdBase(ProdKind::CodeBlock), stmt(&stmt) {}
+    };
+
+    struct IfElseProd : public ProdBase {
+        not_null<const Expression*> expr;
+        ProdItem ifItem;
+        optional<ProdItem> elseItem;
+
+        IfElseProd(const Expression& expr, ProdItem ifItem, optional<ProdItem> elseItem) :
+            ProdBase(ProdKind::IfElse), expr(&expr), ifItem(ifItem), elseItem(elseItem) {}
+    };
+
+    struct RepeatProd : public ProdBase {
+        not_null<const Expression*> expr;
+        ProdItem item;
+
+        RepeatProd(const Expression& expr, ProdItem item) :
+            ProdBase(ProdKind::Repeat), expr(&expr), item(item) {}
+    };
+
+    struct CaseItem {
+        span<const Expression* const> expressions;
+        ProdItem item;
+    };
+
+    struct CaseProd : public ProdBase {
+        not_null<const Expression*> expr;
+        span<const CaseItem> items;
+        optional<ProdItem> defaultItem;
+
+        CaseProd(const Expression& expr, span<const CaseItem> items,
+                 optional<ProdItem> defaultItem) :
+            ProdBase(ProdKind::Case),
+            expr(&expr), items(items), defaultItem(defaultItem) {}
+    };
+
+    struct Rule {
+        span<const ProdBase> prods;
+    };
+
+    struct Production {
+        not_null<const RandSeqProductionSymbol*> symbol;
+        span<const Rule> rules;
+    };
+
+    span<const Production> productions;
+
+    RandSequenceStatement(span<const Production> productions, SourceRange sourceRange) :
+        Statement(StatementKind::RandSequence, sourceRange), productions(productions) {}
 
     EvalResult evalImpl(EvalContext& context) const;
     bool verifyConstantImpl(EvalContext& context) const;
@@ -1085,6 +1154,12 @@ public:
     void serializeTo(ASTSerializer& serializer) const;
 
     static bool isKind(StatementKind kind) { return kind == StatementKind::RandSequence; }
+
+private:
+    static ProdItem createProdItem(const RsProdItemSyntax& syntax, const BindContext& context,
+                                   bool& hasError);
+    static CaseProd createCaseProd(const RsCaseSyntax& syntax, const BindContext& context,
+                                   bool& hasError);
 };
 
 } // namespace slang

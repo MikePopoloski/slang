@@ -2439,22 +2439,100 @@ void RandCaseStatement::serializeTo(ASTSerializer& serializer) const {
     serializer.endArray();
 }
 
-Statement& RandSequenceStatement::fromSyntax(Compilation& compilation,
-                                             const RandSequenceStatementSyntax& syntax,
-                                             const BindContext&, StatementContext& stmtCtx) {
-    for (auto prod : syntax.productions) {
-        for (auto rule : prod->rules) {
-            for (auto p : rule->prods) {
-                if (p->kind == SyntaxKind::RsCodeBlock) {
-                    auto block = stmtCtx.tryGetBlock(compilation, *p);
-                    ASSERT(block);
-                }
-            }
-        }
+RandSequenceStatement::ProdItem RandSequenceStatement::createProdItem(
+    const RsProdItemSyntax& syntax, const BindContext& context, bool& hasError) {
+
+    auto name = syntax.name.valueText();
+    auto symbol = context.scope->find(name);
+    if (!symbol) {
+        if (!name.empty())
+            context.addDiag(diag::NotAProduction, syntax.name.range()) << name;
+        hasError = true;
+        return ProdItem(nullptr);
     }
 
+    return ProdItem(&symbol->as<RandSeqProductionSymbol>());
+}
+
+Statement& RandSequenceStatement::fromSyntax(Compilation& compilation,
+                                             const RandSequenceStatementSyntax& syntax,
+                                             const BindContext& context,
+                                             StatementContext& stmtCtx) {
     bool bad = false;
-    auto result = compilation.emplace<RandSequenceStatement>(syntax.sourceRange());
+    SmallVectorSized<Production, 8> productions;
+    for (auto prod : syntax.productions) {
+        if (prod->name.valueText().empty()) {
+            bad = true;
+            continue;
+        }
+
+        // We should always be able to find the production symbol because
+        // we went through this same sort of loop when creating the scope
+        // for the randsequence block.
+        auto symbol = context.scope->find(prod->name.valueText());
+        ASSERT(symbol);
+
+        SmallVectorSized<Rule, 8> rules;
+        for (auto rule : prod->rules) {
+            SmallVectorSized<ProdBase, 8> prods;
+            for (auto p : rule->prods) {
+                switch (p->kind) {
+                    case SyntaxKind::RsProdItem:
+                        prods.append(createProdItem(p->as<RsProdItemSyntax>(), context, bad));
+                        break;
+                    case SyntaxKind::RsCodeBlock: {
+                        auto block = stmtCtx.tryGetBlock(compilation, *p);
+                        ASSERT(block);
+                        prods.append(CodeBlockProd(*block));
+                        bad |= block->bad();
+                        break;
+                    }
+                    case SyntaxKind::RsIfElse: {
+                        auto& ries = p->as<RsIfElseSyntax>();
+                        auto& expr = Expression::bind(*ries.condition, context);
+                        auto ifItem = createProdItem(*ries.ifItem, context, bad);
+
+                        optional<ProdItem> elseItem;
+                        if (ries.elseClause)
+                            elseItem = createProdItem(*ries.elseClause->item, context, bad);
+
+                        bad |= expr.bad();
+                        if (!expr.bad() && !context.requireBooleanConvertible(expr))
+                            bad = true;
+
+                        prods.append(IfElseProd(expr, ifItem, elseItem));
+                        break;
+                    }
+                    case SyntaxKind::RsRepeat: {
+                        auto& rrs = p->as<RsRepeatSyntax>();
+                        auto& expr = Expression::bind(*rrs.expr, context);
+                        auto item = createProdItem(*rrs.item, context, bad);
+                        prods.append(RepeatProd(expr, item));
+
+                        bad |= expr.bad();
+                        if (!expr.bad() && !expr.type->isIntegral()) {
+                            context.addDiag(diag::ExprMustBeIntegral, expr.sourceRange)
+                                << *expr.type;
+                            bad = true;
+                        }
+                        break;
+                    }
+                    /*case SyntaxKind::RsCase:
+                        prods.append(createCaseProd(p->as<RsCaseSyntax>(), context, bad));
+                        break;*/
+                    default:
+                        THROW_UNREACHABLE;
+                }
+            }
+
+            rules.append({ prods.copy(compilation) });
+        }
+
+        productions.append({ &symbol->as<RandSeqProductionSymbol>(), rules.copy(compilation) });
+    }
+
+    auto result = compilation.emplace<RandSequenceStatement>(productions.copy(compilation),
+                                                             syntax.sourceRange());
     if (bad)
         return badStmt(compilation, result);
 
@@ -2464,6 +2542,9 @@ Statement& RandSequenceStatement::fromSyntax(Compilation& compilation,
 void RandSequenceStatement::collectSymbols(Compilation& compilation, StatementBlockSymbol& block,
                                            const RandSequenceStatementSyntax& syntax) {
     for (auto prod : syntax.productions) {
+        if (prod->name.valueText().empty())
+            continue;
+
         auto& symbol = RandSeqProductionSymbol::fromSyntax(compilation, *prod);
         block.addMember(symbol);
     }

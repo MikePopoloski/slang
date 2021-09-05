@@ -1124,7 +1124,7 @@ void ClockingBlockSymbol::serializeTo(ASTSerializer& serializer) const {
 }
 
 RandSeqProductionSymbol::RandSeqProductionSymbol(string_view name, SourceLocation loc) :
-    Symbol(SymbolKind::Genvar, name, loc) {
+    Symbol(SymbolKind::RandSeqProduction, name, loc) {
 }
 
 RandSeqProductionSymbol& RandSeqProductionSymbol::fromSyntax(Compilation& compilation,
@@ -1132,7 +1132,6 @@ RandSeqProductionSymbol& RandSeqProductionSymbol::fromSyntax(Compilation& compil
     auto result = compilation.emplace<RandSeqProductionSymbol>(syntax.name.valueText(),
                                                                syntax.name.location());
     result->setSyntax(syntax);
-
     return *result;
 }
 

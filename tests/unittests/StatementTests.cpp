@@ -962,30 +962,6 @@ endmodule
     NO_COMPILATION_ERRORS;
 }
 
-TEST_CASE("Unsupported statement gracefully finish") {
-    auto tree = SyntaxTree::fromText(R"(
-module rand_sequence1();
-    initial begin
-        randsequence( bin_op )
-            void bin_op : value operator value // void type is optional
-            { $display("%s %b %b", operator, value[1], value[2]); }
-            ;
-            bit [7:0] value : { return $urandom; } ;
-            string operator : add := 5 { return "+" ; }
-            | dec := 2 { return "-" ; }
-            | mult := 1 { return "*" ; }
-            ;
-        endsequence
-    end
-endmodule
-)");
-
-    Compilation compilation;
-    compilation.addSyntaxTree(tree);
-    auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() > 0);
-}
-
 TEST_CASE("System functions that can also be tasks") {
     auto tree = SyntaxTree::fromText(R"(
 module m;
@@ -1377,4 +1353,50 @@ endmodule
     auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::ExprMustBeIntegral);
+}
+
+TEST_CASE("randsequence statements") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    initial begin
+        randsequence (main)
+            main : first second done ;
+            first : add | dec ;
+            second : pop | push ;
+            done : { $display("done"); } ;
+            add : { $display("add"); } ;
+            dec : { $display("dec"); } ;
+            pop : repeat($urandom_range( 2, 6 )) push;
+            push : if (1) done else pop;
+        endsequence
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("randsequence errors") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    int baz[];
+    initial begin
+        randsequence (main)
+            main : first foo;
+            first : if (baz) main | repeat (baz) main;
+        endsequence
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 3);
+    CHECK(diags[0].code == diag::NotAProduction);
+    CHECK(diags[1].code == diag::NotBooleanConvertible);
+    CHECK(diags[2].code == diag::ExprMustBeIntegral);
 }

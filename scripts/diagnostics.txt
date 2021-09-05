@@ -580,6 +580,7 @@ error PropAbortMatched "'matched' method cannot be used in property abort condit
 error SeqPropAdmitEmpty "sequence properties cannot admit an empty match"
 error RecursivePropDisableIff "recursive properties cannot have disable iff conditions"
 error ConcurrentAssertActionBlock "cannot have '{}' statement in the action block of another concurrent assertion"
+error NotAProduction "unknown production '{}'"
 warning event-const EventExpressionConstant "edge expression is constant"
 warning empty-stmt EmptyStatement "extra ';' has no effect"
 warning pointless-void-cast PointlessVoidCast "cast to void for void-returning function '{}' has no effect"
