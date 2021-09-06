@@ -1358,6 +1358,7 @@ endmodule
 TEST_CASE("randsequence statements") {
     auto tree = SyntaxTree::fromText(R"(
 module m;
+    int a;
     initial begin
         randsequence (main)
             main : first second done ;
@@ -1368,6 +1369,7 @@ module m;
             dec : { $display("dec"); } ;
             pop : repeat($urandom_range( 2, 6 )) push;
             push : if (1) done else pop;
+            baz : case (a & 7) 1, 2: push; 3: pop; default done; endcase;
         endsequence
     end
 endmodule

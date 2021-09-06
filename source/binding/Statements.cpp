@@ -2454,6 +2454,72 @@ RandSequenceStatement::ProdItem RandSequenceStatement::createProdItem(
     return ProdItem(&symbol->as<RandSeqProductionSymbol>());
 }
 
+RandSequenceStatement::CaseProd RandSequenceStatement::createCaseProd(const RsCaseSyntax& syntax,
+                                                                      const BindContext& context,
+                                                                      bool& hasError) {
+    SmallVectorSized<const ExpressionSyntax*, 8> expressions;
+    SmallVectorSized<ProdItem, 8> prods;
+    optional<ProdItem> defItem;
+
+    for (auto item : syntax.items) {
+        switch (item->kind) {
+            case SyntaxKind::StandardRsCaseItem: {
+                auto& sci = item->as<StandardRsCaseItemSyntax>();
+                auto pi = createProdItem(*sci.item, context, hasError);
+                for (auto es : sci.expressions) {
+                    expressions.append(es);
+                    prods.append(pi);
+                }
+                break;
+            }
+            case SyntaxKind::DefaultRsCaseItem:
+                // The parser already errored for duplicate defaults,
+                // so just ignore if it happens here.
+                if (!defItem) {
+                    defItem = createProdItem(*item->as<DefaultRsCaseItemSyntax>().item, context,
+                                             hasError);
+                }
+                break;
+            default:
+                THROW_UNREACHABLE;
+        }
+    }
+
+    SmallVectorSized<const Expression*, 8> bound;
+    hasError |= !Expression::bindMembershipExpressions(
+        context, TokenKind::CaseKeyword, /* wildcard */ false, /* unwrapUnpacked */ false,
+        /* allowTypeReferences */ true, *syntax.expr, expressions, bound);
+
+    SmallVectorSized<CaseItem, 8> items;
+    SmallVectorSized<const Expression*, 8> group;
+    auto& comp = context.getCompilation();
+    auto boundIt = bound.begin();
+    auto prodIt = prods.begin();
+
+    auto expr = *boundIt++;
+    hasError |= expr->bad();
+
+    for (auto item : syntax.items) {
+        switch (item->kind) {
+            case SyntaxKind::StandardRsCaseItem: {
+                auto& sci = item->as<StandardRsCaseItemSyntax>();
+                for (size_t i = 0; i < sci.expressions.size(); i++) {
+                    hasError |= (*boundIt)->bad();
+                    group.append(*boundIt++);
+                }
+
+                items.append({ group.copy(comp), *prodIt++ });
+                group.clear();
+                break;
+            }
+            default:
+                break;
+        }
+    }
+
+    return CaseProd(*expr, items.copy(comp), defItem);
+}
+
 Statement& RandSequenceStatement::fromSyntax(Compilation& compilation,
                                              const RandSequenceStatementSyntax& syntax,
                                              const BindContext& context,
@@ -2517,9 +2583,9 @@ Statement& RandSequenceStatement::fromSyntax(Compilation& compilation,
                         }
                         break;
                     }
-                    /*case SyntaxKind::RsCase:
+                    case SyntaxKind::RsCase:
                         prods.append(createCaseProd(p->as<RsCaseSyntax>(), context, bad));
-                        break;*/
+                        break;
                     default:
                         THROW_UNREACHABLE;
                 }
