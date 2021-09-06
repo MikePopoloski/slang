@@ -83,9 +83,10 @@ enum class StatementFlags {
     Final = 1 << 2,
     InForkJoin = 1 << 3,
     InForkJoinNone = 1 << 4,
-    AutoLifetime = 1 << 5
+    AutoLifetime = 1 << 5,
+    InRandSeq = 1 << 6
 };
-BITMASK(StatementFlags, AutoLifetime);
+BITMASK(StatementFlags, InRandSeq);
 
 /// The base class for all statements in SystemVerilog.
 class Statement {

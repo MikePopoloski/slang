@@ -179,7 +179,7 @@ StatementBlockSymbol& StatementBlockSymbol::fromSyntax(const Scope& scope,
     auto result = comp.emplace<StatementBlockSymbol>(comp, ""sv, syntax.getFirstToken().location(),
                                                      StatementBlockKind::Sequential,
                                                      VariableLifetime::Automatic);
-    result->binder.setItems(*result, syntax.items, syntax.sourceRange(), StatementFlags::None);
+    result->binder.setItems(*result, syntax.items, syntax.sourceRange(), StatementFlags::InRandSeq);
     result->setSyntax(syntax);
     return *result;
 }

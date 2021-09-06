@@ -727,26 +727,27 @@ Statement& ReturnStatement::fromSyntax(Compilation& compilation,
         return badStmt(compilation, nullptr);
     }
 
-    // Find the parent subroutine.
+    // Find the parent subroutine or randsequence production.
     const Scope* scope = context.scope;
     while (scope->asSymbol().kind == SymbolKind::StatementBlock)
         scope = scope->asSymbol().getParentScope();
 
     auto stmtLoc = syntax.returnKeyword.location();
-    if (scope->asSymbol().kind != SymbolKind::Subroutine) {
+    auto& symbol = scope->asSymbol();
+    if (symbol.kind != SymbolKind::Subroutine && symbol.kind != SymbolKind::RandSeqProduction) {
         context.addDiag(diag::ReturnNotInSubroutine, stmtLoc);
         return badStmt(compilation, nullptr);
     }
 
-    auto& subroutine = scope->asSymbol().as<SubroutineSymbol>();
-
+    auto& returnType = symbol.getDeclaredType()->getType();
     const Expression* retExpr = nullptr;
     if (syntax.returnValue) {
-        retExpr = &Expression::bindRValue(subroutine.getReturnType(), *syntax.returnValue, stmtLoc,
-                                          context);
+        retExpr = &Expression::bindRValue(returnType, *syntax.returnValue, stmtLoc, context);
     }
-    else if (!subroutine.getReturnType().isVoid()) {
-        context.addDiag(diag::MissingReturnValue, syntax.sourceRange());
+    else if (!returnType.isVoid()) {
+        DiagCode code = symbol.kind == SymbolKind::Subroutine ? diag::MissingReturnValue
+                                                              : diag::MissingReturnValueProd;
+        context.addDiag(code, syntax.sourceRange());
         return badStmt(compilation, nullptr);
     }
 
@@ -782,7 +783,7 @@ void ReturnStatement::serializeTo(ASTSerializer& serializer) const {
 Statement& BreakStatement::fromSyntax(Compilation& compilation, const JumpStatementSyntax& syntax,
                                       const BindContext& context, StatementContext& stmtCtx) {
     auto result = compilation.emplace<BreakStatement>(syntax.sourceRange());
-    if (!stmtCtx.flags.has(StatementFlags::InLoop)) {
+    if (!stmtCtx.flags.has(StatementFlags::InLoop | StatementFlags::InRandSeq)) {
         context.addDiag(diag::StatementNotInLoop, syntax.sourceRange());
         return badStmt(compilation, result);
     }
