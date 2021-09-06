@@ -1387,7 +1387,7 @@ module m;
     initial begin
         randsequence (main)
             main : first foo;
-            first : if (baz) main | repeat (baz) main;
+            first : if (baz) main := baz { $display("SDF"); } | repeat (baz) main;
         endsequence
     end
 endmodule
@@ -1397,8 +1397,9 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 3);
+    REQUIRE(diags.size() == 4);
     CHECK(diags[0].code == diag::NotAProduction);
     CHECK(diags[1].code == diag::NotBooleanConvertible);
     CHECK(diags[2].code == diag::ExprMustBeIntegral);
+    CHECK(diags[3].code == diag::ExprMustBeIntegral);
 }

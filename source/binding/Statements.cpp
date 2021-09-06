@@ -2591,7 +2591,27 @@ Statement& RandSequenceStatement::fromSyntax(Compilation& compilation,
                 }
             }
 
-            rules.append({ prods.copy(compilation) });
+            const Expression* weightExpr = nullptr;
+            optional<CodeBlockProd> codeBlock;
+            if (auto wc = rule->weightClause) {
+                weightExpr = &Expression::bind(*wc->weight, context);
+                bad |= weightExpr->bad();
+
+                if (!weightExpr->bad() && !weightExpr->type->isIntegral()) {
+                    context.addDiag(diag::ExprMustBeIntegral, weightExpr->sourceRange)
+                        << *weightExpr->type;
+                    bad = true;
+                }
+
+                if (wc->codeBlock) {
+                    auto block = stmtCtx.tryGetBlock(compilation, *wc->codeBlock);
+                    ASSERT(block);
+                    codeBlock = CodeBlockProd(*block);
+                    bad |= block->bad();
+                }
+            }
+
+            rules.append({ prods.copy(compilation), weightExpr, codeBlock });
         }
 
         productions.append({ &symbol->as<RandSeqProductionSymbol>(), rules.copy(compilation) });
@@ -2627,6 +2647,11 @@ void RandSequenceStatement::collectBlocks(const Scope& scope,
                     results.append(&StatementBlockSymbol::fromSyntax(
                         scope, p->as<RsCodeBlockSyntax>(), flags));
                 }
+            }
+
+            if (rule->weightClause && rule->weightClause->codeBlock) {
+                results.append(&StatementBlockSymbol::fromSyntax(
+                    scope, rule->weightClause->codeBlock->as<RsCodeBlockSyntax>(), flags));
             }
         }
     }

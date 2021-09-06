@@ -1125,6 +1125,13 @@ public:
 
     struct Rule {
         span<const ProdBase> prods;
+        const Expression* weightExpr = nullptr;
+        optional<CodeBlockProd> codeBlock;
+
+        Rule(span<const ProdBase> prods, const Expression* weightExpr,
+             optional<CodeBlockProd> codeBlock) :
+            prods(prods),
+            weightExpr(weightExpr), codeBlock(codeBlock) {}
     };
 
     struct Production {
