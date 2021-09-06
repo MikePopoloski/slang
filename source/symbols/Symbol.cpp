@@ -59,6 +59,8 @@ const DeclaredType* Symbol::getDeclaredType() const {
             return &as<TypeParameterSymbol>().targetType;
         case SymbolKind::AssertionPort:
             return &as<AssertionPortSymbol>().declaredType;
+        case SymbolKind::RandSeqProduction:
+            return &as<RandSeqProductionSymbol>().declaredReturnType;
         default:
             if (isValue())
                 return as<ValueSymbol>().getDeclaredType();

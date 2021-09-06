@@ -1079,9 +1079,10 @@ public:
 
     struct ProdItem : public ProdBase {
         const RandSeqProductionSymbol* target;
+        span<const Expression* const> args;
 
-        explicit ProdItem(const RandSeqProductionSymbol* target) :
-            ProdBase(ProdKind::Item), target(target) {}
+        ProdItem(const RandSeqProductionSymbol* target, span<const Expression* const> args) :
+            ProdBase(ProdKind::Item), target(target), args(args) {}
     };
 
     struct CodeBlockProd : public ProdBase {

@@ -39,8 +39,7 @@ public:
                                             const ForeachLoopStatementSyntax& syntax,
                                             bitmask<StatementFlags> flags);
     static StatementBlockSymbol& fromSyntax(const Scope& scope,
-                                            const RandSequenceStatementSyntax& syntax,
-                                            bitmask<StatementFlags> flags);
+                                            const RandSequenceStatementSyntax& syntax);
     static StatementBlockSymbol& fromSyntax(const Scope& scope, const RsCodeBlockSyntax& syntax,
                                             bitmask<StatementFlags> flags);
     static StatementBlockSymbol& fromLabeledStmt(const Scope& scope, const StatementSyntax& syntax,

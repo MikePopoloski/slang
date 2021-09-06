@@ -1123,16 +1123,40 @@ void ClockingBlockSymbol::serializeTo(ASTSerializer& serializer) const {
     }
 }
 
-RandSeqProductionSymbol::RandSeqProductionSymbol(string_view name, SourceLocation loc) :
-    Symbol(SymbolKind::RandSeqProduction, name, loc) {
+RandSeqProductionSymbol::RandSeqProductionSymbol(Compilation& compilation, string_view name,
+                                                 SourceLocation loc) :
+    Symbol(SymbolKind::RandSeqProduction, name, loc),
+    Scope(compilation, this), declaredReturnType(*this) {
 }
 
 RandSeqProductionSymbol& RandSeqProductionSymbol::fromSyntax(Compilation& compilation,
                                                              const ProductionSyntax& syntax) {
-    auto result = compilation.emplace<RandSeqProductionSymbol>(syntax.name.valueText(),
+    auto result = compilation.emplace<RandSeqProductionSymbol>(compilation, syntax.name.valueText(),
                                                                syntax.name.location());
     result->setSyntax(syntax);
+
+    if (syntax.dataType)
+        result->declaredReturnType.setTypeSyntax(*syntax.dataType);
+    else
+        result->declaredReturnType.setType(compilation.getVoidType());
+
+    if (syntax.portList) {
+        SmallVectorSized<const FormalArgumentSymbol*, 8> args;
+        SubroutineSymbol::buildArguments(*result, *syntax.portList, VariableLifetime::Automatic,
+                                         args);
+        result->arguments = args.copy(compilation);
+    }
+
     return *result;
+}
+
+void RandSeqProductionSymbol::serializeTo(ASTSerializer& serializer) const {
+    serializer.write("returnType", getReturnType());
+
+    serializer.startArray("arguments");
+    for (auto arg : arguments)
+        serializer.serialize(*arg);
+    serializer.endArray();
 }
 
 } // namespace slang

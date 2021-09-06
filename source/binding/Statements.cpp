@@ -6,6 +6,7 @@
 //------------------------------------------------------------------------------
 #include "slang/binding/Statements.h"
 
+#include "slang/binding/CallExpression.h"
 #include "slang/binding/Expression.h"
 #include "slang/binding/SystemSubroutine.h"
 #include "slang/binding/TimingControl.h"
@@ -432,7 +433,7 @@ static void findBlocks(const Scope& scope, const StatementSyntax& syntax,
             // labelHandled here to make sure we don't infinitely recurse.
             if (!labelHandled) {
                 results.append(&StatementBlockSymbol::fromSyntax(
-                    scope, syntax.as<RandSequenceStatementSyntax>(), flags));
+                    scope, syntax.as<RandSequenceStatementSyntax>()));
             }
             else {
                 RandSequenceStatement::collectBlocks(
@@ -2448,10 +2449,16 @@ RandSequenceStatement::ProdItem RandSequenceStatement::createProdItem(
         if (!name.empty())
             context.addDiag(diag::NotAProduction, syntax.name.range()) << name;
         hasError = true;
-        return ProdItem(nullptr);
+        return ProdItem(nullptr, {});
     }
 
-    return ProdItem(&symbol->as<RandSeqProductionSymbol>());
+    auto& rsp = symbol->as<RandSeqProductionSymbol>();
+
+    SmallVectorSized<const Expression*, 8> args;
+    hasError = !CallExpression::bindArgs(syntax.argList, rsp.arguments, rsp.name,
+                                         syntax.sourceRange(), context, args);
+
+    return ProdItem(&rsp, args.copy(context.getCompilation()));
 }
 
 RandSequenceStatement::CaseProd RandSequenceStatement::createCaseProd(const RsCaseSyntax& syntax,

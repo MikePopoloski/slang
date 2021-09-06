@@ -11,6 +11,8 @@
 
 namespace slang {
 
+class FormalArgumentSymbol;
+
 /// Represents a subroutine call.
 class CallExpression : public Expression {
 public:
@@ -90,6 +92,11 @@ public:
                                          const InvocationExpressionSyntax* syntax,
                                          const ArrayOrRandomizeMethodExpressionSyntax* withClause,
                                          const BindContext& context);
+
+    static bool bindArgs(const ArgumentListSyntax* argSyntax,
+                         span<const FormalArgumentSymbol* const> formalArgs, string_view symbolName,
+                         SourceRange range, const BindContext& context,
+                         SmallVector<const Expression*>& boundArgs);
 
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::Call; }
 

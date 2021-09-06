@@ -1362,15 +1362,14 @@ module m;
     initial begin
         randsequence (main)
             main : first second done ;
-            first : add | dec ;
+            first : add("foo") | dec ;
             second : pop | push ;
             done : { $display("done"); } ;
-            add : { $display("add"); } ;
+            add(string s) : { $display("add"); } ;
             dec : { $display("dec"); } ;
             pop : repeat($urandom_range( 2, 6 )) push;
             push : if (1) done else pop | rand join (0.5) first second done;
             baz : case (a & 7) 1, 2: push; 3: pop; default done; endcase;
-
         endsequence
     end
 endmodule

@@ -14,6 +14,7 @@
 namespace slang {
 
 class AssertionExpr;
+class FormalArgumentSymbol;
 class PackageSymbol;
 class TimingControl;
 
@@ -360,11 +361,16 @@ private:
 
 struct ProductionSyntax;
 
-class RandSeqProductionSymbol : public Symbol {
+class RandSeqProductionSymbol : public Symbol, public Scope {
 public:
-    RandSeqProductionSymbol(string_view name, SourceLocation loc);
+    DeclaredType declaredReturnType;
+    span<const FormalArgumentSymbol* const> arguments;
 
-    void serializeTo(ASTSerializer&) const {}
+    RandSeqProductionSymbol(Compilation& compilation, string_view name, SourceLocation loc);
+
+    const Type& getReturnType() const { return declaredReturnType.getType(); }
+
+    void serializeTo(ASTSerializer& serializer) const;
 
     static RandSeqProductionSymbol& fromSyntax(Compilation& compilation,
                                                const ProductionSyntax& syntax);

@@ -129,14 +129,13 @@ StatementBlockSymbol& StatementBlockSymbol::fromSyntax(const Scope& scope,
 }
 
 StatementBlockSymbol& StatementBlockSymbol::fromSyntax(const Scope& scope,
-                                                       const RandSequenceStatementSyntax& syntax,
-                                                       bitmask<StatementFlags> flags) {
+                                                       const RandSequenceStatementSyntax& syntax) {
     auto [name, loc] = getLabel(syntax, syntax.randsequence.location());
-    auto result = createBlock(scope, syntax, name, loc, flags);
+    auto result = createBlock(scope, syntax, name, loc, StatementFlags::None);
 
     RandSequenceStatement::collectSymbols(scope.getCompilation(), *result, syntax);
 
-    result->binder.setSyntax(*result, syntax, /* labelHandled */ true, flags);
+    result->binder.setSyntax(*result, syntax, /* labelHandled */ true, StatementFlags::None);
     for (auto block : result->binder.getBlocks())
         result->addMember(*block);
 

@@ -189,24 +189,20 @@ static bool checkOutputArgs(const BindContext& context, bool hasOutputArgs, Sour
     return true;
 }
 
-Expression& CallExpression::fromArgs(Compilation& compilation, const Subroutine& subroutine,
-                                     const Expression* thisClass,
-                                     const ArgumentListSyntax* argSyntax, SourceRange range,
-                                     const BindContext& context) {
+bool CallExpression::bindArgs(const ArgumentListSyntax* argSyntax,
+                              span<const FormalArgumentSymbol* const> formalArgs,
+                              string_view symbolName, SourceRange range, const BindContext& context,
+                              SmallVector<const Expression*>& boundArgs) {
     SmallVectorSized<const SyntaxNode*, 8> orderedArgs;
     NamedArgMap namedArgs;
     if (argSyntax) {
         if (!collectArgs(context, *argSyntax, orderedArgs, namedArgs))
-            return badExpr(compilation, nullptr);
+            return false;
     }
 
-    // Now bind all arguments.
     bool bad = false;
     uint32_t orderedIndex = 0;
-    SmallVectorSized<const Expression*, 8> boundArgs;
-    const SubroutineSymbol& symbol = *std::get<0>(subroutine);
-
-    for (auto formal : symbol.getArguments()) {
+    for (auto formal : formalArgs) {
         const Expression* expr = nullptr;
         if (orderedIndex < orderedArgs.size()) {
             auto arg = orderedArgs[orderedIndex++];
@@ -255,8 +251,8 @@ Expression& CallExpression::fromArgs(Compilation& compilation, const Subroutine&
             if (!expr) {
                 if (namedArgs.empty()) {
                     auto& diag = context.addDiag(diag::TooFewArguments, range);
-                    diag << symbol.name;
-                    diag << symbol.getArguments().size() << orderedArgs.size();
+                    diag << symbolName;
+                    diag << formalArgs.size() << orderedArgs.size();
                     bad = true;
                     break;
                 }
@@ -278,8 +274,8 @@ Expression& CallExpression::fromArgs(Compilation& compilation, const Subroutine&
     // Make sure there weren't too many ordered arguments provided.
     if (orderedIndex < orderedArgs.size()) {
         auto& diag = context.addDiag(diag::TooManyArguments, range);
-        diag << symbol.name;
-        diag << symbol.getArguments().size();
+        diag << symbolName;
+        diag << formalArgs.size();
         diag << orderedArgs.size();
         bad = true;
     }
@@ -290,10 +286,21 @@ Expression& CallExpression::fromArgs(Compilation& compilation, const Subroutine&
         if (!pair.second.second) {
             auto& diag = context.addDiag(diag::ArgDoesNotExist, pair.second.first->name.location());
             diag << pair.second.first->name.valueText();
-            diag << symbol.name;
+            diag << symbolName;
             bad = true;
         }
     }
+
+    return !bad;
+}
+
+Expression& CallExpression::fromArgs(Compilation& compilation, const Subroutine& subroutine,
+                                     const Expression* thisClass,
+                                     const ArgumentListSyntax* argSyntax, SourceRange range,
+                                     const BindContext& context) {
+    SmallVectorSized<const Expression*, 8> boundArgs;
+    const SubroutineSymbol& symbol = *std::get<0>(subroutine);
+    bool bad = !bindArgs(argSyntax, symbol.getArguments(), symbol.name, range, context, boundArgs);
 
     auto result = compilation.emplace<CallExpression>(&symbol, symbol.getReturnType(), thisClass,
                                                       boundArgs.copy(compilation),
