@@ -13,6 +13,7 @@
 #include "slang/diagnostics/LookupDiags.h"
 #include "slang/diagnostics/StatementsDiags.h"
 #include "slang/symbols/ASTSerializer.h"
+#include "slang/symbols/MemberSymbols.h"
 #include "slang/symbols/ParameterSymbols.h"
 #include "slang/symbols/SubroutineSymbols.h"
 #include "slang/symbols/VariableSymbols.h"
@@ -131,9 +132,16 @@ StatementBlockSymbol& StatementBlockSymbol::fromSyntax(const Scope& scope,
 StatementBlockSymbol& StatementBlockSymbol::fromSyntax(const Scope& scope,
                                                        const RandSequenceStatementSyntax& syntax) {
     auto [name, loc] = getLabel(syntax, syntax.randsequence.location());
-    auto result = createBlock(scope, syntax, name, loc, StatementFlags::None);
+    auto result = createBlock(scope, syntax, name, loc, StatementFlags::AutoLifetime);
 
-    RandSequenceStatement::collectSymbols(scope.getCompilation(), *result, syntax);
+    auto& comp = scope.getCompilation();
+    for (auto prod : syntax.productions) {
+        if (prod->name.valueText().empty())
+            continue;
+
+        auto& symbol = RandSeqProductionSymbol::fromSyntax(comp, *prod);
+        result->addMember(symbol);
+    }
 
     result->binder.setSyntax(*result, syntax, /* labelHandled */ true, StatementFlags::None);
     for (auto block : result->binder.getBlocks())
@@ -143,13 +151,35 @@ StatementBlockSymbol& StatementBlockSymbol::fromSyntax(const Scope& scope,
 }
 
 StatementBlockSymbol& StatementBlockSymbol::fromSyntax(const Scope& scope,
-                                                       const RsCodeBlockSyntax& syntax,
-                                                       bitmask<StatementFlags> flags) {
+                                                       const RsRuleSyntax& syntax) {
     auto& comp = scope.getCompilation();
     auto result = comp.emplace<StatementBlockSymbol>(comp, ""sv, syntax.getFirstToken().location(),
                                                      StatementBlockKind::Sequential,
                                                      VariableLifetime::Automatic);
-    result->binder.setItems(*result, syntax.items, syntax.sourceRange(), flags);
+    result->setSyntax(syntax);
+
+    for (auto prod : syntax.prods) {
+        if (prod->kind == SyntaxKind::RsCodeBlock) {
+            result->addMember(
+                StatementBlockSymbol::fromSyntax(scope, prod->as<RsCodeBlockSyntax>()));
+        }
+
+        if (syntax.weightClause && syntax.weightClause->codeBlock) {
+            result->addMember(StatementBlockSymbol::fromSyntax(
+                scope, syntax.weightClause->codeBlock->as<RsCodeBlockSyntax>()));
+        }
+    }
+
+    return *result;
+}
+
+StatementBlockSymbol& StatementBlockSymbol::fromSyntax(const Scope& scope,
+                                                       const RsCodeBlockSyntax& syntax) {
+    auto& comp = scope.getCompilation();
+    auto result = comp.emplace<StatementBlockSymbol>(comp, ""sv, syntax.getFirstToken().location(),
+                                                     StatementBlockKind::Sequential,
+                                                     VariableLifetime::Automatic);
+    result->binder.setItems(*result, syntax.items, syntax.sourceRange(), StatementFlags::None);
     result->setSyntax(syntax);
     return *result;
 }

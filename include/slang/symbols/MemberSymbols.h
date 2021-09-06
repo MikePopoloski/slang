@@ -16,6 +16,7 @@ namespace slang {
 class AssertionExpr;
 class FormalArgumentSymbol;
 class PackageSymbol;
+class StatementBlockSymbol;
 class TimingControl;
 
 struct EmptyMemberSyntax;
@@ -360,14 +361,90 @@ private:
 };
 
 struct ProductionSyntax;
+struct RsCaseSyntax;
+struct RsProdItemSyntax;
+struct RsRuleSyntax;
 
 class RandSeqProductionSymbol : public Symbol, public Scope {
 public:
+    enum class ProdKind { Item, CodeBlock, IfElse, Repeat, Case };
+
+    struct ProdBase {
+        ProdKind kind;
+
+        explicit ProdBase(ProdKind kind) : kind(kind) {}
+    };
+
+    struct ProdItem : public ProdBase {
+        const RandSeqProductionSymbol* target;
+        span<const Expression* const> args;
+
+        ProdItem(const RandSeqProductionSymbol* target, span<const Expression* const> args) :
+            ProdBase(ProdKind::Item), target(target), args(args) {}
+    };
+
+    struct CodeBlockProd : public ProdBase {
+        not_null<const StatementBlockSymbol*> block;
+
+        explicit CodeBlockProd(const StatementBlockSymbol& block) :
+            ProdBase(ProdKind::CodeBlock), block(&block) {}
+    };
+
+    struct IfElseProd : public ProdBase {
+        not_null<const Expression*> expr;
+        ProdItem ifItem;
+        optional<ProdItem> elseItem;
+
+        IfElseProd(const Expression& expr, ProdItem ifItem, optional<ProdItem> elseItem) :
+            ProdBase(ProdKind::IfElse), expr(&expr), ifItem(ifItem), elseItem(elseItem) {}
+    };
+
+    struct RepeatProd : public ProdBase {
+        not_null<const Expression*> expr;
+        ProdItem item;
+
+        RepeatProd(const Expression& expr, ProdItem item) :
+            ProdBase(ProdKind::Repeat), expr(&expr), item(item) {}
+    };
+
+    struct CaseItem {
+        span<const Expression* const> expressions;
+        ProdItem item;
+    };
+
+    struct CaseProd : public ProdBase {
+        not_null<const Expression*> expr;
+        span<const CaseItem> items;
+        optional<ProdItem> defaultItem;
+
+        CaseProd(const Expression& expr, span<const CaseItem> items,
+                 optional<ProdItem> defaultItem) :
+            ProdBase(ProdKind::Case),
+            expr(&expr), items(items), defaultItem(defaultItem) {}
+    };
+
+    struct Rule {
+        not_null<const StatementBlockSymbol*> ruleBlock;
+        span<const ProdBase> prods;
+        const Expression* weightExpr;
+        const Expression* randJoinExpr;
+        optional<CodeBlockProd> codeBlock;
+        bool isRandJoin;
+
+        Rule(const StatementBlockSymbol& ruleBlock, span<const ProdBase> prods,
+             const Expression* weightExpr, const Expression* randJoinExpr,
+             optional<CodeBlockProd> codeBlock, bool isRandJoin) :
+            ruleBlock(&ruleBlock),
+            prods(prods), weightExpr(weightExpr), randJoinExpr(randJoinExpr), codeBlock(codeBlock),
+            isRandJoin(isRandJoin) {}
+    };
+
     DeclaredType declaredReturnType;
     span<const FormalArgumentSymbol* const> arguments;
 
     RandSeqProductionSymbol(Compilation& compilation, string_view name, SourceLocation loc);
 
+    span<const Rule> getRules() const;
     const Type& getReturnType() const { return declaredReturnType.getType(); }
 
     void serializeTo(ASTSerializer& serializer) const;
@@ -375,7 +452,18 @@ public:
     static RandSeqProductionSymbol& fromSyntax(Compilation& compilation,
                                                const ProductionSyntax& syntax);
 
+    static const RandSeqProductionSymbol* findProduction(string_view name, SourceRange nameRange,
+                                                         const BindContext& context);
+
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::RandSeqProduction; }
+
+private:
+    static Rule createRule(const RsRuleSyntax& syntax, const BindContext& context,
+                           const StatementBlockSymbol& ruleBlock);
+    static ProdItem createProdItem(const RsProdItemSyntax& syntax, const BindContext& context);
+    static CaseProd createCaseProd(const RsCaseSyntax& syntax, const BindContext& context);
+
+    mutable optional<span<const Rule>> rules;
 };
 
 } // namespace slang

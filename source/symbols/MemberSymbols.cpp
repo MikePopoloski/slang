@@ -1147,7 +1147,206 @@ RandSeqProductionSymbol& RandSeqProductionSymbol::fromSyntax(Compilation& compil
         result->arguments = args.copy(compilation);
     }
 
+    for (auto rule : syntax.rules) {
+        auto& ruleBlock = StatementBlockSymbol::fromSyntax(*result, *rule);
+        result->addMember(ruleBlock);
+    }
+
     return *result;
+}
+
+span<const RandSeqProductionSymbol::Rule> RandSeqProductionSymbol::getRules() const {
+    if (!rules) {
+        auto syntax = getSyntax();
+        ASSERT(syntax);
+
+        BindContext context(*this, LookupLocation::max);
+
+        auto blocks = membersOfType<StatementBlockSymbol>();
+        auto blockIt = blocks.begin();
+
+        SmallVectorSized<Rule, 8> buffer;
+        for (auto rule : syntax->as<ProductionSyntax>().rules) {
+            ASSERT(blockIt != blocks.end());
+            buffer.append(createRule(*rule, context, *blockIt++));
+        }
+
+        rules = buffer.copy(context.getCompilation());
+    }
+    return *rules;
+}
+
+const RandSeqProductionSymbol* RandSeqProductionSymbol::findProduction(string_view name,
+                                                                       SourceRange nameRange,
+                                                                       const BindContext& context) {
+    auto symbol = Lookup::unqualifiedAt(*context.scope, name, context.getLocation(), nameRange,
+                                        LookupFlags::AllowDeclaredAfter);
+    if (!symbol)
+        return nullptr;
+
+    if (symbol->kind != SymbolKind::RandSeqProduction) {
+        auto& diag = context.addDiag(diag::NotAProduction, nameRange) << name;
+        diag.addNote(diag::NoteDeclarationHere, symbol->location);
+        return nullptr;
+    }
+
+    return &symbol->as<RandSeqProductionSymbol>();
+}
+
+RandSeqProductionSymbol::ProdItem RandSeqProductionSymbol::createProdItem(
+    const RsProdItemSyntax& syntax, const BindContext& context) {
+
+    auto symbol = findProduction(syntax.name.valueText(), syntax.name.range(), context);
+    if (!symbol)
+        return ProdItem(nullptr, {});
+
+    SmallVectorSized<const Expression*, 8> args;
+    CallExpression::bindArgs(syntax.argList, symbol->arguments, symbol->name, syntax.sourceRange(),
+                             context, args);
+
+    return ProdItem(symbol, args.copy(context.getCompilation()));
+}
+
+RandSeqProductionSymbol::CaseProd RandSeqProductionSymbol::createCaseProd(
+    const RsCaseSyntax& syntax, const BindContext& context) {
+
+    SmallVectorSized<const ExpressionSyntax*, 8> expressions;
+    SmallVectorSized<ProdItem, 8> prods;
+    optional<ProdItem> defItem;
+
+    for (auto item : syntax.items) {
+        switch (item->kind) {
+            case SyntaxKind::StandardRsCaseItem: {
+                auto& sci = item->as<StandardRsCaseItemSyntax>();
+                auto pi = createProdItem(*sci.item, context);
+                for (auto es : sci.expressions) {
+                    expressions.append(es);
+                    prods.append(pi);
+                }
+                break;
+            }
+            case SyntaxKind::DefaultRsCaseItem:
+                // The parser already errored for duplicate defaults,
+                // so just ignore if it happens here.
+                if (!defItem)
+                    defItem = createProdItem(*item->as<DefaultRsCaseItemSyntax>().item, context);
+                break;
+            default:
+                THROW_UNREACHABLE;
+        }
+    }
+
+    SmallVectorSized<const Expression*, 8> bound;
+    Expression::bindMembershipExpressions(
+        context, TokenKind::CaseKeyword, /* wildcard */ false, /* unwrapUnpacked */ false,
+        /* allowTypeReferences */ true, *syntax.expr, expressions, bound);
+
+    SmallVectorSized<CaseItem, 8> items;
+    SmallVectorSized<const Expression*, 8> group;
+    auto& comp = context.getCompilation();
+    auto boundIt = bound.begin();
+    auto prodIt = prods.begin();
+    auto expr = *boundIt++;
+
+    for (auto item : syntax.items) {
+        switch (item->kind) {
+            case SyntaxKind::StandardRsCaseItem: {
+                auto& sci = item->as<StandardRsCaseItemSyntax>();
+                for (size_t i = 0; i < sci.expressions.size(); i++)
+                    group.append(*boundIt++);
+
+                items.append({ group.copy(comp), *prodIt++ });
+                group.clear();
+                break;
+            }
+            default:
+                break;
+        }
+    }
+
+    return CaseProd(*expr, items.copy(comp), defItem);
+}
+
+RandSeqProductionSymbol::Rule RandSeqProductionSymbol::createRule(
+    const RsRuleSyntax& syntax, const BindContext& context, const StatementBlockSymbol& ruleBlock) {
+
+    auto blockRange = ruleBlock.membersOfType<StatementBlockSymbol>();
+    auto blockIt = blockRange.begin();
+
+    SmallVectorSized<ProdBase, 8> prods;
+    for (auto p : syntax.prods) {
+        switch (p->kind) {
+            case SyntaxKind::RsProdItem:
+                prods.append(createProdItem(p->as<RsProdItemSyntax>(), context));
+                break;
+            case SyntaxKind::RsCodeBlock: {
+                ASSERT(blockIt != blockRange.end());
+                prods.append(CodeBlockProd(*blockIt++));
+                break;
+            }
+            case SyntaxKind::RsIfElse: {
+                auto& ries = p->as<RsIfElseSyntax>();
+                auto& expr = Expression::bind(*ries.condition, context);
+                auto ifItem = createProdItem(*ries.ifItem, context);
+
+                optional<ProdItem> elseItem;
+                if (ries.elseClause)
+                    elseItem = createProdItem(*ries.elseClause->item, context);
+
+                if (!expr.bad())
+                    context.requireBooleanConvertible(expr);
+
+                prods.append(IfElseProd(expr, ifItem, elseItem));
+                break;
+            }
+            case SyntaxKind::RsRepeat: {
+                auto& rrs = p->as<RsRepeatSyntax>();
+                auto& expr = Expression::bind(*rrs.expr, context);
+                auto item = createProdItem(*rrs.item, context);
+                prods.append(RepeatProd(expr, item));
+
+                if (!expr.bad() && !expr.type->isIntegral())
+                    context.addDiag(diag::ExprMustBeIntegral, expr.sourceRange) << *expr.type;
+
+                break;
+            }
+            case SyntaxKind::RsCase:
+                prods.append(createCaseProd(p->as<RsCaseSyntax>(), context));
+                break;
+            default:
+                THROW_UNREACHABLE;
+        }
+    }
+
+    const Expression* weightExpr = nullptr;
+    optional<CodeBlockProd> codeBlock;
+    if (auto wc = syntax.weightClause) {
+        weightExpr = &Expression::bind(*wc->weight, context);
+        if (!weightExpr->bad() && !weightExpr->type->isIntegral())
+            context.addDiag(diag::ExprMustBeIntegral, weightExpr->sourceRange) << *weightExpr->type;
+
+        if (wc->codeBlock) {
+            ASSERT(blockIt != blockRange.end());
+            codeBlock = CodeBlockProd(*blockIt++);
+        }
+    }
+
+    bool isRandJoin = false;
+    const Expression* randJoinExpr = nullptr;
+    if (syntax.randJoin) {
+        isRandJoin = true;
+        if (syntax.randJoin->expr) {
+            randJoinExpr = &Expression::bind(*syntax.randJoin->expr, context);
+
+            if (!randJoinExpr->bad() && !randJoinExpr->type->isNumeric()) {
+                context.addDiag(diag::RandJoinNotNumeric, randJoinExpr->sourceRange)
+                    << *randJoinExpr->type;
+            }
+        }
+    }
+
+    return { ruleBlock, prods.copy(context.getCompilation()), weightExpr, randJoinExpr, codeBlock,
+             isRandJoin };
 }
 
 void RandSeqProductionSymbol::serializeTo(ASTSerializer& serializer) const {

@@ -229,6 +229,13 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
         symbol.makeDefaultInstance();
     }
 
+    void handle(const RandSeqProductionSymbol& symbol) {
+        if (!handleDefault(symbol))
+            return;
+
+        symbol.getRules();
+    }
+
     void finalize() {
         // Once everything has been visited, go back over and check things that might
         // have been influenced by visiting later symbols. Unfortunately visiting

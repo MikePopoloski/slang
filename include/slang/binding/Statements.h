@@ -1063,117 +1063,24 @@ public:
 };
 
 struct RandSequenceStatementSyntax;
-struct RsCaseSyntax;
-struct RsProdItemSyntax;
-struct RsRuleSyntax;
 
 class RandSequenceStatement : public Statement {
 public:
-    enum class ProdKind { Item, CodeBlock, IfElse, Repeat, Case };
+    const RandSeqProductionSymbol* firstProduction;
 
-    struct ProdBase {
-        ProdKind kind;
-
-        explicit ProdBase(ProdKind kind) : kind(kind) {}
-    };
-
-    struct ProdItem : public ProdBase {
-        const RandSeqProductionSymbol* target;
-        span<const Expression* const> args;
-
-        ProdItem(const RandSeqProductionSymbol* target, span<const Expression* const> args) :
-            ProdBase(ProdKind::Item), target(target), args(args) {}
-    };
-
-    struct CodeBlockProd : public ProdBase {
-        not_null<const Statement*> stmt;
-
-        explicit CodeBlockProd(const Statement& stmt) :
-            ProdBase(ProdKind::CodeBlock), stmt(&stmt) {}
-    };
-
-    struct IfElseProd : public ProdBase {
-        not_null<const Expression*> expr;
-        ProdItem ifItem;
-        optional<ProdItem> elseItem;
-
-        IfElseProd(const Expression& expr, ProdItem ifItem, optional<ProdItem> elseItem) :
-            ProdBase(ProdKind::IfElse), expr(&expr), ifItem(ifItem), elseItem(elseItem) {}
-    };
-
-    struct RepeatProd : public ProdBase {
-        not_null<const Expression*> expr;
-        ProdItem item;
-
-        RepeatProd(const Expression& expr, ProdItem item) :
-            ProdBase(ProdKind::Repeat), expr(&expr), item(item) {}
-    };
-
-    struct CaseItem {
-        span<const Expression* const> expressions;
-        ProdItem item;
-    };
-
-    struct CaseProd : public ProdBase {
-        not_null<const Expression*> expr;
-        span<const CaseItem> items;
-        optional<ProdItem> defaultItem;
-
-        CaseProd(const Expression& expr, span<const CaseItem> items,
-                 optional<ProdItem> defaultItem) :
-            ProdBase(ProdKind::Case),
-            expr(&expr), items(items), defaultItem(defaultItem) {}
-    };
-
-    struct Rule {
-        span<const ProdBase> prods;
-        const Expression* weightExpr;
-        const Expression* randJoinExpr;
-        optional<CodeBlockProd> codeBlock;
-        bool isRandJoin;
-
-        Rule(span<const ProdBase> prods, const Expression* weightExpr,
-             const Expression* randJoinExpr, optional<CodeBlockProd> codeBlock, bool isRandJoin) :
-            prods(prods),
-            weightExpr(weightExpr), randJoinExpr(randJoinExpr), codeBlock(codeBlock),
-            isRandJoin(isRandJoin) {}
-    };
-
-    struct Production {
-        not_null<const RandSeqProductionSymbol*> symbol;
-        span<const Rule> rules;
-    };
-
-    span<const Production> productions;
-
-    RandSequenceStatement(span<const Production> productions, SourceRange sourceRange) :
-        Statement(StatementKind::RandSequence, sourceRange), productions(productions) {}
+    RandSequenceStatement(const RandSeqProductionSymbol* firstProduction, SourceRange sourceRange) :
+        Statement(StatementKind::RandSequence, sourceRange), firstProduction(firstProduction) {}
 
     EvalResult evalImpl(EvalContext& context) const;
     bool verifyConstantImpl(EvalContext& context) const;
 
     static Statement& fromSyntax(Compilation& compilation,
                                  const RandSequenceStatementSyntax& syntax,
-                                 const BindContext& context, StatementContext& stmtCtx);
-
-    static void collectSymbols(Compilation& compilation, StatementBlockSymbol& block,
-                               const RandSequenceStatementSyntax& syntax);
-
-    static void collectBlocks(const Scope& scope, const RandSequenceStatementSyntax& syntax,
-                              SmallVector<const StatementBlockSymbol*>& results,
-                              bitmask<StatementFlags> flags);
+                                 const BindContext& context);
 
     void serializeTo(ASTSerializer& serializer) const;
 
     static bool isKind(StatementKind kind) { return kind == StatementKind::RandSequence; }
-
-private:
-    static Rule createRule(const RsRuleSyntax& syntax, const BindContext& context,
-                           StatementContext& stmtCtx, bool& hasError);
-    static ProdItem createProdItem(const RsProdItemSyntax& syntax, const BindContext& context,
-                                   bool& hasError);
-    static CaseProd createCaseProd(const RsCaseSyntax& syntax, const BindContext& context,
-                                   bool& hasError);
 };
 
 } // namespace slang

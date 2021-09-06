@@ -14,6 +14,7 @@
 namespace slang {
 
 struct RsCodeBlockSyntax;
+struct RsRuleSyntax;
 
 class StatementBlockSymbol : public Symbol, public Scope {
 public:
@@ -40,8 +41,8 @@ public:
                                             bitmask<StatementFlags> flags);
     static StatementBlockSymbol& fromSyntax(const Scope& scope,
                                             const RandSequenceStatementSyntax& syntax);
-    static StatementBlockSymbol& fromSyntax(const Scope& scope, const RsCodeBlockSyntax& syntax,
-                                            bitmask<StatementFlags> flags);
+    static StatementBlockSymbol& fromSyntax(const Scope& scope, const RsRuleSyntax& syntax);
+    static StatementBlockSymbol& fromSyntax(const Scope& scope, const RsCodeBlockSyntax& syntax);
     static StatementBlockSymbol& fromLabeledStmt(const Scope& scope, const StatementSyntax& syntax,
                                                  bitmask<StatementFlags> flags);
 

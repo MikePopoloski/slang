@@ -247,7 +247,7 @@ const Statement& Statement::bind(const StatementSyntax& syntax, const BindContex
             result = stmtCtx.tryGetBlock(comp, syntax);
             if (!result) {
                 result = &RandSequenceStatement::fromSyntax(
-                    comp, syntax.as<RandSequenceStatementSyntax>(), context, stmtCtx);
+                    comp, syntax.as<RandSequenceStatementSyntax>(), context);
             }
             break;
         default:
@@ -434,10 +434,6 @@ static void findBlocks(const Scope& scope, const StatementSyntax& syntax,
             if (!labelHandled) {
                 results.append(&StatementBlockSymbol::fromSyntax(
                     scope, syntax.as<RandSequenceStatementSyntax>()));
-            }
-            else {
-                RandSequenceStatement::collectBlocks(
-                    scope, syntax.as<RandSequenceStatementSyntax>(), results, flags);
             }
             return;
         default:
@@ -2440,249 +2436,12 @@ void RandCaseStatement::serializeTo(ASTSerializer& serializer) const {
     serializer.endArray();
 }
 
-RandSequenceStatement::ProdItem RandSequenceStatement::createProdItem(
-    const RsProdItemSyntax& syntax, const BindContext& context, bool& hasError) {
-
-    auto name = syntax.name.valueText();
-    auto symbol = context.scope->find(name);
-    if (!symbol) {
-        if (!name.empty())
-            context.addDiag(diag::NotAProduction, syntax.name.range()) << name;
-        hasError = true;
-        return ProdItem(nullptr, {});
-    }
-
-    auto& rsp = symbol->as<RandSeqProductionSymbol>();
-
-    SmallVectorSized<const Expression*, 8> args;
-    hasError = !CallExpression::bindArgs(syntax.argList, rsp.arguments, rsp.name,
-                                         syntax.sourceRange(), context, args);
-
-    return ProdItem(&rsp, args.copy(context.getCompilation()));
-}
-
-RandSequenceStatement::CaseProd RandSequenceStatement::createCaseProd(const RsCaseSyntax& syntax,
-                                                                      const BindContext& context,
-                                                                      bool& hasError) {
-    SmallVectorSized<const ExpressionSyntax*, 8> expressions;
-    SmallVectorSized<ProdItem, 8> prods;
-    optional<ProdItem> defItem;
-
-    for (auto item : syntax.items) {
-        switch (item->kind) {
-            case SyntaxKind::StandardRsCaseItem: {
-                auto& sci = item->as<StandardRsCaseItemSyntax>();
-                auto pi = createProdItem(*sci.item, context, hasError);
-                for (auto es : sci.expressions) {
-                    expressions.append(es);
-                    prods.append(pi);
-                }
-                break;
-            }
-            case SyntaxKind::DefaultRsCaseItem:
-                // The parser already errored for duplicate defaults,
-                // so just ignore if it happens here.
-                if (!defItem) {
-                    defItem = createProdItem(*item->as<DefaultRsCaseItemSyntax>().item, context,
-                                             hasError);
-                }
-                break;
-            default:
-                THROW_UNREACHABLE;
-        }
-    }
-
-    SmallVectorSized<const Expression*, 8> bound;
-    hasError |= !Expression::bindMembershipExpressions(
-        context, TokenKind::CaseKeyword, /* wildcard */ false, /* unwrapUnpacked */ false,
-        /* allowTypeReferences */ true, *syntax.expr, expressions, bound);
-
-    SmallVectorSized<CaseItem, 8> items;
-    SmallVectorSized<const Expression*, 8> group;
-    auto& comp = context.getCompilation();
-    auto boundIt = bound.begin();
-    auto prodIt = prods.begin();
-
-    auto expr = *boundIt++;
-    hasError |= expr->bad();
-
-    for (auto item : syntax.items) {
-        switch (item->kind) {
-            case SyntaxKind::StandardRsCaseItem: {
-                auto& sci = item->as<StandardRsCaseItemSyntax>();
-                for (size_t i = 0; i < sci.expressions.size(); i++) {
-                    hasError |= (*boundIt)->bad();
-                    group.append(*boundIt++);
-                }
-
-                items.append({ group.copy(comp), *prodIt++ });
-                group.clear();
-                break;
-            }
-            default:
-                break;
-        }
-    }
-
-    return CaseProd(*expr, items.copy(comp), defItem);
-}
-
-RandSequenceStatement::Rule RandSequenceStatement::createRule(const RsRuleSyntax& syntax,
-                                                              const BindContext& context,
-                                                              StatementContext& stmtCtx,
-                                                              bool& hasError) {
-    auto& comp = context.getCompilation();
-    SmallVectorSized<ProdBase, 8> prods;
-    for (auto p : syntax.prods) {
-        switch (p->kind) {
-            case SyntaxKind::RsProdItem:
-                prods.append(createProdItem(p->as<RsProdItemSyntax>(), context, hasError));
-                break;
-            case SyntaxKind::RsCodeBlock: {
-                auto block = stmtCtx.tryGetBlock(comp, *p);
-                ASSERT(block);
-                prods.append(CodeBlockProd(*block));
-                hasError |= block->bad();
-                break;
-            }
-            case SyntaxKind::RsIfElse: {
-                auto& ries = p->as<RsIfElseSyntax>();
-                auto& expr = Expression::bind(*ries.condition, context);
-                auto ifItem = createProdItem(*ries.ifItem, context, hasError);
-
-                optional<ProdItem> elseItem;
-                if (ries.elseClause)
-                    elseItem = createProdItem(*ries.elseClause->item, context, hasError);
-
-                hasError |= expr.bad();
-                if (!expr.bad() && !context.requireBooleanConvertible(expr))
-                    hasError = true;
-
-                prods.append(IfElseProd(expr, ifItem, elseItem));
-                break;
-            }
-            case SyntaxKind::RsRepeat: {
-                auto& rrs = p->as<RsRepeatSyntax>();
-                auto& expr = Expression::bind(*rrs.expr, context);
-                auto item = createProdItem(*rrs.item, context, hasError);
-                prods.append(RepeatProd(expr, item));
-
-                hasError |= expr.bad();
-                if (!expr.bad() && !expr.type->isIntegral()) {
-                    context.addDiag(diag::ExprMustBeIntegral, expr.sourceRange) << *expr.type;
-                    hasError = true;
-                }
-                break;
-            }
-            case SyntaxKind::RsCase:
-                prods.append(createCaseProd(p->as<RsCaseSyntax>(), context, hasError));
-                break;
-            default:
-                THROW_UNREACHABLE;
-        }
-    }
-
-    const Expression* weightExpr = nullptr;
-    optional<CodeBlockProd> codeBlock;
-    if (auto wc = syntax.weightClause) {
-        weightExpr = &Expression::bind(*wc->weight, context);
-        hasError |= weightExpr->bad();
-
-        if (!weightExpr->bad() && !weightExpr->type->isIntegral()) {
-            context.addDiag(diag::ExprMustBeIntegral, weightExpr->sourceRange) << *weightExpr->type;
-            hasError = true;
-        }
-
-        if (wc->codeBlock) {
-            auto block = stmtCtx.tryGetBlock(comp, *wc->codeBlock);
-            ASSERT(block);
-            codeBlock = CodeBlockProd(*block);
-            hasError |= block->bad();
-        }
-    }
-
-    bool isRandJoin = false;
-    const Expression* randJoinExpr = nullptr;
-    if (syntax.randJoin) {
-        isRandJoin = true;
-        if (syntax.randJoin->expr) {
-            randJoinExpr = &Expression::bind(*syntax.randJoin->expr, context);
-            hasError |= randJoinExpr->bad();
-
-            if (!randJoinExpr->bad() && !randJoinExpr->type->isNumeric()) {
-                context.addDiag(diag::RandJoinNotNumeric, randJoinExpr->sourceRange)
-                    << *randJoinExpr->type;
-                hasError = true;
-            }
-        }
-    }
-
-    return { prods.copy(comp), weightExpr, randJoinExpr, codeBlock, isRandJoin };
-}
-
 Statement& RandSequenceStatement::fromSyntax(Compilation& compilation,
                                              const RandSequenceStatementSyntax& syntax,
-                                             const BindContext& context,
-                                             StatementContext& stmtCtx) {
-    bool bad = false;
-    SmallVectorSized<Production, 8> productions;
-    for (auto prod : syntax.productions) {
-        if (prod->name.valueText().empty()) {
-            bad = true;
-            continue;
-        }
-
-        // We should always be able to find the production symbol because
-        // we went through this same sort of loop when creating the scope
-        // for the randsequence block.
-        auto symbol = context.scope->find(prod->name.valueText());
-        ASSERT(symbol);
-
-        SmallVectorSized<Rule, 8> rules;
-        for (auto rule : prod->rules)
-            rules.append(createRule(*rule, context, stmtCtx, bad));
-
-        productions.append({ &symbol->as<RandSeqProductionSymbol>(), rules.copy(compilation) });
-    }
-
-    auto result = compilation.emplace<RandSequenceStatement>(productions.copy(compilation),
-                                                             syntax.sourceRange());
-    if (bad)
-        return badStmt(compilation, result);
-
+                                             const BindContext&) {
+    // All of the logic for binding productions is in the RandSeqProduction symbol.
+    auto result = compilation.emplace<RandSequenceStatement>(nullptr, syntax.sourceRange());
     return *result;
-}
-
-void RandSequenceStatement::collectSymbols(Compilation& compilation, StatementBlockSymbol& block,
-                                           const RandSequenceStatementSyntax& syntax) {
-    for (auto prod : syntax.productions) {
-        if (prod->name.valueText().empty())
-            continue;
-
-        auto& symbol = RandSeqProductionSymbol::fromSyntax(compilation, *prod);
-        block.addMember(symbol);
-    }
-}
-
-void RandSequenceStatement::collectBlocks(const Scope& scope,
-                                          const RandSequenceStatementSyntax& syntax,
-                                          SmallVector<const StatementBlockSymbol*>& results,
-                                          bitmask<StatementFlags> flags) {
-    for (auto prod : syntax.productions) {
-        for (auto rule : prod->rules) {
-            for (auto p : rule->prods) {
-                if (p->kind == SyntaxKind::RsCodeBlock) {
-                    results.append(&StatementBlockSymbol::fromSyntax(
-                        scope, p->as<RsCodeBlockSyntax>(), flags));
-                }
-            }
-
-            if (rule->weightClause && rule->weightClause->codeBlock) {
-                results.append(&StatementBlockSymbol::fromSyntax(
-                    scope, rule->weightClause->codeBlock->as<RsCodeBlockSyntax>(), flags));
-            }
-        }
-    }
 }
 
 ER RandSequenceStatement::evalImpl(EvalContext&) const {
