@@ -889,6 +889,19 @@ RsRuleSyntax& Parser::parseRsRule() {
             break;
 
         prods.append(prod);
+        if (randJoin && prod->kind != SyntaxKind::RsProdItem) {
+            addDiag(diag::RandJoinProdItem, prod->getFirstToken().location())
+                << prod->sourceRange();
+        }
+    }
+
+    if (randJoin && prods.size() < 2) {
+        SourceRange range = randJoin->sourceRange();
+        if (!prods.empty()) {
+            range = SourceRange{ range.start(), prods.back()->getLastToken().range().end() };
+        }
+
+        addDiag(diag::RandJoinNotEnough, range.start()) << range;
     }
 
     RsWeightClauseSyntax* weightClause = nullptr;

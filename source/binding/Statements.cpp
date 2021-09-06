@@ -2520,6 +2520,99 @@ RandSequenceStatement::CaseProd RandSequenceStatement::createCaseProd(const RsCa
     return CaseProd(*expr, items.copy(comp), defItem);
 }
 
+RandSequenceStatement::Rule RandSequenceStatement::createRule(const RsRuleSyntax& syntax,
+                                                              const BindContext& context,
+                                                              StatementContext& stmtCtx,
+                                                              bool& hasError) {
+    auto& comp = context.getCompilation();
+    SmallVectorSized<ProdBase, 8> prods;
+    for (auto p : syntax.prods) {
+        switch (p->kind) {
+            case SyntaxKind::RsProdItem:
+                prods.append(createProdItem(p->as<RsProdItemSyntax>(), context, hasError));
+                break;
+            case SyntaxKind::RsCodeBlock: {
+                auto block = stmtCtx.tryGetBlock(comp, *p);
+                ASSERT(block);
+                prods.append(CodeBlockProd(*block));
+                hasError |= block->bad();
+                break;
+            }
+            case SyntaxKind::RsIfElse: {
+                auto& ries = p->as<RsIfElseSyntax>();
+                auto& expr = Expression::bind(*ries.condition, context);
+                auto ifItem = createProdItem(*ries.ifItem, context, hasError);
+
+                optional<ProdItem> elseItem;
+                if (ries.elseClause)
+                    elseItem = createProdItem(*ries.elseClause->item, context, hasError);
+
+                hasError |= expr.bad();
+                if (!expr.bad() && !context.requireBooleanConvertible(expr))
+                    hasError = true;
+
+                prods.append(IfElseProd(expr, ifItem, elseItem));
+                break;
+            }
+            case SyntaxKind::RsRepeat: {
+                auto& rrs = p->as<RsRepeatSyntax>();
+                auto& expr = Expression::bind(*rrs.expr, context);
+                auto item = createProdItem(*rrs.item, context, hasError);
+                prods.append(RepeatProd(expr, item));
+
+                hasError |= expr.bad();
+                if (!expr.bad() && !expr.type->isIntegral()) {
+                    context.addDiag(diag::ExprMustBeIntegral, expr.sourceRange) << *expr.type;
+                    hasError = true;
+                }
+                break;
+            }
+            case SyntaxKind::RsCase:
+                prods.append(createCaseProd(p->as<RsCaseSyntax>(), context, hasError));
+                break;
+            default:
+                THROW_UNREACHABLE;
+        }
+    }
+
+    const Expression* weightExpr = nullptr;
+    optional<CodeBlockProd> codeBlock;
+    if (auto wc = syntax.weightClause) {
+        weightExpr = &Expression::bind(*wc->weight, context);
+        hasError |= weightExpr->bad();
+
+        if (!weightExpr->bad() && !weightExpr->type->isIntegral()) {
+            context.addDiag(diag::ExprMustBeIntegral, weightExpr->sourceRange) << *weightExpr->type;
+            hasError = true;
+        }
+
+        if (wc->codeBlock) {
+            auto block = stmtCtx.tryGetBlock(comp, *wc->codeBlock);
+            ASSERT(block);
+            codeBlock = CodeBlockProd(*block);
+            hasError |= block->bad();
+        }
+    }
+
+    bool isRandJoin = false;
+    const Expression* randJoinExpr = nullptr;
+    if (syntax.randJoin) {
+        isRandJoin = true;
+        if (syntax.randJoin->expr) {
+            randJoinExpr = &Expression::bind(*syntax.randJoin->expr, context);
+            hasError |= randJoinExpr->bad();
+
+            if (!randJoinExpr->bad() && !randJoinExpr->type->isNumeric()) {
+                context.addDiag(diag::RandJoinNotNumeric, randJoinExpr->sourceRange)
+                    << *randJoinExpr->type;
+                hasError = true;
+            }
+        }
+    }
+
+    return { prods.copy(comp), weightExpr, randJoinExpr, codeBlock, isRandJoin };
+}
+
 Statement& RandSequenceStatement::fromSyntax(Compilation& compilation,
                                              const RandSequenceStatementSyntax& syntax,
                                              const BindContext& context,
@@ -2539,80 +2632,8 @@ Statement& RandSequenceStatement::fromSyntax(Compilation& compilation,
         ASSERT(symbol);
 
         SmallVectorSized<Rule, 8> rules;
-        for (auto rule : prod->rules) {
-            SmallVectorSized<ProdBase, 8> prods;
-            for (auto p : rule->prods) {
-                switch (p->kind) {
-                    case SyntaxKind::RsProdItem:
-                        prods.append(createProdItem(p->as<RsProdItemSyntax>(), context, bad));
-                        break;
-                    case SyntaxKind::RsCodeBlock: {
-                        auto block = stmtCtx.tryGetBlock(compilation, *p);
-                        ASSERT(block);
-                        prods.append(CodeBlockProd(*block));
-                        bad |= block->bad();
-                        break;
-                    }
-                    case SyntaxKind::RsIfElse: {
-                        auto& ries = p->as<RsIfElseSyntax>();
-                        auto& expr = Expression::bind(*ries.condition, context);
-                        auto ifItem = createProdItem(*ries.ifItem, context, bad);
-
-                        optional<ProdItem> elseItem;
-                        if (ries.elseClause)
-                            elseItem = createProdItem(*ries.elseClause->item, context, bad);
-
-                        bad |= expr.bad();
-                        if (!expr.bad() && !context.requireBooleanConvertible(expr))
-                            bad = true;
-
-                        prods.append(IfElseProd(expr, ifItem, elseItem));
-                        break;
-                    }
-                    case SyntaxKind::RsRepeat: {
-                        auto& rrs = p->as<RsRepeatSyntax>();
-                        auto& expr = Expression::bind(*rrs.expr, context);
-                        auto item = createProdItem(*rrs.item, context, bad);
-                        prods.append(RepeatProd(expr, item));
-
-                        bad |= expr.bad();
-                        if (!expr.bad() && !expr.type->isIntegral()) {
-                            context.addDiag(diag::ExprMustBeIntegral, expr.sourceRange)
-                                << *expr.type;
-                            bad = true;
-                        }
-                        break;
-                    }
-                    case SyntaxKind::RsCase:
-                        prods.append(createCaseProd(p->as<RsCaseSyntax>(), context, bad));
-                        break;
-                    default:
-                        THROW_UNREACHABLE;
-                }
-            }
-
-            const Expression* weightExpr = nullptr;
-            optional<CodeBlockProd> codeBlock;
-            if (auto wc = rule->weightClause) {
-                weightExpr = &Expression::bind(*wc->weight, context);
-                bad |= weightExpr->bad();
-
-                if (!weightExpr->bad() && !weightExpr->type->isIntegral()) {
-                    context.addDiag(diag::ExprMustBeIntegral, weightExpr->sourceRange)
-                        << *weightExpr->type;
-                    bad = true;
-                }
-
-                if (wc->codeBlock) {
-                    auto block = stmtCtx.tryGetBlock(compilation, *wc->codeBlock);
-                    ASSERT(block);
-                    codeBlock = CodeBlockProd(*block);
-                    bad |= block->bad();
-                }
-            }
-
-            rules.append({ prods.copy(compilation), weightExpr, codeBlock });
-        }
+        for (auto rule : prod->rules)
+            rules.append(createRule(*rule, context, stmtCtx, bad));
 
         productions.append({ &symbol->as<RandSeqProductionSymbol>(), rules.copy(compilation) });
     }

@@ -1065,6 +1065,7 @@ public:
 struct RandSequenceStatementSyntax;
 struct RsCaseSyntax;
 struct RsProdItemSyntax;
+struct RsRuleSyntax;
 
 class RandSequenceStatement : public Statement {
 public:
@@ -1125,13 +1126,16 @@ public:
 
     struct Rule {
         span<const ProdBase> prods;
-        const Expression* weightExpr = nullptr;
+        const Expression* weightExpr;
+        const Expression* randJoinExpr;
         optional<CodeBlockProd> codeBlock;
+        bool isRandJoin;
 
         Rule(span<const ProdBase> prods, const Expression* weightExpr,
-             optional<CodeBlockProd> codeBlock) :
+             const Expression* randJoinExpr, optional<CodeBlockProd> codeBlock, bool isRandJoin) :
             prods(prods),
-            weightExpr(weightExpr), codeBlock(codeBlock) {}
+            weightExpr(weightExpr), randJoinExpr(randJoinExpr), codeBlock(codeBlock),
+            isRandJoin(isRandJoin) {}
     };
 
     struct Production {
@@ -1163,6 +1167,8 @@ public:
     static bool isKind(StatementKind kind) { return kind == StatementKind::RandSequence; }
 
 private:
+    static Rule createRule(const RsRuleSyntax& syntax, const BindContext& context,
+                           StatementContext& stmtCtx, bool& hasError);
     static ProdItem createProdItem(const RsProdItemSyntax& syntax, const BindContext& context,
                                    bool& hasError);
     static CaseProd createCaseProd(const RsCaseSyntax& syntax, const BindContext& context,

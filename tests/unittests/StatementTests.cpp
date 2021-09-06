@@ -1368,8 +1368,9 @@ module m;
             add : { $display("add"); } ;
             dec : { $display("dec"); } ;
             pop : repeat($urandom_range( 2, 6 )) push;
-            push : if (1) done else pop;
+            push : if (1) done else pop | rand join (0.5) first second done;
             baz : case (a & 7) 1, 2: push; 3: pop; default done; endcase;
+
         endsequence
     end
 endmodule
@@ -1386,7 +1387,7 @@ module m;
     int baz[];
     initial begin
         randsequence (main)
-            main : first foo;
+            main : first foo | rand join (baz) first first;
             first : if (baz) main := baz { $display("SDF"); } | repeat (baz) main;
         endsequence
     end
@@ -1397,9 +1398,10 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 4);
+    REQUIRE(diags.size() == 5);
     CHECK(diags[0].code == diag::NotAProduction);
-    CHECK(diags[1].code == diag::NotBooleanConvertible);
-    CHECK(diags[2].code == diag::ExprMustBeIntegral);
+    CHECK(diags[1].code == diag::RandJoinNotNumeric);
+    CHECK(diags[2].code == diag::NotBooleanConvertible);
     CHECK(diags[3].code == diag::ExprMustBeIntegral);
+    CHECK(diags[4].code == diag::ExprMustBeIntegral);
 }

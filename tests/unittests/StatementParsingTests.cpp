@@ -304,6 +304,9 @@ module rand_sequence1();
   initial begin
     randsequence()
         foo: case(x) default: a; default: b; endcase;
+        baz: rand join;
+        baz: rand join a;
+        bar: rand join a if (1) a else b;
     endsequence
 
 	randsequence( bin_op )
@@ -312,7 +315,10 @@ endmodule
 )";
     parseCompilationUnit(text);
 
-    REQUIRE(diagnostics.size() == 2);
+    REQUIRE(diagnostics.size() == 5);
     CHECK(diagnostics[0].code == diag::MultipleDefaultCases);
-    CHECK(diagnostics[1].code == diag::ExpectedRsRule);
+    CHECK(diagnostics[1].code == diag::RandJoinNotEnough);
+    CHECK(diagnostics[2].code == diag::RandJoinNotEnough);
+    CHECK(diagnostics[3].code == diag::RandJoinProdItem);
+    CHECK(diagnostics[4].code == diag::ExpectedRsRule);
 }
