@@ -1391,6 +1391,10 @@ module m;
             bar(string first) : first;
             boz : bar;
         endsequence
+
+        randsequence()
+            foo (string s) : { $display(s); };
+        endsequence
     end
 endmodule
 )");
@@ -1399,7 +1403,7 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 7);
+    REQUIRE(diags.size() == 8);
     CHECK(diags[0].code == diag::UndeclaredIdentifier);
     CHECK(diags[1].code == diag::RandJoinNotNumeric);
     CHECK(diags[2].code == diag::NotBooleanConvertible);
@@ -1407,4 +1411,5 @@ endmodule
     CHECK(diags[4].code == diag::ExprMustBeIntegral);
     CHECK(diags[5].code == diag::NotAProduction);
     CHECK(diags[6].code == diag::TooFewArguments);
+    CHECK(diags[7].code == diag::TooFewArguments);
 }

@@ -2438,9 +2438,31 @@ void RandCaseStatement::serializeTo(ASTSerializer& serializer) const {
 
 Statement& RandSequenceStatement::fromSyntax(Compilation& compilation,
                                              const RandSequenceStatementSyntax& syntax,
-                                             const BindContext&) {
+                                             const BindContext& context) {
+    SourceRange firstProdRange;
+    const RandSeqProductionSymbol* firstProd = nullptr;
+    if (syntax.firstProduction) {
+        firstProdRange = syntax.firstProduction.range();
+        firstProd = RandSeqProductionSymbol::findProduction(syntax.firstProduction.valueText(),
+                                                            firstProdRange, context);
+    }
+    else {
+        auto prodRange = context.scope->membersOfType<RandSeqProductionSymbol>();
+        if (prodRange.begin() != prodRange.end()) {
+            firstProd = &*prodRange.begin();
+            firstProdRange = { syntax.randsequence.location(), syntax.closeParen.range().end() };
+        }
+    }
+
+    if (firstProd) {
+        // Make sure the first production doesn't require arguments.
+        SmallVectorSized<const Expression*, 8> args;
+        CallExpression::bindArgs(nullptr, firstProd->arguments, firstProd->name, firstProdRange,
+                                 context, args);
+    }
+
     // All of the logic for binding productions is in the RandSeqProduction symbol.
-    auto result = compilation.emplace<RandSequenceStatement>(nullptr, syntax.sourceRange());
+    auto result = compilation.emplace<RandSequenceStatement>(firstProd, syntax.sourceRange());
     return *result;
 }
 
@@ -2453,8 +2475,9 @@ bool RandSequenceStatement::verifyConstantImpl(EvalContext& context) const {
     return false;
 }
 
-void RandSequenceStatement::serializeTo(ASTSerializer&) const {
-    // TODO:
+void RandSequenceStatement::serializeTo(ASTSerializer& serializer) const {
+    if (firstProduction)
+        serializer.writeLink("firstProduction", *firstProduction);
 }
 
 } // namespace slang
