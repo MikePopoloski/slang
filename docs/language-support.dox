@@ -288,8 +288,8 @@ LRM | Feature | Supported
 {{m-success}} 18.13 | Random number system functions | v0.6
 {{m-dim}}     18.14 | Random stability | N/A
 {{m-dim}}     18.15 | Manually seeding randomize | N/A
-{{m-danger}}  18.16 | Random weighted case | no
-{{m-danger}}  18.17 | Random sequence generation | no
+{{m-success}} 18.16 | Random weighted case | v0.9
+{{m-success}} 18.17 | Random sequence generation | v0.9
 
 ## 19. Functional coverage
 
