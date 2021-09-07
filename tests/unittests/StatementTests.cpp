@@ -1359,6 +1359,8 @@ TEST_CASE("randsequence statements") {
     auto tree = SyntaxTree::fromText(R"(
 module m;
     int a;
+    int cnt;
+
     initial begin
         randsequence (main)
             main : first second done ;
@@ -1370,6 +1372,36 @@ module m;
             pop : repeat($urandom_range( 2, 6 )) push;
             push : if (1) done else pop | rand join (0.5) first second done;
             baz : case (a & 7) 1, 2: push; 3: pop; default done; endcase;
+        endsequence
+
+        randsequence( bin_op )
+            void bin_op : value operator value // void type is optional
+            { $display("%s %b %b", operator, value[1], value[2]); }
+            ;
+            bit [7:0] value : { return 8'($urandom); } ;
+            string operator : add := 5 { return "+" ; }
+                            | dec := 2 { return "-" ; }
+                            | mult := 1 { return "*" ; }
+            ;
+            add : { $display("add"); };
+            dec : { $display("dec"); };
+            mult : { $display("mult"); };
+        endsequence
+
+        randsequence( A )
+            void A : A1 A2;
+            void A1 : { cnt = 1; } B repeat(5) C B 
+            { $display("c=%d, b1=%d, b2=%d", C, B[1], B[2]); }
+            ;
+            void A2 : if (a) D(5) else D(20) 
+            { $display("d1=%d, d2=%d", D[1], D[2]); }
+            ;
+            int B : C { return C;}
+                  | C C { return C[2]; }
+                  | C C C { return C[3]; }
+            ;
+            int C : { cnt = cnt + 1; return cnt; };
+            int D (int prm) : { return prm; };
         endsequence
     end
 endmodule
@@ -1388,8 +1420,8 @@ module m;
         randsequence (main)
             main : first foo | rand join (baz) first first;
             first : if (baz) main := baz { $display("SDF"); } | repeat (baz) main;
-            bar(string first) : first;
-            boz : bar;
+            int bar(string first) : first;
+            boz : bar bar("asdf") { $display(bar[0]); };
         endsequence
 
         randsequence()
@@ -1403,7 +1435,7 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 8);
+    REQUIRE(diags.size() == 9);
     CHECK(diags[0].code == diag::UndeclaredIdentifier);
     CHECK(diags[1].code == diag::RandJoinNotNumeric);
     CHECK(diags[2].code == diag::NotBooleanConvertible);
@@ -1411,5 +1443,6 @@ endmodule
     CHECK(diags[4].code == diag::ExprMustBeIntegral);
     CHECK(diags[5].code == diag::NotAProduction);
     CHECK(diags[6].code == diag::TooFewArguments);
-    CHECK(diags[7].code == diag::TooFewArguments);
+    CHECK(diags[7].code == diag::IndexValueInvalid);
+    CHECK(diags[8].code == diag::TooFewArguments);
 }

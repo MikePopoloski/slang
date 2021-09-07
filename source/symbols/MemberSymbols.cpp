@@ -1349,6 +1349,79 @@ RandSeqProductionSymbol::Rule RandSeqProductionSymbol::createRule(
              isRandJoin };
 }
 
+void RandSeqProductionSymbol::createRuleVariables(const RsRuleSyntax& syntax, const Scope& scope,
+                                                  SmallVector<const Symbol*>& results) {
+    SmallMap<const RandSeqProductionSymbol*, uint32_t, 8> prodMap;
+    auto countProd = [&](const RsProdItemSyntax& item) {
+        auto symbol =
+            Lookup::unqualified(scope, item.name.valueText(), LookupFlags::AllowDeclaredAfter);
+        if (symbol && symbol->kind == SymbolKind::RandSeqProduction) {
+            auto& prod = symbol->as<RandSeqProductionSymbol>();
+            auto& type = prod.getReturnType();
+            if (!type.isVoid()) {
+                auto [it, inserted] = prodMap.emplace(&prod, 1);
+                if (!inserted)
+                    it->second++;
+            }
+        }
+    };
+
+    for (auto p : syntax.prods) {
+        switch (p->kind) {
+            case SyntaxKind::RsProdItem:
+                countProd(p->as<RsProdItemSyntax>());
+                break;
+            case SyntaxKind::RsCodeBlock:
+                break;
+            case SyntaxKind::RsIfElse: {
+                auto& ries = p->as<RsIfElseSyntax>();
+                countProd(*ries.ifItem);
+                if (ries.elseClause)
+                    countProd(*ries.elseClause->item);
+                break;
+            }
+            case SyntaxKind::RsRepeat:
+                countProd(*p->as<RsRepeatSyntax>().item);
+                break;
+            case SyntaxKind::RsCase:
+                for (auto item : p->as<RsCaseSyntax>().items) {
+                    switch (item->kind) {
+                        case SyntaxKind::StandardRsCaseItem:
+                            countProd(*item->as<StandardRsCaseItemSyntax>().item);
+                            break;
+                        case SyntaxKind::DefaultRsCaseItem:
+                            countProd(*item->as<DefaultRsCaseItemSyntax>().item);
+                            break;
+                        default:
+                            THROW_UNREACHABLE;
+                    }
+                }
+                break;
+            default:
+                THROW_UNREACHABLE;
+        }
+    }
+
+    auto& comp = scope.getCompilation();
+    for (auto [symbol, count] : prodMap) {
+        auto var = comp.emplace<VariableSymbol>(symbol->name, syntax.getFirstToken().location(),
+                                                VariableLifetime::Automatic);
+        var->isCompilerGenerated = true;
+        var->isConstant = true;
+
+        if (count == 1) {
+            var->setType(symbol->getReturnType());
+        }
+        else {
+            ConstantRange range{ 1, int32_t(count) };
+            var->setType(
+                FixedSizeUnpackedArrayType::fromDims(comp, symbol->getReturnType(), { &range, 1 }));
+        }
+
+        results.append(var);
+    }
+}
+
 void RandSeqProductionSymbol::serializeTo(ASTSerializer& serializer) const {
     serializer.write("returnType", getReturnType());
 

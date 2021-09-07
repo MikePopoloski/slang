@@ -157,6 +157,7 @@ StatementBlockSymbol& StatementBlockSymbol::fromSyntax(const Scope& scope,
                                                      StatementBlockKind::Sequential,
                                                      VariableLifetime::Automatic);
     result->setSyntax(syntax);
+    result->setNeedElaboration();
 
     for (auto prod : syntax.prods) {
         if (prod->kind == SyntaxKind::RsCodeBlock) {
@@ -199,21 +200,32 @@ StatementBlockSymbol& StatementBlockSymbol::fromLabeledStmt(const Scope& scope,
 
 void StatementBlockSymbol::elaborateVariables(function_ref<void(const Symbol&)> insertCB) const {
     auto stmtSyntax = binder.getSyntax();
-    if (!stmtSyntax || stmtSyntax->kind != SyntaxKind::ForeachLoopStatement)
+    if (!stmtSyntax) {
+        if (auto bs = getSyntax(); bs && bs->kind == SyntaxKind::RsRule) {
+            // Create variables to hold results from all non-void productions
+            // invoked by this rule.
+            SmallVectorSized<const Symbol*, 8> vars;
+            RandSeqProductionSymbol::createRuleVariables(bs->as<RsRuleSyntax>(), *this, vars);
+            for (auto var : vars)
+                insertCB(*var);
+        }
         return;
-
-    const Statement* body = &getBody();
-    if (body->kind == StatementKind::Invalid) {
-        // Unwrap invalid statements here so that we still get foreach loop
-        // variables added even if its body had a problem somewhere.
-        body = body->as<InvalidStatement>().child;
-        if (!body)
-            return;
     }
 
-    for (auto& dim : body->as<ForeachLoopStatement>().loopDims) {
-        if (dim.loopVar)
-            insertCB(*dim.loopVar);
+    if (stmtSyntax->kind == SyntaxKind::ForeachLoopStatement) {
+        const Statement* body = &getBody();
+        if (body->kind == StatementKind::Invalid) {
+            // Unwrap invalid statements here so that we still get foreach loop
+            // variables added even if its body had a problem somewhere.
+            body = body->as<InvalidStatement>().child;
+            if (!body)
+                return;
+        }
+
+        for (auto& dim : body->as<ForeachLoopStatement>().loopDims) {
+            if (dim.loopVar)
+                insertCB(*dim.loopVar);
+        }
     }
 }
 

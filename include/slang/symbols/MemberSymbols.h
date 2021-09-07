@@ -455,6 +455,9 @@ public:
     static const RandSeqProductionSymbol* findProduction(string_view name, SourceRange nameRange,
                                                          const BindContext& context);
 
+    static void createRuleVariables(const RsRuleSyntax& syntax, const Scope& scope,
+                                    SmallVector<const Symbol*>& results);
+
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::RandSeqProduction; }
 
 private:
