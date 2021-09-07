@@ -1207,7 +1207,7 @@ RandSeqProductionSymbol::ProdItem RandSeqProductionSymbol::createProdItem(
     return ProdItem(symbol, args.copy(context.getCompilation()));
 }
 
-RandSeqProductionSymbol::CaseProd RandSeqProductionSymbol::createCaseProd(
+const RandSeqProductionSymbol::CaseProd& RandSeqProductionSymbol::createCaseProd(
     const RsCaseSyntax& syntax, const BindContext& context) {
 
     SmallVectorSized<const ExpressionSyntax*, 8> expressions;
@@ -1264,7 +1264,7 @@ RandSeqProductionSymbol::CaseProd RandSeqProductionSymbol::createCaseProd(
         }
     }
 
-    return CaseProd(*expr, items.copy(comp), defItem);
+    return *comp.emplace<CaseProd>(*expr, items.copy(comp), defItem);
 }
 
 RandSeqProductionSymbol::Rule RandSeqProductionSymbol::createRule(
@@ -1273,15 +1273,17 @@ RandSeqProductionSymbol::Rule RandSeqProductionSymbol::createRule(
     auto blockRange = ruleBlock.membersOfType<StatementBlockSymbol>();
     auto blockIt = blockRange.begin();
 
-    SmallVectorSized<ProdBase, 8> prods;
+    auto& comp = context.getCompilation();
+    SmallVectorSized<const ProdBase*, 8> prods;
     for (auto p : syntax.prods) {
         switch (p->kind) {
             case SyntaxKind::RsProdItem:
-                prods.append(createProdItem(p->as<RsProdItemSyntax>(), context));
+                prods.append(
+                    comp.emplace<ProdItem>(createProdItem(p->as<RsProdItemSyntax>(), context)));
                 break;
             case SyntaxKind::RsCodeBlock: {
                 ASSERT(blockIt != blockRange.end());
-                prods.append(CodeBlockProd(*blockIt++));
+                prods.append(comp.emplace<CodeBlockProd>(*blockIt++));
                 break;
             }
             case SyntaxKind::RsIfElse: {
@@ -1296,14 +1298,14 @@ RandSeqProductionSymbol::Rule RandSeqProductionSymbol::createRule(
                 if (!expr.bad())
                     context.requireBooleanConvertible(expr);
 
-                prods.append(IfElseProd(expr, ifItem, elseItem));
+                prods.append(comp.emplace<IfElseProd>(expr, ifItem, elseItem));
                 break;
             }
             case SyntaxKind::RsRepeat: {
                 auto& rrs = p->as<RsRepeatSyntax>();
                 auto& expr = Expression::bind(*rrs.expr, context);
                 auto item = createProdItem(*rrs.item, context);
-                prods.append(RepeatProd(expr, item));
+                prods.append(comp.emplace<RepeatProd>(expr, item));
 
                 if (!expr.bad() && !expr.type->isIntegral())
                     context.addDiag(diag::ExprMustBeIntegral, expr.sourceRange) << *expr.type;
@@ -1311,7 +1313,7 @@ RandSeqProductionSymbol::Rule RandSeqProductionSymbol::createRule(
                 break;
             }
             case SyntaxKind::RsCase:
-                prods.append(createCaseProd(p->as<RsCaseSyntax>(), context));
+                prods.append(&createCaseProd(p->as<RsCaseSyntax>(), context));
                 break;
             default:
                 THROW_UNREACHABLE;
@@ -1345,8 +1347,7 @@ RandSeqProductionSymbol::Rule RandSeqProductionSymbol::createRule(
         }
     }
 
-    return { ruleBlock, prods.copy(context.getCompilation()), weightExpr, randJoinExpr, codeBlock,
-             isRandJoin };
+    return { ruleBlock, prods.copy(comp), weightExpr, randJoinExpr, codeBlock, isRandJoin };
 }
 
 void RandSeqProductionSymbol::createRuleVariables(const RsRuleSyntax& syntax, const Scope& scope,
@@ -1423,11 +1424,96 @@ void RandSeqProductionSymbol::createRuleVariables(const RsRuleSyntax& syntax, co
 }
 
 void RandSeqProductionSymbol::serializeTo(ASTSerializer& serializer) const {
+    auto writeItem = [&](string_view propName, const ProdItem& item) {
+        serializer.writeProperty(propName);
+        serializer.startObject();
+        if (item.target)
+            serializer.writeLink("target", *item.target);
+
+        serializer.startArray("args");
+        for (auto arg : item.args)
+            serializer.serialize(*arg);
+        serializer.endArray();
+
+        serializer.endObject();
+    };
+
     serializer.write("returnType", getReturnType());
 
     serializer.startArray("arguments");
     for (auto arg : arguments)
         serializer.serialize(*arg);
+    serializer.endArray();
+
+    serializer.startArray("rules");
+    for (auto& rule : getRules()) {
+        serializer.startObject();
+
+        serializer.startArray("prods");
+        for (auto prod : rule.prods) {
+            serializer.startObject();
+            switch (prod->kind) {
+                case ProdKind::Item:
+                    serializer.write("kind", "Item"sv);
+                    writeItem("item", *(const ProdItem*)prod);
+                    break;
+                case ProdKind::CodeBlock:
+                    serializer.write("kind", "CodeBlock"sv);
+                    break;
+                case ProdKind::IfElse: {
+                    auto& iep = *(const IfElseProd*)prod;
+                    serializer.write("kind", "IfElse"sv);
+                    serializer.write("expr", *iep.expr);
+
+                    writeItem("ifItem", iep.ifItem);
+                    if (iep.elseItem)
+                        writeItem("elseItem", *iep.elseItem);
+                    break;
+                }
+                case ProdKind::Repeat: {
+                    auto& rp = *(const RepeatProd*)prod;
+                    serializer.write("kind", "Repeat"sv);
+                    serializer.write("expr", *rp.expr);
+                    writeItem("item", rp.item);
+                    break;
+                }
+                case ProdKind::Case: {
+                    auto& cp = *(const CaseProd*)prod;
+                    serializer.write("kind", "Case"sv);
+                    serializer.write("expr", *cp.expr);
+                    if (cp.defaultItem)
+                        writeItem("defaultItem", *cp.defaultItem);
+
+                    serializer.startArray("items");
+                    for (auto& item : cp.items) {
+                        serializer.startObject();
+                        serializer.startArray("expressions");
+                        for (auto expr : item.expressions)
+                            serializer.serialize(*expr);
+                        serializer.endArray();
+
+                        writeItem("item", item.item);
+                        serializer.endObject();
+                    }
+                    serializer.endArray();
+                    break;
+                }
+                default:
+                    THROW_UNREACHABLE;
+            }
+            serializer.endObject();
+        }
+        serializer.endArray();
+
+        if (rule.weightExpr)
+            serializer.write("weightExpr", *rule.weightExpr);
+
+        serializer.write("isRandJoin", rule.isRandJoin);
+        if (rule.randJoinExpr)
+            serializer.write("randJoinExpr", *rule.randJoinExpr);
+
+        serializer.endObject();
+    }
     serializer.endArray();
 }
 

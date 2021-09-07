@@ -381,6 +381,12 @@ public:
 
         ProdItem(const RandSeqProductionSymbol* target, span<const Expression* const> args) :
             ProdBase(ProdKind::Item), target(target), args(args) {}
+
+        template<typename TVisitor>
+        void visitExprs(TVisitor&& visitor) const {
+            for (auto arg : args)
+                arg->visit(visitor);
+        }
     };
 
     struct CodeBlockProd : public ProdBase {
@@ -425,13 +431,13 @@ public:
 
     struct Rule {
         not_null<const StatementBlockSymbol*> ruleBlock;
-        span<const ProdBase> prods;
+        span<const ProdBase* const> prods;
         const Expression* weightExpr;
         const Expression* randJoinExpr;
         optional<CodeBlockProd> codeBlock;
         bool isRandJoin;
 
-        Rule(const StatementBlockSymbol& ruleBlock, span<const ProdBase> prods,
+        Rule(const StatementBlockSymbol& ruleBlock, span<const ProdBase* const> prods,
              const Expression* weightExpr, const Expression* randJoinExpr,
              optional<CodeBlockProd> codeBlock, bool isRandJoin) :
             ruleBlock(&ruleBlock),
@@ -460,11 +466,62 @@ public:
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::RandSeqProduction; }
 
+    template<typename TVisitor>
+    void visitExprs(TVisitor&& visitor) const {
+        for (auto& rule : getRules()) {
+            for (auto prod : rule.prods) {
+                switch (prod->kind) {
+                    case ProdKind::Item:
+                        ((const ProdItem*)prod)->visitExprs(visitor);
+                        break;
+                    case ProdKind::CodeBlock:
+                        break;
+                    case ProdKind::IfElse: {
+                        auto& iep = *(const IfElseProd*)prod;
+                        iep.expr->visit(visitor);
+                        iep.ifItem.visitExprs(visitor);
+                        if (iep.elseItem)
+                            iep.elseItem->visitExprs(visitor);
+                        break;
+                    }
+                    case ProdKind::Repeat: {
+                        auto& rp = *(const RepeatProd*)prod;
+                        rp.expr->visit(visitor);
+                        rp.item.visitExprs(visitor);
+                        break;
+                    }
+                    case ProdKind::Case: {
+                        auto& cp = *(const CaseProd*)prod;
+                        cp.expr->visit(visitor);
+                        if (cp.defaultItem)
+                            cp.defaultItem->visitExprs(visitor);
+
+                        for (auto& item : cp.items) {
+                            for (auto expr : item.expressions)
+                                expr->visit(visitor);
+
+                            item.item.visitExprs(visitor);
+                        }
+                        break;
+                    }
+                    default:
+                        THROW_UNREACHABLE;
+                }
+            }
+
+            if (rule.weightExpr)
+                rule.weightExpr->visit(visitor);
+
+            if (rule.randJoinExpr)
+                rule.randJoinExpr->visit(visitor);
+        }
+    }
+
 private:
     static Rule createRule(const RsRuleSyntax& syntax, const BindContext& context,
                            const StatementBlockSymbol& ruleBlock);
     static ProdItem createProdItem(const RsProdItemSyntax& syntax, const BindContext& context);
-    static CaseProd createCaseProd(const RsCaseSyntax& syntax, const BindContext& context);
+    static const CaseProd& createCaseProd(const RsCaseSyntax& syntax, const BindContext& context);
 
     mutable optional<span<const Rule>> rules;
 };

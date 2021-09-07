@@ -257,6 +257,14 @@ module Top;
     function logic func(logic bar);
     endfunction
 
+    initial begin
+        randsequence()
+            a: case (f) 0, 1: b("hello"); default: c; endcase | c;
+            b(string s): { $display(s); };
+            c: { break; };
+        endsequence
+    end
+
 endmodule
 
 module Child(I.m i, input logic f = 1);
