@@ -11,7 +11,7 @@ All source code is hosted on [GitHub](https://github.com/MikePopoloski/slang)
 
 slang requires the following dependencies in order to build:
 - [python 3](https://www.python.org/)
-- [CMake](https://cmake.org/) (3.12 or later)
+- [CMake](https://cmake.org/) (3.15 or later)
 - C++17 compatible compiler
 
 @section building-start Quick Start
@@ -68,9 +68,6 @@ SLANG_COVERAGE | Enable Clang code coverage | OFF
 SLANG_SANITIZERS | A list of Clang sanitizers to include in the build | ""
 FUZZ_TARGET | Turn on to enable some changes to make binaries easier to fuzz test | OFF
 CI_BUILD | Enable additional longer-running tests for automated builds | OFF
-SLANG_MSVC_W4 | Enable /W4 for MSVC builds | ON
-SLANG_MSVC_STATIC_RUNTIME | Enable linking to the MSVC static runtime | ON
-LLVM_DIR | When building with LLVM, a path to where the LLVM cmake system lives | ""
 DOXYGENPY_PATH | When building docs, the path to the doxygen.py tool | ""
 
 @section build-scripts Build Scripts
