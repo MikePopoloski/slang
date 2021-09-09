@@ -73,7 +73,7 @@ Expression& Expression::bindAssignmentPattern(Compilation& comp,
         return badExpr(comp, nullptr);
     }
 
-    AssignmentPatternSyntax& p = *syntax.pattern;
+    const AssignmentPatternSyntax& p = *syntax.pattern;
     if (structScope) {
         switch (p.kind) {
             case SyntaxKind::SimpleAssignmentPattern:
@@ -254,18 +254,37 @@ Expression& SimpleAssignmentPatternExpression::forStruct(
     return *result;
 }
 
+static span<const Expression* const> bindExpressionList(
+    const Type& patternType, const Type& elementType, size_t replCount, bitwidth_t expectedCount,
+    const SeparatedSyntaxList<ExpressionSyntax>& items, const BindContext& context,
+    SourceRange sourceRange, bool& bad) {
+
+    SmallVectorSized<const Expression*, 8> elems;
+    for (size_t i = 0; i < replCount; i++) {
+        for (auto item : items) {
+            auto& expr = Expression::bindRValue(elementType, *item,
+                                                item->getFirstToken().location(), context);
+            elems.append(&expr);
+            bad |= expr.bad();
+        }
+    }
+
+    if (!bad && expectedCount && expectedCount != elems.size()) {
+        auto& diag = context.addDiag(diag::WrongNumberAssignmentPatterns, sourceRange);
+        diag << patternType << expectedCount << elems.size();
+        bad = true;
+    }
+
+    return elems.copy(context.getCompilation());
+}
+
 Expression& SimpleAssignmentPatternExpression::forFixedArray(
     Compilation& comp, const SimpleAssignmentPatternSyntax& syntax, const BindContext& context,
     const Type& type, const Type& elementType, bitwidth_t numElements, SourceRange sourceRange) {
 
     bool bad = false;
-    SmallVectorSized<const Expression*, 8> elems;
-    for (auto item : syntax.items) {
-        auto& expr =
-            Expression::bindRValue(elementType, *item, item->getFirstToken().location(), context);
-        elems.append(&expr);
-        bad |= expr.bad();
-    }
+    auto elems = bindExpressionList(type, elementType, 1, numElements, syntax.items, context,
+                                    sourceRange, bad);
 
     if (!bad && numElements != syntax.items.size()) {
         auto& diag = context.addDiag(diag::WrongNumberAssignmentPatterns, sourceRange);
@@ -273,8 +292,7 @@ Expression& SimpleAssignmentPatternExpression::forFixedArray(
         bad = true;
     }
 
-    auto result =
-        comp.emplace<SimpleAssignmentPatternExpression>(type, elems.copy(comp), sourceRange);
+    auto result = comp.emplace<SimpleAssignmentPatternExpression>(type, elems, sourceRange);
     if (bad)
         return badExpr(comp, result);
 
@@ -286,16 +304,10 @@ Expression& SimpleAssignmentPatternExpression::forDynamicArray(
     const Type& type, const Type& elementType, SourceRange sourceRange) {
 
     bool bad = false;
-    SmallVectorSized<const Expression*, 8> elems;
-    for (auto item : syntax.items) {
-        auto& expr =
-            Expression::bindRValue(elementType, *item, item->getFirstToken().location(), context);
-        elems.append(&expr);
-        bad |= expr.bad();
-    }
+    auto elems =
+        bindExpressionList(type, elementType, 1, 0, syntax.items, context, sourceRange, bad);
 
-    auto result =
-        comp.emplace<SimpleAssignmentPatternExpression>(type, elems.copy(comp), sourceRange);
+    auto result = comp.emplace<SimpleAssignmentPatternExpression>(type, elems, sourceRange);
     if (bad)
         return badExpr(comp, result);
 
@@ -825,24 +837,11 @@ Expression& ReplicatedAssignmentPatternExpression::forFixedArray(
         return badExpr(comp, nullptr);
 
     bool bad = false;
-    SmallVectorSized<const Expression*, 8> elems;
-    for (size_t i = 0; i < count; i++) {
-        for (auto item : syntax.items) {
-            auto& expr = Expression::bindRValue(elementType, *item,
-                                                item->getFirstToken().location(), context);
-            elems.append(&expr);
-            bad |= expr.bad();
-        }
-    }
+    auto elems = bindExpressionList(type, elementType, count, numElements, syntax.items, context,
+                                    sourceRange, bad);
 
-    if (!bad && numElements != elems.size()) {
-        auto& diag = context.addDiag(diag::WrongNumberAssignmentPatterns, sourceRange);
-        diag << type << numElements << elems.size();
-        bad = true;
-    }
-
-    auto result = comp.emplace<ReplicatedAssignmentPatternExpression>(
-        type, countExpr, elems.copy(comp), sourceRange);
+    auto result =
+        comp.emplace<ReplicatedAssignmentPatternExpression>(type, countExpr, elems, sourceRange);
     if (bad)
         return badExpr(comp, result);
 
@@ -859,18 +858,11 @@ Expression& ReplicatedAssignmentPatternExpression::forDynamicArray(
         return badExpr(comp, nullptr);
 
     bool bad = false;
-    SmallVectorSized<const Expression*, 8> elems;
-    for (size_t i = 0; i < count; i++) {
-        for (auto item : syntax.items) {
-            auto& expr = Expression::bindRValue(elementType, *item,
-                                                item->getFirstToken().location(), context);
-            elems.append(&expr);
-            bad |= expr.bad();
-        }
-    }
+    auto elems =
+        bindExpressionList(type, elementType, count, 0, syntax.items, context, sourceRange, bad);
 
-    auto result = comp.emplace<ReplicatedAssignmentPatternExpression>(
-        type, countExpr, elems.copy(comp), sourceRange);
+    auto result =
+        comp.emplace<ReplicatedAssignmentPatternExpression>(type, countExpr, elems, sourceRange);
     if (bad)
         return badExpr(comp, result);
 
