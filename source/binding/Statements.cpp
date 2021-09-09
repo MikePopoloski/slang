@@ -2313,23 +2313,26 @@ static bool isValidForceLVal(const Expression& expr, const BindContext& context,
 Statement& ProceduralAssignStatement::fromSyntax(Compilation& compilation,
                                                  const ProceduralAssignStatementSyntax& syntax,
                                                  const BindContext& context) {
+    bool isForce = syntax.keyword.kind == TokenKind::ForceKeyword;
     auto& assign = Expression::bind(*syntax.expr, context,
                                     BindFlags::NonProcedural | BindFlags::AssignmentAllowed);
-    auto result = compilation.emplace<ProceduralAssignStatement>(assign, syntax.sourceRange());
+
+    auto result =
+        compilation.emplace<ProceduralAssignStatement>(assign, isForce, syntax.sourceRange());
     if (assign.bad())
         return badStmt(compilation, result);
 
     if (assign.kind == ExpressionKind::Assignment) {
         auto& lval = assign.as<AssignmentExpression>().left();
-        if (syntax.keyword.kind == TokenKind::AssignKeyword) {
-            if (!isValidAssignLVal(lval)) {
-                context.addDiag(diag::BadProceduralAssign, lval.sourceRange);
+        if (isForce) {
+            if (!isValidForceLVal(lval, context, false)) {
+                context.addDiag(diag::BadProceduralForce, lval.sourceRange);
                 return badStmt(compilation, result);
             }
         }
         else {
-            if (!isValidForceLVal(lval, context, false)) {
-                context.addDiag(diag::BadProceduralForce, lval.sourceRange);
+            if (!isValidAssignLVal(lval)) {
+                context.addDiag(diag::BadProceduralAssign, lval.sourceRange);
                 return badStmt(compilation, result);
             }
         }
@@ -2349,6 +2352,7 @@ bool ProceduralAssignStatement::verifyConstantImpl(EvalContext& context) const {
 
 void ProceduralAssignStatement::serializeTo(ASTSerializer& serializer) const {
     serializer.write("assignment", assignment);
+    serializer.write("isForce", isForce);
 }
 
 Statement& ProceduralDeassignStatement::fromSyntax(Compilation& compilation,
@@ -2356,22 +2360,25 @@ Statement& ProceduralDeassignStatement::fromSyntax(Compilation& compilation,
                                                    const BindContext& context) {
     BindContext ctx = context.resetFlags(BindFlags::NonProcedural);
     auto& lvalue = Expression::bind(*syntax.variable, ctx);
-    auto result = compilation.emplace<ProceduralDeassignStatement>(lvalue, syntax.sourceRange());
+
+    bool isRelease = syntax.keyword.kind == TokenKind::ReleaseKeyword;
+    auto result =
+        compilation.emplace<ProceduralDeassignStatement>(lvalue, isRelease, syntax.sourceRange());
     if (lvalue.bad())
         return badStmt(compilation, result);
 
     if (!lvalue.verifyAssignable(ctx))
         return badStmt(compilation, result);
 
-    if (syntax.keyword.kind == TokenKind::DeassignKeyword) {
-        if (!isValidAssignLVal(lvalue)) {
-            ctx.addDiag(diag::BadProceduralAssign, lvalue.sourceRange);
+    if (isRelease) {
+        if (!isValidForceLVal(lvalue, ctx, false)) {
+            ctx.addDiag(diag::BadProceduralForce, lvalue.sourceRange);
             return badStmt(compilation, result);
         }
     }
     else {
-        if (!isValidForceLVal(lvalue, ctx, false)) {
-            ctx.addDiag(diag::BadProceduralForce, lvalue.sourceRange);
+        if (!isValidAssignLVal(lvalue)) {
+            ctx.addDiag(diag::BadProceduralAssign, lvalue.sourceRange);
             return badStmt(compilation, result);
         }
     }
@@ -2390,6 +2397,7 @@ bool ProceduralDeassignStatement::verifyConstantImpl(EvalContext& context) const
 
 void ProceduralDeassignStatement::serializeTo(ASTSerializer& serializer) const {
     serializer.write("lvalue", lvalue);
+    serializer.write("isRelease", isRelease);
 }
 
 Statement& RandCaseStatement::fromSyntax(Compilation& compilation,

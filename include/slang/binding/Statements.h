@@ -282,6 +282,8 @@ public:
         blockKind(blockKind), list(&list) {}
 
     const Statement& getStatements() const;
+    bool isNamedBlock() const;
+
     EvalResult evalImpl(EvalContext& context) const;
     bool verifyConstantImpl(EvalContext& context) const;
 
@@ -979,9 +981,11 @@ struct ProceduralAssignStatementSyntax;
 class ProceduralAssignStatement : public Statement {
 public:
     const Expression& assignment;
+    bool isForce;
 
-    ProceduralAssignStatement(const Expression& assignment, SourceRange sourceRange) :
-        Statement(StatementKind::ProceduralAssign, sourceRange), assignment(assignment) {}
+    ProceduralAssignStatement(const Expression& assignment, bool isForce, SourceRange sourceRange) :
+        Statement(StatementKind::ProceduralAssign, sourceRange), assignment(assignment),
+        isForce(isForce) {}
 
     EvalResult evalImpl(EvalContext& context) const;
     bool verifyConstantImpl(EvalContext& context) const;
@@ -1005,9 +1009,11 @@ struct ProceduralDeassignStatementSyntax;
 class ProceduralDeassignStatement : public Statement {
 public:
     const Expression& lvalue;
+    bool isRelease;
 
-    ProceduralDeassignStatement(const Expression& lvalue, SourceRange sourceRange) :
-        Statement(StatementKind::ProceduralDeassign, sourceRange), lvalue(lvalue) {}
+    ProceduralDeassignStatement(const Expression& lvalue, bool isRelease, SourceRange sourceRange) :
+        Statement(StatementKind::ProceduralDeassign, sourceRange), lvalue(lvalue),
+        isRelease(isRelease) {}
 
     EvalResult evalImpl(EvalContext& context) const;
     bool verifyConstantImpl(EvalContext& context) const;
