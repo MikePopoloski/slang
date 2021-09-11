@@ -727,7 +727,7 @@ Expression& StructuredAssignmentPatternExpression::forDynamicArray(
     }
 
     SmallVectorSized<const Expression*, 8> elements;
-    if (indexMap.size() != maxIndex + 1) {
+    if (indexMap.size() != size_t(maxIndex + 1)) {
         if (!bad) {
             context.addDiag(diag::AssignmentPatternMissingElements, sourceRange);
             bad = true;
