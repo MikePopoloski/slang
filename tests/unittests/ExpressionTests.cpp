@@ -2303,3 +2303,87 @@ endmodule
     CHECK(diags[2].code == diag::TaggedUnionMissingInit);
     CHECK(diags[3].code == diag::BadAssignment);
 }
+
+TEST_CASE("Assignment pattern expressions") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    // Simple patterns, different target types
+    struct packed { int a; logic [3:0] b; } a = '{9000, 13};
+    struct { int a; real b; } b = '{1, 3.14};
+    logic [3:1][2:5] c = '{3'd2, 3'd5, 3'd6};
+    real d[2:5] = '{1.1, 1.2, 1.3, 1.4};
+    int e[] = '{0:1, 1:2, 2:3};
+    int f[*] = '{1:1, 2:2, 3:3};
+    int g[$] = '{3 {1}};
+    enum logic[1:0] { A, B } h = '{1, 0};
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Assignment pattern errors") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    event e1 = event'{1};
+    parameter p = '{1, 2};
+
+    typedef event e_t;
+    e_t e2 = '{1};
+
+    int a[int] = '{1, 2};
+
+    typedef real rt;
+    typedef struct { int a; rt b; } st;
+    st b = '{1};
+    int c[1:2] = '{1};
+    st d = '{default:1, default:2, a:1, a:2, rt:3.14, blah:3, event:1, (1+1):2};
+
+    int e[] = '{0:1, 0:2, default:1, int:3, -1:2};
+    int f[1:2] = '{default:1, default:2, event:1, 9:1};
+    int g[] = '{1:1};
+
+    st h = '{-1{0}};
+    st i = '{3{1}};
+    int j[1:2] = '{-1{0}};
+    int k[] = '{-1{0}};
+
+    int l[int] = '{default:1, default:2, 3:1, 3:2, int:1};
+    
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 26);
+    CHECK(diags[0].code == diag::BadAssignmentPatternType);
+    CHECK(diags[1].code == diag::AssignmentPatternNoContext);
+    CHECK(diags[2].code == diag::BadAssignmentPatternType);
+    CHECK(diags[3].code == diag::AssignmentPatternAssociativeType);
+    CHECK(diags[4].code == diag::WrongNumberAssignmentPatterns);
+    CHECK(diags[5].code == diag::WrongNumberAssignmentPatterns);
+    CHECK(diags[6].code == diag::AssignmentPatternKeyDupDefault);
+    CHECK(diags[7].code == diag::AssignmentPatternKeyDupName);
+    CHECK(diags[8].code == diag::UnknownMember);
+    CHECK(diags[9].code == diag::AssignmentPatternKeyExpr);
+    CHECK(diags[10].code == diag::AssignmentPatternKeyExpr);
+    CHECK(diags[11].code == diag::AssignmentPatternKeyDupValue);
+    CHECK(diags[12].code == diag::AssignmentPatternDynamicDefault);
+    CHECK(diags[13].code == diag::AssignmentPatternDynamicType);
+    CHECK(diags[14].code == diag::ValueMustBePositive);
+    CHECK(diags[15].code == diag::AssignmentPatternKeyDupDefault);
+    CHECK(diags[16].code == diag::AssignmentPatternKeyExpr);
+    CHECK(diags[17].code == diag::IndexValueInvalid);
+    CHECK(diags[18].code == diag::AssignmentPatternMissingElements);
+    CHECK(diags[19].code == diag::ValueMustBePositive);
+    CHECK(diags[20].code == diag::WrongNumberAssignmentPatterns);
+    CHECK(diags[21].code == diag::ValueMustBePositive);
+    CHECK(diags[22].code == diag::ValueMustBePositive);
+    CHECK(diags[23].code == diag::AssignmentPatternKeyDupDefault);
+    CHECK(diags[24].code == diag::AssignmentPatternKeyDupValue);
+    CHECK(diags[25].code == diag::AssignmentPatternDynamicType);
+}

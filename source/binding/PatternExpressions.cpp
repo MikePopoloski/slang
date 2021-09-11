@@ -286,12 +286,6 @@ Expression& SimpleAssignmentPatternExpression::forFixedArray(
     auto elems = bindExpressionList(type, elementType, 1, numElements, syntax.items, context,
                                     sourceRange, bad);
 
-    if (!bad && numElements != syntax.items.size()) {
-        auto& diag = context.addDiag(diag::WrongNumberAssignmentPatterns, sourceRange);
-        diag << type << numElements << elems.size();
-        bad = true;
-    }
-
     auto result = comp.emplace<SimpleAssignmentPatternExpression>(type, elems, sourceRange);
     if (bad)
         return badExpr(comp, result);
@@ -499,7 +493,6 @@ Expression& StructuredAssignmentPatternExpression::forStruct(
     Compilation& comp, const StructuredAssignmentPatternSyntax& syntax, const BindContext& context,
     const Type& type, const Scope& structScope, SourceRange sourceRange) {
 
-    // TODO: check for duplicate keys
     bool bad = false;
     const Expression* defaultSetter = nullptr;
     SmallMap<const Symbol*, const Expression*, 8> memberMap;
@@ -529,7 +522,16 @@ Expression& StructuredAssignmentPatternExpression::forStruct(
                                         nameToken.location(), context);
                 bad |= expr.bad();
 
-                memberMap.emplace(member, &expr);
+                auto [it, inserted] = memberMap.emplace(member, &expr);
+                if (!inserted) {
+                    auto& diag = context.addDiag(diag::AssignmentPatternKeyDupName,
+                                                 item->key->sourceRange());
+                    diag << name;
+                    diag.addNote(diag::NotePreviousDefinition, it->second->sourceRange.start());
+                    bad = true;
+                    continue;
+                }
+
                 memberSetters.emplace(MemberSetter{ member, &expr });
             }
             else {
@@ -584,11 +586,36 @@ Expression& StructuredAssignmentPatternExpression::forStruct(
     return *result;
 }
 
+static optional<int32_t> bindArrayIndexSetter(
+    const BindContext& context, const Expression& keyExpr, const Type& elementType,
+    const ExpressionSyntax& valueSyntax, SmallMap<int32_t, const Expression*, 8>& indexMap,
+    SmallVector<StructuredAssignmentPatternExpression::IndexSetter>& indexSetters) {
+
+    optional<int32_t> index = context.evalInteger(keyExpr);
+    if (!index)
+        return std::nullopt;
+
+    auto& expr = Expression::bindRValue(elementType, valueSyntax,
+                                        valueSyntax.getFirstToken().location(), context);
+    if (expr.bad())
+        return std::nullopt;
+
+    auto [it, inserted] = indexMap.emplace(*index, &expr);
+    if (!inserted) {
+        auto& diag = context.addDiag(diag::AssignmentPatternKeyDupValue, keyExpr.sourceRange);
+        diag << *index;
+        diag.addNote(diag::NotePreviousDefinition, it->second->sourceRange.start());
+        return std::nullopt;
+    }
+
+    indexSetters.append({ &keyExpr, &expr });
+    return *index;
+}
+
 Expression& StructuredAssignmentPatternExpression::forFixedArray(
     Compilation& comp, const StructuredAssignmentPatternSyntax& syntax, const BindContext& context,
     const Type& type, const Type& elementType, SourceRange sourceRange) {
 
-    // TODO: check for duplicate keys
     bool bad = false;
     const Expression* defaultSetter = nullptr;
     SmallMap<int32_t, const Expression*, 8> indexMap;
@@ -603,10 +630,19 @@ Expression& StructuredAssignmentPatternExpression::forFixedArray(
             }
             defaultSetter = &selfDetermined(comp, *item->expr, context);
             bad |= defaultSetter->bad();
+            continue;
         }
-        else if (DataTypeSyntax::isKind(item->key->kind)) {
-            const Type& typeKey = comp.getType(item->key->as<DataTypeSyntax>(),
-                                               context.getLocation(), *context.scope);
+
+        // The key is either an array index or a data type setter.
+        auto& keyExpr =
+            Expression::bind(*item->key, context, BindFlags::Constant | BindFlags::AllowDataType);
+        if (keyExpr.bad()) {
+            bad = true;
+            continue;
+        }
+
+        if (keyExpr.kind == ExpressionKind::DataType) {
+            const Type& typeKey = *keyExpr.type;
             if (typeKey.isSimpleType()) {
                 auto& expr = bindRValue(typeKey, *item->expr,
                                         item->expr->getFirstToken().location(), context);
@@ -620,29 +656,19 @@ Expression& StructuredAssignmentPatternExpression::forFixedArray(
             }
         }
         else {
-            // TODO: check for type name here
-
-            auto& indexExpr = Expression::bind(*item->key, context, BindFlags::Constant);
-            optional<int32_t> index = context.evalInteger(indexExpr);
+            auto index = bindArrayIndexSetter(context, keyExpr, elementType, *item->expr, indexMap,
+                                              indexSetters);
             if (!index) {
                 bad = true;
                 continue;
             }
 
             if (!type.getFixedRange().containsPoint(*index)) {
-                auto& diag = context.addDiag(diag::IndexValueInvalid, indexExpr.sourceRange);
+                auto& diag = context.addDiag(diag::IndexValueInvalid, keyExpr.sourceRange);
                 diag << *index;
                 diag << type;
                 bad = true;
-                continue;
             }
-
-            auto& expr = bindRValue(elementType, *item->expr,
-                                    item->expr->getFirstToken().location(), context);
-            bad |= expr.bad();
-
-            indexMap.emplace(*index, &expr);
-            indexSetters.append(IndexSetter{ &indexExpr, &expr });
         }
     }
 
@@ -664,46 +690,57 @@ Expression& StructuredAssignmentPatternExpression::forDynamicArray(
     Compilation& comp, const StructuredAssignmentPatternSyntax& syntax, const BindContext& context,
     const Type& type, const Type& elementType, SourceRange sourceRange) {
 
-    // TODO: check for duplicate keys
     bool bad = false;
-    SmallVectorSized<const Expression*, 8> elements;
+    SmallMap<int32_t, const Expression*, 8> indexMap;
     SmallVectorSized<IndexSetter, 4> indexSetters;
+    int32_t maxIndex = 0;
 
     for (auto item : syntax.items) {
         if (item->key->kind == SyntaxKind::DefaultPatternKeyExpression) {
             context.addDiag(diag::AssignmentPatternDynamicDefault, item->key->sourceRange());
             bad = true;
+            continue;
         }
-        else if (DataTypeSyntax::isKind(item->key->kind)) {
+
+        // The key is either an array index or a data type setter.
+        auto& keyExpr =
+            Expression::bind(*item->key, context, BindFlags::Constant | BindFlags::AllowDataType);
+        if (keyExpr.bad()) {
+            bad = true;
+            continue;
+        }
+
+        if (keyExpr.kind == ExpressionKind::DataType) {
             context.addDiag(diag::AssignmentPatternDynamicType, item->key->sourceRange());
             bad = true;
+            continue;
         }
-        else {
-            // TODO: check for type name here
 
-            auto& indexExpr = Expression::bind(*item->key, context, BindFlags::Constant);
-            optional<int32_t> index = context.evalInteger(indexExpr);
-            if (!index) {
-                bad = true;
-                continue;
-            }
-
-            // TODO: check gt zero
-
-            auto& expr = bindRValue(elementType, *item->expr,
-                                    item->expr->getFirstToken().location(), context);
-            bad |= expr.bad();
-
-            indexSetters.append(IndexSetter{ &indexExpr, &expr });
-
-            size_t i = size_t(*index);
-            if (i >= elements.size())
-                elements.extend(i - elements.size() + 1);
-            elements[i] = &expr;
+        auto index = bindArrayIndexSetter(context, keyExpr, elementType, *item->expr, indexMap,
+                                          indexSetters);
+        if (!context.requirePositive(index, keyExpr.sourceRange)) {
+            bad = true;
+            continue;
         }
+
+        maxIndex = std::max(maxIndex, *index);
     }
 
-    // TODO: check that all elements have expressions assigned
+    SmallVectorSized<const Expression*, 8> elements;
+    if (indexMap.size() != maxIndex + 1) {
+        if (!bad) {
+            context.addDiag(diag::AssignmentPatternMissingElements, sourceRange);
+            bad = true;
+        }
+    }
+    else {
+        elements.reserve(size_t(maxIndex + 1));
+        for (int32_t i = 0; i <= maxIndex; i++) {
+            auto expr = indexMap[i];
+            ASSERT(expr);
+            elements.append(expr);
+        }
+    }
 
     auto result = comp.emplace<StructuredAssignmentPatternExpression>(
         type, span<const MemberSetter>{}, span<const TypeSetter>{}, indexSetters.copy(comp),
@@ -719,10 +756,10 @@ Expression& StructuredAssignmentPatternExpression::forAssociativeArray(
     Compilation& comp, const StructuredAssignmentPatternSyntax& syntax, const BindContext& context,
     const Type& type, const Type& elementType, SourceRange sourceRange) {
 
-    // TODO: check for duplicate keys
     bool bad = false;
     const Expression* defaultSetter = nullptr;
     SmallVectorSized<IndexSetter, 4> indexSetters;
+    SmallMap<ConstantValue, SourceRange, 8> indexMap;
 
     const Type* indexType = type.getAssociativeIndexType();
 
@@ -740,8 +777,6 @@ Expression& StructuredAssignmentPatternExpression::forAssociativeArray(
             bad = true;
         }
         else {
-            // TODO: check for type name here
-
             const Expression* indexExpr;
             if (indexType) {
                 indexExpr =
@@ -752,7 +787,21 @@ Expression& StructuredAssignmentPatternExpression::forAssociativeArray(
                 indexExpr = &Expression::bind(*item->key, context, BindFlags::Constant);
             }
 
-            // TODO: check constant index value for validity
+            if (!indexExpr->bad()) {
+                auto cv = context.eval(*indexExpr);
+                if (!cv)
+                    bad = true;
+                else {
+                    auto [it, inserted] = indexMap.emplace(cv, indexExpr->sourceRange);
+                    if (!inserted) {
+                        auto& diag = context.addDiag(diag::AssignmentPatternKeyDupValue,
+                                                     indexExpr->sourceRange);
+                        diag << cv;
+                        diag.addNote(diag::NotePreviousDefinition, it->second.start());
+                        bad = true;
+                    }
+                }
+            }
 
             auto& expr = bindRValue(elementType, *item->expr,
                                     item->expr->getFirstToken().location(), context);
