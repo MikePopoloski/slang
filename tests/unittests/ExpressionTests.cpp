@@ -2351,6 +2351,9 @@ module m;
     int k[] = '{-1{0}};
 
     int l[int] = '{default:1, default:2, 3:1, 3:2, int:1};
+
+    int m[2][2] = '{real:3.14};
+    struct { int i; real r; } n[2] = '{real:3.14};
     
 endmodule
 )");
@@ -2359,7 +2362,7 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 26);
+    REQUIRE(diags.size() == 28);
     CHECK(diags[0].code == diag::BadAssignmentPatternType);
     CHECK(diags[1].code == diag::AssignmentPatternNoContext);
     CHECK(diags[2].code == diag::BadAssignmentPatternType);
@@ -2386,4 +2389,6 @@ endmodule
     CHECK(diags[23].code == diag::AssignmentPatternKeyDupDefault);
     CHECK(diags[24].code == diag::AssignmentPatternKeyDupValue);
     CHECK(diags[25].code == diag::AssignmentPatternDynamicType);
+    CHECK(diags[26].code == diag::AssignmentPatternMissingElements);
+    CHECK(diags[27].code == diag::AssignmentPatternNoMember);
 }

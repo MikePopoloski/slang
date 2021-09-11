@@ -2292,3 +2292,28 @@ TEST_CASE("Tagged union eval") {
     CHECK(diags[2].code == diag::ConstEvalTaggedUnion);
     CHECK(diags[3].code == diag::ConstEvalTaggedUnion);
 }
+
+TEST_CASE("Assignment pattern eval") {
+    ScriptSession session;
+    session.eval("typedef logic[7:0] bt;");
+    session.eval("bt foo[4:3][1:2] = '{bt: 3};");
+
+    CHECK(session.eval("foo").toString() == "[[8'h3,8'h3],[8'h3,8'h3]]");
+
+    session.eval(R"(
+struct {
+    int a[1:0];
+    time t;
+    logic[6:1] l;
+    union packed { int i; } u;
+    struct { real r; } r[2];
+} bar[1:2][4:3] = '{int:1, time:2, real:3.14, default:2};)");
+
+    CHECK(session.eval("bar").toString() ==
+        "[[[[1,1],64'h2,6'b10,32'd2,[[3.14],[3.14]]],"
+        "[[1,1],64'h2,6'b10,32'd2,[[3.14],[3.14]]]],"
+        "[[[1,1],64'h2,6'b10,32'd2,[[3.14],[3.14]]],"
+        "[[1,1],64'h2,6'b10,32'd2,[[3.14],[3.14]]]]]");
+
+    NO_SESSION_ERRORS;
+}

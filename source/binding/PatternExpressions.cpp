@@ -308,185 +308,117 @@ Expression& SimpleAssignmentPatternExpression::forDynamicArray(
     return *result;
 }
 
-static bool matchMembers(const BindContext& context, const Scope& structScope,
-                         SourceRange sourceRange,
-                         SmallMap<const Symbol*, const Expression*, 8>& memberMap,
-                         span<const StructuredAssignmentPatternExpression::TypeSetter> typeSetters,
-                         const Expression* defaultSetter, SmallVector<const Expression*>& results) {
+static const Expression* matchElementValue(
+    const BindContext& context, const Type& elementType, const FieldSymbol* targetField,
+    SourceRange sourceRange,
+    span<const StructuredAssignmentPatternExpression::TypeSetter> typeSetters,
+    const Expression* defaultSetter) {
 
-    const ExpressionSyntax* defaultSyntax = nullptr;
-    if (defaultSetter) {
-        defaultSyntax = defaultSetter->syntax;
-        ASSERT(defaultSyntax);
-    }
-
-    // TODO: check that all memberMap entries are used
-
-    // Every member of the structure must be covered by one of:
-    // member:value     -- recorded in the memberMap
-    // type:value       -- recorded in typeSetters, last one takes precedence
-    // default:value    -- recorded in defaultSetter, types must be assignable
-    // struct member    -- recursively descend into the struct
-    // array member     -- recursively descend into the array
-    bool bad = false;
-    for (auto& field : structScope.membersOfType<FieldSymbol>()) {
-        // If we already have a setter for this field we don't have to do anything else.
-        if (auto it = memberMap.find(&field); it != memberMap.end()) {
-            results.append(it->second);
-            continue;
-        }
-
-        const Type& type = field.getType();
-        if (type.isError() || field.name.empty()) {
-            bad = true;
-            continue;
-        }
-
-        // Otherwise try all type setters for a match. Last one that matches wins.
-        const Expression* found = nullptr;
-        for (auto& setter : typeSetters) {
-            if (setter.type && type.isMatching(*setter.type))
-                found = setter.expr;
-        }
-
-        if (found) {
-            results.append(found);
-            continue;
-        }
-
-        // Otherwise, see if we have a default value that can be applied.
-        // The default applies if:
-        // - The field type matches exactly
-        // - The field type is a simple bit vector and the type is assignment compatible
-        if (defaultSetter) {
-            if (type.isMatching(*defaultSetter->type)) {
-                results.append(defaultSetter);
-                continue;
-            }
-
-            if (type.isSimpleBitVector() && type.isAssignmentCompatible(*defaultSetter->type)) {
-                results.append(&Expression::bindRValue(
-                    type, *defaultSyntax, defaultSyntax->getFirstToken().location(), context));
-                continue;
-            }
-        }
-
-        // Otherwise, we check first if the type is a struct or array, in which
-        // case we descend recursively into its members before continuing on with the default.
-        if (type.isStruct()) {
-            // TODO:
-            continue;
-        }
-        if (type.isArray()) {
-            // TODO:
-            continue;
-        }
-
-        // Finally, if we have a default then it must now be assignment compatible.
-        if (defaultSetter) {
-            results.append(&Expression::bindRValue(
-                type, *defaultSyntax, defaultSyntax->getFirstToken().location(), context));
-            continue;
-        }
-
-        // Otherwise there's no setter for this member, which is an error.
-        context.addDiag(diag::AssignmentPatternNoMember, sourceRange) << field.name;
-        bad = true;
-    }
-
-    return bad;
-}
-
-static bool matchElements(const BindContext& context, const Type& elementType,
-                          ConstantRange arrayRange, SourceRange sourceRange,
-                          SmallMap<int32_t, const Expression*, 8>& indexMap,
-                          span<const StructuredAssignmentPatternExpression::TypeSetter> typeSetters,
-                          const Expression* defaultSetter,
-                          SmallVector<const Expression*>& results) {
-    if (elementType.isError())
-        return true;
-
-    const ExpressionSyntax* defaultSyntax = nullptr;
-    if (defaultSetter) {
-        defaultSyntax = defaultSetter->syntax;
-        ASSERT(defaultSyntax);
-    }
-
-    // TODO: check that all indexMap entries are used
-
-    // Every element in the array must be covered by one of:
-    // index:value      -- recorded in the indexMap
+    // Every element in the array or structure must be covered by one of:
+    // index:value      -- recorded in the indexMap (handled only at the top level, not here)
+    // member:value     -- recorded in the memberMap (handled only at the top level, not here)
     // type:value       -- recorded in typeSetters, last one takes precedence
     // default:value    -- recorded in defaultSetter, types must be assignable
     // struct element   -- recursively descend into the struct
     // array element    -- recursively descend into the array
 
-    auto determineVal = [&]() -> const Expression* {
-        // Otherwise try all type setters for a match. Last one that matches wins.
-        const Expression* found = nullptr;
-        for (auto& setter : typeSetters) {
-            if (setter.type && elementType.isMatching(*setter.type))
-                found = setter.expr;
-        }
+    if (elementType.isError())
+        return nullptr;
 
-        if (found)
-            return found;
+    // Try all type setters for a match. Last one that matches wins.
+    const Expression* found = nullptr;
+    for (auto& setter : typeSetters) {
+        if (setter.type && elementType.isMatching(*setter.type))
+            found = setter.expr;
+    }
+    if (found)
+        return found;
 
-        // Otherwise, see if we have a default value that can be applied.
-        // The default applies if:
-        // - The element type matches exactly
-        // - The element type is a simple bit vector and the type is assignment compatible
-        if (defaultSetter) {
-            if (elementType.isMatching(*defaultSetter->type))
-                return defaultSetter;
+    // Otherwise, see if we have a default value that can be applied.
+    // The default applies if:
+    // - The element type matches exactly
+    // - The element type is a simple bit vector and the type is assignment compatible
+    const ExpressionSyntax* defaultSyntax = nullptr;
+    if (defaultSetter) {
+        defaultSyntax = defaultSetter->syntax;
+        ASSERT(defaultSyntax);
+    }
 
-            if (elementType.isSimpleBitVector() &&
-                elementType.isAssignmentCompatible(*defaultSetter->type)) {
-                return &Expression::bindRValue(elementType, *defaultSyntax,
-                                               defaultSyntax->getFirstToken().location(), context);
-            }
-        }
+    if (defaultSetter) {
+        if (elementType.isMatching(*defaultSetter->type))
+            return defaultSetter;
 
-        // Otherwise, we check first if the type is a struct or array, in which
-        // case we descend recursively into its members before continuing on with the default.
-        if (elementType.isStruct()) {
-            // TODO:
-            return nullptr;
-        }
-        if (elementType.isArray()) {
-            // TODO:
-            return nullptr;
-        }
-
-        // Finally, if we have a default then it must now be assignment compatible.
-        if (defaultSetter) {
+        if (elementType.isSimpleBitVector() &&
+            elementType.isAssignmentCompatible(*defaultSetter->type)) {
             return &Expression::bindRValue(elementType, *defaultSyntax,
                                            defaultSyntax->getFirstToken().location(), context);
         }
-
-        // Otherwise there's no setter for this element, which is an error.
-        context.addDiag(diag::AssignmentPatternMissingElements, sourceRange);
-        return nullptr;
-    };
-
-    optional<const Expression*> cachedVal;
-    for (int32_t i = arrayRange.lower(); i <= arrayRange.upper(); i++) {
-        // If we already have a setter for this index we don't have to do anything else.
-        if (auto it = indexMap.find(i); it != indexMap.end()) {
-            results.append(it->second);
-            continue;
-        }
-
-        if (!cachedVal) {
-            cachedVal = determineVal();
-            if (!cachedVal.value())
-                return true;
-        }
-
-        results.append(*cachedVal);
     }
 
-    return false;
+    // Otherwise, we check first if the type is a struct or array, in which
+    // case we descend recursively into its members before continuing on with the default.
+    if (elementType.isStruct()) {
+        const Scope* structScope;
+        if (elementType.isUnpackedStruct())
+            structScope = &elementType.getCanonicalType().as<UnpackedStructType>();
+        else
+            structScope = &elementType.getCanonicalType().as<PackedStructType>();
+
+        SmallVectorSized<const Expression*, 8> elements;
+        for (auto& field : structScope->membersOfType<FieldSymbol>()) {
+            const Type& type = field.getType();
+            if (type.isError() || field.name.empty())
+                return nullptr;
+
+            auto elemExpr =
+                matchElementValue(context, type, &field, sourceRange, typeSetters, defaultSetter);
+            if (!elemExpr)
+                return nullptr;
+
+            elements.append(elemExpr);
+        }
+
+        auto& comp = context.getCompilation();
+        return comp.emplace<SimpleAssignmentPatternExpression>(elementType, elements.copy(comp),
+                                                               sourceRange);
+    }
+
+    if (elementType.isArray() && elementType.hasFixedRange()) {
+        auto nestedElemType = elementType.getArrayElementType();
+        ASSERT(nestedElemType);
+
+        auto elemExpr = matchElementValue(context, *nestedElemType, nullptr, sourceRange,
+                                          typeSetters, defaultSetter);
+        if (!elemExpr)
+            return nullptr;
+
+        SmallVectorSized<const Expression*, 8> elements;
+        auto arrayRange = elementType.getFixedRange();
+        for (int32_t i = arrayRange.lower(); i <= arrayRange.upper(); i++)
+            elements.append(elemExpr);
+
+        auto& comp = context.getCompilation();
+        return comp.emplace<SimpleAssignmentPatternExpression>(elementType, elements.copy(comp),
+                                                               sourceRange);
+    }
+
+    // Finally, if we have a default then it must now be assignment compatible.
+    if (defaultSetter) {
+        return &Expression::bindRValue(elementType, *defaultSyntax,
+                                       defaultSyntax->getFirstToken().location(), context);
+    }
+
+    // Otherwise there's no setter for this element, which is an error.
+    if (targetField) {
+        auto& diag = context.addDiag(diag::AssignmentPatternNoMember, sourceRange);
+        diag << targetField->name;
+        diag.addNote(diag::NoteDeclarationHere, targetField->location);
+    }
+    else {
+        context.addDiag(diag::AssignmentPatternMissingElements, sourceRange);
+    }
+
+    return nullptr;
 }
 
 Expression& StructuredAssignmentPatternExpression::forStruct(
@@ -573,8 +505,28 @@ Expression& StructuredAssignmentPatternExpression::forStruct(
     }
 
     SmallVectorSized<const Expression*, 8> elements;
-    bad |= matchMembers(context, structScope, syntax.sourceRange(), memberMap, typeSetters,
-                        defaultSetter, elements);
+    for (auto& field : structScope.membersOfType<FieldSymbol>()) {
+        // If we already have a setter for this field we don't have to do anything else.
+        if (auto it = memberMap.find(&field); it != memberMap.end()) {
+            elements.append(it->second);
+            continue;
+        }
+
+        const Type& fieldType = field.getType();
+        if (fieldType.isError() || field.name.empty()) {
+            bad = true;
+            continue;
+        }
+
+        auto expr =
+            matchElementValue(context, fieldType, &field, sourceRange, typeSetters, defaultSetter);
+        if (!expr) {
+            bad = true;
+            continue;
+        }
+
+        elements.append(expr);
+    }
 
     auto result = comp.emplace<StructuredAssignmentPatternExpression>(
         type, memberSetters.copy(comp), typeSetters.copy(comp), span<const IndexSetter>{},
@@ -673,8 +625,27 @@ Expression& StructuredAssignmentPatternExpression::forFixedArray(
     }
 
     SmallVectorSized<const Expression*, 8> elements;
-    bad |= matchElements(context, elementType, type.getFixedRange(), syntax.sourceRange(), indexMap,
-                         typeSetters, defaultSetter, elements);
+    optional<const Expression*> cachedVal;
+    auto arrayRange = type.getFixedRange();
+
+    for (int32_t i = arrayRange.lower(); i <= arrayRange.upper(); i++) {
+        // If we already have a setter for this index we don't have to do anything else.
+        if (auto it = indexMap.find(i); it != indexMap.end()) {
+            elements.append(it->second);
+            continue;
+        }
+
+        if (!cachedVal) {
+            cachedVal = matchElementValue(context, elementType, nullptr, syntax.sourceRange(),
+                                          typeSetters, defaultSetter);
+            if (!cachedVal.value()) {
+                bad = true;
+                break;
+            }
+        }
+
+        elements.append(*cachedVal);
+    }
 
     auto result = comp.emplace<StructuredAssignmentPatternExpression>(
         type, span<const MemberSetter>{}, typeSetters.copy(comp), indexSetters.copy(comp),
