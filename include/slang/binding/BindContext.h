@@ -127,8 +127,8 @@ enum class BindFlags {
     /// assertion formal ports have specific type requirements.
     AssertionDelayOrRepetition = 1 << 24,
 
-    /// Binding is in a context that requires a variable lvalue.
-    VariableLValue = 1 << 25,
+    /// Binding is for the left hand side of an assignment operation.
+    LValue = 1 << 25,
 
     /// Binding is for the negation of a property, which disallows recursive
     /// instantiations.
@@ -250,6 +250,7 @@ public:
     Compilation& getCompilation() const;
     LookupLocation getLocation() const { return LookupLocation(scope, uint32_t(lookupIndex)); }
     bool inUnevaluatedBranch() const { return (flags & BindFlags::UnevaluatedBranch) != 0; }
+    bool isPortConnection() const;
 
     void setAttributes(const Statement& stmt,
                        span<const AttributeInstanceSyntax* const> syntax) const;

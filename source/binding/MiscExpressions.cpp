@@ -847,7 +847,7 @@ Expression& AssertionInstanceExpression::bindPort(const Symbol& symbol, SourceRa
             }
         }
 
-        if (instanceCtx.flags.has(BindFlags::VariableLValue) && !formal.localVarDirection) {
+        if (instanceCtx.flags.has(BindFlags::LValue) && !formal.localVarDirection) {
             instanceCtx.addDiag(diag::AssertionPortTypedLValue, range) << formal.name;
             return badExpr(comp, nullptr);
         }

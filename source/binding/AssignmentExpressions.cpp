@@ -399,8 +399,7 @@ Expression& AssignmentExpression::fromSyntax(Compilation& compilation,
             if (rhs->bad())
                 return badExpr(compilation, rhs);
 
-            Expression* lhs =
-                &create(compilation, *syntax.left, context, BindFlags::None, rhs->type);
+            auto lhs = &create(compilation, *syntax.left, context, BindFlags::LValue, rhs->type);
             selfDetermined(context, lhs);
 
             return fromComponents(compilation, op, isNonBlocking, *lhs, *rhs,
@@ -409,8 +408,7 @@ Expression& AssignmentExpression::fromSyntax(Compilation& compilation,
         }
     }
 
-    auto& lhs =
-        selfDetermined(compilation, *syntax.left, context, extraFlags | BindFlags::VariableLValue);
+    auto& lhs = selfDetermined(compilation, *syntax.left, context, extraFlags | BindFlags::LValue);
 
     Expression* rhs = nullptr;
     if (lhs.type->isVirtualInterface())

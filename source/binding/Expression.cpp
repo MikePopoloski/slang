@@ -186,10 +186,16 @@ const Expression& Expression::bindLValue(const ExpressionSyntax& lhs, const Type
     if (rhsExpr->bad())
         return badExpr(comp, nullptr);
 
-    Expression* lhsExpr = (lhs.kind == SyntaxKind::StreamingConcatenationExpression && !isInout &&
-                           !(context.instance && !context.instance->arrayPath.empty()))
-                              ? &selfDetermined(comp, lhs, context, BindFlags::StreamingAllowed)
-                              : &create(comp, lhs, context, BindFlags::None, rhsExpr->type);
+    Expression* lhsExpr;
+    if (lhs.kind == SyntaxKind::StreamingConcatenationExpression && !isInout &&
+        !context.isPortConnection()) {
+        lhsExpr =
+            &selfDetermined(comp, lhs, context, BindFlags::StreamingAllowed | BindFlags::LValue);
+    }
+    else {
+        lhsExpr = &create(comp, lhs, context, BindFlags::LValue, rhsExpr->type);
+    }
+
     selfDetermined(context, lhsExpr);
 
     SourceRange lhsRange = lhs.sourceRange();
@@ -211,7 +217,7 @@ const Expression& Expression::bindRValue(const Type& lhs, const ExpressionSyntax
             return checkBindFlags(*ref, ctx);
     }
 
-    if (!ctx.instance || ctx.instance->arrayPath.empty())
+    if (!ctx.isPortConnection())
         extraFlags |= BindFlags::StreamingAllowed;
 
     Expression& expr = create(comp, rhs, ctx, extraFlags, &lhs);

@@ -14,6 +14,7 @@
 #include "slang/diagnostics/StatementsDiags.h"
 #include "slang/diagnostics/TypesDiags.h"
 #include "slang/symbols/AttributeSymbol.h"
+#include "slang/symbols/InstanceSymbols.h"
 #include "slang/symbols/SubroutineSymbols.h"
 #include "slang/symbols/VariableSymbols.h"
 #include "slang/syntax/AllSyntax.h"
@@ -23,6 +24,10 @@ namespace slang {
 
 Compilation& BindContext::getCompilation() const {
     return scope->getCompilation();
+}
+
+bool BindContext::isPortConnection() const {
+    return instance && !instance->arrayPath.empty();
 }
 
 void BindContext::setAttributes(const Statement& stmt,

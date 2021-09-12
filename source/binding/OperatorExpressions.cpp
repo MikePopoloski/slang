@@ -292,7 +292,7 @@ Expression& UnaryExpression::fromSyntax(Compilation& compilation,
     auto op = getUnaryOperator(syntax.kind);
     bitmask<BindFlags> extraFlags;
     if (isLValueOp(op))
-        extraFlags = BindFlags::VariableLValue;
+        extraFlags = BindFlags::LValue;
 
     Expression& operand = create(compilation, *syntax.operand, context, extraFlags);
     const Type* type = operand.type;
@@ -373,7 +373,7 @@ Expression& UnaryExpression::fromSyntax(Compilation& compilation,
                                         const BindContext& context) {
     // This method is only ever called for postincrement and postdecrement operators, so
     // the operand must be an lvalue.
-    Expression& operand = create(compilation, *syntax.operand, context, BindFlags::VariableLValue);
+    Expression& operand = create(compilation, *syntax.operand, context, BindFlags::LValue);
     const Type* type = operand.type;
 
     Expression* result = compilation.emplace<UnaryExpression>(getUnaryOperator(syntax.kind), *type,
