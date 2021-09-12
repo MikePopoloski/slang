@@ -792,8 +792,42 @@ Expression& StructuredAssignmentPatternExpression::forAssociativeArray(
     return *result;
 }
 
-void StructuredAssignmentPatternExpression::serializeTo(ASTSerializer&) const {
-    // TODO:
+void StructuredAssignmentPatternExpression::serializeTo(ASTSerializer& serializer) const {
+    if (defaultSetter)
+        serializer.write("defaultSetter", *defaultSetter);
+
+    if (!memberSetters.empty()) {
+        serializer.startArray("memberSetters");
+        for (auto& setter : memberSetters) {
+            serializer.startObject();
+            serializer.writeLink("member", *setter.member);
+            serializer.write("expr", *setter.expr);
+            serializer.endObject();
+        }
+        serializer.endArray();
+    }
+
+    if (!typeSetters.empty()) {
+        serializer.startArray("typeSetters");
+        for (auto& setter : typeSetters) {
+            serializer.startObject();
+            serializer.write("type", *setter.type);
+            serializer.write("expr", *setter.expr);
+            serializer.endObject();
+        }
+        serializer.endArray();
+    }
+
+    if (!indexSetters.empty()) {
+        serializer.startArray("indexSetters");
+        for (auto& setter : indexSetters) {
+            serializer.startObject();
+            serializer.write("index", *setter.index);
+            serializer.write("expr", *setter.expr);
+            serializer.endObject();
+        }
+        serializer.endArray();
+    }
 }
 
 const Expression& ReplicatedAssignmentPatternExpression::bindReplCount(

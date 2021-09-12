@@ -74,18 +74,18 @@ struct StructuredAssignmentPatternSyntax;
 class StructuredAssignmentPatternExpression : public AssignmentPatternExpressionBase {
 public:
     struct MemberSetter {
-        const Symbol* member = nullptr;
-        const Expression* expr = nullptr;
+        not_null<const Symbol*> member;
+        not_null<const Expression*> expr;
     };
 
     struct TypeSetter {
-        const Type* type = nullptr;
-        const Expression* expr = nullptr;
+        not_null<const Type*> type;
+        not_null<const Expression*> expr;
     };
 
     struct IndexSetter {
-        const Expression* index = nullptr;
-        const Expression* expr = nullptr;
+        not_null<const Expression*> index;
+        not_null<const Expression*> expr;
     };
 
     span<const MemberSetter> memberSetters;
