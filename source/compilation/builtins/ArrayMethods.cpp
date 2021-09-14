@@ -69,6 +69,7 @@ public:
             }
 
             auto it = begin(arr);
+            auto guard = context.disableCaching();
             auto iterVal = context.createLocal(iterVar, *it);
             ConstantValue cv = iterExpr->eval(context);
             if (!cv)
@@ -152,6 +153,7 @@ public:
         auto [iterExpr, iterVar] = callInfo.getIteratorInfo();
         if (iterExpr) {
             ASSERT(iterVar);
+            auto guard = context.disableCaching();
             auto iterVal = context.createLocal(iterVar);
 
             auto sortTarget = [&, ie = iterExpr](auto& target) {
@@ -287,6 +289,7 @@ public:
             return nullptr;
 
         auto [iterExpr, iterVar] = callInfo.getIteratorInfo();
+        auto guard = context.disableCaching();
         auto iterVal = context.createLocal(iterVar);
 
         SVQueue results;
@@ -400,6 +403,7 @@ public:
             ASSERT(iterVar);
 
             auto it = begin(arr);
+            auto guard = context.disableCaching();
             auto iterVal = context.createLocal(iterVar, *it);
             ConstantValue elem = *it;
             ConstantValue val = iterExpr->eval(context);
@@ -488,6 +492,7 @@ public:
         auto [iterExpr, iterVar] = callInfo.getIteratorInfo();
         if (iterExpr) {
             ASSERT(iterVar);
+            auto guard = context.disableCaching();
             auto iterVal = context.createLocal(iterVar);
 
             uint32_t index = 0;

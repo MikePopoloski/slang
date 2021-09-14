@@ -12,6 +12,7 @@
 
 #include "slang/numeric/ConstantValue.h"
 #include "slang/symbols/Scope.h"
+#include "slang/util/ScopeGuard.h"
 
 namespace slang {
 
@@ -109,6 +110,20 @@ public:
     /// Indicates whether the results of evaluating expressions using this context
     /// can be cached in each expression's `constant` pointer.
     bool cacheResults() const { return !inFunction() && (flags & EvalFlags::CacheResults) != 0; }
+
+    /// If result caching is enabled, this method disables it and returns an
+    /// object that when destructed will restore the previous caching mode.
+    /// Otherwise does nothing.
+    [[nodiscard]] auto disableCaching() {
+        auto guard = ScopeGuard([this, saved = flags.has(EvalFlags::CacheResults)] {
+            if (saved)
+                flags |= EvalFlags::CacheResults;
+            else
+                flags &= ~EvalFlags::CacheResults;
+        });
+        flags &= ~EvalFlags::CacheResults;
+        return guard;
+    }
 
     /// Gets the top of the call stack.
     const Frame& topFrame() const { return stack.back(); }

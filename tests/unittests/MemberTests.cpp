@@ -2066,3 +2066,19 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Param sum with regression GH #432") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    parameter logic [7:0] m1 [2] = '{ 5, 10 };
+    parameter int y1 = m1.sum with(item);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    auto cv = compilation.getRoot().lookupName<ParameterSymbol>("m.y1").getValue();
+    CHECK(cv.integer() == 15);
+}
