@@ -2202,3 +2202,24 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Class with randsequence") {
+    auto tree = SyntaxTree::fromText(R"(
+class C;
+    int x;
+    function foo;
+        randsequence( main )
+            main : first second third;
+            first : { x = x + 10; };
+            second : { if(x) break; } fourth;
+            third : { x = x + 10; };
+            fourth : { x = x + 15; };
+        endsequence
+    endfunction
+endclass
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}

@@ -738,7 +738,8 @@ void unwrapResult(const Scope& scope, optional<SourceRange> range, LookupResult&
 const Symbol* findThisHandle(const Scope& scope, SourceRange range, LookupResult& result) {
     // Find the parent method, if we can.
     const Symbol* parent = &scope.asSymbol();
-    while (parent->kind == SymbolKind::StatementBlock) {
+    while (parent->kind == SymbolKind::StatementBlock ||
+           parent->kind == SymbolKind::RandSeqProduction) {
         auto parentScope = parent->getParentScope();
         ASSERT(parentScope);
         parent = &parentScope->asSymbol();
@@ -1071,7 +1072,8 @@ std::pair<const ClassType*, bool> Lookup::getContainingClass(const Scope& scope)
     const Symbol* parent = &scope.asSymbol();
     bool inStatic = false;
     while (parent->kind == SymbolKind::StatementBlock || parent->kind == SymbolKind::Subroutine ||
-           parent->kind == SymbolKind::ConstraintBlock) {
+           parent->kind == SymbolKind::ConstraintBlock ||
+           parent->kind == SymbolKind::RandSeqProduction) {
         if (parent->kind == SymbolKind::Subroutine) {
             // Remember whether this was a static class method.
             if (parent->as<SubroutineSymbol>().flags & MethodFlags::Static)
