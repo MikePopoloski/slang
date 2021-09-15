@@ -1161,3 +1161,16 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Enum used in uninstantiated module -- regress") {
+    auto tree = SyntaxTree::fromText(R"(
+module m #(parameter foo);
+    typedef enum logic[foo-1:0] { A, B } et;
+    int i = A;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}

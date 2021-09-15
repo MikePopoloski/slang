@@ -291,13 +291,10 @@ const Type& EnumType::fromSyntax(Compilation& compilation, const EnumTypeSyntax&
     else {
         base = &compilation.getType(*syntax.baseType, location, scope);
         cb = &base->getCanonicalType();
-        if (cb->isError())
-            return *cb;
-
-        if (!cb->isSimpleBitVector()) {
+        if (!cb->isError() && !cb->isSimpleBitVector()) {
             scope.addDiag(diag::InvalidEnumBase, syntax.baseType->getFirstToken().location())
                 << *base;
-            return compilation.getErrorType();
+            cb = &compilation.getErrorType();
         }
 
         bitWidth = cb->getBitWidth();
@@ -339,7 +336,7 @@ const Type& EnumType::fromSyntax(Compilation& compilation, const EnumTypeSyntax&
         previous = ev.getValue();
         previousRange = ev.getInitializer()->sourceRange;
 
-        if (!previous)
+        if (!previous || cb->isError())
             return;
 
         auto loc = previousRange.start();
@@ -400,7 +397,7 @@ const Type& EnumType::fromSyntax(Compilation& compilation, const EnumTypeSyntax&
             value = SVInt(bitWidth, 0, cb->isSigned());
             first = false;
         }
-        else if (!previous) {
+        else if (!previous || cb->isError()) {
             return;
         }
         else {
