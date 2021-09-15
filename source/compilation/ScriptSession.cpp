@@ -91,6 +91,7 @@ Diagnostics ScriptSession::getDiagnostics() {
 
     result.appendRange(compilation.getAllDiagnostics());
     result.appendRange(evalContext.getDiagnostics());
+    result.sort(SyntaxTree::getDefaultSourceManager());
     return result;
 }
 
