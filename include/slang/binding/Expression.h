@@ -262,11 +262,12 @@ public:
     optional<bitwidth_t> getEffectiveWidth() const;
 
     /// If this expression is a reference to a symbol, returns a pointer to that symbol.
-    /// Otherwise, returns null. If the expression is a member access of an unpacked struct
-    /// or class, returns the member being accessed. If it's an element select of an unpacked
-    /// array, returns the root array variable. Selects of a packed types are not considered
-    /// symbol references.
-    const Symbol* getSymbolReference() const;
+    /// Otherwise, returns null. If the expression is a member access of a struct
+    /// or class, returns the member being accessed. If it's a select of an array, returns
+    /// the root array variable. The @a allowPacked argument determines whether selects
+    /// of a packed type are considered a symbol reference or whether to consider only
+    /// unpacked structs and arrays.
+    const Symbol* getSymbolReference(bool allowPacked = true) const;
 
     template<typename T>
     T& as() {

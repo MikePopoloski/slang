@@ -2223,3 +2223,25 @@ endclass
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Bit-slice of rand variable in dist constraint GH #437") {
+    auto tree = SyntaxTree::fromText(R"(
+class C;
+    rand bit [63:0] value;
+    constraint value_c {
+        value[63] dist {0 :/ 70, 1 :/ 30};
+        value[0] == 1'b0;
+        value[15:8] inside {
+            8'h0,
+            8'hF
+        };
+    }
+    function new();
+    endfunction
+endclass
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}

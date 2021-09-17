@@ -413,7 +413,7 @@ bool Expression::verifyAssignable(const BindContext& context, SourceLocation loc
 }
 
 bool Expression::canConnectToRefArg(bool isConstRef, bool allowConstClassHandle) const {
-    auto sym = getSymbolReference();
+    auto sym = getSymbolReference(/* allowPacked */ false);
     if (!sym || !VariableSymbol::isKind(sym->kind))
         return false;
 
@@ -441,24 +441,28 @@ optional<bitwidth_t> Expression::getEffectiveWidth() const {
     return visit(visitor);
 }
 
-const Symbol* Expression::getSymbolReference() const {
+const Symbol* Expression::getSymbolReference(bool allowPacked) const {
     switch (kind) {
         case ExpressionKind::NamedValue:
         case ExpressionKind::HierarchicalValue:
             return &as<ValueExpressionBase>().symbol;
         case ExpressionKind::ElementSelect: {
             auto& val = as<ElementSelectExpression>().value();
-            return val.type->isUnpackedArray() ? val.getSymbolReference() : nullptr;
+            return (allowPacked || val.type->isUnpackedArray()) ? val.getSymbolReference()
+                                                                : nullptr;
         }
         case ExpressionKind::RangeSelect: {
             auto& val = as<RangeSelectExpression>().value();
-            return val.type->isUnpackedArray() ? val.getSymbolReference() : nullptr;
+            return (allowPacked || val.type->isUnpackedArray()) ? val.getSymbolReference()
+                                                                : nullptr;
         }
         case ExpressionKind::MemberAccess: {
             auto& access = as<MemberAccessExpression>();
             auto& val = access.value();
-            if (val.type->isClass() || val.type->isUnpackedStruct())
+            if (val.type->isClass() || allowPacked || val.type->isUnpackedStruct() ||
+                val.type->isUnpackedUnion()) {
                 return &access.member;
+            }
             return nullptr;
         }
         case ExpressionKind::HierarchicalReference:

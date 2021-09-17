@@ -1451,6 +1451,7 @@ module m;
         const ref int b;
         ref int c;
         ref int d;
+        ref logic e;
     endfunction
 
     const int a = 1;
@@ -1458,7 +1459,7 @@ module m;
     logic [3:0] c;
     
     initial begin
-        foo(a, a + 2, b, c);
+        foo(a, a + 2, b, c, c[0]);
     end
 
     function void bar;
@@ -1473,13 +1474,14 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 6);
+    REQUIRE(diags.size() == 7);
     CHECK(diags[0].code == diag::ConstVarToRef);
     CHECK(diags[1].code == diag::InvalidRefArg);
     CHECK(diags[2].code == diag::InvalidRefArg);
     CHECK(diags[3].code == diag::RefTypeMismatch);
-    CHECK(diags[4].code == diag::RefArgAutomaticFunc);
+    CHECK(diags[4].code == diag::InvalidRefArg);
     CHECK(diags[5].code == diag::RefArgAutomaticFunc);
+    CHECK(diags[6].code == diag::RefArgAutomaticFunc);
 }
 
 TEST_CASE("specparams") {
