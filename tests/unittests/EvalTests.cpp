@@ -1511,17 +1511,17 @@ TEST_CASE("Real conversion functions") {
 TEST_CASE("Real math functions") {
     ScriptSession session;
 
-    CHECK(session.eval("$ln(123.456)").real() == log(123.456));
-    CHECK(session.eval("$log10(123.456)").real() == log10(123.456));
-    CHECK(session.eval("$exp(123.456)").real() == exp(123.456));
-    CHECK(session.eval("$sqrt(123.456)").real() == sqrt(123.456));
-    CHECK(session.eval("$floor(123.456)").real() == floor(123.456));
-    CHECK(session.eval("$ceil(123.456)").real() == ceil(123.456));
-    CHECK(session.eval("$sin(123.456)").real() == sin(123.456));
-    CHECK(session.eval("$cos(123.456)").real() == cos(123.456));
-    CHECK(session.eval("$tan(123.456)").real() == tan(123.456));
-    CHECK(session.eval("$asin(0.456)").real() == asin(0.456));
-    CHECK(session.eval("$acos(0.456)").real() == acos(0.456));
+    CHECK(session.eval("$ln(123.456)").real() == Approx(log(123.456)));
+    CHECK(session.eval("$log10(123.456)").real() == Approx(log10(123.456)));
+    CHECK(session.eval("$exp(123.456)").real() == Approx(exp(123.456)));
+    CHECK(session.eval("$sqrt(123.456)").real() == Approx(sqrt(123.456)));
+    CHECK(session.eval("$floor(123.456)").real() == Approx(floor(123.456)));
+    CHECK(session.eval("$ceil(123.456)").real() == Approx(ceil(123.456)));
+    CHECK(session.eval("$sin(123.456)").real() == Approx(sin(123.456)));
+    CHECK(session.eval("$cos(123.456)").real() == Approx(cos(123.456)));
+    CHECK(session.eval("$tan(123.456)").real() == Approx(tan(123.456)));
+    CHECK(session.eval("$asin(0.456)").real() == Approx(asin(0.456)));
+    CHECK(session.eval("$acos(0.456)").real() == Approx(acos(0.456)));
     CHECK(session.eval("$atan(0.456)").real() == Approx(atan(0.456)));
     CHECK(session.eval("$sinh(0.456)").real() == Approx(sinh(0.456)));
     CHECK(session.eval("$cosh(0.456)").real() == Approx(cosh(0.456)));
@@ -1530,9 +1530,9 @@ TEST_CASE("Real math functions") {
     CHECK(session.eval("$acosh(123.456)").real() == Approx(acosh(123.456)));
     CHECK(session.eval("$atanh(0.456)").real() == Approx(atanh(0.456)));
 
-    CHECK(session.eval("$pow(2.1, 1.456)").real() == pow(2.1, 1.456));
-    CHECK(session.eval("$atan2(2.1, 1.456)").real() == atan2(2.1, 1.456));
-    CHECK(session.eval("$hypot(2.1, 1.456)").real() == hypot(2.1, 1.456));
+    CHECK(session.eval("$pow(2.1, 1.456)").real() == Approx(pow(2.1, 1.456)));
+    CHECK(session.eval("$atan2(2.1, 1.456)").real() == Approx(atan2(2.1, 1.456)));
+    CHECK(session.eval("$hypot(2.1, 1.456)").real() == Approx(hypot(2.1, 1.456)));
 
     NO_SESSION_ERRORS;
 }
@@ -2309,11 +2309,10 @@ struct {
     struct { real r; } r[2];
 } bar[1:2][4:3] = '{int:1, time:2, real:3.14, default:2};)");
 
-    CHECK(session.eval("bar").toString() ==
-        "[[[[1,1],64'h2,6'b10,32'd2,[[3.14],[3.14]]],"
-        "[[1,1],64'h2,6'b10,32'd2,[[3.14],[3.14]]]],"
-        "[[[1,1],64'h2,6'b10,32'd2,[[3.14],[3.14]]],"
-        "[[1,1],64'h2,6'b10,32'd2,[[3.14],[3.14]]]]]");
+    CHECK(session.eval("bar").toString() == "[[[[1,1],64'h2,6'b10,32'd2,[[3.14],[3.14]]],"
+                                            "[[1,1],64'h2,6'b10,32'd2,[[3.14],[3.14]]]],"
+                                            "[[[1,1],64'h2,6'b10,32'd2,[[3.14],[3.14]]],"
+                                            "[[1,1],64'h2,6'b10,32'd2,[[3.14],[3.14]]]]]");
 
     NO_SESSION_ERRORS;
 }
