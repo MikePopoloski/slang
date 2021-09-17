@@ -2169,8 +2169,7 @@ Statement& WaitOrderStatement::fromSyntax(Compilation& compilation,
         if (ev.bad())
             return badStmt(compilation, nullptr);
 
-        auto sym = ev.getSymbolReference();
-        if (!sym || !sym->isValue() || !sym->as<ValueSymbol>().getType().isEvent()) {
+        if (!ev.type->isEvent()) {
             context.addDiag(diag::NotAnEvent, name->sourceRange());
             return badStmt(compilation, nullptr);
         }
@@ -2229,8 +2228,7 @@ Statement& EventTriggerStatement::fromSyntax(Compilation& compilation,
     if (target.bad())
         return badStmt(compilation, nullptr);
 
-    auto sym = target.getSymbolReference();
-    if (!sym || !sym->isValue() || !sym->as<ValueSymbol>().getType().isEvent()) {
+    if (!target.type->isEvent()) {
         context.addDiag(diag::NotAnEvent, syntax.name->sourceRange());
         return badStmt(compilation, nullptr);
     }

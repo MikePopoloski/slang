@@ -981,9 +981,11 @@ TEST_CASE("Event triggering statements") {
     auto tree = SyntaxTree::fromText(R"(
 module m;
     event e;
+    event arr[3];
     initial begin
         -> e;
         ->> #3 e;
+        -> arr[1];
     end
 endmodule
 )");
