@@ -28,7 +28,7 @@ public:
 
     void setIncludeAddresses(bool set) { includeAddrs = set; }
 
-    void serialize(const Symbol& symbol);
+    void serialize(const Symbol& symbol, bool inMembersArray = false);
     void serialize(const Expression& expr);
     void serialize(const Statement& statement);
     void serialize(const TimingControl& timing);
@@ -83,7 +83,7 @@ private:
     friend AssertionExpr;
 
     template<typename T>
-    void visit(const T& symbol);
+    void visit(const T& symbol, bool inMembersArray = false);
 
     void visitInvalid(const Expression& expr);
     void visitInvalid(const Statement& statement);

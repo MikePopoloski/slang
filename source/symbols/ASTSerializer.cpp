@@ -15,8 +15,8 @@ ASTSerializer::ASTSerializer(Compilation& compilation, JsonWriter& writer) :
     compilation(compilation), writer(writer) {
 }
 
-void ASTSerializer::serialize(const Symbol& symbol) {
-    symbol.visit(*this);
+void ASTSerializer::serialize(const Symbol& symbol, bool inMembersArray) {
+    symbol.visit(*this, inMembersArray);
 }
 
 void ASTSerializer::serialize(const Expression& expr) {
@@ -145,7 +145,7 @@ void ASTSerializer::writeProperty(string_view name) {
 }
 
 template<typename T>
-void ASTSerializer::visit(const T& elem) {
+void ASTSerializer::visit(const T& elem, bool inMembersArray) {
     if constexpr (std::is_base_of_v<Expression, T>) {
         writer.startObject();
         write("kind", toString(elem.kind));
@@ -172,9 +172,6 @@ void ASTSerializer::visit(const T& elem) {
 
         writer.endObject();
     }
-    else if constexpr (std::is_base_of_v<Type, T> && !std::is_same_v<TypeAliasType, T>) {
-        writer.writeValue(elem.toString());
-    }
     else if constexpr (std::is_base_of_v<TimingControl, T> || std::is_base_of_v<Constraint, T> ||
                        std::is_base_of_v<AssertionExpr, T>) {
         writer.startObject();
@@ -185,7 +182,24 @@ void ASTSerializer::visit(const T& elem) {
         }
         writer.endObject();
     }
+    else if constexpr (std::is_base_of_v<Type, T> && !std::is_same_v<TypeAliasType, T> &&
+                       !std::is_same_v<ClassType, T>) {
+        writer.writeValue(elem.toString());
+    }
     else {
+        if constexpr (std::is_base_of_v<Type, T>) {
+            if (!inMembersArray) {
+                writer.writeValue(elem.toString());
+                return;
+            }
+        }
+
+        // Ignore built-in methods on class types.
+        if constexpr (std::is_same_v<SubroutineSymbol, T>) {
+            if (elem.flags.has(MethodFlags::NotConst | MethodFlags::Randomize))
+                return;
+        }
+
         writer.startObject();
         write("name", elem.name);
         write("kind", toString(elem.kind));
@@ -215,7 +229,7 @@ void ASTSerializer::visit(const T& elem) {
             if (!elem.empty()) {
                 startArray("members");
                 for (auto& member : elem.members())
-                    serialize(member);
+                    serialize(member, /* inMembersArray */ true);
                 endArray();
             }
         }

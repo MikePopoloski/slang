@@ -293,6 +293,12 @@ module test_enum;
     } STATE;
 
     STATE a = STATE_0;
+
+    class C;
+        int i;
+    endclass
+
+    C c = new;
 endmodule
 )");
 
@@ -340,20 +346,39 @@ endmodule
           {
             "name": "a",
             "kind": "Variable",
-            "type": {
-              "name": "STATE",
-              "kind": "TypeAlias",
-              "target": "enum{STATE_0=1'd0,STATE_1=1'd1}test_enum.e$1"
-            },
+            "type": "enum{STATE_0=1'd0,STATE_1=1'd1}test_enum.STATE",
             "initializer": {
               "kind": "NamedValue",
-              "type": {
-                "name": "STATE",
-                "kind": "TypeAlias",
-                "target": "enum{STATE_0=1'd0,STATE_1=1'd1}test_enum.e$1"
-              },
+              "type": "enum{STATE_0=1'd0,STATE_1=1'd1}test_enum.STATE",
               "symbol": "STATE_0",
               "constant": "1'b0"
+            },
+            "lifetime": "Static",
+            "isConstant": false,
+            "isCompilerGenerated": false
+          },
+          {
+            "name": "C",
+            "kind": "ClassType",
+            "members": [
+              {
+                "name": "i",
+                "kind": "ClassProperty",
+                "type": "int",
+                "lifetime": "Automatic",
+                "isConstant": false,
+                "isCompilerGenerated": false,
+                "visibility": "Public"
+              }
+            ]
+          },
+          {
+            "name": "c",
+            "kind": "Variable",
+            "type": "C",
+            "initializer": {
+              "kind": "NewClass",
+              "type": "C"
             },
             "lifetime": "Static",
             "isConstant": false,
