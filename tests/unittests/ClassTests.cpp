@@ -109,7 +109,7 @@ class C;
     pure local function logic foo4;
     virtual static function foo5; endfunction
 
-    virtual int m;
+    pure virtual int m;
     static automatic int n;
     static var static int o;
 
@@ -1945,7 +1945,7 @@ endclass
 TEST_CASE("Constraint qualifiers") {
     auto tree = SyntaxTree::fromText(R"(
 class A;
-    virtual constraint c1 { 1; }
+    rand constraint c1 { 1; }
     pure constraint c2 { 1; }
 
     static constraint c3 { 1; }
@@ -2275,6 +2275,22 @@ class C;
 endclass
 function void C::set_val(int unsigned new_val = _val);
 endfunction
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Virtual interface property with qualifiers") {
+    auto tree = SyntaxTree::fromText(R"(
+interface intf();
+endinterface
+class A;
+    protected virtual intf _my_intf;
+    function new();
+    endfunction
+endclass
 )");
 
     Compilation compilation;

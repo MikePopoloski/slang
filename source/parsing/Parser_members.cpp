@@ -1008,30 +1008,30 @@ MemberSyntax* Parser::parseClassMember(bool isIfaceClass) {
 
     auto attributes = parseAttributes();
 
-    // virtual keyword can either be a class decl, virtual interface, or a method qualifier;
-    // early out here if it's a class or interface
-    if (peek(TokenKind::VirtualKeyword)) {
-        switch (peek(1).kind) {
-            case TokenKind::ClassKeyword: {
-                auto& result = parseClassDeclaration(attributes, consume());
-                errorIfIface(result);
-                return &result;
-            }
-            case TokenKind::InterfaceKeyword:
-            case TokenKind::Identifier: {
-                auto& result = factory.classPropertyDeclaration(attributes, nullptr,
-                                                                parseVariableDeclaration({}));
-                errorIfIface(result);
-                return &result;
-            }
-            default:
-                break;
-        }
+    // virtual keyword can either be a class decl, virtual interface, or a method qualifier.
+    // Early out here if it's a class.
+    if (peek(TokenKind::VirtualKeyword) && peek(1).kind == TokenKind::ClassKeyword) {
+        auto& result = parseClassDeclaration(attributes, consume());
+        errorIfIface(result);
+        return &result;
     }
 
     bool isPureOrExtern = false;
     SmallVectorSized<Token, 4> qualifierBuffer;
     while (isMemberQualifier(peek().kind)) {
+        // As mentioned above, the virtual keyword needs special handling
+        // because it might be a virtual method or a virtual interface property.
+        if (peek(TokenKind::VirtualKeyword) && !isPureOrExtern) {
+            // If the next token after this is another qualifier or a method
+            // keyword then we should take it; otherwise assume that it will
+            // be parsed as a variable declaration.
+            auto kind = peek(1).kind;
+            if (!isMemberQualifier(kind) && kind != TokenKind::FunctionKeyword &&
+                kind != TokenKind::TaskKeyword) {
+                break;
+            }
+        }
+
         Token t = consume();
         qualifierBuffer.append(t);
         if (t.kind == TokenKind::PureKeyword || t.kind == TokenKind::ExternKeyword)
