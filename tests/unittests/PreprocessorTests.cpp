@@ -1687,4 +1687,20 @@ endmodule
 
     std::string result = preprocess(text);
     CHECK(result == expected);
+    CHECK_DIAGNOSTICS_EMPTY;
+}
+
+TEST_CASE("Macro named with keyword") {
+    auto& text = R"(
+`define const const
+`const
+)";
+
+    auto& expected = R"(
+const
+)";
+
+    std::string result = preprocess(text);
+    CHECK(result == expected);
+    CHECK_DIAGNOSTICS_EMPTY;
 }
