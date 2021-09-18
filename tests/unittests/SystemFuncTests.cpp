@@ -1002,3 +1002,19 @@ endmodule
     CHECK(diags[7].code == diag::PlaRangeInAscendingOrder);
     CHECK(diags[8].code == diag::PlaRangeInAscendingOrder);
 }
+
+TEST_CASE("Non-standard system funcs") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    int foo;
+    string s = $psprintf("%0d", foo);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::NonstandardSysFunc);
+}

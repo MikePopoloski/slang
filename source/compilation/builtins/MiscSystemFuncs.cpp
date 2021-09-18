@@ -19,7 +19,8 @@ namespace slang::Builtins {
 
 class SFormatFunction : public SystemSubroutine {
 public:
-    SFormatFunction() : SystemSubroutine("$sformatf", SubroutineKind::Function) {}
+    SFormatFunction(const std::string& name, bool isNonStandard) :
+        SystemSubroutine(name, SubroutineKind::Function), isNonStandard(isNonStandard) {}
 
     const Type& checkArguments(const BindContext& context, const Args& args, SourceRange range,
                                const Expression*) const final {
@@ -35,6 +36,9 @@ public:
 
         if (!FmtHelpers::checkSFormatArgs(context, args))
             return comp.getErrorType();
+
+        if (isNonStandard)
+            context.addDiag(diag::NonstandardSysFunc, range) << name;
 
         return comp.getStringType();
     }
@@ -55,6 +59,9 @@ public:
     }
 
     bool verifyConstant(EvalContext&, const Args&, SourceRange) const final { return true; }
+
+private:
+    bool isNonStandard;
 };
 
 class ValuePlusArgsFunction : public SystemSubroutine {
@@ -351,11 +358,13 @@ private:
 
 void registerMiscSystemFuncs(Compilation& c) {
 #define REGISTER(name) c.addSystemSubroutine(std::make_unique<name##Function>())
-    REGISTER(SFormat);
     REGISTER(ValuePlusArgs);
     REGISTER(ScopeRandomize);
     REGISTER(GlobalClock);
 #undef REGISTER
+
+    c.addSystemSubroutine(std::make_unique<SFormatFunction>("$sformatf", false));
+    c.addSystemSubroutine(std::make_unique<SFormatFunction>("$psprintf", true));
 
     c.addSystemMethod(SymbolKind::ClassType, std::make_unique<ClassRandomizeFunction>());
     c.addSystemMethod(SymbolKind::SequenceType, std::make_unique<SequenceMethod>("triggered"));
