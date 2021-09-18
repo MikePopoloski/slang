@@ -2392,3 +2392,21 @@ endmodule
     CHECK(diags[26].code == diag::AssignmentPatternMissingElements);
     CHECK(diags[27].code == diag::AssignmentPatternNoMember);
 }
+
+TEST_CASE("Set membership type checking regress GH #450") {
+    auto tree = SyntaxTree::fromText(R"(
+string val;
+function compare(string attr[$]);
+    if (val inside {attr}) begin
+    end
+endfunction
+function compare_singular(string attr1, string attr2);
+    if (val inside {attr1, attr2}) begin
+    end
+endfunction
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}

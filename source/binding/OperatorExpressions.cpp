@@ -226,9 +226,6 @@ bool Expression::bindMembershipExpressions(const BindContext& context, TokenKind
         if (bad)
             continue;
 
-        if (canBeStrings && !bound->isImplicitString())
-            canBeStrings = false;
-
         const Type* bt = bound->type;
         if (wildcard) {
             if (!bt->isIntegral()) {
@@ -245,6 +242,9 @@ bool Expression::bindMembershipExpressions(const BindContext& context, TokenKind
         // Special handling for open range expressions -- they don't have
         // a real type on their own, we need to check their bounds.
         if (bound->kind == ExpressionKind::OpenRange) {
+            if (canBeStrings && !bound->isImplicitString())
+                canBeStrings = false;
+
             auto& range = bound->as<OpenRangeExpression>();
             checkType(range.left(), *range.left().type);
             checkType(range.right(), *range.right().type);
@@ -257,6 +257,9 @@ bool Expression::bindMembershipExpressions(const BindContext& context, TokenKind
             while (bt->isUnpackedArray())
                 bt = bt->getArrayElementType();
         }
+
+        if (canBeStrings && !bound->isImplicitString() && !bt->isString())
+            canBeStrings = false;
 
         checkType(*bound, *bt);
     }
