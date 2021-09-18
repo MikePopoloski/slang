@@ -2063,6 +2063,8 @@ package p;
     int i;
     class Base;
         typedef int IntT;
+        int bar;
+        function int baz; return 1; endfunction
     endclass
     class A extends Base;
         rand int j;
@@ -2079,6 +2081,7 @@ module m;
         k = a.randomize with (j, q, foo) { j < foo() + k; };
         k = a.randomize with { j + local::l < 10; };
         k = a.randomize with (j) { j + l < 10; };
+        k = a.randomize with { bar + baz(); };
     end
 endmodule
 

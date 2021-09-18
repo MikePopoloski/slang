@@ -1137,7 +1137,7 @@ bool Lookup::ensureVisible(const Symbol& symbol, const BindContext& context,
 bool Lookup::ensureAccessible(const Symbol& symbol, const BindContext& context,
                               optional<SourceRange> sourceRange) {
     if (context.classRandomizeScope &&
-        symbol.getParentScope() == context.classRandomizeScope->classType) {
+        Lookup::isAccessibleFrom(symbol, context.classRandomizeScope->classType->asSymbol())) {
         return true;
     }
 

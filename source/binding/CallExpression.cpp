@@ -82,7 +82,7 @@ Expression& CallExpression::fromLookup(Compilation& compilation, const Subroutin
         subroutineParent.kind == SymbolKind::ClassType) {
 
         if (!context.classRandomizeScope ||
-            context.classRandomizeScope->classType != sub->getParentScope()) {
+            !Lookup::isAccessibleFrom(*sub, context.classRandomizeScope->classType->asSymbol())) {
 
             auto [parent, inStatic] = Lookup::getContainingClass(*context.scope);
             if (parent && !Lookup::isAccessibleFrom(*sub, *parent)) {
