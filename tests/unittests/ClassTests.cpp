@@ -2248,3 +2248,19 @@ endclass
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Class overriding inherited enumerand") {
+    auto tree = SyntaxTree::fromText(R"(
+class A;
+    typedef enum { FOO, BAR } e1;
+endclass
+
+class B extends A;
+    typedef enum { BAR, BAZ } e2;
+endclass
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}

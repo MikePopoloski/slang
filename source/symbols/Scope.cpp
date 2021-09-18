@@ -750,12 +750,6 @@ void Scope::elaborate() const {
             reportNameConflict(*member, *existing);
     }
 
-    // If this is a class type being elaborated, let it inherit members from parent classes.
-    if (thisSym->kind == SymbolKind::ClassType) {
-        thisSym->as<ClassType>().inheritMembers(
-            [this](const Symbol& member) { insertMember(&member, nullptr, true, true); });
-    }
-
     SmallSet<const SyntaxNode*, 8> enumDecls;
     for (const auto& pair : deferredData.getTransparentTypes()) {
         const Symbol* insertAt = pair.first;
@@ -770,6 +764,12 @@ void Scope::elaborate() const {
                 }
             }
         }
+    }
+
+    // If this is a class type being elaborated, let it inherit members from parent classes.
+    if (thisSym->kind == SymbolKind::ClassType) {
+        thisSym->as<ClassType>().inheritMembers(
+            [this](const Symbol& member) { insertMember(&member, nullptr, true, true); });
     }
 
     auto insertMembers = [this](auto& members, const Symbol* at) {
