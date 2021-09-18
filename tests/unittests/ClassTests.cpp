@@ -2264,3 +2264,20 @@ endclass
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Extern method default arg protected member") {
+    auto tree = SyntaxTree::fromText(R"(
+class C;
+    protected static int unsigned _val = 100;
+    extern virtual function void set_val(int unsigned new_val = _val);
+    virtual function void set_val2(int unsigned new_val = _val);
+    endfunction
+endclass
+function void C::set_val(int unsigned new_val = _val);
+endfunction
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
