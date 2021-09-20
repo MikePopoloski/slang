@@ -117,8 +117,7 @@ public:
 
     void serializeTo(ASTSerializer& serializer) const;
 
-    static ModportPortSymbol& fromSyntax(const Scope& parent, LookupLocation lookupLocation,
-                                         ArgumentDirection direction,
+    static ModportPortSymbol& fromSyntax(const BindContext& context, ArgumentDirection direction,
                                          const ModportNamedPortSyntax& syntax);
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::ModportPort; }
@@ -133,8 +132,7 @@ public:
 
     void serializeTo(ASTSerializer&) const {}
 
-    static void fromSyntax(const Scope& parent, const ModportDeclarationSyntax& syntax,
-                           LookupLocation lookupLocation,
+    static void fromSyntax(const BindContext& context, const ModportDeclarationSyntax& syntax,
                            SmallVector<const ModportSymbol*>& results);
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::Modport; }
@@ -154,8 +152,7 @@ public:
     void serializeTo(ASTSerializer& serializer) const;
 
     static void fromSyntax(Compilation& compilation, const ContinuousAssignSyntax& syntax,
-                           const Scope& scope, LookupLocation location,
-                           SmallVector<const Symbol*>& results,
+                           const BindContext& context, SmallVector<const Symbol*>& results,
                            SmallVector<const Symbol*>& implicitNets);
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::ContinuousAssign; }

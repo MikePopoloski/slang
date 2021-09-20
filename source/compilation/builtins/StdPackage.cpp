@@ -21,8 +21,8 @@ static const Symbol& createProcessClass(Compilation& c) {
     ClassBuilder builder(c, "process");
     builder.type.isAbstract = true;
 
-    auto stateEnum =
-        c.emplace<EnumType>(c, NL, c.getIntType(), LookupLocation(&builder.type, 1), builder.type);
+    BindContext enumCtx(builder.type, LookupLocation(&builder.type, 1));
+    auto stateEnum = c.emplace<EnumType>(c, NL, c.getIntType(), enumCtx);
     stateEnum->systemId = INT32_MAX - 2048;
 
     uint64_t index = 0;

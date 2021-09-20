@@ -153,9 +153,8 @@ bool IntegralType::isDeclaredReg() const {
 
 const Type& IntegralType::fromSyntax(Compilation& compilation, SyntaxKind integerKind,
                                      span<const VariableDimensionSyntax* const> dimensions,
-                                     bool isSigned, LookupLocation location, const Scope& scope) {
+                                     bool isSigned, const BindContext& context) {
     // This is a simple integral vector (possibly of just one element).
-    BindContext context(scope, location);
     SmallVectorSized<std::pair<ConstantRange, const SyntaxNode*>, 4> dims;
     for (auto dimSyntax : dimensions) {
         auto dim = context.evalPackedDimension(*dimSyntax);
@@ -186,16 +185,16 @@ const Type& IntegralType::fromSyntax(Compilation& compilation, SyntaxKind intege
     size_t count = dims.size();
     for (size_t i = 0; i < count; i++) {
         auto& pair = dims[count - i - 1];
-        result = &PackedArrayType::fromSyntax(scope, *result, pair.first, *pair.second);
+        result = &PackedArrayType::fromSyntax(*context.scope, *result, pair.first, *pair.second);
     }
 
     return *result;
 }
 
 const Type& IntegralType::fromSyntax(Compilation& compilation, const IntegerTypeSyntax& syntax,
-                                     LookupLocation location, const Scope& scope) {
+                                     const BindContext& context) {
     return fromSyntax(compilation, syntax.kind, syntax.dimensions,
-                      syntax.signing.kind == TokenKind::SignedKeyword, location, scope);
+                      syntax.signing.kind == TokenKind::SignedKeyword, context);
 }
 
 ConstantValue IntegralType::getDefaultValueImpl() const {
@@ -243,7 +242,7 @@ ConstantValue FloatingType::getDefaultValueImpl() const {
 }
 
 EnumType::EnumType(Compilation& compilation, SourceLocation loc, const Type& baseType_,
-                   LookupLocation lookupLocation, const Scope& scope) :
+                   const BindContext& context) :
     IntegralType(SymbolKind::EnumType, "", loc, baseType_.getBitWidth(), baseType_.isSigned(),
                  baseType_.isFourState()),
     Scope(compilation, this), baseType(baseType_), systemId(compilation.getNextEnumSystemId()) {
@@ -251,7 +250,7 @@ EnumType::EnumType(Compilation& compilation, SourceLocation loc, const Type& bas
     // Enum types don't live as members of the parent scope (they're "owned" by the declaration
     // containing them) but we hook up the parent pointer so that it can participate in name
     // lookups.
-    setParent(scope, lookupLocation.getIndex());
+    setParent(*context.scope, context.lookupIndex);
 }
 
 static void checkEnumRange(const BindContext& context, const VariableDimensionSyntax& syntax) {
@@ -276,8 +275,7 @@ static void checkEnumRange(const BindContext& context, const VariableDimensionSy
 }
 
 const Type& EnumType::fromSyntax(Compilation& compilation, const EnumTypeSyntax& syntax,
-                                 LookupLocation location, const Scope& scope,
-                                 const Type* typedefTarget) {
+                                 const BindContext& context, const Type* typedefTarget) {
     const Type* base;
     const Type* cb;
     bitwidth_t bitWidth;
@@ -289,10 +287,10 @@ const Type& EnumType::fromSyntax(Compilation& compilation, const EnumTypeSyntax&
         bitWidth = cb->getBitWidth();
     }
     else {
-        base = &compilation.getType(*syntax.baseType, location, scope);
+        base = &compilation.getType(*syntax.baseType, context);
         cb = &base->getCanonicalType();
         if (!cb->isError() && !cb->isSimpleBitVector()) {
-            scope.addDiag(diag::InvalidEnumBase, syntax.baseType->getFirstToken().location())
+            context.addDiag(diag::InvalidEnumBase, syntax.baseType->getFirstToken().location())
                 << *base;
             cb = &compilation.getErrorType();
         }
@@ -310,20 +308,20 @@ const Type& EnumType::fromSyntax(Compilation& compilation, const EnumTypeSyntax&
     SourceRange previousRange;
     bool first = true;
 
-    auto resultType = compilation.emplace<EnumType>(compilation, syntax.keyword.location(), *base,
-                                                    location, scope);
+    auto resultType =
+        compilation.emplace<EnumType>(compilation, syntax.keyword.location(), *base, context);
     resultType->setSyntax(syntax);
 
     // Enum values must be unique; this set and lambda are used to check that.
     SmallMap<SVInt, SourceLocation, 8> usedValues;
-    auto checkValue = [&usedValues, &scope](const ConstantValue& cv, SourceLocation loc) {
+    auto checkValue = [&usedValues, &context](const ConstantValue& cv, SourceLocation loc) {
         if (!cv)
             return;
 
         auto& value = cv.integer();
         auto pair = usedValues.emplace(value, loc);
         if (!pair.second) {
-            auto& diag = scope.addDiag(diag::EnumValueDuplicate, loc) << value;
+            auto& diag = context.addDiag(diag::EnumValueDuplicate, loc) << value;
             diag.addNote(diag::NotePreviousDefinition, pair.first->second);
         }
     };
@@ -345,7 +343,7 @@ const Type& EnumType::fromSyntax(Compilation& compilation, const EnumTypeSyntax&
         // An enumerated name with x or z assignments assigned to an enum with no explicit data type
         // or an explicit 2-state declaration shall be a syntax error.
         if (!base->isFourState() && value.hasUnknown()) {
-            scope.addDiag(diag::EnumValueUnknownBits, loc) << value << *base;
+            context.addDiag(diag::EnumValueUnknownBits, loc) << value << *base;
             ev.setValue(nullptr);
             previous = nullptr;
             return;
@@ -367,7 +365,7 @@ const Type& EnumType::fromSyntax(Compilation& compilation, const EnumTypeSyntax&
             }
 
             if (!good) {
-                scope.addDiag(diag::EnumValueOutOfRange, loc) << value << *base;
+                context.addDiag(diag::EnumValueOutOfRange, loc) << value << *base;
                 ev.setValue(nullptr);
                 previous = nullptr;
                 return;
@@ -403,13 +401,13 @@ const Type& EnumType::fromSyntax(Compilation& compilation, const EnumTypeSyntax&
         else {
             auto& prev = previous.integer();
             if (prev.hasUnknown()) {
-                auto& diag = scope.addDiag(diag::EnumIncrementUnknown, loc);
+                auto& diag = context.addDiag(diag::EnumIncrementUnknown, loc);
                 diag << prev << *base << previousRange;
                 previous = nullptr;
                 return;
             }
             else if (prev == allOnes) {
-                auto& diag = scope.addDiag(diag::EnumValueOverflow, loc);
+                auto& diag = context.addDiag(diag::EnumValueOverflow, loc);
                 diag << prev << *base << previousRange;
                 previous = nullptr;
                 return;
@@ -425,8 +423,6 @@ const Type& EnumType::fromSyntax(Compilation& compilation, const EnumTypeSyntax&
         previousRange = range;
     };
 
-    BindContext context(scope, location);
-
     for (auto member : syntax.members) {
         if (member->dimensions.empty()) {
             auto& ev = EnumValueSymbol::fromSyntax(compilation, *member, *resultType, std::nullopt);
@@ -439,7 +435,7 @@ const Type& EnumType::fromSyntax(Compilation& compilation, const EnumTypeSyntax&
         }
         else {
             if (member->dimensions.size() > 1) {
-                scope.addDiag(diag::EnumRangeMultiDimensional, member->dimensions.sourceRange());
+                context.addDiag(diag::EnumRangeMultiDimensional, member->dimensions.sourceRange());
                 return compilation.getErrorType();
             }
 
@@ -636,19 +632,19 @@ ConstantValue QueueType::getDefaultValueImpl() const {
 
 PackedStructType::PackedStructType(Compilation& compilation, bitwidth_t bitWidth, bool isSigned,
                                    bool isFourState, SourceLocation loc,
-                                   LookupLocation lookupLocation, const Scope& scope) :
+                                   const BindContext& context) :
     IntegralType(SymbolKind::PackedStructType, "", loc, bitWidth, isSigned, isFourState),
     Scope(compilation, this), systemId(compilation.getNextStructSystemId()) {
 
     // Struct types don't live as members of the parent scope (they're "owned" by the declaration
     // containing them) but we hook up the parent pointer so that it can participate in name
     // lookups.
-    setParent(scope, lookupLocation.getIndex());
+    setParent(*context.scope, context.lookupIndex);
 }
 
 const Type& PackedStructType::fromSyntax(Compilation& compilation,
                                          const StructUnionTypeSyntax& syntax,
-                                         LookupLocation location, const Scope& scope) {
+                                         const BindContext& context) {
     ASSERT(syntax.packed);
     bool isSigned = syntax.signing.kind == TokenKind::SignedKeyword;
     bool isFourState = false;
@@ -659,14 +655,14 @@ const Type& PackedStructType::fromSyntax(Compilation& compilation,
     // We have to iterate in reverse because members are specified from MSB to LSB order.
     SmallVectorSized<const Symbol*, 8> members;
     for (auto member : make_reverse_range(syntax.members)) {
-        const Type& type = compilation.getType(*member->type, location, scope);
+        const Type& type = compilation.getType(*member->type, context);
         isFourState |= type.isFourState();
         issuedError |= type.isError();
 
         if (!issuedError && !type.isIntegral()) {
             issuedError = true;
-            auto& diag = scope.addDiag(diag::PackedMemberNotIntegral,
-                                       member->type->getFirstToken().location());
+            auto& diag = context.addDiag(diag::PackedMemberNotIntegral,
+                                         member->type->getFirstToken().location());
             diag << type;
             diag << member->type->sourceRange();
         }
@@ -676,14 +672,14 @@ const Type& PackedStructType::fromSyntax(Compilation& compilation,
                                                              decl->name.location(), bitWidth);
             variable->setType(type);
             variable->setSyntax(*decl);
-            variable->setAttributes(scope, member->attributes);
+            variable->setAttributes(*context.scope, member->attributes);
             members.append(variable);
 
             // Unpacked arrays are disallowed in packed structs.
-            if (const Type& dimType = compilation.getType(type, decl->dimensions, location, scope);
+            if (const Type& dimType = compilation.getType(type, decl->dimensions, context);
                 dimType.isUnpackedArray() && !issuedError) {
 
-                auto& diag = scope.addDiag(diag::PackedMemberNotIntegral, decl->name.range());
+                auto& diag = context.addDiag(diag::PackedMemberNotIntegral, decl->name.range());
                 diag << dimType;
                 diag << decl->dimensions.sourceRange();
                 issuedError = true;
@@ -692,8 +688,8 @@ const Type& PackedStructType::fromSyntax(Compilation& compilation,
             bitWidth += type.getBitWidth();
 
             if (decl->initializer) {
-                auto& diag = scope.addDiag(diag::PackedMemberHasInitializer,
-                                           decl->initializer->equals.location());
+                auto& diag = context.addDiag(diag::PackedMemberHasInitializer,
+                                             decl->initializer->equals.location());
                 diag << decl->initializer->expr->sourceRange();
             }
         }
@@ -703,24 +699,24 @@ const Type& PackedStructType::fromSyntax(Compilation& compilation,
         return compilation.getErrorType();
 
     auto structType = compilation.emplace<PackedStructType>(
-        compilation, bitWidth, isSigned, isFourState, syntax.keyword.location(), location, scope);
+        compilation, bitWidth, isSigned, isFourState, syntax.keyword.location(), context);
     structType->setSyntax(syntax);
 
     for (auto member : make_reverse_range(members))
         structType->addMember(*member);
 
-    return createPackedDims(BindContext(scope, location), structType, syntax.dimensions);
+    return createPackedDims(context, structType, syntax.dimensions);
 }
 
 UnpackedStructType::UnpackedStructType(Compilation& compilation, SourceLocation loc,
-                                       LookupLocation lookupLocation, const Scope& scope) :
+                                       const BindContext& context) :
     Type(SymbolKind::UnpackedStructType, "", loc),
     Scope(compilation, this), systemId(compilation.getNextStructSystemId()) {
 
     // Struct types don't live as members of the parent scope (they're "owned" by the declaration
     // containing them) but we hook up the parent pointer so that it can participate in name
     // lookups.
-    setParent(scope, lookupLocation.getIndex());
+    setParent(*context.scope, context.lookupIndex);
 }
 
 ConstantValue UnpackedStructType::getDefaultValueImpl() const {
@@ -731,14 +727,13 @@ ConstantValue UnpackedStructType::getDefaultValueImpl() const {
     return elements;
 }
 
-const Type& UnpackedStructType::fromSyntax(const Scope& scope, LookupLocation location,
+const Type& UnpackedStructType::fromSyntax(const BindContext& context,
                                            const StructUnionTypeSyntax& syntax) {
     ASSERT(!syntax.packed);
 
     uint32_t fieldIndex = 0;
-    auto& comp = scope.getCompilation();
-    auto result =
-        comp.emplace<UnpackedStructType>(comp, syntax.keyword.location(), location, scope);
+    auto& comp = context.getCompilation();
+    auto result = comp.emplace<UnpackedStructType>(comp, syntax.keyword.location(), context);
 
     for (auto member : syntax.members) {
         RandMode randMode = RandMode::None;
@@ -758,7 +753,7 @@ const Type& UnpackedStructType::fromSyntax(const Scope& scope, LookupLocation lo
                                                       fieldIndex);
             variable->setDeclaredType(*member->type);
             variable->setFromDeclarator(*decl);
-            variable->setAttributes(scope, member->attributes);
+            variable->setAttributes(*context.scope, member->attributes);
             variable->randMode = randMode;
 
             if (randMode != RandMode::None)
@@ -780,8 +775,7 @@ const Type& UnpackedStructType::fromSyntax(const Scope& scope, LookupLocation lo
 
 PackedUnionType::PackedUnionType(Compilation& compilation, bitwidth_t bitWidth, bool isSigned,
                                  bool isFourState, bool isTagged, uint32_t tagBits,
-                                 SourceLocation loc, LookupLocation lookupLocation,
-                                 const Scope& scope) :
+                                 SourceLocation loc, const BindContext& context) :
     IntegralType(SymbolKind::PackedUnionType, "", loc, bitWidth, isSigned, isFourState),
     Scope(compilation, this), systemId(compilation.getNextUnionSystemId()), isTagged(isTagged),
     tagBits(tagBits) {
@@ -789,12 +783,12 @@ PackedUnionType::PackedUnionType(Compilation& compilation, bitwidth_t bitWidth, 
     // Union types don't live as members of the parent scope (they're "owned" by the declaration
     // containing them) but we hook up the parent pointer so that it can participate in name
     // lookups.
-    setParent(scope, lookupLocation.getIndex());
+    setParent(*context.scope, context.lookupIndex);
 }
 
 const Type& PackedUnionType::fromSyntax(Compilation& compilation,
                                         const StructUnionTypeSyntax& syntax,
-                                        LookupLocation location, const Scope& scope) {
+                                        const BindContext& context) {
     ASSERT(syntax.packed);
     bool isSigned = syntax.signing.kind == TokenKind::SignedKeyword;
     bool isTagged = syntax.tagged.valid();
@@ -806,14 +800,14 @@ const Type& PackedUnionType::fromSyntax(Compilation& compilation,
     // We have to look at all the members up front to know our width and four-statedness.
     SmallVectorSized<const Symbol*, 8> members;
     for (auto member : syntax.members) {
-        const Type& type = compilation.getType(*member->type, location, scope);
+        const Type& type = compilation.getType(*member->type, context);
         isFourState |= type.isFourState();
         issuedError |= type.isError();
 
         if (!issuedError && !type.isIntegral() && (!isTagged || !type.isVoid())) {
             issuedError = true;
-            auto& diag = scope.addDiag(diag::PackedMemberNotIntegral,
-                                       member->type->getFirstToken().location());
+            auto& diag = context.addDiag(diag::PackedMemberNotIntegral,
+                                         member->type->getFirstToken().location());
             diag << type;
             diag << member->type->sourceRange();
         }
@@ -824,14 +818,14 @@ const Type& PackedUnionType::fromSyntax(Compilation& compilation,
                 compilation.emplace<FieldSymbol>(name.valueText(), name.location(), fieldIndex++);
             variable->setType(type);
             variable->setSyntax(*decl);
-            variable->setAttributes(scope, member->attributes);
+            variable->setAttributes(*context.scope, member->attributes);
             members.append(variable);
 
             // Unpacked arrays are disallowed in packed unions.
-            if (const Type& dimType = compilation.getType(type, decl->dimensions, location, scope);
+            if (const Type& dimType = compilation.getType(type, decl->dimensions, context);
                 dimType.isUnpackedArray() && !issuedError) {
 
-                auto& diag = scope.addDiag(diag::PackedMemberNotIntegral, decl->name.range());
+                auto& diag = context.addDiag(diag::PackedMemberNotIntegral, decl->name.range());
                 diag << dimType;
                 diag << decl->dimensions.sourceRange();
                 issuedError = true;
@@ -845,14 +839,14 @@ const Type& PackedUnionType::fromSyntax(Compilation& compilation,
                 bitWidth = std::max(bitWidth, type.getBitWidth());
             }
             else if (bitWidth != type.getBitWidth() && !issuedError && !name.valueText().empty()) {
-                auto& diag = scope.addDiag(diag::PackedUnionWidthMismatch, name.range());
+                auto& diag = context.addDiag(diag::PackedUnionWidthMismatch, name.range());
                 diag << name.valueText() << type.getBitWidth() << bitWidth;
                 issuedError = true;
             }
 
             if (decl->initializer) {
-                auto& diag = scope.addDiag(diag::PackedMemberHasInitializer,
-                                           decl->initializer->equals.location());
+                auto& diag = context.addDiag(diag::PackedMemberHasInitializer,
+                                             decl->initializer->equals.location());
                 diag << decl->initializer->expr->sourceRange();
             }
         }
@@ -870,24 +864,24 @@ const Type& PackedUnionType::fromSyntax(Compilation& compilation,
 
     auto unionType =
         compilation.emplace<PackedUnionType>(compilation, bitWidth, isSigned, isFourState, isTagged,
-                                             tagBits, syntax.keyword.location(), location, scope);
+                                             tagBits, syntax.keyword.location(), context);
     unionType->setSyntax(syntax);
 
     for (auto member : members)
         unionType->addMember(*member);
 
-    return createPackedDims(BindContext(scope, location), unionType, syntax.dimensions);
+    return createPackedDims(context, unionType, syntax.dimensions);
 }
 
 UnpackedUnionType::UnpackedUnionType(Compilation& compilation, bool isTagged, SourceLocation loc,
-                                     LookupLocation lookupLocation, const Scope& scope) :
+                                     const BindContext& context) :
     Type(SymbolKind::UnpackedUnionType, "", loc),
     Scope(compilation, this), systemId(compilation.getNextUnionSystemId()), isTagged(isTagged) {
 
     // Union types don't live as members of the parent scope (they're "owned" by the declaration
     // containing them) but we hook up the parent pointer so that it can participate in name
     // lookups.
-    setParent(scope, lookupLocation.getIndex());
+    setParent(*context.scope, context.lookupIndex);
 }
 
 ConstantValue UnpackedUnionType::getDefaultValueImpl() const {
@@ -906,14 +900,14 @@ ConstantValue UnpackedUnionType::getDefaultValueImpl() const {
     return u;
 }
 
-const Type& UnpackedUnionType::fromSyntax(const Scope& scope, LookupLocation location,
+const Type& UnpackedUnionType::fromSyntax(const BindContext& context,
                                           const StructUnionTypeSyntax& syntax) {
     ASSERT(!syntax.packed);
 
-    auto& comp = scope.getCompilation();
+    auto& comp = context.getCompilation();
     bool isTagged = syntax.tagged.valid();
     auto result =
-        comp.emplace<UnpackedUnionType>(comp, isTagged, syntax.keyword.location(), location, scope);
+        comp.emplace<UnpackedUnionType>(comp, isTagged, syntax.keyword.location(), context);
 
     uint32_t fieldIndex = 0;
     for (auto member : syntax.members) {
@@ -922,15 +916,15 @@ const Type& UnpackedUnionType::fromSyntax(const Scope& scope, LookupLocation loc
                                                       fieldIndex++);
             variable->setDeclaredType(*member->type);
             variable->setFromDeclarator(*decl);
-            variable->setAttributes(scope, member->attributes);
+            variable->setAttributes(*context.scope, member->attributes);
 
             result->addMember(*variable);
 
             auto& varType = variable->getType();
             if (!isTagged && (varType.isCHandle() || varType.isDynamicallySizedArray()))
-                scope.addDiag(diag::InvalidUnionMember, decl->name.range()) << varType;
+                context.addDiag(diag::InvalidUnionMember, decl->name.range()) << varType;
             else if (varType.isVirtualInterface())
-                scope.addDiag(diag::VirtualInterfaceUnionMember, decl->name.range());
+                context.addDiag(diag::VirtualInterfaceUnionMember, decl->name.range());
 
             // Force resolution of the initializer right away, otherwise nothing
             // is required to force it later.
@@ -958,22 +952,21 @@ ConstantValue EventType::getDefaultValueImpl() const {
     return ConstantValue::NullPlaceholder{};
 }
 
-const Type& VirtualInterfaceType::fromSyntax(const Scope& scope, LookupLocation lookupLocation,
+const Type& VirtualInterfaceType::fromSyntax(const BindContext& context,
                                              const VirtualInterfaceTypeSyntax& syntax) {
-    auto& comp = scope.getCompilation();
+    auto& comp = context.getCompilation();
     auto ifaceName = syntax.name.valueText();
     if (ifaceName.empty())
         return comp.getErrorType();
 
-    auto definition = comp.getDefinition(ifaceName, scope);
+    auto definition = comp.getDefinition(ifaceName, *context.scope);
     if (!definition || definition->definitionKind != DefinitionKind::Interface) {
-        scope.addDiag(diag::UnknownInterface, syntax.name.range()) << ifaceName;
+        context.addDiag(diag::UnknownInterface, syntax.name.range()) << ifaceName;
         return comp.getErrorType();
     }
 
     auto loc = syntax.name.location();
-    auto iface = InstanceBodySymbol::fromDefinition(scope, lookupLocation, loc, *definition,
-                                                    syntax.parameters);
+    auto iface = InstanceBodySymbol::fromDefinition(context, loc, *definition, syntax.parameters);
     if (!iface)
         return comp.getErrorType();
 
@@ -983,7 +976,7 @@ const Type& VirtualInterfaceType::fromSyntax(const Scope& scope, LookupLocation 
         auto sym = iface->find(modportName);
         if (!sym || sym->kind != SymbolKind::Modport) {
             ASSERT(syntax.modport);
-            auto& diag = scope.addDiag(diag::NotAModport, syntax.modport->member.range());
+            auto& diag = context.addDiag(diag::NotAModport, syntax.modport->member.range());
             diag << modportName;
             diag << definition->name;
         }

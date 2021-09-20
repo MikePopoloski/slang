@@ -183,14 +183,17 @@ public:
     /// initializer information.
     void copyTypeFrom(const DeclaredType& source);
 
-    /// Forces resolution of type (and the initializer as well if applicable) using the
-    /// given bind context, which could differ from the normal binding context that
-    /// would otherwise be used for resolution.
+    /// Resolves the initializer using the given bind context, which could
+    /// differ from the binding context that is used for type resolution.
     void resolveAt(const BindContext& context) const;
+
+    /// Forces resolution of both the type and the initializer using the given bind context
+    /// instead of using the normal logic built into DeclaredType to determine the context.
+    void forceResolveAt(const BindContext& context) const;
 
 private:
     const Scope& getScope() const;
-    void resolveType(const BindContext& initializerContext) const;
+    void resolveType(const BindContext& typeContext, const BindContext& initializerContext) const;
     void checkType(const BindContext& context) const;
     void mergePortTypes(const BindContext& context, const ValueSymbol& sourceSymbol,
                         const ImplicitTypeSyntax& implicit, SourceLocation location,

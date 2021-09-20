@@ -20,6 +20,7 @@
 namespace slang {
 
 class AttributeSymbol;
+class BindContext;
 class CompilationUnitSymbol;
 class Definition;
 class DesignTreeNode;
@@ -302,7 +303,7 @@ public:
     void noteDefaultClocking(const Scope& scope, const Symbol& clocking, SourceRange range);
 
     /// Notes that there is a default clocking block associated with the specified scope.
-    void noteDefaultClocking(const Scope& scope, LookupLocation location,
+    void noteDefaultClocking(const BindContext& context,
                              const DefaultClockingReferenceSyntax& syntax);
 
     /// Finds an applicable default clocking block for the given scope, or returns nullptr
@@ -366,11 +367,11 @@ public:
     TimeScale getDefaultTimeScale() const { return defaultTimeScale; }
 
     const Type& getType(SyntaxKind kind) const;
-    const Type& getType(const DataTypeSyntax& node, LookupLocation location, const Scope& parent,
+    const Type& getType(const DataTypeSyntax& node, const BindContext& context,
                         const Type* typedefTarget = nullptr);
     const Type& getType(const Type& elementType,
                         const SyntaxList<VariableDimensionSyntax>& dimensions,
-                        LookupLocation location, const Scope& parent);
+                        const BindContext& context);
 
     const Type& getType(bitwidth_t width, bitmask<IntegralFlags> flags);
     const Type& getScalarType(bitmask<IntegralFlags> flags);

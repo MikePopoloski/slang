@@ -24,7 +24,7 @@ Expression& Expression::bindAssignmentPattern(Compilation& comp,
     SourceRange range = syntax.sourceRange();
 
     if (syntax.type) {
-        assignmentTarget = &comp.getType(*syntax.type, context.getLocation(), *context.scope);
+        assignmentTarget = &comp.getType(*syntax.type, context);
         if (!assignmentTarget->isSimpleType() && syntax.type->kind != SyntaxKind::TypeReference) {
             if (!assignmentTarget->isError())
                 context.addDiag(diag::BadAssignmentPatternType, range) << *assignmentTarget;
@@ -484,8 +484,7 @@ Expression& StructuredAssignmentPatternExpression::forStruct(
             }
         }
         else if (DataTypeSyntax::isKind(item->key->kind)) {
-            const Type& typeKey = comp.getType(item->key->as<DataTypeSyntax>(),
-                                               context.getLocation(), *context.scope);
+            const Type& typeKey = comp.getType(item->key->as<DataTypeSyntax>(), context);
             if (typeKey.isSimpleType()) {
                 auto& expr = bindRValue(typeKey, *item->expr,
                                         item->expr->getFirstToken().location(), context);

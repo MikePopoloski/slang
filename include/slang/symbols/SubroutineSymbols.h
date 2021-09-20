@@ -182,7 +182,7 @@ public:
                                              const ClassMethodPrototypeSyntax& syntax);
     static MethodPrototypeSymbol& fromSyntax(const Scope& scope,
                                              const ModportSubroutinePortSyntax& syntax);
-    static MethodPrototypeSymbol& fromSyntax(const Scope& scope, LookupLocation lookupLocation,
+    static MethodPrototypeSymbol& fromSyntax(const BindContext& context,
                                              const ModportNamedPortSyntax& syntax);
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::MethodPrototype; }

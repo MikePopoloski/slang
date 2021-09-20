@@ -272,7 +272,7 @@ bool HierarchicalValueExpression::verifyConstantImpl(EvalContext& context) const
 
 Expression& DataTypeExpression::fromSyntax(Compilation& compilation, const DataTypeSyntax& syntax,
                                            const BindContext& context) {
-    const Type& type = compilation.getType(syntax, context.getLocation(), *context.scope);
+    const Type& type = compilation.getType(syntax, context);
     if (syntax.kind == SyntaxKind::TypeReference &&
         context.flags.has(BindFlags::AllowTypeReferences)) {
         return *compilation.emplace<TypeReferenceExpression>(compilation.getTypeRefType(), type,

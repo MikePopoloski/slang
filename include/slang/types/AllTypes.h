@@ -39,11 +39,11 @@ public:
     bool isDeclaredReg() const;
 
     static const Type& fromSyntax(Compilation& compilation, const IntegerTypeSyntax& syntax,
-                                  LookupLocation location, const Scope& scope);
+                                  const BindContext& context);
 
     static const Type& fromSyntax(Compilation& compilation, SyntaxKind integerKind,
                                   span<const VariableDimensionSyntax* const> dimensions,
-                                  bool isSigned, LookupLocation location, const Scope& scope);
+                                  bool isSigned, const BindContext& context);
 
     ConstantValue getDefaultValueImpl() const;
 
@@ -101,11 +101,10 @@ public:
     int systemId;
 
     EnumType(Compilation& compilation, SourceLocation loc, const Type& baseType,
-             LookupLocation lookupLocation, const Scope& scope);
+             const BindContext& context);
 
     static const Type& fromSyntax(Compilation& compilation, const EnumTypeSyntax& syntax,
-                                  LookupLocation location, const Scope& scope,
-                                  const Type* typedefTarget);
+                                  const BindContext& context, const Type* typedefTarget);
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::EnumType; }
 
     iterator_range<specific_symbol_iterator<EnumValueSymbol>> values() const {
@@ -211,10 +210,10 @@ public:
     int systemId;
 
     PackedStructType(Compilation& compilation, bitwidth_t bitWidth, bool isSigned, bool isFourState,
-                     SourceLocation loc, LookupLocation lookupLocation, const Scope& scope);
+                     SourceLocation loc, const BindContext& context);
 
     static const Type& fromSyntax(Compilation& compilation, const StructUnionTypeSyntax& syntax,
-                                  LookupLocation location, const Scope& scope);
+                                  const BindContext& context);
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::PackedStructType; }
 };
@@ -224,11 +223,9 @@ class UnpackedStructType : public Type, public Scope {
 public:
     int systemId;
 
-    UnpackedStructType(Compilation& compilation, SourceLocation loc, LookupLocation lookupLocation,
-                       const Scope& scope);
+    UnpackedStructType(Compilation& compilation, SourceLocation loc, const BindContext& context);
 
-    static const Type& fromSyntax(const Scope& scope, LookupLocation location,
-                                  const StructUnionTypeSyntax& syntax);
+    static const Type& fromSyntax(const BindContext& context, const StructUnionTypeSyntax& syntax);
 
     ConstantValue getDefaultValueImpl() const;
 
@@ -244,10 +241,10 @@ public:
 
     PackedUnionType(Compilation& compilation, bitwidth_t bitWidth, bool isSigned, bool isFourState,
                     bool isTagged, uint32_t tagBits, SourceLocation loc,
-                    LookupLocation lookupLocation, const Scope& scope);
+                    const BindContext& context);
 
     static const Type& fromSyntax(Compilation& compilation, const StructUnionTypeSyntax& syntax,
-                                  LookupLocation location, const Scope& scope);
+                                  const BindContext& context);
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::PackedUnionType; }
 };
@@ -259,10 +256,9 @@ public:
     bool isTagged;
 
     UnpackedUnionType(Compilation& compilation, bool isTagged, SourceLocation loc,
-                      LookupLocation lookupLocation, const Scope& scope);
+                      const BindContext& context);
 
-    static const Type& fromSyntax(const Scope& scope, LookupLocation location,
-                                  const StructUnionTypeSyntax& syntax);
+    static const Type& fromSyntax(const BindContext& context, const StructUnionTypeSyntax& syntax);
 
     ConstantValue getDefaultValueImpl() const;
 
@@ -388,7 +384,7 @@ public:
 
     ConstantValue getDefaultValueImpl() const;
 
-    static const Type& fromSyntax(const Scope& scope, LookupLocation lookupLocation,
+    static const Type& fromSyntax(const BindContext& context,
                                   const VirtualInterfaceTypeSyntax& syntax);
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::VirtualInterfaceType; }

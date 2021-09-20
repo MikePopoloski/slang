@@ -150,25 +150,26 @@ ModportPortSymbol::ModportPortSymbol(string_view name, SourceLocation loc,
     direction(direction) {
 }
 
-ModportPortSymbol& ModportPortSymbol::fromSyntax(const Scope& parent, LookupLocation lookupLocation,
+ModportPortSymbol& ModportPortSymbol::fromSyntax(const BindContext& context,
                                                  ArgumentDirection direction,
                                                  const ModportNamedPortSyntax& syntax) {
-    auto& comp = parent.getCompilation();
+    auto& comp = context.getCompilation();
     auto name = syntax.name;
     auto result = comp.emplace<ModportPortSymbol>(name.valueText(), name.location(), direction);
     result->setSyntax(syntax);
-    result->internalSymbol = Lookup::unqualifiedAt(parent, name.valueText(), lookupLocation,
-                                                   name.range(), LookupFlags::NoParentScope);
+    result->internalSymbol =
+        Lookup::unqualifiedAt(*context.scope, name.valueText(), context.getLocation(), name.range(),
+                              LookupFlags::NoParentScope);
 
     if (result->internalSymbol) {
         if (result->internalSymbol->kind == SymbolKind::Subroutine) {
-            auto& diag = parent.addDiag(diag::ExpectedImportExport, name.range());
+            auto& diag = context.addDiag(diag::ExpectedImportExport, name.range());
             diag << name.valueText();
             diag.addNote(diag::NoteDeclarationHere, result->internalSymbol->location);
             result->internalSymbol = nullptr;
         }
         else if (!SemanticFacts::isAllowedInModport(result->internalSymbol->kind)) {
-            auto& diag = parent.addDiag(diag::NotAllowedInModport, name.range());
+            auto& diag = context.addDiag(diag::NotAllowedInModport, name.range());
             diag << name.valueText();
             diag.addNote(diag::NoteDeclarationHere, result->internalSymbol->location);
             result->internalSymbol = nullptr;
@@ -194,15 +195,14 @@ ModportSymbol::ModportSymbol(Compilation& compilation, string_view name, SourceL
     Symbol(SymbolKind::Modport, name, loc), Scope(compilation, this) {
 }
 
-void ModportSymbol::fromSyntax(const Scope& parent, const ModportDeclarationSyntax& syntax,
-                               LookupLocation lookupLocation,
+void ModportSymbol::fromSyntax(const BindContext& context, const ModportDeclarationSyntax& syntax,
                                SmallVector<const ModportSymbol*>& results) {
-    auto& comp = parent.getCompilation();
+    auto& comp = context.getCompilation();
     for (auto item : syntax.items) {
         auto modport =
             comp.emplace<ModportSymbol>(comp, item->name.valueText(), item->name.location());
         modport->setSyntax(*item);
-        modport->setAttributes(parent, syntax.attributes);
+        modport->setAttributes(*context.scope, syntax.attributes);
         results.append(modport);
 
         for (auto port : item->ports->ports) {
@@ -214,14 +214,13 @@ void ModportSymbol::fromSyntax(const Scope& parent, const ModportDeclarationSynt
                         switch (simplePort->kind) {
                             case SyntaxKind::ModportNamedPort: {
                                 auto& mpp = ModportPortSymbol::fromSyntax(
-                                    parent, lookupLocation, direction,
-                                    simplePort->as<ModportNamedPortSyntax>());
+                                    context, direction, simplePort->as<ModportNamedPortSyntax>());
                                 mpp.setAttributes(*modport, portList.attributes);
                                 modport->addMember(mpp);
                                 break;
                             }
                             case SyntaxKind::ModportExplicitPort:
-                                parent.addDiag(diag::NotYetSupported, simplePort->sourceRange());
+                                context.addDiag(diag::NotYetSupported, simplePort->sourceRange());
                                 break;
                             default:
                                 THROW_UNREACHABLE;
@@ -239,15 +238,14 @@ void ModportSymbol::fromSyntax(const Scope& parent, const ModportDeclarationSynt
                             switch (subPort->kind) {
                                 case SyntaxKind::ModportNamedPort: {
                                     auto& mps = MethodPrototypeSymbol::fromSyntax(
-                                        parent, lookupLocation,
-                                        subPort->as<ModportNamedPortSyntax>());
+                                        context, subPort->as<ModportNamedPortSyntax>());
                                     mps.setAttributes(*modport, portList.attributes);
                                     modport->addMember(mps);
                                     break;
                                 }
                                 case SyntaxKind::ModportSubroutinePort: {
                                     auto& mps = MethodPrototypeSymbol::fromSyntax(
-                                        parent, subPort->as<ModportSubroutinePortSyntax>());
+                                        *context.scope, subPort->as<ModportSubroutinePortSyntax>());
                                     mps.setAttributes(*modport, portList.attributes);
                                     modport->addMember(mps);
                                     break;
@@ -260,7 +258,7 @@ void ModportSymbol::fromSyntax(const Scope& parent, const ModportDeclarationSynt
                     break;
                 }
                 case SyntaxKind::ModportClockingPort:
-                    parent.addDiag(diag::NotYetSupported, port->sourceRange());
+                    context.addDiag(diag::NotYetSupported, port->sourceRange());
                     break;
                 default:
                     THROW_UNREACHABLE;
@@ -280,12 +278,12 @@ ContinuousAssignSymbol::ContinuousAssignSymbol(SourceLocation loc, const Express
 }
 
 void ContinuousAssignSymbol::fromSyntax(Compilation& compilation,
-                                        const ContinuousAssignSyntax& syntax, const Scope& scope,
-                                        LookupLocation location,
+                                        const ContinuousAssignSyntax& syntax,
+                                        const BindContext& parentContext,
                                         SmallVector<const Symbol*>& results,
                                         SmallVector<const Symbol*>& implicitNets) {
-    BindContext context(scope, location, BindFlags::NonProcedural);
-    auto& netType = scope.getDefaultNetType();
+    BindContext context = parentContext.resetFlags(BindFlags::NonProcedural);
+    auto& netType = context.scope->getDefaultNetType();
 
     for (auto expr : syntax.assignments) {
         // If not explicitly disabled, check for net references on the lhs of each
@@ -307,7 +305,7 @@ void ContinuousAssignSymbol::fromSyntax(Compilation& compilation,
         }
 
         auto symbol = compilation.emplace<ContinuousAssignSymbol>(*expr);
-        symbol->setAttributes(scope, syntax.attributes);
+        symbol->setAttributes(*context.scope, syntax.attributes);
         results.append(symbol);
     }
 }

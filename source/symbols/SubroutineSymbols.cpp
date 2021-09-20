@@ -737,10 +737,9 @@ MethodPrototypeSymbol& MethodPrototypeSymbol::fromSyntax(
     return *result;
 }
 
-MethodPrototypeSymbol& MethodPrototypeSymbol::fromSyntax(const Scope& scope,
-                                                         LookupLocation lookupLocation,
+MethodPrototypeSymbol& MethodPrototypeSymbol::fromSyntax(const BindContext& context,
                                                          const ModportNamedPortSyntax& syntax) {
-    auto& comp = scope.getCompilation();
+    auto& comp = context.getCompilation();
     auto name = syntax.name;
     auto result = comp.emplace<MethodPrototypeSymbol>(comp, name.valueText(), name.location(),
                                                       SubroutineKind::Function, Visibility::Public,
@@ -748,14 +747,15 @@ MethodPrototypeSymbol& MethodPrototypeSymbol::fromSyntax(const Scope& scope,
     result->setSyntax(syntax);
 
     // Find the target subroutine that is being imported.
-    auto target = Lookup::unqualifiedAt(scope, syntax.name.valueText(), lookupLocation,
-                                        syntax.name.range(), LookupFlags::NoParentScope);
+    auto target =
+        Lookup::unqualifiedAt(*context.scope, syntax.name.valueText(), context.getLocation(),
+                              syntax.name.range(), LookupFlags::NoParentScope);
     if (!target)
         return *result;
 
     // Target must actually be a subroutine (or a prototype of one).
     if (target->kind != SymbolKind::Subroutine && target->kind != SymbolKind::MethodPrototype) {
-        auto& diag = scope.addDiag(diag::NotASubroutine, name.range());
+        auto& diag = context.addDiag(diag::NotASubroutine, name.range());
         diag << target->name;
         diag.addNote(diag::NoteDeclarationHere, target->location);
         return *result;

@@ -708,22 +708,22 @@ void Compilation::noteDefaultClocking(const Scope& scope, const Symbol& clocking
     }
 }
 
-void Compilation::noteDefaultClocking(const Scope& scope, LookupLocation location,
+void Compilation::noteDefaultClocking(const BindContext& context,
                                       const DefaultClockingReferenceSyntax& syntax) {
     auto name = syntax.name.valueText();
     auto range = syntax.name.range();
-    auto sym = Lookup::unqualifiedAt(scope, name, location, range);
+    auto sym = Lookup::unqualifiedAt(*context.scope, name, context.getLocation(), range);
     if (!sym)
         return;
 
     if (sym->kind != SymbolKind::ClockingBlock) {
-        auto& diag = scope.addDiag(diag::NotAClockingBlock, range);
+        auto& diag = context.addDiag(diag::NotAClockingBlock, range);
         diag << name;
         diag.addNote(diag::NoteDeclarationHere, sym->location);
         return;
     }
 
-    noteDefaultClocking(scope, *sym, range);
+    noteDefaultClocking(*context.scope, *sym, range);
 }
 
 const Symbol* Compilation::getDefaultClocking(const Scope& scope) const {
@@ -1023,15 +1023,15 @@ const Type& Compilation::getType(SyntaxKind typeKind) const {
     return it == knownTypes.end() ? *errorType : *it->second;
 }
 
-const Type& Compilation::getType(const DataTypeSyntax& node, LookupLocation location,
-                                 const Scope& parent, const Type* typedefTarget) {
-    return Type::fromSyntax(*this, node, location, parent, typedefTarget);
+const Type& Compilation::getType(const DataTypeSyntax& node, const BindContext& context,
+                                 const Type* typedefTarget) {
+    return Type::fromSyntax(*this, node, context, typedefTarget);
 }
 
 const Type& Compilation::getType(const Type& elementType,
                                  const SyntaxList<VariableDimensionSyntax>& dimensions,
-                                 LookupLocation location, const Scope& scope) {
-    return Type::fromSyntax(*this, elementType, dimensions, location, scope);
+                                 const BindContext& context) {
+    return Type::fromSyntax(*this, elementType, dimensions, context);
 }
 
 const Type& Compilation::getType(bitwidth_t width, bitmask<IntegralFlags> flags) {

@@ -805,7 +805,7 @@ void Scope::elaborate() const {
     uint32_t constructIndex = 1;
 
     for (auto symbol : deferred) {
-        LookupLocation location = LookupLocation::before(*symbol);
+        BindContext context(*this, LookupLocation::before(*symbol));
         auto& member = symbol->as<DeferredMemberSymbol>();
 
         switch (member.node.kind) {
@@ -813,8 +813,8 @@ void Scope::elaborate() const {
                 SmallVectorSized<const Symbol*, 8> instances;
                 SmallVectorSized<const Symbol*, 8> implicitNets;
                 InstanceSymbol::fromSyntax(compilation,
-                                           member.node.as<HierarchyInstantiationSyntax>(), location,
-                                           *this, instances, implicitNets);
+                                           member.node.as<HierarchyInstantiationSyntax>(), context,
+                                           instances, implicitNets);
                 insertMembersAndNets(instances, implicitNets, symbol);
                 break;
             }
@@ -822,14 +822,14 @@ void Scope::elaborate() const {
                 SmallVectorSized<const Symbol*, 8> instances;
                 SmallVectorSized<const Symbol*, 8> implicitNets;
                 PrimitiveInstanceSymbol::fromSyntax(member.node.as<PrimitiveInstantiationSyntax>(),
-                                                    location, *this, instances, implicitNets);
+                                                    context, instances, implicitNets);
                 insertMembersAndNets(instances, implicitNets, symbol);
                 break;
             }
             case SyntaxKind::IfGenerate: {
                 SmallVectorSized<GenerateBlockSymbol*, 8> blocks;
                 GenerateBlockSymbol::fromSyntax(compilation, member.node.as<IfGenerateSyntax>(),
-                                                location, *this, constructIndex, true, blocks);
+                                                context, constructIndex, true, blocks);
                 constructIndex++;
                 insertMembers(blocks, symbol);
                 break;
@@ -837,7 +837,7 @@ void Scope::elaborate() const {
             case SyntaxKind::CaseGenerate: {
                 SmallVectorSized<GenerateBlockSymbol*, 8> blocks;
                 GenerateBlockSymbol::fromSyntax(compilation, member.node.as<CaseGenerateSyntax>(),
-                                                location, *this, constructIndex, true, blocks);
+                                                context, constructIndex, true, blocks);
                 constructIndex++;
                 insertMembers(blocks, symbol);
                 break;
@@ -845,7 +845,7 @@ void Scope::elaborate() const {
             case SyntaxKind::LoopGenerate:
                 insertMember(&GenerateBlockArraySymbol::fromSyntax(
                                  compilation, member.node.as<LoopGenerateSyntax>(),
-                                 symbol->getIndex(), location, *this, constructIndex),
+                                 symbol->getIndex(), context, constructIndex),
                              symbol, true, true);
                 constructIndex++;
                 break;
@@ -886,15 +886,15 @@ void Scope::elaborate() const {
                 SmallVectorSized<const Symbol*, 4> symbols;
                 SmallVectorSized<const Symbol*, 8> implicitNets;
                 ContinuousAssignSymbol::fromSyntax(compilation,
-                                                   member.node.as<ContinuousAssignSyntax>(), *this,
-                                                   location, symbols, implicitNets);
+                                                   member.node.as<ContinuousAssignSyntax>(),
+                                                   context, symbols, implicitNets);
                 insertMembersAndNets(symbols, implicitNets, symbol);
                 break;
             }
             case SyntaxKind::ModportDeclaration: {
                 SmallVectorSized<const ModportSymbol*, 4> results;
-                ModportSymbol::fromSyntax(*this, member.node.as<ModportDeclarationSyntax>(),
-                                          location, results);
+                ModportSymbol::fromSyntax(context, member.node.as<ModportDeclarationSyntax>(),
+                                          results);
                 insertMembers(results, symbol);
                 break;
             }
@@ -903,8 +903,8 @@ void Scope::elaborate() const {
                 break;
             case SyntaxKind::UserDefinedNetDeclaration: {
                 SmallVectorSized<const NetSymbol*, 4> results;
-                NetSymbol::fromSyntax(*this, member.node.as<UserDefinedNetDeclarationSyntax>(),
-                                      location, results);
+                NetSymbol::fromSyntax(context, member.node.as<UserDefinedNetDeclarationSyntax>(),
+                                      results);
                 insertMembers(results, symbol);
                 break;
             }
@@ -917,14 +917,13 @@ void Scope::elaborate() const {
             case SyntaxKind::DefaultClockingReference: {
                 // No symbol to create here; instead, try to look up the clocking block
                 // and register it as a default.
-                compilation.noteDefaultClocking(*this, location,
+                compilation.noteDefaultClocking(context,
                                                 member.node.as<DefaultClockingReferenceSyntax>());
                 break;
             }
             case SyntaxKind::DefaultDisableDeclaration: {
                 // No symbol to create here; instead, bind the expression and hand it
                 // off to the compilation for tracking.
-                BindContext context(*this, location);
                 auto& expr = Expression::bind(
                     *member.node.as<DefaultDisableDeclarationSyntax>().expr, context);
 

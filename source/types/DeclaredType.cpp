@@ -30,7 +30,7 @@ DeclaredType::DeclaredType(const Symbol& parent, bitmask<DeclaredTypeFlags> flag
 
 const Type& DeclaredType::getType() const {
     if (!type)
-        resolveType(getBindContext<true>());
+        resolveType(getBindContext<false>(), getBindContext<true>());
     return *type;
 }
 
@@ -63,9 +63,9 @@ const Scope& DeclaredType::getScope() const {
     return *scope;
 }
 
-void DeclaredType::resolveType(const BindContext& initializerContext) const {
-    auto& scope = getScope();
-    auto& comp = scope.getCompilation();
+void DeclaredType::resolveType(const BindContext& typeContext,
+                               const BindContext& initializerContext) const {
+    auto& comp = typeContext.getCompilation();
     if (!typeSyntax) {
         type = &comp.getErrorType();
         return;
@@ -77,11 +77,10 @@ void DeclaredType::resolveType(const BindContext& initializerContext) const {
 
     // If we are configured to infer implicit types, bind the initializer expression
     // first so that we can derive our type from whatever that happens to be.
-    BindContext typeContext = getBindContext<false>();
     if (typeSyntax->kind == SyntaxKind::ImplicitType &&
         flags.has(DeclaredTypeFlags::InferImplicit)) {
         if (dimensions) {
-            scope.addDiag(diag::UnpackedArrayParamType, dimensions->sourceRange());
+            typeContext.addDiag(diag::UnpackedArrayParamType, dimensions->sourceRange());
             type = &comp.getErrorType();
         }
         else if (!initializerSyntax) {
@@ -103,9 +102,9 @@ void DeclaredType::resolveType(const BindContext& initializerContext) const {
         if (flags.has(DeclaredTypeFlags::TypedefTarget))
             typedefTarget = &parent.as<Type>();
 
-        type = &comp.getType(*typeSyntax, typeContext.getLocation(), scope, typedefTarget);
+        type = &comp.getType(*typeSyntax, typeContext, typedefTarget);
         if (dimensions)
-            type = &comp.getType(*type, *dimensions, typeContext.getLocation(), scope);
+            type = &comp.getType(*type, *dimensions, typeContext);
     }
 
     if (flags.has(DeclaredTypeFlags::NeedsTypeCheck) && !type->isError())
@@ -346,14 +345,14 @@ void DeclaredType::mergePortTypes(
 }
 
 void DeclaredType::resolveAt(const BindContext& context) const {
-    if (!initializerSyntax)
-        return;
-
     if (!type) {
-        resolveType(context);
+        resolveType(getBindContext<false>(), context);
         if (initializer)
             return;
     }
+
+    if (!initializerSyntax)
+        return;
 
     // Enums are special in that their initializers target the base type of the enum
     // instead of the actual enum type (which doesn't allow implicit conversions from
@@ -371,6 +370,11 @@ void DeclaredType::resolveAt(const BindContext& context) const {
 
     initializer = &Expression::bindRValue(*targetType, *initializerSyntax, initializerLocation,
                                           context, extraFlags);
+}
+
+void DeclaredType::forceResolveAt(const BindContext& context) const {
+    resolveType(context, context);
+    resolveAt(context);
 }
 
 const Expression* DeclaredType::getInitializer() const {
