@@ -195,7 +195,7 @@ public:
     const Symbol& symbol;
     const AssertionExpr& body;
     span<std::tuple<const Symbol*, ActualArg> const> arguments;
-    span<std::tuple<const Symbol*, const Expression*> const> localVarInitializers;
+    span<const Symbol* const> localVars;
     bool isRecursiveProperty;
 
     AssertionInstanceExpression(const Type& type, const Symbol& symbol, const AssertionExpr& body,
@@ -221,8 +221,12 @@ public:
     template<typename TVisitor>
     void visitExprs(TVisitor&& visitor) const {
         body.visit(visitor);
-        for (auto [sym, expr] : localVarInitializers)
-            expr->visit(visitor);
+        for (auto sym : localVars) {
+            auto dt = sym->getDeclaredType();
+            ASSERT(dt);
+            if (auto init = dt->getInitializer())
+                init->visit(visitor);
+        }
     }
 };
 

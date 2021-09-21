@@ -221,6 +221,11 @@ public:
         flat_hash_map<const Symbol*, std::tuple<const PropertyExprSyntax*, BindContext>>
             argumentMap;
 
+        /// A map of local variables declared in the assertion item.
+        /// These don't exist in any scope because their types can depend
+        /// on the expanded arguments.
+        flat_hash_map<string_view, const Symbol*> localVars;
+
         /// If an argument to a sequence or property is being expanded, this
         /// member contains the source location where the argument was referenced.
         SourceLocation argExpansionLoc;

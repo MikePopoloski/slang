@@ -280,6 +280,12 @@ public:
                                      const NameSyntax& syntax, bitmask<LookupFlags> flags,
                                      LookupResult& result);
 
+    /// Performs a lookup within an expanding sequence or property to try to find a
+    /// local variable matching the given name. If one is found, populates @a result
+    /// and returns true. Otherwise returns false.
+    static bool findAssertionLocalVar(const BindContext& context, const NameSyntax& name,
+                                      LookupResult& result);
+
 private:
     Lookup() = default;
 

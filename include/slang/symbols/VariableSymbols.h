@@ -187,8 +187,6 @@ struct LocalVariableDeclarationSyntax;
 /// such as a sequence or property.
 class LocalAssertionVarSymbol : public VariableSymbol {
 public:
-    const ExpressionSyntax* defaultValueSyntax = nullptr;
-
     LocalAssertionVarSymbol(string_view name, SourceLocation loc);
 
     static void fromSyntax(const Scope& scope, const LocalVariableDeclarationSyntax& syntax,

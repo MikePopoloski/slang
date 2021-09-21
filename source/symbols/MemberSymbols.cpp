@@ -928,13 +928,6 @@ SequenceSymbol& SequenceSymbol::fromSyntax(const Scope& scope,
         AssertionPortSymbol::buildPorts(*result, *syntax.portList, ports);
     result->ports = ports.copy(comp);
 
-    for (auto varSyntax : syntax.variables) {
-        SmallVectorSized<const LocalAssertionVarSymbol*, 4> vars;
-        LocalAssertionVarSymbol::fromSyntax(scope, *varSyntax, vars);
-        for (auto var : vars)
-            result->addMember(*var);
-    }
-
     return *result;
 }
 
@@ -957,13 +950,6 @@ PropertySymbol& PropertySymbol::fromSyntax(const Scope& scope,
     if (syntax.portList)
         AssertionPortSymbol::buildPorts(*result, *syntax.portList, ports);
     result->ports = ports.copy(comp);
-
-    for (auto varSyntax : syntax.variables) {
-        SmallVectorSized<const LocalAssertionVarSymbol*, 4> vars;
-        LocalAssertionVarSymbol::fromSyntax(scope, *varSyntax, vars);
-        for (auto var : vars)
-            result->addMember(*var);
-    }
 
     return *result;
 }

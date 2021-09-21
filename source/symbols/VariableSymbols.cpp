@@ -487,23 +487,16 @@ void LocalAssertionVarSymbol::fromSyntax(const Scope& scope,
                                          SmallVector<const LocalAssertionVarSymbol*>& results) {
     auto& comp = scope.getCompilation();
     for (auto declarator : syntax.declarators) {
-        // Note that we don't use setFromDeclarator here as we can't let DeclaredType do its
-        // usual handling of initializers / default values. The expressions for local vars can
-        // depend on assertion ports, which aren't known until bind time and are handled specially
-        // later when instantiating the sequence.
         auto var = comp.emplace<LocalAssertionVarSymbol>(declarator->name.valueText(),
                                                          declarator->name.location());
         var->setDeclaredType(*syntax.type);
-        var->setSyntax(*declarator);
+        var->setFromDeclarator(*declarator);
         var->setAttributes(scope, syntax.attributes);
-
-        if (!declarator->dimensions.empty())
-            var->getDeclaredType()->setDimensionSyntax(declarator->dimensions);
-
-        if (declarator->initializer)
-            var->defaultValueSyntax = declarator->initializer->expr;
-
         results.append(var);
+
+        // Local variables don't get added to any scope as members but
+        // we still need a parent pointer set so they can participate in lookups.
+        var->setParent(scope);
     }
 }
 

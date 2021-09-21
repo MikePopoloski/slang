@@ -894,7 +894,7 @@ endmodule
     CHECK(diags[2].code == diag::AssertionPortOutputDefault);
     CHECK(diags[3].code == diag::LocalVarTypeRequired);
     CHECK(diags[4].code == diag::AssertionExprType);
-    CHECK(diags[5].code == diag::UsedBeforeDeclared);
+    CHECK(diags[5].code == diag::UndeclaredIdentifier);
     CHECK(diags[6].code == diag::LocalVarOutputEmptyMatch);
     CHECK(diags[7].code == diag::AssertionOutputLocalVar);
     CHECK(diags[8].code == diag::AssertionPortPropOutput);
@@ -1128,6 +1128,19 @@ module m;
     wire clk, req;
     assume property (@(posedge clk) req dist {0:=40, 1:=60});
 endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Property port crash regression GH #451") {
+    auto tree = SyntaxTree::fromText(R"(
+property prop(a);
+    logic [$bits(a)-1:0] b;
+    1;
+endproperty
 )");
 
     Compilation compilation;

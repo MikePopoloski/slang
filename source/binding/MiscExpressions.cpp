@@ -455,29 +455,36 @@ static bool checkAssertionArg(const PropertyExprSyntax& propExpr, const Assertio
     return true;
 }
 
-static const AssertionExpr& bindAssertionBody(
-    const Symbol& symbol, const SyntaxNode& syntax, const BindContext& context,
-    SourceLocation outputLocalVarArgLoc,
-    SmallVector<std::tuple<const Symbol*, const Expression*>>& localVarInitializers) {
-
-    auto collectInitializers = [&](const Scope& sym) {
-        for (auto& local : sym.membersOfType<LocalAssertionVarSymbol>()) {
-            if (local.defaultValueSyntax) {
-                auto& expr =
-                    Expression::bind(*local.defaultValueSyntax, context, BindFlags::AssertionExpr);
-                localVarInitializers.append(std::make_tuple(&local, &expr));
+static const AssertionExpr& bindAssertionBody(const Symbol& symbol, const SyntaxNode& syntax,
+                                              const BindContext& context,
+                                              SourceLocation outputLocalVarArgLoc,
+                                              BindContext::AssertionInstanceDetails& instance,
+                                              SmallVector<const Symbol*>& localVars) {
+    auto createLocals = [&](auto& syntaxType) {
+        for (auto varSyntax : syntaxType.variables) {
+            SmallVectorSized<const LocalAssertionVarSymbol*, 4> vars;
+            LocalAssertionVarSymbol::fromSyntax(*context.scope, *varSyntax, vars);
+            for (auto var : vars) {
+                var->getDeclaredType()->forceResolveAt(context);
+                localVars.append(var);
+                if (!var->name.empty()) {
+                    // TODO: check duplicates
+                    instance.localVars.emplace(var->name, var);
+                }
             }
         }
     };
 
     if (symbol.kind == SymbolKind::Sequence) {
-        auto& seqExpr = *syntax.as<SequenceDeclarationSyntax>().seqExpr;
-        auto& result = AssertionExpr::bind(seqExpr, context);
+        auto& sds = syntax.as<SequenceDeclarationSyntax>();
+        createLocals(sds);
+
+        auto& result = AssertionExpr::bind(*sds.seqExpr, context);
         result.requireSequence(context);
-        collectInitializers(symbol.as<SequenceSymbol>());
 
         if (outputLocalVarArgLoc && result.admitsEmpty()) {
-            auto& diag = context.addDiag(diag::LocalVarOutputEmptyMatch, seqExpr.sourceRange());
+            auto& diag =
+                context.addDiag(diag::LocalVarOutputEmptyMatch, sds.seqExpr->sourceRange());
             diag << symbol.name;
             diag.addNote(diag::NoteDeclarationHere, outputLocalVarArgLoc);
         }
@@ -485,8 +492,9 @@ static const AssertionExpr& bindAssertionBody(
         return result;
     }
     else {
-        collectInitializers(symbol.as<PropertySymbol>());
-        return AssertionExpr::bind(*syntax.as<PropertyDeclarationSyntax>().propertySpec, context);
+        auto& pds = syntax.as<PropertyDeclarationSyntax>();
+        createLocals(pds);
+        return AssertionExpr::bind(*pds.propertySpec, context);
     }
 }
 
@@ -699,14 +707,14 @@ Expression& AssertionInstanceExpression::fromLookup(const Symbol& symbol,
     auto bodySyntax = symbol.getSyntax();
     ASSERT(bodySyntax);
 
-    SmallVectorSized<std::tuple<const Symbol*, const Expression*>, 8> localVarInitializers;
-    auto& body = bindAssertionBody(symbol, *bodySyntax, bodyContext, outputLocalVarArgLoc,
-                                   localVarInitializers);
+    SmallVectorSized<const Symbol*, 8> localVars;
+    auto& body = bindAssertionBody(symbol, *bodySyntax, bodyContext, outputLocalVarArgLoc, instance,
+                                   localVars);
 
     auto result = comp.emplace<AssertionInstanceExpression>(*type, symbol, body,
                                                             /* isRecursiveProperty */ false, range);
     result->arguments = actualArgs.copy(comp);
-    result->localVarInitializers = localVarInitializers.copy(comp);
+    result->localVars = localVars.copy(comp);
 
     if (instance.isRecursive) {
         if (!context.flags.has(BindFlags::PropertyTimeAdvance))
@@ -796,14 +804,14 @@ Expression& AssertionInstanceExpression::makeDefault(const Symbol& symbol) {
     auto bodySyntax = symbol.getSyntax();
     ASSERT(bodySyntax);
 
-    SmallVectorSized<std::tuple<const Symbol*, const Expression*>, 8> localVarInitializers;
-    auto& body = bindAssertionBody(symbol, *bodySyntax, bodyContext, outputLocalVarArgLoc,
-                                   localVarInitializers);
+    SmallVectorSized<const Symbol*, 8> localVars;
+    auto& body = bindAssertionBody(symbol, *bodySyntax, bodyContext, outputLocalVarArgLoc, instance,
+                                   localVars);
 
     SourceRange range{ symbol.location, symbol.location + 1 };
     auto result = comp.emplace<AssertionInstanceExpression>(*type, symbol, body,
                                                             /* isRecursiveProperty */ false, range);
-    result->localVarInitializers = localVarInitializers.copy(comp);
+    result->localVars = localVars.copy(comp);
     return *result;
 }
 
@@ -944,13 +952,9 @@ void AssertionInstanceExpression::serializeTo(ASTSerializer& serializer) const {
     serializer.write("body", body);
     serializer.write("isRecursiveProperty", isRecursiveProperty);
 
-    serializer.startArray("localVarInitializers");
-    for (auto [var, expr] : localVarInitializers) {
-        serializer.startObject();
-        serializer.write("local", *var);
-        serializer.write("expr", *expr);
-        serializer.endObject();
-    }
+    serializer.startArray("localVars");
+    for (auto var : localVars)
+        serializer.serialize(*var);
     serializer.endArray();
 }
 

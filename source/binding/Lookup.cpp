@@ -1265,6 +1265,43 @@ bool Lookup::withinClassRandomize(const Scope& scope, span<const string_view> na
     return lookupDownward(nameParts, name, context, result, flags);
 }
 
+bool Lookup::findAssertionLocalVar(const BindContext& context, const NameSyntax& syntax,
+                                   LookupResult& result) {
+    int colonParts = 0;
+    SmallVectorSized<NamePlusLoc, 8> nameParts;
+    const NameSyntax* first = &syntax;
+    if (syntax.kind == SyntaxKind::ScopedName) {
+        first = splitScopedName(syntax.as<ScopedNameSyntax>(), nameParts, colonParts);
+        if (colonParts)
+            return false;
+    }
+
+    NameComponents name;
+    switch (first->kind) {
+        case SyntaxKind::IdentifierName:
+        case SyntaxKind::IdentifierSelectName:
+        case SyntaxKind::ClassName:
+            name = *first;
+            break;
+        default:
+            return false;
+    }
+
+    auto inst = context.assertionInstance;
+    ASSERT(inst);
+
+    while (inst->argDetails)
+        inst = inst->argDetails;
+
+    auto& map = inst->localVars;
+    auto it = map.find(name.text());
+    if (it == map.end())
+        return false;
+
+    result.found = it->second;
+    return lookupDownward(nameParts, name, context, result, LookupFlags::None);
+}
+
 void Lookup::unqualifiedImpl(const Scope& scope, string_view name, LookupLocation location,
                              optional<SourceRange> sourceRange, bitmask<LookupFlags> flags,
                              SymbolIndex outOfBlockIndex, LookupResult& result) {
