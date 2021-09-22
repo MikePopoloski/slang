@@ -930,13 +930,31 @@ EventExpressionSyntax& Parser::parseSignalEvent() {
 }
 
 EventExpressionSyntax& Parser::parseEventExpression() {
-    EventExpressionSyntax* left;
+    EventExpressionSyntax* left = nullptr;
     auto kind = peek().kind;
     if (kind == TokenKind::OpenParenthesis) {
         auto openParen = consume();
         auto& expr = parseEventExpression();
         auto closeParen = expect(TokenKind::CloseParenthesis);
-        left = &factory.parenthesizedEventExpression(openParen, expr, closeParen);
+
+        // If the event expression turns out to be interpretable as a simple expression,
+        // treat it as such. This is necessary because the next token coming up might
+        // be part of a larger binary expression (the opening paren here is ambiguous).
+        if (expr.kind == SyntaxKind::SignalEventExpression) {
+            auto& see = expr.as<SignalEventExpressionSyntax>();
+            if (!see.edge && !see.iffClause) {
+                ExpressionSyntax* newExpr =
+                    &factory.parenthesizedExpression(openParen, *see.expr, closeParen);
+
+                newExpr = &parsePostfixExpression(*newExpr, ExpressionOptions::None);
+                newExpr = &parseBinaryExpression(newExpr, ExpressionOptions::None, 0);
+
+                left = &factory.signalEventExpression(Token(), *newExpr, nullptr);
+            }
+        }
+
+        if (!left)
+            left = &factory.parenthesizedEventExpression(openParen, expr, closeParen);
     }
     else {
         left = &parseSignalEvent();

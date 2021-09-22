@@ -2410,3 +2410,16 @@ endfunction
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Binary expression regress GH #457") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    wire a;
+    always @((a) && (a)) begin end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
