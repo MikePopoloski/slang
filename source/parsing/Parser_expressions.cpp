@@ -731,24 +731,39 @@ NameSyntax& Parser::parseNamePart(bitmask<NameOptions> options) {
             if (options.has(NameOptions::SequenceExpr) && isSequenceRepetition())
                 return factory.identifierName(identifier);
 
-            uint32_t index = 1;
-            scanTypePart<isSemicolon>(index, TokenKind::OpenBracket, TokenKind::CloseBracket);
-            if (!options.has(NameOptions::ForeachName) ||
-                peek(index).kind != TokenKind::CloseParenthesis) {
-
+            if (options.has(NameOptions::ForeachName)) {
+                // For a foreach loop declaration, the final selector
+                // brackets need to be parsed specially because they declare
+                // loop variable names. All the selectors prior can be
+                // parsed as normal selectors.
                 SmallVectorSized<ElementSelectSyntax*, 4> buffer;
                 do {
+                    uint32_t index = 1;
+                    scanTypePart<isSemicolon>(index, TokenKind::OpenBracket,
+                                              TokenKind::CloseBracket);
+                    if (peek(index).kind != TokenKind::OpenBracket)
+                        break;
+
                     buffer.append(&parseElementSelect());
                 } while (peek(TokenKind::OpenBracket));
+
+                if (buffer.empty())
+                    return factory.identifierName(identifier);
 
                 return factory.identifierSelectName(identifier, buffer.copy(alloc));
             }
             else {
-                return factory.identifierName(identifier);
+                // Simply parse all selectors and return the final name.
+                SmallVectorSized<ElementSelectSyntax*, 4> buffer;
+                do {
+                    buffer.append(&parseElementSelect());
+                } while (peek(TokenKind::OpenBracket));
+                return factory.identifierSelectName(identifier, buffer.copy(alloc));
             }
         }
-        default:
+        default: {
             return factory.identifierName(identifier);
+        }
     }
 }
 

@@ -1448,3 +1448,25 @@ endmodule
     CHECK(diags[7].code == diag::IndexValueInvalid);
     CHECK(diags[8].code == diag::TooFewArguments);
 }
+
+TEST_CASE("foreach loop non-standard syntax") {
+    auto tree = SyntaxTree::fromText(R"(
+module top;
+    int array[8][8];
+    initial begin
+        foreach (array[i]) begin
+            foreach (array[i][j]) begin
+                array[i][j] = i * j;
+            end
+        end
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::NonstandardForeach);
+}

@@ -2316,3 +2316,24 @@ struct {
 
     NO_SESSION_ERRORS;
 }
+
+TEST_CASE("foreach loop extended name eval") {
+    ScriptSession session;
+    session.eval("typedef int rt[2][2];");
+    session.eval(R"(
+function rt f;
+    rt array;
+    initial begin
+        foreach (array[i]) begin
+            foreach (array[i][j]) begin
+                array[i][j] = (i + 1) * (j + 1);
+            end
+        end
+    end
+    return array;
+endfunction
+)");
+
+    auto cv = session.eval("f();");
+    CHECK(cv.toString() == "[[1,2],[2,4]]");
+}

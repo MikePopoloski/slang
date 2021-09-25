@@ -220,6 +220,7 @@ error RandJoinProdItem "rand join list can only contain simple references to oth
 error RandJoinNotEnough "rand join list must contain at least two productions"
 warning nonstandard-generate NonStandardGenBlock "standalone generate block without loop or condition is not allowed in SystemVerilog"
 warning empty-pattern EmptyAssignmentPattern "empty assignment patterns are disallowed by SystemVerilog"
+warning nonstandard-foreach NonstandardForeach "non-standard foreach loop variable list"
 note NoteToMatchThis "to match this '{}'"
 
 subsystem Declarations
@@ -805,6 +806,6 @@ group extra = { empty-member empty-stmt dup-import pointless-void-cast case-gen-
                 unused-result format-real ignored-slice task-ignored width-trunc dup-attr }
 
 group pedantic = { empty-pattern implicit-net-port nonstandard-escape-code nonstandard-generate format-multibit-strength
-                   nonstandard-sys-func }
+                   nonstandard-sys-func nonstandard-foreach }
 
 group conversion = { width-trunc width-expand implicit-conv }

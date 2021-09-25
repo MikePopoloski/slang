@@ -386,6 +386,11 @@ ForeachLoopListSyntax& Parser::parseForeachLoopVariables() {
     auto openParen = expect(TokenKind::OpenParenthesis);
     auto& arrayName = parseName(NameOptions::ForeachName);
 
+    if (arrayName.kind == SyntaxKind::IdentifierSelectName) {
+        SourceRange range = arrayName.sourceRange();
+        addDiag(diag::NonstandardForeach, range.start()) << range;
+    }
+
     span<TokenOrSyntax> list;
     Token openBracket;
     Token closeBracket;
