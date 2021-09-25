@@ -1714,3 +1714,41 @@ TEST_CASE("Preproc stringify assertion regress GH #451") {
     // Just test that no assert is hit.
     preprocess(text);
 }
+
+TEST_CASE("Macro inside an escaped identifier") {
+    auto& text = R"(
+`define MAKE_INST(NAME, SIG) \
+    (* instance_name = `"inst_``NAME`" *) \
+    mod \inst_``NAME (.sig(SIG));
+
+module mod(input logic sig);
+endmodule
+module top;
+    logic sig1, sig2;
+    `MAKE_INST(A, sig1)
+    `MAKE_INST(B, sig2)
+endmodule
+)";
+
+    std::string foo = R"(
+module mod(input logic sig);
+endmodule
+module top;
+    logic sig1, sig2;
+    
+    (* instance_name = "inst_A" *) 
+    mod \inst_A (.sig(sig1));
+    
+    (* instance_name = "inst_B" *) 
+    mod \inst_B (.sig(sig2));
+endmodule
+)";
+
+    std::string result = preprocess(text);
+    CHECK(result == foo);
+
+    auto tree = SyntaxTree::fromText(text);
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}

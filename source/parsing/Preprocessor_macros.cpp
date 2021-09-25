@@ -333,29 +333,29 @@ bool Preprocessor::expandMacro(MacroDef macro, MacroExpansion& expansion,
     SourceLocation expansionLoc =
         sourceManager.createExpansionLoc(start, expansionRange, macroName);
 
-    // now add each body token, substituting arguments as necessary
-    for (auto& token : body) {
+    auto handleToken = [&](Token token) {
         if (token.kind != TokenKind::Identifier && !LF::isKeyword(token.kind) &&
             (token.kind != TokenKind::Directive ||
              token.directiveKind() != SyntaxKind::MacroUsage)) {
-
+            // Non-identifier, can't be argument substituted.
             expansion.append(token, expansionLoc, start, expansionRange);
-            continue;
+            return true;
         }
 
-        // Other tools allow arguments to replace matching directive names, e.g.:
-        // `define FOO(bar) `bar
-        // `define ONE 1
-        // `FOO(ONE)   // expands to 1
         string_view text = token.valueText();
-        if (token.kind == TokenKind::Directive && text.length() >= 1)
+        if (token.kind == TokenKind::Directive && !text.empty()) {
+            // Other tools allow arguments to replace matching directive names, e.g.:
+            // `define FOO(bar) `bar
+            // `define ONE 1
+            // `FOO(ONE)   // expands to 1
             text = text.substr(1);
+        }
 
         // check for formal param
         auto it = argumentMap.find(text);
         if (it == argumentMap.end()) {
             expansion.append(token, expansionLoc, start, expansionRange);
-            continue;
+            return true;
         }
 
         // Fully expand out arguments before substitution to make sure we can detect whether
@@ -378,7 +378,7 @@ bool Preprocessor::expandMacro(MacroDef macro, MacroExpansion& expansion,
             Token empty(alloc, TokenKind::EmptyMacroArgument, token.trivia(), ""sv,
                         token.location());
             expansion.append(empty, expansionLoc, start, expansionRange);
-            continue;
+            return true;
         }
 
         // We need to ensure that we get correct spacing for the leading token here;
@@ -411,6 +411,37 @@ bool Preprocessor::expandMacro(MacroDef macro, MacroExpansion& expansion,
         expansion.append(first, argLoc, firstLoc, argRange);
         for (++begin; begin != end; begin++)
             expansion.append(*begin, argLoc, firstLoc, argRange);
+
+        return true;
+    };
+
+    // Now add each body token, substituting arguments as necessary.
+    for (auto token : body) {
+        if (token.kind == TokenKind::Identifier && !token.rawText().empty() &&
+            token.rawText()[0] == '\\') {
+            // Escaped identifier, might need to break apart and substitute
+            // individual pieces of it.
+            size_t index = token.rawText().find("``");
+            if (index != std::string_view::npos) {
+                Token first = token.withRawText(alloc, token.rawText().substr(0, index));
+                if (!handleToken(first))
+                    return false;
+
+                SmallVectorSized<Token, 8> splits;
+                Lexer::splitTokens(alloc, diagnostics, sourceManager, token, index,
+                                   getCurrentKeywordVersion(), splits);
+
+                for (auto t : splits) {
+                    if (!handleToken(t))
+                        return false;
+                }
+
+                continue;
+            }
+        }
+
+        if (!handleToken(token))
+            return false;
     }
 
     return true;
