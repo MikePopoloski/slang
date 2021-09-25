@@ -1058,27 +1058,20 @@ void CopyClassExpression::serializeTo(ASTSerializer& serializer) const {
 
 Expression& DistExpression::fromSyntax(Compilation& comp, const ExpressionOrDistSyntax& syntax,
                                        const BindContext& context) {
-    auto& left = Expression::bind(*syntax.expr, context);
-    bool bad = left.bad();
+    SmallVectorSized<const ExpressionSyntax*, 8> expressions;
+    for (auto item : syntax.distribution->items)
+        expressions.append(item->range);
 
-    if (!left.bad() && !left.type->isIntegral()) {
-        context.addDiag(diag::ExprMustBeIntegral, left.sourceRange) << *left.type;
-        bad = true;
-    }
+    SmallVectorSized<const Expression*, 8> bound;
+    bool bad =
+        !bindMembershipExpressions(context, TokenKind::DistKeyword, /* requireIntegral */ true,
+                                   /* unwrapUnpacked */ false, /* allowTypeReferences */ false,
+                                   /* allowOpenRange */ true, *syntax.expr, expressions, bound);
 
     SmallVectorSized<DistItem, 4> items;
+    size_t index = 1;
     for (auto item : syntax.distribution->items) {
-        auto value = &create(comp, *item->range, context);
-        contextDetermined(context, value, *left.type);
-        bad |= value->bad();
-
-        if (!value->bad() && value->kind != ExpressionKind::OpenRange &&
-            !value->type->isIntegral()) {
-            context.addDiag(diag::ExprMustBeIntegral, value->sourceRange) << *value->type;
-            bad = true;
-        }
-
-        DistItem di{ *value, {} };
+        DistItem di{ *bound[index++], {} };
         if (item->weight) {
             auto weightKind = item->weight->op.kind == TokenKind::ColonSlash ? DistWeight::PerRange
                                                                              : DistWeight::PerValue;
@@ -1096,7 +1089,7 @@ Expression& DistExpression::fromSyntax(Compilation& comp, const ExpressionOrDist
         items.emplace(di);
     }
 
-    auto result = comp.emplace<DistExpression>(comp.getVoidType(), left, items.copy(comp),
+    auto result = comp.emplace<DistExpression>(comp.getVoidType(), *bound[0], items.copy(comp),
                                                syntax.sourceRange());
     if (bad)
         return badExpr(comp, result);

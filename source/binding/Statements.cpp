@@ -1056,9 +1056,11 @@ Statement& CaseStatement::fromSyntax(Compilation& compilation, const CaseStateme
     bool isInside = syntax.matchesOrInside.kind == TokenKind::InsideKeyword;
     bool wildcard = !isInside && keyword != TokenKind::CaseKeyword;
     bool allowTypeRefs = !isInside && keyword == TokenKind::CaseKeyword;
+    bool allowOpenRange = !wildcard;
 
-    bad |= !Expression::bindMembershipExpressions(context, keyword, wildcard, isInside,
-                                                  allowTypeRefs, *syntax.expr, expressions, bound);
+    bad |=
+        !Expression::bindMembershipExpressions(context, keyword, wildcard, isInside, allowTypeRefs,
+                                               allowOpenRange, *syntax.expr, expressions, bound);
 
     if (isInside && condition != CaseStatementCondition::Normal) {
         context.addDiag(diag::CaseInsideKeyword, syntax.matchesOrInside.range())

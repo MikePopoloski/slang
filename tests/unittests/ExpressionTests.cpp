@@ -2411,6 +2411,24 @@ endfunction
     NO_COMPILATION_ERRORS;
 }
 
+TEST_CASE("Assignment assertion regress GH #456") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    enum { A, B } foo;
+    int bar;
+    initial begin
+        case (bar)
+            A: begin end
+        endcase
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
 TEST_CASE("Binary expression regress GH #457") {
     auto tree = SyntaxTree::fromText(R"(
 module m;

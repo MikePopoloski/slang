@@ -402,9 +402,9 @@ void GenerateBlockSymbol::fromSyntax(Compilation& compilation, const CaseGenerat
     BindContext bindContext = context.resetFlags(BindFlags::Constant);
     SmallVectorSized<const Expression*, 8> bound;
     if (!Expression::bindMembershipExpressions(
-            bindContext, TokenKind::CaseKeyword, /* wildcard */ false,
-            /* unwrapUnpacked */ false, /* allowTypeReferences */ true, *syntax.condition,
-            expressions, bound)) {
+            bindContext, TokenKind::CaseKeyword, /* requireIntegral */ false,
+            /* unwrapUnpacked */ false, /* allowTypeReferences */ true, /* allowOpenRange */ true,
+            *syntax.condition, expressions, bound)) {
         return;
     }
 

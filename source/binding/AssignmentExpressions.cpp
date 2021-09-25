@@ -214,8 +214,8 @@ Expression* Expression::tryConnectPortArray(const BindContext& context, const Ty
 
 bool Expression::isImplicitlyAssignableTo(const Type& targetType) const {
     return targetType.isAssignmentCompatible(*type) ||
-           (targetType.isString() && isImplicitString()) ||
-           (targetType.isEnum() && isSameEnum(*this, *type));
+           ((targetType.isString() || targetType.isByteArray()) && isImplicitString()) ||
+           (targetType.isEnum() && isSameEnum(*this, targetType));
 }
 
 Expression& Expression::convertAssignment(const BindContext& context, const Type& type,
@@ -269,9 +269,7 @@ Expression& Expression::convertAssignment(const BindContext& context, const Type
     if (!type.isAssignmentCompatible(*rt)) {
         // String literals have a type of integer, but are allowed to implicitly convert to the
         // string type. See comments on isSameEnum for why that's here as well.
-        if (((type.isString() || type.isByteArray()) && expr.isImplicitString()) ||
-            (type.isEnum() && isSameEnum(expr, type))) {
-
+        if (expr.isImplicitlyAssignableTo(type)) {
             result = &ConversionExpression::makeImplicit(context, type, ConversionKind::Implicit,
                                                          *result, location);
             selfDetermined(context, result);
@@ -702,9 +700,7 @@ static void checkImplicitConversions(const BindContext& context, const Type& tar
 Expression& ConversionExpression::makeImplicit(const BindContext& context, const Type& targetType,
                                                ConversionKind conversionKind, Expression& expr,
                                                SourceLocation loc) {
-    ASSERT(targetType.isAssignmentCompatible(*expr.type) ||
-           ((targetType.isString() || targetType.isByteArray()) && expr.isImplicitString()) ||
-           (targetType.isEnum() && isSameEnum(expr, targetType)));
+    ASSERT(expr.isImplicitlyAssignableTo(targetType));
 
     Expression* op = &expr;
     selfDetermined(context, op);

@@ -157,8 +157,8 @@ const Type* Expression::binaryOperatorType(Compilation& compilation, const Type*
 }
 
 bool Expression::bindMembershipExpressions(const BindContext& context, TokenKind keyword,
-                                           bool wildcard, bool unwrapUnpacked,
-                                           bool allowTypeReferences,
+                                           bool requireIntegral, bool unwrapUnpacked,
+                                           bool allowTypeReferences, bool allowOpenRange,
                                            const ExpressionSyntax& valueExpr,
                                            span<const ExpressionSyntax* const> expressions,
                                            SmallVector<const Expression*>& results) {
@@ -171,7 +171,7 @@ bool Expression::bindMembershipExpressions(const BindContext& context, TokenKind
     bool bad = valueRes.bad();
     bool canBeStrings = valueRes.isImplicitString();
 
-    if ((!wildcard && type->isAggregate()) || (wildcard && !type->isIntegral())) {
+    if ((!requireIntegral && type->isAggregate()) || (requireIntegral && !type->isIntegral())) {
         if (!bad) {
             context.addDiag(diag::BadSetMembershipType, valueRes.sourceRange)
                 << *type << LexerFacts::getTokenKindText(keyword);
@@ -226,8 +226,20 @@ bool Expression::bindMembershipExpressions(const BindContext& context, TokenKind
         if (bad)
             continue;
 
+        // Special handling for open range expressions -- they don't have
+        // a real type on their own, we need to check their bounds.
+        if (allowOpenRange && bound->kind == ExpressionKind::OpenRange) {
+            if (canBeStrings && !bound->isImplicitString())
+                canBeStrings = false;
+
+            auto& range = bound->as<OpenRangeExpression>();
+            checkType(range.left(), *range.left().type);
+            checkType(range.right(), *range.right().type);
+            continue;
+        }
+
         const Type* bt = bound->type;
-        if (wildcard) {
+        if (requireIntegral) {
             if (!bt->isIntegral()) {
                 context.addDiag(diag::BadSetMembershipType, bound->sourceRange)
                     << *bt << LexerFacts::getTokenKindText(keyword);
@@ -236,18 +248,6 @@ bool Expression::bindMembershipExpressions(const BindContext& context, TokenKind
             else {
                 type = binaryOperatorType(comp, type, bt, false);
             }
-            continue;
-        }
-
-        // Special handling for open range expressions -- they don't have
-        // a real type on their own, we need to check their bounds.
-        if (bound->kind == ExpressionKind::OpenRange) {
-            if (canBeStrings && !bound->isImplicitString())
-                canBeStrings = false;
-
-            auto& range = bound->as<OpenRangeExpression>();
-            checkType(range.left(), *range.left().type);
-            checkType(range.right(), *range.right().type);
             continue;
         }
 
@@ -1116,9 +1116,9 @@ Expression& InsideExpression::fromSyntax(Compilation& compilation,
 
     SmallVectorSized<const Expression*, 8> bound;
     bool bad =
-        !bindMembershipExpressions(context, TokenKind::InsideKeyword, /* wildcard */ false,
+        !bindMembershipExpressions(context, TokenKind::InsideKeyword, /* requireIntegral */ false,
                                    /* unwrapUnpacked */ true, /* allowTypeReferences */ false,
-                                   *syntax.expr, expressions, bound);
+                                   /* allowOpenRange */ true, *syntax.expr, expressions, bound);
 
     auto boundSpan = bound.copy(compilation);
     auto result = compilation.emplace<InsideExpression>(compilation.getLogicType(), *boundSpan[0],

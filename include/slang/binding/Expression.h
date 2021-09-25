@@ -194,12 +194,15 @@ public:
     ///
     /// The @param keyword parameter is used to customize diagnostics produced.
     ///
-    /// If @param wildcard is set to true, expression types will be restricted to
+    /// If @param requireIntegral is set to true, expression types will be restricted to
     /// be only integral types.
     ///
     /// If @param unwrapUnpacked is set to true, unpacked arrays will be unwrapped to
     /// their element types to find the type to check against. Otherwise, all aggregates
     /// are illegal.
+    ///
+    /// If @param allowOpenRange is set to true, open range expressions will be allowed.
+    /// Otherwise an error will be issued for them.
     ///
     /// If @param allowTypeReferences is true the bound expressions are allowed to
     /// be type reference expressions. Otherwise an error will be issued.
@@ -207,8 +210,8 @@ public:
     /// @returns true if all expressions are legal, otherwise false and appropriate
     /// diagnostics are issued.
     static bool bindMembershipExpressions(const BindContext& context, TokenKind keyword,
-                                          bool wildcard, bool unwrapUnpacked,
-                                          bool allowTypeReferences,
+                                          bool requireIntegral, bool unwrapUnpacked,
+                                          bool allowTypeReferences, bool allowOpenRange,
                                           const ExpressionSyntax& valueExpr,
                                           span<const ExpressionSyntax* const> expressions,
                                           SmallVector<const Expression*>& results);

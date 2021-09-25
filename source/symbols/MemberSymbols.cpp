@@ -1221,9 +1221,11 @@ const RandSeqProductionSymbol::CaseProd& RandSeqProductionSymbol::createCaseProd
     }
 
     SmallVectorSized<const Expression*, 8> bound;
-    Expression::bindMembershipExpressions(
-        context, TokenKind::CaseKeyword, /* wildcard */ false, /* unwrapUnpacked */ false,
-        /* allowTypeReferences */ true, *syntax.expr, expressions, bound);
+    Expression::bindMembershipExpressions(context, TokenKind::CaseKeyword,
+                                          /* requireIntegral */ false,
+                                          /* unwrapUnpacked */ false,
+                                          /* allowTypeReferences */ true, /* allowOpenRange */ true,
+                                          *syntax.expr, expressions, bound);
 
     SmallVectorSized<CaseItem, 8> items;
     SmallVectorSized<const Expression*, 8> group;
