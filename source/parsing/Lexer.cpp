@@ -117,7 +117,7 @@ Token Lexer::stringify(BumpAllocator& alloc, SourceLocation location, span<Trivi
     string_view raw = toStringView(text.copy(alloc));
 
     Diagnostics unused;
-    Lexer lexer{ BufferID(), raw, raw.data(), alloc, unused, LexerOptions{} };
+    Lexer lexer{ BufferID::getPlaceholder(), raw, raw.data(), alloc, unused, LexerOptions{} };
 
     auto token = lexer.lex();
     ASSERT(token.kind == TokenKind::StringLiteral);
@@ -143,7 +143,7 @@ Trivia Lexer::commentify(BumpAllocator& alloc, Token* begin, Token* end) {
     string_view raw = toStringView(text.copy(alloc));
 
     Diagnostics unused;
-    Lexer lexer{ BufferID(), raw, raw.data(), alloc, unused, LexerOptions{} };
+    Lexer lexer{ BufferID::getPlaceholder(), raw, raw.data(), alloc, unused, LexerOptions{} };
 
     auto token = lexer.lex();
     ASSERT(token.kind == TokenKind::EndOfFile);

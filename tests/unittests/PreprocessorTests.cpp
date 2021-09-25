@@ -1704,3 +1704,13 @@ const
     CHECK(result == expected);
     CHECK_DIAGNOSTICS_EMPTY;
 }
+
+TEST_CASE("Preproc stringify assertion regress GH #451") {
+    auto& text = R"(
+`define FOO (* instance_name = `"\inst_``NAME`" *)
+`FOO
+)";
+
+    // Just test that no assert is hit.
+    preprocess(text);
+}
