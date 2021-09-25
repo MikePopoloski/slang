@@ -741,8 +741,10 @@ NameSyntax& Parser::parseNamePart(bitmask<NameOptions> options) {
                     uint32_t index = 1;
                     scanTypePart<isSemicolon>(index, TokenKind::OpenBracket,
                                               TokenKind::CloseBracket);
-                    if (peek(index).kind != TokenKind::OpenBracket)
+                    if (peek(index).kind != TokenKind::OpenBracket &&
+                        peek(index).kind != TokenKind::Dot) {
                         break;
+                    }
 
                     buffer.append(&parseElementSelect());
                 } while (peek(TokenKind::OpenBracket));

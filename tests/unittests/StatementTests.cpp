@@ -1461,6 +1461,17 @@ module top;
         end
     end
 endmodule
+
+class A;
+    int subhash[string];
+endclass
+class C;
+    A hash[string];
+    task t(string index);
+        foreach (hash[index].subhash[i]) begin
+        end
+    endtask
+endclass
 )");
 
     Compilation compilation;
