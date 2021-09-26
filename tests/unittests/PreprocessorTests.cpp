@@ -1730,22 +1730,82 @@ module top;
 endmodule
 )";
 
-    std::string foo = R"(
+    std::string result = preprocess(text);
+    CHECK(result == R"(
 module mod(input logic sig);
 endmodule
 module top;
     logic sig1, sig2;
     
     (* instance_name = "inst_A" *) 
-    mod \inst_A (.sig(sig1));
+    mod \inst_A  (.sig(sig1));
     
     (* instance_name = "inst_B" *) 
-    mod \inst_B (.sig(sig2));
+    mod \inst_B  (.sig(sig2));
+endmodule
+)");
+
+    auto tree = SyntaxTree::fromText(text);
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Nested macro arg escaped identifier") {
+    auto& text = R"(
+`define FOO(a, b) a: b
+`define BAR(a, b) `FOO(\asdf_``a , b)
+
+module m;
+    initial begin
+        int i;
+        `BAR([k]123, i++);
+    end
 endmodule
 )";
 
     std::string result = preprocess(text);
-    CHECK(result == foo);
+    CHECK(result == R"(
+module m;
+    initial begin
+        int i;
+        \asdf_[k]123 : i++;
+    end
+endmodule
+)");
+
+    auto tree = SyntaxTree::fromText(text);
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Macro arg concat with multiple adjacent tokens") {
+    auto& text = R"(
+`define MACRO(ARG) \
+    if (PARAM == 0) begin: size``ARG \
+        assign var_``ARG = 1'b1; \
+    end
+module top #(
+    int unsigned PARAM = 0
+) ();
+    logic var_4K;
+    `MACRO(4K)
+endmodule
+)";
+
+    std::string result = preprocess(text);
+    CHECK(result == R"(
+module top #(
+    int unsigned PARAM = 0
+) ();
+    logic var_4K;
+    
+    if (PARAM == 0) begin: size4K 
+        assign var_4K = 1'b1; 
+    end
+endmodule
+)");
 
     auto tree = SyntaxTree::fromText(text);
     Compilation compilation;

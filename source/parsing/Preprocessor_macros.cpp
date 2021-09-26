@@ -98,9 +98,11 @@ bool Preprocessor::applyMacroOps(span<Token const> tokens, SmallVector<Token>& d
     Token stringify;
     Token syntheticComment;
     bool anyNewMacros = false;
+    bool didConcat = false;
 
     for (size_t i = 0; i < tokens.size(); i++) {
         Token newToken;
+        bool nextDidConcat = false;
 
         // Once we see a `" token, we start collecting tokens into their own
         // buffer for stringification. Otherwise, just add them to the final
@@ -183,17 +185,33 @@ bool Preprocessor::applyMacroOps(span<Token const> tokens, SmallVector<Token>& d
                             dest.pop();
                             ++i;
 
+                            nextDidConcat = true;
                             anyNewMacros |= newToken.kind == TokenKind::Directive &&
                                             newToken.directiveKind() == SyntaxKind::MacroUsage;
                         }
                     }
                 }
                 break;
-            default:
+            default: {
+                // If last iteration we did a token concatenation, check whether this token
+                // is right next to it (not leading trivia). If so, we should try to
+                // continue the concatenation process.
+                if (didConcat && token.trivia().empty() && emptyArgTrivia.empty()) {
+                    newToken = Lexer::concatenateTokens(alloc, dest.back(), token);
+                    if (newToken) {
+                        dest.pop();
+                        nextDidConcat = true;
+                        break;
+                    }
+                }
+
+                // Otherwise take the token as it is.
                 newToken = token;
                 break;
+            }
         }
 
+        didConcat = nextDidConcat;
         if (!newToken)
             continue;
 
@@ -433,6 +451,20 @@ bool Preprocessor::expandMacro(MacroDef macro, MacroExpansion& expansion,
 
                 for (auto t : splits) {
                     if (!handleToken(t))
+                        return false;
+                }
+
+                // Add an empty argument in here so we can make sure a space ends
+                // the escaped identifier once it gets concatenated again.
+                if (!splits.empty()) {
+                    SmallVectorSized<Trivia, 2> triviaBuf;
+                    triviaBuf.emplace(TriviaKind::Whitespace, " "sv);
+
+                    auto loc = splits.back().location() + splits.back().rawText().length();
+                    Token empty(alloc, TokenKind::EmptyMacroArgument, triviaBuf.copy(alloc), ""sv,
+                                loc);
+
+                    if (!handleToken(empty))
                         return false;
                 }
 
