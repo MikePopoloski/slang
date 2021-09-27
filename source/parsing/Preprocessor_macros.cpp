@@ -351,17 +351,33 @@ bool Preprocessor::expandMacro(MacroDef macro, MacroExpansion& expansion,
     SourceLocation expansionLoc =
         sourceManager.createExpansionLoc(start, expansionRange, macroName);
 
+    auto append = [&](Token token) {
+        expansion.append(token, expansionLoc, start, expansionRange);
+        return true;
+    };
+
+    bool inDefineDirective = false;
+
     auto handleToken = [&](Token token) {
+        if (inDefineDirective && !isOnSameLine(token))
+            inDefineDirective = false;
+
         if (token.kind != TokenKind::Identifier && !LF::isKeyword(token.kind) &&
-            (token.kind != TokenKind::Directive ||
-             token.directiveKind() != SyntaxKind::MacroUsage)) {
+            token.kind != TokenKind::Directive) {
             // Non-identifier, can't be argument substituted.
-            expansion.append(token, expansionLoc, start, expansionRange);
-            return true;
+            return append(token);
         }
 
         string_view text = token.valueText();
         if (token.kind == TokenKind::Directive && !text.empty()) {
+            if (token.directiveKind() != SyntaxKind::MacroUsage) {
+                // If this is the start of a `define directive, note that fact because
+                // during argument expansion we will insert line continuations.
+                if (token.directiveKind() == SyntaxKind::DefineDirective)
+                    inDefineDirective = true;
+                return append(token);
+            }
+
             // Other tools allow arguments to replace matching directive names, e.g.:
             // `define FOO(bar) `bar
             // `define ONE 1
@@ -371,10 +387,8 @@ bool Preprocessor::expandMacro(MacroDef macro, MacroExpansion& expansion,
 
         // check for formal param
         auto it = argumentMap.find(text);
-        if (it == argumentMap.end()) {
-            expansion.append(token, expansionLoc, start, expansionRange);
-            return true;
-        }
+        if (it == argumentMap.end())
+            return append(token);
 
         // Fully expand out arguments before substitution to make sure we can detect whether
         // a usage of a macro in a replacement list is valid or an illegal recursion.
@@ -395,8 +409,7 @@ bool Preprocessor::expandMacro(MacroDef macro, MacroExpansion& expansion,
             // here to ensure that the trivia of the formal parameter is passed on.
             Token empty(alloc, TokenKind::EmptyMacroArgument, token.trivia(), ""sv,
                         token.location());
-            expansion.append(empty, expansionLoc, start, expansionRange);
-            return true;
+            return append(empty);
         }
 
         // We need to ensure that we get correct spacing for the leading token here;
@@ -426,9 +439,30 @@ bool Preprocessor::expandMacro(MacroDef macro, MacroExpansion& expansion,
             }
         }
 
-        expansion.append(first, argLoc, firstLoc, argRange);
-        for (++begin; begin != end; begin++)
-            expansion.append(*begin, argLoc, firstLoc, argRange);
+        if (inDefineDirective) {
+            // Inside a define directive we need to insert line continuations
+            // any time an expanded token will end up on a new line.
+            auto appendBody = [&](Token token) {
+                if (!isOnSameLine(token)) {
+                    Token lc(alloc, TokenKind::LineContinuation, token.trivia(), "\\"sv,
+                             token.location());
+                    expansion.append(lc, argLoc, firstLoc, argRange,
+                                     /* allowLineContinuation */ true);
+
+                    token = token.withTrivia(alloc, {});
+                }
+                expansion.append(token, argLoc, firstLoc, argRange);
+            };
+
+            appendBody(first);
+            for (++begin; begin != end; begin++)
+                appendBody(*begin);
+        }
+        else {
+            expansion.append(first, argLoc, firstLoc, argRange);
+            for (++begin; begin != end; begin++)
+                expansion.append(*begin, argLoc, firstLoc, argRange);
+        }
 
         return true;
     };
@@ -498,12 +532,14 @@ SourceLocation Preprocessor::MacroExpansion::adjustLoc(Token token, SourceLocati
 }
 
 void Preprocessor::MacroExpansion::append(Token token, SourceLocation& macroLoc,
-                                          SourceLocation& firstLoc, SourceRange expansionRange) {
+                                          SourceLocation& firstLoc, SourceRange expansionRange,
+                                          bool allowLineContinuation) {
     SourceLocation location = adjustLoc(token, macroLoc, firstLoc, expansionRange);
-    append(token, location);
+    append(token, location, allowLineContinuation);
 }
 
-void Preprocessor::MacroExpansion::append(Token token, SourceLocation location) {
+void Preprocessor::MacroExpansion::append(Token token, SourceLocation location,
+                                          bool allowLineContinuation) {
     if (!any) {
         if (!isTopLevel)
             token = token.withTrivia(alloc, usageSite.trivia());
@@ -513,7 +549,7 @@ void Preprocessor::MacroExpansion::append(Token token, SourceLocation location) 
     }
 
     // Line continuations get stripped out when we expand macros and become newline trivia instead.
-    if (token.kind == TokenKind::LineContinuation) {
+    if (token.kind == TokenKind::LineContinuation && !allowLineContinuation) {
         SmallVectorSized<Trivia, 8> newTrivia;
         newTrivia.appendRange(token.trivia());
         newTrivia.append(Trivia(TriviaKind::EndOfLine, token.rawText().substr(1)));

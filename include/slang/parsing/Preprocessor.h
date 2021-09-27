@@ -214,9 +214,9 @@ private:
         SourceLocation adjustLoc(Token token, SourceLocation& macroLoc, SourceLocation& firstLoc,
                                  SourceRange expansionRange) const;
 
-        void append(Token token, SourceLocation location);
+        void append(Token token, SourceLocation location, bool allowLineContinuation = false);
         void append(Token token, SourceLocation& macroLoc, SourceLocation& firstLoc,
-                    SourceRange expansionRange);
+                    SourceRange expansionRange, bool allowLineContinuation = false);
 
     private:
         SourceManager& sourceManager;

@@ -1812,3 +1812,39 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Macro defining new macro with newlines") {
+    auto& text = R"(
+`define FOO(x, y) \
+    `ifndef x \
+        `define x (y) \
+    `endif
+    
+`FOO(baz,
+    1 ?
+        0 :
+        1)
+
+module m;
+    int i = `baz;
+endmodule
+)";
+
+    std::string result = preprocess(text);
+    CHECK(result == R"(
+    
+     
+         
+    
+module m;
+    int i = (1 ?
+        0 :
+        1);
+endmodule
+)");
+
+    auto tree = SyntaxTree::fromText(text);
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
