@@ -1141,8 +1141,8 @@ bool Lookup::ensureVisible(const Symbol& symbol, const BindContext& context,
 
 bool Lookup::ensureAccessible(const Symbol& symbol, const BindContext& context,
                               optional<SourceRange> sourceRange) {
-    if (context.classRandomizeScope &&
-        Lookup::isAccessibleFrom(symbol, context.classRandomizeScope->classType->asSymbol())) {
+    if (context.randomizeDetails && context.randomizeDetails->classType &&
+        Lookup::isAccessibleFrom(symbol, context.randomizeDetails->classType->asSymbol())) {
         return true;
     }
 
@@ -1525,7 +1525,7 @@ void Lookup::qualified(const ScopedNameSyntax& syntax, const BindContext& contex
     bool inConstantEval = (flags & LookupFlags::Constant) != 0;
 
     if (leftMost->kind == SyntaxKind::LocalScope) {
-        if (!context.classRandomizeScope) {
+        if (!context.randomizeDetails || !context.randomizeDetails->classType) {
             result.addDiag(scope, diag::LocalNotAllowed, first.range());
             return;
         }

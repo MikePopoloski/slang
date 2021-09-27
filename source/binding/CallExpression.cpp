@@ -81,8 +81,8 @@ Expression& CallExpression::fromLookup(Compilation& compilation, const Subroutin
     if (!sub->flags.has(MethodFlags::Static) && !thisClass &&
         subroutineParent.kind == SymbolKind::ClassType) {
 
-        if (!context.classRandomizeScope ||
-            !Lookup::isAccessibleFrom(*sub, context.classRandomizeScope->classType->asSymbol())) {
+        if (!context.randomizeDetails || !context.randomizeDetails->classType ||
+            !Lookup::isAccessibleFrom(*sub, context.randomizeDetails->classType->asSymbol())) {
 
             auto [parent, inStatic] = Lookup::getContainingClass(*context.scope);
             if (parent && !Lookup::isAccessibleFrom(*sub, *parent)) {
@@ -434,7 +434,7 @@ static const Expression* bindIteratorExpr(Compilation& compilation,
 
 static CallExpression::RandomizeCallInfo bindRandomizeExpr(
     const ArrayOrRandomizeMethodExpressionSyntax& withClause, BindContext& context,
-    BindContext::ClassRandomizeScope& randomizeCtx) {
+    BindContext::RandomizeDetails& randomizeDetails) {
 
     if (!withClause.constraints) {
         context.addDiag(diag::MissingConstraintBlock, withClause.sourceRange());
@@ -442,7 +442,7 @@ static CallExpression::RandomizeCallInfo bindRandomizeExpr(
     }
 
     if (withClause.args) {
-        if (!context.classRandomizeScope) {
+        if (!context.randomizeDetails || !context.randomizeDetails->classType) {
             context.addDiag(diag::NameListWithScopeRandomize, withClause.args->sourceRange());
             return { nullptr, {} };
         }
@@ -457,11 +457,11 @@ static CallExpression::RandomizeCallInfo bindRandomizeExpr(
             names.append(expr->as<IdentifierNameSyntax>().identifier.valueText());
         }
 
-        randomizeCtx.nameRestrictions = names.copy(context.getCompilation());
+        randomizeDetails.nameRestrictions = names.copy(context.getCompilation());
     }
 
     auto& constraints = Constraint::bind(*withClause.constraints, context);
-    return { &constraints, randomizeCtx.nameRestrictions };
+    return { &constraints, randomizeDetails.nameRestrictions };
 }
 
 Expression& CallExpression::createSystemCall(
@@ -499,26 +499,26 @@ Expression& CallExpression::createSystemCall(
         }
     }
     else {
-        BindContext::ClassRandomizeScope randomizeCtx;
+        BindContext::RandomizeDetails randomizeDetails;
         BindContext argContext = context;
 
         if (subroutine.withClauseMode == WithClauseMode::Randomize) {
             // If this is a class-scoped randomize call, setup the scope properly
             // so that class members can be found in the constraint block.
             if (firstArg) {
-                randomizeCtx.classType = &firstArg->type->getCanonicalType().as<ClassType>();
-                argContext.classRandomizeScope = &randomizeCtx;
+                randomizeDetails.classType = &firstArg->type->getCanonicalType().as<ClassType>();
+                argContext.randomizeDetails = &randomizeDetails;
             }
             else if (randomizeScope && randomizeScope->asSymbol().kind == SymbolKind::ClassType) {
-                randomizeCtx.classType = randomizeScope;
-                argContext.classRandomizeScope = &randomizeCtx;
+                randomizeDetails.classType = randomizeScope;
+                argContext.randomizeDetails = &randomizeDetails;
             }
             iterOrThis = firstArg;
         }
 
         if (withClause) {
             if (subroutine.withClauseMode == WithClauseMode::Randomize) {
-                auto randInfo = bindRandomizeExpr(*withClause, argContext, randomizeCtx);
+                auto randInfo = bindRandomizeExpr(*withClause, argContext, randomizeDetails);
                 if (!randInfo.inlineConstraints)
                     return badExpr(compilation, nullptr);
 
@@ -527,7 +527,7 @@ Expression& CallExpression::createSystemCall(
                 // These need to be cleared out because we will reuse the bind context
                 // for looking up argument names below and they aren't subject to any
                 // restriction list.
-                randomizeCtx.nameRestrictions = {};
+                randomizeDetails.nameRestrictions = {};
             }
             else {
                 argContext.addDiag(diag::WithClauseNotAllowed, withClause->with.range())

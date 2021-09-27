@@ -188,9 +188,9 @@ public:
     const IteratorSymbol* firstIterator = nullptr;
 
     /// A collection of information needed to bind names inside inline constraint
-    /// blocks for class randomize function calls.
-    struct ClassRandomizeScope {
-        /// The scope of the class type itself.
+    /// blocks for class and scope randomize function calls.
+    struct RandomizeDetails {
+        /// The scope of the class type itself, if randomizing a class.
         const Scope* classType = nullptr;
 
         /// A list of names to which class-scoped lookups are restricted.
@@ -199,10 +199,11 @@ public:
         span<const string_view> nameRestrictions;
     };
 
-    /// If this context is for binding an inline constraint block for a class randomize
-    /// function call, this points to information about the class scope. Name lookups
-    /// happen inside the class scope before going through the normal local lookup.
-    const ClassRandomizeScope* classRandomizeScope = nullptr;
+    /// If this context is for binding an inline constraint block for a randomize
+    /// function call, this points to information about the scope. Name lookups
+    /// happen inside the class scope before going through the normal local lookup,
+    /// for example.
+    const RandomizeDetails* randomizeDetails = nullptr;
 
     /// Information required to instantiate a sequence or property instance.
     struct AssertionInstanceDetails {

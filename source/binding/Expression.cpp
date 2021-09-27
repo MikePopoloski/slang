@@ -775,7 +775,7 @@ Expression& Expression::bindName(Compilation& compilation, const NameSyntax& syn
 
     // Special case scenarios: array iterator expressions, class-scoped randomize calls,
     // and expanding sequences and properties.
-    if (context.firstIterator || context.classRandomizeScope || context.assertionInstance) {
+    if (context.firstIterator || context.randomizeDetails || context.assertionInstance) {
         // If we're in an array iterator expression, the iterator variable needs to be findable
         // even though it's not added to any scope. Check for that case and manually look for
         // its name here.
@@ -787,14 +787,12 @@ Expression& Expression::bindName(Compilation& compilation, const NameSyntax& syn
             }
         }
 
-        if (context.classRandomizeScope) {
-            ASSERT(context.classRandomizeScope->classType);
-
+        if (context.randomizeDetails && context.randomizeDetails->classType) {
             // Inside a class-scoped randomize call, first do a lookup in the class scope.
             // If it's not found, we proceed to do a normal lookup.
             LookupResult result;
-            if (Lookup::withinClassRandomize(*context.classRandomizeScope->classType,
-                                             context.classRandomizeScope->nameRestrictions, syntax,
+            if (Lookup::withinClassRandomize(*context.randomizeDetails->classType,
+                                             context.randomizeDetails->nameRestrictions, syntax,
                                              flags, result)) {
                 return bindLookupResult(compilation, result, syntax, invocation, withClause,
                                         context);
