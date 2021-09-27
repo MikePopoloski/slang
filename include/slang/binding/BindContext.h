@@ -29,6 +29,7 @@ struct ExpressionSyntax;
 struct PropertyExprSyntax;
 struct SelectorSyntax;
 struct VariableDimensionSyntax;
+enum class RandMode;
 
 /// Specifies flags that control expression and statement binding.
 enum class BindFlags {
@@ -197,6 +198,10 @@ public:
         /// If empty, the lookup is unrestricted and all names are first
         /// tried in class-scope.
         span<const string_view> nameRestrictions;
+
+        /// A set of variables for a scope randomize call that should be
+        /// treated as a rand variable.
+        flat_hash_set<const Symbol*> scopeRandVars;
     };
 
     /// If this context is for binding an inline constraint block for a randomize
@@ -296,6 +301,10 @@ public:
     /// for a subroutine. This method unwraps for the case where we are calling a subroutine.
     const ExpressionSyntax* requireSimpleExpr(const PropertyExprSyntax& expr) const;
     const ExpressionSyntax* requireSimpleExpr(const PropertyExprSyntax& expr, DiagCode code) const;
+
+    /// Gets the rand mode for the given symbol, taking into account any randomize
+    /// scope that may be active in this context.
+    RandMode getRandMode(const Symbol& symbol) const;
 
     /// If this context is within an assertion instance, report a backtrace of how that
     /// instance was expanded to the given diagnostic; otherwise, do nothing.

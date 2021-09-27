@@ -432,38 +432,6 @@ static const Expression* bindIteratorExpr(Compilation& compilation,
     return &Expression::bind(*withClause.args->expressions[0], iterCtx);
 }
 
-static CallExpression::RandomizeCallInfo bindRandomizeExpr(
-    const ArrayOrRandomizeMethodExpressionSyntax& withClause, BindContext& context,
-    BindContext::RandomizeDetails& randomizeDetails) {
-
-    if (!withClause.constraints) {
-        context.addDiag(diag::MissingConstraintBlock, withClause.sourceRange());
-        return { nullptr, {} };
-    }
-
-    if (withClause.args) {
-        if (!context.randomizeDetails || !context.randomizeDetails->classType) {
-            context.addDiag(diag::NameListWithScopeRandomize, withClause.args->sourceRange());
-            return { nullptr, {} };
-        }
-
-        SmallVectorSized<string_view, 4> names;
-        for (auto expr : withClause.args->expressions) {
-            if (expr->kind != SyntaxKind::IdentifierName) {
-                context.addDiag(diag::ExpectedIdentifier, expr->sourceRange());
-                continue;
-            }
-
-            names.append(expr->as<IdentifierNameSyntax>().identifier.valueText());
-        }
-
-        randomizeDetails.nameRestrictions = names.copy(context.getCompilation());
-    }
-
-    auto& constraints = Constraint::bind(*withClause.constraints, context);
-    return { &constraints, randomizeDetails.nameRestrictions };
-}
-
 Expression& CallExpression::createSystemCall(
     Compilation& compilation, const SystemSubroutine& subroutine, const Expression* firstArg,
     const InvocationExpressionSyntax* syntax,
@@ -505,29 +473,45 @@ Expression& CallExpression::createSystemCall(
         if (subroutine.withClauseMode == WithClauseMode::Randomize) {
             // If this is a class-scoped randomize call, setup the scope properly
             // so that class members can be found in the constraint block.
+            argContext.randomizeDetails = &randomizeDetails;
             if (firstArg) {
                 randomizeDetails.classType = &firstArg->type->getCanonicalType().as<ClassType>();
-                argContext.randomizeDetails = &randomizeDetails;
             }
             else if (randomizeScope && randomizeScope->asSymbol().kind == SymbolKind::ClassType) {
                 randomizeDetails.classType = randomizeScope;
-                argContext.randomizeDetails = &randomizeDetails;
             }
             iterOrThis = firstArg;
         }
 
         if (withClause) {
             if (subroutine.withClauseMode == WithClauseMode::Randomize) {
-                auto randInfo = bindRandomizeExpr(*withClause, argContext, randomizeDetails);
-                if (!randInfo.inlineConstraints)
+                if (!withClause->constraints) {
+                    argContext.addDiag(diag::MissingConstraintBlock, withClause->sourceRange());
                     return badExpr(compilation, nullptr);
+                }
+
+                RandomizeCallInfo randInfo;
+                if (withClause->args) {
+                    if (!argContext.randomizeDetails || !argContext.randomizeDetails->classType) {
+                        argContext.addDiag(diag::NameListWithScopeRandomize,
+                                           withClause->args->sourceRange());
+                        return badExpr(compilation, nullptr);
+                    }
+
+                    SmallVectorSized<string_view, 4> names;
+                    for (auto expr : withClause->args->expressions) {
+                        if (expr->kind != SyntaxKind::IdentifierName) {
+                            argContext.addDiag(diag::ExpectedIdentifier, expr->sourceRange());
+                            continue;
+                        }
+
+                        names.append(expr->as<IdentifierNameSyntax>().identifier.valueText());
+                    }
+
+                    randInfo.constraintRestrictions = names.copy(argContext.getCompilation());
+                }
 
                 callInfo.extraInfo = randInfo;
-
-                // These need to be cleared out because we will reuse the bind context
-                // for looking up argument names below and they aren't subject to any
-                // restriction list.
-                randomizeDetails.nameRestrictions = {};
             }
             else {
                 argContext.addDiag(diag::WithClauseNotAllowed, withClause->with.range())
@@ -547,7 +531,7 @@ Expression& CallExpression::createSystemCall(
                         if (arg.expr->kind == SyntaxKind::ClockingPropertyExpr) {
                             if (subroutine.allowClockingArgument(index)) {
                                 buffer.append(&ClockingEventExpression::fromSyntax(
-                                    arg.expr->as<ClockingPropertyExprSyntax>(), context));
+                                    arg.expr->as<ClockingPropertyExprSyntax>(), argContext));
                             }
                             else {
                                 argContext.addDiag(diag::TimingControlNotAllowed,
@@ -582,6 +566,25 @@ Expression& CallExpression::createSystemCall(
                         THROW_UNREACHABLE;
                 }
             }
+        }
+
+        if (withClause) {
+            // Finally bind the inline constraint block if we have one.
+            ASSERT(withClause->constraints);
+
+            // For scope randomize calls we need to register the
+            // arg variables so they get treated as 'rand'.
+            if (!randomizeDetails.classType) {
+                for (auto arg : buffer) {
+                    auto sym = arg->getSymbolReference();
+                    if (sym)
+                        randomizeDetails.scopeRandVars.emplace(sym);
+                }
+            }
+
+            auto& randInfo = std::get<2>(callInfo.extraInfo);
+            randomizeDetails.nameRestrictions = randInfo.constraintRestrictions;
+            randInfo.inlineConstraints = &Constraint::bind(*withClause->constraints, argContext);
         }
     }
 

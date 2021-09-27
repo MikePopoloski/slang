@@ -108,7 +108,7 @@ struct DistVarVisitor {
                 case ExpressionKind::ElementSelect:
                 case ExpressionKind::RangeSelect: {
                     if (auto sym = expr.getSymbolReference()) {
-                        RandMode mode = sym->getRandMode();
+                        RandMode mode = context.getRandMode(*sym);
                         if (mode == RandMode::Rand)
                             anyRandVars = true;
                         else if (mode == RandMode::RandC)
@@ -224,7 +224,7 @@ struct ConstraintExprVisitor {
 
             if (isSoft) {
                 if (auto sym = expr.getSymbolReference()) {
-                    RandMode mode = sym->getRandMode();
+                    RandMode mode = context.getRandMode(*sym);
                     if (mode == RandMode::RandC)
                         context.addDiag(diag::RandCInSoft, expr.sourceRange);
                 }
@@ -346,7 +346,7 @@ Constraint& UniquenessConstraint::fromSyntax(const UniquenessConstraintSyntax& s
                 while (symType->isUnpackedArray())
                     symType = symType->getArrayElementType();
 
-                RandMode mode = sym->getRandMode();
+                RandMode mode = context.getRandMode(*sym);
                 if (mode == RandMode::RandC)
                     context.addDiag(diag::RandCInUnique, expr.sourceRange);
                 else if (mode == RandMode::None)
@@ -389,7 +389,7 @@ Constraint& DisableSoftConstraint::fromSyntax(const DisableConstraintSyntax& syn
         return badConstraint(comp, result);
 
     auto sym = expr.getSymbolReference();
-    if (!sym || sym->getRandMode() != RandMode::Rand) {
+    if (!sym || context.getRandMode(*sym) != RandMode::Rand) {
         context.addDiag(diag::BadDisableSoft, expr.sourceRange);
         return badConstraint(comp, result);
     }
@@ -413,9 +413,9 @@ Constraint& SolveBeforeConstraint::fromSyntax(const SolveBeforeConstraintSyntax&
                 bad = true;
             else {
                 auto sym = expr.getSymbolReference();
-                if (!sym || sym->getRandMode() == RandMode::None)
+                if (!sym || context.getRandMode(*sym) == RandMode::None)
                     context.addDiag(diag::BadSolveBefore, expr.sourceRange);
-                else if (sym && sym->getRandMode() == RandMode::RandC)
+                else if (sym && context.getRandMode(*sym) == RandMode::RandC)
                     context.addDiag(diag::RandCInSolveBefore, expr.sourceRange);
             }
         }

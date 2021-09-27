@@ -2126,6 +2126,24 @@ endclass
     CHECK(diags[8].code == diag::NameListWithScopeRandomize);
 }
 
+TEST_CASE("Scope randomize rand variables") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    int a, b;
+    initial begin
+        b = randomize(a) with {
+            a dist { 1 :/ 1, [9:2] :/ 9};
+            a inside {[9:1]};
+        };
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
 TEST_CASE("Local members in generic classes of same type") {
     auto tree = SyntaxTree::fromText(R"(
 class A #(type T = int);

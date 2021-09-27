@@ -326,6 +326,21 @@ const ExpressionSyntax* BindContext::requireSimpleExpr(const PropertyExprSyntax&
     return nullptr;
 }
 
+RandMode BindContext::getRandMode(const Symbol& symbol) const {
+    RandMode mode = symbol.getRandMode();
+    if (mode != RandMode::None)
+        return mode;
+
+    if (randomizeDetails) {
+        if (auto it = randomizeDetails->scopeRandVars.find(&symbol);
+            it != randomizeDetails->scopeRandVars.end()) {
+            return RandMode::Rand;
+        }
+    }
+
+    return RandMode::None;
+}
+
 static bool checkIndexType(const Type& type) {
     auto& ct = type.getCanonicalType();
     if (ct.isFloating())
