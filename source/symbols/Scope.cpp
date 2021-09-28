@@ -500,6 +500,8 @@ const Symbol* Scope::find(string_view name) const {
             return nullptr;
         case SymbolKind::MethodPrototype:
             return symbol->as<MethodPrototypeSymbol>().getSubroutine();
+        case SymbolKind::ModportClocking:
+            return symbol->as<ModportClockingSymbol>().target;
         default:
             return symbol;
     }

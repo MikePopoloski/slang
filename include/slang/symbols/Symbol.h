@@ -66,6 +66,7 @@ enum class RandMode;
     x(InterfacePort) \
     x(Modport) \
     x(ModportPort) \
+    x(ModportClocking) \
     x(Instance) \
     x(InstanceBody) \
     x(InstanceArray) \

@@ -191,6 +191,35 @@ void ModportPortSymbol::serializeTo(ASTSerializer& serializer) const {
         serializer.writeLink("internalSymbol", *internalSymbol);
 }
 
+ModportClockingSymbol::ModportClockingSymbol(string_view name, SourceLocation loc) :
+    Symbol(SymbolKind::ModportClocking, name, loc) {
+}
+
+ModportClockingSymbol& ModportClockingSymbol::fromSyntax(const BindContext& context,
+                                                         const ModportClockingPortSyntax& syntax) {
+    auto& comp = context.getCompilation();
+    auto name = syntax.name;
+    auto result = comp.emplace<ModportClockingSymbol>(name.valueText(), name.location());
+    result->setSyntax(syntax);
+
+    result->target = Lookup::unqualifiedAt(*context.scope, name.valueText(), context.getLocation(),
+                                           name.range(), LookupFlags::NoParentScope);
+
+    if (result->target && result->target->kind != SymbolKind::ClockingBlock) {
+        auto& diag = context.addDiag(diag::NotAClockingBlock, name.range());
+        diag << name.valueText();
+        diag.addNote(diag::NoteDeclarationHere, result->target->location);
+        result->target = nullptr;
+    }
+
+    return *result;
+}
+
+void ModportClockingSymbol::serializeTo(ASTSerializer& serializer) const {
+    if (target)
+        serializer.writeLink("target", *target);
+}
+
 ModportSymbol::ModportSymbol(Compilation& compilation, string_view name, SourceLocation loc) :
     Symbol(SymbolKind::Modport, name, loc), Scope(compilation, this) {
 }
@@ -257,11 +286,16 @@ void ModportSymbol::fromSyntax(const BindContext& context, const ModportDeclarat
                     }
                     break;
                 }
-                case SyntaxKind::ModportClockingPort:
-                    context.addDiag(diag::NotYetSupported, port->sourceRange());
+                case SyntaxKind::ModportClockingPort: {
+                    auto& clockingPort = port->as<ModportClockingPortSyntax>();
+                    auto& mcs = ModportClockingSymbol::fromSyntax(context, clockingPort);
+                    mcs.setAttributes(*modport, clockingPort.attributes);
+                    modport->addMember(mcs);
                     break;
-                default:
+                }
+                default: {
                     THROW_UNREACHABLE;
+                }
             }
         }
     }

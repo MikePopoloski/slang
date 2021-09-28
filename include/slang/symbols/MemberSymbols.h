@@ -123,6 +123,24 @@ public:
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::ModportPort; }
 };
 
+struct ModportClockingPortSyntax;
+
+/// Represents a clocking block port.
+class ModportClockingSymbol : public Symbol {
+public:
+    /// The target clocking block of the modport.
+    const Symbol* target = nullptr;
+
+    ModportClockingSymbol(string_view name, SourceLocation loc);
+
+    void serializeTo(ASTSerializer& serializer) const;
+
+    static ModportClockingSymbol& fromSyntax(const BindContext& context,
+                                             const ModportClockingPortSyntax& syntax);
+
+    static bool isKind(SymbolKind kind) { return kind == SymbolKind::ModportClocking; }
+};
+
 struct ModportDeclarationSyntax;
 
 /// Represents a modport within an interface definition.

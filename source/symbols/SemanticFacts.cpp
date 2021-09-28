@@ -192,6 +192,7 @@ bool SemanticFacts::isAllowedInModport(SymbolKind kind) {
         case SymbolKind::Net:
         case SymbolKind::Variable:
         case SymbolKind::Subroutine:
+        case SymbolKind::ClockingBlock:
             return true;
         default:
             return false;

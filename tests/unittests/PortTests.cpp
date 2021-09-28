@@ -703,3 +703,65 @@ endmodule
     CHECK(diags[0].code == diag::UnconnectedUnnamedPort);
     CHECK(diags[1].code == diag::NullPortExpression);
 }
+
+TEST_CASE("Clocking blocks in modports") {
+    auto tree = SyntaxTree::fromText(R"(
+interface A_Bus( input logic clk );
+    wire req, gnt;
+    wire [7:0] addr, data;
+
+    clocking sb @(posedge clk); 
+        input gnt;
+        output req, addr;
+        inout data;
+        property p1; req ##[1:3] gnt; endproperty 
+    endclocking
+
+    modport DUT ( input clk, req, addr,
+                  output gnt,
+                  inout data );
+
+    modport STB ( clocking sb );
+
+    modport TB ( input gnt,
+                 output req, addr, 
+                 inout data );
+endinterface
+
+module dev1(A_Bus.DUT b);
+endmodule
+
+module dev2(A_Bus.DUT b);
+endmodule
+
+module top;
+    logic clk;
+
+    A_Bus b1( clk );
+    A_Bus b2( clk );
+
+    dev1 d1( b1 );
+    dev2 d2( b2 );
+
+    T tb( b1, b2 );
+endmodule
+
+program T (A_Bus.STB c, A_Bus.STB d);
+    assert property (c.sb.p1);
+    initial begin 
+        c.sb.req <= 1;
+        wait( c.sb.gnt == 1 );
+
+        c.sb.req <= 0;
+        d.sb.req <= 1;
+        wait( d.sb.gnt == 1 );
+
+        d.sb.req <= 0;
+    end 
+endprogram
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}

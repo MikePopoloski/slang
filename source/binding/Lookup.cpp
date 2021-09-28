@@ -1375,6 +1375,9 @@ void Lookup::unqualifiedImpl(const Scope& scope, string_view name, LookupLocatio
                     // Looking up a prototype should always forward on to the actual method.
                     result.found = symbol->as<MethodPrototypeSymbol>().getSubroutine();
                     break;
+                case SymbolKind::ModportClocking:
+                    result.found = symbol->as<ModportClockingSymbol>().target;
+                    break;
                 default:
                     result.found = symbol;
                     break;

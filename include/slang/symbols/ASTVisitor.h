@@ -154,6 +154,7 @@ decltype(auto) Symbol::visit(TVisitor&& visitor, Args&&... args) const {
         SYMBOL(Subroutine);
         SYMBOL(Modport);
         SYMBOL(ModportPort);
+        SYMBOL(ModportClocking);
         SYMBOL(ContinuousAssign);
         SYMBOL(Genvar);
         SYMBOL(ElabSystemTask);
