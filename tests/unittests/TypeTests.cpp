@@ -1174,3 +1174,111 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Virtual interfaces with clocking blocks") {
+    auto tree = SyntaxTree::fromText(R"(
+interface SyncBus( input logic clk );
+    wire a, b, c;
+    clocking sb @(posedge clk); 
+        input a;
+        output b;
+        inout c;
+    endclocking 
+endinterface
+
+typedef virtual SyncBus VI;
+
+task do_it( VI v );
+    if( v.sb.a == 1 )
+        v.sb.b <= 0;
+    else 
+        v.sb.c <= ##1 1;
+endtask
+
+module top;
+    logic clk;
+    SyncBus b1( clk );
+    SyncBus b2( clk );
+
+    initial begin 
+        static VI v[2] = '{ b1, b2 };
+        repeat( 20 )
+            do_it( v[ $urandom_range( 0, 1 ) ] );
+    end
+endmodule
+
+interface A_Bus( input logic clk );
+    wire req, gnt;
+    wire [7:0] addr, data;
+
+    clocking sb @(posedge clk); 
+        input gnt;
+        output req, addr;
+        inout data;
+        property p1; req ##[1:3] gnt; endproperty 
+    endclocking
+
+    modport DUT ( input clk, req, addr,
+                  output gnt,
+                  inout data );
+    
+    modport STB ( clocking sb );
+
+    modport TB ( input gnt,
+                 output req, addr, 
+                 inout data );
+endinterface
+
+module dev1(A_Bus.DUT b);
+endmodule
+
+module dev2(A_Bus.DUT b);
+endmodule
+
+module top2;
+    logic clk;
+    A_Bus b1( clk );
+    A_Bus b2( clk );
+
+    dev1 d1( b1 );
+    dev2 d2( b2 );
+
+    T tb( b1, b2 );
+endmodule
+
+program T (A_Bus.STB b1, A_Bus.STB b2 );
+    typedef virtual A_Bus.STB SYNCTB;
+
+    task request( SYNCTB s );
+        s.sb.req <= 1;
+    endtask
+
+    task wait_grant( SYNCTB s );
+        wait( s.sb.gnt == 1 );
+    endtask
+
+    task drive(SYNCTB s, logic [7:0] adr, data );
+        if( s.sb.gnt == 0 ) begin 
+            request(s);
+            wait_grant(s);
+        end
+    
+        s.sb.addr <= adr;
+        s.sb.data <= data;
+
+        repeat(2) @s.sb;
+        s.sb.req <= 0;
+    endtask
+
+    assert property (b1.sb.p1);
+    initial begin 
+        drive( b1, 8'($random), 8'($random) );
+        drive( b2, 8'($random), 8'($random) );
+    end 
+endprogram
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}

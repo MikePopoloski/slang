@@ -844,6 +844,18 @@ Expression& MemberAccessExpression::fromSelector(
                 scope = &vi.iface;
             break;
         }
+        case SymbolKind::VoidType: {
+            // This is possible via a clocking block accessed through a virtual interface,
+            // so check for that case.
+            if (expr.kind == ExpressionKind::MemberAccess) {
+                auto sym = expr.getSymbolReference();
+                if (sym && sym->kind == SymbolKind::ClockingBlock) {
+                    scope = &sym->as<ClockingBlockSymbol>();
+                    break;
+                }
+            }
+            [[fallthrough]];
+        }
         default: {
             if (auto result = tryBindSpecialMethod(compilation, expr, selector, invocation,
                                                    withClause, context)) {
@@ -901,11 +913,13 @@ Expression& MemberAccessExpression::fromSelector(
                                               range, context);
         }
         case SymbolKind::ConstraintBlock:
+        case SymbolKind::ClockingBlock: {
             if (errorIfNotProcedural())
                 return badExpr(compilation, &expr);
             return *compilation.emplace<MemberAccessExpression>(compilation.getVoidType(), expr,
                                                                 *member, 0u, range);
-        default:
+        }
+        default: {
             if (member->isValue()) {
                 auto& value = member->as<ValueSymbol>();
                 return *compilation.emplace<MemberAccessExpression>(value.getType(), expr, value,
@@ -918,6 +932,7 @@ Expression& MemberAccessExpression::fromSelector(
             diag << selector.name;
             diag << *expr.type;
             return badExpr(compilation, &expr);
+        }
     }
 }
 
@@ -1183,7 +1198,7 @@ bool MemberAccessExpression::verifyAssignableImpl(const BindContext& context,
     // If this is a selection of a class member, assignability depends only on the selected
     // member and not on the class handle itself. Otherwise, the opposite is true.
     auto& valueType = *value().type;
-    if (!valueType.isClass() && !valueType.isVirtualInterface())
+    if (!valueType.isClass() && !valueType.isVirtualInterface() && !valueType.isVoid())
         return value().verifyAssignable(context, location, isNonBlocking, inConcat);
 
     if (VariableSymbol::isKind(member.kind)) {

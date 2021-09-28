@@ -481,7 +481,7 @@ TimingControl& CycleDelayControl::fromSyntax(Compilation& compilation, const Del
         return badCtrl(compilation, result);
     }
 
-    if (!compilation.getDefaultClocking(*context.scope))
+    if (!context.flags.has(BindFlags::LValue) && !compilation.getDefaultClocking(*context.scope))
         context.addDiag(diag::NoDefaultClocking, syntax.sourceRange());
 
     return *result;

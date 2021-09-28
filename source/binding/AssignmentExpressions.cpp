@@ -335,7 +335,6 @@ Expression& Expression::convertAssignment(const BindContext& context, const Type
 Expression& AssignmentExpression::fromSyntax(Compilation& compilation,
                                              const BinaryExpressionSyntax& syntax,
                                              const BindContext& context) {
-
     bool isNonBlocking = syntax.kind == SyntaxKind::NonblockingAssignmentExpression;
 
     if (isNonBlocking && context.flags.has(BindFlags::Final)) {
@@ -373,6 +372,7 @@ Expression& AssignmentExpression::fromSyntax(Compilation& compilation,
         rightExpr->kind == SyntaxKind::TimingControlExpression) {
 
         BindContext timingCtx = context;
+        timingCtx.flags |= BindFlags::LValue;
         if (isNonBlocking)
             timingCtx.flags |= BindFlags::NonBlockingTimingControl;
 
@@ -432,25 +432,6 @@ Expression& AssignmentExpression::fromSyntax(Compilation& compilation,
                           context);
 }
 
-static const Symbol* getLValueSym(const Expression& expr) {
-    auto valExpr = &expr;
-    while (true) {
-        if (valExpr->kind == ExpressionKind::MemberAccess)
-            valExpr = &valExpr->as<MemberAccessExpression>().value();
-        else if (valExpr->kind == ExpressionKind::ElementSelect)
-            valExpr = &valExpr->as<ElementSelectExpression>().value();
-        else if (valExpr->kind == ExpressionKind::RangeSelect)
-            valExpr = &valExpr->as<RangeSelectExpression>().value();
-        else
-            break;
-    }
-
-    if (ValueExpressionBase::isKind(valExpr->kind))
-        return &valExpr->as<ValueExpressionBase>().symbol;
-
-    return nullptr;
-}
-
 Expression& AssignmentExpression::fromComponents(
     Compilation& compilation, optional<BinaryOperator> op, bool nonBlocking, Expression& lhs,
     Expression& rhs, SourceLocation assignLoc, const TimingControl* timingControl,
@@ -489,7 +470,7 @@ Expression& AssignmentExpression::fromComponents(
     if (timingControl) {
         // Cycle delays are only allowed on clock vars, and clock vars
         // cannot use any timing control other than cycle delays.
-        if (auto sym = getLValueSym(lhs); sym && sym->kind == SymbolKind::ClockVar) {
+        if (auto sym = lhs.getSymbolReference(); sym && sym->kind == SymbolKind::ClockVar) {
             if (timingControl->kind != TimingControlKind::CycleDelay) {
                 ASSERT(timingControl->syntax);
                 context.addDiag(diag::ClockVarBadTiming, timingControl->syntax->sourceRange());
