@@ -1358,6 +1358,8 @@ logic_t SVInt::operator<(const SVInt& rhs) const {
         return logic_t(true);
     if (a2 < a1)
         return logic_t(false);
+    if (a1 == 0)
+        return logic_t(false); // both values are zero
 
     // same number of words, compare each one until there's no match
     uint32_t top = whichWord(a1 - 1);

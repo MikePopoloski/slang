@@ -678,7 +678,8 @@ TEST_CASE("Double conversions") {
     CHECK(SVInt::fromDouble(16, -1.0, true) == "-16'sd1"_si);
     CHECK(SVInt::fromDouble(16, -1024.499999, true) == "-16'sd1024"_si);
     CHECK(SVInt::fromDouble(16, -1024.5, true) == "-16'sd1025"_si);
-    CHECK(SVInt::fromDouble(112, -36893488147419107328.0, true) == "-112'sd36893488147419103232"_si);
+    CHECK(SVInt::fromDouble(112, -36893488147419107328.0, true) ==
+          "-112'sd36893488147419103232"_si);
 
     CHECK(SVInt::fromDouble(19, NAN, true) == "19'sd0"_si);
     CHECK(SVInt::fromDouble(19, INFINITY, true) == "19'sd0"_si);
@@ -755,4 +756,19 @@ TEST_CASE("Time scaling") {
     CHECK(scale.apply(234.0567891, TimeUnit::Nanoseconds) == AP(234));
     CHECK(scale.apply(234.0567891, TimeUnit::Picoseconds) == AP(0));
     CHECK(scale.apply(234.0567891, TimeUnit::Seconds) == AP(234056789100));
+}
+
+TEST_CASE("SVInt operator crash regression GH #469") {
+    auto tree = SyntaxTree::fromText(R"(
+if mlog2 (32'd1;
+function mlog2
+input [1024 : 0 value
+for ;
+value > 32'd0
+value = value >> 1
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    compilation.getAllDiagnostics();
 }
