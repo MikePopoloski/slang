@@ -840,11 +840,32 @@ Expression& Expression::bindLookupResult(Compilation& compilation, const LookupR
     if (!symbol)
         return badExpr(compilation, nullptr);
 
+    SourceRange sourceRange = syntax.sourceRange();
+    auto errorIfInvoke = [&]() {
+        // If we require a subroutine, enforce that now. The invocation syntax will have been
+        // nulled out if we used it elsewhere in this function.
+        if (invocation) {
+            SourceLocation loc = invocation->arguments ? invocation->arguments->openParen.location()
+                                                       : sourceRange.start();
+            auto& diag = context.addDiag(diag::ExpressionNotCallable, loc);
+            diag << sourceRange;
+            return false;
+        }
+        else if (withClause) {
+            context.addDiag(diag::UnexpectedWithClause, withClause->with.range());
+            return false;
+        }
+        return true;
+    };
+
     if (context.flags.has(BindFlags::AllowDataType) && symbol->isType()) {
         // We looked up a named data type and we were allowed to do so, so return it.
-        ASSERT(!invocation && !withClause);
         const Type& resultType = Type::fromLookupResult(compilation, result, syntax, context);
-        return *compilation.emplace<DataTypeExpression>(resultType, syntax.sourceRange());
+        auto expr = compilation.emplace<DataTypeExpression>(resultType, sourceRange);
+        if (!expr->bad() && !errorIfInvoke())
+            return badExpr(compilation, expr);
+
+        return *expr;
     }
 
     // Recursive function call
@@ -860,7 +881,6 @@ Expression& Expression::bindLookupResult(Compilation& compilation, const LookupR
     }
 
     Expression* expr;
-    SourceRange sourceRange = syntax.sourceRange();
     switch (symbol->kind) {
         case SymbolKind::Subroutine: {
             SourceRange callRange = invocation ? invocation->sourceRange() : sourceRange;
@@ -925,18 +945,8 @@ Expression& Expression::bindLookupResult(Compilation& compilation, const LookupR
         }
     }
 
-    // If we require a subroutine, enforce that now. The invocation syntax will have been
-    // nulled out if we used it above.
-    if (invocation && !expr->bad()) {
-        SourceLocation loc = invocation->arguments ? invocation->arguments->openParen.location()
-                                                   : sourceRange.start();
-        auto& diag = context.addDiag(diag::ExpressionNotCallable, loc);
-        diag << sourceRange;
-        return badExpr(compilation, nullptr);
-    }
-    else if (withClause && !expr->bad()) {
-        context.addDiag(diag::UnexpectedWithClause, withClause->with.range());
-    }
+    if (!expr->bad() && !errorIfInvoke())
+        return badExpr(compilation, expr);
 
     return *expr;
 }

@@ -2441,3 +2441,16 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Expression lookup regress GH #470") {
+    auto tree = SyntaxTree::fromText(R"(
+typedef logic [$ clog2:0] clearing_lfsr_perm_t;
+function aes_sb_out_mask_prd_concat;
+sb_out_mask_prd [ $ clog2 () ' ( RomSize ) ] ;
+endfunction
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    compilation.getAllDiagnostics();
+}
