@@ -728,9 +728,6 @@ NameSyntax& Parser::parseNamePart(bitmask<NameOptions> options) {
             return factory.className(identifier, *parameterValues);
         }
         case TokenKind::OpenBracket: {
-            if (options.has(NameOptions::SequenceExpr) && isSequenceRepetition())
-                return factory.identifierName(identifier);
-
             if (options.has(NameOptions::ForeachName)) {
                 // For a foreach loop declaration, the final selector
                 // brackets need to be parsed specially because they declare
@@ -755,11 +752,20 @@ NameSyntax& Parser::parseNamePart(bitmask<NameOptions> options) {
                 return factory.identifierSelectName(identifier, buffer.copy(alloc));
             }
             else {
-                // Simply parse all selectors and return the final name.
                 SmallVectorSized<ElementSelectSyntax*, 4> buffer;
                 do {
+                    // Inside a sequence expression this could be a repetition directive
+                    // instead of a selection.
+                    if (options.has(NameOptions::SequenceExpr) && isSequenceRepetition()) {
+                        if (buffer.empty())
+                            return factory.identifierName(identifier);
+                        else
+                            return factory.identifierSelectName(identifier, buffer.copy(alloc));
+                    }
+
                     buffer.append(&parseElementSelect());
                 } while (peek(TokenKind::OpenBracket));
+
                 return factory.identifierSelectName(identifier, buffer.copy(alloc));
             }
         }

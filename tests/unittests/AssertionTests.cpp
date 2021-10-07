@@ -1147,3 +1147,35 @@ endproperty
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Seq expr parsing regress GH #473") {
+    auto tree = SyntaxTree::fromText(R"(
+module top(
+    input logic clk
+);
+    localparam I_MAX = 4;
+    localparam J_MAX = 2;
+    logic a, b, c;
+    logic [J_MAX-1:0][I_MAX-1:0] sig_a, sig_b, sig_c;
+
+    COVER_PASS: cover property ( @(posedge clk)
+        a ##[0:$]
+        b ##1
+        c [*0:$] ##0
+        ~c
+    ) $info("%t %m HIT", $time);
+
+    COVER_FAIL: cover property ( @(posedge clk)
+        sig_a[0][0] ##[0:$]
+        sig_b[0][0] ##1
+        sig_c[0][0] [*0:$] ##0
+        ~sig_c[0][0]
+    ) $info("%t %m HIT", $time);
+
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
