@@ -189,9 +189,14 @@ const Symbol* unwrapTypeParam(const Symbol* symbol) {
     return symbol;
 }
 
-bool isClassType(const Symbol& symbol) {
-    if (symbol.isType())
-        return symbol.as<Type>().isClass();
+optional<bool> isClassType(const Symbol& symbol) {
+    if (symbol.isType()) {
+        auto& type = symbol.as<Type>();
+        if (type.isError())
+            return std::nullopt;
+
+        return type.isClass();
+    }
 
     return symbol.kind == SymbolKind::GenericClassDef;
 }
@@ -313,7 +318,16 @@ bool lookupDownward(span<const NamePlusLoc> nameParts, NameComponents name,
             if (!symbol)
                 return false;
 
-            bool isType = symbol->isType() || isClassType(*symbol);
+            bool isType;
+            if (symbol->isType()) {
+                isType = true;
+                if (symbol->as<Type>().isError())
+                    return false;
+            }
+            else {
+                isType = symbol->kind == SymbolKind::GenericClassDef;
+            }
+
             auto code = isType ? diag::DotOnType : diag::NotAHierarchicalScope;
             auto& diag = result.addDiag(*context.scope, code, it->dotLocation);
             diag << name.range();
@@ -583,7 +597,16 @@ bool resolveColonNames(SmallVectorSized<NamePlusLoc, 8>& nameParts, int colonPar
 
     // If the prefix name resolved normally to a class object, use that. Otherwise we need
     // to look for a package with the corresponding name.
-    if (!symbol || !isClassType(*symbol)) {
+    bool lookForPackage = symbol == nullptr;
+    if (symbol) {
+        auto isClass = isClassType(*symbol);
+        if (!isClass.has_value())
+            return false;
+
+        lookForPackage = !isClass.value();
+    }
+
+    if (lookForPackage) {
         symbol = context.getCompilation().getPackage(name.text());
         if (!symbol) {
             if (!context.scope->isUninstantiated()) {
@@ -638,7 +661,6 @@ bool resolveColonNames(SmallVectorSized<NamePlusLoc, 8>& nameParts, int colonPar
         return true;
     };
 
-    bool isClass = false;
     while (colonParts--) {
         if (name.selectors) {
             result.addDiag(*context.scope, diag::InvalidScopeIndexExpression,
@@ -651,13 +673,18 @@ bool resolveColonNames(SmallVectorSized<NamePlusLoc, 8>& nameParts, int colonPar
         if (!symbol)
             return false;
 
-        isClass = isClassType(*symbol);
-        if (symbol->kind != SymbolKind::Package && !isClass) {
-            auto& diag = result.addDiag(*context.scope, diag::NotAClass, part.dotLocation);
-            diag << name.range();
-            diag << symbol->name;
-            diag.addNote(diag::NoteDeclarationHere, symbol->location);
-            return false;
+        if (symbol->kind != SymbolKind::Package) {
+            auto isClass = isClassType(*symbol);
+            if (!isClass.has_value())
+                return false;
+
+            if (!isClass.value()) {
+                auto& diag = result.addDiag(*context.scope, diag::NotAClass, part.dotLocation);
+                diag << name.range();
+                diag << symbol->name;
+                diag.addNote(diag::NoteDeclarationHere, symbol->location);
+                return false;
+            }
         }
 
         if (!validateSymbol())
@@ -1256,7 +1283,8 @@ bool Lookup::withinClassRandomize(const Scope& scope, span<const string_view> na
     BindContext context(scope, LookupLocation::max);
     if (colonParts) {
         // Disallow package lookups in this function.
-        if (!isClassType(*result.found))
+        auto isClass = isClassType(*result.found);
+        if (!isClass.has_value() || !isClass.value())
             return false;
 
         return resolveColonNames(nameParts, colonParts, name, flags, result, context);

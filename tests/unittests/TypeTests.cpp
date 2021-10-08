@@ -1282,3 +1282,18 @@ endprogram
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Typedef + type param colon access regress GH #471") {
+    auto tree = SyntaxTree::fromText(R"(
+class C #(type T);
+    typedef T obj_type;
+    function obj_type create();
+        return obj_type::type_id::create();
+    endfunction
+endclass
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
