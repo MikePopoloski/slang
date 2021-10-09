@@ -1297,3 +1297,18 @@ endclass
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("rand_mode on dynamic array regress GH #478") {
+    auto tree = SyntaxTree::fromText(R"(
+class r;
+    rand bit v[];
+    function void pre_randomize();
+        v.rand_mode(0);
+    endfunction
+endclass
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}

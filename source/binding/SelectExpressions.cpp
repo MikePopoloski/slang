@@ -830,9 +830,15 @@ Expression& MemberAccessExpression::fromSelector(
         case SymbolKind::AssociativeArrayType:
         case SymbolKind::QueueType:
         case SymbolKind::EventType:
-        case SymbolKind::SequenceType:
+        case SymbolKind::SequenceType: {
+            if (auto result = tryBindSpecialMethod(compilation, expr, selector, invocation,
+                                                   withClause, context)) {
+                return *result;
+            }
+
             return CallExpression::fromSystemMethod(compilation, expr, selector, invocation,
                                                     withClause, context);
+        }
         case SymbolKind::VirtualInterfaceType: {
             if (errorIfNotProcedural())
                 return badExpr(compilation, &expr);
