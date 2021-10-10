@@ -2315,3 +2315,18 @@ endclass
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Extern task default val regress GH #475") {
+    auto tree = SyntaxTree::fromText(R"(
+class C;
+    extern task f(bit[7:0] i[$]='{});
+endclass
+
+task C::f(bit[7:0] i[$]='{});
+endtask
+)");
+
+    // Just test no crash.
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+}

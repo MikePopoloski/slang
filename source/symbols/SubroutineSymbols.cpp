@@ -266,6 +266,10 @@ static bool isSameExpr(const SyntaxNode& l, const SyntaxNode& r) {
         else {
             Token lt = l.childToken(i);
             Token rt = r.childToken(i);
+
+            if (!lt)
+                return !rt;
+
             if (lt.kind != rt.kind || lt.valueText() != rt.valueText())
                 return false;
         }
