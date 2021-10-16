@@ -1312,3 +1312,40 @@ endclass
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("virtual interfaces in uninstantiated modules GH #481") {
+    auto tree = SyntaxTree::fromText(R"(
+class C;
+    virtual bus_intf _bus;
+    function new(virtual bus_intf bus);
+        _bus = bus;
+    endfunction
+    function void set_intf(virtual bus_intf bus);
+        _bus = bus;
+    endfunction
+endclass
+
+interface bus_intf;
+endinterface
+
+interface tb_intf(
+    bus_intf bus
+);
+    C c;
+    initial begin
+        c = new(bus);
+        c.set_intf(bus);
+        c._bus = bus;
+    end
+endinterface
+
+module top;
+    //bus_intf bus();
+    //tb_intf tb(.*);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}

@@ -999,6 +999,7 @@ Expression* Expression::tryBindInterfaceRef(const BindContext& context,
     if (!result.found)
         return nullptr;
 
+    auto& comp = context.getCompilation();
     auto symbol = result.found;
     if (symbol->kind == SymbolKind::InterfacePort) {
         auto& ifacePort = symbol->as<InterfacePortSymbol>();
@@ -1016,8 +1017,13 @@ Expression* Expression::tryBindInterfaceRef(const BindContext& context,
             }
         }
 
-        if (!symbol)
-            return nullptr;
+        if (!symbol) {
+            // Returning nullptr from this function means to try doing normal expression
+            // binding, but if we hit this case here we found the iface and simply failed
+            // to connect it, likely because we're in an uninstantiated context. Return
+            // a badExpr here to silence any follow on errors that might otherwise result.
+            return &badExpr(comp, nullptr);
+        }
     }
     else if ((symbol->kind == SymbolKind::Instance && symbol->as<InstanceSymbol>().isInterface()) ||
              symbol->kind == SymbolKind::Modport) {
@@ -1046,8 +1052,7 @@ Expression* Expression::tryBindInterfaceRef(const BindContext& context,
         // TODO: error
     }
 
-    return context.getCompilation().emplace<HierarchicalReferenceExpression>(*symbol, targetType,
-                                                                             syntax.sourceRange());
+    return comp.emplace<HierarchicalReferenceExpression>(*symbol, targetType, syntax.sourceRange());
 }
 
 void Expression::findPotentiallyImplicitNets(const SyntaxNode& expr, const BindContext& context,
