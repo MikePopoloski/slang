@@ -2367,3 +2367,30 @@ endclass
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("rand_mode as a function") {
+    auto tree = SyntaxTree::fromText(R"(
+class C;
+    rand int i;
+    function void f();
+        rand_mode(0);
+        this.rand_mode(0);
+        i.rand_mode(0);
+    endfunction
+endclass
+module top;
+    C c;
+    function void make();
+        c = new();
+        c.rand_mode(0);
+    endfunction
+    initial begin
+        make();
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}

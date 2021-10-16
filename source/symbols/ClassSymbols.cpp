@@ -218,12 +218,12 @@ void ClassType::populate(const Scope& scope, const ClassDeclarationSyntax& synta
     if (srandom)
         srandom->addArg("seed", int_t);
 
-    auto rand_mode = makeFunc("rand_mode", void_t, false, MethodFlags::None, SubroutineKind::Task);
+    auto rand_mode = makeFunc("rand_mode", void_t, false, MethodFlags::None, SubroutineKind::Function);
     if (rand_mode)
         rand_mode->addArg("on_ff", comp.getBitType());
 
     auto constraint_mode =
-        makeFunc("constraint_mode", void_t, false, MethodFlags::None, SubroutineKind::Task);
+        makeFunc("constraint_mode", void_t, false, MethodFlags::None, SubroutineKind::Function);
     if (constraint_mode)
         constraint_mode->addArg("on_ff", comp.getBitType());
 

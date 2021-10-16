@@ -179,7 +179,7 @@ public:
 
 class RandModeFunc : public SystemSubroutine {
 public:
-    RandModeFunc(const std::string& name) : SystemSubroutine(name, SubroutineKind::Task) {}
+    RandModeFunc(const std::string& name) : SystemSubroutine(name, SubroutineKind::Function) {}
 
     const Type& checkArguments(const BindContext& context, const Args& args, SourceRange range,
                                const Expression*) const final {
@@ -196,7 +196,7 @@ public:
                 return badArg(context, *args[1]);
         }
 
-        return comp.getIntType();
+        return numArgs ? comp.getVoidType() : comp.getIntType();
     }
 
     ConstantValue eval(EvalContext&, const Args&,
