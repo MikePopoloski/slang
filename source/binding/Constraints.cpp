@@ -138,13 +138,30 @@ struct ConstraintExprVisitor {
 
     template<typename T>
     bool visit(const T& expr) {
-        if constexpr (is_detected_v<ASTDetectors::visitExprs_t, T, ConstraintExprVisitor>)
-            expr.visitExprs(*this);
-
         if (failed)
             return false;
 
         if constexpr (std::is_base_of_v<Expression, T>) {
+            if (isSoft) {
+                if (auto sym = expr.getSymbolReference()) {
+                    RandMode mode = context.getRandMode(*sym);
+                    if (mode == RandMode::RandC)
+                        context.addDiag(diag::RandCInSoft, expr.sourceRange);
+                }
+            }
+
+            if constexpr (is_detected_v<ASTDetectors::visitExprs_t, T, ConstraintExprVisitor>) {
+                // Inside call and select expressions we don't care about the types.
+                // This allows things like selections of associative arrays and built-in methods
+                // on arrays of strings to work as long as the actual operators at the top level
+                // don't have those types.
+                if (expr.kind != ExpressionKind::ElementSelect &&
+                    expr.kind != ExpressionKind::MemberAccess &&
+                    expr.kind != ExpressionKind::Call) {
+                    expr.visitExprs(*this);
+                }
+            }
+
             switch (expr.kind) {
                 case ExpressionKind::Streaming:
                 case ExpressionKind::NewArray:
@@ -220,14 +237,6 @@ struct ConstraintExprVisitor {
             if (!expr.type->isValidForRand(RandMode::Rand)) {
                 context.addDiag(diag::NonIntegralConstraintExpr, expr.sourceRange) << *expr.type;
                 return visitInvalid(expr);
-            }
-
-            if (isSoft) {
-                if (auto sym = expr.getSymbolReference()) {
-                    RandMode mode = context.getRandMode(*sym);
-                    if (mode == RandMode::RandC)
-                        context.addDiag(diag::RandCInSoft, expr.sourceRange);
-                }
             }
         }
 

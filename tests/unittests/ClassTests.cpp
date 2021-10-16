@@ -2330,3 +2330,40 @@ endtask
     Compilation compilation;
     compilation.addSyntaxTree(tree);
 }
+
+TEST_CASE("Select expressions in constraints can be more permissive with types") {
+    auto tree = SyntaxTree::fromText(R"(
+class A;
+    rand int min;
+    rand int max;
+    int name;
+endclass
+
+class C;
+    int t[string];
+    rand A arr[$];
+    constraint tags_c {
+        foreach (arr[i]) {
+            arr[i].name == t["G1"] -> arr[i].min == 0 && arr[i].max == 1000;
+        }
+    }
+    function new();
+        t["G1"] = 1;
+    endfunction
+endclass
+
+class D;
+    string s[$];
+    function void f();
+        int i;
+        int j = std::randomize(i) with {
+            i < s.size();
+        };
+    endfunction
+endclass
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
