@@ -618,8 +618,13 @@ FunctionPrototypeSyntax& Parser::parseFunctionPrototype(SyntaxKind parentKind,
     if (!checkSubroutineName(name))
         addDiag(diag::ExpectedSubroutineName, keyword.location()) << name.sourceRange();
 
-    if (options.has(FunctionOptions::IsPrototype) && name.kind == SyntaxKind::ScopedName)
+    if (options.has(FunctionOptions::IsPrototype) && name.kind == SyntaxKind::ScopedName) {
         addDiag(diag::SubroutinePrototypeScoped, name.getFirstToken().location());
+    }
+    else if (lifetime.kind == TokenKind::StaticKeyword && name.kind == SyntaxKind::ScopedName &&
+             name.as<ScopedNameSyntax>().separator.kind == TokenKind::DoubleColon) {
+        addDiag(diag::MethodStaticLifetime, lifetime.location()) << lifetime.range();
+    }
 
     bool constructor = getLastConsumed().kind == TokenKind::NewKeyword;
     if (isConstructor)

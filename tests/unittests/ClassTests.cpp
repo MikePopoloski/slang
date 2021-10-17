@@ -2394,3 +2394,23 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Out-of-block class method with static lifetime") {
+    auto tree = SyntaxTree::fromText(R"(
+class C;
+    extern task t1();
+    extern task t2();
+endclass
+task automatic C::t1();
+endtask
+task static C::t2();
+endtask
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::MethodStaticLifetime);
+}
