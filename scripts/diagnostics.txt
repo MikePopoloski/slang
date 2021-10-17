@@ -204,7 +204,6 @@ error Delay3UdpNotAllowed "instances of user-defined primitives can have a maxim
 error RandOnPackedMember "packed members cannot have random modifiers"
 error RandOnUnionMember "members of unions cannot have random modifiers"
 error SolveBeforeDisallowed "constraint ordering directive is not allowed within a nested constraint block"
-error LifetimeForPrototype "lifetime specifier is not allowed on prototype declaration"
 error InvalidPackageDecl "invalid package declaration"
 error InvalidSequenceRange "invalid sequence range"
 error InvalidPropertyIndex "only a single count of cycles is allowed for '{}' expression"
@@ -221,6 +220,7 @@ error RandJoinNotEnough "rand join list must contain at least two productions"
 warning nonstandard-generate NonStandardGenBlock "standalone generate block without loop or condition is not allowed in SystemVerilog"
 warning empty-pattern EmptyAssignmentPattern "empty assignment patterns are disallowed by SystemVerilog"
 warning nonstandard-foreach NonstandardForeach "non-standard foreach loop variable list"
+warning lifetime-prototype LifetimeForPrototype "lifetime specifier is not allowed on prototype declaration"
 note NoteToMatchThis "to match this '{}'"
 
 subsystem Declarations
@@ -800,7 +800,7 @@ group default = { real-underflow real-overflow literal-overflow unconnected-port
                   extra-pragma-args expected-diag-arg unknown-diag-arg pragma-diag-level explicit-static
                   static-skipped elem-not-found dynarray-index dynarray-range queue-range empty-queue
                   unknown-escape-code no-top warning-task unsized-concat finish-num implicit-conv nonblocking-final
-                  constraint-missing missing-format dpi-spec enum-range udp-port-empty }
+                  constraint-missing missing-format dpi-spec enum-range udp-port-empty lifetime-prototype }
 
 group extra = { empty-member empty-stmt dup-import pointless-void-cast case-gen-none case-gen-dup
                 unused-result format-real ignored-slice task-ignored width-trunc dup-attr }
