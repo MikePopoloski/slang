@@ -5,6 +5,7 @@ TEST_CASE("I/O system tasks") {
 module m;
     string foo;
     int blah[3];
+    bit[7:0] q[$];
 
     typedef int arr_t[3];
 
@@ -20,6 +21,7 @@ module m;
         $readmemb("SDF", blah, 3);
         $readmemh("SDF", blah, 3, 4);
         $writememh("SDF", arr_t'{1,2,3}, 3, 4);
+        $sformat(foo, "%p", q);
     end
 endmodule
 )");

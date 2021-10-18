@@ -237,7 +237,7 @@ public:
             }
         }
 
-        if (!FmtHelpers::checkDisplayArgs(context, args.subspan(2)))
+        if (!FmtHelpers::checkSFormatArgs(context, args.subspan(1)))
             return comp.getErrorType();
 
         return comp.getVoidType();
