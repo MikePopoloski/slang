@@ -75,6 +75,10 @@ public:
         return implementsIfaces;
     }
 
+    /// If this class has a base class with a constructor, gets the expression used to
+    /// invoke that method. Otherwise returns nullptr.
+    const Expression* getBaseConstructorCall() const;
+
     static const Symbol& fromSyntax(const Scope& scope, const ClassDeclarationSyntax& syntax);
 
     void addForwardDecl(const ForwardingTypedefSymbol& decl) const;
@@ -103,7 +107,8 @@ private:
                           function_ref<void(const Symbol&)> insertCB) const;
 
     mutable const Type* baseClass = nullptr;
-    mutable const Expression* baseConstructorCall = nullptr;
+    mutable const Symbol* baseConstructor = nullptr;
+    mutable optional<const Expression*> baseConstructorCall;
     mutable const ForwardingTypedefSymbol* firstForward = nullptr;
     mutable span<const Type* const> implementsIfaces;
     SymbolIndex headerIndex;

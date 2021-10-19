@@ -107,6 +107,13 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
         symbol.getDataType();
     }
 
+    void handle(const ClassType& symbol) {
+        if (!handleDefault(symbol))
+            return;
+
+        symbol.getBaseConstructorCall();
+    }
+
     void handle(const NetSymbol& symbol) {
         if (!handleDefault(symbol))
             return;

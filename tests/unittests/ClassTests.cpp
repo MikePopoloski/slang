@@ -2414,3 +2414,27 @@ endtask
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::MethodStaticLifetime);
 }
+
+TEST_CASE("Base class constructor checking order of inheritance") {
+    auto tree = SyntaxTree::fromText(R"(
+typedef class A;
+
+class B extends A;
+endclass
+
+class Top;
+    int i;
+endclass
+
+class A extends Top;
+    function new();
+        B b;
+        b.i = 1;
+    endfunction
+endclass
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}

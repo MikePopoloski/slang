@@ -218,7 +218,8 @@ void ClassType::populate(const Scope& scope, const ClassDeclarationSyntax& synta
     if (srandom)
         srandom->addArg("seed", int_t);
 
-    auto rand_mode = makeFunc("rand_mode", void_t, false, MethodFlags::None, SubroutineKind::Function);
+    auto rand_mode =
+        makeFunc("rand_mode", void_t, false, MethodFlags::None, SubroutineKind::Function);
     if (rand_mode)
         rand_mode->addArg("on_ff", comp.getBitType());
 
@@ -265,7 +266,6 @@ void ClassType::handleExtends(const ExtendsClauseSyntax& extendsClause, const Bi
     baseClass = baseType;
 
     // Inherit all base class members that don't conflict with our declared symbols.
-    const Symbol* baseConstructor = nullptr;
     auto& comp = context.getCompilation();
     auto& scopeNameMap = getNameMap();
     bool pureVirtualError = false;
@@ -276,12 +276,12 @@ void ClassType::handleExtends(const ExtendsClauseSyntax& extendsClause, const Bi
 
         // Don't inherit constructors.
         if (member.kind == SymbolKind::Subroutine &&
-            (member.as<SubroutineSymbol>().flags & MethodFlags::Constructor) != 0) {
+            member.as<SubroutineSymbol>().flags.has(MethodFlags::Constructor)) {
             baseConstructor = &member;
             continue;
         }
         if (member.kind == SymbolKind::MethodPrototype &&
-            (member.as<MethodPrototypeSymbol>().flags & MethodFlags::Constructor) != 0) {
+            member.as<MethodPrototypeSymbol>().flags.has(MethodFlags::Constructor)) {
             baseConstructor = member.as<MethodPrototypeSymbol>().getSubroutine();
             continue;
         }
@@ -409,15 +409,31 @@ void ClassType::handleExtends(const ExtendsClauseSyntax& extendsClause, const Bi
             }
         }
     }
+}
+
+const Expression* ClassType::getBaseConstructorCall() const {
+    if (baseConstructorCall)
+        return *baseConstructorCall;
+
+    baseConstructorCall = nullptr;
+    const Expression* callExpr = nullptr;
+
+    auto syntax = getSyntax();
+    ASSERT(syntax);
+
+    auto& classSyntax = syntax->as<ClassDeclarationSyntax>();
+    if (!classSyntax.extendsClause)
+        return nullptr;
 
     // If we have a constructor, find whether it invokes super.new in its body.
+    ensureElaborated();
     if (auto ourConstructor = find("new")) {
         auto checkForSuperNew = [&](const Statement& stmt) {
             if (stmt.kind == StatementKind::ExpressionStatement) {
                 auto& expr = stmt.as<ExpressionStatement>().expr;
                 if (expr.kind == ExpressionKind::NewClass &&
                     expr.as<NewClassExpression>().isSuperClass) {
-                    baseConstructorCall = &expr;
+                    callExpr = &expr;
                 }
             }
         };
@@ -426,7 +442,7 @@ void ClassType::handleExtends(const ExtendsClauseSyntax& extendsClause, const Bi
         // spurious errors on top of it.
         auto& body = ourConstructor->as<SubroutineSymbol>().getBody();
         if (body.bad())
-            return;
+            return nullptr;
 
         if (body.kind != StatementKind::List)
             checkForSuperNew(body);
@@ -440,13 +456,15 @@ void ClassType::handleExtends(const ExtendsClauseSyntax& extendsClause, const Bi
         }
     }
 
+    BindContext context(*this, LookupLocation(this, uint32_t(headerIndex)));
+    auto& extendsClause = *classSyntax.extendsClause;
+
     if (auto extendsArgs = extendsClause.arguments) {
         // Can't have both a super.new and extends arguments.
-        if (baseConstructorCall) {
-            auto& diag =
-                context.addDiag(diag::BaseConstructorDuplicate, baseConstructorCall->sourceRange);
+        if (callExpr) {
+            auto& diag = context.addDiag(diag::BaseConstructorDuplicate, callExpr->sourceRange);
             diag.addNote(diag::NotePreviousUsage, extendsArgs->getFirstToken().location());
-            return;
+            return nullptr;
         }
 
         // If we have a base class constructor, create the call to it.
@@ -454,9 +472,9 @@ void ClassType::handleExtends(const ExtendsClauseSyntax& extendsClause, const Bi
             SourceRange range = extendsClause.sourceRange();
             Lookup::ensureVisible(*baseConstructor, context, range);
 
-            baseConstructorCall =
-                &CallExpression::fromArgs(comp, &baseConstructor->as<SubroutineSymbol>(), nullptr,
-                                          extendsArgs, range, context);
+            callExpr = &CallExpression::fromArgs(context.getCompilation(),
+                                                 &baseConstructor->as<SubroutineSymbol>(), nullptr,
+                                                 extendsArgs, range, context);
         }
         else if (!extendsArgs->parameters.empty()) {
             auto& diag = context.addDiag(diag::TooManyArguments, extendsArgs->sourceRange());
@@ -468,19 +486,22 @@ void ClassType::handleExtends(const ExtendsClauseSyntax& extendsClause, const Bi
 
     // If we have a base class constructor and nothing called it, make sure
     // it has no arguments or all of the arguments have default values.
-    if (baseConstructor && !baseConstructorCall) {
+    if (baseConstructor && !callExpr) {
         for (auto arg : baseConstructor->as<SubroutineSymbol>().getArguments()) {
             if (!arg->getInitializer()) {
                 auto& diag =
                     context.addDiag(diag::BaseConstructorNotCalled, extendsClause.sourceRange());
                 diag << name << baseClass->name;
                 diag.addNote(diag::NoteDeclarationHere, baseConstructor->location);
-                return;
+                return nullptr;
             }
         }
 
         Lookup::ensureVisible(*baseConstructor, context, extendsClause.sourceRange());
     }
+
+    baseConstructorCall = callExpr;
+    return callExpr;
 }
 
 // Recursively finds interface classes that are implemented and adds them
