@@ -72,7 +72,7 @@ void LookupResult::clear() {
     systemSubroutine = nullptr;
     wasImported = false;
     isHierarchical = false;
-    sawBadImport = false;
+    suppressUndeclared = false;
     fromTypeParam = false;
     fromForwardTypedef = false;
     selectors.clear();
@@ -84,7 +84,7 @@ void LookupResult::copyFrom(const LookupResult& other) {
     systemSubroutine = other.systemSubroutine;
     wasImported = other.wasImported;
     isHierarchical = other.isHierarchical;
-    sawBadImport = other.sawBadImport;
+    suppressUndeclared = other.suppressUndeclared;
     fromTypeParam = other.fromTypeParam;
     fromForwardTypedef = other.fromForwardTypedef;
 
@@ -1449,7 +1449,7 @@ void Lookup::unqualifiedImpl(const Scope& scope, string_view name, LookupLocatio
 
             auto package = import->getPackage();
             if (!package) {
-                result.sawBadImport = true;
+                result.suppressUndeclared = true;
                 continue;
             }
 
@@ -1522,13 +1522,22 @@ void Lookup::unqualifiedImpl(const Scope& scope, string_view name, LookupLocatio
     //     return k;
     //   endfunction
     auto& sym = scope.asSymbol();
-    if (sym.kind == SymbolKind::Subroutine)
+    if (sym.kind == SymbolKind::Subroutine) {
         outOfBlockIndex = sym.as<SubroutineSymbol>().outOfBlockIndex;
-    else if (sym.kind == SymbolKind::ConstraintBlock)
+    }
+    else if (sym.kind == SymbolKind::ConstraintBlock) {
         outOfBlockIndex = sym.as<ConstraintBlockSymbol>().getOutOfBlockIndex();
+    }
     else if (uint32_t(outOfBlockIndex) != 0) {
         location = LookupLocation(location.getScope(), uint32_t(outOfBlockIndex));
         outOfBlockIndex = SymbolIndex(0);
+    }
+    else if (sym.kind == SymbolKind::ClassType) {
+        // Suppress errors when we fail to find a symbol inside a class that
+        // had a problem resolving its base class, since the symbol may be
+        // expected to be defined in the base.
+        auto baseClass = sym.as<ClassType>().getBaseClass();
+        result.suppressUndeclared |= baseClass && baseClass->isError();
     }
 
     return unqualifiedImpl(*location.getScope(), name, location, sourceRange, flags,
@@ -1709,7 +1718,8 @@ void Lookup::reportUndeclared(const Scope& initialScope, string_view name, Sourc
     // error for undeclared identifier because maybe it's supposed to come from that package.
     // In particular it's important that we do this because when we first look at a
     // definition because it's possible we haven't seen the file containing the package yet.
-    if (result.sawBadImport)
+    // This also gets set for class scopes that have an error base class.
+    if (result.suppressUndeclared)
         return;
 
     // The symbol wasn't found, so this is an error. The only question is how helpful we can

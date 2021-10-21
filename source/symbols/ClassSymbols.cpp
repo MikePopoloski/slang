@@ -250,13 +250,17 @@ void ClassType::inheritMembers(function_ref<void(const Symbol&)> insertCB) const
 
 void ClassType::handleExtends(const ExtendsClauseSyntax& extendsClause, const BindContext& context,
                               function_ref<void(const Symbol&)> insertCB) const {
+    auto& comp = context.getCompilation();
     auto baseType = Lookup::findClass(*extendsClause.baseName, context);
-    if (!baseType)
+    if (!baseType) {
+        baseClass = &comp.getErrorType();
         return;
+    }
 
     // A normal class can't extend an interface class. This method won't be called
     // for an interface class, so we don't need to check that again here.
     if (baseType->isInterface) {
+        baseClass = &comp.getErrorType();
         context.addDiag(diag::ExtendIfaceFromClass, extendsClause.sourceRange()) << baseType->name;
         return;
     }
@@ -266,7 +270,6 @@ void ClassType::handleExtends(const ExtendsClauseSyntax& extendsClause, const Bi
     baseClass = baseType;
 
     // Inherit all base class members that don't conflict with our declared symbols.
-    auto& comp = context.getCompilation();
     auto& scopeNameMap = getNameMap();
     bool pureVirtualError = false;
 

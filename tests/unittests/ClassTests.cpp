@@ -2438,3 +2438,32 @@ endclass
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Uninstantiated generic class inheritance regress GH #485") {
+    auto tree = SyntaxTree::fromText(R"(
+class base;
+    int n;
+    function void f();
+        n = 0;
+    endfunction
+endclass
+
+class child #(type SUPER_CLASS=base) extends SUPER_CLASS;
+    function void f();
+        super.f();
+        n = 3;
+    endfunction
+endclass
+
+module top;
+    // child #(base) c;
+    initial begin
+        // c = new();
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}

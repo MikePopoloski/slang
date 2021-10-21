@@ -128,10 +128,11 @@ struct LookupResult {
     /// Set to true if the symbol was found via upward name resolution.
     bool isUpwardName = false;
 
-    /// Set to true if we observed an invalid import statement somewhere during lookup.
-    /// This means the lack of a found symbol should be treated with caution, because
-    /// it could be the import failure causing it instead of some otherwise invalid name.
-    bool sawBadImport = false;
+    /// Set to true if there were problems during lookup that indicate we should
+    /// ignore the lack of a found symbol, because we're in a context where such
+    /// a failure may be expected (for example, within a default instantiation of
+    /// a generic class where the base class fails to resolve).
+    bool suppressUndeclared = false;
 
     /// Set to true if the lookup was resolved through a type parameter. Some language
     /// rules restrict where this can be done.
