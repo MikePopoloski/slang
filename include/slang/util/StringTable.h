@@ -6,6 +6,7 @@
 //------------------------------------------------------------------------------
 #pragma once
 
+#include <memory>
 #include "slang/util/Util.h"
 
 namespace slang {
@@ -59,7 +60,7 @@ private:
         size_t hashCode = 0;
         T value;
     };
-    Entry* table;
+    std::unique_ptr<Entry[]> table;
     uint32_t capacity;
 
     static uint32_t roundUpToPow2(uint32_t n) {
