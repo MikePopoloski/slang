@@ -631,6 +631,11 @@ bool Type::isDerivedFrom(const Type& base) const {
             return true;
     }
 
+    // Allow error types to be convertible / derivable from anything else,
+    // to prevent knock-on errors from being reported.
+    if (d && d->isError())
+        return true;
+
     return false;
 }
 
@@ -850,8 +855,11 @@ const Type* Type::getCommonBase(const Type& left, const Type& right) {
 
         parents.emplace(l);
         l = l->as<ClassType>().getBaseClass();
-        if (!l || l->isError())
+        if (!l)
             break;
+
+        if (l->isError())
+            return l;
 
         l = &l->getCanonicalType();
     }
@@ -861,8 +869,11 @@ const Type* Type::getCommonBase(const Type& left, const Type& right) {
             return r;
 
         r = r->as<ClassType>().getBaseClass();
-        if (!r || r->isError())
+        if (!r)
             return nullptr;
+
+        if (r->isError())
+            return r;
 
         r = &r->getCanonicalType();
     }

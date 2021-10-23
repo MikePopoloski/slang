@@ -820,9 +820,16 @@ Expression& MemberAccessExpression::fromSelector(
         case SymbolKind::UnpackedStructType:
         case SymbolKind::PackedUnionType:
         case SymbolKind::UnpackedUnionType:
-        case SymbolKind::ClassType:
             scope = &type.as<Scope>();
             break;
+        case SymbolKind::ClassType: {
+            auto& ct = type.as<ClassType>();
+            if (auto base = ct.getBaseClass(); base && base->isError())
+                return badExpr(compilation, &expr);
+
+            scope = &ct;
+            break;
+        }
         case SymbolKind::EnumType:
         case SymbolKind::StringType:
         case SymbolKind::FixedSizeUnpackedArrayType:

@@ -2463,6 +2463,19 @@ class child2 #(type SUPER_CLASS=base) extends SUPER_CLASS;
         super.new();
     endfunction
 endclass
+
+virtual class ovm_object;
+endclass
+
+class child3 #(type SUPER_CLASS=base) extends SUPER_CLASS;
+    function ovm_object create(string name="");
+        child3#(SUPER_CLASS) obj = new();
+        if (name != "") begin
+            obj.set_name(name);
+        end
+        return obj;
+    endfunction
+endclass
 )");
 
     Compilation compilation;
