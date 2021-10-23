@@ -13,9 +13,12 @@ using namespace slang;
 struct CloneVisitor {
     BumpAllocator& alloc;
     const slang::detail::ChangeMap& changes;
+    const slang::detail::ListChangeMap& listAdditions;
 
-    CloneVisitor(BumpAllocator& alloc, const slang::detail::ChangeMap& changes) :
-        alloc(alloc), changes(changes) {}
+    CloneVisitor(BumpAllocator& alloc, const slang::detail::ChangeMap& changes,
+                 const slang::detail::ListChangeMap& listAdditions) :
+        alloc(alloc),
+        changes(changes), listAdditions(listAdditions) {}
 
 #ifdef _MSC_VER
 #    pragma warning(push)
@@ -27,6 +30,25 @@ struct CloneVisitor {
 
         constexpr bool IsList = std::is_same_v<T, SyntaxListBase>;
         optional<SmallVectorSized<TokenOrSyntax, 8>> listBuffer;
+
+        if constexpr (IsList) {
+            if (auto it = listAdditions.find(&node); it != listAdditions.end()) {
+                listBuffer.emplace();
+
+                const slang::detail::SyntaxChange* lastChange = nullptr;
+                for (auto& change : it->second) {
+                    if (change.kind == slang::detail::SyntaxChange::InsertAtFront) {
+                        if (!listBuffer->empty() && change.separator)
+                            listBuffer->append(change.separator);
+                        listBuffer->append(change.second);
+                        lastChange = &change;
+                    }
+                }
+
+                if (lastChange && node.getChildCount() && lastChange->separator)
+                    listBuffer->append(lastChange->separator);
+            }
+        }
 
         auto backfillList = [&](size_t index) {
             if (cloned->kind != SyntaxKind::SyntaxList && cloned->kind != SyntaxKind::SeparatedList)
@@ -79,6 +101,8 @@ struct CloneVisitor {
                         listBuffer->append(child->visit(*this));
                         listBuffer->append(it->second.second);
                         break;
+                    case slang::detail::SyntaxChange::InsertAtFront:
+                    case slang::detail::SyntaxChange::InsertAtBack:
                     default:
                         THROW_UNREACHABLE;
                 }
@@ -86,6 +110,19 @@ struct CloneVisitor {
         }
 
         if constexpr (IsList) {
+            if (auto it = listAdditions.find(&node); it != listAdditions.end()) {
+                if (!listBuffer)
+                    backfillList(node.getChildCount());
+
+                for (auto& change : it->second) {
+                    if (change.kind == slang::detail::SyntaxChange::InsertAtBack) {
+                        if (!listBuffer->empty() && change.separator)
+                            listBuffer->append(change.separator);
+                        listBuffer->append(change.second);
+                    }
+                }
+            }
+
             if (listBuffer) {
                 cloned->resetAll(alloc, *listBuffer);
                 listBuffer.reset();
@@ -106,12 +143,10 @@ struct CloneVisitor {
 namespace slang::detail {
 
 std::shared_ptr<SyntaxTree> transformTree(
-    const std::shared_ptr<SyntaxTree>& tree, const ChangeMap& changes,
-    const std::vector<std::shared_ptr<SyntaxTree>>& tempTrees) {
+    BumpAllocator&& alloc, const std::shared_ptr<SyntaxTree>& tree, const ChangeMap& changes,
+    const ListChangeMap& listAdditions, const std::vector<std::shared_ptr<SyntaxTree>>& tempTrees) {
 
-    BumpAllocator alloc;
-    CloneVisitor visitor(alloc, changes);
-
+    CloneVisitor visitor(alloc, changes, listAdditions);
     SyntaxNode* root = tree->root().visit(visitor);
 
     // Steal ownership of any temporary syntax trees that the user created; once we return the

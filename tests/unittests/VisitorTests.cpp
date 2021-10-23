@@ -28,12 +28,29 @@ public:
             fmt::format("\n    localparam int {}__count = {};", decl.name.valueText(), count));
         insertAfter(decl, newNode);
     }
+
+    void handle(const FunctionDeclarationSyntax& decl) {
+        auto portList = decl.prototype->portList;
+        if (!portList)
+            return;
+
+        auto& argA = factory.functionPort(nullptr, {}, {}, {}, nullptr,
+                                          factory.declarator(makeId("argA"), nullptr, nullptr));
+        insertAtFront(portList->ports, argA, makeComma());
+
+        auto& argZ = factory.functionPort(nullptr, {}, {}, {}, nullptr,
+                                          factory.declarator(makeId("argZ"), nullptr, nullptr));
+        insertAtBack(portList->ports, argZ, makeComma());
+    }
 };
 
 TEST_CASE("Basic rewriting") {
     auto tree = SyntaxTree::fromText(R"(
 module M;
     typedef enum int { FOO = 1, BAR = 2, BAZ = 3 } test_t;
+
+    function void foo(int i, output r);
+    endfunction
 endmodule
 )");
 
@@ -43,6 +60,8 @@ endmodule
 module M;
     typedef enum int { FOO = 1, BAR = 2, BAZ = 3 } test_t;
     localparam int test_t__count = 3;
+    function void foo(argA,int i, output r,argZ);
+    endfunction
 endmodule
 )");
 }

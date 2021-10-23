@@ -436,7 +436,9 @@ const SourceManager::FileInfo* SourceManager::getFileInfo(BufferID buffer) const
         return nullptr;
 
     std::shared_lock lock(mut);
-    ASSERT(buffer.getId() < bufferEntries.size());
+    if (buffer.getId() >= bufferEntries.size())
+        return nullptr;
+
     return std::get_if<FileInfo>(&bufferEntries[buffer.getId()]);
 }
 

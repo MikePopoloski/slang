@@ -63,17 +63,19 @@ namespace detail {
 struct SyntaxChange {
     const SyntaxNode* first = nullptr;
     SyntaxNode* second = nullptr;
+    Token separator;
 
-    enum Kind { Remove, Replace, InsertBefore, InsertAfter } kind;
+    enum Kind { Remove, Replace, InsertBefore, InsertAfter, InsertAtFront, InsertAtBack } kind;
 
-    SyntaxChange(Kind kind, const SyntaxNode* first, SyntaxNode* second) :
-        first(first), second(second), kind(kind) {}
+    SyntaxChange(Kind kind, const SyntaxNode* first, SyntaxNode* second, Token separator = {}) :
+        first(first), second(second), kind(kind), separator(separator) {}
 };
 
 using ChangeMap = flat_hash_map<const SyntaxNode*, detail::SyntaxChange>;
+using ListChangeMap = flat_hash_map<const SyntaxNode*, std::vector<detail::SyntaxChange>>;
 std::shared_ptr<SyntaxTree> transformTree(
-    const std::shared_ptr<SyntaxTree>& tree, const ChangeMap& changes,
-    const std::vector<std::shared_ptr<SyntaxTree>>& tempTrees);
+    BumpAllocator&& alloc, const std::shared_ptr<SyntaxTree>& tree, const ChangeMap& changes,
+    const ListChangeMap& listAdditions, const std::vector<std::shared_ptr<SyntaxTree>>& tempTrees);
 
 } // namespace detail
 
@@ -82,6 +84,8 @@ std::shared_ptr<SyntaxTree> transformTree(
 template<typename TDerived>
 class SyntaxRewriter : public SyntaxVisitor<TDerived> {
 public:
+    SyntaxRewriter() : factory(alloc) {}
+
     /// Transforms the given syntax tree using the rewriter.
     /// The tree will be visited in order and each node will be given a chance to be
     /// rewritten (by providing visit() implementations in the derived class).
@@ -98,7 +102,7 @@ public:
         if (changes.empty())
             return tree;
 
-        return transformTree(tree, changes, tempTrees);
+        return transformTree(std::move(alloc), tree, changes, listAdditions, tempTrees);
     }
 
 protected:
@@ -132,9 +136,32 @@ protected:
                                                         &newNode });
     }
 
+    /// Insert @a newNode at the front of @a list in the rewritten tree.
+    void insertAtFront(const SyntaxListBase& list, SyntaxNode& newNode, Token separator = {}) {
+        listAdditions[&list].push_back(
+            { detail::SyntaxChange::InsertAtFront, &list, &newNode, separator });
+    }
+
+    /// Insert @a newNode at the back of @a list in the rewritten tree.
+    void insertAtBack(const SyntaxListBase& list, SyntaxNode& newNode, Token separator = {}) {
+        listAdditions[&list].push_back(
+            { detail::SyntaxChange::InsertAtBack, &list, &newNode, separator });
+    }
+
+    Token makeToken(TokenKind kind, string_view text) {
+        return Token(alloc, kind, {}, text, SourceLocation::NoLocation);
+    }
+
+    Token makeId(string_view text) { return makeToken(TokenKind::Identifier, text); }
+    Token makeComma() { return makeToken(TokenKind::Comma, ","sv); }
+
+    BumpAllocator alloc;
+    SyntaxFactory factory;
+
 private:
     SourceManager* sourceManager = nullptr;
     detail::ChangeMap changes;
+    detail::ListChangeMap listAdditions;
     std::vector<std::shared_ptr<SyntaxTree>> tempTrees;
 };
 
