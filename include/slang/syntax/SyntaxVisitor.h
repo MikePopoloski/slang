@@ -68,7 +68,7 @@ struct SyntaxChange {
     enum Kind { Remove, Replace, InsertBefore, InsertAfter, InsertAtFront, InsertAtBack } kind;
 
     SyntaxChange(Kind kind, const SyntaxNode* first, SyntaxNode* second, Token separator = {}) :
-        first(first), second(second), kind(kind), separator(separator) {}
+        first(first), second(second), separator(separator), kind(kind) {}
 };
 
 using ChangeMap = flat_hash_map<const SyntaxNode*, detail::SyntaxChange>;
