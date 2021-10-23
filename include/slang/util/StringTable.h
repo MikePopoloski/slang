@@ -7,6 +7,7 @@
 #pragma once
 
 #include <memory>
+
 #include "slang/util/Util.h"
 
 namespace slang {
@@ -24,7 +25,7 @@ public:
         // we can use bitwise AND instead of mod for wraparound.
         capacity = (uint32_t)entries.size() * 2;
         capacity = roundUpToPow2(capacity);
-        table = new Entry[capacity];
+        table = std::make_unique<Entry[]>(capacity);
 
         for (auto& entry : entries) {
             size_t hc = std::hash<string_view>()(entry.first);
