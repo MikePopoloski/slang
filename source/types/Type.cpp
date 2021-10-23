@@ -850,7 +850,7 @@ const Type* Type::getCommonBase(const Type& left, const Type& right) {
 
         parents.emplace(l);
         l = l->as<ClassType>().getBaseClass();
-        if (!l)
+        if (!l || l->isError())
             break;
 
         l = &l->getCanonicalType();
@@ -861,7 +861,7 @@ const Type* Type::getCommonBase(const Type& left, const Type& right) {
             return r;
 
         r = r->as<ClassType>().getBaseClass();
-        if (!r)
+        if (!r || r->isError())
             return nullptr;
 
         r = &r->getCanonicalType();

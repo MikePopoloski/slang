@@ -2456,11 +2456,13 @@ class child #(type SUPER_CLASS=base) extends SUPER_CLASS;
 endclass
 
 module top;
-    // child #(base) c;
-    initial begin
-        // c = new();
-    end
 endmodule
+
+class child2 #(type SUPER_CLASS=base) extends SUPER_CLASS;
+    function new();
+        super.new();
+    endfunction
+endclass
 )");
 
     Compilation compilation;

@@ -919,6 +919,9 @@ Expression& NewClassExpression::fromSyntax(Compilation& compilation,
                 return badExpr(compilation, nullptr);
             }
 
+            if (base->isError())
+                return badExpr(compilation, nullptr);
+
             classType = &base->as<Type>().getCanonicalType().as<ClassType>();
             assignmentTarget = &compilation.getVoidType();
             isSuperClass = true;

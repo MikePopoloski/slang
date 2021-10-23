@@ -360,7 +360,7 @@ void ClassType::handleExtends(const ExtendsClauseSyntax& extendsClause, const Bi
 
             // Otherwise it could be inherited from a higher-level base.
             auto possibleBase = currentBase->getBaseClass();
-            if (!possibleBase)
+            if (!possibleBase || possibleBase->isError())
                 break;
 
             currentBase = &possibleBase->getCanonicalType().as<ClassType>();
@@ -405,7 +405,7 @@ void ClassType::handleExtends(const ExtendsClauseSyntax& extendsClause, const Bi
 
                 // Otherwise it could be inherited from a higher-level base.
                 auto possibleBase = currentBase->getBaseClass();
-                if (!possibleBase)
+                if (!possibleBase || possibleBase->isError())
                     break;
 
                 currentBase = &possibleBase->getCanonicalType().as<ClassType>();
@@ -521,7 +521,7 @@ static void findIfaces(const ClassType& type, SmallVector<const Type*>& ifaces,
             ifaces.append(iface);
     }
 
-    if (auto base = type.getBaseClass())
+    if (auto base = type.getBaseClass(); base && !base->isError())
         findIfaces(base->getCanonicalType().as<ClassType>(), ifaces, visited);
 }
 
