@@ -459,8 +459,8 @@ const Symbol* Expression::getSymbolReference(bool allowPacked) const {
         case ExpressionKind::MemberAccess: {
             auto& access = as<MemberAccessExpression>();
             auto& val = access.value();
-            if (allowPacked || val.type->isClass() || val.type->isVirtualInterface() ||
-                val.type->isVoid() || val.type->isUnpackedStruct() || val.type->isUnpackedUnion()) {
+            if (allowPacked || val.type->isClass() || val.type->isUnpackedStruct() ||
+                val.type->isUnpackedUnion()) {
                 return &access.member;
             }
             return nullptr;

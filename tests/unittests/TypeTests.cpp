@@ -1285,6 +1285,67 @@ endprogram
     NO_COMPILATION_ERRORS;
 }
 
+TEST_CASE("Virtual interfaces with nested hierarchical names") {
+    auto tree = SyntaxTree::fromText(R"(
+interface clk_generator(output logic clk);
+time period;
+initial begin
+    clk = 0;
+    period = 0ns;
+    forever begin
+        if (period != 0ns) begin
+            #(period/2) clk = 1;
+            #(period/2) clk = 0;
+        end else begin
+            clk = 0;
+            @(period);
+        end
+    end
+end
+endinterface
+
+interface testbench(output logic clk_slow, output logic clk_fast);
+    clk_generator bus_clk_slow(
+        .clk(clk_slow)
+    );
+    clk_generator bus_clk_fast(
+        .clk(clk_fast)
+    );
+endinterface
+
+class TB;
+    virtual testbench tb_intf;
+
+    task run();
+        tb_intf.bus_clk_slow.period = 10ns;
+        #1us;
+        tb_intf.bus_clk_fast.period = 2ns;
+        #1us;
+        tb_intf.bus_clk_slow.period = 0ns;
+    endtask
+endclass
+
+module top;
+    logic clk_100;
+    logic clk_500;
+
+    testbench testbench(
+        .clk_slow (clk_100),
+        .clk_fast (clk_500)
+    );
+
+    initial begin
+        TB tb;
+        tb = new();
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
 TEST_CASE("Typedef + type param colon access regress GH #471") {
     auto tree = SyntaxTree::fromText(R"(
 class C #(type T);

@@ -10,6 +10,7 @@
 #include "slang/compilation/Compilation.h"
 #include "slang/compilation/Definition.h"
 #include "slang/diagnostics/ConstEvalDiags.h"
+#include "slang/diagnostics/ExpressionsDiags.h"
 #include "slang/diagnostics/LookupDiags.h"
 #include "slang/diagnostics/NumericDiags.h"
 #include "slang/parsing/LexerFacts.h"
@@ -248,21 +249,40 @@ bool lookupDownward(span<const NamePlusLoc> nameParts, NameComponents name,
         if (!checkClassParams(name))
             return false;
 
-        auto isValueLike = [](const Symbol& symbol) {
-            switch (symbol.kind) {
+        auto isValueLike = [&](const Symbol*& symbol) {
+            switch (symbol->kind) {
                 case SymbolKind::ConstraintBlock:
                 case SymbolKind::Sequence:
                 case SymbolKind::Property:
                 case SymbolKind::LetDecl:
                 case SymbolKind::AssertionPort:
                     return true;
-                default:
-                    return symbol.isValue();
+                default: {
+                    if (!symbol->isValue())
+                        return false;
+
+                    // If this is a virtual interface value we should unwrap to
+                    // the target interface and continue the hierarchical lookup.
+                    auto& type = symbol->as<ValueSymbol>().getType();
+                    if (type.isVirtualInterface()) {
+                        if (context.flags.has(BindFlags::NonProcedural))
+                            context.addDiag(diag::DynamicNotProcedural, name.range());
+
+                        auto& vit = type.getCanonicalType().as<VirtualInterfaceType>();
+                        if (vit.modport)
+                            symbol = vit.modport;
+                        else
+                            symbol = &vit.iface;
+                        return false;
+                    }
+
+                    return true;
+                }
             }
         };
 
         // If we found a value, the remaining dots are member access expressions.
-        if (isValueLike(*symbol)) {
+        if (isValueLike(symbol)) {
             if (name.selectors)
                 result.selectors.appendRange(*name.selectors);
 
