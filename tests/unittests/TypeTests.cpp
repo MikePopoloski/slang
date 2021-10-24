@@ -1411,6 +1411,80 @@ endmodule
     NO_COMPILATION_ERRORS;
 }
 
+TEST_CASE("virtual interfaces member access via nested member") {
+    auto tree = SyntaxTree::fromText(R"(
+interface clk_generator(output logic clk);
+time period;
+initial begin
+    clk = 0;
+    period = 0ns;
+    forever begin
+        if (period != 0ns) begin
+            #(period/2) clk = 1;
+            #(period/2) clk = 0;
+        end else begin
+            clk = 0;
+            @(period);
+        end
+    end
+end
+endinterface
+
+interface testbench(output logic clk_slow, output logic clk_fast);
+    clk_generator bus_clk_slow(
+        .clk(clk_slow)
+    );
+    clk_generator bus_clk_fast(
+        .clk(clk_fast)
+    );
+endinterface
+
+class TB;
+    virtual testbench tb_intf[$];
+
+    task run();
+        foreach (tb_intf[i]) begin
+            fork
+                automatic int j = i;
+                begin
+                    tb_intf[j].bus_clk_slow.period = 10ns;
+                    #1us;
+                    tb_intf[j].bus_clk_fast.period = 2ns;
+                    #1us;
+                    tb_intf[j].bus_clk_slow.period = 0ns;
+                end
+             join_none
+        end
+        wait fork;
+    endtask
+endclass
+
+module top;
+    logic [1:0] clk_100;
+    logic [1:0] clk_500;
+
+    testbench testbench0(
+        .clk_slow (clk_100[0]),
+        .clk_fast (clk_500[0])
+    );
+
+    testbench testbench1(
+        .clk_slow (clk_100[1]),
+        .clk_fast (clk_500[1])
+    );
+
+    initial begin
+        TB tb;
+        tb = new();
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
 TEST_CASE("Invalid enum base regress GH #472") {
     auto tree = SyntaxTree::fromText(R"(
 package pkg;

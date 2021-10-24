@@ -18,6 +18,7 @@ class IteratorSymbol;
 class Scope;
 class Symbol;
 class SystemSubroutine;
+class Type;
 struct ElementSelectSyntax;
 struct NameSyntax;
 struct ScopedNameSyntax;
@@ -226,6 +227,13 @@ public:
     static const Symbol* selectChild(const Symbol& symbol,
                                      span<const ElementSelectSyntax* const> selectors,
                                      const BindContext& context, LookupResult& result);
+
+    /// Applies the given @a selectors to the @a virtualInterface type and returns the
+    /// selected child in @result -- if any errors occur, diagnostics are issued to
+    /// the result object and nullptr is returned.
+    static void selectChild(const Type& virtualInterface, SourceRange range,
+                            span<LookupResult::Selector> selectors, const BindContext& context,
+                            LookupResult& result);
 
     /// Searches for a class with the given @a name within @a context -- if no symbol is
     /// found, or if the found symbol is not a class type, appropriate diagnostics are issued.

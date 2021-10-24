@@ -1057,17 +1057,17 @@ const Type& Type::lookupNamedType(Compilation& compilation, const NameSyntax& sy
     if (result.hasError())
         compilation.addDiagnostics(result.getDiagnostics());
 
-    return fromLookupResult(compilation, result, syntax, context);
+    return fromLookupResult(compilation, result, syntax.sourceRange(), context);
 }
 
 const Type& Type::fromLookupResult(Compilation& compilation, const LookupResult& result,
-                                   const NameSyntax& syntax, const BindContext& context) {
+                                   SourceRange sourceRange, const BindContext& context) {
     const Symbol* symbol = result.found;
     if (!symbol)
         return compilation.getErrorType();
 
     if (!symbol->isType()) {
-        context.addDiag(diag::NotAType, syntax.sourceRange()) << symbol->name;
+        context.addDiag(diag::NotAType, sourceRange) << symbol->name;
         return compilation.getErrorType();
     }
 

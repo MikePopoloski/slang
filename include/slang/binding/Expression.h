@@ -315,8 +315,8 @@ protected:
                                 const ArrayOrRandomizeMethodExpressionSyntax* withClause,
                                 const BindContext& context);
 
-    static Expression& bindLookupResult(Compilation& compilation, const LookupResult& result,
-                                        const NameSyntax& syntax,
+    static Expression& bindLookupResult(Compilation& compilation, LookupResult& result,
+                                        SourceRange sourceRange,
                                         const InvocationExpressionSyntax* invocation,
                                         const ArrayOrRandomizeMethodExpressionSyntax* withClause,
                                         const BindContext& context);

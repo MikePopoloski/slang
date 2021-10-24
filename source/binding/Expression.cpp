@@ -782,8 +782,8 @@ Expression& Expression::bindName(Compilation& compilation, const NameSyntax& syn
         if (context.firstIterator) {
             LookupResult result;
             if (Lookup::findIterator(*context.scope, *context.firstIterator, syntax, result)) {
-                return bindLookupResult(compilation, result, syntax, invocation, withClause,
-                                        context);
+                return bindLookupResult(compilation, result, syntax.sourceRange(), invocation,
+                                        withClause, context);
             }
         }
 
@@ -794,8 +794,8 @@ Expression& Expression::bindName(Compilation& compilation, const NameSyntax& syn
             if (Lookup::withinClassRandomize(*context.randomizeDetails->classType,
                                              context.randomizeDetails->nameRestrictions, syntax,
                                              flags, result)) {
-                return bindLookupResult(compilation, result, syntax, invocation, withClause,
-                                        context);
+                return bindLookupResult(compilation, result, syntax.sourceRange(), invocation,
+                                        withClause, context);
             }
             else if (result.hasError()) {
                 result.reportErrors(context);
@@ -807,8 +807,8 @@ Expression& Expression::bindName(Compilation& compilation, const NameSyntax& syn
             // Look for a matching local assertion variable.
             LookupResult result;
             if (Lookup::findAssertionLocalVar(context, syntax, result)) {
-                return bindLookupResult(compilation, result, syntax, invocation, withClause,
-                                        context);
+                return bindLookupResult(compilation, result, syntax.sourceRange(), invocation,
+                                        withClause, context);
             }
         }
     }
@@ -828,11 +828,12 @@ Expression& Expression::bindName(Compilation& compilation, const NameSyntax& syn
                                           callRange, context);
     }
 
-    return bindLookupResult(compilation, result, syntax, invocation, withClause, context);
+    return bindLookupResult(compilation, result, syntax.sourceRange(), invocation, withClause,
+                            context);
 }
 
-Expression& Expression::bindLookupResult(Compilation& compilation, const LookupResult& result,
-                                         const NameSyntax& syntax,
+Expression& Expression::bindLookupResult(Compilation& compilation, LookupResult& result,
+                                         SourceRange sourceRange,
                                          const InvocationExpressionSyntax* invocation,
                                          const ArrayOrRandomizeMethodExpressionSyntax* withClause,
                                          const BindContext& context) {
@@ -840,7 +841,6 @@ Expression& Expression::bindLookupResult(Compilation& compilation, const LookupR
     if (!symbol)
         return badExpr(compilation, nullptr);
 
-    SourceRange sourceRange = syntax.sourceRange();
     auto errorIfInvoke = [&]() {
         // If we require a subroutine, enforce that now. The invocation syntax will have been
         // nulled out if we used it elsewhere in this function.
@@ -860,7 +860,7 @@ Expression& Expression::bindLookupResult(Compilation& compilation, const LookupR
 
     if (context.flags.has(BindFlags::AllowDataType) && symbol->isType()) {
         // We looked up a named data type and we were allowed to do so, so return it.
-        const Type& resultType = Type::fromLookupResult(compilation, result, syntax, context);
+        const Type& resultType = Type::fromLookupResult(compilation, result, sourceRange, context);
         auto expr = compilation.emplace<DataTypeExpression>(resultType, sourceRange);
         if (!expr->bad() && !errorIfInvoke())
             return badExpr(compilation, expr);
@@ -924,14 +924,32 @@ Expression& Expression::bindLookupResult(Compilation& compilation, const LookupR
     }
 
     // Drill down into member accesses.
-    for (auto& selector : result.selectors) {
+    for (size_t i = 0; i < result.selectors.size(); i++) {
         if (expr->bad())
             return *expr;
 
+        auto& selector = result.selectors[i];
         auto memberSelect = std::get_if<LookupResult::MemberSelector>(&selector);
         if (memberSelect) {
+            // If this is an access via a virtual interface we need to look at
+            // all the selectors together, as this may constitute a hierarchical reference.
+            if (expr->type->isVirtualInterface()) {
+                LookupResult nextResult;
+                span<LookupResult::Selector> selectors = result.selectors;
+                Lookup::selectChild(*expr->type, expr->sourceRange, selectors.subspan(i), context,
+                                    nextResult);
+
+                nextResult.reportErrors(context);
+                if (!nextResult.found)
+                    return badExpr(compilation, expr);
+
+                return bindLookupResult(compilation, nextResult, sourceRange, invocation,
+                                        withClause, context);
+            }
+
             expr = &MemberAccessExpression::fromSelector(compilation, *expr, *memberSelect,
                                                          invocation, withClause, context);
+
             if (expr->kind == ExpressionKind::Call) {
                 // TODO: what if this is not the last selector in the chain?
                 invocation = nullptr;
