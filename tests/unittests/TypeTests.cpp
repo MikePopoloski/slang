@@ -918,6 +918,8 @@ module m;
     struct packed { logic [3:0] a; int b; } [4:1] s;
     union packed { logic [3:0] a; bit [1:4] b; } [4:1] u;
     enum { A, B, C } [4:1] e;
+
+    initial e = A;
 endmodule
 )");
 
@@ -1340,12 +1342,40 @@ interface tb_intf(
 endinterface
 
 module top;
-    //bus_intf bus();
-    //tb_intf tb(.*);
 endmodule
 )");
 
     Compilation compilation;
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Invalid enum base regress GH #472") {
+    auto tree = SyntaxTree::fromText(R"(
+package pkg;
+    typedef enum node [3:0] {
+        IDLE    = 4'h0,
+        NOTIDLE
+    } CXDB_SM_t;
+
+    typedef enum node [15:0] {
+        BP_IDLE    = 16'(1<<IDLE),
+        BP_NOTIDLE = 16'(1<<NOTIDLE)
+    } CXDB_BP_SM_t;
+endpackage
+
+module test
+import pkg::*;
+#(parameter bit A = 0) ();
+localparam logic [3:0] SM_IDLE = A ? BP_IDLE : IDLE;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::UndeclaredIdentifier);
+    CHECK(diags[1].code == diag::UndeclaredIdentifier);
 }

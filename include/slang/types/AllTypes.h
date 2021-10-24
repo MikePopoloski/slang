@@ -107,6 +107,9 @@ public:
                                   const BindContext& context, const Type* typedefTarget);
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::EnumType; }
 
+    static void createDefaultMembers(const BindContext& context, const EnumTypeSyntax& syntax,
+                                     SmallVector<const Symbol*>& members);
+
     iterator_range<specific_symbol_iterator<EnumValueSymbol>> values() const {
         return membersOfType<EnumValueSymbol>();
     }

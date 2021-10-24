@@ -289,15 +289,17 @@ const Type& EnumType::fromSyntax(Compilation& compilation, const EnumTypeSyntax&
     else {
         base = &compilation.getType(*syntax.baseType, context);
         cb = &base->getCanonicalType();
-        if (!cb->isError() && !cb->isSimpleBitVector()) {
+        if (cb->isError())
+            return *cb;
+
+        if (!cb->isSimpleBitVector()) {
             context.addDiag(diag::InvalidEnumBase, syntax.baseType->getFirstToken().location())
                 << *base;
-            cb = &compilation.getErrorType();
+            return compilation.getErrorType();
         }
 
         bitWidth = cb->getBitWidth();
-        if (bitWidth == 0)
-            bitWidth = 1;
+        ASSERT(bitWidth);
     }
 
     SVInt allOnes(bitWidth, 0, cb->isSigned());
@@ -334,7 +336,7 @@ const Type& EnumType::fromSyntax(Compilation& compilation, const EnumTypeSyntax&
         previous = ev.getValue();
         previousRange = ev.getInitializer()->sourceRange;
 
-        if (!previous || cb->isError())
+        if (!previous)
             return;
 
         auto loc = previousRange.start();
@@ -395,7 +397,7 @@ const Type& EnumType::fromSyntax(Compilation& compilation, const EnumTypeSyntax&
             value = SVInt(bitWidth, 0, cb->isSigned());
             first = false;
         }
-        else if (!previous || cb->isError()) {
+        else if (!previous) {
             return;
         }
         else {
@@ -491,6 +493,52 @@ const Type& EnumType::fromSyntax(Compilation& compilation, const EnumTypeSyntax&
     return createPackedDims(context, resultType, syntax.dimensions);
 }
 
+static string_view getEnumValueName(Compilation& comp, string_view name, int32_t index) {
+    if (!name.empty()) {
+        ASSERT(index >= 0);
+
+        size_t sz = (size_t)snprintf(nullptr, 0, "%d", index);
+        char* mem = (char*)comp.allocate(sz + name.size() + 1, 1);
+        memcpy(mem, name.data(), name.size());
+        snprintf(mem + name.size(), sz + 1, "%d", index);
+
+        name = string_view(mem, sz + name.size());
+    }
+    return name;
+}
+
+void EnumType::createDefaultMembers(const BindContext& context, const EnumTypeSyntax& syntax,
+                                    SmallVector<const Symbol*>& members) {
+    auto& comp = context.getCompilation();
+    for (auto member : syntax.members) {
+        string_view name = member->name.valueText();
+        SourceLocation loc = member->name.location();
+
+        if (member->dimensions.empty()) {
+            members.append(comp.emplace<EnumValueSymbol>(name, loc));
+        }
+        else {
+            auto dims = member->dimensions[0];
+            auto range = context.evalUnpackedDimension(*dims);
+            if (!range)
+                continue;
+
+            SourceRange dimRange = dims->sourceRange();
+            if (!context.requirePositive(optional(range->left), dimRange) ||
+                !context.requirePositive(optional(range->right), dimRange)) {
+                continue;
+            }
+
+            int32_t low = range->lower();
+            for (uint32_t i = 0; i < range->width(); i++) {
+                int32_t index = int32_t(i) + low;
+                members.append(
+                    comp.emplace<EnumValueSymbol>(getEnumValueName(comp, name, index), loc));
+            }
+        }
+    }
+}
+
 EnumValueSymbol::EnumValueSymbol(string_view name, SourceLocation loc) :
     ValueSymbol(SymbolKind::EnumValue, name, loc, DeclaredTypeFlags::RequireConstant) {
 }
@@ -499,21 +547,12 @@ EnumValueSymbol& EnumValueSymbol::fromSyntax(Compilation& compilation,
                                              const DeclaratorSyntax& syntax, const Type& type,
                                              optional<int32_t> index) {
     string_view name = syntax.name.valueText();
-    if (index && !name.empty()) {
-        ASSERT(*index >= 0);
-
-        size_t sz = (size_t)snprintf(nullptr, 0, "%d", *index);
-        char* mem = (char*)compilation.allocate(sz + name.size() + 1, 1);
-        memcpy(mem, name.data(), name.size());
-        snprintf(mem + name.size(), sz + 1, "%d", *index);
-
-        name = string_view(mem, sz + name.size());
-    }
+    if (index)
+        name = getEnumValueName(compilation, name, *index);
 
     auto ev = compilation.emplace<EnumValueSymbol>(name, syntax.name.location());
     ev->setType(type);
     ev->setSyntax(syntax);
-
     return *ev;
 }
 
