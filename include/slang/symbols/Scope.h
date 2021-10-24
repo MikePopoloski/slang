@@ -250,9 +250,8 @@ private:
         void addMember(Symbol* symbol);
         span<Symbol* const> getMembers() const;
 
-        using TransparentTypeMap = flat_hash_map<const Symbol*, const Symbol*>;
         void registerTransparentType(const Symbol* insertion, const Symbol& parent);
-        iterator_range<TransparentTypeMap::const_iterator> getTransparentTypes() const;
+        span<std::pair<const Symbol*, const Symbol*> const> getTransparentTypes() const;
 
         void addForwardingTypedef(const ForwardingTypedefSymbol& symbol);
         span<const ForwardingTypedefSymbol* const> getForwardingTypedefs() const;
@@ -271,7 +270,7 @@ private:
         // Some types are special in that their members leak into the surrounding scope; this
         // set keeps track of all variables, parameters, arguments, etc that have such data types
         // so that when our list of members is finalized we can include their members as well.
-        TransparentTypeMap transparentTypes;
+        std::vector<std::pair<const Symbol*, const Symbol*>> transparentTypes;
 
         // Track a list of forwarding typedefs declared in the scope; once we've fully elaborated
         // we'll go back and make sure they're actually valid.

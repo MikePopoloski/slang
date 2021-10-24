@@ -1066,12 +1066,12 @@ span<Symbol* const> Scope::DeferredMemberData::getMembers() const {
 
 void Scope::DeferredMemberData::registerTransparentType(const Symbol* insertion,
                                                         const Symbol& parent) {
-    transparentTypes.emplace(insertion, &parent);
+    transparentTypes.emplace_back(insertion, &parent);
 }
 
-iterator_range<Scope::DeferredMemberData::TransparentTypeMap::const_iterator> Scope::
-    DeferredMemberData::getTransparentTypes() const {
-    return { transparentTypes.begin(), transparentTypes.end() };
+span<std::pair<const Symbol*, const Symbol*> const> Scope::DeferredMemberData::getTransparentTypes()
+    const {
+    return transparentTypes;
 }
 
 void Scope::DeferredMemberData::addForwardingTypedef(const ForwardingTypedefSymbol& symbol) {

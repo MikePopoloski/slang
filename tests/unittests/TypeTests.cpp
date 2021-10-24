@@ -1379,3 +1379,30 @@ endmodule
     CHECK(diags[0].code == diag::UndeclaredIdentifier);
     CHECK(diags[1].code == diag::UndeclaredIdentifier);
 }
+
+TEST_CASE("Intermittent enum label failure GH #487") {
+    auto tree = SyntaxTree::fromText(R"(
+`ifdef TWOSTATE
+    typedef bit node;
+`else
+    typedef logic node;
+`endif
+
+typedef enum node [3:0] {
+    IDLE = 4'h0,
+    NOTIDLE
+} sm_t;
+
+typedef enum node [15:0] {
+    BP_IDLE    = 16'(1<<IDLE),
+    BP_NOTIDLE = 16'(1<<NOTIDLE)
+} bp_sm_t;
+
+module top;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
