@@ -49,9 +49,12 @@ enum class ExpressionOptions {
 
     /// In a bins select context the && and || operators should be left
     /// to the bins parsing instead of being part of the expression itself.
-    BinsSelectContext = 1 << 6
+    BinsSelectContext = 1 << 6,
+
+    /// "dist" expressions are allowed in this context.
+    AllowDist = 1 << 7
 };
-BITMASK(ExpressionOptions, BinsSelectContext);
+BITMASK(ExpressionOptions, AllowDist);
 
 /// Various options for parsing names.
 enum class NameOptions {
@@ -198,7 +201,7 @@ private:
     // ---- Recursive-descent parsing routines, by syntax type ----
 
     // clang-format off
-    ExpressionSyntax& parseMinTypMaxExpression();
+    ExpressionSyntax& parseMinTypMaxExpression(bitmask<ExpressionOptions> options = {});
     ExpressionSyntax& parsePrimaryExpression(bitmask<ExpressionOptions> options);
     ExpressionSyntax& parseIntegerExpression(bool disallowVector);
     ExpressionSyntax& parseInsideExpression(ExpressionSyntax& expr);

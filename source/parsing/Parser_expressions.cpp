@@ -15,8 +15,8 @@ ExpressionSyntax& Parser::parseExpression() {
     return parseSubExpression(ExpressionOptions::None, 0);
 }
 
-ExpressionSyntax& Parser::parseMinTypMaxExpression() {
-    ExpressionSyntax& first = parseExpression();
+ExpressionSyntax& Parser::parseMinTypMaxExpression(bitmask<ExpressionOptions> options) {
+    ExpressionSyntax& first = parseSubExpression(options, 0);
     if (!peek(TokenKind::Colon))
         return first;
 
@@ -29,12 +29,7 @@ ExpressionSyntax& Parser::parseMinTypMaxExpression() {
 }
 
 ExpressionSyntax& Parser::parseExpressionOrDist(bitmask<ExpressionOptions> options) {
-    auto& expr = parseSubExpression(options, 0);
-    if (!peek(TokenKind::DistKeyword))
-        return expr;
-
-    auto& dist = parseDistConstraintList();
-    return factory.expressionOrDist(expr, dist);
+    return parseSubExpression(options | ExpressionOptions::AllowDist, 0);
 }
 
 static bool isNewExpr(const ExpressionSyntax* expr) {
@@ -138,8 +133,17 @@ ExpressionSyntax& Parser::parseBinaryExpression(ExpressionSyntax* left,
             break;
 
         // take the operator
-        if (opKind == SyntaxKind::InsideExpression)
+        if (opKind == SyntaxKind::InsideExpression) {
             left = &parseInsideExpression(*left);
+        }
+        else if (opKind == SyntaxKind::ExpressionOrDist) {
+            auto& dist = parseDistConstraintList();
+            left = &factory.expressionOrDist(*left, dist);
+
+            if (!options.has(ExpressionOptions::AllowDist)) {
+                addDiag(diag::InvalidDistExpression, dist.dist.location()) << dist.sourceRange();
+            }
+        }
         else {
             auto opToken = consume();
             auto attributes = parseAttributes();
@@ -195,9 +199,14 @@ ExpressionSyntax& Parser::parsePrimaryExpression(bitmask<ExpressionOptions> opti
             return parseIntegerExpression(options.has(ExpressionOptions::DisallowVectors));
         case TokenKind::OpenParenthesis: {
             auto openParen = consume();
-            auto expr = &parseMinTypMaxExpression();
-
+            auto expr = &parseMinTypMaxExpression(options & ExpressionOptions::AllowDist);
             auto closeParen = expect(TokenKind::CloseParenthesis);
+
+            if (expr->kind == SyntaxKind::ExpressionOrDist &&
+                options.has(ExpressionOptions::AllowDist)) {
+                addDiag(diag::NonstandardDist, openParen.location()) << closeParen.range();
+            }
+
             return factory.parenthesizedExpression(openParen, *expr, closeParen);
         }
         case TokenKind::ApostropheOpenBrace:
@@ -1330,12 +1339,8 @@ SequenceExprSyntax& Parser::parseParenthesizedSeqExpr(Token openParen, SequenceE
         // at it later.
         if (isBinaryOrPostfixExpression(peek().kind)) {
             result = &parsePostfixExpression(*result, ExpressionOptions::SequenceExpr);
-            result = &parseBinaryExpression(result, ExpressionOptions::SequenceExpr, 0);
-
-            if (peek(TokenKind::DistKeyword)) {
-                auto& dist = parseDistConstraintList();
-                result = &factory.expressionOrDist(*result, dist);
-            }
+            result = &parseBinaryExpression(
+                result, ExpressionOptions::SequenceExpr | ExpressionOptions::AllowDist, 0);
         }
 
         auto repetition = parseSequenceRepetition();

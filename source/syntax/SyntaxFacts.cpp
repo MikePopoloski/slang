@@ -107,6 +107,7 @@ SyntaxKind SyntaxFacts::getBinaryExpression(TokenKind kind) {
         case TokenKind::TripleLeftShiftEqual: return SyntaxKind::ArithmeticLeftShiftAssignmentExpression;
         case TokenKind::RightShiftEqual: return SyntaxKind::LogicalRightShiftAssignmentExpression;
         case TokenKind::TripleRightShiftEqual: return SyntaxKind::ArithmeticRightShiftAssignmentExpression;
+        case TokenKind::DistKeyword: return SyntaxKind::ExpressionOrDist;
         default: return SyntaxKind::Unknown;
     }
 }
@@ -226,6 +227,7 @@ int SyntaxFacts::getPrecedence(SyntaxKind kind) {
         case SyntaxKind::GreaterThanExpression:
         case SyntaxKind::GreaterThanEqualExpression:
         case SyntaxKind::InsideExpression:
+        case SyntaxKind::ExpressionOrDist:
             return 9;
         case SyntaxKind::LogicalShiftLeftExpression:
         case SyntaxKind::LogicalShiftRightExpression:

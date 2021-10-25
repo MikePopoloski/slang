@@ -759,3 +759,23 @@ endmodule
     parseCompilationUnit(text);
     CHECK_DIAGNOSTICS_EMPTY;
 }
+
+TEST_CASE("Dist expression parsing in disallowed contexts") {
+    auto& text = R"(
+class C;
+    rand bit a;
+    rand bit [3:0] b;
+    constraint cmd_c {
+        a  ->  b dist { 0 := 1, [1:15] := 1};
+        a  -> (b dist { 0 := 1, [1:15] := 1});
+    }
+
+    int i = 1 + a dist {0 := 1, [1:15] := 1};
+endclass
+)";
+    parseCompilationUnit(text);
+
+    REQUIRE(diagnostics.size() == 2);
+    CHECK(diagnostics[0].code == diag::NonstandardDist);
+    CHECK(diagnostics[1].code == diag::InvalidDistExpression);
+}

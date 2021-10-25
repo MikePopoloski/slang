@@ -1856,15 +1856,11 @@ ConstraintItemSyntax* Parser::parseConstraintItem(bool allowBlock, bool isTopLev
 
     // at this point we either have an expression with optional distribution or
     // we have an implication constraint
-    auto expr = &parseSubExpression(ExpressionOptions::ConstraintContext, 0);
+    auto expr =
+        &parseSubExpression(ExpressionOptions::ConstraintContext | ExpressionOptions::AllowDist, 0);
     if (peek(TokenKind::MinusArrow)) {
         auto arrow = consume();
         return &factory.implicationConstraint(*expr, arrow, *parseConstraintItem(true, false));
-    }
-
-    if (peek(TokenKind::DistKeyword)) {
-        auto& dist = parseDistConstraintList();
-        expr = &factory.expressionOrDist(*expr, dist);
     }
 
     return &factory.expressionConstraint(Token(), *expr, expect(TokenKind::Semicolon));

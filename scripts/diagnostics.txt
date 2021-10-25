@@ -217,10 +217,12 @@ error UnpackedSigned "unpacked type cannot have signedness declared"
 error TaggedStruct "structs cannot be declared 'tagged'"
 error RandJoinProdItem "rand join list can only contain simple references to other productions"
 error RandJoinNotEnough "rand join list must contain at least two productions"
+error InvalidDistExpression "cannot use a 'dist' expression in this context"
 warning nonstandard-generate NonStandardGenBlock "standalone generate block without loop or condition is not allowed in SystemVerilog"
 warning empty-pattern EmptyAssignmentPattern "empty assignment patterns are disallowed by SystemVerilog"
 warning nonstandard-foreach NonstandardForeach "non-standard foreach loop variable list"
 warning lifetime-prototype LifetimeForPrototype "lifetime specifier is not allowed on prototype declaration"
+warning nonstandard-dist NonstandardDist "use of parentheses around 'dist' expression is non-standard"
 note NoteToMatchThis "to match this '{}'"
 
 subsystem Declarations
@@ -800,12 +802,13 @@ group default = { real-underflow real-overflow literal-overflow unconnected-port
                   extra-pragma-args expected-diag-arg unknown-diag-arg pragma-diag-level explicit-static
                   static-skipped elem-not-found dynarray-index dynarray-range queue-range empty-queue
                   unknown-escape-code no-top warning-task unsized-concat finish-num implicit-conv nonblocking-final
-                  constraint-missing missing-format dpi-spec enum-range udp-port-empty lifetime-prototype }
+                  constraint-missing missing-format dpi-spec enum-range udp-port-empty lifetime-prototype
+                  nonstandard-sys-func nonstandard-foreach nonstandard-dist }
 
 group extra = { empty-member empty-stmt dup-import pointless-void-cast case-gen-none case-gen-dup
                 unused-result format-real ignored-slice task-ignored width-trunc dup-attr }
 
 group pedantic = { empty-pattern implicit-net-port nonstandard-escape-code nonstandard-generate format-multibit-strength
-                   nonstandard-sys-func nonstandard-foreach }
+                   nonstandard-sys-func nonstandard-foreach nonstandard-dist }
 
 group conversion = { width-trunc width-expand implicit-conv }
