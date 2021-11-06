@@ -883,6 +883,7 @@ Expression& Expression::bindLookupResult(Compilation& compilation, LookupResult&
     Expression* expr;
     switch (symbol->kind) {
         case SymbolKind::Subroutine: {
+            ASSERT(result.selectors.empty());
             SourceRange callRange = invocation ? invocation->sourceRange() : sourceRange;
             expr = &CallExpression::fromLookup(compilation, &symbol->as<SubroutineSymbol>(),
                                                nullptr, invocation, withClause, callRange, context);
@@ -892,20 +893,20 @@ Expression& Expression::bindLookupResult(Compilation& compilation, LookupResult&
         }
         case SymbolKind::Sequence:
         case SymbolKind::Property:
-            expr =
-                &AssertionInstanceExpression::fromLookup(*symbol, invocation, sourceRange, context);
-            invocation = nullptr;
-            break;
-        case SymbolKind::LetDecl:
-            expr =
-                &AssertionInstanceExpression::fromLookup(*symbol, invocation, sourceRange, context);
-            if (result.isHierarchical) {
-                SourceRange callRange = invocation ? invocation->sourceRange() : sourceRange;
+        case SymbolKind::LetDecl: {
+            const InvocationExpressionSyntax* localInvoke = nullptr;
+            if (result.selectors.empty())
+                localInvoke = std::exchange(invocation, nullptr);
+
+            expr = &AssertionInstanceExpression::fromLookup(*symbol, localInvoke, sourceRange,
+                                                            context);
+
+            if (symbol->kind == SymbolKind::LetDecl && result.isHierarchical) {
+                SourceRange callRange = localInvoke ? localInvoke->sourceRange() : sourceRange;
                 context.addDiag(diag::LetHierarchical, callRange);
             }
-
-            invocation = nullptr;
             break;
+        }
         case SymbolKind::AssertionPort:
             expr = &AssertionInstanceExpression::bindPort(*symbol, sourceRange, context);
             break;
@@ -947,13 +948,18 @@ Expression& Expression::bindLookupResult(Compilation& compilation, LookupResult&
                                         withClause, context);
             }
 
-            expr = &MemberAccessExpression::fromSelector(compilation, *expr, *memberSelect,
-                                                         invocation, withClause, context);
+            if (i == result.selectors.size() - 1) {
+                expr = &MemberAccessExpression::fromSelector(compilation, *expr, *memberSelect,
+                                                             invocation, withClause, context);
 
-            if (expr->kind == ExpressionKind::Call) {
-                // TODO: what if this is not the last selector in the chain?
-                invocation = nullptr;
-                withClause = nullptr;
+                if (expr->kind == ExpressionKind::Call) {
+                    invocation = nullptr;
+                    withClause = nullptr;
+                }
+            }
+            else {
+                expr = &MemberAccessExpression::fromSelector(compilation, *expr, *memberSelect,
+                                                             nullptr, nullptr, context);
             }
         }
         else {

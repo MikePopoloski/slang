@@ -2454,3 +2454,21 @@ endfunction
     compilation.addSyntaxTree(tree);
     compilation.getAllDiagnostics();
 }
+
+TEST_CASE("Nested call expressions") {
+    auto tree = SyntaxTree::fromText(R"(
+class A;
+    function int foo(int i); endfunction
+    function A func; endfunction
+endclass
+
+module m;
+    A bar;
+    int i = bar.func.foo(3);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
