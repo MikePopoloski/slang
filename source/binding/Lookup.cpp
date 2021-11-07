@@ -1804,7 +1804,7 @@ void Lookup::reportUndeclared(const Scope& initialScope, string_view name, Sourc
             if (s->kind == SymbolKind::TransparentMember)
                 s = &s->as<TransparentMemberSymbol>().wrapped;
 
-            if (flags & LookupFlags::Type) {
+            if (flags.has(LookupFlags::Type)) {
                 if (!s->isType() && s->kind != SymbolKind::TypeParameter &&
                     s->kind != SymbolKind::GenericClassDef) {
                     return false;
@@ -1843,7 +1843,7 @@ void Lookup::reportUndeclared(const Scope& initialScope, string_view name, Sourc
             return true;
         };
 
-        if ((flags & LookupFlags::AllowDeclaredAfter) == 0) {
+        if (!flags.has(LookupFlags::AllowDeclaredAfter)) {
             actualSym = scope->find(name);
             if (actualSym) {
                 usedBeforeDeclared = isViable(*actualSym);
@@ -1893,7 +1893,7 @@ void Lookup::reportUndeclared(const Scope& initialScope, string_view name, Sourc
 
     // Otherwise, if we found the symbol but it wasn't viable becaues we're in a
     // constant context, tell the user not to use hierarchical names here.
-    if ((flags & LookupFlags::Constant) && actualSym &&
+    if (flags.has(LookupFlags::Constant) && actualSym &&
         (actualSym->isScope() || actualSym->kind == SymbolKind::Instance)) {
         result.addDiag(initialScope, diag::HierarchicalNotAllowedInConstant, range);
         return;
@@ -1902,9 +1902,14 @@ void Lookup::reportUndeclared(const Scope& initialScope, string_view name, Sourc
     // Otherwise, check if this names a definition, in which case we can give a nicer error.
     auto def = initialScope.getCompilation().getDefinition(name, initialScope);
     if (def) {
-        auto code =
-            (flags & LookupFlags::Type) ? diag::DefinitionUsedAsType : diag::DefinitionUsedAsValue;
-        result.addDiag(initialScope, code, range) << name << def->getArticleKindString();
+        if (isHierarchical) {
+            result.addDiag(initialScope, diag::CouldNotResolveHierarchicalPath, range) << name;
+        }
+        else {
+            auto code = flags.has(LookupFlags::Type) ? diag::DefinitionUsedAsType
+                                                     : diag::DefinitionUsedAsValue;
+            result.addDiag(initialScope, code, range) << name << def->getArticleKindString();
+        }
         return;
     }
 
@@ -1922,7 +1927,7 @@ void Lookup::reportUndeclared(const Scope& initialScope, string_view name, Sourc
 
     // We couldn't make any senes of this, just report a simple error about a missing identifier.
     auto& diag = result.addDiag(initialScope, diag::UndeclaredIdentifier, range) << name;
-    if (isHierarchical && (flags & LookupFlags::Constant))
+    if (isHierarchical && flags.has(LookupFlags::Constant))
         diag.addNote(diag::NoteHierarchicalNameInCE, range.start()) << name;
 }
 
