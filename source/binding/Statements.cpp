@@ -1272,20 +1272,46 @@ Statement& ForLoopStatement::fromSyntax(Compilation& compilation,
         }
     }
 
+    const Expression* stopExpr = nullptr;
+    if (syntax.stopExpr)
+        stopExpr = &Expression::bind(*syntax.stopExpr, context);
+
     SmallVectorSized<const Expression*, 2> steps;
-    auto& stopExpr = Expression::bind(*syntax.stopExpr, context);
     for (auto step : syntax.steps) {
         auto& expr = Expression::bind(*step, context, BindFlags::AssignmentAllowed);
         steps.append(&expr);
         anyBad |= expr.bad();
+
+        bool stepOk;
+        switch (expr.kind) {
+            case ExpressionKind::Invalid:
+            case ExpressionKind::Assignment:
+            case ExpressionKind::Call:
+                stepOk = true;
+                break;
+            case ExpressionKind::UnaryOp: {
+                auto op = expr.as<UnaryExpression>().op;
+                stepOk = op == UnaryOperator::Preincrement || op == UnaryOperator::Postincrement ||
+                         op == UnaryOperator::Predecrement || op == UnaryOperator::Postdecrement;
+                break;
+            }
+            default:
+                stepOk = false;
+                break;
+        }
+
+        if (!stepOk) {
+            anyBad = true;
+            context.addDiag(diag::InvalidForStepExpression, expr.sourceRange);
+        }
     }
 
     auto& bodyStmt = Statement::bind(*syntax.statement, context, stmtCtx);
-    auto result = compilation.emplace<ForLoopStatement>(initializers.copy(compilation), &stopExpr,
+    auto result = compilation.emplace<ForLoopStatement>(initializers.copy(compilation), stopExpr,
                                                         steps.copy(compilation), bodyStmt,
                                                         syntax.sourceRange());
 
-    if (anyBad || stopExpr.bad() || bodyStmt.bad())
+    if (anyBad || (stopExpr && stopExpr->bad()) || bodyStmt.bad())
         return badStmt(compilation, result);
     return *result;
 }

@@ -839,7 +839,7 @@ token forKeyword
 token openParen
 separated_list<SyntaxNode> initializers
 token semi1
-Expression stopExpr
+Expression? stopExpr
 token semi2
 separated_list<Expression> steps
 token closeParen

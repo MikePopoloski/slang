@@ -1481,3 +1481,22 @@ endclass
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::NonstandardForeach);
 }
+
+TEST_CASE("for loop expression error checking") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    int i;
+    initial begin
+        for (i; ; i) begin end
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::InvalidForInitializer);
+    CHECK(diags[1].code == diag::InvalidForStepExpression);
+}

@@ -2337,3 +2337,23 @@ endfunction
     auto cv = session.eval("f();");
     CHECK(cv.toString() == "[[1,2],[2,4]]");
 }
+
+TEST_CASE("for loop with no stop expression eval") {
+    ScriptSession session;
+    session.eval("typedef int rt[2][2];");
+    session.eval(R"(
+function automatic int f;
+    int i = 0;
+    for (;;) begin
+        i++;
+        if (i > 2)
+            break;
+    end
+    return i;
+endfunction
+)");
+
+    auto cv = session.eval("f();");
+    CHECK(cv.toString() == "3");
+    NO_SESSION_ERRORS;
+}

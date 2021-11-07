@@ -354,14 +354,30 @@ ForLoopStatementSyntax& Parser::parseForLoopStatement(NamedLabelSyntax* label,
             diag::ExpectedForInitializer, [this] { return &parseForInitializer(); });
     }
     else {
-        // TODO: require variable assignment
         parseList<isPossibleExpressionOrComma, isEndOfParenList>(
             initializers, TokenKind::Semicolon, TokenKind::Comma, semi1, RequireItems::False,
-            diag::ExpectedForInitializer, [this] { return &parseExpression(); });
+            diag::ExpectedForInitializer, [this] {
+                auto& expr = parseExpression();
+                if (expr.kind != SyntaxKind::AssignmentExpression &&
+                    (expr.kind != SyntaxKind::IdentifierName ||
+                     !expr.getFirstToken().isMissing())) {
+                    // Initializer expressions must be variable assignments.
+                    SourceRange range = expr.sourceRange();
+                    addDiag(diag::InvalidForInitializer, range.start()) << range;
+                }
+                return &expr;
+            });
     }
 
-    auto& stopExpr = parseExpression();
-    auto semi2 = expect(TokenKind::Semicolon);
+    ExpressionSyntax* stopExpr = nullptr;
+    Token semi2;
+    if (peek(TokenKind::Semicolon)) {
+        semi2 = consume();
+    }
+    else {
+        stopExpr = &parseExpression();
+        semi2 = expect(TokenKind::Semicolon);
+    }
 
     Token closeParen;
     SmallVectorSized<TokenOrSyntax, 4> steps;
