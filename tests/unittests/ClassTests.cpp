@@ -2482,3 +2482,23 @@ endclass
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Empty constraint set regression GH #494") {
+    auto tree = SyntaxTree::fromText(R"(
+class C;
+    int mode;
+    rand int b;
+    constraint c {
+        if (mode == 0) {
+            b > 2;
+        } else {
+            // TODO
+        }
+    }
+endclass
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}

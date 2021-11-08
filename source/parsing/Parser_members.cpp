@@ -1835,7 +1835,8 @@ ConstraintItemSyntax* Parser::parseConstraintItem(bool allowBlock, bool isTopLev
             // we can find out for sure one way or the other.
             if (allowBlock) {
                 uint32_t index = 1;
-                if (!scanTypePart<isNotInConcatenationExpr>(index, TokenKind::OpenBrace,
+                if (peek(1).kind == TokenKind::CloseBrace ||
+                    !scanTypePart<isNotInConcatenationExpr>(index, TokenKind::OpenBrace,
                                                             TokenKind::CloseBrace)) {
                     return &parseConstraintBlock(false);
                 }
