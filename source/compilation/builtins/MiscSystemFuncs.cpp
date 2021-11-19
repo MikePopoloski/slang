@@ -313,7 +313,7 @@ private:
             // Arguments to sequence instances that have triggered invoked can only
             // reference local variables if that is the entire argument.
             SequenceMethodExprVisitor visitor(context, name);
-            for (auto& [formal, arg] : aie.arguments) {
+            for (auto& [formal, arg_] : aie.arguments) {
                 std::visit(
                     [&visitor](auto&& arg) {
                         // Local vars are allowed at the top level, so we need to check if
@@ -350,7 +350,7 @@ private:
                             static_assert(always_false<T>::value, "Missing case");
                         }
                     },
-                    arg);
+                    arg_);
             }
         }
     }
