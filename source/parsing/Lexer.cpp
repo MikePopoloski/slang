@@ -169,7 +169,7 @@ void Lexer::splitTokens(BumpAllocator& alloc, Diagnostics& diagnostics,
     while (true) {
         Token token = lexer.lex(keywordVersion);
         if (token.kind == TokenKind::EndOfFile || token.location().buffer() != loc.buffer() ||
-            token.location().offset() > endOffset)
+            token.location().offset() >= endOffset)
             break;
 
         results.append(token);

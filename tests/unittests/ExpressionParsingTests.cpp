@@ -779,3 +779,23 @@ endclass
     CHECK(diagnostics[0].code == diag::NonstandardDist);
     CHECK(diagnostics[1].code == diag::InvalidDistExpression);
 }
+
+TEST_CASE("Integer literal parsing regression GH #498") {
+    auto& text = R"(
+task foo(bit [31:0] a);
+	$display("%x", a);
+endtask: foo
+
+task test();
+	foo(32'h0e+32'h4000);
+endtask: test
+
+module m;
+initial begin
+	test();
+end
+endmodule
+)";
+    parseCompilationUnit(text);
+    CHECK_DIAGNOSTICS_EMPTY;
+}
