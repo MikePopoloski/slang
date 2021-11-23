@@ -150,7 +150,7 @@ int NumberParser::append(Token token, bool isFirst) {
                     // This is ok, this was initially lexed as a real token with exponent.
                     // Slice off everything after and including the operator, which will
                     // become new tokens.
-                    text.resize(text.size() - (chars.size() - index));
+                    text.resize(text.size() - (chars.size() - size_t(index)));
                     valid = true;
                     return index;
                 }
