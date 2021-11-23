@@ -108,6 +108,8 @@ void ClassPropertySymbol::fromSyntax(const Scope& scope,
 void ClassPropertySymbol::serializeTo(ASTSerializer& serializer) const {
     VariableSymbol::serializeTo(serializer);
     serializer.write("visibility", toString(visibility));
+    if (randMode != RandMode::None)
+        serializer.write("randMode", toString(randMode));
 }
 
 void ClassType::addForwardDecl(const ForwardingTypedefSymbol& decl) const {
