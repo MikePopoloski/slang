@@ -84,6 +84,10 @@ public:
                 // it apart here now that we know it's a hex literal and put the remaining (new)
                 // tokens back on the parser's stack.
                 stream.handleExponentSplit(next, (size_t)index);
+
+                // Bump the count so that we definitely take the modified raw text
+                // instead of trying to use the initial token's raw directly.
+                count++;
                 break;
             }
 

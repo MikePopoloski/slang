@@ -148,6 +148,9 @@ int NumberParser::append(Token token, bool isFirst) {
                     addDigit(logic_t(getHexDigitValue(c)), 16);
                 else if (c == '+' || c == '-') {
                     // This is ok, this was initially lexed as a real token with exponent.
+                    // Slice off everything after and including the operator, which will
+                    // become new tokens.
+                    text.resize(text.size() - (chars.size() - index));
                     valid = true;
                     return index;
                 }

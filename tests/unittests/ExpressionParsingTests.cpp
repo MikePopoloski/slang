@@ -1,4 +1,5 @@
 #include "Test.h"
+#include "slang/syntax/SyntaxPrinter.h"
 
 using LF = LexerFacts;
 
@@ -796,6 +797,8 @@ initial begin
 end
 endmodule
 )";
-    parseCompilationUnit(text);
+    auto& syntax = parseCompilationUnit(text);
+    auto result = SyntaxPrinter().setSquashNewlines(false).print(syntax).str();
+    CHECK(result == text);
     CHECK_DIAGNOSTICS_EMPTY;
 }
