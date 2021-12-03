@@ -69,7 +69,7 @@ enum class LookupFlags {
     /// Treat this lookup as hierarchical even if it's a simple name.
     ForceHierarchical = AllowDeclaredAfter | RegisterUpwardNames | NoUndeclaredErrorIfUninstantiated
 };
-BITMASK(LookupFlags, RegisterUpwardNames);
+BITMASK(LookupFlags, RegisterUpwardNames)
 
 /// This type denotes the ordering of symbols within a particular scope, for the purposes of
 /// determining whether a found symbol is visible compared to the given location.

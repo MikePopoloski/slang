@@ -53,7 +53,7 @@ enum class MethodFlags : uint16_t {
     /// subroutine call.
     Randomize = 1 << 8
 };
-BITMASK(MethodFlags, Randomize);
+BITMASK(MethodFlags, Randomize)
 
 class MethodPrototypeSymbol;
 struct ClassMethodDeclarationSyntax;

@@ -83,7 +83,7 @@ enum class DeclaredTypeFlags {
     NeedsTypeCheck = Port | NetType | UserDefinedNetType | FormalArgMergeVar | Rand |
                      DPIReturnType | DPIArg | RequireSequenceType
 };
-BITMASK(DeclaredTypeFlags, RequireSequenceType);
+BITMASK(DeclaredTypeFlags, RequireSequenceType)
 
 /// Ties together various syntax nodes that declare the type of some parent symbol
 /// along with the logic necessary to resolve that type. Optionally includes an

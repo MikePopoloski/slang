@@ -24,7 +24,7 @@ namespace slang {
     x(DisableSoft) \
     x(SolveBefore) \
     x(Foreach)
-ENUM(ConstraintKind, CONSTRAINT);
+ENUM(ConstraintKind, CONSTRAINT)
 #undef CONTROL
 // clang-format on
 

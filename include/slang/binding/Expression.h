@@ -68,7 +68,7 @@ struct NamedArgumentSyntax;
     x(ClockingEvent) \
     x(AssertionInstance) \
     x(TaggedUnion)
-ENUM(ExpressionKind, EXPRESSION);
+ENUM(ExpressionKind, EXPRESSION)
 #undef EXPRESSION
 
 #define OP(x) \
@@ -86,7 +86,7 @@ ENUM(ExpressionKind, EXPRESSION);
     x(Predecrement) \
     x(Postincrement) \
     x(Postdecrement)
-ENUM(UnaryOperator, OP);
+ENUM(UnaryOperator, OP)
 #undef OP
 
 #define OP(x) \
@@ -118,11 +118,11 @@ ENUM(UnaryOperator, OP);
     x(ArithmeticShiftLeft) \
     x(ArithmeticShiftRight) \
     x(Power)
-ENUM(BinaryOperator, OP);
+ENUM(BinaryOperator, OP)
 #undef OP
 
 #define RANGE(x) x(Simple) x(IndexedUp) x(IndexedDown)
-ENUM(RangeSelectionKind, RANGE);
+ENUM(RangeSelectionKind, RANGE)
 #undef RANGE
 // clang-format on
 
