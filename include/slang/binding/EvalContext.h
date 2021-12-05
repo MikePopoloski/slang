@@ -38,7 +38,7 @@ enum class EvalFlags : uint8_t {
     /// `constant` pointer.
     CacheResults = 4
 };
-BITMASK(EvalFlags, CacheResults);
+BITMASK(EvalFlags, CacheResults)
 
 /// A container for all context required to evaluate a statement or expression.
 /// Mostly this involves tracking the callstack and maintaining

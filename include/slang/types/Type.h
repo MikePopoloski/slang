@@ -35,7 +35,7 @@ enum class IntegralFlags : uint8_t {
     /// more useful messaging.
     Reg = 4
 };
-BITMASK(IntegralFlags, Reg);
+BITMASK(IntegralFlags, Reg)
 
 struct DataTypeSyntax;
 struct VariableDimensionSyntax;

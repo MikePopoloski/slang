@@ -56,7 +56,7 @@ struct StatementSyntax;
     x(ProceduralDeassign) \
     x(RandCase) \
     x(RandSequence)
-ENUM(StatementKind, STATEMENT);
+ENUM(StatementKind, STATEMENT)
 #undef STATEMENT
 
 #define CASE_CONDITION(x) \
@@ -86,7 +86,7 @@ enum class StatementFlags {
     AutoLifetime = 1 << 5,
     InRandSeq = 1 << 6
 };
-BITMASK(StatementFlags, InRandSeq);
+BITMASK(StatementFlags, InRandSeq)
 
 /// The base class for all statements in SystemVerilog.
 class Statement {

@@ -24,7 +24,7 @@ namespace slang {
     x(Delay3) \
     x(OneStepDelay) \
     x(CycleDelay)
-ENUM(TimingControlKind, CONTROL);
+ENUM(TimingControlKind, CONTROL)
 #undef CONTROL
 // clang-format on
 

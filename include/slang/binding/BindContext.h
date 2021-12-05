@@ -145,7 +145,7 @@ enum class BindFlags {
     /// Binding is inside a concurrent assertion's action block.
     ConcurrentAssertActionBlock = 1 << 29
 };
-BITMASK(BindFlags, ConcurrentAssertActionBlock);
+BITMASK(BindFlags, ConcurrentAssertActionBlock)
 
 enum class DimensionKind { Unknown, Range, AbbreviatedRange, Dynamic, Associative, Queue };
 

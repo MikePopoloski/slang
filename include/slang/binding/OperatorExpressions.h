@@ -256,7 +256,7 @@ private:
 struct StreamingConcatenationExpressionSyntax;
 
 #define RANGE(x) x(Simple) x(IndexedUp) x(IndexedDown) x(Bit)
-ENUM(WithRangeKind, RANGE); // RangeSelectionKind + Bit
+ENUM(WithRangeKind, RANGE) // RangeSelectionKind + Bit
 #undef RANGE
 
 /// Represents a streaming concatenation.

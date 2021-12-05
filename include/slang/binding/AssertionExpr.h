@@ -29,7 +29,7 @@ namespace slang {
     x(Conditional) \
     x(Case) \
     x(DisableIff)
-ENUM(AssertionExprKind, EXPR);
+ENUM(AssertionExprKind, EXPR)
 #undef EXPR
 
 #define OP(x) \
@@ -40,7 +40,7 @@ ENUM(AssertionExprKind, EXPR);
     x(SAlways) \
     x(Eventually) \
     x(SEventually)
-ENUM(UnaryAssertionOperator, OP);
+ENUM(UnaryAssertionOperator, OP)
 #undef OP
 
 #define OP(x) \
@@ -59,7 +59,7 @@ ENUM(UnaryAssertionOperator, OP);
     x(NonOverlappedImplication) \
     x(OverlappedFollowedBy) \
     x(NonOverlappedFollowedBy)
-ENUM(BinaryAssertionOperator, OP);
+ENUM(BinaryAssertionOperator, OP)
 #undef OP
 // clang-format on
 
