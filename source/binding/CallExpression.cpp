@@ -784,6 +784,26 @@ void CallExpression::serializeTo(ASTSerializer& serializer) const {
     if (subroutine.index() == 1) {
         auto& callInfo = std::get<1>(subroutine);
         serializer.write("subroutine", callInfo.subroutine->name);
+
+        if (callInfo.extraInfo.index() == 1) {
+            auto& itInfo = std::get<1>(callInfo.extraInfo);
+            if (itInfo.iterVar)
+                serializer.write("iterVar", *itInfo.iterVar);
+            if (itInfo.iterExpr)
+                serializer.write("iterExpr", *itInfo.iterExpr);
+        }
+        else if (callInfo.extraInfo.index() == 2) {
+            auto& randInfo = std::get<2>(callInfo.extraInfo);
+            if (randInfo.inlineConstraints)
+                serializer.write("inlineConstraints", *randInfo.inlineConstraints);
+
+            if (!randInfo.constraintRestrictions.empty()) {
+                serializer.startArray("constraintRestrictions");
+                for (auto name : randInfo.constraintRestrictions)
+                    serializer.serialize(name);
+                serializer.endArray();
+            }
+        }
     }
     else {
         const SubroutineSymbol& symbol = *std::get<0>(subroutine);

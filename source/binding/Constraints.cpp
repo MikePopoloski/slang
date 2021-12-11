@@ -465,6 +465,14 @@ Constraint& ForeachConstraint::fromSyntax(const LoopConstraintSyntax& syntax,
     if (!arrayRef)
         return badConstraint(comp, nullptr);
 
+    // Set the parent pointer on the iterator variables in case
+    // someone inspects them later. We just created these in the
+    // method above so the const_cast is safe.
+    for (auto& dim : dims) {
+        if (dim.loopVar)
+            const_cast<IteratorSymbol*>(dim.loopVar)->setParent(*context.scope);
+    }
+
     auto& body = Constraint::bind(*syntax.constraints, iterCtx);
     auto result = comp.emplace<ForeachConstraint>(*arrayRef, dims.copy(comp), body);
     if (body.bad())

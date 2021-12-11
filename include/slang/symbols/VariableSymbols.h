@@ -156,6 +156,8 @@ public:
     IteratorSymbol(string_view name, SourceLocation loc, const Type& arrayType,
                    const Type& indexType);
 
+    using VariableSymbol::setParent;
+
     void serializeTo(ASTSerializer&) const {};
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::Iterator; }

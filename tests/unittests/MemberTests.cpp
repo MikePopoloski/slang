@@ -257,12 +257,15 @@ module Top;
     function logic func(logic bar);
     endfunction
 
+    int arr[3];
     initial begin
         randsequence()
             a: case (f) 0, 1: b("hello"); default: c; endcase | c;
             b(string s): { $display(s); };
             c: { break; };
         endsequence
+
+        arr[0] = randomize with { foreach(arr[i]) i == 1; };
     end
 
 endmodule
