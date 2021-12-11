@@ -2472,3 +2472,19 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("evalLValue crash if lhs not implemented") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    int a;
+    initial begin
+        if ((m.a = 1) == 2) begin
+        end
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}

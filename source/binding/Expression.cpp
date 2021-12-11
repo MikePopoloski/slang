@@ -60,7 +60,7 @@ public:
         else {
             (void)expr;
             (void)context;
-            THROW_UNREACHABLE;
+            return nullptr;
         }
     }
 
