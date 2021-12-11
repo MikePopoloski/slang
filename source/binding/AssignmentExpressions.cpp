@@ -486,8 +486,10 @@ Expression& AssignmentExpression::fromComponents(
 }
 
 ConstantValue AssignmentExpression::evalImpl(EvalContext& context) const {
-    if (!context.isScriptEval() && timingControl)
+    if (!context.isScriptEval() && timingControl) {
+        context.addDiag(diag::ConstEvalTimedStmtNotConst, sourceRange);
         return nullptr;
+    }
 
     if (left().kind == ExpressionKind::Streaming) {
         return Bitstream::evaluateTarget(left().as<StreamingConcatenationExpression>(), right(),
@@ -966,7 +968,8 @@ Expression& NewClassExpression::fromSyntax(Compilation& compilation,
     return *result;
 }
 
-ConstantValue NewClassExpression::evalImpl(EvalContext&) const {
+ConstantValue NewClassExpression::evalImpl(EvalContext& context) const {
+    verifyConstantImpl(context);
     return nullptr;
 }
 

@@ -691,8 +691,10 @@ const Statement& BlockStatement::getStatements() const {
 }
 
 ER BlockStatement::evalImpl(EvalContext& context) const {
-    if (blockKind != StatementBlockKind::Sequential)
+    if (blockKind != StatementBlockKind::Sequential) {
+        context.addDiag(diag::ConstEvalParallelBlockNotConst, sourceRange);
         return ER::Fail;
+    }
 
     ER result = getStatements().eval(context);
     if (result == ER::Disable) {
@@ -841,6 +843,9 @@ Statement& DisableStatement::fromSyntax(Compilation& compilation,
 }
 
 ER DisableStatement::evalImpl(EvalContext& context) const {
+    if (!verifyConstantImpl(context))
+        return ER::Fail;
+
     ASSERT(!context.getDisableTarget());
     context.setDisableTarget(&target, sourceRange);
     return ER::Disable;
@@ -1888,6 +1893,8 @@ ER ExpressionStatement::evalImpl(EvalContext& context) const {
     // Skip system task invocations.
     if (expr.kind == ExpressionKind::Call &&
         expr.as<CallExpression>().getSubroutineKind() == SubroutineKind::Task) {
+        context.addDiag(diag::ConstSysTaskIgnored, expr.sourceRange)
+            << expr.as<CallExpression>().getSubroutineName();
         return ER::Success;
     }
 
@@ -1927,6 +1934,7 @@ ER TimedStatement::evalImpl(EvalContext& context) const {
     if (context.isScriptEval())
         return stmt.eval(context);
 
+    context.addDiag(diag::ConstEvalTimedStmtNotConst, sourceRange);
     return ER::Fail;
 }
 
@@ -2016,6 +2024,11 @@ ER ImmediateAssertionStatement::evalImpl(EvalContext& context) const {
     auto result = cond.eval(context);
     if (result.bad())
         return ER::Fail;
+
+    if (isDeferred) {
+        context.addDiag(diag::ConstEvalTimedStmtNotConst, sourceRange);
+        return ER::Fail;
+    }
 
     if (result.isTrue()) {
         if (ifTrue)
@@ -2109,7 +2122,8 @@ Statement& ConcurrentAssertionStatement::fromSyntax(
     return *result;
 }
 
-ER ConcurrentAssertionStatement::evalImpl(EvalContext&) const {
+ER ConcurrentAssertionStatement::evalImpl(EvalContext& context) const {
+    verifyConstantImpl(context);
     return ER::Fail;
 }
 
@@ -2132,7 +2146,8 @@ Statement& DisableForkStatement::fromSyntax(Compilation& compilation,
     return *compilation.emplace<DisableForkStatement>(syntax.sourceRange());
 }
 
-ER DisableForkStatement::evalImpl(EvalContext&) const {
+ER DisableForkStatement::evalImpl(EvalContext& context) const {
+    verifyConstantImpl(context);
     return ER::Fail;
 }
 
@@ -2160,7 +2175,8 @@ Statement& WaitStatement::fromSyntax(Compilation& compilation, const WaitStateme
     return *result;
 }
 
-ER WaitStatement::evalImpl(EvalContext&) const {
+ER WaitStatement::evalImpl(EvalContext& context) const {
+    verifyConstantImpl(context);
     return ER::Fail;
 }
 
@@ -2179,7 +2195,8 @@ Statement& WaitForkStatement::fromSyntax(Compilation& compilation,
     return *compilation.emplace<WaitForkStatement>(syntax.sourceRange());
 }
 
-ER WaitForkStatement::evalImpl(EvalContext&) const {
+ER WaitForkStatement::evalImpl(EvalContext& context) const {
+    verifyConstantImpl(context);
     return ER::Fail;
 }
 
@@ -2225,7 +2242,8 @@ Statement& WaitOrderStatement::fromSyntax(Compilation& compilation,
     return *result;
 }
 
-ER WaitOrderStatement::evalImpl(EvalContext&) const {
+ER WaitOrderStatement::evalImpl(EvalContext& context) const {
+    verifyConstantImpl(context);
     return ER::Fail;
 }
 
@@ -2271,7 +2289,8 @@ Statement& EventTriggerStatement::fromSyntax(Compilation& compilation,
                                                        syntax.sourceRange());
 }
 
-ER EventTriggerStatement::evalImpl(EvalContext&) const {
+ER EventTriggerStatement::evalImpl(EvalContext& context) const {
+    verifyConstantImpl(context);
     return ER::Fail;
 }
 
@@ -2367,7 +2386,8 @@ Statement& ProceduralAssignStatement::fromSyntax(Compilation& compilation,
     return *result;
 }
 
-ER ProceduralAssignStatement::evalImpl(EvalContext&) const {
+ER ProceduralAssignStatement::evalImpl(EvalContext& context) const {
+    verifyConstantImpl(context);
     return ER::Fail;
 }
 
@@ -2412,7 +2432,8 @@ Statement& ProceduralDeassignStatement::fromSyntax(Compilation& compilation,
     return *result;
 }
 
-ER ProceduralDeassignStatement::evalImpl(EvalContext&) const {
+ER ProceduralDeassignStatement::evalImpl(EvalContext& context) const {
+    verifyConstantImpl(context);
     return ER::Fail;
 }
 
@@ -2454,7 +2475,8 @@ Statement& RandCaseStatement::fromSyntax(Compilation& compilation,
     return *result;
 }
 
-ER RandCaseStatement::evalImpl(EvalContext&) const {
+ER RandCaseStatement::evalImpl(EvalContext& context) const {
+    verifyConstantImpl(context);
     return ER::Fail;
 }
 
@@ -2504,7 +2526,8 @@ Statement& RandSequenceStatement::fromSyntax(Compilation& compilation,
     return *result;
 }
 
-ER RandSequenceStatement::evalImpl(EvalContext&) const {
+ER RandSequenceStatement::evalImpl(EvalContext& context) const {
+    verifyConstantImpl(context);
     return ER::Fail;
 }
 

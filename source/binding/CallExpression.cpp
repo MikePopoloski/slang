@@ -610,6 +610,13 @@ Expression& CallExpression::createSystemCall(
 }
 
 ConstantValue CallExpression::evalImpl(EvalContext& context) const {
+    // If thisClass() is set call eval on it to be sure an error is issued.
+    if (thisClass()) {
+        auto cv = thisClass()->eval(context);
+        ASSERT(!cv);
+        return nullptr;
+    }
+
     // Delegate system calls to their appropriate handler.
     if (isSystemCall()) {
         auto& callInfo = std::get<1>(subroutine);
@@ -618,11 +625,6 @@ ConstantValue CallExpression::evalImpl(EvalContext& context) const {
 
     const SubroutineSymbol& symbol = *std::get<0>(subroutine);
     if (!checkConstant(context, symbol, sourceRange))
-        return nullptr;
-
-    // If thisClass() is set, we will already have issued an error when
-    // verifying constant-ness. Just fail silently here.
-    if (thisClass())
         return nullptr;
 
     // Evaluate all argument in the current stack frame.

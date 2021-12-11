@@ -261,7 +261,8 @@ bool NamedValueExpression::verifyConstantImpl(EvalContext& context) const {
     return true;
 }
 
-ConstantValue HierarchicalValueExpression::evalImpl(EvalContext&) const {
+ConstantValue HierarchicalValueExpression::evalImpl(EvalContext& context) const {
+    verifyConstantImpl(context);
     return nullptr;
 }
 
@@ -1043,7 +1044,8 @@ Expression& CopyClassExpression::fromSyntax(Compilation& compilation,
     return *result;
 }
 
-ConstantValue CopyClassExpression::evalImpl(EvalContext&) const {
+ConstantValue CopyClassExpression::evalImpl(EvalContext& context) const {
+    verifyConstantImpl(context);
     return nullptr;
 }
 

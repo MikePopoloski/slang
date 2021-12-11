@@ -58,8 +58,8 @@ public:
             return expr.evalLValueImpl(context);
         }
         else {
-            (void)expr;
-            (void)context;
+            bool isConst = expr.verifyConstant(context);
+            ASSERT(!isConst);
             return nullptr;
         }
     }
