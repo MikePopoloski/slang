@@ -6,9 +6,9 @@
 //------------------------------------------------------------------------------
 #pragma once
 
-#include <xxhash/xxhash.h>
-
 #include "slang/util/Util.h"
+
+extern "C" uint64_t XXH3_64bits(const void* data, size_t len);
 
 namespace slang {
 

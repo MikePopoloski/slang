@@ -40,4 +40,13 @@
 #define XXH_STATIC_LINKING_ONLY   /* access advanced declarations */
 #define XXH_IMPLEMENTATION   /* access definitions */
 
+#if defined(__clang__)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wzero-as-null-pointer-constant"
+#endif
+
 #include "xxhash.h"
+
+#if defined(__clang__)
+#pragma clang diagnostic pop
+#endif
