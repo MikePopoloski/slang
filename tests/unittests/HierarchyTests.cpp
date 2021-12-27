@@ -1480,3 +1480,48 @@ endmodule
     CHECK(diags[2].code == diag::InvalidArgumentExpr);
     CHECK(diags[3].code == diag::InvalidArgumentExpr);
 }
+
+TEST_CASE("Upward name regression GH #461") {
+    auto tree = SyntaxTree::fromText(R"(
+module Top();
+    dut_0 inst_0();
+    dut_1 inst_1();
+endmodule
+
+module dut_0();
+    dut inst_dut();
+    dummy_1 inst_dummy();
+endmodule
+
+module dut_1();
+    dut inst_dut();
+    dummy_2 inst_dummy();
+endmodule
+
+module dummy_1();
+    reg[1:0] data;
+endmodule
+
+module dummy_2();
+    reg[7:0] data;
+endmodule
+
+module dut();
+    sub inst();
+endmodule
+
+module sub();
+    reg[1:0] data;
+    initial begin
+        data = inst_dummy.data;
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::WidthTruncate);
+}
