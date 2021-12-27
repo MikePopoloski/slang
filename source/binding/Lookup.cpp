@@ -477,7 +477,6 @@ bool lookupUpward(Compilation& compilation, span<const NamePlusLoc> nameParts,
         return lookupDownward(nameParts, name, context, result, flags);
     };
 
-    auto currentInstPath = compilation.getCurrentInstancePath();
     const Scope* scope = context.scope;
     while (scope) {
         // Search for a scope or instance target within our current scope.
@@ -498,26 +497,15 @@ bool lookupUpward(Compilation& compilation, span<const NamePlusLoc> nameParts,
             scope = symbol->getParentScope();
         }
         else {
-            // If our instance path is set, we can use a specific instance by
-            // matching it up with the body that we found. Otherwise, this is
-            // initial lookup and we should pick any arbitrary instance with
-            // which to continue.
+            // TODO: if this is a nested module it may do the wrong thing...
             const InstanceSymbol* inst = nullptr;
-            if (!currentInstPath.empty() && &currentInstPath.back()->body == symbol) {
-                inst = currentInstPath.back();
+            auto parents = compilation.getParentInstances(symbol->as<InstanceBodySymbol>());
+            if (!parents.empty()) {
+                inst = parents[0];
                 scope = inst->getParentScope();
-                currentInstPath = currentInstPath.subspan(0, currentInstPath.size() - 1);
             }
             else {
-                // TODO: if this is a nested module it may do the wrong thing...
-                auto parents = compilation.getParentInstances(symbol->as<InstanceBodySymbol>());
-                if (!parents.empty()) {
-                    inst = parents[0];
-                    scope = inst->getParentScope();
-                }
-                else {
-                    scope = nullptr;
-                }
+                scope = nullptr;
             }
 
             // If the instance's definition name matches our target name,
@@ -1745,15 +1733,8 @@ void Lookup::qualified(const ScopedNameSyntax& syntax, const BindContext& contex
     if (!lookupUpward(compilation, nameParts, first, context, result, flags))
         return;
 
-    if (result.found) {
-        result.isUpwardName = true;
-        if (flags.has(LookupFlags::RegisterUpwardNames)) {
-            auto body = scope.getContainingInstance();
-            if (body)
-                compilation.noteUpwardNames(*body);
-        }
+    if (result.found)
         return;
-    }
 
     // We couldn't find anything. originalResult has any diagnostics issued by the first
     // downward lookup (if any), so it's fine to just return it as is. If we never found any

@@ -146,8 +146,6 @@ add_library(slangcompiler
 
     compilation/Compilation.cpp
     compilation/Definition.cpp
-    compilation/DesignTree.cpp
-    compilation/InstanceCache.cpp
     compilation/ScriptSession.cpp
     compilation/SemanticModel.cpp
 

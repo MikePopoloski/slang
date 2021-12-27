@@ -616,8 +616,6 @@ int driverMain(int argc, TArgs argv, bool suppressColorsStdout, bool suppressCol
         coptions.maxConstexprBacktrace = *maxConstexprBacktrace;
     if (errorLimit.has_value())
         coptions.errorLimit = *errorLimit * 2;
-    if (astJsonFile)
-        coptions.disableInstanceCaching = true;
     if (onlyLint == true) {
         coptions.suppressUnused = true;
         coptions.lintMode = true;

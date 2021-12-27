@@ -573,7 +573,7 @@ bool Type::isAssignmentCompatible(const Type& rhs) const {
 
         auto& lv = l->as<VirtualInterfaceType>();
         auto& rv = r->as<VirtualInterfaceType>();
-        if (&lv.iface != &rv.iface && lv.iface.getCacheKey() != rv.iface.getCacheKey())
+        if (!lv.iface.hasSameType(rv.iface))
             return false;
 
         // A virtual interface with no modport selected may be assigned to a

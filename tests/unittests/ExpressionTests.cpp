@@ -2282,10 +2282,10 @@ endmodule
 TEST_CASE("Tagged union expression errors") {
     auto tree = SyntaxTree::fromText(R"(
 module m;
+    int i;
     union tagged { int a; int b[]; void c; } foo;
     initial begin
-        static int i = 1 + tagged a;
-
+        i = 1 + tagged a;
         foo = tagged baz 1;
         foo = tagged b;
         foo = tagged c 52;

@@ -23,11 +23,9 @@ class AttributeSymbol;
 class BindContext;
 class CompilationUnitSymbol;
 class Definition;
-class DesignTreeNode;
 class Expression;
 class GenericClassDefSymbol;
 class InstanceBodySymbol;
-class InstanceCache;
 class InstanceSymbol;
 class PackageSymbol;
 class PrimitiveSymbol;
@@ -111,10 +109,6 @@ struct CompilationOptions {
     /// for tests; for end users, they can use warning flags to control output.
     bool suppressUnused = true;
 
-    /// If true, disable caching of instance bodies, so that each instance gets
-    /// its own copy of all body members.
-    bool disableInstanceCaching = false;
-
     /// If non-empty, specifies the list of modules that should serve as the
     /// top modules in the design. If empty, this will be automatically determined
     /// based on which modules are unreferenced elsewhere.
@@ -167,10 +161,6 @@ public:
     /// no longer make any modifications to the compilation object; any attempts to do
     /// so will result in an exception.
     const RootSymbol& getRoot();
-
-    /// Gets the design tree. Like @a getRoot this will force elaboration the first time
-    /// it's called and the compilation will be finalized.
-    const DesignTreeNode& getDesignTree();
 
     /// Indicates whether the design has been compiled and can no longer accept modifications.
     bool isFinalized() const { return finalized; }
@@ -279,13 +269,6 @@ public:
     /// Notes the presence of a DPI export directive. These will be checked for correctness
     /// but are otherwise unused by SystemVerilog code.
     void noteDPIExportDirective(const DPIExportSyntax& syntax, const Scope& scope);
-
-    /// Notes the fact that the given instance body has one or more upward hierarchical
-    /// names in its expressions or statements.
-    void noteUpwardNames(const InstanceBodySymbol& instance);
-
-    /// Returns true if the given instance body has at least one upward hierarchical name in it.
-    bool hasUpwardNames(const InstanceBodySymbol& instance) const;
 
     /// Tracks the existence of an out-of-block declaration (method or constraint) in the
     /// given scope. This can later be retrieved by calling findOutOfBlockDecl().
@@ -397,10 +380,6 @@ public:
     /// that we don't bother providing dedicated accessors for them.
     const NetType& getWireNetType() const { return *wireNetType; }
 
-    /// Gets access to the compilation's cache of instantiated modules, interfaces, and programs.
-    InstanceCache& getInstanceCache();
-    const InstanceCache& getInstanceCache() const;
-
     /// Allocates space for a constant value in the pool of constants.
     ConstantValue* allocConstant(ConstantValue&& value) {
         return constantAllocator.emplace(std::move(value));
@@ -417,18 +396,6 @@ public:
     GenericClassDefSymbol* allocGenericClass(Args&&... args) {
         return genericClassAllocator.emplace(std::forward<Args>(args)...);
     }
-
-    /// Sets the hierarchical path of the current instance being elaborated.
-    /// This state is transistory during elaboration and is used to correctly
-    /// resolve upward name lookups.
-    void setCurrentInstancePath(span<const InstanceSymbol* const> path) {
-        currentInstancePath = path;
-    }
-
-    /// Gets the hierarchical path of the current instance being elaborated.
-    /// This state is transistory during elaboration and is used to correctly
-    /// resolve upward name lookups.
-    span<const InstanceSymbol* const> getCurrentInstancePath() const { return currentInstancePath; }
 
     /// Forces the given symbol and all children underneath it in the hierarchy to
     /// be elaborated and any relevant diagnostics to be issued.
@@ -555,7 +522,6 @@ private:
         outOfBlockDecls;
 
     std::unique_ptr<RootSymbol> root;
-    std::unique_ptr<InstanceCache> instanceCache;
     const SourceManager* sourceManager = nullptr;
     size_t numErrors = 0; // total number of errors inserted into the diagMap
     TimeScale defaultTimeScale;
@@ -604,18 +570,10 @@ private:
     // which is used to know when we've seen them all and can stop doing early scanning.
     flat_hash_set<const BindDirectiveSyntax*> seenBindDirectives;
 
-    // A set of all instance bodies that have upward hierarchical names.
-    flat_hash_set<const InstanceBodySymbol*> bodiesWithUpwardNames;
-
     // A tree of parameter overrides to apply when elaborating.
     // Note that instances store pointers into this tree so it must not be
     // modified after elaboration begins.
     ParamOverrideNode paramOverrides;
-
-    // The path of the current instance being elaborated. This is only set temporarily,
-    // during traversal of the AST to collect diagnostics, in order to allow upward
-    // names to resolve to specific instances.
-    span<const InstanceSymbol* const> currentInstancePath;
 
     // A list of DPI export directives we've encountered during elaboration.
     std::vector<std::pair<const DPIExportSyntax*, const Scope*>> dpiExports;
@@ -636,9 +594,6 @@ private:
 
     // The built-in std package.
     const PackageSymbol* stdPkg = nullptr;
-
-    // The design tree representing the elaborated design.
-    const DesignTreeNode* designTree = nullptr;
 };
 
 } // namespace slang

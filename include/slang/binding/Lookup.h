@@ -63,13 +63,10 @@ enum class LookupFlags {
     /// is not found in the initial search scope.
     NoParentScope = 1 << 7,
 
-    /// The presence of upward name paths should be registered with the compilation.
-    RegisterUpwardNames = 1 << 8,
-
     /// Treat this lookup as hierarchical even if it's a simple name.
-    ForceHierarchical = AllowDeclaredAfter | RegisterUpwardNames | NoUndeclaredErrorIfUninstantiated
+    ForceHierarchical = AllowDeclaredAfter | NoUndeclaredErrorIfUninstantiated
 };
-BITMASK(LookupFlags, RegisterUpwardNames)
+BITMASK(LookupFlags, NoParentScope)
 
 /// This type denotes the ordering of symbols within a particular scope, for the purposes of
 /// determining whether a found symbol is visible compared to the given location.
@@ -125,9 +122,6 @@ struct LookupResult {
 
     /// Set to true if the lookup was hierarchical.
     bool isHierarchical = false;
-
-    /// Set to true if the symbol was found via upward name resolution.
-    bool isUpwardName = false;
 
     /// Set to true if there were problems during lookup that indicate we should
     /// ignore the lack of a found symbol, because we're in a context where such

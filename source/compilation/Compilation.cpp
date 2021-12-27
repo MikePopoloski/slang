@@ -11,7 +11,6 @@
 
 #include "slang/binding/SystemSubroutine.h"
 #include "slang/compilation/Definition.h"
-#include "slang/compilation/DesignTree.h"
 #include "slang/compilation/ScriptSession.h"
 #include "slang/diagnostics/DiagnosticEngine.h"
 #include "slang/diagnostics/LookupDiags.h"
@@ -135,9 +134,6 @@ Compilation::Compilation(const Bag& options) :
     defaultTimeScale.precision = { TimeUnit::Nanoseconds, TimeScaleMagnitude::One };
 
     root = std::make_unique<RootSymbol>(*this);
-    instanceCache = std::make_unique<InstanceCache>();
-    if (this->options.disableInstanceCaching)
-        instanceCache->disable();
 
     // Register all system tasks, functions, and methods.
     Builtins::registerArrayMethods(*this);
@@ -410,17 +406,6 @@ const RootSymbol& Compilation::getRoot(bool skipDefParamResolution) {
     return *root;
 }
 
-const DesignTreeNode& Compilation::getDesignTree() {
-    // Force creation of the tree by going through getSemanticDiagnostics
-    // which will ensure that the design is visited in the proper order first.
-    if (!designTree) {
-        getSemanticDiagnostics();
-        ASSERT(designTree);
-    }
-
-    return *designTree;
-}
-
 const CompilationUnitSymbol* Compilation::getCompilationUnit(
     const CompilationUnitSyntax& syntax) const {
 
@@ -671,14 +656,6 @@ void Compilation::noteDPIExportDirective(const DPIExportSyntax& syntax, const Sc
     dpiExports.emplace_back(&syntax, &scope);
 }
 
-void Compilation::noteUpwardNames(const InstanceBodySymbol& instance) {
-    bodiesWithUpwardNames.emplace(&instance);
-}
-
-bool Compilation::hasUpwardNames(const InstanceBodySymbol& instance) const {
-    return bodiesWithUpwardNames.find(&instance) != bodiesWithUpwardNames.end();
-}
-
 void Compilation::addOutOfBlockDecl(const Scope& scope, const ScopedNameSyntax& name,
                                     const SyntaxNode& syntax, SymbolIndex index) {
     string_view className = name.left->getLastToken().valueText();
@@ -748,7 +725,6 @@ void Compilation::noteGlobalClocking(const Scope& scope, const Symbol& clocking,
 }
 
 const Symbol* Compilation::getGlobalClocking(const Scope& scope) const {
-    auto currInstPath = getCurrentInstancePath();
     auto curr = &scope;
     do {
         if (auto it = globalClockingMap.find(curr); it != globalClockingMap.end())
@@ -758,21 +734,11 @@ const Symbol* Compilation::getGlobalClocking(const Scope& scope) const {
         if (sym.kind != SymbolKind::InstanceBody)
             curr = sym.getParentScope();
         else {
-            // Go up to the next parent instance. If there is a current instance
-            // path use that specific instance, otherwise grab any old parent
-            // for the current instance body.
-            // TODO: make sure this works with nested modules
-            if (!currInstPath.empty() && &currInstPath.back()->body == &sym) {
-                curr = currInstPath.back()->getParentScope();
-                currInstPath = currInstPath.subspan(0, currInstPath.size() - 1);
-            }
-            else {
-                auto parents = getParentInstances(sym.as<InstanceBodySymbol>());
-                if (!parents.empty())
-                    curr = parents[0]->getParentScope();
-                else
-                    curr = nullptr;
-            }
+            auto parents = getParentInstances(sym.as<InstanceBodySymbol>());
+            if (!parents.empty())
+                curr = parents[0]->getParentScope();
+            else
+                curr = nullptr;
         }
     } while (curr);
 
@@ -850,11 +816,6 @@ const Diagnostics& Compilation::getSemanticDiagnostics() {
                               options.errorLimit == 0 ? UINT32_MAX : options.errorLimit);
     getRoot().visit(visitor);
     visitor.finalize();
-
-    if (!visitor.hierarchyProblem)
-        designTree = &DesignTreeNode::build(*this);
-    else
-        designTree = &DesignTreeNode::empty(*this);
 
     // Check all DPI methods for correctness.
     if (!dpiExports.empty() || !visitor.dpiImports.empty())
@@ -1074,14 +1035,6 @@ const Type& Compilation::getUnboundedType() {
 
 const Type& Compilation::getTypeRefType() {
     return getType(SyntaxKind::TypeReference);
-}
-
-InstanceCache& Compilation::getInstanceCache() {
-    return *instanceCache;
-}
-
-const InstanceCache& Compilation::getInstanceCache() const {
-    return *instanceCache;
 }
 
 Scope::DeferredMemberData& Compilation::getOrAddDeferredData(Scope::DeferredMemberIndex& index) {
@@ -1329,7 +1282,6 @@ void Compilation::resolveDefParams(size_t) {
 
     auto createClone = [&](Compilation& c) {
         c.options = options;
-        c.options.disableInstanceCaching = true;
         for (auto& tree : syntaxTrees)
             c.addSyntaxTree(tree);
 

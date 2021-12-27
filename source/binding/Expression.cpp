@@ -767,7 +767,7 @@ Expression& Expression::bindName(Compilation& compilation, const NameSyntax& syn
                                  const InvocationExpressionSyntax* invocation,
                                  const ArrayOrRandomizeMethodExpressionSyntax* withClause,
                                  const BindContext& context) {
-    bitmask<LookupFlags> flags = LookupFlags::RegisterUpwardNames;
+    bitmask<LookupFlags> flags = LookupFlags::None;
     if (invocation && invocation->arguments)
         flags |= LookupFlags::AllowDeclaredAfter;
     if (context.flags.has(BindFlags::Constant) || context.flags.has(BindFlags::NoHierarchicalNames))

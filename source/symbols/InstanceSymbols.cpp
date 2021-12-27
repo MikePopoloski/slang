@@ -46,14 +46,13 @@ std::pair<string_view, SourceLocation> getNameLoc(const HierarchicalInstanceSynt
 
 class InstanceBuilder {
 public:
-    InstanceBuilder(const BindContext& context, const InstanceCacheKey& cacheKeyBase,
+    InstanceBuilder(const BindContext& context, const Definition& definition,
                     const ParamOverrideNode* paramOverrideNode,
                     span<const ParameterSymbolBase* const> parameters,
                     span<const AttributeInstanceSyntax* const> attributes, bool isUninstantiated) :
         compilation(context.getCompilation()),
-        context(context), cacheKeyBase(cacheKeyBase), parameters(parameters),
-        attributes(attributes), paramOverrideNode(paramOverrideNode),
-        isUninstantiated(isUninstantiated) {}
+        context(context), definition(definition), parameters(parameters), attributes(attributes),
+        paramOverrideNode(paramOverrideNode), isUninstantiated(isUninstantiated) {}
 
     Symbol* create(const HierarchicalInstanceSyntax& syntax) {
         path.clear();
@@ -72,7 +71,7 @@ private:
 
     Compilation& compilation;
     const BindContext& context;
-    const InstanceCacheKey& cacheKeyBase;
+    const Definition& definition;
     SmallVectorSized<int32_t, 4> path;
     span<const ParameterSymbolBase* const> parameters;
     span<const AttributeInstanceSyntax* const> attributes;
@@ -80,21 +79,9 @@ private:
     bool isUninstantiated = false;
 
     Symbol* createInstance(const HierarchicalInstanceSyntax& syntax) {
-        // Find all port connections to interface instances so we can
-        // extract their cache keys.
-        auto& def = cacheKeyBase.getDefinition();
-        SmallVectorSized<std::pair<const InstanceCacheKey*, string_view>, 8> ifaceKeys;
-        InterfacePortSymbol::findInterfaceInstanceKeys(*context.scope, def, syntax.connections,
-                                                       ifaceKeys);
-
-        // Try to look up a cached instance using our own key to avoid redoing work.
-        InstanceCacheKey cacheKey = cacheKeyBase;
-        if (!ifaceKeys.empty())
-            cacheKey.setInterfacePortKeys(ifaceKeys.copy(compilation));
-
         auto [name, loc] = getNameLoc(syntax);
         auto inst = compilation.emplace<InstanceSymbol>(
-            compilation, name, loc, cacheKey, paramOverrideNode, parameters, isUninstantiated);
+            compilation, name, loc, definition, paramOverrideNode, parameters, isUninstantiated);
 
         inst->arrayPath = path.copy(compilation);
         inst->setSyntax(syntax);
@@ -150,8 +137,7 @@ bool createParams(Compilation& compilation, const Definition& definition,
     struct TempInstance : public InstanceBodySymbol {
         TempInstance(Compilation& compilation, const Definition& definition,
                      bool forceInvalidParams) :
-            InstanceBodySymbol(compilation, InstanceCacheKey(definition, {}, {}), nullptr, {},
-                               forceInvalidParams) {
+            InstanceBodySymbol(compilation, definition, nullptr, {}, forceInvalidParams) {
             setParent(definition.scope);
         }
     };
@@ -238,12 +224,12 @@ InstanceSymbol::InstanceSymbol(Compilation& compilation, string_view name, Sourc
 }
 
 InstanceSymbol::InstanceSymbol(Compilation& compilation, string_view name, SourceLocation loc,
-                               const InstanceCacheKey& cacheKey,
+                               const Definition& definition,
                                const ParamOverrideNode* paramOverrideNode,
                                span<const ParameterSymbolBase* const> parameters,
                                bool isUninstantiated) :
     InstanceSymbol(compilation, name, loc,
-                   InstanceBodySymbol::fromDefinition(compilation, cacheKey, paramOverrideNode,
+                   InstanceBodySymbol::fromDefinition(compilation, definition, paramOverrideNode,
                                                       parameters, isUninstantiated)) {
 }
 
@@ -349,17 +335,10 @@ void InstanceSymbol::fromSyntax(Compilation& compilation,
         if (syntax.parameters)
             paramBuilder.setAssignments(*syntax.parameters);
 
-        // Determine values for all parameters now so that they can be
-        // shared between instances, and so that we can use them to create
-        // a cache key to lookup any instance bodies that may already be
-        // suitable for the new instances we're about to create.
         createParams(compilation, *definition, paramBuilder, context.getLocation(),
                      syntax.getFirstToken().location(), isUninstantiated);
 
-        InstanceCacheKey cacheKey(*definition, paramBuilder.paramValues.copy(compilation),
-                                  paramBuilder.typeParams.copy(compilation));
-
-        InstanceBuilder builder(context, cacheKey, nullptr, paramBuilder.paramSymbols,
+        InstanceBuilder builder(context, *definition, nullptr, paramBuilder.paramSymbols,
                                 syntax.attributes, isUninstantiated);
 
         for (auto instanceSyntax : syntax.instances) {
@@ -388,17 +367,10 @@ void InstanceSymbol::fromSyntax(Compilation& compilation,
             if (overrideNode)
                 paramBuilder.setOverrides(overrideNode->overrides);
 
-            // Determine values for all parameters now so that they can be
-            // shared between instances, and so that we can use them to create
-            // a cache key to lookup any instance bodies that may already be
-            // suitable for the new instances we're about to create.
             createParams(compilation, *definition, paramBuilder, context.getLocation(),
                          syntax.getFirstToken().location(), isUninstantiated);
 
-            InstanceCacheKey cacheKey(*definition, paramBuilder.paramValues.copy(compilation),
-                                      paramBuilder.typeParams.copy(compilation));
-
-            InstanceBuilder builder(context, cacheKey, overrideNode, paramBuilder.paramSymbols,
+            InstanceBuilder builder(context, *definition, overrideNode, paramBuilder.paramSymbols,
                                     syntax.attributes, isUninstantiated);
 
             createImplicitNets(*instanceSyntax, context, netType, implicitNetNames, implicitNets);
@@ -577,28 +549,14 @@ void InstanceSymbol::serializeTo(ASTSerializer& serializer) const {
     serializer.endArray();
 }
 
-InstanceBodySymbol::InstanceBodySymbol(Compilation& compilation, const InstanceCacheKey& cacheKey,
+InstanceBodySymbol::InstanceBodySymbol(Compilation& compilation, const Definition& definition,
                                        const ParamOverrideNode* paramOverrideNode,
                                        span<const ParameterSymbolBase* const> parameters,
                                        bool isUninstantiated) :
-    Symbol(SymbolKind::InstanceBody, cacheKey.getDefinition().name,
-           cacheKey.getDefinition().location),
+    Symbol(SymbolKind::InstanceBody, definition.name, definition.location),
     Scope(compilation, this), paramOverrideNode(paramOverrideNode), parameters(parameters),
-    isUninstantiated(isUninstantiated), cacheKey(cacheKey) {
-    setParent(cacheKey.getDefinition().scope, cacheKey.getDefinition().indexInScope);
-}
-
-const InstanceBodySymbol& InstanceBodySymbol::cloneUncached() const {
-    auto& result = fromDefinition(getCompilation(), getCacheKey(), paramOverrideNode, parameters,
-                                  isUninstantiated, /* forceUncached */ true);
-
-    // const_cast is ok here only because we pass forceUncached above, which ensures
-    // the function just created a new instance.
-    auto scope = getParentScope();
-    ASSERT(scope);
-    const_cast<InstanceBodySymbol&>(result).setParent(*scope, getIndex());
-
-    return result;
+    isUninstantiated(isUninstantiated), definition(definition) {
+    setParent(definition.scope, definition.indexInScope);
 }
 
 const InstanceBodySymbol& InstanceBodySymbol::fromDefinition(
@@ -612,8 +570,8 @@ const InstanceBodySymbol& InstanceBodySymbol::fromDefinition(
     createParams(compilation, definition, paramBuilder, LookupLocation::max, definition.location,
                  isUninstantiated);
 
-    return fromDefinition(compilation, InstanceCacheKey(definition, {}, {}), paramOverrideNode,
-                          paramBuilder.paramSymbols, isUninstantiated);
+    return fromDefinition(compilation, definition, paramOverrideNode, paramBuilder.paramSymbols,
+                          isUninstantiated);
 }
 
 const InstanceBodySymbol* InstanceBodySymbol::fromDefinition(
@@ -630,10 +588,7 @@ const InstanceBodySymbol* InstanceBodySymbol::fromDefinition(
         return nullptr;
     }
 
-    InstanceCacheKey cacheKey(definition, paramBuilder.paramValues.copy(comp),
-                              paramBuilder.typeParams.copy(comp));
-
-    return &fromDefinition(comp, cacheKey, nullptr, paramBuilder.paramSymbols,
+    return &fromDefinition(comp, definition, nullptr, paramBuilder.paramSymbols,
                            /* isUninstantiated */ false);
 }
 
@@ -650,17 +605,11 @@ static span<const ParameterSymbolBase* const> copyParams(
 }
 
 const InstanceBodySymbol& InstanceBodySymbol::fromDefinition(
-    Compilation& comp, const InstanceCacheKey& cacheKey, const ParamOverrideNode* paramOverrideNode,
-    span<const ParameterSymbolBase* const> parameters, bool isUninstantiated, bool forceUncached) {
+    Compilation& comp, const Definition& definition, const ParamOverrideNode* paramOverrideNode,
+    span<const ParameterSymbolBase* const> parameters, bool isUninstantiated) {
 
-    // If there's already a cached body for this key, return that instead of creating a new one.
-    if (!paramOverrideNode && !forceUncached) {
-        if (auto cached = comp.getInstanceCache().find(cacheKey))
-            return *cached;
-    }
-
-    auto& declSyntax = cacheKey.getDefinition().syntax;
-    auto result = comp.emplace<InstanceBodySymbol>(comp, cacheKey, paramOverrideNode,
+    auto& declSyntax = definition.syntax;
+    auto result = comp.emplace<InstanceBodySymbol>(comp, definition, paramOverrideNode,
                                                    copyParams(comp, parameters), isUninstantiated);
     result->setSyntax(declSyntax);
 
@@ -722,7 +671,6 @@ const InstanceBodySymbol& InstanceBodySymbol::fromDefinition(
         }
     }
 
-    comp.getInstanceCache().insert(*result);
     return *result;
 }
 
@@ -734,8 +682,43 @@ const Symbol* InstanceBodySymbol::findPort(string_view portName) const {
     return nullptr;
 }
 
+bool InstanceBodySymbol::hasSameType(const InstanceBodySymbol& other) const {
+    if (&other == this)
+        return true;
+
+    if (&definition != &other.definition)
+        return false;
+
+    if (parameters.size() != other.parameters.size())
+        return false;
+
+    for (auto li = parameters.begin(), ri = other.parameters.begin(); li != parameters.end();
+         li++, ri++) {
+
+        auto& lp = (*li)->symbol;
+        auto& rp = (*ri)->symbol;
+        if (lp.kind != rp.kind)
+            return false;
+
+        if (lp.kind == SymbolKind::Parameter) {
+            auto& lv = lp.as<ParameterSymbol>().getValue();
+            auto& rv = rp.as<ParameterSymbol>().getValue();
+            if (lv != rv)
+                return false;
+        }
+        else {
+            auto& lt = lp.as<TypeParameterSymbol>().targetType.getType();
+            auto& rt = rp.as<TypeParameterSymbol>().targetType.getType();
+            if (!lt.isMatching(rt))
+                return false;
+        }
+    }
+
+    return true;
+}
+
 void InstanceBodySymbol::serializeTo(ASTSerializer& serializer) const {
-    serializer.write("definition", cacheKey.getDefinition().name);
+    serializer.write("definition", definition.name);
 }
 
 string_view InstanceArraySymbol::getArrayName() const {

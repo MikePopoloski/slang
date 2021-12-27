@@ -78,11 +78,6 @@ public:
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::InterfacePort; }
 
-    static void findInterfaceInstanceKeys(
-        const Scope& scope, const Definition& definition,
-        const SeparatedSyntaxList<PortConnectionSyntax>& portConnections,
-        SmallVector<std::pair<const InstanceCacheKey*, string_view>>& results);
-
 private:
     mutable optional<span<const ConstantRange>> range;
 };

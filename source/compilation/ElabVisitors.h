@@ -171,16 +171,10 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
             return;
         }
 
-        auto guard = ScopeGuard([this, &symbol] { activeInstanceBodies.erase(&symbol.body); });
-
-        // Instance bodies are all the same, so if we've visited this one
-        // already don't bother doing it again.
-        if (!visitedInstanceBodies.emplace(&symbol.body).second)
-            return;
-
         // In order to avoid "effectively infinite" recursions, where parameter values
         // are changing but the numbers are so huge that we would run for almost forever,
         // check the depth and bail out after a certain configurable point.
+        auto guard = ScopeGuard([this, &symbol] { activeInstanceBodies.erase(&symbol.body); });
         if (activeInstanceBodies.size() > compilation.getOptions().maxInstanceDepth) {
             auto& diag =
                 symbol.getParentScope()->addDiag(diag::MaxInstanceDepthExceeded, symbol.location);
@@ -280,7 +274,6 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
     Compilation& compilation;
     const size_t& numErrors;
     flat_hash_map<const Definition*, size_t> instanceCount;
-    flat_hash_set<const InstanceBodySymbol*> visitedInstanceBodies;
     flat_hash_set<const InstanceBodySymbol*> activeInstanceBodies;
     uint32_t errorLimit;
     SmallVectorSized<const GenericClassDefSymbol*, 8> genericClasses;

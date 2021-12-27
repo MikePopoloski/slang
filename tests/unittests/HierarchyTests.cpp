@@ -1,7 +1,5 @@
 #include "Test.h"
 
-#include "slang/compilation/DesignTree.h"
-
 TEST_CASE("Finding top level") {
     auto file1 = SyntaxTree::fromText(
         "module A; endmodule\nmodule B; A a(); endmodule\nmodule C; endmodule");
@@ -1216,28 +1214,6 @@ endmodule
     Compilation compilation;
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
-
-    auto dt = &compilation.getDesignTree();
-    CHECK(dt->symbol.name == "$root");
-
-    auto top = dt->childNodes[0];
-    CHECK(top->symbol.name == "top");
-
-    auto checkI = [&](int val) {
-        auto& body = dt->symbol.as<InstanceBodySymbol>();
-        auto i = &body.members().begin()->as<VariableSymbol>();
-        CHECK(i->name == "i");
-
-        auto sym = i->getInitializer()->as<ConversionExpression>().operand().getSymbolReference();
-        REQUIRE(sym);
-        CHECK(sym->as<ParameterSymbol>().getValue().integer() == val);
-    };
-
-    dt = top->childNodes[0]->childNodes[0];
-    checkI(7);
-
-    dt = top->childNodes[1]->childNodes[0];
-    checkI(11);
 }
 
 TEST_CASE("defparams") {
@@ -1364,21 +1340,20 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 
-    auto& root = *compilation.getDesignTree().childNodes[0];
-    REQUIRE(root.childNodes.size() == 3);
+    auto& root = compilation.getRoot().topInstances[0]->body;
+    REQUIRE(root.members().size() == 4);
 
     auto checkChild = [&](int index, const std::string& name, int val) {
-        REQUIRE(root.childNodes[index]->instance);
-        auto& inst = *root.childNodes[index]->instance;
+        auto& inst = root.memberAt<InstanceSymbol>(index);
         CHECK(inst.name == name);
 
-        auto& param = root.childNodes[index]->symbol.as<Scope>().memberAt<ParameterSymbol>(0);
+        auto& param = inst.body.memberAt<ParameterSymbol>(0);
         CHECK(param.getValue().integer() == val);
     };
 
     checkChild(0, "dut0", 1234);
     checkChild(1, "dut1", 12345);
-    checkChild(2, "dut2", 5678);
+    checkChild(3, "dut2", 5678);
 }
 
 TEST_CASE("defparam in infinite recursion") {

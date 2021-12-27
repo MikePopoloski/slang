@@ -1095,10 +1095,7 @@ module env;
 endmodule
 )");
 
-    CompilationOptions options;
-    options.disableInstanceCaching = true;
-
-    Compilation compilation(options);
+    Compilation compilation;
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }

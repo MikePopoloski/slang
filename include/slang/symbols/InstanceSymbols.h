@@ -6,7 +6,6 @@
 //------------------------------------------------------------------------------
 #pragma once
 
-#include "slang/compilation/InstanceCache.h"
 #include "slang/numeric/ConstantValue.h"
 #include "slang/symbols/Scope.h"
 #include "slang/symbols/SemanticFacts.h"
@@ -55,7 +54,7 @@ public:
                    const InstanceBodySymbol& body);
 
     InstanceSymbol(Compilation& compilation, string_view name, SourceLocation loc,
-                   const InstanceCacheKey& cacheKey, const ParamOverrideNode* paramOverrideNode,
+                   const Definition& definition, const ParamOverrideNode* paramOverrideNode,
                    span<const ParameterSymbolBase* const> parameters, bool isUninstantiated);
 
     const Definition& getDefinition() const;
@@ -111,7 +110,7 @@ public:
     /// in the user's code.
     bool isUninstantiated = false;
 
-    InstanceBodySymbol(Compilation& compilation, const InstanceCacheKey& cacheKey,
+    InstanceBodySymbol(Compilation& compilation, const Definition& definition,
                        const ParamOverrideNode* paramOverrideNode,
                        span<const ParameterSymbolBase* const> parameters, bool isUninstantiated);
 
@@ -122,8 +121,9 @@ public:
 
     const Symbol* findPort(string_view name) const;
 
-    const Definition& getDefinition() const { return cacheKey.getDefinition(); }
-    const InstanceCacheKey& getCacheKey() const { return cacheKey; }
+    const Definition& getDefinition() const { return definition; }
+
+    bool hasSameType(const InstanceBodySymbol& other) const;
 
     static const InstanceBodySymbol& fromDefinition(Compilation& compilation,
                                                     const Definition& definition,
@@ -135,12 +135,9 @@ public:
         const ParameterValueAssignmentSyntax* parameterSyntax);
 
     static const InstanceBodySymbol& fromDefinition(
-        Compilation& compilation, const InstanceCacheKey& cacheKey,
+        Compilation& compilation, const Definition& definition,
         const ParamOverrideNode* paramOverrideNode,
-        span<const ParameterSymbolBase* const> parameters, bool isUninstantiated,
-        bool forceUncached = false);
-
-    const InstanceBodySymbol& cloneUncached() const;
+        span<const ParameterSymbolBase* const> parameters, bool isUninstantiated);
 
     void serializeTo(ASTSerializer& serializer) const;
 
@@ -151,7 +148,7 @@ private:
 
     void setPorts(span<const Symbol* const> ports) const { portList = ports; }
 
-    InstanceCacheKey cacheKey;
+    const Definition& definition;
     mutable span<const Symbol* const> portList;
 };
 
