@@ -25,8 +25,6 @@ class CompilationUnitSymbol;
 class Definition;
 class Expression;
 class GenericClassDefSymbol;
-class InstanceBodySymbol;
-class InstanceSymbol;
 class PackageSymbol;
 class PrimitiveSymbol;
 class RootSymbol;
@@ -232,17 +230,6 @@ public:
 
     /// Gets the attributes associated with the given expression.
     span<const AttributeSymbol* const> getAttributes(const Expression& expr) const;
-
-    /// Registers a new instance with the compilation; used to keep track of which
-    /// instances point to which instance bodies.
-    void addInstance(const InstanceSymbol& instance);
-
-    /// Registers a new instance with the compilation; used to keep track of which
-    /// instances point to which instance bodies.
-    void addInstance(const InstanceSymbol& instance, const InstanceBodySymbol& body);
-
-    /// Returns the list of instances that share the same instance body.
-    span<const InstanceSymbol* const> getParentInstances(const InstanceBodySymbol& body) const;
 
     /// Notes that the given symbol was imported into the current scope via a package import,
     /// and further that the current scope is within a package declaration. These symbols are
@@ -473,9 +460,6 @@ private:
 
     // Map from token kinds to the built-in net types.
     flat_hash_map<TokenKind, std::unique_ptr<NetType>> knownNetTypes;
-
-    // Map of all instances that share a single instance body.
-    flat_hash_map<const InstanceBodySymbol*, std::vector<const InstanceSymbol*>> instanceParents;
 
     // The name map for packages. Note that packages have their own namespace,
     // which is why they can't share the definitions name table.

@@ -1109,11 +1109,9 @@ const Symbol* InterfacePortSymbol::getConnection() const {
     ASSERT(scope);
 
     auto& body = scope->asSymbol().as<InstanceBodySymbol>();
-    auto instances = scope->getCompilation().getParentInstances(body);
-    if (instances.empty())
-        return nullptr;
+    ASSERT(body.parentInstance);
 
-    auto conn = instances[0]->getPortConnection(*this);
+    auto conn = body.parentInstance->getPortConnection(*this);
     if (!conn)
         return nullptr;
 

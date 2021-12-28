@@ -458,9 +458,8 @@ bool lookupDownward(span<const NamePlusLoc> nameParts, NameComponents name,
 // Returns true if the lookup was ok, or if it failed in a way that allows us to continue
 // looking up in other ways. Returns false if the entire lookup has failed and should be
 // aborted.
-bool lookupUpward(Compilation& compilation, span<const NamePlusLoc> nameParts,
-                  const NameComponents& name, const BindContext& context, LookupResult& result,
-                  bitmask<LookupFlags> flags) {
+bool lookupUpward(span<const NamePlusLoc> nameParts, const NameComponents& name,
+                  const BindContext& context, LookupResult& result, bitmask<LookupFlags> flags) {
     // Upward lookups can match either a scope name, or a module definition name (on any of the
     // instances). Imports are not considered.
     const Symbol* firstMatch = nullptr;
@@ -498,19 +497,13 @@ bool lookupUpward(Compilation& compilation, span<const NamePlusLoc> nameParts,
         }
         else {
             // TODO: if this is a nested module it may do the wrong thing...
-            const InstanceSymbol* inst = nullptr;
-            auto parents = compilation.getParentInstances(symbol->as<InstanceBodySymbol>());
-            if (!parents.empty()) {
-                inst = parents[0];
-                scope = inst->getParentScope();
-            }
-            else {
-                scope = nullptr;
-            }
+            auto inst = symbol->as<InstanceBodySymbol>().parentInstance;
+            ASSERT(inst);
 
             // If the instance's definition name matches our target name,
             // try to match from the current instance.
-            if (inst && inst->getDefinition().name == name.text) {
+            scope = inst->getParentScope();
+            if (inst->getDefinition().name == name.text) {
                 if (!tryMatch(*inst))
                     return false;
 
@@ -1730,7 +1723,7 @@ void Lookup::qualified(const ScopedNameSyntax& syntax, const BindContext& contex
 
     // If we reach this point we're in case (2) or (4) above. Go up through the instantiation
     // hierarchy and see if we can find a match there.
-    if (!lookupUpward(compilation, nameParts, first, context, result, flags))
+    if (!lookupUpward(nameParts, first, context, result, flags))
         return;
 
     if (result.found)

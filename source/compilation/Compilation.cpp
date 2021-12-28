@@ -606,22 +606,6 @@ span<const AttributeSymbol* const> Compilation::getAttributes(const void* ptr) c
     return it->second;
 }
 
-void Compilation::addInstance(const InstanceSymbol& instance) {
-    instanceParents[&instance.body].push_back(&instance);
-}
-
-void Compilation::addInstance(const InstanceSymbol& instance, const InstanceBodySymbol& body) {
-    instanceParents[&body].push_back(&instance);
-}
-
-span<const InstanceSymbol* const> Compilation::getParentInstances(
-    const InstanceBodySymbol& body) const {
-    auto it = instanceParents.find(&body);
-    if (it == instanceParents.end())
-        return {};
-    return it->second;
-}
-
 void Compilation::notePackageExportCandidate(const PackageSymbol& packageScope,
                                              const Symbol& symbol) {
     packageExportCandidateMap[&packageScope][symbol.name] = &symbol;
@@ -734,11 +718,10 @@ const Symbol* Compilation::getGlobalClocking(const Scope& scope) const {
         if (sym.kind != SymbolKind::InstanceBody)
             curr = sym.getParentScope();
         else {
-            auto parents = getParentInstances(sym.as<InstanceBodySymbol>());
-            if (!parents.empty())
-                curr = parents[0]->getParentScope();
-            else
-                curr = nullptr;
+            auto parent = sym.as<InstanceBodySymbol>().parentInstance;
+            ASSERT(parent);
+
+            curr = parent->getParentScope();
         }
     } while (curr);
 
@@ -880,18 +863,15 @@ const Diagnostics& Compilation::getSemanticDiagnostics() {
             if (!symbol)
                 continue;
 
-            auto parents = getParentInstances(symbol->as<InstanceBodySymbol>());
-            if (parents.empty())
-                continue;
+            auto parent = symbol->as<InstanceBodySymbol>().parentInstance;
+            ASSERT(parent);
 
-            count += parents.size();
-            for (auto parent : parents) {
-                if (auto scope = parent->getParentScope()) {
-                    auto& sym = scope->asSymbol();
-                    if (sym.kind != SymbolKind::Root && sym.kind != SymbolKind::CompilationUnit) {
-                        found = &diag;
-                        inst = parent;
-                    }
+            count++;
+            if (auto scope = parent->getParentScope()) {
+                auto& sym = scope->asSymbol();
+                if (sym.kind != SymbolKind::Root && sym.kind != SymbolKind::CompilationUnit) {
+                    found = &diag;
+                    inst = parent;
                 }
             }
         }

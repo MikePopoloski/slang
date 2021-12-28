@@ -72,11 +72,9 @@ static void getHierarchicalPathImpl(const Symbol& symbol, std::string& buffer) {
     auto scope = symbol.getParentScope();
     auto current = &symbol;
     if (scope && symbol.kind == SymbolKind::InstanceBody) {
-        auto parents = scope->getCompilation().getParentInstances(symbol.as<InstanceBodySymbol>());
-        if (parents.empty())
-            return;
+        current = symbol.as<InstanceBodySymbol>().parentInstance;
+        ASSERT(current);
 
-        current = parents[0];
         scope = current->getParentScope();
     }
 

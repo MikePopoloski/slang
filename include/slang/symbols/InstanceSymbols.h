@@ -50,8 +50,7 @@ class InstanceSymbol : public InstanceSymbolBase {
 public:
     const InstanceBodySymbol& body;
 
-    InstanceSymbol(Compilation& compilation, string_view name, SourceLocation loc,
-                   const InstanceBodySymbol& body);
+    InstanceSymbol(string_view name, SourceLocation loc, InstanceBodySymbol& body);
 
     InstanceSymbol(Compilation& compilation, string_view name, SourceLocation loc,
                    const Definition& definition, const ParamOverrideNode* paramOverrideNode,
@@ -97,9 +96,12 @@ struct ParameterValueAssignmentSyntax;
 
 class InstanceBodySymbol : public Symbol, public Scope {
 public:
+    /// The parent instance for which this is the body.
+    const InstanceSymbol* parentInstance = nullptr;
+
     /// A pointer into the parameter override tree, if this instance or any
     /// child instances have parameter overrides that need to be applied.
-    const ParamOverrideNode* paramOverrideNode;
+    const ParamOverrideNode* paramOverrideNode = nullptr;
 
     /// A copy of all port parameter symbols used to construct the instance body.
     span<const ParameterSymbolBase* const> parameters;
@@ -125,19 +127,19 @@ public:
 
     bool hasSameType(const InstanceBodySymbol& other) const;
 
-    static const InstanceBodySymbol& fromDefinition(Compilation& compilation,
-                                                    const Definition& definition,
-                                                    bool isUninstantiated,
-                                                    const ParamOverrideNode* paramOverrideNode);
+    static InstanceBodySymbol& fromDefinition(Compilation& compilation,
+                                              const Definition& definition, bool isUninstantiated,
+                                              const ParamOverrideNode* paramOverrideNode);
 
-    static const InstanceBodySymbol* fromDefinition(
+    static InstanceBodySymbol* fromDefinition(
         const BindContext& context, SourceLocation sourceLoc, const Definition& definition,
         const ParameterValueAssignmentSyntax* parameterSyntax);
 
-    static const InstanceBodySymbol& fromDefinition(
-        Compilation& compilation, const Definition& definition,
-        const ParamOverrideNode* paramOverrideNode,
-        span<const ParameterSymbolBase* const> parameters, bool isUninstantiated);
+    static InstanceBodySymbol& fromDefinition(Compilation& compilation,
+                                              const Definition& definition,
+                                              const ParamOverrideNode* paramOverrideNode,
+                                              span<const ParameterSymbolBase* const> parameters,
+                                              bool isUninstantiated);
 
     void serializeTo(ASTSerializer& serializer) const;
 

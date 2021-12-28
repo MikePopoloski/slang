@@ -216,11 +216,9 @@ void InstanceSymbolBase::getArrayDimensions(SmallVector<ConstantRange>& dimensio
         getInstanceArrayDimensions(scope->asSymbol().as<InstanceArraySymbol>(), dimensions);
 }
 
-InstanceSymbol::InstanceSymbol(Compilation& compilation, string_view name, SourceLocation loc,
-                               const InstanceBodySymbol& body) :
-    InstanceSymbolBase(SymbolKind::Instance, name, loc),
-    body(body) {
-    compilation.addInstance(*this);
+InstanceSymbol::InstanceSymbol(string_view name, SourceLocation loc, InstanceBodySymbol& body) :
+    InstanceSymbolBase(SymbolKind::Instance, name, loc), body(body) {
+    body.parentInstance = this;
 }
 
 InstanceSymbol::InstanceSymbol(Compilation& compilation, string_view name, SourceLocation loc,
@@ -228,7 +226,7 @@ InstanceSymbol::InstanceSymbol(Compilation& compilation, string_view name, Sourc
                                const ParamOverrideNode* paramOverrideNode,
                                span<const ParameterSymbolBase* const> parameters,
                                bool isUninstantiated) :
-    InstanceSymbol(compilation, name, loc,
+    InstanceSymbol(name, loc,
                    InstanceBodySymbol::fromDefinition(compilation, definition, paramOverrideNode,
                                                       parameters, isUninstantiated)) {
 }
@@ -237,7 +235,7 @@ InstanceSymbol& InstanceSymbol::createDefault(Compilation& compilation,
                                               const Definition& definition,
                                               const ParamOverrideNode* paramOverrideNode) {
     return *compilation.emplace<InstanceSymbol>(
-        compilation, definition.name, definition.location,
+        definition.name, definition.location,
         InstanceBodySymbol::fromDefinition(compilation, definition,
                                            /* isUninstantiated */ false, paramOverrideNode));
 }
@@ -246,7 +244,7 @@ InstanceSymbol& InstanceSymbol::createInvalid(Compilation& compilation,
                                               const Definition& definition) {
     // Give this instance an empty name so that it can't be referenced by name.
     return *compilation.emplace<InstanceSymbol>(
-        compilation, "", SourceLocation::NoLocation,
+        "", SourceLocation::NoLocation,
         InstanceBodySymbol::fromDefinition(compilation, definition,
                                            /* isUninstantiated */ true, nullptr));
 }
@@ -559,9 +557,10 @@ InstanceBodySymbol::InstanceBodySymbol(Compilation& compilation, const Definitio
     setParent(definition.scope, definition.indexInScope);
 }
 
-const InstanceBodySymbol& InstanceBodySymbol::fromDefinition(
-    Compilation& compilation, const Definition& definition, bool isUninstantiated,
-    const ParamOverrideNode* paramOverrideNode) {
+InstanceBodySymbol& InstanceBodySymbol::fromDefinition(Compilation& compilation,
+                                                       const Definition& definition,
+                                                       bool isUninstantiated,
+                                                       const ParamOverrideNode* paramOverrideNode) {
 
     ParameterBuilder paramBuilder(definition.scope, definition.name, definition.parameters);
     if (paramOverrideNode)
@@ -574,7 +573,7 @@ const InstanceBodySymbol& InstanceBodySymbol::fromDefinition(
                           isUninstantiated);
 }
 
-const InstanceBodySymbol* InstanceBodySymbol::fromDefinition(
+InstanceBodySymbol* InstanceBodySymbol::fromDefinition(
     const BindContext& context, SourceLocation sourceLoc, const Definition& definition,
     const ParameterValueAssignmentSyntax* parameterSyntax) {
 
@@ -604,7 +603,7 @@ static span<const ParameterSymbolBase* const> copyParams(
     return span<PSB const>(ptr, source.size());
 }
 
-const InstanceBodySymbol& InstanceBodySymbol::fromDefinition(
+InstanceBodySymbol& InstanceBodySymbol::fromDefinition(
     Compilation& comp, const Definition& definition, const ParamOverrideNode* paramOverrideNode,
     span<const ParameterSymbolBase* const> parameters, bool isUninstantiated) {
 
