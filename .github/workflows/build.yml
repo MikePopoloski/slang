@@ -2,7 +2,7 @@ name: CI Build
 
 on:
   push:
-    branches: [ master ]
+    branches: [ master, macos-build ]
   pull_request:
     branches: [ master ]
 
@@ -33,6 +33,31 @@ jobs:
       with:
         name: SLANG_ARTIFACT_WIN
         path: slang-windows.zip
+
+  build_macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Configure
+        shell: bash
+        run: |
+          mkdir build
+          cd build
+          cmake .. -DCMAKE_INSTALL_PREFIX=$HOME/slang/
+      - name: Build
+        run: |
+          cd build
+          make install -j8
+      - name: Run tests
+        run: ctest --output-on-failure
+      - name: Archive binaries
+        run: tar -czvf slang-macos.tar.gz -C $HOME slang/
+      - name: Upload artifacts
+        if: github.event_name == 'push'
+        uses: actions/upload-artifact@v2
+        with:
+          name: SLANG_ARTIFACT_MACOS
+          path: slang-macos.tar.gz
 
   build_linux:
     runs-on: ubuntu-20.04
@@ -91,7 +116,7 @@ jobs:
 
   publish:
     runs-on: ubuntu-latest
-    needs: [build_msvc, build_linux]
+    needs: [build_msvc, build_macos, build_linux]
     if: github.event_name == 'push'
     steps:
     - uses: actions/download-artifact@v2
@@ -100,6 +125,9 @@ jobs:
     - uses: actions/download-artifact@v2
       with:
         name: SLANG_ARTIFACT_LINUX
+    - uses: actions/download-artifact@v2
+      with:
+        name: SLANG_ARTIFACT_MACOS
     - uses: meeDamian/github-release@2.0
       with:
         token: "${{ secrets.GITHUB_TOKEN }}"
@@ -109,4 +137,4 @@ jobs:
         prerelease: true
         allow_override: true
         gzip: false
-        files: slang-linux.tar.gz slang-windows.zip
+        files: slang-linux.tar.gz slang-windows.zip slang-macos.tar.gz
