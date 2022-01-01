@@ -1525,3 +1525,27 @@ endmodule
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::WidthTruncate);
 }
+
+TEST_CASE("Parameter override regression GH #459") {
+    auto tree = SyntaxTree::fromText(R"(
+module tb();
+    dut #(.P1(1), .P2(1), .P3(1)) inst();
+endmodule
+
+module dut();
+    reg data;
+    function int getv();
+        return 1;
+    endfunction
+
+    parameter P0 = $bits(data);
+    parameter [P0:0] P1 = 0;
+    parameter [getv():0] P2 = 0;
+    parameter reg [$bits(data)-1:0] P3 = 0;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
