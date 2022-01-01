@@ -603,7 +603,7 @@ GenerateBlockArraySymbol& GenerateBlockArraySymbol::fromSyntax(Compilation& comp
             addBlockMembers(*block, *syntax.block);
 
         implicitParam->setType(compilation.getIntegerType());
-        implicitParam->setValue(std::move(value));
+        implicitParam->setValue(compilation, std::move(value), /* needsCoercion */ false);
 
         entries.append({ &implicitParam->getValue().integer(), block });
     };

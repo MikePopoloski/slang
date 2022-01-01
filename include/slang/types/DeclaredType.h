@@ -39,44 +39,52 @@ enum class DeclaredTypeFlags {
     /// The bound initializer is required to be a constant expression.
     RequireConstant = 1 << 1,
 
+    /// The initializer expression has been overridden via a parameter
+    /// in a hierarchical instantation.
+    InitializerOverridden = 1 << 2,
+
+    /// The type has been overridden via a type parameter in a hierarchical
+    /// instantation.
+    TypeOverridden = 1 << 3,
+
     /// The initializer is for an automatic variable.
-    AutomaticInitializer = 1 << 2,
+    AutomaticInitializer = 1 << 4,
 
     /// The type being bound is for a port.
-    Port = 1 << 3,
+    Port = 1 << 5,
 
     /// The type being bound is the target of a typedef.
-    TypedefTarget = 1 << 4,
+    TypedefTarget = 1 << 6,
 
     /// The type being bound is a net type.
-    NetType = 1 << 5,
+    NetType = 1 << 7,
 
     /// The type being bound is a user-defined net type.
-    UserDefinedNetType = 1 << 6,
+    UserDefinedNetType = 1 << 8,
 
-    /// The type being bound is part of port I/O declaration
+    /// The type being bound is part of a port I/O declaration
     /// and should be merged with the formal argument declared
     /// elsewhere in the scope.
-    FormalArgMergeVar = 1 << 7,
+    FormalArgMergeVar = 1 << 9,
 
     /// The type being bound is for a random variable
-    Rand = 1 << 8,
+    Rand = 1 << 10,
 
     /// The type being bound is a DPI return type.
-    DPIReturnType = 1 << 9,
+    DPIReturnType = 1 << 11,
 
     /// The type being bound is for a DPI argument.
-    DPIArg = 1 << 10,
+    DPIArg = 1 << 12,
 
     /// Specparams are allowed in the initializer expression, even if
     /// the expression is otherwise not constant.
-    SpecparamsAllowed = 1 << 11,
+    SpecparamsAllowed = 1 << 13,
 
     /// Allow use of the unbounded literal '$' in the initializer expression.
-    AllowUnboundedLiteral = 1 << 12,
+    AllowUnboundedLiteral = 1 << 14,
 
     /// The type must be one allowed in a sequence expression.
-    RequireSequenceType = 1 << 13,
+    RequireSequenceType = 1 << 15,
 
     /// A mask of flags that indicate additional type rules are needed to
     /// be checked after the type itself is resolved.
@@ -154,17 +162,12 @@ public:
     /// This is used to detect cycles in the the type resolution process.
     bool isEvaluating() const { return evaluating; }
 
-    /// Indicates whether this declared type has an already resolved initializer
-    /// expression. If no initializer syntax has been set, or if it has but the
-    /// initializer has not being resolved yet, returns false.
-    bool hasResolvedInitializer() const { return initializer != nullptr; }
-
     /// Sets a separate, later position in the parent scope for binding the
     /// declared type and initializer. This is used for merged port symbols
     /// because their declared I/O location and symbol location may differ.
     void setOverrideIndex(SymbolIndex index) { overrideIndex = uint32_t(index); }
 
-    /// Adds additional type resolution flags to constraint resolution behavior.
+    /// Adds additional type resolution flags to constrain resolution behavior.
     /// This will clear any resolved type to force resolution again with the
     /// new flags set.
     void addFlags(bitmask<DeclaredTypeFlags> toAdd) {
@@ -172,6 +175,9 @@ public:
         initializer = nullptr;
         flags |= toAdd;
     }
+
+    /// Gets the flags currently active for the declared type.
+    bitmask<DeclaredTypeFlags> getFlags() const { return flags; }
 
     /// Perform a merge of implicit port information; this facilitates the non-ascii
     /// port system permitted by Verilog, where port I/O declarations are separate
@@ -192,7 +198,6 @@ public:
     void forceResolveAt(const BindContext& context) const;
 
 private:
-    const Scope& getScope() const;
     void resolveType(const BindContext& typeContext, const BindContext& initializerContext) const;
     void checkType(const BindContext& context) const;
     void mergePortTypes(const BindContext& context, const ValueSymbol& sourceSymbol,

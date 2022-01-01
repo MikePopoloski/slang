@@ -109,27 +109,6 @@ ParameterSymbol& ParameterSymbol::fromDecl(const Definition::ParameterDecl& decl
     return *result;
 }
 
-ParameterSymbol& ParameterSymbol::clone(Compilation& compilation) const {
-    auto result =
-        compilation.emplace<ParameterSymbol>(name, location, isLocalParam(), isPortParam());
-
-    if (auto syntax = getSyntax())
-        result->setSyntax(*syntax);
-
-    auto declared = getDeclaredType();
-    result->getDeclaredType()->copyTypeFrom(*declared);
-
-    if (auto init = declared->getInitializerSyntax())
-        result->setInitializerSyntax(*init, declared->getInitializerLocation());
-
-    if (declared->hasResolvedInitializer())
-        result->setInitializer(*declared->getInitializer());
-
-    result->value = value;
-    result->fromStringLit = fromStringLit;
-    return *result;
-}
-
 const ConstantValue& ParameterSymbol::getValue() const {
     if (!value) {
         // If no value has been explicitly set, try to set it
@@ -156,6 +135,14 @@ const ConstantValue& ParameterSymbol::getValue() const {
             value = &ConstantValue::Invalid;
         }
     }
+    else if (needsCoercion) {
+        auto scope = getParentScope();
+        ASSERT(scope);
+
+        value = scope->getCompilation().allocConstant(getType().coerceValue(*value));
+        needsCoercion = false;
+    }
+
     return *value;
 }
 
@@ -165,10 +152,10 @@ bool ParameterSymbol::isImplicitString() const {
     return fromStringLit || value->bad();
 }
 
-void ParameterSymbol::setValue(ConstantValue newValue) {
-    auto scope = getParentScope();
-    ASSERT(scope);
-    value = scope->getCompilation().allocConstant(std::move(newValue));
+void ParameterSymbol::setValue(Compilation& compilation, ConstantValue newValue,
+                               bool newNeedsCoercion) {
+    value = compilation.allocConstant(std::move(newValue));
+    needsCoercion = newNeedsCoercion;
 }
 
 void ParameterSymbol::serializeTo(ASTSerializer& serializer) const {
@@ -257,17 +244,6 @@ TypeParameterSymbol& TypeParameterSymbol::fromDecl(const Definition::ParameterDe
     return *result;
 }
 
-TypeParameterSymbol& TypeParameterSymbol::clone(Compilation& comp) const {
-    auto result = comp.emplace<TypeParameterSymbol>(name, location, isLocalParam(), isPortParam());
-    if (auto syntax = getSyntax())
-        result->setSyntax(*syntax);
-
-    auto declared = getDeclaredType();
-    result->targetType.copyTypeFrom(*declared);
-
-    return *result;
-}
-
 const Type& TypeParameterSymbol::getTypeAlias() const {
     if (typeAlias)
         return *typeAlias;
@@ -279,6 +255,7 @@ const Type& TypeParameterSymbol::getTypeAlias() const {
     if (auto syntax = getSyntax())
         alias->setSyntax(*syntax);
 
+    alias->targetType.addFlags(targetType.getFlags());
     alias->targetType.copyTypeFrom(targetType);
     alias->setParent(*scope, getIndex());
 

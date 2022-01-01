@@ -52,10 +52,8 @@ public:
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::Parameter; }
 
-    ParameterSymbol& clone(Compilation& compilation) const;
-
     const ConstantValue& getValue() const;
-    void setValue(ConstantValue value);
+    void setValue(Compilation& compilation, ConstantValue value, bool needsCoercion);
 
     bool isImplicitString() const;
 
@@ -64,6 +62,7 @@ public:
 private:
     mutable const ConstantValue* value = nullptr;
     mutable bool fromStringLit = false;
+    mutable bool needsCoercion = false;
 };
 
 struct TypeParameterDeclarationSyntax;
@@ -82,8 +81,6 @@ public:
                                          const ExpressionSyntax* newInitializer);
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::TypeParameter; }
-
-    TypeParameterSymbol& clone(Compilation& compilation) const;
 
     const Type& getTypeAlias() const;
 

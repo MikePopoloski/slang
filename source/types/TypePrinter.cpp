@@ -314,9 +314,11 @@ void TypePrinter::visit(const ClassType& type, string_view) {
 
 void TypePrinter::visit(const VirtualInterfaceType& type, string_view) {
     buffer->append(type.iface.getDefinition().name);
-    if (!type.iface.parameters.empty()) {
+
+    auto params = type.iface.body.parameters;
+    if (!params.empty()) {
         buffer->append("#(");
-        for (auto param : type.iface.parameters) {
+        for (auto param : params) {
             buffer->format("{}=", param->symbol.name);
             if (param->symbol.kind == SymbolKind::TypeParameter)
                 append(param->symbol.as<TypeParameterSymbol>().targetType.getType());

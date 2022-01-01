@@ -63,7 +63,7 @@ void ParameterBuilder::setAssignments(const ParameterValueAssignmentSyntax& synt
             if (param.isLocalParam)
                 continue;
 
-            overrides.emplace(param.name, orderedParams[orderedIndex++]->expr);
+            assignments.emplace(param.name, orderedParams[orderedIndex++]->expr);
         }
 
         // Make sure there aren't extra param assignments for non-existent params.
@@ -99,7 +99,7 @@ void ParameterBuilder::setAssignments(const ParameterValueAssignmentSyntax& synt
             if (!arg->expr)
                 continue;
 
-            overrides.emplace(param.name, arg->expr);
+            assignments.emplace(param.name, arg->expr);
         }
 
         for (auto& pair : namedParams) {
@@ -135,28 +135,29 @@ bool ParameterBuilder::createParams(Scope& newScope, LookupLocation lookupLocati
         if (!param.isTypeParam) {
             // This is a value parameter.
             const ExpressionSyntax* newInitializer = nullptr;
-            if (auto it = overrides.find(param.name); it != overrides.end())
+            if (auto it = assignments.find(param.name); it != assignments.end())
                 newInitializer = it->second;
 
             auto& newParam = ParameterSymbol::fromDecl(param, newScope, context, newInitializer);
             paramSymbols.append(&newParam);
 
             // If there is an override map, see if this parameter is in it.
-            if (overrideMap) {
-                if (auto it = overrideMap->find(std::string(param.name));
-                    it != overrideMap->end()) {
-                    newParam.setValue(newParam.getType().coerceValue(it->second));
+            if (overrideNode) {
+                auto& map = overrideNode->overrides;
+                if (auto it = map.find(std::string(param.name)); it != map.end()) {
+                    newParam.setValue(compilation, newParam.getType().coerceValue(it->second),
+                                      false);
                     paramValues.append(&newParam.getValue());
                     continue;
                 }
             }
 
-            // Otherwise local params don't get overriden.
+            // Otherwise local params don't get overridden.
             if (newParam.isLocalParam())
                 continue;
 
             if (forceInvalidValues) {
-                newParam.setValue(nullptr);
+                newParam.setValue(compilation, nullptr, false);
                 paramValues.append(&ConstantValue::Invalid);
                 continue;
             }
@@ -177,7 +178,7 @@ bool ParameterBuilder::createParams(Scope& newScope, LookupLocation lookupLocati
         else {
             // Otherwise this is a type parameter.
             const ExpressionSyntax* newInitializer = nullptr;
-            if (auto it = overrides.find(param.name); it != overrides.end())
+            if (auto it = assignments.find(param.name); it != assignments.end())
                 newInitializer = it->second;
 
             auto& newParam =
@@ -203,6 +204,115 @@ bool ParameterBuilder::createParams(Scope& newScope, LookupLocation lookupLocati
     }
 
     return !anyErrors;
+}
+
+const ParameterSymbolBase& ParameterBuilder::createParam(const Definition::ParameterDecl& decl,
+                                                         SourceLocation instanceLoc,
+                                                         bool forceInvalidValues) const {
+    auto reportError = [&](auto& param) {
+        auto& diag = scope.addDiag(diag::ParamHasNoValue, instanceLoc);
+        diag << definitionName;
+        diag << param.name;
+    };
+
+    auto& comp = scope.getCompilation();
+    const ExpressionSyntax* newInitializer = nullptr;
+    if (auto it = assignments.find(decl.name); it != assignments.end())
+        newInitializer = it->second;
+
+    if (decl.isTypeParam) {
+        auto param = comp.emplace<TypeParameterSymbol>(decl.name, decl.location, decl.isLocalParam,
+                                                       decl.isPortParam);
+
+        if (!decl.hasSyntax) {
+            if (decl.givenType)
+                param->targetType.setType(*decl.givenType);
+        }
+        else {
+            ASSERT(decl.typeDecl);
+            param->setSyntax(*decl.typeDecl);
+            if (decl.typeDecl->assignment)
+                param->targetType.setTypeSyntax(*decl.typeDecl->assignment->type);
+        }
+
+        if (newInitializer) {
+            // If this is a NameSyntax, the parser didn't know we were assigning to
+            // a type parameter, so fix it up into a NamedTypeSyntax to get a type from it.
+            auto& tt = param->targetType;
+            tt.addFlags(DeclaredTypeFlags::TypeOverridden);
+            if (NameSyntax::isKind(newInitializer->kind)) {
+                // const_cast is ugly but safe here, we're only going to refer to it
+                // by const reference everywhere down.
+                auto& nameSyntax = const_cast<NameSyntax&>(newInitializer->as<NameSyntax>());
+                auto namedType = comp.emplace<NamedTypeSyntax>(nameSyntax);
+
+                tt.setTypeSyntax(*namedType);
+            }
+            else if (!DataTypeSyntax::isKind(newInitializer->kind)) {
+                scope.addDiag(diag::BadTypeParamExpr, newInitializer->getFirstToken().location())
+                    << param->name;
+            }
+            else {
+                tt.setTypeSyntax(newInitializer->as<DataTypeSyntax>());
+            }
+        }
+
+        if (!param->isLocalParam()) {
+            if (forceInvalidValues) {
+                param->targetType.setType(comp.getErrorType());
+            }
+            else if (!newInitializer && param->isPortParam() &&
+                     !param->targetType.getTypeSyntax()) {
+                reportError(*param);
+            }
+        }
+
+        return *param;
+    }
+    else {
+        auto param = comp.emplace<ParameterSymbol>(decl.name, decl.location, decl.isLocalParam,
+                                                   decl.isPortParam);
+
+        if (!decl.hasSyntax) {
+            ASSERT(decl.givenType);
+            param->setType(*decl.givenType);
+            if (decl.givenInitializer)
+                param->setInitializer(*decl.givenInitializer);
+        }
+        else {
+            ASSERT(decl.valueSyntax);
+            ASSERT(decl.valueDecl);
+
+            param->setDeclaredType(*decl.valueSyntax->type);
+            param->setFromDeclarator(*decl.valueDecl);
+        }
+
+        if (newInitializer) {
+            param->getDeclaredType()->addFlags(DeclaredTypeFlags::InitializerOverridden);
+            param->setInitializerSyntax(*newInitializer,
+                                        newInitializer->getFirstToken().location());
+        }
+
+        // If there is an override node, see if this parameter is in it.
+        if (overrideNode) {
+            auto& map = overrideNode->overrides;
+            if (auto it = map.find(std::string(decl.name)); it != map.end()) {
+                param->setValue(comp, it->second, /* needsCoercion */ true);
+                return *param;
+            }
+        }
+
+        if (!param->isLocalParam()) {
+            if (forceInvalidValues) {
+                param->setValue(comp, nullptr, /* needsCoercion */ false);
+            }
+            else if (param->isPortParam() && !param->getDeclaredType()->getInitializerSyntax()) {
+                reportError(*param);
+            }
+        }
+
+        return *param;
+    }
 }
 
 void ParameterBuilder::createDecls(const Scope& scope, const ParameterDeclarationBaseSyntax& syntax,

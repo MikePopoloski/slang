@@ -260,7 +260,7 @@ public:
     bool isExplicitExtern = false;
 
     /// Set to true if this is a 'pure' constraint block, once which is
-    /// required to be overriden in derived classes.
+    /// required to be overridden in derived classes.
     bool isPure = false;
 
     ConstraintBlockSymbol(Compilation& compilation, string_view name, SourceLocation loc);

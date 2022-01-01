@@ -47,12 +47,11 @@ std::pair<string_view, SourceLocation> getNameLoc(const HierarchicalInstanceSynt
 class InstanceBuilder {
 public:
     InstanceBuilder(const BindContext& context, const Definition& definition,
-                    const ParamOverrideNode* paramOverrideNode,
-                    span<const ParameterSymbolBase* const> parameters,
+                    const ParameterBuilder& paramBuilder,
                     span<const AttributeInstanceSyntax* const> attributes, bool isUninstantiated) :
         compilation(context.getCompilation()),
-        context(context), definition(definition), parameters(parameters), attributes(attributes),
-        paramOverrideNode(paramOverrideNode), isUninstantiated(isUninstantiated) {}
+        context(context), definition(definition), paramBuilder(paramBuilder),
+        attributes(attributes), isUninstantiated(isUninstantiated) {}
 
     Symbol* create(const HierarchicalInstanceSyntax& syntax) {
         path.clear();
@@ -73,15 +72,14 @@ private:
     const BindContext& context;
     const Definition& definition;
     SmallVectorSized<int32_t, 4> path;
-    span<const ParameterSymbolBase* const> parameters;
+    const ParameterBuilder& paramBuilder;
     span<const AttributeInstanceSyntax* const> attributes;
-    const ParamOverrideNode* paramOverrideNode;
     bool isUninstantiated = false;
 
     Symbol* createInstance(const HierarchicalInstanceSyntax& syntax) {
         auto [name, loc] = getNameLoc(syntax);
-        auto inst = compilation.emplace<InstanceSymbol>(
-            compilation, name, loc, definition, paramOverrideNode, parameters, isUninstantiated);
+        auto inst = compilation.emplace<InstanceSymbol>(compilation, name, loc, definition,
+                                                        paramBuilder, isUninstantiated);
 
         inst->arrayPath = path.copy(compilation);
         inst->setSyntax(syntax);
@@ -127,30 +125,6 @@ private:
         return result;
     }
 };
-
-bool createParams(Compilation& compilation, const Definition& definition,
-                  ParameterBuilder& paramBuilder, LookupLocation ll, SourceLocation instanceLoc,
-                  bool forceInvalidParams) {
-    // Construct a temporary scope that has the right parent to house instance parameters
-    // as we're evaluating them. We hold on to the initializer expressions and give them
-    // to the instances later when we create them.
-    struct TempInstance : public InstanceBodySymbol {
-        TempInstance(Compilation& compilation, const Definition& definition,
-                     bool forceInvalidParams) :
-            InstanceBodySymbol(compilation, definition, nullptr, {}, forceInvalidParams) {
-            setParent(definition.scope);
-        }
-    };
-
-    auto& tempDef = *compilation.emplace<TempInstance>(compilation, definition, forceInvalidParams);
-
-    // Need the imports here as well, since parameters may depend on them.
-    for (auto import : definition.syntax.header->imports)
-        tempDef.addMembers(*import);
-
-    return paramBuilder.createParams(tempDef, ll, instanceLoc, forceInvalidParams,
-                                     /* suppressErrors */ false);
-}
 
 void createImplicitNets(const HierarchicalInstanceSyntax& instance, const BindContext& context,
                         const NetType& netType, SmallSet<string_view, 8>& implicitNetNames,
@@ -222,13 +196,11 @@ InstanceSymbol::InstanceSymbol(string_view name, SourceLocation loc, InstanceBod
 }
 
 InstanceSymbol::InstanceSymbol(Compilation& compilation, string_view name, SourceLocation loc,
-                               const Definition& definition,
-                               const ParamOverrideNode* paramOverrideNode,
-                               span<const ParameterSymbolBase* const> parameters,
+                               const Definition& definition, const ParameterBuilder& paramBuilder,
                                bool isUninstantiated) :
     InstanceSymbol(name, loc,
-                   InstanceBodySymbol::fromDefinition(compilation, definition, paramOverrideNode,
-                                                      parameters, isUninstantiated)) {
+                   InstanceBodySymbol::fromDefinition(compilation, definition, loc, paramBuilder,
+                                                      isUninstantiated)) {
 }
 
 InstanceSymbol& InstanceSymbol::createDefault(Compilation& compilation,
@@ -238,6 +210,26 @@ InstanceSymbol& InstanceSymbol::createDefault(Compilation& compilation,
         definition.name, definition.location,
         InstanceBodySymbol::fromDefinition(compilation, definition,
                                            /* isUninstantiated */ false, paramOverrideNode));
+}
+
+InstanceSymbol& InstanceSymbol::createVirtual(
+    const Scope& scope, SourceLocation loc, const Definition& definition,
+    const ParameterValueAssignmentSyntax* paramAssignments) {
+
+    ParameterBuilder paramBuilder(scope, definition.name, definition.parameters);
+    if (paramAssignments)
+        paramBuilder.setAssignments(*paramAssignments);
+
+    auto& comp = scope.getCompilation();
+    auto& result =
+        *comp.emplace<InstanceSymbol>(comp, definition.name, loc, definition, paramBuilder,
+                                      /* isUninstantiated */ false);
+
+    // Set the parent pointer so that traversing upwards still works to find
+    // the instantiation scope. This "virtual" instance never actually gets
+    // added to the scope the proper way as a member.
+    result.setParent(scope);
+    return result;
 }
 
 InstanceSymbol& InstanceSymbol::createInvalid(Compilation& compilation,
@@ -321,23 +313,18 @@ void InstanceSymbol::fromSyntax(Compilation& compilation,
         }
     }
 
-    // We have to check each port connection expression for any names that can't be resolved,
-    // which represent implicit nets that need to be created now.
     SmallSet<string_view, 8> implicitNetNames;
     auto& netType = context.scope->getDefaultNetType();
+
+    ParameterBuilder paramBuilder(*context.scope, definition->name, definition->parameters);
+    if (syntax.parameters)
+        paramBuilder.setAssignments(*syntax.parameters);
 
     // The common case is that our parent doesn't have a parameter override node,
     // which lets us evaluate all parameter assignments for this instance in a batch.
     if (!parentOverrideNode) {
-        ParameterBuilder paramBuilder(*context.scope, definition->name, definition->parameters);
-        if (syntax.parameters)
-            paramBuilder.setAssignments(*syntax.parameters);
-
-        createParams(compilation, *definition, paramBuilder, context.getLocation(),
-                     syntax.getFirstToken().location(), isUninstantiated);
-
-        InstanceBuilder builder(context, *definition, nullptr, paramBuilder.paramSymbols,
-                                syntax.attributes, isUninstantiated);
+        InstanceBuilder builder(context, *definition, paramBuilder, syntax.attributes,
+                                isUninstantiated);
 
         for (auto instanceSyntax : syntax.instances) {
             createImplicitNets(*instanceSyntax, context, netType, implicitNetNames, implicitNets);
@@ -347,29 +334,19 @@ void InstanceSymbol::fromSyntax(Compilation& compilation,
     else {
         // Otherwise we need to evaluate parameters separately for each child.
         for (auto instanceSyntax : syntax.instances) {
-            const ParamOverrideNode* overrideNode = nullptr;
-
+            paramBuilder.setOverrides(nullptr);
             if (instanceSyntax->decl) {
                 auto instName = instanceSyntax->decl->name.valueText();
                 if (!instName.empty()) {
                     if (auto it = parentOverrideNode->childNodes.find(std::string(instName));
                         it != parentOverrideNode->childNodes.end()) {
-                        overrideNode = &it->second;
+                        paramBuilder.setOverrides(&it->second);
                     }
                 }
             }
 
-            ParameterBuilder paramBuilder(*context.scope, definition->name, definition->parameters);
-            if (syntax.parameters)
-                paramBuilder.setAssignments(*syntax.parameters);
-            if (overrideNode)
-                paramBuilder.setOverrides(overrideNode->overrides);
-
-            createParams(compilation, *definition, paramBuilder, context.getLocation(),
-                         syntax.getFirstToken().location(), isUninstantiated);
-
-            InstanceBuilder builder(context, *definition, overrideNode, paramBuilder.paramSymbols,
-                                    syntax.attributes, isUninstantiated);
+            InstanceBuilder builder(context, *definition, paramBuilder, syntax.attributes,
+                                    isUninstantiated);
 
             createImplicitNets(*instanceSyntax, context, netType, implicitNetNames, implicitNets);
             results.append(builder.create(*instanceSyntax));
@@ -549,10 +526,9 @@ void InstanceSymbol::serializeTo(ASTSerializer& serializer) const {
 
 InstanceBodySymbol::InstanceBodySymbol(Compilation& compilation, const Definition& definition,
                                        const ParamOverrideNode* paramOverrideNode,
-                                       span<const ParameterSymbolBase* const> parameters,
                                        bool isUninstantiated) :
     Symbol(SymbolKind::InstanceBody, definition.name, definition.location),
-    Scope(compilation, this), paramOverrideNode(paramOverrideNode), parameters(parameters),
+    Scope(compilation, this), paramOverrideNode(paramOverrideNode),
     isUninstantiated(isUninstantiated), definition(definition) {
     setParent(definition.scope, definition.indexInScope);
 }
@@ -564,70 +540,37 @@ InstanceBodySymbol& InstanceBodySymbol::fromDefinition(Compilation& compilation,
 
     ParameterBuilder paramBuilder(definition.scope, definition.name, definition.parameters);
     if (paramOverrideNode)
-        paramBuilder.setOverrides(paramOverrideNode->overrides);
+        paramBuilder.setOverrides(paramOverrideNode);
 
-    createParams(compilation, definition, paramBuilder, LookupLocation::max, definition.location,
-                 isUninstantiated);
-
-    return fromDefinition(compilation, definition, paramOverrideNode, paramBuilder.paramSymbols,
+    return fromDefinition(compilation, definition, definition.location, paramBuilder,
                           isUninstantiated);
 }
 
-InstanceBodySymbol* InstanceBodySymbol::fromDefinition(
-    const BindContext& context, SourceLocation sourceLoc, const Definition& definition,
-    const ParameterValueAssignmentSyntax* parameterSyntax) {
-
-    ParameterBuilder paramBuilder(*context.scope, definition.name, definition.parameters);
-    if (parameterSyntax)
-        paramBuilder.setAssignments(*parameterSyntax);
-
-    auto& comp = context.getCompilation();
-    if (!createParams(comp, definition, paramBuilder, context.getLocation(), sourceLoc,
-                      /* isUninstantiated */ false)) {
-        return nullptr;
-    }
-
-    return &fromDefinition(comp, definition, nullptr, paramBuilder.paramSymbols,
-                           /* isUninstantiated */ false);
-}
-
-static span<const ParameterSymbolBase* const> copyParams(
-    BumpAllocator& alloc, span<const ParameterSymbolBase* const> source) {
-    if (source.empty())
-        return {};
-
-    using PSB = const ParameterSymbolBase*;
-    PSB* ptr = reinterpret_cast<PSB*>(alloc.allocate(source.size() * sizeof(PSB), alignof(PSB)));
-    memcpy(ptr, source.data(), source.size() * sizeof(PSB));
-
-    return span<PSB const>(ptr, source.size());
-}
-
-InstanceBodySymbol& InstanceBodySymbol::fromDefinition(
-    Compilation& comp, const Definition& definition, const ParamOverrideNode* paramOverrideNode,
-    span<const ParameterSymbolBase* const> parameters, bool isUninstantiated) {
-
+InstanceBodySymbol& InstanceBodySymbol::fromDefinition(Compilation& comp,
+                                                       const Definition& definition,
+                                                       SourceLocation instanceLoc,
+                                                       const ParameterBuilder& paramBuilder,
+                                                       bool isUninstantiated) {
     auto& declSyntax = definition.syntax;
-    auto result = comp.emplace<InstanceBodySymbol>(comp, definition, paramOverrideNode,
-                                                   copyParams(comp, parameters), isUninstantiated);
+    auto result = comp.emplace<InstanceBodySymbol>(comp, definition, paramBuilder.getOverrides(),
+                                                   isUninstantiated);
     result->setSyntax(declSyntax);
 
     // Package imports from the header always come first.
     for (auto import : declSyntax.header->imports)
         result->addMembers(*import);
 
-    // Now add in all parameter ports.
-    auto paramIt = parameters.begin();
-    while (paramIt != parameters.end()) {
-        auto original = *paramIt;
-        if (!original->isPortParam())
+    // Add in all parameter ports.
+    SmallVectorSized<const ParameterSymbolBase*, 8> params;
+    auto paramIt = definition.parameters.begin();
+    while (paramIt != definition.parameters.end()) {
+        auto& decl = *paramIt;
+        if (!decl.isPortParam)
             break;
 
-        if (original->symbol.kind == SymbolKind::Parameter)
-            result->addMember(original->symbol.as<ParameterSymbol>().clone(comp));
-        else
-            result->addMember(original->symbol.as<TypeParameterSymbol>().clone(comp));
-
+        auto& param = paramBuilder.createParam(decl, instanceLoc, isUninstantiated);
+        params.append(&param);
+        result->addMember(param.symbol);
         paramIt++;
     }
 
@@ -636,40 +579,37 @@ InstanceBodySymbol& InstanceBodySymbol::fromDefinition(
 
     // Finally add members from the body.
     for (auto member : declSyntax.members) {
-        // If this is a parameter declaration, we should already have metadata for it in our
-        // parameters list. The list is given in declaration order, so we should be be able to move
-        // through them incrementally.
+        // If this is a parameter declaration we will create the symbol manually
+        // as we need to apply any overrides.
         if (member->kind != SyntaxKind::ParameterDeclarationStatement) {
             result->addMembers(*member);
         }
         else {
+            auto createParam = [&](auto& declarator) {
+                ASSERT(paramIt != definition.parameters.end());
+
+                auto& decl = *paramIt;
+                ASSERT(declarator.name.valueText() == decl.name);
+
+                auto& param = paramBuilder.createParam(decl, instanceLoc, isUninstantiated);
+                params.append(&param);
+                result->addMember(param.symbol);
+                paramIt++;
+            };
+
             auto paramBase = member->as<ParameterDeclarationStatementSyntax>().parameter;
             if (paramBase->kind == SyntaxKind::ParameterDeclaration) {
-                for (auto declarator : paramBase->as<ParameterDeclarationSyntax>().declarators) {
-                    ASSERT(paramIt != parameters.end());
-
-                    auto& symbol = (*paramIt)->symbol;
-                    ASSERT(declarator->name.valueText() == symbol.name);
-
-                    result->addMember(symbol.as<ParameterSymbol>().clone(comp));
-                    paramIt++;
-                }
+                for (auto declarator : paramBase->as<ParameterDeclarationSyntax>().declarators)
+                    createParam(*declarator);
             }
             else {
-                for (auto declarator :
-                     paramBase->as<TypeParameterDeclarationSyntax>().declarators) {
-                    ASSERT(paramIt != parameters.end());
-
-                    auto& symbol = (*paramIt)->symbol;
-                    ASSERT(declarator->name.valueText() == symbol.name);
-
-                    result->addMember(symbol.as<TypeParameterSymbol>().clone(comp));
-                    paramIt++;
-                }
+                for (auto declarator : paramBase->as<TypeParameterDeclarationSyntax>().declarators)
+                    createParam(*declarator);
             }
         }
     }
 
+    result->parameters = params.copy(comp);
     return *result;
 }
 

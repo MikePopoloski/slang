@@ -291,7 +291,7 @@ void ClassType::handleExtends(const ExtendsClauseSyntax& extendsClause, const Bi
             continue;
         }
 
-        // Don't inherit if the member is already overriden.
+        // Don't inherit if the member is already overridden.
         if (auto it = scopeNameMap.find(member.name); it != scopeNameMap.end())
             continue;
 
@@ -386,7 +386,7 @@ void ClassType::handleExtends(const ExtendsClauseSyntax& extendsClause, const Bi
             }
         }
         else if (member.kind == SymbolKind::ConstraintBlock) {
-            // Constraint blocks can also be overriden -- check that 'static'ness
+            // Constraint blocks can also be overridden -- check that 'static'ness
             // matches between base and derived if the base is pure.
             auto currentBase = baseType;
             while (true) {

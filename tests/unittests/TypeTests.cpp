@@ -1538,3 +1538,23 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Virtual interface assignment compatiblity error") {
+    auto tree = SyntaxTree::fromText(R"(
+interface A #(parameter A, B);
+endinterface
+
+module m;
+    virtual A #(1,2) a1;
+    virtual A #(3,4) a2;
+    initial a1 = a2;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::BadAssignment);
+}

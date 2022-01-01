@@ -13,7 +13,7 @@
 namespace slang {
 
 class Compilation;
-class InstanceBodySymbol;
+class InstanceSymbol;
 class ModportSymbol;
 
 struct IntegerTypeSyntax;
@@ -377,10 +377,10 @@ struct VirtualInterfaceTypeSyntax;
 /// Represents a virtual interface type.
 class VirtualInterfaceType : public Type {
 public:
-    const InstanceBodySymbol& iface;
+    const InstanceSymbol& iface;
     const ModportSymbol* modport;
 
-    VirtualInterfaceType(const InstanceBodySymbol& iface, const ModportSymbol* modport,
+    VirtualInterfaceType(const InstanceSymbol& iface, const ModportSymbol* modport,
                          SourceLocation loc) :
         Type(SymbolKind::VirtualInterfaceType, "", loc),
         iface(iface), modport(modport) {}

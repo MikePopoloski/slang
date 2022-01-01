@@ -15,6 +15,7 @@ class ParameterSymbolBase;
 class Scope;
 class Type;
 struct ExpressionSyntax;
+struct ParamOverrideNode;
 struct ParameterDeclarationBaseSyntax;
 struct ParameterPortListSyntax;
 struct ParameterValueAssignmentSyntax;
@@ -37,12 +38,16 @@ public:
         definitionName(definitionName), parameterDecls(parameterDecls) {}
 
     void setAssignments(const ParameterValueAssignmentSyntax& syntax);
-    void setOverrides(const flat_hash_map<std::string, ConstantValue>& newVal) {
-        overrideMap = &newVal;
-    }
+    void setOverrides(const ParamOverrideNode* newVal) { overrideNode = newVal; }
+
+    const ParamOverrideNode* getOverrides() const { return overrideNode; }
 
     bool createParams(Scope& newScope, LookupLocation lookupLocation, SourceLocation instanceLoc,
                       bool forceInvalidValues, bool suppressErrors);
+
+    const ParameterSymbolBase& createParam(const Definition::ParameterDecl& decl,
+                                           SourceLocation instanceLoc,
+                                           bool forceInvalidValues) const;
 
     static void createDecls(const Scope& scope, const ParameterDeclarationBaseSyntax& syntax,
                             bool isLocal, bool isPort, SmallVector<Decl>& results);
@@ -53,8 +58,8 @@ private:
     const Scope& scope;
     string_view definitionName;
     span<const Decl> parameterDecls;
-    SmallMap<string_view, const ExpressionSyntax*, 8> overrides;
-    const flat_hash_map<std::string, ConstantValue>* overrideMap = nullptr;
+    SmallMap<string_view, const ExpressionSyntax*, 8> assignments;
+    const ParamOverrideNode* overrideNode = nullptr;
 };
 
 } // namespace slang

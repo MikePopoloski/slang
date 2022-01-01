@@ -1069,7 +1069,7 @@ Expression* Expression::tryBindInterfaceRef(const BindContext& context,
 
     // Now make sure the interface or modport we found matches the target type.
     auto& vit = targetType.getCanonicalType().as<VirtualInterfaceType>();
-    if (&vit.iface != iface) {
+    if (&vit.iface != iface->parentInstance) {
         // TODO: error
     }
     else if (modport && vit.modport != modport) {

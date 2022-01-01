@@ -18,6 +18,7 @@ class Definition;
 class Expression;
 class InstanceBodySymbol;
 class InterfacePortSymbol;
+class ParameterBuilder;
 class ParameterSymbolBase;
 class PortConnection;
 class PortSymbol;
@@ -46,6 +47,8 @@ protected:
     using Symbol::Symbol;
 };
 
+struct ParameterValueAssignmentSyntax;
+
 class InstanceSymbol : public InstanceSymbolBase {
 public:
     const InstanceBodySymbol& body;
@@ -53,8 +56,8 @@ public:
     InstanceSymbol(string_view name, SourceLocation loc, InstanceBodySymbol& body);
 
     InstanceSymbol(Compilation& compilation, string_view name, SourceLocation loc,
-                   const Definition& definition, const ParamOverrideNode* paramOverrideNode,
-                   span<const ParameterSymbolBase* const> parameters, bool isUninstantiated);
+                   const Definition& definition, const ParameterBuilder& paramBuilder,
+                   bool isUninstantiated);
 
     const Definition& getDefinition() const;
     bool isModule() const;
@@ -79,6 +82,11 @@ public:
     static InstanceSymbol& createDefault(Compilation& compilation, const Definition& definition,
                                          const ParamOverrideNode* paramOverrideNode);
 
+    /// Creates a placeholder instance for a virtual interface type declaration.
+    static InstanceSymbol& createVirtual(const Scope& scope, SourceLocation loc,
+                                         const Definition& definition,
+                                         const ParameterValueAssignmentSyntax* paramAssignments);
+
     /// Creates an intentionally invalid instance by forcing all parameters to null values.
     /// This allows type checking instance members as long as they don't depend on any parameters.
     static InstanceSymbol& createInvalid(Compilation& compilation, const Definition& definition);
@@ -91,8 +99,6 @@ public:
 private:
     mutable PointerMap* connections = nullptr;
 };
-
-struct ParameterValueAssignmentSyntax;
 
 class InstanceBodySymbol : public Symbol, public Scope {
 public:
@@ -113,8 +119,7 @@ public:
     bool isUninstantiated = false;
 
     InstanceBodySymbol(Compilation& compilation, const Definition& definition,
-                       const ParamOverrideNode* paramOverrideNode,
-                       span<const ParameterSymbolBase* const> parameters, bool isUninstantiated);
+                       const ParamOverrideNode* paramOverrideNode, bool isUninstantiated);
 
     span<const Symbol* const> getPortList() const {
         ensureElaborated();
@@ -131,14 +136,10 @@ public:
                                               const Definition& definition, bool isUninstantiated,
                                               const ParamOverrideNode* paramOverrideNode);
 
-    static InstanceBodySymbol* fromDefinition(
-        const BindContext& context, SourceLocation sourceLoc, const Definition& definition,
-        const ParameterValueAssignmentSyntax* parameterSyntax);
-
     static InstanceBodySymbol& fromDefinition(Compilation& compilation,
                                               const Definition& definition,
-                                              const ParamOverrideNode* paramOverrideNode,
-                                              span<const ParameterSymbolBase* const> parameters,
+                                              SourceLocation instanceLoc,
+                                              const ParameterBuilder& paramBuilder,
                                               bool isUninstantiated);
 
     void serializeTo(ASTSerializer& serializer) const;

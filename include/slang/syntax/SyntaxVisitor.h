@@ -35,7 +35,7 @@ public:
             DERIVED->visitDefault(t);
     }
 
-    /// The default handler invoked when no visit() method is overriden for a particular type.
+    /// The default handler invoked when no visit() method is overridden for a particular type.
     /// Will visit all child nodes by default.
     void visitDefault(const SyntaxNode& node) {
         for (uint32_t i = 0; i < node.getChildCount(); i++) {

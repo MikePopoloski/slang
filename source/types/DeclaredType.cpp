@@ -11,6 +11,7 @@
 #include "slang/diagnostics/DeclarationsDiags.h"
 #include "slang/diagnostics/StatementsDiags.h"
 #include "slang/symbols/ClassSymbols.h"
+#include "slang/symbols/InstanceSymbols.h"
 #include "slang/symbols/Scope.h"
 #include "slang/symbols/SubroutineSymbols.h"
 #include "slang/symbols/Symbol.h"
@@ -55,12 +56,6 @@ void DeclaredType::mergeImplicitPort(
     span<const VariableDimensionSyntax* const> unpackedDimensions) {
     mergePortTypes(getBindContext<false>(), parent.as<ValueSymbol>(), implicit, location,
                    unpackedDimensions);
-}
-
-const Scope& DeclaredType::getScope() const {
-    const Scope* scope = parent.getParentScope();
-    ASSERT(scope);
-    return *scope;
 }
 
 void DeclaredType::resolveType(const BindContext& typeContext,
@@ -404,6 +399,23 @@ T DeclaredType::getBindContext() const {
     if (flags.has(DeclaredTypeFlags::SpecparamsAllowed))
         bindFlags |= BindFlags::SpecparamsAllowed;
 
+    const Scope* scope = parent.getParentScope();
+    ASSERT(scope);
+
+    // If this type/initializer has been overridden by a parameter override,
+    // we should use the instantiation scope and not the parameter's scope
+    // when resolving.
+    if ((IsInitializer && flags.has(DeclaredTypeFlags::InitializerOverridden)) ||
+        (!IsInitializer && flags.has(DeclaredTypeFlags::TypeOverridden))) {
+        auto inst = scope->asSymbol().as<InstanceBodySymbol>().parentInstance;
+        ASSERT(inst);
+
+        scope = inst->getParentScope();
+        ASSERT(scope);
+
+        return BindContext(*scope, LookupLocation::before(*inst), bindFlags);
+    }
+
     // The location depends on whether we are binding the initializer or the type.
     // Initializer lookup happens *after* the parent symbol, so that it can reference
     // the symbol itself. Type lookup happens *before*, since it can't yet see the
@@ -423,7 +435,7 @@ T DeclaredType::getBindContext() const {
         location = LookupLocation::before(parent);
     }
 
-    return BindContext(getScope(), location, bindFlags);
+    return BindContext(*scope, location, bindFlags);
 }
 
 } // namespace slang

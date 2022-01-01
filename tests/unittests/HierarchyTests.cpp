@@ -148,8 +148,8 @@ endmodule
     REQUIRE(diags.size() == 10);
     CHECK(diags[0].code == diag::ParamHasNoValue);
     CHECK(diags[1].code == diag::TooManyParamAssignments);
-    CHECK(diags[2].code == diag::ParamHasNoValue);
-    CHECK(diags[3].code == diag::AssignedToLocalPortParam);
+    CHECK(diags[2].code == diag::AssignedToLocalPortParam);
+    CHECK(diags[3].code == diag::ParamHasNoValue);
     CHECK(diags[4].code == diag::ParameterDoesNotExist);
     CHECK(diags[5].code == diag::AssignedToLocalBodyParam);
     CHECK(diags[6].code == diag::DuplicateParamAssignment);
@@ -157,10 +157,10 @@ endmodule
     CHECK(diags[8].code == diag::LocalParamNoInitializer);
     CHECK(diags[9].code == diag::BodyParamNoInitializer);
 
-    REQUIRE(diags[3].notes.size() == 1);
+    REQUIRE(diags[2].notes.size() == 1);
     REQUIRE(diags[5].notes.size() == 1);
     REQUIRE(diags[6].notes.size() == 1);
-    CHECK(diags[3].notes[0].code == diag::NoteDeclarationHere);
+    CHECK(diags[2].notes[0].code == diag::NoteDeclarationHere);
     CHECK(diags[5].notes[0].code == diag::NoteDeclarationHere);
     CHECK(diags[6].notes[0].code == diag::NotePreviousUsage);
 }
