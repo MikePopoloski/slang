@@ -561,6 +561,7 @@ InstanceBodySymbol& InstanceBodySymbol::fromDefinition(Compilation& comp,
         result->addMembers(*import);
 
     // Add in all parameter ports.
+    bool unused = false;
     SmallVectorSized<const ParameterSymbolBase*, 8> params;
     auto paramIt = definition.parameters.begin();
     while (paramIt != definition.parameters.end()) {
@@ -568,7 +569,8 @@ InstanceBodySymbol& InstanceBodySymbol::fromDefinition(Compilation& comp,
         if (!decl.isPortParam)
             break;
 
-        auto& param = paramBuilder.createParam(decl, instanceLoc, isUninstantiated);
+        auto& param = paramBuilder.createParam(decl, instanceLoc, isUninstantiated,
+                                               /* suppressErrors */ false, unused);
         params.append(&param);
         result->addMember(param.symbol);
         paramIt++;
@@ -591,7 +593,8 @@ InstanceBodySymbol& InstanceBodySymbol::fromDefinition(Compilation& comp,
                 auto& decl = *paramIt;
                 ASSERT(declarator.name.valueText() == decl.name);
 
-                auto& param = paramBuilder.createParam(decl, instanceLoc, isUninstantiated);
+                auto& param = paramBuilder.createParam(decl, instanceLoc, isUninstantiated,
+                                                       /* suppressErrors */ false, unused);
                 params.append(&param);
                 result->addMember(param.symbol);
                 paramIt++;

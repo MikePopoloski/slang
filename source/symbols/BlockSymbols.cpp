@@ -9,6 +9,7 @@
 #include "slang/binding/Expression.h"
 #include "slang/binding/MiscExpressions.h"
 #include "slang/compilation/Compilation.h"
+#include "slang/compilation/Definition.h"
 #include "slang/diagnostics/DeclarationsDiags.h"
 #include "slang/diagnostics/LookupDiags.h"
 #include "slang/diagnostics/StatementsDiags.h"

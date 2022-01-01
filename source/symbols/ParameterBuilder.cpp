@@ -115,10 +115,11 @@ void ParameterBuilder::setAssignments(const ParameterValueAssignmentSyntax& synt
     }
 }
 
-bool ParameterBuilder::createParams(Scope& newScope, LookupLocation lookupLocation,
-                                    SourceLocation instanceLoc, bool forceInvalidValues,
-                                    bool suppressErrors) {
-    bool anyErrors = false;
+const ParameterSymbolBase& ParameterBuilder::createParam(const Definition::ParameterDecl& decl,
+                                                         SourceLocation instanceLoc,
+                                                         bool forceInvalidValues,
+                                                         bool suppressErrors,
+                                                         bool& anyErrors) const {
     auto reportError = [&](auto& param) {
         anyErrors = true;
         if (!suppressErrors) {
@@ -126,93 +127,6 @@ bool ParameterBuilder::createParams(Scope& newScope, LookupLocation lookupLocati
             diag << definitionName;
             diag << param.name;
         }
-    };
-
-    auto& compilation = scope.getCompilation();
-    BindContext context(scope, lookupLocation, BindFlags::Constant);
-
-    for (auto& param : parameterDecls) {
-        if (!param.isTypeParam) {
-            // This is a value parameter.
-            const ExpressionSyntax* newInitializer = nullptr;
-            if (auto it = assignments.find(param.name); it != assignments.end())
-                newInitializer = it->second;
-
-            auto& newParam = ParameterSymbol::fromDecl(param, newScope, context, newInitializer);
-            paramSymbols.append(&newParam);
-
-            // If there is an override map, see if this parameter is in it.
-            if (overrideNode) {
-                auto& map = overrideNode->overrides;
-                if (auto it = map.find(std::string(param.name)); it != map.end()) {
-                    newParam.setValue(compilation, newParam.getType().coerceValue(it->second),
-                                      false);
-                    paramValues.append(&newParam.getValue());
-                    continue;
-                }
-            }
-
-            // Otherwise local params don't get overridden.
-            if (newParam.isLocalParam())
-                continue;
-
-            if (forceInvalidValues) {
-                newParam.setValue(compilation, nullptr, false);
-                paramValues.append(&ConstantValue::Invalid);
-                continue;
-            }
-
-            // For all port params, if we were provided a parameter override save
-            // that value now for use with the cache key. Otherwise use a nullptr
-            // to represent that the default will be used. We can't evaluate the
-            // default now because it might depend on other members that haven't
-            // been created yet.
-            if (newInitializer)
-                paramValues.append(&newParam.getValue());
-            else
-                paramValues.append(nullptr);
-
-            if (newParam.isPortParam() && !newParam.getDeclaredType()->getInitializerSyntax())
-                reportError(newParam);
-        }
-        else {
-            // Otherwise this is a type parameter.
-            const ExpressionSyntax* newInitializer = nullptr;
-            if (auto it = assignments.find(param.name); it != assignments.end())
-                newInitializer = it->second;
-
-            auto& newParam =
-                TypeParameterSymbol::fromDecl(param, newScope, context, newInitializer);
-            paramSymbols.append(&newParam);
-            if (newParam.isLocalParam())
-                continue;
-
-            if (forceInvalidValues) {
-                newParam.targetType.setType(compilation.getErrorType());
-                typeParams.append(&compilation.getErrorType());
-                continue;
-            }
-
-            if (newInitializer)
-                typeParams.append(&newParam.targetType.getType());
-            else
-                typeParams.append(nullptr);
-
-            if (!newInitializer && newParam.isPortParam() && !newParam.targetType.getTypeSyntax())
-                reportError(newParam);
-        }
-    }
-
-    return !anyErrors;
-}
-
-const ParameterSymbolBase& ParameterBuilder::createParam(const Definition::ParameterDecl& decl,
-                                                         SourceLocation instanceLoc,
-                                                         bool forceInvalidValues) const {
-    auto reportError = [&](auto& param) {
-        auto& diag = scope.addDiag(diag::ParamHasNoValue, instanceLoc);
-        diag << definitionName;
-        diag << param.name;
     };
 
     auto& comp = scope.getCompilation();

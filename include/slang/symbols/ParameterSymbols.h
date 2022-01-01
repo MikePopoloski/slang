@@ -6,7 +6,6 @@
 //------------------------------------------------------------------------------
 #pragma once
 
-#include "slang/compilation/Definition.h"
 #include "slang/symbols/ValueSymbol.h"
 
 namespace slang {
@@ -46,10 +45,6 @@ public:
     static void fromSyntax(const Scope& scope, const ParameterDeclarationSyntax& syntax,
                            bool isLocal, bool isPort, SmallVector<ParameterSymbol*>& results);
 
-    static ParameterSymbol& fromDecl(const Definition::ParameterDecl& decl, Scope& newScope,
-                                     const BindContext& context,
-                                     const ExpressionSyntax* newInitializer);
-
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::Parameter; }
 
     const ConstantValue& getValue() const;
@@ -75,10 +70,6 @@ public:
 
     static void fromSyntax(const Scope& scope, const TypeParameterDeclarationSyntax& syntax,
                            bool isLocal, bool isPort, SmallVector<TypeParameterSymbol*>& results);
-
-    static TypeParameterSymbol& fromDecl(const Definition::ParameterDecl& decl, Scope& newScope,
-                                         const BindContext& context,
-                                         const ExpressionSyntax* newInitializer);
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::TypeParameter; }
 

@@ -16,6 +16,7 @@
 #include "slang/diagnostics/ExpressionsDiags.h"
 #include "slang/symbols/ASTSerializer.h"
 #include "slang/symbols/MemberSymbols.h"
+#include "slang/symbols/ParameterSymbols.h"
 #include "slang/symbols/SubroutineSymbols.h"
 #include "slang/symbols/SymbolBuilders.h"
 #include "slang/syntax/AllSyntax.h"
@@ -749,25 +750,54 @@ const Type* GenericClassDefSymbol::getSpecializationImpl(
     classType->genericClass = this;
     classType->setParent(*scope, getIndex());
 
-    ParameterBuilder paramBuilder(*context.scope, name, paramDecls);
-    if (syntax)
-        paramBuilder.setAssignments(*syntax);
-
     // If this is for the default specialization, `syntax` will be null.
     // We want to suppress errors about params not having values and just
     // return null so that the caller can figure out if this is actually a problem.
     bool isForDefault = syntax == nullptr;
-    if (!paramBuilder.createParams(*classType, context.getLocation(), instanceLoc,
-                                   forceInvalidParams, isForDefault)) {
-        if (isForDefault)
-            return nullptr;
 
-        // Otherwise use an error type instead.
-        return &comp.getErrorType();
+    ParameterBuilder paramBuilder(*context.scope, name, paramDecls);
+    if (syntax)
+        paramBuilder.setAssignments(*syntax);
+
+    SmallVectorSized<const ConstantValue*, 8> paramValues;
+    SmallVectorSized<const Type*, 8> typeParams;
+    for (auto& decl : paramDecls) {
+        bool anyErrors = false;
+        auto& param = paramBuilder.createParam(decl, instanceLoc, forceInvalidParams, isForDefault,
+                                               anyErrors);
+
+        if (anyErrors) {
+            if (isForDefault)
+                return nullptr;
+
+            // Otherwise use an error type instead.
+            return &comp.getErrorType();
+        }
+
+        auto& sym = param.symbol;
+        classType->addMember(sym);
+
+        if (sym.kind == SymbolKind::Parameter) {
+            auto& ps = sym.as<ParameterSymbol>();
+            if (!forceInvalidParams)
+                ps.getDeclaredType()->resolveAt(context);
+
+            if (!param.isLocalParam()) {
+                paramValues.append(&ps.getValue());
+            }
+        }
+        else {
+            auto& tps = sym.as<TypeParameterSymbol>();
+            if (!forceInvalidParams)
+                tps.targetType.forceResolveAt(context);
+
+            if (!param.isLocalParam()) {
+                typeParams.append(&tps.targetType.getType());
+            }
+        }
     }
 
-    SpecializationKey key(*this, paramBuilder.paramValues.copy(comp),
-                          paramBuilder.typeParams.copy(comp));
+    SpecializationKey key(*this, paramValues.copy(comp), typeParams.copy(comp));
     if (auto it = specMap.find(key); it != specMap.end())
         return it->second;
 

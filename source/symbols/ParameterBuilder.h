@@ -28,10 +28,6 @@ class ParameterBuilder {
 public:
     using Decl = Definition::ParameterDecl;
 
-    SmallVectorSized<const ParameterSymbolBase*, 8> paramSymbols;
-    SmallVectorSized<const ConstantValue*, 8> paramValues;
-    SmallVectorSized<const Type*, 8> typeParams;
-
     ParameterBuilder(const Scope& scope, string_view definitionName,
                      span<const Decl> parameterDecls) :
         scope(scope),
@@ -42,12 +38,9 @@ public:
 
     const ParamOverrideNode* getOverrides() const { return overrideNode; }
 
-    bool createParams(Scope& newScope, LookupLocation lookupLocation, SourceLocation instanceLoc,
-                      bool forceInvalidValues, bool suppressErrors);
-
     const ParameterSymbolBase& createParam(const Definition::ParameterDecl& decl,
-                                           SourceLocation instanceLoc,
-                                           bool forceInvalidValues) const;
+                                           SourceLocation instanceLoc, bool forceInvalidValues,
+                                           bool suppressErrors, bool& anyErrors) const;
 
     static void createDecls(const Scope& scope, const ParameterDeclarationBaseSyntax& syntax,
                             bool isLocal, bool isPort, SmallVector<Decl>& results);
