@@ -1075,8 +1075,8 @@ void Lookup::selectChild(const Type& virtualInterface, SourceRange range,
     SmallVectorSized<const ElementSelectSyntax*, 8> elementSelects;
     auto& comp = context.getCompilation();
 
-    for (size_t i = 0; i < selectors.size(); i++) {
-        if (auto memberSel = std::get_if<LookupResult::MemberSelector>(&selectors[i])) {
+    for (auto& selector : selectors) {
+        if (auto memberSel = std::get_if<LookupResult::MemberSelector>(&selector)) {
             NamePlusLoc npl;
             npl.dotLocation = memberSel->dotLocation;
             npl.name.text = memberSel->name;
@@ -1087,7 +1087,7 @@ void Lookup::selectChild(const Type& virtualInterface, SourceRange range,
             elementSelects.clear();
         }
         else {
-            elementSelects.append(std::get<const ElementSelectSyntax*>(selectors[i]));
+            elementSelects.append(std::get<const ElementSelectSyntax*>(selector));
         }
     }
 

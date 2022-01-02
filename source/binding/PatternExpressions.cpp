@@ -663,7 +663,7 @@ Expression& StructuredAssignmentPatternExpression::forDynamicArray(
     bool bad = false;
     SmallMap<int32_t, const Expression*, 8> indexMap;
     SmallVectorSized<IndexSetter, 4> indexSetters;
-    int32_t maxIndex = 0;
+    size_t maxIndex = 0;
 
     for (auto item : syntax.items) {
         if (item->key->kind == SyntaxKind::DefaultPatternKeyExpression) {
@@ -693,18 +693,18 @@ Expression& StructuredAssignmentPatternExpression::forDynamicArray(
             continue;
         }
 
-        maxIndex = std::max(maxIndex, *index);
+        maxIndex = std::max(maxIndex, size_t(*index));
     }
 
     SmallVectorSized<const Expression*, 8> elements;
-    if (indexMap.size() != size_t(maxIndex + 1)) {
+    if (indexMap.size() != maxIndex + 1) {
         if (!bad) {
             context.addDiag(diag::AssignmentPatternMissingElements, sourceRange);
             bad = true;
         }
     }
     else {
-        elements.reserve(size_t(maxIndex + 1));
+        elements.reserve(maxIndex + 1);
         for (int32_t i = 0; i <= maxIndex; i++) {
             auto expr = indexMap[i];
             ASSERT(expr);
