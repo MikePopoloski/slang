@@ -37,7 +37,7 @@ Contributions are welcome, whether they be in the form of bug reports, comments,
 
 slang is licensed under the MIT license:
 
->   Copyright (c) 2015-2021 Michael Popoloski
+>   Copyright (c) 2015-2022 Michael Popoloski
 >
 >   Permission is hereby granted, free of charge, to any person obtaining a copy
 >   of this software and associated documentation files (the "Software"), to deal
