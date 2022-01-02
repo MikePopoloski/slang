@@ -705,8 +705,8 @@ Expression& StructuredAssignmentPatternExpression::forDynamicArray(
     }
     else {
         elements.reserve(maxIndex + 1);
-        for (int32_t i = 0; i <= maxIndex; i++) {
-            auto expr = indexMap[i];
+        for (size_t i = 0; i <= maxIndex; i++) {
+            auto expr = indexMap[int32_t(i)];
             ASSERT(expr);
             elements.append(expr);
         }
