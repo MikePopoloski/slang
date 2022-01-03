@@ -63,6 +63,7 @@ struct NamedArgumentSyntax;
     x(Dist) \
     x(NewArray) \
     x(NewClass) \
+    x(NewCovergroup) \
     x(CopyClass) \
     x(MinTypMax) \
     x(ClockingEvent) \

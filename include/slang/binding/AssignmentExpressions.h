@@ -188,4 +188,31 @@ private:
     const Expression* constructorCall_;
 };
 
+/// Represents a `new` expression that creates a covergroup instance.
+class NewCovergroupExpression : public Expression {
+public:
+    span<const Expression* const> arguments;
+
+    NewCovergroupExpression(const Type& type, span<const Expression* const> arguments,
+                            SourceRange sourceRange) :
+        Expression(ExpressionKind::NewCovergroup, type, sourceRange),
+        arguments(arguments) {}
+
+    ConstantValue evalImpl(EvalContext& context) const;
+    bool verifyConstantImpl(EvalContext& context) const;
+
+    void serializeTo(ASTSerializer& serializer) const;
+
+    static Expression& fromSyntax(Compilation& compilation, const NewClassExpressionSyntax& syntax,
+                                  const BindContext& context, const Type& assignmentTarget);
+
+    static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::NewCovergroup; }
+
+    template<typename TVisitor>
+    void visitExprs(TVisitor&& visitor) const {
+        for (auto arg : arguments)
+            arg->visit(visitor);
+    }
+};
+
 } // namespace slang

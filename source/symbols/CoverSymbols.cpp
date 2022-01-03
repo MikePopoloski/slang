@@ -7,6 +7,9 @@
 #include "slang/symbols/CoverSymbols.h"
 
 #include "slang/compilation/Compilation.h"
+#include "slang/diagnostics/DeclarationsDiags.h"
+#include "slang/symbols/SubroutineSymbols.h"
+#include "slang/symbols/VariableSymbols.h"
 #include "slang/syntax/AllSyntax.h"
 
 namespace slang {
@@ -20,6 +23,21 @@ const Symbol& CovergroupType::fromSyntax(const Scope& scope,
     auto& comp = scope.getCompilation();
     auto result =
         comp.emplace<CovergroupType>(comp, syntax.name.valueText(), syntax.name.location());
+
+    if (syntax.portList) {
+        SmallVectorSized<const FormalArgumentSymbol*, 8> args;
+        SubroutineSymbol::buildArguments(*result, *syntax.portList, VariableLifetime::Automatic,
+                                         args);
+        result->arguments = args.copy(comp);
+
+        for (auto arg : result->arguments) {
+            if (arg->direction == ArgumentDirection::Out ||
+                arg->direction == ArgumentDirection::InOut) {
+                scope.addDiag(diag::CovergroupOutArg, arg->location);
+            }
+        }
+    }
+
     return *result;
 }
 

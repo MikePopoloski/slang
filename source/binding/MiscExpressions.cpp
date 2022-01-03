@@ -225,6 +225,12 @@ bool NamedValueExpression::verifyConstantImpl(EvalContext& context) const {
         return false;
     }
 
+    // Same for covergroups.
+    if (type->isCovergroup()) {
+        context.addDiag(diag::ConstEvalCovergroupType, sourceRange);
+        return false;
+    }
+
     const EvalContext::Frame& frame = context.topFrame();
     const SubroutineSymbol* subroutine = frame.subroutine;
     if (!subroutine)

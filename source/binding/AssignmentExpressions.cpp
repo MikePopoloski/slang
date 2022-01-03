@@ -21,6 +21,7 @@
 #include "slang/diagnostics/TypesDiags.h"
 #include "slang/symbols/ASTSerializer.h"
 #include "slang/symbols/ClassSymbols.h"
+#include "slang/symbols/CoverSymbols.h"
 #include "slang/symbols/InstanceSymbols.h"
 #include "slang/symbols/SubroutineSymbols.h"
 #include "slang/syntax/AllSyntax.h"
@@ -893,6 +894,12 @@ Expression& NewClassExpression::fromSyntax(Compilation& compilation,
     bool isSuperClass = false;
     const ClassType* classType = nullptr;
     if (syntax.scopedNew->kind == SyntaxKind::ConstructorName) {
+        // The new keyword can also be used to create covergroups.
+        if (assignmentTarget && assignmentTarget->isCovergroup()) {
+            return NewCovergroupExpression::fromSyntax(compilation, syntax, context,
+                                                       *assignmentTarget);
+        }
+
         if (!assignmentTarget || !assignmentTarget->isClass()) {
             if (!assignmentTarget || !assignmentTarget->isError())
                 context.addDiag(diag::NewClassTarget, syntax.sourceRange());
@@ -983,4 +990,37 @@ void NewClassExpression::serializeTo(ASTSerializer& serializer) const {
         serializer.write("constructorCall", *constructorCall());
 }
 
+Expression& NewCovergroupExpression::fromSyntax(Compilation& compilation,
+                                                const NewClassExpressionSyntax& syntax,
+                                                const BindContext& context,
+                                                const Type& assignmentTarget) {
+    auto range = syntax.sourceRange();
+    auto& coverType = assignmentTarget.getCanonicalType().as<CovergroupType>();
+
+    SmallVectorSized<const Expression*, 8> args;
+    if (!CallExpression::bindArgs(syntax.argList, coverType.arguments, "new"sv, range, context,
+                                  args)) {
+        return badExpr(compilation, nullptr);
+    }
+
+    return *compilation.emplace<NewCovergroupExpression>(assignmentTarget, args.copy(compilation),
+                                                         range);
+}
+
+ConstantValue NewCovergroupExpression::evalImpl(EvalContext& context) const {
+    verifyConstantImpl(context);
+    return nullptr;
+}
+
+bool NewCovergroupExpression::verifyConstantImpl(EvalContext& context) const {
+    context.addDiag(diag::ConstEvalCovergroupType, sourceRange);
+    return false;
+}
+
+void NewCovergroupExpression::serializeTo(ASTSerializer& serializer) const {
+    serializer.startArray("arguments");
+    for (auto arg : arguments)
+        serializer.serialize(*arg);
+    serializer.endArray();
+}
 } // namespace slang

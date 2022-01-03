@@ -11,11 +11,14 @@
 
 namespace slang {
 
+class FormalArgumentSymbol;
 struct CovergroupDeclarationSyntax;
 
 /// Represents a covergroup definition type.
 class CovergroupType : public Type, public Scope {
 public:
+    span<const FormalArgumentSymbol* const> arguments;
+
     CovergroupType(Compilation& compilation, string_view name, SourceLocation loc);
 
     static const Symbol& fromSyntax(const Scope& scope, const CovergroupDeclarationSyntax& syntax);

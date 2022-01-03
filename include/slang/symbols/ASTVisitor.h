@@ -318,6 +318,7 @@ decltype(auto) Expression::visitExpression(TExpression* expr, TVisitor&& visitor
         CASE(Dist, DistExpression);
         CASE(NewArray, NewArrayExpression);
         CASE(NewClass, NewClassExpression);
+        CASE(NewCovergroup, NewCovergroupExpression);
         CASE(CopyClass, CopyClassExpression);
         CASE(MinTypMax, MinTypMaxExpression);
         CASE(ClockingEvent, ClockingEventExpression);
