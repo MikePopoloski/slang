@@ -84,10 +84,13 @@ static void getHierarchicalPathImpl(const Symbol& symbol, std::string& buffer) {
             getHierarchicalPathImpl(parent, buffer);
 
             if (!current->name.empty()) {
-                if (parent.kind == SymbolKind::Package || parent.kind == SymbolKind::ClassType)
+                if (parent.kind == SymbolKind::Package || parent.kind == SymbolKind::ClassType ||
+                    parent.kind == SymbolKind::CovergroupType) {
                     buffer.append("::");
-                else
+                }
+                else {
                     buffer.append(".");
+                }
             }
         }
     }
@@ -111,10 +114,13 @@ static void getLexicalPathImpl(const Symbol& symbol, std::string& buffer) {
             getLexicalPathImpl(parent, buffer);
 
             if (!symbol.name.empty()) {
-                if (parent.kind == SymbolKind::Package || parent.kind == SymbolKind::ClassType)
+                if (parent.kind == SymbolKind::Package || parent.kind == SymbolKind::ClassType ||
+                    parent.kind == SymbolKind::CovergroupType) {
                     buffer.append("::");
-                else
+                }
+                else {
                     buffer.append(".");
+                }
             }
         }
     }

@@ -12,6 +12,7 @@
 namespace slang {
 
 class ClassType;
+class CovergroupType;
 class FormatBuffer;
 
 struct TypePrintingOptions {
@@ -59,6 +60,7 @@ public:
     void visit(const PropertyType& type, string_view overrideName);
     void visit(const VirtualInterfaceType& type, string_view overrideName);
     void visit(const ClassType& type, string_view overrideName);
+    void visit(const CovergroupType& type, string_view overrideName);
     void visit(const TypeAliasType& type, string_view overrideName);
     void visit(const ErrorType& type, string_view overrideName);
 

@@ -14,6 +14,7 @@
 #include "slang/symbols/BlockSymbols.h"
 #include "slang/symbols/ClassSymbols.h"
 #include "slang/symbols/CompilationUnitSymbols.h"
+#include "slang/symbols/CoverSymbols.h"
 #include "slang/symbols/InstanceSymbols.h"
 #include "slang/symbols/MemberSymbols.h"
 #include "slang/symbols/ParameterSymbols.h"
@@ -465,6 +466,9 @@ void Scope::addMembers(const SyntaxNode& syntax) {
             break;
         case SyntaxKind::LetDeclaration:
             addMember(LetDeclSymbol::fromSyntax(*this, syntax.as<LetDeclarationSyntax>()));
+            break;
+        case SyntaxKind::CovergroupDeclaration:
+            addMember(CovergroupType::fromSyntax(*this, syntax.as<CovergroupDeclarationSyntax>()));
             break;
         case SyntaxKind::PulseStyleDeclaration:
         case SyntaxKind::PathDeclaration:

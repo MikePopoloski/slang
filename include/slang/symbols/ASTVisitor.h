@@ -21,6 +21,7 @@
 #include "slang/symbols/BlockSymbols.h"
 #include "slang/symbols/ClassSymbols.h"
 #include "slang/symbols/CompilationUnitSymbols.h"
+#include "slang/symbols/CoverSymbols.h"
 #include "slang/symbols/InstanceSymbols.h"
 #include "slang/symbols/MemberSymbols.h"
 #include "slang/symbols/ParameterSymbols.h"
@@ -191,6 +192,7 @@ decltype(auto) Symbol::visit(TVisitor&& visitor, Args&&... args) const {
         TYPE(PackedUnionType);
         TYPE(UnpackedUnionType);
         TYPE(ClassType);
+        TYPE(CovergroupType);
         TYPE(VoidType);
         TYPE(NullType);
         TYPE(CHandleType);

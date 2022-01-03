@@ -171,6 +171,9 @@ public:
     /// Indicates whether this is a class type.
     bool isClass() const { return getCanonicalType().kind == SymbolKind::ClassType; }
 
+    /// Indicates whether this is a covergroup type.
+    bool isCovergroup() const { return getCanonicalType().kind == SymbolKind::CovergroupType; }
+
     /// Indicates whether this is a floating point type.
     bool isFloating() const { return getCanonicalType().kind == SymbolKind::FloatingType; }
 

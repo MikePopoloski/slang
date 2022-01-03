@@ -1,6 +1,7 @@
 add_executable(unittests
     AssertionTests.cpp
     ClassTests.cpp
+    CoverTests.cpp
     DiagnosticTests.cpp
     EvalTests.cpp
     ExpressionParsingTests.cpp
@@ -21,8 +22,7 @@ add_executable(unittests
     SystemFuncTests.cpp
     TypeTests.cpp
     UtilTests.cpp
-    VisitorTests.cpp
- "AssertionTests.cpp")
+    VisitorTests.cpp)
 
 target_link_libraries(unittests PRIVATE slangcompiler)
 

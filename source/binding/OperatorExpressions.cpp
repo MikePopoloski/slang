@@ -193,6 +193,9 @@ bool Expression::bindMembershipExpressions(const BindContext& context, TokenKind
         else if ((bt.isEvent() || bt.isNull()) && (type->isEvent() || type->isNull())) {
             // ok
         }
+        else if ((bt.isCovergroup() || bt.isNull()) && (type->isCovergroup() || type->isNull())) {
+            // ok
+        }
         else if (bt.isTypeRefType() && type->isTypeRefType()) {
             // ok
         }
@@ -768,6 +771,11 @@ Expression& BinaryExpression::fromComponents(Expression& lhs, Expression& rhs, B
                     good = true;
                     result->type = &compilation.getBitType();
                 }
+                else if ((lt->isCovergroup() || lt->isNull()) &&
+                         (rt->isCovergroup() || rt->isNull())) {
+                    good = true;
+                    result->type = &compilation.getBitType();
+                }
                 else if ((lt->isVirtualInterface() && lt->isAssignmentCompatible(*rt)) ||
                          (rt->isVirtualInterface() && rt->isAssignmentCompatible(*lt))) {
                     good = true;
@@ -981,7 +989,7 @@ Expression& ConditionalExpression::fromSyntax(Compilation& compilation,
         }
         else if (lt->isClass() || rt->isClass() || lt->isCHandle() || rt->isCHandle() ||
                  lt->isEvent() || rt->isEvent() || lt->isVirtualInterface() ||
-                 rt->isVirtualInterface()) {
+                 rt->isVirtualInterface() || lt->isCovergroup() || rt->isCovergroup()) {
             if (lt->isNull())
                 result->type = rt;
             else if (rt->isNull())

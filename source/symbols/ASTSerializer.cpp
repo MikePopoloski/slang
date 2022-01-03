@@ -186,7 +186,7 @@ void ASTSerializer::visit(const T& elem, bool inMembersArray) {
         writer.endObject();
     }
     else if constexpr (std::is_base_of_v<Type, T> && !std::is_same_v<TypeAliasType, T> &&
-                       !std::is_same_v<ClassType, T>) {
+                       !std::is_same_v<ClassType, T> && !std::is_same_v<CovergroupType, T>) {
         writer.writeValue(elem.toString());
     }
     else {

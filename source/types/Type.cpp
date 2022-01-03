@@ -213,6 +213,7 @@ bool Type::isBooleanConvertible() const {
         case SymbolKind::StringType:
         case SymbolKind::EventType:
         case SymbolKind::ClassType:
+        case SymbolKind::CovergroupType:
         case SymbolKind::VirtualInterfaceType:
             return true;
         default:
@@ -581,8 +582,8 @@ bool Type::isAssignmentCompatible(const Type& rhs) const {
         return (lv.modport == rv.modport) || (lv.modport && !rv.modport);
     }
 
-    // Null can be assigned to chandles and events.
-    if (l->isCHandle() || l->isEvent())
+    // Null can be assigned to handles.
+    if (l->isCHandle() || l->isEvent() || l->isCovergroup())
         return r->isNull();
 
     return false;
@@ -1018,6 +1019,7 @@ bool Type::isKind(SymbolKind kind) {
         case SymbolKind::PackedUnionType:
         case SymbolKind::UnpackedUnionType:
         case SymbolKind::ClassType:
+        case SymbolKind::CovergroupType:
         case SymbolKind::VoidType:
         case SymbolKind::NullType:
         case SymbolKind::CHandleType:

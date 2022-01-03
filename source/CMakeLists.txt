@@ -159,6 +159,7 @@ add_library(slangcompiler
     symbols/BlockSymbols.cpp
     symbols/ClassSymbols.cpp
     symbols/CompilationUnitSymbols.cpp
+    symbols/CoverSymbols.cpp
     symbols/InstanceSymbols.cpp
     symbols/MemberSymbols.cpp
     symbols/ParameterBuilder.cpp

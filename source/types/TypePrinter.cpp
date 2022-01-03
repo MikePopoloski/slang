@@ -20,10 +20,13 @@ static std::string getLexicalPath(const Scope* scope) {
     auto& sym = scope->asSymbol();
     sym.getLexicalPath(str);
 
-    if (sym.kind == SymbolKind::Package || sym.kind == SymbolKind::ClassType)
+    if (sym.kind == SymbolKind::Package || sym.kind == SymbolKind::ClassType ||
+        sym.kind == SymbolKind::CovergroupType) {
         str.append("::");
-    else
+    }
+    else {
         str.push_back('.');
+    }
 
     return str;
 }
@@ -309,6 +312,10 @@ void TypePrinter::visit(const PropertyType& type, string_view) {
 }
 
 void TypePrinter::visit(const ClassType& type, string_view) {
+    buffer->append(type.name);
+}
+
+void TypePrinter::visit(const CovergroupType& type, string_view) {
     buffer->append(type.name);
 }
 

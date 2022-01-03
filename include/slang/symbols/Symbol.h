@@ -45,6 +45,7 @@ enum class RandMode;
     x(PackedUnionType) \
     x(UnpackedUnionType) \
     x(ClassType) \
+    x(CovergroupType) \
     x(VoidType) \
     x(NullType) \
     x(CHandleType) \
