@@ -6,6 +6,7 @@
 //------------------------------------------------------------------------------
 #include "slang/symbols/CoverSymbols.h"
 
+#include "slang/binding/TimingControl.h"
 #include "slang/compilation/Compilation.h"
 #include "slang/diagnostics/DeclarationsDiags.h"
 #include "slang/symbols/SubroutineSymbols.h"
@@ -23,6 +24,8 @@ const Symbol& CovergroupType::fromSyntax(const Scope& scope,
     auto& comp = scope.getCompilation();
     auto result =
         comp.emplace<CovergroupType>(comp, syntax.name.valueText(), syntax.name.location());
+    result->setSyntax(syntax);
+    result->setAttributes(scope, syntax.attributes);
 
     if (syntax.portList) {
         SmallVectorSized<const FormalArgumentSymbol*, 8> args;
@@ -39,6 +42,37 @@ const Symbol& CovergroupType::fromSyntax(const Scope& scope,
     }
 
     return *result;
+}
+
+const TimingControl* CovergroupType::getCoverageEvent() const {
+    if (event)
+        return *event;
+
+    auto scope = getParentScope();
+    auto syntax = getSyntax();
+    if (scope && syntax) {
+        if (auto evSyntax = syntax->as<CovergroupDeclarationSyntax>().event) {
+            LookupLocation ll = LookupLocation::min;
+            if (!arguments.empty())
+                ll = LookupLocation::after(*arguments.back());
+
+            BindContext context(*this, ll);
+
+            if (evSyntax->kind == SyntaxKind::BlockCoverageEvent) {
+                event = &BlockEventListControl::fromSyntax(
+                    *evSyntax->as<BlockCoverageEventSyntax>().expr, context);
+                return *event;
+            }
+            else if (evSyntax->kind == SyntaxKind::EventControlWithExpression) {
+                event =
+                    &TimingControl::bind(evSyntax->as<EventControlWithExpressionSyntax>(), context);
+                return *event;
+            }
+        }
+    }
+
+    event = nullptr;
+    return nullptr;
 }
 
 ConstantValue CovergroupType::getDefaultValueImpl() const {

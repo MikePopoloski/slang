@@ -23,11 +23,15 @@ public:
 
     static const Symbol& fromSyntax(const Scope& scope, const CovergroupDeclarationSyntax& syntax);
 
+    const TimingControl* getCoverageEvent() const;
     ConstantValue getDefaultValueImpl() const;
 
     void serializeTo(ASTSerializer& serializer) const;
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::CovergroupType; }
+
+private:
+    mutable optional<const TimingControl*> event;
 };
 
 } // namespace slang

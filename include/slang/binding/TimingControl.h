@@ -23,7 +23,8 @@ namespace slang {
     x(RepeatedEvent) \
     x(Delay3) \
     x(OneStepDelay) \
-    x(CycleDelay)
+    x(CycleDelay) \
+    x(BlockEventList)
 ENUM(TimingControlKind, CONTROL)
 #undef CONTROL
 // clang-format on
@@ -274,6 +275,28 @@ public:
     void visitExprs(TVisitor&& visitor) const {
         expr.visit(visitor);
     }
+};
+
+struct BlockEventExpressionSyntax;
+
+class BlockEventListControl : public TimingControl {
+public:
+    struct Event {
+        const Symbol* target = nullptr;
+        bool isBegin = false;
+    };
+
+    span<const Event> events;
+
+    explicit BlockEventListControl(span<const Event> events) :
+        TimingControl(TimingControlKind::BlockEventList), events(events) {}
+
+    static TimingControl& fromSyntax(const BlockEventExpressionSyntax& syntax,
+                                     const BindContext& context);
+
+    static bool isKind(TimingControlKind kind) { return kind == TimingControlKind::BlockEventList; }
+
+    void serializeTo(ASTSerializer& serializer) const;
 };
 
 } // namespace slang

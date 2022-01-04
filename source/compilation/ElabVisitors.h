@@ -114,6 +114,13 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
         symbol.getBaseConstructorCall();
     }
 
+    void handle(const CovergroupType& symbol) {
+        if (!handleDefault(symbol))
+            return;
+
+        symbol.getCoverageEvent();
+    }
+
     void handle(const NetSymbol& symbol) {
         if (!handleDefault(symbol))
             return;

@@ -75,3 +75,32 @@ endmodule
     CHECK(diags[1].code == diag::ConstEvalCovergroupType);
     CHECK(diags[2].code == diag::ConstEvalCovergroupType);
 }
+
+TEST_CASE("Covergroup coverage events") {
+    auto tree = SyntaxTree::fromText(R"(
+module n;
+    function bar; endfunction
+endmodule
+
+module m;
+    wire clk;
+
+    covergroup cg1 @(clk); endgroup
+    covergroup cg2 @@(begin n.bar or end baz); endgroup
+    covergroup cg3 (asdf) @asdf; endgroup
+
+    covergroup cg4 @@(begin foo); endgroup
+    covergroup cg5 @@(begin clk or begin foo); endgroup
+
+    task baz; endtask
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::UndeclaredIdentifier);
+    CHECK(diags[1].code == diag::InvalidBlockEventTarget);
+}

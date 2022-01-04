@@ -491,4 +491,55 @@ void CycleDelayControl::serializeTo(ASTSerializer& serializer) const {
     serializer.write("expr", expr);
 }
 
+TimingControl& BlockEventListControl::fromSyntax(const BlockEventExpressionSyntax& syntax,
+                                                 const BindContext& context) {
+    auto& comp = context.getCompilation();
+    SmallVectorSized<Event, 4> events;
+
+    auto addEvent = [&](const PrimaryBlockEventExpressionSyntax& evSyntax) {
+        LookupResult result;
+        Lookup::name(*evSyntax.name, context, LookupFlags::ForceHierarchical, result);
+        result.errorIfSelectors(context);
+        result.reportErrors(context);
+
+        const Symbol* symbol = result.found;
+        if (!symbol)
+            return false;
+
+        if (symbol->kind != SymbolKind::StatementBlock && symbol->kind != SymbolKind::Subroutine) {
+            context.addDiag(diag::InvalidBlockEventTarget, evSyntax.name->sourceRange());
+            return false;
+        }
+
+        events.append({ nullptr, evSyntax.keyword.kind == TokenKind::BeginKeyword });
+        return true;
+    };
+
+    const BlockEventExpressionSyntax* curr = &syntax;
+    while (curr->kind == SyntaxKind::BinaryBlockEventExpression) {
+        auto& bin = curr->as<BinaryBlockEventExpressionSyntax>();
+        if (!addEvent(bin.left->as<PrimaryBlockEventExpressionSyntax>()))
+            return badCtrl(comp, nullptr);
+
+        curr = bin.right;
+    }
+
+    if (!addEvent(curr->as<PrimaryBlockEventExpressionSyntax>()))
+        return badCtrl(comp, nullptr);
+
+    return *comp.emplace<BlockEventListControl>(events.copy(comp));
+}
+
+void BlockEventListControl::serializeTo(ASTSerializer& serializer) const {
+    serializer.startArray("events");
+    for (auto& event : events) {
+        ASSERT(event.target);
+        serializer.startObject();
+        serializer.writeLink("target", *event.target);
+        serializer.write("isBegin", event.isBegin);
+        serializer.endObject();
+    }
+    serializer.endArray();
+}
+
 } // namespace slang
