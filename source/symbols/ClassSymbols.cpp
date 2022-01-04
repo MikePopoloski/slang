@@ -762,9 +762,10 @@ const Type* GenericClassDefSymbol::getSpecializationImpl(
     SmallVectorSized<const ConstantValue*, 8> paramValues;
     SmallVectorSized<const Type*, 8> typeParams;
     for (auto& decl : paramDecls) {
+        bool isOverriden = false;
         bool anyErrors = false;
         auto& param = paramBuilder.createParam(decl, instanceLoc, forceInvalidParams, isForDefault,
-                                               anyErrors);
+                                               isOverriden, anyErrors);
 
         if (anyErrors) {
             if (isForDefault)
@@ -779,7 +780,7 @@ const Type* GenericClassDefSymbol::getSpecializationImpl(
 
         if (sym.kind == SymbolKind::Parameter) {
             auto& ps = sym.as<ParameterSymbol>();
-            if (!forceInvalidParams)
+            if (!forceInvalidParams && isOverriden)
                 ps.getDeclaredType()->resolveAt(context);
 
             if (!param.isLocalParam()) {
@@ -788,7 +789,7 @@ const Type* GenericClassDefSymbol::getSpecializationImpl(
         }
         else {
             auto& tps = sym.as<TypeParameterSymbol>();
-            if (!forceInvalidParams)
+            if (!forceInvalidParams && isOverriden)
                 tps.targetType.forceResolveAt(context);
 
             if (!param.isLocalParam()) {

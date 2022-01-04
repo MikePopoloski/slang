@@ -118,7 +118,7 @@ void ParameterBuilder::setAssignments(const ParameterValueAssignmentSyntax& synt
 const ParameterSymbolBase& ParameterBuilder::createParam(const Definition::ParameterDecl& decl,
                                                          SourceLocation instanceLoc,
                                                          bool forceInvalidValues,
-                                                         bool suppressErrors,
+                                                         bool suppressErrors, bool& isOverriden,
                                                          bool& anyErrors) const {
     auto reportError = [&](auto& param) {
         anyErrors = true;
@@ -131,8 +131,10 @@ const ParameterSymbolBase& ParameterBuilder::createParam(const Definition::Param
 
     auto& comp = scope.getCompilation();
     const ExpressionSyntax* newInitializer = nullptr;
-    if (auto it = assignments.find(decl.name); it != assignments.end())
+    if (auto it = assignments.find(decl.name); it != assignments.end()) {
         newInitializer = it->second;
+        isOverriden = newInitializer != nullptr;
+    }
 
     if (decl.isTypeParam) {
         auto param = comp.emplace<TypeParameterSymbol>(decl.name, decl.location, decl.isLocalParam,

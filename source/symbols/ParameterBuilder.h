@@ -40,7 +40,8 @@ public:
 
     const ParameterSymbolBase& createParam(const Definition::ParameterDecl& decl,
                                            SourceLocation instanceLoc, bool forceInvalidValues,
-                                           bool suppressErrors, bool& anyErrors) const;
+                                           bool suppressErrors, bool& isOverriden,
+                                           bool& anyErrors) const;
 
     static void createDecls(const Scope& scope, const ParameterDeclarationBaseSyntax& syntax,
                             bool isLocal, bool isPort, SmallVector<Decl>& results);

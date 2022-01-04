@@ -2502,3 +2502,18 @@ endclass
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Class parameter defaults regression") {
+    auto tree = SyntaxTree::fromText(R"(
+class C #(type T1=int, T2=T1, parameter T1 foo = 1, parameter int bar = foo);
+endclass
+
+module m;
+    C c = new;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
