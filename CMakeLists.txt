@@ -1,6 +1,6 @@
 # slang - cmake entry point
 cmake_minimum_required(VERSION 3.15)
-project(slang VERSION 0.9.0 LANGUAGES CXX)
+project(slang VERSION 1.0.0 LANGUAGES CXX)
 
 option(SLANG_COVERAGE "Enable code coverage" OFF)
 option(CI_BUILD "Enable longer running tests for CI builds" OFF)
@@ -14,8 +14,8 @@ set(DOXYGENPY_PATH "" CACHE STRING "When building docs, the path to doxygen.py t
 
 set(SLANG_SANITIZERS "" CACHE STRING "List of Clang sanitizers to include in build")
 
-set(SLANG_VERSION_MAJOR 0)
-set(SLANG_VERSION_MINOR 9)
+set(SLANG_VERSION_MAJOR 1)
+set(SLANG_VERSION_MINOR 0)
 
 # Default build type if none is set
 if(NOT CMAKE_BUILD_TYPE)
