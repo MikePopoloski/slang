@@ -106,7 +106,10 @@ enum class RandMode;
     x(ClockVar) \
     x(LocalAssertionVar) \
     x(LetDecl) \
-    x(RandSeqProduction)
+    x(RandSeqProduction) \
+    x(CovergroupBody) \
+    x(Coverpoint) \
+    x(CoverCross)
 // clang-format on
 
 ENUM(SymbolKind, SYMBOLKIND)

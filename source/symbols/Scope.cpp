@@ -470,6 +470,12 @@ void Scope::addMembers(const SyntaxNode& syntax) {
         case SyntaxKind::CovergroupDeclaration:
             addMember(CovergroupType::fromSyntax(*this, syntax.as<CovergroupDeclarationSyntax>()));
             break;
+        case SyntaxKind::Coverpoint:
+            addMember(CoverpointSymbol::fromSyntax(*this, syntax.as<CoverpointSyntax>()));
+            break;
+        case SyntaxKind::CoverCross:
+            addMember(CoverCrossSymbol::fromSyntax(*this, syntax.as<CoverCrossSyntax>()));
+            break;
         case SyntaxKind::PulseStyleDeclaration:
         case SyntaxKind::PathDeclaration:
         case SyntaxKind::IfNonePathDeclaration:
