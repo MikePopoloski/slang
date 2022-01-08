@@ -1806,7 +1806,7 @@ Expression expr
 token closeParen
 
 Coverpoint base=Member
-DataType? type
+DataType type
 NamedLabel? label
 token coverpoint
 Expression expr

@@ -1366,6 +1366,9 @@ CoverpointSyntax* Parser::parseCoverpoint(AttrList attributes, DataTypeSyntax* t
     auto& expr = parseExpression();
     auto iff = parseCoverageIffClause();
 
+    if (!type)
+        type = &factory.implicitType(Token(), nullptr, placeholderToken());
+
     if (peek(TokenKind::OpenBrace)) {
         auto openBrace = consume();
 
@@ -1374,12 +1377,12 @@ CoverpointSyntax* Parser::parseCoverpoint(AttrList attributes, DataTypeSyntax* t
             TokenKind::CloseBrace, closeBrace, SyntaxKind::Coverpoint,
             [this](SyntaxKind, bool&) { return parseCoverpointMember(); });
 
-        return &factory.coverpoint(attributes, type, label, keyword, expr, iff, openBrace, members,
+        return &factory.coverpoint(attributes, *type, label, keyword, expr, iff, openBrace, members,
                                    closeBrace, Token());
     }
 
     // no brace, so this is an empty list, expect a semicolon
-    return &factory.coverpoint(attributes, type, label, keyword, expr, iff, Token(), nullptr,
+    return &factory.coverpoint(attributes, *type, label, keyword, expr, iff, Token(), nullptr,
                                Token(), expect(TokenKind::Semicolon));
 }
 

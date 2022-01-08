@@ -121,6 +121,13 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
         symbol.getCoverageEvent();
     }
 
+    void handle(const CoverpointSymbol& symbol) {
+        if (!handleDefault(symbol))
+            return;
+
+        symbol.getIffExpr();
+    }
+
     void handle(const NetSymbol& symbol) {
         if (!handleDefault(symbol))
             return;

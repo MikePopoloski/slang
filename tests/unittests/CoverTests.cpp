@@ -108,17 +108,20 @@ endmodule
 TEST_CASE("Cover points") {
     auto tree = SyntaxTree::fromText(R"(
 module m;
+    int arr[3];
     covergroup cg1 (ref int x , ref int y, input int c);
         coverpoint x; // creates coverpoint "x" covering the formal "x"
         x: coverpoint y; // INVALID: coverpoint label "x" already exists
         b: coverpoint y; // creates coverpoint "b" covering the formal "y"
 
-        cx: coverpoint x; // creates coverpoint "cx" covering the formal "x"
+        cx: coverpoint x iff (arr); // creates coverpoint "cx" covering the formal "x"
 
         option.weight = c; // set weight of "cg" to value of formal "c"
 
         bit [7:0] d: coverpoint y[31:24]; // creates coverpoint "d" covering the
                                           // high order 8 bits of the formal "y"
+
+        real z: coverpoint y;
 
         e: coverpoint x {
             option.weight = 2; // set the weight of coverpoint "e"
@@ -139,8 +142,9 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 3);
+    REQUIRE(diags.size() == 4);
     CHECK(diags[0].code == diag::Redefinition);
-    CHECK(diags[1].code == diag::Redefinition);
-    CHECK(diags[2].code == diag::ExpectedToken);
+    CHECK(diags[1].code == diag::NotBooleanConvertible);
+    CHECK(diags[2].code == diag::NonIntegralCoverageExpr);
+    CHECK(diags[3].code == diag::ExpectedToken);
 }

@@ -7,6 +7,7 @@
 #pragma once
 
 #include "slang/symbols/Scope.h"
+#include "slang/types/DeclaredType.h"
 #include "slang/types/Type.h"
 
 namespace slang {
@@ -53,14 +54,28 @@ struct CoverpointSyntax;
 
 class CoverpointSymbol : public Symbol, public Scope {
 public:
-    CoverpointSymbol(Compilation& compilation, string_view name, SourceLocation loc) :
-        Symbol(SymbolKind::Coverpoint, name, loc), Scope(compilation, this) {}
+    DeclaredType declaredType;
+
+    CoverpointSymbol(Compilation& compilation, string_view name, SourceLocation loc);
 
     static CoverpointSymbol& fromSyntax(const Scope& scope, const CoverpointSyntax& syntax);
+
+    const Type& getType() const { return declaredType.getType(); }
+
+    const Expression& getCoverageExpr() const {
+        auto init = declaredType.getInitializer();
+        ASSERT(init);
+        return *init;
+    }
+
+    const Expression* getIffExpr() const;
 
     void serializeTo(ASTSerializer& serializer) const;
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::Coverpoint; }
+
+private:
+    mutable optional<const Expression*> iffExpr;
 };
 
 struct CoverCrossSyntax;

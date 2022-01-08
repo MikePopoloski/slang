@@ -86,10 +86,13 @@ enum class DeclaredTypeFlags {
     /// The type must be one allowed in a sequence expression.
     RequireSequenceType = 1 << 15,
 
+    /// The type must be valid in a coverage expression.
+    CoverageType = 1 << 16,
+
     /// A mask of flags that indicate additional type rules are needed to
     /// be checked after the type itself is resolved.
     NeedsTypeCheck = Port | NetType | UserDefinedNetType | FormalArgMergeVar | Rand |
-                     DPIReturnType | DPIArg | RequireSequenceType
+                     DPIReturnType | DPIArg | RequireSequenceType | CoverageType
 };
 BITMASK(DeclaredTypeFlags, RequireSequenceType)
 
