@@ -558,7 +558,15 @@ inline void write_digit2_separated(char* buf, unsigned a, unsigned b,
   auto usep = static_cast<unsigned long long>(sep);
   // Add ASCII '0' to each digit byte and insert separators.
   digits |= 0x3030003030003030 | (usep << 16) | (usep << 40);
-  memcpy(buf, &digits, 8);
+
+  constexpr const size_t len = 8;
+  if (const_check(is_big_endian())) {
+    char tmp[len];
+    memcpy(tmp, &digits, len);
+    std::reverse_copy(tmp, tmp + len, buf);
+  } else {
+    memcpy(buf, &digits, len);
+  }
 }
 
 template <typename Period> FMT_CONSTEXPR inline const char* get_units() {
@@ -1082,7 +1090,7 @@ template <typename OutputIt, typename Char> class tm_writer {
   }
   template <typename T, FMT_ENABLE_IF(!has_member_data_tm_gmtoff<T>::value)>
   void format_utc_offset_impl(const T& tm) {
-#if defined(_WIN32)
+#if defined(_WIN32) && defined(_UCRT)
 #  if FMT_USE_TZSET
     tzset_once();
 #  endif
