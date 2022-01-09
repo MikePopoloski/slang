@@ -953,6 +953,11 @@ Diagnostic& Compilation::addDiag(Diagnostic diag) {
     return it->second.back();
 }
 
+const ImplicitTypeSyntax& Compilation::createEmptyTypeSyntax(SourceLocation loc) {
+    return *emplace<ImplicitTypeSyntax>(Token(), nullptr,
+                                        Token(*this, TokenKind::Placeholder, {}, {}, loc));
+}
+
 void Compilation::forceElaborate(const Symbol& symbol) {
     DiagnosticVisitor visitor(*this, numErrors,
                               options.errorLimit == 0 ? UINT32_MAX : options.errorLimit);

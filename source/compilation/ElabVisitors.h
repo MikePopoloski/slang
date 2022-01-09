@@ -128,6 +128,13 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
         symbol.getIffExpr();
     }
 
+    void handle(const CoverCrossSymbol& symbol) {
+        if (!handleDefault(symbol))
+            return;
+
+        symbol.getIffExpr();
+    }
+
     void handle(const NetSymbol& symbol) {
         if (!handleDefault(symbol))
             return;

@@ -143,6 +143,17 @@ CoverpointSymbol& CoverpointSymbol::fromSyntax(const Scope& scope, const Coverpo
     return *result;
 }
 
+CoverpointSymbol& CoverpointSymbol::fromImplicit(const Scope& scope,
+                                                 const IdentifierNameSyntax& syntax) {
+    auto loc = syntax.identifier.location();
+    auto& comp = scope.getCompilation();
+    auto result = comp.emplace<CoverpointSymbol>(comp, syntax.identifier.valueText(), loc);
+
+    result->declaredType.setTypeSyntax(comp.createEmptyTypeSyntax(loc));
+    result->declaredType.setInitializerSyntax(syntax, loc);
+    return *result;
+}
+
 const Expression* CoverpointSymbol::getIffExpr() const {
     if (!iffExpr) {
         auto scope = getParentScope();
@@ -169,10 +180,64 @@ void CoverpointSymbol::serializeTo(ASTSerializer&) const {
     // TODO:
 }
 
-CoverCrossSymbol& CoverCrossSymbol::fromSyntax(const Scope& scope, const CoverCrossSyntax&) {
+void CoverCrossSymbol::fromSyntax(const Scope& scope, const CoverCrossSyntax& syntax,
+                                  SmallVector<const Symbol*>& results) {
+    string_view name;
+    SourceLocation loc;
+    if (syntax.label) {
+        name = syntax.label->name.valueText();
+        loc = syntax.label->name.location();
+    }
+    else {
+        loc = syntax.cross.location();
+    }
+
+    SmallVectorSized<const CoverpointSymbol*, 4> targets;
+    for (auto item : syntax.items) {
+        auto id = item->identifier;
+        auto symbol = Lookup::unqualifiedAt(scope, id.valueText(), LookupLocation::max, id.range());
+        if (symbol) {
+            if (symbol->kind == SymbolKind::Coverpoint) {
+                targets.append(&symbol->as<CoverpointSymbol>());
+            }
+            else {
+                // If we didn't find a coverpoint, create one implicitly
+                // that will be initialized with this expression.
+                auto& newPoint = CoverpointSymbol::fromImplicit(scope, *item);
+                targets.append(&newPoint);
+                results.append(&newPoint);
+            }
+        }
+    }
+
     auto& comp = scope.getCompilation();
-    auto result = comp.emplace<CoverCrossSymbol>(comp, "", SourceLocation()); // TODO: name and loc
-    return *result;
+    auto result = comp.emplace<CoverCrossSymbol>(comp, name, loc, targets.copy(comp));
+    result->setSyntax(syntax);
+    result->setAttributes(scope, syntax.attributes);
+
+    results.append(result);
+}
+
+const Expression* CoverCrossSymbol::getIffExpr() const {
+    if (!iffExpr) {
+        auto scope = getParentScope();
+        auto syntax = getSyntax();
+        ASSERT(scope);
+
+        if (!syntax)
+            iffExpr = nullptr;
+        else {
+            auto iffSyntax = syntax->as<CoverCrossSyntax>().iff;
+            if (!iffSyntax)
+                iffExpr = nullptr;
+            else {
+                BindContext context(*scope, LookupLocation::min);
+                iffExpr = &Expression::bind(*iffSyntax->expr, context);
+                context.requireBooleanConvertible(*iffExpr.value());
+            }
+        }
+    }
+    return *iffExpr;
 }
 
 void CoverCrossSymbol::serializeTo(ASTSerializer&) const {

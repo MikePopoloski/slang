@@ -174,14 +174,14 @@ public:
                                                     DeclaredTypeFlags::InferImplicit);
         port->direction = getDirection(syntax.direction);
         port->setSyntax(syntax);
-        port->setDeclaredType(UnsetType);
+        port->setDeclaredType(compilation.createEmptyTypeSyntax(syntax.name.location()));
         port->setAttributes(scope, syntax.attributes);
 
         if (syntax.expr)
             port->setInitializerSyntax(*syntax.expr, syntax.expr->getFirstToken().location());
 
         lastDirection = port->direction;
-        lastType = &UnsetType;
+        lastType = nullptr;
         lastNetType = nullptr;
         lastInterface = nullptr;
 
@@ -199,6 +199,9 @@ private:
             // TODO: inherit modport
             return add(decl, lastInterface, ""sv, attrs);
         }
+
+        if (!lastType)
+            lastType = &compilation.createEmptyTypeSyntax(decl.getFirstToken().location());
 
         return add(decl, lastDirection, *lastType, lastNetType, attrs);
     }
@@ -262,7 +265,7 @@ private:
         port->setAttributes(scope, attrs);
 
         lastDirection = ArgumentDirection::InOut;
-        lastType = &UnsetType;
+        lastType = nullptr;
         lastNetType = nullptr;
         lastInterface = iface;
 
@@ -274,14 +277,10 @@ private:
     SmallVector<std::pair<Symbol*, const Symbol*>>& implicitMembers;
 
     ArgumentDirection lastDirection = ArgumentDirection::InOut;
-    const DataTypeSyntax* lastType = &UnsetType;
+    const DataTypeSyntax* lastType = nullptr;
     const NetType* lastNetType = nullptr;
     const Definition* lastInterface = nullptr;
-
-    static const ImplicitTypeSyntax UnsetType;
 };
-
-const ImplicitTypeSyntax AnsiPortListBuilder::UnsetType{ Token(), nullptr, Token() };
 
 class NonAnsiPortListBuilder {
 public:

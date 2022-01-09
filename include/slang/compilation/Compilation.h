@@ -39,6 +39,7 @@ struct DataTypeSyntax;
 struct DefaultClockingReferenceSyntax;
 struct DPIExportSyntax;
 struct FunctionDeclarationSyntax;
+struct ImplicitTypeSyntax;
 struct ModuleDeclarationSyntax;
 struct ScopedNameSyntax;
 struct UdpDeclarationSyntax;
@@ -383,6 +384,8 @@ public:
     GenericClassDefSymbol* allocGenericClass(Args&&... args) {
         return genericClassAllocator.emplace(std::forward<Args>(args)...);
     }
+
+    const ImplicitTypeSyntax& createEmptyTypeSyntax(SourceLocation loc);
 
     /// Forces the given symbol and all children underneath it in the hierarchy to
     /// be elaborated and any relevant diagnostics to be issued.

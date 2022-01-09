@@ -51,6 +51,7 @@ private:
 };
 
 struct CoverpointSyntax;
+struct IdentifierNameSyntax;
 
 class CoverpointSymbol : public Symbol, public Scope {
 public:
@@ -59,6 +60,7 @@ public:
     CoverpointSymbol(Compilation& compilation, string_view name, SourceLocation loc);
 
     static CoverpointSymbol& fromSyntax(const Scope& scope, const CoverpointSyntax& syntax);
+    static CoverpointSymbol& fromImplicit(const Scope& scope, const IdentifierNameSyntax& syntax);
 
     const Type& getType() const { return declaredType.getType(); }
 
@@ -82,14 +84,24 @@ struct CoverCrossSyntax;
 
 class CoverCrossSymbol : public Symbol, public Scope {
 public:
-    CoverCrossSymbol(Compilation& compilation, string_view name, SourceLocation loc) :
-        Symbol(SymbolKind::CoverCross, name, loc), Scope(compilation, this) {}
+    span<const CoverpointSymbol* const> targets;
 
-    static CoverCrossSymbol& fromSyntax(const Scope& scope, const CoverCrossSyntax& syntax);
+    CoverCrossSymbol(Compilation& compilation, string_view name, SourceLocation loc,
+                     span<const CoverpointSymbol* const> targets) :
+        Symbol(SymbolKind::CoverCross, name, loc),
+        Scope(compilation, this), targets(targets) {}
+
+    static void fromSyntax(const Scope& scope, const CoverCrossSyntax& syntax,
+                           SmallVector<const Symbol*>& results);
+
+    const Expression* getIffExpr() const;
 
     void serializeTo(ASTSerializer& serializer) const;
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::CoverCross; }
+
+private:
+    mutable optional<const Expression*> iffExpr;
 };
 
 } // namespace slang

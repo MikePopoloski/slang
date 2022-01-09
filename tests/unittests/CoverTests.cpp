@@ -142,9 +142,10 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 4);
+    REQUIRE(diags.size() == 5);
     CHECK(diags[0].code == diag::Redefinition);
     CHECK(diags[1].code == diag::NotBooleanConvertible);
     CHECK(diags[2].code == diag::NonIntegralCoverageExpr);
     CHECK(diags[3].code == diag::ExpectedToken);
+    CHECK(diags[4].code == diag::RedefinitionDifferentSymbolKind);
 }
