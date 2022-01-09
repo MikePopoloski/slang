@@ -165,6 +165,7 @@ module m;
         type_option.foo = 1;
         option.weight = 1;
         option.comment = 3.14;
+        type_option.weight = c;
     endgroup
 
     int a_var, b_var;
@@ -191,10 +192,11 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 5);
+    REQUIRE(diags.size() == 6);
     CHECK(diags[0].code == diag::UnknownMember);
     CHECK(diags[1].code == diag::CoverageOptionDup);
     CHECK(diags[2].code == diag::BadAssignment);
-    CHECK(diags[3].code == diag::UnknownCovergroupMember);
-    CHECK(diags[4].code == diag::NonStaticClassProperty);
+    CHECK(diags[3].code == diag::AutoFromStaticInit);
+    CHECK(diags[4].code == diag::UnknownCovergroupMember);
+    CHECK(diags[5].code == diag::NonStaticClassProperty);
 }

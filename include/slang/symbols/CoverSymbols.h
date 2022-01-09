@@ -20,6 +20,7 @@ class CoverageOptionSetter {
 public:
     CoverageOptionSetter(const Scope& scope, const CoverageOptionSyntax& syntax);
 
+    bool isTypeOption() const;
     string_view getName() const;
     const Expression& getExpression() const;
 

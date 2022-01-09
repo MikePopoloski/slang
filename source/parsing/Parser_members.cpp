@@ -1296,6 +1296,12 @@ static bool isValidOption(const ExpressionSyntax& expr) {
     if (assign.left->kind != SyntaxKind::ScopedName)
         return false;
 
+    auto& scoped = assign.left->as<ScopedNameSyntax>();
+    if (scoped.left->kind != SyntaxKind::IdentifierName ||
+        scoped.right->kind != SyntaxKind::IdentifierName) {
+        return false;
+    }
+
     return true;
 }
 

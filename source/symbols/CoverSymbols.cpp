@@ -28,7 +28,8 @@ public:
         options.emplace(scope, syntax);
 
         if (auto name = options.back().getName(); !name.empty()) {
-            auto [it, inserted] = names.emplace(name, syntax.expr);
+            auto names = options.back().isTypeOption() ? &typeNames : &instNames;
+            auto [it, inserted] = names->emplace(name, syntax.expr);
             if (!inserted) {
                 auto& diag = scope.addDiag(diag::CoverageOptionDup, syntax.expr->sourceRange());
                 diag << name;
@@ -42,7 +43,8 @@ public:
 private:
     const Scope& scope;
     SmallVectorSized<CoverageOptionSetter, 4> options;
-    SmallMap<string_view, const SyntaxNode*, 4> names;
+    SmallMap<string_view, const SyntaxNode*, 4> instNames;
+    SmallMap<string_view, const SyntaxNode*, 4> typeNames;
 };
 
 } // namespace
@@ -53,12 +55,27 @@ CoverageOptionSetter::CoverageOptionSetter(const Scope& scope, const CoverageOpt
     scope(scope), syntax(syntax) {
 }
 
+bool CoverageOptionSetter::isTypeOption() const {
+    if (syntax.expr->kind == SyntaxKind::AssignmentExpression) {
+        auto& assign = syntax.expr->as<BinaryExpressionSyntax>();
+        if (assign.left->kind == SyntaxKind::ScopedName) {
+            auto& scoped = assign.left->as<ScopedNameSyntax>();
+            if (scoped.left->kind == SyntaxKind::IdentifierName) {
+                return scoped.left->as<IdentifierNameSyntax>().identifier.valueText() ==
+                       "type_option"sv;
+            }
+        }
+    }
+    return false;
+}
+
 string_view CoverageOptionSetter::getName() const {
     if (syntax.expr->kind == SyntaxKind::AssignmentExpression) {
         auto& assign = syntax.expr->as<BinaryExpressionSyntax>();
         if (assign.left->kind == SyntaxKind::ScopedName) {
             auto& scoped = assign.left->as<ScopedNameSyntax>();
-            if (scoped.right->kind == SyntaxKind::IdentifierName) {
+            if (scoped.left->kind == SyntaxKind::IdentifierName &&
+                scoped.right->kind == SyntaxKind::IdentifierName) {
                 return scoped.right->as<IdentifierNameSyntax>().identifier.valueText();
             }
         }
@@ -68,8 +85,14 @@ string_view CoverageOptionSetter::getName() const {
 
 const Expression& CoverageOptionSetter::getExpression() const {
     if (!expr) {
+        bitmask<BindFlags> flags = BindFlags::AssignmentAllowed;
+        if (isTypeOption()) {
+            flags |= BindFlags::StaticInitializer;
+            flags |= BindFlags::Constant;
+        }
+
         BindContext context(scope, LookupLocation(&scope, 3));
-        expr = &Expression::bind(*syntax.expr, context, BindFlags::AssignmentAllowed);
+        expr = &Expression::bind(*syntax.expr, context, flags);
         context.setAttributes(*expr, syntax.attributes);
     }
     return *expr;
