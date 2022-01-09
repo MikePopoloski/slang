@@ -655,6 +655,7 @@ error HierarchicalNotAllowedInConstant "hierarchical names are not allowed in co
 error UnknownMember "no member named '{}' in {}"
 error UnknownPackageMember "no member named '{}' in package '{}'"
 error UnknownClassMember "no member named '{}' in class '{}'"
+error UnknownCovergroupMember "no member named '{}' in covergroup '{}'"
 error UnknownUnitMember "no member named '{}' in compilation unit"
 error RecursiveDefinition "'{}' recursively depends on its own definition"
 error UnknownSystemMethod "unknown built-in method '{}' on type {}"

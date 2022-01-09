@@ -166,6 +166,24 @@ module m;
         option.weight = 1;
         option.comment = 3.14;
     endgroup
+
+    int a_var, b_var;
+    wire clk;
+    covergroup gc (int maxA, int maxB) @(posedge clk);
+        a : coverpoint a_var;
+        b : coverpoint b_var;
+    endgroup
+
+    gc g1 = new (10,20);
+    initial begin
+        g1.option.comment = "Here is a comment set for the instance g1";
+        g1.type_option.comment = "New comment";
+        gc::type_option.comment = "Here is a comment for covergroup g1";
+        gc::foo = 1;
+        gc::option.comment = "Invalid";
+
+        //g1.a.option.weight = 3; // Set weight for coverpoint "a" of instance g1
+    end
 endmodule
 )");
 
@@ -173,8 +191,10 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 3);
+    REQUIRE(diags.size() == 5);
     CHECK(diags[0].code == diag::UnknownMember);
     CHECK(diags[1].code == diag::CoverageOptionDup);
     CHECK(diags[2].code == diag::BadAssignment);
+    CHECK(diags[3].code == diag::UnknownCovergroupMember);
+    CHECK(diags[4].code == diag::NonStaticClassProperty);
 }

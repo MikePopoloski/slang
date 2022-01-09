@@ -17,6 +17,7 @@
 #include "slang/symbols/BlockSymbols.h"
 #include "slang/symbols/ClassSymbols.h"
 #include "slang/symbols/CompilationUnitSymbols.h"
+#include "slang/symbols/CoverSymbols.h"
 #include "slang/symbols/InstanceSymbols.h"
 #include "slang/symbols/MemberSymbols.h"
 #include "slang/symbols/ParameterSymbols.h"
@@ -602,6 +603,10 @@ bool resolveColonNames(SmallVectorSized<NamePlusLoc, 8>& nameParts, int colonPar
             return false;
     }
 
+    auto isCovergroup = [&](const Symbol& symbol) {
+        return symbol.isType() && symbol.as<Type>().isCovergroup();
+    };
+
     // If the prefix name resolved normally to a class object, use that. Otherwise we need
     // to look for a package with the corresponding name.
     bool lookForPackage = symbol == nullptr;
@@ -610,7 +615,7 @@ bool resolveColonNames(SmallVectorSized<NamePlusLoc, 8>& nameParts, int colonPar
         if (!isClass.has_value())
             return false;
 
-        lookForPackage = !isClass.value();
+        lookForPackage = !isClass.value() && !isCovergroup(*symbol);
     }
 
     if (lookForPackage) {
@@ -626,7 +631,7 @@ bool resolveColonNames(SmallVectorSized<NamePlusLoc, 8>& nameParts, int colonPar
 
     // The initial symbol found cannot be resolved via a forward typedef (i.e. "incomplete")
     // unless this is within a typedef declaration.
-    if (result.fromForwardTypedef && (flags & LookupFlags::TypedefTarget) == 0)
+    if (result.fromForwardTypedef && !flags.has(LookupFlags::TypedefTarget))
         result.addDiag(*context.scope, diag::ScopeIncompleteTypedef, name.range);
 
     auto validateSymbol = [&] {
@@ -688,7 +693,7 @@ bool resolveColonNames(SmallVectorSized<NamePlusLoc, 8>& nameParts, int colonPar
             if (!isClass.has_value())
                 return false;
 
-            if (!isClass.value()) {
+            if (!isClass.value() && !isCovergroup(*symbol)) {
                 auto& diag = result.addDiag(*context.scope, diag::NotAClass, part.dotLocation);
                 diag << name.range;
                 diag << symbol->name;
@@ -710,6 +715,8 @@ bool resolveColonNames(SmallVectorSized<NamePlusLoc, 8>& nameParts, int colonPar
         const Symbol* savedSymbol = symbol;
         if (symbol->kind == SymbolKind::Package)
             symbol = symbol->as<PackageSymbol>().findForImport(name.text);
+        else if (symbol->kind == SymbolKind::CovergroupType)
+            symbol = symbol->as<CovergroupType>().body.find(name.text);
         else
             symbol = symbol->as<Scope>().find(name.text);
 
@@ -717,6 +724,8 @@ bool resolveColonNames(SmallVectorSized<NamePlusLoc, 8>& nameParts, int colonPar
             DiagCode code = diag::UnknownClassMember;
             if (savedSymbol->kind == SymbolKind::Package)
                 code = diag::UnknownPackageMember;
+            else if (savedSymbol->kind == SymbolKind::CovergroupType)
+                code = diag::UnknownCovergroupMember;
 
             auto& diag = result.addDiag(*context.scope, code, part.dotLocation);
             diag << name.text;

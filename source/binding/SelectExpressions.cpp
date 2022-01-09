@@ -15,6 +15,7 @@
 #include "slang/diagnostics/LookupDiags.h"
 #include "slang/symbols/ASTSerializer.h"
 #include "slang/symbols/ClassSymbols.h"
+#include "slang/symbols/CoverSymbols.h"
 #include "slang/symbols/InstanceSymbols.h"
 #include "slang/symbols/MemberSymbols.h"
 #include "slang/symbols/ParameterSymbols.h"
@@ -830,6 +831,9 @@ Expression& MemberAccessExpression::fromSelector(
             scope = &ct;
             break;
         }
+        case SymbolKind::CovergroupType:
+            scope = &type.as<CovergroupType>().body;
+            break;
         case SymbolKind::EnumType:
         case SymbolKind::StringType:
         case SymbolKind::FixedSizeUnpackedArrayType:
