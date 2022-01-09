@@ -119,6 +119,8 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
             return;
 
         symbol.getCoverageEvent();
+        for (auto& option : symbol.body.options)
+            option.getExpression();
     }
 
     void handle(const CoverpointSymbol& symbol) {

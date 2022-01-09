@@ -109,7 +109,7 @@ TEST_CASE("Cover points") {
     auto tree = SyntaxTree::fromText(R"(
 module m;
     int arr[3];
-    covergroup cg1 (ref int x , ref int y, input int c);
+    covergroup cg1 (ref int x, ref int y, input int c);
         coverpoint x; // creates coverpoint "x" covering the formal "x"
         x: coverpoint y; // INVALID: coverpoint label "x" already exists
         b: coverpoint y; // creates coverpoint "b" covering the formal "y"
@@ -155,4 +155,26 @@ endmodule
     CHECK(diags[5].code == diag::NotBooleanConvertible);
     CHECK(diags[6].code == diag::NonIntegralCoverageExpr);
     CHECK(diags[7].code == diag::CoverCrossItems);
+}
+
+TEST_CASE("Coverage options") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    covergroup cg1 (ref int x, ref int y, input int c);
+        option.weight = c;
+        type_option.foo = 1;
+        option.weight = 1;
+        option.comment = 3.14;
+    endgroup
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 3);
+    CHECK(diags[0].code == diag::UnknownMember);
+    CHECK(diags[1].code == diag::CoverageOptionDup);
+    CHECK(diags[2].code == diag::BadAssignment);
 }

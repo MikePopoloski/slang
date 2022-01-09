@@ -814,6 +814,28 @@ const Symbol* findSuperHandle(const Scope& scope, SourceRange range, LookupResul
     return base;
 }
 
+bool withinCovergroup(const Symbol& symbol, const Scope& initialScope) {
+    const Scope* nextScope = &initialScope;
+    do {
+        switch (nextScope->asSymbol().kind) {
+            case SymbolKind::CovergroupType:
+            case SymbolKind::CovergroupBody:
+            case SymbolKind::Coverpoint:
+            case SymbolKind::CoverCross:
+                if (symbol.getParentScope() == nextScope)
+                    return true;
+
+                nextScope = nextScope->asSymbol().getParentScope();
+                break;
+            default:
+                nextScope = nullptr;
+                break;
+        }
+    } while (nextScope);
+
+    return false;
+}
+
 } // namespace
 
 void Lookup::name(const NameSyntax& syntax, const BindContext& context, bitmask<LookupFlags> flags,
@@ -1224,7 +1246,8 @@ bool Lookup::ensureAccessible(const Symbol& symbol, const BindContext& context,
         }
         return false;
     }
-    else if (!parent || inStatic || (context.flags & BindFlags::StaticInitializer) != 0) {
+    else if (inStatic || context.flags.has(BindFlags::StaticInitializer) ||
+             (!parent && !withinCovergroup(symbol, *context.scope))) {
         if (sourceRange)
             context.addDiag(diag::NonStaticClassProperty, *sourceRange) << symbol.name;
         return false;

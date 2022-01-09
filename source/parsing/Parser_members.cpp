@@ -1288,17 +1288,28 @@ DefParamSyntax& Parser::parseDefParam(AttrList attributes) {
     return result;
 }
 
+static bool isValidOption(const ExpressionSyntax& expr) {
+    if (expr.kind != SyntaxKind::AssignmentExpression)
+        return false;
+
+    auto& assign = expr.as<BinaryExpressionSyntax>();
+    if (assign.left->kind != SyntaxKind::ScopedName)
+        return false;
+
+    return true;
+}
+
 CoverageOptionSyntax* Parser::parseCoverageOption(AttrList attributes) {
     auto token = peek();
     if (token.kind == TokenKind::Identifier) {
         if (token.valueText() == "option" || token.valueText() == "type_option") {
-            consume();
-            auto dot = expect(TokenKind::Dot);
-            auto name = expect(TokenKind::Identifier);
-            auto equals = expect(TokenKind::Equals);
             auto& expr = parseExpression();
-            return &factory.coverageOption(attributes, token, dot, name, equals, expr,
-                                           expect(TokenKind::Semicolon));
+            if (!isValidOption(expr)) {
+                auto range = expr.sourceRange();
+                addDiag(diag::InvalidCoverageOption, range.start()) << range;
+            }
+
+            return &factory.coverageOption(attributes, expr, expect(TokenKind::Semicolon));
         }
     }
     return nullptr;

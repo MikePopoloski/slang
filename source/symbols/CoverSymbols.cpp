@@ -16,7 +16,64 @@
 #include "slang/syntax/AllSyntax.h"
 #include "slang/types/AllTypes.h"
 
+namespace {
+
+using namespace slang;
+
+class OptionBuilder {
+public:
+    explicit OptionBuilder(const Scope& scope) : scope(scope) {}
+
+    void add(const CoverageOptionSyntax& syntax) {
+        options.emplace(scope, syntax);
+
+        if (auto name = options.back().getName(); !name.empty()) {
+            auto [it, inserted] = names.emplace(name, syntax.expr);
+            if (!inserted) {
+                auto& diag = scope.addDiag(diag::CoverageOptionDup, syntax.expr->sourceRange());
+                diag << name;
+                diag.addNote(diag::NotePreviousUsage, it->second->getFirstToken().location());
+            }
+        }
+    }
+
+    span<const CoverageOptionSetter> get() const { return options.copy(scope.getCompilation()); }
+
+private:
+    const Scope& scope;
+    SmallVectorSized<CoverageOptionSetter, 4> options;
+    SmallMap<string_view, const SyntaxNode*, 4> names;
+};
+
+} // namespace
+
 namespace slang {
+
+CoverageOptionSetter::CoverageOptionSetter(const Scope& scope, const CoverageOptionSyntax& syntax) :
+    scope(scope), syntax(syntax) {
+}
+
+string_view CoverageOptionSetter::getName() const {
+    if (syntax.expr->kind == SyntaxKind::AssignmentExpression) {
+        auto& assign = syntax.expr->as<BinaryExpressionSyntax>();
+        if (assign.left->kind == SyntaxKind::ScopedName) {
+            auto& scoped = assign.left->as<ScopedNameSyntax>();
+            if (scoped.right->kind == SyntaxKind::IdentifierName) {
+                return scoped.right->as<IdentifierNameSyntax>().identifier.valueText();
+            }
+        }
+    }
+    return ""sv;
+}
+
+const Expression& CoverageOptionSetter::getExpression() const {
+    if (!expr) {
+        BindContext context(scope, LookupLocation(&scope, 3));
+        expr = &Expression::bind(*syntax.expr, context, BindFlags::AssignmentAllowed);
+        context.setAttributes(*expr, syntax.attributes);
+    }
+    return *expr;
+}
 
 static void addProperty(Scope& scope, string_view name, VariableLifetime lifetime,
                         const StructBuilder& structBuilder) {
@@ -87,15 +144,16 @@ const Symbol& CovergroupType::fromSyntax(const Scope& scope,
     }
 
     result->addMember(*body);
+
+    OptionBuilder options(*body);
     for (auto member : syntax.members) {
-        if (member->kind == SyntaxKind::CoverageOption) {
-            // TODO: handle options
-        }
-        else {
+        if (member->kind == SyntaxKind::CoverageOption)
+            options.add(member->as<CoverageOptionSyntax>());
+        else
             body->addMembers(*member);
-        }
     }
 
+    body->options = options.get();
     return *result;
 }
 

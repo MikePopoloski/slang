@@ -13,13 +13,29 @@
 namespace slang {
 
 class FormalArgumentSymbol;
+struct CoverageOptionSyntax;
 struct CovergroupDeclarationSyntax;
+
+class CoverageOptionSetter {
+public:
+    CoverageOptionSetter(const Scope& scope, const CoverageOptionSyntax& syntax);
+
+    string_view getName() const;
+    const Expression& getExpression() const;
+
+private:
+    const Scope& scope;
+    const CoverageOptionSyntax& syntax;
+    mutable const Expression* expr = nullptr;
+};
 
 /// Represents the body of a covergroup type, separated out because the
 /// arguments of a covergroup need to live in their own scope so that
 /// they can be shadowed by body members.
 class CovergroupBodySymbol : public Symbol, public Scope {
 public:
+    span<const CoverageOptionSetter> options;
+
     CovergroupBodySymbol(Compilation& compilation, SourceLocation loc);
 
     void serializeTo(ASTSerializer&) const {}
