@@ -134,6 +134,10 @@ module m;
             option.weight = c; // set weight of cross to value of formal "c"
         }
         b: cross y, x; // INVALID: coverpoint label "b" already exists
+
+        cross x, y iff (arr);
+        cross x, arr;
+        cross x;
     endgroup
 endmodule
 )");
@@ -142,10 +146,13 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 5);
+    REQUIRE(diags.size() == 8);
     CHECK(diags[0].code == diag::Redefinition);
     CHECK(diags[1].code == diag::NotBooleanConvertible);
     CHECK(diags[2].code == diag::NonIntegralCoverageExpr);
     CHECK(diags[3].code == diag::ExpectedToken);
     CHECK(diags[4].code == diag::RedefinitionDifferentSymbolKind);
+    CHECK(diags[5].code == diag::NotBooleanConvertible);
+    CHECK(diags[6].code == diag::NonIntegralCoverageExpr);
+    CHECK(diags[7].code == diag::CoverCrossItems);
 }

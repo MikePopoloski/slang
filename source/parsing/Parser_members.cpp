@@ -1554,6 +1554,9 @@ CoverCrossSyntax* Parser::parseCoverCross(AttrList attributes, NamedLabelSyntax*
         buffer.append(consume());
     }
 
+    if (buffer.size() < 2)
+        addDiag(diag::CoverCrossItems, peek().location());
+
     auto iff = parseCoverageIffClause();
 
     if (peek(TokenKind::OpenBrace)) {

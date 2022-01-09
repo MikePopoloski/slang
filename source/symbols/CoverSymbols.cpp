@@ -194,19 +194,16 @@ void CoverCrossSymbol::fromSyntax(const Scope& scope, const CoverCrossSyntax& sy
 
     SmallVectorSized<const CoverpointSymbol*, 4> targets;
     for (auto item : syntax.items) {
-        auto id = item->identifier;
-        auto symbol = Lookup::unqualifiedAt(scope, id.valueText(), LookupLocation::max, id.range());
-        if (symbol) {
-            if (symbol->kind == SymbolKind::Coverpoint) {
-                targets.append(&symbol->as<CoverpointSymbol>());
-            }
-            else {
-                // If we didn't find a coverpoint, create one implicitly
-                // that will be initialized with this expression.
-                auto& newPoint = CoverpointSymbol::fromImplicit(scope, *item);
-                targets.append(&newPoint);
-                results.append(&newPoint);
-            }
+        auto symbol = scope.find(item->identifier.valueText());
+        if (symbol && symbol->kind == SymbolKind::Coverpoint) {
+            targets.append(&symbol->as<CoverpointSymbol>());
+        }
+        else {
+            // If we didn't find a coverpoint, create one implicitly
+            // that will be initialized with this expression.
+            auto& newPoint = CoverpointSymbol::fromImplicit(scope, *item);
+            targets.append(&newPoint);
+            results.append(&newPoint);
         }
     }
 

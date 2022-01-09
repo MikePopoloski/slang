@@ -219,6 +219,7 @@ error RandJoinProdItem "rand join list can only contain simple references to oth
 error RandJoinNotEnough "rand join list must contain at least two productions"
 error InvalidDistExpression "cannot use a 'dist' expression in this context"
 error InvalidForInitializer "for loop initializer must be an assignment expression"
+error CoverCrossItems "cover cross declaration requires at least two coverage items"
 warning nonstandard-generate NonStandardGenBlock "standalone generate block without loop or condition is not allowed in SystemVerilog"
 warning empty-pattern EmptyAssignmentPattern "empty assignment patterns are disallowed by SystemVerilog"
 warning nonstandard-foreach NonstandardForeach "non-standard foreach loop variable list"
