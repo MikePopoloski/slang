@@ -9,11 +9,53 @@
 #include "slang/binding/TimingControl.h"
 #include "slang/compilation/Compilation.h"
 #include "slang/diagnostics/DeclarationsDiags.h"
+#include "slang/symbols/ClassSymbols.h"
 #include "slang/symbols/SubroutineSymbols.h"
+#include "slang/symbols/SymbolBuilders.h"
 #include "slang/symbols/VariableSymbols.h"
 #include "slang/syntax/AllSyntax.h"
+#include "slang/types/AllTypes.h"
 
 namespace slang {
+
+static void addProperty(Scope& scope, string_view name, VariableLifetime lifetime,
+                        const StructBuilder& structBuilder) {
+    auto& comp = scope.getCompilation();
+    auto& prop = *comp.emplace<ClassPropertySymbol>(name, SourceLocation::NoLocation, lifetime,
+                                                    Visibility::Public);
+    prop.setType(structBuilder.type);
+    scope.addMember(prop);
+}
+
+CovergroupBodySymbol::CovergroupBodySymbol(Compilation& comp, SourceLocation loc) :
+    Symbol(SymbolKind::CovergroupBody, ""sv, loc), Scope(comp, this) {
+
+    auto& int_t = comp.getIntType();
+    auto& bit_t = comp.getBitType();
+    auto& string_t = comp.getStringType();
+
+    StructBuilder option(*this, LookupLocation::min);
+    option.addField("name"sv, string_t);
+    option.addField("weight"sv, int_t);
+    option.addField("goal"sv, int_t);
+    option.addField("comment"sv, string_t);
+    option.addField("at_least"sv, int_t);
+    option.addField("auto_bin_max"sv, int_t);
+    option.addField("cross_num_print_missing"sv, int_t);
+    option.addField("detect_overlap"sv, bit_t);
+    option.addField("per_instance"sv, bit_t);
+    option.addField("get_inst_coverage"sv, bit_t);
+    addProperty(*this, "option"sv, VariableLifetime::Automatic, option);
+
+    StructBuilder type_option(*this, LookupLocation::min);
+    type_option.addField("weight"sv, int_t);
+    type_option.addField("goal"sv, int_t);
+    type_option.addField("comment"sv, string_t);
+    type_option.addField("strobe"sv, bit_t);
+    type_option.addField("merge_instances"sv, bit_t);
+    type_option.addField("distribute_first"sv, bit_t);
+    addProperty(*this, "type_option"sv, VariableLifetime::Static, type_option);
+}
 
 CovergroupType::CovergroupType(Compilation& compilation, string_view name, SourceLocation loc,
                                const CovergroupBodySymbol& body) :
@@ -96,8 +138,8 @@ void CovergroupType::serializeTo(ASTSerializer&) const {
     // TODO:
 }
 
-CoverpointSymbol::CoverpointSymbol(Compilation& compilation, string_view name, SourceLocation loc) :
-    Symbol(SymbolKind::Coverpoint, name, loc), Scope(compilation, this),
+CoverpointSymbol::CoverpointSymbol(Compilation& comp, string_view name, SourceLocation loc) :
+    Symbol(SymbolKind::Coverpoint, name, loc), Scope(comp, this),
     declaredType(*this, DeclaredTypeFlags::InferImplicit | DeclaredTypeFlags::AutomaticInitializer |
                             DeclaredTypeFlags::CoverageType) {
 
@@ -105,6 +147,25 @@ CoverpointSymbol::CoverpointSymbol(Compilation& compilation, string_view name, S
     // other members of the parent covergroup. This allows coverpoints named the same
     // as formal arguments to not interfere with lookup.
     declaredType.setOverrideIndex(SymbolIndex(1));
+
+    auto& int_t = comp.getIntType();
+    auto& bit_t = comp.getBitType();
+    auto& string_t = comp.getStringType();
+
+    StructBuilder option(*this, LookupLocation::min);
+    option.addField("weight"sv, int_t);
+    option.addField("goal"sv, int_t);
+    option.addField("comment"sv, string_t);
+    option.addField("at_least"sv, int_t);
+    option.addField("auto_bin_max"sv, int_t);
+    option.addField("detect_overlap"sv, bit_t);
+    addProperty(*this, "option"sv, VariableLifetime::Automatic, option);
+
+    StructBuilder type_option(*this, LookupLocation::min);
+    type_option.addField("weight"sv, int_t);
+    type_option.addField("goal"sv, int_t);
+    type_option.addField("comment"sv, string_t);
+    addProperty(*this, "type_option"sv, VariableLifetime::Static, type_option);
 }
 
 CoverpointSymbol& CoverpointSymbol::fromSyntax(const Scope& scope, const CoverpointSyntax& syntax) {
@@ -178,6 +239,29 @@ const Expression* CoverpointSymbol::getIffExpr() const {
 
 void CoverpointSymbol::serializeTo(ASTSerializer&) const {
     // TODO:
+}
+
+CoverCrossSymbol::CoverCrossSymbol(Compilation& comp, string_view name, SourceLocation loc,
+                                   span<const CoverpointSymbol* const> targets) :
+    Symbol(SymbolKind::CoverCross, name, loc),
+    Scope(comp, this), targets(targets) {
+
+    auto& int_t = comp.getIntType();
+    auto& string_t = comp.getStringType();
+
+    StructBuilder option(*this, LookupLocation::min);
+    option.addField("weight"sv, int_t);
+    option.addField("goal"sv, int_t);
+    option.addField("comment"sv, string_t);
+    option.addField("at_least"sv, int_t);
+    option.addField("cross_num_print_missing"sv, int_t);
+    addProperty(*this, "option"sv, VariableLifetime::Automatic, option);
+
+    StructBuilder type_option(*this, LookupLocation::min);
+    type_option.addField("weight"sv, int_t);
+    type_option.addField("goal"sv, int_t);
+    type_option.addField("comment"sv, string_t);
+    addProperty(*this, "type_option"sv, VariableLifetime::Static, type_option);
 }
 
 void CoverCrossSymbol::fromSyntax(const Scope& scope, const CoverCrossSyntax& syntax,

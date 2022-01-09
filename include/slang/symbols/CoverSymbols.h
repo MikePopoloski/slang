@@ -20,8 +20,7 @@ struct CovergroupDeclarationSyntax;
 /// they can be shadowed by body members.
 class CovergroupBodySymbol : public Symbol, public Scope {
 public:
-    CovergroupBodySymbol(Compilation& compilation, SourceLocation loc) :
-        Symbol(SymbolKind::CovergroupBody, ""sv, loc), Scope(compilation, this) {}
+    CovergroupBodySymbol(Compilation& compilation, SourceLocation loc);
 
     void serializeTo(ASTSerializer&) const {}
 
@@ -87,9 +86,7 @@ public:
     span<const CoverpointSymbol* const> targets;
 
     CoverCrossSymbol(Compilation& compilation, string_view name, SourceLocation loc,
-                     span<const CoverpointSymbol* const> targets) :
-        Symbol(SymbolKind::CoverCross, name, loc),
-        Scope(compilation, this), targets(targets) {}
+                     span<const CoverpointSymbol* const> targets);
 
     static void fromSyntax(const Scope& scope, const CoverCrossSyntax& syntax,
                            SmallVector<const Symbol*>& results);

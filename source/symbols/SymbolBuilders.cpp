@@ -10,6 +10,7 @@
 #include "slang/compilation/Compilation.h"
 #include "slang/symbols/ClassSymbols.h"
 #include "slang/symbols/VariableSymbols.h"
+#include "slang/types/AllTypes.h"
 #include "slang/types/Type.h"
 
 namespace slang {
@@ -71,6 +72,18 @@ MethodBuilder ClassBuilder::addMethod(string_view name, const Type& retType, Sub
     MethodBuilder method(compilation, name, retType, kind);
     type.addMember(method.symbol);
     return method;
+}
+
+StructBuilder::StructBuilder(const Scope& scope, LookupLocation lookupLocation) :
+    compilation(scope.getCompilation()), type(*compilation.emplace<UnpackedStructType>(
+                                             compilation, NL, BindContext(scope, lookupLocation))) {
+}
+
+void StructBuilder::addField(string_view name, const Type& fieldType) {
+    auto field = compilation.emplace<FieldSymbol>(name, NL, currFieldIndex);
+    field->setType(fieldType);
+    type.addMember(*field);
+    currFieldIndex++;
 }
 
 } // namespace slang

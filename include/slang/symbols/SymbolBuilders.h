@@ -10,6 +10,8 @@
 
 namespace slang {
 
+class UnpackedStructType;
+
 /// A helper class for constructing method symbols programmatically.
 class MethodBuilder {
 public:
@@ -56,6 +58,24 @@ public:
     /// object can be used to modify the method further.
     MethodBuilder addMethod(string_view name, const Type& returnType,
                             SubroutineKind kind = SubroutineKind::Function);
+};
+
+/// A helper class for constructing struct types programmatically.
+class StructBuilder {
+public:
+    /// The compilation used to construct symbols.
+    Compilation& compilation;
+
+    /// The struct type being constructed.
+    UnpackedStructType& type;
+
+    StructBuilder(const Scope& scope, LookupLocation lookupLocation);
+
+    /// Adds a field to the struct.
+    void addField(string_view name, const Type& fieldType);
+
+private:
+    uint32_t currFieldIndex = 0;
 };
 
 } // namespace slang
