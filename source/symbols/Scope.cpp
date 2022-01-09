@@ -720,10 +720,6 @@ void Scope::reportNameConflict(const Symbol& member, const Symbol& existing) con
             (*diag) << member.name << memberType << existingType;
         }
     }
-    else if (existing.kind != member.kind) {
-        diag = &addDiag(diag::RedefinitionDifferentSymbolKind, member.location);
-        (*diag) << member.name;
-    }
     else {
         diag = &addDiag(diag::Redefinition, member.location);
         (*diag) << member.name;

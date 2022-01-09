@@ -285,7 +285,7 @@ endmodule
     auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 4);
     CHECK(diags[0].code == diag::AmbiguousWildcardImport);
-    CHECK(diags[1].code == diag::RedefinitionDifferentSymbolKind);
+    CHECK(diags[1].code == diag::Redefinition);
     CHECK(diags[2].code == diag::Redefinition);
     CHECK(diags[3].code == diag::ImportNameCollision);
 }
@@ -1713,7 +1713,7 @@ endmodule
 
     auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 5);
-    CHECK(diags[0].code == diag::RedefinitionDifferentSymbolKind);
+    CHECK(diags[0].code == diag::Redefinition);
     CHECK(diags[1].code == diag::UnknownPackage);
     CHECK(diags[2].code == diag::UnknownPackageMember);
     CHECK(diags[3].code == diag::ImportNameCollision);

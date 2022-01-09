@@ -630,7 +630,6 @@ warning enum-range EnumRangeLiteral "enum element ranges must be integer literal
 subsystem Lookup
 error Redefinition "redefinition of '{}'"
 error RedefinitionDifferentType "redefinition of '{}' with a different type: {} vs {}"
-error RedefinitionDifferentSymbolKind "redefinition of '{}' as different kind of symbol"
 error AmbiguousWildcardImport "multiple imports found for identifier '{}'"
 note NoteImportedFrom "imported from here"
 note NoteHierarchicalNameInCE "reference to '{}' by hierarchical name is not allowed in a constant expression"

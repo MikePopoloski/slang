@@ -151,7 +151,7 @@ endmodule
     CHECK(diags[1].code == diag::NotBooleanConvertible);
     CHECK(diags[2].code == diag::NonIntegralCoverageExpr);
     CHECK(diags[3].code == diag::ExpectedToken);
-    CHECK(diags[4].code == diag::RedefinitionDifferentSymbolKind);
+    CHECK(diags[4].code == diag::Redefinition);
     CHECK(diags[5].code == diag::NotBooleanConvertible);
     CHECK(diags[6].code == diag::NonIntegralCoverageExpr);
     CHECK(diags[7].code == diag::CoverCrossItems);
