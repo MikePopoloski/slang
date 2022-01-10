@@ -92,7 +92,7 @@ SubroutineSymbol* SubroutineSymbol::fromSyntax(Compilation& compilation,
         auto implicitReturnVar = compilation.emplace<VariableSymbol>(result->name, result->location,
                                                                      VariableLifetime::Automatic);
         implicitReturnVar->setDeclaredType(*proto->returnType);
-        implicitReturnVar->isCompilerGenerated = true;
+        implicitReturnVar->flags |= VariableFlags::CompilerGenerated;
         result->addMember(*implicitReturnVar);
         result->returnValVar = implicitReturnVar;
         result->declaredReturnType.setTypeSyntax(*proto->returnType);
@@ -389,8 +389,7 @@ static span<const FormalArgumentSymbol* const> cloneArguments(
     for (auto arg : source) {
         auto copied = compilation.emplace<FormalArgumentSymbol>(arg->name, arg->location,
                                                                 arg->direction, arg->lifetime);
-        copied->isCompilerGenerated = arg->isCompilerGenerated;
-        copied->isConstant = arg->isConstant;
+        copied->flags = arg->flags;
         copied->getDeclaredType()->copyTypeFrom(*arg->getDeclaredType());
         if (auto init = arg->getDeclaredType()->getInitializer())
             copied->getDeclaredType()->setInitializer(*init);
@@ -548,7 +547,7 @@ void SubroutineSymbol::buildArguments(Scope& scope, const FunctionPortListSyntax
 
         if (portSyntax->constKeyword) {
             ASSERT(direction == ArgumentDirection::Ref);
-            arg->isConstant = true;
+            arg->flags |= VariableFlags::Const;
         }
 
         // If we're given a type, use that. Otherwise, if we were given a
@@ -579,7 +578,8 @@ bool SubroutineSymbol::hasOutputArgs() const {
         cachedHasOutputArgs = false;
         for (auto arg : getArguments()) {
             if (arg->direction != ArgumentDirection::In &&
-                (arg->direction != ArgumentDirection::Ref || !arg->isConstant)) {
+                (arg->direction != ArgumentDirection::Ref ||
+                 !arg->flags.has(VariableFlags::Const))) {
                 cachedHasOutputArgs = true;
                 break;
             }
@@ -627,8 +627,7 @@ void SubroutineSymbol::addThisVar(const Type& type) {
     auto tv = getCompilation().emplace<VariableSymbol>("this", type.location,
                                                        VariableLifetime::Automatic);
     tv->setType(type);
-    tv->isConstant = true;
-    tv->isCompilerGenerated = true;
+    tv->flags |= VariableFlags::Const | VariableFlags::CompilerGenerated;
     thisVar = tv;
     addMember(*thisVar);
 }

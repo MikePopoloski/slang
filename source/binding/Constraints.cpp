@@ -222,7 +222,8 @@ struct ConstraintExprVisitor {
                         const SubroutineSymbol& sub = *std::get<0>(call.subroutine);
                         for (auto arg : sub.getArguments()) {
                             if (arg->direction == ArgumentDirection::Out ||
-                                (arg->direction == ArgumentDirection::Ref && !arg->isConstant)) {
+                                (arg->direction == ArgumentDirection::Ref &&
+                                 !arg->flags.has(VariableFlags::Const))) {
                                 context.addDiag(diag::OutRefFuncConstraint, expr.sourceRange);
                                 return visitInvalid(expr);
                             }

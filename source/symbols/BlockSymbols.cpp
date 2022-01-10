@@ -623,7 +623,7 @@ GenerateBlockArraySymbol& GenerateBlockArraySymbol::fromSyntax(Compilation& comp
     auto& local = *compilation.emplace<VariableSymbol>(genvar.valueText(), genvar.location(),
                                                        VariableLifetime::Automatic);
     local.setType(compilation.getIntegerType());
-    local.isCompilerGenerated = true;
+    local.flags |= VariableFlags::CompilerGenerated;
 
     iterScope.setTemporaryParent(*context.scope, scopeIndex);
     iterScope.addMember(local);

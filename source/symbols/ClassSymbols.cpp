@@ -91,12 +91,14 @@ void ClassPropertySymbol::fromSyntax(const Scope& scope,
     for (auto declarator : dataSyntax.declarators) {
         auto var = comp.emplace<ClassPropertySymbol>(
             declarator->name.valueText(), declarator->name.location(), lifetime, visibility);
-        var->isConstant = isConst;
         var->randMode = randMode;
         var->setDeclaredType(*dataSyntax.type);
         var->setFromDeclarator(*declarator);
         var->setAttributes(scope, syntax.attributes);
         results.append(var);
+
+        if (isConst)
+            var->flags |= VariableFlags::Const;
 
         if (randMode != RandMode::None)
             var->getDeclaredType()->addFlags(DeclaredTypeFlags::Rand);
@@ -1051,8 +1053,7 @@ void ConstraintBlockSymbol::addThisVar(const Type& type) {
     auto tv = getCompilation().emplace<VariableSymbol>("this", type.location,
                                                        VariableLifetime::Automatic);
     tv->setType(type);
-    tv->isConstant = true;
-    tv->isCompilerGenerated = true;
+    tv->flags |= VariableFlags::Const | VariableFlags::CompilerGenerated;
     thisVar = tv;
     addMember(*thisVar);
 }

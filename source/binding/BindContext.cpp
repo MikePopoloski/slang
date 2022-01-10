@@ -139,7 +139,7 @@ bool BindContext::requireAssignable(const VariableSymbol& var, bool isNonBlockin
         return false;
     };
 
-    if (var.isConstant) {
+    if (var.flags.has(VariableFlags::Const)) {
         // If we are in a class constructor and this variable does not have an initializer,
         // it's ok to assign to it.
         const Symbol* parent = &scope->asSymbol();

@@ -1427,8 +1427,7 @@ void RandSeqProductionSymbol::createRuleVariables(const RsRuleSyntax& syntax, co
     for (auto [symbol, count] : prodMap) {
         auto var = comp.emplace<VariableSymbol>(symbol->name, syntax.getFirstToken().location(),
                                                 VariableLifetime::Automatic);
-        var->isCompilerGenerated = true;
-        var->isConstant = true;
+        var->flags |= VariableFlags::Const | VariableFlags::CompilerGenerated;
 
         if (count == 1) {
             var->setType(symbol->getReturnType());

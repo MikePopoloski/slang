@@ -1840,8 +1840,10 @@ void Lookup::reportUndeclared(const Scope& initialScope, string_view name, Sourc
                 return false;
             }
 
-            if (VariableSymbol::isKind(s->kind) && s->as<VariableSymbol>().isCompilerGenerated)
+            if (VariableSymbol::isKind(s->kind) &&
+                s->as<VariableSymbol>().flags.has(VariableFlags::CompilerGenerated)) {
                 return false;
+            }
 
             if (!isVisibleFrom(*s, initialScope))
                 return false;

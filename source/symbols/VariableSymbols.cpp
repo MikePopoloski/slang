@@ -111,11 +111,13 @@ void VariableSymbol::fromSyntax(Compilation& compilation, const DataDeclarationS
     for (auto declarator : syntax.declarators) {
         auto variable = compilation.emplace<VariableSymbol>(declarator->name.valueText(),
                                                             declarator->name.location(), *lifetime);
-        variable->isConstant = isConst;
         variable->setDeclaredType(*syntax.type);
         variable->setFromDeclarator(*declarator);
         variable->setAttributes(scope, syntax.attributes);
         results.append(variable);
+
+        if (isConst)
+            variable->flags |= VariableFlags::Const;
 
         // If this is a static variable in a procedural context and it has an initializer,
         // the spec requires that the static keyword must be explicitly provided.
@@ -162,8 +164,20 @@ VariableSymbol::VariableSymbol(SymbolKind childKind, string_view name, SourceLoc
 
 void VariableSymbol::serializeTo(ASTSerializer& serializer) const {
     serializer.write("lifetime", toString(lifetime));
-    serializer.write("isConstant", isConstant);
-    serializer.write("isCompilerGenerated", isCompilerGenerated);
+
+    if (flags) {
+        std::string str;
+        if (flags.has(VariableFlags::Const))
+            str += "const,";
+        if (flags.has(VariableFlags::CompilerGenerated))
+            str += "compiler_generated,";
+        if (flags.has(VariableFlags::ImmutableCoverageOption))
+            str += "imm_cov_option,";
+        if (!str.empty()) {
+            str.pop_back();
+            serializer.write("flags", str);
+        }
+    }
 }
 
 FormalArgumentSymbol::FormalArgumentSymbol(string_view name, SourceLocation loc,
@@ -193,11 +207,13 @@ void FormalArgumentSymbol::fromSyntax(const Scope& scope, const PortDeclarationS
     for (auto declarator : syntax.declarators) {
         auto arg = comp.emplace<FormalArgumentSymbol>(
             declarator->name.valueText(), declarator->name.location(), direction, lifetime);
-        arg->isConstant = isConst;
         arg->setDeclaredType(*header.dataType);
         arg->setFromDeclarator(*declarator);
         arg->setAttributes(scope, syntax.attributes);
         results.append(arg);
+
+        if (isConst)
+            arg->flags |= VariableFlags::Const;
     }
 }
 
@@ -366,7 +382,7 @@ IteratorSymbol::IteratorSymbol(const Scope& scope, string_view name, SourceLocat
     VariableSymbol(SymbolKind::Iterator, name, loc, VariableLifetime::Automatic),
     arrayType(arrayType) {
 
-    isConstant = true;
+    flags |= VariableFlags::Const;
     setParent(scope);
 
     const Type* elemType = arrayType.getArrayElementType();
@@ -381,7 +397,7 @@ IteratorSymbol::IteratorSymbol(string_view name, SourceLocation loc, const Type&
     VariableSymbol(SymbolKind::Iterator, name, loc, VariableLifetime::Automatic),
     arrayType(arrayType) {
 
-    isConstant = true;
+    flags |= VariableFlags::Const;
     setType(indexType);
 }
 

@@ -18,17 +18,28 @@ struct IdentifierNameSyntax;
 struct DataDeclarationSyntax;
 struct ForVariableDeclarationSyntax;
 
+/// Specifies various flags that can apply to variables.
+enum class VariableFlags : uint16_t {
+    /// No specific flags specified.
+    None = 0,
+
+    /// The variable is a constant, i.e. not modifiable after initialization.
+    Const = 1 << 0,
+
+    /// The variable was not declared by the user but created during compilation.
+    CompilerGenerated = 1 << 1,
+
+    /// The variable is a coverage option that is not modifiable outside of
+    /// the covergroup declaration.
+    ImmutableCoverageOption = 1 << 2,
+};
+BITMASK(VariableFlags, ImmutableCoverageOption)
+
 /// Represents a variable declaration.
 class VariableSymbol : public ValueSymbol {
 public:
     VariableLifetime lifetime;
-
-    /// The variable is marked constant and can't be modified.
-    bool isConstant = false;
-
-    /// The compiler created this variable, as opposed to
-    /// it being declared in the user's source code.
-    bool isCompilerGenerated = false;
+    bitmask<VariableFlags> flags;
 
     VariableSymbol(string_view name, SourceLocation loc, VariableLifetime lifetime);
 

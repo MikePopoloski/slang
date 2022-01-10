@@ -356,9 +356,7 @@ endmodule
               "symbol": "STATE_0",
               "constant": "1'b0"
             },
-            "lifetime": "Static",
-            "isConstant": false,
-            "isCompilerGenerated": false
+            "lifetime": "Static"
           },
           {
             "name": "C",
@@ -369,8 +367,6 @@ endmodule
                 "kind": "ClassProperty",
                 "type": "int",
                 "lifetime": "Automatic",
-                "isConstant": false,
-                "isCompilerGenerated": false,
                 "visibility": "Public"
               }
             ]
@@ -383,9 +379,7 @@ endmodule
               "kind": "NewClass",
               "type": "C"
             },
-            "lifetime": "Static",
-            "isConstant": false,
-            "isCompilerGenerated": false
+            "lifetime": "Static"
           }
         ],
         "definition": "test_enum"

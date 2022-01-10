@@ -214,7 +214,7 @@ bool CallExpression::bindArgs(const ArgumentListSyntax* argSyntax,
             }
             else if (auto exSyn = context.requireSimpleExpr(arg->as<PropertyExprSyntax>())) {
                 expr = &Expression::bindArgument(formal->getType(), formal->direction, *exSyn,
-                                                 context, formal->isConstant);
+                                                 context, formal->flags.has(VariableFlags::Const));
             }
 
             // Make sure there isn't also a named value for this argument.
@@ -243,7 +243,7 @@ bool CallExpression::bindArgs(const ArgumentListSyntax* argSyntax,
             }
             else if (auto exSyn = context.requireSimpleExpr(*arg)) {
                 expr = &Expression::bindArgument(formal->getType(), formal->direction, *exSyn,
-                                                 context, formal->isConstant);
+                                                 context, formal->flags.has(VariableFlags::Const));
             }
         }
         else {

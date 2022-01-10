@@ -418,8 +418,10 @@ bool Expression::canConnectToRefArg(bool isConstRef, bool allowConstClassHandle)
         return false;
 
     auto& var = sym->as<VariableSymbol>();
-    if (!isConstRef && var.isConstant && (!allowConstClassHandle || !var.getType().isClass()))
+    if (!isConstRef && var.flags.has(VariableFlags::Const) &&
+        (!allowConstClassHandle || !var.getType().isClass())) {
         return false;
+    }
 
     // Need to recursively check the left hand side of element selects and member accesses
     // to be sure this is actually an lvalue and not, for example, the result of a
