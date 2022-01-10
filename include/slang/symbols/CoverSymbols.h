@@ -25,8 +25,8 @@ public:
     const Expression& getExpression() const;
 
 private:
-    const Scope& scope;
-    const CoverageOptionSyntax& syntax;
+    not_null<const Scope*> scope;
+    not_null<const CoverageOptionSyntax*> syntax;
     mutable const Expression* expr = nullptr;
 };
 

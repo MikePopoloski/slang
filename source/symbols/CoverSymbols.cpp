@@ -52,12 +52,12 @@ private:
 namespace slang {
 
 CoverageOptionSetter::CoverageOptionSetter(const Scope& scope, const CoverageOptionSyntax& syntax) :
-    scope(scope), syntax(syntax) {
+    scope(&scope), syntax(&syntax) {
 }
 
 bool CoverageOptionSetter::isTypeOption() const {
-    if (syntax.expr->kind == SyntaxKind::AssignmentExpression) {
-        auto& assign = syntax.expr->as<BinaryExpressionSyntax>();
+    if (syntax->expr->kind == SyntaxKind::AssignmentExpression) {
+        auto& assign = syntax->expr->as<BinaryExpressionSyntax>();
         if (assign.left->kind == SyntaxKind::ScopedName) {
             auto& scoped = assign.left->as<ScopedNameSyntax>();
             if (scoped.left->kind == SyntaxKind::IdentifierName) {
@@ -70,8 +70,8 @@ bool CoverageOptionSetter::isTypeOption() const {
 }
 
 string_view CoverageOptionSetter::getName() const {
-    if (syntax.expr->kind == SyntaxKind::AssignmentExpression) {
-        auto& assign = syntax.expr->as<BinaryExpressionSyntax>();
+    if (syntax->expr->kind == SyntaxKind::AssignmentExpression) {
+        auto& assign = syntax->expr->as<BinaryExpressionSyntax>();
         if (assign.left->kind == SyntaxKind::ScopedName) {
             auto& scoped = assign.left->as<ScopedNameSyntax>();
             if (scoped.left->kind == SyntaxKind::IdentifierName &&
@@ -91,9 +91,9 @@ const Expression& CoverageOptionSetter::getExpression() const {
             flags |= BindFlags::Constant;
         }
 
-        BindContext context(scope, LookupLocation(&scope, 3));
-        expr = &Expression::bind(*syntax.expr, context, flags);
-        context.setAttributes(*expr, syntax.attributes);
+        BindContext context(*scope, LookupLocation(scope, 3));
+        expr = &Expression::bind(*syntax->expr, context, flags);
+        context.setAttributes(*expr, syntax->attributes);
     }
     return *expr;
 }
