@@ -7,6 +7,7 @@
 #pragma once
 
 #include "slang/symbols/SubroutineSymbols.h"
+#include "slang/symbols/VariableSymbols.h"
 
 namespace slang {
 
@@ -72,7 +73,8 @@ public:
     StructBuilder(const Scope& scope, LookupLocation lookupLocation);
 
     /// Adds a field to the struct.
-    void addField(string_view name, const Type& fieldType);
+    void addField(string_view name, const Type& fieldType,
+                  bitmask<VariableFlags> flags = VariableFlags::None);
 
 private:
     uint32_t currFieldIndex = 0;

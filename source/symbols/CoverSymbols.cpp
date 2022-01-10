@@ -120,18 +120,18 @@ CovergroupBodySymbol::CovergroupBodySymbol(Compilation& comp, SourceLocation loc
     option.addField("goal"sv, int_t);
     option.addField("comment"sv, string_t);
     option.addField("at_least"sv, int_t);
-    option.addField("auto_bin_max"sv, int_t);
+    option.addField("auto_bin_max"sv, int_t, VariableFlags::ImmutableCoverageOption);
     option.addField("cross_num_print_missing"sv, int_t);
-    option.addField("detect_overlap"sv, bit_t);
-    option.addField("per_instance"sv, bit_t);
-    option.addField("get_inst_coverage"sv, bit_t);
+    option.addField("detect_overlap"sv, bit_t, VariableFlags::ImmutableCoverageOption);
+    option.addField("per_instance"sv, bit_t, VariableFlags::ImmutableCoverageOption);
+    option.addField("get_inst_coverage"sv, bit_t, VariableFlags::ImmutableCoverageOption);
     addProperty(*this, "option"sv, VariableLifetime::Automatic, option);
 
     StructBuilder type_option(*this, LookupLocation::min);
     type_option.addField("weight"sv, int_t);
     type_option.addField("goal"sv, int_t);
     type_option.addField("comment"sv, string_t);
-    type_option.addField("strobe"sv, bit_t);
+    type_option.addField("strobe"sv, bit_t, VariableFlags::ImmutableCoverageOption);
     type_option.addField("merge_instances"sv, bit_t);
     type_option.addField("distribute_first"sv, bit_t);
     addProperty(*this, "type_option"sv, VariableLifetime::Static, type_option);
@@ -238,8 +238,8 @@ CoverpointSymbol::CoverpointSymbol(Compilation& comp, string_view name, SourceLo
     option.addField("goal"sv, int_t);
     option.addField("comment"sv, string_t);
     option.addField("at_least"sv, int_t);
-    option.addField("auto_bin_max"sv, int_t);
-    option.addField("detect_overlap"sv, bit_t);
+    option.addField("auto_bin_max"sv, int_t, VariableFlags::ImmutableCoverageOption);
+    option.addField("detect_overlap"sv, bit_t, VariableFlags::ImmutableCoverageOption);
     addProperty(*this, "option"sv, VariableLifetime::Automatic, option);
 
     StructBuilder type_option(*this, LookupLocation::min);

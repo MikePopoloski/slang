@@ -79,8 +79,10 @@ StructBuilder::StructBuilder(const Scope& scope, LookupLocation lookupLocation) 
                                              compilation, NL, BindContext(scope, lookupLocation))) {
 }
 
-void StructBuilder::addField(string_view name, const Type& fieldType) {
+void StructBuilder::addField(string_view name, const Type& fieldType,
+                             bitmask<VariableFlags> flags) {
     auto field = compilation.emplace<FieldSymbol>(name, NL, currFieldIndex);
+    field->flags = flags;
     field->setType(fieldType);
     type.addMember(*field);
     currFieldIndex++;

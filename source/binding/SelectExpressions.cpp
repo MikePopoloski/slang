@@ -1185,14 +1185,39 @@ bool MemberAccessExpression::verifyConstantImpl(EvalContext& context) const {
     return value().verifyConstant(context);
 }
 
+static bool isWithinCovergroup(const Symbol& field, const Scope& usageScope) {
+    const Scope* scope = field.getParentScope();
+    while (scope) {
+        switch (scope->asSymbol().kind) {
+            case SymbolKind::CovergroupType:
+            case SymbolKind::CovergroupBody:
+            case SymbolKind::Coverpoint:
+            case SymbolKind::CoverCross:
+                return scope == &usageScope;
+            default:
+                scope = scope->asSymbol().getParentScope();
+                break;
+        }
+    }
+    return false;
+}
+
 bool MemberAccessExpression::verifyAssignableImpl(const BindContext& context,
                                                   SourceLocation location, bool isNonBlocking,
                                                   bool inConcat) const {
     // If this is a selection of a class member, assignability depends only on the selected
     // member and not on the class handle itself. Otherwise, the opposite is true.
     auto& valueType = *value().type;
-    if (!valueType.isClass())
+    if (!valueType.isClass()) {
+        if (VariableSymbol::isKind(member.kind) &&
+            member.as<VariableSymbol>().flags.has(VariableFlags::ImmutableCoverageOption) &&
+            !isWithinCovergroup(member, *context.scope)) {
+            context.addDiag(diag::CoverOptionImmutable, location) << member.name;
+            return false;
+        }
+
         return value().verifyAssignable(context, location, isNonBlocking, inConcat);
+    }
 
     if (VariableSymbol::isKind(member.kind)) {
         return context.requireAssignable(member.as<VariableSymbol>(), isNonBlocking, location,

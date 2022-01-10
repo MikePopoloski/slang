@@ -183,6 +183,9 @@ module m;
         gc::foo = 1;
         gc::option.comment = "Invalid";
 
+        g1.option.per_instance = 1;
+        gc::type_option.strobe = 1;
+
         //g1.a.option.weight = 3; // Set weight for coverpoint "a" of instance g1
     end
 endmodule
@@ -192,11 +195,13 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 6);
+    REQUIRE(diags.size() == 8);
     CHECK(diags[0].code == diag::UnknownMember);
     CHECK(diags[1].code == diag::CoverageOptionDup);
     CHECK(diags[2].code == diag::BadAssignment);
     CHECK(diags[3].code == diag::AutoFromStaticInit);
     CHECK(diags[4].code == diag::UnknownCovergroupMember);
     CHECK(diags[5].code == diag::NonStaticClassProperty);
+    CHECK(diags[6].code == diag::CoverOptionImmutable);
+    CHECK(diags[7].code == diag::CoverOptionImmutable);
 }
