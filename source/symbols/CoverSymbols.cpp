@@ -282,6 +282,16 @@ CoverpointSymbol& CoverpointSymbol::fromSyntax(const Scope& scope, const Coverpo
     result->declaredType.setInitializerSyntax(*syntax.expr,
                                               syntax.expr->getFirstToken().location());
 
+    OptionBuilder options(*result);
+    for (auto member : syntax.members) {
+        if (member->kind == SyntaxKind::CoverageOption)
+            options.add(member->as<CoverageOptionSyntax>());
+        else {
+            // TODO:
+        }
+    }
+
+    result->options = options.get();
     return *result;
 }
 
@@ -377,6 +387,16 @@ void CoverCrossSymbol::fromSyntax(const Scope& scope, const CoverCrossSyntax& sy
     result->setSyntax(syntax);
     result->setAttributes(scope, syntax.attributes);
 
+    OptionBuilder options(*result);
+    for (auto member : syntax.members) {
+        if (member->kind == SyntaxKind::CoverageOption)
+            options.add(member->as<CoverageOptionSyntax>());
+        else {
+            // TODO:
+        }
+    }
+
+    result->options = options.get();
     results.append(result);
 }
 

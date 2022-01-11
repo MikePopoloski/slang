@@ -72,6 +72,7 @@ struct IdentifierNameSyntax;
 class CoverpointSymbol : public Symbol, public Scope {
 public:
     DeclaredType declaredType;
+    span<const CoverageOptionSetter> options;
 
     CoverpointSymbol(Compilation& compilation, string_view name, SourceLocation loc);
 
@@ -101,6 +102,7 @@ struct CoverCrossSyntax;
 class CoverCrossSymbol : public Symbol, public Scope {
 public:
     span<const CoverpointSymbol* const> targets;
+    span<const CoverageOptionSetter> options;
 
     CoverCrossSymbol(Compilation& compilation, string_view name, SourceLocation loc,
                      span<const CoverpointSymbol* const> targets);
