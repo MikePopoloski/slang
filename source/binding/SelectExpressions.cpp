@@ -850,6 +850,18 @@ Expression& MemberAccessExpression::fromSelector(
             return CallExpression::fromSystemMethod(compilation, expr, selector, invocation,
                                                     withClause, context);
         }
+        case SymbolKind::VoidType:
+            if (auto sym = expr.getSymbolReference()) {
+                if (sym->kind == SymbolKind::Coverpoint) {
+                    scope = &sym->as<CoverpointSymbol>();
+                    break;
+                }
+                else if (sym->kind == SymbolKind::CoverCross) {
+                    scope = &sym->as<CoverCrossSymbol>();
+                    break;
+                }
+            }
+            [[fallthrough]];
         default: {
             if (auto result = tryBindSpecialMethod(compilation, expr, selector, invocation,
                                                    withClause, context)) {
@@ -906,7 +918,9 @@ Expression& MemberAccessExpression::fromSelector(
             return CallExpression::fromLookup(compilation, &sub, &expr, invocation, withClause,
                                               range, context);
         }
-        case SymbolKind::ConstraintBlock: {
+        case SymbolKind::ConstraintBlock:
+        case SymbolKind::Coverpoint:
+        case SymbolKind::CoverCross: {
             if (errorIfNotProcedural())
                 return badExpr(compilation, &expr);
             return *compilation.emplace<MemberAccessExpression>(compilation.getVoidType(), expr,

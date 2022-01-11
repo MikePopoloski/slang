@@ -269,6 +269,8 @@ bool lookupDownward(span<const NamePlusLoc> nameParts, NameComponents name,
         auto isValueLike = [&](const Symbol*& symbol) {
             switch (symbol->kind) {
                 case SymbolKind::ConstraintBlock:
+                case SymbolKind::Coverpoint:
+                case SymbolKind::CoverCross:
                 case SymbolKind::Sequence:
                 case SymbolKind::Property:
                 case SymbolKind::LetDecl:
@@ -604,7 +606,13 @@ bool resolveColonNames(SmallVectorSized<NamePlusLoc, 8>& nameParts, int colonPar
     }
 
     auto isCovergroup = [&](const Symbol& symbol) {
-        return symbol.isType() && symbol.as<Type>().isCovergroup();
+        switch (symbol.kind) {
+            case SymbolKind::Coverpoint:
+            case SymbolKind::CoverCross:
+                return true;
+            default:
+                return symbol.isType() && symbol.as<Type>().isCovergroup();
+        }
     };
 
     // If the prefix name resolved normally to a class object, use that. Otherwise we need

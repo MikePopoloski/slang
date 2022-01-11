@@ -172,7 +172,14 @@ module m;
     wire clk;
     covergroup gc (int maxA, int maxB) @(posedge clk);
         a : coverpoint a_var;
-        b : coverpoint b_var;
+        b : coverpoint b_var {
+            option.weight = maxA;
+            type_option.weight = 1;
+        }
+        c : cross a, b {
+            option.weight = maxB;
+            type_option.weight = 1;
+        }
     endgroup
 
     gc g1 = new (10,20);
@@ -186,7 +193,10 @@ module m;
         g1.option.per_instance = 1;
         gc::type_option.strobe = 1;
 
-        //g1.a.option.weight = 3; // Set weight for coverpoint "a" of instance g1
+        g1.a.option.weight = 3;
+        g1.c.option.weight = 3;
+        gc::a::type_option.weight = 1;
+        gc::c::type_option.weight = 1;
     end
 endmodule
 )");
