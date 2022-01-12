@@ -473,6 +473,9 @@ void Scope::addMembers(const SyntaxNode& syntax) {
         case SyntaxKind::Coverpoint:
             addMember(CoverpointSymbol::fromSyntax(*this, syntax.as<CoverpointSyntax>()));
             break;
+        case SyntaxKind::CoverageBins:
+            addMember(CoverageBinSymbol::fromSyntax(*this, syntax.as<CoverageBinsSyntax>()));
+            break;
         case SyntaxKind::CoverCross: {
             SmallVectorSized<const Symbol*, 8> symbols;
             CoverCrossSymbol::fromSyntax(*this, syntax.as<CoverCrossSyntax>(), symbols);

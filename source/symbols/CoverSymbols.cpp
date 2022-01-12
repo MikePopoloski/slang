@@ -249,6 +249,74 @@ CoverpointSymbol::CoverpointSymbol(Compilation& comp, string_view name, SourceLo
     addProperty(*this, "type_option"sv, VariableLifetime::Static, type_option);
 }
 
+const Expression* CoverageBinSymbol::getIffExpr() const {
+    if (!isResolved)
+        resolve();
+    return iffExpr;
+}
+
+const Expression* CoverageBinSymbol::getNumberOfBinsExpr() const {
+    if (!isResolved)
+        resolve();
+    return numberOfBinsExpr;
+}
+
+const span<const Expression* const> CoverageBinSymbol::getValues() const {
+    if (!isResolved)
+        resolve();
+    return values;
+}
+
+void CoverageBinSymbol::serializeTo(ASTSerializer&) const {
+    // TODO:
+}
+
+CoverageBinSymbol& CoverageBinSymbol::fromSyntax(const Scope& scope,
+                                                 const CoverageBinsSyntax& syntax) {
+    auto& comp = scope.getCompilation();
+    auto result = comp.emplace<CoverageBinSymbol>(syntax.name.valueText(), syntax.name.location());
+    result->setSyntax(syntax);
+    result->setAttributes(scope, syntax.attributes);
+
+    result->isWildcard = syntax.wildcard.kind == TokenKind::WildcardKeyword;
+
+    if (syntax.keyword.kind == TokenKind::IgnoreBinsKeyword)
+        result->binsKind = IgnoreBins;
+    else if (syntax.keyword.kind == TokenKind::IllegalBinsKeyword)
+        result->binsKind = IllegalBins;
+
+    if (syntax.selector)
+        result->isArray = true;
+
+    return *result;
+}
+
+static const Expression& bindCoverageExpr(const ExpressionSyntax& syntax,
+                                          const BindContext& context) {
+    // TODO: restrictions on coverage expressions
+    return Expression::bind(syntax, context);
+}
+
+void CoverageBinSymbol::resolve() const {
+    ASSERT(!isResolved);
+    isResolved = true;
+
+    auto syntax = getSyntax();
+    auto scope = getParentScope();
+    ASSERT(syntax && scope);
+
+    BindContext context(*scope, LookupLocation::before(*this));
+
+    auto& binsSyntax = syntax->as<CoverageBinsSyntax>();
+    if (binsSyntax.iff)
+        iffExpr = &bindCoverageExpr(*binsSyntax.iff->expr, context);
+
+    if (binsSyntax.selector) {
+        if (auto sel = binsSyntax.selector->selector; sel && sel->kind == SyntaxKind::BitSelect)
+            numberOfBinsExpr = &bindCoverageExpr(*sel->as<BitSelectSyntax>().expr, context);
+    }
+}
+
 CoverpointSymbol& CoverpointSymbol::fromSyntax(const Scope& scope, const CoverpointSyntax& syntax) {
     // It's possible for invalid syntax to parse as a coverpoint. If the keyword wasn't
     // given just give up and return a placeholder.
@@ -286,9 +354,8 @@ CoverpointSymbol& CoverpointSymbol::fromSyntax(const Scope& scope, const Coverpo
     for (auto member : syntax.members) {
         if (member->kind == SyntaxKind::CoverageOption)
             options.add(member->as<CoverageOptionSyntax>());
-        else {
-            // TODO:
-        }
+        else
+            result->addMembers(*member);
     }
 
     result->options = options.get();

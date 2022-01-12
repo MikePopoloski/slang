@@ -66,6 +66,38 @@ private:
     mutable optional<const TimingControl*> event;
 };
 
+struct CoverageBinsSyntax;
+
+class CoverageBinSymbol : public Symbol {
+public:
+    enum BinKind { Bins, IllegalBins, IgnoreBins } binsKind = Bins;
+    bool isArray = false;
+    bool isWildcard = false;
+    bool isDefault = false;
+    bool isDefaultSequence = false;
+
+    CoverageBinSymbol(string_view name, SourceLocation loc) :
+        Symbol(SymbolKind::CoverageBin, name, loc) {}
+
+    const Expression* getIffExpr() const;
+    const Expression* getNumberOfBinsExpr() const;
+    const span<const Expression* const> getValues() const;
+
+    void serializeTo(ASTSerializer& serializer) const;
+
+    static CoverageBinSymbol& fromSyntax(const Scope& scope, const CoverageBinsSyntax& syntax);
+
+    static bool isKind(SymbolKind kind) { return kind == SymbolKind::CoverageBin; }
+
+private:
+    void resolve() const;
+
+    mutable const Expression* numberOfBinsExpr = nullptr;
+    mutable const Expression* iffExpr = nullptr;
+    mutable span<const Expression* const> values;
+    mutable bool isResolved = false;
+};
+
 struct CoverpointSyntax;
 struct IdentifierNameSyntax;
 

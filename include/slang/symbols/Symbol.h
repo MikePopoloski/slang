@@ -109,7 +109,8 @@ enum class RandMode;
     x(RandSeqProduction) \
     x(CovergroupBody) \
     x(Coverpoint) \
-    x(CoverCross)
+    x(CoverCross) \
+    x(CoverageBin)
 // clang-format on
 
 ENUM(SymbolKind, SYMBOLKIND)
