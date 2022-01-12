@@ -1850,11 +1850,16 @@ token closeParen
 TransListCoverageBinInitializer base=CoverageBinInitializer
 separated_list<TransSet> sets
 
+CoverageBinsArraySize
+token openBracket
+Expression? expr
+token closeBracket
+
 CoverageBins base=Member
 token wildcard
 token keyword
 token name
-ElementSelect? selector
+CoverageBinsArraySize? size
 token equals
 CoverageBinInitializer initializer
 CoverageIffClause? iff

@@ -1439,9 +1439,16 @@ MemberSyntax* Parser::parseCoverpointMember() {
 
     Token name = expect(TokenKind::Identifier);
 
-    ElementSelectSyntax* selector = nullptr;
-    if (peek(TokenKind::OpenBracket))
-        selector = &parseElementSelect();
+    CoverageBinsArraySizeSyntax* size = nullptr;
+    if (peek(TokenKind::OpenBracket)) {
+        auto openBracket = consume();
+
+        ExpressionSyntax* expr = nullptr;
+        if (!peek(TokenKind::CloseBracket))
+            expr = &parseExpression();
+
+        size = &factory.coverageBinsArraySize(openBracket, expr, expect(TokenKind::CloseBracket));
+    }
 
     // bunch of different kinds of initializers here
     CoverageBinInitializerSyntax* initializer = nullptr;
@@ -1471,8 +1478,8 @@ MemberSyntax* Parser::parseCoverpointMember() {
     }
 
     auto iff = parseCoverageIffClause();
-    return &factory.coverageBins(attributes, wildcard, bins, name, selector, equals, *initializer,
-                                 iff, expect(TokenKind::Semicolon));
+    return &factory.coverageBins(attributes, wildcard, bins, name, size, equals, *initializer, iff,
+                                 expect(TokenKind::Semicolon));
 }
 
 TransRangeSyntax& Parser::parseTransRange() {

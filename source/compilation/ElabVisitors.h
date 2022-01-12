@@ -141,6 +141,13 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
             option.getExpression();
     }
 
+    void handle(const CoverageBinSymbol& symbol) {
+        if (!handleDefault(symbol))
+            return;
+
+        symbol.getIffExpr();
+    }
+
     void handle(const NetSymbol& symbol) {
         if (!handleDefault(symbol))
             return;

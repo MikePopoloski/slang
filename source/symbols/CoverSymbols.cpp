@@ -285,7 +285,7 @@ CoverageBinSymbol& CoverageBinSymbol::fromSyntax(const Scope& scope,
     else if (syntax.keyword.kind == TokenKind::IllegalBinsKeyword)
         result->binsKind = IllegalBins;
 
-    if (syntax.selector)
+    if (syntax.size)
         result->isArray = true;
 
     return *result;
@@ -311,10 +311,8 @@ void CoverageBinSymbol::resolve() const {
     if (binsSyntax.iff)
         iffExpr = &bindCoverageExpr(*binsSyntax.iff->expr, context);
 
-    if (binsSyntax.selector) {
-        if (auto sel = binsSyntax.selector->selector; sel && sel->kind == SyntaxKind::BitSelect)
-            numberOfBinsExpr = &bindCoverageExpr(*sel->as<BitSelectSyntax>().expr, context);
-    }
+    if (binsSyntax.size && binsSyntax.size->expr)
+        numberOfBinsExpr = &bindCoverageExpr(*binsSyntax.size->expr, context);
 }
 
 CoverpointSymbol& CoverpointSymbol::fromSyntax(const Scope& scope, const CoverpointSyntax& syntax) {
