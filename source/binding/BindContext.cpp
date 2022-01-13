@@ -67,6 +67,18 @@ Diagnostic& BindContext::addDiag(DiagCode code, SourceRange sourceRange) const {
     return diag;
 }
 
+bool BindContext::requireIntegral(const Expression& expr) const {
+    if (expr.bad())
+        return false;
+
+    if (!expr.type->isIntegral()) {
+        addDiag(diag::ExprMustBeIntegral, expr.sourceRange) << *expr.type;
+        return false;
+    }
+
+    return true;
+}
+
 bool BindContext::requireIntegral(const ConstantValue& cv, SourceRange range) const {
     if (cv.bad())
         return false;
@@ -209,13 +221,8 @@ optional<int32_t> BindContext::evalInteger(const ExpressionSyntax& syntax,
 }
 
 optional<int32_t> BindContext::evalInteger(const Expression& expr) const {
-    if (expr.bad())
+    if (!requireIntegral(expr))
         return std::nullopt;
-
-    if (!expr.type->isIntegral()) {
-        addDiag(diag::ExprMustBeIntegral, expr.sourceRange) << *expr.type;
-        return std::nullopt;
-    }
 
     ConstantValue cv = eval(expr);
     if (!requireIntegral(cv, expr.sourceRange))

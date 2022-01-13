@@ -832,10 +832,8 @@ Expression& NewArrayExpression::fromSyntax(Compilation& compilation,
     if (sizeExpr.bad() || (initExpr && initExpr->bad()))
         return badExpr(compilation, result);
 
-    if (!sizeExpr.type->isIntegral()) {
-        context.addDiag(diag::ExprMustBeIntegral, sizeExpr.sourceRange) << *sizeExpr.type;
+    if (!context.requireIntegral(sizeExpr))
         return badExpr(compilation, result);
-    }
 
     return *result;
 }

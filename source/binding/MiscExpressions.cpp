@@ -1085,13 +1085,9 @@ Expression& DistExpression::fromSyntax(Compilation& comp, const ExpressionOrDist
                                                                              : DistWeight::PerValue;
             auto& weightExpr = Expression::bind(*item->weight->expr, context);
             di.weight.emplace(DistWeight{ weightKind, weightExpr });
-            bad |= weightExpr.bad();
 
-            if (!weightExpr.bad() && !weightExpr.type->isIntegral()) {
-                context.addDiag(diag::ExprMustBeIntegral, weightExpr.sourceRange)
-                    << *weightExpr.type;
+            if (!context.requireIntegral(weightExpr))
                 bad = true;
-            }
         }
 
         items.emplace(di);

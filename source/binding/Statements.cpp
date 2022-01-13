@@ -2457,12 +2457,7 @@ Statement& RandCaseStatement::fromSyntax(Compilation& compilation,
         auto& stmt = Statement::bind(*item->statement, context, stmtCtx);
         items.append({ &expr, &stmt });
 
-        if (expr.bad() || stmt.bad()) {
-            bad = true;
-        }
-
-        if (!expr.bad() && !expr.type->isIntegral()) {
-            context.addDiag(diag::ExprMustBeIntegral, expr.sourceRange) << *expr.type;
+        if (stmt.bad() || !context.requireIntegral(expr)) {
             bad = true;
         }
     }

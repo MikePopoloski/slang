@@ -1764,13 +1764,8 @@ Expression& StreamingConcatenationExpression::fromSyntax(
                 if (!expr)
                     break;
 
-                if (expr->bad())
+                if (!context.requireIntegral(*expr))
                     return badExpr(compilation, badResult());
-
-                if (!expr->type->isIntegral()) {
-                    context.addDiag(diag::ExprMustBeIntegral, expr->sourceRange) << *expr->type;
-                    return badExpr(compilation, badResult());
-                }
 
                 if (!context.inUnevaluatedBranch()) {
                     if (ConstantValue val = context.tryEval(*expr)) {

@@ -473,13 +473,9 @@ TimingControl& CycleDelayControl::fromSyntax(Compilation& compilation, const Del
                                              const BindContext& context) {
     auto& expr = Expression::bind(*syntax.delayValue, context);
     auto result = compilation.emplace<CycleDelayControl>(expr);
-    if (expr.bad())
-        return badCtrl(compilation, result);
 
-    if (!expr.type->isIntegral()) {
-        context.addDiag(diag::ExprMustBeIntegral, expr.sourceRange) << *expr.type;
+    if (!context.requireIntegral(expr))
         return badCtrl(compilation, result);
-    }
 
     if (!context.flags.has(BindFlags::LValue) && !compilation.getDefaultClocking(*context.scope))
         context.addDiag(diag::NoDefaultClocking, syntax.sourceRange());

@@ -1327,9 +1327,7 @@ RandSeqProductionSymbol::Rule RandSeqProductionSymbol::createRule(
                 auto item = createProdItem(*rrs.item, context);
                 prods.append(comp.emplace<RepeatProd>(expr, item));
 
-                if (!expr.bad() && !expr.type->isIntegral())
-                    context.addDiag(diag::ExprMustBeIntegral, expr.sourceRange) << *expr.type;
-
+                context.requireIntegral(expr);
                 break;
             }
             case SyntaxKind::RsCase:
@@ -1344,8 +1342,7 @@ RandSeqProductionSymbol::Rule RandSeqProductionSymbol::createRule(
     optional<CodeBlockProd> codeBlock;
     if (auto wc = syntax.weightClause) {
         weightExpr = &Expression::bind(*wc->weight, context);
-        if (!weightExpr->bad() && !weightExpr->type->isIntegral())
-            context.addDiag(diag::ExprMustBeIntegral, weightExpr->sourceRange) << *weightExpr->type;
+        context.requireIntegral(*weightExpr);
 
         if (wc->codeBlock) {
             ASSERT(blockIt != blockRange.end());

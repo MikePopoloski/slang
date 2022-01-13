@@ -160,10 +160,8 @@ Expression& ElementSelectExpression::fromSyntax(Compilation& compilation, Expres
             flags = BindFlags::AllowUnboundedLiteral | BindFlags::AllowUnboundedLiteralArithmetic;
 
         selector = &selfDetermined(compilation, syntax, context, flags);
-        if (!selector->bad() && !selector->type->isIntegral() && !selector->type->isUnbounded()) {
-            context.addDiag(diag::ExprMustBeIntegral, selector->sourceRange) << *selector->type;
+        if (!selector->type->isUnbounded() && !context.requireIntegral(*selector))
             return badExpr(compilation, nullptr);
-        }
     }
 
     auto result =
@@ -389,14 +387,11 @@ Expression& RangeSelectExpression::fromSyntax(Compilation& compilation, Expressi
     if (value.bad() || left.bad() || right.bad())
         return badExpr(compilation, result);
 
-    if (!left.type->isIntegral() && !left.type->isUnbounded()) {
-        context.addDiag(diag::ExprMustBeIntegral, left.sourceRange) << *left.type;
+    if (!left.type->isUnbounded() && !context.requireIntegral(left))
         return badExpr(compilation, result);
-    }
-    if (!right.type->isIntegral() && !right.type->isUnbounded()) {
-        context.addDiag(diag::ExprMustBeIntegral, right.sourceRange) << *right.type;
+
+    if (!right.type->isUnbounded() && !context.requireIntegral(right))
         return badExpr(compilation, result);
-    }
 
     const Type& valueType = *value.type;
     const Type& elementType = getIndexedType(compilation, context, valueType, syntax.sourceRange(),
