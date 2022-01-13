@@ -1465,6 +1465,20 @@ MemberSyntax* Parser::parseCoverpointMember() {
             auto defaultKeyword = consume();
             auto sequenceKeyword = consumeIf(TokenKind::SequenceKeyword);
             initializer = &factory.defaultCoverageBinInitializer(defaultKeyword, sequenceKeyword);
+
+            if (wildcard) {
+                addDiag(diag::CoverageBinDefaultWildcard, wildcard.location())
+                    << defaultKeyword.range();
+            }
+
+            if (sequenceKeyword && size) {
+                addDiag(diag::CoverageBinDefSeqSize, sequenceKeyword.location())
+                    << size->sourceRange();
+            }
+
+            if (bins.kind == TokenKind::IgnoreBinsKeyword) {
+                addDiag(diag::CoverageBinDefaultIgnore, defaultKeyword.location()) << bins.range();
+            }
             break;
         }
         case TokenKind::OpenParenthesis:

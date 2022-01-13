@@ -223,12 +223,15 @@ module m;
     covergroup cg1 (ref int x, ref int y, input int c);
         coverpoint x {
             bins a = { [0:63],65 } iff (arr);
-            bins b[4] = { [127:150],[148:191] } iff (c);
-            bins c[] = { 200,201,202 };
-            bins d = { [1000:$] };
+            ignore_bins b[4] = { [127:150],[148:191] } iff (c);
+            illegal_bins c[] = { 200,201,202 };
+            wildcard bins d = { [1000:$] };
             bins e = { [$:$] };
             bins f[arr] = { 200,201,202 };
             bins others[] = default;
+            wildcard bins foo = default;
+            bins bar[] = default sequence;
+            ignore_bins baz = default;
         }
     endgroup
 endmodule
@@ -238,8 +241,11 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 3);
+    REQUIRE(diags.size() == 6);
     CHECK(diags[0].code == diag::NotBooleanConvertible);
     CHECK(diags[1].code == diag::OpenRangeUnbounded);
     CHECK(diags[2].code == diag::ExprMustBeIntegral);
+    CHECK(diags[3].code == diag::CoverageBinDefaultWildcard);
+    CHECK(diags[4].code == diag::CoverageBinDefSeqSize);
+    CHECK(diags[5].code == diag::CoverageBinDefaultIgnore);
 }
