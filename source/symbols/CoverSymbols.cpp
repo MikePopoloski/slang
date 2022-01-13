@@ -288,13 +288,17 @@ CoverageBinSymbol& CoverageBinSymbol::fromSyntax(const Scope& scope,
     if (syntax.size)
         result->isArray = true;
 
+    if (syntax.initializer->kind == SyntaxKind::DefaultCoverageBinInitializer) {
+        result->isDefault = true;
+        if (syntax.initializer->as<DefaultCoverageBinInitializerSyntax>().sequenceKeyword)
+            result->isDefaultSequence = true;
+    }
+
     return *result;
 }
 
-static const Expression& bindCoverageExpr(const ExpressionSyntax& syntax,
-                                          const BindContext& context) {
-    // TODO: restrictions on coverage expressions
-    return Expression::bind(syntax, context);
+static void checkCoverageExpr(const Expression&, const BindContext&) {
+    // TODO: implement rules for coverage expressions
 }
 
 void CoverageBinSymbol::resolve() const {
@@ -305,14 +309,48 @@ void CoverageBinSymbol::resolve() const {
     auto scope = getParentScope();
     ASSERT(syntax && scope);
 
+    auto& comp = scope->getCompilation();
+    auto& coverpoint = scope->asSymbol().as<CoverpointSymbol>();
+    auto& type = coverpoint.getType();
     BindContext context(*scope, LookupLocation::before(*this));
 
     auto& binsSyntax = syntax->as<CoverageBinsSyntax>();
-    if (binsSyntax.iff)
-        iffExpr = &bindCoverageExpr(*binsSyntax.iff->expr, context);
+    if (binsSyntax.iff) {
+        iffExpr = &Expression::bind(*binsSyntax.iff->expr, context);
+        context.requireBooleanConvertible(*iffExpr);
+        checkCoverageExpr(*iffExpr, context);
+    }
 
-    if (binsSyntax.size && binsSyntax.size->expr)
-        numberOfBinsExpr = &bindCoverageExpr(*binsSyntax.size->expr, context);
+    if (binsSyntax.size && binsSyntax.size->expr) {
+        numberOfBinsExpr = &Expression::bind(*binsSyntax.size->expr, context);
+        context.requireIntegral(*numberOfBinsExpr);
+        checkCoverageExpr(*numberOfBinsExpr, context);
+    }
+
+    auto init = binsSyntax.initializer;
+    switch (init->kind) {
+        case SyntaxKind::RangeCoverageBinInitializer: {
+            SmallVectorSized<const Expression*, 4> buffer;
+            for (auto elem : init->as<RangeCoverageBinInitializerSyntax>().ranges->valueRanges) {
+                bitmask<BindFlags> flags;
+                if (elem->kind == SyntaxKind::OpenRangeExpression)
+                    flags = BindFlags::AllowUnboundedLiteral;
+
+                auto& expr = Expression::bindRValue(type, *elem, binsSyntax.equals.location(),
+                                                    context, flags);
+
+                checkCoverageExpr(expr, context);
+                buffer.append(&expr);
+            }
+            values = buffer.copy(comp);
+            break;
+        }
+        case SyntaxKind::DefaultCoverageBinInitializer:
+            // Already handled at construction time.
+            break;
+        default:
+            THROW_UNREACHABLE;
+    }
 }
 
 CoverpointSymbol& CoverpointSymbol::fromSyntax(const Scope& scope, const CoverpointSyntax& syntax) {

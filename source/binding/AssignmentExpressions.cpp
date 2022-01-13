@@ -225,9 +225,9 @@ Expression& Expression::convertAssignment(const BindContext& context, const Type
     if (expr.bad())
         return expr;
 
-    Compilation& compilation = context.getCompilation();
+    Compilation& comp = context.getCompilation();
     if (type.isError())
-        return badExpr(compilation, &expr);
+        return badExpr(comp, &expr);
 
     Expression* result = &expr;
     const Type* rt = expr.type;
@@ -283,12 +283,21 @@ Expression& Expression::convertAssignment(const BindContext& context, const Type
                 // Add an implicit bit-stream casting otherwise types are not assignment compatible.
                 // The size rule is not identical to explicit bit-stream casting so a different
                 // ConversionKind is used.
-                result = compilation.emplace<ConversionExpression>(
-                    type, ConversionKind::StreamingConcat, *result, result->sourceRange);
+                result = comp.emplace<ConversionExpression>(type, ConversionKind::StreamingConcat,
+                                                            *result, result->sourceRange);
                 selfDetermined(context, result);
                 return *result;
             }
-            return badExpr(compilation, &expr);
+            return badExpr(comp, &expr);
+        }
+        else if (expr.kind == ExpressionKind::OpenRange) {
+            // Convert each side of the range and return that as a new range.
+            auto& ore = expr.as<OpenRangeExpression>();
+            auto& left = convertAssignment(context, type, ore.left(), location, lhsExpr);
+            auto& right = convertAssignment(context, type, ore.right(), location, lhsExpr);
+            result = comp.emplace<OpenRangeExpression>(*expr.type, left, right, expr.sourceRange);
+            result->syntax = expr.syntax;
+            return *result;
         }
 
         DiagCode code = type.isCastCompatible(*rt) || type.isBitstreamCastable(*rt)
@@ -300,20 +309,19 @@ Expression& Expression::convertAssignment(const BindContext& context, const Type
             diag << (*lhsExpr)->sourceRange;
 
         diag << expr.sourceRange;
-        return badExpr(compilation, &expr);
+        return badExpr(comp, &expr);
     }
 
     if (type.isNumeric() && rt->isNumeric()) {
-        if ((context.flags & BindFlags::EnumInitializer) != 0 &&
+        if (context.flags.has(BindFlags::EnumInitializer) &&
             !checkEnumInitializer(context, type, *result)) {
-
-            return badExpr(compilation, &expr);
+            return badExpr(comp, &expr);
         }
 
         // The "signednessFromRt" flag is important here; only the width of the lhs is
         // propagated down to operands, not the sign flag. Once the expression is appropriately
         // sized, the makeImplicit call down below will convert the sign for us.
-        rt = binaryOperatorType(compilation, &type, rt, false, /* signednessFromRt */ true);
+        rt = binaryOperatorType(comp, &type, rt, false, /* signednessFromRt */ true);
         bool expanding = type.isEquivalent(*rt);
         if (expanding)
             rt = &type;

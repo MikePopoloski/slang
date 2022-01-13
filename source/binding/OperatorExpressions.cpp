@@ -1927,18 +1927,34 @@ size_t StreamingConcatenationExpression::bitstreamWidth() const {
 Expression& OpenRangeExpression::fromSyntax(Compilation& comp,
                                             const OpenRangeExpressionSyntax& syntax,
                                             const BindContext& context) {
-    Expression& left = create(comp, *syntax.left, context);
-    Expression& right = create(comp, *syntax.right, context);
+    // If we are allowed unbounded literals here, pass that along to subexpressions.
+    bitmask<BindFlags> flags = BindFlags::None;
+    if (context.flags.has(BindFlags::AllowUnboundedLiteral))
+        flags = BindFlags::AllowUnboundedLiteral;
+
+    Expression& left = create(comp, *syntax.left, context, flags);
+    Expression& right = create(comp, *syntax.right, context, flags);
 
     auto result =
         comp.emplace<OpenRangeExpression>(comp.getVoidType(), left, right, syntax.sourceRange());
     if (left.bad() || right.bad())
         return badExpr(comp, result);
 
-    if (!(left.type->isNumeric() && right.type->isNumeric()) &&
+    auto lt = left.type;
+    auto rt = right.type;
+    if (lt->isUnbounded()) {
+        lt = &comp.getIntType();
+        if (rt->isUnbounded())
+            context.addDiag(diag::OpenRangeUnbounded, result->sourceRange);
+    }
+
+    if (rt->isUnbounded())
+        rt = &comp.getIntType();
+
+    if (!(lt->isNumeric() && rt->isNumeric()) &&
         !(left.isImplicitString() && right.isImplicitString())) {
         auto& diag = context.addDiag(diag::BadOpenRange, syntax.colon.location());
-        diag << left.sourceRange << right.sourceRange << *left.type << *right.type;
+        diag << left.sourceRange << right.sourceRange << *lt << *rt;
         return badExpr(comp, result);
     }
 

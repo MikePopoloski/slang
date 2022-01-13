@@ -145,7 +145,7 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
         if (!handleDefault(symbol))
             return;
 
-        symbol.getIffExpr();
+        symbol.getValues();
     }
 
     void handle(const NetSymbol& symbol) {
