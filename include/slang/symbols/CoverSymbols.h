@@ -67,9 +67,22 @@ private:
 };
 
 struct CoverageBinsSyntax;
+struct TransRangeSyntax;
 
 class CoverageBinSymbol : public Symbol {
 public:
+    struct TransRangeList {
+        span<const Expression* const> items;
+        const Expression* repeatFrom = nullptr;
+        const Expression* repeatTo = nullptr;
+        enum RepeatKind { None, Consecutive, Nonconsecutive, GoTo } repeatKind = None;
+
+        TransRangeList(const TransRangeSyntax& syntax, const Type& type,
+                       const BindContext& context);
+    };
+
+    using TransSet = span<const TransRangeList>;
+
     enum BinKind { Bins, IllegalBins, IgnoreBins } binsKind = Bins;
     bool isArray = false;
     bool isWildcard = false;
@@ -81,7 +94,8 @@ public:
 
     const Expression* getIffExpr() const;
     const Expression* getNumberOfBinsExpr() const;
-    const span<const Expression* const> getValues() const;
+    span<const Expression* const> getValues() const;
+    span<const TransSet> getTransList() const;
 
     void serializeTo(ASTSerializer& serializer) const;
 
@@ -95,6 +109,7 @@ private:
     mutable const Expression* numberOfBinsExpr = nullptr;
     mutable const Expression* iffExpr = nullptr;
     mutable span<const Expression* const> values;
+    mutable span<const TransSet> transList;
     mutable bool isResolved = false;
 };
 

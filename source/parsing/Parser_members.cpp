@@ -1482,6 +1482,11 @@ MemberSyntax* Parser::parseCoverpointMember() {
             break;
         }
         case TokenKind::OpenParenthesis:
+            if (size && size->expr) {
+                auto range = size->expr->sourceRange();
+                addDiag(diag::CoverageBinTransSize, range.start()) << range;
+            }
+
             initializer = &parseTransListInitializer();
             break;
         default: {
@@ -1522,7 +1527,7 @@ TransRangeSyntax& Parser::parseTransRange() {
                 break;
         }
 
-        SelectorSyntax* selector = parseElementSelector();
+        SelectorSyntax* selector = parseSequenceRange();
         repeat = &factory.transRepeatRange(openBracket, specifier, selector,
                                            expect(TokenKind::CloseBracket));
     }

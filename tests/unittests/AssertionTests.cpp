@@ -128,10 +128,10 @@ endmodule
     CHECK(diags[5].code == diag::ValueMustBePositive);
     CHECK(diags[6].code == diag::SeqRangeMinMax);
     CHECK(diags[7].code == diag::ExprMustBeIntegral);
-    CHECK(diags[8].code == diag::InvalidSequenceRange);
+    CHECK(diags[8].code == diag::InvalidRepeatRange);
     CHECK(diags[9].code == diag::ExpectedExpression);
     CHECK(diags[10].code == diag::ExpectedExpression);
-    CHECK(diags[11].code == diag::InvalidSequenceRange);
+    CHECK(diags[11].code == diag::InvalidRepeatRange);
     CHECK(diags[12].code == diag::PropertyLhsInvalid);
     CHECK(diags[13].code == diag::ThroughoutLhsInvalid);
     CHECK(diags[14].code == diag::ThroughoutLhsInvalid);

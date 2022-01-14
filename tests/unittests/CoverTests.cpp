@@ -232,6 +232,9 @@ module m;
             wildcard bins foo = default;
             bins bar[] = default sequence;
             ignore_bins baz = default;
+            bins t[] = (1,5 => 6,7), (1 => 12[*3:4] => [3:3],4 [-> 3]),
+                (1 => 3 [=2:arr] => 6[*3+:4] => 7[*]);
+            bins u[3] = (1,5 => 6,7);
         }
     endgroup
 endmodule
@@ -241,11 +244,15 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 6);
+    REQUIRE(diags.size() == 10);
     CHECK(diags[0].code == diag::NotBooleanConvertible);
     CHECK(diags[1].code == diag::OpenRangeUnbounded);
     CHECK(diags[2].code == diag::ExprMustBeIntegral);
     CHECK(diags[3].code == diag::CoverageBinDefaultWildcard);
     CHECK(diags[4].code == diag::CoverageBinDefSeqSize);
     CHECK(diags[5].code == diag::CoverageBinDefaultIgnore);
+    CHECK(diags[6].code == diag::ExprMustBeIntegral);
+    CHECK(diags[7].code == diag::InvalidRepeatRange);
+    CHECK(diags[8].code == diag::ExpectedExpression);
+    CHECK(diags[9].code == diag::CoverageBinTransSize);
 }

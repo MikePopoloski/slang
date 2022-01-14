@@ -261,10 +261,16 @@ const Expression* CoverageBinSymbol::getNumberOfBinsExpr() const {
     return numberOfBinsExpr;
 }
 
-const span<const Expression* const> CoverageBinSymbol::getValues() const {
+span<const Expression* const> CoverageBinSymbol::getValues() const {
     if (!isResolved)
         resolve();
     return values;
+}
+
+span<const CoverageBinSymbol::TransSet> CoverageBinSymbol::getTransList() const {
+    if (!isResolved)
+        resolve();
+    return transList;
 }
 
 void CoverageBinSymbol::serializeTo(ASTSerializer&) const {
@@ -345,11 +351,69 @@ void CoverageBinSymbol::resolve() const {
             values = buffer.copy(comp);
             break;
         }
+        case SyntaxKind::TransListCoverageBinInitializer: {
+            SmallVectorSized<TransSet, 4> listBuffer;
+            for (auto setElem : init->as<TransListCoverageBinInitializerSyntax>().sets) {
+                SmallVectorSized<TransRangeList, 4> setBuffer;
+                for (auto rangeElem : setElem->ranges)
+                    setBuffer.emplace(*rangeElem, type, context);
+                listBuffer.append(setBuffer.copy(comp));
+            }
+            transList = listBuffer.copy(comp);
+            break;
+        }
         case SyntaxKind::DefaultCoverageBinInitializer:
             // Already handled at construction time.
             break;
         default:
             THROW_UNREACHABLE;
+    }
+}
+
+CoverageBinSymbol::TransRangeList::TransRangeList(const TransRangeSyntax& syntax, const Type& type,
+                                                  const BindContext& context) {
+    SmallVectorSized<const Expression*, 4> buffer;
+    for (auto elem : syntax.items) {
+        auto& expr = Expression::bindRValue(type, *elem, elem->getFirstToken().location(), context);
+        checkCoverageExpr(expr, context);
+        buffer.append(&expr);
+    }
+
+    auto& comp = context.getCompilation();
+    items = buffer.copy(comp);
+
+    if (syntax.repeat) {
+        switch (syntax.repeat->specifier.kind) {
+            case TokenKind::Star:
+                repeatKind = Consecutive;
+                break;
+            case TokenKind::Equals:
+                repeatKind = Nonconsecutive;
+                break;
+            case TokenKind::MinusArrow:
+                repeatKind = GoTo;
+                break;
+            default:
+                THROW_UNREACHABLE;
+        }
+
+        auto bindCount = [&](const ExpressionSyntax& exprSyntax) {
+            auto& expr = Expression::bind(exprSyntax, context);
+            context.requireIntegral(expr);
+            checkCoverageExpr(expr, context);
+            return &expr;
+        };
+
+        if (auto sel = syntax.repeat->selector) {
+            if (sel->kind == SyntaxKind::BitSelect) {
+                repeatFrom = bindCount(*sel->as<BitSelectSyntax>().expr);
+            }
+            else {
+                auto& rss = sel->as<RangeSelectSyntax>();
+                repeatFrom = bindCount(*rss.left);
+                repeatTo = bindCount(*rss.right);
+            }
+        }
     }
 }
 

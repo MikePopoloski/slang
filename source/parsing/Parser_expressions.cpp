@@ -1203,7 +1203,7 @@ SelectorSyntax* Parser::parseSequenceRange() {
     else if (result->kind == SyntaxKind::AscendingRangeSelect ||
              result->kind == SyntaxKind::DescendingRangeSelect) {
         auto& rs = result->as<RangeSelectSyntax>();
-        addDiag(diag::InvalidSequenceRange, rs.range.location()) << rs.range.range();
+        addDiag(diag::InvalidRepeatRange, rs.range.location()) << rs.range.range();
     }
     return result;
 }
@@ -1311,13 +1311,13 @@ SequenceRepetitionSyntax* Parser::parseSequenceRepetition() {
             addDiag(diag::ExpectedExpression, peek().location());
     }
     else if (op.kind == TokenKind::Plus) {
-        addDiag(diag::InvalidSequenceRange, selector->getFirstToken().location())
+        addDiag(diag::InvalidRepeatRange, selector->getFirstToken().location())
             << selector->sourceRange();
     }
     else if (selector->kind == SyntaxKind::AscendingRangeSelect ||
              selector->kind == SyntaxKind::DescendingRangeSelect) {
         auto& rs = selector->as<RangeSelectSyntax>();
-        addDiag(diag::InvalidSequenceRange, rs.range.location()) << rs.range.range();
+        addDiag(diag::InvalidRepeatRange, rs.range.location()) << rs.range.range();
     }
 
     auto closeBracket = expect(TokenKind::CloseBracket);
