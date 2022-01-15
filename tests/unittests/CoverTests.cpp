@@ -290,3 +290,36 @@ endclass
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Covergroup built-in methods") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    covergroup cg (int xb, yb, ref int x, y) ;
+        coverpoint x {bins xbins[] = { [0:xb] }; }
+        coverpoint y {bins ybins[] = { [0:yb] }; }
+    endgroup
+
+    int a,b,c,d;
+    cg cv1 = new (1,2,a,b); // cv1.x has 2 bins, cv1.y has 3 bins
+    cg cv2 = new (3,6,c,d); // cv2.x has 4 bins, cv2.y has 7 bins
+
+    int covered, total;
+    real r;
+    initial begin
+        r = cv1.x.get_inst_coverage(covered,total); // total = 2
+        r = cv1.get_inst_coverage(); // total = 5
+        r = cg::x::get_coverage(covered,total); // total = 6
+        r = cg::get_coverage(covered); // total = 16
+
+        cv1.start();
+        cv1.x.stop();
+        cv1.set_inst_name("asdf");
+        cv1.sample();
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}

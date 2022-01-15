@@ -107,6 +107,37 @@ static void addProperty(Scope& scope, string_view name, VariableLifetime lifetim
     scope.addMember(prop);
 }
 
+static void addBuiltInMethods(Scope& scope, bool isCovergroup) {
+    auto& comp = scope.getCompilation();
+    auto makeFunc = [&](string_view funcName, const Type& returnType) {
+        MethodBuilder builder(comp, funcName, returnType, SubroutineKind::Function);
+        scope.addMember(builder.symbol);
+        return builder;
+    };
+
+    auto& void_t = comp.getVoidType();
+    auto& int_t = comp.getIntType();
+    auto& real_t = comp.getRealType();
+    auto& string_t = comp.getStringType();
+
+    if (isCovergroup) {
+        makeFunc("sample"sv, void_t);
+        makeFunc("set_inst_name"sv, void_t).addArg("name"sv, string_t);
+    }
+
+    auto get_coverage = makeFunc("get_coverage"sv, real_t);
+    get_coverage.addFlags(MethodFlags::Static);
+    get_coverage.addArg("covered_bins"sv, int_t, ArgumentDirection::Ref, SVInt(32, 0, true));
+    get_coverage.addArg("total_bins"sv, int_t, ArgumentDirection::Ref, SVInt(32, 0, true));
+
+    auto get_inst_coverage = makeFunc("get_inst_coverage"sv, real_t);
+    get_inst_coverage.addArg("covered_bins"sv, int_t, ArgumentDirection::Ref, SVInt(32, 0, true));
+    get_inst_coverage.addArg("total_bins"sv, int_t, ArgumentDirection::Ref, SVInt(32, 0, true));
+
+    makeFunc("start"sv, void_t);
+    makeFunc("stop"sv, void_t);
+}
+
 CovergroupBodySymbol::CovergroupBodySymbol(Compilation& comp, SourceLocation loc) :
     Symbol(SymbolKind::CovergroupBody, ""sv, loc), Scope(comp, this) {
 
@@ -135,6 +166,8 @@ CovergroupBodySymbol::CovergroupBodySymbol(Compilation& comp, SourceLocation loc
     type_option.addField("merge_instances"sv, bit_t);
     type_option.addField("distribute_first"sv, bit_t);
     addProperty(*this, "type_option"sv, VariableLifetime::Static, type_option);
+
+    addBuiltInMethods(*this, true);
 }
 
 CovergroupType::CovergroupType(Compilation& compilation, string_view name, SourceLocation loc,
@@ -231,36 +264,6 @@ ConstantValue CovergroupType::getDefaultValueImpl() const {
 
 void CovergroupType::serializeTo(ASTSerializer&) const {
     // TODO:
-}
-
-CoverpointSymbol::CoverpointSymbol(Compilation& comp, string_view name, SourceLocation loc) :
-    Symbol(SymbolKind::Coverpoint, name, loc), Scope(comp, this),
-    declaredType(*this, DeclaredTypeFlags::InferImplicit | DeclaredTypeFlags::AutomaticInitializer |
-                            DeclaredTypeFlags::CoverageType) {
-
-    // Set the overrideIndex for the type and expression so that they cannot refer to
-    // other members of the parent covergroup. This allows coverpoints named the same
-    // as formal arguments to not interfere with lookup.
-    declaredType.setOverrideIndex(SymbolIndex(1));
-
-    auto& int_t = comp.getIntType();
-    auto& bit_t = comp.getBitType();
-    auto& string_t = comp.getStringType();
-
-    StructBuilder option(*this, LookupLocation::min);
-    option.addField("weight"sv, int_t);
-    option.addField("goal"sv, int_t);
-    option.addField("comment"sv, string_t);
-    option.addField("at_least"sv, int_t);
-    option.addField("auto_bin_max"sv, int_t, VariableFlags::ImmutableCoverageOption);
-    option.addField("detect_overlap"sv, bit_t, VariableFlags::ImmutableCoverageOption);
-    addProperty(*this, "option"sv, VariableLifetime::Automatic, option);
-
-    StructBuilder type_option(*this, LookupLocation::min);
-    type_option.addField("weight"sv, int_t);
-    type_option.addField("goal"sv, int_t);
-    type_option.addField("comment"sv, string_t);
-    addProperty(*this, "type_option"sv, VariableLifetime::Static, type_option);
 }
 
 const Expression* CoverageBinSymbol::getIffExpr() const {
@@ -483,6 +486,38 @@ CoverageBinSymbol::TransRangeList::TransRangeList(const TransRangeSyntax& syntax
     }
 }
 
+CoverpointSymbol::CoverpointSymbol(Compilation& comp, string_view name, SourceLocation loc) :
+    Symbol(SymbolKind::Coverpoint, name, loc), Scope(comp, this),
+    declaredType(*this, DeclaredTypeFlags::InferImplicit | DeclaredTypeFlags::AutomaticInitializer |
+                            DeclaredTypeFlags::CoverageType) {
+
+    // Set the overrideIndex for the type and expression so that they cannot refer to
+    // other members of the parent covergroup. This allows coverpoints named the same
+    // as formal arguments to not interfere with lookup.
+    declaredType.setOverrideIndex(SymbolIndex(1));
+
+    auto& int_t = comp.getIntType();
+    auto& bit_t = comp.getBitType();
+    auto& string_t = comp.getStringType();
+
+    StructBuilder option(*this, LookupLocation::min);
+    option.addField("weight"sv, int_t);
+    option.addField("goal"sv, int_t);
+    option.addField("comment"sv, string_t);
+    option.addField("at_least"sv, int_t);
+    option.addField("auto_bin_max"sv, int_t, VariableFlags::ImmutableCoverageOption);
+    option.addField("detect_overlap"sv, bit_t, VariableFlags::ImmutableCoverageOption);
+    addProperty(*this, "option"sv, VariableLifetime::Automatic, option);
+
+    StructBuilder type_option(*this, LookupLocation::min);
+    type_option.addField("weight"sv, int_t);
+    type_option.addField("goal"sv, int_t);
+    type_option.addField("comment"sv, string_t);
+    addProperty(*this, "type_option"sv, VariableLifetime::Static, type_option);
+
+    addBuiltInMethods(*this, false);
+}
+
 CoverpointSymbol& CoverpointSymbol::fromSyntax(const Scope& scope, const CoverpointSyntax& syntax) {
     // It's possible for invalid syntax to parse as a coverpoint. If the keyword wasn't
     // given just give up and return a placeholder.
@@ -586,6 +621,8 @@ CoverCrossSymbol::CoverCrossSymbol(Compilation& comp, string_view name, SourceLo
     type_option.addField("goal"sv, int_t);
     type_option.addField("comment"sv, string_t);
     addProperty(*this, "type_option"sv, VariableLifetime::Static, type_option);
+
+    addBuiltInMethods(*this, false);
 }
 
 void CoverCrossSymbol::fromSyntax(const Scope& scope, const CoverCrossSyntax& syntax,
