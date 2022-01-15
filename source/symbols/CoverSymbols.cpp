@@ -345,6 +345,19 @@ void CoverageBinSymbol::resolve() const {
         checkCoverageExpr(*numberOfBinsExpr, context);
     }
 
+    auto bindWithExpr = [&](const WithClauseSyntax& withSyntax) {
+        // Create the iterator variable and set it up with a bind context so that it
+        // can be found by the iteration expression.
+        auto it = comp.emplace<IteratorSymbol>(*context.scope, "item"sv, coverpoint.location, type);
+
+        BindContext iterCtx = context;
+        it->nextIterator = std::exchange(iterCtx.firstIterator, it);
+        iterCtx.flags &= ~BindFlags::StaticInitializer;
+
+        withExpr = &Expression::bind(*withSyntax.expr, iterCtx);
+        iterCtx.requireBooleanConvertible(*withExpr);
+    };
+
     auto init = binsSyntax.initializer;
     switch (init->kind) {
         case SyntaxKind::RangeCoverageBinInitializer: {
@@ -363,19 +376,17 @@ void CoverageBinSymbol::resolve() const {
             }
             values = buffer.copy(comp);
 
-            if (rcbis.withClause) {
-                // Create the iterator variable and set it up with a bind context so that it
-                // can be found by the iteration expression.
-                auto it = comp.emplace<IteratorSymbol>(*context.scope, "item"sv,
-                                                       coverpoint.location, type);
+            if (rcbis.withClause)
+                bindWithExpr(*rcbis.withClause);
+            break;
+        }
+        case SyntaxKind::IdWithExprCoverageBinInitializer: {
+            auto& iwecbi = init->as<IdWithExprCoverageBinInitializerSyntax>();
+            bindWithExpr(*iwecbi.withClause);
 
-                BindContext iterCtx = context;
-                it->nextIterator = std::exchange(iterCtx.firstIterator, it);
-                iterCtx.flags &= ~BindFlags::StaticInitializer;
-
-                withExpr = &Expression::bind(*rcbis.withClause->expr, iterCtx);
-                iterCtx.requireBooleanConvertible(*withExpr);
-            }
+            auto targetName = iwecbi.id.valueText();
+            if (!targetName.empty() && targetName != coverpoint.name)
+                context.addDiag(diag::CoverageBinTargetName, iwecbi.id.range()) << coverpoint.name;
             break;
         }
         case SyntaxKind::TransListCoverageBinInitializer: {

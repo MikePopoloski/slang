@@ -1489,6 +1489,15 @@ MemberSyntax* Parser::parseCoverpointMember() {
 
             initializer = &parseTransListInitializer();
             break;
+        case TokenKind::Identifier:
+            if (peek(1).kind == TokenKind::WithKeyword) {
+                auto id = consume();
+                auto with = parseWithClause();
+                ASSERT(with);
+                initializer = &factory.idWithExprCoverageBinInitializer(id, *with);
+                break;
+            }
+            [[fallthrough]];
         default: {
             auto& expr = parseExpression();
             initializer = &factory.expressionCoverageBinInitializer(expr);

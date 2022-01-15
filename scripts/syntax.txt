@@ -1832,6 +1832,10 @@ RangeCoverageBinInitializer base=CoverageBinInitializer
 OpenRangeList ranges
 WithClause? withClause
 
+IdWithExprCoverageBinInitializer base=CoverageBinInitializer
+token id
+WithClause withClause
+
 TransRepeatRange
 token openBracket
 token specifier

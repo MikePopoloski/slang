@@ -239,6 +239,11 @@ module m;
             bins w = 1+1;
             bins mod3[] = {[0:255]} with (item % 3 == 0);
         }
+
+        coverpoint c {
+            bins func[] = c with (item % 3 == 0);
+            bins func2 = asdf with (item % 3 == 0);
+        }
     endgroup
 
     function type(arr) func(int i);
@@ -250,7 +255,7 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 11);
+    REQUIRE(diags.size() == 12);
     CHECK(diags[0].code == diag::NotBooleanConvertible);
     CHECK(diags[1].code == diag::OpenRangeUnbounded);
     CHECK(diags[2].code == diag::ExprMustBeIntegral);
@@ -262,4 +267,5 @@ endmodule
     CHECK(diags[8].code == diag::ExpectedExpression);
     CHECK(diags[9].code == diag::CoverageBinTransSize);
     CHECK(diags[10].code == diag::CoverageSetType);
+    CHECK(diags[11].code == diag::CoverageBinTargetName);
 }
