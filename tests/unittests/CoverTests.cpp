@@ -269,3 +269,24 @@ endmodule
     CHECK(diags[10].code == diag::CoverageSetType);
     CHECK(diags[11].code == diag::CoverageBinTargetName);
 }
+
+TEST_CASE("Covergroup in class") {
+    auto tree = SyntaxTree::fromText(R"(
+class xyz;
+    bit [3:0] m_x;
+    local int m_y;
+    protected bit m_z;
+
+    covergroup cov1 @m_z;
+        coverpoint m_x;
+        coverpoint m_y;
+    endgroup
+
+    function new(); cov1 = new; endfunction
+endclass
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}

@@ -1178,12 +1178,26 @@ const ClassType* Lookup::findClass(const NameSyntax& className, const BindContex
 }
 
 std::pair<const ClassType*, bool> Lookup::getContainingClass(const Scope& scope) {
+    auto isClassElem = [](SymbolKind kind) {
+        switch (kind) {
+            case SymbolKind::StatementBlock:
+            case SymbolKind::Subroutine:
+            case SymbolKind::MethodPrototype:
+            case SymbolKind::ConstraintBlock:
+            case SymbolKind::RandSeqProduction:
+            case SymbolKind::CovergroupBody:
+            case SymbolKind::CovergroupType:
+            case SymbolKind::Coverpoint:
+            case SymbolKind::CoverCross:
+                return true;
+            default:
+                return false;
+        }
+    };
+
     const Symbol* parent = &scope.asSymbol();
     bool inStatic = false;
-    while (parent->kind == SymbolKind::StatementBlock || parent->kind == SymbolKind::Subroutine ||
-           parent->kind == SymbolKind::MethodPrototype ||
-           parent->kind == SymbolKind::ConstraintBlock ||
-           parent->kind == SymbolKind::RandSeqProduction) {
+    while (isClassElem(parent->kind)) {
         if (parent->kind == SymbolKind::Subroutine) {
             // Remember whether this was a static class method.
             if (parent->as<SubroutineSymbol>().flags.has(MethodFlags::Static))

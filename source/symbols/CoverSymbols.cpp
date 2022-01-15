@@ -145,10 +145,14 @@ CovergroupType::CovergroupType(Compilation& compilation, string_view name, Sourc
 
 const Symbol& CovergroupType::fromSyntax(const Scope& scope,
                                          const CovergroupDeclarationSyntax& syntax) {
+    // If we're inside a class, this covergroup is actually anonymous and the name
+    // is used to implicitly declare a property of the covergroup type.
+    bool inClass = scope.asSymbol().kind == SymbolKind::ClassType;
+    string_view name = inClass ? ""sv : syntax.name.valueText();
+
     auto& comp = scope.getCompilation();
     auto body = comp.emplace<CovergroupBodySymbol>(comp, syntax.name.location());
-    auto result =
-        comp.emplace<CovergroupType>(comp, syntax.name.valueText(), syntax.name.location(), *body);
+    auto result = comp.emplace<CovergroupType>(comp, name, syntax.name.location(), *body);
     result->setSyntax(syntax);
     result->setAttributes(scope, syntax.attributes);
 
@@ -177,6 +181,16 @@ const Symbol& CovergroupType::fromSyntax(const Scope& scope,
     }
 
     body->options = options.get();
+
+    if (inClass) {
+        auto var =
+            comp.emplace<ClassPropertySymbol>(syntax.name.valueText(), syntax.name.location(),
+                                              VariableLifetime::Automatic, Visibility::Public);
+        var->setType(*result);
+        var->flags |= VariableFlags::Const;
+        return *var;
+    }
+
     return *result;
 }
 
