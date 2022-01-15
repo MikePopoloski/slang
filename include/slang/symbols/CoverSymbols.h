@@ -48,6 +48,7 @@ public:
 class CovergroupType : public Type, public Scope {
 public:
     span<const FormalArgumentSymbol* const> arguments;
+    span<const FormalArgumentSymbol* const> sampleArguments;
     const CovergroupBodySymbol& body;
 
     CovergroupType(Compilation& compilation, string_view name, SourceLocation loc,

@@ -120,10 +120,8 @@ static void addBuiltInMethods(Scope& scope, bool isCovergroup) {
     auto& real_t = comp.getRealType();
     auto& string_t = comp.getStringType();
 
-    if (isCovergroup) {
-        makeFunc("sample"sv, void_t);
+    if (isCovergroup)
         makeFunc("set_inst_name"sv, void_t).addArg("name"sv, string_t);
-    }
 
     auto get_coverage = makeFunc("get_coverage"sv, real_t);
     get_coverage.addFlags(MethodFlags::Static);
@@ -199,6 +197,29 @@ const Symbol& CovergroupType::fromSyntax(const Scope& scope,
             if (arg->direction == ArgumentDirection::Out ||
                 arg->direction == ArgumentDirection::InOut) {
                 scope.addDiag(diag::CovergroupOutArg, arg->location);
+            }
+        }
+    }
+
+    MethodBuilder sample(comp, "sample"sv, comp.getVoidType(), SubroutineKind::Function);
+    body->addMember(sample.symbol);
+
+    if (syntax.event && syntax.event->kind == SyntaxKind::WithFunctionSample) {
+        auto& wfs = syntax.event->as<WithFunctionSampleSyntax>();
+        if (wfs.portList) {
+            SmallVectorSized<const FormalArgumentSymbol*, 8> args;
+            SubroutineSymbol::buildArguments(*result, *wfs.portList, VariableLifetime::Automatic,
+                                             args);
+
+            result->sampleArguments = args.copy(comp);
+
+            for (auto arg : result->sampleArguments) {
+                if (arg->direction == ArgumentDirection::Out ||
+                    arg->direction == ArgumentDirection::InOut) {
+                    scope.addDiag(diag::CovergroupOutArg, arg->location);
+                }
+
+                sample.copyArg(*arg);
             }
         }
     }

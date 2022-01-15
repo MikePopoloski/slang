@@ -1750,6 +1750,9 @@ CovergroupDeclarationSyntax& Parser::parseCovergroupDeclaration(AttrList attribu
                 addDiag(diag::ExpectedSampleKeyword, sample.location());
 
             auto samplePortList = parseFunctionPortList(/* allowEmptyNames */ false);
+            if (!samplePortList)
+                addDiag(diag::ExpectedFunctionPortList, peek().location());
+
             event = &factory.withFunctionSample(with, function, sample, samplePortList);
             break;
         }

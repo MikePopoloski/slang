@@ -323,3 +323,56 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Covergroup overriding sample method") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    covergroup p_cg with function sample(bit a, int x);
+        coverpoint x;
+        cross x, a;
+    endgroup : p_cg
+
+    p_cg cg1 = new;
+
+    wire clk;
+    bit a;
+    int b,c;
+    property p1;
+        int x;
+        @(posedge clk)(a, x = b) ##1 (c, cg1.sample(a, x));
+    endproperty : p1
+
+    c1: cover property (p1);
+
+    function automatic void F(int j);
+        bit d;
+        cg1.sample(d, j);
+    endfunction
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Covergroup overriding sample method errors") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    covergroup cg1 with function sample(bit a, output int x);
+    endgroup
+
+    covergroup cg2 with function foo;
+    endgroup
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 3);
+    CHECK(diags[0].code == diag::CovergroupOutArg);
+    CHECK(diags[1].code == diag::ExpectedSampleKeyword);
+    CHECK(diags[2].code == diag::ExpectedFunctionPortList);
+}

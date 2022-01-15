@@ -36,6 +36,9 @@ public:
                                  ArgumentDirection direction = ArgumentDirection::In,
                                  optional<SVInt> defaultValue = {});
 
+    /// Makes a copy of the given argument and adds it to this method.
+    FormalArgumentSymbol& copyArg(const FormalArgumentSymbol& fromArg);
+
     /// Adds flags to the method.
     void addFlags(bitmask<MethodFlags> flags);
 

@@ -56,6 +56,23 @@ FormalArgumentSymbol& MethodBuilder::addArg(string_view name, const Type& type,
     return *arg;
 }
 
+FormalArgumentSymbol& MethodBuilder::copyArg(const FormalArgumentSymbol& fromArg) {
+    auto arg = compilation.emplace<FormalArgumentSymbol>(fromArg.name, fromArg.location,
+                                                         fromArg.direction, fromArg.lifetime);
+    arg->flags = fromArg.flags;
+    symbol.addMember(*arg);
+    args.append(arg);
+
+    auto& argDT = *arg->getDeclaredType();
+    auto& fromDT = *fromArg.getDeclaredType();
+    argDT.copyTypeFrom(fromDT);
+
+    if (auto expr = fromDT.getInitializerSyntax())
+        argDT.setInitializerSyntax(*expr, fromDT.getInitializerLocation());
+
+    return *arg;
+}
+
 void MethodBuilder::addFlags(bitmask<MethodFlags> flags) {
     symbol.flags |= flags;
 }
