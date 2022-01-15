@@ -237,6 +237,7 @@ module m;
             bins u[3] = (1,5 => 6,7);
             bins v = func(1);
             bins w = 1+1;
+            bins mod3[] = {[0:255]} with (item % 3 == 0);
         }
     endgroup
 

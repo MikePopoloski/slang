@@ -95,6 +95,7 @@ public:
     const Expression* getIffExpr() const;
     const Expression* getNumberOfBinsExpr() const;
     const Expression* getSetCoverageExpr() const;
+    const Expression* getWithExpr() const;
     span<const Expression* const> getValues() const;
     span<const TransSet> getTransList() const;
 
@@ -110,6 +111,7 @@ private:
     mutable const Expression* numberOfBinsExpr = nullptr;
     mutable const Expression* iffExpr = nullptr;
     mutable const Expression* setCoverageExpr = nullptr;
+    mutable const Expression* withExpr = nullptr;
     mutable span<const Expression* const> values;
     mutable span<const TransSet> transList;
     mutable bool isResolved = false;

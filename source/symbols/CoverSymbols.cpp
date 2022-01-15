@@ -267,6 +267,12 @@ const Expression* CoverageBinSymbol::getSetCoverageExpr() const {
     return setCoverageExpr;
 }
 
+const Expression* CoverageBinSymbol::getWithExpr() const {
+    if (!isResolved)
+        resolve();
+    return withExpr;
+}
+
 span<const Expression* const> CoverageBinSymbol::getValues() const {
     if (!isResolved)
         resolve();
@@ -343,7 +349,8 @@ void CoverageBinSymbol::resolve() const {
     switch (init->kind) {
         case SyntaxKind::RangeCoverageBinInitializer: {
             SmallVectorSized<const Expression*, 4> buffer;
-            for (auto elem : init->as<RangeCoverageBinInitializerSyntax>().ranges->valueRanges) {
+            auto& rcbis = init->as<RangeCoverageBinInitializerSyntax>();
+            for (auto elem : rcbis.ranges->valueRanges) {
                 bitmask<BindFlags> flags;
                 if (elem->kind == SyntaxKind::OpenRangeExpression)
                     flags = BindFlags::AllowUnboundedLiteral;
@@ -355,6 +362,20 @@ void CoverageBinSymbol::resolve() const {
                 buffer.append(&expr);
             }
             values = buffer.copy(comp);
+
+            if (rcbis.withClause) {
+                // Create the iterator variable and set it up with a bind context so that it
+                // can be found by the iteration expression.
+                auto it = comp.emplace<IteratorSymbol>(*context.scope, "item"sv,
+                                                       coverpoint.location, type);
+
+                BindContext iterCtx = context;
+                it->nextIterator = std::exchange(iterCtx.firstIterator, it);
+                iterCtx.flags &= ~BindFlags::StaticInitializer;
+
+                withExpr = &Expression::bind(*rcbis.withClause->expr, iterCtx);
+                iterCtx.requireBooleanConvertible(*withExpr);
+            }
             break;
         }
         case SyntaxKind::TransListCoverageBinInitializer: {
