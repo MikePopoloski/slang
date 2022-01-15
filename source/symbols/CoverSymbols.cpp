@@ -261,6 +261,12 @@ const Expression* CoverageBinSymbol::getNumberOfBinsExpr() const {
     return numberOfBinsExpr;
 }
 
+const Expression* CoverageBinSymbol::getSetCoverageExpr() const {
+    if (!isResolved)
+        resolve();
+    return setCoverageExpr;
+}
+
 span<const Expression* const> CoverageBinSymbol::getValues() const {
     if (!isResolved)
         resolve();
@@ -362,6 +368,20 @@ void CoverageBinSymbol::resolve() const {
             transList = listBuffer.copy(comp);
             break;
         }
+        case SyntaxKind::ExpressionCoverageBinInitializer:
+            setCoverageExpr = &Expression::bind(
+                *init->as<ExpressionCoverageBinInitializerSyntax>().expr, context);
+            if (!setCoverageExpr->bad()) {
+                auto& t = *setCoverageExpr->type;
+                if (!t.isArray() || t.isAssociativeArray() ||
+                    !type.isAssignmentCompatible(*t.getArrayElementType())) {
+
+                    auto& diag =
+                        context.addDiag(diag::CoverageSetType, setCoverageExpr->sourceRange);
+                    diag << t << coverpoint.name << type;
+                }
+            }
+            break;
         case SyntaxKind::DefaultCoverageBinInitializer:
             // Already handled at construction time.
             break;

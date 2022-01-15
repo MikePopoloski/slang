@@ -235,8 +235,13 @@ module m;
             bins t[] = (1,5 => 6,7), (1 => 12[*3:4] => [3:3],4 [-> 3]),
                 (1 => 3 [=2:arr] => 6[*3+:4] => 7[*]);
             bins u[3] = (1,5 => 6,7);
+            bins v = func(1);
+            bins w = 1+1;
         }
     endgroup
+
+    function type(arr) func(int i);
+    endfunction
 endmodule
 )");
 
@@ -244,7 +249,7 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 10);
+    REQUIRE(diags.size() == 11);
     CHECK(diags[0].code == diag::NotBooleanConvertible);
     CHECK(diags[1].code == diag::OpenRangeUnbounded);
     CHECK(diags[2].code == diag::ExprMustBeIntegral);
@@ -255,4 +260,5 @@ endmodule
     CHECK(diags[7].code == diag::InvalidRepeatRange);
     CHECK(diags[8].code == diag::ExpectedExpression);
     CHECK(diags[9].code == diag::CoverageBinTransSize);
+    CHECK(diags[10].code == diag::CoverageSetType);
 }
