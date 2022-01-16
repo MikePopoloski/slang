@@ -900,7 +900,7 @@ module M;
     type_t gen3;
 
     wire blah1 = m_inst.gen3.a[0];             // ok
-    localparam int blah2 = m_inst.gen3.a[0];   // undeclared identifier because const expr
+    localparam int blah2 = int'(m_inst.gen3.a[0]);
 
     wire a = foo.bar;           // import collision
     wire b = asdf.bar;          // unknown identifier
@@ -932,9 +932,9 @@ endmodule
     auto& diagnostics = compilation.getAllDiagnostics();
     std::string result = "\n" + report(diagnostics);
     CHECK(result == R"(
-source:64:28: error: reference to 'gen3' by hierarchical name is not allowed in a constant expression
-    localparam int blah2 = m_inst.gen3.a[0];   // undeclared identifier because const expr
-                           ^~~~~~~~~~~~~~~~
+source:64:33: error: reference to 'gen3' by hierarchical name is not allowed in a constant expression
+    localparam int blah2 = int'(m_inst.gen3.a[0]);
+                                ^~~~~~~~~~~~~~~~
 source:66:14: error: multiple imports found for identifier 'foo'
     wire a = foo.bar;           // import collision
              ^~~

@@ -76,18 +76,14 @@ enum class DeclaredTypeFlags {
     /// The type being bound is for a DPI argument.
     DPIArg = 1 << 12,
 
-    /// Specparams are allowed in the initializer expression, even if
-    /// the expression is otherwise not constant.
-    SpecparamsAllowed = 1 << 13,
-
     /// Allow use of the unbounded literal '$' in the initializer expression.
-    AllowUnboundedLiteral = 1 << 14,
+    AllowUnboundedLiteral = 1 << 13,
 
     /// The type must be one allowed in a sequence expression.
-    RequireSequenceType = 1 << 15,
+    RequireSequenceType = 1 << 14,
 
     /// The type must be valid in a coverage expression.
-    CoverageType = 1 << 16,
+    CoverageType = 1 << 15,
 
     /// A mask of flags that indicate additional type rules are needed to
     /// be checked after the type itself is resolved.

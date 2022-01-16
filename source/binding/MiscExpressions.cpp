@@ -55,11 +55,6 @@ Expression& ValueExpressionBase::fromSymbol(const BindContext& context, const Sy
         if (!symbol.as<ConstraintBlockSymbol>().isStatic)
             Lookup::ensureAccessible(symbol, context, sourceRange);
     }
-    else if (symbol.kind == SymbolKind::Specparam && context.flags.has(BindFlags::Constant) &&
-             !context.flags.has(BindFlags::SpecparamsAllowed)) {
-        context.addDiag(diag::SpecparamInConstant, sourceRange);
-        return badExpr(comp, nullptr);
-    }
     else if (symbol.kind == SymbolKind::Parameter &&
              !context.flags.has(BindFlags::AllowUnboundedLiteral) &&
              symbol.as<ParameterSymbol>().getValue().isUnbounded()) {
@@ -228,6 +223,11 @@ bool NamedValueExpression::verifyConstantImpl(EvalContext& context) const {
     // Same for covergroups.
     if (type->isCovergroup()) {
         context.addDiag(diag::ConstEvalCovergroupType, sourceRange);
+        return false;
+    }
+
+    if (symbol.kind == SymbolKind::Specparam && !context.areSpecparamsAllowed()) {
+        context.addDiag(diag::SpecparamInConstant, sourceRange);
         return false;
     }
 

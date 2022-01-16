@@ -282,8 +282,7 @@ void DefParamSymbol::serializeTo(ASTSerializer& serializer) const {
 
 SpecparamSymbol::SpecparamSymbol(string_view name, SourceLocation loc) :
     ValueSymbol(SymbolKind::Specparam, name, loc,
-                DeclaredTypeFlags::InferImplicit | DeclaredTypeFlags::RequireConstant |
-                    DeclaredTypeFlags::SpecparamsAllowed) {
+                DeclaredTypeFlags::InferImplicit | DeclaredTypeFlags::RequireConstant) {
 }
 
 const ConstantValue& SpecparamSymbol::getValue() const {
@@ -296,7 +295,8 @@ const ConstantValue& SpecparamSymbol::getValue() const {
             ASSERT(scope);
 
             BindContext ctx(*scope, LookupLocation::before(*this));
-            value = scope->getCompilation().allocConstant(ctx.eval(*init));
+            value = scope->getCompilation().allocConstant(
+                ctx.eval(*init, EvalFlags::SpecparamsAllowed));
         }
         else {
             value = &ConstantValue::Invalid;

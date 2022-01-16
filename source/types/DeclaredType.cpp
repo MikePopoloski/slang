@@ -401,8 +401,6 @@ T DeclaredType::getBindContext() const {
         bindFlags |= BindFlags::NonProcedural;
     if (!flags.has(DeclaredTypeFlags::AutomaticInitializer))
         bindFlags |= BindFlags::StaticInitializer;
-    if (flags.has(DeclaredTypeFlags::SpecparamsAllowed))
-        bindFlags |= BindFlags::SpecparamsAllowed;
 
     const Scope* scope = parent.getParentScope();
     ASSERT(scope);

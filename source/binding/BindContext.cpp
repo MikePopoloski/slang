@@ -200,8 +200,8 @@ bool BindContext::verifyConstant(const Expression& expr) const {
     return ok;
 }
 
-ConstantValue BindContext::eval(const Expression& expr) const {
-    EvalContext ctx(getCompilation(), EvalFlags::CacheResults);
+ConstantValue BindContext::eval(const Expression& expr, bitmask<EvalFlags> extraFlags) const {
+    EvalContext ctx(getCompilation(), extraFlags | EvalFlags::CacheResults);
     ConstantValue result = expr.eval(ctx);
     ctx.reportDiags(*this);
     return result;

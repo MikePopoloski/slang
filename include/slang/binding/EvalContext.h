@@ -28,17 +28,20 @@ enum class EvalFlags : uint8_t {
 
     /// This evaluation is happening inside of a script, so some
     /// language rules should be relaxed.
-    IsScript = 1,
+    IsScript = 1 << 0,
 
     /// This evaluation is happening to verify the const-ness of
     /// an expression, not to figure out a final result.
-    IsVerifying = 2,
+    IsVerifying = 1 << 1,
 
     /// The results of the evaluation can be cached in each expression's
     /// `constant` pointer.
-    CacheResults = 4
+    CacheResults = 1 << 2,
+
+    /// Specparams are allowed during evaluation.
+    SpecparamsAllowed = 1 << 3
 };
-BITMASK(EvalFlags, CacheResults)
+BITMASK(EvalFlags, SpecparamsAllowed)
 
 /// A container for all context required to evaluate a statement or expression.
 /// Mostly this involves tracking the callstack and maintaining
@@ -101,15 +104,18 @@ public:
 
     /// Indicates whether this evaluation context is for a script session
     /// (not used during normal compilation flow).
-    bool isScriptEval() const { return (flags & EvalFlags::IsScript) != 0; }
+    bool isScriptEval() const { return flags.has(EvalFlags::IsScript); }
 
     /// Indicates whether this context is for verifying const-ness
     /// without actually evaluating anything.
-    bool isVerifying() const { return (flags & EvalFlags::IsVerifying) != 0; }
+    bool isVerifying() const { return flags.has(EvalFlags::IsVerifying); }
+
+    /// Indicates whether specparams are allowed to be used during evaluation.
+    bool areSpecparamsAllowed() const { return flags.has(EvalFlags::SpecparamsAllowed); }
 
     /// Indicates whether the results of evaluating expressions using this context
     /// can be cached in each expression's `constant` pointer.
-    bool cacheResults() const { return !inFunction() && (flags & EvalFlags::CacheResults) != 0; }
+    bool cacheResults() const { return !inFunction() && flags.has(EvalFlags::CacheResults); }
 
     /// If result caching is enabled, this method disables it and returns an
     /// object that when destructed will restore the previous caching mode.

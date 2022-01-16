@@ -661,7 +661,7 @@ static void checkImplicitConversions(const BindContext& context, const Type& tar
         // Warn for implicit assignments between integral types of differing widths.
         bitwidth_t targetWidth = lt.getBitWidth();
         bitwidth_t actualWidth = rt.getBitWidth();
-        if (targetWidth == actualWidth || context.flags.has(BindFlags::Constant))
+        if (targetWidth == actualWidth)
             return;
 
         // Before we go and issue this warning, weed out false positives by
