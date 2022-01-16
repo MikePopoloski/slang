@@ -800,26 +800,6 @@ endmodule
     CHECK(j.getValue().integer() == 4);
 }
 
-TEST_CASE("Local interface declared later considered hierarchical") {
-    auto tree = SyntaxTree::fromText(R"(
-interface I;
-    logic [3:0] foo;
-endinterface
-
-module m;
-    localparam int j = $bits(i.foo);
-    I i();
-endmodule
-)");
-
-    Compilation compilation;
-    compilation.addSyntaxTree(tree);
-
-    auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 1);
-    CHECK(diags[0].code == diag::UsedBeforeDeclared);
-}
-
 TEST_CASE("Recursive modules -- if generate") {
     auto tree = SyntaxTree::fromText(R"(
 module bar #(parameter int c) ();

@@ -1656,10 +1656,6 @@ void Lookup::qualified(const ScopedNameSyntax& syntax, const BindContext& contex
 
     auto& scope = *context.scope;
     auto& compilation = context.getCompilation();
-    if (compilation.isFinalizing())
-        flags |= LookupFlags::Constant;
-
-    bool inConstantEval = (flags & LookupFlags::Constant) != 0;
 
     SyntaxKind firstKind = leftMost->kind;
     if (firstKind == SyntaxKind::LocalScope) {
@@ -1692,14 +1688,6 @@ void Lookup::qualified(const ScopedNameSyntax& syntax, const BindContext& contex
             lookupDownward(nameParts, first, context, result, flags);
             return;
         case SyntaxKind::RootScope:
-            // Be careful to avoid calling getRoot() if we're in a constant context (there's a
-            // chance we could already be in the middle of calling getRoot in that case).
-            if (inConstantEval) {
-                result.isHierarchical = true;
-                result.addDiag(scope, diag::HierarchicalNotAllowedInConstant, first.range);
-                return;
-            }
-
             // Ignore hierarchical lookups that occur inside uninstantiated modules.
             if (scope.isUninstantiated())
                 return;
@@ -1761,18 +1749,7 @@ void Lookup::qualified(const ScopedNameSyntax& syntax, const BindContext& contex
         if (result.found || result.wasImported)
             return;
 
-        if (inConstantEval) {
-            // An appropriate error was already issued in lookupDownward()
-            return;
-        }
-
         originalResult.copyFrom(result);
-    }
-    else if (inConstantEval) {
-        // We can't perform upward lookups during constant evaluation so just report an unknown
-        // identifier.
-        reportUndeclared(scope, name, first.range, flags, true, result);
-        return;
     }
 
     // If we reach this point we're in case (2) or (4) above. Go up through the instantiation
@@ -1796,17 +1773,15 @@ void Lookup::qualified(const ScopedNameSyntax& syntax, const BindContext& contex
 void Lookup::reportUndeclared(const Scope& initialScope, string_view name, SourceRange range,
                               bitmask<LookupFlags> flags, bool isHierarchical,
                               LookupResult& result) {
-    // If the user doesn't want an error, don't give him one.
-    if (flags.has(LookupFlags::NoUndeclaredError))
-        return;
-
-    if (flags.has(LookupFlags::NoUndeclaredErrorIfUninstantiated) &&
-        initialScope.isUninstantiated()) {
+    // If the caller doesn't want an error, don't give him one.
+    if (flags.has(LookupFlags::NoUndeclaredError) ||
+        (flags.has(LookupFlags::NoUndeclaredErrorIfUninstantiated) &&
+         initialScope.isUninstantiated())) {
         return;
     }
 
     // If we observed a wildcard import we couldn't resolve, we shouldn't report an
-    // error for undeclared identifier because maybe it's supposed to come from that package.
+    // error for an undeclared identifier because maybe it's supposed to come from that package.
     // In particular it's important that we do this because when we first look at a
     // definition because it's possible we haven't seen the file containing the package yet.
     // This also gets set for class scopes that have an error base class.
@@ -1858,7 +1833,7 @@ void Lookup::reportUndeclared(const Scope& initialScope, string_view name, Sourc
 
             // Ignore special members.
             if (s->kind == SymbolKind::Subroutine &&
-                (s->as<SubroutineSymbol>().flags & MethodFlags::Constructor) != 0) {
+                s->as<SubroutineSymbol>().flags.has(MethodFlags::Constructor)) {
                 return false;
             }
 
@@ -1921,14 +1896,6 @@ void Lookup::reportUndeclared(const Scope& initialScope, string_view name, Sourc
         return;
     }
 
-    // Otherwise, if we found the symbol but it wasn't viable becaues we're in a
-    // constant context, tell the user not to use hierarchical names here.
-    if (flags.has(LookupFlags::Constant) && actualSym &&
-        (actualSym->isScope() || actualSym->kind == SymbolKind::Instance)) {
-        result.addDiag(initialScope, diag::HierarchicalNotAllowedInConstant, range);
-        return;
-    }
-
     // Otherwise, check if this names a definition, in which case we can give a nicer error.
     auto def = initialScope.getCompilation().getDefinition(name, initialScope);
     if (def) {
@@ -1956,9 +1923,7 @@ void Lookup::reportUndeclared(const Scope& initialScope, string_view name, Sourc
     }
 
     // We couldn't make any sense of this, just report a simple error about a missing identifier.
-    auto& diag = result.addDiag(initialScope, diag::UndeclaredIdentifier, range) << name;
-    if (isHierarchical && flags.has(LookupFlags::Constant))
-        diag.addNote(diag::NoteHierarchicalNameInCE, range.start()) << name;
+    result.addDiag(initialScope, diag::UndeclaredIdentifier, range) << name;
 }
 
 } // namespace slang

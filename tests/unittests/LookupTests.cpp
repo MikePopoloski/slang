@@ -932,12 +932,9 @@ endmodule
     auto& diagnostics = compilation.getAllDiagnostics();
     std::string result = "\n" + report(diagnostics);
     CHECK(result == R"(
-source:64:28: error: use of undeclared identifier 'm_inst'
+source:64:34: error: hierarchical names are not allowed in constant expressions
     localparam int blah2 = m_inst.gen3.a[0];   // undeclared identifier because const expr
-                           ^~~~~~
-source:64:28: note: reference to 'm_inst' by hierarchical name is not allowed in a constant expression
-    localparam int blah2 = m_inst.gen3.a[0];   // undeclared identifier because const expr
-                           ^
+                           ~~~~~~^
 source:66:14: error: multiple imports found for identifier 'foo'
     wire a = foo.bar;           // import collision
              ^~~
