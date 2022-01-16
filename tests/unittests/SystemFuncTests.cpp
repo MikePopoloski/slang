@@ -794,6 +794,25 @@ endmodule
     CHECK(diags[1].code == diag::UnexpectedClockingExpr);
 }
 
+TEST_CASE("Hierarchical reference in $bits") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    localparam int k = $bits(n.foo);
+endmodule
+
+module n;
+    int foo;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::ConstEvalHierarchicalNameInCE);
+}
+
 TEST_CASE("Sampled value functions") {
     auto tree = SyntaxTree::fromText(R"(
 module m;

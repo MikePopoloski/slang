@@ -1558,3 +1558,22 @@ endmodule
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::BadAssignment);
 }
+
+TEST_CASE("Hierarchical name in type reference") {
+    auto tree = SyntaxTree::fromText(R"(
+module n;
+    logic [17:1] foo;
+endmodule
+
+module m;
+    var type(n.foo) asdf = 1;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::ConstEvalHierarchicalNameInCE);
+}

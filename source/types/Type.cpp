@@ -943,9 +943,9 @@ const Type& Type::fromSyntax(Compilation& compilation, const DataTypeSyntax& nod
                                             context);
         }
         case SyntaxKind::TypeReference: {
-            auto& expr = Expression::bind(*node.as<TypeReferenceSyntax>().expr,
-                                          context.resetFlags(BindFlags::NoHierarchicalNames),
+            auto& expr = Expression::bind(*node.as<TypeReferenceSyntax>().expr, context,
                                           BindFlags::AllowDataType);
+            context.verifyConstant(expr);
             return *expr.type;
         }
         case SyntaxKind::VirtualInterfaceType:
