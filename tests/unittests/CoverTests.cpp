@@ -220,11 +220,12 @@ TEST_CASE("Coverpoint bins") {
     auto tree = SyntaxTree::fromText(R"(
 module m;
     int arr[];
+    const int ci = 2;
     covergroup cg1 (ref int x, ref int y, input int c);
         coverpoint x {
             bins a = { [0:63],65 } iff (arr);
             ignore_bins b[4] = { [127:150],[148:191] } iff (c);
-            illegal_bins c[] = { 200,201,202 };
+            illegal_bins cbins[] = { 200,201,202 };
             wildcard bins d = { [1000:$] };
             bins e = { [$:$] };
             bins f[arr] = { 200,201,202 };
@@ -237,7 +238,7 @@ module m;
             bins u[3] = (1,5 => 6,7);
             bins v = func(1);
             bins w = 1+1;
-            bins mod3[] = {[0:255]} with (item % 3 == 0);
+            bins mod3[] = {[c:ci]} with (item % 3 == 0);
         }
 
         coverpoint c {

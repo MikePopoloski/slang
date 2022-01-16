@@ -143,9 +143,12 @@ enum class BindFlags {
     RecursivePropertyArg = 1 << 28,
 
     /// Binding is inside a concurrent assertion's action block.
-    ConcurrentAssertActionBlock = 1 << 29
+    ConcurrentAssertActionBlock = 1 << 29,
+
+    /// Binding is for a covergroup expression.
+    CovergroupExpr = 1 << 30
 };
-BITMASK(BindFlags, ConcurrentAssertActionBlock)
+BITMASK(BindFlags, CovergroupExpr)
 
 enum class DimensionKind { Unknown, Range, AbbreviatedRange, Dynamic, Associative, Queue };
 

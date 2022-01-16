@@ -353,8 +353,16 @@ CoverageBinSymbol& CoverageBinSymbol::fromSyntax(const Scope& scope,
     return *result;
 }
 
-static void checkCoverageExpr(const Expression&, const BindContext&) {
-    // TODO: implement rules for coverage expressions
+static const Expression& bindCovergroupExpr(const ExpressionSyntax& syntax,
+                                            const BindContext& context,
+                                            const Type* lvalueType = nullptr,
+                                            bitmask<BindFlags> extraFlags = {}) {
+    if (lvalueType) {
+        return Expression::bindRValue(*lvalueType, syntax, syntax.getFirstToken().location(),
+                                      context, extraFlags | BindFlags::Constant);
+    }
+
+    return Expression::bind(syntax, context, extraFlags | BindFlags::Constant);
 }
 
 void CoverageBinSymbol::resolve() const {
@@ -372,15 +380,13 @@ void CoverageBinSymbol::resolve() const {
 
     auto& binsSyntax = syntax->as<CoverageBinsSyntax>();
     if (binsSyntax.iff) {
-        iffExpr = &Expression::bind(*binsSyntax.iff->expr, context);
+        iffExpr = &bindCovergroupExpr(*binsSyntax.iff->expr, context);
         context.requireBooleanConvertible(*iffExpr);
-        checkCoverageExpr(*iffExpr, context);
     }
 
     if (binsSyntax.size && binsSyntax.size->expr) {
-        numberOfBinsExpr = &Expression::bind(*binsSyntax.size->expr, context);
+        numberOfBinsExpr = &bindCovergroupExpr(*binsSyntax.size->expr, context);
         context.requireIntegral(*numberOfBinsExpr);
-        checkCoverageExpr(*numberOfBinsExpr, context);
     }
 
     auto bindWithExpr = [&](const WithClauseSyntax& withSyntax) {
@@ -392,7 +398,7 @@ void CoverageBinSymbol::resolve() const {
         it->nextIterator = std::exchange(iterCtx.firstIterator, it);
         iterCtx.flags &= ~BindFlags::StaticInitializer;
 
-        withExpr = &Expression::bind(*withSyntax.expr, iterCtx);
+        withExpr = &bindCovergroupExpr(*withSyntax.expr, iterCtx);
         iterCtx.requireBooleanConvertible(*withExpr);
     };
 
@@ -406,10 +412,7 @@ void CoverageBinSymbol::resolve() const {
                 if (elem->kind == SyntaxKind::OpenRangeExpression)
                     flags = BindFlags::AllowUnboundedLiteral;
 
-                auto& expr = Expression::bindRValue(type, *elem, binsSyntax.equals.location(),
-                                                    context, flags);
-
-                checkCoverageExpr(expr, context);
+                auto& expr = bindCovergroupExpr(*elem, context, &type, flags);
                 buffer.append(&expr);
             }
             values = buffer.copy(comp);
@@ -439,8 +442,9 @@ void CoverageBinSymbol::resolve() const {
             break;
         }
         case SyntaxKind::ExpressionCoverageBinInitializer:
-            setCoverageExpr = &Expression::bind(
+            setCoverageExpr = &bindCovergroupExpr(
                 *init->as<ExpressionCoverageBinInitializerSyntax>().expr, context);
+
             if (!setCoverageExpr->bad()) {
                 auto& t = *setCoverageExpr->type;
                 if (!t.isArray() || t.isAssociativeArray() ||
@@ -464,8 +468,7 @@ CoverageBinSymbol::TransRangeList::TransRangeList(const TransRangeSyntax& syntax
                                                   const BindContext& context) {
     SmallVectorSized<const Expression*, 4> buffer;
     for (auto elem : syntax.items) {
-        auto& expr = Expression::bindRValue(type, *elem, elem->getFirstToken().location(), context);
-        checkCoverageExpr(expr, context);
+        auto& expr = bindCovergroupExpr(*elem, context, &type);
         buffer.append(&expr);
     }
 
@@ -488,9 +491,8 @@ CoverageBinSymbol::TransRangeList::TransRangeList(const TransRangeSyntax& syntax
         }
 
         auto bindCount = [&](const ExpressionSyntax& exprSyntax) {
-            auto& expr = Expression::bind(exprSyntax, context);
+            auto& expr = bindCovergroupExpr(exprSyntax, context);
             context.requireIntegral(expr);
-            checkCoverageExpr(expr, context);
             return &expr;
         };
 

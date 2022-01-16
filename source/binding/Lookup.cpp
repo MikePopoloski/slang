@@ -1955,7 +1955,7 @@ void Lookup::reportUndeclared(const Scope& initialScope, string_view name, Sourc
         return;
     }
 
-    // We couldn't make any senes of this, just report a simple error about a missing identifier.
+    // We couldn't make any sense of this, just report a simple error about a missing identifier.
     auto& diag = result.addDiag(initialScope, diag::UndeclaredIdentifier, range) << name;
     if (isHierarchical && flags.has(LookupFlags::Constant))
         diag.addNote(diag::NoteHierarchicalNameInCE, range.start()) << name;

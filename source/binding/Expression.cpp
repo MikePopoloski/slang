@@ -323,7 +323,7 @@ const Expression& Expression::bindImplicitParam(
 }
 
 const Expression& Expression::checkBindFlags(const Expression& expr, const BindContext& context) {
-    if ((context.flags & BindFlags::Constant) == 0)
+    if (!context.flags.has(BindFlags::Constant))
         return expr;
 
     EvalContext verifyContext(context.getCompilation(), EvalFlags::IsVerifying);
