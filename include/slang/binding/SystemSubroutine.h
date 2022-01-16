@@ -56,8 +56,6 @@ protected:
 
     bool checkArgCount(const BindContext& context, bool isMethod, const Args& args,
                        SourceRange callRange, size_t min, size_t max) const;
-
-    static BindContext makeNonConst(const BindContext& context);
 };
 
 /// An implementation of the SystemSubroutine interface that has

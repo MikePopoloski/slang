@@ -86,14 +86,16 @@ string_view CoverageOptionSetter::getName() const {
 const Expression& CoverageOptionSetter::getExpression() const {
     if (!expr) {
         bitmask<BindFlags> flags = BindFlags::AssignmentAllowed;
-        if (isTypeOption()) {
+        bool isTypeOpt = isTypeOption();
+        if (isTypeOpt)
             flags |= BindFlags::StaticInitializer;
-            flags |= BindFlags::Constant;
-        }
 
         BindContext context(*scope, LookupLocation(scope, 3));
         expr = &Expression::bind(*syntax->expr, context, flags);
         context.setAttributes(*expr, syntax->attributes);
+
+        if (isTypeOpt)
+            context.verifyConstant(*expr);
     }
     return *expr;
 }
@@ -357,12 +359,13 @@ static const Expression& bindCovergroupExpr(const ExpressionSyntax& syntax,
                                             const BindContext& context,
                                             const Type* lvalueType = nullptr,
                                             bitmask<BindFlags> extraFlags = {}) {
+    // TODO: check requirements
     if (lvalueType) {
         return Expression::bindRValue(*lvalueType, syntax, syntax.getFirstToken().location(),
-                                      context, extraFlags | BindFlags::Constant);
+                                      context, extraFlags);
     }
 
-    return Expression::bind(syntax, context, extraFlags | BindFlags::Constant);
+    return Expression::bind(syntax, context, extraFlags);
 }
 
 void CoverageBinSymbol::resolve() const {

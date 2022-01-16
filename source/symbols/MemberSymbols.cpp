@@ -485,7 +485,7 @@ string_view ElabSystemTaskSymbol::getMessage() const {
 
     // Bind all arguments.
     auto& comp = scope->getCompilation();
-    BindContext bindCtx(*scope, LookupLocation::before(*this), BindFlags::Constant);
+    BindContext bindCtx(*scope, LookupLocation::before(*this));
     SmallVectorSized<const Expression*, 4> args;
     for (auto arg : argSyntax->parameters) {
         switch (arg->kind) {
@@ -791,7 +791,7 @@ PrimitiveSymbol& PrimitiveSymbol::fromSyntax(const Scope& scope,
 
         if (initExpr) {
             BindContext context(scope, LookupLocation::max);
-            auto& expr = Expression::bind(*initExpr, context, BindFlags::Constant);
+            auto& expr = Expression::bind(*initExpr, context);
             if (!expr.bad()) {
                 if (expr.kind == ExpressionKind::IntegerLiteral &&
                     (expr.type->getBitWidth() == 1 || expr.isUnsizedInteger())) {

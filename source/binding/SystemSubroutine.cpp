@@ -67,14 +67,6 @@ bool SystemSubroutine::notConst(EvalContext& context, SourceRange range) const {
     return false;
 }
 
-BindContext SystemSubroutine::makeNonConst(const BindContext& ctx) {
-    BindContext nonConstCtx(ctx);
-    if (nonConstCtx.flags.has(BindFlags::Constant))
-        nonConstCtx.flags &= ~BindFlags::Constant;
-
-    return nonConstCtx;
-}
-
 const Expression& SimpleSystemSubroutine::bindArgument(size_t argIndex, const BindContext& context,
                                                        const ExpressionSyntax& syntax,
                                                        const Args& args) const {

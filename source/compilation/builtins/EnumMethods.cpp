@@ -15,11 +15,6 @@ public:
     EnumFirstLastMethod(const std::string& name, bool first) :
         SystemSubroutine(name, SubroutineKind::Function), first(first) {}
 
-    const Expression& bindArgument(size_t, const BindContext& context,
-                                   const ExpressionSyntax& syntax, const Args&) const final {
-        return Expression::bind(syntax, makeNonConst(context));
-    }
-
     const Type& checkArguments(const BindContext& context, const Args& args, SourceRange range,
                                const Expression*) const final {
         auto& comp = context.getCompilation();
@@ -154,11 +149,6 @@ private:
 class EnumNumMethod : public SystemSubroutine {
 public:
     EnumNumMethod() : SystemSubroutine("num", SubroutineKind::Function) {}
-
-    const Expression& bindArgument(size_t, const BindContext& context,
-                                   const ExpressionSyntax& syntax, const Args&) const final {
-        return Expression::bind(syntax, makeNonConst(context));
-    }
 
     const Type& checkArguments(const BindContext& context, const Args& args, SourceRange range,
                                const Expression*) const final {

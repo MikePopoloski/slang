@@ -224,7 +224,7 @@ optional<bitwidth_t> BindContext::requireValidBitWidth(const SVInt& value,
 
 optional<int32_t> BindContext::evalInteger(const ExpressionSyntax& syntax,
                                            bitmask<BindFlags> extraFlags) const {
-    return evalInteger(Expression::bind(syntax, resetFlags(BindFlags::Constant | extraFlags)));
+    return evalInteger(Expression::bind(syntax, *this, extraFlags));
 }
 
 optional<int32_t> BindContext::evalInteger(const Expression& expr) const {
@@ -388,7 +388,7 @@ void BindContext::evalRangeDimension(const SelectorSyntax& syntax, bool isPacked
     switch (syntax.kind) {
         case SyntaxKind::BitSelect: {
             auto& expr = Expression::bind(*syntax.as<BitSelectSyntax>().expr, *this,
-                                          BindFlags::Constant | BindFlags::AllowDataType);
+                                          BindFlags::AllowDataType);
 
             // If this expression is actually a data type, this is an associative array dimension
             // instead of a normal packed / unpacked array.

@@ -369,17 +369,13 @@ Expression& RangeSelectExpression::fromSyntax(Compilation& compilation, Expressi
     }
 
     // Selection expressions don't need to be const if we're selecting from a queue.
-    bool isQueue = value.type->isQueue();
-    bool leftConst = !isQueue && selectionKind == RangeSelectionKind::Simple;
-    bool rightConst = !isQueue;
     bitmask<BindFlags> extraFlags;
+    bool isQueue = value.type->isQueue();
     if (isQueue)
         extraFlags = BindFlags::AllowUnboundedLiteral | BindFlags::AllowUnboundedLiteralArithmetic;
 
-    auto& left = leftConst ? bind(*syntax.left, context, BindFlags::Constant | extraFlags)
-                           : selfDetermined(compilation, *syntax.left, context, extraFlags);
-    auto& right = rightConst ? bind(*syntax.right, context, BindFlags::Constant | extraFlags)
-                             : selfDetermined(compilation, *syntax.right, context, extraFlags);
+    auto& left = bind(*syntax.left, context, extraFlags);
+    auto& right = bind(*syntax.right, context, extraFlags);
 
     auto result = compilation.emplace<RangeSelectExpression>(
         selectionKind, compilation.getErrorType(), value, left, right, fullRange);

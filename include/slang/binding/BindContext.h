@@ -36,109 +36,105 @@ enum class BindFlags {
     /// No special binding behavior specified.
     None = 0,
 
-    /// The binding is for a constant expression, so report an error if
-    /// it's not constant for some reason.
-    Constant = 1 << 0,
-
     /// The expression is inside a concatenation; this enables slightly
     /// different binding rules.
-    InsideConcatenation = 1 << 1,
+    InsideConcatenation = 1 << 0,
 
     /// The expression is inside the unevaluated side of a conditional branch.
     /// This is used to avoid issuing warnings for things that won't happen.
-    UnevaluatedBranch = 1 << 2,
+    UnevaluatedBranch = 1 << 1,
 
     /// Allow the expression to also be a data type; used in a few places like
     /// the first argument to system methods like $bits
-    AllowDataType = 1 << 3,
+    AllowDataType = 1 << 2,
 
     /// The expression being bound is an enum value initializer.
-    EnumInitializer = 1 << 4,
+    EnumInitializer = 1 << 3,
 
     /// Attributes are disallowed on expressions in this context.
-    NoAttributes = 1 << 5,
+    NoAttributes = 1 << 4,
 
     /// Assignment is allowed in this context. This flag is cleared
     /// for nested subexpressions, unless they are directly parenthesized.
-    AssignmentAllowed = 1 << 6,
+    AssignmentAllowed = 1 << 5,
 
     /// Assignments are disallowed in this context. As opposed to the AssignmentAllowed
     /// flag, this is not cleared and overrides that fact even if we are in a
     /// procedural context and would otherwise be allowed to modify variables.
-    AssignmentDisallowed = 1 << 7,
+    AssignmentDisallowed = 1 << 6,
 
     /// Expression is not inside a procedural context.
-    NonProcedural = 1 << 8,
+    NonProcedural = 1 << 7,
 
     /// Expression is for a static variable's initializer. References to automatic
     /// variables will be disallowed.
-    StaticInitializer = 1 << 9,
+    StaticInitializer = 1 << 8,
 
     /// Streaming operator is allowed in assignment target, assignment source, bit-stream casting
     /// argument, or stream expressions of another streaming concatenation. This flag is cleared for
     /// nested subexpressions, unless they are directly parenthesized.
-    StreamingAllowed = 1 << 10,
+    StreamingAllowed = 1 << 9,
 
     /// This is the first expression appearing as an expression statement; potentially this
     /// indicates whether a subroutine invocation is as a task (if set) or as a function (unset).
     /// Cleared for nested subexpressions.
-    TopLevelStatement = 1 << 11,
+    TopLevelStatement = 1 << 10,
 
     /// Expression is allowed to be the unbounded literal '$' such as inside a queue select.
-    AllowUnboundedLiteral = 1 << 12,
+    AllowUnboundedLiteral = 1 << 11,
 
     /// Expression is allowed to do arithmetic with an unbounded literal.
-    AllowUnboundedLiteralArithmetic = 1 << 13,
+    AllowUnboundedLiteralArithmetic = 1 << 12,
 
     /// Binding is happening within a function body
-    Function = 1 << 14,
+    Function = 1 << 13,
 
     /// Binding is happening within a final block.
-    Final = 1 << 15,
+    Final = 1 << 14,
 
     /// Binding is happening within the intra-assignment timing control of
     /// a non-blocking assignment expression.
-    NonBlockingTimingControl = 1 << 16,
+    NonBlockingTimingControl = 1 << 15,
 
     /// Binding is happening within an event expression.
-    EventExpression = 1 << 17,
+    EventExpression = 1 << 16,
 
     /// Binding is in a context where type reference expressions are allowed.
-    AllowTypeReferences = 1 << 18,
+    AllowTypeReferences = 1 << 17,
 
     /// Binding is happening within an assertion expression (sequence or property).
-    AssertionExpr = 1 << 19,
+    AssertionExpr = 1 << 18,
 
     /// Allow binding a clocking block as part of a top-level event expression.
-    AllowClockingBlock = 1 << 20,
+    AllowClockingBlock = 1 << 19,
 
     /// Binding is for checking an assertion argument, prior to it being expanded as
     /// part of an actual instance.
-    AssertionInstanceArgCheck = 1 << 21,
+    AssertionInstanceArgCheck = 1 << 20,
 
     /// Binding is for a cycle delay or sequence repetition, where references to
     /// assertion formal ports have specific type requirements.
-    AssertionDelayOrRepetition = 1 << 22,
+    AssertionDelayOrRepetition = 1 << 21,
 
     /// Binding is for the left hand side of an assignment operation.
-    LValue = 1 << 23,
+    LValue = 1 << 22,
 
     /// Binding is for the negation of a property, which disallows recursive
     /// instantiations.
-    PropertyNegation = 1 << 24,
+    PropertyNegation = 1 << 23,
 
     /// Binding is for a property that has come after a positive advancement
     /// of time within the parent property definition.
-    PropertyTimeAdvance = 1 << 25,
+    PropertyTimeAdvance = 1 << 24,
 
     /// Binding is for an argument passed to a recursive property instance.
-    RecursivePropertyArg = 1 << 26,
+    RecursivePropertyArg = 1 << 25,
 
     /// Binding is inside a concurrent assertion's action block.
-    ConcurrentAssertActionBlock = 1 << 27,
+    ConcurrentAssertActionBlock = 1 << 26,
 
     /// Binding is for a covergroup expression.
-    CovergroupExpr = 1 << 28
+    CovergroupExpr = 1 << 27
 };
 BITMASK(BindFlags, CovergroupExpr)
 

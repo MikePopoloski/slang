@@ -546,7 +546,7 @@ void AssignmentExpression::serializeTo(ASTSerializer& serializer) const {
 Expression& ConversionExpression::fromSyntax(Compilation& compilation,
                                              const CastExpressionSyntax& syntax,
                                              const BindContext& context) {
-    auto& targetExpr = bind(*syntax.left, context, BindFlags::AllowDataType | BindFlags::Constant);
+    auto& targetExpr = bind(*syntax.left, context, BindFlags::AllowDataType);
     auto& operand =
         selfDetermined(compilation, *syntax.right, context, BindFlags::StreamingAllowed);
 

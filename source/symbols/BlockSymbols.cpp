@@ -360,10 +360,9 @@ void GenerateBlockSymbol::fromSyntax(Compilation& compilation, const IfGenerateS
                                      SmallVector<GenerateBlockSymbol*>& results) {
     optional<bool> selector;
     if (isInstantiated) {
-        BindContext bindContext = context.resetFlags(BindFlags::Constant);
-        const auto& cond = Expression::bind(*syntax.condition, bindContext);
-        ConstantValue cv = bindContext.eval(cond);
-        if (cv && bindContext.requireBooleanConvertible(cond))
+        auto& cond = Expression::bind(*syntax.condition, context);
+        ConstantValue cv = context.eval(cond);
+        if (cv && context.requireBooleanConvertible(cond))
             selector = cv.isTrue();
     }
 
@@ -400,10 +399,9 @@ void GenerateBlockSymbol::fromSyntax(Compilation& compilation, const CaseGenerat
         }
     }
 
-    BindContext bindContext = context.resetFlags(BindFlags::Constant);
     SmallVectorSized<const Expression*, 8> bound;
     if (!Expression::bindMembershipExpressions(
-            bindContext, TokenKind::CaseKeyword, /* requireIntegral */ false,
+            context, TokenKind::CaseKeyword, /* requireIntegral */ false,
             /* unwrapUnpacked */ false, /* allowTypeReferences */ true, /* allowOpenRange */ true,
             *syntax.condition, expressions, bound)) {
         return;
@@ -413,7 +411,7 @@ void GenerateBlockSymbol::fromSyntax(Compilation& compilation, const CaseGenerat
     auto condExpr = *boundIt++;
 
     const Type* condType = nullptr;
-    ConstantValue condVal = bindContext.eval(*condExpr);
+    ConstantValue condVal = context.eval(*condExpr);
     if (!condVal) {
         if (condExpr->kind == ExpressionKind::TypeReference)
             condType = &condExpr->as<TypeReferenceExpression>().targetType;
@@ -436,7 +434,7 @@ void GenerateBlockSymbol::fromSyntax(Compilation& compilation, const CaseGenerat
         for (size_t i = 0; i < sci.expressions.size(); i++) {
             // Have to keep incrementing the iterator here so that we stay in sync.
             auto expr = *boundIt++;
-            ConstantValue val = bindContext.eval(*expr);
+            ConstantValue val = context.eval(*expr);
 
             bool match = val && val == condVal;
             if (!val && condType && expr->kind == ExpressionKind::TypeReference)
@@ -610,10 +608,9 @@ GenerateBlockArraySymbol& GenerateBlockArraySymbol::fromSyntax(Compilation& comp
     };
 
     // Bind the initialization expression.
-    BindContext bindContext = context.resetFlags(BindFlags::Constant);
     auto& initial = Expression::bindRValue(compilation.getIntegerType(), *syntax.initialExpr,
-                                           syntax.equals.location(), bindContext);
-    ConstantValue initialVal = bindContext.eval(initial);
+                                           syntax.equals.location(), context);
+    ConstantValue initialVal = context.eval(initial);
     if (!initialVal)
         return *result;
 
@@ -629,14 +626,14 @@ GenerateBlockArraySymbol& GenerateBlockArraySymbol::fromSyntax(Compilation& comp
     iterScope.addMember(local);
 
     // Bind the stop and iteration expressions so we can reuse them on each iteration.
-    BindContext iterContext(iterScope, LookupLocation::max, BindFlags::Constant);
+    BindContext iterContext(iterScope, LookupLocation::max);
     auto& stopExpr = Expression::bind(*syntax.stopExpr, iterContext);
     auto& iterExpr =
         Expression::bind(*syntax.iterationExpr, iterContext, BindFlags::AssignmentAllowed);
     if (stopExpr.bad() || iterExpr.bad())
         return *result;
 
-    if (!bindContext.requireBooleanConvertible(stopExpr))
+    if (!context.requireBooleanConvertible(stopExpr))
         return *result;
 
     if (!iterContext.verifyConstant(iterExpr))

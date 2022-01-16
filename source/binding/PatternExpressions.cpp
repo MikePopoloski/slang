@@ -585,8 +585,7 @@ Expression& StructuredAssignmentPatternExpression::forFixedArray(
         }
 
         // The key is either an array index or a data type setter.
-        auto& keyExpr =
-            Expression::bind(*item->key, context, BindFlags::Constant | BindFlags::AllowDataType);
+        auto& keyExpr = Expression::bind(*item->key, context, BindFlags::AllowDataType);
         if (keyExpr.bad()) {
             bad = true;
             continue;
@@ -673,8 +672,7 @@ Expression& StructuredAssignmentPatternExpression::forDynamicArray(
         }
 
         // The key is either an array index or a data type setter.
-        auto& keyExpr =
-            Expression::bind(*item->key, context, BindFlags::Constant | BindFlags::AllowDataType);
+        auto& keyExpr = Expression::bind(*item->key, context, BindFlags::AllowDataType);
         if (keyExpr.bad()) {
             bad = true;
             continue;
@@ -749,12 +747,11 @@ Expression& StructuredAssignmentPatternExpression::forAssociativeArray(
         else {
             const Expression* indexExpr;
             if (indexType) {
-                indexExpr =
-                    &bindRValue(*indexType, *item->key, item->key->getFirstToken().location(),
-                                context, BindFlags::Constant);
+                indexExpr = &bindRValue(*indexType, *item->key,
+                                        item->key->getFirstToken().location(), context);
             }
             else {
-                indexExpr = &Expression::bind(*item->key, context, BindFlags::Constant);
+                indexExpr = &Expression::bind(*item->key, context);
             }
 
             if (!indexExpr->bad()) {
@@ -832,7 +829,7 @@ void StructuredAssignmentPatternExpression::serializeTo(ASTSerializer& serialize
 const Expression& ReplicatedAssignmentPatternExpression::bindReplCount(
     Compilation& comp, const ExpressionSyntax& syntax, const BindContext& context, size_t& count) {
 
-    const Expression& expr = bind(syntax, context, BindFlags::Constant);
+    const Expression& expr = bind(syntax, context);
     optional<int32_t> c = context.evalInteger(expr);
     if (!context.requireGtZero(c, expr.sourceRange))
         return badExpr(comp, &expr);

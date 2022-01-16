@@ -1659,8 +1659,7 @@ Expression& StreamingConcatenationExpression::fromSyntax(
         // The slice_size determines the size of each block. If specified, it may be a constant
         // integral expression or a simple type.
         if (isRightToLeft) {
-            const auto& sliceExpr =
-                bind(*syntax.sliceSize, context, BindFlags::AllowDataType | BindFlags::Constant);
+            auto& sliceExpr = bind(*syntax.sliceSize, context, BindFlags::AllowDataType);
             if (sliceExpr.bad())
                 return badExpr(compilation, badResult());
 
