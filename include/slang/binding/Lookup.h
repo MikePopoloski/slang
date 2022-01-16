@@ -31,37 +31,33 @@ enum class LookupFlags {
     /// No special modifiers.
     None = 0,
 
-    /// The lookup is occurring in a constant context. This adds an additional
-    /// restriction that the symbols cannot be referenced by hierarchical path.
-    Constant = 1 << 0,
-
     /// A lookup for a type name, as opposed to a value. These names cannot be hierarchical
     /// but can be package or class scoped.
-    Type = 1 << 1,
+    Type = 1 << 0,
 
     /// Usually lookups require that the found symbol be declared before the lookup
     /// location. This flag removes that restriction.
-    AllowDeclaredAfter = 1 << 2,
+    AllowDeclaredAfter = 1 << 1,
 
     /// Don't search through wildcard imports to satisfy the lookup.
-    DisallowWildcardImport = 1 << 3,
+    DisallowWildcardImport = 1 << 2,
 
     /// Don't report an error if the lookup is for a simple identifier that
     /// cannot be found.
-    NoUndeclaredError = 1 << 4,
+    NoUndeclaredError = 1 << 3,
 
     /// Don't report an error if the lookup is for a simple identifier that
     /// cannot be found *and* the context in which we are searching is an
     /// uninstantiated module.
-    NoUndeclaredErrorIfUninstantiated = 1 << 5,
+    NoUndeclaredErrorIfUninstantiated = 1 << 4,
 
     /// The lookup is for a typedef target type, which has a special exemption
     /// to allow scoped access to incomplete forward class types.
-    TypedefTarget = 1 << 6,
+    TypedefTarget = 1 << 5,
 
     /// The lookup should not continue looking into parent scopes if the name
     /// is not found in the initial search scope.
-    NoParentScope = 1 << 7,
+    NoParentScope = 1 << 6,
 
     /// Treat this lookup as hierarchical even if it's a simple name.
     ForceHierarchical = AllowDeclaredAfter | NoUndeclaredErrorIfUninstantiated

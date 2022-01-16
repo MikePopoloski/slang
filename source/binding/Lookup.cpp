@@ -243,7 +243,7 @@ const Symbol* getVirtualInterfaceTarget(const Type& type, const BindContext& con
 // looking up in other ways. Returns false if the entire lookup has failed and should be
 // aborted.
 bool lookupDownward(span<const NamePlusLoc> nameParts, NameComponents name,
-                    const BindContext& context, LookupResult& result, bitmask<LookupFlags> flags) {
+                    const BindContext& context, LookupResult& result) {
     const Symbol* symbol = std::exchange(result.found, nullptr);
     ASSERT(symbol);
 
@@ -370,13 +370,6 @@ bool lookupDownward(span<const NamePlusLoc> nameParts, NameComponents name,
             return true;
         }
 
-        if (result.isHierarchical && (flags & LookupFlags::Constant) != 0) {
-            auto& diag = result.addDiag(*context.scope, diag::HierarchicalNotAllowedInConstant,
-                                        it->dotLocation);
-            diag << name.range;
-            return false;
-        }
-
         if (!name.selectors.empty()) {
             symbol = Lookup::selectChild(*symbol, name.selectors, context, result);
             if (!symbol)
@@ -462,7 +455,7 @@ bool lookupDownward(span<const NamePlusLoc> nameParts, NameComponents name,
 // looking up in other ways. Returns false if the entire lookup has failed and should be
 // aborted.
 bool lookupUpward(span<const NamePlusLoc> nameParts, const NameComponents& name,
-                  const BindContext& context, LookupResult& result, bitmask<LookupFlags> flags) {
+                  const BindContext& context, LookupResult& result) {
     // Upward lookups can match either a scope name, or a module definition name (on any of the
     // instances). Imports are not considered.
     const Symbol* firstMatch = nullptr;
@@ -476,7 +469,7 @@ bool lookupUpward(span<const NamePlusLoc> nameParts, const NameComponents& name,
 
         result.clear();
         result.found = &symbol;
-        return lookupDownward(nameParts, name, context, result, flags);
+        return lookupDownward(nameParts, name, context, result);
     };
 
     const Scope* scope = context.scope;
@@ -521,7 +514,7 @@ bool lookupUpward(span<const NamePlusLoc> nameParts, const NameComponents& name,
         // If we did find a match at some point, repeat that
         // lookup to provide a real error message.
         result.found = firstMatch;
-        lookupDownward(nameParts, name, context, result, flags);
+        lookupDownward(nameParts, name, context, result);
         return false;
     }
     return true;
@@ -749,7 +742,7 @@ bool resolveColonNames(SmallVectorSized<NamePlusLoc, 8>& nameParts, int colonPar
         return false;
 
     result.found = symbol;
-    return lookupDownward(nameParts, name, context, result, flags);
+    return lookupDownward(nameParts, name, context, result);
 }
 
 const Symbol* getCompilationUnit(const Symbol& symbol) {
@@ -1136,7 +1129,7 @@ void Lookup::selectChild(const Type& virtualInterface, SourceRange range,
         namePartsReversed.append(npl);
 
     result.found = getVirtualInterfaceTarget(virtualInterface, context, range);
-    lookupDownward(namePartsReversed, unused, context, result, LookupFlags::None);
+    lookupDownward(namePartsReversed, unused, context, result);
 }
 
 const ClassType* Lookup::findClass(const NameSyntax& className, const BindContext& context,
@@ -1321,7 +1314,7 @@ bool Lookup::findIterator(const Scope& scope, const IteratorSymbol& symbol,
         return false;
 
     BindContext context(scope, LookupLocation::max);
-    return lookupDownward(nameParts, name, context, result, LookupFlags::None);
+    return lookupDownward(nameParts, name, context, result);
 }
 
 bool Lookup::withinClassRandomize(const Scope& scope, span<const string_view> nameRestrictions,
@@ -1387,7 +1380,7 @@ bool Lookup::withinClassRandomize(const Scope& scope, span<const string_view> na
         return resolveColonNames(nameParts, colonParts, name, flags, result, context);
     }
 
-    return lookupDownward(nameParts, name, context, result, flags);
+    return lookupDownward(nameParts, name, context, result);
 }
 
 bool Lookup::findAssertionLocalVar(const BindContext& context, const NameSyntax& syntax,
@@ -1424,7 +1417,7 @@ bool Lookup::findAssertionLocalVar(const BindContext& context, const NameSyntax&
         return false;
 
     result.found = it->second;
-    return lookupDownward(nameParts, name, context, result, LookupFlags::None);
+    return lookupDownward(nameParts, name, context, result);
 }
 
 void Lookup::unqualifiedImpl(const Scope& scope, string_view name, LookupLocation location,
@@ -1685,7 +1678,7 @@ void Lookup::qualified(const ScopedNameSyntax& syntax, const BindContext& contex
             break;
         case SyntaxKind::UnitScope:
             result.found = getCompilationUnit(scope.asSymbol());
-            lookupDownward(nameParts, first, context, result, flags);
+            lookupDownward(nameParts, first, context, result);
             return;
         case SyntaxKind::RootScope:
             // Ignore hierarchical lookups that occur inside uninstantiated modules.
@@ -1693,7 +1686,7 @@ void Lookup::qualified(const ScopedNameSyntax& syntax, const BindContext& contex
                 return;
 
             result.found = &compilation.getRoot();
-            lookupDownward(nameParts, first, context, result, flags);
+            lookupDownward(nameParts, first, context, result);
             return;
         case SyntaxKind::ThisHandle:
             result.found = findThisHandle(scope, first.range, result);
@@ -1740,7 +1733,7 @@ void Lookup::qualified(const ScopedNameSyntax& syntax, const BindContext& contex
     LookupResult originalResult;
     if (result.found) {
         // Perform the downward lookup.
-        if (!lookupDownward(nameParts, first, context, result, flags))
+        if (!lookupDownward(nameParts, first, context, result))
             return;
 
         // If we found a symbol, we're done with lookup. In case (1) above we'll always have a
@@ -1754,7 +1747,7 @@ void Lookup::qualified(const ScopedNameSyntax& syntax, const BindContext& contex
 
     // If we reach this point we're in case (2) or (4) above. Go up through the instantiation
     // hierarchy and see if we can find a match there.
-    if (!lookupUpward(nameParts, first, context, result, flags))
+    if (!lookupUpward(nameParts, first, context, result))
         return;
 
     if (result.found)

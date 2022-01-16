@@ -338,9 +338,9 @@ endmodule
 
     auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 4);
-    CHECK(diags[0].code == diag::HierarchicalNotAllowedInConstant);
-    CHECK(diags[1].code == diag::HierarchicalNotAllowedInConstant);
-    CHECK(diags[2].code == diag::HierarchicalNotAllowedInConstant);
+    CHECK(diags[0].code == diag::ConstEvalHierarchicalName);
+    CHECK(diags[1].code == diag::ConstEvalHierarchicalName);
+    CHECK(diags[2].code == diag::ConstEvalHierarchicalName);
     CHECK(diags[3].code == diag::ConstEvalHierarchicalName);
 }
 
@@ -360,7 +360,7 @@ endmodule
 
     auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 1);
-    CHECK(diags[0].code == diag::HierarchicalNotAllowedInConstant);
+    CHECK(diags[0].code == diag::ConstEvalHierarchicalName);
 }
 
 TEST_CASE("Lookup location for constant function call") {
@@ -932,9 +932,9 @@ endmodule
     auto& diagnostics = compilation.getAllDiagnostics();
     std::string result = "\n" + report(diagnostics);
     CHECK(result == R"(
-source:64:34: error: hierarchical names are not allowed in constant expressions
+source:64:28: error: reference to 'gen3' by hierarchical name is not allowed in a constant expression
     localparam int blah2 = m_inst.gen3.a[0];   // undeclared identifier because const expr
-                           ~~~~~~^
+                           ^~~~~~~~~~~~~~~~
 source:66:14: error: multiple imports found for identifier 'foo'
     wire a = foo.bar;           // import collision
              ^~~
@@ -1423,7 +1423,7 @@ module m;
     import p::*;
     int t = unknown;
 
-    localparam int u = $root.block;
+    localparam int u = $root.m.block.foobar;
 
     I iface();
     localparam int v = iface.bar;
@@ -1447,7 +1447,7 @@ endmodule
     CHECK(diags[8].code == diag::ParamHasNoValue);
     CHECK(diags[9].code == diag::UnknownSystemName);
     CHECK(diags[10].code == diag::UnknownPackage);
-    CHECK(diags[11].code == diag::HierarchicalNotAllowedInConstant);
+    CHECK(diags[11].code == diag::ConstEvalHierarchicalName);
     CHECK(diags[12].code == diag::CouldNotResolveHierarchicalPath);
 }
 

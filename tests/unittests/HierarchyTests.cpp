@@ -557,8 +557,8 @@ endmodule
     CHECK((it++)->code == diag::ExpectedGenvarIterVar);
     CHECK((it++)->code == diag::UndeclaredIdentifier);
     CHECK((it++)->code == diag::NotAGenvar);
-    CHECK((it++)->code == diag::HierarchicalNotAllowedInConstant);
-    CHECK((it++)->code == diag::HierarchicalNotAllowedInConstant);
+    CHECK((it++)->code == diag::ConstEvalHierarchicalName);
+    CHECK((it++)->code == diag::ConstEvalHierarchicalName);
     CHECK((it++)->code == diag::NotBooleanConvertible);
     CHECK((it++)->code == diag::GenvarUnknownBits);
     CHECK((it++)->code == diag::GenvarUnknownBits);

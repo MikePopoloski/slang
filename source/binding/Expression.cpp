@@ -772,8 +772,6 @@ Expression& Expression::bindName(Compilation& compilation, const NameSyntax& syn
     bitmask<LookupFlags> flags = LookupFlags::None;
     if (invocation && invocation->arguments)
         flags |= LookupFlags::AllowDeclaredAfter;
-    if (context.flags.has(BindFlags::Constant))
-        flags |= LookupFlags::Constant;
 
     // Special case scenarios: array iterator expressions, class-scoped randomize calls,
     // and expanding sequences and properties.
