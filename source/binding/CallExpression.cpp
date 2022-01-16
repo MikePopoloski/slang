@@ -620,7 +620,19 @@ ConstantValue CallExpression::evalImpl(EvalContext& context) const {
     // Delegate system calls to their appropriate handler.
     if (isSystemCall()) {
         auto& callInfo = std::get<1>(subroutine);
-        return callInfo.subroutine->eval(context, arguments(), callInfo);
+        auto iteratorInfo = std::get_if<IteratorCallInfo>(&callInfo.extraInfo);
+
+        if (iteratorInfo && iteratorInfo->iterExpr &&
+            !iteratorInfo->iterExpr->verifyConstant(context)) {
+            return nullptr;
+        }
+
+        for (auto arg : arguments()) {
+            if (!arg->verifyConstant(context))
+                return nullptr;
+        }
+
+        return callInfo.subroutine->eval(context, arguments(), sourceRange, callInfo);
     }
 
     const SubroutineSymbol& symbol = *std::get<0>(subroutine);
@@ -628,7 +640,7 @@ ConstantValue CallExpression::evalImpl(EvalContext& context) const {
         return nullptr;
 
     // Evaluate all argument in the current stack frame.
-    SmallVectorSized<ConstantValue, 8> args;
+    SmallVectorSized<ConstantValue, 4> args;
     for (auto arg : arguments()) {
         ConstantValue v = arg->eval(context);
         if (!v)

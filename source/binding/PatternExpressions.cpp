@@ -751,7 +751,7 @@ Expression& StructuredAssignmentPatternExpression::forAssociativeArray(
             if (indexType) {
                 indexExpr =
                     &bindRValue(*indexType, *item->key, item->key->getFirstToken().location(),
-                                context.resetFlags(BindFlags::Constant));
+                                context, BindFlags::Constant);
             }
             else {
                 indexExpr = &Expression::bind(*item->key, context, BindFlags::Constant);

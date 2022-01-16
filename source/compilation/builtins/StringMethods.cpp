@@ -16,7 +16,7 @@ public:
     explicit StringLenMethod(Compilation& comp) :
         SimpleSystemSubroutine("len", SubroutineKind::Function, 0, {}, comp.getIntType(), true) {}
 
-    ConstantValue eval(EvalContext& context, const Args& args,
+    ConstantValue eval(EvalContext& context, const Args& args, SourceRange,
                        const CallExpression::SystemCallInfo&) const final {
         auto val = args[0]->eval(context);
         if (!val)
@@ -33,7 +33,7 @@ public:
                                { &comp.getIntType(), &comp.getByteType() }, comp.getVoidType(),
                                true) {}
 
-    ConstantValue eval(EvalContext& context, const Args& args,
+    ConstantValue eval(EvalContext& context, const Args& args, SourceRange,
                        const CallExpression::SystemCallInfo&) const final {
         auto strCv = args[0]->evalLValue(context);
         auto indexCv = args[1]->eval(context);
@@ -60,7 +60,7 @@ public:
         SimpleSystemSubroutine("getc", SubroutineKind::Function, 1, { &comp.getIntType() },
                                comp.getByteType(), true) {}
 
-    ConstantValue eval(EvalContext& context, const Args& args,
+    ConstantValue eval(EvalContext& context, const Args& args, SourceRange,
                        const CallExpression::SystemCallInfo&) const final {
         auto strCv = args[0]->eval(context);
         auto indexCv = args[1]->eval(context);
@@ -82,7 +82,7 @@ public:
         SimpleSystemSubroutine(name, SubroutineKind::Function, 0, {}, comp.getStringType(), true),
         upper(upper) {}
 
-    ConstantValue eval(EvalContext& context, const Args& args,
+    ConstantValue eval(EvalContext& context, const Args& args, SourceRange,
                        const CallExpression::SystemCallInfo&) const final {
         auto val = args[0]->eval(context);
         if (!val)
@@ -111,7 +111,7 @@ public:
                                comp.getIntType(), true),
         ignoreCase(ignoreCase) {}
 
-    ConstantValue eval(EvalContext& context, const Args& args,
+    ConstantValue eval(EvalContext& context, const Args& args, SourceRange,
                        const CallExpression::SystemCallInfo&) const final {
         auto lhsCv = args[0]->eval(context);
         auto rhsCv = args[1]->eval(context);
@@ -153,7 +153,7 @@ public:
                                { &comp.getIntType(), &comp.getIntType() }, comp.getStringType(),
                                true) {}
 
-    ConstantValue eval(EvalContext& context, const Args& args,
+    ConstantValue eval(EvalContext& context, const Args& args, SourceRange,
                        const CallExpression::SystemCallInfo&) const final {
         auto strCv = args[0]->eval(context);
         auto leftCv = args[1]->eval(context);
@@ -178,7 +178,7 @@ public:
         SimpleSystemSubroutine(name, SubroutineKind::Function, 0, {}, comp.getIntegerType(), true),
         base(base) {}
 
-    ConstantValue eval(EvalContext& context, const Args& args,
+    ConstantValue eval(EvalContext& context, const Args& args, SourceRange,
                        const CallExpression::SystemCallInfo&) const final {
         auto cv = args[0]->eval(context);
         if (!cv)
@@ -201,7 +201,7 @@ public:
         SimpleSystemSubroutine("atoreal", SubroutineKind::Function, 0, {}, comp.getRealType(),
                                true) {}
 
-    ConstantValue eval(EvalContext& context, const Args& args,
+    ConstantValue eval(EvalContext& context, const Args& args, SourceRange,
                        const CallExpression::SystemCallInfo&) const final {
         auto cv = args[0]->eval(context);
         if (!cv)
@@ -222,7 +222,7 @@ public:
                                comp.getVoidType(), true),
         base(base) {}
 
-    ConstantValue eval(EvalContext& context, const Args& args,
+    ConstantValue eval(EvalContext& context, const Args& args, SourceRange,
                        const CallExpression::SystemCallInfo&) const final {
         auto strCv = args[0]->evalLValue(context);
         auto valCv = args[1]->eval(context);
@@ -243,7 +243,7 @@ public:
         SimpleSystemSubroutine("realtoa", SubroutineKind::Function, 1, { &comp.getRealType() },
                                comp.getVoidType(), true) {}
 
-    ConstantValue eval(EvalContext& context, const Args& args,
+    ConstantValue eval(EvalContext& context, const Args& args, SourceRange,
                        const CallExpression::SystemCallInfo&) const final {
         auto strCv = args[0]->evalLValue(context);
         auto valCv = args[1]->eval(context);

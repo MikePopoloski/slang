@@ -39,7 +39,7 @@ public:
                                            const Args& previousArgs) const;
     virtual const Type& checkArguments(const BindContext& context, const Args& args,
                                        SourceRange range, const Expression* iterOrThis) const = 0;
-    virtual ConstantValue eval(EvalContext& context, const Args& args,
+    virtual ConstantValue eval(EvalContext& context, const Args& args, SourceRange range,
                                const CallExpression::SystemCallInfo& callInfo) const = 0;
     virtual bool verifyConstant(EvalContext& context, const Args& args,
                                 SourceRange range) const = 0;
@@ -95,8 +95,9 @@ public:
         SimpleSystemSubroutine(name, SubroutineKind::Function, requiredArgs, argTypes, returnType,
                                isMethod) {}
 
-    ConstantValue eval(EvalContext&, const Args&,
+    ConstantValue eval(EvalContext& context, const Args&, SourceRange range,
                        const CallExpression::SystemCallInfo&) const final {
+        notConst(context, range);
         return nullptr;
     }
     bool verifyConstant(EvalContext& context, const Args&, SourceRange range) const final {

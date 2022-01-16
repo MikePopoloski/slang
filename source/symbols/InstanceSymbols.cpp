@@ -869,12 +869,11 @@ Symbol* recursePrimArray(Compilation& compilation, const PrimitiveSymbol& primit
 
 template<typename TSyntax>
 void createPrimitives(const PrimitiveSymbol& primitive, const TSyntax& syntax,
-                      const BindContext& parentContext, SmallVector<const Symbol*>& results,
+                      const BindContext& context, SmallVector<const Symbol*>& results,
                       SmallVector<const Symbol*>& implicitNets) {
     SmallSet<string_view, 8> implicitNetNames;
     SmallVectorSized<int32_t, 4> path;
 
-    BindContext context = parentContext.resetFlags(BindFlags::Constant);
     auto& comp = context.getCompilation();
     auto& netType = context.scope->getDefaultNetType();
 

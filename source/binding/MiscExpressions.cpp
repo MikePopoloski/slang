@@ -268,11 +268,14 @@ bool NamedValueExpression::verifyConstantImpl(EvalContext& context) const {
 }
 
 ConstantValue HierarchicalValueExpression::evalImpl(EvalContext& context) const {
-    verifyConstantImpl(context);
+    context.addDiag(diag::ConstEvalHierarchicalName, sourceRange) << symbol.name;
     return nullptr;
 }
 
 bool HierarchicalValueExpression::verifyConstantImpl(EvalContext& context) const {
+    if (context.isScriptEval())
+        return true;
+
     context.addDiag(diag::ConstEvalHierarchicalName, sourceRange) << symbol.name;
     return false;
 }

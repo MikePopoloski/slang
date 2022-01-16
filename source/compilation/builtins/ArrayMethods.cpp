@@ -54,7 +54,7 @@ public:
         }
     }
 
-    ConstantValue eval(EvalContext& context, const Args& args,
+    ConstantValue eval(EvalContext& context, const Args& args, SourceRange,
                        const CallExpression::SystemCallInfo& callInfo) const final {
         ConstantValue arr = args[0]->eval(context);
         if (!arr)
@@ -140,7 +140,7 @@ public:
         return comp.getVoidType();
     }
 
-    ConstantValue eval(EvalContext& context, const Args& args,
+    ConstantValue eval(EvalContext& context, const Args& args, SourceRange,
                        const CallExpression::SystemCallInfo& callInfo) const final {
         auto lval = args[0]->evalLValue(context);
         if (!lval)
@@ -220,7 +220,7 @@ public:
         return comp.getVoidType();
     }
 
-    ConstantValue eval(EvalContext& context, const Args& args,
+    ConstantValue eval(EvalContext& context, const Args& args, SourceRange,
                        const CallExpression::SystemCallInfo&) const final {
         auto lval = args[0]->evalLValue(context);
         if (!lval)
@@ -282,7 +282,7 @@ public:
         return *comp.emplace<QueueType>(*arrayType->getArrayElementType(), 0u);
     }
 
-    ConstantValue eval(EvalContext& context, const Args& args,
+    ConstantValue eval(EvalContext& context, const Args& args, SourceRange,
                        const CallExpression::SystemCallInfo& callInfo) const final {
         ConstantValue arr = args[0]->eval(context);
         if (!arr)
@@ -388,7 +388,7 @@ public:
         return *comp.emplace<QueueType>(*elemType, 0u);
     }
 
-    ConstantValue eval(EvalContext& context, const Args& args,
+    ConstantValue eval(EvalContext& context, const Args& args, SourceRange,
                        const CallExpression::SystemCallInfo& callInfo) const final {
         ConstantValue arr = args[0]->eval(context);
         if (!arr)
@@ -481,7 +481,7 @@ public:
         return *comp.emplace<QueueType>(*arrayType->getArrayElementType(), 0u);
     }
 
-    ConstantValue eval(EvalContext& context, const Args& args,
+    ConstantValue eval(EvalContext& context, const Args& args, SourceRange,
                        const CallExpression::SystemCallInfo& callInfo) const final {
         ConstantValue arr = args[0]->eval(context);
         if (!arr)
@@ -539,7 +539,7 @@ public:
     ArraySizeMethod(Compilation& comp, const std::string& name) :
         SimpleSystemSubroutine(name, SubroutineKind::Function, 0, {}, comp.getIntType(), true) {}
 
-    ConstantValue eval(EvalContext& context, const Args& args,
+    ConstantValue eval(EvalContext& context, const Args& args, SourceRange,
                        const CallExpression::SystemCallInfo&) const final {
         auto val = args[0]->eval(context);
         if (!val)
@@ -555,7 +555,7 @@ public:
         SimpleSystemSubroutine("delete", SubroutineKind::Function, 0, {}, comp.getVoidType(),
                                true) {}
 
-    ConstantValue eval(EvalContext& context, const Args& args,
+    ConstantValue eval(EvalContext& context, const Args& args, SourceRange,
                        const CallExpression::SystemCallInfo&) const final {
         auto lval = args[0]->evalLValue(context);
         if (!lval)
@@ -598,7 +598,7 @@ public:
         return comp.getVoidType();
     }
 
-    ConstantValue eval(EvalContext& context, const Args& args,
+    ConstantValue eval(EvalContext& context, const Args& args, SourceRange,
                        const CallExpression::SystemCallInfo&) const final {
         auto lval = args[0]->evalLValue(context);
         if (!lval)
@@ -655,7 +655,7 @@ public:
         return comp.getIntType();
     }
 
-    ConstantValue eval(EvalContext& context, const Args& args,
+    ConstantValue eval(EvalContext& context, const Args& args, SourceRange,
                        const CallExpression::SystemCallInfo&) const final {
         auto array = args[0]->eval(context);
         auto index = args[1]->eval(context);
@@ -705,8 +705,9 @@ public:
         return comp.getIntType();
     }
 
-    ConstantValue eval(EvalContext&, const Args&,
+    ConstantValue eval(EvalContext& context, const Args&, SourceRange range,
                        const CallExpression::SystemCallInfo&) const final {
+        notConst(context, range);
         return nullptr;
     }
     bool verifyConstant(EvalContext& context, const Args&, SourceRange range) const final {
@@ -728,7 +729,7 @@ public:
         return *args[0]->type->getArrayElementType();
     }
 
-    ConstantValue eval(EvalContext& context, const Args& args,
+    ConstantValue eval(EvalContext& context, const Args& args, SourceRange,
                        const CallExpression::SystemCallInfo&) const final {
         auto lval = args[0]->evalLValue(context);
         if (!lval)
@@ -784,7 +785,7 @@ public:
         return comp.getVoidType();
     }
 
-    ConstantValue eval(EvalContext& context, const Args& args,
+    ConstantValue eval(EvalContext& context, const Args& args, SourceRange,
                        const CallExpression::SystemCallInfo&) const final {
         auto lval = args[0]->evalLValue(context);
         auto cv = args[1]->eval(context);
@@ -838,7 +839,7 @@ public:
         return comp.getVoidType();
     }
 
-    ConstantValue eval(EvalContext& context, const Args& args,
+    ConstantValue eval(EvalContext& context, const Args& args, SourceRange,
                        const CallExpression::SystemCallInfo&) const final {
         auto lval = args[0]->evalLValue(context);
         auto ci = args[1]->eval(context);
@@ -883,7 +884,7 @@ public:
         return comp.getVoidType();
     }
 
-    ConstantValue eval(EvalContext& context, const Args& args,
+    ConstantValue eval(EvalContext& context, const Args& args, SourceRange,
                        const CallExpression::SystemCallInfo&) const final {
         auto lval = args[0]->evalLValue(context);
         if (!lval)
@@ -940,8 +941,9 @@ public:
         return comp.getIntType();
     }
 
-    ConstantValue eval(EvalContext&, const Args&,
+    ConstantValue eval(EvalContext& context, const Args&, SourceRange range,
                        const CallExpression::SystemCallInfo&) const final {
+        notConst(context, range);
         return nullptr;
     }
     bool verifyConstant(EvalContext& context, const Args&, SourceRange range) const final {

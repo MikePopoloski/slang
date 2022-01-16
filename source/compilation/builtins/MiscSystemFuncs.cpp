@@ -43,7 +43,7 @@ public:
         return comp.getStringType();
     }
 
-    ConstantValue eval(EvalContext& context, const Args& args,
+    ConstantValue eval(EvalContext& context, const Args& args, SourceRange,
                        const CallExpression::SystemCallInfo& callInfo) const final {
         ConstantValue formatStr = args[0]->eval(context).convertToStr();
         if (!formatStr)
@@ -94,8 +94,9 @@ public:
         return comp.getIntType();
     }
 
-    ConstantValue eval(EvalContext&, const Args&,
+    ConstantValue eval(EvalContext& context, const Args&, SourceRange range,
                        const CallExpression::SystemCallInfo&) const final {
+        notConst(context, range);
         return nullptr;
     }
     bool verifyConstant(EvalContext& context, const Args&, SourceRange range) const final {
@@ -153,8 +154,9 @@ public:
         return comp.getIntType();
     }
 
-    ConstantValue eval(EvalContext&, const Args&,
+    ConstantValue eval(EvalContext& context, const Args&, SourceRange range,
                        const CallExpression::SystemCallInfo&) const final {
+        notConst(context, range);
         return nullptr;
     }
     bool verifyConstant(EvalContext& context, const Args&, SourceRange range) const final {
@@ -192,8 +194,9 @@ public:
         return comp.getIntType();
     }
 
-    ConstantValue eval(EvalContext&, const Args&,
+    ConstantValue eval(EvalContext& context, const Args&, SourceRange range,
                        const CallExpression::SystemCallInfo&) const final {
+        notConst(context, range);
         return nullptr;
     }
     bool verifyConstant(EvalContext& context, const Args&, SourceRange range) const final {
@@ -224,8 +227,9 @@ public:
         return comp.getType(SyntaxKind::EventType);
     }
 
-    ConstantValue eval(EvalContext&, const Args&,
+    ConstantValue eval(EvalContext& context, const Args&, SourceRange range,
                        const CallExpression::SystemCallInfo&) const final {
+        notConst(context, range);
         return nullptr;
     }
     bool verifyConstant(EvalContext& context, const Args&, SourceRange range) const final {
@@ -277,8 +281,9 @@ public:
         return comp.getBitType();
     }
 
-    ConstantValue eval(EvalContext&, const Args&,
+    ConstantValue eval(EvalContext& context, const Args&, SourceRange range,
                        const CallExpression::SystemCallInfo&) const final {
+        notConst(context, range);
         return nullptr;
     }
     bool verifyConstant(EvalContext& context, const Args&, SourceRange range) const final {

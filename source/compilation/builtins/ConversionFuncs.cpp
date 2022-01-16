@@ -32,7 +32,7 @@ public:
         return comp.getType(type.getBitWidth(), flags);
     }
 
-    ConstantValue eval(EvalContext& context, const Args& args,
+    ConstantValue eval(EvalContext& context, const Args& args, SourceRange,
                        const CallExpression::SystemCallInfo&) const final {
         auto val = args[0]->eval(context);
         if (!val)
@@ -54,7 +54,7 @@ public:
         SimpleSystemSubroutine("$rtoi", SubroutineKind::Function, 1, { &comp.getRealType() },
                                comp.getIntegerType(), false) {}
 
-    ConstantValue eval(EvalContext& context, const Args& args,
+    ConstantValue eval(EvalContext& context, const Args& args, SourceRange,
                        const CallExpression::SystemCallInfo&) const final {
         auto val = args[0]->eval(context);
         if (!val)
@@ -82,7 +82,7 @@ public:
 
     bool verifyConstant(EvalContext&, const Args&, SourceRange) const final { return true; }
 
-    ConstantValue eval(EvalContext& context, const Args& args,
+    ConstantValue eval(EvalContext& context, const Args& args, SourceRange,
                        const CallExpression::SystemCallInfo&) const final {
         auto val = args[0]->eval(context);
         if (!val)
@@ -98,7 +98,7 @@ public:
         SimpleSystemSubroutine("$realtobits", SubroutineKind::Function, 1, { &comp.getRealType() },
                                comp.getType(64, IntegralFlags::Unsigned), false) {}
 
-    ConstantValue eval(EvalContext& context, const Args& args,
+    ConstantValue eval(EvalContext& context, const Args& args, SourceRange,
                        const CallExpression::SystemCallInfo&) const final {
         auto val = args[0]->eval(context);
         if (!val)
@@ -115,7 +115,7 @@ public:
                                { &comp.getType(64, IntegralFlags::Unsigned) }, comp.getRealType(),
                                false) {}
 
-    ConstantValue eval(EvalContext& context, const Args& args,
+    ConstantValue eval(EvalContext& context, const Args& args, SourceRange,
                        const CallExpression::SystemCallInfo&) const final {
         auto val = args[0]->eval(context);
         if (!val)
@@ -133,7 +133,7 @@ public:
                                { &comp.getShortRealType() },
                                comp.getType(32, IntegralFlags::Unsigned), false) {}
 
-    ConstantValue eval(EvalContext& context, const Args& args,
+    ConstantValue eval(EvalContext& context, const Args& args, SourceRange,
                        const CallExpression::SystemCallInfo&) const final {
         auto val = args[0]->eval(context);
         if (!val)
@@ -150,7 +150,7 @@ public:
                                { &comp.getType(32, IntegralFlags::Unsigned) },
                                comp.getShortRealType(), false) {}
 
-    ConstantValue eval(EvalContext& context, const Args& args,
+    ConstantValue eval(EvalContext& context, const Args& args, SourceRange,
                        const CallExpression::SystemCallInfo&) const final {
         auto val = args[0]->eval(context);
         if (!val)

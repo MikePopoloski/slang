@@ -20,8 +20,10 @@ class SystemTaskBase : public SystemSubroutine {
 public:
     explicit SystemTaskBase(const std::string& name) :
         SystemSubroutine(name, SubroutineKind::Task) {}
-    ConstantValue eval(EvalContext&, const Args&,
+
+    ConstantValue eval(EvalContext& context, const Args&, SourceRange range,
                        const CallExpression::SystemCallInfo&) const final {
+        notConst(context, range);
         return nullptr;
     }
     bool verifyConstant(EvalContext& context, const Args&, SourceRange range) const final {
@@ -36,8 +38,9 @@ public:
         SimpleSystemSubroutine(name, SubroutineKind::Task, requiredArgs, argTypes, returnType,
                                false) {}
 
-    ConstantValue eval(EvalContext&, const Args&,
+    ConstantValue eval(EvalContext& context, const Args&, SourceRange range,
                        const CallExpression::SystemCallInfo&) const final {
+        notConst(context, range);
         return nullptr;
     }
     bool verifyConstant(EvalContext& context, const Args&, SourceRange range) const final {
@@ -548,8 +551,9 @@ public:
         return kind == SubroutineKind::Function ? comp.getIntType() : comp.getVoidType();
     }
 
-    ConstantValue eval(EvalContext&, const Args&,
+    ConstantValue eval(EvalContext& context, const Args&, SourceRange range,
                        const CallExpression::SystemCallInfo&) const final {
+        notConst(context, range);
         return nullptr;
     }
 

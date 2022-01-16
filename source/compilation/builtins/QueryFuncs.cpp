@@ -42,7 +42,7 @@ public:
         return comp.getIntegerType();
     }
 
-    ConstantValue eval(EvalContext& context, const Args& args,
+    ConstantValue eval(EvalContext& context, const Args& args, SourceRange,
                        const CallExpression::SystemCallInfo&) const final {
         size_t width;
         if (args[0]->type->isFixedSize()) {
@@ -86,7 +86,7 @@ public:
         return comp.getStringType();
     }
 
-    ConstantValue eval(EvalContext&, const Args& args,
+    ConstantValue eval(EvalContext&, const Args& args, SourceRange,
                        const CallExpression::SystemCallInfo&) const final {
         TypePrinter printer;
         printer.append(*args[0]->type);
@@ -116,7 +116,7 @@ public:
         return comp.getBitType();
     }
 
-    ConstantValue eval(EvalContext&, const Args& args,
+    ConstantValue eval(EvalContext&, const Args& args, SourceRange,
                        const CallExpression::SystemCallInfo&) const final {
         if (args[0]->type->isUnbounded())
             return SVInt(1, 1, false);
@@ -333,12 +333,12 @@ protected:
     }
 };
 
-#define SUBROUTINE(className, base, ...)                                       \
-    class className : public base {                                            \
-    public:                                                                    \
-        className() : base(__VA_ARGS__) {}                                     \
-        ConstantValue eval(EvalContext& context, const Args& args,             \
-                           const CallExpression::SystemCallInfo&) const final; \
+#define SUBROUTINE(className, base, ...)                                              \
+    class className : public base {                                                   \
+    public:                                                                           \
+        className() : base(__VA_ARGS__) {}                                            \
+        ConstantValue eval(EvalContext& context, const Args& args, SourceRange range, \
+                           const CallExpression::SystemCallInfo&) const final;        \
     }
 
 #define FUNC SubroutineKind::Function
@@ -350,7 +350,7 @@ SUBROUTINE(RightFunction, ArrayQueryFunction, "$right", FUNC);
 SUBROUTINE(SizeFunction, ArrayQueryFunction, "$size", FUNC);
 SUBROUTINE(IncrementFunction, ArrayQueryFunction, "$increment", FUNC);
 
-ConstantValue LowFunction::eval(EvalContext& context, const Args& args,
+ConstantValue LowFunction::eval(EvalContext& context, const Args& args, SourceRange,
                                 const CallExpression::SystemCallInfo&) const {
     DimResult dim = getDim(context, args);
     if (dim.hardFail)
@@ -372,7 +372,7 @@ ConstantValue LowFunction::eval(EvalContext& context, const Args& args,
     return SVInt(32, uint64_t(dim.range.lower()), true);
 }
 
-ConstantValue HighFunction::eval(EvalContext& context, const Args& args,
+ConstantValue HighFunction::eval(EvalContext& context, const Args& args, SourceRange,
                                  const CallExpression::SystemCallInfo&) const {
     DimResult dim = getDim(context, args);
     if (dim.hardFail)
@@ -394,7 +394,7 @@ ConstantValue HighFunction::eval(EvalContext& context, const Args& args,
     return SVInt(32, uint64_t(dim.range.upper()), true);
 }
 
-ConstantValue LeftFunction::eval(EvalContext& context, const Args& args,
+ConstantValue LeftFunction::eval(EvalContext& context, const Args& args, SourceRange,
                                  const CallExpression::SystemCallInfo&) const {
     DimResult dim = getDim(context, args);
     if (dim.hardFail)
@@ -409,7 +409,7 @@ ConstantValue LeftFunction::eval(EvalContext& context, const Args& args,
     return SVInt(32, uint64_t(dim.range.left), true);
 }
 
-ConstantValue RightFunction::eval(EvalContext& context, const Args& args,
+ConstantValue RightFunction::eval(EvalContext& context, const Args& args, SourceRange,
                                   const CallExpression::SystemCallInfo&) const {
     DimResult dim = getDim(context, args);
     if (dim.hardFail)
@@ -428,7 +428,7 @@ ConstantValue RightFunction::eval(EvalContext& context, const Args& args,
     return SVInt(32, uint64_t(dim.range.right), true);
 }
 
-ConstantValue SizeFunction::eval(EvalContext& context, const Args& args,
+ConstantValue SizeFunction::eval(EvalContext& context, const Args& args, SourceRange,
                                  const CallExpression::SystemCallInfo&) const {
     DimResult dim = getDim(context, args);
     if (dim.hardFail)
@@ -446,7 +446,7 @@ ConstantValue SizeFunction::eval(EvalContext& context, const Args& args,
     return SVInt(32, dim.range.width(), true);
 }
 
-ConstantValue IncrementFunction::eval(EvalContext& context, const Args& args,
+ConstantValue IncrementFunction::eval(EvalContext& context, const Args& args, SourceRange,
                                       const CallExpression::SystemCallInfo&) const {
     DimResult dim = getDim(context, args);
     if (dim.hardFail)
@@ -492,7 +492,7 @@ public:
 
     bool verifyConstant(EvalContext&, const Args&, SourceRange) const final { return true; }
 
-    ConstantValue eval(EvalContext&, const Args& args,
+    ConstantValue eval(EvalContext&, const Args& args, SourceRange,
                        const CallExpression::SystemCallInfo&) const final {
         // Count the number of dimensions by unwrapping arrays.
         uint64_t count = 0;

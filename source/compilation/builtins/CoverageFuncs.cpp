@@ -66,8 +66,9 @@ public:
         return *returnType;
     }
 
-    ConstantValue eval(EvalContext&, const Args&,
+    ConstantValue eval(EvalContext& context, const Args&, SourceRange range,
                        const CallExpression::SystemCallInfo&) const final {
+        notConst(context, range);
         return nullptr;
     }
 

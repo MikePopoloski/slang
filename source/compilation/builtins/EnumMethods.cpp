@@ -29,7 +29,7 @@ public:
         return *args[0]->type;
     }
 
-    ConstantValue eval(EvalContext&, const Args& args,
+    ConstantValue eval(EvalContext&, const Args& args, SourceRange,
                        const CallExpression::SystemCallInfo&) const final {
         // Expression isn't actually evaluated here; we know the value to return at compile time.
         const EnumType& type = args[0]->type->getCanonicalType().as<EnumType>();
@@ -84,7 +84,7 @@ public:
         return *args[0]->type;
     }
 
-    ConstantValue eval(EvalContext& context, const Args& args,
+    ConstantValue eval(EvalContext& context, const Args& args, SourceRange,
                        const CallExpression::SystemCallInfo&) const final {
         auto val = args[0]->eval(context);
         if (!val)
@@ -169,7 +169,7 @@ public:
         return comp.getIntType();
     }
 
-    ConstantValue eval(EvalContext&, const Args& args,
+    ConstantValue eval(EvalContext&, const Args& args, SourceRange,
                        const CallExpression::SystemCallInfo&) const final {
         // Expression isn't actually evaluated here; we know the value to return at compile time.
         const EnumType& type = args[0]->type->getCanonicalType().as<EnumType>();
@@ -185,7 +185,7 @@ public:
         SimpleSystemSubroutine("name", SubroutineKind::Function, 0, {}, comp.getStringType(),
                                true) {}
 
-    ConstantValue eval(EvalContext& context, const Args& args,
+    ConstantValue eval(EvalContext& context, const Args& args, SourceRange,
                        const CallExpression::SystemCallInfo&) const final {
         auto val = args[0]->eval(context);
         if (!val)
