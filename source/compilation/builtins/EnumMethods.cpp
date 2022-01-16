@@ -204,9 +204,10 @@ void registerEnumMethods(Compilation& c) {
     REGISTER(SymbolKind::EnumType, EnumFirstLast, "last", false);
     REGISTER(SymbolKind::EnumType, EnumNextPrev, "next", true);
     REGISTER(SymbolKind::EnumType, EnumNextPrev, "prev", false);
-    REGISTER(SymbolKind::EnumType, EnumNum);
     REGISTER(SymbolKind::EnumType, EnumName, c);
 #undef REGISTER
+
+    c.addSystemMethod(SymbolKind::EnumType, std::make_unique<EnumNumMethod>());
 }
 
 } // namespace slang::Builtins
