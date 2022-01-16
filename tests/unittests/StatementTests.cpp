@@ -166,7 +166,7 @@ endmodule
     REQUIRE(diags.size() == 4);
     CHECK(diags[0].code == diag::InvalidDisableTarget);
     CHECK(diags[1].code == diag::InvalidDisableTarget);
-    CHECK(diags[2].code == diag::ConstEvalHierarchicalNameInCE);
+    CHECK(diags[2].code == diag::ConstEvalHierarchicalName);
     CHECK(diags[3].code == diag::ConstEvalDisableTarget);
 }
 

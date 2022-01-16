@@ -810,7 +810,7 @@ endmodule
 
     auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 1);
-    CHECK(diags[0].code == diag::ConstEvalHierarchicalNameInCE);
+    CHECK(diags[0].code == diag::ConstEvalHierarchicalName);
 }
 
 TEST_CASE("Sampled value functions") {

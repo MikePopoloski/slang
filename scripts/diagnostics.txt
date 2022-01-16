@@ -752,7 +752,7 @@ error ConstEvalArrayIndexInvalid "cannot refer to element {} of {} in a constant
 error ConstEvalPartSelectInvalid "cannot select range of [{}:{}] from {} in a constant expression"
 error ConstEvalStringIndexInvalid "cannot select index {} from string of length {} in a constant expression"
 error ConstEvalReplicationCountInvalid "string replication count {} is invalid in a constant expression"
-error ConstEvalHierarchicalNameInCE "reference to '{}' by hierarchical name is not allowed in a constant expression"
+error ConstEvalHierarchicalName "reference to '{}' by hierarchical name is not allowed in a constant expression"
 error ConstEvalFunctionIdentifiersMustBeLocal "all identifiers that are not parameters or enums must be declared locally to a constant function"
 error ConstEvalIdUsedInCEBeforeDecl "identifier '{}' is declared after the invocation of the current constant function"
 error ConstEvalNoCaseItemsMatched "no items in {} case statement matched value {} in constant function"

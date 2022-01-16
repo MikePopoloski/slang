@@ -341,7 +341,7 @@ endmodule
     CHECK(diags[0].code == diag::HierarchicalNotAllowedInConstant);
     CHECK(diags[1].code == diag::HierarchicalNotAllowedInConstant);
     CHECK(diags[2].code == diag::HierarchicalNotAllowedInConstant);
-    CHECK(diags[3].code == diag::ConstEvalHierarchicalNameInCE);
+    CHECK(diags[3].code == diag::ConstEvalHierarchicalName);
 }
 
 TEST_CASE("Hierarchical reference in CE across modules") {

@@ -273,7 +273,7 @@ ConstantValue HierarchicalValueExpression::evalImpl(EvalContext& context) const 
 }
 
 bool HierarchicalValueExpression::verifyConstantImpl(EvalContext& context) const {
-    context.addDiag(diag::ConstEvalHierarchicalNameInCE, sourceRange) << symbol.name;
+    context.addDiag(diag::ConstEvalHierarchicalName, sourceRange) << symbol.name;
     return false;
 }
 

@@ -854,7 +854,7 @@ ER DisableStatement::evalImpl(EvalContext& context) const {
 bool DisableStatement::verifyConstantImpl(EvalContext& context) const {
     // Hierarchical names are disallowed in constant expressions and constant functions
     if (isHierarchical) {
-        context.addDiag(diag::ConstEvalHierarchicalNameInCE, sourceRange) << target.name;
+        context.addDiag(diag::ConstEvalHierarchicalName, sourceRange) << target.name;
         return false;
     }
 
