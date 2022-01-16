@@ -36,8 +36,10 @@ enum class DeclaredTypeFlags {
     /// will be resolved as 'logic' if implicit syntax is provided.
     InferImplicit = 1 << 0,
 
-    /// The bound initializer is required to be a constant expression.
-    RequireConstant = 1 << 1,
+    /// The bound initializer cannot refer to the parent symbol in its expression.
+    /// This is used for parameters which would otherwise be infinitely
+    /// recursive if they referenced themselves.
+    InitializerCantSeeParent = 1 << 1,
 
     /// The initializer expression has been overridden via a parameter
     /// in a hierarchical instantation.

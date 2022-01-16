@@ -540,7 +540,7 @@ void EnumType::createDefaultMembers(const BindContext& context, const EnumTypeSy
 }
 
 EnumValueSymbol::EnumValueSymbol(string_view name, SourceLocation loc) :
-    ValueSymbol(SymbolKind::EnumValue, name, loc, DeclaredTypeFlags::RequireConstant) {
+    ValueSymbol(SymbolKind::EnumValue, name, loc, DeclaredTypeFlags::InitializerCantSeeParent) {
 }
 
 EnumValueSymbol& EnumValueSymbol::fromSyntax(Compilation& compilation,
@@ -1005,7 +1005,8 @@ const Type& VirtualInterfaceType::fromSyntax(const BindContext& context,
     }
 
     auto loc = syntax.name.location();
-    auto& iface = InstanceSymbol::createVirtual(*context.scope, loc, *definition, syntax.parameters);
+    auto& iface =
+        InstanceSymbol::createVirtual(*context.scope, loc, *definition, syntax.parameters);
 
     const ModportSymbol* modport = nullptr;
     string_view modportName = syntax.modport ? syntax.modport->member.valueText() : ""sv;

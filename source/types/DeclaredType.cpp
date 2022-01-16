@@ -395,8 +395,6 @@ void DeclaredType::setFromDeclarator(const DeclaratorSyntax& decl) {
 template<bool IsInitializer, typename T>
 T DeclaredType::getBindContext() const {
     bitmask<BindFlags> bindFlags;
-    if (flags.has(DeclaredTypeFlags::RequireConstant))
-        bindFlags |= BindFlags::Constant;
     if (flags.has(DeclaredTypeFlags::Port | DeclaredTypeFlags::NetType))
         bindFlags |= BindFlags::NonProcedural;
     if (!flags.has(DeclaredTypeFlags::AutomaticInitializer))
@@ -429,7 +427,7 @@ T DeclaredType::getBindContext() const {
         location = LookupLocation(parent.getParentScope(), overrideIndex);
     }
     else if (IsInitializer) {
-        if (flags.has(DeclaredTypeFlags::RequireConstant))
+        if (flags.has(DeclaredTypeFlags::InitializerCantSeeParent))
             location = LookupLocation::before(parent);
         else
             location = LookupLocation::after(parent);

@@ -48,7 +48,7 @@ bool ParameterSymbolBase::hasDefault() const {
 
 ParameterSymbol::ParameterSymbol(string_view name, SourceLocation loc, bool isLocal, bool isPort) :
     ValueSymbol(SymbolKind::Parameter, name, loc,
-                DeclaredTypeFlags::InferImplicit | DeclaredTypeFlags::RequireConstant |
+                DeclaredTypeFlags::InferImplicit | DeclaredTypeFlags::InitializerCantSeeParent |
                     DeclaredTypeFlags::AllowUnboundedLiteral),
     ParameterSymbolBase(*this, isLocal, isPort) {
 }
@@ -282,7 +282,7 @@ void DefParamSymbol::serializeTo(ASTSerializer& serializer) const {
 
 SpecparamSymbol::SpecparamSymbol(string_view name, SourceLocation loc) :
     ValueSymbol(SymbolKind::Specparam, name, loc,
-                DeclaredTypeFlags::InferImplicit | DeclaredTypeFlags::RequireConstant) {
+                DeclaredTypeFlags::InferImplicit | DeclaredTypeFlags::InitializerCantSeeParent) {
 }
 
 const ConstantValue& SpecparamSymbol::getValue() const {
