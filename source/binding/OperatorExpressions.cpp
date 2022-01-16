@@ -282,11 +282,10 @@ bool Expression::bindMembershipExpressions(const BindContext& context, TokenKind
         else
             selfDetermined(context, expr);
 
-        auto& checked = checkBindFlags(*expr, context);
-        if (checked.bad())
+        if (expr->bad())
             return false;
 
-        results[index++] = &checked;
+        results[index++] = expr;
     }
 
     return true;

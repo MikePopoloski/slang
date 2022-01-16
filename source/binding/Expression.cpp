@@ -168,9 +168,7 @@ const InvalidExpression InvalidExpression::Instance(nullptr, ErrorType::Instance
 
 const Expression& Expression::bind(const ExpressionSyntax& syntax, const BindContext& context,
                                    bitmask<BindFlags> extraFlags) {
-    const Expression& result =
-        selfDetermined(context.getCompilation(), syntax, context, extraFlags);
-    return checkBindFlags(result, context.resetFlags(extraFlags));
+    return selfDetermined(context.getCompilation(), syntax, context, extraFlags);
 }
 
 const Expression& Expression::bindLValue(const ExpressionSyntax& lhs, const Type& rhs,
@@ -199,11 +197,9 @@ const Expression& Expression::bindLValue(const ExpressionSyntax& lhs, const Type
     selfDetermined(context, lhsExpr);
 
     SourceRange lhsRange = lhs.sourceRange();
-    auto& result = AssignmentExpression::fromComponents(
-        comp, std::nullopt, /* nonBlocking */ false, *lhsExpr, *rhsExpr, lhsRange.start(),
-        /* timingControl */ nullptr, lhsRange, context);
-
-    return checkBindFlags(result, context);
+    return AssignmentExpression::fromComponents(comp, std::nullopt, /* nonBlocking */ false,
+                                                *lhsExpr, *rhsExpr, lhsRange.start(),
+                                                /* timingControl */ nullptr, lhsRange, context);
 }
 
 const Expression& Expression::bindRValue(const Type& lhs, const ExpressionSyntax& rhs,
@@ -214,16 +210,14 @@ const Expression& Expression::bindRValue(const Type& lhs, const ExpressionSyntax
     BindContext ctx = context.resetFlags(extraFlags);
     if (lhs.isVirtualInterface()) {
         if (auto ref = tryBindInterfaceRef(ctx, rhs, lhs))
-            return checkBindFlags(*ref, ctx);
+            return *ref;
     }
 
     if (!ctx.isPortConnection())
         extraFlags |= BindFlags::StreamingAllowed;
 
     Expression& expr = create(comp, rhs, ctx, extraFlags, &lhs);
-
-    const Expression& result = convertAssignment(ctx, lhs, expr, location);
-    return checkBindFlags(result, ctx);
+    return convertAssignment(ctx, lhs, expr, location);
 }
 
 const Expression& Expression::bindRefArg(const Type& lhs, bool isConstRef,
@@ -254,7 +248,7 @@ const Expression& Expression::bindRefArg(const Type& lhs, bool isConstRef,
         return badExpr(comp, &expr);
     }
 
-    return checkBindFlags(expr, context);
+    return expr;
 }
 
 const Expression& Expression::bindArgument(const Type& argType, ArgumentDirection direction,
@@ -318,21 +312,7 @@ const Expression& Expression::bindImplicitParam(
         }
     }
 
-    const Expression& result = convertAssignment(exprContext, *lhsType, expr, location);
-    return checkBindFlags(result, exprContext);
-}
-
-const Expression& Expression::checkBindFlags(const Expression& expr, const BindContext& context) {
-    if (!context.flags.has(BindFlags::Constant))
-        return expr;
-
-    EvalContext verifyContext(context.getCompilation(), EvalFlags::IsVerifying);
-    bool ok = expr.verifyConstant(verifyContext);
-    verifyContext.reportDiags(context);
-
-    if (!ok)
-        return badExpr(context.getCompilation(), &expr);
-    return expr;
+    return convertAssignment(exprContext, *lhsType, expr, location);
 }
 
 ConstantValue Expression::eval(EvalContext& context) const {

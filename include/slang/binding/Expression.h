@@ -304,8 +304,6 @@ protected:
     static ConstantValue evalBinaryOperator(BinaryOperator op, const ConstantValue& cvl,
                                             const ConstantValue& cvr);
 
-    static const Expression& checkBindFlags(const Expression& expr, const BindContext& context);
-
     static Expression& create(Compilation& compilation, const ExpressionSyntax& syntax,
                               const BindContext& context,
                               bitmask<BindFlags> extraFlags = BindFlags::None,

@@ -1041,13 +1041,13 @@ endmodule
 source:9:20: error: could not resolve hierarchical path name 'bar'
         return gen1.bar;
                    ^~~~
-source:16:26: note: in call to 'foo1'
+source:16:26: note: in call to 'foo1()'
     localparam int bar = foo1();
                          ^
 source:13:16: error: reference to 'asdf' by hierarchical name is not allowed in a constant expression
         return $root.M.asdf;
                ^~~~~~~~~~~~
-source:17:26: note: in call to 'foo2'
+source:17:26: note: in call to 'foo2()'
     localparam int baz = foo2();
                          ^
 )");
