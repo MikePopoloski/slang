@@ -151,11 +151,23 @@ private:
     bool next;
 };
 
-class EnumNumMethod : public SimpleSystemSubroutine {
+class EnumNumMethod : public SystemSubroutine {
 public:
-    explicit EnumNumMethod(Compilation& comp) :
-        SimpleSystemSubroutine("num", SubroutineKind::Function, 0, {}, comp.getIntType(),
-                               /* isMethod */ true, /* allowNonConst */ true) {}
+    EnumNumMethod() : SystemSubroutine("num", SubroutineKind::Function) {}
+
+    const Expression& bindArgument(size_t, const BindContext& context,
+                                   const ExpressionSyntax& syntax, const Args&) const final {
+        return Expression::bind(syntax, makeNonConst(context));
+    }
+
+    const Type& checkArguments(const BindContext& context, const Args& args, SourceRange range,
+                               const Expression*) const final {
+        auto& comp = context.getCompilation();
+        if (!checkArgCount(context, true, args, range, 0, 0))
+            return comp.getErrorType();
+
+        return comp.getIntType();
+    }
 
     ConstantValue eval(EvalContext&, const Args& args,
                        const CallExpression::SystemCallInfo&) const final {
@@ -163,6 +175,8 @@ public:
         const EnumType& type = args[0]->type->getCanonicalType().as<EnumType>();
         return SVInt(32, (uint64_t)type.values().size(), true);
     }
+
+    bool verifyConstant(EvalContext&, const Args&, SourceRange) const final { return true; }
 };
 
 class EnumNameMethod : public SimpleSystemSubroutine {
@@ -200,7 +214,7 @@ void registerEnumMethods(Compilation& c) {
     REGISTER(SymbolKind::EnumType, EnumFirstLast, "last", false);
     REGISTER(SymbolKind::EnumType, EnumNextPrev, "next", true);
     REGISTER(SymbolKind::EnumType, EnumNextPrev, "prev", false);
-    REGISTER(SymbolKind::EnumType, EnumNum, c);
+    REGISTER(SymbolKind::EnumType, EnumNum);
     REGISTER(SymbolKind::EnumType, EnumName, c);
 #undef REGISTER
 }

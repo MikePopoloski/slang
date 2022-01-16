@@ -69,30 +69,22 @@ bool SystemSubroutine::notConst(EvalContext& context, SourceRange range) const {
 
 BindContext SystemSubroutine::makeNonConst(const BindContext& ctx) {
     BindContext nonConstCtx(ctx);
-    if (nonConstCtx.flags & BindFlags::Constant) {
+    if (nonConstCtx.flags.has(BindFlags::Constant))
         nonConstCtx.flags &= ~BindFlags::Constant;
-        nonConstCtx.flags |= BindFlags::NoHierarchicalNames;
-    }
+
     return nonConstCtx;
 }
 
 const Expression& SimpleSystemSubroutine::bindArgument(size_t argIndex, const BindContext& context,
                                                        const ExpressionSyntax& syntax,
                                                        const Args& args) const {
-    optional<BindContext> nonConstCtx;
-    const BindContext* ctx = &context;
-    if (allowNonConst) {
-        nonConstCtx.emplace(makeNonConst(context));
-        ctx = &nonConstCtx.value();
-    }
-
     if (isMethod)
         argIndex--;
 
     if (argIndex >= argTypes.size())
-        return SystemSubroutine::bindArgument(argIndex, *ctx, syntax, args);
+        return SystemSubroutine::bindArgument(argIndex, context, syntax, args);
 
-    return Expression::bindArgument(*argTypes[argIndex], ArgumentDirection::In, syntax, *ctx);
+    return Expression::bindArgument(*argTypes[argIndex], ArgumentDirection::In, syntax, context);
 }
 
 const Type& SimpleSystemSubroutine::checkArguments(const BindContext& context, const Args& args,
