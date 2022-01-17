@@ -524,6 +524,7 @@ error TaggedUnionTarget "tagged union expression can only be used in an assignme
 error TaggedUnionMissingInit "missing initializer expression for non-void tagged union member '{}'"
 error CoverOptionImmutable "the '{}' option cannot be modified outside of the covergroup definition"
 error OpenRangeUnbounded "open range cannot be unbounded on both sides"
+error CoverageExprVar "coverage expressions can only reference constants and non-ref formal arguments"
 warning ignored-slice IgnoredSlice "slice size ignored for left-to-right streaming operator"
 warning unsized-concat UnsizedInConcat "unsized integer in concat; using a width of {}"
 warning width-expand WidthExpand "implicit conversion expands from {} to {} bits"

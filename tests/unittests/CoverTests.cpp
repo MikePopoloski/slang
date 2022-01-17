@@ -221,20 +221,20 @@ TEST_CASE("Coverpoint bins") {
 module m;
     int arr[];
     const int ci = 2;
-    covergroup cg1 (ref int x, ref int y, input int c);
+    covergroup cg1 (ref int x, ref int y, input int c, int fa2[]);
         coverpoint x {
             bins a = { [0:63],65 } iff (arr);
             ignore_bins b[4] = { [127:150],[148:191] } iff (c);
             illegal_bins cbins[] = { 200,201,202 };
             wildcard bins d = { [1000:$] };
             bins e = { [$:$] };
-            bins f[arr] = { 200,201,202 };
+            bins f[fa2] = { 200,201,202 };
             bins others[] = default;
             wildcard bins foo = default;
             bins bar[] = default sequence;
             ignore_bins baz = default;
             bins t[] = (1,5 => 6,7), (1 => 12[*3:4] => [3:3],4 [-> 3]),
-                (1 => 3 [=2:arr] => 6[*3+:4] => 7[*]);
+                (1 => 3 [=2:fa2] => 6[*3+:4] => 7[*]);
             bins u[3] = (1,5 => 6,7);
             bins v = func(1);
             bins w = 1+1;
@@ -376,4 +376,32 @@ endmodule
     CHECK(diags[0].code == diag::CovergroupOutArg);
     CHECK(diags[1].code == diag::ExpectedSampleKeyword);
     CHECK(diags[2].code == diag::ExpectedFunctionPortList);
+}
+
+TEST_CASE("Covergroup expression errors") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    int asdf;
+    wire [31:0] w;
+    covergroup cg1 (int a, ref int r);
+        coverpoint a {
+            bins b = {r, asdf, w, foo()};
+        }
+    endgroup
+
+    function int foo;
+        return asdf;
+    endfunction
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 4);
+    CHECK(diags[0].code == diag::CoverageExprVar);
+    CHECK(diags[1].code == diag::CoverageExprVar);
+    CHECK(diags[2].code == diag::CoverageExprVar);
+    CHECK(diags[3].code == diag::ConstEvalFunctionIdentifiersMustBeLocal);
 }

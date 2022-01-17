@@ -9,6 +9,8 @@
 #include "slang/binding/TimingControl.h"
 #include "slang/compilation/Compilation.h"
 #include "slang/diagnostics/DeclarationsDiags.h"
+#include "slang/diagnostics/ExpressionsDiags.h"
+#include "slang/symbols/ASTVisitor.h"
 #include "slang/symbols/ClassSymbols.h"
 #include "slang/symbols/SubroutineSymbols.h"
 #include "slang/symbols/SymbolBuilders.h"
@@ -94,8 +96,8 @@ const Expression& CoverageOptionSetter::getExpression() const {
         expr = &Expression::bind(*syntax->expr, context, flags);
         context.setAttributes(*expr, syntax->attributes);
 
-        if (isTypeOpt)
-            context.verifyConstant(*expr);
+        if (isTypeOpt && expr->kind == ExpressionKind::Assignment)
+            context.verifyConstant(expr->as<AssignmentExpression>().right());
     }
     return *expr;
 }
@@ -355,17 +357,60 @@ CoverageBinSymbol& CoverageBinSymbol::fromSyntax(const Scope& scope,
     return *result;
 }
 
+struct CoverageVarVisitor {
+    const BindContext& context;
+
+    CoverageVarVisitor(const BindContext& context) : context(context) {}
+
+    template<typename T>
+    void visit(const T& expr) {
+        if constexpr (std::is_base_of_v<Expression, T>) {
+            if (expr.kind == ExpressionKind::NamedValue) {
+                if (auto sym = expr.getSymbolReference(); sym && sym->isValue()) {
+                    if (sym->kind == SymbolKind::FormalArgument) {
+                        if (sym->as<FormalArgumentSymbol>().direction == ArgumentDirection::Ref)
+                            context.addDiag(diag::CoverageExprVar, expr.sourceRange);
+                    }
+                    else if (VariableSymbol::isKind(sym->kind)) {
+                        if (!sym->as<VariableSymbol>().flags.has(VariableFlags::Const))
+                            context.addDiag(diag::CoverageExprVar, expr.sourceRange);
+                    }
+                    else if (sym->kind != SymbolKind::Parameter &&
+                             sym->kind != SymbolKind::EnumValue) {
+                        context.addDiag(diag::CoverageExprVar, expr.sourceRange);
+                    }
+                }
+            }
+            else {
+                if constexpr (is_detected_v<ASTDetectors::visitExprs_t, T, CoverageVarVisitor>)
+                    expr.visitExprs(*this);
+            }
+        }
+    }
+
+    void visitInvalid(const Expression&) {}
+    void visitInvalid(const AssertionExpr&) {}
+};
+
 static const Expression& bindCovergroupExpr(const ExpressionSyntax& syntax,
                                             const BindContext& context,
                                             const Type* lvalueType = nullptr,
                                             bitmask<BindFlags> extraFlags = {}) {
-    // TODO: check requirements
+    const Expression* expr;
     if (lvalueType) {
-        return Expression::bindRValue(*lvalueType, syntax, syntax.getFirstToken().location(),
-                                      context, extraFlags);
+        expr = &Expression::bindRValue(*lvalueType, syntax, syntax.getFirstToken().location(),
+                                       context, extraFlags);
+    }
+    else {
+        expr = &Expression::bind(syntax, context, extraFlags);
     }
 
-    return Expression::bind(syntax, context, extraFlags);
+    if (context.verifyConstant(*expr)) {
+        CoverageVarVisitor visitor(context);
+        expr->visit(visitor);
+    }
+
+    return *expr;
 }
 
 void CoverageBinSymbol::resolve() const {
@@ -383,7 +428,7 @@ void CoverageBinSymbol::resolve() const {
 
     auto& binsSyntax = syntax->as<CoverageBinsSyntax>();
     if (binsSyntax.iff) {
-        iffExpr = &bindCovergroupExpr(*binsSyntax.iff->expr, context);
+        iffExpr = &Expression::bind(*binsSyntax.iff->expr, context);
         context.requireBooleanConvertible(*iffExpr);
     }
 
