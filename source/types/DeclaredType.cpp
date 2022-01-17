@@ -399,6 +399,8 @@ T DeclaredType::getBindContext() const {
         bindFlags |= BindFlags::NonProcedural;
     if (!flags.has(DeclaredTypeFlags::AutomaticInitializer))
         bindFlags |= BindFlags::StaticInitializer;
+    if (flags.has(DeclaredTypeFlags::CoverageType))
+        bindFlags |= BindFlags::AllowCoverageSampleFormal;
 
     const Scope* scope = parent.getParentScope();
     ASSERT(scope);

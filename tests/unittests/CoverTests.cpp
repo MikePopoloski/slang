@@ -360,7 +360,10 @@ endmodule
 TEST_CASE("Covergroup overriding sample method errors") {
     auto tree = SyntaxTree::fromText(R"(
 module m;
-    covergroup cg1 with function sample(bit a, output int x);
+    covergroup cg1 (int x) with function sample(bit a, output int y);
+        coverpoint x {
+            bins b = {a} iff (a);
+        }
     endgroup
 
     covergroup cg2 with function foo;
@@ -372,10 +375,11 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 3);
+    REQUIRE(diags.size() == 4);
     CHECK(diags[0].code == diag::CovergroupOutArg);
-    CHECK(diags[1].code == diag::ExpectedSampleKeyword);
-    CHECK(diags[2].code == diag::ExpectedFunctionPortList);
+    CHECK(diags[1].code == diag::CoverageSampleFormal);
+    CHECK(diags[2].code == diag::ExpectedSampleKeyword);
+    CHECK(diags[3].code == diag::ExpectedFunctionPortList);
 }
 
 TEST_CASE("Covergroup expression errors") {

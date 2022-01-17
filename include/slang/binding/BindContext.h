@@ -133,10 +133,11 @@ enum class BindFlags {
     /// Binding is inside a concurrent assertion's action block.
     ConcurrentAssertActionBlock = 1 << 26,
 
-    /// Binding is for a covergroup expression.
-    CovergroupExpr = 1 << 27
+    /// Binding is for a covergroup expression that permits referencing a
+    /// formal argument of an overridden sample method.
+    AllowCoverageSampleFormal = 1 << 27
 };
-BITMASK(BindFlags, CovergroupExpr)
+BITMASK(BindFlags, AllowCoverageSampleFormal)
 
 enum class DimensionKind { Unknown, Range, AbbreviatedRange, Dynamic, Associative, Queue };
 

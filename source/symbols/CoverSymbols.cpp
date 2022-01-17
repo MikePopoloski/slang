@@ -223,6 +223,8 @@ const Symbol& CovergroupType::fromSyntax(const Scope& scope,
                     scope.addDiag(diag::CovergroupOutArg, arg->location);
                 }
 
+                const_cast<FormalArgumentSymbol*>(arg)->flags |=
+                    VariableFlags::CoverageSampleFormal;
                 sample.copyArg(*arg);
             }
         }
@@ -428,7 +430,8 @@ void CoverageBinSymbol::resolve() const {
 
     auto& binsSyntax = syntax->as<CoverageBinsSyntax>();
     if (binsSyntax.iff) {
-        iffExpr = &Expression::bind(*binsSyntax.iff->expr, context);
+        iffExpr =
+            &Expression::bind(*binsSyntax.iff->expr, context, BindFlags::AllowCoverageSampleFormal);
         context.requireBooleanConvertible(*iffExpr);
     }
 
@@ -659,7 +662,8 @@ const Expression* CoverpointSymbol::getIffExpr() const {
                 iffExpr = nullptr;
             else {
                 BindContext context(*scope, LookupLocation::min);
-                iffExpr = &Expression::bind(*iffSyntax->expr, context);
+                iffExpr = &Expression::bind(*iffSyntax->expr, context,
+                                            BindFlags::AllowCoverageSampleFormal);
                 context.requireBooleanConvertible(*iffExpr.value());
             }
         }
@@ -755,7 +759,8 @@ const Expression* CoverCrossSymbol::getIffExpr() const {
                 iffExpr = nullptr;
             else {
                 BindContext context(*scope, LookupLocation::min);
-                iffExpr = &Expression::bind(*iffSyntax->expr, context);
+                iffExpr = &Expression::bind(*iffSyntax->expr, context,
+                                            BindFlags::AllowCoverageSampleFormal);
                 context.requireBooleanConvertible(*iffExpr.value());
             }
         }

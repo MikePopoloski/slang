@@ -32,8 +32,11 @@ enum class VariableFlags : uint16_t {
     /// The variable is a coverage option that is not modifiable outside of
     /// the covergroup declaration.
     ImmutableCoverageOption = 1 << 2,
+
+    /// The variable is a formal argument of an overridden sample method in a covergroup.
+    CoverageSampleFormal = 1 << 3
 };
-BITMASK(VariableFlags, ImmutableCoverageOption)
+BITMASK(VariableFlags, CoverageSampleFormal)
 
 /// Represents a variable declaration.
 class VariableSymbol : public ValueSymbol {
