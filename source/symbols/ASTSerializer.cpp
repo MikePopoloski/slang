@@ -39,6 +39,10 @@ void ASTSerializer::serialize(const AssertionExpr& expr) {
     expr.visit(*this);
 }
 
+void ASTSerializer::serialize(const BinsSelectExpr& expr) {
+    expr.visit(*this);
+}
+
 void ASTSerializer::serialize(string_view value) {
     writer.writeValue(value);
 }
@@ -104,6 +108,11 @@ void ASTSerializer::write(string_view name, const Constraint& value) {
 }
 
 void ASTSerializer::write(string_view name, const AssertionExpr& value) {
+    writer.writeProperty(name);
+    serialize(value);
+}
+
+void ASTSerializer::write(string_view name, const BinsSelectExpr& value) {
     writer.writeProperty(name);
     serialize(value);
 }
@@ -176,11 +185,12 @@ void ASTSerializer::visit(const T& elem, bool inMembersArray) {
         writer.endObject();
     }
     else if constexpr (std::is_base_of_v<TimingControl, T> || std::is_base_of_v<Constraint, T> ||
-                       std::is_base_of_v<AssertionExpr, T>) {
+                       std::is_base_of_v<AssertionExpr, T> ||
+                       std::is_base_of_v<BinsSelectExpr, T>) {
         writer.startObject();
         write("kind", toString(elem.kind));
         if constexpr (!std::is_same_v<TimingControl, T> && !std::is_same_v<Constraint, T> &&
-                      !std::is_same_v<AssertionExpr, T>) {
+                      !std::is_same_v<AssertionExpr, T> && !std::is_same_v<BinsSelectExpr, T>) {
             elem.serializeTo(*this);
         }
         writer.endObject();
@@ -263,6 +273,10 @@ void ASTSerializer::visitInvalid(const slang::Constraint& constraint) {
 
 void ASTSerializer::visitInvalid(const slang::AssertionExpr& expr) {
     visit(expr.as<InvalidAssertionExpr>());
+}
+
+void ASTSerializer::visitInvalid(const slang::BinsSelectExpr& expr) {
+    visit(expr.as<InvalidBinsSelectExpr>());
 }
 
 } // namespace slang

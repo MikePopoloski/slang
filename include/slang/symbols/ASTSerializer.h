@@ -13,6 +13,7 @@ namespace slang {
 
 class AssertionExpr;
 class AttributeSymbol;
+class BinsSelectExpr;
 class Compilation;
 class ConstantValue;
 class Constraint;
@@ -33,7 +34,8 @@ public:
     void serialize(const Statement& statement);
     void serialize(const TimingControl& timing);
     void serialize(const Constraint& constraint);
-    void serialize(const AssertionExpr& constraint);
+    void serialize(const AssertionExpr& assertionExpr);
+    void serialize(const BinsSelectExpr& binsSelectExpr);
     void serialize(std::string_view value);
 
     void startArray(string_view name);
@@ -55,6 +57,7 @@ public:
     void write(string_view name, const TimingControl& value);
     void write(string_view name, const Constraint& value);
     void write(string_view name, const AssertionExpr& value);
+    void write(string_view name, const BinsSelectExpr& value);
 
     void writeLink(string_view name, const Symbol& value);
 
@@ -81,6 +84,7 @@ private:
     friend TimingControl;
     friend Constraint;
     friend AssertionExpr;
+    friend BinsSelectExpr;
 
     template<typename T>
     void visit(const T& symbol, bool inMembersArray = false);
@@ -90,6 +94,7 @@ private:
     void visitInvalid(const TimingControl& timing);
     void visitInvalid(const Constraint& timing);
     void visitInvalid(const AssertionExpr& expr);
+    void visitInvalid(const BinsSelectExpr& expr);
 
     Compilation& compilation;
     JsonWriter& writer;

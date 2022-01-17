@@ -104,6 +104,7 @@ public:
     void visitInvalid(const TimingControl&) {}
     void visitInvalid(const Constraint&) {}
     void visitInvalid(const AssertionExpr&) {}
+    void visitInvalid(const BinsSelectExpr&) {}
 
 #undef DERIVED
 };
@@ -394,6 +395,19 @@ decltype(auto) AssertionExpr::visit(TVisitor& visitor, Args&&... args) const {
         CASE(Conditional, ConditionalAssertionExpr);
         CASE(Case, CaseAssertionExpr);
         CASE(DisableIff, DisableIffAssertionExpr);
+    }
+#undef CASE
+    // clang-format on
+    THROW_UNREACHABLE;
+}
+
+template<typename TVisitor, typename... Args>
+decltype(auto) BinsSelectExpr::visit(TVisitor& visitor, Args&&... args) const {
+    // clang-format off
+#define CASE(k, n) case BinsSelectExprKind::k: return visitor.visit(*static_cast<const n*>(this), std::forward<Args>(args)...)
+    switch (kind) {
+        case BinsSelectExprKind::Invalid: return visitor.visitInvalid(*this, std::forward<Args>(args)...);
+        CASE(Condition, ConditionBinsSelectExpr);
     }
 #undef CASE
     // clang-format on

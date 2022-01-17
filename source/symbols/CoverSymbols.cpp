@@ -317,6 +317,12 @@ const Expression* CoverageBinSymbol::getWithExpr() const {
     return withExpr;
 }
 
+const BinsSelectExpr* CoverageBinSymbol::getCrossSelectExpr() const {
+    if (!isResolved)
+        resolve();
+    return selectExpr;
+}
+
 span<const Expression* const> CoverageBinSymbol::getValues() const {
     if (!isResolved)
         resolve();
@@ -365,6 +371,11 @@ CoverageBinSymbol& CoverageBinSymbol::fromSyntax(const Scope& scope,
     auto result = comp.emplace<CoverageBinSymbol>(syntax.name.valueText(), syntax.name.location());
     result->setSyntax(syntax);
     result->setAttributes(scope, syntax.attributes);
+
+    if (syntax.keyword.kind == TokenKind::IgnoreBinsKeyword)
+        result->binsKind = IgnoreBins;
+    else if (syntax.keyword.kind == TokenKind::IllegalBinsKeyword)
+        result->binsKind = IllegalBins;
 
     return *result;
 }
@@ -436,105 +447,105 @@ void CoverageBinSymbol::resolve() const {
     auto& comp = scope->getCompilation();
     BindContext context(*scope, LookupLocation::before(*this));
 
-    if (syntax->kind == SyntaxKind::CoverageBins) {
-        auto& coverpoint = scope->asSymbol().as<CoverpointSymbol>();
-        auto& type = coverpoint.getType();
-
-        auto& binsSyntax = syntax->as<CoverageBinsSyntax>();
-        if (binsSyntax.iff) {
-            iffExpr = &Expression::bind(*binsSyntax.iff->expr, context,
-                                        BindFlags::AllowCoverageSampleFormal);
-            context.requireBooleanConvertible(*iffExpr);
-        }
-
-        if (binsSyntax.size && binsSyntax.size->expr) {
-            numberOfBinsExpr = &bindCovergroupExpr(*binsSyntax.size->expr, context);
-            context.requireIntegral(*numberOfBinsExpr);
-        }
-
-        auto bindWithExpr = [&](const WithClauseSyntax& withSyntax) {
-            // Create the iterator variable and set it up with a bind context so that it
-            // can be found by the iteration expression.
-            auto it =
-                comp.emplace<IteratorSymbol>(*context.scope, "item"sv, coverpoint.location, type);
-
-            BindContext iterCtx = context;
-            it->nextIterator = std::exchange(iterCtx.firstIterator, it);
-            iterCtx.flags &= ~BindFlags::StaticInitializer;
-
-            withExpr = &bindCovergroupExpr(*withSyntax.expr, iterCtx);
-            iterCtx.requireBooleanConvertible(*withExpr);
-        };
-
-        auto init = binsSyntax.initializer;
-        switch (init->kind) {
-            case SyntaxKind::RangeCoverageBinInitializer: {
-                SmallVectorSized<const Expression*, 4> buffer;
-                auto& rcbis = init->as<RangeCoverageBinInitializerSyntax>();
-                for (auto elem : rcbis.ranges->valueRanges) {
-                    bitmask<BindFlags> flags;
-                    if (elem->kind == SyntaxKind::OpenRangeExpression)
-                        flags = BindFlags::AllowUnboundedLiteral;
-
-                    auto& expr = bindCovergroupExpr(*elem, context, &type, flags);
-                    buffer.append(&expr);
-                }
-                values = buffer.copy(comp);
-
-                if (rcbis.withClause)
-                    bindWithExpr(*rcbis.withClause);
-                break;
-            }
-            case SyntaxKind::IdWithExprCoverageBinInitializer: {
-                auto& iwecbi = init->as<IdWithExprCoverageBinInitializerSyntax>();
-                bindWithExpr(*iwecbi.withClause);
-
-                auto targetName = iwecbi.id.valueText();
-                if (!targetName.empty() && targetName != coverpoint.name)
-                    context.addDiag(diag::CoverageBinTargetName, iwecbi.id.range())
-                        << coverpoint.name;
-                break;
-            }
-            case SyntaxKind::TransListCoverageBinInitializer: {
-                SmallVectorSized<TransSet, 4> listBuffer;
-                for (auto setElem : init->as<TransListCoverageBinInitializerSyntax>().sets) {
-                    SmallVectorSized<TransRangeList, 4> setBuffer;
-                    for (auto rangeElem : setElem->ranges)
-                        setBuffer.emplace(*rangeElem, type, context);
-                    listBuffer.append(setBuffer.copy(comp));
-                }
-                transList = listBuffer.copy(comp);
-                break;
-            }
-            case SyntaxKind::ExpressionCoverageBinInitializer:
-                setCoverageExpr = &bindCovergroupExpr(
-                    *init->as<ExpressionCoverageBinInitializerSyntax>().expr, context);
-
-                if (!setCoverageExpr->bad()) {
-                    auto& t = *setCoverageExpr->type;
-                    if (!t.isArray() || t.isAssociativeArray() ||
-                        !type.isAssignmentCompatible(*t.getArrayElementType())) {
-
-                        auto& diag =
-                            context.addDiag(diag::CoverageSetType, setCoverageExpr->sourceRange);
-                        diag << t << coverpoint.name << type;
-                    }
-                }
-                break;
-            case SyntaxKind::DefaultCoverageBinInitializer:
-                // Already handled at construction time.
-                break;
-            default:
-                THROW_UNREACHABLE;
-        }
-    }
-    else {
+    if (syntax->kind == SyntaxKind::BinsSelection) {
         auto& binsSyntax = syntax->as<BinsSelectionSyntax>();
         if (binsSyntax.iff) {
             iffExpr = &Expression::bind(*binsSyntax.iff->expr, context,
                                         BindFlags::AllowCoverageSampleFormal);
             context.requireBooleanConvertible(*iffExpr);
         }
+
+        selectExpr = &BinsSelectExpr::bind(*binsSyntax.expr, context);
+        return;
+    }
+
+    auto& coverpoint = scope->asSymbol().as<CoverpointSymbol>();
+    auto& type = coverpoint.getType();
+
+    auto& binsSyntax = syntax->as<CoverageBinsSyntax>();
+    if (binsSyntax.iff) {
+        iffExpr =
+            &Expression::bind(*binsSyntax.iff->expr, context, BindFlags::AllowCoverageSampleFormal);
+        context.requireBooleanConvertible(*iffExpr);
+    }
+
+    if (binsSyntax.size && binsSyntax.size->expr) {
+        numberOfBinsExpr = &bindCovergroupExpr(*binsSyntax.size->expr, context);
+        context.requireIntegral(*numberOfBinsExpr);
+    }
+
+    auto bindWithExpr = [&](const WithClauseSyntax& withSyntax) {
+        // Create the iterator variable and set it up with a bind context so that it
+        // can be found by the iteration expression.
+        auto it = comp.emplace<IteratorSymbol>(*context.scope, "item"sv, coverpoint.location, type);
+
+        BindContext iterCtx = context;
+        it->nextIterator = std::exchange(iterCtx.firstIterator, it);
+        iterCtx.flags &= ~BindFlags::StaticInitializer;
+
+        withExpr = &bindCovergroupExpr(*withSyntax.expr, iterCtx);
+        iterCtx.requireBooleanConvertible(*withExpr);
+    };
+
+    auto init = binsSyntax.initializer;
+    switch (init->kind) {
+        case SyntaxKind::RangeCoverageBinInitializer: {
+            SmallVectorSized<const Expression*, 4> buffer;
+            auto& rcbis = init->as<RangeCoverageBinInitializerSyntax>();
+            for (auto elem : rcbis.ranges->valueRanges) {
+                bitmask<BindFlags> flags;
+                if (elem->kind == SyntaxKind::OpenRangeExpression)
+                    flags = BindFlags::AllowUnboundedLiteral;
+
+                auto& expr = bindCovergroupExpr(*elem, context, &type, flags);
+                buffer.append(&expr);
+            }
+            values = buffer.copy(comp);
+
+            if (rcbis.withClause)
+                bindWithExpr(*rcbis.withClause);
+            break;
+        }
+        case SyntaxKind::IdWithExprCoverageBinInitializer: {
+            auto& iwecbi = init->as<IdWithExprCoverageBinInitializerSyntax>();
+            bindWithExpr(*iwecbi.withClause);
+
+            auto targetName = iwecbi.id.valueText();
+            if (!targetName.empty() && targetName != coverpoint.name)
+                context.addDiag(diag::CoverageBinTargetName, iwecbi.id.range()) << coverpoint.name;
+            break;
+        }
+        case SyntaxKind::TransListCoverageBinInitializer: {
+            SmallVectorSized<TransSet, 4> listBuffer;
+            for (auto setElem : init->as<TransListCoverageBinInitializerSyntax>().sets) {
+                SmallVectorSized<TransRangeList, 4> setBuffer;
+                for (auto rangeElem : setElem->ranges)
+                    setBuffer.emplace(*rangeElem, type, context);
+                listBuffer.append(setBuffer.copy(comp));
+            }
+            transList = listBuffer.copy(comp);
+            break;
+        }
+        case SyntaxKind::ExpressionCoverageBinInitializer:
+            setCoverageExpr = &bindCovergroupExpr(
+                *init->as<ExpressionCoverageBinInitializerSyntax>().expr, context);
+
+            if (!setCoverageExpr->bad()) {
+                auto& t = *setCoverageExpr->type;
+                if (!t.isArray() || t.isAssociativeArray() ||
+                    !type.isAssignmentCompatible(*t.getArrayElementType())) {
+
+                    auto& diag =
+                        context.addDiag(diag::CoverageSetType, setCoverageExpr->sourceRange);
+                    diag << t << coverpoint.name << type;
+                }
+            }
+            break;
+        case SyntaxKind::DefaultCoverageBinInitializer:
+            // Already handled at construction time.
+            break;
+        default:
+            THROW_UNREACHABLE;
     }
 }
 
@@ -794,6 +805,42 @@ const Expression* CoverCrossSymbol::getIffExpr() const {
 }
 
 void CoverCrossSymbol::serializeTo(ASTSerializer&) const {
+    // TODO:
+}
+
+const BinsSelectExpr& BinsSelectExpr::bind(const BinsSelectExpressionSyntax& syntax,
+                                           const BindContext& context) {
+    BinsSelectExpr* result;
+    switch (syntax.kind) {
+        case SyntaxKind::ParenthesizedBinsSelectExpr:
+            return bind(*syntax.as<ParenthesizedBinsSelectExprSyntax>().expr, context);
+        case SyntaxKind::BinsSelectConditionExpr:
+            result = &ConditionBinsSelectExpr::fromSyntax(
+                syntax.as<BinsSelectConditionExprSyntax>(), context);
+            break;
+        default:
+            THROW_UNREACHABLE;
+    }
+
+    result->syntax = &syntax;
+    return *result;
+}
+
+BinsSelectExpr& BinsSelectExpr::badExpr(Compilation& compilation, const BinsSelectExpr* expr) {
+    return *compilation.emplace<InvalidBinsSelectExpr>(expr);
+}
+
+void InvalidBinsSelectExpr::serializeTo(ASTSerializer& serializer) const {
+    if (child)
+        serializer.write("child", *child);
+}
+
+BinsSelectExpr& ConditionBinsSelectExpr::fromSyntax(const BinsSelectConditionExprSyntax&,
+                                                    const BindContext& context) {
+    return badExpr(context.getCompilation(), nullptr);
+}
+
+void ConditionBinsSelectExpr::serializeTo(ASTSerializer&) const {
     // TODO:
 }
 

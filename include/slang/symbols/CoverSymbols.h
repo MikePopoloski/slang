@@ -67,6 +67,7 @@ private:
     mutable optional<const TimingControl*> event;
 };
 
+class BinsSelectExpr;
 struct BinsSelectionSyntax;
 struct CoverageBinsSyntax;
 struct TransRangeSyntax;
@@ -98,6 +99,7 @@ public:
     const Expression* getNumberOfBinsExpr() const;
     const Expression* getSetCoverageExpr() const;
     const Expression* getWithExpr() const;
+    const BinsSelectExpr* getCrossSelectExpr() const;
     span<const Expression* const> getValues() const;
     span<const TransSet> getTransList() const;
 
@@ -115,6 +117,7 @@ private:
     mutable const Expression* iffExpr = nullptr;
     mutable const Expression* setCoverageExpr = nullptr;
     mutable const Expression* withExpr = nullptr;
+    mutable const BinsSelectExpr* selectExpr = nullptr;
     mutable span<const Expression* const> values;
     mutable span<const TransSet> transList;
     mutable bool isResolved = false;
@@ -184,6 +187,76 @@ public:
 
 private:
     mutable optional<const Expression*> iffExpr;
+};
+
+// clang-format off
+#define EXPR(x) \
+    x(Invalid) \
+    x(Condition) \
+    x(Binary) \
+    x(CrossSet)
+ENUM(BinsSelectExprKind, EXPR)
+#undef EXPR
+// clang-format on
+
+struct BinsSelectExpressionSyntax;
+
+class BinsSelectExpr {
+public:
+    BinsSelectExprKind kind;
+
+    const SyntaxNode* syntax = nullptr;
+
+    bool bad() const { return kind == BinsSelectExprKind::Invalid; }
+
+    static const BinsSelectExpr& bind(const BinsSelectExpressionSyntax& syntax,
+                                      const BindContext& context);
+
+    template<typename T>
+    T& as() {
+        ASSERT(T::isKind(kind));
+        return *static_cast<T*>(this);
+    }
+
+    template<typename T>
+    const T& as() const {
+        ASSERT(T::isKind(kind));
+        return *static_cast<const T*>(this);
+    }
+
+    template<typename TVisitor, typename... Args>
+    decltype(auto) visit(TVisitor& visitor, Args&&... args) const;
+
+protected:
+    explicit BinsSelectExpr(BinsSelectExprKind kind) : kind(kind) {}
+
+    static BinsSelectExpr& badExpr(Compilation& compilation, const BinsSelectExpr* expr);
+};
+
+class InvalidBinsSelectExpr : public BinsSelectExpr {
+public:
+    const BinsSelectExpr* child;
+
+    explicit InvalidBinsSelectExpr(const BinsSelectExpr* child) :
+        BinsSelectExpr(BinsSelectExprKind::Invalid), child(child) {}
+
+    static bool isKind(BinsSelectExprKind kind) { return kind == BinsSelectExprKind::Invalid; }
+
+    void serializeTo(ASTSerializer& serializer) const;
+};
+
+struct BinsSelectConditionExprSyntax;
+
+class ConditionBinsSelectExpr : public BinsSelectExpr {
+public:
+    ConditionBinsSelectExpr() : BinsSelectExpr(BinsSelectExprKind::Condition) {}
+
+    static BinsSelectExpr& fromSyntax(const BinsSelectConditionExprSyntax& syntax,
+                                      const BindContext& context);
+
+    void serializeTo(ASTSerializer& serializer) const;
+
+    static bool isKind(BinsSelectExprKind kind) { return kind == BinsSelectExprKind::Condition; }
 };
 
 } // namespace slang
