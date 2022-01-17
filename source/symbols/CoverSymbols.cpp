@@ -368,7 +368,7 @@ struct CoverageVarVisitor {
     void visit(const T& expr) {
         if constexpr (std::is_base_of_v<Expression, T>) {
             if (expr.kind == ExpressionKind::NamedValue) {
-                if (auto sym = expr.getSymbolReference(); sym && sym->isValue()) {
+                if (const Symbol* sym = expr.getSymbolReference(); sym && sym->isValue()) {
                     if (sym->kind == SymbolKind::FormalArgument) {
                         if (sym->as<FormalArgumentSymbol>().direction == ArgumentDirection::Ref)
                             context.addDiag(diag::CoverageExprVar, expr.sourceRange);
