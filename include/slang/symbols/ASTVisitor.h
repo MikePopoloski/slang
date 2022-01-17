@@ -181,6 +181,7 @@ decltype(auto) Symbol::visit(TVisitor&& visitor, Args&&... args) const {
         SYMBOL(CovergroupBody);
         SYMBOL(Coverpoint);
         SYMBOL(CoverCross);
+        SYMBOL(CoverCrossBody);
         SYMBOL(CoverageBin);
         TYPE(PredefinedIntegerType);
         TYPE(ScalarType);

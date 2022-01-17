@@ -67,6 +67,7 @@ private:
     mutable optional<const TimingControl*> event;
 };
 
+struct BinsSelectionSyntax;
 struct CoverageBinsSyntax;
 struct TransRangeSyntax;
 
@@ -103,6 +104,7 @@ public:
     void serializeTo(ASTSerializer& serializer) const;
 
     static CoverageBinSymbol& fromSyntax(const Scope& scope, const CoverageBinsSyntax& syntax);
+    static CoverageBinSymbol& fromSyntax(const Scope& scope, const BinsSelectionSyntax& syntax);
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::CoverageBin; }
 
@@ -147,6 +149,18 @@ public:
 
 private:
     mutable optional<const Expression*> iffExpr;
+};
+
+/// Represents the body of a cover cross type, separated out because the
+/// members of the cross body can't be accessed outside of the cross itself.
+class CoverCrossBodySymbol : public Symbol, public Scope {
+public:
+    CoverCrossBodySymbol(Compilation& compilation, SourceLocation loc) :
+        Symbol(SymbolKind::CoverCrossBody, ""sv, loc), Scope(compilation, this) {}
+
+    void serializeTo(ASTSerializer&) const {}
+
+    static bool isKind(SymbolKind kind) { return kind == SymbolKind::CoverCrossBody; }
 };
 
 struct CoverCrossSyntax;

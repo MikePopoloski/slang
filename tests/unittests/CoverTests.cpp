@@ -409,3 +409,23 @@ endmodule
     CHECK(diags[2].code == diag::CoverageExprVar);
     CHECK(diags[3].code == diag::ConstEvalFunctionIdentifiersMustBeLocal);
 }
+
+TEST_CASE("Cover cross bins") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    int i,j;
+    covergroup ct;
+        coverpoint i { bins i[] = { [0:1] }; }
+        coverpoint j { bins j[] = { [0:1] }; }
+        x1: cross i,j;
+        x2: cross i,j {
+            bins i_zero = binsof(i) intersect { 0 };
+        }
+    endgroup
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}

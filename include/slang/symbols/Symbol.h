@@ -110,6 +110,7 @@ enum class RandMode;
     x(CovergroupBody) \
     x(Coverpoint) \
     x(CoverCross) \
+    x(CoverCrossBody) \
     x(CoverageBin)
 // clang-format on
 

@@ -359,6 +359,16 @@ CoverageBinSymbol& CoverageBinSymbol::fromSyntax(const Scope& scope,
     return *result;
 }
 
+CoverageBinSymbol& CoverageBinSymbol::fromSyntax(const Scope& scope,
+                                                 const BinsSelectionSyntax& syntax) {
+    auto& comp = scope.getCompilation();
+    auto result = comp.emplace<CoverageBinSymbol>(syntax.name.valueText(), syntax.name.location());
+    result->setSyntax(syntax);
+    result->setAttributes(scope, syntax.attributes);
+
+    return *result;
+}
+
 struct CoverageVarVisitor {
     const BindContext& context;
 
@@ -424,94 +434,107 @@ void CoverageBinSymbol::resolve() const {
     ASSERT(syntax && scope);
 
     auto& comp = scope->getCompilation();
-    auto& coverpoint = scope->asSymbol().as<CoverpointSymbol>();
-    auto& type = coverpoint.getType();
     BindContext context(*scope, LookupLocation::before(*this));
 
-    auto& binsSyntax = syntax->as<CoverageBinsSyntax>();
-    if (binsSyntax.iff) {
-        iffExpr =
-            &Expression::bind(*binsSyntax.iff->expr, context, BindFlags::AllowCoverageSampleFormal);
-        context.requireBooleanConvertible(*iffExpr);
-    }
+    if (syntax->kind == SyntaxKind::CoverageBins) {
+        auto& coverpoint = scope->asSymbol().as<CoverpointSymbol>();
+        auto& type = coverpoint.getType();
 
-    if (binsSyntax.size && binsSyntax.size->expr) {
-        numberOfBinsExpr = &bindCovergroupExpr(*binsSyntax.size->expr, context);
-        context.requireIntegral(*numberOfBinsExpr);
-    }
-
-    auto bindWithExpr = [&](const WithClauseSyntax& withSyntax) {
-        // Create the iterator variable and set it up with a bind context so that it
-        // can be found by the iteration expression.
-        auto it = comp.emplace<IteratorSymbol>(*context.scope, "item"sv, coverpoint.location, type);
-
-        BindContext iterCtx = context;
-        it->nextIterator = std::exchange(iterCtx.firstIterator, it);
-        iterCtx.flags &= ~BindFlags::StaticInitializer;
-
-        withExpr = &bindCovergroupExpr(*withSyntax.expr, iterCtx);
-        iterCtx.requireBooleanConvertible(*withExpr);
-    };
-
-    auto init = binsSyntax.initializer;
-    switch (init->kind) {
-        case SyntaxKind::RangeCoverageBinInitializer: {
-            SmallVectorSized<const Expression*, 4> buffer;
-            auto& rcbis = init->as<RangeCoverageBinInitializerSyntax>();
-            for (auto elem : rcbis.ranges->valueRanges) {
-                bitmask<BindFlags> flags;
-                if (elem->kind == SyntaxKind::OpenRangeExpression)
-                    flags = BindFlags::AllowUnboundedLiteral;
-
-                auto& expr = bindCovergroupExpr(*elem, context, &type, flags);
-                buffer.append(&expr);
-            }
-            values = buffer.copy(comp);
-
-            if (rcbis.withClause)
-                bindWithExpr(*rcbis.withClause);
-            break;
+        auto& binsSyntax = syntax->as<CoverageBinsSyntax>();
+        if (binsSyntax.iff) {
+            iffExpr = &Expression::bind(*binsSyntax.iff->expr, context,
+                                        BindFlags::AllowCoverageSampleFormal);
+            context.requireBooleanConvertible(*iffExpr);
         }
-        case SyntaxKind::IdWithExprCoverageBinInitializer: {
-            auto& iwecbi = init->as<IdWithExprCoverageBinInitializerSyntax>();
-            bindWithExpr(*iwecbi.withClause);
 
-            auto targetName = iwecbi.id.valueText();
-            if (!targetName.empty() && targetName != coverpoint.name)
-                context.addDiag(diag::CoverageBinTargetName, iwecbi.id.range()) << coverpoint.name;
-            break;
+        if (binsSyntax.size && binsSyntax.size->expr) {
+            numberOfBinsExpr = &bindCovergroupExpr(*binsSyntax.size->expr, context);
+            context.requireIntegral(*numberOfBinsExpr);
         }
-        case SyntaxKind::TransListCoverageBinInitializer: {
-            SmallVectorSized<TransSet, 4> listBuffer;
-            for (auto setElem : init->as<TransListCoverageBinInitializerSyntax>().sets) {
-                SmallVectorSized<TransRangeList, 4> setBuffer;
-                for (auto rangeElem : setElem->ranges)
-                    setBuffer.emplace(*rangeElem, type, context);
-                listBuffer.append(setBuffer.copy(comp));
-            }
-            transList = listBuffer.copy(comp);
-            break;
-        }
-        case SyntaxKind::ExpressionCoverageBinInitializer:
-            setCoverageExpr = &bindCovergroupExpr(
-                *init->as<ExpressionCoverageBinInitializerSyntax>().expr, context);
 
-            if (!setCoverageExpr->bad()) {
-                auto& t = *setCoverageExpr->type;
-                if (!t.isArray() || t.isAssociativeArray() ||
-                    !type.isAssignmentCompatible(*t.getArrayElementType())) {
+        auto bindWithExpr = [&](const WithClauseSyntax& withSyntax) {
+            // Create the iterator variable and set it up with a bind context so that it
+            // can be found by the iteration expression.
+            auto it =
+                comp.emplace<IteratorSymbol>(*context.scope, "item"sv, coverpoint.location, type);
 
-                    auto& diag =
-                        context.addDiag(diag::CoverageSetType, setCoverageExpr->sourceRange);
-                    diag << t << coverpoint.name << type;
+            BindContext iterCtx = context;
+            it->nextIterator = std::exchange(iterCtx.firstIterator, it);
+            iterCtx.flags &= ~BindFlags::StaticInitializer;
+
+            withExpr = &bindCovergroupExpr(*withSyntax.expr, iterCtx);
+            iterCtx.requireBooleanConvertible(*withExpr);
+        };
+
+        auto init = binsSyntax.initializer;
+        switch (init->kind) {
+            case SyntaxKind::RangeCoverageBinInitializer: {
+                SmallVectorSized<const Expression*, 4> buffer;
+                auto& rcbis = init->as<RangeCoverageBinInitializerSyntax>();
+                for (auto elem : rcbis.ranges->valueRanges) {
+                    bitmask<BindFlags> flags;
+                    if (elem->kind == SyntaxKind::OpenRangeExpression)
+                        flags = BindFlags::AllowUnboundedLiteral;
+
+                    auto& expr = bindCovergroupExpr(*elem, context, &type, flags);
+                    buffer.append(&expr);
                 }
+                values = buffer.copy(comp);
+
+                if (rcbis.withClause)
+                    bindWithExpr(*rcbis.withClause);
+                break;
             }
-            break;
-        case SyntaxKind::DefaultCoverageBinInitializer:
-            // Already handled at construction time.
-            break;
-        default:
-            THROW_UNREACHABLE;
+            case SyntaxKind::IdWithExprCoverageBinInitializer: {
+                auto& iwecbi = init->as<IdWithExprCoverageBinInitializerSyntax>();
+                bindWithExpr(*iwecbi.withClause);
+
+                auto targetName = iwecbi.id.valueText();
+                if (!targetName.empty() && targetName != coverpoint.name)
+                    context.addDiag(diag::CoverageBinTargetName, iwecbi.id.range())
+                        << coverpoint.name;
+                break;
+            }
+            case SyntaxKind::TransListCoverageBinInitializer: {
+                SmallVectorSized<TransSet, 4> listBuffer;
+                for (auto setElem : init->as<TransListCoverageBinInitializerSyntax>().sets) {
+                    SmallVectorSized<TransRangeList, 4> setBuffer;
+                    for (auto rangeElem : setElem->ranges)
+                        setBuffer.emplace(*rangeElem, type, context);
+                    listBuffer.append(setBuffer.copy(comp));
+                }
+                transList = listBuffer.copy(comp);
+                break;
+            }
+            case SyntaxKind::ExpressionCoverageBinInitializer:
+                setCoverageExpr = &bindCovergroupExpr(
+                    *init->as<ExpressionCoverageBinInitializerSyntax>().expr, context);
+
+                if (!setCoverageExpr->bad()) {
+                    auto& t = *setCoverageExpr->type;
+                    if (!t.isArray() || t.isAssociativeArray() ||
+                        !type.isAssignmentCompatible(*t.getArrayElementType())) {
+
+                        auto& diag =
+                            context.addDiag(diag::CoverageSetType, setCoverageExpr->sourceRange);
+                        diag << t << coverpoint.name << type;
+                    }
+                }
+                break;
+            case SyntaxKind::DefaultCoverageBinInitializer:
+                // Already handled at construction time.
+                break;
+            default:
+                THROW_UNREACHABLE;
+        }
+    }
+    else {
+        auto& binsSyntax = syntax->as<BinsSelectionSyntax>();
+        if (binsSyntax.iff) {
+            iffExpr = &Expression::bind(*binsSyntax.iff->expr, context,
+                                        BindFlags::AllowCoverageSampleFormal);
+            context.requireBooleanConvertible(*iffExpr);
+        }
     }
 }
 
@@ -732,13 +755,15 @@ void CoverCrossSymbol::fromSyntax(const Scope& scope, const CoverCrossSyntax& sy
     result->setSyntax(syntax);
     result->setAttributes(scope, syntax.attributes);
 
+    auto body = comp.emplace<CoverCrossBodySymbol>(comp, loc);
+    result->addMember(*body);
+
     OptionBuilder options(*result);
     for (auto member : syntax.members) {
         if (member->kind == SyntaxKind::CoverageOption)
             options.add(member->as<CoverageOptionSyntax>());
-        else {
-            // TODO:
-        }
+        else
+            body->addMembers(*member);
     }
 
     result->options = options.get();
