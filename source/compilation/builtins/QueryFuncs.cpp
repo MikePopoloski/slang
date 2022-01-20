@@ -63,7 +63,9 @@ public:
         return SVInt(32, width, true);
     }
 
-    bool verifyConstant(EvalContext&, const Args&, SourceRange) const final { return true; }
+    bool verifyConstant(EvalContext& context, const Args& args, SourceRange) const final {
+        return !args.empty() && noHierarchical(context, *args[0]);
+    }
 };
 
 class TypenameFunction : public SystemSubroutine {
@@ -92,7 +94,9 @@ public:
         return printer.toString();
     }
 
-    bool verifyConstant(EvalContext&, const Args&, SourceRange) const final { return true; }
+    bool verifyConstant(EvalContext& context, const Args& args, SourceRange) const final {
+        return !args.empty() && noHierarchical(context, *args[0]);
+    }
 };
 
 class IsUnboundedFunction : public SystemSubroutine {
@@ -128,7 +132,9 @@ public:
         return SVInt(1, 0, false);
     }
 
-    bool verifyConstant(EvalContext&, const Args&, SourceRange) const final { return true; }
+    bool verifyConstant(EvalContext& context, const Args& args, SourceRange) const final {
+        return !args.empty() && noHierarchical(context, *args[0]);
+    }
 };
 
 class ArrayQueryFunction : public SystemSubroutine {
@@ -194,7 +200,9 @@ public:
         return comp.getIntegerType();
     }
 
-    bool verifyConstant(EvalContext&, const Args&, SourceRange) const final { return true; }
+    bool verifyConstant(EvalContext& context, const Args& args, SourceRange) const final {
+        return !args.empty() && noHierarchical(context, *args[0]);
+    }
 
 protected:
     struct DimResult {
@@ -487,7 +495,9 @@ public:
         return comp.getIntegerType();
     }
 
-    bool verifyConstant(EvalContext&, const Args&, SourceRange) const final { return true; }
+    bool verifyConstant(EvalContext& context, const Args& args, SourceRange) const final {
+        return !args.empty() && noHierarchical(context, *args[0]);
+    }
 
     ConstantValue eval(EvalContext&, const Args& args, SourceRange,
                        const CallExpression::SystemCallInfo&) const final {

@@ -50,7 +50,9 @@ public:
         return value->getValue();
     }
 
-    bool verifyConstant(EvalContext&, const Args&, SourceRange) const final { return true; }
+    bool verifyConstant(EvalContext& context, const Args& args, SourceRange) const final {
+        return !args.empty() && noHierarchical(context, *args[0]);
+    }
 
 private:
     bool first;
@@ -166,7 +168,9 @@ public:
         return SVInt(32, (uint64_t)type.values().size(), true);
     }
 
-    bool verifyConstant(EvalContext&, const Args&, SourceRange) const final { return true; }
+    bool verifyConstant(EvalContext& context, const Args& args, SourceRange) const final {
+        return !args.empty() && noHierarchical(context, *args[0]);
+    }
 };
 
 class EnumNameMethod : public SimpleSystemSubroutine {

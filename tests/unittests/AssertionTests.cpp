@@ -1179,3 +1179,17 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("$past in $bits regress GH #509") {
+    auto tree = SyntaxTree::fromText(R"(
+module top;
+    logic clk, reset, a, b, c;
+    assert property(@(posedge clk) disable iff (reset)
+        a |-> {500-$bits($past(b)){1'b0}});
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}

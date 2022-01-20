@@ -379,7 +379,7 @@ module M;
     logic [3:0] y;
 
     function int stuff2;
-        return $bits(y);
+        return int'(y);
     endfunction
 
 endmodule

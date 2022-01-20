@@ -620,17 +620,8 @@ ConstantValue CallExpression::evalImpl(EvalContext& context) const {
     // Delegate system calls to their appropriate handler.
     if (isSystemCall()) {
         auto& callInfo = std::get<1>(subroutine);
-        auto iteratorInfo = std::get_if<IteratorCallInfo>(&callInfo.extraInfo);
-
-        if (iteratorInfo && iteratorInfo->iterExpr &&
-            !iteratorInfo->iterExpr->verifyConstant(context)) {
+        if (!callInfo.subroutine->verifyConstant(context, arguments(), sourceRange))
             return nullptr;
-        }
-
-        for (auto arg : arguments()) {
-            if (!arg->verifyConstant(context))
-                return nullptr;
-        }
 
         return callInfo.subroutine->eval(context, arguments(), sourceRange, callInfo);
     }

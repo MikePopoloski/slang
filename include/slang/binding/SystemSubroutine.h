@@ -53,6 +53,7 @@ protected:
     const Type& badArg(const BindContext& context, const Expression& arg) const;
 
     bool notConst(EvalContext& context, SourceRange range) const;
+    bool noHierarchical(EvalContext& context, const Expression& expr) const;
 
     bool checkArgCount(const BindContext& context, bool isMethod, const Args& args,
                        SourceRange callRange, size_t min, size_t max) const;

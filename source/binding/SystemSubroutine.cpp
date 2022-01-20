@@ -10,6 +10,32 @@
 #include "slang/compilation/Compilation.h"
 #include "slang/diagnostics/ExpressionsDiags.h"
 #include "slang/diagnostics/SysFuncsDiags.h"
+#include "slang/symbols/ASTVisitor.h"
+
+namespace {
+
+using namespace slang;
+
+struct HierarchicalVisitor {
+    bool any = false;
+
+    template<typename T>
+    void visit(const T& expr) {
+        if constexpr (std::is_base_of_v<Expression, T>) {
+            if (expr.kind == ExpressionKind::HierarchicalValue) {
+                any = true;
+            }
+            else if constexpr (is_detected_v<ASTDetectors::visitExprs_t, T, HierarchicalVisitor>) {
+                expr.visitExprs(*this);
+            }
+        }
+    }
+
+    void visitInvalid(const Expression&) {}
+    void visitInvalid(const AssertionExpr&) {}
+};
+
+} // namespace
 
 namespace slang {
 
@@ -65,6 +91,18 @@ const Type& SystemSubroutine::badArg(const BindContext& context, const Expressio
 bool SystemSubroutine::notConst(EvalContext& context, SourceRange range) const {
     context.addDiag(diag::SysFuncNotConst, range) << name;
     return false;
+}
+
+bool SystemSubroutine::noHierarchical(EvalContext& context, const Expression& expr) const {
+    HierarchicalVisitor visitor;
+    expr.visit(visitor);
+
+    if (visitor.any && !context.isScriptEval()) {
+        context.addDiag(diag::SysFuncHierarchicalNotAllowed, expr.sourceRange) << name;
+        return false;
+    }
+
+    return true;
 }
 
 const Expression& SimpleSystemSubroutine::bindArgument(size_t argIndex, const BindContext& context,
