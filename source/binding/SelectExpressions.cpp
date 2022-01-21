@@ -911,7 +911,8 @@ Expression& MemberAccessExpression::fromSelector(
         }
         case SymbolKind::ConstraintBlock:
         case SymbolKind::Coverpoint:
-        case SymbolKind::CoverCross: {
+        case SymbolKind::CoverCross:
+        case SymbolKind::CoverageBin: {
             if (errorIfNotProcedural())
                 return badExpr(compilation, &expr);
             return *compilation.emplace<MemberAccessExpression>(compilation.getVoidType(), expr,

@@ -192,7 +192,9 @@ private:
 // clang-format off
 #define EXPR(x) \
     x(Invalid) \
-    x(Condition)
+    x(Condition) \
+    x(Unary) \
+    x(Binary)
 ENUM(BinsSelectExprKind, EXPR)
 #undef EXPR
 // clang-format on
@@ -247,7 +249,11 @@ struct BinsSelectConditionExprSyntax;
 
 class ConditionBinsSelectExpr : public BinsSelectExpr {
 public:
-    ConditionBinsSelectExpr() : BinsSelectExpr(BinsSelectExprKind::Condition) {}
+    const Symbol& target;
+    span<const Expression* const> intersects;
+
+    explicit ConditionBinsSelectExpr(const Symbol& target) :
+        BinsSelectExpr(BinsSelectExprKind::Condition), target(target) {}
 
     static BinsSelectExpr& fromSyntax(const BinsSelectConditionExprSyntax& syntax,
                                       const BindContext& context);
@@ -255,6 +261,46 @@ public:
     void serializeTo(ASTSerializer& serializer) const;
 
     static bool isKind(BinsSelectExprKind kind) { return kind == BinsSelectExprKind::Condition; }
+};
+
+struct UnaryBinsSelectExprSyntax;
+
+class UnaryBinsSelectExpr : public BinsSelectExpr {
+public:
+    const BinsSelectExpr& expr;
+
+    /// The kind of unary operator. Currently there's only one such kind of
+    /// operator supported in SystemVerilog.
+    enum Op { Negation } op = Negation;
+
+    explicit UnaryBinsSelectExpr(const BinsSelectExpr& expr) :
+        BinsSelectExpr(BinsSelectExprKind::Unary), expr(expr) {}
+
+    static BinsSelectExpr& fromSyntax(const UnaryBinsSelectExprSyntax& syntax,
+                                      const BindContext& context);
+
+    void serializeTo(ASTSerializer& serializer) const;
+
+    static bool isKind(BinsSelectExprKind kind) { return kind == BinsSelectExprKind::Unary; }
+};
+
+struct BinaryBinsSelectExprSyntax;
+
+class BinaryBinsSelectExpr : public BinsSelectExpr {
+public:
+    const BinsSelectExpr& left;
+    const BinsSelectExpr& right;
+    enum Op { And, Or } op;
+
+    BinaryBinsSelectExpr(const BinsSelectExpr& left, const BinsSelectExpr& right, Op op) :
+        BinsSelectExpr(BinsSelectExprKind::Binary), left(left), right(right), op(op) {}
+
+    static BinsSelectExpr& fromSyntax(const BinaryBinsSelectExprSyntax& syntax,
+                                      const BindContext& context);
+
+    void serializeTo(ASTSerializer& serializer) const;
+
+    static bool isKind(BinsSelectExprKind kind) { return kind == BinsSelectExprKind::Binary; }
 };
 
 } // namespace slang

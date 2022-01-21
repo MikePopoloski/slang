@@ -818,6 +818,14 @@ const BinsSelectExpr& BinsSelectExpr::bind(const BinsSelectExpressionSyntax& syn
             result = &ConditionBinsSelectExpr::fromSyntax(
                 syntax.as<BinsSelectConditionExprSyntax>(), context);
             break;
+        case SyntaxKind::UnaryBinsSelectExpr:
+            result =
+                &UnaryBinsSelectExpr::fromSyntax(syntax.as<UnaryBinsSelectExprSyntax>(), context);
+            break;
+        case SyntaxKind::BinaryBinsSelectExpr:
+            result =
+                &BinaryBinsSelectExpr::fromSyntax(syntax.as<BinaryBinsSelectExprSyntax>(), context);
+            break;
         default:
             THROW_UNREACHABLE;
     }
@@ -835,13 +843,74 @@ void InvalidBinsSelectExpr::serializeTo(ASTSerializer& serializer) const {
         serializer.write("child", *child);
 }
 
-BinsSelectExpr& ConditionBinsSelectExpr::fromSyntax(const BinsSelectConditionExprSyntax&,
+BinsSelectExpr& ConditionBinsSelectExpr::fromSyntax(const BinsSelectConditionExprSyntax& syntax,
                                                     const BindContext& context) {
-    return badExpr(context.getCompilation(), nullptr);
+    auto& comp = context.getCompilation();
+    auto& nameExpr = Expression::bind(*syntax.name, context, BindFlags::AllowCoverpoint);
+    if (nameExpr.bad())
+        return badExpr(comp, nullptr);
+
+    auto sym = nameExpr.getSymbolReference();
+    if (!sym || (sym->kind != SymbolKind::Coverpoint &&
+                 (sym->kind != SymbolKind::CoverageBin ||
+                  sym->getParentScope()->asSymbol().kind != SymbolKind::Coverpoint))) {
+        context.addDiag(diag::InvalidBinsTarget, syntax.name->sourceRange());
+        return badExpr(comp, nullptr);
+    }
+
+    auto expr = comp.emplace<ConditionBinsSelectExpr>(*sym);
+
+    if (syntax.intersects) {
+        const Type* type;
+        if (sym->kind == SymbolKind::Coverpoint)
+            type = &sym->as<CoverpointSymbol>().declaredType.getType();
+        else
+            type = &sym->getParentScope()->asSymbol().as<CoverpointSymbol>().declaredType.getType();
+
+        SmallVectorSized<const Expression*, 4> buffer;
+        for (auto elem : syntax.intersects->ranges->valueRanges) {
+            bitmask<BindFlags> flags;
+            if (elem->kind == SyntaxKind::OpenRangeExpression)
+                flags = BindFlags::AllowUnboundedLiteral;
+
+            auto& elemExpr = bindCovergroupExpr(*elem, context, type, flags);
+            buffer.append(&elemExpr);
+        }
+        expr->intersects = buffer.copy(comp);
+    }
+
+    return *expr;
 }
 
 void ConditionBinsSelectExpr::serializeTo(ASTSerializer&) const {
     // TODO:
+}
+
+BinsSelectExpr& UnaryBinsSelectExpr::fromSyntax(const UnaryBinsSelectExprSyntax& syntax,
+                                                const BindContext& context) {
+    auto& comp = context.getCompilation();
+    auto& expr = bind(*syntax.expr, context);
+    return *comp.emplace<UnaryBinsSelectExpr>(expr);
+}
+
+void UnaryBinsSelectExpr::serializeTo(ASTSerializer& serializer) const {
+    serializer.write("expr", expr);
+    serializer.write("op", "negation"sv);
+}
+
+BinsSelectExpr& BinaryBinsSelectExpr::fromSyntax(const BinaryBinsSelectExprSyntax& syntax,
+                                                 const BindContext& context) {
+    auto& comp = context.getCompilation();
+    auto& left = bind(*syntax.left, context);
+    auto& right = bind(*syntax.right, context);
+    Op op = syntax.op.kind == TokenKind::DoubleAnd ? And : Or;
+    return *comp.emplace<BinaryBinsSelectExpr>(left, right, op);
+}
+
+void BinaryBinsSelectExpr::serializeTo(ASTSerializer& serializer) const {
+    serializer.write("left", left);
+    serializer.write("right", right);
+    serializer.write("op", op == And ? "and"sv : "or"sv);
 }
 
 } // namespace slang

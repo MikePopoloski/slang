@@ -70,7 +70,9 @@ Expression& ValueExpressionBase::fromSymbol(const BindContext& context, const Sy
     if (!symbol.isValue()) {
         if ((symbol.kind == SymbolKind::ClockingBlock &&
              context.flags.has(BindFlags::AllowClockingBlock)) ||
-            (symbol.kind == SymbolKind::ConstraintBlock && constraintAllowed)) {
+            (symbol.kind == SymbolKind::ConstraintBlock && constraintAllowed) ||
+            (symbol.kind == SymbolKind::Coverpoint &&
+             context.flags.has(BindFlags::AllowCoverpoint))) {
             // Special case for event expressions and constraint block built-in methods.
             return *comp.emplace<HierarchicalReferenceExpression>(symbol, comp.getVoidType(),
                                                                   sourceRange);

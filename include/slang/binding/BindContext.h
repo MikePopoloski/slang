@@ -135,9 +135,12 @@ enum class BindFlags {
 
     /// Binding is for a covergroup expression that permits referencing a
     /// formal argument of an overridden sample method.
-    AllowCoverageSampleFormal = 1 << 27
+    AllowCoverageSampleFormal = 1 << 27,
+
+    /// Expressions are allowed to reference coverpoint objects directly.
+    AllowCoverpoint = 1 << 28
 };
-BITMASK(BindFlags, AllowCoverageSampleFormal)
+BITMASK(BindFlags, AllowCoverpoint)
 
 enum class DimensionKind { Unknown, Range, AbbreviatedRange, Dynamic, Associative, Queue };
 

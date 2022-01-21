@@ -408,6 +408,8 @@ decltype(auto) BinsSelectExpr::visit(TVisitor& visitor, Args&&... args) const {
     switch (kind) {
         case BinsSelectExprKind::Invalid: return visitor.visitInvalid(*this, std::forward<Args>(args)...);
         CASE(Condition, ConditionBinsSelectExpr);
+        CASE(Unary, UnaryBinsSelectExpr);
+        CASE(Binary, BinaryBinsSelectExpr);
     }
 #undef CASE
     // clang-format on
