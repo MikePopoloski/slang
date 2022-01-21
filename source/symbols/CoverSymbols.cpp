@@ -481,7 +481,6 @@ void CoverageBinSymbol::resolve() const {
 
         BindContext iterCtx = context;
         it->nextIterator = std::exchange(iterCtx.firstIterator, it);
-        iterCtx.flags &= ~BindFlags::StaticInitializer;
 
         withExpr = &bindCovergroupExpr(*withSyntax.expr, iterCtx);
         iterCtx.requireBooleanConvertible(*withExpr);
@@ -826,6 +825,14 @@ const BinsSelectExpr& BinsSelectExpr::bind(const BinsSelectExpressionSyntax& syn
             result =
                 &BinaryBinsSelectExpr::fromSyntax(syntax.as<BinaryBinsSelectExprSyntax>(), context);
             break;
+        case SyntaxKind::SimpleBinsSelectExpr:
+            result = &SetExprBinsSelectExpr::fromSyntax(syntax.as<SimpleBinsSelectExprSyntax>(),
+                                                        context);
+            break;
+        case SyntaxKind::BinSelectWithFilterExpr:
+            result = &BinSelectWithFilterExpr::fromSyntax(
+                syntax.as<BinSelectWithFilterExprSyntax>(), context);
+            break;
         default:
             THROW_UNREACHABLE;
     }
@@ -911,6 +918,59 @@ void BinaryBinsSelectExpr::serializeTo(ASTSerializer& serializer) const {
     serializer.write("left", left);
     serializer.write("right", right);
     serializer.write("op", op == And ? "and"sv : "or"sv);
+}
+
+BinsSelectExpr& SetExprBinsSelectExpr::fromSyntax(const SimpleBinsSelectExprSyntax& syntax,
+                                                  const BindContext& context) {
+    // TODO: matches, queue expressions
+    auto& comp = context.getCompilation();
+    auto& expr = Expression::bind(*syntax.expr, context, BindFlags::AllowCoverpoint);
+
+    if (expr.kind == ExpressionKind::NamedValue) {
+        auto sym = expr.getSymbolReference();
+        ASSERT(sym);
+
+        if (sym->kind == SymbolKind::CoverCross) {
+            // TODO: check that this is our cover cross
+
+            if (syntax.matchesClause) {
+                // TODO: error
+            }
+        }
+    }
+
+    return *comp.emplace<SetExprBinsSelectExpr>(expr);
+}
+
+void SetExprBinsSelectExpr::serializeTo(ASTSerializer&) const {
+    // TODO:
+}
+
+BinsSelectExpr& BinSelectWithFilterExpr::fromSyntax(const BinSelectWithFilterExprSyntax& syntax,
+                                                    const BindContext& context) {
+    // TODO: matches
+    auto& comp = context.getCompilation();
+    auto& expr = bind(*syntax.expr, context);
+
+    // Create the iterator variables for all of the parent cross items
+    // and then bind the filter expression.
+    BindContext iterCtx = context;
+
+    auto& cross = context.scope->asSymbol().getParentScope()->asSymbol().as<CoverCrossSymbol>();
+    for (auto target : cross.targets) {
+        auto it = comp.emplace<IteratorSymbol>(*context.scope, target->name, target->location,
+                                               target->getType());
+        it->nextIterator = std::exchange(iterCtx.firstIterator, it);
+    }
+
+    auto& filter = bindCovergroupExpr(*syntax.filter, iterCtx);
+    iterCtx.requireBooleanConvertible(filter);
+
+    return *comp.emplace<BinSelectWithFilterExpr>(expr, filter);
+}
+
+void BinSelectWithFilterExpr::serializeTo(ASTSerializer&) const {
+    // TODO:
 }
 
 } // namespace slang

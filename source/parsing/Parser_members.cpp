@@ -1646,33 +1646,52 @@ BinsSelectExpressionSyntax& Parser::parseBinsSelectPrimary() {
                                                intersectClause);
     };
 
+    auto parseMatches = [&] {
+        MatchesClauseSyntax* matchesClause = nullptr;
+        if (peek(TokenKind::MatchesKeyword)) {
+            auto matches = consume();
+            auto& matchExpr = parseSubExpression(ExpressionOptions::BinsSelectContext, 0);
+            matchesClause = &factory.matchesClause(matches, factory.expressionPattern(matchExpr));
+        }
+        return matchesClause;
+    };
+
+    BinsSelectExpressionSyntax* result;
     switch (peek().kind) {
         case TokenKind::BinsOfKeyword:
-            return parseCondition();
+            result = &parseCondition();
+            break;
         case TokenKind::Exclamation: {
             auto op = consume();
-            return factory.unaryBinsSelectExpr(op, parseCondition());
+            result = &factory.unaryBinsSelectExpr(op, parseCondition());
+            break;
         }
         case TokenKind::OpenParenthesis: {
             auto openParen = consume();
             auto& expr = parseBinsSelectExpression();
             auto closeParen = expect(TokenKind::CloseParenthesis);
-            return factory.parenthesizedBinsSelectExpr(openParen, expr, closeParen);
+            result = &factory.parenthesizedBinsSelectExpr(openParen, expr, closeParen);
+            break;
         }
         default: {
             auto& expr = parseSubExpression(ExpressionOptions::BinsSelectContext, 0);
-
-            MatchesClauseSyntax* matchesClause = nullptr;
-            if (peek(TokenKind::MatchesKeyword)) {
-                auto matches = consume();
-                auto& matchExpr = parseSubExpression(ExpressionOptions::BinsSelectContext, 0);
-                matchesClause =
-                    &factory.matchesClause(matches, factory.expressionPattern(matchExpr));
-            }
-
-            return factory.simpleBinsSelectExpr(expr, matchesClause);
+            auto matches = parseMatches();
+            result = &factory.simpleBinsSelectExpr(expr, matches);
+            break;
         }
     }
+
+    if (peek(TokenKind::WithKeyword)) {
+        auto with = consume();
+        auto openParen = expect(TokenKind::OpenParenthesis);
+        auto& expr = parseExpression();
+        auto closeParen = expect(TokenKind::CloseParenthesis);
+        auto matches = parseMatches();
+        result =
+            &factory.binSelectWithFilterExpr(*result, with, openParen, expr, closeParen, matches);
+    }
+
+    return *result;
 }
 
 BinsSelectExpressionSyntax& Parser::parseBinsSelectExpression() {

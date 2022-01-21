@@ -194,7 +194,9 @@ private:
     x(Invalid) \
     x(Condition) \
     x(Unary) \
-    x(Binary)
+    x(Binary) \
+    x(SetExpr) \
+    x(WithFilter)
 ENUM(BinsSelectExprKind, EXPR)
 #undef EXPR
 // clang-format on
@@ -301,6 +303,41 @@ public:
     void serializeTo(ASTSerializer& serializer) const;
 
     static bool isKind(BinsSelectExprKind kind) { return kind == BinsSelectExprKind::Binary; }
+};
+
+struct SimpleBinsSelectExprSyntax;
+
+class SetExprBinsSelectExpr : public BinsSelectExpr {
+public:
+    const Expression& expr;
+
+    explicit SetExprBinsSelectExpr(const Expression& expr) :
+        BinsSelectExpr(BinsSelectExprKind::SetExpr), expr(expr) {}
+
+    static BinsSelectExpr& fromSyntax(const SimpleBinsSelectExprSyntax& syntax,
+                                      const BindContext& context);
+
+    void serializeTo(ASTSerializer& serializer) const;
+
+    static bool isKind(BinsSelectExprKind kind) { return kind == BinsSelectExprKind::SetExpr; }
+};
+
+struct BinSelectWithFilterExprSyntax;
+
+class BinSelectWithFilterExpr : public BinsSelectExpr {
+public:
+    const BinsSelectExpr& expr;
+    const Expression& filter;
+
+    BinSelectWithFilterExpr(const BinsSelectExpr& expr, const Expression& filter) :
+        BinsSelectExpr(BinsSelectExprKind::WithFilter), expr(expr), filter(filter) {}
+
+    static BinsSelectExpr& fromSyntax(const BinSelectWithFilterExprSyntax& syntax,
+                                      const BindContext& context);
+
+    void serializeTo(ASTSerializer& serializer) const;
+
+    static bool isKind(BinsSelectExprKind kind) { return kind == BinsSelectExprKind::WithFilter; }
 };
 
 } // namespace slang

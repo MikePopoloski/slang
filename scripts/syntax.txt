@@ -1911,6 +1911,14 @@ SimpleBinsSelectExpr base=BinsSelectExpression
 Expression expr
 MatchesClause? matchesClause
 
+BinSelectWithFilterExpr base=BinsSelectExpression
+BinsSelectExpression expr
+token with
+token openParen
+Expression filter
+token closeParen
+MatchesClause? matchesClause
+
 BinsSelection base=Member
 token keyword
 token name

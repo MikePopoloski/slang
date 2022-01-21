@@ -589,6 +589,10 @@ ExpressionSyntax& Parser::parsePostfixExpression(ExpressionSyntax& lhs,
                 // expression -- return and let the call further up the stack handle it.
                 if (peek(1).kind == TokenKind::OpenBracket)
                     return *expr;
+
+                if (options.has(ExpressionOptions::BinsSelectContext))
+                    return *expr;
+
                 expr = &parseArrayOrRandomizeMethod(*expr);
                 break;
 
