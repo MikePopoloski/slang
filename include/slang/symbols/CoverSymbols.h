@@ -192,9 +192,7 @@ private:
 // clang-format off
 #define EXPR(x) \
     x(Invalid) \
-    x(Condition) \
-    x(Binary) \
-    x(CrossSet)
+    x(Condition)
 ENUM(BinsSelectExprKind, EXPR)
 #undef EXPR
 // clang-format on
