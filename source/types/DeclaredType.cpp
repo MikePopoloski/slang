@@ -25,7 +25,7 @@
 namespace slang {
 
 DeclaredType::DeclaredType(const Symbol& parent, bitmask<DeclaredTypeFlags> flags) :
-    parent(parent), flags(flags), overrideIndex(0), evaluating(false) {
+    parent(parent), flags(flags), overrideIndex(0), evaluating(false), hasLink(false) {
     // If this assert fires you need to update Symbol::getDeclaredType
     ASSERT(parent.getDeclaredType() == this);
 }
@@ -62,7 +62,13 @@ void DeclaredType::mergeImplicitPort(
 void DeclaredType::resolveType(const BindContext& typeContext,
                                const BindContext& initializerContext) const {
     auto& comp = typeContext.getCompilation();
-    if (!typeSyntax) {
+    if (hasLink) {
+        ASSERT(typeOrLink.link);
+        type = &typeOrLink.link->getType();
+        return;
+    }
+
+    if (!typeOrLink.typeSyntax) {
         type = &comp.getErrorType();
         return;
     }
@@ -73,7 +79,7 @@ void DeclaredType::resolveType(const BindContext& typeContext,
 
     // If we are configured to infer implicit types, bind the initializer expression
     // first so that we can derive our type from whatever that happens to be.
-    if (typeSyntax->kind == SyntaxKind::ImplicitType &&
+    if (typeOrLink.typeSyntax->kind == SyntaxKind::ImplicitType &&
         flags.has(DeclaredTypeFlags::InferImplicit)) {
         if (dimensions) {
             typeContext.addDiag(diag::UnpackedArrayParamType, dimensions->sourceRange());
@@ -87,9 +93,9 @@ void DeclaredType::resolveType(const BindContext& typeContext,
             if (flags.has(DeclaredTypeFlags::AllowUnboundedLiteral))
                 extraFlags = BindFlags::AllowUnboundedLiteral;
 
-            initializer =
-                &Expression::bindImplicitParam(*typeSyntax, *initializerSyntax, initializerLocation,
-                                               initializerContext, typeContext, extraFlags);
+            initializer = &Expression::bindImplicitParam(*typeOrLink.typeSyntax, *initializerSyntax,
+                                                         initializerLocation, initializerContext,
+                                                         typeContext, extraFlags);
             type = initializer->type;
         }
     }
@@ -98,7 +104,7 @@ void DeclaredType::resolveType(const BindContext& typeContext,
         if (flags.has(DeclaredTypeFlags::TypedefTarget))
             typedefTarget = &parent.as<Type>();
 
-        type = &comp.getType(*typeSyntax, typeContext, typedefTarget);
+        type = &comp.getType(*typeOrLink.typeSyntax, typeContext, typedefTarget);
         if (dimensions)
             type = &comp.getType(*type, *dimensions, typeContext);
     }
@@ -177,10 +183,11 @@ void DeclaredType::checkType(const BindContext& context) const {
             break;
         case uint32_t(DeclaredTypeFlags::FormalArgMergeVar):
             if (auto var = parent.as<FormalArgumentSymbol>().getMergedVariable()) {
-                ASSERT(typeSyntax);
-                mergePortTypes(context, *var, typeSyntax->as<ImplicitTypeSyntax>(), parent.location,
-                               dimensions ? *dimensions
-                                          : span<const VariableDimensionSyntax* const>{});
+                ASSERT(!hasLink);
+                ASSERT(typeOrLink.typeSyntax);
+                mergePortTypes(
+                    context, *var, typeOrLink.typeSyntax->as<ImplicitTypeSyntax>(), parent.location,
+                    dimensions ? *dimensions : span<const VariableDimensionSyntax* const>{});
             }
             break;
         case uint32_t(DeclaredTypeFlags::Rand): {
@@ -349,6 +356,12 @@ void DeclaredType::resolveAt(const BindContext& context) const {
         resolveType(getBindContext<false>(), context);
         if (initializer)
             return;
+    }
+
+    if (hasLink) {
+        ASSERT(typeOrLink.link);
+        initializer = typeOrLink.link->getInitializer();
+        return;
     }
 
     if (!initializerSyntax)

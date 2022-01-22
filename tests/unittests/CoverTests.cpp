@@ -484,3 +484,46 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Cover cross bin set expressions") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    int a;
+    logic [7:0] b;
+    covergroup cg;
+        coverpoint a { bins x[] = {[0:10]}; }
+        coverpoint b { bins y[] = {[0:20]}; }
+
+        aXb : cross a, b {
+            //bins one = '{ '{1,2}, '{3,4}, '{5,6} };
+        }
+    endgroup
+
+    int c,d;
+    covergroup cg2(int cg_lim);
+        coverpoint c;
+        coverpoint d;
+        cXd : cross c, d {
+            function CrossQueueType myFunc1(int f_lim);
+                for (int i = 0; i < f_lim; ++i)
+                    myFunc1.push_back('{i,i});
+            endfunction
+
+            bins one = myFunc1(cg_lim);
+            bins two = myFunc2(cg_lim);
+
+            function CrossQueueType myFunc2(logic [31:0] f_lim);
+                for (logic [31:0] i = 0; i < f_lim; ++i)
+                    myFunc2.push_back('{2*i,2*i});
+            endfunction
+        }
+    endgroup
+
+    cg2 cg_inst = new(3);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}

@@ -9,6 +9,7 @@
 #include "slang/symbols/Scope.h"
 #include "slang/types/DeclaredType.h"
 #include "slang/types/Type.h"
+#include "slang/util/Function.h"
 
 namespace slang {
 

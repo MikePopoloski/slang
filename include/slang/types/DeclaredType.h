@@ -117,13 +117,25 @@ public:
     /// Sets the source syntax for the type, which will later be used when
     /// resolution is requested.
     void setTypeSyntax(const DataTypeSyntax& newType) {
-        typeSyntax = &newType;
+        typeOrLink.typeSyntax = &newType;
+        hasLink = false;
         type = nullptr;
+    }
+
+    /// Sets this declared type to link to the given type, taking on whatever
+    /// type and initializer that target has.
+    void setLink(const DeclaredType& target) {
+        hasLink = true;
+        typeOrLink.link = &target;
+        type = nullptr;
+        initializer = nullptr;
     }
 
     /// Gets the type syntax that was previously set via @a setTypeSyntax -- if any.
     /// Otherwise returns nullptr.
-    const DataTypeSyntax* getTypeSyntax() const { return typeSyntax; }
+    const DataTypeSyntax* getTypeSyntax() const {
+        return hasLink ? nullptr : typeOrLink.typeSyntax;
+    }
 
     /// Sets an additional set of dimensions that represent the unpacked portion of
     /// the type declaration.
@@ -212,7 +224,10 @@ private:
     const Symbol& parent;
 
     mutable const Type* type = nullptr;
-    const DataTypeSyntax* typeSyntax = nullptr;
+    union {
+        const DataTypeSyntax* typeSyntax = nullptr;
+        const DeclaredType* link;
+    } typeOrLink;
     const SyntaxList<VariableDimensionSyntax>* dimensions = nullptr;
 
     mutable const Expression* initializer = nullptr;
@@ -220,8 +235,9 @@ private:
     SourceLocation initializerLocation;
 
     bitmask<DeclaredTypeFlags> flags;
-    uint32_t overrideIndex : 31;
+    uint32_t overrideIndex : 30;
     mutable uint32_t evaluating : 1;
+    mutable uint32_t hasLink : 1;
 };
 
 } // namespace slang

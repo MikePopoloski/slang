@@ -105,4 +105,13 @@ void StructBuilder::addField(string_view name, const Type& fieldType,
     currFieldIndex++;
 }
 
+void StructBuilder::addField(string_view name, const DeclaredType& typeLink,
+                             bitmask<VariableFlags> flags) {
+    auto field = compilation.emplace<FieldSymbol>(name, NL, currFieldIndex);
+    field->flags = flags;
+    field->getDeclaredType()->setLink(typeLink);
+    type.addMember(*field);
+    currFieldIndex++;
+}
+
 } // namespace slang

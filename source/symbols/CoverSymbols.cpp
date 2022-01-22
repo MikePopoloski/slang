@@ -768,6 +768,19 @@ void CoverCrossSymbol::fromSyntax(const Scope& scope, const CoverCrossSyntax& sy
     auto body = comp.emplace<CoverCrossBodySymbol>(comp, loc);
     result->addMember(*body);
 
+    StructBuilder valType(*body, LookupLocation::min);
+    for (auto item : targets)
+        valType.addField(item->name, item->declaredType);
+
+    auto valType_t = comp.emplace<TypeAliasType>("CrossValType", loc);
+    valType_t->targetType.setType(valType.type);
+    body->addMember(*valType_t);
+
+    auto queueType = comp.emplace<QueueType>(*valType_t, 0);
+    auto queueType_t = comp.emplace<TypeAliasType>("CrossQueueType", loc);
+    queueType_t->targetType.setType(*queueType);
+    body->addMember(*queueType_t);
+
     OptionBuilder options(*result);
     for (auto member : syntax.members) {
         if (member->kind == SyntaxKind::CoverageOption)
