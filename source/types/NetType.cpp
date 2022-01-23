@@ -98,8 +98,6 @@ void NetType::resolve() const {
         BindContext context(*scope, LookupLocation::before(*this));
         Lookup::name(nameSyntax, context, LookupFlags::Type | LookupFlags::NoSelectors, result);
 
-        // TODO: error if hierarchical
-
         if (result.found && result.found->kind == SymbolKind::NetType) {
             result.reportDiags(context);
 

@@ -427,11 +427,19 @@ bool lookupDownward(span<const NamePlusLoc> nameParts, NameComponents name,
     if (!checkClassParams(name))
         return false;
 
-    // If we found an automatic variable check that we didn't try to reference it hierarchically.
-    if (result.isHierarchical && symbol && VariableSymbol::isKind(symbol->kind) &&
-        symbol->as<VariableSymbol>().lifetime == VariableLifetime::Automatic) {
-        result.addDiag(*context.scope, diag::AutoVariableHierarchical, name.range);
-        return false;
+    if (result.isHierarchical && symbol) {
+        if (VariableSymbol::isKind(symbol->kind) &&
+            symbol->as<VariableSymbol>().lifetime == VariableLifetime::Automatic) {
+            // If we found an automatic variable check that we didn't try to reference it
+            // hierarchically.
+            result.addDiag(*context.scope, diag::AutoVariableHierarchical, name.range);
+            return false;
+        }
+        else if (symbol->isType()) {
+            // Types cannot be referenced hierarchically.
+            result.addDiag(*context.scope, diag::TypeHierarchical, name.range);
+            return false;
+        }
     }
 
     result.found = symbol;

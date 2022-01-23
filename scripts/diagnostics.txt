@@ -678,6 +678,7 @@ error UnresolvedForwardTypedef "forward typedef '{}' does not resolve to a data 
 error DefinitionUsedAsType "'{}' is {} definition but is used like a type"
 error DefinitionUsedAsValue "'{}' is {} definition but is used as a value"
 error AutoVariableHierarchical "cannot refer to automatic variable via hierarchical reference"
+error TypeHierarchical "cannot refer to type names via hierarchical reference"
 error NonStaticClassProperty "invalid use of non-static class property '{}'"
 error NonStaticClassMethod "call to non-static member function without object handle"
 error NestedNonStaticClassProperty "invalid use of non-static class property '{}' from nested class '{}'"

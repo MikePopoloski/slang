@@ -1060,8 +1060,6 @@ const Type& Type::lookupNamedType(Compilation& compilation, const NameSyntax& sy
     LookupResult result;
     Lookup::name(syntax, context, flags, result);
 
-    // TODO: selectors, hierarchical?
-
     if (result.hasError())
         compilation.addDiagnostics(result.getDiagnostics());
 

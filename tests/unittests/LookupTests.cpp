@@ -1713,3 +1713,22 @@ endmodule
     CHECK(diags[3].code == diag::ImportNameCollision);
     CHECK(diags[4].code == diag::UnknownPackageMember);
 }
+
+TEST_CASE("Hierarchical lookup of type name") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    var type(n.foo) asdf = 1;
+endmodule
+
+module n;
+    typedef int foo;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::TypeHierarchical);
+}
