@@ -59,10 +59,13 @@ enum class LookupFlags {
     /// is not found in the initial search scope.
     NoParentScope = 1 << 6,
 
+    /// Additional name selectors are not allowed in the final result.
+    NoSelectors = 1 << 7,
+
     /// Treat this lookup as hierarchical even if it's a simple name.
     ForceHierarchical = AllowDeclaredAfter | NoUndeclaredErrorIfUninstantiated
 };
-BITMASK(LookupFlags, NoParentScope)
+BITMASK(LookupFlags, NoSelectors)
 
 /// This type denotes the ordering of symbols within a particular scope, for the purposes of
 /// determining whether a found symbol is visible compared to the given location.
@@ -182,7 +185,7 @@ struct LookupResult {
 
     /// Reports any diagnostics that have occurred during lookup to the given bind
     /// context, which will ensure they are visible to the compilation.
-    void reportErrors(const BindContext& context);
+    void reportDiags(const BindContext& context);
 
     /// Issues a diagnostic if there are selectors in the lookup result.
     void errorIfSelectors(const BindContext& context);

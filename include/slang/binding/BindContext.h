@@ -169,11 +169,6 @@ public:
     /// Various flags that control how binding is performed.
     bitmask<BindFlags> flags;
 
-    /// An optional pointer to the context used by an active expression evaluation.
-    /// If this is set, it means that the binding was forced by the evaluation and
-    /// we can use that information for more informative error messages.
-    EvalContext* evalContext = nullptr;
-
     /// If the expression being bound is for an instance port connection, this is
     /// a pointer to that instance; otherwise, it's nullptr.
     const InstanceSymbolBase* instance = nullptr;

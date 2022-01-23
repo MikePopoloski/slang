@@ -312,9 +312,8 @@ Expression& HierarchicalReferenceExpression::fromSyntax(Compilation& compilation
                                                         const NameSyntax& syntax,
                                                         const BindContext& context) {
     LookupResult result;
-    Lookup::name(syntax, context, LookupFlags::ForceHierarchical, result);
-    result.errorIfSelectors(context);
-    result.reportErrors(context);
+    Lookup::name(syntax, context, LookupFlags::ForceHierarchical | LookupFlags::NoSelectors, result);
+    result.reportDiags(context);
 
     const Symbol* symbol = result.found;
     if (!symbol)

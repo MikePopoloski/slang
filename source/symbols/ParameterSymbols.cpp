@@ -226,8 +226,8 @@ void DefParamSymbol::resolve() const {
 
     BindContext context(*scope, LookupLocation::before(*this));
     LookupResult result;
-    Lookup::name(*assignment.name, context, LookupFlags::None, result);
-    result.reportErrors(context);
+    Lookup::name(*assignment.name, context, LookupFlags::NoSelectors, result);
+    result.reportDiags(context);
 
     target = result.found;
     if (target && target->kind != SymbolKind::Parameter) {

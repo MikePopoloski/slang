@@ -823,9 +823,8 @@ Statement& DisableStatement::fromSyntax(Compilation& compilation,
                                         const DisableStatementSyntax& syntax,
                                         const BindContext& context) {
     LookupResult result;
-    Lookup::name(*syntax.name, context, LookupFlags::ForceHierarchical, result);
-    result.errorIfSelectors(context);
-    result.reportErrors(context);
+    Lookup::name(*syntax.name, context, LookupFlags::ForceHierarchical | LookupFlags::NoSelectors, result);
+    result.reportDiags(context);
 
     const Symbol* symbol = result.found;
     if (!symbol)

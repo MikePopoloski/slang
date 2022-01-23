@@ -20,9 +20,8 @@
 
 namespace slang {
 
-const Statement& SubroutineSymbol::getBody(EvalContext* evalContext) const {
+const Statement& SubroutineSymbol::getBody() const {
     BindContext context(*this, LookupLocation::max);
-    context.evalContext = evalContext;
     return binder.getStatement(context);
 }
 

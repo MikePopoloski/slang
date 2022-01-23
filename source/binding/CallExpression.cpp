@@ -651,7 +651,7 @@ ConstantValue CallExpression::evalImpl(EvalContext& context) const {
     context.createLocal(symbol.returnValVar);
 
     using ER = Statement::EvalResult;
-    ER er = symbol.getBody(&context).eval(context);
+    ER er = symbol.getBody().eval(context);
 
     // If we got a disable result, it means a disable statement was evaluated that
     // targeted a block that wasn't executing. This isn't allowed in a constant expression.
@@ -705,7 +705,7 @@ bool CallExpression::verifyConstantImpl(EvalContext& context) const {
     if (!context.pushFrame(symbol, sourceRange.start(), lookupLocation))
         return false;
 
-    bool result = symbol.getBody(&context).verifyConstant(context);
+    bool result = symbol.getBody().verifyConstant(context);
     context.popFrame();
     return result;
 }

@@ -97,18 +97,7 @@ void LookupResult::copyFrom(const LookupResult& other) {
     diagnostics.appendRange(other.diagnostics);
 }
 
-void LookupResult::reportErrors(const BindContext& context) {
-    if (!hasError())
-        return;
-
-    // If we failed to find the symbol because of restrictions on hierarchical names
-    // inside constant expressions (which we know if evalContext is set) then issue
-    // a backtrace to give the user a bit more context.
-    if (!found && isHierarchical && context.evalContext) {
-        Diagnostic& first = diagnostics.front();
-        context.evalContext->reportStack(first);
-    }
-
+void LookupResult::reportDiags(const BindContext& context) {
     context.getCompilation().addDiagnostics(diagnostics);
 }
 
@@ -862,6 +851,8 @@ void Lookup::name(const NameSyntax& syntax, const BindContext& context, bitmask<
             // Handle qualified names separately.
             qualified(syntax.as<ScopedNameSyntax>(), context, flags, result);
             unwrapResult(scope, syntax.sourceRange(), result);
+            if (flags.has(LookupFlags::NoSelectors))
+                result.errorIfSelectors(context);
             return;
         case SyntaxKind::ThisHandle:
             result.found = findThisHandle(scope, syntax.sourceRange(), result);
@@ -915,6 +906,8 @@ void Lookup::name(const NameSyntax& syntax, const BindContext& context, bitmask<
         }
         else {
             result.selectors.appendRange(name.selectors);
+            if (flags.has(LookupFlags::NoSelectors))
+                result.errorIfSelectors(context);
         }
     }
 }
@@ -1135,10 +1128,8 @@ void Lookup::selectChild(const Type& virtualInterface, SourceRange range,
 const ClassType* Lookup::findClass(const NameSyntax& className, const BindContext& context,
                                    optional<DiagCode> requireInterfaceClass) {
     LookupResult result;
-    Lookup::name(className, context, LookupFlags::Type, result);
-
-    result.errorIfSelectors(context);
-    result.reportErrors(context);
+    Lookup::name(className, context, LookupFlags::Type | LookupFlags::NoSelectors, result);
+    result.reportDiags(context);
     if (!result.found)
         return nullptr;
 
@@ -1251,7 +1242,7 @@ bool Lookup::ensureVisible(const Symbol& symbol, const BindContext& context,
     if (checkVisibility(symbol, *context.scope, sourceRange, result))
         return true;
 
-    result.reportErrors(context);
+    result.reportDiags(context);
     return false;
 }
 

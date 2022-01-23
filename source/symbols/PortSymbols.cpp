@@ -801,7 +801,7 @@ private:
 
         LookupResult result;
         Lookup::name(expr->as<NameSyntax>(), context, LookupFlags::None, result);
-        result.reportErrors(context);
+        result.reportDiags(context);
 
         // If we found the interface but it's actually a port, unwrap to the target connection.
         const Symbol* symbol = result.found;

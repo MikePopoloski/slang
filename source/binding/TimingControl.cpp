@@ -494,9 +494,8 @@ TimingControl& BlockEventListControl::fromSyntax(const BlockEventExpressionSynta
 
     auto addEvent = [&](const PrimaryBlockEventExpressionSyntax& evSyntax) {
         LookupResult result;
-        Lookup::name(*evSyntax.name, context, LookupFlags::ForceHierarchical, result);
-        result.errorIfSelectors(context);
-        result.reportErrors(context);
+        Lookup::name(*evSyntax.name, context, LookupFlags::ForceHierarchical | LookupFlags::NoSelectors, result);
+        result.reportDiags(context);
 
         const Symbol* symbol = result.found;
         if (!symbol)

@@ -96,11 +96,12 @@ void NetType::resolve() const {
         LookupResult result;
         const NameSyntax& nameSyntax = *declSyntax.type->as<NamedTypeSyntax>().name;
         BindContext context(*scope, LookupLocation::before(*this));
-        Lookup::name(nameSyntax, context, LookupFlags::Type, result);
+        Lookup::name(nameSyntax, context, LookupFlags::Type | LookupFlags::NoSelectors, result);
+
+        // TODO: error if hierarchical
 
         if (result.found && result.found->kind == SymbolKind::NetType) {
-            result.errorIfSelectors(context);
-            result.reportErrors(context);
+            result.reportDiags(context);
 
             alias = &result.found->as<NetType>();
             declaredType.copyTypeFrom(alias->getCanonical().declaredType);

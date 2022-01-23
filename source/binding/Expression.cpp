@@ -778,7 +778,7 @@ Expression& Expression::bindName(Compilation& compilation, const NameSyntax& syn
                                         withClause, context);
             }
             else if (result.hasError()) {
-                result.reportErrors(context);
+                result.reportDiags(context);
                 return badExpr(compilation, nullptr);
             }
         }
@@ -796,7 +796,7 @@ Expression& Expression::bindName(Compilation& compilation, const NameSyntax& syn
     // Normal name lookup and resolution.
     LookupResult result;
     Lookup::name(syntax, context, flags, result);
-    result.reportErrors(context);
+    result.reportDiags(context);
 
     if (result.systemSubroutine) {
         // There won't be any selectors here; this gets checked in the lookup call.
@@ -920,7 +920,7 @@ Expression& Expression::bindLookupResult(Compilation& compilation, LookupResult&
                 Lookup::selectChild(*expr->type, expr->sourceRange, selectors.subspan(i), context,
                                     nextResult);
 
-                nextResult.reportErrors(context);
+                nextResult.reportDiags(context);
                 if (!nextResult.found)
                     return badExpr(compilation, expr);
 
@@ -1028,9 +1028,12 @@ Expression* Expression::tryBindInterfaceRef(const BindContext& context,
             // a badExpr here to silence any follow on errors that might otherwise result.
             return &badExpr(comp, nullptr);
         }
+
+        result.reportDiags(context);
     }
     else if ((symbol->kind == SymbolKind::Instance && symbol->as<InstanceSymbol>().isInterface()) ||
              symbol->kind == SymbolKind::Modport) {
+        result.reportDiags(context);
         result.errorIfSelectors(context);
     }
     else {

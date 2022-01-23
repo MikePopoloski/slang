@@ -95,7 +95,7 @@ public:
     /// Returns true if the subroutine has output, inout, or non-const ref arguments.
     bool hasOutputArgs() const;
 
-    const Statement& getBody(EvalContext* evalContext = nullptr) const;
+    const Statement& getBody() const;
     const Type& getReturnType() const { return declaredReturnType.getType(); }
 
     void setOverride(const SubroutineSymbol& parentMethod) const;

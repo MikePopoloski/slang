@@ -407,7 +407,7 @@ void InstanceSymbol::fromBindDirective(const Scope& scope, const BindDirectiveSy
         for (auto inst : syntax.targetInstances->targets) {
             LookupResult result;
             Lookup::name(*inst, context, LookupFlags::None, result);
-            result.reportErrors(context);
+            result.reportDiags(context);
 
             if (result.found) {
                 // TODO: check valid target
@@ -437,7 +437,7 @@ void InstanceSymbol::fromBindDirective(const Scope& scope, const BindDirectiveSy
 
             // If no name and no definition, report an error.
             if (!targetDef) {
-                result.reportErrors(context);
+                result.reportDiags(context);
                 return;
             }
         }
