@@ -13,6 +13,7 @@
 #include "slang/diagnostics/ExpressionsDiags.h"
 #include "slang/diagnostics/LookupDiags.h"
 #include "slang/diagnostics/NumericDiags.h"
+#include "slang/diagnostics/ParserDiags.h"
 #include "slang/parsing/LexerFacts.h"
 #include "slang/symbols/BlockSymbols.h"
 #include "slang/symbols/ClassSymbols.h"
@@ -861,6 +862,16 @@ void Lookup::name(const NameSyntax& syntax, const BindContext& context, bitmask<
             }
             return;
         }
+        case SyntaxKind::RootScope:
+            if (!flags.has(LookupFlags::AllowRoot)) {
+                auto tok = syntax.getFirstToken();
+                result.addDiag(scope, diag::ExpectedToken,
+                               tok.location() + tok.valueText().length())
+                    << "."sv;
+                return;
+            }
+            result.found = &scope.getCompilation().getRoot();
+            return;
         default:
             THROW_UNREACHABLE;
     }

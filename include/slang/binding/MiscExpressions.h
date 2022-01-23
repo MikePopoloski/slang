@@ -119,7 +119,8 @@ public:
     void serializeTo(ASTSerializer& serializer) const;
 
     static Expression& fromSyntax(Compilation& compilation, const NameSyntax& syntax,
-                                  const BindContext& context);
+                                  const BindContext& context,
+                                  bitmask<LookupFlags> extraLookupFlags = {});
 
     static bool isKind(ExpressionKind kind) {
         return kind == ExpressionKind::HierarchicalReference;

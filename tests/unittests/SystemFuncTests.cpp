@@ -968,6 +968,11 @@ module top;
         $load_coverage_db("coverage.db");
     end
 
+    initial begin
+        int unsigned result;
+        result = $coverage_control(0, 0, 0, $root);
+    end
+
 endmodule
 )");
 

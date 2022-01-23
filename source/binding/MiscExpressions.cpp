@@ -310,9 +310,12 @@ void TypeReferenceExpression::serializeTo(ASTSerializer& serializer) const {
 
 Expression& HierarchicalReferenceExpression::fromSyntax(Compilation& compilation,
                                                         const NameSyntax& syntax,
-                                                        const BindContext& context) {
+                                                        const BindContext& context,
+                                                        bitmask<LookupFlags> extraLookupFlags) {
     LookupResult result;
-    Lookup::name(syntax, context, LookupFlags::ForceHierarchical | LookupFlags::NoSelectors, result);
+    Lookup::name(syntax, context,
+                 LookupFlags::ForceHierarchical | LookupFlags::NoSelectors | extraLookupFlags,
+                 result);
     result.reportDiags(context);
 
     const Symbol* symbol = result.found;

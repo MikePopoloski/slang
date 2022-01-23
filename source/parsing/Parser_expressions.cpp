@@ -673,7 +673,6 @@ NameSyntax& Parser::parseName(bitmask<NameOptions> options) {
         case SyntaxKind::LocalScope:
             expectedKind = TokenKind::DoubleColon;
             break;
-        case SyntaxKind::RootScope:
         case SyntaxKind::SuperHandle:
             expectedKind = TokenKind::Dot;
             break;

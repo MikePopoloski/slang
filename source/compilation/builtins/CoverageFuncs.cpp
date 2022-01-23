@@ -23,6 +23,7 @@ public:
         requiredArgs(requiredArgs) {
         ASSERT(requiredArgs <= argTypes.size());
         ASSERT(nameOrHierIndex <= argTypes.size());
+        ASSERT(requiredArgs > nameOrHierIndex);
     };
 
     const Expression& bindArgument(size_t argIndex, const BindContext& context,
@@ -31,8 +32,8 @@ public:
             return SystemSubroutine::bindArgument(argIndex, context, syntax, args);
 
         if (argIndex == nameOrHierIndex && NameSyntax::isKind(syntax.kind)) {
-            return HierarchicalReferenceExpression::fromSyntax(context.getCompilation(),
-                                                               syntax.as<NameSyntax>(), context);
+            return HierarchicalReferenceExpression::fromSyntax(
+                context.getCompilation(), syntax.as<NameSyntax>(), context, LookupFlags::AllowRoot);
         }
 
         return Expression::bindArgument(*argTypes[argIndex], ArgumentDirection::In, syntax,
@@ -56,7 +57,8 @@ public:
                     return comp.getErrorType();
                 }
             }
-            else if (sym.kind != SymbolKind::Instance || !sym.as<InstanceSymbol>().isModule()) {
+            else if (sym.kind != SymbolKind::Root &&
+                     (sym.kind != SymbolKind::Instance || !sym.as<InstanceSymbol>().isModule())) {
                 if (!context.scope->isUninstantiated())
                     context.addDiag(diag::ExpectedModuleInstance, arg->sourceRange);
                 return comp.getErrorType();
