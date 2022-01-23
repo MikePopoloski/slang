@@ -708,9 +708,9 @@ endmodule
 source:4:22: error: invalid access token; '.' should be '::'
     always_comb $unit.foo;
                      ^
-source:4:22: error: no member named 'foo' in compilation unit
+source:4:23: error: use of undeclared identifier 'foo'
     always_comb $unit.foo;
-                     ^~~~
+                      ^~~
 source:5:22: error: invalid access token; '::' should be '.'
     always_comb $root::bar;
                      ^
@@ -971,9 +971,9 @@ source:59:39: note: declared here
 source:74:14: error: unknown class or package 'p3'
     wire i = p3::bar;           // unknown package
              ^~
-source:75:19: error: no member named 'bar' in compilation unit
+source:75:21: error: use of undeclared identifier 'bar'
     wire j = $unit::bar;        // unknown unit member
-                  ^ ~~~
+                    ^~~
 source:77:19: error: no member named 'bar' in 'type_t'
     wire l = gen3.bar;          // doesn't find top.gen3.bar because of local variable
              ~~~~~^~~
@@ -1731,4 +1731,38 @@ endmodule
     auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::TypeHierarchical);
+}
+
+TEST_CASE("$unit is not hierarchical") {
+    auto tree = SyntaxTree::fromText(R"(
+typedef int foo;
+
+module m;
+    var type($unit::foo) asdf = 1;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("$unit does not allow forward references") {
+    auto tree = SyntaxTree::fromText(R"(
+task t;
+    int x;
+    x = 5 + b; // illegal - "b" is defined later
+    x = 5 + $unit::b; // illegal - $unit adds no special forward referencing
+endtask
+
+bit b;
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::UsedBeforeDeclared);
+    CHECK(diags[1].code == diag::UsedBeforeDeclared);
 }

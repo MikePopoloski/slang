@@ -412,12 +412,8 @@ bool lookupDownward(span<const NamePlusLoc> nameParts, NameComponents name,
                 }
             }
 
-            // Give a slightly nicer error if this is a compilation unit lookup.
-            DiagCode code = diag::CouldNotResolveHierarchicalPath;
-            if (prevSym.kind == SymbolKind::CompilationUnit)
-                code = diag::UnknownUnitMember;
-
-            auto& diag = result.addDiag(*context.scope, code, it->dotLocation);
+            auto& diag = result.addDiag(*context.scope, diag::CouldNotResolveHierarchicalPath,
+                                        it->dotLocation);
             diag << name.text;
             diag << name.range;
             return true;
@@ -740,19 +736,6 @@ bool resolveColonNames(SmallVectorSized<NamePlusLoc, 8>& nameParts, int colonPar
 
     result.found = symbol;
     return lookupDownward(nameParts, name, context, result);
-}
-
-const Symbol* getCompilationUnit(const Symbol& symbol) {
-    const Symbol* current = &symbol;
-    while (true) {
-        if (current->kind == SymbolKind::CompilationUnit)
-            return current;
-
-        auto scope = current->getParentScope();
-        ASSERT(scope);
-
-        current = &scope->asSymbol();
-    }
 }
 
 void unwrapResult(const Scope& scope, optional<SourceRange> range, LookupResult& result,
@@ -1641,15 +1624,24 @@ void Lookup::qualified(const ScopedNameSyntax& syntax, const BindContext& contex
     SmallVectorSized<NamePlusLoc, 8> nameParts;
     auto leftMost = splitScopedName(syntax, nameParts, colonParts);
 
+    SyntaxKind firstKind = leftMost->kind;
     NameComponents first = *leftMost;
     auto name = first.text;
     if (name.empty())
         return;
 
+    auto popFront = [&] {
+        first = nameParts.back().name;
+        firstKind = nameParts.back().kind;
+        nameParts.pop();
+        name = first.text;
+        if (colonParts)
+            colonParts--;
+    };
+
     auto& scope = *context.scope;
     auto& compilation = context.getCompilation();
 
-    SyntaxKind firstKind = leftMost->kind;
     if (firstKind == SyntaxKind::LocalScope) {
         if (!context.randomizeDetails || !context.randomizeDetails->classType) {
             result.addDiag(scope, diag::LocalNotAllowed, first.range);
@@ -1660,12 +1652,7 @@ void Lookup::qualified(const ScopedNameSyntax& syntax, const BindContext& contex
         // the name as if the local hadn't been specified -- the local
         // lookup portion has already been ensured because we exited
         // early from withinClassRandomize.
-        first = nameParts.back().name;
-        firstKind = nameParts.back().kind;
-        nameParts.pop();
-        name = first.text;
-        if (colonParts)
-            colonParts--;
+        popFront();
     }
 
     switch (firstKind) {
@@ -1675,10 +1662,24 @@ void Lookup::qualified(const ScopedNameSyntax& syntax, const BindContext& contex
             // Start by trying to find the first name segment using normal unqualified lookup
             unqualifiedImpl(scope, name, context.getLocation(), first.range, flags, {}, result);
             break;
-        case SyntaxKind::UnitScope:
-            result.found = getCompilationUnit(scope.asSymbol());
-            lookupDownward(nameParts, first, context, result);
-            return;
+        case SyntaxKind::UnitScope: {
+            // Walk upward to find the compilation unit scope.
+            popFront();
+            const Scope* current = &scope;
+            LookupLocation location = context.getLocation();
+            do {
+                auto& symbol = current->asSymbol();
+                if (symbol.kind == SymbolKind::CompilationUnit) {
+                    unqualifiedImpl(*current, name, location, first.range, flags, {}, result);
+                    break;
+                }
+
+                location = LookupLocation::after(symbol);
+                current = location.getScope();
+            } while (current);
+
+            break;
+        }
         case SyntaxKind::RootScope:
             // Ignore hierarchical lookups that occur inside uninstantiated modules.
             if (scope.isUninstantiated())
