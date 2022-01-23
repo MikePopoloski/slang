@@ -232,7 +232,7 @@ LRM | Feature | Supported
 LRM | Feature | Supported
 --- | ------- | ---------
 {{m-success}} 15.3 | Semaphores | v0.6
-{{m-warning}} 15.4 | Mailboxes | partial
+{{m-success}} 15.4 | Mailboxes | v1.0
 {{m-success}} 15.5 | Named events | v0.5
 
 ## 16. Assertions
