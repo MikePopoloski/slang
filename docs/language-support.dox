@@ -295,14 +295,14 @@ LRM | Feature | Supported
 
 LRM | Feature | Supported
 --- | ------- | ---------
-{{m-danger}} 19.3 | Defining the coverage model | no
-{{m-danger}} 19.4 | Using covergroup in classes | no
-{{m-danger}} 19.5 | Defining coverage points | no
-{{m-danger}} 19.6 | Defining cross coverage | no
-{{m-danger}} 19.7 | Specifying coverage options | no
-{{m-danger}} 19.8 | Predefined coverage methods | no
+{{m-success}} 19.3 | Defining the coverage model | v1.0
+{{m-success}} 19.4 | Using covergroup in classes | v1.0
+{{m-success}} 19.5 | Defining coverage points | v1.0
+{{m-success}} 19.6 | Defining cross coverage | v1.0
+{{m-success}} 19.7 | Specifying coverage options | v1.0
+{{m-success}} 19.8 | Predefined coverage methods | v1.0
 {{m-success}} 19.9 | Predefined coverage system tasks | v0.9
-{{m-danger}} 19.10 | Organization of option members | no
+{{m-success}} 19.10 | Organization of option members | v1.0
 {{m-dim}}    19.11 | Coverage computation | N/A
 
 ## 20. Utility system tasks and system functions
