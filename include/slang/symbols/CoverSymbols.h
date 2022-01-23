@@ -9,7 +9,6 @@
 #include "slang/symbols/Scope.h"
 #include "slang/types/DeclaredType.h"
 #include "slang/types/Type.h"
-#include "slang/util/Function.h"
 
 namespace slang {
 
@@ -159,6 +158,8 @@ private:
 /// members of the cross body can't be accessed outside of the cross itself.
 class CoverCrossBodySymbol : public Symbol, public Scope {
 public:
+    const Type* crossQueueType = nullptr;
+
     CoverCrossBodySymbol(Compilation& compilation, SourceLocation loc) :
         Symbol(SymbolKind::CoverCrossBody, ""sv, loc), Scope(compilation, this) {}
 
@@ -197,7 +198,8 @@ private:
     x(Unary) \
     x(Binary) \
     x(SetExpr) \
-    x(WithFilter)
+    x(WithFilter) \
+    x(CrossId)
 ENUM(BinsSelectExprKind, EXPR)
 #undef EXPR
 // clang-format on
@@ -311,9 +313,10 @@ struct SimpleBinsSelectExprSyntax;
 class SetExprBinsSelectExpr : public BinsSelectExpr {
 public:
     const Expression& expr;
+    const Expression* matchesExpr;
 
-    explicit SetExprBinsSelectExpr(const Expression& expr) :
-        BinsSelectExpr(BinsSelectExprKind::SetExpr), expr(expr) {}
+    SetExprBinsSelectExpr(const Expression& expr, const Expression* matchesExpr) :
+        BinsSelectExpr(BinsSelectExprKind::SetExpr), expr(expr), matchesExpr(matchesExpr) {}
 
     static BinsSelectExpr& fromSyntax(const SimpleBinsSelectExprSyntax& syntax,
                                       const BindContext& context);
@@ -329,9 +332,12 @@ class BinSelectWithFilterExpr : public BinsSelectExpr {
 public:
     const BinsSelectExpr& expr;
     const Expression& filter;
+    const Expression* matchesExpr;
 
-    BinSelectWithFilterExpr(const BinsSelectExpr& expr, const Expression& filter) :
-        BinsSelectExpr(BinsSelectExprKind::WithFilter), expr(expr), filter(filter) {}
+    BinSelectWithFilterExpr(const BinsSelectExpr& expr, const Expression& filter,
+                            const Expression* matchesExpr) :
+        BinsSelectExpr(BinsSelectExprKind::WithFilter),
+        expr(expr), filter(filter), matchesExpr(matchesExpr) {}
 
     static BinsSelectExpr& fromSyntax(const BinSelectWithFilterExprSyntax& syntax,
                                       const BindContext& context);
@@ -339,6 +345,15 @@ public:
     void serializeTo(ASTSerializer& serializer) const;
 
     static bool isKind(BinsSelectExprKind kind) { return kind == BinsSelectExprKind::WithFilter; }
+};
+
+class CrossIdBinsSelectExpr : public BinsSelectExpr {
+public:
+    CrossIdBinsSelectExpr() : BinsSelectExpr(BinsSelectExprKind::CrossId) {}
+
+    void serializeTo(ASTSerializer&) const {}
+
+    static bool isKind(BinsSelectExprKind kind) { return kind == BinsSelectExprKind::CrossId; }
 };
 
 } // namespace slang

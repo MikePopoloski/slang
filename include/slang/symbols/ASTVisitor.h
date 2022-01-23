@@ -412,6 +412,7 @@ decltype(auto) BinsSelectExpr::visit(TVisitor& visitor, Args&&... args) const {
         CASE(Binary, BinaryBinsSelectExpr);
         CASE(SetExpr, SetExprBinsSelectExpr);
         CASE(WithFilter, BinSelectWithFilterExpr);
+        CASE(CrossId, CrossIdBinsSelectExpr);
     }
 #undef CASE
     // clang-format on

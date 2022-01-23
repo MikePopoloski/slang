@@ -780,6 +780,7 @@ void CoverCrossSymbol::fromSyntax(const Scope& scope, const CoverCrossSyntax& sy
     auto queueType_t = comp.emplace<TypeAliasType>("CrossQueueType", loc);
     queueType_t->targetType.setType(*queueType);
     body->addMember(*queueType_t);
+    body->crossQueueType = queueType_t;
 
     OptionBuilder options(*result);
     for (auto member : syntax.members) {
@@ -935,24 +936,38 @@ void BinaryBinsSelectExpr::serializeTo(ASTSerializer& serializer) const {
 
 BinsSelectExpr& SetExprBinsSelectExpr::fromSyntax(const SimpleBinsSelectExprSyntax& syntax,
                                                   const BindContext& context) {
-    // TODO: matches, queue expressions
+    auto& body = context.scope->asSymbol().as<CoverCrossBodySymbol>();
+    ASSERT(body.crossQueueType);
+
+    auto parent = body.getParentScope();
+    ASSERT(parent);
+
+    // If the syntax is a simple identifier that names our parent cross,
+    // we're selecting the whole cross (which is otherwise not an expression).
     auto& comp = context.getCompilation();
-    auto& expr = Expression::bind(*syntax.expr, context, BindFlags::AllowCoverpoint);
+    auto& cross = parent->asSymbol().as<CoverCrossSymbol>();
+    if (syntax.expr->kind == SyntaxKind::IdentifierName &&
+        syntax.expr->as<IdentifierNameSyntax>().identifier.valueText() == cross.name) {
 
-    if (expr.kind == ExpressionKind::NamedValue) {
-        auto sym = expr.getSymbolReference();
-        ASSERT(sym);
+        if (syntax.matchesClause)
+            context.addDiag(diag::InvalidBinsMatches, syntax.matchesClause->sourceRange());
 
-        if (sym->kind == SymbolKind::CoverCross) {
-            // TODO: check that this is our cover cross
-
-            if (syntax.matchesClause) {
-                // TODO: error
-            }
-        }
+        return *comp.emplace<CrossIdBinsSelectExpr>();
     }
 
-    return *comp.emplace<SetExprBinsSelectExpr>(expr);
+    const Expression* matches = nullptr;
+    if (syntax.matchesClause) {
+        matches =
+            &bindCovergroupExpr(*syntax.matchesClause->pattern->as<ExpressionPatternSyntax>().expr,
+                                context, nullptr, BindFlags::AllowUnboundedLiteral);
+        if (!matches->bad() && !matches->type->isUnbounded())
+            context.requireIntegral(*matches);
+    }
+
+    auto& expr = Expression::bindRValue(*body.crossQueueType, *syntax.expr,
+                                        syntax.expr->getFirstToken().location(), context);
+
+    return *comp.emplace<SetExprBinsSelectExpr>(expr, matches);
 }
 
 void SetExprBinsSelectExpr::serializeTo(ASTSerializer&) const {
@@ -961,7 +976,6 @@ void SetExprBinsSelectExpr::serializeTo(ASTSerializer&) const {
 
 BinsSelectExpr& BinSelectWithFilterExpr::fromSyntax(const BinSelectWithFilterExprSyntax& syntax,
                                                     const BindContext& context) {
-    // TODO: matches
     auto& comp = context.getCompilation();
     auto& expr = bind(*syntax.expr, context);
 
@@ -979,7 +993,16 @@ BinsSelectExpr& BinSelectWithFilterExpr::fromSyntax(const BinSelectWithFilterExp
     auto& filter = bindCovergroupExpr(*syntax.filter, iterCtx);
     iterCtx.requireBooleanConvertible(filter);
 
-    return *comp.emplace<BinSelectWithFilterExpr>(expr, filter);
+    const Expression* matches = nullptr;
+    if (syntax.matchesClause) {
+        matches =
+            &bindCovergroupExpr(*syntax.matchesClause->pattern->as<ExpressionPatternSyntax>().expr,
+                                context, nullptr, BindFlags::AllowUnboundedLiteral);
+        if (!matches->bad() && !matches->type->isUnbounded())
+            context.requireIntegral(*matches);
+    }
+
+    return *comp.emplace<BinSelectWithFilterExpr>(expr, filter, matches);
 }
 
 void BinSelectWithFilterExpr::serializeTo(ASTSerializer&) const {

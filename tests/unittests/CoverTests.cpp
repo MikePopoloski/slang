@@ -419,7 +419,7 @@ module m;
         coverpoint j { bins j[] = { [0:1] }; }
         x1: cross i,j;
         x2: cross i,j {
-            bins i_zero = binsof(i) intersect { 0 };
+            bins i_zero = binsof(i) intersect { 0 } iff (1);
         }
     endgroup
 
@@ -485,6 +485,38 @@ endmodule
     NO_COMPILATION_ERRORS;
 }
 
+TEST_CASE("Cover cross illegal matches expr") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    logic [0:7] a, b;
+    parameter [0:7] mask = 127;
+
+    covergroup cg;
+        coverpoint a {
+            bins low[] = {[0:127]};
+            bins high = {[128:255]};
+        }
+
+        coverpoint b {
+            bins two[] = b with (item % 2 == 0);
+            bins three[] = b with (item % 3 == 0);
+        }
+
+        X: cross a,b {
+            bins apple = X matches 127;
+        }
+    endgroup
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::InvalidBinsMatches);
+}
+
 TEST_CASE("Cover cross bin set expressions") {
     auto tree = SyntaxTree::fromText(R"(
 module m;
@@ -495,7 +527,8 @@ module m;
         coverpoint b { bins y[] = {[0:20]}; }
 
         aXb : cross a, b {
-            //bins one = '{ '{1,2}, '{3,4}, '{5,6} };
+            bins one = '{ '{1,2}, '{3,4}, '{5,6} } matches 5;
+            bins two = '{ '{1,2}, '{3,4}, '{5,6} } matches $;
         }
     endgroup
 
