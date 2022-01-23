@@ -132,6 +132,10 @@ void ASTSerializer::writeLink(string_view name, const Symbol& value) {
     writer.writeValue(str);
 }
 
+void ASTSerializer::startArray() {
+    writer.startArray();
+}
+
 void ASTSerializer::startArray(string_view name) {
     writer.writeProperty(name);
     writer.startArray();

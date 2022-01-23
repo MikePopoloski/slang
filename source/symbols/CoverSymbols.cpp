@@ -102,6 +102,10 @@ const Expression& CoverageOptionSetter::getExpression() const {
     return *expr;
 }
 
+void CoverageOptionSetter::serializeTo(ASTSerializer& serializer) const {
+    serializer.write("expr", getExpression());
+}
+
 static void addProperty(Scope& scope, string_view name, VariableLifetime lifetime,
                         const StructBuilder& structBuilder) {
     auto& comp = scope.getCompilation();
@@ -170,6 +174,15 @@ CovergroupBodySymbol::CovergroupBodySymbol(Compilation& comp, SourceLocation loc
     addProperty(*this, "type_option"sv, VariableLifetime::Static, type_option);
 
     addBuiltInMethods(*this, true);
+}
+
+void CovergroupBodySymbol::serializeTo(ASTSerializer& serializer) const {
+    if (!options.empty()) {
+        serializer.startArray("options");
+        for (auto& opt : options)
+            opt.serializeTo(serializer);
+        serializer.endArray();
+    }
 }
 
 CovergroupType::CovergroupType(Compilation& compilation, string_view name, SourceLocation loc,
@@ -289,8 +302,9 @@ ConstantValue CovergroupType::getDefaultValueImpl() const {
     return ConstantValue::NullPlaceholder{};
 }
 
-void CovergroupType::serializeTo(ASTSerializer&) const {
-    // TODO:
+void CovergroupType::serializeTo(ASTSerializer& serializer) const {
+    if (auto ev = getCoverageEvent())
+        serializer.write("event", *ev);
 }
 
 const Expression* CoverageBinSymbol::getIffExpr() const {
@@ -335,8 +349,61 @@ span<const CoverageBinSymbol::TransSet> CoverageBinSymbol::getTransList() const 
     return transList;
 }
 
-void CoverageBinSymbol::serializeTo(ASTSerializer&) const {
-    // TODO:
+void CoverageBinSymbol::serializeTo(ASTSerializer& serializer) const {
+    switch (binsKind) {
+        case Bins:
+            serializer.write("binsKind"sv, "Bins"sv);
+            break;
+        case IllegalBins:
+            serializer.write("binsKind"sv, "IllegalBins"sv);
+            break;
+        case IgnoreBins:
+            serializer.write("binsKind"sv, "IgnoreBins"sv);
+            break;
+    }
+
+    serializer.write("isArray", isArray);
+    serializer.write("isWildcard", isWildcard);
+    serializer.write("isDefault", isDefault);
+    serializer.write("isDefaultSequence", isDefaultSequence);
+
+    if (auto expr = getIffExpr())
+        serializer.write("iff", *expr);
+
+    if (auto expr = getNumberOfBinsExpr())
+        serializer.write("numberOfBins", *expr);
+
+    if (auto expr = getSetCoverageExpr())
+        serializer.write("setCoverage", *expr);
+
+    if (auto expr = getWithExpr())
+        serializer.write("with", *expr);
+
+    if (auto expr = getCrossSelectExpr())
+        serializer.write("crossSelect", *expr);
+
+    auto valArray = getValues();
+    if (!valArray.empty()) {
+        serializer.startArray("values");
+        for (auto val : valArray)
+            serializer.serialize(*val);
+        serializer.endArray();
+    }
+
+    auto trans = getTransList();
+    if (!trans.empty()) {
+        serializer.startArray("trans");
+        for (auto& set : trans) {
+            serializer.startArray();
+            for (auto& rangeList : set) {
+                serializer.startObject();
+                rangeList.serializeTo(serializer);
+                serializer.endObject();
+            }
+            serializer.endArray();
+        }
+        serializer.endArray();
+    }
 }
 
 CoverageBinSymbol& CoverageBinSymbol::fromSyntax(const Scope& scope,
@@ -593,6 +660,32 @@ CoverageBinSymbol::TransRangeList::TransRangeList(const TransRangeSyntax& syntax
     }
 }
 
+void CoverageBinSymbol::TransRangeList::serializeTo(ASTSerializer& serializer) const {
+    serializer.startArray("items");
+    for (auto item : items)
+        serializer.serialize(*item);
+    serializer.endArray();
+
+    if (repeatFrom)
+        serializer.write("repeatFrom", *repeatFrom);
+    if (repeatTo)
+        serializer.write("repeatTo", *repeatTo);
+
+    switch (repeatKind) {
+        case Consecutive:
+            serializer.write("repeatKind", "Consecutive"sv);
+            break;
+        case Nonconsecutive:
+            serializer.write("repeatKind", "Nonconsecutive"sv);
+            break;
+        case GoTo:
+            serializer.write("repeatKind", "GoTo"sv);
+            break;
+        default:
+            break;
+    }
+}
+
 CoverpointSymbol::CoverpointSymbol(Compilation& comp, string_view name, SourceLocation loc) :
     Symbol(SymbolKind::Coverpoint, name, loc), Scope(comp, this),
     declaredType(*this, DeclaredTypeFlags::InferImplicit | DeclaredTypeFlags::AutomaticInitializer |
@@ -704,8 +797,16 @@ const Expression* CoverpointSymbol::getIffExpr() const {
     return *iffExpr;
 }
 
-void CoverpointSymbol::serializeTo(ASTSerializer&) const {
-    // TODO:
+void CoverpointSymbol::serializeTo(ASTSerializer& serializer) const {
+    if (!options.empty()) {
+        serializer.startArray("options");
+        for (auto& opt : options)
+            opt.serializeTo(serializer);
+        serializer.endArray();
+    }
+
+    if (auto iff = getIffExpr())
+        serializer.write("iff", *iff);
 }
 
 CoverCrossSymbol::CoverCrossSymbol(Compilation& comp, string_view name, SourceLocation loc,
@@ -776,7 +877,7 @@ void CoverCrossSymbol::fromSyntax(const Scope& scope, const CoverCrossSyntax& sy
     valType_t->targetType.setType(valType.type);
     body->addMember(*valType_t);
 
-    auto queueType = comp.emplace<QueueType>(*valType_t, 0);
+    auto queueType = comp.emplace<QueueType>(*valType_t, 0u);
     auto queueType_t = comp.emplace<TypeAliasType>("CrossQueueType", loc);
     queueType_t->targetType.setType(*queueType);
     body->addMember(*queueType_t);
@@ -817,8 +918,24 @@ const Expression* CoverCrossSymbol::getIffExpr() const {
     return *iffExpr;
 }
 
-void CoverCrossSymbol::serializeTo(ASTSerializer&) const {
-    // TODO:
+void CoverCrossSymbol::serializeTo(ASTSerializer& serializer) const {
+    serializer.startArray("targets");
+    for (auto target : targets) {
+        serializer.startObject();
+        serializer.writeLink("coverpoint", *target);
+        serializer.endObject();
+    }
+    serializer.endArray();
+
+    if (!options.empty()) {
+        serializer.startArray("options");
+        for (auto& opt : options)
+            opt.serializeTo(serializer);
+        serializer.endArray();
+    }
+
+    if (auto iff = getIffExpr())
+        serializer.write("iff", *iff);
 }
 
 const BinsSelectExpr& BinsSelectExpr::bind(const BinsSelectExpressionSyntax& syntax,
@@ -903,8 +1020,14 @@ BinsSelectExpr& ConditionBinsSelectExpr::fromSyntax(const BinsSelectConditionExp
     return *expr;
 }
 
-void ConditionBinsSelectExpr::serializeTo(ASTSerializer&) const {
-    // TODO:
+void ConditionBinsSelectExpr::serializeTo(ASTSerializer& serializer) const {
+    serializer.writeLink("target", target);
+    if (!intersects.empty()) {
+        serializer.startArray("intersects");
+        for (auto item : intersects)
+            serializer.serialize(*item);
+        serializer.endArray();
+    }
 }
 
 BinsSelectExpr& UnaryBinsSelectExpr::fromSyntax(const UnaryBinsSelectExprSyntax& syntax,
@@ -970,8 +1093,10 @@ BinsSelectExpr& SetExprBinsSelectExpr::fromSyntax(const SimpleBinsSelectExprSynt
     return *comp.emplace<SetExprBinsSelectExpr>(expr, matches);
 }
 
-void SetExprBinsSelectExpr::serializeTo(ASTSerializer&) const {
-    // TODO:
+void SetExprBinsSelectExpr::serializeTo(ASTSerializer& serializer) const {
+    serializer.write("expr", expr);
+    if (matchesExpr)
+        serializer.write("matchesExpr", *matchesExpr);
 }
 
 BinsSelectExpr& BinSelectWithFilterExpr::fromSyntax(const BinSelectWithFilterExprSyntax& syntax,
@@ -1005,8 +1130,11 @@ BinsSelectExpr& BinSelectWithFilterExpr::fromSyntax(const BinSelectWithFilterExp
     return *comp.emplace<BinSelectWithFilterExpr>(expr, filter, matches);
 }
 
-void BinSelectWithFilterExpr::serializeTo(ASTSerializer&) const {
-    // TODO:
+void BinSelectWithFilterExpr::serializeTo(ASTSerializer& serializer) const {
+    serializer.write("expr", expr);
+    serializer.write("filter", filter);
+    if (matchesExpr)
+        serializer.write("matchesExpr", *matchesExpr);
 }
 
 } // namespace slang

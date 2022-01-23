@@ -38,6 +38,7 @@ public:
     void serialize(const BinsSelectExpr& binsSelectExpr);
     void serialize(std::string_view value);
 
+    void startArray();
     void startArray(string_view name);
     void endArray();
     void startObject();

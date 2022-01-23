@@ -6,6 +6,7 @@
 //------------------------------------------------------------------------------
 #pragma once
 
+#include "slang/binding/Expression.h"
 #include "slang/symbols/Scope.h"
 #include "slang/types/DeclaredType.h"
 #include "slang/types/Type.h"
@@ -24,6 +25,13 @@ public:
     string_view getName() const;
     const Expression& getExpression() const;
 
+    void serializeTo(ASTSerializer& serializer) const;
+
+    template<typename TVisitor>
+    void visitExprs(TVisitor&& visitor) const {
+        getExpression().visit(visitor);
+    }
+
 private:
     not_null<const Scope*> scope;
     not_null<const CoverageOptionSyntax*> syntax;
@@ -39,7 +47,7 @@ public:
 
     CovergroupBodySymbol(Compilation& compilation, SourceLocation loc);
 
-    void serializeTo(ASTSerializer&) const {}
+    void serializeTo(ASTSerializer& serializer) const;
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::CovergroupBody; }
 };
@@ -82,6 +90,20 @@ public:
 
         TransRangeList(const TransRangeSyntax& syntax, const Type& type,
                        const BindContext& context);
+
+        void serializeTo(ASTSerializer& serializer) const;
+
+        template<typename TVisitor>
+        void visitExprs(TVisitor&& visitor) const {
+            for (auto item : items)
+                item->visit(visitor);
+
+            if (repeatFrom)
+                repeatFrom->visit(visitor);
+
+            if (repeatTo)
+                repeatTo->visit(visitor);
+        }
     };
 
     using TransSet = span<const TransRangeList>;
@@ -109,6 +131,9 @@ public:
     static CoverageBinSymbol& fromSyntax(const Scope& scope, const BinsSelectionSyntax& syntax);
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::CoverageBin; }
+
+    template<typename TVisitor>
+    void visitExprs(TVisitor&& visitor) const;
 
 private:
     void resolve() const;
@@ -150,6 +175,15 @@ public:
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::Coverpoint; }
 
+    template<typename TVisitor>
+    void visitExprs(TVisitor&& visitor) const {
+        if (auto expr = getIffExpr())
+            expr->visit(visitor);
+
+        for (auto& opt : options)
+            opt.visitExprs(visitor);
+    }
+
 private:
     mutable optional<const Expression*> iffExpr;
 };
@@ -186,6 +220,15 @@ public:
     void serializeTo(ASTSerializer& serializer) const;
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::CoverCross; }
+
+    template<typename TVisitor>
+    void visitExprs(TVisitor&& visitor) const {
+        if (auto expr = getIffExpr())
+            expr->visit(visitor);
+
+        for (auto& opt : options)
+            opt.visitExprs(visitor);
+    }
 
 private:
     mutable optional<const Expression*> iffExpr;
@@ -266,6 +309,12 @@ public:
     void serializeTo(ASTSerializer& serializer) const;
 
     static bool isKind(BinsSelectExprKind kind) { return kind == BinsSelectExprKind::Condition; }
+
+    template<typename TVisitor>
+    void visitExprs(TVisitor&& visitor) const {
+        for (auto expr : intersects)
+            expr->visit(visitor);
+    }
 };
 
 struct UnaryBinsSelectExprSyntax;
@@ -287,6 +336,11 @@ public:
     void serializeTo(ASTSerializer& serializer) const;
 
     static bool isKind(BinsSelectExprKind kind) { return kind == BinsSelectExprKind::Unary; }
+
+    template<typename TVisitor>
+    void visitExprs(TVisitor&& visitor) const {
+        expr.visit(visitor);
+    }
 };
 
 struct BinaryBinsSelectExprSyntax;
@@ -306,6 +360,12 @@ public:
     void serializeTo(ASTSerializer& serializer) const;
 
     static bool isKind(BinsSelectExprKind kind) { return kind == BinsSelectExprKind::Binary; }
+
+    template<typename TVisitor>
+    void visitExprs(TVisitor&& visitor) const {
+        left.visit(visitor);
+        right.visit(visitor);
+    }
 };
 
 struct SimpleBinsSelectExprSyntax;
@@ -324,6 +384,13 @@ public:
     void serializeTo(ASTSerializer& serializer) const;
 
     static bool isKind(BinsSelectExprKind kind) { return kind == BinsSelectExprKind::SetExpr; }
+
+    template<typename TVisitor>
+    void visitExprs(TVisitor&& visitor) const {
+        expr.visit(visitor);
+        if (matchesExpr)
+            matchesExpr->visit(visitor);
+    }
 };
 
 struct BinSelectWithFilterExprSyntax;
@@ -345,6 +412,14 @@ public:
     void serializeTo(ASTSerializer& serializer) const;
 
     static bool isKind(BinsSelectExprKind kind) { return kind == BinsSelectExprKind::WithFilter; }
+
+    template<typename TVisitor>
+    void visitExprs(TVisitor&& visitor) const {
+        expr.visit(visitor);
+        filter.visit(visitor);
+        if (matchesExpr)
+            matchesExpr->visit(visitor);
+    }
 };
 
 class CrossIdBinsSelectExpr : public BinsSelectExpr {
@@ -355,5 +430,27 @@ public:
 
     static bool isKind(BinsSelectExprKind kind) { return kind == BinsSelectExprKind::CrossId; }
 };
+
+template<typename TVisitor>
+void CoverageBinSymbol::visitExprs(TVisitor&& visitor) const {
+    if (auto expr = getIffExpr())
+        expr->visit(visitor);
+    if (auto expr = getNumberOfBinsExpr())
+        expr->visit(visitor);
+    if (auto expr = getSetCoverageExpr())
+        expr->visit(visitor);
+    if (auto expr = getWithExpr())
+        expr->visit(visitor);
+    if (auto expr = getCrossSelectExpr())
+        expr->visit(visitor);
+
+    for (auto val : getValues())
+        val->visit(visitor);
+
+    for (auto& set : getTransList()) {
+        for (auto& rangeList : set)
+            rangeList.visitExprs(visitor);
+    }
+}
 
 } // namespace slang
