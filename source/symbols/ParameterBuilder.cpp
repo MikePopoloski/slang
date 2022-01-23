@@ -178,7 +178,7 @@ const ParameterSymbolBase& ParameterBuilder::createParam(const Definition::Param
                 param->targetType.setType(comp.getErrorType());
             }
             else if (!newInitializer && param->isPortParam() &&
-                     !param->targetType.getTypeSyntax()) {
+                     !param->targetType.getTypeSyntax() && (decl.hasSyntax || !decl.givenType)) {
                 reportError(*param);
             }
         }

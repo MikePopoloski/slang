@@ -680,6 +680,13 @@ module m;
         i = sm.try_put(s);
         sm.peek("sdf");
     end
+
+    mailbox mb2;
+    initial begin
+        mb2.put(3);
+        mb2.put(3.14);
+        mb2.put(s);
+    end
 endmodule
 )");
 

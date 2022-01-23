@@ -516,6 +516,10 @@ bool Type::isEquivalent(const Type& rhs) const {
         return l->getArrayElementType()->isEquivalent(*r->getArrayElementType());
     }
 
+    // The 'untyped' type is equivalent with everything.
+    if (l->isUntypedType() || r->isUntypedType())
+        return true;
+
     return false;
 }
 

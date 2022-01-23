@@ -123,7 +123,8 @@ static const Symbol& createMailboxClass(Compilation& c) {
     };
 
     auto& mailbox = *c.allocGenericClass("mailbox", NL, specialize);
-    mailbox.addParameterDecl(Definition::ParameterDecl("T", NL, false, true, nullptr));
+    mailbox.addParameterDecl(
+        Definition::ParameterDecl("T", NL, false, true, &c.getType(SyntaxKind::Untyped)));
 
     return mailbox;
 }
