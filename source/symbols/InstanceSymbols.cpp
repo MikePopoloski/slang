@@ -47,7 +47,7 @@ std::pair<string_view, SourceLocation> getNameLoc(const HierarchicalInstanceSynt
 class InstanceBuilder {
 public:
     InstanceBuilder(const BindContext& context, const Definition& definition,
-                    const ParameterBuilder& paramBuilder,
+                    ParameterBuilder& paramBuilder,
                     span<const AttributeInstanceSyntax* const> attributes, bool isUninstantiated) :
         compilation(context.getCompilation()),
         context(context), definition(definition), paramBuilder(paramBuilder),
@@ -72,7 +72,7 @@ private:
     const BindContext& context;
     const Definition& definition;
     SmallVectorSized<int32_t, 4> path;
-    const ParameterBuilder& paramBuilder;
+    ParameterBuilder& paramBuilder;
     span<const AttributeInstanceSyntax* const> attributes;
     bool isUninstantiated = false;
 
@@ -196,7 +196,7 @@ InstanceSymbol::InstanceSymbol(string_view name, SourceLocation loc, InstanceBod
 }
 
 InstanceSymbol::InstanceSymbol(Compilation& compilation, string_view name, SourceLocation loc,
-                               const Definition& definition, const ParameterBuilder& paramBuilder,
+                               const Definition& definition, ParameterBuilder& paramBuilder,
                                bool isUninstantiated) :
     InstanceSymbol(name, loc,
                    InstanceBodySymbol::fromDefinition(compilation, definition, loc, paramBuilder,
@@ -213,14 +213,15 @@ InstanceSymbol& InstanceSymbol::createDefault(Compilation& compilation,
 }
 
 InstanceSymbol& InstanceSymbol::createVirtual(
-    const Scope& scope, SourceLocation loc, const Definition& definition,
+    const BindContext& context, SourceLocation loc, const Definition& definition,
     const ParameterValueAssignmentSyntax* paramAssignments) {
 
-    ParameterBuilder paramBuilder(scope, definition.name, definition.parameters);
+    ParameterBuilder paramBuilder(*context.scope, definition.name, definition.parameters);
+    paramBuilder.setInstanceContext(context);
     if (paramAssignments)
         paramBuilder.setAssignments(*paramAssignments);
 
-    auto& comp = scope.getCompilation();
+    auto& comp = context.getCompilation();
     auto& result =
         *comp.emplace<InstanceSymbol>(comp, definition.name, loc, definition, paramBuilder,
                                       /* isUninstantiated */ false);
@@ -228,7 +229,7 @@ InstanceSymbol& InstanceSymbol::createVirtual(
     // Set the parent pointer so that traversing upwards still works to find
     // the instantiation scope. This "virtual" instance never actually gets
     // added to the scope the proper way as a member.
-    result.setParent(scope);
+    result.setParent(*context.scope);
     return result;
 }
 
@@ -317,6 +318,7 @@ void InstanceSymbol::fromSyntax(Compilation& compilation,
     auto& netType = context.scope->getDefaultNetType();
 
     ParameterBuilder paramBuilder(*context.scope, definition->name, definition->parameters);
+    paramBuilder.setForceInvalidValues(isUninstantiated);
     if (syntax.parameters)
         paramBuilder.setAssignments(*syntax.parameters);
 
@@ -539,6 +541,7 @@ InstanceBodySymbol& InstanceBodySymbol::fromDefinition(Compilation& compilation,
                                                        const ParamOverrideNode* paramOverrideNode) {
 
     ParameterBuilder paramBuilder(definition.scope, definition.name, definition.parameters);
+    paramBuilder.setForceInvalidValues(isUninstantiated);
     if (paramOverrideNode)
         paramBuilder.setOverrides(paramOverrideNode);
 
@@ -549,7 +552,7 @@ InstanceBodySymbol& InstanceBodySymbol::fromDefinition(Compilation& compilation,
 InstanceBodySymbol& InstanceBodySymbol::fromDefinition(Compilation& comp,
                                                        const Definition& definition,
                                                        SourceLocation instanceLoc,
-                                                       const ParameterBuilder& paramBuilder,
+                                                       ParameterBuilder& paramBuilder,
                                                        bool isUninstantiated) {
     auto& declSyntax = definition.syntax;
     auto result = comp.emplace<InstanceBodySymbol>(comp, definition, paramBuilder.getOverrides(),
@@ -561,7 +564,6 @@ InstanceBodySymbol& InstanceBodySymbol::fromDefinition(Compilation& comp,
         result->addMembers(*import);
 
     // Add in all parameter ports.
-    bool unused1 = false, unused2 = false;
     SmallVectorSized<const ParameterSymbolBase*, 8> params;
     auto paramIt = definition.parameters.begin();
     while (paramIt != definition.parameters.end()) {
@@ -569,10 +571,8 @@ InstanceBodySymbol& InstanceBodySymbol::fromDefinition(Compilation& comp,
         if (!decl.isPortParam)
             break;
 
-        auto& param = paramBuilder.createParam(decl, instanceLoc, isUninstantiated,
-                                               /* suppressErrors */ false, unused1, unused2);
+        auto& param = paramBuilder.createParam(decl, *result, instanceLoc);
         params.append(&param);
-        result->addMember(param.symbol);
         paramIt++;
     }
 
@@ -593,11 +593,8 @@ InstanceBodySymbol& InstanceBodySymbol::fromDefinition(Compilation& comp,
                 auto& decl = *paramIt;
                 ASSERT(declarator.name.valueText() == decl.name);
 
-                auto& param =
-                    paramBuilder.createParam(decl, instanceLoc, isUninstantiated,
-                                             /* suppressErrors */ false, unused1, unused2);
+                auto& param = paramBuilder.createParam(decl, *result, instanceLoc);
                 params.append(&param);
-                result->addMember(param.symbol);
                 paramIt++;
             };
 

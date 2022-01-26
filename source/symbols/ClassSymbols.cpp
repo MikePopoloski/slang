@@ -758,18 +758,17 @@ const Type* GenericClassDefSymbol::getSpecializationImpl(
     bool isForDefault = syntax == nullptr;
 
     ParameterBuilder paramBuilder(*context.scope, name, paramDecls);
+    paramBuilder.setForceInvalidValues(forceInvalidParams);
+    paramBuilder.setSuppressErrors(isForDefault);
+    paramBuilder.setInstanceContext(context);
     if (syntax)
         paramBuilder.setAssignments(*syntax);
 
     SmallVectorSized<const ConstantValue*, 8> paramValues;
     SmallVectorSized<const Type*, 8> typeParams;
     for (auto& decl : paramDecls) {
-        bool isOverriden = false;
-        bool anyErrors = false;
-        auto& param = paramBuilder.createParam(decl, instanceLoc, forceInvalidParams, isForDefault,
-                                               isOverriden, anyErrors);
-
-        if (anyErrors) {
+        auto& param = paramBuilder.createParam(decl, *classType, instanceLoc);
+        if (paramBuilder.hasErrors()) {
             if (isForDefault)
                 return nullptr;
 
@@ -777,24 +776,14 @@ const Type* GenericClassDefSymbol::getSpecializationImpl(
             return &comp.getErrorType();
         }
 
-        auto& sym = param.symbol;
-        classType->addMember(sym);
-
-        if (sym.kind == SymbolKind::Parameter) {
-            auto& ps = sym.as<ParameterSymbol>();
-            if (!forceInvalidParams && isOverriden)
-                ps.getDeclaredType()->resolveAt(context);
-
-            if (!param.isLocalParam()) {
+        if (!param.isLocalParam()) {
+            auto& sym = param.symbol;
+            if (sym.kind == SymbolKind::Parameter) {
+                auto& ps = sym.as<ParameterSymbol>();
                 paramValues.append(&ps.getValue());
             }
-        }
-        else {
-            auto& tps = sym.as<TypeParameterSymbol>();
-            if (!forceInvalidParams && isOverriden)
-                tps.targetType.forceResolveAt(context);
-
-            if (!param.isLocalParam()) {
+            else {
+                auto& tps = sym.as<TypeParameterSymbol>();
                 typeParams.append(&tps.targetType.getType());
             }
         }

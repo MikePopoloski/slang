@@ -1577,3 +1577,21 @@ endmodule
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::ConstEvalHierarchicalName);
 }
+
+TEST_CASE("Virtual interface parameter resolution regress GH #510") {
+    auto tree = SyntaxTree::fromText(R"(
+interface I #(A=1);
+endinterface
+
+class C #(A=1);
+   virtual I #(.A(A)) intf;
+   function void f(virtual I #(.A(A)) ifc);
+      intf = ifc;
+   endfunction
+endclass
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}

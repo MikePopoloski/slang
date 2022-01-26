@@ -56,7 +56,7 @@ public:
     InstanceSymbol(string_view name, SourceLocation loc, InstanceBodySymbol& body);
 
     InstanceSymbol(Compilation& compilation, string_view name, SourceLocation loc,
-                   const Definition& definition, const ParameterBuilder& paramBuilder,
+                   const Definition& definition, ParameterBuilder& paramBuilder,
                    bool isUninstantiated);
 
     const Definition& getDefinition() const;
@@ -83,7 +83,7 @@ public:
                                          const ParamOverrideNode* paramOverrideNode);
 
     /// Creates a placeholder instance for a virtual interface type declaration.
-    static InstanceSymbol& createVirtual(const Scope& scope, SourceLocation loc,
+    static InstanceSymbol& createVirtual(const BindContext& context, SourceLocation loc,
                                          const Definition& definition,
                                          const ParameterValueAssignmentSyntax* paramAssignments);
 
@@ -139,7 +139,7 @@ public:
     static InstanceBodySymbol& fromDefinition(Compilation& compilation,
                                               const Definition& definition,
                                               SourceLocation instanceLoc,
-                                              const ParameterBuilder& paramBuilder,
+                                              ParameterBuilder& paramBuilder,
                                               bool isUninstantiated);
 
     void serializeTo(ASTSerializer& serializer) const;

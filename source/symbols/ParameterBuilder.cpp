@@ -16,6 +16,12 @@
 
 namespace slang {
 
+ParameterBuilder::ParameterBuilder(const Scope& scope, string_view definitionName,
+                                   span<const Decl> parameterDecls) :
+    scope(scope),
+    definitionName(definitionName), parameterDecls(parameterDecls) {
+}
+
 void ParameterBuilder::setAssignments(const ParameterValueAssignmentSyntax& syntax) {
     // Build up data structures to easily index the parameter assignments. We need to handle
     // both ordered assignment as well as named assignment, though a specific instance can only
@@ -116,10 +122,8 @@ void ParameterBuilder::setAssignments(const ParameterValueAssignmentSyntax& synt
 }
 
 const ParameterSymbolBase& ParameterBuilder::createParam(const Definition::ParameterDecl& decl,
-                                                         SourceLocation instanceLoc,
-                                                         bool forceInvalidValues,
-                                                         bool suppressErrors, bool& isOverriden,
-                                                         bool& anyErrors) const {
+                                                         Scope& newScope,
+                                                         SourceLocation instanceLoc) {
     auto reportError = [&](auto& param) {
         anyErrors = true;
         if (!suppressErrors) {
@@ -131,10 +135,8 @@ const ParameterSymbolBase& ParameterBuilder::createParam(const Definition::Param
 
     auto& comp = scope.getCompilation();
     const ExpressionSyntax* newInitializer = nullptr;
-    if (auto it = assignments.find(decl.name); it != assignments.end()) {
+    if (auto it = assignments.find(decl.name); it != assignments.end())
         newInitializer = it->second;
-        isOverriden = newInitializer != nullptr;
-    }
 
     if (decl.isTypeParam) {
         auto param = comp.emplace<TypeParameterSymbol>(decl.name, decl.location, decl.isLocalParam,
@@ -151,10 +153,10 @@ const ParameterSymbolBase& ParameterBuilder::createParam(const Definition::Param
                 param->targetType.setTypeSyntax(*decl.typeDecl->assignment->type);
         }
 
+        auto& tt = param->targetType;
         if (newInitializer) {
             // If this is a NameSyntax, the parser didn't know we were assigning to
             // a type parameter, so fix it up into a NamedTypeSyntax to get a type from it.
-            auto& tt = param->targetType;
             tt.addFlags(DeclaredTypeFlags::TypeOverridden);
             if (NameSyntax::isKind(newInitializer->kind)) {
                 // const_cast is ugly but safe here, we're only going to refer to it
@@ -173,12 +175,20 @@ const ParameterSymbolBase& ParameterBuilder::createParam(const Definition::Param
             }
         }
 
+        // Add to scope *after* setting the type on the member,
+        // so that enums get picked up correctly.
+        newScope.addMember(*param);
+
         if (!param->isLocalParam()) {
             if (forceInvalidValues) {
-                param->targetType.setType(comp.getErrorType());
+                tt.setType(comp.getErrorType());
             }
-            else if (!newInitializer && param->isPortParam() &&
-                     !param->targetType.getTypeSyntax() && (decl.hasSyntax || !decl.givenType)) {
+            else if (newInitializer) {
+                if (instanceContext)
+                    tt.forceResolveAt(*instanceContext);
+            }
+            else if (param->isPortParam() && !tt.getTypeSyntax() &&
+                     (decl.hasSyntax || !decl.givenType)) {
                 reportError(*param);
             }
         }
@@ -203,11 +213,16 @@ const ParameterSymbolBase& ParameterBuilder::createParam(const Definition::Param
             param->setFromDeclarator(*decl.valueDecl);
         }
 
+        auto& declType = *param->getDeclaredType();
         if (newInitializer) {
-            param->getDeclaredType()->addFlags(DeclaredTypeFlags::InitializerOverridden);
+            declType.addFlags(DeclaredTypeFlags::InitializerOverridden);
             param->setInitializerSyntax(*newInitializer,
                                         newInitializer->getFirstToken().location());
         }
+
+        // Add to scope *after* setting the type on the member,
+        // so that enums get picked up correctly.
+        newScope.addMember(*param);
 
         // If there is an override node, see if this parameter is in it.
         if (overrideNode) {
@@ -222,7 +237,11 @@ const ParameterSymbolBase& ParameterBuilder::createParam(const Definition::Param
             if (forceInvalidValues) {
                 param->setValue(comp, nullptr, /* needsCoercion */ false);
             }
-            else if (param->isPortParam() && !param->getDeclaredType()->getInitializerSyntax()) {
+            else if (newInitializer) {
+                if (instanceContext)
+                    declType.resolveAt(*instanceContext);
+            }
+            else if (param->isPortParam() && !declType.getInitializerSyntax()) {
                 reportError(*param);
             }
         }
