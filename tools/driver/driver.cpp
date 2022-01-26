@@ -570,9 +570,8 @@ int driverMain(int argc, TArgs argv, bool suppressColorsStdout, bool suppressCol
             sourceManager.addUserDirectory(string_view(dir));
         }
         catch (const std::exception&) {
-            OS::printE(fg(errorColor), "error: ");
+            OS::printE(fg(warningColor), "warning: ");
             OS::printE("include directory '{}' does not exist\n", dir);
-            anyErrors = true;
         }
     }
 
@@ -581,9 +580,8 @@ int driverMain(int argc, TArgs argv, bool suppressColorsStdout, bool suppressCol
             sourceManager.addSystemDirectory(string_view(dir));
         }
         catch (const std::exception&) {
-            OS::printE(fg(errorColor), "error: ");
+            OS::printE(fg(warningColor), "warning: ");
             OS::printE("include directory '{}' does not exist\n", dir);
-            anyErrors = true;
         }
     }
 
