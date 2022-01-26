@@ -391,8 +391,7 @@ module Top;
     typedef struct s1_t;
 
 endmodule
-)",
-                                     "source");
+)");
 
     Compilation compilation;
     const auto& instance = evalModule(tree, compilation).body;
@@ -536,8 +535,7 @@ module Top(logic f[3'b1x0],
     struct packed { logic j[3]; } foo;
 
 endmodule
-)",
-                                     "source");
+)");
 
     Compilation compilation;
     evalModule(tree, compilation);
@@ -582,8 +580,7 @@ module m;
     test2 t;
     chandle j = t;
 endmodule
-)",
-                                     "source");
+)");
 
     Compilation compilation;
     compilation.addSyntaxTree(tree);

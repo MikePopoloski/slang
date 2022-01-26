@@ -61,14 +61,14 @@ public:
     Token next();
 
     /// Push a new source file onto the stack.
-    void pushSource(string_view source, string_view name = "");
+    void pushSource(string_view source, string_view name = "source");
     void pushSource(SourceBuffer buffer);
 
     /// Predefines the given macro definition. The given definition string is lexed
     /// as if it were source text immediately following a `define directive.
     /// If any diagnostics are printed for the created text, they will be marked
-    /// as coming from @a fileName.
-    void predefine(const std::string& definition, string_view fileName = "<api>");
+    /// as coming from @a name.
+    void predefine(const std::string& definition, string_view name = "<api>");
 
     /// Undefines a previously defined macro. If the macro is not defined, or
     /// if you pass the name of an intrinsic macro, this call returns false and

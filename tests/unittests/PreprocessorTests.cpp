@@ -2,11 +2,11 @@
 
 #include "slang/syntax/SyntaxPrinter.h"
 
-std::string preprocess(string_view text, string_view name = "source", const Bag& options = {}) {
+std::string preprocess(string_view text, const Bag& options = {}) {
     diagnostics.clear();
 
     Preprocessor preprocessor(getSourceManager(), alloc, diagnostics, options);
-    preprocessor.pushSource(getSourceManager().assignText(name, text));
+    preprocessor.pushSource(text);
 
     std::string result;
     while (true) {
@@ -88,7 +88,7 @@ TEST_CASE("Include directive errors") {
     Bag options;
     options.set(ppOptions);
 
-    preprocess(text, "source", options);
+    preprocess(text, options);
 
     REQUIRE(diagnostics.size() == 5);
     CHECK(diagnostics[0].code == diag::CouldNotOpenIncludeFile);
@@ -1030,9 +1030,7 @@ TEST_CASE("FILE Directive") {
     Token token = lexToken(text);
 
     REQUIRE(token.kind == TokenKind::StringLiteral);
-    // we set the name by default for files created this way as
-    // <unnamed_bufferN> for some N, let's not be sensitive to that number
-    CHECK(token.valueText().substr(0, 15) == "<unnamed_buffer");
+    CHECK(token.valueText() == "source");
     CHECK_DIAGNOSTICS_EMPTY;
 }
 

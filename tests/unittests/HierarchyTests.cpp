@@ -705,8 +705,7 @@ module baz #(parameter int i)();
         always asdf = 1;
     end
 endmodule
-)",
-                                     "source");
+)");
 
     Compilation compilation;
     compilation.addSyntaxTree(tree);

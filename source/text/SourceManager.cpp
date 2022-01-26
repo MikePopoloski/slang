@@ -312,14 +312,21 @@ SourceBuffer SourceManager::assignText(string_view path, string_view text,
     return assignBuffer(path, std::move(buffer), includedFrom);
 }
 
-SourceBuffer SourceManager::assignBuffer(string_view path, std::vector<char>&& buffer,
+SourceBuffer SourceManager::assignBuffer(string_view pathStr, std::vector<char>&& buffer,
                                          SourceLocation includedFrom) {
-    std::unique_lock lock(mut);
-    userFileBuffers.emplace_back(FileData(nullptr, std::string(path), std::move(buffer)));
 
-    FileData* fd = &userFileBuffers.back();
-    userFileLookup[std::string(path)] = fd;
-    return createBufferEntry(fd, includedFrom, lock);
+    // first see if we have this file cached
+    fs::path path(pathStr);
+    {
+        std::shared_lock lock(mut);
+        auto it = lookupCache.find(path.u8string());
+        if (it != lookupCache.end()) {
+            throw std::runtime_error(
+                "Buffer with the given path has already been assigned to the source manager");
+        }
+    }
+
+    return cacheBuffer(path, includedFrom, std::move(buffer));
 }
 
 SourceBuffer SourceManager::readSource(const fs::path& path) {
@@ -369,12 +376,6 @@ SourceBuffer SourceManager::readHeader(string_view path, SourceLocation included
         SourceBuffer result = openCached(d / p, includedFrom);
         if (result.id)
             return result;
-    }
-
-    // As a last resort, check for user specified in-memory buffers.
-    std::unique_lock writeLock(mut);
-    if (auto it = userFileLookup.find(std::string(path)); it != userFileLookup.end()) {
-        return createBufferEntry(it->second, includedFrom, writeLock);
     }
 
     return SourceBuffer();
@@ -452,7 +453,7 @@ SourceBuffer SourceManager::createBufferEntry(FileData* fd, SourceLocation inclu
 
 bool SourceManager::isCached(const fs::path& path) const {
     std::error_code ec;
-    fs::path absPath = fs::canonical(path, ec);
+    fs::path absPath = fs::weakly_canonical(path, ec);
     if (ec)
         return false;
 
@@ -463,7 +464,7 @@ bool SourceManager::isCached(const fs::path& path) const {
 
 SourceBuffer SourceManager::openCached(const fs::path& fullPath, SourceLocation includedFrom) {
     std::error_code ec;
-    fs::path absPath = fs::canonical(fullPath, ec);
+    fs::path absPath = fs::weakly_canonical(fullPath, ec);
     if (ec)
         return SourceBuffer();
 
@@ -505,7 +506,10 @@ SourceBuffer SourceManager::cacheBuffer(const fs::path& path, SourceLocation inc
     auto fd = std::make_unique<FileData>(&*directories.insert(path.parent_path()).first,
                                          std::move(name), std::move(buffer));
 
-    FileData* fdPtr = lookupCache.emplace(path.u8string(), std::move(fd)).first->second.get();
+    auto [it, inserted] = lookupCache.emplace(path.u8string(), std::move(fd));
+    ASSERT(inserted);
+
+    FileData* fdPtr = it->second.get();
     return createBufferEntry(fdPtr, includedFrom, lock);
 }
 
@@ -561,13 +565,22 @@ bool SourceManager::readFile(const fs::path& path, std::vector<char>& buffer) {
 
 const SourceManager::LineDirectiveInfo* SourceManager::FileInfo::getPreviousLineDirective(
     size_t rawLineNumber) const {
+
+    if (lineDirectives.empty())
+        return nullptr;
+
     auto it = std::lower_bound(
         lineDirectives.begin(), lineDirectives.end(), LineDirectiveInfo({}, rawLineNumber, 0, 0),
         [](const auto& a, const auto& b) { return a.lineInFile < b.lineInFile; });
 
-    if (it != lineDirectives.begin()) {
-        // lower_bound will give us an iterator to the first directive after the command
-        // let's instead get a pointer to the one right before it
+    // lower_bound will give us an iterator to the first directive after the command
+    // let's instead get a pointer to the one right before it
+    if (it == lineDirectives.begin()) {
+        if (it->lineInFile == rawLineNumber)
+            return &(*it);
+        return nullptr;
+    }
+    else {
         if (it == lineDirectives.end()) {
             // Check to see whether the actual last directive is before the
             // given line number
@@ -576,8 +589,6 @@ const SourceManager::LineDirectiveInfo* SourceManager::FileInfo::getPreviousLine
         }
         return &*(it - 1);
     }
-
-    return nullptr;
 }
 
 size_t SourceManager::getRawLineNumber(SourceLocation location) const {

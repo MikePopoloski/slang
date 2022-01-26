@@ -247,12 +247,6 @@ private:
     // cache for file lookups; this holds on to the actual file data
     std::unordered_map<std::string, std::unique_ptr<FileData>> lookupCache;
 
-    // extra file data that came from programmatic buffers instead of a real file on disk
-    std::deque<FileData> userFileBuffers;
-
-    // map to lookup user programmatic buffers
-    flat_hash_map<std::string, FileData*> userFileLookup;
-
     // directories for system and user includes
     std::vector<fs::path> systemDirectories;
     std::vector<fs::path> userDirectories;

@@ -24,8 +24,9 @@ std::shared_ptr<SyntaxTree> SyntaxTree::fromFile(string_view path) {
     return fromFile(path, getDefaultSourceManager());
 }
 
-std::shared_ptr<SyntaxTree> SyntaxTree::fromText(string_view text, string_view name) {
-    return fromText(text, getDefaultSourceManager(), name);
+std::shared_ptr<SyntaxTree> SyntaxTree::fromText(string_view text, string_view name,
+                                                 string_view path) {
+    return fromText(text, getDefaultSourceManager(), name, path);
 }
 
 std::shared_ptr<SyntaxTree> SyntaxTree::fromFile(string_view path, SourceManager& sourceManager,
@@ -37,10 +38,15 @@ std::shared_ptr<SyntaxTree> SyntaxTree::fromFile(string_view path, SourceManager
 }
 
 std::shared_ptr<SyntaxTree> SyntaxTree::fromText(string_view text, SourceManager& sourceManager,
-                                                 string_view name, const Bag& options) {
-    SourceBuffer buffer = sourceManager.assignText(name, text);
+                                                 string_view name, string_view path,
+                                                 const Bag& options) {
+    SourceBuffer buffer = sourceManager.assignText(path, text);
     if (!buffer)
         return nullptr;
+
+    if (!name.empty())
+        sourceManager.addLineDirective(SourceLocation(buffer.id, 0), 2, name, 0);
+
     return create(sourceManager, span(&buffer, 1), options, true);
 }
 

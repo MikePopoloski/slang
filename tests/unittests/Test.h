@@ -67,8 +67,8 @@ inline SourceManager& getSourceManager() {
     if (!sourceManager) {
         auto testDir = findTestDir();
         sourceManager = new SourceManager();
-        sourceManager->addUserDirectory(string_view(testDir));
-        sourceManager->addSystemDirectory(string_view(testDir));
+        sourceManager->addUserDirectory(testDir);
+        sourceManager->addSystemDirectory(testDir);
         sourceManager->addSystemDirectory(string_view(testDir + "system/"));
     }
     return *sourceManager;
@@ -122,7 +122,7 @@ inline const ModuleDeclarationSyntax& parseModule(const std::string& text) {
     diagnostics.clear();
 
     Preprocessor preprocessor(getSourceManager(), alloc, diagnostics);
-    preprocessor.pushSource(string_view(text));
+    preprocessor.pushSource(text);
 
     Parser parser(preprocessor);
     return parser.parseModule();
@@ -132,7 +132,7 @@ inline const ClassDeclarationSyntax& parseClass(const std::string& text) {
     diagnostics.clear();
 
     Preprocessor preprocessor(getSourceManager(), alloc, diagnostics);
-    preprocessor.pushSource(string_view(text));
+    preprocessor.pushSource(text);
 
     Parser parser(preprocessor);
     return parser.parseClass();
@@ -142,7 +142,7 @@ inline const MemberSyntax& parseMember(const std::string& text) {
     diagnostics.clear();
 
     Preprocessor preprocessor(getSourceManager(), alloc, diagnostics);
-    preprocessor.pushSource(string_view(text));
+    preprocessor.pushSource(text);
 
     Parser parser(preprocessor);
     MemberSyntax* member = parser.parseSingleMember(SyntaxKind::ModuleDeclaration);
@@ -154,7 +154,7 @@ inline const StatementSyntax& parseStatement(const std::string& text) {
     diagnostics.clear();
 
     Preprocessor preprocessor(getSourceManager(), alloc, diagnostics);
-    preprocessor.pushSource(string_view(text));
+    preprocessor.pushSource(text);
 
     Parser parser(preprocessor);
     return parser.parseStatement();
@@ -164,7 +164,7 @@ inline const ExpressionSyntax& parseExpression(const std::string& text) {
     diagnostics.clear();
 
     Preprocessor preprocessor(getSourceManager(), alloc, diagnostics);
-    preprocessor.pushSource(string_view(text), "source");
+    preprocessor.pushSource(text);
 
     Parser parser(preprocessor);
     return parser.parseExpression();
@@ -174,7 +174,7 @@ inline const CompilationUnitSyntax& parseCompilationUnit(const std::string& text
     diagnostics.clear();
 
     Preprocessor preprocessor(getSourceManager(), alloc, diagnostics);
-    preprocessor.pushSource(string_view(text), "source");
+    preprocessor.pushSource(text);
 
     Parser parser(preprocessor);
     return parser.parseCompilationUnit();

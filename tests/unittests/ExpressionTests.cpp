@@ -520,8 +520,7 @@ module m1;
     int x = 'd;
 
 endmodule
-)",
-                                     "source");
+)");
 
     Compilation compilation;
     compilation.addSyntaxTree(tree);
@@ -574,8 +573,7 @@ module m1;
     real a = 9999e99999;
     real b = 9999e-99999;
 endmodule
-)",
-                                     "source");
+)");
 
     Compilation compilation;
     compilation.addSyntaxTree(tree);

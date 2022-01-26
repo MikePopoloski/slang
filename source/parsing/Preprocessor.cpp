@@ -36,8 +36,11 @@ Preprocessor::Preprocessor(const Preprocessor& other) :
 }
 
 void Preprocessor::pushSource(string_view source, string_view name) {
-    auto buffer = sourceManager.assignText(name, source);
+    auto buffer = sourceManager.assignText(source);
     pushSource(buffer);
+
+    if (!name.empty())
+        sourceManager.addLineDirective(SourceLocation(buffer.id, 0), 2, name, 0);
 }
 
 void Preprocessor::pushSource(SourceBuffer buffer) {
@@ -46,11 +49,9 @@ void Preprocessor::pushSource(SourceBuffer buffer) {
     lexerStack.emplace_back(std::make_unique<Lexer>(buffer, alloc, diagnostics, lexerOptions));
 }
 
-void Preprocessor::predefine(const std::string& definition, string_view fileName) {
-    std::string text = "`define " + definition + "\n";
-
+void Preprocessor::predefine(const std::string& definition, string_view name) {
     Preprocessor pp(*this);
-    pp.pushSource(sourceManager.assignText(fileName, string_view(text)));
+    pp.pushSource("`define " + definition + "\n", name);
 
     // Consume all of the definition text.
     while (pp.next().kind != TokenKind::EndOfFile) {

@@ -696,8 +696,7 @@ module m;
     always_comb foo.asdf::blah;
 
 endmodule
-)",
-                                     "source");
+)");
 
     Compilation compilation;
     compilation.addSyntaxTree(tree);
@@ -923,8 +922,7 @@ module M;
     wire s = gen2.varArray[1];  // ok
 
 endmodule
-)",
-                                     "source");
+)");
 
     Compilation compilation;
     compilation.addSyntaxTree(tree);
@@ -1029,8 +1027,7 @@ module M;
     always_comb legit = foo2();
 
 endmodule
-)",
-                                     "source");
+)");
 
     Compilation compilation;
     compilation.addSyntaxTree(tree);
@@ -1280,8 +1277,7 @@ module m;
     int something;
     int foo = someIn;
 endmodule
-)",
-                                     "source");
+)");
 
     Compilation compilation;
     compilation.addSyntaxTree(tree);

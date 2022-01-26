@@ -19,7 +19,7 @@ ScriptSession::ScriptSession() :
 }
 
 ConstantValue ScriptSession::eval(string_view text) {
-    syntaxTrees.emplace_back(SyntaxTree::fromText(text, "source"));
+    syntaxTrees.emplace_back(SyntaxTree::fromText(text));
 
     const auto& node = syntaxTrees.back()->root();
     switch (node.kind) {

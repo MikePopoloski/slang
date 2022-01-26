@@ -1147,8 +1147,7 @@ module m;
     end
         
 endmodule
-)",
-                                     "source");
+)");
 
     Compilation compilation;
     compilation.addSyntaxTree(tree);

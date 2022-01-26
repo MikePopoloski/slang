@@ -14,8 +14,8 @@ TEST_CASE("Diagnostic Line Number") {
     CHECK(token.valueText() == "ident");
     CHECK(diagnostics.size() == 1);
     std::string message = to_string(diagnostics[0]);
-    int bufNum, line, col;
-    sscanf(message.c_str(), "<unnamed_buffer%d>:%d:%d", &bufNum, &line, &col);
+    int line, col;
+    sscanf(message.c_str(), "source:%d:%d", &line, &col);
     CHECK(line == 1);
     CHECK(col == 10);
 }
@@ -89,8 +89,7 @@ module m;
     struct { int i; } asdf;
     int i = `BAR(asdf.bar);
 endmodule
-)",
-                                     "source");
+)");
 
     Compilation compilation;
     compilation.addSyntaxTree(tree);
@@ -113,8 +112,7 @@ module m;
     struct { int i; } asdf;
     int i = `BAR(asdf);
 endmodule
-)",
-                                     "source");
+)");
 
     Compilation compilation;
     compilation.addSyntaxTree(tree);
@@ -144,8 +142,7 @@ module m;
     int i;
     initial i = `BAR(asdf);
 endmodule
-)",
-                                     "source");
+)");
 
     Compilation compilation;
     compilation.addSyntaxTree(tree);
@@ -173,8 +170,7 @@ TEST_CASE("Diag caret within macro arg only") {
 module m;
     int i = `BAR(++);
 endmodule
-)",
-                                     "source");
+)");
 
     Compilation compilation;
     compilation.addSyntaxTree(tree);
@@ -199,8 +195,7 @@ module m;
     struct { int i; } bar;
     int i = `BAR(asdf, bar);
 endmodule
-)",
-                                     "source");
+)");
 
     Compilation compilation;
     compilation.addSyntaxTree(tree);
@@ -230,8 +225,7 @@ module m;
     struct { int i; } bar;
     int i = `BAR(asdf, bar);
 endmodule
-)",
-                                     "source");
+)");
 
     Compilation compilation;
     compilation.addSyntaxTree(tree);
@@ -258,8 +252,7 @@ module m;
     int i;
     int j = `TOP;
 endmodule
-)",
-                                     "source");
+)");
 
     Compilation compilation;
     compilation.addSyntaxTree(tree);
@@ -284,8 +277,7 @@ module m;
     int i;
     int j = `PASS(i + 1, ());
 endmodule
-)",
-                                     "source");
+)");
 
     Compilation compilation;
     compilation.addSyntaxTree(tree);
@@ -310,8 +302,7 @@ module m;
     bit b;
     int j = (b) `PASS([1]);
 endmodule
-)",
-                                     "source");
+)");
 
     Compilation compilation;
     compilation.addSyntaxTree(tree);
@@ -344,8 +335,7 @@ module m;
 `include "fake-include1.svh"
     ;
 endmodule
-)",
-                                     "source");
+)");
 
     Compilation compilation;
     compilation.addSyntaxTree(tree);
@@ -362,7 +352,7 @@ i + 1 ()
 }
 
 TEST_CASE("Diag include stack -- skipped tokens") {
-    auto& sm = SyntaxTree::getDefaultSourceManager();
+    SourceManager sm;
     sm.assignText("fake-include1.svh", R"(
 `include <asdf
 )");
@@ -371,7 +361,7 @@ module m;
 `include "fake-include1.svh"
 endmodule
 )",
-                                     "source");
+                                     sm);
 
     Compilation compilation;
     compilation.addSyntaxTree(tree);
@@ -507,8 +497,8 @@ module m;
 `pragma diagnostic ignore=("default", "empty-member")
     ; // ignored
 endmodule
-)",
-                                     "source");
+)");
+
     Compilation compilation;
     compilation.addSyntaxTree(tree);
 
