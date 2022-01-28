@@ -765,3 +765,40 @@ endprogram
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Hierarchical interface port connection") {
+    auto tree = SyntaxTree::fromText(R"(
+module Top();
+    dut inst_0(inst1.intf_inst_1);
+    dut inst_1(inst2.intf_inst_2);
+    sub_1 inst1();
+    sub_2 inst2();
+endmodule
+
+module dut(intf pi);
+    parameter P = pi.P;
+endmodule
+
+module sub_1();
+    intf #(3)intf_inst_1();
+endmodule
+
+module sub_2();
+    intf #(4)intf_inst_2();
+endmodule
+
+interface intf();
+    parameter P = 0;
+endinterface
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    auto& p1 = compilation.getRoot().lookupName<ParameterSymbol>("Top.inst_0.P");
+    CHECK(p1.getValue().integer() == 3);
+
+    auto& p2 = compilation.getRoot().lookupName<ParameterSymbol>("Top.inst_1.P");
+    CHECK(p2.getValue().integer() == 4);
+}

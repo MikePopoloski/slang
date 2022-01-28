@@ -100,6 +100,9 @@ struct CompilationOptions {
     /// be used during compilation.
     MinTypMax minTypMax = MinTypMax::Typ;
 
+    /// If true, allow hierarchical names in constant expressions.
+    bool allowHierarchicalConst = false;
+
     /// If true, compile in "linting" mode where we suppress errors that could
     /// be caused by not having an elaborated design.
     bool lintMode = false;

@@ -35,6 +35,8 @@ public:
 protected:
     ValueExpressionBase(ExpressionKind kind, const ValueSymbol& symbol, SourceRange sourceRange) :
         Expression(kind, symbol.getType(), sourceRange), symbol(symbol) {}
+
+    bool verifyConstantBase(EvalContext& context) const;
 };
 
 /// Represents an expression that references a named value.

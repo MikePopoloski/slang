@@ -1532,3 +1532,33 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Hierarchical names in constexpr option") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    n #(4) n1();
+    o o1();
+endmodule
+
+module n #(int i);
+endmodule
+
+module o;
+    p p1();
+endmodule
+
+module p;
+    parameter int foo = n1.i;
+endmodule
+)");
+
+    CompilationOptions options;
+    options.allowHierarchicalConst = true;
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    auto& foo = compilation.getRoot().lookupName<ParameterSymbol>("m.o1.p1.foo");
+    CHECK(foo.getValue().integer() == 4);
+}

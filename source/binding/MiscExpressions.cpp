@@ -164,6 +164,29 @@ optional<bitwidth_t> ValueExpressionBase::getEffectiveWidthImpl() const {
     }
 }
 
+bool ValueExpressionBase::verifyConstantBase(EvalContext& context) const {
+    // Class types are disallowed in constant expressions. Note that I don't see anything
+    // in the spec that would explicitly disallow them, but literally every tool issues
+    // an error so for now we will follow suit.
+    if (type->isClass()) {
+        context.addDiag(diag::ConstEvalClassType, sourceRange);
+        return false;
+    }
+
+    // Same for covergroups.
+    if (type->isCovergroup()) {
+        context.addDiag(diag::ConstEvalCovergroupType, sourceRange);
+        return false;
+    }
+
+    if (symbol.kind == SymbolKind::Specparam && !context.areSpecparamsAllowed()) {
+        context.addDiag(diag::SpecparamInConstant, sourceRange);
+        return false;
+    }
+
+    return true;
+}
+
 void ValueExpressionBase::serializeTo(ASTSerializer& serializer) const {
     serializer.writeLink("symbol", symbol);
 }
@@ -219,24 +242,8 @@ bool NamedValueExpression::verifyConstantImpl(EvalContext& context) const {
     if (context.isScriptEval())
         return true;
 
-    // Class types are disallowed in constant expressions. Note that I don't see anything
-    // in the spec that would explicitly disallow them, but literally every tool issues
-    // an error so for now we will follow suit.
-    if (type->isClass()) {
-        context.addDiag(diag::ConstEvalClassType, sourceRange);
+    if (!verifyConstantBase(context))
         return false;
-    }
-
-    // Same for covergroups.
-    if (type->isCovergroup()) {
-        context.addDiag(diag::ConstEvalCovergroupType, sourceRange);
-        return false;
-    }
-
-    if (symbol.kind == SymbolKind::Specparam && !context.areSpecparamsAllowed()) {
-        context.addDiag(diag::SpecparamInConstant, sourceRange);
-        return false;
-    }
 
     const EvalContext::Frame& frame = context.topFrame();
     const SubroutineSymbol* subroutine = frame.subroutine;
@@ -275,13 +282,46 @@ bool NamedValueExpression::verifyConstantImpl(EvalContext& context) const {
 }
 
 ConstantValue HierarchicalValueExpression::evalImpl(EvalContext& context) const {
-    context.addDiag(diag::ConstEvalHierarchicalName, sourceRange) << symbol.name;
-    return nullptr;
+    if (!verifyConstantImpl(context))
+        return nullptr;
+
+    switch (symbol.kind) {
+        case SymbolKind::Parameter: {
+            auto v = symbol.as<ParameterSymbol>().getValue();
+            if (v.isUnbounded()) {
+                if (auto target = context.getQueueTarget()) {
+                    int32_t size = (int32_t)target->queue()->size();
+                    return SVInt(32, uint64_t(size - 1), true);
+                }
+            }
+            return v;
+        }
+        case SymbolKind::EnumValue:
+            return symbol.as<EnumValueSymbol>().getValue();
+        case SymbolKind::Specparam:
+            return symbol.as<SpecparamSymbol>().getValue();
+        default:
+            THROW_UNREACHABLE;
+    }
 }
 
 bool HierarchicalValueExpression::verifyConstantImpl(EvalContext& context) const {
-    if (context.isScriptEval())
-        return true;
+    if (!context.compilation.getOptions().allowHierarchicalConst) {
+        context.addDiag(diag::ConstEvalHierarchicalName, sourceRange) << symbol.name;
+        return false;
+    }
+
+    if (!verifyConstantBase(context))
+        return false;
+
+    switch (symbol.kind) {
+        case SymbolKind::Parameter:
+        case SymbolKind::EnumValue:
+        case SymbolKind::Specparam:
+            return true;
+        default:
+            break;
+    }
 
     context.addDiag(diag::ConstEvalHierarchicalName, sourceRange) << symbol.name;
     return false;
