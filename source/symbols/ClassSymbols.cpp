@@ -764,6 +764,8 @@ const Type* GenericClassDefSymbol::getSpecializationImpl(
     if (syntax)
         paramBuilder.setAssignments(*syntax);
 
+    SourceRange instRange = { instanceLoc, instanceLoc + 1 };
+
     SmallVectorSized<const ConstantValue*, 8> paramValues;
     SmallVectorSized<const Type*, 8> typeParams;
     for (auto& decl : paramDecls) {
@@ -780,7 +782,7 @@ const Type* GenericClassDefSymbol::getSpecializationImpl(
             auto& sym = param.symbol;
             if (sym.kind == SymbolKind::Parameter) {
                 auto& ps = sym.as<ParameterSymbol>();
-                paramValues.append(&ps.getValue());
+                paramValues.append(&ps.getValue(instRange));
             }
             else {
                 auto& tps = sym.as<TypeParameterSymbol>();

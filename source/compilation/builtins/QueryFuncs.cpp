@@ -117,7 +117,7 @@ public:
         return comp.getBitType();
     }
 
-    ConstantValue eval(EvalContext&, const Args& args, SourceRange,
+    ConstantValue eval(EvalContext&, const Args& args, SourceRange range,
                        const CallExpression::SystemCallInfo&) const final {
         if (args[0]->type->isUnbounded())
             return SVInt(1, 1, false);
@@ -125,7 +125,7 @@ public:
         if (args[0]->kind == ExpressionKind::NamedValue) {
             auto sym = args[0]->getSymbolReference();
             if (sym && sym->kind == SymbolKind::Parameter &&
-                sym->as<ParameterSymbol>().getValue().isUnbounded())
+                sym->as<ParameterSymbol>().getValue(range).isUnbounded())
                 return SVInt(1, 1, false);
         }
 

@@ -9,6 +9,7 @@
 #include "slang/binding/BindContext.h"
 #include "slang/binding/Expression.h"
 #include "slang/compilation/Compilation.h"
+#include "slang/diagnostics/ConstEvalDiags.h"
 #include "slang/diagnostics/DeclarationsDiags.h"
 #include "slang/diagnostics/LookupDiags.h"
 #include "slang/diagnostics/TypesDiags.h"
@@ -556,7 +557,7 @@ EnumValueSymbol& EnumValueSymbol::fromSyntax(Compilation& compilation,
     return *ev;
 }
 
-const ConstantValue& EnumValueSymbol::getValue() const {
+const ConstantValue& EnumValueSymbol::getValue(SourceRange referencingRange) const {
     if (!value) {
         // If no value has been explicitly set, try to set it
         // from our initializer.
@@ -566,6 +567,19 @@ const ConstantValue& EnumValueSymbol::getValue() const {
             ASSERT(scope);
 
             BindContext ctx(*scope, LookupLocation::max);
+
+            if (evaluating) {
+                ASSERT(referencingRange.start());
+
+                auto& diag = ctx.addDiag(diag::ConstEvalParamCycle, location) << name;
+                diag.addNote(diag::NoteReferencedHere, referencingRange.start())
+                    << referencingRange;
+                return ConstantValue::Invalid;
+            }
+
+            evaluating = true;
+            auto guard = ScopeGuard([this] { evaluating = false; });
+
             value = scope->getCompilation().allocConstant(ctx.eval(*init));
         }
         else {

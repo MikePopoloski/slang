@@ -8,6 +8,7 @@
 
 #include "slang/binding/Expression.h"
 #include "slang/compilation/Compilation.h"
+#include "slang/diagnostics/ConstEvalDiags.h"
 #include "slang/diagnostics/DeclarationsDiags.h"
 #include "slang/symbols/ASTSerializer.h"
 #include "slang/syntax/AllSyntax.h"
@@ -74,7 +75,7 @@ void ParameterSymbol::fromSyntax(const Scope& scope, const ParameterDeclarationS
     }
 }
 
-const ConstantValue& ParameterSymbol::getValue() const {
+const ConstantValue& ParameterSymbol::getValue(SourceRange referencingRange) const {
     if (!value) {
         // If no value has been explicitly set, try to set it
         // from our initializer.
@@ -84,6 +85,19 @@ const ConstantValue& ParameterSymbol::getValue() const {
             ASSERT(scope);
 
             BindContext ctx(*scope, LookupLocation::max);
+
+            if (evaluating) {
+                ASSERT(referencingRange.start());
+
+                auto& diag = ctx.addDiag(diag::ConstEvalParamCycle, location) << name;
+                diag.addNote(diag::NoteReferencedHere, referencingRange.start())
+                    << referencingRange;
+                return ConstantValue::Invalid;
+            }
+
+            evaluating = true;
+            auto guard = ScopeGuard([this] { evaluating = false; });
+
             value = scope->getCompilation().allocConstant(ctx.eval(*init));
 
             // If this parameter has an implicit type declared and it was assigned
@@ -111,9 +125,9 @@ const ConstantValue& ParameterSymbol::getValue() const {
     return *value;
 }
 
-bool ParameterSymbol::isImplicitString() const {
+bool ParameterSymbol::isImplicitString(SourceRange referencingRange) const {
     if (!value)
-        getValue();
+        getValue(referencingRange);
     return fromStringLit || value->bad();
 }
 
@@ -285,7 +299,7 @@ SpecparamSymbol::SpecparamSymbol(string_view name, SourceLocation loc) :
                 DeclaredTypeFlags::InferImplicit | DeclaredTypeFlags::InitializerCantSeeParent) {
 }
 
-const ConstantValue& SpecparamSymbol::getValue() const {
+const ConstantValue& SpecparamSymbol::getValue(SourceRange referencingRange) const {
     if (!value) {
         // If no value has been explicitly set, try to set it
         // from our initializer.
@@ -295,6 +309,19 @@ const ConstantValue& SpecparamSymbol::getValue() const {
             ASSERT(scope);
 
             BindContext ctx(*scope, LookupLocation::before(*this));
+
+            if (evaluating) {
+                ASSERT(referencingRange.start());
+
+                auto& diag = ctx.addDiag(diag::ConstEvalParamCycle, location) << name;
+                diag.addNote(diag::NoteReferencedHere, referencingRange.start())
+                    << referencingRange;
+                return ConstantValue::Invalid;
+            }
+
+            evaluating = true;
+            auto guard = ScopeGuard([this] { evaluating = false; });
+
             value = scope->getCompilation().allocConstant(
                 ctx.eval(*init, EvalFlags::SpecparamsAllowed));
         }

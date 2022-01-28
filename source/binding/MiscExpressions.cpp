@@ -62,7 +62,7 @@ Expression& ValueExpressionBase::fromSymbol(const BindContext& context, const Sy
     }
     else if (symbol.kind == SymbolKind::Parameter &&
              !context.flags.has(BindFlags::AllowUnboundedLiteral) &&
-             symbol.as<ParameterSymbol>().getValue().isUnbounded()) {
+             symbol.as<ParameterSymbol>().getValue(sourceRange).isUnbounded()) {
         context.addDiag(diag::UnboundedNotAllowed, sourceRange);
         return badExpr(comp, nullptr);
     }
@@ -154,11 +154,11 @@ optional<bitwidth_t> ValueExpressionBase::getEffectiveWidthImpl() const {
 
     switch (symbol.kind) {
         case SymbolKind::Parameter:
-            return cvToWidth(symbol.as<ParameterSymbol>().getValue());
+            return cvToWidth(symbol.as<ParameterSymbol>().getValue(sourceRange));
         case SymbolKind::EnumValue:
-            return cvToWidth(symbol.as<EnumValueSymbol>().getValue());
+            return cvToWidth(symbol.as<EnumValueSymbol>().getValue(sourceRange));
         case SymbolKind::Specparam:
-            return cvToWidth(symbol.as<SpecparamSymbol>().getValue());
+            return cvToWidth(symbol.as<SpecparamSymbol>().getValue(sourceRange));
         default:
             return type->getBitWidth();
     }
@@ -197,7 +197,7 @@ ConstantValue NamedValueExpression::evalImpl(EvalContext& context) const {
 
     switch (symbol.kind) {
         case SymbolKind::Parameter: {
-            auto v = symbol.as<ParameterSymbol>().getValue();
+            auto v = symbol.as<ParameterSymbol>().getValue(sourceRange);
             if (v.isUnbounded()) {
                 if (auto target = context.getQueueTarget()) {
                     int32_t size = (int32_t)target->queue()->size();
@@ -207,9 +207,9 @@ ConstantValue NamedValueExpression::evalImpl(EvalContext& context) const {
             return v;
         }
         case SymbolKind::EnumValue:
-            return symbol.as<EnumValueSymbol>().getValue();
+            return symbol.as<EnumValueSymbol>().getValue(sourceRange);
         case SymbolKind::Specparam:
-            return symbol.as<SpecparamSymbol>().getValue();
+            return symbol.as<SpecparamSymbol>().getValue(sourceRange);
         default:
             ConstantValue* v = context.findLocal(&symbol);
             if (v)
@@ -287,7 +287,7 @@ ConstantValue HierarchicalValueExpression::evalImpl(EvalContext& context) const 
 
     switch (symbol.kind) {
         case SymbolKind::Parameter: {
-            auto v = symbol.as<ParameterSymbol>().getValue();
+            auto v = symbol.as<ParameterSymbol>().getValue(sourceRange);
             if (v.isUnbounded()) {
                 if (auto target = context.getQueueTarget()) {
                     int32_t size = (int32_t)target->queue()->size();
@@ -297,9 +297,9 @@ ConstantValue HierarchicalValueExpression::evalImpl(EvalContext& context) const 
             return v;
         }
         case SymbolKind::EnumValue:
-            return symbol.as<EnumValueSymbol>().getValue();
+            return symbol.as<EnumValueSymbol>().getValue(sourceRange);
         case SymbolKind::Specparam:
-            return symbol.as<SpecparamSymbol>().getValue();
+            return symbol.as<SpecparamSymbol>().getValue(sourceRange);
         default:
             THROW_UNREACHABLE;
     }

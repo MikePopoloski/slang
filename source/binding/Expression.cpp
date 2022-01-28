@@ -498,7 +498,7 @@ bool Expression::isImplicitString() const {
         case ExpressionKind::NamedValue: {
             auto& nv = as<NamedValueExpression>();
             return nv.symbol.kind == SymbolKind::Parameter &&
-                   nv.symbol.as<ParameterSymbol>().isImplicitString();
+                   nv.symbol.as<ParameterSymbol>().isImplicitString(sourceRange);
         }
         case ExpressionKind::Conversion: {
             auto& conv = as<ConversionExpression>();

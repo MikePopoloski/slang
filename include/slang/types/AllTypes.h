@@ -120,7 +120,7 @@ class EnumValueSymbol : public ValueSymbol {
 public:
     EnumValueSymbol(string_view name, SourceLocation loc);
 
-    const ConstantValue& getValue() const;
+    const ConstantValue& getValue(SourceRange referencingRange = {}) const;
     void setValue(ConstantValue value);
 
     void serializeTo(ASTSerializer& serializer) const;
@@ -132,6 +132,7 @@ public:
 
 private:
     mutable const ConstantValue* value = nullptr;
+    mutable bool evaluating = false;
 };
 
 /// Represents a packed array of some simple element type (vectors, packed structures, other packed

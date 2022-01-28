@@ -47,10 +47,10 @@ public:
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::Parameter; }
 
-    const ConstantValue& getValue() const;
+    const ConstantValue& getValue(SourceRange referencingRange = {}) const;
     void setValue(Compilation& compilation, ConstantValue value, bool needsCoercion);
 
-    bool isImplicitString() const;
+    bool isImplicitString(SourceRange referencingRange) const;
 
     void serializeTo(ASTSerializer& serializer) const;
 
@@ -58,6 +58,7 @@ private:
     mutable const ConstantValue* value = nullptr;
     mutable bool fromStringLit = false;
     mutable bool needsCoercion = false;
+    mutable bool evaluating = false;
 };
 
 struct TypeParameterDeclarationSyntax;
@@ -113,7 +114,7 @@ class SpecparamSymbol : public ValueSymbol {
 public:
     SpecparamSymbol(string_view name, SourceLocation loc);
 
-    const ConstantValue& getValue() const;
+    const ConstantValue& getValue(SourceRange referencingRange = {}) const;
 
     static void fromSyntax(const Scope& scope, const SpecparamDeclarationSyntax& syntax,
                            SmallVector<const SpecparamSymbol*>& results);
@@ -124,6 +125,7 @@ public:
 
 private:
     mutable const ConstantValue* value = nullptr;
+    mutable bool evaluating = false;
 };
 
 } // namespace slang

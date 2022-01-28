@@ -389,11 +389,12 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 4);
+    REQUIRE(diags.size() == 5);
     CHECK(diags[0].code == diag::RecursiveDefinition);
     CHECK(diags[1].code == diag::RecursiveDefinition);
-    CHECK(diags[2].code == diag::ConstEvalIdUsedInCEBeforeDecl);
-    CHECK(diags[3].code == diag::ConstEvalFunctionIdentifiersMustBeLocal);
+    CHECK(diags[2].code == diag::ConstEvalParamCycle);
+    CHECK(diags[3].code == diag::ConstEvalIdUsedInCEBeforeDecl);
+    CHECK(diags[4].code == diag::ConstEvalFunctionIdentifiersMustBeLocal);
 }
 
 TEST_CASE("Parameter ordering from const func") {
@@ -1561,4 +1562,47 @@ endmodule
 
     auto& foo = compilation.getRoot().lookupName<ParameterSymbol>("m.o1.p1.foo");
     CHECK(foo.getValue().integer() == 4);
+}
+
+TEST_CASE("Hierarchical names in constexpr errors") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    n #(o1.p1.foo) n1();
+    o o1();
+endmodule
+
+module n #(int i);
+endmodule
+
+module o;
+    p p1();
+endmodule
+
+module p;
+    parameter int foo = n1.i;
+    specparam bar = baz();
+
+    function baz;
+        return p.bar;
+    endfunction
+
+    /*localparam enum { A = 1, B = func2(), C } asdf = C;
+    localparam asdf2 = B;
+
+    function int func2;
+        return B;
+    endfunction*/
+endmodule
+)");
+
+    CompilationOptions options;
+    options.allowHierarchicalConst = true;
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::ConstEvalParamCycle);
+    CHECK(diags[1].code == diag::ConstEvalParamCycle);
 }
