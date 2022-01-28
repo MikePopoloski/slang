@@ -470,6 +470,8 @@ TEST_CASE("DiagnosticEngine::setWarningOptions") {
     };
 
     DiagnosticEngine engine(getSourceManager());
+    engine.setDefaultWarnings();
+
     Diagnostics diags = engine.setWarningOptions(options);
     CHECK(diags.size() == 1);
 

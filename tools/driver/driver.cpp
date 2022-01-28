@@ -11,7 +11,10 @@
 #include "slang/compilation/Compilation.h"
 #include "slang/diagnostics/DeclarationsDiags.h"
 #include "slang/diagnostics/DiagnosticEngine.h"
+#include "slang/diagnostics/ExpressionsDiags.h"
 #include "slang/diagnostics/LookupDiags.h"
+#include "slang/diagnostics/ParserDiags.h"
+#include "slang/diagnostics/SysFuncsDiags.h"
 #include "slang/diagnostics/TextDiagnosticClient.h"
 #include "slang/parsing/Preprocessor.h"
 #include "slang/symbols/ASTSerializer.h"
@@ -256,6 +259,8 @@ bool loadAllSources(Compilation& compilation, SourceManager& sourceManager,
     return ok;
 }
 
+enum class CompatMode { None, VCS };
+
 class Compiler {
 public:
     Compilation& compilation;
@@ -271,7 +276,20 @@ public:
     }
 
     void setDiagnosticOptions(const std::vector<std::string>& warningOptions,
-                              bool ignoreUnknownModules, bool allowUseBeforeDeclare) {
+                              bool ignoreUnknownModules, bool allowUseBeforeDeclare,
+                              CompatMode compatMode) {
+        diagEngine.setDefaultWarnings();
+
+        if (compatMode == CompatMode::VCS) {
+            diagEngine.setSeverity(diag::StaticInitializerMustBeExplicit,
+                                   DiagnosticSeverity::Ignored);
+            diagEngine.setSeverity(diag::ImplicitConvert, DiagnosticSeverity::Ignored);
+            diagEngine.setSeverity(diag::BadFinishNum, DiagnosticSeverity::Ignored);
+            diagEngine.setSeverity(diag::NonstandardSysFunc, DiagnosticSeverity::Ignored);
+            diagEngine.setSeverity(diag::NonstandardForeach, DiagnosticSeverity::Ignored);
+            diagEngine.setSeverity(diag::NonstandardDist, DiagnosticSeverity::Ignored);
+        }
+
         Diagnostics optionDiags = diagEngine.setWarningOptions(warningOptions);
         Diagnostics pragmaDiags = diagEngine.setMappingsFromPragmas();
         if (ignoreUnknownModules)
@@ -447,6 +465,7 @@ int driverMain(int argc, TArgs argv, bool suppressColorsStdout, bool suppressCol
     optional<uint32_t> maxConstexprDepth;
     optional<uint32_t> maxConstexprSteps;
     optional<uint32_t> maxConstexprBacktrace;
+    optional<std::string> compat;
     optional<std::string> minTypMax;
     optional<bool> allowHierarchicalConst;
     std::vector<std::string> topModules;
@@ -467,6 +486,8 @@ int driverMain(int argc, TArgs argv, bool suppressColorsStdout, bool suppressCol
                 "Maximum number of frames to show when printing a constant evaluation "
                 "backtrace; the rest will be abbreviated",
                 "<limit>");
+    cmdLine.add("--compat", compat, "Attempt to increase compatibility with the specified tool",
+                "vcs");
     cmdLine.add("-T,--timing", minTypMax,
                 "Select which value to consider in min:typ:max expressions", "min|typ|max");
     cmdLine.add("--allow-hierarchical-const", allowHierarchicalConst,
@@ -585,6 +606,22 @@ int driverMain(int argc, TArgs argv, bool suppressColorsStdout, bool suppressCol
         catch (const std::exception&) {
             OS::printE(fg(warningColor), "warning: ");
             OS::printE("include directory '{}' does not exist\n", dir);
+        }
+    }
+
+    CompatMode compatMode = CompatMode::None;
+    if (compat.has_value()) {
+        if (compat == "vcs") {
+            compatMode = CompatMode::VCS;
+            if (!allowHierarchicalConst.has_value())
+                allowHierarchicalConst = true;
+            if (!allowUseBeforeDeclare.has_value())
+                allowUseBeforeDeclare = true;
+        }
+        else {
+            OS::printE(fg(errorColor), "error: ");
+            OS::printE("invalid value for compat option: '{}'", *compat);
+            return 1;
         }
     }
 
@@ -710,7 +747,7 @@ int driverMain(int argc, TArgs argv, bool suppressColorsStdout, bool suppressCol
 
             compiler.diagEngine.setErrorLimit((int)errorLimit.value_or(20));
             compiler.setDiagnosticOptions(warningOptions, ignoreUnknownModules == true,
-                                          allowUseBeforeDeclare == true);
+                                          allowUseBeforeDeclare == true, compatMode);
 
             anyErrors |= !compiler.run();
 

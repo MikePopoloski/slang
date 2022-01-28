@@ -163,6 +163,9 @@ public:
     /// message for its diagnostic code.
     std::string formatMessage(const Diagnostic& diag) const;
 
+    /// Initializes diagnostic warnings to the default group.
+    void setDefaultWarnings();
+
     /// Sets diagnostic options from the given option strings, typically from a list of -W
     /// arguments passed to a command line invocation. Any errors encountered while parsing
     /// the options are returned via the diagnostics set.

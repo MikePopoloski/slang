@@ -175,6 +175,12 @@ Set the maximum number of frames to show when printing a constant evaluation
 backtrace in diagnostics; the rest will be abbreviated to avoid spamming output.
 The default is 10.
 
+`--compat vcs`
+
+Attempt to increase compatibility with the specified tool. Various options will
+be set and warnings will be silenced to mimic the given tool as closely as possible.
+Currently only 'vcs' is supported as a value. 
+
 `-T,--timing min|typ|max`
 
 Select which expressions in min:typ:max triplets should be processed as part of

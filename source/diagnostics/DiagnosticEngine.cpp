@@ -403,11 +403,12 @@ static bool startsWith(string_view str, string_view prefix) {
     return str.size() >= prefix.size() && str.compare(0, prefix.size(), prefix) == 0;
 };
 
-Diagnostics DiagnosticEngine::setWarningOptions(span<const std::string> options) {
-    // By default, start with all warnings disabled except the default group.
+void DiagnosticEngine::setDefaultWarnings() {
     setIgnoreAllWarnings(true);
     setSeverity(*findDiagGroup("default"sv), DiagnosticSeverity::Warning);
+}
 
+Diagnostics DiagnosticEngine::setWarningOptions(span<const std::string> options) {
     Diagnostics diags;
     auto findAndSet = [&](string_view name, DiagnosticSeverity severity, const char* errorPrefix) {
         if (auto group = findDiagGroup(name))
