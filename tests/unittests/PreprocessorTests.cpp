@@ -1044,7 +1044,10 @@ TEST_CASE("FILE Directive (include+nesting)") {
 
     diagnostics.clear();
 
-    Preprocessor preprocessor(getSourceManager(), alloc, diagnostics);
+    SourceManager sourceManager;
+    setupSourceManager(sourceManager);
+
+    Preprocessor preprocessor(sourceManager, alloc, diagnostics);
     preprocessor.pushSource(text);
 
     Token token = preprocessor.next();
@@ -1069,7 +1072,11 @@ TEST_CASE("`line + FILE + LINE Directive") {
                  "`__FILE__";
 
     diagnostics.clear();
-    Preprocessor preprocessor(getSourceManager(), alloc, diagnostics);
+
+    SourceManager sourceManager;
+    setupSourceManager(sourceManager);
+
+    Preprocessor preprocessor(sourceManager, alloc, diagnostics);
     preprocessor.pushSource(text);
 
     Token token = preprocessor.next();

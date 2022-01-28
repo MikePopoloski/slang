@@ -141,6 +141,11 @@ public:
     /// Returns true if the given file path is already loaded and cached in the source manager.
     bool isCached(const fs::path& path) const;
 
+    /// Sets whether filenames should be made "proximate" to the current directory
+    /// for diagnostic reporting purposes. This is on by default but can be
+    /// disabled to always use the simple filename.
+    void setDisableProximatePaths(bool set) { disableProximatePaths = set; }
+
     /// Adds a line directive at the given location.
     void addLineDirective(SourceLocation location, size_t lineNum, string_view name, uint8_t level);
 
@@ -258,6 +263,7 @@ private:
     flat_hash_map<BufferID, std::vector<DiagnosticDirectiveInfo>> diagDirectives;
 
     std::atomic<uint32_t> unnamedBufferCount = 0;
+    bool disableProximatePaths = false;
 
     FileInfo* getFileInfo(BufferID buffer);
     const FileInfo* getFileInfo(BufferID buffer) const;

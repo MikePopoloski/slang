@@ -1,5 +1,4 @@
-#define CATCH_CONFIG_MAIN
-#define DO_NOT_USE_WMAIN
+#define CATCH_CONFIG_RUNNER
 #include <catch2/catch.hpp>
 
 // This file contains the Catch unit testing framework implementation
@@ -11,6 +10,8 @@
 // Catch impl whenever we modify a test.
 
 #include "slang/diagnostics/Diagnostics.h"
+#include "slang/syntax/SyntaxTree.h"
+#include "slang/text/SourceManager.h"
 #include "slang/util/BumpAllocator.h"
 
 namespace slang {
@@ -19,3 +20,8 @@ BumpAllocator alloc;
 Diagnostics diagnostics;
 
 } // namespace slang
+
+int main(int argc, char* argv[]) {
+    slang::SyntaxTree::getDefaultSourceManager().setDisableProximatePaths(true);
+    return Catch::Session().run(argc, argv);
+}

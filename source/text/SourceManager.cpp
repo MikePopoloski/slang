@@ -394,7 +394,7 @@ void SourceManager::addLineDirective(SourceLocation location, size_t lineNum, st
 
     fs::path full;
     fs::path linePath = widen(name);
-    if (linePath.has_relative_path())
+    if (!disableProximatePaths && linePath.has_relative_path())
         full = linePath.lexically_proximate(fs::current_path());
     else
         full = fs::path(widen(info->data->name)).replace_filename(linePath);
@@ -494,12 +494,15 @@ SourceBuffer SourceManager::openCached(const fs::path& fullPath, SourceLocation 
 SourceBuffer SourceManager::cacheBuffer(const fs::path& path, SourceLocation includedFrom,
                                         std::vector<char>&& buffer) {
     std::string name;
-    std::error_code ec;
-    fs::path rel = fs::proximate(path, ec);
-    if (ec || rel.empty())
+    if (!disableProximatePaths) {
+        std::error_code ec;
+        name = fs::proximate(path, ec).u8string();
+        if (ec)
+            name = {};
+    }
+
+    if (name.empty())
         name = path.filename().u8string();
-    else
-        name = rel.u8string();
 
     std::unique_lock lock(mut);
 

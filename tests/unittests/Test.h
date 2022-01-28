@@ -62,14 +62,20 @@ inline std::string findTestDir() {
     return (path / "tests/unittests/data/").string();
 }
 
+inline void setupSourceManager(SourceManager& sourceManager) {
+    auto testDir = findTestDir();
+    sourceManager.addUserDirectory(testDir);
+    sourceManager.addSystemDirectory(testDir);
+    sourceManager.addSystemDirectory(string_view(testDir + "system/"));
+}
+
 inline SourceManager& getSourceManager() {
     static SourceManager* sourceManager = nullptr;
     if (!sourceManager) {
         auto testDir = findTestDir();
         sourceManager = new SourceManager();
-        sourceManager->addUserDirectory(testDir);
-        sourceManager->addSystemDirectory(testDir);
-        sourceManager->addSystemDirectory(string_view(testDir + "system/"));
+        sourceManager->setDisableProximatePaths(true);
+        setupSourceManager(*sourceManager);
     }
     return *sourceManager;
 }
