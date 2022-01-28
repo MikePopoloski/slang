@@ -448,6 +448,7 @@ int driverMain(int argc, TArgs argv, bool suppressColorsStdout, bool suppressCol
     optional<uint32_t> maxConstexprSteps;
     optional<uint32_t> maxConstexprBacktrace;
     optional<std::string> minTypMax;
+    optional<bool> allowHierarchicalConst;
     std::vector<std::string> topModules;
     std::vector<std::string> paramOverrides;
     cmdLine.add("--max-hierarchy-depth", maxInstanceDepth, "Maximum depth of the design hierarchy",
@@ -468,6 +469,8 @@ int driverMain(int argc, TArgs argv, bool suppressColorsStdout, bool suppressCol
                 "<limit>");
     cmdLine.add("-T,--timing", minTypMax,
                 "Select which value to consider in min:typ:max expressions", "min|typ|max");
+    cmdLine.add("--allow-hierarchical-const", allowHierarchicalConst,
+                "Allow hierarchical references in constant expressions.");
     cmdLine.add("--top", topModules,
                 "One or more top-level modules to instantiate "
                 "(instead of figuring it out automatically)",
@@ -618,6 +621,8 @@ int driverMain(int argc, TArgs argv, bool suppressColorsStdout, bool suppressCol
         coptions.suppressUnused = true;
         coptions.lintMode = true;
     }
+    if (allowHierarchicalConst == true)
+        coptions.allowHierarchicalConst = true;
 
     for (auto& name : topModules)
         coptions.topModules.emplace(name);

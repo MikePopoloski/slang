@@ -185,6 +185,11 @@ the compilation. By default this will be the "typical", or middle expression.
 Override all parameters with the given name in top-level modules to the provided value.
 This option can be specified more than once to override multiple parameters.
 
+`--allow-hierarchical-const`
+
+Allow hierarchical references in constant expressions. SystemVerilog does permit this,
+but many popular tools allow it anyway so this flag can be used for compatibility purposes.
+
 @section diag-control Diagnostic Control
 
 `--color-diagnostics`
