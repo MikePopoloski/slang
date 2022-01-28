@@ -849,7 +849,7 @@ endmodule
 
     // Reduce this a bit just to make the tests faster.
     CompilationOptions co;
-    co.maxGenerateSteps = 8192;
+    co.maxGenerateSteps = 1024;
 
     Bag options;
     options.set(co);
@@ -1261,7 +1261,10 @@ module m;
 endmodule
 )");
 
-    Compilation compilation;
+    CompilationOptions options;
+    options.maxDefParamSteps = 32;
+
+    Compilation compilation(options);
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
@@ -1351,7 +1354,8 @@ endmodule
 )");
 
     CompilationOptions options;
-    options.maxInstanceDepth = 16;
+    options.maxInstanceDepth = 8;
+    options.maxDefParamSteps = 32;
 
     Compilation compilation(options);
     compilation.addSyntaxTree(tree);
