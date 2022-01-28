@@ -81,32 +81,27 @@ void Preprocessor::undefineAll() {
     macros["__FILE__"] = MacroIntrinsic::File;
     macros["__LINE__"] = MacroIntrinsic::Line;
 
-    predefine("__slang__ 1"s, options.predefineSource);
-    predefine("__slang_major__ "s + std::to_string(VersionInfo::getMajor()),
-              options.predefineSource);
-    predefine("__slang_minor__ "s + std::to_string(VersionInfo::getMinor()),
-              options.predefineSource);
-    predefine("__slang_rev__ "s + std::string(VersionInfo::getRevision()), options.predefineSource);
+#define DEFINE(name, value) createBuiltInMacro(name, value, #value)
+    DEFINE("__slang__"sv, 1);
+    createBuiltInMacro("__slang_major__"sv, VersionInfo::getMajor());
+    createBuiltInMacro("__slang_minor__"sv, VersionInfo::getMinor());
 
-    predefine("SV_COV_START 0"s, options.predefineSource);
-    predefine("SV_COV_STOP 1"s, options.predefineSource);
-    predefine("SV_COV_RESET 2"s, options.predefineSource);
-    predefine("SV_COV_CHECK 3"s, options.predefineSource);
-    predefine("SV_COV_MODULE 10"s, options.predefineSource);
-    predefine("SV_COV_HIER 11"s, options.predefineSource);
-    predefine("SV_COV_ASSERTION 20"s, options.predefineSource);
-    predefine("SV_COV_FSM_STATE 21"s, options.predefineSource);
-    predefine("SV_COV_STATEMENT 22"s, options.predefineSource);
-    predefine("SV_COV_TOGGLE 23"s, options.predefineSource);
-    predefine("SV_COV_OVERFLOW -2"s, options.predefineSource);
-    predefine("SV_COV_ERROR -1"s, options.predefineSource);
-    predefine("SV_COV_NOCOV 0"s, options.predefineSource);
-    predefine("SV_COV_OK 1"s, options.predefineSource);
-    predefine("SV_COV_PARTIAL 2"s, options.predefineSource);
-
-    // All macros we've defined thus far should be marked as built-ins so they can't be undefined.
-    for (auto& [name, macro] : macros)
-        macro.builtIn = true;
+    DEFINE("SV_COV_START"sv, 0);
+    DEFINE("SV_COV_STOP"sv, 1);
+    DEFINE("SV_COV_RESET"sv, 2);
+    DEFINE("SV_COV_CHECK"sv, 3);
+    DEFINE("SV_COV_MODULE"sv, 10);
+    DEFINE("SV_COV_HIER"sv, 11);
+    DEFINE("SV_COV_ASSERTION"sv, 20);
+    DEFINE("SV_COV_FSM_STATE"sv, 21);
+    DEFINE("SV_COV_STATEMENT"sv, 22);
+    DEFINE("SV_COV_TOGGLE"sv, 23);
+    DEFINE("SV_COV_OVERFLOW"sv, -2);
+    DEFINE("SV_COV_ERROR"sv, -1);
+    DEFINE("SV_COV_NOCOV"sv, 0);
+    DEFINE("SV_COV_OK"sv, 1);
+    DEFINE("SV_COV_PARTIAL"sv, 2);
+#undef DEFINE
 
     for (std::string predef : options.predefines) {
         // Find location of equals sign to indicate start of body.

@@ -73,6 +73,5 @@ Name | Value
 \`__slang__ | 1
 \`__slang_major__ | *slang major version number*
 \`__slang_minor__ | *slang minor version number*
-\`__slang_rev__ | *slang git revision number*
 
 */

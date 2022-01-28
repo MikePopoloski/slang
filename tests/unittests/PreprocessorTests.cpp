@@ -1370,7 +1370,7 @@ TEST_CASE("Preprocessor API") {
     CHECK(!pp.isDefined("BUZ"));
 
     pp.setKeywordVersion(KeywordVersion::v1364_2001);
-    CHECK(pp.getDefinedMacros().size() == 20);
+    CHECK(pp.getDefinedMacros().size() == 19);
 }
 
 TEST_CASE("Undef builtin") {

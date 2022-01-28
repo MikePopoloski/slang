@@ -27,6 +27,32 @@ Preprocessor::MacroDef Preprocessor::findMacro(Token directive) {
     return it->second;
 }
 
+void Preprocessor::createBuiltInMacro(string_view name, int value, string_view valueStr) {
+#define NL SourceLocation::NoLocation
+
+    if (valueStr.empty()) {
+        auto str = std::to_string(value);
+        auto ptr = (char*)alloc.allocate(str.length(), 1);
+        memcpy(ptr, str.data(), str.length());
+        valueStr = string_view(ptr, str.length());
+    }
+
+    Token directive(alloc, TokenKind::Directive, {}, valueStr, NL, SyntaxKind::DefineDirective);
+    Token nameTok(alloc, TokenKind::Identifier, {}, name, NL);
+
+    SmallVectorSized<Token, 2> body;
+    body.append(Token(alloc, TokenKind::IntegerLiteral, {}, valueStr, NL,
+                      SVInt(32, uint64_t(value), true)));
+
+    MacroDef def;
+    def.syntax =
+        alloc.emplace<DefineDirectiveSyntax>(directive, nameTok, nullptr, body.copy(alloc));
+    def.builtIn = true;
+    macros[name] = def;
+
+#undef NL
+}
+
 MacroActualArgumentListSyntax* Preprocessor::handleTopLevelMacro(Token directive) {
     auto macro = findMacro(directive);
     if (!macro.valid()) {
