@@ -392,3 +392,14 @@ TEST_CASE("Test CommandLine -- plusarg errors") {
     CHECK(errors[1] == "prog: no value provided for argument '+foo'"s);
     CHECK(errors[2] == "prog: invalid value 'asdf' for float argument '+num'"s);
 }
+
+TEST_CASE("Test CommandLine -- file names") {
+    optional<std::string> foo;
+
+    CommandLine cmdLine;
+    cmdLine.add("+foo", foo, "", "", /* isFileName */ true);
+
+    CHECK(cmdLine.parse("prog +foo+../something/bar/baz"));
+
+    CHECK(fs::path(*foo).is_absolute());
+}

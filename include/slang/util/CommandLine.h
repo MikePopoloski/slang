@@ -121,8 +121,10 @@ public:
     /// (including the dashes) that are accepted for this option.
     /// @a desc is a human-friendly description for printing help text.
     /// @a valueName is an example name for the value when printing help text.
+    /// @a isFileName indicates whether the parsed string is a filename that
+    ///               might be relative to the current directory.
     void add(string_view name, optional<std::string>& value, string_view desc,
-             string_view valueName = {});
+             string_view valueName = {}, bool isFileName = false);
 
     /// Register an option with @a name that will be parsed as a list of int32s.
     /// If the option is not provided on a command line, the value will remain an empty vector.
@@ -181,13 +183,18 @@ public:
     /// (including the dashes) that are accepted for this option.
     /// @a desc is a human-friendly description for printing help text.
     /// @a valueName is an example name for the value when printing help text.
+    /// @a isFileName indicates whether the parsed string is a filename that
+    ///               might be relative to the current directory.
     void add(string_view name, std::vector<std::string>& value, string_view desc,
-             string_view valueName = {});
+             string_view valueName = {}, bool isFileName = false);
 
     /// Set a variable that will receive any positional arguments provided
     /// on the command line. They will be returned as a list of strings.
     /// @valueName is for including in the help text.
-    void setPositional(std::vector<std::string>& values, string_view valueName);
+    /// @a isFileName indicates whether the parsed string is a filename that
+    ///               might be relative to the current directory.
+    void setPositional(std::vector<std::string>& values, string_view valueName,
+                       bool isFileName = false);
 
     /// Parse the provided command line (C-style).
     /// @return true on success, false if an errors occurs.
@@ -252,6 +259,7 @@ private:
         std::string desc;
         std::string valueName;
         std::string allArgNames;
+        bool isFileName = false;
 
         bool expectsValue() const;
 
@@ -284,7 +292,7 @@ private:
     };
 
     void addInternal(string_view name, OptionStorage storage, string_view desc,
-                     string_view valueName);
+                     string_view valueName, bool isFileName = false);
 
     void parseStr(string_view argList, ParseOptions options, bool& hasArg, std::string& current,
                   SmallVector<std::string>& storage);

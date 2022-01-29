@@ -49,8 +49,8 @@ void CommandLine::add(string_view name, optional<double>& value, string_view des
 }
 
 void CommandLine::add(string_view name, optional<std::string>& value, string_view desc,
-                      string_view valueName) {
-    addInternal(name, &value, desc, valueName);
+                      string_view valueName, bool isFileName) {
+    addInternal(name, &value, desc, valueName, isFileName);
 }
 
 void CommandLine::add(string_view name, std::vector<int32_t>& value, string_view desc,
@@ -79,12 +79,12 @@ void CommandLine::add(string_view name, std::vector<double>& value, string_view 
 }
 
 void CommandLine::add(string_view name, std::vector<std::string>& value, string_view desc,
-                      string_view valueName) {
-    addInternal(name, &value, desc, valueName);
+                      string_view valueName, bool isFileName) {
+    addInternal(name, &value, desc, valueName, isFileName);
 }
 
 void CommandLine::addInternal(string_view name, OptionStorage storage, string_view desc,
-                              string_view valueName) {
+                              string_view valueName, bool isFileName) {
     if (name.empty())
         throw std::invalid_argument("Name cannot be empty");
 
@@ -93,6 +93,7 @@ void CommandLine::addInternal(string_view name, OptionStorage storage, string_vi
     option->valueName = valueName;
     option->allArgNames = name;
     option->storage = std::move(storage); // NOLINT
+    option->isFileName = isFileName;
 
     while (true) {
         size_t index = name.find_first_of(',');
@@ -128,13 +129,15 @@ void CommandLine::addInternal(string_view name, OptionStorage storage, string_vi
     orderedOptions.emplace_back(option);
 }
 
-void CommandLine::setPositional(std::vector<std::string>& values, string_view valueName) {
+void CommandLine::setPositional(std::vector<std::string>& values, string_view valueName,
+                                bool isFileName) {
     if (positional)
         throw std::runtime_error("Can only set one positional argument");
 
     positional = std::make_shared<Option>();
     positional->valueName = valueName;
     positional->storage = &values;
+    positional->isFileName = isFileName;
 }
 
 bool CommandLine::parse(int argc, const char* const argv[]) {
@@ -610,6 +613,16 @@ bool CommandLine::Option::expectsValue() const {
 }
 
 std::string CommandLine::Option::set(string_view name, string_view value) {
+    std::string pathMem;
+    if (isFileName && !value.empty()) {
+        std::error_code ec;
+        fs::path path = fs::weakly_canonical(value, ec);
+        if (!ec) {
+            pathMem = path.u8string();
+            value = pathMem;
+        }
+    }
+
     return std::visit(
         [&](auto&& arg) {
             if (!allowValue(*arg))

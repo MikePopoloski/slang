@@ -415,10 +415,12 @@ int driverMain(int argc, TArgs argv, bool suppressColorsStdout, bool suppressCol
     std::vector<std::string> libDirs;
     std::vector<std::string> libExts;
     cmdLine.add("-I,--include-directory,+incdir", includeDirs, "Additional include search paths",
-                "<dir>");
-    cmdLine.add("--isystem", includeSystemDirs, "Additional system include search paths", "<dir>");
+                "<dir>", /* isFileName */ true);
+    cmdLine.add("--isystem", includeSystemDirs, "Additional system include search paths", "<dir>",
+                /* isFileName */ true);
     cmdLine.add("-y,--libdir", libDirs,
-                "Library search paths, which will be searched for missing modules", "<dir>");
+                "Library search paths, which will be searched for missing modules", "<dir>",
+                /* isFileName */ true);
     cmdLine.add("-Y,--libext", libExts, "Additional library file extensions to search", "<ext>");
 
     // Preprocessor
@@ -452,7 +454,7 @@ int driverMain(int argc, TArgs argv, bool suppressColorsStdout, bool suppressCol
     optional<std::string> astJsonFile;
     cmdLine.add("--ast-json", astJsonFile,
                 "Dump the compiled AST in JSON format to the specified file, or '-' for stdout",
-                "<file>");
+                "<file>", /* isFileName */ true);
 
     std::vector<std::string> astJsonScopes;
     cmdLine.add("--ast-json-scope", astJsonScopes,
@@ -545,13 +547,13 @@ int driverMain(int argc, TArgs argv, bool suppressColorsStdout, bool suppressCol
     optional<bool> singleUnit;
     std::vector<std::string> sourceFiles;
     cmdLine.add("--single-unit", singleUnit, "Treat all input files as a single compilation unit");
-    cmdLine.setPositional(sourceFiles, "files");
+    cmdLine.setPositional(sourceFiles, "files", /* isFileName */ true);
 
     std::vector<std::string> libraryFiles;
     cmdLine.add("-v", libraryFiles,
                 "One or more library files, which are separate compilation units "
                 "where modules are not automatically instantiated.",
-                "<filename>");
+                "<filename>", /* isFileName */ true);
 
 #if defined(INCLUDE_SIM)
     // Simulation
