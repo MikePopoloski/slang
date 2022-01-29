@@ -99,17 +99,19 @@ void CommandLine::addInternal(string_view name, OptionStorage storage, string_vi
         if (index != string_view::npos)
             curr = name.substr(0, index);
 
-        if (curr.length() <= 1 || curr[0] != '-')
-            throw std::invalid_argument("Names must begin with '-' or '--'");
+        if (curr.length() <= 1 || (curr[0] != '-' && curr[0] != '+'))
+            throw std::invalid_argument("Names must begin with '-', '+', or '--'");
 
-        curr = curr.substr(1);
-        if (curr[0] == '-') {
+        if (curr[0] != '+') {
             curr = curr.substr(1);
-            if (curr.empty())
-                throw std::invalid_argument("Names must begin with '-' or '--'");
-        }
-        else if (curr.length() > 1) {
-            throw std::invalid_argument("Long name requires '--' prefix");
+            if (curr[0] == '-') {
+                curr = curr.substr(1);
+                if (curr.empty())
+                    throw std::invalid_argument("Names must begin with '-' or '--'");
+            }
+            else if (curr.length() > 1) {
+                throw std::invalid_argument("Long name requires '--' prefix");
+            }
         }
 
         if (!optionMap.try_emplace(std::string(curr), option).second) {
@@ -245,10 +247,10 @@ bool CommandLine::parse(span<const string_view> args) {
         }
 
         // This is a positional argument if:
-        // - Doesn't start with '-'
+        // - Doesn't start with '-' and '+'
         // - Is exactly '-'
         // - Or we've seen a double dash already
-        if (arg.length() <= 1 || arg[0] != '-' || doubleDash) {
+        if (arg.length() <= 1 || doubleDash || (arg[0] != '-' && arg[0] != '+')) {
             positionalArgs.append(arg);
             continue;
         }
@@ -256,6 +258,12 @@ bool CommandLine::parse(span<const string_view> args) {
         // Double dash indicates that all further arguments are positional.
         if (arg == "--"sv) {
             doubleDash = true;
+            continue;
+        }
+
+        // Handle plus args, which are treated differently from all others.
+        if (arg[0] == '+') {
+            handlePlusArg(arg, hadUnknowns);
             continue;
         }
 
@@ -362,6 +370,55 @@ std::string CommandLine::getHelpText(string_view overview) const {
     return result;
 }
 
+void CommandLine::handlePlusArg(string_view arg, bool& hadUnknowns) {
+    // Values are plus separated.
+    string_view value;
+    size_t idx = arg.find_first_of('+', 2);
+    if (idx != string_view::npos) {
+        value = arg.substr(idx + 1);
+        arg = arg.substr(0, idx);
+    }
+
+    // TODO: change once we have heterogeneous lookup from C++20
+    auto it = optionMap.find(std::string(arg));
+    if (it == optionMap.end()) {
+        hadUnknowns = true;
+        errors.emplace_back(
+            fmt::format("{}: unknown command line argument '{}'"sv, programName, arg));
+        return;
+    }
+
+    auto option = it->second.get();
+    if (value.empty()) {
+        if (option->expectsValue()) {
+            errors.emplace_back(
+                fmt::format("{}: no value provided for argument '{}'"sv, programName, arg));
+        }
+        else {
+            std::string result = option->set(arg, value);
+            ASSERT(result.empty());
+        }
+        return;
+    }
+
+    do {
+        string_view curr = value;
+        idx = value.find_first_of('+');
+        if (idx != string_view::npos) {
+            value = value.substr(idx + 1);
+            curr = curr.substr(0, idx);
+        }
+        else {
+            value = {};
+        }
+
+        std::string result = option->set(arg, curr);
+        if (!result.empty())
+            errors.emplace_back(fmt::format("{}: {}", programName, result));
+
+    } while (!value.empty());
+}
+
 CommandLine::Option* CommandLine::findOption(string_view arg, string_view& value) const {
     // If there is an equals sign, strip off the value.
     size_t equalsIndex = arg.find_first_of('=');
@@ -414,6 +471,9 @@ std::string CommandLine::findNearestMatch(string_view arg) const {
     int bestDistance = 5;
 
     for (auto& [key, value] : optionMap) {
+        if (key[0] == '+')
+            continue;
+
         int dist = editDistance(key, arg, /* allowReplacements */ true, bestDistance);
         if (dist < bestDistance) {
             bestName = key;

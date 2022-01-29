@@ -7,9 +7,9 @@
 #pragma once
 
 #include <map>
+#include <string>
 #include <variant>
 #include <vector>
-#include <string>
 
 #include "slang/util/Util.h"
 
@@ -37,6 +37,11 @@ namespace slang {
 /// Groups of short form names can be combined together. The final short
 /// form name in such a group can have an adjacent value:
 /// `-abcf1`
+///
+/// Options can alternatively begin with a '+', in which case they are
+/// always long form, and expect their value(s) to come separated by
+/// additional '+' signs. For example:
+/// `+opt+val1+val2`
 ///
 /// A standalone double dash, "--", indicates that all further elements of
 /// the command line are to be considered positional and not parsed as options.
@@ -261,6 +266,8 @@ private:
 
     void addInternal(string_view name, OptionStorage storage, string_view desc,
                      string_view valueName);
+
+    void handlePlusArg(string_view arg, bool& hadUnknowns);
 
     Option* findOption(string_view arg, string_view& value) const;
     Option* tryGroupOrPrefix(string_view& arg, string_view& value);

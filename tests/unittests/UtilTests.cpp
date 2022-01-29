@@ -12,6 +12,7 @@ TEST_CASE("Test CommandLine -- basic") {
     optional<int64_t> unused2;
     optional<uint32_t> used1;
     optional<int64_t> used2;
+    std::vector<std::string> multi;
     std::vector<std::string> vals;
 
     CommandLine cmdLine;
@@ -27,11 +28,12 @@ TEST_CASE("Test CommandLine -- basic") {
     cmdLine.add("--buz,--boz", unused2, "SDF", "=<val>");
     cmdLine.add("--fiz,--faz", used1, "SDF");
     cmdLine.add("--fuz,--foz", used2, "SDF");
+    cmdLine.add("-m,+multi", multi, "SDF");
     cmdLine.setPositional(vals, "vals");
 
     CHECK(cmdLine.parse("prog -a -b --longFlag=False pos1 pos2 -c asdf -d -1234 --ext=9876 "
                         "--ext2 9999.1234e12 pos3 --fiz=4321 --foz=-4321    - pos5 "
-                        "--longFlag2=true -- --buz --boz"sv));
+                        "--longFlag2=true -ma +multi+b+cd+ef -- --buz --boz"sv));
 
     CHECK(cmdLine.getProgramName() == "prog");
     cmdLine.setProgramName("asdf");
@@ -61,6 +63,12 @@ TEST_CASE("Test CommandLine -- basic") {
     CHECK(used1 == 4321);
     CHECK(used2 == -4321);
 
+    REQUIRE(multi.size() == 4);
+    CHECK(multi[0] == "a");
+    CHECK(multi[1] == "b");
+    CHECK(multi[2] == "cd");
+    CHECK(multi[3] == "ef");
+
     REQUIRE(vals.size() == 7);
     CHECK(vals[0] == "pos1");
     CHECK(vals[1] == "pos2");
@@ -89,6 +97,7 @@ OPTIONS:
   --buz,--boz=<val>    SDF
   --fiz,--faz          SDF
   --fuz,--foz          SDF
+  -m,+multi            SDF
 )");
 }
 
@@ -168,11 +177,13 @@ TEST_CASE("Test CommandLine -- user errors") {
     optional<int32_t> foo;
     optional<double> bar;
     optional<bool> frob;
+    std::vector<std::string> multi;
 
     CommandLine cmdLine;
     cmdLine.add("--foo", foo, "");
     cmdLine.add("--bar", bar, "");
     cmdLine.add("--frob", frob, "");
+    cmdLine.add("-m,+multi", multi, "SDF");
 
     CHECK(!cmdLine.parse("prog --foo \"\" --foo 123f4 --bar \"\" --bar 123.45g "
                          "--frob=asdf --foo 1 --foo 2 asdf -D --frib --bar"));
@@ -315,4 +326,23 @@ TEST_CASE("Test CommandLine -- positional not allowed") {
     auto errors = cmdLine.getErrors();
     REQUIRE(errors.size() == 1);
     CHECK(errors[0] == "prog: positional arguments are not allowed (see e.g. 'asdf')"s);
+}
+
+TEST_CASE("Test CommandLine -- plusarg errors") {
+    optional<bool> flag;
+    optional<std::string> foo;
+    optional<double> num;
+
+    CommandLine cmdLine;
+    cmdLine.add("+flag", flag, "");
+    cmdLine.add("+foo", foo, "");
+    cmdLine.add("+num", num, "");
+
+    CHECK(!cmdLine.parse("prog +unknown+asdf +foo +flag +num+asdf"));
+
+    auto errors = cmdLine.getErrors();
+    REQUIRE(errors.size() == 3);
+    CHECK(errors[0] == "prog: unknown command line argument '+unknown'"s);
+    CHECK(errors[1] == "prog: no value provided for argument '+foo'"s);
+    CHECK(errors[2] == "prog: invalid value 'asdf' for float argument '+num'"s);
 }
