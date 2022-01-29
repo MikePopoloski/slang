@@ -159,53 +159,101 @@ bool CommandLine::parse(int argc, const wchar_t* const argv[]) {
 
 #endif
 
-bool CommandLine::parse(string_view argList) {
+bool CommandLine::parse(string_view argList, ParseOptions options) {
     bool hasArg = false;
     std::string current;
     SmallVectorSized<std::string, 8> storage;
 
+    auto pushArg = [&]() {
+        if (hasArg) {
+            storage.emplace(std::move(current));
+            current.clear();
+            hasArg = false;
+        }
+    };
+
     auto end = argList.data() + argList.size();
-    for (const char* ptr = argList.data(); ptr != end; ptr++) {
+    auto ptr = argList.data();
+    while (ptr != end) {
         // Whitespace breaks up arguments.
-        if (isWhitespace(*ptr)) {
-            if (hasArg) {
-                storage.emplace(std::move(current));
-                current.clear();
-                hasArg = false;
-            }
+        char c = *ptr++;
+        if (isWhitespace(c)) {
+            pushArg();
             continue;
+        }
+
+        // Check for and consume comments.
+        if (options.supportComments && (c == '#' || c == '/')) {
+            // Slash character only applies if we aren't building an argument already.
+            // The hash always applies, even if adjacent to an argument.
+            if (c == '#') {
+                pushArg();
+                while (ptr != end && !isNewline(*ptr))
+                    ptr++;
+                continue;
+            }
+
+            if (!hasArg && ptr != end) {
+                if (*ptr == '/') {
+                    pushArg();
+                    ptr++;
+                    while (ptr != end && !isNewline(*ptr))
+                        ptr++;
+                    continue;
+                }
+                else if (*ptr == '*') {
+                    pushArg();
+                    ptr++;
+                    while (ptr != end) {
+                        c = *ptr++;
+                        if (c == '*' && ptr != end && *ptr == '/') {
+                            ptr++;
+                            break;
+                        }
+                    }
+                    continue;
+                }
+            }
         }
 
         // Any non-whitespace character here means we are building an argument.
         hasArg = true;
 
         // Escape character preserves the value of the next character.
-        if (*ptr == '\\') {
-            if (++ptr != end)
-                current += *ptr;
+        if (c == '\\') {
+            if (ptr != end)
+                current += *ptr++;
             continue;
         }
 
         // Single quotes consume all characters until the next single quote.
-        if (*ptr == '\'') {
-            while (++ptr != end && *ptr != '\'')
-                current += *ptr;
+        if (c == '\'') {
+            while (ptr != end) {
+                c = *ptr++;
+                if (c == '\'')
+                    break;
+                current += c;
+            }
             continue;
         }
 
         // Double quotes consume all characters except escaped characters.
-        if (*ptr == '"') {
-            while (++ptr != end && *ptr != '"') {
+        if (c == '"') {
+            while (ptr != end) {
+                c = *ptr++;
+                if (c == '"')
+                    break;
+
                 // Only backslashes and quotes can be escaped.
-                if (*ptr == '\\' && ptr + 1 != end && (ptr[1] == '\\' || ptr[1] == '"'))
-                    ++ptr;
-                current += *ptr;
+                if (c == '\\' && ptr != end && (*ptr == '\\' || *ptr == '"'))
+                    c = *ptr++;
+                current += c;
             }
             continue;
         }
 
         // Otherwise we just have a normal character.
-        current += *ptr;
+        current += c;
     }
 
     if (hasArg)

@@ -151,6 +151,27 @@ TEST_CASE("Test CommandLine -- splitting") {
     CHECK(stuff == std::vector{ " -a"s, "asdf"s, "bar baz bif \\"s, "f foo \" biz \\"s, "1"s });
 }
 
+TEST_CASE("Test CommandLine -- comments") {
+    std::vector<std::string> stuff;
+
+    CommandLine cmdLine;
+    cmdLine.add("-a,--longa", stuff, "SDF", "val");
+
+    CommandLine::ParseOptions options;
+    options.supportComments = true;
+
+    auto args = R"(prog -a
+foo#comment!!
+-a foo/bar//not_comment //this is a comment!
+-a foo/bar/*/not_comment/* -a
+/*comment! / * /* asdf*/ value#asdf
+)"sv;
+    CHECK(cmdLine.parse(args, options));
+
+    CHECK(stuff ==
+          std::vector{ "foo"s, "foo/bar//not_comment"s, "foo/bar/*/not_comment/*"s, "value"s });
+}
+
 TEST_CASE("Test CommandLine -- programmer errors") {
     optional<bool> foo;
 

@@ -192,20 +192,28 @@ public:
     /// @return true on success, false if an errors occurs.
     bool parse(int argc, const char* const argv[]);
 
-    /// Parse the provided command line (space delimited, with handling of
-    /// quoted arguments).
-    /// @return true on success, false if an errors occurs.
-    bool parse(string_view argList);
-
-    /// Parse the provided command line (as a pre-separated list of strings).
-    /// @return true on success, false if an errors occurs.
-    bool parse(span<const string_view> args);
-
 #if defined(_MSC_VER)
     /// Parse the provided command line (MSVC wchar-style).
     /// @return true on success, false if an errors occurs.
     bool parse(int argc, const wchar_t* const argv[]);
 #endif
+
+    /// Parse the provided command line (as a pre-separated list of strings).
+    /// @return true on success, false if an errors occurs.
+    bool parse(span<const string_view> args);
+
+    /// Contains various options to control parsing of command flags.
+    struct ParseOptions {
+        /// If set to true, comments will be parsed and ignored.
+        /// Comments start with '#' or '//' for line comments and
+        /// '/*' and '*/' for block comments.
+        bool supportComments = false;
+    };
+
+    /// Parse the provided command line (space delimited, with handling of
+    /// quoted arguments).
+    /// @return true on success, false if an errors occurs.
+    bool parse(string_view argList, ParseOptions options = {});
 
     /// Gets the name of the program, parsed out of the first item on the command line.
     string_view getProgramName() const { return programName; }
