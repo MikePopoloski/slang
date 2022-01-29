@@ -414,7 +414,8 @@ int driverMain(int argc, TArgs argv, bool suppressColorsStdout, bool suppressCol
     std::vector<std::string> includeSystemDirs;
     std::vector<std::string> libDirs;
     std::vector<std::string> libExts;
-    cmdLine.add("-I,--include-directory", includeDirs, "Additional include search paths", "<dir>");
+    cmdLine.add("-I,--include-directory,+incdir", includeDirs, "Additional include search paths",
+                "<dir>");
     cmdLine.add("--isystem", includeSystemDirs, "Additional system include search paths", "<dir>");
     cmdLine.add("-y,--libdir", libDirs,
                 "Library search paths, which will be searched for missing modules", "<dir>");
@@ -426,7 +427,7 @@ int driverMain(int argc, TArgs argv, bool suppressColorsStdout, bool suppressCol
     optional<uint32_t> maxIncludeDepth;
     std::vector<std::string> defines;
     std::vector<std::string> undefines;
-    cmdLine.add("-D,--define-macro", defines,
+    cmdLine.add("-D,--define-macro,+define", defines,
                 "Define <macro> to <value> (or 1 if <value> ommitted) in all source files",
                 "<macro>=<value>");
     cmdLine.add("-U,--undefine-macro", undefines,
