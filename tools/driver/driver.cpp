@@ -115,6 +115,45 @@ SourceBuffer readSource(SourceManager& sourceManager, const std::string& file) {
     return buffer;
 }
 
+bool processCommandFile(const std::string& fileName, CommandLine& cmdLine, bool makeRelative) {
+    std::error_code ec;
+    fs::path path = fs::canonical(fileName, ec);
+    std::vector<char> buffer;
+    if (ec || !OS::readFile(path, buffer)) {
+        OS::printE(fg(errorColor), "error: ");
+        OS::printE("no such file or directory: '{}'\n", fileName);
+        return false;
+    }
+
+    fs::path currPath;
+    if (makeRelative) {
+        currPath = fs::current_path();
+        fs::current_path(path.parent_path());
+    }
+
+    CommandLine::ParseOptions options;
+    options.expandEnvVars = true;
+    options.ignoreProgramName = true;
+    options.supportComments = true;
+
+    ASSERT(!buffer.empty());
+    buffer.pop_back();
+
+    string_view argStr(buffer.data(), buffer.size());
+    bool result = cmdLine.parse(argStr, options);
+
+    if (makeRelative)
+        fs::current_path(currPath);
+
+    if (!result) {
+        for (auto& err : cmdLine.getErrors())
+            OS::printE("{}\n", err);
+        return false;
+    }
+
+    return true;
+}
+
 bool loadAllSources(Compilation& compilation, SourceManager& sourceManager,
                     const std::vector<SourceBuffer>& buffers, const Bag& options, bool singleUnit,
                     bool onlyLint, const std::vector<std::string>& libraryFiles,
@@ -555,6 +594,18 @@ int driverMain(int argc, TArgs argv, bool suppressColorsStdout, bool suppressCol
                 "where modules are not automatically instantiated.",
                 "<filename>", /* isFileName */ true);
 
+    std::vector<std::string> currCommandFiles;
+    cmdLine.add("-f", currCommandFiles,
+                "One or more command files containing additional program options. "
+                "Paths in the file are considered relative to the current directory.",
+                "<filename>", /* isFileName */ true);
+
+    std::vector<std::string> relCommandFiles;
+    cmdLine.add("-F", relCommandFiles,
+                "One or more command files containing additional program options. "
+                "Paths in the file are considered relative to the file itself.",
+                "<filename>", /* isFileName */ true);
+
 #if defined(INCLUDE_SIM)
     // Simulation
     optional<bool> shouldSim;
@@ -576,6 +627,24 @@ int driverMain(int argc, TArgs argv, bool suppressColorsStdout, bool suppressCol
         OS::print("slang version {}.{}.{}\n", VersionInfo::getMajor(), VersionInfo::getMinor(),
                   VersionInfo::getRevision());
         return 0;
+    }
+
+    // Process all command files, and keep processing them until we've run out.
+    while (!currCommandFiles.empty() || !relCommandFiles.empty()) {
+        auto copyCurrFiles = currCommandFiles;
+        auto copyRelFiles = relCommandFiles;
+        currCommandFiles.clear();
+        relCommandFiles.clear();
+
+        for (auto& file : copyCurrFiles) {
+            if (!processCommandFile(file, cmdLine, /* makeRelative */ false))
+                return 1;
+        }
+
+        for (auto& file : copyRelFiles) {
+            if (!processCommandFile(file, cmdLine, /* makeRelative */ true))
+                return 1;
+        }
     }
 
     bool showColors;

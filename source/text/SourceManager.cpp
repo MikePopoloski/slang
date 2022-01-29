@@ -6,13 +6,9 @@
 //------------------------------------------------------------------------------
 #include "slang/text/SourceManager.h"
 
-#if !defined(_MSC_VER)
-#    include <sys/stat.h>
-#endif
-
-#include <fstream>
 #include <string>
 
+#include "slang/util/OS.h"
 #include "slang/util/StackContainer.h"
 #include "slang/util/String.h"
 
@@ -482,7 +478,7 @@ SourceBuffer SourceManager::openCached(const fs::path& fullPath, SourceLocation 
 
     // do the read
     std::vector<char> buffer;
-    if (!readFile(absPath, buffer)) {
+    if (!OS::readFile(absPath, buffer)) {
         std::unique_lock lock(mut);
         lookupCache.emplace(absPath.u8string(), nullptr);
         return SourceBuffer();
@@ -535,35 +531,6 @@ void SourceManager::computeLineOffsets(const std::vector<char>& buffer,
             ptr++;
         }
     }
-}
-
-bool SourceManager::readFile(const fs::path& path, std::vector<char>& buffer) {
-#if defined(_MSC_VER)
-    std::error_code ec;
-    uintmax_t size = fs::file_size(path, ec);
-    if (ec)
-        return false;
-#else
-    struct stat s;
-    int ec = ::stat(path.string().c_str(), &s);
-    if (ec != 0 || s.st_size < 0)
-        return false;
-
-    uintmax_t size = uintmax_t(s.st_size);
-#endif
-
-    // + 1 for null terminator
-    buffer.resize((size_t)size + 1);
-    std::ifstream stream(path, std::ios::binary);
-    if (!stream.read(buffer.data(), (std::streamsize)size))
-        return false;
-
-    // null-terminate the buffer while we're at it
-    size_t sz = (size_t)stream.gcount();
-    buffer.resize(sz + 1);
-    buffer[sz] = '\0';
-
-    return true;
 }
 
 const SourceManager::LineDirectiveInfo* SourceManager::FileInfo::getPreviousLineDirective(

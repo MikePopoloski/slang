@@ -34,6 +34,22 @@ Adds a file to the compilation, like a positional argument, except that the file
 considered to be a Verilog library. Libraries are always their own compilation unit even
 when compiling with `--single-unit`, and modules within them are never automatically instantiated.
 
+`-f <filename>`
+
+Opens the given "command file" containing lists of arguments to process in
+addition to the ones provided on the command line itself. Any file paths in
+the file are relative to the current working directory.
+
+See @ref command-files for more information about command files.
+
+`-F <filename>`
+
+Opens the given "command file" containing lists of arguments to process in
+addition to the ones provided on the command line itself. Any file paths in
+the file are relative to the command file itself.
+
+See @ref command-files for more information about command files.
+
 @section Actions
 
 These options control what action the tool will perform when run.
@@ -59,6 +75,7 @@ All diagnostics encountered will be printed.
 @section include-paths Include paths and macros
 
 `-I,--include-directory <dir>`
+`+incdir+<dir>[+<dir>...]`
 
 Add the given directory path to the list of directories searched by \`include directives that use
 quotes to specify the path.
@@ -69,6 +86,7 @@ Add the given directory path to the list of directories searched by \`include di
 angle brackets to specify the path.
 
 `-D,--define-macro <macro>=<value>`
+`+define+<macro>=<value>[+<macro>=<value>...]
 
 Define \<macro\> to \<value\> (or `1` if \<value\> is ommitted) at the start of all source files.
 Example:

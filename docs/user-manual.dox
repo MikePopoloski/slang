@@ -74,4 +74,29 @@ Name | Value
 \`__slang_major__ | *slang major version number*
 \`__slang_minor__ | *slang minor version number*
 
+@section command-files Command Files
+
+Command files allow specifying tool options in standalone composable files instead of needing
+to pass all of them on the command line. One or more command files can be used by passing them
+via the -F or -f command line flags -- both flags function identically except in the
+treatment of file paths in the command file. -F files treat their paths as relative to the
+command file itself, where as -f files treat paths as relative to the current working directory.
+
+The format of a command file is straightforward; all text is treated as whitespace-delimited
+arguments, similarly to how they might be passed on the command line. Newlines are treated
+like any other form of whitespace. Some important features are as follows:
+
+-  Command files can contain comments. '#' starts a line comment that continues to the end of
+   the line, regardless of where the '#' occurs. '//' similarly starts a line comment, but only
+   if preceeded by whitespace. '/*' and '*/' form a C-style multiline block comment.
+-  Single quotes and double quotes group text in a similar fashion to how they work in Bash
+   and other shells.
+-  The backslash character can be used to escape special characters and treat them like normal text.
+-  Environment variables in the command file are expanded. Variables can be specified in one of
+   three styles: $VAR, $(VAR), and ${VAR}.
+-  Command files can further include other command files by using -f or -F.
+-  Arguments set in a command file are overridden by anything set on the command line if they would
+   otherwise conflict.
+
+
 */

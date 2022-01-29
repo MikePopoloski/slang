@@ -279,8 +279,6 @@ private:
 
     static void computeLineOffsets(const std::vector<char>& buffer,
                                    std::vector<size_t>& offsets) noexcept;
-
-    static bool readFile(const fs::path& path, std::vector<char>& buffer);
 };
 
 } // namespace slang

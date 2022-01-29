@@ -6,8 +6,10 @@
 //------------------------------------------------------------------------------
 #pragma once
 
+#include <filesystem>
 #include <fmt/color.h>
 #include <fmt/xchar.h>
+#include <vector>
 
 #include "slang/util/String.h"
 
@@ -26,6 +28,11 @@ public:
     /// This is off by default.
     static void setStdoutColorsEnabled(bool enabled) { showColorsStdout = enabled; }
     static void setStderrColorsEnabled(bool enabled) { showColorsStderr = enabled; }
+
+    /// Reads a file from @a path into memory. If successful, the bytes are placed
+    /// into @a buffer -- otherwise, returns false.
+    /// Note that the buffer will be null-terminated.
+    static bool readFile(const std::filesystem::path& path, std::vector<char>& buffer);
 
 #if defined(_MSC_VER)
     /// Prints formatted text to stdout, handling Unicode conversions where necessary.
