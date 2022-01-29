@@ -11,6 +11,7 @@
 #include <variant>
 #include <vector>
 
+#include "slang/util/SmallVector.h"
 #include "slang/util/Util.h"
 
 namespace slang {
@@ -198,22 +199,32 @@ public:
     bool parse(int argc, const wchar_t* const argv[]);
 #endif
 
-    /// Parse the provided command line (as a pre-separated list of strings).
-    /// @return true on success, false if an errors occurs.
-    bool parse(span<const string_view> args);
-
     /// Contains various options to control parsing of command flags.
     struct ParseOptions {
         /// If set to true, comments will be parsed and ignored.
         /// Comments start with '#' or '//' for line comments and
         /// '/*' and '*/' for block comments.
         bool supportComments = false;
+
+        /// If set to true, don't consider the first argument
+        /// to be the name of the program.
+        bool ignoreProgramName = false;
+
+        /// If set to true, expand any environment variables found,
+        /// with the supported forms $VAR, $(VAR), and ${VAR}.
+        bool expandEnvVars = false;
+
+        ParseOptions() {}
     };
 
     /// Parse the provided command line (space delimited, with handling of
     /// quoted arguments).
     /// @return true on success, false if an errors occurs.
     bool parse(string_view argList, ParseOptions options = {});
+
+    /// Parse the provided command line (as a pre-separated list of strings).
+    /// @return true on success, false if an errors occurs.
+    bool parse(span<const string_view> args, ParseOptions options = {});
 
     /// Gets the name of the program, parsed out of the first item on the command line.
     string_view getProgramName() const { return programName; }
@@ -274,6 +285,11 @@ private:
 
     void addInternal(string_view name, OptionStorage storage, string_view desc,
                      string_view valueName);
+
+    void parseStr(string_view argList, ParseOptions options, bool& hasArg, std::string& current,
+                  SmallVector<std::string>& storage);
+
+    static std::string expandVar(const char*& ptr, const char* end);
 
     void handlePlusArg(string_view arg, bool& hadUnknowns);
 

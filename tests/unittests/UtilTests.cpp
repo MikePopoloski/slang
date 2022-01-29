@@ -172,6 +172,31 @@ foo#comment!!
           std::vector{ "foo"s, "foo/bar//not_comment"s, "foo/bar/*/not_comment/*"s, "value"s });
 }
 
+TEST_CASE("Test CommandLine -- env vars") {
+    std::vector<std::string> stuff;
+
+    CommandLine cmdLine;
+    cmdLine.add("-a,--longa", stuff, "SDF", "val");
+    cmdLine.setPositional(stuff, "stuff");
+
+    CommandLine::ParseOptions options;
+    options.ignoreProgramName = true;
+    options.expandEnvVars = true;
+
+    putenv((char*)"FOO=abc 123");
+    putenv((char*)"BAR#=some string");
+    putenv((char*)"BAZ=987654");
+
+    auto args = R"qq(
+$&
+asdf/$FOO/bar "$(BAR#)" ${UNK} ${BAZ} ${
+$)qq"sv;
+    CHECK(cmdLine.parse(args, options));
+
+    CHECK(stuff ==
+          std::vector{ "$&"s, "asdf/abc"s, "123/bar"s, "some string"s, "987654"s, "${"s, "$"s });
+}
+
 TEST_CASE("Test CommandLine -- programmer errors") {
     optional<bool> foo;
 

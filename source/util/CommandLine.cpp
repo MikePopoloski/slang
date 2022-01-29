@@ -8,6 +8,7 @@
 
 #include "../text/CharInfo.h"
 #include <charconv>
+#include <cstdlib>
 #include <filesystem>
 #include <fmt/format.h>
 
@@ -164,6 +165,20 @@ bool CommandLine::parse(string_view argList, ParseOptions options) {
     std::string current;
     SmallVectorSized<std::string, 8> storage;
 
+    parseStr(argList, options, hasArg, current, storage);
+
+    if (hasArg)
+        storage.emplace(std::move(current));
+
+    SmallVectorSized<string_view, 8> args(storage.size());
+    for (auto& arg : storage)
+        args.append(arg);
+
+    return parse(args, options);
+}
+
+void CommandLine::parseStr(string_view argList, ParseOptions options, bool& hasArg,
+                           std::string& current, SmallVector<std::string>& storage) {
     auto pushArg = [&]() {
         if (hasArg) {
             storage.emplace(std::move(current));
@@ -172,8 +187,8 @@ bool CommandLine::parse(string_view argList, ParseOptions options) {
         }
     };
 
-    auto end = argList.data() + argList.size();
     auto ptr = argList.data();
+    auto end = ptr + argList.size();
     while (ptr != end) {
         // Whitespace breaks up arguments.
         char c = *ptr++;
@@ -216,6 +231,16 @@ bool CommandLine::parse(string_view argList, ParseOptions options) {
             }
         }
 
+        // Look for environment variables to expand.
+        if (c == '$' && options.expandEnvVars && ptr != end) {
+            std::string result = expandVar(ptr, end);
+
+            ParseOptions newOptions = options;
+            newOptions.expandEnvVars = false;
+            parseStr(result, newOptions, hasArg, current, storage);
+            continue;
+        }
+
         // Any non-whitespace character here means we are building an argument.
         hasArg = true;
 
@@ -247,7 +272,11 @@ bool CommandLine::parse(string_view argList, ParseOptions options) {
                 // Only backslashes and quotes can be escaped.
                 if (c == '\\' && ptr != end && (*ptr == '\\' || *ptr == '"'))
                     c = *ptr++;
-                current += c;
+
+                if (c == '$' && options.expandEnvVars && ptr != end)
+                    current.append(expandVar(ptr, end));
+                else
+                    current += c;
             }
             continue;
         }
@@ -255,25 +284,63 @@ bool CommandLine::parse(string_view argList, ParseOptions options) {
         // Otherwise we just have a normal character.
         current += c;
     }
-
-    if (hasArg)
-        storage.emplace(std::move(current));
-
-    SmallVectorSized<string_view, 8> args(storage.size());
-    for (auto& arg : storage)
-        args.append(arg);
-
-    return parse(args);
 }
 
-bool CommandLine::parse(span<const string_view> args) {
-    if (args.empty())
-        throw std::runtime_error("Expected at least one argument");
+std::string CommandLine::expandVar(const char*& ptr, const char* end) {
+    auto getEnv = [](const std::string& name) -> std::string {
+        char* result = getenv(name.c_str());
+        if (result)
+            return result;
+        else
+            return {};
+    };
 
+    // Three forms for environment variables to try:
+    // $VAR
+    // $(VAR)
+    // ${VAR}
+    char c = *ptr++;
+    if (c == '(' || c == '{') {
+        char startDelim = c;
+        char endDelim = c == '(' ? ')' : '}';
+        std::string varName;
+        while (ptr != end) {
+            c = *ptr++;
+            if (c == endDelim)
+                return getEnv(varName);
+
+            varName += c;
+        }
+
+        // If we reach the end, we didn't find a closing delimiter.
+        // Don't try to expand, just return the whole thing we collected.
+        return "$"s + startDelim + varName;
+    }
+    else if (isAlphaNumeric(c)) {
+        std::string varName;
+        varName += c;
+        while (ptr != end && isAlphaNumeric(*ptr))
+            varName += *ptr++;
+
+        return getEnv(varName);
+    }
+    else {
+        // This is not a possible variable name so just return what we have.
+        return "$"s + c;
+    }
+}
+
+bool CommandLine::parse(span<const string_view> args, ParseOptions options) {
     if (optionMap.empty())
         throw std::runtime_error("No options defined");
 
-    programName = fs::path(args[0]).filename().string();
+    if (!options.ignoreProgramName) {
+        if (args.empty())
+            throw std::runtime_error("Expected at least one argument");
+
+        programName = fs::path(args[0]).filename().string();
+        args = args.subspan(1);
+    }
 
     SmallVectorSized<string_view, 8> positionalArgs;
     Option* expectingVal = nullptr;
@@ -281,7 +348,7 @@ bool CommandLine::parse(span<const string_view> args) {
     bool doubleDash = false;
     bool hadUnknowns = false;
 
-    for (auto it = args.begin() + 1; it != args.end(); it++) {
+    for (auto it = args.begin(); it != args.end(); it++) {
         string_view arg = *it;
 
         // If we were previously expecting a value, set that now.
