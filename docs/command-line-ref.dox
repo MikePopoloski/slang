@@ -74,8 +74,10 @@ All diagnostics encountered will be printed.
 
 @section include-paths Include paths and macros
 
-`-I,--include-directory <dir>`
-`+incdir+<dir>[+<dir>...]`
+```
+-I,--include-directory <dir>
++incdir+<dir>[+<dir>...]
+```
 
 Add the given directory path to the list of directories searched by \`include directives that use
 quotes to specify the path.
@@ -85,8 +87,10 @@ quotes to specify the path.
 Add the given directory path to the list of directories searched by \`include directives that use
 angle brackets to specify the path.
 
-`-D,--define-macro <macro>=<value>`
-`+define+<macro>=<value>[+<macro>=<value>...]
+```
+-D,--define-macro <macro>=<value>
++define+<macro>=<value>[+<macro>=<value>...]
+```
 
 Define \<macro\> to \<value\> (or `1` if \<value\> is ommitted) at the start of all source files.
 Example:
