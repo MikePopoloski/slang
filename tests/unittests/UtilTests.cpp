@@ -403,3 +403,17 @@ TEST_CASE("Test CommandLine -- file names") {
 
     CHECK(fs::path(*foo).is_absolute());
 }
+
+TEST_CASE("Test CommandLine -- ignore duplicates") {
+    optional<int32_t> foo;
+
+    CommandLine cmdLine;
+    cmdLine.add("--foo", foo, "");
+
+    CommandLine::ParseOptions options;
+    options.ignoreDuplicates = true;
+
+    CHECK(cmdLine.parse("prog --foo 123 --foo 456", options));
+
+    CHECK(foo == 123);
+}

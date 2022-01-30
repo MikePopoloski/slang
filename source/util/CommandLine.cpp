@@ -356,7 +356,7 @@ bool CommandLine::parse(span<const string_view> args, ParseOptions options) {
 
         // If we were previously expecting a value, set that now.
         if (expectingVal) {
-            std::string result = expectingVal->set(expectingValName, arg);
+            std::string result = expectingVal->set(expectingValName, arg, options.ignoreDuplicates);
             if (!result.empty())
                 errors.emplace_back(fmt::format("{}: {}", programName, result));
 
@@ -381,7 +381,7 @@ bool CommandLine::parse(span<const string_view> args, ParseOptions options) {
 
         // Handle plus args, which are treated differently from all others.
         if (arg[0] == '+') {
-            handlePlusArg(arg, hadUnknowns);
+            handlePlusArg(arg, options, hadUnknowns);
             continue;
         }
 
@@ -399,7 +399,7 @@ bool CommandLine::parse(span<const string_view> args, ParseOptions options) {
         // If we didn't find the option and there was only a single dash,
         // maybe this was actually a group of single-char options or a prefixed value.
         if (!option && !longName) {
-            option = tryGroupOrPrefix(name, value);
+            option = tryGroupOrPrefix(name, value, options);
             if (option)
                 arg = name;
         }
@@ -425,7 +425,7 @@ bool CommandLine::parse(span<const string_view> args, ParseOptions options) {
             expectingValName = arg;
         }
         else {
-            std::string result = option->set(arg, value);
+            std::string result = option->set(arg, value, options.ignoreDuplicates);
             if (!result.empty())
                 errors.emplace_back(fmt::format("{}: {}", programName, result));
         }
@@ -438,7 +438,7 @@ bool CommandLine::parse(span<const string_view> args, ParseOptions options) {
 
     if (positional) {
         for (auto arg : positionalArgs)
-            positional->set(""sv, arg);
+            positional->set(""sv, arg, options.ignoreDuplicates);
     }
     else if (!positionalArgs.empty() && !hadUnknowns) {
         errors.emplace_back(
@@ -488,7 +488,7 @@ std::string CommandLine::getHelpText(string_view overview) const {
     return result;
 }
 
-void CommandLine::handlePlusArg(string_view arg, bool& hadUnknowns) {
+void CommandLine::handlePlusArg(string_view arg, ParseOptions options, bool& hadUnknowns) {
     // Values are plus separated.
     string_view value;
     size_t idx = arg.find_first_of('+', 2);
@@ -513,7 +513,7 @@ void CommandLine::handlePlusArg(string_view arg, bool& hadUnknowns) {
                 fmt::format("{}: no value provided for argument '{}'"sv, programName, arg));
         }
         else {
-            std::string result = option->set(arg, value);
+            std::string result = option->set(arg, value, options.ignoreDuplicates);
             ASSERT(result.empty());
         }
         return;
@@ -530,7 +530,7 @@ void CommandLine::handlePlusArg(string_view arg, bool& hadUnknowns) {
             value = {};
         }
 
-        std::string result = option->set(arg, curr);
+        std::string result = option->set(arg, curr, options.ignoreDuplicates);
         if (!result.empty())
             errors.emplace_back(fmt::format("{}: {}", programName, result));
 
@@ -553,7 +553,8 @@ CommandLine::Option* CommandLine::findOption(string_view arg, string_view& value
     return it->second.get();
 }
 
-CommandLine::Option* CommandLine::tryGroupOrPrefix(string_view& arg, string_view& value) {
+CommandLine::Option* CommandLine::tryGroupOrPrefix(string_view& arg, string_view& value,
+                                                   ParseOptions options) {
     // This function handles cases like:
     // -abcvalue
     // Where -a, -b, and -c are arguments and value is the value for argument -c
@@ -572,7 +573,7 @@ CommandLine::Option* CommandLine::tryGroupOrPrefix(string_view& arg, string_view
         }
 
         // Otherwise this is a single flag and we should move on.
-        option->set(name, ""sv);
+        option->set(name, ""sv, options.ignoreDuplicates);
         arg = value;
     }
 }
@@ -612,7 +613,7 @@ bool CommandLine::Option::expectsValue() const {
     return storage.index() != 0;
 }
 
-std::string CommandLine::Option::set(string_view name, string_view value) {
+std::string CommandLine::Option::set(string_view name, string_view value, bool ignoreDup) {
     std::string pathMem;
     if (isFileName && !value.empty()) {
         std::error_code ec;
@@ -625,8 +626,11 @@ std::string CommandLine::Option::set(string_view name, string_view value) {
 
     return std::visit(
         [&](auto&& arg) {
-            if (!allowValue(*arg))
+            if (!allowValue(*arg)) {
+                if (ignoreDup)
+                    return std::string();
                 return fmt::format("more than one value provided for argument '{}'"sv, name);
+            }
             return set(*arg, name, value);
         },
         storage);

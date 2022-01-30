@@ -221,6 +221,10 @@ public:
         /// with the supported forms $VAR, $(VAR), and ${VAR}.
         bool expandEnvVars = false;
 
+        /// If set to true, don't issue an error if a duplicate
+        /// argument setter is found.
+        bool ignoreDuplicates = false;
+
         ParseOptions() {}
     };
 
@@ -263,7 +267,7 @@ private:
 
         bool expectsValue() const;
 
-        std::string set(string_view name, string_view value);
+        std::string set(string_view name, string_view value, bool ignoreDup);
 
     private:
         std::string set(optional<bool>& target, string_view name, string_view value);
@@ -299,10 +303,10 @@ private:
 
     static std::string expandVar(const char*& ptr, const char* end);
 
-    void handlePlusArg(string_view arg, bool& hadUnknowns);
+    void handlePlusArg(string_view arg, ParseOptions options, bool& hadUnknowns);
 
     Option* findOption(string_view arg, string_view& value) const;
-    Option* tryGroupOrPrefix(string_view& arg, string_view& value);
+    Option* tryGroupOrPrefix(string_view& arg, string_view& value, ParseOptions options);
     std::string findNearestMatch(string_view arg) const;
 
     std::shared_ptr<Option> positional;

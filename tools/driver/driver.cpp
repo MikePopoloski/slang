@@ -135,6 +135,7 @@ bool processCommandFile(const std::string& fileName, CommandLine& cmdLine, bool 
     options.expandEnvVars = true;
     options.ignoreProgramName = true;
     options.supportComments = true;
+    options.ignoreDuplicates = true;
 
     ASSERT(!buffer.empty());
     buffer.pop_back();
