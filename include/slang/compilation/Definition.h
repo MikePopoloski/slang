@@ -86,6 +86,7 @@ public:
     flat_hash_set<string_view> modports;
     span<const AttributeSymbol* const> attributes;
     const SyntaxTree* syntaxTree;
+    bool hasNonAnsiPorts;
 
     Definition(const Scope& scope, LookupLocation lookupLocation,
                const ModuleDeclarationSyntax& syntax, const NetType& defaultNetType,

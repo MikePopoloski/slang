@@ -840,6 +840,7 @@ void Scope::elaborate() const {
 
     // Go through deferred instances and elaborate them now.
     bool usedPorts = false;
+    bool nonAnsiPorts = false;
     auto deferred = deferredData.getMembers();
     uint32_t constructIndex = 1;
 
@@ -912,6 +913,7 @@ void Scope::elaborate() const {
                 // method just for this.
                 asSymbol().as<InstanceBodySymbol>().setPorts(ports.copy(compilation));
                 usedPorts = true;
+                nonAnsiPorts = member.node.kind == SyntaxKind::NonAnsiPortList;
                 break;
             }
             case SyntaxKind::DataDeclaration: {
@@ -989,6 +991,15 @@ void Scope::elaborate() const {
                     addDiag(diag::UnusedPortDecl, decl->sourceRange()) << name;
                     break;
                 }
+            }
+        }
+    }
+    else if (nonAnsiPorts) {
+        // Check that all non-ansi ports had I/O declarations assigned.
+        for (auto port : asSymbol().as<InstanceBodySymbol>().portList) {
+            if (port->kind == SymbolKind::InterfacePort &&
+                port->as<InterfacePortSymbol>().isMissingIO) {
+                addDiag(diag::MissingPortIODeclaration, port->location) << port->name;
             }
         }
     }

@@ -802,3 +802,46 @@ endinterface
     auto& p2 = compilation.getRoot().lookupName<ParameterSymbol>("Top.inst_1.P");
     CHECK(p2.getValue().integer() == 4);
 }
+
+TEST_CASE("Non-ansi interface ports") {
+    auto tree = SyntaxTree::fromText(R"(
+interface I #(int foo);
+endinterface
+
+module m;
+    I #(5) i1();
+    n n1(i1);
+endmodule
+
+module n(x);
+    I x;
+
+    localparam bar = x.foo;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    auto& bar = compilation.getRoot().lookupName<ParameterSymbol>("m.n1.bar");
+    CHECK(bar.getValue().integer() == 5);
+}
+
+TEST_CASE("Non-ansi port missing I/O") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    n n1(i1);
+endmodule
+
+module n(x);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::MissingPortIODeclaration);
+}

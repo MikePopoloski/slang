@@ -9,10 +9,12 @@
 #include "slang/binding/BindContext.h"
 #include "slang/binding/TimingControl.h"
 #include "slang/compilation/Compilation.h"
+#include "slang/compilation/Definition.h"
 #include "slang/diagnostics/DeclarationsDiags.h"
 #include "slang/diagnostics/ParserDiags.h"
 #include "slang/symbols/ASTSerializer.h"
 #include "slang/symbols/BlockSymbols.h"
+#include "slang/symbols/InstanceSymbols.h"
 #include "slang/symbols/PortSymbols.h"
 #include "slang/symbols/Scope.h"
 #include "slang/symbols/SubroutineSymbols.h"
@@ -54,6 +56,9 @@ void VariableSymbol::fromSyntax(Compilation& compilation, const DataDeclarationS
     // This might actually be a net declaration with a user defined net type. That can only
     // be true if the data type syntax is a simple identifier or a "class name",
     // so if we see that it is, perform a lookup and see what comes back.
+    //
+    // Alternatively, it could also be a non-ansi interface port declaration. In that case
+    // the name found will be an interface definition.
     if (syntax.modifiers.empty()) {
         string_view simpleName = getPotentialNetTypeName(*syntax.type);
         if (!simpleName.empty()) {
@@ -72,6 +77,42 @@ void VariableSymbol::fromSyntax(Compilation& compilation, const DataDeclarationS
                     results.append(net);
                 }
                 return;
+            }
+
+            if (!result &&
+                syntax.type->as<NamedTypeSyntax>().name->kind == SyntaxKind::IdentifierName) {
+                if (auto def = compilation.getDefinition(simpleName);
+                    def && def->definitionKind == DefinitionKind::Interface) {
+                    // This is not a variable declaration. It's either a non-ansi interface port
+                    // declaration, or it's an error (the user tried to instantiate an interface
+                    // but forgot the parenthesis for the port list). Look in the scope for a
+                    // port with the given name(s) to determine which this is.
+                    if (auto instance = scope.getContainingInstance();
+                        instance && instance->getDefinition().hasNonAnsiPorts) {
+                        for (auto decl : syntax.declarators) {
+                            auto name = decl->name.valueText();
+                            if (name.empty())
+                                continue;
+
+                            auto symbol = scope.find(name);
+                            if (symbol && symbol->kind == SymbolKind::InterfacePort) {
+                                // Unfortunately we can't know at port creation time that
+                                // we are going to be merging this info about interfaces,
+                                // so we have to const_cast.
+                                auto& iface =
+                                    const_cast<Symbol*>(symbol)->as<InterfacePortSymbol>();
+                                iface.interfaceDef = def;
+                                iface.isMissingIO = false;
+                                iface.setSyntax(*decl);
+                                iface.setAttributes(scope, syntax.attributes);
+                            }
+                            else {
+                                scope.addDiag(diag::UnusedPortDecl, decl->sourceRange()) << name;
+                            }
+                        }
+                        return;
+                    }
+                }
             }
         }
     }

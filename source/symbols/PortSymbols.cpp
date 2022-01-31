@@ -314,19 +314,24 @@ public:
     }
 
     Symbol* createPort(const ImplicitNonAnsiPortSyntax& syntax) {
-        auto port = compilation.emplace<PortSymbol>("", syntax.getFirstToken().location());
-        port->setSyntax(syntax);
-
+        auto loc = syntax.getFirstToken().location();
         switch (syntax.expr->kind) {
             case SyntaxKind::PortReference: {
                 auto& ref = syntax.expr->as<PortReferenceSyntax>();
-                port->name = ref.name.valueText();
-
-                auto info = getInfo(port->name, port->location);
-                if (!info)
+                auto name = ref.name.valueText();
+                auto info = getInfo(name, loc);
+                if (!info) {
+                    // Treat all unknown ports as an interface port. If that
+                    // turns out not to be true later we will issue an error then.
+                    auto port = compilation.emplace<InterfacePortSymbol>(name, loc);
+                    port->isMissingIO = true;
                     return port;
+                }
 
                 // TODO: explicit connection expression
+
+                auto port = compilation.emplace<PortSymbol>(name, loc);
+                port->setSyntax(syntax);
 
                 ASSERT(info->internalSymbol);
                 port->direction = info->direction;
@@ -335,9 +340,12 @@ public:
                 port->setAttributes(scope, info->attrs);
                 return port;
             }
-            case SyntaxKind::PortConcatenation:
+            case SyntaxKind::PortConcatenation: {
                 scope.addDiag(diag::NotYetSupported, syntax.sourceRange());
+                auto port = compilation.emplace<PortSymbol>(""sv, loc);
+                port->setSyntax(syntax);
                 return port;
+            }
             default:
                 THROW_UNREACHABLE;
         }
@@ -375,15 +383,13 @@ private:
     };
     SmallMap<string_view, PortInfo, 8> portInfos;
 
-    const PortInfo* getInfo(string_view name, SourceLocation loc) {
+    const PortInfo* getInfo(string_view name, SourceLocation) {
         if (name.empty())
             return nullptr;
 
         auto it = portInfos.find(name);
-        if (it == portInfos.end()) {
-            scope.addDiag(diag::MissingPortIODeclaration, loc) << name;
+        if (it == portInfos.end())
             return nullptr;
-        }
 
         it->second.used = true;
         return &it->second;
@@ -1081,6 +1087,11 @@ void PortSymbol::serializeTo(ASTSerializer& serializer) const {
 optional<span<const ConstantRange>> InterfacePortSymbol::getDeclaredRange() const {
     if (range)
         return *range;
+
+    if (!interfaceDef) {
+        range.emplace();
+        return *range;
+    }
 
     auto syntax = getSyntax();
     ASSERT(syntax);

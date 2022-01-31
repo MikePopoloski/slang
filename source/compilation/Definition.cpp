@@ -104,6 +104,8 @@ Definition::Definition(const Scope& scope, LookupLocation lookupLocation,
     defaultLifetime =
         SemanticFacts::getVariableLifetime(header.lifetime).value_or(VariableLifetime::Static);
     attributes = AttributeSymbol::fromSyntax(syntax.attributes, scope, lookupLocation);
+    hasNonAnsiPorts =
+        syntax.header->ports && syntax.header->ports->kind == SyntaxKind::NonAnsiPortList;
 
     // Find all port parameters.
     bool hasPortParams = header.parameters != nullptr;

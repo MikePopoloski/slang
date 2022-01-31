@@ -66,9 +66,11 @@ public:
     /// Returns nullopt if an error occurs evaluating the dimensions.
     optional<span<const ConstantRange>> getDeclaredRange() const;
 
-    /// Gets the interface instance that this port connects to. Note that there may be
-    /// more than one actual instance that has connected this port; this will return
-    /// only the first such connection.
+    /// Set to true if this was declared as a non-ansi port and no
+    /// I/O declaration was ever found for it.
+    bool isMissingIO = false;
+
+    /// Gets the interface instance that this port connects to.
     const Symbol* getConnection() const;
 
     InterfacePortSymbol(string_view name, SourceLocation loc) :
