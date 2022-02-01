@@ -280,6 +280,9 @@ PortDeclarationSyntax& Parser::parsePortDeclaration(AttrList attributes) {
     if (isPortDirection(peek().kind))
         direction = consume();
 
+    // Callers must ensure we don't call with 'const' unless also 'ref'.
+    ASSERT(!constKeyword || direction.kind == TokenKind::RefKeyword);
+
     auto& header = parsePortHeader(constKeyword, direction);
 
     Token semi;
@@ -1031,18 +1034,24 @@ PortConnectionSyntax& Parser::parsePortConnection() {
     return factory.orderedPortConnection(attributes, parsePropertyExpr(0));
 }
 
-bool Parser::isPortDeclaration() {
+bool Parser::isPortDeclaration(bool inStatement) {
     uint32_t index = 0;
     if (!scanAttributes(index))
         return false;
 
-    if (peek(index).kind == TokenKind::ConstKeyword &&
-        peek(index + 1).kind == TokenKind::RefKeyword) {
+    TokenKind kind = peek(index).kind;
+    if (kind == TokenKind::ConstKeyword && peek(index + 1).kind == TokenKind::RefKeyword)
+        return true;
+
+    // non-ansi interface port declarations are of the form:
+    // interface_identifier . modport_identifier list_of_interface_identifiers
+    if (!inStatement && kind == TokenKind::Identifier && peek(index + 1).kind == TokenKind::Dot &&
+        peek(index + 2).kind == TokenKind::Identifier &&
+        peek(index + 3).kind == TokenKind::Identifier) {
         return true;
     }
 
-    // TODO: check for interface port declaration
-    return isPortDirection(peek(index).kind);
+    return isPortDirection(kind);
 }
 
 bool Parser::isNetDeclaration() {

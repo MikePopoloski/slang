@@ -35,6 +35,37 @@ const NetType& getDefaultNetType(const Scope& scope, SourceLocation location) {
     return scope.getCompilation().getWireNetType();
 }
 
+std::tuple<const Definition*, string_view> getInterfacePortInfo(
+    const Scope& scope, const InterfacePortHeaderSyntax& header) {
+
+    auto& comp = scope.getCompilation();
+    auto token = header.nameOrKeyword;
+    auto def = comp.getDefinition(token.valueText(), scope);
+    string_view modport;
+
+    if (!def) {
+        scope.addDiag(diag::UnknownInterface, token.range()) << token.valueText();
+    }
+    else if (def->definitionKind != DefinitionKind::Interface) {
+        auto& diag = scope.addDiag(diag::PortTypeNotInterfaceOrData, header.nameOrKeyword.range());
+        diag << def->name;
+        diag.addNote(diag::NoteDeclarationHere, def->location);
+        def = nullptr;
+    }
+    else if (header.modport) {
+        auto member = header.modport->member;
+        modport = member.valueText();
+        if (auto it = def->modports.find(modport); it == def->modports.end() && !modport.empty()) {
+            auto& diag = scope.addDiag(diag::NotAModport, member.range());
+            diag << modport;
+            diag << def->name;
+            modport = {};
+        }
+    }
+
+    return { def, modport };
+}
+
 // Helper class to build up lists of port symbols.
 class AnsiPortListBuilder {
 public:
@@ -133,35 +164,7 @@ public:
             case SyntaxKind::InterfacePortHeader: {
                 // TODO: handle generic interface header
                 auto& header = syntax.header->as<InterfacePortHeaderSyntax>();
-                auto token = header.nameOrKeyword;
-                auto definition = compilation.getDefinition(token.valueText(), scope);
-                string_view modport;
-
-                if (!definition) {
-                    scope.addDiag(diag::UnknownInterface, token.range()) << token.valueText();
-                }
-                else if (definition->definitionKind != DefinitionKind::Interface) {
-                    auto& diag = scope.addDiag(diag::PortTypeNotInterfaceOrData,
-                                               header.nameOrKeyword.range());
-                    diag << definition->name;
-                    diag.addNote(diag::NoteDeclarationHere, definition->location);
-                    definition = nullptr;
-                }
-                else if (header.modport) {
-                    auto def = compilation.getDefinition(token.valueText(), scope);
-                    ASSERT(def);
-
-                    auto member = header.modport->member;
-                    modport = member.valueText();
-                    if (auto it = def->modports.find(modport);
-                        it == def->modports.end() && !modport.empty()) {
-                        auto& diag = scope.addDiag(diag::NotAModport, member.range());
-                        diag << modport;
-                        diag << def->name;
-                        modport = {};
-                    }
-                }
-
+                auto [definition, modport] = getInterfacePortInfo(scope, header);
                 return add(decl, definition, modport, syntax.attributes);
             }
             default:
@@ -328,6 +331,15 @@ public:
                     return port;
                 }
 
+                if (info->isIface) {
+                    auto port = compilation.emplace<InterfacePortSymbol>(name, loc);
+                    port->setSyntax(*info->syntax);
+                    port->setAttributes(scope, info->attrs);
+                    port->interfaceDef = info->ifaceDef;
+                    port->modport = info->modport;
+                    return port;
+                }
+
                 // TODO: explicit connection expression
 
                 auto port = compilation.emplace<PortSymbol>(name, loc);
@@ -375,8 +387,11 @@ private:
         const DeclaratorSyntax* syntax = nullptr;
         span<const AttributeInstanceSyntax* const> attrs;
         const Symbol* internalSymbol = nullptr;
+        const Definition* ifaceDef = nullptr;
+        string_view modport;
         ArgumentDirection direction = ArgumentDirection::In;
         bool used = false;
+        bool isIface = false;
 
         PortInfo(const DeclaratorSyntax* syntax, span<const AttributeInstanceSyntax* const> attrs) :
             syntax(syntax), attrs(attrs) {}
@@ -466,9 +481,14 @@ private:
                 setInternalSymbol(*net, decl, *netHeader.dataType, info, insertionPoint);
                 break;
             }
-            case SyntaxKind::InterfacePortHeader:
-                scope.addDiag(diag::NotYetSupported, header.sourceRange());
+            case SyntaxKind::InterfacePortHeader: {
+                auto& ifaceHeader = header.as<InterfacePortHeaderSyntax>();
+                auto [definition, modport] = getInterfacePortInfo(scope, ifaceHeader);
+                info.isIface = true;
+                info.ifaceDef = definition;
+                info.modport = modport;
                 break;
+            }
             default:
                 THROW_UNREACHABLE;
         }
@@ -625,6 +645,19 @@ public:
         // TODO: verify that interface ports must always have a name
         ASSERT(!port.name.empty());
 
+        // If the port definition is empty it means an error already
+        // occurred; there's no way to check this connection so early out.
+        if (!port.interfaceDef) {
+            if (usingOrdered)
+                orderedIndex++;
+            else {
+                auto it = namedConns.find(port.name);
+                if (it != namedConns.end())
+                    it->second.second = true;
+            }
+            return emptyConnection(port);
+        }
+
         auto reportUnconnected = [&]() {
             auto& diag = scope.addDiag(diag::InterfacePortNotConnected, instance.location);
             diag << port.name;
@@ -681,7 +714,7 @@ public:
             if (orderedIndex < orderedConns.size()) {
                 auto loc = orderedConns[orderedIndex]->getFirstToken().location();
                 auto& diag = scope.addDiag(diag::TooManyPortConnections, loc);
-                diag << instance.name;
+                diag << instance.body.getDefinition().name;
                 diag << orderedConns.size();
                 diag << orderedIndex;
             }
@@ -694,7 +727,7 @@ public:
                     auto& diag =
                         scope.addDiag(diag::PortDoesNotExist, pair.second.first->name.location());
                     diag << pair.second.first->name.valueText();
-                    diag << instance.name;
+                    diag << instance.body.getDefinition().name;
                 }
             }
         }

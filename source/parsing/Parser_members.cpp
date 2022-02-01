@@ -92,7 +92,7 @@ MemberSyntax* Parser::parseMember(SyntaxKind parentKind, bool& anyLocalModules) 
 
     if (isHierarchyInstantiation(/* requireName */ false))
         return &parseHierarchyInstantiation(attributes);
-    if (isPortDeclaration())
+    if (isPortDeclaration(/* inStatement */ false))
         return &parsePortDeclaration(attributes);
     if (isNetDeclaration())
         return &parseNetDeclaration(attributes);

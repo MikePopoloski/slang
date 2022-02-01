@@ -633,7 +633,7 @@ span<SyntaxNode*> Parser::parseBlockItems(TokenKind endKind, Token& end, bool in
         SyntaxNode* newNode = nullptr;
         bool isStmt = false;
 
-        if (isPortDeclaration()) {
+        if (isPortDeclaration(/* inStatement */ true)) {
             newNode = &parsePortDeclaration(parseAttributes());
         }
         else if (isVariableDeclaration()) {

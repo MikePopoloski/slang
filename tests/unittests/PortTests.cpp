@@ -806,17 +806,22 @@ endinterface
 TEST_CASE("Non-ansi interface ports") {
     auto tree = SyntaxTree::fromText(R"(
 interface I #(int foo);
+    int baz;
+    modport mod(input baz);
 endinterface
 
 module m;
     I #(5) i1();
-    n n1(i1);
+    n n1(i1, i1);
 endmodule
 
-module n(x);
+module n(x, y);
     I x;
 
     localparam bar = x.foo;
+    int i = y.baz;
+
+    I.mod y;
 endmodule
 )");
 
