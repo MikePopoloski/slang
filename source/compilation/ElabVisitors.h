@@ -70,6 +70,12 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
         symbol.getPackage();
     }
 
+    void handle(const InterfacePortSymbol& symbol) {
+        if (!handleDefault(symbol))
+            return;
+        symbol.getDeclaredRange();
+    }
+
     void handle(const ContinuousAssignSymbol& symbol) {
         if (!handleDefault(symbol))
             return;

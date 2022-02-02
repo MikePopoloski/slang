@@ -11,6 +11,7 @@
 #include "slang/compilation/Compilation.h"
 #include "slang/compilation/Definition.h"
 #include "slang/diagnostics/DeclarationsDiags.h"
+#include "slang/diagnostics/LookupDiags.h"
 #include "slang/diagnostics/ParserDiags.h"
 #include "slang/symbols/ASTSerializer.h"
 #include "slang/symbols/BlockSymbols.h"
@@ -101,10 +102,24 @@ void VariableSymbol::fromSyntax(Compilation& compilation, const DataDeclarationS
                                 // so we have to const_cast.
                                 auto& iface =
                                     const_cast<Symbol*>(symbol)->as<InterfacePortSymbol>();
-                                iface.interfaceDef = def;
-                                iface.isMissingIO = false;
-                                iface.setSyntax(*decl);
-                                iface.setAttributes(scope, syntax.attributes);
+                                if (iface.isMissingIO) {
+                                    iface.location = decl->name.location();
+                                    iface.interfaceDef = def;
+                                    iface.isMissingIO = false;
+                                    iface.setSyntax(*decl);
+                                    iface.setAttributes(scope, syntax.attributes);
+                                }
+                                else {
+                                    auto prevSyntax = iface.getSyntax();
+                                    ASSERT(prevSyntax);
+
+                                    auto& diag =
+                                        scope.addDiag(diag::Redefinition, decl->name.location());
+                                    diag << name;
+                                    diag.addNote(
+                                        diag::NotePreviousDefinition,
+                                        prevSyntax->as<DeclaratorSyntax>().name.location());
+                                }
                             }
                             else {
                                 scope.addDiag(diag::UnusedPortDecl, decl->sourceRange()) << name;

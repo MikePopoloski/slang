@@ -300,7 +300,7 @@ public:
                 // TODO: handle initializer
                 if (auto name = decl->name; !name.isMissing()) {
                     auto result =
-                        portInfos.emplace(name.valueText(), PortInfo{ decl, port->attributes });
+                        portInfos.emplace(name.valueText(), PortInfo{ *decl, port->attributes });
 
                     if (result.second) {
                         handleIODecl(*port->header, result.first->second, insertionPoint);
@@ -317,20 +317,21 @@ public:
     }
 
     Symbol* createPort(const ImplicitNonAnsiPortSyntax& syntax) {
-        auto loc = syntax.getFirstToken().location();
         switch (syntax.expr->kind) {
             case SyntaxKind::PortReference: {
                 auto& ref = syntax.expr->as<PortReferenceSyntax>();
                 auto name = ref.name.valueText();
-                auto info = getInfo(name, loc);
+                auto info = getInfo(name);
                 if (!info) {
                     // Treat all unknown ports as an interface port. If that
                     // turns out not to be true later we will issue an error then.
-                    auto port = compilation.emplace<InterfacePortSymbol>(name, loc);
+                    auto port = compilation.emplace<InterfacePortSymbol>(
+                        name, syntax.getFirstToken().location());
                     port->isMissingIO = true;
                     return port;
                 }
 
+                auto loc = info->syntax->name.location();
                 if (info->isIface) {
                     auto port = compilation.emplace<InterfacePortSymbol>(name, loc);
                     port->setSyntax(*info->syntax);
@@ -354,7 +355,8 @@ public:
             }
             case SyntaxKind::PortConcatenation: {
                 scope.addDiag(diag::NotYetSupported, syntax.sourceRange());
-                auto port = compilation.emplace<PortSymbol>(""sv, loc);
+                auto port =
+                    compilation.emplace<PortSymbol>(""sv, syntax.getFirstToken().location());
                 port->setSyntax(syntax);
                 return port;
             }
@@ -384,7 +386,7 @@ private:
     SmallVector<std::pair<Symbol*, const Symbol*>>& implicitMembers;
 
     struct PortInfo {
-        const DeclaratorSyntax* syntax = nullptr;
+        not_null<const DeclaratorSyntax*> syntax;
         span<const AttributeInstanceSyntax* const> attrs;
         const Symbol* internalSymbol = nullptr;
         const Definition* ifaceDef = nullptr;
@@ -393,12 +395,12 @@ private:
         bool used = false;
         bool isIface = false;
 
-        PortInfo(const DeclaratorSyntax* syntax, span<const AttributeInstanceSyntax* const> attrs) :
-            syntax(syntax), attrs(attrs) {}
+        PortInfo(const DeclaratorSyntax& syntax, span<const AttributeInstanceSyntax* const> attrs) :
+            syntax(&syntax), attrs(attrs) {}
     };
     SmallMap<string_view, PortInfo, 8> portInfos;
 
-    const PortInfo* getInfo(string_view name, SourceLocation) {
+    const PortInfo* getInfo(string_view name) {
         if (name.empty())
             return nullptr;
 

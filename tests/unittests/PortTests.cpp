@@ -833,13 +833,27 @@ endmodule
     CHECK(bar.getValue().integer() == 5);
 }
 
-TEST_CASE("Non-ansi port missing I/O") {
+TEST_CASE("Non-ansi port errors") {
     auto tree = SyntaxTree::fromText(R"(
+interface I;
+    int foo;
+    modport mod(input foo);
+endinterface
+
 module m;
-    n n1(i1);
+    I i2(), i3 [2] ();
+    n n1(i1, i2, i3);
 endmodule
 
-module n(x);
+module n(x, y, z);
+    I.mod y;
+    I y;
+    I z[2];
+    I z;
+endmodule
+
+module o(x);
+    I x[foo];
 endmodule
 )");
 
@@ -847,6 +861,9 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 1);
+    REQUIRE(diags.size() == 4);
     CHECK(diags[0].code == diag::MissingPortIODeclaration);
+    CHECK(diags[1].code == diag::Redefinition);
+    CHECK(diags[2].code == diag::Redefinition);
+    CHECK(diags[3].code == diag::UndeclaredIdentifier);
 }
