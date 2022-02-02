@@ -855,15 +855,41 @@ endmodule
 module o(x);
     I x[foo];
 endmodule
+
+module p(x);
+    const ref int x;
+endmodule
 )");
 
     Compilation compilation;
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 4);
+    REQUIRE(diags.size() == 5);
     CHECK(diags[0].code == diag::MissingPortIODeclaration);
     CHECK(diags[1].code == diag::Redefinition);
     CHECK(diags[2].code == diag::Redefinition);
     CHECK(diags[3].code == diag::UndeclaredIdentifier);
+    CHECK(diags[4].code == diag::ConstPortNotAllowed);
+}
+
+TEST_CASE("User-defined nettypes in ports") {
+    auto tree = SyntaxTree::fromText(R"(
+typedef logic[10:0] stuff;
+nettype stuff baz;
+nettype baz foo;
+
+module m(x);
+    input foo x;
+endmodule
+
+module top;
+    foo f;
+    m m1(f);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
 }

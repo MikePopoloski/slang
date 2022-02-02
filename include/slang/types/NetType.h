@@ -6,8 +6,8 @@
 //------------------------------------------------------------------------------
 #pragma once
 
-#include "slang/types/DeclaredType.h"
 #include "slang/symbols/Symbol.h"
+#include "slang/types/DeclaredType.h"
 
 namespace slang {
 
@@ -65,6 +65,7 @@ public:
 
 private:
     friend class Symbol;
+    friend class NetSymbol;
 
     void resolve() const;
 

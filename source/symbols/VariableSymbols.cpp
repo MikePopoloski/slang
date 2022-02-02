@@ -52,6 +52,56 @@ static VariableLifetime getDefaultLifetime(const Scope& scope) {
     }
 }
 
+static bool checkNonAnsiInterfacePort(Compilation& compilation, const Scope& scope,
+                                      string_view simpleName, const DataDeclarationSyntax& syntax) {
+    auto def = compilation.getDefinition(simpleName);
+    if (!def || def->definitionKind != DefinitionKind::Interface)
+        return false;
+
+    // This is not a variable declaration. It's either a non-ansi interface port
+    // declaration, or it's an error (the user tried to instantiate an interface
+    // but forgot the parenthesis for the port list). Look in the scope for a
+    // port with the given name(s) to determine which this is.
+    auto instance = scope.getContainingInstance();
+    if (!instance || !instance->getDefinition().hasNonAnsiPorts)
+        return false;
+
+    for (auto decl : syntax.declarators) {
+        auto name = decl->name.valueText();
+        if (name.empty())
+            continue;
+
+        auto symbol = scope.find(name);
+        if (symbol && symbol->kind == SymbolKind::InterfacePort) {
+            // Unfortunately we can't know at port creation time that
+            // we are going to be merging this info about interfaces,
+            // so we have to const_cast.
+            auto& iface = const_cast<Symbol*>(symbol)->as<InterfacePortSymbol>();
+            if (iface.isMissingIO) {
+                iface.location = decl->name.location();
+                iface.interfaceDef = def;
+                iface.isMissingIO = false;
+                iface.setSyntax(*decl);
+                iface.setAttributes(scope, syntax.attributes);
+            }
+            else {
+                auto prevSyntax = iface.getSyntax();
+                ASSERT(prevSyntax);
+
+                auto& diag = scope.addDiag(diag::Redefinition, decl->name.location());
+                diag << name;
+                diag.addNote(diag::NotePreviousDefinition,
+                             prevSyntax->as<DeclaratorSyntax>().name.location());
+            }
+        }
+        else {
+            scope.addDiag(diag::UnusedPortDecl, decl->sourceRange()) << name;
+        }
+    }
+
+    return true;
+}
+
 void VariableSymbol::fromSyntax(Compilation& compilation, const DataDeclarationSyntax& syntax,
                                 const Scope& scope, SmallVector<const ValueSymbol*>& results) {
     // This might actually be a net declaration with a user defined net type. That can only
@@ -66,13 +116,9 @@ void VariableSymbol::fromSyntax(Compilation& compilation, const DataDeclarationS
             auto result = Lookup::unqualified(scope, simpleName);
             if (result && result->kind == SymbolKind::NetType) {
                 const NetType& netType = result->as<NetType>();
-                netType.getAliasTarget(); // force resolution of target
-
-                auto& declaredType = *netType.getDeclaredType();
                 for (auto declarator : syntax.declarators) {
                     auto net = compilation.emplace<NetSymbol>(declarator->name.valueText(),
                                                               declarator->name.location(), netType);
-                    net->getDeclaredType()->copyTypeFrom(declaredType);
                     net->setFromDeclarator(*declarator);
                     net->setAttributes(scope, syntax.attributes);
                     results.append(net);
@@ -82,52 +128,8 @@ void VariableSymbol::fromSyntax(Compilation& compilation, const DataDeclarationS
 
             if (!result &&
                 syntax.type->as<NamedTypeSyntax>().name->kind == SyntaxKind::IdentifierName) {
-                if (auto def = compilation.getDefinition(simpleName);
-                    def && def->definitionKind == DefinitionKind::Interface) {
-                    // This is not a variable declaration. It's either a non-ansi interface port
-                    // declaration, or it's an error (the user tried to instantiate an interface
-                    // but forgot the parenthesis for the port list). Look in the scope for a
-                    // port with the given name(s) to determine which this is.
-                    if (auto instance = scope.getContainingInstance();
-                        instance && instance->getDefinition().hasNonAnsiPorts) {
-                        for (auto decl : syntax.declarators) {
-                            auto name = decl->name.valueText();
-                            if (name.empty())
-                                continue;
-
-                            auto symbol = scope.find(name);
-                            if (symbol && symbol->kind == SymbolKind::InterfacePort) {
-                                // Unfortunately we can't know at port creation time that
-                                // we are going to be merging this info about interfaces,
-                                // so we have to const_cast.
-                                auto& iface =
-                                    const_cast<Symbol*>(symbol)->as<InterfacePortSymbol>();
-                                if (iface.isMissingIO) {
-                                    iface.location = decl->name.location();
-                                    iface.interfaceDef = def;
-                                    iface.isMissingIO = false;
-                                    iface.setSyntax(*decl);
-                                    iface.setAttributes(scope, syntax.attributes);
-                                }
-                                else {
-                                    auto prevSyntax = iface.getSyntax();
-                                    ASSERT(prevSyntax);
-
-                                    auto& diag =
-                                        scope.addDiag(diag::Redefinition, decl->name.location());
-                                    diag << name;
-                                    diag.addNote(
-                                        diag::NotePreviousDefinition,
-                                        prevSyntax->as<DeclaratorSyntax>().name.location());
-                                }
-                            }
-                            else {
-                                scope.addDiag(diag::UnusedPortDecl, decl->sourceRange()) << name;
-                            }
-                        }
-                        return;
-                    }
-                }
+                if (checkNonAnsiInterfacePort(compilation, scope, simpleName, syntax))
+                    return;
             }
         }
     }
@@ -309,6 +311,13 @@ void FieldSymbol::serializeTo(ASTSerializer& serializer) const {
     serializer.write("offset", offset);
 }
 
+NetSymbol::NetSymbol(string_view name, SourceLocation loc, const NetType& netType) :
+    ValueSymbol(SymbolKind::Net, name, loc, DeclaredTypeFlags::NetType), netType(netType) {
+
+    netType.getAliasTarget(); // force resolution of target
+    getDeclaredType()->copyTypeFrom(netType.declaredType);
+}
+
 void NetSymbol::fromSyntax(const Scope& scope, const NetDeclarationSyntax& syntax,
                            SmallVector<const NetSymbol*>& results) {
     auto& comp = scope.getCompilation();
@@ -356,13 +365,9 @@ void NetSymbol::fromSyntax(const BindContext& context,
     else
         netType = &result->as<NetType>();
 
-    netType->getAliasTarget(); // force resolution of target
-    auto& declaredType = *netType->getDeclaredType();
-
     for (auto declarator : syntax.declarators) {
         auto net = comp.emplace<NetSymbol>(declarator->name.valueText(),
                                            declarator->name.location(), *netType);
-        net->getDeclaredType()->copyTypeFrom(declaredType);
         net->setFromDeclarator(*declarator);
         net->setAttributes(*context.scope, syntax.attributes);
         results.append(net);

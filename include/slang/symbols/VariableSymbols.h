@@ -129,8 +129,7 @@ public:
     const NetType& netType;
     enum ExpansionHint { None, Vectored, Scalared } expansionHint = None;
 
-    NetSymbol(string_view name, SourceLocation loc, const NetType& netType) :
-        ValueSymbol(SymbolKind::Net, name, loc, DeclaredTypeFlags::NetType), netType(netType) {}
+    NetSymbol(string_view name, SourceLocation loc, const NetType& netType);
 
     const TimingControl* getDelay() const;
 

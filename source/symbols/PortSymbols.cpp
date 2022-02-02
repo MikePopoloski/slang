@@ -66,6 +66,13 @@ std::tuple<const Definition*, string_view> getInterfacePortInfo(
     return { def, modport };
 }
 
+const NetType* tryFindNetType(const Scope& scope, string_view name) {
+    auto result = Lookup::unqualified(scope, name);
+    if (result && result->kind == SymbolKind::NetType)
+        return &result->as<NetType>();
+    return nullptr;
+}
+
 // Helper class to build up lists of port symbols.
 class AnsiPortListBuilder {
 public:
@@ -291,7 +298,7 @@ public:
         const Scope& scope,
         span<std::pair<const PortDeclarationSyntax*, const Symbol*> const> portDeclarations,
         SmallVector<std::pair<Symbol*, const Symbol*>>& implicitMembers) :
-        compilation(scope.getCompilation()),
+        comp(scope.getCompilation()),
         scope(scope), implicitMembers(implicitMembers) {
 
         // All port declarations in the scope have been collected; index them for easy lookup.
@@ -325,15 +332,15 @@ public:
                 if (!info) {
                     // Treat all unknown ports as an interface port. If that
                     // turns out not to be true later we will issue an error then.
-                    auto port = compilation.emplace<InterfacePortSymbol>(
-                        name, syntax.getFirstToken().location());
+                    auto port =
+                        comp.emplace<InterfacePortSymbol>(name, syntax.getFirstToken().location());
                     port->isMissingIO = true;
                     return port;
                 }
 
                 auto loc = info->syntax->name.location();
                 if (info->isIface) {
-                    auto port = compilation.emplace<InterfacePortSymbol>(name, loc);
+                    auto port = comp.emplace<InterfacePortSymbol>(name, loc);
                     port->setSyntax(*info->syntax);
                     port->setAttributes(scope, info->attrs);
                     port->interfaceDef = info->ifaceDef;
@@ -343,7 +350,7 @@ public:
 
                 // TODO: explicit connection expression
 
-                auto port = compilation.emplace<PortSymbol>(name, loc);
+                auto port = comp.emplace<PortSymbol>(name, loc);
                 port->setSyntax(syntax);
 
                 ASSERT(info->internalSymbol);
@@ -355,8 +362,7 @@ public:
             }
             case SyntaxKind::PortConcatenation: {
                 scope.addDiag(diag::NotYetSupported, syntax.sourceRange());
-                auto port =
-                    compilation.emplace<PortSymbol>(""sv, syntax.getFirstToken().location());
+                auto port = comp.emplace<PortSymbol>(""sv, syntax.getFirstToken().location());
                 port->setSyntax(syntax);
                 return port;
             }
@@ -366,9 +372,9 @@ public:
     }
 
     Symbol* createPort(const EmptyNonAnsiPortSyntax& syntax) {
-        auto port = compilation.emplace<PortSymbol>("", syntax.placeholder.location());
+        auto port = comp.emplace<PortSymbol>("", syntax.placeholder.location());
         port->setSyntax(syntax);
-        port->setType(compilation.getVoidType()); // indicator that this is an empty port
+        port->setType(comp.getVoidType()); // indicator that this is an empty port
         return port;
     }
 
@@ -381,7 +387,7 @@ public:
     }
 
 private:
-    Compilation& compilation;
+    Compilation& comp;
     const Scope& scope;
     SmallVector<std::pair<Symbol*, const Symbol*>>& implicitMembers;
 
@@ -401,9 +407,6 @@ private:
     SmallMap<string_view, PortInfo, 8> portInfos;
 
     const PortInfo* getInfo(string_view name) {
-        if (name.empty())
-            return nullptr;
-
         auto it = portInfos.find(name);
         if (it == portInfos.end())
             return nullptr;
@@ -425,13 +428,25 @@ private:
                 auto& varHeader = header.as<VariablePortHeaderSyntax>();
                 info.direction = SemanticFacts::getDirection(varHeader.direction.kind);
 
+                if (varHeader.constKeyword)
+                    scope.addDiag(diag::ConstPortNotAllowed, varHeader.constKeyword.range());
+
                 // If the port has any kind of type declared, this constitutes a full symbol
                 // definition. Otherwise we need to see if there's an existing symbol to match with.
                 if (varHeader.varKeyword || varHeader.dataType->kind != SyntaxKind::ImplicitType) {
-                    // TODO: check for user defined net type?
-                    auto variable = compilation.emplace<VariableSymbol>(name, declLoc,
-                                                                        VariableLifetime::Static);
-                    setInternalSymbol(*variable, decl, *varHeader.dataType, info, insertionPoint);
+                    if (!varHeader.varKeyword) {
+                        auto simpleName = SyntaxFacts::getSimpleTypeName(*varHeader.dataType);
+                        auto netType = tryFindNetType(scope, simpleName);
+                        if (netType) {
+                            auto net = comp.emplace<NetSymbol>(name, declLoc, *netType);
+                            setInternalSymbol(*net, decl, nullptr, info, insertionPoint);
+                            break;
+                        }
+                    }
+
+                    auto variable =
+                        comp.emplace<VariableSymbol>(name, declLoc, VariableLifetime::Static);
+                    setInternalSymbol(*variable, decl, varHeader.dataType, info, insertionPoint);
                 }
                 else if (auto symbol = scope.find(name);
                          symbol && (symbol->kind == SymbolKind::Variable ||
@@ -456,31 +471,25 @@ private:
                 }
                 else {
                     // No symbol and no data type defaults to a basic net.
-                    auto net = compilation.emplace<NetSymbol>(name, declLoc,
-                                                              getDefaultNetType(scope, declLoc));
-                    setInternalSymbol(*net, decl, *varHeader.dataType, info, insertionPoint);
+                    auto net =
+                        comp.emplace<NetSymbol>(name, declLoc, getDefaultNetType(scope, declLoc));
+                    setInternalSymbol(*net, decl, varHeader.dataType, info, insertionPoint);
                 }
 
                 if (info.direction == ArgumentDirection::InOut &&
                     info.internalSymbol->kind != SymbolKind::Net) {
                     scope.addDiag(diag::InOutPortCannotBeVariable, declLoc) << name;
                 }
-                else if (info.direction == ArgumentDirection::Ref &&
-                         info.internalSymbol->kind == SymbolKind::Net) {
-                    scope.addDiag(diag::RefPortMustBeVariable, declLoc) << name;
-                }
                 break;
             }
             case SyntaxKind::NetPortHeader: {
                 auto& netHeader = header.as<NetPortHeaderSyntax>();
                 info.direction = SemanticFacts::getDirection(netHeader.direction.kind);
-                if (info.direction == ArgumentDirection::Ref)
-                    scope.addDiag(diag::RefPortMustBeVariable, declLoc) << name;
 
                 // Create a new symbol to represent this port internally to the instance.
-                auto net = compilation.emplace<NetSymbol>(
-                    name, declLoc, compilation.getNetType(netHeader.netType.kind));
-                setInternalSymbol(*net, decl, *netHeader.dataType, info, insertionPoint);
+                auto net =
+                    comp.emplace<NetSymbol>(name, declLoc, comp.getNetType(netHeader.netType.kind));
+                setInternalSymbol(*net, decl, netHeader.dataType, info, insertionPoint);
                 break;
             }
             case SyntaxKind::InterfacePortHeader: {
@@ -494,16 +503,23 @@ private:
             default:
                 THROW_UNREACHABLE;
         }
+
+        if (info.direction == ArgumentDirection::Ref &&
+            info.internalSymbol->kind == SymbolKind::Net) {
+            scope.addDiag(diag::RefPortMustBeVariable, declLoc) << name;
+        }
     }
 
     void setInternalSymbol(ValueSymbol& symbol, const DeclaratorSyntax& decl,
-                           const DataTypeSyntax& dataType, PortInfo& info,
+                           const DataTypeSyntax* dataType, PortInfo& info,
                            const Symbol* insertionPoint) {
         symbol.setSyntax(decl);
-        symbol.setDeclaredType(dataType, decl.dimensions);
         symbol.setAttributes(scope, info.attrs);
         implicitMembers.emplace(&symbol, insertionPoint);
         info.internalSymbol = &symbol;
+
+        if (dataType)
+            symbol.setDeclaredType(*dataType, decl.dimensions);
 
         if (insertionPoint)
             symbol.getDeclaredType()->setOverrideIndex(insertionPoint->getIndex());
