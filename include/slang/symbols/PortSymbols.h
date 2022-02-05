@@ -36,9 +36,6 @@ public:
     /// this set to nullptr.
     const Symbol* internalSymbol = nullptr;
 
-    /// An optional default value that is used for the port when no connection is provided.
-    const Expression* defaultValue = nullptr;
-
     /// The source location where the external name for the port is declared.
     SourceLocation externalLoc;
 
@@ -74,12 +71,12 @@ public:
 
     const Type& getType() const;
 
+    /// Placeholder function to enable generic code. Multi-ports never have initializers.
+    const Expression* getInitializer() const { return nullptr; }
+
     void serializeTo(ASTSerializer& serializer) const;
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::MultiPort; }
-
-    /// A placeholder value to make templating between PortSymbol and MultiPortSymbol easier.
-    static inline const Expression* const defaultValue = nullptr;
 
 private:
     mutable const Type* type = nullptr;

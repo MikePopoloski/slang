@@ -882,13 +882,19 @@ module r({x, y}, {z, w}, {q, r}, {o, p});
     input o;
     ref int p;
 endmodule
+
+module s(x, y, z);
+    input x = 1;
+    output y = foo;
+    I z = 3;
+endmodule
 )");
 
     Compilation compilation;
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 15);
+    REQUIRE(diags.size() == 18);
     CHECK(diags[0].code == diag::MissingPortIODeclaration);
     CHECK(diags[1].code == diag::Redefinition);
     CHECK(diags[2].code == diag::Redefinition);
@@ -904,6 +910,9 @@ endmodule
     CHECK(diags[12].code == diag::PortConcatInOut);
     CHECK(diags[13].code == diag::PortConcatRef);
     CHECK(diags[14].code == diag::PortConcatRef);
+    CHECK(diags[15].code == diag::DisallowedPortDefault);
+    CHECK(diags[16].code == diag::UndeclaredIdentifier);
+    CHECK(diags[17].code == diag::DisallowedPortDefault);
 }
 
 TEST_CASE("User-defined nettypes in ports") {

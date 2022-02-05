@@ -305,19 +305,18 @@ public:
         // All port declarations in the scope have been collected; index them for easy lookup.
         for (auto [port, insertionPoint] : portDeclarations) {
             for (auto decl : port->declarators) {
-                // TODO: handle initializer
                 if (auto name = decl->name; !name.isMissing()) {
-                    auto result =
+                    auto [it, inserted] =
                         portInfos.emplace(name.valueText(), PortInfo{ *decl, port->attributes });
 
-                    if (result.second) {
-                        handleIODecl(*port->header, result.first->second, insertionPoint);
+                    if (inserted) {
+                        handleIODecl(*port->header, it->second, insertionPoint);
                     }
                     else {
                         auto& diag = scope.addDiag(diag::Redefinition, name.location());
                         diag << name.valueText();
                         diag.addNote(diag::NotePreviousDefinition,
-                                     result.first->second.syntax->name.location());
+                                     it->second.syntax->name.location());
                     }
                 }
             }
@@ -459,6 +458,7 @@ private:
             case SyntaxKind::InterfacePortHeader: {
                 auto& ifaceHeader = header.as<InterfacePortHeaderSyntax>();
                 auto [definition, modport] = getInterfacePortInfo(scope, ifaceHeader);
+                ASSERT(ifaceHeader.nameOrKeyword.kind == TokenKind::Identifier);
                 info.isIface = true;
                 info.ifaceDef = definition;
                 info.modport = modport;
@@ -472,6 +472,9 @@ private:
             info.internalSymbol->kind == SymbolKind::Net) {
             scope.addDiag(diag::RefPortMustBeVariable, declLoc) << name;
         }
+
+        if (info.direction != ArgumentDirection::Out && decl.initializer)
+            scope.addDiag(diag::DisallowedPortDefault, decl.initializer->sourceRange());
     }
 
     void setInternalSymbol(ValueSymbol& symbol, const DeclaratorSyntax& decl,
@@ -522,6 +525,10 @@ private:
         port->internalSymbol = info->internalSymbol;
         port->getDeclaredType()->copyTypeFrom(*info->internalSymbol->getDeclaredType());
         port->setAttributes(scope, info->attrs);
+
+        if (auto init = info->syntax->initializer)
+            port->setInitializerSyntax(*init->expr, init->equals.location());
+
         return *port;
     }
 
@@ -670,13 +677,13 @@ public:
 
     template<typename TPort>
     PortConnection* getConnection(const TPort& port) {
-        const bool hasDefault = port.defaultValue != nullptr;
+        const bool hasDefault = port.getInitializer() != nullptr;
         if (usingOrdered) {
             if (orderedIndex >= orderedConns.size()) {
                 orderedIndex++;
 
                 if (hasDefault)
-                    return createConnection(port, port.defaultValue, {});
+                    return createConnection(port, port.getInitializer(), {});
 
                 if (port.name.empty()) {
                     if (!warnedAboutUnnamed) {
@@ -697,7 +704,7 @@ public:
             if (pc.kind == SyntaxKind::OrderedPortConnection)
                 return createConnection(port, *pc.as<OrderedPortConnectionSyntax>().expr, attrs);
             else
-                return createConnection(port, port.defaultValue, attrs);
+                return createConnection(port, port.getInitializer(), attrs);
         }
 
         if (port.name.empty()) {
@@ -716,7 +723,7 @@ public:
                 return implicitNamedPort(port, wildcardAttrs, wildcardRange, true);
 
             if (hasDefault)
-                return createConnection(port, port.defaultValue, {});
+                return createConnection(port, port.getInitializer(), {});
 
             scope.addDiag(diag::UnconnectedNamedPort, instance.location) << port.name;
             return emptyConnection(port);
@@ -898,8 +905,8 @@ private:
         if (!symbol) {
             // If this is a wildcard connection, we're allowed to use the port's default value,
             // if it has one.
-            if (isWildcard && port.defaultValue)
-                return createConnection(port, port.defaultValue, attributes);
+            if (isWildcard && port.getInitializer())
+                return createConnection(port, port.getInitializer(), attributes);
 
             scope.addDiag(diag::ImplicitNamedPortNotFound, range) << port.name;
             return emptyConnection(port);
@@ -1221,12 +1228,8 @@ void PortSymbol::fromSyntax(
 
 void PortSymbol::serializeTo(ASTSerializer& serializer) const {
     serializer.write("direction", toString(direction));
-
     if (internalSymbol)
         serializer.writeLink("internalSymbol", *internalSymbol);
-
-    if (defaultValue)
-        serializer.write("default", *defaultValue);
 }
 
 MultiPortSymbol::MultiPortSymbol(string_view name, SourceLocation loc,

@@ -88,6 +88,9 @@ static bool checkNonAnsiInterfacePort(Compilation& compilation, const Scope& sco
                     auto& diag = scope.addDiag(diag::IfacePortInConcat, iface.multiPortLoc);
                     diag << iface.name;
                 }
+
+                if (decl->initializer)
+                    scope.addDiag(diag::DisallowedPortDefault, decl->initializer->sourceRange());
             }
             else {
                 auto prevSyntax = iface.getSyntax();
