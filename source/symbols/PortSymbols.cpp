@@ -492,12 +492,11 @@ private:
                 THROW_UNREACHABLE;
         }
 
-        if (info.direction == ArgumentDirection::Ref &&
-            info.internalSymbol->kind == SymbolKind::Net) {
+        const bool isNet = info.internalSymbol && info.internalSymbol->kind == SymbolKind::Net;
+        if (info.direction == ArgumentDirection::Ref && isNet)
             scope.addDiag(diag::RefPortMustBeVariable, declLoc) << name;
-        }
 
-        if (info.direction != ArgumentDirection::Out && decl.initializer)
+        if ((info.direction != ArgumentDirection::Out || isNet) && decl.initializer)
             scope.addDiag(diag::DisallowedPortDefault, decl.initializer->sourceRange());
     }
 

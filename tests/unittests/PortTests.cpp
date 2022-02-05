@@ -885,7 +885,7 @@ endmodule
 
 module s(x, y, z);
     input x = 1;
-    output y = foo;
+    output int y = foo;
     I z = 3;
 endmodule
 )");
