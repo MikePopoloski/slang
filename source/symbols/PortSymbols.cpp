@@ -324,11 +324,34 @@ public:
     }
 
     Symbol* createPort(const ImplicitNonAnsiPortSyntax& syntax) {
+        auto loc = syntax.expr->getFirstToken().location();
         switch (syntax.expr->kind) {
             case SyntaxKind::PortReference:
-                return &createPort(syntax.expr->as<PortReferenceSyntax>());
+                return &createPort(""sv, loc, syntax.expr->as<PortReferenceSyntax>());
             case SyntaxKind::PortConcatenation:
-                return &createPort(syntax.expr->as<PortConcatenationSyntax>());
+                return &createPort(""sv, loc, syntax.expr->as<PortConcatenationSyntax>());
+            default:
+                THROW_UNREACHABLE;
+        }
+    }
+
+    Symbol* createPort(const ExplicitNonAnsiPortSyntax& syntax) {
+        auto name = syntax.name.valueText();
+        auto loc = syntax.name.location();
+
+        if (!syntax.expr) {
+            auto port = comp.emplace<PortSymbol>(name, loc);
+            port->direction = ArgumentDirection::In;
+            port->setSyntax(syntax);
+            port->setType(comp.getVoidType()); // indicator that this is an empty port
+            return port;
+        }
+
+        switch (syntax.expr->kind) {
+            case SyntaxKind::PortReference:
+                return &createPort(name, loc, syntax.expr->as<PortReferenceSyntax>());
+            case SyntaxKind::PortConcatenation:
+                return &createPort(name, loc, syntax.expr->as<PortConcatenationSyntax>());
             default:
                 THROW_UNREACHABLE;
         }
@@ -336,6 +359,7 @@ public:
 
     Symbol* createPort(const EmptyNonAnsiPortSyntax& syntax) {
         auto port = comp.emplace<PortSymbol>("", syntax.placeholder.location());
+        port->direction = ArgumentDirection::In;
         port->setSyntax(syntax);
         port->setType(comp.getVoidType()); // indicator that this is an empty port
         return port;
@@ -492,21 +516,24 @@ private:
             symbol.getDeclaredType()->setOverrideIndex(insertionPoint->getIndex());
     }
 
-    Symbol& createPort(const PortReferenceSyntax& syntax) {
+    Symbol& createPort(string_view externalName, SourceLocation externalLoc,
+                       const PortReferenceSyntax& syntax) {
         auto name = syntax.name.valueText();
+        if (externalName.empty())
+            externalName = name;
+
         auto info = getInfo(name);
-        auto externalLoc = syntax.getFirstToken().location();
         if (!info) {
             // Treat all unknown ports as an interface port. If that
             // turns out not to be true later we will issue an error then.
-            auto port = comp.emplace<InterfacePortSymbol>(name, externalLoc);
+            auto port = comp.emplace<InterfacePortSymbol>(externalName, externalLoc);
             port->isMissingIO = true;
             return *port;
         }
 
         auto loc = info->syntax->name.location();
         if (info->isIface) {
-            auto port = comp.emplace<InterfacePortSymbol>(name, loc);
+            auto port = comp.emplace<InterfacePortSymbol>(externalName, loc);
             port->setSyntax(*info->syntax);
             port->setAttributes(scope, info->attrs);
             port->interfaceDef = info->ifaceDef;
@@ -516,7 +543,7 @@ private:
 
         // TODO: explicit connection expression
 
-        auto port = comp.emplace<PortSymbol>(name, loc);
+        auto port = comp.emplace<PortSymbol>(externalName, loc);
         port->setSyntax(syntax);
         port->externalLoc = externalLoc;
 
@@ -532,7 +559,8 @@ private:
         return *port;
     }
 
-    Symbol& createPort(const PortConcatenationSyntax& syntax) {
+    Symbol& createPort(string_view name, SourceLocation externalLoc,
+                       const PortConcatenationSyntax& syntax) {
         ArgumentDirection dir = ArgumentDirection::In;
         SmallVectorSized<const PortSymbol*, 4> buffer;
         bool allNets = true;
@@ -547,7 +575,7 @@ private:
         };
 
         for (auto item : syntax.references) {
-            auto& port = createPort(*item);
+            auto& port = createPort(""sv, item->getFirstToken().location(), *item);
             if (port.kind == SymbolKind::Port) {
                 auto& ps = port.as<PortSymbol>();
                 buffer.append(&ps);
@@ -605,8 +633,7 @@ private:
             }
         }
 
-        auto result = comp.emplace<MultiPortSymbol>(""sv, syntax.getFirstToken().location(),
-                                                    buffer.copy(comp), dir);
+        auto result = comp.emplace<MultiPortSymbol>(name, externalLoc, buffer.copy(comp), dir);
         result->setSyntax(syntax);
         return *result;
     }
@@ -867,7 +894,7 @@ private:
     PortConnection* createConnection(const TPort& port, const PropertyExprSyntax& syntax,
                                      span<const AttributeSymbol* const> attributes) {
         // If this is an empty port, it's an error to provide an expression.
-        if (port.name.empty() && port.getType().isVoid()) {
+        if (port.getType().isVoid()) {
             auto& diag = scope.addDiag(diag::NullPortExpression, syntax.sourceRange());
             diag.addNote(diag::NoteDeclarationHere, port.location);
             return emptyConnection(port);
@@ -1206,7 +1233,7 @@ void PortSymbol::fromSyntax(
                         results.append(builder.createPort(port->as<ImplicitNonAnsiPortSyntax>()));
                         break;
                     case SyntaxKind::ExplicitNonAnsiPort:
-                        scope.addDiag(diag::NotYetSupported, port->sourceRange());
+                        results.append(builder.createPort(port->as<ExplicitNonAnsiPortSyntax>()));
                         break;
                     case SyntaxKind::EmptyNonAnsiPort:
                         results.append(builder.createPort(port->as<EmptyNonAnsiPortSyntax>()));

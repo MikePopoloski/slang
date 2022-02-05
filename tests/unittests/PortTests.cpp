@@ -947,12 +947,23 @@ module n ({a, b}, a);
     output b;
 endmodule
 
+module o (.a(i), .b(i), .c());
+    inout i;
+endmodule
+
+module p (.a({b,c}), f, .g(h[1]));
+    input b,c,f,h;
+endmodule
+
 module top;
     logic a;
     logic [1:0] b;
 
     m m1(a, a);
     n n1(b, 1);
+    o o1(a, a, );
+    o o2(.a, .b(a), .c());
+    p p1(.a(b), .f(1), .g(b[0]));
 endmodule
 )");
 
