@@ -83,6 +83,11 @@ static bool checkNonAnsiInterfacePort(Compilation& compilation, const Scope& sco
                 iface.isMissingIO = false;
                 iface.setSyntax(*decl);
                 iface.setAttributes(scope, syntax.attributes);
+
+                if (iface.multiPortLoc) {
+                    auto& diag = scope.addDiag(diag::IfacePortInConcat, iface.multiPortLoc);
+                    diag << iface.name;
+                }
             }
             else {
                 auto prevSyntax = iface.getSyntax();

@@ -64,6 +64,7 @@ enum class RandMode;
     x(Parameter) \
     x(TypeParameter) \
     x(Port) \
+    x(MultiPort) \
     x(InterfacePort) \
     x(Modport) \
     x(ModportPort) \

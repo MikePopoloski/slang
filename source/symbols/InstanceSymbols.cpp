@@ -468,6 +468,16 @@ const PortConnection* InstanceSymbol::getPortConnection(const PortSymbol& port) 
     return reinterpret_cast<const PortConnection*>(it->second);
 }
 
+const PortConnection* InstanceSymbol::getPortConnection(const MultiPortSymbol& port) const {
+    resolvePortConnections();
+
+    auto it = connections->find(reinterpret_cast<uintptr_t>(&port));
+    if (it == connections->end())
+        return nullptr;
+
+    return reinterpret_cast<const PortConnection*>(it->second);
+}
+
 const PortConnection* InstanceSymbol::getPortConnection(const InterfacePortSymbol& port) const {
     resolvePortConnections();
 

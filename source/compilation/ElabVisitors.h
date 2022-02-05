@@ -76,6 +76,12 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
         symbol.getDeclaredRange();
     }
 
+    void handle(const MultiPortSymbol& symbol) {
+        if (!handleDefault(symbol))
+            return;
+        symbol.getType();
+    }
+
     void handle(const ContinuousAssignSymbol& symbol) {
         if (!handleDefault(symbol))
             return;

@@ -856,8 +856,31 @@ module o(x);
     I x[foo];
 endmodule
 
-module p(x);
+module p(x, {y, z, w});
     const ref int x;
+    I y;
+    I.mod z;
+endmodule
+
+module q({x, y}, {z, w}, {q, r});
+    input foo x;
+    input y, z, w[3];
+
+    input [16777215-1:0] q, r;
+endmodule
+
+module r({x, y}, {z, w}, {q, r}, {o, p});
+    inout x;
+    output logic y;
+
+    input logic z;
+    inout w;
+
+    ref int q;
+    output r;
+
+    input o;
+    ref int p;
 endmodule
 )");
 
@@ -865,12 +888,22 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 5);
+    REQUIRE(diags.size() == 15);
     CHECK(diags[0].code == diag::MissingPortIODeclaration);
     CHECK(diags[1].code == diag::Redefinition);
     CHECK(diags[2].code == diag::Redefinition);
     CHECK(diags[3].code == diag::UndeclaredIdentifier);
-    CHECK(diags[4].code == diag::ConstPortNotAllowed);
+    CHECK(diags[4].code == diag::IfacePortInConcat);
+    CHECK(diags[5].code == diag::IfacePortInConcat);
+    CHECK(diags[6].code == diag::MissingPortIODeclaration);
+    CHECK(diags[7].code == diag::ConstPortNotAllowed);
+    CHECK(diags[8].code == diag::BadConcatExpression);
+    CHECK(diags[9].code == diag::ValueExceedsMaxBitWidth);
+    CHECK(diags[10].code == diag::UndeclaredIdentifier);
+    CHECK(diags[11].code == diag::PortConcatInOut);
+    CHECK(diags[12].code == diag::PortConcatInOut);
+    CHECK(diags[13].code == diag::PortConcatRef);
+    CHECK(diags[14].code == diag::PortConcatRef);
 }
 
 TEST_CASE("User-defined nettypes in ports") {
@@ -886,6 +919,31 @@ endmodule
 module top;
     foo f;
     m m1(f);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Non-ansi port expressions") {
+    auto tree = SyntaxTree::fromText(R"(
+module m (a,a);
+    input a;
+endmodule
+
+module n ({a, b}, a);
+    input a;
+    output b;
+endmodule
+
+module top;
+    logic a;
+    logic [1:0] b;
+
+    m m1(a, a);
+    n n1(b, 1);
 endmodule
 )");
 

@@ -18,6 +18,7 @@ class Definition;
 class Expression;
 class InstanceBodySymbol;
 class InterfacePortSymbol;
+class MultiPortSymbol;
 class ParameterBuilder;
 class ParameterSymbolBase;
 class PortConnection;
@@ -64,6 +65,7 @@ public:
     bool isInterface() const;
 
     const PortConnection* getPortConnection(const PortSymbol& port) const;
+    const PortConnection* getPortConnection(const MultiPortSymbol& port) const;
     const PortConnection* getPortConnection(const InterfacePortSymbol& port) const;
     void resolvePortConnections() const;
 

@@ -558,6 +558,7 @@ void Scope::addDeferredMembers(const SyntaxNode& syntax) {
 static bool canLookupByName(SymbolKind kind) {
     switch (kind) {
         case SymbolKind::Port:
+        case SymbolKind::MultiPort:
         case SymbolKind::Package:
         case SymbolKind::Primitive:
             return false;
@@ -839,6 +840,7 @@ void Scope::elaborate() const {
     };
 
     // Go through deferred instances and elaborate them now.
+    SmallVectorSized<std::pair<Symbol*, const Symbol*>, 8> implicitMembers;
     bool usedPorts = false;
     bool nonAnsiPorts = false;
     auto deferred = deferredData.getMembers();
@@ -900,7 +902,6 @@ void Scope::elaborate() const {
             case SyntaxKind::AnsiPortList:
             case SyntaxKind::NonAnsiPortList: {
                 SmallVectorSized<const Symbol*, 8> ports;
-                SmallVectorSized<std::pair<Symbol*, const Symbol*>, 8> implicitMembers;
                 PortSymbol::fromSyntax(member.node.as<PortListSyntax>(), *this, ports,
                                        implicitMembers, deferredData.getPortDeclarations());
                 insertMembers(ports, symbol);
@@ -997,6 +998,13 @@ void Scope::elaborate() const {
     else if (nonAnsiPorts) {
         // Check that all non-ansi ports had I/O declarations assigned.
         for (auto port : asSymbol().as<InstanceBodySymbol>().portList) {
+            if (port->kind == SymbolKind::InterfacePort &&
+                port->as<InterfacePortSymbol>().isMissingIO) {
+                addDiag(diag::MissingPortIODeclaration, port->location) << port->name;
+            }
+        }
+
+        for (auto [port, insertionPoint] : implicitMembers) {
             if (port->kind == SymbolKind::InterfacePort &&
                 port->as<InterfacePortSymbol>().isMissingIO) {
                 addDiag(diag::MissingPortIODeclaration, port->location) << port->name;

@@ -39,6 +39,9 @@ public:
     /// An optional default value that is used for the port when no connection is provided.
     const Expression* defaultValue = nullptr;
 
+    /// The source location where the external name for the port is declared.
+    SourceLocation externalLoc;
+
     PortSymbol(string_view name, SourceLocation loc,
                bitmask<DeclaredTypeFlags> flags = DeclaredTypeFlags::None);
 
@@ -50,6 +53,36 @@ public:
         span<std::pair<const PortDeclarationSyntax*, const Symbol*> const> portDeclarations);
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::Port; }
+
+    using ValueSymbol::setParent;
+};
+
+/// Represents a multi-port, which is a port symbol that externally appears as
+/// a single connection but internally connects to multiple names, potentially
+/// with varying directions.
+class MultiPortSymbol : public Symbol {
+public:
+    span<const PortSymbol* const> ports;
+
+    /// The direction of data flowing across the various ports. This is the most
+    /// restrictive aggregated direction out of all the ports. You need to check
+    /// each individual port to know how the data actually flows.
+    ArgumentDirection direction;
+
+    MultiPortSymbol(string_view name, SourceLocation loc, span<const PortSymbol* const> ports,
+                    ArgumentDirection direction);
+
+    const Type& getType() const;
+
+    void serializeTo(ASTSerializer& serializer) const;
+
+    static bool isKind(SymbolKind kind) { return kind == SymbolKind::MultiPort; }
+
+    /// A placeholder value to make templating between PortSymbol and MultiPortSymbol easier.
+    static inline const Expression* const defaultValue = nullptr;
+
+private:
+    mutable const Type* type = nullptr;
 };
 
 /// Represents the public-facing side of a module / program / interface port
@@ -70,6 +103,12 @@ public:
     /// I/O declaration was ever found for it.
     bool isMissingIO = false;
 
+    /// The source location of the port name, if this port was declared
+    /// inside of a multi-port concatenation expression. This is only set
+    /// if isMissingIO is also set to true; it indicates an error should be
+    /// reported when the I/O declaration is finally found.
+    SourceLocation multiPortLoc;
+
     /// Gets the interface instance that this port connects to.
     const Symbol* getConnection() const;
 
@@ -87,7 +126,7 @@ private:
 class PortConnection {
 public:
     union {
-        const PortSymbol* port;
+        const Symbol* port;
         const InterfacePortSymbol* ifacePort;
     };
 
@@ -99,7 +138,7 @@ public:
     bool isInterfacePort;
     span<const AttributeSymbol* const> attributes;
 
-    PortConnection(const PortSymbol& port, const Expression* expr,
+    PortConnection(const Symbol& port, const Expression* expr,
                    span<const AttributeSymbol* const> attributes);
     PortConnection(const InterfacePortSymbol& port, const Symbol* instance,
                    span<const AttributeSymbol* const> attributes);

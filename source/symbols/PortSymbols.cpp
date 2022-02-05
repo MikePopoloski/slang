@@ -10,6 +10,7 @@
 #include "slang/compilation/Compilation.h"
 #include "slang/compilation/Definition.h"
 #include "slang/diagnostics/DeclarationsDiags.h"
+#include "slang/diagnostics/ExpressionsDiags.h"
 #include "slang/diagnostics/LookupDiags.h"
 #include "slang/symbols/ASTSerializer.h"
 #include "slang/symbols/AttributeSymbol.h"
@@ -325,47 +326,10 @@ public:
 
     Symbol* createPort(const ImplicitNonAnsiPortSyntax& syntax) {
         switch (syntax.expr->kind) {
-            case SyntaxKind::PortReference: {
-                auto& ref = syntax.expr->as<PortReferenceSyntax>();
-                auto name = ref.name.valueText();
-                auto info = getInfo(name);
-                if (!info) {
-                    // Treat all unknown ports as an interface port. If that
-                    // turns out not to be true later we will issue an error then.
-                    auto port =
-                        comp.emplace<InterfacePortSymbol>(name, syntax.getFirstToken().location());
-                    port->isMissingIO = true;
-                    return port;
-                }
-
-                auto loc = info->syntax->name.location();
-                if (info->isIface) {
-                    auto port = comp.emplace<InterfacePortSymbol>(name, loc);
-                    port->setSyntax(*info->syntax);
-                    port->setAttributes(scope, info->attrs);
-                    port->interfaceDef = info->ifaceDef;
-                    port->modport = info->modport;
-                    return port;
-                }
-
-                // TODO: explicit connection expression
-
-                auto port = comp.emplace<PortSymbol>(name, loc);
-                port->setSyntax(syntax);
-
-                ASSERT(info->internalSymbol);
-                port->direction = info->direction;
-                port->internalSymbol = info->internalSymbol;
-                port->getDeclaredType()->copyTypeFrom(*info->internalSymbol->getDeclaredType());
-                port->setAttributes(scope, info->attrs);
-                return port;
-            }
-            case SyntaxKind::PortConcatenation: {
-                scope.addDiag(diag::NotYetSupported, syntax.sourceRange());
-                auto port = comp.emplace<PortSymbol>(""sv, syntax.getFirstToken().location());
-                port->setSyntax(syntax);
-                return port;
-            }
+            case SyntaxKind::PortReference:
+                return &createPort(syntax.expr->as<PortReferenceSyntax>());
+            case SyntaxKind::PortConcatenation:
+                return &createPort(syntax.expr->as<PortConcatenationSyntax>());
             default:
                 THROW_UNREACHABLE;
         }
@@ -524,6 +488,121 @@ private:
         if (insertionPoint)
             symbol.getDeclaredType()->setOverrideIndex(insertionPoint->getIndex());
     }
+
+    Symbol& createPort(const PortReferenceSyntax& syntax) {
+        auto name = syntax.name.valueText();
+        auto info = getInfo(name);
+        auto externalLoc = syntax.getFirstToken().location();
+        if (!info) {
+            // Treat all unknown ports as an interface port. If that
+            // turns out not to be true later we will issue an error then.
+            auto port = comp.emplace<InterfacePortSymbol>(name, externalLoc);
+            port->isMissingIO = true;
+            return *port;
+        }
+
+        auto loc = info->syntax->name.location();
+        if (info->isIface) {
+            auto port = comp.emplace<InterfacePortSymbol>(name, loc);
+            port->setSyntax(*info->syntax);
+            port->setAttributes(scope, info->attrs);
+            port->interfaceDef = info->ifaceDef;
+            port->modport = info->modport;
+            return *port;
+        }
+
+        // TODO: explicit connection expression
+
+        auto port = comp.emplace<PortSymbol>(name, loc);
+        port->setSyntax(syntax);
+        port->externalLoc = externalLoc;
+
+        ASSERT(info->internalSymbol);
+        port->direction = info->direction;
+        port->internalSymbol = info->internalSymbol;
+        port->getDeclaredType()->copyTypeFrom(*info->internalSymbol->getDeclaredType());
+        port->setAttributes(scope, info->attrs);
+        return *port;
+    }
+
+    Symbol& createPort(const PortConcatenationSyntax& syntax) {
+        ArgumentDirection dir = ArgumentDirection::In;
+        SmallVectorSized<const PortSymbol*, 4> buffer;
+        bool allNets = true;
+        bool allVars = true;
+        bool hadError = false;
+
+        auto reportDirError = [&](DiagCode code) {
+            if (!hadError) {
+                scope.addDiag(code, syntax.sourceRange());
+                hadError = true;
+            }
+        };
+
+        for (auto item : syntax.references) {
+            auto& port = createPort(*item);
+            if (port.kind == SymbolKind::Port) {
+                auto& ps = port.as<PortSymbol>();
+                buffer.append(&ps);
+                ps.setParent(scope);
+
+                // We need to merge the port direction with all of the other component port
+                // directions to come up with our "effective" direction, which is what we use
+                // to bind connection expressions. The rules here are not spelled out in the
+                // LRM, but here's what I think makes sense based on other language rules:
+                // - If all the directions are the same, that's the effective direction.
+                // - inputs and outputs can be freely mixed; output direction dominates.
+                // - if any port is ref, all ports must be variables. Effective direction is ref.
+                // - if any port is inout, all ports must be nets. Effective direction is inout.
+                // - ref and inout can never mix (implied by above two points).
+                if (ps.direction == ArgumentDirection::InOut) {
+                    dir = ArgumentDirection::InOut;
+                    if (!allNets)
+                        reportDirError(diag::PortConcatInOut);
+                }
+                else if (ps.direction == ArgumentDirection::Ref) {
+                    dir = ArgumentDirection::Ref;
+                    if (!allVars)
+                        reportDirError(diag::PortConcatRef);
+                }
+                else if (ps.direction == ArgumentDirection::Out && dir == ArgumentDirection::In) {
+                    dir = ArgumentDirection::Out;
+                }
+
+                auto sym = ps.internalSymbol;
+                ASSERT(sym);
+                if (sym->kind == SymbolKind::Net) {
+                    allVars = false;
+                    if (dir == ArgumentDirection::Ref)
+                        reportDirError(diag::PortConcatRef);
+                }
+                else {
+                    allNets = false;
+                    if (dir == ArgumentDirection::InOut)
+                        reportDirError(diag::PortConcatInOut);
+                }
+            }
+            else {
+                auto& ip = port.as<InterfacePortSymbol>();
+                if (ip.isMissingIO) {
+                    // This port gets added to the implicit members list because we
+                    // need it to be findable via lookup, so that later declarations
+                    // can properly issue an error if this is a real interface port.
+                    ip.multiPortLoc = item->getFirstToken().location();
+                    implicitMembers.emplace(&port, nullptr);
+                }
+                else {
+                    auto& diag = scope.addDiag(diag::IfacePortInConcat, item->sourceRange());
+                    diag << ip.name;
+                }
+            }
+        }
+
+        auto result = comp.emplace<MultiPortSymbol>(""sv, syntax.getFirstToken().location(),
+                                                    buffer.copy(comp), dir);
+        result->setSyntax(syntax);
+        return *result;
+    }
 };
 
 class PortConnectionBuilder {
@@ -589,11 +668,14 @@ public:
         std::reverse(instanceDims.begin(), instanceDims.end());
     }
 
-    PortConnection* getConnection(const PortSymbol& port) {
+    template<typename TPort>
+    PortConnection* getConnection(const TPort& port) {
+        const bool hasDefault = port.defaultValue != nullptr;
         if (usingOrdered) {
             if (orderedIndex >= orderedConns.size()) {
                 orderedIndex++;
-                if (port.defaultValue)
+
+                if (hasDefault)
                     return createConnection(port, port.defaultValue, {});
 
                 if (port.name.empty()) {
@@ -633,7 +715,7 @@ public:
             if (hasWildcard)
                 return implicitNamedPort(port, wildcardAttrs, wildcardRange, true);
 
-            if (port.defaultValue)
+            if (hasDefault)
                 return createConnection(port, port.defaultValue, {});
 
             scope.addDiag(diag::UnconnectedNamedPort, instance.location) << port.name;
@@ -659,7 +741,7 @@ public:
         return implicitNamedPort(port, attrs, conn.name.range(), false);
     }
 
-    PortConnection* getConnection(const InterfacePortSymbol& port) {
+    PortConnection* getIfaceConnection(const InterfacePortSymbol& port) {
         // TODO: verify that interface ports must always have a name
         ASSERT(!port.name.empty());
 
@@ -756,6 +838,10 @@ private:
         return comp.emplace<PortConnection>(port, nullptr, span<const AttributeSymbol* const>{});
     }
 
+    PortConnection* emptyConnection(const MultiPortSymbol& port) {
+        return comp.emplace<PortConnection>(port, nullptr, span<const AttributeSymbol* const>{});
+    }
+
     PortConnection* emptyConnection(const InterfacePortSymbol& port) {
         return comp.emplace<PortConnection>(port, nullptr, span<const AttributeSymbol* const>{});
     }
@@ -765,7 +851,13 @@ private:
         return comp.emplace<PortConnection>(port, expr, attributes);
     }
 
-    PortConnection* createConnection(const PortSymbol& port, const PropertyExprSyntax& syntax,
+    PortConnection* createConnection(const MultiPortSymbol& port, const Expression* expr,
+                                     span<const AttributeSymbol* const> attributes) {
+        return comp.emplace<PortConnection>(port, expr, attributes);
+    }
+
+    template<typename TPort>
+    PortConnection* createConnection(const TPort& port, const PropertyExprSyntax& syntax,
                                      span<const AttributeSymbol* const> attributes) {
         // If this is an empty port, it's an error to provide an expression.
         if (port.name.empty() && port.getType().isVoid()) {
@@ -791,7 +883,8 @@ private:
         return comp.emplace<PortConnection>(port, ifaceInst, attributes);
     }
 
-    PortConnection* implicitNamedPort(const PortSymbol& port,
+    template<typename TPort>
+    PortConnection* implicitNamedPort(const TPort& port,
                                       span<const AttributeSymbol* const> attributes,
                                       SourceRange range, bool isWildcard) {
         // An implicit named port connection is semantically equivalent to `.port(port)` except:
@@ -1068,6 +1161,7 @@ private:
 
 PortSymbol::PortSymbol(string_view name, SourceLocation loc, bitmask<DeclaredTypeFlags> flags) :
     ValueSymbol(SymbolKind::Port, name, loc, flags | DeclaredTypeFlags::Port) {
+    externalLoc = loc;
 }
 
 void PortSymbol::fromSyntax(
@@ -1135,6 +1229,69 @@ void PortSymbol::serializeTo(ASTSerializer& serializer) const {
         serializer.write("default", *defaultValue);
 }
 
+MultiPortSymbol::MultiPortSymbol(string_view name, SourceLocation loc,
+                                 span<const PortSymbol* const> ports, ArgumentDirection direction) :
+    Symbol(SymbolKind::MultiPort, name, loc),
+    ports(ports), direction(direction) {
+}
+
+const Type& MultiPortSymbol::getType() const {
+    if (type)
+        return *type;
+
+    auto scope = getParentScope();
+    auto syntax = getSyntax();
+    ASSERT(scope && syntax);
+
+    auto& comp = scope->getCompilation();
+
+    BindContext context(*scope, LookupLocation::before(*this));
+    bitwidth_t totalWidth = 0;
+    bitmask<IntegralFlags> flags;
+
+    for (auto port : ports) {
+        auto& t = port->getType();
+        if (t.isError()) {
+            type = &comp.getErrorType();
+            return *type;
+        }
+
+        if (!t.isIntegral()) {
+            context.addDiag(diag::BadConcatExpression, port->externalLoc) << t;
+            type = &comp.getErrorType();
+            return *type;
+        }
+
+        totalWidth += t.getBitWidth();
+
+        if (!context.requireValidBitWidth(totalWidth, syntax->sourceRange())) {
+            type = &comp.getErrorType();
+            return *type;
+        }
+
+        if (t.isFourState())
+            flags |= IntegralFlags::FourState;
+    }
+
+    if (totalWidth == 0) {
+        type = &comp.getErrorType();
+        return *type;
+    }
+
+    type = &comp.getType(totalWidth, flags);
+    return *type;
+}
+
+void MultiPortSymbol::serializeTo(ASTSerializer& serializer) const {
+    serializer.startArray("ports");
+    for (auto port : ports) {
+        serializer.startObject();
+        port->serializeTo(serializer);
+        serializer.endObject();
+    }
+    serializer.endArray();
+}
+
 optional<span<const ConstantRange>> InterfacePortSymbol::getDeclaredRange() const {
     if (range)
         return *range;
@@ -1186,7 +1343,7 @@ void InterfacePortSymbol::serializeTo(ASTSerializer& serializer) const {
         serializer.write("modport", modport);
 }
 
-PortConnection::PortConnection(const PortSymbol& port, const Expression* expr,
+PortConnection::PortConnection(const Symbol& port, const Expression* expr,
                                span<const AttributeSymbol* const> attributes) :
     port(&port),
     expr(expr), isInterfacePort(false), attributes(attributes) {
@@ -1209,10 +1366,15 @@ void PortConnection::makeConnections(
             results.emplace(reinterpret_cast<uintptr_t>(&port),
                             reinterpret_cast<uintptr_t>(builder.getConnection(port)));
         }
+        else if (portBase->kind == SymbolKind::MultiPort) {
+            auto& port = portBase->as<MultiPortSymbol>();
+            results.emplace(reinterpret_cast<uintptr_t>(&port),
+                            reinterpret_cast<uintptr_t>(builder.getConnection(port)));
+        }
         else {
             auto& port = portBase->as<InterfacePortSymbol>();
             results.emplace(reinterpret_cast<uintptr_t>(&port),
-                            reinterpret_cast<uintptr_t>(builder.getConnection(port)));
+                            reinterpret_cast<uintptr_t>(builder.getIfaceConnection(port)));
         }
     }
 
