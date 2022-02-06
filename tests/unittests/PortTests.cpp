@@ -917,17 +917,27 @@ endmodule
 
 TEST_CASE("User-defined nettypes in ports") {
     auto tree = SyntaxTree::fromText(R"(
-typedef logic[10:0] stuff;
+typedef logic[10:0] stuff[2];
 nettype stuff baz;
 nettype baz foo;
 
-module m(x);
+module m(x, y);
     input foo x;
+
+    int baz[3];
+    input foo y[$size(baz)];
+endmodule
+
+int bar[3];
+
+module n(input foo x[$size(bar)], y);
 endmodule
 
 module top;
     foo f;
-    m m1(f);
+    foo g[3];
+    m m1(f, g);
+    n n1(g, f);
 endmodule
 )");
 

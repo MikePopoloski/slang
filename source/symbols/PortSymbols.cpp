@@ -67,13 +67,6 @@ std::tuple<const Definition*, string_view> getInterfacePortInfo(
     return { def, modport };
 }
 
-const NetType* tryFindNetType(const Scope& scope, string_view name) {
-    auto result = Lookup::unqualified(scope, name);
-    if (result && result->kind == SymbolKind::NetType)
-        return &result->as<NetType>();
-    return nullptr;
-}
-
 // Helper class to build up lists of port symbols.
 class AnsiPortListBuilder {
 public:
@@ -84,7 +77,7 @@ public:
 
     Symbol* createPort(const ImplicitAnsiPortSyntax& syntax) {
         // Helper function to check if an implicit type syntax is totally empty.
-        auto typeSyntaxEmpty = [](const DataTypeSyntax& typeSyntax) {
+        auto isEmpty = [](const DataTypeSyntax& typeSyntax) {
             if (typeSyntax.kind != SyntaxKind::ImplicitType)
                 return false;
 
@@ -101,41 +94,44 @@ public:
                 // We'll never even get into this code path if the very first port omitted all three
                 // because then it would be a non-ansi port list.
                 auto& header = syntax.header->as<VariablePortHeaderSyntax>();
-                if (!header.direction && !header.varKeyword && typeSyntaxEmpty(*header.dataType))
+                if (!header.direction && !header.varKeyword && isEmpty(*header.dataType))
                     return addInherited(decl, syntax.attributes);
 
                 // It's possible that this is actually an interface port if the data type is just an
                 // identifier. The only way to know is to do a lookup and see what comes back.
-                const Definition* definition = nullptr;
                 string_view simpleName = SyntaxFacts::getSimpleTypeName(*header.dataType);
                 if (!simpleName.empty()) {
                     auto found = Lookup::unqualified(scope, simpleName, LookupFlags::Type);
+                    if (found && found->kind == SymbolKind::NetType) {
+                        return add(decl, getDirection(header.direction), nullptr,
+                                   &found->as<NetType>(), syntax.attributes);
+                    }
 
                     // If we didn't find a valid type, try to find a definition.
-                    if (!found || !found->isType())
-                        definition = compilation.getDefinition(simpleName, scope);
-                }
+                    if (!found || !found->isType()) {
+                        if (auto definition = compilation.getDefinition(simpleName, scope)) {
+                            if (definition->definitionKind != DefinitionKind::Interface) {
+                                auto& diag = scope.addDiag(diag::PortTypeNotInterfaceOrData,
+                                                           header.dataType->sourceRange());
+                                diag << definition->name;
+                                diag.addNote(diag::NoteDeclarationHere, definition->location);
+                                definition = nullptr;
+                            }
+                            else {
+                                if (header.varKeyword) {
+                                    scope.addDiag(diag::VarWithInterfacePort,
+                                                  header.varKeyword.location());
+                                }
 
-                if (definition) {
-                    if (definition->definitionKind != DefinitionKind::Interface) {
-                        auto& diag = scope.addDiag(diag::PortTypeNotInterfaceOrData,
-                                                   header.dataType->sourceRange());
-                        diag << definition->name;
-                        diag.addNote(diag::NoteDeclarationHere, definition->location);
-                        definition = nullptr;
-                    }
-                    else {
-                        if (header.varKeyword) {
-                            scope.addDiag(diag::VarWithInterfacePort, header.varKeyword.location());
+                                if (header.direction) {
+                                    scope.addDiag(diag::DirectionWithInterfacePort,
+                                                  header.direction.location());
+                                }
+                            }
+
+                            return add(decl, definition, ""sv, syntax.attributes);
                         }
-
-                        if (header.direction) {
-                            scope.addDiag(diag::DirectionWithInterfacePort,
-                                          header.direction.location());
-                        }
                     }
-
-                    return add(decl, definition, ""sv, syntax.attributes);
                 }
 
                 // Rules from [23.2.2.3]:
@@ -161,12 +157,11 @@ public:
                     netType = &getDefaultNetType(scope, decl.name.location());
                 }
 
-                // TODO: user-defined nettypes
-                return add(decl, direction, *header.dataType, netType, syntax.attributes);
+                return add(decl, direction, header.dataType, netType, syntax.attributes);
             }
             case SyntaxKind::NetPortHeader: {
                 auto& header = syntax.header->as<NetPortHeaderSyntax>();
-                return add(decl, getDirection(header.direction), *header.dataType,
+                return add(decl, getDirection(header.direction), header.dataType,
                            &compilation.getNetType(header.netType.kind), syntax.attributes);
             }
             case SyntaxKind::InterfacePortHeader: {
@@ -211,14 +206,14 @@ private:
             return add(decl, lastInterface, ""sv, attrs);
         }
 
-        if (!lastType)
+        if (!lastType && !lastNetType)
             lastType = &compilation.createEmptyTypeSyntax(decl.getFirstToken().location());
 
-        return add(decl, lastDirection, *lastType, lastNetType, attrs);
+        return add(decl, lastDirection, lastType, lastNetType, attrs);
     }
 
     Symbol* add(const DeclaratorSyntax& decl, ArgumentDirection direction,
-                const DataTypeSyntax& type, const NetType* netType,
+                const DataTypeSyntax* type, const NetType* netType,
                 span<const AttributeInstanceSyntax* const> attrs) {
 
         auto port = compilation.emplace<PortSymbol>(decl.name.valueText(), decl.name.location());
@@ -243,6 +238,22 @@ private:
                                                          VariableLifetime::Static);
         }
 
+        if (type) {
+            // Symbol and port can't link their types here, they need to be independent.
+            // This is due to the way we resolve connections - see the comment in
+            // InstanceSymbol::resolvePortConnections for an example of a scenario that
+            // would otherwise cause reentrant type resolution for the port symbol.
+            symbol->setDeclaredType(*type, decl.dimensions);
+            port->setDeclaredType(*type, decl.dimensions);
+        }
+        else {
+            ASSERT(netType);
+            if (!decl.dimensions.empty())
+                symbol->getDeclaredType()->setDimensionSyntax(decl.dimensions);
+
+            port->getDeclaredType()->copyTypeFrom(*symbol->getDeclaredType());
+        }
+
         // Initializers here are evaluated in the context of the port list and
         // must always be a constant value.
         // TODO: handle initializers
@@ -251,16 +262,9 @@ private:
         port->internalSymbol = symbol;
         implicitMembers.emplace(symbol, port);
 
-        // Symbol and port can't link their types here, they need to be independent.
-        // This is due to the way we resolve connections - see the comment in
-        // InstanceSymbol::resolvePortConnections for an example of a scenario that
-        // would otherwise cause reentrant type resolution for the port symbol.
-        symbol->setDeclaredType(type, decl.dimensions);
-        port->setDeclaredType(type, decl.dimensions);
-
         // Remember the properties of this port in case the next port wants to inherit from it.
         lastDirection = direction;
-        lastType = &type;
+        lastType = type;
         lastNetType = netType;
         lastInterface = nullptr;
 
@@ -427,10 +431,11 @@ private:
                 // definition. Otherwise we need to see if there's an existing symbol to match with.
                 if (varHeader.varKeyword || varHeader.dataType->kind != SyntaxKind::ImplicitType) {
                     if (!varHeader.varKeyword) {
-                        auto simpleName = SyntaxFacts::getSimpleTypeName(*varHeader.dataType);
-                        auto netType = tryFindNetType(scope, simpleName);
-                        if (netType) {
-                            auto net = comp.emplace<NetSymbol>(name, declLoc, *netType);
+                        auto typeName = SyntaxFacts::getSimpleTypeName(*varHeader.dataType);
+                        auto result = Lookup::unqualified(scope, typeName, LookupFlags::Type);
+                        if (result && result->kind == SymbolKind::NetType) {
+                            auto net =
+                                comp.emplace<NetSymbol>(name, declLoc, result->as<NetType>());
                             setInternalSymbol(*net, decl, nullptr, info, insertionPoint);
                             break;
                         }
@@ -515,6 +520,8 @@ private:
 
         if (dataType)
             symbol.setDeclaredType(*dataType, decl.dimensions);
+        else if (!decl.dimensions.empty())
+            symbol.getDeclaredType()->setDimensionSyntax(decl.dimensions);
 
         if (insertionPoint)
             symbol.getDeclaredType()->setOverrideIndex(insertionPoint->getIndex());
