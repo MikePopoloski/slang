@@ -981,3 +981,31 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Interface port modport inheritance") {
+    auto tree = SyntaxTree::fromText(R"(
+interface I;
+  int i;
+  int j;
+  modport m(input i);
+endinterface
+
+module m (I.m a, b);
+  initial $display(a.i, a.j);
+  initial $display(b.i, b.j);
+endmodule
+
+module n;
+  I a();
+  m m1(a, a);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::InvalidModportAccess);
+    CHECK(diags[1].code == diag::InvalidModportAccess);
+}

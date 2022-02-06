@@ -190,6 +190,7 @@ public:
         lastType = nullptr;
         lastNetType = nullptr;
         lastInterface = nullptr;
+        lastModport = ""sv;
 
         return port;
     }
@@ -201,10 +202,8 @@ private:
 
     Symbol* addInherited(const DeclaratorSyntax& decl,
                          span<const AttributeInstanceSyntax* const> attrs) {
-        if (lastInterface) {
-            // TODO: inherit modport
-            return add(decl, lastInterface, ""sv, attrs);
-        }
+        if (lastInterface)
+            return add(decl, lastInterface, lastModport, attrs);
 
         if (!lastType && !lastNetType)
             lastType = &compilation.createEmptyTypeSyntax(decl.getFirstToken().location());
@@ -267,6 +266,7 @@ private:
         lastType = type;
         lastNetType = netType;
         lastInterface = nullptr;
+        lastModport = ""sv;
 
         return port;
     }
@@ -288,6 +288,7 @@ private:
         lastType = nullptr;
         lastNetType = nullptr;
         lastInterface = iface;
+        lastModport = modport;
 
         return port;
     }
@@ -300,6 +301,7 @@ private:
     const DataTypeSyntax* lastType = nullptr;
     const NetType* lastNetType = nullptr;
     const Definition* lastInterface = nullptr;
+    string_view lastModport;
 };
 
 class NonAnsiPortListBuilder {
