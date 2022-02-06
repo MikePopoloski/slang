@@ -535,7 +535,7 @@ void ClockVarSymbol::fromSyntax(const Scope& scope, const ClockingItemSyntax& sy
             if (sym) {
                 auto sourceType = sym->getDeclaredType();
                 ASSERT(sourceType);
-                arg->getDeclaredType()->copyTypeFrom(*sourceType);
+                arg->getDeclaredType()->setLink(*sourceType);
             }
         }
     }

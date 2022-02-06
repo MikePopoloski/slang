@@ -179,7 +179,7 @@ ModportPortSymbol& ModportPortSymbol::fromSyntax(const BindContext& context,
     if (result->internalSymbol) {
         auto sourceType = result->internalSymbol->getDeclaredType();
         ASSERT(sourceType);
-        result->getDeclaredType()->copyTypeFrom(*sourceType);
+        result->getDeclaredType()->setLink(*sourceType);
     }
 
     return *result;

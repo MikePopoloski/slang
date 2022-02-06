@@ -389,7 +389,7 @@ static span<const FormalArgumentSymbol* const> cloneArguments(
         auto copied = compilation.emplace<FormalArgumentSymbol>(arg->name, arg->location,
                                                                 arg->direction, arg->lifetime);
         copied->flags = arg->flags;
-        copied->getDeclaredType()->copyTypeFrom(*arg->getDeclaredType());
+        copied->getDeclaredType()->setLink(*arg->getDeclaredType());
         if (auto init = arg->getDeclaredType()->getInitializer())
             copied->getDeclaredType()->setInitializer(*init);
 
@@ -410,7 +410,7 @@ SubroutineSymbol& SubroutineSymbol::createFromPrototype(Compilation& compilation
         prototype.subroutineKind);
 
     result->setParent(parent, SymbolIndex(INT32_MAX));
-    result->declaredReturnType.copyTypeFrom(prototype.declaredReturnType);
+    result->declaredReturnType.setLink(prototype.declaredReturnType);
     result->visibility = prototype.visibility;
     result->flags = prototype.flags;
     result->arguments = cloneArguments(compilation, *result, prototype.getArguments());
@@ -766,7 +766,7 @@ MethodPrototypeSymbol& MethodPrototypeSymbol::fromSyntax(const BindContext& cont
     // Copy details from the found subroutine into the newly created prototype.
     // This lambda exists to handle both SubroutineSymbols and MethodPrototypeSymbols.
     auto copyDetails = [&](auto& source) {
-        result->declaredReturnType.copyTypeFrom(source.declaredReturnType);
+        result->declaredReturnType.setLink(source.declaredReturnType);
         result->subroutineKind = source.subroutineKind;
         result->arguments = cloneArguments(comp, *result, source.getArguments());
     };

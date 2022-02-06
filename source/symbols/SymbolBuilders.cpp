@@ -65,7 +65,7 @@ FormalArgumentSymbol& MethodBuilder::copyArg(const FormalArgumentSymbol& fromArg
 
     auto& argDT = *arg->getDeclaredType();
     auto& fromDT = *fromArg.getDeclaredType();
-    argDT.copyTypeFrom(fromDT);
+    argDT.setLink(fromDT);
 
     if (auto expr = fromDT.getInitializerSyntax())
         argDT.setInitializerSyntax(*expr, fromDT.getInitializerLocation());

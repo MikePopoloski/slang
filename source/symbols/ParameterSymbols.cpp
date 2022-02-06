@@ -186,8 +186,7 @@ const Type& TypeParameterSymbol::getTypeAlias() const {
     if (auto syntax = getSyntax())
         alias->setSyntax(*syntax);
 
-    alias->targetType.addFlags(targetType.getFlags());
-    alias->targetType.copyTypeFrom(targetType);
+    alias->targetType.setLink(targetType);
     alias->setParent(*scope, getIndex());
 
     typeAlias = alias;

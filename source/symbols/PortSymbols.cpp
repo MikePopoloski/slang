@@ -224,7 +224,6 @@ private:
         auto port = compilation.emplace<PortSymbol>(decl.name.valueText(), decl.name.location());
         port->direction = direction;
         port->setSyntax(decl);
-        port->setDeclaredType(type, decl.dimensions);
         port->setAttributes(scope, attrs);
 
         if (!port->name.empty()) {
@@ -248,10 +247,16 @@ private:
         // must always be a constant value.
         // TODO: handle initializers
         symbol->setSyntax(decl);
-        symbol->getDeclaredType()->copyTypeFrom(*port->getDeclaredType());
         symbol->setAttributes(scope, attrs);
         port->internalSymbol = symbol;
         implicitMembers.emplace(symbol, port);
+
+        // Symbol and port can't link their types here, they need to be independent.
+        // This is due to the way we resolve connections - see the comment in
+        // InstanceSymbol::resolvePortConnections for an example of a scenario that
+        // would otherwise cause reentrant type resolution for the port symbol.
+        symbol->setDeclaredType(type, decl.dimensions);
+        port->setDeclaredType(type, decl.dimensions);
 
         // Remember the properties of this port in case the next port wants to inherit from it.
         lastDirection = direction;
