@@ -124,12 +124,7 @@ public:
 
     /// Sets this declared type to link to the given type, taking on whatever
     /// type and initializer that target has.
-    void setLink(const DeclaredType& target) {
-        hasLink = true;
-        typeOrLink.link = &target;
-        type = nullptr;
-        initializer = nullptr;
-    }
+    void setLink(const DeclaredType& target);
 
     /// Gets the type syntax that was previously set via @a setTypeSyntax -- if any.
     /// Otherwise returns nullptr.

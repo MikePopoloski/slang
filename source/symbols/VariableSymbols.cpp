@@ -209,7 +209,7 @@ VariableSymbol& VariableSymbol::fromSyntax(Compilation& compilation,
         var->setDeclaredType(*syntax.type);
     else {
         ASSERT(lastVar);
-        var->getDeclaredType()->copyTypeFrom(*lastVar->getDeclaredType());
+        var->getDeclaredType()->setLink(*lastVar->getDeclaredType());
     }
 
     var->setFromDeclarator(*syntax.declarator);
@@ -322,8 +322,7 @@ void FieldSymbol::serializeTo(ASTSerializer& serializer) const {
 NetSymbol::NetSymbol(string_view name, SourceLocation loc, const NetType& netType) :
     ValueSymbol(SymbolKind::Net, name, loc, DeclaredTypeFlags::NetType), netType(netType) {
 
-    netType.getAliasTarget(); // force resolution of target
-    getDeclaredType()->copyTypeFrom(netType.declaredType);
+    getDeclaredType()->setLink(netType.declaredType);
 }
 
 void NetSymbol::fromSyntax(const Scope& scope, const NetDeclarationSyntax& syntax,

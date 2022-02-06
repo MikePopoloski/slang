@@ -1059,9 +1059,7 @@ const Type& Type::lookupNamedType(Compilation& compilation, const NameSyntax& sy
 
     LookupResult result;
     Lookup::name(syntax, context, flags, result);
-
-    if (result.hasError())
-        compilation.addDiagnostics(result.getDiagnostics());
+    result.reportDiags(context);
 
     return fromLookupResult(compilation, result, syntax.sourceRange(), context);
 }
@@ -1073,6 +1071,11 @@ const Type& Type::fromLookupResult(Compilation& compilation, const LookupResult&
         return compilation.getErrorType();
 
     if (!symbol->isType()) {
+        if (symbol->kind == SymbolKind::NetType && context.flags.has(BindFlags::AllowNetType)) {
+            result.errorIfSelectors(context);
+            return symbol->as<NetType>().getDataType();
+        }
+
         context.addDiag(diag::NotAType, sourceRange) << symbol->name;
         return compilation.getErrorType();
     }

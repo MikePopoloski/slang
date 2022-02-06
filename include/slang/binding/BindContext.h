@@ -138,9 +138,12 @@ enum class BindFlags {
     AllowCoverageSampleFormal = 1 << 27,
 
     /// Expressions are allowed to reference coverpoint objects directly.
-    AllowCoverpoint = 1 << 28
+    AllowCoverpoint = 1 << 28,
+
+    /// User-defined nettypes are allowed to be looked up in this context.
+    AllowNetType = 1 << 29
 };
-BITMASK(BindFlags, AllowCoverpoint)
+BITMASK(BindFlags, AllowNetType)
 
 enum class DimensionKind { Unknown, Range, AbbreviatedRange, Dynamic, Associative, Queue };
 

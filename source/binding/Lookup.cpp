@@ -98,11 +98,11 @@ void LookupResult::copyFrom(const LookupResult& other) {
     diagnostics.appendRange(other.diagnostics);
 }
 
-void LookupResult::reportDiags(const BindContext& context) {
+void LookupResult::reportDiags(const BindContext& context) const {
     context.getCompilation().addDiagnostics(diagnostics);
 }
 
-void LookupResult::errorIfSelectors(const BindContext& context) {
+void LookupResult::errorIfSelectors(const BindContext& context) const {
     if (selectors.empty())
         return;
 

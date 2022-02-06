@@ -16,45 +16,34 @@
 namespace slang {
 
 NetType::NetType(NetKind netKind, string_view name, const Type& dataType) :
-    Symbol(SymbolKind::NetType, name, SourceLocation()), netKind(netKind), declaredType(*this),
-    isResolved(true) {
-
+    Symbol(SymbolKind::NetType, name, SourceLocation()), declaredType(*this), netKind(netKind) {
     declaredType.setType(dataType);
 }
 
 NetType::NetType(string_view name, SourceLocation location) :
-    Symbol(SymbolKind::NetType, name, location), netKind(UserDefined),
-    declaredType(*this, DeclaredTypeFlags::UserDefinedNetType) {
-}
-
-const NetType* NetType::getAliasTarget() const {
-    if (!isResolved)
-        resolve();
-    return alias;
-}
-
-const NetType& NetType::getCanonical() const {
-    if (auto target = getAliasTarget())
-        return target->getCanonical();
-    return *this;
-}
-
-const Type& NetType::getDataType() const {
-    if (!isResolved)
-        resolve();
-    return declaredType.getType();
+    Symbol(SymbolKind::NetType, name, location),
+    declaredType(*this, DeclaredTypeFlags::UserDefinedNetType), netKind(UserDefined) {
 }
 
 const SubroutineSymbol* NetType::getResolutionFunction() const {
-    if (!isResolved)
-        resolve();
-    return resolver;
+    if (resolver)
+        return *resolver;
+
+    auto syntax = getSyntax();
+    auto scope = getParentScope();
+    ASSERT(syntax && scope);
+
+    auto& declSyntax = syntax->as<NetTypeDeclarationSyntax>();
+    if (declSyntax.withFunction) {
+        // TODO: lookup and validate the function here
+    }
+
+    resolver = nullptr;
+    return *resolver;
 }
 
 void NetType::serializeTo(ASTSerializer& serializer) const {
     serializer.write("type", getDataType());
-    if (auto target = getAliasTarget())
-        serializer.write("target", *target);
 }
 
 NetType& NetType::fromSyntax(const Scope& scope, const NetTypeDeclarationSyntax& syntax) {
@@ -62,52 +51,9 @@ NetType& NetType::fromSyntax(const Scope& scope, const NetTypeDeclarationSyntax&
     auto result = comp.emplace<NetType>(syntax.name.valueText(), syntax.name.location());
     result->setSyntax(syntax);
     result->setAttributes(scope, syntax.attributes);
-
-    // If this is an enum, make sure the declared type is set up before we get added to
-    // any scope, so that the enum members get picked up correctly.
-    if (syntax.type->kind == SyntaxKind::EnumType)
-        result->declaredType.setTypeSyntax(*syntax.type);
+    result->declaredType.setTypeSyntax(*syntax.type);
 
     return *result;
-}
-
-void NetType::resolve() const {
-    ASSERT(!isResolved);
-    isResolved = true;
-
-    auto syntaxNode = getSyntax();
-    ASSERT(syntaxNode);
-
-    auto scope = getParentScope();
-    ASSERT(scope);
-
-    auto& declSyntax = syntaxNode->as<NetTypeDeclarationSyntax>();
-    if (declSyntax.withFunction) {
-        // TODO: lookup and validate the function here
-    }
-
-    // If this is an enum, we already set the type earlier.
-    if (declSyntax.type->kind == SyntaxKind::EnumType)
-        return;
-
-    // Our type syntax is either a link to another net type we are aliasing, or an actual
-    // data type that we are using as the basis for a custom net type.
-    if (declSyntax.type->kind == SyntaxKind::NamedType) {
-        LookupResult result;
-        const NameSyntax& nameSyntax = *declSyntax.type->as<NamedTypeSyntax>().name;
-        BindContext context(*scope, LookupLocation::before(*this));
-        Lookup::name(nameSyntax, context, LookupFlags::Type | LookupFlags::NoSelectors, result);
-
-        if (result.found && result.found->kind == SymbolKind::NetType) {
-            result.reportDiags(context);
-
-            alias = &result.found->as<NetType>();
-            declaredType.copyTypeFrom(alias->getCanonical().declaredType);
-            return;
-        }
-    }
-
-    declaredType.setTypeSyntax(*declSyntax.type);
 }
 
 } // namespace slang

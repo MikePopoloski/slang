@@ -22,6 +22,8 @@ struct NetTypeDeclarationSyntax;
 ///
 class NetType : public Symbol {
 public:
+    DeclaredType declaredType;
+
     enum NetKind {
         Unknown,
         Wire,
@@ -42,14 +44,8 @@ public:
     NetType(NetKind netKind, string_view name, const Type& dataType);
     NetType(string_view name, SourceLocation location);
 
-    /// If this net type is an alias, gets the target of the alias. Otherwise returns nullptr.
-    const NetType* getAliasTarget() const;
-
-    /// Gets the canonical net type for this net type, which involves unwrapping any aliases.
-    const NetType& getCanonical() const;
-
     /// Gets the data type for nets of this particular net type.
-    const Type& getDataType() const;
+    const Type& getDataType() const { return declaredType.getType(); }
 
     /// Gets the custom resolution function for this net type, if it has one.
     const SubroutineSymbol* getResolutionFunction() const;
@@ -64,16 +60,7 @@ public:
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::NetType; }
 
 private:
-    friend class Symbol;
-    friend class NetSymbol;
-
-    void resolve() const;
-
-    mutable DeclaredType declaredType;
-
-    mutable const NetType* alias = nullptr;
-    mutable const SubroutineSymbol* resolver = nullptr;
-    mutable bool isResolved = false;
+    mutable optional<const SubroutineSymbol*> resolver;
 };
 
 } // namespace slang

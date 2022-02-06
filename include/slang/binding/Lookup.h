@@ -188,10 +188,10 @@ struct LookupResult {
 
     /// Reports any diagnostics that have occurred during lookup to the given bind
     /// context, which will ensure they are visible to the compilation.
-    void reportDiags(const BindContext& context);
+    void reportDiags(const BindContext& context) const;
 
     /// Issues a diagnostic if there are selectors in the lookup result.
-    void errorIfSelectors(const BindContext& context);
+    void errorIfSelectors(const BindContext& context) const;
 
 private:
     Diagnostics diagnostics;

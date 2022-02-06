@@ -36,20 +36,27 @@ const Type& DeclaredType::getType() const {
     return *type;
 }
 
+void DeclaredType::setLink(const DeclaredType& target) {
+    ASSERT(hasLink || !typeOrLink.typeSyntax);
+    ASSERT(!type && !dimensions);
+
+    hasLink = true;
+    typeOrLink.link = &target;
+    type = nullptr;
+    initializer = nullptr;
+}
+
 void DeclaredType::setDimensionSyntax(const SyntaxList<VariableDimensionSyntax>& newDimensions) {
     dimensions = &newDimensions;
     type = nullptr;
 }
 
 void DeclaredType::copyTypeFrom(const DeclaredType& source) {
-    if (auto ts = source.getTypeSyntax()) {
-        setTypeSyntax(*ts);
-        if (auto dims = source.getDimensionSyntax())
-            setDimensionSyntax(*dims);
-    }
-
     type = source.type;
+    dimensions = source.dimensions;
+    typeOrLink = source.typeOrLink;
     overrideIndex = source.overrideIndex;
+    hasLink = source.hasLink;
 }
 
 void DeclaredType::mergeImplicitPort(
@@ -65,6 +72,8 @@ void DeclaredType::resolveType(const BindContext& typeContext,
     if (hasLink) {
         ASSERT(typeOrLink.link);
         type = &typeOrLink.link->getType();
+        if (dimensions)
+            type = &comp.getType(*type, *dimensions, typeContext);
         return;
     }
 
@@ -358,12 +367,6 @@ void DeclaredType::resolveAt(const BindContext& context) const {
             return;
     }
 
-    if (hasLink) {
-        ASSERT(typeOrLink.link);
-        initializer = typeOrLink.link->getInitializer();
-        return;
-    }
-
     if (!initializerSyntax)
         return;
 
@@ -414,6 +417,8 @@ T DeclaredType::getBindContext() const {
         bindFlags |= BindFlags::StaticInitializer;
     if (flags.has(DeclaredTypeFlags::CoverageType))
         bindFlags |= BindFlags::AllowCoverageSampleFormal;
+    if (flags.has(DeclaredTypeFlags::UserDefinedNetType))
+        bindFlags |= BindFlags::AllowNetType;
 
     const Scope* scope = parent.getParentScope();
     ASSERT(scope);
