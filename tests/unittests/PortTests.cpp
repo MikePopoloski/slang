@@ -985,19 +985,19 @@ endmodule
 TEST_CASE("Interface port modport inheritance") {
     auto tree = SyntaxTree::fromText(R"(
 interface I;
-  int i;
-  int j;
-  modport m(input i);
+    int i;
+    int j;
+    modport m(input i);
 endinterface
 
 module m (I.m a, b);
-  initial $display(a.i, a.j);
-  initial $display(b.i, b.j);
+    initial $display(a.i, a.j);
+    initial $display(b.i, b.j);
 endmodule
 
 module n;
-  I a();
-  m m1(a, a);
+    I a();
+    m m1(a, a);
 endmodule
 )");
 
@@ -1008,4 +1008,40 @@ endmodule
     REQUIRE(diags.size() == 2);
     CHECK(diags[0].code == diag::InvalidModportAccess);
     CHECK(diags[1].code == diag::InvalidModportAccess);
+}
+
+TEST_CASE("Generic interface ports") {
+    auto tree = SyntaxTree::fromText(R"(
+interface I;
+    int i;
+    int j;
+    modport m(input i);
+    modport n(input j);
+endinterface
+
+interface J;
+    int k;
+endinterface
+
+module m (interface a, b, interface.m c, d, e, interface.n f);
+    initial $display(a.i, a.j);
+    initial $display(b.i, b.j);
+endmodule
+
+module n;
+    I i();
+    J j();
+
+    m m1(i, i.m, j, i, i.m, i.m);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 3);
+    CHECK(diags[0].code == diag::InvalidModportAccess);
+    CHECK(diags[1].code == diag::NotAModport);
+    CHECK(diags[2].code == diag::ModportConnMismatch);
 }

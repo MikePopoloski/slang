@@ -92,19 +92,23 @@ public:
     /// If non-empty, the name of the modport that restricts which interface signals are accessible.
     string_view modport;
 
-    /// Gets the set of dimensions for specifying interface arrays.
-    /// Returns nullopt if an error occurs evaluating the dimensions.
-    optional<span<const ConstantRange>> getDeclaredRange() const;
-
-    /// Set to true if this was declared as a non-ansi port and no
-    /// I/O declaration was ever found for it.
-    bool isMissingIO = false;
-
     /// The source location of the port name, if this port was declared
     /// inside of a multi-port concatenation expression. This is only set
     /// if isMissingIO is also set to true; it indicates an error should be
     /// reported when the I/O declaration is finally found.
     SourceLocation multiPortLoc;
+
+    /// Set to true if this was declared as a non-ansi port and no
+    /// I/O declaration was ever found for it.
+    bool isMissingIO = false;
+
+    /// Set to true if this is a generic interface port, which allows connections
+    /// to any interface type. If true, @a interfaceDef will be nullptr.
+    bool isGeneric = false;
+
+    /// Gets the set of dimensions for specifying interface arrays.
+    /// Returns nullopt if an error occurs evaluating the dimensions.
+    optional<span<const ConstantRange>> getDeclaredRange() const;
 
     /// Gets the interface instance that this port connects to.
     const Symbol* getConnection() const;
@@ -112,6 +116,7 @@ public:
     InterfacePortSymbol(string_view name, SourceLocation loc) :
         Symbol(SymbolKind::InterfacePort, name, loc) {}
 
+    bool isInvalid() const { return !interfaceDef && !isGeneric; }
     void serializeTo(ASTSerializer& serializer) const;
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::InterfacePort; }

@@ -129,7 +129,8 @@ public:
                                 }
                             }
 
-                            return add(decl, definition, ""sv, syntax.attributes);
+                            return add(decl, definition, ""sv, /* isGeneric */ false,
+                                       syntax.attributes);
                         }
                     }
                 }
@@ -165,10 +166,16 @@ public:
                            &compilation.getNetType(header.netType.kind), syntax.attributes);
             }
             case SyntaxKind::InterfacePortHeader: {
-                // TODO: handle generic interface header
                 auto& header = syntax.header->as<InterfacePortHeaderSyntax>();
+                if (header.nameOrKeyword.kind == TokenKind::InterfaceKeyword) {
+                    string_view modport;
+                    if (header.modport)
+                        modport = header.modport->member.valueText();
+                    return add(decl, nullptr, modport, /* isGeneric */ true, syntax.attributes);
+                }
+
                 auto [definition, modport] = getInterfacePortInfo(scope, header);
-                return add(decl, definition, modport, syntax.attributes);
+                return add(decl, definition, modport, /* isGeneric */ false, syntax.attributes);
             }
             default:
                 THROW_UNREACHABLE;
@@ -191,6 +198,7 @@ public:
         lastNetType = nullptr;
         lastInterface = nullptr;
         lastModport = ""sv;
+        lastGenericIface = false;
 
         return port;
     }
@@ -202,8 +210,8 @@ private:
 
     Symbol* addInherited(const DeclaratorSyntax& decl,
                          span<const AttributeInstanceSyntax* const> attrs) {
-        if (lastInterface)
-            return add(decl, lastInterface, lastModport, attrs);
+        if (lastInterface || lastGenericIface)
+            return add(decl, lastInterface, lastModport, lastGenericIface, attrs);
 
         if (!lastType && !lastNetType)
             lastType = &compilation.createEmptyTypeSyntax(decl.getFirstToken().location());
@@ -267,12 +275,13 @@ private:
         lastNetType = netType;
         lastInterface = nullptr;
         lastModport = ""sv;
+        lastGenericIface = false;
 
         return port;
     }
 
     Symbol* add(const DeclaratorSyntax& decl, const Definition* iface, string_view modport,
-                span<const AttributeInstanceSyntax* const> attrs) {
+                bool isGeneric, span<const AttributeInstanceSyntax* const> attrs) {
         auto port =
             compilation.emplace<InterfacePortSymbol>(decl.name.valueText(), decl.name.location());
 
@@ -281,6 +290,7 @@ private:
 
         port->interfaceDef = iface;
         port->modport = modport;
+        port->isGeneric = isGeneric;
         port->setSyntax(decl);
         port->setAttributes(scope, attrs);
 
@@ -289,6 +299,7 @@ private:
         lastNetType = nullptr;
         lastInterface = iface;
         lastModport = modport;
+        lastGenericIface = isGeneric;
 
         return port;
     }
@@ -302,6 +313,7 @@ private:
     const NetType* lastNetType = nullptr;
     const Definition* lastInterface = nullptr;
     string_view lastModport;
+    bool lastGenericIface = false;
 };
 
 class NonAnsiPortListBuilder {
@@ -794,7 +806,7 @@ public:
 
         // If the port definition is empty it means an error already
         // occurred; there's no way to check this connection so early out.
-        if (!port.interfaceDef) {
+        if (port.isInvalid()) {
             if (usingOrdered)
                 orderedIndex++;
             else {
@@ -1059,34 +1071,42 @@ private:
 
     const Symbol* getInterface(const InterfacePortSymbol& port, const Symbol* symbol,
                                string_view providedModport, SourceRange range) {
-        if (!port.interfaceDef)
+        if (port.isInvalid())
             return nullptr;
 
         auto portDims = port.getDeclaredRange();
         if (!portDims)
             return nullptr;
 
+        ASSERT(port.isGeneric || port.interfaceDef);
+        auto checkConnection = [&](const Definition& connDef, string_view connModport) {
+            if (&connDef != port.interfaceDef && !port.isGeneric) {
+                // TODO: print the potentially nested name path instead of the simple name
+                auto& diag = scope.addDiag(diag::InterfacePortTypeMismatch, range);
+                diag << connDef.name << port.interfaceDef->name;
+                diag.addNote(diag::NoteDeclarationHere, port.location);
+                return false;
+            }
+
+            // Modport must match the specified requirement, if we have one.
+            if (!connModport.empty() && !port.modport.empty() && connModport != port.modport) {
+                auto& diag = scope.addDiag(diag::ModportConnMismatch, range);
+                diag << connDef.name << connModport;
+                diag << (port.isGeneric ? "interface"sv : port.interfaceDef->name);
+                diag << port.modport;
+                return false;
+            }
+
+            return true;
+        };
+
         // The user can explicitly connect a modport symbol.
         if (symbol->kind == SymbolKind::Modport) {
             // Interface that owns the modport must match our expected interface.
             auto connDef = symbol->getDeclaringDefinition();
-            ASSERT(connDef);
-            if (connDef != port.interfaceDef) {
-                // TODO: print the potentially nested name path instead of the simple name
-                auto& diag = scope.addDiag(diag::InterfacePortTypeMismatch, range);
-                diag << connDef->name << port.interfaceDef->name;
-                diag.addNote(diag::NoteDeclarationHere, port.location);
+            ASSERT(connDef && providedModport.empty());
+            if (!checkConnection(*connDef, symbol->name))
                 return nullptr;
-            }
-
-            // Modport must match the specified requirement, if we have one.
-            ASSERT(providedModport.empty());
-            if (!port.modport.empty() && symbol->name != port.modport) {
-                auto& diag = scope.addDiag(diag::ModportConnMismatch, range);
-                diag << connDef->name << symbol->name;
-                diag << port.interfaceDef->name << port.modport;
-                return nullptr;
-            }
 
             // Make sure the port doesn't require an array.
             if (!portDims->empty()) {
@@ -1133,21 +1153,18 @@ private:
             return nullptr;
         }
 
-        auto connDef = &child->as<InstanceSymbol>().getDefinition();
-        if (connDef != port.interfaceDef) {
-            // TODO: print the potentially nested name path instead of the simple name
-            auto& diag = scope.addDiag(diag::InterfacePortTypeMismatch, range);
-            diag << connDef->name << port.interfaceDef->name;
-            diag.addNote(diag::NoteDeclarationHere, port.location);
+        auto& connDef = child->as<InstanceSymbol>().getDefinition();
+        if (!checkConnection(connDef, providedModport))
             return nullptr;
-        }
 
-        // If a modport was provided and our port requires a modport, make sure they match.
-        if (!providedModport.empty() && !port.modport.empty() && providedModport != port.modport) {
-            auto& diag = scope.addDiag(diag::ModportConnMismatch, range);
-            diag << connDef->name << providedModport;
-            diag << port.interfaceDef->name << port.modport;
-            return nullptr;
+        if (port.isGeneric && !port.modport.empty() && providedModport.empty()) {
+            if (auto it = connDef.modports.find(port.modport); it == connDef.modports.end()) {
+                auto& diag = scope.addDiag(diag::NotAModport, range);
+                diag << port.modport;
+                diag << connDef.name;
+                diag.addNote(diag::NoteReferencedHere, port.location);
+                return nullptr;
+            }
         }
 
         // If the dimensions match exactly what the port is expecting make the connection.
@@ -1339,7 +1356,7 @@ optional<span<const ConstantRange>> InterfacePortSymbol::getDeclaredRange() cons
     if (range)
         return *range;
 
-    if (!interfaceDef) {
+    if (isInvalid()) {
         range.emplace();
         return *range;
     }
@@ -1384,6 +1401,7 @@ void InterfacePortSymbol::serializeTo(ASTSerializer& serializer) const {
         serializer.write("interfaceDef", interfaceDef->name);
     if (!modport.empty())
         serializer.write("modport", modport);
+    serializer.write("isGeneric", isGeneric);
 }
 
 PortConnection::PortConnection(const Symbol& port, const Expression* expr,
