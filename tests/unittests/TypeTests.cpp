@@ -1592,3 +1592,21 @@ endclass
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Virtual interface in extern func arg regress GH #511") {
+    auto tree = SyntaxTree::fromText(R"(
+interface I #(int unsigned WIDTH=32, int unsigned DELAY=4);
+endinterface
+
+class C;
+    extern function void set_intf(virtual I #(.WIDTH(32), .DELAY(4)) intf);
+endclass
+
+function void C::set_intf(virtual I #(.WIDTH(32), .DELAY(4)) intf);
+endfunction
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}

@@ -466,7 +466,10 @@ bool Type::isMatching(const Type& rhs) const {
     if (l->isVirtualInterface() && r->isVirtualInterface()) {
         auto& lv = l->as<VirtualInterfaceType>();
         auto& rv = r->as<VirtualInterfaceType>();
-        return &lv.iface == &rv.iface && lv.modport == rv.modport;
+        if (!lv.iface.body.hasSameType(rv.iface.body))
+            return false;
+
+        return lv.modport == rv.modport;
     }
 
     return false;
