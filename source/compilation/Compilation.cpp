@@ -586,6 +586,11 @@ void Compilation::setAttributes(const Expression& expr,
     attributeMap[&expr] = attributes;
 }
 
+void Compilation::setAttributes(const PortConnection& conn,
+                                span<const AttributeSymbol* const> attributes) {
+    attributeMap[&conn] = attributes;
+}
+
 span<const AttributeSymbol* const> Compilation::getAttributes(const Symbol& symbol) const {
     return getAttributes(static_cast<const void*>(&symbol));
 }
@@ -596,6 +601,10 @@ span<const AttributeSymbol* const> Compilation::getAttributes(const Statement& s
 
 span<const AttributeSymbol* const> Compilation::getAttributes(const Expression& expr) const {
     return getAttributes(static_cast<const void*>(&expr));
+}
+
+span<const AttributeSymbol* const> Compilation::getAttributes(const PortConnection& conn) const {
+    return getAttributes(static_cast<const void*>(&conn));
 }
 
 span<const AttributeSymbol* const> Compilation::getAttributes(const void* ptr) const {

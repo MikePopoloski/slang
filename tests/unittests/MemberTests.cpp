@@ -439,7 +439,7 @@ endmodule
     REQUIRE(attrs.size() == 1);
     CHECK(attrs[0]->name == "asdf");
 
-    attrs = n1.getPortConnection(fooPort)->attributes;
+    attrs = compilation.getAttributes(*n1.getPortConnection(fooPort));
     REQUIRE(attrs.size() == 1);
     CHECK(attrs[0]->name == "blah2");
 

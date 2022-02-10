@@ -488,6 +488,14 @@ const PortConnection* InstanceSymbol::getPortConnection(const InterfacePortSymbo
     return reinterpret_cast<const PortConnection*>(it->second);
 }
 
+void InstanceSymbol::forEachPortConnection(function_ref<void(const PortConnection&)> cb) const {
+    resolvePortConnections();
+    for (auto& [k, v] : *connections) {
+        auto conn = reinterpret_cast<const PortConnection*>(v);
+        cb(*conn);
+    }
+}
+
 void InstanceSymbol::resolvePortConnections() const {
     // Note: the order of operations here is very subtly important.
     // In order to resolve connections, we need to actually know our list of ports.

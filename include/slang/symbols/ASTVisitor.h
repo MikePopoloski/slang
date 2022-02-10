@@ -350,12 +350,10 @@ decltype(auto) Expression::visit(TVisitor&& visitor, Args&&... args) {
 
 template<typename TVisitor>
 void InstanceSymbol::visitExprs(TVisitor&& visitor) const {
-    resolvePortConnections();
-    for (auto& [k, v] : *connections) {
-        auto conn = reinterpret_cast<const PortConnection*>(v);
-        if (conn && !conn->isInterfacePort && conn->expr)
-            conn->expr->visit(visitor);
-    }
+    forEachPortConnection([&](auto& conn) {
+        if (auto expr = conn.getExpression())
+            expr->visit(visitor);
+    });
 }
 
 template<typename TVisitor, typename... Args>

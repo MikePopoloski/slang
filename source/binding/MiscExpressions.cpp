@@ -38,12 +38,12 @@ Expression& ValueExpressionBase::fromSymbol(const BindContext& context, const Sy
             if (!Lookup::ensureAccessible(symbol, context, sourceRange))
                 return badExpr(comp, nullptr);
         }
-        else if (context.flags.has(BindFlags::StaticInitializer)) {
-            context.addDiag(diag::AutoFromStaticInit, sourceRange) << symbol.name;
-            return badExpr(comp, nullptr);
-        }
         else if (context.flags.has(BindFlags::NonProcedural)) {
             context.addDiag(diag::AutoFromNonProcedural, sourceRange) << symbol.name;
+            return badExpr(comp, nullptr);
+        }
+        else if (context.flags.has(BindFlags::StaticInitializer)) {
+            context.addDiag(diag::AutoFromStaticInit, sourceRange) << symbol.name;
             return badExpr(comp, nullptr);
         }
         else if (context.flags.has(BindFlags::NonBlockingTimingControl)) {

@@ -10,6 +10,7 @@
 #include "slang/symbols/Scope.h"
 #include "slang/symbols/SemanticFacts.h"
 #include "slang/symbols/Symbol.h"
+#include "slang/util/Function.h"
 
 namespace slang {
 
@@ -67,7 +68,8 @@ public:
     const PortConnection* getPortConnection(const PortSymbol& port) const;
     const PortConnection* getPortConnection(const MultiPortSymbol& port) const;
     const PortConnection* getPortConnection(const InterfacePortSymbol& port) const;
-    void resolvePortConnections() const;
+
+    void forEachPortConnection(function_ref<void(const PortConnection&)> cb) const;
 
     void serializeTo(ASTSerializer& serializer) const;
 
@@ -99,6 +101,8 @@ public:
     void visitExprs(TVisitor&& visitor) const; // implementation is in ASTVisitor.h
 
 private:
+    void resolvePortConnections() const;
+
     mutable PointerMap* connections = nullptr;
 };
 

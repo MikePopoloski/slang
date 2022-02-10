@@ -51,14 +51,6 @@ void DeclaredType::setDimensionSyntax(const SyntaxList<VariableDimensionSyntax>&
     type = nullptr;
 }
 
-void DeclaredType::copyTypeFrom(const DeclaredType& source) {
-    type = source.type;
-    dimensions = source.dimensions;
-    typeOrLink = source.typeOrLink;
-    overrideIndex = source.overrideIndex;
-    hasLink = source.hasLink;
-}
-
 void DeclaredType::mergeImplicitPort(
     const ImplicitTypeSyntax& implicit, SourceLocation location,
     span<const VariableDimensionSyntax* const> unpackedDimensions) {
@@ -173,11 +165,6 @@ void DeclaredType::checkType(const BindContext& context) const {
     ASSERT(countPopulation64(masked) == 1);
 
     switch (masked) {
-        case uint32_t(DeclaredTypeFlags::Port):
-            // Ports cannot be chandles.
-            if (type->isCHandle())
-                context.addDiag(diag::InvalidPortType, parent.location) << *type;
-            break;
         case uint32_t(DeclaredTypeFlags::NetType): {
             auto& net = parent.as<NetSymbol>();
             if (net.netType.netKind != NetType::UserDefined && !isValidForNet(*type))
@@ -411,7 +398,7 @@ void DeclaredType::setFromDeclarator(const DeclaratorSyntax& decl) {
 template<bool IsInitializer, typename T>
 T DeclaredType::getBindContext() const {
     bitmask<BindFlags> bindFlags;
-    if (flags.has(DeclaredTypeFlags::Port | DeclaredTypeFlags::NetType))
+    if (flags.has(DeclaredTypeFlags::NetType))
         bindFlags |= BindFlags::NonProcedural;
     if (!flags.has(DeclaredTypeFlags::AutomaticInitializer))
         bindFlags |= BindFlags::StaticInitializer;

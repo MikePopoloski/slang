@@ -9,7 +9,6 @@
 #include "slang/binding/Expression.h"
 #include "slang/numeric/ConstantValue.h"
 #include "slang/symbols/SemanticFacts.h"
-#include "slang/symbols/ValueSymbol.h"
 
 namespace slang {
 
@@ -26,11 +25,8 @@ struct PortListSyntax;
 /// Represents the public-facing side of a module / program / interface port.
 /// The port symbol itself is not directly referenceable from within the instance;
 /// it can however connect directly to a symbol that is.
-class PortSymbol : public ValueSymbol {
+class PortSymbol : public Symbol {
 public:
-    /// The direction of data flowing across the port.
-    ArgumentDirection direction = ArgumentDirection::InOut;
-
     /// An instance-internal symbol that this port connects to, if any.
     /// Ports that do not connect directly to an internal symbol will have
     /// this set to nullptr.
@@ -39,8 +35,24 @@ public:
     /// The source location where the external name for the port is declared.
     SourceLocation externalLoc;
 
-    PortSymbol(string_view name, SourceLocation loc,
-               bitmask<DeclaredTypeFlags> flags = DeclaredTypeFlags::None);
+    /// The direction of data flowing across the port.
+    ArgumentDirection direction = ArgumentDirection::InOut;
+
+    /// Set to true for null ports, i.e. ports that don't connect to
+    /// anything internal to the instance.
+    bool isNullPort = false;
+
+    PortSymbol(string_view name, SourceLocation loc);
+
+    const Type& getType() const;
+
+    bool hasInitializer() const { return initializer || initializerSyntax; }
+    const Expression* getInitializer() const;
+
+    void setInitializerSyntax(const ExpressionSyntax& syntax, SourceLocation loc) {
+        initializerSyntax = &syntax;
+        initializerLoc = loc;
+    }
 
     void serializeTo(ASTSerializer& serializer) const;
 
@@ -51,7 +63,13 @@ public:
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::Port; }
 
-    using ValueSymbol::setParent;
+    using Symbol::setParent;
+
+private:
+    mutable const Type* type = nullptr;
+    mutable const Expression* initializer = nullptr;
+    const ExpressionSyntax* initializerSyntax = nullptr;
+    SourceLocation initializerLoc;
 };
 
 /// Represents a multi-port, which is a port symbol that externally appears as
@@ -66,12 +84,17 @@ public:
     /// each individual port to know how the data actually flows.
     ArgumentDirection direction;
 
+    /// Always set to false on multi-ports; included for parity for PortSymbols
+    /// so that generic code can work on both types.
+    bool isNullPort = false;
+
     MultiPortSymbol(string_view name, SourceLocation loc, span<const PortSymbol* const> ports,
                     ArgumentDirection direction);
 
     const Type& getType() const;
 
-    /// Placeholder function to enable generic code. Multi-ports never have initializers.
+    /// Placeholder functions to enable generic code. Multi-ports never have initializers.
+    bool hasInitializer() const { return false; }
     const Expression* getInitializer() const { return nullptr; }
 
     void serializeTo(ASTSerializer& serializer) const;
@@ -127,29 +150,35 @@ private:
 
 class PortConnection {
 public:
-    union {
-        const Symbol* port;
-        const InterfacePortSymbol* ifacePort;
-    };
+    const Symbol& port;
+    const InstanceSymbol& parentInstance;
 
-    union {
-        const Expression* expr;
-        const Symbol* ifaceInstance;
-    };
+    PortConnection(const Symbol& port, const InstanceSymbol& parentInstance);
+    PortConnection(const Symbol& port, const InstanceSymbol& parentInstance,
+                   const ExpressionSyntax& expr);
+    PortConnection(const Symbol& port, const InstanceSymbol& parentInstance, bool useDefault);
+    PortConnection(const InterfacePortSymbol& port, const InstanceSymbol& parentInstance,
+                   const Symbol* connectedSymbol);
+    PortConnection(const Symbol& port, const InstanceSymbol& parentInstance,
+                   const Symbol* connectedSymbol, SourceRange implicitNameRange);
 
-    bool isInterfacePort;
-    span<const AttributeSymbol* const> attributes;
+    const Symbol* getIfaceInstance() const;
+    const Expression* getExpression() const;
 
-    PortConnection(const Symbol& port, const Expression* expr,
-                   span<const AttributeSymbol* const> attributes);
-    PortConnection(const InterfacePortSymbol& port, const Symbol* instance,
-                   span<const AttributeSymbol* const> attributes);
+    void serializeTo(ASTSerializer& serializer) const;
 
     static void makeConnections(const InstanceSymbol& instance, span<const Symbol* const> ports,
                                 const SeparatedSyntaxList<PortConnectionSyntax>& portConnections,
                                 PointerMap& results);
 
-    void serializeTo(ASTSerializer& serializer) const;
+private:
+    const Symbol* connectedSymbol = nullptr;
+    mutable const Expression* expr = nullptr;
+    union {
+        const ExpressionSyntax* exprSyntax = nullptr;
+        SourceRange implicitNameRange;
+    };
+    bool useDefault = false;
 };
 
 } // namespace slang

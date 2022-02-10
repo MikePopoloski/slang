@@ -76,6 +76,13 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
         symbol.getDeclaredRange();
     }
 
+    void handle(const PortSymbol& symbol) {
+        if (!handleDefault(symbol))
+            return;
+        symbol.getType();
+        symbol.getInitializer();
+    }
+
     void handle(const MultiPortSymbol& symbol) {
         if (!handleDefault(symbol))
             return;
@@ -204,9 +211,15 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
             return;
 
         instanceCount[&symbol.getDefinition()]++;
-        symbol.resolvePortConnections();
+
         for (auto attr : compilation.getAttributes(symbol))
             attr->getValue();
+
+        symbol.forEachPortConnection([&](auto& conn) {
+            conn.getExpression();
+            for (auto attr : compilation.getAttributes(conn))
+                attr->getValue();
+        });
 
         // Detect infinite recursion, which happens if we see this exact
         // instance body somewhere higher up in the stack.

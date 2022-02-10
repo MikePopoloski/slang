@@ -72,7 +72,7 @@ class AnsiPortListBuilder {
 public:
     AnsiPortListBuilder(const Scope& scope,
                         SmallVector<std::pair<Symbol*, const Symbol*>>& implicitMembers) :
-        compilation(scope.getCompilation()),
+        comp(scope.getCompilation()),
         scope(scope), implicitMembers(implicitMembers) {}
 
     Symbol* createPort(const ImplicitAnsiPortSyntax& syntax) {
@@ -109,7 +109,7 @@ public:
 
                     // If we didn't find a valid type, try to find a definition.
                     if (!found || !found->isType()) {
-                        if (auto definition = compilation.getDefinition(simpleName, scope)) {
+                        if (auto definition = comp.getDefinition(simpleName, scope)) {
                             if (definition->definitionKind != DefinitionKind::Interface) {
                                 auto& diag = scope.addDiag(diag::PortTypeNotInterfaceOrData,
                                                            header.dataType->sourceRange());
@@ -163,7 +163,7 @@ public:
             case SyntaxKind::NetPortHeader: {
                 auto& header = syntax.header->as<NetPortHeaderSyntax>();
                 return add(decl, getDirection(header.direction), header.dataType,
-                           &compilation.getNetType(header.netType.kind), syntax.attributes);
+                           &comp.getNetType(header.netType.kind), syntax.attributes);
             }
             case SyntaxKind::InterfacePortHeader: {
                 auto& header = syntax.header->as<InterfacePortHeaderSyntax>();
@@ -183,15 +183,10 @@ public:
     }
 
     Symbol* createPort(const ExplicitAnsiPortSyntax& syntax) {
-        auto port = compilation.emplace<PortSymbol>(syntax.name.valueText(), syntax.name.location(),
-                                                    DeclaredTypeFlags::InferImplicit);
+        auto port = comp.emplace<PortSymbol>(syntax.name.valueText(), syntax.name.location());
         port->direction = getDirection(syntax.direction);
         port->setSyntax(syntax);
-        port->setDeclaredType(compilation.createEmptyTypeSyntax(syntax.name.location()));
         port->setAttributes(scope, syntax.attributes);
-
-        if (syntax.expr)
-            port->setInitializerSyntax(*syntax.expr, syntax.expr->getFirstToken().location());
 
         lastDirection = port->direction;
         lastType = nullptr;
@@ -214,7 +209,7 @@ private:
             return add(decl, lastInterface, lastModport, lastGenericIface, attrs);
 
         if (!lastType && !lastNetType)
-            lastType = &compilation.createEmptyTypeSyntax(decl.getFirstToken().location());
+            lastType = &comp.createEmptyTypeSyntax(decl.getFirstToken().location());
 
         return add(decl, lastDirection, lastType, lastNetType, attrs);
     }
@@ -223,7 +218,7 @@ private:
                 const DataTypeSyntax* type, const NetType* netType,
                 span<const AttributeInstanceSyntax* const> attrs) {
 
-        auto port = compilation.emplace<PortSymbol>(decl.name.valueText(), decl.name.location());
+        auto port = comp.emplace<PortSymbol>(decl.name.valueText(), decl.name.location());
         port->direction = direction;
         port->setSyntax(decl);
         port->setAttributes(scope, attrs);
@@ -238,27 +233,20 @@ private:
         // Create a new symbol to represent this port internally to the instance.
         ValueSymbol* symbol;
         if (netType) {
-            symbol = compilation.emplace<NetSymbol>(port->name, port->location, *netType);
+            symbol = comp.emplace<NetSymbol>(port->name, port->location, *netType);
         }
         else {
-            symbol = compilation.emplace<VariableSymbol>(port->name, port->location,
-                                                         VariableLifetime::Static);
+            symbol =
+                comp.emplace<VariableSymbol>(port->name, port->location, VariableLifetime::Static);
         }
 
         if (type) {
-            // Symbol and port can't link their types here, they need to be independent.
-            // This is due to the way we resolve connections - see the comment in
-            // InstanceSymbol::resolvePortConnections for an example of a scenario that
-            // would otherwise cause reentrant type resolution for the port symbol.
             symbol->setDeclaredType(*type, decl.dimensions);
-            port->setDeclaredType(*type, decl.dimensions);
         }
         else {
             ASSERT(netType);
             if (!decl.dimensions.empty())
                 symbol->getDeclaredType()->setDimensionSyntax(decl.dimensions);
-
-            port->getDeclaredType()->copyTypeFrom(*symbol->getDeclaredType());
         }
 
         // Initializers here are evaluated in the context of the port list and
@@ -282,11 +270,10 @@ private:
 
     Symbol* add(const DeclaratorSyntax& decl, const Definition* iface, string_view modport,
                 bool isGeneric, span<const AttributeInstanceSyntax* const> attrs) {
-        auto port =
-            compilation.emplace<InterfacePortSymbol>(decl.name.valueText(), decl.name.location());
+        auto port = comp.emplace<InterfacePortSymbol>(decl.name.valueText(), decl.name.location());
 
         if (iface)
-            compilation.noteInterfacePort(*iface);
+            comp.noteInterfacePort(*iface);
 
         port->interfaceDef = iface;
         port->modport = modport;
@@ -304,7 +291,7 @@ private:
         return port;
     }
 
-    Compilation& compilation;
+    Compilation& comp;
     const Scope& scope;
     SmallVector<std::pair<Symbol*, const Symbol*>>& implicitMembers;
 
@@ -366,7 +353,7 @@ public:
             auto port = comp.emplace<PortSymbol>(name, loc);
             port->direction = ArgumentDirection::In;
             port->setSyntax(syntax);
-            port->setType(comp.getVoidType()); // indicator that this is an empty port
+            port->isNullPort = true;
             return port;
         }
 
@@ -384,7 +371,7 @@ public:
         auto port = comp.emplace<PortSymbol>("", syntax.placeholder.location());
         port->direction = ArgumentDirection::In;
         port->setSyntax(syntax);
-        port->setType(comp.getVoidType()); // indicator that this is an empty port
+        port->isNullPort = true;
         return port;
     }
 
@@ -575,7 +562,6 @@ private:
         ASSERT(info->internalSymbol);
         port->direction = info->direction;
         port->internalSymbol = info->internalSymbol;
-        port->getDeclaredType()->copyTypeFrom(*info->internalSymbol->getDeclaredType());
         port->setAttributes(scope, info->attrs);
 
         if (auto init = info->syntax->initializer)
@@ -729,13 +715,13 @@ public:
 
     template<typename TPort>
     PortConnection* getConnection(const TPort& port) {
-        const bool hasDefault = port.getInitializer() != nullptr;
+        const bool hasDefault = port.hasInitializer();
         if (usingOrdered) {
             if (orderedIndex >= orderedConns.size()) {
                 orderedIndex++;
 
                 if (hasDefault)
-                    return createConnection(port, port.getInitializer(), {});
+                    return defaultConnection(port, {});
 
                 if (port.name.empty()) {
                     if (!warnedAboutUnnamed) {
@@ -756,7 +742,7 @@ public:
             if (pc.kind == SyntaxKind::OrderedPortConnection)
                 return createConnection(port, *pc.as<OrderedPortConnectionSyntax>().expr, attrs);
             else
-                return createConnection(port, port.getInitializer(), attrs);
+                return defaultConnection(port, attrs);
         }
 
         if (port.name.empty()) {
@@ -775,7 +761,7 @@ public:
                 return implicitNamedPort(port, wildcardAttrs, wildcardRange, true);
 
             if (hasDefault)
-                return createConnection(port, port.getInitializer(), {});
+                return defaultConnection(port, {});
 
             scope.addDiag(diag::UnconnectedNamedPort, instance.location) << port.name;
             return emptyConnection(port);
@@ -894,52 +880,64 @@ public:
 
 private:
     PortConnection* emptyConnection(const PortSymbol& port) {
-        return comp.emplace<PortConnection>(port, nullptr, span<const AttributeSymbol* const>{});
+        return comp.emplace<PortConnection>(port, instance);
     }
 
     PortConnection* emptyConnection(const MultiPortSymbol& port) {
-        return comp.emplace<PortConnection>(port, nullptr, span<const AttributeSymbol* const>{});
+        return comp.emplace<PortConnection>(port, instance);
     }
 
     PortConnection* emptyConnection(const InterfacePortSymbol& port) {
-        return comp.emplace<PortConnection>(port, nullptr, span<const AttributeSymbol* const>{});
+        return comp.emplace<PortConnection>(port, instance);
     }
 
-    PortConnection* createConnection(const PortSymbol& port, const Expression* expr,
-                                     span<const AttributeSymbol* const> attributes) {
-        return comp.emplace<PortConnection>(port, expr, attributes);
+    PortConnection* defaultConnection(const PortSymbol& port,
+                                      span<const AttributeSymbol* const> attributes) {
+        auto conn = comp.emplace<PortConnection>(port, instance, /* useDefault */ true);
+        if (!attributes.empty())
+            comp.setAttributes(*conn, attributes);
+
+        return conn;
     }
 
-    PortConnection* createConnection(const MultiPortSymbol& port, const Expression* expr,
-                                     span<const AttributeSymbol* const> attributes) {
-        return comp.emplace<PortConnection>(port, expr, attributes);
+    PortConnection* defaultConnection(const MultiPortSymbol& port,
+                                      span<const AttributeSymbol* const> attributes) {
+        auto conn = comp.emplace<PortConnection>(port, instance, /* useDefault */ false);
+        if (!attributes.empty())
+            comp.setAttributes(*conn, attributes);
+
+        return conn;
     }
 
     template<typename TPort>
     PortConnection* createConnection(const TPort& port, const PropertyExprSyntax& syntax,
                                      span<const AttributeSymbol* const> attributes) {
         // If this is an empty port, it's an error to provide an expression.
-        if (port.getType().isVoid()) {
+        if (port.isNullPort) {
             auto& diag = scope.addDiag(diag::NullPortExpression, syntax.sourceRange());
             diag.addNote(diag::NoteDeclarationHere, port.location);
             return emptyConnection(port);
         }
 
-        // TODO: if port is explicit, check that expression as well
-        BindContext context(scope, lookupLocation, BindFlags::NonProcedural);
-        context.instance = &instance;
-
+        BindContext context(scope, lookupLocation);
         auto exprSyntax = context.requireSimpleExpr(syntax);
         if (!exprSyntax)
             return emptyConnection(port);
 
-        auto& expr = Expression::bindArgument(port.getType(), port.direction, *exprSyntax, context);
-        return createConnection(port, &expr, attributes);
+        auto conn = comp.emplace<PortConnection>(port, instance, *exprSyntax);
+        if (!attributes.empty())
+            comp.setAttributes(*conn, attributes);
+
+        return conn;
     }
 
     PortConnection* createConnection(const InterfacePortSymbol& port, const Symbol* ifaceInst,
                                      span<const AttributeSymbol* const> attributes) {
-        return comp.emplace<PortConnection>(port, ifaceInst, attributes);
+        auto conn = comp.emplace<PortConnection>(port, instance, ifaceInst);
+        if (!attributes.empty())
+            comp.setAttributes(*conn, attributes);
+
+        return conn;
     }
 
     template<typename TPort>
@@ -957,8 +955,8 @@ private:
         if (!symbol) {
             // If this is a wildcard connection, we're allowed to use the port's default value,
             // if it has one.
-            if (isWildcard && port.getInitializer())
-                return createConnection(port, port.getInitializer(), attributes);
+            if (isWildcard && port.hasInitializer())
+                return defaultConnection(port, attributes);
 
             scope.addDiag(diag::ImplicitNamedPortNotFound, range) << port.name;
             return emptyConnection(port);
@@ -970,26 +968,11 @@ private:
             diag.addNote(diag::NoteDeclarationHere, symbol->location);
         }
 
-        auto& portType = port.getType();
-        if (portType.isError())
-            return emptyConnection(port);
+        auto conn = comp.emplace<PortConnection>(port, instance, symbol, range);
+        if (!attributes.empty())
+            comp.setAttributes(*conn, attributes);
 
-        BindContext context(scope, LookupLocation::max, BindFlags::NonProcedural);
-        auto expr = &ValueExpressionBase::fromSymbol(context, *symbol, false, range);
-        if (expr->bad())
-            return emptyConnection(port);
-
-        if (!expr->type->isEquivalent(portType)) {
-            auto& diag = scope.addDiag(diag::ImplicitNamedPortTypeMismatch, range);
-            diag << port.name;
-            diag << portType;
-            diag << *expr->type;
-            return emptyConnection(port);
-        }
-
-        // TODO: direction of assignment
-        auto& assign = Expression::convertAssignment(context, portType, *expr, range.start());
-        return createConnection(port, &assign, attributes);
+        return conn;
     }
 
     PortConnection* getInterfaceExpr(const InterfacePortSymbol& port,
@@ -1223,9 +1206,51 @@ private:
 
 } // end anonymous namespace
 
-PortSymbol::PortSymbol(string_view name, SourceLocation loc, bitmask<DeclaredTypeFlags> flags) :
-    ValueSymbol(SymbolKind::Port, name, loc, flags | DeclaredTypeFlags::Port) {
+PortSymbol::PortSymbol(string_view name, SourceLocation loc) : Symbol(SymbolKind::Port, name, loc) {
     externalLoc = loc;
+}
+
+const Type& PortSymbol::getType() const {
+    if (type)
+        return *type;
+
+    auto scope = getParentScope();
+    auto syntax = getSyntax();
+    ASSERT(scope && syntax);
+
+    if (internalSymbol) {
+        auto dt = internalSymbol->getDeclaredType();
+        ASSERT(dt);
+        type = &dt->getType();
+    }
+    else if (isNullPort) {
+        type = &scope->getCompilation().getVoidType();
+    }
+    else {
+        // TODO:
+        ASSERT(false);
+    }
+
+    if (type->isCHandle())
+        scope->addDiag(diag::InvalidPortType, location) << *type;
+
+    return *type;
+}
+
+const Expression* PortSymbol::getInitializer() const {
+    if (!initializer && initializerSyntax) {
+        auto scope = getParentScope();
+        auto syntax = getSyntax();
+        ASSERT(scope && syntax);
+        ASSERT(internalSymbol);
+
+        BindContext context(*scope, LookupLocation::after(*internalSymbol),
+                            BindFlags::NonProcedural | BindFlags::StaticInitializer);
+        initializer =
+            &Expression::bindRValue(getType(), *initializerSyntax, initializerLoc, context);
+    }
+
+    return initializer;
 }
 
 void PortSymbol::fromSyntax(
@@ -1284,7 +1309,12 @@ void PortSymbol::fromSyntax(
 }
 
 void PortSymbol::serializeTo(ASTSerializer& serializer) const {
+    serializer.write("type", getType());
     serializer.write("direction", toString(direction));
+
+    if (auto init = getInitializer())
+        serializer.write("initializer", *init);
+
     if (internalSymbol)
         serializer.writeLink("internalSymbol", *internalSymbol);
 }
@@ -1343,6 +1373,9 @@ const Type& MultiPortSymbol::getType() const {
 }
 
 void MultiPortSymbol::serializeTo(ASTSerializer& serializer) const {
+    serializer.write("type", getType());
+    serializer.write("direction", toString(direction));
+
     serializer.startArray("ports");
     for (auto port : ports) {
         serializer.startObject();
@@ -1393,7 +1426,7 @@ const Symbol* InterfacePortSymbol::getConnection() const {
     if (!conn)
         return nullptr;
 
-    return conn->ifaceInstance;
+    return conn->getIfaceInstance();
 }
 
 void InterfacePortSymbol::serializeTo(ASTSerializer& serializer) const {
@@ -1404,16 +1437,93 @@ void InterfacePortSymbol::serializeTo(ASTSerializer& serializer) const {
     serializer.write("isGeneric", isGeneric);
 }
 
-PortConnection::PortConnection(const Symbol& port, const Expression* expr,
-                               span<const AttributeSymbol* const> attributes) :
-    port(&port),
-    expr(expr), isInterfacePort(false), attributes(attributes) {
+PortConnection::PortConnection(const Symbol& port, const InstanceSymbol& parentInstance) :
+    port(port), parentInstance(parentInstance) {
 }
 
-PortConnection::PortConnection(const InterfacePortSymbol& port, const Symbol* instance,
-                               span<const AttributeSymbol* const> attributes) :
-    ifacePort(&port),
-    ifaceInstance(instance), isInterfacePort(true), attributes(attributes) {
+PortConnection::PortConnection(const Symbol& port, const InstanceSymbol& parentInstance,
+                               const ExpressionSyntax& expr) :
+    port(port),
+    parentInstance(parentInstance), exprSyntax(&expr) {
+}
+
+PortConnection::PortConnection(const Symbol& port, const InstanceSymbol& parentInstance,
+                               bool useDefault) :
+    port(port),
+    parentInstance(parentInstance), useDefault(useDefault) {
+}
+
+PortConnection::PortConnection(const InterfacePortSymbol& port,
+                               const InstanceSymbol& parentInstance,
+                               const Symbol* connectedSymbol) :
+    port(port),
+    parentInstance(parentInstance), connectedSymbol(connectedSymbol) {
+}
+
+PortConnection::PortConnection(const Symbol& port, const InstanceSymbol& parentInstance,
+                               const Symbol* connectedSymbol, SourceRange implicitNameRange) :
+    port(port),
+    parentInstance(parentInstance), connectedSymbol(connectedSymbol),
+    implicitNameRange(implicitNameRange) {
+}
+
+const Symbol* PortConnection::getIfaceInstance() const {
+    if (port.kind == SymbolKind::InterfacePort)
+        return connectedSymbol;
+    return nullptr;
+}
+
+const Expression* PortConnection::getExpression() const {
+    if (expr || port.kind == SymbolKind::InterfacePort)
+        return expr;
+
+    if (connectedSymbol || exprSyntax) {
+        auto ll = LookupLocation::after(parentInstance);
+        auto scope = ll.getScope();
+        ASSERT(scope);
+
+        BindContext context(*scope, ll, BindFlags::NonProcedural);
+        context.instance = &parentInstance;
+
+        ArgumentDirection direction;
+        const Type* type;
+        if (port.kind == SymbolKind::Port) {
+            auto& ps = port.as<PortSymbol>();
+            direction = ps.direction;
+            type = &ps.getType();
+        }
+        else {
+            auto& mp = port.as<MultiPortSymbol>();
+            direction = mp.direction;
+            type = &mp.getType();
+        }
+
+        if (connectedSymbol) {
+            auto& valExpr = ValueExpressionBase::fromSymbol(context, *connectedSymbol, false,
+                                                            implicitNameRange);
+
+            if (!valExpr.type->isEquivalent(*type) && !valExpr.bad() && !type->isError()) {
+                auto& diag =
+                    context.addDiag(diag::ImplicitNamedPortTypeMismatch, implicitNameRange);
+                diag << port.name;
+                diag << *type;
+                diag << *valExpr.type;
+            }
+
+            // TODO: direction of assignment
+            expr =
+                &Expression::convertAssignment(context, *type, valExpr, implicitNameRange.start());
+        }
+        else {
+            expr = &Expression::bindArgument(*type, direction, *exprSyntax, context);
+        }
+    }
+    else if (useDefault) {
+        auto& ps = port.as<PortSymbol>();
+        expr = ps.getInitializer();
+    }
+
+    return expr;
 }
 
 void PortConnection::makeConnections(
@@ -1424,18 +1534,24 @@ void PortConnection::makeConnections(
     for (auto portBase : ports) {
         if (portBase->kind == SymbolKind::Port) {
             auto& port = portBase->as<PortSymbol>();
-            results.emplace(reinterpret_cast<uintptr_t>(&port),
-                            reinterpret_cast<uintptr_t>(builder.getConnection(port)));
+            auto conn = builder.getConnection(port);
+            ASSERT(conn);
+
+            results.emplace(reinterpret_cast<uintptr_t>(&port), reinterpret_cast<uintptr_t>(conn));
         }
         else if (portBase->kind == SymbolKind::MultiPort) {
             auto& port = portBase->as<MultiPortSymbol>();
-            results.emplace(reinterpret_cast<uintptr_t>(&port),
-                            reinterpret_cast<uintptr_t>(builder.getConnection(port)));
+            auto conn = builder.getConnection(port);
+            ASSERT(conn);
+
+            results.emplace(reinterpret_cast<uintptr_t>(&port), reinterpret_cast<uintptr_t>(conn));
         }
         else {
             auto& port = portBase->as<InterfacePortSymbol>();
-            results.emplace(reinterpret_cast<uintptr_t>(&port),
-                            reinterpret_cast<uintptr_t>(builder.getIfaceConnection(port)));
+            auto conn = builder.getIfaceConnection(port);
+            ASSERT(conn);
+
+            results.emplace(reinterpret_cast<uintptr_t>(&port), reinterpret_cast<uintptr_t>(conn));
         }
     }
 
@@ -1443,20 +1559,20 @@ void PortConnection::makeConnections(
 }
 
 void PortConnection::serializeTo(ASTSerializer& serializer) const {
-    serializer.write("isInterfacePort", isInterfacePort);
-    if (isInterfacePort) {
-        if (ifacePort)
-            serializer.writeLink("ifacePort", *ifacePort);
-        if (ifaceInstance)
-            serializer.writeLink("ifaceInstance", *ifaceInstance);
+    serializer.writeLink("port", port);
+    if (port.kind == SymbolKind::InterfacePort) {
+        if (connectedSymbol)
+            serializer.writeLink("ifaceInstance", *connectedSymbol);
     }
     else {
-        if (port)
-            serializer.writeLink("port", *port);
-        if (expr)
-            serializer.write("expr", *expr);
+        if (auto e = getExpression())
+            serializer.write("expr", *e);
     }
 
+    auto scope = parentInstance.getParentScope();
+    ASSERT(scope);
+
+    auto attributes = scope->getCompilation().getAttributes(*this);
     if (!attributes.empty()) {
         serializer.startArray("attributes");
         for (auto attr : attributes)

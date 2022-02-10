@@ -52,47 +52,44 @@ enum class DeclaredTypeFlags {
     /// The initializer is for an automatic variable.
     AutomaticInitializer = 1 << 4,
 
-    /// The type being bound is for a port.
-    Port = 1 << 5,
-
     /// The type being bound is the target of a typedef.
-    TypedefTarget = 1 << 6,
+    TypedefTarget = 1 << 5,
 
     /// The type being bound is a net type.
-    NetType = 1 << 7,
+    NetType = 1 << 6,
 
     /// The type being bound is a user-defined net type.
-    UserDefinedNetType = 1 << 8,
+    UserDefinedNetType = 1 << 7,
 
     /// The type being bound is part of a port I/O declaration
     /// and should be merged with the formal argument declared
     /// elsewhere in the scope.
-    FormalArgMergeVar = 1 << 9,
+    FormalArgMergeVar = 1 << 8,
 
     /// The type being bound is for a random variable
-    Rand = 1 << 10,
+    Rand = 1 << 9,
 
     /// The type being bound is a DPI return type.
-    DPIReturnType = 1 << 11,
+    DPIReturnType = 1 << 10,
 
     /// The type being bound is for a DPI argument.
-    DPIArg = 1 << 12,
+    DPIArg = 1 << 11,
 
     /// Allow use of the unbounded literal '$' in the initializer expression.
-    AllowUnboundedLiteral = 1 << 13,
+    AllowUnboundedLiteral = 1 << 12,
 
     /// The type must be one allowed in a sequence expression.
-    RequireSequenceType = 1 << 14,
+    RequireSequenceType = 1 << 13,
 
     /// The type must be valid in a coverage expression.
-    CoverageType = 1 << 15,
+    CoverageType = 1 << 14,
 
     /// A mask of flags that indicate additional type rules are needed to
     /// be checked after the type itself is resolved.
-    NeedsTypeCheck = Port | NetType | UserDefinedNetType | FormalArgMergeVar | Rand |
-                     DPIReturnType | DPIArg | RequireSequenceType | CoverageType
+    NeedsTypeCheck = NetType | UserDefinedNetType | FormalArgMergeVar | Rand | DPIReturnType |
+                     DPIArg | RequireSequenceType | CoverageType
 };
-BITMASK(DeclaredTypeFlags, RequireSequenceType)
+BITMASK(DeclaredTypeFlags, CoverageType)
 
 /// Ties together various syntax nodes that declare the type of some parent symbol
 /// along with the logic necessary to resolve that type. Optionally includes an
@@ -184,18 +181,11 @@ public:
         flags |= toAdd;
     }
 
-    /// Gets the flags currently active for the declared type.
-    bitmask<DeclaredTypeFlags> getFlags() const { return flags; }
-
     /// Perform a merge of implicit port information; this facilitates the non-ascii
     /// port system permitted by Verilog, where port I/O declarations are separate
     /// from the actual symbol declaration but may still carry some type info.
     void mergeImplicitPort(const ImplicitTypeSyntax& implicit, SourceLocation location,
                            span<const VariableDimensionSyntax* const> unpackedDimensions);
-
-    /// Copies any type information from the provided @a source -- does not include
-    /// initializer information.
-    void copyTypeFrom(const DeclaredType& source);
 
     /// Resolves the initializer using the given bind context, which could
     /// differ from the binding context that is used for type resolution.

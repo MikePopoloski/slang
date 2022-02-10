@@ -27,6 +27,7 @@ class Expression;
 class GenericClassDefSymbol;
 class PackageSymbol;
 class PrimitiveSymbol;
+class PortConnection;
 class RootSymbol;
 class Statement;
 class SubroutineSymbol;
@@ -226,6 +227,9 @@ public:
     /// Sets the attributes associated with the given expression.
     void setAttributes(const Expression& expr, span<const AttributeSymbol* const> attributes);
 
+    /// Sets the attributes associated with the given port connection.
+    void setAttributes(const PortConnection& conn, span<const AttributeSymbol* const> attributes);
+
     /// Gets the attributes associated with the given symbol.
     span<const AttributeSymbol* const> getAttributes(const Symbol& symbol) const;
 
@@ -234,6 +238,9 @@ public:
 
     /// Gets the attributes associated with the given expression.
     span<const AttributeSymbol* const> getAttributes(const Expression& expr) const;
+
+    /// Gets the attributes associated with the given port connection.
+    span<const AttributeSymbol* const> getAttributes(const PortConnection& conn) const;
 
     /// Notes that the given symbol was imported into the current scope via a package import,
     /// and further that the current scope is within a package declaration. These symbols are
