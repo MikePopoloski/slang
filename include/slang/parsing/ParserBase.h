@@ -155,14 +155,29 @@ protected:
             if (IsEnd(peek().kind))
                 break;
 
-            // If the next token isn't expected, try skipping over some tokens until
-            // we find a good place to continue.
-            if (!IsExpected(peek().kind)) {
-                if (!skipBadTokens<IsExpected, IsEnd>(code))
+            // Since the list hasn't ended, we must see a separator here.
+            // If we don't, something is wrong and we need to try to recover
+            // by skipping tokens until we get back to a separator or end token.
+            if (!peek(separatorKind)) {
+                // Special case for semicolon-ended lists: we assume that
+                // a missing separator means they actually probably missed
+                // the *end* token (i.e. the semicolon) and that we'll more
+                // easily recover by stopping list processing and letting
+                // the calling code move on.
+                if (closeKind == TokenKind::Semicolon)
                     break;
 
-                // We're back on track; continue on below to make sure we get a
-                // separator into the output buffer.
+                // Otherwise keep sucking up spans of unexpected tokens until
+                // we find a separator, our end token, or something that makes
+                // us abort completely. We call expect() here to get a diagnostic
+                // issued, we know it won't ever return a real token.
+                expect(separatorKind);
+                do {
+                    if (!skipBadTokens<IsExpected, IsEnd>(code, false)) {
+                        closeToken = expect(closeKind);
+                        return;
+                    }
+                } while (!peek(separatorKind));
             }
 
             buffer.append(expect(separatorKind));
@@ -180,8 +195,7 @@ protected:
             // an infinite loop. Detect that here and bail out. If parseItem()
             // did not issue a diagnostic on this token, add one now as well.
             if (current == peek()) {
-                skipToken(code);
-                if (IsEnd(peek().kind) || !skipBadTokens<IsExpected, IsEnd>(code))
+                if (!skipBadTokens<IsExpected, IsEnd>(code, true))
                     break;
             }
         }
@@ -189,11 +203,9 @@ protected:
     }
 
     template<bool (*IsExpected)(TokenKind), bool (*IsAbort)(TokenKind)>
-    bool skipBadTokens(DiagCode code) {
+    bool skipBadTokens(DiagCode code, bool first) {
         auto current = peek();
-        bool first = true;
-
-        while (!IsExpected(current.kind)) {
+        do {
             if (current.kind == TokenKind::EndOfFile || IsAbort(current.kind) ||
                 SyntaxFacts::isEndKeyword(current.kind)) {
                 return false;
@@ -202,7 +214,8 @@ protected:
             skipToken(first ? std::make_optional(code) : std::nullopt);
             current = peek();
             first = false;
-        }
+        } while (!IsExpected(current.kind));
+
         return true;
     }
 

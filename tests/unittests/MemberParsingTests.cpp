@@ -876,3 +876,44 @@ endmodule
     parseCompilationUnit(text);
     CHECK_DIAGNOSTICS_EMPTY;
 }
+
+TEST_CASE("Parser list error recovery") {
+    auto& text = R"(
+package def_pkg;
+    typedef logic node;
+endpackage
+
+module M
+    import def_pkg::*;
+(
+    input node clk,
+    input node rst
+);
+    node a
+    node b;
+endmodule
+
+module N (input int a
+    input int b,
+    int c;
+endmodule
+)";
+
+    parseCompilationUnit(text);
+
+    std::string result = "\n" + reportGlobalDiags();
+    CHECK(result == R"(
+source:12:11: error: expected ';'
+    node a
+          ^
+source:16:22: error: expected ','
+module N (input int a
+                     ^
+source:18:10: error: expected ')'
+    int c;
+         ^
+source:16:10: note: to match this '('
+module N (input int a
+         ^
+)");
+}
