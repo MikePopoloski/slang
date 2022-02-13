@@ -950,9 +950,11 @@ const Type& Type::fromSyntax(Compilation& compilation, const DataTypeSyntax& nod
                                             context);
         }
         case SyntaxKind::TypeReference: {
-            auto& expr = Expression::bind(*node.as<TypeReferenceSyntax>().expr, context,
-                                          BindFlags::AllowDataType);
-            context.verifyConstant(expr);
+            auto& exprSyntax = *node.as<TypeReferenceSyntax>().expr;
+            auto& expr = Expression::bind(exprSyntax, context, BindFlags::AllowDataType);
+            if (expr.hasHierarchicalReference() && !compilation.getOptions().allowHierarchicalConst)
+                context.addDiag(diag::TypeRefHierarchical, exprSyntax.sourceRange());
+
             return *expr.type;
         }
         case SyntaxKind::VirtualInterfaceType:

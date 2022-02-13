@@ -636,13 +636,9 @@ GenerateBlockArraySymbol& GenerateBlockArraySymbol::fromSyntax(Compilation& comp
     if (!context.requireBooleanConvertible(stopExpr))
         return *result;
 
-    if (!iterContext.verifyConstant(iterExpr))
-        return *result;
-
     // Create storage for the iteration variable.
     EvalContext evalContext(compilation);
     auto loopVal = evalContext.createLocal(&local, initialVal);
-
     if (loopVal->integer().hasUnknown())
         iterContext.addDiag(diag::GenvarUnknownBits, genvar.range()) << *loopVal;
 
@@ -680,6 +676,11 @@ GenerateBlockArraySymbol& GenerateBlockArraySymbol::fromSyntax(Compilation& comp
             break;
         }
     }
+
+    // If we never ran the iteration expression, run it once to ensure
+    // we've collected all errors.
+    if (indices.empty())
+        iterExpr.eval(evalContext);
 
     evalContext.reportDiags(iterContext);
 

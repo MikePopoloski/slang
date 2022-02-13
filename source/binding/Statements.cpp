@@ -823,7 +823,8 @@ Statement& DisableStatement::fromSyntax(Compilation& compilation,
                                         const DisableStatementSyntax& syntax,
                                         const BindContext& context) {
     LookupResult result;
-    Lookup::name(*syntax.name, context, LookupFlags::ForceHierarchical | LookupFlags::NoSelectors, result);
+    Lookup::name(*syntax.name, context, LookupFlags::ForceHierarchical | LookupFlags::NoSelectors,
+                 result);
     result.reportDiags(context);
 
     const Symbol* symbol = result.found;
@@ -1930,7 +1931,7 @@ Statement& TimedStatement::fromSyntax(Compilation& compilation,
 }
 
 ER TimedStatement::evalImpl(EvalContext& context) const {
-    if (context.isScriptEval())
+    if (context.flags.has(EvalFlags::IsScript))
         return stmt.eval(context);
 
     context.addDiag(diag::ConstEvalTimedStmtNotConst, sourceRange);
@@ -1938,7 +1939,7 @@ ER TimedStatement::evalImpl(EvalContext& context) const {
 }
 
 bool TimedStatement::verifyConstantImpl(EvalContext& context) const {
-    if (context.isScriptEval())
+    if (context.flags.has(EvalFlags::IsScript))
         return true;
 
     context.addDiag(diag::ConstEvalTimedStmtNotConst, sourceRange);

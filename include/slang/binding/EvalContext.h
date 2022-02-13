@@ -39,9 +39,13 @@ enum class EvalFlags : uint8_t {
     CacheResults = 1 << 2,
 
     /// Specparams are allowed during evaluation.
-    SpecparamsAllowed = 1 << 3
+    SpecparamsAllowed = 1 << 3,
+
+    /// Evaluation is for a covergroup expression, which allows some
+    /// forms of non-constant variables to be referenced.
+    CovergroupExpr = 1 << 4
 };
-BITMASK(EvalFlags, SpecparamsAllowed)
+BITMASK(EvalFlags, CovergroupExpr)
 
 /// A container for all context required to evaluate a statement or expression.
 /// Mostly this involves tracking the callstack and maintaining
@@ -49,6 +53,7 @@ BITMASK(EvalFlags, SpecparamsAllowed)
 class EvalContext {
 public:
     Compilation& compilation;
+    bitmask<EvalFlags> flags;
 
     /// Represents a single frame in the call stack.
     struct Frame {
@@ -102,16 +107,9 @@ public:
     /// this is a top-level expression.
     bool inFunction() const { return stack.size() > 1; }
 
-    /// Indicates whether this evaluation context is for a script session
-    /// (not used during normal compilation flow).
-    bool isScriptEval() const { return flags.has(EvalFlags::IsScript); }
-
     /// Indicates whether this context is for verifying const-ness
     /// without actually evaluating anything.
     bool isVerifying() const { return flags.has(EvalFlags::IsVerifying); }
-
-    /// Indicates whether specparams are allowed to be used during evaluation.
-    bool areSpecparamsAllowed() const { return flags.has(EvalFlags::SpecparamsAllowed); }
 
     /// Indicates whether the results of evaluating expressions using this context
     /// can be cached in each expression's `constant` pointer.
@@ -178,7 +176,6 @@ public:
 
 private:
     uint32_t steps = 0;
-    bitmask<EvalFlags> flags;
     const Symbol* disableTarget = nullptr;
     const ConstantValue* queueTarget = nullptr;
     SmallVectorSized<Frame, 4> stack;

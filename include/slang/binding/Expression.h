@@ -273,6 +273,9 @@ public:
     /// unpacked structs and arrays.
     const Symbol* getSymbolReference(bool allowPacked = true) const;
 
+    /// Returns true if any subexpression of this expression is a hierarchical reference.
+    bool hasHierarchicalReference() const;
+
     template<typename T>
     T& as() {
         ASSERT(T::isKind(kind));

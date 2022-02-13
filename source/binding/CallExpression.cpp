@@ -712,7 +712,7 @@ bool CallExpression::verifyConstantImpl(EvalContext& context) const {
 
 bool CallExpression::checkConstant(EvalContext& context, const SubroutineSymbol& subroutine,
                                    SourceRange range) {
-    if (context.isScriptEval())
+    if (context.flags.has(EvalFlags::IsScript))
         return true;
 
     if (subroutine.subroutineKind == SubroutineKind::Task) {

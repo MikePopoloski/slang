@@ -495,7 +495,7 @@ Expression& AssignmentExpression::fromComponents(
 }
 
 ConstantValue AssignmentExpression::evalImpl(EvalContext& context) const {
-    if (!context.isScriptEval() && timingControl) {
+    if (!context.flags.has(EvalFlags::IsScript) && timingControl) {
         context.addDiag(diag::ConstEvalTimedStmtNotConst, sourceRange);
         return nullptr;
     }
@@ -525,7 +525,7 @@ ConstantValue AssignmentExpression::evalImpl(EvalContext& context) const {
 }
 
 bool AssignmentExpression::verifyConstantImpl(EvalContext& context) const {
-    if (!context.isScriptEval() && timingControl) {
+    if (!context.flags.has(EvalFlags::IsScript) && timingControl) {
         context.addDiag(diag::ConstEvalTimedStmtNotConst, sourceRange);
         return false;
     }

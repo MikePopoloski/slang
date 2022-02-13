@@ -97,7 +97,7 @@ const Expression& CoverageOptionSetter::getExpression() const {
         context.setAttributes(*expr, syntax->attributes);
 
         if (isTypeOpt && expr->kind == ExpressionKind::Assignment)
-            context.verifyConstant(expr->as<AssignmentExpression>().right());
+            context.eval(expr->as<AssignmentExpression>().right());
     }
     return *expr;
 }
@@ -447,41 +447,6 @@ CoverageBinSymbol& CoverageBinSymbol::fromSyntax(const Scope& scope,
     return *result;
 }
 
-struct CoverageVarVisitor {
-    const BindContext& context;
-
-    CoverageVarVisitor(const BindContext& context) : context(context) {}
-
-    template<typename T>
-    void visit(const T& expr) {
-        if constexpr (std::is_base_of_v<Expression, T>) {
-            if (expr.kind == ExpressionKind::NamedValue) {
-                if (const Symbol* sym = expr.getSymbolReference(); sym && sym->isValue()) {
-                    if (sym->kind == SymbolKind::FormalArgument) {
-                        if (sym->as<FormalArgumentSymbol>().direction == ArgumentDirection::Ref)
-                            context.addDiag(diag::CoverageExprVar, expr.sourceRange);
-                    }
-                    else if (VariableSymbol::isKind(sym->kind)) {
-                        if (!sym->as<VariableSymbol>().flags.has(VariableFlags::Const))
-                            context.addDiag(diag::CoverageExprVar, expr.sourceRange);
-                    }
-                    else if (sym->kind != SymbolKind::Parameter &&
-                             sym->kind != SymbolKind::EnumValue) {
-                        context.addDiag(diag::CoverageExprVar, expr.sourceRange);
-                    }
-                }
-            }
-            else {
-                if constexpr (is_detected_v<ASTDetectors::visitExprs_t, T, CoverageVarVisitor>)
-                    expr.visitExprs(*this);
-            }
-        }
-    }
-
-    void visitInvalid(const Expression&) {}
-    void visitInvalid(const AssertionExpr&) {}
-};
-
 static const Expression& bindCovergroupExpr(const ExpressionSyntax& syntax,
                                             const BindContext& context,
                                             const Type* lvalueType = nullptr,
@@ -495,11 +460,7 @@ static const Expression& bindCovergroupExpr(const ExpressionSyntax& syntax,
         expr = &Expression::bind(syntax, context, extraFlags);
     }
 
-    if (context.verifyConstant(*expr)) {
-        CoverageVarVisitor visitor(context);
-        expr->visit(visitor);
-    }
-
+    context.eval(*expr, EvalFlags::CovergroupExpr);
     return *expr;
 }
 

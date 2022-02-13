@@ -100,6 +100,25 @@ public:
     optional<bitwidth_t> visitInvalid(const Expression&) { return std::nullopt; }
 };
 
+struct HierarchicalVisitor {
+    bool any = false;
+
+    template<typename T>
+    void visit(const T& expr) {
+        if constexpr (std::is_base_of_v<Expression, T>) {
+            if (expr.kind == ExpressionKind::HierarchicalValue) {
+                any = true;
+            }
+            else if constexpr (is_detected_v<ASTDetectors::visitExprs_t, T, HierarchicalVisitor>) {
+                expr.visitExprs(*this);
+            }
+        }
+    }
+
+    void visitInvalid(const Expression&) {}
+    void visitInvalid(const AssertionExpr&) {}
+};
+
 } // namespace
 
 namespace slang {
@@ -520,6 +539,12 @@ bool Expression::isUnsizedInteger() const {
         default:
             return false;
     }
+}
+
+bool Expression::hasHierarchicalReference() const {
+    HierarchicalVisitor visitor;
+    visit(visitor);
+    return visitor.any;
 }
 
 Expression& Expression::create(Compilation& compilation, const ExpressionSyntax& syntax,

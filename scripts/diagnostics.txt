@@ -646,6 +646,7 @@ error InvalidUnionMember "untagged unions cannot have members of type {}"
 error VirtualInterfaceUnionMember "virtual interfaces cannot be used as members of unions"
 error InvalidArrayElemType "cannot declare an array with elements of type {}"
 error NonIntegralCoverageExpr "{} is not a valid type for a coverage expression"
+error TypeRefHierarchical "'type' expression cannot contain hierarchical references"
 warning enum-range EnumRangeLiteral "enum element ranges must be integer literals"
 
 subsystem Lookup
