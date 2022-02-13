@@ -19,7 +19,6 @@ class InstanceSymbol;
 class InstanceCacheKey;
 
 struct ImplicitTypeSyntax;
-struct PortDeclarationSyntax;
 struct PortListSyntax;
 
 /// Represents the public-facing side of a module / program / interface port.
@@ -45,6 +44,7 @@ public:
     PortSymbol(string_view name, SourceLocation loc);
 
     const Type& getType() const;
+    void setType(const Type& newType) { type = &newType; }
 
     bool hasInitializer() const { return initializer || initializerSyntax; }
     const Expression* getInitializer() const;
@@ -59,7 +59,7 @@ public:
     static void fromSyntax(
         const PortListSyntax& syntax, const Scope& scope, SmallVector<const Symbol*>& results,
         SmallVector<std::pair<Symbol*, const Symbol*>>& implicitMembers,
-        span<std::pair<const PortDeclarationSyntax*, const Symbol*> const> portDeclarations);
+        span<std::pair<const SyntaxNode*, const Symbol*> const> portDeclarations);
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::Port; }
 
@@ -114,16 +114,6 @@ public:
 
     /// If non-empty, the name of the modport that restricts which interface signals are accessible.
     string_view modport;
-
-    /// The source location of the port name, if this port was declared
-    /// inside of a multi-port concatenation expression. This is only set
-    /// if isMissingIO is also set to true; it indicates an error should be
-    /// reported when the I/O declaration is finally found.
-    SourceLocation multiPortLoc;
-
-    /// Set to true if this was declared as a non-ansi port and no
-    /// I/O declaration was ever found for it.
-    bool isMissingIO = false;
 
     /// Set to true if this is a generic interface port, which allows connections
     /// to any interface type. If true, @a interfaceDef will be nullptr.

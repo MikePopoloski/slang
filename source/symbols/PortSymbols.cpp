@@ -305,28 +305,62 @@ private:
 
 class NonAnsiPortListBuilder {
 public:
-    NonAnsiPortListBuilder(
-        const Scope& scope,
-        span<std::pair<const PortDeclarationSyntax*, const Symbol*> const> portDeclarations,
-        SmallVector<std::pair<Symbol*, const Symbol*>>& implicitMembers) :
+    NonAnsiPortListBuilder(const Scope& scope,
+                           span<std::pair<const SyntaxNode*, const Symbol*> const> portDeclarations,
+                           SmallVector<std::pair<Symbol*, const Symbol*>>& implicitMembers) :
         comp(scope.getCompilation()),
         scope(scope), implicitMembers(implicitMembers) {
 
         // All port declarations in the scope have been collected; index them for easy lookup.
-        for (auto [port, insertionPoint] : portDeclarations) {
-            for (auto decl : port->declarators) {
-                if (auto name = decl->name; !name.isMissing()) {
-                    auto [it, inserted] =
-                        portInfos.emplace(name.valueText(), PortInfo{ *decl, port->attributes });
+        for (auto [syntax, insertionPoint] : portDeclarations) {
+            if (syntax->kind == SyntaxKind::PortDeclaration) {
+                auto& port = syntax->as<PortDeclarationSyntax>();
+                for (auto decl : port.declarators) {
+                    if (auto name = decl->name; !name.isMissing()) {
+                        auto [it, inserted] =
+                            portInfos.emplace(name.valueText(), PortInfo{ *decl, port.attributes });
 
-                    if (inserted) {
-                        handleIODecl(*port->header, it->second, insertionPoint);
+                        if (inserted) {
+                            handleIODecl(*port.header, it->second, insertionPoint);
+                        }
+                        else {
+                            auto& diag = scope.addDiag(diag::Redefinition, name.location());
+                            diag << name.valueText();
+                            diag.addNote(diag::NotePreviousDefinition,
+                                         it->second.syntax->name.location());
+                        }
                     }
-                    else {
-                        auto& diag = scope.addDiag(diag::Redefinition, name.location());
-                        diag << name.valueText();
-                        diag.addNote(diag::NotePreviousDefinition,
-                                     it->second.syntax->name.location());
+                }
+            }
+            else {
+                auto& data = syntax->as<DataDeclarationSyntax>();
+                auto& namedType = data.type->as<NamedTypeSyntax>();
+                auto typeName = namedType.name->as<IdentifierNameSyntax>().identifier.valueText();
+                auto def = comp.getDefinition(typeName);
+
+                ASSERT(def && def->definitionKind == DefinitionKind::Interface);
+
+                for (auto decl : data.declarators) {
+                    if (auto name = decl->name; !name.isMissing()) {
+                        auto [it, inserted] =
+                            portInfos.emplace(name.valueText(), PortInfo{ *decl, data.attributes });
+
+                        if (inserted) {
+                            auto& info = it->second;
+                            info.isIface = true;
+                            info.ifaceDef = def;
+
+                            if (decl->initializer) {
+                                scope.addDiag(diag::DisallowedPortDefault,
+                                              decl->initializer->sourceRange());
+                            }
+                        }
+                        else {
+                            auto& diag = scope.addDiag(diag::Redefinition, name.location());
+                            diag << name.valueText();
+                            diag.addNote(diag::NotePreviousDefinition,
+                                         it->second.syntax->name.location());
+                        }
                     }
                 }
             }
@@ -402,15 +436,6 @@ private:
             syntax(&syntax), attrs(attrs) {}
     };
     SmallMap<string_view, PortInfo, 8> portInfos;
-
-    const PortInfo* getInfo(string_view name) {
-        auto it = portInfos.find(name);
-        if (it == portInfos.end())
-            return nullptr;
-
-        it->second.used = true;
-        return &it->second;
-    }
 
     void handleIODecl(const PortHeaderSyntax& header, PortInfo& info,
                       const Symbol* insertionPoint) {
@@ -497,6 +522,10 @@ private:
                 info.isIface = true;
                 info.ifaceDef = definition;
                 info.modport = modport;
+
+                if (decl.initializer)
+                    scope.addDiag(diag::DisallowedPortDefault, decl.initializer->sourceRange());
+
                 break;
             }
             default:
@@ -534,22 +563,26 @@ private:
         if (externalName.empty())
             externalName = name;
 
-        auto info = getInfo(name);
-        if (!info) {
-            // Treat all unknown ports as an interface port. If that
-            // turns out not to be true later we will issue an error then.
-            auto port = comp.emplace<InterfacePortSymbol>(externalName, externalLoc);
-            port->isMissingIO = true;
+        auto it = portInfos.find(name);
+        if (it == portInfos.end()) {
+            if (!name.empty())
+                scope.addDiag(diag::MissingPortIODeclaration, externalLoc) << name;
+
+            auto port = comp.emplace<PortSymbol>(externalName, externalLoc);
+            port->setType(comp.getErrorType());
             return *port;
         }
 
-        auto loc = info->syntax->name.location();
-        if (info->isIface) {
+        auto& info = it->second;
+        info.used = true;
+
+        auto loc = info.syntax->name.location();
+        if (info.isIface) {
             auto port = comp.emplace<InterfacePortSymbol>(externalName, loc);
-            port->setSyntax(*info->syntax);
-            port->setAttributes(scope, info->attrs);
-            port->interfaceDef = info->ifaceDef;
-            port->modport = info->modport;
+            port->setSyntax(*info.syntax);
+            port->setAttributes(scope, info.attrs);
+            port->interfaceDef = info.ifaceDef;
+            port->modport = info.modport;
             return *port;
         }
 
@@ -559,12 +592,12 @@ private:
         port->setSyntax(syntax);
         port->externalLoc = externalLoc;
 
-        ASSERT(info->internalSymbol);
-        port->direction = info->direction;
-        port->internalSymbol = info->internalSymbol;
-        port->setAttributes(scope, info->attrs);
+        ASSERT(info.internalSymbol);
+        port->direction = info.direction;
+        port->internalSymbol = info.internalSymbol;
+        port->setAttributes(scope, info.attrs);
 
-        if (auto init = info->syntax->initializer)
+        if (auto init = info.syntax->initializer)
             port->setInitializerSyntax(*init->expr, init->equals.location());
 
         return *port;
@@ -589,6 +622,10 @@ private:
             auto& port = createPort(""sv, item->getFirstToken().location(), *item);
             if (port.kind == SymbolKind::Port) {
                 auto& ps = port.as<PortSymbol>();
+                auto sym = ps.internalSymbol;
+                if (!sym)
+                    continue;
+
                 buffer.append(&ps);
                 ps.setParent(scope);
 
@@ -615,8 +652,6 @@ private:
                     dir = ArgumentDirection::Out;
                 }
 
-                auto sym = ps.internalSymbol;
-                ASSERT(sym);
                 if (sym->kind == SymbolKind::Net) {
                     allVars = false;
                     if (dir == ArgumentDirection::Ref)
@@ -629,18 +664,8 @@ private:
                 }
             }
             else {
-                auto& ip = port.as<InterfacePortSymbol>();
-                if (ip.isMissingIO) {
-                    // This port gets added to the implicit members list because we
-                    // need it to be findable via lookup, so that later declarations
-                    // can properly issue an error if this is a real interface port.
-                    ip.multiPortLoc = item->getFirstToken().location();
-                    implicitMembers.emplace(&port, nullptr);
-                }
-                else {
-                    auto& diag = scope.addDiag(diag::IfacePortInConcat, item->sourceRange());
-                    diag << ip.name;
-                }
+                auto& diag = scope.addDiag(diag::IfacePortInConcat, item->sourceRange());
+                diag << port.name;
             }
         }
 
@@ -1256,7 +1281,7 @@ const Expression* PortSymbol::getInitializer() const {
 void PortSymbol::fromSyntax(
     const PortListSyntax& syntax, const Scope& scope, SmallVector<const Symbol*>& results,
     SmallVector<std::pair<Symbol*, const Symbol*>>& implicitMembers,
-    span<std::pair<const PortDeclarationSyntax*, const Symbol*> const> portDeclarations) {
+    span<std::pair<const SyntaxNode*, const Symbol*> const> portDeclarations) {
 
     switch (syntax.kind) {
         case SyntaxKind::AnsiPortList: {

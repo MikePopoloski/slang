@@ -883,10 +883,11 @@ module r({x, y}, {z, w}, {q, r}, {o, p});
     ref int p;
 endmodule
 
-module s(x, y, z);
+module s(x, y, z, w);
     input x = 1;
     output int y = foo;
     I z = 3;
+    I.mod w = 3;
 endmodule
 )");
 
@@ -894,7 +895,7 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 18);
+    REQUIRE(diags.size() == 19);
     CHECK(diags[0].code == diag::MissingPortIODeclaration);
     CHECK(diags[1].code == diag::Redefinition);
     CHECK(diags[2].code == diag::Redefinition);
@@ -913,6 +914,29 @@ endmodule
     CHECK(diags[15].code == diag::DisallowedPortDefault);
     CHECK(diags[16].code == diag::UndeclaredIdentifier);
     CHECK(diags[17].code == diag::DisallowedPortDefault);
+    CHECK(diags[18].code == diag::DisallowedPortDefault);
+}
+
+TEST_CASE("Non-ansi port locations") {
+    auto tree = SyntaxTree::fromText(R"(
+module m(a, b);
+    output a;
+    input b;
+
+    int i = 1;
+    typedef int foo_t;
+
+    localparam int j = 2;
+    foo_t a = j;
+
+    nettype int nt;
+    nt #3 b;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
 }
 
 TEST_CASE("User-defined nettypes in ports") {

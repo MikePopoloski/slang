@@ -24,10 +24,11 @@ class InstanceBodySymbol;
 class NetType;
 class WildcardImportSymbol;
 struct AttributeInstanceSyntax;
+struct DataDeclarationSyntax;
 struct NameSyntax;
 struct PackageImportItemSyntax;
 struct PortConnectionSyntax;
-struct PortDeclarationSyntax;
+struct UserDefinedNetDeclarationSyntax;
 
 using SymbolMap = flat_hash_map<string_view, const Symbol*>;
 using PointerMap = flat_hash_map<uintptr_t, uintptr_t>;
@@ -256,9 +257,8 @@ private:
         void addForwardingTypedef(const ForwardingTypedefSymbol& symbol);
         span<const ForwardingTypedefSymbol* const> getForwardingTypedefs() const;
 
-        void addPortDeclaration(const PortDeclarationSyntax& syntax, const Symbol* insertion);
-        span<std::pair<const PortDeclarationSyntax*, const Symbol*> const> getPortDeclarations()
-            const;
+        void addPortDeclaration(const SyntaxNode& syntax, const Symbol* insertion);
+        span<std::pair<const SyntaxNode*, const Symbol*> const> getPortDeclarations() const;
 
         void addNameConflict(const Symbol& member);
         span<const Symbol* const> getNameConflicts() const;
@@ -278,7 +278,7 @@ private:
 
         // Track a list of non-ANSI port declarations declared in the scope; once we've fully
         // elaborated we'll go back and make sure they're valid.
-        std::vector<std::pair<const PortDeclarationSyntax*, const Symbol*>> portDecls;
+        std::vector<std::pair<const SyntaxNode*, const Symbol*>> portDecls;
 
         // A list of members that have name conflicts that need to be reported.
         std::vector<const Symbol*> nameConflicts;
@@ -287,34 +287,19 @@ private:
     // Sideband collection of wildcard imports stored in the Compilation object.
     using ImportData = std::vector<const WildcardImportSymbol*>;
 
-    // Inserts the given member symbol into our own list of members, right after
-    // the given symbol. If `at` is null, it will insert at the head of the list.
     void insertMember(const Symbol* member, const Symbol* at, bool isElaborating,
                       bool incrementIndex) const;
 
-    // Gets or creates deferred member data in the Compilation object's sideband table.
     DeferredMemberData& getOrAddDeferredData() const;
-
-    // Elaborates all deferred members and then releases the entry from the
-    // Compilation object's sideband table.
     void elaborate() const;
-
-    // Handles name conflicts between symbols in the scope.
     void handleNameConflict(const Symbol& member, const Symbol*& existing,
                             bool isElaborating) const;
-
-    // Reports an error for a name conflict between two symbols.
+    bool handleDataDeclaration(const DataDeclarationSyntax& syntax);
+    void handleUserDefinedNet(const UserDefinedNetDeclarationSyntax& syntax);
     void reportNameConflict(const Symbol& member, const Symbol& existing) const;
-
-    // Checks for a conflict when multiple imports (or exports) target symbols
-    // with the same name.
     void checkImportConflict(const Symbol& member, const Symbol& existing) const;
-
-    // Add a wildcard import to this scope.
     void addWildcardImport(const PackageImportItemSyntax& item,
                            span<const AttributeInstanceSyntax* const> attributes);
-
-    // Helper for adding in one or more deferred members from a syntax node.
     void addDeferredMembers(const SyntaxNode& syntax);
 
     // The compilation that owns this scope.
