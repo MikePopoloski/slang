@@ -30,20 +30,16 @@ enum class EvalFlags : uint8_t {
     /// language rules should be relaxed.
     IsScript = 1 << 0,
 
-    /// This evaluation is happening to verify the const-ness of
-    /// an expression, not to figure out a final result.
-    IsVerifying = 1 << 1,
-
     /// The results of the evaluation can be cached in each expression's
     /// `constant` pointer.
-    CacheResults = 1 << 2,
+    CacheResults = 1 << 1,
 
     /// Specparams are allowed during evaluation.
-    SpecparamsAllowed = 1 << 3,
+    SpecparamsAllowed = 1 << 2,
 
     /// Evaluation is for a covergroup expression, which allows some
     /// forms of non-constant variables to be referenced.
-    CovergroupExpr = 1 << 4
+    CovergroupExpr = 1 << 3
 };
 BITMASK(EvalFlags, CovergroupExpr)
 
@@ -106,10 +102,6 @@ public:
     /// Returns true if the context is currently within a function call, and false if
     /// this is a top-level expression.
     bool inFunction() const { return stack.size() > 1; }
-
-    /// Indicates whether this context is for verifying const-ness
-    /// without actually evaluating anything.
-    bool isVerifying() const { return flags.has(EvalFlags::IsVerifying); }
 
     /// Indicates whether the results of evaluating expressions using this context
     /// can be cached in each expression's `constant` pointer.

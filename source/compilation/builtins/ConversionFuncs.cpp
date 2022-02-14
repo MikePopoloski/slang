@@ -42,8 +42,6 @@ public:
         return val.convertToInt(to.getBitWidth(), toSigned, to.isFourState());
     }
 
-    bool verifyConstant(EvalContext&, const Args&, SourceRange) const final { return true; }
-
 private:
     bool toSigned;
 };
@@ -79,8 +77,6 @@ public:
 
         return comp.getRealType();
     }
-
-    bool verifyConstant(EvalContext&, const Args&, SourceRange) const final { return true; }
 
     ConstantValue eval(EvalContext& context, const Args& args, SourceRange,
                        const CallExpression::SystemCallInfo&) const final {

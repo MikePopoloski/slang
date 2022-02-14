@@ -40,18 +40,6 @@ struct EvalVisitor {
     ER visitInvalid(const Statement&, EvalContext&) { return ER::Fail; }
 };
 
-struct VerifyVisitor {
-    template<typename T>
-    bool visit(const T& stmt, EvalContext& context) {
-        if (stmt.bad())
-            return false;
-
-        return stmt.verifyConstantImpl(context);
-    }
-
-    bool visitInvalid(const Statement&, EvalContext&) { return false; }
-};
-
 } // namespace
 
 namespace slang {
@@ -65,11 +53,6 @@ void InvalidStatement::serializeTo(ASTSerializer& serializer) const {
 
 ER Statement::eval(EvalContext& context) const {
     EvalVisitor visitor;
-    return visit(visitor, context);
-}
-
-bool Statement::verifyConstant(EvalContext& context) const {
-    VerifyVisitor visitor;
     return visit(visitor, context);
 }
 
@@ -613,14 +596,6 @@ ER StatementList::evalImpl(EvalContext& context) const {
     return ER::Success;
 }
 
-bool StatementList::verifyConstantImpl(EvalContext& context) const {
-    for (auto item : list) {
-        if (!item->verifyConstant(context))
-            return false;
-    }
-    return true;
-}
-
 void StatementList::serializeTo(ASTSerializer& serializer) const {
     serializer.startArray("list");
     for (auto stmt : list) {
@@ -712,15 +687,6 @@ ER BlockStatement::evalImpl(EvalContext& context) const {
     return result;
 }
 
-bool BlockStatement::verifyConstantImpl(EvalContext& context) const {
-    if (blockKind != StatementBlockKind::Sequential) {
-        context.addDiag(diag::ConstEvalParallelBlockNotConst, sourceRange);
-        return false;
-    }
-
-    return getStatements().verifyConstant(context);
-}
-
 Statement& ReturnStatement::fromSyntax(Compilation& compilation,
                                        const ReturnStatementSyntax& syntax,
                                        const BindContext& context, StatementContext& stmtCtx) {
@@ -773,10 +739,6 @@ ER ReturnStatement::evalImpl(EvalContext& context) const {
     return ER::Return;
 }
 
-bool ReturnStatement::verifyConstantImpl(EvalContext& context) const {
-    return !expr || expr->verifyConstant(context);
-}
-
 void ReturnStatement::serializeTo(ASTSerializer& serializer) const {
     if (expr)
         serializer.write("expr", *expr);
@@ -796,10 +758,6 @@ ER BreakStatement::evalImpl(EvalContext&) const {
     return ER::Break;
 }
 
-bool BreakStatement::verifyConstantImpl(EvalContext&) const {
-    return true;
-}
-
 Statement& ContinueStatement::fromSyntax(Compilation& compilation,
                                          const JumpStatementSyntax& syntax,
                                          const BindContext& context, StatementContext& stmtCtx) {
@@ -813,10 +771,6 @@ Statement& ContinueStatement::fromSyntax(Compilation& compilation,
 
 ER ContinueStatement::evalImpl(EvalContext&) const {
     return ER::Continue;
-}
-
-bool ContinueStatement::verifyConstantImpl(EvalContext&) const {
-    return true;
 }
 
 Statement& DisableStatement::fromSyntax(Compilation& compilation,
@@ -843,22 +797,15 @@ Statement& DisableStatement::fromSyntax(Compilation& compilation,
 }
 
 ER DisableStatement::evalImpl(EvalContext& context) const {
-    if (!verifyConstantImpl(context))
+    // Hierarchical names are disallowed in constant expressions and constant functions
+    if (isHierarchical) {
+        context.addDiag(diag::ConstEvalHierarchicalName, sourceRange) << target.name;
         return ER::Fail;
+    }
 
     ASSERT(!context.getDisableTarget());
     context.setDisableTarget(&target, sourceRange);
     return ER::Disable;
-}
-
-bool DisableStatement::verifyConstantImpl(EvalContext& context) const {
-    // Hierarchical names are disallowed in constant expressions and constant functions
-    if (isHierarchical) {
-        context.addDiag(diag::ConstEvalHierarchicalName, sourceRange) << target.name;
-        return false;
-    }
-
-    return true;
 }
 
 void DisableStatement::serializeTo(ASTSerializer& serializer) const {
@@ -887,14 +834,6 @@ ER VariableDeclStatement::evalImpl(EvalContext& context) const {
     // Create storage for the variable.
     context.createLocal(&symbol, initial);
     return ER::Success;
-}
-
-bool VariableDeclStatement::verifyConstantImpl(EvalContext& context) const {
-    if (auto initializer = symbol.getInitializer()) {
-        if (!initializer->verifyConstant(context))
-            return false;
-    }
-    return true;
 }
 
 void VariableDeclStatement::serializeTo(ASTSerializer& serializer) const {
@@ -961,16 +900,6 @@ ER ConditionalStatement::evalImpl(EvalContext& context) const {
         return ifFalse->eval(context);
 
     return ER::Success;
-}
-
-bool ConditionalStatement::verifyConstantImpl(EvalContext& context) const {
-    if (!cond.verifyConstant(context) || !ifTrue.verifyConstant(context))
-        return false;
-
-    if (ifFalse)
-        return ifFalse->verifyConstant(context);
-
-    return true;
 }
 
 void ConditionalStatement::serializeTo(ASTSerializer& serializer) const {
@@ -1213,25 +1142,6 @@ ER CaseStatement::evalImpl(EvalContext& context) const {
     return ER::Success;
 }
 
-bool CaseStatement::verifyConstantImpl(EvalContext& context) const {
-    if (!expr.verifyConstant(context))
-        return false;
-
-    for (auto& group : items) {
-        for (auto item : group.expressions) {
-            if (!item->verifyConstant(context))
-                return false;
-        }
-        if (!group.stmt->verifyConstant(context))
-            return false;
-    }
-
-    if (defaultCase)
-        return defaultCase->verifyConstant(context);
-
-    return true;
-}
-
 void CaseStatement::serializeTo(ASTSerializer& serializer) const {
     serializer.write("condition", toString(condition));
     serializer.write("check", toString(check));
@@ -1354,23 +1264,6 @@ ER ForLoopStatement::evalImpl(EvalContext& context) const {
     return ER::Success;
 }
 
-bool ForLoopStatement::verifyConstantImpl(EvalContext& context) const {
-    for (auto init : initializers) {
-        if (!init->verifyConstant(context))
-            return false;
-    }
-
-    if (stopExpr && !stopExpr->verifyConstant(context))
-        return false;
-
-    for (auto step : steps) {
-        if (!step->verifyConstant(context))
-            return false;
-    }
-
-    return body.verifyConstant(context);
-}
-
 void ForLoopStatement::serializeTo(ASTSerializer& serializer) const {
     serializer.startArray("initializers");
     for (auto ini : initializers) {
@@ -1439,10 +1332,6 @@ ER RepeatLoopStatement::evalImpl(EvalContext& context) const {
     }
 
     return ER::Success;
-}
-
-bool RepeatLoopStatement::verifyConstantImpl(EvalContext& context) const {
-    return count.verifyConstant(context) && body.verifyConstant(context);
 }
 
 void RepeatLoopStatement::serializeTo(ASTSerializer& serializer) const {
@@ -1570,10 +1459,6 @@ ER ForeachLoopStatement::evalImpl(EvalContext& context) const {
         return ER::Success;
 
     return result;
-}
-
-bool ForeachLoopStatement::verifyConstantImpl(EvalContext& context) const {
-    return arrayRef.verifyConstant(context) && body.verifyConstant(context);
 }
 
 ER ForeachLoopStatement::evalRecursive(EvalContext& context, const ConstantValue& cv,
@@ -1727,10 +1612,6 @@ ER WhileLoopStatement::evalImpl(EvalContext& context) const {
     return ER::Success;
 }
 
-bool WhileLoopStatement::verifyConstantImpl(EvalContext& context) const {
-    return cond.verifyConstant(context) && body.verifyConstant(context);
-}
-
 void WhileLoopStatement::serializeTo(ASTSerializer& serializer) const {
     serializer.write("cond", cond);
     serializer.write("body", body);
@@ -1776,10 +1657,6 @@ ER DoWhileLoopStatement::evalImpl(EvalContext& context) const {
     return ER::Success;
 }
 
-bool DoWhileLoopStatement::verifyConstantImpl(EvalContext& context) const {
-    return cond.verifyConstant(context) && body.verifyConstant(context);
-}
-
 void DoWhileLoopStatement::serializeTo(ASTSerializer& serializer) const {
     serializer.write("cond", cond);
     serializer.write("body", body);
@@ -1810,10 +1687,6 @@ ER ForeverLoopStatement::evalImpl(EvalContext& context) const {
     }
 
     return ER::Success;
-}
-
-bool ForeverLoopStatement::verifyConstantImpl(EvalContext& context) const {
-    return body.verifyConstant(context);
 }
 
 void ForeverLoopStatement::serializeTo(ASTSerializer& serializer) const {
@@ -1891,7 +1764,7 @@ Statement& ExpressionStatement::fromSyntax(Compilation& compilation,
 
 ER ExpressionStatement::evalImpl(EvalContext& context) const {
     // Skip system task invocations.
-    if (expr.kind == ExpressionKind::Call &&
+    if (expr.kind == ExpressionKind::Call && expr.as<CallExpression>().isSystemCall() &&
         expr.as<CallExpression>().getSubroutineKind() == SubroutineKind::Task) {
         context.addDiag(diag::ConstSysTaskIgnored, expr.sourceRange)
             << expr.as<CallExpression>().getSubroutineName();
@@ -1899,18 +1772,6 @@ ER ExpressionStatement::evalImpl(EvalContext& context) const {
     }
 
     return expr.eval(context) ? ER::Success : ER::Fail;
-}
-
-bool ExpressionStatement::verifyConstantImpl(EvalContext& context) const {
-    // Skip system task invocations, but provide a warning.
-    if (expr.kind == ExpressionKind::Call && expr.as<CallExpression>().isSystemCall() &&
-        expr.as<CallExpression>().getSubroutineKind() == SubroutineKind::Task) {
-        context.addDiag(diag::ConstSysTaskIgnored, expr.sourceRange)
-            << expr.as<CallExpression>().getSubroutineName();
-        return true;
-    }
-
-    return expr.verifyConstant(context);
 }
 
 void ExpressionStatement::serializeTo(ASTSerializer& serializer) const {
@@ -1936,14 +1797,6 @@ ER TimedStatement::evalImpl(EvalContext& context) const {
 
     context.addDiag(diag::ConstEvalTimedStmtNotConst, sourceRange);
     return ER::Fail;
-}
-
-bool TimedStatement::verifyConstantImpl(EvalContext& context) const {
-    if (context.flags.has(EvalFlags::IsScript))
-        return true;
-
-    context.addDiag(diag::ConstEvalTimedStmtNotConst, sourceRange);
-    return false;
 }
 
 void TimedStatement::serializeTo(ASTSerializer& serializer) const {
@@ -2048,24 +1901,6 @@ ER ImmediateAssertionStatement::evalImpl(EvalContext& context) const {
     return ER::Fail;
 }
 
-bool ImmediateAssertionStatement::verifyConstantImpl(EvalContext& context) const {
-    if (!cond.verifyConstant(context))
-        return false;
-
-    if (ifTrue && !ifTrue->verifyConstant(context))
-        return false;
-
-    if (ifFalse && !ifFalse->verifyConstant(context))
-        return false;
-
-    if (isDeferred) {
-        context.addDiag(diag::ConstEvalTimedStmtNotConst, sourceRange);
-        return false;
-    }
-
-    return true;
-}
-
 void ImmediateAssertionStatement::serializeTo(ASTSerializer& serializer) const {
     serializer.write("cond", cond);
     if (ifTrue)
@@ -2123,13 +1958,8 @@ Statement& ConcurrentAssertionStatement::fromSyntax(
 }
 
 ER ConcurrentAssertionStatement::evalImpl(EvalContext& context) const {
-    verifyConstantImpl(context);
-    return ER::Fail;
-}
-
-bool ConcurrentAssertionStatement::verifyConstantImpl(EvalContext& context) const {
     context.addDiag(diag::ConstEvalTimedStmtNotConst, sourceRange);
-    return false;
+    return ER::Fail;
 }
 
 void ConcurrentAssertionStatement::serializeTo(ASTSerializer& serializer) const {
@@ -2147,13 +1977,8 @@ Statement& DisableForkStatement::fromSyntax(Compilation& compilation,
 }
 
 ER DisableForkStatement::evalImpl(EvalContext& context) const {
-    verifyConstantImpl(context);
-    return ER::Fail;
-}
-
-bool DisableForkStatement::verifyConstantImpl(EvalContext& context) const {
     context.addDiag(diag::ConstEvalTimedStmtNotConst, sourceRange);
-    return false;
+    return ER::Fail;
 }
 
 Statement& WaitStatement::fromSyntax(Compilation& compilation, const WaitStatementSyntax& syntax,
@@ -2176,13 +2001,8 @@ Statement& WaitStatement::fromSyntax(Compilation& compilation, const WaitStateme
 }
 
 ER WaitStatement::evalImpl(EvalContext& context) const {
-    verifyConstantImpl(context);
-    return ER::Fail;
-}
-
-bool WaitStatement::verifyConstantImpl(EvalContext& context) const {
     context.addDiag(diag::ConstEvalTimedStmtNotConst, sourceRange);
-    return false;
+    return ER::Fail;
 }
 
 void WaitStatement::serializeTo(ASTSerializer& serializer) const {
@@ -2196,13 +2016,8 @@ Statement& WaitForkStatement::fromSyntax(Compilation& compilation,
 }
 
 ER WaitForkStatement::evalImpl(EvalContext& context) const {
-    verifyConstantImpl(context);
-    return ER::Fail;
-}
-
-bool WaitForkStatement::verifyConstantImpl(EvalContext& context) const {
     context.addDiag(diag::ConstEvalTimedStmtNotConst, sourceRange);
-    return false;
+    return ER::Fail;
 }
 
 Statement& WaitOrderStatement::fromSyntax(Compilation& compilation,
@@ -2243,13 +2058,8 @@ Statement& WaitOrderStatement::fromSyntax(Compilation& compilation,
 }
 
 ER WaitOrderStatement::evalImpl(EvalContext& context) const {
-    verifyConstantImpl(context);
-    return ER::Fail;
-}
-
-bool WaitOrderStatement::verifyConstantImpl(EvalContext& context) const {
     context.addDiag(diag::ConstEvalTimedStmtNotConst, sourceRange);
-    return false;
+    return ER::Fail;
 }
 
 void WaitOrderStatement::serializeTo(ASTSerializer& serializer) const {
@@ -2290,13 +2100,8 @@ Statement& EventTriggerStatement::fromSyntax(Compilation& compilation,
 }
 
 ER EventTriggerStatement::evalImpl(EvalContext& context) const {
-    verifyConstantImpl(context);
-    return ER::Fail;
-}
-
-bool EventTriggerStatement::verifyConstantImpl(EvalContext& context) const {
     context.addDiag(diag::ConstEvalTimedStmtNotConst, sourceRange);
-    return false;
+    return ER::Fail;
 }
 
 void EventTriggerStatement::serializeTo(ASTSerializer& serializer) const {
@@ -2387,13 +2192,8 @@ Statement& ProceduralAssignStatement::fromSyntax(Compilation& compilation,
 }
 
 ER ProceduralAssignStatement::evalImpl(EvalContext& context) const {
-    verifyConstantImpl(context);
-    return ER::Fail;
-}
-
-bool ProceduralAssignStatement::verifyConstantImpl(EvalContext& context) const {
     context.addDiag(diag::ConstEvalProceduralAssign, sourceRange);
-    return false;
+    return ER::Fail;
 }
 
 void ProceduralAssignStatement::serializeTo(ASTSerializer& serializer) const {
@@ -2433,13 +2233,8 @@ Statement& ProceduralDeassignStatement::fromSyntax(Compilation& compilation,
 }
 
 ER ProceduralDeassignStatement::evalImpl(EvalContext& context) const {
-    verifyConstantImpl(context);
-    return ER::Fail;
-}
-
-bool ProceduralDeassignStatement::verifyConstantImpl(EvalContext& context) const {
     context.addDiag(diag::ConstEvalProceduralAssign, sourceRange);
-    return false;
+    return ER::Fail;
 }
 
 void ProceduralDeassignStatement::serializeTo(ASTSerializer& serializer) const {
@@ -2471,13 +2266,8 @@ Statement& RandCaseStatement::fromSyntax(Compilation& compilation,
 }
 
 ER RandCaseStatement::evalImpl(EvalContext& context) const {
-    verifyConstantImpl(context);
-    return ER::Fail;
-}
-
-bool RandCaseStatement::verifyConstantImpl(EvalContext& context) const {
     context.addDiag(diag::ConstEvalRandValue, sourceRange);
-    return false;
+    return ER::Fail;
 }
 
 void RandCaseStatement::serializeTo(ASTSerializer& serializer) const {
@@ -2522,13 +2312,8 @@ Statement& RandSequenceStatement::fromSyntax(Compilation& compilation,
 }
 
 ER RandSequenceStatement::evalImpl(EvalContext& context) const {
-    verifyConstantImpl(context);
-    return ER::Fail;
-}
-
-bool RandSequenceStatement::verifyConstantImpl(EvalContext& context) const {
     context.addDiag(diag::ConstEvalRandValue, sourceRange);
-    return false;
+    return ER::Fail;
 }
 
 void RandSequenceStatement::serializeTo(ASTSerializer& serializer) const {

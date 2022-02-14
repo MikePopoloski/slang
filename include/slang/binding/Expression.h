@@ -242,10 +242,6 @@ public:
     /// if the expression does not represent an lvalue.
     LValue evalLValue(EvalContext& context) const;
 
-    /// Verifies that this expression is valid as a constant expression.
-    /// If it's not, appropriate diagnostics will be issued.
-    bool verifyConstant(EvalContext& context) const;
-
     /// Verifies that this expression is a valid lvalue and that each element
     /// of that lvalue can be assigned to. If it's not, appropriate diagnostics
     /// will be issued.

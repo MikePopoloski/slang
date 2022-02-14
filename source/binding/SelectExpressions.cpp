@@ -333,10 +333,6 @@ LValue ElementSelectExpression::evalLValueImpl(EvalContext& context) const {
     return lval;
 }
 
-bool ElementSelectExpression::verifyConstantImpl(EvalContext& context) const {
-    return value().verifyConstant(context) && selector().verifyConstant(context);
-}
-
 void ElementSelectExpression::serializeTo(ASTSerializer& serializer) const {
     serializer.write("value", value());
     serializer.write("selector", selector());
@@ -640,11 +636,6 @@ LValue RangeSelectExpression::evalLValueImpl(EvalContext& context) const {
     }
 
     return lval;
-}
-
-bool RangeSelectExpression::verifyConstantImpl(EvalContext& context) const {
-    return value().verifyConstant(context) && left().verifyConstant(context) &&
-           right().verifyConstant(context);
 }
 
 optional<ConstantRange> RangeSelectExpression::getFixedRange(EvalContext& context,
@@ -1185,10 +1176,6 @@ LValue MemberAccessExpression::evalLValueImpl(EvalContext& context) const {
     }
 
     return lval;
-}
-
-bool MemberAccessExpression::verifyConstantImpl(EvalContext& context) const {
-    return value().verifyConstant(context);
 }
 
 static bool isWithinCovergroup(const Symbol& field, const Scope& usageScope) {

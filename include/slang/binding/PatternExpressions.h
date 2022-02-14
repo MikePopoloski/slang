@@ -16,7 +16,6 @@ public:
     span<const Expression* const> elements() const { return elements_; }
 
     ConstantValue evalImpl(EvalContext& context) const;
-    bool verifyConstantImpl(EvalContext&) const;
 
     void serializeTo(ASTSerializer& serializer) const;
 

@@ -205,14 +205,6 @@ ConstantValue AssignmentPatternExpressionBase::evalImpl(EvalContext& context) co
     }
 }
 
-bool AssignmentPatternExpressionBase::verifyConstantImpl(EvalContext& context) const {
-    for (auto elem : elements()) {
-        if (!elem->verifyConstant(context))
-            return false;
-    }
-    return true;
-}
-
 void AssignmentPatternExpressionBase::serializeTo(ASTSerializer& serializer) const {
     if (!elements().empty()) {
         serializer.startArray("elements");

@@ -43,6 +43,8 @@ public:
 
     ConstantValue eval(EvalContext& context, const Args& args, SourceRange,
                        const CallExpression::SystemCallInfo&) const final {
+        noHierarchical(context, *args[0]);
+
         size_t width;
         if (args[0]->type->isFixedSize()) {
             width = args[0]->type->bitstreamWidth();
@@ -61,10 +63,6 @@ public:
 
         // TODO: width > INT_MAX
         return SVInt(32, width, true);
-    }
-
-    bool verifyConstant(EvalContext& context, const Args& args, SourceRange) const final {
-        return !args.empty() && noHierarchical(context, *args[0]);
     }
 };
 
@@ -86,16 +84,14 @@ public:
         return comp.getStringType();
     }
 
-    ConstantValue eval(EvalContext&, const Args& args, SourceRange,
+    ConstantValue eval(EvalContext& context, const Args& args, SourceRange,
                        const CallExpression::SystemCallInfo&) const final {
+        noHierarchical(context, *args[0]);
+
         TypePrinter printer;
         printer.append(*args[0]->type);
 
         return printer.toString();
-    }
-
-    bool verifyConstant(EvalContext& context, const Args& args, SourceRange) const final {
-        return !args.empty() && noHierarchical(context, *args[0]);
     }
 };
 
@@ -117,8 +113,10 @@ public:
         return comp.getBitType();
     }
 
-    ConstantValue eval(EvalContext&, const Args& args, SourceRange range,
+    ConstantValue eval(EvalContext& context, const Args& args, SourceRange range,
                        const CallExpression::SystemCallInfo&) const final {
+        noHierarchical(context, *args[0]);
+
         if (args[0]->type->isUnbounded())
             return SVInt(1, 1, false);
 
@@ -130,10 +128,6 @@ public:
         }
 
         return SVInt(1, 0, false);
-    }
-
-    bool verifyConstant(EvalContext& context, const Args& args, SourceRange) const final {
-        return !args.empty() && noHierarchical(context, *args[0]);
     }
 };
 
@@ -200,10 +194,6 @@ public:
         return comp.getIntegerType();
     }
 
-    bool verifyConstant(EvalContext& context, const Args& args, SourceRange) const final {
-        return !args.empty() && noHierarchical(context, *args[0]);
-    }
-
 protected:
     struct DimResult {
         AssociativeArray map;
@@ -228,6 +218,8 @@ protected:
     };
 
     DimResult getDim(EvalContext& context, const Args& args) const {
+        noHierarchical(context, *args[0]);
+
         // If an index expression is provided, evaluate it. Otherwise default to 1.
         ConstantValue iv;
         int32_t index = 1;
@@ -495,12 +487,10 @@ public:
         return comp.getIntegerType();
     }
 
-    bool verifyConstant(EvalContext& context, const Args& args, SourceRange) const final {
-        return !args.empty() && noHierarchical(context, *args[0]);
-    }
-
-    ConstantValue eval(EvalContext&, const Args& args, SourceRange,
+    ConstantValue eval(EvalContext& context, const Args& args, SourceRange,
                        const CallExpression::SystemCallInfo&) const final {
+        noHierarchical(context, *args[0]);
+
         // Count the number of dimensions by unwrapping arrays.
         uint64_t count = 0;
         const Type* type = args[0]->type;

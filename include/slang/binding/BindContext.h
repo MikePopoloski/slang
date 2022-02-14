@@ -277,8 +277,6 @@ public:
     bool requireValidBitWidth(bitwidth_t width, SourceRange range) const;
     optional<bitwidth_t> requireValidBitWidth(const SVInt& value, SourceRange range) const;
 
-    bool verifyConstant(const Expression& expr) const;
-
     ConstantValue eval(const Expression& expr, bitmask<EvalFlags> extraFlags = {}) const;
     ConstantValue tryEval(const Expression& expr) const;
 

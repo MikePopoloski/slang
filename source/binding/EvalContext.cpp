@@ -134,15 +134,9 @@ void EvalContext::reportDiags(const BindContext& context) {
     context.scope->addDiags(diags);
 }
 
-static void reportFrame(const EvalContext& context, Diagnostic& diag,
-                        const EvalContext::Frame& frame) {
+static void reportFrame(Diagnostic& diag, const EvalContext::Frame& frame) {
     if (!frame.subroutine)
         return;
-
-    if (context.isVerifying()) {
-        diag.addNote(diag::NoteInCallTo, frame.callLocation) << frame.subroutine->name;
-        return;
-    }
 
     FormatBuffer buffer;
     buffer.format("{}(", frame.subroutine->name);
@@ -166,7 +160,7 @@ void EvalContext::reportStack(Diagnostic& diag) const {
     if (stack.size() <= limit || limit == 0) {
         FormatBuffer buffer;
         for (const Frame& frame : make_reverse_range(stack))
-            reportFrame(*this, diag, frame);
+            reportFrame(diag, frame);
         return;
     }
 
@@ -174,13 +168,13 @@ void EvalContext::reportStack(Diagnostic& diag) const {
     const ptrdiff_t end = start + ptrdiff_t(limit % 2);
     auto reversed = make_reverse_range(stack);
     for (auto it = reversed.begin(), itEnd = it + start; it != itEnd; it++)
-        reportFrame(*this, diag, *it);
+        reportFrame(diag, *it);
 
     diag.addNote(diag::NoteSkippingFrames, (reversed.begin() + start)->callLocation)
         << stack.size() - limit;
 
     for (auto it = reversed.end() - end, itEnd = reversed.end(); it != itEnd; it++)
-        reportFrame(*this, diag, *it);
+        reportFrame(diag, *it);
 }
 
 } // namespace slang

@@ -42,9 +42,6 @@ public:
         notConst(context, range);
         return nullptr;
     }
-    bool verifyConstant(EvalContext& context, const Args&, SourceRange range) const final {
-        return notConst(context, range);
-    }
 };
 
 class FGetsFunc : public SystemSubroutine {
@@ -76,9 +73,6 @@ public:
                        const CallExpression::SystemCallInfo&) const final {
         notConst(context, range);
         return nullptr;
-    }
-    bool verifyConstant(EvalContext& context, const Args&, SourceRange range) const final {
-        return notConst(context, range);
     }
 };
 
@@ -124,9 +118,6 @@ public:
                        const CallExpression::SystemCallInfo&) const final {
         notConst(context, range);
         return nullptr;
-    }
-    bool verifyConstant(EvalContext& context, const Args&, SourceRange range) const final {
-        return notConst(context, range);
     }
 
 private:
@@ -176,9 +167,6 @@ public:
         notConst(context, range);
         return nullptr;
     }
-    bool verifyConstant(EvalContext& context, const Args&, SourceRange range) const final {
-        return notConst(context, range);
-    }
 };
 
 class RandModeFunc : public SystemSubroutine {
@@ -207,9 +195,6 @@ public:
                        const CallExpression::SystemCallInfo&) const final {
         notConst(context, range);
         return nullptr;
-    }
-    bool verifyConstant(EvalContext& context, const Args&, SourceRange range) const final {
-        return notConst(context, range);
     }
 };
 
@@ -242,9 +227,6 @@ public:
         notConst(context, range);
         return nullptr;
     }
-    bool verifyConstant(EvalContext& context, const Args&, SourceRange range) const final {
-        return notConst(context, range);
-    }
 
 private:
     size_t numArgs;
@@ -275,9 +257,6 @@ public:
                        const CallExpression::SystemCallInfo&) const final {
         notConst(context, range);
         return nullptr;
-    }
-    bool verifyConstant(EvalContext& context, const Args&, SourceRange range) const final {
-        return notConst(context, range);
     }
 };
 
@@ -313,9 +292,6 @@ public:
                        const CallExpression::SystemCallInfo&) const final {
         notConst(context, range);
         return nullptr;
-    }
-    bool verifyConstant(EvalContext& context, const Args&, SourceRange range) const final {
-        return notConst(context, range);
     }
 };
 
@@ -370,9 +346,6 @@ public:
         notConst(context, range);
         return nullptr;
     }
-    bool verifyConstant(EvalContext& context, const Args&, SourceRange range) const final {
-        return notConst(context, range);
-    }
 };
 
 class GlobalValueChangeFunc : public SystemSubroutine {
@@ -413,9 +386,6 @@ public:
                        const CallExpression::SystemCallInfo&) const final {
         notConst(context, range);
         return nullptr;
-    }
-    bool verifyConstant(EvalContext& context, const Args&, SourceRange range) const final {
-        return notConst(context, range);
     }
 
 private:

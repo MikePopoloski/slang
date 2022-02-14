@@ -36,7 +36,6 @@ public:
     Expression& right() { return *right_; }
 
     ConstantValue evalImpl(EvalContext& context) const;
-    bool verifyConstantImpl(EvalContext& context) const;
 
     void serializeTo(ASTSerializer& serializer) const;
 
@@ -88,7 +87,6 @@ public:
     Expression& operand() { return *operand_; }
 
     ConstantValue evalImpl(EvalContext& context) const;
-    bool verifyConstantImpl(EvalContext& context) const;
     optional<bitwidth_t> getEffectiveWidthImpl() const;
 
     void serializeTo(ASTSerializer& serializer) const;
@@ -132,7 +130,6 @@ public:
     const Expression* initExpr() const { return initializer_; }
 
     ConstantValue evalImpl(EvalContext& context) const;
-    bool verifyConstantImpl(EvalContext& context) const;
 
     void serializeTo(ASTSerializer& serializer) const;
 
@@ -169,7 +166,6 @@ public:
     const Expression* constructorCall() const { return constructorCall_; }
 
     ConstantValue evalImpl(EvalContext& context) const;
-    bool verifyConstantImpl(EvalContext& context) const;
 
     void serializeTo(ASTSerializer& serializer) const;
 
@@ -199,7 +195,6 @@ public:
         arguments(arguments) {}
 
     ConstantValue evalImpl(EvalContext& context) const;
-    bool verifyConstantImpl(EvalContext& context) const;
 
     void serializeTo(ASTSerializer& serializer) const;
 

@@ -26,7 +26,6 @@ public:
     SVInt getValue() const { return valueStorage; }
 
     ConstantValue evalImpl(EvalContext& context) const;
-    bool verifyConstantImpl(EvalContext&) const { return true; }
     optional<bitwidth_t> getEffectiveWidthImpl() const;
 
     void serializeTo(ASTSerializer&) const;
@@ -51,7 +50,6 @@ public:
     double getValue() const { return value; }
 
     ConstantValue evalImpl(EvalContext& context) const;
-    bool verifyConstantImpl(EvalContext&) const { return true; }
 
     void serializeTo(ASTSerializer&) const;
 
@@ -72,7 +70,6 @@ public:
     double getValue() const { return value; }
 
     ConstantValue evalImpl(EvalContext& context) const;
-    bool verifyConstantImpl(EvalContext&) const { return true; }
 
     void serializeTo(ASTSerializer&) const;
 
@@ -96,7 +93,6 @@ public:
 
     ConstantValue evalImpl(EvalContext& context) const;
     bool propagateType(const BindContext& context, const Type& newType);
-    bool verifyConstantImpl(EvalContext&) const { return true; }
 
     void serializeTo(ASTSerializer&) const;
 
@@ -117,7 +113,6 @@ public:
         Expression(ExpressionKind::NullLiteral, type, sourceRange) {}
 
     ConstantValue evalImpl(EvalContext& context) const;
-    bool verifyConstantImpl(EvalContext&) const { return true; }
 
     void serializeTo(ASTSerializer&) const {}
 
@@ -133,7 +128,6 @@ public:
         Expression(ExpressionKind::UnboundedLiteral, type, sourceRange) {}
 
     ConstantValue evalImpl(EvalContext& context) const;
-    bool verifyConstantImpl(EvalContext&) const { return true; }
 
     void serializeTo(ASTSerializer&) const {}
 
@@ -154,7 +148,6 @@ public:
     const ConstantValue& getIntValue() const;
 
     ConstantValue evalImpl(EvalContext& context) const;
-    bool verifyConstantImpl(EvalContext&) const { return true; }
 
     void serializeTo(ASTSerializer& serializer) const;
 

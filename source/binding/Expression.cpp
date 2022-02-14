@@ -58,25 +58,14 @@ public:
             return expr.evalLValueImpl(context);
         }
         else {
-            bool isConst = expr.verifyConstant(context);
-            ASSERT(!isConst);
+            // Ensure that we get some kind of diagnostic issued here.
+            auto result = expr.eval(context);
+            ASSERT(result.bad());
             return nullptr;
         }
     }
 
     LValue visitInvalid(const Expression&, EvalContext&) { return nullptr; }
-};
-
-struct VerifyVisitor {
-    template<typename T>
-    bool visit(const T& expr, EvalContext& context) {
-        if (expr.bad())
-            return false;
-
-        return expr.verifyConstantImpl(context);
-    }
-
-    bool visitInvalid(const Expression&, EvalContext&) { return false; }
 };
 
 class EffectiveWidthVisitor {
@@ -341,11 +330,6 @@ ConstantValue Expression::eval(EvalContext& context) const {
 
 LValue Expression::evalLValue(EvalContext& context) const {
     LValueVisitor visitor;
-    return visit(visitor, context);
-}
-
-bool Expression::verifyConstant(EvalContext& context) const {
-    VerifyVisitor visitor;
     return visit(visitor, context);
 }
 

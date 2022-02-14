@@ -193,13 +193,6 @@ bool BindContext::requireValidBitWidth(bitwidth_t width, SourceRange range) cons
     return true;
 }
 
-bool BindContext::verifyConstant(const Expression& expr) const {
-    EvalContext verifyContext(getCompilation(), EvalFlags::IsVerifying);
-    bool ok = expr.verifyConstant(verifyContext);
-    verifyContext.reportDiags(*this);
-    return ok;
-}
-
 ConstantValue BindContext::eval(const Expression& expr, bitmask<EvalFlags> extraFlags) const {
     EvalContext ctx(getCompilation(), extraFlags | EvalFlags::CacheResults);
     ConstantValue result = expr.eval(ctx);

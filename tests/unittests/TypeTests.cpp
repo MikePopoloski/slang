@@ -1569,7 +1569,6 @@ endmodule
 
     Compilation compilation;
     compilation.addSyntaxTree(tree);
-    NO_COMPILATION_ERRORS;
 
     auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 1);

@@ -127,10 +127,6 @@ public:
     /// Evaluates the statement under the given evaluation context.
     EvalResult eval(EvalContext& context) const;
 
-    /// Verifies that this statement is valid in a constant function.
-    /// If it's not, appropriate diagnostics will be issued.
-    bool verifyConstant(EvalContext& context) const;
-
     /// Additional information passed along during statement binding.
     struct StatementContext {
         /// A series of block symbols that are expected to be bound, in order,
@@ -239,7 +235,6 @@ public:
         Statement(StatementKind::Empty, sourceRange) {}
 
     EvalResult evalImpl(EvalContext&) const { return EvalResult::Success; }
-    bool verifyConstantImpl(EvalContext&) const { return true; }
 
     void serializeTo(ASTSerializer&) const {}
 
@@ -255,7 +250,6 @@ public:
         Statement(StatementKind::List, sourceRange), list(list) {}
 
     EvalResult evalImpl(EvalContext& context) const;
-    bool verifyConstantImpl(EvalContext& context) const;
 
     void serializeTo(ASTSerializer& serializer) const;
 
@@ -285,7 +279,6 @@ public:
     bool isNamedBlock() const;
 
     EvalResult evalImpl(EvalContext& context) const;
-    bool verifyConstantImpl(EvalContext& context) const;
 
     void serializeTo(ASTSerializer& serializer) const;
 
@@ -314,7 +307,6 @@ public:
         Statement(StatementKind::Return, sourceRange), expr(expr) {}
 
     EvalResult evalImpl(EvalContext& context) const;
-    bool verifyConstantImpl(EvalContext& context) const;
 
     static Statement& fromSyntax(Compilation& compilation, const ReturnStatementSyntax& syntax,
                                  const BindContext& context, StatementContext& stmtCtx);
@@ -338,7 +330,6 @@ public:
         Statement(StatementKind::Break, sourceRange) {}
 
     EvalResult evalImpl(EvalContext& context) const;
-    bool verifyConstantImpl(EvalContext& context) const;
 
     static Statement& fromSyntax(Compilation& compilation, const JumpStatementSyntax& syntax,
                                  const BindContext& context, StatementContext& stmtCtx);
@@ -354,7 +345,6 @@ public:
         Statement(StatementKind::Continue, sourceRange) {}
 
     EvalResult evalImpl(EvalContext& context) const;
-    bool verifyConstantImpl(EvalContext& context) const;
 
     static Statement& fromSyntax(Compilation& compilation, const JumpStatementSyntax& syntax,
                                  const BindContext& context, StatementContext& stmtCtx);
@@ -376,7 +366,6 @@ public:
         isHierarchical(isHierarchical) {}
 
     EvalResult evalImpl(EvalContext& context) const;
-    bool verifyConstantImpl(EvalContext& context) const;
 
     static Statement& fromSyntax(Compilation& compilation, const DisableStatementSyntax& syntax,
                                  const BindContext& context);
@@ -394,7 +383,6 @@ public:
         Statement(StatementKind::VariableDeclaration, sourceRange), symbol(symbol) {}
 
     EvalResult evalImpl(EvalContext& context) const;
-    bool verifyConstantImpl(EvalContext& context) const;
 
     void serializeTo(ASTSerializer& serializer) const;
 
@@ -415,7 +403,6 @@ public:
         cond(cond), ifTrue(ifTrue), ifFalse(ifFalse) {}
 
     EvalResult evalImpl(EvalContext& context) const;
-    bool verifyConstantImpl(EvalContext& context) const;
 
     static Statement& fromSyntax(Compilation& compilation, const ConditionalStatementSyntax& syntax,
                                  const BindContext& context, StatementContext& stmtCtx);
@@ -459,7 +446,6 @@ public:
         expr(expr), items(items), defaultCase(defaultCase), condition(condition), check(check) {}
 
     EvalResult evalImpl(EvalContext& context) const;
-    bool verifyConstantImpl(EvalContext& context) const;
 
     static Statement& fromSyntax(Compilation& compilation, const CaseStatementSyntax& syntax,
                                  const BindContext& context, StatementContext& stmtCtx);
@@ -500,7 +486,6 @@ public:
         initializers(initializers), stopExpr(stopExpr), steps(steps), body(body) {}
 
     EvalResult evalImpl(EvalContext& context) const;
-    bool verifyConstantImpl(EvalContext& context) const;
 
     static Statement& fromSyntax(Compilation& compilation, const ForLoopStatementSyntax& syntax,
                                  const BindContext& context, StatementContext& stmtCtx);
@@ -536,7 +521,6 @@ public:
         Statement(StatementKind::RepeatLoop, sourceRange), count(count), body(body) {}
 
     EvalResult evalImpl(EvalContext& context) const;
-    bool verifyConstantImpl(EvalContext& context) const;
 
     static Statement& fromSyntax(Compilation& compilation, const LoopStatementSyntax& syntax,
                                  const BindContext& context, StatementContext& stmtCtx);
@@ -582,7 +566,6 @@ public:
         arrayRef(arrayRef), loopDims(loopDims), body(body) {}
 
     EvalResult evalImpl(EvalContext& context) const;
-    bool verifyConstantImpl(EvalContext& context) const;
 
     static Statement& fromSyntax(Compilation& compilation, const ForeachLoopStatementSyntax& syntax,
                                  const BindContext& context, StatementContext& stmtCtx);
@@ -618,7 +601,6 @@ public:
         Statement(StatementKind::WhileLoop, sourceRange), cond(cond), body(body) {}
 
     EvalResult evalImpl(EvalContext& context) const;
-    bool verifyConstantImpl(EvalContext& context) const;
 
     static Statement& fromSyntax(Compilation& compilation, const LoopStatementSyntax& syntax,
                                  const BindContext& context, StatementContext& stmtCtx);
@@ -649,7 +631,6 @@ public:
         Statement(StatementKind::DoWhileLoop, sourceRange), cond(cond), body(body) {}
 
     EvalResult evalImpl(EvalContext& context) const;
-    bool verifyConstantImpl(EvalContext& context) const;
 
     static Statement& fromSyntax(Compilation& compilation, const DoWhileStatementSyntax& syntax,
                                  const BindContext& context, StatementContext& stmtCtx);
@@ -679,7 +660,6 @@ public:
         Statement(StatementKind::ForeverLoop, sourceRange), body(body) {}
 
     EvalResult evalImpl(EvalContext& context) const;
-    bool verifyConstantImpl(EvalContext& context) const;
 
     static Statement& fromSyntax(Compilation& compilation, const ForeverStatementSyntax& syntax,
                                  const BindContext& context, StatementContext& stmtCtx);
@@ -705,7 +685,6 @@ public:
         Statement(StatementKind::ExpressionStatement, sourceRange), expr(expr) {}
 
     EvalResult evalImpl(EvalContext& context) const;
-    bool verifyConstantImpl(EvalContext& context) const;
 
     static Statement& fromSyntax(Compilation& compilation, const ExpressionStatementSyntax& syntax,
                                  const BindContext& context);
@@ -735,7 +714,6 @@ public:
         Statement(StatementKind::Timed, sourceRange), timing(timing), stmt(stmt) {}
 
     EvalResult evalImpl(EvalContext& context) const;
-    bool verifyConstantImpl(EvalContext& context) const;
 
     static Statement& fromSyntax(Compilation& compilation,
                                  const TimingControlStatementSyntax& syntax,
@@ -775,7 +753,6 @@ public:
         isDeferred(isDeferred), isFinal(isFinal) {}
 
     EvalResult evalImpl(EvalContext& context) const;
-    bool verifyConstantImpl(EvalContext& context) const;
 
     static Statement& fromSyntax(Compilation& compilation,
                                  const ImmediateAssertionStatementSyntax& syntax,
@@ -816,7 +793,6 @@ public:
     }
 
     EvalResult evalImpl(EvalContext& context) const;
-    bool verifyConstantImpl(EvalContext& context) const;
 
     static Statement& fromSyntax(Compilation& compilation,
                                  const ConcurrentAssertionStatementSyntax& syntax,
@@ -848,7 +824,6 @@ public:
         Statement(StatementKind::DisableFork, sourceRange) {}
 
     EvalResult evalImpl(EvalContext& context) const;
-    bool verifyConstantImpl(EvalContext& context) const;
 
     static Statement& fromSyntax(Compilation& compilation,
                                  const DisableForkStatementSyntax& syntax);
@@ -869,7 +844,6 @@ public:
         Statement(StatementKind::Wait, sourceRange), cond(cond), stmt(stmt) {}
 
     EvalResult evalImpl(EvalContext& context) const;
-    bool verifyConstantImpl(EvalContext& context) const;
 
     static Statement& fromSyntax(Compilation& compilation, const WaitStatementSyntax& syntax,
                                  const BindContext& context, StatementContext& stmtCtx);
@@ -897,7 +871,6 @@ public:
         Statement(StatementKind::WaitFork, sourceRange) {}
 
     EvalResult evalImpl(EvalContext& context) const;
-    bool verifyConstantImpl(EvalContext& context) const;
 
     static Statement& fromSyntax(Compilation& compilation, const WaitForkStatementSyntax& syntax);
 
@@ -920,7 +893,6 @@ public:
         events(events), ifTrue(ifTrue), ifFalse(ifFalse) {}
 
     EvalResult evalImpl(EvalContext& context) const;
-    bool verifyConstantImpl(EvalContext& context) const;
 
     static Statement& fromSyntax(Compilation& compilation, const WaitOrderStatementSyntax& syntax,
                                  const BindContext& context, StatementContext& stmtCtx);
@@ -958,7 +930,6 @@ public:
         target(target), timing(timing), isNonBlocking(isNonBlocking) {}
 
     EvalResult evalImpl(EvalContext& context) const;
-    bool verifyConstantImpl(EvalContext& context) const;
 
     static Statement& fromSyntax(Compilation& compilation,
                                  const EventTriggerStatementSyntax& syntax,
@@ -988,7 +959,6 @@ public:
         isForce(isForce) {}
 
     EvalResult evalImpl(EvalContext& context) const;
-    bool verifyConstantImpl(EvalContext& context) const;
 
     static Statement& fromSyntax(Compilation& compilation,
                                  const ProceduralAssignStatementSyntax& syntax,
@@ -1016,7 +986,6 @@ public:
         isRelease(isRelease) {}
 
     EvalResult evalImpl(EvalContext& context) const;
-    bool verifyConstantImpl(EvalContext& context) const;
 
     static Statement& fromSyntax(Compilation& compilation,
                                  const ProceduralDeassignStatementSyntax& syntax,
@@ -1047,7 +1016,6 @@ public:
         Statement(StatementKind::RandCase, sourceRange), items(items) {}
 
     EvalResult evalImpl(EvalContext& context) const;
-    bool verifyConstantImpl(EvalContext& context) const;
 
     static Statement& fromSyntax(Compilation& compilation, const RandCaseStatementSyntax& syntax,
                                  const BindContext& context, StatementContext& stmtCtx);
@@ -1079,7 +1047,6 @@ public:
         Statement(StatementKind::RandSequence, sourceRange), firstProduction(firstProduction) {}
 
     EvalResult evalImpl(EvalContext& context) const;
-    bool verifyConstantImpl(EvalContext& context) const;
 
     static Statement& fromSyntax(Compilation& compilation,
                                  const RandSequenceStatementSyntax& syntax,

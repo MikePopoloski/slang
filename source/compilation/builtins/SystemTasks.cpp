@@ -26,9 +26,6 @@ public:
         notConst(context, range);
         return nullptr;
     }
-    bool verifyConstant(EvalContext& context, const Args&, SourceRange range) const final {
-        return notConst(context, range);
-    }
 };
 
 class SimpleSystemTask : public SimpleSystemSubroutine {
@@ -42,9 +39,6 @@ public:
                        const CallExpression::SystemCallInfo&) const final {
         notConst(context, range);
         return nullptr;
-    }
-    bool verifyConstant(EvalContext& context, const Args&, SourceRange range) const final {
-        return notConst(context, range);
     }
 };
 
@@ -555,10 +549,6 @@ public:
                        const CallExpression::SystemCallInfo&) const final {
         notConst(context, range);
         return nullptr;
-    }
-
-    bool verifyConstant(EvalContext& context, const Args&, SourceRange range) const final {
-        return notConst(context, range);
     }
 
 private:

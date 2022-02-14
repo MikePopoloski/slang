@@ -28,7 +28,6 @@ public:
 
     ConstantValue evalImpl(EvalContext& context) const;
     bool propagateType(const BindContext& context, const Type& newType);
-    bool verifyConstantImpl(EvalContext& context) const;
     optional<bitwidth_t> getEffectiveWidthImpl() const;
 
     void serializeTo(ASTSerializer& serializer) const;
@@ -72,7 +71,6 @@ public:
 
     ConstantValue evalImpl(EvalContext& context) const;
     bool propagateType(const BindContext& context, const Type& newType);
-    bool verifyConstantImpl(EvalContext& context) const;
     optional<bitwidth_t> getEffectiveWidthImpl() const;
 
     void serializeTo(ASTSerializer& serializer) const;
@@ -118,7 +116,6 @@ public:
 
     ConstantValue evalImpl(EvalContext& context) const;
     bool propagateType(const BindContext& context, const Type& newType);
-    bool verifyConstantImpl(EvalContext& context) const;
     optional<bitwidth_t> getEffectiveWidthImpl() const;
 
     void serializeTo(ASTSerializer& serializer) const;
@@ -157,7 +154,6 @@ public:
     span<const Expression* const> rangeList() const { return rangeList_; }
 
     ConstantValue evalImpl(EvalContext& context) const;
-    bool verifyConstantImpl(EvalContext& context) const;
 
     void serializeTo(ASTSerializer& serializer) const;
 
@@ -193,7 +189,6 @@ public:
 
     ConstantValue evalImpl(EvalContext& context) const;
     LValue evalLValueImpl(EvalContext& context) const;
-    bool verifyConstantImpl(EvalContext& context) const;
 
     void serializeTo(ASTSerializer& serializer) const;
 
@@ -232,7 +227,6 @@ public:
     Expression& concat() { return *concat_; }
 
     ConstantValue evalImpl(EvalContext& context) const;
-    bool verifyConstantImpl(EvalContext& context) const;
 
     void serializeTo(ASTSerializer& serializer) const;
 
@@ -287,7 +281,6 @@ public:
     span<const StreamExpression* const> streams() const { return streams_; }
 
     ConstantValue evalImpl(EvalContext& context) const;
-    bool verifyConstantImpl(EvalContext& context) const;
 
     void serializeTo(ASTSerializer& serializer) const;
 
@@ -336,7 +329,6 @@ public:
 
     ConstantValue evalImpl(EvalContext& context) const;
     bool propagateType(const BindContext& context, const Type& newType);
-    bool verifyConstantImpl(EvalContext& context) const;
 
     ConstantValue checkInside(EvalContext& context, const ConstantValue& val) const;
 

@@ -620,9 +620,6 @@ ConstantValue CallExpression::evalImpl(EvalContext& context) const {
     // Delegate system calls to their appropriate handler.
     if (isSystemCall()) {
         auto& callInfo = std::get<1>(subroutine);
-        if (!callInfo.subroutine->verifyConstant(context, arguments(), sourceRange))
-            return nullptr;
-
         return callInfo.subroutine->eval(context, arguments(), sourceRange, callInfo);
     }
 
@@ -666,47 +663,6 @@ ConstantValue CallExpression::evalImpl(EvalContext& context) const {
         return nullptr;
 
     ASSERT(er == ER::Success || er == ER::Return);
-    return result;
-}
-
-bool CallExpression::verifyConstantImpl(EvalContext& context) const {
-    if (thisClass() && !thisClass()->verifyConstant(context))
-        return false;
-
-    for (auto arg : arguments()) {
-        if (!arg->verifyConstant(context))
-            return false;
-    }
-
-    if (isSystemCall()) {
-        auto& callInfo = std::get<1>(subroutine);
-        auto iteratorInfo = std::get_if<IteratorCallInfo>(&callInfo.extraInfo);
-
-        if (iteratorInfo && iteratorInfo->iterExpr &&
-            !iteratorInfo->iterExpr->verifyConstant(context)) {
-            return false;
-        }
-
-        return callInfo.subroutine->verifyConstant(context, arguments(), sourceRange);
-    }
-
-    const SubroutineSymbol& symbol = *std::get<0>(subroutine);
-    if (!checkConstant(context, symbol, sourceRange))
-        return false;
-
-    // Recursive function calls check body only once
-    // otherwise never finish until exceeding depth limit.
-    if (inRecursion)
-        return true;
-
-    inRecursion = true;
-    auto guard = ScopeGuard([this] { inRecursion = false; });
-
-    if (!context.pushFrame(symbol, sourceRange.start(), lookupLocation))
-        return false;
-
-    bool result = symbol.getBody().verifyConstant(context);
-    context.popFrame();
     return result;
 }
 

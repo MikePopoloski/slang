@@ -164,7 +164,7 @@ optional<bitwidth_t> ValueExpressionBase::getEffectiveWidthImpl() const {
     }
 }
 
-bool ValueExpressionBase::verifyConstantBase(EvalContext& context) const {
+bool ValueExpressionBase::checkConstantBase(EvalContext& context) const {
     // Class types are disallowed in constant expressions. Note that I don't see anything
     // in the spec that would explicitly disallow them, but literally every tool issues
     // an error so for now we will follow suit.
@@ -192,7 +192,7 @@ void ValueExpressionBase::serializeTo(ASTSerializer& serializer) const {
 }
 
 ConstantValue NamedValueExpression::evalImpl(EvalContext& context) const {
-    if (!verifyConstantImpl(context))
+    if (!checkConstant(context))
         return nullptr;
 
     switch (symbol.kind) {
@@ -243,7 +243,7 @@ ConstantValue NamedValueExpression::evalImpl(EvalContext& context) const {
 }
 
 LValue NamedValueExpression::evalLValueImpl(EvalContext& context) const {
-    if (!verifyConstantImpl(context))
+    if (!checkConstant(context))
         return nullptr;
 
     auto cv = context.findLocal(&symbol);
@@ -256,11 +256,11 @@ LValue NamedValueExpression::evalLValueImpl(EvalContext& context) const {
     return LValue(*cv);
 }
 
-bool NamedValueExpression::verifyConstantImpl(EvalContext& context) const {
+bool NamedValueExpression::checkConstant(EvalContext& context) const {
     if (context.flags.has(EvalFlags::IsScript))
         return true;
 
-    if (!verifyConstantBase(context))
+    if (!checkConstantBase(context))
         return false;
 
     const EvalContext::Frame& frame = context.topFrame();
@@ -300,8 +300,23 @@ bool NamedValueExpression::verifyConstantImpl(EvalContext& context) const {
 }
 
 ConstantValue HierarchicalValueExpression::evalImpl(EvalContext& context) const {
-    if (!verifyConstantImpl(context))
+    if (!context.compilation.getOptions().allowHierarchicalConst) {
+        context.addDiag(diag::ConstEvalHierarchicalName, sourceRange) << symbol.name;
         return nullptr;
+    }
+
+    if (!checkConstantBase(context))
+        return nullptr;
+
+    switch (symbol.kind) {
+        case SymbolKind::Parameter:
+        case SymbolKind::EnumValue:
+        case SymbolKind::Specparam:
+            break;
+        default:
+            context.addDiag(diag::ConstEvalHierarchicalName, sourceRange) << symbol.name;
+            return nullptr;
+    }
 
     switch (symbol.kind) {
         case SymbolKind::Parameter: {
@@ -321,28 +336,6 @@ ConstantValue HierarchicalValueExpression::evalImpl(EvalContext& context) const 
         default:
             THROW_UNREACHABLE;
     }
-}
-
-bool HierarchicalValueExpression::verifyConstantImpl(EvalContext& context) const {
-    if (!context.compilation.getOptions().allowHierarchicalConst) {
-        context.addDiag(diag::ConstEvalHierarchicalName, sourceRange) << symbol.name;
-        return false;
-    }
-
-    if (!verifyConstantBase(context))
-        return false;
-
-    switch (symbol.kind) {
-        case SymbolKind::Parameter:
-        case SymbolKind::EnumValue:
-        case SymbolKind::Specparam:
-            return true;
-        default:
-            break;
-    }
-
-    context.addDiag(diag::ConstEvalHierarchicalName, sourceRange) << symbol.name;
-    return false;
 }
 
 Expression& DataTypeExpression::fromSyntax(Compilation& compilation, const DataTypeSyntax& syntax,
@@ -1091,10 +1084,6 @@ ConstantValue MinTypMaxExpression::evalImpl(EvalContext& context) const {
     return selected().eval(context);
 }
 
-bool MinTypMaxExpression::verifyConstantImpl(EvalContext& context) const {
-    return selected().verifyConstant(context);
-}
-
 optional<bitwidth_t> MinTypMaxExpression::getEffectiveWidthImpl() const {
     return selected().getEffectiveWidth();
 }
@@ -1121,13 +1110,8 @@ Expression& CopyClassExpression::fromSyntax(Compilation& compilation,
 }
 
 ConstantValue CopyClassExpression::evalImpl(EvalContext& context) const {
-    verifyConstantImpl(context);
-    return nullptr;
-}
-
-bool CopyClassExpression::verifyConstantImpl(EvalContext& context) const {
     context.addDiag(diag::ConstEvalClassType, sourceRange);
-    return false;
+    return nullptr;
 }
 
 void CopyClassExpression::serializeTo(ASTSerializer& serializer) const {
@@ -1265,12 +1249,6 @@ ConstantValue TaggedUnionExpression::evalImpl(EvalContext& context) const {
 
         return result;
     }
-}
-
-bool TaggedUnionExpression::verifyConstantImpl(EvalContext& context) const {
-    if (valueExpr)
-        return valueExpr->verifyConstant(context);
-    return true;
 }
 
 void TaggedUnionExpression::serializeTo(ASTSerializer& serializer) const {

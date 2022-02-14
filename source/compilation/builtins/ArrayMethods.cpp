@@ -102,8 +102,6 @@ public:
         }
     }
 
-    bool verifyConstant(EvalContext&, const Args&, SourceRange) const final { return true; }
-
 private:
     Operator op;
 };
@@ -201,8 +199,6 @@ public:
         return nullptr;
     }
 
-    bool verifyConstant(EvalContext&, const Args&, SourceRange) const final { return true; }
-
 private:
     bool reversed;
 };
@@ -238,8 +234,6 @@ public:
 
         return nullptr;
     }
-
-    bool verifyConstant(EvalContext&, const Args&, SourceRange) const final { return true; }
 };
 
 class ArrayLocatorMethod : public SystemSubroutine {
@@ -354,8 +348,6 @@ public:
 
         return results;
     }
-
-    bool verifyConstant(EvalContext&, const Args&, SourceRange) const final { return true; }
 };
 
 class ArrayMinMaxMethod : public SystemSubroutine {
@@ -446,8 +438,6 @@ public:
         return result;
     }
 
-    bool verifyConstant(EvalContext&, const Args&, SourceRange) const final { return true; }
-
 private:
     bool isMin;
 };
@@ -527,8 +517,6 @@ public:
 
         return result;
     }
-
-    bool verifyConstant(EvalContext&, const Args&, SourceRange) const final { return true; }
 
 private:
     bool isIndexed;
@@ -621,8 +609,6 @@ public:
         }
         return nullptr;
     }
-
-    bool verifyConstant(EvalContext&, const Args&, SourceRange) const final { return true; }
 };
 
 class AssocArrayExistsMethod : public SystemSubroutine {
@@ -665,8 +651,6 @@ public:
         bool exists = array.map()->count(index);
         return SVInt(32, exists ? 1 : 0, true);
     }
-
-    bool verifyConstant(EvalContext&, const Args&, SourceRange) const final { return true; }
 };
 
 class AssocArrayTraversalMethod : public SystemSubroutine {
@@ -710,9 +694,6 @@ public:
         notConst(context, range);
         return nullptr;
     }
-    bool verifyConstant(EvalContext& context, const Args&, SourceRange range) const final {
-        return notConst(context, range);
-    }
 };
 
 class QueuePopMethod : public SystemSubroutine {
@@ -752,8 +733,6 @@ public:
 
         return result;
     }
-
-    bool verifyConstant(EvalContext&, const Args&, SourceRange) const final { return true; }
 
 private:
     bool front;
@@ -804,8 +783,6 @@ public:
         q.resizeToBound();
         return nullptr;
     }
-
-    bool verifyConstant(EvalContext&, const Args&, SourceRange) const final { return true; }
 
 private:
     bool front;
@@ -862,8 +839,6 @@ public:
         q.resizeToBound();
         return nullptr;
     }
-
-    bool verifyConstant(EvalContext&, const Args&, SourceRange) const final { return true; }
 };
 
 class QueueDeleteMethod : public SystemSubroutine {
@@ -911,8 +886,6 @@ public:
         q.erase(q.begin() + *index);
         return nullptr;
     }
-
-    bool verifyConstant(EvalContext&, const Args&, SourceRange) const final { return true; }
 };
 
 class IteratorIndexMethod : public SystemSubroutine {
@@ -945,9 +918,6 @@ public:
                        const CallExpression::SystemCallInfo&) const final {
         notConst(context, range);
         return nullptr;
-    }
-    bool verifyConstant(EvalContext& context, const Args&, SourceRange range) const final {
-        return notConst(context, range);
     }
 };
 

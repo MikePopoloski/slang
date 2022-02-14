@@ -57,7 +57,6 @@ public:
     SubroutineKind getSubroutineKind() const;
 
     ConstantValue evalImpl(EvalContext& context) const;
-    bool verifyConstantImpl(EvalContext& context) const;
 
     void serializeTo(ASTSerializer& serializer) const;
 
@@ -141,8 +140,6 @@ private:
     const Expression* thisClass_;
     span<const Expression*> arguments_;
     LookupLocation lookupLocation;
-
-    mutable bool inRecursion = false;
 };
 
 } // namespace slang

@@ -556,10 +556,6 @@ ConstantValue UnaryExpression::evalImpl(EvalContext& context) const {
     THROW_UNREACHABLE;
 }
 
-bool UnaryExpression::verifyConstantImpl(EvalContext& context) const {
-    return operand().verifyConstant(context);
-}
-
 void UnaryExpression::serializeTo(ASTSerializer& serializer) const {
     serializer.write("op", toString(op));
     serializer.write("operand", operand());
@@ -920,10 +916,6 @@ ConstantValue BinaryExpression::evalImpl(EvalContext& context) const {
     return evalBinaryOperator(op, cvl, cvr);
 }
 
-bool BinaryExpression::verifyConstantImpl(EvalContext& context) const {
-    return left().verifyConstant(context) && right().verifyConstant(context);
-}
-
 void BinaryExpression::serializeTo(ASTSerializer& serializer) const {
     serializer.write("op", toString(op));
     serializer.write("left", left());
@@ -1103,11 +1095,6 @@ ConstantValue ConditionalExpression::evalImpl(EvalContext& context) const {
         return right().eval(context);
 }
 
-bool ConditionalExpression::verifyConstantImpl(EvalContext& context) const {
-    return left().verifyConstant(context) && right().verifyConstant(context) &&
-           pred().verifyConstant(context);
-}
-
 void ConditionalExpression::serializeTo(ASTSerializer& serializer) const {
     serializer.write("pred", pred());
     serializer.write("left", left());
@@ -1191,18 +1178,6 @@ ConstantValue InsideExpression::evalImpl(EvalContext& context) const {
     }
 
     return SVInt(anyUnknown ? logic_t::x : logic_t(0));
-}
-
-bool InsideExpression::verifyConstantImpl(EvalContext& context) const {
-    if (!left().verifyConstant(context))
-        return false;
-
-    for (auto elem : rangeList()) {
-        if (!elem->verifyConstant(context))
-            return false;
-    }
-
-    return true;
 }
 
 void InsideExpression::serializeTo(ASTSerializer& serializer) const {
@@ -1508,14 +1483,6 @@ LValue ConcatenationExpression::evalLValueImpl(EvalContext& context) const {
     return LValue(std::move(lvals));
 }
 
-bool ConcatenationExpression::verifyConstantImpl(EvalContext& context) const {
-    for (auto operand : operands()) {
-        if (!operand->verifyConstant(context))
-            return false;
-    }
-    return true;
-}
-
 void ConcatenationExpression::serializeTo(ASTSerializer& serializer) const {
     if (!operands().empty()) {
         serializer.startArray("operands");
@@ -1626,10 +1593,6 @@ ConstantValue ReplicationExpression::evalImpl(EvalContext& context) const {
     }
 
     return v.integer().replicate(c.integer());
-}
-
-bool ReplicationExpression::verifyConstantImpl(EvalContext& context) const {
-    return count().verifyConstant(context) && concat().verifyConstant(context);
 }
 
 void ReplicationExpression::serializeTo(ASTSerializer& serializer) const {
@@ -1849,22 +1812,6 @@ ConstantValue StreamingConcatenationExpression::evalImpl(EvalContext& context) c
     return values;
 }
 
-bool StreamingConcatenationExpression::verifyConstantImpl(EvalContext& context) const {
-    for (auto stream : streams()) {
-        if (!stream->operand->verifyConstant(context))
-            return false;
-
-        if (stream->with) {
-            if (!stream->with->left->verifyConstant(context))
-                return false;
-
-            if (stream->with->right && !stream->with->right->verifyConstant(context))
-                return false;
-        }
-    }
-    return true;
-}
-
 void StreamingConcatenationExpression::serializeTo(ASTSerializer& serializer) const {
     serializer.write("sliceSize", sliceSize);
     if (!streams().empty()) {
@@ -1968,10 +1915,6 @@ bool OpenRangeExpression::propagateType(const BindContext& context, const Type& 
 ConstantValue OpenRangeExpression::evalImpl(EvalContext&) const {
     // Should never enter this expecting a real result.
     return nullptr;
-}
-
-bool OpenRangeExpression::verifyConstantImpl(EvalContext& context) const {
-    return left().verifyConstant(context) && right().verifyConstant(context);
 }
 
 ConstantValue OpenRangeExpression::checkInside(EvalContext& context,

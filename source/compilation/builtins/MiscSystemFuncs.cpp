@@ -58,8 +58,6 @@ public:
         return *result;
     }
 
-    bool verifyConstant(EvalContext&, const Args&, SourceRange) const final { return true; }
-
 private:
     bool isNonStandard;
 };
@@ -98,9 +96,6 @@ public:
                        const CallExpression::SystemCallInfo&) const final {
         notConst(context, range);
         return nullptr;
-    }
-    bool verifyConstant(EvalContext& context, const Args&, SourceRange range) const final {
-        return notConst(context, range);
     }
 };
 
@@ -159,9 +154,6 @@ public:
         notConst(context, range);
         return nullptr;
     }
-    bool verifyConstant(EvalContext& context, const Args&, SourceRange range) const final {
-        return notConst(context, range);
-    }
 };
 
 class ScopeRandomizeFunction : public SystemSubroutine {
@@ -199,9 +191,6 @@ public:
         notConst(context, range);
         return nullptr;
     }
-    bool verifyConstant(EvalContext& context, const Args&, SourceRange range) const final {
-        return notConst(context, range);
-    }
 };
 
 class GlobalClockFunction : public SystemSubroutine {
@@ -231,9 +220,6 @@ public:
                        const CallExpression::SystemCallInfo&) const final {
         notConst(context, range);
         return nullptr;
-    }
-    bool verifyConstant(EvalContext& context, const Args&, SourceRange range) const final {
-        return notConst(context, range);
     }
 };
 
@@ -285,9 +271,6 @@ public:
                        const CallExpression::SystemCallInfo&) const final {
         notConst(context, range);
         return nullptr;
-    }
-    bool verifyConstant(EvalContext& context, const Args&, SourceRange range) const final {
-        return notConst(context, range);
     }
 
 private:

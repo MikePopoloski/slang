@@ -41,8 +41,6 @@ public:
                                        SourceRange range, const Expression* iterOrThis) const = 0;
     virtual ConstantValue eval(EvalContext& context, const Args& args, SourceRange range,
                                const CallExpression::SystemCallInfo& callInfo) const = 0;
-    virtual bool verifyConstant(EvalContext& context, const Args& args,
-                                SourceRange range) const = 0;
 
     virtual void lower(mir::Procedure&, const Args&) const {}
 
@@ -68,7 +66,6 @@ public:
                                    const Args& previousArgs) const final;
     const Type& checkArguments(const BindContext& context, const Args& args, SourceRange range,
                                const Expression* iterExpr) const final;
-    bool verifyConstant(EvalContext&, const Args&, SourceRange) const override { return true; }
 
 protected:
     SimpleSystemSubroutine(const std::string& name, SubroutineKind kind, size_t requiredArgs,
@@ -98,9 +95,6 @@ public:
                        const CallExpression::SystemCallInfo&) const final {
         notConst(context, range);
         return nullptr;
-    }
-    bool verifyConstant(EvalContext& context, const Args&, SourceRange range) const final {
-        return notConst(context, range);
     }
 };
 

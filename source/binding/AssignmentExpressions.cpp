@@ -524,15 +524,6 @@ ConstantValue AssignmentExpression::evalImpl(EvalContext& context) const {
     return rvalue;
 }
 
-bool AssignmentExpression::verifyConstantImpl(EvalContext& context) const {
-    if (!context.flags.has(EvalFlags::IsScript) && timingControl) {
-        context.addDiag(diag::ConstEvalTimedStmtNotConst, sourceRange);
-        return false;
-    }
-
-    return left().verifyConstant(context) && right().verifyConstant(context);
-}
-
 void AssignmentExpression::serializeTo(ASTSerializer& serializer) const {
     serializer.write("left", left());
     serializer.write("right", right());
@@ -804,10 +795,6 @@ ConstantValue ConversionExpression::convert(EvalContext& context, const Type& fr
     THROW_UNREACHABLE;
 }
 
-bool ConversionExpression::verifyConstantImpl(EvalContext& context) const {
-    return operand().verifyConstant(context);
-}
-
 optional<bitwidth_t> ConversionExpression::getEffectiveWidthImpl() const {
     if (isImplicit())
         return operand().getEffectiveWidth();
@@ -878,11 +865,6 @@ ConstantValue NewArrayExpression::evalImpl(EvalContext& context) const {
         result[index] = def;
 
     return result;
-}
-
-bool NewArrayExpression::verifyConstantImpl(EvalContext& context) const {
-    return sizeExpr().verifyConstant(context) &&
-           (!initExpr() || initExpr()->verifyConstant(context));
 }
 
 void NewArrayExpression::serializeTo(ASTSerializer& serializer) const {
@@ -982,13 +964,8 @@ Expression& NewClassExpression::fromSyntax(Compilation& compilation,
 }
 
 ConstantValue NewClassExpression::evalImpl(EvalContext& context) const {
-    verifyConstantImpl(context);
-    return nullptr;
-}
-
-bool NewClassExpression::verifyConstantImpl(EvalContext& context) const {
     context.addDiag(diag::ConstEvalClassType, sourceRange);
-    return false;
+    return nullptr;
 }
 
 void NewClassExpression::serializeTo(ASTSerializer& serializer) const {
@@ -1014,13 +991,8 @@ Expression& NewCovergroupExpression::fromSyntax(Compilation& compilation,
 }
 
 ConstantValue NewCovergroupExpression::evalImpl(EvalContext& context) const {
-    verifyConstantImpl(context);
-    return nullptr;
-}
-
-bool NewCovergroupExpression::verifyConstantImpl(EvalContext& context) const {
     context.addDiag(diag::ConstEvalCovergroupType, sourceRange);
-    return false;
+    return nullptr;
 }
 
 void NewCovergroupExpression::serializeTo(ASTSerializer& serializer) const {

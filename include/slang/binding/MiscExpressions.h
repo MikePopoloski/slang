@@ -36,7 +36,7 @@ protected:
     ValueExpressionBase(ExpressionKind kind, const ValueSymbol& symbol, SourceRange sourceRange) :
         Expression(kind, symbol.getType(), sourceRange), symbol(symbol) {}
 
-    bool verifyConstantBase(EvalContext& context) const;
+    bool checkConstantBase(EvalContext& context) const;
 };
 
 /// Represents an expression that references a named value.
@@ -47,9 +47,11 @@ public:
 
     ConstantValue evalImpl(EvalContext& context) const;
     LValue evalLValueImpl(EvalContext& context) const;
-    bool verifyConstantImpl(EvalContext& context) const;
 
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::NamedValue; }
+
+private:
+    bool checkConstant(EvalContext& context) const;
 };
 
 /// Represents an expression that references a named value via hierarchical path.
@@ -59,7 +61,6 @@ public:
         ValueExpressionBase(ExpressionKind::HierarchicalValue, symbol, sourceRange) {}
 
     ConstantValue evalImpl(EvalContext& context) const;
-    bool verifyConstantImpl(EvalContext& context) const;
 
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::HierarchicalValue; }
 };
@@ -73,7 +74,6 @@ public:
         Expression(ExpressionKind::DataType, type, sourceRange) {}
 
     ConstantValue evalImpl(EvalContext&) const { return nullptr; }
-    bool verifyConstantImpl(EvalContext&) const { return true; }
 
     void serializeTo(ASTSerializer&) const {}
 
@@ -96,7 +96,6 @@ public:
         targetType(targetType) {}
 
     ConstantValue evalImpl(EvalContext&) const { return nullptr; }
-    bool verifyConstantImpl(EvalContext&) const { return true; }
 
     void serializeTo(ASTSerializer& serializer) const;
 
@@ -116,7 +115,6 @@ public:
         symbol(&symbol) {}
 
     ConstantValue evalImpl(EvalContext&) const { return nullptr; }
-    bool verifyConstantImpl(EvalContext&) const { return true; }
 
     void serializeTo(ASTSerializer& serializer) const;
 
@@ -138,7 +136,6 @@ public:
         Expression(ExpressionKind::LValueReference, type, sourceRange) {}
 
     ConstantValue evalImpl(EvalContext& context) const;
-    bool verifyConstantImpl(EvalContext&) const { return true; }
 
     void serializeTo(ASTSerializer&) const {}
 
@@ -153,7 +150,6 @@ public:
         Expression(ExpressionKind::EmptyArgument, type, sourceRange) {}
 
     ConstantValue evalImpl(EvalContext&) const { return nullptr; }
-    bool verifyConstantImpl(EvalContext&) const { return true; }
 
     void serializeTo(ASTSerializer&) const {}
 
@@ -174,7 +170,6 @@ public:
         timingControl(timingControl) {}
 
     ConstantValue evalImpl(EvalContext&) const { return nullptr; }
-    bool verifyConstantImpl(EvalContext&) const { return false; }
 
     static Expression& fromSyntax(const ClockingPropertyExprSyntax& syntax,
                                   const BindContext& context);
@@ -207,7 +202,6 @@ public:
         symbol(symbol), body(body), isRecursiveProperty(isRecursiveProperty) {}
 
     ConstantValue evalImpl(EvalContext&) const { return nullptr; }
-    bool verifyConstantImpl(EvalContext&) const { return false; }
 
     static Expression& fromLookup(const Symbol& symbol, const InvocationExpressionSyntax* syntax,
                                   SourceRange range, const BindContext& context);
@@ -257,7 +251,6 @@ public:
 
     ConstantValue evalImpl(EvalContext& context) const;
     bool propagateType(const BindContext& context, const Type& newType);
-    bool verifyConstantImpl(EvalContext& context) const;
     optional<bitwidth_t> getEffectiveWidthImpl() const;
 
     void serializeTo(ASTSerializer& serializer) const;
@@ -292,7 +285,6 @@ public:
     const Expression& sourceExpr() const { return sourceExpr_; }
 
     ConstantValue evalImpl(EvalContext& context) const;
-    bool verifyConstantImpl(EvalContext& context) const;
 
     void serializeTo(ASTSerializer& serializer) const;
 
@@ -336,7 +328,6 @@ public:
     span<DistItem const> items() const { return items_; }
 
     ConstantValue evalImpl(EvalContext&) const { return nullptr; }
-    bool verifyConstantImpl(EvalContext&) const { return false; }
 
     void serializeTo(ASTSerializer& serializer) const;
 
@@ -374,7 +365,6 @@ public:
         member(member), valueExpr(valueExpr) {}
 
     ConstantValue evalImpl(EvalContext& context) const;
-    bool verifyConstantImpl(EvalContext& context) const;
 
     void serializeTo(ASTSerializer& serializer) const;
 

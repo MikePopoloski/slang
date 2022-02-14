@@ -24,9 +24,10 @@ public:
         return *args[0]->type;
     }
 
-    ConstantValue eval(EvalContext&, const Args& args, SourceRange,
+    ConstantValue eval(EvalContext& context, const Args& args, SourceRange,
                        const CallExpression::SystemCallInfo&) const final {
         // Expression isn't actually evaluated here; we know the value to return at compile time.
+        noHierarchical(context, *args[0]);
         const EnumType& type = args[0]->type->getCanonicalType().as<EnumType>();
 
         auto range = type.values();
@@ -48,10 +49,6 @@ public:
         }
 
         return value->getValue();
-    }
-
-    bool verifyConstant(EvalContext& context, const Args& args, SourceRange) const final {
-        return !args.empty() && noHierarchical(context, *args[0]);
     }
 
 private:
@@ -142,8 +139,6 @@ public:
         return values[i]->getValue();
     }
 
-    bool verifyConstant(EvalContext&, const Args&, SourceRange) const final { return true; }
-
 private:
     bool next;
 };
@@ -161,15 +156,12 @@ public:
         return comp.getIntType();
     }
 
-    ConstantValue eval(EvalContext&, const Args& args, SourceRange,
+    ConstantValue eval(EvalContext& context, const Args& args, SourceRange,
                        const CallExpression::SystemCallInfo&) const final {
         // Expression isn't actually evaluated here; we know the value to return at compile time.
+        noHierarchical(context, *args[0]);
         const EnumType& type = args[0]->type->getCanonicalType().as<EnumType>();
         return SVInt(32, (uint64_t)type.values().size(), true);
-    }
-
-    bool verifyConstant(EvalContext& context, const Args& args, SourceRange) const final {
-        return !args.empty() && noHierarchical(context, *args[0]);
     }
 };
 

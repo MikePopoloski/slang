@@ -74,10 +74,6 @@ public:
         return nullptr;
     }
 
-    bool verifyConstant(EvalContext& context, const Args&, SourceRange range) const final {
-        return notConst(context, range);
-    }
-
 private:
     std::vector<const Type*> argTypes;
     const Type* returnType;
