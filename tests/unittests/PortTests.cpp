@@ -883,11 +883,14 @@ module r({x, y}, {z, w}, {q, r}, {o, p});
     ref int p;
 endmodule
 
-module s(x, y, z, w);
+module s(x, y, z, w, q);
     input x = 1;
     output int y = foo;
     I z = 3;
     I.mod w = 3;
+
+    int baz;
+    output int q = baz;
 endmodule
 )");
 
@@ -895,7 +898,7 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 19);
+    REQUIRE(diags.size() == 20);
     CHECK(diags[0].code == diag::MissingPortIODeclaration);
     CHECK(diags[1].code == diag::Redefinition);
     CHECK(diags[2].code == diag::Redefinition);
@@ -915,6 +918,7 @@ endmodule
     CHECK(diags[16].code == diag::UndeclaredIdentifier);
     CHECK(diags[17].code == diag::DisallowedPortDefault);
     CHECK(diags[18].code == diag::DisallowedPortDefault);
+    CHECK(diags[19].code == diag::ConstEvalNonConstVariable);
 }
 
 TEST_CASE("Non-ansi port locations") {

@@ -1273,6 +1273,7 @@ const Expression* PortSymbol::getInitializer() const {
                             BindFlags::NonProcedural | BindFlags::StaticInitializer);
         initializer =
             &Expression::bindRValue(getType(), *initializerSyntax, initializerLoc, context);
+        context.eval(*initializer);
     }
 
     return initializer;
