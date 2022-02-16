@@ -215,7 +215,7 @@ This option can be specified more than once to override multiple parameters.
 
 `--allow-hierarchical-const`
 
-Allow hierarchical references in constant expressions. SystemVerilog does permit this,
+Allow hierarchical references in constant expressions. SystemVerilog doesn't permit this,
 but many popular tools allow it anyway so this flag can be used for compatibility purposes.
 
 @section diag-control Diagnostic Control
