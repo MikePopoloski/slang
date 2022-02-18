@@ -54,7 +54,7 @@ public:
         initializerLoc = loc;
     }
 
-    const Expression* getSelectExpr() const;
+    const Expression* getInternalExpr() const;
 
     void serializeTo(ASTSerializer& serializer) const;
 
@@ -70,7 +70,7 @@ public:
 private:
     mutable const Type* type = nullptr;
     mutable const Expression* initializer = nullptr;
-    mutable const Expression* selectExpr = nullptr;
+    mutable const Expression* internalExpr = nullptr;
     const ExpressionSyntax* initializerSyntax = nullptr;
     SourceLocation initializerLoc;
 };

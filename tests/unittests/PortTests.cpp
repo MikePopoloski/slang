@@ -1077,3 +1077,27 @@ endmodule
     CHECK(diags[1].code == diag::NotAModport);
     CHECK(diags[2].code == diag::ModportConnMismatch);
 }
+
+TEST_CASE("Explicit ansi ports") {
+    auto tree = SyntaxTree::fromText(R"(
+module m(input .a(), .b(foo[3:2]), .c(3'd3), output .d(3'd3), ref .e(bar));
+    logic [4:0] foo;
+    const int bar = 2;
+endmodule
+
+module top;
+    logic [2:0] foo;
+    int bar;
+    m m1(.a(1), .b(2'd2), .c(), .d(foo), .e(bar));
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 3);
+    CHECK(diags[0].code == diag::ExpressionNotAssignable);
+    CHECK(diags[1].code == diag::InvalidRefArg);
+    CHECK(diags[2].code == diag::NullPortExpression);
+}

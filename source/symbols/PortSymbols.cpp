@@ -188,6 +188,9 @@ public:
         port->setSyntax(syntax);
         port->setAttributes(scope, syntax.attributes);
 
+        if (!syntax.expr)
+            port->isNullPort = true;
+
         lastDirection = port->direction;
         lastType = nullptr;
         lastNetType = nullptr;
@@ -947,7 +950,7 @@ private:
             return emptyConnection(port);
         }
 
-        BindContext context(scope, lookupLocation);
+        BindContext context(scope, lookupLocation, BindFlags::NonProcedural);
         auto exprSyntax = context.requireSimpleExpr(syntax);
         if (!exprSyntax)
             return emptyConnection(port);
@@ -1254,11 +1257,12 @@ const Type& PortSymbol::getType() const {
         if (syntax->kind == SyntaxKind::PortReference) {
             auto& prs = syntax->as<PortReferenceSyntax>();
             if (auto select = prs.select) {
-                BindContext context(*scope, LookupLocation::before(*this));
+                BindContext context(*scope, LookupLocation::before(*this),
+                                    BindFlags::NonProcedural);
                 auto& valExpr = ValueExpressionBase::fromSymbol(context, *internalSymbol, false,
                                                                 prs.name.range());
-                selectExpr = &Expression::bindSelector(valExpr, *select, context);
-                type = selectExpr->type;
+                internalExpr = &Expression::bindSelector(valExpr, *select, context);
+                type = internalExpr->type;
             }
         }
     }
@@ -1266,8 +1270,31 @@ const Type& PortSymbol::getType() const {
         type = &scope->getCompilation().getVoidType();
     }
     else {
-        // TODO:
-        ASSERT(false);
+        // We should have an explicit port connection expression here.
+        auto& eaps = syntax->as<ExplicitAnsiPortSyntax>();
+        ASSERT(eaps.expr);
+
+        BindContext context(*scope, LookupLocation::max, BindFlags::NonProcedural);
+        internalExpr = &Expression::bind(*eaps.expr, context);
+        type = internalExpr->type;
+
+        // The direction of binding is reversed, as data coming in to an input
+        // port flows out to the internal symbol, and vice versa. Inout and ref
+        // ports don't change.
+        if (!internalExpr->bad()) {
+            switch (direction) {
+                case ArgumentDirection::In:
+                case ArgumentDirection::InOut:
+                    internalExpr->verifyAssignable(context);
+                    break;
+                case ArgumentDirection::Ref:
+                    if (!internalExpr->canConnectToRefArg(/* isConstRef */ false))
+                        context.addDiag(diag::InvalidRefArg, location) << internalExpr->sourceRange;
+                    break;
+                case ArgumentDirection::Out:
+                    break;
+            }
+        }
     }
 
     if (type->isCHandle())
@@ -1293,9 +1320,9 @@ const Expression* PortSymbol::getInitializer() const {
     return initializer;
 }
 
-const Expression* PortSymbol::getSelectExpr() const {
+const Expression* PortSymbol::getInternalExpr() const {
     getType();
-    return selectExpr;
+    return internalExpr;
 }
 
 void PortSymbol::fromSyntax(
@@ -1380,7 +1407,7 @@ const Type& MultiPortSymbol::getType() const {
 
     auto& comp = scope->getCompilation();
 
-    BindContext context(*scope, LookupLocation::before(*this));
+    BindContext context(*scope, LookupLocation::before(*this), BindFlags::NonProcedural);
     bitwidth_t totalWidth = 0;
     bitmask<IntegralFlags> flags;
 
@@ -1445,7 +1472,7 @@ optional<span<const ConstantRange>> InterfacePortSymbol::getDeclaredRange() cons
     auto scope = getParentScope();
     ASSERT(scope);
 
-    BindContext context(*scope, LookupLocation::before(*this));
+    BindContext context(*scope, LookupLocation::before(*this), BindFlags::NonProcedural);
 
     SmallVectorSized<ConstantRange, 4> buffer;
     for (auto dimSyntax : syntax->as<DeclaratorSyntax>().dimensions) {
