@@ -883,7 +883,7 @@ module r({x, y}, {z, w}, {q, r}, {o, p});
     ref int p;
 endmodule
 
-module s(x, y, z, w, q);
+module s(x, y, z, w, q, r[2]);
     input x = 1;
     output int y = foo;
     I z = 3;
@@ -891,6 +891,8 @@ module s(x, y, z, w, q);
 
     int baz;
     output int q = baz;
+
+    I r;
 endmodule
 )");
 
@@ -898,13 +900,13 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 20);
+    REQUIRE(diags.size() == 21);
     CHECK(diags[0].code == diag::MissingPortIODeclaration);
     CHECK(diags[1].code == diag::Redefinition);
     CHECK(diags[2].code == diag::Redefinition);
     CHECK(diags[3].code == diag::UndeclaredIdentifier);
-    CHECK(diags[4].code == diag::IfacePortInConcat);
-    CHECK(diags[5].code == diag::IfacePortInConcat);
+    CHECK(diags[4].code == diag::IfacePortInExpr);
+    CHECK(diags[5].code == diag::IfacePortInExpr);
     CHECK(diags[6].code == diag::MissingPortIODeclaration);
     CHECK(diags[7].code == diag::ConstPortNotAllowed);
     CHECK(diags[8].code == diag::BadConcatExpression);
@@ -914,11 +916,12 @@ endmodule
     CHECK(diags[12].code == diag::PortConcatInOut);
     CHECK(diags[13].code == diag::PortConcatRef);
     CHECK(diags[14].code == diag::PortConcatRef);
-    CHECK(diags[15].code == diag::DisallowedPortDefault);
-    CHECK(diags[16].code == diag::UndeclaredIdentifier);
-    CHECK(diags[17].code == diag::DisallowedPortDefault);
+    CHECK(diags[15].code == diag::IfacePortInExpr);
+    CHECK(diags[16].code == diag::DisallowedPortDefault);
+    CHECK(diags[17].code == diag::UndeclaredIdentifier);
     CHECK(diags[18].code == diag::DisallowedPortDefault);
-    CHECK(diags[19].code == diag::ConstEvalNonConstVariable);
+    CHECK(diags[19].code == diag::DisallowedPortDefault);
+    CHECK(diags[20].code == diag::ConstEvalNonConstVariable);
 }
 
 TEST_CASE("Non-ansi port locations") {
@@ -989,8 +992,9 @@ module o (.a(i), .b(i), .c());
     inout i;
 endmodule
 
-module p (.a({b,c}), f, .g(h[1]));
-    input b,c,f,h;
+module p (.a({b,c}), f, .g(h[1]), .i(foo[3:1]));
+    input b,c,f,h[2];
+    input logic [7:0] foo;
 endmodule
 
 module top;
@@ -1001,7 +1005,7 @@ module top;
     n n1(b, 1);
     o o1(a, a, );
     o o2(.a, .b(a), .c());
-    p p1(.a(b), .f(1), .g(b[0]));
+    p p1(.a(b), .f(1), .g(b[0]), .i(3'd3));
 endmodule
 )");
 

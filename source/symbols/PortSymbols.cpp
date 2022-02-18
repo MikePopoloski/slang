@@ -578,6 +578,11 @@ private:
 
         auto loc = info.syntax->name.location();
         if (info.isIface) {
+            if (syntax.select) {
+                auto& diag = scope.addDiag(diag::IfacePortInExpr, syntax.select->sourceRange());
+                diag << externalName;
+            }
+
             auto port = comp.emplace<InterfacePortSymbol>(externalName, loc);
             port->setSyntax(*info.syntax);
             port->setAttributes(scope, info.attrs);
@@ -585,8 +590,6 @@ private:
             port->modport = info.modport;
             return *port;
         }
-
-        // TODO: explicit connection expression
 
         auto port = comp.emplace<PortSymbol>(externalName, loc);
         port->setSyntax(syntax);
@@ -664,7 +667,7 @@ private:
                 }
             }
             else {
-                auto& diag = scope.addDiag(diag::IfacePortInConcat, item->sourceRange());
+                auto& diag = scope.addDiag(diag::IfacePortInExpr, item->sourceRange());
                 diag << port.name;
             }
         }
@@ -1247,6 +1250,17 @@ const Type& PortSymbol::getType() const {
         auto dt = internalSymbol->getDeclaredType();
         ASSERT(dt);
         type = &dt->getType();
+
+        if (syntax->kind == SyntaxKind::PortReference) {
+            auto& prs = syntax->as<PortReferenceSyntax>();
+            if (auto select = prs.select) {
+                BindContext context(*scope, LookupLocation::before(*this));
+                auto& valExpr = ValueExpressionBase::fromSymbol(context, *internalSymbol, false,
+                                                                prs.name.range());
+                selectExpr = &Expression::bindSelector(valExpr, *select, context);
+                type = selectExpr->type;
+            }
+        }
     }
     else if (isNullPort) {
         type = &scope->getCompilation().getVoidType();
@@ -1277,6 +1291,11 @@ const Expression* PortSymbol::getInitializer() const {
     }
 
     return initializer;
+}
+
+const Expression* PortSymbol::getSelectExpr() const {
+    getType();
+    return selectExpr;
 }
 
 void PortSymbol::fromSyntax(

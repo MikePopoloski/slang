@@ -180,6 +180,10 @@ public:
                                                const BindContext& typeContext,
                                                bitmask<BindFlags> extraFlags = BindFlags::None);
 
+    /// Bind a selector expression given an already existing value to select from.
+    static const Expression& bindSelector(Expression& value, const ElementSelectSyntax& syntax,
+                                          const BindContext& context);
+
     /// Converts the given expression to the specified type, as if the right hand side had been
     /// assigned (without a cast) to a left hand side of the specified type.
     static Expression& convertAssignment(const BindContext& context, const Type& type,

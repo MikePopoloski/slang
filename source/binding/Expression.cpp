@@ -323,6 +323,11 @@ const Expression& Expression::bindImplicitParam(
     return convertAssignment(exprContext, *lhsType, expr, location);
 }
 
+const Expression& Expression::bindSelector(Expression& value, const ElementSelectSyntax& syntax,
+                                           const BindContext& context) {
+    return bindSelector(context.getCompilation(), value, syntax, context);
+}
+
 ConstantValue Expression::eval(EvalContext& context) const {
     EvalVisitor visitor;
     return visit(visitor, context);
