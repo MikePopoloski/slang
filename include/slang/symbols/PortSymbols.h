@@ -41,7 +41,11 @@ public:
     /// anything internal to the instance.
     bool isNullPort = false;
 
-    PortSymbol(string_view name, SourceLocation loc);
+    /// True if this port was declared using the ansi syntax, and
+    /// false if it was declared using the non-ansi syntax.
+    bool isAnsiPort = false;
+
+    PortSymbol(string_view name, SourceLocation loc, bool isAnsiPort);
 
     const Type& getType() const;
     void setType(const Type& newType) { type = &newType; }

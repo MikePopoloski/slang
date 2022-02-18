@@ -1101,3 +1101,28 @@ endmodule
     CHECK(diags[1].code == diag::InvalidRefArg);
     CHECK(diags[2].code == diag::NullPortExpression);
 }
+
+TEST_CASE("Ansi port initializers") {
+    auto tree = SyntaxTree::fromText(R"(
+interface Iface;
+endinterface
+
+int foo;
+module m(input int i = 1, j = foo, output int k = 3, Iface iface = 4);
+endmodule
+
+module top;
+    Iface iface();
+    m m1(.iface);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 3);
+    CHECK(diags[0].code == diag::ConstEvalNonConstVariable);
+    CHECK(diags[1].code == diag::AnsiIfacePortDefault);
+    CHECK(diags[2].code == diag::UnconnectedNamedPort);
+}

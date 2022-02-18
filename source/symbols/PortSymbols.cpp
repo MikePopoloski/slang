@@ -183,7 +183,8 @@ public:
     }
 
     Symbol* createPort(const ExplicitAnsiPortSyntax& syntax) {
-        auto port = comp.emplace<PortSymbol>(syntax.name.valueText(), syntax.name.location());
+        auto port = comp.emplace<PortSymbol>(syntax.name.valueText(), syntax.name.location(),
+                                             /* isAnsiPort */ true);
         port->direction = getDirection(syntax.direction);
         port->setSyntax(syntax);
         port->setAttributes(scope, syntax.attributes);
@@ -220,8 +221,8 @@ private:
     Symbol* add(const DeclaratorSyntax& decl, ArgumentDirection direction,
                 const DataTypeSyntax* type, const NetType* netType,
                 span<const AttributeInstanceSyntax* const> attrs) {
-
-        auto port = comp.emplace<PortSymbol>(decl.name.valueText(), decl.name.location());
+        auto port = comp.emplace<PortSymbol>(decl.name.valueText(), decl.name.location(),
+                                             /* isAnsiPort */ true);
         port->direction = direction;
         port->setSyntax(decl);
         port->setAttributes(scope, attrs);
@@ -252,13 +253,15 @@ private:
                 symbol->getDeclaredType()->setDimensionSyntax(decl.dimensions);
         }
 
-        // Initializers here are evaluated in the context of the port list and
-        // must always be a constant value.
-        // TODO: handle initializers
         symbol->setSyntax(decl);
         symbol->setAttributes(scope, attrs);
         port->internalSymbol = symbol;
         implicitMembers.emplace(symbol, port);
+
+        if (decl.initializer) {
+            port->setInitializerSyntax(*decl.initializer->expr,
+                                       decl.initializer->equals.location());
+        }
 
         // Remember the properties of this port in case the next port wants to inherit from it.
         lastDirection = direction;
@@ -283,6 +286,9 @@ private:
         port->isGeneric = isGeneric;
         port->setSyntax(decl);
         port->setAttributes(scope, attrs);
+
+        if (decl.initializer)
+            scope.addDiag(diag::AnsiIfacePortDefault, decl.initializer->sourceRange());
 
         lastDirection = ArgumentDirection::InOut;
         lastType = nullptr;
@@ -387,7 +393,7 @@ public:
         auto loc = syntax.name.location();
 
         if (!syntax.expr) {
-            auto port = comp.emplace<PortSymbol>(name, loc);
+            auto port = comp.emplace<PortSymbol>(name, loc, /* isAnsiPort */ false);
             port->direction = ArgumentDirection::In;
             port->setSyntax(syntax);
             port->isNullPort = true;
@@ -405,7 +411,8 @@ public:
     }
 
     Symbol* createPort(const EmptyNonAnsiPortSyntax& syntax) {
-        auto port = comp.emplace<PortSymbol>("", syntax.placeholder.location());
+        auto port =
+            comp.emplace<PortSymbol>("", syntax.placeholder.location(), /* isAnsiPort */ false);
         port->direction = ArgumentDirection::In;
         port->setSyntax(syntax);
         port->isNullPort = true;
@@ -571,7 +578,7 @@ private:
             if (!name.empty())
                 scope.addDiag(diag::MissingPortIODeclaration, externalLoc) << name;
 
-            auto port = comp.emplace<PortSymbol>(externalName, externalLoc);
+            auto port = comp.emplace<PortSymbol>(externalName, externalLoc, /* isAnsiPort */ false);
             port->setType(comp.getErrorType());
             return *port;
         }
@@ -594,7 +601,7 @@ private:
             return *port;
         }
 
-        auto port = comp.emplace<PortSymbol>(externalName, loc);
+        auto port = comp.emplace<PortSymbol>(externalName, loc, /* isAnsiPort */ false);
         port->setSyntax(syntax);
         port->externalLoc = externalLoc;
 
@@ -746,7 +753,7 @@ public:
 
     template<typename TPort>
     PortConnection* getConnection(const TPort& port) {
-        const bool hasDefault = port.hasInitializer();
+        const bool hasDefault = port.hasInitializer() && port.direction == ArgumentDirection::In;
         if (usingOrdered) {
             if (orderedIndex >= orderedConns.size()) {
                 orderedIndex++;
@@ -986,7 +993,7 @@ private:
         if (!symbol) {
             // If this is a wildcard connection, we're allowed to use the port's default value,
             // if it has one.
-            if (isWildcard && port.hasInitializer())
+            if (isWildcard && port.hasInitializer() && port.direction == ArgumentDirection::In)
                 return defaultConnection(port, attributes);
 
             scope.addDiag(diag::ImplicitNamedPortNotFound, range) << port.name;
@@ -1237,7 +1244,8 @@ private:
 
 } // end anonymous namespace
 
-PortSymbol::PortSymbol(string_view name, SourceLocation loc) : Symbol(SymbolKind::Port, name, loc) {
+PortSymbol::PortSymbol(string_view name, SourceLocation loc, bool isAnsiPort) :
+    Symbol(SymbolKind::Port, name, loc), isAnsiPort(isAnsiPort) {
     externalLoc = loc;
 }
 
@@ -1310,8 +1318,15 @@ const Expression* PortSymbol::getInitializer() const {
         ASSERT(scope && syntax);
         ASSERT(internalSymbol);
 
-        BindContext context(*scope, LookupLocation::after(*internalSymbol),
-                            BindFlags::NonProcedural | BindFlags::StaticInitializer);
+        // Ansi ports bind their initializers in the context of the port list,
+        // while non-ansi ports use the internal symbol context.
+        LookupLocation ll;
+        if (isAnsiPort)
+            ll = LookupLocation::after(*this);
+        else
+            ll = LookupLocation::after(*internalSymbol);
+
+        BindContext context(*scope, ll, BindFlags::NonProcedural | BindFlags::StaticInitializer);
         initializer =
             &Expression::bindRValue(getType(), *initializerSyntax, initializerLoc, context);
         context.eval(*initializer);
