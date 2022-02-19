@@ -997,7 +997,7 @@ endmodule
     auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 2);
     CHECK(diags[0].code == diag::UnusedDefinition);
-    CHECK(diags[1].code == diag::UnusedDefinition);
+    CHECK(diags[1].code == diag::TopModuleIfacePort);
 }
 
 TEST_CASE("Manually specify top modules") {

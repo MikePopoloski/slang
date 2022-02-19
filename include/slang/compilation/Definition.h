@@ -63,15 +63,6 @@ public:
         bool hasDefault() const;
     };
 
-    struct PortDecl {
-        string_view name;
-        uint32_t index;
-        bool likelyInterface;
-
-        PortDecl(string_view name, uint32_t index, bool likelyInterface) :
-            name(name), index(index), likelyInterface(likelyInterface) {}
-    };
-
     string_view name;
     SourceLocation location;
     const ModuleDeclarationSyntax& syntax;
@@ -93,12 +84,6 @@ public:
                UnconnectedDrive unconnectedDrive, optional<TimeScale> directiveTimeScale,
                const SyntaxTree* syntaxTree);
 
-    span<const PortDecl> getPorts() const {
-        if (!resolvedPorts)
-            resolvePorts();
-        return ports;
-    }
-
     /// Returns a string description of the definition kind, such as "module",
     /// "interface", or "program".
     string_view getKindString() const;
@@ -106,12 +91,6 @@ public:
     /// Returns a string description of the definition kind, including an
     /// indefinite article. e.g. "a module", "an interface".
     string_view getArticleKindString() const;
-
-private:
-    void resolvePorts() const;
-
-    mutable SmallVectorSized<PortDecl, 8> ports;
-    mutable bool resolvedPorts = false;
 };
 
 } // namespace slang

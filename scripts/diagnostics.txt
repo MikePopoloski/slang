@@ -802,6 +802,7 @@ subsystem Compilation
 error MaxInstanceDepthExceeded "{} instantiation exceeded maximum depth of {}"
 error InfinitelyRecursiveHierarchy "infinitely recursive instantiation of {}"
 error InvalidTopModule "'{}' is not a valid top-level module"
+error TopModuleIfacePort "top-level module '{}' has unconnected interface port '{}'"
 error NoDeclInClass "out-of-block definition of '{}' does not match any declaration in '{}'"
 error InvalidParamOverrideOpt "'{}' is not a valid form of parameter override"
 error DPIExportKindMismatch "mismatch between 'function' and 'task' declared in DPI export"

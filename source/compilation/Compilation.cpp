@@ -273,13 +273,6 @@ const RootSymbol& Compilation::getRoot(bool skipDefParamResolution) {
             if (!param.hasDefault() && cliOverrides.find(param.name) == cliOverrides.end())
                 return false;
         }
-
-        // Can't have interface ports.
-        for (auto& port : definition.getPorts()) {
-            if (port.likelyInterface)
-                return false;
-        }
-
         return true;
     };
 
@@ -832,8 +825,19 @@ const Diagnostics& Compilation::getSemanticDiagnostics() {
         }
     }
 
-    // Report on unused definitions.
     if (!options.suppressUnused) {
+        // Top level instances cannot have interface ports.
+        for (auto inst : getRoot().topInstances) {
+            for (auto port : inst->body.getPortList()) {
+                if (port->kind == SymbolKind::InterfacePort) {
+                    inst->body.addDiag(diag::TopModuleIfacePort, port->location)
+                        << inst->name << port->name;
+                    break;
+                }
+            }
+        }
+
+        // Report on unused definitions.
         for (auto def : unreferencedDefs) {
             // If this is an interface, it may have been referenced in a port.
             if (visitor.usedIfacePorts.find(def) != visitor.usedIfacePorts.end())
