@@ -590,7 +590,7 @@ private:
     Symbol& createPort(string_view externalName, SourceLocation externalLoc,
                        const PortReferenceSyntax& syntax) {
         auto name = syntax.name.valueText();
-        if (externalName.empty())
+        if (externalName.empty() && !syntax.select)
             externalName = name;
 
         auto it = portInfos.find(name);

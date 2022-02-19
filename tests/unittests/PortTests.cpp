@@ -1223,6 +1223,10 @@ endmodule
 module w(t t);
 endmodule
 
+module asdf(a[2:1]);
+    input logic [3:0] a;
+endmodule
+
 module top;
     I i();
     logic r;
@@ -1251,6 +1255,8 @@ module top;
     v v1(.qq);
 
     w w1(t);
+
+    asdf aa1(.a(3));
 endmodule
 )");
 
@@ -1263,7 +1269,7 @@ endmodule
     CHECK(!m1.getPortConnection(m1_i)->getIfaceInstance());
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 12);
+    REQUIRE(diags.size() == 14);
     CHECK(diags[0].code == diag::PortTypeNotInterfaceOrData);
     CHECK(diags[1].code == diag::TooManyPortConnections);
     CHECK(diags[2].code == diag::ImplicitNamedPortNotFound);
@@ -1276,4 +1282,6 @@ endmodule
     CHECK(diags[9].code == diag::UndeclaredIdentifier);
     CHECK(diags[10].code == diag::PortConnDimensionsMismatch);
     CHECK(diags[11].code == diag::ImplicitNamedPortTypeMismatch);
+    CHECK(diags[12].code == diag::UnconnectedUnnamedPort);
+    CHECK(diags[13].code == diag::PortDoesNotExist);
 }
