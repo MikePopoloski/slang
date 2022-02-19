@@ -1080,7 +1080,7 @@ endmodule
 
 TEST_CASE("Explicit ansi ports") {
     auto tree = SyntaxTree::fromText(R"(
-module m(input .a(), .b(foo[3:2]), .c(3'd3), output .d(3'd3), ref .e(bar));
+module m(input .a(), .b(foo[3:2]), .c(3'd3), output .d(3'd3), ref .e(bar), i);
     logic [4:0] foo;
     const int bar = 2;
 endmodule
@@ -1088,7 +1088,8 @@ endmodule
 module top;
     logic [2:0] foo;
     int bar;
-    m m1(.a(1), .b(2'd2), .c(), .d(foo), .e(bar));
+    logic i;
+    m m1(.a(1), .b(2'd2), .c(), .d(foo), .e(bar), .i);
 endmodule
 )");
 
@@ -1147,4 +1148,132 @@ endmodule
     REQUIRE(diags.size() == 2);
     CHECK(diags[0].code == diag::ExpressionNotAssignable);
     CHECK(diags[1].code == diag::InvalidRefArg);
+}
+
+TEST_CASE("No default nettype warning") {
+    auto tree = SyntaxTree::fromText(R"(
+`default_nettype none
+
+module m(input i);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::ImplicitNetPortNoDefault);
+}
+
+TEST_CASE("Module as interface port def") {
+    auto tree = SyntaxTree::fromText(R"(
+module N;
+endmodule
+
+module m (N n);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::PortTypeNotInterfaceOrData);
+}
+
+TEST_CASE("More port connection tests") {
+    auto tree = SyntaxTree::fromText(R"(
+interface I;
+    int i;
+    modport mod (input i);
+endinterface
+
+module m(input int x = 3);
+endmodule
+
+module n({a, b}, c, d);
+    input a,b,c;
+    I d;
+endmodule
+
+module o(I i);
+endmodule
+
+module p({a, b});
+    input a, b;
+endmodule
+
+module q(input r);
+endmodule
+
+module s(I y);
+endmodule
+
+module t(I z);
+endmodule
+
+module u(I z[3]);
+endmodule
+
+module v(input int qq);
+endmodule
+
+module w(t t);
+endmodule
+
+module top;
+    I i();
+    logic r;
+
+    m m1();
+    m m2(2, 3);
+    m m3((* foo = 1 *));
+    m m4((* foo = 2 *) .x);
+    m m5((* foo = 3 *) .*);
+    n n1(.c(2));
+    o o1(.i(), .foo(2));
+    o o2((* baz = 3 *) .i);
+    o o3((* baz = 3 *) .i(i));
+    p p1((* bar = 2 *));
+    q q1((* baz = 4 *) .r);
+    s s1(.y);
+    t t1(.z);
+
+    I z();
+    I arr[foo]();
+
+    u u1(.z(z.mod));
+    u u2(.z(arr));
+
+    logic qq;
+    v v1(.qq);
+
+    w w1(t);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& m1 = compilation.getRoot().lookupName<InstanceSymbol>("top.m1");
+    auto& m1_i = m1.body.findPort("x")->as<PortSymbol>();
+    CHECK(!m1_i.getInternalExpr());
+    CHECK(!m1.getPortConnection(m1_i)->getIfaceInstance());
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 12);
+    CHECK(diags[0].code == diag::PortTypeNotInterfaceOrData);
+    CHECK(diags[1].code == diag::TooManyPortConnections);
+    CHECK(diags[2].code == diag::ImplicitNamedPortNotFound);
+    CHECK(diags[3].code == diag::InterfacePortNotConnected);
+    CHECK(diags[4].code == diag::UnconnectedUnnamedPort);
+    CHECK(diags[5].code == diag::InterfacePortNotConnected);
+    CHECK(diags[6].code == diag::PortDoesNotExist);
+    CHECK(diags[7].code == diag::ImplicitNamedPortNotFound);
+    CHECK(diags[8].code == diag::UsedBeforeDeclared);
+    CHECK(diags[9].code == diag::UndeclaredIdentifier);
+    CHECK(diags[10].code == diag::PortConnDimensionsMismatch);
+    CHECK(diags[11].code == diag::ImplicitNamedPortTypeMismatch);
 }

@@ -1111,8 +1111,7 @@ private:
 
     const Symbol* getInterface(const InterfacePortSymbol& port, const Symbol* symbol,
                                string_view providedModport, SourceRange range) {
-        if (port.isInvalid())
-            return nullptr;
+        ASSERT(!port.isInvalid());
 
         auto portDims = port.getDeclaredRange();
         if (!portDims)
