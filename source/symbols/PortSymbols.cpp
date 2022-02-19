@@ -67,6 +67,26 @@ std::tuple<const Definition*, string_view> getInterfacePortInfo(
     return { def, modport };
 }
 
+// This checks factors others than types when making a port connection
+// to a specific symbol.
+void checkSymbolConnection(const Expression& expr, ArgumentDirection direction,
+                           const BindContext& context, SourceLocation loc) {
+    switch (direction) {
+        case ArgumentDirection::In:
+            // All expressions are fine for inputs.
+            break;
+        case ArgumentDirection::Out:
+        case ArgumentDirection::InOut:
+            // TODO: inouts check for nets
+            expr.verifyAssignable(context);
+            break;
+        case ArgumentDirection::Ref:
+            if (!expr.canConnectToRefArg(/* isConstRef */ false))
+                context.addDiag(diag::InvalidRefArg, loc) << expr.sourceRange;
+            break;
+    }
+}
+
 // Helper class to build up lists of port symbols.
 class AnsiPortListBuilder {
 public:
@@ -825,7 +845,6 @@ public:
     }
 
     PortConnection* getIfaceConnection(const InterfacePortSymbol& port) {
-        // TODO: verify that interface ports must always have a name
         ASSERT(!port.name.empty());
 
         // If the port definition is empty it means an error already
@@ -1290,18 +1309,20 @@ const Type& PortSymbol::getType() const {
         // port flows out to the internal symbol, and vice versa. Inout and ref
         // ports don't change.
         if (!internalExpr->bad()) {
+            ArgumentDirection checkDir = direction;
             switch (direction) {
                 case ArgumentDirection::In:
-                case ArgumentDirection::InOut:
-                    internalExpr->verifyAssignable(context);
-                    break;
-                case ArgumentDirection::Ref:
-                    if (!internalExpr->canConnectToRefArg(/* isConstRef */ false))
-                        context.addDiag(diag::InvalidRefArg, location) << internalExpr->sourceRange;
+                    checkDir = ArgumentDirection::Out;
                     break;
                 case ArgumentDirection::Out:
+                    checkDir = ArgumentDirection::In;
+                    break;
+                case ArgumentDirection::InOut:
+                case ArgumentDirection::Ref:
                     break;
             }
+
+            checkSymbolConnection(*internalExpr, checkDir, context, location);
         }
     }
 
@@ -1595,11 +1616,14 @@ const Expression* PortConnection::getExpression() const {
                 diag << port.name;
                 diag << *type;
                 diag << *valExpr.type;
-            }
 
-            // TODO: direction of assignment
-            expr =
-                &Expression::convertAssignment(context, *type, valExpr, implicitNameRange.start());
+                auto& comp = context.getCompilation();
+                expr = comp.emplace<InvalidExpression>(&valExpr, comp.getErrorType());
+            }
+            else {
+                expr = &valExpr;
+                checkSymbolConnection(*expr, direction, context, expr->sourceRange.start());
+            }
         }
         else {
             expr = &Expression::bindArgument(*type, direction, *exprSyntax, context);

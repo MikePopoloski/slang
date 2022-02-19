@@ -1126,3 +1126,25 @@ endmodule
     CHECK(diags[1].code == diag::AnsiIfacePortDefault);
     CHECK(diags[2].code == diag::UnconnectedNamedPort);
 }
+
+TEST_CASE("Implicit named port connection directions") {
+    auto tree = SyntaxTree::fromText(R"(
+module m(input int a, output int b, ref c);
+endmodule
+
+module top;
+    localparam int a = 1;
+    localparam int b = 2;
+    wire c;
+    m m1(.a, .b, .c);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::ExpressionNotAssignable);
+    CHECK(diags[1].code == diag::InvalidRefArg);
+}
