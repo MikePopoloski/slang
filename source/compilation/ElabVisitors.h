@@ -74,6 +74,9 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
         if (!handleDefault(symbol))
             return;
         symbol.getDeclaredRange();
+
+        if (symbol.interfaceDef)
+            usedIfacePorts.emplace(symbol.interfaceDef);
     }
 
     void handle(const PortSymbol& symbol) {
@@ -334,6 +337,7 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
     const size_t& numErrors;
     flat_hash_map<const Definition*, size_t> instanceCount;
     flat_hash_set<const InstanceBodySymbol*> activeInstanceBodies;
+    flat_hash_set<const Definition*> usedIfacePorts;
     uint32_t errorLimit;
     SmallVectorSized<const GenericClassDefSymbol*, 8> genericClasses;
     SmallVectorSized<const SubroutineSymbol*, 4> dpiImports;

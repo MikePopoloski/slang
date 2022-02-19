@@ -252,10 +252,6 @@ public:
     const Symbol* findPackageExportCandidate(const PackageSymbol& packageScope,
                                              string_view name) const;
 
-    /// Notes the fact that the given definition has been used in an interface port.
-    /// This prevents warning about that interface definition being unused in the design.
-    void noteInterfacePort(const Definition& definition);
-
     /// Notes the presence of a bind directive. The compilation uses this to decide
     /// when it has done enough traversal of the hierarchy to have seen all bind directives.
     /// If @a targetDef is non-null, the bind directive applies to all instances of the
@@ -546,9 +542,6 @@ private:
     // A list of definitions that are unreferenced in any instantiations and
     // are also not automatically instantiated as top-level.
     std::vector<const Definition*> unreferencedDefs;
-
-    // A list of interface definitions used in interface ports.
-    flat_hash_set<const Definition*> usedIfacePorts;
 
     // The name map for user-defined primitive definitions.
     flat_hash_map<string_view, const PrimitiveSymbol*> udpMap;

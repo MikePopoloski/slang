@@ -630,10 +630,6 @@ const Symbol* Compilation::findPackageExportCandidate(const PackageSymbol& packa
     return nullptr;
 }
 
-void Compilation::noteInterfacePort(const Definition& definition) {
-    usedIfacePorts.emplace(&definition);
-}
-
 bool Compilation::noteBindDirective(const BindDirectiveSyntax& syntax,
                                     const Definition* targetDef) {
     if (!seenBindDirectives.emplace(&syntax).second)
@@ -840,7 +836,7 @@ const Diagnostics& Compilation::getSemanticDiagnostics() {
     if (!options.suppressUnused) {
         for (auto def : unreferencedDefs) {
             // If this is an interface, it may have been referenced in a port.
-            if (usedIfacePorts.find(def) != usedIfacePorts.end())
+            if (visitor.usedIfacePorts.find(def) != visitor.usedIfacePorts.end())
                 continue;
 
             def->scope.addDiag(diag::UnusedDefinition, def->location) << def->getKindString();

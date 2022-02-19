@@ -297,10 +297,6 @@ private:
     Symbol* add(const DeclaratorSyntax& decl, const Definition* iface, string_view modport,
                 bool isGeneric, span<const AttributeInstanceSyntax* const> attrs) {
         auto port = comp.emplace<InterfacePortSymbol>(decl.name.valueText(), decl.name.location());
-
-        if (iface)
-            comp.noteInterfacePort(*iface);
-
         port->interfaceDef = iface;
         port->modport = modport;
         port->isGeneric = isGeneric;
