@@ -361,7 +361,7 @@ public:
                 auto& data = syntax->as<DataDeclarationSyntax>();
                 auto& namedType = data.type->as<NamedTypeSyntax>();
                 auto typeName = namedType.name->as<IdentifierNameSyntax>().identifier.valueText();
-                auto def = comp.getDefinition(typeName);
+                auto def = comp.getDefinition(typeName, scope);
 
                 ASSERT(def && def->definitionKind == DefinitionKind::Interface);
 
@@ -1116,9 +1116,11 @@ private:
         ASSERT(port.isGeneric || port.interfaceDef);
         auto checkConnection = [&](const Definition& connDef, string_view connModport) {
             if (&connDef != port.interfaceDef && !port.isGeneric) {
-                // TODO: print the potentially nested name path instead of the simple name
+                std::string path;
+                connDef.getHierarchicalPath(path);
+
                 auto& diag = scope.addDiag(diag::InterfacePortTypeMismatch, range);
-                diag << connDef.name << port.interfaceDef->name;
+                diag << path << port.interfaceDef->name;
                 diag.addNote(diag::NoteDeclarationHere, port.location);
                 return false;
             }

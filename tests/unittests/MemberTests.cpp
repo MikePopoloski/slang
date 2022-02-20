@@ -524,9 +524,12 @@ endpackage
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 
-    CHECK(compilation.getDefinition("m")->timeScale == TimeScale("10ns", "10ps"));
-    CHECK(compilation.getDefinition("n")->timeScale == TimeScale("10us", "1ns"));
-    CHECK(compilation.getDefinition("o")->timeScale == TimeScale("100s", "10fs"));
+    CHECK(compilation.getDefinition("m", compilation.getRoot())->timeScale ==
+          TimeScale("10ns", "10ps"));
+    CHECK(compilation.getDefinition("n", compilation.getRoot())->timeScale ==
+          TimeScale("10us", "1ns"));
+    CHECK(compilation.getDefinition("o", compilation.getRoot())->timeScale ==
+          TimeScale("100s", "10fs"));
     CHECK(compilation.getPackage("p")->getTimeScale() == TimeScale("100s", "1ps"));
 }
 

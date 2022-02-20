@@ -169,4 +169,14 @@ string_view Definition::getArticleKindString() const {
     }
 }
 
+void Definition::getHierarchicalPath(std::string& buffer) const {
+    auto& parentSym = scope.asSymbol();
+    if (parentSym.kind != SymbolKind::Root && parentSym.kind != SymbolKind::CompilationUnit) {
+        parentSym.getHierarchicalPath(buffer);
+        buffer.append(".");
+    }
+
+    buffer.append(name);
+}
+
 } // namespace slang

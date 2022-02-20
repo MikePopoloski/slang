@@ -91,6 +91,14 @@ public:
     /// Returns a string description of the definition kind, including an
     /// indefinite article. e.g. "a module", "an interface".
     string_view getArticleKindString() const;
+
+    bool isInstantiated() const { return instantiated; }
+    void noteInstantiated() const { instantiated = true; }
+
+    void getHierarchicalPath(std::string& buffer) const;
+
+private:
+    mutable bool instantiated = false;
 };
 
 } // namespace slang

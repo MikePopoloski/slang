@@ -480,7 +480,6 @@ bool lookupUpward(span<const NamePlusLoc> nameParts, const NameComponents& name,
             scope = symbol->getParentScope();
         }
         else {
-            // TODO: if this is a nested module it may do the wrong thing...
             auto inst = symbol->as<InstanceBodySymbol>().parentInstance;
             ASSERT(inst);
 

@@ -25,6 +25,7 @@ class NetType;
 class WildcardImportSymbol;
 struct AttributeInstanceSyntax;
 struct DataDeclarationSyntax;
+struct ModuleDeclarationSyntax;
 struct NameSyntax;
 struct PackageImportItemSyntax;
 struct PortConnectionSyntax;
@@ -296,6 +297,7 @@ private:
                             bool isElaborating) const;
     bool handleDataDeclaration(const DataDeclarationSyntax& syntax);
     void handleUserDefinedNet(const UserDefinedNetDeclarationSyntax& syntax);
+    void handleNestedDefinition(const ModuleDeclarationSyntax& syntax) const;
     void reportNameConflict(const Symbol& member, const Symbol& existing) const;
     void checkImportConflict(const Symbol& member, const Symbol& existing) const;
     void addWildcardImport(const PackageImportItemSyntax& item,

@@ -419,23 +419,15 @@ const Definition* Compilation::getDefinition(string_view lookupName, const Scope
 
     // There are nested modules somewhere with this same name, so we need to do the full search.
     const Scope* searchScope = &scope;
-    while (searchScope) {
+    do {
         auto it = definitionMap.find(std::make_tuple(lookupName, searchScope));
         if (it != definitionMap.end())
             return it->second.get();
 
-        auto& sym = searchScope->asSymbol();
-        if (sym.kind == SymbolKind::Root)
-            return nullptr;
-
-        searchScope = sym.getParentScope();
-    }
+        searchScope = searchScope->asSymbol().getParentScope();
+    } while (searchScope);
 
     return nullptr;
-}
-
-const Definition* Compilation::getDefinition(string_view lookupName) const {
-    return getDefinition(lookupName, *root);
 }
 
 const Definition* Compilation::getDefinition(const ModuleDeclarationSyntax& syntax) const {

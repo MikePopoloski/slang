@@ -173,9 +173,6 @@ public:
     /// before more global ones.
     const Definition* getDefinition(string_view name, const Scope& scope) const;
 
-    /// Gets the top level definition with the given name, or null if there is no such definition.
-    const Definition* getDefinition(string_view name) const;
-
     /// Gets the definition for the given syntax node, or nullptr if it does not exist.
     const Definition* getDefinition(const ModuleDeclarationSyntax& syntax) const;
 

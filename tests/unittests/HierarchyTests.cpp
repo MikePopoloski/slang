@@ -1607,3 +1607,80 @@ endmodule
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::ConstEvalHierarchicalName);
 }
+
+TEST_CASE("Nested modules") {
+    auto tree = SyntaxTree::fromText(R"(
+module ff2;
+endmodule
+
+module ff3 #(parameter int foo);
+endmodule
+
+module top(input d, ck, pr, clr, output q, nq);
+    wire q1, nq1, nq2;
+    module ff1;
+        nand g1b (nq1, d, clr, q1);
+        nand g1a (q1, ck, nq2, nq1);
+    endmodule
+    ff1 i1();
+    
+    module ff2;
+        wire q2;
+        nand g2b (nq2, ck, clr, q2);
+        nand g2a (q2, nq1, pr, nq2);
+    endmodule
+
+    module ff3;
+        int b;
+        nand g3a (q, nq2, clr, nq);
+        nand g3b (nq, q1, pr, q);
+    endmodule
+    ff3 i3();
+
+    wire i = ff2.q2;
+    wire [31:0] j = i3.b;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    auto& top = compilation.getRoot().lookupName<InstanceSymbol>("top").body;
+    auto instances = top.membersOfType<InstanceSymbol>();
+    REQUIRE(instances.size() == 3);
+    CHECK(instances[0]->name == "i1");
+    CHECK(instances[1]->name == "i3");
+    CHECK(instances[2]->name == "ff2");
+}
+
+TEST_CASE("Nested interfaces") {
+    auto tree = SyntaxTree::fromText(R"(
+interface I;
+endinterface
+
+module m(I i);
+endmodule
+
+module n;
+    interface I; endinterface
+
+    I i();
+    m m1(i);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diagnostics = compilation.getAllDiagnostics();
+    std::string result = "\n" + report(diagnostics);
+    CHECK(result == R"(
+source:12:10: error: cannot connect instance of interface 'n.I' to port of interface 'I'
+    m m1(i);
+         ^
+source:5:12: note: declared here
+module m(I i);
+           ^
+)");
+}

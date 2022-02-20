@@ -176,6 +176,11 @@ void Scope::addMembers(const SyntaxNode& syntax) {
             // Definitions exist in their own namespace and are tracked in the Compilation.
             LookupLocation ll(this, lastMember ? uint32_t(lastMember->getIndex()) + 1 : 1);
             compilation.createDefinition(*this, ll, syntax.as<ModuleDeclarationSyntax>());
+
+            if (thisSym->kind != SymbolKind::Root && thisSym->kind != SymbolKind::CompilationUnit &&
+                syntax.kind != SyntaxKind::InterfaceDeclaration) {
+                addDeferredMembers(syntax);
+            }
             break;
         }
         case SyntaxKind::PackageDeclaration: {
@@ -842,6 +847,7 @@ void Scope::elaborate() const {
 
     // Go through deferred instances and elaborate them now.
     bool usedPorts = false;
+    bool hasNestedDefs = false;
     auto deferred = deferredData.getMembers();
     uint32_t constructIndex = 1;
 
@@ -964,8 +970,25 @@ void Scope::elaborate() const {
             case SyntaxKind::DataDeclaration:
                 // Nothing to do here, handled by port creation.
                 break;
+            case SyntaxKind::ModuleDeclaration:
+            case SyntaxKind::ProgramDeclaration:
+                // These have to wait until we've seen all instantiations.
+                hasNestedDefs = true;
+                break;
             default:
                 THROW_UNREACHABLE;
+        }
+    }
+
+    // If there are nested definitions, go back through and find ones that
+    // need to be implicitly instantiated.
+    if (hasNestedDefs) {
+        for (auto symbol : deferred) {
+            auto& member = symbol->as<DeferredMemberSymbol>();
+            if (member.node.kind == SyntaxKind::ModuleDeclaration ||
+                member.node.kind == SyntaxKind::ProgramDeclaration) {
+                handleNestedDefinition(member.node.as<ModuleDeclarationSyntax>());
+            }
         }
     }
 
@@ -1081,7 +1104,7 @@ bool Scope::handleDataDeclaration(const DataDeclarationSyntax& syntax) {
         return false;
     }
 
-    auto def = compilation.getDefinition(name);
+    auto def = compilation.getDefinition(name, *this);
     if (!def || def->definitionKind != DefinitionKind::Interface)
         return false;
 
@@ -1104,6 +1127,36 @@ void Scope::handleUserDefinedNet(const UserDefinedNetDeclarationSyntax& syntax) 
     NetSymbol::fromSyntax(*this, syntax, symbol, results);
     for (auto sym : results)
         addMember(*sym);
+}
+
+void Scope::handleNestedDefinition(const ModuleDeclarationSyntax& syntax) const {
+    // We implicitly instantiated this definition if it has no parameters
+    // and no ports and hasn't been instantiated elsewhere.
+    auto& header = *syntax.header;
+    if (header.parameters && !header.parameters->declarations.empty())
+        return;
+
+    if (header.ports) {
+        if (header.ports->kind == SyntaxKind::AnsiPortList) {
+            if (!header.ports->as<AnsiPortListSyntax>().ports.empty())
+                return;
+        }
+        else if (header.ports->kind == SyntaxKind::NonAnsiPortList) {
+            if (!header.ports->as<NonAnsiPortListSyntax>().ports.empty())
+                return;
+        }
+        else {
+            return;
+        }
+    }
+
+    auto def = compilation.getDefinition(syntax);
+    ASSERT(def);
+    if (def->isInstantiated())
+        return;
+
+    auto& inst = InstanceSymbol::createDefault(compilation, *def, nullptr);
+    insertMember(&inst, lastMember, /* isElaborating */ true, /* incrementIndex */ true);
 }
 
 void Scope::addWildcardImport(const PackageImportItemSyntax& item,
@@ -1240,6 +1293,8 @@ static size_t countMembers(const SyntaxNode& syntax) {
         case SyntaxKind::BindDirective:
         case SyntaxKind::DefaultClockingReference:
         case SyntaxKind::DefaultDisableDeclaration:
+        case SyntaxKind::ModuleDeclaration:
+        case SyntaxKind::ProgramDeclaration:
             return 1;
         default:
             THROW_UNREACHABLE;

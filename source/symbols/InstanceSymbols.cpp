@@ -304,6 +304,8 @@ void InstanceSymbol::fromSyntax(Compilation& compilation,
         return;
     }
 
+    definition->noteInstantiated();
+
     if (owningDefinition) {
         auto owningKind = owningDefinition->definitionKind;
         if (owningKind == DefinitionKind::Program ||
