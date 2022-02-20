@@ -353,7 +353,7 @@ public:
 
             if (ref.kind == ExpressionKind::HierarchicalReference) {
                 auto& sym = *ref.as<HierarchicalReferenceExpression>().symbol;
-                if (sym.kind != SymbolKind::Variable &&
+                if (sym.kind != SymbolKind::Variable && sym.kind != SymbolKind::Net &&
                     (sym.kind != SymbolKind::Instance || !sym.as<InstanceSymbol>().isModule())) {
                     if (!context.scope->isUninstantiated())
                         context.addDiag(diag::ExpectedModOrVarName, ref.sourceRange);
