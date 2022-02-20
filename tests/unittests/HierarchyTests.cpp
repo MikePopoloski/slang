@@ -780,26 +780,6 @@ endmodule
     NO_COMPILATION_ERRORS;
 }
 
-TEST_CASE("Local interface not considered hierarchical") {
-    auto tree = SyntaxTree::fromText(R"(
-interface I;
-    logic [3:0] foo;
-endinterface
-
-module m;
-    I i();
-    localparam int j = $bits(i.foo);
-endmodule
-)");
-
-    Compilation compilation;
-    compilation.addSyntaxTree(tree);
-    NO_COMPILATION_ERRORS;
-
-    auto& j = compilation.getRoot().lookupName<ParameterSymbol>("m.j");
-    CHECK(j.getValue().integer() == 4);
-}
-
 TEST_CASE("Recursive modules -- if generate") {
     auto tree = SyntaxTree::fromText(R"(
 module bar #(parameter int c) ();
@@ -1605,4 +1585,25 @@ endmodule
     REQUIRE(diags.size() == 2);
     CHECK(diags[0].code == diag::ConstEvalParamCycle);
     CHECK(diags[1].code == diag::ConstEvalParamCycle);
+}
+
+TEST_CASE("Hierarchical in const missing error regress") {
+    auto tree = SyntaxTree::fromText(R"(
+module top;
+  parameter WIDTH = dut.WIDTH;
+
+  test dut();
+endmodule
+
+module test;
+  parameter WIDTH = 8;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::ConstEvalHierarchicalName);
 }

@@ -14,8 +14,15 @@
 
 namespace slang {
 
+static CompilationOptions createOptions() {
+    CompilationOptions options;
+    options.allowHierarchicalConst = true;
+    return options;
+}
+
 ScriptSession::ScriptSession() :
-    scope(compilation.createScriptScope()), evalContext(compilation, EvalFlags::IsScript) {
+    compilation(createOptions()), scope(compilation.createScriptScope()),
+    evalContext(compilation, EvalFlags::IsScript) {
 }
 
 ConstantValue ScriptSession::eval(string_view text) {

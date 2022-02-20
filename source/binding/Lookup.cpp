@@ -304,18 +304,12 @@ bool lookupDownward(span<const NamePlusLoc> nameParts, NameComponents name,
         }
 
         // This is a hierarchical lookup unless it's the first component in the path and the
-        // current scope is either an interface port or a package, or it's an instance that
-        // is in the same scope as the lookup.
+        // current scope is either an interface port or a package.
         result.isHierarchical = true;
         if (it == nameParts.rbegin()) {
-            if (symbol->kind == SymbolKind::InstanceArray || symbol->kind == SymbolKind::Instance) {
-                result.isHierarchical = symbol->getParentScope() != context.scope;
-            }
-            else {
-                result.isHierarchical = symbol->kind != SymbolKind::InterfacePort &&
-                                        symbol->kind != SymbolKind::Package &&
-                                        symbol->kind != SymbolKind::CompilationUnit;
-            }
+            result.isHierarchical = symbol->kind != SymbolKind::InterfacePort &&
+                                    symbol->kind != SymbolKind::Package &&
+                                    symbol->kind != SymbolKind::CompilationUnit;
         }
 
         string_view modportName;
