@@ -1285,3 +1285,36 @@ endmodule
     CHECK(diags[12].code == diag::UnconnectedUnnamedPort);
     CHECK(diags[13].code == diag::PortDoesNotExist);
 }
+
+TEST_CASE("Inconsistent port collapsing") {
+    auto tree = SyntaxTree::fromText(R"(
+module m (input .a({b, {c[1:0], d}}), input uwire [2:1] f);
+    wand b;
+    wand [3:0] c;
+    supply0 d;
+endmodule
+
+module n ({b[1:0], a});
+    input tri0 a;
+    input tri1 [3:0] b;
+endmodule
+
+module top;
+    wand a;
+    wor b;
+    trireg [1:0] c;
+
+    m m1({a, b, c}, c);
+    n n1({{a, a}, c[0]});
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 3);
+    CHECK(diags[0].code == diag::NetRangeInconsistent);
+    CHECK(diags[1].code == diag::NetInconsistent);
+    CHECK(diags[2].code == diag::NetRangeInconsistent);
+}

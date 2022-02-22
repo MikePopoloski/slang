@@ -59,6 +59,9 @@ public:
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::NetType; }
 
+    static const NetType& getSimulatedNetType(const NetType& internal, const NetType& external,
+                                              bool& shouldWarn);
+
 private:
     mutable optional<const SubroutineSymbol*> resolver;
 };

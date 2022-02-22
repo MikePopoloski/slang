@@ -399,6 +399,8 @@ warning ineffective-sign SignednessNoEffect "'{}' on I/O declaration has no effe
 warning constraint-missing NoConstraintBody "no body for implicit constraint block '{}'"
 warning dpi-spec DPISpecDisallowed "'DPI' specified subroutines are not supported and will be treated as 'DPI-C'. Note that this may require changes to the application's C code."
 warning udp-port-empty EmptyUdpPort "primitive port connection is empty"
+warning net-inconsistent NetInconsistent "net type '{}' of connection is inconsistent with net type '{}' of port"
+warning net-range-inconsistent NetRangeInconsistent "net type '{}' of connection bits [{}:{}] is inconsistent with net type '{}' of corresponding port range"
 
 subsystem Expressions
 error BadUnaryExpression "invalid operand type {} to unary expression"

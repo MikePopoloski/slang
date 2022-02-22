@@ -220,6 +220,7 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
 
         symbol.forEachPortConnection([&](auto& conn) {
             conn.getExpression();
+            conn.checkSimulatedNetTypes();
             for (auto attr : compilation.getAttributes(conn))
                 attr->getValue();
         });

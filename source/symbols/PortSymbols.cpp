@@ -7,6 +7,7 @@
 #include "slang/symbols/PortSymbols.h"
 
 #include "slang/binding/MiscExpressions.h"
+#include "slang/binding/OperatorExpressions.h"
 #include "slang/compilation/Compilation.h"
 #include "slang/compilation/Definition.h"
 #include "slang/diagnostics/DeclarationsDiags.h"
@@ -1358,6 +1359,32 @@ const Expression* PortSymbol::getInternalExpr() const {
     return internalExpr;
 }
 
+static void getNetRanges(const Expression& expr, SmallVector<PortSymbol::NetTypeRange>& ranges) {
+    if (auto sym = expr.getSymbolReference(); sym && sym->kind == SymbolKind::Net) {
+        auto& nt = sym->as<NetSymbol>().netType;
+        bitwidth_t width = expr.type->getBitWidth();
+
+        if (!ranges.empty() && ranges.back().netType == &nt)
+            ranges.back().width += width;
+        else
+            ranges.append({ &nt, width });
+    }
+    else if (expr.kind == ExpressionKind::Concatenation) {
+        for (auto op : expr.as<ConcatenationExpression>().operands())
+            getNetRanges(*op, ranges);
+    }
+}
+
+void PortSymbol::getNetTypes(SmallVector<NetTypeRange>& ranges) const {
+    if (auto ie = getInternalExpr()) {
+        getNetRanges(*ie, ranges);
+    }
+    else if (internalSymbol && internalSymbol->kind == SymbolKind::Net) {
+        auto& nt = internalSymbol->as<NetSymbol>().netType;
+        ranges.append({ &nt, getType().getBitWidth() });
+    }
+}
+
 void PortSymbol::fromSyntax(
     const PortListSyntax& syntax, const Scope& scope, SmallVector<const Symbol*>& results,
     SmallVector<std::pair<Symbol*, const Symbol*>>& implicitMembers,
@@ -1632,6 +1659,98 @@ const Expression* PortConnection::getExpression() const {
     }
 
     return expr;
+}
+
+void PortConnection::checkSimulatedNetTypes() const {
+    getExpression();
+    if (!expr || expr->bad())
+        return;
+
+    SmallVectorSized<PortSymbol::NetTypeRange, 4> internal;
+    if (port.kind == SymbolKind::Port)
+        port.as<PortSymbol>().getNetTypes(internal);
+    else {
+        for (auto p : port.as<MultiPortSymbol>().ports)
+            p->getNetTypes(internal);
+    }
+
+    SmallVectorSized<PortSymbol::NetTypeRange, 4> external;
+    getNetRanges(*expr, external);
+
+    // There might not be any nets, in which case we should just leave.
+    if (internal.empty() || external.empty())
+        return;
+
+    auto scope = parentInstance.getParentScope();
+    ASSERT(scope);
+
+    // Simple case is one net connected on each side.
+    if (internal.size() == 1 && external.size() == 1) {
+        if (internal[0].netType != external[0].netType) {
+            bool shouldWarn;
+            NetType::getSimulatedNetType(*internal[0].netType, *external[0].netType, shouldWarn);
+            if (shouldWarn) {
+                auto& diag = scope->addDiag(diag::NetInconsistent, expr->sourceRange);
+                diag << external[0].netType->name;
+                diag << internal[0].netType->name;
+                diag.addNote(diag::NoteDeclarationHere, port.location);
+            }
+        }
+        return;
+    }
+
+    // Otherwise we need to compare ranges of net types for differences.
+    auto in = internal.begin();
+    auto ex = external.begin();
+    bitwidth_t currBit = 0;
+    bitwidth_t exprWidth = expr->type->getBitWidth();
+    bool shownDeclaredHere = false;
+
+    while (true) {
+        bool shouldWarn;
+        auto& inNt = *in->netType;
+        auto& exNt = *ex->netType;
+        NetType::getSimulatedNetType(inNt, exNt, shouldWarn);
+
+        bitwidth_t width;
+        if (in->width < ex->width) {
+            width = in->width;
+            ex->width -= width;
+            in++;
+        }
+        else {
+            width = ex->width;
+            ex++;
+
+            if (in->width == width)
+                in++;
+            else
+                in->width -= width;
+        }
+
+        if (shouldWarn) {
+            ASSERT(exprWidth >= currBit + width);
+            bitwidth_t left = exprWidth - currBit - 1;
+            bitwidth_t right = left - (width - 1);
+
+            auto& diag = scope->addDiag(diag::NetRangeInconsistent, expr->sourceRange);
+            diag << exNt.name;
+            diag << left << right;
+            diag << inNt.name;
+
+            if (!shownDeclaredHere) {
+                diag.addNote(diag::NoteDeclarationHere, port.location);
+                shownDeclaredHere = true;
+            }
+        }
+
+        if (in == internal.end() || ex == external.end()) {
+            ASSERT(in == internal.end() && ex == external.end());
+            break;
+        }
+
+        currBit += width;
+    }
 }
 
 void PortConnection::makeConnections(

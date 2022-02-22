@@ -60,6 +60,12 @@ public:
 
     const Expression* getInternalExpr() const;
 
+    struct NetTypeRange {
+        const NetType* netType = nullptr;
+        bitwidth_t width = 0;
+    };
+    void getNetTypes(SmallVector<NetTypeRange>& ranges) const;
+
     void serializeTo(ASTSerializer& serializer) const;
 
     static void fromSyntax(
@@ -161,6 +167,7 @@ public:
 
     const Symbol* getIfaceInstance() const;
     const Expression* getExpression() const;
+    void checkSimulatedNetTypes() const;
 
     void serializeTo(ASTSerializer& serializer) const;
 
@@ -176,6 +183,7 @@ private:
         SourceRange implicitNameRange;
     };
     bool useDefault = false;
+    mutable bool netTypeWarned = false;
 };
 
 } // namespace slang

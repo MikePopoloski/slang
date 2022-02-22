@@ -56,4 +56,148 @@ NetType& NetType::fromSyntax(const Scope& scope, const NetTypeDeclarationSyntax&
     return *result;
 }
 
+const NetType& NetType::getSimulatedNetType(const NetType& internal, const NetType& external,
+                                            bool& shouldWarn) {
+    shouldWarn = false;
+    switch (internal.netKind) {
+        case Unknown:
+        case UserDefined:
+            return internal;
+        case Wire:
+        case Tri:
+            return external;
+        case WAnd:
+        case TriAnd:
+            switch (external.netKind) {
+                case Wire:
+                case Tri:
+                    return internal;
+                case WOr:
+                case TriOr:
+                case TriReg:
+                case Tri0:
+                case Tri1:
+                case UWire:
+                    shouldWarn = true;
+                    break;
+                default:
+                    break;
+            }
+            return external;
+        case WOr:
+        case TriOr:
+            switch (external.netKind) {
+                case Wire:
+                case Tri:
+                    return internal;
+                case WAnd:
+                case TriAnd:
+                case TriReg:
+                case Tri0:
+                case Tri1:
+                case UWire:
+                    shouldWarn = true;
+                    break;
+                default:
+                    break;
+            }
+            return external;
+        case TriReg:
+            switch (external.netKind) {
+                case Wire:
+                case Tri:
+                    return internal;
+                case WAnd:
+                case TriAnd:
+                case WOr:
+                case TriOr:
+                case UWire:
+                    shouldWarn = true;
+                    break;
+                default:
+                    break;
+            }
+            return external;
+        case Tri0:
+            switch (external.netKind) {
+                case Wire:
+                case Tri:
+                case TriReg:
+                    return internal;
+                case WAnd:
+                case TriAnd:
+                case WOr:
+                case TriOr:
+                case UWire:
+                case Tri1:
+                    shouldWarn = true;
+                    break;
+                default:
+                    break;
+            }
+            return external;
+        case Tri1:
+            switch (external.netKind) {
+                case Wire:
+                case Tri:
+                case TriReg:
+                    return internal;
+                case WAnd:
+                case TriAnd:
+                case WOr:
+                case TriOr:
+                case UWire:
+                case Tri0:
+                    shouldWarn = true;
+                    break;
+                default:
+                    break;
+            }
+            return external;
+        case UWire:
+            switch (external.netKind) {
+                case UWire:
+                case Supply0:
+                case Supply1:
+                    return external;
+                case WAnd:
+                case TriAnd:
+                case WOr:
+                case TriOr:
+                case TriReg:
+                case Tri0:
+                case Tri1:
+                    shouldWarn = true;
+                    break;
+                default:
+                    break;
+            }
+            return internal;
+        case Supply0:
+            switch (external.netKind) {
+                case Supply0:
+                    return external;
+                case Supply1:
+                    shouldWarn = true;
+                    return external;
+                default:
+                    break;
+            }
+            return internal;
+        case Supply1:
+            switch (external.netKind) {
+                case Supply0:
+                    shouldWarn = true;
+                    return external;
+                case Supply1:
+                    return external;
+                default:
+                    break;
+            }
+            return internal;
+        default:
+            THROW_UNREACHABLE;
+    }
+}
+
 } // namespace slang
