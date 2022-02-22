@@ -183,7 +183,6 @@ private:
         SourceRange implicitNameRange;
     };
     bool useDefault = false;
-    mutable bool netTypeWarned = false;
 };
 
 } // namespace slang
