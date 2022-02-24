@@ -126,14 +126,19 @@ void PackageSymbol::noteImport(const Symbol& symbol) const {
     if (exportDecls.empty())
         return;
 
+    const Symbol* packageParent;
     auto targetScope = symbol.getParentScope();
-    ASSERT(targetScope);
+    while (true) {
+        ASSERT(targetScope);
+        packageParent = &targetScope->asSymbol();
+        if (packageParent->kind == SymbolKind::Package)
+            break;
 
-    auto& packageParent = targetScope->asSymbol();
-    ASSERT(packageParent.kind == SymbolKind::Package);
+        targetScope = packageParent->getParentScope();
+    }
 
     for (auto decl : exportDecls) {
-        if (decl->package.valueText() != packageParent.name)
+        if (decl->package.valueText() != packageParent->name)
             continue;
 
         if (decl->item.kind == TokenKind::Star || decl->item.valueText() == symbol.name) {

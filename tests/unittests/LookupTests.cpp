@@ -1762,3 +1762,20 @@ bit b;
     CHECK(diags[0].code == diag::UsedBeforeDeclared);
     CHECK(diags[1].code == diag::UsedBeforeDeclared);
 }
+
+TEST_CASE("Exporting an imported enum member regress") {
+    auto tree = SyntaxTree::fromText(R"(
+package p1;
+    typedef enum { A, B } asdf_t;
+endpackage
+
+package p2;
+    import p1::*;
+    export p1::A;
+endpackage
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
