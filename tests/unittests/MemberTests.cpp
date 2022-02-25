@@ -1160,7 +1160,7 @@ endmodule
 source:7:5: error: $error encountered
     $error;
     ^
-source:11:9: note: $info encountered:           43.200000 top.asdf:m Hello world 14!
+source:11:9: note: $info encountered:           43.200000 top.asdf.genblk1:m Hello world 14!
         $info(4, 3.2, " %m:%l Hello world %0d!", foo + 2);
         ^
 )");
@@ -2106,4 +2106,34 @@ endmodule
 
     auto cv = compilation.getRoot().lookupName<ParameterSymbol>("m.y1").getValue();
     CHECK(cv.integer() == 15);
+}
+
+TEST_CASE("Hierarchical path strings") {
+    auto tree = SyntaxTree::fromText(R"(
+module top;
+    m m1 [4][2:0][3:4] ();
+endmodule
+
+module m;
+    for (genvar i = 0; i < 10; i++) begin : asdf
+        if (i == 1) begin
+            int foo = 0;
+        end
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    auto& foo = compilation.getRoot()
+                    .lookupName<GenerateBlockArraySymbol>("top.m1[2][1][3].asdf")
+                    .memberAt<GenerateBlockSymbol>(1)
+                    .memberAt<GenerateBlockSymbol>(1)
+                    .find<VariableSymbol>("foo");
+
+    std::string path;
+    foo.getHierarchicalPath(path);
+    CHECK(path == "top.m1[2][1][3].asdf[1].genblk1.foo");
 }

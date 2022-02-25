@@ -6,6 +6,8 @@
 //------------------------------------------------------------------------------
 #include "slang/symbols/Symbol.h"
 
+#include "../text/FormatBuffer.h"
+
 #include "slang/compilation/Compilation.h"
 #include "slang/compilation/Definition.h"
 #include "slang/symbols/ASTVisitor.h"
@@ -70,7 +72,7 @@ const DeclaredType* Symbol::getDeclaredType() const {
     }
 }
 
-static void getHierarchicalPathImpl(const Symbol& symbol, std::string& buffer) {
+static void getHierarchicalPathImpl(const Symbol& symbol, FormatBuffer& buffer) {
     auto scope = symbol.getParentScope();
     auto current = &symbol;
     if (scope && symbol.kind == SymbolKind::InstanceBody) {
@@ -80,33 +82,72 @@ static void getHierarchicalPathImpl(const Symbol& symbol, std::string& buffer) {
         scope = current->getParentScope();
     }
 
+    string_view separator;
     if (scope) {
         auto& parent = scope->asSymbol();
         if (parent.kind != SymbolKind::Root && parent.kind != SymbolKind::CompilationUnit) {
             getHierarchicalPathImpl(parent, buffer);
-
-            if (!current->name.empty()) {
-                if (parent.kind == SymbolKind::Package || parent.kind == SymbolKind::ClassType ||
-                    parent.kind == SymbolKind::CovergroupType) {
-                    buffer.append("::");
-                }
-                else {
-                    buffer.append(".");
-                }
+            if (parent.kind == SymbolKind::Package || parent.kind == SymbolKind::ClassType ||
+                parent.kind == SymbolKind::CovergroupType) {
+                separator = "::"sv;
+            }
+            else {
+                separator = "."sv;
             }
         }
     }
 
+    auto addName = [&](string_view text) {
+        if (!separator.empty())
+            buffer.append(separator);
+        buffer.append(text);
+    };
+
     if (!current->name.empty())
-        buffer.append(current->name);
+        addName(current->name);
+
+    if (current->kind == SymbolKind::GenerateBlock) {
+        auto& block = current->as<GenerateBlockSymbol>();
+        if (auto index = block.arrayIndex) {
+            buffer.append("[");
+            buffer.append(index->toString(LiteralBase::Decimal, false));
+            buffer.append("]");
+        }
+        else if (current->name.empty()) {
+            addName(block.getExternalName());
+        }
+    }
+    else if (current->kind == SymbolKind::Instance) {
+        auto& inst = current->as<InstanceSymbol>();
+        if (!inst.arrayPath.empty()) {
+            SmallVectorSized<ConstantRange, 8> instanceDimVec;
+            inst.getArrayDimensions(instanceDimVec);
+
+            span<const ConstantRange> instanceDims = instanceDimVec;
+            span<const int32_t> arrayPath = inst.arrayPath;
+            ASSERT(instanceDims.size() == arrayPath.size());
+
+            for (size_t i = 0; i < instanceDims.size(); i++) {
+                auto dim = instanceDims[i];
+                auto idx = arrayPath[i];
+
+                if (!dim.isLittleEndian())
+                    idx = dim.upper() - idx;
+                idx += dim.lower();
+
+                buffer.format("[{}]", idx);
+            }
+        }
+    }
 }
 
-void Symbol::getHierarchicalPath(std::string& buffer) const {
-    size_t sz = buffer.size();
+void Symbol::getHierarchicalPath(std::string& result) const {
+    FormatBuffer buffer;
     getHierarchicalPathImpl(*this, buffer);
-
-    if (sz == buffer.size())
+    if (buffer.empty())
         buffer.append("$unit");
+
+    result.append(buffer.data(), buffer.size());
 }
 
 static void getLexicalPathImpl(const Symbol& symbol, std::string& buffer) {

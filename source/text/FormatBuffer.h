@@ -37,6 +37,7 @@ public:
     size_t size() const { return buf.size(); }
     const char* data() const { return buf.data(); }
     char back() const { return buf.data()[buf.size() - 1]; }
+    bool empty() const { return buf.size() == 0; }
 
     void pop_back() { buf.resize(buf.size() - 1); }
     void clear() { buf.clear(); }

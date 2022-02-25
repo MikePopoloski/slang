@@ -586,7 +586,7 @@ GenerateBlockArraySymbol& GenerateBlockArraySymbol::fromSyntax(Compilation& comp
         }
     }
 
-    SmallVectorSized<ArrayEntry, 8> entries;
+    SmallVectorSized<const GenerateBlockSymbol*, 8> entries;
     auto createBlock = [&](ConstantValue value, bool isInstantiated) {
         // Spec: each generate block gets their own scope, with an implicit
         // localparam of the same name as the genvar.
@@ -604,7 +604,8 @@ GenerateBlockArraySymbol& GenerateBlockArraySymbol::fromSyntax(Compilation& comp
         implicitParam->setType(compilation.getIntegerType());
         implicitParam->setValue(compilation, std::move(value), /* needsCoercion */ false);
 
-        entries.append({ &implicitParam->getValue().integer(), block });
+        block->arrayIndex = &implicitParam->getValue().integer();
+        entries.append(block);
     };
 
     // Bind the initialization expression.
@@ -694,8 +695,8 @@ GenerateBlockArraySymbol& GenerateBlockArraySymbol::fromSyntax(Compilation& comp
     if (entries.empty())
         createBlock(SVInt(32, 0, true), false);
     else {
-        for (auto& entry : entries)
-            result->addMember(*entry.block);
+        for (auto entry : entries)
+            result->addMember(*entry);
     }
 
     return *result;

@@ -965,9 +965,9 @@ static const Symbol* selectSingleChild(const Symbol& symbol, const BitSelectSynt
         if (!array.valid)
             return nullptr;
 
-        for (auto& entry : array.entries) {
-            if (*entry.index == *index)
-                return entry.block;
+        for (auto entry : array.entries) {
+            if (entry->arrayIndex && *entry->arrayIndex == *index)
+                return entry;
         }
 
         auto& diag =
