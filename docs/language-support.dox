@@ -303,7 +303,7 @@ LRM | Feature | Supported
 {{m-success}} 19.8 | Predefined coverage methods | v1.0
 {{m-success}} 19.9 | Predefined coverage system tasks | v0.9
 {{m-success}} 19.10 | Organization of option members | v1.0
-{{m-dim}}    19.11 | Coverage computation | N/A
+{{m-dim}}     19.11 | Coverage computation | N/A
 
 ## 20. Utility system tasks and system functions
 
@@ -361,13 +361,13 @@ LRM | Feature | Supported
 LRM | Feature | Supported
 --- | ------- | ---------
 {{m-success}} 23.2.1 | Module definitions | v0.2
-{{m-warning}} 23.2.2 | Port declarations | partial
+{{m-success}} 23.2.2 | Port declarations | v1.0
 {{m-success}} 23.2.3 | Parameterized modules | v0.2
 {{m-success}} 23.2.4 | Module contents | v0.2
 {{m-success}} 23.3.1 | Top-level modules and $root | v0.2
 {{m-success}} 23.3.2 | Module instantiation syntax | v0.2
 {{m-warning}} 23.3.3 | Port connection rules | partial
-{{m-danger}}  23.4 | Nested modules | no
+{{m-success}} 23.4 | Nested modules | v1.0
 {{m-danger}}  23.5 | Extern modules | no
 {{m-success}} 23.6 | Hierarchical names | v0.2
 {{m-success}} 23.7 | Member selects and hierarchical names | v0.2
