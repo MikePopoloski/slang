@@ -6,6 +6,8 @@
 //------------------------------------------------------------------------------
 #pragma once
 
+#include <cstdint>
+
 namespace slang {
 
 /// Returns whether the given character is a valid ASCII character.

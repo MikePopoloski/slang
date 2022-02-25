@@ -106,6 +106,17 @@ Token Lexer::stringify(BumpAllocator& alloc, SourceLocation location, span<Trivi
             text.append('\\');
             text.append('"');
         }
+        else if (cur.kind == TokenKind::StringLiteral) {
+            text.append('\\');
+            text.append('"');
+
+            auto raw = cur.rawText();
+            if (raw.size() > 2)
+                text.appendRange(raw.substr(1, raw.size() - 2));
+
+            text.append('\\');
+            text.append('"');
+        }
         else if (cur.kind != TokenKind::EmptyMacroArgument) {
             text.appendRange(cur.rawText());
         }

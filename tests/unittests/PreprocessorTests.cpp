@@ -1853,3 +1853,29 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Macro stringification with quotes regress") {
+    auto& text = R"(
+`define FOO(x) if (!(x)) $error("asdf '%s'", `"x`")
+
+module m;
+    parameter foo = "bar";
+    `FOO(foo == "bar");
+endmodule
+)";
+
+    string_view expected = R"a(
+module m;
+    parameter foo = "bar";
+    if (!(foo == "bar")) $error("asdf '%s'", "foo == \"bar\"");
+endmodule
+)a";
+
+    std::string result = preprocess(text);
+    CHECK(result == expected);
+
+    auto tree = SyntaxTree::fromText(text);
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
