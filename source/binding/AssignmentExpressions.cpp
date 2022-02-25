@@ -300,9 +300,12 @@ Expression& Expression::convertAssignment(const BindContext& context, const Type
             return *result;
         }
 
-        DiagCode code = type.isCastCompatible(*rt) || type.isBitstreamCastable(*rt)
-                            ? diag::NoImplicitConversion
-                            : diag::BadAssignment;
+        DiagCode code = diag::BadAssignment;
+        if (!context.flags.has(BindFlags::OutputArg) &&
+            (type.isCastCompatible(*rt) || type.isBitstreamCastable(*rt))) {
+            code = diag::NoImplicitConversion;
+        }
+
         auto& diag = context.addDiag(code, location);
         diag << *rt << type;
         if (lhsExpr)

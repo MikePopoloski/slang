@@ -205,9 +205,9 @@ const Expression& Expression::bindLValue(const ExpressionSyntax& lhs, const Type
     selfDetermined(context, lhsExpr);
 
     SourceRange lhsRange = lhs.sourceRange();
-    return AssignmentExpression::fromComponents(comp, std::nullopt, /* nonBlocking */ false,
-                                                *lhsExpr, *rhsExpr, lhsRange.start(),
-                                                /* timingControl */ nullptr, lhsRange, context);
+    return AssignmentExpression::fromComponents(
+        comp, std::nullopt, /* nonBlocking */ false, *lhsExpr, *rhsExpr, lhsRange.start(),
+        /* timingControl */ nullptr, lhsRange, context.resetFlags(BindFlags::OutputArg));
 }
 
 const Expression& Expression::bindRValue(const Type& lhs, const ExpressionSyntax& rhs,

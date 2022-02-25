@@ -141,9 +141,12 @@ enum class BindFlags {
     AllowCoverpoint = 1 << 28,
 
     /// User-defined nettypes are allowed to be looked up in this context.
-    AllowNetType = 1 << 29
+    AllowNetType = 1 << 29,
+
+    /// Binding is for an output (or inout) port or function argument.
+    OutputArg = 1 << 30
 };
-BITMASK(BindFlags, AllowNetType)
+BITMASK(BindFlags, OutputArg)
 
 enum class DimensionKind { Unknown, Range, AbbreviatedRange, Dynamic, Associative, Queue };
 

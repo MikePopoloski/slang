@@ -184,12 +184,6 @@ public:
     static const Expression& bindSelector(Expression& value, const ElementSelectSyntax& syntax,
                                           const BindContext& context);
 
-    /// Converts the given expression to the specified type, as if the right hand side had been
-    /// assigned (without a cast) to a left hand side of the specified type.
-    static Expression& convertAssignment(const BindContext& context, const Type& type,
-                                         Expression& expr, SourceLocation location,
-                                         Expression** lhsExpr = nullptr);
-
     /// Specialized method for binding all of the expressions in a set membership check.
     /// This is used for case statements and the 'inside' operator.
     ///
@@ -339,6 +333,10 @@ protected:
 
     static Expression* tryBindInterfaceRef(const BindContext& context,
                                            const ExpressionSyntax& syntax, const Type& targetType);
+
+    static Expression& convertAssignment(const BindContext& context, const Type& type,
+                                         Expression& expr, SourceLocation location,
+                                         Expression** lhsExpr = nullptr);
 
     static Expression& badExpr(Compilation& compilation, const Expression* expr);
 

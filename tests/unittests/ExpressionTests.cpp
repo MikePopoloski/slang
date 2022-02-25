@@ -2486,3 +2486,23 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Bad conversion diagnostic in lvalue") {
+    auto tree = SyntaxTree::fromText(R"(
+typedef enum { A, B } foo;
+module m(output int i);
+endmodule
+
+module top;
+    foo i;
+    m m1(i);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::BadAssignment);
+}
