@@ -89,6 +89,8 @@ ElabSystemTaskKind SemanticFacts::getElabSystemTaskKind(Token token) {
         return ElabSystemTaskKind::Warning;
     if (name == "$info"sv)
         return ElabSystemTaskKind::Info;
+    if (name == "$static_assert"sv)
+        return ElabSystemTaskKind::StaticAssert;
     THROW_UNREACHABLE;
 }
 

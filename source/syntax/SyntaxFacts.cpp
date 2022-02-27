@@ -1245,6 +1245,7 @@ static bool isModuleOrPackageDecl(SyntaxKind kind) {
         case SyntaxKind::LetDeclaration:
         case SyntaxKind::ConstraintDeclaration:
         case SyntaxKind::CheckerDeclaration:
+        case SyntaxKind::ElabSystemTask:
             return true;
         default:
             return false;
@@ -1281,7 +1282,6 @@ static bool isModuleCommonItem(SyntaxKind kind) {
         case SyntaxKind::CaseGenerate:
         case SyntaxKind::IfGenerate:
         case SyntaxKind::GenerateBlock:
-        case SyntaxKind::ElabSystemTask:
         case SyntaxKind::BindDirective:
             return true;
         default:
@@ -1359,7 +1359,6 @@ bool SyntaxFacts::isAllowedInProgram(SyntaxKind kind) {
         case SyntaxKind::IfGenerate:
         case SyntaxKind::GenerateRegion:
         case SyntaxKind::GenerateBlock:
-        case SyntaxKind::ElabSystemTask:
             return true;
         default:
             return isModuleCommonDecl(kind);

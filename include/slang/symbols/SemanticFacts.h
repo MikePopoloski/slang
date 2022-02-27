@@ -71,7 +71,7 @@ ENUM(SubroutineKind, SRK)
 ENUM(AssertionKind, ASK)
 #undef ASK
 
-#define ELAB(x) x(Fatal) x(Error) x(Warning) x(Info)
+#define ELAB(x) x(Fatal) x(Error) x(Warning) x(Info) x(StaticAssert)
 /// Specifies possible elaboration system task kinds.
 ENUM(ElabSystemTaskKind, ELAB)
 #undef ELAB

@@ -210,6 +210,7 @@ public:
     ElabSystemTaskSymbol(ElabSystemTaskKind taskKind, SourceLocation loc);
 
     string_view getMessage() const;
+    const Expression* getAssertCondition() const;
     void issueDiagnostic() const;
 
     void serializeTo(ASTSerializer& serializer) const;
@@ -221,6 +222,7 @@ public:
 
 private:
     mutable optional<string_view> message;
+    mutable const Expression* assertCondition = nullptr;
 };
 
 class PrimitivePortSymbol : public ValueSymbol {

@@ -2137,3 +2137,48 @@ endmodule
     foo.getHierarchicalPath(path);
     CHECK(path == "top.m1[2][1][3].asdf[1].genblk1.foo");
 }
+
+TEST_CASE("$static_assert elab task") {
+    auto tree = SyntaxTree::fromText(R"(
+module top;
+    m asdf();
+endmodule
+
+module m;
+    localparam int foo = 12;
+
+    struct packed { logic [4:1] a, b; } bar;
+
+    $static_assert(foo < $bits(bar));
+    $static_assert(foo * 0, "Stuff %0d", foo / 2);
+    $static_assert(foo, "Stuff Stuff %0d", foo / 2);
+    $static_assert(bar);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diagnostics = compilation.getAllDiagnostics();
+    std::string result = "\n" + report(diagnostics);
+    CHECK(result == R"(
+source:11:5: error: static assertion failed
+    $static_assert(foo < $bits(bar));
+    ^
+source:11:24: note: comparison reduces to (12 < 8)
+    $static_assert(foo < $bits(bar));
+                   ~~~~^~~~~~~~~~~~
+source:12:5: error: static assertion failed: Stuff 6
+    $static_assert(foo * 0, "Stuff %0d", foo / 2);
+    ^
+source:14:5: error: static assertion failed
+    $static_assert(bar);
+    ^
+source:14:20: error: reference to non-constant variable 'bar' is not allowed in a constant expression
+    $static_assert(bar);
+                   ^~~
+source:9:41: note: declared here
+    struct packed { logic [4:1] a, b; } bar;
+                                        ^
+)");
+}

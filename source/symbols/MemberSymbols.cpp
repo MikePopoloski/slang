@@ -512,14 +512,24 @@ string_view ElabSystemTaskSymbol::getMessage() const {
             return empty();
     }
 
-    // If this is a $fatal task, check the finish number. We don't use this
-    // for anything, but enforce that it's 0, 1, or 2.
     span<const Expression* const> argSpan = args;
-    if (taskKind == ElabSystemTaskKind::Fatal && !argSpan.empty()) {
-        if (!FmtHelpers::checkFinishNum(bindCtx, *argSpan[0]))
-            return empty();
+    if (!argSpan.empty()) {
+        if (taskKind == ElabSystemTaskKind::Fatal) {
+            // If this is a $fatal task, check the finish number. We don't use this
+            // for anything, but enforce that it's 0, 1, or 2.
+            if (!FmtHelpers::checkFinishNum(bindCtx, *argSpan[0]))
+                return empty();
 
-        argSpan = argSpan.subspan(1);
+            argSpan = argSpan.subspan(1);
+        }
+        else if (taskKind == ElabSystemTaskKind::StaticAssert) {
+            // The first argument is the condition to check.
+            if (!bindCtx.requireBooleanConvertible(*argSpan[0]) || !bindCtx.eval(*argSpan[0]))
+                return empty();
+
+            assertCondition = argSpan[0];
+            argSpan = argSpan.subspan(1);
+        }
     }
 
     // Check all arguments.
@@ -531,7 +541,7 @@ string_view ElabSystemTaskSymbol::getMessage() const {
     optional<std::string> str = FmtHelpers::formatDisplay(*scope, evalCtx, argSpan);
     evalCtx.reportDiags(bindCtx);
 
-    if (!str)
+    if (!str || str->empty())
         return empty();
 
     str->insert(0, ": ");
@@ -544,9 +554,40 @@ string_view ElabSystemTaskSymbol::getMessage() const {
     return *message;
 }
 
+static void reduceComparison(const BinaryExpression& expr, Diagnostic& result) {
+    switch (expr.op) {
+        case BinaryOperator::Equality:
+        case BinaryOperator::Inequality:
+        case BinaryOperator::CaseEquality:
+        case BinaryOperator::CaseInequality:
+        case BinaryOperator::WildcardEquality:
+        case BinaryOperator::WildcardInequality:
+        case BinaryOperator::GreaterThan:
+        case BinaryOperator::GreaterThanEqual:
+        case BinaryOperator::LessThan:
+        case BinaryOperator::LessThanEqual:
+            break;
+        default:
+            return;
+    }
+
+    ASSERT(expr.syntax);
+    auto& syntax = expr.syntax->as<BinaryExpressionSyntax>();
+
+    auto lc = expr.left().constant;
+    auto rc = expr.right().constant;
+    ASSERT(lc && rc);
+
+    auto& note = result.addNote(diag::NoteComparisonReduces, syntax.operatorToken.location());
+    note << expr.sourceRange;
+    note << *lc << syntax.operatorToken.rawText() << *rc;
+}
+
 void ElabSystemTaskSymbol::issueDiagnostic() const {
     auto scope = getParentScope();
     ASSERT(scope);
+
+    string_view msg = getMessage();
 
     DiagCode code;
     switch (taskKind) {
@@ -562,16 +603,40 @@ void ElabSystemTaskSymbol::issueDiagnostic() const {
         case ElabSystemTaskKind::Info:
             code = diag::InfoTask;
             break;
+        case ElabSystemTaskKind::StaticAssert: {
+            if (assertCondition && assertCondition->constant) {
+                // Issue no diagnostic if the assert condition is true.
+                if (assertCondition->constant->isTrue())
+                    return;
+            }
+
+            auto& diag = scope->addDiag(diag::StaticAssert, location) << msg;
+
+            // If the condition is a comparison operator, note the value of both
+            // sides to provide more info about why the assertion failed.
+            if (assertCondition && assertCondition->kind == ExpressionKind::BinaryOp)
+                reduceComparison(assertCondition->as<BinaryExpression>(), diag);
+
+            return;
+        }
         default:
             THROW_UNREACHABLE;
     }
 
-    scope->addDiag(code, location) << getMessage();
+    scope->addDiag(code, location) << msg;
+}
+
+const Expression* ElabSystemTaskSymbol::getAssertCondition() const {
+    getMessage();
+    return assertCondition;
 }
 
 void ElabSystemTaskSymbol::serializeTo(ASTSerializer& serializer) const {
     serializer.write("taskKind", toString(taskKind));
     serializer.write("message", getMessage());
+
+    if (assertCondition)
+        serializer.write("assertCondition", *assertCondition);
 }
 
 PrimitivePortSymbol::PrimitivePortSymbol(Compilation& compilation, string_view name,

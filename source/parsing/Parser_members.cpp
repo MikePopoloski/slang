@@ -2084,8 +2084,10 @@ DPIExportSyntax& Parser::parseDPIExport(AttrList attributes) {
 
 ElabSystemTaskSyntax* Parser::parseElabSystemTask(AttrList attributes) {
     auto name = peek().valueText();
-    if (name != "$fatal"sv && name != "$error"sv && name != "$warning"sv && name != "$info"sv)
+    if (name != "$fatal"sv && name != "$error"sv && name != "$warning"sv && name != "$info"sv &&
+        name != "$static_assert"sv) {
         return nullptr;
+    }
 
     auto nameToken = consume();
     ArgumentListSyntax* argList = nullptr;
