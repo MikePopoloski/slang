@@ -532,17 +532,24 @@ string_view ElabSystemTaskSymbol::getMessage() const {
         }
     }
 
+    message = createMessage(bindCtx, argSpan);
+    return *message;
+}
+
+string_view ElabSystemTaskSymbol::createMessage(const BindContext& context,
+                                                span<const Expression* const> args) {
     // Check all arguments.
-    if (!FmtHelpers::checkDisplayArgs(bindCtx, argSpan))
-        return empty();
+    if (!FmtHelpers::checkDisplayArgs(context, args))
+        return ""sv;
 
     // Format the message to string.
+    auto& comp = context.getCompilation();
     EvalContext evalCtx(comp);
-    optional<std::string> str = FmtHelpers::formatDisplay(*scope, evalCtx, argSpan);
-    evalCtx.reportDiags(bindCtx);
+    optional<std::string> str = FmtHelpers::formatDisplay(*context.scope, evalCtx, args);
+    evalCtx.reportDiags(context);
 
     if (!str || str->empty())
-        return empty();
+        return ""sv;
 
     str->insert(0, ": ");
 
@@ -550,8 +557,7 @@ string_view ElabSystemTaskSymbol::getMessage() const {
     auto mem = comp.allocate(str->size(), alignof(char));
     memcpy(mem, str->data(), str->size());
 
-    message = string_view(reinterpret_cast<char*>(mem), str->size());
-    return *message;
+    return string_view(reinterpret_cast<char*>(mem), str->size());
 }
 
 static void reduceComparison(const BinaryExpression& expr, Diagnostic& result) {
@@ -583,6 +589,22 @@ static void reduceComparison(const BinaryExpression& expr, Diagnostic& result) {
     note << *lc << syntax.operatorToken.rawText() << *rc;
 }
 
+void ElabSystemTaskSymbol::reportStaticAssert(const Scope& scope, SourceLocation loc,
+                                              string_view message, const Expression* condition) {
+    if (condition && condition->constant) {
+        // Issue no diagnostic if the assert condition is true.
+        if (condition->constant->isTrue())
+            return;
+    }
+
+    auto& diag = scope.addDiag(diag::StaticAssert, loc) << message;
+
+    // If the condition is a comparison operator, note the value of both
+    // sides to provide more info about why the assertion failed.
+    if (condition && condition->kind == ExpressionKind::BinaryOp)
+        reduceComparison(condition->as<BinaryExpression>(), diag);
+}
+
 void ElabSystemTaskSymbol::issueDiagnostic() const {
     auto scope = getParentScope();
     ASSERT(scope);
@@ -603,22 +625,9 @@ void ElabSystemTaskSymbol::issueDiagnostic() const {
         case ElabSystemTaskKind::Info:
             code = diag::InfoTask;
             break;
-        case ElabSystemTaskKind::StaticAssert: {
-            if (assertCondition && assertCondition->constant) {
-                // Issue no diagnostic if the assert condition is true.
-                if (assertCondition->constant->isTrue())
-                    return;
-            }
-
-            auto& diag = scope->addDiag(diag::StaticAssert, location) << msg;
-
-            // If the condition is a comparison operator, note the value of both
-            // sides to provide more info about why the assertion failed.
-            if (assertCondition && assertCondition->kind == ExpressionKind::BinaryOp)
-                reduceComparison(assertCondition->as<BinaryExpression>(), diag);
-
+        case ElabSystemTaskKind::StaticAssert:
+            reportStaticAssert(*scope, location, msg, assertCondition);
             return;
-        }
         default:
             THROW_UNREACHABLE;
     }

@@ -2153,6 +2153,11 @@ module m;
     $static_assert(foo * 0, "Stuff %0d", foo / 2);
     $static_assert(foo, "Stuff Stuff %0d", foo / 2);
     $static_assert(bar);
+
+    initial begin
+        $static_assert(foo > $bits(bar));
+        $static_assert(foo < $bits(bar));
+    end
 endmodule
 )");
 
@@ -2180,5 +2185,11 @@ source:14:20: error: reference to non-constant variable 'bar' is not allowed in 
 source:9:41: note: declared here
     struct packed { logic [4:1] a, b; } bar;
                                         ^
+source:18:9: error: static assertion failed
+        $static_assert(foo < $bits(bar));
+        ^
+source:18:28: note: comparison reduces to (12 < 8)
+        $static_assert(foo < $bits(bar));
+                       ~~~~^~~~~~~~~~~~
 )");
 }

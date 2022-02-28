@@ -218,6 +218,12 @@ public:
     static ElabSystemTaskSymbol& fromSyntax(Compilation& compilation,
                                             const ElabSystemTaskSyntax& syntax);
 
+    static string_view createMessage(const BindContext& context,
+                                     span<const Expression* const> args);
+
+    static void reportStaticAssert(const Scope& scope, SourceLocation loc, string_view message,
+                                   const Expression* condition);
+
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::ElabSystemTask; }
 
 private:

@@ -12,6 +12,7 @@
 #include "slang/mir/Procedure.h"
 #include "slang/symbols/ASTVisitor.h"
 #include "slang/symbols/InstanceSymbols.h"
+#include "slang/symbols/MemberSymbols.h"
 #include "slang/syntax/AllSyntax.h"
 
 namespace slang::Builtins {
@@ -137,6 +138,38 @@ public:
         }
 
         return comp.getVoidType();
+    }
+};
+
+class StaticAssertTask : public SystemSubroutine {
+public:
+    StaticAssertTask() : SystemSubroutine("$static_assert", SubroutineKind::Task) {}
+
+    bool allowEmptyArgument(size_t index) const final { return index != 0; }
+
+    const Type& checkArguments(const BindContext& context, const Args& args, SourceRange range,
+                               const Expression*) const final {
+        auto& comp = context.getCompilation();
+
+        string_view message;
+        const Expression* condition = nullptr;
+
+        if (!args.empty()) {
+            if (!context.requireBooleanConvertible(*args[0]) || !context.eval(*args[0]))
+                return comp.getErrorType();
+
+            condition = args[0];
+            message = ElabSystemTaskSymbol::createMessage(context, args.subspan(1));
+        }
+
+        ElabSystemTaskSymbol::reportStaticAssert(*context.scope, range.start(), message, condition);
+
+        return comp.getVoidType();
+    }
+
+    ConstantValue eval(EvalContext&, const Args&, SourceRange,
+                       const CallExpression::SystemCallInfo&) const final {
+        return nullptr;
     }
 };
 
@@ -729,6 +762,7 @@ void registerSystemTasks(Compilation& c) {
     c.addSystemSubroutine(std::make_unique<SimpleSystemTask>("$system", *int_t, 0,
                                                              std::vector<const Type*>{ string_t }));
     c.addSystemSubroutine(std::make_unique<SdfAnnotateTask>());
+    c.addSystemSubroutine(std::make_unique<StaticAssertTask>());
 
 #define TASK(name, required, ...)                             \
     c.addSystemSubroutine(std::make_unique<SimpleSystemTask>( \
