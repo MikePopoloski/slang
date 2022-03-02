@@ -138,23 +138,37 @@ static const flat_hash_map<DiagCode, std::tuple<string_view, string_view, Diagno
 
     output += '''};
 
-static const flat_hash_map<string_view, DiagCode> optionMap = {
+static const flat_hash_map<string_view, std::vector<DiagCode>> optionMap = {
 '''
 
     optionMap = {}
     for k,v in sorted(diags.items()):
         for d in v:
-            if not d[3]:
+            name = d[3]
+            if not name:
                 continue
-            output += '    {{"{}"sv, diag::{}}},\n'.format(d[3], d[1])
-            optionMap[d[3]] = d[1]
+
+            if name in optionMap:
+                optionMap[name].append(d[1])
+            else:
+                optionMap[name] = [d[1]]
+
+    for key in sorted(optionMap):
+        vals = optionMap[key]
+        valstr = ', '.join(["diag::{}".format(v) for v in vals])
+        output += '    {{"{}"sv, {{ {} }}}},\n'.format(key, valstr)
+
     output += '''};
 
 static const flat_hash_map<string_view, DiagGroup> groupMap = {
 '''
 
     for g in sorted(groups):
-        elems = ', '.join('diag::{}'.format(optionMap[e]) for e in g[1])
+        elems = []
+        for e in g[1]:
+            elems.extend(optionMap[e])
+
+        elems = ', '.join('diag::{}'.format(e) for e in elems)
         output += '    {{"{}"sv, DiagGroup("{}", {{ {} }})}},\n'.format(g[0], g[0], elems)
 
     output += '''};
@@ -188,10 +202,10 @@ string_view getDefaultOptionName(DiagCode code) {
     return ""sv;
 }
 
-DiagCode findDiagFromOptionName(string_view name) {
+span<const DiagCode> findDiagsFromOptionName(string_view name) {
     if (auto it = optionMap.find(name); it != optionMap.end())
         return it->second;
-    return DiagCode();
+    return {};
 }
 
 const DiagGroup* findDefaultDiagGroup(string_view name) {

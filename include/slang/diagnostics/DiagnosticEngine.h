@@ -128,7 +128,7 @@ public:
 
     /// Finds a diagnostic given an option name. If no matching diagnostic is found,
     /// returns an empty diagnostic code.
-    DiagCode findFromOptionName(string_view optionName) const;
+    span<const DiagCode> findFromOptionName(string_view optionName) const;
 
     /// Finds the diagnostic group with the given name, if it exists. Otherwise returns nullptr.
     const DiagGroup* findDiagGroup(string_view name) const;

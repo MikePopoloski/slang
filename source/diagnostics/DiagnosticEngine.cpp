@@ -19,7 +19,7 @@ namespace slang {
 string_view getDefaultMessage(DiagCode code);
 DiagnosticSeverity getDefaultSeverity(DiagCode code);
 string_view getDefaultOptionName(DiagCode code);
-DiagCode findDiagFromOptionName(string_view name);
+span<const DiagCode> findDiagsFromOptionName(string_view name);
 const DiagGroup* findDefaultDiagGroup(string_view name);
 
 DiagnosticEngine::FormatterMap DiagnosticEngine::defaultFormatters;
@@ -102,8 +102,8 @@ string_view DiagnosticEngine::getOptionName(DiagCode code) const {
     return getDefaultOptionName(code);
 }
 
-DiagCode DiagnosticEngine::findFromOptionName(string_view optionName) const {
-    return findDiagFromOptionName(optionName);
+span<const DiagCode> DiagnosticEngine::findFromOptionName(string_view optionName) const {
+    return findDiagsFromOptionName(optionName);
 }
 
 const DiagGroup* DiagnosticEngine::findDiagGroup(string_view name) const {
@@ -411,10 +411,13 @@ void DiagnosticEngine::setDefaultWarnings() {
 Diagnostics DiagnosticEngine::setWarningOptions(span<const std::string> options) {
     Diagnostics diags;
     auto findAndSet = [&](string_view name, DiagnosticSeverity severity, const char* errorPrefix) {
-        if (auto group = findDiagGroup(name))
+        if (auto group = findDiagGroup(name)) {
             setSeverity(*group, severity);
-        else if (auto code = findFromOptionName(name))
-            setSeverity(code, severity);
+        }
+        else if (auto codes = findFromOptionName(name); !codes.empty()) {
+            for (auto code : codes)
+                setSeverity(code, severity);
+        }
         else {
             auto& diag = diags.add(diag::UnknownWarningOption, SourceLocation::NoLocation);
             diag << std::string(errorPrefix) + std::string(name);
@@ -496,8 +499,9 @@ Diagnostics DiagnosticEngine::setMappingsFromPragmas() {
                     for (auto code : group->getDiags())
                         noteDiag(code, directive);
                 }
-                else if (auto code = findFromOptionName(name)) {
-                    noteDiag(code, directive);
+                else if (auto codes = findFromOptionName(name); !codes.empty()) {
+                    for (auto code : codes)
+                        noteDiag(code, directive);
                 }
                 else {
                     auto& diag = diags.add(diag::UnknownWarningOption,
