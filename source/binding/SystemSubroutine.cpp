@@ -69,7 +69,9 @@ bool SystemSubroutine::notConst(EvalContext& context, SourceRange range) const {
 }
 
 bool SystemSubroutine::noHierarchical(EvalContext& context, const Expression& expr) const {
-    if (expr.hasHierarchicalReference() && !context.flags.has(EvalFlags::IsScript)) {
+    if (expr.hasHierarchicalReference() &&
+        !context.compilation.getOptions().allowHierarchicalConst &&
+        !context.flags.has(EvalFlags::IsScript)) {
         context.addDiag(diag::SysFuncHierarchicalNotAllowed, expr.sourceRange) << name;
         return false;
     }
