@@ -626,9 +626,9 @@ std::ostream& operator<<(std::ostream& os, const SVInt& rhs) {
 std::string SVInt::toString() const {
     // guess the base to use
     LiteralBase base;
-    if (bitWidth < 8 || unknownFlag)
+    if (bitWidth < 8 || (unknownFlag && bitWidth <= 64))
         base = LiteralBase::Binary;
-    else if (bitWidth == 32 || signFlag)
+    else if (bitWidth <= 32 || signFlag)
         base = LiteralBase::Decimal;
     else
         base = LiteralBase::Hex;

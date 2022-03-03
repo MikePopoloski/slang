@@ -2266,10 +2266,10 @@ TEST_CASE("Tagged union eval") {
     session.eval("u.a = 1;");
 
     session.eval("union tagged packed { byte a; byte unsigned b; } v;");
-    CHECK(session.eval("v").toString() == "9'h0");
+    CHECK(session.eval("v").toString() == "9'd0");
 
     session.eval("v = tagged b 200;");
-    CHECK(session.eval("v").toString() == "9'h1c8");
+    CHECK(session.eval("v").toString() == "9'd456");
     CHECK(session.eval("v.b").integer() == 200);
     CHECK(session.eval("v.b = 5").integer() == 5);
     session.eval("v.a");
@@ -2298,7 +2298,7 @@ TEST_CASE("Assignment pattern eval") {
     session.eval("typedef logic[7:0] bt;");
     session.eval("bt foo[4:3][1:2] = '{bt: 3};");
 
-    CHECK(session.eval("foo").toString() == "[[8'h3,8'h3],[8'h3,8'h3]]");
+    CHECK(session.eval("foo").toString() == "[[8'd3,8'd3],[8'd3,8'd3]]");
 
     session.eval(R"(
 struct {
