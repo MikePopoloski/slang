@@ -439,7 +439,7 @@ void TypePrinter::printAKA(const Type& type) {
         target = &newTarget;
     }
 
-    if (target != &type) {
+    if (target != &type && target->name != type.name) {
         buffer->append(" (aka '");
         target->visit(*this, ""sv);
         buffer->append("')");
