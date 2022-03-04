@@ -728,7 +728,7 @@ void UnknownModuleSymbol::fromSyntax(Compilation& compilation,
                     &Expression::bind(*expr->as<OrderedParamAssignmentSyntax>().expr, context));
             else if (expr->kind == SyntaxKind::NamedParamAssignment) {
                 if (auto ex = expr->as<NamedParamAssignmentSyntax>().expr)
-                    params.append(&Expression::bind(*ex, context));
+                    params.append(&Expression::bind(*ex, context, BindFlags::AllowDataType));
             }
         }
     }
