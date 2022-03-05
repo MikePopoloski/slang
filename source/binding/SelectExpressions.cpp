@@ -1196,8 +1196,8 @@ static bool isWithinCovergroup(const Symbol& field, const Scope& usageScope) {
 }
 
 bool MemberAccessExpression::verifyAssignableImpl(const BindContext& context,
-                                                  SourceLocation location, bool isNonBlocking,
-                                                  bool inConcat) const {
+                                                  SourceLocation location,
+                                                  bitmask<AssignFlags> flags) const {
     // If this is a selection of a class member, assignability depends only on the selected
     // member and not on the class handle itself. Otherwise, the opposite is true.
     auto& valueType = *value().type;
@@ -1209,12 +1209,12 @@ bool MemberAccessExpression::verifyAssignableImpl(const BindContext& context,
             return false;
         }
 
-        return value().verifyAssignable(context, location, isNonBlocking, inConcat);
+        return value().verifyAssignable(context, location, flags);
     }
 
     if (VariableSymbol::isKind(member.kind)) {
-        return context.requireAssignable(member.as<VariableSymbol>(), isNonBlocking, location,
-                                         sourceRange);
+        return ValueExpressionBase::checkVariableAssignment(context, member.as<VariableSymbol>(),
+                                                            flags, location, sourceRange);
     }
 
     // TODO: modport assignability checks

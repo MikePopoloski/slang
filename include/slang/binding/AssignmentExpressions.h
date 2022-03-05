@@ -43,7 +43,7 @@ public:
                                   const BindContext& context);
 
     static Expression& fromComponents(Compilation& compilation, optional<BinaryOperator> op,
-                                      bool nonBlocking, Expression& lhs, Expression& rhs,
+                                      bitmask<AssignFlags> flags, Expression& lhs, Expression& rhs,
                                       SourceLocation assignLoc, const TimingControl* timingControl,
                                       SourceRange sourceRange, const BindContext& context);
 

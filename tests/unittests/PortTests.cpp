@@ -998,8 +998,8 @@ module p (.a({b,c}), f, .g(h[1]), .i(foo[3:1]));
 endmodule
 
 module top;
-    logic a;
-    logic [1:0] b;
+    wire a;
+    wire [1:0] b;
 
     m m1(a, a);
     n n1(b, 1);
@@ -1317,4 +1317,25 @@ endmodule
     CHECK(diags[0].code == diag::NetRangeInconsistent);
     CHECK(diags[1].code == diag::NetInconsistent);
     CHECK(diags[2].code == diag::NetRangeInconsistent);
+}
+
+TEST_CASE("Inout port conn to variable") {
+    auto tree = SyntaxTree::fromText(R"(
+module m(logic a);
+endmodule
+
+module top;
+    logic a;
+    m m1(a);
+    m m2(.a);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::InOutVarPortConn);
+    CHECK(diags[1].code == diag::InOutVarPortConn);
 }

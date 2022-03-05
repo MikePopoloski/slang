@@ -26,10 +26,6 @@ Compilation& BindContext::getCompilation() const {
     return scope->getCompilation();
 }
 
-bool BindContext::isPortConnection() const {
-    return instance && !instance->arrayPath.empty();
-}
-
 void BindContext::setAttributes(const Statement& stmt,
                                 span<const AttributeInstanceSyntax* const> syntax) const {
     if (syntax.empty())
@@ -136,52 +132,6 @@ bool BindContext::requireBooleanConvertible(const Expression& expr) const {
         addDiag(diag::NotBooleanConvertible, expr.sourceRange) << *expr.type;
         return false;
     }
-    return true;
-}
-
-bool BindContext::requireAssignable(const VariableSymbol& var, bool isNonBlocking,
-                                    SourceLocation assignLoc, SourceRange varRange) const {
-    auto reportErr = [&](DiagCode code) {
-        if (!assignLoc)
-            assignLoc = varRange.start();
-
-        auto& diag = addDiag(code, assignLoc);
-        diag.addNote(diag::NoteDeclarationHere, var.location);
-        diag << var.name << varRange;
-        return false;
-    };
-
-    if (var.flags.has(VariableFlags::Const)) {
-        // If we are in a class constructor and this variable does not have an initializer,
-        // it's ok to assign to it.
-        const Symbol* parent = &scope->asSymbol();
-        while (parent->kind == SymbolKind::StatementBlock) {
-            auto parentScope = parent->getParentScope();
-            ASSERT(parentScope);
-            parent = &parentScope->asSymbol();
-        }
-
-        if (var.getInitializer() || parent->kind != SymbolKind::Subroutine ||
-            (parent->as<SubroutineSymbol>().flags & MethodFlags::Constructor) == 0) {
-            return reportErr(diag::AssignmentToConst);
-        }
-    }
-
-    if (isNonBlocking && var.lifetime == VariableLifetime::Automatic &&
-        var.kind != SymbolKind::ClassProperty) {
-        return reportErr(diag::NonblockingAssignmentToAuto);
-    }
-
-    if (var.kind == SymbolKind::ClockVar) {
-        auto& cv = var.as<ClockVarSymbol>();
-        if (cv.direction == ArgumentDirection::In)
-            return reportErr(diag::WriteToInputClockVar);
-
-        if (!isNonBlocking)
-            return reportErr(diag::ClockVarSyncDrive);
-    }
-
-    // TODO: modport assignability checks
     return true;
 }
 

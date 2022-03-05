@@ -257,7 +257,6 @@ public:
     Compilation& getCompilation() const;
     LookupLocation getLocation() const { return LookupLocation(scope, uint32_t(lookupIndex)); }
     bool inUnevaluatedBranch() const { return (flags & BindFlags::UnevaluatedBranch) != 0; }
-    bool isPortConnection() const;
 
     void setAttributes(const Statement& stmt,
                        span<const AttributeInstanceSyntax* const> syntax) const;
@@ -275,8 +274,6 @@ public:
     bool requirePositive(optional<int32_t> value, SourceRange range) const;
     bool requireGtZero(optional<int32_t> value, SourceRange range) const;
     bool requireBooleanConvertible(const Expression& expr) const;
-    bool requireAssignable(const VariableSymbol& var, bool isNonBlocking, SourceLocation assignLoc,
-                           SourceRange varRange) const;
     bool requireValidBitWidth(bitwidth_t width, SourceRange range) const;
     optional<bitwidth_t> requireValidBitWidth(const SVInt& value, SourceRange range) const;
 

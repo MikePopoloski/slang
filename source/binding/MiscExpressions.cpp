@@ -13,6 +13,7 @@
 #include "slang/diagnostics/ConstEvalDiags.h"
 #include "slang/diagnostics/ExpressionsDiags.h"
 #include "slang/diagnostics/LookupDiags.h"
+#include "slang/diagnostics/StatementsDiags.h"
 #include "slang/symbols/ASTSerializer.h"
 #include "slang/symbols/ClassSymbols.h"
 #include "slang/symbols/MemberSymbols.h"
@@ -96,7 +97,7 @@ Expression& ValueExpressionBase::fromSymbol(const BindContext& context, const Sy
 }
 
 bool ValueExpressionBase::verifyAssignableImpl(const BindContext& context, SourceLocation location,
-                                               bool isNonBlocking, bool inConcat) const {
+                                               bitmask<AssignFlags> flags) const {
     if (!location)
         location = sourceRange.start();
 
@@ -124,16 +125,64 @@ bool ValueExpressionBase::verifyAssignableImpl(const BindContext& context, Sourc
     }
 
     if (VariableSymbol::isKind(symbol.kind)) {
-        if (symbol.kind == SymbolKind::ClockVar && inConcat) {
-            auto& diag = context.addDiag(diag::ClockVarAssignConcat, location);
-            diag.addNote(diag::NoteDeclarationHere, symbol.location);
-            diag << symbol.name << sourceRange;
-        }
-
-        return context.requireAssignable(symbol.as<VariableSymbol>(), isNonBlocking, location,
-                                         sourceRange);
+        return checkVariableAssignment(context, symbol.as<VariableSymbol>(), flags, location,
+                                       sourceRange);
     }
 
+    return true;
+}
+
+bool ValueExpressionBase::checkVariableAssignment(const BindContext& context,
+                                                  const VariableSymbol& var,
+                                                  bitmask<AssignFlags> flags,
+                                                  SourceLocation assignLoc, SourceRange varRange) {
+    auto reportErr = [&](DiagCode code) {
+        if (!assignLoc)
+            assignLoc = varRange.start();
+
+        auto& diag = context.addDiag(code, assignLoc);
+        diag.addNote(diag::NoteDeclarationHere, var.location);
+        diag << var.name << varRange;
+        return false;
+    };
+
+    if (var.flags.has(VariableFlags::Const)) {
+        // If we are in a class constructor and this variable does not have an initializer,
+        // it's ok to assign to it.
+        const Symbol* parent = &context.scope->asSymbol();
+        while (parent->kind == SymbolKind::StatementBlock) {
+            auto parentScope = parent->getParentScope();
+            ASSERT(parentScope);
+            parent = &parentScope->asSymbol();
+        }
+
+        if (var.getInitializer() || parent->kind != SymbolKind::Subroutine ||
+            (parent->as<SubroutineSymbol>().flags & MethodFlags::Constructor) == 0) {
+            return reportErr(diag::AssignmentToConst);
+        }
+    }
+
+    if (flags.has(AssignFlags::NonBlocking) && var.lifetime == VariableLifetime::Automatic &&
+        var.kind != SymbolKind::ClassProperty) {
+        return reportErr(diag::NonblockingAssignmentToAuto);
+    }
+
+    if (var.kind == SymbolKind::ClockVar) {
+        if (flags.has(AssignFlags::InConcat))
+            reportErr(diag::ClockVarAssignConcat);
+
+        auto& cv = var.as<ClockVarSymbol>();
+        if (cv.direction == ArgumentDirection::In)
+            return reportErr(diag::WriteToInputClockVar);
+
+        if (!flags.has(AssignFlags::NonBlocking))
+            return reportErr(diag::ClockVarSyncDrive);
+    }
+
+    if (flags.has(AssignFlags::InOutPort))
+        return reportErr(diag::InOutVarPortConn);
+
+    // TODO: modport assignability checks
     return true;
 }
 

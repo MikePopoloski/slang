@@ -985,7 +985,7 @@ endmodule
 TEST_CASE("Gates") {
     auto tree = SyntaxTree::fromText(R"(
 module m;
-    logic foo;
+    wire foo;
     pullup (supply0, pull1) (foo);
     pmos #3 asdf [3:0][4][5] (foo, 2, 3), blah (foo, 4, 5), (foo, 5, 6);
     rtranif1 (foo, foo, 1), asdf2(foo, foo, 2);

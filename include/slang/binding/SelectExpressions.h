@@ -119,7 +119,7 @@ public:
     ConstantValue evalImpl(EvalContext& context) const;
     LValue evalLValueImpl(EvalContext& context) const;
     bool verifyAssignableImpl(const BindContext& context, SourceLocation location,
-                              bool isNonBlocking, bool inConcat) const;
+                              bitmask<AssignFlags> flags) const;
 
     void serializeTo(ASTSerializer& serializer) const;
 

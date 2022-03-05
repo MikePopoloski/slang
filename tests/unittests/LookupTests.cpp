@@ -1054,7 +1054,7 @@ module M;
     N n2(M.n1.foo);
 endmodule
 
-module N(logic f);
+module N(input logic f);
     logic foo;
 endmodule
 )");

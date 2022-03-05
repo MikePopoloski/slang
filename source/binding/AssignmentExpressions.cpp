@@ -354,7 +354,10 @@ Expression& Expression::convertAssignment(const BindContext& context, const Type
 Expression& AssignmentExpression::fromSyntax(Compilation& compilation,
                                              const BinaryExpressionSyntax& syntax,
                                              const BindContext& context) {
+    bitmask<AssignFlags> assignFlags;
     bool isNonBlocking = syntax.kind == SyntaxKind::NonblockingAssignmentExpression;
+    if (isNonBlocking)
+        assignFlags = AssignFlags::NonBlocking;
 
     if (isNonBlocking && context.flags.has(BindFlags::Final)) {
         context.addDiag(diag::NonblockingInFinal, syntax.sourceRange());
@@ -419,7 +422,7 @@ Expression& AssignmentExpression::fromSyntax(Compilation& compilation,
             auto lhs = &create(compilation, *syntax.left, context, BindFlags::LValue, rhs->type);
             selfDetermined(context, lhs);
 
-            return fromComponents(compilation, op, isNonBlocking, *lhs, *rhs,
+            return fromComponents(compilation, op, assignFlags, *lhs, *rhs,
                                   syntax.operatorToken.location(), timingControl,
                                   syntax.sourceRange(), context);
         }
@@ -446,23 +449,23 @@ Expression& AssignmentExpression::fromSyntax(Compilation& compilation,
         }
     }
 
-    return fromComponents(compilation, op, isNonBlocking, lhs, *rhs,
-                          syntax.operatorToken.location(), timingControl, syntax.sourceRange(),
-                          context);
+    return fromComponents(compilation, op, assignFlags, lhs, *rhs, syntax.operatorToken.location(),
+                          timingControl, syntax.sourceRange(), context);
 }
 
 Expression& AssignmentExpression::fromComponents(
-    Compilation& compilation, optional<BinaryOperator> op, bool nonBlocking, Expression& lhs,
-    Expression& rhs, SourceLocation assignLoc, const TimingControl* timingControl,
+    Compilation& compilation, optional<BinaryOperator> op, bitmask<AssignFlags> flags,
+    Expression& lhs, Expression& rhs, SourceLocation assignLoc, const TimingControl* timingControl,
     SourceRange sourceRange, const BindContext& context) {
 
-    auto result = compilation.emplace<AssignmentExpression>(op, nonBlocking, *lhs.type, lhs, rhs,
-                                                            timingControl, sourceRange);
+    auto result = compilation.emplace<AssignmentExpression>(
+        op, flags.has(AssignFlags::NonBlocking), *lhs.type, lhs, rhs, timingControl, sourceRange);
+
     if (lhs.bad() || rhs.bad())
         return badExpr(compilation, result);
 
     // Make sure we can actually assign to the thing on the lhs.
-    if (!lhs.verifyAssignable(context, assignLoc, nonBlocking))
+    if (!lhs.verifyAssignable(context, assignLoc, flags))
         return badExpr(compilation, result);
 
     if (lhs.kind == ExpressionKind::Streaming) {

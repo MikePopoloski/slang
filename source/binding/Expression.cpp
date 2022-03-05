@@ -194,7 +194,7 @@ const Expression& Expression::bindLValue(const ExpressionSyntax& lhs, const Type
 
     Expression* lhsExpr;
     if (lhs.kind == SyntaxKind::StreamingConcatenationExpression && !isInout &&
-        !context.isPortConnection()) {
+        (!context.instance || context.instance->arrayPath.empty())) {
         lhsExpr =
             &selfDetermined(comp, lhs, context, BindFlags::StreamingAllowed | BindFlags::LValue);
     }
@@ -204,9 +204,13 @@ const Expression& Expression::bindLValue(const ExpressionSyntax& lhs, const Type
 
     selfDetermined(context, lhsExpr);
 
+    bitmask<AssignFlags> assignFlags;
+    if (isInout && context.instance)
+        assignFlags = AssignFlags::InOutPort;
+
     SourceRange lhsRange = lhs.sourceRange();
     return AssignmentExpression::fromComponents(
-        comp, std::nullopt, /* nonBlocking */ false, *lhsExpr, *rhsExpr, lhsRange.start(),
+        comp, std::nullopt, assignFlags, *lhsExpr, *rhsExpr, lhsRange.start(),
         /* timingControl */ nullptr, lhsRange, context.resetFlags(BindFlags::OutputArg));
 }
 
@@ -221,7 +225,7 @@ const Expression& Expression::bindRValue(const Type& lhs, const ExpressionSyntax
             return *ref;
     }
 
-    if (!ctx.isPortConnection())
+    if (!context.instance || context.instance->arrayPath.empty())
         extraFlags |= BindFlags::StreamingAllowed;
 
     Expression& expr = create(comp, rhs, ctx, extraFlags, &lhs);
@@ -268,7 +272,6 @@ const Expression& Expression::bindArgument(const Type& argType, ArgumentDirectio
             return bindRValue(argType, syntax, loc, context);
         case ArgumentDirection::Out:
         case ArgumentDirection::InOut:
-            // TODO: additional restrictions on inout
             return bindLValue(syntax, argType, loc, context, direction == ArgumentDirection::InOut);
         case ArgumentDirection::Ref:
             return bindRefArg(argType, isConstRef, syntax, loc, context);
@@ -339,21 +342,21 @@ LValue Expression::evalLValue(EvalContext& context) const {
 }
 
 bool Expression::verifyAssignable(const BindContext& context, SourceLocation location,
-                                  bool isNonBlocking, bool inConcat) const {
+                                  bitmask<AssignFlags> flags) const {
     switch (kind) {
         case ExpressionKind::NamedValue: {
             auto& nv = as<NamedValueExpression>();
-            return nv.verifyAssignableImpl(context, location, isNonBlocking, inConcat);
+            return nv.verifyAssignableImpl(context, location, flags);
         }
         case ExpressionKind::HierarchicalValue: {
             auto& hv = as<HierarchicalValueExpression>();
-            return hv.verifyAssignableImpl(context, location, isNonBlocking, inConcat);
+            return hv.verifyAssignableImpl(context, location, flags);
         }
         case ExpressionKind::ElementSelect: {
             auto& select = as<ElementSelectExpression>();
             if (context.flags.has(BindFlags::NonProcedural))
                 context.eval(select.selector());
-            return select.value().verifyAssignable(context, location, isNonBlocking, inConcat);
+            return select.value().verifyAssignable(context, location, flags);
         }
         case ExpressionKind::RangeSelect: {
             auto& select = as<RangeSelectExpression>();
@@ -361,11 +364,11 @@ bool Expression::verifyAssignable(const BindContext& context, SourceLocation loc
                 context.eval(select.left());
                 context.eval(select.right());
             }
-            return select.value().verifyAssignable(context, location, isNonBlocking, inConcat);
+            return select.value().verifyAssignable(context, location, flags);
         }
         case ExpressionKind::MemberAccess: {
             auto& access = as<MemberAccessExpression>();
-            return access.verifyAssignableImpl(context, location, isNonBlocking, inConcat);
+            return access.verifyAssignableImpl(context, location, flags);
         }
         case ExpressionKind::Concatenation: {
             auto& concat = as<ConcatenationExpression>();
@@ -373,7 +376,7 @@ bool Expression::verifyAssignable(const BindContext& context, SourceLocation loc
                 break;
 
             for (auto op : concat.operands()) {
-                if (!op->verifyAssignable(context, location, isNonBlocking, true))
+                if (!op->verifyAssignable(context, location, flags | AssignFlags::InConcat))
                     return false;
             }
             return true;
@@ -381,7 +384,8 @@ bool Expression::verifyAssignable(const BindContext& context, SourceLocation loc
         case ExpressionKind::Streaming: {
             auto& stream = as<StreamingConcatenationExpression>();
             for (auto op : stream.streams()) {
-                if (!op->operand->verifyAssignable(context, location, isNonBlocking, true))
+                if (!op->operand->verifyAssignable(context, location,
+                                                   flags | AssignFlags::InConcat))
                     return false;
             }
             return true;

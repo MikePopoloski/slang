@@ -19,7 +19,7 @@ public:
     const ValueSymbol& symbol;
 
     bool verifyAssignableImpl(const BindContext& context, SourceLocation location,
-                              bool isNonBlocking, bool inConcat) const;
+                              bitmask<AssignFlags> flags) const;
     optional<bitwidth_t> getEffectiveWidthImpl() const;
 
     void serializeTo(ASTSerializer& serializer) const;
@@ -27,6 +27,10 @@ public:
     static Expression& fromSymbol(const BindContext& context, const Symbol& symbol,
                                   bool isHierarchical, SourceRange sourceRange,
                                   bool constraintAllowed = false);
+
+    static bool checkVariableAssignment(const BindContext& context, const VariableSymbol& var,
+                                        bitmask<AssignFlags> flags, SourceLocation assignLoc,
+                                        SourceRange varRange);
 
     static bool isKind(ExpressionKind kind) {
         return kind == ExpressionKind::NamedValue || kind == ExpressionKind::HierarchicalValue;
