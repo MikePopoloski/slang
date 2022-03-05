@@ -1339,3 +1339,27 @@ endmodule
     CHECK(diags[0].code == diag::InOutVarPortConn);
     CHECK(diags[1].code == diag::InOutVarPortConn);
 }
+
+TEST_CASE("Unconnected ref port errors") {
+    auto tree = SyntaxTree::fromText(R"(
+module m(a[1:0]);
+    ref int a;
+endmodule
+
+module n(ref int a);
+endmodule
+
+module top;
+    m m1();
+    n n1();
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::RefPortUnnamedUnconnected);
+    CHECK(diags[1].code == diag::RefPortUnconnected);
+}

@@ -771,14 +771,21 @@ public:
 
     template<typename TPort>
     PortConnection* getConnection(const TPort& port) {
-        const bool hasDefault = port.hasInitializer() && port.direction == ArgumentDirection::In;
-        if (usingOrdered) {
-            if (orderedIndex >= orderedConns.size()) {
-                orderedIndex++;
-
-                if (hasDefault)
-                    return defaultConnection(port, {});
-
+        auto reportUnconnected = [&] {
+            if (port.direction == ArgumentDirection::Ref) {
+                if (port.name.empty()) {
+                    if (!unnamedRefError) {
+                        auto& diag =
+                            scope.addDiag(diag::RefPortUnnamedUnconnected, instance.location);
+                        diag.addNote(diag::NoteDeclarationHere, port.location);
+                        unnamedRefError = true;
+                    }
+                }
+                else {
+                    scope.addDiag(diag::RefPortUnconnected, instance.location) << port.name;
+                }
+            }
+            else {
                 if (port.name.empty()) {
                     if (!warnedAboutUnnamed) {
                         auto& diag = scope.addDiag(diag::UnconnectedUnnamedPort, instance.location);
@@ -789,8 +796,19 @@ public:
                 else {
                     scope.addDiag(diag::UnconnectedNamedPort, instance.location) << port.name;
                 }
+            }
+            return emptyConnection(port);
+        };
 
-                return emptyConnection(port);
+        const bool hasDefault = port.hasInitializer() && port.direction == ArgumentDirection::In;
+        if (usingOrdered) {
+            if (orderedIndex >= orderedConns.size()) {
+                orderedIndex++;
+
+                if (hasDefault)
+                    return defaultConnection(port, {});
+
+                return reportUnconnected();
             }
 
             const PortConnectionSyntax& pc = *orderedConns[orderedIndex++];
@@ -803,12 +821,7 @@ public:
 
         if (port.name.empty()) {
             // port is unnamed so can never be connected by name
-            if (!warnedAboutUnnamed) {
-                auto& diag = scope.addDiag(diag::UnconnectedUnnamedPort, instance.location);
-                diag.addNote(diag::NoteDeclarationHere, port.location);
-                warnedAboutUnnamed = true;
-            }
-            return emptyConnection(port);
+            return reportUnconnected();
         }
 
         auto it = namedConns.find(port.name);
@@ -819,8 +832,7 @@ public:
             if (hasDefault)
                 return defaultConnection(port, {});
 
-            scope.addDiag(diag::UnconnectedNamedPort, instance.location) << port.name;
-            return emptyConnection(port);
+            return reportUnconnected();
         }
 
         // We have a named connection; there are two possibilities here:
@@ -1258,6 +1270,7 @@ private:
     bool usingOrdered = true;
     bool hasWildcard = false;
     bool warnedAboutUnnamed = false;
+    bool unnamedRefError = false;
 };
 
 } // end anonymous namespace
