@@ -104,6 +104,9 @@ struct CompilationOptions {
     /// If true, allow hierarchical names in constant expressions.
     bool allowHierarchicalConst = false;
 
+    /// If true, allow all integral types to convert implicitly to enum types.
+    bool relaxEnumConversions = false;
+
     /// If true, compile in "linting" mode where we suppress errors that could
     /// be caused by not having an elaborated design.
     bool lintMode = false;

@@ -1217,7 +1217,7 @@ Expression& ConcatenationExpression::fromSyntax(Compilation& compilation,
                 continue;
             }
 
-            if (arg->isImplicitlyAssignableTo(elemType)) {
+            if (arg->isImplicitlyAssignableTo(compilation, elemType)) {
                 buffer.append(&convertAssignment(context, elemType, *arg,
                                                  argSyntax->getFirstToken().location()));
                 totalElems++;

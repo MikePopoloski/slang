@@ -252,7 +252,7 @@ public:
 
     /// Returns true if this expression can be implicitly assigned to value
     /// of the given type.
-    bool isImplicitlyAssignableTo(const Type& type) const;
+    bool isImplicitlyAssignableTo(Compilation& compilation, const Type& type) const;
 
     /// Traverses the expression tree and computes what its width would be (in bits)
     /// if the types of all known constants were declared with only the bits necessary to

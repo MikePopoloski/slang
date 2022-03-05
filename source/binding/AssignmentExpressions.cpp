@@ -213,10 +213,21 @@ Expression* Expression::tryConnectPortArray(const BindContext& context, const Ty
     return &RangeSelectExpression::fromConstant(comp, *result, range, context);
 }
 
-bool Expression::isImplicitlyAssignableTo(const Type& targetType) const {
-    return targetType.isAssignmentCompatible(*type) ||
-           ((targetType.isString() || targetType.isByteArray()) && isImplicitString()) ||
-           (targetType.isEnum() && isSameEnum(*this, targetType));
+bool Expression::isImplicitlyAssignableTo(Compilation& compilation, const Type& targetType) const {
+    if (targetType.isAssignmentCompatible(*type))
+        return true;
+
+    // String literals have a type of integer, but are allowed to implicitly convert to the
+    // string type.
+    if ((targetType.isString() || targetType.isByteArray()) && isImplicitString())
+        return true;
+
+    if (targetType.isEnum()) {
+        return isSameEnum(*this, targetType) ||
+               (type->isIntegral() && compilation.getOptions().relaxEnumConversions);
+    }
+
+    return false;
 }
 
 Expression& Expression::convertAssignment(const BindContext& context, const Type& type,
@@ -268,13 +279,9 @@ Expression& Expression::convertAssignment(const BindContext& context, const Type
     }
 
     if (!type.isAssignmentCompatible(*rt)) {
-        // String literals have a type of integer, but are allowed to implicitly convert to the
-        // string type. See comments on isSameEnum for why that's here as well.
-        if (expr.isImplicitlyAssignableTo(type)) {
-            result = &ConversionExpression::makeImplicit(context, type, ConversionKind::Implicit,
-                                                         *result, location);
-            selfDetermined(context, result);
-            return *result;
+        if (expr.isImplicitlyAssignableTo(comp, type)) {
+            return ConversionExpression::makeImplicit(context, type, ConversionKind::Implicit,
+                                                      *result, location);
         }
 
         if (expr.kind == ExpressionKind::Streaming) {
@@ -686,7 +693,8 @@ static void checkImplicitConversions(const BindContext& context, const Type& tar
 Expression& ConversionExpression::makeImplicit(const BindContext& context, const Type& targetType,
                                                ConversionKind conversionKind, Expression& expr,
                                                SourceLocation loc) {
-    ASSERT(expr.isImplicitlyAssignableTo(targetType));
+    auto& comp = context.getCompilation();
+    ASSERT(expr.isImplicitlyAssignableTo(comp, targetType));
 
     Expression* op = &expr;
     selfDetermined(context, op);
@@ -697,8 +705,7 @@ Expression& ConversionExpression::makeImplicit(const BindContext& context, const
     if (conversionKind == ConversionKind::Implicit && !context.inUnevaluatedBranch())
         checkImplicitConversions(context, targetType, *op, loc);
 
-    return *context.getCompilation().emplace<ConversionExpression>(targetType, conversionKind, *op,
-                                                                   op->sourceRange);
+    return *comp.emplace<ConversionExpression>(targetType, conversionKind, *op, op->sourceRange);
 }
 
 ConstantValue ConversionExpression::evalImpl(EvalContext& context) const {

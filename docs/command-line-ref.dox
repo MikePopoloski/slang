@@ -218,6 +218,11 @@ This option can be specified more than once to override multiple parameters.
 Allow hierarchical references in constant expressions. SystemVerilog doesn't permit this,
 but many popular tools allow it anyway so this flag can be used for compatibility purposes.
 
+`--relax-enum-conversions`
+
+Allow all integral types to convert implicitly to enum types in assignments. SystemVerilog doesn't
+permit this, but some tools allow it anyway so this flag can be used for compatibility purposes.
+
 @section diag-control Diagnostic Control
 
 `--color-diagnostics`

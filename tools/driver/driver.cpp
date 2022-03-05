@@ -555,6 +555,7 @@ int driverMain(int argc, TArgs argv, bool suppressColorsStdout, bool suppressCol
     optional<bool> diagHierarchy;
     optional<bool> ignoreUnknownModules;
     optional<bool> allowUseBeforeDeclare;
+    optional<bool> relaxEnumConversions;
     optional<uint32_t> errorLimit;
     std::vector<std::string> warningOptions;
     cmdLine.add("-W", warningOptions, "Control the specified warning", "<warning>");
@@ -582,6 +583,8 @@ int driverMain(int argc, TArgs argv, bool suppressColorsStdout, bool suppressCol
                 "interface, and programs.");
     cmdLine.add("--allow-use-before-declare", allowUseBeforeDeclare,
                 "Don't issue an error for use of names before their declarations.");
+    cmdLine.add("--relax-enum-conversions", relaxEnumConversions,
+                "Allow all integral types to convert implicitly to enum types.");
 
     // File list
     optional<bool> singleUnit;
@@ -690,6 +693,8 @@ int driverMain(int argc, TArgs argv, bool suppressColorsStdout, bool suppressCol
                 allowHierarchicalConst = true;
             if (!allowUseBeforeDeclare.has_value())
                 allowUseBeforeDeclare = true;
+            if (!relaxEnumConversions.has_value())
+                relaxEnumConversions = true;
         }
         else {
             OS::printE(fg(errorColor), "error: ");
@@ -733,6 +738,8 @@ int driverMain(int argc, TArgs argv, bool suppressColorsStdout, bool suppressCol
     }
     if (allowHierarchicalConst == true)
         coptions.allowHierarchicalConst = true;
+    if (relaxEnumConversions == true)
+        coptions.relaxEnumConversions = true;
 
     for (auto& name : topModules)
         coptions.topModules.emplace(name);
