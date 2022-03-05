@@ -393,7 +393,6 @@ const RootSymbol& Compilation::getRoot(bool skipDefParamResolution) {
     if (numBinds) {
         BindVisitor visitor(seenBindDirectives, numBinds);
         root->visit(visitor);
-        ASSERT(visitor.errored || seenBindDirectives.size() == numBinds);
     }
 
     return *root;
