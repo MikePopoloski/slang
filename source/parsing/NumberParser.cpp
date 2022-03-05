@@ -298,4 +298,11 @@ NumberParser::IntResult NumberParser::reportMissingDigits(Token sizeToken, Token
                              Token::createMissing(alloc, TokenKind::IntegerLiteral, errLoc));
 }
 
+void NumberParser::reportIntOverflow(Token token) {
+    SVInt val = token.intValue().resize(32);
+    val.setSigned(true);
+
+    addDiag(diag::SignedIntegerOverflow, token.location()) << val;
+}
+
 } // namespace slang

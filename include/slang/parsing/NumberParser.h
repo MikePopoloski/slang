@@ -37,7 +37,7 @@ public:
     IntResult parseSimpleInt(TStream& stream) {
         auto token = stream.consume();
         if (token.intValue() > INT32_MAX)
-            addDiag(diag::SignedIntegerOverflow, token.location());
+            reportIntOverflow(token);
         return IntResult::simple(token);
     }
 
@@ -54,7 +54,7 @@ public:
         else {
             if (!stream.peek(TokenKind::IntegerBase)) {
                 if (token.intValue() > INT32_MAX)
-                    addDiag(diag::SignedIntegerOverflow, token.location());
+                    reportIntOverflow(token);
                 return IntResult::simple(token);
             }
 
@@ -122,6 +122,7 @@ private:
     void addDigit(logic_t digit, int maxValue);
     Diagnostic& addDiag(DiagCode code, SourceLocation location);
     IntResult reportMissingDigits(Token sizeToken, Token baseToken, Token first);
+    void reportIntOverflow(Token token);
 
     bitwidth_t sizeBits = 0;
     LiteralBase literalBase = LiteralBase::Binary;

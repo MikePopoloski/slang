@@ -528,7 +528,7 @@ endmodule
     auto& diagnostics = compilation.getAllDiagnostics();
     std::string result = "\n" + report(diagnostics);
     CHECK(result == R"(
-source:7:17: warning: vector literal too large for the given number of bits [-Wliteral-overflow]
+source:7:17: warning: vector literal too large for the given number of bits [-Wvector-overflow]
     int i = 35'd123498234978234;
                 ^
 source:8:13: error: size of vector literal cannot be zero
@@ -537,7 +537,7 @@ source:8:13: error: size of vector literal cannot be zero
 source:9:13: error: size of vector literal is too large (> 16777215 bits)
     int k = 16777216'd1;
             ^
-source:12:13: error: signed integer overflows 32 bits
+source:12:13: warning: signed integer literal overflows 32 bits, will be truncated to -727379969 [-Wint-overflow]
     int n = 999999999999;
             ^
 source:13:16: error: numeric literals must not start with a leading underscore
@@ -558,7 +558,7 @@ source:19:16: error: expected decimal digit
 source:20:16: error: expected hexadecimal digit
     int v = 'h g;
                ^
-source:21:17: warning: vector literal too large for the given number of bits [-Wliteral-overflow]
+source:21:17: warning: vector literal too large for the given number of bits [-Wvector-overflow]
     int w = 3'h f;
                 ^
 source:22:15: error: expected vector literal digits

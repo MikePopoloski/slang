@@ -40,7 +40,6 @@ warning nonstandard-escape-code NonstandardEscapeCode "non-standard character es
 subsystem Numeric
 error LiteralSizeIsZero "size of vector literal cannot be zero"
 error LiteralSizeTooLarge "size of vector literal is too large (> {} bits)"
-error SignedIntegerOverflow "signed integer overflows 32 bits"
 error ValueMustBeIntegral "value must be integral"
 error ValueMustNotBeUnknown "value must not have any unknown bits"
 error ValueMustBePositive "value must be positive"
@@ -49,7 +48,8 @@ error ValueOutOfRange "{} is out of allowed range ({} to {})"
 error ExpectedVectorDigits "expected vector literal digits"
 warning real-underflow RealLiteralUnderflow "value of real literal is too small; minimum is {:.5e}"
 warning real-overflow RealLiteralOverflow "value of real literal is too large; maximum is {:.5e}"
-warning literal-overflow VectorLiteralOverflow "vector literal too large for the given number of bits"
+warning vector-overflow VectorLiteralOverflow "vector literal too large for the given number of bits"
+warning int-overflow SignedIntegerOverflow "signed integer literal overflows 32 bits, will be truncated to {}"
 
 subsystem Preprocessor
 error CouldNotOpenIncludeFile "could not find or open include file"
@@ -832,7 +832,7 @@ warning unknown-warning-option UnknownWarningOption "unknown warning option '{}'
 // Following are groups of diagnostics, to make it easy to control them from the command line.
 // The default group is the set of warnings that are enabled by default.
 
-group default = { real-underflow real-overflow literal-overflow unconnected-port
+group default = { real-underflow real-overflow vector-overflow int-overflow unconnected-port
                   unconnected-unnamed-port event-const redef-macro not-supported unknown-pragma
                   extra-pragma-args expected-diag-arg unknown-diag-arg pragma-diag-level explicit-static
                   static-skipped elem-not-found dynarray-index dynarray-range queue-range empty-queue
