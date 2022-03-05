@@ -963,6 +963,13 @@ endmodule
 
 module top;
 endmodule
+
+module top2({a[1:0], a[3:2]});
+    ref int a;
+endmodule
+
+module top3(ref int a);
+endmodule
 )");
 
     CompilationOptions coptions;
@@ -975,9 +982,11 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 2);
+    REQUIRE(diags.size() == 4);
     CHECK(diags[0].code == diag::UnusedDefinition);
     CHECK(diags[1].code == diag::TopModuleIfacePort);
+    CHECK(diags[2].code == diag::TopModuleUnnamedRefPort);
+    CHECK(diags[3].code == diag::TopModuleRefPort);
 }
 
 TEST_CASE("Manually specify top modules") {

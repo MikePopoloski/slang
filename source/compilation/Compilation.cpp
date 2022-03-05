@@ -817,13 +817,31 @@ const Diagnostics& Compilation::getSemanticDiagnostics() {
     }
 
     if (!options.suppressUnused) {
-        // Top level instances cannot have interface ports.
+        // Top level instances cannot have interface or ref ports.
         for (auto inst : getRoot().topInstances) {
             for (auto port : inst->body.getPortList()) {
                 if (port->kind == SymbolKind::InterfacePort) {
                     inst->body.addDiag(diag::TopModuleIfacePort, port->location)
                         << inst->name << port->name;
                     break;
+                }
+                else {
+                    ArgumentDirection dir;
+                    if (port->kind == SymbolKind::MultiPort)
+                        dir = port->as<MultiPortSymbol>().direction;
+                    else
+                        dir = port->as<PortSymbol>().direction;
+
+                    if (dir == ArgumentDirection::Ref) {
+                        if (port->name.empty()) {
+                            inst->body.addDiag(diag::TopModuleUnnamedRefPort, port->location)
+                                << inst->name;
+                        }
+                        else {
+                            inst->body.addDiag(diag::TopModuleRefPort, port->location)
+                                << inst->name << port->name;
+                        }
+                    }
                 }
             }
         }
