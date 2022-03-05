@@ -70,7 +70,7 @@ struct CompilationOptions {
 
     /// The maximum number of steps that will be taken when expanding a single
     /// generate construct, to detect infinite loops.
-    uint32_t maxGenerateSteps = 65535;
+    uint32_t maxGenerateSteps = 131072;
 
     /// The maximum depth of nested function calls in constant expressions,
     /// to detect infinite recursion.
