@@ -69,7 +69,8 @@ void DeclaredType::resolveType(const BindContext& typeContext,
         return;
     }
 
-    if (!typeOrLink.typeSyntax) {
+    auto syntax = typeOrLink.typeSyntax;
+    if (!syntax) {
         type = &comp.getErrorType();
         return;
     }
@@ -80,11 +81,17 @@ void DeclaredType::resolveType(const BindContext& typeContext,
 
     // If we are configured to infer implicit types, bind the initializer expression
     // first so that we can derive our type from whatever that happens to be.
-    if (typeOrLink.typeSyntax->kind == SyntaxKind::ImplicitType &&
-        flags.has(DeclaredTypeFlags::InferImplicit)) {
+    if (syntax->kind == SyntaxKind::ImplicitType && flags.has(DeclaredTypeFlags::InferImplicit)) {
         if (dimensions) {
-            typeContext.addDiag(diag::UnpackedArrayParamType, dimensions->sourceRange());
-            type = &comp.getErrorType();
+            auto& its = syntax->as<ImplicitTypeSyntax>();
+            if (its.signing || !its.dimensions.empty()) {
+                type = &comp.getType(*syntax, typeContext, nullptr);
+                type = &comp.getType(*type, *dimensions, typeContext);
+            }
+            else {
+                typeContext.addDiag(diag::UnpackedArrayParamType, dimensions->sourceRange());
+                type = &comp.getErrorType();
+            }
         }
         else if (!initializerSyntax) {
             type = &comp.getErrorType();
@@ -94,9 +101,9 @@ void DeclaredType::resolveType(const BindContext& typeContext,
             if (flags.has(DeclaredTypeFlags::AllowUnboundedLiteral))
                 extraFlags = BindFlags::AllowUnboundedLiteral;
 
-            initializer = &Expression::bindImplicitParam(*typeOrLink.typeSyntax, *initializerSyntax,
-                                                         initializerLocation, initializerContext,
-                                                         typeContext, extraFlags);
+            initializer =
+                &Expression::bindImplicitParam(*syntax, *initializerSyntax, initializerLocation,
+                                               initializerContext, typeContext, extraFlags);
             type = initializer->type;
         }
     }
@@ -105,7 +112,7 @@ void DeclaredType::resolveType(const BindContext& typeContext,
         if (flags.has(DeclaredTypeFlags::TypedefTarget))
             typedefTarget = &parent.as<Type>();
 
-        type = &comp.getType(*typeOrLink.typeSyntax, typeContext, typedefTarget);
+        type = &comp.getType(*syntax, typeContext, typedefTarget);
         if (dimensions)
             type = &comp.getType(*type, *dimensions, typeContext);
     }

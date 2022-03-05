@@ -1059,6 +1059,8 @@ TEST_CASE("Implicit param with unpacked dimensions") {
     auto tree = SyntaxTree::fromText(R"(
 module m;
     parameter foo[3] = '{1,2,3};
+    parameter signed bar[2] = '{1,2};
+    parameter [31:0] baz[2] = '{1,2};
 endmodule
 )");
 
