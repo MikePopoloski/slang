@@ -6,6 +6,7 @@
 //------------------------------------------------------------------------------
 #include "slang/symbols/PortSymbols.h"
 
+#include "slang/binding/AssignmentExpressions.h"
 #include "slang/binding/MiscExpressions.h"
 #include "slang/binding/OperatorExpressions.h"
 #include "slang/compilation/Compilation.h"
@@ -1387,6 +1388,16 @@ static void getNetRanges(const Expression& expr, SmallVector<PortSymbol::NetType
         for (auto op : expr.as<ConcatenationExpression>().operands())
             getNetRanges(*op, ranges);
     }
+    else if (expr.kind == ExpressionKind::Conversion) {
+        auto& conv = expr.as<ConversionExpression>();
+        if (conv.isImplicit())
+            getNetRanges(conv.operand(), ranges);
+    }
+    else if (expr.kind == ExpressionKind::Assignment) {
+        auto& assign = expr.as<AssignmentExpression>();
+        if (assign.isLValueArg())
+            getNetRanges(assign.left(), ranges);
+    }
 }
 
 void PortSymbol::getNetTypes(SmallVector<NetTypeRange>& ranges) const {
@@ -1619,6 +1630,17 @@ const Symbol* PortConnection::getIfaceInstance() const {
     return nullptr;
 }
 
+static std::pair<ArgumentDirection, const Type*> getDirAndType(const Symbol& port) {
+    if (port.kind == SymbolKind::Port) {
+        auto& ps = port.as<PortSymbol>();
+        return { ps.direction, &ps.getType() };
+    }
+    else {
+        auto& mp = port.as<MultiPortSymbol>();
+        return { mp.direction, &mp.getType() };
+    }
+}
+
 const Expression* PortConnection::getExpression() const {
     if (expr || port.kind == SymbolKind::InterfacePort)
         return expr;
@@ -1631,19 +1653,7 @@ const Expression* PortConnection::getExpression() const {
         BindContext context(*scope, ll, BindFlags::NonProcedural);
         context.instance = &parentInstance;
 
-        ArgumentDirection direction;
-        const Type* type;
-        if (port.kind == SymbolKind::Port) {
-            auto& ps = port.as<PortSymbol>();
-            direction = ps.direction;
-            type = &ps.getType();
-        }
-        else {
-            auto& mp = port.as<MultiPortSymbol>();
-            direction = mp.direction;
-            type = &mp.getType();
-        }
-
+        auto [direction, type] = getDirAndType(port);
         if (connectedSymbol) {
             auto& valExpr = ValueExpressionBase::fromSymbol(context, *connectedSymbol, false,
                                                             implicitNameRange);
@@ -1692,24 +1702,95 @@ void PortConnection::checkSimulatedNetTypes() const {
     getNetRanges(*expr, external);
 
     // There might not be any nets, in which case we should just leave.
-    if (internal.empty() || external.empty())
+    if (internal.empty() && external.empty())
         return;
 
     auto scope = parentInstance.getParentScope();
     ASSERT(scope);
 
+    auto requireMatching = [&](const NetType& udnt) {
+        // Types are more restricted; they must match instead of just being
+        // assignment compatible. Also direction must be input or output.
+        // We need to do this dance to get at the type of the connection prior
+        // to it being converted to match the type of the port.
+        auto exprType = expr->type.get();
+        if (expr->kind == ExpressionKind::Conversion) {
+            auto& conv = expr->as<ConversionExpression>();
+            if (conv.isImplicit())
+                exprType = conv.operand().type;
+        }
+        else if (expr->kind == ExpressionKind::Assignment) {
+            auto& assign = expr->as<AssignmentExpression>();
+            if (assign.isLValueArg())
+                exprType = assign.left().type;
+        }
+
+        auto [direction, type] = getDirAndType(port);
+        if (!type->isMatching(*exprType)) {
+            auto& diag = scope->addDiag(diag::MismatchedUserDefPortConn, expr->sourceRange);
+            diag << udnt.name;
+            diag << *type;
+            diag << *exprType;
+        }
+        else if (direction != ArgumentDirection::In && direction != ArgumentDirection::Out) {
+            auto& diag = scope->addDiag(diag::MismatchedUserDefPortDir, expr->sourceRange);
+            diag << udnt.name;
+        }
+    };
+
+    // If only one side has net types, check for user-defined nettypes,
+    // which impose additional restrictions on the connection.
+    if (internal.empty() || external.empty()) {
+        const NetType* udnt = nullptr;
+        auto checker = [&](auto& list) {
+            for (auto& ntr : list) {
+                if (!ntr.netType->isBuiltIn()) {
+                    udnt = ntr.netType;
+                    break;
+                }
+            }
+        };
+
+        checker(internal);
+        checker(external);
+        if (udnt)
+            requireMatching(*udnt);
+
+        return;
+    }
+
     // Simple case is one net connected on each side.
     if (internal.size() == 1 && external.size() == 1) {
-        if (internal[0].netType != external[0].netType) {
+        auto& inNt = *internal[0].netType;
+        auto& exNt = *external[0].netType;
+        if (&inNt == &exNt)
+            return;
+
+        if (!inNt.isBuiltIn() || !exNt.isBuiltIn()) {
+            // If both sides are user-defined nettypes they need to match.
+            if (!inNt.isBuiltIn() && !exNt.isBuiltIn()) {
+                auto& diag = scope->addDiag(diag::UserDefPortTwoSided, expr->sourceRange);
+                diag << inNt.name << exNt.name;
+            }
+            else if (!inNt.isBuiltIn()) {
+                requireMatching(inNt);
+            }
+            else {
+                requireMatching(exNt);
+            }
+        }
+        else {
+            // Otherwise both sides are built-in nettypes.
             bool shouldWarn;
-            NetType::getSimulatedNetType(*internal[0].netType, *external[0].netType, shouldWarn);
+            NetType::getSimulatedNetType(inNt, exNt, shouldWarn);
             if (shouldWarn) {
                 auto& diag = scope->addDiag(diag::NetInconsistent, expr->sourceRange);
-                diag << external[0].netType->name;
-                diag << internal[0].netType->name;
+                diag << exNt.name;
+                diag << inNt.name;
                 diag.addNote(diag::NoteDeclarationHere, port.location);
             }
         }
+
         return;
     }
 
@@ -1724,7 +1805,18 @@ void PortConnection::checkSimulatedNetTypes() const {
         bool shouldWarn;
         auto& inNt = *in->netType;
         auto& exNt = *ex->netType;
-        NetType::getSimulatedNetType(inNt, exNt, shouldWarn);
+
+        if (!inNt.isBuiltIn() || !exNt.isBuiltIn()) {
+            if (&inNt != &exNt) {
+                scope->addDiag(diag::UserDefPortMixedConcat, expr->sourceRange)
+                    << inNt.name << exNt.name;
+                return;
+            }
+            shouldWarn = false;
+        }
+        else {
+            NetType::getSimulatedNetType(inNt, exNt, shouldWarn);
+        }
 
         bitwidth_t width;
         if (in->width < ex->width) {

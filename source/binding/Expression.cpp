@@ -461,6 +461,18 @@ const Symbol* Expression::getSymbolReference(bool allowPacked) const {
         }
         case ExpressionKind::HierarchicalReference:
             return as<HierarchicalReferenceExpression>().symbol;
+        case ExpressionKind::Conversion: {
+            auto& conv = as<ConversionExpression>();
+            if (conv.isImplicit())
+                return conv.operand().getSymbolReference(allowPacked);
+            return nullptr;
+        }
+        case ExpressionKind::Assignment: {
+            auto& assign = as<AssignmentExpression>();
+            if (assign.isLValueArg())
+                return assign.left().getSymbolReference(allowPacked);
+            return nullptr;
+        }
         default:
             return nullptr;
     }

@@ -1363,3 +1363,55 @@ endmodule
     CHECK(diags[0].code == diag::RefPortUnnamedUnconnected);
     CHECK(diags[1].code == diag::RefPortUnconnected);
 }
+
+TEST_CASE("User-defined nettype port connection errors") {
+    auto tree = SyntaxTree::fromText(R"(
+nettype integer nt1;
+
+module m(nt1 foo, bar, input nt1 baz);
+endmodule
+
+module n(input foo);
+endmodule
+
+module o(nt1 a);
+endmodule
+
+module p({a, b});
+    input nt1 a, b;
+endmodule
+
+module top;
+    wire [5:0] a;
+    wire integer b;
+
+    m m1(a, b, b);
+
+    nettype logic[5:0] nt2;
+    nt2 c;
+    n n1(c);
+
+    o o1(c);
+
+    p p1({c, c});
+
+    nt1 d;
+    p p2({d, d});
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 9);
+    CHECK(diags[0].code == diag::WidthTruncate);
+    CHECK(diags[1].code == diag::MismatchedUserDefPortConn);
+    CHECK(diags[2].code == diag::MismatchedUserDefPortDir);
+    CHECK(diags[3].code == diag::WidthTruncate);
+    CHECK(diags[4].code == diag::MismatchedUserDefPortConn);
+    CHECK(diags[5].code == diag::WidthTruncate);
+    CHECK(diags[6].code == diag::UserDefPortTwoSided);
+    CHECK(diags[7].code == diag::WidthExpand);
+    CHECK(diags[8].code == diag::UserDefPortMixedConcat);
+}
