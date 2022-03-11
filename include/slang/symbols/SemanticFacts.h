@@ -86,6 +86,10 @@ ENUM(RandMode, MODE)
 ENUM(PrimitivePortDirection, DIRECTION)
 #undef DIRECTION
 
+#define DRIVER(x) x(Procedural) x(Continuous) x(Other)
+ENUM(DriverKind, DRIVER)
+#undef DRIVER
+
 class SemanticFacts {
 public:
     /// Interprets a keyword token as a variable lifetime value.

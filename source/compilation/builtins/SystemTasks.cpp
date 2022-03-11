@@ -228,7 +228,7 @@ public:
         if (!checkArgCount(context, false, args, range, 1, INT32_MAX))
             return comp.getErrorType();
 
-        if (!args[0]->verifyAssignable(context))
+        if (!args[0]->requireLValue(context))
             return comp.getErrorType();
 
         const Type& ft = *args[0]->type;
@@ -256,7 +256,7 @@ public:
         if (!checkArgCount(context, false, args, range, 2, INT32_MAX))
             return comp.getErrorType();
 
-        if (!args[0]->verifyAssignable(context))
+        if (!args[0]->requireLValue(context))
             return comp.getErrorType();
 
         for (size_t i = 0; i < 2; i++) {
@@ -287,7 +287,7 @@ public:
         if (!checkArgCount(context, false, args, range, 2, 4))
             return comp.getErrorType();
 
-        if (isInput && !args[1]->verifyAssignable(context))
+        if (isInput && !args[1]->requireLValue(context))
             return comp.getErrorType();
 
         if (!args[0]->type->canBeStringLike())
@@ -492,7 +492,7 @@ public:
             return comp.getErrorType();
         }
 
-        if (!args[0]->verifyAssignable(context))
+        if (!args[0]->requireLValue(context))
             return comp.getErrorType();
 
         return comp.getIntType();
@@ -571,7 +571,7 @@ public:
             if (!args[i]->type->isIntegral())
                 return badArg(context, *args[i]);
 
-            if (!args[i]->verifyAssignable(context))
+            if (!args[i]->requireLValue(context))
                 return comp.getErrorType();
         }
 

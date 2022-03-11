@@ -36,4 +36,11 @@ bool ValueSymbol::isKind(SymbolKind kind) {
     }
 }
 
+void ValueSymbol::addDriver(DriverKind, const Expression*) const {
+}
+
+ValueSymbol::Driver::Driver(DriverKind kind, const Expression* longestStaticPrefix) :
+    longestStaticPrefix(longestStaticPrefix), kind(kind) {
+}
+
 } // namespace slang

@@ -1195,9 +1195,9 @@ static bool isWithinCovergroup(const Symbol& field, const Scope& usageScope) {
     return false;
 }
 
-bool MemberAccessExpression::verifyAssignableImpl(const BindContext& context,
-                                                  SourceLocation location,
-                                                  bitmask<AssignFlags> flags) const {
+bool MemberAccessExpression::requireLValueImpl(const BindContext& context, SourceLocation location,
+                                               bitmask<AssignFlags> flags,
+                                               const Expression* longestStaticPrefix) const {
     // If this is a selection of a class member, assignability depends only on the selected
     // member and not on the class handle itself. Otherwise, the opposite is true.
     auto& valueType = *value().type;
@@ -1209,7 +1209,7 @@ bool MemberAccessExpression::verifyAssignableImpl(const BindContext& context,
             return false;
         }
 
-        return value().verifyAssignable(context, location, flags);
+        return value().requireLValue(context, location, flags, longestStaticPrefix);
     }
 
     if (VariableSymbol::isKind(member.kind)) {

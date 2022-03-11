@@ -6,8 +6,9 @@
 //------------------------------------------------------------------------------
 #pragma once
 
-#include "slang/types/DeclaredType.h"
+#include "slang/symbols/SemanticFacts.h"
 #include "slang/symbols/Symbol.h"
+#include "slang/types/DeclaredType.h"
 
 namespace slang {
 
@@ -49,12 +50,30 @@ public:
 
     static bool isKind(SymbolKind kind);
 
+    class Driver {
+    public:
+        const Expression* longestStaticPrefix;
+        DriverKind kind;
+
+        Driver(DriverKind kind, const Expression* longestStaticPrefix);
+
+        const Driver* getNextDriver() const { return next; }
+
+    private:
+        friend class ValueSymbol;
+        mutable const Driver* next;
+    };
+
+    void addDriver(DriverKind kind, const Expression* longestStaticPrefix) const;
+    const Driver* getFirstDriver() const { return firstDriver; }
+
 protected:
     ValueSymbol(SymbolKind kind, string_view name, SourceLocation location,
                 bitmask<DeclaredTypeFlags> flags = DeclaredTypeFlags::None);
 
 private:
     DeclaredType declaredType;
+    mutable const Driver* firstDriver = nullptr;
 };
 
 } // namespace slang

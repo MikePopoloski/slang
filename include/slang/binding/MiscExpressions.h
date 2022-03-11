@@ -18,8 +18,8 @@ class ValueExpressionBase : public Expression {
 public:
     const ValueSymbol& symbol;
 
-    bool verifyAssignableImpl(const BindContext& context, SourceLocation location,
-                              bitmask<AssignFlags> flags) const;
+    bool requireLValueImpl(const BindContext& context, SourceLocation location,
+                           bitmask<AssignFlags> flags, const Expression* longestStaticPrefix) const;
     optional<bitwidth_t> getEffectiveWidthImpl() const;
 
     void serializeTo(ASTSerializer& serializer) const;

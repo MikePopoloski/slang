@@ -96,8 +96,8 @@ Expression& ValueExpressionBase::fromSymbol(const BindContext& context, const Sy
         return *comp.emplace<NamedValueExpression>(value, sourceRange);
 }
 
-bool ValueExpressionBase::verifyAssignableImpl(const BindContext& context, SourceLocation location,
-                                               bitmask<AssignFlags> flags) const {
+bool ValueExpressionBase::requireLValueImpl(const BindContext& context, SourceLocation location,
+                                            bitmask<AssignFlags> flags, const Expression*) const {
     if (!location)
         location = sourceRange.start();
 

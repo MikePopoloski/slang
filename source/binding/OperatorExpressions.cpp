@@ -355,8 +355,9 @@ Expression& UnaryExpression::fromSyntax(Compilation& compilation,
             // expression
             good = type->isNumeric();
             result->type = type;
-            if (!operand.verifyAssignable(context, syntax.operatorToken.location()))
+            if (!operand.requireLValue(context, syntax.operatorToken.location())) {
                 return badExpr(compilation, result);
+            }
 
             break;
         default:
@@ -383,7 +384,7 @@ Expression& UnaryExpression::fromSyntax(Compilation& compilation,
 
     Expression* result = compilation.emplace<UnaryExpression>(getUnaryOperator(syntax.kind), *type,
                                                               operand, syntax.sourceRange());
-    if (operand.bad() || !operand.verifyAssignable(context, syntax.operatorToken.location()))
+    if (operand.bad() || !operand.requireLValue(context, syntax.operatorToken.location()))
         return badExpr(compilation, result);
 
     if ((context.flags.has(BindFlags::NonProcedural) &&

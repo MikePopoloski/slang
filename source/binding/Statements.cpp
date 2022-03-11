@@ -2213,7 +2213,7 @@ Statement& ProceduralDeassignStatement::fromSyntax(Compilation& compilation,
     if (lvalue.bad())
         return badStmt(compilation, result);
 
-    if (!lvalue.verifyAssignable(ctx))
+    if (!lvalue.requireLValue(ctx))
         return badStmt(compilation, result);
 
     if (isRelease) {

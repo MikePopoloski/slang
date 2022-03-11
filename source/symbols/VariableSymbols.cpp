@@ -416,7 +416,7 @@ void ClockVarSymbol::fromSyntax(const Scope& scope, const ClockingItemSyntax& sy
             arg->setInitializer(expr);
 
             if (dir != ArgumentDirection::In)
-                expr.verifyAssignable(context, decl->value->equals.location());
+                expr.requireLValue(context, decl->value->equals.location());
         }
         else {
             auto sym = Lookup::unqualifiedAt(*parent, name.valueText(), ll, name.range());

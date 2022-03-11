@@ -25,7 +25,7 @@ public:
         if (!args[0]->type->isIntegral())
             return badArg(context, *args[0]);
 
-        if (!args[1]->verifyAssignable(context))
+        if (!args[1]->requireLValue(context))
             return comp.getErrorType();
 
         const Type& ft = *args[1]->type;
@@ -54,7 +54,7 @@ public:
         if (!checkArgCount(context, false, args, range, 2, 2))
             return comp.getErrorType();
 
-        if (!args[0]->verifyAssignable(context))
+        if (!args[0]->requireLValue(context))
             return comp.getErrorType();
 
         const Type& ft = *args[0]->type;
@@ -136,7 +136,7 @@ public:
         if (!checkArgCount(context, false, args, range, 2, 4))
             return comp.getErrorType();
 
-        if (!args[0]->verifyAssignable(context))
+        if (!args[0]->requireLValue(context))
             return comp.getErrorType();
 
         // First argument is integral or an unpacked array.
@@ -216,7 +216,7 @@ public:
                 return badArg(context, *args[i]);
         }
 
-        if (!args[0]->verifyAssignable(context))
+        if (!args[0]->requireLValue(context))
             return comp.getErrorType();
 
         return comp.getIntType();

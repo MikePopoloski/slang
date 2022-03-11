@@ -341,22 +341,20 @@ LValue Expression::evalLValue(EvalContext& context) const {
     return visit(visitor, context);
 }
 
-bool Expression::verifyAssignable(const BindContext& context, SourceLocation location,
-                                  bitmask<AssignFlags> flags) const {
+bool Expression::requireLValue(const BindContext& context, SourceLocation location,
+                               bitmask<AssignFlags> flags,
+                               const Expression* longestStaticPrefix) const {
     switch (kind) {
-        case ExpressionKind::NamedValue: {
-            auto& nv = as<NamedValueExpression>();
-            return nv.verifyAssignableImpl(context, location, flags);
-        }
+        case ExpressionKind::NamedValue:
         case ExpressionKind::HierarchicalValue: {
-            auto& hv = as<HierarchicalValueExpression>();
-            return hv.verifyAssignableImpl(context, location, flags);
+            auto& ve = as<ValueExpressionBase>();
+            return ve.requireLValueImpl(context, location, flags, longestStaticPrefix);
         }
         case ExpressionKind::ElementSelect: {
             auto& select = as<ElementSelectExpression>();
             if (context.flags.has(BindFlags::NonProcedural))
                 context.eval(select.selector());
-            return select.value().verifyAssignable(context, location, flags);
+            return select.value().requireLValue(context, location, flags, longestStaticPrefix);
         }
         case ExpressionKind::RangeSelect: {
             auto& select = as<RangeSelectExpression>();
@@ -364,11 +362,11 @@ bool Expression::verifyAssignable(const BindContext& context, SourceLocation loc
                 context.eval(select.left());
                 context.eval(select.right());
             }
-            return select.value().verifyAssignable(context, location, flags);
+            return select.value().requireLValue(context, location, flags, longestStaticPrefix);
         }
         case ExpressionKind::MemberAccess: {
             auto& access = as<MemberAccessExpression>();
-            return access.verifyAssignableImpl(context, location, flags);
+            return access.requireLValueImpl(context, location, flags, longestStaticPrefix);
         }
         case ExpressionKind::Concatenation: {
             auto& concat = as<ConcatenationExpression>();
@@ -376,17 +374,20 @@ bool Expression::verifyAssignable(const BindContext& context, SourceLocation loc
                 break;
 
             for (auto op : concat.operands()) {
-                if (!op->verifyAssignable(context, location, flags | AssignFlags::InConcat))
+                if (!op->requireLValue(context, location, flags | AssignFlags::InConcat,
+                                       longestStaticPrefix)) {
                     return false;
+                }
             }
             return true;
         }
         case ExpressionKind::Streaming: {
             auto& stream = as<StreamingConcatenationExpression>();
             for (auto op : stream.streams()) {
-                if (!op->operand->verifyAssignable(context, location,
-                                                   flags | AssignFlags::InConcat))
+                if (!op->operand->requireLValue(context, location, flags | AssignFlags::InConcat,
+                                                longestStaticPrefix)) {
                     return false;
+                }
             }
             return true;
         }

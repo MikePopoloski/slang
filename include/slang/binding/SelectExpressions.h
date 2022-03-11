@@ -118,8 +118,8 @@ public:
 
     ConstantValue evalImpl(EvalContext& context) const;
     LValue evalLValueImpl(EvalContext& context) const;
-    bool verifyAssignableImpl(const BindContext& context, SourceLocation location,
-                              bitmask<AssignFlags> flags) const;
+    bool requireLValueImpl(const BindContext& context, SourceLocation location,
+                           bitmask<AssignFlags> flags, const Expression* longestStaticPrefix) const;
 
     void serializeTo(ASTSerializer& serializer) const;
 

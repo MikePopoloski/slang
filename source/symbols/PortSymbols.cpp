@@ -78,10 +78,10 @@ void checkSymbolConnection(const Expression& expr, ArgumentDirection direction,
             // All expressions are fine for inputs.
             break;
         case ArgumentDirection::Out:
-            expr.verifyAssignable(context, loc);
+            expr.requireLValue(context, loc);
             break;
         case ArgumentDirection::InOut:
-            expr.verifyAssignable(context, loc, AssignFlags::InOutPort);
+            expr.requireLValue(context, loc, AssignFlags::InOutPort);
             break;
         case ArgumentDirection::Ref:
             if (!expr.canConnectToRefArg(/* isConstRef */ false))

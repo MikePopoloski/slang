@@ -80,7 +80,7 @@ public:
             return comp.getErrorType();
         }
 
-        if (!args[1]->verifyAssignable(context))
+        if (!args[1]->requireLValue(context))
             return comp.getErrorType();
 
         // TODO: if the first argument is known at compile time, do more specific

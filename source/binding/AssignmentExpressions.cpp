@@ -465,7 +465,7 @@ Expression& AssignmentExpression::fromComponents(
         return badExpr(compilation, result);
 
     // Make sure we can actually assign to the thing on the lhs.
-    if (!lhs.verifyAssignable(context, assignLoc, flags))
+    if (!lhs.requireLValue(context, assignLoc, flags))
         return badExpr(compilation, result);
 
     if (lhs.kind == ExpressionKind::Streaming) {
