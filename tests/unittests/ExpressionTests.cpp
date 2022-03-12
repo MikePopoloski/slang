@@ -942,6 +942,10 @@ module m;
         automatic int i;
         i <= 1;
     end
+
+    logic o,p;
+    assign {o,p}[0] = 1;
+    assign {o,p}[1:0] = 2'd1;
 endmodule
 )");
 
@@ -949,11 +953,13 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 4);
+    REQUIRE(diags.size() == 6);
     CHECK(diags[0].code == diag::ExpressionNotAssignable);
     CHECK(diags[1].code == diag::ExpressionNotAssignable);
     CHECK(diags[2].code == diag::AssignmentToConst);
     CHECK(diags[3].code == diag::NonblockingAssignmentToAuto);
+    CHECK(diags[4].code == diag::ExpressionNotAssignable);
+    CHECK(diags[5].code == diag::ExpressionNotAssignable);
 }
 
 TEST_CASE("Subroutine calls with out params from various contexts") {

@@ -39,9 +39,14 @@ enum class EvalFlags : uint8_t {
 
     /// Evaluation is for a covergroup expression, which allows some
     /// forms of non-constant variables to be referenced.
-    CovergroupExpr = 1 << 3
+    CovergroupExpr = 1 << 3,
+
+    /// For parameter evaluation, allow unbounded literals to evaluate to
+    /// the placeholder value. Other expressions that have an unbounded literal
+    /// without a queue target will return an invalid value.
+    AllowUnboundedPlaceholder = 1 << 4
 };
-BITMASK(EvalFlags, CovergroupExpr)
+BITMASK(EvalFlags, AllowUnboundedPlaceholder)
 
 /// A container for all context required to evaluate a statement or expression.
 /// Mostly this involves tracking the callstack and maintaining

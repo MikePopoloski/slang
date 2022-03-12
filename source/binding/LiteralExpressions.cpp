@@ -203,8 +203,11 @@ ConstantValue UnboundedLiteral::evalImpl(EvalContext& context) const {
     // max bound of that queue. Otherwise assume we're assigning to a constant (parameter)
     // and use a placeholder value to indicate that.
     auto target = context.getQueueTarget();
-    if (!target)
-        return ConstantValue::UnboundedPlaceholder{};
+    if (!target) {
+        if (context.flags.has(EvalFlags::AllowUnboundedPlaceholder))
+            return ConstantValue::UnboundedPlaceholder{};
+        return nullptr;
+    }
 
     int32_t size = (int32_t)target->queue()->size();
     return SVInt(32, uint64_t(size - 1), true);

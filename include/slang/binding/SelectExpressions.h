@@ -23,6 +23,8 @@ public:
 
     const Expression& selector() const { return *selector_; }
 
+    bool isConstantSelect(const BindContext& context) const;
+
     ConstantValue evalImpl(EvalContext& context) const;
     LValue evalLValueImpl(EvalContext& context) const;
 
@@ -66,6 +68,8 @@ public:
 
     const Expression& left() const { return *left_; }
     const Expression& right() const { return *right_; }
+
+    bool isConstantSelect(const BindContext& context) const;
 
     ConstantValue evalImpl(EvalContext& context) const;
     LValue evalLValueImpl(EvalContext& context) const;

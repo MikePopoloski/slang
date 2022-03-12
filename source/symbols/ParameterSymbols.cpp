@@ -98,7 +98,8 @@ const ConstantValue& ParameterSymbol::getValue(SourceRange referencingRange) con
             evaluating = true;
             auto guard = ScopeGuard([this] { evaluating = false; });
 
-            value = scope->getCompilation().allocConstant(ctx.eval(*init));
+            value = scope->getCompilation().allocConstant(
+                ctx.eval(*init, EvalFlags::AllowUnboundedPlaceholder));
 
             // If this parameter has an implicit type declared and it was assigned
             // a string literal, make a note so that this parameter gets treated

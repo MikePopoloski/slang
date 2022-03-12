@@ -352,17 +352,55 @@ bool Expression::requireLValue(const BindContext& context, SourceLocation locati
         }
         case ExpressionKind::ElementSelect: {
             auto& select = as<ElementSelectExpression>();
-            if (context.flags.has(BindFlags::NonProcedural))
-                context.eval(select.selector());
-            return select.value().requireLValue(context, location, flags, longestStaticPrefix);
+            auto& val = select.value();
+            if (val.kind == ExpressionKind::Concatenation ||
+                val.kind == ExpressionKind::Streaming) {
+                // Selects of concatenations are not allowed to be lvalues.
+                break;
+            }
+
+            if (context.flags.has(BindFlags::NonProcedural)) {
+                if (!context.eval(select.selector()))
+                    return false;
+
+                if (!longestStaticPrefix)
+                    longestStaticPrefix = this;
+            }
+            else if (select.isConstantSelect(context)) {
+                if (!longestStaticPrefix)
+                    longestStaticPrefix = this;
+            }
+            else {
+                longestStaticPrefix = nullptr;
+            }
+
+            return val.requireLValue(context, location, flags, longestStaticPrefix);
         }
         case ExpressionKind::RangeSelect: {
             auto& select = as<RangeSelectExpression>();
-            if (context.flags.has(BindFlags::NonProcedural)) {
-                context.eval(select.left());
-                context.eval(select.right());
+            auto& val = select.value();
+            if (val.kind == ExpressionKind::Concatenation ||
+                val.kind == ExpressionKind::Streaming) {
+                // Selects of concatenations are not allowed to be lvalues.
+                break;
             }
-            return select.value().requireLValue(context, location, flags, longestStaticPrefix);
+
+            if (context.flags.has(BindFlags::NonProcedural)) {
+                if (!context.eval(select.left()) || !context.eval(select.right()))
+                    return false;
+
+                if (!longestStaticPrefix)
+                    longestStaticPrefix = this;
+            }
+            else if (select.isConstantSelect(context)) {
+                if (!longestStaticPrefix)
+                    longestStaticPrefix = this;
+            }
+            else {
+                longestStaticPrefix = nullptr;
+            }
+
+            return val.requireLValue(context, location, flags, longestStaticPrefix);
         }
         case ExpressionKind::MemberAccess: {
             auto& access = as<MemberAccessExpression>();
@@ -373,6 +411,7 @@ bool Expression::requireLValue(const BindContext& context, SourceLocation locati
             if (!concat.type->isIntegral())
                 break;
 
+            ASSERT(!longestStaticPrefix);
             for (auto op : concat.operands()) {
                 if (!op->requireLValue(context, location, flags | AssignFlags::InConcat,
                                        longestStaticPrefix)) {
@@ -382,6 +421,7 @@ bool Expression::requireLValue(const BindContext& context, SourceLocation locati
             return true;
         }
         case ExpressionKind::Streaming: {
+            ASSERT(!longestStaticPrefix);
             auto& stream = as<StreamingConcatenationExpression>();
             for (auto op : stream.streams()) {
                 if (!op->operand->requireLValue(context, location, flags | AssignFlags::InConcat,

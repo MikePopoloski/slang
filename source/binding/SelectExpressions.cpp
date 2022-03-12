@@ -208,6 +208,10 @@ Expression& ElementSelectExpression::fromConstant(Compilation& compilation, Expr
     return *result;
 }
 
+bool ElementSelectExpression::isConstantSelect(const BindContext& context) const {
+    return !context.tryEval(selector()).bad();
+}
+
 ConstantValue ElementSelectExpression::evalImpl(EvalContext& context) const {
     ConstantValue cv = value().eval(context);
     if (!cv)
@@ -556,6 +560,10 @@ Expression& RangeSelectExpression::fromConstant(Compilation& compilation, Expres
         result->type = compilation.emplace<PackedArrayType>(elementType, range);
 
     return *result;
+}
+
+bool RangeSelectExpression::isConstantSelect(const BindContext& context) const {
+    return context.tryEval(left()) && context.tryEval(right());
 }
 
 ConstantValue RangeSelectExpression::evalImpl(EvalContext& context) const {
@@ -1208,6 +1216,9 @@ bool MemberAccessExpression::requireLValueImpl(const BindContext& context, Sourc
             context.addDiag(diag::CoverOptionImmutable, location) << member.name;
             return false;
         }
+
+        if (!longestStaticPrefix)
+            longestStaticPrefix = this;
 
         return value().requireLValue(context, location, flags, longestStaticPrefix);
     }
