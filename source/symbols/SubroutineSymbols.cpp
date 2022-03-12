@@ -943,9 +943,8 @@ void MethodPrototypeSymbol::serializeTo(ASTSerializer& serializer) const {
     serializer.write("visibility", toString(visibility));
 
     serializer.startArray("arguments");
-    for (auto const arg : arguments) {
-        arg->serializeTo(serializer);
-    }
+    for (auto arg : arguments)
+        serializer.serialize(*arg);
     serializer.endArray();
 }
 
