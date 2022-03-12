@@ -954,9 +954,9 @@ endmodule
 
     auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 6);
-    CHECK(diags[0].code == diag::ExpressionNotAssignable);
-    CHECK(diags[1].code == diag::ExpressionNotAssignable);
-    CHECK(diags[2].code == diag::AssignmentToConst);
+    CHECK(diags[0].code == diag::CantModifyConst);
+    CHECK(diags[1].code == diag::CantModifyConst);
+    CHECK(diags[2].code == diag::AssignmentToConstVar);
     CHECK(diags[3].code == diag::NonblockingAssignmentToAuto);
     CHECK(diags[4].code == diag::ExpressionNotAssignable);
     CHECK(diags[5].code == diag::ExpressionNotAssignable);

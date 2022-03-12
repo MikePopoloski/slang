@@ -103,7 +103,7 @@ bool ValueExpressionBase::requireLValueImpl(const BindContext& context, SourceLo
 
     if (symbol.kind == SymbolKind::Parameter || symbol.kind == SymbolKind::EnumValue ||
         symbol.kind == SymbolKind::Specparam) {
-        auto& diag = context.addDiag(diag::ExpressionNotAssignable, location);
+        auto& diag = context.addDiag(diag::CantModifyConst, location) << symbol.name;
         diag.addNote(diag::NoteDeclarationHere, symbol.location);
         diag << sourceRange;
         return false;
@@ -158,7 +158,7 @@ bool ValueExpressionBase::checkVariableAssignment(const BindContext& context,
 
         if (var.getInitializer() || parent->kind != SymbolKind::Subroutine ||
             (parent->as<SubroutineSymbol>().flags & MethodFlags::Constructor) == 0) {
-            return reportErr(diag::AssignmentToConst);
+            return reportErr(diag::AssignmentToConstVar);
         }
     }
 

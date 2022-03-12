@@ -1146,7 +1146,7 @@ endmodule
 
     auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 2);
-    CHECK(diags[0].code == diag::ExpressionNotAssignable);
+    CHECK(diags[0].code == diag::CantModifyConst);
     CHECK(diags[1].code == diag::InvalidRefArg);
 }
 

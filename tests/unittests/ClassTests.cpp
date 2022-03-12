@@ -668,7 +668,7 @@ endmodule
     auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 3);
     CHECK(diags[0].code == diag::InvalidThisHandle);
-    CHECK(diags[1].code == diag::AssignmentToConst);
+    CHECK(diags[1].code == diag::AssignmentToConstVar);
     CHECK(diags[2].code == diag::InvalidThisHandle);
 }
 
@@ -946,8 +946,8 @@ endclass
     auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 3);
     CHECK(diags[0].code == diag::StaticConstNoInitializer);
-    CHECK(diags[1].code == diag::AssignmentToConst);
-    CHECK(diags[2].code == diag::AssignmentToConst);
+    CHECK(diags[1].code == diag::AssignmentToConstVar);
+    CHECK(diags[2].code == diag::AssignmentToConstVar);
 }
 
 TEST_CASE("Virtual method checking") {
