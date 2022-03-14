@@ -344,6 +344,20 @@ LValue Expression::evalLValue(EvalContext& context) const {
 bool Expression::requireLValue(const BindContext& context, SourceLocation location,
                                bitmask<AssignFlags> flags,
                                const Expression* longestStaticPrefix) const {
+    auto updatePrefix = [&](auto& select) {
+        if (context.flags.has(BindFlags::NonProcedural)) {
+            if (!longestStaticPrefix)
+                longestStaticPrefix = this;
+        }
+        else if (select.isConstantSelect(context)) {
+            if (!longestStaticPrefix)
+                longestStaticPrefix = this;
+        }
+        else {
+            longestStaticPrefix = nullptr;
+        }
+    };
+
     switch (kind) {
         case ExpressionKind::NamedValue:
         case ExpressionKind::HierarchicalValue: {
@@ -362,18 +376,9 @@ bool Expression::requireLValue(const BindContext& context, SourceLocation locati
             if (context.flags.has(BindFlags::NonProcedural)) {
                 if (!context.eval(select.selector()))
                     return false;
-
-                if (!longestStaticPrefix)
-                    longestStaticPrefix = this;
-            }
-            else if (select.isConstantSelect(context)) {
-                if (!longestStaticPrefix)
-                    longestStaticPrefix = this;
-            }
-            else {
-                longestStaticPrefix = nullptr;
             }
 
+            updatePrefix(select);
             return val.requireLValue(context, location, flags, longestStaticPrefix);
         }
         case ExpressionKind::RangeSelect: {
@@ -388,18 +393,9 @@ bool Expression::requireLValue(const BindContext& context, SourceLocation locati
             if (context.flags.has(BindFlags::NonProcedural)) {
                 if (!context.eval(select.left()) || !context.eval(select.right()))
                     return false;
-
-                if (!longestStaticPrefix)
-                    longestStaticPrefix = this;
-            }
-            else if (select.isConstantSelect(context)) {
-                if (!longestStaticPrefix)
-                    longestStaticPrefix = this;
-            }
-            else {
-                longestStaticPrefix = nullptr;
             }
 
+            updatePrefix(select);
             return val.requireLValue(context, location, flags, longestStaticPrefix);
         }
         case ExpressionKind::MemberAccess: {

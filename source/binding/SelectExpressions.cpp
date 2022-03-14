@@ -212,7 +212,7 @@ Expression& ElementSelectExpression::fromConstant(Compilation& compilation, Expr
 }
 
 bool ElementSelectExpression::isConstantSelect(const BindContext& context) const {
-    return !context.tryEval(selector()).bad();
+    return value().type->hasFixedRange() && !context.tryEval(selector()).bad();
 }
 
 ConstantValue ElementSelectExpression::evalImpl(EvalContext& context) const {
@@ -565,7 +565,7 @@ Expression& RangeSelectExpression::fromConstant(Compilation& compilation, Expres
 }
 
 bool RangeSelectExpression::isConstantSelect(const BindContext& context) const {
-    return context.tryEval(left()) && context.tryEval(right());
+    return value().type->hasFixedRange() && context.tryEval(left()) && context.tryEval(right());
 }
 
 ConstantValue RangeSelectExpression::evalImpl(EvalContext& context) const {
