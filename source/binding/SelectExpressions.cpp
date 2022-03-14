@@ -84,7 +84,16 @@ optional<ConstantRange> getFixedIndex(const ConstantValue& cs, const Type& value
 optional<int32_t> getDynamicIndex(const ConstantValue& cs, const ConstantValue& cv,
                                   const Type& valueType, EvalContext& context,
                                   SourceRange sourceRange) {
+    // TODO: rework errors / warnings for out-of-bounds accesses
     optional<int32_t> index = cs.integer().as<int32_t>();
+    if (!index) {
+        context.addDiag(diag::ConstEvalArrayIndexInvalid, sourceRange) << cs << valueType;
+        return std::nullopt;
+    }
+
+    if (!cv)
+        return index;
+
     if (valueType.isString()) {
         const std::string& str = cv.str();
         if (!index || *index < 0 || size_t(*index) >= str.size()) {
@@ -95,7 +104,6 @@ optional<int32_t> getDynamicIndex(const ConstantValue& cs, const ConstantValue& 
         return index;
     }
 
-    // For dynamic arrays and queues, elements out of bounds only issue a warning.
     size_t maxIndex = cv.size();
     if (cv.isQueue())
         maxIndex++;
@@ -115,20 +123,15 @@ optional<int32_t> getDynamicIndex(const ConstantValue& cs, const ConstantValue& 
 
 namespace slang {
 
-static const ValueSymbol* getValueFrom(const Expression& expr) {
-    if (expr.kind == ExpressionKind::NamedValue)
-        return &expr.as<NamedValueExpression>().symbol;
-    if (expr.kind == ExpressionKind::HierarchicalValue)
-        return &expr.as<HierarchicalValueExpression>().symbol;
-    return nullptr;
-}
-
 static void checkForVectoredSelect(const Expression& value, SourceRange range,
                                    const BindContext& context) {
-    if (auto sym = getValueFrom(value); sym && sym->kind == SymbolKind::Net &&
-                                        sym->as<NetSymbol>().expansionHint == NetSymbol::Vectored) {
+    if (value.kind != ExpressionKind::NamedValue && value.kind != ExpressionKind::HierarchicalValue)
+        return;
+
+    const Symbol& sym = value.as<ValueExpressionBase>().symbol;
+    if (sym.kind == SymbolKind::Net && sym.as<NetSymbol>().expansionHint == NetSymbol::Vectored) {
         auto& diag = context.addDiag(diag::SelectOfVectoredNet, range);
-        diag.addNote(diag::NoteDeclarationHere, sym->location);
+        diag.addNote(diag::NoteDeclarationHere, sym.location);
     }
 }
 
@@ -217,23 +220,14 @@ ConstantValue ElementSelectExpression::evalImpl(EvalContext& context) const {
     if (!cv)
         return nullptr;
 
-    auto prevQ = context.getQueueTarget();
-    if (cv.isQueue())
-        context.setQueueTarget(&cv);
-
-    ConstantValue cs = selector().eval(context);
-
-    context.setQueueTarget(prevQ);
-    if (!cs)
+    ConstantValue associativeIndex;
+    auto range = evalIndex(context, cv, associativeIndex);
+    if (!range && associativeIndex.bad())
         return nullptr;
 
     // Handling for packed and unpacked arrays, all integer types.
     const Type& valType = *value().type;
     if (valType.hasFixedRange()) {
-        auto range = getFixedIndex(cs, valType, *type, context, sourceRange);
-        if (!range)
-            return nullptr;
-
         // For fixed types, we know we will always be in range, so just do the selection.
         if (valType.isUnpackedArray())
             return cv.elements()[size_t(range->left)];
@@ -243,13 +237,8 @@ ConstantValue ElementSelectExpression::evalImpl(EvalContext& context) const {
 
     // Handling for associative arrays.
     if (valType.isAssociativeArray()) {
-        if (cs.hasUnknown()) {
-            context.addDiag(diag::ConstEvalAssociativeIndexInvalid, selector().sourceRange) << cs;
-            return nullptr;
-        }
-
         auto& map = *cv.map();
-        if (auto it = map.find(cs); it != map.end())
+        if (auto it = map.find(associativeIndex); it != map.end())
             return it->second;
 
         // If there is a user specified default, return that without warning.
@@ -258,23 +247,20 @@ ConstantValue ElementSelectExpression::evalImpl(EvalContext& context) const {
 
         // Otherwise issue a warning and use the default default.
         context.addDiag(diag::ConstEvalAssociativeElementNotFound, selector().sourceRange)
-            << value().sourceRange << cs;
+            << value().sourceRange << associativeIndex;
         return type->getDefaultValue();
     }
 
     // Handling for strings, dynamic arrays, and queues.
-    auto index = getDynamicIndex(cs, cv, valType, context, sourceRange);
-    if (!index)
-        return nullptr;
-
+    ASSERT(range->left == range->right);
     if (valType.isString())
-        return cv.getSlice(*index, *index, nullptr);
+        return cv.getSlice(range->left, range->right, nullptr);
 
     // -1 is returned for dynamic array indices that are out of bounds.
-    if (*index == -1)
+    if (range->left == -1)
         return type->getDefaultValue();
 
-    return std::move(cv).at(size_t(*index));
+    return std::move(cv).at(size_t(range->left));
 }
 
 LValue ElementSelectExpression::evalLValueImpl(EvalContext& context) const {
@@ -282,26 +268,18 @@ LValue ElementSelectExpression::evalLValueImpl(EvalContext& context) const {
     if (!lval)
         return nullptr;
 
-    auto prevQ = context.getQueueTarget();
-    ConstantValue queueVal;
-    if (value().type->isQueue()) {
-        queueVal = lval.load();
-        context.setQueueTarget(&queueVal);
-    }
+    ConstantValue loadedVal;
+    if (!value().type->hasFixedRange())
+        loadedVal = lval.load();
 
-    ConstantValue cs = selector().eval(context);
-
-    context.setQueueTarget(prevQ);
-    if (!cs)
+    ConstantValue associativeIndex;
+    auto range = evalIndex(context, loadedVal, associativeIndex);
+    if (!range && associativeIndex.bad())
         return nullptr;
 
     // Handling for packed and unpacked arrays, all integer types.
     const Type& valType = *value().type;
     if (valType.hasFixedRange()) {
-        auto range = getFixedIndex(cs, valType, *type, context, sourceRange);
-        if (!range)
-            return nullptr;
-
         // For fixed types, we know we will always be in range, so just do the selection.
         if (valType.isUnpackedArray())
             lval.addIndex(range->left, type->getDefaultValue());
@@ -312,29 +290,53 @@ LValue ElementSelectExpression::evalLValueImpl(EvalContext& context) const {
 
     // Handling for associative arrays.
     if (valType.isAssociativeArray()) {
-        if (cs.hasUnknown()) {
-            context.addDiag(diag::ConstEvalAssociativeIndexInvalid, selector().sourceRange) << cs;
-            return nullptr;
-        }
-
-        lval.addArrayLookup(std::move(cs), type->getDefaultValue());
+        lval.addArrayLookup(std::move(associativeIndex), type->getDefaultValue());
         return lval;
     }
 
     // Handling for strings, dynamic arrays, and queues.
-    auto index = getDynamicIndex(cs, lval.load(), valType, context, sourceRange);
-    if (!index)
-        return nullptr;
-
+    ASSERT(range->left == range->right);
     if (valType.isString()) {
-        lval.addIndex(*index, nullptr);
+        lval.addIndex(range->left, nullptr);
     }
     else {
         // -1 is returned for dynamic array indices that are out of bounds.
         // LValue handles selecting elements out of bounds and ignores accesses to those locations.
-        lval.addIndex(*index, type->getDefaultValue());
+        lval.addIndex(range->left, type->getDefaultValue());
     }
     return lval;
+}
+
+optional<ConstantRange> ElementSelectExpression::evalIndex(EvalContext& context,
+                                                           const ConstantValue& val,
+                                                           ConstantValue& associativeIndex) const {
+    auto prevQ = context.getQueueTarget();
+    if (val.isQueue())
+        context.setQueueTarget(&val);
+
+    ConstantValue cs = selector().eval(context);
+
+    context.setQueueTarget(prevQ);
+    if (!cs)
+        return std::nullopt;
+
+    const Type& valType = *value().type;
+    if (valType.hasFixedRange())
+        return getFixedIndex(cs, valType, *type, context, sourceRange);
+
+    if (valType.isAssociativeArray()) {
+        if (cs.hasUnknown())
+            context.addDiag(diag::ConstEvalAssociativeIndexInvalid, selector().sourceRange) << cs;
+        else
+            associativeIndex = std::move(cs);
+        return std::nullopt;
+    }
+
+    auto index = getDynamicIndex(cs, val, valType, context, sourceRange);
+    if (!index)
+        return std::nullopt;
+
+    return ConstantRange{ *index, *index };
 }
 
 void ElementSelectExpression::serializeTo(ASTSerializer& serializer) const {
@@ -571,39 +573,22 @@ ConstantValue RangeSelectExpression::evalImpl(EvalContext& context) const {
     if (!cv)
         return nullptr;
 
-    auto prevQ = context.getQueueTarget();
-    if (cv.isQueue())
-        context.setQueueTarget(&cv);
-
-    ConstantValue cl = left().eval(context);
-    ConstantValue cr = right().eval(context);
-
-    context.setQueueTarget(prevQ);
-    if (!cl || !cr)
+    auto range = evalRange(context, cv);
+    if (!range)
         return nullptr;
 
-    if (value().type->hasFixedRange()) {
-        optional<ConstantRange> range = getFixedRange(context, cl, cr);
-        if (!range)
-            return nullptr;
-
+    if (value().type->hasFixedRange())
         return cv.getSlice(range->upper(), range->lower(), nullptr);
-    }
-    else {
-        optional<ConstantRange> range = getDynamicRange(context, cl, cr, cv);
-        if (!range)
-            return nullptr;
 
-        // If this is a queue, we didn't verify the endianness of the selection.
-        // Check if it's reversed here and issue a warning if so.
-        if (value().type->isQueue() && range->isLittleEndian() && range->left != range->right) {
-            context.addDiag(diag::ConstEvalQueueRange, sourceRange) << range->left << range->right;
-            return value().type->getDefaultValue();
-        }
-
-        return cv.getSlice(range->upper(), range->lower(),
-                           type->getArrayElementType()->getDefaultValue());
+    // If this is a queue, we didn't verify the endianness of the selection.
+    // Check if it's reversed here and issue a warning if so.
+    if (value().type->isQueue() && range->isLittleEndian() && range->left != range->right) {
+        context.addDiag(diag::ConstEvalQueueRange, sourceRange) << range->left << range->right;
+        return value().type->getDefaultValue();
     }
+
+    return cv.getSlice(range->upper(), range->lower(),
+                       type->getArrayElementType()->getDefaultValue());
 }
 
 LValue RangeSelectExpression::evalLValueImpl(EvalContext& context) const {
@@ -611,39 +596,44 @@ LValue RangeSelectExpression::evalLValueImpl(EvalContext& context) const {
     if (!lval)
         return nullptr;
 
-    auto prevQ = context.getQueueTarget();
-    ConstantValue queueVal;
-    if (value().type->isQueue()) {
-        queueVal = lval.load();
-        context.setQueueTarget(&queueVal);
-    }
+    ConstantValue loadedVal;
+    if (!value().type->hasFixedRange())
+        loadedVal = lval.load();
 
-    ConstantValue cl = left().eval(context);
-    ConstantValue cr = right().eval(context);
-
-    context.setQueueTarget(prevQ);
-    if (!cl || !cr)
+    auto range = evalRange(context, loadedVal);
+    if (!range)
         return nullptr;
 
     if (value().type->hasFixedRange()) {
-        optional<ConstantRange> range = getFixedRange(context, cl, cr);
-        if (!range)
-            return nullptr;
-
         if (value().type->isIntegral())
             lval.addBitSlice(*range);
         else
             lval.addArraySlice(*range, nullptr);
     }
     else {
-        optional<ConstantRange> range = getDynamicRange(context, cl, cr, lval.load());
-        if (!range)
-            return nullptr;
-
         lval.addArraySlice(*range, type->getArrayElementType()->getDefaultValue());
     }
 
     return lval;
+}
+
+optional<ConstantRange> RangeSelectExpression::evalRange(EvalContext& context,
+                                                         const ConstantValue& val) const {
+    auto prevQ = context.getQueueTarget();
+    if (val.isQueue())
+        context.setQueueTarget(&val);
+
+    ConstantValue cl = left().eval(context);
+    ConstantValue cr = right().eval(context);
+
+    context.setQueueTarget(prevQ);
+    if (!cl || !cr)
+        return std::nullopt;
+
+    if (value().type->hasFixedRange())
+        return getFixedRange(context, cl, cr);
+    else
+        return getDynamicRange(context, cl, cr, val);
 }
 
 optional<ConstantRange> RangeSelectExpression::getFixedRange(EvalContext& context,
@@ -723,13 +713,17 @@ optional<ConstantRange> RangeSelectExpression::getDynamicRange(EvalContext& cont
     }
 
     // Out of bounds ranges are allowed, we just issue a warning.
-    size_t size = cv.size();
-    if (l < 0 || r < 0 || size_t(r) >= size) {
-        auto& diag = context.addDiag(diag::ConstEvalDynamicArrayRange, sourceRange);
-        diag << result.left << result.right;
-        diag << valueType;
-        diag << size;
+    if (!cv.bad()) {
+        size_t size = cv.size();
+        if (l < 0 || r < 0 || size_t(r) >= size) {
+            auto& diag = context.addDiag(diag::ConstEvalDynamicArrayRange, sourceRange);
+            diag << result.left << result.right;
+            diag << valueType;
+            diag << size;
+        }
     }
+
+    // TODO: warn on negative indices when we don't have a value to check the size against
 
     return result;
 }

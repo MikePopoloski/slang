@@ -28,6 +28,9 @@ public:
     ConstantValue evalImpl(EvalContext& context) const;
     LValue evalLValueImpl(EvalContext& context) const;
 
+    optional<ConstantRange> evalIndex(EvalContext& context, const ConstantValue& val,
+                                      ConstantValue& associativeIndex) const;
+
     void serializeTo(ASTSerializer& serializer) const;
 
     static Expression& fromSyntax(Compilation& compilation, Expression& value,
@@ -73,6 +76,8 @@ public:
 
     ConstantValue evalImpl(EvalContext& context) const;
     LValue evalLValueImpl(EvalContext& context) const;
+
+    optional<ConstantRange> evalRange(EvalContext& context, const ConstantValue& val) const;
 
     void serializeTo(ASTSerializer& serializer) const;
 
