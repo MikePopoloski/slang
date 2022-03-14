@@ -98,11 +98,6 @@ public:
     }
 
 private:
-    optional<ConstantRange> getFixedRange(EvalContext& context, const ConstantValue& cl,
-                                          const ConstantValue& cr) const;
-    optional<ConstantRange> getDynamicRange(EvalContext& context, const ConstantValue& cl,
-                                            const ConstantValue& cr, const ConstantValue& cv) const;
-
     Expression* value_;
     const Expression* left_;
     const Expression* right_;

@@ -24,13 +24,11 @@
 #include "slang/syntax/AllSyntax.h"
 #include "slang/types/AllTypes.h"
 
-namespace {
+namespace slang {
 
-using namespace slang;
-
-const Type& getIndexedType(Compilation& compilation, const BindContext& context,
-                           const Type& valueType, SourceRange exprRange, SourceRange valueRange,
-                           bool isRangeSelect) {
+static const Type& getIndexedType(Compilation& compilation, const BindContext& context,
+                                  const Type& valueType, SourceRange exprRange,
+                                  SourceRange valueRange, bool isRangeSelect) {
     const Type& ct = valueType.getCanonicalType();
     if (ct.isArray()) {
         return *ct.getArrayElementType();
@@ -56,72 +54,6 @@ const Type& getIndexedType(Compilation& compilation, const BindContext& context,
         return compilation.getBitType();
     }
 }
-
-optional<ConstantRange> getFixedIndex(const ConstantValue& cs, const Type& valueType,
-                                      const Type& resultType, EvalContext& context,
-                                      SourceRange sourceRange) {
-    optional<int32_t> index = cs.integer().as<int32_t>();
-    ConstantRange range = valueType.getFixedRange();
-    if (!index || !range.containsPoint(*index)) {
-        context.addDiag(diag::ConstEvalArrayIndexInvalid, sourceRange) << cs << valueType;
-        return std::nullopt;
-    }
-
-    if (valueType.isUnpackedArray()) {
-        // Unpacked arrays are stored reversed in memory, so reverse the range here.
-        range = range.reverse();
-        int32_t i = range.translateIndex(*index);
-        return ConstantRange{ i, i };
-    }
-
-    // For packed arrays, we're selecting bit ranges, not necessarily single bits,
-    // so multiply out by the width of each element.
-    int32_t width = (int32_t)resultType.getBitWidth();
-    int32_t i = range.translateIndex(*index) * width;
-    return ConstantRange{ i + width - 1, i };
-}
-
-optional<int32_t> getDynamicIndex(const ConstantValue& cs, const ConstantValue& cv,
-                                  const Type& valueType, EvalContext& context,
-                                  SourceRange sourceRange) {
-    // TODO: rework errors / warnings for out-of-bounds accesses
-    optional<int32_t> index = cs.integer().as<int32_t>();
-    if (!index) {
-        context.addDiag(diag::ConstEvalArrayIndexInvalid, sourceRange) << cs << valueType;
-        return std::nullopt;
-    }
-
-    if (!cv)
-        return index;
-
-    if (valueType.isString()) {
-        const std::string& str = cv.str();
-        if (!index || *index < 0 || size_t(*index) >= str.size()) {
-            context.addDiag(diag::ConstEvalStringIndexInvalid, sourceRange) << cs << str.size();
-            return std::nullopt;
-        }
-
-        return index;
-    }
-
-    size_t maxIndex = cv.size();
-    if (cv.isQueue())
-        maxIndex++;
-
-    if (!index || *index < 0 || size_t(*index) >= maxIndex) {
-        context.addDiag(diag::ConstEvalDynamicArrayIndex, sourceRange)
-            << cs << valueType << maxIndex;
-
-        // Return a sentinel value (which is never valid as a dynamic array index).
-        return -1;
-    }
-
-    return index;
-}
-
-} // namespace
-
-namespace slang {
 
 static void checkForVectoredSelect(const Expression& value, SourceRange range,
                                    const BindContext& context) {
@@ -321,8 +253,27 @@ optional<ConstantRange> ElementSelectExpression::evalIndex(EvalContext& context,
         return std::nullopt;
 
     const Type& valType = *value().type;
-    if (valType.hasFixedRange())
-        return getFixedIndex(cs, valType, *type, context, sourceRange);
+    if (valType.hasFixedRange()) {
+        optional<int32_t> index = cs.integer().as<int32_t>();
+        ConstantRange range = valType.getFixedRange();
+        if (!index || !range.containsPoint(*index)) {
+            context.addDiag(diag::ConstEvalArrayIndexInvalid, sourceRange) << cs << valType;
+            return std::nullopt;
+        }
+
+        if (valType.isUnpackedArray()) {
+            // Unpacked arrays are stored reversed in memory, so reverse the range here.
+            range = range.reverse();
+            int32_t i = range.translateIndex(*index);
+            return ConstantRange{ i, i };
+        }
+
+        // For packed arrays, we're selecting bit ranges, not necessarily single bits,
+        // so multiply out by the width of each element.
+        int32_t width = (int32_t)type->getBitWidth();
+        int32_t i = range.translateIndex(*index) * width;
+        return ConstantRange{ i + width - 1, i };
+    }
 
     if (valType.isAssociativeArray()) {
         if (cs.hasUnknown())
@@ -332,9 +283,36 @@ optional<ConstantRange> ElementSelectExpression::evalIndex(EvalContext& context,
         return std::nullopt;
     }
 
-    auto index = getDynamicIndex(cs, val, valType, context, sourceRange);
-    if (!index)
+    // TODO: rework errors / warnings for out-of-bounds accesses
+    optional<int32_t> index = cs.integer().as<int32_t>();
+    if (!index) {
+        context.addDiag(diag::ConstEvalArrayIndexInvalid, sourceRange) << cs << valType;
         return std::nullopt;
+    }
+
+    if (!val)
+        return ConstantRange{ *index, *index };
+
+    if (valType.isString()) {
+        const std::string& str = val.str();
+        if (!index || *index < 0 || size_t(*index) >= str.size()) {
+            context.addDiag(diag::ConstEvalStringIndexInvalid, sourceRange) << cs << str.size();
+            return std::nullopt;
+        }
+
+        return ConstantRange{ *index, *index };
+    }
+
+    size_t maxIndex = val.size();
+    if (val.isQueue())
+        maxIndex++;
+
+    if (!index || *index < 0 || size_t(*index) >= maxIndex) {
+        context.addDiag(diag::ConstEvalDynamicArrayIndex, sourceRange) << cs << valType << maxIndex;
+
+        // Return a sentinel value (which is never valid as a dynamic array index).
+        return ConstantRange{ -1, -1 };
+    }
 
     return ConstantRange{ *index, *index };
 }
@@ -630,65 +608,52 @@ optional<ConstantRange> RangeSelectExpression::evalRange(EvalContext& context,
     if (!cl || !cr)
         return std::nullopt;
 
-    if (value().type->hasFixedRange())
-        return getFixedRange(context, cl, cr);
-    else
-        return getDynamicRange(context, cl, cr, val);
-}
-
-optional<ConstantRange> RangeSelectExpression::getFixedRange(EvalContext& context,
-                                                             const ConstantValue& cl,
-                                                             const ConstantValue& cr) const {
-    ConstantRange result;
     const Type& valueType = *value().type;
-    ConstantRange valueRange = valueType.getFixedRange();
+    if (valueType.hasFixedRange()) {
+        ConstantRange result;
+        ConstantRange valueRange = valueType.getFixedRange();
 
-    if (selectionKind == RangeSelectionKind::Simple) {
-        result = type->getFixedRange();
-    }
-    else {
-        optional<int32_t> l = cl.integer().as<int32_t>();
-        if (!l) {
-            context.addDiag(diag::ConstEvalArrayIndexInvalid, sourceRange) << cl << valueType;
+        if (selectionKind == RangeSelectionKind::Simple) {
+            result = type->getFixedRange();
+        }
+        else {
+            optional<int32_t> l = cl.integer().as<int32_t>();
+            if (!l) {
+                context.addDiag(diag::ConstEvalArrayIndexInvalid, sourceRange) << cl << valueType;
+                return std::nullopt;
+            }
+
+            optional<int32_t> r = cr.integer().as<int32_t>();
+            ASSERT(r);
+            result = ConstantRange::getIndexedRange(*l, *r, valueRange.isLittleEndian(),
+                                                    selectionKind == RangeSelectionKind::IndexedUp);
+        }
+
+        if (!valueRange.containsPoint(result.left) || !valueRange.containsPoint(result.right)) {
+            auto& diag = context.addDiag(diag::ConstEvalPartSelectInvalid, sourceRange);
+            diag << result.left << result.right;
+            diag << valueType;
             return std::nullopt;
         }
 
-        optional<int32_t> r = cr.integer().as<int32_t>();
-        ASSERT(r);
-        result = ConstantRange::getIndexedRange(*l, *r, valueRange.isLittleEndian(),
-                                                selectionKind == RangeSelectionKind::IndexedUp);
-    }
-
-    if (!valueRange.containsPoint(result.left) || !valueRange.containsPoint(result.right)) {
-        auto& diag = context.addDiag(diag::ConstEvalPartSelectInvalid, sourceRange);
-        diag << result.left << result.right;
-        diag << valueType;
-        return std::nullopt;
-    }
-
-    if (!valueType.isPackedArray()) {
-        if (valueType.isUnpackedArray()) {
-            // Unpacked arrays are stored reversed in memory, so reverse the range here.
-            valueRange = valueRange.reverse();
+        if (!valueType.isPackedArray()) {
+            if (valueType.isUnpackedArray()) {
+                // Unpacked arrays are stored reversed in memory, so reverse the range here.
+                valueRange = valueRange.reverse();
+            }
+            result.left = valueRange.translateIndex(result.left);
+            result.right = valueRange.translateIndex(result.right);
+            return result;
         }
-        result.left = valueRange.translateIndex(result.left);
-        result.right = valueRange.translateIndex(result.right);
+
+        // For packed arrays we're potentially selecting multi-bit elements.
+        int32_t width = (int32_t)valueType.getArrayElementType()->getBitWidth();
+        result.left = valueRange.translateIndex(result.left) * width + width - 1;
+        result.right = valueRange.translateIndex(result.right) * width;
+
         return result;
     }
 
-    // For packed arrays we're potentially selecting multi-bit elements.
-    int32_t width = (int32_t)valueType.getArrayElementType()->getBitWidth();
-    result.left = valueRange.translateIndex(result.left) * width + width - 1;
-    result.right = valueRange.translateIndex(result.right) * width;
-
-    return result;
-}
-
-optional<ConstantRange> RangeSelectExpression::getDynamicRange(EvalContext& context,
-                                                               const ConstantValue& cl,
-                                                               const ConstantValue& cr,
-                                                               const ConstantValue& cv) const {
-    const Type& valueType = *value().type;
     optional<int32_t> li = cl.integer().as<int32_t>();
     optional<int32_t> ri = cr.integer().as<int32_t>();
     if (!li) {
@@ -713,8 +678,8 @@ optional<ConstantRange> RangeSelectExpression::getDynamicRange(EvalContext& cont
     }
 
     // Out of bounds ranges are allowed, we just issue a warning.
-    if (!cv.bad()) {
-        size_t size = cv.size();
+    if (!val.bad()) {
+        size_t size = val.size();
         if (l < 0 || r < 0 || size_t(r) >= size) {
             auto& diag = context.addDiag(diag::ConstEvalDynamicArrayRange, sourceRange);
             diag << result.left << result.right;
