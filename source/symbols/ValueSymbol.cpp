@@ -137,14 +137,14 @@ void ValueSymbol::addDriver(DriverKind driverKind, const Expression& longestStat
         // initializer expression that should count as a driver as well.
         switch (kind) {
             case SymbolKind::Net:
-                if (auto init = getInitializer())
+                if (getInitializer())
                     firstDriver = comp.emplace<Driver>(DriverKind::Continuous, makeRef());
                 break;
             case SymbolKind::Variable:
             case SymbolKind::ClassProperty:
             case SymbolKind::Field:
                 if (as<VariableSymbol>().lifetime == VariableLifetime::Static) {
-                    if (auto init = getInitializer())
+                    if (getInitializer())
                         firstDriver = comp.emplace<Driver>(DriverKind::Procedural, makeRef());
                 }
                 break;
