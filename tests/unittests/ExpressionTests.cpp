@@ -2533,6 +2533,12 @@ module m;
     end
 
     assign bar[2][1].foo = 3;
+
+    int i = 1;
+    assign i = 2;
+
+    wire [31:0] j = 1;
+    assign j = 2;
 endmodule
 )");
 
@@ -2540,7 +2546,8 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 2);
+    REQUIRE(diags.size() == 3);
     CHECK(diags[0].code == diag::MultipleContAssigns);
     CHECK(diags[1].code == diag::MixedVarAssigns);
+    CHECK(diags[2].code == diag::MixedVarAssigns);
 }

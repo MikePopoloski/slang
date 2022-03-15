@@ -125,11 +125,40 @@ void ValueSymbol::addDriver(DriverKind driverKind, const Expression& longestStat
     auto& comp = scope->getCompilation();
     auto driver = comp.emplace<Driver>(driverKind, longestStaticPrefix);
     if (!firstDriver) {
-        firstDriver = driver;
-        return;
+        auto makeRef = [&]() -> const Expression& {
+            BindContext bindContext(*scope, LookupLocation::min);
+            SourceRange range = { location, location + name.length() };
+            return ValueExpressionBase::fromSymbol(bindContext, *this, /* isHierarchical */ false,
+                                                   range);
+        };
+
+        // The first time we add a driver, check whether there is also an
+        // initializer expression that should count as a driver as well.
+        switch (kind) {
+            case SymbolKind::Net:
+                if (auto init = getInitializer())
+                    firstDriver = comp.emplace<Driver>(DriverKind::Continuous, makeRef());
+                break;
+            case SymbolKind::Variable:
+            case SymbolKind::ClassProperty:
+            case SymbolKind::Field:
+                if (as<VariableSymbol>().lifetime == VariableLifetime::Static) {
+                    if (auto init = getInitializer())
+                        firstDriver = comp.emplace<Driver>(DriverKind::Procedural, makeRef());
+                }
+                break;
+            default:
+                break;
+        }
+
+        if (!firstDriver) {
+            firstDriver = driver;
+            return;
+        }
     }
 
-    const bool isNet = kind == SymbolKind::Net;
+    const bool checkOverlap =
+        VariableSymbol::isKind(kind) && as<VariableSymbol>().lifetime == VariableLifetime::Static;
 
     // Walk the list of drivers to the end and add this one there.
     // Along the way, check that the driver is valid given the ones that already exist.
@@ -137,7 +166,7 @@ void ValueSymbol::addDriver(DriverKind driverKind, const Expression& longestStat
     while (true) {
         // Variables can't be driven by multiple continuous assignments or
         // a mix of continuous and procedural assignments.
-        if (!isNet &&
+        if (checkOverlap &&
             (driverKind == DriverKind::Continuous || curr->kind == DriverKind::Continuous) &&
             curr->overlaps(comp, *driver)) {
 
