@@ -15,6 +15,7 @@
 #include "slang/symbols/Scope.h"
 #include "slang/symbols/VariableSymbols.h"
 #include "slang/syntax/AllSyntax.h"
+#include "slang/types/NetType.h"
 
 namespace slang {
 
@@ -158,7 +159,9 @@ void ValueSymbol::addDriver(DriverKind driverKind, const Expression& longestStat
     }
 
     const bool checkOverlap =
-        VariableSymbol::isKind(kind) && as<VariableSymbol>().lifetime == VariableLifetime::Static;
+        (VariableSymbol::isKind(kind) &&
+         as<VariableSymbol>().lifetime == VariableLifetime::Static) ||
+        (kind == SymbolKind::Net && as<NetSymbol>().netType.netKind == NetType::UWire);
 
     // Walk the list of drivers to the end and add this one there.
     // Along the way, check that the driver is valid given the ones that already exist.
@@ -173,7 +176,8 @@ void ValueSymbol::addDriver(DriverKind driverKind, const Expression& longestStat
             auto currRange = curr->longestStaticPrefix->sourceRange;
             auto driverRange = driver->longestStaticPrefix->sourceRange;
             auto code =
-                (driverKind == DriverKind::Continuous && curr->kind == DriverKind::Continuous)
+                kind == SymbolKind::Net ? diag::MultipleUWireDrivers
+                : (driverKind == DriverKind::Continuous && curr->kind == DriverKind::Continuous)
                     ? diag::MultipleContAssigns
                     : diag::MixedVarAssigns;
 

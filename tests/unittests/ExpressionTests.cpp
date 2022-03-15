@@ -2539,6 +2539,9 @@ module m;
 
     wire [31:0] j = 1;
     assign j = 2;
+
+    uwire [31:0] k = 1;
+    assign k = 2;
 endmodule
 )");
 
@@ -2546,8 +2549,9 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 3);
+    REQUIRE(diags.size() == 4);
     CHECK(diags[0].code == diag::MultipleContAssigns);
     CHECK(diags[1].code == diag::MixedVarAssigns);
     CHECK(diags[2].code == diag::MixedVarAssigns);
+    CHECK(diags[3].code == diag::MultipleUWireDrivers);
 }
