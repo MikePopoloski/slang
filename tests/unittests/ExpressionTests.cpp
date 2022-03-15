@@ -877,17 +877,18 @@ TEST_CASE("Disallowed assignment contexts") {
 module m;
     int i;
     int j;
+    int p;
     logic [(j = 2) : 0] asdf;
     assign i = 1 + (j = 1);
 
-    initial i = {j = 1};
-    initial if (i = 1) begin end
+    initial p = {j = 1};
+    initial if (p = 1) begin end
 
-    assign i = j++;
-    assign i = ++j;
+    assign i = i++;
+    assign i = ++i;
 
     // This is ok
-    initial i = 1 + (j = 1);
+    initial p = 1 + (j = 1);
 
     function func(int k);
     endfunction
@@ -905,7 +906,7 @@ module m;
     end
 
     final begin
-        i <= 5;
+        p <= 5;
     end
 endmodule
 )");
@@ -933,7 +934,7 @@ module m;
     const struct { int j = i[0] + 2; } foo = '{3};
 
     initial begin
-        ASD = 3;
+        ASD = ASD;
         i[0] = 4;
         foo.j = 5;
     end
@@ -1522,8 +1523,11 @@ module sub(input byte b);
           diag::BadStreamContext },
     };
 
-    for (const auto& test : illegal)
-        CHECK(testBitstream(test.sv, test.msg) == 1);
+    for (const auto& test : illegal) {
+        if (testBitstream(test.sv, test.msg) != 1) {
+            FAIL_CHECK(test.sv);
+        }
+    }
 
     std::string legal[] = {
         "int a; byte b[4] = {<<3{a}};",
@@ -2511,4 +2515,32 @@ endmodule
     auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::BadAssignment);
+}
+
+TEST_CASE("Multiple driver errors") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    struct packed { int foo; } [1:0] bar[3];
+
+    assign bar[0][0].foo = 1;
+    assign bar[0][0].foo = 2;
+    assign bar[1] = '0;
+
+    initial begin
+        bar[1][0] = '1;
+        bar[2][0].foo = 1;
+        bar[2][0].foo = 2;
+    end
+
+    assign bar[2][1].foo = 3;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::MultipleContAssigns);
+    CHECK(diags[1].code == diag::MixedVarAssigns);
 }

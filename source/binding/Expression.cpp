@@ -427,6 +427,12 @@ bool Expression::requireLValue(const BindContext& context, SourceLocation locati
             }
             return true;
         }
+        case ExpressionKind::Conversion: {
+            auto& conv = as<ConversionExpression>();
+            if (conv.isImplicit())
+                return conv.operand().requireLValue(context, location, flags, longestStaticPrefix);
+            break;
+        }
         case ExpressionKind::Invalid:
             return false;
         default:

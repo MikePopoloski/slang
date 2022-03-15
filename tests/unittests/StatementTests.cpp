@@ -1302,7 +1302,12 @@ module m;
         {cb.i, cb.i[1]} <= 3; // bad
     end
 
-    assign cb.i = 3;
+    int j;
+    clocking cb2 @clk;
+        output j;
+    endclocking
+
+    assign cb2.j = 3;
 endmodule
 )");
 

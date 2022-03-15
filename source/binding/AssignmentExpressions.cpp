@@ -464,15 +464,15 @@ Expression& AssignmentExpression::fromComponents(
     if (lhs.bad() || rhs.bad())
         return badExpr(compilation, result);
 
-    // Make sure we can actually assign to the thing on the lhs.
-    if (!lhs.requireLValue(context, assignLoc, flags))
-        return badExpr(compilation, result);
-
     if (lhs.kind == ExpressionKind::Streaming) {
         if (!Bitstream::canBeTarget(lhs.as<StreamingConcatenationExpression>(), rhs, assignLoc,
                                     context)) {
             return badExpr(compilation, result);
         }
+
+        if (!lhs.requireLValue(context, assignLoc, flags))
+            return badExpr(compilation, result);
+
         return *result;
     }
 
@@ -487,6 +487,9 @@ Expression& AssignmentExpression::fromComponents(
     result->right_ =
         &convertAssignment(context, *lhs.type, *result->right_, assignLoc, &result->left_);
     if (result->right_->bad())
+        return badExpr(compilation, result);
+
+    if (!result->left_->requireLValue(context, assignLoc, flags))
         return badExpr(compilation, result);
 
     if (timingControl) {

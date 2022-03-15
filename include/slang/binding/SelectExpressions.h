@@ -125,6 +125,8 @@ public:
     bool requireLValueImpl(const BindContext& context, SourceLocation location,
                            bitmask<AssignFlags> flags, const Expression* longestStaticPrefix) const;
 
+    ConstantRange getSelectRange() const;
+
     void serializeTo(ASTSerializer& serializer) const;
 
     static Expression& fromSelector(Compilation& compilation, Expression& expr,

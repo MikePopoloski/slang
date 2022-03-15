@@ -2164,9 +2164,13 @@ Statement& ProceduralAssignStatement::fromSyntax(Compilation& compilation,
                                                  const ProceduralAssignStatementSyntax& syntax,
                                                  const BindContext& context) {
     bool isForce = syntax.keyword.kind == TokenKind::ForceKeyword;
-    auto& assign = Expression::bind(*syntax.expr, context,
-                                    BindFlags::NonProcedural | BindFlags::AssignmentAllowed);
+    bitmask<BindFlags> bindFlags = BindFlags::NonProcedural | BindFlags::AssignmentAllowed;
+    if (isForce)
+        bindFlags |= BindFlags::ProceduralForceRelease;
+    else
+        bindFlags |= BindFlags::ProceduralAssign;
 
+    auto& assign = Expression::bind(*syntax.expr, context, bindFlags);
     auto result =
         compilation.emplace<ProceduralAssignStatement>(assign, isForce, syntax.sourceRange());
     if (assign.bad())
@@ -2204,7 +2208,7 @@ void ProceduralAssignStatement::serializeTo(ASTSerializer& serializer) const {
 Statement& ProceduralDeassignStatement::fromSyntax(Compilation& compilation,
                                                    const ProceduralDeassignStatementSyntax& syntax,
                                                    const BindContext& context) {
-    BindContext ctx = context.resetFlags(BindFlags::NonProcedural);
+    auto ctx = context.resetFlags(BindFlags::NonProcedural | BindFlags::ProceduralForceRelease);
     auto& lvalue = Expression::bind(*syntax.variable, ctx);
 
     bool isRelease = syntax.keyword.kind == TokenKind::ReleaseKeyword;

@@ -26,6 +26,16 @@ Compilation& BindContext::getCompilation() const {
     return scope->getCompilation();
 }
 
+DriverKind BindContext::getDriverKind() const {
+    if (flags.has(BindFlags::ProceduralAssign))
+        return DriverKind::Procedural;
+    if (flags.has(BindFlags::ProceduralForceRelease))
+        return DriverKind::Other;
+    if (flags.has(BindFlags::NonProcedural))
+        return DriverKind::Continuous;
+    return DriverKind::Procedural;
+}
+
 void BindContext::setAttributes(const Statement& stmt,
                                 span<const AttributeInstanceSyntax* const> syntax) const {
     if (syntax.empty())

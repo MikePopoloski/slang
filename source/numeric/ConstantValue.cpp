@@ -776,6 +776,10 @@ bool ConstantRange::containsPoint(int32_t index) const {
     return index >= lower() && index <= upper();
 }
 
+bool ConstantRange::overlaps(ConstantRange other) const {
+    return lower() <= other.upper() && upper() >= other.lower();
+}
+
 ConstantRange ConstantRange::getIndexedRange(int32_t l, int32_t r, bool littleEndian,
                                              bool indexedUp) {
     ConstantRange result;

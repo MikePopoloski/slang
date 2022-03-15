@@ -52,19 +52,21 @@ public:
 
     class Driver {
     public:
-        const Expression* longestStaticPrefix;
+        not_null<const Expression*> longestStaticPrefix;
         DriverKind kind;
 
-        Driver(DriverKind kind, const Expression* longestStaticPrefix);
+        Driver(DriverKind kind, const Expression& longestStaticPrefix);
 
         const Driver* getNextDriver() const { return next; }
 
+        bool overlaps(Compilation& compilation, const Driver& other) const;
+
     private:
         friend class ValueSymbol;
-        mutable const Driver* next;
+        mutable const Driver* next = nullptr;
     };
 
-    void addDriver(DriverKind kind, const Expression* longestStaticPrefix) const;
+    void addDriver(DriverKind kind, const Expression& longestStaticPrefix) const;
     const Driver* getFirstDriver() const { return firstDriver; }
 
 protected:

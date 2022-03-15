@@ -316,6 +316,10 @@ struct ConstantRange {
     /// Determines whether the given point is within the range.
     bool containsPoint(int32_t index) const;
 
+    /// Determines whether the given range overlaps with this one
+    /// (including cases where one is wholly contained in the other).
+    bool overlaps(ConstantRange other) const;
+
     /// Creates a constant range based on a left / right value that is either indexed up
     /// or indexed down. This implements the SystemVerilog range operators of '+:' and '-:'
     static ConstantRange getIndexedRange(int32_t l, int32_t r, bool littleEndian, bool indexedUp);

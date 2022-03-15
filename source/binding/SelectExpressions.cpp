@@ -1145,6 +1145,25 @@ LValue MemberAccessExpression::evalLValueImpl(EvalContext& context) const {
     return lval;
 }
 
+ConstantRange MemberAccessExpression::getSelectRange() const {
+    int32_t io = (int32_t)offset;
+    auto& valueType = value().type->getCanonicalType();
+    if (valueType.isUnpackedStruct()) {
+        return { io, io };
+    }
+    else if (valueType.isUnpackedUnion()) {
+        return { 0, 0 };
+    }
+    else if (valueType.isPackedUnion()) {
+        int32_t width = (int32_t)type->getBitWidth();
+        return { width - 1, 0 };
+    }
+    else {
+        int32_t width = (int32_t)type->getBitWidth();
+        return { width + io - 1, io };
+    }
+}
+
 static bool isWithinCovergroup(const Symbol& field, const Scope& usageScope) {
     const Scope* scope = field.getParentScope();
     while (scope) {
@@ -1183,8 +1202,14 @@ bool MemberAccessExpression::requireLValueImpl(const BindContext& context, Sourc
     }
 
     if (VariableSymbol::isKind(member.kind)) {
-        return ValueExpressionBase::checkVariableAssignment(context, member.as<VariableSymbol>(),
-                                                            flags, location, sourceRange);
+        if (!longestStaticPrefix)
+            longestStaticPrefix = this;
+
+        auto& var = member.as<VariableSymbol>();
+        var.addDriver(context.getDriverKind(), *longestStaticPrefix);
+
+        return ValueExpressionBase::checkVariableAssignment(context, var, flags, location,
+                                                            sourceRange);
     }
 
     // TODO: modport assignability checks
