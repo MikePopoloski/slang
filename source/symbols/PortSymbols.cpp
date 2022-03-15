@@ -69,7 +69,7 @@ std::tuple<const Definition*, string_view> getInterfacePortInfo(
     return { def, modport };
 }
 
-// This checks factors others than types when making a port connection
+// This checks factors other than types when making a port connection
 // to a specific symbol.
 void checkSymbolConnection(const Expression& expr, ArgumentDirection direction,
                            const BindContext& context, SourceLocation loc) {
@@ -251,10 +251,16 @@ private:
         port->setAttributes(scope, attrs);
 
         if (!port->name.empty()) {
-            if (port->direction == ArgumentDirection::InOut && !netType)
+            if (port->direction == ArgumentDirection::InOut && !netType) {
                 scope.addDiag(diag::InOutPortCannotBeVariable, port->location) << port->name;
-            else if (port->direction == ArgumentDirection::Ref && netType)
+            }
+            else if (port->direction == ArgumentDirection::InOut &&
+                     netType->netKind == NetType::UWire) {
+                scope.addDiag(diag::InOutUWirePort, port->location) << port->name;
+            }
+            else if (port->direction == ArgumentDirection::Ref && netType) {
                 scope.addDiag(diag::RefPortMustBeVariable, port->location) << port->name;
+            }
         }
 
         // Create a new symbol to represent this port internally to the instance.
@@ -565,6 +571,11 @@ private:
         if (info.direction == ArgumentDirection::Ref && isNet)
             scope.addDiag(diag::RefPortMustBeVariable, declLoc) << name;
 
+        if (info.direction == ArgumentDirection::InOut && isNet &&
+            info.internalSymbol->as<NetSymbol>().netType.netKind == NetType::UWire) {
+            scope.addDiag(diag::InOutUWirePort, declLoc) << name;
+        }
+
         if ((info.direction != ArgumentDirection::Out || isNet) && decl.initializer)
             scope.addDiag(diag::DisallowedPortDefault, decl.initializer->sourceRange());
     }
@@ -688,6 +699,14 @@ private:
                     allVars = false;
                     if (dir == ArgumentDirection::Ref)
                         reportDirError(diag::PortConcatRef);
+
+                    // UWire nets aren't resolvable nets and so act like variables
+                    // for the purposes of these checks.
+                    if (sym->as<NetSymbol>().netType.netKind == NetType::UWire) {
+                        allNets = false;
+                        if (dir == ArgumentDirection::InOut)
+                            reportDirError(diag::PortConcatInOut);
+                    }
                 }
                 else {
                     allNets = false;

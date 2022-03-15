@@ -22,6 +22,7 @@
 #include "slang/symbols/VariableSymbols.h"
 #include "slang/syntax/AllSyntax.h"
 #include "slang/types/AllTypes.h"
+#include "slang/types/NetType.h"
 
 namespace slang {
 
@@ -114,6 +115,13 @@ bool ValueExpressionBase::requireLValueImpl(const BindContext& context, SourceLo
         // chandles can only be assigned in procedural contexts.
         if (symbol.getType().isCHandle()) {
             context.addDiag(diag::AssignToCHandle, sourceRange);
+            return false;
+        }
+
+        if (symbol.kind == SymbolKind::Net &&
+            symbol.as<NetSymbol>().netType.netKind == NetType::UWire &&
+            flags.has(AssignFlags::InOutPort)) {
+            context.addDiag(diag::InOutUWireConn, sourceRange) << symbol.name;
             return false;
         }
     }

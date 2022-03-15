@@ -1415,3 +1415,38 @@ endmodule
     CHECK(diags[7].code == diag::WidthExpand);
     CHECK(diags[8].code == diag::UserDefPortMixedConcat);
 }
+
+TEST_CASE("inout uwire port errors") {
+    auto tree = SyntaxTree::fromText(R"(
+module m(a);
+    inout uwire a;
+endmodule
+
+module n(inout uwire a);
+endmodule
+
+module p({a,b});
+    inout a;
+    input uwire b;
+endmodule
+
+module q(a);
+    inout a;
+endmodule
+
+module top;
+    uwire a;
+    q q1(a);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 4);
+    CHECK(diags[0].code == diag::InOutUWirePort);
+    CHECK(diags[1].code == diag::InOutUWirePort);
+    CHECK(diags[2].code == diag::PortConcatInOut);
+    CHECK(diags[3].code == diag::InOutUWireConn);
+}
