@@ -72,14 +72,14 @@ std::tuple<const Definition*, string_view> getInterfacePortInfo(
 // This checks factors other than types when making a port connection
 // to a specific symbol.
 void checkSymbolConnection(const Expression& expr, ArgumentDirection direction,
-                           const BindContext& context, SourceLocation loc, bool isInputPort) {
+                           const BindContext& context, SourceLocation loc,
+                           bitmask<AssignFlags> flags) {
     switch (direction) {
         case ArgumentDirection::In:
             // All expressions are fine for inputs.
             break;
         case ArgumentDirection::Out:
-            expr.requireLValue(context, loc,
-                               isInputPort ? AssignFlags::InputPort : AssignFlags::None);
+            expr.requireLValue(context, loc, flags);
             break;
         case ArgumentDirection::InOut:
             expr.requireLValue(context, loc, AssignFlags::InOutPort);
@@ -1328,15 +1328,12 @@ const Type& PortSymbol::getType() const {
 
         if (direction == ArgumentDirection::In || direction == ArgumentDirection::InOut) {
             // Ensure that this driver gets registered with the internal symbol.
-            if (internalExpr) {
-                internalExpr->requireLValue(context, {},
-                                            direction == ArgumentDirection::In
-                                                ? AssignFlags::InputPort
-                                                : AssignFlags::InOutPort);
-            }
-            else {
-                internalSymbol->as<ValueSymbol>().addDriver(DriverKind::Continuous, valExpr, true);
-            }
+            auto flags = direction == ArgumentDirection::In ? AssignFlags::InputPort
+                                                            : AssignFlags::InOutPort;
+            if (internalExpr)
+                internalExpr->requireLValue(context, {}, flags);
+            else
+                internalSymbol->as<ValueSymbol>().addDriver(DriverKind::Continuous, valExpr, flags);
         }
     }
     else if (isNullPort) {
@@ -1369,7 +1366,8 @@ const Type& PortSymbol::getType() const {
             }
 
             checkSymbolConnection(*internalExpr, checkDir, context, location,
-                                  direction == ArgumentDirection::In);
+                                  direction == ArgumentDirection::In ? AssignFlags::InputPort
+                                                                     : AssignFlags::None);
         }
     }
 
@@ -1704,7 +1702,9 @@ const Expression* PortConnection::getExpression() const {
             }
             else {
                 expr = &valExpr;
-                checkSymbolConnection(*expr, direction, context, expr->sourceRange.start(), false);
+                checkSymbolConnection(*expr, direction, context, expr->sourceRange.start(),
+                                      direction == ArgumentDirection::Out ? AssignFlags::OutputPort
+                                                                          : AssignFlags::None);
             }
         }
         else {

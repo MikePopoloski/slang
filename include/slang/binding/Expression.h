@@ -127,26 +127,6 @@ ENUM(RangeSelectionKind, RANGE)
 #undef RANGE
 // clang-format on
 
-/// A set of flags that control how assignments are checked.
-enum class AssignFlags {
-    /// No special assignment behavior specified.
-    None = 0,
-
-    /// The assignment is non-blocking.
-    NonBlocking = 1 << 0,
-
-    /// The assignment is occurring inside a concatenation.
-    InConcat = 1 << 1,
-
-    /// The assignment is for an inout port of a module / interface / program.
-    InOutPort = 1 << 2,
-
-    /// The assignment is for an input port of a module / interface / program
-    /// (the assignment to the internal symbol from the port itself).
-    InputPort = 1 << 3
-};
-BITMASK(AssignFlags, InputPort)
-
 /// The base class for all expressions in SystemVerilog.
 class Expression {
 public:

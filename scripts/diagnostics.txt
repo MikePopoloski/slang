@@ -10,6 +10,7 @@ note NoteDeclarationHere "declared here"
 note NotePreviousMatch "previous match here"
 note NoteReferencedHere "referenced here"
 note NoteAssignedHere "also assigned here"
+note NoteDrivenHere "driven here"
 error AttributesNotAllowed "attributes are not allowed here"
 warning not-supported WarnNotYetSupported "language feature not yet supported"
 
@@ -560,6 +561,8 @@ warning width-expand WidthExpand "implicit conversion expands from {} to {} bits
 warning width-trunc WidthTruncate "implicit conversion truncates from {} to {} bits"
 warning implicit-conv ImplicitConvert "implicit conversion from {} to {}"
 warning nonblocking-final NonblockingInFinal "nonblocking assignments in final blocks have no effect"
+warning port-coercion InputPortCoercion "input net port '{}' coerced to 'inout'"
+warning port-coercion OutputPortCoercion "output net port '{}' coerced to 'inout'"
 
 subsystem Statements
 error ReturnNotInSubroutine "return statement is only valid inside task and function blocks"
@@ -855,7 +858,7 @@ group default = { real-underflow real-overflow vector-overflow int-overflow unco
                   static-skipped elem-not-found dynarray-index dynarray-range queue-range empty-queue
                   unknown-escape-code no-top warning-task unsized-concat finish-num implicit-conv nonblocking-final
                   constraint-missing missing-format dpi-spec enum-range udp-port-empty lifetime-prototype
-                  nonstandard-sys-func nonstandard-foreach nonstandard-dist net-inconsistent }
+                  nonstandard-sys-func nonstandard-foreach nonstandard-dist net-inconsistent port-coercion }
 
 group extra = { empty-member empty-stmt dup-import pointless-void-cast case-gen-none case-gen-dup
                 unused-result format-real ignored-slice task-ignored width-trunc dup-attr }

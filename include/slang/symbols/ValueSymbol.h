@@ -54,11 +54,15 @@ public:
     public:
         not_null<const Expression*> longestStaticPrefix;
         DriverKind kind;
-        bool isInputPort;
+        bitmask<AssignFlags> flags;
 
-        Driver(DriverKind kind, const Expression& longestStaticPrefix, bool isInputPort);
+        Driver(DriverKind kind, const Expression& longestStaticPrefix, bitmask<AssignFlags> flags);
 
         const Driver* getNextDriver() const { return next; }
+        bool isInputPort() const { return flags.has(AssignFlags::InputPort); }
+        bool isUnidirectionalPort() const {
+            return flags.has(AssignFlags::InputPort | AssignFlags::OutputPort);
+        }
 
         bool overlaps(Compilation& compilation, const Driver& other) const;
 
@@ -67,7 +71,8 @@ public:
         mutable const Driver* next = nullptr;
     };
 
-    void addDriver(DriverKind kind, const Expression& longestStaticPrefix, bool isInputPort) const;
+    void addDriver(DriverKind kind, const Expression& longestStaticPrefix,
+                   bitmask<AssignFlags> flags) const;
     const Driver* getFirstDriver() const { return firstDriver; }
 
 protected:

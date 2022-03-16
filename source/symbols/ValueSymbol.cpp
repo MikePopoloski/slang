@@ -45,9 +45,9 @@ bool ValueSymbol::isKind(SymbolKind kind) {
 }
 
 ValueSymbol::Driver::Driver(DriverKind kind, const Expression& longestStaticPrefix,
-                            bool isInputPort) :
+                            bitmask<AssignFlags> flags) :
     longestStaticPrefix(&longestStaticPrefix),
-    kind(kind), isInputPort(isInputPort) {
+    kind(kind), flags(flags) {
 }
 
 static const Expression* nextPrefix(const Expression& expr) {
@@ -122,12 +122,12 @@ bool ValueSymbol::Driver::overlaps(Compilation& compilation, const Driver& other
 }
 
 void ValueSymbol::addDriver(DriverKind driverKind, const Expression& longestStaticPrefix,
-                            bool isInputPort) const {
+                            bitmask<AssignFlags> flags) const {
     auto scope = getParentScope();
     ASSERT(scope);
 
     auto& comp = scope->getCompilation();
-    auto driver = comp.emplace<Driver>(driverKind, longestStaticPrefix, isInputPort);
+    auto driver = comp.emplace<Driver>(driverKind, longestStaticPrefix, flags);
     if (!firstDriver) {
         auto makeRef = [&]() -> const Expression& {
             BindContext bindContext(*scope, LookupLocation::min);
@@ -140,14 +140,18 @@ void ValueSymbol::addDriver(DriverKind driverKind, const Expression& longestStat
         // initializer expression that should count as a driver as well.
         switch (kind) {
             case SymbolKind::Net:
-                if (getInitializer())
-                    firstDriver = comp.emplace<Driver>(DriverKind::Continuous, makeRef(), false);
+                if (getInitializer()) {
+                    firstDriver =
+                        comp.emplace<Driver>(DriverKind::Continuous, makeRef(), AssignFlags::None);
+                }
                 break;
             case SymbolKind::Variable:
             case SymbolKind::ClassProperty:
             case SymbolKind::Field:
-                if (as<VariableSymbol>().lifetime == VariableLifetime::Static && getInitializer())
-                    firstDriver = comp.emplace<Driver>(DriverKind::Procedural, makeRef(), false);
+                if (as<VariableSymbol>().lifetime == VariableLifetime::Static && getInitializer()) {
+                    firstDriver =
+                        comp.emplace<Driver>(DriverKind::Procedural, makeRef(), AssignFlags::None);
+                }
                 break;
             default:
                 break;
@@ -159,34 +163,68 @@ void ValueSymbol::addDriver(DriverKind driverKind, const Expression& longestStat
         }
     }
 
-    const bool checkOverlap =
-        (VariableSymbol::isKind(kind) &&
-         as<VariableSymbol>().lifetime == VariableLifetime::Static) ||
-        (kind == SymbolKind::Net && as<NetSymbol>().netType.netKind == NetType::UWire);
+    // We need to check for overlap in the following cases:
+    // - static variables (automatic variables can't ever be driven continuously)
+    // - uwire nets
+    // - any nets where an input port is being driven (to warn about port coercion)
+    const bool isNet = kind == SymbolKind::Net;
+    const bool isUWire = isNet && as<NetSymbol>().netType.netKind == NetType::UWire;
+    const bool checkOverlap = (VariableSymbol::isKind(kind) &&
+                               as<VariableSymbol>().lifetime == VariableLifetime::Static) ||
+                              isUWire;
 
     // Walk the list of drivers to the end and add this one there.
     // Along the way, check that the driver is valid given the ones that already exist.
     auto curr = firstDriver;
     while (true) {
-        // Variables can't be driven by multiple continuous assignments or
-        // a mix of continuous and procedural assignments.
-        if (checkOverlap &&
-            (driverKind == DriverKind::Continuous || curr->kind == DriverKind::Continuous) &&
-            curr->overlaps(comp, *driver)) {
+        bool shouldCheck = checkOverlap && (driverKind == DriverKind::Continuous ||
+                                            curr->kind == DriverKind::Continuous);
+        if (curr->isUnidirectionalPort() != driver->isUnidirectionalPort())
+            shouldCheck = true;
 
+        if (shouldCheck && curr->overlaps(comp, *driver)) {
             auto currRange = curr->longestStaticPrefix->sourceRange;
             auto driverRange = driver->longestStaticPrefix->sourceRange;
 
-            if (curr->isInputPort || driver->isInputPort) {
-                auto& diag = scope->addDiag(diag::InputPortAssign,
-                                            curr->isInputPort ? driverRange : currRange);
+            // The default handling case for mixed vs multiple assignments is in the else branch.
+            // Check for more specialized cases here:
+            // 1. If this is a non-uwire net for an input or output port
+            // 2. If this is a variable for an input port
+            if ((isNet && (curr->isUnidirectionalPort() || driver->isUnidirectionalPort()) &&
+                 !isUWire) ||
+                (!isNet && (curr->isInputPort() || driver->isInputPort()))) {
+
+                auto code = diag::InputPortAssign;
+                if (isNet) {
+                    if (curr->flags.has(AssignFlags::InputPort))
+                        code = diag::InputPortCoercion;
+                    else
+                        code = diag::OutputPortCoercion;
+                }
+
+                // This is a little messy; basically we want to report the correct
+                // range for the port vs the assignment. We only want to do this
+                // for input ports though, as output ports show up at the instantiation
+                // site and we'd rather that be considered the "port declaration".
+                auto portRange = currRange;
+                auto assignRange = driverRange;
+                if (driver->isInputPort() || curr->flags.has(AssignFlags::OutputPort))
+                    std::swap(portRange, assignRange);
+
+                auto& diag = scope->addDiag(code, assignRange);
                 diag << name;
-                diag.addNote(diag::NoteDeclarationHere,
-                             curr->isInputPort ? currRange.start() : driverRange.start());
+
+                auto note = code == diag::OutputPortCoercion ? diag::NoteDrivenHere
+                                                             : diag::NoteDeclarationHere;
+                diag.addNote(note, portRange.start());
+
+                // For variable ports this is an error, for nets it's a warning.
+                if (!isNet)
+                    return;
             }
             else {
                 auto code =
-                    kind == SymbolKind::Net ? diag::MultipleUWireDrivers
+                    isUWire ? diag::MultipleUWireDrivers
                     : (driverKind == DriverKind::Continuous && curr->kind == DriverKind::Continuous)
                         ? diag::MultipleContAssigns
                         : diag::MixedVarAssigns;
@@ -194,9 +232,8 @@ void ValueSymbol::addDriver(DriverKind driverKind, const Expression& longestStat
                 auto& diag = scope->addDiag(code, driverRange);
                 diag << name;
                 diag.addNote(diag::NoteAssignedHere, currRange.start()) << currRange;
+                return;
             }
-
-            return;
         }
 
         if (!curr->next) {

@@ -205,8 +205,12 @@ const Expression& Expression::bindLValue(const ExpressionSyntax& lhs, const Type
     selfDetermined(context, lhsExpr);
 
     bitmask<AssignFlags> assignFlags;
-    if (isInout && context.instance)
-        assignFlags = AssignFlags::InOutPort;
+    if (context.instance) {
+        if (isInout)
+            assignFlags = AssignFlags::InOutPort;
+        else if (context.instance->kind != SymbolKind::PrimitiveInstance)
+            assignFlags = AssignFlags::OutputPort;
+    }
 
     SourceRange lhsRange = lhs.sourceRange();
     return AssignmentExpression::fromComponents(
