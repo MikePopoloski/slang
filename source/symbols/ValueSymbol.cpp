@@ -177,8 +177,11 @@ void ValueSymbol::addDriver(DriverKind driverKind, const Expression& longestStat
     // Along the way, check that the driver is valid given the ones that already exist.
     auto curr = firstDriver;
     while (true) {
-        bool shouldCheck = checkOverlap && (driverKind == DriverKind::Continuous ||
-                                            curr->kind == DriverKind::Continuous);
+        bool shouldCheck =
+            checkOverlap &&
+            (driverKind == DriverKind::Continuous || curr->kind == DriverKind::Continuous) &&
+            driverKind != DriverKind::Other && curr->kind != DriverKind::Other;
+
         if (curr->isUnidirectionalPort() != driver->isUnidirectionalPort())
             shouldCheck = true;
 

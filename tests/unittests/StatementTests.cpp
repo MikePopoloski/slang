@@ -1044,12 +1044,17 @@ TEST_CASE("Procedural assign / deassign statements") {
 module m;
     int a;
     wire b;
+    int c;
     initial begin
         assign a = 5;
         deassign a;
         force b = 5;
         release b;
+        force c = 4;
+        release c;
     end
+
+    assign c = 1;
 endmodule
 )");
 
