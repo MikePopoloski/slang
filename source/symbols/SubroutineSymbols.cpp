@@ -557,6 +557,8 @@ void SubroutineSymbol::buildArguments(Scope& scope, const FunctionPortListSyntax
         }
         else if (directionSpecified || !lastType) {
             arg->setType(comp.getLogicType());
+            arg->setDeclaredType(
+                comp.createEmptyTypeSyntax(declarator->getFirstToken().location()));
             lastType = nullptr;
         }
         else {

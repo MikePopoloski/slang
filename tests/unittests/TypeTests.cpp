@@ -1610,3 +1610,27 @@ endfunction
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Subroutine ref-arg type checking") {
+    auto tree = SyntaxTree::fromText(R"(
+package subroutines;
+    task automatic put_data (input value, ref d[$]);
+        d.push_back(value);
+    endtask
+endpackage
+
+module stack (input clk, input int data);
+    import subroutines::*;
+    int data_q[$];
+    always @(posedge clk)
+        put_data(data[0], data_q);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::RefTypeMismatch);
+}
