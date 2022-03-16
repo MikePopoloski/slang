@@ -1206,7 +1206,7 @@ bool MemberAccessExpression::requireLValueImpl(const BindContext& context, Sourc
             longestStaticPrefix = this;
 
         auto& var = member.as<VariableSymbol>();
-        var.addDriver(context.getDriverKind(), *longestStaticPrefix);
+        var.addDriver(context.getDriverKind(), *longestStaticPrefix, false);
 
         return ValueExpressionBase::checkVariableAssignment(context, var, flags, location,
                                                             sourceRange);

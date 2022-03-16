@@ -44,8 +44,10 @@ bool ValueSymbol::isKind(SymbolKind kind) {
     }
 }
 
-ValueSymbol::Driver::Driver(DriverKind kind, const Expression& longestStaticPrefix) :
-    longestStaticPrefix(&longestStaticPrefix), kind(kind) {
+ValueSymbol::Driver::Driver(DriverKind kind, const Expression& longestStaticPrefix,
+                            bool isInputPort) :
+    longestStaticPrefix(&longestStaticPrefix),
+    kind(kind), isInputPort(isInputPort) {
 }
 
 static const Expression* nextPrefix(const Expression& expr) {
@@ -119,12 +121,13 @@ bool ValueSymbol::Driver::overlaps(Compilation& compilation, const Driver& other
     return true;
 }
 
-void ValueSymbol::addDriver(DriverKind driverKind, const Expression& longestStaticPrefix) const {
+void ValueSymbol::addDriver(DriverKind driverKind, const Expression& longestStaticPrefix,
+                            bool isInputPort) const {
     auto scope = getParentScope();
     ASSERT(scope);
 
     auto& comp = scope->getCompilation();
-    auto driver = comp.emplace<Driver>(driverKind, longestStaticPrefix);
+    auto driver = comp.emplace<Driver>(driverKind, longestStaticPrefix, isInputPort);
     if (!firstDriver) {
         auto makeRef = [&]() -> const Expression& {
             BindContext bindContext(*scope, LookupLocation::min);
@@ -138,15 +141,13 @@ void ValueSymbol::addDriver(DriverKind driverKind, const Expression& longestStat
         switch (kind) {
             case SymbolKind::Net:
                 if (getInitializer())
-                    firstDriver = comp.emplace<Driver>(DriverKind::Continuous, makeRef());
+                    firstDriver = comp.emplace<Driver>(DriverKind::Continuous, makeRef(), false);
                 break;
             case SymbolKind::Variable:
             case SymbolKind::ClassProperty:
             case SymbolKind::Field:
-                if (as<VariableSymbol>().lifetime == VariableLifetime::Static) {
-                    if (getInitializer())
-                        firstDriver = comp.emplace<Driver>(DriverKind::Procedural, makeRef());
-                }
+                if (as<VariableSymbol>().lifetime == VariableLifetime::Static && getInitializer())
+                    firstDriver = comp.emplace<Driver>(DriverKind::Procedural, makeRef(), false);
                 break;
             default:
                 break;
@@ -175,15 +176,26 @@ void ValueSymbol::addDriver(DriverKind driverKind, const Expression& longestStat
 
             auto currRange = curr->longestStaticPrefix->sourceRange;
             auto driverRange = driver->longestStaticPrefix->sourceRange;
-            auto code =
-                kind == SymbolKind::Net ? diag::MultipleUWireDrivers
-                : (driverKind == DriverKind::Continuous && curr->kind == DriverKind::Continuous)
-                    ? diag::MultipleContAssigns
-                    : diag::MixedVarAssigns;
 
-            auto& diag = scope->addDiag(code, driverRange);
-            diag << name;
-            diag.addNote(diag::NoteAssignedHere, currRange.start()) << currRange;
+            if (curr->isInputPort || driver->isInputPort) {
+                auto& diag = scope->addDiag(diag::InputPortAssign,
+                                            curr->isInputPort ? driverRange : currRange);
+                diag << name;
+                diag.addNote(diag::NoteDeclarationHere,
+                             curr->isInputPort ? currRange.start() : driverRange.start());
+            }
+            else {
+                auto code =
+                    kind == SymbolKind::Net ? diag::MultipleUWireDrivers
+                    : (driverKind == DriverKind::Continuous && curr->kind == DriverKind::Continuous)
+                        ? diag::MultipleContAssigns
+                        : diag::MixedVarAssigns;
+
+                auto& diag = scope->addDiag(code, driverRange);
+                diag << name;
+                diag.addNote(diag::NoteAssignedHere, currRange.start()) << currRange;
+            }
+
             return;
         }
 

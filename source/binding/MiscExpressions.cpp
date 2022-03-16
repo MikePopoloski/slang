@@ -143,7 +143,8 @@ bool ValueExpressionBase::requireLValueImpl(const BindContext& context, SourceLo
         }
     }
 
-    symbol.addDriver(context.getDriverKind(), *longestStaticPrefix);
+    const bool isInputPort = flags.has(AssignFlags::InputPort | AssignFlags::InOutPort);
+    symbol.addDriver(context.getDriverKind(), *longestStaticPrefix, isInputPort);
     return true;
 }
 

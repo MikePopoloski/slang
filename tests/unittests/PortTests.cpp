@@ -1450,3 +1450,34 @@ endmodule
     CHECK(diags[2].code == diag::PortConcatInOut);
     CHECK(diags[3].code == diag::InOutUWireConn);
 }
+
+TEST_CASE("Assigning to input ports") {
+    auto tree = SyntaxTree::fromText(R"(
+module m(input .a(a), input int b, output int c);
+    int a;
+    assign a = 1;
+    assign b = 2;
+endmodule
+
+module n(a[1:0]);
+    input var [3:0] a;
+    assign a[2:1] = 1;
+    assign a[3] = 1;
+endmodule
+
+module o;
+    int a, b, c = 1;
+    m m1(.a, .b, .c);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 4);
+    CHECK(diags[0].code == diag::InputPortAssign);
+    CHECK(diags[1].code == diag::InputPortAssign);
+    CHECK(diags[2].code == diag::InputPortAssign);
+    CHECK(diags[3].code == diag::MixedVarAssigns);
+}

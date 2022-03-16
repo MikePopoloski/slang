@@ -139,9 +139,13 @@ enum class AssignFlags {
     InConcat = 1 << 1,
 
     /// The assignment is for an inout port of a module / interface / program.
-    InOutPort = 1 << 2
+    InOutPort = 1 << 2,
+
+    /// The assignment is for an input port of a module / interface / program
+    /// (the assignment to the internal symbol from the port itself).
+    InputPort = 1 << 3
 };
-BITMASK(AssignFlags, InOutPort)
+BITMASK(AssignFlags, InputPort)
 
 /// The base class for all expressions in SystemVerilog.
 class Expression {

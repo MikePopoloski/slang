@@ -54,8 +54,9 @@ public:
     public:
         not_null<const Expression*> longestStaticPrefix;
         DriverKind kind;
+        bool isInputPort;
 
-        Driver(DriverKind kind, const Expression& longestStaticPrefix);
+        Driver(DriverKind kind, const Expression& longestStaticPrefix, bool isInputPort);
 
         const Driver* getNextDriver() const { return next; }
 
@@ -66,7 +67,7 @@ public:
         mutable const Driver* next = nullptr;
     };
 
-    void addDriver(DriverKind kind, const Expression& longestStaticPrefix) const;
+    void addDriver(DriverKind kind, const Expression& longestStaticPrefix, bool isInputPort) const;
     const Driver* getFirstDriver() const { return firstDriver; }
 
 protected:

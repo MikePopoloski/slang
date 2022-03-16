@@ -72,13 +72,14 @@ std::tuple<const Definition*, string_view> getInterfacePortInfo(
 // This checks factors other than types when making a port connection
 // to a specific symbol.
 void checkSymbolConnection(const Expression& expr, ArgumentDirection direction,
-                           const BindContext& context, SourceLocation loc) {
+                           const BindContext& context, SourceLocation loc, bool isInputPort) {
     switch (direction) {
         case ArgumentDirection::In:
             // All expressions are fine for inputs.
             break;
         case ArgumentDirection::Out:
-            expr.requireLValue(context, loc);
+            expr.requireLValue(context, loc,
+                               isInputPort ? AssignFlags::InputPort : AssignFlags::None);
             break;
         case ArgumentDirection::InOut:
             expr.requireLValue(context, loc, AssignFlags::InOutPort);
@@ -1313,15 +1314,28 @@ const Type& PortSymbol::getType() const {
         ASSERT(dt);
         type = &dt->getType();
 
+        BindContext context(*scope, LookupLocation::before(*this), BindFlags::NonProcedural);
+        Expression& valExpr = ValueExpressionBase::fromSymbol(
+            context, *internalSymbol, false, { location, location + name.length() });
+
         if (syntax->kind == SyntaxKind::PortReference) {
             auto& prs = syntax->as<PortReferenceSyntax>();
             if (auto select = prs.select) {
-                BindContext context(*scope, LookupLocation::before(*this),
-                                    BindFlags::NonProcedural);
-                auto& valExpr = ValueExpressionBase::fromSymbol(context, *internalSymbol, false,
-                                                                prs.name.range());
                 internalExpr = &Expression::bindSelector(valExpr, *select, context);
                 type = internalExpr->type;
+            }
+        }
+
+        if (direction == ArgumentDirection::In || direction == ArgumentDirection::InOut) {
+            // Ensure that this driver gets registered with the internal symbol.
+            if (internalExpr) {
+                internalExpr->requireLValue(context, {},
+                                            direction == ArgumentDirection::In
+                                                ? AssignFlags::InputPort
+                                                : AssignFlags::InOutPort);
+            }
+            else {
+                internalSymbol->as<ValueSymbol>().addDriver(DriverKind::Continuous, valExpr, true);
             }
         }
     }
@@ -1354,7 +1368,8 @@ const Type& PortSymbol::getType() const {
                     break;
             }
 
-            checkSymbolConnection(*internalExpr, checkDir, context, location);
+            checkSymbolConnection(*internalExpr, checkDir, context, location,
+                                  direction == ArgumentDirection::In);
         }
     }
 
@@ -1689,7 +1704,7 @@ const Expression* PortConnection::getExpression() const {
             }
             else {
                 expr = &valExpr;
-                checkSymbolConnection(*expr, direction, context, expr->sourceRange.start());
+                checkSymbolConnection(*expr, direction, context, expr->sourceRange.start(), false);
             }
         }
         else {
