@@ -1083,20 +1083,16 @@ TimingControlSyntax* Parser::parseTimingControl() {
                 return &factory.oneStepDelay(hash, consume());
 
             auto& delay = parsePrimaryExpression(ExpressionOptions::DisallowVectors);
-            if (!isValidDelayExpr(delay.kind)) {
-                auto range = delay.sourceRange();
-                addDiag(diag::InvalidDelayValue, range.start()) << range;
-            }
+            if (!isValidDelayExpr(delay.kind))
+                addDiag(diag::InvalidDelayValue, delay.sourceRange());
 
             return &factory.delay(SyntaxKind::DelayControl, hash, delay);
         }
         case TokenKind::DoubleHash: {
             auto hash = consume();
             auto& delay = parsePrimaryExpression(ExpressionOptions::None);
-            if (!isValidCycleDelay(delay.kind)) {
-                auto range = delay.sourceRange();
-                addDiag(diag::InvalidDelayValue, range.start()) << range;
-            }
+            if (!isValidCycleDelay(delay.kind))
+                addDiag(diag::InvalidDelayValue, delay.sourceRange());
 
             return &factory.delay(SyntaxKind::CycleDelay, hash, delay);
         }
@@ -1206,7 +1202,7 @@ SelectorSyntax* Parser::parseSequenceRange() {
     else if (result->kind == SyntaxKind::AscendingRangeSelect ||
              result->kind == SyntaxKind::DescendingRangeSelect) {
         auto& rs = result->as<RangeSelectSyntax>();
-        addDiag(diag::InvalidRepeatRange, rs.range.location()) << rs.range.range();
+        addDiag(diag::InvalidRepeatRange, rs.range.range());
     }
     return result;
 }
@@ -1314,13 +1310,11 @@ SequenceRepetitionSyntax* Parser::parseSequenceRepetition() {
             addDiag(diag::ExpectedExpression, peek().location());
     }
     else if (op.kind == TokenKind::Plus) {
-        addDiag(diag::InvalidRepeatRange, selector->getFirstToken().location())
-            << selector->sourceRange();
+        addDiag(diag::InvalidRepeatRange, selector->sourceRange());
     }
     else if (selector->kind == SyntaxKind::AscendingRangeSelect ||
              selector->kind == SyntaxKind::DescendingRangeSelect) {
-        auto& rs = selector->as<RangeSelectSyntax>();
-        addDiag(diag::InvalidRepeatRange, rs.range.location()) << rs.range.range();
+        addDiag(diag::InvalidRepeatRange, selector->as<RangeSelectSyntax>().range.range());
     }
 
     auto closeBracket = expect(TokenKind::CloseBracket);
@@ -1566,9 +1560,8 @@ PropertyExprSyntax& Parser::parsePropertyPrimary() {
                 auto& expr = parsePropertyPrimary();
 
                 if (selector && selector->kind != SyntaxKind::BitSelect) {
-                    auto range = selector->sourceRange();
-                    addDiag(diag::InvalidPropertyIndex, range.start())
-                        << range << op.valueText() << op.range();
+                    addDiag(diag::InvalidPropertyIndex, selector->sourceRange())
+                        << op.valueText() << op.range();
                 }
 
                 return factory.unarySelectPropertyExpr(op, openBracket, selector, closeBracket,
@@ -1590,9 +1583,8 @@ PropertyExprSyntax& Parser::parsePropertyPrimary() {
                 auto& expr = parsePropertyExpr(0);
 
                 if (selector && selector->kind != SyntaxKind::SimpleRangeSelect) {
-                    auto range = selector->sourceRange();
-                    addDiag(diag::InvalidPropertyRange, range.start())
-                        << range << op.valueText() << op.range();
+                    addDiag(diag::InvalidPropertyRange, selector->sourceRange())
+                        << op.valueText() << op.range();
                 }
 
                 return factory.unarySelectPropertyExpr(op, openBracket, selector, closeBracket,
@@ -1601,8 +1593,7 @@ PropertyExprSyntax& Parser::parsePropertyPrimary() {
 
             if (current.kind == TokenKind::SAlwaysKeyword ||
                 current.kind == TokenKind::EventuallyKeyword) {
-                auto range = op.range();
-                addDiag(diag::InvalidPropertyRange, range.start()) << range << op.valueText();
+                addDiag(diag::InvalidPropertyRange, op.range()) << op.valueText();
             }
 
             auto& expr = parsePropertyExpr(0);

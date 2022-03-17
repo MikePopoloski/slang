@@ -126,7 +126,7 @@ ModuleHeaderSyntax& Parser::parseModuleHeader() {
             errorRange = ports->sourceRange();
 
         if (errorRange)
-            addDiag(diag::InvalidPackageDecl, errorRange->start()) << *errorRange;
+            addDiag(diag::InvalidPackageDecl, *errorRange);
     }
     else if (!imports.empty() && !parameterList && !ports) {
         addDiag(diag::ExpectedPortList, peek().location());
@@ -205,8 +205,15 @@ PortHeaderSyntax& Parser::parsePortHeader(Token constKeyword, Token direction) {
     if (!constKeyword) {
         if (isNetType(kind)) {
             auto netType = consume();
-            return factory.netPortHeader(direction, netType,
-                                         parseDataType(TypeOptions::AllowImplicit));
+            auto& dataType = parseDataType(TypeOptions::AllowImplicit);
+
+            if (netType.kind == TokenKind::InterconnectKeyword &&
+                (dataType.kind != SyntaxKind::ImplicitType ||
+                 dataType.as<ImplicitTypeSyntax>().signing)) {
+                addDiag(diag::InterconnectTypeSyntax, dataType.sourceRange());
+            }
+
+            return factory.netPortHeader(direction, netType, dataType);
         }
 
         if (kind == TokenKind::InterfaceKeyword) {
@@ -425,14 +432,10 @@ StructUnionTypeSyntax& Parser::parseStructUnion(SyntaxKind syntaxKind) {
                 case TokenKind::RandKeyword:
                 case TokenKind::RandCKeyword:
                     randomQualifier = consume();
-                    if (packed) {
-                        addDiag(diag::RandOnPackedMember, randomQualifier.location())
-                            << randomQualifier.range();
-                    }
-                    else if (keyword.kind == TokenKind::UnionKeyword) {
-                        addDiag(diag::RandOnUnionMember, randomQualifier.location())
-                            << randomQualifier.range();
-                    }
+                    if (packed)
+                        addDiag(diag::RandOnPackedMember, randomQualifier.range());
+                    else if (keyword.kind == TokenKind::UnionKeyword)
+                        addDiag(diag::RandOnUnionMember, randomQualifier.range());
                     break;
                 default:
                     break;
@@ -466,15 +469,15 @@ StructUnionTypeSyntax& Parser::parseStructUnion(SyntaxKind syntaxKind) {
         if (!dims.empty()) {
             SourceRange range{ dims.front()->getFirstToken().location(),
                                dims.back()->getLastToken().range().end() };
-            addDiag(diag::PackedDimsOnUnpacked, range.start()) << range;
+            addDiag(diag::PackedDimsOnUnpacked, range);
         }
 
         if (signing)
-            addDiag(diag::UnpackedSigned, signing.location()) << signing.range();
+            addDiag(diag::UnpackedSigned, signing.range());
     }
 
     if (keyword.kind == TokenKind::StructKeyword && tagged.valid())
-        addDiag(diag::TaggedStruct, tagged.location()) << tagged.range();
+        addDiag(diag::TaggedStruct, tagged.range());
 
     return factory.structUnionType(syntaxKind, keyword, tagged, packed, signing, openBrace,
                                    buffer.copy(alloc), closeBrace, dims);
@@ -600,14 +603,10 @@ DriveStrengthSyntax* Parser::parseDriveStrength() {
     auto strength1 = expectStrength(TokenKind::Strong0Keyword);
     auto closeParen = expect(TokenKind::CloseParenthesis);
 
-    if (isStrength0(strength0.kind) == isStrength0(strength1.kind)) {
-        addDiag(diag::DriveStrengthInvalid, strength1.location())
-            << strength0.range() << strength1.range();
-    }
-    else if (isHighZ(strength0) && isHighZ(strength1)) {
-        addDiag(diag::DriveStrengthHighZ, strength1.location())
-            << strength0.range() << strength1.range();
-    }
+    if (isStrength0(strength0.kind) == isStrength0(strength1.kind))
+        addDiag(diag::DriveStrengthInvalid, strength1.range()) << strength0.range();
+    else if (isHighZ(strength0) && isHighZ(strength1))
+        addDiag(diag::DriveStrengthHighZ, strength1.range()) << strength0.range();
 
     return &factory.driveStrength(openParen, strength0, comma, strength1, closeParen);
 }
@@ -618,7 +617,7 @@ NetStrengthSyntax* Parser::parsePullStrength(Token type) {
 
     auto errorIfHighZ = [&](Token t) {
         if (isHighZ(t))
-            addDiag(diag::PullStrengthHighZ, t.location()) << t.range();
+            addDiag(diag::PullStrengthHighZ, t.range());
     };
 
     if (peek(2).kind == TokenKind::Comma) {
@@ -635,10 +634,8 @@ NetStrengthSyntax* Parser::parsePullStrength(Token type) {
     errorIfHighZ(strength);
     if (!isHighZ(strength)) {
         bool isPulldown = type.kind == TokenKind::PullDownKeyword;
-        if (isStrength0(strength.kind) != isPulldown) {
-            addDiag(diag::InvalidPullStrength, strength.location())
-                << type.valueText() << strength.range();
-        }
+        if (isStrength0(strength.kind) != isPulldown)
+            addDiag(diag::InvalidPullStrength, strength.range()) << type.valueText();
     }
 
     return &factory.pullStrength(openParen, strength, closeParen);
@@ -717,8 +714,24 @@ MemberSyntax& Parser::parseNetDeclaration(AttrList attributes) {
     auto delay = parseDelay3();
 
     Token semi;
-    auto declarators = parseDeclarators(semi, /* allowMinTypMax */ false,
-                                        /* requireInitializers */ hasDriveStrength);
+    auto declSpan = parseDeclarators(semi, /* allowMinTypMax */ false,
+                                     /* requireInitializers */ hasDriveStrength);
+
+    SeparatedSyntaxList<DeclaratorSyntax> declarators(declSpan);
+    if (netType.kind == TokenKind::InterconnectKeyword) {
+        if (type.kind != SyntaxKind::ImplicitType || type.as<ImplicitTypeSyntax>().signing)
+            addDiag(diag::InterconnectTypeSyntax, type.sourceRange());
+
+        if (delay && delay->kind != SyntaxKind::OneStepDelay &&
+            delay->kind != SyntaxKind::DelayControl) {
+            addDiag(diag::InterconnectDelaySyntax, delay->sourceRange());
+        }
+
+        for (auto decl : declarators) {
+            if (decl->initializer)
+                addDiag(diag::InterconnectInitializer, decl->initializer->sourceRange());
+        }
+    }
 
     return factory.netDeclaration(attributes, netType, strength, expansionHint, type, delay,
                                   declarators, semi);
@@ -808,8 +821,8 @@ DataDeclarationSyntax& Parser::parseDataDeclaration(AttrList attributes) {
 
         if (auto [it, inserted] = modifierSet.emplace(t.kind, t); !inserted) {
             if (!errorDup) {
-                auto& diag = addDiag(diag::DuplicateDeclModifier, t.location());
-                diag << t.rawText() << t.range() << it->second.range();
+                auto& diag = addDiag(diag::DuplicateDeclModifier, t.range());
+                diag << t.rawText() << it->second.range();
                 errorDup = true;
             }
             continue;
@@ -818,8 +831,8 @@ DataDeclarationSyntax& Parser::parseDataDeclaration(AttrList attributes) {
         if (SyntaxFacts::isLifetimeModifier(t.kind)) {
             if (lastLifetime) {
                 if (!errorLifetime) {
-                    auto& diag = addDiag(diag::DeclModifierConflict, t.location());
-                    diag << t.rawText() << t.range();
+                    auto& diag = addDiag(diag::DeclModifierConflict, t.range());
+                    diag << t.rawText();
                     diag << lastLifetime.rawText() << lastLifetime.range();
                     errorLifetime = true;
                 }
@@ -831,8 +844,8 @@ DataDeclarationSyntax& Parser::parseDataDeclaration(AttrList attributes) {
         if (!errorOrdering && modifiers.size() > 1) {
             Token prev = modifiers[modifiers.size() - 2];
             if (!SyntaxFacts::isModifierAllowedAfter(t.kind, prev.kind)) {
-                auto& diag = addDiag(diag::DeclModifierOrdering, t.location());
-                diag << t.rawText() << t.range();
+                auto& diag = addDiag(diag::DeclModifierOrdering, t.range());
+                diag << t.rawText();
                 diag << prev.rawText() << prev.range();
                 errorOrdering = true;
             }

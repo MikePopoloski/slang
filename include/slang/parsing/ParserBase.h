@@ -25,6 +25,7 @@ protected:
 
     Diagnostics& getDiagnostics();
     Diagnostic& addDiag(DiagCode code, SourceLocation location);
+    Diagnostic& addDiag(DiagCode code, SourceRange range);
 
     // Helper methods to manipulate the underlying token stream.
     Token peek(uint32_t offset);

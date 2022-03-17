@@ -362,8 +362,7 @@ ForLoopStatementSyntax& Parser::parseForLoopStatement(NamedLabelSyntax* label,
                     (expr.kind != SyntaxKind::IdentifierName ||
                      !expr.getFirstToken().isMissing())) {
                     // Initializer expressions must be variable assignments.
-                    SourceRange range = expr.sourceRange();
-                    addDiag(diag::InvalidForInitializer, range.start()) << range;
+                    addDiag(diag::InvalidForInitializer, expr.sourceRange());
                 }
                 return &expr;
             });
@@ -402,10 +401,8 @@ ForeachLoopListSyntax& Parser::parseForeachLoopVariables() {
     auto openParen = expect(TokenKind::OpenParenthesis);
     auto& arrayName = parseName(NameOptions::ForeachName);
 
-    if (arrayName.kind == SyntaxKind::IdentifierSelectName) {
-        SourceRange range = arrayName.sourceRange();
-        addDiag(diag::NonstandardForeach, range.start()) << range;
-    }
+    if (arrayName.kind == SyntaxKind::IdentifierSelectName)
+        addDiag(diag::NonstandardForeach, arrayName.sourceRange());
 
     span<TokenOrSyntax> list;
     Token openBracket;
@@ -450,10 +447,8 @@ ProceduralAssignStatementSyntax& Parser::parseProceduralAssignStatement(NamedLab
                                                                         SyntaxKind kind) {
     auto keyword = consume();
     auto& expr = parseExpression();
-    if (expr.kind != SyntaxKind::AssignmentExpression) {
-        addDiag(diag::ExpectedContinuousAssignment, expr.getFirstToken().location())
-            << expr.sourceRange();
-    }
+    if (expr.kind != SyntaxKind::AssignmentExpression)
+        addDiag(diag::ExpectedContinuousAssignment, expr.sourceRange());
 
     auto semi = expect(TokenKind::Semicolon);
     return factory.proceduralAssignStatement(kind, label, attributes, keyword, expr, semi);
@@ -910,19 +905,16 @@ RsRuleSyntax& Parser::parseRsRule() {
             break;
 
         prods.append(prod);
-        if (randJoin && prod->kind != SyntaxKind::RsProdItem) {
-            addDiag(diag::RandJoinProdItem, prod->getFirstToken().location())
-                << prod->sourceRange();
-        }
+        if (randJoin && prod->kind != SyntaxKind::RsProdItem)
+            addDiag(diag::RandJoinProdItem, prod->sourceRange());
     }
 
     if (randJoin && prods.size() < 2) {
         SourceRange range = randJoin->sourceRange();
-        if (!prods.empty()) {
+        if (!prods.empty())
             range = SourceRange{ range.start(), prods.back()->getLastToken().range().end() };
-        }
 
-        addDiag(diag::RandJoinNotEnough, range.start()) << range;
+        addDiag(diag::RandJoinNotEnough, range);
     }
 
     RsWeightClauseSyntax* weightClause = nullptr;

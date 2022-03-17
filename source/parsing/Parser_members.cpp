@@ -315,7 +315,7 @@ MemberSyntax* Parser::parseMember(SyntaxKind parentKind, bool& anyLocalModules) 
 
         if (t.kind == TokenKind::FunctionKeyword || t.kind == TokenKind::TaskKeyword) {
             // Skip all the qualifiers.
-            addDiag(diag::QualifiersOnOutOfBlock, token.location()) << token.range();
+            addDiag(diag::QualifiersOnOutOfBlock, token.range());
             for (uint32_t i = 0; i < index; i++)
                 skipToken(std::nullopt);
 
@@ -332,10 +332,8 @@ MemberSyntax* Parser::parseMember(SyntaxKind parentKind, bool& anyLocalModules) 
                 Token qual = consume();
                 quals.append(qual);
 
-                if (qual.kind != TokenKind::StaticKeyword && isConstraintQualifier(qual.kind)) {
-                    addDiag(diag::ConstraintQualOutOfBlock, qual.location())
-                        << qual.valueText() << qual.range();
-                }
+                if (qual.kind != TokenKind::StaticKeyword && isConstraintQualifier(qual.kind))
+                    addDiag(diag::ConstraintQualOutOfBlock, qual.range()) << qual.valueText();
             }
 
             return &parseConstraint(attributes, quals.copy(alloc));
@@ -598,7 +596,7 @@ FunctionPrototypeSyntax& Parser::parseFunctionPrototype(SyntaxKind parentKind,
 
     auto lifetime = parseLifetime();
     if (lifetime && options.has(FunctionOptions::IsPrototype))
-        addDiag(diag::LifetimeForPrototype, lifetime.location()) << lifetime.range();
+        addDiag(diag::LifetimeForPrototype, lifetime.range());
 
     // Return type is optional for function declarations, and should not be given
     // for tasks and constructors (we'll check that below).
@@ -623,7 +621,7 @@ FunctionPrototypeSyntax& Parser::parseFunctionPrototype(SyntaxKind parentKind,
     }
     else if (lifetime.kind == TokenKind::StaticKeyword && name.kind == SyntaxKind::ScopedName &&
              name.as<ScopedNameSyntax>().separator.kind == TokenKind::DoubleColon) {
-        addDiag(diag::MethodStaticLifetime, lifetime.location()) << lifetime.range();
+        addDiag(diag::MethodStaticLifetime, lifetime.range());
     }
 
     bool constructor = getLastConsumed().kind == TokenKind::NewKeyword;
@@ -732,8 +730,7 @@ LoopGenerateSyntax& Parser::parseLoopGenerateConstruct(AttrList attributes) {
             iterVarCheck = iterationExpr->as<PostfixUnaryExpressionSyntax>().operand;
             break;
         default:
-            addDiag(diag::InvalidGenvarIterExpression, iterationExpr->getFirstToken().location())
-                << iterationExpr->sourceRange();
+            addDiag(diag::InvalidGenvarIterExpression, iterationExpr->sourceRange());
             iterationExpr = &factory.badExpression(*iterationExpr);
             break;
     }
@@ -744,8 +741,7 @@ LoopGenerateSyntax& Parser::parseLoopGenerateConstruct(AttrList attributes) {
          iterVarCheck->as<IdentifierNameSyntax>().identifier.valueText() !=
              identifier.valueText())) {
 
-        addDiag(diag::ExpectedGenvarIterVar, iterVarCheck->getFirstToken().location())
-            << iterVarCheck->sourceRange();
+        addDiag(diag::ExpectedGenvarIterVar, iterVarCheck->sourceRange());
         iterationExpr = &factory.badExpression(*iterationExpr);
     }
 
@@ -933,8 +929,8 @@ void Parser::checkClassQualifiers(span<const Token> qualifiers, bool isConstrain
         if (isKind) {
             if (lastSeen) {
                 if (!alreadyErrored) {
-                    auto& diag = addDiag(diag::QualifierConflict, curr.location());
-                    diag << curr.rawText() << curr.range();
+                    auto& diag = addDiag(diag::QualifierConflict, curr.range());
+                    diag << curr.rawText();
                     diag << lastSeen.rawText() << lastSeen.range();
                     alreadyErrored = true;
                 }
@@ -952,8 +948,8 @@ void Parser::checkClassQualifiers(span<const Token> qualifiers, bool isConstrain
         // Don't allow duplicates of any qualifier.
         if (auto [it, inserted] = qualifierSet.emplace(t.kind, t); !inserted) {
             if (!errorDup) {
-                auto& diag = addDiag(diag::DuplicateQualifier, t.location());
-                diag << t.rawText() << t.range() << it->second.range();
+                auto& diag = addDiag(diag::DuplicateQualifier, t.range());
+                diag << t.rawText() << it->second.range();
                 errorDup = true;
             }
             continue;
@@ -962,8 +958,8 @@ void Parser::checkClassQualifiers(span<const Token> qualifiers, bool isConstrain
         // Some qualifiers are required to come first in the list.
         if (count > 1 && (t.kind == TokenKind::PureKeyword || t.kind == TokenKind::ExternKeyword)) {
             if (!errorFirst) {
-                auto& diag = addDiag(diag::QualifierNotFirst, t.location());
-                diag << t.rawText() << t.range();
+                auto& diag = addDiag(diag::QualifierNotFirst, t.range());
+                diag << t.rawText();
                 errorFirst = true;
             }
             continue;
@@ -975,8 +971,8 @@ void Parser::checkClassQualifiers(span<const Token> qualifiers, bool isConstrain
         else if (lastPure) {
             if (t.kind != TokenKind::VirtualKeyword && !isConstraint) {
                 if (!errorPure) {
-                    auto& diag = addDiag(diag::PureRequiresVirtual, t.location());
-                    diag << lastPure.range() << t.range();
+                    auto& diag = addDiag(diag::PureRequiresVirtual, t.range());
+                    diag << lastPure.range();
                     errorPure = true;
                 }
                 continue;
@@ -1000,15 +996,13 @@ void Parser::checkClassQualifiers(span<const Token> qualifiers, bool isConstrain
     }
 
     if (lastPure && !errorPure && !isVirtual && !isConstraint)
-        addDiag(diag::PureRequiresVirtual, lastPure.location()) << lastPure.range();
+        addDiag(diag::PureRequiresVirtual, lastPure.range());
 }
 
 MemberSyntax* Parser::parseClassMember(bool isIfaceClass) {
     auto errorIfIface = [&](const SyntaxNode& syntax) {
-        if (isIfaceClass) {
-            auto range = syntax.sourceRange();
-            addDiag(diag::NotAllowedInIfaceClass, range.start()) << range;
-        }
+        if (isIfaceClass)
+            addDiag(diag::NotAllowedInIfaceClass, syntax.sourceRange());
     };
 
     auto attributes = parseAttributes();
@@ -1051,8 +1045,8 @@ MemberSyntax* Parser::parseClassMember(bool isIfaceClass) {
         Token lastLifetime;
         for (auto qual : qualifiers) {
             if (!isPropertyQualifier(qual.kind)) {
-                auto& diag = addDiag(diag::InvalidPropertyQualifier, qual.location());
-                diag << qual.range() << qual.rawText();
+                auto& diag = addDiag(diag::InvalidPropertyQualifier, qual.range());
+                diag << qual.rawText();
                 break;
             }
 
@@ -1069,12 +1063,12 @@ MemberSyntax* Parser::parseClassMember(bool isIfaceClass) {
             for (auto mod : decl.as<DataDeclarationSyntax>().modifiers) {
                 if (isLifetimeModifier(mod.kind) && lastLifetime) {
                     if (mod.kind == lastLifetime.kind) {
-                        auto& diag = addDiag(diag::DuplicateQualifier, mod.location());
-                        diag << mod.rawText() << mod.range() << lastLifetime.range();
+                        auto& diag = addDiag(diag::DuplicateQualifier, mod.range());
+                        diag << mod.rawText() << lastLifetime.range();
                     }
                     else {
-                        auto& diag = addDiag(diag::QualifierConflict, mod.location());
-                        diag << mod.rawText() << mod.range();
+                        auto& diag = addDiag(diag::QualifierConflict, mod.range());
+                        diag << mod.rawText();
                         diag << lastLifetime.rawText() << lastLifetime.range();
                     }
                     break;
@@ -1087,14 +1081,13 @@ MemberSyntax* Parser::parseClassMember(bool isIfaceClass) {
                  decl.kind == SyntaxKind::NetTypeDeclaration ||
                  decl.kind == SyntaxKind::LetDeclaration) {
             // Nettypes and package imports are disallowed in classes.
-            SourceRange range = decl.sourceRange();
-            addDiag(diag::NotAllowedInClass, range.start()) << range;
+            addDiag(diag::NotAllowedInClass, decl.sourceRange());
         }
         else {
             // Otherwise, check for invalid qualifiers.
             for (auto qual : qualifiers) {
                 if (isIfaceClass) {
-                    addDiag(diag::InvalidQualifierForIfaceMember, qual.location()) << qual.range();
+                    addDiag(diag::InvalidQualifierForIfaceMember, qual.range());
                     break;
                 }
 
@@ -1103,13 +1096,12 @@ MemberSyntax* Parser::parseClassMember(bool isIfaceClass) {
                     case TokenKind::RandCKeyword:
                     case TokenKind::ConstKeyword:
                     case TokenKind::StaticKeyword:
-                        addDiag(diag::InvalidQualifierForMember, qual.location()) << qual.range();
+                        addDiag(diag::InvalidQualifierForMember, qual.range());
                         break;
                     case TokenKind::LocalKeyword:
                     case TokenKind::ProtectedKeyword:
                         if (decl.kind == SyntaxKind::ParameterDeclarationStatement)
-                            addDiag(diag::InvalidQualifierForMember, qual.location())
-                                << qual.range();
+                            addDiag(diag::InvalidQualifierForMember, qual.range());
                         break;
                     default:
                         break;
@@ -1129,15 +1121,15 @@ MemberSyntax* Parser::parseClassMember(bool isIfaceClass) {
                 isPure = true;
 
             if (!isMethodQualifier(qual.kind)) {
-                auto& diag = addDiag(diag::InvalidMethodQualifier, qual.location());
-                diag << qual.range() << qual.rawText();
+                auto& diag = addDiag(diag::InvalidMethodQualifier, qual.range());
+                diag << qual.rawText();
                 isPure = true;
                 break;
             }
 
             if (isIfaceClass && qual.kind != TokenKind::PureKeyword &&
                 qual.kind != TokenKind::VirtualKeyword) {
-                addDiag(diag::InvalidQualifierForIfaceMember, qual.location()) << qual.range();
+                addDiag(diag::InvalidQualifierForIfaceMember, qual.range());
                 isPure = true;
                 break;
             }
@@ -1147,10 +1139,8 @@ MemberSyntax* Parser::parseClassMember(bool isIfaceClass) {
             addDiag(diag::IfaceMethodPure, peek().location());
 
         auto checkProto = [this, &qualifiers](auto& proto, bool checkLifetime) {
-            if (checkLifetime && proto.lifetime.kind == TokenKind::StaticKeyword) {
-                auto& diag = addDiag(diag::MethodStaticLifetime, proto.lifetime.location());
-                diag << proto.lifetime.range();
-            }
+            if (checkLifetime && proto.lifetime.kind == TokenKind::StaticKeyword)
+                addDiag(diag::MethodStaticLifetime, proto.lifetime.range());
 
             // Additional checking for constructors.
             auto lastNamePart = proto.name->getLastToken();
@@ -1158,8 +1148,7 @@ MemberSyntax* Parser::parseClassMember(bool isIfaceClass) {
                 for (auto qual : qualifiers) {
                     if (qual.kind == TokenKind::VirtualKeyword ||
                         qual.kind == TokenKind::StaticKeyword) {
-                        addDiag(diag::InvalidQualifierForConstructor, qual.location())
-                            << qual.range();
+                        addDiag(diag::InvalidQualifierForConstructor, qual.range());
                         break;
                     }
                 }
@@ -1188,8 +1177,7 @@ MemberSyntax* Parser::parseClassMember(bool isIfaceClass) {
             // If this is a scoped name, it should be an out-of-block definition for
             // a method declared in a nested class. Qualifiers are not allowed here.
             if (funcDecl.prototype->name->kind == SyntaxKind::ScopedName && !qualifiers.empty()) {
-                addDiag(diag::QualifiersOnOutOfBlock, qualifiers[0].location())
-                    << qualifiers[0].range();
+                addDiag(diag::QualifiersOnOutOfBlock, qualifiers[0].range());
             }
 
             return &factory.classMethodDeclaration(attributes, qualifiers, funcDecl);
@@ -1257,10 +1245,8 @@ ContinuousAssignSyntax& Parser::parseContinuousAssign(AttrList attributes) {
         buffer, TokenKind::Semicolon, TokenKind::Comma, semi, RequireItems::True,
         diag::ExpectedContinuousAssignment, [this] {
             auto& expr = parseExpression();
-            if (expr.kind != SyntaxKind::AssignmentExpression) {
-                addDiag(diag::ExpectedContinuousAssignment, expr.getFirstToken().location())
-                    << expr.sourceRange();
-            }
+            if (expr.kind != SyntaxKind::AssignmentExpression)
+                addDiag(diag::ExpectedContinuousAssignment, expr.sourceRange());
             return &expr;
         });
 
@@ -1310,10 +1296,8 @@ CoverageOptionSyntax* Parser::parseCoverageOption(AttrList attributes) {
     if (token.kind == TokenKind::Identifier) {
         if (token.valueText() == "option" || token.valueText() == "type_option") {
             auto& expr = parseExpression();
-            if (!isValidOption(expr)) {
-                auto range = expr.sourceRange();
-                addDiag(diag::InvalidCoverageOption, range.start()) << range;
-            }
+            if (!isValidOption(expr))
+                addDiag(diag::InvalidCoverageOption, expr.sourceRange());
 
             return &factory.coverageOption(attributes, expr, expect(TokenKind::Semicolon));
         }
@@ -1482,10 +1466,8 @@ MemberSyntax* Parser::parseCoverpointMember() {
             break;
         }
         case TokenKind::OpenParenthesis:
-            if (size && size->expr) {
-                auto range = size->expr->sourceRange();
-                addDiag(diag::CoverageBinTransSize, range.start()) << range;
-            }
+            if (size && size->expr)
+                addDiag(diag::CoverageBinTransSize, size->expr->sourceRange());
 
             initializer = &parseTransListInitializer();
             break;
@@ -1809,8 +1791,8 @@ static bool checkConstraintName(const NameSyntax& name) {
 MemberSyntax& Parser::parseConstraint(AttrList attributes, span<Token> qualifiers) {
     for (auto qual : qualifiers) {
         if (!isConstraintQualifier(qual.kind)) {
-            auto& diag = addDiag(diag::InvalidConstraintQualifier, qual.location());
-            diag << qual.range() << qual.rawText();
+            auto& diag = addDiag(diag::InvalidConstraintQualifier, qual.range());
+            diag << qual.rawText();
             break;
         }
     }
@@ -1829,10 +1811,8 @@ MemberSyntax& Parser::parseConstraint(AttrList attributes, span<Token> qualifier
                                              parseConstraintBlock(/* isTopLevel */ true));
     }
 
-    if (!nameError && name.kind != SyntaxKind::IdentifierName) {
-        SourceRange range = name.sourceRange();
-        addDiag(diag::ExpectedIdentifier, range.start()) << range;
-    }
+    if (!nameError && name.kind != SyntaxKind::IdentifierName)
+        addDiag(diag::ExpectedIdentifier, name.sourceRange());
 
     return factory.constraintPrototype(attributes, qualifiers, keyword, name,
                                        expect(TokenKind::Semicolon));
@@ -1853,7 +1833,7 @@ ConstraintItemSyntax* Parser::parseConstraintItem(bool allowBlock, bool isTopLev
         case TokenKind::SolveKeyword: {
             auto solve = consume();
             if (!isTopLevel)
-                addDiag(diag::SolveBeforeDisallowed, solve.location()) << solve.range();
+                addDiag(diag::SolveBeforeDisallowed, solve.range());
 
             Token before;
             SmallVectorSized<TokenOrSyntax, 4> beforeBuffer;
@@ -2108,18 +2088,14 @@ AssertionItemPortSyntax& Parser::parseAssertionItemPort(SyntaxKind parentKind) {
         bool isSeqOrProp = parentKind == SyntaxKind::SequenceDeclaration ||
                            parentKind == SyntaxKind::PropertyDeclaration;
         if (!local && isSeqOrProp)
-            addDiag(diag::AssertionPortDirNoLocal, direction.location()) << direction.range();
+            addDiag(diag::AssertionPortDirNoLocal, direction.range());
     }
 
     if (parentKind == SyntaxKind::LetDeclaration) {
-        if (local) {
-            addDiag(diag::UnexpectedLetPortKeyword, local.location())
-                << local.range() << local.valueText();
-        }
-        else if (direction) {
-            addDiag(diag::UnexpectedLetPortKeyword, direction.location())
-                << direction.range() << direction.valueText();
-        }
+        if (local)
+            addDiag(diag::UnexpectedLetPortKeyword, local.range()) << local.valueText();
+        else if (direction)
+            addDiag(diag::UnexpectedLetPortKeyword, direction.range()) << direction.valueText();
     }
 
     DataTypeSyntax* type;
@@ -2423,8 +2399,8 @@ PrimitiveInstantiationSyntax& Parser::parsePrimitiveInstantiation(AttrList attri
                 case TokenKind::RtranIf1Keyword:
                 case TokenKind::TranKeyword:
                 case TokenKind::RtranKeyword:
-                    addDiag(diag::DriveStrengthNotAllowed, type.location())
-                        << type.valueText() << type.range() << strength->sourceRange();
+                    addDiag(diag::DriveStrengthNotAllowed, type.range())
+                        << type.valueText() << strength->sourceRange();
                     break;
                 default:
                     break;
@@ -2438,12 +2414,10 @@ PrimitiveInstantiationSyntax& Parser::parsePrimitiveInstantiation(AttrList attri
             case TokenKind::PullDownKeyword:
             case TokenKind::PullUpKeyword:
             case TokenKind::TranKeyword:
-            case TokenKind::RtranKeyword: {
-                auto range = delay->sourceRange();
-                addDiag(diag::DelaysNotAllowed, range.start())
-                    << type.valueText() << type.range() << range;
+            case TokenKind::RtranKeyword:
+                addDiag(diag::DelaysNotAllowed, delay->sourceRange())
+                    << type.valueText() << type.range();
                 break;
-            }
             case TokenKind::AndKeyword:
             case TokenKind::NandKeyword:
             case TokenKind::OrKeyword:
@@ -2461,11 +2435,11 @@ PrimitiveInstantiationSyntax& Parser::parsePrimitiveInstantiation(AttrList attri
                     if (auto d3 = delay->as<Delay3Syntax>().delay3) {
                         auto range = d3->sourceRange();
                         if (type.kind == TokenKind::Identifier) {
-                            addDiag(diag::Delay3UdpNotAllowed, range.start()) << range;
+                            addDiag(diag::Delay3UdpNotAllowed, range);
                         }
                         else {
-                            addDiag(diag::Delay3NotAllowed, range.start())
-                                << type.valueText() << type.range() << range;
+                            addDiag(diag::Delay3NotAllowed, range)
+                                << type.valueText() << type.range();
                         }
                     }
                 }
@@ -2984,10 +2958,7 @@ void Parser::checkMemberAllowed(const SyntaxNode& member, SyntaxKind parentKind)
             return;
     }
 
-    auto error = [&](DiagCode code) {
-        SourceRange range = member.sourceRange();
-        addDiag(code, range.start()) << range;
-    };
+    auto error = [&](DiagCode code) { addDiag(code, member.sourceRange()); };
 
     switch (parentKind) {
         case SyntaxKind::CompilationUnit:

@@ -43,6 +43,10 @@ Diagnostic& ParserBase::addDiag(DiagCode code, SourceLocation location) {
     return getDiagnostics().add(code, location);
 }
 
+Diagnostic& ParserBase::addDiag(DiagCode code, SourceRange range) {
+    return addDiag(code, range.start()) << range;
+}
+
 Token ParserBase::peek(uint32_t offset) {
     while (window.currentOffset + offset >= window.count)
         window.addNew();
@@ -117,7 +121,7 @@ void ParserBase::skipToken(std::optional<DiagCode> diagCode) {
     window.moveToNext();
 
     if (diagCode && !haveDiag)
-        addDiag(*diagCode, token.location()) << token.range();
+        addDiag(*diagCode, token.range());
 
     // If the token we're skipping is an opening paren / bracket / brace,
     // skip everything up to the corresponding closing token, otherwise we're

@@ -917,3 +917,19 @@ module N (input int a
          ^
 )");
 }
+
+TEST_CASE("Interconnect errors") {
+    auto& text = R"(
+module m(interconnect logic i);
+    interconnect logic [31:0] #(1,2,3) a [2] = 1;
+endmodule
+)";
+
+    parseCompilationUnit(text);
+
+    REQUIRE(diagnostics.size() == 4);
+    CHECK(diagnostics[0].code == diag::InterconnectTypeSyntax);
+    CHECK(diagnostics[1].code == diag::InterconnectTypeSyntax);
+    CHECK(diagnostics[2].code == diag::InterconnectDelaySyntax);
+    CHECK(diagnostics[3].code == diag::InterconnectInitializer);
+}
