@@ -84,6 +84,9 @@ enum class DeclaredTypeFlags {
     /// The type must be valid in a coverage expression.
     CoverageType = 1 << 14,
 
+    /// The type is for an interconnect net, which has special rules.
+    InterconnectNet = 1 << 15,
+
     /// A mask of flags that indicate additional type rules are needed to
     /// be checked after the type itself is resolved.
     NeedsTypeCheck = NetType | UserDefinedNetType | FormalArgMergeVar | Rand | DPIReturnType |

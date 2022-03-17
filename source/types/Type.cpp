@@ -967,7 +967,7 @@ const Type& Type::fromSyntax(Compilation& compilation, const DataTypeSyntax& nod
 const Type& Type::fromSyntax(Compilation& compilation, const Type& elementType,
                              const SyntaxList<VariableDimensionSyntax>& dimensions,
                              const BindContext& context) {
-    if (elementType.isError())
+    if (elementType.isError() || dimensions.empty())
         return elementType;
 
     switch (elementType.getCanonicalType().kind) {

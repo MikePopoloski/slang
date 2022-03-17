@@ -106,6 +106,23 @@ void DeclaredType::resolveType(const BindContext& typeContext,
             type = initializer->type;
         }
     }
+    else if (flags.has(DeclaredTypeFlags::InterconnectNet)) {
+        // An interconnect net is always untyped (or some array of untyped elements).
+        type = &comp.getType(SyntaxKind::Untyped);
+        if (syntax->kind == SyntaxKind::ImplicitType) {
+            // This should always be an implicit type unless there's an
+            // error (diagnosed by the parser).
+            auto& its = syntax->as<ImplicitTypeSyntax>();
+            if (!its.dimensions.empty())
+                type = &comp.getType(*type, its.dimensions, typeContext);
+        }
+
+        if (dimensions)
+            type = &comp.getType(*type, *dimensions, typeContext);
+
+        // Return early to skip additional checks for net types.
+        return;
+    }
     else {
         const Type* typedefTarget = nullptr;
         if (flags.has(DeclaredTypeFlags::TypedefTarget))

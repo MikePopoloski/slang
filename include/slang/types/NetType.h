@@ -38,6 +38,7 @@ public:
         Supply0,
         Supply1,
         UWire,
+        Interconnect,
         UserDefined
     } netKind;
 

@@ -112,6 +112,7 @@ Compilation::Compilation(const Bag& options) :
     MAKE_NETTYPE(Supply0);
     MAKE_NETTYPE(Supply1);
     MAKE_NETTYPE(UWire);
+    MAKE_NETTYPE(Interconnect);
 
     knownNetTypes[TokenKind::Unknown] =
         std::make_unique<NetType>(NetType::Unknown, "<error>", *logicType);

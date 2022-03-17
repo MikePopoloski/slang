@@ -2197,3 +2197,35 @@ source:18:28: note: comparison reduces to (12 < 8)
                        ~~~~^~~~~~~~~~~~
 )");
 }
+
+TEST_CASE("Interconnect nets") {
+    auto tree = SyntaxTree::fromText(R"(
+package p;
+   typedef struct {
+      bit a,b,c;
+   } S;
+endpackage:p
+
+module top();
+   interconnect bus;
+
+   tb tb(bus);
+   dut dut(bus);
+endmodule
+
+module tb import p::*; (output S so);
+   initial
+     so = '{0,1,1};
+endmodule
+
+module dut import p::*; (input S si);
+   always @*
+     $display("struct: %b%b%b", si.a, si.b, si.c);
+
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}

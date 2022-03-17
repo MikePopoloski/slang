@@ -222,7 +222,10 @@ void FieldSymbol::serializeTo(ASTSerializer& serializer) const {
 NetSymbol::NetSymbol(string_view name, SourceLocation loc, const NetType& netType) :
     ValueSymbol(SymbolKind::Net, name, loc, DeclaredTypeFlags::NetType), netType(netType) {
 
-    getDeclaredType()->setLink(netType.declaredType);
+    auto dt = getDeclaredType();
+    dt->setLink(netType.declaredType);
+    if (netType.netKind == NetType::Interconnect)
+        dt->addFlags(DeclaredTypeFlags::InterconnectNet);
 }
 
 void NetSymbol::fromSyntax(const Scope& scope, const NetDeclarationSyntax& syntax,
@@ -246,7 +249,7 @@ void NetSymbol::fromSyntax(const Scope& scope, const NetDeclarationSyntax& synta
         auto net = comp.emplace<NetSymbol>(declarator->name.valueText(),
                                            declarator->name.location(), netType);
         net->expansionHint = expansionHint;
-        net->setDeclaredType(*syntax.type, declarator->dimensions);
+        net->setDeclaredType(*syntax.type);
         net->setFromDeclarator(*declarator);
         net->setAttributes(scope, syntax.attributes);
         results.append(net);
