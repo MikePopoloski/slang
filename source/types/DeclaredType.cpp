@@ -9,6 +9,7 @@
 #include "slang/binding/Expression.h"
 #include "slang/compilation/Compilation.h"
 #include "slang/diagnostics/DeclarationsDiags.h"
+#include "slang/diagnostics/ParserDiags.h"
 #include "slang/diagnostics/StatementsDiags.h"
 #include "slang/diagnostics/TypesDiags.h"
 #include "slang/symbols/ClassSymbols.h"
@@ -114,11 +115,14 @@ void DeclaredType::resolveType(const BindContext& typeContext,
             // error (diagnosed by the parser).
             auto& its = syntax->as<ImplicitTypeSyntax>();
             if (!its.dimensions.empty())
-                type = &comp.getType(*type, its.dimensions, typeContext);
+                type = &comp.getType(*type, its.dimensions,
+                                     typeContext.resetFlags(BindFlags::InterconnectType));
         }
 
-        if (dimensions)
-            type = &comp.getType(*type, *dimensions, typeContext);
+        if (dimensions) {
+            type = &comp.getType(*type, *dimensions,
+                                 typeContext.resetFlags(BindFlags::InterconnectType));
+        }
 
         // Return early to skip additional checks for net types.
         return;
@@ -298,9 +302,17 @@ void DeclaredType::mergePortTypes(
             return;
 
         if (!sourceType->isIntegral()) {
-            auto& diag = context.addDiag(diag::CantDeclarePortSigned, location);
-            diag << sourceSymbol.name << implicit.signing.valueText() << *destType;
-            diag.addNote(diag::NoteDeclarationHere, sourceSymbol.location);
+            if (sourceSymbol.kind == SymbolKind::Net &&
+                sourceSymbol.as<NetSymbol>().netType.netKind == NetType::Interconnect) {
+                auto& diag =
+                    context.addDiag(diag::InterconnectTypeSyntax, implicit.signing.range());
+                diag.addNote(diag::NoteDeclarationHere, sourceSymbol.location);
+            }
+            else {
+                auto& diag = context.addDiag(diag::CantDeclarePortSigned, location);
+                diag << sourceSymbol.name << implicit.signing.valueText() << *destType;
+                diag.addNote(diag::NoteDeclarationHere, sourceSymbol.location);
+            }
             return;
         }
 

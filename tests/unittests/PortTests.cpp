@@ -1505,3 +1505,92 @@ endmodule
     CHECK(diags[0].code == diag::OutputPortCoercion);
     CHECK(diags[1].code == diag::InputPortCoercion);
 }
+
+TEST_CASE("Interconnect ports") {
+    auto tree = SyntaxTree::fromText(R"(
+module m(interconnect a, b = 1);
+endmodule
+
+module n(a);
+    input signed a;
+    interconnect a;
+endmodule
+
+module netlist;
+    interconnect iwire;
+    dut1 child1(iwire);
+    dut2 child2(iwire);
+endmodule
+
+module dut1(inout wire w);
+    assign w = 1;
+endmodule
+
+module dut2(inout wand w);
+    assign w = 0;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::InterconnectInitializer);
+    CHECK(diags[1].code == diag::InterconnectTypeSyntax);
+}
+
+TEST_CASE("More interconnect ports") {
+    auto tree = SyntaxTree::fromText(R"(
+module top();
+    interconnect [0:3] [0:1] aBus;
+    logic [0:3] dBus;
+    driver driverArray[0:3](aBus);
+    cmp cmpArray[0:3](aBus,rst,dBus);
+endmodule : top
+
+package NetsPkg;
+    nettype real realNet;
+endpackage : NetsPkg
+
+module driver
+    import NetsPkg::*;
+    #(parameter int delay = 30,
+                int iterations = 256)
+    (output realNet out [0:1]);
+    timeunit 1ns / 1ps;
+    real outR[1:0];
+    assign out = outR;
+    initial begin
+        outR[0] = 0.0;
+        outR[1] = 3.3;
+        for (int i = 0; i < iterations; i++) begin
+            #delay outR[0] += 0.2;
+            outR[1] -= 0.2;
+        end
+    end
+endmodule : driver
+
+module cmp
+    import NetsPkg::*;
+    #(parameter real hyst = 0.65)
+    (input realNet inA [0:1],
+     input logic rst,
+     output logic out);
+    timeunit 1ns / 1ps;
+    real updatePeriod = 100.0;
+
+    initial out = 1'b0;
+
+    always #updatePeriod begin
+        if (rst) out <= 1'b0;
+        else if (inA[0] > inA[1]) out <= 1'b1;
+        else if (inA[0] < inA[1] - hyst) out <= 1'b0;
+    end
+endmodule : cmp
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}

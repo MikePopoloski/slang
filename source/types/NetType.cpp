@@ -65,12 +65,14 @@ const NetType& NetType::getSimulatedNetType(const NetType& internal, const NetTy
             return internal;
         case Wire:
         case Tri:
+        case Interconnect:
             return external;
         case WAnd:
         case TriAnd:
             switch (external.netKind) {
                 case Wire:
                 case Tri:
+                case Interconnect:
                     return internal;
                 case WOr:
                 case TriOr:
@@ -89,6 +91,7 @@ const NetType& NetType::getSimulatedNetType(const NetType& internal, const NetTy
             switch (external.netKind) {
                 case Wire:
                 case Tri:
+                case Interconnect:
                     return internal;
                 case WAnd:
                 case TriAnd:
@@ -106,6 +109,7 @@ const NetType& NetType::getSimulatedNetType(const NetType& internal, const NetTy
             switch (external.netKind) {
                 case Wire:
                 case Tri:
+                case Interconnect:
                     return internal;
                 case WAnd:
                 case TriAnd:
@@ -123,6 +127,7 @@ const NetType& NetType::getSimulatedNetType(const NetType& internal, const NetTy
                 case Wire:
                 case Tri:
                 case TriReg:
+                case Interconnect:
                     return internal;
                 case WAnd:
                 case TriAnd:
@@ -141,6 +146,7 @@ const NetType& NetType::getSimulatedNetType(const NetType& internal, const NetTy
                 case Wire:
                 case Tri:
                 case TriReg:
+                case Interconnect:
                     return internal;
                 case WAnd:
                 case TriAnd:

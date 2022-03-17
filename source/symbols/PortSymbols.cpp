@@ -14,6 +14,7 @@
 #include "slang/diagnostics/DeclarationsDiags.h"
 #include "slang/diagnostics/ExpressionsDiags.h"
 #include "slang/diagnostics/LookupDiags.h"
+#include "slang/diagnostics/ParserDiags.h"
 #include "slang/symbols/ASTSerializer.h"
 #include "slang/symbols/AttributeSymbol.h"
 #include "slang/symbols/InstanceSymbols.h"
@@ -289,8 +290,13 @@ private:
         implicitMembers.emplace(symbol, port);
 
         if (decl.initializer) {
-            port->setInitializerSyntax(*decl.initializer->expr,
-                                       decl.initializer->equals.location());
+            if (netType && netType->netKind == NetType::Interconnect) {
+                scope.addDiag(diag::InterconnectInitializer, decl.initializer->sourceRange());
+            }
+            else {
+                port->setInitializerSyntax(*decl.initializer->expr,
+                                           decl.initializer->equals.location());
+            }
         }
 
         // Remember the properties of this port in case the next port wants to inherit from it.
@@ -1761,6 +1767,18 @@ void PortConnection::checkSimulatedNetTypes() const {
 
         auto [direction, type] = getDirAndType(port);
         if (!type->isMatching(*exprType)) {
+            // If this is from an interconnect connection, don't require matching types.
+            auto isInterconnect = [](const Type& t) {
+                auto curr = &t;
+                while (curr->isArray())
+                    curr = curr->getArrayElementType();
+
+                return curr->isUntypedType();
+            };
+
+            if (isInterconnect(*type) || isInterconnect(*exprType))
+                return;
+
             auto& diag = scope->addDiag(diag::MismatchedUserDefPortConn, expr->sourceRange);
             diag << udnt.name;
             diag << *type;
