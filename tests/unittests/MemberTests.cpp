@@ -1279,6 +1279,8 @@ module m;
 
     logic [3:0] r;
     initial f1(1, r);
+
+    import "DPI-C" function void f8(i);
 endmodule
 )");
 

@@ -142,17 +142,6 @@ const ParameterSymbolBase& ParameterBuilder::createParam(const Definition::Param
         auto param = comp.emplace<TypeParameterSymbol>(decl.name, decl.location, decl.isLocalParam,
                                                        decl.isPortParam);
 
-        if (!decl.hasSyntax) {
-            if (decl.givenType)
-                param->targetType.setType(*decl.givenType);
-        }
-        else {
-            ASSERT(decl.typeDecl);
-            param->setSyntax(*decl.typeDecl);
-            if (decl.typeDecl->assignment)
-                param->targetType.setTypeSyntax(*decl.typeDecl->assignment->type);
-        }
-
         auto& tt = param->targetType;
         if (newInitializer) {
             // If this is a NameSyntax, the parser didn't know we were assigning to
@@ -167,12 +156,27 @@ const ParameterSymbolBase& ParameterBuilder::createParam(const Definition::Param
                 tt.setTypeSyntax(*namedType);
             }
             else if (!DataTypeSyntax::isKind(newInitializer->kind)) {
+                tt.setType(comp.getErrorType());
                 scope.addDiag(diag::BadTypeParamExpr, newInitializer->getFirstToken().location())
                     << param->name;
             }
             else {
                 tt.setTypeSyntax(newInitializer->as<DataTypeSyntax>());
             }
+        }
+        else if (!decl.hasSyntax) {
+            if (decl.givenType)
+                param->targetType.setType(*decl.givenType);
+            else
+                param->targetType.setType(comp.getErrorType());
+        }
+        else {
+            ASSERT(decl.typeDecl);
+            param->setSyntax(*decl.typeDecl);
+            if (decl.typeDecl->assignment)
+                param->targetType.setTypeSyntax(*decl.typeDecl->assignment->type);
+            else
+                param->targetType.setType(comp.getErrorType());
         }
 
         // Add to scope *after* setting the type on the member,
@@ -199,6 +203,10 @@ const ParameterSymbolBase& ParameterBuilder::createParam(const Definition::Param
         auto param = comp.emplace<ParameterSymbol>(decl.name, decl.location, decl.isLocalParam,
                                                    decl.isPortParam);
 
+        auto& declType = *param->getDeclaredType();
+        if (newInitializer)
+            declType.addFlags(DeclaredTypeFlags::InitializerOverridden);
+
         if (!decl.hasSyntax) {
             ASSERT(decl.givenType);
             param->setType(*decl.givenType);
@@ -213,9 +221,7 @@ const ParameterSymbolBase& ParameterBuilder::createParam(const Definition::Param
             param->setFromDeclarator(*decl.valueDecl);
         }
 
-        auto& declType = *param->getDeclaredType();
         if (newInitializer) {
-            declType.addFlags(DeclaredTypeFlags::InitializerOverridden);
             param->setInitializerSyntax(*newInitializer,
                                         newInitializer->getFirstToken().location());
         }

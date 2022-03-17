@@ -432,6 +432,9 @@ void ClockVarSymbol::fromSyntax(const Scope& scope, const ClockingItemSyntax& sy
                 ASSERT(sourceType);
                 arg->getDeclaredType()->setLink(*sourceType);
             }
+            else {
+                arg->getDeclaredType()->setType(comp.getErrorType());
+            }
         }
     }
 }

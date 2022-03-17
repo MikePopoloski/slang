@@ -181,6 +181,9 @@ ModportPortSymbol& ModportPortSymbol::fromSyntax(const BindContext& context,
         ASSERT(sourceType);
         result->getDeclaredType()->setLink(*sourceType);
     }
+    else {
+        result->setType(comp.getErrorType());
+    }
 
     return *result;
 }
@@ -957,6 +960,14 @@ void AssertionPortSymbol::buildPorts(Scope& scope, const AssertionItemPortListSy
                 scope.addDiag(diag::AssertionPortPropOutput, item->direction.range());
             }
         }
+        else if (isEmpty(*item->type)) {
+            port->localVarDirection = lastLocalDir;
+        }
+
+        // 'local' direction requires that we have a sequence type. This flag needs to be
+        // added prior to setting a resolved type in the branches below.
+        if (port->localVarDirection)
+            port->declaredType.addFlags(DeclaredTypeFlags::RequireSequenceType);
 
         if (isEmpty(*item->type)) {
             if (lastType)
@@ -971,9 +982,6 @@ void AssertionPortSymbol::buildPorts(Scope& scope, const AssertionItemPortListSy
                 if (item->local && scope.asSymbol().kind != SymbolKind::LetDecl)
                     scope.addDiag(diag::LocalVarTypeRequired, item->local.range());
             }
-
-            if (!item->local)
-                port->localVarDirection = lastLocalDir;
         }
         else {
             port->declaredType.setTypeSyntax(*item->type);
@@ -1004,10 +1012,6 @@ void AssertionPortSymbol::buildPorts(Scope& scope, const AssertionItemPortListSy
             else {
                 port->defaultValueSyntax = item->defaultValue->expr;
             }
-        }
-
-        if (port->localVarDirection) {
-            port->declaredType.addFlags(DeclaredTypeFlags::RequireSequenceType);
         }
 
         scope.addMember(*port);

@@ -683,8 +683,11 @@ CoverpointSymbol& CoverpointSymbol::fromSyntax(const Scope& scope, const Coverpo
     // It's possible for invalid syntax to parse as a coverpoint. If the keyword wasn't
     // given just give up and return a placeholder.
     auto& comp = scope.getCompilation();
-    if (syntax.coverpoint.isMissing())
-        return *comp.emplace<CoverpointSymbol>(comp, ""sv, syntax.getFirstToken().location());
+    if (syntax.coverpoint.isMissing()) {
+        auto result = comp.emplace<CoverpointSymbol>(comp, ""sv, syntax.getFirstToken().location());
+        result->declaredType.setType(comp.getErrorType());
+        return *result;
+    }
 
     // Figure out the name of the coverpoint. If there's a label, it provides the name.
     // Otherwise check if the expression is a simple variable reference. If so, we take

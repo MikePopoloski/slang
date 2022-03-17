@@ -114,9 +114,9 @@ public:
     /// Sets the source syntax for the type, which will later be used when
     /// resolution is requested.
     void setTypeSyntax(const DataTypeSyntax& newType) {
+        ASSERT(!type);
         typeOrLink.typeSyntax = &newType;
         hasLink = false;
-        type = nullptr;
     }
 
     /// Sets this declared type to link to the given type, taking on whatever
@@ -147,9 +147,9 @@ public:
     /// when resolution is requested. @param loc is the source location to use when
     /// reporting diagnostics about the initializer.
     void setInitializerSyntax(const ExpressionSyntax& syntax, SourceLocation loc) {
+        ASSERT(!initializer);
         initializerSyntax = &syntax;
         initializerLocation = loc;
-        initializer = nullptr;
     }
 
     /// Gets the initializer syntax previously set by @a setInitializerSyntax
@@ -176,8 +176,7 @@ public:
     /// This will clear any resolved type to force resolution again with the
     /// new flags set.
     void addFlags(bitmask<DeclaredTypeFlags> toAdd) {
-        type = nullptr;
-        initializer = nullptr;
+        ASSERT(!type && !initializer);
         flags |= toAdd;
     }
 

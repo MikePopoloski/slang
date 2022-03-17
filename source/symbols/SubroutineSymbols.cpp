@@ -556,7 +556,6 @@ void SubroutineSymbol::buildArguments(Scope& scope, const FunctionPortListSyntax
             lastType = portSyntax->dataType;
         }
         else if (directionSpecified || !lastType) {
-            arg->setType(comp.getLogicType());
             arg->setDeclaredType(
                 comp.createEmptyTypeSyntax(declarator->getFirstToken().location()));
             lastType = nullptr;
@@ -754,14 +753,18 @@ MethodPrototypeSymbol& MethodPrototypeSymbol::fromSyntax(const BindContext& cont
     auto target =
         Lookup::unqualifiedAt(*context.scope, syntax.name.valueText(), context.getLocation(),
                               syntax.name.range(), LookupFlags::NoParentScope);
-    if (!target)
+    if (!target) {
+        result->declaredReturnType.setType(comp.getErrorType());
         return *result;
+    }
 
     // Target must actually be a subroutine (or a prototype of one).
     if (target->kind != SymbolKind::Subroutine && target->kind != SymbolKind::MethodPrototype) {
         auto& diag = context.addDiag(diag::NotASubroutine, name.range());
         diag << target->name;
         diag.addNote(diag::NoteDeclarationHere, target->location);
+
+        result->declaredReturnType.setType(comp.getErrorType());
         return *result;
     }
 

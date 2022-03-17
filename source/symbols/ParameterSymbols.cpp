@@ -163,6 +163,7 @@ void TypeParameterSymbol::fromSyntax(const Scope& scope,
         param->setSyntax(*decl);
 
         if (!decl->assignment) {
+            param->targetType.setType(comp.getErrorType());
             if (!isPort)
                 scope.addDiag(diag::BodyParamNoInitializer, loc);
             else if (isLocal)

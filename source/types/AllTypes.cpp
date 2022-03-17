@@ -516,7 +516,9 @@ void EnumType::createDefaultMembers(const BindContext& context, const EnumTypeSy
         SourceLocation loc = member->name.location();
 
         if (member->dimensions.empty()) {
-            members.append(comp.emplace<EnumValueSymbol>(name, loc));
+            auto ev = comp.emplace<EnumValueSymbol>(name, loc);
+            ev->setType(comp.getErrorType());
+            members.append(ev);
         }
         else {
             auto dims = member->dimensions[0];
@@ -533,8 +535,9 @@ void EnumType::createDefaultMembers(const BindContext& context, const EnumTypeSy
             int32_t low = range->lower();
             for (uint32_t i = 0; i < range->width(); i++) {
                 int32_t index = int32_t(i) + low;
-                members.append(
-                    comp.emplace<EnumValueSymbol>(getEnumValueName(comp, name, index), loc));
+                auto ev = comp.emplace<EnumValueSymbol>(getEnumValueName(comp, name, index), loc);
+                ev->setType(comp.getErrorType());
+                members.append(ev);
             }
         }
     }

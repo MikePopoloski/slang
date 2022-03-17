@@ -38,17 +38,15 @@ const Type& DeclaredType::getType() const {
 
 void DeclaredType::setLink(const DeclaredType& target) {
     ASSERT(hasLink || !typeOrLink.typeSyntax);
-    ASSERT(!type && !dimensions);
+    ASSERT(!type && !dimensions && !initializer);
 
     hasLink = true;
     typeOrLink.link = &target;
-    type = nullptr;
-    initializer = nullptr;
 }
 
 void DeclaredType::setDimensionSyntax(const SyntaxList<VariableDimensionSyntax>& newDimensions) {
+    ASSERT(!type);
     dimensions = &newDimensions;
-    type = nullptr;
 }
 
 void DeclaredType::mergeImplicitPort(
@@ -70,6 +68,7 @@ void DeclaredType::resolveType(const BindContext& typeContext,
     }
 
     auto syntax = typeOrLink.typeSyntax;
+    ASSERT(syntax);
     if (!syntax) {
         type = &comp.getErrorType();
         return;
