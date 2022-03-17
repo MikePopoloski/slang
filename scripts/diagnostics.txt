@@ -558,6 +558,7 @@ error MixedVarAssigns "cannot mix continuous and procedural assignments to varia
 error MultipleContAssigns "cannot have multiple continuous assignments to variable '{}'"
 error MultipleUWireDrivers "'uwire' net '{}' cannot have multiple drivers"
 error InputPortAssign "cannot assign to input port '{}'"
+error InterconnectReference "cannot reference interconnect net '{}' outside of a port connection"
 warning ignored-slice IgnoredSlice "slice size ignored for left-to-right streaming operator"
 warning unsized-concat UnsizedInConcat "unsized integer in concat; using a width of {}"
 warning width-expand WidthExpand "implicit conversion expands from {} to {} bits"

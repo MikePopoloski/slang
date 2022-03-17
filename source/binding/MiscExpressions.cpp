@@ -28,7 +28,7 @@ namespace slang {
 
 Expression& ValueExpressionBase::fromSymbol(const BindContext& context, const Symbol& symbol,
                                             bool isHierarchical, SourceRange sourceRange,
-                                            bool constraintAllowed) {
+                                            bool constraintAllowed, bool interconnectAllowed) {
     // Automatic variables have additional restrictions.
     Compilation& comp = context.getCompilation();
     if (VariableSymbol::isKind(symbol.kind) &&
@@ -66,6 +66,12 @@ Expression& ValueExpressionBase::fromSymbol(const BindContext& context, const Sy
              !context.flags.has(BindFlags::AllowUnboundedLiteral) &&
              symbol.as<ParameterSymbol>().getValue(sourceRange).isUnbounded()) {
         context.addDiag(diag::UnboundedNotAllowed, sourceRange);
+        return badExpr(comp, nullptr);
+    }
+    else if (symbol.kind == SymbolKind::Net &&
+             symbol.as<NetSymbol>().netType.netKind == NetType::Interconnect && !context.instance &&
+             !interconnectAllowed) {
+        context.addDiag(diag::InterconnectReference, sourceRange) << symbol.name;
         return badExpr(comp, nullptr);
     }
 

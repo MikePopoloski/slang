@@ -1321,8 +1321,9 @@ const Type& PortSymbol::getType() const {
         type = &dt->getType();
 
         BindContext context(*scope, LookupLocation::before(*this), BindFlags::NonProcedural);
-        Expression& valExpr = ValueExpressionBase::fromSymbol(
-            context, *internalSymbol, false, { location, location + name.length() });
+        auto& valExpr = ValueExpressionBase::fromSymbol(
+            context, *internalSymbol, false, { location, location + name.length() },
+            /* constraintAllowed */ false, /* interconnectAllowed */ true);
 
         if (syntax->kind == SyntaxKind::PortReference) {
             auto& prs = syntax->as<PortReferenceSyntax>();
@@ -1693,8 +1694,9 @@ const Expression* PortConnection::getExpression() const {
 
         auto [direction, type] = getDirAndType(port);
         if (connectedSymbol) {
-            auto& valExpr = ValueExpressionBase::fromSymbol(context, *connectedSymbol, false,
-                                                            implicitNameRange);
+            auto& valExpr = ValueExpressionBase::fromSymbol(
+                context, *connectedSymbol, false, implicitNameRange, /* constraintAllowed */ false,
+                /* interconnectAllowed */ true);
 
             if (!valExpr.type->isEquivalent(*type) && !valExpr.bad() && !type->isError()) {
                 auto& diag =

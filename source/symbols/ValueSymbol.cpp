@@ -133,7 +133,8 @@ void ValueSymbol::addDriver(DriverKind driverKind, const Expression& longestStat
             BindContext bindContext(*scope, LookupLocation::min);
             SourceRange range = { location, location + name.length() };
             return ValueExpressionBase::fromSymbol(bindContext, *this, /* isHierarchical */ false,
-                                                   range);
+                                                   range, /* constraintAllowed */ false,
+                                                   /* interconnectAllowed */ true);
         };
 
         // The first time we add a driver, check whether there is also an

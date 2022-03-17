@@ -2211,6 +2211,9 @@ module top();
 
    tb tb(bus);
    dut dut(bus);
+
+   assign bus = 1;
+   initial $display(bus);
 endmodule
 
 module tb import p::*; (output S so);
@@ -2221,11 +2224,14 @@ endmodule
 module dut import p::*; (input S si);
    always @*
      $display("struct: %b%b%b", si.a, si.b, si.c);
-
 endmodule
 )");
 
     Compilation compilation;
     compilation.addSyntaxTree(tree);
-    NO_COMPILATION_ERRORS;
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::InterconnectReference);
+    CHECK(diags[1].code == diag::InterconnectReference);
 }
