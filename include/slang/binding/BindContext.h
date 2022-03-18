@@ -152,10 +152,10 @@ enum class BindFlags : uint64_t {
     /// Binding is for a procedural force / release / deassign statement.
     ProceduralForceRelease = 1ull << 32,
 
-    /// Binding is for the type of an interconnect net.
-    InterconnectType = 1ull << 33,
+    /// Binding is in a context that allows interconnect nets.
+    AllowInterconnect = 1ull << 33,
 };
-BITMASK(BindFlags, InterconnectType)
+BITMASK(BindFlags, AllowInterconnect)
 
 enum class DimensionKind { Unknown, Range, AbbreviatedRange, Dynamic, Associative, Queue };
 

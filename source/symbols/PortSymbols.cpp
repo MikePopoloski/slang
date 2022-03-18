@@ -707,12 +707,17 @@ private:
                     if (dir == ArgumentDirection::Ref)
                         reportDirError(diag::PortConcatRef);
 
-                    // UWire nets aren't resolvable nets and so act like variables
-                    // for the purposes of these checks.
-                    if (sym->as<NetSymbol>().netType.netKind == NetType::UWire) {
+                    auto& net = sym->as<NetSymbol>();
+                    if (net.netType.netKind == NetType::UWire) {
+                        // UWire nets aren't resolvable nets and so act like variables
+                        // for the purposes of these checks.
                         allNets = false;
                         if (dir == ArgumentDirection::InOut)
                             reportDirError(diag::PortConcatInOut);
+                    }
+                    else if (net.netType.netKind == NetType::Interconnect) {
+                        // Can't use interconnects in a port concat.
+                        scope.addDiag(diag::InterconnectMultiPort, item->sourceRange());
                     }
                 }
                 else {
@@ -1320,10 +1325,11 @@ const Type& PortSymbol::getType() const {
         ASSERT(dt);
         type = &dt->getType();
 
-        BindContext context(*scope, LookupLocation::before(*this), BindFlags::NonProcedural);
-        auto& valExpr = ValueExpressionBase::fromSymbol(
-            context, *internalSymbol, false, { location, location + name.length() },
-            /* constraintAllowed */ false, /* interconnectAllowed */ true);
+        BindContext context(*scope, LookupLocation::before(*this),
+                            BindFlags::NonProcedural | BindFlags::AllowInterconnect);
+
+        auto& valExpr = ValueExpressionBase::fromSymbol(context, *internalSymbol, false,
+                                                        { location, location + name.length() });
 
         if (syntax->kind == SyntaxKind::PortReference) {
             auto& prs = syntax->as<PortReferenceSyntax>();
@@ -1449,6 +1455,40 @@ void PortSymbol::getNetTypes(SmallVector<NetTypeRange>& ranges) const {
     }
 }
 
+static bool isNetPortImpl(const Expression& expr) {
+    if (auto sym = expr.getSymbolReference(); sym && sym->kind == SymbolKind::Net)
+        return true;
+
+    if (expr.kind == ExpressionKind::Concatenation) {
+        for (auto op : expr.as<ConcatenationExpression>().operands()) {
+            if (!isNetPortImpl(*op))
+                return false;
+        }
+        return true;
+    }
+
+    if (expr.kind == ExpressionKind::Conversion) {
+        auto& conv = expr.as<ConversionExpression>();
+        if (conv.isImplicit())
+            return isNetPortImpl(conv.operand());
+    }
+
+    if (expr.kind == ExpressionKind::Assignment) {
+        auto& assign = expr.as<AssignmentExpression>();
+        if (assign.isLValueArg())
+            return isNetPortImpl(assign.left());
+    }
+
+    return false;
+}
+
+bool PortSymbol::isNetPort() const {
+    if (auto ie = getInternalExpr())
+        return isNetPortImpl(*ie);
+
+    return internalSymbol && internalSymbol->kind == SymbolKind::Net;
+}
+
 void PortSymbol::fromSyntax(
     const PortListSyntax& syntax, const Scope& scope, SmallVector<const Symbol*>& results,
     SmallVector<std::pair<Symbol*, const Symbol*>>& implicitMembers,
@@ -1537,7 +1577,7 @@ const Type& MultiPortSymbol::getType() const {
 
     for (auto port : ports) {
         auto& t = port->getType();
-        if (t.isError()) {
+        if (t.isError() || t.isUntypedType()) {
             type = &comp.getErrorType();
             return *type;
         }
@@ -1689,14 +1729,19 @@ const Expression* PortConnection::getExpression() const {
         auto scope = ll.getScope();
         ASSERT(scope);
 
-        BindContext context(*scope, ll, BindFlags::NonProcedural);
+        const bool isNetPort = port.kind == SymbolKind::Port && port.as<PortSymbol>().isNetPort();
+
+        bitmask<BindFlags> flags = BindFlags::NonProcedural;
+        if (isNetPort)
+            flags |= BindFlags::AllowInterconnect;
+
+        BindContext context(*scope, ll, flags);
         context.instance = &parentInstance;
 
         auto [direction, type] = getDirAndType(port);
         if (connectedSymbol) {
-            auto& valExpr = ValueExpressionBase::fromSymbol(
-                context, *connectedSymbol, false, implicitNameRange, /* constraintAllowed */ false,
-                /* interconnectAllowed */ true);
+            auto& valExpr = ValueExpressionBase::fromSymbol(context, *connectedSymbol, false,
+                                                            implicitNameRange);
 
             if (!valExpr.type->isEquivalent(*type) && !valExpr.bad() && !type->isError()) {
                 auto& diag =
@@ -1727,6 +1772,20 @@ const Expression* PortConnection::getExpression() const {
     return expr;
 }
 
+static const Symbol* findAnyVars(const Expression& expr) {
+    if (auto sym = expr.getSymbolReference(); sym && sym->kind != SymbolKind::Net)
+        return sym;
+
+    if (expr.kind == ExpressionKind::Concatenation) {
+        for (auto op : expr.as<ConcatenationExpression>().operands()) {
+            if (auto sym = findAnyVars(*op))
+                return sym;
+        }
+    }
+
+    return nullptr;
+}
+
 void PortConnection::checkSimulatedNetTypes() const {
     getExpression();
     if (!expr || expr->bad())
@@ -1749,6 +1808,14 @@ void PortConnection::checkSimulatedNetTypes() const {
 
     auto scope = parentInstance.getParentScope();
     ASSERT(scope);
+
+    // Do additional checking on the expression for interconnect port connections.
+    if (internal.size() == 1 && internal[0].netType->netKind == NetType::Interconnect) {
+        if (auto sym = findAnyVars(*expr)) {
+            scope->addDiag(diag::InterconnectPortVar, expr->sourceRange) << sym->name;
+            return;
+        }
+    }
 
     auto requireMatching = [&](const NetType& udnt) {
         // Types are more restricted; they must match instead of just being

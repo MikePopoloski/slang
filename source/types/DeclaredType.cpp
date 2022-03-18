@@ -116,12 +116,12 @@ void DeclaredType::resolveType(const BindContext& typeContext,
             auto& its = syntax->as<ImplicitTypeSyntax>();
             if (!its.dimensions.empty())
                 type = &comp.getType(*type, its.dimensions,
-                                     typeContext.resetFlags(BindFlags::InterconnectType));
+                                     typeContext.resetFlags(BindFlags::AllowInterconnect));
         }
 
         if (dimensions) {
             type = &comp.getType(*type, *dimensions,
-                                 typeContext.resetFlags(BindFlags::InterconnectType));
+                                 typeContext.resetFlags(BindFlags::AllowInterconnect));
         }
 
         // Return early to skip additional checks for net types.

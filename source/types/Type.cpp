@@ -974,7 +974,7 @@ const Type& Type::fromSyntax(Compilation& compilation, const Type& elementType,
         case SymbolKind::SequenceType:
         case SymbolKind::PropertyType:
         case SymbolKind::UntypedType:
-            if (!context.flags.has(BindFlags::InterconnectType)) {
+            if (!context.flags.has(BindFlags::AllowInterconnect)) {
                 context.addDiag(diag::InvalidArrayElemType, dimensions.sourceRange())
                     << elementType;
                 return compilation.getErrorType();

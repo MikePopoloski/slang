@@ -26,7 +26,7 @@ public:
 
     static Expression& fromSymbol(const BindContext& context, const Symbol& symbol,
                                   bool isHierarchical, SourceRange sourceRange,
-                                  bool constraintAllowed = false, bool interconnectAllowed = false);
+                                  bool constraintAllowed = false);
 
     static bool checkVariableAssignment(const BindContext& context, const VariableSymbol& var,
                                         bitmask<AssignFlags> flags, SourceLocation assignLoc,

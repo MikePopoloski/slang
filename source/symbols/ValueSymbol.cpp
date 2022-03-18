@@ -130,11 +130,10 @@ void ValueSymbol::addDriver(DriverKind driverKind, const Expression& longestStat
     auto driver = comp.emplace<Driver>(driverKind, longestStaticPrefix, flags);
     if (!firstDriver) {
         auto makeRef = [&]() -> const Expression& {
-            BindContext bindContext(*scope, LookupLocation::min);
+            BindContext bindContext(*scope, LookupLocation::min, BindFlags::AllowInterconnect);
             SourceRange range = { location, location + name.length() };
             return ValueExpressionBase::fromSymbol(bindContext, *this, /* isHierarchical */ false,
-                                                   range, /* constraintAllowed */ false,
-                                                   /* interconnectAllowed */ true);
+                                                   range);
         };
 
         // The first time we add a driver, check whether there is also an

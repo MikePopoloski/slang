@@ -66,6 +66,8 @@ public:
     };
     void getNetTypes(SmallVector<NetTypeRange>& ranges) const;
 
+    bool isNetPort() const;
+
     void serializeTo(ASTSerializer& serializer) const;
 
     static void fromSyntax(

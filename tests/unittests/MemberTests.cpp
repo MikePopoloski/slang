@@ -2204,6 +2204,8 @@ package p;
    typedef struct {
       bit a,b,c;
    } S;
+
+   nettype S SNet;
 endpackage:p
 
 module top();
@@ -2216,12 +2218,11 @@ module top();
    initial $display(bus);
 endmodule
 
-module tb import p::*; (output S so);
-   initial
-     so = '{0,1,1};
+module tb import p::*; (output SNet so);
+   assign so = '{0,1,1};
 endmodule
 
-module dut import p::*; (input S si);
+module dut import p::*; (input SNet si);
    always @*
      $display("struct: %b%b%b", si.a, si.b, si.c);
 endmodule

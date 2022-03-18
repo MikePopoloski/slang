@@ -1529,15 +1529,37 @@ endmodule
 module dut2(inout wand w);
     assign w = 0;
 endmodule
+
+module o({a, b});
+    input interconnect a;
+    input b;
+endmodule
+
+module p(input interconnect a);
+endmodule
+
+module q(input int b);
+endmodule
+
+module top;
+    logic a;
+    p p1(.a);
+
+    interconnect b;
+    q q1(.b);
+endmodule
 )");
 
     Compilation compilation;
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 2);
+    REQUIRE(diags.size() == 5);
     CHECK(diags[0].code == diag::InterconnectInitializer);
     CHECK(diags[1].code == diag::InterconnectTypeSyntax);
+    CHECK(diags[2].code == diag::InterconnectMultiPort);
+    CHECK(diags[3].code == diag::InterconnectPortVar);
+    CHECK(diags[4].code == diag::InterconnectReference);
 }
 
 TEST_CASE("More interconnect ports") {
