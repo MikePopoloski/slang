@@ -839,6 +839,7 @@ Expression& Expression::bindName(Compilation& compilation, const NameSyntax& syn
         if (context.firstIterator) {
             LookupResult result;
             if (Lookup::findIterator(*context.scope, *context.firstIterator, syntax, result)) {
+                result.reportDiags(context);
                 return bindLookupResult(compilation, result, syntax.sourceRange(), invocation,
                                         withClause, context);
             }
@@ -848,9 +849,8 @@ Expression& Expression::bindName(Compilation& compilation, const NameSyntax& syn
             // Inside a class-scoped randomize call, first do a lookup in the class scope.
             // If it's not found, we proceed to do a normal lookup.
             LookupResult result;
-            if (Lookup::withinClassRandomize(*context.randomizeDetails->classType,
-                                             context.randomizeDetails->nameRestrictions, syntax,
-                                             flags, result)) {
+            if (Lookup::withinClassRandomize(context, syntax, flags, result)) {
+                result.reportDiags(context);
                 return bindLookupResult(compilation, result, syntax.sourceRange(), invocation,
                                         withClause, context);
             }
@@ -864,6 +864,7 @@ Expression& Expression::bindName(Compilation& compilation, const NameSyntax& syn
             // Look for a matching local assertion variable.
             LookupResult result;
             if (Lookup::findAssertionLocalVar(context, syntax, result)) {
+                result.reportDiags(context);
                 return bindLookupResult(compilation, result, syntax.sourceRange(), invocation,
                                         withClause, context);
             }

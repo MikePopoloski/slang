@@ -476,6 +476,7 @@ Expression& CallExpression::createSystemCall(
             argContext.randomizeDetails = &randomizeDetails;
             if (firstArg) {
                 randomizeDetails.classType = &firstArg->type->getCanonicalType().as<ClassType>();
+                randomizeDetails.thisVar = firstArg->getSymbolReference();
             }
             else if (randomizeScope && randomizeScope->asSymbol().kind == SymbolKind::ClassType) {
                 randomizeDetails.classType = randomizeScope;

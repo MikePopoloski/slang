@@ -2098,7 +2098,7 @@ class B;
         k = local::k; // error
         k = a.randomize (l, j);
         k = a.randomize (l, j) with (l) { l[0] > 1; };
-        k = randomize (k);
+        k = randomize (k) with { this.k < 10; };
         k = randomize (baz);
         k = randomize (k[0]);
         k = randomize (null);
@@ -2114,16 +2114,17 @@ endclass
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 9);
-    CHECK(diags[0].code == diag::UnknownMember);
-    CHECK(diags[1].code == diag::ExpectedIdentifier);
+    REQUIRE(diags.size() == 10);
+    CHECK(diags[0].code == diag::BadBinaryExpression);
+    CHECK(diags[1].code == diag::UnknownMember);
     CHECK(diags[2].code == diag::ExpectedIdentifier);
-    CHECK(diags[3].code == diag::LocalNotAllowed);
-    CHECK(diags[4].code == diag::ExpectedClassPropertyName);
+    CHECK(diags[3].code == diag::ExpectedIdentifier);
+    CHECK(diags[4].code == diag::LocalNotAllowed);
     CHECK(diags[5].code == diag::ExpectedClassPropertyName);
-    CHECK(diags[6].code == diag::ExpectedVariableName);
-    CHECK(diags[7].code == diag::InvalidRandType);
-    CHECK(diags[8].code == diag::NameListWithScopeRandomize);
+    CHECK(diags[6].code == diag::ExpectedClassPropertyName);
+    CHECK(diags[7].code == diag::ExpectedVariableName);
+    CHECK(diags[8].code == diag::InvalidRandType);
+    CHECK(diags[9].code == diag::NameListWithScopeRandomize);
 }
 
 TEST_CASE("Scope randomize rand variables") {

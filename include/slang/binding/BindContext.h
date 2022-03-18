@@ -199,6 +199,10 @@ public:
         /// The scope of the class type itself, if randomizing a class.
         const Scope* classType = nullptr;
 
+        /// If randomizing a class via a dotted handle access, this is
+        /// the the class handle symbol.
+        const Symbol* thisVar = nullptr;
+
         /// A list of names to which class-scoped lookups are restricted.
         /// If empty, the lookup is unrestricted and all names are first
         /// tried in class-scope.

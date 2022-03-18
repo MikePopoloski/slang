@@ -281,9 +281,8 @@ public:
     /// restrictions provided. If the symbol is not found, or if the name starts with 'local::',
     /// it is expected that the caller will then perform a normal lookup in the local scope.
     /// Returns true if the symbol is found and false otherwise.
-    static bool withinClassRandomize(const Scope& scope, span<const string_view> nameRestrictions,
-                                     const NameSyntax& syntax, bitmask<LookupFlags> flags,
-                                     LookupResult& result);
+    static bool withinClassRandomize(const BindContext& context, const NameSyntax& syntax,
+                                     bitmask<LookupFlags> flags, LookupResult& result);
 
     /// Performs a lookup within an expanding sequence or property to try to find a
     /// local variable matching the given name. If one is found, populates @a result

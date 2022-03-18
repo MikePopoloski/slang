@@ -1303,14 +1303,27 @@ bool Lookup::findIterator(const Scope& scope, const IteratorSymbol& symbol,
     return lookupDownward(nameParts, name, context, result);
 }
 
-bool Lookup::withinClassRandomize(const Scope& scope, span<const string_view> nameRestrictions,
-                                  const NameSyntax& syntax, bitmask<LookupFlags> flags,
-                                  LookupResult& result) {
+bool Lookup::withinClassRandomize(const BindContext& context, const NameSyntax& syntax,
+                                  bitmask<LookupFlags> flags, LookupResult& result) {
     int colonParts = 0;
     SmallVectorSized<NamePlusLoc, 8> nameParts;
     const NameSyntax* first = &syntax;
     if (syntax.kind == SyntaxKind::ScopedName)
         first = splitScopedName(syntax.as<ScopedNameSyntax>(), nameParts, colonParts);
+
+    ASSERT(context.randomizeDetails);
+    auto& details = *context.randomizeDetails;
+    auto& classScope = *details.classType;
+
+    auto findSuperScope = [&]() -> const Scope& {
+        if (details.thisVar) {
+            auto dt = details.thisVar->getDeclaredType();
+            ASSERT(dt);
+            return dt->getType().getCanonicalType().as<ClassType>();
+        }
+
+        return *context.scope;
+    };
 
     NameComponents name = *first;
     switch (first->kind) {
@@ -1323,28 +1336,31 @@ bool Lookup::withinClassRandomize(const Scope& scope, span<const string_view> na
             // If the nameRestrictions list is not empty, we have to verify that the
             // first element is in the list. Otherwise, an empty list indicates that
             // the lookup is unrestricted.
-            if (!nameRestrictions.empty()) {
-                if (std::find(nameRestrictions.begin(), nameRestrictions.end(), name.text) ==
-                    nameRestrictions.end()) {
+            if (!details.nameRestrictions.empty()) {
+                if (std::find(details.nameRestrictions.begin(), details.nameRestrictions.end(),
+                              name.text) == details.nameRestrictions.end()) {
                     return false;
                 }
             }
 
-            result.found = scope.find(name.text);
+            result.found = classScope.find(name.text);
             break;
         case SyntaxKind::ThisHandle:
-            result.found = &scope.asSymbol();
-            if (nameParts.back().kind == SyntaxKind::SuperHandle) {
+            result.found = details.thisVar;
+            if (!result.found)
+                result.found = findThisHandle(*context.scope, name.range, result);
+
+            if (result.found && nameParts.back().kind == SyntaxKind::SuperHandle) {
                 // Handle "this.super.whatever" the same as if the user had just
                 // written "super.whatever".
                 name = nameParts.back().name;
                 nameParts.pop();
-                result.found = findSuperHandle(scope, name.range, result);
+                result.found = findSuperHandle(findSuperScope(), name.range, result);
                 colonParts = 1;
             }
             break;
         case SyntaxKind::SuperHandle:
-            result.found = findSuperHandle(scope, name.range, result);
+            result.found = findSuperHandle(findSuperScope(), name.range, result);
             colonParts = 1; // pretend we used colon access to resolve class scoped name
             break;
         default:
@@ -1356,17 +1372,17 @@ bool Lookup::withinClassRandomize(const Scope& scope, span<const string_view> na
     if (!result.found)
         return false;
 
-    BindContext context(scope, LookupLocation::max);
+    BindContext classContext(classScope, LookupLocation::max);
     if (colonParts) {
         // Disallow package lookups in this function.
         auto isClass = isClassType(*result.found);
         if (!isClass.has_value() || !isClass.value())
             return false;
 
-        return resolveColonNames(nameParts, colonParts, name, flags, result, context);
+        return resolveColonNames(nameParts, colonParts, name, flags, result, classContext);
     }
 
-    return lookupDownward(nameParts, name, context, result);
+    return lookupDownward(nameParts, name, classContext, result);
 }
 
 bool Lookup::findAssertionLocalVar(const BindContext& context, const NameSyntax& syntax,
