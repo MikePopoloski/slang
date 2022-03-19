@@ -876,6 +876,11 @@ Expression& MemberAccessExpression::fromSelector(
             return *compilation.emplace<MemberAccessExpression>(compilation.getVoidType(), expr,
                                                                 *member, 0u, range);
         }
+        case SymbolKind::EnumValue:
+            // The thing being selected from doesn't actually matter, since the
+            // enum value is a constant.
+            return ValueExpressionBase::fromSymbol(context, *member, /* isHierarchical */ false,
+                                                   range);
         default: {
             if (member->isValue()) {
                 auto& value = member->as<ValueSymbol>();

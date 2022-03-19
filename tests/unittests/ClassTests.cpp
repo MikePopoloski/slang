@@ -249,8 +249,8 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 5);
-    for (int i = 0; i < 5; i++) {
+    REQUIRE(diags.size() == 4);
+    for (int i = 0; i < 4; i++) {
         CHECK(diags[i].code == diag::ConstEvalClassType);
     }
 }

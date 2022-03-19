@@ -1634,3 +1634,24 @@ endmodule
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::RefTypeMismatch);
 }
+
+TEST_CASE("Struct enum member lookup") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    function int foo;
+        struct { enum {A,B} i; } asdf;
+        asdf.i = asdf.B;
+        return asdf.i;
+    endfunction
+
+    localparam int bar = foo();
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    auto& bar = compilation.getRoot().lookupName<ParameterSymbol>("m.bar");
+    CHECK(bar.getValue().integer() == 1);
+}
