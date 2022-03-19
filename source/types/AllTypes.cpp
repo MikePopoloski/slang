@@ -293,7 +293,9 @@ const Type& EnumType::fromSyntax(Compilation& compilation, const EnumTypeSyntax&
         if (cb->isError())
             return *cb;
 
-        if (!cb->isSimpleBitVector()) {
+        // Error if the named type is invalid for an enum base type. Other invalid types
+        // will have been diagnosed already by the parser.
+        if (!cb->isSimpleBitVector() && syntax.baseType->kind == SyntaxKind::NamedType) {
             context.addDiag(diag::InvalidEnumBase, syntax.baseType->getFirstToken().location())
                 << *base;
             return compilation.getErrorType();
