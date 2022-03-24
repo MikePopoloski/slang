@@ -1655,3 +1655,24 @@ endmodule
     auto& bar = compilation.getRoot().lookupName<ParameterSymbol>("m.bar");
     CHECK(bar.getValue().integer() == 1);
 }
+
+TEST_CASE("Type compatibility not based on syntax node alone") {
+    auto tree = SyntaxTree::fromText(R"(
+module m #(type t);
+    struct { t bar; } foo;
+endmodule
+
+module n;
+    m #(int) m1();
+    m #(real) m2();
+    initial m1.foo = m2.foo;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::BadAssignment);
+}

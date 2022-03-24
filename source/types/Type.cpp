@@ -399,8 +399,13 @@ bool Type::isMatching(const Type& rhs) const {
     // and also handles simple bit vector types that share the same range, signedness,
     // and four-stateness because we uniquify them in the compilation cache.
     // This handles checks [6.22.1] (a), (b), (c), (d), (g), and (h).
-    if (l == r || (l->getSyntax() && l->getSyntax() == r->getSyntax()))
+    if (l == r)
         return true;
+
+    if (l->getSyntax() && l->getSyntax() == r->getSyntax() &&
+        l->getParentScope() == r->getParentScope()) {
+        return true;
+    }
 
     // Special casing for type synonyms: real/realtime
     if (l->isFloating() && r->isFloating()) {
