@@ -2518,3 +2518,29 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Class inheritance circular dependency") {
+    auto tree = SyntaxTree::fromText(R"(
+typedef class C;
+
+class A extends C;
+endclass
+
+class B extends A;
+endclass
+
+class C extends B;
+endclass
+
+module m;
+    C c1 = new;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::ClassInheritanceCycle);
+}

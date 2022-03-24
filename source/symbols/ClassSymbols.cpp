@@ -14,6 +14,7 @@
 #include "slang/compilation/Compilation.h"
 #include "slang/diagnostics/DeclarationsDiags.h"
 #include "slang/diagnostics/ExpressionsDiags.h"
+#include "slang/diagnostics/TypesDiags.h"
 #include "slang/symbols/ASTSerializer.h"
 #include "slang/symbols/MemberSymbols.h"
 #include "slang/symbols/ParameterSymbols.h"
@@ -268,6 +269,22 @@ void ClassType::handleExtends(const ExtendsClauseSyntax& extendsClause, const Bi
         baseClass = &comp.getErrorType();
         context.addDiag(diag::ExtendIfaceFromClass, extendsClause.sourceRange()) << baseType->name;
         return;
+    }
+
+    // Make sure there are no cycles in the inheritance chain.
+    auto currBase = baseType;
+    while (true) {
+        if (currBase == this) {
+            context.addDiag(diag::ClassInheritanceCycle, extendsClause.sourceRange()) << name;
+            baseClass = &comp.getErrorType();
+            return;
+        }
+
+        auto next = currBase->getBaseClass();
+        if (!next || next->isError())
+            break;
+
+        currBase = &next->getCanonicalType().as<ClassType>();
     }
 
     // Assign this member before resolving anything below, because they

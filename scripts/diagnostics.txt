@@ -676,6 +676,7 @@ error VirtualInterfaceUnionMember "virtual interfaces cannot be used as members 
 error InvalidArrayElemType "cannot declare an array with elements of type {}"
 error NonIntegralCoverageExpr "{} is not a valid type for a coverage expression"
 error TypeRefHierarchical "'type' expression cannot contain hierarchical references"
+error ClassInheritanceCycle "circular dependency in inheritance chain for class '{}'"
 warning enum-range EnumRangeLiteral "enum element ranges must be integer literals"
 
 subsystem Lookup
