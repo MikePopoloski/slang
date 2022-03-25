@@ -914,7 +914,7 @@ Expression& MemberAccessExpression::fromSyntax(
     selector.nameRange = syntax.name.range();
 
     auto& result = fromSelector(compilation, lhs, selector, invocation, withClause, context);
-    if (result.kind != ExpressionKind::Call) {
+    if (result.kind != ExpressionKind::Call && !result.bad()) {
         if (invocation) {
             auto& diag = context.addDiag(diag::ExpressionNotCallable, invocation->sourceRange());
             diag << selector.nameRange;

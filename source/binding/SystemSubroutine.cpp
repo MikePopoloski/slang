@@ -97,6 +97,9 @@ const Type& SimpleSystemSubroutine::checkArguments(const BindContext& context, c
     if (!checkArgCount(context, isMethod, args, range, requiredArgs, argTypes.size()))
         return comp.getErrorType();
 
+    if (isFirstArgLValue && !args.empty() && !args[0]->requireLValue(context))
+        return comp.getErrorType();
+
     return *returnType;
 }
 

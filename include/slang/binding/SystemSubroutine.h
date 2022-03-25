@@ -70,10 +70,10 @@ public:
 protected:
     SimpleSystemSubroutine(const std::string& name, SubroutineKind kind, size_t requiredArgs,
                            const std::vector<const Type*>& argTypes, const Type& returnType,
-                           bool isMethod) :
+                           bool isMethod, bool isFirstArgLValue = false) :
         SystemSubroutine(name, kind),
-        argTypes(argTypes), returnType(&returnType), requiredArgs(requiredArgs),
-        isMethod(isMethod) {
+        argTypes(argTypes), returnType(&returnType), requiredArgs(requiredArgs), isMethod(isMethod),
+        isFirstArgLValue(isFirstArgLValue) {
         ASSERT(requiredArgs <= argTypes.size());
     }
 
@@ -82,6 +82,7 @@ private:
     const Type* returnType;
     size_t requiredArgs;
     bool isMethod;
+    bool isFirstArgLValue;
 };
 
 class NonConstantFunction : public SimpleSystemSubroutine {

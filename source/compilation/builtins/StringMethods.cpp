@@ -31,7 +31,7 @@ public:
     explicit StringPutcMethod(Compilation& comp) :
         SimpleSystemSubroutine("putc", SubroutineKind::Function, 2,
                                { &comp.getIntType(), &comp.getByteType() }, comp.getVoidType(),
-                               true) {}
+                               true, /* isFirstArgLValue */ true) {}
 
     ConstantValue eval(EvalContext& context, const Args& args, SourceRange,
                        const CallExpression::SystemCallInfo&) const final {
@@ -219,7 +219,7 @@ class StringItoAMethod : public SimpleSystemSubroutine {
 public:
     StringItoAMethod(Compilation& comp, const std::string& name, LiteralBase base) :
         SimpleSystemSubroutine(name, SubroutineKind::Function, 1, { &comp.getIntegerType() },
-                               comp.getVoidType(), true),
+                               comp.getVoidType(), true, /* isFirstArgLValue */ true),
         base(base) {}
 
     ConstantValue eval(EvalContext& context, const Args& args, SourceRange,
@@ -241,7 +241,7 @@ class StringRealtoAMethod : public SimpleSystemSubroutine {
 public:
     explicit StringRealtoAMethod(Compilation& comp) :
         SimpleSystemSubroutine("realtoa", SubroutineKind::Function, 1, { &comp.getRealType() },
-                               comp.getVoidType(), true) {}
+                               comp.getVoidType(), true, /* isFirstArgLValue */ true) {}
 
     ConstantValue eval(EvalContext& context, const Args& args, SourceRange,
                        const CallExpression::SystemCallInfo&) const final {

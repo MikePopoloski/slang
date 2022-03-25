@@ -119,6 +119,9 @@ public:
         if (!checkArgCount(context, true, args, range, 0, 0))
             return comp.getErrorType();
 
+        if (!args[0]->requireLValue(context))
+            return comp.getErrorType();
+
         if (iterExpr) {
             if (!isComparable(*iterExpr->type)) {
                 context.addDiag(diag::ArrayMethodComparable, iterExpr->sourceRange) << name;
@@ -211,6 +214,9 @@ public:
                                const Expression*) const final {
         auto& comp = context.getCompilation();
         if (!checkArgCount(context, true, args, range, 0, 0))
+            return comp.getErrorType();
+
+        if (!args[0]->requireLValue(context))
             return comp.getErrorType();
 
         return comp.getVoidType();
@@ -540,8 +546,8 @@ public:
 class DynArrayDeleteMethod : public SimpleSystemSubroutine {
 public:
     explicit DynArrayDeleteMethod(Compilation& comp) :
-        SimpleSystemSubroutine("delete", SubroutineKind::Function, 0, {}, comp.getVoidType(),
-                               true) {}
+        SimpleSystemSubroutine("delete", SubroutineKind::Function, 0, {}, comp.getVoidType(), true,
+                               /* isFirstArgLValue */ true) {}
 
     ConstantValue eval(EvalContext& context, const Args& args, SourceRange,
                        const CallExpression::SystemCallInfo&) const final {
@@ -574,6 +580,9 @@ public:
                                const Expression*) const final {
         auto& comp = context.getCompilation();
         if (!checkArgCount(context, true, args, range, 0, 1))
+            return comp.getErrorType();
+
+        if (!args[0]->requireLValue(context))
             return comp.getErrorType();
 
         if (args.size() > 1) {
@@ -707,6 +716,9 @@ public:
         if (!checkArgCount(context, true, args, range, 0, 0))
             return comp.getErrorType();
 
+        if (!args[0]->requireLValue(context))
+            return comp.getErrorType();
+
         return *args[0]->type->getArrayElementType();
     }
 
@@ -761,6 +773,9 @@ public:
         if (!checkArgCount(context, true, args, range, 1, 1))
             return comp.getErrorType();
 
+        if (!args[0]->requireLValue(context))
+            return comp.getErrorType();
+
         return comp.getVoidType();
     }
 
@@ -810,6 +825,9 @@ public:
         if (!checkArgCount(context, true, args, range, 2, 2))
             return comp.getErrorType();
 
+        if (!args[0]->requireLValue(context))
+            return comp.getErrorType();
+
         if (!args[1]->type->isIntegral())
             return badArg(context, *args[1]);
 
@@ -849,6 +867,9 @@ public:
                                const Expression*) const final {
         auto& comp = context.getCompilation();
         if (!checkArgCount(context, true, args, range, 0, 1))
+            return comp.getErrorType();
+
+        if (!args[0]->requireLValue(context))
             return comp.getErrorType();
 
         if (args.size() > 1) {
