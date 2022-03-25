@@ -715,6 +715,12 @@ Expression& Expression::create(Compilation& compilation, const ExpressionSyntax&
         case SyntaxKind::InvocationExpression:
             result = &CallExpression::fromSyntax(
                 compilation, syntax.as<InvocationExpressionSyntax>(), nullptr, context);
+
+            // The syntax node might have already been assigned after creating the
+            // call expression, for cases like let decls that get expanded in place.
+            // Return early to avoid overwriting that syntax node.
+            if (result->syntax)
+                return *result;
             break;
         case SyntaxKind::ConditionalExpression:
             result = &ConditionalExpression::fromSyntax(

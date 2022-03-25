@@ -2198,6 +2198,30 @@ source:18:28: note: comparison reduces to (12 < 8)
 )");
 }
 
+TEST_CASE("$static_assert with let expression") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    localparam i = 1;
+    let isNegative(n) = n < 0;
+    $static_assert(isNegative(i));
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diagnostics = compilation.getAllDiagnostics();
+    std::string result = "\n" + report(diagnostics);
+    CHECK(result == R"(
+source:5:5: error: static assertion failed
+    $static_assert(isNegative(i));
+    ^
+source:4:27: note: comparison reduces to (1 < 0)
+    let isNegative(n) = n < 0;
+                        ~~^~~
+)");
+}
+
 TEST_CASE("Interconnect nets") {
     auto tree = SyntaxTree::fromText(R"(
 package p;
