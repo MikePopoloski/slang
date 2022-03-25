@@ -41,11 +41,13 @@ Lexer::Lexer(BufferID bufferId, string_view source, const char* startPtr, BumpAl
     if (count >= 2) {
         const unsigned char* ubuf = reinterpret_cast<const unsigned char*>(sourceBuffer);
         if ((ubuf[0] == 0xFF && ubuf[1] == 0xFE) || (ubuf[0] == 0xFE && ubuf[1] == 0xFF)) {
+            errorCount++;
             addDiag(diag::UnicodeBOM, 0);
             advance(2);
         }
         else if (count >= 3) {
             if (ubuf[0] == 0xEF && ubuf[1] == 0xBB && ubuf[2] == 0xBF) {
+                errorCount++;
                 addDiag(diag::UnicodeBOM, 0);
                 advance(3);
             }
@@ -218,6 +220,7 @@ Token Lexer::lexToken(KeywordVersion keywordVersion) {
             // he'll just keep getting back EndOfFile tokens over and over
             sourceBuffer--;
             if (!reallyAtEnd()) {
+                errorCount++;
                 addDiag(diag::EmbeddedNull, currentOffset());
                 advance();
                 return create(TokenKind::Unknown);
@@ -561,6 +564,7 @@ Token Lexer::lexToken(KeywordVersion keywordVersion) {
             }
             return create(TokenKind::Tilde);
         default:
+            errorCount++;
             if (isASCII(c))
                 addDiag(diag::NonPrintableChar, currentOffset() - 1);
             else {
@@ -659,6 +663,7 @@ Token Lexer::lexStringLiteral() {
             }
 
             // otherwise just error and ignore
+            errorCount++;
             addDiag(diag::EmbeddedNull, offset);
             advance();
         }
@@ -1065,6 +1070,7 @@ void Lexer::scanLineComment() {
                 break;
 
             // otherwise just error and ignore
+            errorCount++;
             addDiag(diag::EmbeddedNull, currentOffset());
         }
         advance();
@@ -1082,6 +1088,7 @@ void Lexer::scanBlockComment() {
             }
 
             // otherwise just error and ignore
+            errorCount++;
             addDiag(diag::EmbeddedNull, currentOffset());
             advance();
         }
@@ -1114,7 +1121,6 @@ void Lexer::addTrivia(TriviaKind kind) {
 }
 
 Diagnostic& Lexer::addDiag(DiagCode code, size_t offset) {
-    errorCount++;
     return diagnostics.add(code, SourceLocation(bufferId, offset));
 }
 
