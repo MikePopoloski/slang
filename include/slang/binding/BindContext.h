@@ -275,6 +275,7 @@ public:
     DriverKind getDriverKind() const;
     const InstanceSymbolBase* getInstance() const;
     const ProceduralBlockSymbol* getProceduralBlock() const;
+    const SubroutineSymbol* getContainingSubroutine() const;
 
     void setInstance(const InstanceSymbolBase& inst);
     void setProceduralBlock(const ProceduralBlockSymbol& block);

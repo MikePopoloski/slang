@@ -110,9 +110,12 @@ enum class AssignFlags {
     OutputPort = 1 << 3,
 
     /// The assignment is for an inout port of a module / interface / program.
-    InOutPort = 1 << 4
+    InOutPort = 1 << 4,
+
+    /// This assignment is being discovered via a function call from a procedure.
+    FuncFromProcedure = 1 << 5
 };
-BITMASK(AssignFlags, InOutPort)
+BITMASK(AssignFlags, FuncFromProcedure)
 
 class SemanticFacts {
 public:

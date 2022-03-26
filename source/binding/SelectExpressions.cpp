@@ -14,6 +14,7 @@
 #include "slang/diagnostics/ExpressionsDiags.h"
 #include "slang/diagnostics/LookupDiags.h"
 #include "slang/symbols/ASTSerializer.h"
+#include "slang/symbols/BlockSymbols.h"
 #include "slang/symbols/ClassSymbols.h"
 #include "slang/symbols/CoverSymbols.h"
 #include "slang/symbols/InstanceSymbols.h"
@@ -1278,9 +1279,12 @@ bool MemberAccessExpression::requireLValueImpl(const BindContext& context, Sourc
         if (!longestStaticPrefix)
             longestStaticPrefix = this;
 
+        const Symbol* containingSym = context.getProceduralBlock();
+        if (!containingSym)
+            containingSym = context.getContainingSubroutine();
+
         auto& var = member.as<VariableSymbol>();
-        var.addDriver(context.getDriverKind(), *longestStaticPrefix, context.getProceduralBlock(),
-                      flags);
+        var.addDriver(context.getDriverKind(), *longestStaticPrefix, containingSym, flags);
 
         return ValueExpressionBase::checkVariableAssignment(context, var, flags, location,
                                                             sourceRange);

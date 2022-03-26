@@ -45,6 +45,24 @@ const ProceduralBlockSymbol* BindContext::getProceduralBlock() const {
     return nullptr;
 }
 
+const SubroutineSymbol* BindContext::getContainingSubroutine() const {
+    if (instanceOrProc)
+        return nullptr;
+
+    auto curr = scope.get();
+    do {
+        auto& sym = curr->asSymbol();
+        if (sym.kind == SymbolKind::Subroutine)
+            return &sym.as<SubroutineSymbol>();
+        if (sym.kind != SymbolKind::StatementBlock)
+            break;
+
+        curr = sym.getParentScope();
+    } while (curr);
+
+    return nullptr;
+}
+
 void BindContext::setInstance(const InstanceSymbolBase& inst) {
     ASSERT(!instanceOrProc);
     instanceOrProc = &inst;

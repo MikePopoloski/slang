@@ -55,12 +55,12 @@ public:
     class Driver {
     public:
         not_null<const Expression*> longestStaticPrefix;
-        const ProceduralBlockSymbol* proceduralBlock;
+        const Symbol* containingSymbol;
         DriverKind kind;
         bitmask<AssignFlags> flags;
 
         Driver(DriverKind kind, const Expression& longestStaticPrefix,
-               const ProceduralBlockSymbol* proceduralBlock, bitmask<AssignFlags> flags);
+               const Symbol* containingSymbol, bitmask<AssignFlags> flags, SourceRange range);
 
         const Driver* getNextDriver() const { return next; }
         bool isInputPort() const { return flags.has(AssignFlags::InputPort); }
@@ -68,15 +68,22 @@ public:
             return flags.has(AssignFlags::InputPort | AssignFlags::OutputPort);
         }
 
+        bool isInSingleDriverProcedure() const;
+        bool isInFunction() const;
+
+        SourceRange getSourceRange() const;
+
         bool overlaps(Compilation& compilation, const Driver& other) const;
 
     private:
         friend class ValueSymbol;
         mutable const Driver* next = nullptr;
+        mutable SourceRange range;
     };
 
     void addDriver(DriverKind kind, const Expression& longestStaticPrefix,
-                   const ProceduralBlockSymbol* proceduralBlock, bitmask<AssignFlags> flags) const;
+                   const Symbol* containingSymbol, bitmask<AssignFlags> flags,
+                   SourceRange rangeOverride = {}) const;
     const Driver* getFirstDriver() const { return firstDriver; }
 
 protected:

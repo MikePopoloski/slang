@@ -14,6 +14,7 @@
 #include "slang/diagnostics/ExpressionsDiags.h"
 #include "slang/symbols/BlockSymbols.h"
 #include "slang/symbols/Scope.h"
+#include "slang/symbols/SubroutineSymbols.h"
 #include "slang/symbols/VariableSymbols.h"
 #include "slang/syntax/AllSyntax.h"
 #include "slang/types/NetType.h"
@@ -46,10 +47,26 @@ bool ValueSymbol::isKind(SymbolKind kind) {
 }
 
 ValueSymbol::Driver::Driver(DriverKind kind, const Expression& longestStaticPrefix,
-                            const ProceduralBlockSymbol* proceduralBlock,
-                            bitmask<AssignFlags> flags) :
+                            const Symbol* containingSymbol, bitmask<AssignFlags> flags,
+                            SourceRange range) :
     longestStaticPrefix(&longestStaticPrefix),
-    proceduralBlock(proceduralBlock), kind(kind), flags(flags) {
+    containingSymbol(containingSymbol), kind(kind), flags(flags), range(range) {
+}
+
+bool ValueSymbol::Driver::isInSingleDriverProcedure() const {
+    return containingSymbol && containingSymbol->kind == SymbolKind::ProceduralBlock &&
+           containingSymbol->as<ProceduralBlockSymbol>().isSingleDriverBlock();
+}
+
+bool ValueSymbol::Driver::isInFunction() const {
+    return containingSymbol && containingSymbol->kind == SymbolKind::Subroutine &&
+           containingSymbol->as<SubroutineSymbol>().subroutineKind == SubroutineKind::Function;
+}
+
+SourceRange ValueSymbol::Driver::getSourceRange() const {
+    if (!range.start() && !range.end())
+        range = longestStaticPrefix->sourceRange;
+    return range;
 }
 
 static const Expression* nextPrefix(const Expression& expr) {
@@ -125,8 +142,8 @@ bool ValueSymbol::Driver::overlaps(Compilation& compilation, const Driver& other
 
 static bool handleOverlap(const Scope& scope, string_view name, const ValueSymbol::Driver& curr,
                           const ValueSymbol::Driver& driver, bool isNet, bool isUWire) {
-    auto currRange = curr.longestStaticPrefix->sourceRange;
-    auto driverRange = driver.longestStaticPrefix->sourceRange;
+    auto currRange = curr.getSourceRange();
+    auto driverRange = driver.getSourceRange();
 
     // The default handling case for mixed vs multiple assignments is below.
     // First check for more specialized cases here:
@@ -167,12 +184,12 @@ static bool handleOverlap(const Scope& scope, string_view name, const ValueSymbo
         // Multiple procedural drivers where one of them is an
         // always_comb / always_ff block.
         ProceduralBlockKind procKind;
-        if (driver.proceduralBlock && driver.proceduralBlock->isSingleDriverBlock()) {
-            procKind = driver.proceduralBlock->procedureKind;
+        if (driver.isInSingleDriverProcedure()) {
+            procKind = driver.containingSymbol->as<ProceduralBlockSymbol>().procedureKind;
         }
         else {
-            ASSERT(curr.proceduralBlock);
-            procKind = curr.proceduralBlock->procedureKind;
+            ASSERT(curr.containingSymbol);
+            procKind = curr.containingSymbol->as<ProceduralBlockSymbol>().procedureKind;
             std::swap(driverRange, currRange);
         }
 
@@ -194,6 +211,16 @@ static bool handleOverlap(const Scope& scope, string_view name, const ValueSymbo
         auto& diag = scope.addDiag(diag::MultipleAlwaysAssigns, driverRange);
         diag << name << procName;
         diag.addNote(diag::NoteAssignedHere, currRange.start()) << currRange;
+
+        if (driver.flags.has(AssignFlags::FuncFromProcedure) ||
+            curr.flags.has(AssignFlags::FuncFromProcedure)) {
+            SourceRange extraRange = driver.flags.has(AssignFlags::FuncFromProcedure)
+                                         ? driver.longestStaticPrefix->sourceRange
+                                         : curr.longestStaticPrefix->sourceRange;
+
+            diag.addNote(diag::NoteOriginalAssign, extraRange.start()) << extraRange;
+        }
+
         return false;
     }
 
@@ -209,13 +236,14 @@ static bool handleOverlap(const Scope& scope, string_view name, const ValueSymbo
 }
 
 void ValueSymbol::addDriver(DriverKind driverKind, const Expression& longestStaticPrefix,
-                            const ProceduralBlockSymbol* proceduralBlock,
-                            bitmask<AssignFlags> flags) const {
+                            const Symbol* containingSymbol, bitmask<AssignFlags> flags,
+                            SourceRange rangeOverride) const {
     auto scope = getParentScope();
     ASSERT(scope);
 
     auto& comp = scope->getCompilation();
-    auto driver = comp.emplace<Driver>(driverKind, longestStaticPrefix, proceduralBlock, flags);
+    auto driver = comp.emplace<Driver>(driverKind, longestStaticPrefix, containingSymbol, flags,
+                                       rangeOverride);
 
     if (!firstDriver) {
         auto makeRef = [&]() -> const Expression& {
@@ -231,7 +259,7 @@ void ValueSymbol::addDriver(DriverKind driverKind, const Expression& longestStat
             case SymbolKind::Net:
                 if (getInitializer()) {
                     firstDriver = comp.emplace<Driver>(DriverKind::Continuous, makeRef(), nullptr,
-                                                       AssignFlags::None);
+                                                       AssignFlags::None, SourceRange());
                 }
                 break;
             case SymbolKind::Variable:
@@ -239,7 +267,7 @@ void ValueSymbol::addDriver(DriverKind driverKind, const Expression& longestStat
             case SymbolKind::Field:
                 if (as<VariableSymbol>().lifetime == VariableLifetime::Static && getInitializer()) {
                     firstDriver = comp.emplace<Driver>(DriverKind::Procedural, makeRef(), nullptr,
-                                                       AssignFlags::None);
+                                                       AssignFlags::None, SourceRange());
                 }
                 break;
             default:
@@ -282,9 +310,9 @@ void ValueSymbol::addDriver(DriverKind driverKind, const Expression& longestStat
             if (driverKind == DriverKind::Continuous || curr->kind == DriverKind::Continuous) {
                 shouldCheck = true;
             }
-            else if (curr->proceduralBlock != proceduralBlock &&
-                     ((curr->proceduralBlock && curr->proceduralBlock->isSingleDriverBlock()) ||
-                      (proceduralBlock && proceduralBlock->isSingleDriverBlock()))) {
+            else if (curr->containingSymbol != containingSymbol &&
+                     (curr->isInSingleDriverProcedure() || driver->isInSingleDriverProcedure()) &&
+                     !curr->isInFunction() && !driver->isInFunction()) {
                 shouldCheck = true;
             }
         }

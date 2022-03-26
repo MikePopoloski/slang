@@ -2313,3 +2313,36 @@ endmodule
     CHECK(diags[2].code == diag::MultipleAlwaysAssigns);
     CHECK(diags[3].code == diag::MultipleAlwaysAssigns);
 }
+
+TEST_CASE("always_comb drivers within nested functions") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    int baz;
+
+    function void f1(int bar);
+      baz = bar;
+    endfunction
+
+    function void f2(int bar);
+      f1(bar);
+    endfunction
+
+    always_comb f2(2);
+    always_comb f2(3);
+
+    int v;
+    function void f3(int bar);
+      v = bar;
+    endfunction
+
+    always_comb f3(4);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::MultipleAlwaysAssigns);
+}

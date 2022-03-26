@@ -15,6 +15,7 @@
 #include "slang/diagnostics/LookupDiags.h"
 #include "slang/diagnostics/StatementsDiags.h"
 #include "slang/symbols/ASTSerializer.h"
+#include "slang/symbols/BlockSymbols.h"
 #include "slang/symbols/ClassSymbols.h"
 #include "slang/symbols/MemberSymbols.h"
 #include "slang/symbols/ParameterSymbols.h"
@@ -149,8 +150,11 @@ bool ValueExpressionBase::requireLValueImpl(const BindContext& context, SourceLo
         }
     }
 
-    symbol.addDriver(context.getDriverKind(), *longestStaticPrefix, context.getProceduralBlock(),
-                     flags);
+    const Symbol* containingSym = context.getProceduralBlock();
+    if (!containingSym)
+        containingSym = context.getContainingSubroutine();
+
+    symbol.addDriver(context.getDriverKind(), *longestStaticPrefix, containingSym, flags);
     return true;
 }
 

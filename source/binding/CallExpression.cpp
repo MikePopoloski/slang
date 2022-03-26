@@ -15,6 +15,7 @@
 #include "slang/diagnostics/ExpressionsDiags.h"
 #include "slang/diagnostics/LookupDiags.h"
 #include "slang/diagnostics/ParserDiags.h"
+#include "slang/symbols/ASTVisitor.h"
 #include "slang/symbols/ClassSymbols.h"
 #include "slang/symbols/SubroutineSymbols.h"
 #include "slang/syntax/AllSyntax.h"
@@ -294,6 +295,9 @@ bool CallExpression::bindArgs(const ArgumentListSyntax* argSyntax,
     return !bad;
 }
 
+static void addFunctionDrivers(const Symbol& procedure, const SubroutineSymbol& func,
+                               SourceRange range);
+
 Expression& CallExpression::fromArgs(Compilation& compilation, const Subroutine& subroutine,
                                      const Expression* thisClass,
                                      const ArgumentListSyntax* argSyntax, SourceRange range,
@@ -324,6 +328,13 @@ Expression& CallExpression::fromArgs(Compilation& compilation, const Subroutine&
 
     if (!checkOutputArgs(context, symbol.hasOutputArgs(), range))
         return badExpr(compilation, result);
+
+    // If this is a function invoked from a procedure, register drivers for this
+    // particular procedure to detect multiple driver violations.
+    if (symbol.subroutineKind == SubroutineKind::Function && !thisClass) {
+        if (auto proc = context.getProceduralBlock(); proc && proc->isSingleDriverBlock())
+            addFunctionDrivers(*proc, symbol, range);
+    }
 
     return *result;
 }
@@ -781,6 +792,47 @@ void CallExpression::serializeTo(ASTSerializer& serializer) const {
             serializer.serialize(*arg);
         serializer.endArray();
     }
+}
+
+class FuncDriverVisitor : public ASTVisitor<FuncDriverVisitor, true, true> {
+public:
+    const Symbol& procedure;
+    const SubroutineSymbol& func;
+    SourceRange range;
+    SmallSet<const ValueSymbol*, 8> visited;
+
+    FuncDriverVisitor(const Symbol& procedure, const SubroutineSymbol& func, SourceRange range) :
+        procedure(procedure), func(func), range(range) {}
+
+    void handle(const CallExpression& expr) {
+        if (!expr.isSystemCall() && expr.getSubroutineKind() == SubroutineKind::Function &&
+            !expr.thisClass()) {
+            addFunctionDrivers(procedure, *std::get<0>(expr.subroutine), range);
+        }
+    }
+
+    void handle(const ValueExpressionBase& expr) {
+        if (!visited.emplace(&expr.symbol).second)
+            return;
+
+        // If the target symbol is driven by the function we're inspecting,
+        // add another driver for the procedure we're originally called from.
+        auto driver = expr.symbol.getFirstDriver();
+        while (driver) {
+            if (driver->containingSymbol == &func) {
+                expr.symbol.addDriver(DriverKind::Procedural, *driver->longestStaticPrefix,
+                                      &procedure, AssignFlags::FuncFromProcedure, range);
+            }
+
+            driver = driver->getNextDriver();
+        }
+    }
+};
+
+static void addFunctionDrivers(const Symbol& procedure, const SubroutineSymbol& func,
+                               SourceRange range) {
+    FuncDriverVisitor visitor(procedure, func, range);
+    func.getBody().visit(visitor);
 }
 
 } // namespace slang
