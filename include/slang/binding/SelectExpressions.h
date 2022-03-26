@@ -27,6 +27,8 @@ public:
 
     ConstantValue evalImpl(EvalContext& context) const;
     LValue evalLValueImpl(EvalContext& context) const;
+    bool requireLValueImpl(const BindContext& context, SourceLocation location,
+                           bitmask<AssignFlags> flags, const Expression* longestStaticPrefix) const;
 
     optional<ConstantRange> evalIndex(EvalContext& context, const ConstantValue& val,
                                       ConstantValue& associativeIndex) const;
@@ -76,6 +78,8 @@ public:
 
     ConstantValue evalImpl(EvalContext& context) const;
     LValue evalLValueImpl(EvalContext& context) const;
+    bool requireLValueImpl(const BindContext& context, SourceLocation location,
+                           bitmask<AssignFlags> flags, const Expression* longestStaticPrefix) const;
 
     optional<ConstantRange> evalRange(EvalContext& context, const ConstantValue& val) const;
 

@@ -561,6 +561,7 @@ error MultipleContAssigns "cannot have multiple continuous assignments to variab
 error MultipleUWireDrivers "'uwire' net '{}' cannot have multiple drivers"
 error InputPortAssign "cannot assign to input port '{}'"
 error InterconnectReference "cannot reference interconnect net '{}' outside of a net port connection"
+error UserDefPartialDriver "net '{}' with user-defined nettype cannot be partially driven"
 warning ignored-slice IgnoredSlice "slice size ignored for left-to-right streaming operator"
 warning unsized-concat UnsizedInConcat "unsized integer in concat; using a width of {}"
 warning width-expand WidthExpand "implicit conversion expands from {} to {} bits"

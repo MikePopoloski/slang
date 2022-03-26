@@ -348,20 +348,6 @@ LValue Expression::evalLValue(EvalContext& context) const {
 bool Expression::requireLValue(const BindContext& context, SourceLocation location,
                                bitmask<AssignFlags> flags,
                                const Expression* longestStaticPrefix) const {
-    auto updatePrefix = [&](auto& select) {
-        if (context.flags.has(BindFlags::NonProcedural)) {
-            if (!longestStaticPrefix)
-                longestStaticPrefix = this;
-        }
-        else if (select.isConstantSelect(context)) {
-            if (!longestStaticPrefix)
-                longestStaticPrefix = this;
-        }
-        else {
-            longestStaticPrefix = nullptr;
-        }
-    };
-
     switch (kind) {
         case ExpressionKind::NamedValue:
         case ExpressionKind::HierarchicalValue: {
@@ -370,37 +356,11 @@ bool Expression::requireLValue(const BindContext& context, SourceLocation locati
         }
         case ExpressionKind::ElementSelect: {
             auto& select = as<ElementSelectExpression>();
-            auto& val = select.value();
-            if (val.kind == ExpressionKind::Concatenation ||
-                val.kind == ExpressionKind::Streaming) {
-                // Selects of concatenations are not allowed to be lvalues.
-                break;
-            }
-
-            if (context.flags.has(BindFlags::NonProcedural)) {
-                if (!context.eval(select.selector()))
-                    return false;
-            }
-
-            updatePrefix(select);
-            return val.requireLValue(context, location, flags, longestStaticPrefix);
+            return select.requireLValueImpl(context, location, flags, longestStaticPrefix);
         }
         case ExpressionKind::RangeSelect: {
             auto& select = as<RangeSelectExpression>();
-            auto& val = select.value();
-            if (val.kind == ExpressionKind::Concatenation ||
-                val.kind == ExpressionKind::Streaming) {
-                // Selects of concatenations are not allowed to be lvalues.
-                break;
-            }
-
-            if (context.flags.has(BindFlags::NonProcedural)) {
-                if (!context.eval(select.left()) || !context.eval(select.right()))
-                    return false;
-            }
-
-            updatePrefix(select);
-            return val.requireLValue(context, location, flags, longestStaticPrefix);
+            return select.requireLValueImpl(context, location, flags, longestStaticPrefix);
         }
         case ExpressionKind::MemberAccess: {
             auto& access = as<MemberAccessExpression>();

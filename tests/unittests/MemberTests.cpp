@@ -200,6 +200,16 @@ module m;
     n6 #(foo) asdf;
 
     t1 #3 baz;
+
+    // Assigning to a select or slice of a user-defined net
+    // is not allowed.
+    nettype struct { logic a; logic b; } n7;
+    nettype logic[4:0] n8;
+
+    n7 fizz;
+    n8 buzz;
+    assign fizz.b = 1;
+    assign buzz[2:0] = 2;
 endmodule
 )");
 
@@ -207,13 +217,15 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 6);
+    REQUIRE(diags.size() == 8);
     CHECK(diags[0].code == diag::InvalidUserDefinedNetType);
     CHECK(diags[1].code == diag::InvalidUserDefinedNetType);
     CHECK(diags[2].code == diag::InvalidUserDefinedNetType);
     CHECK(diags[3].code == diag::InvalidUserDefinedNetType);
     CHECK(diags[4].code == diag::DelayNotNumeric);
     CHECK(diags[5].code == diag::VarDeclWithDelay);
+    CHECK(diags[6].code == diag::UserDefPartialDriver);
+    CHECK(diags[7].code == diag::UserDefPartialDriver);
 }
 
 TEST_CASE("JSON dump") {

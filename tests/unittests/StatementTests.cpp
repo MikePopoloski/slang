@@ -1079,7 +1079,7 @@ module m;
         deassign {i, l[0]};
         force {w[1], i[1]} = 1;
         release i[1];
-        force {w[1], x[1]} = 1;
+        force {w[1], x} = 1;
         assign q = 1;
     end
 endmodule

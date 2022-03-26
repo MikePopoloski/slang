@@ -23,6 +23,7 @@
 #include "slang/symbols/VariableSymbols.h"
 #include "slang/syntax/AllSyntax.h"
 #include "slang/types/AllTypes.h"
+#include "slang/types/NetType.h"
 
 namespace slang {
 
@@ -65,6 +66,55 @@ static void checkForVectoredSelect(const Expression& value, SourceRange range,
         auto& diag = context.addDiag(diag::SelectOfVectoredNet, range);
         diag.addNote(diag::NoteDeclarationHere, sym.location);
     }
+}
+
+template<typename T>
+bool requireLValueHelper(const T& expr, const BindContext& context, SourceLocation location,
+                         bitmask<AssignFlags> flags, const Expression* longestStaticPrefix) {
+    auto& val = expr.value();
+    if (val.kind == ExpressionKind::Concatenation || val.kind == ExpressionKind::Streaming) {
+        // Selects of concatenations are not allowed to be lvalues.
+        if (!location)
+            location = expr.sourceRange.start();
+
+        auto& diag = context.addDiag(diag::ExpressionNotAssignable, location);
+        diag << expr.sourceRange;
+        return false;
+    }
+
+    if (ValueExpressionBase::isKind(val.kind)) {
+        auto sym = val.getSymbolReference();
+        if (sym && sym->kind == SymbolKind::Net) {
+            auto& net = sym->as<NetSymbol>();
+            if (net.netType.netKind == NetType::UserDefined) {
+                context.addDiag(diag::UserDefPartialDriver, expr.sourceRange) << net.name;
+                return false;
+            }
+        }
+    }
+
+    if (context.flags.has(BindFlags::NonProcedural)) {
+        if constexpr (std::is_same_v<T, RangeSelectExpression>) {
+            if (!context.eval(expr.left()) || !context.eval(expr.right()))
+                return false;
+        }
+        else {
+            if (!context.eval(expr.selector()))
+                return false;
+        }
+
+        if (!longestStaticPrefix)
+            longestStaticPrefix = &expr;
+    }
+    else if (expr.isConstantSelect(context)) {
+        if (!longestStaticPrefix)
+            longestStaticPrefix = &expr;
+    }
+    else {
+        longestStaticPrefix = nullptr;
+    }
+
+    return val.requireLValue(context, location, flags, longestStaticPrefix);
 }
 
 Expression& ElementSelectExpression::fromSyntax(Compilation& compilation, Expression& value,
@@ -315,6 +365,12 @@ optional<ConstantRange> ElementSelectExpression::evalIndex(EvalContext& context,
     }
 
     return ConstantRange{ *index, *index };
+}
+
+bool ElementSelectExpression::requireLValueImpl(const BindContext& context, SourceLocation location,
+                                                bitmask<AssignFlags> flags,
+                                                const Expression* longestStaticPrefix) const {
+    return requireLValueHelper(*this, context, location, flags, longestStaticPrefix);
 }
 
 void ElementSelectExpression::serializeTo(ASTSerializer& serializer) const {
@@ -691,6 +747,12 @@ optional<ConstantRange> RangeSelectExpression::evalRange(EvalContext& context,
     // TODO: warn on negative indices when we don't have a value to check the size against
 
     return result;
+}
+
+bool RangeSelectExpression::requireLValueImpl(const BindContext& context, SourceLocation location,
+                                              bitmask<AssignFlags> flags,
+                                              const Expression* longestStaticPrefix) const {
+    return requireLValueHelper(*this, context, location, flags, longestStaticPrefix);
 }
 
 void RangeSelectExpression::serializeTo(ASTSerializer& serializer) const {
@@ -1198,6 +1260,12 @@ bool MemberAccessExpression::requireLValueImpl(const BindContext& context, Sourc
             !isWithinCovergroup(member, *context.scope)) {
             context.addDiag(diag::CoverOptionImmutable, location) << member.name;
             return false;
+        }
+
+        if (auto sym = value().getSymbolReference(); sym && sym->kind == SymbolKind::Net) {
+            auto& net = sym->as<NetSymbol>();
+            if (net.netType.netKind == NetType::UserDefined)
+                context.addDiag(diag::UserDefPartialDriver, sourceRange) << net.name;
         }
 
         if (!longestStaticPrefix)
