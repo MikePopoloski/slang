@@ -356,13 +356,21 @@ bool NamedValueExpression::checkConstant(EvalContext& context) const {
         }
     }
     else {
-        // If the two locations are not in the same compilation unit, assume that it's ok.
+        // Check whether the referenced parameter is declared prior to the invocation
+        // of the constant function. If the two locations are not in the same compilation
+        // unit, assume that it's ok. Also if the reference is via a package import
+        // that's fine too.
         auto compare = symbol.isDeclaredBefore(frame.lookupLocation);
         if (!compare.value_or(true)) {
-            auto& diag = context.addDiag(diag::ConstEvalIdUsedInCEBeforeDecl, sourceRange)
-                         << symbol.name;
-            diag.addNote(diag::NoteDeclarationHere, symbol.location);
-            return false;
+            auto scope = symbol.getParentScope();
+            if (!scope || scope->asSymbol().kind != SymbolKind::Package ||
+                scope == frame.lookupLocation.getScope()) {
+
+                auto& diag = context.addDiag(diag::ConstEvalIdUsedInCEBeforeDecl, sourceRange)
+                             << symbol.name;
+                diag.addNote(diag::NoteDeclarationHere, symbol.location);
+                return false;
+            }
         }
     }
 

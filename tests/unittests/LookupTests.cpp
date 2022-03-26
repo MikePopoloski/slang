@@ -1779,3 +1779,23 @@ endpackage
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Imported param referenced from const func") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    localparam int foo = bar();
+
+    function int bar;
+        return pkg::baz;
+    endfunction
+endmodule
+
+package pkg;
+    parameter int baz = 3;
+endpackage
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
