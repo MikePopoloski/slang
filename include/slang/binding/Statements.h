@@ -17,6 +17,7 @@
 namespace slang {
 
 class BlockStatement;
+class ProceduralBlockSymbol;
 class RandSeqProductionSymbol;
 class StatementBlockSymbol;
 class VariableSymbol;
@@ -188,6 +189,8 @@ protected:
 /// defer statement binding until its actually needed.
 class StatementBinder {
 public:
+    const ProceduralBlockSymbol* parentProcedure = nullptr;
+
     void setSyntax(const Scope& scope, const StatementSyntax& syntax, bool labelHandled,
                    bitmask<StatementFlags> flags);
     void setSyntax(const StatementBlockSymbol& scope, const ForLoopStatementSyntax& syntax,

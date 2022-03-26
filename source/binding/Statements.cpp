@@ -248,18 +248,21 @@ Statement& Statement::badStmt(Compilation& compilation, const Statement* stmt) {
 
 static void findBlocks(const Scope& scope, const StatementSyntax& syntax,
                        SmallVector<const StatementBlockSymbol*>& results, bool labelHandled,
-                       bitmask<StatementFlags> flags) {
+                       bitmask<StatementFlags> flags,
+                       const ProceduralBlockSymbol* parentProcedure) {
     if (!labelHandled && hasSimpleLabel(syntax)) {
-        results.append(&StatementBlockSymbol::fromLabeledStmt(scope, syntax, flags));
+        results.append(
+            &StatementBlockSymbol::fromLabeledStmt(scope, syntax, flags, parentProcedure));
         return;
     }
 
     auto recurse = [&](auto stmt) {
-        findBlocks(scope, *stmt, results, /* lableHandled */ false, flags);
+        findBlocks(scope, *stmt, results, /* lableHandled */ false, flags, parentProcedure);
     };
 
     auto recurseF = [&](auto stmt, auto extraFlags) {
-        findBlocks(scope, *stmt, results, /* lableHandled */ false, flags | extraFlags);
+        findBlocks(scope, *stmt, results, /* lableHandled */ false, flags | extraFlags,
+                   parentProcedure);
     };
 
     switch (syntax.kind) {
@@ -287,14 +290,16 @@ static void findBlocks(const Scope& scope, const StatementSyntax& syntax,
             // - They are unnamed but have variable declarations within them
             auto& block = syntax.as<BlockStatementSyntax>();
             if (block.blockName || block.label) {
-                results.append(&StatementBlockSymbol::fromSyntax(scope, block, flags));
+                results.append(
+                    &StatementBlockSymbol::fromSyntax(scope, block, flags, parentProcedure));
                 return;
             }
 
             for (auto item : block.items) {
                 // If we find any decls at all, this block gets its own scope.
                 if (!StatementSyntax::isKind(item->kind)) {
-                    results.append(&StatementBlockSymbol::fromSyntax(scope, block, flags));
+                    results.append(
+                        &StatementBlockSymbol::fromSyntax(scope, block, flags, parentProcedure));
                     return;
                 }
             }
@@ -347,12 +352,12 @@ static void findBlocks(const Scope& scope, const StatementSyntax& syntax,
             auto& forLoop = syntax.as<ForLoopStatementSyntax>();
             if (!forLoop.initializers.empty() &&
                 forLoop.initializers[0]->kind == SyntaxKind::ForVariableDeclaration) {
-
-                results.append(&StatementBlockSymbol::fromSyntax(scope, forLoop, flags));
+                results.append(
+                    &StatementBlockSymbol::fromSyntax(scope, forLoop, flags, parentProcedure));
             }
             else if (syntax.label) {
-                results.append(&StatementBlockSymbol::fromLabeledStmt(scope, syntax, flags));
-                return;
+                results.append(
+                    &StatementBlockSymbol::fromLabeledStmt(scope, syntax, flags, parentProcedure));
             }
             else {
                 recurseF(forLoop.statement, StatementFlags::InLoop);
@@ -364,7 +369,7 @@ static void findBlocks(const Scope& scope, const StatementSyntax& syntax,
             // here to make sure we don't infinitely recurse.
             if (!labelHandled) {
                 results.append(&StatementBlockSymbol::fromSyntax(
-                    scope, syntax.as<ForeachLoopStatementSyntax>(), flags));
+                    scope, syntax.as<ForeachLoopStatementSyntax>(), flags, parentProcedure));
             }
             else {
                 recurseF(syntax.as<ForeachLoopStatementSyntax>().statement, StatementFlags::InLoop);
@@ -416,7 +421,7 @@ static void findBlocks(const Scope& scope, const StatementSyntax& syntax,
             // labelHandled here to make sure we don't infinitely recurse.
             if (!labelHandled) {
                 results.append(&StatementBlockSymbol::fromSyntax(
-                    scope, syntax.as<RandSequenceStatementSyntax>()));
+                    scope, syntax.as<RandSequenceStatementSyntax>(), parentProcedure));
             }
             return;
         default:
@@ -433,7 +438,7 @@ void StatementBinder::setSyntax(const Scope& scope, const StatementSyntax& synta
     sourceRange = syntax_.sourceRange();
 
     SmallVectorSized<const StatementBlockSymbol*, 8> buffer;
-    findBlocks(scope, syntax_, buffer, labelHandled, flags);
+    findBlocks(scope, syntax_, buffer, labelHandled, flags, parentProcedure);
     blocks = buffer.copy(scope.getCompilation());
 }
 
@@ -447,7 +452,9 @@ void StatementBinder::setSyntax(const StatementBlockSymbol& scope,
     sourceRange = syntax_.sourceRange();
 
     SmallVectorSized<const StatementBlockSymbol*, 8> buffer;
-    findBlocks(scope, *syntax_.statement, buffer, labelHandled, flags | StatementFlags::InLoop);
+    findBlocks(scope, *syntax_.statement, buffer, labelHandled, flags | StatementFlags::InLoop,
+               parentProcedure);
+
     blocks = buffer.copy(scope.getCompilation());
 }
 
@@ -487,7 +494,8 @@ void StatementBinder::setItems(Scope& scope, const SyntaxList<SyntaxNode>& items
                 scope.addDiag(diag::NotYetSupported, item->sourceRange());
                 break;
             default:
-                findBlocks(scope, item->as<StatementSyntax>(), buffer, labelHandled, flags);
+                findBlocks(scope, item->as<StatementSyntax>(), buffer, labelHandled, flags,
+                           parentProcedure);
                 break;
         }
     }

@@ -192,9 +192,10 @@ const Expression& Expression::bindLValue(const ExpressionSyntax& lhs, const Type
     if (rhsExpr->bad())
         return badExpr(comp, nullptr);
 
+    auto instance = context.getInstance();
     Expression* lhsExpr;
     if (lhs.kind == SyntaxKind::StreamingConcatenationExpression && !isInout &&
-        (!context.instance || context.instance->arrayPath.empty())) {
+        (!instance || instance->arrayPath.empty())) {
         lhsExpr =
             &selfDetermined(comp, lhs, context, BindFlags::StreamingAllowed | BindFlags::LValue);
     }
@@ -205,10 +206,10 @@ const Expression& Expression::bindLValue(const ExpressionSyntax& lhs, const Type
     selfDetermined(context, lhsExpr);
 
     bitmask<AssignFlags> assignFlags;
-    if (context.instance) {
+    if (instance) {
         if (isInout)
             assignFlags = AssignFlags::InOutPort;
-        else if (context.instance->kind != SymbolKind::PrimitiveInstance)
+        else if (instance->kind != SymbolKind::PrimitiveInstance)
             assignFlags = AssignFlags::OutputPort;
     }
 
@@ -229,7 +230,8 @@ const Expression& Expression::bindRValue(const Type& lhs, const ExpressionSyntax
             return *ref;
     }
 
-    if (!context.instance || context.instance->arrayPath.empty())
+    auto instance = context.getInstance();
+    if (!instance || instance->arrayPath.empty())
         extraFlags |= BindFlags::StreamingAllowed;
 
     Expression& expr = create(comp, rhs, ctx, extraFlags, &lhs);

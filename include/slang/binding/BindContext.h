@@ -20,6 +20,7 @@ class Compilation;
 class Expression;
 class InstanceSymbolBase;
 class IteratorSymbol;
+class ProceduralBlockSymbol;
 class Scope;
 class Statement;
 class Type;
@@ -184,10 +185,10 @@ public:
     /// Various flags that control how binding is performed.
     bitmask<BindFlags> flags;
 
-    /// If the expression being bound is for an instance port connection, this is
-    /// a pointer to that instance; otherwise, it's nullptr.
-    const InstanceSymbolBase* instance = nullptr;
+private:
+    const Symbol* instanceOrProc = nullptr;
 
+public:
     /// If an array iteration expression is being bound, this contains the symbol
     /// representing the first iterator, along with a linked list of any others
     /// that may be active.
@@ -267,11 +268,16 @@ public:
         ASSERT(!lookupLocation.getScope() || lookupLocation.getScope() == &scope);
     }
 
-    Compilation& getCompilation() const;
+    Compilation& getCompilation() const { return scope->getCompilation(); }
     LookupLocation getLocation() const { return LookupLocation(scope, uint32_t(lookupIndex)); }
     bool inUnevaluatedBranch() const { return (flags & BindFlags::UnevaluatedBranch) != 0; }
 
     DriverKind getDriverKind() const;
+    const InstanceSymbolBase* getInstance() const;
+    const ProceduralBlockSymbol* getProceduralBlock() const;
+
+    void setInstance(const InstanceSymbolBase& inst);
+    void setProceduralBlock(const ProceduralBlockSymbol& block);
 
     void setAttributes(const Statement& stmt,
                        span<const AttributeInstanceSyntax* const> syntax) const;

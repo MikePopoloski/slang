@@ -14,6 +14,7 @@
 #include "slang/diagnostics/StatementsDiags.h"
 #include "slang/diagnostics/TypesDiags.h"
 #include "slang/symbols/AttributeSymbol.h"
+#include "slang/symbols/BlockSymbols.h"
 #include "slang/symbols/InstanceSymbols.h"
 #include "slang/symbols/SubroutineSymbols.h"
 #include "slang/symbols/VariableSymbols.h"
@@ -21,10 +22,6 @@
 #include "slang/types/Type.h"
 
 namespace slang {
-
-Compilation& BindContext::getCompilation() const {
-    return scope->getCompilation();
-}
 
 DriverKind BindContext::getDriverKind() const {
     if (flags.has(BindFlags::ProceduralAssign))
@@ -34,6 +31,28 @@ DriverKind BindContext::getDriverKind() const {
     if (flags.has(BindFlags::NonProcedural))
         return DriverKind::Continuous;
     return DriverKind::Procedural;
+}
+
+const InstanceSymbolBase* BindContext::getInstance() const {
+    if (instanceOrProc && instanceOrProc->kind != SymbolKind::ProceduralBlock)
+        return (const InstanceSymbolBase*)instanceOrProc;
+    return nullptr;
+}
+
+const ProceduralBlockSymbol* BindContext::getProceduralBlock() const {
+    if (instanceOrProc && instanceOrProc->kind == SymbolKind::ProceduralBlock)
+        return &instanceOrProc->as<ProceduralBlockSymbol>();
+    return nullptr;
+}
+
+void BindContext::setInstance(const InstanceSymbolBase& inst) {
+    ASSERT(!instanceOrProc);
+    instanceOrProc = &inst;
+}
+
+void BindContext::setProceduralBlock(const ProceduralBlockSymbol& block) {
+    ASSERT(!instanceOrProc);
+    instanceOrProc = &block;
 }
 
 void BindContext::setAttributes(const Statement& stmt,

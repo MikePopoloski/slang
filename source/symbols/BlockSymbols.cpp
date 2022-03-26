@@ -26,7 +26,12 @@ namespace slang {
 
 const Statement& StatementBlockSymbol::getBody() const {
     ensureElaborated();
-    return binder.getStatement(BindContext(*this, LookupLocation::max));
+
+    BindContext context(*this, LookupLocation::max);
+    if (binder.parentProcedure)
+        context.setProceduralBlock(*binder.parentProcedure);
+
+    return binder.getStatement(context);
 }
 
 static std::pair<string_view, SourceLocation> getLabel(const StatementSyntax& syntax,
@@ -39,9 +44,9 @@ static std::pair<string_view, SourceLocation> getLabel(const StatementSyntax& sy
     return { ""sv, defaultLoc };
 }
 
-StatementBlockSymbol& StatementBlockSymbol::fromSyntax(const Scope& scope,
-                                                       const BlockStatementSyntax& syntax,
-                                                       bitmask<StatementFlags> flags) {
+StatementBlockSymbol& StatementBlockSymbol::fromSyntax(
+    const Scope& scope, const BlockStatementSyntax& syntax, bitmask<StatementFlags> flags,
+    const ProceduralBlockSymbol* parentProcedure) {
     string_view name;
     SourceLocation loc;
     if (syntax.blockName) {
@@ -71,6 +76,7 @@ StatementBlockSymbol& StatementBlockSymbol::fromSyntax(const Scope& scope,
                                                             : VariableLifetime::Static;
     auto& comp = scope.getCompilation();
     auto result = comp.emplace<StatementBlockSymbol>(comp, name, loc, blockKind, lifetime);
+    result->binder.parentProcedure = parentProcedure;
     result->binder.setItems(*result, syntax.items, syntax.sourceRange(), flags);
     result->setSyntax(syntax);
     result->setAttributes(scope, syntax.attributes);
@@ -90,9 +96,10 @@ static StatementBlockSymbol* createBlock(const Scope& scope, const StatementSynt
     return result;
 }
 
-StatementBlockSymbol& StatementBlockSymbol::fromSyntax(const Scope& scope,
-                                                       const ForLoopStatementSyntax& syntax,
-                                                       bitmask<StatementFlags> flags) {
+StatementBlockSymbol& StatementBlockSymbol::fromSyntax(
+    const Scope& scope, const ForLoopStatementSyntax& syntax, bitmask<StatementFlags> flags,
+    const ProceduralBlockSymbol* parentProcedure) {
+
     auto [name, loc] = getLabel(syntax, syntax.forKeyword.location());
     auto result = createBlock(scope, syntax, name, loc, flags);
 
@@ -107,6 +114,7 @@ StatementBlockSymbol& StatementBlockSymbol::fromSyntax(const Scope& scope,
         result->addMember(var);
     }
 
+    result->binder.parentProcedure = parentProcedure;
     result->binder.setSyntax(*result, syntax, flags);
     for (auto block : result->binder.getBlocks())
         result->addMember(*block);
@@ -114,12 +122,14 @@ StatementBlockSymbol& StatementBlockSymbol::fromSyntax(const Scope& scope,
     return *result;
 }
 
-StatementBlockSymbol& StatementBlockSymbol::fromSyntax(const Scope& scope,
-                                                       const ForeachLoopStatementSyntax& syntax,
-                                                       bitmask<StatementFlags> flags) {
+StatementBlockSymbol& StatementBlockSymbol::fromSyntax(
+    const Scope& scope, const ForeachLoopStatementSyntax& syntax, bitmask<StatementFlags> flags,
+    const ProceduralBlockSymbol* parentProcedure) {
+
     auto [name, loc] = getLabel(syntax, syntax.keyword.location());
     auto result = createBlock(scope, syntax, name, loc, flags);
 
+    result->binder.parentProcedure = parentProcedure;
     result->binder.setSyntax(*result, syntax, /* labelHandled */ true, flags);
     for (auto block : result->binder.getBlocks())
         result->addMember(*block);
@@ -130,8 +140,10 @@ StatementBlockSymbol& StatementBlockSymbol::fromSyntax(const Scope& scope,
     return *result;
 }
 
-StatementBlockSymbol& StatementBlockSymbol::fromSyntax(const Scope& scope,
-                                                       const RandSequenceStatementSyntax& syntax) {
+StatementBlockSymbol& StatementBlockSymbol::fromSyntax(
+    const Scope& scope, const RandSequenceStatementSyntax& syntax,
+    const ProceduralBlockSymbol* parentProcedure) {
+
     auto [name, loc] = getLabel(syntax, syntax.randsequence.location());
     auto result = createBlock(scope, syntax, name, loc, StatementFlags::AutoLifetime);
 
@@ -140,10 +152,11 @@ StatementBlockSymbol& StatementBlockSymbol::fromSyntax(const Scope& scope,
         if (prod->name.valueText().empty())
             continue;
 
-        auto& symbol = RandSeqProductionSymbol::fromSyntax(comp, *prod);
+        auto& symbol = RandSeqProductionSymbol::fromSyntax(comp, *prod, parentProcedure);
         result->addMember(symbol);
     }
 
+    result->binder.parentProcedure = parentProcedure;
     result->binder.setSyntax(*result, syntax, /* labelHandled */ true, StatementFlags::None);
     for (auto block : result->binder.getBlocks())
         result->addMember(*block);
@@ -151,8 +164,9 @@ StatementBlockSymbol& StatementBlockSymbol::fromSyntax(const Scope& scope,
     return *result;
 }
 
-StatementBlockSymbol& StatementBlockSymbol::fromSyntax(const Scope& scope,
-                                                       const RsRuleSyntax& syntax) {
+StatementBlockSymbol& StatementBlockSymbol::fromSyntax(
+    const Scope& scope, const RsRuleSyntax& syntax, const ProceduralBlockSymbol* parentProcedure) {
+
     auto& comp = scope.getCompilation();
     auto result = comp.emplace<StatementBlockSymbol>(comp, ""sv, syntax.getFirstToken().location(),
                                                      StatementBlockKind::Sequential,
@@ -162,36 +176,40 @@ StatementBlockSymbol& StatementBlockSymbol::fromSyntax(const Scope& scope,
 
     for (auto prod : syntax.prods) {
         if (prod->kind == SyntaxKind::RsCodeBlock) {
-            result->addMember(
-                StatementBlockSymbol::fromSyntax(scope, prod->as<RsCodeBlockSyntax>()));
+            result->addMember(StatementBlockSymbol::fromSyntax(scope, prod->as<RsCodeBlockSyntax>(),
+                                                               parentProcedure));
         }
 
         if (syntax.weightClause && syntax.weightClause->codeBlock) {
             result->addMember(StatementBlockSymbol::fromSyntax(
-                scope, syntax.weightClause->codeBlock->as<RsCodeBlockSyntax>()));
+                scope, syntax.weightClause->codeBlock->as<RsCodeBlockSyntax>(), parentProcedure));
         }
     }
 
     return *result;
 }
 
-StatementBlockSymbol& StatementBlockSymbol::fromSyntax(const Scope& scope,
-                                                       const RsCodeBlockSyntax& syntax) {
+StatementBlockSymbol& StatementBlockSymbol::fromSyntax(
+    const Scope& scope, const RsCodeBlockSyntax& syntax,
+    const ProceduralBlockSymbol* parentProcedure) {
     auto& comp = scope.getCompilation();
     auto result = comp.emplace<StatementBlockSymbol>(comp, ""sv, syntax.getFirstToken().location(),
                                                      StatementBlockKind::Sequential,
                                                      VariableLifetime::Automatic);
+
+    result->binder.parentProcedure = parentProcedure;
     result->binder.setItems(*result, syntax.items, syntax.sourceRange(), StatementFlags::InRandSeq);
     result->setSyntax(syntax);
     return *result;
 }
 
-StatementBlockSymbol& StatementBlockSymbol::fromLabeledStmt(const Scope& scope,
-                                                            const StatementSyntax& syntax,
-                                                            bitmask<StatementFlags> flags) {
+StatementBlockSymbol& StatementBlockSymbol::fromLabeledStmt(
+    const Scope& scope, const StatementSyntax& syntax, bitmask<StatementFlags> flags,
+    const ProceduralBlockSymbol* parentProcedure) {
     auto [name, loc] = getLabel(syntax, {});
     auto result = createBlock(scope, syntax, name, loc, flags);
 
+    result->binder.parentProcedure = parentProcedure;
     result->binder.setSyntax(*result, syntax, /* labelHandled */ true, flags);
     for (auto block : result->binder.getBlocks())
         result->addMember(*block);
@@ -230,8 +248,19 @@ void StatementBlockSymbol::elaborateVariables(function_ref<void(const Symbol&)> 
     }
 }
 
+ProceduralBlockSymbol::ProceduralBlockSymbol(SourceLocation loc,
+                                             ProceduralBlockKind procedureKind) :
+    Symbol(SymbolKind::ProceduralBlock, "", loc),
+    procedureKind(procedureKind) {
+    binder.parentProcedure = this;
+}
+
 const Statement& ProceduralBlockSymbol::getBody() const {
-    return binder.getStatement(BindContext(*getParentScope(), LookupLocation::after(*this)));
+    BindContext context(*getParentScope(), LookupLocation::after(*this));
+    if (binder.parentProcedure)
+        context.setProceduralBlock(*binder.parentProcedure);
+
+    return binder.getStatement(context);
 }
 
 ProceduralBlockSymbol& ProceduralBlockSymbol::createProceduralBlock(

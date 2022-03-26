@@ -479,7 +479,8 @@ public:
     void serializeTo(ASTSerializer& serializer) const;
 
     static RandSeqProductionSymbol& fromSyntax(Compilation& compilation,
-                                               const ProductionSyntax& syntax);
+                                               const ProductionSyntax& syntax,
+                                               const ProceduralBlockSymbol* parentProcedure);
 
     static const RandSeqProductionSymbol* findProduction(string_view name, SourceRange nameRange,
                                                          const BindContext& context);

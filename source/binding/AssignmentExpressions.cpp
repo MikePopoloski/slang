@@ -249,7 +249,8 @@ Expression& Expression::convertAssignment(const BindContext& context, const Type
 
     // If this is a port connection to an array of instances, check if the provided
     // expression represents an array that should be sliced on a per-instance basis.
-    if (context.instance && !context.instance->arrayPath.empty()) {
+    auto instance = context.getInstance();
+    if (instance && !instance->arrayPath.empty()) {
         // If the connection is already of the right size and simply differs in
         // terms of four-statedness or signedness, don't bother trying to slice
         // out the connection.
@@ -259,7 +260,7 @@ Expression& Expression::convertAssignment(const BindContext& context, const Type
             // slice the port side. If lhsExpr is null, this is an input port and we should
             // slice the incoming expression as an rvalue.
             if (lhsExpr) {
-                Expression* conn = tryConnectPortArray(context, *rt, **lhsExpr, *context.instance);
+                Expression* conn = tryConnectPortArray(context, *rt, **lhsExpr, *instance);
                 if (conn) {
                     selfDetermined(context, conn);
                     *lhsExpr = conn;
@@ -269,7 +270,7 @@ Expression& Expression::convertAssignment(const BindContext& context, const Type
                 }
             }
             else {
-                Expression* conn = tryConnectPortArray(context, type, expr, *context.instance);
+                Expression* conn = tryConnectPortArray(context, type, expr, *instance);
                 if (conn) {
                     selfDetermined(context, conn);
                     return *conn;

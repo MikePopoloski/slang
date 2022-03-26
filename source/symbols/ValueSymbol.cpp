@@ -12,6 +12,7 @@
 #include "slang/binding/SelectExpressions.h"
 #include "slang/compilation/Compilation.h"
 #include "slang/diagnostics/ExpressionsDiags.h"
+#include "slang/symbols/BlockSymbols.h"
 #include "slang/symbols/Scope.h"
 #include "slang/symbols/VariableSymbols.h"
 #include "slang/syntax/AllSyntax.h"
@@ -45,9 +46,10 @@ bool ValueSymbol::isKind(SymbolKind kind) {
 }
 
 ValueSymbol::Driver::Driver(DriverKind kind, const Expression& longestStaticPrefix,
+                            const ProceduralBlockSymbol* proceduralBlock,
                             bitmask<AssignFlags> flags) :
     longestStaticPrefix(&longestStaticPrefix),
-    kind(kind), flags(flags) {
+    proceduralBlock(proceduralBlock), kind(kind), flags(flags) {
 }
 
 static const Expression* nextPrefix(const Expression& expr) {
@@ -121,13 +123,100 @@ bool ValueSymbol::Driver::overlaps(Compilation& compilation, const Driver& other
     return true;
 }
 
+static bool handleOverlap(const Scope& scope, string_view name, const ValueSymbol::Driver& curr,
+                          const ValueSymbol::Driver& driver, bool isNet, bool isUWire) {
+    auto currRange = curr.longestStaticPrefix->sourceRange;
+    auto driverRange = driver.longestStaticPrefix->sourceRange;
+
+    // The default handling case for mixed vs multiple assignments is below.
+    // First check for more specialized cases here:
+    // 1. If this is a non-uwire net for an input or output port
+    // 2. If this is a variable for an input port
+    if ((isNet && (curr.isUnidirectionalPort() || driver.isUnidirectionalPort()) && !isUWire) ||
+        (!isNet && (curr.isInputPort() || driver.isInputPort()))) {
+
+        auto code = diag::InputPortAssign;
+        if (isNet) {
+            if (curr.flags.has(AssignFlags::InputPort))
+                code = diag::InputPortCoercion;
+            else
+                code = diag::OutputPortCoercion;
+        }
+
+        // This is a little messy; basically we want to report the correct
+        // range for the port vs the assignment. We only want to do this
+        // for input ports though, as output ports show up at the instantiation
+        // site and we'd rather that be considered the "port declaration".
+        auto portRange = currRange;
+        auto assignRange = driverRange;
+        if (driver.isInputPort() || curr.flags.has(AssignFlags::OutputPort))
+            std::swap(portRange, assignRange);
+
+        auto& diag = scope.addDiag(code, assignRange);
+        diag << name;
+
+        auto note =
+            code == diag::OutputPortCoercion ? diag::NoteDrivenHere : diag::NoteDeclarationHere;
+        diag.addNote(note, portRange.start());
+
+        // For variable ports this is an error, for nets it's a warning.
+        return isNet;
+    }
+
+    if (curr.kind == DriverKind::Procedural && driver.kind == DriverKind::Procedural) {
+        // Multiple procedural drivers where one of them is an
+        // always_comb / always_ff block.
+        ProceduralBlockKind procKind;
+        if (driver.proceduralBlock && driver.proceduralBlock->isSingleDriverBlock()) {
+            procKind = driver.proceduralBlock->procedureKind;
+        }
+        else {
+            ASSERT(curr.proceduralBlock);
+            procKind = curr.proceduralBlock->procedureKind;
+            std::swap(driverRange, currRange);
+        }
+
+        string_view procName;
+        switch (procKind) {
+            case ProceduralBlockKind::AlwaysComb:
+                procName = "always_comb"sv;
+                break;
+            case ProceduralBlockKind::AlwaysLatch:
+                procName = "always_latch"sv;
+                break;
+            case ProceduralBlockKind::AlwaysFF:
+                procName = "always_ff"sv;
+                break;
+            default:
+                THROW_UNREACHABLE;
+        }
+
+        auto& diag = scope.addDiag(diag::MultipleAlwaysAssigns, driverRange);
+        diag << name << procName;
+        diag.addNote(diag::NoteAssignedHere, currRange.start()) << currRange;
+        return false;
+    }
+
+    auto code = isUWire ? diag::MultipleUWireDrivers
+                : (driver.kind == DriverKind::Continuous && curr.kind == DriverKind::Continuous)
+                    ? diag::MultipleContAssigns
+                    : diag::MixedVarAssigns;
+
+    auto& diag = scope.addDiag(code, driverRange);
+    diag << name;
+    diag.addNote(diag::NoteAssignedHere, currRange.start()) << currRange;
+    return false;
+}
+
 void ValueSymbol::addDriver(DriverKind driverKind, const Expression& longestStaticPrefix,
+                            const ProceduralBlockSymbol* proceduralBlock,
                             bitmask<AssignFlags> flags) const {
     auto scope = getParentScope();
     ASSERT(scope);
 
     auto& comp = scope->getCompilation();
-    auto driver = comp.emplace<Driver>(driverKind, longestStaticPrefix, flags);
+    auto driver = comp.emplace<Driver>(driverKind, longestStaticPrefix, proceduralBlock, flags);
+
     if (!firstDriver) {
         auto makeRef = [&]() -> const Expression& {
             BindContext bindContext(*scope, LookupLocation::min, BindFlags::AllowInterconnect);
@@ -141,16 +230,16 @@ void ValueSymbol::addDriver(DriverKind driverKind, const Expression& longestStat
         switch (kind) {
             case SymbolKind::Net:
                 if (getInitializer()) {
-                    firstDriver =
-                        comp.emplace<Driver>(DriverKind::Continuous, makeRef(), AssignFlags::None);
+                    firstDriver = comp.emplace<Driver>(DriverKind::Continuous, makeRef(), nullptr,
+                                                       AssignFlags::None);
                 }
                 break;
             case SymbolKind::Variable:
             case SymbolKind::ClassProperty:
             case SymbolKind::Field:
                 if (as<VariableSymbol>().lifetime == VariableLifetime::Static && getInitializer()) {
-                    firstDriver =
-                        comp.emplace<Driver>(DriverKind::Procedural, makeRef(), AssignFlags::None);
+                    firstDriver = comp.emplace<Driver>(DriverKind::Procedural, makeRef(), nullptr,
+                                                       AssignFlags::None);
                 }
                 break;
             default:
@@ -166,7 +255,6 @@ void ValueSymbol::addDriver(DriverKind driverKind, const Expression& longestStat
     // We need to check for overlap in the following cases:
     // - static variables (automatic variables can't ever be driven continuously)
     // - uwire nets
-    // - any nets where an input port is being driven (to warn about port coercion)
     const bool isNet = kind == SymbolKind::Net;
     const bool isUWire = isNet && as<NetSymbol>().netType.netKind == NetType::UWire;
     const bool checkOverlap = (VariableSymbol::isKind(kind) &&
@@ -177,66 +265,33 @@ void ValueSymbol::addDriver(DriverKind driverKind, const Expression& longestStat
     // Along the way, check that the driver is valid given the ones that already exist.
     auto curr = firstDriver;
     while (true) {
-        bool shouldCheck =
-            checkOverlap &&
-            (driverKind == DriverKind::Continuous || curr->kind == DriverKind::Continuous) &&
-            driverKind != DriverKind::Other && curr->kind != DriverKind::Other;
-
-        if (curr->isUnidirectionalPort() != driver->isUnidirectionalPort())
+        // Determine whether we should check this pair of drivers for overlap.
+        // - If this is for a mix of input/output and inout ports, always check.
+        // - Don't check for "Other" drivers (procedural force / release, etc)
+        // - Otherwise, if is this a static var or uwire net:
+        //      - Check if a mix of continuous and procedural assignments
+        //      - Check if multiple continuous assignments
+        //      - If both procedural, check that there aren't multiple
+        //        always_comb / always_ff procedures.
+        bool shouldCheck = false;
+        if (curr->isUnidirectionalPort() != driver->isUnidirectionalPort()) {
             shouldCheck = true;
+        }
+        else if (checkOverlap && driverKind != DriverKind::Other &&
+                 curr->kind != DriverKind::Other) {
+            if (driverKind == DriverKind::Continuous || curr->kind == DriverKind::Continuous) {
+                shouldCheck = true;
+            }
+            else if (curr->proceduralBlock != proceduralBlock &&
+                     ((curr->proceduralBlock && curr->proceduralBlock->isSingleDriverBlock()) ||
+                      (proceduralBlock && proceduralBlock->isSingleDriverBlock()))) {
+                shouldCheck = true;
+            }
+        }
 
         if (shouldCheck && curr->overlaps(comp, *driver)) {
-            auto currRange = curr->longestStaticPrefix->sourceRange;
-            auto driverRange = driver->longestStaticPrefix->sourceRange;
-
-            // The default handling case for mixed vs multiple assignments is in the else branch.
-            // Check for more specialized cases here:
-            // 1. If this is a non-uwire net for an input or output port
-            // 2. If this is a variable for an input port
-            if ((isNet && (curr->isUnidirectionalPort() || driver->isUnidirectionalPort()) &&
-                 !isUWire) ||
-                (!isNet && (curr->isInputPort() || driver->isInputPort()))) {
-
-                auto code = diag::InputPortAssign;
-                if (isNet) {
-                    if (curr->flags.has(AssignFlags::InputPort))
-                        code = diag::InputPortCoercion;
-                    else
-                        code = diag::OutputPortCoercion;
-                }
-
-                // This is a little messy; basically we want to report the correct
-                // range for the port vs the assignment. We only want to do this
-                // for input ports though, as output ports show up at the instantiation
-                // site and we'd rather that be considered the "port declaration".
-                auto portRange = currRange;
-                auto assignRange = driverRange;
-                if (driver->isInputPort() || curr->flags.has(AssignFlags::OutputPort))
-                    std::swap(portRange, assignRange);
-
-                auto& diag = scope->addDiag(code, assignRange);
-                diag << name;
-
-                auto note = code == diag::OutputPortCoercion ? diag::NoteDrivenHere
-                                                             : diag::NoteDeclarationHere;
-                diag.addNote(note, portRange.start());
-
-                // For variable ports this is an error, for nets it's a warning.
-                if (!isNet)
-                    return;
-            }
-            else {
-                auto code =
-                    isUWire ? diag::MultipleUWireDrivers
-                    : (driverKind == DriverKind::Continuous && curr->kind == DriverKind::Continuous)
-                        ? diag::MultipleContAssigns
-                        : diag::MixedVarAssigns;
-
-                auto& diag = scope->addDiag(code, driverRange);
-                diag << name;
-                diag.addNote(diag::NoteAssignedHere, currRange.start()) << currRange;
+            if (!handleOverlap(*scope, name, *curr, *driver, isNet, isUWire))
                 return;
-            }
         }
 
         if (!curr->next) {

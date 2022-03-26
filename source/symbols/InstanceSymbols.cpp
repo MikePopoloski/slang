@@ -971,7 +971,7 @@ span<const Expression* const> PrimitiveInstanceSymbol::getPortConnections() cons
 
         auto& comp = scope->getCompilation();
         BindContext context(*scope, LookupLocation::after(*this), BindFlags::NonProcedural);
-        context.instance = this;
+        context.setInstance(*this);
 
         SmallVectorSized<const ExpressionSyntax*, 8> conns;
         auto& his = syntax->as<HierarchicalInstanceSyntax>();

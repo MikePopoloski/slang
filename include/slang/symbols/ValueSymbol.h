@@ -12,6 +12,8 @@
 
 namespace slang {
 
+class ProceduralBlockSymbol;
+
 /// A base class for symbols that represent a value (for example a variable or a parameter).
 /// The common functionality is that they all have a type.
 class ValueSymbol : public Symbol {
@@ -53,10 +55,12 @@ public:
     class Driver {
     public:
         not_null<const Expression*> longestStaticPrefix;
+        const ProceduralBlockSymbol* proceduralBlock;
         DriverKind kind;
         bitmask<AssignFlags> flags;
 
-        Driver(DriverKind kind, const Expression& longestStaticPrefix, bitmask<AssignFlags> flags);
+        Driver(DriverKind kind, const Expression& longestStaticPrefix,
+               const ProceduralBlockSymbol* proceduralBlock, bitmask<AssignFlags> flags);
 
         const Driver* getNextDriver() const { return next; }
         bool isInputPort() const { return flags.has(AssignFlags::InputPort); }
@@ -72,7 +76,7 @@ public:
     };
 
     void addDriver(DriverKind kind, const Expression& longestStaticPrefix,
-                   bitmask<AssignFlags> flags) const;
+                   const ProceduralBlockSymbol* proceduralBlock, bitmask<AssignFlags> flags) const;
     const Driver* getFirstDriver() const { return firstDriver; }
 
 protected:

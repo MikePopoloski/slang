@@ -149,7 +149,8 @@ bool ValueExpressionBase::requireLValueImpl(const BindContext& context, SourceLo
         }
     }
 
-    symbol.addDriver(context.getDriverKind(), *longestStaticPrefix, flags);
+    symbol.addDriver(context.getDriverKind(), *longestStaticPrefix, context.getProceduralBlock(),
+                     flags);
     return true;
 }
 

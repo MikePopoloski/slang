@@ -1225,8 +1225,10 @@ RandSeqProductionSymbol::RandSeqProductionSymbol(Compilation& compilation, strin
     Scope(compilation, this), declaredReturnType(*this) {
 }
 
-RandSeqProductionSymbol& RandSeqProductionSymbol::fromSyntax(Compilation& compilation,
-                                                             const ProductionSyntax& syntax) {
+RandSeqProductionSymbol& RandSeqProductionSymbol::fromSyntax(
+    Compilation& compilation, const ProductionSyntax& syntax,
+    const ProceduralBlockSymbol* parentProcedure) {
+
     auto result = compilation.emplace<RandSeqProductionSymbol>(compilation, syntax.name.valueText(),
                                                                syntax.name.location());
     result->setSyntax(syntax);
@@ -1244,7 +1246,7 @@ RandSeqProductionSymbol& RandSeqProductionSymbol::fromSyntax(Compilation& compil
     }
 
     for (auto rule : syntax.rules) {
-        auto& ruleBlock = StatementBlockSymbol::fromSyntax(*result, *rule);
+        auto& ruleBlock = StatementBlockSymbol::fromSyntax(*result, *rule, parentProcedure);
         result->addMember(ruleBlock);
     }
 

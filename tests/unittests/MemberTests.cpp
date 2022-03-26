@@ -2272,3 +2272,44 @@ endmodule
     CHECK(diags[0].code == diag::InterconnectReference);
     CHECK(diags[1].code == diag::InterconnectReference);
 }
+
+TEST_CASE("always_comb / always_ff restrictions") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    logic [2:0] a;
+    int b = 1;
+    int c;
+    always_comb begin : boz
+        a[0] = 1;
+        a[1:0] = 2;
+        b = 3;
+
+        fork : baz
+            automatic int d = 1;
+            c = d;
+        join_none
+    end
+
+    wire clk;
+    always_ff @(posedge clk) begin : baz
+        a[1] <= 1;
+    end
+
+    always_latch begin : foo
+        b = 4;
+    end
+
+    always @* c = 3;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 4);
+    CHECK(diags[0].code == diag::MultipleAlwaysAssigns);
+    CHECK(diags[1].code == diag::MultipleAlwaysAssigns);
+    CHECK(diags[2].code == diag::MultipleAlwaysAssigns);
+    CHECK(diags[3].code == diag::MultipleAlwaysAssigns);
+}

@@ -1343,10 +1343,13 @@ const Type& PortSymbol::getType() const {
             // Ensure that this driver gets registered with the internal symbol.
             auto flags = direction == ArgumentDirection::In ? AssignFlags::InputPort
                                                             : AssignFlags::InOutPort;
-            if (internalExpr)
+            if (internalExpr) {
                 internalExpr->requireLValue(context, {}, flags);
-            else
-                internalSymbol->as<ValueSymbol>().addDriver(DriverKind::Continuous, valExpr, flags);
+            }
+            else {
+                internalSymbol->as<ValueSymbol>().addDriver(DriverKind::Continuous, valExpr,
+                                                            nullptr, flags);
+            }
         }
     }
     else if (isNullPort) {
@@ -1736,7 +1739,7 @@ const Expression* PortConnection::getExpression() const {
             flags |= BindFlags::AllowInterconnect;
 
         BindContext context(*scope, ll, flags);
-        context.instance = &parentInstance;
+        context.setInstance(parentInstance);
 
         auto [direction, type] = getDirAndType(port);
         if (connectedSymbol) {

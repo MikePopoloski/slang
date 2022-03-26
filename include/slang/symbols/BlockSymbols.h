@@ -32,19 +32,26 @@ public:
     void serializeTo(ASTSerializer&) const {}
 
     static StatementBlockSymbol& fromSyntax(const Scope& scope, const BlockStatementSyntax& syntax,
-                                            bitmask<StatementFlags> flags);
+                                            bitmask<StatementFlags> flags,
+                                            const ProceduralBlockSymbol* parentProcedure);
     static StatementBlockSymbol& fromSyntax(const Scope& scope,
                                             const ForLoopStatementSyntax& syntax,
-                                            bitmask<StatementFlags> flags);
+                                            bitmask<StatementFlags> flags,
+                                            const ProceduralBlockSymbol* parentProcedure);
     static StatementBlockSymbol& fromSyntax(const Scope& scope,
                                             const ForeachLoopStatementSyntax& syntax,
-                                            bitmask<StatementFlags> flags);
+                                            bitmask<StatementFlags> flags,
+                                            const ProceduralBlockSymbol* parentProcedure);
     static StatementBlockSymbol& fromSyntax(const Scope& scope,
-                                            const RandSequenceStatementSyntax& syntax);
-    static StatementBlockSymbol& fromSyntax(const Scope& scope, const RsRuleSyntax& syntax);
-    static StatementBlockSymbol& fromSyntax(const Scope& scope, const RsCodeBlockSyntax& syntax);
+                                            const RandSequenceStatementSyntax& syntax,
+                                            const ProceduralBlockSymbol* parentProcedure);
+    static StatementBlockSymbol& fromSyntax(const Scope& scope, const RsRuleSyntax& syntax,
+                                            const ProceduralBlockSymbol* parentProcedure);
+    static StatementBlockSymbol& fromSyntax(const Scope& scope, const RsCodeBlockSyntax& syntax,
+                                            const ProceduralBlockSymbol* parentProcedure);
     static StatementBlockSymbol& fromLabeledStmt(const Scope& scope, const StatementSyntax& syntax,
-                                                 bitmask<StatementFlags> flags);
+                                                 bitmask<StatementFlags> flags,
+                                                 const ProceduralBlockSymbol* parentProcedure);
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::StatementBlock; }
 
@@ -66,11 +73,16 @@ class ProceduralBlockSymbol : public Symbol {
 public:
     ProceduralBlockKind procedureKind;
 
-    ProceduralBlockSymbol(SourceLocation loc, ProceduralBlockKind procedureKind) :
-        Symbol(SymbolKind::ProceduralBlock, "", loc), procedureKind(procedureKind) {}
+    ProceduralBlockSymbol(SourceLocation loc, ProceduralBlockKind procedureKind);
 
     const Statement& getBody() const;
     void serializeTo(ASTSerializer& serializer) const;
+
+    bool isSingleDriverBlock() const {
+        return procedureKind == ProceduralBlockKind::AlwaysComb ||
+               procedureKind == ProceduralBlockKind::AlwaysLatch ||
+               procedureKind == ProceduralBlockKind::AlwaysFF;
+    }
 
     static ProceduralBlockSymbol& fromSyntax(
         const Scope& scope, const ProceduralBlockSyntax& syntax,
