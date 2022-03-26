@@ -85,7 +85,7 @@ bool requireLValueHelper(const T& expr, const BindContext& context, SourceLocati
     if (ValueExpressionBase::isKind(val.kind)) {
         auto sym = val.getSymbolReference();
         if (sym && sym->kind == SymbolKind::Net) {
-            auto& net = sym->as<NetSymbol>();
+            auto& net = sym->template as<NetSymbol>();
             if (net.netType.netKind == NetType::UserDefined) {
                 context.addDiag(diag::UserDefPartialDriver, expr.sourceRange) << net.name;
                 return false;
