@@ -2297,6 +2297,7 @@ module m;
 
     always_latch begin : foo
         b = 4;
+        fork join
     end
 
     always @* c = 3;
@@ -2307,11 +2308,13 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 4);
+    REQUIRE(diags.size() == 6);
     CHECK(diags[0].code == diag::MultipleAlwaysAssigns);
-    CHECK(diags[1].code == diag::MultipleAlwaysAssigns);
+    CHECK(diags[1].code == diag::ForkJoinAlwaysComb);
     CHECK(diags[2].code == diag::MultipleAlwaysAssigns);
     CHECK(diags[3].code == diag::MultipleAlwaysAssigns);
+    CHECK(diags[4].code == diag::MultipleAlwaysAssigns);
+    CHECK(diags[5].code == diag::ForkJoinAlwaysComb);
 }
 
 TEST_CASE("always_comb drivers within nested functions") {

@@ -276,6 +276,7 @@ public:
     const InstanceSymbolBase* getInstance() const;
     const ProceduralBlockSymbol* getProceduralBlock() const;
     const SubroutineSymbol* getContainingSubroutine() const;
+    bool inAlwaysCombLatch() const;
 
     void setInstance(const InstanceSymbolBase& inst);
     void setProceduralBlock(const ProceduralBlockSymbol& block);

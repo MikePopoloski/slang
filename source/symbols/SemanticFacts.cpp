@@ -93,8 +93,25 @@ ElabSystemTaskKind SemanticFacts::getElabSystemTaskKind(Token token) {
         return ElabSystemTaskKind::StaticAssert;
     THROW_UNREACHABLE;
 }
-
 // clang-format on
+
+string_view SemanticFacts::getProcedureKindStr(ProceduralBlockKind kind) {
+    switch (kind) {
+        case ProceduralBlockKind::Initial:
+            return "initial"sv;
+        case ProceduralBlockKind::Final:
+            return "final"sv;
+        case ProceduralBlockKind::Always:
+            return "always"sv;
+        case ProceduralBlockKind::AlwaysComb:
+            return "always_comb"sv;
+        case ProceduralBlockKind::AlwaysLatch:
+            return "always_latch"sv;
+        case ProceduralBlockKind::AlwaysFF:
+            return "always_ff"sv;
+    }
+    THROW_UNREACHABLE;
+}
 
 StatementBlockKind SemanticFacts::getStatementBlockKind(const BlockStatementSyntax& syntax) {
     if (syntax.kind == SyntaxKind::SequentialBlockStatement)

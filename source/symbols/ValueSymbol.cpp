@@ -193,23 +193,8 @@ static bool handleOverlap(const Scope& scope, string_view name, const ValueSymbo
             std::swap(driverRange, currRange);
         }
 
-        string_view procName;
-        switch (procKind) {
-            case ProceduralBlockKind::AlwaysComb:
-                procName = "always_comb"sv;
-                break;
-            case ProceduralBlockKind::AlwaysLatch:
-                procName = "always_latch"sv;
-                break;
-            case ProceduralBlockKind::AlwaysFF:
-                procName = "always_ff"sv;
-                break;
-            default:
-                THROW_UNREACHABLE;
-        }
-
         auto& diag = scope.addDiag(diag::MultipleAlwaysAssigns, driverRange);
-        diag << name << procName;
+        diag << name << SemanticFacts::getProcedureKindStr(procKind);
         diag.addNote(diag::NoteAssignedHere, currRange.start()) << currRange;
 
         if (driver.flags.has(AssignFlags::FuncFromProcedure) ||

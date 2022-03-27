@@ -63,6 +63,14 @@ const SubroutineSymbol* BindContext::getContainingSubroutine() const {
     return nullptr;
 }
 
+bool BindContext::inAlwaysCombLatch() const {
+    if (auto proc = getProceduralBlock()) {
+        return proc->procedureKind == ProceduralBlockKind::AlwaysComb ||
+               proc->procedureKind == ProceduralBlockKind::AlwaysLatch;
+    }
+    return false;
+}
+
 void BindContext::setInstance(const InstanceSymbolBase& inst) {
     ASSERT(!instanceOrProc);
     instanceOrProc = &inst;

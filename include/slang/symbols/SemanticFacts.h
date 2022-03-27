@@ -137,6 +137,8 @@ public:
 
     static ElabSystemTaskKind getElabSystemTaskKind(Token token);
 
+    static string_view getProcedureKindStr(ProceduralBlockKind kind);
+
     static void populateTimeScale(TimeScale& timeScale, const Scope& scope,
                                   const TimeUnitsDeclarationSyntax& syntax,
                                   optional<SourceRange>& unitsRange,

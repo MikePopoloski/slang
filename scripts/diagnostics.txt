@@ -647,6 +647,7 @@ error RecursivePropDisableIff "recursive properties cannot have disable iff cond
 error ConcurrentAssertActionBlock "cannot have '{}' statement in the action block of another concurrent assertion"
 error InvalidForStepExpression "for loop step expression must be an assignment, increment/decrement operator, or a subroutine call"
 error InvalidBlockEventTarget "block event must specify a task, function, or named block"
+error ForkJoinAlwaysComb "fork-join is not allowed in {} procedure"
 warning event-const EventExpressionConstant "edge expression is constant"
 warning empty-stmt EmptyStatement "extra ';' has no effect"
 warning pointless-void-cast PointlessVoidCast "cast to void for void-returning function '{}' has no effect"

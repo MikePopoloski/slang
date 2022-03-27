@@ -641,6 +641,13 @@ Statement& BlockStatement::fromSyntax(Compilation& compilation, const BlockState
             context.flags &= ~BindFlags::Function & ~BindFlags::Final;
         }
     }
+    else if (blockKind != StatementBlockKind::Sequential && context.inAlwaysCombLatch()) {
+        auto proc = context.getProceduralBlock();
+        ASSERT(proc);
+        context.addDiag(diag::ForkJoinAlwaysComb, syntax.begin.range())
+            << SemanticFacts::getProcedureKindStr(proc->procedureKind);
+        return badStmt(compilation, nullptr);
+    }
 
     bool wasInForkJoin = stmtCtx.flags.has(StatementFlags::InForkJoin);
     if (blockKind != StatementBlockKind::Sequential)

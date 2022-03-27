@@ -59,11 +59,17 @@ StatementBlockSymbol& StatementBlockSymbol::fromSyntax(
     }
 
     StatementBlockKind blockKind = SemanticFacts::getStatementBlockKind(syntax);
-    if ((flags.has(StatementFlags::Func | StatementFlags::Final)) &&
+    if (flags.has(StatementFlags::Func | StatementFlags::Final) &&
         !flags.has(StatementFlags::InForkJoinNone)) {
         // fork-join and fork-join_any blocks are not allowed in functions, so check that here.
         if (blockKind == StatementBlockKind::JoinAll || blockKind == StatementBlockKind::JoinAny)
             scope.addDiag(diag::TimingInFuncNotAllowed, syntax.end.range());
+    }
+    else if (blockKind != StatementBlockKind::Sequential && parentProcedure &&
+             (parentProcedure->procedureKind == ProceduralBlockKind::AlwaysComb ||
+              parentProcedure->procedureKind == ProceduralBlockKind::AlwaysLatch)) {
+        scope.addDiag(diag::ForkJoinAlwaysComb, syntax.begin.range())
+            << SemanticFacts::getProcedureKindStr(parentProcedure->procedureKind);
     }
 
     if (blockKind != StatementBlockKind::Sequential) {
