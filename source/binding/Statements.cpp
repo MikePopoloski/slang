@@ -475,6 +475,8 @@ void StatementBinder::setItems(Scope& scope, const SyntaxList<SyntaxNode>& items
             case SyntaxKind::ForwardInterfaceClassTypedefDeclaration:
             case SyntaxKind::PackageImportDeclaration:
             case SyntaxKind::ParameterDeclarationStatement:
+            case SyntaxKind::LetDeclaration:
+            case SyntaxKind::NetTypeDeclaration:
                 scope.addMembers(*item);
                 break;
             case SyntaxKind::PortDeclaration:
@@ -488,10 +490,6 @@ void StatementBinder::setItems(Scope& scope, const SyntaxList<SyntaxNode>& items
                 else {
                     scope.addDiag(diag::UnexpectedPortDecl, item->sourceRange());
                 }
-                break;
-            case SyntaxKind::LetDeclaration:
-            case SyntaxKind::NetTypeDeclaration:
-                scope.addDiag(diag::NotYetSupported, item->sourceRange());
                 break;
             default:
                 findBlocks(scope, item->as<StatementSyntax>(), buffer, labelHandled, flags,

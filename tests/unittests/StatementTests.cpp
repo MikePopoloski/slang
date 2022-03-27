@@ -1512,3 +1512,20 @@ endmodule
     CHECK(diags[1].code == diag::InvalidForStepExpression);
     CHECK(diags[2].code == diag::InitializerRequired);
 }
+
+TEST_CASE("Additional statement block items") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    int i;
+    initial begin
+        let a(x) = 1 + x;
+        nettype int nt;
+        i = a(3);
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
