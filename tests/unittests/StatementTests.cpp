@@ -1498,6 +1498,7 @@ module m;
     int i;
     initial begin
         for (i; ; i) begin end
+        for (int j; j < 10; j++) begin end
     end
 endmodule
 )");
@@ -1506,7 +1507,8 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 2);
+    REQUIRE(diags.size() == 3);
     CHECK(diags[0].code == diag::InvalidForInitializer);
     CHECK(diags[1].code == diag::InvalidForStepExpression);
+    CHECK(diags[2].code == diag::InitializerRequired);
 }

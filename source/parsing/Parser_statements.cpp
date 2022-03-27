@@ -333,8 +333,9 @@ SyntaxNode& Parser::parseForInitializer() {
         auto varKeyword = consumeIf(TokenKind::VarKeyword);
         auto& type = parseDataType();
 
-        // TODO: require initializer
-        return factory.forVariableDeclaration(varKeyword, &type, parseDeclarator());
+        return factory.forVariableDeclaration(
+            varKeyword, &type,
+            parseDeclarator(/* allowMinTypMax */ false, /* requireInitializers */ true));
     }
 
     return factory.forVariableDeclaration(Token(), nullptr, parseDeclarator());
