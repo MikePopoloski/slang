@@ -115,6 +115,11 @@ MemberSyntax* Parser::parseMember(SyntaxKind parentKind, bool& anyLocalModules) 
         }
         case TokenKind::BeginKeyword:
             errorIfAttributes(attributes);
+            if (!attributes.empty()) {
+                return &factory.emptyMember(
+                    attributes, nullptr,
+                    Token::createMissing(alloc, TokenKind::Semicolon, token.location()));
+            }
 
             // It's definitely not legal to have a generate block here on its own
             // (without an if or for loop) but some simulators seems to accept it
@@ -297,6 +302,11 @@ MemberSyntax* Parser::parseMember(SyntaxKind parentKind, bool& anyLocalModules) 
             auto rand = consume();
             return &factory.checkerDataDeclaration(attributes, rand, parseDataDeclaration({}));
         }
+        case TokenKind::ExternKeyword:
+            errorIfAttributes(attributes);
+            if (auto member = parseExternMember(attributes))
+                return member;
+            break;
         default:
             break;
     }
@@ -2948,6 +2958,35 @@ NetAliasSyntax& Parser::parseNetAlias(AttrList attributes) {
         diag::ExpectedExpression, [this] { return &parseExpression(); });
 
     return factory.netAlias(attributes, keyword, buffer.copy(alloc), semi);
+}
+
+MemberSyntax* Parser::parseExternMember(AttrList attributes) {
+    uint32_t index = 1;
+    if (!scanAttributes(index))
+        return nullptr;
+
+    switch (peek(index).kind) {
+        case TokenKind::ModuleKeyword:
+        case TokenKind::MacromoduleKeyword:
+        case TokenKind::InterfaceKeyword:
+        case TokenKind::ProgramKeyword: {
+            auto keyword = consume();
+            auto actualAttrs = parseAttributes();
+            auto& header = parseModuleHeader();
+            return &factory.externModuleDecl(attributes, keyword, actualAttrs, header);
+        }
+        case TokenKind::PrimitiveKeyword: {
+            auto keyword = consume();
+            auto actualAttrs = parseAttributes();
+            auto primitive = consume();
+            auto name = expect(TokenKind::Identifier);
+            auto& portList = parseUdpPortList();
+            return &factory.externUdpDecl(attributes, keyword, actualAttrs, primitive, name,
+                                          portList);
+        }
+        default:
+            return nullptr;
+    }
 }
 
 void Parser::checkMemberAllowed(const SyntaxNode& member, SyntaxKind parentKind) {

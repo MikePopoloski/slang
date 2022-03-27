@@ -505,6 +505,8 @@ void Scope::addMembers(const SyntaxNode& syntax) {
         case SyntaxKind::CheckerInstantiation:
         case SyntaxKind::CheckerDeclaration:
         case SyntaxKind::CheckerDataDeclaration:
+        case SyntaxKind::ExternModuleDecl:
+        case SyntaxKind::ExternUdpDecl:
             addDiag(diag::NotYetSupported, syntax.sourceRange());
             break;
         default:

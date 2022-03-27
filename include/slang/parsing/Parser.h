@@ -389,6 +389,7 @@ private:
     RsProdItemSyntax& parseRsProdItem();
     RsCodeBlockSyntax& parseRsCodeBlock();
     RsCaseSyntax& parseRsCase();
+    MemberSyntax* parseExternMember(AttrList attributes);
     // clang-format on
 
     template<bool (*IsEnd)(TokenKind)>

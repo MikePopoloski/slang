@@ -1298,6 +1298,8 @@ bool SyntaxFacts::isAllowedInCompilationUnit(SyntaxKind kind) {
         case SyntaxKind::PackageDeclaration:
         case SyntaxKind::BindDirective:
         case SyntaxKind::UdpDeclaration:
+        case SyntaxKind::ExternModuleDecl:
+        case SyntaxKind::ExternUdpDecl:
             return true;
         default:
             return isAllowedInPackage(kind);
@@ -1321,6 +1323,7 @@ bool SyntaxFacts::isAllowedInModule(SyntaxKind kind) {
         case SyntaxKind::ModuleDeclaration:
         case SyntaxKind::InterfaceDeclaration:
         case SyntaxKind::ProgramDeclaration:
+        case SyntaxKind::ExternModuleDecl:
         case SyntaxKind::TimeUnitsDeclaration:
         case SyntaxKind::SpecparamDeclaration:
         case SyntaxKind::SpecifyBlock:

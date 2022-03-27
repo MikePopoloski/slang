@@ -933,3 +933,17 @@ endmodule
     CHECK(diagnostics[2].code == diag::InterconnectDelaySyntax);
     CHECK(diagnostics[3].code == diag::InterconnectInitializer);
 }
+
+TEST_CASE("Extern module/primitive parsing") {
+    auto& text = R"(
+extern macromodule m #(parameter int i) (input real r);
+extern (* asdf = 1 *) primitive p(output reg r);
+
+module m;
+    extern interface I;
+endmodule
+)";
+
+    parseCompilationUnit(text);
+    CHECK_DIAGNOSTICS_EMPTY;
+}

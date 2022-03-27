@@ -1148,10 +1148,6 @@ NamedBlockClause? blockName
 kindmap<ModuleDeclaration>
 ModuleDeclaration InterfaceDeclaration ProgramDeclaration PackageDeclaration
 
-ExternModule
-token externKeyword
-ModuleHeader header
-
 // ----- MEMBERS -----
 
 EmptyMember base=Member
@@ -1658,6 +1654,18 @@ NetAlias base=Member
 token keyword
 separated_list<Expression> nets
 token semi
+
+ExternModuleDecl base=Member
+token externKeyword
+list<AttributeInstance> actualAttributes
+ModuleHeader header
+
+ExternUdpDecl base=Member
+token externKeyword
+list<AttributeInstance> actualAttributes
+token primitive
+token name
+UdpPortList portList
 
 // ----- CONSTRAINTS -----
 
