@@ -501,9 +501,14 @@ void Scope::addMembers(const SyntaxNode& syntax) {
             // without them so warn instead of erroring.
             addDiag(diag::WarnNotYetSupported, syntax.sourceRange());
             break;
-        default:
+        case SyntaxKind::NetAlias:
+        case SyntaxKind::CheckerInstantiation:
+        case SyntaxKind::CheckerDeclaration:
+        case SyntaxKind::CheckerDataDeclaration:
             addDiag(diag::NotYetSupported, syntax.sourceRange());
             break;
+        default:
+            THROW_UNREACHABLE;
     }
 }
 
