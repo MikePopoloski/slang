@@ -2301,6 +2301,11 @@ module m;
     end
 
     always @* c = 3;
+
+    int k;
+    always_comb begin
+        k = #1 3;
+    end
 endmodule
 )");
 
@@ -2308,13 +2313,14 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 6);
+    REQUIRE(diags.size() == 7);
     CHECK(diags[0].code == diag::MultipleAlwaysAssigns);
     CHECK(diags[1].code == diag::ForkJoinAlwaysComb);
     CHECK(diags[2].code == diag::MultipleAlwaysAssigns);
     CHECK(diags[3].code == diag::MultipleAlwaysAssigns);
     CHECK(diags[4].code == diag::MultipleAlwaysAssigns);
     CHECK(diags[5].code == diag::ForkJoinAlwaysComb);
+    CHECK(diags[6].code == diag::TimingInFuncNotAllowed);
 }
 
 TEST_CASE("always_comb drivers within nested functions") {

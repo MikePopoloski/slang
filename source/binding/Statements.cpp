@@ -2007,7 +2007,7 @@ Statement& WaitStatement::fromSyntax(Compilation& compilation, const WaitStateme
     if (!context.requireBooleanConvertible(cond))
         return badStmt(compilation, result);
 
-    if (context.flags.has(BindFlags::Function | BindFlags::Final)) {
+    if (context.flags.has(BindFlags::Function | BindFlags::Final) || context.inAlwaysCombLatch()) {
         context.addDiag(diag::TimingInFuncNotAllowed, syntax.sourceRange());
         return badStmt(compilation, result);
     }
@@ -2064,7 +2064,8 @@ Statement& WaitOrderStatement::fromSyntax(Compilation& compilation,
 
     auto result = compilation.emplace<WaitOrderStatement>(events.copy(compilation), ifTrue, ifFalse,
                                                           syntax.sourceRange());
-    if (context.flags.has(BindFlags::Function) || context.flags.has(BindFlags::Final)) {
+    if (context.flags.has(BindFlags::Function) || context.flags.has(BindFlags::Final) ||
+        context.inAlwaysCombLatch()) {
         context.addDiag(diag::TimingInFuncNotAllowed, syntax.sourceRange());
         return badStmt(compilation, result);
     }
