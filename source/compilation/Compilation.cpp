@@ -634,8 +634,17 @@ void Compilation::addOutOfBlockDecl(const Scope& scope, const ScopedNameSyntax& 
                                     const SyntaxNode& syntax, SymbolIndex index) {
     string_view className = name.left->getLastToken().valueText();
     string_view declName = name.right->getLastToken().valueText();
-    outOfBlockDecls.emplace(std::make_tuple(className, declName, &scope),
-                            std::make_tuple(&syntax, &name, index, false));
+    auto [it, inserted] = outOfBlockDecls.emplace(std::make_tuple(className, declName, &scope),
+                                                  std::make_tuple(&syntax, &name, index, false));
+
+    if (!inserted) {
+        std::string combined = fmt::format("{}::{}", className, declName);
+        auto range = std::get<1>(it->second)->sourceRange();
+
+        auto& diag = scope.addDiag(diag::Redefinition, name.sourceRange());
+        diag << combined;
+        diag.addNote(diag::NotePreviousDefinition, range.start()) << range;
+    }
 }
 
 std::tuple<const SyntaxNode*, SymbolIndex, bool*> Compilation::findOutOfBlockDecl(

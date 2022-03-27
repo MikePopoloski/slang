@@ -2044,17 +2044,18 @@ endclass
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 10);
+    REQUIRE(diags.size() == 11);
     CHECK(diags[0].code == diag::MemberDefinitionBeforeClass);
     CHECK(diags[1].code == diag::NoConstraintBody);
     CHECK(diags[2].code == diag::NoMemberImplFound);
     CHECK(diags[3].code == diag::PureConstraintInAbstract);
     CHECK(diags[4].code == diag::ConstraintQualOutOfBlock);
-    CHECK(diags[5].code == diag::MismatchStaticConstraint);
-    CHECK(diags[6].code == diag::BodyForPureConstraint);
-    CHECK(diags[7].code == diag::InvalidThisHandle);
-    CHECK(diags[8].code == diag::InheritFromAbstractConstraint);
-    CHECK(diags[9].code == diag::MismatchStaticConstraint);
+    CHECK(diags[5].code == diag::Redefinition);
+    CHECK(diags[6].code == diag::MismatchStaticConstraint);
+    CHECK(diags[7].code == diag::BodyForPureConstraint);
+    CHECK(diags[8].code == diag::InvalidThisHandle);
+    CHECK(diags[9].code == diag::InheritFromAbstractConstraint);
+    CHECK(diags[10].code == diag::MismatchStaticConstraint);
 }
 
 TEST_CASE("Randomize 'with' clauses") {
@@ -2543,4 +2544,25 @@ endmodule
     auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::ClassInheritanceCycle);
+}
+
+TEST_CASE("Duplicate out of block definitions") {
+    auto tree = SyntaxTree::fromText(R"(
+class A;
+    extern function int b();
+endclass
+
+function int A::b();
+endfunction
+
+function real A::b();
+endfunction
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::Redefinition);
 }
