@@ -2583,8 +2583,7 @@ UdpPortListSyntax& Parser::parseUdpPortList() {
 }
 
 UdpEntrySyntax& Parser::parseUdpEntry() {
-    // TODO: additional error checking based on the kind of symbol we expect to see
-    auto nextSymbol = [&] {
+    auto nextSymbol = [&](bool required) {
         switch (peek().kind) {
             case TokenKind::IntegerLiteral:
             case TokenKind::IntegerBase:
@@ -2594,6 +2593,8 @@ UdpEntrySyntax& Parser::parseUdpEntry() {
             case TokenKind::Identifier:
                 return consume();
             default:
+                if (required)
+                    addDiag(diag::ExpectedUdpSymbol, peek().location());
                 return Token();
         }
     };
@@ -2601,7 +2602,7 @@ UdpEntrySyntax& Parser::parseUdpEntry() {
     SmallVectorSized<Token, 4> preInputs;
     SmallVectorSized<Token, 4> postInputs;
     while (true) {
-        auto next = nextSymbol();
+        auto next = nextSymbol(false);
         if (!next)
             break;
 
@@ -2610,15 +2611,14 @@ UdpEntrySyntax& Parser::parseUdpEntry() {
 
     UdpEdgeIndicatorSyntax* edgeIndicator = nullptr;
     if (peek(TokenKind::OpenParenthesis)) {
-        // TODO: error if empty symbols
         auto openParen = consume();
-        auto first = nextSymbol();
-        auto second = nextSymbol();
+        auto first = nextSymbol(true);
+        auto second = nextSymbol(false);
         auto closeParen = expect(TokenKind::CloseParenthesis);
         edgeIndicator = &factory.udpEdgeIndicator(openParen, first, second, closeParen);
 
         while (true) {
-            auto next = nextSymbol();
+            auto next = nextSymbol(false);
             if (!next)
                 break;
 
@@ -2627,13 +2627,13 @@ UdpEntrySyntax& Parser::parseUdpEntry() {
     }
 
     auto colon1 = expect(TokenKind::Colon);
-    auto current = nextSymbol(); // TODO: error if empty
+    auto current = nextSymbol(true);
 
     Token colon2;
     Token nextState;
     if (peek(TokenKind::Colon)) {
         colon2 = consume();
-        nextState = nextSymbol(); // TODO: error if empty
+        nextState = nextSymbol(true);
     }
 
     auto semi = expect(TokenKind::Semicolon);

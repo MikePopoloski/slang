@@ -1662,13 +1662,20 @@ endmodule
 primitive m(output a, input b);
     table 00:0; endtable
 endprimitive
+
+primitive p11 (a, b);
+    output reg a;
+    input b;
+    initial a = 1'b1;
+    table 00:; endtable
+endprimitive
 )");
 
     Compilation compilation;
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 19);
+    REQUIRE(diags.size() == 20);
     CHECK(diags[0].code == diag::PrimitiveOutputFirst);
     CHECK(diags[1].code == diag::PrimitiveAnsiMix);
     CHECK(diags[2].code == diag::Redefinition);
@@ -1688,6 +1695,7 @@ endprimitive
     CHECK(diags[16].code == diag::PrimitiveInitVal);
     CHECK(diags[17].code == diag::Redefinition);
     CHECK(diags[18].code == diag::Redefinition);
+    CHECK(diags[19].code == diag::ExpectedUdpSymbol);
 }
 
 TEST_CASE("UDP instances error checking") {
