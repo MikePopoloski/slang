@@ -954,6 +954,17 @@ interface I;
     extern forkjoin task foo(int i, output r);
     extern function int bar(int i, j);
 endinterface
+
+module memMod(interface a);
+    logic avail;
+    task a.Read;
+        avail = 0;
+    endtask
+
+    task a.Write;
+        avail = 0;
+    endtask
+endmodule
 )";
 
     parseCompilationUnit(text);

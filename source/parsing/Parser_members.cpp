@@ -571,9 +571,6 @@ static bool checkSubroutineName(const NameSyntax& name) {
 
     if (name.kind == SyntaxKind::ScopedName) {
         auto& scoped = name.as<ScopedNameSyntax>();
-        if (scoped.separator.kind == TokenKind::Dot)
-            return false;
-
         return checkKind(*scoped.left) && checkKind(*scoped.right);
     }
 
