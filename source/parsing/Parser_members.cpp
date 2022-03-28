@@ -304,7 +304,7 @@ MemberSyntax* Parser::parseMember(SyntaxKind parentKind, bool& anyLocalModules) 
         }
         case TokenKind::ExternKeyword:
             errorIfAttributes(attributes);
-            if (auto member = parseExternMember(attributes))
+            if (auto member = parseExternMember(parentKind, attributes))
                 return member;
             break;
         default:
@@ -2960,7 +2960,7 @@ NetAliasSyntax& Parser::parseNetAlias(AttrList attributes) {
     return factory.netAlias(attributes, keyword, buffer.copy(alloc), semi);
 }
 
-MemberSyntax* Parser::parseExternMember(AttrList attributes) {
+MemberSyntax* Parser::parseExternMember(SyntaxKind parentKind, AttrList attributes) {
     uint32_t index = 1;
     if (!scanAttributes(index))
         return nullptr;
@@ -2983,6 +2983,21 @@ MemberSyntax* Parser::parseExternMember(AttrList attributes) {
             auto& portList = parseUdpPortList();
             return &factory.externUdpDecl(attributes, keyword, actualAttrs, primitive, name,
                                           portList);
+        }
+        case TokenKind::ForkJoinKeyword:
+        case TokenKind::FunctionKeyword:
+        case TokenKind::TaskKeyword: {
+            // If there were more attributes here it's invalid,
+            // we'll come back around later after tokens are skipped.
+            if (index != 1)
+                return nullptr;
+
+            auto keyword = consume();
+            auto forkJoin = consumeIf(TokenKind::ForkJoinKeyword);
+            auto& proto = parseFunctionPrototype(parentKind, FunctionOptions::AllowTasks |
+                                                                 FunctionOptions::IsPrototype);
+            auto semi = expect(TokenKind::Semicolon);
+            return &factory.externInterfaceMethod(attributes, keyword, forkJoin, proto, semi);
         }
         default:
             return nullptr;

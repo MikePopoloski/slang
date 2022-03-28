@@ -947,3 +947,15 @@ endmodule
     parseCompilationUnit(text);
     CHECK_DIAGNOSTICS_EMPTY;
 }
+
+TEST_CASE("Extern interface method parsing") {
+    auto& text = R"(
+interface I;
+    extern forkjoin task foo(int i, output r);
+    extern function int bar(int i, j);
+endinterface
+)";
+
+    parseCompilationUnit(text);
+    CHECK_DIAGNOSTICS_EMPTY;
+}

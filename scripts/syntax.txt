@@ -1667,6 +1667,12 @@ token primitive
 token name
 UdpPortList portList
 
+ExternInterfaceMethod base=Member
+token externKeyword
+token forkJoin
+FunctionPrototype prototype
+token semi
+
 // ----- CONSTRAINTS -----
 
 ConstraintItem final=false

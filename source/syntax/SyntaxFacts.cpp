@@ -1341,6 +1341,7 @@ bool SyntaxFacts::isAllowedInInterface(SyntaxKind kind) {
         case SyntaxKind::InterfaceDeclaration:
         case SyntaxKind::ProgramDeclaration:
         case SyntaxKind::TimeUnitsDeclaration:
+        case SyntaxKind::ExternInterfaceMethod:
             return true;
         default:
             return isModuleCommonItem(kind);
