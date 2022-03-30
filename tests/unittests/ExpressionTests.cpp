@@ -2542,6 +2542,10 @@ module m;
 
     uwire [31:0] k = 1;
     assign k = 2;
+
+    nettype real nt;
+    nt n = 3.14;
+    assign n = 2.3;
 endmodule
 )");
 
@@ -2549,9 +2553,10 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 4);
+    REQUIRE(diags.size() == 5);
     CHECK(diags[0].code == diag::MultipleContAssigns);
     CHECK(diags[1].code == diag::MixedVarAssigns);
     CHECK(diags[2].code == diag::MixedVarAssigns);
     CHECK(diags[3].code == diag::MultipleUWireDrivers);
+    CHECK(diags[4].code == diag::MultipleUDNTDrivers);
 }

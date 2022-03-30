@@ -562,6 +562,7 @@ error MixedVarAssigns "cannot mix continuous and procedural assignments to varia
 error MultipleContAssigns "cannot have multiple continuous assignments to variable '{}'"
 error MultipleAlwaysAssigns "variable '{}' driven by {} procedure cannot be written to by any other process"
 error MultipleUWireDrivers "'uwire' net '{}' cannot have multiple drivers"
+error MultipleUDNTDrivers "net '{}' with user-defined nettype '{}' cannot have multiple drivers because it does not specify a resolution function"
 error InputPortAssign "cannot assign to input port '{}'"
 error InterconnectReference "cannot reference interconnect net '{}' outside of a net port connection"
 error UserDefPartialDriver "net '{}' with user-defined nettype cannot be partially driven"

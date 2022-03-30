@@ -141,7 +141,8 @@ bool ValueSymbol::Driver::overlaps(Compilation& compilation, const Driver& other
 }
 
 static bool handleOverlap(const Scope& scope, string_view name, const ValueSymbol::Driver& curr,
-                          const ValueSymbol::Driver& driver, bool isNet, bool isUWire) {
+                          const ValueSymbol::Driver& driver, bool isNet, bool isUWire,
+                          bool isSingleDriverUDNT, const NetType* netType) {
     auto currRange = curr.getSourceRange();
     auto driverRange = driver.getSourceRange();
 
@@ -149,7 +150,10 @@ static bool handleOverlap(const Scope& scope, string_view name, const ValueSymbo
     // First check for more specialized cases here:
     // 1. If this is a non-uwire net for an input or output port
     // 2. If this is a variable for an input port
-    if ((isNet && (curr.isUnidirectionalPort() || driver.isUnidirectionalPort()) && !isUWire) ||
+    const bool isUnidirectionNetPort =
+        isNet && (curr.isUnidirectionalPort() || driver.isUnidirectionalPort());
+
+    if ((isUnidirectionNetPort && !isUWire && !isSingleDriverUDNT) ||
         (!isNet && (curr.isInputPort() || driver.isInputPort()))) {
 
         auto code = diag::InputPortAssign;
@@ -209,13 +213,23 @@ static bool handleOverlap(const Scope& scope, string_view name, const ValueSymbo
         return false;
     }
 
-    auto code = isUWire ? diag::MultipleUWireDrivers
-                : (driver.kind == DriverKind::Continuous && curr.kind == DriverKind::Continuous)
-                    ? diag::MultipleContAssigns
-                    : diag::MixedVarAssigns;
+    DiagCode code;
+    if (isUWire)
+        code = diag::MultipleUWireDrivers;
+    else if (isSingleDriverUDNT)
+        code = diag::MultipleUDNTDrivers;
+    else if (driver.kind == DriverKind::Continuous && curr.kind == DriverKind::Continuous)
+        code = diag::MultipleContAssigns;
+    else
+        code = diag::MixedVarAssigns;
 
     auto& diag = scope.addDiag(code, driverRange);
     diag << name;
+    if (isSingleDriverUDNT) {
+        ASSERT(netType);
+        diag << netType->name;
+    }
+
     diag.addNote(diag::NoteAssignedHere, currRange.start()) << currRange;
     return false;
 }
@@ -268,11 +282,22 @@ void ValueSymbol::addDriver(DriverKind driverKind, const Expression& longestStat
     // We need to check for overlap in the following cases:
     // - static variables (automatic variables can't ever be driven continuously)
     // - uwire nets
+    // - user-defined nets with no resolution function
     const bool isNet = kind == SymbolKind::Net;
-    const bool isUWire = isNet && as<NetSymbol>().netType.netKind == NetType::UWire;
+    bool isUWire = false;
+    bool isSingleDriverUDNT = false;
+    const NetType* netType = nullptr;
+
+    if (isNet) {
+        netType = &as<NetSymbol>().netType;
+        isUWire = netType->netKind == NetType::UWire;
+        isSingleDriverUDNT =
+            netType->netKind == NetType::UserDefined && netType->getResolutionFunction() == nullptr;
+    }
+
     const bool checkOverlap = (VariableSymbol::isKind(kind) &&
                                as<VariableSymbol>().lifetime == VariableLifetime::Static) ||
-                              isUWire;
+                              isUWire || isSingleDriverUDNT;
 
     // Walk the list of drivers to the end and add this one there.
     // Along the way, check that the driver is valid given the ones that already exist.
@@ -303,8 +328,10 @@ void ValueSymbol::addDriver(DriverKind driverKind, const Expression& longestStat
         }
 
         if (shouldCheck && curr->overlaps(comp, *driver)) {
-            if (!handleOverlap(*scope, name, *curr, *driver, isNet, isUWire))
+            if (!handleOverlap(*scope, name, *curr, *driver, isNet, isUWire, isSingleDriverUDNT,
+                               netType)) {
                 return;
+            }
         }
 
         if (!curr->next) {
