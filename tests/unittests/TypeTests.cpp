@@ -1676,3 +1676,64 @@ endmodule
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::BadAssignment);
 }
+
+TEST_CASE("User-defined nettype resolution function errors") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    class C;
+        function real func6(real r);
+        endfunction
+    endclass
+
+    nettype baz nt1 with func1;
+    nettype real nt2 with bar;
+    nettype real nt3 with C;
+    nettype real nt4 with func1;
+    nettype real nt5 with func2;
+    nettype real nt6 with func3;
+    nettype real nt7 with func4;
+    nettype real nt8 with func5;
+    nettype real nt9 with C::func6;
+    nettype real nt10 with func7;
+    nettype real nt11 with func8;
+
+    function real func1;
+    endfunction
+
+    function baz func2(real r);
+    endfunction
+
+    task func3(real r);
+    endtask
+
+    function int func4(real r);
+    endfunction
+
+    function real func5(real r);
+    endfunction
+
+    import "DPI-C" function real func7(real r);
+
+    function real func8(real r[]);
+        r[1] = 3.14;
+    endfunction
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 11);
+    CHECK(diags[0].code == diag::UndeclaredIdentifier);
+    CHECK(diags[1].code == diag::UndeclaredIdentifier);
+    CHECK(diags[2].code == diag::NotASubroutine);
+    CHECK(diags[3].code == diag::NTResolveSingleArg);
+    CHECK(diags[4].code == diag::NTResolveTask);
+    CHECK(diags[5].code == diag::NTResolveReturn);
+    CHECK(diags[6].code == diag::NTResolveSingleArg);
+    CHECK(diags[7].code == diag::NTResolveClass);
+    CHECK(diags[8].code == diag::NTResolveUserDef);
+    CHECK(diags[9].code == diag::UndeclaredIdentifier);
+    CHECK(diags[10].code == diag::NTResolveArgModify);
+}

@@ -250,7 +250,7 @@ void ValueSymbol::addDriver(DriverKind driverKind, const Expression& longestStat
             case SymbolKind::Variable:
             case SymbolKind::ClassProperty:
             case SymbolKind::Field:
-                if (as<VariableSymbol>().lifetime == VariableLifetime::Static && getInitializer()) {
+                if (getInitializer()) {
                     firstDriver = comp.emplace<Driver>(DriverKind::Procedural, makeRef(), nullptr,
                                                        AssignFlags::None, SourceRange());
                 }

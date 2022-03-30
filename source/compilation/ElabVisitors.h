@@ -127,6 +127,7 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
             return;
 
         symbol.getDataType();
+        symbol.getResolutionFunction();
     }
 
     void handle(const ClassType& symbol) {

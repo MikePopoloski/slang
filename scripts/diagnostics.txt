@@ -682,6 +682,12 @@ error InvalidArrayElemType "cannot declare an array with elements of type {}"
 error NonIntegralCoverageExpr "{} is not a valid type for a coverage expression"
 error TypeRefHierarchical "'type' expression cannot contain hierarchical references"
 error ClassInheritanceCycle "circular dependency in inheritance chain for class '{}'"
+error NTResolveSingleArg "resolution function for nettype '{}' should have a single input argument of type {}"
+error NTResolveReturn "resolution function for nettype '{}' should have a return type of {}"
+error NTResolveTask "resolution function for nettype '{}' cannot be a task"
+error NTResolveClass "resolution function for nettype '{}' cannot be a non-static class method"
+error NTResolveUserDef "resolution function for nettype '{}' must be a normal user-defined function"
+error NTResolveArgModify "resolution function for nettype '{}' cannot modify its input argument '{}'"
 warning enum-range EnumRangeLiteral "enum element ranges must be integer literals"
 
 subsystem Lookup

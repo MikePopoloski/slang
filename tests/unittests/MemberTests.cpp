@@ -2363,3 +2363,69 @@ endmodule
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::MultipleAlwaysAssigns);
 }
+
+TEST_CASE("User defined net examples") {
+    auto tree = SyntaxTree::fromText(R"(
+// user-defined data type T
+typedef struct {
+    real field1;
+    bit field2;
+} T;
+
+// user-defined resolution function Tsum
+function automatic T Tsum (input T driver[]);
+    Tsum.field1 = 0.0;
+    foreach (driver[i])
+        Tsum.field1 += driver[i].field1;
+endfunction
+
+nettype T wT; // an unresolved nettype wT whose data type is T
+
+// a nettype wTsum whose data type is T and
+// resolution function is Tsum
+nettype T wTsum with Tsum;
+
+// user-defined data type TR
+typedef real TR[5];
+
+// an unresolved nettype wTR whose data type
+// is an array of real
+nettype TR wTR;
+
+// declare another name nettypeid2 for nettype wTsum
+nettype wTsum nettypeid2;
+
+class Base #(parameter p = 1);
+    typedef struct {
+        real r;
+        bit[p-1:0] data;
+    } T;
+
+    static function T Tsum (input T driver[]);
+        Tsum.r = 0.0;
+        Tsum.data = 0;
+        foreach (driver[i])
+            Tsum.data += driver[i].data;
+        Tsum.r = $itor(Tsum.data);
+    endfunction
+endclass
+
+typedef Base#(32) MyBaseT;
+nettype MyBaseT::T narrowTsum with MyBaseT::Tsum;
+
+typedef Base#(64) MyBaseType;
+nettype MyBaseType::T wideTsum with MyBaseType::Tsum;
+
+module m;
+    narrowTsum net1; // data is 32 bits wide
+    wideTsum net2; // data is 64 bits wide
+
+    var type(net1.data) d1;
+    var type(net2.data) d2;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
