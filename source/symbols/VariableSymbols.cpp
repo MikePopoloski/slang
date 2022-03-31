@@ -7,6 +7,7 @@
 #include "slang/symbols/VariableSymbols.h"
 
 #include "slang/binding/BindContext.h"
+#include "slang/binding/MiscExpressions.h"
 #include "slang/binding/TimingControl.h"
 #include "slang/compilation/Compilation.h"
 #include "slang/compilation/Definition.h"
@@ -423,7 +424,7 @@ void ClockVarSymbol::fromSyntax(const Scope& scope, const ClockingItemSyntax& sy
             arg->setInitializer(expr);
 
             if (dir != ArgumentDirection::In)
-                expr.requireLValue(context, decl->value->equals.location());
+                expr.requireLValue(context, decl->value->equals.location(), AssignFlags::ClockVar);
         }
         else {
             auto sym = Lookup::unqualifiedAt(*parent, name.valueText(), ll, name.range());
@@ -438,6 +439,15 @@ void ClockVarSymbol::fromSyntax(const Scope& scope, const ClockingItemSyntax& sy
                 auto sourceType = sym->getDeclaredType();
                 ASSERT(sourceType);
                 arg->getDeclaredType()->setLink(*sourceType);
+
+                if (dir != ArgumentDirection::In) {
+                    auto& valExpr = ValueExpressionBase::fromSymbol(
+                        context, *sym, false,
+                        { arg->location, arg->location + arg->name.length() });
+
+                    sym->as<ValueSymbol>().addDriver(DriverKind::Continuous, valExpr, nullptr,
+                                                     AssignFlags::ClockVar);
+                }
             }
             else {
                 arg->getDeclaredType()->setType(comp.getErrorType());

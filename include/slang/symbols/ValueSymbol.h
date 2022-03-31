@@ -67,6 +67,7 @@ public:
         bool isUnidirectionalPort() const {
             return flags.has(AssignFlags::InputPort | AssignFlags::OutputPort);
         }
+        bool isClockVar() const { return flags.has(AssignFlags::ClockVar); }
 
         bool isInSingleDriverProcedure() const;
         bool isInFunction() const;

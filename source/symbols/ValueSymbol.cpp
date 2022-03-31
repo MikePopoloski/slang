@@ -213,6 +213,25 @@ static bool handleOverlap(const Scope& scope, string_view name, const ValueSymbo
         return false;
     }
 
+    if (curr.isClockVar() || driver.isClockVar()) {
+        // Both drivers being clockvars is allowed.
+        if (curr.isClockVar() && driver.isClockVar())
+            return true;
+
+        // Procedural drivers are allowed to clockvars.
+        if (curr.kind == DriverKind::Procedural || driver.kind == DriverKind::Procedural)
+            return true;
+
+        // Otherwise we have an error.
+        if (driver.isClockVar())
+            std::swap(driverRange, currRange);
+
+        auto& diag = scope.addDiag(diag::ClockVarTargetAssign, driverRange);
+        diag << name;
+        diag.addNote(diag::NoteReferencedHere, currRange.start()) << currRange;
+        return false;
+    }
+
     DiagCode code;
     if (isUWire)
         code = diag::MultipleUWireDrivers;

@@ -1308,6 +1308,8 @@ module m;
     end
 
     int j;
+    assign j = 1;
+    
     clocking cb2 @clk;
         output j;
     endclocking
@@ -1322,14 +1324,15 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 7);
+    REQUIRE(diags.size() == 8);
     CHECK(diags[0].code == diag::WriteToInputClockVar);
     CHECK(diags[1].code == diag::ClockVarSyncDrive);
     CHECK(diags[2].code == diag::ClockVarBadTiming);
     CHECK(diags[3].code == diag::CycleDelayNonClock);
     CHECK(diags[4].code == diag::ClockVarAssignConcat);
-    CHECK(diags[5].code == diag::ClockVarSyncDrive);
-    CHECK(diags[6].code == diag::ClockVarOutputRead);
+    CHECK(diags[5].code == diag::ClockVarTargetAssign);
+    CHECK(diags[6].code == diag::ClockVarSyncDrive);
+    CHECK(diags[7].code == diag::ClockVarOutputRead);
 }
 
 TEST_CASE("Invalid case statement regress GH #422") {

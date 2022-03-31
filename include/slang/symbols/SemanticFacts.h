@@ -113,9 +113,12 @@ enum class AssignFlags {
     InOutPort = 1 << 4,
 
     /// This assignment is being discovered via a function call from a procedure.
-    FuncFromProcedure = 1 << 5
+    FuncFromProcedure = 1 << 5,
+
+    /// The assignment is from a clocking block signal.
+    ClockVar = 1 << 6
 };
-BITMASK(AssignFlags, FuncFromProcedure)
+BITMASK(AssignFlags, ClockVar)
 
 class SemanticFacts {
 public:

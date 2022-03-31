@@ -565,6 +565,7 @@ error MultipleAlwaysAssigns "variable '{}' driven by {} procedure cannot be writ
 error MultipleUWireDrivers "'uwire' net '{}' cannot have multiple drivers"
 error MultipleUDNTDrivers "net '{}' with user-defined nettype '{}' cannot have multiple drivers because it does not specify a resolution function"
 error InputPortAssign "cannot assign to input port '{}'"
+error ClockVarTargetAssign "cannot write to '{}' with a continuous assignment since it's associated with an output clocking signal"
 error InterconnectReference "cannot reference interconnect net '{}' outside of a net port connection"
 error UserDefPartialDriver "net '{}' with user-defined nettype cannot be partially driven"
 warning ignored-slice IgnoredSlice "slice size ignored for left-to-right streaming operator"
