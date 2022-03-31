@@ -451,7 +451,7 @@ Expression& StructuredAssignmentPatternExpression::forStruct(
                     auto& diag = context.addDiag(diag::AssignmentPatternKeyDupName,
                                                  item->key->sourceRange());
                     diag << name;
-                    diag.addNote(diag::NotePreviousDefinition, it->second->sourceRange.start());
+                    diag.addNote(diag::NotePreviousDefinition, it->second->sourceRange);
                     bad = true;
                     continue;
                 }
@@ -547,7 +547,7 @@ static optional<int32_t> bindArrayIndexSetter(
     if (!inserted) {
         auto& diag = context.addDiag(diag::AssignmentPatternKeyDupValue, keyExpr.sourceRange);
         diag << *index;
-        diag.addNote(diag::NotePreviousDefinition, it->second->sourceRange.start());
+        diag.addNote(diag::NotePreviousDefinition, it->second->sourceRange);
         return std::nullopt;
     }
 
@@ -756,7 +756,7 @@ Expression& StructuredAssignmentPatternExpression::forAssociativeArray(
                         auto& diag = context.addDiag(diag::AssignmentPatternKeyDupValue,
                                                      indexExpr->sourceRange);
                         diag << cv;
-                        diag.addNote(diag::NotePreviousDefinition, it->second.start());
+                        diag.addNote(diag::NotePreviousDefinition, it->second);
                         bad = true;
                     }
                 }

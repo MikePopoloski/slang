@@ -771,7 +771,7 @@ public:
                 else {
                     auto& diag =
                         scope.addDiag(diag::DuplicateWildcardPortConnection, conn->sourceRange());
-                    diag.addNote(diag::NotePreviousUsage, wildcardRange.start());
+                    diag.addNote(diag::NotePreviousUsage, wildcardRange);
                 }
             }
             else {

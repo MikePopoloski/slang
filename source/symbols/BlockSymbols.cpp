@@ -493,7 +493,7 @@ void GenerateBlockSymbol::fromSyntax(Compilation& compilation, const CaseGenerat
             if (currentFound && !warned) {
                 auto& diag = context.addDiag(diag::CaseGenerateDup, currentMatchRange);
                 diag << condVal;
-                diag.addNote(diag::NotePreviousMatch, matchRange.start());
+                diag.addNote(diag::NotePreviousMatch, matchRange);
                 warned = true;
             }
 

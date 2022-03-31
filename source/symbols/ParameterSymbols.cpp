@@ -90,8 +90,7 @@ const ConstantValue& ParameterSymbol::getValue(SourceRange referencingRange) con
                 ASSERT(referencingRange.start());
 
                 auto& diag = ctx.addDiag(diag::ConstEvalParamCycle, location) << name;
-                diag.addNote(diag::NoteReferencedHere, referencingRange.start())
-                    << referencingRange;
+                diag.addNote(diag::NoteReferencedHere, referencingRange);
                 return ConstantValue::Invalid;
             }
 
@@ -315,8 +314,7 @@ const ConstantValue& SpecparamSymbol::getValue(SourceRange referencingRange) con
                 ASSERT(referencingRange.start());
 
                 auto& diag = ctx.addDiag(diag::ConstEvalParamCycle, location) << name;
-                diag.addNote(diag::NoteReferencedHere, referencingRange.start())
-                    << referencingRange;
+                diag.addNote(diag::NoteReferencedHere, referencingRange);
                 return ConstantValue::Invalid;
             }
 

@@ -31,6 +31,10 @@ Diagnostic& Diagnostic::addNote(DiagCode noteCode, SourceLocation noteLocation) 
     return notes.back();
 }
 
+Diagnostic& Diagnostic::addNote(DiagCode noteCode, SourceRange range) {
+    return addNote(noteCode, range.start()) << range;
+}
+
 Diagnostic& Diagnostic::addNote(const Diagnostic& diag) {
     notes.emplace_back(diag);
     return notes.back();

@@ -577,7 +577,7 @@ const ConstantValue& EnumValueSymbol::getValue(SourceRange referencingRange) con
                 ASSERT(referencingRange.start());
 
                 auto& diag = ctx.addDiag(diag::ConstEvalParamCycle, location) << name;
-                diag.addNote(diag::NoteReferencedHere, referencingRange.start())
+                diag.addNote(diag::NoteReferencedHere, referencingRange)
                     << referencingRange;
                 return ConstantValue::Invalid;
             }

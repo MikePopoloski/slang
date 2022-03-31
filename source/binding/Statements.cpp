@@ -1122,7 +1122,7 @@ ER CaseStatement::evalImpl(EvalContext& context) const {
                 if (matchedStmt) {
                     auto& diag =
                         context.addDiag(diag::ConstEvalCaseItemsNotUnique, item->sourceRange) << cv;
-                    diag.addNote(diag::NotePreviousMatch, matchRange.start());
+                    diag.addNote(diag::NotePreviousMatch, matchRange);
                     unique = false;
                 }
                 else {

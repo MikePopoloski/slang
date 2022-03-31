@@ -149,7 +149,7 @@ void SemanticFacts::populateTimeScale(TimeScale& timeScale, const Scope& scope,
             // value is exactly the same, otherwise we error.
             if (value != *val && !errored) {
                 auto& diag = scope.addDiag(diag::MismatchedTimeScales, token.range());
-                diag.addNote(diag::NotePreviousDefinition, prevRange->start()) << *prevRange;
+                diag.addNote(diag::NotePreviousDefinition, *prevRange);
                 errored = true;
             }
         }

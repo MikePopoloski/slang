@@ -178,7 +178,7 @@ static bool handleOverlap(const Scope& scope, string_view name, const ValueSymbo
 
         auto note =
             code == diag::OutputPortCoercion ? diag::NoteDrivenHere : diag::NoteDeclarationHere;
-        diag.addNote(note, portRange.start());
+        diag.addNote(note, portRange);
 
         // For variable ports this is an error, for nets it's a warning.
         return isNet;
@@ -199,7 +199,7 @@ static bool handleOverlap(const Scope& scope, string_view name, const ValueSymbo
 
         auto& diag = scope.addDiag(diag::MultipleAlwaysAssigns, driverRange);
         diag << name << SemanticFacts::getProcedureKindStr(procKind);
-        diag.addNote(diag::NoteAssignedHere, currRange.start()) << currRange;
+        diag.addNote(diag::NoteAssignedHere, currRange);
 
         if (driver.flags.has(AssignFlags::FuncFromProcedure) ||
             curr.flags.has(AssignFlags::FuncFromProcedure)) {
@@ -207,7 +207,7 @@ static bool handleOverlap(const Scope& scope, string_view name, const ValueSymbo
                                          ? driver.longestStaticPrefix->sourceRange
                                          : curr.longestStaticPrefix->sourceRange;
 
-            diag.addNote(diag::NoteOriginalAssign, extraRange.start()) << extraRange;
+            diag.addNote(diag::NoteOriginalAssign, extraRange);
         }
 
         return false;
@@ -228,7 +228,7 @@ static bool handleOverlap(const Scope& scope, string_view name, const ValueSymbo
 
         auto& diag = scope.addDiag(diag::ClockVarTargetAssign, driverRange);
         diag << name;
-        diag.addNote(diag::NoteReferencedHere, currRange.start()) << currRange;
+        diag.addNote(diag::NoteReferencedHere, currRange);
         return false;
     }
 
@@ -249,7 +249,7 @@ static bool handleOverlap(const Scope& scope, string_view name, const ValueSymbo
         diag << netType->name;
     }
 
-    diag.addNote(diag::NoteAssignedHere, currRange.start()) << currRange;
+    diag.addNote(diag::NoteAssignedHere, currRange);
     return false;
 }
 

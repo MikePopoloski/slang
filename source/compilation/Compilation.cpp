@@ -643,7 +643,7 @@ void Compilation::addOutOfBlockDecl(const Scope& scope, const ScopedNameSyntax& 
 
         auto& diag = scope.addDiag(diag::Redefinition, name.sourceRange());
         diag << combined;
-        diag.addNote(diag::NotePreviousDefinition, range.start()) << range;
+        diag.addNote(diag::NotePreviousDefinition, range);
     }
 }
 
@@ -731,7 +731,7 @@ void Compilation::noteDefaultDisable(const Scope& scope, const Expression& expr)
     auto [it, inserted] = defaultDisableMap.emplace(&scope, &expr);
     if (!inserted) {
         auto& diag = scope.addDiag(diag::MultipleDefaultDisable, expr.sourceRange);
-        diag.addNote(diag::NotePreviousDefinition, it->second->sourceRange.start());
+        diag.addNote(diag::NotePreviousDefinition, it->second->sourceRange);
     }
 }
 

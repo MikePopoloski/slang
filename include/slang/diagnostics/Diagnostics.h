@@ -101,6 +101,7 @@ public:
 
     /// Adds a new note to the diagnostic at the given source location.
     Diagnostic& addNote(DiagCode code, SourceLocation location);
+    Diagnostic& addNote(DiagCode code, SourceRange range);
     Diagnostic& addNote(const Diagnostic& diag);
 
     /// Adds an argument to the diagnostic.
