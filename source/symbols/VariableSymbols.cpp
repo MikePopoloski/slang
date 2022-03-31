@@ -414,7 +414,11 @@ void ClockVarSymbol::fromSyntax(const Scope& scope, const ClockingItemSyntax& sy
         // Otherwise we need to lookup the signal in our parent scope and
         // take the type from that.
         if (decl->value) {
-            auto& expr = Expression::bind(*decl->value->expr, context, BindFlags::NonProcedural);
+            bitmask<BindFlags> bindFlags = BindFlags::NonProcedural;
+            if (dir == ArgumentDirection::Out || dir == ArgumentDirection::InOut)
+                bindFlags |= BindFlags::LValue;
+
+            auto& expr = Expression::bind(*decl->value->expr, context, bindFlags);
             arg->setType(*expr.type);
             arg->setInitializer(expr);
 

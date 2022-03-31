@@ -1325,8 +1325,11 @@ const Type& PortSymbol::getType() const {
         ASSERT(dt);
         type = &dt->getType();
 
-        BindContext context(*scope, LookupLocation::before(*this),
-                            BindFlags::NonProcedural | BindFlags::AllowInterconnect);
+        bitmask<BindFlags> bindFlags = BindFlags::NonProcedural | BindFlags::AllowInterconnect;
+        if (direction == ArgumentDirection::In || direction == ArgumentDirection::InOut)
+            bindFlags |= BindFlags::LValue;
+
+        BindContext context(*scope, LookupLocation::before(*this), bindFlags);
 
         auto& valExpr = ValueExpressionBase::fromSymbol(context, *internalSymbol, false,
                                                         { location, location + name.length() });
@@ -1360,27 +1363,31 @@ const Type& PortSymbol::getType() const {
         auto& eaps = syntax->as<ExplicitAnsiPortSyntax>();
         ASSERT(eaps.expr);
 
-        BindContext context(*scope, LookupLocation::max, BindFlags::NonProcedural);
-        internalExpr = &Expression::bind(*eaps.expr, context);
-        type = internalExpr->type;
-
         // The direction of binding is reversed, as data coming in to an input
         // port flows out to the internal symbol, and vice versa. Inout and ref
         // ports don't change.
-        if (!internalExpr->bad()) {
-            ArgumentDirection checkDir = direction;
-            switch (direction) {
-                case ArgumentDirection::In:
-                    checkDir = ArgumentDirection::Out;
-                    break;
-                case ArgumentDirection::Out:
-                    checkDir = ArgumentDirection::In;
-                    break;
-                case ArgumentDirection::InOut:
-                case ArgumentDirection::Ref:
-                    break;
-            }
+        bitmask<BindFlags> bindFlags = BindFlags::NonProcedural;
+        ArgumentDirection checkDir = direction;
+        switch (direction) {
+            case ArgumentDirection::In:
+                checkDir = ArgumentDirection::Out;
+                bindFlags |= BindFlags::LValue;
+                break;
+            case ArgumentDirection::Out:
+                checkDir = ArgumentDirection::In;
+                break;
+            case ArgumentDirection::InOut:
+                bindFlags |= BindFlags::LValue;
+                break;
+            case ArgumentDirection::Ref:
+                break;
+        }
 
+        BindContext context(*scope, LookupLocation::max, bindFlags);
+        internalExpr = &Expression::bind(*eaps.expr, context);
+        type = internalExpr->type;
+
+        if (!internalExpr->bad()) {
             checkSymbolConnection(*internalExpr, checkDir, context, location,
                                   direction == ArgumentDirection::In ? AssignFlags::InputPort
                                                                      : AssignFlags::None);
@@ -1733,15 +1740,17 @@ const Expression* PortConnection::getExpression() const {
         ASSERT(scope);
 
         const bool isNetPort = port.kind == SymbolKind::Port && port.as<PortSymbol>().isNetPort();
+        auto [direction, type] = getDirAndType(port);
 
         bitmask<BindFlags> flags = BindFlags::NonProcedural;
         if (isNetPort)
             flags |= BindFlags::AllowInterconnect;
+        if (direction == ArgumentDirection::Out || direction == ArgumentDirection::InOut)
+            flags |= BindFlags::LValue;
 
         BindContext context(*scope, ll, flags);
         context.setInstance(parentInstance);
 
-        auto [direction, type] = getDirAndType(port);
         if (connectedSymbol) {
             auto& valExpr = ValueExpressionBase::fromSymbol(context, *connectedSymbol, false,
                                                             implicitNameRange);

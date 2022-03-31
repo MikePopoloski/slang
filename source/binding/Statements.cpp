@@ -2222,7 +2222,8 @@ void ProceduralAssignStatement::serializeTo(ASTSerializer& serializer) const {
 Statement& ProceduralDeassignStatement::fromSyntax(Compilation& compilation,
                                                    const ProceduralDeassignStatementSyntax& syntax,
                                                    const BindContext& context) {
-    auto ctx = context.resetFlags(BindFlags::NonProcedural | BindFlags::ProceduralForceRelease);
+    auto ctx = context.resetFlags(BindFlags::NonProcedural | BindFlags::ProceduralForceRelease |
+                                  BindFlags::LValue);
     auto& lvalue = Expression::bind(*syntax.variable, ctx);
 
     bool isRelease = syntax.keyword.kind == TokenKind::ReleaseKeyword;
