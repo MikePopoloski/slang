@@ -75,6 +75,11 @@ Expression& ValueExpressionBase::fromSymbol(const BindContext& context, const Sy
         context.addDiag(diag::InterconnectReference, sourceRange) << symbol.name;
         return badExpr(comp, nullptr);
     }
+    else if (symbol.kind == SymbolKind::ClockVar && !context.flags.has(BindFlags::LValue) &&
+             symbol.as<ClockVarSymbol>().direction == ArgumentDirection::Out) {
+        context.addDiag(diag::ClockVarOutputRead, sourceRange) << symbol.name;
+        return badExpr(comp, nullptr);
+    }
 
     if (!symbol.isValue()) {
         if ((symbol.kind == SymbolKind::ClockingBlock &&

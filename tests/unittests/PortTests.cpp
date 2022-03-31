@@ -714,7 +714,7 @@ interface A_Bus( input logic clk );
         input gnt;
         output req, addr;
         inout data;
-        property p1; req ##[1:3] gnt; endproperty 
+        property p1; gnt ##[1:3] data; endproperty 
     endclocking
 
     modport DUT ( input clk, req, addr,
