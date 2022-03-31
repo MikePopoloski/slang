@@ -339,7 +339,8 @@ void ValueSymbol::addDriver(DriverKind driverKind, const Expression& longestStat
             if (driverKind == DriverKind::Continuous || curr->kind == DriverKind::Continuous) {
                 shouldCheck = true;
             }
-            else if (curr->containingSymbol != containingSymbol &&
+            else if (curr->containingSymbol != containingSymbol && curr->containingSymbol &&
+                     containingSymbol &&
                      (curr->isInSingleDriverProcedure() || driver->isInSingleDriverProcedure()) &&
                      !curr->isInFunction() && !driver->isInFunction()) {
                 shouldCheck = true;
