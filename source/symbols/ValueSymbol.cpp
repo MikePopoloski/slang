@@ -184,6 +184,32 @@ static bool handleOverlap(const Scope& scope, string_view name, const ValueSymbo
         return isNet;
     }
 
+    if (curr.isClockVar() || driver.isClockVar()) {
+        // Both drivers being clockvars is allowed.
+        if (curr.isClockVar() && driver.isClockVar())
+            return true;
+
+        // Procedural drivers are allowed to clockvars.
+        if (curr.kind == DriverKind::Procedural || driver.kind == DriverKind::Procedural)
+            return true;
+
+        // Otherwise we have an error.
+        if (driver.isClockVar())
+            std::swap(driverRange, currRange);
+
+        auto& diag = scope.addDiag(diag::ClockVarTargetAssign, driverRange);
+        diag << name;
+        diag.addNote(diag::NoteReferencedHere, currRange);
+        return false;
+    }
+
+    if (curr.isLocalVarFormalArg() && driver.isLocalVarFormalArg()) {
+        auto& diag = scope.addDiag(diag::LocalFormalVarMultiAssign, driverRange);
+        diag << name;
+        diag.addNote(diag::NoteAssignedHere, currRange);
+        return false;
+    }
+
     if (curr.kind == DriverKind::Procedural && driver.kind == DriverKind::Procedural) {
         // Multiple procedural drivers where one of them is an
         // always_comb / always_ff block.
@@ -210,25 +236,6 @@ static bool handleOverlap(const Scope& scope, string_view name, const ValueSymbo
             diag.addNote(diag::NoteOriginalAssign, extraRange);
         }
 
-        return false;
-    }
-
-    if (curr.isClockVar() || driver.isClockVar()) {
-        // Both drivers being clockvars is allowed.
-        if (curr.isClockVar() && driver.isClockVar())
-            return true;
-
-        // Procedural drivers are allowed to clockvars.
-        if (curr.kind == DriverKind::Procedural || driver.kind == DriverKind::Procedural)
-            return true;
-
-        // Otherwise we have an error.
-        if (driver.isClockVar())
-            std::swap(driverRange, currRange);
-
-        auto& diag = scope.addDiag(diag::ClockVarTargetAssign, driverRange);
-        diag << name;
-        diag.addNote(diag::NoteReferencedHere, currRange);
         return false;
     }
 
@@ -316,7 +323,8 @@ void ValueSymbol::addDriver(DriverKind driverKind, const Expression& longestStat
 
     const bool checkOverlap = (VariableSymbol::isKind(kind) &&
                                as<VariableSymbol>().lifetime == VariableLifetime::Static) ||
-                              isUWire || isSingleDriverUDNT;
+                              isUWire || isSingleDriverUDNT ||
+                              kind == SymbolKind::LocalAssertionVar;
 
     // Walk the list of drivers to the end and add this one there.
     // Along the way, check that the driver is valid given the ones that already exist.
@@ -330,6 +338,8 @@ void ValueSymbol::addDriver(DriverKind driverKind, const Expression& longestStat
         //      - Check if multiple continuous assignments
         //      - If both procedural, check that there aren't multiple
         //        always_comb / always_ff procedures.
+        // - Assertion local variable formal arguments can't drive more than
+        //   one output to the same local variable.
         bool shouldCheck = false;
         if (curr->isUnidirectionalPort() != driver->isUnidirectionalPort()) {
             shouldCheck = true;
@@ -343,6 +353,9 @@ void ValueSymbol::addDriver(DriverKind driverKind, const Expression& longestStat
                      containingSymbol &&
                      (curr->isInSingleDriverProcedure() || driver->isInSingleDriverProcedure()) &&
                      !curr->isInFunction() && !driver->isInFunction()) {
+                shouldCheck = true;
+            }
+            else if (curr->isLocalVarFormalArg() && driver->isLocalVarFormalArg()) {
                 shouldCheck = true;
             }
         }

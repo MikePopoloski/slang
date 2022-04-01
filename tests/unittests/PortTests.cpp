@@ -1405,11 +1405,11 @@ endmodule
 
     auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 9);
-    CHECK(diags[0].code == diag::WidthTruncate);
-    CHECK(diags[1].code == diag::MismatchedUserDefPortConn);
+    CHECK(diags[0].code == diag::MismatchedUserDefPortConn);
+    CHECK(diags[1].code == diag::WidthTruncate);
     CHECK(diags[2].code == diag::MismatchedUserDefPortDir);
-    CHECK(diags[3].code == diag::WidthTruncate);
-    CHECK(diags[4].code == diag::MismatchedUserDefPortConn);
+    CHECK(diags[3].code == diag::MismatchedUserDefPortConn);
+    CHECK(diags[4].code == diag::WidthTruncate);
     CHECK(diags[5].code == diag::WidthTruncate);
     CHECK(diags[6].code == diag::UserDefPortTwoSided);
     CHECK(diags[7].code == diag::WidthExpand);

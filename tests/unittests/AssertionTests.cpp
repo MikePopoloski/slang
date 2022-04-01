@@ -1106,7 +1106,7 @@ endmodule
     CHECK(diags[5].code == diag::RecursivePropArgExpr);
 }
 
-TEST_CASE("Illegal oncurrent assertions in action blocks") {
+TEST_CASE("Illegal concurrent assertions in action blocks") {
     auto tree = SyntaxTree::fromText(R"(
 module m;
     assert property (1) begin assume property (1); end else cover property (1);
@@ -1192,4 +1192,24 @@ endmodule
     Compilation compilation;
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Assertion local var formal arg multiple drivers") {
+    auto tree = SyntaxTree::fromText(R"(
+sequence s1(local output int x, y);
+    ##1 1;
+endsequence
+
+sequence s2;
+    int foo;
+    s1(foo, foo);
+endsequence
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::LocalFormalVarMultiAssign);
 }

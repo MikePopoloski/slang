@@ -604,9 +604,13 @@ static bool checkAssertionArg(const PropertyExprSyntax& propExpr, const Assertio
     if (formal.localVarDirection == ArgumentDirection::InOut ||
         formal.localVarDirection == ArgumentDirection::Out) {
         auto sym = bound.getSymbolReference();
-        if (!sym || sym->kind != SymbolKind::LocalAssertionVar)
+        if (!sym || sym->kind != SymbolKind::LocalAssertionVar) {
             ctx.addDiag(diag::AssertionOutputLocalVar, bound.sourceRange);
-        return false;
+            return false;
+        }
+
+        sym->as<ValueSymbol>().addDriver(DriverKind::Procedural, bound, nullptr,
+                                         AssignFlags::AssertionLocalVarFormalArg);
     }
 
     result = &bound;

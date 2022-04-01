@@ -116,9 +116,12 @@ enum class AssignFlags {
     FuncFromProcedure = 1 << 5,
 
     /// The assignment is from a clocking block signal.
-    ClockVar = 1 << 6
+    ClockVar = 1 << 6,
+
+    /// The assignment is from an assertion instance's local variable formal argument.
+    AssertionLocalVarFormalArg = 1 << 7
 };
-BITMASK(AssignFlags, ClockVar)
+BITMASK(AssignFlags, AssertionLocalVarFormalArg)
 
 class SemanticFacts {
 public:

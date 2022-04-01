@@ -68,6 +68,9 @@ public:
             return flags.has(AssignFlags::InputPort | AssignFlags::OutputPort);
         }
         bool isClockVar() const { return flags.has(AssignFlags::ClockVar); }
+        bool isLocalVarFormalArg() const {
+            return flags.has(AssignFlags::AssertionLocalVarFormalArg);
+        }
 
         bool isInSingleDriverProcedure() const;
         bool isInFunction() const;
