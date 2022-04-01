@@ -569,6 +569,7 @@ error ClockVarTargetAssign "cannot write to '{}' with a continuous assignment si
 error LocalFormalVarMultiAssign "cannot bind local variable '{}' to more than one output or inout local variable formal argument"
 error InterconnectReference "cannot reference interconnect net '{}' outside of a net port connection"
 error UserDefPartialDriver "net '{}' with user-defined nettype cannot be partially driven"
+error LocalVarEventExpr "local variable '{}' cannot be referenced in an event expression"
 warning ignored-slice IgnoredSlice "slice size ignored for left-to-right streaming operator"
 warning unsized-concat UnsizedInConcat "unsized integer in concat; using a width of {}"
 warning width-expand WidthExpand "implicit conversion expands from {} to {} bits"

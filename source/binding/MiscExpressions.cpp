@@ -58,6 +58,11 @@ Expression& ValueExpressionBase::fromSymbol(const BindContext& context, const Sy
             context.addDiag(diag::CoverageSampleFormal, sourceRange) << symbol.name;
             return badExpr(comp, nullptr);
         }
+        else if (context.flags.has(BindFlags::EventExpression) &&
+                 symbol.kind == SymbolKind::LocalAssertionVar) {
+            context.addDiag(diag::LocalVarEventExpr, sourceRange) << symbol.name;
+            return badExpr(comp, nullptr);
+        }
     }
     else if (symbol.kind == SymbolKind::ConstraintBlock) {
         if (!symbol.as<ConstraintBlockSymbol>().isStatic)

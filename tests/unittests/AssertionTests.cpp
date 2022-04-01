@@ -464,9 +464,10 @@ module m;
         a ##1 c ##1 @b 1;
     endsequence
 
+    event e;
     sequence s6;
         int i;
-        s5(i + 1, i + 1, i + 1).triggered ##1 s5(i, i, i).triggered;
+        s5(i + 1, e, i + 1).triggered ##1 s5(i, e, i).triggered;
     endsequence
 endmodule
 )");
@@ -475,11 +476,10 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 4);
+    REQUIRE(diags.size() == 3);
     CHECK(diags[0].code == diag::SeqMethodInputLocalVar);
     CHECK(diags[1].code == diag::SequenceMethodLocalVar);
     CHECK(diags[2].code == diag::SequenceMethodLocalVar);
-    CHECK(diags[3].code == diag::SequenceMethodLocalVar);
 }
 
 TEST_CASE("Sequence event control") {
@@ -1212,4 +1212,20 @@ endsequence
     auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::LocalFormalVarMultiAssign);
+}
+
+TEST_CASE("Assertion local var in event expression") {
+    auto tree = SyntaxTree::fromText(R"(
+sequence s;
+    int x;
+    @(x) 1 ##1 1;
+endsequence
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::LocalVarEventExpr);
 }
