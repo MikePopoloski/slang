@@ -98,5 +98,41 @@ like any other form of whitespace. Some important features are as follows:
 -  Arguments set in a command file are overridden by anything set on the command line if they would
    otherwise conflict.
 
+@section system-funcs Nonstandard Built-in Functions
+
+Besides the system tasks and functions specified in the SystemVerilog LRM, slang also provides
+the following nonstandard built-in functions:
+
+`$static_assert(condition[, message])`
+
+Performs an elaboration-time check of the provided condition (which must be a constant expression)
+and fails with an error if the condition is false. This works very similarly to the $error elaboration
+system task, with the optional message being a string that accepts formatting specifiers in the same
+style as the $sformatf function. If no message is provided it will print a default message about the failure.
+
+$static_assert is usable in all contexts where $error is allowed, and additionally is supported in other
+contexts such as packages. It can also be used in task, function, and other statement blocks.
+
+If the assertion fails and the provided condition contains a comparison operator, slang will print
+additional helpful information about both sides of the comparison to help diagnose the failure.
+
+Example:
+@code{.sv}
+// test.sv
+module m;
+    localparam int foo = 12;
+    struct packed { logic [4:1] a, b; } bar;
+    $static_assert(foo < $bits(bar));
+endmodule
+@endcode
+
+@code{.ansi}
+test.sv:5:5: error: static assertion failed
+    $static_assert(foo < $bits(bar));
+    ^
+test.sv:5:24: note: comparison reduces to (12 < 8)
+    $static_assert(foo < $bits(bar));
+                   ~~~~^~~~~~~~~~~~
+@endcode
 
 */
