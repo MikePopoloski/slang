@@ -17,15 +17,12 @@
 
 namespace slang {
 
-EvalContext::EvalContext(Compilation& compilation, bitmask<EvalFlags> flags) :
-    compilation(compilation), flags(flags) {
-    stack.emplace(Frame{});
-}
-
 ConstantValue* EvalContext::createLocal(const ValueSymbol* symbol, ConstantValue value) {
+    ASSERT(!stack.empty());
     ConstantValue& result = stack.back().temporaries[symbol];
-    if (!value)
+    if (!value) {
         result = symbol->getType().getDefaultValue();
+    }
     else {
         ASSERT(!value.isInteger() ||
                value.integer().getBitWidth() == symbol->getType().getBitWidth());
@@ -37,8 +34,12 @@ ConstantValue* EvalContext::createLocal(const ValueSymbol* symbol, ConstantValue
 }
 
 ConstantValue* EvalContext::findLocal(const ValueSymbol* symbol) {
-    auto it = stack.back().temporaries.find(symbol);
-    if (it == stack.back().temporaries.end())
+    if (stack.empty())
+        return nullptr;
+
+    auto& frame = stack.back();
+    auto it = frame.temporaries.find(symbol);
+    if (it == frame.temporaries.end())
         return nullptr;
     return &it->second;
 }
@@ -57,6 +58,10 @@ bool EvalContext::pushFrame(const SubroutineSymbol& subroutine, SourceLocation c
     frame.lookupLocation = lookupLocation;
     stack.emplace(std::move(frame));
     return true;
+}
+
+void EvalContext::pushEmptyFrame() {
+    stack.emplace(Frame{});
 }
 
 void EvalContext::popFrame() {

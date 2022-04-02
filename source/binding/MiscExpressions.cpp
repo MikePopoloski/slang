@@ -348,6 +348,9 @@ bool NamedValueExpression::checkConstant(EvalContext& context) const {
     if (!checkConstantBase(context))
         return false;
 
+    if (!context.inFunction())
+        return true;
+
     const EvalContext::Frame& frame = context.topFrame();
     const SubroutineSymbol* subroutine = frame.subroutine;
     if (!subroutine)

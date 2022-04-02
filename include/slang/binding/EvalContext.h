@@ -7,8 +7,6 @@
 #pragma once
 
 #include <map>
-#include <stack>
-#include <vector>
 
 #include "slang/numeric/ConstantValue.h"
 #include "slang/symbols/Scope.h"
@@ -72,7 +70,8 @@ public:
         LookupLocation lookupLocation;
     };
 
-    explicit EvalContext(Compilation& compilation, bitmask<EvalFlags> flags = {});
+    explicit EvalContext(Compilation& compilation, bitmask<EvalFlags> flags = {}) :
+        compilation(compilation), flags(flags) {}
 
     /// Creates storage for a local variable in the current frame.
     ConstantValue* createLocal(const ValueSymbol* symbol, ConstantValue value = nullptr);
@@ -84,6 +83,10 @@ public:
     /// Push a new frame onto the call stack.
     [[nodiscard]] bool pushFrame(const SubroutineSymbol& subroutine, SourceLocation callLocation,
                                  LookupLocation lookupLocation);
+
+    /// Pushes an empty frame onto the call stack. Intended for use with
+    /// on-the-fly evaluation in a scripting context.
+    void pushEmptyFrame();
 
     /// Pop the active frame from the call stack.
     void popFrame();
@@ -106,7 +109,7 @@ public:
 
     /// Returns true if the context is currently within a function call, and false if
     /// this is a top-level expression.
-    bool inFunction() const { return stack.size() > 1; }
+    bool inFunction() const { return !stack.empty(); }
 
     /// Indicates whether the results of evaluating expressions using this context
     /// can be cached in each expression's `constant` pointer.
@@ -116,13 +119,21 @@ public:
     /// object that when destructed will restore the previous caching mode.
     /// Otherwise does nothing.
     [[nodiscard]] auto disableCaching() {
-        auto guard = ScopeGuard([this, saved = flags.has(EvalFlags::CacheResults)] {
-            if (saved)
-                flags |= EvalFlags::CacheResults;
-            else
-                flags &= ~EvalFlags::CacheResults;
-        });
+        auto guard =
+            ScopeGuard([this, saved = flags.has(EvalFlags::CacheResults), pushed = !inFunction()] {
+                if (pushed)
+                    popFrame();
+
+                if (saved)
+                    flags |= EvalFlags::CacheResults;
+                else
+                    flags &= ~EvalFlags::CacheResults;
+            });
+
         flags &= ~EvalFlags::CacheResults;
+        if (!inFunction())
+            pushEmptyFrame();
+
         return guard;
     }
 

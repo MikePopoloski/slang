@@ -23,6 +23,7 @@ static CompilationOptions createOptions() {
 ScriptSession::ScriptSession() :
     compilation(createOptions()), scope(compilation.createScriptScope()),
     evalContext(compilation, EvalFlags::IsScript) {
+    evalContext.pushEmptyFrame();
 }
 
 ConstantValue ScriptSession::eval(string_view text) {

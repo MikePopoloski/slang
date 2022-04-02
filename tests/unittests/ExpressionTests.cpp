@@ -47,6 +47,8 @@ TEST_CASE("Evaluate assignment expression") {
 
     // Initialize `i` to 1.
     EvalContext context(compilation);
+    context.pushEmptyFrame();
+
     auto i = context.createLocal(&local, SVInt(32, 1, true));
 
     // Evaluate the expression tree.

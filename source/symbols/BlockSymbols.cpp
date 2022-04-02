@@ -674,6 +674,8 @@ GenerateBlockArraySymbol& GenerateBlockArraySymbol::fromSyntax(Compilation& comp
 
     // Create storage for the iteration variable.
     EvalContext evalContext(compilation);
+    evalContext.pushEmptyFrame();
+
     auto loopVal = evalContext.createLocal(&local, initialVal);
     if (loopVal->integer().hasUnknown())
         iterContext.addDiag(diag::GenvarUnknownBits, genvar.range()) << *loopVal;
