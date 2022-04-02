@@ -14,7 +14,7 @@
 # Values that contain spaces should be placed between quotes (\" \").
 
 ##! M_LINKS_NAVBAR1 = \
-##!  "user-manual command-line-ref language-support" \
+##!  "user-manual command-line-ref language-support warning-ref" \
 ##!  "developer-guide building commoncomp sourcemanagement diagnostics parsing"
 ##! M_LINKS_NAVBAR2 = \
 ##!  "api-reference namespaces annotated files" \

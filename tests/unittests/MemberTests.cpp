@@ -1274,8 +1274,8 @@ endinterface
     CHECK(diags[1].code == diag::NotASubroutine);
     CHECK(diags[2].code == diag::TypoIdentifier);
     CHECK(diags[3].code == diag::MethodReturnMismatch);
-    CHECK(diags[4].code == diag::Redefinition);
-    CHECK(diags[5].code == diag::NotASubroutine);
+    CHECK(diags[4].code == diag::NotASubroutine);
+    CHECK(diags[5].code == diag::Redefinition);
 }
 
 TEST_CASE("DPI Imports") {

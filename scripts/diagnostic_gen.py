@@ -81,12 +81,14 @@ def main():
 
     createsource(os.path.join(args.outDir, "DiagCode.cpp"), diags, groups)
     createallheader(os.path.join(headerdir, "AllDiags.h"), diags)
+    createdocs(os.path.join(args.outDir, "../docs/warnings.dox"), diags, groups)
 
     doCheck = False
     if doCheck:
         diaglist = checkDiags(args.srcDir, diaglist)
         diaglist = checkDiags(args.incDir, diaglist)
         reportUnused(diaglist)
+
 
 def createheader(path, subsys, diags):
     output = '''//------------------------------------------------------------------------------
@@ -104,7 +106,7 @@ namespace slang::diag {{
 '''.format(subsys, subsys)
 
     index = 0
-    for d in diags:
+    for d in sorted(diags):
         output += 'inline constexpr DiagCode {}(DiagSubsystem::{}, {});\n'.format(d[1], subsys, index)
         index += 1
 
@@ -112,6 +114,7 @@ namespace slang::diag {{
 }
 '''
     writefile(path, output)
+
 
 def createsource(path, diags, groups):
     output = '''//------------------------------------------------------------------------------
@@ -132,9 +135,9 @@ static const flat_hash_map<DiagCode, std::tuple<string_view, string_view, Diagno
 '''
 
     for k,v in sorted(diags.items()):
-        for d in v:
+        for d in sorted(v):
             output += '    {{diag::{}, std::make_tuple("{}"sv, "{}"sv, DiagnosticSeverity::{}, "{}"sv)}},\n'.format(
-                       d[1], d[1], d[2], d[0], d[3] if len(d) > 2 else '')
+                       d[1], d[1], d[2], d[0], d[3])
 
     output += '''};
 
@@ -143,7 +146,7 @@ static const flat_hash_map<string_view, std::vector<DiagCode>> optionMap = {
 
     optionMap = {}
     for k,v in sorted(diags.items()):
-        for d in v:
+        for d in sorted(v):
             name = d[3]
             if not name:
                 continue
@@ -165,7 +168,7 @@ static const flat_hash_map<string_view, DiagGroup> groupMap = {
 
     for g in sorted(groups):
         elems = []
-        for e in g[1]:
+        for e in sorted(g[1]):
             elems.extend(optionMap[e])
 
         elems = ', '.join('diag::{}'.format(e) for e in elems)
@@ -218,6 +221,7 @@ const DiagGroup* findDefaultDiagGroup(string_view name) {
 '''
     writefile(path, output)
 
+
 def createallheader(path, diags):
     output = '''//------------------------------------------------------------------------------
 //! @file AllDiags.h
@@ -235,6 +239,63 @@ def createallheader(path, diags):
     output += '\n'
     writefile(path, output)
 
+
+def createdocs(path, diags, groups):
+    output = '''/** @page warning-ref Warning Reference
+@brief Reference information about all supported warnings
+
+@tableofcontents
+
+@section warnings Warning Listing
+
+'''
+
+    groupMap = {}
+    warnlist = []
+    for g in groups:
+        warnlist.append(g)
+        for e in g[1]:
+            if e in groupMap:
+                groupMap[e].add(g[0])
+            else:
+                groupMap[e] = set([g[0]])
+
+    for k,v in diags.items():
+        for d in v:
+            if not d[3]:
+                continue
+            warnlist.append(d)
+
+    warnlist.sort(key = lambda d: d[3] if len(d) > 3 else d[0])
+
+    lastOpt = ''
+    for d in warnlist:
+        if len(d) > 3:
+            opt = d[3]
+            if opt != lastOpt:
+                if lastOpt != '':
+                    output += '\n@n\n'
+                output += '@subsection {} -W{}\n'.format(opt, opt)
+
+                if opt in groupMap:
+                    groups = groupMap[opt]
+                    if 'default' in groups:
+                        output += 'This diagnostic is enabled by default. @n @n\n'
+
+            output += '@code{{.txt}}warning: {}@endcode\n@n\n'.format(d[2])
+            lastOpt = opt
+        else:
+            opt = d[0]
+            lastOpt = opt
+            elemlist = ', '.join('-W' + s for s in d[1])
+
+            output += '\n@n\n@subsection {} -W{}\n'.format(opt, opt)
+            output += 'Controls {}.\n@n\n'.format(elemlist)
+
+    output += '\n*/'
+    writefile(path, output)
+
+
 def checkDiags(path, diags):
     import glob
     for ext in ('cpp', 'h'):
@@ -244,9 +305,11 @@ def checkDiags(path, diags):
                 diags = [d for d in diags if not ('::' + d) in text]
     return diags
 
+
 def reportUnused(diags):
     for d in diags:
         print("warning: '{}' is unused".format(d))
+
 
 if __name__ == "__main__":
     main()

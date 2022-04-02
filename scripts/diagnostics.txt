@@ -467,7 +467,6 @@ error AssignmentPatternKeyDupDefault "assignment pattern has multiple default ke
 error AssignmentPatternKeyDupValue "assignment pattern has multiple keys for index {}"
 error AssignmentPatternKeyDupName "assignment pattern has multiple keys for member '{}'"
 error AssignmentPatternNoMember "member '{}' is not covered by any assignment pattern key"
-error AssignmentPatternNestedNoMember "member '{}' has nested elements that are not covered by any assignment pattern key"
 error AssignmentPatternMissingElements "not all elements of array are covered by an assignment pattern key"
 error AssignmentPatternDynamicDefault "assignment pattern for dynamic array or queue cannot have default key"
 error AssignmentPatternDynamicType "assignment patterns for dynamic arrays, associative arrays, and queues cannot have type keys"

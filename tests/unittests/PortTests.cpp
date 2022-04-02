@@ -1410,10 +1410,10 @@ endmodule
     CHECK(diags[2].code == diag::MismatchedUserDefPortDir);
     CHECK(diags[3].code == diag::MismatchedUserDefPortConn);
     CHECK(diags[4].code == diag::WidthTruncate);
-    CHECK(diags[5].code == diag::WidthTruncate);
-    CHECK(diags[6].code == diag::UserDefPortTwoSided);
-    CHECK(diags[7].code == diag::WidthExpand);
-    CHECK(diags[8].code == diag::UserDefPortMixedConcat);
+    CHECK(diags[5].code == diag::UserDefPortTwoSided);
+    CHECK(diags[6].code == diag::WidthTruncate);
+    CHECK(diags[7].code == diag::UserDefPortMixedConcat);
+    CHECK(diags[8].code == diag::WidthExpand);
 }
 
 TEST_CASE("inout uwire port errors") {
