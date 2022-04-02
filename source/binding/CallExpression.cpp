@@ -799,20 +799,28 @@ public:
     const Symbol& procedure;
     const SubroutineSymbol& func;
     SourceRange range;
-    SmallSet<const ValueSymbol*, 8> visited;
+    SmallSet<const ValueSymbol*, 8> visitedValues;
+    SmallSet<const SubroutineSymbol*, 4>& visitedSubs;
 
-    FuncDriverVisitor(const Symbol& procedure, const SubroutineSymbol& func, SourceRange range) :
-        procedure(procedure), func(func), range(range) {}
+    FuncDriverVisitor(const Symbol& procedure, SmallSet<const SubroutineSymbol*, 4>& visitedSubs,
+                      const SubroutineSymbol& func, SourceRange range) :
+        procedure(procedure),
+        func(func), range(range), visitedSubs(visitedSubs) {}
 
     void handle(const CallExpression& expr) {
         if (!expr.isSystemCall() && expr.getSubroutineKind() == SubroutineKind::Function &&
             !expr.thisClass()) {
-            addFunctionDrivers(procedure, *std::get<0>(expr.subroutine), range);
+
+            auto& subroutine = *std::get<0>(expr.subroutine);
+            if (visitedSubs.emplace(&subroutine).second) {
+                FuncDriverVisitor visitor(procedure, visitedSubs, subroutine, range);
+                subroutine.getBody().visit(visitor);
+            }
         }
     }
 
     void handle(const ValueExpressionBase& expr) {
-        if (!visited.emplace(&expr.symbol).second)
+        if (!visitedValues.emplace(&expr.symbol).second)
             return;
 
         // If the target symbol is driven by the function we're inspecting,
@@ -831,7 +839,10 @@ public:
 
 static void addFunctionDrivers(const Symbol& procedure, const SubroutineSymbol& func,
                                SourceRange range) {
-    FuncDriverVisitor visitor(procedure, func, range);
+    SmallSet<const SubroutineSymbol*, 4> visitedSubs;
+    visitedSubs.emplace(&func);
+
+    FuncDriverVisitor visitor(procedure, visitedSubs, func, range);
     func.getBody().visit(visitor);
 }
 

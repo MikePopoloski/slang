@@ -2562,3 +2562,29 @@ endmodule
     CHECK(diags[3].code == diag::MultipleUWireDrivers);
     CHECK(diags[4].code == diag::MultipleUDNTDrivers);
 }
+
+TEST_CASE("Recursive function in always_comb driver check") {
+    auto tree = SyntaxTree::fromText(R"(
+module top;
+  logic passed;
+  logic [7:0] value;
+  integer ones;
+
+  function automatic integer count_by_one(input integer start);
+    if (start) count_by_one = (value[start] ? 1 : 0) + count_ones(start-1);
+    else count_by_one = value[start] ? 1 : 0;
+  endfunction
+
+  function automatic integer count_ones(input integer start);
+    if (start) count_ones = (value[start] ? 1 : 0) + count_by_one(start-1);
+    else count_ones = value[start] ? 1 : 0;
+  endfunction
+
+  always_comb ones = count_ones(7);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
