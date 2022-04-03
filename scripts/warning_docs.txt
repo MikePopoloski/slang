@@ -232,9 +232,11 @@ endmodule
 
 -Wempty-member
 An unnecessary semicolon is located in a non-procedural scope (such as a module body).
+```
 module m;
     ;
 endmodule
+```
 
 -Wineffective-sign
 For a non-ANSI instance port or function body port declaration, the port I/O specifies a
