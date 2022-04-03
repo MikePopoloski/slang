@@ -370,7 +370,7 @@ def createdocs(outDir, inpath, slangBin, diags, groups):
         else:
             opt = d[0]
             lastOpt = opt
-            elemlist = ', '.join('-W' + s for s in d[1])
+            elemlist = ', '.join('@ref {}'.format(s, s) for s in d[1])
 
             output += '\n@n\n@subsection {} -W{}\n'.format(opt, opt)
             output += 'Controls {}.\n@n\n'.format(elemlist)
