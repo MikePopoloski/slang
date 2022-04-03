@@ -39,8 +39,8 @@ struct PreprocessorOptions {
     /// via the @a predefines option.
     std::string predefineSource = "<api>";
 
-    /// A set of macros to predefine, of the form <macro>=<value> or
-    /// just <macro> to predefine to a value of 1.
+    /// A set of macros to predefine, of the form &lt;macro>=&lt;value> or
+    /// just &lt;macro> to predefine to a value of 1.
     std::vector<std::string> predefines;
 
     /// A set of macro names to undefine at the start of file preprocessing.

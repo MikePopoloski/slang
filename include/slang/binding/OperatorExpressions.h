@@ -249,9 +249,11 @@ private:
 
 struct StreamingConcatenationExpressionSyntax;
 
+/// @cond NOPE
 #define RANGE(x) x(Simple) x(IndexedUp) x(IndexedDown) x(Bit)
 ENUM(WithRangeKind, RANGE) // RangeSelectionKind + Bit
 #undef RANGE
+/// @endcond
 
 /// Represents a streaming concatenation.
 class StreamingConcatenationExpression : public Expression {

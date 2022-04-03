@@ -101,8 +101,8 @@ BITMASK(DeclaredTypeFlags, CoverageType)
 class DeclaredType {
 public:
     /// Constructs a new instance of the class.
-    /// @param parent is the parent symbol that owns the declared type.
-    /// @flags are optional additional flags that constraint type resolution.
+    /// @param parent The parent symbol that owns the declared type.
+    /// @param flags Optional additional flags that constrain type resolution.
     explicit DeclaredType(const Symbol& parent,
                           bitmask<DeclaredTypeFlags> flags = DeclaredTypeFlags::None);
     DeclaredType(const DeclaredType&) = delete;
@@ -147,8 +147,9 @@ public:
     void setInitializer(const Expression& expr) { initializer = &expr; }
 
     /// Sets the syntax for the initializer expression, which will be later used
-    /// when resolution is requested. @param loc is the source location to use when
-    /// reporting diagnostics about the initializer.
+    /// when resolution is requested.
+    /// @param syntax The initializer expression syntax.
+    /// @param loc The source location to use when reporting diagnostics about the initializer.
     void setInitializerSyntax(const ExpressionSyntax& syntax, SourceLocation loc) {
         ASSERT(!initializer);
         initializerSyntax = &syntax;

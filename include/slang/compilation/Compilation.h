@@ -120,7 +120,7 @@ struct CompilationOptions {
     /// based on which modules are unreferenced elsewhere.
     flat_hash_set<string_view> topModules;
 
-    /// A list of parameters to override, of the form <name>=<value> -- note that
+    /// A list of parameters to override, of the form &lt;name>=&lt;value> -- note that
     /// for now at least this only applies to parameters in top-level modules.
     std::vector<std::string> paramOverrides;
 };

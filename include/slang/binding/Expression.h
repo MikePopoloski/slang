@@ -187,24 +187,28 @@ public:
     /// Specialized method for binding all of the expressions in a set membership check.
     /// This is used for case statements and the 'inside' operator.
     ///
-    /// The @param valueExpr is the value being checked for membership, and @param expressions
-    /// denotes the set to check within. All of the expressions influence each other for
-    /// purposes of finding a common comparison type.
+    /// @param context The context used for binding expressions.
+    /// @param valueExpr The value being checked for membership.
+    /// @param expressions Denotes the set to check within. All of the expressions influence
+    /// each other for purposes of finding a common comparison type.
     ///
-    /// The @param keyword parameter is used to customize diagnostics produced.
+    /// @param keyword The kind of membership being bound, which is used to customize
+    /// any diagnostics produced.
     ///
-    /// If @param requireIntegral is set to true, expression types will be restricted to
+    /// @param requireIntegral If set to true, expression types will be restricted to
     /// be only integral types.
     ///
-    /// If @param unwrapUnpacked is set to true, unpacked arrays will be unwrapped to
+    /// @param unwrapUnpacked If set to true, unpacked arrays will be unwrapped to
     /// their element types to find the type to check against. Otherwise, all aggregates
     /// are illegal.
     ///
-    /// If @param allowOpenRange is set to true, open range expressions will be allowed.
+    /// @param allowOpenRange If set to true, open range expressions will be allowed.
     /// Otherwise an error will be issued for them.
     ///
-    /// If @param allowTypeReferences is true the bound expressions are allowed to
+    /// @param allowTypeReferences If set to true the bound expressions are allowed to
     /// be type reference expressions. Otherwise an error will be issued.
+    ///
+    /// @param results A vector that will be filled with the bound membership expressions.
     ///
     /// @returns true if all expressions are legal, otherwise false and appropriate
     /// diagnostics are issued.

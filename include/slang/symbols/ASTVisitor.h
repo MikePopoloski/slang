@@ -118,6 +118,8 @@ auto makeVisitor(Functions... funcs) {
     return Result(std::move(funcs)...);
 }
 
+/// @cond NOPE
+
 template<typename TVisitor, typename... Args>
 decltype(auto) Symbol::visit(TVisitor&& visitor, Args&&... args) const {
     // clang-format off
@@ -417,5 +419,7 @@ decltype(auto) BinsSelectExpr::visit(TVisitor& visitor, Args&&... args) const {
     // clang-format on
     THROW_UNREACHABLE;
 }
+
+/// @endcond
 
 } // namespace slang

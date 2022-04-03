@@ -253,7 +253,9 @@ def createdocs(path, diags, groups):
     groupMap = {}
     warnlist = []
     for g in groups:
-        warnlist.append(g)
+        if g[0] != 'default':
+            warnlist.append(g)
+
         for e in g[1]:
             if e in groupMap:
                 groupMap[e].add(g[0])

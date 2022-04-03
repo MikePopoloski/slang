@@ -33,12 +33,11 @@ struct FormatOptions {
 };
 
 /// Parse the given formatString and call the provided callbacks for each parsed portion.
-/// The formatString is specified by the SystemVerilog LRM -- see that for a complete reference.
-///
-/// @param onText will be invoked for each constant / non-formatted portion of the format string.
-/// @param onArg will be invoked for each format specifier in the format string, with various
+/// @param formatString Specified by the SystemVerilog LRM -- see that for a complete reference.
+/// @param onText Will be invoked for each constant / non-formatted portion of the format string.
+/// @param onArg Will be invoked for each format specifier in the format string, with various
 ///              options parsed and provided as arguments.
-/// @param onError will be invoked for any errors in the format string, with a diagnostic code
+/// @param onError Will be invoked for any errors in the format string, with a diagnostic code
 ///                describing the problem and the location in the string where the error occurred.
 /// @return true if parsing was successful, and false if an error occurred.
 bool parse(

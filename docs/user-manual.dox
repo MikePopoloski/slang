@@ -88,7 +88,7 @@ like any other form of whitespace. Some important features are as follows:
 
 -  Command files can contain comments. '#' starts a line comment that continues to the end of
    the line, regardless of where the '#' occurs. '//' similarly starts a line comment, but only
-   if preceeded by whitespace. '/*' and '&lowast;/' form a C-style multiline block comment.
+   if preceeded by whitespace. '/&lowast;' and '&lowast;/' form a C-style multiline block comment.
 -  Single quotes and double quotes group text in a similar fashion to how they work in Bash
    and other shells.
 -  The backslash character can be used to escape special characters and treat them like normal text.

@@ -190,7 +190,7 @@ public:
 
     /// Set a variable that will receive any positional arguments provided
     /// on the command line. They will be returned as a list of strings.
-    /// @valueName is for including in the help text.
+    /// @a valueName is for including in the help text.
     /// @a isFileName indicates whether the parsed string is a filename that
     ///               might be relative to the current directory.
     void setPositional(std::vector<std::string>& values, string_view valueName,
