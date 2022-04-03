@@ -3,6 +3,7 @@
 import argparse
 import os
 import shlex
+import subprocess
 
 def writefile(path, contents):
     try:
@@ -20,6 +21,8 @@ def main():
     parser.add_argument('--outDir', default=os.getcwd(), help='Output directory')
     parser.add_argument('--srcDir', help='Source directory to search for usages')
     parser.add_argument('--incDir', help='Include directory to search for usages')
+    parser.add_argument('--docs', action='store_true')
+    parser.add_argument('--slangBin')
     args = parser.parse_args()
 
     ourdir = os.path.dirname(os.path.realpath(__file__))
@@ -76,18 +79,21 @@ def main():
             else:
                 raise Exception('Invalid entry: {}'.format(line))
 
-    for k,v in sorted(diags.items()):
-        createheader(os.path.join(headerdir, k + "Diags.h"), k, v)
+    if args.docs:
+        createdocs(args.outDir, os.path.join(ourdir, "warning_docs.txt"),
+                   args.slangBin, diags, groups)
+    else:
+        for k,v in sorted(diags.items()):
+            createheader(os.path.join(headerdir, k + "Diags.h"), k, v)
 
-    createsource(os.path.join(args.outDir, "DiagCode.cpp"), diags, groups)
-    createallheader(os.path.join(headerdir, "AllDiags.h"), diags)
-    createdocs(os.path.join(args.outDir, "../docs/warnings.dox"), diags, groups)
+        createsource(os.path.join(args.outDir, "DiagCode.cpp"), diags, groups)
+        createallheader(os.path.join(headerdir, "AllDiags.h"), diags)
 
-    doCheck = False
-    if doCheck:
-        diaglist = checkDiags(args.srcDir, diaglist)
-        diaglist = checkDiags(args.incDir, diaglist)
-        reportUnused(diaglist)
+        doCheck = False
+        if doCheck:
+            diaglist = checkDiags(args.srcDir, diaglist)
+            diaglist = checkDiags(args.incDir, diaglist)
+            reportUnused(diaglist)
 
 
 def createheader(path, subsys, diags):
@@ -240,13 +246,62 @@ def createallheader(path, diags):
     writefile(path, output)
 
 
-def createdocs(path, diags, groups):
+def createdocs(outDir, inpath, slangBin, diags, groups):
+    inf = open(inpath)
+    curropt = None
+    inexample = False
+    exampleMap = {}
+
+    for line in [x.strip('\n') for x in inf]:
+        if not inexample:
+            line = line.strip()
+            if not line or line.startswith('//'):
+                continue
+
+        if inexample:
+            if line.startswith('```'):
+                inexample = False
+            else:
+                if curropt[2]:
+                    curropt[2] += '\n'
+                curropt[2] += line
+        elif line.startswith('-W'):
+            if curropt:
+                exampleMap[curropt[0]] = curropt
+            curropt = [line[2:], '', '', '']
+        elif line.startswith('```'):
+            inexample = True
+        else:
+            if curropt[1]:
+                curropt[1] += ' '
+            curropt[1] += line
+
+    if curropt:
+        exampleMap[curropt[0]] = curropt
+
+    for k,v in exampleMap.items():
+        if not v[2]:
+            continue
+
+        testPath = os.path.join(outDir, 'test.sv')
+        with open(testPath, 'w') as outf:
+            outf.write(v[2])
+
+        encoding = 'utf-16-le' if os.name == 'nt' else 'utf-8'
+        args = [slangBin, '--quiet', '-Wnone', '-W' + k, '--color-diagnostics', testPath]
+
+        result = subprocess.run(args, encoding=encoding,
+                                stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        v[3] = result.stdout
+        if k not in v[3]:
+            raise Exception('Test for -W{} is not correct'.format(k))
+
     output = '''/** @page warning-ref Warning Reference
 @brief Reference information about all supported warnings
 
 @tableofcontents
 
-@section warnings Warning Listing
+@section warnings Warnings
 
 '''
 
@@ -274,17 +329,39 @@ def createdocs(path, diags, groups):
     for d in warnlist:
         if len(d) > 3:
             opt = d[3]
-            if opt != lastOpt:
-                if lastOpt != '':
-                    output += '\n@n\n'
-                output += '@subsection {} -W{}\n'.format(opt, opt)
+            if opt == lastOpt:
+                continue
 
-                if opt in groupMap:
-                    groups = groupMap[opt]
-                    if 'default' in groups:
-                        output += 'This diagnostic is enabled by default. @n @n\n'
+            if lastOpt != '':
+                output += '\n@n\n'
+            output += '@subsection {} -W{}\n'.format(opt, opt)
 
-            output += '@code{{.txt}}warning: {}@endcode\n@n\n'.format(d[2])
+            example = None
+            results = None
+            if opt in exampleMap:
+                details = exampleMap[opt]
+                desc = details[1]
+                example = details[2]
+                results = details[3]
+                output += desc
+                output += ' @n @n\n'
+
+            if opt in groupMap:
+                groups = groupMap[opt]
+                if 'default' in groups:
+                    output += 'This diagnostic is enabled by default. @n @n\n'
+
+            if example:
+                assert(results)
+                output += '@b Example: \n\n'
+                output += '@code{.sv}\n'
+                output += example + '\n'
+                output += '@endcode\n\n'
+                output += 'produces:\n\n'
+                output += '@code{.ansi}\n'
+                output += results
+                output += '@endcode\n'
+
             lastOpt = opt
         else:
             opt = d[0]
@@ -295,7 +372,7 @@ def createdocs(path, diags, groups):
             output += 'Controls {}.\n@n\n'.format(elemlist)
 
     output += '\n*/'
-    writefile(path, output)
+    writefile(os.path.join(outDir, "warnings.dox"), output)
 
 
 def checkDiags(path, diags):

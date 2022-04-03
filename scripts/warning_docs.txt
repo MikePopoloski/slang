@@ -1,0 +1,564 @@
+// This file is an input to the diagnostic_gen.py script, to generate
+// documentation for compiler warning flags.
+
+-Wunknown-escape-code
+Detects use of unknown character escape codes in string literals.
+```
+string s = "Hello World\q";
+```
+
+-Wnonstandard-escape-code
+Detects use of '\\\%' in string literals. This is not a real escape code
+but other tools silently allow it anyway.
+```
+string s = "Hello World\%";
+```
+
+-Wreal-underflow
+Issued for real literals that are too small to be represented.
+```
+real r = 4.94066e-325;
+```
+
+-Wreal-overflow
+Issued for real literals that are too large to be represented.
+```
+real r = 1.79769e+309;
+```
+
+-Wvector-overflow
+Issued for vector literals that are larger than their specified number of bits.
+```
+logic [7:0] i = 7'd256;
+```
+
+-Wint-overflow
+Issued for integer literals that overflow a 32-bit integer (31-bits plus sign).
+```
+int i = 2147483648;
+```
+
+-Wignored-macro-paste
+Points out macro concatenation tokens that aren't actually concatenating anything due
+to whitespace on either side, or tokens that can't be concatenated in the first place.
+```
+`define FOO(a) a `` +
+int foo;
+int bar = `FOO(foo) foo;
+```
+
+-Wredef-macro
+Issued for redefining a macro name with a different body.
+```
+`define FOO 1
+`define FOO 2
+```
+
+-Wunknown-pragma
+Issued for an unknown pragma directive.
+```
+`pragma foo
+```
+
+-Wextra-pragma-args
+Issued for a pragma directive that specifies more arguments than expected.
+```
+`pragma resetall extraarg
+```
+
+-Wexpected-diag-arg
+Issued for a pragma diagnostic directive that is missing an argument.
+```
+`pragma diagnostic
+```
+
+-Wunknown-diag-arg
+Issued for an unknown argument given to a pragma diagnostic directive.
+```
+`pragma diagnostic pushh
+```
+
+-Wpragma-diag-level
+Issued for a malformed diagnostic pragma. A severity code was expected
+where the given location is indicated.
+```
+`pragma diagnostic foo=3'd3
+```
+
+-Wnonstandard-generate
+Indicates a standalone generate block (begin / end pair) without a corresponding
+generate loop or condition. This was allowed in older Verilog standards but
+is no longer allowed in SystemVerilog.
+```
+module m;
+    begin : gen_block
+        int i = 1;
+    end
+endmodule
+```
+
+-Wempty-pattern
+Issued for empty assignment pattern literals, which are not allowed by
+SystemVerilog but are supported by some tools.
+```
+int foo[] = '{};
+```
+
+-Wnonstandard-foreach
+foreach loops are not allowed to have multidimensional brackets when declaring
+loop variables, but most tools allow it as an extension.
+```
+module top;
+    int array[8][8];
+    initial begin
+        foreach (array[i]) begin
+            foreach (array[i][j]) begin
+                array[i][j] = i * j;
+            end
+        end
+    end
+endmodule
+```
+
+-Wlifetime-prototype
+Lifetime specifiers are not allowed on method prototype declarations but some
+tools allow it as an extension.
+```
+class C;
+    extern function automatic void foo;
+endclass
+
+function automatic void C::foo;
+endfunction
+```
+
+-Wnonstandard-dist
+'dist' constraint items are technically not allowed to be surrounded by parentheses according
+to the language grammar, but most tools allow it as an extension.
+```
+class C;
+    rand bit a;
+    rand bit [3:0] b;
+    constraint cmd_c {
+        a -> (b dist { 0 := 1, [1:15] := 1});
+    }
+endclass
+```
+
+-Wwarning-task
+A $warning elaboration task was encountered. Its message is printed by this diagnostic.
+```
+$warning("Hello World!");
+```
+
+-Wexplicit-static
+static variables declared locally to a procedural block that contain an initializer require
+that the 'static' keyword be explicitly provided (and not just inferred from context) to
+clarify that the initialization happens only once. Most tools don't enforce this rule,
+so this is just a warning instead of an error.
+```
+module m;
+    initial begin
+        int i = 1;
+    end
+endmodule
+```
+
+-Wcase-gen-dup
+More than one case generate item was found to have the same value. The second
+case block will never be selected.
+```
+module m;
+    case (1)
+        1: begin end
+        1: begin end
+    endcase
+endmodule
+```
+
+-Wcase-gen-none
+A case generate directive did not match any items and so no block was selected.
+```
+module m;
+    case (1)
+        0: begin end
+    endcase
+endmodule
+```
+
+-Wunconnected-port
+An instance port was left unconnected and it has no default value.
+```
+module m(input int i);
+endmodule
+
+module n;
+    m m1();
+endmodule
+```
+
+-Wunconnected-unnamed-port
+An unnamed instance port was left unconnected.
+```
+module m({a, b});
+    input a, b;
+endmodule
+
+module n;
+    m m1();
+endmodule
+```
+
+-Wimplicit-net-port
+A net port that elides its net type occurs in a context where `default_nettype is set to 'none'.
+This technically should be an error but it makes the use of 'none' as a default nettype very
+annoying and most tools just default to a wire in this case.
+```
+`default_nettype none
+
+module m(input i);
+endmodule
+```
+
+-Wdup-attr
+A design element has more than one attribute of the same name.
+Only the last one will apply.
+```
+module m;
+    (* foo = 1, foo = 2 *)
+    int i;
+endmodule
+```
+
+-Wempty-member
+An unnecessary semicolon is located in a non-procedural scope (such as a module body).
+module m;
+    ;
+endmodule
+
+-Wineffective-sign
+For a non-ANSI instance port or function body port declaration, the port I/O specifies a
+signing keyword but the actual data type of the port does not permit that signing to take effect.
+```
+module m(a);
+    input unsigned a;
+    int a;
+endmodule
+```
+
+-Wconstraint-missing
+An implicit class constraint block has no external definition and so is useless.
+```
+class C;
+    constraint c;
+endclass
+```
+
+-Wdpi-spec
+Old-style "DPI" specified subroutines are deprecated and not supported by slang.
+Use the new-style "DPI-C" which has a well-defined standardized calling convention.
+```
+import "DPI" function void foo();
+```
+
+-Wudp-port-empty
+A connection to a user-defined primitive instance is an empty expression.
+While allowed, this is easily confused with a misplaced comma and is likely
+not what you want.
+```
+primitive p1 (output a, input b);
+    table 00:0; endtable
+endprimitive
+
+module m;
+    logic a;
+    p1 (a,);
+endmodule
+```
+
+-Wnet-inconsistent
+A connection (or part of a connection) between an external net and an internal net
+port has inconsistent net types. The SystemVerilog LRM defines which combinations
+of net types are inconsistent and should produce a warning; see section [23.3.3.7]
+"Port connections with dissimilar net types (net and port collapsing)" for more detail.
+```
+module m (input .a({b, {c[1:0], d}}));
+    wand b;
+    wand [3:0] c;
+    supply0 d;
+endmodule
+
+module top;
+    wand a;
+    wor b;
+    trireg [1:0] c;
+    m m1({a, b, c});
+endmodule
+```
+
+-Wignored-slice
+A streaming operator with direction left-to-right provides a slice size, which
+has no effect because only right-to-left streaming can use a slice size.
+```
+int a;
+int b = {>> 4 {a}};
+```
+
+-Wunsized-concat
+An unsized type is used in a concatenation. This is not allowed in SystemVerilog
+but most tools allow it anyway as an extension.
+```
+longint i = {1, 2};
+```
+
+-Wwidth-expand
+An implicit conversion in an expression expands a type. This may be harmless,
+but the warning provides a mechanism for discovering unintended conversions.
+An explicit cast can be used to silence the warning.
+```
+logic [1:0] a;
+int b = a;
+```
+
+-Wwidth-trunc
+An implicit conversion in an expression truncates a type. This conversion
+potentially loses data. An explicit cast can be used to silence the warning.
+```
+int a;
+logic [1:0] b = a;
+```
+
+-Wimplicit-conv
+An implicit conversion in an expression converts between two unrelated types.
+SystemVerilog allows this for all packed integral types but it often
+indicates a mistake in the code.
+```
+module m;
+    struct packed { logic a; int b; } foo;
+    union packed { int a; int b; } bar;
+    initial foo = bar;
+endmodule
+```
+
+-Wnonblocking-final
+A nonblocking assignment is used in a 'final' block, which will have no effect.
+```
+module m;
+    int i;
+    final begin
+        i <= 1;
+    end
+endmodule
+```
+
+-Wport-coercion
+An input net port has been coerced to 'inout' direction because it is assigned
+to in the instance body. Alternatively, an output net port has been coerced to
+'inout' direction because it is assigned to externally to the instance.
+```
+module m(input wire a, output b);
+    assign a = 1;
+endmodule
+
+module n;
+    wire b;
+    m m1(1, b);
+    assign b = 1;
+endmodule
+```
+
+-Wevent-const
+An event expression is a constant and so will never change.
+```
+module m;
+    always @(1) begin
+    end
+endmodule
+```
+
+-Wempty-stmt
+An extra semicolon in a procedural context implies an empty statement that does nothing.
+```
+module m;
+    initial begin
+        ;
+    end
+endmodule
+```
+
+-Wpointless-void-cast
+A function call is cast to 'void' but it already returns void so the cast is pointless.
+```
+module m;
+    function void foo; endfunction
+    initial begin
+        void'(foo());
+    end
+endmodule
+```
+
+-Wunused-result
+A non-void function is invoked without inspecting its return value. Capture the result
+or cast the call to 'void' to suppress the warning.
+```
+module m;
+    function int foo; return 1; endfunction
+    initial begin
+        foo();
+    end
+endmodule
+```
+
+-Wenum-range
+An enum member is specified as a range with values that are not integer literals.
+The LRM does not allow other constant expressions to be used here.
+```
+localparam int i = 1;
+typedef enum { A[i:3] } e_t;
+```
+
+-Wdup-import
+A given scope contains more than one import statement for the same package and name.
+```
+package p;
+    int i;
+endpackage
+
+module m;
+    import p::i;
+    import p::i;
+endmodule
+```
+
+-Wformat-real
+A string formatting function was passed a real value for an integer format specifier,
+which will force the value to round to an integer.
+```
+module m;
+    initial $display("%d", 3.14);
+endmodule
+```
+
+-Wfinish-num
+The $finish control task accepts a "finish number" of 0, 1, or 2 as its first argument.
+The actual call to $finish in this case passed something other than one of those values.
+```
+module m;
+    initial $finish("Hello");
+endmodule
+```
+
+-Wmissing-format
+A string formatting function has a lone '%%' at the end of the format string,
+implying that the rest of the specifier is missing. If a literal '%%' is intended
+in the output, use the standard '%%%' to achieve that.
+```
+module m;
+    initial $display("Hello World %");
+endmodule
+```
+
+-Wformat-multibit-strength
+Formatting multibit nets with the %%v specifier is not allowed in SystemVerilog
+but most tools allow it anyway as an extension.
+```
+module m;
+    wire [3:0] w;
+    initial $display("%v", w);
+endmodule
+```
+
+-Wnonstandard-sys-func
+Indicates a call to a nonstandard system function. Currently this only applies
+to the $psprintf function, which is a synonym for $sformatf.
+```
+module m;
+    initial $psprintf("%d", 42);
+endmodule
+```
+
+-Welem-not-found
+A constant function tried to access a nonexistent element of an associative array.
+```
+localparam int foo = func();
+function int func;
+    int i[string];
+    return i["Hello"];
+endfunction
+```
+
+-Wstatic-skipped
+A constant function contains a static variable with an initializer. That initializer
+will be skipped during constant evaluation, which could lead to unintuitive results.
+```
+localparam int foo = func();
+function int func;
+    static int i = 1;
+    return i;
+endfunction
+```
+
+-Wdynarray-index
+A constant function tried to access a nonexistent element of a dynamic array.
+```
+localparam int foo = func();
+function int func;
+    automatic int i[] = new [2];
+    return i[4];
+endfunction
+```
+
+-Wdynarray-range
+A constant function tried to access a nonexistent range of a dynamic array.
+```
+typedef int ret_type[2];
+localparam ret_type foo = func();
+function ret_type func;
+    automatic int i[] = new [2];
+    return i[6:7];
+endfunction
+```
+
+-Wqueue-range
+A constant function is accessing a queue with a reversed range, which
+is defined to always yield an empty queue.
+```
+typedef int ret_type[$];
+localparam ret_type foo = func();
+function ret_type func;
+    automatic int i[$] = {1, 2, 3};
+    return i[2:0];
+endfunction
+```
+
+-Wempty-queue
+A constant function tried to pop an element from an empty queue.
+```
+localparam int foo = func();
+function int func;
+    automatic int i[$];
+    return i.pop_back();
+endfunction
+```
+
+-Wtask-ignored
+A constant function contains a system task invocation which will
+be skipped during constant evaluation. This could yield unintuitive results.
+```
+localparam string foo = func();
+function string func;
+    automatic string s;
+    $swrite(s, "asdf %d", 3);
+    return s;
+endfunction
+```
+
+-Wunused-def
+A module, interface, or program definition is unused in the design.
+```
+module m #(parameter int i);
+endmodule;
+
+module top;
+endmodule
+```

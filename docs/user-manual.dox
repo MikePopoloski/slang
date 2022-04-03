@@ -117,6 +117,7 @@ If the assertion fails and the provided condition contains a comparison operator
 additional helpful information about both sides of the comparison to help diagnose the failure.
 
 Example:
+
 @code{.sv}
 // test.sv
 module m;

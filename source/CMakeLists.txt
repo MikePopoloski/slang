@@ -23,7 +23,6 @@ add_custom_command(
                 --srcDir ${CMAKE_CURRENT_SOURCE_DIR}
                 --incDir ${CMAKE_CURRENT_SOURCE_DIR}/../include/slang
     OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/slang/diagnostics/AllDiags.h ${CMAKE_CURRENT_BINARY_DIR}/DiagCode.cpp
-           ${CMAKE_CURRENT_BINARY_DIR}/../docs/warnings.dox
     DEPENDS ${SCRIPTS_DIR}/diagnostic_gen.py ${SCRIPTS_DIR}/diagnostics.txt
     COMMENT "Generating diagnostics"
 )
