@@ -569,3 +569,9 @@ No valid top-level modules exist in the design. No top has been instantiated.
 module m #(parameter int i);
 endmodule
 ```
+
+-Wunknown-warning-option
+<ignored>
+
+-Wnot-supported
+<ignored>

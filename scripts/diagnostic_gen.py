@@ -332,19 +332,23 @@ def createdocs(outDir, inpath, slangBin, diags, groups):
             if opt == lastOpt:
                 continue
 
+            if opt not in exampleMap:
+                raise Exception('No documentation for -W{}'.format(opt))
+
+            details = exampleMap[opt]
+            desc = details[1]
+            example = details[2]
+            results = details[3]
+
+            if desc == '<ignored>':
+                continue
+
             if lastOpt != '':
                 output += '\n@n\n'
             output += '@subsection {} -W{}\n'.format(opt, opt)
 
-            example = None
-            results = None
-            if opt in exampleMap:
-                details = exampleMap[opt]
-                desc = details[1]
-                example = details[2]
-                results = details[3]
-                output += desc
-                output += ' @n @n\n'
+            output += desc
+            output += ' @n @n\n'
 
             if opt in groupMap:
                 groups = groupMap[opt]
