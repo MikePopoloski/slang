@@ -213,6 +213,12 @@ the compilation. By default this will be the "typical", or middle expression.
 Override all parameters with the given name in top-level modules to the provided value.
 This option can be specified more than once to override multiple parameters.
 
+`--allow-use-before-declare`
+
+Don't issue an error if an identifier is used before its declaration. This is not allowed in
+SystemVerilog -- this option is provided for compatibility with tools that have weaker enforcement
+of this rule.
+
 `--allow-hierarchical-const`
 
 Allow hierarchical references in constant expressions. SystemVerilog doesn't permit this,
@@ -267,15 +273,9 @@ disable the limit. The default is 64.
 
 Don't issue an error for instantiations of unknown modules, interface, and programs.
 
-`--allow-use-before-declare`
-
-Don't issue an error if an identifier is used before its declaration. This is not allowed in
-SystemVerilog -- this option is provided for compatibility with tools that have weaker enforcement
-of this rule.
-
 `-Wfoo`
 
-Enable warning "foo". See TODO for a complete list of warnings that can be enabled this way.
+Enable warning "foo". See @ref warning-ref for a complete list of warnings that can be enabled this way.
 
 `-Wno-foo`
 
