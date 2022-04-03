@@ -864,7 +864,7 @@ error MultipleDefaultClocking "scope already has a default clocking block"
 error MultipleGlobalClocking "scope already has a global clocking block"
 error MultipleDefaultDisable "scope already has a default disable declaration"
 warning unused-def UnusedDefinition "{} definition is unused"
-warning no-top NoTopModules "no top-level modules found in design"
+warning missing-top NoTopModules "no top-level modules found in design"
 
 subsystem Meta
 error TooManyErrors "too many errors emitted, stopping now [--error-limit=]"
@@ -878,9 +878,10 @@ group default = { real-underflow real-overflow vector-overflow int-overflow unco
                   unconnected-unnamed-port event-const redef-macro not-supported unknown-pragma
                   extra-pragma-args expected-diag-arg unknown-diag-arg pragma-diag-level explicit-static
                   static-skipped elem-not-found dynarray-index dynarray-range queue-range empty-queue
-                  unknown-escape-code no-top warning-task unsized-concat finish-num implicit-conv nonblocking-final
-                  constraint-missing missing-format dpi-spec enum-range udp-port-empty lifetime-prototype
-                  nonstandard-sys-func nonstandard-foreach nonstandard-dist net-inconsistent port-coercion }
+                  unknown-escape-code missing-top warning-task unsized-concat finish-num implicit-conv
+                  nonblocking-final constraint-missing missing-format dpi-spec enum-range udp-port-empty
+                  lifetime-prototype nonstandard-sys-func nonstandard-foreach nonstandard-dist net-inconsistent
+                  port-coercion }
 
 group extra = { empty-member empty-stmt dup-import pointless-void-cast case-gen-none case-gen-dup
                 unused-result format-real ignored-slice task-ignored width-trunc dup-attr }

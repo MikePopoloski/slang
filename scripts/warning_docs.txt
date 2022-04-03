@@ -557,8 +557,15 @@ endfunction
 A module, interface, or program definition is unused in the design.
 ```
 module m #(parameter int i);
-endmodule;
+endmodule
 
 module top;
+endmodule
+```
+
+-Wmissing-top
+No valid top-level modules exist in the design. No top has been instantiated.
+```
+module m #(parameter int i);
 endmodule
 ```
