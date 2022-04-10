@@ -173,17 +173,17 @@ finding all modules that are not instantiated elsewhere in the design.
 `--max-hierarchy-depth <depth>`
 
 Set the maximum depth of the design hierarchy. Used to detect infinite
-module instantiation recursion. The default is 512.
+module instantiation recursion. The default is 128.
 
 `--max-generate-steps <steps>`
 
 Set the maximum number of steps that can occur during generate block evaluation
-before giving up. Used to detect infinite generate loops. The default is 65535.
+before giving up. Used to detect infinite generate loops. The default is 131072.
 
 `--max-constexpr-depth <depth>`
 
 Set the maximum depth of the constant evaluation call stack. Used to detect
-infinite recursion during constant evaluation. The default is 256.
+infinite recursion during constant evaluation. The default is 128.
 
 `--max-constexpr-steps <steps>`
 
