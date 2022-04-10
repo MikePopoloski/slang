@@ -1935,11 +1935,14 @@ Statement& ConcurrentAssertionStatement::fromSyntax(
         return badStmt(compilation, nullptr);
     }
 
+    BindContext ctx = context;
+    ctx.clearInstanceAndProc();
+
     AssertionKind assertKind = SemanticFacts::getAssertKind(syntax.kind);
-    auto& prop = AssertionExpr::bind(*syntax.propertySpec, context);
+    auto& prop = AssertionExpr::bind(*syntax.propertySpec, ctx);
     bool bad = prop.bad();
 
-    BindContext ctx = context.resetFlags(BindFlags::ConcurrentAssertActionBlock);
+    ctx.flags |= BindFlags::ConcurrentAssertActionBlock;
     const Statement* ifTrue = nullptr;
     const Statement* ifFalse = nullptr;
     if (syntax.action->statement)
@@ -1950,15 +1953,15 @@ Statement& ConcurrentAssertionStatement::fromSyntax(
                                    stmtCtx);
     }
 
-    bool isCover =
+    const bool isCover =
         assertKind == AssertionKind::CoverProperty || assertKind == AssertionKind::CoverSequence;
     if (isCover && ifFalse) {
-        context.addDiag(diag::CoverStmtNoFail, syntax.action->elseClause->sourceRange());
+        ctx.addDiag(diag::CoverStmtNoFail, syntax.action->elseClause->sourceRange());
         bad = true;
     }
     else if (assertKind == AssertionKind::Restrict &&
              (ifFalse || (ifTrue && ifTrue->kind != StatementKind::Empty))) {
-        context.addDiag(diag::RestrictStmtNoFail, syntax.action->sourceRange());
+        ctx.addDiag(diag::RestrictStmtNoFail, syntax.action->sourceRange());
         bad = true;
     }
 

@@ -2368,6 +2368,21 @@ endmodule
     CHECK(diags[0].code == diag::MultipleAlwaysAssigns);
 }
 
+TEST_CASE("always_comb timing inside assertion") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    wire b;
+    always_comb begin
+        assert property (@(posedge b) ((b) and b) ##0 b);
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
 TEST_CASE("User defined net examples") {
     auto tree = SyntaxTree::fromText(R"(
 // user-defined data type T

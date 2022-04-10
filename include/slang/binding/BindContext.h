@@ -280,6 +280,7 @@ public:
 
     void setInstance(const InstanceSymbolBase& inst);
     void setProceduralBlock(const ProceduralBlockSymbol& block);
+    void clearInstanceAndProc() { instanceOrProc = nullptr; }
 
     void setAttributes(const Statement& stmt,
                        span<const AttributeInstanceSyntax* const> syntax) const;
