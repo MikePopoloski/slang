@@ -107,6 +107,11 @@ struct CompilationOptions {
     /// If true, allow all integral types to convert implicitly to enum types.
     bool relaxEnumConversions = false;
 
+    /// Signals driven by an always_comb are normally not allowed to be driven
+    /// by any other process. Setting this option allows initial blocks to
+    /// also drive such signals.
+    bool allowDupInitialDrivers = false;
+
     /// If true, compile in "linting" mode where we suppress errors that could
     /// be caused by not having an elaborated design.
     bool lintMode = false;

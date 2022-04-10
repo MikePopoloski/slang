@@ -2448,3 +2448,25 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("always_comb dup driver with initial block with language option") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    int foo[2];
+
+    initial begin
+        for (int i = 0; i < 2; i++)
+            foo[i] = 0;
+    end
+
+    always_comb foo[1] = 1;
+endmodule
+)");
+
+    CompilationOptions options;
+    options.allowDupInitialDrivers = true;
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}

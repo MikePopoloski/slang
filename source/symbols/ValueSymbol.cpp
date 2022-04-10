@@ -63,6 +63,12 @@ bool ValueSymbol::Driver::isInFunction() const {
            containingSymbol->as<SubroutineSymbol>().subroutineKind == SubroutineKind::Function;
 }
 
+bool ValueSymbol::Driver::isInInitialBlock() const {
+    return containingSymbol && containingSymbol->kind == SymbolKind::ProceduralBlock &&
+           containingSymbol->as<ProceduralBlockSymbol>().procedureKind ==
+               ProceduralBlockKind::Initial;
+}
+
 SourceRange ValueSymbol::Driver::getSourceRange() const {
     if (!range.start() && !range.end())
         range = longestStaticPrefix->sourceRange;
@@ -338,6 +344,8 @@ void ValueSymbol::addDriver(DriverKind driverKind, const Expression& longestStat
         //      - Check if multiple continuous assignments
         //      - If both procedural, check that there aren't multiple
         //        always_comb / always_ff procedures.
+        //          - If the allowDupInitialDrivers option is set, allow an initial
+        //            block to overlap even if the other block is an always_comb/ff.
         // - Assertion local variable formal arguments can't drive more than
         //   one output to the same local variable.
         bool shouldCheck = false;
@@ -352,7 +360,10 @@ void ValueSymbol::addDriver(DriverKind driverKind, const Expression& longestStat
             else if (curr->containingSymbol != containingSymbol && curr->containingSymbol &&
                      containingSymbol &&
                      (curr->isInSingleDriverProcedure() || driver->isInSingleDriverProcedure()) &&
-                     !curr->isInFunction() && !driver->isInFunction()) {
+                     !curr->isInFunction() && !driver->isInFunction() &&
+                     (!comp.getOptions().allowDupInitialDrivers ||
+                      (!curr->isInInitialBlock() && !driver->isInInitialBlock()))) {
+
                 shouldCheck = true;
             }
             else if (curr->isLocalVarFormalArg() && driver->isLocalVarFormalArg()) {

@@ -74,6 +74,7 @@ public:
 
         bool isInSingleDriverProcedure() const;
         bool isInFunction() const;
+        bool isInInitialBlock() const;
 
         SourceRange getSourceRange() const;
 

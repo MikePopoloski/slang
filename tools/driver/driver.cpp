@@ -510,7 +510,10 @@ int driverMain(int argc, TArgs argv, bool suppressColorsStdout, bool suppressCol
     optional<uint32_t> maxConstexprBacktrace;
     optional<std::string> compat;
     optional<std::string> minTypMax;
+    optional<bool> allowUseBeforeDeclare;
+    optional<bool> relaxEnumConversions;
     optional<bool> allowHierarchicalConst;
+    optional<bool> allowDupInitialDrivers;
     std::vector<std::string> topModules;
     std::vector<std::string> paramOverrides;
     cmdLine.add("--max-hierarchy-depth", maxInstanceDepth, "Maximum depth of the design hierarchy",
@@ -533,8 +536,15 @@ int driverMain(int argc, TArgs argv, bool suppressColorsStdout, bool suppressCol
                 "vcs");
     cmdLine.add("-T,--timing", minTypMax,
                 "Select which value to consider in min:typ:max expressions", "min|typ|max");
+    cmdLine.add("--allow-use-before-declare", allowUseBeforeDeclare,
+                "Don't issue an error for use of names before their declarations.");
+    cmdLine.add("--relax-enum-conversions", relaxEnumConversions,
+                "Allow all integral types to convert implicitly to enum types.");
     cmdLine.add("--allow-hierarchical-const", allowHierarchicalConst,
                 "Allow hierarchical references in constant expressions.");
+    cmdLine.add("--allow-dup-initial-drivers", allowDupInitialDrivers,
+                "Allow signals driven in an always_comb or always_ff block to also be driven"
+                "by initial blocks.");
     cmdLine.add("--top", topModules,
                 "One or more top-level modules to instantiate "
                 "(instead of figuring it out automatically)",
@@ -554,8 +564,6 @@ int driverMain(int argc, TArgs argv, bool suppressColorsStdout, bool suppressCol
     optional<bool> diagMacroExpansion;
     optional<bool> diagHierarchy;
     optional<bool> ignoreUnknownModules;
-    optional<bool> allowUseBeforeDeclare;
-    optional<bool> relaxEnumConversions;
     optional<uint32_t> errorLimit;
     std::vector<std::string> warningOptions;
     cmdLine.add("-W", warningOptions, "Control the specified warning", "<warning>");
@@ -581,10 +589,6 @@ int driverMain(int argc, TArgs argv, bool suppressColorsStdout, bool suppressCol
     cmdLine.add("--ignore-unknown-modules", ignoreUnknownModules,
                 "Don't issue an error for instantiations of unknown modules, "
                 "interface, and programs.");
-    cmdLine.add("--allow-use-before-declare", allowUseBeforeDeclare,
-                "Don't issue an error for use of names before their declarations.");
-    cmdLine.add("--relax-enum-conversions", relaxEnumConversions,
-                "Allow all integral types to convert implicitly to enum types.");
 
     // File list
     optional<bool> singleUnit;
@@ -738,6 +742,8 @@ int driverMain(int argc, TArgs argv, bool suppressColorsStdout, bool suppressCol
     }
     if (allowHierarchicalConst == true)
         coptions.allowHierarchicalConst = true;
+    if (allowDupInitialDrivers == true)
+        coptions.allowDupInitialDrivers = true;
     if (relaxEnumConversions == true)
         coptions.relaxEnumConversions = true;
 
