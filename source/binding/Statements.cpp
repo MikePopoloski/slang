@@ -435,7 +435,6 @@ void StatementBinder::setSyntax(const Scope& scope, const StatementSyntax& synta
     syntax = &syntax_;
     labelHandled = labelHandled_;
     flags = flags_;
-    sourceRange = syntax_.sourceRange();
 
     SmallVectorSized<const StatementBlockSymbol*, 8> buffer;
     findBlocks(scope, syntax_, buffer, labelHandled, flags, parentProcedure);
@@ -449,7 +448,6 @@ void StatementBinder::setSyntax(const StatementBlockSymbol& scope,
     syntax = &syntax_;
     labelHandled = false;
     flags = flags_;
-    sourceRange = syntax_.sourceRange();
 
     SmallVectorSized<const StatementBlockSymbol*, 8> buffer;
     findBlocks(scope, *syntax_.statement, buffer, labelHandled, flags | StatementFlags::InLoop,
@@ -458,13 +456,14 @@ void StatementBinder::setSyntax(const StatementBlockSymbol& scope,
     blocks = buffer.copy(scope.getCompilation());
 }
 
-void StatementBinder::setItems(Scope& scope, const SyntaxList<SyntaxNode>& items, SourceRange range,
+void StatementBinder::setItems(Scope& scope, const SyntaxNode& syntax_,
+                               const SyntaxList<SyntaxNode>& items,
                                bitmask<StatementFlags> flags_) {
     stmt = nullptr;
-    syntax = &items;
+    syntax = &syntax_;
     labelHandled = false;
+    isItems = true;
     flags = flags_;
-    sourceRange = range;
 
     SmallVectorSized<const StatementBlockSymbol*, 8> buffer;
     for (auto item : items) {
@@ -527,10 +526,6 @@ const Statement& StatementBinder::getStatement(const BindContext& context) const
     return *stmt;
 }
 
-const StatementSyntax* StatementBinder::getSyntax() const {
-    return syntax.index() == 0 ? std::get<0>(syntax) : nullptr;
-}
-
 const Statement& StatementBinder::bindStatement(const BindContext& context) const {
     auto& scope = *context.scope;
     auto& comp = scope.getCompilation();
@@ -559,26 +554,45 @@ const Statement& StatementBinder::bindStatement(const BindContext& context) cons
     }
 
     bool anyBad = false;
+    SourceRange sourceRange;
     Statement::StatementContext stmtCtx;
     stmtCtx.blocks = blocks;
     stmtCtx.flags = flags;
 
-    if (auto stmtSyntax = std::get_if<const StatementSyntax*>(&syntax)) {
-        if (auto ptr = *stmtSyntax) {
-            buffer.append(
-                &Statement::bind(*ptr, context, stmtCtx, /* inList */ false, labelHandled));
-            anyBad |= buffer.back()->bad();
+    if (isItems) {
+        ASSERT(syntax);
+        const SyntaxList<SyntaxNode>* items;
+        switch (syntax->kind) {
+            case SyntaxKind::RsCodeBlock:
+                items = &syntax->as<RsCodeBlockSyntax>().items;
+                break;
+            case SyntaxKind::ParallelBlockStatement:
+            case SyntaxKind::SequentialBlockStatement:
+                items = &syntax->as<BlockStatementSyntax>().items;
+                break;
+            case SyntaxKind::FunctionDeclaration:
+            case SyntaxKind::TaskDeclaration:
+                items = &syntax->as<FunctionDeclarationSyntax>().items;
+                break;
+            default:
+                THROW_UNREACHABLE;
         }
-    }
-    else {
-        auto& items = *std::get<const SyntaxList<SyntaxNode>*>(syntax);
-        for (auto item : items) {
+
+        for (auto item : *items) {
             if (StatementSyntax::isKind(item->kind)) {
                 buffer.append(&Statement::bind(item->as<StatementSyntax>(), context, stmtCtx,
                                                /* inList */ true));
                 anyBad |= buffer.back()->bad();
             }
         }
+    }
+    else if (syntax) {
+        buffer.append(&Statement::bind(syntax->as<StatementSyntax>(), context, stmtCtx,
+                                       /* inList */ false, labelHandled));
+        anyBad |= buffer.back()->bad();
+    }
+    else {
+        sourceRange = { SourceLocation::NoLocation, SourceLocation::NoLocation };
     }
 
     ASSERT(anyBad || stmtCtx.blocks.empty());

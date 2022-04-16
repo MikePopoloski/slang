@@ -83,7 +83,7 @@ StatementBlockSymbol& StatementBlockSymbol::fromSyntax(
     auto& comp = scope.getCompilation();
     auto result = comp.emplace<StatementBlockSymbol>(comp, name, loc, blockKind, lifetime);
     result->binder.parentProcedure = parentProcedure;
-    result->binder.setItems(*result, syntax.items, syntax.sourceRange(), flags);
+    result->binder.setItems(*result, syntax, syntax.items, flags);
     result->setSyntax(syntax);
     result->setAttributes(scope, syntax.attributes);
     return *result;
@@ -204,7 +204,7 @@ StatementBlockSymbol& StatementBlockSymbol::fromSyntax(
                                                      VariableLifetime::Automatic);
 
     result->binder.parentProcedure = parentProcedure;
-    result->binder.setItems(*result, syntax.items, syntax.sourceRange(), StatementFlags::InRandSeq);
+    result->binder.setItems(*result, syntax, syntax.items, StatementFlags::InRandSeq);
     result->setSyntax(syntax);
     return *result;
 }

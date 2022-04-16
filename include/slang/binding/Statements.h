@@ -195,23 +195,23 @@ public:
                    bitmask<StatementFlags> flags);
     void setSyntax(const StatementBlockSymbol& scope, const ForLoopStatementSyntax& syntax,
                    bitmask<StatementFlags> flags);
-    void setItems(Scope& scope, const SyntaxList<SyntaxNode>& syntax, SourceRange sourceRange,
+    void setItems(Scope& scope, const SyntaxNode& syntax, const SyntaxList<SyntaxNode>& items,
                   bitmask<StatementFlags> flags);
 
     const Statement& getStatement(const BindContext& context) const;
     span<const StatementBlockSymbol* const> getBlocks() const { return blocks; }
-    const StatementSyntax* getSyntax() const;
+    const SyntaxNode* getSyntax() const { return syntax; }
 
 private:
     const Statement& bindStatement(const BindContext& context) const;
 
-    std::variant<const StatementSyntax*, const SyntaxList<SyntaxNode>*> syntax;
+    const SyntaxNode* syntax = nullptr;
     span<const StatementBlockSymbol* const> blocks;
     mutable const Statement* stmt = nullptr;
-    SourceRange sourceRange;
     bitmask<StatementFlags> flags;
     mutable bool isBinding = false;
     bool labelHandled = false;
+    bool isItems = false;
 };
 
 /// Represents an invalid statement, which is usually generated and inserted

@@ -108,7 +108,7 @@ SubroutineSymbol* SubroutineSymbol::fromSyntax(Compilation& compilation,
         stmtFlags |= StatementFlags::AutoLifetime;
 
     const Symbol* last = result->getLastMember();
-    result->binder.setItems(*result, syntax.items, syntax.sourceRange(), stmtFlags);
+    result->binder.setItems(*result, syntax, syntax.items, stmtFlags);
 
     // Subroutines can also declare arguments inside their bodies as port declarations.
     // Find them by walking through members that were added by setItems().
