@@ -116,7 +116,7 @@ static bool prefixOverlaps(EvalContext& ctx, const Expression& left, const Expre
     return lrange->overlaps(*rrange);
 }
 
-bool ValueSymbol::Driver::overlaps(Compilation& compilation, const Driver& other) const {
+bool ValueSymbol::Driver::overlaps(EvalContext& evalContext, const Driver& other) const {
     auto buildPath = [](const Expression* expr, SmallVector<const Expression*>& path) {
         do {
             if (expr->kind == ExpressionKind::Conversion) {
@@ -135,11 +135,10 @@ bool ValueSymbol::Driver::overlaps(Compilation& compilation, const Driver& other
     SmallVectorSized<const Expression*, 4> otherPath;
     buildPath(other.longestStaticPrefix, otherPath);
 
-    EvalContext ctx(compilation);
     for (size_t i = ourPath.size(), j = otherPath.size(); i > 0 && j > 0; i--, j--) {
         auto ourElem = ourPath[i - 1];
         auto otherElem = otherPath[j - 1];
-        if (!prefixOverlaps(ctx, *ourElem, *otherElem))
+        if (!prefixOverlaps(evalContext, *ourElem, *otherElem))
             return false;
     }
 
@@ -268,7 +267,7 @@ static bool handleOverlap(const Scope& scope, string_view name, const ValueSymbo
 
 void ValueSymbol::addDriver(DriverKind driverKind, const Expression& longestStaticPrefix,
                             const Symbol* containingSymbol, bitmask<AssignFlags> flags,
-                            SourceRange rangeOverride) const {
+                            SourceRange rangeOverride, EvalContext* customEvalContext) const {
     auto scope = getParentScope();
     ASSERT(scope);
 
@@ -332,6 +331,11 @@ void ValueSymbol::addDriver(DriverKind driverKind, const Expression& longestStat
                               isUWire || isSingleDriverUDNT ||
                               kind == SymbolKind::LocalAssertionVar;
 
+    EvalContext localEvalCtx(comp);
+    EvalContext* evalCtxPtr = customEvalContext;
+    if (!evalCtxPtr)
+        evalCtxPtr = &localEvalCtx;
+
     // Walk the list of drivers to the end and add this one there.
     // Along the way, check that the driver is valid given the ones that already exist.
     auto curr = firstDriver;
@@ -371,7 +375,7 @@ void ValueSymbol::addDriver(DriverKind driverKind, const Expression& longestStat
             }
         }
 
-        if (shouldCheck && curr->overlaps(comp, *driver)) {
+        if (shouldCheck && curr->overlaps(*evalCtxPtr, *driver)) {
             if (!handleOverlap(*scope, name, *curr, *driver, isNet, isUWire, isSingleDriverUDNT,
                                netType)) {
                 return;

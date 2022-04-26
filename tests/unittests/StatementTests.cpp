@@ -1535,3 +1535,29 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Unrollable for loop drivers") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    int foo[10];
+    initial
+        for (int i = 1; i < 10; i += 2) begin : baz
+            foo[i] = 2;
+        end
+
+    for (genvar i = 0; i < 10; i += 2) begin
+        always_comb foo[i] = 1;
+    end
+
+    always_comb foo[1] = 1;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 3);
+    CHECK(diags[0].code == diag::InvalidForInitializer);
+}

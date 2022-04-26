@@ -116,7 +116,8 @@ Expression& ValueExpressionBase::fromSymbol(const BindContext& context, const Sy
 
 bool ValueExpressionBase::requireLValueImpl(const BindContext& context, SourceLocation location,
                                             bitmask<AssignFlags> flags,
-                                            const Expression* longestStaticPrefix) const {
+                                            const Expression* longestStaticPrefix,
+                                            EvalContext* customEvalContext) const {
     if (!location)
         location = sourceRange.start();
 
@@ -150,9 +151,6 @@ bool ValueExpressionBase::requireLValueImpl(const BindContext& context, SourceLo
         }
     }
 
-    if (!longestStaticPrefix)
-        longestStaticPrefix = this;
-
     if (VariableSymbol::isKind(symbol.kind)) {
         if (!checkVariableAssignment(context, symbol.as<VariableSymbol>(), flags, location,
                                      sourceRange)) {
@@ -160,11 +158,10 @@ bool ValueExpressionBase::requireLValueImpl(const BindContext& context, SourceLo
         }
     }
 
-    const Symbol* containingSym = context.getProceduralBlock();
-    if (!containingSym)
-        containingSym = context.getContainingSubroutine();
+    if (!longestStaticPrefix)
+        longestStaticPrefix = this;
+    context.addDriver(symbol, *longestStaticPrefix, flags, customEvalContext);
 
-    symbol.addDriver(context.getDriverKind(), *longestStaticPrefix, containingSym, flags);
     return true;
 }
 

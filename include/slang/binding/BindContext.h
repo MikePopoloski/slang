@@ -155,8 +155,12 @@ enum class BindFlags : uint64_t {
 
     /// Binding is in a context that allows interconnect nets.
     AllowInterconnect = 1ull << 33,
+
+    /// Binding is inside a potentially unrollable for loop, which means we
+    /// should skip registering drivers and let the loop unroller do it.
+    UnrollableForLoop = 1ull << 34
 };
-BITMASK(BindFlags, AllowInterconnect)
+BITMASK(BindFlags, UnrollableForLoop)
 
 enum class DimensionKind { Unknown, Range, AbbreviatedRange, Dynamic, Associative, Queue };
 
@@ -287,6 +291,9 @@ public:
 
     void setAttributes(const Expression& expr,
                        span<const AttributeInstanceSyntax* const> syntax) const;
+
+    void addDriver(const ValueSymbol& symbol, const Expression& longestStaticPrefix,
+                   bitmask<AssignFlags> assignFlags, EvalContext* customEvalContext) const;
 
     Diagnostic& addDiag(DiagCode code, SourceLocation location) const;
     Diagnostic& addDiag(DiagCode code, SourceRange sourceRange) const;

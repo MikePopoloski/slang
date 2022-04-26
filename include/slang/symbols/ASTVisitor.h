@@ -95,10 +95,6 @@ public:
         }
     }
 
-    void visitDefault(const Symbol&) {}
-    void visitDefault(const Expression&) {}
-    void visitDefault(const Statement&) {}
-
     void visitInvalid(const Expression&) {}
     void visitInvalid(const Statement&) {}
     void visitInvalid(const TimingControl&) {}

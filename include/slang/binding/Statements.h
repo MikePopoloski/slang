@@ -85,9 +85,10 @@ enum class StatementFlags {
     InForkJoin = 1 << 3,
     InForkJoinNone = 1 << 4,
     AutoLifetime = 1 << 5,
-    InRandSeq = 1 << 6
+    InRandSeq = 1 << 6,
+    UnrollableForLoop = 1 << 7
 };
-BITMASK(StatementFlags, InRandSeq)
+BITMASK(StatementFlags, UnrollableForLoop)
 
 /// The base class for all statements in SystemVerilog.
 class Statement {
@@ -146,14 +147,17 @@ public:
 
         /// Records that we've entered a loop, and returns a guard that will
         /// revert back to the previous state on destruction.
-        [[nodiscard]] auto enterLoop() {
-            auto guard = ScopeGuard([this, saved = flags.has(StatementFlags::InLoop)] {
-                if (saved)
-                    flags |= StatementFlags::InLoop;
-                else
-                    flags &= ~StatementFlags::InLoop;
+        [[nodiscard]] auto enterLoop(bool isUnrollableForLoop = false) {
+            auto guard = ScopeGuard([this, savedFlags = flags] {
+                auto savableFlags = StatementFlags::InLoop | StatementFlags::UnrollableForLoop;
+                flags &= ~savableFlags;
+                flags |= savedFlags & savableFlags;
             });
+
             flags |= StatementFlags::InLoop;
+            if (isUnrollableForLoop)
+                flags |= StatementFlags::UnrollableForLoop;
+
             return guard;
         }
     };
@@ -478,6 +482,7 @@ public:
 class ForLoopStatement : public Statement {
 public:
     span<const Expression* const> initializers;
+    span<const VariableSymbol* const> loopVars;
     const Expression* stopExpr;
     span<const Expression* const> steps;
     const Statement& body;
@@ -690,7 +695,7 @@ public:
     EvalResult evalImpl(EvalContext& context) const;
 
     static Statement& fromSyntax(Compilation& compilation, const ExpressionStatementSyntax& syntax,
-                                 const BindContext& context);
+                                 const BindContext& context, StatementContext& stmtCtx);
 
     static Statement& fromSyntax(Compilation& compilation,
                                  const VoidCastedCallStatementSyntax& syntax,

@@ -19,7 +19,8 @@ public:
     const ValueSymbol& symbol;
 
     bool requireLValueImpl(const BindContext& context, SourceLocation location,
-                           bitmask<AssignFlags> flags, const Expression* longestStaticPrefix) const;
+                           bitmask<AssignFlags> flags, const Expression* longestStaticPrefix,
+                           EvalContext* customEvalContext) const;
     optional<bitwidth_t> getEffectiveWidthImpl() const;
 
     void serializeTo(ASTSerializer& serializer) const;

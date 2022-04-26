@@ -71,7 +71,8 @@ static void checkForVectoredSelect(const Expression& value, SourceRange range,
 
 template<typename T>
 bool requireLValueHelper(const T& expr, const BindContext& context, SourceLocation location,
-                         bitmask<AssignFlags> flags, const Expression* longestStaticPrefix) {
+                         bitmask<AssignFlags> flags, const Expression* longestStaticPrefix,
+                         EvalContext* customEvalContext) {
     auto& val = expr.value();
     if (val.kind == ExpressionKind::Concatenation || val.kind == ExpressionKind::Streaming) {
         // Selects of concatenations are not allowed to be lvalues.
@@ -107,15 +108,22 @@ bool requireLValueHelper(const T& expr, const BindContext& context, SourceLocati
         if (!longestStaticPrefix)
             longestStaticPrefix = &expr;
     }
-    else if (expr.isConstantSelect(context)) {
-        if (!longestStaticPrefix)
-            longestStaticPrefix = &expr;
-    }
     else {
-        longestStaticPrefix = nullptr;
+        EvalContext localEvalCtx(context.getCompilation(), EvalFlags::CacheResults);
+        EvalContext* evalCtxPtr = customEvalContext;
+        if (!evalCtxPtr)
+            evalCtxPtr = &localEvalCtx;
+
+        if (expr.isConstantSelect(*evalCtxPtr)) {
+            if (!longestStaticPrefix)
+                longestStaticPrefix = &expr;
+        }
+        else {
+            longestStaticPrefix = nullptr;
+        }
     }
 
-    return val.requireLValue(context, location, flags, longestStaticPrefix);
+    return val.requireLValue(context, location, flags, longestStaticPrefix, customEvalContext);
 }
 
 Expression& ElementSelectExpression::fromSyntax(Compilation& compilation, Expression& value,
@@ -194,8 +202,8 @@ Expression& ElementSelectExpression::fromConstant(Compilation& compilation, Expr
     return *result;
 }
 
-bool ElementSelectExpression::isConstantSelect(const BindContext& context) const {
-    return value().type->hasFixedRange() && !context.tryEval(selector()).bad();
+bool ElementSelectExpression::isConstantSelect(EvalContext& context) const {
+    return value().type->hasFixedRange() && !selector().eval(context).bad();
 }
 
 ConstantValue ElementSelectExpression::evalImpl(EvalContext& context) const {
@@ -370,8 +378,10 @@ optional<ConstantRange> ElementSelectExpression::evalIndex(EvalContext& context,
 
 bool ElementSelectExpression::requireLValueImpl(const BindContext& context, SourceLocation location,
                                                 bitmask<AssignFlags> flags,
-                                                const Expression* longestStaticPrefix) const {
-    return requireLValueHelper(*this, context, location, flags, longestStaticPrefix);
+                                                const Expression* longestStaticPrefix,
+                                                EvalContext* customEvalContext) const {
+    return requireLValueHelper(*this, context, location, flags, longestStaticPrefix,
+                               customEvalContext);
 }
 
 void ElementSelectExpression::serializeTo(ASTSerializer& serializer) const {
@@ -599,8 +609,8 @@ Expression& RangeSelectExpression::fromConstant(Compilation& compilation, Expres
     return *result;
 }
 
-bool RangeSelectExpression::isConstantSelect(const BindContext& context) const {
-    return value().type->hasFixedRange() && context.tryEval(left()) && context.tryEval(right());
+bool RangeSelectExpression::isConstantSelect(EvalContext& context) const {
+    return value().type->hasFixedRange() && left().eval(context) && right().eval(context);
 }
 
 ConstantValue RangeSelectExpression::evalImpl(EvalContext& context) const {
@@ -752,8 +762,10 @@ optional<ConstantRange> RangeSelectExpression::evalRange(EvalContext& context,
 
 bool RangeSelectExpression::requireLValueImpl(const BindContext& context, SourceLocation location,
                                               bitmask<AssignFlags> flags,
-                                              const Expression* longestStaticPrefix) const {
-    return requireLValueHelper(*this, context, location, flags, longestStaticPrefix);
+                                              const Expression* longestStaticPrefix,
+                                              EvalContext* customEvalContext) const {
+    return requireLValueHelper(*this, context, location, flags, longestStaticPrefix,
+                               customEvalContext);
 }
 
 void RangeSelectExpression::serializeTo(ASTSerializer& serializer) const {
@@ -1251,7 +1263,8 @@ static bool isWithinCovergroup(const Symbol& field, const Scope& usageScope) {
 
 bool MemberAccessExpression::requireLValueImpl(const BindContext& context, SourceLocation location,
                                                bitmask<AssignFlags> flags,
-                                               const Expression* longestStaticPrefix) const {
+                                               const Expression* longestStaticPrefix,
+                                               EvalContext* customEvalContext) const {
     // If this is a selection of a class member, assignability depends only on the selected
     // member and not on the class handle itself. Otherwise, the opposite is true.
     auto& valueType = *value().type;
@@ -1272,19 +1285,16 @@ bool MemberAccessExpression::requireLValueImpl(const BindContext& context, Sourc
         if (!longestStaticPrefix)
             longestStaticPrefix = this;
 
-        return value().requireLValue(context, location, flags, longestStaticPrefix);
+        return value().requireLValue(context, location, flags, longestStaticPrefix,
+                                     customEvalContext);
     }
 
     if (VariableSymbol::isKind(member.kind)) {
         if (!longestStaticPrefix)
             longestStaticPrefix = this;
 
-        const Symbol* containingSym = context.getProceduralBlock();
-        if (!containingSym)
-            containingSym = context.getContainingSubroutine();
-
         auto& var = member.as<VariableSymbol>();
-        var.addDriver(context.getDriverKind(), *longestStaticPrefix, containingSym, flags);
+        context.addDriver(var, *longestStaticPrefix, flags, customEvalContext);
 
         return ValueExpressionBase::checkVariableAssignment(context, var, flags, location,
                                                             sourceRange);

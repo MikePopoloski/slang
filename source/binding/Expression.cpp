@@ -348,25 +348,29 @@ LValue Expression::evalLValue(EvalContext& context) const {
 }
 
 bool Expression::requireLValue(const BindContext& context, SourceLocation location,
-                               bitmask<AssignFlags> flags,
-                               const Expression* longestStaticPrefix) const {
+                               bitmask<AssignFlags> flags, const Expression* longestStaticPrefix,
+                               EvalContext* customEvalContext) const {
     switch (kind) {
         case ExpressionKind::NamedValue:
         case ExpressionKind::HierarchicalValue: {
             auto& ve = as<ValueExpressionBase>();
-            return ve.requireLValueImpl(context, location, flags, longestStaticPrefix);
+            return ve.requireLValueImpl(context, location, flags, longestStaticPrefix,
+                                        customEvalContext);
         }
         case ExpressionKind::ElementSelect: {
             auto& select = as<ElementSelectExpression>();
-            return select.requireLValueImpl(context, location, flags, longestStaticPrefix);
+            return select.requireLValueImpl(context, location, flags, longestStaticPrefix,
+                                            customEvalContext);
         }
         case ExpressionKind::RangeSelect: {
             auto& select = as<RangeSelectExpression>();
-            return select.requireLValueImpl(context, location, flags, longestStaticPrefix);
+            return select.requireLValueImpl(context, location, flags, longestStaticPrefix,
+                                            customEvalContext);
         }
         case ExpressionKind::MemberAccess: {
             auto& access = as<MemberAccessExpression>();
-            return access.requireLValueImpl(context, location, flags, longestStaticPrefix);
+            return access.requireLValueImpl(context, location, flags, longestStaticPrefix,
+                                            customEvalContext);
         }
         case ExpressionKind::Concatenation: {
             auto& concat = as<ConcatenationExpression>();
@@ -376,7 +380,7 @@ bool Expression::requireLValue(const BindContext& context, SourceLocation locati
             ASSERT(!longestStaticPrefix);
             for (auto op : concat.operands()) {
                 if (!op->requireLValue(context, location, flags | AssignFlags::InConcat,
-                                       longestStaticPrefix)) {
+                                       longestStaticPrefix, customEvalContext)) {
                     return false;
                 }
             }
@@ -387,7 +391,7 @@ bool Expression::requireLValue(const BindContext& context, SourceLocation locati
             auto& stream = as<StreamingConcatenationExpression>();
             for (auto op : stream.streams()) {
                 if (!op->operand->requireLValue(context, location, flags | AssignFlags::InConcat,
-                                                longestStaticPrefix)) {
+                                                longestStaticPrefix, customEvalContext)) {
                     return false;
                 }
             }
@@ -395,8 +399,10 @@ bool Expression::requireLValue(const BindContext& context, SourceLocation locati
         }
         case ExpressionKind::Conversion: {
             auto& conv = as<ConversionExpression>();
-            if (conv.isImplicit())
-                return conv.operand().requireLValue(context, location, flags, longestStaticPrefix);
+            if (conv.isImplicit()) {
+                return conv.operand().requireLValue(context, location, flags, longestStaticPrefix,
+                                                    customEvalContext);
+            }
             break;
         }
         case ExpressionKind::Invalid:

@@ -23,12 +23,13 @@ public:
 
     const Expression& selector() const { return *selector_; }
 
-    bool isConstantSelect(const BindContext& context) const;
+    bool isConstantSelect(EvalContext& context) const;
 
     ConstantValue evalImpl(EvalContext& context) const;
     LValue evalLValueImpl(EvalContext& context) const;
     bool requireLValueImpl(const BindContext& context, SourceLocation location,
-                           bitmask<AssignFlags> flags, const Expression* longestStaticPrefix) const;
+                           bitmask<AssignFlags> flags, const Expression* longestStaticPrefix,
+                           EvalContext* customEvalContext) const;
 
     optional<ConstantRange> evalIndex(EvalContext& context, const ConstantValue& val,
                                       ConstantValue& associativeIndex) const;
@@ -74,12 +75,13 @@ public:
     const Expression& left() const { return *left_; }
     const Expression& right() const { return *right_; }
 
-    bool isConstantSelect(const BindContext& context) const;
+    bool isConstantSelect(EvalContext& context) const;
 
     ConstantValue evalImpl(EvalContext& context) const;
     LValue evalLValueImpl(EvalContext& context) const;
     bool requireLValueImpl(const BindContext& context, SourceLocation location,
-                           bitmask<AssignFlags> flags, const Expression* longestStaticPrefix) const;
+                           bitmask<AssignFlags> flags, const Expression* longestStaticPrefix,
+                           EvalContext* customEvalContext) const;
 
     optional<ConstantRange> evalRange(EvalContext& context, const ConstantValue& val) const;
 
@@ -127,7 +129,8 @@ public:
     ConstantValue evalImpl(EvalContext& context) const;
     LValue evalLValueImpl(EvalContext& context) const;
     bool requireLValueImpl(const BindContext& context, SourceLocation location,
-                           bitmask<AssignFlags> flags, const Expression* longestStaticPrefix) const;
+                           bitmask<AssignFlags> flags, const Expression* longestStaticPrefix,
+                           EvalContext* customEvalContext) const;
 
     ConstantRange getSelectRange() const;
 

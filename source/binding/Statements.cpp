@@ -155,7 +155,7 @@ const Statement& Statement::bind(const StatementSyntax& syntax, const BindContex
             break;
         case SyntaxKind::ExpressionStatement:
             result = &ExpressionStatement::fromSyntax(comp, syntax.as<ExpressionStatementSyntax>(),
-                                                      context);
+                                                      context, stmtCtx);
             break;
         case SyntaxKind::VoidCastedCallStatement:
             result = &ExpressionStatement::fromSyntax(
@@ -1194,18 +1194,103 @@ void CaseStatement::serializeTo(ASTSerializer& serializer) const {
     }
 }
 
+class UnrollVisitor : public ASTVisitor<UnrollVisitor, true, false> {
+public:
+    bool anyErrors = false;
+
+    explicit UnrollVisitor(const BindContext& bindCtx) :
+        bindCtx(bindCtx.resetFlags({})), evalCtx(bindCtx.getCompilation()) {
+        evalCtx.pushEmptyFrame();
+    }
+
+    void handle(const ForLoopStatement& loop) {
+        // Attempt to unroll the loop. If we are unable to collect constant values
+        // for all loop variables across all iterations, we won't unroll at all.
+        auto handleFail = [&] { loop.body.visit(*this); };
+
+        SmallVectorSized<ConstantValue*, 2> localPtrs;
+        for (auto var : loop.loopVars) {
+            auto init = var->getInitializer();
+            if (!init) {
+                handleFail();
+                return;
+            }
+
+            auto cv = init->eval(evalCtx);
+            if (!cv) {
+                handleFail();
+                return;
+            }
+
+            localPtrs.append(evalCtx.createLocal(var, std::move(cv)));
+        }
+
+        SmallVectorSized<ConstantValue, 16> values;
+        while (true) {
+            auto cv = loop.stopExpr->eval(evalCtx);
+            if (!cv) {
+                handleFail();
+                return;
+            }
+
+            if (!cv.isTrue())
+                break;
+
+            for (auto local : localPtrs)
+                values.emplace(*local);
+
+            for (auto step : loop.steps) {
+                if (!step->eval(evalCtx)) {
+                    handleFail();
+                    return;
+                }
+            }
+        }
+
+        // We have all the loop iteration values. Go back through
+        // and visit the loop body for each iteration.
+        for (size_t i = 0; i < values.size();) {
+            for (auto local : localPtrs)
+                *local = std::move(values[i++]);
+
+            loop.body.visit(*this);
+            if (anyErrors)
+                return;
+        }
+    }
+
+    // TODO:
+    // void handle(const ConditionalStatement&) {
+    //}
+
+    void handle(const ExpressionStatement& stmt) {
+        if (stmt.expr.kind == ExpressionKind::Assignment) {
+            auto& lhs = stmt.expr.as<AssignmentExpression>().left();
+            anyErrors |= lhs.requireLValue(bindCtx, {}, {}, nullptr, &evalCtx);
+        }
+    }
+
+private:
+    BindContext bindCtx;
+    EvalContext evalCtx;
+};
+
 Statement& ForLoopStatement::fromSyntax(Compilation& compilation,
                                         const ForLoopStatementSyntax& syntax,
                                         const BindContext& context, StatementContext& stmtCtx) {
-    auto guard = stmtCtx.enterLoop();
-
-    // If the initializers were variable declarations, they've already been hoisted
-    // out into a parent block and will be initialized there.
     SmallVectorSized<const Expression*, 4> initializers;
+    SmallVectorSized<const VariableSymbol*, 4> loopVars;
     bool anyBad = false;
-    if (!syntax.initializers.empty() &&
-        syntax.initializers[0]->kind != SyntaxKind::ForVariableDeclaration) {
 
+    const bool hasVarDecls = !syntax.initializers.empty() &&
+                             syntax.initializers[0]->kind == SyntaxKind::ForVariableDeclaration;
+    if (hasVarDecls) {
+        // The block should have already been created for us containing the
+        // variable declarations.
+        for (auto& var : context.scope->membersOfType<VariableSymbol>())
+            loopVars.append(&var);
+    }
+    else {
         for (auto initializer : syntax.initializers) {
             auto& init = Expression::bind(initializer->as<ExpressionSyntax>(), context,
                                           BindFlags::AssignmentAllowed);
@@ -1248,13 +1333,34 @@ Statement& ForLoopStatement::fromSyntax(Compilation& compilation,
         }
     }
 
+    if (anyBad || (stopExpr && stopExpr->bad()))
+        return badStmt(compilation, nullptr);
+
+    // For purposes of checking for multiple drivers to variables, we want to
+    // "unroll" this for loop if possible to allow finer grained checking of
+    // longest static prefixes involving the loop variables(s).
+    const bool wasInUnrollableLoop = stmtCtx.flags.has(StatementFlags::UnrollableForLoop) &&
+                                     stmtCtx.flags.has(StatementFlags::InLoop);
+    const bool isPotentiallyUnrollable = hasVarDecls && stopExpr && !steps.empty();
+
+    auto guard = stmtCtx.enterLoop(isPotentiallyUnrollable);
     auto& bodyStmt = Statement::bind(*syntax.statement, context, stmtCtx);
+
     auto result = compilation.emplace<ForLoopStatement>(initializers.copy(compilation), stopExpr,
                                                         steps.copy(compilation), bodyStmt,
                                                         syntax.sourceRange());
+    result->loopVars = loopVars.copy(compilation);
 
-    if (anyBad || (stopExpr && stopExpr->bad()) || bodyStmt.bad())
+    if (bodyStmt.bad())
         return badStmt(compilation, result);
+
+    // If this is the top-level unrollable for loop, attempt the unrolling now.
+    // If not top-level, just pop up the stack and let the parent loop handle us.
+    if (isPotentiallyUnrollable && !wasInUnrollableLoop) {
+        UnrollVisitor visitor(context);
+        visitor.visit(*result);
+    }
+
     return *result;
 }
 
@@ -1722,9 +1828,14 @@ void ForeverLoopStatement::serializeTo(ASTSerializer& serializer) const {
 
 Statement& ExpressionStatement::fromSyntax(Compilation& compilation,
                                            const ExpressionStatementSyntax& syntax,
-                                           const BindContext& context) {
-    auto& expr = Expression::bind(*syntax.expr, context,
-                                  BindFlags::AssignmentAllowed | BindFlags::TopLevelStatement);
+                                           const BindContext& context, StatementContext& stmtCtx) {
+    bitmask<BindFlags> extraFlags = BindFlags::AssignmentAllowed | BindFlags::TopLevelStatement;
+    if (stmtCtx.flags.has(StatementFlags::UnrollableForLoop) &&
+        BinaryExpressionSyntax::isKind(syntax.expr->kind)) {
+        extraFlags |= BindFlags::UnrollableForLoop;
+    }
+
+    auto& expr = Expression::bind(*syntax.expr, context, extraFlags);
     auto result = compilation.emplace<ExpressionStatement>(expr, syntax.sourceRange());
     if (expr.bad())
         return badStmt(compilation, result);

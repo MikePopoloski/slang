@@ -104,6 +104,20 @@ void BindContext::setAttributes(const Expression& expr,
                                    AttributeSymbol::fromSyntax(syntax, *scope, getLocation()));
 }
 
+void BindContext::addDriver(const ValueSymbol& symbol, const Expression& longestStaticPrefix,
+                            bitmask<AssignFlags> assignFlags,
+                            EvalContext* customEvalContext) const {
+    if (flags.has(BindFlags::UnrollableForLoop))
+        return;
+
+    const Symbol* containingSym = getProceduralBlock();
+    if (!containingSym)
+        containingSym = getContainingSubroutine();
+
+    symbol.addDriver(getDriverKind(), longestStaticPrefix, containingSym, assignFlags, {},
+                     customEvalContext);
+}
+
 Diagnostic& BindContext::addDiag(DiagCode code, SourceLocation location) const {
     auto& diag = scope->addDiag(code, location);
     if (assertionInstance)
@@ -459,7 +473,7 @@ BindContext BindContext::resetFlags(bitmask<BindFlags> addedFlags) const {
         BindFlags::InsideConcatenation | BindFlags::AllowDataType | BindFlags::AssignmentAllowed |
         BindFlags::StreamingAllowed | BindFlags::TopLevelStatement |
         BindFlags::AllowUnboundedLiteral | BindFlags::AllowTypeReferences |
-        BindFlags::AllowClockingBlock;
+        BindFlags::AllowClockingBlock | BindFlags::UnrollableForLoop;
 
     BindContext result(*this);
     result.flags &= ~NonSticky;

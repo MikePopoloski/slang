@@ -110,6 +110,7 @@ StatementBlockSymbol& StatementBlockSymbol::fromSyntax(
     auto result = createBlock(scope, syntax, name, loc, flags);
 
     // If one entry is a variable declaration, they must all be.
+    // We'll only enter this function if we have variable decls.
     auto& comp = scope.getCompilation();
     const VariableSymbol* lastVar = nullptr;
     for (auto init : syntax.initializers) {
@@ -119,6 +120,9 @@ StatementBlockSymbol& StatementBlockSymbol::fromSyntax(
         lastVar = &var;
         result->addMember(var);
     }
+
+    if (syntax.stopExpr && !syntax.steps.empty())
+        flags |= StatementFlags::UnrollableForLoop;
 
     result->binder.parentProcedure = parentProcedure;
     result->binder.setSyntax(*result, syntax, flags);

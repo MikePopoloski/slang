@@ -250,7 +250,8 @@ public:
     /// will be registered with the various symbols involved.
     bool requireLValue(const BindContext& context, SourceLocation location = {},
                        bitmask<AssignFlags> flags = {},
-                       const Expression* longestStaticPrefix = nullptr) const;
+                       const Expression* longestStaticPrefix = nullptr,
+                       EvalContext* customEvalContext = nullptr) const;
 
     /// Checks whether this kind of expression can be connected to a ref argument
     /// for a subroutine or module port.

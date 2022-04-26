@@ -12,6 +12,7 @@
 
 namespace slang {
 
+class EvalContext;
 class ProceduralBlockSymbol;
 
 /// A base class for symbols that represent a value (for example a variable or a parameter).
@@ -78,7 +79,7 @@ public:
 
         SourceRange getSourceRange() const;
 
-        bool overlaps(Compilation& compilation, const Driver& other) const;
+        bool overlaps(EvalContext& evalContext, const Driver& other) const;
 
     private:
         friend class ValueSymbol;
@@ -88,7 +89,7 @@ public:
 
     void addDriver(DriverKind kind, const Expression& longestStaticPrefix,
                    const Symbol* containingSymbol, bitmask<AssignFlags> flags,
-                   SourceRange rangeOverride = {}) const;
+                   SourceRange rangeOverride = {}, EvalContext* customEvalContext = nullptr) const;
     const Driver* getFirstDriver() const { return firstDriver; }
 
 protected:
