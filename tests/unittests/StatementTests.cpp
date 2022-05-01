@@ -1571,6 +1571,14 @@ module m;
     always_comb baz[1][1].foo = 4; // error
     always_comb baz[1][1].bar = 4;
     always_comb baz[2][1].foo = 3;
+
+    struct { int foo; int bar; } arr[2147483647];
+    initial begin
+        for (int i = 0; i < 2147483647; i++) begin
+            arr[i].foo = 1;
+        end
+    end
+    always_comb arr[0].bar = 2;
 endmodule
 )");
 
@@ -1578,7 +1586,8 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 2);
+    REQUIRE(diags.size() == 3);
     CHECK(diags[0].code == diag::MultipleAlwaysAssigns);
     CHECK(diags[1].code == diag::MultipleAlwaysAssigns);
+    CHECK(diags[2].code == diag::MultipleAlwaysAssigns);
 }

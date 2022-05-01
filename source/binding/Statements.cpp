@@ -1204,14 +1204,18 @@ public:
     }
 
     void handle(const ForLoopStatement& loop) {
-        // Attempt to unroll the loop. If we are unable to collect constant values
-        // for all loop variables across all iterations, we won't unroll at all.
-        auto handleFail = [&] { loop.body.visit(*this); };
-
-        if (loop.loopVars.empty() || !loop.stopExpr || loop.steps.empty()) {
-            handleFail();
+        if (loop.loopVars.empty() || !loop.stopExpr || loop.steps.empty() || anyErrors) {
+            loop.body.visit(*this);
             return;
         }
+
+        // Attempt to unroll the loop. If we are unable to collect constant values
+        // for all loop variables across all iterations, we won't unroll at all.
+        auto handleFail = [&] {
+            for (auto var : loop.loopVars)
+                evalCtx.deleteLocal(var);
+            loop.body.visit(*this);
+        };
 
         SmallVectorSized<ConstantValue*, 2> localPtrs;
         for (auto var : loop.loopVars) {
@@ -1232,7 +1236,7 @@ public:
 
         SmallVectorSized<ConstantValue, 16> values;
         while (true) {
-            auto cv = loop.stopExpr->eval(evalCtx);
+            auto cv = step() ? loop.stopExpr->eval(evalCtx) : ConstantValue();
             if (!cv) {
                 handleFail();
                 return;
@@ -1267,7 +1271,7 @@ public:
     void handle(const ConditionalStatement& stmt) {
         // Evaluate the condition; if not constant visit both sides,
         // otherwise visit only the side that matches the condition.
-        auto cond = stmt.cond.eval(evalCtx);
+        auto cond = step() ? stmt.cond.eval(evalCtx) : ConstantValue();
         if (!cond) {
             stmt.ifTrue.visit(*this);
             if (stmt.ifFalse)
@@ -1282,6 +1286,7 @@ public:
     }
 
     void handle(const ExpressionStatement& stmt) {
+        step();
         if (stmt.expr.kind == ExpressionKind::Assignment) {
             auto& lhs = stmt.expr.as<AssignmentExpression>().left();
             anyErrors |= !lhs.requireLValue(bindCtx, {}, {}, nullptr, &evalCtx);
@@ -1289,6 +1294,14 @@ public:
     }
 
 private:
+    bool step() {
+        if (anyErrors || !evalCtx.step(SourceLocation::NoLocation)) {
+            anyErrors = true;
+            return false;
+        }
+        return true;
+    }
+
     BindContext bindCtx;
     EvalContext evalCtx;
 };

@@ -80,6 +80,10 @@ public:
     /// Returns nullptr if the symbol cannot be found.
     ConstantValue* findLocal(const ValueSymbol* symbol);
 
+    /// Removes a previously created local. Pointers to the local's
+    /// storage will be invalidated.
+    void deleteLocal(const ValueSymbol* symbol);
+
     /// Push a new frame onto the call stack.
     [[nodiscard]] bool pushFrame(const SubroutineSymbol& subroutine, SourceLocation callLocation,
                                  LookupLocation lookupLocation);

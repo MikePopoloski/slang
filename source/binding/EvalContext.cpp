@@ -44,6 +44,13 @@ ConstantValue* EvalContext::findLocal(const ValueSymbol* symbol) {
     return &it->second;
 }
 
+void EvalContext::deleteLocal(const ValueSymbol* symbol) {
+    if (!stack.empty()) {
+        auto& frame = stack.back();
+        frame.temporaries.erase(symbol);
+    }
+}
+
 bool EvalContext::pushFrame(const SubroutineSymbol& subroutine, SourceLocation callLocation,
                             LookupLocation lookupLocation) {
     const uint32_t maxDepth = compilation.getOptions().maxConstexprDepth;
