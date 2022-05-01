@@ -827,9 +827,9 @@ public:
         // add another driver for the procedure we're originally called from.
         auto driver = expr.symbol.getFirstDriver();
         while (driver) {
-            if (driver->containingSymbol == &func) {
-                expr.symbol.addDriver(DriverKind::Procedural, *driver->longestStaticPrefix,
-                                      &procedure, AssignFlags::FuncFromProcedure, range);
+            if (driver->containingSymbol == &func && !driver->hasError) {
+                expr.symbol.addDriver(DriverKind::Procedural, *driver, &procedure,
+                                      AssignFlags::FuncFromProcedure, range);
             }
 
             driver = driver->getNextDriver();

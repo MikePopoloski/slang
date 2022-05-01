@@ -54,16 +54,23 @@ public:
     static bool isKind(SymbolKind kind);
 
     class Driver {
+    private:
+        friend class ValueSymbol;
+        mutable const Driver* next = nullptr;
+
     public:
-        not_null<const Expression*> longestStaticPrefix;
         const Symbol* containingSymbol;
+        SourceRange sourceRange;
+        uint32_t numPrefixEntries;
         DriverKind kind;
         bitmask<AssignFlags> flags;
-
-        Driver(DriverKind kind, const Expression& longestStaticPrefix,
-               const Symbol* containingSymbol, bitmask<AssignFlags> flags, SourceRange range);
+        bool hasOriginalRange;
+        bool hasError = false;
 
         const Driver* getNextDriver() const { return next; }
+        span<const ConstantRange> getPrefix() const;
+        SourceRange getOriginalRange() const;
+
         bool isInputPort() const { return flags.has(AssignFlags::InputPort); }
         bool isUnidirectionalPort() const {
             return flags.has(AssignFlags::InputPort | AssignFlags::OutputPort);
@@ -77,19 +84,31 @@ public:
         bool isInFunction() const;
         bool isInInitialBlock() const;
 
-        SourceRange getSourceRange() const;
+        bool overlaps(const Driver& other) const;
 
-        bool overlaps(EvalContext& evalContext, const Driver& other) const;
+        static Driver& create(EvalContext& evalContext, DriverKind kind,
+                              const Expression& longestStaticPrefix, const Symbol* containingSymbol,
+                              bitmask<AssignFlags> flags, SourceRange range);
+
+        static Driver& create(Compilation& compilation, DriverKind kind, span<const ConstantRange> longestStaticPrefix,
+                              const Symbol* containingSymbol, bitmask<AssignFlags> flags,
+                              SourceRange range, SourceRange originalRange);
 
     private:
-        friend class ValueSymbol;
-        mutable const Driver* next = nullptr;
-        mutable SourceRange range;
+        Driver(DriverKind kind, const Symbol* containingSymbol, bitmask<AssignFlags> flags,
+               uint32_t numPrefixEntries, bool hasOriginalRange) :
+            containingSymbol(containingSymbol),
+            numPrefixEntries(numPrefixEntries), kind(kind), flags(flags),
+            hasOriginalRange(hasOriginalRange) {}
     };
 
     void addDriver(DriverKind kind, const Expression& longestStaticPrefix,
                    const Symbol* containingSymbol, bitmask<AssignFlags> flags,
                    SourceRange rangeOverride = {}, EvalContext* customEvalContext = nullptr) const;
+
+    void addDriver(DriverKind kind, const Driver& copyFrom, const Symbol* containingSymbol,
+                   bitmask<AssignFlags> flags, SourceRange rangeOverride) const;
+
     const Driver* getFirstDriver() const { return firstDriver; }
 
 protected:
@@ -97,6 +116,8 @@ protected:
                 bitmask<DeclaredTypeFlags> flags = DeclaredTypeFlags::None);
 
 private:
+    void addDriverImpl(const Scope& scope, const Driver& driver) const;
+
     DeclaredType declaredType;
     mutable const Driver* firstDriver = nullptr;
 };
