@@ -450,8 +450,8 @@ void StatementBinder::setSyntax(const StatementBlockSymbol& scope,
     flags = flags_;
 
     SmallVectorSized<const StatementBlockSymbol*, 8> buffer;
-    findBlocks(scope, *syntax_.statement, buffer, labelHandled, flags | StatementFlags::InLoop,
-               parentProcedure);
+    findBlocks(scope, *syntax_.statement, buffer, labelHandled,
+               flags | StatementFlags::InLoop | StatementFlags::InForLoop, parentProcedure);
 
     blocks = buffer.copy(scope.getCompilation());
 }
@@ -1208,6 +1208,11 @@ public:
         // for all loop variables across all iterations, we won't unroll at all.
         auto handleFail = [&] { loop.body.visit(*this); };
 
+        if (loop.loopVars.empty() || !loop.stopExpr || loop.steps.empty()) {
+            handleFail();
+            return;
+        }
+
         SmallVectorSized<ConstantValue*, 2> localPtrs;
         for (auto var : loop.loopVars) {
             auto init = var->getInitializer();
@@ -1266,7 +1271,7 @@ public:
     void handle(const ExpressionStatement& stmt) {
         if (stmt.expr.kind == ExpressionKind::Assignment) {
             auto& lhs = stmt.expr.as<AssignmentExpression>().left();
-            anyErrors |= lhs.requireLValue(bindCtx, {}, {}, nullptr, &evalCtx);
+            anyErrors |= !lhs.requireLValue(bindCtx, {}, {}, nullptr, &evalCtx);
         }
     }
 
@@ -1339,11 +1344,8 @@ Statement& ForLoopStatement::fromSyntax(Compilation& compilation,
     // For purposes of checking for multiple drivers to variables, we want to
     // "unroll" this for loop if possible to allow finer grained checking of
     // longest static prefixes involving the loop variables(s).
-    const bool wasInUnrollableLoop = stmtCtx.flags.has(StatementFlags::UnrollableForLoop) &&
-                                     stmtCtx.flags.has(StatementFlags::InLoop);
-    const bool isPotentiallyUnrollable = hasVarDecls && stopExpr && !steps.empty();
-
-    auto guard = stmtCtx.enterLoop(isPotentiallyUnrollable);
+    const bool wasFirst = !stmtCtx.flags.has(StatementFlags::InForLoop);
+    auto guard = stmtCtx.enterLoop(true);
     auto& bodyStmt = Statement::bind(*syntax.statement, context, stmtCtx);
 
     auto result = compilation.emplace<ForLoopStatement>(initializers.copy(compilation), stopExpr,
@@ -1356,7 +1358,7 @@ Statement& ForLoopStatement::fromSyntax(Compilation& compilation,
 
     // If this is the top-level unrollable for loop, attempt the unrolling now.
     // If not top-level, just pop up the stack and let the parent loop handle us.
-    if (isPotentiallyUnrollable && !wasInUnrollableLoop) {
+    if (wasFirst) {
         UnrollVisitor visitor(context);
         visitor.visit(*result);
     }
@@ -1830,7 +1832,7 @@ Statement& ExpressionStatement::fromSyntax(Compilation& compilation,
                                            const ExpressionStatementSyntax& syntax,
                                            const BindContext& context, StatementContext& stmtCtx) {
     bitmask<BindFlags> extraFlags = BindFlags::AssignmentAllowed | BindFlags::TopLevelStatement;
-    if (stmtCtx.flags.has(StatementFlags::UnrollableForLoop) &&
+    if (stmtCtx.flags.has(StatementFlags::InForLoop) &&
         BinaryExpressionSyntax::isKind(syntax.expr->kind)) {
         extraFlags |= BindFlags::UnrollableForLoop;
     }

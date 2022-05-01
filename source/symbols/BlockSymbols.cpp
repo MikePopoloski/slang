@@ -121,9 +121,6 @@ StatementBlockSymbol& StatementBlockSymbol::fromSyntax(
         result->addMember(var);
     }
 
-    if (syntax.stopExpr && !syntax.steps.empty())
-        flags |= StatementFlags::UnrollableForLoop;
-
     result->binder.parentProcedure = parentProcedure;
     result->binder.setSyntax(*result, syntax, flags);
     for (auto block : result->binder.getBlocks())

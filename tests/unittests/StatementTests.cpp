@@ -1549,7 +1549,26 @@ module m;
         always_comb foo[i] = 1;
     end
 
-    always_comb foo[1] = 1;
+    always_comb foo[1] = 1; // error
+
+    struct { int foo; int bar; } baz[3][2];
+    initial begin
+        while (1) begin
+            for (int i = 0; i < 3; i++) begin
+                for (int j = 0; j < 2; j++) begin
+                    forever begin
+                        #1 baz[i][j].foo = 1;
+                    end
+                end
+            end
+        end
+    end
+    for (genvar i = 0; i < 3; i++) begin
+        always_comb baz[i][0].bar = 3;
+    end
+
+    always_comb baz[1][1].foo = 4; // error
+    always_comb baz[1][1].bar = 4;
 endmodule
 )");
 
@@ -1557,6 +1576,7 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 1);
+    REQUIRE(diags.size() == 2);
     CHECK(diags[0].code == diag::MultipleAlwaysAssigns);
+    CHECK(diags[1].code == diag::MultipleAlwaysAssigns);
 }

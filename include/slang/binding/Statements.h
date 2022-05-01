@@ -86,9 +86,9 @@ enum class StatementFlags {
     InForkJoinNone = 1 << 4,
     AutoLifetime = 1 << 5,
     InRandSeq = 1 << 6,
-    UnrollableForLoop = 1 << 7
+    InForLoop = 1 << 7
 };
-BITMASK(StatementFlags, UnrollableForLoop)
+BITMASK(StatementFlags, InForLoop)
 
 /// The base class for all statements in SystemVerilog.
 class Statement {
@@ -147,16 +147,16 @@ public:
 
         /// Records that we've entered a loop, and returns a guard that will
         /// revert back to the previous state on destruction.
-        [[nodiscard]] auto enterLoop(bool isUnrollableForLoop = false) {
+        [[nodiscard]] auto enterLoop(bool isForLoop = false) {
             auto guard = ScopeGuard([this, savedFlags = flags] {
-                auto savableFlags = StatementFlags::InLoop | StatementFlags::UnrollableForLoop;
+                auto savableFlags = StatementFlags::InLoop | StatementFlags::InForLoop;
                 flags &= ~savableFlags;
                 flags |= savedFlags & savableFlags;
             });
 
             flags |= StatementFlags::InLoop;
-            if (isUnrollableForLoop)
-                flags |= StatementFlags::UnrollableForLoop;
+            if (isForLoop)
+                flags |= StatementFlags::InForLoop;
 
             return guard;
         }
