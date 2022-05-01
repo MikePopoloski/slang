@@ -1591,3 +1591,29 @@ endmodule
     CHECK(diags[1].code == diag::MultipleAlwaysAssigns);
     CHECK(diags[2].code == diag::MultipleAlwaysAssigns);
 }
+
+TEST_CASE("Unrollable for loop drivers -- strict checking") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    int foo[10];
+    initial
+        for (int i = 1; i < 10; i += 2) begin : baz
+            foo[i] = 2;
+        end
+
+    for (genvar i = 0; i < 10; i += 2) begin
+        always_comb foo[i] = 1;
+    end
+endmodule
+)");
+
+    CompilationOptions options;
+    options.strictDriverChecking = true;
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::MultipleAlwaysAssigns);
+}

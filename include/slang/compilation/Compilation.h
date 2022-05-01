@@ -112,6 +112,10 @@ struct CompilationOptions {
     /// also drive such signals.
     bool allowDupInitialDrivers = false;
 
+    /// If true, perform strict checking of variable drivers, which currently
+    /// means not taking into account procedural for loop unrolling.
+    bool strictDriverChecking = false;
+
     /// If true, compile in "linting" mode where we suppress errors that could
     /// be caused by not having an elaborated design.
     bool lintMode = false;

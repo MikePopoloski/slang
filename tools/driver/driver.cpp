@@ -514,6 +514,7 @@ int driverMain(int argc, TArgs argv, bool suppressColorsStdout, bool suppressCol
     optional<bool> relaxEnumConversions;
     optional<bool> allowHierarchicalConst;
     optional<bool> allowDupInitialDrivers;
+    optional<bool> strictDriverChecking;
     std::vector<std::string> topModules;
     std::vector<std::string> paramOverrides;
     cmdLine.add("--max-hierarchy-depth", maxInstanceDepth, "Maximum depth of the design hierarchy",
@@ -543,14 +544,17 @@ int driverMain(int argc, TArgs argv, bool suppressColorsStdout, bool suppressCol
     cmdLine.add("--allow-hierarchical-const", allowHierarchicalConst,
                 "Allow hierarchical references in constant expressions.");
     cmdLine.add("--allow-dup-initial-drivers", allowDupInitialDrivers,
-                "Allow signals driven in an always_comb or always_ff block to also be driven"
+                "Allow signals driven in an always_comb or always_ff block to also be driven "
                 "by initial blocks.");
+    cmdLine.add("--strict-driver-checking", strictDriverChecking,
+                "Perform strict driver checking, which currently means disabling "
+                "procedural 'for' loop unrolling.");
     cmdLine.add("--top", topModules,
                 "One or more top-level modules to instantiate "
                 "(instead of figuring it out automatically)",
                 "<name>");
     cmdLine.add("-G", paramOverrides,
-                "One or more parameter overrides to apply when"
+                "One or more parameter overrides to apply when "
                 "instantiating top-level modules",
                 "<name>=<value>");
 
@@ -746,6 +750,8 @@ int driverMain(int argc, TArgs argv, bool suppressColorsStdout, bool suppressCol
         coptions.allowDupInitialDrivers = true;
     if (relaxEnumConversions == true)
         coptions.relaxEnumConversions = true;
+    if (strictDriverChecking == true)
+        coptions.strictDriverChecking = true;
 
     for (auto& name : topModules)
         coptions.topModules.emplace(name);

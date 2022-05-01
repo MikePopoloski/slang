@@ -1384,7 +1384,7 @@ Statement& ForLoopStatement::fromSyntax(Compilation& compilation,
 
     // If this is the top-level unrollable for loop, attempt the unrolling now.
     // If not top-level, just pop up the stack and let the parent loop handle us.
-    if (wasFirst) {
+    if (wasFirst && !compilation.getOptions().strictDriverChecking) {
         UnrollVisitor visitor(context);
         visitor.visit(*result);
     }
@@ -1859,7 +1859,8 @@ Statement& ExpressionStatement::fromSyntax(Compilation& compilation,
                                            const BindContext& context, StatementContext& stmtCtx) {
     bitmask<BindFlags> extraFlags = BindFlags::AssignmentAllowed | BindFlags::TopLevelStatement;
     if (stmtCtx.flags.has(StatementFlags::InForLoop) &&
-        BinaryExpressionSyntax::isKind(syntax.expr->kind)) {
+        BinaryExpressionSyntax::isKind(syntax.expr->kind) &&
+        !compilation.getOptions().strictDriverChecking) {
         extraFlags |= BindFlags::UnrollableForLoop;
     }
 
