@@ -1264,9 +1264,22 @@ public:
         }
     }
 
-    // TODO:
-    // void handle(const ConditionalStatement&) {
-    //}
+    void handle(const ConditionalStatement& stmt) {
+        // Evaluate the condition; if not constant visit both sides,
+        // otherwise visit only the side that matches the condition.
+        auto cond = stmt.cond.eval(evalCtx);
+        if (!cond) {
+            stmt.ifTrue.visit(*this);
+            if (stmt.ifFalse)
+                stmt.ifFalse->visit(*this);
+        }
+        else if (cond.isTrue()) {
+            stmt.ifTrue.visit(*this);
+        }
+        else if (stmt.ifFalse) {
+            stmt.ifFalse->visit(*this);
+        }
+    }
 
     void handle(const ExpressionStatement& stmt) {
         if (stmt.expr.kind == ExpressionKind::Assignment) {

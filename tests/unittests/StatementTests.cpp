@@ -1557,7 +1557,8 @@ module m;
             for (int i = 0; i < 3; i++) begin
                 for (int j = 0; j < 2; j++) begin
                     forever begin
-                        #1 baz[i][j].foo = 1;
+                        if (i != 2 || j != 1)
+                            #1 baz[i][j].foo = 1;
                     end
                 end
             end
@@ -1569,6 +1570,7 @@ module m;
 
     always_comb baz[1][1].foo = 4; // error
     always_comb baz[1][1].bar = 4;
+    always_comb baz[2][1].foo = 3;
 endmodule
 )");
 
