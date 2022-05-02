@@ -2588,3 +2588,17 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("String literal binary op const eval regress") {
+    auto tree = SyntaxTree::fromText(R"(
+parameter string foo = "hello";
+parameter string bar = {foo, "0" | 5};
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    auto& bar = compilation.getRoot().compilationUnits[0]->lookupName<ParameterSymbol>("bar");
+    CHECK(bar.getValue().str() == "hello5");
+}

@@ -1322,14 +1322,19 @@ Expression& ConcatenationExpression::fromSyntax(Compilation& compilation,
 
     if (!errored) {
         for (size_t i = 0; i < buffer.size(); i++) {
-            if (!anyStrings)
+            if (!anyStrings) {
                 selfDetermined(context, buffer[i]);
+            }
             else {
                 Expression* expr = buffer[i];
-                if (expr->type->isString())
+                if (expr->type->isString()) {
                     selfDetermined(context, expr);
-                else if (expr->isImplicitString())
-                    contextDetermined(context, expr, compilation.getStringType());
+                }
+                else if (expr->isImplicitString()) {
+                    expr = &ConversionExpression::makeImplicit(context, compilation.getStringType(),
+                                                               ConversionKind::Implicit, *expr,
+                                                               expr->sourceRange.start());
+                }
                 else {
                     errored = true;
                     context.addDiag(diag::ConcatWithStringInt, expr->sourceRange);
