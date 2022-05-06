@@ -2602,3 +2602,39 @@ parameter string bar = {foo, "0" | 5};
     auto& bar = compilation.getRoot().compilationUnits[0]->lookupName<ParameterSymbol>("bar");
     CHECK(bar.getValue().str() == "hello5");
 }
+
+TEST_CASE("Clocking block synchronous drive regress GH #543") {
+    auto tree = SyntaxTree::fromText(R"(
+interface I;
+    logic clk;
+    logic [31:0] a;
+
+    default clocking cb @(posedge clk);
+        output a;
+    endclocking
+
+endinterface
+
+class C;
+    virtual I intf;
+    rand bit b;
+
+    virtual task t();
+        fork begin
+            for (int i = 0; i < 4; i++) begin
+                intf.cb.a[10] <= b;
+                if (b) begin
+                    #100;
+                    intf.cb.a[10] <= '0;
+                end
+                #100;
+            end
+        end join_none
+    endtask
+endclass
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}

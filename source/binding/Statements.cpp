@@ -1288,8 +1288,9 @@ public:
     void handle(const ExpressionStatement& stmt) {
         step();
         if (stmt.expr.kind == ExpressionKind::Assignment) {
-            auto& lhs = stmt.expr.as<AssignmentExpression>().left();
-            anyErrors |= !lhs.requireLValue(bindCtx, {}, {}, nullptr, &evalCtx);
+            auto& assign = stmt.expr.as<AssignmentExpression>();
+            auto flags = assign.isNonBlocking() ? AssignFlags::NonBlocking : AssignFlags::None;
+            anyErrors |= !assign.left().requireLValue(bindCtx, {}, flags, nullptr, &evalCtx);
         }
     }
 
