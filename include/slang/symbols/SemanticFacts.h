@@ -112,8 +112,8 @@ enum class AssignFlags {
     /// The assignment is for an inout port of a module / interface / program.
     InOutPort = 1 << 4,
 
-    /// This assignment is being discovered via a function call from a procedure.
-    FuncFromProcedure = 1 << 5,
+    /// This assignment is being discovered via a subroutine call from a procedure.
+    SubFromProcedure = 1 << 5,
 
     /// The assignment is from a clocking block signal.
     ClockVar = 1 << 6,

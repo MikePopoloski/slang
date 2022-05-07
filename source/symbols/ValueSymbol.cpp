@@ -152,9 +152,8 @@ bool ValueSymbol::Driver::isInSingleDriverProcedure() const {
            containingSymbol->as<ProceduralBlockSymbol>().isSingleDriverBlock();
 }
 
-bool ValueSymbol::Driver::isInFunction() const {
-    return containingSymbol && containingSymbol->kind == SymbolKind::Subroutine &&
-           containingSymbol->as<SubroutineSymbol>().subroutineKind == SubroutineKind::Function;
+bool ValueSymbol::Driver::isInSubroutine() const {
+    return containingSymbol && containingSymbol->kind == SymbolKind::Subroutine;
 }
 
 bool ValueSymbol::Driver::isInInitialBlock() const {
@@ -279,9 +278,9 @@ static bool handleOverlap(const Scope& scope, string_view name, const ValueSymbo
         diag << name << SemanticFacts::getProcedureKindStr(procKind);
         diag.addNote(diag::NoteAssignedHere, currRange);
 
-        if (driver.flags.has(AssignFlags::FuncFromProcedure) ||
-            curr.flags.has(AssignFlags::FuncFromProcedure)) {
-            SourceRange extraRange = driver.flags.has(AssignFlags::FuncFromProcedure)
+        if (driver.flags.has(AssignFlags::SubFromProcedure) ||
+            curr.flags.has(AssignFlags::SubFromProcedure)) {
+            SourceRange extraRange = driver.flags.has(AssignFlags::SubFromProcedure)
                                          ? driver.getOriginalRange()
                                          : curr.getOriginalRange();
 
@@ -421,7 +420,7 @@ void ValueSymbol::addDriverImpl(const Scope& scope, const Driver& driver) const 
             else if (curr->containingSymbol != driver.containingSymbol && curr->containingSymbol &&
                      driver.containingSymbol &&
                      (curr->isInSingleDriverProcedure() || driver.isInSingleDriverProcedure()) &&
-                     !curr->isInFunction() && !driver.isInFunction() &&
+                     !curr->isInSubroutine() && !driver.isInSubroutine() &&
                      (!comp.getOptions().allowDupInitialDrivers ||
                       (!curr->isInInitialBlock() && !driver.isInInitialBlock()))) {
 

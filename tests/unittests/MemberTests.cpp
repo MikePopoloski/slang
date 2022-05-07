@@ -2357,6 +2357,16 @@ module m;
     endfunction
 
     always_comb f3(4);
+
+    int foo;
+    task t;
+      foo <= 1;
+    endtask
+
+    always_comb begin
+      foo <= 2;
+      t();
+    end
 endmodule
 )");
 

@@ -81,7 +81,7 @@ public:
         }
 
         bool isInSingleDriverProcedure() const;
-        bool isInFunction() const;
+        bool isInSubroutine() const;
         bool isInInitialBlock() const;
 
         bool overlaps(const Driver& other) const;
@@ -90,7 +90,8 @@ public:
                               const Expression& longestStaticPrefix, const Symbol* containingSymbol,
                               bitmask<AssignFlags> flags, SourceRange range);
 
-        static Driver& create(Compilation& compilation, DriverKind kind, span<const ConstantRange> longestStaticPrefix,
+        static Driver& create(Compilation& compilation, DriverKind kind,
+                              span<const ConstantRange> longestStaticPrefix,
                               const Symbol* containingSymbol, bitmask<AssignFlags> flags,
                               SourceRange range, SourceRange originalRange);
 

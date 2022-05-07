@@ -295,8 +295,8 @@ bool CallExpression::bindArgs(const ArgumentListSyntax* argSyntax,
     return !bad;
 }
 
-static void addFunctionDrivers(const Symbol& procedure, const SubroutineSymbol& func,
-                               SourceRange range);
+static void addSubroutineDrivers(const Symbol& procedure, const SubroutineSymbol& sub,
+                                 SourceRange range);
 
 Expression& CallExpression::fromArgs(Compilation& compilation, const Subroutine& subroutine,
                                      const Expression* thisClass,
@@ -329,11 +329,11 @@ Expression& CallExpression::fromArgs(Compilation& compilation, const Subroutine&
     if (!checkOutputArgs(context, symbol.hasOutputArgs(), range))
         return badExpr(compilation, result);
 
-    // If this is a function invoked from a procedure, register drivers for this
+    // If this subroutine is invoked from a procedure, register drivers for this
     // particular procedure to detect multiple driver violations.
-    if (symbol.subroutineKind == SubroutineKind::Function && !thisClass) {
+    if (!thisClass) {
         if (auto proc = context.getProceduralBlock(); proc && proc->isSingleDriverBlock())
-            addFunctionDrivers(*proc, symbol, range);
+            addSubroutineDrivers(*proc, symbol, range);
     }
 
     return *result;
@@ -794,26 +794,24 @@ void CallExpression::serializeTo(ASTSerializer& serializer) const {
     }
 }
 
-class FuncDriverVisitor : public ASTVisitor<FuncDriverVisitor, true, true> {
+class DriverVisitor : public ASTVisitor<DriverVisitor, true, true> {
 public:
     const Symbol& procedure;
-    const SubroutineSymbol& func;
+    const SubroutineSymbol& sub;
     SourceRange range;
     SmallSet<const ValueSymbol*, 8> visitedValues;
     SmallSet<const SubroutineSymbol*, 4>& visitedSubs;
 
-    FuncDriverVisitor(const Symbol& procedure, SmallSet<const SubroutineSymbol*, 4>& visitedSubs,
-                      const SubroutineSymbol& func, SourceRange range) :
+    DriverVisitor(const Symbol& procedure, SmallSet<const SubroutineSymbol*, 4>& visitedSubs,
+                  const SubroutineSymbol& sub, SourceRange range) :
         procedure(procedure),
-        func(func), range(range), visitedSubs(visitedSubs) {}
+        sub(sub), range(range), visitedSubs(visitedSubs) {}
 
     void handle(const CallExpression& expr) {
-        if (!expr.isSystemCall() && expr.getSubroutineKind() == SubroutineKind::Function &&
-            !expr.thisClass()) {
-
+        if (!expr.isSystemCall() && !expr.thisClass()) {
             auto& subroutine = *std::get<0>(expr.subroutine);
             if (visitedSubs.emplace(&subroutine).second) {
-                FuncDriverVisitor visitor(procedure, visitedSubs, subroutine, range);
+                DriverVisitor visitor(procedure, visitedSubs, subroutine, range);
                 subroutine.getBody().visit(visitor);
             }
         }
@@ -823,13 +821,13 @@ public:
         if (!visitedValues.emplace(&expr.symbol).second)
             return;
 
-        // If the target symbol is driven by the function we're inspecting,
+        // If the target symbol is driven by the subroutine we're inspecting,
         // add another driver for the procedure we're originally called from.
         auto driver = expr.symbol.getFirstDriver();
         while (driver) {
-            if (driver->containingSymbol == &func && !driver->hasError) {
+            if (driver->containingSymbol == &sub && !driver->hasError) {
                 expr.symbol.addDriver(DriverKind::Procedural, *driver, &procedure,
-                                      AssignFlags::FuncFromProcedure, range);
+                                      AssignFlags::SubFromProcedure, range);
             }
 
             driver = driver->getNextDriver();
@@ -837,13 +835,13 @@ public:
     }
 };
 
-static void addFunctionDrivers(const Symbol& procedure, const SubroutineSymbol& func,
-                               SourceRange range) {
+static void addSubroutineDrivers(const Symbol& procedure, const SubroutineSymbol& sub,
+                                 SourceRange range) {
     SmallSet<const SubroutineSymbol*, 4> visitedSubs;
-    visitedSubs.emplace(&func);
+    visitedSubs.emplace(&sub);
 
-    FuncDriverVisitor visitor(procedure, visitedSubs, func, range);
-    func.getBody().visit(visitor);
+    DriverVisitor visitor(procedure, visitedSubs, sub, range);
+    sub.getBody().visit(visitor);
 }
 
 } // namespace slang
