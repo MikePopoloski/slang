@@ -41,6 +41,8 @@ public:
 
     const SyntaxNode* syntax = nullptr;
 
+    SourceRange sourceRange;
+
     bool bad() const { return kind == TimingControlKind::Invalid; }
 
     static TimingControl& bind(const TimingControlSyntax& syntax, const BindContext& context);
@@ -63,7 +65,8 @@ public:
     decltype(auto) visit(TVisitor& visitor, Args&&... args) const;
 
 protected:
-    explicit TimingControl(TimingControlKind kind) : kind(kind) {}
+    TimingControl(TimingControlKind kind, SourceRange sourceRange) :
+        kind(kind), sourceRange(sourceRange) {}
 
     static TimingControl& badCtrl(Compilation& compilation, const TimingControl* ctrl);
 };
@@ -73,7 +76,7 @@ public:
     const TimingControl* child;
 
     explicit InvalidTimingControl(const TimingControl* child) :
-        TimingControl(TimingControlKind::Invalid), child(child) {}
+        TimingControl(TimingControlKind::Invalid, SourceRange()), child(child) {}
 
     static bool isKind(TimingControlKind kind) { return kind == TimingControlKind::Invalid; }
 
@@ -87,8 +90,8 @@ class DelayControl : public TimingControl {
 public:
     const Expression& expr;
 
-    explicit DelayControl(const Expression& expr) :
-        TimingControl(TimingControlKind::Delay), expr(expr) {}
+    DelayControl(const Expression& expr, SourceRange sourceRange) :
+        TimingControl(TimingControlKind::Delay, sourceRange), expr(expr) {}
 
     static TimingControl& fromSyntax(Compilation& compilation, const DelaySyntax& syntax,
                                      const BindContext& context);
@@ -115,8 +118,10 @@ public:
     const Expression* expr2;
     const Expression* expr3;
 
-    Delay3Control(const Expression& expr1, const Expression* expr2, const Expression* expr3) :
-        TimingControl(TimingControlKind::Delay3), expr1(expr1), expr2(expr2), expr3(expr3) {}
+    Delay3Control(const Expression& expr1, const Expression* expr2, const Expression* expr3,
+                  SourceRange sourceRange) :
+        TimingControl(TimingControlKind::Delay3, sourceRange),
+        expr1(expr1), expr2(expr2), expr3(expr3) {}
 
     static TimingControl& fromSyntax(Compilation& compilation, const Delay3Syntax& syntax,
                                      const BindContext& context);
@@ -150,9 +155,10 @@ public:
     const Expression* iffCondition;
     EdgeKind edge;
 
-    SignalEventControl(EdgeKind edge, const Expression& expr, const Expression* iffCondition) :
-        TimingControl(TimingControlKind::SignalEvent), expr(expr), iffCondition(iffCondition),
-        edge(edge) {}
+    SignalEventControl(EdgeKind edge, const Expression& expr, const Expression* iffCondition,
+                       SourceRange sourceRange) :
+        TimingControl(TimingControlKind::SignalEvent, sourceRange),
+        expr(expr), iffCondition(iffCondition), edge(edge) {}
 
     static TimingControl& fromSyntax(Compilation& compilation,
                                      const SignalEventExpressionSyntax& syntax,
@@ -182,7 +188,8 @@ public:
 
 private:
     static TimingControl& fromExpr(Compilation& compilation, EdgeKind edge, const Expression& expr,
-                                   const Expression* iffCondition, const BindContext& context);
+                                   const Expression* iffCondition, const BindContext& context,
+                                   SourceRange sourceRange);
 };
 
 struct EventExpressionSyntax;
@@ -191,8 +198,8 @@ class EventListControl : public TimingControl {
 public:
     span<const TimingControl* const> events;
 
-    explicit EventListControl(span<const TimingControl* const> events) :
-        TimingControl(TimingControlKind::EventList), events(events) {}
+    EventListControl(span<const TimingControl* const> events, SourceRange sourceRange) :
+        TimingControl(TimingControlKind::EventList, sourceRange), events(events) {}
 
     static TimingControl& fromSyntax(Compilation& compilation, const SyntaxNode& syntax,
                                      const BindContext& context);
@@ -212,7 +219,8 @@ struct ImplicitEventControlSyntax;
 
 class ImplicitEventControl : public TimingControl {
 public:
-    ImplicitEventControl() : TimingControl(TimingControlKind::ImplicitEvent) {}
+    explicit ImplicitEventControl(SourceRange sourceRange) :
+        TimingControl(TimingControlKind::ImplicitEvent, sourceRange) {}
 
     static TimingControl& fromSyntax(Compilation& compilation,
                                      const ImplicitEventControlSyntax& syntax,
@@ -230,8 +238,10 @@ public:
     const Expression& expr;
     const TimingControl& event;
 
-    RepeatedEventControl(const Expression& expr, const TimingControl& event) :
-        TimingControl(TimingControlKind::RepeatedEvent), expr(expr), event(event) {}
+    RepeatedEventControl(const Expression& expr, const TimingControl& event,
+                         SourceRange sourceRange) :
+        TimingControl(TimingControlKind::RepeatedEvent, sourceRange),
+        expr(expr), event(event) {}
 
     static TimingControl& fromSyntax(Compilation& compilation,
                                      const RepeatedEventControlSyntax& syntax,
@@ -250,7 +260,8 @@ public:
 
 class OneStepDelayControl : public TimingControl {
 public:
-    OneStepDelayControl() : TimingControl(TimingControlKind::OneStepDelay) {}
+    explicit OneStepDelayControl(SourceRange sourceRange) :
+        TimingControl(TimingControlKind::OneStepDelay, sourceRange) {}
 
     static bool isKind(TimingControlKind kind) { return kind == TimingControlKind::OneStepDelay; }
 
@@ -261,8 +272,8 @@ class CycleDelayControl : public TimingControl {
 public:
     const Expression& expr;
 
-    explicit CycleDelayControl(const Expression& expr) :
-        TimingControl(TimingControlKind::CycleDelay), expr(expr) {}
+    CycleDelayControl(const Expression& expr, SourceRange sourceRange) :
+        TimingControl(TimingControlKind::CycleDelay, sourceRange), expr(expr) {}
 
     static TimingControl& fromSyntax(Compilation& compilation, const DelaySyntax& syntax,
                                      const BindContext& context);
@@ -288,8 +299,8 @@ public:
 
     span<const Event> events;
 
-    explicit BlockEventListControl(span<const Event> events) :
-        TimingControl(TimingControlKind::BlockEventList), events(events) {}
+    BlockEventListControl(span<const Event> events, SourceRange sourceRange) :
+        TimingControl(TimingControlKind::BlockEventList, sourceRange), events(events) {}
 
     static TimingControl& fromSyntax(const BlockEventExpressionSyntax& syntax,
                                      const BindContext& context);
