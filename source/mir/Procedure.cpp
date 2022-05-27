@@ -32,7 +32,7 @@ public:
             stmt->visit(*this);
     }
 
-    void visit(const BlockStatement& block) { block.getStatements().visit(*this); }
+    void visit(const BlockStatement& block) { block.body.visit(*this); }
     void visit(const ExpressionStatement& stmt) { stmt.expr.visit(*this); }
 
     void visit(const VariableDeclStatement& stmt) {

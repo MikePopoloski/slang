@@ -335,8 +335,14 @@ endmodule
     Compilation compilation;
     compilation.addSyntaxTree(tree);
 
-    auto& block = compilation.getRoot().lookupName<StatementBlockSymbol>("m.block");
-    auto& cs = block.getBody().as<CaseStatement>();
+    auto& cs = compilation.getRoot()
+                   .topInstances[0]
+                   ->body.membersOfType<ProceduralBlockSymbol>()
+                   .begin()
+                   ->getBody()
+                   .as<BlockStatement>()
+                   .body.as<CaseStatement>();
+
     CHECK(cs.expr.type->toString() == "logic[8:0]");
 
     auto& diags = compilation.getAllDiagnostics();

@@ -461,8 +461,12 @@ endmodule
     CHECK(attrs[0]->name == "blah3");
     CHECK(attrs[0]->getValue().convertToStr().str() == "str val");
 
-    auto& block = root.lookupName<StatementBlockSymbol>("m.block");
-    auto stmtList = block.getBody().as<StatementList>().list;
+    auto stmtList = m.body.membersOfType<ProceduralBlockSymbol>()
+                        .begin()
+                        ->getBody()
+                        .as<BlockStatement>()
+                        .body.as<StatementList>()
+                        .list;
     REQUIRE(stmtList.size() == 2);
 
     attrs = compilation.getAttributes(*stmtList[0]);

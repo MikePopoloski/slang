@@ -27,31 +27,25 @@ public:
         Scope(compilation, this), blockKind(blockKind), defaultLifetime(defaultLifetime) {}
 
     void setTemporaryParent(const Scope& scope, SymbolIndex index) { setParent(scope, index); }
-    const Statement& getBody() const;
+    const Statement& getStatement(const BindContext& context,
+                                  Statement::StatementContext& stmtCtx) const;
 
     void serializeTo(ASTSerializer&) const {}
 
     static StatementBlockSymbol& fromSyntax(const Scope& scope, const BlockStatementSyntax& syntax,
-                                            bitmask<StatementFlags> flags,
-                                            const ProceduralBlockSymbol* parentProcedure);
+                                            bitmask<StatementFlags> flags);
     static StatementBlockSymbol& fromSyntax(const Scope& scope,
                                             const ForLoopStatementSyntax& syntax,
-                                            bitmask<StatementFlags> flags,
-                                            const ProceduralBlockSymbol* parentProcedure);
+                                            bitmask<StatementFlags> flags);
     static StatementBlockSymbol& fromSyntax(const Scope& scope,
                                             const ForeachLoopStatementSyntax& syntax,
-                                            bitmask<StatementFlags> flags,
-                                            const ProceduralBlockSymbol* parentProcedure);
+                                            bitmask<StatementFlags> flags);
     static StatementBlockSymbol& fromSyntax(const Scope& scope,
-                                            const RandSequenceStatementSyntax& syntax,
-                                            const ProceduralBlockSymbol* parentProcedure);
-    static StatementBlockSymbol& fromSyntax(const Scope& scope, const RsRuleSyntax& syntax,
-                                            const ProceduralBlockSymbol* parentProcedure);
-    static StatementBlockSymbol& fromSyntax(const Scope& scope, const RsCodeBlockSyntax& syntax,
-                                            const ProceduralBlockSymbol* parentProcedure);
+                                            const RandSequenceStatementSyntax& syntax);
+    static StatementBlockSymbol& fromSyntax(const Scope& scope, const RsRuleSyntax& syntax);
+    static StatementBlockSymbol& fromSyntax(const Scope& scope, const RsCodeBlockSyntax& syntax);
     static StatementBlockSymbol& fromLabeledStmt(const Scope& scope, const StatementSyntax& syntax,
-                                                 bitmask<StatementFlags> flags,
-                                                 const ProceduralBlockSymbol* parentProcedure);
+                                                 bitmask<StatementFlags> flags);
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::StatementBlock; }
 
@@ -60,7 +54,8 @@ private:
 
     void elaborateVariables(function_ref<void(const Symbol&)> insertCB) const;
 
-    StatementBinder binder;
+    span<const StatementBlockSymbol* const> blocks;
+    mutable const Statement* stmt = nullptr;
 };
 
 struct ConcurrentAssertionMemberSyntax;

@@ -143,7 +143,8 @@ public:
         /// statement syntax node. If they match, the block symbol is popped
         /// and returned wrapped inside a BlockStatement.
         /// Otherwise nullptr is returned.
-        BlockStatement* tryGetBlock(Compilation& compilation, const SyntaxNode& syntax);
+        const Statement* tryGetBlock(const BindContext& context, StatementContext& stmtCtx,
+                                     const SyntaxNode& syntax);
 
         /// Records that we've entered a loop, and returns a guard that will
         /// revert back to the previous state on destruction.
@@ -167,6 +168,17 @@ public:
                                  StatementContext& stmtCtx, bool inList = false,
                                  bool labelHandled = false);
 
+    static const Statement& bindBlock(const StatementBlockSymbol& block, const SyntaxNode& syntax,
+                                      const BindContext& context, StatementContext& stmtCtx);
+
+    static span<const StatementBlockSymbol* const> createBlockItems(
+        Scope& scope, const SyntaxList<SyntaxNode>& items, bitmask<StatementFlags> flags);
+
+    static span<const StatementBlockSymbol* const> createBlockItems(Scope& scope,
+                                                                    const StatementSyntax& syntax,
+                                                                    bool labelHandled,
+                                                                    bitmask<StatementFlags> flags);
+
     template<typename T>
     T& as() {
         ASSERT(T::isKind(kind));
@@ -186,6 +198,8 @@ protected:
     Statement(StatementKind kind, SourceRange sourceRange) : kind(kind), sourceRange(sourceRange) {}
 
     static Statement& badStmt(Compilation& compilation, const Statement* stmt);
+    static void bindScopeInitializers(const BindContext& context,
+                                      SmallVector<const Statement*>& results);
 };
 
 /// A wrapper around a statement syntax node and some associated symbols that can later
@@ -274,34 +288,27 @@ struct BlockStatementSyntax;
 /// Represents a sequential or parallel block statement.
 class BlockStatement : public Statement {
 public:
+    const Statement& body;
+    const StatementBlockSymbol* blockSymbol = nullptr;
     StatementBlockKind blockKind;
 
-    BlockStatement(const StatementBlockSymbol& block, SourceRange sourceRange);
-    BlockStatement(const StatementList& list, StatementBlockKind blockKind,
-                   SourceRange sourceRange) :
-        Statement(StatementKind::Block, sourceRange),
-        blockKind(blockKind), list(&list) {}
-
-    const Statement& getStatements() const;
-    bool isNamedBlock() const;
+    BlockStatement(const Statement& body, StatementBlockKind blockKind, SourceRange sourceRange) :
+        Statement(StatementKind::Block, sourceRange), blockKind(blockKind), body(body) {}
 
     EvalResult evalImpl(EvalContext& context) const;
 
     void serializeTo(ASTSerializer& serializer) const;
 
     static Statement& fromSyntax(Compilation& compilation, const BlockStatementSyntax& syntax,
-                                 const BindContext& context, StatementContext& stmtCtx);
+                                 const BindContext& context, StatementContext& stmtCtx,
+                                 bool addInitializers = false);
 
     static bool isKind(StatementKind kind) { return kind == StatementKind::Block; }
 
     template<typename TVisitor>
     void visitStmts(TVisitor&& visitor) const {
-        getStatements().visit(visitor);
+        body.visit(visitor);
     }
-
-private:
-    const StatementBlockSymbol* block = nullptr;
-    const StatementList* list = nullptr;
 };
 
 struct ReturnStatementSyntax;

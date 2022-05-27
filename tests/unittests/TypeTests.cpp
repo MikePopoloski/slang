@@ -860,7 +860,7 @@ endmodule
 
     // Force the compilation to create top-level instances before we try to
     // query their names via hierarchical path.
-    session.getCompilation().getRoot();
+    session.compilation.getRoot();
 
     auto tn = [&](auto& name) { return session.eval("$typename("s + name + ")"s).str(); };
 

@@ -1225,10 +1225,8 @@ RandSeqProductionSymbol::RandSeqProductionSymbol(Compilation& compilation, strin
     Scope(compilation, this), declaredReturnType(*this) {
 }
 
-RandSeqProductionSymbol& RandSeqProductionSymbol::fromSyntax(
-    Compilation& compilation, const ProductionSyntax& syntax,
-    const ProceduralBlockSymbol* parentProcedure) {
-
+RandSeqProductionSymbol& RandSeqProductionSymbol::fromSyntax(Compilation& compilation,
+                                                             const ProductionSyntax& syntax) {
     auto result = compilation.emplace<RandSeqProductionSymbol>(compilation, syntax.name.valueText(),
                                                                syntax.name.location());
     result->setSyntax(syntax);
@@ -1246,7 +1244,7 @@ RandSeqProductionSymbol& RandSeqProductionSymbol::fromSyntax(
     }
 
     for (auto rule : syntax.rules) {
-        auto& ruleBlock = StatementBlockSymbol::fromSyntax(*result, *rule, parentProcedure);
+        auto& ruleBlock = StatementBlockSymbol::fromSyntax(*result, *rule);
         result->addMember(ruleBlock);
     }
 
@@ -1442,6 +1440,12 @@ RandSeqProductionSymbol::Rule RandSeqProductionSymbol::createRule(
                     << *randJoinExpr->type;
             }
         }
+    }
+
+    for (auto& block : blockRange) {
+        Statement::StatementContext stmtCtx;
+        stmtCtx.flags = StatementFlags::InRandSeq;
+        block.getStatement(context, stmtCtx);
     }
 
     return { ruleBlock, prods.copy(comp), weightExpr, randJoinExpr, codeBlock, isRandJoin };

@@ -56,12 +56,13 @@ ER Statement::eval(EvalContext& context) const {
     return visit(visitor, context);
 }
 
-BlockStatement* Statement::StatementContext::tryGetBlock(Compilation& compilation,
-                                                         const SyntaxNode& node) {
-    if (!blocks.empty() && blocks[0]->getSyntax() == &node) {
-        auto result = compilation.emplace<BlockStatement>(*blocks[0], node.sourceRange());
+const Statement* Statement::StatementContext::tryGetBlock(const BindContext& context,
+                                                          StatementContext& stmtCtx,
+                                                          const SyntaxNode& syntax) {
+    if (!blocks.empty() && blocks[0]->getSyntax() == &syntax) {
+        auto& result = blocks[0]->getStatement(context, stmtCtx);
         blocks = blocks.subspan(1);
-        return result;
+        return &result;
     }
     return nullptr;
 }
@@ -80,17 +81,14 @@ static bool hasSimpleLabel(const StatementSyntax& syntax) {
 const Statement& Statement::bind(const StatementSyntax& syntax, const BindContext& context,
                                  StatementContext& stmtCtx, bool inList, bool labelHandled) {
     auto& comp = context.getCompilation();
-    Statement* result;
 
     if (!labelHandled && hasSimpleLabel(syntax)) {
-        result = stmtCtx.tryGetBlock(comp, syntax);
-        ASSERT(result);
-
-        result->syntax = &syntax;
-        context.setAttributes(*result, syntax.attributes);
-        return *result;
+        auto block = stmtCtx.tryGetBlock(context, stmtCtx, syntax);
+        ASSERT(block);
+        return *block;
     }
 
+    Statement* result;
     switch (syntax.kind) {
         case SyntaxKind::EmptyStatement:
             result = comp.emplace<EmptyStatement>(syntax.sourceRange());
@@ -123,11 +121,11 @@ const Statement& Statement::bind(const StatementSyntax& syntax, const BindContex
             break;
         case SyntaxKind::ForLoopStatement:
             // We might have an implicit block here; check for that first.
-            result = stmtCtx.tryGetBlock(comp, syntax);
-            if (!result) {
-                result = &ForLoopStatement::fromSyntax(comp, syntax.as<ForLoopStatementSyntax>(),
-                                                       context, stmtCtx);
-            }
+            if (auto block = stmtCtx.tryGetBlock(context, stmtCtx, syntax))
+                return *block;
+
+            result = &ForLoopStatement::fromSyntax(comp, syntax.as<ForLoopStatementSyntax>(),
+                                                   context, stmtCtx);
             break;
         case SyntaxKind::LoopStatement: {
             auto& loop = syntax.as<LoopStatementSyntax>();
@@ -139,11 +137,11 @@ const Statement& Statement::bind(const StatementSyntax& syntax, const BindContex
         }
         case SyntaxKind::ForeachLoopStatement:
             // We might have an implicit block here; check for that first.
-            result = stmtCtx.tryGetBlock(comp, syntax);
-            if (!result) {
-                result = &ForeachLoopStatement::fromSyntax(
-                    comp, syntax.as<ForeachLoopStatementSyntax>(), context, stmtCtx);
-            }
+            if (auto block = stmtCtx.tryGetBlock(context, stmtCtx, syntax))
+                return *block;
+
+            result = &ForeachLoopStatement::fromSyntax(
+                comp, syntax.as<ForeachLoopStatementSyntax>(), context, stmtCtx);
             break;
         case SyntaxKind::DoWhileStatement:
             result = &DoWhileLoopStatement::fromSyntax(comp, syntax.as<DoWhileStatementSyntax>(),
@@ -166,11 +164,11 @@ const Statement& Statement::bind(const StatementSyntax& syntax, const BindContex
             // A block statement may or may not match up with a hierarchy node. Handle both cases
             // here. We traverse statements in the same order as the findBlocks call below, so this
             // should always sync up exactly.
-            result = stmtCtx.tryGetBlock(comp, syntax);
-            if (!result) {
-                result = &BlockStatement::fromSyntax(comp, syntax.as<BlockStatementSyntax>(),
-                                                     context, stmtCtx);
-            }
+            if (auto block = stmtCtx.tryGetBlock(context, stmtCtx, syntax))
+                return *block;
+
+            result = &BlockStatement::fromSyntax(comp, syntax.as<BlockStatementSyntax>(), context,
+                                                 stmtCtx);
             break;
         case SyntaxKind::TimingControlStatement:
             result = &TimedStatement::fromSyntax(comp, syntax.as<TimingControlStatementSyntax>(),
@@ -227,11 +225,11 @@ const Statement& Statement::bind(const StatementSyntax& syntax, const BindContex
             break;
         case SyntaxKind::RandSequenceStatement:
             // We might have an implicit block here; check for that first.
-            result = stmtCtx.tryGetBlock(comp, syntax);
-            if (!result) {
-                result = &RandSequenceStatement::fromSyntax(
-                    comp, syntax.as<RandSequenceStatementSyntax>(), context);
-            }
+            if (auto block = stmtCtx.tryGetBlock(context, stmtCtx, syntax))
+                return *block;
+
+            result = &RandSequenceStatement::fromSyntax(
+                comp, syntax.as<RandSequenceStatementSyntax>(), context);
             break;
         default:
             THROW_UNREACHABLE;
@@ -242,27 +240,109 @@ const Statement& Statement::bind(const StatementSyntax& syntax, const BindContex
     return *result;
 }
 
+static BlockStatement* createBlockStatement(
+    Compilation& comp, SmallVector<const Statement*>& buffer, const SyntaxNode& syntax,
+    StatementBlockKind blocKind = StatementBlockKind::Sequential) {
+
+    const Statement* body;
+    if (buffer.size() == 1)
+        body = buffer[0];
+    else
+        body = comp.emplace<StatementList>(buffer.copy(comp), syntax.sourceRange());
+
+    return comp.emplace<BlockStatement>(*body, blocKind, body->sourceRange);
+}
+
+const Statement& Statement::bindBlock(const StatementBlockSymbol& block, const SyntaxNode& syntax,
+                                      const BindContext& context, StatementContext& stmtCtx) {
+    BlockStatement* result;
+    auto& comp = context.getCompilation();
+
+    if (syntax.kind == SyntaxKind::SequentialBlockStatement ||
+        syntax.kind == SyntaxKind::ParallelBlockStatement) {
+        auto& bss = syntax.as<BlockStatementSyntax>();
+        auto& bs =
+            BlockStatement::fromSyntax(comp, bss, context, stmtCtx, /* addInitializers */ true);
+        if (bs.bad())
+            return bs;
+
+        result = &bs.as<BlockStatement>();
+        result->syntax = &bss;
+        context.setAttributes(*result, bss.attributes);
+    }
+    else if (syntax.kind == SyntaxKind::RsCodeBlock) {
+        SmallVectorSized<const Statement*, 8> buffer;
+        bindScopeInitializers(context, buffer);
+
+        for (auto item : syntax.as<RsCodeBlockSyntax>().items) {
+            if (StatementSyntax::isKind(item->kind)) {
+                buffer.append(&bind(item->as<StatementSyntax>(), context, stmtCtx,
+                                    /* inList */ true));
+            }
+        }
+
+        result = createBlockStatement(comp, buffer, syntax);
+    }
+    else {
+        SmallVectorSized<const Statement*, 8> buffer;
+        bindScopeInitializers(context, buffer);
+
+        auto& ss = syntax.as<StatementSyntax>();
+        buffer.append(&bind(ss, context, stmtCtx, /* inList */ false,
+                            /* labelHandled */ true));
+
+        result = createBlockStatement(comp, buffer, syntax);
+        result->syntax = &ss;
+        context.setAttributes(*result, ss.attributes);
+    }
+
+    result->blockSymbol = &block;
+    return *result;
+}
+
+void Statement::bindScopeInitializers(const BindContext& context,
+                                      SmallVector<const Statement*>& results) {
+    // This relies on the language requiring all declarations be at the
+    // start of a statement block. Additional work would be required to
+    // support declarations anywhere in the block, because as written all
+    // of the initialization will happen at the start of the block, which
+    // might have different side-effects than if they were initialized in
+    // the middle somewhere. The parser currently enforces this for us.
+    auto& scope = *context.scope;
+    auto& comp = scope.getCompilation();
+    for (auto& member : scope.members()) {
+        if (member.kind != SymbolKind::Variable)
+            continue;
+
+        // Filter out implicitly generated function return type variables -- they are
+        // initialized elsewhere. Note that we manufacture a somewhat reasonable
+        // source range here, since we don't have the real one.
+        auto& var = member.as<VariableSymbol>();
+        if (!var.flags.has(VariableFlags::CompilerGenerated)) {
+            SourceRange range{ var.location, var.location + var.name.length() };
+            results.append(comp.emplace<VariableDeclStatement>(var, range));
+        }
+    }
+}
+
 Statement& Statement::badStmt(Compilation& compilation, const Statement* stmt) {
     return *compilation.emplace<InvalidStatement>(stmt);
 }
 
 static void findBlocks(const Scope& scope, const StatementSyntax& syntax,
                        SmallVector<const StatementBlockSymbol*>& results, bool labelHandled,
-                       bitmask<StatementFlags> flags,
-                       const ProceduralBlockSymbol* parentProcedure) {
+                       bitmask<StatementFlags> flags) {
     if (!labelHandled && hasSimpleLabel(syntax)) {
-        results.append(
-            &StatementBlockSymbol::fromLabeledStmt(scope, syntax, flags, parentProcedure));
+        results.append(&StatementBlockSymbol::fromLabeledStmt(scope, syntax, flags));
         return;
     }
 
     auto recurse = [&](auto stmt) {
-        findBlocks(scope, *stmt, results, /* lableHandled */ false, flags, parentProcedure);
+        findBlocks(scope, *stmt, results, /* lableHandled */ false, flags);
     };
 
     auto recurseF = [&](auto stmt, auto extraFlags) {
-        findBlocks(scope, *stmt, results, /* lableHandled */ false, flags | extraFlags,
-                   parentProcedure);
+        findBlocks(scope, *stmt, results, /* lableHandled */ false, flags | extraFlags);
     };
 
     switch (syntax.kind) {
@@ -290,16 +370,14 @@ static void findBlocks(const Scope& scope, const StatementSyntax& syntax,
             // - They are unnamed but have variable declarations within them
             auto& block = syntax.as<BlockStatementSyntax>();
             if (block.blockName || block.label) {
-                results.append(
-                    &StatementBlockSymbol::fromSyntax(scope, block, flags, parentProcedure));
+                results.append(&StatementBlockSymbol::fromSyntax(scope, block, flags));
                 return;
             }
 
             for (auto item : block.items) {
                 // If we find any decls at all, this block gets its own scope.
                 if (!StatementSyntax::isKind(item->kind)) {
-                    results.append(
-                        &StatementBlockSymbol::fromSyntax(scope, block, flags, parentProcedure));
+                    results.append(&StatementBlockSymbol::fromSyntax(scope, block, flags));
                     return;
                 }
             }
@@ -352,12 +430,10 @@ static void findBlocks(const Scope& scope, const StatementSyntax& syntax,
             auto& forLoop = syntax.as<ForLoopStatementSyntax>();
             if (!forLoop.initializers.empty() &&
                 forLoop.initializers[0]->kind == SyntaxKind::ForVariableDeclaration) {
-                results.append(
-                    &StatementBlockSymbol::fromSyntax(scope, forLoop, flags, parentProcedure));
+                results.append(&StatementBlockSymbol::fromSyntax(scope, forLoop, flags));
             }
             else if (syntax.label) {
-                results.append(
-                    &StatementBlockSymbol::fromLabeledStmt(scope, syntax, flags, parentProcedure));
+                results.append(&StatementBlockSymbol::fromLabeledStmt(scope, syntax, flags));
             }
             else {
                 recurseF(forLoop.statement, StatementFlags::InLoop);
@@ -369,7 +445,7 @@ static void findBlocks(const Scope& scope, const StatementSyntax& syntax,
             // here to make sure we don't infinitely recurse.
             if (!labelHandled) {
                 results.append(&StatementBlockSymbol::fromSyntax(
-                    scope, syntax.as<ForeachLoopStatementSyntax>(), flags, parentProcedure));
+                    scope, syntax.as<ForeachLoopStatementSyntax>(), flags));
             }
             else {
                 recurseF(syntax.as<ForeachLoopStatementSyntax>().statement, StatementFlags::InLoop);
@@ -421,7 +497,7 @@ static void findBlocks(const Scope& scope, const StatementSyntax& syntax,
             // labelHandled here to make sure we don't infinitely recurse.
             if (!labelHandled) {
                 results.append(&StatementBlockSymbol::fromSyntax(
-                    scope, syntax.as<RandSequenceStatementSyntax>(), parentProcedure));
+                    scope, syntax.as<RandSequenceStatementSyntax>()));
             }
             return;
         default:
@@ -429,41 +505,8 @@ static void findBlocks(const Scope& scope, const StatementSyntax& syntax,
     }
 }
 
-void StatementBinder::setSyntax(const Scope& scope, const StatementSyntax& syntax_,
-                                bool labelHandled_, bitmask<StatementFlags> flags_) {
-    stmt = nullptr;
-    syntax = &syntax_;
-    labelHandled = labelHandled_;
-    flags = flags_;
-
-    SmallVectorSized<const StatementBlockSymbol*, 8> buffer;
-    findBlocks(scope, syntax_, buffer, labelHandled, flags, parentProcedure);
-    blocks = buffer.copy(scope.getCompilation());
-}
-
-void StatementBinder::setSyntax(const StatementBlockSymbol& scope,
-                                const ForLoopStatementSyntax& syntax_,
-                                bitmask<StatementFlags> flags_) {
-    stmt = nullptr;
-    syntax = &syntax_;
-    labelHandled = false;
-    flags = flags_;
-
-    SmallVectorSized<const StatementBlockSymbol*, 8> buffer;
-    findBlocks(scope, *syntax_.statement, buffer, labelHandled,
-               flags | StatementFlags::InLoop | StatementFlags::InForLoop, parentProcedure);
-
-    blocks = buffer.copy(scope.getCompilation());
-}
-
-void StatementBinder::setItems(Scope& scope, const SyntaxNode& syntax_,
-                               const SyntaxList<SyntaxNode>& items,
-                               bitmask<StatementFlags> flags_) {
-    stmt = nullptr;
-    syntax = &syntax_;
-    labelHandled = false;
-    isItems = true;
-    flags = flags_;
+span<const StatementBlockSymbol* const> Statement::createBlockItems(
+    Scope& scope, const SyntaxList<SyntaxNode>& items, bitmask<StatementFlags> flags) {
 
     SmallVectorSized<const StatementBlockSymbol*, 8> buffer;
     for (auto item : items) {
@@ -491,15 +534,68 @@ void StatementBinder::setItems(Scope& scope, const SyntaxNode& syntax_,
                 }
                 break;
             default:
-                findBlocks(scope, item->as<StatementSyntax>(), buffer, labelHandled, flags,
-                           parentProcedure);
+                findBlocks(scope, item->as<StatementSyntax>(), buffer, false, flags);
                 break;
         }
     }
 
-    blocks = buffer.copy(scope.getCompilation());
+    auto blocks = buffer.copy(scope.getCompilation());
     for (auto block : blocks)
         scope.addMember(*block);
+
+    return blocks;
+}
+
+span<const StatementBlockSymbol* const> Statement::createBlockItems(Scope& scope,
+                                                                    const StatementSyntax& syntax,
+                                                                    bool labelHandled,
+                                                                    bitmask<StatementFlags> flags) {
+    SmallVectorSized<const StatementBlockSymbol*, 8> buffer;
+    findBlocks(scope, syntax, buffer, labelHandled, flags);
+
+    auto blocks = buffer.copy(scope.getCompilation());
+    for (auto block : blocks)
+        scope.addMember(*block);
+
+    return blocks;
+}
+
+void StatementBinder::setSyntax(const Scope& scope, const StatementSyntax& syntax_,
+                                bool labelHandled_, bitmask<StatementFlags> flags_) {
+    stmt = nullptr;
+    syntax = &syntax_;
+    labelHandled = labelHandled_;
+    flags = flags_;
+
+    SmallVectorSized<const StatementBlockSymbol*, 8> buffer;
+    findBlocks(scope, syntax_, buffer, labelHandled, flags);
+    blocks = buffer.copy(scope.getCompilation());
+}
+
+void StatementBinder::setSyntax(const StatementBlockSymbol& scope,
+                                const ForLoopStatementSyntax& syntax_,
+                                bitmask<StatementFlags> flags_) {
+    stmt = nullptr;
+    syntax = &syntax_;
+    labelHandled = false;
+    flags = flags_;
+
+    SmallVectorSized<const StatementBlockSymbol*, 8> buffer;
+    findBlocks(scope, *syntax_.statement, buffer, labelHandled,
+               flags | StatementFlags::InLoop | StatementFlags::InForLoop);
+
+    blocks = buffer.copy(scope.getCompilation());
+}
+
+void StatementBinder::setItems(Scope& scope, const SyntaxNode& syntax_,
+                               const SyntaxList<SyntaxNode>& items,
+                               bitmask<StatementFlags> flags_) {
+    stmt = nullptr;
+    syntax = &syntax_;
+    labelHandled = false;
+    isItems = true;
+    flags = flags_;
+    blocks = Statement::createBlockItems(scope, items, flags);
 }
 
 const Statement& StatementBinder::getStatement(const BindContext& context) const {
@@ -561,6 +657,8 @@ const Statement& StatementBinder::bindStatement(const BindContext& context) cons
 
     if (isItems) {
         ASSERT(syntax);
+        sourceRange = syntax->sourceRange();
+
         const SyntaxList<SyntaxNode>* items;
         switch (syntax->kind) {
             case SyntaxKind::RsCodeBlock:
@@ -587,6 +685,7 @@ const Statement& StatementBinder::bindStatement(const BindContext& context) cons
         }
     }
     else if (syntax) {
+        sourceRange = syntax->sourceRange();
         buffer.append(&Statement::bind(syntax->as<StatementSyntax>(), context, stmtCtx,
                                        /* inList */ false, labelHandled));
         anyBad |= buffer.back()->bad();
@@ -624,28 +723,15 @@ void StatementList::serializeTo(ASTSerializer& serializer) const {
     serializer.endArray();
 }
 
-BlockStatement::BlockStatement(const StatementBlockSymbol& block, SourceRange sourceRange) :
-    Statement(StatementKind::Block, sourceRange), blockKind(block.blockKind), block(&block) {
-}
-
-void BlockStatement::serializeTo(ASTSerializer& serializer) const {
-    serializer.write("blockKind", toString(blockKind));
-    if (block)
-        serializer.writeLink("block", *block);
-    serializer.write("body", getStatements());
-}
-
-Statement& BlockStatement::fromSyntax(Compilation& compilation, const BlockStatementSyntax& syntax,
-                                      const BindContext& sourceCtx, StatementContext& stmtCtx) {
-    ASSERT(!syntax.blockName);
-    ASSERT(!syntax.label);
-
+Statement& BlockStatement::fromSyntax(Compilation& comp, const BlockStatementSyntax& syntax,
+                                      const BindContext& sourceCtx, StatementContext& stmtCtx,
+                                      bool addInitializers) {
     BindContext context = sourceCtx;
     auto blockKind = SemanticFacts::getStatementBlockKind(syntax);
     if (context.flags.has(BindFlags::Function | BindFlags::Final)) {
         if (blockKind == StatementBlockKind::JoinAll || blockKind == StatementBlockKind::JoinAny) {
             context.addDiag(diag::TimingInFuncNotAllowed, syntax.end.range());
-            return badStmt(compilation, nullptr);
+            return badStmt(comp, nullptr);
         }
         else if (blockKind == StatementBlockKind::JoinNone) {
             // The "function body" flag does not propagate through fork-join_none
@@ -658,7 +744,7 @@ Statement& BlockStatement::fromSyntax(Compilation& compilation, const BlockState
         ASSERT(proc);
         context.addDiag(diag::ForkJoinAlwaysComb, syntax.begin.range())
             << SemanticFacts::getProcedureKindStr(proc->procedureKind);
-        return badStmt(compilation, nullptr);
+        return badStmt(comp, nullptr);
     }
 
     bool wasInForkJoin = stmtCtx.flags.has(StatementFlags::InForkJoin);
@@ -667,29 +753,35 @@ Statement& BlockStatement::fromSyntax(Compilation& compilation, const BlockState
 
     bool anyBad = false;
     SmallVectorSized<const Statement*, 8> buffer;
+
+    if (addInitializers)
+        bindScopeInitializers(context, buffer);
+
     for (auto item : syntax.items) {
-        auto& stmt =
-            Statement::bind(item->as<StatementSyntax>(), context, stmtCtx, /* inList */ true);
-        buffer.append(&stmt);
-        anyBad |= stmt.bad();
+        if (StatementSyntax::isKind(item->kind)) {
+            auto& stmt =
+                Statement::bind(item->as<StatementSyntax>(), context, stmtCtx, /* inList */ true);
+            buffer.append(&stmt);
+            anyBad |= stmt.bad();
+        }
     }
 
-    auto list = compilation.emplace<StatementList>(buffer.copy(compilation), syntax.sourceRange());
-    auto result = compilation.emplace<BlockStatement>(*list, blockKind, syntax.sourceRange());
+    auto result = createBlockStatement(comp, buffer, syntax, blockKind);
 
     if (blockKind != StatementBlockKind::Sequential && !wasInForkJoin)
         stmtCtx.flags &= ~StatementFlags::InForkJoin;
 
     if (anyBad)
-        return badStmt(compilation, result);
+        return badStmt(comp, result);
 
     return *result;
 }
 
-const Statement& BlockStatement::getStatements() const {
-    if (block)
-        return block->getBody();
-    return *list;
+void BlockStatement::serializeTo(ASTSerializer& serializer) const {
+    serializer.write("blockKind", toString(blockKind));
+    if (blockSymbol)
+        serializer.writeLink("block", *blockSymbol);
+    serializer.write("body", body);
 }
 
 ER BlockStatement::evalImpl(EvalContext& context) const {
@@ -698,14 +790,14 @@ ER BlockStatement::evalImpl(EvalContext& context) const {
         return ER::Fail;
     }
 
-    ER result = getStatements().eval(context);
+    ER result = body.eval(context);
     if (result == ER::Disable) {
         // Check if the disable statement we evaluated was targeting this block.
         // If it was, we've already skipped enough statements, so just clear out
         // the target and continue on.
         auto target = context.getDisableTarget();
         ASSERT(target);
-        if (target == block) {
+        if (target == blockSymbol) {
             result = ER::Success;
             context.setDisableTarget(nullptr, {});
         }
@@ -1551,7 +1643,7 @@ const Expression* ForeachLoopStatement::buildLoopDims(const ForeachLoopListSynta
         string_view name = idName.identifier.valueText();
 
         // If we previously had skipped dimensions this one can't be dynamically
-        // sized (there would be no way to reach it duration iteration).
+        // sized (there would be no way to reach it during iteration).
         if (!dims.back().range && skippedAny) {
             context.addDiag(diag::ForeachDynamicDimAfterSkipped, idName.sourceRange()) << name;
             return nullptr;
