@@ -235,6 +235,10 @@ Allow signals driven by always_comb or always_ff procedures to also be driven by
 SystemVerilog doesn't permit this, but some tools allow it anyway so this flag can be used for
 compatibility purposes.
 
+`--strict-driver-checking`
+
+Perform strict driver checking, which currently means disabling procedural 'for' @ref loop-unroll
+
 @section diag-control Diagnostic Control
 
 `--color-diagnostics`

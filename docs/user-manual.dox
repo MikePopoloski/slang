@@ -136,4 +136,39 @@ test.sv:5:24: note: comparison reduces to (12 < 8)
                    ~~~~^~~~~~~~~~~~
 @endcode
 
+@section loop-unroll Driver loop unrolling
+
+SystemVerilog specifies various rules about how nets and variables can be driven. These rules all operate on the
+principal of "longest static prefixes" which are described in the LRM in section 11.5.3. Unintuitive behavior can
+result when operating on nested subsets of arrays or structures due to these rules, for example:
+
+@code{.sv}
+module m;
+    int foo[10];
+    initial
+        for (int i = 1; i < 10; i += 2) begin : baz
+            foo[i] = 2;
+        end
+
+    for (genvar i = 0; i < 10; i += 2) begin
+        always_comb foo[i] = 1;
+    end
+endmodule
+@endcode
+
+Under LRM rules, this results in a compilation error because inside a procedural block the for loop variable `i`
+is not constant and therefore the longest static prefix of the assignment is just `foo`, and so all elements
+are assumed assigned by the initial block. Most tools, slang included, implement an extension to attempt to
+unroll all procedural for loops in order to extend the longest static prefix of assignments within those loops,
+making the above example compile successfully. Such unrolling can be disabled with the `--strict-driver-checking`
+command line flag.
+
+The limitations of this feature are as follows:
+- Only for loops are supported -- other kinds of loops are not.
+- The for loop must declare its iteration variables and must provide stop and iteration expressions.
+- The number of iterations of all for loops in a block must be less than the limit given by `--max-constexpr-steps`
+- Only assignment statements are supported -- output args from subroutines are not taken into account.
+- Conditional statements inside of for loops that depend on the iteration variable will work as expected.
+- All other forms of flow control inside each for loop (including break / continue) are ignored.
+
 */
