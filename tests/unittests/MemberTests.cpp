@@ -2298,8 +2298,8 @@ module m;
 
         fork : baz
             automatic int d = 1;
-            c = d;
         join_none
+        c = 1;
     end
 
     wire clk;
