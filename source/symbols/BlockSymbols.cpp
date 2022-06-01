@@ -190,6 +190,8 @@ StatementBlockSymbol& StatementBlockSymbol::fromLabeledStmt(const Scope& scope,
 }
 
 void StatementBlockSymbol::elaborateVariables(function_ref<void(const Symbol&)> insertCB) const {
+    ASSERT(!stmt);
+
     auto syntax = getSyntax();
     if (!syntax)
         return;
@@ -202,21 +204,22 @@ void StatementBlockSymbol::elaborateVariables(function_ref<void(const Symbol&)> 
         for (auto var : vars)
             insertCB(*var);
     }
-    // else if (syntax->kind == SyntaxKind::ForeachLoopStatement) {
-    //     const Statement* body = &getBody();
-    //     if (body->kind == StatementKind::Invalid) {
-    //         // Unwrap invalid statements here so that we still get foreach loop
-    //         // variables added even if its body had a problem somewhere.
-    //         body = body->as<InvalidStatement>().child;
-    //         if (!body)
-    //             return;
-    //     }
+    else if (syntax->kind == SyntaxKind::ForeachLoopStatement) {
+        SmallVectorSized<ForeachLoopStatement::LoopDim, 4> dims;
+        BindContext context(*this, LookupLocation::max);
 
-    //    for (auto& dim : body->as<ForeachLoopStatement>().loopDims) {
-    //        if (dim.loopVar)
-    //            insertCB(*dim.loopVar);
-    //    }
-    //}
+        if (!ForeachLoopStatement::buildLoopDims(*syntax->as<ForeachLoopStatementSyntax>().loopList,
+                                                 context, dims)) {
+            // If building loop dims failed we don't want to later proceed with trying to
+            // bind the statement again, so just set to invalid here.
+            stmt = &InvalidStatement::Instance;
+        }
+
+        for (auto& dim : dims) {
+            if (dim.loopVar)
+                insertCB(*dim.loopVar);
+        }
+    }
 }
 
 ProceduralBlockSymbol::ProceduralBlockSymbol(SourceLocation loc,

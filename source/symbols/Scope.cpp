@@ -1065,8 +1065,11 @@ void Scope::elaborate() const {
     // Allow statement blocks containing variables to include them in their member
     // list before allowing anyone else to access the contained statements.
     if (thisSym->kind == SymbolKind::StatementBlock) {
-        thisSym->as<StatementBlockSymbol>().elaborateVariables(
-            [this](const Symbol& member) { insertMember(&member, nullptr, true, true); });
+        const Symbol* at = nullptr;
+        thisSym->as<StatementBlockSymbol>().elaborateVariables([this, &at](const Symbol& member) {
+            insertMember(&member, at, true, false);
+            at = &member;
+        });
     }
 
     ASSERT(deferredMemberIndex == DeferredMemberIndex::Invalid);

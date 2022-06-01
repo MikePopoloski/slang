@@ -1685,14 +1685,41 @@ Statement& ForeachLoopStatement::fromSyntax(Compilation& compilation,
                                             const BindContext& context, StatementContext& stmtCtx) {
     auto guard = stmtCtx.enterLoop();
 
+    auto& arrayRef = Expression::bind(*syntax.loopList->arrayName, context);
+    ASSERT(!arrayRef.bad());
+
+    // Loop variables were already built in the containing block when it was elaborated,
+    // so we just have to find them and associate them with the correct dim ranges here.
     BindContext iterCtx = context;
     SmallVectorSized<LoopDim, 4> dims;
-    auto arrayRef = buildLoopDims(*syntax.loopList, iterCtx, dims);
-    if (!arrayRef)
-        return badStmt(compilation, nullptr);
+    const Type* type = arrayRef.type;
+    auto range = context.scope->membersOfType<IteratorSymbol>();
+    auto itIt = range.begin();
+
+    for (auto loopVar : syntax.loopList->loopVariables) {
+        if (type->hasFixedRange())
+            dims.append({ type->getFixedRange() });
+        else
+            dims.emplace();
+
+        type = type->getArrayElementType();
+
+        if (loopVar->kind == SyntaxKind::EmptyIdentifierName)
+            continue;
+
+        ASSERT(itIt != range.end());
+        ASSERT(itIt->name == loopVar->as<IdentifierNameSyntax>().identifier.valueText());
+
+        IteratorSymbol* it = const_cast<IteratorSymbol*>(&*itIt);
+        it->nextIterator = std::exchange(iterCtx.firstIterator, it);
+        dims.back().loopVar = it;
+        itIt++;
+    }
+
+    ASSERT(itIt == range.end());
 
     auto& bodyStmt = Statement::bind(*syntax.statement, iterCtx, stmtCtx);
-    auto result = compilation.emplace<ForeachLoopStatement>(*arrayRef, dims.copy(compilation),
+    auto result = compilation.emplace<ForeachLoopStatement>(arrayRef, dims.copy(compilation),
                                                             bodyStmt, syntax.sourceRange());
     if (bodyStmt.bad())
         return badStmt(compilation, result);
