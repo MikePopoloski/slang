@@ -32,20 +32,16 @@ public:
 
     void serializeTo(ASTSerializer&) const {}
 
-    static StatementBlockSymbol& fromSyntax(const Scope& scope, const BlockStatementSyntax& syntax,
-                                            bitmask<StatementFlags> flags);
+    static StatementBlockSymbol& fromSyntax(const Scope& scope, const BlockStatementSyntax& syntax);
     static StatementBlockSymbol& fromSyntax(const Scope& scope,
-                                            const ForLoopStatementSyntax& syntax,
-                                            bitmask<StatementFlags> flags);
+                                            const ForLoopStatementSyntax& syntax);
     static StatementBlockSymbol& fromSyntax(const Scope& scope,
-                                            const ForeachLoopStatementSyntax& syntax,
-                                            bitmask<StatementFlags> flags);
+                                            const ForeachLoopStatementSyntax& syntax);
     static StatementBlockSymbol& fromSyntax(const Scope& scope,
                                             const RandSequenceStatementSyntax& syntax);
     static StatementBlockSymbol& fromSyntax(const Scope& scope, const RsRuleSyntax& syntax);
     static StatementBlockSymbol& fromSyntax(const Scope& scope, const RsCodeBlockSyntax& syntax);
-    static StatementBlockSymbol& fromLabeledStmt(const Scope& scope, const StatementSyntax& syntax,
-                                                 bitmask<StatementFlags> flags);
+    static StatementBlockSymbol& fromLabeledStmt(const Scope& scope, const StatementSyntax& syntax);
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::StatementBlock; }
 

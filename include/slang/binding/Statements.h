@@ -161,6 +161,12 @@ public:
 
             return guard;
         }
+
+        auto scopedFlags(bitmask<StatementFlags> newFlags) {
+            auto guard = ScopeGuard([this, savedFlags = flags] { flags = savedFlags; });
+            flags |= newFlags;
+            return guard;
+        }
     };
 
     /// Binds a statement tree from the given syntax nodes.
@@ -172,12 +178,11 @@ public:
                                       const BindContext& context, StatementContext& stmtCtx);
 
     static span<const StatementBlockSymbol* const> createBlockItems(
-        Scope& scope, const SyntaxList<SyntaxNode>& items, bitmask<StatementFlags> flags);
+        Scope& scope, const SyntaxList<SyntaxNode>& items);
 
     static span<const StatementBlockSymbol* const> createBlockItems(Scope& scope,
                                                                     const StatementSyntax& syntax,
-                                                                    bool labelHandled,
-                                                                    bitmask<StatementFlags> flags);
+                                                                    bool labelHandled);
 
     template<typename T>
     T& as() {

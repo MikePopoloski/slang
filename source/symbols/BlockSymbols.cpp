@@ -59,20 +59,35 @@ static std::pair<string_view, SourceLocation> getLabel(const StatementSyntax& sy
 
 static StatementBlockSymbol* createBlock(
     const Scope& scope, const StatementSyntax& syntax, string_view name, SourceLocation loc,
-    bitmask<StatementFlags> flags, StatementBlockKind blockKind = StatementBlockKind::Sequential) {
+    StatementBlockKind blockKind = StatementBlockKind::Sequential,
+    optional<VariableLifetime> lifetime = {}) {
 
-    auto lifetime = flags.has(StatementFlags::AutoLifetime) ? VariableLifetime::Automatic
-                                                            : VariableLifetime::Static;
+    if (!lifetime.has_value()) {
+        auto& scopeSym = scope.asSymbol();
+        switch (scopeSym.kind) {
+            case SymbolKind::StatementBlock:
+                lifetime = scopeSym.as<StatementBlockSymbol>().defaultLifetime;
+                break;
+            case SymbolKind::Subroutine:
+                lifetime = scopeSym.as<SubroutineSymbol>().defaultLifetime;
+                break;
+            default:
+                lifetime = VariableLifetime::Static;
+                if (auto def = scopeSym.getDeclaringDefinition())
+                    lifetime = def->defaultLifetime;
+                break;
+        }
+    }
+
     auto& comp = scope.getCompilation();
-    auto result = comp.emplace<StatementBlockSymbol>(comp, name, loc, blockKind, lifetime);
+    auto result = comp.emplace<StatementBlockSymbol>(comp, name, loc, blockKind, *lifetime);
     result->setSyntax(syntax);
     result->setAttributes(scope, syntax.attributes);
     return result;
 }
 
 StatementBlockSymbol& StatementBlockSymbol::fromSyntax(const Scope& scope,
-                                                       const BlockStatementSyntax& syntax,
-                                                       bitmask<StatementFlags> flags) {
+                                                       const BlockStatementSyntax& syntax) {
     string_view name;
     SourceLocation loc;
     if (syntax.blockName) {
@@ -85,17 +100,16 @@ StatementBlockSymbol& StatementBlockSymbol::fromSyntax(const Scope& scope,
     }
 
     auto result =
-        createBlock(scope, syntax, name, loc, flags, SemanticFacts::getStatementBlockKind(syntax));
+        createBlock(scope, syntax, name, loc, SemanticFacts::getStatementBlockKind(syntax));
 
-    result->blocks = Statement::createBlockItems(*result, syntax.items, flags);
+    result->blocks = Statement::createBlockItems(*result, syntax.items);
     return *result;
 }
 
 StatementBlockSymbol& StatementBlockSymbol::fromSyntax(const Scope& scope,
-                                                       const ForLoopStatementSyntax& syntax,
-                                                       bitmask<StatementFlags> flags) {
+                                                       const ForLoopStatementSyntax& syntax) {
     auto [name, loc] = getLabel(syntax, syntax.forKeyword.location());
-    auto result = createBlock(scope, syntax, name, loc, flags);
+    auto result = createBlock(scope, syntax, name, loc);
 
     // If one entry is a variable declaration, they must all be.
     // We'll only enter this function if we have variable decls.
@@ -110,17 +124,16 @@ StatementBlockSymbol& StatementBlockSymbol::fromSyntax(const Scope& scope,
     }
 
     result->blocks =
-        Statement::createBlockItems(*result, *syntax.statement, /* labelHandled */ false, flags);
+        Statement::createBlockItems(*result, *syntax.statement, /* labelHandled */ false);
     return *result;
 }
 
 StatementBlockSymbol& StatementBlockSymbol::fromSyntax(const Scope& scope,
-                                                       const ForeachLoopStatementSyntax& syntax,
-                                                       bitmask<StatementFlags> flags) {
+                                                       const ForeachLoopStatementSyntax& syntax) {
     auto [name, loc] = getLabel(syntax, syntax.keyword.location());
-    auto result = createBlock(scope, syntax, name, loc, flags);
+    auto result = createBlock(scope, syntax, name, loc);
     result->blocks =
-        Statement::createBlockItems(*result, *syntax.statement, /* labelHandled */ false, flags);
+        Statement::createBlockItems(*result, *syntax.statement, /* labelHandled */ false);
 
     // This block needs elaboration to collect iteration variables.
     result->setNeedElaboration();
@@ -131,7 +144,8 @@ StatementBlockSymbol& StatementBlockSymbol::fromSyntax(const Scope& scope,
 StatementBlockSymbol& StatementBlockSymbol::fromSyntax(const Scope& scope,
                                                        const RandSequenceStatementSyntax& syntax) {
     auto [name, loc] = getLabel(syntax, syntax.randsequence.location());
-    auto result = createBlock(scope, syntax, name, loc, StatementFlags::AutoLifetime);
+    auto result = createBlock(scope, syntax, name, loc, StatementBlockKind::Sequential,
+                              VariableLifetime::Automatic);
 
     auto& comp = scope.getCompilation();
     for (auto prod : syntax.productions) {
@@ -176,16 +190,15 @@ StatementBlockSymbol& StatementBlockSymbol::fromSyntax(const Scope& scope,
                                                      StatementBlockKind::Sequential,
                                                      VariableLifetime::Automatic);
     result->setSyntax(syntax);
-    result->blocks = Statement::createBlockItems(*result, syntax.items, StatementFlags::InRandSeq);
+    result->blocks = Statement::createBlockItems(*result, syntax.items);
     return *result;
 }
 
 StatementBlockSymbol& StatementBlockSymbol::fromLabeledStmt(const Scope& scope,
-                                                            const StatementSyntax& syntax,
-                                                            bitmask<StatementFlags> flags) {
+                                                            const StatementSyntax& syntax) {
     auto [name, loc] = getLabel(syntax, {});
-    auto result = createBlock(scope, syntax, name, loc, flags);
-    result->blocks = Statement::createBlockItems(*result, syntax, /* labelHandled */ true, flags);
+    auto result = createBlock(scope, syntax, name, loc);
+    result->blocks = Statement::createBlockItems(*result, syntax, /* labelHandled */ true);
     return *result;
 }
 

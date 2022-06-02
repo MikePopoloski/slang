@@ -1391,7 +1391,7 @@ module m;
             second : pop | push ;
             done : { $display("done"); return; } ;
             add(string s) : { $display(s); } ;
-            dec : { $display("dec"); break; } ;
+            dec : { begin : foo $display("dec"); break; end } ;
             pop : repeat($urandom_range( 2, 6 )) push;
             push : if (1) done else pop | rand join (0.5) first second done;
             baz : case (a & 7) 1, 2: push; 3: pop; default done; endcase;

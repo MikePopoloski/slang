@@ -330,20 +330,13 @@ Statement& Statement::badStmt(Compilation& compilation, const Statement* stmt) {
 }
 
 static void findBlocks(const Scope& scope, const StatementSyntax& syntax,
-                       SmallVector<const StatementBlockSymbol*>& results, bool labelHandled,
-                       bitmask<StatementFlags> flags) {
+                       SmallVector<const StatementBlockSymbol*>& results, bool labelHandled) {
     if (!labelHandled && hasSimpleLabel(syntax)) {
-        results.append(&StatementBlockSymbol::fromLabeledStmt(scope, syntax, flags));
+        results.append(&StatementBlockSymbol::fromLabeledStmt(scope, syntax));
         return;
     }
 
-    auto recurse = [&](auto stmt) {
-        findBlocks(scope, *stmt, results, /* lableHandled */ false, flags);
-    };
-
-    auto recurseF = [&](auto stmt, auto extraFlags) {
-        findBlocks(scope, *stmt, results, /* lableHandled */ false, flags | extraFlags);
-    };
+    auto recurse = [&](auto stmt) { findBlocks(scope, *stmt, results, /* lableHandled */ false); };
 
     switch (syntax.kind) {
         case SyntaxKind::ReturnStatement:
@@ -370,24 +363,20 @@ static void findBlocks(const Scope& scope, const StatementSyntax& syntax,
             // - They are unnamed but have variable declarations within them
             auto& block = syntax.as<BlockStatementSyntax>();
             if (block.blockName || block.label) {
-                results.append(&StatementBlockSymbol::fromSyntax(scope, block, flags));
+                results.append(&StatementBlockSymbol::fromSyntax(scope, block));
                 return;
             }
 
             for (auto item : block.items) {
                 // If we find any decls at all, this block gets its own scope.
                 if (!StatementSyntax::isKind(item->kind)) {
-                    results.append(&StatementBlockSymbol::fromSyntax(scope, block, flags));
+                    results.append(&StatementBlockSymbol::fromSyntax(scope, block));
                     return;
                 }
             }
 
-            StatementFlags extra = StatementFlags::None;
-            if (SemanticFacts::getStatementBlockKind(block) == StatementBlockKind::JoinNone)
-                extra = StatementFlags::InForkJoinNone;
-
             for (auto item : block.items)
-                recurseF(&item->as<StatementSyntax>(), extra);
+                recurse(&item->as<StatementSyntax>());
             return;
         }
 
@@ -416,13 +405,13 @@ static void findBlocks(const Scope& scope, const StatementSyntax& syntax,
             return;
         }
         case SyntaxKind::ForeverStatement:
-            recurseF(syntax.as<ForeverStatementSyntax>().statement, StatementFlags::InLoop);
+            recurse(syntax.as<ForeverStatementSyntax>().statement);
             return;
         case SyntaxKind::LoopStatement:
-            recurseF(syntax.as<LoopStatementSyntax>().statement, StatementFlags::InLoop);
+            recurse(syntax.as<LoopStatementSyntax>().statement);
             return;
         case SyntaxKind::DoWhileStatement:
-            recurseF(syntax.as<DoWhileStatementSyntax>().statement, StatementFlags::InLoop);
+            recurse(syntax.as<DoWhileStatementSyntax>().statement);
             return;
         case SyntaxKind::ForLoopStatement: {
             // For loops are special; if they declare variables, they get
@@ -430,13 +419,13 @@ static void findBlocks(const Scope& scope, const StatementSyntax& syntax,
             auto& forLoop = syntax.as<ForLoopStatementSyntax>();
             if (!forLoop.initializers.empty() &&
                 forLoop.initializers[0]->kind == SyntaxKind::ForVariableDeclaration) {
-                results.append(&StatementBlockSymbol::fromSyntax(scope, forLoop, flags));
+                results.append(&StatementBlockSymbol::fromSyntax(scope, forLoop));
             }
             else if (syntax.label) {
-                results.append(&StatementBlockSymbol::fromLabeledStmt(scope, syntax, flags));
+                results.append(&StatementBlockSymbol::fromLabeledStmt(scope, syntax));
             }
             else {
-                recurseF(forLoop.statement, StatementFlags::InLoop);
+                recurse(forLoop.statement);
             }
             return;
         }
@@ -445,10 +434,10 @@ static void findBlocks(const Scope& scope, const StatementSyntax& syntax,
             // here to make sure we don't infinitely recurse.
             if (!labelHandled) {
                 results.append(&StatementBlockSymbol::fromSyntax(
-                    scope, syntax.as<ForeachLoopStatementSyntax>(), flags));
+                    scope, syntax.as<ForeachLoopStatementSyntax>()));
             }
             else {
-                recurseF(syntax.as<ForeachLoopStatementSyntax>().statement, StatementFlags::InLoop);
+                recurse(syntax.as<ForeachLoopStatementSyntax>().statement);
             }
             return;
         case SyntaxKind::TimingControlStatement:
@@ -506,7 +495,7 @@ static void findBlocks(const Scope& scope, const StatementSyntax& syntax,
 }
 
 span<const StatementBlockSymbol* const> Statement::createBlockItems(
-    Scope& scope, const SyntaxList<SyntaxNode>& items, bitmask<StatementFlags> flags) {
+    Scope& scope, const SyntaxList<SyntaxNode>& items) {
 
     SmallVectorSized<const StatementBlockSymbol*, 8> buffer;
     for (auto item : items) {
@@ -534,7 +523,7 @@ span<const StatementBlockSymbol* const> Statement::createBlockItems(
                 }
                 break;
             default:
-                findBlocks(scope, item->as<StatementSyntax>(), buffer, false, flags);
+                findBlocks(scope, item->as<StatementSyntax>(), buffer, false);
                 break;
         }
     }
@@ -548,10 +537,9 @@ span<const StatementBlockSymbol* const> Statement::createBlockItems(
 
 span<const StatementBlockSymbol* const> Statement::createBlockItems(Scope& scope,
                                                                     const StatementSyntax& syntax,
-                                                                    bool labelHandled,
-                                                                    bitmask<StatementFlags> flags) {
+                                                                    bool labelHandled) {
     SmallVectorSized<const StatementBlockSymbol*, 8> buffer;
-    findBlocks(scope, syntax, buffer, labelHandled, flags);
+    findBlocks(scope, syntax, buffer, labelHandled);
 
     auto blocks = buffer.copy(scope.getCompilation());
     for (auto block : blocks)
@@ -568,7 +556,7 @@ void StatementBinder::setSyntax(const Scope& scope, const StatementSyntax& synta
     flags = flags_;
 
     SmallVectorSized<const StatementBlockSymbol*, 8> buffer;
-    findBlocks(scope, syntax_, buffer, labelHandled, flags);
+    findBlocks(scope, syntax_, buffer, labelHandled);
     blocks = buffer.copy(scope.getCompilation());
 }
 
@@ -581,8 +569,7 @@ void StatementBinder::setSyntax(const StatementBlockSymbol& scope,
     flags = flags_;
 
     SmallVectorSized<const StatementBlockSymbol*, 8> buffer;
-    findBlocks(scope, *syntax_.statement, buffer, labelHandled,
-               flags | StatementFlags::InLoop | StatementFlags::InForLoop);
+    findBlocks(scope, *syntax_.statement, buffer, labelHandled);
 
     blocks = buffer.copy(scope.getCompilation());
 }
@@ -595,7 +582,7 @@ void StatementBinder::setItems(Scope& scope, const SyntaxNode& syntax_,
     labelHandled = false;
     isItems = true;
     flags = flags_;
-    blocks = Statement::createBlockItems(scope, items, flags);
+    blocks = Statement::createBlockItems(scope, items);
 }
 
 const Statement& StatementBinder::getStatement(const BindContext& context) const {
