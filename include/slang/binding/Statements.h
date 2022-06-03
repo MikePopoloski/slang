@@ -298,7 +298,7 @@ public:
     StatementBlockKind blockKind;
 
     BlockStatement(const Statement& body, StatementBlockKind blockKind, SourceRange sourceRange) :
-        Statement(StatementKind::Block, sourceRange), blockKind(blockKind), body(body) {}
+        Statement(StatementKind::Block, sourceRange), body(body), blockKind(blockKind) {}
 
     EvalResult evalImpl(EvalContext& context) const;
 
