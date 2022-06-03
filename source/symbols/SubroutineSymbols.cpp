@@ -21,8 +21,34 @@
 namespace slang {
 
 const Statement& SubroutineSymbol::getBody() const {
-    BindContext context(*this, LookupLocation::max);
-    return binder.getStatement(context);
+    if (!stmt) {
+        auto syntax = getSyntax();
+        if (!syntax || !FunctionDeclarationSyntax::isKind(syntax->kind)) {
+            // DPI functions, subroutines created from prototypes, etc
+            // don't have a real body.
+            stmt = &StatementList::makeEmpty(getCompilation());
+        }
+        else if (isBinding) {
+            // Avoid issues with recursive function calls re-entering this
+            // method while we're still binding.
+            return InvalidStatement::Instance;
+        }
+        else {
+            isBinding = true;
+            auto guard = ScopeGuard([this] { isBinding = false; });
+
+            BindContext context(*this, LookupLocation::max);
+            if (subroutineKind == SubroutineKind::Function)
+                context.flags |= BindFlags::Function;
+
+            Statement::StatementContext stmtCtx;
+            stmtCtx.blocks = blocks;
+
+            stmt = &Statement::bindItems(syntax->as<FunctionDeclarationSyntax>().items, context,
+                                         stmtCtx);
+        }
+    }
+    return *stmt;
 }
 
 SubroutineSymbol* SubroutineSymbol::fromSyntax(Compilation& compilation,
@@ -100,15 +126,8 @@ SubroutineSymbol* SubroutineSymbol::fromSyntax(Compilation& compilation,
         result->declaredReturnType.setType(compilation.getVoidType());
     }
 
-    // Set statement body and collect all declared local variables.
-    bitmask<StatementFlags> stmtFlags;
-    if (subroutineKind == SubroutineKind::Function)
-        stmtFlags |= StatementFlags::Func;
-    if (*lifetime == VariableLifetime::Automatic)
-        stmtFlags |= StatementFlags::AutoLifetime;
-
     const Symbol* last = result->getLastMember();
-    result->binder.setItems(*result, syntax, syntax.items, stmtFlags);
+    result->blocks = Statement::createAndAddBlockItems(*result, syntax.items);
 
     // Subroutines can also declare arguments inside their bodies as port declarations.
     // Find them by walking through members that were added by setItems().

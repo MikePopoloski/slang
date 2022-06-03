@@ -31,7 +31,7 @@ const Statement& StatementBlockSymbol::getStatement(const BindContext& parentCon
 
         auto syntax = getSyntax();
         if (!syntax || syntax->kind == SyntaxKind::RsRule) {
-            stmt = &InvalidStatement::Instance;
+            stmt = &BlockStatement::makeEmpty(parentContext.getCompilation());
         }
         else {
             BindContext context = parentContext;
@@ -102,7 +102,7 @@ StatementBlockSymbol& StatementBlockSymbol::fromSyntax(const Scope& scope,
     auto result =
         createBlock(scope, syntax, name, loc, SemanticFacts::getStatementBlockKind(syntax));
 
-    result->blocks = Statement::createBlockItems(*result, syntax.items);
+    result->blocks = Statement::createAndAddBlockItems(*result, syntax.items);
     return *result;
 }
 
@@ -124,7 +124,7 @@ StatementBlockSymbol& StatementBlockSymbol::fromSyntax(const Scope& scope,
     }
 
     result->blocks =
-        Statement::createBlockItems(*result, *syntax.statement, /* labelHandled */ false);
+        Statement::createAndAddBlockItems(*result, *syntax.statement, /* labelHandled */ false);
     return *result;
 }
 
@@ -133,7 +133,7 @@ StatementBlockSymbol& StatementBlockSymbol::fromSyntax(const Scope& scope,
     auto [name, loc] = getLabel(syntax, syntax.keyword.location());
     auto result = createBlock(scope, syntax, name, loc);
     result->blocks =
-        Statement::createBlockItems(*result, *syntax.statement, /* labelHandled */ false);
+        Statement::createAndAddBlockItems(*result, *syntax.statement, /* labelHandled */ false);
 
     // This block needs elaboration to collect iteration variables.
     result->setNeedElaboration();
@@ -190,7 +190,7 @@ StatementBlockSymbol& StatementBlockSymbol::fromSyntax(const Scope& scope,
                                                      StatementBlockKind::Sequential,
                                                      VariableLifetime::Automatic);
     result->setSyntax(syntax);
-    result->blocks = Statement::createBlockItems(*result, syntax.items);
+    result->blocks = Statement::createAndAddBlockItems(*result, syntax.items);
     return *result;
 }
 
@@ -198,7 +198,7 @@ StatementBlockSymbol& StatementBlockSymbol::fromLabeledStmt(const Scope& scope,
                                                             const StatementSyntax& syntax) {
     auto [name, loc] = getLabel(syntax, {});
     auto result = createBlock(scope, syntax, name, loc);
-    result->blocks = Statement::createBlockItems(*result, syntax, /* labelHandled */ true);
+    result->blocks = Statement::createAndAddBlockItems(*result, syntax, /* labelHandled */ true);
     return *result;
 }
 
@@ -239,14 +239,30 @@ ProceduralBlockSymbol::ProceduralBlockSymbol(SourceLocation loc,
                                              ProceduralBlockKind procedureKind) :
     Symbol(SymbolKind::ProceduralBlock, "", loc),
     procedureKind(procedureKind) {
-    binder.parentProcedure = this;
 }
 
 const Statement& ProceduralBlockSymbol::getBody() const {
-    BindContext context(*getParentScope(), LookupLocation::after(*this));
-    context.setProceduralBlock(*this);
+    if (!stmt) {
+        ASSERT(!isBinding);
 
-    return binder.getStatement(context);
+        isBinding = true;
+        auto guard = ScopeGuard([this] { isBinding = false; });
+
+        auto scope = getParentScope();
+        ASSERT(scope && stmtSyntax);
+
+        BindContext context(*scope, LookupLocation::after(*this));
+        context.setProceduralBlock(*this);
+
+        if (procedureKind == ProceduralBlockKind::Final)
+            context.flags |= BindFlags::Final;
+
+        Statement::StatementContext stmtCtx;
+        stmtCtx.blocks = blocks;
+
+        stmt = &Statement::bind(*stmtSyntax, context, stmtCtx);
+    }
+    return *stmt;
 }
 
 ProceduralBlockSymbol& ProceduralBlockSymbol::createProceduralBlock(
@@ -254,26 +270,14 @@ ProceduralBlockSymbol& ProceduralBlockSymbol::createProceduralBlock(
     const MemberSyntax& syntax, const StatementSyntax& stmtSyntax,
     span<const StatementBlockSymbol* const>& additionalBlocks) {
 
-    // Figure out our default variable lifetime by looking for the
-    // parent instance and using its default.
-    VariableLifetime lifetime = VariableLifetime::Static;
-    if (auto def = scope.asSymbol().getDeclaringDefinition())
-        lifetime = def->defaultLifetime;
-
     auto& comp = scope.getCompilation();
     auto result = comp.emplace<ProceduralBlockSymbol>(location, kind);
-
-    bitmask<StatementFlags> flags;
-    if (kind == ProceduralBlockKind::Final)
-        flags |= StatementFlags::Final;
-    if (lifetime == VariableLifetime::Automatic)
-        flags |= StatementFlags::AutoLifetime;
-
-    result->binder.setSyntax(scope, stmtSyntax, /* labelHandled */ false, flags);
     result->setSyntax(syntax);
     result->setAttributes(scope, syntax.attributes);
+    result->blocks = Statement::createBlockItems(scope, stmtSyntax, /* labelHandled */ false);
+    result->stmtSyntax = &stmtSyntax;
 
-    additionalBlocks = result->binder.getBlocks();
+    additionalBlocks = result->blocks;
 
     return *result;
 }

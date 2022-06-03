@@ -144,10 +144,12 @@ public:
 private:
     void addThisVar(const Type& type);
 
-    StatementBinder binder;
+    span<const StatementBlockSymbol* const> blocks;
+    mutable const Statement* stmt = nullptr;
     ArgList arguments;
     mutable const SubroutineSymbol* overrides = nullptr;
     mutable optional<bool> cachedHasOutputArgs;
+    mutable bool isBinding = false;
 };
 
 struct ClassMethodPrototypeSyntax;

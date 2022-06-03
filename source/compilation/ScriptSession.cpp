@@ -83,13 +83,12 @@ ConstantValue ScriptSession::evalExpression(const ExpressionSyntax& expr) {
 }
 
 void ScriptSession::evalStatement(const StatementSyntax& stmt) {
-    StatementBinder binder;
-    binder.setSyntax(scope, stmt, false, StatementFlags::None);
-    for (auto block : binder.getBlocks())
-        scope.addMember(*block);
+    auto& block = StatementBlockSymbol::fromLabeledStmt(scope, stmt);
+    scope.addMember(block);
 
     BindContext context(scope, LookupLocation::max);
-    binder.getStatement(context).eval(evalContext);
+    Statement::StatementContext stmtCtx;
+    block.getStatement(context, stmtCtx).eval(evalContext);
 }
 
 Diagnostics ScriptSession::getDiagnostics() {

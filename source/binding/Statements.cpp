@@ -300,6 +300,25 @@ const Statement& Statement::bindBlock(const StatementBlockSymbol& block, const S
     return *result;
 }
 
+const Statement& Statement::bindItems(const SyntaxList<SyntaxNode>& items,
+                                      const BindContext& context, StatementContext& stmtCtx) {
+    SmallVectorSized<const Statement*, 8> buffer;
+    bindScopeInitializers(context, buffer);
+
+    for (auto item : items) {
+        if (StatementSyntax::isKind(item->kind)) {
+            buffer.append(&bind(item->as<StatementSyntax>(), context, stmtCtx,
+                                /* inList */ true));
+        }
+    }
+
+    if (buffer.size() == 1)
+        return *buffer[0];
+
+    auto& comp = context.getCompilation();
+    return *comp.emplace<StatementList>(buffer.copy(comp), SourceRange());
+}
+
 void Statement::bindScopeInitializers(const BindContext& context,
                                       SmallVector<const Statement*>& results) {
     // This relies on the language requiring all declarations be at the
@@ -494,7 +513,7 @@ static void findBlocks(const Scope& scope, const StatementSyntax& syntax,
     }
 }
 
-span<const StatementBlockSymbol* const> Statement::createBlockItems(
+span<const StatementBlockSymbol* const> Statement::createAndAddBlockItems(
     Scope& scope, const SyntaxList<SyntaxNode>& items) {
 
     SmallVectorSized<const StatementBlockSymbol*, 8> buffer;
@@ -535,161 +554,22 @@ span<const StatementBlockSymbol* const> Statement::createBlockItems(
     return blocks;
 }
 
-span<const StatementBlockSymbol* const> Statement::createBlockItems(Scope& scope,
+span<const StatementBlockSymbol* const> Statement::createBlockItems(const Scope& scope,
                                                                     const StatementSyntax& syntax,
                                                                     bool labelHandled) {
     SmallVectorSized<const StatementBlockSymbol*, 8> buffer;
     findBlocks(scope, syntax, buffer, labelHandled);
+    return buffer.copy(scope.getCompilation());
+}
 
-    auto blocks = buffer.copy(scope.getCompilation());
+span<const StatementBlockSymbol* const> Statement::createAndAddBlockItems(
+    Scope& scope, const StatementSyntax& syntax, bool labelHandled) {
+
+    auto blocks = createBlockItems(scope, syntax, labelHandled);
     for (auto block : blocks)
         scope.addMember(*block);
 
     return blocks;
-}
-
-void StatementBinder::setSyntax(const Scope& scope, const StatementSyntax& syntax_,
-                                bool labelHandled_, bitmask<StatementFlags> flags_) {
-    stmt = nullptr;
-    syntax = &syntax_;
-    labelHandled = labelHandled_;
-    flags = flags_;
-
-    SmallVectorSized<const StatementBlockSymbol*, 8> buffer;
-    findBlocks(scope, syntax_, buffer, labelHandled);
-    blocks = buffer.copy(scope.getCompilation());
-}
-
-void StatementBinder::setSyntax(const StatementBlockSymbol& scope,
-                                const ForLoopStatementSyntax& syntax_,
-                                bitmask<StatementFlags> flags_) {
-    stmt = nullptr;
-    syntax = &syntax_;
-    labelHandled = false;
-    flags = flags_;
-
-    SmallVectorSized<const StatementBlockSymbol*, 8> buffer;
-    findBlocks(scope, *syntax_.statement, buffer, labelHandled);
-
-    blocks = buffer.copy(scope.getCompilation());
-}
-
-void StatementBinder::setItems(Scope& scope, const SyntaxNode& syntax_,
-                               const SyntaxList<SyntaxNode>& items,
-                               bitmask<StatementFlags> flags_) {
-    stmt = nullptr;
-    syntax = &syntax_;
-    labelHandled = false;
-    isItems = true;
-    flags = flags_;
-    blocks = Statement::createBlockItems(scope, items);
-}
-
-const Statement& StatementBinder::getStatement(const BindContext& context) const {
-    if (!stmt) {
-        // Avoid issues with recursive function calls re-entering this
-        // method while we're still binding.
-        if (isBinding)
-            return InvalidStatement::Instance;
-
-        isBinding = true;
-        auto guard = ScopeGuard([this] { isBinding = false; });
-
-        BindContext ctx = context;
-        if (!flags.has(StatementFlags::InForkJoinNone)) {
-            if (flags.has(StatementFlags::Func))
-                ctx.flags |= BindFlags::Function;
-            if (flags.has(StatementFlags::Final))
-                ctx.flags |= BindFlags::Final;
-        }
-
-        stmt = &bindStatement(ctx);
-    }
-
-    return *stmt;
-}
-
-const Statement& StatementBinder::bindStatement(const BindContext& context) const {
-    auto& scope = *context.scope;
-    auto& comp = scope.getCompilation();
-    SmallVectorSized<const Statement*, 8> buffer;
-
-    auto scopeKind = scope.asSymbol().kind;
-    if (scopeKind == SymbolKind::StatementBlock || scopeKind == SymbolKind::Subroutine) {
-        // This relies on the language requiring all declarations be at the
-        // start of a statement block. Additional work would be required to
-        // support declarations anywhere in the block, because as written all
-        // of the initialization will happen at the start of the block, which
-        // might have different side-effects than if they were initialized in
-        // the middle somewhere. The parser currently enforces this for us.
-        for (auto& member : scope.members()) {
-            if (member.kind != SymbolKind::Variable)
-                continue;
-
-            // Filter out implicitly generated function return type variables -- they are
-            // initialized elsewhere. Note that we manufacture a somewhat reasonable
-            // source range here, since we don't have the real one.
-            auto& var = member.as<VariableSymbol>();
-            SourceRange range{ var.location, var.location + var.name.length() };
-            if (!var.flags.has(VariableFlags::CompilerGenerated))
-                buffer.append(comp.emplace<VariableDeclStatement>(var, range));
-        }
-    }
-
-    bool anyBad = false;
-    SourceRange sourceRange;
-    Statement::StatementContext stmtCtx;
-    stmtCtx.blocks = blocks;
-    stmtCtx.flags = flags;
-
-    if (isItems) {
-        ASSERT(syntax);
-        sourceRange = syntax->sourceRange();
-
-        const SyntaxList<SyntaxNode>* items;
-        switch (syntax->kind) {
-            case SyntaxKind::RsCodeBlock:
-                items = &syntax->as<RsCodeBlockSyntax>().items;
-                break;
-            case SyntaxKind::ParallelBlockStatement:
-            case SyntaxKind::SequentialBlockStatement:
-                items = &syntax->as<BlockStatementSyntax>().items;
-                break;
-            case SyntaxKind::FunctionDeclaration:
-            case SyntaxKind::TaskDeclaration:
-                items = &syntax->as<FunctionDeclarationSyntax>().items;
-                break;
-            default:
-                THROW_UNREACHABLE;
-        }
-
-        for (auto item : *items) {
-            if (StatementSyntax::isKind(item->kind)) {
-                buffer.append(&Statement::bind(item->as<StatementSyntax>(), context, stmtCtx,
-                                               /* inList */ true));
-                anyBad |= buffer.back()->bad();
-            }
-        }
-    }
-    else if (syntax) {
-        sourceRange = syntax->sourceRange();
-        buffer.append(&Statement::bind(syntax->as<StatementSyntax>(), context, stmtCtx,
-                                       /* inList */ false, labelHandled));
-        anyBad |= buffer.back()->bad();
-    }
-    else {
-        sourceRange = { SourceLocation::NoLocation, SourceLocation::NoLocation };
-    }
-
-    ASSERT(anyBad || stmtCtx.blocks.empty());
-
-    if (buffer.size() == 1)
-        return *buffer[0];
-
-    if (anyBad)
-        return InvalidStatement::Instance;
-
-    return *comp.emplace<StatementList>(buffer.copy(comp), sourceRange);
 }
 
 ER StatementList::evalImpl(EvalContext& context) const {
@@ -708,6 +588,10 @@ void StatementList::serializeTo(ASTSerializer& serializer) const {
         serializer.serialize(*stmt);
     }
     serializer.endArray();
+}
+
+Statement& StatementList::makeEmpty(Compilation& compilation) {
+    return *compilation.emplace<StatementList>(span<const Statement* const>(), SourceRange());
 }
 
 Statement& BlockStatement::fromSyntax(Compilation& comp, const BlockStatementSyntax& syntax,
@@ -762,6 +646,11 @@ Statement& BlockStatement::fromSyntax(Compilation& comp, const BlockStatementSyn
         return badStmt(comp, result);
 
     return *result;
+}
+
+Statement& BlockStatement::makeEmpty(Compilation& compilation) {
+    return *compilation.emplace<BlockStatement>(StatementList::makeEmpty(compilation),
+                                                StatementBlockKind::Sequential, SourceRange());
 }
 
 void BlockStatement::serializeTo(ASTSerializer& serializer) const {

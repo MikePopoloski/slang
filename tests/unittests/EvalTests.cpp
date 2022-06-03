@@ -2323,11 +2323,9 @@ TEST_CASE("foreach loop extended name eval") {
     session.eval(R"(
 function rt f;
     rt array;
-    initial begin
-        foreach (array[i]) begin
-            foreach (array[i][j]) begin
-                array[i][j] = (i + 1) * (j + 1);
-            end
+    foreach (array[i]) begin
+        foreach (array[i][j]) begin
+            array[i][j] = (i + 1) * (j + 1);
         end
     end
     return array;

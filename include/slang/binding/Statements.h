@@ -177,12 +177,18 @@ public:
     static const Statement& bindBlock(const StatementBlockSymbol& block, const SyntaxNode& syntax,
                                       const BindContext& context, StatementContext& stmtCtx);
 
-    static span<const StatementBlockSymbol* const> createBlockItems(
-        Scope& scope, const SyntaxList<SyntaxNode>& items);
+    static const Statement& bindItems(const SyntaxList<SyntaxNode>& items,
+                                      const BindContext& context, StatementContext& stmtCtx);
 
-    static span<const StatementBlockSymbol* const> createBlockItems(Scope& scope,
+    static span<const StatementBlockSymbol* const> createBlockItems(const Scope& scope,
                                                                     const StatementSyntax& syntax,
                                                                     bool labelHandled);
+
+    static span<const StatementBlockSymbol* const> createAndAddBlockItems(
+        Scope& scope, const SyntaxList<SyntaxNode>& items);
+
+    static span<const StatementBlockSymbol* const> createAndAddBlockItems(
+        Scope& scope, const StatementSyntax& syntax, bool labelHandled);
 
     template<typename T>
     T& as() {
@@ -205,36 +211,6 @@ protected:
     static Statement& badStmt(Compilation& compilation, const Statement* stmt);
     static void bindScopeInitializers(const BindContext& context,
                                       SmallVector<const Statement*>& results);
-};
-
-/// A wrapper around a statement syntax node and some associated symbols that can later
-/// be turned into an actual statement tree. The point of this is to allow symbols to
-/// defer statement binding until its actually needed.
-class StatementBinder {
-public:
-    const ProceduralBlockSymbol* parentProcedure = nullptr;
-
-    void setSyntax(const Scope& scope, const StatementSyntax& syntax, bool labelHandled,
-                   bitmask<StatementFlags> flags);
-    void setSyntax(const StatementBlockSymbol& scope, const ForLoopStatementSyntax& syntax,
-                   bitmask<StatementFlags> flags);
-    void setItems(Scope& scope, const SyntaxNode& syntax, const SyntaxList<SyntaxNode>& items,
-                  bitmask<StatementFlags> flags);
-
-    const Statement& getStatement(const BindContext& context) const;
-    span<const StatementBlockSymbol* const> getBlocks() const { return blocks; }
-    const SyntaxNode* getSyntax() const { return syntax; }
-
-private:
-    const Statement& bindStatement(const BindContext& context) const;
-
-    const SyntaxNode* syntax = nullptr;
-    span<const StatementBlockSymbol* const> blocks;
-    mutable const Statement* stmt = nullptr;
-    bitmask<StatementFlags> flags;
-    mutable bool isBinding = false;
-    bool labelHandled = false;
-    bool isItems = false;
 };
 
 /// Represents an invalid statement, which is usually generated and inserted
@@ -279,6 +255,8 @@ public:
 
     void serializeTo(ASTSerializer& serializer) const;
 
+    static Statement& makeEmpty(Compilation& compilation);
+
     static bool isKind(StatementKind kind) { return kind == StatementKind::List; }
 
     template<typename TVisitor>
@@ -307,6 +285,8 @@ public:
     static Statement& fromSyntax(Compilation& compilation, const BlockStatementSyntax& syntax,
                                  const BindContext& context, StatementContext& stmtCtx,
                                  bool addInitializers = false);
+
+    static Statement& makeEmpty(Compilation& compilation);
 
     static bool isKind(StatementKind kind) { return kind == StatementKind::Block; }
 
