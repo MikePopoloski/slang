@@ -58,8 +58,8 @@ ER Statement::eval(EvalContext& context) const {
 
 const Statement* Statement::StatementContext::tryGetBlock(const BindContext& context,
                                                           StatementContext& stmtCtx,
-                                                          const SyntaxNode& syntax) {
-    if (!blocks.empty() && blocks[0]->getSyntax() == &syntax) {
+                                                          const SyntaxNode& target) {
+    if (!blocks.empty() && blocks[0]->getSyntax() == &target) {
         auto& result = blocks[0]->getStatement(context, stmtCtx);
         blocks = blocks.subspan(1);
         return &result;
