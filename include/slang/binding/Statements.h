@@ -80,13 +80,9 @@ ENUM(CaseStatementCheck, CASE_CHECK)
 enum class StatementFlags {
     None = 0,
     InLoop = 1 << 0,
-    Func = 1 << 1,
-    Final = 1 << 2,
-    InForkJoin = 1 << 3,
-    InForkJoinNone = 1 << 4,
-    AutoLifetime = 1 << 5,
-    InRandSeq = 1 << 6,
-    InForLoop = 1 << 7
+    InForkJoin = 1 << 1,
+    InRandSeq = 1 << 2,
+    InForLoop = 1 << 3
 };
 BITMASK(StatementFlags, InForLoop)
 
@@ -161,12 +157,6 @@ public:
 
             return guard;
         }
-
-        auto scopedFlags(bitmask<StatementFlags> newFlags) {
-            auto guard = ScopeGuard([this, savedFlags = flags] { flags = savedFlags; });
-            flags |= newFlags;
-            return guard;
-        }
     };
 
     /// Binds a statement tree from the given syntax nodes.
@@ -174,19 +164,26 @@ public:
                                  StatementContext& stmtCtx, bool inList = false,
                                  bool labelHandled = false);
 
+    /// Binds a statement tree that forms the contents of a block.
     static const Statement& bindBlock(const StatementBlockSymbol& block, const SyntaxNode& syntax,
                                       const BindContext& context, StatementContext& stmtCtx);
 
+    /// Binds a list of statement items.
     static const Statement& bindItems(const SyntaxList<SyntaxNode>& items,
                                       const BindContext& context, StatementContext& stmtCtx);
 
+    /// Creates any symbols declared by the given statement syntax, such as local variables.
     static span<const StatementBlockSymbol* const> createBlockItems(const Scope& scope,
                                                                     const StatementSyntax& syntax,
                                                                     bool labelHandled);
 
+    /// Creates any symbols declared by the given list of syntax nodes, such as local variables,
+    /// and ignores any statement syntax nodes. The created symbols are added to the given scope.
     static span<const StatementBlockSymbol* const> createAndAddBlockItems(
         Scope& scope, const SyntaxList<SyntaxNode>& items);
 
+    /// Creates any symbols declared by the given statement syntax, such as local variables.
+    /// The created symbols are added to the given scope.
     static span<const StatementBlockSymbol* const> createAndAddBlockItems(
         Scope& scope, const StatementSyntax& syntax, bool labelHandled);
 
