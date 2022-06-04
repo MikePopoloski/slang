@@ -2484,3 +2484,29 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("always_ff timing control restrictions") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    int i;
+    always_ff i <= 1;
+
+    wire clk;
+    int j;
+    always_ff begin
+        begin : a @(posedge clk) j <= 1; end
+        begin : b @(negedge clk) j <= 0; end
+        #3 j <= 2;
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 3);
+    CHECK(diags[0].code == diag::AlwaysFFEventControl);
+    CHECK(diags[1].code == diag::AlwaysFFEventControl);
+    CHECK(diags[2].code == diag::BlockingInAlwaysFF);
+}

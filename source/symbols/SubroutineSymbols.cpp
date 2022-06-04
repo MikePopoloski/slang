@@ -41,7 +41,7 @@ const Statement& SubroutineSymbol::getBody() const {
             if (subroutineKind == SubroutineKind::Function)
                 context.flags |= BindFlags::Function;
 
-            Statement::StatementContext stmtCtx;
+            Statement::StatementContext stmtCtx(context);
             stmtCtx.blocks = blocks;
 
             stmt = &Statement::bindItems(syntax->as<FunctionDeclarationSyntax>().items, context,

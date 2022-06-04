@@ -56,15 +56,44 @@ ER Statement::eval(EvalContext& context) const {
     return visit(visitor, context);
 }
 
+Statement::StatementContext::~StatementContext() {
+    if (!lastEventControl.start()) {
+        auto proc = rootBindContext.getProceduralBlock();
+        if (proc && proc->procedureKind == ProceduralBlockKind::AlwaysFF)
+            rootBindContext.addDiag(diag::AlwaysFFEventControl, proc->location);
+    }
+}
+
 const Statement* Statement::StatementContext::tryGetBlock(const BindContext& context,
-                                                          StatementContext& stmtCtx,
                                                           const SyntaxNode& target) {
     if (!blocks.empty() && blocks[0]->getSyntax() == &target) {
-        auto& result = blocks[0]->getStatement(context, stmtCtx);
+        auto& result = blocks[0]->getStatement(context, *this);
         blocks = blocks.subspan(1);
         return &result;
     }
     return nullptr;
+}
+
+void Statement::StatementContext::observeTiming(const TimingControl& timing) {
+    auto proc = rootBindContext.getProceduralBlock();
+    if (!proc || proc->procedureKind != ProceduralBlockKind::AlwaysFF || timing.bad())
+        return;
+
+    if (timing.kind != TimingControlKind::SignalEvent &&
+        timing.kind != TimingControlKind::EventList &&
+        timing.kind != TimingControlKind::ImplicitEvent) {
+        rootBindContext.addDiag(diag::BlockingInAlwaysFF, timing.sourceRange);
+        return;
+    }
+
+    if (lastEventControl.start() && !flags.has(StatementFlags::HasTimingError)) {
+        auto& diag = rootBindContext.addDiag(diag::AlwaysFFEventControl, timing.sourceRange);
+        diag.addNote(diag::NotePreviousUsage, lastEventControl);
+
+        flags |= StatementFlags::HasTimingError;
+    }
+
+    lastEventControl = timing.sourceRange;
 }
 
 static bool hasSimpleLabel(const StatementSyntax& syntax) {
@@ -83,7 +112,7 @@ const Statement& Statement::bind(const StatementSyntax& syntax, const BindContex
     auto& comp = context.getCompilation();
 
     if (!labelHandled && hasSimpleLabel(syntax)) {
-        auto block = stmtCtx.tryGetBlock(context, stmtCtx, syntax);
+        auto block = stmtCtx.tryGetBlock(context, syntax);
         ASSERT(block);
         return *block;
     }
@@ -121,7 +150,7 @@ const Statement& Statement::bind(const StatementSyntax& syntax, const BindContex
             break;
         case SyntaxKind::ForLoopStatement:
             // We might have an implicit block here; check for that first.
-            if (auto block = stmtCtx.tryGetBlock(context, stmtCtx, syntax))
+            if (auto block = stmtCtx.tryGetBlock(context, syntax))
                 return *block;
 
             result = &ForLoopStatement::fromSyntax(comp, syntax.as<ForLoopStatementSyntax>(),
@@ -137,7 +166,7 @@ const Statement& Statement::bind(const StatementSyntax& syntax, const BindContex
         }
         case SyntaxKind::ForeachLoopStatement:
             // We might have an implicit block here; check for that first.
-            if (auto block = stmtCtx.tryGetBlock(context, stmtCtx, syntax))
+            if (auto block = stmtCtx.tryGetBlock(context, syntax))
                 return *block;
 
             result = &ForeachLoopStatement::fromSyntax(
@@ -164,7 +193,7 @@ const Statement& Statement::bind(const StatementSyntax& syntax, const BindContex
             // A block statement may or may not match up with a hierarchy node. Handle both cases
             // here. We traverse statements in the same order as the findBlocks call below, so this
             // should always sync up exactly.
-            if (auto block = stmtCtx.tryGetBlock(context, stmtCtx, syntax))
+            if (auto block = stmtCtx.tryGetBlock(context, syntax))
                 return *block;
 
             result = &BlockStatement::fromSyntax(comp, syntax.as<BlockStatementSyntax>(), context,
@@ -198,7 +227,7 @@ const Statement& Statement::bind(const StatementSyntax& syntax, const BindContex
         case SyntaxKind::BlockingEventTriggerStatement:
         case SyntaxKind::NonblockingEventTriggerStatement:
             result = &EventTriggerStatement::fromSyntax(
-                comp, syntax.as<EventTriggerStatementSyntax>(), context);
+                comp, syntax.as<EventTriggerStatementSyntax>(), context, stmtCtx);
             break;
         case SyntaxKind::ProceduralAssignStatement:
         case SyntaxKind::ProceduralForceStatement:
@@ -225,7 +254,7 @@ const Statement& Statement::bind(const StatementSyntax& syntax, const BindContex
             break;
         case SyntaxKind::RandSequenceStatement:
             // We might have an implicit block here; check for that first.
-            if (auto block = stmtCtx.tryGetBlock(context, stmtCtx, syntax))
+            if (auto block = stmtCtx.tryGetBlock(context, syntax))
                 return *block;
 
             result = &RandSequenceStatement::fromSyntax(
@@ -1878,6 +1907,11 @@ Statement& ExpressionStatement::fromSyntax(Compilation& compilation,
             break;
         }
         case ExpressionKind::Assignment:
+            if (auto timing = expr.as<AssignmentExpression>().timingControl)
+                stmtCtx.observeTiming(*timing);
+
+            ok = true;
+            break;
         case ExpressionKind::NewClass:
             ok = true;
             break;
@@ -1945,6 +1979,8 @@ Statement& TimedStatement::fromSyntax(Compilation& compilation,
                                       const TimingControlStatementSyntax& syntax,
                                       const BindContext& context, StatementContext& stmtCtx) {
     auto& timing = TimingControl::bind(*syntax.timingControl, context);
+    stmtCtx.observeTiming(timing);
+
     auto& stmt = Statement::bind(*syntax.statement, context, stmtCtx);
     auto result = compilation.emplace<TimedStatement>(timing, stmt, syntax.sourceRange());
 
@@ -2246,7 +2282,8 @@ void WaitOrderStatement::serializeTo(ASTSerializer& serializer) const {
 
 Statement& EventTriggerStatement::fromSyntax(Compilation& compilation,
                                              const EventTriggerStatementSyntax& syntax,
-                                             const BindContext& context) {
+                                             const BindContext& context,
+                                             StatementContext& stmtCtx) {
     auto& target = Expression::bind(*syntax.name, context);
     if (target.bad())
         return badStmt(compilation, nullptr);
@@ -2257,8 +2294,10 @@ Statement& EventTriggerStatement::fromSyntax(Compilation& compilation,
     }
 
     const TimingControl* timing = nullptr;
-    if (syntax.timing)
+    if (syntax.timing) {
         timing = &TimingControl::bind(*syntax.timing, context);
+        stmtCtx.observeTiming(*timing);
+    }
 
     bool isNonBlocking = syntax.kind == SyntaxKind::NonblockingEventTriggerStatement;
 

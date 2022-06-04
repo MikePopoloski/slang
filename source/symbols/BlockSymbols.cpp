@@ -257,7 +257,7 @@ const Statement& ProceduralBlockSymbol::getBody() const {
         if (procedureKind == ProceduralBlockKind::Final)
             context.flags |= BindFlags::Final;
 
-        Statement::StatementContext stmtCtx;
+        Statement::StatementContext stmtCtx(context);
         stmtCtx.blocks = blocks;
 
         stmt = &Statement::bind(*stmtSyntax, context, stmtCtx);

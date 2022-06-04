@@ -87,7 +87,7 @@ void ScriptSession::evalStatement(const StatementSyntax& stmt) {
     scope.addMember(block);
 
     BindContext context(scope, LookupLocation::max);
-    Statement::StatementContext stmtCtx;
+    Statement::StatementContext stmtCtx(context);
     block.getStatement(context, stmtCtx).eval(evalContext);
 }
 

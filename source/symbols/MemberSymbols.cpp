@@ -1443,7 +1443,7 @@ RandSeqProductionSymbol::Rule RandSeqProductionSymbol::createRule(
     }
 
     for (auto& block : blockRange) {
-        Statement::StatementContext stmtCtx;
+        Statement::StatementContext stmtCtx(context);
         stmtCtx.flags = StatementFlags::InRandSeq;
         block.getStatement(context, stmtCtx);
     }

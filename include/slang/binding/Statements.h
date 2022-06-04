@@ -82,9 +82,10 @@ enum class StatementFlags {
     InLoop = 1 << 0,
     InForkJoin = 1 << 1,
     InRandSeq = 1 << 2,
-    InForLoop = 1 << 3
+    InForLoop = 1 << 3,
+    HasTimingError = 1 << 4
 };
-BITMASK(StatementFlags, InForLoop)
+BITMASK(StatementFlags, HasTimingError)
 
 /// The base class for all statements in SystemVerilog.
 class Statement {
@@ -135,12 +136,25 @@ public:
         /// Tracks various bits of context about where we are in statement binding.
         bitmask<StatementFlags> flags;
 
+        /// A source range indicating the last event control observed
+        /// while binding statements. This is only updated in always_ff blocks.
+        SourceRange lastEventControl;
+
+        /// The context used for binding statements.
+        const BindContext& rootBindContext;
+
+        explicit StatementContext(const BindContext& context) : rootBindContext(context) {}
+        ~StatementContext();
+
         /// Attempts to match up the head of the block list with the given
         /// statement syntax node. If they match, the block symbol is popped
         /// and returned wrapped inside a BlockStatement.
         /// Otherwise nullptr is returned.
-        const Statement* tryGetBlock(const BindContext& context, StatementContext& stmtCtx,
-                                     const SyntaxNode& syntax);
+        const Statement* tryGetBlock(const BindContext& context, const SyntaxNode& syntax);
+
+        /// Observes that the given timing control has been created and checks it
+        /// for correctness given the current statement context.
+        void observeTiming(const TimingControl& timing);
 
         /// Records that we've entered a loop, and returns a guard that will
         /// revert back to the previous state on destruction.
@@ -930,7 +944,7 @@ public:
 
     static Statement& fromSyntax(Compilation& compilation,
                                  const EventTriggerStatementSyntax& syntax,
-                                 const BindContext& context);
+                                 const BindContext& context, StatementContext& stmtCtx);
 
     void serializeTo(ASTSerializer& serializer) const;
 
