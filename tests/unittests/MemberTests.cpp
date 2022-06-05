@@ -128,7 +128,7 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 9);
+    REQUIRE(diags.size() == 10);
     CHECK(diags[0].code == diag::DelayNotNumeric);
     CHECK(diags[1].code == diag::ConstEvalNonConstVariable);
     CHECK(diags[2].code == diag::ConstEvalNonConstVariable);
@@ -138,6 +138,7 @@ endmodule
     CHECK(diags[6].code == diag::DynamicNotProcedural);
     CHECK(diags[7].code == diag::Delay3OnVar);
     CHECK(diags[8].code == diag::NonProceduralFuncArg);
+    CHECK(diags[9].code == diag::MultipleContAssigns);
 }
 
 TEST_CASE("User defined nettypes") {
@@ -2509,4 +2510,34 @@ endmodule
     CHECK(diags[0].code == diag::AlwaysFFEventControl);
     CHECK(diags[1].code == diag::AlwaysFFEventControl);
     CHECK(diags[2].code == diag::BlockingInAlwaysFF);
+}
+
+
+TEST_CASE("driver checking applied to subroutine ref args") {
+    auto tree = SyntaxTree::fromText(R"(
+function automatic void f(ref int a);
+endfunction
+
+function automatic void g(const ref int a);
+endfunction
+
+module m;
+    int i;
+    always_comb begin
+        f(i);
+        g(i);
+    end
+    always_comb begin
+        f(i);
+        g(i);
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::MultipleAlwaysAssigns);
 }

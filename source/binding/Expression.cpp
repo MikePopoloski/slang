@@ -266,6 +266,14 @@ const Expression& Expression::bindRefArg(const Type& lhs, bool isConstRef,
         return badExpr(comp, &expr);
     }
 
+    // ref args are considered drivers unless they are const.
+    if (!isConstRef) {
+        // The check for ref-args is more strict than the check for lvalues,
+        // so the net effect of this call is to get a driver registered for
+        // us without duplicating the logic for determining longest static prefix.
+        expr.requireLValue(context);
+    }
+
     return expr;
 }
 
