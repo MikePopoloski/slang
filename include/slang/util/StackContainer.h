@@ -6,7 +6,7 @@
 //------------------------------------------------------------------------------
 #pragma once
 
-#include <flat_hash_map.hpp>
+#include "slang/util/FlatHashMap.h"
 
 namespace slang {
 

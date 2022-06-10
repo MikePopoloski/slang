@@ -6,11 +6,11 @@
 //------------------------------------------------------------------------------
 #pragma once
 
-#include <flat_hash_map.hpp>
 #include <vector>
 
 #include "slang/mir/Instr.h"
 #include "slang/util/BumpAllocator.h"
+#include "slang/util/FlatHashMap.h"
 
 namespace slang {
 

@@ -7,9 +7,10 @@
 #pragma once
 
 #include <any>
-#include <flat_hash_map.hpp>
 #include <typeindex>
 #include <typeinfo>
+
+#include "slang/util/FlatHashMap.h"
 
 namespace slang {
 

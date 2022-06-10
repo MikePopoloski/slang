@@ -1497,5 +1497,4 @@ struct power_of_two_std_hash : std::hash<T>
 
 } // end namespace ska
 
-using ska::flat_hash_map;
 using ska::flat_hash_set;

@@ -6,10 +6,10 @@
 //------------------------------------------------------------------------------
 #pragma once
 
-#include <flat_hash_map.hpp>
 
 #include "slang/binding/Lookup.h"
 #include "slang/symbols/SemanticFacts.h"
+#include "slang/util/FlatHashMap.h"
 #include "slang/util/SmallVector.h"
 #include "slang/util/Util.h"
 
