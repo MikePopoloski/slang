@@ -1351,7 +1351,7 @@ const Type& PortSymbol::getType() const {
             }
             else {
                 internalSymbol->as<ValueSymbol>().addDriver(DriverKind::Continuous, valExpr,
-                                                            nullptr, flags);
+                                                            scope->asSymbol(), flags);
             }
         }
     }

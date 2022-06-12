@@ -445,8 +445,8 @@ void ClockVarSymbol::fromSyntax(const Scope& scope, const ClockingItemSyntax& sy
                         context, *sym, false,
                         { arg->location, arg->location + arg->name.length() });
 
-                    sym->as<ValueSymbol>().addDriver(DriverKind::Continuous, valExpr, nullptr,
-                                                     AssignFlags::ClockVar);
+                    sym->as<ValueSymbol>().addDriver(DriverKind::Continuous, valExpr,
+                                                     scope.asSymbol(), AssignFlags::ClockVar);
                 }
             }
             else {

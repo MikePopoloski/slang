@@ -221,7 +221,7 @@ void DiagnosticEngine::issueImpl(const Diagnostic& diagnostic, DiagnosticSeverit
     // Notes are ignored if location is "NoLocation" since they frequently make no
     // sense without location information.
     for (const Diagnostic& note : diagnostic.notes) {
-        if (note.location != SourceLocation::NoLocation)
+        if (note.location != SourceLocation::NoLocation || note.code == diag::NoteFromHere2)
             issue(note);
     }
 }

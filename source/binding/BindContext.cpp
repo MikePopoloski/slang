@@ -114,7 +114,10 @@ void BindContext::addDriver(const ValueSymbol& symbol, const Expression& longest
     if (!containingSym)
         containingSym = getContainingSubroutine();
 
-    symbol.addDriver(getDriverKind(), longestStaticPrefix, containingSym, assignFlags, {},
+    if (!containingSym)
+        containingSym = &scope->asSymbol();
+
+    symbol.addDriver(getDriverKind(), longestStaticPrefix, *containingSym, assignFlags, {},
                      customEvalContext);
 }
 

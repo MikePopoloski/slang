@@ -614,7 +614,7 @@ static bool checkAssertionArg(const PropertyExprSyntax& propExpr, const Assertio
             return false;
         }
 
-        sym->as<ValueSymbol>().addDriver(DriverKind::Procedural, bound, nullptr,
+        sym->as<ValueSymbol>().addDriver(DriverKind::Procedural, bound, context.scope->asSymbol(),
                                          AssignFlags::AssertionLocalVarFormalArg);
     }
 

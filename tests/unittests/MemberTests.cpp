@@ -2512,7 +2512,6 @@ endmodule
     CHECK(diags[2].code == diag::BlockingInAlwaysFF);
 }
 
-
 TEST_CASE("driver checking applied to subroutine ref args") {
     auto tree = SyntaxTree::fromText(R"(
 function automatic void f(ref int a);
@@ -2540,4 +2539,35 @@ endmodule
     auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::MultipleAlwaysAssigns);
+}
+
+TEST_CASE("hierarchical driver errors") {
+    auto tree = SyntaxTree::fromText(R"(
+interface I;
+    int foo;
+endinterface
+
+module m;
+    I i();
+
+    n n1(i);
+    n n2(i);
+endmodule
+
+module n(I i);
+    always_comb i.foo = 1;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    std::string result = "\n" + report(diags);
+    CHECK(result == R"(
+source:14:17: error: variable 'foo' driven by always_comb procedure cannot be written to by any other process
+    always_comb i.foo = 1;
+                ^~~~~
+note: from 'm.n2' and 'm.n1'
+)");
 }

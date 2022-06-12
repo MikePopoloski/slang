@@ -826,7 +826,7 @@ public:
         auto driver = expr.symbol.getFirstDriver();
         while (driver) {
             if (driver->containingSymbol == &sub && !driver->hasError) {
-                expr.symbol.addDriver(DriverKind::Procedural, *driver, &procedure,
+                expr.symbol.addDriver(DriverKind::Procedural, *driver, procedure,
                                       AssignFlags::SubFromProcedure, range);
             }
 

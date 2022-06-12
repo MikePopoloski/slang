@@ -59,7 +59,7 @@ public:
         mutable const Driver* next = nullptr;
 
     public:
-        const Symbol* containingSymbol;
+        not_null<const Symbol*> containingSymbol;
         SourceRange sourceRange;
         uint32_t numPrefixEntries;
         DriverKind kind;
@@ -87,27 +87,27 @@ public:
         bool overlaps(const Driver& other) const;
 
         static Driver& create(EvalContext& evalContext, DriverKind kind,
-                              const Expression& longestStaticPrefix, const Symbol* containingSymbol,
+                              const Expression& longestStaticPrefix, const Symbol& containingSymbol,
                               bitmask<AssignFlags> flags, SourceRange range);
 
         static Driver& create(Compilation& compilation, DriverKind kind,
                               span<const ConstantRange> longestStaticPrefix,
-                              const Symbol* containingSymbol, bitmask<AssignFlags> flags,
+                              const Symbol& containingSymbol, bitmask<AssignFlags> flags,
                               SourceRange range, SourceRange originalRange);
 
     private:
-        Driver(DriverKind kind, const Symbol* containingSymbol, bitmask<AssignFlags> flags,
+        Driver(DriverKind kind, const Symbol& containingSymbol, bitmask<AssignFlags> flags,
                uint32_t numPrefixEntries, bool hasOriginalRange) :
-            containingSymbol(containingSymbol),
+            containingSymbol(&containingSymbol),
             numPrefixEntries(numPrefixEntries), kind(kind), flags(flags),
             hasOriginalRange(hasOriginalRange) {}
     };
 
     void addDriver(DriverKind kind, const Expression& longestStaticPrefix,
-                   const Symbol* containingSymbol, bitmask<AssignFlags> flags,
+                   const Symbol& containingSymbol, bitmask<AssignFlags> flags,
                    SourceRange rangeOverride = {}, EvalContext* customEvalContext = nullptr) const;
 
-    void addDriver(DriverKind kind, const Driver& copyFrom, const Symbol* containingSymbol,
+    void addDriver(DriverKind kind, const Driver& copyFrom, const Symbol& containingSymbol,
                    bitmask<AssignFlags> flags, SourceRange rangeOverride) const;
 
     const Driver* getFirstDriver() const { return firstDriver; }
