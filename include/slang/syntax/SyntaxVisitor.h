@@ -6,11 +6,11 @@
 //------------------------------------------------------------------------------
 #pragma once
 
-#include <flat_hash_map.hpp>
 #include <vector>
 
 #include "slang/syntax/AllSyntax.h"
 #include "slang/syntax/SyntaxTree.h"
+#include "slang/util/Hash.h"
 #include "slang/util/TypeTraits.h"
 
 namespace slang {

@@ -10,8 +10,8 @@
 
 #include "slang/codegen/CodeGenerator.h"
 #include "slang/mir/Procedure.h"
-#include "slang/types/AllTypes.h"
 #include "slang/symbols/VariableSymbols.h"
+#include "slang/types/AllTypes.h"
 
 namespace slang {
 

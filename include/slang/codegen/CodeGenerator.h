@@ -7,12 +7,12 @@
 //------------------------------------------------------------------------------
 #pragma once
 
-#include <flat_hash_map.hpp>
 #include <memory>
 #include <string>
 #include <vector>
 
 #include "slang/util/Function.h"
+#include "slang/util/Hash.h"
 #include "slang/util/Util.h"
 
 namespace llvm {

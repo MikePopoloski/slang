@@ -6,6 +6,8 @@
 //------------------------------------------------------------------------------
 #pragma once
 
+#include <flat_hash_map.hpp>
+
 #include "slang/util/Util.h"
 
 extern "C" uint64_t XXH3_64bits(const void* data, size_t len);
@@ -49,11 +51,16 @@ struct HashValueImpl<Tuple, 0> {
 
 } // namespace slang
 
-namespace std {
+namespace slang {
 
-// Specialization of std::hash for all std::tuples. Why isn't this built in?
+// Specialize a user-defined type instead of std::hash
+template<typename T>
+struct Hasher {
+    size_t operator()(const T& t) const { return std::hash<T>()(t); }
+};
+
 template<typename... TT>
-struct hash<std::tuple<TT...>> {
+struct Hasher<std::tuple<TT...>> {
     size_t operator()(const std::tuple<TT...>& tt) const {
         size_t seed = 0;
         slang::detail::HashValueImpl<std::tuple<TT...>>::apply(seed, tt);
@@ -61,4 +68,11 @@ struct hash<std::tuple<TT...>> {
     }
 };
 
-} // namespace std
+template<typename K, typename V, typename H = slang::Hasher<K>, typename E = std::equal_to<K>,
+         typename A = std::allocator<std::pair<K, V>>>
+using flat_hash_map = ska::flat_hash_map<K, V, H, E, A>;
+
+template<typename T, typename H = slang::Hasher<T>, typename E = std::equal_to<T>,
+         typename A = std::allocator<T>>
+using flat_hash_set = ska::flat_hash_set<T, H, E, A>;
+} // namespace slang

@@ -9,7 +9,6 @@
 #include <atomic>
 #include <deque>
 #include <filesystem>
-#include <flat_hash_map.hpp>
 #include <memory>
 #include <mutex>
 #include <set>
@@ -19,6 +18,7 @@
 #include <vector>
 
 #include "slang/text/SourceLocation.h"
+#include "slang/util/Hash.h"
 #include "slang/util/Util.h"
 
 namespace fs = std::filesystem;

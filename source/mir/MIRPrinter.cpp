@@ -8,8 +8,8 @@
 
 #include <fmt/format.h>
 
-#include "slang/types/Type.h"
 #include "slang/symbols/VariableSymbols.h"
+#include "slang/types/Type.h"
 
 namespace slang::mir {
 

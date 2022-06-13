@@ -6,13 +6,13 @@
 //------------------------------------------------------------------------------
 #pragma once
 
-#include <flat_hash_map.hpp>
 #include <memory>
 #include <string>
 #include <typeindex>
 #include <typeinfo>
 
 #include "slang/diagnostics/Diagnostics.h"
+#include "slang/util/Hash.h"
 
 namespace slang {
 
