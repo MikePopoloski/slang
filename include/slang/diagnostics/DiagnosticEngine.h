@@ -12,7 +12,7 @@
 #include <typeinfo>
 
 #include "slang/diagnostics/Diagnostics.h"
-#include "slang/util/FlatHashMap.h"
+#include "slang/util/Hash.h"
 
 namespace slang {
 

@@ -10,7 +10,7 @@
 
 #include "slang/mir/Instr.h"
 #include "slang/util/BumpAllocator.h"
-#include "slang/util/FlatHashMap.h"
+#include "slang/util/Hash.h"
 
 namespace slang {
 

@@ -6,13 +6,12 @@
 //------------------------------------------------------------------------------
 #pragma once
 
-
 #include "slang/compilation/Definition.h"
 #include "slang/symbols/Scope.h"
 #include "slang/symbols/VariableSymbols.h"
 #include "slang/types/Type.h"
-#include "slang/util/FlatHashMap.h"
 #include "slang/util/Function.h"
+#include "slang/util/Hash.h"
 
 namespace slang {
 

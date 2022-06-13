@@ -11,7 +11,7 @@
 #include "slang/binding/EvalContext.h"
 #include "slang/binding/Lookup.h"
 #include "slang/numeric/ConstantValue.h"
-#include "slang/util/FlatHashMap.h"
+#include "slang/util/Hash.h"
 #include "slang/util/Util.h"
 
 namespace slang {

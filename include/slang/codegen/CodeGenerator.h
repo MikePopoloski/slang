@@ -11,8 +11,8 @@
 #include <string>
 #include <vector>
 
-#include "slang/util/FlatHashMap.h"
 #include "slang/util/Function.h"
+#include "slang/util/Hash.h"
 #include "slang/util/Util.h"
 
 namespace llvm {

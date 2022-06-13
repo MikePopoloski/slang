@@ -133,7 +133,7 @@ def createsource(path, diags, groups):
 
 #include <ostream>
 
-#include "slang/util/FlatHashMap.h"
+#include "slang/util/Hash.h"
 
 namespace slang {
 

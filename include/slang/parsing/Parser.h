@@ -6,14 +6,13 @@
 //------------------------------------------------------------------------------
 #pragma once
 
-
 #include "slang/parsing/NumberParser.h"
 #include "slang/parsing/ParserBase.h"
 #include "slang/parsing/Token.h"
 #include "slang/syntax/AllSyntax.h"
 #include "slang/syntax/SyntaxFacts.h"
 #include "slang/util/Bag.h"
-#include "slang/util/FlatHashMap.h"
+#include "slang/util/Hash.h"
 
 namespace slang {
 

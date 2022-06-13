@@ -18,7 +18,7 @@
 #include <vector>
 
 #include "slang/text/SourceLocation.h"
-#include "slang/util/FlatHashMap.h"
+#include "slang/util/Hash.h"
 #include "slang/util/Util.h"
 
 namespace fs = std::filesystem;

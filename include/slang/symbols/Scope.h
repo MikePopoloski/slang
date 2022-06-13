@@ -6,12 +6,11 @@
 //------------------------------------------------------------------------------
 #pragma once
 
-
 #include "slang/binding/Lookup.h"
 #include "slang/diagnostics/Diagnostics.h"
 #include "slang/symbols/SemanticFacts.h"
 #include "slang/symbols/Symbol.h"
-#include "slang/util/FlatHashMap.h"
+#include "slang/util/Hash.h"
 #include "slang/util/Iterator.h"
 #include "slang/util/Util.h"
 

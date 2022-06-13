@@ -6,8 +6,9 @@
 //------------------------------------------------------------------------------
 #pragma once
 
-#include "slang/util/FlatHashMap.h"
 #include <llvm/Support/Alignment.h>
+
+#include "slang/util/Hash.h"
 
 namespace llvm {
 
