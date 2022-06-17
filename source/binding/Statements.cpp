@@ -1595,7 +1595,6 @@ Statement& ForeachLoopStatement::fromSyntax(Compilation& compilation,
 
     // Loop variables were already built in the containing block when it was elaborated,
     // so we just have to find them and associate them with the correct dim ranges here.
-    BindContext iterCtx = context;
     SmallVectorSized<LoopDim, 4> dims;
     const Type* type = arrayRef.type;
     auto range = context.scope->membersOfType<IteratorSymbol>();
@@ -1616,14 +1615,13 @@ Statement& ForeachLoopStatement::fromSyntax(Compilation& compilation,
         ASSERT(itIt->name == loopVar->as<IdentifierNameSyntax>().identifier.valueText());
 
         IteratorSymbol* it = const_cast<IteratorSymbol*>(&*itIt);
-        it->nextIterator = std::exchange(iterCtx.firstIterator, it);
         dims.back().loopVar = it;
         itIt++;
     }
 
     ASSERT(itIt == range.end());
 
-    auto& bodyStmt = Statement::bind(*syntax.statement, iterCtx, stmtCtx);
+    auto& bodyStmt = Statement::bind(*syntax.statement, context, stmtCtx);
     auto result = compilation.emplace<ForeachLoopStatement>(arrayRef, dims.copy(compilation),
                                                             bodyStmt, syntax.sourceRange());
     if (bodyStmt.bad())

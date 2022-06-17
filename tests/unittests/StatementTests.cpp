@@ -1622,3 +1622,28 @@ endmodule
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::MultipleAlwaysAssigns);
 }
+
+TEST_CASE("foreach shadowed variable regression") {
+    auto tree = SyntaxTree::fromText(R"(
+class C #(parameter type foo_t);
+    foo_t arr[];
+
+    function void baz;
+        foreach (arr[i]) begin
+            for (int i = 0; i < 10; i++) begin
+                if (i == 4)
+                    break;
+            end
+        end
+    endfunction
+endclass
+
+module m;
+    C #(int) c;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}

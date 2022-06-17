@@ -28,6 +28,8 @@ const Statement& StatementBlockSymbol::getStatement(const BindContext& parentCon
                                                     Statement::StatementContext& stmtCtx) const {
     if (!stmt) {
         ensureElaborated();
+        if (stmt)
+            return *stmt;
 
         auto syntax = getSyntax();
         if (!syntax || syntax->kind == SyntaxKind::RsRule) {
