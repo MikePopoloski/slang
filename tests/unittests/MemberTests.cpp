@@ -2499,6 +2499,16 @@ module m;
         begin : b @(negedge clk) j <= 0; end
         #3 j <= 2;
     end
+
+endmodule
+
+interface I;
+    logic clk;
+    modport foo (input clk);
+endinterface
+
+module n (I.foo i);
+    always_ff @(posedge i.clk) begin end
 endmodule
 )");
 

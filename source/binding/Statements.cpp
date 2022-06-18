@@ -59,7 +59,7 @@ ER Statement::eval(EvalContext& context) const {
 Statement::StatementContext::~StatementContext() {
     if (!lastEventControl.start()) {
         auto proc = rootBindContext.getProceduralBlock();
-        if (proc && proc->procedureKind == ProceduralBlockKind::AlwaysFF)
+        if (proc && proc->procedureKind == ProceduralBlockKind::AlwaysFF && !proc->getBody().bad())
             rootBindContext.addDiag(diag::AlwaysFFEventControl, proc->location);
     }
 }
