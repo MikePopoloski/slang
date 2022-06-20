@@ -183,13 +183,13 @@ TEST_CASE("Test CommandLine -- env vars") {
     options.ignoreProgramName = true;
     options.expandEnvVars = true;
 
-    putenv((char*)"FOO=abc 123");
+    putenv((char*)"FOO_456=abc 123");
     putenv((char*)"BAR#=some string");
     putenv((char*)"BAZ=987654");
 
     auto args = R"qq(
 $&
-asdf/$FOO/bar "$(BAR#)" ${UNK} ${BAZ} ${
+asdf/$FOO_456/bar "$(BAR#)" ${UNK} ${BAZ} ${
 $)qq"sv;
     CHECK(cmdLine.parse(args, options));
 

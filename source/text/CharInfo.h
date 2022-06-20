@@ -64,6 +64,12 @@ inline bool isAlphaNumeric(char c) {
     return (c >= '0' && c <= '9') || (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');
 }
 
+/// Returns whether the given character is valid in a C language identifier.
+/// That includes all alphanumeric characters and the underscore.
+inline bool isValidCIdChar(char c) {
+    return isAlphaNumeric(c) || c == '_';
+}
+
 /// Returns whether the given character is considered a special logic digit,
 /// which encompasses various ways to say Unknown (X) or High Impedance (Z).
 inline bool isLogicDigit(char c) {

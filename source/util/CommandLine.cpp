@@ -319,10 +319,10 @@ std::string CommandLine::expandVar(const char*& ptr, const char* end) {
         // Don't try to expand, just return the whole thing we collected.
         return "$"s + startDelim + varName;
     }
-    else if (isAlphaNumeric(c)) {
+    else if (isValidCIdChar(c)) {
         std::string varName;
         varName += c;
-        while (ptr != end && isAlphaNumeric(*ptr))
+        while (ptr != end && isValidCIdChar(*ptr))
             varName += *ptr++;
 
         return getEnv(varName);

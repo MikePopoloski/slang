@@ -1103,10 +1103,6 @@ void Compilation::parseParamOverrides(flat_hash_map<string_view, const ConstantV
     }
 }
 
-static bool isValidCIdChar(char c) {
-    return isAlphaNumeric(c) || c == '_';
-}
-
 static bool checkSignaturesMatch(const SubroutineSymbol& a, const SubroutineSymbol& b) {
     if (a.subroutineKind != b.subroutineKind || a.flags != b.flags)
         return false;
