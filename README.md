@@ -18,13 +18,14 @@ Full documentation is available on the website: https://sv-lang.com
 
 ### Getting Started
 
-You can download prebuilt binaries for Windows and Linux for the latest release or the nightly pre-release from the GitHub releases page. You can run the included tool on your code right out of the box; check out the [user manual](https://sv-lang.com/user-manual.html) for more information about how it works.
+Instructions on building slang from source are [here](https://sv-lang.com/building.html).
+
+The slang binary can be on your code right out of the box; check out the [user manual](https://sv-lang.com/user-manual.html) for more information about how it works.
 
 If you're looking to use slang as a library, please read through the [developer guide](https://sv-lang.com/developer-guide.html).
 
-Instructions on building slang from source are [here](https://sv-lang.com/building.html).
-
 ### Try It Out
+
 Experiment with parsing, type checking, and error detection live [on the web](https://sv-lang.com/explore/) (this tool is inspired by Matt Godbolt's excellent [Compiler Explorer](https://godbolt.org/)). It's still pretty rough but useful for exploring the interactive behavior of the toolchain.
 
 ### Contact & Support
