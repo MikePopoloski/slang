@@ -20,7 +20,7 @@ Full documentation is available on the website: https://sv-lang.com
 
 Instructions on building slang from source are [here](https://sv-lang.com/building.html).
 
-The slang binary can be on your code right out of the box; check out the [user manual](https://sv-lang.com/user-manual.html) for more information about how it works.
+The slang binary can be run on your code right out of the box; check out the [user manual](https://sv-lang.com/user-manual.html) for more information about how it works.
 
 If you're looking to use slang as a library, please read through the [developer guide](https://sv-lang.com/developer-guide.html).
 
