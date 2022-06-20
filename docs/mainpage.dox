@@ -20,15 +20,12 @@ simulators, linters, code editors, and refactoring tools.
 
 @section mainpage-getting-started Getting Started
 
-You can download prebuilt binaries for Windows and Linux for the
-[latest release](https://github.com/MikePopoloski/slang/releases/latest) or the
-[nightly pre-release](https://github.com/MikePopoloski/slang/releases/tag/nightly).
-You can run the included tool on your code right out of the box; check out the
+Instructions on building slang from source are here: @ref building
+
+The slang binary can be run on your code right out of the box; check out the
 @ref user-manual for more information about how it works.
 
 If you're looking to use slang as a library, please read through the @ref developer-guide.
-
-Instructions on building slang from source are here: @ref building
 
 @section mainpage-try Try It Out
 
