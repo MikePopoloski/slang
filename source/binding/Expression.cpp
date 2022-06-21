@@ -385,10 +385,10 @@ bool Expression::requireLValue(const BindContext& context, SourceLocation locati
             if (!concat.type->isIntegral())
                 break;
 
-            ASSERT(!longestStaticPrefix);
+            ASSERT(!longestStaticPrefix || flags.has(AssignFlags::SlicedPort));
             for (auto op : concat.operands()) {
-                if (!op->requireLValue(context, location, flags | AssignFlags::InConcat,
-                                       longestStaticPrefix, customEvalContext)) {
+                if (!op->requireLValue(context, location, flags | AssignFlags::InConcat, nullptr,
+                                       customEvalContext)) {
                     return false;
                 }
             }

@@ -420,6 +420,9 @@ void ValueSymbol::addDriverImpl(const Scope& scope, const Driver& driver) const 
         // - Don't check for "Other" drivers (procedural force / release, etc)
         // - Otherwise, if is this a static var or uwire net:
         //      - Check if a mix of continuous and procedural assignments
+        //      - Don't check if both drivers are sliced ports from an array
+        //        of instances. We already sliced these up correctly when the
+        //        connections were made and the overlap logic here won't work correctly.
         //      - Check if multiple continuous assignments
         //      - If both procedural, check that there aren't multiple
         //        always_comb / always_ff procedures.
@@ -434,7 +437,10 @@ void ValueSymbol::addDriverImpl(const Scope& scope, const Driver& driver) const 
         else if (checkOverlap && driver.kind != DriverKind::Other &&
                  curr->kind != DriverKind::Other) {
             if (driver.kind == DriverKind::Continuous || curr->kind == DriverKind::Continuous) {
-                shouldCheck = true;
+                if (!driver.flags.has(AssignFlags::SlicedPort) ||
+                    !curr->flags.has(AssignFlags::SlicedPort)) {
+                    shouldCheck = true;
+                }
             }
             else if (curr->containingSymbol != driver.containingSymbol &&
                      curr->containingSymbol->kind == SymbolKind::ProceduralBlock &&

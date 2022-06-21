@@ -232,7 +232,7 @@ bool Expression::isImplicitlyAssignableTo(Compilation& compilation, const Type& 
 
 Expression& Expression::convertAssignment(const BindContext& context, const Type& type,
                                           Expression& expr, SourceLocation location,
-                                          Expression** lhsExpr) {
+                                          Expression** lhsExpr, bitmask<AssignFlags>* assignFlags) {
     if (expr.bad())
         return expr;
 
@@ -264,6 +264,10 @@ Expression& Expression::convertAssignment(const BindContext& context, const Type
                 if (conn) {
                     selfDetermined(context, conn);
                     *lhsExpr = conn;
+
+                    ASSERT(assignFlags);
+                    if (assignFlags)
+                        *assignFlags |= AssignFlags::SlicedPort;
 
                     selfDetermined(context, result);
                     return *result;
@@ -301,8 +305,11 @@ Expression& Expression::convertAssignment(const BindContext& context, const Type
         else if (expr.kind == ExpressionKind::OpenRange) {
             // Convert each side of the range and return that as a new range.
             auto& ore = expr.as<OpenRangeExpression>();
-            auto& left = convertAssignment(context, type, ore.left(), location, lhsExpr);
-            auto& right = convertAssignment(context, type, ore.right(), location, lhsExpr);
+            auto& left =
+                convertAssignment(context, type, ore.left(), location, lhsExpr, assignFlags);
+            auto& right =
+                convertAssignment(context, type, ore.right(), location, lhsExpr, assignFlags);
+
             result = comp.emplace<OpenRangeExpression>(*expr.type, left, right, expr.sourceRange);
             result->syntax = expr.syntax;
             return *result;
@@ -486,7 +493,7 @@ Expression& AssignmentExpression::fromComponents(
     }
 
     result->right_ =
-        &convertAssignment(context, *lhs.type, *result->right_, assignLoc, &result->left_);
+        &convertAssignment(context, *lhs.type, *result->right_, assignLoc, &result->left_, &flags);
     if (result->right_->bad())
         return badExpr(compilation, result);
 

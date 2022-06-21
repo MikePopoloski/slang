@@ -2581,3 +2581,38 @@ source:14:17: error: variable 'foo' driven by always_comb procedure cannot be wr
 note: from 'm.n2' and 'm.n1'
 )");
 }
+
+TEST_CASE("lvalue driver assertion regression GH #551") {
+    auto tree = SyntaxTree::fromText(R"(
+module M #(parameter int W=1) (
+    input  logic         clk,
+    input  logic         rst,
+    input  logic [W-1:0] d,
+    output logic [W-1:0] o
+);
+endmodule
+
+module M2 #(
+    parameter int W = 2
+) (
+    input logic clk,
+    input logic rst
+);
+    localparam int W_MAX = $clog2(W);
+
+    logic [W_MAX:0] d, o;
+    logic x_d, x_o;
+
+    M m [W_MAX+1:0] (
+        .clk (clk),
+        .rst (rst),
+        .d   ({x_d, d}),
+        .o   ({x_o, o})
+    );
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}

@@ -343,7 +343,8 @@ protected:
 
     static Expression& convertAssignment(const BindContext& context, const Type& type,
                                          Expression& expr, SourceLocation location,
-                                         Expression** lhsExpr = nullptr);
+                                         Expression** lhsExpr = nullptr,
+                                         bitmask<AssignFlags>* assignFlags = nullptr);
 
     static Expression& badExpr(Compilation& compilation, const Expression* expr);
 
