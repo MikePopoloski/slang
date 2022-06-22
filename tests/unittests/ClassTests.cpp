@@ -2566,3 +2566,23 @@ endfunction
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::Redefinition);
 }
+
+TEST_CASE("Class method driver crash regress GH #552") {
+    auto tree = SyntaxTree::fromText(R"(
+class B;
+    int v[$];
+endclass
+
+class C;
+    virtual function B get();
+    endfunction
+    function f();
+        get().v.delete();
+    endfunction
+endclass
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}

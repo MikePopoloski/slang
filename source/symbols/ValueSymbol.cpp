@@ -56,6 +56,7 @@ ValueSymbol::Driver& ValueSymbol::Driver::create(EvalContext& evalContext, Drive
         switch (expr->kind) {
             case ExpressionKind::NamedValue:
             case ExpressionKind::HierarchicalValue:
+            case ExpressionKind::Call:
                 expr = nullptr;
                 break;
             case ExpressionKind::Conversion:
