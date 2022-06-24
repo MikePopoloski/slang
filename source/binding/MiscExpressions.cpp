@@ -484,7 +484,14 @@ ConstantValue LValueReferenceExpression::evalImpl(EvalContext& context) const {
 }
 
 Expression& ClockingEventExpression::fromSyntax(const ClockingPropertyExprSyntax& syntax,
-                                                const BindContext& context) {
+                                                const BindContext& argContext) {
+    // Clocking event expressions are only used in special system function calls,
+    // where they don't actually pass any time but instead tell the function which
+    // clock to use. We don't want usage inside of an always_comb to report an error
+    // about passing time, so clear out the context's procedure to avoid that.
+    BindContext context(argContext);
+    context.clearInstanceAndProc();
+
     auto& comp = context.getCompilation();
     auto& timing = TimingControl::bind(*syntax.event, context);
 
