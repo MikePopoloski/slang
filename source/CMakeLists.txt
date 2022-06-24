@@ -71,7 +71,10 @@ add_dependencies(slangcore gen_version)
 
 if(NOT CMAKE_CXX_COMPILER_ID MATCHES "MSVC" AND NOT APPLE)
     # Link against C++17 filesystem
-    target_link_libraries(slangcore PUBLIC stdc++fs)
+    if ((CMAKE_CXX_COMPILER_ID MATCHES "GNU" AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 9.1) OR
+        (CMAKE_CXX_COMPILER_ID MATCHES "Clang" AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 9.0))
+        target_link_libraries(slangcore PUBLIC stdc++fs)
+    endif()
 endif()
 
 find_package(Threads)
