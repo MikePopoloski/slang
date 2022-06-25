@@ -385,7 +385,7 @@ bool Preprocessor::expandMacro(MacroDef macro, MacroExpansion& expansion,
     bool inDefineDirective = false;
 
     auto handleToken = [&](Token token) {
-        if (inDefineDirective && !isOnSameLine(token))
+        if (inDefineDirective && !token.isOnSameLine())
             inDefineDirective = false;
 
         if (token.kind != TokenKind::Identifier && !LF::isKeyword(token.kind) &&
@@ -469,7 +469,7 @@ bool Preprocessor::expandMacro(MacroDef macro, MacroExpansion& expansion,
             // Inside a define directive we need to insert line continuations
             // any time an expanded token will end up on a new line.
             auto appendBody = [&](Token token) {
-                if (!isOnSameLine(token)) {
+                if (!token.isOnSameLine()) {
                     Token lc(alloc, TokenKind::LineContinuation, token.trivia(), "\\"sv,
                              token.location());
                     expansion.append(lc, argLoc, firstLoc, argRange,
@@ -754,7 +754,7 @@ span<Token> Preprocessor::MacroParser::parseTokenList(bool allowNewlines) {
     SmallVectorSized<TokenKind, 16> delimPairStack;
     while (true) {
         auto kind = peek().kind;
-        if (kind == TokenKind::EndOfFile || (!allowNewlines && !isOnSameLine(peek()))) {
+        if (kind == TokenKind::EndOfFile || (!allowNewlines && !peek().isOnSameLine())) {
             if (!delimPairStack.empty()) {
                 pp.addDiag(diag::UnbalancedMacroArgDims, tokens.back().location())
                     << LF::getTokenKindText(delimPairStack.back());

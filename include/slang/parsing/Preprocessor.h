@@ -238,7 +238,6 @@ private:
     bool applyMacroOps(span<Token const> tokens, SmallVector<Token>& dest);
     void createBuiltInMacro(string_view name, int value, string_view valueStr = {});
 
-    static bool isOnSameLine(Token token);
     static bool isSameMacro(const DefineDirectiveSyntax& left, const DefineDirectiveSyntax& right);
 
     // functions to advance the underlying token stream

@@ -240,6 +240,7 @@ warning empty-pattern EmptyAssignmentPattern "empty assignment patterns are disa
 warning nonstandard-foreach NonstandardForeach "non-standard foreach loop variable list"
 warning lifetime-prototype LifetimeForPrototype "lifetime specifier is not allowed on prototype declaration"
 warning nonstandard-dist NonstandardDist "use of parentheses around 'dist' expression is non-standard"
+warning empty-body EmptyBody "{} has empty body (put the semicolon on a separate line to silence this warning)"
 note NoteToMatchThis "to match this '{}'"
 
 subsystem Declarations

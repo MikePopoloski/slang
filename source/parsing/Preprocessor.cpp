@@ -331,7 +331,7 @@ Trivia Preprocessor::handleIncludeDirective(Token directive) {
     // A (valid) macro-expanded include filename will be lexed as either
     // a StringLiteral or the token sequence '<' ... '>'
     Token fileName = peek();
-    if (!isOnSameLine(fileName)) {
+    if (!fileName.isOnSameLine()) {
         fileName = expect(TokenKind::IncludeFileName);
     }
     else if (fileName.kind == TokenKind::LessThan) {
@@ -341,7 +341,7 @@ Trivia Preprocessor::handleIncludeDirective(Token directive) {
 
         while (true) {
             Token token = peek();
-            if (token.kind == TokenKind::EndOfFile || !isOnSameLine(token)) {
+            if (token.kind == TokenKind::EndOfFile || !token.isOnSameLine()) {
                 fileName = expect(TokenKind::IncludeFileName);
                 if (!tokens.empty()) {
                     SmallVectorSized<Trivia, 4> trivia;
@@ -670,7 +670,7 @@ bool Preprocessor::expectTimeScaleSpecifier(Token& token, TimeScaleValue& value)
 
         TimeUnit unit;
         auto suffix = peek();
-        if (suffix.kind != TokenKind::Identifier || !isOnSameLine(suffix) ||
+        if (suffix.kind != TokenKind::Identifier || !suffix.isOnSameLine() ||
             !suffixToTimeUnit(suffix.rawText(), unit)) {
 
             addDiag(diag::ExpectedTimeLiteral, token.range());
@@ -841,7 +841,7 @@ Trivia Preprocessor::handleEndKeywordsDirective(Token directive) {
 }
 
 Trivia Preprocessor::handlePragmaDirective(Token directive) {
-    if (peek().kind != TokenKind::Identifier || !isOnSameLine(peek())) {
+    if (peek().kind != TokenKind::Identifier || !peek().isOnSameLine()) {
         addDiag(diag::ExpectedPragmaName, directive.location());
         return createSimpleDirective(directive);
     }
@@ -852,7 +852,7 @@ Trivia Preprocessor::handlePragmaDirective(Token directive) {
     bool wantComma = false;
     bool ok = true;
 
-    while (token.kind != TokenKind::EndOfFile && isOnSameLine(token)) {
+    while (token.kind != TokenKind::EndOfFile && token.isOnSameLine()) {
         if (wantComma) {
             args.append(expect(TokenKind::Comma));
             wantComma = false;
@@ -942,7 +942,7 @@ std::pair<PragmaExpressionSyntax*, bool> Preprocessor::parsePragmaValue() {
     Token lastToken = openParen;
 
     token = peek();
-    while (token.kind != TokenKind::EndOfFile && isOnSameLine(token)) {
+    while (token.kind != TokenKind::EndOfFile && token.isOnSameLine()) {
         if (wantComma) {
             if (token.kind == TokenKind::CloseParenthesis) {
                 ok = true;
@@ -969,7 +969,7 @@ std::pair<PragmaExpressionSyntax*, bool> Preprocessor::parsePragmaValue() {
 
     token = peek();
     Token closeParen;
-    if (token.kind == TokenKind::CloseParenthesis && isOnSameLine(token)) {
+    if (token.kind == TokenKind::CloseParenthesis && token.isOnSameLine()) {
         closeParen = consume();
     }
     else {
@@ -982,7 +982,7 @@ std::pair<PragmaExpressionSyntax*, bool> Preprocessor::parsePragmaValue() {
 }
 
 std::pair<PragmaExpressionSyntax*, bool> Preprocessor::checkNextPragmaToken() {
-    if (!isOnSameLine(peek())) {
+    if (!peek().isOnSameLine()) {
         auto loc = lastConsumed.location() + lastConsumed.rawText().length();
         addDiag(diag::ExpectedPragmaExpression, loc);
 
@@ -1215,32 +1215,6 @@ Diagnostic& Preprocessor::addDiag(DiagCode code, SourceLocation location) {
 
 Diagnostic& Preprocessor::addDiag(DiagCode code, SourceRange range) {
     return diagnostics.add(code, range);
-}
-
-bool Preprocessor::isOnSameLine(Token token) {
-    for (auto& t : token.trivia()) {
-        switch (t.kind) {
-            case TriviaKind::LineComment:
-            case TriviaKind::EndOfLine:
-            case TriviaKind::SkippedSyntax:
-            case TriviaKind::SkippedTokens:
-            case TriviaKind::DisabledText:
-                return false;
-            case TriviaKind::Directive:
-                if (t.syntax()->kind != SyntaxKind::MacroUsage)
-                    return false;
-                break;
-            case TriviaKind::BlockComment:
-                if (size_t offset = t.getRawText().find_first_of("\r\n");
-                    offset != std::string_view::npos) {
-                    return false;
-                }
-                break;
-            default:
-                break;
-        }
-    }
-    return true;
 }
 
 } // namespace slang

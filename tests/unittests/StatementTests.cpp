@@ -1647,3 +1647,38 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Empty body warnings") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    bit done = 0;
+    int arr[];
+    initial begin
+        if (1);
+        if (1); else;
+
+        for (int i = 0; i < 10; i++); begin end
+
+        repeat (1);
+        forever;
+
+        while (done == 0);
+        begin
+            done = 1;
+        end
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 6);
+    CHECK(diags[0].code == diag::EmptyBody);
+    CHECK(diags[1].code == diag::EmptyBody);
+    CHECK(diags[2].code == diag::EmptyBody);
+    CHECK(diags[3].code == diag::EmptyBody);
+    CHECK(diags[4].code == diag::EmptyBody);
+    CHECK(diags[5].code == diag::EmptyBody);
+}

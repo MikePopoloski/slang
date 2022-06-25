@@ -145,6 +145,18 @@ class C;
 endclass
 ```
 
+-Wempty-body
+An empty statement body for a loop or conditional statement could be confusing or misleading.
+If intended, move the semicolon to a separate line to suppress the warning.
+```
+module m;
+    initial begin
+        if (1); begin
+        end
+    end
+endmodule
+```
+
 -Wwarning-task
 A $warning elaboration task was encountered. Its message is printed by this diagnostic.
 ```

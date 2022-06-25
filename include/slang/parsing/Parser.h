@@ -466,6 +466,9 @@ private:
     // Report errors for invalid members in specific kinds of blocks.
     void checkMemberAllowed(const SyntaxNode& member, SyntaxKind parentKind);
 
+    // Report warnings for misleading empty loop / conditional bodies.
+    void checkEmptyBody(const SyntaxNode& syntax, Token prevToken, string_view syntaxName);
+
     // ---- Member variables ----
 
     // The factory used to create new syntax nodes.

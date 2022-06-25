@@ -165,6 +165,10 @@ public:
     NumericTokenFlags numericFlags() const;
     SyntaxKind directiveKind() const;
 
+    /// Returns true if this token is on the same line as the token before it.
+    /// This is detected by examining the leading trivia of this token for newlines.
+    bool isOnSameLine() const;
+
     bool valid() const { return info != nullptr; }
     explicit operator bool() const { return valid(); }
 

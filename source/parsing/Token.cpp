@@ -314,6 +314,32 @@ SyntaxKind Token::directiveKind() const {
     return info->directiveKind();
 }
 
+bool Token::isOnSameLine() const {
+    for (auto& t : trivia()) {
+        switch (t.kind) {
+            case TriviaKind::LineComment:
+            case TriviaKind::EndOfLine:
+            case TriviaKind::SkippedSyntax:
+            case TriviaKind::SkippedTokens:
+            case TriviaKind::DisabledText:
+                return false;
+            case TriviaKind::Directive:
+                if (t.syntax()->kind != SyntaxKind::MacroUsage)
+                    return false;
+                break;
+            case TriviaKind::BlockComment:
+                if (size_t offset = t.getRawText().find_first_of("\r\n");
+                    offset != std::string_view::npos) {
+                    return false;
+                }
+                break;
+            default:
+                break;
+        }
+    }
+    return true;
+}
+
 Token Token::withTrivia(BumpAllocator& alloc, span<Trivia const> trivia) const {
     return clone(alloc, trivia, rawText(), location());
 }

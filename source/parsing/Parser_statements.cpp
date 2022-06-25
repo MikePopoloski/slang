@@ -50,7 +50,9 @@ StatementSyntax& Parser::parseStatement(bool allowEmpty, bool allowSuperNew) {
             return parseConditionalStatement(label, attributes, Token());
         case TokenKind::ForeverKeyword: {
             auto forever = consume();
-            return factory.foreverStatement(label, attributes, forever, parseStatement());
+            auto& body = parseStatement();
+            checkEmptyBody(body, forever, "forever loop"sv);
+            return factory.foreverStatement(label, attributes, forever, body);
         }
         case TokenKind::RepeatKeyword:
         case TokenKind::WhileKeyword:
@@ -180,6 +182,11 @@ ConditionalStatementSyntax& Parser::parseConditionalStatement(NamedLabelSyntax* 
         parseConditionalPredicate(parseExpression(), TokenKind::CloseParenthesis, closeParen);
     auto& statement = parseStatement();
     auto elseClause = parseElseClause();
+
+    if (elseClause)
+        checkEmptyBody(*elseClause->clause, elseClause->elseKeyword, "else clause"sv);
+    else
+        checkEmptyBody(statement, closeParen, "if statement"sv);
 
     return factory.conditionalStatement(label, attributes, uniqueOrPriority, ifKeyword, openParen,
                                         predicate, closeParen, statement, elseClause);
@@ -311,6 +318,8 @@ LoopStatementSyntax& Parser::parseLoopStatement(NamedLabelSyntax* label, AttrLis
     auto& expr = parseExpression();
     auto closeParen = expect(TokenKind::CloseParenthesis);
     auto& statement = parseStatement();
+    checkEmptyBody(statement, closeParen,
+                   keyword.kind == TokenKind::WhileKeyword ? "while loop"sv : "repeat loop"sv);
     return factory.loopStatement(label, attributes, keyword, openParen, expr, closeParen,
                                  statement);
 }
@@ -385,9 +394,13 @@ ForLoopStatementSyntax& Parser::parseForLoopStatement(NamedLabelSyntax* label,
         steps, TokenKind::CloseParenthesis, TokenKind::Comma, closeParen, RequireItems::False,
         diag::ExpectedExpression, [this] { return &parseExpression(); });
 
+    auto& body = parseStatement();
+
+    checkEmptyBody(body, closeParen, "for loop"sv);
+
     return factory.forLoopStatement(label, attributes, forKeyword, openParen,
                                     initializers.copy(alloc), semi1, stopExpr, semi2,
-                                    steps.copy(alloc), closeParen, parseStatement());
+                                    steps.copy(alloc), closeParen, body);
 }
 
 NameSyntax& Parser::parseForeachLoopVariable() {
@@ -978,6 +991,19 @@ StatementSyntax& Parser::parseRandSequenceStatement(NamedLabelSyntax* label, Att
 StatementSyntax& Parser::parseCheckerStatement(NamedLabelSyntax* label, AttrList attributes) {
     auto& instance = parseCheckerInstantiation({});
     return factory.checkerInstanceStatement(label, attributes, instance);
+}
+
+void Parser::checkEmptyBody(const SyntaxNode& syntax, Token prevToken, string_view syntaxName) {
+    if (syntax.kind != SyntaxKind::EmptyStatement || prevToken.isMissing())
+        return;
+
+    auto& ess = syntax.as<EmptyStatementSyntax>();
+    if (ess.label || !ess.attributes.empty() || ess.semicolon.isMissing() ||
+        !ess.semicolon.isOnSameLine()) {
+        return;
+    }
+
+    addDiag(diag::EmptyBody, ess.semicolon.location()) << syntaxName;
 }
 
 } // namespace slang

@@ -1,7 +1,7 @@
 #include "Test.h"
 
 TEST_CASE("If statement") {
-    auto& text = "if (foo && bar &&& baz) ; else ;";
+    auto& text = "if (foo && bar &&& baz) ; else \n;";
     auto& stmt = parseStatement(text);
 
     REQUIRE(stmt.kind == SyntaxKind::ConditionalStatement);
@@ -47,7 +47,7 @@ TEST_CASE("Case statement (range)") {
 }
 
 TEST_CASE("Loop statements") {
-    auto& text = "while (foo) ;";
+    auto& text = "while (foo) \n;";
     auto& stmt = parseStatement(text);
 
     REQUIRE(stmt.kind == SyntaxKind::LoopStatement);
@@ -74,7 +74,7 @@ TEST_CASE("Foreach statement") {
 }
 
 TEST_CASE("Forever statement") {
-    auto& text = "forever ;";
+    auto& text = "forever \n;";
     auto& stmt = parseStatement(text);
 
     REQUIRE(stmt.kind == SyntaxKind::ForeverStatement);
