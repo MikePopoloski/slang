@@ -2616,3 +2616,28 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Subroutine referring to itself in return type") {
+    auto tree = SyntaxTree::fromText(R"(
+function foo foo;
+endfunction
+
+class A;
+    extern function bar bar;
+endclass
+
+function bar A::bar;
+endfunction
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 5);
+    CHECK(diags[0].code == diag::NotAType);
+    CHECK(diags[1].code == diag::RecursiveDefinition);
+    CHECK(diags[2].code == diag::RecursiveDefinition);
+    CHECK(diags[3].code == diag::NotAType);
+    CHECK(diags[4].code == diag::UndeclaredIdentifier);
+}

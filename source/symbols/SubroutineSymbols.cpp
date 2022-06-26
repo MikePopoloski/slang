@@ -807,6 +807,8 @@ const SubroutineSymbol* MethodPrototypeSymbol::getSubroutine() const {
     if (subroutine)
         return *subroutine;
 
+    subroutine = nullptr;
+
     ASSERT(getParentScope() && getParentScope()->asSymbol().getParentScope());
     auto& nearScope = *getParentScope();
     auto& parentSym = nearScope.asSymbol();
@@ -864,7 +866,6 @@ const SubroutineSymbol* MethodPrototypeSymbol::getSubroutine() const {
             auto& diag =
                 outerScope.addDiag(diag::BodyForPure, syntax->prototype->name->sourceRange());
             diag.addNote(diag::NoteDeclarationHere, location);
-            subroutine = nullptr;
         }
         else {
             // Create a stub subroutine that we can return for callers to reference.
@@ -876,7 +877,6 @@ const SubroutineSymbol* MethodPrototypeSymbol::getSubroutine() const {
     // Otherwise, there must be a body for any declared prototype.
     if (!syntax) {
         outerScope.addDiag(diag::NoMemberImplFound, location) << name;
-        subroutine = nullptr;
         return nullptr;
     }
 

@@ -508,6 +508,7 @@ void Scope::addMembers(const SyntaxNode& syntax) {
         case SyntaxKind::ExternModuleDecl:
         case SyntaxKind::ExternUdpDecl:
         case SyntaxKind::ExternInterfaceMethod:
+        case SyntaxKind::WildcardPortList:
             addDiag(diag::NotYetSupported, syntax.sourceRange());
             break;
         default:

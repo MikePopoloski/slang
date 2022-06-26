@@ -1425,6 +1425,15 @@ bool Lookup::findAssertionLocalVar(const BindContext& context, const NameSyntax&
 void Lookup::unqualifiedImpl(const Scope& scope, string_view name, LookupLocation location,
                              optional<SourceRange> sourceRange, bitmask<LookupFlags> flags,
                              SymbolIndex outOfBlockIndex, LookupResult& result) {
+    auto reportRecursiveError = [&](const Symbol& symbol) {
+        if (sourceRange) {
+            auto& diag = result.addDiag(scope, diag::RecursiveDefinition, *sourceRange);
+            diag << name;
+            diag.addNote(diag::NoteDeclarationHere, symbol.location);
+        }
+        result.found = nullptr;
+    };
+
     // Try a simple name lookup to see if we find anything.
     auto& nameMap = scope.getNameMap();
     const Symbol* symbol = nullptr;
@@ -1451,16 +1460,34 @@ void Lookup::unqualifiedImpl(const Scope& scope, string_view name, LookupLocatio
                     case SymbolKind::GenericClassDef:
                         forward = symbol->as<GenericClassDefSymbol>().getFirstForwardDecl();
                         break;
-                    case SymbolKind::Subroutine:
+                    case SymbolKind::Subroutine: {
                         // Subroutines can be referenced before they are declared if they
                         // are tasks or return void (tasks are always set to have a void
                         // return type internally so we only need one check here).
-                        locationGood = symbol->as<SubroutineSymbol>().getReturnType().isVoid();
+                        //
+                        // It's important to check that we're not in the middle of evaluating
+                        // the return type before we try to access that return type or
+                        // we'll hard fail.
+                        auto& sub = symbol->as<SubroutineSymbol>();
+                        if (sub.declaredReturnType.isEvaluating()) {
+                            reportRecursiveError(*symbol);
+                            return;
+                        }
+
+                        locationGood = sub.getReturnType().isVoid();
                         break;
-                    case SymbolKind::MethodPrototype:
+                    }
+                    case SymbolKind::MethodPrototype: {
                         // Same as above.
-                        locationGood = symbol->as<MethodPrototypeSymbol>().getReturnType().isVoid();
+                        auto& sub = symbol->as<MethodPrototypeSymbol>();
+                        if (sub.declaredReturnType.isEvaluating()) {
+                            reportRecursiveError(*symbol);
+                            return;
+                        }
+
+                        locationGood = sub.getReturnType().isVoid();
                         break;
+                    }
                     case SymbolKind::Sequence:
                     case SymbolKind::Property:
                         // Sequences and properties can always be referenced before declaration.
@@ -1509,15 +1536,9 @@ void Lookup::unqualifiedImpl(const Scope& scope, string_view name, LookupLocatio
             // like a parameter and a function, so detect and report the error here to avoid a
             // stack overflow.
             if (result.found) {
-                const DeclaredType* declaredType = result.found->getDeclaredType();
-                if (declaredType && declaredType->isEvaluating()) {
-                    if (sourceRange) {
-                        auto& diag = result.addDiag(scope, diag::RecursiveDefinition, *sourceRange);
-                        diag << name;
-                        diag.addNote(diag::NoteDeclarationHere, result.found->location);
-                    }
-                    result.found = nullptr;
-                }
+                auto declaredType = result.found->getDeclaredType();
+                if (declaredType && declaredType->isEvaluating())
+                    reportRecursiveError(*result.found);
             }
 
             return;
