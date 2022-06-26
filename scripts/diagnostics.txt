@@ -885,7 +885,7 @@ group default = { real-underflow real-overflow vector-overflow int-overflow unco
                   unknown-escape-code missing-top warning-task unsized-concat finish-num implicit-conv
                   nonblocking-final constraint-missing missing-format dpi-spec enum-range udp-port-empty
                   lifetime-prototype nonstandard-sys-func nonstandard-foreach nonstandard-dist net-inconsistent
-                  port-coercion }
+                  port-coercion empty-body }
 
 group extra = { empty-member empty-stmt dup-import pointless-void-cast case-gen-none case-gen-dup
                 unused-result format-real ignored-slice task-ignored width-trunc dup-attr }
