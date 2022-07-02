@@ -2676,3 +2676,51 @@ endmodule
     CHECK(diags[1].code == diag::InOutVarPortConn);
     CHECK(diags[2].code == diag::InputPortAssign);
 }
+
+TEST_CASE("Invalid modport clocking block") {
+    auto tree = SyntaxTree::fromText(R"(
+interface I;
+    int j;
+    modport m (clocking j);
+endinterface
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::NotAClockingBlock);
+}
+
+TEST_CASE("Explicit modport expressions") {
+    auto tree = SyntaxTree::fromText(R"(
+interface I;
+    int j, l;
+    wire w;
+    modport m (input .k({j, l}), output .o({l, j}), inout .p(j),
+               ref .q(w), .r(foo), .s());
+endinterface
+
+module n (I.m m);
+    longint i = m.k;
+    assign m.o = i;
+    int q = m.s;
+endmodule
+
+module top;
+    I i();
+    n n1(i);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 4);
+    CHECK(diags[0].code == diag::InOutVarPortConn);
+    CHECK(diags[1].code == diag::InvalidRefArg);
+    CHECK(diags[2].code == diag::UndeclaredIdentifier);
+    CHECK(diags[3].code == diag::BadAssignment);
+}

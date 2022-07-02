@@ -196,6 +196,7 @@ ModportPortSymbol& ModportPortSymbol::fromSyntax(const BindContext& context,
 
         switch (direction) {
             case ArgumentDirection::In:
+                // unreachable
                 break;
             case ArgumentDirection::Out:
                 expr.requireLValue(checkCtx, loc, AssignFlags::ModportConn);
@@ -214,10 +215,58 @@ ModportPortSymbol& ModportPortSymbol::fromSyntax(const BindContext& context,
     return *result;
 }
 
+ModportPortSymbol& ModportPortSymbol::fromSyntax(const BindContext& parentContext,
+                                                 ArgumentDirection direction,
+                                                 const ModportExplicitPortSyntax& syntax) {
+    BindContext context = parentContext.resetFlags(BindFlags::NonProcedural);
+    auto& comp = context.getCompilation();
+    auto name = syntax.name;
+    auto result = comp.emplace<ModportPortSymbol>(name.valueText(), name.location(), direction);
+    result->setSyntax(syntax);
+
+    if (!syntax.expr) {
+        result->setType(comp.getVoidType());
+        return *result;
+    }
+
+    BindFlags extraFlags = BindFlags::None;
+    if (direction == ArgumentDirection::Out || direction == ArgumentDirection::InOut)
+        extraFlags = BindFlags::LValue;
+
+    auto& expr = Expression::bind(*syntax.expr, context, extraFlags);
+    result->explicitConnection = &expr;
+    if (expr.bad()) {
+        result->setType(comp.getErrorType());
+        return *result;
+    }
+
+    result->setType(*expr.type);
+
+    switch (direction) {
+        case ArgumentDirection::In:
+            break;
+        case ArgumentDirection::Out:
+            expr.requireLValue(context, result->location, AssignFlags::ModportConn);
+            break;
+        case ArgumentDirection::InOut:
+            expr.requireLValue(context, result->location,
+                               AssignFlags::ModportConn | AssignFlags::InOutPort);
+            break;
+        case ArgumentDirection::Ref:
+            if (!expr.canConnectToRefArg(/* isConstRef */ false))
+                context.addDiag(diag::InvalidRefArg, result->location) << expr.sourceRange;
+            break;
+    }
+
+    return *result;
+}
+
 void ModportPortSymbol::serializeTo(ASTSerializer& serializer) const {
     serializer.write("direction", toString(direction));
     if (internalSymbol)
         serializer.writeLink("internalSymbol", *internalSymbol);
+    if (explicitConnection)
+        serializer.write("explicitConnection", *explicitConnection);
 }
 
 ModportClockingSymbol::ModportClockingSymbol(string_view name, SourceLocation loc) :
@@ -277,9 +326,14 @@ void ModportSymbol::fromSyntax(const BindContext& context, const ModportDeclarat
                                 modport->addMember(mpp);
                                 break;
                             }
-                            case SyntaxKind::ModportExplicitPort:
-                                context.addDiag(diag::NotYetSupported, simplePort->sourceRange());
+                            case SyntaxKind::ModportExplicitPort: {
+                                auto& mpp = ModportPortSymbol::fromSyntax(
+                                    context, direction,
+                                    simplePort->as<ModportExplicitPortSyntax>());
+                                mpp.setAttributes(*modport, portList.attributes);
+                                modport->addMember(mpp);
                                 break;
+                            }
                             default:
                                 THROW_UNREACHABLE;
                         }

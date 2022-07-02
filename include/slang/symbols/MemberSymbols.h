@@ -100,6 +100,7 @@ private:
     mutable optional<const PackageSymbol*> package;
 };
 
+struct ModportExplicitPortSyntax;
 struct ModportNamedPortSyntax;
 
 /// Represents a single port specifier in a modport declaration.
@@ -113,12 +114,19 @@ public:
     /// this set to nullptr.
     const Symbol* internalSymbol = nullptr;
 
+    /// An optional explicit expression that defines how the port connects
+    /// to members internal to the instance.
+    const Expression* explicitConnection = nullptr;
+
     ModportPortSymbol(string_view name, SourceLocation loc, ArgumentDirection direction);
 
     void serializeTo(ASTSerializer& serializer) const;
 
     static ModportPortSymbol& fromSyntax(const BindContext& context, ArgumentDirection direction,
                                          const ModportNamedPortSyntax& syntax);
+
+    static ModportPortSymbol& fromSyntax(const BindContext& context, ArgumentDirection direction,
+                                         const ModportExplicitPortSyntax& syntax);
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::ModportPort; }
 };
