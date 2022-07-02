@@ -176,13 +176,39 @@ ModportPortSymbol& ModportPortSymbol::fromSyntax(const BindContext& context,
         }
     }
 
-    if (result->internalSymbol) {
-        auto sourceType = result->internalSymbol->getDeclaredType();
-        ASSERT(sourceType);
-        result->getDeclaredType()->setLink(*sourceType);
-    }
-    else {
+    if (!result->internalSymbol) {
         result->setType(comp.getErrorType());
+        return *result;
+    }
+
+    auto sourceType = result->internalSymbol->getDeclaredType();
+    ASSERT(sourceType);
+    result->getDeclaredType()->setLink(*sourceType);
+
+    // Perform checking on the connected symbol to make sure it's allowed
+    // given the modport's direction.
+    if (direction != ArgumentDirection::In) {
+        BindContext checkCtx = context.resetFlags(BindFlags::NonProcedural);
+
+        auto loc = result->location;
+        auto& expr = ValueExpressionBase::fromSymbol(checkCtx, *result->internalSymbol, false,
+                                                     { loc, loc + result->name.length() });
+
+        switch (direction) {
+            case ArgumentDirection::In:
+                break;
+            case ArgumentDirection::Out:
+                expr.requireLValue(checkCtx, loc, AssignFlags::ModportConn);
+                break;
+            case ArgumentDirection::InOut:
+                expr.requireLValue(checkCtx, loc,
+                                   AssignFlags::ModportConn | AssignFlags::InOutPort);
+                break;
+            case ArgumentDirection::Ref:
+                if (!expr.canConnectToRefArg(/* isConstRef */ false))
+                    checkCtx.addDiag(diag::InvalidRefArg, loc) << expr.sourceRange;
+                break;
+        }
     }
 
     return *result;

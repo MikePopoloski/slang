@@ -123,9 +123,12 @@ enum class AssignFlags {
 
     /// The assignment is for an output port that was sliced due to an array of instances
     /// being connected to an array argument.
-    SlicedPort = 1 << 8
+    SlicedPort = 1 << 8,
+
+    /// The assignment is the connection between a modport port and a symbol within the interface.
+    ModportConn = 1 << 9
 };
-BITMASK(AssignFlags, SlicedPort)
+BITMASK(AssignFlags, ModportConn)
 
 class SemanticFacts {
 public:

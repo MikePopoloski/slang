@@ -107,7 +107,7 @@ void BindContext::setAttributes(const Expression& expr,
 void BindContext::addDriver(const ValueSymbol& symbol, const Expression& longestStaticPrefix,
                             bitmask<AssignFlags> assignFlags,
                             EvalContext* customEvalContext) const {
-    if (flags.has(BindFlags::UnrollableForLoop))
+    if (flags.has(BindFlags::UnrollableForLoop) || assignFlags.has(AssignFlags::ModportConn))
         return;
 
     const Symbol* containingSym = getProceduralBlock();

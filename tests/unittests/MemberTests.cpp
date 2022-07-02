@@ -2641,3 +2641,31 @@ endfunction
     CHECK(diags[3].code == diag::NotAType);
     CHECK(diags[4].code == diag::UndeclaredIdentifier);
 }
+
+TEST_CASE("modport internal symbol direction checking") {
+    auto tree = SyntaxTree::fromText(R"(
+interface I;
+    wire w;
+    int j;
+    modport m (ref w, inout j);
+    modport n (output j);
+endinterface
+
+module m (I i);
+    always_comb i.j = 1;
+endmodule
+
+module top;
+    I i();
+    m m1(i);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::InvalidRefArg);
+    CHECK(diags[1].code == diag::InOutPortCannotBeVariable);
+}
