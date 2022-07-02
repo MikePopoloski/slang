@@ -1924,7 +1924,7 @@ endinterface
 interface bus_B (input clk);
     logic [8:1] cmd;
     logic enable;
-    modport test (input clk, enable, cmd);
+    modport test (input clk, enable, output cmd);
     modport dut (output enable);
 endinterface
 
@@ -2642,22 +2642,28 @@ endfunction
     CHECK(diags[4].code == diag::UndeclaredIdentifier);
 }
 
-TEST_CASE("modport internal symbol direction checking") {
+TEST_CASE("modport direction checking") {
     auto tree = SyntaxTree::fromText(R"(
 interface I;
     wire w;
     int j;
     modport m (ref w, inout j);
     modport n (output j);
+    modport o (input j);
 endinterface
 
 module m (I i);
     always_comb i.j = 1;
 endmodule
 
+module n (I.o o);
+    always_comb o.j = 1;
+endmodule
+
 module top;
     I i();
     m m1(i);
+    n n1(i);
 endmodule
 )");
 
@@ -2665,7 +2671,8 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 2);
+    REQUIRE(diags.size() == 3);
     CHECK(diags[0].code == diag::InvalidRefArg);
-    CHECK(diags[1].code == diag::InOutPortCannotBeVariable);
+    CHECK(diags[1].code == diag::InOutVarPortConn);
+    CHECK(diags[2].code == diag::InputPortAssign);
 }

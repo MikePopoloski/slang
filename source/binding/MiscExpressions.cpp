@@ -157,6 +157,14 @@ bool ValueExpressionBase::requireLValueImpl(const BindContext& context, SourceLo
             return false;
         }
     }
+    else if (symbol.kind == SymbolKind::ModportPort) {
+        if (symbol.as<ModportPortSymbol>().direction == ArgumentDirection::In) {
+            auto& diag = context.addDiag(diag::InputPortAssign, sourceRange);
+            diag << symbol.name;
+            diag.addNote(diag::NoteDeclarationHere, symbol.location);
+            return false;
+        }
+    }
 
     if (!longestStaticPrefix)
         longestStaticPrefix = this;
@@ -215,7 +223,6 @@ bool ValueExpressionBase::checkVariableAssignment(const BindContext& context,
     if (flags.has(AssignFlags::InOutPort))
         return reportErr(diag::InOutVarPortConn);
 
-    // TODO: modport assignability checks
     return true;
 }
 

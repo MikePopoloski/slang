@@ -1783,7 +1783,7 @@ TEST_CASE("Virtual interface data type") {
     auto tree = SyntaxTree::fromText(R"(
 interface Foo;
     logic i;
-    modport m(input i);
+    modport m(output i);
 endinterface
 
 module m;
