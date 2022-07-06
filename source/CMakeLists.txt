@@ -128,7 +128,7 @@ add_library(slangcompiler
     binding/LValue.cpp
     binding/MiscExpressions.cpp
     binding/OperatorExpressions.cpp
-    binding/PatternExpressions.cpp
+    binding/Patterns.cpp
     binding/SelectExpressions.cpp
     binding/Statements.cpp
     binding/SystemSubroutine.cpp
