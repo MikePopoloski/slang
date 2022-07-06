@@ -812,15 +812,14 @@ Expression& Expression::bindName(Compilation& compilation, const NameSyntax& syn
     if (invocation && invocation->arguments)
         flags |= LookupFlags::AllowDeclaredAfter;
 
-    // Special case scenarios: array iterator expressions, class-scoped randomize calls,
+    // Special case scenarios: temporary variables, class-scoped randomize calls,
     // and expanding sequences and properties.
-    if (context.firstIterator || context.randomizeDetails || context.assertionInstance) {
-        // If we're in an array iterator expression, the iterator variable needs to be findable
-        // even though it's not added to any scope. Check for that case and manually look for
-        // its name here.
-        if (context.firstIterator) {
+    if (context.firstTempVar || context.randomizeDetails || context.assertionInstance) {
+        // If we have any temporary variables, they need to be findable even though they aren't
+        // added to any scope. Check for that case and manually look for its name here.
+        if (context.firstTempVar) {
             LookupResult result;
-            if (Lookup::findIterator(*context.scope, *context.firstIterator, syntax, result)) {
+            if (Lookup::findTempVar(*context.scope, *context.firstTempVar, syntax, result)) {
                 result.reportDiags(context);
                 return bindLookupResult(compilation, result, syntax.sourceRange(), invocation,
                                         withClause, context);

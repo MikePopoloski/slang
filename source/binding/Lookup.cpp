@@ -1265,8 +1265,8 @@ bool Lookup::ensureAccessible(const Symbol& symbol, const BindContext& context,
     return true;
 }
 
-bool Lookup::findIterator(const Scope& scope, const IteratorSymbol& symbol,
-                          const NameSyntax& syntax, LookupResult& result) {
+bool Lookup::findTempVar(const Scope& scope, const TempVarSymbol& symbol, const NameSyntax& syntax,
+                         LookupResult& result) {
     int colonParts = 0;
     SmallVectorSized<NamePlusLoc, 8> nameParts;
     const NameSyntax* first = &syntax;
@@ -1287,13 +1287,13 @@ bool Lookup::findIterator(const Scope& scope, const IteratorSymbol& symbol,
             return false;
     }
 
-    const IteratorSymbol* curr = &symbol;
+    const TempVarSymbol* curr = &symbol;
     do {
         if (curr->name == name.text) {
             result.found = curr;
             break;
         }
-        curr = curr->nextIterator;
+        curr = curr->nextTemp;
     } while (curr);
 
     if (!result.found)

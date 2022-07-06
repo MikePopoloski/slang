@@ -508,7 +508,7 @@ void CoverageBinSymbol::resolve() const {
         auto it = comp.emplace<IteratorSymbol>(*context.scope, "item"sv, coverpoint.location, type);
 
         BindContext iterCtx = context;
-        it->nextIterator = std::exchange(iterCtx.firstIterator, it);
+        it->nextTemp = std::exchange(iterCtx.firstTempVar, it);
 
         withExpr = &bindCovergroupExpr(*withSyntax.expr, iterCtx);
         iterCtx.requireBooleanConvertible(*withExpr);
@@ -1076,7 +1076,7 @@ BinsSelectExpr& BinSelectWithFilterExpr::fromSyntax(const BinSelectWithFilterExp
     for (auto target : cross.targets) {
         auto it = comp.emplace<IteratorSymbol>(*context.scope, target->name, target->location,
                                                target->getType());
-        it->nextIterator = std::exchange(iterCtx.firstIterator, it);
+        it->nextTemp = std::exchange(iterCtx.firstTempVar, it);
     }
 
     auto& filter = bindCovergroupExpr(*syntax.filter, iterCtx);

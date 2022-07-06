@@ -75,4 +75,5 @@ using flat_hash_map = ska::flat_hash_map<K, V, H, E, A>;
 template<typename T, typename H = slang::Hasher<T>, typename E = std::equal_to<T>,
          typename A = std::allocator<T>>
 using flat_hash_set = ska::flat_hash_set<T, H, E, A>;
+
 } // namespace slang

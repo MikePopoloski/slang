@@ -152,15 +152,36 @@ private:
     mutable optional<const TimingControl*> delay;
 };
 
-/// Represents an iterator variable created for array manipulation methods.
-class IteratorSymbol : public VariableSymbol {
+/// Represents a temporary variable materialized within a limited scope
+/// such as a single expression. Used for things like iterators used in
+/// array manipulation methods and for pattern identifiers.
+class TempVarSymbol : public VariableSymbol {
 public:
-    /// For efficiency purposes, each iterator symbol can form a linked list
-    /// so that when binding nested iteration expressions we don't need to
-    /// manage memory separately for list nodes. This member is otherwise
-    /// not useful to other consumers.
-    const IteratorSymbol* nextIterator = nullptr;
+    /// For efficiency purposes, each temp var symbol can form a linked list so
+    /// that when binding nested expressions we don't need to manage memory separately
+    /// for list nodes. This member is otherwise not useful to other consumers.
+    const TempVarSymbol* nextTemp = nullptr;
 
+    using VariableSymbol::setParent;
+
+    static bool isKind(SymbolKind kind) {
+        switch (kind) {
+            case SymbolKind::Iterator:
+                return true;
+            default:
+                return false;
+        }
+    }
+
+protected:
+    TempVarSymbol(SymbolKind childKind, string_view name, SourceLocation loc,
+                  VariableLifetime lifetime) :
+        VariableSymbol(childKind, name, loc, lifetime) {}
+};
+
+/// Represents an iterator variable created for array manipulation methods.
+class IteratorSymbol : public TempVarSymbol {
+public:
     /// The type of the array that this iterator traverses.
     const Type& arrayType;
 
@@ -168,11 +189,19 @@ public:
     IteratorSymbol(string_view name, SourceLocation loc, const Type& arrayType,
                    const Type& indexType);
 
-    using VariableSymbol::setParent;
-
-    void serializeTo(ASTSerializer&) const {};
+    void serializeTo(ASTSerializer&) const {}
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::Iterator; }
+};
+
+/// Represents a pattern variable materialized for a pattern matching expression.
+class PatternVarSymbol : public TempVarSymbol {
+public:
+    PatternVarSymbol(string_view name, SourceLocation loc, const Type& type);
+
+    void serializeTo(ASTSerializer&) const {}
+
+    static bool isKind(SymbolKind kind) { return kind == SymbolKind::PatternVar; }
 };
 
 struct ClockingItemSyntax;

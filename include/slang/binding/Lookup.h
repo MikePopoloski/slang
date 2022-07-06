@@ -14,10 +14,10 @@ namespace slang {
 
 class BindContext;
 class ClassType;
-class IteratorSymbol;
 class Scope;
 class Symbol;
 class SystemSubroutine;
+class TempVarSymbol;
 class Type;
 struct ElementSelectSyntax;
 struct NameSyntax;
@@ -272,10 +272,10 @@ public:
     static bool ensureAccessible(const Symbol& symbol, const BindContext& context,
                                  optional<SourceRange> sourceRange);
 
-    /// Searches a linked list of iterator symbols to see if any match the given name.
+    /// Searches a linked list of temporary variable symbols to see if any match the given name.
     /// If one is found, populates @a result and returns true. Otherwise returns false.
-    static bool findIterator(const Scope& scope, const IteratorSymbol& symbol,
-                             const NameSyntax& name, LookupResult& result);
+    static bool findTempVar(const Scope& scope, const TempVarSymbol& symbol, const NameSyntax& name,
+                            LookupResult& result);
 
     /// Performs a lookup within the given class randomize() scope, respecting the name
     /// restrictions provided. If the symbol is not found, or if the name starts with 'local::',

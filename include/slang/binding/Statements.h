@@ -17,6 +17,7 @@
 namespace slang {
 
 class BlockStatement;
+class IteratorSymbol;
 class ProceduralBlockSymbol;
 class RandSeqProductionSymbol;
 class StatementBlockSymbol;

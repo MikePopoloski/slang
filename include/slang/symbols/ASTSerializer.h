@@ -18,6 +18,7 @@ class Compilation;
 class ConstantValue;
 class Constraint;
 class Expression;
+class Pattern;
 class Statement;
 class Symbol;
 class Type;
@@ -36,6 +37,7 @@ public:
     void serialize(const Constraint& constraint);
     void serialize(const AssertionExpr& assertionExpr);
     void serialize(const BinsSelectExpr& binsSelectExpr);
+    void serialize(const Pattern& pattern);
     void serialize(std::string_view value);
 
     void startArray();
@@ -59,6 +61,7 @@ public:
     void write(string_view name, const Constraint& value);
     void write(string_view name, const AssertionExpr& value);
     void write(string_view name, const BinsSelectExpr& value);
+    void write(string_view name, const Pattern& value);
 
     void writeLink(string_view name, const Symbol& value);
 
@@ -86,6 +89,7 @@ private:
     friend Constraint;
     friend AssertionExpr;
     friend BinsSelectExpr;
+    friend Pattern;
 
     template<typename T>
     void visit(const T& symbol, bool inMembersArray = false);
@@ -96,6 +100,7 @@ private:
     void visitInvalid(const Constraint& timing);
     void visitInvalid(const AssertionExpr& expr);
     void visitInvalid(const BinsSelectExpr& expr);
+    void visitInvalid(const Pattern& pattern);
 
     Compilation& compilation;
     JsonWriter& writer;

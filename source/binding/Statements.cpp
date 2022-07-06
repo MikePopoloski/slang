@@ -1578,7 +1578,7 @@ const Expression* ForeachLoopStatement::buildLoopDims(const ForeachLoopListSynta
         // linked list of iterators.
         auto it =
             comp.emplace<IteratorSymbol>(name, idName.identifier.location(), currType, *indexType);
-        it->nextIterator = std::exchange(context.firstIterator, it);
+        it->nextTemp = std::exchange(context.firstTempVar, it);
         dims.back().loopVar = it;
     }
 

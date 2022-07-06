@@ -93,6 +93,7 @@ enum class RandMode;
     x(MethodPrototype) \
     x(UnknownModule) \
     x(Iterator) \
+    x(PatternVar) \
     x(ConstraintBlock) \
     x(DefParam) \
     x(Specparam) \

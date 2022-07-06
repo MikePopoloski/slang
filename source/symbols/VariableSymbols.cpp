@@ -346,7 +346,7 @@ void NetSymbol::serializeTo(ASTSerializer& serializer) const {
 
 IteratorSymbol::IteratorSymbol(const Scope& scope, string_view name, SourceLocation loc,
                                const Type& arrayType) :
-    VariableSymbol(SymbolKind::Iterator, name, loc, VariableLifetime::Automatic),
+    TempVarSymbol(SymbolKind::Iterator, name, loc, VariableLifetime::Automatic),
     arrayType(arrayType) {
 
     flags |= VariableFlags::Const;
@@ -361,11 +361,18 @@ IteratorSymbol::IteratorSymbol(const Scope& scope, string_view name, SourceLocat
 
 IteratorSymbol::IteratorSymbol(string_view name, SourceLocation loc, const Type& arrayType,
                                const Type& indexType) :
-    VariableSymbol(SymbolKind::Iterator, name, loc, VariableLifetime::Automatic),
+    TempVarSymbol(SymbolKind::Iterator, name, loc, VariableLifetime::Automatic),
     arrayType(arrayType) {
 
     flags |= VariableFlags::Const;
     setType(indexType);
+}
+
+PatternVarSymbol::PatternVarSymbol(string_view name, SourceLocation loc, const Type& type) :
+    TempVarSymbol(SymbolKind::PatternVar, name, loc, VariableLifetime::Automatic) {
+
+    flags |= VariableFlags::Const;
+    setType(type);
 }
 
 ClockVarSymbol::ClockVarSymbol(string_view name, SourceLocation loc, ArgumentDirection direction,

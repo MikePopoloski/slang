@@ -101,6 +101,7 @@ public:
     void visitInvalid(const Constraint&) {}
     void visitInvalid(const AssertionExpr&) {}
     void visitInvalid(const BinsSelectExpr&) {}
+    void visitInvalid(const Pattern&) {}
 
 #undef DERIVED
 };
@@ -163,6 +164,7 @@ decltype(auto) Symbol::visit(TVisitor&& visitor, Args&&... args) const {
         SYMBOL(MethodPrototype);
         SYMBOL(UnknownModule);
         SYMBOL(Iterator);
+        SYMBOL(PatternVar);
         SYMBOL(ConstraintBlock);
         SYMBOL(DefParam);
         SYMBOL(Specparam);
@@ -410,6 +412,21 @@ decltype(auto) BinsSelectExpr::visit(TVisitor& visitor, Args&&... args) const {
         CASE(SetExpr, SetExprBinsSelectExpr);
         CASE(WithFilter, BinSelectWithFilterExpr);
         CASE(CrossId, CrossIdBinsSelectExpr);
+    }
+#undef CASE
+    // clang-format on
+    THROW_UNREACHABLE;
+}
+
+template<typename TVisitor, typename... Args>
+decltype(auto) Pattern::visit(TVisitor& visitor, Args&&... args) const {
+    // clang-format off
+#define CASE(k, n) case PatternKind::k: return visitor.visit(*static_cast<const n*>(this), std::forward<Args>(args)...)
+    switch (kind) {
+        case PatternKind::Invalid: return visitor.visitInvalid(*this, std::forward<Args>(args)...);
+        CASE(Wildcard, WildcardPattern);
+        CASE(Constant, ConstantPattern);
+        CASE(Variable, VariablePattern);
     }
 #undef CASE
     // clang-format on
