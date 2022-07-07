@@ -864,70 +864,101 @@ void VariableDeclStatement::serializeTo(ASTSerializer& serializer) const {
     serializer.writeLink("symbol", symbol);
 }
 
-Statement& ConditionalStatement::fromSyntax(Compilation& compilation,
+Statement& ConditionalStatement::fromSyntax(Compilation& comp,
                                             const ConditionalStatementSyntax& syntax,
                                             const BindContext& context, StatementContext& stmtCtx) {
     bool bad = false;
-    auto& conditions = syntax.predicate->conditions;
-    if (conditions.size() == 0) {
-        bad = true;
-    }
-    else if (conditions.size() > 1) {
-        context.addDiag(diag::NotYetSupported, conditions[1]->sourceRange());
-        bad = true;
-    }
-    else if (conditions[0]->matchesClause) {
-        context.addDiag(diag::NotYetSupported, conditions[0]->matchesClause->sourceRange());
-        bad = true;
+    bool isConst = true;
+    bool isTrue = true;
+    SmallVectorSized<Condition, 2> conditions;
+    BindContext trueContext = context;
+
+    for (auto condSyntax : syntax.predicate->conditions) {
+        auto& cond = Expression::bind(*condSyntax->expr, trueContext);
+        bad |= cond.bad();
+
+        const Pattern* pattern = nullptr;
+        if (condSyntax->matchesClause) {
+            Pattern::VarMap patternVarMap;
+            pattern = &Pattern::bind(*condSyntax->matchesClause->pattern, *cond.type, patternVarMap,
+                                     trueContext);
+
+            // We don't consider the condition to be const if there's a pattern.
+            isConst = false;
+            bad |= pattern->bad();
+        }
+        else {
+            if (!bad && !trueContext.requireBooleanConvertible(cond))
+                bad = true;
+        }
+
+        if (!bad && isConst) {
+            ConstantValue condVal = trueContext.tryEval(cond);
+            if (!condVal)
+                isConst = false;
+            else if (!condVal.isTrue())
+                isTrue = false;
+        }
+
+        conditions.append({ &cond, pattern });
     }
 
+    // If the condition is constant, we know which branch will be taken.
     BindFlags ifFlags = BindFlags::None;
     BindFlags elseFlags = BindFlags::None;
-    auto& cond = Expression::bind(*conditions[0]->expr, context);
-    bad |= cond.bad();
-
-    if (!bad && !context.requireBooleanConvertible(cond))
-        bad = true;
-
-    ConstantValue condVal = context.tryEval(cond);
-    if (condVal) {
-        // If the condition is constant, we know which branch will be taken.
-        if (condVal.isTrue())
+    if (isConst) {
+        if (isTrue)
             elseFlags = BindFlags::UnevaluatedBranch;
         else
             ifFlags = BindFlags::UnevaluatedBranch;
     }
 
-    auto& ifTrue = Statement::bind(*syntax.statement, context.resetFlags(ifFlags), stmtCtx);
+    auto& ifTrue = Statement::bind(*syntax.statement, trueContext.resetFlags(ifFlags), stmtCtx);
+
     const Statement* ifFalse = nullptr;
     if (syntax.elseClause) {
         ifFalse = &Statement::bind(syntax.elseClause->clause->as<StatementSyntax>(),
                                    context.resetFlags(elseFlags), stmtCtx);
     }
 
-    auto result =
-        compilation.emplace<ConditionalStatement>(cond, ifTrue, ifFalse, syntax.sourceRange());
-    if (bad || ifTrue.bad() || (ifFalse && ifFalse->bad()))
-        return badStmt(compilation, result);
+    auto result = comp.emplace<ConditionalStatement>(conditions.copy(comp), ifTrue, ifFalse,
+                                                     syntax.sourceRange());
+    if (bad || conditions.empty() || ifTrue.bad() || (ifFalse && ifFalse->bad()))
+        return badStmt(comp, result);
 
     return *result;
 }
 
 ER ConditionalStatement::evalImpl(EvalContext& context) const {
-    auto result = cond.eval(context);
-    if (result.bad())
-        return ER::Fail;
+    for (auto& cond : conditions) {
+        // TODO: implement pattern matching
+        ASSERT(!cond.pattern);
 
-    if (result.isTrue())
-        return ifTrue.eval(context);
-    if (ifFalse)
-        return ifFalse->eval(context);
+        auto result = cond.expr->eval(context);
+        if (result.bad())
+            return ER::Fail;
 
-    return ER::Success;
+        if (!result.isTrue()) {
+            if (ifFalse)
+                return ifFalse->eval(context);
+            return ER::Success;
+        }
+    }
+
+    return ifTrue.eval(context);
 }
 
 void ConditionalStatement::serializeTo(ASTSerializer& serializer) const {
-    serializer.write("cond", cond);
+    serializer.startArray("conditions");
+    for (auto& cond : conditions) {
+        serializer.startObject();
+        serializer.write("expr", *cond.expr);
+        if (cond.pattern)
+            serializer.write("pattern", *cond.pattern);
+        serializer.endObject();
+    }
+    serializer.endArray();
+
     serializer.write("ifTrue", ifTrue);
     if (ifFalse)
         serializer.write("ifFalse", *ifFalse);
@@ -1268,18 +1299,32 @@ public:
     void handle(const ConditionalStatement& stmt) {
         // Evaluate the condition; if not constant visit both sides,
         // otherwise visit only the side that matches the condition.
-        auto cond = step() ? stmt.cond.eval(evalCtx) : ConstantValue();
-        if (!cond) {
+        auto fallback = [&] {
             stmt.ifTrue.visit(*this);
             if (stmt.ifFalse)
                 stmt.ifFalse->visit(*this);
+        };
+
+        for (auto& cond : stmt.conditions) {
+            if (cond.pattern || !step()) {
+                fallback();
+                return;
+            }
+
+            auto result = cond.expr->eval(evalCtx);
+            if (!result) {
+                fallback();
+                return;
+            }
+
+            if (!result.isTrue()) {
+                if (stmt.ifFalse)
+                    stmt.ifFalse->visit(*this);
+                return;
+            }
         }
-        else if (cond.isTrue()) {
-            stmt.ifTrue.visit(*this);
-        }
-        else if (stmt.ifFalse) {
-            stmt.ifFalse->visit(*this);
-        }
+
+        stmt.ifTrue.visit(*this);
     }
 
     void handle(const ExpressionStatement& stmt) {

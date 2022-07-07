@@ -65,6 +65,7 @@ public:
             case SymbolKind::Field:
             case SymbolKind::ClassProperty:
             case SymbolKind::Iterator:
+            case SymbolKind::PatternVar:
             case SymbolKind::ClockVar:
             case SymbolKind::LocalAssertionVar:
                 return true;

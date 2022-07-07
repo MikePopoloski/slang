@@ -404,14 +404,19 @@ struct ConditionalStatementSyntax;
 
 class ConditionalStatement : public Statement {
 public:
-    const Expression& cond;
+    struct Condition {
+        not_null<const Expression*> expr;
+        const Pattern* pattern = nullptr;
+    };
+
+    span<const Condition> conditions;
     const Statement& ifTrue;
     const Statement* ifFalse;
 
-    ConditionalStatement(const Expression& cond, const Statement& ifTrue, const Statement* ifFalse,
-                         SourceRange sourceRange) :
+    ConditionalStatement(span<const Condition> conditions, const Statement& ifTrue,
+                         const Statement* ifFalse, SourceRange sourceRange) :
         Statement(StatementKind::Conditional, sourceRange),
-        cond(cond), ifTrue(ifTrue), ifFalse(ifFalse) {}
+        conditions(conditions), ifTrue(ifTrue), ifFalse(ifFalse) {}
 
     EvalResult evalImpl(EvalContext& context) const;
 
@@ -424,7 +429,8 @@ public:
 
     template<typename TVisitor>
     void visitExprs(TVisitor&& visitor) const {
-        cond.visit(visitor);
+        for (auto& cond : conditions)
+            cond.expr->visit(visitor);
     }
 
     template<typename TVisitor>

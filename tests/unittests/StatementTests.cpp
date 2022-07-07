@@ -1682,3 +1682,28 @@ endmodule
     CHECK(diags[4].code == diag::EmptyBody);
     CHECK(diags[5].code == diag::EmptyBody);
 }
+
+TEST_CASE("If statement pattern matching") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    localparam int foo = 2;
+    int e, j;
+    initial begin
+        if (e matches foo &&& j > 0 &&& e matches .* &&& e matches .baz &&& baz > 2) begin
+            j = baz;
+        end
+        else begin
+            // Can't reference pattern var here.
+            j = baz;
+        end
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::UndeclaredIdentifier);
+}
