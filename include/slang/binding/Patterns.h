@@ -22,7 +22,6 @@ class PatternVarSymbol;
     x(Constant) \
     x(Variable) \
     x(Tagged) \
-    x(Ordered) \
     x(Structure)
 ENUM(PatternKind, PATTERN)
 #undef PATTERN
