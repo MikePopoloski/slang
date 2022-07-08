@@ -427,6 +427,8 @@ decltype(auto) Pattern::visit(TVisitor& visitor, Args&&... args) const {
         CASE(Wildcard, WildcardPattern);
         CASE(Constant, ConstantPattern);
         CASE(Variable, VariablePattern);
+        CASE(Tagged, TaggedPattern);
+        CASE(Structure, StructurePattern);
     }
 #undef CASE
     // clang-format on

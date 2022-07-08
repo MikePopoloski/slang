@@ -1697,6 +1697,31 @@ module m;
             j = baz;
         end
     end
+
+    typedef union tagged {
+        struct {
+            bit [4:0] reg1, reg2, regd;
+        } Add;
+        union tagged {
+            bit [9:0] JmpU;
+            struct {
+                bit [1:0] cc;
+                bit [9:0] addr;
+            } JmpC;
+        } Jmp;
+    } Instr;
+
+    Instr instr;
+    initial begin
+        if (instr matches (tagged Jmp (tagged JmpC '{cc:.c,addr:.a}))) begin
+            j = c + a;
+        end
+
+        if (instr matches (tagged Jmp .j) &&&
+            j matches (tagged JmpC '{cc:.c,addr:.a})) begin
+            e = c + a;
+        end
+    end
 endmodule
 )");
 

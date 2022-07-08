@@ -12,6 +12,7 @@
 
 namespace slang {
 
+class FieldSymbol;
 class PatternVarSymbol;
 
 // clang-format off
@@ -22,7 +23,7 @@ class PatternVarSymbol;
     x(Variable) \
     x(Tagged) \
     x(Ordered) \
-    x(Structured)
+    x(Structure)
 ENUM(PatternKind, PATTERN)
 #undef PATTERN
 // clang-format on
@@ -49,6 +50,10 @@ public:
 
     static Pattern& bind(const PatternSyntax& syntax, const Type& targetType, VarMap& varMap,
                          BindContext& context);
+
+    /// Evaluates the pattern under the given evaluation context. Any errors that occur
+    /// will be stored in the evaluation context instead of issued to the compilation.
+    ConstantValue eval(EvalContext& context, const ConstantValue& value) const;
 
     template<typename T>
     T& as() {
@@ -92,6 +97,8 @@ public:
 
     static Pattern& fromSyntax(const WildcardPatternSyntax& syntax, const BindContext& context);
 
+    ConstantValue evalImpl(EvalContext& context, const ConstantValue& value) const;
+
     static bool isKind(PatternKind kind) { return kind == PatternKind::Wildcard; }
 
     void serializeTo(ASTSerializer&) const {}
@@ -108,6 +115,8 @@ public:
 
     static Pattern& fromSyntax(const ExpressionPatternSyntax& syntax, const Type& targetType,
                                const BindContext& context);
+
+    ConstantValue evalImpl(EvalContext& context, const ConstantValue& value) const;
 
     static bool isKind(PatternKind kind) { return kind == PatternKind::Constant; }
 
@@ -126,7 +135,53 @@ public:
     static Pattern& fromSyntax(const VariablePatternSyntax& syntax, const Type& targetType,
                                VarMap& varMap, BindContext& context);
 
+    ConstantValue evalImpl(EvalContext& context, const ConstantValue& value) const;
+
     static bool isKind(PatternKind kind) { return kind == PatternKind::Variable; }
+
+    void serializeTo(ASTSerializer& serializer) const;
+};
+
+struct TaggedPatternSyntax;
+
+class TaggedPattern : public Pattern {
+public:
+    const FieldSymbol& member;
+    const Pattern* valuePattern;
+
+    TaggedPattern(const FieldSymbol& member, const Pattern* valuePattern, SourceRange sourceRange) :
+        Pattern(PatternKind::Tagged, sourceRange), member(member), valuePattern(valuePattern) {}
+
+    static Pattern& fromSyntax(const TaggedPatternSyntax& syntax, const Type& targetType,
+                               VarMap& varMap, BindContext& context);
+
+    ConstantValue evalImpl(EvalContext& context, const ConstantValue& value) const;
+
+    static bool isKind(PatternKind kind) { return kind == PatternKind::Tagged; }
+
+    void serializeTo(ASTSerializer& serializer) const;
+};
+
+struct StructurePatternSyntax;
+
+class StructurePattern : public Pattern {
+public:
+    struct FieldPattern {
+        not_null<const FieldSymbol*> field;
+        not_null<const Pattern*> pattern;
+    };
+
+    span<const FieldPattern> patterns;
+
+    StructurePattern(span<const FieldPattern> patterns, SourceRange sourceRange) :
+        Pattern(PatternKind::Structure, sourceRange), patterns(patterns) {}
+
+    static Pattern& fromSyntax(const StructurePatternSyntax& syntax, const Type& targetType,
+                               VarMap& varMap, BindContext& context);
+
+    ConstantValue evalImpl(EvalContext& context, const ConstantValue& value) const;
+
+    static bool isKind(PatternKind kind) { return kind == PatternKind::Structure; }
 
     void serializeTo(ASTSerializer& serializer) const;
 };

@@ -931,12 +931,12 @@ Statement& ConditionalStatement::fromSyntax(Compilation& comp,
 
 ER ConditionalStatement::evalImpl(EvalContext& context) const {
     for (auto& cond : conditions) {
-        // TODO: implement pattern matching
-        ASSERT(!cond.pattern);
-
         auto result = cond.expr->eval(context);
         if (result.bad())
             return ER::Fail;
+
+        if (cond.pattern)
+            result = cond.pattern->eval(context, result);
 
         if (!result.isTrue()) {
             if (ifFalse)

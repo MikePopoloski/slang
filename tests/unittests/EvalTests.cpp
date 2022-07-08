@@ -2355,3 +2355,38 @@ endfunction
     CHECK(cv.toString() == "3");
     NO_SESSION_ERRORS;
 }
+
+TEST_CASE("Conditional statement pattern matching eval") {
+    ScriptSession session;
+    session.eval(R"(
+typedef union tagged {
+    struct {
+        bit [4:0] reg1, reg2, regd;
+    } Add;
+    union tagged {
+        bit [9:0] JmpU;
+        struct packed {
+            bit [1:0] cc;
+            bit [9:0] addr;
+        } JmpC;
+    } Jmp;
+} Instr;
+)");
+
+    session.eval(R"(
+function automatic int f;
+    Instr e = tagged Jmp tagged JmpC '{2, 137};
+    int rf[3] = '{0, 0, 1};
+
+    if (e matches (tagged Jmp (tagged JmpC '{cc:.c,addr:.a}))
+        &&& (rf[c] != 0))
+        return c + a;
+    else
+        return 1;
+endfunction
+)");
+
+    auto cv = session.eval("f();");
+    CHECK(cv.toString() == "139");
+    NO_SESSION_ERRORS;
+}
