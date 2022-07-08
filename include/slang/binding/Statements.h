@@ -40,6 +40,7 @@ struct StatementSyntax;
     x(Disable) \
     x(Conditional) \
     x(Case) \
+    x(PatternCase) \
     x(ForLoop) \
     x(RepeatLoop) \
     x(ForeachLoop) \
@@ -477,6 +478,53 @@ public:
         for (auto& item : items) {
             for (auto itemExpr : item.expressions)
                 itemExpr->visit(visitor);
+        }
+    }
+
+    template<typename TVisitor>
+    void visitStmts(TVisitor&& visitor) const {
+        for (auto& item : items)
+            item.stmt->visit(visitor);
+        if (defaultCase)
+            defaultCase->visit(visitor);
+    }
+};
+
+class PatternCaseStatement : public Statement {
+public:
+    struct ItemGroup {
+        not_null<const Pattern*> pattern;
+        const Expression* filter;
+        not_null<const Statement*> stmt;
+    };
+
+    const Expression& expr;
+    span<ItemGroup const> items;
+    const Statement* defaultCase = nullptr;
+    CaseStatementCondition condition;
+    CaseStatementCheck check;
+
+    PatternCaseStatement(CaseStatementCondition condition, CaseStatementCheck check,
+                         const Expression& expr, span<ItemGroup const> items,
+                         const Statement* defaultCase, SourceRange sourceRange) :
+        Statement(StatementKind::PatternCase, sourceRange),
+        expr(expr), items(items), defaultCase(defaultCase), condition(condition), check(check) {}
+
+    EvalResult evalImpl(EvalContext& context) const;
+
+    static Statement& fromSyntax(Compilation& compilation, const CaseStatementSyntax& syntax,
+                                 const BindContext& context, StatementContext& stmtCtx);
+
+    void serializeTo(ASTSerializer& serializer) const;
+
+    static bool isKind(StatementKind kind) { return kind == StatementKind::PatternCase; }
+
+    template<typename TVisitor>
+    void visitExprs(TVisitor&& visitor) const {
+        expr.visit(visitor);
+        for (auto& item : items) {
+            if (item.filter)
+                item.filter->visit(visitor);
         }
     }
 

@@ -237,6 +237,7 @@ decltype(auto) Statement::visit(TVisitor&& visitor, Args&&... args) const {
         CASE(Disable, DisableStatement);
         CASE(Conditional, ConditionalStatement);
         CASE(Case, CaseStatement);
+        CASE(PatternCase, PatternCaseStatement);
         CASE(ForLoop, ForLoopStatement);
         CASE(RepeatLoop, RepeatLoopStatement);
         CASE(ForeachLoop, ForeachLoopStatement);

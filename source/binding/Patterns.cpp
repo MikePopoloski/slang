@@ -99,15 +99,10 @@ Pattern& ConstantPattern::fromSyntax(const ExpressionPatternSyntax& syntax, cons
                                      const BindContext& context) {
     // Bind the expression (it must be a constant).
     auto& comp = context.getCompilation();
-    auto& expr = Expression::bind(*syntax.expr, context);
-    if (expr.bad() || !context.eval(expr) || targetType.isError())
+    auto& expr = Expression::bindRValue(targetType, *syntax.expr,
+                                        syntax.expr->getFirstToken().location(), context);
+    if (expr.bad() || !context.eval(expr))
         return badPattern(comp, nullptr);
-
-    if (!expr.type->isEquivalent(targetType)) {
-        auto& diag = context.addDiag(diag::PatternTypeMismatch, expr.sourceRange);
-        diag << *expr.type << targetType;
-        return badPattern(comp, nullptr);
-    }
 
     return *comp.emplace<ConstantPattern>(expr, syntax.sourceRange());
 }

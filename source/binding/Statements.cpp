@@ -964,13 +964,8 @@ void ConditionalStatement::serializeTo(ASTSerializer& serializer) const {
         serializer.write("ifFalse", *ifFalse);
 }
 
-Statement& CaseStatement::fromSyntax(Compilation& compilation, const CaseStatementSyntax& syntax,
-                                     const BindContext& context, StatementContext& stmtCtx) {
-    bool bad = false;
-    if (syntax.matchesOrInside.kind == TokenKind::MatchesKeyword) {
-        context.addDiag(diag::NotYetSupported, syntax.matchesOrInside.range());
-        bad = true;
-    }
+static std::tuple<CaseStatementCondition, CaseStatementCheck> getConditionAndCheck(
+    const CaseStatementSyntax& syntax) {
 
     CaseStatementCondition condition;
     switch (syntax.caseKeyword.kind) {
@@ -1005,9 +1000,18 @@ Statement& CaseStatement::fromSyntax(Compilation& compilation, const CaseStateme
             THROW_UNREACHABLE;
     }
 
+    return { condition, check };
+}
+
+Statement& CaseStatement::fromSyntax(Compilation& compilation, const CaseStatementSyntax& syntax,
+                                     const BindContext& context, StatementContext& stmtCtx) {
+    if (syntax.matchesOrInside.kind == TokenKind::MatchesKeyword)
+        return PatternCaseStatement::fromSyntax(compilation, syntax, context, stmtCtx);
+
     SmallVectorSized<const ExpressionSyntax*, 8> expressions;
     SmallVectorSized<const Statement*, 8> statements;
     const Statement* defStmt = nullptr;
+    bool bad = false;
 
     for (auto item : syntax.items) {
         switch (item->kind) {
@@ -1022,9 +1026,6 @@ Statement& CaseStatement::fromSyntax(Compilation& compilation, const CaseStateme
                 bad |= stmt.bad();
                 break;
             }
-            case SyntaxKind::PatternCaseItem:
-                // TODO: support pattern case statements
-                break;
             case SyntaxKind::DefaultCaseItem:
                 // The parser already errored for duplicate defaults,
                 // so just ignore if it happens here.
@@ -1050,6 +1051,8 @@ Statement& CaseStatement::fromSyntax(Compilation& compilation, const CaseStateme
     bad |=
         !Expression::bindMembershipExpressions(context, keyword, wildcard, isInside, allowTypeRefs,
                                                allowOpenRange, *syntax.expr, expressions, bound);
+
+    auto [condition, check] = getConditionAndCheck(syntax);
 
     if (isInside && condition != CaseStatementCondition::Normal) {
         context.addDiag(diag::CaseInsideKeyword, syntax.matchesOrInside.range())
@@ -1213,6 +1216,143 @@ void CaseStatement::serializeTo(ASTSerializer& serializer) const {
 
         serializer.write("stmt", *item.stmt);
 
+        serializer.endObject();
+    }
+    serializer.endArray();
+
+    if (defaultCase) {
+        serializer.write("defaultCase", *defaultCase);
+    }
+}
+
+Statement& PatternCaseStatement::fromSyntax(Compilation& compilation,
+                                            const CaseStatementSyntax& syntax,
+                                            const BindContext& context, StatementContext& stmtCtx) {
+    ASSERT(syntax.matchesOrInside.kind == TokenKind::MatchesKeyword);
+
+    auto& expr = Expression::bind(*syntax.expr, context);
+    bool bad = expr.bad();
+
+    SmallVectorSized<ItemGroup, 8> items;
+    const Statement* defStmt = nullptr;
+
+    for (auto item : syntax.items) {
+        switch (item->kind) {
+            case SyntaxKind::PatternCaseItem: {
+                Pattern::VarMap varMap;
+                BindContext localCtx = context;
+
+                auto& pci = item->as<PatternCaseItemSyntax>();
+                auto& pattern = Pattern::bind(*pci.pattern, *expr.type, varMap, localCtx);
+                auto& stmt = Statement::bind(*pci.statement, localCtx, stmtCtx);
+                bad |= stmt.bad() | pattern.bad();
+
+                const Expression* filter = nullptr;
+                if (pci.expr) {
+                    filter = &Expression::bind(*pci.expr, localCtx);
+                    if (!bad && !localCtx.requireBooleanConvertible(*filter))
+                        bad = true;
+                }
+
+                items.append({ &pattern, filter, &stmt });
+                break;
+            }
+            case SyntaxKind::DefaultCaseItem:
+                // The parser already errored for duplicate defaults,
+                // so just ignore if it happens here.
+                if (!defStmt) {
+                    defStmt = &Statement::bind(
+                        item->as<DefaultCaseItemSyntax>().clause->as<StatementSyntax>(), context,
+                        stmtCtx);
+                    bad |= defStmt->bad();
+                }
+                break;
+            default:
+                THROW_UNREACHABLE;
+        }
+    }
+
+    auto [condition, check] = getConditionAndCheck(syntax);
+    auto result = compilation.emplace<PatternCaseStatement>(
+        condition, check, expr, items.copy(compilation), defStmt, syntax.sourceRange());
+    if (bad)
+        return badStmt(compilation, result);
+
+    return *result;
+}
+
+ER PatternCaseStatement::evalImpl(EvalContext& context) const {
+    auto cv = expr.eval(context);
+    if (!cv)
+        return ER::Fail;
+
+    // TODO: handle casex / casez pattern matching
+
+    const Statement* matchedStmt = nullptr;
+    SourceRange matchRange;
+
+    for (auto& item : items) {
+        auto val = item.pattern->eval(context, cv);
+        if (!val)
+            return ER::Fail;
+
+        if (!val.isTrue())
+            continue;
+
+        if (item.filter) {
+            val = item.filter->eval(context);
+            if (!val)
+                return ER::Fail;
+
+            if (!val.isTrue())
+                continue;
+        }
+
+        // If we already matched with a previous item, the only we reason
+        // we'd still get here is to check for uniqueness. The presence of
+        // another match means we failed the uniqueness check.
+        if (matchedStmt) {
+            auto& diag =
+                context.addDiag(diag::ConstEvalCaseItemsNotUnique, item.pattern->sourceRange) << cv;
+            diag.addNote(diag::NotePreviousMatch, matchRange);
+            break;
+        }
+
+        matchedStmt = item.stmt;
+        matchRange = item.pattern->sourceRange;
+
+        if (check != CaseStatementCheck::Unique && check != CaseStatementCheck::Unique0)
+            break;
+    }
+
+    if (!matchedStmt)
+        matchedStmt = defaultCase;
+
+    if (matchedStmt)
+        return matchedStmt->eval(context);
+
+    if (check == CaseStatementCheck::Priority || check == CaseStatementCheck::Unique) {
+        auto& diag = context.addDiag(diag::ConstEvalNoCaseItemsMatched, expr.sourceRange);
+        diag << (check == CaseStatementCheck::Priority ? "priority"sv : "unique"sv);
+        diag << cv;
+    }
+
+    return ER::Success;
+}
+
+void PatternCaseStatement::serializeTo(ASTSerializer& serializer) const {
+    serializer.write("condition", toString(condition));
+    serializer.write("check", toString(check));
+    serializer.write("expr", expr);
+    serializer.startArray("items");
+    for (auto const& item : items) {
+        serializer.startObject();
+        serializer.write("pattern", *item.pattern);
+
+        if (item.filter)
+            serializer.write("filter", *item.filter);
+
+        serializer.write("stmt", *item.stmt);
         serializer.endObject();
     }
     serializer.endArray();

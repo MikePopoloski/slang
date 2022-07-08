@@ -599,19 +599,20 @@ endmodule
 TEST_CASE("If statement -- unevaluated branches -- invalid") {
     auto tree = SyntaxTree::fromText(R"(
 module m;
-
     localparam int n = -1;
     localparam logic[1:0] foo = '0;
 
     int j;
+    int baz[];
     initial begin
         if (n >= 0) begin
             j = foo[n];
         end else begin
             j = foo[n];
         end
-    end
 
+        if (baz) begin end
+    end
 endmodule
 )");
 
@@ -619,8 +620,9 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 1);
+    REQUIRE(diags.size() == 2);
     CHECK(diags[0].code == diag::IndexValueInvalid);
+    CHECK(diags[1].code == diag::NotBooleanConvertible);
 }
 
 TEST_CASE("Nonblocking assignment statement") {
@@ -1731,4 +1733,109 @@ endmodule
     auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::UndeclaredIdentifier);
+}
+
+TEST_CASE("Case statement pattern matching") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    typedef union tagged {
+        void Invalid;
+        int Valid;
+    } VInt;
+
+    VInt v;
+    initial begin
+        case (v) matches
+            tagged Invalid : $display ("v is Invalid");
+            tagged Valid .n : $display ("v is Valid with value %d", n);
+        endcase
+    end
+
+    typedef union tagged {
+        struct {
+            bit [4:0] reg1, reg2, regd;
+        } Add;
+        union tagged {
+            bit [9:0] JmpU;
+            struct {
+                bit [1:0] cc;
+                bit [9:0] addr;
+            } JmpC;
+        } Jmp;
+    } Instr;
+
+    int rf[];
+    bit [9:0] pc;
+
+    Instr instr;
+    initial begin
+        case (instr) matches
+            tagged Add '{.r1, .r2, .rd} &&& (rd != 0) : rf[rd] = rf[r1] + rf[r2];
+            tagged Jmp .j : case (j) matches
+                                tagged JmpU .a : pc = pc + a;
+                                tagged JmpC '{.c, .a}: if (rf[c]) pc = a;
+                            endcase
+        endcase
+
+        case (instr) matches
+            tagged Add '{.*, .*, 0} : ; // no op
+            tagged Add '{.r1, .r2, .rd} : rf[rd] = rf[r1] + rf[r2];
+            tagged Jmp .j : case (j) matches
+                                tagged JmpU .a : pc = pc + a;
+                                tagged JmpC '{.c, .a} : if (rf[c]) pc = a;
+                            endcase
+        endcase
+
+        case (instr) matches
+            tagged Add .s: case (s) matches
+                                '{.*, .*, 0} : ; // no op
+                                '{.r1, .r2, .rd} : rf[rd] = rf[r1] + rf[r2];
+                          endcase
+            tagged Jmp .j: case (j) matches
+                                tagged JmpU .a : pc = pc + a;
+                                tagged JmpC '{.c, .a} : if (rf[c]) pc = a;
+                                default: begin end
+                           endcase
+        endcase
+
+        case (instr) matches
+            tagged Add '{.r1, .r2, .rd} &&& (rd != 0) : rf[rd] = rf[r1] + rf[r2];
+            tagged Jmp (tagged JmpU .a) : pc = pc + a;
+            tagged Jmp (tagged JmpC '{.c, .a}) : if (rf[c]) pc = a;
+        endcase
+
+        case (instr) matches
+            tagged Add '{reg2:.r2,regd:.rd,reg1:.r1} &&& (rd != 0):
+                                                        rf[rd] = rf[r1] + rf[r2];
+            tagged Jmp (tagged JmpU .a) : pc = pc + a;
+            tagged Jmp (tagged JmpC '{addr:.a,cc:.c}) : if (rf[c]) pc = a;
+        endcase
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Pattern case statement invalid filter") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    int foo;
+    int bar[];
+    initial begin
+        case (foo) matches
+            .* &&& bar: begin end
+        endcase
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::NotBooleanConvertible);
 }

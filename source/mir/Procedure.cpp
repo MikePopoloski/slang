@@ -48,6 +48,7 @@ public:
     void visit(const DisableStatement&) {}
     void visit(const ConditionalStatement&) {}
     void visit(const CaseStatement&) {}
+    void visit(const PatternCaseStatement&) {}
     void visit(const ForLoopStatement&) {}
     void visit(const RepeatLoopStatement&) {}
     void visit(const ForeachLoopStatement&) {}

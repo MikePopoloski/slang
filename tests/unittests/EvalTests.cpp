@@ -2356,7 +2356,7 @@ endfunction
     NO_SESSION_ERRORS;
 }
 
-TEST_CASE("Conditional statement pattern matching eval") {
+TEST_CASE("Pattern matching eval") {
     ScriptSession session;
     session.eval(R"(
 typedef union tagged {
@@ -2370,11 +2370,12 @@ typedef union tagged {
             bit [9:0] addr;
         } JmpC;
     } Jmp;
+    void Baz;
 } Instr;
 )");
 
     session.eval(R"(
-function automatic int f;
+function automatic int f1;
     Instr e = tagged Jmp tagged JmpC '{2, 137};
     int rf[3] = '{0, 0, 1};
 
@@ -2386,7 +2387,51 @@ function automatic int f;
 endfunction
 )");
 
-    auto cv = session.eval("f();");
-    CHECK(cv.toString() == "139");
-    NO_SESSION_ERRORS;
+    session.eval(R"(
+function automatic int f2;
+    Instr e = tagged Jmp tagged JmpC '{2, 137};
+    int rf[3] = '{0, 0, 1};
+    int i = 1;
+    struct { int a; real b; } asdf = '{1, 3.14};
+
+    unique case (e) matches
+        tagged Add: return 99;
+    endcase
+
+    case (e) matches
+        tagged Jmp: i++;
+    endcase
+
+    case (e) matches
+        tagged Add: return 100;
+        default: i += 9;
+    endcase
+
+    unique case (e) matches
+        tagged Jmp tagged JmpC '{.*, .*}: begin end
+        tagged Jmp tagged JmpC '{.*, .*}: begin end
+    endcase
+
+    case (asdf) matches
+        '{1.1, 3}: i++;
+        '{1, 3.14}: i += 3;
+    endcase
+
+    case (e) matches
+        tagged Add '{reg1:0}: return 2;
+        tagged Jmp tagged JmpC '{2, 0}: return 3;
+        tagged Jmp tagged JmpC '{.a, 137} &&& rf[0] > 0: return 4;
+        tagged Jmp tagged JmpC '{.a, .b} &&& rf[2] == 1: return a + b + i;
+        default: return 0;
+    endcase
+endfunction
+)");
+
+    CHECK(session.eval("f1();").toString() == "139");
+    CHECK(session.eval("f2();").toString() == "153");
+
+    auto diags = session.getDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::ConstEvalNoCaseItemsMatched);
+    CHECK(diags[1].code == diag::ConstEvalCaseItemsNotUnique);
 }
