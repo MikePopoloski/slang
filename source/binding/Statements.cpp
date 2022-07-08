@@ -1245,7 +1245,7 @@ Statement& PatternCaseStatement::fromSyntax(Compilation& compilation,
                 auto& pci = item->as<PatternCaseItemSyntax>();
                 auto& pattern = Pattern::bind(*pci.pattern, *expr.type, varMap, localCtx);
                 auto& stmt = Statement::bind(*pci.statement, localCtx, stmtCtx);
-                bad |= stmt.bad() | pattern.bad();
+                bad |= stmt.bad() || pattern.bad();
 
                 const Expression* filter = nullptr;
                 if (pci.expr) {
