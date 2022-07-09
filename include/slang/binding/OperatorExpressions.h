@@ -10,6 +10,7 @@
 
 namespace slang {
 
+class Pattern;
 struct PostfixUnaryExpressionSyntax;
 struct PrefixUnaryExpressionSyntax;
 
@@ -100,13 +101,16 @@ struct ConditionalExpressionSyntax;
 /// Represents a conditional operator expression.
 class ConditionalExpression : public Expression {
 public:
-    ConditionalExpression(const Type& type, Expression& pred, Expression& left, Expression& right,
-                          SourceRange sourceRange) :
-        Expression(ExpressionKind::ConditionalOp, type, sourceRange),
-        pred_(&pred), left_(&left), right_(&right) {}
+    struct Condition {
+        not_null<const Expression*> expr;
+        const Pattern* pattern = nullptr;
+    };
+    span<const Condition> conditions;
 
-    const Expression& pred() const { return *pred_; }
-    Expression& pred() { return *pred_; }
+    ConditionalExpression(const Type& type, span<const Condition> conditions, Expression& left,
+                          Expression& right, SourceRange sourceRange) :
+        Expression(ExpressionKind::ConditionalOp, type, sourceRange),
+        conditions(conditions), left_(&left), right_(&right) {}
 
     const Expression& left() const { return *left_; }
     Expression& left() { return *left_; }
@@ -128,13 +132,14 @@ public:
 
     template<typename TVisitor>
     void visitExprs(TVisitor&& visitor) const {
-        pred().visit(visitor);
+        for (auto& cond : conditions)
+            cond.expr->visit(visitor);
+
         left().visit(visitor);
         right().visit(visitor);
     }
 
 private:
-    Expression* pred_;
     Expression* left_;
     Expression* right_;
 };

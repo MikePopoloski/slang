@@ -1685,7 +1685,7 @@ endmodule
     CHECK(diags[5].code == diag::EmptyBody);
 }
 
-TEST_CASE("If statement pattern matching") {
+TEST_CASE("Conditional statement / expression pattern matching") {
     auto tree = SyntaxTree::fromText(R"(
 module m;
     localparam int foo = 2;
@@ -1723,6 +1723,10 @@ module m;
             j matches (tagged JmpC '{cc:.c,addr:.a})) begin
             e = c + a;
         end
+    end
+
+    initial begin
+        e = instr matches tagged Jmp tagged JmpC '{cc:.c,addr:.a} &&& foo > 1 ? a + c : 0;
     end
 endmodule
 )");

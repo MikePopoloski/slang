@@ -10,6 +10,7 @@
 #include "slang/binding/Bitstream.h"
 #include "slang/binding/LiteralExpressions.h"
 #include "slang/binding/MiscExpressions.h"
+#include "slang/binding/Patterns.h"
 #include "slang/binding/SelectExpressions.h"
 #include "slang/compilation/Compilation.h"
 #include "slang/diagnostics/ConstEvalDiags.h"
@@ -923,23 +924,53 @@ void BinaryExpression::serializeTo(ASTSerializer& serializer) const {
     serializer.write("right", right());
 }
 
-Expression& ConditionalExpression::fromSyntax(Compilation& compilation,
+Expression& ConditionalExpression::fromSyntax(Compilation& comp,
                                               const ConditionalExpressionSyntax& syntax,
                                               const BindContext& context,
                                               const Type* assignmentTarget) {
-    if (syntax.predicate->conditions.size() != 1) {
-        context.addDiag(diag::NotYetSupported, syntax.sourceRange());
-        return badExpr(compilation, nullptr);
-    }
+    bool bad = false;
+    bool isConst = true;
+    bool isTrue = true;
+    bool isFourState = false;
+    SmallVectorSized<Condition, 2> conditions;
+    BindContext trueContext = context;
 
-    auto& pred = selfDetermined(compilation, *syntax.predicate->conditions[0]->expr, context);
+    for (auto condSyntax : syntax.predicate->conditions) {
+        auto& cond = selfDetermined(comp, *condSyntax->expr, trueContext);
+        bad |= cond.bad();
+
+        const Pattern* pattern = nullptr;
+        if (condSyntax->matchesClause) {
+            Pattern::VarMap patternVarMap;
+            pattern = &Pattern::bind(*condSyntax->matchesClause->pattern, *cond.type, patternVarMap,
+                                     trueContext);
+
+            // We don't consider the condition to be const if there's a pattern.
+            isConst = false;
+            bad |= pattern->bad();
+        }
+        else {
+            isFourState |= cond.type->isFourState();
+            if (!bad && !trueContext.requireBooleanConvertible(cond))
+                bad = true;
+        }
+
+        if (!bad && isConst) {
+            ConstantValue condVal = trueContext.tryEval(cond);
+            if (!condVal || (condVal.isInteger() && condVal.integer().hasUnknown()))
+                isConst = false;
+            else if (!condVal.isTrue())
+                isTrue = false;
+        }
+
+        conditions.append({ &cond, pattern });
+    }
 
     // If the predicate is known at compile time, we can tell which branch will be unevaluated.
     bitmask<BindFlags> leftFlags = BindFlags::None;
     bitmask<BindFlags> rightFlags = BindFlags::None;
-    ConstantValue predVal = context.tryEval(pred);
-    if (predVal && (!predVal.isInteger() || !predVal.integer().hasUnknown())) {
-        if (predVal.isTrue())
+    if (isConst) {
+        if (isTrue)
             rightFlags = BindFlags::UnevaluatedBranch;
         else
             leftFlags = BindFlags::UnevaluatedBranch;
@@ -952,32 +983,30 @@ Expression& ConditionalExpression::fromSyntax(Compilation& compilation,
         rightFlags |= BindFlags::AllowUnboundedLiteral;
     }
 
-    auto& left = create(compilation, *syntax.left, context, leftFlags, assignmentTarget);
-    auto& right = create(compilation, *syntax.right, context, rightFlags, assignmentTarget);
+    auto& left = create(comp, *syntax.left, trueContext, leftFlags, assignmentTarget);
+    auto& right = create(comp, *syntax.right, context, rightFlags, assignmentTarget);
+    bad |= left.bad() || right.bad();
 
     const Type* lt = left.type;
     const Type* rt = right.type;
     if (lt->isUnbounded())
-        lt = &compilation.getIntType();
+        lt = &comp.getIntType();
     if (rt->isUnbounded())
-        rt = &compilation.getIntType();
+        rt = &comp.getIntType();
 
     // Force four-state return type for ambiguous condition case.
-    const Type* resultType = binaryOperatorType(compilation, lt, rt, pred.type->isFourState());
-    auto result = compilation.emplace<ConditionalExpression>(*resultType, pred, left, right,
-                                                             syntax.sourceRange());
-    if (pred.bad() || left.bad() || right.bad())
-        return badExpr(compilation, result);
-
-    if (!context.requireBooleanConvertible(pred))
-        return badExpr(compilation, result);
+    const Type* resultType = binaryOperatorType(comp, lt, rt, isFourState);
+    auto result = comp.emplace<ConditionalExpression>(*resultType, conditions.copy(comp), left,
+                                                      right, syntax.sourceRange());
+    if (bad)
+        return badExpr(comp, result);
 
     // If both sides of the expression are numeric, we've already determined the correct
     // result type. Otherwise, follow the rules in [11.14.11].
     bool good = true;
     if (!lt->isNumeric() || !rt->isNumeric()) {
         if (lt->isNull() && rt->isNull()) {
-            result->type = &compilation.getNullType();
+            result->type = &comp.getNullType();
         }
         else if (lt->isClass() || rt->isClass() || lt->isCHandle() || rt->isCHandle() ||
                  lt->isEvent() || rt->isEvent() || lt->isVirtualInterface() ||
@@ -1001,7 +1030,7 @@ Expression& ConditionalExpression::fromSyntax(Compilation& compilation,
             result->type = lt;
         }
         else if (left.isImplicitString() && right.isImplicitString()) {
-            result->type = &compilation.getStringType();
+            result->type = &comp.getStringType();
         }
         else {
             good = false;
@@ -1013,7 +1042,7 @@ Expression& ConditionalExpression::fromSyntax(Compilation& compilation,
         diag << *lt << *rt;
         diag << left.sourceRange;
         diag << right.sourceRange;
-        return badExpr(compilation, result);
+        return badExpr(comp, result);
     }
 
     context.setAttributes(*result, syntax.attributes);
@@ -1033,9 +1062,18 @@ optional<bitwidth_t> ConditionalExpression::getEffectiveWidthImpl() const {
 }
 
 ConstantValue ConditionalExpression::evalImpl(EvalContext& context) const {
-    ConstantValue cp = pred().eval(context);
-    if (!cp)
-        return nullptr;
+    ConstantValue cp;
+    for (auto& cond : conditions) {
+        cp = cond.expr->eval(context);
+        if (cond.pattern)
+            cp = cond.pattern->eval(context, cp);
+
+        if (cp.bad())
+            return nullptr;
+
+        if (!cp.isTrue())
+            break;
+    }
 
     // When the conditional predicate is unknown, there are rules to combine both sides
     // and return the hybrid result.
@@ -1097,7 +1135,16 @@ ConstantValue ConditionalExpression::evalImpl(EvalContext& context) const {
 }
 
 void ConditionalExpression::serializeTo(ASTSerializer& serializer) const {
-    serializer.write("pred", pred());
+    serializer.startArray("conditions");
+    for (auto& cond : conditions) {
+        serializer.startObject();
+        serializer.write("expr", *cond.expr);
+        if (cond.pattern)
+            serializer.write("pattern", *cond.pattern);
+        serializer.endObject();
+    }
+    serializer.endArray();
+
     serializer.write("left", left());
     serializer.write("right", right());
 }

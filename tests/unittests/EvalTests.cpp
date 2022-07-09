@@ -2427,8 +2427,17 @@ function automatic int f2;
 endfunction
 )");
 
+    session.eval(R"(
+function automatic int f3;
+    Instr e = tagged Jmp tagged JmpC '{2, 137};
+    int rf[3] = '{0, 0, 1};
+    return e matches (tagged Jmp (tagged JmpC '{cc:.c,addr:.a})) &&& rf[c] != 0 ? c + a : 1;
+endfunction
+)");
+
     CHECK(session.eval("f1();").toString() == "139");
     CHECK(session.eval("f2();").toString() == "153");
+    CHECK(session.eval("f3();").toString() == "139");
 
     auto diags = session.getDiagnostics();
     REQUIRE(diags.size() == 2);
