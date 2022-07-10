@@ -1843,3 +1843,23 @@ endmodule
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::NotBooleanConvertible);
 }
+
+TEST_CASE("Pattern matching -- fallback variable creation") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    int bar;
+    initial begin
+        if (foo matches '{.a, tagged Jmp .b}) begin
+            bar = a + b;
+        end
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::UndeclaredIdentifier);
+}

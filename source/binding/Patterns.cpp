@@ -70,6 +70,39 @@ Pattern& Pattern::bind(const PatternSyntax& syntax, const Type& targetType, VarM
     return *result;
 }
 
+void Pattern::createPlaceholderVars(const PatternSyntax& syntax, VarMap& varMap,
+                                    BindContext& context) {
+    switch (syntax.kind) {
+        case SyntaxKind::ParenthesizedPattern:
+            createPlaceholderVars(*syntax.as<ParenthesizedPatternSyntax>().pattern, varMap,
+                                  context);
+            break;
+        case SyntaxKind::VariablePattern:
+            VariablePattern::fromSyntax(syntax.as<VariablePatternSyntax>(),
+                                        context.getCompilation().getErrorType(), varMap, context);
+            break;
+        case SyntaxKind::TaggedPattern:
+            if (auto pattern = syntax.as<TaggedPatternSyntax>().pattern)
+                createPlaceholderVars(*pattern, varMap, context);
+            break;
+        case SyntaxKind::StructurePattern:
+            for (auto member : syntax.as<StructurePatternSyntax>().members) {
+                if (member->kind == SyntaxKind::NamedStructurePatternMember) {
+                    createPlaceholderVars(*member->as<NamedStructurePatternMemberSyntax>().pattern,
+                                          varMap, context);
+                }
+                else {
+                    createPlaceholderVars(
+                        *member->as<OrderedStructurePatternMemberSyntax>().pattern, varMap,
+                        context);
+                }
+            }
+            break;
+        default:
+            break;
+    }
+}
+
 ConstantValue Pattern::eval(EvalContext& context, const ConstantValue& value) const {
     EvalVisitor visitor;
     return visit(visitor, context, value);
@@ -155,6 +188,8 @@ Pattern& TaggedPattern::fromSyntax(const TaggedPatternSyntax& syntax, const Type
     if (!targetType.isTaggedUnion()) {
         if (!targetType.isError())
             context.addDiag(diag::PatternTaggedType, syntax.sourceRange()) << targetType;
+
+        createPlaceholderVars(syntax, varMap, context);
         return badPattern(comp, nullptr);
     }
 
@@ -165,6 +200,8 @@ Pattern& TaggedPattern::fromSyntax(const TaggedPatternSyntax& syntax, const Type
             auto& diag = context.addDiag(diag::UnknownMember, syntax.memberName.range());
             diag << memberName << targetType;
         }
+
+        createPlaceholderVars(syntax, varMap, context);
         return badPattern(comp, nullptr);
     }
 
@@ -209,6 +246,8 @@ Pattern& StructurePattern::fromSyntax(const StructurePatternSyntax& syntax, cons
     if (!targetType.isStruct() || syntax.members.empty()) {
         if (!targetType.isError() && !syntax.members.empty())
             context.addDiag(diag::PatternStructType, syntax.sourceRange()) << targetType;
+
+        createPlaceholderVars(syntax, varMap, context);
         return badPattern(comp, nullptr);
     }
 
@@ -220,15 +259,19 @@ Pattern& StructurePattern::fromSyntax(const StructurePatternSyntax& syntax, cons
         auto fields = structScope.membersOfType<FieldSymbol>();
         auto it = fields.begin();
         for (auto memberSyntax : syntax.members) {
+            auto& patternSyntax = *memberSyntax->as<OrderedStructurePatternMemberSyntax>().pattern;
             if (it == fields.end()) {
-                context.addDiag(diag::PatternStructTooMany, memberSyntax->sourceRange())
-                    << targetType;
-                bad = true;
+                if (!bad) {
+                    context.addDiag(diag::PatternStructTooMany, memberSyntax->sourceRange())
+                        << targetType;
+                    bad = true;
+                }
+
+                createPlaceholderVars(patternSyntax, varMap, context);
                 break;
             }
 
-            auto& pattern = bind(*memberSyntax->as<OrderedStructurePatternMemberSyntax>().pattern,
-                                 it->getType(), varMap, context);
+            auto& pattern = bind(patternSyntax, it->getType(), varMap, context);
             bad |= pattern.bad();
 
             patterns.append({ &(*it), &pattern });
@@ -251,6 +294,7 @@ Pattern& StructurePattern::fromSyntax(const StructurePatternSyntax& syntax, cons
                     diag << memberName << targetType;
                 }
 
+                createPlaceholderVars(*nspms.pattern, varMap, context);
                 bad = true;
                 continue;
             }

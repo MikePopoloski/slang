@@ -73,6 +73,8 @@ protected:
     Pattern(PatternKind kind, SourceRange sourceRange) : kind(kind), sourceRange(sourceRange) {}
 
     static Pattern& badPattern(Compilation& compilation, const Pattern* child);
+    static void createPlaceholderVars(const PatternSyntax& syntax, VarMap& varMap,
+                                      BindContext& context);
 };
 
 class InvalidPattern : public Pattern {
