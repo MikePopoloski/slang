@@ -40,7 +40,7 @@ add_custom_target(gen_version
     -P "${CMAKE_CURRENT_SOURCE_DIR}/../cmake/gitversion.cmake"
 )
 
-add_library(slangcore
+set(slangcore_SOURCES
     ${CMAKE_CURRENT_BINARY_DIR}/DiagCode.cpp
     diagnostics/DiagnosticClient.cpp
     diagnostics/DiagnosticEngine.cpp
@@ -61,11 +61,19 @@ add_library(slangcore
     util/CommandLine.cpp
     util/OS.cpp
     util/String.cpp
-
-    ../external/fmt/format.cc
-    ../external/fmt/os.cc
-    ../external/xxhash/xxhash.cpp
 )
+
+if(NOT SLANG_USE_SYSTEM_LIBS)
+    set(slangcore_SOURCES
+        ${slangcore_SOURCES}
+        ../external/fmt/format.cc
+        ../external/fmt/os.cc
+        ../external/xxhash/xxhash.cpp
+    )
+endif()
+
+add_library(slangcore ${slangcore_SOURCES})
+
 slang_define_lib(slangcore)
 add_dependencies(slangcore gen_version)
 
@@ -73,9 +81,17 @@ if(NOT CMAKE_CXX_COMPILER_ID MATCHES "MSVC" AND NOT APPLE)
     # Link against C++17 filesystem
     if ((CMAKE_CXX_COMPILER_ID MATCHES "GNU" AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 9.1) OR
         (CMAKE_CXX_COMPILER_ID MATCHES "Clang" AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 9.0))
-        target_link_libraries(slangcore PUBLIC stdc++fs)
+        set(slangcore_SYSTEM_LIBS stdc++fs)
     endif()
 endif()
+
+if(SLANG_USE_SYSTEM_LIBS)
+    find_package(fmt)
+    find_package(xxHash)
+    set(slangcore_SYSTEM_LIBS ${slangcore_SYSTEM_LIBS} fmt::fmt xxHash::xxhash)
+endif()
+
+target_link_libraries(slangcore PUBLIC ${slangcore_SYSTEM_LIBS})
 
 find_package(Threads)
 target_link_libraries(slangcore PUBLIC ${CMAKE_THREAD_LIBS_INIT})
