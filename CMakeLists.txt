@@ -1,6 +1,8 @@
 # slang - cmake entry point
 cmake_minimum_required(VERSION 3.15)
-project(slang VERSION 2.0.0 LANGUAGES CXX)
+project(slang VERSION 2.0.0 LANGUAGES CXX
+        HOMEPAGE_URL https://sv-lang.com/
+        DESCRIPTION "SystemVerilog compiler and language services")
 
 option(SLANG_COVERAGE "Enable code coverage" OFF)
 option(CI_BUILD "Enable longer running tests for CI builds" OFF)
@@ -214,4 +216,13 @@ endif()
 
 if(SLANG_INCLUDE_DOCS)
     add_subdirectory(docs)
+endif()
+
+if(UNIX)
+  # Install pkg-config input file
+  configure_file(${CMAKE_CURRENT_SOURCE_DIR}/scripts/sv-lang.pc.in
+                 ${CMAKE_CURRENT_BINARY_DIR}/sv-lang.pc
+                 @ONLY)
+  install(FILES ${CMAKE_CURRENT_BINARY_DIR}/sv-lang.pc
+          DESTINATION ${CMAKE_INSTALL_PREFIX}/share/pkgconfig)
 endif()
