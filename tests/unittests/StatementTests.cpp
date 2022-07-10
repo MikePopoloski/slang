@@ -1863,3 +1863,38 @@ endmodule
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::UndeclaredIdentifier);
 }
+
+TEST_CASE("Pattern matching error cases") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    struct { int a, b; } asdf;
+    union tagged { int a; real b; } baz;
+    initial begin
+        if (asdf matches '{.c, .c}) begin end
+        if (asdf matches tagged Foo) begin end
+        if (baz matches tagged c) begin end
+        if (baz matches tagged a tagged Foo) begin end
+        if (baz matches '{.a, .b}) begin end
+        if (asdf matches '{.a, .b, .c}) begin end
+        if (asdf matches '{.a}) begin end
+        if (asdf matches '{c: .*}) begin end
+        if (asdf matches '{a: tagged Foo}) begin end
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 9);
+    CHECK(diags[0].code == diag::Redefinition);
+    CHECK(diags[1].code == diag::PatternTaggedType);
+    CHECK(diags[2].code == diag::UnknownMember);
+    CHECK(diags[3].code == diag::PatternTaggedType);
+    CHECK(diags[4].code == diag::PatternStructType);
+    CHECK(diags[5].code == diag::PatternStructTooMany);
+    CHECK(diags[6].code == diag::PatternStructTooFew);
+    CHECK(diags[7].code == diag::UnknownMember);
+    CHECK(diags[8].code == diag::PatternTaggedType);
+}
