@@ -235,6 +235,7 @@ error CoverageBinTransSize "transition coverage bins cannot have an explicit siz
 error InterconnectTypeSyntax "interconnect nets cannot have an explicit type"
 error InterconnectDelaySyntax "interconnect net delays can only be a single value"
 error InterconnectInitializer "interconnect nets cannot have initializers"
+error InvalidEdgeDescriptor "invalid edge descriptor (expected 01, 10, or x/z transitions)"
 warning nonstandard-generate NonStandardGenBlock "standalone generate block without loop or condition is not allowed in SystemVerilog"
 warning empty-pattern EmptyAssignmentPattern "empty assignment patterns are disallowed by SystemVerilog"
 warning nonstandard-foreach NonstandardForeach "non-standard foreach loop variable list"

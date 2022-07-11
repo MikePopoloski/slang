@@ -588,7 +588,7 @@ endprimitive
     CHECK_DIAGNOSTICS_EMPTY;
 }
 
-TEST_CASE("specify block") {
+TEST_CASE("specify block parsing") {
     auto& text = R"(
 module m;
     specify
@@ -615,6 +615,25 @@ endmodule
 
     parseCompilationUnit(text);
     CHECK_DIAGNOSTICS_EMPTY;
+}
+
+TEST_CASE("specify block parsing errors") {
+    auto& text = R"(
+module m;
+    specify
+        $width(edge[0 1, 22, , 11] clr);
+    endspecify
+endmodule
+)";
+
+    parseCompilationUnit(text);
+
+    REQUIRE(diagnostics.size() == 5);
+    CHECK(diagnostics[0].code == diag::InvalidEdgeDescriptor);
+    CHECK(diagnostics[1].code == diag::ExpectedToken);
+    CHECK(diagnostics[2].code == diag::InvalidEdgeDescriptor);
+    CHECK(diagnostics[3].code == diag::ExpectedEdgeDescriptor);
+    CHECK(diagnostics[4].code == diag::InvalidEdgeDescriptor);
 }
 
 TEST_CASE("Invalid package decls") {

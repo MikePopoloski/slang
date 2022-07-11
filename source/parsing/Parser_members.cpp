@@ -2830,12 +2830,55 @@ PathDeclarationSyntax& Parser::parsePathDeclaration() {
 }
 
 EdgeDescriptorSyntax& Parser::parseEdgeDescriptor() {
-    // TODO: enforce all the restrictions here
-    auto t1 = consume();
+    Token t1;
+    if (peek(TokenKind::IntegerLiteral) || peek(TokenKind::Identifier)) {
+        t1 = consume();
+    }
+    else {
+        addDiag(diag::ExpectedEdgeDescriptor, peek().location());
+        t1 = Token::createMissing(alloc, TokenKind::Identifier, peek().location());
+        return factory.edgeDescriptor(t1, Token());
+    }
 
     Token t2;
-    if (t1.kind == TokenKind::IntegerLiteral && peek(TokenKind::Identifier))
+    if (t1.kind == TokenKind::IntegerLiteral && peek(TokenKind::Identifier) &&
+        peek().trivia().empty()) {
         t2 = consume();
+    }
+
+    auto t1Raw = t1.rawText();
+    auto t2Raw = t2.valid() ? t2.rawText() : ""sv;
+
+    SourceRange range = t1.range();
+    if (t2)
+        range = { t1.range().start(), t2.range().end() };
+
+    if (t1Raw.length() + t2Raw.length() != 2) {
+        addDiag(diag::InvalidEdgeDescriptor, range);
+    }
+    else {
+        char edges[2];
+        memcpy(edges, t1Raw.data(), t1Raw.length());
+        if (!t2Raw.empty())
+            memcpy(edges + t1Raw.length(), t2Raw.data(), t2Raw.length());
+
+        bool bad = false;
+        bool bothUnknown = true;
+        for (int i = 0; i < 2; i++) {
+            char c = edges[i] = (char)::tolower(edges[i]);
+            if (c == '0' || c == '1') {
+                bothUnknown = false;
+            }
+            else if (!bad && (c != 'x' && c != 'z')) {
+                bad = true;
+                addDiag(diag::InvalidEdgeDescriptor, range);
+            }
+        }
+
+        if (!bad && (edges[0] == edges[1] || bothUnknown)) {
+            addDiag(diag::InvalidEdgeDescriptor, range);
+        }
+    }
 
     return factory.edgeDescriptor(t1, t2);
 }
@@ -2880,7 +2923,6 @@ TimingCheckArgSyntax& Parser::parseTimingCheckArg() {
         return factory.timingCheckEvent(edge, control, terminal, cond);
     }
 
-    // TODO: enforce restrictions on kinds of expressions
     auto& expr = parseMinTypMaxExpression();
     auto cond = parseCondition();
     return factory.expressionTimingCheckArg(expr, cond);
