@@ -20,14 +20,16 @@ using namespace slang;
 
 struct EvalVisitor {
     template<typename T>
-    ConstantValue visit(const T& pattern, EvalContext& context, const ConstantValue& value) {
+    ConstantValue visit(const T& pattern, EvalContext& context, const ConstantValue& value,
+                        CaseStatementCondition conditionKind) {
         if (pattern.bad())
             return nullptr;
 
-        return pattern.evalImpl(context, value);
+        return pattern.evalImpl(context, value, conditionKind);
     }
 
-    ConstantValue visitInvalid(const Pattern&, EvalContext&, const ConstantValue&) {
+    ConstantValue visitInvalid(const Pattern&, EvalContext&, const ConstantValue&,
+                               CaseStatementCondition) {
         return nullptr;
     }
 };
@@ -103,9 +105,10 @@ void Pattern::createPlaceholderVars(const PatternSyntax& syntax, VarMap& varMap,
     }
 }
 
-ConstantValue Pattern::eval(EvalContext& context, const ConstantValue& value) const {
+ConstantValue Pattern::eval(EvalContext& context, const ConstantValue& value,
+                            CaseStatementCondition conditionKind) const {
     EvalVisitor visitor;
-    return visit(visitor, context, value);
+    return visit(visitor, context, value, conditionKind);
 }
 
 Pattern& Pattern::badPattern(Compilation& comp, const Pattern* child) {
@@ -123,7 +126,8 @@ Pattern& WildcardPattern::fromSyntax(const WildcardPatternSyntax& syntax,
     return *comp.emplace<WildcardPattern>(syntax.sourceRange());
 }
 
-ConstantValue WildcardPattern::evalImpl(EvalContext&, const ConstantValue&) const {
+ConstantValue WildcardPattern::evalImpl(EvalContext&, const ConstantValue&,
+                                        CaseStatementCondition) const {
     // Always succeeds.
     return SVInt(1, 1, false);
 }
@@ -131,18 +135,44 @@ ConstantValue WildcardPattern::evalImpl(EvalContext&, const ConstantValue&) cons
 Pattern& ConstantPattern::fromSyntax(const ExpressionPatternSyntax& syntax, const Type& targetType,
                                      const BindContext& context) {
     // Bind the expression (it must be a constant).
+    // We force integral types to be four-state here so that if we need to do a casex / casez
+    // condition we will get the right result for unknowns.
     auto& comp = context.getCompilation();
-    auto& expr = Expression::bindRValue(targetType, *syntax.expr,
+    const Type* type = &targetType;
+    if (type->isIntegral() && !type->isFourState()) {
+        auto flags = type->getIntegralFlags() | IntegralFlags::FourState;
+        type = &comp.getType(type->getBitWidth(), flags);
+    }
+
+    auto& expr = Expression::bindRValue(*type, *syntax.expr,
                                         syntax.expr->getFirstToken().location(), context);
+
     if (expr.bad() || !context.eval(expr))
         return badPattern(comp, nullptr);
 
     return *comp.emplace<ConstantPattern>(expr, syntax.sourceRange());
 }
 
-ConstantValue ConstantPattern::evalImpl(EvalContext&, const ConstantValue& value) const {
+ConstantValue ConstantPattern::evalImpl(EvalContext&, const ConstantValue& value,
+                                        CaseStatementCondition conditionKind) const {
     ASSERT(expr.constant);
-    return SVInt(1, *expr.constant == value ? 1 : 0, false);
+    ASSERT(conditionKind != CaseStatementCondition::Inside);
+
+    bool result;
+    if (conditionKind == CaseStatementCondition::Normal || !expr.constant->isInteger() ||
+        !value.isInteger()) {
+        result = *expr.constant == value;
+    }
+    else {
+        const SVInt& l = expr.constant->integer();
+        const SVInt& r = value.integer();
+        if (conditionKind == CaseStatementCondition::WildcardJustZ)
+            result = caseZWildcardEqual(l, r);
+        else
+            result = caseXWildcardEqual(l, r);
+    }
+
+    return SVInt(1, result ? 1 : 0, false);
 }
 
 void ConstantPattern::serializeTo(ASTSerializer& serializer) const {
@@ -170,7 +200,8 @@ Pattern& VariablePattern::fromSyntax(const VariablePatternSyntax& syntax, const 
     return *comp.emplace<VariablePattern>(*var, syntax.sourceRange());
 }
 
-ConstantValue VariablePattern::evalImpl(EvalContext& context, const ConstantValue& value) const {
+ConstantValue VariablePattern::evalImpl(EvalContext& context, const ConstantValue& value,
+                                        CaseStatementCondition) const {
     // Capture the current value into a local for our symbol.
     context.createLocal(&variable, value);
 
@@ -218,7 +249,8 @@ Pattern& TaggedPattern::fromSyntax(const TaggedPatternSyntax& syntax, const Type
     return *result;
 }
 
-ConstantValue TaggedPattern::evalImpl(EvalContext& context, const ConstantValue& value) const {
+ConstantValue TaggedPattern::evalImpl(EvalContext& context, const ConstantValue& value,
+                                      CaseStatementCondition conditionKind) const {
     if (value.bad())
         return nullptr;
 
@@ -228,7 +260,7 @@ ConstantValue TaggedPattern::evalImpl(EvalContext& context, const ConstantValue&
         return SVInt(1, 0, false);
 
     if (valuePattern)
-        return valuePattern->eval(context, unionVal->value);
+        return valuePattern->eval(context, unionVal->value, conditionKind);
 
     // If no nested pattern we just succeed.
     return SVInt(1, 1, false);
@@ -314,14 +346,15 @@ Pattern& StructurePattern::fromSyntax(const StructurePatternSyntax& syntax, cons
     return *result;
 }
 
-ConstantValue StructurePattern::evalImpl(EvalContext& context, const ConstantValue& value) const {
+ConstantValue StructurePattern::evalImpl(EvalContext& context, const ConstantValue& value,
+                                         CaseStatementCondition conditionKind) const {
     if (value.bad())
         return nullptr;
 
     if (value.isUnpacked()) {
         auto elems = value.elements();
         for (auto& fp : patterns) {
-            auto cv = fp.pattern->eval(context, elems[fp.field->offset]);
+            auto cv = fp.pattern->eval(context, elems[fp.field->offset], conditionKind);
             if (!cv.isTrue())
                 return cv;
         }
@@ -332,7 +365,7 @@ ConstantValue StructurePattern::evalImpl(EvalContext& context, const ConstantVal
             int32_t io = (int32_t)fp.field->offset;
             int32_t width = (int32_t)fp.field->getType().getBitWidth();
 
-            auto cv = fp.pattern->eval(context, cvi.slice(width + io - 1, io));
+            auto cv = fp.pattern->eval(context, cvi.slice(width + io - 1, io), conditionKind);
             if (!cv.isTrue())
                 return cv;
         }

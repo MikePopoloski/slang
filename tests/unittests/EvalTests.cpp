@@ -2417,6 +2417,14 @@ function automatic int f2;
         '{1, 3.14}: i += 3;
     endcase
 
+    casex (asdf) matches
+        '{32'bx, 3.14}: i += 9;
+    endcase
+
+    casez (asdf) matches
+        '{32'b?, 3.14}: i += 7;
+    endcase
+
     case (e) matches
         tagged Add '{reg1:0}: return 2;
         tagged Jmp tagged JmpC '{2, 0}: return 3;
@@ -2436,7 +2444,7 @@ endfunction
 )");
 
     CHECK(session.eval("f1();").toString() == "139");
-    CHECK(session.eval("f2();").toString() == "153");
+    CHECK(session.eval("f2();").toString() == "169");
     CHECK(session.eval("f3();").toString() == "139");
 
     auto diags = session.getDiagnostics();

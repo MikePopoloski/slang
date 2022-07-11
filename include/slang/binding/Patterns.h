@@ -14,6 +14,7 @@ namespace slang {
 
 class FieldSymbol;
 class PatternVarSymbol;
+enum class CaseStatementCondition;
 
 // clang-format off
 #define PATTERN(x) \
@@ -52,7 +53,8 @@ public:
 
     /// Evaluates the pattern under the given evaluation context. Any errors that occur
     /// will be stored in the evaluation context instead of issued to the compilation.
-    ConstantValue eval(EvalContext& context, const ConstantValue& value) const;
+    ConstantValue eval(EvalContext& context, const ConstantValue& value,
+                       CaseStatementCondition conditionKind) const;
 
     template<typename T>
     T& as() {
@@ -98,7 +100,8 @@ public:
 
     static Pattern& fromSyntax(const WildcardPatternSyntax& syntax, const BindContext& context);
 
-    ConstantValue evalImpl(EvalContext& context, const ConstantValue& value) const;
+    ConstantValue evalImpl(EvalContext& context, const ConstantValue& value,
+                           CaseStatementCondition conditionKind) const;
 
     static bool isKind(PatternKind kind) { return kind == PatternKind::Wildcard; }
 
@@ -117,7 +120,8 @@ public:
     static Pattern& fromSyntax(const ExpressionPatternSyntax& syntax, const Type& targetType,
                                const BindContext& context);
 
-    ConstantValue evalImpl(EvalContext& context, const ConstantValue& value) const;
+    ConstantValue evalImpl(EvalContext& context, const ConstantValue& value,
+                           CaseStatementCondition conditionKind) const;
 
     static bool isKind(PatternKind kind) { return kind == PatternKind::Constant; }
 
@@ -136,7 +140,8 @@ public:
     static Pattern& fromSyntax(const VariablePatternSyntax& syntax, const Type& targetType,
                                VarMap& varMap, BindContext& context);
 
-    ConstantValue evalImpl(EvalContext& context, const ConstantValue& value) const;
+    ConstantValue evalImpl(EvalContext& context, const ConstantValue& value,
+                           CaseStatementCondition conditionKind) const;
 
     static bool isKind(PatternKind kind) { return kind == PatternKind::Variable; }
 
@@ -156,7 +161,8 @@ public:
     static Pattern& fromSyntax(const TaggedPatternSyntax& syntax, const Type& targetType,
                                VarMap& varMap, BindContext& context);
 
-    ConstantValue evalImpl(EvalContext& context, const ConstantValue& value) const;
+    ConstantValue evalImpl(EvalContext& context, const ConstantValue& value,
+                           CaseStatementCondition conditionKind) const;
 
     static bool isKind(PatternKind kind) { return kind == PatternKind::Tagged; }
 
@@ -180,7 +186,8 @@ public:
     static Pattern& fromSyntax(const StructurePatternSyntax& syntax, const Type& targetType,
                                VarMap& varMap, BindContext& context);
 
-    ConstantValue evalImpl(EvalContext& context, const ConstantValue& value) const;
+    ConstantValue evalImpl(EvalContext& context, const ConstantValue& value,
+                           CaseStatementCondition conditionKind) const;
 
     static bool isKind(PatternKind kind) { return kind == PatternKind::Structure; }
 

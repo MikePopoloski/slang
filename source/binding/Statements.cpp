@@ -936,7 +936,7 @@ ER ConditionalStatement::evalImpl(EvalContext& context) const {
             return ER::Fail;
 
         if (cond.pattern)
-            result = cond.pattern->eval(context, result);
+            result = cond.pattern->eval(context, result, CaseStatementCondition::Normal);
 
         if (!result.isTrue()) {
             if (ifFalse)
@@ -1292,7 +1292,7 @@ ER PatternCaseStatement::evalImpl(EvalContext& context) const {
     SourceRange matchRange;
 
     for (auto& item : items) {
-        auto val = item.pattern->eval(context, cv);
+        auto val = item.pattern->eval(context, cv, condition);
         if (!val)
             return ER::Fail;
 

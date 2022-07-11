@@ -12,6 +12,7 @@
 #include "slang/binding/MiscExpressions.h"
 #include "slang/binding/Patterns.h"
 #include "slang/binding/SelectExpressions.h"
+#include "slang/binding/Statements.h"
 #include "slang/compilation/Compilation.h"
 #include "slang/diagnostics/ConstEvalDiags.h"
 #include "slang/diagnostics/ExpressionsDiags.h"
@@ -1066,7 +1067,7 @@ ConstantValue ConditionalExpression::evalImpl(EvalContext& context) const {
     for (auto& cond : conditions) {
         cp = cond.expr->eval(context);
         if (cond.pattern)
-            cp = cond.pattern->eval(context, cp);
+            cp = cond.pattern->eval(context, cp, CaseStatementCondition::Normal);
 
         if (cp.bad())
             return nullptr;
