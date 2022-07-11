@@ -186,7 +186,7 @@ LRM | Feature | Supported
 --- | ------- | ---------
 {{m-success}} 12.4 | Conditional if-else statement | v0.2
 {{m-success}} 12.5 | Case statement | v0.2
-{{m-danger}}  12.6 | Pattern matching conditional statements | no
+{{m-success}} 12.6 | Pattern matching conditional statements | v2.0
 {{m-success}} 12.7.1 | For-loop statements | v0.2
 {{m-success}} 12.7.2 | Repeat-loop statements | v0.2
 {{m-success}} 12.7.3 | Foreach-loop statements | v0.2
