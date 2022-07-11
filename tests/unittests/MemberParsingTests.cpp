@@ -970,3 +970,35 @@ endmodule
     parseCompilationUnit(text);
     CHECK_DIAGNOSTICS_EMPTY;
 }
+
+TEST_CASE("Config declaration parsing") {
+    auto& text = R"(
+config cfgl;
+    design rtlLib.top;
+    instance top use #(.WIDTH(32));
+    instance top.a1 use #(.W(top.WIDTH));
+endconfig
+
+config cfg2;
+    localparam S = 24;
+    design rtlLib.top4;
+    instance top4.a1 use #(.W(top4.S));
+    instance top4.a2 use #(.W(S));
+endconfig
+
+config cfg3;
+    design rtlLib.top ;
+    default liblist aLib rtlLib;
+    cell m use gateLib.m ;
+endconfig
+
+config cfg6;
+    design rtlLib.top;
+    default liblist aLib rtlLib;
+    instance top.a2 use work.cfg5:config ;
+endconfig
+)";
+
+    parseCompilationUnit(text);
+    CHECK_DIAGNOSTICS_EMPTY;
+}

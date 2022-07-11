@@ -2228,3 +2228,61 @@ token closeParen
 PragmaDirective base=Directive
 token name
 separated_list<PragmaExpression> args
+
+// ----- CONFIG -----
+
+ConfigCellIdentifier
+token library
+token dot
+token cell
+
+ConfigRuleClause final=false
+empty
+
+ConfigLiblist base=ConfigRuleClause
+token liblist
+tokenlist libraries
+
+ConfigUseClause base=ConfigRuleClause
+token use
+ConfigCellIdentifier? name
+ParameterValueAssignment? paramAssignments
+token colon
+token config
+
+ConfigRule final=false
+empty
+
+DefaultConfigRule base=ConfigRule
+token defaultKeyword
+ConfigLiblist liblist
+token semi
+
+ConfigInstanceIdentifier
+token dot
+token name
+
+InstanceConfigRule base=ConfigRule
+token instance
+token topModule
+list<ConfigInstanceIdentifier> instanceNames
+ConfigRuleClause ruleClause
+token semi
+
+CellConfigRule base=ConfigRule
+token cell
+ConfigCellIdentifier name
+ConfigRuleClause ruleClause
+token semi
+
+ConfigDeclaration base=Member
+token config
+token name
+token semi1
+list<ParameterDeclarationStatement> localparams
+token design
+list<ConfigCellIdentifier> topCells
+token semi2
+list<ConfigRule> rules
+token endconfig
+NamedBlockClause? blockName

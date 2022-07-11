@@ -389,6 +389,10 @@ private:
     RsCodeBlockSyntax& parseRsCodeBlock();
     RsCaseSyntax& parseRsCase();
     MemberSyntax* parseExternMember(SyntaxKind parentKind, AttrList attributes);
+    ConfigCellIdentifierSyntax& parseConfigCellIdentifier();
+    ConfigLiblistSyntax& parseConfigLiblist();
+    ConfigUseClauseSyntax& parseConfigUseClause();
+    ConfigDeclarationSyntax& parseConfigDeclaration(AttrList attributes);
     // clang-format on
 
     template<bool (*IsEnd)(TokenKind)>

@@ -497,6 +497,7 @@ void Scope::addMembers(const SyntaxNode& syntax) {
         case SyntaxKind::IfNonePathDeclaration:
         case SyntaxKind::ConditionalPathDeclaration:
         case SyntaxKind::SystemTimingCheck:
+        case SyntaxKind::ConfigDeclaration:
             // TODO: these aren't supported yet but we can compile everything else successfully
             // without them so warn instead of erroring.
             addDiag(diag::WarnNotYetSupported, syntax.sourceRange());

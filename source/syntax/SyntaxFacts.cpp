@@ -1300,6 +1300,7 @@ bool SyntaxFacts::isAllowedInCompilationUnit(SyntaxKind kind) {
         case SyntaxKind::UdpDeclaration:
         case SyntaxKind::ExternModuleDecl:
         case SyntaxKind::ExternUdpDecl:
+        case SyntaxKind::ConfigDeclaration:
             return true;
         default:
             return isAllowedInPackage(kind);

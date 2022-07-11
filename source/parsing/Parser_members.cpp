@@ -307,6 +307,9 @@ MemberSyntax* Parser::parseMember(SyntaxKind parentKind, bool& anyLocalModules) 
             if (auto member = parseExternMember(parentKind, attributes))
                 return member;
             break;
+        case TokenKind::ConfigKeyword:
+            errorIfAttributes(attributes);
+            return &parseConfigDeclaration(attributes);
         default:
             break;
     }
@@ -2999,6 +3002,119 @@ MemberSyntax* Parser::parseExternMember(SyntaxKind parentKind, AttrList attribut
         default:
             return nullptr;
     }
+}
+
+ConfigCellIdentifierSyntax& Parser::parseConfigCellIdentifier() {
+    auto id1 = expect(TokenKind::Identifier);
+    if (peek(TokenKind::Dot)) {
+        auto dot = consume();
+        return factory.configCellIdentifier(id1, dot, expect(TokenKind::Identifier));
+    }
+
+    return factory.configCellIdentifier(Token(), Token(), id1);
+}
+
+ConfigLiblistSyntax& Parser::parseConfigLiblist() {
+    auto liblist = expect(TokenKind::LibListKeyword);
+
+    SmallVectorSized<Token, 4> tokens;
+    while (peek(TokenKind::Identifier))
+        tokens.append(consume());
+
+    return factory.configLiblist(liblist, tokens.copy(alloc));
+}
+
+ConfigUseClauseSyntax& Parser::parseConfigUseClause() {
+    auto use = expect(TokenKind::UseKeyword);
+
+    ConfigCellIdentifierSyntax* name = nullptr;
+    if (peek(TokenKind::Identifier) || !peek(TokenKind::Hash))
+        name = &parseConfigCellIdentifier();
+
+    auto paramAssignments = parseParameterValueAssignment();
+
+    Token colon, config;
+    if (peek(TokenKind::Colon)) {
+        colon = consume();
+        config = expect(TokenKind::ConfigKeyword);
+    }
+
+    return factory.configUseClause(use, name, paramAssignments, colon, config);
+}
+
+ConfigDeclarationSyntax& Parser::parseConfigDeclaration(AttrList attributes) {
+    auto config = consume();
+    auto name = expect(TokenKind::Identifier);
+    auto semi1 = expect(TokenKind::Semicolon);
+
+    SmallVectorSized<ParameterDeclarationStatementSyntax*, 4> localparams;
+    while (peek(TokenKind::LocalParamKeyword)) {
+        Token paramSemi;
+        auto& paramBase = parseParameterDecl(consume(), &paramSemi);
+        localparams.append(&factory.parameterDeclarationStatement(nullptr, paramBase, paramSemi));
+    }
+
+    auto design = expect(TokenKind::DesignKeyword);
+
+    SmallVectorSized<ConfigCellIdentifierSyntax*, 4> topCells;
+    while (peek(TokenKind::Identifier))
+        topCells.append(&parseConfigCellIdentifier());
+
+    auto semi2 = expect(TokenKind::Semicolon);
+
+    SmallVectorSized<ConfigRuleSyntax*, 4> rules;
+    while (true) {
+        auto token = peek();
+        if (token.kind == TokenKind::DefaultKeyword) {
+            consume();
+            auto& liblist = parseConfigLiblist();
+            rules.append(&factory.defaultConfigRule(token, liblist, expect(TokenKind::Semicolon)));
+        }
+        else if (token.kind == TokenKind::CellKeyword) {
+            consume();
+            auto& cellName = parseConfigCellIdentifier();
+
+            ConfigRuleClauseSyntax* rule;
+            if (peek(TokenKind::UseKeyword))
+                rule = &parseConfigUseClause();
+            else
+                rule = &parseConfigLiblist();
+
+            rules.append(
+                &factory.cellConfigRule(token, cellName, *rule, expect(TokenKind::Semicolon)));
+        }
+        else if (token.kind == TokenKind::InstanceKeyword) {
+            consume();
+            auto topModule = expect(TokenKind::Identifier);
+
+            SmallVectorSized<ConfigInstanceIdentifierSyntax*, 4> instanceNames;
+            while (peek(TokenKind::Dot)) {
+                auto dot = consume();
+                instanceNames.append(
+                    &factory.configInstanceIdentifier(dot, expect(TokenKind::Identifier)));
+            }
+
+            ConfigRuleClauseSyntax* rule;
+            if (peek(TokenKind::UseKeyword))
+                rule = &parseConfigUseClause();
+            else
+                rule = &parseConfigLiblist();
+
+            rules.append(&factory.instanceConfigRule(token, topModule, instanceNames.copy(alloc),
+                                                     *rule, expect(TokenKind::Semicolon)));
+        }
+        else {
+            break;
+        }
+    }
+
+    auto endconfig = expect(TokenKind::EndConfigKeyword);
+    auto blockName = parseNamedBlockClause();
+    checkBlockNames(name, blockName);
+
+    return factory.configDeclaration(attributes, config, name, semi1, localparams.copy(alloc),
+                                     design, topCells.copy(alloc), semi2, rules.copy(alloc),
+                                     endconfig, blockName);
 }
 
 void Parser::checkMemberAllowed(const SyntaxNode& member, SyntaxKind parentKind) {
