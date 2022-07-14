@@ -2757,3 +2757,37 @@ endmodule
     CHECK(diags[2].code == diag::UndeclaredIdentifier);
     CHECK(diags[3].code == diag::BadAssignment);
 }
+
+TEST_CASE("Modport import subroutine consteval rules") {
+    auto tree = SyntaxTree::fromText(R"(
+interface I;
+    function int foo(int i);
+        return i;
+    endfunction
+
+    extern function int bar(int i);
+
+    modport m(import foo, bar);
+endinterface
+
+module n (I.m m);
+    localparam int j = m.foo(3);
+    localparam int k = m.bar(4);
+endmodule
+
+module top;
+    I i();
+    n n1(i);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::ConstEvalSubroutineNotConstant);
+
+    auto& j = compilation.getRoot().lookupName<ParameterSymbol>("top.n1.j");
+    CHECK(j.getValue().integer() == 3);
+}
