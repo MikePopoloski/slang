@@ -342,29 +342,26 @@ void ModportSymbol::fromSyntax(const BindContext& context, const ModportDeclarat
                 }
                 case SyntaxKind::ModportSubroutinePortList: {
                     auto& portList = port->as<ModportSubroutinePortListSyntax>();
-                    if (portList.importExport.kind == TokenKind::ExportKeyword) {
-                        // TODO: implement
-                    }
-                    else {
-                        for (auto subPort : portList.ports) {
-                            switch (subPort->kind) {
-                                case SyntaxKind::ModportNamedPort: {
-                                    auto& mps = MethodPrototypeSymbol::fromSyntax(
-                                        context, subPort->as<ModportNamedPortSyntax>());
-                                    mps.setAttributes(*modport, portList.attributes);
-                                    modport->addMember(mps);
-                                    break;
-                                }
-                                case SyntaxKind::ModportSubroutinePort: {
-                                    auto& mps = MethodPrototypeSymbol::fromSyntax(
-                                        *context.scope, subPort->as<ModportSubroutinePortSyntax>());
-                                    mps.setAttributes(*modport, portList.attributes);
-                                    modport->addMember(mps);
-                                    break;
-                                }
-                                default:
-                                    THROW_UNREACHABLE;
+                    bool isExport = portList.importExport.kind == TokenKind::ExportKeyword;
+                    for (auto subPort : portList.ports) {
+                        switch (subPort->kind) {
+                            case SyntaxKind::ModportNamedPort: {
+                                auto& mps = MethodPrototypeSymbol::fromSyntax(
+                                    context, subPort->as<ModportNamedPortSyntax>(), isExport);
+                                mps.setAttributes(*modport, portList.attributes);
+                                modport->addMember(mps);
+                                break;
                             }
+                            case SyntaxKind::ModportSubroutinePort: {
+                                auto& mps = MethodPrototypeSymbol::fromSyntax(
+                                    *context.scope, subPort->as<ModportSubroutinePortSyntax>(),
+                                    isExport);
+                                mps.setAttributes(*modport, portList.attributes);
+                                modport->addMember(mps);
+                                break;
+                            }
+                            default:
+                                THROW_UNREACHABLE;
                         }
                     }
                     break;

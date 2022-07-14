@@ -33,27 +33,38 @@ enum class MethodFlags : uint16_t {
     /// The method is a class constructor.
     Constructor = 1 << 3,
 
-    /// The method is imported into an interface instance.
-    InterfaceImport = 1 << 4,
+    /// The method is declared extern from an interface,
+    /// and so its body must be exported by a module elsewhere.
+    InterfaceExtern = 1 << 4,
+
+    /// The method is imported via a modport.
+    ModportImport = 1 << 5,
+
+    /// The method is exported via a modport.
+    ModportExport = 1 << 6,
 
     /// The method is a DPI import.
-    DPIImport = 1 << 5,
+    DPIImport = 1 << 7,
 
     /// The method is a DPI import marked 'context'.
-    DPIContext = 1 << 6,
+    DPIContext = 1 << 8,
 
     /// The method is known not to be constant, even if it otherwise
     /// meets all of the requirements for a constant function. Used for
     /// built-in methods only.
-    NotConst = 1 << 7,
+    NotConst = 1 << 9,
 
     /// This method is a std::randomize built-in. These are declared as
     /// normal subroutines so they can be found via name lookup, and then
     /// a special case translates the calls into the appropriate system
     /// subroutine call.
-    Randomize = 1 << 8
+    Randomize = 1 << 10,
+
+    /// Used with InterfaceExtern methods to indicate that more than one
+    /// module is allowed to export the same task.
+    ForkJoin = 1 << 11
 };
-BITMASK(MethodFlags, Randomize)
+BITMASK(MethodFlags, ForkJoin)
 
 class MethodPrototypeSymbol;
 struct ClassMethodDeclarationSyntax;
@@ -153,6 +164,7 @@ private:
 };
 
 struct ClassMethodPrototypeSyntax;
+struct ExternInterfaceMethodSyntax;
 struct ModportNamedPortSyntax;
 struct ModportSubroutinePortSyntax;
 
@@ -183,16 +195,30 @@ public:
     static MethodPrototypeSymbol& fromSyntax(const Scope& scope,
                                              const ClassMethodPrototypeSyntax& syntax);
     static MethodPrototypeSymbol& fromSyntax(const Scope& scope,
-                                             const ModportSubroutinePortSyntax& syntax);
+                                             const ModportSubroutinePortSyntax& syntax,
+                                             bool isExport);
     static MethodPrototypeSymbol& fromSyntax(const BindContext& context,
-                                             const ModportNamedPortSyntax& syntax);
+                                             const ModportNamedPortSyntax& syntax, bool isExport);
+    static MethodPrototypeSymbol& fromSyntax(const Scope& scope,
+                                             const ExternInterfaceMethodSyntax& syntax);
+
+    static MethodPrototypeSymbol& implicitExtern(const Scope& scope,
+                                                 const ModportSubroutinePortSyntax& syntax);
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::MethodPrototype; }
 
 private:
+    static MethodPrototypeSymbol& createForModport(const Scope& scope, const SyntaxNode& syntax,
+                                                   Token nameToken, bool isExport);
+
+    template<typename TSyntax>
+    static MethodPrototypeSymbol& createExternIfaceMethod(const Scope& scope,
+                                                          const TSyntax& syntax);
+
     span<const FormalArgumentSymbol* const> arguments;
     mutable optional<const SubroutineSymbol*> subroutine;
     mutable const Symbol* overrides = nullptr;
+    mutable bool needsMatchCheck = false;
 };
 
 } // namespace slang

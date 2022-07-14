@@ -66,8 +66,7 @@ static void validateResolver(const NetType& netType, const SubroutineSymbol& res
         return;
     }
 
-    if (resolver.flags.has(MethodFlags::InterfaceImport | MethodFlags::DPIImport |
-                           MethodFlags::NotConst | MethodFlags::Randomize)) {
+    if (resolver.flags != MethodFlags::None && resolver.flags != MethodFlags::Static) {
         reportError(diag::NTResolveUserDef);
         return;
     }

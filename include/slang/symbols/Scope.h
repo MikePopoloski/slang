@@ -297,6 +297,7 @@ private:
     bool handleDataDeclaration(const DataDeclarationSyntax& syntax);
     void handleUserDefinedNet(const UserDefinedNetDeclarationSyntax& syntax);
     void handleNestedDefinition(const ModuleDeclarationSyntax& syntax) const;
+    void handleExportedMethods(span<Symbol* const> deferredMembers) const;
     void reportNameConflict(const Symbol& member, const Symbol& existing) const;
     void checkImportConflict(const Symbol& member, const Symbol& existing) const;
     void addWildcardImport(const PackageImportItemSyntax& item,

@@ -1238,6 +1238,9 @@ TEST_CASE("Modport subroutine import") {
     auto tree = SyntaxTree::fromText(R"(
 interface I;
     function void foo(int i); endfunction
+    function void bar(int a, logic b); endfunction
+    task baz; endtask
+
     modport m(import foo, import function void bar(int, logic), task baz);
 endinterface
 
@@ -1277,10 +1280,40 @@ endinterface
     REQUIRE(diags.size() == 6);
     CHECK(diags[0].code == diag::ExpectedImportExport);
     CHECK(diags[1].code == diag::NotASubroutine);
-    CHECK(diags[2].code == diag::TypoIdentifier);
+    CHECK(diags[2].code == diag::IfaceImportExportTarget);
     CHECK(diags[3].code == diag::MethodReturnMismatch);
     CHECK(diags[4].code == diag::NotASubroutine);
     CHECK(diags[5].code == diag::Redefinition);
+}
+
+TEST_CASE("Modport subroutine export") {
+    auto tree = SyntaxTree::fromText(R"(
+interface I;
+    extern function void foo(int i, real r);
+    extern forkjoin task t3();
+
+    modport m(export foo, function void bar(int, logic), task baz, export func);
+    modport n(import function void func(int), import task t2);
+    modport o(export t2);
+endinterface
+
+module n(I.m a);
+    initial begin
+        a.foo(42, 3.14);
+        a.bar(1, 1);
+        a.baz();
+    end
+endmodule
+
+module m;
+    I i();
+    n n1(i);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
 }
 
 TEST_CASE("DPI Imports") {

@@ -629,12 +629,18 @@ void SubroutineSymbol::serializeTo(ASTSerializer& serializer) const {
             str += "static,";
         if (flags.has(MethodFlags::Constructor))
             str += "ctor,";
-        if (flags.has(MethodFlags::InterfaceImport))
-            str += "ifaceImport,";
+        if (flags.has(MethodFlags::InterfaceExtern))
+            str += "ifaceExtern,";
+        if (flags.has(MethodFlags::ModportImport))
+            str += "modportImport,";
+        if (flags.has(MethodFlags::ModportExport))
+            str += "modportExport,";
         if (flags.has(MethodFlags::DPIImport))
             str += "dpi,";
         if (flags.has(MethodFlags::DPIContext))
             str += "context,";
+        if (flags.has(MethodFlags::ForkJoin))
+            str += "forkJoin,";
         if (!str.empty()) {
             str.pop_back();
             serializer.write("flags", str);
@@ -729,19 +735,102 @@ MethodPrototypeSymbol& MethodPrototypeSymbol::fromSyntax(const Scope& scope,
     return *result;
 }
 
-MethodPrototypeSymbol& MethodPrototypeSymbol::fromSyntax(
-    const Scope& scope, const ModportSubroutinePortSyntax& syntax) {
+MethodPrototypeSymbol& MethodPrototypeSymbol::createForModport(const Scope& scope,
+                                                               const SyntaxNode& syntax,
+                                                               Token nameToken, bool isExport) {
+    // Create the prototype symbol.
+    auto& comp = scope.getCompilation();
+    auto flags = isExport ? MethodFlags::ModportExport : MethodFlags::ModportImport;
+    auto name = nameToken.valueText();
+    auto result = comp.emplace<MethodPrototypeSymbol>(
+        comp, name, nameToken.location(), SubroutineKind::Function, Visibility::Public, flags);
+    result->setSyntax(syntax);
 
+    // Find the target method we're importing or exporting from the parent interface.
+    auto target = scope.find(name);
+    if (!target) {
+        auto& diag = scope.addDiag(diag::IfaceImportExportTarget, syntax.sourceRange());
+        diag << (isExport ? "export"sv : "import"sv);
+        diag << name;
+
+        result->subroutine = nullptr;
+        result->declaredReturnType.setType(comp.getErrorType());
+        return *result;
+    }
+
+    if (target->kind == SymbolKind::Subroutine) {
+        result->subroutine = &target->as<SubroutineSymbol>();
+    }
+    else {
+        auto& diag = scope.addDiag(diag::NotASubroutine, nameToken.range());
+        diag << target->name;
+        diag.addNote(diag::NoteDeclarationHere, target->location);
+
+        result->subroutine = nullptr;
+        result->declaredReturnType.setType(comp.getErrorType());
+    }
+
+    return *result;
+}
+
+MethodPrototypeSymbol& MethodPrototypeSymbol::fromSyntax(const Scope& scope,
+                                                         const ModportSubroutinePortSyntax& syntax,
+                                                         bool isExport) {
     auto& comp = scope.getCompilation();
     auto& proto = *syntax.prototype;
+    auto& result =
+        createForModport(scope, syntax, syntax.prototype->name->getLastToken(), isExport);
 
-    Token nameToken = proto.name->getLastToken();
+    auto target = result.subroutine.value();
+    if (!target)
+        return result;
+
+    result.subroutineKind = proto.keyword.kind == TokenKind::TaskKeyword ? SubroutineKind::Task
+                                                                         : SubroutineKind::Function;
+
+    if (result.subroutineKind == SubroutineKind::Function)
+        result.declaredReturnType.setTypeSyntax(*proto.returnType);
+    else
+        result.declaredReturnType.setType(comp.getVoidType());
+
+    SmallVectorSized<const FormalArgumentSymbol*, 8> arguments;
+    if (proto.portList) {
+        SubroutineSymbol::buildArguments(result, *proto.portList, VariableLifetime::Automatic,
+                                         arguments);
+    }
+
+    result.arguments = arguments.copy(comp);
+    result.needsMatchCheck = true;
+    return result;
+}
+
+MethodPrototypeSymbol& MethodPrototypeSymbol::fromSyntax(const BindContext& context,
+                                                         const ModportNamedPortSyntax& syntax,
+                                                         bool isExport) {
+    auto& result = createForModport(*context.scope, syntax, syntax.name, isExport);
+    auto target = result.subroutine.value();
+    if (!target)
+        return result;
+
+    result.declaredReturnType.setLink(target->declaredReturnType);
+    result.subroutineKind = target->subroutineKind;
+    result.arguments = cloneArguments(context.getCompilation(), result, target->getArguments());
+    return result;
+}
+
+template<typename TSyntax>
+MethodPrototypeSymbol& MethodPrototypeSymbol::createExternIfaceMethod(const Scope& scope,
+                                                                      const TSyntax& syntax) {
+    auto& comp = scope.getCompilation();
+    auto& proto = *syntax.prototype;
+    auto nameToken = proto.name->getLastToken();
     auto subroutineKind = proto.keyword.kind == TokenKind::TaskKeyword ? SubroutineKind::Task
                                                                        : SubroutineKind::Function;
 
     auto result = comp.emplace<MethodPrototypeSymbol>(
         comp, nameToken.valueText(), nameToken.location(), subroutineKind, Visibility::Public,
-        MethodFlags::InterfaceImport);
+        MethodFlags::InterfaceExtern);
+
     result->setSyntax(syntax);
 
     if (subroutineKind == SubroutineKind::Function)
@@ -756,100 +845,48 @@ MethodPrototypeSymbol& MethodPrototypeSymbol::fromSyntax(
     }
 
     result->arguments = arguments.copy(comp);
+    result->subroutine = &SubroutineSymbol::createFromPrototype(comp, *result, scope);
     return *result;
 }
 
-MethodPrototypeSymbol& MethodPrototypeSymbol::fromSyntax(const BindContext& context,
-                                                         const ModportNamedPortSyntax& syntax) {
-    auto& comp = context.getCompilation();
-    auto name = syntax.name;
-    auto result = comp.emplace<MethodPrototypeSymbol>(comp, name.valueText(), name.location(),
-                                                      SubroutineKind::Function, Visibility::Public,
-                                                      MethodFlags::InterfaceImport);
-    result->setSyntax(syntax);
+MethodPrototypeSymbol& MethodPrototypeSymbol::fromSyntax(
+    const Scope& scope, const ExternInterfaceMethodSyntax& syntax) {
 
-    // Find the target subroutine that is being imported.
-    auto target =
-        Lookup::unqualifiedAt(*context.scope, syntax.name.valueText(), context.getLocation(),
-                              syntax.name.range(), LookupFlags::NoParentScope);
-    if (!target) {
-        result->declaredReturnType.setType(comp.getErrorType());
-        return *result;
-    }
+    auto& result = createExternIfaceMethod(scope, syntax);
+    if (syntax.forkJoin)
+        result.flags |= MethodFlags::ForkJoin;
 
-    // Target must actually be a subroutine (or a prototype of one).
-    if (target->kind != SymbolKind::Subroutine && target->kind != SymbolKind::MethodPrototype) {
-        auto& diag = context.addDiag(diag::NotASubroutine, name.range());
-        diag << target->name;
-        diag.addNote(diag::NoteDeclarationHere, target->location);
+    return result;
+}
 
-        result->declaredReturnType.setType(comp.getErrorType());
-        return *result;
-    }
+MethodPrototypeSymbol& MethodPrototypeSymbol::implicitExtern(
+    const Scope& scope, const ModportSubroutinePortSyntax& syntax) {
 
-    // Copy details from the found subroutine into the newly created prototype.
-    // This lambda exists to handle both SubroutineSymbols and MethodPrototypeSymbols.
-    auto copyDetails = [&](auto& source) {
-        result->declaredReturnType.setLink(source.declaredReturnType);
-        result->subroutineKind = source.subroutineKind;
-        result->arguments = cloneArguments(comp, *result, source.getArguments());
-    };
-
-    if (target->kind == SymbolKind::Subroutine)
-        copyDetails(target->as<SubroutineSymbol>());
-    else
-        copyDetails(target->as<MethodPrototypeSymbol>());
-
-    return *result;
+    auto& result = createExternIfaceMethod(scope, syntax);
+    return result;
 }
 
 const SubroutineSymbol* MethodPrototypeSymbol::getSubroutine() const {
-    if (subroutine)
+    ASSERT(getParentScope() && getParentScope()->asSymbol().getParentScope());
+
+    if (subroutine) {
+        if (needsMatchCheck) {
+            needsMatchCheck = false;
+            if (!checkMethodMatch(*getParentScope(), *subroutine.value()))
+                subroutine = nullptr;
+        }
         return *subroutine;
+    }
 
     subroutine = nullptr;
 
-    ASSERT(getParentScope() && getParentScope()->asSymbol().getParentScope());
     auto& nearScope = *getParentScope();
     auto& parentSym = nearScope.asSymbol();
     auto& outerScope = *parentSym.getParentScope();
     auto& comp = outerScope.getCompilation();
 
-    if (flags.has(MethodFlags::InterfaceImport)) {
-        // This is a prototype declared in a modport or an interface. If it's in a
-        // modport, check whether the parent interface declares the method already.
-        if (parentSym.kind == SymbolKind::Modport) {
-            auto result = Lookup::unqualified(
-                outerScope, name, LookupFlags::NoParentScope | LookupFlags::AllowDeclaredAfter);
-
-            if (result) {
-                // If we found a symbol, make sure it's actually a subroutine.
-                if (result->kind != SymbolKind::Subroutine &&
-                    result->kind != SymbolKind::MethodPrototype) {
-                    auto& diag = outerScope.addDiag(diag::NotASubroutine, location);
-                    diag << result->name;
-                    diag.addNote(diag::NoteDeclarationHere, result->location);
-                }
-                else {
-                    if (result->kind == SymbolKind::MethodPrototype)
-                        subroutine = result->as<MethodPrototypeSymbol>().getSubroutine();
-                    else
-                        subroutine = &result->as<SubroutineSymbol>();
-
-                    if (*subroutine && !checkMethodMatch(nearScope, *subroutine.value()))
-                        subroutine = nullptr;
-
-                    return *subroutine;
-                }
-            }
-        }
-
-        // It's allowed to not have an immediate body for this method anywhere
-        // (though it will need to be connected if this method is called at runtime).
-        // For now, create a placeholder subroutine to return.
-        subroutine = &SubroutineSymbol::createFromPrototype(comp, *this, nearScope);
-        return *subroutine;
-    }
+    ASSERT(!flags.has(MethodFlags::ModportImport | MethodFlags::ModportExport |
+                      MethodFlags::InterfaceExtern));
 
     // The out-of-block definition must be in our parent scope.
     auto [declSyntax, index, used] = comp.findOutOfBlockDecl(outerScope, parentSym.name, name);
@@ -860,7 +897,7 @@ const SubroutineSymbol* MethodPrototypeSymbol::getSubroutine() const {
         *used = true;
     }
 
-    if (flags & MethodFlags::Pure) {
+    if (flags.has(MethodFlags::Pure)) {
         // A pure method should not have a body defined.
         if (syntax) {
             auto& diag =

@@ -381,37 +381,40 @@ bool lookupDownward(span<const NamePlusLoc> nameParts, NameComponents name,
             // If we did the lookup in a modport, check to see if the symbol actually
             // exists in the parent interface.
             auto& prevSym = scope.asSymbol();
-            if (prevSym.kind == SymbolKind::Modport) {
-                symbol = prevSym.getParentScope()->find(name.text);
-                if (symbol) {
-                    // Variables, nets, subroutines can only be accessed via the modport.
-                    // Other symbols aren't permitted in a modport, so they are allowed
-                    // to be accessed through it as if we had accessed the interface
-                    // instance itself.
-                    if (SemanticFacts::isAllowedInModport(symbol->kind)) {
-                        // This is an error, the modport disallows access.
-                        auto def = prevSym.getDeclaringDefinition();
-                        ASSERT(def);
+            if (prevSym.kind != SymbolKind::Modport ||
+                (symbol = prevSym.getParentScope()->find(name.text)) == nullptr) {
 
-                        auto& diag =
-                            result.addDiag(*context.scope, diag::InvalidModportAccess, name.range);
-                        diag << name.text;
-                        diag << def->name;
-                        diag << prevSym.name;
-                        return false;
-                    }
-                    else {
-                        // This is fine, we found what we needed.
-                        continue;
-                    }
+                // Check if we actually had a method prototype found here but it failed
+                // to resolve due to some other error, in which case we should keep quiet.
+                auto& nameMap = scope.getNameMap();
+                if (auto scopeIt = nameMap.find(name.text);
+                    scopeIt != nameMap.end() &&
+                    scopeIt->second->kind == SymbolKind::MethodPrototype) {
+                    return false;
                 }
+
+                auto& diag = result.addDiag(*context.scope, diag::CouldNotResolveHierarchicalPath,
+                                            it->dotLocation);
+                diag << name.text;
+                diag << name.range;
+                return true;
             }
 
-            auto& diag = result.addDiag(*context.scope, diag::CouldNotResolveHierarchicalPath,
-                                        it->dotLocation);
-            diag << name.text;
-            diag << name.range;
-            return true;
+            // Variables, nets, subroutines can only be accessed via the modport.
+            // Other symbols aren't permitted in a modport, so they are allowed
+            // to be accessed through it as if we had accessed the interface
+            // instance itself.
+            if (SemanticFacts::isAllowedInModport(symbol->kind)) {
+                // This is an error, the modport disallows access.
+                auto def = prevSym.getDeclaringDefinition();
+                ASSERT(def);
+
+                auto& diag = result.addDiag(*context.scope, diag::InvalidModportAccess, name.range);
+                diag << name.text;
+                diag << def->name;
+                diag << prevSym.name;
+                return false;
+            }
         }
     }
 

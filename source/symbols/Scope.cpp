@@ -492,6 +492,10 @@ void Scope::addMembers(const SyntaxNode& syntax) {
                 addMember(*sym);
             break;
         }
+        case SyntaxKind::ExternInterfaceMethod:
+            addMember(
+                MethodPrototypeSymbol::fromSyntax(*this, syntax.as<ExternInterfaceMethodSyntax>()));
+            break;
         case SyntaxKind::PulseStyleDeclaration:
         case SyntaxKind::PathDeclaration:
         case SyntaxKind::IfNonePathDeclaration:
@@ -508,7 +512,6 @@ void Scope::addMembers(const SyntaxNode& syntax) {
         case SyntaxKind::CheckerDataDeclaration:
         case SyntaxKind::ExternModuleDecl:
         case SyntaxKind::ExternUdpDecl:
-        case SyntaxKind::ExternInterfaceMethod:
         case SyntaxKind::WildcardPortList:
             addDiag(diag::NotYetSupported, syntax.sourceRange());
             break;
@@ -822,10 +825,19 @@ void Scope::elaborate() const {
         }
     }
 
-    // If this is a class type being elaborated, let it inherit members from parent classes.
+    auto deferred = deferredData.getMembers();
+
     if (thisSym->kind == SymbolKind::ClassType) {
+        // If this is a class type being elaborated, let it inherit members from parent classes.
         thisSym->as<ClassType>().inheritMembers(
             [this](const Symbol& member) { insertMember(&member, nullptr, true, true); });
+    }
+    else if (thisSym->kind == SymbolKind::InstanceBody &&
+             thisSym->as<InstanceBodySymbol>().getDefinition().definitionKind ==
+                 DefinitionKind::Interface) {
+        // Allow the interface to implicitly declare extern methods for
+        // exported subroutines that are only declared in modports.
+        handleExportedMethods(deferred);
     }
 
     auto insertMembers = [this](auto& members, const Symbol* at) {
@@ -858,7 +870,6 @@ void Scope::elaborate() const {
     // Go through deferred instances and elaborate them now.
     bool usedPorts = false;
     bool hasNestedDefs = false;
-    auto deferred = deferredData.getMembers();
     uint32_t constructIndex = 1;
 
     for (auto symbol : deferred) {
@@ -1170,6 +1181,77 @@ void Scope::handleNestedDefinition(const ModuleDeclarationSyntax& syntax) const 
 
     auto& inst = InstanceSymbol::createDefault(compilation, *def, nullptr);
     insertMember(&inst, lastMember, /* isElaborating */ true, /* incrementIndex */ true);
+}
+
+void Scope::handleExportedMethods(span<Symbol* const> deferredMembers) const {
+    SmallSet<string_view, 4> waitingForImport;
+    SmallMap<string_view, const ModportSubroutinePortSyntax*, 4> foundImports;
+
+    auto create = [&](const ModportSubroutinePortSyntax& syntax) {
+        auto& symbol = MethodPrototypeSymbol::implicitExtern(*this, syntax);
+        insertMember(&symbol, nullptr, true, true);
+    };
+
+    for (auto symbol : deferredMembers) {
+        auto& node = symbol->as<DeferredMemberSymbol>().node;
+        if (node.kind != SyntaxKind::ModportDeclaration)
+            continue;
+
+        for (auto item : node.as<ModportDeclarationSyntax>().items) {
+            for (auto port : item->ports->ports) {
+                if (port->kind != SyntaxKind::ModportSubroutinePortList)
+                    continue;
+
+                auto& portList = port->as<ModportSubroutinePortListSyntax>();
+                bool isExport = portList.importExport.kind == TokenKind::ExportKeyword;
+
+                for (auto subPort : portList.ports) {
+                    switch (subPort->kind) {
+                        case SyntaxKind::ModportNamedPort: {
+                            // A simple named export is not enough to create a
+                            // new extern prototype, but if an import has already
+                            // declared it for us then we can take details from that.
+                            // Otherwise remember it in case we see an import for it later.
+                            if (isExport) {
+                                auto& mnps = subPort->as<ModportNamedPortSyntax>();
+                                auto name = mnps.name.valueText();
+                                if (name.empty() || nameMap->find(name) != nameMap->end())
+                                    break;
+
+                                if (auto it = foundImports.find(name); it != foundImports.end())
+                                    create(*it->second);
+                                else
+                                    waitingForImport.emplace(name);
+                            }
+                            break;
+                        }
+                        case SyntaxKind::ModportSubroutinePort: {
+                            // If this is an export, see if this should create an implicit
+                            // extern prototype. If it's an import then see if a previous
+                            // export is waiting for it to be declared.
+                            auto& msps = subPort->as<ModportSubroutinePortSyntax>();
+                            auto name = msps.prototype->name->getLastToken().valueText();
+                            if (name.empty() || nameMap->find(name) != nameMap->end())
+                                break;
+
+                            if (isExport) {
+                                create(msps);
+                            }
+                            else {
+                                if (waitingForImport.find(name) != waitingForImport.end())
+                                    create(msps);
+                                else
+                                    foundImports.emplace(name, &msps);
+                            }
+                            break;
+                        }
+                        default:
+                            THROW_UNREACHABLE;
+                    }
+                }
+            }
+        }
+    }
 }
 
 void Scope::addWildcardImport(const PackageImportItemSyntax& item,
