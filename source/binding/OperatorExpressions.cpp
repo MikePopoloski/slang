@@ -1957,6 +1957,11 @@ Expression& OpenRangeExpression::fromSyntax(Compilation& comp,
         return badExpr(comp, result);
     }
 
+    auto cvl = context.tryEval(left);
+    auto cvr = context.tryEval(right);
+    if (cvl.isInteger() && cvr.isInteger() && bool(cvl.integer() > cvr.integer()))
+        context.addDiag(diag::ReversedOpenRange, result->sourceRange);
+
     return *result;
 }
 

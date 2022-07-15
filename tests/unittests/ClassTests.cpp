@@ -2135,8 +2135,8 @@ module m;
     int a, b;
     initial begin
         b = randomize(a) with {
-            a dist { 1 :/ 1, [9:2] :/ 9};
-            a inside {[9:1]};
+            a dist { 1 :/ 1, [2:9] :/ 9};
+            a inside {[1:9]};
         };
     end
 endmodule
@@ -2586,4 +2586,22 @@ endclass
     Compilation compilation;
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Reversed dist range treated as empty") {
+    auto tree = SyntaxTree::fromText(R"(
+class C;
+    rand bit [4:0] a;
+    constraint a_c {
+        a dist { 16 :/ 1, [15:1] :/ 1};
+    }
+endclass
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::ReversedOpenRange);
 }
