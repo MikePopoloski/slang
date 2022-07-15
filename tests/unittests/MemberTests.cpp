@@ -2811,7 +2811,7 @@ TEST_CASE("Extern interface method errors") {
     auto tree = SyntaxTree::fromText(R"(
 interface I;
     extern task t1;
-    extern function int f1(int i);
+    extern forkjoin function int f1(int i);
 
     logic l;
     function void f2; endfunction
@@ -2825,6 +2825,7 @@ module n (I.m m);
     function void m.l(int i, real r); endfunction
     function void m.f2(); endfunction
     function void m.f1(); endfunction
+    function int m.f1(int i); endfunction
 endmodule
 
 module top;
@@ -2842,13 +2843,15 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 8);
+    REQUIRE(diags.size() == 10);
     CHECK(diags[0].code == diag::MissingExternImpl);
-    CHECK(diags[1].code == diag::MethodReturnMismatch);
-    CHECK(diags[2].code == diag::UndeclaredIdentifier);
-    CHECK(diags[3].code == diag::UnknownMember);
-    CHECK(diags[4].code == diag::NotASubroutine);
-    CHECK(diags[5].code == diag::IfaceMethodNotExtern);
-    CHECK(diags[6].code == diag::NotAnInterfaceOrPort);
-    CHECK(diags[7].code == diag::NotAnInterfaceOrPort);
+    CHECK(diags[1].code == diag::ExternFuncForkJoin);
+    CHECK(diags[2].code == diag::MethodReturnMismatch);
+    CHECK(diags[3].code == diag::UndeclaredIdentifier);
+    CHECK(diags[4].code == diag::UnknownMember);
+    CHECK(diags[5].code == diag::NotASubroutine);
+    CHECK(diags[6].code == diag::IfaceMethodNotExtern);
+    CHECK(diags[7].code == diag::DupInterfaceExternMethod);
+    CHECK(diags[8].code == diag::NotAnInterfaceOrPort);
+    CHECK(diags[9].code == diag::NotAnInterfaceOrPort);
 }

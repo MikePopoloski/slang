@@ -684,6 +684,13 @@ void SubroutineSymbol::connectExternInterfacePrototype() const {
     auto proto = sub.getPrototype();
     ASSERT(proto);
 
+    if (!proto->flags.has(MethodFlags::ForkJoin) && proto->getFirstExternImpl() != nullptr) {
+        auto& diag = scope->addDiag(diag::DupInterfaceExternMethod, location);
+        diag << (subroutineKind == SubroutineKind::Function ? "function"sv : "task"sv);
+        diag << ifaceName << name;
+        diag.addNote(diag::NotePreviousDefinition, proto->getFirstExternImpl()->impl->location);
+    }
+
     proto->addExternImpl(*this);
     proto->checkMethodMatch(*scope, *this);
     prototype = proto;
@@ -935,8 +942,12 @@ MethodPrototypeSymbol& MethodPrototypeSymbol::fromSyntax(
     const Scope& scope, const ExternInterfaceMethodSyntax& syntax) {
 
     auto& result = createExternIfaceMethod(scope, syntax);
-    if (syntax.forkJoin)
-        result.flags |= MethodFlags::ForkJoin;
+    if (syntax.forkJoin) {
+        if (result.subroutineKind == SubroutineKind::Function)
+            scope.addDiag(diag::ExternFuncForkJoin, syntax.forkJoin.range());
+        else
+            result.flags |= MethodFlags::ForkJoin;
+    }
 
     return result;
 }
