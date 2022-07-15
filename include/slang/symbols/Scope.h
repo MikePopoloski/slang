@@ -303,6 +303,8 @@ private:
     void addWildcardImport(const PackageImportItemSyntax& item,
                            span<const AttributeInstanceSyntax* const> attributes);
     void addDeferredMembers(const SyntaxNode& syntax);
+    void tryFixupInstances(const DataDeclarationSyntax& syntax, const BindContext& context,
+                           SmallVector<const Symbol*>& results) const;
 
     // The compilation that owns this scope.
     Compilation& compilation;

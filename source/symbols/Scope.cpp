@@ -988,9 +988,14 @@ void Scope::elaborate() const {
                 break;
             }
             case SyntaxKind::PortDeclaration:
-            case SyntaxKind::DataDeclaration:
                 // Nothing to do here, handled by port creation.
                 break;
+            case SyntaxKind::DataDeclaration: {
+                SmallVectorSized<const Symbol*, 8> instances;
+                tryFixupInstances(member.node.as<DataDeclarationSyntax>(), context, instances);
+                insertMembers(instances, symbol);
+                break;
+            }
             case SyntaxKind::ModuleDeclaration:
             case SyntaxKind::ProgramDeclaration:
                 // These have to wait until we've seen all instantiations.
@@ -1088,15 +1093,19 @@ void Scope::elaborate() const {
     ASSERT(deferredMemberIndex == DeferredMemberIndex::Invalid);
 }
 
+static string_view getIdentifierName(const NamedTypeSyntax& syntax) {
+    if (syntax.name->kind == SyntaxKind::IdentifierName)
+        return syntax.name->as<IdentifierNameSyntax>().identifier.valueText();
+
+    if (syntax.name->kind == SyntaxKind::ClassName)
+        return syntax.name->as<ClassNameSyntax>().identifier.valueText();
+
+    return ""sv;
+}
+
 bool Scope::handleDataDeclaration(const DataDeclarationSyntax& syntax) {
-    string_view name;
     auto& namedType = syntax.type->as<NamedTypeSyntax>();
-    if (namedType.name->kind == SyntaxKind::IdentifierName)
-        name = namedType.name->as<IdentifierNameSyntax>().identifier.valueText();
-
-    if (namedType.name->kind == SyntaxKind::ClassName)
-        name = namedType.name->as<ClassNameSyntax>().identifier.valueText();
-
+    string_view name = getIdentifierName(namedType);
     if (name.empty())
         return false;
 
@@ -1120,22 +1129,57 @@ bool Scope::handleDataDeclaration(const DataDeclarationSyntax& syntax) {
         return true;
     }
 
-    // No user-defined net type found -- check if this is an interface definition,
-    // which would imply that this is a non-ansi interface port.
-    if (symbol || namedType.name->kind != SyntaxKind::IdentifierName ||
-        asSymbol().kind != SymbolKind::InstanceBody ||
-        !asSymbol().as<InstanceBodySymbol>().getDefinition().hasNonAnsiPorts) {
+    // No user-defined net type found. If this is a simple name and no symbol at all
+    // was found we should continue on to see if this is a non-ansi interface port.
+    if (symbol || namedType.name->kind != SyntaxKind::IdentifierName)
         return false;
-    }
 
     auto def = compilation.getDefinition(name, *this);
-    if (!def || def->definitionKind != DefinitionKind::Interface)
+    if (!def)
         return false;
 
-    // Save for later when we process the ports.
+    // If we're in an instance and have non-ansi ports then assume that this is
+    // a non-ansi interface port definition.
+    if (def->definitionKind == DefinitionKind::Interface &&
+        asSymbol().kind == SymbolKind::InstanceBody &&
+        asSymbol().as<InstanceBodySymbol>().getDefinition().hasNonAnsiPorts) {
+
+        // Save for later when we process the ports.
+        addDeferredMembers(syntax);
+        getOrAddDeferredData().addPortDeclaration(syntax, lastMember);
+        return true;
+    }
+
+    // If we made it this far it's probably a malformed instantiation -- the user forgot
+    // to include the parentheses. Let's just treat it like an instantiation instead, as
+    // long as there are no decl initializers (which would never look like an instantiation).
+    for (auto decl : syntax.declarators) {
+        if (decl->initializer)
+            return false;
+    }
+
     addDeferredMembers(syntax);
-    getOrAddDeferredData().addPortDeclaration(syntax, lastMember);
     return true;
+}
+
+void Scope::tryFixupInstances(const DataDeclarationSyntax& syntax, const BindContext& context,
+                              SmallVector<const Symbol*>& results) const {
+    auto& namedType = syntax.type->as<NamedTypeSyntax>();
+    string_view name = getIdentifierName(namedType);
+    auto def = compilation.getDefinition(name, *this);
+    if (!def)
+        return;
+
+    // Matching the check in handleDataDeclaration -- if this is true we
+    // handle this as a non-ansi interface port declaration instead.
+    if (def->definitionKind == DefinitionKind::Interface &&
+        asSymbol().kind == SymbolKind::InstanceBody &&
+        asSymbol().as<InstanceBodySymbol>().getDefinition().hasNonAnsiPorts) {
+        return;
+    }
+
+    // Assume this is malformed instantiation syntax and create the instances anyway.
+    InstanceSymbol::fromFixupSyntax(compilation, *def, syntax, context, results);
 }
 
 void Scope::handleUserDefinedNet(const UserDefinedNetDeclarationSyntax& syntax) {

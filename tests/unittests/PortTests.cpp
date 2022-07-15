@@ -524,7 +524,7 @@ endinterface
 
     auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 1);
-    CHECK(diags[0].code == diag::DefinitionUsedAsType);
+    CHECK(diags[0].code == diag::InstanceMissingParens);
 }
 
 TEST_CASE("Instance array connection error reporting") {

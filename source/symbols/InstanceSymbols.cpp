@@ -295,9 +295,10 @@ void InstanceSymbol::fromSyntax(Compilation& compilation,
             }
         }
         else {
-            if (!isUninstantiated)
+            if (!isUninstantiated) {
                 context.addDiag(diag::UnknownModule, syntax.type.range())
                     << syntax.type.valueText();
+            }
 
             UnknownModuleSymbol::fromSyntax(compilation, syntax, context, results, implicitNets);
         }
@@ -356,6 +357,42 @@ void InstanceSymbol::fromSyntax(Compilation& compilation,
             results.append(builder.create(*instanceSyntax));
         }
     }
+}
+
+void InstanceSymbol::fromFixupSyntax(Compilation& comp, const Definition& definition,
+                                     const DataDeclarationSyntax& syntax,
+                                     const BindContext& context,
+                                     SmallVector<const Symbol*>& results) {
+    auto missing = [&](TokenKind tk, SourceLocation loc) {
+        return Token::createMissing(comp, tk, loc);
+    };
+
+    // Fabricate a fake instantiation syntax to let us reuse all of the real logic
+    // for this fixup case.
+    SmallVectorSized<TokenOrSyntax, 4> instances;
+    for (auto decl : syntax.declarators) {
+        auto loc = decl->name.location();
+        if (!instances.empty())
+            instances.append(missing(TokenKind::Comma, loc));
+
+        loc = loc + decl->name.rawText().length();
+        context.addDiag(diag::InstanceMissingParens, loc) << definition.getKindString();
+
+        auto instName = comp.emplace<InstanceNameSyntax>(decl->name, decl->dimensions);
+        auto instance = comp.emplace<HierarchicalInstanceSyntax>(
+            instName, missing(TokenKind::OpenParenthesis, loc), span<TokenOrSyntax>(),
+            missing(TokenKind::CloseParenthesis, loc));
+
+        instances.append(instance);
+    }
+
+    auto instantiation = comp.emplace<HierarchyInstantiationSyntax>(
+        span<AttributeInstanceSyntax*>(), syntax.type->getFirstToken(), nullptr,
+        instances.copy(comp), syntax.semi);
+
+    SmallVectorSized<const Symbol*, 8> implicitNets;
+    fromSyntax(comp, *instantiation, context, results, implicitNets);
+    ASSERT(implicitNets.empty());
 }
 
 void InstanceSymbol::fromBindDirective(const Scope& scope, const BindDirectiveSyntax& syntax) {

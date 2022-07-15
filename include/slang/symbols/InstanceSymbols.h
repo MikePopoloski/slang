@@ -28,6 +28,7 @@ class PrimitiveSymbol;
 class TimingControl;
 
 struct BindDirectiveSyntax;
+struct DataDeclarationSyntax;
 struct HierarchicalInstanceSyntax;
 struct HierarchyInstantiationSyntax;
 struct ParamOverrideNode;
@@ -76,6 +77,10 @@ public:
     static void fromSyntax(Compilation& compilation, const HierarchyInstantiationSyntax& syntax,
                            const BindContext& context, SmallVector<const Symbol*>& results,
                            SmallVector<const Symbol*>& implicitNets);
+
+    static void fromFixupSyntax(Compilation& compilation, const Definition& definition,
+                                const DataDeclarationSyntax& syntax, const BindContext& context,
+                                SmallVector<const Symbol*>& results);
 
     /// Creates one or more instances and binds them into a target scoped, based on the
     /// provided syntax directive.
