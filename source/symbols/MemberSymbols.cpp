@@ -343,6 +343,9 @@ void ModportSymbol::fromSyntax(const BindContext& context, const ModportDeclarat
                 case SyntaxKind::ModportSubroutinePortList: {
                     auto& portList = port->as<ModportSubroutinePortListSyntax>();
                     bool isExport = portList.importExport.kind == TokenKind::ExportKeyword;
+                    if (isExport)
+                        modport->hasExports = true;
+
                     for (auto subPort : portList.ports) {
                         switch (subPort->kind) {
                             case SyntaxKind::ModportNamedPort: {

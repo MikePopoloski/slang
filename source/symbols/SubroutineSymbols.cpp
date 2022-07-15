@@ -13,6 +13,7 @@
 #include "slang/symbols/ClassSymbols.h"
 #include "slang/symbols/CompilationUnitSymbols.h"
 #include "slang/symbols/InstanceSymbols.h"
+#include "slang/symbols/MemberSymbols.h"
 #include "slang/symbols/PortSymbols.h"
 #include "slang/symbols/VariableSymbols.h"
 #include "slang/syntax/AllSyntax.h"
@@ -626,6 +627,9 @@ bool SubroutineSymbol::hasOutputArgs() const {
 }
 
 void SubroutineSymbol::connectExternInterfacePrototype() const {
+    if (prototype)
+        return;
+
     auto scope = getParentScope();
     auto syntax = getSyntax();
     ASSERT(scope && syntax);
@@ -639,14 +643,26 @@ void SubroutineSymbol::connectExternInterfacePrototype() const {
         return;
     }
 
-    const InstanceSymbol* inst;
+    const InstanceSymbol* inst = nullptr;
+    const ModportSymbol* modport = nullptr;
     if (symbol->kind == SymbolKind::InterfacePort) {
-        // TODO: handle modport as well
-        auto conn = symbol->as<InterfacePortSymbol>().getConnection();
+        auto& port = symbol->as<InterfacePortSymbol>();
+        auto conn = port.getConnection();
         if (!conn)
             return;
 
-        inst = &conn->as<InstanceSymbol>();
+        if (conn->kind == SymbolKind::Modport) {
+            modport = &conn->as<ModportSymbol>();
+            inst = conn->getParentScope()->asSymbol().as<InstanceBodySymbol>().parentInstance;
+        }
+        else {
+            inst = &conn->as<InstanceSymbol>();
+            if (!port.modport.empty()) {
+                conn = inst->body.find(port.modport);
+                if (conn && conn->kind == SymbolKind::Modport)
+                    modport = &conn->as<ModportSymbol>();
+            }
+        }
     }
     else if (symbol->kind == SymbolKind::Instance) {
         inst = &symbol->as<InstanceSymbol>();
@@ -694,6 +710,18 @@ void SubroutineSymbol::connectExternInterfacePrototype() const {
     proto->addExternImpl(*this);
     proto->checkMethodMatch(*scope, *this);
     prototype = proto;
+
+    // If our connection goes through a modport that exports us we should register ourselves
+    // as an implementation for that export to facilitate checking for missing exports later.
+    if (modport && modport->hasExports) {
+        if (auto it = modport->getNameMap().find(name); it != modport->getNameMap().end()) {
+            if (it->second && it->second->kind == SymbolKind::MethodPrototype) {
+                auto& modportProto = it->second->as<MethodPrototypeSymbol>();
+                if (modportProto.flags.has(MethodFlags::ModportExport))
+                    modportProto.addExternImpl(*this);
+            }
+        }
+    }
 }
 
 void SubroutineSymbol::serializeTo(ASTSerializer& serializer) const {

@@ -878,6 +878,7 @@ error MultipleDefaultClocking "scope already has a default clocking block"
 error MultipleGlobalClocking "scope already has a global clocking block"
 error MultipleDefaultDisable "scope already has a default disable declaration"
 error MissingExternImpl "no implementation found for extern {} {}.{}"
+error MissingExportImpl "no implementation for modport export '{}' provided by '{}'"
 warning unused-def UnusedDefinition "{} definition is unused"
 warning missing-top NoTopModules "no top-level modules found in design"
 

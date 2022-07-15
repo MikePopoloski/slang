@@ -25,7 +25,9 @@ class CompilationUnitSymbol;
 class Definition;
 class Expression;
 class GenericClassDefSymbol;
+class InterfacePortSymbol;
 class MethodPrototypeSymbol;
+class ModportSymbol;
 class PackageSymbol;
 class PrimitiveSymbol;
 class PortConnection;
@@ -435,6 +437,8 @@ private:
     void parseParamOverrides(flat_hash_map<string_view, const ConstantValue*>& results);
     void checkDPIMethods(span<const SubroutineSymbol* const> dpiImports);
     void checkExternIfaceMethods(span<const MethodPrototypeSymbol* const> protos);
+    void checkModportExports(
+        span<const std::pair<const InterfacePortSymbol*, const ModportSymbol*>> modports);
     void resolveDefParams(size_t numDefParams);
 
     // Stored options object.

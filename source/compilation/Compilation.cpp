@@ -810,8 +810,12 @@ const Diagnostics& Compilation::getSemanticDiagnostics() {
     // Check extern interface methods for correctness.
     for (auto method : externInterfaceMethods)
         method->connectExternInterfacePrototype();
+
     if (!visitor.externIfaceProtos.empty())
         checkExternIfaceMethods(visitor.externIfaceProtos);
+
+    if (!visitor.modportsWithExports.empty())
+        checkModportExports(visitor.modportsWithExports);
 
     // Report on unused out-of-block definitions. These are always a real error.
     for (auto& [key, val] : outOfBlockDecls) {
@@ -1286,6 +1290,36 @@ void Compilation::checkExternIfaceMethods(span<const MethodPrototypeSymbol* cons
                 diag << (proto->subroutineKind == SubroutineKind::Function ? "function"sv
                                                                            : "task"sv);
                 diag << parent.name << proto->name;
+            }
+        }
+    }
+}
+
+void Compilation::checkModportExports(
+    span<const std::pair<const InterfacePortSymbol*, const ModportSymbol*>> modports) {
+
+    for (auto [port, modport] : modports) {
+        auto def = port->getDeclaringDefinition();
+        ASSERT(def);
+
+        for (auto& method : modport->membersOfType<MethodPrototypeSymbol>()) {
+            if (method.flags.has(MethodFlags::ModportExport)) {
+                bool found = false;
+                auto impl = method.getFirstExternImpl();
+                while (impl) {
+                    if (impl->impl->getDeclaringDefinition() == def) {
+                        found = true;
+                        break;
+                    }
+                    impl = impl->getNextImpl();
+                }
+
+                if (!found) {
+                    auto& diag =
+                        port->getParentScope()->addDiag(diag::MissingExportImpl, port->location);
+                    diag << method.name << def->name;
+                    diag.addNote(diag::NoteDeclarationHere, method.location);
+                }
             }
         }
     }

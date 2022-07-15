@@ -1307,18 +1307,26 @@ module n(I.m a);
     function void a.bar(int i, logic l); endfunction
     task a.baz; endtask
     function void a.func(int i); endfunction
+
+    function void a.foo(int i, real r);
+    endfunction
 endmodule
 
 module m;
-    I i();
-    n n1(i);
+    I i1();
+    n n1(i1);
+
+    I i2();
+    n n2(i2.m);
 
     localparam int baz = 3;
-    function void i.foo(int i, real r);
-        i += baz;
-    endfunction
+    task i1.t2;
+        static int i = baz;
+    endtask
 
-    task i.t2; endtask
+    task i2.t2;
+        static int i = baz;
+    endtask
 endmodule
 )");
 
@@ -2817,6 +2825,7 @@ interface I;
     function void f2; endfunction
 
     modport m(input l);
+    modport o(export f1);
 endinterface
 
 module n (I.m m);
@@ -2825,12 +2834,20 @@ module n (I.m m);
     function void m.l(int i, real r); endfunction
     function void m.f2(); endfunction
     function void m.f1(); endfunction
-    function int m.f1(int i); endfunction
+endmodule
+
+module p (I.o o);
+endmodule
+
+module q (I.o o);
+    function int o.f1(int i); endfunction
 endmodule
 
 module top;
     I i();
     n n1(i);
+    p p1(i);
+    q q1(i);
 
     function int n1.foo(int i); endfunction
 
@@ -2843,7 +2860,7 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 10);
+    REQUIRE(diags.size() == 11);
     CHECK(diags[0].code == diag::MissingExternImpl);
     CHECK(diags[1].code == diag::ExternFuncForkJoin);
     CHECK(diags[2].code == diag::MethodReturnMismatch);
@@ -2851,7 +2868,8 @@ endmodule
     CHECK(diags[4].code == diag::UnknownMember);
     CHECK(diags[5].code == diag::NotASubroutine);
     CHECK(diags[6].code == diag::IfaceMethodNotExtern);
-    CHECK(diags[7].code == diag::DupInterfaceExternMethod);
-    CHECK(diags[8].code == diag::NotAnInterfaceOrPort);
+    CHECK(diags[7].code == diag::MissingExportImpl);
+    CHECK(diags[8].code == diag::DupInterfaceExternMethod);
     CHECK(diags[9].code == diag::NotAnInterfaceOrPort);
+    CHECK(diags[10].code == diag::NotAnInterfaceOrPort);
 }

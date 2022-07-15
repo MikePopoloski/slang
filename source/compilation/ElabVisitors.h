@@ -75,8 +75,23 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
             return;
         symbol.getDeclaredRange();
 
-        if (symbol.interfaceDef)
+        if (symbol.interfaceDef) {
             usedIfacePorts.emplace(symbol.interfaceDef);
+
+            // If we this interface port specifies a modport and that
+            // modport has export methods, store it in a list for later
+            // processing and checking.
+            if (!symbol.modport.empty()) {
+                auto conn = symbol.getConnection();
+                if (conn) {
+                    if (conn->kind == SymbolKind::Instance)
+                        conn = conn->as<InstanceSymbol>().body.find(symbol.modport);
+
+                    if (conn && conn->kind == SymbolKind::Modport)
+                        modportsWithExports.append({ &symbol, &conn->as<ModportSymbol>() });
+                }
+            }
+        }
     }
 
     void handle(const PortSymbol& symbol) {
@@ -347,6 +362,8 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
     SmallVectorSized<const GenericClassDefSymbol*, 8> genericClasses;
     SmallVectorSized<const SubroutineSymbol*, 4> dpiImports;
     SmallVectorSized<const MethodPrototypeSymbol*, 4> externIfaceProtos;
+    SmallVectorSized<std::pair<const InterfacePortSymbol*, const ModportSymbol*>, 4>
+        modportsWithExports;
     bool hierarchyProblem = false;
 };
 

@@ -154,6 +154,8 @@ struct ModportDeclarationSyntax;
 /// Represents a modport within an interface definition.
 class ModportSymbol : public Symbol, public Scope {
 public:
+    bool hasExports = false;
+
     ModportSymbol(Compilation& compilation, string_view name, SourceLocation loc);
 
     void serializeTo(ASTSerializer&) const {}
