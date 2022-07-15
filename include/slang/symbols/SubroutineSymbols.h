@@ -112,6 +112,9 @@ public:
     void setOverride(const SubroutineSymbol& parentMethod) const;
     const SubroutineSymbol* getOverride() const { return overrides; }
 
+    const MethodPrototypeSymbol* getPrototype() const { return prototype; }
+    void connectExternInterfacePrototype() const;
+
     bool isVirtual() const { return flags.has(MethodFlags::Virtual) || overrides != nullptr; }
 
     void serializeTo(ASTSerializer& serializer) const;
@@ -159,6 +162,7 @@ private:
     mutable const Statement* stmt = nullptr;
     ArgList arguments;
     mutable const SubroutineSymbol* overrides = nullptr;
+    mutable const MethodPrototypeSymbol* prototype = nullptr;
     mutable optional<bool> cachedHasOutputArgs;
     mutable bool isBinding = false;
 };
@@ -190,6 +194,22 @@ public:
 
     bool checkMethodMatch(const Scope& scope, const SubroutineSymbol& method) const;
 
+    class ExternImpl {
+    public:
+        not_null<const SubroutineSymbol*> impl;
+
+        explicit ExternImpl(const SubroutineSymbol& impl) : impl(&impl) {}
+
+        const ExternImpl* getNextImpl() const { return next; }
+
+    private:
+        friend class MethodPrototypeSymbol;
+        mutable const ExternImpl* next = nullptr;
+    };
+
+    const ExternImpl* getFirstExternImpl() const { return firstExternImpl; }
+    void addExternImpl(const SubroutineSymbol& impl) const;
+
     void serializeTo(ASTSerializer& serializer) const;
 
     static MethodPrototypeSymbol& fromSyntax(const Scope& scope,
@@ -219,6 +239,7 @@ private:
     mutable optional<const SubroutineSymbol*> subroutine;
     mutable const Symbol* overrides = nullptr;
     mutable bool needsMatchCheck = false;
+    mutable const ExternImpl* firstExternImpl = nullptr;
 };
 
 } // namespace slang

@@ -13,6 +13,7 @@
 #include "slang/symbols/ClassSymbols.h"
 #include "slang/symbols/CompilationUnitSymbols.h"
 #include "slang/symbols/InstanceSymbols.h"
+#include "slang/symbols/PortSymbols.h"
 #include "slang/symbols/VariableSymbols.h"
 #include "slang/syntax/AllSyntax.h"
 #include "slang/syntax/SyntaxFacts.h"
@@ -66,8 +67,23 @@ SubroutineSymbol* SubroutineSymbol::fromSyntax(Compilation& compilation,
         if (auto last = parent.getLastMember())
             index = (uint32_t)last->getIndex() + 1;
 
-        compilation.addOutOfBlockDecl(parent, proto->name->as<ScopedNameSyntax>(), syntax,
-                                      SymbolIndex(index));
+        auto& scopedName = proto->name->as<ScopedNameSyntax>();
+        if (scopedName.separator.kind == TokenKind::DoubleColon) {
+            // This is an out-of-block class method implementation.
+            compilation.addOutOfBlockDecl(parent, scopedName, syntax, SymbolIndex(index));
+        }
+        else {
+            // Otherwise this is an interface method implementation.
+            // We should create the method like normal but not add it to
+            // the parent name map (because it can only be looked up via
+            // the interface instance).
+            auto result =
+                SubroutineSymbol::fromSyntax(compilation, syntax, parent, /* outOfBlock */ true);
+            ASSERT(result);
+
+            result->setParent(parent, SymbolIndex(index));
+            compilation.addExternInterfaceMethod(*result);
+        }
         return nullptr;
     }
 
@@ -309,6 +325,7 @@ SubroutineSymbol& SubroutineSymbol::createOutOfBlock(Compilation& compilation,
     // but nothing should be trying to look for these that way anyway.
     result->setParent(parent, SymbolIndex(INT32_MAX));
     result->outOfBlockIndex = outOfBlockIndex;
+    result->prototype = &prototype;
 
     // All of our flags are taken from the prototype.
     result->visibility = prototype.visibility;
@@ -433,6 +450,7 @@ SubroutineSymbol& SubroutineSymbol::createFromPrototype(Compilation& compilation
     result->visibility = prototype.visibility;
     result->flags = prototype.flags;
     result->arguments = cloneArguments(compilation, *result, prototype.getArguments());
+    result->prototype = &prototype;
     return *result;
 }
 
@@ -605,6 +623,70 @@ bool SubroutineSymbol::hasOutputArgs() const {
         }
     }
     return *cachedHasOutputArgs;
+}
+
+void SubroutineSymbol::connectExternInterfacePrototype() const {
+    auto scope = getParentScope();
+    auto syntax = getSyntax();
+    ASSERT(scope && syntax);
+
+    auto nameToken = syntax->as<FunctionDeclarationSyntax>().prototype->name->getFirstToken();
+    auto ifaceName = nameToken.valueText();
+    auto symbol = scope->find(ifaceName);
+    if (!symbol) {
+        if (!ifaceName.empty())
+            scope->addDiag(diag::UndeclaredIdentifier, nameToken.range()) << ifaceName;
+        return;
+    }
+
+    const InstanceSymbol* inst;
+    if (symbol->kind == SymbolKind::InterfacePort) {
+        // TODO: handle modport as well
+        auto conn = symbol->as<InterfacePortSymbol>().getConnection();
+        if (!conn)
+            return;
+
+        inst = &conn->as<InstanceSymbol>();
+    }
+    else if (symbol->kind == SymbolKind::Instance) {
+        inst = &symbol->as<InstanceSymbol>();
+        if (!inst->isInterface()) {
+            scope->addDiag(diag::NotAnInterfaceOrPort, nameToken.range()) << ifaceName;
+            return;
+        }
+    }
+    else {
+        scope->addDiag(diag::NotAnInterfaceOrPort, nameToken.range()) << ifaceName;
+        return;
+    }
+
+    auto ifaceMethod = inst->body.find(name);
+    if (!ifaceMethod) {
+        scope->addDiag(diag::UnknownMember, location) << name << ifaceName;
+        return;
+    }
+
+    if (ifaceMethod->kind != SymbolKind::Subroutine) {
+        auto& diag = scope->addDiag(diag::NotASubroutine, location);
+        diag << name;
+        diag.addNote(diag::NoteDeclarationHere, ifaceMethod->location);
+        return;
+    }
+
+    auto& sub = ifaceMethod->as<SubroutineSymbol>();
+    if (!sub.flags.has(MethodFlags::InterfaceExtern)) {
+        auto& diag = scope->addDiag(diag::IfaceMethodNotExtern, location);
+        diag << name;
+        diag.addNote(diag::NoteDeclarationHere, ifaceMethod->location);
+        return;
+    }
+
+    auto proto = sub.getPrototype();
+    ASSERT(proto);
+
+    proto->addExternImpl(*this);
+    proto->checkMethodMatch(*scope, *this);
+    prototype = proto;
 }
 
 void SubroutineSymbol::serializeTo(ASTSerializer& serializer) const {
@@ -996,6 +1078,11 @@ bool MethodPrototypeSymbol::checkMethodMatch(const Scope& scope,
     }
 
     return true;
+}
+
+void MethodPrototypeSymbol::addExternImpl(const SubroutineSymbol& impl) const {
+    auto node = getCompilation().emplace<ExternImpl>(impl);
+    node->next = std::exchange(firstExternImpl, node);
 }
 
 void MethodPrototypeSymbol::serializeTo(ASTSerializer& serializer) const {

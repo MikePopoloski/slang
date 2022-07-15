@@ -111,6 +111,9 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
 
         if (auto sub = symbol.getSubroutine())
             handle(*sub);
+
+        if (symbol.flags.has(MethodFlags::InterfaceExtern))
+            externIfaceProtos.append(&symbol);
     }
 
     void handle(const GenericClassDefSymbol& symbol) {
@@ -343,6 +346,7 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
     uint32_t errorLimit;
     SmallVectorSized<const GenericClassDefSymbol*, 8> genericClasses;
     SmallVectorSized<const SubroutineSymbol*, 4> dpiImports;
+    SmallVectorSized<const MethodPrototypeSymbol*, 4> externIfaceProtos;
     bool hierarchyProblem = false;
 };
 

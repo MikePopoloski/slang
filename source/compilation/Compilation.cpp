@@ -659,6 +659,10 @@ std::tuple<const SyntaxNode*, SymbolIndex, bool*> Compilation::findOutOfBlockDec
     return { nullptr, SymbolIndex(), nullptr };
 }
 
+void Compilation::addExternInterfaceMethod(const SubroutineSymbol& method) {
+    externInterfaceMethods.push_back(&method);
+}
+
 void Compilation::noteDefaultClocking(const Scope& scope, const Symbol& clocking,
                                       SourceRange range) {
     auto [it, inserted] = defaultClockingMap.emplace(&scope, &clocking);
@@ -802,6 +806,12 @@ const Diagnostics& Compilation::getSemanticDiagnostics() {
     // Check all DPI methods for correctness.
     if (!dpiExports.empty() || !visitor.dpiImports.empty())
         checkDPIMethods(visitor.dpiImports);
+
+    // Check extern interface methods for correctness.
+    for (auto method : externInterfaceMethods)
+        method->connectExternInterfacePrototype();
+    if (!visitor.externIfaceProtos.empty())
+        checkExternIfaceMethods(visitor.externIfaceProtos);
 
     // Report on unused out-of-block definitions. These are always a real error.
     for (auto& [key, val] : outOfBlockDecls) {
@@ -1259,6 +1269,23 @@ void Compilation::checkDPIMethods(span<const SubroutineSymbol* const> dpiImports
                     diag << cId;
                     diag.addNote(diag::NotePreviousDefinition, it->second->name.location());
                 }
+            }
+        }
+    }
+}
+
+void Compilation::checkExternIfaceMethods(span<const MethodPrototypeSymbol* const> protos) {
+    for (auto proto : protos) {
+        if (!proto->getFirstExternImpl() && !proto->flags.has(MethodFlags::ForkJoin)) {
+            auto scope = proto->getParentScope();
+            ASSERT(scope);
+
+            auto& parent = scope->asSymbol();
+            if (!parent.name.empty() && !proto->name.empty()) {
+                auto& diag = scope->addDiag(diag::MissingExternImpl, proto->location);
+                diag << (proto->subroutineKind == SubroutineKind::Function ? "function"sv
+                                                                           : "task"sv);
+                diag << parent.name << proto->name;
             }
         }
     }

@@ -1303,11 +1303,22 @@ module n(I.m a);
         a.bar(1, 1);
         a.baz();
     end
+
+    function void a.bar(int i, logic l); endfunction
+    task a.baz; endtask
+    function void a.func(int i); endfunction
 endmodule
 
 module m;
     I i();
     n n1(i);
+
+    localparam int baz = 3;
+    function void i.foo(int i, real r);
+        i += baz;
+    endfunction
+
+    task i.t2; endtask
 endmodule
 )");
 
@@ -2773,6 +2784,10 @@ endinterface
 module n (I.m m);
     localparam int j = m.foo(3);
     localparam int k = m.bar(4);
+
+    function int m.bar(int i);
+        return i;
+    endfunction
 endmodule
 
 module top;
@@ -2790,4 +2805,50 @@ endmodule
 
     auto& j = compilation.getRoot().lookupName<ParameterSymbol>("top.n1.j");
     CHECK(j.getValue().integer() == 3);
+}
+
+TEST_CASE("Extern interface method errors") {
+    auto tree = SyntaxTree::fromText(R"(
+interface I;
+    extern task t1;
+    extern function int f1(int i);
+
+    logic l;
+    function void f2; endfunction
+
+    modport m(input l);
+endinterface
+
+module n (I.m m);
+    function void n.foo(int i, real r); endfunction
+    function void m.foo(int i, real r); endfunction
+    function void m.l(int i, real r); endfunction
+    function void m.f2(); endfunction
+    function void m.f1(); endfunction
+endmodule
+
+module top;
+    I i();
+    n n1(i);
+
+    function int n1.foo(int i); endfunction
+
+    real r;
+    function int r.foo(int i); endfunction
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 8);
+    CHECK(diags[0].code == diag::MissingExternImpl);
+    CHECK(diags[1].code == diag::MethodReturnMismatch);
+    CHECK(diags[2].code == diag::UndeclaredIdentifier);
+    CHECK(diags[3].code == diag::UnknownMember);
+    CHECK(diags[4].code == diag::NotASubroutine);
+    CHECK(diags[5].code == diag::IfaceMethodNotExtern);
+    CHECK(diags[6].code == diag::NotAnInterfaceOrPort);
+    CHECK(diags[7].code == diag::NotAnInterfaceOrPort);
 }
