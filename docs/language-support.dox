@@ -397,7 +397,7 @@ LRM | Feature | Supported
 {{m-success}} 25.5.4 | Modport expressions | v2.0
 {{m-success}} 25.5.5 | Clocking blocks and modports | v2.0
 {{m-danger}}  25.6 | Interfaces and specify blocks | no
-{{m-warning}} 25.7 | Tasks and functions in interfaces | partial
+{{m-success}} 25.7 | Tasks and functions in interfaces | v2.0
 {{m-success}} 25.8 | Parameterized interfaces | v0.2
 {{m-warning}} 25.9 | Virtual interfaces | partial
 {{m-success}} 25.10 | Access to interface objects | v0.6
