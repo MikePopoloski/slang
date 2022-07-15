@@ -1341,11 +1341,12 @@ endclass
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 4);
+    REQUIRE(diags.size() == 5);
     CHECK(diags[0].code == diag::VirtualReturnMismatch);
     CHECK(diags[1].code == diag::IfaceNameConflict);
     CHECK(diags[2].code == diag::IfaceNameConflict);
-    CHECK(diags[3].code == diag::IfaceMethodHidden);
+    CHECK(diags[3].code == diag::IfaceNameConflict);
+    CHECK(diags[4].code == diag::IfaceMethodHidden);
 }
 
 TEST_CASE("Interface class diamond with generics") {

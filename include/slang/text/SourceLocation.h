@@ -154,6 +154,12 @@ public:
     /// @return the end of the range.
     SourceLocation end() const { return endLoc; }
 
+    bool operator==(const SourceRange& rhs) const {
+        return startLoc == rhs.startLoc && endLoc == rhs.endLoc;
+    }
+
+    bool operator!=(const SourceRange& rhs) const { return !(*this == rhs); }
+
 private:
     SourceLocation startLoc;
     SourceLocation endLoc;

@@ -374,10 +374,14 @@ endmodule
     CHECK((it++)->code == diag::UsedBeforeDeclared);
     CHECK((it++)->code == diag::UsedBeforeDeclared);
     CHECK((it++)->code == diag::UsedBeforeDeclared);
+    CHECK((it++)->code == diag::UsedBeforeDeclared);
+    CHECK((it++)->code == diag::UsedBeforeDeclared);
+    CHECK((it++)->code == diag::UnconnectedNamedPort);
     CHECK((it++)->code == diag::UnconnectedNamedPort);
     CHECK((it++)->code == diag::UnconnectedNamedPort);
     CHECK((it++)->code == diag::MixingOrderedAndNamedPorts);
     CHECK((it++)->code == diag::DuplicateWildcardPortConnection);
+    CHECK((it++)->code == diag::UnconnectedNamedPort);
     CHECK((it++)->code == diag::UnconnectedNamedPort);
     CHECK((it++)->code == diag::UnconnectedNamedPort);
     CHECK((it++)->code == diag::DuplicatePortConnection);
@@ -1313,10 +1317,11 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 3);
+    REQUIRE(diags.size() == 4);
     CHECK(diags[0].code == diag::NetRangeInconsistent);
-    CHECK(diags[1].code == diag::NetInconsistent);
-    CHECK(diags[2].code == diag::NetRangeInconsistent);
+    CHECK(diags[1].code == diag::NetRangeInconsistent);
+    CHECK(diags[2].code == diag::NetInconsistent);
+    CHECK(diags[3].code == diag::NetRangeInconsistent);
 }
 
 TEST_CASE("Inout port conn to variable") {

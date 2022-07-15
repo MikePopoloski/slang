@@ -77,6 +77,40 @@ Diagnostic& Diagnostic::operator<<(shortreal_t arg) {
     return *this;
 }
 
+bool Diagnostic::operator==(const Diagnostic& rhs) const {
+    // NOTE: this method doesn't check every field; we want diagnostics that are
+    // "logically" equivalent to return true even if some of the fields actually
+    // differ in ways that don't matter.
+    if (code != rhs.code || location != rhs.location || args.size() != rhs.args.size())
+        return false;
+
+    for (auto lit = args.begin(), rit = rhs.args.begin(); lit != args.end(); lit++, rit++) {
+        // Unwrap the argument type (stored as a variant).
+        bool result = std::visit(
+            [&](auto&& l, auto&& r) {
+                using LT = std::decay_t<decltype(l)>;
+                using RT = std::decay_t<decltype(r)>;
+                if constexpr (std::is_same_v<LT, RT>) {
+                    if constexpr (std::is_same_v<std::any, LT>) {
+                        return l.type() == r.type();
+                    }
+                    else {
+                        return l == r;
+                    }
+                }
+                else {
+                    return false;
+                }
+            },
+            *lit, *rit);
+
+        if (!result)
+            return false;
+    }
+
+    return true;
+}
+
 Diagnostic& Diagnostics::add(DiagCode code, SourceLocation location) {
     ASSERT(location);
     emplace(code, location);

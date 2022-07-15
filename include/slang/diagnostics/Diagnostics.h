@@ -125,6 +125,9 @@ public:
         args.emplace_back((uint64_t)arg);
         return *this;
     }
+
+    bool operator==(const Diagnostic& rhs) const;
+    bool operator!=(const Diagnostic& rhs) const { return !(*this == rhs); }
 };
 
 /// A collection of diagnostics.

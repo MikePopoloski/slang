@@ -927,7 +927,14 @@ const Diagnostics& Compilation::getSemanticDiagnostics() {
             results.emplace(std::move(diag));
         }
         else {
-            results.emplace(diagList.front());
+            auto it = diagList.begin();
+            ASSERT(it != diagList.end());
+
+            results.emplace(*it);
+            for (++it; it != diagList.end(); ++it) {
+                if (*it != results.back())
+                    results.emplace(*it);
+            }
         }
     }
 
