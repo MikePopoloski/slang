@@ -8,6 +8,10 @@ function(slang_define_lib libname)
     install(TARGETS ${libname}
             LIBRARY DESTINATION lib
             ARCHIVE DESTINATION lib)
+
+    if(SLANG_RUN_CLANG_TIDY)
+        set_target_properties(${libname} PROPERTIES CXX_CLANG_TIDY clang-tidy)
+    endif()
 endfunction()
 
 install(DIRECTORY ../include/ DESTINATION include)

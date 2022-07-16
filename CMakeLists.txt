@@ -12,6 +12,7 @@ option(SLANG_INCLUDE_DOCS "Include documentation targets in the build" OFF)
 option(SLANG_INCLUDE_LLVM "Include LLVM in the build for code generation" OFF)
 option(STATIC_BUILD "Make the linked binaries static" OFF)
 option(BUILD_SHARED_LIBS "Generate a shared library instead of static" OFF)
+option(SLANG_RUN_CLANG_TIDY "Run clang-tidy during the build" OFF)
 set(DOXYGENPY_PATH "" CACHE STRING "When building docs, the path to doxygen.py tool")
 
 set(SLANG_SANITIZERS "" CACHE STRING "List of Clang sanitizers to include in build")
