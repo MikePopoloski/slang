@@ -7,6 +7,15 @@
 
 All source code is hosted on [GitHub](https://github.com/MikePopoloski/slang)
 
+@code{.ansi}
+git clone https://github.com/MikePopoloski/slang.git
+@endcode
+
+git submodules are used for some dependencies, so they need to be pulled as well:
+@code{.ansi}
+git submodule update --init --recursive
+@endcode
+
 @section dependencies Dependencies
 
 slang requires the following dependencies in order to build:
@@ -69,6 +78,7 @@ SLANG_SANITIZERS | A list of Clang sanitizers to include in the build | ""
 FUZZ_TARGET | Turn on to enable some changes to make binaries easier to fuzz test | OFF
 CI_BUILD | Enable additional longer-running tests for automated builds | OFF
 DOXYGENPY_PATH | When building docs, the path to the doxygen.py tool | ""
+SLANG_USE_SYSTEM_LIBS | Configures the build to use dependencies already installed on the system (such as fmt and xxhash) instead of the ones included in the repo | OFF
 
 @section build-scripts Build Scripts
 

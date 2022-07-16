@@ -20,6 +20,11 @@ Full documentation is available on the website: https://sv-lang.com
 
 Instructions on building slang from source are [here](https://sv-lang.com/building.html).
 
+Note that git submodules are used for some dependencies, so they need to be pulled as well:
+```
+git submodule update --init --recursive
+```
+
 The slang binary can be run on your code right out of the box; check out the [user manual](https://sv-lang.com/user-manual.html) for more information about how it works.
 
 If you're looking to use slang as a library, please read through the [developer guide](https://sv-lang.com/developer-guide.html).
