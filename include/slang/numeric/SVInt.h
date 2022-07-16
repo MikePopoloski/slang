@@ -35,7 +35,7 @@ struct logic_t {
     constexpr explicit logic_t(uint8_t value) : value(value) {}
 
     /// Returns true if the bit is either X or Z
-    constexpr bool isUnknown() const { return value == x.value || value == z.value; }
+    bool isUnknown() const { return value == x.value || value == z.value; }
 
     logic_t operator!() const {
         if (isUnknown())
