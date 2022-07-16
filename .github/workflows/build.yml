@@ -11,6 +11,8 @@ jobs:
     runs-on: windows-latest
     steps:
     - uses: actions/checkout@v2
+      with:
+        submodules: recursive
     - uses: microsoft/setup-msbuild@v1.0.2
     - name: Configure
       shell: bash
@@ -29,6 +31,8 @@ jobs:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v2
+        with:
+          submodules: recursive
       - name: Configure
         shell: bash
         run: |
@@ -56,6 +60,8 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
+      with:
+        submodules: recursive
     - name: Install dependencies
       run: |
         export PATH="$HOME/.local/bin:$PATH"
