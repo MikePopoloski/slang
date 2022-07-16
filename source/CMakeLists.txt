@@ -11,10 +11,11 @@ function(slang_define_lib libname)
 endfunction()
 
 install(DIRECTORY ../include/ DESTINATION include)
-install(DIRECTORY ../external/ DESTINATION include)
 install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/slang/diagnostics/ DESTINATION include/slang/diagnostics)
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/slang/syntax/AllSyntax.h DESTINATION include/slang/syntax/)
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/slang/syntax/SyntaxKind.h DESTINATION include/slang/syntax/)
+install(DIRECTORY ../external/ieee1800/ DESTINATION include/ieee1800)
+install(FILES ../external/flat_hash_map.hpp ../external/span.hpp DESTINATION include)
 
 #-------- Core library - depended on by everything else
 add_custom_command(
@@ -70,6 +71,9 @@ if(NOT SLANG_USE_SYSTEM_LIBS)
         ../external/fmt/os.cc
         ../external/xxhash/xxhash.cpp
     )
+
+    install(DIRECTORY ../external/fmt/ DESTINATION include/fmt)
+    install(DIRECTORY ../external/xxhash/ DESTINATION include/xxhash)
 endif()
 
 add_library(slangcore ${slangcore_SOURCES})
