@@ -76,9 +76,9 @@ struct logic_t {
     logic_t operator&&(const logic_t& rhs) const { return *this & rhs; }
     logic_t operator||(const logic_t& rhs) const { return *this | rhs; }
 
-    // This works around a bug in MSVC:
+    // This works around a bug in catch2:
     // 'static_cast': cannot convert from 'slang::logic_t' to 'const bool &'
-#if !defined(_MSC_VER)
+#if !defined(UNITTESTS)
     explicit
 #endif
     operator bool() const {

@@ -25,6 +25,7 @@ add_executable(unittests
     VisitorTests.cpp)
 
 target_link_libraries(unittests PRIVATE slangcompiler Catch2::Catch2)
+target_compile_definitions(unittests PRIVATE UNITTESTS)
 
 if(CI_BUILD)
     message("Running CI build")
