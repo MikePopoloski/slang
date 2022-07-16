@@ -1,5 +1,8 @@
 #include "Test.h"
 
+#include <catch2/catch_approx.hpp>
+using Catch::Approx;
+
 #include "slang/compilation/ScriptSession.h"
 
 TEST_CASE("Simple eval") {

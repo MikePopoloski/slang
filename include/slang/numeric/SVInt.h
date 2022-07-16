@@ -35,7 +35,7 @@ struct logic_t {
     constexpr explicit logic_t(uint8_t value) : value(value) {}
 
     /// Returns true if the bit is either X or Z
-    bool isUnknown() const { return value == x.value || value == z.value; }
+    constexpr bool isUnknown() const { return value == x.value || value == z.value; }
 
     logic_t operator!() const {
         if (isUnknown())
@@ -76,7 +76,14 @@ struct logic_t {
     logic_t operator&&(const logic_t& rhs) const { return *this & rhs; }
     logic_t operator||(const logic_t& rhs) const { return *this | rhs; }
 
-    explicit operator bool() const { return !isUnknown() && value != 0; }
+    // This works around a bug in MSVC:
+    // 'static_cast': cannot convert from 'slang::logic_t' to 'const bool &'
+#if !defined(_MSC_VER)
+    explicit
+#endif
+    operator bool() const {
+        return !isUnknown() && value != 0;
+    }
 
     friend bool exactlyEqual(logic_t lhs, logic_t rhs) { return lhs.value == rhs.value; }
 

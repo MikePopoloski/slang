@@ -6,7 +6,8 @@
         disable : 4459) // annoying warning about global "alloc" being shadowed by locals
 #endif
 
-#include <catch2/catch.hpp>
+#include <catch2/catch_test_macros.hpp>
+#include <catch2/matchers/catch_matchers_templated.hpp>
 #include <sstream>
 
 #include "slang/compilation/Compilation.h"
@@ -195,11 +196,11 @@ inline const InstanceSymbol& evalModule(std::shared_ptr<SyntaxTree> syntax,
     return *root.topInstances[0];
 }
 
-class LogicExactlyEqualMatcher : public Catch::MatcherBase<logic_t> {
+class LogicExactlyEqualMatcher : public Catch::Matchers::MatcherGenericBase {
 public:
     explicit LogicExactlyEqualMatcher(logic_t v) : value(v) {}
 
-    bool match(const logic_t& t) const final { return exactlyEqual(t, value); }
+    bool match(const logic_t& t) const { return exactlyEqual(t, value); }
 
     std::string describe() const final {
         std::ostringstream ss;
@@ -215,11 +216,11 @@ inline LogicExactlyEqualMatcher exactlyEquals(logic_t v) {
     return LogicExactlyEqualMatcher(v);
 }
 
-class SVIntExactlyEqualMatcher : public Catch::MatcherBase<SVInt> {
+class SVIntExactlyEqualMatcher : public Catch::Matchers::MatcherGenericBase {
 public:
     explicit SVIntExactlyEqualMatcher(SVInt v) : value(v) {}
 
-    bool match(const SVInt& t) const final { return exactlyEqual(t, value); }
+    bool match(const SVInt& t) const { return exactlyEqual(t, value); }
 
     std::string describe() const final {
         std::ostringstream ss;

@@ -1,5 +1,8 @@
 #include "Test.h"
 
+#include <catch2/catch_approx.hpp>
+using Catch::Approx;
+
 #include "slang/numeric/SVInt.h"
 
 TEST_CASE("Construction") {
