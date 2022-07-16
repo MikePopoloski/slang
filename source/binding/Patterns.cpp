@@ -1,6 +1,6 @@
 //------------------------------------------------------------------------------
-// PatternExpressions.cpp
-// Definitions for pattern expressions
+// Patterns.cpp
+// Definitions for pattern matching binding
 //
 // File is under the MIT license; see LICENSE for details
 //------------------------------------------------------------------------------

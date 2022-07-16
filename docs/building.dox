@@ -12,6 +12,7 @@ git clone https://github.com/MikePopoloski/slang.git
 @endcode
 
 git submodules are used for some dependencies, so they need to be pulled as well:
+
 @code{.ansi}
 git submodule update --init --recursive
 @endcode

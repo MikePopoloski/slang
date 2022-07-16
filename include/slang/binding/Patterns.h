@@ -1,6 +1,6 @@
 //------------------------------------------------------------------------------
-//! @file PatternExpressions.h
-//! @brief Definitions for pattern expressions
+//! @file Patterns.h
+//! @brief Definitions for pattern matching binding
 //
 // File is under the MIT license; see LICENSE for details
 //------------------------------------------------------------------------------
