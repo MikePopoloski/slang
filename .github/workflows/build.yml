@@ -52,7 +52,7 @@ jobs:
       matrix:
         include:
           - compiler: clang++-14
-            flags: '-DCMAKE_BUILD_TYPE=Debug -DSLANG_COVERAGE=ON -DSLANG_SANITIZERS=undefined,address -DSLANG_RUN_CLANG_TIDY=ON
+            flags: '-DCMAKE_BUILD_TYPE=Debug -DSLANG_COVERAGE=ON -DSLANG_SANITIZERS=undefined,address -DSLANG_RUN_CLANG_TIDY=ON'
           - compiler: g++-12
             flags: '-DCMAKE_BUILD_TYPE=Release'
           - compiler: g++-8
