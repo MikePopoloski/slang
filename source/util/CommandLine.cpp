@@ -351,9 +351,7 @@ bool CommandLine::parse(span<const string_view> args, ParseOptions options) {
     bool doubleDash = false;
     bool hadUnknowns = false;
 
-    for (auto it = args.begin(); it != args.end(); it++) {
-        string_view arg = *it;
-
+    for (auto arg : args) {
         // If we were previously expecting a value, set that now.
         if (expectingVal) {
             std::string result = expectingVal->set(expectingValName, arg, options.ignoreDuplicates);

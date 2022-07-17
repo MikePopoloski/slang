@@ -2864,8 +2864,8 @@ EdgeDescriptorSyntax& Parser::parseEdgeDescriptor() {
 
         bool bad = false;
         bool bothUnknown = true;
-        for (int i = 0; i < 2; i++) {
-            char c = edges[i] = (char)::tolower(edges[i]);
+        for (char& edge : edges) {
+            char c = edge = (char)::tolower(edge);
             if (c == '0' || c == '1') {
                 bothUnknown = false;
             }

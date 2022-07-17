@@ -18,9 +18,12 @@ Checks: >
     -bugprone-sizeof-expression,
     -bugprone-easily-swappable-parameters,
     -bugprone-implicit-widening-of-multiplication-result,
+    -bugprone-not-null-terminated-result,
     -clang-analyzer-cplusplus.NewDelete*,
     -clang-analyzer-cplusplus.InnerPointer,
+    -clang-analyzer-core.NullDereference,
+    -clang-analyzer-core.NonNullParamChecker,
     -misc-non-private-member-variables-in-classes,
     -misc-no-recursion,
-    -performance-no-int-to-ptr
+    -performance-no-int-to-ptr,
     -portability-simd-intrinsics
