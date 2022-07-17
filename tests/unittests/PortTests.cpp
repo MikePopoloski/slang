@@ -1,6 +1,12 @@
 #include "Test.h"
 
 #include "slang/compilation/Definition.h"
+#include "slang/symbols/CompilationUnitSymbols.h"
+#include "slang/symbols/InstanceSymbols.h"
+#include "slang/symbols/ParameterSymbols.h"
+#include "slang/symbols/PortSymbols.h"
+#include "slang/symbols/VariableSymbols.h"
+#include "slang/types/Type.h"
 
 TEST_CASE("Module ANSI ports") {
     auto tree = SyntaxTree::fromText(R"(

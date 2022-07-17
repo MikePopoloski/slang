@@ -1,6 +1,11 @@
 #include "Test.h"
 
+#include "slang/binding/Expression.h"
 #include "slang/symbols/ClassSymbols.h"
+#include "slang/symbols/CompilationUnitSymbols.h"
+#include "slang/symbols/InstanceSymbols.h"
+#include "slang/symbols/ParameterSymbols.h"
+#include "slang/symbols/SubroutineSymbols.h"
 
 static constexpr const char* PacketClass = R"(
 class Packet;

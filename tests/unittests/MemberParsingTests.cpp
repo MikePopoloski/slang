@@ -1,5 +1,7 @@
 #include "Test.h"
 
+#include "slang/parsing/Preprocessor.h"
+
 TEST_CASE("Simple module") {
     auto& text = "module foo(); endmodule";
     const auto& module = parseModule(text);

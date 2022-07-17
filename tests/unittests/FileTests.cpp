@@ -1,5 +1,7 @@
 #include "Test.h"
 
+#include "slang/text/SourceManager.h"
+
 std::string getTestInclude() {
     return findTestDir() + "/include.svh";
 }

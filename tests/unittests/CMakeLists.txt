@@ -20,6 +20,7 @@ add_executable(unittests
     StatementParsingTests.cpp
     StatementTests.cpp
     SystemFuncTests.cpp
+    Test.cpp
     TypeTests.cpp
     UtilTests.cpp
     VisitorTests.cpp)

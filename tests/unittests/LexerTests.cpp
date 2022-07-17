@@ -1,7 +1,9 @@
 #include "../source/text/CharInfo.h"
 #include "Test.h"
 
+#include "slang/parsing/Preprocessor.h"
 #include "slang/syntax/SyntaxPrinter.h"
+#include "slang/text/SourceManager.h"
 
 using LF = LexerFacts;
 

@@ -1,6 +1,13 @@
 #include "Test.h"
 
 #include "slang/compilation/ScriptSession.h"
+#include "slang/symbols/CompilationUnitSymbols.h"
+#include "slang/symbols/InstanceSymbols.h"
+#include "slang/symbols/MemberSymbols.h"
+#include "slang/symbols/ParameterSymbols.h"
+#include "slang/symbols/SubroutineSymbols.h"
+#include "slang/symbols/VariableSymbols.h"
+#include "slang/types/AllTypes.h"
 
 TEST_CASE("Enum declaration") {
     auto tree = SyntaxTree::fromText(R"(

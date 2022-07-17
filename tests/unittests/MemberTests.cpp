@@ -1,11 +1,23 @@
 #include "Test.h"
 
+#include "slang/binding/AssignmentExpressions.h"
+#include "slang/binding/CallExpression.h"
 #include "slang/binding/OperatorExpressions.h"
+#include "slang/binding/Statements.h"
 #include "slang/compilation/Definition.h"
 #include "slang/symbols/ASTSerializer.h"
 #include "slang/symbols/AttributeSymbol.h"
+#include "slang/symbols/BlockSymbols.h"
+#include "slang/symbols/CompilationUnitSymbols.h"
+#include "slang/symbols/InstanceSymbols.h"
+#include "slang/symbols/MemberSymbols.h"
+#include "slang/symbols/ParameterSymbols.h"
+#include "slang/symbols/PortSymbols.h"
+#include "slang/symbols/SubroutineSymbols.h"
+#include "slang/symbols/VariableSymbols.h"
 #include "slang/text/Json.h"
 #include "slang/types/NetType.h"
+#include "slang/types/Type.h"
 
 TEST_CASE("Nets") {
     auto tree = SyntaxTree::fromText(R"(

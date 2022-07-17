@@ -1,5 +1,10 @@
 #include "Test.h"
 
+#include "slang/binding/Expression.h"
+#include "slang/symbols/CompilationUnitSymbols.h"
+#include "slang/symbols/ParameterSymbols.h"
+#include "slang/types/Type.h"
+
 TEST_CASE("I/O system tasks") {
     auto tree = SyntaxTree::fromText(R"(
 module m;

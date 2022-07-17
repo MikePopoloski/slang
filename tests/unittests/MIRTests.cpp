@@ -3,6 +3,9 @@
 #include "slang/mir/MIRBuilder.h"
 #include "slang/mir/MIRPrinter.h"
 #include "slang/mir/Procedure.h"
+#include "slang/symbols/BlockSymbols.h"
+#include "slang/symbols/CompilationUnitSymbols.h"
+#include "slang/symbols/InstanceSymbols.h"
 
 using namespace slang::mir;
 

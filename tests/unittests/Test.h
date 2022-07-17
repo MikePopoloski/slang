@@ -8,23 +8,17 @@
 
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_templated.hpp>
-#include <sstream>
 
 #include "slang/compilation/Compilation.h"
 #include "slang/diagnostics/AllDiags.h"
-#include "slang/diagnostics/DiagnosticEngine.h"
-#include "slang/parsing/Parser.h"
-#include "slang/parsing/Preprocessor.h"
-#include "slang/symbols/ASTVisitor.h"
 #include "slang/syntax/SyntaxTree.h"
-#include "slang/text/SourceManager.h"
-#include "slang/types/AllTypes.h"
-#include "slang/util/BumpAllocator.h"
 
 namespace slang {
 
 extern BumpAllocator alloc;
 extern Diagnostics diagnostics;
+
+class InstanceSymbol;
 
 } // namespace slang
 
@@ -53,160 +47,33 @@ using namespace slang;
         }                                      \
     } while (0)
 
-inline std::string findTestDir() {
-    auto path = fs::current_path();
-    while (!fs::exists(path / "tests")) {
-        path = path.parent_path();
-        ASSERT(!path.empty());
-    }
+std::string findTestDir();
+void setupSourceManager(SourceManager& sourceManager);
+SourceManager& getSourceManager();
 
-    return (path / "tests/unittests/data/").string();
-}
+bool withinUlp(double a, double b);
 
-inline void setupSourceManager(SourceManager& sourceManager) {
-    auto testDir = findTestDir();
-    sourceManager.addUserDirectory(testDir);
-    sourceManager.addSystemDirectory(testDir);
-    sourceManager.addSystemDirectory(string_view(testDir + "system/"));
-}
+std::string report(const Diagnostics& diags);
+std::string reportGlobalDiags();
+std::string to_string(const Diagnostic& diag);
 
-inline SourceManager& getSourceManager() {
-    static SourceManager* sourceManager = nullptr;
-    if (!sourceManager) {
-        auto testDir = findTestDir();
-        sourceManager = new SourceManager();
-        sourceManager->setDisableProximatePaths(true);
-        setupSourceManager(*sourceManager);
-    }
-    return *sourceManager;
-}
+Token lexToken(string_view text);
+Token lexRawToken(string_view text);
 
-inline bool withinUlp(double a, double b) {
-    static_assert(sizeof(double) == sizeof(int64_t));
-    int64_t ia, ib;
-    memcpy(&ia, &a, sizeof(double));
-    memcpy(&ib, &b, sizeof(double));
-    return std::abs(ia - ib) <= 1;
-}
-
-inline std::string report(const Diagnostics& diags) {
-    if (diags.empty())
-        return "";
-
-    return DiagnosticEngine::reportAll(SyntaxTree::getDefaultSourceManager(), diags);
-}
-
-inline std::string reportGlobalDiags() {
-    return DiagnosticEngine::reportAll(getSourceManager(), diagnostics);
-}
-
-inline std::string to_string(const Diagnostic& diag) {
-    return DiagnosticEngine::reportAll(getSourceManager(), span(&diag, 1));
-}
-
-inline Token lexToken(string_view text) {
-    diagnostics.clear();
-
-    Preprocessor preprocessor(getSourceManager(), alloc, diagnostics);
-    preprocessor.pushSource(text);
-
-    Token token = preprocessor.next();
-    REQUIRE(token);
-    return token;
-}
-
-inline Token lexRawToken(string_view text) {
-    diagnostics.clear();
-    auto buffer = getSourceManager().assignText(text);
-    Lexer lexer(buffer, alloc, diagnostics);
-
-    Token token = lexer.lex();
-    REQUIRE(token);
-    return token;
-}
-
-inline const ModuleDeclarationSyntax& parseModule(const std::string& text) {
-    diagnostics.clear();
-
-    Preprocessor preprocessor(getSourceManager(), alloc, diagnostics);
-    preprocessor.pushSource(text);
-
-    Parser parser(preprocessor);
-    return parser.parseModule();
-}
-
-inline const ClassDeclarationSyntax& parseClass(const std::string& text) {
-    diagnostics.clear();
-
-    Preprocessor preprocessor(getSourceManager(), alloc, diagnostics);
-    preprocessor.pushSource(text);
-
-    Parser parser(preprocessor);
-    return parser.parseClass();
-}
-
-inline const MemberSyntax& parseMember(const std::string& text) {
-    diagnostics.clear();
-
-    Preprocessor preprocessor(getSourceManager(), alloc, diagnostics);
-    preprocessor.pushSource(text);
-
-    Parser parser(preprocessor);
-    MemberSyntax* member = parser.parseSingleMember(SyntaxKind::ModuleDeclaration);
-    REQUIRE(member);
-    return *member;
-}
-
-inline const StatementSyntax& parseStatement(const std::string& text) {
-    diagnostics.clear();
-
-    Preprocessor preprocessor(getSourceManager(), alloc, diagnostics);
-    preprocessor.pushSource(text);
-
-    Parser parser(preprocessor);
-    return parser.parseStatement();
-}
-
-inline const ExpressionSyntax& parseExpression(const std::string& text) {
-    diagnostics.clear();
-
-    Preprocessor preprocessor(getSourceManager(), alloc, diagnostics);
-    preprocessor.pushSource(text);
-
-    Parser parser(preprocessor);
-    return parser.parseExpression();
-}
-
-inline const CompilationUnitSyntax& parseCompilationUnit(const std::string& text) {
-    diagnostics.clear();
-
-    Preprocessor preprocessor(getSourceManager(), alloc, diagnostics);
-    preprocessor.pushSource(text);
-
-    Parser parser(preprocessor);
-    return parser.parseCompilationUnit();
-}
-
-inline const InstanceSymbol& evalModule(std::shared_ptr<SyntaxTree> syntax,
-                                        Compilation& compilation) {
-    compilation.addSyntaxTree(syntax);
-    const RootSymbol& root = compilation.getRoot();
-
-    REQUIRE(root.topInstances.size() > 0);
-    return *root.topInstances[0];
-}
+const ModuleDeclarationSyntax& parseModule(const std::string& text);
+const ClassDeclarationSyntax& parseClass(const std::string& text);
+const MemberSyntax& parseMember(const std::string& text);
+const StatementSyntax& parseStatement(const std::string& text);
+const ExpressionSyntax& parseExpression(const std::string& text);
+const CompilationUnitSyntax& parseCompilationUnit(const std::string& text);
+const InstanceSymbol& evalModule(std::shared_ptr<SyntaxTree> syntax, Compilation& compilation);
 
 class LogicExactlyEqualMatcher : public Catch::Matchers::MatcherGenericBase {
 public:
     explicit LogicExactlyEqualMatcher(logic_t v) : value(v) {}
 
-    bool match(const logic_t& t) const { return exactlyEqual(t, value); }
-
-    std::string describe() const final {
-        std::ostringstream ss;
-        ss << "equals " << value;
-        return ss.str();
-    }
+    bool match(const logic_t& t) const;
+    std::string describe() const final;
 
 private:
     logic_t value;
@@ -220,13 +87,8 @@ class SVIntExactlyEqualMatcher : public Catch::Matchers::MatcherGenericBase {
 public:
     explicit SVIntExactlyEqualMatcher(SVInt v) : value(v) {}
 
-    bool match(const SVInt& t) const { return exactlyEqual(t, value); }
-
-    std::string describe() const final {
-        std::ostringstream ss;
-        ss << "equals " << value;
-        return ss.str();
-    }
+    bool match(const SVInt& t) const;
+    std::string describe() const final;
 
 private:
     SVInt value;

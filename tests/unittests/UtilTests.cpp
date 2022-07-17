@@ -1,5 +1,6 @@
 #include "Test.h"
 
+#include "slang/text/SourceManager.h"
 #include "slang/util/CommandLine.h"
 
 TEST_CASE("Test CommandLine -- basic") {

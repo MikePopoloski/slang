@@ -1,5 +1,7 @@
 #include "Test.h"
 
+#include <sstream>
+
 #include <catch2/catch_approx.hpp>
 using Catch::Approx;
 

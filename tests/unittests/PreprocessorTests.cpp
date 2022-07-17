@@ -1,6 +1,8 @@
 #include "Test.h"
 
+#include "slang/parsing/Preprocessor.h"
 #include "slang/syntax/SyntaxPrinter.h"
+#include "slang/text/SourceManager.h"
 
 std::string preprocess(string_view text, const Bag& options = {}) {
     diagnostics.clear();

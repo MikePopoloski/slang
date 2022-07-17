@@ -1,4 +1,7 @@
 #include "Test.h"
+
+#include "slang/parsing/Parser.h"
+#include "slang/parsing/Preprocessor.h"
 #include "slang/syntax/SyntaxPrinter.h"
 
 using LF = LexerFacts;
