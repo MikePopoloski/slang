@@ -2,6 +2,7 @@
 #include "Test.h"
 
 #include "slang/parsing/Preprocessor.h"
+#include "slang/syntax/AllSyntax.h"
 #include "slang/syntax/SyntaxPrinter.h"
 #include "slang/text/SourceManager.h"
 

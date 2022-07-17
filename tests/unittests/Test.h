@@ -19,6 +19,12 @@ extern BumpAllocator alloc;
 extern Diagnostics diagnostics;
 
 class InstanceSymbol;
+struct ClassDeclarationSyntax;
+struct CompilationUnitSyntax;
+struct ExpressionSyntax;
+struct MemberSyntax;
+struct ModuleDeclarationSyntax;
+struct StatementSyntax;
 
 } // namespace slang
 

@@ -122,6 +122,45 @@ struct ParserOptions {
     uint32_t maxRecursionDepth = 1024;
 };
 
+/// Various bits of metadata collected during parsing.
+struct ParserMetadata {
+    /// Collection of metadata that can be associated with a syntax node at parse time.
+    struct Node {
+        TokenKind defaultNetType;
+        TokenKind unconnectedDrive;
+        optional<TimeScale> timeScale;
+    };
+
+    /// Specific metadata that was in effect when certain syntax nodes were parsed
+    /// (such as various bits of preprocessor state).
+    flat_hash_map<const SyntaxNode*, Node> nodeMap;
+
+    /// A set of names of all instantiations of global modules/interfaces/programs.
+    /// This can be used to determine which modules should be considered as top-level
+    /// roots of the design.
+    flat_hash_set<string_view> globalInstances;
+
+    /// A list of all names parsed that could represent a package or class name,
+    /// since they are simple names that appear on the left-hand side of a double colon.
+    std::vector<const IdentifierNameSyntax*> classPackageNames;
+
+    /// A list of all package import declarations parsed.
+    std::vector<const PackageImportDeclarationSyntax*> packageImports;
+
+    /// A list of all defparams parsed.
+    std::vector<const DefParamSyntax*> defparams;
+
+    /// A list of all class declarations parsed.
+    std::vector<const ClassDeclarationSyntax*> classDecls;
+
+    /// A list of all bind directives parsed.
+    std::vector<const BindDirectiveSyntax*> bindDirectives;
+
+    /// The EOF token, if one has already been consumed by the parser.
+    /// Otherwise an empty token.
+    Token eofToken;
+};
+
 /// Implements a full syntax parser for SystemVerilog.
 class Parser : ParserBase, SyntaxFacts {
 public:
@@ -149,46 +188,8 @@ public:
     /// Check whether the parser has consumed the entire input stream.
     bool isDone();
 
-    /// Gets the EndOfFile token, if one has been consumed. Otherwise returns an empty token.
-    Token getEOFToken();
-
-    /// Various metadata collected during parsing.
-    struct Metadata {
-        /// Collection of metadata that can be associated with a syntax node at parse time.
-        struct Node {
-            TokenKind defaultNetType;
-            TokenKind unconnectedDrive;
-            optional<TimeScale> timeScale;
-        };
-
-        /// Specific metadata that was in effect when certain syntax nodes were parsed
-        /// (such as various bits of preprocessor state).
-        flat_hash_map<const SyntaxNode*, Node> nodeMap;
-
-        /// A set of names of all instantiations of global modules/interfaces/programs.
-        /// This can be used to determine which modules should be considered as top-level
-        /// roots of the design.
-        flat_hash_set<string_view> globalInstances;
-
-        /// A list of all names parsed that could represent a package or class name,
-        /// since they are simple names that appear on the left-hand side of a double colon.
-        SmallVectorSized<const IdentifierNameSyntax*, 4> classPackageNames;
-
-        /// A list of all package import declarations parsed.
-        SmallVectorSized<const PackageImportDeclarationSyntax*, 4> packageImports;
-
-        /// A list of all defparams parsed.
-        SmallVectorSized<const DefParamSyntax*, 4> defparams;
-
-        /// A list of all class declarations parsed.
-        SmallVectorSized<const ClassDeclarationSyntax*, 4> classDecls;
-
-        /// A list of all bind directives parsed.
-        SmallVectorSized<const BindDirectiveSyntax*, 4> bindDirectives;
-    };
-
     /// Gets the current set of metadata collected during parsing.
-    Metadata&& getMetadata() { return std::move(meta); }
+    ParserMetadata&& getMetadata();
 
 private:
     using ExpressionOptions = detail::ExpressionOptions;
@@ -482,7 +483,7 @@ private:
     ParserOptions parseOptions;
 
     // Various metadata collected during parsing.
-    Metadata meta;
+    ParserMetadata meta;
 
     // Helper class for parsing out numeric literals.
     NumberParser numberParser;
@@ -499,9 +500,6 @@ private:
     // The kind of definition currently being parsed, which could be a module,
     // interface, program, etc.
     SyntaxKind currentDefinitionKind = SyntaxKind::Unknown;
-
-    // The held EOF token, if we've encountered it.
-    Token eofToken;
 };
 
 template<bool (*IsEnd)(TokenKind)>

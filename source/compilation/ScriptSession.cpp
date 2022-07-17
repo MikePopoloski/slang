@@ -11,6 +11,7 @@
 #include "slang/symbols/BlockSymbols.h"
 #include "slang/symbols/CompilationUnitSymbols.h"
 #include "slang/symbols/VariableSymbols.h"
+#include "slang/syntax/AllSyntax.h"
 
 namespace slang {
 

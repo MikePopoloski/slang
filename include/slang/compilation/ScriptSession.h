@@ -12,6 +12,9 @@
 
 namespace slang {
 
+struct ExpressionSyntax;
+struct StatementSyntax;
+
 /// A helper class that allows evaluating arbitrary snippets of SystemVerilog
 /// source code and maintaining state across multiple eval calls.
 class ScriptSession {

@@ -6,6 +6,7 @@
 //------------------------------------------------------------------------------
 #include "slang/syntax/SyntaxPrinter.h"
 
+#include "slang/parsing/Parser.h"
 #include "slang/syntax/SyntaxTree.h"
 #include "slang/text/SourceManager.h"
 
@@ -99,8 +100,8 @@ SyntaxPrinter& SyntaxPrinter::print(const SyntaxNode& node) {
 
 SyntaxPrinter& SyntaxPrinter::print(const SyntaxTree& tree) {
     print(tree.root());
-    if (tree.root().kind != SyntaxKind::CompilationUnit && tree.getEOFToken())
-        print(tree.getEOFToken());
+    if (tree.root().kind != SyntaxKind::CompilationUnit && tree.getMetadata().eofToken)
+        print(tree.getMetadata().eofToken);
     return *this;
 }
 

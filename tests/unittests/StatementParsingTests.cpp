@@ -1,5 +1,7 @@
 #include "Test.h"
 
+#include "slang/syntax/AllSyntax.h"
+
 TEST_CASE("If statement") {
     auto& text = "if (foo && bar &&& baz) ; else \n;";
     auto& stmt = parseStatement(text);

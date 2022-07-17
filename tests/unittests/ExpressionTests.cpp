@@ -9,6 +9,7 @@
 #include "slang/symbols/InstanceSymbols.h"
 #include "slang/symbols/ParameterSymbols.h"
 #include "slang/symbols/VariableSymbols.h"
+#include "slang/syntax/AllSyntax.h"
 #include "slang/types/Type.h"
 
 SVInt testParameter(const std::string& text, uint32_t index = 0) {

@@ -9,13 +9,14 @@
 #include <memory>
 
 #include "slang/diagnostics/Diagnostics.h"
-#include "slang/parsing/Parser.h"
 #include "slang/util/Bag.h"
 #include "slang/util/BumpAllocator.h"
 
 namespace slang {
 
 class SourceManager;
+class SyntaxNode;
+struct ParserMetadata;
 struct SourceBuffer;
 
 /// The SyntaxTree is the easiest way to interface with the lexer / preprocessor /
@@ -33,6 +34,7 @@ public:
                std::shared_ptr<SyntaxTree> parent = nullptr);
 
     SyntaxTree(SyntaxTree&& other) = default;
+    ~SyntaxTree();
 
     /// Creates a syntax tree from a full compilation unit.
     /// @a path is the path to the source file on disk.
@@ -103,11 +105,6 @@ public:
     /// Gets the root of the syntax tree.
     const SyntaxNode& root() const { return *rootNode; }
 
-    /// Gets the EndOfFile token marking the end of the input source text.
-    /// This is useful if, for example, the tree doesn't represent a whole
-    /// compilation unit and you still want to see the trailing trivia.
-    Token getEOFToken() const { return eof; }
-
     /// The options used to construct the syntax tree.
     const Bag& options() const { return options_; }
 
@@ -118,7 +115,7 @@ public:
     const SyntaxTree* getParentTree() const { return parentTree.get(); }
 
     /// Gets various bits of metadata collected during parsing.
-    const Parser::Metadata& getMetadata() const { return metadata; }
+    const ParserMetadata& getMetadata() const { return *metadata; }
 
     /// This is a shared default source manager for cases where the user doesn't
     /// care about managing the lifetime of loaded source. Note that all of
@@ -128,7 +125,7 @@ public:
 
 private:
     SyntaxTree(SyntaxNode* root, SourceManager& sourceManager, BumpAllocator&& alloc,
-               Diagnostics&& diagnostics, Parser::Metadata&& metadata, Bag options, Token eof);
+               Diagnostics&& diagnostics, ParserMetadata&& metadata, Bag options);
 
     static std::shared_ptr<SyntaxTree> create(SourceManager& sourceManager,
                                               span<const SourceBuffer> source, const Bag& options,
@@ -136,12 +133,11 @@ private:
 
     SyntaxNode* rootNode;
     SourceManager& sourceMan;
-    Parser::Metadata metadata;
     BumpAllocator alloc;
     Diagnostics diagnosticsBuffer;
     Bag options_;
+    std::unique_ptr<ParserMetadata> metadata;
     std::shared_ptr<SyntaxTree> parentTree;
-    Token eof;
 };
 
 } // namespace slang

@@ -7,6 +7,7 @@
 #include "slang/symbols/ParameterSymbols.h"
 #include "slang/symbols/SubroutineSymbols.h"
 #include "slang/symbols/VariableSymbols.h"
+#include "slang/syntax/AllSyntax.h"
 #include "slang/types/AllTypes.h"
 
 TEST_CASE("Enum declaration") {

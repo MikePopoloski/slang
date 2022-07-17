@@ -61,14 +61,11 @@ bool Parser::isDone() {
     return getLastConsumed().kind == TokenKind::EndOfFile || peek(TokenKind::EndOfFile);
 }
 
-Token Parser::getEOFToken() {
-    if (eofToken.kind == TokenKind::EndOfFile)
-        return eofToken;
+ParserMetadata&& Parser::getMetadata() {
+    if (meta.eofToken.kind != TokenKind::EndOfFile && peek(TokenKind::EndOfFile))
+        meta.eofToken = consume();
 
-    if (peek(TokenKind::EndOfFile))
-        return consume();
-
-    return Token();
+    return std::move(meta);
 }
 
 Token Parser::parseLifetime() {

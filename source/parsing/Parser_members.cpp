@@ -13,14 +13,14 @@ namespace slang {
 CompilationUnitSyntax& Parser::parseCompilationUnit() {
     try {
         auto members = parseMemberList<MemberSyntax>(
-            TokenKind::EndOfFile, eofToken, SyntaxKind::CompilationUnit,
+            TokenKind::EndOfFile, meta.eofToken, SyntaxKind::CompilationUnit,
             [this](SyntaxKind parentKind, bool& anyLocalModules) {
                 return parseMember(parentKind, anyLocalModules);
             });
-        return factory.compilationUnit(members, eofToken);
+        return factory.compilationUnit(members, meta.eofToken);
     }
     catch (const RecursionException&) {
-        return factory.compilationUnit(nullptr, eofToken);
+        return factory.compilationUnit(nullptr, meta.eofToken);
     }
 }
 
@@ -53,7 +53,8 @@ ModuleDeclarationSyntax& Parser::parseModule(AttrList attributes, SyntaxKind par
     }
 
     SyntaxKind declKind = getModuleDeclarationKind(header.moduleKeyword.kind);
-    Metadata::Node node{ pp.getDefaultNetType(), pp.getUnconnectedDrive(), pp.getTimeScale() };
+    ParserMetadata::Node node{ pp.getDefaultNetType(), pp.getUnconnectedDrive(),
+                               pp.getTimeScale() };
 
     auto savedDefinitionKind = currentDefinitionKind;
     currentDefinitionKind = declKind;
@@ -916,7 +917,7 @@ ClassDeclarationSyntax& Parser::parseClassDeclaration(AttrList attributes,
     auto& result = factory.classDeclaration(attributes, virtualOrInterface, classKeyword, lifetime,
                                             name, parameterList, extendsClause, implementsClause,
                                             semi, members, endClass, endBlockName);
-    meta.classDecls.append(&result);
+    meta.classDecls.push_back(&result);
     return result;
 }
 
@@ -1280,7 +1281,7 @@ DefParamSyntax& Parser::parseDefParam(AttrList attributes) {
         diag::ExpectedVariableAssignment, [this] { return &parseDefParamAssignment(); });
 
     auto& result = factory.defParam(attributes, defparam, buffer.copy(alloc), semi);
-    meta.defparams.append(&result);
+    meta.defparams.push_back(&result);
     return result;
 }
 
@@ -1980,7 +1981,7 @@ PackageImportDeclarationSyntax& Parser::parseImportDeclaration(AttrList attribut
                                                 [this] { return &parsePackageImportItem(); });
 
     auto& result = factory.packageImportDeclaration(attributes, keyword, items.copy(alloc), semi);
-    meta.packageImports.append(&result);
+    meta.packageImports.push_back(&result);
     return result;
 }
 
@@ -2524,7 +2525,7 @@ BindDirectiveSyntax& Parser::parseBindDirective(AttrList attr) {
     auto& instantiation = parseHierarchyInstantiation({});
     auto& result = factory.bindDirective(attr, keyword, target, targetInstances, instantiation);
 
-    meta.bindDirectives.append(&result);
+    meta.bindDirectives.push_back(&result);
     return result;
 }
 

@@ -1,5 +1,6 @@
 #include "Test.h"
 
+#include "slang/parsing/Parser.h"
 #include "slang/parsing/Preprocessor.h"
 
 TEST_CASE("Simple module") {

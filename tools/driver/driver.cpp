@@ -16,6 +16,7 @@
 #include "slang/diagnostics/ParserDiags.h"
 #include "slang/diagnostics/SysFuncsDiags.h"
 #include "slang/diagnostics/TextDiagnosticClient.h"
+#include "slang/parsing/Parser.h"
 #include "slang/parsing/Preprocessor.h"
 #include "slang/symbols/ASTSerializer.h"
 #include "slang/symbols/CompilationUnitSymbols.h"

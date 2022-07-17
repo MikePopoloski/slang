@@ -3,6 +3,7 @@
 #include <sstream>
 
 #include "slang/diagnostics/DiagnosticEngine.h"
+#include "slang/parsing/Parser.h"
 #include "slang/parsing/Preprocessor.h"
 #include "slang/symbols/CompilationUnitSymbols.h"
 #include "slang/text/SourceManager.h"

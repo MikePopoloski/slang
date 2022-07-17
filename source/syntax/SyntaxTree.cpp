@@ -17,8 +17,12 @@ SyntaxTree::SyntaxTree(SyntaxNode* root, SourceManager& sourceManager, BumpAlloc
     rootNode(root),
     sourceMan(sourceManager), alloc(std::move(alloc)), parentTree(std::move(parent)) {
     if (parentTree)
-        eof = parentTree->eof;
+        metadata = std::make_unique<ParserMetadata>(parentTree->getMetadata());
+    else
+        metadata = std::make_unique<ParserMetadata>();
 }
+
+SyntaxTree::~SyntaxTree() = default;
 
 std::shared_ptr<SyntaxTree> SyntaxTree::fromFile(string_view path) {
     return fromFile(path, getDefaultSourceManager());
@@ -68,11 +72,10 @@ SourceManager& SyntaxTree::getDefaultSourceManager() {
 }
 
 SyntaxTree::SyntaxTree(SyntaxNode* root, SourceManager& sourceManager, BumpAllocator&& alloc,
-                       Diagnostics&& diagnostics, Parser::Metadata&& metadata, Bag options,
-                       Token eof) :
+                       Diagnostics&& diagnostics, ParserMetadata&& metadata, Bag options) :
     rootNode(root),
-    sourceMan(sourceManager), metadata(std::move(metadata)), alloc(std::move(alloc)),
-    diagnosticsBuffer(std::move(diagnostics)), options_(std::move(options)), eof(eof) {
+    sourceMan(sourceManager), alloc(std::move(alloc)), diagnosticsBuffer(std::move(diagnostics)),
+    options_(std::move(options)), metadata(std::make_unique<ParserMetadata>(std::move(metadata))) {
 }
 
 std::shared_ptr<SyntaxTree> SyntaxTree::create(SourceManager& sourceManager,
@@ -98,7 +101,7 @@ std::shared_ptr<SyntaxTree> SyntaxTree::create(SourceManager& sourceManager,
 
     return std::shared_ptr<SyntaxTree>(new SyntaxTree(root, sourceManager, std::move(alloc),
                                                       std::move(diagnostics), parser.getMetadata(),
-                                                      options, parser.getEOFToken()));
+                                                      options));
 }
 
 } // namespace slang

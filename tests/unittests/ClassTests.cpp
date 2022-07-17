@@ -6,6 +6,7 @@
 #include "slang/symbols/InstanceSymbols.h"
 #include "slang/symbols/ParameterSymbols.h"
 #include "slang/symbols/SubroutineSymbols.h"
+#include "slang/syntax/AllSyntax.h"
 
 static constexpr const char* PacketClass = R"(
 class Packet;
