@@ -73,11 +73,15 @@ if(NOT SLANG_USE_SYSTEM_LIBS)
         ${slangcore_SOURCES}
         ../external/fmt/format.cc
         ../external/fmt/os.cc
-        ../external/xxhash/xxhash.cpp
+        ../external/xxHash/xxhash.c
     )
+    set_source_files_properties(../external/xxHash/xxhash.c PROPERTIES LANGUAGE CXX)
+    if(NOT CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
+        set_source_files_properties(../external/xxHash/xxhash.c PROPERTIES COMPILE_FLAGS -w)
+    endif()
 
     install(DIRECTORY ../external/fmt/ DESTINATION include/fmt)
-    install(DIRECTORY ../external/xxhash/ DESTINATION include/xxhash)
+    install(FILES ../external/xxHash/xxhash.h DESTINATION include/xxhash)
 endif()
 
 add_library(slangcore ${slangcore_SOURCES})

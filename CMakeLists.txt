@@ -172,6 +172,8 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
         -Wzero-as-null-pointer-constant
         -Wno-missing-braces
     )
+    add_compile_options(-xc++)
+
     if (APPLE)
         set(CMAKE_SHARED_LIBRARY_CREATE_CXX_FLAGS "${CMAKE_SHARED_LIBRARY_CREATE_CXX_FLAGS} -undefined dynamic_lookup")
         if(STATIC_BUILD)

@@ -3,3 +3,8 @@
 	url = https://github.com/catchorg/Catch2.git
 	branch = devel
 	shallow = true
+[submodule "external/xxHash"]
+	path = external/xxHash
+	url = https://github.com/Cyan4973/xxHash.git
+	branch = dev
+	shallow = true
