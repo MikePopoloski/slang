@@ -101,6 +101,7 @@ if(SLANG_USE_SYSTEM_LIBS)
     set(slangcore_SYSTEM_LIBS ${slangcore_SYSTEM_LIBS} fmt::fmt xxHash::xxhash)
 else()
     target_link_libraries(slangcore PUBLIC fmt::fmt)
+    target_compile_definitions(fmt PUBLIC FMT_UNICODE)
 endif()
 
 target_link_libraries(slangcore PUBLIC ${slangcore_SYSTEM_LIBS})
