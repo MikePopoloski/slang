@@ -203,6 +203,10 @@ if(CMAKE_GENERATOR MATCHES "Visual Studio")
     add_compile_options("/MP")
 endif()
 
+if(NOT SLANG_USE_SYSTEM_LIBS)
+    add_subdirectory(external/fmt)
+endif()
+
 add_subdirectory(source)
 add_subdirectory(tools)
 

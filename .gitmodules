@@ -8,3 +8,8 @@
 	url = https://github.com/Cyan4973/xxHash.git
 	branch = dev
 	shallow = true
+[submodule "external/fmt"]
+	path = external/fmt
+	url = https://github.com/fmtlib/fmt.git
+	branch = master
+	shallow = true

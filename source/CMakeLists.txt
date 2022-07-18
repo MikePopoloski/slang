@@ -71,16 +71,14 @@ set(slangcore_SOURCES
 if(NOT SLANG_USE_SYSTEM_LIBS)
     set(slangcore_SOURCES
         ${slangcore_SOURCES}
-        ../external/fmt/format.cc
-        ../external/fmt/os.cc
         ../external/xxHash/xxhash.c
     )
+
     set_source_files_properties(../external/xxHash/xxhash.c PROPERTIES LANGUAGE CXX)
     if(NOT CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
         set_source_files_properties(../external/xxHash/xxhash.c PROPERTIES COMPILE_FLAGS -w)
     endif()
 
-    install(DIRECTORY ../external/fmt/ DESTINATION include/fmt)
     install(FILES ../external/xxHash/xxhash.h DESTINATION include/xxhash)
 endif()
 
@@ -101,6 +99,8 @@ if(SLANG_USE_SYSTEM_LIBS)
     find_package(fmt)
     find_package(xxHash)
     set(slangcore_SYSTEM_LIBS ${slangcore_SYSTEM_LIBS} fmt::fmt xxHash::xxhash)
+else()
+    target_link_libraries(slangcore PUBLIC fmt::fmt)
 endif()
 
 target_link_libraries(slangcore PUBLIC ${slangcore_SYSTEM_LIBS})
@@ -138,7 +138,7 @@ add_library(slangparser
 )
 slang_define_lib(slangparser)
 add_dependencies(slangparser slangcore)
-target_link_libraries(slangparser INTERFACE slangcore)
+target_link_libraries(slangparser PUBLIC slangcore)
 
 #-------- Compiler library
 add_library(slangcompiler
@@ -212,7 +212,7 @@ add_library(slangcompiler
 )
 slang_define_lib(slangcompiler)
 add_dependencies(slangcompiler slangparser)
-target_link_libraries(slangcompiler INTERFACE slangparser)
+target_link_libraries(slangcompiler PUBLIC slangparser)
 
 #-------- Runtime library
 add_library(slangruntime
@@ -221,7 +221,7 @@ add_library(slangruntime
 )
 slang_define_lib(slangruntime)
 add_dependencies(slangruntime slangcore)
-target_link_libraries(slangruntime INTERFACE slangcore)
+target_link_libraries(slangruntime PUBLIC slangcore)
 
 #-------- Codegen library
 if(SLANG_INCLUDE_LLVM)
@@ -235,7 +235,7 @@ if(SLANG_INCLUDE_LLVM)
     )
     slang_define_lib(slangcodegen)
     add_dependencies(slangcodegen slangparser)
-    target_link_libraries(slangcodegen INTERFACE slangcompiler)
+    target_link_libraries(slangcodegen PUBLIC slangcompiler)
 
     find_package(LLVM REQUIRED CONFIG)
 

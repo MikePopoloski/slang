@@ -38,7 +38,7 @@ public:
     /// Prints formatted text to stdout, handling Unicode conversions where necessary.
     template<typename... Args>
     static void print(string_view format, const Args&... args) {
-        fmt::vprint(stdout, fmt::to_string_view(widen(format)),
+        fmt::vprint(stdout, fmt::detail::to_string_view(widen(format)),
                     fmt::make_format_args<fmt::wformat_context>(convert(args)...));
     }
 
@@ -46,11 +46,10 @@ public:
     template<typename... Args>
     static void print(const fmt::text_style& style, string_view format, const Args&... args) {
         if (showColorsStdout) {
-            fmt::vprint(stdout, style, fmt::to_string_view(widen(format)),
-                        fmt::make_format_args<fmt::wformat_context>(convert(args)...));
+            vprint_win32(stdout, style, format, std::forward<Args>(args)...);
         }
         else {
-            fmt::vprint(stdout, fmt::to_string_view(widen(format)),
+            fmt::vprint(stdout, fmt::detail::to_string_view(widen(format)),
                         fmt::make_format_args<fmt::wformat_context>(convert(args)...));
         }
     }
@@ -58,7 +57,7 @@ public:
     /// Prints formatted text to stderr, handling Unicode conversions where necessary.
     template<typename... Args>
     static void printE(string_view format, const Args&... args) {
-        fmt::vprint(stderr, fmt::to_string_view(widen(format)),
+        fmt::vprint(stderr, fmt::detail::to_string_view(widen(format)),
                     fmt::make_format_args<fmt::wformat_context>(convert(args)...));
     }
 
@@ -66,11 +65,10 @@ public:
     template<typename... Args>
     static void printE(const fmt::text_style& style, string_view format, const Args&... args) {
         if (showColorsStderr) {
-            fmt::vprint(stderr, style, fmt::to_string_view(widen(format)),
-                        fmt::make_format_args<fmt::wformat_context>(convert(args)...));
+            vprint_win32(stderr, style, format, std::forward<Args>(args)...);
         }
         else {
-            fmt::vprint(stderr, fmt::to_string_view(widen(format)),
+            fmt::vprint(stderr, fmt::detail::to_string_view(widen(format)),
                         fmt::make_format_args<fmt::wformat_context>(convert(args)...));
         }
     }
@@ -122,9 +120,26 @@ private:
         return std::forward<T>(t);
     }
 
-    static std::wstring convert(const std::string& s) { return widen(s); }
-    static std::wstring convert(const std::string_view& s) { return widen(s); }
-    static std::wstring convert(const char* s) { return widen(s); }
+    static std::wstring convert(const std::string& s) {
+        return widen(s);
+    }
+    static std::wstring convert(const std::string_view& s) {
+        return widen(s);
+    }
+    static std::wstring convert(const char* s) {
+        return widen(s);
+    }
+
+    template<typename... Args>
+    static void vprint_win32(std::FILE* f, const fmt::text_style& ts, const string_view& format,
+                             const Args&... args) {
+        fmt::basic_memory_buffer<wchar_t> buf;
+        fmt::detail::vformat_to(buf, ts, fmt::detail::to_string_view(widen(format)),
+                                fmt::make_format_args<fmt::wformat_context>(convert(args)...));
+
+        buf.push_back(wchar_t(0));
+        fmt::detail::fputs(buf.data(), f);
+    }
 #endif
 };
 
