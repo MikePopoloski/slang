@@ -118,7 +118,7 @@ SourceBuffer readSource(SourceManager& sourceManager, const std::string& file) {
 
 bool processCommandFile(const std::string& fileName, CommandLine& cmdLine, bool makeRelative) {
     std::error_code ec;
-    fs::path path = fs::canonical(fileName, ec);
+    fs::path path = fs::canonical(widen(fileName), ec);
     std::vector<char> buffer;
     if (ec || !OS::readFile(path, buffer)) {
         OS::printE(fg(errorColor), "error: ");

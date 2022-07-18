@@ -21,7 +21,7 @@ SourceManager::SourceManager() {
 }
 
 std::string SourceManager::makeAbsolutePath(string_view path) const {
-    return fs::canonical(path).string();
+    return fs::canonical(widen(path)).u8string();
 }
 
 void SourceManager::addSystemDirectory(string_view path) {
@@ -312,7 +312,7 @@ SourceBuffer SourceManager::assignBuffer(string_view pathStr, std::vector<char>&
                                          SourceLocation includedFrom) {
 
     // first see if we have this file cached
-    fs::path path(pathStr);
+    fs::path path(widen(pathStr));
     {
         std::shared_lock lock(mut);
         auto it = lookupCache.find(path.u8string());
