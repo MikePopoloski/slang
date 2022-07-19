@@ -30,25 +30,45 @@ struct BufferID {
     }
 
     /// @return true if the ID is for a valid buffer, and false if not.
-    [[nodiscard]] bool valid() const { return id != 0; }
+    [[nodiscard]] bool valid() const {
+        return id != 0;
+    }
 
-    bool operator==(const BufferID& rhs) const { return id == rhs.id; }
-    bool operator!=(const BufferID& rhs) const { return !(*this == rhs); }
-    bool operator<(const BufferID& rhs) const { return id < rhs.id; }
-    bool operator<=(const BufferID& rhs) const { return id <= rhs.id; }
-    bool operator>(const BufferID& rhs) const { return rhs < *this; }
-    bool operator>=(const BufferID& rhs) const { return rhs <= *this; }
+    bool operator==(const BufferID& rhs) const {
+        return id == rhs.id;
+    }
+    bool operator!=(const BufferID& rhs) const {
+        return !(*this == rhs);
+    }
+    bool operator<(const BufferID& rhs) const {
+        return id < rhs.id;
+    }
+    bool operator<=(const BufferID& rhs) const {
+        return id <= rhs.id;
+    }
+    bool operator>(const BufferID& rhs) const {
+        return rhs < *this;
+    }
+    bool operator>=(const BufferID& rhs) const {
+        return rhs <= *this;
+    }
 
     /// @return an integer representing the raw buffer ID.
-    constexpr uint32_t getId() const { return id; }
+    constexpr uint32_t getId() const {
+        return id;
+    }
 
     /// @return true if the ID is for a valid buffer, and false if not.
-    explicit operator bool() const { return valid(); }
+    explicit operator bool() const {
+        return valid();
+    }
 
     /// @return a placeholder buffer ID. It should be used only for
     /// locations where the buffer doesn't actually matter and won't
     /// be observed.
-    static BufferID getPlaceholder() { return BufferID(UINT32_MAX, ""sv); }
+    static BufferID getPlaceholder() {
+        return BufferID(UINT32_MAX, ""sv);
+    }
 
 #ifdef DEBUG
     string_view name;
@@ -82,13 +102,19 @@ public:
     }
 
     /// @return the character offset of this location within the source buffer.
-    [[nodiscard]] size_t offset() const { return charOffset; }
+    [[nodiscard]] size_t offset() const {
+        return charOffset;
+    }
 
     /// @return true if the location is valid, and false if not.
-    [[nodiscard]] bool valid() const { return buffer().valid(); }
+    [[nodiscard]] bool valid() const {
+        return buffer().valid();
+    }
 
     /// @return true if the location is valid, and false if not.
-    explicit operator bool() const { return valid(); }
+    explicit operator bool() const {
+        return valid();
+    }
 
     /// Computes a source location that is offset from the current one.
     /// Note that there is no error checking to ensure that the location
@@ -112,7 +138,9 @@ public:
         return bufferID == rhs.bufferID && charOffset == rhs.charOffset;
     }
 
-    bool operator!=(const SourceLocation& rhs) const { return !(*this == rhs); }
+    bool operator!=(const SourceLocation& rhs) const {
+        return !(*this == rhs);
+    }
 
     bool operator<(const SourceLocation& rhs) const {
         if (bufferID != rhs.bufferID)
@@ -120,7 +148,17 @@ public:
         return charOffset < rhs.charOffset;
     }
 
-    bool operator>=(const SourceLocation& rhs) const { return !(*this < rhs); }
+    bool operator<=(const SourceLocation& rhs) const {
+        return (*this < rhs) || *this == rhs;
+    }
+
+    bool operator>(const SourceLocation& rhs) const {
+        return !(*this <= rhs);
+    }
+
+    bool operator>=(const SourceLocation& rhs) const {
+        return !(*this < rhs);
+    }
 
 #ifdef DEBUG
     string_view bufferName;

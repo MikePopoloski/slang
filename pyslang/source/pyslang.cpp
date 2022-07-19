@@ -2,12 +2,7 @@
 // pyslang.cpp
 // File is under the MIT license; see LICENSE for details
 //------------------------------------------------------------------------------
-#include <pybind11/pybind11.h>
-
-#define STRINGIFY(x) #x
-#define MACRO_STRINGIFY(x) STRINGIFY(x)
-
-namespace py = pybind11;
+#include "pyslang.h"
 
 void registerUtil(py::module_& m);
 void registerSyntax(py::module_& m);

@@ -2,15 +2,10 @@
 // util.cpp
 // File is under the MIT license; see LICENSE for details
 //------------------------------------------------------------------------------
-#include <fmt/format.h>
-#include <pybind11/operators.h>
-#include <pybind11/pybind11.h>
+#include "pyslang.h"
 
 #include "slang/text/SourceLocation.h"
 #include "slang/util/BumpAllocator.h"
-
-namespace py = pybind11;
-using namespace slang;
 
 void registerUtil(py::module_& m) {
     py::class_<BumpAllocator>(m, "BumpAllocator");
@@ -38,6 +33,10 @@ void registerUtil(py::module_& m) {
         .def_readonly_static("NoLocation", &SourceLocation::NoLocation)
         .def(py::self == py::self)
         .def(py::self != py::self)
+        .def(py::self < py::self)
+        .def(py::self <= py::self)
+        .def(py::self > py::self)
+        .def(py::self >= py::self)
         .def(hash(py::self))
         .def("__bool__", &SourceLocation::valid)
         .def("__repr__", [](const SourceLocation& self) {
