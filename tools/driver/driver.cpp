@@ -887,8 +887,6 @@ void writeToFile(Stream& os, string_view fileName, String contents) {
 
 #if defined(_MSC_VER)
 #    include <Windows.h>
-#    include <fcntl.h>
-#    include <io.h>
 
 void writeToFile(string_view fileName, string_view contents) {
     if (fileName == "-") {
@@ -902,9 +900,6 @@ void writeToFile(string_view fileName, string_view contents) {
 
 #    ifndef FUZZ_TARGET
 int wmain(int argc, wchar_t** argv) {
-    _setmode(_fileno(stdout), _O_U16TEXT);
-    _setmode(_fileno(stderr), _O_U16TEXT);
-
     auto supportsColors = [](DWORD handle) {
         HANDLE hOut = GetStdHandle(handle);
         if (hOut != INVALID_HANDLE_VALUE) {

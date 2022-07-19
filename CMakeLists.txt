@@ -70,6 +70,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 if(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
     # Prefer the latest standard, and enable full conformance
     add_compile_options(/std:c++17)
+    add_compile_options(/utf-8)
     add_compile_options(/permissive-)
     add_compile_options(/Zc:inline)
     add_compile_options(/Gy)        # Function-level linking
