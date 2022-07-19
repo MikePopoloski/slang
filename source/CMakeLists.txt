@@ -81,6 +81,7 @@ if(NOT SLANG_USE_SYSTEM_LIBS)
     endif()
 
     install(FILES ../external/xxHash/xxhash.h DESTINATION include/xxhash)
+    install(DIRECTORY ../external/fmt/include/fmt/ DESTINATION include/fmt)
 endif()
 
 add_library(slangcore ${slangcore_SOURCES})
