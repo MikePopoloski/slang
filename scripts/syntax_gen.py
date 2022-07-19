@@ -331,6 +331,8 @@ string_view toString(SyntaxKind kind);
 }
 ''')
 
+    generateTokenKinds(ourdir, args.dir)
+
 
 def generate(outf, name, tags, members, alltypes, kindmap):
     tagdict = {}
@@ -485,6 +487,100 @@ def generate(outf, name, tags, members, alltypes, kindmap):
         outf.write('    {}* clone(BumpAllocator& alloc) const;\n'.format(name))
 
     outf.write('};\n\n')
+
+
+def loadkinds(ourdir, filename):
+    kinds = []
+    inf = open(os.path.join(ourdir, filename))
+    for line in [x.strip('\n') for x in inf]:
+        line = line.strip()
+        if not line:
+            continue
+
+        kinds.append(line)
+    return kinds
+
+
+def writekinddecl(outf, name, basetype, kinds):
+    outf.write('enum class {} : {} {{\n'.format(name, basetype))
+    for k in kinds:
+        outf.write('    {},\n'.format(k))
+
+    outf.write('''}};
+
+std::ostream& operator<<(std::ostream& os, {} kind);
+string_view toString({} kind);
+
+'''.format(name, name))
+
+
+def writekindimpls(outf, name, kinds):
+    outf.write('''std::ostream& operator<<(std::ostream& os, {} kind) {{
+    os << toString(kind);
+    return os;
+}}
+
+string_view toString({} kind) {{
+    switch (kind) {{
+'''.format(name, name))
+
+    for k in kinds:
+        outf.write('        case {}::{}: return "{}";\n'.format(name, k, k))
+    outf.write('''        default: return "";
+    }
+}
+
+''')
+
+
+def generateTokenKinds(ourdir, builddir):
+    headerdir = os.path.join(builddir, 'slang', 'parsing')
+    try:
+        os.makedirs(headerdir)
+    except OSError:
+        pass
+
+    triviakinds = loadkinds(ourdir, "triviakinds.txt")
+    tokenkinds = loadkinds(ourdir, "tokenkinds.txt")
+
+    outf = open(os.path.join(headerdir, "TokenKind.h"), 'w')
+    outf.write('''//------------------------------------------------------------------------------
+//! @file TokenKind.h
+//! @brief Generated TokenKind and TriviaKind enums
+//
+// File is under the MIT license; see LICENSE for details
+//------------------------------------------------------------------------------
+#pragma once
+
+#include <ostream>
+
+#include "slang/util/Util.h"
+
+namespace slang {
+
+''')
+
+    writekinddecl(outf, 'TriviaKind', 'uint8_t', triviakinds)
+    writekinddecl(outf, 'TokenKind', 'uint16_t', tokenkinds)
+    outf.write('}\n')
+
+    outf = open(os.path.join(builddir, "TokenKind.cpp"), 'w')
+    outf.write('''//------------------------------------------------------------------------------
+// TokenKind.cpp
+// Generated TokenKind and TriviaKind enums
+//
+// File is under the MIT license; see LICENSE for details
+//------------------------------------------------------------------------------
+#include "slang/parsing/TokenKind.h"
+
+namespace slang {
+
+''')
+
+    writekindimpls(outf, 'TriviaKind', triviakinds)
+    writekindimpls(outf, 'TokenKind', tokenkinds)
+    outf.write('}\n')
+
 
 if __name__ == "__main__":
     main()

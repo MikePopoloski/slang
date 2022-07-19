@@ -18,6 +18,7 @@ install(DIRECTORY ../include/ DESTINATION include)
 install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/slang/diagnostics/ DESTINATION include/slang/diagnostics)
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/slang/syntax/AllSyntax.h DESTINATION include/slang/syntax/)
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/slang/syntax/SyntaxKind.h DESTINATION include/slang/syntax/)
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/slang/parsing/TokenKind.h DESTINATION include/slang/parsing/)
 install(DIRECTORY ../external/ieee1800/ DESTINATION include/ieee1800)
 install(FILES ../external/flat_hash_map.hpp ../external/span.hpp DESTINATION include)
 
@@ -112,8 +113,10 @@ target_link_libraries(slangcore PUBLIC ${CMAKE_THREAD_LIBS_INIT})
 #-------- Parsing / syntax library
 add_custom_command(
     COMMAND ${Python_EXECUTABLE} ${SCRIPTS_DIR}/syntax_gen.py --dir ${CMAKE_CURRENT_BINARY_DIR}
-    OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/slang/syntax/AllSyntax.h ${CMAKE_CURRENT_BINARY_DIR}/AllSyntax.cpp ${CMAKE_CURRENT_BINARY_DIR}/slang/syntax/SyntaxKind.h
-    DEPENDS ${SCRIPTS_DIR}/syntax_gen.py ${SCRIPTS_DIR}/syntax.txt
+    OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/slang/syntax/AllSyntax.h ${CMAKE_CURRENT_BINARY_DIR}/AllSyntax.cpp
+           ${CMAKE_CURRENT_BINARY_DIR}/slang/syntax/SyntaxKind.h ${CMAKE_CURRENT_BINARY_DIR}/slang/parsing/TokenKind.h
+           ${CMAKE_CURRENT_BINARY_DIR}/TokenKind.cpp
+    DEPENDS ${SCRIPTS_DIR}/syntax_gen.py ${SCRIPTS_DIR}/syntax.txt ${SCRIPTS_DIR}/triviakinds.txt  ${SCRIPTS_DIR}/tokenkinds.txt
     COMMENT "Generating syntax"
 )
 
@@ -131,6 +134,7 @@ add_library(slangparser
     parsing/Token.cpp
 
     ${CMAKE_CURRENT_BINARY_DIR}/AllSyntax.cpp
+    ${CMAKE_CURRENT_BINARY_DIR}/TokenKind.cpp
     syntax/SyntaxFacts.cpp
     syntax/SyntaxNode.cpp
     syntax/SyntaxPrinter.cpp
