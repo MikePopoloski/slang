@@ -511,7 +511,12 @@ def writekinddecl(outf, name, basetype, kinds):
 std::ostream& operator<<(std::ostream& os, {} kind);
 string_view toString({} kind);
 
-'''.format(name, name))
+template<>
+struct enum_info<{}> {{
+    static const {} members[{}];
+}};
+
+'''.format(name, name, name, name, len(kinds)))
 
 
 def writekindimpls(outf, name, kinds):
@@ -529,6 +534,15 @@ string_view toString({} kind) {{
     outf.write('''        default: return "";
     }
 }
+
+''')
+
+    outf.write('''const {} enum_info<{}>::members[{}] = {{
+'''.format(name, name, len(kinds)))
+
+    for k in kinds:
+        outf.write('    {}::{},\n'.format(name, k))
+    outf.write('''};
 
 ''')
 

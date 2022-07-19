@@ -21,7 +21,9 @@
         static const char* strings[] = { elements(UTIL_ENUM_STRING) }; \
         return strings[static_cast<std::underlying_type_t<name>>(e)];  \
     }                                                                  \
-    inline std::ostream& operator<<(std::ostream& os, name e) { return os << toString(e); }
+    inline std::ostream& operator<<(std::ostream& os, name e) {        \
+        return os << toString(e);                                      \
+    }
 
 /// The ENUM_MEMBER macro defines a weakly-typed enum with stringification
 /// methods similar to ENUM. It is intended to be used for enums that are
@@ -65,6 +67,9 @@
     BITMASK_DETAIL_DEFINE_OPS(value_type)
 
 namespace slang {
+
+template<typename T>
+struct enum_info {};
 
 namespace bitmask_detail {
 
