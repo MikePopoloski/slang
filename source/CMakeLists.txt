@@ -9,6 +9,9 @@ function(slang_define_lib libname)
             LIBRARY DESTINATION lib
             ARCHIVE DESTINATION lib)
 
+    if(SLANG_INCLUDE_PYLIB)
+        set_target_properties(${libname} PROPERTIES POSITION_INDEPENDENT_CODE ON)
+    endif()
     if(SLANG_RUN_CLANG_TIDY)
         set_target_properties(${libname} PROPERTIES CXX_CLANG_TIDY clang-tidy)
     endif()
@@ -78,6 +81,10 @@ if(NOT SLANG_USE_SYSTEM_LIBS)
     set_source_files_properties(../external/xxHash/xxhash.c PROPERTIES LANGUAGE CXX)
     if(NOT CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
         set_source_files_properties(../external/xxHash/xxhash.c PROPERTIES COMPILE_FLAGS -w)
+    endif()
+
+    if(SLANG_INCLUDE_PYLIB)
+        set_target_properties(fmt PROPERTIES POSITION_INDEPENDENT_CODE ON)
     endif()
 
     install(FILES ../external/xxHash/xxhash.h DESTINATION include/xxhash)

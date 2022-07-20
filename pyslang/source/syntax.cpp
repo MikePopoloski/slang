@@ -90,7 +90,7 @@ void registerSyntax(py::module_& m) {
              })
         .def("__str__", &SyntaxNode::toString);
 
-    py::class_<SyntaxTree>(m, "SyntaxTree")
+    py::class_<SyntaxTree, std::shared_ptr<SyntaxTree>>(m, "SyntaxTree")
         .def_readonly("isLibrary", &SyntaxTree::isLibrary)
         .def_static("fromFile", py::overload_cast<string_view>(&SyntaxTree::fromFile))
         .def_static("fromText",
