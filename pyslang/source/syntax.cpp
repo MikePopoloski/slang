@@ -5,12 +5,14 @@
 #include "pyslang.h"
 
 #include "slang/parsing/Parser.h"
+#include "slang/syntax/SyntaxNode.h"
 #include "slang/syntax/SyntaxTree.h"
 #include "slang/text/SourceManager.h"
 
 void registerSyntax(py::module_& m) {
     EXPOSE_ENUM(m, TriviaKind);
     EXPOSE_ENUM(m, TokenKind);
+    EXPOSE_ENUM(m, SyntaxKind);
 
     py::class_<Trivia>(m, "Trivia")
         .def(py::init<>())
@@ -39,6 +41,7 @@ void registerSyntax(py::module_& m) {
                       double, bool, optional<TimeUnit>>())
         .def(py::init<BumpAllocator&, TokenKind, span<Trivia const>, string_view, SourceLocation,
                       LiteralBase, bool>())
+        .def_readonly("kind", &Token::kind)
         .def_property_readonly("isMissing", &Token::isMissing)
         .def_property_readonly("range", &Token::range)
         .def_property_readonly("location", &Token::location)
@@ -66,9 +69,26 @@ void registerSyntax(py::module_& m) {
                                })
         .def(py::self == py::self)
         .def(py::self != py::self)
-        .def("__repr__", [](const Token& self) {
-            return fmt::format("Token(TokenKind::{})", toString(self.kind));
-        });
+        .def("__repr__",
+             [](const Token& self) {
+                 return fmt::format("Token(TokenKind::{})", toString(self.kind));
+             })
+        .def("__str__", &Token::toString);
+
+    py::class_<SyntaxNode>(m, "SyntaxNode")
+        .def_readonly("parent", &SyntaxNode::parent)
+        .def_readonly("kind", &SyntaxNode::kind)
+        .def("getFirstToken", &SyntaxNode::getFirstToken)
+        .def("getLastToken", &SyntaxNode::getLastToken)
+        .def("sourceRange", &SyntaxNode::sourceRange)
+        .def("childNode", &SyntaxNode::childNode)
+        .def("childToken", &SyntaxNode::childToken)
+        .def("getChildCount", &SyntaxNode::getChildCount)
+        .def("__repr__",
+             [](const SyntaxNode& self) {
+                 return fmt::format("SyntaxNode(SyntaxKind::{})", toString(self.kind));
+             })
+        .def("__str__", &SyntaxNode::toString);
 
     py::class_<SyntaxTree>(m, "SyntaxTree")
         .def_readonly("isLibrary", &SyntaxTree::isLibrary)

@@ -244,6 +244,10 @@ std::ostream& operator<<(std::ostream& os, SyntaxKind kind) {
 
 string_view toString(SyntaxKind kind) {
     switch (kind) {
+        case SyntaxKind::Unknown: return "Unknown";
+        case SyntaxKind::SyntaxList: return "SyntaxList";
+        case SyntaxKind::TokenList: return "TokenList";
+        case SyntaxKind::SeparatedList: return "SeparatedList";
 ''')
 
     for k,v in sorted(kindmap.items()):
@@ -252,6 +256,18 @@ string_view toString(SyntaxKind kind) {
     cppf.write('''        default: return "";
     }
 }
+
+''')
+
+    cppf.write('const SyntaxKind enum_info<SyntaxKind>::members[{}] = {{\n'.format(len(kindmap.items()) + 4))
+    cppf.write('''    SyntaxKind::Unknown,
+    SyntaxKind::SyntaxList,
+    SyntaxKind::TokenList,
+    SyntaxKind::SeparatedList,
+''')
+    for k,v in sorted(kindmap.items()):
+        cppf.write('    SyntaxKind::{},\n'.format(k))
+    cppf.write('''};
 
 }
 ''')
@@ -311,6 +327,8 @@ string_view toString(SyntaxKind kind) {
 //------------------------------------------------------------------------------
 #pragma once
 
+#include "slang/util/Enum.h"
+
 namespace slang {
 
 enum class SyntaxKind {
@@ -323,13 +341,18 @@ enum class SyntaxKind {
     for k,v in sorted(kindmap.items()):
         outf.write('    {},\n'.format(k))
 
-    outf.write('''};
+    outf.write('''}};
 
 std::ostream& operator<<(std::ostream& os, SyntaxKind kind);
 string_view toString(SyntaxKind kind);
 
-}
-''')
+template<>
+struct enum_info<SyntaxKind> {{
+    static const SyntaxKind members[{}];
+}};
+
+}}
+'''.format(len(kindmap.items()) + 4))
 
     generateTokenKinds(ourdir, args.dir)
 
