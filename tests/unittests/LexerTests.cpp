@@ -606,6 +606,33 @@ TEST_CASE("Bad time literal") {
     CHECK(token.kind != TokenKind::TimeLiteral);
 }
 
+TEST_CASE("Colon") {
+    SECTION("Basic Colon") {
+        auto& text = ":";
+        Token token = lexToken(text);
+
+        CHECK(token.kind == TokenKind::Colon);
+        CHECK(token.toString() == ":");
+        CHECK_DIAGNOSTICS_EMPTY;
+    }
+    SECTION("Colon followed by comment") {
+        auto& text = ":// comment";
+        Token token = lexToken(text);
+
+        CHECK(token.kind == TokenKind::Colon);
+        CHECK(token.toString() == ":");
+        CHECK_DIAGNOSTICS_EMPTY;
+    }
+    SECTION("Colon followed by another kind of comment") {
+        auto& text = ":/* comment */";
+        Token token = lexToken(text);
+
+        CHECK(token.kind == TokenKind::Colon);
+        CHECK(token.toString() == ":");
+        CHECK_DIAGNOSTICS_EMPTY;
+    }
+}
+
 TEST_CASE("Misplaced directive char") {
     auto& text = "`";
     Token token = lexRawToken(text);
