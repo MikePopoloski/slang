@@ -375,6 +375,11 @@ Token Lexer::lexToken(KeywordVersion keywordVersion) {
                     advance();
                     return create(TokenKind::ColonEquals);
                 case '/':
+                    switch (peek(1)) {
+                        case '/':
+                        case '*':
+                            return create(TokenKind::Colon);
+                    }
                     advance();
                     return create(TokenKind::ColonSlash);
                 case ':':
