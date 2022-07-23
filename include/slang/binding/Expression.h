@@ -225,6 +225,13 @@ public:
     static void findPotentiallyImplicitNets(const SyntaxNode& expr, const BindContext& context,
                                             SmallVector<Token>& results);
 
+    /// Converts an expression to be of the given type, following the rules for
+    /// implicit conversions, array port slicing, etc.
+    static Expression& convertAssignment(const BindContext& context, const Type& type,
+                                         Expression& expr, SourceLocation location,
+                                         Expression** lhsExpr = nullptr,
+                                         bitmask<AssignFlags>* assignFlags = nullptr);
+
     /// Indicates whether the expression is invalid.
     bool bad() const;
 
@@ -340,11 +347,6 @@ protected:
 
     static Expression* tryBindInterfaceRef(const BindContext& context,
                                            const ExpressionSyntax& syntax, const Type& targetType);
-
-    static Expression& convertAssignment(const BindContext& context, const Type& type,
-                                         Expression& expr, SourceLocation location,
-                                         Expression** lhsExpr = nullptr,
-                                         bitmask<AssignFlags>* assignFlags = nullptr);
 
     static Expression& badExpr(Compilation& compilation, const Expression* expr);
 

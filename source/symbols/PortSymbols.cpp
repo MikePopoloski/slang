@@ -1752,24 +1752,41 @@ const Expression* PortConnection::getExpression() const {
         context.setInstance(parentInstance);
 
         if (connectedSymbol) {
-            auto& valExpr = ValueExpressionBase::fromSymbol(context, *connectedSymbol, false,
-                                                            implicitNameRange);
+            Expression* e = &ValueExpressionBase::fromSymbol(context, *connectedSymbol, false,
+                                                             implicitNameRange);
 
-            if (!valExpr.type->isEquivalent(*type) && !valExpr.bad() && !type->isError()) {
-                auto& diag =
-                    context.addDiag(diag::ImplicitNamedPortTypeMismatch, implicitNameRange);
-                diag << port.name;
-                diag << *type;
-                diag << *valExpr.type;
+            bitmask<AssignFlags> assignFlags;
+            if (direction == ArgumentDirection::Out)
+                assignFlags = AssignFlags::OutputPort;
 
+            if (!e->type->isEquivalent(*type)) {
                 auto& comp = context.getCompilation();
-                expr = comp.emplace<InvalidExpression>(&valExpr, comp.getErrorType());
+                if (!parentInstance.arrayPath.empty() && direction != ArgumentDirection::Ref) {
+                    if (direction == ArgumentDirection::In) {
+                        e = &Expression::convertAssignment(context, *type, *e,
+                                                           implicitNameRange.start());
+                    }
+                    else {
+                        auto rhs = comp.emplace<EmptyArgumentExpression>(*type, implicitNameRange);
+                        Expression::convertAssignment(context, *e->type, *rhs,
+                                                      implicitNameRange.start(), &e, &assignFlags);
+                    }
+                }
+                else if (!e->bad() && !type->isError()) {
+                    auto& diag =
+                        context.addDiag(diag::ImplicitNamedPortTypeMismatch, implicitNameRange);
+                    diag << port.name;
+                    diag << *type;
+                    diag << *e->type;
+
+                    e = comp.emplace<InvalidExpression>(e, comp.getErrorType());
+                }
             }
-            else {
-                expr = &valExpr;
+
+            expr = e;
+            if (!expr->bad()) {
                 checkSymbolConnection(*expr, direction, context, expr->sourceRange.start(),
-                                      direction == ArgumentDirection::Out ? AssignFlags::OutputPort
-                                                                          : AssignFlags::None);
+                                      assignFlags);
             }
         }
         else {

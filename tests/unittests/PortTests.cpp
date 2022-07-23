@@ -1627,3 +1627,29 @@ endmodule : cmp
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Implicit port connection with instance array slicing") {
+    auto tree = SyntaxTree::fromText(R"(
+module M(
+    input logic a,
+    output logic b
+);
+endmodule
+
+module top;
+    localparam N = 8;
+
+    logic [N-1:0] a;
+    logic [N-1:0] b;
+
+    M m [N-1:0] (
+        .a,
+        .b
+    );
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
