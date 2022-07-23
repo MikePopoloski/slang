@@ -2611,3 +2611,28 @@ endclass
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::ReversedOpenRange);
 }
+
+TEST_CASE("Access to static class data member with incomplete forward typedef") {
+    auto tree = SyntaxTree::fromText(R"(
+typedef class S;
+typedef class A;
+
+class C;
+    function f();
+        A a = new();
+        S::a["test"] = a;
+    endfunction
+endclass
+
+class S;
+    static A a[string];
+endclass
+
+class A;
+endclass
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}

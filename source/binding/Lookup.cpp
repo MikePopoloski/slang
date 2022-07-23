@@ -620,11 +620,6 @@ bool resolveColonNames(SmallVectorSized<NamePlusLoc, 8>& nameParts, int colonPar
         }
     }
 
-    // The initial symbol found cannot be resolved via a forward typedef (i.e. "incomplete")
-    // unless this is within a typedef declaration.
-    if (result.fromForwardTypedef && !flags.has(LookupFlags::TypedefTarget))
-        result.addDiag(*context.scope, diag::ScopeIncompleteTypedef, name.range);
-
     auto validateSymbol = [&] {
         // Handle generic classes and parameter assignments. If this is a generic class,
         // we must have param assignments here (even if the generic class has a default
@@ -726,6 +721,15 @@ bool resolveColonNames(SmallVectorSized<NamePlusLoc, 8>& nameParts, int colonPar
         }
 
         nameParts.pop();
+
+        // The initial symbol found cannot be resolved via a forward typedef (i.e. "incomplete")
+        // unless this is within a typedef declaration.
+        if (result.fromForwardTypedef && !flags.has(LookupFlags::TypedefTarget) &&
+            symbol->isType()) {
+
+            result.fromForwardTypedef = false;
+            result.addDiag(*context.scope, diag::ScopeIncompleteTypedef, name.range);
+        }
     }
 
     if (!validateSymbol())
