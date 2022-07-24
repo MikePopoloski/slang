@@ -398,19 +398,19 @@ struct ClassPropertyDeclarationSyntax;
 struct ForwardInterfaceClassTypedefDeclarationSyntax;
 struct ForwardTypedefDeclarationSyntax;
 
+#define CATEGORY(x) x(None) x(Enum) x(Struct) x(Union) x(Class) x(InterfaceClass)
+ENUM(ForwardTypedefCategory, CATEGORY);
+#undef CATEGORY
+
 /// A forward declaration of a user-defined type name. A given type name can have
 /// an arbitrary number of forward declarations in the same scope, so each symbol
 /// forms a linked list, headed by the actual type definition.
 class ForwardingTypedefSymbol : public Symbol {
 public:
-#define CATEGORY(x) x(None) x(Enum) x(Struct) x(Union) x(Class) x(InterfaceClass)
-    ENUM_MEMBER(Category, CATEGORY);
-#undef CATEGORY
-
-    Category category;
+    ForwardTypedefCategory category;
     optional<Visibility> visibility;
 
-    ForwardingTypedefSymbol(string_view name, SourceLocation loc, Category category) :
+    ForwardingTypedefSymbol(string_view name, SourceLocation loc, ForwardTypedefCategory category) :
         Symbol(SymbolKind::ForwardingTypedef, name, loc), category(category) {}
 
     static ForwardingTypedefSymbol& fromSyntax(const Scope& scope,
@@ -425,7 +425,7 @@ public:
     void addForwardDecl(const ForwardingTypedefSymbol& decl) const;
     const ForwardingTypedefSymbol* getNextForwardDecl() const { return next; }
 
-    void checkType(Category checkCategory, Visibility checkVisibility,
+    void checkType(ForwardTypedefCategory checkCategory, Visibility checkVisibility,
                    SourceLocation declLoc) const;
 
     void serializeTo(ASTSerializer& serializer) const;

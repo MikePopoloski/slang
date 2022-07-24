@@ -577,8 +577,7 @@ const ConstantValue& EnumValueSymbol::getValue(SourceRange referencingRange) con
                 ASSERT(referencingRange.start());
 
                 auto& diag = ctx.addDiag(diag::ConstEvalParamCycle, location) << name;
-                diag.addNote(diag::NoteReferencedHere, referencingRange)
-                    << referencingRange;
+                diag.addNote(diag::NoteReferencedHere, referencingRange) << referencingRange;
                 return ConstantValue::Invalid;
             }
 
@@ -1051,22 +1050,22 @@ ConstantValue VirtualInterfaceType::getDefaultValueImpl() const {
 ForwardingTypedefSymbol& ForwardingTypedefSymbol::fromSyntax(
     const Scope& scope, const ForwardTypedefDeclarationSyntax& syntax) {
 
-    Category category;
+    ForwardTypedefCategory category;
     switch (syntax.keyword.kind) {
         case TokenKind::EnumKeyword:
-            category = Category::Enum;
+            category = ForwardTypedefCategory::Enum;
             break;
         case TokenKind::StructKeyword:
-            category = Category::Struct;
+            category = ForwardTypedefCategory::Struct;
             break;
         case TokenKind::UnionKeyword:
-            category = Category::Union;
+            category = ForwardTypedefCategory::Union;
             break;
         case TokenKind::ClassKeyword:
-            category = Category::Class;
+            category = ForwardTypedefCategory::Class;
             break;
         default:
-            category = Category::None;
+            category = ForwardTypedefCategory::None;
             break;
     }
 
@@ -1083,7 +1082,7 @@ ForwardingTypedefSymbol& ForwardingTypedefSymbol::fromSyntax(
 
     auto& comp = scope.getCompilation();
     auto result = comp.emplace<ForwardingTypedefSymbol>(
-        syntax.name.valueText(), syntax.name.location(), Category::InterfaceClass);
+        syntax.name.valueText(), syntax.name.location(), ForwardTypedefCategory::InterfaceClass);
     result->setSyntax(syntax);
     result->setAttributes(scope, syntax.attributes);
     return *result;
@@ -1127,24 +1126,25 @@ void ForwardingTypedefSymbol::addForwardDecl(const ForwardingTypedefSymbol& decl
         next->addForwardDecl(decl);
 }
 
-void ForwardingTypedefSymbol::checkType(Category checkCategory, Visibility checkVisibility,
-                                        SourceLocation declLoc) const {
-    if (category != None && checkCategory != None && category != checkCategory) {
+void ForwardingTypedefSymbol::checkType(ForwardTypedefCategory checkCategory,
+                                        Visibility checkVisibility, SourceLocation declLoc) const {
+    if (category != ForwardTypedefCategory::None && checkCategory != ForwardTypedefCategory::None &&
+        category != checkCategory) {
         auto& diag = getParentScope()->addDiag(diag::ForwardTypedefDoesNotMatch, location);
         switch (category) {
-            case ForwardingTypedefSymbol::Enum:
+            case ForwardTypedefCategory::Enum:
                 diag << "enum"sv;
                 break;
-            case ForwardingTypedefSymbol::Struct:
+            case ForwardTypedefCategory::Struct:
                 diag << "struct"sv;
                 break;
-            case ForwardingTypedefSymbol::Union:
+            case ForwardTypedefCategory::Union:
                 diag << "union"sv;
                 break;
-            case ForwardingTypedefSymbol::Class:
+            case ForwardTypedefCategory::Class:
                 diag << "class"sv;
                 break;
-            case ForwardingTypedefSymbol::InterfaceClass:
+            case ForwardTypedefCategory::InterfaceClass:
                 diag << "interface class"sv;
                 break;
             default:
@@ -1218,26 +1218,26 @@ void TypeAliasType::addForwardDecl(const ForwardingTypedefSymbol& decl) const {
 
 void TypeAliasType::checkForwardDecls() const {
     auto& ct = targetType.getType().getCanonicalType();
-    ForwardingTypedefSymbol::Category category;
+    ForwardTypedefCategory category;
     switch (ct.kind) {
         case SymbolKind::PackedStructType:
         case SymbolKind::UnpackedStructType:
-            category = ForwardingTypedefSymbol::Struct;
+            category = ForwardTypedefCategory::Struct;
             break;
         case SymbolKind::PackedUnionType:
         case SymbolKind::UnpackedUnionType:
-            category = ForwardingTypedefSymbol::Union;
+            category = ForwardTypedefCategory::Union;
             break;
         case SymbolKind::EnumType:
-            category = ForwardingTypedefSymbol::Enum;
+            category = ForwardTypedefCategory::Enum;
             break;
         case SymbolKind::ClassType:
-            category = ForwardingTypedefSymbol::Class;
+            category = ForwardTypedefCategory::Class;
             if (ct.as<ClassType>().isInterface)
-                category = ForwardingTypedefSymbol::InterfaceClass;
+                category = ForwardTypedefCategory::InterfaceClass;
             break;
         default:
-            category = ForwardingTypedefSymbol::None;
+            category = ForwardTypedefCategory::None;
             break;
     }
 

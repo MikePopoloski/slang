@@ -25,16 +25,6 @@
         return os << toString(e);                                      \
     }
 
-/// The ENUM_MEMBER macro defines a weakly-typed enum with stringification
-/// methods similar to ENUM. It is intended to be used for enums that are
-/// defined inside a parent class.
-#define ENUM_MEMBER(name, elements)                                    \
-    enum name { elements(UTIL_ENUM_ELEMENT) };                         \
-    friend string_view toString(name e) {                              \
-        static const char* strings[] = { elements(UTIL_ENUM_STRING) }; \
-        return strings[static_cast<std::underlying_type_t<name>>(e)];  \
-    }
-
 #define BITMASK_DETAIL_DEFINE_OPS(value_type)                                                    \
     inline constexpr slang::bitmask<value_type> operator&(value_type l, value_type r) noexcept { \
         return slang::bitmask<value_type>{ l } & r;                                              \
