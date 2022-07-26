@@ -431,7 +431,7 @@ module M(I i);
     function int stuff;
         return i.foo;
     endfunction
-    
+
     localparam int b = stuff();
 endmodule
 
@@ -760,7 +760,7 @@ module m #(parameter p::foo f = "SDF") ();
     end
     else begin: block2
         l #(.f(f)) l1();
-    end 
+    end
 endmodule
 )");
     auto tree2 = SyntaxTree::fromText(R"(
@@ -931,6 +931,11 @@ endmodule
 
 TEST_CASE("Error checking in uninstantiated modules") {
     auto tree = SyntaxTree::fromText(R"(
+interface I;
+    int i;
+    modport m (input i);
+endinterface
+
 module bar #(parameter int foo);
     localparam int bar = foo;
     int j = int'(bar[foo]);
@@ -940,6 +945,10 @@ module bar #(parameter int foo);
     int k = {};
 
     UnknownMod #(3, 4) m(j + 1, l, {});
+
+    I qux1();
+    I qux2[3] ();
+    OtherUnknown #(.a(2)) o(qux1.m, qux2);
 endmodule
 
 module top;
@@ -1200,9 +1209,9 @@ endmodule
 module m;
     parameter a = 1;
     parameter b = 2;
-  
+
     logic [b-1:0] foo;
-  
+
     defparam m1.a = $bits(foo) + 2;
     defparam m1.b = 4;
 
@@ -1245,7 +1254,7 @@ endmodule
 module m;
     parameter a = 6;
     defparam q.foo = 1;
-    
+
     if (a == 6) begin : q
         parameter foo = 0;
     end
@@ -1638,7 +1647,7 @@ module top(input d, ck, pr, clr, output q, nq);
         nand g1a (q1, ck, nq2, nq1);
     endmodule
     ff1 i1();
-    
+
     module ff2;
         wire q2;
         nand g2b (nq2, ck, clr, q2);
