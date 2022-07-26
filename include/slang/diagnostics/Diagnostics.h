@@ -13,6 +13,7 @@
 
 #include "slang/numeric/ConstantValue.h"
 #include "slang/text/SourceLocation.h"
+#include "slang/util/Enum.h"
 #include "slang/util/SmallVector.h"
 
 namespace slang {
@@ -20,27 +21,36 @@ namespace slang {
 class SourceManager;
 class Symbol;
 
-enum class DiagSubsystem : uint16_t {
-    Invalid,
-    General,
-    Lexer,
-    Numeric,
-    Preprocessor,
-    Parser,
-    Declarations,
-    Expressions,
-    Statements,
-    Types,
-    Lookup,
-    SysFuncs,
-    ConstEval,
-    Compilation,
-    Meta
-};
+// clang-format off
+#define DS(x) \
+    x(Invalid) \
+    x(General) \
+    x(Lexer) \
+    x(Numeric) \
+    x(Preprocessor) \
+    x(Parser) \
+    x(Declarations) \
+    x(Expressions) \
+    x(Statements) \
+    x(Types) \
+    x(Lookup) \
+    x(SysFuncs) \
+    x(ConstEval) \
+    x(Compilation) \
+    x(Meta)
+ENUM_SIZED(DiagSubsystem, uint16_t, DS)
+#undef DS
 
 /// The severity of a given diagnostic. This is not tied to the diagnostic itself;
 /// it can be configured on a per-diagnostic basis at runtime.
-enum class DiagnosticSeverity { Ignored, Note, Warning, Error, Fatal };
+#define DS(x) \
+    x(Ignored) \
+    x(Note) \
+    x(Warning) \
+    x(Error) \
+    x(Fatal)
+ENUM(DiagnosticSeverity, DS)
+// clang-format on
 
 class DiagCode {
 public:

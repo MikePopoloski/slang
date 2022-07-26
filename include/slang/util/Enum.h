@@ -15,8 +15,9 @@
 
 /// The ENUM macro defines a strongly-typed enum with the given elements
 /// along with a toString() method and an overload of operator<< for formatting.
-#define ENUM(name, elements)                                                                    \
-    enum class name { elements(UTIL_ENUM_ELEMENT) };                                            \
+#define ENUM(name, elements) ENUM_SIZED(name, int, elements)
+#define ENUM_SIZED(name, underlying, elements)                                                  \
+    enum class name : underlying { elements(UTIL_ENUM_ELEMENT) };                               \
     inline string_view toString(name e) {                                                       \
         static const char* strings[] = { elements(UTIL_ENUM_STRING) };                          \
         return strings[static_cast<std::underlying_type_t<name>>(e)];                           \
