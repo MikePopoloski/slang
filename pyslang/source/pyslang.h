@@ -20,7 +20,7 @@ using namespace slang;
 #define EXPOSE_ENUM(handle, name)                         \
     do {                                                  \
         py::enum_<name> e(handle, #name);                 \
-        for (auto m : enum_info<name>::members) {         \
+        for (auto m : name##_traits::values) {            \
             e.value(std::string(toString(m)).c_str(), m); \
         }                                                 \
     } while (0)

@@ -259,7 +259,7 @@ string_view toString(SyntaxKind kind) {
 
 ''')
 
-    cppf.write('const SyntaxKind enum_info<SyntaxKind>::members[{}] = {{\n'.format(len(kindmap.items()) + 4))
+    cppf.write('decltype(SyntaxKind_traits::values) SyntaxKind_traits::values = {\n')
     cppf.write('''    SyntaxKind::Unknown,
     SyntaxKind::SyntaxList,
     SyntaxKind::TokenList,
@@ -346,9 +346,9 @@ enum class SyntaxKind {
 std::ostream& operator<<(std::ostream& os, SyntaxKind kind);
 string_view toString(SyntaxKind kind);
 
-template<>
-struct enum_info<SyntaxKind> {{
-    static const SyntaxKind members[{}];
+class SyntaxKind_traits {{
+public:
+    static const std::array<SyntaxKind, {}> values;
 }};
 
 }}
@@ -534,9 +534,9 @@ def writekinddecl(outf, name, basetype, kinds):
 std::ostream& operator<<(std::ostream& os, {} kind);
 string_view toString({} kind);
 
-template<>
-struct enum_info<{}> {{
-    static const {} members[{}];
+class {}_traits {{
+public:
+    static const std::array<{}, {}> values;
 }};
 
 '''.format(name, name, name, name, len(kinds)))
@@ -560,8 +560,8 @@ string_view toString({} kind) {{
 
 ''')
 
-    outf.write('''const {} enum_info<{}>::members[{}] = {{
-'''.format(name, name, len(kinds)))
+    outf.write('''decltype({}_traits::values) {}_traits::values = {{
+'''.format(name, name))
 
     for k in kinds:
         outf.write('    {}::{},\n'.format(name, k))

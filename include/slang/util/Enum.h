@@ -15,15 +15,31 @@
 
 /// The ENUM macro defines a strongly-typed enum with the given elements
 /// along with a toString() method and an overload of operator<< for formatting.
-#define ENUM(name, elements)                                           \
-    enum class name { elements(UTIL_ENUM_ELEMENT) };                   \
-    inline string_view toString(name e) {                              \
-        static const char* strings[] = { elements(UTIL_ENUM_STRING) }; \
-        return strings[static_cast<std::underlying_type_t<name>>(e)];  \
-    }                                                                  \
-    inline std::ostream& operator<<(std::ostream& os, name e) {        \
-        return os << toString(e);                                      \
-    }
+#define ENUM(name, elements)                                                                    \
+    enum class name { elements(UTIL_ENUM_ELEMENT) };                                            \
+    inline string_view toString(name e) {                                                       \
+        static const char* strings[] = { elements(UTIL_ENUM_STRING) };                          \
+        return strings[static_cast<std::underlying_type_t<name>>(e)];                           \
+    }                                                                                           \
+    inline std::ostream& operator<<(std::ostream& os, name e) {                                 \
+        return os << toString(e);                                                               \
+    }                                                                                           \
+    class name##_traits {                                                                       \
+        enum e { elements(UTIL_ENUM_ELEMENT) };                                                 \
+        static constexpr auto vals = { elements(UTIL_ENUM_ELEMENT) };                           \
+        static constexpr auto getValues() {                                                     \
+            std::array<name, vals.size()> result{};                                             \
+            size_t i = 0;                                                                       \
+            for (auto val : vals)                                                               \
+                result[i++] = name(val);                                                        \
+            return result;                                                                      \
+        }                                                                                       \
+                                                                                                \
+    public:                                                                                     \
+        static const std::array<name, vals.size()> values;                                      \
+    };                                                                                          \
+    inline constexpr const std::array<name, name##_traits::vals.size()> name##_traits::values = \
+        getValues();
 
 #define BITMASK_DETAIL_DEFINE_OPS(value_type)                                                    \
     inline constexpr slang::bitmask<value_type> operator&(value_type l, value_type r) noexcept { \
@@ -57,9 +73,6 @@
     BITMASK_DETAIL_DEFINE_OPS(value_type)
 
 namespace slang {
-
-template<typename T>
-struct enum_info {};
 
 namespace bitmask_detail {
 
