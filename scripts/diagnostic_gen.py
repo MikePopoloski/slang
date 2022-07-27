@@ -223,8 +223,19 @@ const DiagGroup* findDefaultDiagGroup(string_view name) {
     return nullptr;
 }
 
-}
+static const DiagCode AllGeneratedCodes[] = {
 '''
+
+    for k,v in sorted(diags.items()):
+        for d in sorted(v):
+            output += '    diag::{},\n'.format(d[1])
+
+    output += '''};
+
+decltype(DiagCode::KnownCodes) DiagCode::KnownCodes = AllGeneratedCodes;
+
+}'''
+
     writefile(path, output)
 
 

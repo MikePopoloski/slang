@@ -72,6 +72,8 @@ public:
 
     constexpr bool operator<(DiagCode other) const { return code < other.code; }
 
+    static const span<const DiagCode> KnownCodes;
+
 private:
     DiagSubsystem subsystem;
     uint16_t code;

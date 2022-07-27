@@ -4,7 +4,11 @@
 //------------------------------------------------------------------------------
 #include "pyslang.h"
 
+#include "slang/diagnostics/DiagnosticClient.h"
+#include "slang/diagnostics/DiagnosticEngine.h"
 #include "slang/diagnostics/Diagnostics.h"
+#include "slang/diagnostics/TextDiagnosticClient.h"
+#include "slang/symbols/Symbol.h"
 #include "slang/text/SourceLocation.h"
 #include "slang/text/SourceManager.h"
 #include "slang/util/BumpAllocator.h"
@@ -114,4 +118,111 @@ void registerUtil(py::module_& m) {
         .def("__bool__", &DiagCode::valid)
         .def("__repr__",
              [](const DiagCode& self) { return fmt::format("DiagCode({})", toString(self)); });
+
+    struct Diags {};
+    py::class_<Diags> diagHolder(m, "Diags");
+    for (auto code : DiagCode::KnownCodes) {
+        diagHolder.def_property_readonly_static(std::string(toString(code)).c_str(),
+                                                [code](py::object) { return code; });
+    }
+
+    py::class_<Diagnostic>(m, "Diagnostic")
+        .def(py::init<DiagCode, SourceLocation>())
+        .def_readonly("code", &Diagnostic::code)
+        .def_readonly("location", &Diagnostic::location)
+        .def_readonly("symbol", &Diagnostic::symbol)
+        .def("isError", &Diagnostic::isError)
+        .def(py::self == py::self)
+        .def(py::self != py::self);
+
+    py::class_<Diagnostics>(m, "Diagnostics")
+        .def(py::init<>())
+        .def("add", py::overload_cast<DiagCode, SourceLocation>(&Diagnostics::add))
+        .def("add", py::overload_cast<DiagCode, SourceRange>(&Diagnostics::add))
+        .def("add", py::overload_cast<const Symbol&, DiagCode, SourceLocation>(&Diagnostics::add))
+        .def("add", py::overload_cast<const Symbol&, DiagCode, SourceRange>(&Diagnostics::add))
+        .def("sort", &Diagnostics::sort)
+        .def("__len__", &Diagnostics::size)
+        .def("__getitem__",
+             [](const Diagnostics& s, size_t i) {
+                 if (i >= s.size()) {
+                     throw py::index_error();
+                 }
+                 return s[i];
+             })
+        .def(
+            "__iter__",
+            [](const Diagnostics& self) { return py::make_iterator(self.begin(), self.end()); },
+            py::keep_alive<0, 1>());
+
+    py::class_<DiagGroup>(m, "DiagGroup")
+        .def(py::init<const std::string&, const std::vector<DiagCode>&>())
+        .def("getName", &DiagGroup::getName)
+        .def("getDiags", &DiagGroup::getDiags)
+        .def("__repr__",
+             [](const DiagGroup& self) { return fmt::format("DiagGroup({})", self.getName()); });
+
+    py::class_<DiagnosticEngine>(m, "DiagnosticEngine")
+        .def(py::init<const SourceManager&>())
+        .def("addClient", &DiagnosticEngine::addClient)
+        .def("clearClients", &DiagnosticEngine::clearClients)
+        .def("issue", &DiagnosticEngine::issue)
+        .def("getSourceManager", &DiagnosticEngine::getSourceManager)
+        .def("getNumErrors", &DiagnosticEngine::getNumErrors)
+        .def("getNumWarnings", &DiagnosticEngine::getNumWarnings)
+        .def("clearCounts", &DiagnosticEngine::clearCounts)
+        .def("setErrorLimit", &DiagnosticEngine::setErrorLimit)
+        .def("setIgnoreAllWarnings", &DiagnosticEngine::setIgnoreAllWarnings)
+        .def("setIgnoreAllNotes", &DiagnosticEngine::setIgnoreAllNotes)
+        .def("setWarningsAsErrors", &DiagnosticEngine::setWarningsAsErrors)
+        .def("setErrorsAsFatal", &DiagnosticEngine::setErrorsAsFatal)
+        .def("setFatalsAsErrors", &DiagnosticEngine::setFatalsAsErrors)
+        .def("setSeverity",
+             py::overload_cast<DiagCode, DiagnosticSeverity>(&DiagnosticEngine::setSeverity))
+        .def("setSeverity", py::overload_cast<const DiagGroup&, DiagnosticSeverity>(
+                                &DiagnosticEngine::setSeverity))
+        .def("getSeverity", &DiagnosticEngine::getSeverity)
+        .def("setMessage", &DiagnosticEngine::setMessage)
+        .def("getMessage", &DiagnosticEngine::getMessage)
+        .def("getOptionName", &DiagnosticEngine::getOptionName)
+        .def("findFromOptionName", &DiagnosticEngine::findFromOptionName)
+        .def("findDiagGroup", &DiagnosticEngine::findDiagGroup,
+             py::return_value_policy::reference_internal)
+        .def("clearMappings", py::overload_cast<>(&DiagnosticEngine::clearMappings))
+        .def("clearMappings",
+             py::overload_cast<DiagnosticSeverity>(&DiagnosticEngine::clearMappings))
+        .def("formatMessage", &DiagnosticEngine::formatMessage)
+        .def("setDefaultWarnings", &DiagnosticEngine::setDefaultWarnings)
+        .def("setWarningOptions", &DiagnosticEngine::setWarningOptions)
+        .def("setMappingsFromPragmas", &DiagnosticEngine::setMappingsFromPragmas)
+        .def_static("reportAll", &DiagnosticEngine::reportAll);
+
+    py::class_<ReportedDiagnostic>(m, "ReportedDiagnostic")
+        .def_property_readonly(
+            "originalDiagnostic",
+            [](const ReportedDiagnostic& self) { return self.originalDiagnostic; })
+        .def_readonly("expansionLocs", &ReportedDiagnostic::expansionLocs)
+        .def_readonly("ranges", &ReportedDiagnostic::ranges)
+        .def_readonly("location", &ReportedDiagnostic::location)
+        .def_readonly("formattedMessage", &ReportedDiagnostic::formattedMessage)
+        .def_readonly("severity", &ReportedDiagnostic::severity)
+        .def_readonly("shouldShowIncludeStack", &ReportedDiagnostic::shouldShowIncludeStack);
+
+    py::class_<DiagnosticClient>(m, "DiagnosticClient")
+        .def("report", &DiagnosticClient::report)
+        .def("setEngine", &DiagnosticClient::setEngine);
+
+    py::class_<TextDiagnosticClient, DiagnosticClient>(m, "TextDiagnosticClient")
+        .def(py::init<>())
+        .def("showColors", &TextDiagnosticClient::showColors)
+        .def("showColumn", &TextDiagnosticClient::showColumn)
+        .def("showLocation", &TextDiagnosticClient::showLocation)
+        .def("showSourceLine", &TextDiagnosticClient::showSourceLine)
+        .def("showOptionName", &TextDiagnosticClient::showOptionName)
+        .def("showIncludeStack", &TextDiagnosticClient::showIncludeStack)
+        .def("showMacroExpansion", &TextDiagnosticClient::showMacroExpansion)
+        .def("showHierarchyInstance", &TextDiagnosticClient::showHierarchyInstance)
+        .def("report", &TextDiagnosticClient::report)
+        .def("clear", &TextDiagnosticClient::clear)
+        .def("getString", &TextDiagnosticClient::getString);
 }
