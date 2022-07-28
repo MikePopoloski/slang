@@ -16,8 +16,17 @@ namespace slang {
 /// A type that can represent the largest possible bit width of a SystemVerilog integer.
 using bitwidth_t = uint32_t;
 
+// clang-format off
+#define LB(x) \
+    x(Binary) \
+    x(Octal) \
+    x(Decimal) \
+    x(Hex)
+// clang-format on
+
 /// Specifies the base of an integer (for converting to/from a string)
-enum class LiteralBase : uint8_t { Binary, Octal, Decimal, Hex };
+ENUM_SIZED(LiteralBase, uint8_t, LB)
+#undef LB
 
 bool literalBaseFromChar(char base, LiteralBase& result);
 
@@ -85,8 +94,11 @@ struct logic_t {
         return !isUnknown() && value != 0;
     }
 
-    friend bool exactlyEqual(logic_t lhs, logic_t rhs) { return lhs.value == rhs.value; }
+    friend bool exactlyEqual(logic_t lhs, logic_t rhs) {
+        return lhs.value == rhs.value;
+    }
 
+    char toChar() const;
     friend std::ostream& operator<<(std::ostream& os, const logic_t& rhs);
 
     static constexpr uint8_t X_VALUE = 1 << 7;

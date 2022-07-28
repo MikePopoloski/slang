@@ -45,6 +45,16 @@ bool literalBaseFromChar(char base, LiteralBase& result) {
     }
 }
 
+char logic_t::toChar() const {
+    if (value == logic_t::x.value)
+        return 'x';
+    if (value == logic_t::z.value)
+        return 'z';
+    if (value)
+        return '1';
+    return '0';
+}
+
 std::ostream& operator<<(std::ostream& os, const logic_t& rhs) {
     if (rhs.value == logic_t::x.value)
         os << "x";
