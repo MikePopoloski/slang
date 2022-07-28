@@ -11,15 +11,18 @@
 
 namespace slang {
 
+// clang-format off
+#define TU(x) \
+    x(Seconds) \
+    x(Milliseconds) \
+    x(Microseconds) \
+    x(Nanoseconds) \
+    x(Picoseconds) \
+    x(Femtoseconds)
 /// Scale unit for a time value.
-enum class TimeUnit : uint8_t {
-    Seconds,
-    Milliseconds,
-    Microseconds,
-    Nanoseconds,
-    Picoseconds,
-    Femtoseconds
-};
+ENUM_SIZED(TimeUnit, uint8_t, TU)
+#undef TU
+// clang-format on
 
 bool suffixToTimeUnit(string_view timeSuffix, TimeUnit& unit);
 string_view timeUnitToSuffix(TimeUnit unit);

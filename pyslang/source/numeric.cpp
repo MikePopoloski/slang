@@ -4,7 +4,12 @@
 //------------------------------------------------------------------------------
 #include "pyslang.h"
 
+#include "slang/numeric/ConstantValue.h"
 #include "slang/numeric/SVInt.h"
+#include "slang/numeric/Time.h"
+
+template<typename T>
+struct always_false : std::false_type {};
 
 static SVInt SVIntFromFloat(double value) {
     if (!isnormal(value))
@@ -211,4 +216,122 @@ void registerNumeric(py::module_& m) {
              })
         .def("__int__", [](const SVInt& self) { return PyIntFromSVInt(self); })
         .def("__float__", [](const SVInt& self) { return self.toDouble(); });
+
+    EXPOSE_ENUM(m, TimeUnit);
+    m.def("suffixToTimeUnit", &suffixToTimeUnit);
+    m.def("timeUnitToSuffix", &timeUnitToSuffix);
+
+    py::enum_<TimeScaleMagnitude>(m, "TimeScaleMagnitude")
+        .value("One", TimeScaleMagnitude::One)
+        .value("Ten", TimeScaleMagnitude::Ten)
+        .value("Hundred", TimeScaleMagnitude::Hundred);
+
+    py::class_<TimeScaleValue>(m, "TimeScaleValue")
+        .def(py::init<>())
+        .def(py::init<TimeUnit, TimeScaleMagnitude>())
+        .def(py::init<string_view>())
+        .def_readwrite("unit", &TimeScaleValue::unit)
+        .def_readwrite("magnitude", &TimeScaleValue::magnitude)
+        .def_static("fromLiteral", &TimeScaleValue::fromLiteral)
+        .def(py::self == py::self)
+        .def(py::self != py::self)
+        .def("__repr__", [](const TimeScaleValue& self) { return self.toString(); });
+
+    py::class_<TimeScale>(m, "TimeScale")
+        .def(py::init<>())
+        .def(py::init<TimeScaleValue, TimeScaleValue>())
+        .def_readwrite("base", &TimeScale::base)
+        .def_readwrite("precision", &TimeScale::precision)
+        .def("apply", &TimeScale::apply)
+        .def(py::self == py::self)
+        .def(py::self != py::self)
+        .def("__repr__", [](const TimeScale& self) { return self.toString(); });
+
+    py::class_<ConstantValue::NullPlaceholder>(m, "Null")
+        .def(py::init<>())
+        .def("__repr__", [](const ConstantValue::NullPlaceholder&) { return "null"; });
+
+    py::class_<ConstantValue::UnboundedPlaceholder>(m, "Unbounded")
+        .def(py::init<>())
+        .def("__repr__", [](const ConstantValue::UnboundedPlaceholder&) { return "$"; });
+
+    py::class_<ConstantValue>(m, "ConstantValue")
+        .def(py::init<>())
+        .def(py::init<const SVInt&>())
+        .def(py::init<const std::string&>())
+        .def(py::init([](int i) { return ConstantValue(SVInt(i)); }))
+        .def(py::init([](double d) { return ConstantValue(real_t(d)); }))
+        .def("isContainer", &ConstantValue::isContainer)
+        .def("isTrue", &ConstantValue::isTrue)
+        .def("isFalse", &ConstantValue::isFalse)
+        .def("hasUnknown", &ConstantValue::hasUnknown)
+        .def("bitstreamWidth", &ConstantValue::bitstreamWidth)
+        .def("getSlice", &ConstantValue::getSlice)
+        .def("empty", &ConstantValue::empty)
+        .def("size", &ConstantValue::size)
+        .def("convertToInt", py::overload_cast<>(&ConstantValue::convertToInt, py::const_))
+        .def("convertToInt",
+             py::overload_cast<bitwidth_t, bool, bool>(&ConstantValue::convertToInt, py::const_))
+        .def("convertToReal", &ConstantValue::convertToReal)
+        .def("convertToShortReal", &ConstantValue::convertToShortReal)
+        .def("convertToStr", &ConstantValue::convertToStr)
+        .def("convertToByteArray", &ConstantValue::convertToByteArray)
+        .def("convertToByteQueue", &ConstantValue::convertToByteQueue)
+        .def(hash(py::self))
+        .def(py::self == py::self)
+        .def(py::self != py::self)
+        .def("__bool__", [](const ConstantValue& self) { return bool(self); })
+        .def("__repr__", [](const ConstantValue& self) { return self.toString(); })
+        .def_property_readonly("value", [](const ConstantValue& self) {
+            return std::visit(
+                [](auto&& arg) -> py::object {
+                    using T = std::decay_t<decltype(arg)>;
+                    if constexpr (std::is_same_v<T, std::monostate>)
+                        return py::none();
+                    else if constexpr (std::is_same_v<T, SVInt>)
+                        return py::cast(arg);
+                    else if constexpr (std::is_same_v<T, real_t>)
+                        return py::cast(double(arg));
+                    else if constexpr (std::is_same_v<T, shortreal_t>)
+                        return py::cast(float(arg));
+                    else if constexpr (std::is_same_v<T, ConstantValue::NullPlaceholder>)
+                        return py::cast(arg);
+                    else if constexpr (std::is_same_v<T, ConstantValue::UnboundedPlaceholder>)
+                        return py::cast(arg);
+                    else if constexpr (std::is_same_v<T, ConstantValue::Elements>)
+                        return py::cast(arg);
+                    else if constexpr (std::is_same_v<T, std::string>)
+                        return py::cast(arg);
+                    else if constexpr (std::is_same_v<T, ConstantValue::Map>)
+                        return py::cast(*arg);
+                    else if constexpr (std::is_same_v<T, ConstantValue::Queue>)
+                        return py::cast(*arg);
+                    else if constexpr (std::is_same_v<T, ConstantValue::Union>)
+                        return py::cast(*arg);
+                    else
+                        static_assert(always_false<T>::value, "Missing case");
+                },
+                self.getVariant());
+        });
+
+    py::class_<ConstantRange>(m, "ConstantRange")
+        .def(py::init<>())
+        .def(py::init([](int left, int right) {
+            return ConstantRange{ left, right };
+        }))
+        .def_readwrite("left", &ConstantRange::left)
+        .def_readwrite("right", &ConstantRange::right)
+        .def_property_readonly("width", &ConstantRange::width)
+        .def_property_readonly("lower", &ConstantRange::lower)
+        .def_property_readonly("upper", &ConstantRange::upper)
+        .def_property_readonly("isLittleEndian", &ConstantRange::isLittleEndian)
+        .def("reverse", &ConstantRange::reverse)
+        .def("subrange", &ConstantRange::subrange)
+        .def("translateIndex", &ConstantRange::translateIndex)
+        .def("containsPoint", &ConstantRange::containsPoint)
+        .def("overlaps", &ConstantRange::overlaps)
+        .def("getIndexedRange", &ConstantRange::getIndexedRange)
+        .def(py::self == py::self)
+        .def(py::self != py::self)
+        .def("__repr__", [](const ConstantRange& self) { return self.toString(); });
 }
