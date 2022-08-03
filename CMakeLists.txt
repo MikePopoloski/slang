@@ -28,6 +28,7 @@ if(NOT CMAKE_BUILD_TYPE)
 endif()
 
 set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake" ${CMAKE_MODULE_PATH})
+SET(SCRIPTS_DIR ${PROJECT_SOURCE_DIR}/scripts)
 
 find_package (Python COMPONENTS Interpreter)
 

@@ -1,5 +1,3 @@
-SET(SCRIPTS_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../scripts)
-
 function(slang_define_lib libname)
     target_compile_options(${libname} PRIVATE ${SLANG_WARN_FLAGS})
     target_include_directories(${libname} PUBLIC ../include/)

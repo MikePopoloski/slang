@@ -10,6 +10,7 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 
+#include "slang/syntax/SyntaxNode.h"
 #include "slang/util/Enum.h"
 #include "slang/util/Hash.h"
 #include "slang/util/ScopeGuard.h"
@@ -166,5 +167,47 @@ template<typename Key, typename Hash, typename Equal, typename Alloc>
 struct type_caster<flat_hash_set<Key, Hash, Equal, Alloc>>
     : set_caster<flat_hash_set<Key, Hash, Equal, Alloc>, Key> {};
 
+template<typename type>
+class type_caster<not_null<type>> {
+private:
+    using caster_t = make_caster<type>;
+    caster_t subcaster;
+
+public:
+    bool load(handle src, bool convert) { return subcaster.load(src, convert); }
+    static constexpr auto name = caster_t::name;
+    static handle cast(const not_null<type>& src, return_value_policy policy, handle parent) {
+        return caster_t::cast(src.get(), policy, parent);
+    }
+    template<typename T>
+    using cast_op_type = not_null<type>;
+    explicit operator not_null<type>() { return cast_op<type>(subcaster); }
+};
+
 } // namespace detail
+
+template<typename T>
+struct is_SyntaxList : std::false_type {};
+template<typename T>
+struct is_SyntaxList<SyntaxList<T>> : std::true_type {};
+
+template<typename T>
+struct is_SeparatedSyntaxList : std::false_type {};
+template<typename T>
+struct is_SeparatedSyntaxList<SeparatedSyntaxList<T>> : std::true_type {};
+
+template<typename T>
+struct polymorphic_type_hook<T, detail::enable_if_t<std::is_base_of<SyntaxNode, T>::value>> {
+    static const void* get(const T* src, const std::type_info*& type) {
+        type = src ? typeFromSyntaxKind(src->kind) : nullptr;
+        if constexpr (is_SyntaxList<T>::value || is_SeparatedSyntaxList<T>::value ||
+                      std::is_same_v<T, TokenList>) {
+            return static_cast<const SyntaxNode*>(src);
+        }
+        else {
+            return src;
+        }
+    }
+};
+
 } // namespace pybind11

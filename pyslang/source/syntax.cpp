@@ -77,15 +77,62 @@ void registerSyntax(py::module_& m) {
              })
         .def("__str__", &Token::toString);
 
+    class SyntaxNodeIterator
+        : public iterator_facade<SyntaxNodeIterator, std::random_access_iterator_tag, py::object> {
+    public:
+        SyntaxNodeIterator(const SyntaxNode& node, ptrdiff_t index) : node(node), index(index) {}
+
+        py::object operator*() const {
+            if (auto child = node.childNode(size_t(index)))
+                return py::cast(child);
+            return py::cast(node.childToken(size_t(index)));
+        }
+
+        bool operator==(const SyntaxNodeIterator& other) const {
+            return &node == &other.node && index == other.index;
+        }
+
+        bool operator<(const SyntaxNodeIterator& other) const { return index < other.index; }
+
+        size_t operator-(const SyntaxNodeIterator& other) const { return index - other.index; }
+
+        SyntaxNodeIterator& operator+=(ptrdiff_t n) {
+            index = index + n;
+            return *this;
+        }
+        SyntaxNodeIterator& operator-=(ptrdiff_t n) {
+            index = index - n;
+            return *this;
+        }
+
+    private:
+        const SyntaxNode& node;
+        ptrdiff_t index;
+    };
+
     py::class_<SyntaxNode>(m, "SyntaxNode")
         .def_readonly("parent", &SyntaxNode::parent)
         .def_readonly("kind", &SyntaxNode::kind)
         .def("getFirstToken", &SyntaxNode::getFirstToken)
         .def("getLastToken", &SyntaxNode::getLastToken)
-        .def("childNode", &SyntaxNode::childNode)
-        .def("childToken", &SyntaxNode::childToken)
         .def_property_readonly("sourceRange", &SyntaxNode::sourceRange)
-        .def_property_readonly("childCount", &SyntaxNode::getChildCount)
+        .def("__getitem__",
+             [](const SyntaxNode& self, size_t i) -> py::object {
+                 if (i >= self.getChildCount())
+                     throw py::index_error();
+
+                 if (auto node = self.childNode(i))
+                     return py::cast(node);
+                 return py::cast(self.childToken(i));
+             })
+        .def("__len__", &SyntaxNode::getChildCount)
+        .def(
+            "__iter__",
+            [](const SyntaxNode& s) {
+                return py::make_iterator(SyntaxNodeIterator(s, 0),
+                                         SyntaxNodeIterator(s, ptrdiff_t(s.getChildCount())));
+            },
+            py::keep_alive<0, 1>())
         .def("__repr__",
              [](const SyntaxNode& self) {
                  return fmt::format("SyntaxNode(SyntaxKind.{})", toString(self.kind));

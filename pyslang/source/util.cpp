@@ -28,13 +28,13 @@ void registerUtil(py::module_& m) {
             Bag result;
             for (auto item : list) {
                 auto type = py::type::of(item);
-                if (type == py::type::of<LexerOptions>())
+                if (type.is(py::type::of<LexerOptions>()))
                     result.set(item.cast<LexerOptions>());
-                else if (type == py::type::of<PreprocessorOptions>())
+                else if (type.is(py::type::of<PreprocessorOptions>()))
                     result.set(item.cast<PreprocessorOptions>());
-                else if (type == py::type::of<ParserOptions>())
+                else if (type.is(py::type::of<ParserOptions>()))
                     result.set(item.cast<ParserOptions>());
-                else if (type == py::type::of<CompilationOptions>())
+                else if (type.is(py::type::of<CompilationOptions>()))
                     result.set(item.cast<CompilationOptions>());
                 else
                     throw py::type_error();

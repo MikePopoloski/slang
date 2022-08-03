@@ -5,7 +5,8 @@ import os
 
 class TypeInfo:
     def __init__(self, processedMembers, members, pointerMembers, optionalMembers,
-                 final, constructorArgs, argNames, base, combinedMembers, notNullMembers):
+                 final, constructorArgs, argNames, base, combinedMembers, notNullMembers,
+                 kindValue, initializers, baseInitializers):
         self.processedMembers = processedMembers
         self.members = members
         self.pointerMembers = pointerMembers
@@ -16,24 +17,201 @@ class TypeInfo:
         self.base = base
         self.combinedMembers = combinedMembers
         self.notNullMembers = notNullMembers
+        self.kindValue = kindValue
+        self.initializers = initializers
+        self.baseInitializers = baseInitializers
 
 def main():
     parser = argparse.ArgumentParser(description='Diagnostic source generator')
     parser.add_argument('--dir', default=os.getcwd(), help='Output directory')
+    parser.add_argument('--python-bindings', action='store_true')
     args = parser.parse_args()
 
     ourdir = os.path.dirname(os.path.realpath(__file__))
+    alltypes, kindmap = loadalltypes(ourdir)
+
+    if args.python_bindings:
+        generatePyBindings(args.dir, alltypes)
+    else:
+        generateSyntax(args.dir, alltypes, kindmap)
+        generateTokenKinds(ourdir, args.dir)
+
+
+def loadalltypes(ourdir):
     inf = open(os.path.join(ourdir, "syntax.txt"))
 
-    headerdir = os.path.join(args.dir, 'slang', 'syntax')
+    currtype = None
+    currkind = None
+    currtype_name = None
+    tags = None
+    alltypes = {}
+    kindmap = {}
+
+    alltypes['SyntaxNode'] = TypeInfo(None, None, None, None, '', None, None, None, [], None, '', None, None)
+
+    for line in [x.strip('\n') for x in inf]:
+        if line.startswith('//'):
+            continue
+        elif not line or (currtype is not None and line == 'empty'):
+            if currtype is not None:
+                createtype(currtype_name, tags, currtype, alltypes, kindmap)
+            currtype = None
+            currkind = None
+        elif currtype is not None:
+            p = line.split(' ')
+            if len(p) != 2:
+                raise Exception("Two elements per member please.")
+            currtype.append(p)
+        elif currkind is not None:
+            for k in line.split(' '):
+                if k in kindmap:
+                    raise Exception("More than one kind map for {}".format(k))
+                kindmap[k] = currkind
+        elif line.startswith('kindmap<'):
+            currkind = line[8:line.index('>')] + 'Syntax'
+        else:
+            p = line.split(' ')
+            currtype_name = p[0] + 'Syntax'
+            tags = p[1:] if len(p) > 1 else None
+            currtype = []
+
+    if currtype:
+        createtype(currtype_name, tags, currtype, alltypes, kindmap)
+
+    return (alltypes, kindmap)
+
+
+def createtype(name, tags, members, alltypes, kindmap):
+    tagdict = {}
+    if tags:
+        for t in tags:
+            p = t.split('=')
+            tagdict[p[0]] = p[1]
+
+    base = tagdict['base'] + 'Syntax' if 'base' in tagdict else 'SyntaxNode'
+
+    pointerMembers = set()
+    optionalMembers = set()
+    notNullMembers = set()
+    processedMembers = []
+    baseInitializers = ''
+    combined = members
+    if base != 'SyntaxNode':
+        processedMembers.extend(alltypes[base].processedMembers)
+        pointerMembers = pointerMembers.union(alltypes[base].pointerMembers)
+        optionalMembers = optionalMembers.union(alltypes[base].optionalMembers)
+        notNullMembers = notNullMembers.union(alltypes[base].notNullMembers)
+        baseInitializers = ', '.join([x[1] for x in alltypes[base].members])
+        if baseInitializers:
+            baseInitializers = ', ' + baseInitializers
+        combined = alltypes[base].members + members
+
+    for m in members:
+        if m[0] == 'token':
+            m[0] = 'Token'
+            typename = m[0]
+        elif m[0] == 'tokenlist':
+            m[0] = 'TokenList'
+            typename = m[0]
+            pointerMembers.add(m[1])
+        elif m[0].startswith('list<'):
+            last = m[0][5:m[0].index('>')]
+            if not last.endswith('SyntaxNode'):
+                last += 'Syntax'
+
+            m[0] = 'SyntaxList<' + last + '>'
+            typename = m[0]
+            pointerMembers.add(m[1])
+        elif m[0].startswith('separated_list<'):
+            last = m[0][15:m[0].index('>')]
+            if not last.endswith('SyntaxNode'):
+                last += 'Syntax'
+
+            m[0] = 'SeparatedSyntaxList<' + last + '>'
+            typename = m[0]
+            pointerMembers.add(m[1])
+        else:
+            optional = False
+            if m[0].endswith('?'):
+                optional = True
+                m[0] = m[0][:-1]
+
+            if m[0] != 'SyntaxNode':
+                m[0] += 'Syntax'
+
+            if m[0] not in alltypes:
+                raise Exception("Unknown type '{}'".format(m[0]))
+
+            typename = m[0]
+            if optional:
+                m[0] += '*'
+                optionalMembers.add(m[1])
+            else:
+                m[0] += '&'
+                notNullMembers.add(m[1])
+
+        m.append(typename)
+        processedMembers.append('{} {}'.format(m[0], m[1]))
+        if m[1] in notNullMembers:
+            m[0] = 'not_null<{}*>'.format(typename)
+
+    final = ' final'
+    if 'final' in tagdict and tagdict['final'] == 'false':
+        final = ''
+
+    kindArg = 'SyntaxKind kind'
+    kindValue = 'kind'
+    argNames = []
+
+    if not final or tagdict.get('multiKind') == 'true':
+        argNames.append('kind')
+    else:
+        k = name
+        if k.endswith('Syntax'):
+            k = k[:-6]
+
+        if k in kindmap:
+            raise Exception("More than one kind map for {}".format(k))
+        kindmap[k] = name
+        kindArg = ''
+        kindValue = 'SyntaxKind::' + k
+
+    if kindArg and processedMembers:
+        kindArg += ', '
+
+    initializers = ', '.join(['{0}({1}{0})'.format(x[1], '&' if x[1] in notNullMembers else '') for x in members])
+    if initializers:
+        initializers = ', ' + initializers
+
+    argMembers = []
+    for m in processedMembers:
+        space = m.index(' ')
+        argNames.append(m[space + 1:])
+
+        if m.startswith('SyntaxList<') or m.startswith('SeparatedSyntaxList<') or m.startswith('TokenList'):
+            argMembers.append('const {}&{}'.format(m[:space], m[space:]))
+        else:
+            argMembers.append(m)
+
+    if final and not argMembers:
+        raise Exception('{} has no members'.format(name))
+
+    constructorArgs = '{}{}'.format(kindArg, ', '.join(argMembers))
+    alltypes[name] = TypeInfo(processedMembers, members, pointerMembers, optionalMembers,
+                              final, constructorArgs, argNames, base, combined, notNullMembers,
+                              kindValue, initializers, baseInitializers)
+
+
+def generateSyntax(builddir, alltypes, kindmap):
+    # Make sure the output directory exists.
+    headerdir = os.path.join(builddir, 'slang', 'syntax')
     try:
         os.makedirs(headerdir)
     except OSError:
         pass
 
+    # Start the header file.
     outf = open(os.path.join(headerdir, "AllSyntax.h"), 'w')
-    cppf = open(os.path.join(args.dir, "AllSyntax.cpp"), 'w')
-
     outf.write('''//------------------------------------------------------------------------------
 //! @file AllSyntax.h
 //! @brief All generated syntax node data structures
@@ -53,6 +231,53 @@ namespace slang {
 
 ''')
 
+    # Write all type definitions.
+    for name,currtype in alltypes.items():
+        if name == 'SyntaxNode':
+            continue
+
+        outf.write('struct {} : public {} {{\n'.format(name, currtype.base))
+
+        for m in currtype.members:
+            outf.write('    {} {};\n'.format(m[0], m[1]))
+
+        outf.write('\n')
+        outf.write('    {}({}) :\n'.format(name, currtype.constructorArgs))
+        outf.write('        {}({}{}){} {{\n'.format(currtype.base, currtype.kindValue, currtype.baseInitializers, currtype.initializers))
+
+        # Write constructor body.
+        for m in currtype.members:
+            if m[0] == 'Token':
+                continue
+            if m[1] in currtype.pointerMembers:
+                outf.write('        this->{}.parent = this;\n'.format(m[1]))
+                if m[0].startswith('SyntaxList<') or m[0].startswith('SeparatedSyntaxList<'):
+                    outf.write('        for (auto child : this->{})\n'.format(m[1]))
+                    outf.write('            child->parent = this;\n')
+            elif m[1] in currtype.optionalMembers:
+                outf.write('        if (this->{0}) this->{0}->parent = this;\n'.format(m[1]))
+            else:
+                outf.write('        this->{}->parent = this;\n'.format(m[1]))
+
+        outf.write('    }\n\n')
+
+        # Copy constructor (defaulted).
+        outf.write('    explicit {}(const {}&) = default;\n\n'.format(name, name))
+
+        if not currtype.members and currtype.final == '':
+            outf.write('    static bool isKind(SyntaxKind kind);\n')
+        else:
+            outf.write('    static bool isKind(SyntaxKind kind);\n\n')
+
+            outf.write('    TokenOrSyntax getChild(size_t index);\n')
+            outf.write('    ConstTokenOrSyntax getChild(size_t index) const;\n')
+            outf.write('    void setChild(size_t index, TokenOrSyntax child);\n\n')
+            outf.write('    {}* clone(BumpAllocator& alloc) const;\n'.format(name))
+
+        outf.write('};\n\n')
+
+    # Start the source file.
+    cppf = open(os.path.join(builddir, "AllSyntax.cpp"), 'w')
     cppf.write('''//------------------------------------------------------------------------------
 // AllSyntax.cpp
 // All generated syntax node data structures
@@ -66,56 +291,14 @@ namespace slang {
 
 namespace slang {
 
+size_t SyntaxNode::getChildCount() const {
+    switch (kind) {
+        case SyntaxKind::Unknown: return 0;
+        case SyntaxKind::SyntaxList:
+        case SyntaxKind::TokenList:
+        case SyntaxKind::SeparatedList:
+            return ((const SyntaxListBase*)this)->getChildCount();
 ''')
-
-    currtype = None
-    currkind = None
-    currtype_name = None
-    tags = None
-    alltypes = {}
-    kindmap = {}
-
-    alltypes['SyntaxNode'] = TypeInfo(None, None, None, None, '', None, None, None, [], None)
-
-    for line in [x.strip('\n') for x in inf]:
-        if line.startswith('//'):
-            outf.write(line)
-            outf.write('\n\n')
-        elif not line or (currtype is not None and line == 'empty'):
-            if currtype is not None:
-                generate(outf, currtype_name, tags, currtype, alltypes, kindmap)
-            currtype = None
-            currkind = None
-        elif currtype is not None:
-            p = line.split(' ')
-            if len(p) != 2:
-                raise Exception("Two elements per member please.")
-            currtype.append(p)
-        elif currkind is not None:
-            for k in line.split(' '):
-                if k in kindmap:
-                    raise Exception("More than one kind map for {}".format(k))
-                kindmap[k] = currkind
-        elif line.startswith('forward '):
-            outf.write('struct {};\n'.format(line[8:]))
-        elif line.startswith('kindmap<'):
-            currkind = line[8:line.index('>')] + 'Syntax'
-        else:
-            p = line.split(' ')
-            currtype_name = p[0] + 'Syntax'
-            tags = p[1:] if len(p) > 1 else None
-            currtype = []
-
-    if currtype:
-        generate(outf, currtype_name, tags, currtype, alltypes, kindmap)
-
-    cppf.write('size_t SyntaxNode::getChildCount() const {\n')
-    cppf.write('    switch (kind) {\n')
-    cppf.write('        case SyntaxKind::Unknown: return 0;\n')
-    cppf.write('        case SyntaxKind::SyntaxList:\n')
-    cppf.write('        case SyntaxKind::TokenList:\n')
-    cppf.write('        case SyntaxKind::SeparatedList:\n')
-    cppf.write('            return ((const SyntaxListBase*)this)->getChildCount();\n')
 
     for k,v in sorted(kindmap.items()):
         count = len(alltypes[v].combinedMembers)
@@ -125,6 +308,7 @@ namespace slang {
     cppf.write('    THROW_UNREACHABLE;\n')
     cppf.write('}\n\n')
 
+    # Build a reverse mapping from class types to their syntax kinds.
     reverseKindmap = {}
     for k,v in kindmap.items():
         if v in reverseKindmap:
@@ -132,6 +316,7 @@ namespace slang {
         else:
             reverseKindmap[v] = [k]
 
+    # Continue building up the reverse map by traversing base class links.
     for k,v in alltypes.items():
         if not v.final:
             continue
@@ -145,7 +330,7 @@ namespace slang {
             k = v.base
             v = alltypes[k]
 
-    # Write out isKind static methods for each derived type
+    # Write out isKind static methods for each derived type.
     for k,v in sorted(alltypes.items()):
         if v.base is None:
             continue
@@ -196,12 +381,12 @@ namespace slang {
                     cppf.write('        case {}: '.format(index))
                     index += 1
 
-                    if m[0] == 'token':
+                    if m[0] == 'Token':
                         cppf.write('{} = child.token(); return;\n'.format(m[1]))
                     elif m[1] in v.pointerMembers:
-                        cppf.write('{} = child.node()->as<{}>(); return;\n'.format(m[1], m[0]))
+                        cppf.write('{} = child.node()->as<{}>(); return;\n'.format(m[1], m[2]))
                     else:
-                        cppf.write('{} = &child.node()->as<{}>(); return;\n'.format(m[1], m[0]))
+                        cppf.write('{} = &child.node()->as<{}>(); return;\n'.format(m[1], m[2]))
 
                 cppf.write('        default: THROW_UNREACHABLE;\n')
                 cppf.write('    }\n')
@@ -215,7 +400,7 @@ namespace slang {
             cppf.write('    return alloc.emplace<{}>(*this);\n'.format(k))
             cppf.write('}\n\n')
 
-    # Write out syntax factory methods
+    # Write out syntax factory methods.
     outf.write('class SyntaxFactory {\n')
     outf.write('public:\n')
     outf.write('    explicit SyntaxFactory(BumpAllocator& alloc) : alloc(alloc) {}\n')
@@ -236,6 +421,7 @@ namespace slang {
         cppf.write('    return *alloc.emplace<{}>({});\n'.format(k, argNames))
         cppf.write('}\n\n')
 
+    # Write out toString methods for SyntaxKind enum.
     cppf.write('''
 std::ostream& operator<<(std::ostream& os, SyntaxKind kind) {
     os << toString(kind);
@@ -259,6 +445,7 @@ string_view toString(SyntaxKind kind) {
 
 ''')
 
+    # Write out traits member list for SyntaxKind enum.
     cppf.write('decltype(SyntaxKind_traits::values) SyntaxKind_traits::values = {\n')
     cppf.write('''    SyntaxKind::Unknown,
     SyntaxKind::SyntaxList,
@@ -268,6 +455,21 @@ string_view toString(SyntaxKind kind) {
     for k,v in sorted(kindmap.items()):
         cppf.write('    SyntaxKind::{},\n'.format(k))
     cppf.write('''};
+
+const std::type_info* typeFromSyntaxKind(SyntaxKind kind) {
+    switch (kind) {
+        case SyntaxKind::Unknown: break;
+        case SyntaxKind::SyntaxList:
+        case SyntaxKind::TokenList:
+        case SyntaxKind::SeparatedList:
+            return &typeid(SyntaxNode);
+''')
+
+    for k,v in sorted(kindmap.items()):
+        cppf.write('        case SyntaxKind::{}: return &typeid({});\n'.format(k, v))
+    cppf.write('''    }
+    return nullptr;
+}
 
 }
 ''')
@@ -318,6 +520,7 @@ string_view toString(SyntaxKind kind) {
         if v.final:
             print("Type '{}' has no kinds assigned to it.".format(k))
 
+    # Write out the SyntaxKind header file.
     outf = open(os.path.join(headerdir, "SyntaxKind.h"), 'w')
     outf.write('''//------------------------------------------------------------------------------
 //! @file SyntaxKind.h
@@ -328,6 +531,8 @@ string_view toString(SyntaxKind kind) {
 #pragma once
 
 #include "slang/util/Enum.h"
+
+namespace std { class type_info; }
 
 namespace slang {
 
@@ -351,165 +556,10 @@ public:
     static const std::array<SyntaxKind, {}> values;
 }};
 
+const std::type_info* typeFromSyntaxKind(SyntaxKind kind);
+
 }}
 '''.format(len(kindmap.items()) + 4))
-
-    generateTokenKinds(ourdir, args.dir)
-
-
-def generate(outf, name, tags, members, alltypes, kindmap):
-    tagdict = {}
-    if tags:
-        for t in tags:
-            p = t.split('=')
-            tagdict[p[0]] = p[1]
-
-    base = tagdict['base'] + 'Syntax' if 'base' in tagdict else 'SyntaxNode'
-    outf.write('struct {} : public {} {{\n'.format(name, base))
-
-    pointerMembers = set()
-    optionalMembers = set()
-    notNullMembers = set()
-    processed_members = []
-    baseInitializers = ''
-    combined = members
-    if base != 'SyntaxNode':
-        processed_members.extend(alltypes[base].processedMembers)
-        pointerMembers = pointerMembers.union(alltypes[base].pointerMembers)
-        optionalMembers = optionalMembers.union(alltypes[base].optionalMembers)
-        notNullMembers = notNullMembers.union(alltypes[base].notNullMembers)
-        baseInitializers = ', '.join([x[1] for x in alltypes[base].members])
-        if baseInitializers:
-            baseInitializers = ', ' + baseInitializers
-        combined = alltypes[base].members + members
-
-    for m in members:
-        membertype = None
-        if m[0] == 'token':
-            typename = 'Token'
-        elif m[0] == 'tokenlist':
-            m[0] = typename = 'TokenList'
-            pointerMembers.add(m[1])
-        elif m[0].startswith('list<'):
-            last = m[0][5:m[0].index('>')]
-            if not last.endswith('SyntaxNode'):
-                last += 'Syntax'
-
-            m[0] = typename = 'SyntaxList<' + last + '>'
-            pointerMembers.add(m[1])
-        elif m[0].startswith('separated_list<'):
-            last = m[0][15:m[0].index('>')]
-            if not last.endswith('SyntaxNode'):
-                last += 'Syntax'
-
-            m[0] = typename = 'SeparatedSyntaxList<' + last + '>'
-            pointerMembers.add(m[1])
-        else:
-            optional = False
-            if m[0].endswith('?'):
-                optional = True
-                m[0] = m[0][:-1]
-
-            if m[0] != 'SyntaxNode':
-                m[0] += 'Syntax'
-
-            if m[0] not in alltypes:
-                raise Exception("Unknown type '{}'".format(m[0]))
-
-            if optional:
-                typename = m[0] + '*'
-                optionalMembers.add(m[1])
-            else:
-                notNullMembers.add(m[1])
-                typename = m[0] + '&'
-                membertype = 'not_null<{}*>'.format(m[0])
-
-        l = '{} {}'.format(typename, m[1])
-        processed_members.append(l)
-
-        if membertype is None:
-            outf.write('    {};\n'.format(l))
-        else:
-            outf.write('    {} {};\n'.format(membertype, m[1]))
-
-    final = ' final'
-    if 'final' in tagdict and tagdict['final'] == 'false':
-        final = ''
-
-    kindArg = 'SyntaxKind kind'
-    kindValue = 'kind'
-    argNames = []
-
-    if not final or tagdict.get('multiKind') == 'true':
-        argNames.append('kind')
-    else:
-        k = name
-        if k.endswith('Syntax'):
-            k = k[:-6]
-
-        if k in kindmap:
-            raise Exception("More than one kind map for {}".format(k))
-        kindmap[k] = name
-        kindArg = ''
-        kindValue = 'SyntaxKind::' + k
-
-    if kindArg and processed_members:
-        kindArg += ', '
-
-    initializers = ', '.join(['{0}({1}{0})'.format(x[1], '&' if x[1] in notNullMembers else '') for x in members])
-    if initializers:
-        initializers = ', ' + initializers
-
-    argMembers = []
-    for m in processed_members:
-        space = m.index(' ')
-        argNames.append(m[space + 1:])
-
-        if m.startswith('SyntaxList<') or m.startswith('SeparatedSyntaxList<') or m.startswith('TokenList'):
-            argMembers.append('const {}&{}'.format(m[:space], m[space:]))
-        else:
-            argMembers.append(m)
-
-    if final and not argMembers:
-        raise Exception('{} has no members'.format(name))
-
-    constructorArgs = '{}{}'.format(kindArg, ', '.join(argMembers))
-    alltypes[name] = TypeInfo(processed_members, members, pointerMembers, optionalMembers,
-                              final, constructorArgs, argNames, base, combined, notNullMembers)
-
-    outf.write('\n')
-    outf.write('    {}({}) :\n'.format(name, constructorArgs))
-    outf.write('        {}({}{}){} {{\n'.format(base, kindValue, baseInitializers, initializers))
-
-    for m in members:
-        if m[0] == 'token':
-            continue
-        if m[1] in pointerMembers:
-            outf.write('        this->{}.parent = this;\n'.format(m[1]))
-            if m[0].startswith('SyntaxList<') or m[0].startswith('SeparatedSyntaxList<'):
-                outf.write('        for (auto child : this->{})\n'.format(m[1]))
-                outf.write('            child->parent = this;\n')
-
-        elif m[1] in optionalMembers:
-            outf.write('        if (this->{0}) this->{0}->parent = this;\n'.format(m[1]))
-        else:
-            outf.write('        this->{}->parent = this;\n'.format(m[1]))
-
-    outf.write('    }\n\n')
-
-    outf.write('    explicit {}(const {}&) = default;\n\n'.format(name, name))
-
-    if not members and final == '':
-        outf.write('    static bool isKind(SyntaxKind kind);\n')
-    else:
-        outf.write('    static bool isKind(SyntaxKind kind);\n\n')
-
-        outf.write('    TokenOrSyntax getChild(size_t index);\n')
-        outf.write('    ConstTokenOrSyntax getChild(size_t index) const;\n')
-        outf.write('    void setChild(size_t index, TokenOrSyntax child);\n\n')
-        outf.write('    {}* clone(BumpAllocator& alloc) const;\n'.format(name))
-
-    outf.write('};\n\n')
 
 
 def loadkinds(ourdir, filename):
@@ -616,6 +666,33 @@ namespace slang {
 
     writekindimpls(outf, 'TriviaKind', triviakinds)
     writekindimpls(outf, 'TokenKind', tokenkinds)
+    outf.write('}\n')
+
+
+def generatePyBindings(builddir, alltypes):
+    outf = open(os.path.join(builddir, "PySyntaxBindings.cpp"), 'w')
+    outf.write('''//------------------------------------------------------------------------------
+// PySyntaxBindings.cpp
+// Generated Python bindings for syntax types
+//
+// File is under the MIT license; see LICENSE for details
+//------------------------------------------------------------------------------
+#include "pyslang.h"
+
+#include "slang/syntax/AllSyntax.h"
+
+void registerSyntaxNodes(py::module_& m) {
+''')
+
+    for k,v in alltypes.items():
+        if k == 'SyntaxNode':
+            continue
+
+        outf.write('    py::class_<{}, {}>(m, "{}")'.format(k, v.base, k))
+        for m in v.members:
+            outf.write('\n        .def_readwrite("{}", &{}::{})'.format(m[1], k, m[1]))
+        outf.write(';\n\n')
+
     outf.write('}\n')
 
 
