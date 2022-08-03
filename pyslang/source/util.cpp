@@ -93,6 +93,8 @@ void registerUtil(py::module_& m) {
 
     py::class_<SourceBuffer>(m, "SourceBuffer")
         .def(py::init<>())
+        .def_readonly("id", &SourceBuffer::id)
+        .def_readonly("data", &SourceBuffer::data)
         .def("__bool__", &SourceBuffer::operator bool);
 
     py::class_<SourceManager>(m, "SourceManager")
@@ -170,10 +172,12 @@ void registerUtil(py::module_& m) {
 
     py::class_<Diagnostics>(m, "Diagnostics")
         .def(py::init<>())
-        .def("add", py::overload_cast<DiagCode, SourceLocation>(&Diagnostics::add))
-        .def("add", py::overload_cast<DiagCode, SourceRange>(&Diagnostics::add))
-        .def("add", py::overload_cast<const Symbol&, DiagCode, SourceLocation>(&Diagnostics::add))
-        .def("add", py::overload_cast<const Symbol&, DiagCode, SourceRange>(&Diagnostics::add))
+        .def("add", py::overload_cast<DiagCode, SourceLocation>(&Diagnostics::add), byrefint)
+        .def("add", py::overload_cast<DiagCode, SourceRange>(&Diagnostics::add), byrefint)
+        .def("add", py::overload_cast<const Symbol&, DiagCode, SourceLocation>(&Diagnostics::add),
+             byrefint)
+        .def("add", py::overload_cast<const Symbol&, DiagCode, SourceRange>(&Diagnostics::add),
+             byrefint)
         .def("sort", &Diagnostics::sort)
         .def("__len__", &Diagnostics::size)
         .def("__getitem__",
@@ -200,9 +204,9 @@ void registerUtil(py::module_& m) {
         .def("addClient", &DiagnosticEngine::addClient)
         .def("clearClients", &DiagnosticEngine::clearClients)
         .def("issue", &DiagnosticEngine::issue)
-        .def("getSourceManager", &DiagnosticEngine::getSourceManager)
-        .def("getNumErrors", &DiagnosticEngine::getNumErrors)
-        .def("getNumWarnings", &DiagnosticEngine::getNumWarnings)
+        .def_property_readonly("sourceManager", &DiagnosticEngine::getSourceManager)
+        .def_property_readonly("numErrors", &DiagnosticEngine::getNumErrors)
+        .def_property_readonly("numWarnings", &DiagnosticEngine::getNumWarnings)
         .def("clearCounts", &DiagnosticEngine::clearCounts)
         .def("setErrorLimit", &DiagnosticEngine::setErrorLimit)
         .def("setIgnoreAllWarnings", &DiagnosticEngine::setIgnoreAllWarnings)
@@ -219,8 +223,7 @@ void registerUtil(py::module_& m) {
         .def("getMessage", &DiagnosticEngine::getMessage)
         .def("getOptionName", &DiagnosticEngine::getOptionName)
         .def("findFromOptionName", &DiagnosticEngine::findFromOptionName)
-        .def("findDiagGroup", &DiagnosticEngine::findDiagGroup,
-             py::return_value_policy::reference_internal)
+        .def("findDiagGroup", &DiagnosticEngine::findDiagGroup, byrefint)
         .def("clearMappings", py::overload_cast<>(&DiagnosticEngine::clearMappings))
         .def("clearMappings",
              py::overload_cast<DiagnosticSeverity>(&DiagnosticEngine::clearMappings))

@@ -8,6 +8,7 @@
 #include "slang/parsing/Parser.h"
 #include "slang/parsing/Preprocessor.h"
 #include "slang/syntax/SyntaxNode.h"
+#include "slang/syntax/SyntaxPrinter.h"
 #include "slang/syntax/SyntaxTree.h"
 #include "slang/text/SourceManager.h"
 
@@ -21,7 +22,7 @@ void registerSyntax(py::module_& m) {
         .def(py::init<TriviaKind, string_view>())
         .def_readonly("kind", &Trivia::kind)
         .def("getExplicitLocation", &Trivia::getExplicitLocation)
-        .def("syntax", &Trivia::syntax, py::return_value_policy::reference_internal)
+        .def("syntax", &Trivia::syntax, byrefint)
         .def("getRawText", &Trivia::getRawText)
         .def("getSkippedTokens", &Trivia::getSkippedTokens)
         .def("__repr__", [](const Trivia& self) {
@@ -158,7 +159,7 @@ void registerSyntax(py::module_& m) {
         .def_property_readonly("sourceManager", py::overload_cast<>(&SyntaxTree::sourceManager))
         .def_property_readonly("root", py::overload_cast<>(&SyntaxTree::root))
         .def_property_readonly("options", &SyntaxTree::options)
-        .def_static("getDefaultSourceManager", &SyntaxTree::getDefaultSourceManager);
+        .def_static("getDefaultSourceManager", &SyntaxTree::getDefaultSourceManager, byref);
 
     py::class_<LexerOptions>(m, "LexerOptions")
         .def(py::init<>())
@@ -174,4 +175,21 @@ void registerSyntax(py::module_& m) {
     py::class_<ParserOptions>(m, "ParserOptions")
         .def(py::init<>())
         .def_readwrite("maxRecursionDepth", &ParserOptions::maxRecursionDepth);
+
+    py::class_<SyntaxPrinter>(m, "SyntaxPrinter")
+        .def(py::init<>())
+        .def(py::init<const SourceManager&>())
+        .def("print", py::overload_cast<Trivia>(&SyntaxPrinter::print), byrefint)
+        .def("print", py::overload_cast<Token>(&SyntaxPrinter::print), byrefint)
+        .def("print", py::overload_cast<const SyntaxNode&>(&SyntaxPrinter::print), byrefint)
+        .def("print", py::overload_cast<const SyntaxTree&>(&SyntaxPrinter::print), byrefint)
+        .def("setIncludeTrivia", &SyntaxPrinter::setIncludeTrivia, byrefint)
+        .def("setIncludeMissing", &SyntaxPrinter::setIncludeMissing, byrefint)
+        .def("setIncludeSkipped", &SyntaxPrinter::setIncludeSkipped, byrefint)
+        .def("setIncludeDirectives", &SyntaxPrinter::setIncludeDirectives, byrefint)
+        .def("setIncludePreprocessed", &SyntaxPrinter::setIncludePreprocessed, byrefint)
+        .def("setIncludeComments", &SyntaxPrinter::setIncludeComments, byrefint)
+        .def("setSquashNewlines", &SyntaxPrinter::setSquashNewlines, byrefint)
+        .def("str", &SyntaxPrinter::str)
+        .def_static("printFile", &SyntaxPrinter::printFile);
 }

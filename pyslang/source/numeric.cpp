@@ -90,6 +90,7 @@ void registerNumeric(py::module_& m) {
         .def("__or__", &logic_t::operator|)
         .def("__xor__", &logic_t::operator^)
         .def("__invert__", &logic_t::operator~)
+        .def("__int__", [](const logic_t& self) { return self.value; })
         .def("__bool__", [](const logic_t& self) { return bool(self); })
         .def("__repr__", [](const logic_t& self) { return fmt::format("{}", self.toChar()); });
 

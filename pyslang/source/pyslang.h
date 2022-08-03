@@ -30,6 +30,9 @@ using namespace slang;
         }                                                 \
     } while (0)
 
+static constexpr auto byref = py::return_value_policy::reference;
+static constexpr auto byrefint = py::return_value_policy::reference_internal;
+
 namespace pybind11 {
 namespace detail {
 
