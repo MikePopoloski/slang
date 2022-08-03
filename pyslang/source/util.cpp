@@ -4,18 +4,51 @@
 //------------------------------------------------------------------------------
 #include "pyslang.h"
 
+#include "slang/compilation/Compilation.h"
 #include "slang/diagnostics/DiagnosticClient.h"
 #include "slang/diagnostics/DiagnosticEngine.h"
 #include "slang/diagnostics/Diagnostics.h"
 #include "slang/diagnostics/TextDiagnosticClient.h"
+#include "slang/parsing/Lexer.h"
+#include "slang/parsing/Parser.h"
+#include "slang/parsing/Preprocessor.h"
 #include "slang/symbols/Symbol.h"
 #include "slang/text/SourceLocation.h"
 #include "slang/text/SourceManager.h"
+#include "slang/util/Bag.h"
 #include "slang/util/BumpAllocator.h"
 #include "slang/util/Version.h"
 
 void registerUtil(py::module_& m) {
     py::class_<BumpAllocator>(m, "BumpAllocator").def(py::init<>());
+
+    py::class_<Bag>(m, "Bag")
+        .def(py::init<>())
+        .def(py::init([](py::list list) {
+            Bag result;
+            for (auto item : list) {
+                auto type = py::type::of(item);
+                if (type == py::type::of<LexerOptions>())
+                    result.set(item.cast<LexerOptions>());
+                else if (type == py::type::of<PreprocessorOptions>())
+                    result.set(item.cast<PreprocessorOptions>());
+                else if (type == py::type::of<ParserOptions>())
+                    result.set(item.cast<ParserOptions>());
+                else if (type == py::type::of<CompilationOptions>())
+                    result.set(item.cast<CompilationOptions>());
+                else
+                    throw py::type_error();
+            }
+            return result;
+        }))
+        .def_property("lexerOptions", &Bag::get<LexerOptions>,
+                      py::overload_cast<const LexerOptions&>(&Bag::set<LexerOptions>))
+        .def_property("preprocessorOptions", &Bag::get<PreprocessorOptions>,
+                      py::overload_cast<const PreprocessorOptions&>(&Bag::set<PreprocessorOptions>))
+        .def_property("parserOptions", &Bag::get<ParserOptions>,
+                      py::overload_cast<const ParserOptions&>(&Bag::set<ParserOptions>))
+        .def_property("compilationOptions", &Bag::get<CompilationOptions>,
+                      py::overload_cast<const CompilationOptions&>(&Bag::set<CompilationOptions>));
 
     py::class_<BufferID>(m, "BufferID")
         .def(py::init<>())
@@ -208,11 +241,12 @@ void registerUtil(py::module_& m) {
         .def_readonly("severity", &ReportedDiagnostic::severity)
         .def_readonly("shouldShowIncludeStack", &ReportedDiagnostic::shouldShowIncludeStack);
 
-    py::class_<DiagnosticClient>(m, "DiagnosticClient")
+    py::class_<DiagnosticClient, std::shared_ptr<DiagnosticClient>>(m, "DiagnosticClient")
         .def("report", &DiagnosticClient::report)
         .def("setEngine", &DiagnosticClient::setEngine);
 
-    py::class_<TextDiagnosticClient, DiagnosticClient>(m, "TextDiagnosticClient")
+    py::class_<TextDiagnosticClient, DiagnosticClient, std::shared_ptr<TextDiagnosticClient>>(
+        m, "TextDiagnosticClient")
         .def(py::init<>())
         .def("showColors", &TextDiagnosticClient::showColors)
         .def("showColumn", &TextDiagnosticClient::showColumn)

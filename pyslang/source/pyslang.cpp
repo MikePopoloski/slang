@@ -4,6 +4,7 @@
 //------------------------------------------------------------------------------
 #include "pyslang.h"
 
+void registerCompilation(py::module_& m);
 void registerNumeric(py::module_& m);
 void registerUtil(py::module_& m);
 void registerSyntax(py::module_& m);
@@ -17,6 +18,7 @@ PYBIND11_MODULE(pyslang, m) {
     m.attr("__version__") = "dev";
 #endif
 
+    registerCompilation(m);
     registerNumeric(m);
     registerUtil(m);
     registerSyntax(m);

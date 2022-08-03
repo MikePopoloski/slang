@@ -1,4 +1,5 @@
 pybind11_add_module(pyslang MODULE
+    source/compilation.cpp
     source/numeric.cpp
     source/pyslang.cpp
     source/syntax.cpp

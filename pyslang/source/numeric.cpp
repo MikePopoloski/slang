@@ -217,6 +217,9 @@ void registerNumeric(py::module_& m) {
         .def("__int__", [](const SVInt& self) { return PyIntFromSVInt(self); })
         .def("__float__", [](const SVInt& self) { return self.toDouble(); });
 
+    py::implicitly_convertible<py::int_, SVInt>();
+    py::implicitly_convertible<double, SVInt>();
+
     EXPOSE_ENUM(m, TimeUnit);
     m.def("suffixToTimeUnit", &suffixToTimeUnit);
     m.def("timeUnitToSuffix", &timeUnitToSuffix);

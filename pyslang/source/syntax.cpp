@@ -4,7 +4,9 @@
 //------------------------------------------------------------------------------
 #include "pyslang.h"
 
+#include "slang/parsing/Lexer.h"
 #include "slang/parsing/Parser.h"
+#include "slang/parsing/Preprocessor.h"
 #include "slang/syntax/SyntaxNode.h"
 #include "slang/syntax/SyntaxTree.h"
 #include "slang/text/SourceManager.h"
@@ -19,11 +21,11 @@ void registerSyntax(py::module_& m) {
         .def(py::init<TriviaKind, string_view>())
         .def_readonly("kind", &Trivia::kind)
         .def("getExplicitLocation", &Trivia::getExplicitLocation)
-        .def("syntax", &Trivia::syntax)
+        .def("syntax", &Trivia::syntax, py::return_value_policy::reference_internal)
         .def("getRawText", &Trivia::getRawText)
         .def("getSkippedTokens", &Trivia::getSkippedTokens)
         .def("__repr__", [](const Trivia& self) {
-            return fmt::format("Trivia(TriviaKind::{})", toString(self.kind));
+            return fmt::format("Trivia(TriviaKind.{})", toString(self.kind));
         });
 
     py::class_<Token>(m, "Token")
@@ -49,7 +51,6 @@ void registerSyntax(py::module_& m) {
         .def_property_readonly("valueText", &Token::valueText)
         .def_property_readonly("rawText", &Token::rawText)
         .def_property_readonly("isOnSameLine", &Token::isOnSameLine)
-        .def_property_readonly("valid", &Token::valid)
         .def_property_readonly("value",
                                [](const Token& t) -> py::object {
                                    switch (t.kind) {
@@ -69,9 +70,10 @@ void registerSyntax(py::module_& m) {
                                })
         .def(py::self == py::self)
         .def(py::self != py::self)
+        .def("__bool__", &Token::operator bool)
         .def("__repr__",
              [](const Token& self) {
-                 return fmt::format("Token(TokenKind::{})", toString(self.kind));
+                 return fmt::format("Token(TokenKind.{})", toString(self.kind));
              })
         .def("__str__", &Token::toString);
 
@@ -80,26 +82,49 @@ void registerSyntax(py::module_& m) {
         .def_readonly("kind", &SyntaxNode::kind)
         .def("getFirstToken", &SyntaxNode::getFirstToken)
         .def("getLastToken", &SyntaxNode::getLastToken)
-        .def("sourceRange", &SyntaxNode::sourceRange)
         .def("childNode", &SyntaxNode::childNode)
         .def("childToken", &SyntaxNode::childToken)
-        .def("getChildCount", &SyntaxNode::getChildCount)
+        .def_property_readonly("sourceRange", &SyntaxNode::sourceRange)
+        .def_property_readonly("childCount", &SyntaxNode::getChildCount)
         .def("__repr__",
              [](const SyntaxNode& self) {
-                 return fmt::format("SyntaxNode(SyntaxKind::{})", toString(self.kind));
+                 return fmt::format("SyntaxNode(SyntaxKind.{})", toString(self.kind));
              })
         .def("__str__", &SyntaxNode::toString);
 
     py::class_<SyntaxTree, std::shared_ptr<SyntaxTree>>(m, "SyntaxTree")
         .def_readonly("isLibrary", &SyntaxTree::isLibrary)
         .def_static("fromFile", py::overload_cast<string_view>(&SyntaxTree::fromFile))
+        .def_static(
+            "fromFile",
+            py::overload_cast<string_view, SourceManager&, const Bag&>(&SyntaxTree::fromFile),
+            "path"_a, "sourceManager"_a, "options"_a = Bag())
         .def_static("fromText",
                     py::overload_cast<string_view, string_view, string_view>(&SyntaxTree::fromText),
                     "text"_a, "name"_a = "source", "path"_a = "")
-        .def("diagnostics", &SyntaxTree::diagnostics)
-        .def("sourceManager", py::overload_cast<>(&SyntaxTree::sourceManager))
-        .def("root", py::overload_cast<>(&SyntaxTree::root))
-        .def("options", &SyntaxTree::options)
-        .def("getMetadata", &SyntaxTree::getMetadata)
+        .def_static(
+            "fromText",
+            py::overload_cast<string_view, SourceManager&, string_view, string_view, const Bag&>(
+                &SyntaxTree::fromText),
+            "text"_a, "sourceManager"_a, "name"_a = "source", "path"_a = "", "options"_a = Bag())
+        .def_property_readonly("diagnostics", &SyntaxTree::diagnostics)
+        .def_property_readonly("sourceManager", py::overload_cast<>(&SyntaxTree::sourceManager))
+        .def_property_readonly("root", py::overload_cast<>(&SyntaxTree::root))
+        .def_property_readonly("options", &SyntaxTree::options)
         .def_static("getDefaultSourceManager", &SyntaxTree::getDefaultSourceManager);
+
+    py::class_<LexerOptions>(m, "LexerOptions")
+        .def(py::init<>())
+        .def_readwrite("maxErrors", &LexerOptions::maxErrors);
+
+    py::class_<PreprocessorOptions>(m, "PreprocessorOptions")
+        .def(py::init<>())
+        .def_readwrite("maxIncludeDepth", &PreprocessorOptions::maxIncludeDepth)
+        .def_readwrite("predefineSource", &PreprocessorOptions::predefineSource)
+        .def_readwrite("predefines", &PreprocessorOptions::predefines)
+        .def_readwrite("undefines", &PreprocessorOptions::undefines);
+
+    py::class_<ParserOptions>(m, "ParserOptions")
+        .def(py::init<>())
+        .def_readwrite("maxRecursionDepth", &ParserOptions::maxRecursionDepth);
 }
