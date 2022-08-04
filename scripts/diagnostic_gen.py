@@ -5,30 +5,32 @@ import os
 import shlex
 import subprocess
 
+
 def writefile(path, contents):
     try:
-        with open(path, 'r') as f:
+        with open(path, "r") as f:
             existing = f.read()
     except OSError:
-        existing = ''
+        existing = ""
 
     if existing != contents:
-        with open(path, 'w') as f:
+        with open(path, "w") as f:
             f.write(contents)
 
+
 def main():
-    parser = argparse.ArgumentParser(description='Diagnostic source generator')
-    parser.add_argument('--outDir', default=os.getcwd(), help='Output directory')
-    parser.add_argument('--srcDir', help='Source directory to search for usages')
-    parser.add_argument('--incDir', help='Include directory to search for usages')
-    parser.add_argument('--docs', action='store_true')
-    parser.add_argument('--slangBin')
+    parser = argparse.ArgumentParser(description="Diagnostic source generator")
+    parser.add_argument("--outDir", default=os.getcwd(), help="Output directory")
+    parser.add_argument("--srcDir", help="Source directory to search for usages")
+    parser.add_argument("--incDir", help="Include directory to search for usages")
+    parser.add_argument("--docs", action="store_true")
+    parser.add_argument("--slangBin")
     args = parser.parse_args()
 
     ourdir = os.path.dirname(os.path.realpath(__file__))
     inf = open(os.path.join(ourdir, "diagnostics.txt"))
 
-    headerdir = os.path.join(args.outDir, 'slang', 'diagnostics')
+    headerdir = os.path.join(args.outDir, "slang", "diagnostics")
     try:
         os.makedirs(headerdir)
     except OSError:
@@ -37,53 +39,58 @@ def main():
     diags = {}
     groups = []
     diaglist = []
-    subsystem = 'General'
+    subsystem = "General"
     curgroup = None
 
     def parsegroup(elems):
         nonlocal curgroup
         for e in elems:
-            if e == '}':
+            if e == "}":
                 groups.append(curgroup)
                 curgroup = None
                 break
             curgroup[1].append(e)
 
-    for line in [x.strip('\n') for x in inf]:
-        if not line or line.startswith('//'):
+    for line in [x.strip("\n") for x in inf]:
+        if not line or line.startswith("//"):
             continue
 
         parts = shlex.split(line)
         if curgroup:
             parsegroup(parts)
-        elif parts[0] == 'subsystem':
+        elif parts[0] == "subsystem":
             subsystem = parts[1]
             if subsystem not in diags:
                 diags[subsystem] = []
-        elif parts[0] == 'group':
+        elif parts[0] == "group":
             curgroup = (parts[1], [])
-            assert(parts[2] == '=')
-            assert(parts[3] == '{')
+            assert parts[2] == "="
+            assert parts[3] == "{"
             parsegroup(parts[4:])
         else:
             sev = parts[0]
-            if sev == 'warning':
-                diags[subsystem].append(('Warning', parts[2], parts[3], parts[1]))
+            if sev == "warning":
+                diags[subsystem].append(("Warning", parts[2], parts[3], parts[1]))
                 diaglist.append(parts[2])
-            elif sev == 'error':
-                diags[subsystem].append(('Error', parts[1], parts[2], ''))
+            elif sev == "error":
+                diags[subsystem].append(("Error", parts[1], parts[2], ""))
                 diaglist.append(parts[1])
-            elif sev == 'note':
-                diags[subsystem].append(('Note', parts[1], parts[2], ''))
+            elif sev == "note":
+                diags[subsystem].append(("Note", parts[1], parts[2], ""))
                 diaglist.append(parts[1])
             else:
-                raise Exception('Invalid entry: {}'.format(line))
+                raise Exception("Invalid entry: {}".format(line))
 
     if args.docs:
-        createdocs(args.outDir, os.path.join(ourdir, "warning_docs.txt"),
-                   args.slangBin, diags, groups)
+        createdocs(
+            args.outDir,
+            os.path.join(ourdir, "warning_docs.txt"),
+            args.slangBin,
+            diags,
+            groups,
+        )
     else:
-        for k,v in sorted(diags.items()):
+        for k, v in sorted(diags.items()):
             createheader(os.path.join(headerdir, k + "Diags.h"), k, v)
 
         createsource(os.path.join(args.outDir, "DiagCode.cpp"), diags, groups)
@@ -97,7 +104,7 @@ def main():
 
 
 def createheader(path, subsys, diags):
-    output = '''//------------------------------------------------------------------------------
+    output = """//------------------------------------------------------------------------------
 //! @file {}Diags.h
 //! @brief Generated diagnostic enums for the {} subsystem
 //
@@ -109,21 +116,25 @@ def createheader(path, subsys, diags):
 
 namespace slang::diag {{
 
-'''.format(subsys, subsys)
+""".format(
+        subsys, subsys
+    )
 
     index = 0
     for d in sorted(diags):
-        output += 'inline constexpr DiagCode {}(DiagSubsystem::{}, {});\n'.format(d[1], subsys, index)
+        output += "inline constexpr DiagCode {}(DiagSubsystem::{}, {});\n".format(
+            d[1], subsys, index
+        )
         index += 1
 
-    output += '''
+    output += """
 }
-'''
+"""
     writefile(path, output)
 
 
 def createsource(path, diags, groups):
-    output = '''//------------------------------------------------------------------------------
+    output = """//------------------------------------------------------------------------------
 // DiagCode.cpp
 // Generated diagnostic helpers
 //
@@ -138,20 +149,21 @@ def createsource(path, diags, groups):
 namespace slang {
 
 static const flat_hash_map<DiagCode, std::tuple<string_view, string_view, DiagnosticSeverity, string_view>> data = {
-'''
+"""
 
-    for k,v in sorted(diags.items()):
+    for k, v in sorted(diags.items()):
         for d in sorted(v):
             output += '    {{diag::{}, std::make_tuple("{}"sv, "{}"sv, DiagnosticSeverity::{}, "{}"sv)}},\n'.format(
-                       d[1], d[1], d[2], d[0], d[3])
+                d[1], d[1], d[2], d[0], d[3]
+            )
 
-    output += '''};
+    output += """};
 
 static const flat_hash_map<string_view, std::vector<DiagCode>> optionMap = {
-'''
+"""
 
     optionMap = {}
-    for k,v in sorted(diags.items()):
+    for k, v in sorted(diags.items()):
         for d in sorted(v):
             name = d[3]
             if not name:
@@ -164,23 +176,25 @@ static const flat_hash_map<string_view, std::vector<DiagCode>> optionMap = {
 
     for key in sorted(optionMap):
         vals = optionMap[key]
-        valstr = ', '.join(["diag::{}".format(v) for v in vals])
+        valstr = ", ".join(["diag::{}".format(v) for v in vals])
         output += '    {{"{}"sv, {{ {} }}}},\n'.format(key, valstr)
 
-    output += '''};
+    output += """};
 
 static const flat_hash_map<string_view, DiagGroup> groupMap = {
-'''
+"""
 
     for g in sorted(groups):
         elems = []
         for e in sorted(g[1]):
             elems.extend(optionMap[e])
 
-        elems = ', '.join('diag::{}'.format(e) for e in elems)
-        output += '    {{"{}"sv, DiagGroup("{}", {{ {} }})}},\n'.format(g[0], g[0], elems)
+        elems = ", ".join("diag::{}".format(e) for e in elems)
+        output += '    {{"{}"sv, DiagGroup("{}", {{ {} }})}},\n'.format(
+            g[0], g[0], elems
+        )
 
-    output += '''};
+    output += """};
 
 std::ostream& operator<<(std::ostream& os, DiagCode code) {
     os << toString(code);
@@ -224,23 +238,23 @@ const DiagGroup* findDefaultDiagGroup(string_view name) {
 }
 
 static const DiagCode AllGeneratedCodes[] = {
-'''
+"""
 
-    for k,v in sorted(diags.items()):
+    for k, v in sorted(diags.items()):
         for d in sorted(v):
-            output += '    diag::{},\n'.format(d[1])
+            output += "    diag::{},\n".format(d[1])
 
-    output += '''};
+    output += """};
 
 decltype(DiagCode::KnownCodes) DiagCode::KnownCodes = AllGeneratedCodes;
 
-}'''
+}"""
 
     writefile(path, output)
 
 
 def createallheader(path, diags):
-    output = '''//------------------------------------------------------------------------------
+    output = """//------------------------------------------------------------------------------
 //! @file AllDiags.h
 //! @brief Combined header that includes all subsystem-specific diagnostic headers
 //
@@ -248,12 +262,12 @@ def createallheader(path, diags):
 //------------------------------------------------------------------------------
 #pragma once
 
-'''
+"""
 
     for k in sorted(diags.keys()):
         output += '#include "slang/diagnostics/{}Diags.h"\n'.format(k)
 
-    output += '\n'
+    output += "\n"
     writefile(path, output)
 
 
@@ -263,63 +277,71 @@ def createdocs(outDir, inpath, slangBin, diags, groups):
     inexample = False
     exampleMap = {}
 
-    for line in [x.strip('\n') for x in inf]:
+    for line in [x.strip("\n") for x in inf]:
         if not inexample:
             line = line.strip()
-            if not line or line.startswith('//'):
+            if not line or line.startswith("//"):
                 continue
 
         if inexample:
-            if line.startswith('```'):
+            if line.startswith("```"):
                 inexample = False
             else:
                 if curropt[2]:
-                    curropt[2] += '\n'
+                    curropt[2] += "\n"
                 curropt[2] += line
-        elif line.startswith('-W'):
+        elif line.startswith("-W"):
             if curropt:
                 exampleMap[curropt[0]] = curropt
-            curropt = [line[2:], '', '', '']
-        elif line.startswith('```'):
+            curropt = [line[2:], "", "", ""]
+        elif line.startswith("```"):
             inexample = True
         else:
             if curropt[1]:
-                curropt[1] += ' '
+                curropt[1] += " "
             curropt[1] += line
 
     if curropt:
         exampleMap[curropt[0]] = curropt
 
-    for k,v in exampleMap.items():
+    for k, v in exampleMap.items():
         if not v[2]:
             continue
 
-        testPath = os.path.join(outDir, 'test.sv')
-        with open(testPath, 'w') as outf:
+        testPath = os.path.join(outDir, "test.sv")
+        with open(testPath, "w") as outf:
             outf.write(v[2])
 
-        encoding = 'utf-16-le' if os.name == 'nt' else 'utf-8'
-        args = [slangBin, '--quiet', '-Wnone', '-W' + k, '--color-diagnostics', testPath]
+        encoding = "utf-16-le" if os.name == "nt" else "utf-8"
+        args = [
+            slangBin,
+            "--quiet",
+            "-Wnone",
+            "-W" + k,
+            "--color-diagnostics",
+            testPath,
+        ]
 
-        result = subprocess.run(args, encoding=encoding,
-                                stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        result = subprocess.run(
+            args, encoding=encoding, stdout=subprocess.PIPE, stderr=subprocess.STDOUT
+        )
         v[3] = result.stdout
         if k not in v[3]:
-            raise Exception('Test for -W{} is not correct'.format(k))
+            raise Exception("Test for -W{} is not correct".format(k))
 
-    output = '''/** @page warning-ref Warning Reference
+    output = """/** @page warning-ref Warning Reference
 @brief Reference information about all supported warnings
 
 @tableofcontents
 
 @section warnings Warnings
 
-'''
+"""
 
     groupMap = {}
     warnlist = []
     for g in groups:
-        if g[0] != 'default':
+        if g[0] != "default":
             warnlist.append(g)
 
         for e in g[1]:
@@ -328,15 +350,15 @@ def createdocs(outDir, inpath, slangBin, diags, groups):
             else:
                 groupMap[e] = set([g[0]])
 
-    for k,v in diags.items():
+    for k, v in diags.items():
         for d in v:
             if not d[3]:
                 continue
             warnlist.append(d)
 
-    warnlist.sort(key = lambda d: d[3] if len(d) > 3 else d[0])
+    warnlist.sort(key=lambda d: d[3] if len(d) > 3 else d[0])
 
-    lastOpt = ''
+    lastOpt = ""
     for d in warnlist:
         if len(d) > 3:
             opt = d[3]
@@ -344,59 +366,60 @@ def createdocs(outDir, inpath, slangBin, diags, groups):
                 continue
 
             if opt not in exampleMap:
-                raise Exception('No documentation for -W{}'.format(opt))
+                raise Exception("No documentation for -W{}".format(opt))
 
             details = exampleMap[opt]
             desc = details[1]
             example = details[2]
             results = details[3]
 
-            if desc == '<ignored>':
+            if desc == "<ignored>":
                 continue
 
-            if lastOpt != '':
-                output += '\n@n\n'
-            output += '@subsection {} -W{}\n'.format(opt, opt)
+            if lastOpt != "":
+                output += "\n@n\n"
+            output += "@subsection {} -W{}\n".format(opt, opt)
 
             output += desc
-            output += ' @n @n\n'
+            output += " @n @n\n"
 
             if opt in groupMap:
                 groups = groupMap[opt]
-                if 'default' in groups:
-                    output += 'This diagnostic is enabled by default. @n @n\n'
+                if "default" in groups:
+                    output += "This diagnostic is enabled by default. @n @n\n"
 
             if example:
-                assert(results)
-                output += '@b Example: \n\n'
-                output += '@code{.sv}\n'
-                output += example + '\n'
-                output += '@endcode\n\n'
-                output += 'produces:\n\n'
-                output += '@code{.ansi}\n'
+                assert results
+                output += "@b Example: \n\n"
+                output += "@code{.sv}\n"
+                output += example + "\n"
+                output += "@endcode\n\n"
+                output += "produces:\n\n"
+                output += "@code{.ansi}\n"
                 output += results
-                output += '@endcode\n'
+                output += "@endcode\n"
 
             lastOpt = opt
         else:
             opt = d[0]
             lastOpt = opt
-            elemlist = ', '.join('@ref {}'.format(s, s) for s in d[1])
+            elemlist = ", ".join("@ref {}".format(s, s) for s in d[1])
 
-            output += '\n@n\n@subsection {} -W{}\n'.format(opt, opt)
-            output += 'Controls {}.\n@n\n'.format(elemlist)
+            output += "\n@n\n@subsection {} -W{}\n".format(opt, opt)
+            output += "Controls {}.\n@n\n".format(elemlist)
 
-    output += '\n*/'
+    output += "\n*/"
     writefile(os.path.join(outDir, "warnings.dox"), output)
 
 
 def checkDiags(path, diags):
     import glob
-    for ext in ('cpp', 'h'):
+
+    for ext in ("cpp", "h"):
         for file in glob.glob(path + "/**/*." + ext, recursive=True):
-            with open(file, 'r') as f:
+            with open(file, "r") as f:
                 text = f.read()
-                diags = [d for d in diags if not ('::' + d) in text]
+                diags = [d for d in diags if not ("::" + d) in text]
     return diags
 
 
