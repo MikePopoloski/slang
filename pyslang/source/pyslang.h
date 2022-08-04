@@ -87,14 +87,14 @@ public:
     }
     template<typename U>
     type_caster& operator=(const type_caster<span<U>>& other) {
-        list_caster = other.list_caster;
-        value = list_caster ? get_value(*list_caster) : other.value;
+        listCaster = other.listCaster;
+        value = listCaster ? get_value(*listCaster) : other.value;
         return *this;
     }
     template<typename U>
     type_caster& operator=(type_caster<span<U>>&& other) {
-        list_caster = std::move(other.list_caster);
-        value = list_caster ? get_value(*list_caster) : other.value;
+        listCaster = std::move(other.listCaster);
+        value = listCaster ? get_value(*listCaster) : other.value;
         return *this;
     }
 
@@ -131,13 +131,13 @@ public:
         if (convert && std::is_const<T>::value &&
             (!std::is_pointer<T>::value ||
              std::is_base_of<type_caster_generic, make_caster<T>>::value)) {
-            list_caster.emplace();
-            if (list_caster->load(src, convert)) {
-                value = get_value(*list_caster);
+            listCaster.emplace();
+            if (listCaster->load(src, convert)) {
+                value = get_value(*listCaster);
                 return true;
             }
             else {
-                list_caster.reset();
+                listCaster.reset();
             }
         }
 
@@ -156,7 +156,7 @@ private:
     }
 
     using ListCaster = list_caster<std::vector<value_type>, value_type>;
-    std::optional<ListCaster> list_caster;
+    std::optional<ListCaster> listCaster;
     span<T> value;
 };
 
