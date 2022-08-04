@@ -31,7 +31,7 @@ jobs:
 
     - uses: actions/upload-artifact@v3
       with:
-        path: dist/*.tar.gz
+        path: pyslang/dist/*.tar.gz
 
 
   build_wheels:
@@ -54,6 +54,8 @@ jobs:
     - uses: pypa/cibuildwheel@v2.8.1
       env:
         CIBW_ARCHS_MACOS: auto universal2
+      with:
+        package-dir: pyslang/
 
     - name: Verify clean directory
       run: git diff --exit-code
@@ -61,17 +63,13 @@ jobs:
 
     - uses: actions/upload-artifact@v3
       with:
-        path: wheelhouse/*.whl
+        path: pyslang/wheelhouse/*.whl
 
 
   upload_test:
     name: Upload test
     needs: [build_wheels, build_sdist]
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: pyslang/
-
     steps:
     - uses: actions/setup-python@v4
       with:
@@ -93,10 +91,6 @@ jobs:
     needs: [build_wheels, build_sdist]
     runs-on: ubuntu-latest
     if: (github.event_name == 'release' && github.event.action == 'published') || github.event_name == 'workflow_dispatch'
-    defaults:
-      run:
-        working-directory: pyslang/
-
     steps:
     - uses: actions/setup-python@v4
       with:
