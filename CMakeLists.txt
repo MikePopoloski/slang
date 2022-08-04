@@ -7,6 +7,7 @@ project(slang VERSION 2.0.0 LANGUAGES CXX
 option(SLANG_COVERAGE "Enable code coverage" OFF)
 option(CI_BUILD "Enable longer running tests for CI builds" OFF)
 option(FUZZ_TARGET "Enables changes to make binaries easier to fuzz test" OFF)
+option(SLANG_INCLUDE_TOOLS "Include tools targets in the build" ON)
 option(SLANG_INCLUDE_TESTS "Include test targets in the build" ON)
 option(SLANG_INCLUDE_DOCS "Include documentation targets in the build" OFF)
 option(SLANG_INCLUDE_LLVM "Include LLVM in the build for code generation" OFF)
@@ -211,7 +212,10 @@ if(NOT SLANG_USE_SYSTEM_LIBS)
 endif()
 
 add_subdirectory(source)
-add_subdirectory(tools)
+
+if(SLANG_INCLUDE_TOOLS)
+    add_subdirectory(tools)
+endif()
 
 if(SLANG_INCLUDE_TESTS)
     include(CTest)
