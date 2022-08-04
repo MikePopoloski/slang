@@ -5,6 +5,23 @@
 #include "slang/syntax/SyntaxPrinter.h"
 #include "slang/text/SourceManager.h"
 
+void trimTrailingWhitespace(std::string& str) {
+    size_t off = 0;
+    const char* data = str.data();
+    while (off < str.length()) {
+        size_t nl = str.find_first_of('\n', off);
+        if (nl == std::string::npos)
+            nl = str.length();
+
+        size_t idx = nl;
+        while (idx > off && data[idx - 1] == ' ')
+            idx--;
+
+        str.erase(idx, nl - idx);
+        off = idx + 1;
+    }
+}
+
 std::string preprocess(string_view text, const Bag& options = {}) {
     diagnostics.clear();
 
@@ -19,6 +36,7 @@ std::string preprocess(string_view text, const Bag& options = {}) {
             break;
     }
 
+    trimTrailingWhitespace(result);
     return result;
 }
 
@@ -715,7 +733,7 @@ TEST_CASE("Nested macro with different body locations") {
 
 `NESTED_DEFINE
 )";
-    auto& expected = "\n     \n         \n    \n(32 * 4)\n";
+    auto& expected = "\n\n\n\n(32 * 4)\n";
 
     std::string result = preprocess(text);
     CHECK(result == expected);
@@ -960,7 +978,7 @@ TEST_CASE("Nested ifdef and macros") {
     `endif
 `FOO
 )";
-    auto& expected = "\n     \n     \n        asdfasdf \n    \n";
+    auto& expected = "\n\n\n        asdfasdf\n\n";
 
     std::string result = preprocess(text);
     CHECK(result == expected);
@@ -1657,12 +1675,12 @@ endmodule
     CHECK(result == R"(
 module m;
   logic q, d, clk, rst;
-  
-                                            
-  /* synopsys sync_set_reset "rst" */       
-                                                    
-  always_ff @(posedge (clk)) begin                      
-    q <= (rst) ? (0) : (d);       
+
+
+  /* synopsys sync_set_reset "rst" */
+
+  always_ff @(posedge (clk)) begin
+    q <= (rst) ? (0) : (d);
   end
 endmodule
 )");
@@ -1744,11 +1762,11 @@ module mod(input logic sig);
 endmodule
 module top;
     logic sig1, sig2;
-    
-    (* instance_name = "inst_A" *) 
+
+    (* instance_name = "inst_A" *)
     mod \inst_A  (.sig(sig1));
-    
-    (* instance_name = "inst_B" *) 
+
+    (* instance_name = "inst_B" *)
     mod \inst_B  (.sig(sig2));
 endmodule
 )");
@@ -1808,9 +1826,9 @@ module top #(
     int unsigned PARAM = 0
 ) ();
     logic var_4K;
-    
-    if (PARAM == 0) begin: size4K 
-        assign var_4K = 1'b1; 
+
+    if (PARAM == 0) begin: size4K
+        assign var_4K = 1'b1;
     end
 endmodule
 )");
@@ -1827,7 +1845,7 @@ TEST_CASE("Macro defining new macro with newlines") {
     `ifndef x \
         `define x (y) \
     `endif
-    
+
 `FOO(baz,
     1 ?
         0 :
@@ -1840,10 +1858,9 @@ endmodule
 
     std::string result = preprocess(text);
     CHECK(result == R"(
-    
-     
-         
-    
+
+
+
 module m;
     int i = (1 ?
         0 :

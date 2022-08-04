@@ -421,7 +421,7 @@ module test;
 
     logic a[5];
     m m1(.a(a));
-    
+
     logic b[3][4][5];
     m m2 [3][4] (.a(b));
 
@@ -579,7 +579,7 @@ TEST_CASE("Non-ANSI I/O lookup location") {
 module m(a);
     input a;
     var integer c;
-    initial c = a; 
+    initial c = a;
     integer a;
 endmodule
 )");
@@ -720,11 +720,11 @@ interface A_Bus( input logic clk );
     wire req, gnt;
     wire [7:0] addr, data;
 
-    clocking sb @(posedge clk); 
+    clocking sb @(posedge clk);
         input gnt;
         output req, addr;
         inout data;
-        property p1; gnt ##[1:3] data; endproperty 
+        property p1; gnt ##[1:3] data; endproperty
     endclocking
 
     modport DUT ( input clk, req, addr,
@@ -734,7 +734,7 @@ interface A_Bus( input logic clk );
     modport STB ( clocking sb );
 
     modport TB ( input gnt,
-                 output req, addr, 
+                 output req, addr,
                  inout data );
 endinterface
 
@@ -758,7 +758,7 @@ endmodule
 
 program T (A_Bus.STB c, A_Bus.STB d);
     assert property (c.sb.p1);
-    initial begin 
+    initial begin
         c.sb.req <= 1;
         wait( c.sb.gnt == 1 );
 
@@ -767,7 +767,7 @@ program T (A_Bus.STB c, A_Bus.STB d);
         wait( d.sb.gnt == 1 );
 
         d.sb.req <= 0;
-    end 
+    end
 endprogram
 )");
 

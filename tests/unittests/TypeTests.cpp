@@ -1128,7 +1128,7 @@ module m;
         union tagged {
             bit [9:0] JmpU;
             struct {
-                bit [1:0] cc; 
+                bit [1:0] cc;
                 bit [9:0] addr;
             } JmpC;
         } Jmp;
@@ -1148,7 +1148,7 @@ module m;
         union tagged packed {
             bit [9:0] JmpU;
             struct packed {
-                bit [1:0] cc; 
+                bit [1:0] cc;
                 bit [9:0] addr;
             } JmpC;
         } Jmp;
@@ -1183,11 +1183,11 @@ TEST_CASE("Virtual interfaces with clocking blocks") {
     auto tree = SyntaxTree::fromText(R"(
 interface SyncBus( input logic clk );
     wire a, b, c;
-    clocking sb @(posedge clk); 
+    clocking sb @(posedge clk);
         input a;
         output b;
         inout c;
-    endclocking 
+    endclocking
 endinterface
 
 typedef virtual SyncBus VI;
@@ -1195,7 +1195,7 @@ typedef virtual SyncBus VI;
 task do_it( VI v );
     if( v.sb.a == 1 )
         v.sb.b <= 0;
-    else 
+    else
         v.sb.c <= ##1 1;
 endtask
 
@@ -1204,7 +1204,7 @@ module top;
     SyncBus b1( clk );
     SyncBus b2( clk );
 
-    initial begin 
+    initial begin
         static VI v[2] = '{ b1, b2 };
         repeat( 20 )
             do_it( v[ $urandom_range( 0, 1 ) ] );
@@ -1215,21 +1215,21 @@ interface A_Bus( input logic clk );
     wire req, gnt;
     wire [7:0] addr, data;
 
-    clocking sb @(posedge clk); 
+    clocking sb @(posedge clk);
         input gnt;
         output req, addr;
         inout data;
-        property p1; gnt ##[1:3] data; endproperty 
+        property p1; gnt ##[1:3] data; endproperty
     endclocking
 
     modport DUT ( input clk, req, addr,
                   output gnt,
                   inout data );
-    
+
     modport STB ( clocking sb );
 
     modport TB ( input gnt,
-                 output req, addr, 
+                 output req, addr,
                  inout data );
 endinterface
 
@@ -1262,11 +1262,11 @@ program T (A_Bus.STB b1, A_Bus.STB b2 );
     endtask
 
     task drive(SYNCTB s, logic [7:0] adr, data );
-        if( s.sb.gnt == 0 ) begin 
+        if( s.sb.gnt == 0 ) begin
             request(s);
             wait_grant(s);
         end
-    
+
         s.sb.addr <= adr;
         s.sb.data <= data;
 
@@ -1275,10 +1275,10 @@ program T (A_Bus.STB b1, A_Bus.STB b2 );
     endtask
 
     assert property (b1.sb.p1);
-    initial begin 
+    initial begin
         drive( b1, 8'($random), 8'($random) );
         drive( b2, 8'($random), 8'($random) );
-    end 
+    end
 endprogram
 )");
 

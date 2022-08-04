@@ -2373,7 +2373,7 @@ module m;
 
     int m[2][2] = '{real:3.14};
     struct { int i; real r; } n[2] = '{real:3.14};
-    
+
 endmodule
 )");
 

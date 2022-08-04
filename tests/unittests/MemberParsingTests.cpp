@@ -792,7 +792,7 @@ class cg_cls;
 	    coverpoint y;
 	    XYA: cross xy, a { }
 	endgroup
-	
+
 	covergroup cg;
 	    coverpoint a { bins x[] = {[0:10]}; }
 	    coverpoint b { bins y[] = {[0:20]}; }
@@ -849,7 +849,7 @@ module mod_m;
 	    }
 	endgroup
 	cg cg_inst = new(3);
-	
+
 	covergroup yy;
 	    cross a, b
 	    {

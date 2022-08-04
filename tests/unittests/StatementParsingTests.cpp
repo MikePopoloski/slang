@@ -280,9 +280,9 @@ endmodule : m
 
 TEST_CASE("randsequence parsing") {
     auto& text = R"(
-module rand_sequence1(); 
-  initial begin 
-  
+module rand_sequence1();
+  initial begin
+
 	randsequence( bin_op )
 		void bin_op : value operator value // void type is optional
 		{ $display("%s %b %b", operator, value[1], value[2]); }
@@ -302,7 +302,7 @@ endmodule
 
 TEST_CASE("randsequence parsing error cases") {
     auto& text = R"(
-module rand_sequence1(); 
+module rand_sequence1();
   initial begin
     randsequence()
         foo: case(x) default: a; default: b; endcase;

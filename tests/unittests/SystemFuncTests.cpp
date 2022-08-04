@@ -270,7 +270,7 @@ TEST_CASE("Array query functions -- errors") {
     auto tree = SyntaxTree::fromText(R"(
 module m;
     logic [3:1][2:5] foo [3][][$];
-    
+
     localparam int p1 = $left(foo, 4);  // fine
     localparam int p2 = $right(foo[0]); // not constant
     localparam int p3 = $left(foo, p2);
@@ -306,7 +306,7 @@ module m;
 
     localparam int asdfasdf[] = '{p2};
     localparam int p19 = boz();
-    
+
     function int boz;
         automatic int i = $size(asdfasdf);
         return i;

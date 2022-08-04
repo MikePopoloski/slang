@@ -66,7 +66,7 @@ module m #(
     always_comb begin
         foreach(VEC[i]) begin
             automatic int v = VEC[i];
-            
+
             $display(i);
         end
     end
@@ -1324,7 +1324,7 @@ module m;
 
     int j;
     assign j = 1;
-    
+
     clocking cb2 @clk;
         output j;
     endclocking
@@ -1369,7 +1369,7 @@ module m;
     int foo[];
     initial begin
         byte a, b, x;
-        randcase 
+        randcase
             a + b : x = 1;
             a - b : x = 2;
             a ^ ~b : x = 3;
@@ -1423,10 +1423,10 @@ module m;
 
         randsequence( A )
             void A : A1 A2;
-            void A1 : { cnt = 1; } B repeat(5) C B 
+            void A1 : { cnt = 1; } B repeat(5) C B
             { $display("c=%d, b1=%d, b2=%d", C, B[1], B[2]); }
             ;
-            void A2 : if (a) D(5) else D(20) 
+            void A2 : if (a) D(5) else D(20)
             { $display("d1=%d, d2=%d", D[1], D[2]); }
             ;
             int B : C { return C;}

@@ -332,7 +332,7 @@ i + 1 ()
     auto tree = SyntaxTree::fromText(R"(
 module m;
     int i;
-    int j = 
+    int j =
 `include "fake-include1.svh"
     ;
 endmodule

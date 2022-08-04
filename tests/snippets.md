@@ -45,11 +45,11 @@ class C;
   extern function int foo(int i = k);
   localparam int k = 2;
 endclass
-    
+
 function int C::foo(int i);
   return i;
 endfunction
-    
+
 module m;
   C c = new;
   initial $display(c.foo());

@@ -201,7 +201,7 @@ The default is 10.
 
 Attempt to increase compatibility with the specified tool. Various options will
 be set and warnings will be silenced to mimic the given tool as closely as possible.
-Currently only 'vcs' is supported as a value. 
+Currently only 'vcs' is supported as a value.
 
 `-T,--timing min|typ|max`
 

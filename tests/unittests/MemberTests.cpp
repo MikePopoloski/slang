@@ -1178,7 +1178,7 @@ module m;
     else begin
         $warning("ASDFASDF");
     end
-        
+
 endmodule
 )");
 
@@ -1565,7 +1565,7 @@ module m;
     const int a = 1;
     localparam int b = 2;
     logic [3:0] c;
-    
+
     initial begin
         foo(a, a + 2, b, c, c[0]);
     end
@@ -1602,7 +1602,7 @@ module m;
     int i = s3;
     localparam int j = s3;
 
-    specify 
+    specify
         specparam s4 = 2:3:4;
     endspecify
 
@@ -2031,10 +2031,10 @@ module m1;
     // without parameters, binds to a, b above
     let tmp = a && b;
     a1: assert property (@(posedge clk) eq(p,q));
-    always_comb begin 
+    always_comb begin
         a2: assert (eq(r)); // use default for y
         a3: assert (tmp);
-    end 
+    end
 endmodule : m1
 
 module m2;
@@ -2042,12 +2042,12 @@ module m2;
     logic a, b;
     let y = x;
 
-    always_comb begin 
+    always_comb begin
         // y binds to preceding definition of x
         // in the declarative context of let
         automatic bit x = 1'b0;
         b = a | y;
-    end 
+    end
 endmodule : m2
 
 module m3;
@@ -2075,7 +2075,7 @@ module m5(input clock);
     logic [15:0] a, b;
     logic c, d;
     typedef bit [15:0] bits;
-    
+
     let ones_match(bits x, y) = x == y;
     let same(logic x, y) = x === y;
     always_comb a1: assert(ones_match(a, b));
@@ -2092,11 +2092,11 @@ module m6(input clock);
     let p1(x) = $past(x);
     let p2(x) = $past(x,,,@(posedge clock));
     let s(x) = $sampled(x);
-    always_comb begin 
+    always_comb begin
         a1: assert(p1(a));
         a2: assert(p2(a));
         a3: assert(s(a));
-    end 
+    end
     a4: assert property(@(posedge clock) p1(a));
 endmodule : m6
 
@@ -2110,8 +2110,8 @@ module my_checker;
     wire [1:0] req;
     wire [1:0] vld;
     logic ovr;
-    if (valid_arb(.request(req), .valid(vld), .override(ovr))) begin 
-    end 
+    if (valid_arb(.request(req), .valid(vld), .override(ovr))) begin
+    end
 endmodule
 )");
 
