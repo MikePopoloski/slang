@@ -18,12 +18,12 @@ def test_numerics():
 
 
 def test_bag():
-    l = LexerOptions()
-    p = ParserOptions()
-    p.maxRecursionDepth = 4
-    b = Bag([l, p])
+    lo = LexerOptions()
+    po = ParserOptions()
+    po.maxRecursionDepth = 4
+    b = Bag([lo, po])
     assert b.parserOptions.maxRecursionDepth == 4
-    assert b.compilationOptions == None
+    assert b.compilationOptions is None
 
 
 testFile = """

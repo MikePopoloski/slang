@@ -151,7 +151,7 @@ namespace slang {
 static const flat_hash_map<DiagCode, std::tuple<string_view, string_view, DiagnosticSeverity, string_view>> data = {
 """
 
-    for k, v in sorted(diags.items()):
+    for _, v in sorted(diags.items()):
         for d in sorted(v):
             output += '    {{diag::{}, std::make_tuple("{}"sv, "{}"sv, DiagnosticSeverity::{}, "{}"sv)}},\n'.format(
                 d[1], d[1], d[2], d[0], d[3]
@@ -163,7 +163,7 @@ static const flat_hash_map<string_view, std::vector<DiagCode>> optionMap = {
 """
 
     optionMap = {}
-    for k, v in sorted(diags.items()):
+    for _, v in sorted(diags.items()):
         for d in sorted(v):
             name = d[3]
             if not name:
@@ -240,7 +240,7 @@ const DiagGroup* findDefaultDiagGroup(string_view name) {
 static const DiagCode AllGeneratedCodes[] = {
 """
 
-    for k, v in sorted(diags.items()):
+    for _, v in sorted(diags.items()):
         for d in sorted(v):
             output += "    diag::{},\n".format(d[1])
 
@@ -350,7 +350,7 @@ def createdocs(outDir, inpath, slangBin, diags, groups):
             else:
                 groupMap[e] = set([g[0]])
 
-    for k, v in diags.items():
+    for _, v in diags.items():
         for d in v:
             if not d[3]:
                 continue
@@ -403,7 +403,7 @@ def createdocs(outDir, inpath, slangBin, diags, groups):
         else:
             opt = d[0]
             lastOpt = opt
-            elemlist = ", ".join("@ref {}".format(s, s) for s in d[1])
+            elemlist = ", ".join("@ref {}".format(s) for s in d[1])
 
             output += "\n@n\n@subsection {} -W{}\n".format(opt, opt)
             output += "Controls {}.\n@n\n".format(elemlist)

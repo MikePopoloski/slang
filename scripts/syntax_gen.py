@@ -507,7 +507,7 @@ string_view toString(SyntaxKind kind) {
 """
     )
 
-    for k, v in sorted(kindmap.items()):
+    for k, _ in sorted(kindmap.items()):
         cppf.write('        case SyntaxKind::{}: return "{}";\n'.format(k, k))
 
     cppf.write(
@@ -527,7 +527,7 @@ string_view toString(SyntaxKind kind) {
     SyntaxKind::SeparatedList,
 """
     )
-    for k, v in sorted(kindmap.items()):
+    for k, _ in sorted(kindmap.items()):
         cppf.write("    SyntaxKind::{},\n".format(k))
     cppf.write(
         """};
@@ -644,7 +644,7 @@ enum class SyntaxKind {
 """
     )
 
-    for k, v in sorted(kindmap.items()):
+    for k, _ in sorted(kindmap.items()):
         outf.write("    {},\n".format(k))
 
     outf.write(
