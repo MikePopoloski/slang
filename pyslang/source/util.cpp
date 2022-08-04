@@ -179,7 +179,7 @@ void registerUtil(py::module_& m) {
         .def("add", py::overload_cast<const Symbol&, DiagCode, SourceRange>(&Diagnostics::add),
              byrefint)
         .def("sort", &Diagnostics::sort)
-        .def("__len__", &Diagnostics::size)
+        .def("__len__", [](const Diagnostics& self) { return self.size(); })
         .def("__getitem__",
              [](const Diagnostics& s, size_t i) {
                  if (i >= s.size()) {
