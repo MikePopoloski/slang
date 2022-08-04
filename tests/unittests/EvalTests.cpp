@@ -1,5 +1,4 @@
 #include "Test.h"
-
 #include <catch2/catch_approx.hpp>
 using Catch::Approx;
 

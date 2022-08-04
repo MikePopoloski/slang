@@ -199,7 +199,9 @@ public:
 #    pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
 #endif
     /// Indicates whether we are still "small", which means we are still on the stack.
-    bool isSmall() const { return (void*)data_ == (void*)firstElement; }
+    bool isSmall() const {
+        return (void*)data_ == (void*)firstElement;
+    }
 #if defined(__GNUC__) && !defined(__clang__)
 #    pragma GCC diagnostic pop
 #endif
@@ -207,9 +209,13 @@ public:
 protected:
     // Protected to disallow construction or deletion via base class.
     // This way we don't need a virtual destructor, or vtable at all.
-    SmallVector() {}
-    explicit SmallVector(size_t capacity) : capacity(capacity) {}
-    ~SmallVector() { cleanup(); }
+    SmallVector() {
+    }
+    explicit SmallVector(size_t capacity) : capacity(capacity) {
+    }
+    ~SmallVector() {
+        cleanup();
+    }
 
     template<typename TType, size_t N>
     friend class SmallVectorSized;

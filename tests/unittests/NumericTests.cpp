@@ -1,8 +1,6 @@
 #include "Test.h"
-
-#include <sstream>
-
 #include <catch2/catch_approx.hpp>
+#include <sstream>
 using Catch::Approx;
 
 #include "slang/numeric/SVInt.h"

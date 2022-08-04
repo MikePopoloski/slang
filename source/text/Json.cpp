@@ -4,11 +4,10 @@
 //
 // File is under the MIT license; see LICENSE for details
 //------------------------------------------------------------------------------
-#include <climits>
-
 #include "slang/text/Json.h"
 
 #include "FormatBuffer.h"
+#include <climits>
 
 #include "slang/util/SmallVector.h"
 #include "slang/util/String.h"

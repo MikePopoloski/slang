@@ -17,4 +17,4 @@ ExportList getExportedFunctions() {
     return results;
 }
 
-} // namespace simrt
+} // namespace slang::runtime

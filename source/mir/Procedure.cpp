@@ -134,16 +134,36 @@ public:
         return {};
     }
 
-    MIRValue visit(const BinaryExpression&) { return {}; }
-    MIRValue visit(const ConditionalExpression&) { return {}; }
-    MIRValue visit(const InsideExpression&) { return {}; }
-    MIRValue visit(const AssignmentExpression&) { return {}; }
-    MIRValue visit(const ConcatenationExpression&) { return {}; }
-    MIRValue visit(const ReplicationExpression&) { return {}; }
-    MIRValue visit(const StreamingConcatenationExpression&) { return {}; }
-    MIRValue visit(const ElementSelectExpression&) { return {}; }
-    MIRValue visit(const RangeSelectExpression&) { return {}; }
-    MIRValue visit(const MemberAccessExpression&) { return {}; }
+    MIRValue visit(const BinaryExpression&) {
+        return {};
+    }
+    MIRValue visit(const ConditionalExpression&) {
+        return {};
+    }
+    MIRValue visit(const InsideExpression&) {
+        return {};
+    }
+    MIRValue visit(const AssignmentExpression&) {
+        return {};
+    }
+    MIRValue visit(const ConcatenationExpression&) {
+        return {};
+    }
+    MIRValue visit(const ReplicationExpression&) {
+        return {};
+    }
+    MIRValue visit(const StreamingConcatenationExpression&) {
+        return {};
+    }
+    MIRValue visit(const ElementSelectExpression&) {
+        return {};
+    }
+    MIRValue visit(const RangeSelectExpression&) {
+        return {};
+    }
+    MIRValue visit(const MemberAccessExpression&) {
+        return {};
+    }
 
     MIRValue visit(const CallExpression& expr) {
         if (expr.isSystemCall()) {
@@ -153,28 +173,69 @@ public:
         return {};
     }
 
-    MIRValue visit(const ConversionExpression&) { return {}; }
-    MIRValue visit(const NewArrayExpression&) { return {}; }
-    MIRValue visit(const NewClassExpression&) { return {}; }
-    MIRValue visit(const NewCovergroupExpression&) { return {}; }
-    MIRValue visit(const CopyClassExpression&) { return {}; }
-    MIRValue visit(const MinTypMaxExpression&) { return {}; }
-    MIRValue visit(const DataTypeExpression&) { return {}; }
-    MIRValue visit(const TypeReferenceExpression&) { return {}; }
-    MIRValue visit(const HierarchicalReferenceExpression&) { return {}; }
-    MIRValue visit(const LValueReferenceExpression&) { return {}; }
-    MIRValue visit(const SimpleAssignmentPatternExpression&) { return {}; }
-    MIRValue visit(const StructuredAssignmentPatternExpression&) { return {}; }
-    MIRValue visit(const ReplicatedAssignmentPatternExpression&) { return {}; }
-    MIRValue visit(const EmptyArgumentExpression&) { return {}; }
-    MIRValue visit(const OpenRangeExpression&) { return {}; }
-    MIRValue visit(const DistExpression&) { return {}; }
-    MIRValue visit(const ClockingEventExpression&) { return {}; }
-    MIRValue visit(const AssertionInstanceExpression&) { return {}; }
-    MIRValue visit(const TaggedUnionExpression&) { return {}; }
+    MIRValue visit(const ConversionExpression&) {
+        return {};
+    }
+    MIRValue visit(const NewArrayExpression&) {
+        return {};
+    }
+    MIRValue visit(const NewClassExpression&) {
+        return {};
+    }
+    MIRValue visit(const NewCovergroupExpression&) {
+        return {};
+    }
+    MIRValue visit(const CopyClassExpression&) {
+        return {};
+    }
+    MIRValue visit(const MinTypMaxExpression&) {
+        return {};
+    }
+    MIRValue visit(const DataTypeExpression&) {
+        return {};
+    }
+    MIRValue visit(const TypeReferenceExpression&) {
+        return {};
+    }
+    MIRValue visit(const HierarchicalReferenceExpression&) {
+        return {};
+    }
+    MIRValue visit(const LValueReferenceExpression&) {
+        return {};
+    }
+    MIRValue visit(const SimpleAssignmentPatternExpression&) {
+        return {};
+    }
+    MIRValue visit(const StructuredAssignmentPatternExpression&) {
+        return {};
+    }
+    MIRValue visit(const ReplicatedAssignmentPatternExpression&) {
+        return {};
+    }
+    MIRValue visit(const EmptyArgumentExpression&) {
+        return {};
+    }
+    MIRValue visit(const OpenRangeExpression&) {
+        return {};
+    }
+    MIRValue visit(const DistExpression&) {
+        return {};
+    }
+    MIRValue visit(const ClockingEventExpression&) {
+        return {};
+    }
+    MIRValue visit(const AssertionInstanceExpression&) {
+        return {};
+    }
+    MIRValue visit(const TaggedUnionExpression&) {
+        return {};
+    }
 
-    void visitInvalid(const Statement&) {}
-    MIRValue visitInvalid(const Expression&) { return {}; }
+    void visitInvalid(const Statement&) {
+    }
+    MIRValue visitInvalid(const Expression&) {
+        return {};
+    }
 
 private:
     MIRValue emitConst(const Expression& expr) {
