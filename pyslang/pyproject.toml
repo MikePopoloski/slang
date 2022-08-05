@@ -8,3 +8,6 @@ requires = [
 ]
 
 build-backend = "setuptools.build_meta"
+
+[tool.cibuildwheel]
+archs = ['auto64']
