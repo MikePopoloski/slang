@@ -54,7 +54,7 @@ jobs:
     - uses: pypa/cibuildwheel@v2.8.1
       env:
         CIBW_ARCHS_MACOS: auto universal2
-        MACOSX_DEPLOYMENT_TARGET: "10.14"
+        MACOSX_DEPLOYMENT_TARGET: "10.15"
       with:
         package-dir: pyslang/
 
