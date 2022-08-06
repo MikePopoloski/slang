@@ -1,4 +1,4 @@
-name: pydist
+name: wheels
 
 on:
   workflow_dispatch:
@@ -64,7 +64,7 @@ jobs:
 
     - uses: actions/upload-artifact@v3
       with:
-        path: pyslang/wheelhouse/*.whl
+        path: wheelhouse/*.whl
 
 
   upload_test:
