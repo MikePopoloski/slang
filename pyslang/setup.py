@@ -7,10 +7,10 @@ setup(
     description="Python bindings for slang, a library for compiling SystemVerilog",
     author="Mike Popoloski",
     license="MIT",
-    packages=find_packages(where="source"),
+    packages=[""],
     package_dir={"": "source"},
     cmake_source_dir="../",
-    cmake_install_dir="source/pyslang",
+    cmake_install_dir="source",
     cmake_install_target="pyslang-install-pylib",
     cmake_args=[
         "-DSLANG_INCLUDE_TESTS=OFF",
