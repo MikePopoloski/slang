@@ -26,8 +26,8 @@ set(SLANG_SANITIZERS
     ""
     CACHE STRING "List of Clang sanitizers to include in build")
 
-set(SLANG_VERSION_MAJOR 2)
-set(SLANG_VERSION_MINOR 0)
+set(SLANG_VERSION_MAJOR ${CMAKE_PROJECT_VERSION_MAJOR})
+set(SLANG_VERSION_MINOR ${CMAKE_PROJECT_VERSION_MINOR})
 
 # Default build type if none is set
 if(NOT CMAKE_BUILD_TYPE)
