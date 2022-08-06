@@ -249,19 +249,7 @@ if(SLANG_INCLUDE_DOCS)
 endif()
 
 if(SLANG_INCLUDE_PYLIB)
-  if(SKBUILD)
-    # Building under scitkit-build requires that we do some contortions to get
-    # the correct Python libraries loaded.
-    execute_process(
-      COMMAND "${PYTHON_EXECUTABLE}" -c
-              "import pybind11; print(pybind11.get_cmake_dir())"
-      OUTPUT_VARIABLE _tmp_dir
-      OUTPUT_STRIP_TRAILING_WHITESPACE COMMAND_ECHO STDOUT)
-    list(APPEND CMAKE_PREFIX_PATH "${_tmp_dir}")
-    find_package(pybind11 CONFIG REQUIRED)
-  else()
-    add_subdirectory(external/pybind11)
-  endif()
+  add_subdirectory(external/pybind11)
   add_subdirectory(pyslang)
 endif()
 
