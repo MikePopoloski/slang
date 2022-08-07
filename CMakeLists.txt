@@ -234,6 +234,11 @@ if(CMAKE_GENERATOR MATCHES "Visual Studio")
 endif()
 
 if(NOT SLANG_USE_SYSTEM_LIBS)
+  if(SLANG_INCLUDE_INSTALL)
+    set(FMT_INSTALL ON)
+    set(FMT_CMAKE_DIR "${CMAKE_INSTALL_DATAROOTDIR}/cmake/fmt")
+    set(FMT_PKGCONFIG_DIR "${CMAKE_INSTALL_DATAROOTDIR}/pkgconfig")
+  endif()
   add_subdirectory(external/fmt)
 endif()
 
@@ -295,15 +300,5 @@ if(SLANG_INCLUDE_INSTALL)
                    ${CMAKE_CURRENT_BINARY_DIR}/sv-lang.pc @ONLY)
     install(FILES ${CMAKE_CURRENT_BINARY_DIR}/sv-lang.pc
             DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/pkgconfig)
-  endif()
-
-  if(NOT SLANG_USE_SYSTEM_LIBS)
-    # Add export for fmtlib
-    install(
-      TARGETS fmt
-      EXPORT ${SLANG_EXPORT_NAME}
-      LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-      ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
-      PUBLIC_HEADER DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/fmt")
   endif()
 endif()

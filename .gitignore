@@ -8,3 +8,7 @@ CMakeSettings.json
 _skbuild/
 *.egg-info/
 __pycache__/
+dist/
+wheelhouse/
+pyslang/LICENSE
+pyslang/MANIFEST.in

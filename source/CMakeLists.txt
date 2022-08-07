@@ -269,7 +269,5 @@ if(SLANG_INCLUDE_INSTALL)
   if(NOT SLANG_USE_SYSTEM_LIBS)
     install(FILES ../external/xxHash/xxhash.h
             DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/xxhash)
-    install(DIRECTORY ../external/fmt/include/fmt/
-            DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/fmt)
   endif()
 endif()
