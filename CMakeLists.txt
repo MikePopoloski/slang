@@ -40,7 +40,7 @@ set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake" ${CMAKE_MODULE_PATH})
 set(SCRIPTS_DIR ${PROJECT_SOURCE_DIR}/scripts)
 
 if(SLANG_INCLUDE_PYLIB)
-  find_package(Python REQUIRED COMPONENTS Interpreter Development)
+  find_package(Python REQUIRED COMPONENTS Interpreter Development.Module)
 else()
   find_package(Python REQUIRED COMPONENTS Interpreter)
 endif()
