@@ -21,6 +21,7 @@ jobs:
     steps:
     - uses: actions/checkout@v3
       with:
+        fetch-depth: 0
         submodules: true
 
     - name: Build SDist
@@ -49,6 +50,7 @@ jobs:
     steps:
     - uses: actions/checkout@v3
       with:
+        fetch-depth: 0
         submodules: true
 
     - uses: pypa/cibuildwheel@v2.8.1
