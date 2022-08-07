@@ -10,7 +10,7 @@ build-backend = "setuptools.build_meta"
 
 [tool.cibuildwheel]
 archs = ['auto64']
-skip = ['pp*']
+skip = ['pp*', 'cp36-*']
 build-verbosity = 1
 test-command = "pytest {project}/pyslang/tests"
 test-extras = ["test"]
