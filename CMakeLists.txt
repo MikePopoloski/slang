@@ -36,15 +36,26 @@ if(NOT CMAKE_BUILD_TYPE)
       CACHE STRING "Build type (Release/Debug/RelWithDebInfo/MinSizeRel)" FORCE)
 endif()
 
+include(GNUInstallDirs)
+include(CMakePackageConfigHelpers)
+
 set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake" ${CMAKE_MODULE_PATH})
 set(SCRIPTS_DIR ${PROJECT_SOURCE_DIR}/scripts)
 
+if(NOT SLANG_EXPORT_NAME)
+  set(SLANG_EXPORT_NAME "${PROJECT_NAME}Targets")
+endif()
+
+option(SLANG_INCLUDE_INSTALL "Include installation targets" ON)
+
+# Find Python
 if(SLANG_INCLUDE_PYLIB)
   find_package(Python REQUIRED COMPONENTS Interpreter Development.Module)
 else()
   find_package(Python REQUIRED COMPONENTS Interpreter)
 endif()
 
+# Set saner / consistent build directories on all platforms
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/bin)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELWITHDEBINFO
@@ -253,10 +264,46 @@ if(SLANG_INCLUDE_PYLIB)
   add_subdirectory(pyslang)
 endif()
 
-if(UNIX)
-  # Install pkg-config input file
-  configure_file(${CMAKE_CURRENT_SOURCE_DIR}/scripts/sv-lang.pc.in
-                 ${CMAKE_CURRENT_BINARY_DIR}/sv-lang.pc @ONLY)
-  install(FILES ${CMAKE_CURRENT_BINARY_DIR}/sv-lang.pc
-          DESTINATION ${CMAKE_INSTALL_PREFIX}/share/pkgconfig)
+if(SLANG_INCLUDE_INSTALL)
+  # Package export / installation rules
+  set(SLANG_CMAKECONFIG_INSTALL_DIR
+      "${CMAKE_INSTALL_DATAROOTDIR}/cmake/${PROJECT_NAME}"
+      CACHE STRING "install path for slangConfig.cmake")
+
+  install(
+    EXPORT ${SLANG_EXPORT_NAME}
+    NAMESPACE "slang::"
+    DESTINATION ${SLANG_CMAKECONFIG_INSTALL_DIR})
+
+  configure_package_config_file(
+    ${CMAKE_CURRENT_SOURCE_DIR}/cmake/slangConfig.cmake.in
+    "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}Config.cmake"
+    INSTALL_DESTINATION ${SLANG_CMAKECONFIG_INSTALL_DIR})
+
+  write_basic_package_version_file(
+    ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}ConfigVersion.cmake
+    VERSION ${PROJECT_VERSION}
+    COMPATIBILITY AnyNewerVersion)
+
+  install(FILES ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}Config.cmake
+                ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}ConfigVersion.cmake
+          DESTINATION ${SLANG_CMAKECONFIG_INSTALL_DIR})
+
+  if(UNIX)
+    # Install pkg-config input file
+    configure_file(${CMAKE_CURRENT_SOURCE_DIR}/scripts/sv-lang.pc.in
+                   ${CMAKE_CURRENT_BINARY_DIR}/sv-lang.pc @ONLY)
+    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/sv-lang.pc
+            DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/pkgconfig)
+  endif()
+
+  if(NOT SLANG_USE_SYSTEM_LIBS)
+    # Add export for fmtlib
+    install(
+      TARGETS fmt
+      EXPORT ${SLANG_EXPORT_NAME}
+      LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+      ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+      PUBLIC_HEADER DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/fmt")
+  endif()
 endif()

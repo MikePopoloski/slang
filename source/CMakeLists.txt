@@ -1,35 +1,38 @@
+# Helper function that defines library targets
 function(slang_define_lib libname)
   target_compile_options(${libname} PRIVATE ${SLANG_WARN_FLAGS})
-  target_include_directories(${libname} PUBLIC ../include/)
-  target_include_directories(${libname} PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
-  target_include_directories(${libname} SYSTEM PUBLIC ../external/)
-  install(
-    TARGETS ${libname}
-    LIBRARY DESTINATION lib
-    ARCHIVE DESTINATION lib)
+  target_include_directories(
+    ${libname}
+    PUBLIC "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../include/>"
+           "$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>")
+  target_include_directories(
+    ${libname} PUBLIC "$<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>"
+                      "$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>")
+  target_include_directories(
+    ${libname} SYSTEM
+    PUBLIC "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../external/>")
+
+  if(SLANG_INCLUDE_INSTALL)
+    install(
+      TARGETS ${libname}
+      EXPORT ${SLANG_EXPORT_NAME}
+      LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+      ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+      INCLUDES
+      DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+  endif()
 
   if(SLANG_INCLUDE_PYLIB)
     set_target_properties(${libname} PROPERTIES POSITION_INDEPENDENT_CODE ON)
   endif()
+
   if(SLANG_RUN_CLANG_TIDY)
     set_target_properties(${libname} PROPERTIES CXX_CLANG_TIDY clang-tidy)
   endif()
 endfunction()
 
-install(DIRECTORY ../include/ DESTINATION include)
-install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/slang/diagnostics/
-        DESTINATION include/slang/diagnostics)
-install(FILES ${CMAKE_CURRENT_BINARY_DIR}/slang/syntax/AllSyntax.h
-        DESTINATION include/slang/syntax/)
-install(FILES ${CMAKE_CURRENT_BINARY_DIR}/slang/syntax/SyntaxKind.h
-        DESTINATION include/slang/syntax/)
-install(FILES ${CMAKE_CURRENT_BINARY_DIR}/slang/parsing/TokenKind.h
-        DESTINATION include/slang/parsing/)
-install(DIRECTORY ../external/ieee1800/ DESTINATION include/ieee1800)
-install(FILES ../external/flat_hash_map.hpp ../external/span.hpp
-        DESTINATION include)
-
-# -------- Core library - depended on by everything else
+# -------- Core library - depended on by everything else Generate diagnostic
+# headers
 add_custom_command(
   COMMAND
     ${Python_EXECUTABLE} ${SCRIPTS_DIR}/diagnostic_gen.py --outDir
@@ -40,6 +43,7 @@ add_custom_command(
   DEPENDS ${SCRIPTS_DIR}/diagnostic_gen.py ${SCRIPTS_DIR}/diagnostics.txt
   COMMENT "Generating diagnostics")
 
+# Generate version header
 add_custom_target(
   gen_version ALL
   BYPRODUCTS ${CMAKE_CURRENT_BINARY_DIR}/Version.cpp
@@ -80,13 +84,6 @@ if(NOT SLANG_USE_SYSTEM_LIBS)
     set_source_files_properties(../external/xxHash/xxhash.c
                                 PROPERTIES COMPILE_FLAGS -w)
   endif()
-
-  if(SLANG_INCLUDE_PYLIB)
-    set_target_properties(fmt PROPERTIES POSITION_INDEPENDENT_CODE ON)
-  endif()
-
-  install(FILES ../external/xxHash/xxhash.h DESTINATION include/xxhash)
-  install(DIRECTORY ../external/fmt/include/fmt/ DESTINATION include/fmt)
 endif()
 
 add_library(slangcore ${slangcore_SOURCES})
@@ -110,14 +107,17 @@ if(SLANG_USE_SYSTEM_LIBS)
   set(slangcore_SYSTEM_LIBS ${slangcore_SYSTEM_LIBS} fmt::fmt xxHash::xxhash)
 else()
   target_link_libraries(slangcore PUBLIC fmt::fmt)
+  if(SLANG_INCLUDE_PYLIB)
+    set_target_properties(fmt PROPERTIES POSITION_INDEPENDENT_CODE ON)
+  endif()
 endif()
 
 target_link_libraries(slangcore PUBLIC ${slangcore_SYSTEM_LIBS})
 
 find_package(Threads)
-target_link_libraries(slangcore PUBLIC ${CMAKE_THREAD_LIBS_INIT})
+target_link_libraries(slangcore PRIVATE ${CMAKE_THREAD_LIBS_INIT})
 
-# -------- Parsing / syntax library
+# -------- Parsing / syntax library Generate syntax headers and sources
 add_custom_command(
   COMMAND ${Python_EXECUTABLE} ${SCRIPTS_DIR}/syntax_gen.py --dir
           ${CMAKE_CURRENT_BINARY_DIR}
@@ -248,4 +248,28 @@ if(SLANG_INCLUDE_LLVM)
   llvm_map_components_to_libnames(llvm_libs support core orcjit native
                                   nativecodegen)
   target_link_libraries(slangcodegen PRIVATE ${llvm_libs})
+endif()
+
+# Installation rules
+if(SLANG_INCLUDE_INSTALL)
+  install(DIRECTORY ../include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+  install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/slang/diagnostics/
+          DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/slang/diagnostics)
+  install(FILES ${CMAKE_CURRENT_BINARY_DIR}/slang/syntax/AllSyntax.h
+          DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/slang/syntax/)
+  install(FILES ${CMAKE_CURRENT_BINARY_DIR}/slang/syntax/SyntaxKind.h
+          DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/slang/syntax/)
+  install(FILES ${CMAKE_CURRENT_BINARY_DIR}/slang/parsing/TokenKind.h
+          DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/slang/parsing/)
+  install(DIRECTORY ../external/ieee1800/
+          DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/ieee1800)
+  install(FILES ../external/flat_hash_map.hpp ../external/span.hpp
+          DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+
+  if(NOT SLANG_USE_SYSTEM_LIBS)
+    install(FILES ../external/xxHash/xxhash.h
+            DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/xxhash)
+    install(DIRECTORY ../external/fmt/include/fmt/
+            DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/fmt)
+  endif()
 endif()
