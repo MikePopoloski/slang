@@ -85,6 +85,7 @@ jobs:
       with:
         password: ${{ secrets.TEST_PYPI_API_TOKEN }}
         repository_url: https://test.pypi.org/legacy/
+        verbose: true
 
 
   upload_official:
@@ -105,3 +106,4 @@ jobs:
     - uses: pypa/gh-action-pypi-publish@v1.5.1
       with:
         password: ${{ secrets.PYPI_API_TOKEN }}
+        verbose: true
