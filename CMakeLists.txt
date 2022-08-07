@@ -1,5 +1,16 @@
 # slang - cmake entry point
 cmake_minimum_required(VERSION 3.15)
+
+# Determine if slang is built as a subproject (using add_subdirectory) or if it
+# is the master project.
+if(NOT DEFINED SLANG_MASTER_PROJECT)
+  set(SLANG_MASTER_PROJECT OFF)
+  if(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
+    set(SLANG_MASTER_PROJECT ON)
+    message(STATUS "CMake version: ${CMAKE_VERSION}")
+  endif()
+endif()
+
 project(
   slang
   VERSION 2.0.0
@@ -10,11 +21,15 @@ project(
 option(SLANG_COVERAGE "Enable code coverage" OFF)
 option(CI_BUILD "Enable longer running tests for CI builds" OFF)
 option(FUZZ_TARGET "Enables changes to make binaries easier to fuzz test" OFF)
-option(SLANG_INCLUDE_TOOLS "Include tools targets in the build" ON)
-option(SLANG_INCLUDE_TESTS "Include test targets in the build" ON)
+option(SLANG_INCLUDE_TOOLS "Include tools targets in the build"
+       ${SLANG_MASTER_PROJECT})
+option(SLANG_INCLUDE_TESTS "Include test targets in the build"
+       ${SLANG_MASTER_PROJECT})
 option(SLANG_INCLUDE_DOCS "Include documentation targets in the build" OFF)
 option(SLANG_INCLUDE_LLVM "Include LLVM in the build for code generation" OFF)
 option(SLANG_INCLUDE_PYLIB "Include the pyslang python module in the build" OFF)
+option(SLANG_INCLUDE_INSTALL "Include installation targets"
+       ${SLANG_MASTER_PROJECT})
 option(STATIC_BUILD "Make the linked binaries static" OFF)
 option(BUILD_SHARED_LIBS "Generate a shared library instead of static" OFF)
 option(SLANG_RUN_CLANG_TIDY "Run clang-tidy during the build" OFF)
@@ -26,11 +41,11 @@ set(SLANG_SANITIZERS
     ""
     CACHE STRING "List of Clang sanitizers to include in build")
 
-set(SLANG_VERSION_MAJOR ${CMAKE_PROJECT_VERSION_MAJOR})
-set(SLANG_VERSION_MINOR ${CMAKE_PROJECT_VERSION_MINOR})
+set(SLANG_VERSION_MAJOR ${PROJECT_VERSION_MAJOR})
+set(SLANG_VERSION_MINOR ${PROJECT_VERSION_MINOR})
 
 # Default build type if none is set
-if(NOT CMAKE_BUILD_TYPE)
+if(SLANG_MASTER_PROJECT AND NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE
       "Release"
       CACHE STRING "Build type (Release/Debug/RelWithDebInfo/MinSizeRel)" FORCE)
@@ -45,8 +60,6 @@ set(SCRIPTS_DIR ${PROJECT_SOURCE_DIR}/scripts)
 if(NOT SLANG_EXPORT_NAME)
   set(SLANG_EXPORT_NAME "${PROJECT_NAME}Targets")
 endif()
-
-option(SLANG_INCLUDE_INSTALL "Include installation targets" ON)
 
 # Find Python
 if(SLANG_INCLUDE_PYLIB)
