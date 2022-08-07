@@ -1,10 +1,7 @@
 @PACKAGE_INIT@
 
-if(@SLANG_USE_SYSTEM_LIBS@)
-  include(CMakeFindDependencyMacro)
-  find_dependency(fmt)
-  find_dependency(xxHash)
-endif()
+include(CMakeFindDependencyMacro)
+find_dependency(fmt)
 
 include("${CMAKE_CURRENT_LIST_DIR}/@CMAKE_PROJECT_NAME@Targets.cmake")
 
