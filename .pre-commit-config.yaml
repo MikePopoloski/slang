@@ -41,7 +41,7 @@ repos:
 
 # flake8 for python linting
 - repo: https://github.com/pycqa/flake8
-  rev: 5.0.3
+  rev: 5.0.4
   hooks:
   - id: flake8
     additional_dependencies: [flake8-bugbear]
