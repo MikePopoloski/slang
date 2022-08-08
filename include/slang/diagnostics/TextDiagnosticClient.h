@@ -11,6 +11,12 @@
 
 #include "slang/diagnostics/DiagnosticClient.h"
 
+namespace fmt {
+inline namespace v9 {
+enum class terminal_color : uint8_t;
+}
+} // namespace fmt
+
 namespace slang {
 
 class FormatBuffer;
@@ -18,6 +24,14 @@ class Symbol;
 
 class TextDiagnosticClient : public DiagnosticClient {
 public:
+    fmt::terminal_color noteColor;
+    fmt::terminal_color warningColor;
+    fmt::terminal_color errorColor;
+    fmt::terminal_color fatalColor;
+    fmt::terminal_color highlightColor;
+    fmt::terminal_color filenameColor;
+    fmt::terminal_color locationColor;
+
     TextDiagnosticClient();
     ~TextDiagnosticClient();
 
@@ -39,6 +53,8 @@ public:
     static void setDefaultSymbolPathCB(TFunc&& func) {
         defaultSymbolPathCB = std::forward<TFunc>(func);
     }
+
+    fmt::terminal_color getSeverityColor(DiagnosticSeverity severity) const;
 
     void report(const ReportedDiagnostic& diagnostic) override;
 

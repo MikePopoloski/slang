@@ -21,6 +21,10 @@ public:
     SyntaxPrinter() = default;
     explicit SyntaxPrinter(const SourceManager& sourceManager);
 
+    /// Append raw text to the buffer.
+    /// @return a reference to this object, to allow chaining additional method calls.
+    SyntaxPrinter& append(string_view text);
+
     /// Print the provided @a trivia to the internal buffer.
     /// @return a reference to this object, to allow chaining additional method calls.
     SyntaxPrinter& print(Trivia trivia);
@@ -95,8 +99,6 @@ public:
     static std::string printFile(const SyntaxTree& tree);
 
 private:
-    void append(string_view text);
-
     std::string buffer;
     const SourceManager* sourceManager = nullptr;
     bool includeTrivia = true;

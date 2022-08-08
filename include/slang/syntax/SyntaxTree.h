@@ -68,6 +68,19 @@ public:
                                                 string_view name = "source"sv,
                                                 string_view path = "", const Bag& options = {});
 
+    /// Creates a syntax tree from a full compilation unit already in memory.
+    /// @a text is the actual source code text.
+    /// @a sourceManager is the manager that owns all of the loaded source code.
+    /// @a name is an optional name to give to the loaded source buffer.
+    /// @a path is an optional path to give to the loaded source buffer.
+    /// @a options is an optional bag of lexer, preprocessor, and parser options.
+    /// @return the created and parsed syntax tree.
+    static std::shared_ptr<SyntaxTree> fromFileInMemory(string_view text,
+                                                        SourceManager& sourceManager,
+                                                        string_view name = "source"sv,
+                                                        string_view path = "",
+                                                        const Bag& options = {});
+
     /// Creates a syntax tree from an already loaded source buffer.
     /// @a buffer is the loaded source buffer.
     /// @a sourceManager is the manager that owns the buffer.

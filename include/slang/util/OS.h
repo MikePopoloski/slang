@@ -17,6 +17,10 @@ namespace slang {
 /// A collection of various OS-specific utility functions.
 class OS {
 public:
+    /// Tries to enable color output support for stdout and stderr.
+    /// @return true if successful and false otherwise.
+    static bool tryEnableColors();
+
     /// @return true if the given file descriptor supports color text output.
     static bool fileSupportsColors(int fd);
 

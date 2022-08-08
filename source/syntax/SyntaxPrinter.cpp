@@ -115,10 +115,10 @@ std::string SyntaxPrinter::printFile(const SyntaxTree& tree) {
         .str();
 }
 
-void SyntaxPrinter::append(string_view text) {
+SyntaxPrinter& SyntaxPrinter::append(string_view text) {
     if (!squashNewlines) {
         buffer.append(text);
-        return;
+        return *this;
     }
 
     bool carriage = false;
@@ -152,6 +152,7 @@ void SyntaxPrinter::append(string_view text) {
     }
 
     buffer.append(text);
+    return *this;
 }
 
 } // namespace slang

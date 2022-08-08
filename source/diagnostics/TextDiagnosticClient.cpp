@@ -12,15 +12,27 @@
 
 namespace slang {
 
-static constexpr auto noteColor = fmt::terminal_color::bright_black;
-static constexpr auto warningColor = fmt::terminal_color::bright_yellow;
-static constexpr auto errorColor = fmt::terminal_color::bright_red;
-static constexpr auto fatalColor = fmt::terminal_color::bright_red;
-static constexpr auto highlightColor = fmt::terminal_color::bright_green;
-static constexpr auto filenameColor = fmt::terminal_color::cyan;
-static constexpr auto locationColor = fmt::terminal_color::bright_cyan;
+TextDiagnosticClient::SymbolPathCB TextDiagnosticClient::defaultSymbolPathCB;
 
-static fmt::terminal_color getSeverityColor(DiagnosticSeverity severity) {
+TextDiagnosticClient::TextDiagnosticClient() :
+    buffer(std::make_unique<FormatBuffer>()), symbolPathCB(defaultSymbolPathCB) {
+
+    noteColor = fmt::terminal_color::bright_black;
+    warningColor = fmt::terminal_color::bright_yellow;
+    errorColor = fmt::terminal_color::bright_red;
+    fatalColor = fmt::terminal_color::bright_red;
+    highlightColor = fmt::terminal_color::bright_green;
+    filenameColor = fmt::terminal_color::cyan;
+    locationColor = fmt::terminal_color::bright_cyan;
+}
+
+TextDiagnosticClient::~TextDiagnosticClient() = default;
+
+void TextDiagnosticClient::showColors(bool show) {
+    buffer->setColorsEnabled(show);
+}
+
+fmt::terminal_color TextDiagnosticClient::getSeverityColor(DiagnosticSeverity severity) const {
     switch (severity) {
         case DiagnosticSeverity::Note:
             return noteColor;
@@ -33,18 +45,6 @@ static fmt::terminal_color getSeverityColor(DiagnosticSeverity severity) {
         default:
             return fmt::terminal_color::black;
     }
-}
-
-TextDiagnosticClient::SymbolPathCB TextDiagnosticClient::defaultSymbolPathCB;
-
-TextDiagnosticClient::TextDiagnosticClient() :
-    buffer(std::make_unique<FormatBuffer>()), symbolPathCB(defaultSymbolPathCB) {
-}
-
-TextDiagnosticClient::~TextDiagnosticClient() = default;
-
-void TextDiagnosticClient::showColors(bool show) {
-    buffer->setColorsEnabled(show);
 }
 
 void TextDiagnosticClient::report(const ReportedDiagnostic& diag) {

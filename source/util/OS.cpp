@@ -7,6 +7,7 @@
 #include "slang/util/OS.h"
 
 #if defined(_MSC_VER)
+#    include <Windows.h>
 #    include <fcntl.h>
 #    include <io.h>
 #else
@@ -22,8 +23,35 @@ namespace slang {
 
 #if defined(_MSC_VER)
 
+bool OS::tryEnableColors() {
+    auto tryEnable = [](DWORD handle) {
+        HANDLE hOut = GetStdHandle(handle);
+        if (hOut != INVALID_HANDLE_VALUE) {
+            DWORD mode = 0;
+            if (GetConsoleMode(hOut, &mode)) {
+                mode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING;
+                if (SetConsoleMode(hOut, mode))
+                    return true;
+            }
+        }
+        return false;
+    };
+
+    bool result = tryEnable(STD_OUTPUT_HANDLE);
+    result |= tryEnable(STD_ERROR_HANDLE);
+    return result;
+}
+
 bool OS::fileSupportsColors(int fd) {
-    return fd == _fileno(stdout) || fd == _fileno(stderr);
+    auto handle = _get_osfhandle(fd);
+    if (handle < 0)
+        return false;
+
+    DWORD mode = 0;
+    if (!GetConsoleMode((HANDLE)handle, &mode))
+        return false;
+
+    return (mode & ENABLE_VIRTUAL_TERMINAL_PROCESSING) != 0;
 }
 
 bool OS::fileSupportsColors(FILE* file) {
@@ -31,6 +59,10 @@ bool OS::fileSupportsColors(FILE* file) {
 }
 
 #else
+
+bool OS::tryEnableColors() {
+    return true;
+}
 
 bool OS::fileSupportsColors(int fd) {
 #    ifdef __APPLE__

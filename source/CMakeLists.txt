@@ -190,6 +190,7 @@ add_library(
   compilation/Definition.cpp
   compilation/ScriptSession.cpp
   compilation/SemanticModel.cpp
+  driver/Driver.cpp
   mir/Instr.cpp
   mir/MIRBuilder.cpp
   mir/MIRPrinter.cpp
