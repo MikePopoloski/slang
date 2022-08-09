@@ -11,9 +11,14 @@ if(NOT DEFINED SLANG_MASTER_PROJECT)
   endif()
 endif()
 
+set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake" ${CMAKE_MODULE_PATH})
+include(gitversion)
+get_git_version(SLANG_VERSION_MAJOR SLANG_VERSION_MINOR SLANG_VERSION_PATCH
+                SLANG_VERSION_HASH SLANG_VERSION_STRING)
+
 project(
   slang
-  VERSION 2.0.0
+  VERSION ${SLANG_VERSION_STRING}
   LANGUAGES CXX
   HOMEPAGE_URL https://sv-lang.com/
   DESCRIPTION "SystemVerilog compiler and language services")
@@ -41,9 +46,6 @@ set(SLANG_SANITIZERS
     ""
     CACHE STRING "List of Clang sanitizers to include in build")
 
-set(SLANG_VERSION_MAJOR ${PROJECT_VERSION_MAJOR})
-set(SLANG_VERSION_MINOR ${PROJECT_VERSION_MINOR})
-
 # Default build type if none is set
 if(SLANG_MASTER_PROJECT AND NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE
@@ -54,7 +56,6 @@ endif()
 include(GNUInstallDirs)
 include(CMakePackageConfigHelpers)
 
-set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake" ${CMAKE_MODULE_PATH})
 set(SCRIPTS_DIR ${PROJECT_SOURCE_DIR}/scripts)
 
 if(NOT SLANG_EXPORT_NAME)

@@ -45,16 +45,8 @@ add_custom_command(
   COMMENT "Generating diagnostics")
 
 # Generate version header
-add_custom_target(
-  gen_version ALL
-  BYPRODUCTS ${CMAKE_CURRENT_BINARY_DIR}/Version.cpp
-  DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/util/Version.cpp.in
-  DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/../cmake/gitversion.cmake
-  COMMAND
-    ${CMAKE_COMMAND} -Dinfile="${CMAKE_CURRENT_SOURCE_DIR}/util/Version.cpp.in"
-    -Doutfile="${CMAKE_CURRENT_BINARY_DIR}/Version.cpp"
-    -Dlocal_dir="${CMAKE_CURRENT_SOURCE_DIR}" -P
-    "${CMAKE_CURRENT_SOURCE_DIR}/../cmake/gitversion.cmake")
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/util/Version.cpp.in
+               ${CMAKE_CURRENT_BINARY_DIR}/Version.cpp @ONLY)
 
 set(slangcore_SOURCES
     ${CMAKE_CURRENT_BINARY_DIR}/DiagCode.cpp
@@ -87,9 +79,7 @@ if(NOT SLANG_USE_SYSTEM_LIBS)
 endif()
 
 add_library(slangcore ${slangcore_SOURCES})
-
 slang_define_lib(slangcore)
-add_dependencies(slangcore gen_version)
 
 if(NOT CMAKE_CXX_COMPILER_ID MATCHES "MSVC" AND NOT APPLE)
   # Link against C++17 filesystem
