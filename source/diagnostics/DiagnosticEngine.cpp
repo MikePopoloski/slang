@@ -232,6 +232,9 @@ std::string DiagnosticEngine::formatMessage(const Diagnostic& diag) const {
         return std::string(getMessage(diag.code));
 
     // Let each formatter have a look at the diagnostic before we begin.
+    if (formatters.empty())
+        formatters = defaultFormatters;
+
     for (auto& [key, formatter] : formatters)
         formatter->startMessage(diag);
 

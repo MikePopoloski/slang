@@ -312,7 +312,6 @@ def createdocs(outDir, inpath, slangBin, diags, groups):
         with open(testPath, "w") as outf:
             outf.write(v[2])
 
-        encoding = "utf-16-le" if os.name == "nt" else "utf-8"
         args = [
             slangBin,
             "--quiet",
@@ -323,7 +322,7 @@ def createdocs(outDir, inpath, slangBin, diags, groups):
         ]
 
         result = subprocess.run(
-            args, encoding=encoding, stdout=subprocess.PIPE, stderr=subprocess.STDOUT
+            args, encoding="utf-8", stdout=subprocess.PIPE, stderr=subprocess.STDOUT
         )
         v[3] = result.stdout
         if k not in v[3]:

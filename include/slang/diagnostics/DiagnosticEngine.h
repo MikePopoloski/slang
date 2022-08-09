@@ -224,7 +224,7 @@ private:
     // A map from typeid to a formatter for that type. Used to register custom
     // formatters for subsystem-specific types.
     using FormatterMap = flat_hash_map<std::type_index, std::shared_ptr<DiagArgFormatter>>;
-    FormatterMap formatters;
+    mutable FormatterMap formatters;
 
     // A set of default formatters that will be assigned to each new DiagnosticEngine instance
     // that gets created. These can later be overridden on a per-instance basis.
