@@ -118,8 +118,8 @@ int driverMain(int argc, TArgs argv) try {
     }
 
     if (showVersion == true) {
-        OS::print("slang version {}.{}.{}\n", VersionInfo::getMajor(), VersionInfo::getMinor(),
-                  VersionInfo::getRevision());
+        OS::print("slang version {}.{}.{}+{}\n", VersionInfo::getMajor(), VersionInfo::getMinor(),
+                  VersionInfo::getPatch(), VersionInfo::getHash());
         return 0;
     }
 

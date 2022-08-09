@@ -12,15 +12,19 @@ using namespace std::literals;
 namespace slang {
 
 int VersionInfo::getMajor() {
-    return @_version_major@;
+    return @SLANG_VERSION_MAJOR@;
 }
 
 int VersionInfo::getMinor() {
-    return @_version_minor@;
+    return @SLANG_VERSION_MINOR@;
 }
 
-string_view VersionInfo::getRevision() {
-    return "@_build_version@"sv;
+int VersionInfo::getPatch() {
+    return @SLANG_VERSION_PATCH@;
+}
+
+string_view VersionInfo::getHash() {
+    return "@SLANG_VERSION_HASH@"sv;
 }
 
 }

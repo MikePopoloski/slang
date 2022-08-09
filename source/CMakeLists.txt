@@ -31,8 +31,9 @@ function(slang_define_lib libname)
   endif()
 endfunction()
 
-# -------- Core library - depended on by everything else Generate diagnostic
-# headers
+# -------- Core library - depended on by everything else
+
+# Generate diagnostic headers
 add_custom_command(
   COMMAND
     ${Python_EXECUTABLE} ${SCRIPTS_DIR}/diagnostic_gen.py --outDir
@@ -48,12 +49,11 @@ add_custom_target(
   gen_version ALL
   BYPRODUCTS ${CMAKE_CURRENT_BINARY_DIR}/Version.cpp
   DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/util/Version.cpp.in
+  DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/../cmake/gitversion.cmake
   COMMAND
     ${CMAKE_COMMAND} -Dinfile="${CMAKE_CURRENT_SOURCE_DIR}/util/Version.cpp.in"
     -Doutfile="${CMAKE_CURRENT_BINARY_DIR}/Version.cpp"
-    -Dlocal_dir="${CMAKE_CURRENT_SOURCE_DIR}"
-    -D_version_major=${SLANG_VERSION_MAJOR}
-    -D_version_minor=${SLANG_VERSION_MINOR} -P
+    -Dlocal_dir="${CMAKE_CURRENT_SOURCE_DIR}" -P
     "${CMAKE_CURRENT_SOURCE_DIR}/../cmake/gitversion.cmake")
 
 set(slangcore_SOURCES
@@ -115,7 +115,9 @@ endif()
 find_package(Threads)
 target_link_libraries(slangcore PRIVATE ${CMAKE_THREAD_LIBS_INIT})
 
-# -------- Parsing / syntax library Generate syntax headers and sources
+# -------- Parsing / syntax library
+
+# Generate syntax headers and sources
 add_custom_command(
   COMMAND ${Python_EXECUTABLE} ${SCRIPTS_DIR}/syntax_gen.py --dir
           ${CMAKE_CURRENT_BINARY_DIR}

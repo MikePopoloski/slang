@@ -19,8 +19,11 @@ public:
     /// Gets the minor version number of the library.
     static int getMinor();
 
-    /// Gets a string describing the revision information of the library.
-    static std::string_view getRevision();
+    /// Gets the patch version number of the library.
+    static int getPatch();
+
+    /// Gets a string describing the git hash of the library.
+    static std::string_view getHash();
 };
 
 } // namespace slang

@@ -137,7 +137,8 @@ void registerUtil(py::module_& m) {
     py::class_<VersionInfo>(m, "VersionInfo")
         .def_static("getMajor", &VersionInfo::getMajor)
         .def_static("getMinor", &VersionInfo::getMinor)
-        .def_static("getRevision", &VersionInfo::getRevision);
+        .def_static("getPatch", &VersionInfo::getPatch)
+        .def_static("getHash", &VersionInfo::getHash);
 
     EXPOSE_ENUM(m, DiagSubsystem);
     EXPOSE_ENUM(m, DiagnosticSeverity);
