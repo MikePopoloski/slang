@@ -279,7 +279,7 @@ endif()
 
 if(SLANG_INCLUDE_PYLIB)
   add_subdirectory(external/pybind11)
-  add_subdirectory(pyslang)
+  add_subdirectory(bindings)
 endif()
 
 if(SLANG_INCLUDE_INSTALL)
