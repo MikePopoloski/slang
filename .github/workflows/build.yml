@@ -12,6 +12,7 @@ jobs:
     steps:
     - uses: actions/checkout@v2
       with:
+        fetch-depth: 0
         submodules: recursive
     - uses: microsoft/setup-msbuild@v1.0.2
     - name: Configure
@@ -32,6 +33,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
         with:
+          fetch-depth: 0
           submodules: recursive
       - name: Configure
         shell: bash
@@ -61,6 +63,7 @@ jobs:
     steps:
     - uses: actions/checkout@v2
       with:
+        fetch-depth: 0
         submodules: recursive
     - name: Install dependencies
       run: |
