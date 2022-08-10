@@ -14,6 +14,8 @@
 #include "slang/util/Hash.h"
 #include "slang/util/String.h"
 
+static const double log2_10 = log2(10.0);
+
 namespace slang {
 
 const logic_t logic_t::x{ logic_t::X_VALUE };
@@ -647,14 +649,18 @@ std::string SVInt::toString() const {
 }
 
 std::string SVInt::toString(LiteralBase base) const {
+    // Append the base unless we're a signed 32-bit base 10 integer.
+    bool includeBase = base != LiteralBase::Decimal || bitWidth != 32 || !signFlag || unknownFlag;
+
     SmallVectorSized<char, 32> buffer;
-    writeTo(buffer, base);
+    writeTo(buffer, base, includeBase, DefaultStringAbbreviationThresholdBits);
     return std::string(buffer.begin(), buffer.end());
 }
 
-std::string SVInt::toString(LiteralBase base, bool includeBase) const {
+std::string SVInt::toString(LiteralBase base, bool includeBase,
+                            bitwidth_t abbreviateThresholdBits) const {
     SmallVectorSized<char, 32> buffer;
-    writeTo(buffer, base, includeBase);
+    writeTo(buffer, base, includeBase, abbreviateThresholdBits);
     return std::string(buffer.begin(), buffer.end());
 }
 
@@ -664,7 +670,8 @@ void SVInt::writeTo(SmallVector<char>& buffer, LiteralBase base) const {
     writeTo(buffer, base, includeBase);
 }
 
-void SVInt::writeTo(SmallVector<char>& buffer, LiteralBase base, bool includeBase) const {
+void SVInt::writeTo(SmallVector<char>& buffer, LiteralBase base, bool includeBase,
+                    bitwidth_t abbreviateThresholdBits) const {
     // negative sign if necessary
     SVInt tmp(*this);
     if (signFlag && !unknownFlag && isNegative()) {
@@ -672,7 +679,14 @@ void SVInt::writeTo(SmallVector<char>& buffer, LiteralBase base, bool includeBas
         buffer.append('-');
     }
 
-    // append the bit size, unless we're a signed 32-bit base 10 integer
+    // If the number is larger than the threshold to abbreviate,
+    // force it to print as a decimal.
+    bitwidth_t activeBits = tmp.getActiveBits();
+    if (activeBits > abbreviateThresholdBits) {
+        includeBase = true;
+        base = LiteralBase::Decimal;
+    }
+
     if (includeBase) {
         uintToStr(buffer, bitWidth);
         buffer.append('\'');
@@ -694,7 +708,7 @@ void SVInt::writeTo(SmallVector<char>& buffer, LiteralBase base, bool includeBas
         }
     }
 
-    // for bases 2, 8, and 16 we can just shift instead of dividing
+    uint32_t base10Exponent = 0;
     size_t startOffset = buffer.size();
     static const char Digits[] = "0123456789abcdef";
     if (base == LiteralBase::Decimal) {
@@ -739,6 +753,21 @@ void SVInt::writeTo(SmallVector<char>& buffer, LiteralBase base, bool includeBas
                 buffer.append('Z');
         }
         else {
+            // Limit the size of the output string based on the given threshold.
+            if (activeBits > abbreviateThresholdBits) {
+                base10Exponent =
+                    std::max(5u, (uint32_t)ceil((activeBits - abbreviateThresholdBits) / log2_10));
+                SVInt divisor(bitwidth_t(ceil(base10Exponent * log2_10)), 10, false);
+                divisor = divisor.pow(base10Exponent);
+
+                SVInt remainder;
+                SVInt quotient;
+                divide(tmp, tmp.getNumWords(), divisor, divisor.getNumWords(), &quotient,
+                       &remainder);
+                tmp = quotient;
+                activeBits = tmp.getActiveBits();
+            }
+
             // repeatedly divide by 10 to get each digit
             SVInt divisor(4, 10, false);
             while (tmp != 0) {
@@ -754,6 +783,7 @@ void SVInt::writeTo(SmallVector<char>& buffer, LiteralBase base, bool includeBas
         }
     }
     else {
+        // for bases 2, 8, and 16 we can just shift instead of dividing
         uint32_t shiftAmount = 0;
         uint32_t maskAmount = 0;
         switch (base) {
@@ -811,6 +841,10 @@ void SVInt::writeTo(SmallVector<char>& buffer, LiteralBase base, bool includeBas
     else {
         // reverse the digits
         std::reverse(buffer.begin() + startOffset, buffer.end());
+        if (base10Exponent > 0) {
+            buffer.appendRange("...e"sv);
+            uintToStr(buffer, base10Exponent);
+        }
     }
 }
 
@@ -1339,7 +1373,7 @@ logic_t SVInt::operator<(const SVInt& rhs) const {
     if (unknownFlag || rhs.hasUnknown())
         return logic_t::x;
 
-    bool bothSigned = signFlag & rhs.signFlag;
+    bool bothSigned = signFlag && rhs.signFlag;
     if (bitWidth != rhs.bitWidth) {
         if (bitWidth < rhs.bitWidth)
             return extend(rhs.bitWidth, bothSigned) < rhs;

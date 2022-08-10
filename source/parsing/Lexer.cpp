@@ -19,6 +19,8 @@
 
 static_assert(std::numeric_limits<double>::is_iec559, "SystemVerilog requires IEEE 754");
 
+static const double BitsPerDecimal = log2(10.0);
+
 namespace slang {
 
 using LF = LexerFacts;
@@ -906,8 +908,6 @@ Token Lexer::lexNumericLiteral() {
     // normal numeric literal
     SVInt intVal;
     if (!digits.empty()) {
-        static const double BitsPerDecimal = log2(10.0);
-
         double bitsDbl = ceil(BitsPerDecimal * double(digits.size()));
         bitwidth_t bits;
         if (bitsDbl <= double(SVInt::MAX_BITS))

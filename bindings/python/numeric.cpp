@@ -124,7 +124,8 @@ void registerNumeric(py::module_& m) {
         .def("setAllZ", &SVInt::setAllZ)
         .def("flattenUnknowns", &SVInt::flattenUnknowns)
         .def("shrinkToFit", &SVInt::shrinkToFit)
-        .def("toString", py::overload_cast<LiteralBase, bool>(&SVInt::toString, py::const_))
+        .def("toString",
+             py::overload_cast<LiteralBase, bool, bitwidth_t>(&SVInt::toString, py::const_))
         .def("shl", py::overload_cast<const SVInt&>(&SVInt::shl, py::const_))
         .def("ashr", py::overload_cast<const SVInt&>(&SVInt::ashr, py::const_))
         .def("lshr", py::overload_cast<const SVInt&>(&SVInt::lshr, py::const_))

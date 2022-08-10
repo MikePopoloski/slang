@@ -12,6 +12,8 @@
 #include "slang/diagnostics/SysFuncsDiags.h"
 #include "slang/util/String.h"
 
+static const double log2_10 = log2(10.0);
+
 namespace slang::SFormat {
 
 static optional<uint32_t> parseUInt(const char*& ptr, const char* end) {
@@ -181,7 +183,6 @@ void formatInt(std::string& result, const SVInt& value, LiteralBase base,
     if (options.width)
         width = *options.width;
     else {
-        static const double log2_10 = log2(10.0);
         bitwidth_t bw = value.getBitWidth();
         switch (base) {
             case LiteralBase::Binary:

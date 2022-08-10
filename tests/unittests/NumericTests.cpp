@@ -571,9 +571,8 @@ TEST_CASE("Slicing") {
              .shl(16777000) +
          "16777215'd1234"_si.shl(16777206))
             .slice(16777214, 16777000);
-    CHECK(v3.toString(LiteralBase::Decimal) ==
-          "215'd47111210086086240918128115148156713906029950526455712219410726911");
-    CHECK(v3.toString(LiteralBase::Hex) ==
+    CHECK(v3.toString(LiteralBase::Decimal) == "215'd47111210086086240918128115148156713906...e27");
+    CHECK(v3.toString(LiteralBase::Hex, true) ==
           "215'h728560c56c16d0b0be23da38038624767fffffffffffffffffffff");
 
     SVInt v4 =
@@ -581,7 +580,7 @@ TEST_CASE("Slicing") {
             .shl(16777000) +
         "16777215'd1234"_si.shl(16777206);
     v4.set(16777001, 16777000, "2'b01"_si);
-    CHECK(v4.slice(16777214, 16777000).toString(LiteralBase::Hex) ==
+    CHECK(v4.slice(16777214, 16777000).toString(LiteralBase::Hex, true) ==
           "215'h728560c56c16d0b0be23da38038624767ffffffffffffffffffffd");
 }
 

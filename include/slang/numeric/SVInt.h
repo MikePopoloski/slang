@@ -296,10 +296,12 @@ public:
 
     [[nodiscard]] size_t hash() const;
     void writeTo(SmallVector<char>& buffer, LiteralBase base) const;
-    void writeTo(SmallVector<char>& buffer, LiteralBase base, bool includeBase) const;
+    void writeTo(SmallVector<char>& buffer, LiteralBase base, bool includeBase,
+                 bitwidth_t abbreviateThresholdBits = MAX_BITS) const;
     std::string toString() const;
     std::string toString(LiteralBase base) const;
-    std::string toString(LiteralBase base, bool includeBase) const;
+    std::string toString(LiteralBase base, bool includeBase,
+                         bitwidth_t abbreviateThresholdBits = MAX_BITS) const;
 
     /// Power function. Note that the result will have the same bitwidth
     /// as this object. The value will be modulo the bit width.
@@ -545,6 +547,11 @@ public:
 
     static const SVInt Zero;
     static const SVInt One;
+
+    /// The default threshold, in bits, to use for abbreviating toString results
+    /// when calling one of the simple toString() methods that doesn't take a user
+    /// provided threshold.
+    static constexpr bitwidth_t DefaultStringAbbreviationThresholdBits = 128;
 
 private:
     // fast internal constructors to just set fields on new values
