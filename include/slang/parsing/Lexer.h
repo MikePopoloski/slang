@@ -102,6 +102,8 @@ private:
     // encounter a null to check whether we really are at the end of the buffer
     bool reallyAtEnd() { return sourceBuffer >= sourceEnd - 1; }
 
+    void handleNonPrintable(char c);
+
     uint32_t lexemeLength() { return (uint32_t)(sourceBuffer - marker); }
     string_view lexeme() { return string_view(marker, lexemeLength()); }
 

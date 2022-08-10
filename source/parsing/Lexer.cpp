@@ -569,16 +569,7 @@ Token Lexer::lexToken(KeywordVersion keywordVersion) {
             }
             return create(TokenKind::Tilde);
         default:
-            errorCount++;
-            if (isASCII(c))
-                addDiag(diag::NonPrintableChar, currentOffset() - 1);
-            else {
-                addDiag(diag::UTF8Char, currentOffset() - 1);
-
-                // skip over UTF-8 sequences
-                int skip = utf8SeqBytes(c);
-                advance(std::min((int)(sourceEnd - sourceBuffer - 1), skip));
-            }
+            handleNonPrintable(c);
             return create(TokenKind::Unknown);
     }
 }
@@ -642,13 +633,17 @@ Token Lexer::lexStringLiteral() {
                     }
                     break;
                 default: {
-                    // '\%' is not an actual escape code but other tools silently allow it
-                    // and major UVM headers use it, so we'll issue a (fairly quiet) warning about
-                    // it. Otherwise issue a louder warning (on by default).
-                    DiagCode code =
-                        c == '%' ? diag::NonstandardEscapeCode : diag::UnknownEscapeCode;
-                    addDiag(code, offset) << c;
-                    stringBuffer.append(c);
+                    if (isPrintable(c)) {
+                        // '\%' is not an actual escape code but other tools silently allow it
+                        // and major UVM headers use it, so we'll issue a (fairly quiet) warning
+                        // about it. Otherwise issue a louder warning (on by default).
+                        DiagCode code =
+                            c == '%' ? diag::NonstandardEscapeCode : diag::UnknownEscapeCode;
+                        addDiag(code, offset) << c;
+                    }
+
+                    // Back up so that we handle this character as a normal char in the outer loop.
+                    sourceBuffer--;
                     break;
                 }
             }
@@ -672,9 +667,13 @@ Token Lexer::lexStringLiteral() {
             addDiag(diag::EmbeddedNull, offset);
             advance();
         }
-        else {
+        else if (isPrintable(c)) {
             advance();
             stringBuffer.append(c);
+        }
+        else {
+            advance();
+            handleNonPrintable(c);
         }
     }
 
@@ -1070,15 +1069,24 @@ void Lexer::scanLineComment() {
         if (isNewline(c))
             break;
 
-        if (c == '\0') {
-            if (reallyAtEnd())
-                break;
+        if (!isPrintable(c)) {
+            if (c == '\0') {
+                if (reallyAtEnd())
+                    break;
 
-            // otherwise just error and ignore
-            errorCount++;
-            addDiag(diag::EmbeddedNull, currentOffset());
+                // otherwise just error and ignore
+                errorCount++;
+                addDiag(diag::EmbeddedNull, currentOffset());
+                advance();
+            }
+            else {
+                advance();
+                handleNonPrintable(c);
+            }
         }
-        advance();
+        else {
+            advance();
+        }
     }
     addTrivia(TriviaKind::LineComment);
 }
@@ -1086,18 +1094,7 @@ void Lexer::scanLineComment() {
 void Lexer::scanBlockComment() {
     while (true) {
         char c = peek();
-        if (c == '\0') {
-            if (reallyAtEnd()) {
-                addDiag(diag::UnterminatedBlockComment, currentOffset());
-                break;
-            }
-
-            // otherwise just error and ignore
-            errorCount++;
-            addDiag(diag::EmbeddedNull, currentOffset());
-            advance();
-        }
-        else if (c == '*' && peek(1) == '/') {
+        if (c == '*' && peek(1) == '/') {
             advance(2);
             break;
         }
@@ -1106,12 +1103,42 @@ void Lexer::scanBlockComment() {
             addDiag(diag::NestedBlockComment, currentOffset());
             advance(2);
         }
-        else {
+        else if (isPrintable(c)) {
             advance();
+        }
+        else {
+            if (c == '\0') {
+                if (reallyAtEnd()) {
+                    addDiag(diag::UnterminatedBlockComment, currentOffset());
+                    break;
+                }
+
+                // otherwise just error and ignore
+                errorCount++;
+                addDiag(diag::EmbeddedNull, currentOffset());
+                advance();
+            }
+            else {
+                advance();
+                handleNonPrintable(c);
+            }
         }
     }
 
     addTrivia(TriviaKind::BlockComment);
+}
+
+void Lexer::handleNonPrintable(char c) {
+    errorCount++;
+    if (isASCII(c))
+        addDiag(diag::NonPrintableChar, currentOffset() - 1);
+    else {
+        addDiag(diag::UTF8Char, currentOffset() - 1);
+
+        // skip over UTF-8 sequences
+        int skip = utf8SeqBytes(c);
+        advance(std::min((int)(sourceEnd - sourceBuffer - 1), skip));
+    }
 }
 
 template<typename... Args>

@@ -101,6 +101,19 @@ TEST_CASE("Line Comment (embedded null)") {
     CHECK(diagnostics.back().code == diag::EmbeddedNull);
 }
 
+TEST_CASE("Line Comment (non printable)") {
+    const char text[] = "// foo \U0001f34c bar";
+    auto str = std::string(text, text + sizeof(text) - 1);
+    Token token = lexToken(string_view(str));
+
+    CHECK(token.kind == TokenKind::EndOfFile);
+    CHECK(token.toString() == str);
+    CHECK(token.trivia().size() == 1);
+    CHECK(token.trivia()[0].kind == TriviaKind::LineComment);
+    REQUIRE(!diagnostics.empty());
+    CHECK(diagnostics.back().code == diag::UTF8Char);
+}
+
 TEST_CASE("Block Comment (one line)") {
     auto& text = "/* comment */";
     Token token = lexToken(text);
@@ -150,6 +163,19 @@ TEST_CASE("Block comment (embedded null)") {
     CHECK(token.trivia()[0].kind == TriviaKind::BlockComment);
     REQUIRE(!diagnostics.empty());
     CHECK(diagnostics.back().code == diag::EmbeddedNull);
+}
+
+TEST_CASE("Block comment (non printable)") {
+    const char text[] = "/* foo\U0001f34c */";
+    auto str = std::string(text, text + sizeof(text) - 1);
+    Token token = lexToken(string_view(str));
+
+    CHECK(token.kind == TokenKind::EndOfFile);
+    CHECK(token.toString() == str);
+    CHECK(token.trivia().size() == 1);
+    CHECK(token.trivia()[0].kind == TriviaKind::BlockComment);
+    REQUIRE(!diagnostics.empty());
+    CHECK(diagnostics.back().code == diag::UTF8Char);
 }
 
 TEST_CASE("Block Comment (nested)") {
@@ -403,6 +429,30 @@ TEST_CASE("String literal (nonstandard escape)") {
     CHECK(token.valueText() == "literal%");
     REQUIRE(!diagnostics.empty());
     CHECK(diagnostics.back().code == diag::NonstandardEscapeCode);
+}
+
+TEST_CASE("String literal (null escape)") {
+    auto& text = "\"literal\\\0\"";
+    auto str = std::string(text, text + sizeof(text) - 1);
+    Token token = lexToken(str);
+
+    CHECK(token.kind == TokenKind::StringLiteral);
+    CHECK(token.toString() == str);
+    CHECK(token.valueText() == "literal");
+    REQUIRE(!diagnostics.empty());
+    CHECK(diagnostics.back().code == diag::EmbeddedNull);
+}
+
+TEST_CASE("String literal (UTF8 escape)") {
+    auto& text = "\"literal\\\U0001f34c\"";
+    auto str = std::string(text, text + sizeof(text) - 1);
+    Token token = lexToken(str);
+
+    CHECK(token.kind == TokenKind::StringLiteral);
+    CHECK(token.toString() == str);
+    CHECK(token.valueText() == "literal");
+    REQUIRE(!diagnostics.empty());
+    CHECK(diagnostics.back().code == diag::UTF8Char);
 }
 
 TEST_CASE("Integer literal") {

@@ -15,9 +15,10 @@ inline bool isASCII(char c) {
     return static_cast<unsigned char>(c) < 128;
 }
 
-/// Returns whether the given character is considered "printable".
+/// Returns whether the given character is considered "printable",
+/// which notably includes whitespace (while the c function `isprint` does not).
 inline bool isPrintable(char c) {
-    return c >= 33 && c <= 126;
+    return (c >= 32 && c <= 126) || (c >= 9 && c <= 13);
 }
 
 /// Returns whether the given character is considered whitespace.
