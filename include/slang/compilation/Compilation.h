@@ -91,6 +91,9 @@ struct CompilationOptions {
     /// giving up due to potentially cyclic dependencies in parameter values.
     uint32_t maxDefParamSteps = 128;
 
+    /// The maximum number of instances allowed in a single instance array.
+    uint32_t maxInstanceArray = 65535;
+
     /// The maximum number of errors that can be found before we short circuit
     /// the tree walking process.
     uint32_t errorLimit = 64;

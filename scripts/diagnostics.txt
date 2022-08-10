@@ -406,6 +406,7 @@ error IfaceMethodNotExtern "cannot provide an implementation for an interface me
 error DupInterfaceExternMethod "more than one implementation provided for extern {} {}.{}"
 error ExternFuncForkJoin "only extern tasks can be declared 'forkjoin'"
 error InstanceMissingParens "{} instantiation is missing port list parentheses"
+error MaxInstanceArrayExceeded "{} array exceeded maximum size of {}"
 error FatalTask "$fatal encountered{}"
 error ErrorTask "$error encountered{}"
 error StaticAssert "static assertion failed{}"

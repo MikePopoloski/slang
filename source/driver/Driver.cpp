@@ -74,6 +74,8 @@ void Driver::addStandardArgs() {
                 "Maximum number of frames to show when printing a constant evaluation "
                 "backtrace; the rest will be abbreviated",
                 "<limit>");
+    cmdLine.add("--max-instance-array", options.maxInstanceArray,
+                "Maximum number of instances allowed in a single instance array", "<limit>");
     cmdLine.add("--compat", options.compat,
                 "Attempt to increase compatibility with the specified tool", "vcs");
     cmdLine.add("-T,--timing", options.minTypMax,
@@ -567,6 +569,8 @@ Bag Driver::createOptionBag() const {
         coptions.maxConstexprSteps = *options.maxConstexprSteps;
     if (options.maxConstexprBacktrace.has_value())
         coptions.maxConstexprBacktrace = *options.maxConstexprBacktrace;
+    if (options.maxInstanceArray.has_value())
+        coptions.maxInstanceArray = *options.maxInstanceArray;
     if (options.errorLimit.has_value())
         coptions.errorLimit = *options.errorLimit * 2;
     if (options.onlyLint == true) {

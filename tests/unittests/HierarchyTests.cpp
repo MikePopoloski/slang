@@ -1713,3 +1713,23 @@ module m(I i);
            ^
 )");
 }
+
+TEST_CASE("Instance array size limits") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+endmodule
+
+module n;
+    m m1[999999999] ();
+    and a1[999999999] ();
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::MaxInstanceArrayExceeded);
+    CHECK(diags[0].code == diag::MaxInstanceArrayExceeded);
+}

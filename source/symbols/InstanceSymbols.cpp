@@ -92,21 +92,31 @@ private:
         if (it == end)
             return createInstance(syntax);
 
-        // Evaluate the dimensions of the array. If this fails for some reason,
-        // make up an empty array so that we don't get further errors when
-        // things try to reference this symbol.
         ASSERT(syntax.decl);
         auto nameToken = syntax.decl->name;
-        auto dim = context.evalDimension(**it, /* requireRange */ true, /* isPacked */ false);
-        if (!dim.isRange()) {
+        auto createEmpty = [&]() {
             return compilation.emplace<InstanceArraySymbol>(
                 compilation, nameToken.valueText(), nameToken.location(),
                 span<const Symbol* const>{}, ConstantRange());
-        }
+        };
 
+        auto& dimSyntax = **it;
         ++it;
 
+        // Evaluate the dimensions of the array. If this fails for some reason,
+        // make up an empty array so that we don't get further errors when
+        // things try to reference this symbol.
+        auto dim = context.evalDimension(dimSyntax, /* requireRange */ true, /* isPacked */ false);
+        if (!dim.isRange())
+            return createEmpty();
+
         ConstantRange range = dim.range;
+        if (range.width() > compilation.getOptions().maxInstanceArray) {
+            auto& diag = context.addDiag(diag::MaxInstanceArrayExceeded, dimSyntax.sourceRange());
+            diag << definition.getKindString() << compilation.getOptions().maxInstanceArray;
+            return createEmpty();
+        }
+
         SmallVectorSized<const Symbol*, 8> elements;
         for (int32_t i = range.lower(); i <= range.upper(); i++) {
             path.append(i);
@@ -925,21 +935,31 @@ Symbol* recursePrimArray(Compilation& compilation, const PrimitiveSymbol& primit
     if (it == end)
         return createPrimInst(compilation, *context.scope, primitive, instance, attributes, path);
 
-    // Evaluate the dimensions of the array. If this fails for some reason,
-    // make up an empty array so that we don't get further errors when
-    // things try to reference this symbol.
     ASSERT(instance.decl);
     auto nameToken = instance.decl->name;
-    auto dim = context.evalDimension(**it, /* requireRange */ true, /* isPacked */ false);
-    if (!dim.isRange()) {
+    auto createEmpty = [&]() {
         return compilation.emplace<InstanceArraySymbol>(
             compilation, nameToken.valueText(), nameToken.location(), span<const Symbol* const>{},
             ConstantRange());
-    }
+    };
 
+    auto& dimSyntax = **it;
     ++it;
 
+    // Evaluate the dimensions of the array. If this fails for some reason,
+    // make up an empty array so that we don't get further errors when
+    // things try to reference this symbol.
+    auto dim = context.evalDimension(dimSyntax, /* requireRange */ true, /* isPacked */ false);
+    if (!dim.isRange())
+        return createEmpty();
+
     ConstantRange range = dim.range;
+    if (range.width() > compilation.getOptions().maxInstanceArray) {
+        auto& diag = context.addDiag(diag::MaxInstanceArrayExceeded, dimSyntax.sourceRange());
+        diag << "primitive"sv << compilation.getOptions().maxInstanceArray;
+        return createEmpty();
+    }
+
     SmallVectorSized<const Symbol*, 8> elements;
     for (int32_t i = range.lower(); i <= range.upper(); i++) {
         path.append(i);

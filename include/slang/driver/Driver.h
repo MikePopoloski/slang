@@ -109,6 +109,9 @@ public:
         /// before abbreviating them.
         optional<uint32_t> maxConstexprBacktrace;
 
+        /// The maximum number of instances allowed in a single instance array.
+        optional<uint32_t> maxInstanceArray;
+
         /// A string indicating a member of @a CompatMode to use for tailoring
         /// other compilation options.
         optional<std::string> compat;
