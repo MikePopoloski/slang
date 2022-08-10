@@ -805,3 +805,17 @@ endmodule
     CHECK(result == text);
     CHECK_DIAGNOSTICS_EMPTY;
 }
+
+TEST_CASE("Invalid integer literal base regression") {
+    auto& text = R"(
+module m;
+    int i = #'d3;
+endmodule
+)";
+    auto& syntax = parseCompilationUnit(text);
+    auto result = SyntaxPrinter().setSquashNewlines(false).print(syntax).str();
+    CHECK(result == text);
+
+    REQUIRE(diagnostics.size() == 1);
+    CHECK(diagnostics[0].code == diag::ExpectedIntegerLiteral);
+}

@@ -35,7 +35,7 @@ public:
 
     template<typename TStream>
     IntResult parseSimpleInt(TStream& stream) {
-        auto token = stream.consume();
+        auto token = stream.expect(TokenKind::IntegerLiteral);
         if (token.intValue() > INT32_MAX)
             reportIntOverflow(token);
         return IntResult::simple(token);
