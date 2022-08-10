@@ -147,6 +147,11 @@ void registerSyntax(py::module_& m) {
             "fromFile",
             py::overload_cast<string_view, SourceManager&, const Bag&>(&SyntaxTree::fromFile),
             "path"_a, "sourceManager"_a, "options"_a = Bag())
+        .def_static("fromFiles", py::overload_cast<span<const string_view>>(&SyntaxTree::fromFiles))
+        .def_static("fromFiles",
+                    py::overload_cast<span<const string_view>, SourceManager&, const Bag&>(
+                        &SyntaxTree::fromFiles),
+                    "paths"_a, "sourceManager"_a, "options"_a = Bag())
         .def_static("fromText",
                     py::overload_cast<string_view, string_view, string_view>(&SyntaxTree::fromText),
                     "text"_a, "name"_a = "source", "path"_a = "")
@@ -155,6 +160,12 @@ void registerSyntax(py::module_& m) {
             py::overload_cast<string_view, SourceManager&, string_view, string_view, const Bag&>(
                 &SyntaxTree::fromText),
             "text"_a, "sourceManager"_a, "name"_a = "source", "path"_a = "", "options"_a = Bag())
+        .def_static("fromFileInMemory", &SyntaxTree::fromFileInMemory, "text"_a, "sourceManager"_a,
+                    "name"_a = "source", "path"_a = "", "options"_a = Bag())
+        .def_static("fromBuffer", &SyntaxTree::fromBuffer, "buffer"_a, "sourceManager"_a,
+                    "options"_a = Bag())
+        .def_static("fromBuffers", &SyntaxTree::fromBuffers, "buffers"_a, "sourceManager"_a,
+                    "options"_a = Bag())
         .def_property_readonly("diagnostics", &SyntaxTree::diagnostics)
         .def_property_readonly("sourceManager", py::overload_cast<>(&SyntaxTree::sourceManager))
         .def_property_readonly("root", py::overload_cast<>(&SyntaxTree::root))

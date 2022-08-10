@@ -28,17 +28,36 @@ std::shared_ptr<SyntaxTree> SyntaxTree::fromFile(string_view path) {
     return fromFile(path, getDefaultSourceManager());
 }
 
-std::shared_ptr<SyntaxTree> SyntaxTree::fromText(string_view text, string_view name,
-                                                 string_view path) {
-    return fromText(text, getDefaultSourceManager(), name, path);
-}
-
 std::shared_ptr<SyntaxTree> SyntaxTree::fromFile(string_view path, SourceManager& sourceManager,
                                                  const Bag& options) {
     SourceBuffer buffer = sourceManager.readSource(path);
     if (!buffer)
         return nullptr;
     return create(sourceManager, span(&buffer, 1), options, false);
+}
+
+std::shared_ptr<SyntaxTree> SyntaxTree::fromFiles(span<const string_view> paths) {
+    return fromFiles(paths, getDefaultSourceManager());
+}
+
+std::shared_ptr<SyntaxTree> SyntaxTree::fromFiles(span<const string_view> paths,
+                                                  SourceManager& sourceManager,
+                                                  const Bag& options) {
+    SmallVectorSized<SourceBuffer, 4> buffers(paths.size());
+    for (auto path : paths) {
+        SourceBuffer buffer = sourceManager.readSource(path);
+        if (!buffer)
+            return nullptr;
+
+        buffers.append(buffer);
+    }
+
+    return create(sourceManager, buffers, options, false);
+}
+
+std::shared_ptr<SyntaxTree> SyntaxTree::fromText(string_view text, string_view name,
+                                                 string_view path) {
+    return fromText(text, getDefaultSourceManager(), name, path);
 }
 
 std::shared_ptr<SyntaxTree> SyntaxTree::fromText(string_view text, SourceManager& sourceManager,
