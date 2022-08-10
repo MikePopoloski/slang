@@ -192,8 +192,8 @@ public:
     const Definition* getDefinition(const ModuleDeclarationSyntax& syntax) const;
 
     /// Creates a new definition in the given scope based on the given syntax.
-    const Definition& createDefinition(const Scope& scope, LookupLocation location,
-                                       const ModuleDeclarationSyntax& syntax);
+    void createDefinition(const Scope& scope, LookupLocation location,
+                          const ModuleDeclarationSyntax& syntax);
 
     /// Gets the package with the give name, or null if there is no such package.
     const PackageSymbol* getPackage(string_view name) const;

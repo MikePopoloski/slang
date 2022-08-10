@@ -1218,9 +1218,10 @@ void Scope::handleNestedDefinition(const ModuleDeclarationSyntax& syntax) const 
         }
     }
 
+    // This can return nullptr if we had more than one nested declaration
+    // with the same name (so only one got stored in the compilation's map).
     auto def = compilation.getDefinition(syntax);
-    ASSERT(def);
-    if (def->isInstantiated())
+    if (!def || def->isInstantiated())
         return;
 
     auto& inst = InstanceSymbol::createDefault(compilation, *def, nullptr);

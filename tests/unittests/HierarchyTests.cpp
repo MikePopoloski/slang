@@ -1663,12 +1663,17 @@ module top(input d, ck, pr, clr, output q, nq);
 
     wire i = ff2.q2;
     wire [31:0] j = i3.b;
+
+    module ff1; endmodule
 endmodule
 )");
 
     Compilation compilation;
     compilation.addSyntaxTree(tree);
-    NO_COMPILATION_ERRORS;
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::Redefinition);
 
     auto& top = compilation.getRoot().lookupName<InstanceSymbol>("top").body;
     auto instances = top.membersOfType<InstanceSymbol>();

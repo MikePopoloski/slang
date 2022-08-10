@@ -446,8 +446,8 @@ static void reportRedefinition(const Scope& scope, const T& newSym, const U& old
     diag.addNote(diag::NotePreviousDefinition, oldSym.location);
 }
 
-const Definition& Compilation::createDefinition(const Scope& scope, LookupLocation location,
-                                                const ModuleDeclarationSyntax& syntax) {
+void Compilation::createDefinition(const Scope& scope, LookupLocation location,
+                                   const ModuleDeclarationSyntax& syntax) {
     auto& metadata = definitionMetadata[&syntax];
     auto def =
         std::make_unique<Definition>(scope, location, syntax, *metadata.defaultNetType,
@@ -456,25 +456,28 @@ const Definition& Compilation::createDefinition(const Scope& scope, LookupLocati
     // Record that the given scope contains this definition. If the scope is a compilation unit, add
     // it to the root scope instead so that lookups from other compilation units will find it.
     auto targetScope = scope.asSymbol().kind == SymbolKind::CompilationUnit ? root.get() : &scope;
-    auto it = definitionMap.emplace(std::tuple(def->name, targetScope), std::move(def)).first;
+    std::tuple key(def->name, targetScope);
+    if (auto it = definitionMap.find(key); it != definitionMap.end()) {
+        reportRedefinition(scope, *def, *it->second);
+        return;
+    }
+
+    auto [it, inserted] = definitionMap.emplace(key, std::move(def));
+    ASSERT(inserted);
 
     auto result = it->second.get();
     if (targetScope == root.get()) {
         auto& topDef = topDefinitions[result->name].first;
-        if (topDef)
-            reportRedefinition(scope, *result, *topDef);
-        else {
-            topDef = result;
-            if (auto primIt = udpMap.find(result->name); primIt != udpMap.end())
-                reportRedefinition(scope, *result, *primIt->second);
-        }
+        ASSERT(!topDef);
+
+        topDef = result;
+        if (auto primIt = udpMap.find(result->name); primIt != udpMap.end())
+            reportRedefinition(scope, *result, *primIt->second);
     }
     else {
         // Record the fact that we have nested modules with this given name.
         topDefinitions[result->name].second = true;
     }
-
-    return *result;
 }
 
 const PackageSymbol* Compilation::getPackage(string_view lookupName) const {
