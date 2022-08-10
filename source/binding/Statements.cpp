@@ -260,6 +260,9 @@ const Statement& Statement::bind(const StatementSyntax& syntax, const BindContex
             result = &RandSequenceStatement::fromSyntax(
                 comp, syntax.as<RandSequenceStatementSyntax>(), context);
             break;
+        case SyntaxKind::CheckerInstanceStatement:
+            context.addDiag(diag::NotYetSupported, syntax.sourceRange());
+            return badStmt(comp, nullptr);
         default:
             THROW_UNREACHABLE;
     }
@@ -401,6 +404,7 @@ static void findBlocks(const Scope& scope, const StatementSyntax& syntax,
         case SyntaxKind::ExpressionStatement:
         case SyntaxKind::WaitForkStatement:
         case SyntaxKind::VoidCastedCallStatement:
+        case SyntaxKind::CheckerInstanceStatement:
             // These statements don't have child statements within them.
             return;
 
