@@ -494,7 +494,7 @@ const PackageSymbol& Compilation::createPackage(const Scope& scope,
         PackageSymbol::fromSyntax(scope, syntax, *metadata.defaultNetType, metadata.timeScale);
 
     auto [it, inserted] = packageMap.emplace(package.name, &package);
-    if (!inserted) {
+    if (!inserted && !package.name.empty()) {
         auto& diag = scope.addDiag(diag::Redefinition, package.location);
         diag << package.name;
         diag.addNote(diag::NotePreviousDefinition, it->second->location);
@@ -641,7 +641,7 @@ void Compilation::addOutOfBlockDecl(const Scope& scope, const ScopedNameSyntax& 
     auto [it, inserted] = outOfBlockDecls.emplace(std::make_tuple(className, declName, &scope),
                                                   std::make_tuple(&syntax, &name, index, false));
 
-    if (!inserted) {
+    if (!inserted && !className.empty() && !declName.empty()) {
         std::string combined = fmt::format("{}::{}", className, declName);
         auto range = std::get<1>(it->second)->sourceRange();
 
