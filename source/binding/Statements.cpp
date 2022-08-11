@@ -288,6 +288,7 @@ static BlockStatement* createBlockStatement(
 const Statement& Statement::bindBlock(const StatementBlockSymbol& block, const SyntaxNode& syntax,
                                       const BindContext& context, StatementContext& stmtCtx) {
     BlockStatement* result;
+    bool anyBad = false;
     auto& comp = context.getCompilation();
 
     if (syntax.kind == SyntaxKind::SequentialBlockStatement ||
@@ -308,8 +309,10 @@ const Statement& Statement::bindBlock(const StatementBlockSymbol& block, const S
 
         for (auto item : syntax.as<RsCodeBlockSyntax>().items) {
             if (StatementSyntax::isKind(item->kind)) {
-                buffer.append(&bind(item->as<StatementSyntax>(), context, stmtCtx,
-                                    /* inList */ true));
+                auto& stmt = bind(item->as<StatementSyntax>(), context, stmtCtx,
+                                  /* inList */ true);
+                buffer.append(&stmt);
+                anyBad |= stmt.bad();
             }
         }
 
@@ -320,8 +323,10 @@ const Statement& Statement::bindBlock(const StatementBlockSymbol& block, const S
         bindScopeInitializers(context, buffer);
 
         auto& ss = syntax.as<StatementSyntax>();
-        buffer.append(&bind(ss, context, stmtCtx, /* inList */ false,
-                            /* labelHandled */ true));
+        auto& stmt = bind(ss, context, stmtCtx, /* inList */ false,
+                          /* labelHandled */ true);
+        buffer.append(&stmt);
+        anyBad |= stmt.bad();
 
         result = createBlockStatement(comp, buffer, syntax);
         result->syntax = &ss;
@@ -329,6 +334,9 @@ const Statement& Statement::bindBlock(const StatementBlockSymbol& block, const S
     }
 
     result->blockSymbol = &block;
+    if (anyBad)
+        return badStmt(comp, result);
+
     return *result;
 }
 
@@ -624,7 +632,9 @@ void StatementList::serializeTo(ASTSerializer& serializer) const {
 }
 
 Statement& StatementList::makeEmpty(Compilation& compilation) {
-    return *compilation.emplace<StatementList>(span<const Statement* const>(), SourceRange());
+    return *compilation.emplace<StatementList>(
+        span<const Statement* const>(),
+        SourceRange(SourceLocation::NoLocation, SourceLocation::NoLocation));
 }
 
 Statement& BlockStatement::fromSyntax(Compilation& comp, const BlockStatementSyntax& syntax,
@@ -682,8 +692,9 @@ Statement& BlockStatement::fromSyntax(Compilation& comp, const BlockStatementSyn
 }
 
 Statement& BlockStatement::makeEmpty(Compilation& compilation) {
-    return *compilation.emplace<BlockStatement>(StatementList::makeEmpty(compilation),
-                                                StatementBlockKind::Sequential, SourceRange());
+    return *compilation.emplace<BlockStatement>(
+        StatementList::makeEmpty(compilation), StatementBlockKind::Sequential,
+        SourceRange(SourceLocation::NoLocation, SourceLocation::NoLocation));
 }
 
 void BlockStatement::serializeTo(ASTSerializer& serializer) const {
