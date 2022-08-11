@@ -1899,3 +1899,15 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Single preproc token diag location regress") {
+    auto tree = SyntaxTree::fromFileInMemory("`SV_COV_OK"sv, SyntaxTree::getDefaultSourceManager());
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    report(diags);
+
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::ExpectedMember);
+}
