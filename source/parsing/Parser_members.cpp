@@ -205,8 +205,7 @@ MemberSyntax* Parser::parseMember(SyntaxKind parentKind, bool& anyLocalModules) 
         }
         case TokenKind::AssertKeyword:
         case TokenKind::AssumeKeyword:
-        case TokenKind::CoverKeyword:
-        case TokenKind::RestrictKeyword: {
+        case TokenKind::CoverKeyword: {
             auto& statement = parseAssertionStatement(nullptr, {});
             switch (statement.kind) {
                 case SyntaxKind::ImmediateAssertStatement:
@@ -218,6 +217,11 @@ MemberSyntax* Parser::parseMember(SyntaxKind parentKind, bool& anyLocalModules) 
                     return &factory.concurrentAssertionMember(
                         attributes, statement.as<ConcurrentAssertionStatementSyntax>());
             }
+        }
+        case TokenKind::RestrictKeyword: {
+            auto& statement = parseConcurrentAssertion(nullptr, {});
+            return &factory.concurrentAssertionMember(
+                attributes, statement.as<ConcurrentAssertionStatementSyntax>());
         }
         case TokenKind::AssignKeyword:
             return &parseContinuousAssign(attributes);

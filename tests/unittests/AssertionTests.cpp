@@ -66,9 +66,9 @@ module m;
     assert property (strong(a ##1 b) and weak(a intersect b));
     assert property (not a ##1 b);
     assert property (accept_on(b) sync_reject_on(c) sync_accept_on(d) reject_on(e) b ##1 c);
-    assert property (if (b) a ##1 c else d ##1 e);
-    assert property (case (b) 1, 2, 3: 1 ##1 b; 4: a and b; default: 1 |-> b; endcase);
-    assert property (@(posedge b) ((b) and b) ##0 b);
+    assume property (if (b) a ##1 c else d ##1 e);
+    cover property (case (b) 1, 2, 3: 1 ##1 b; 4: a and b; default: 1 |-> b; endcase);
+    restrict property (@(posedge b) ((b) and b) ##0 b);
 endmodule
 )");
 
