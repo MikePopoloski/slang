@@ -166,17 +166,17 @@ const ParameterSymbolBase& ParameterBuilder::createParam(const Definition::Param
         }
         else if (!decl.hasSyntax) {
             if (decl.givenType)
-                param->targetType.setType(*decl.givenType);
+                tt.setType(*decl.givenType);
             else
-                param->targetType.setType(comp.getErrorType());
+                tt.setType(comp.getErrorType());
         }
         else {
             ASSERT(decl.typeDecl);
             param->setSyntax(*decl.typeDecl);
             if (decl.typeDecl->assignment)
-                param->targetType.setTypeSyntax(*decl.typeDecl->assignment->type);
+                tt.setTypeSyntax(*decl.typeDecl->assignment->type);
             else
-                param->targetType.setType(comp.getErrorType());
+                tt.setType(comp.getErrorType());
         }
 
         // Add to scope *after* setting the type on the member,

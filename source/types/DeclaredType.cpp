@@ -411,8 +411,11 @@ void DeclaredType::resolveAt(const BindContext& context) const {
 }
 
 void DeclaredType::forceResolveAt(const BindContext& context) const {
-    resolveType(context, context);
-    resolveAt(context);
+    if (!type)
+        resolveType(context, context);
+
+    if (!initializer)
+        resolveAt(context);
 }
 
 const Expression* DeclaredType::getInitializer() const {
