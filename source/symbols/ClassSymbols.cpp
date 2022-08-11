@@ -972,14 +972,14 @@ ConstraintBlockSymbol& ConstraintBlockSymbol::fromSyntax(const Scope& scope,
         }
     }
 
-    if (result->isPure && scope.asSymbol().kind == SymbolKind::ClassType) {
+    if (scope.asSymbol().kind == SymbolKind::ClassType) {
         auto& classType = scope.asSymbol().as<ClassType>();
-        if (!classType.isAbstract)
+        if (result->isPure && !classType.isAbstract)
             scope.addDiag(diag::PureConstraintInAbstract, nameToken.range());
-    }
 
-    if (!result->isStatic)
-        result->addThisVar(scope.asSymbol().as<ClassType>());
+        if (!result->isStatic)
+            result->addThisVar(classType);
+    }
 
     return *result;
 }
