@@ -34,6 +34,11 @@ string_view SystemSubroutine::kindStr() const {
 
 bool SystemSubroutine::checkArgCount(const BindContext& context, bool isMethod, const Args& args,
                                      SourceRange callRange, size_t min, size_t max) const {
+    for (auto arg : args) {
+        if (arg->bad())
+            return false;
+    }
+
     size_t provided = args.size();
     if (isMethod) {
         ASSERT(provided);
@@ -48,11 +53,6 @@ bool SystemSubroutine::checkArgCount(const BindContext& context, bool isMethod, 
     if (provided > max) {
         context.addDiag(diag::TooManyArguments, args[max]->sourceRange) << name << max << provided;
         return false;
-    }
-
-    for (auto arg : args) {
-        if (arg->bad())
-            return false;
     }
 
     return true;
