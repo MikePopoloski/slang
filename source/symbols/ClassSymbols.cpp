@@ -922,6 +922,9 @@ ConstraintBlockSymbol* ConstraintBlockSymbol::fromSyntax(
         return nullptr;
     }
 
+    if (scope.asSymbol().kind != SymbolKind::ClassType)
+        scope.addDiag(diag::ConstraintNotInClass, syntax.sourceRange());
+
     auto nameToken = syntax.name->getLastToken();
     auto result =
         comp.emplace<ConstraintBlockSymbol>(comp, nameToken.valueText(), nameToken.location());
@@ -940,7 +943,7 @@ ConstraintBlockSymbol* ConstraintBlockSymbol::fromSyntax(
         }
     }
 
-    if (!result->isStatic)
+    if (!result->isStatic && scope.asSymbol().kind == SymbolKind::ClassType)
         result->addThisVar(scope.asSymbol().as<ClassType>());
 
     return result;
