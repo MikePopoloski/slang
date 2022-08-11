@@ -625,6 +625,11 @@ private:
 
         auto loc = info.syntax->name.location();
         if (info.isIface) {
+            // Interface ports should not have empty names. We'll be ignoring the
+            // select if there is one (along with issuing an error) so just set the name.
+            if (externalName.empty())
+                externalName = name;
+
             if (syntax.select) {
                 auto& diag = scope.addDiag(diag::IfacePortInExpr, syntax.select->sourceRange());
                 diag << externalName;
@@ -887,13 +892,12 @@ public:
     }
 
     PortConnection* getIfaceConnection(const InterfacePortSymbol& port) {
-        ASSERT(!port.name.empty());
-
         // If the port definition is empty it means an error already
         // occurred; there's no way to check this connection so early out.
-        if (port.isInvalid()) {
-            if (usingOrdered)
+        if (port.isInvalid() || port.name.empty()) {
+            if (usingOrdered) {
                 orderedIndex++;
+            }
             else {
                 auto it = namedConns.find(port.name);
                 if (it != namedConns.end())
