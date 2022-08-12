@@ -687,33 +687,33 @@ ConstantValue QueueType::getDefaultValueImpl() const {
     return result;
 }
 
-PackedStructType::PackedStructType(Compilation& compilation, bitwidth_t bitWidth, bool isSigned,
-                                   bool isFourState, SourceLocation loc,
+PackedStructType::PackedStructType(Compilation& compilation, bool isSigned, SourceLocation loc,
                                    const BindContext& context) :
-    IntegralType(SymbolKind::PackedStructType, "", loc, bitWidth, isSigned, isFourState),
+    IntegralType(SymbolKind::PackedStructType, "", loc, 0, isSigned, false),
     Scope(compilation, this), systemId(compilation.getNextStructSystemId()) {
 
-    // Struct types don't live as members of the parent scope (they're "owned" by the declaration
-    // containing them) but we hook up the parent pointer so that it can participate in name
-    // lookups.
+    // Struct types don't live as members of the parent scope (they're "owned" by
+    // the declaration containing them) but we hook up the parent pointer so that
+    // it can participate in name lookups.
     setParent(*context.scope, context.lookupIndex);
 }
 
-const Type& PackedStructType::fromSyntax(Compilation& compilation,
-                                         const StructUnionTypeSyntax& syntax,
-                                         const BindContext& context) {
+const Type& PackedStructType::fromSyntax(Compilation& comp, const StructUnionTypeSyntax& syntax,
+                                         const BindContext& parentContext) {
     ASSERT(syntax.packed);
-    bool isSigned = syntax.signing.kind == TokenKind::SignedKeyword;
-    bool isFourState = false;
+    const bool isSigned = syntax.signing.kind == TokenKind::SignedKeyword;
     bool issuedError = false;
-    bitwidth_t bitWidth = 0;
 
-    // We have to look at all the members up front to know our width and four-statedness.
-    // We have to iterate in reverse because members are specified from MSB to LSB order.
-    SmallVectorSized<const Symbol*, 8> members;
-    for (auto member : make_reverse_range(syntax.members)) {
-        const Type& type = compilation.getType(*member->type, context);
-        isFourState |= type.isFourState();
+    auto structType =
+        comp.emplace<PackedStructType>(comp, isSigned, syntax.keyword.location(), parentContext);
+    structType->setSyntax(syntax);
+
+    BindContext context(*structType, LookupLocation::max, parentContext.flags);
+
+    SmallVectorSized<FieldSymbol*, 8> members;
+    for (auto member : syntax.members) {
+        const Type& type = comp.getType(*member->type, context);
+        structType->isFourState |= type.isFourState();
         issuedError |= type.isError();
 
         if (!issuedError && !type.isIntegral()) {
@@ -725,15 +725,16 @@ const Type& PackedStructType::fromSyntax(Compilation& compilation,
         }
 
         for (auto decl : member->declarators) {
-            auto variable = compilation.emplace<FieldSymbol>(decl->name.valueText(),
-                                                             decl->name.location(), bitWidth);
-            variable->setType(type);
-            variable->setSyntax(*decl);
-            variable->setAttributes(*context.scope, member->attributes);
-            members.append(variable);
+            auto field =
+                comp.emplace<FieldSymbol>(decl->name.valueText(), decl->name.location(), 0u);
+            field->setType(type);
+            field->setSyntax(*decl);
+            field->setAttributes(*context.scope, member->attributes);
+            structType->addMember(*field);
+            members.append(field);
 
             // Unpacked arrays are disallowed in packed structs.
-            if (const Type& dimType = compilation.getType(type, decl->dimensions, context);
+            if (const Type& dimType = comp.getType(type, decl->dimensions, context);
                 dimType.isUnpackedArray() && !issuedError) {
 
                 auto& diag = context.addDiag(diag::PackedMemberNotIntegral, decl->name.range());
@@ -742,7 +743,7 @@ const Type& PackedStructType::fromSyntax(Compilation& compilation,
                 issuedError = true;
             }
 
-            bitWidth += type.getBitWidth();
+            structType->bitWidth += type.getBitWidth();
 
             if (decl->initializer) {
                 auto& diag = context.addDiag(diag::PackedMemberHasInitializer,
@@ -752,17 +753,18 @@ const Type& PackedStructType::fromSyntax(Compilation& compilation,
         }
     }
 
-    if (!bitWidth || issuedError)
-        return compilation.getErrorType();
+    if (!structType->bitWidth || issuedError)
+        return comp.getErrorType();
 
-    auto structType = compilation.emplace<PackedStructType>(
-        compilation, bitWidth, isSigned, isFourState, syntax.keyword.location(), context);
-    structType->setSyntax(syntax);
+    // We added the fields in reverse order, so compute their actual
+    // offsets in the right order now.
+    bitwidth_t offset = 0;
+    for (auto member : make_reverse_range(members)) {
+        member->offset = offset;
+        offset += member->getType().getBitWidth();
+    }
 
-    for (auto member : make_reverse_range(members))
-        structType->addMember(*member);
-
-    return createPackedDims(context, structType, syntax.dimensions);
+    return createPackedDims(parentContext, structType, syntax.dimensions);
 }
 
 UnpackedStructType::UnpackedStructType(Compilation& compilation, SourceLocation loc,
@@ -770,9 +772,9 @@ UnpackedStructType::UnpackedStructType(Compilation& compilation, SourceLocation 
     Type(SymbolKind::UnpackedStructType, "", loc),
     Scope(compilation, this), systemId(compilation.getNextStructSystemId()) {
 
-    // Struct types don't live as members of the parent scope (they're "owned" by the declaration
-    // containing them) but we hook up the parent pointer so that it can participate in name
-    // lookups.
+    // Struct types don't live as members of the parent scope (they're "owned" by
+    // the declaration containing them) but we hook up the parent pointer so that
+    // it can participate in name lookups.
     setParent(*context.scope, context.lookupIndex);
 }
 
@@ -806,59 +808,61 @@ const Type& UnpackedStructType::fromSyntax(const BindContext& context,
         }
 
         for (auto decl : member->declarators) {
-            auto variable = comp.emplace<FieldSymbol>(decl->name.valueText(), decl->name.location(),
-                                                      fieldIndex);
-            variable->setDeclaredType(*member->type);
-            variable->setFromDeclarator(*decl);
-            variable->setAttributes(*context.scope, member->attributes);
-            variable->randMode = randMode;
+            auto field = comp.emplace<FieldSymbol>(decl->name.valueText(), decl->name.location(),
+                                                   fieldIndex);
+            field->setDeclaredType(*member->type);
+            field->setFromDeclarator(*decl);
+            field->setAttributes(*context.scope, member->attributes);
+            field->randMode = randMode;
 
             if (randMode != RandMode::None)
-                variable->getDeclaredType()->addFlags(DeclaredTypeFlags::Rand);
+                field->getDeclaredType()->addFlags(DeclaredTypeFlags::Rand);
 
-            result->addMember(*variable);
+            result->addMember(*field);
             fieldIndex++;
-
-            // Force resolution of the type right away, otherwise nothing
-            // is required to force it later.
-            variable->getType();
-            variable->getInitializer();
         }
+    }
+
+    for (auto& field : result->membersOfType<FieldSymbol>()) {
+        // Force resolution of the type right away, otherwise nothing
+        // is required to force it later.
+        field.getType();
+        field.getInitializer();
     }
 
     result->setSyntax(syntax);
     return *result;
 }
 
-PackedUnionType::PackedUnionType(Compilation& compilation, bitwidth_t bitWidth, bool isSigned,
-                                 bool isFourState, bool isTagged, uint32_t tagBits,
+PackedUnionType::PackedUnionType(Compilation& compilation, bool isSigned, bool isTagged,
                                  SourceLocation loc, const BindContext& context) :
-    IntegralType(SymbolKind::PackedUnionType, "", loc, bitWidth, isSigned, isFourState),
+    IntegralType(SymbolKind::PackedUnionType, "", loc, 0, isSigned, false),
     Scope(compilation, this), systemId(compilation.getNextUnionSystemId()), isTagged(isTagged),
-    tagBits(tagBits) {
+    tagBits(0) {
 
-    // Union types don't live as members of the parent scope (they're "owned" by the declaration
-    // containing them) but we hook up the parent pointer so that it can participate in name
-    // lookups.
+    // Union types don't live as members of the parent scope (they're "owned" by
+    // the declaration containing them) but we hook up the parent pointer so that
+    // it can participate in name lookups.
     setParent(*context.scope, context.lookupIndex);
 }
 
-const Type& PackedUnionType::fromSyntax(Compilation& compilation,
-                                        const StructUnionTypeSyntax& syntax,
-                                        const BindContext& context) {
+const Type& PackedUnionType::fromSyntax(Compilation& comp, const StructUnionTypeSyntax& syntax,
+                                        const BindContext& parentContext) {
     ASSERT(syntax.packed);
-    bool isSigned = syntax.signing.kind == TokenKind::SignedKeyword;
-    bool isTagged = syntax.tagged.valid();
-    bool isFourState = false;
+    const bool isSigned = syntax.signing.kind == TokenKind::SignedKeyword;
+    const bool isTagged = syntax.tagged.valid();
     bool issuedError = false;
-    bitwidth_t bitWidth = 0;
     uint32_t fieldIndex = 0;
 
-    // We have to look at all the members up front to know our width and four-statedness.
-    SmallVectorSized<const Symbol*, 8> members;
+    auto unionType = comp.emplace<PackedUnionType>(comp, isSigned, isTagged,
+                                                   syntax.keyword.location(), parentContext);
+    unionType->setSyntax(syntax);
+
+    BindContext context(*unionType, LookupLocation::max, parentContext.flags);
+
     for (auto member : syntax.members) {
-        const Type& type = compilation.getType(*member->type, context);
-        isFourState |= type.isFourState();
+        const Type& type = comp.getType(*member->type, context);
+        unionType->isFourState |= type.isFourState();
         issuedError |= type.isError();
 
         if (!issuedError && !type.isIntegral() && (!isTagged || !type.isVoid())) {
@@ -871,15 +875,14 @@ const Type& PackedUnionType::fromSyntax(Compilation& compilation,
 
         for (auto decl : member->declarators) {
             auto name = decl->name;
-            auto variable =
-                compilation.emplace<FieldSymbol>(name.valueText(), name.location(), fieldIndex++);
-            variable->setType(type);
-            variable->setSyntax(*decl);
-            variable->setAttributes(*context.scope, member->attributes);
-            members.append(variable);
+            auto field = comp.emplace<FieldSymbol>(name.valueText(), name.location(), fieldIndex++);
+            field->setType(type);
+            field->setSyntax(*decl);
+            field->setAttributes(*context.scope, member->attributes);
+            unionType->addMember(*field);
 
             // Unpacked arrays are disallowed in packed unions.
-            if (const Type& dimType = compilation.getType(type, decl->dimensions, context);
+            if (const Type& dimType = comp.getType(type, decl->dimensions, context);
                 dimType.isUnpackedArray() && !issuedError) {
 
                 auto& diag = context.addDiag(diag::PackedMemberNotIntegral, decl->name.range());
@@ -888,16 +891,17 @@ const Type& PackedUnionType::fromSyntax(Compilation& compilation,
                 issuedError = true;
             }
 
-            if (!bitWidth) {
-                bitWidth = type.getBitWidth();
+            if (!unionType->bitWidth) {
+                unionType->bitWidth = type.getBitWidth();
             }
             else if (isTagged) {
                 // In tagged unions the members don't all have to have the same width.
-                bitWidth = std::max(bitWidth, type.getBitWidth());
+                unionType->bitWidth = std::max(unionType->bitWidth, type.getBitWidth());
             }
-            else if (bitWidth != type.getBitWidth() && !issuedError && !name.valueText().empty()) {
+            else if (unionType->bitWidth != type.getBitWidth() && !issuedError &&
+                     !name.valueText().empty()) {
                 auto& diag = context.addDiag(diag::PackedUnionWidthMismatch, name.range());
-                diag << name.valueText() << type.getBitWidth() << bitWidth;
+                diag << name.valueText() << type.getBitWidth() << unionType->bitWidth;
                 issuedError = true;
             }
 
@@ -910,22 +914,13 @@ const Type& PackedUnionType::fromSyntax(Compilation& compilation,
     }
 
     // In tagged unions the tag contributes to the total number of packed bits.
-    uint32_t tagBits = 0;
     if (isTagged) {
-        tagBits = clog2(members.size());
-        bitWidth += tagBits;
+        unionType->tagBits = clog2(fieldIndex);
+        unionType->bitWidth += unionType->tagBits;
     }
 
-    if (!bitWidth || issuedError)
-        return compilation.getErrorType();
-
-    auto unionType =
-        compilation.emplace<PackedUnionType>(compilation, bitWidth, isSigned, isFourState, isTagged,
-                                             tagBits, syntax.keyword.location(), context);
-    unionType->setSyntax(syntax);
-
-    for (auto member : members)
-        unionType->addMember(*member);
+    if (!unionType->bitWidth || issuedError)
+        return comp.getErrorType();
 
     return createPackedDims(context, unionType, syntax.dimensions);
 }
@@ -935,9 +930,9 @@ UnpackedUnionType::UnpackedUnionType(Compilation& compilation, bool isTagged, So
     Type(SymbolKind::UnpackedUnionType, "", loc),
     Scope(compilation, this), systemId(compilation.getNextUnionSystemId()), isTagged(isTagged) {
 
-    // Union types don't live as members of the parent scope (they're "owned" by the declaration
-    // containing them) but we hook up the parent pointer so that it can participate in name
-    // lookups.
+    // Union types don't live as members of the parent scope (they're "owned" by
+    // the declaration containing them) but we hook up the parent pointer so that
+    // it can participate in name lookups.
     setParent(*context.scope, context.lookupIndex);
 }
 
@@ -969,24 +964,25 @@ const Type& UnpackedUnionType::fromSyntax(const BindContext& context,
     uint32_t fieldIndex = 0;
     for (auto member : syntax.members) {
         for (auto decl : member->declarators) {
-            auto variable = comp.emplace<FieldSymbol>(decl->name.valueText(), decl->name.location(),
-                                                      fieldIndex++);
-            variable->setDeclaredType(*member->type);
-            variable->setFromDeclarator(*decl);
-            variable->setAttributes(*context.scope, member->attributes);
-
-            result->addMember(*variable);
-
-            auto& varType = variable->getType();
-            if (!isTagged && (varType.isCHandle() || varType.isDynamicallySizedArray()))
-                context.addDiag(diag::InvalidUnionMember, decl->name.range()) << varType;
-            else if (varType.isVirtualInterface())
-                context.addDiag(diag::VirtualInterfaceUnionMember, decl->name.range());
-
-            // Force resolution of the initializer right away, otherwise nothing
-            // is required to force it later.
-            variable->getInitializer();
+            auto field = comp.emplace<FieldSymbol>(decl->name.valueText(), decl->name.location(),
+                                                   fieldIndex++);
+            field->setDeclaredType(*member->type);
+            field->setFromDeclarator(*decl);
+            field->setAttributes(*context.scope, member->attributes);
+            result->addMember(*field);
         }
+    }
+
+    for (auto& field : result->membersOfType<FieldSymbol>()) {
+        auto& varType = field.getType();
+        if (!isTagged && (varType.isCHandle() || varType.isDynamicallySizedArray()))
+            context.addDiag(diag::InvalidUnionMember, field.location) << varType;
+        else if (varType.isVirtualInterface())
+            context.addDiag(diag::VirtualInterfaceUnionMember, field.location);
+
+        // Force resolution of the initializer right away, otherwise nothing
+        // is required to force it later.
+        field.getInitializer();
     }
 
     result->setSyntax(syntax);

@@ -213,8 +213,8 @@ class PackedStructType : public IntegralType, public Scope {
 public:
     int systemId;
 
-    PackedStructType(Compilation& compilation, bitwidth_t bitWidth, bool isSigned, bool isFourState,
-                     SourceLocation loc, const BindContext& context);
+    PackedStructType(Compilation& compilation, bool isSigned, SourceLocation loc,
+                     const BindContext& context);
 
     static const Type& fromSyntax(Compilation& compilation, const StructUnionTypeSyntax& syntax,
                                   const BindContext& context);
@@ -243,8 +243,7 @@ public:
     bool isTagged;
     uint32_t tagBits;
 
-    PackedUnionType(Compilation& compilation, bitwidth_t bitWidth, bool isSigned, bool isFourState,
-                    bool isTagged, uint32_t tagBits, SourceLocation loc,
+    PackedUnionType(Compilation& compilation, bool isSigned, bool isTagged, SourceLocation loc,
                     const BindContext& context);
 
     static const Type& fromSyntax(Compilation& compilation, const StructUnionTypeSyntax& syntax,

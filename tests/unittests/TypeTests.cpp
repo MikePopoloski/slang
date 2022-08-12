@@ -1745,3 +1745,26 @@ endmodule
     CHECK(diags[9].code == diag::UndeclaredIdentifier);
     CHECK(diags[10].code == diag::NTResolveArgModify);
 }
+
+TEST_CASE("Self referential struct / union member types") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    struct packed { int a; logic [$bits(a)-1:0] b; logic [$bits(a)-1:0] b; } s1;
+    union packed { logic [3:0] a; logic [3:0] b[$bits(a)];logic [$bits(a)-1:0] b; } u1;
+
+    struct { int a; logic [$bits(a)-1:0] b; logic [$bits(a)-1:0] b; } s2;
+    union { int a; logic [$bits(a)-1:0] b; logic [$bits(a)-1:0] b; } u2;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 5);
+    CHECK(diags[0].code == diag::Redefinition);
+    CHECK(diags[1].code == diag::PackedMemberNotIntegral);
+    CHECK(diags[2].code == diag::Redefinition);
+    CHECK(diags[3].code == diag::Redefinition);
+    CHECK(diags[4].code == diag::Redefinition);
+}
