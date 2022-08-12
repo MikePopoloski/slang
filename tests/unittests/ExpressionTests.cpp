@@ -2647,3 +2647,23 @@ endclass
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Bits of non-static var allowed in static init") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+  initial begin
+    automatic int a = 1;
+    static logic [$bits(a)-1:0] b;
+  end
+endmodule
+
+class C;
+    int a;
+    static int b = $bits(a);
+endclass
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}

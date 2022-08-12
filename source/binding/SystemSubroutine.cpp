@@ -58,6 +58,12 @@ bool SystemSubroutine::checkArgCount(const BindContext& context, bool isMethod, 
     return true;
 }
 
+BindContext SystemSubroutine::unevaluatedContext(const BindContext& sourceContext) {
+    BindContext result = sourceContext;
+    result.flags &= ~BindFlags::StaticInitializer;
+    return result;
+}
+
 const Type& SystemSubroutine::badArg(const BindContext& context, const Expression& arg) const {
     context.addDiag(diag::BadSystemSubroutineArg, arg.sourceRange) << *arg.type << kindStr();
     return context.getCompilation().getErrorType();

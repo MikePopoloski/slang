@@ -91,7 +91,7 @@ Expression& CallExpression::fromLookup(Compilation& compilation, const Subroutin
                 diag << parent->name;
                 return badExpr(compilation, nullptr);
             }
-            else if (!parent || inStatic || (context.flags & BindFlags::StaticInitializer) != 0) {
+            else if (!parent || inStatic || context.flags.has(BindFlags::StaticInitializer)) {
                 context.addDiag(diag::NonStaticClassMethod, range);
                 return badExpr(compilation, nullptr);
             }

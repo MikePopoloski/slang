@@ -19,7 +19,7 @@ public:
 
     const Expression& bindArgument(size_t, const BindContext& context,
                                    const ExpressionSyntax& syntax, const Args&) const final {
-        return Expression::bind(syntax, context, BindFlags::AllowDataType);
+        return Expression::bind(syntax, unevaluatedContext(context), BindFlags::AllowDataType);
     }
 
     const Type& checkArguments(const BindContext& context, const Args& args, SourceRange range,
@@ -72,7 +72,7 @@ public:
 
     const Expression& bindArgument(size_t, const BindContext& context,
                                    const ExpressionSyntax& syntax, const Args&) const final {
-        return Expression::bind(syntax, context, BindFlags::AllowDataType);
+        return Expression::bind(syntax, unevaluatedContext(context), BindFlags::AllowDataType);
     }
 
     const Type& checkArguments(const BindContext& context, const Args& args, SourceRange range,
@@ -101,7 +101,8 @@ public:
 
     const Expression& bindArgument(size_t, const BindContext& context,
                                    const ExpressionSyntax& syntax, const Args&) const final {
-        return Expression::bind(syntax, context, BindFlags::AllowUnboundedLiteral);
+        return Expression::bind(syntax, unevaluatedContext(context),
+                                BindFlags::AllowUnboundedLiteral);
     }
 
     const Type& checkArguments(const BindContext& context, const Args& args, SourceRange range,
@@ -137,8 +138,10 @@ public:
 
     const Expression& bindArgument(size_t index, const BindContext& context,
                                    const ExpressionSyntax& syntax, const Args&) const final {
-        BindFlags flags = index == 0 ? BindFlags::AllowDataType : BindFlags::None;
-        return Expression::bind(syntax, context, flags);
+        if (index == 0)
+            return Expression::bind(syntax, unevaluatedContext(context), BindFlags::AllowDataType);
+        else
+            return Expression::bind(syntax, context);
     }
 
     const Type& checkArguments(const BindContext& context, const Args& args, SourceRange range,
@@ -465,7 +468,7 @@ public:
 
     const Expression& bindArgument(size_t, const BindContext& context,
                                    const ExpressionSyntax& syntax, const Args&) const final {
-        return Expression::bind(syntax, context, BindFlags::AllowDataType);
+        return Expression::bind(syntax, unevaluatedContext(context), BindFlags::AllowDataType);
     }
 
     const Type& checkArguments(const BindContext& context, const Args& args, SourceRange range,
