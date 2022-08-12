@@ -671,9 +671,9 @@ void Scope::handleNameConflict(const Symbol& member, const Symbol*& existing,
 
     if (existing->kind == SymbolKind::ExplicitImport && member.kind == SymbolKind::ExplicitImport) {
         if (!isElaborating) {
-            // These can't be checked until we can resolve the imports and see if they point to
-            // the same symbol.
-            getOrAddDeferredData().addNameConflict(member);
+            // These can't be checked until we can resolve the imports and
+            // see if they point to the same symbol.
+            compilation.noteNameConflict(member);
         }
         else {
             checkImportConflict(member, *existing);
@@ -724,11 +724,20 @@ void Scope::handleNameConflict(const Symbol& member, const Symbol*& existing,
         // We want to look at the symbol types here to provide nicer error messages, but
         // it might not be safe to resolve the type at this point (because we're in the
         // middle of elaborating the scope). Save the member for later reporting.
-        getOrAddDeferredData().addNameConflict(member);
+        compilation.noteNameConflict(member);
         return;
     }
 
     reportNameConflict(member, *existing);
+}
+
+void Scope::handleNameConflict(const Symbol& member) const {
+    auto existing = nameMap->find(member.name)->second;
+    ASSERT(existing);
+    if (member.kind == SymbolKind::ExplicitImport)
+        checkImportConflict(member, *existing);
+    else
+        reportNameConflict(member, *existing);
 }
 
 void Scope::reportNameConflict(const Symbol& member, const Symbol& existing) const {
@@ -779,14 +788,6 @@ void Scope::elaborate() const {
     ASSERT(deferredMemberIndex != DeferredMemberIndex::Invalid);
     auto deferredData = compilation.getOrAddDeferredData(deferredMemberIndex);
     deferredMemberIndex = DeferredMemberIndex::Invalid;
-
-    for (auto member : deferredData.getNameConflicts()) {
-        auto existing = nameMap->find(member->name)->second;
-        if (member->kind == SymbolKind::ExplicitImport)
-            checkImportConflict(*member, *existing);
-        else
-            reportNameConflict(*member, *existing);
-    }
 
     SmallSet<const SyntaxNode*, 8> enumDecls;
     for (const auto& pair : deferredData.getTransparentTypes()) {
@@ -1360,14 +1361,6 @@ void Scope::DeferredMemberData::addPortDeclaration(const SyntaxNode& syntax,
 span<std::pair<const SyntaxNode*, const Symbol*> const> Scope::DeferredMemberData::
     getPortDeclarations() const {
     return portDecls;
-}
-
-void Scope::DeferredMemberData::addNameConflict(const Symbol& member) {
-    nameConflicts.push_back(&member);
-}
-
-span<const Symbol* const> Scope::DeferredMemberData::getNameConflicts() const {
-    return nameConflicts;
 }
 
 static size_t countGenMembers(const SyntaxNode& syntax) {

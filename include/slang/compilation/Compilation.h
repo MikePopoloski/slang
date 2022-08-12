@@ -316,6 +316,10 @@ public:
     /// Notes that there is a default disable associated with the specified scope.
     void noteDefaultDisable(const Scope& scope, const Expression& expr);
 
+    /// Notes that the given symbol has a name conflict in its parent scope.
+    /// This will cause appropriate errors to be issued.
+    void noteNameConflict(const Symbol& symbol);
+
     /// Finds an applicable default disable expression for the given scope, or returns nullptr
     /// if no such declaration is in effect.
     const Expression* getDefaultDisable(const Scope& scope) const;
@@ -596,6 +600,9 @@ private:
 
     // A list of extern interface method implementations for later elaboration.
     std::vector<const SubroutineSymbol*> externInterfaceMethods;
+
+    // A list of name conflicts to later resolve by issuing diagnostics.
+    std::vector<const Symbol*> nameConflicts;
 
     // A map of scopes to default clocking blocks.
     flat_hash_map<const Scope*, const Symbol*> defaultClockingMap;

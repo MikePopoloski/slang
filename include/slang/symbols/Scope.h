@@ -260,9 +260,6 @@ private:
         void addPortDeclaration(const SyntaxNode& syntax, const Symbol* insertion);
         span<std::pair<const SyntaxNode*, const Symbol*> const> getPortDeclarations() const;
 
-        void addNameConflict(const Symbol& member);
-        span<const Symbol* const> getNameConflicts() const;
-
     private:
         // A list of deferred member symbols.
         std::vector<Symbol*> members;
@@ -279,9 +276,6 @@ private:
         // Track a list of non-ANSI port declarations declared in the scope; once we've fully
         // elaborated we'll go back and make sure they're valid.
         std::vector<std::pair<const SyntaxNode*, const Symbol*>> portDecls;
-
-        // A list of members that have name conflicts that need to be reported.
-        std::vector<const Symbol*> nameConflicts;
     };
 
     // Sideband collection of wildcard imports stored in the Compilation object.
@@ -292,6 +286,7 @@ private:
 
     DeferredMemberData& getOrAddDeferredData() const;
     void elaborate() const;
+    void handleNameConflict(const Symbol& member) const;
     void handleNameConflict(const Symbol& member, const Symbol*& existing,
                             bool isElaborating) const;
     bool handleDataDeclaration(const DataDeclarationSyntax& syntax);

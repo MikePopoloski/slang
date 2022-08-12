@@ -743,6 +743,10 @@ void Compilation::noteDefaultDisable(const Scope& scope, const Expression& expr)
     }
 }
 
+void Compilation::noteNameConflict(const Symbol& symbol) {
+    nameConflicts.push_back(&symbol);
+}
+
 const Expression* Compilation::getDefaultDisable(const Scope& scope) const {
     auto curr = &scope;
     while (true) {
@@ -820,6 +824,23 @@ const Diagnostics& Compilation::getSemanticDiagnostics() {
 
     if (!visitor.modportsWithExports.empty())
         checkModportExports(visitor.modportsWithExports);
+
+    // Report any lingering name conflicts.
+    if (!nameConflicts.empty()) {
+        // Make a copy here, since it's possible that handling the name conflict
+        // could trigger more names to be added to the list. We won't bother
+        // trying to report additional names this way, as they're both
+        // unlikely to occur and also duplicates of ones we've already seen
+        // (just in some other area of the hierarchy).
+        auto tempCopy = nameConflicts;
+        nameConflicts.clear();
+
+        for (auto symbol : tempCopy) {
+            auto scope = symbol->getParentScope();
+            ASSERT(scope);
+            scope->handleNameConflict(*symbol);
+        }
+    }
 
     // Report on unused out-of-block definitions. These are always a real error.
     for (auto& [key, val] : outOfBlockDecls) {
