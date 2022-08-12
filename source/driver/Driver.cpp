@@ -402,8 +402,9 @@ bool Driver::parseAllSources() {
     bool singleUnit = options.singleUnit == true;
     bool onlyLint = options.onlyLint == true;
 
+    auto optionBag = createOptionBag();
     if (singleUnit) {
-        auto tree = SyntaxTree::fromBuffers(buffers, sourceManager, options);
+        auto tree = SyntaxTree::fromBuffers(buffers, sourceManager, optionBag);
         if (onlyLint)
             tree->isLibrary = true;
 
@@ -411,7 +412,7 @@ bool Driver::parseAllSources() {
     }
     else {
         for (const SourceBuffer& buffer : buffers) {
-            auto tree = SyntaxTree::fromBuffer(buffer, sourceManager, options);
+            auto tree = SyntaxTree::fromBuffer(buffer, sourceManager, optionBag);
             if (onlyLint)
                 tree->isLibrary = true;
 
@@ -427,7 +428,7 @@ bool Driver::parseAllSources() {
             continue;
         }
 
-        auto tree = SyntaxTree::fromBuffer(buffer, sourceManager, options);
+        auto tree = SyntaxTree::fromBuffer(buffer, sourceManager, optionBag);
         tree->isLibrary = true;
         syntaxTrees.emplace_back(std::move(tree));
     }
@@ -522,7 +523,7 @@ bool Driver::parseAllSources() {
             }
 
             if (buffer) {
-                auto tree = SyntaxTree::fromBuffer(buffer, sourceManager, options);
+                auto tree = SyntaxTree::fromBuffer(buffer, sourceManager, optionBag);
                 tree->isLibrary = true;
                 syntaxTrees.emplace_back(tree);
 
