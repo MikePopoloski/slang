@@ -813,13 +813,22 @@ const Diagnostics& Compilation::getSemanticDiagnostics() {
     getRoot().visit(visitor);
     visitor.finalize();
 
+    // Note for the following checks here: anything that depends on a list
+    // stored in the compilation object should think carefully about taking
+    // a copy of that list first before iterating over it, because your check
+    // might trigger additional action that ends up adding to that list,
+    // causing undefined behavior.
+
     // Check all DPI methods for correctness.
     if (!dpiExports.empty() || !visitor.dpiImports.empty())
         checkDPIMethods(visitor.dpiImports);
 
     // Check extern interface methods for correctness.
-    for (auto method : externInterfaceMethods)
-        method->connectExternInterfacePrototype();
+    if (!externInterfaceMethods.empty()) {
+        auto methods = externInterfaceMethods;
+        for (auto method : methods)
+            method->connectExternInterfacePrototype();
+    }
 
     if (!visitor.externIfaceProtos.empty())
         checkExternIfaceMethods(visitor.externIfaceProtos);
@@ -829,15 +838,8 @@ const Diagnostics& Compilation::getSemanticDiagnostics() {
 
     // Report any lingering name conflicts.
     if (!nameConflicts.empty()) {
-        // Make a copy here, since it's possible that handling the name conflict
-        // could trigger more names to be added to the list. We won't bother
-        // trying to report additional names this way, as they're both
-        // unlikely to occur and also duplicates of ones we've already seen
-        // (just in some other area of the hierarchy).
-        auto tempCopy = nameConflicts;
-        nameConflicts.clear();
-
-        for (auto symbol : tempCopy) {
+        auto conflicts = nameConflicts;
+        for (auto symbol : conflicts) {
             auto scope = symbol->getParentScope();
             ASSERT(scope);
             scope->handleNameConflict(*symbol);
@@ -845,23 +847,26 @@ const Diagnostics& Compilation::getSemanticDiagnostics() {
     }
 
     // Report on unused out-of-block definitions. These are always a real error.
-    for (auto& [key, val] : outOfBlockDecls) {
-        auto& [syntax, name, index, used] = val;
-        if (!used) {
-            auto& [className, declName, scope] = key;
-            auto classRange = name->left->sourceRange();
-            auto sym = Lookup::unqualifiedAt(*scope, className,
-                                             LookupLocation(scope, uint32_t(index)), classRange);
+    if (!outOfBlockDecls.empty()) {
+        auto decls = outOfBlockDecls;
+        for (auto& [key, val] : decls) {
+            auto& [syntax, name, index, used] = val;
+            if (!used) {
+                auto& [className, declName, scope] = key;
+                auto classRange = name->left->sourceRange();
+                auto sym = Lookup::unqualifiedAt(
+                    *scope, className, LookupLocation(scope, uint32_t(index)), classRange);
 
-            if (sym && !declName.empty() && !className.empty()) {
-                if (sym->kind == SymbolKind::ClassType ||
-                    sym->kind == SymbolKind::GenericClassDef) {
-                    auto& diag = scope->addDiag(diag::NoDeclInClass, name->sourceRange());
-                    diag << declName << className;
-                }
-                else {
-                    auto& diag = scope->addDiag(diag::NotAClass, classRange);
-                    diag << className;
+                if (sym && !declName.empty() && !className.empty()) {
+                    if (sym->kind == SymbolKind::ClassType ||
+                        sym->kind == SymbolKind::GenericClassDef) {
+                        auto& diag = scope->addDiag(diag::NoDeclInClass, name->sourceRange());
+                        diag << declName << className;
+                    }
+                    else {
+                        auto& diag = scope->addDiag(diag::NotAClass, classRange);
+                        diag << className;
+                    }
                 }
             }
         }
@@ -1215,7 +1220,8 @@ void Compilation::checkDPIMethods(span<const SubroutineSymbol* const> dpiImports
 
     flat_hash_map<std::tuple<string_view, const Scope*>, const DPIExportSyntax*> exportsByScope;
     flat_hash_map<const SubroutineSymbol*, const DPIExportSyntax*> previousExports;
-    for (auto [syntax, scope] : dpiExports) {
+    auto exports = dpiExports;
+    for (auto [syntax, scope] : exports) {
         if (syntax->specString.valueText() == "DPI")
             scope->addDiag(diag::DPISpecDisallowed, syntax->specString.range());
 
