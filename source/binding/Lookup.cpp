@@ -872,6 +872,24 @@ void Lookup::name(const NameSyntax& syntax, const BindContext& context, bitmask<
             }
             result.found = &scope.getCompilation().getRoot();
             return;
+        case SyntaxKind::ConstructorName:
+            result.addDiag(scope, diag::UnexpectedNameToken, syntax.sourceRange())
+                << syntax.getFirstToken().valueText();
+            result.found = nullptr;
+            return;
+        case SyntaxKind::LocalScope:
+            // This can only happen in error scenarios, where the parser has
+            // already issued a diagnostic.
+            result.found = nullptr;
+            return;
+        case SyntaxKind::UnitScope:
+        case SyntaxKind::SuperHandle:
+        case SyntaxKind::ArrayUniqueMethod:
+        case SyntaxKind::ArrayAndMethod:
+        case SyntaxKind::ArrayOrMethod:
+        case SyntaxKind::ArrayXorMethod:
+            // These error cases can't happen here because the parser will always
+            // wrap them into a scoped name.
         default:
             THROW_UNREACHABLE;
     }
@@ -1675,8 +1693,6 @@ void Lookup::qualified(const ScopedNameSyntax& syntax, const BindContext& contex
     SyntaxKind firstKind = leftMost->kind;
     NameComponents first = *leftMost;
     auto name = first.text;
-    if (name.empty())
-        return;
 
     auto popFront = [&] {
         first = nameParts.back().name;
@@ -1702,6 +1718,9 @@ void Lookup::qualified(const ScopedNameSyntax& syntax, const BindContext& contex
         // early from withinClassRandomize.
         popFront();
     }
+
+    if (name.empty())
+        return;
 
     switch (firstKind) {
         case SyntaxKind::IdentifierName:
@@ -1754,6 +1773,13 @@ void Lookup::qualified(const ScopedNameSyntax& syntax, const BindContext& contex
         case SyntaxKind::LocalScope:
             // This is only reachable in invalid code. An error has already been
             // reported so early out.
+            return;
+        case SyntaxKind::ArrayUniqueMethod:
+        case SyntaxKind::ArrayAndMethod:
+        case SyntaxKind::ArrayOrMethod:
+        case SyntaxKind::ArrayXorMethod:
+        case SyntaxKind::ConstructorName:
+            result.addDiag(scope, diag::UnexpectedNameToken, first.range) << name;
             return;
         default:
             THROW_UNREACHABLE;

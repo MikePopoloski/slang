@@ -1807,3 +1807,34 @@ endpackage
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Invalid name component lookup handling") {
+    auto tree = SyntaxTree::fromText(R"(
+class C;
+endclass
+
+module m;
+    C c;
+    int i = !new;
+    int k;
+    initial begin
+        k = c.randomize with { local::unique; };
+        k = c.randomize with { local::new; };
+        k = c.randomize with { local::local; };
+        k = new.foo;
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 6);
+    CHECK(diags[0].code == diag::UnexpectedNameToken);
+    CHECK(diags[1].code == diag::UnexpectedNameToken);
+    CHECK(diags[2].code == diag::ExpectedIdentifier);
+    CHECK(diags[3].code == diag::ExpectedToken);
+    CHECK(diags[4].code == diag::UnexpectedNameToken);
+    CHECK(diags[5].code == diag::NewKeywordQualified);
+}

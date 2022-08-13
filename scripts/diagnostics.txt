@@ -768,6 +768,7 @@ error UnexpectedSelection "unexpected selection expression"
 error BadInstanceArrayRange "cannot select range of [{}:{}] from instance array of [{}:{}]"
 error InstanceArrayEndianMismatch "endianness of selection [{}:{}] must match declared array range of [{}:{}]"
 error IfaceImportExportTarget "could not find target for {} of '{}'"
+error UnexpectedNameToken "unexpected use of '{}' keyword"
 warning dup-import DuplicateImport "duplicate import declaration is redundant"
 
 subsystem SysFuncs
