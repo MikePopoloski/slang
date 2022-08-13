@@ -797,7 +797,7 @@ const Symbol* findSuperHandle(const Scope& scope, SourceRange range, LookupResul
     }
 
     auto base = parent->getBaseClass();
-    if (!base) {
+    if (!base && !parent->name.empty()) {
         result.addDiag(scope, diag::SuperNoBase, range) << parent->name;
         return nullptr;
     }

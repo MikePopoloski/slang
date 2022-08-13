@@ -934,7 +934,7 @@ Expression& NewClassExpression::fromSyntax(Compilation& compilation,
             // any particular assignment target.
             auto [ct, _] = Lookup::getContainingClass(*context.scope);
             classType = ct;
-            if (!classType) {
+            if (!classType || classType->name.empty()) {
                 // Parser already emitted an error for this case.
                 return badExpr(compilation, nullptr);
             }
