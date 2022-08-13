@@ -1733,3 +1733,27 @@ endmodule
     CHECK(diags[0].code == diag::MaxInstanceArrayExceeded);
     CHECK(diags[0].code == diag::MaxInstanceArrayExceeded);
 }
+
+TEST_CASE("defparam fork bomb mitigation") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    defparam;
+
+    module top;
+        if (1) begin
+            top t1();
+            top t2();
+        end
+    endmodule
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::MaxInstanceArrayExceeded);
+    CHECK(diags[0].code == diag::MaxInstanceArrayExceeded);
+}
