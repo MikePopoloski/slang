@@ -1189,12 +1189,7 @@ void testExpect(TokenKind kind) {
 TEST_CASE("Missing / expected tokens") {
     testExpect(TokenKind::IncludeFileName);
     testExpect(TokenKind::StringLiteral);
-    testExpect(TokenKind::Directive);
-    testExpect(TokenKind::MacroUsage);
     testExpect(TokenKind::IntegerLiteral);
-    testExpect(TokenKind::IntegerBase);
-    testExpect(TokenKind::UnbasedUnsizedLiteral);
-    testExpect(TokenKind::RealLiteral);
     testExpect(TokenKind::TimeLiteral);
     testExpect(TokenKind::WithKeyword);
 }

@@ -1732,6 +1732,9 @@ void Lookup::qualified(const ScopedNameSyntax& syntax, const BindContext& contex
         case SyntaxKind::UnitScope: {
             // Walk upward to find the compilation unit scope.
             popFront();
+            if (name.empty())
+                return;
+
             const Scope* current = &scope;
             LookupLocation location = context.getLocation();
             do {

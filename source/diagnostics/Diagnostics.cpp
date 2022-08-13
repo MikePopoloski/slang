@@ -40,12 +40,19 @@ Diagnostic& Diagnostic::addNote(const Diagnostic& diag) {
     return notes.back();
 }
 
+Diagnostic& Diagnostic::addStringAllowEmpty(const std::string& arg) {
+    args.emplace_back(arg);
+    return *this;
+}
+
 Diagnostic& Diagnostic::operator<<(const std::string& arg) {
+    ASSERT(!arg.empty());
     args.emplace_back(arg);
     return *this;
 }
 
 Diagnostic& Diagnostic::operator<<(string_view arg) {
+    ASSERT(!arg.empty());
     args.emplace_back(std::string(arg));
     return *this;
 }

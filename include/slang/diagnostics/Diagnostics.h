@@ -125,6 +125,8 @@ public:
     Diagnostic& operator<<(real_t arg);
     Diagnostic& operator<<(shortreal_t arg);
 
+    Diagnostic& addStringAllowEmpty(const std::string& arg);
+
     template<typename T, typename = std::enable_if_t<std::is_integral_v<T> && std::is_signed_v<T>>>
     Diagnostic& operator<<(T arg) {
         args.emplace_back((int64_t)arg);

@@ -680,7 +680,7 @@ void ElabSystemTaskSymbol::reportStaticAssert(const Scope& scope, SourceLocation
             return;
     }
 
-    auto& diag = scope.addDiag(diag::StaticAssert, loc) << message;
+    auto& diag = scope.addDiag(diag::StaticAssert, loc).addStringAllowEmpty(std::string(message));
 
     // If the condition is a comparison operator, note the value of both
     // sides to provide more info about why the assertion failed.
@@ -715,7 +715,7 @@ void ElabSystemTaskSymbol::issueDiagnostic() const {
             THROW_UNREACHABLE;
     }
 
-    scope->addDiag(code, location) << msg;
+    scope->addDiag(code, location).addStringAllowEmpty(std::string(msg));
 }
 
 const Expression* ElabSystemTaskSymbol::getAssertCondition() const {
