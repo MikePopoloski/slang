@@ -450,8 +450,13 @@ const Expression* ClassType::getBaseConstructorCall() const {
     if (!classSyntax.extendsClause)
         return nullptr;
 
-    // If we have a constructor, find whether it invokes super.new in its body.
     ensureElaborated();
+
+    ASSERT(baseClass);
+    if (baseClass->isError())
+        return nullptr;
+
+    // If we have a constructor, find whether it invokes super.new in its body.
     if (auto ourConstructor = find("new")) {
         auto checkForSuperNew = [&](const Statement& stmt) {
             if (stmt.kind == StatementKind::ExpressionStatement) {
