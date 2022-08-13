@@ -1000,6 +1000,8 @@ const SubroutineSymbol* MethodPrototypeSymbol::getSubroutine() const {
     }
 
     subroutine = nullptr;
+    if (name.empty())
+        return *subroutine;
 
     auto& nearScope = *getParentScope();
     auto& parentSym = nearScope.asSymbol();

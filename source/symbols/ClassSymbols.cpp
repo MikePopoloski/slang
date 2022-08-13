@@ -1008,8 +1008,8 @@ const Constraint& ConstraintBlockSymbol::getConstraints() const {
         auto& comp = outerScope.getCompilation();
 
         auto [declSyntax, index, used] = comp.findOutOfBlockDecl(outerScope, parentSym.name, name);
-        if (!declSyntax || declSyntax->kind != SyntaxKind::ConstraintDeclaration) {
-            if (!isPure) {
+        if (!declSyntax || declSyntax->kind != SyntaxKind::ConstraintDeclaration || name.empty()) {
+            if (!isPure && !name.empty()) {
                 DiagCode code = isExplicitExtern ? diag::NoMemberImplFound : diag::NoConstraintBody;
                 outerScope.addDiag(code, location) << name;
             }

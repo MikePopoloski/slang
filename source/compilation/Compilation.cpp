@@ -441,9 +441,11 @@ const Definition* Compilation::getDefinition(const ModuleDeclarationSyntax& synt
 
 template<typename T, typename U>
 static void reportRedefinition(const Scope& scope, const T& newSym, const U& oldSym) {
-    auto& diag = scope.addDiag(diag::Redefinition, newSym.location);
-    diag << newSym.name;
-    diag.addNote(diag::NotePreviousDefinition, oldSym.location);
+    if (!newSym.name.empty()) {
+        auto& diag = scope.addDiag(diag::Redefinition, newSym.location);
+        diag << newSym.name;
+        diag.addNote(diag::NotePreviousDefinition, oldSym.location);
+    }
 }
 
 void Compilation::createDefinition(const Scope& scope, LookupLocation location,
@@ -851,7 +853,7 @@ const Diagnostics& Compilation::getSemanticDiagnostics() {
             auto sym = Lookup::unqualifiedAt(*scope, className,
                                              LookupLocation(scope, uint32_t(index)), classRange);
 
-            if (sym) {
+            if (sym && !declName.empty() && !className.empty()) {
                 if (sym->kind == SymbolKind::ClassType ||
                     sym->kind == SymbolKind::GenericClassDef) {
                     auto& diag = scope->addDiag(diag::NoDeclInClass, name->sourceRange());

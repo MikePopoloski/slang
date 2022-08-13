@@ -494,22 +494,23 @@ void BindContext::addAssertionBacktrace(Diagnostic& diag) const {
     }
     else {
         ASSERT(inst.symbol);
-
-        auto& note = diag.addNote(diag::NoteWhileExpanding, inst.instanceLoc);
-        switch (inst.symbol->kind) {
-            case SymbolKind::Sequence:
-                note << "sequence"sv;
-                break;
-            case SymbolKind::Property:
-                note << "property"sv;
-                break;
-            case SymbolKind::LetDecl:
-                note << "let declaration"sv;
-                break;
-            default:
-                THROW_UNREACHABLE;
+        if (!inst.symbol->name.empty()) {
+            auto& note = diag.addNote(diag::NoteWhileExpanding, inst.instanceLoc);
+            switch (inst.symbol->kind) {
+                case SymbolKind::Sequence:
+                    note << "sequence"sv;
+                    break;
+                case SymbolKind::Property:
+                    note << "property"sv;
+                    break;
+                case SymbolKind::LetDecl:
+                    note << "let declaration"sv;
+                    break;
+                default:
+                    THROW_UNREACHABLE;
+            }
+            note << inst.symbol->name;
         }
-        note << inst.symbol->name;
     }
 
     ASSERT(inst.prevContext);
