@@ -420,8 +420,8 @@ StructUnionTypeSyntax& Parser::parseStructUnion(SyntaxKind syntaxKind) {
     if (openBrace.isMissing())
         closeBrace = missingToken(TokenKind::CloseBrace, openBrace.location());
     else {
-        auto kind = peek().kind;
-        while (kind != TokenKind::CloseBrace && kind != TokenKind::EndOfFile) {
+        auto curr = peek();
+        while (curr.kind != TokenKind::CloseBrace && curr.kind != TokenKind::EndOfFile) {
             auto attributes = parseAttributes();
 
             Token randomQualifier;
@@ -450,10 +450,14 @@ StructUnionTypeSyntax& Parser::parseStructUnion(SyntaxKind syntaxKind) {
             buffer.append(
                 &factory.structUnionMember(attributes, randomQualifier, type, declarators, semi));
 
-            if (type.kind == SyntaxKind::ImplicitType && declarators.empty())
+            // If we failed to consume any tokens for this member, skip whatever token is
+            // in the way, otherwise we will loop forever.
+            if (type.kind == SyntaxKind::ImplicitType && declarators.empty() &&
+                peek().location() == curr.location()) {
                 skipToken({});
+            }
 
-            kind = peek().kind;
+            curr = peek();
         }
         closeBrace = expect(TokenKind::CloseBrace);
 
