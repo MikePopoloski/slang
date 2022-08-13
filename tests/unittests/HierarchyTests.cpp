@@ -1731,7 +1731,7 @@ endmodule
     auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 2);
     CHECK(diags[0].code == diag::MaxInstanceArrayExceeded);
-    CHECK(diags[0].code == diag::MaxInstanceArrayExceeded);
+    CHECK(diags[1].code == diag::MaxInstanceArrayExceeded);
 }
 
 TEST_CASE("defparam fork bomb mitigation") {
@@ -1750,10 +1750,9 @@ endmodule
 
     Compilation compilation;
     compilation.addSyntaxTree(tree);
-    NO_COMPILATION_ERRORS;
 
     auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 2);
-    CHECK(diags[0].code == diag::MaxInstanceArrayExceeded);
-    CHECK(diags[0].code == diag::MaxInstanceArrayExceeded);
+    CHECK(diags[0].code == diag::ExpectedVariableAssignment);
+    CHECK(diags[1].code == diag::MaxInstanceDepthExceeded);
 }
