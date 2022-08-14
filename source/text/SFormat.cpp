@@ -6,10 +6,10 @@
 //------------------------------------------------------------------------------
 #include "slang/text/SFormat.h"
 
-#include "../text/CharInfo.h"
 #include <ieee1800/vpi_user.h>
 
 #include "slang/diagnostics/SysFuncsDiags.h"
+#include "slang/text/CharInfo.h"
 #include "slang/util/String.h"
 
 static const double log2_10 = log2(10.0);

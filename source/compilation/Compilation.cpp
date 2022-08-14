@@ -6,7 +6,6 @@
 //------------------------------------------------------------------------------
 #include "slang/compilation/Compilation.h"
 
-#include "../text/CharInfo.h"
 #include "ElabVisitors.h"
 
 #include "slang/binding/SystemSubroutine.h"
@@ -18,6 +17,7 @@
 #include "slang/parsing/Parser.h"
 #include "slang/parsing/Preprocessor.h"
 #include "slang/syntax/SyntaxTree.h"
+#include "slang/text/CharInfo.h"
 #include "slang/text/SourceManager.h"
 #include "slang/types/TypePrinter.h"
 

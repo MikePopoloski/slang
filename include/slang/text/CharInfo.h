@@ -1,6 +1,6 @@
 //------------------------------------------------------------------------------
-// CharInfo.h
-// Various character-related utilities
+//! @file CharInfo.h
+//! @brief Various character-related utilities
 //
 // File is under the MIT license; see LICENSE for details
 //------------------------------------------------------------------------------
@@ -20,6 +20,13 @@ constexpr bool isASCII(char c) {
 constexpr bool isPrintableASCII(char c) {
     return (c >= 32 && c <= 126) || (c >= 9 && c <= 13);
 }
+
+/// Returns whether the given Unicode character is considered "printable".
+/// Unicode code points of the categories L, M, N, P, S and Zs are considered
+/// printable.
+/// In addition, U+00AD SOFT HYPHEN is also considered printable, as
+/// it's actually displayed on most terminals.
+bool isPrintableUnicode(uint32_t c);
 
 /// Returns whether the given character is considered whitespace.
 constexpr bool isWhitespace(char c) {
@@ -102,6 +109,15 @@ constexpr uint8_t getHexDigitValue(char c) {
     return uint8_t(10 + c - 'a');
 }
 
+/// Gets the hexadecimal character for the given number (which should be less than 16).
+constexpr char getHexForDigit(uint32_t num, bool lowerCase = false) {
+    constexpr const char LUT[] = "0123456789ABCDEF";
+    const uint8_t offset = lowerCase ? 32 : 0;
+    return LUT[num] | offset;
+}
+
+/// Gets the length of the UTF-8 sequence starting with the given first character.
+/// Returns 0 if the given character is invalid for a UTF-8 sequence.
 constexpr int utf8Len(unsigned char first) {
     constexpr const char lengths[] = { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
                                        0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 2, 2, 3, 3, 4, 0 };

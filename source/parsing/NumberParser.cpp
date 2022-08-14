@@ -6,9 +6,8 @@
 //------------------------------------------------------------------------------
 #include "slang/parsing/NumberParser.h"
 
-#include "../text/CharInfo.h"
-
 #include "slang/diagnostics/LexerDiags.h"
+#include "slang/text/CharInfo.h"
 #include "slang/util/String.h"
 
 namespace slang {

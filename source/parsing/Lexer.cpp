@@ -6,13 +6,13 @@
 //------------------------------------------------------------------------------
 #include "slang/parsing/Lexer.h"
 
-#include "../text/CharInfo.h"
 #include <algorithm>
 #include <cmath>
 
 #include "slang/diagnostics/LexerDiags.h"
 #include "slang/diagnostics/NumericDiags.h"
 #include "slang/syntax/SyntaxNode.h"
+#include "slang/text/CharInfo.h"
 #include "slang/text/SourceManager.h"
 #include "slang/util/BumpAllocator.h"
 #include "slang/util/String.h"

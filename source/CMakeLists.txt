@@ -57,6 +57,7 @@ set(slangcore_SOURCES
     numeric/ConstantValue.cpp
     numeric/SVInt.cpp
     numeric/Time.cpp
+    text/CharInfo.cpp
     text/Json.cpp
     text/SFormat.cpp
     text/SourceManager.cpp

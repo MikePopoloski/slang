@@ -6,11 +6,11 @@
 //------------------------------------------------------------------------------
 #include "slang/numeric/SVInt.h"
 
-#include "../text/CharInfo.h"
 #include "SVIntHelpers.h"
 #include <fmt/format.h>
 #include <stdexcept>
 
+#include "slang/text/CharInfo.h"
 #include "slang/util/Hash.h"
 #include "slang/util/String.h"
 

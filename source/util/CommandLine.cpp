@@ -6,12 +6,12 @@
 //------------------------------------------------------------------------------
 #include "slang/util/CommandLine.h"
 
-#include "../text/CharInfo.h"
 #include <charconv>
 #include <cstdlib>
 #include <filesystem>
 #include <fmt/format.h>
 
+#include "slang/text/CharInfo.h"
 #include "slang/util/SmallVector.h"
 #include "slang/util/String.h"
 
