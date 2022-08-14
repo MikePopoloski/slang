@@ -28,10 +28,19 @@ TEST_CASE("UTF8 chars") {
     CHECK(diagnostics.back().code == diag::UTF8Char);
 }
 
+TEST_CASE("Invalid UTF8 chars") {
+    auto& text = "// asdf \xed\xa0\x80\xed\xa0\x80 asdf";
+    Token token = lexToken(text);
+
+    CHECK(token.kind == TokenKind::EndOfFile);
+    CHECK(token.toString() == text);
+    REQUIRE(!diagnostics.empty());
+    CHECK(diagnostics.back().code == diag::InvalidUTF8Seq);
+}
+
 TEST_CASE("Unicode BOMs") {
     lexToken("\xEF\xBB\xBF ");
-    REQUIRE(!diagnostics.empty());
-    CHECK(diagnostics.back().code == diag::UnicodeBOM);
+    REQUIRE(diagnostics.empty());
 
     lexToken("\xFE\xFF ");
     REQUIRE(!diagnostics.empty());
@@ -101,8 +110,8 @@ TEST_CASE("Line Comment (embedded null)") {
     CHECK(diagnostics.back().code == diag::EmbeddedNull);
 }
 
-TEST_CASE("Line Comment (non printable)") {
-    const char text[] = "// foo \U0001f34c bar";
+TEST_CASE("Line Comment (UTF8)") {
+    const char text[] = "// foo 的氣墊船 bar";
     auto str = std::string(text, text + sizeof(text) - 1);
     Token token = lexToken(string_view(str));
 
@@ -110,8 +119,7 @@ TEST_CASE("Line Comment (non printable)") {
     CHECK(token.toString() == str);
     CHECK(token.trivia().size() == 1);
     CHECK(token.trivia()[0].kind == TriviaKind::LineComment);
-    REQUIRE(!diagnostics.empty());
-    CHECK(diagnostics.back().code == diag::UTF8Char);
+    REQUIRE(diagnostics.empty());
 }
 
 TEST_CASE("Block Comment (one line)") {
@@ -165,8 +173,8 @@ TEST_CASE("Block comment (embedded null)") {
     CHECK(diagnostics.back().code == diag::EmbeddedNull);
 }
 
-TEST_CASE("Block comment (non printable)") {
-    const char text[] = "/* foo\U0001f34c */";
+TEST_CASE("Block comment (UTF8 text)") {
+    const char text[] = u8"/* foo 的氣墊船 */";
     auto str = std::string(text, text + sizeof(text) - 1);
     Token token = lexToken(string_view(str));
 
@@ -174,8 +182,7 @@ TEST_CASE("Block comment (non printable)") {
     CHECK(token.toString() == str);
     CHECK(token.trivia().size() == 1);
     CHECK(token.trivia()[0].kind == TriviaKind::BlockComment);
-    REQUIRE(!diagnostics.empty());
-    CHECK(diagnostics.back().code == diag::UTF8Char);
+    REQUIRE(diagnostics.empty());
 }
 
 TEST_CASE("Block Comment (nested)") {
@@ -450,9 +457,9 @@ TEST_CASE("String literal (UTF8 escape)") {
 
     CHECK(token.kind == TokenKind::StringLiteral);
     CHECK(token.toString() == str);
-    CHECK(token.valueText() == "literal");
+    CHECK(token.valueText() == "literal\U0001f34c");
     REQUIRE(!diagnostics.empty());
-    CHECK(diagnostics.back().code == diag::UTF8Char);
+    CHECK(diagnostics.back().code == diag::UnknownEscapeCode);
 }
 
 TEST_CASE("Integer literal") {
@@ -1192,12 +1199,4 @@ TEST_CASE("Missing / expected tokens") {
     testExpect(TokenKind::IntegerLiteral);
     testExpect(TokenKind::TimeLiteral);
     testExpect(TokenKind::WithKeyword);
-}
-
-TEST_CASE("Test text utilities") {
-    CHECK(utf8SeqBytes(63) == 0);
-    CHECK(utf8SeqBytes('\xc1') == 1);
-    CHECK(utf8SeqBytes('\xe0') == 2);
-    CHECK(utf8SeqBytes('\xf0') == 3);
-    CHECK(utf8SeqBytes('\xff') == 0);
 }

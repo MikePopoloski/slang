@@ -21,7 +21,7 @@ class BumpAllocator;
 struct LexerOptions {
     /// The maximum number of errors that can occur before the rest of the source
     /// buffer is skipped.
-    uint32_t maxErrors = 64;
+    uint32_t maxErrors = 16;
 };
 
 /// The Lexer is responsible for taking source text and chopping it up into tokens.
@@ -83,6 +83,7 @@ private:
     void scanLineComment();
     void scanWhitespace();
     void scanIdentifier();
+    bool scanUTF8Char(bool alreadyErrored);
 
     template<typename... Args>
     Token create(TokenKind kind, Args&&... args);
@@ -101,8 +102,6 @@ private:
     // in order to detect embedded nulls gracefully, we call this whenever we
     // encounter a null to check whether we really are at the end of the buffer
     bool reallyAtEnd() { return sourceBuffer >= sourceEnd - 1; }
-
-    void handleNonPrintable(char c);
 
     uint32_t lexemeLength() { return (uint32_t)(sourceBuffer - marker); }
     string_view lexeme() { return string_view(marker, lexemeLength()); }

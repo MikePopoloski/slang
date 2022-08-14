@@ -39,7 +39,7 @@ Lexer::Lexer(BufferID bufferId, string_view source, const char* startPtr, BumpAl
     ASSERT(count);
     ASSERT(sourceEnd[-1] == '\0');
 
-    // detect BOMs so we can give nice errors for invaild encoding
+    // detect BOMs so we can give nice errors for invalid encoding
     if (count >= 2) {
         const unsigned char* ubuf = reinterpret_cast<const unsigned char*>(sourceBuffer);
         if ((ubuf[0] == 0xFF && ubuf[1] == 0xFE) || (ubuf[0] == 0xFE && ubuf[1] == 0xFF)) {
@@ -48,11 +48,9 @@ Lexer::Lexer(BufferID bufferId, string_view source, const char* startPtr, BumpAl
             advance(2);
         }
         else if (count >= 3) {
-            if (ubuf[0] == 0xEF && ubuf[1] == 0xBB && ubuf[2] == 0xBF) {
-                errorCount++;
-                addDiag(diag::UnicodeBOM, 0);
+            // Silently skip the UTF8 BOM.
+            if (ubuf[0] == 0xEF && ubuf[1] == 0xBB && ubuf[2] == 0xBF)
                 advance(3);
-            }
         }
     }
 }
@@ -571,12 +569,25 @@ Token Lexer::lexToken(KeywordVersion keywordVersion) {
             }
             return create(TokenKind::Tilde);
         default:
-            handleNonPrintable(c);
+            errorCount++;
+            if (isASCII(c)) {
+                addDiag(diag::NonPrintableChar, currentOffset() - 1);
+            }
+            else {
+                sourceBuffer--;
+                addDiag(diag::UTF8Char, currentOffset());
+
+                bool sawUTF8Error = false;
+                do {
+                    sawUTF8Error |= !scanUTF8Char(sawUTF8Error);
+                } while (!isASCII(peek()));
+            }
             return create(TokenKind::Unknown);
     }
 }
 
 Token Lexer::lexStringLiteral() {
+    bool sawUTF8Error = false;
     SmallVectorSized<char, 128> stringBuffer;
     while (true) {
         size_t offset = currentOffset();
@@ -635,7 +646,10 @@ Token Lexer::lexStringLiteral() {
                     }
                     break;
                 default: {
-                    if (isPrintable(c)) {
+                    // Back up so that we handle this character as a normal char in the outer loop.
+                    auto curr = --sourceBuffer;
+
+                    if (isPrintableASCII(c)) {
                         // '\%' is not an actual escape code but other tools silently allow it
                         // and major UVM headers use it, so we'll issue a (fairly quiet) warning
                         // about it. Otherwise issue a louder warning (on by default).
@@ -643,9 +657,13 @@ Token Lexer::lexStringLiteral() {
                             c == '%' ? diag::NonstandardEscapeCode : diag::UnknownEscapeCode;
                         addDiag(code, offset) << c;
                     }
-
-                    // Back up so that we handle this character as a normal char in the outer loop.
-                    sourceBuffer--;
+                    else if (scanUTF8Char(sawUTF8Error)) {
+                        addDiag(diag::UnknownEscapeCode, offset) << string_view(curr, utf8Len(c));
+                        sourceBuffer = curr;
+                    }
+                    else {
+                        sawUTF8Error = true;
+                    }
                     break;
                 }
             }
@@ -669,13 +687,21 @@ Token Lexer::lexStringLiteral() {
             addDiag(diag::EmbeddedNull, offset);
             advance();
         }
-        else if (isPrintable(c)) {
+        else if (isASCII(c)) {
             advance();
             stringBuffer.append(c);
+            sawUTF8Error = false;
         }
         else {
-            advance();
-            handleNonPrintable(c);
+            auto curr = sourceBuffer;
+            int len = utf8Len(c);
+            if (scanUTF8Char(sawUTF8Error)) {
+                for (int i = 0; i < len; i++)
+                    stringBuffer.append(curr[i]);
+            }
+            else {
+                sawUTF8Error = true;
+            }
         }
     }
 
@@ -697,7 +723,7 @@ Token Lexer::lexEscapeSequence(bool isMacroName) {
         return create(TokenKind::Unknown);
     }
 
-    while (isPrintable(c)) {
+    while (isPrintableASCII(c)) {
         advance();
         c = peek();
         if (isWhitespace(c))
@@ -1064,12 +1090,14 @@ void Lexer::scanWhitespace() {
 }
 
 void Lexer::scanLineComment() {
+    bool sawUTF8Error = false;
     while (true) {
         char c = peek();
-        if (isNewline(c))
-            break;
+        if (isASCII(c)) {
+            if (isNewline(c))
+                break;
 
-        if (!isPrintable(c)) {
+            sawUTF8Error = false;
             if (c == '\0') {
                 if (reallyAtEnd())
                     break;
@@ -1077,37 +1105,32 @@ void Lexer::scanLineComment() {
                 // otherwise just error and ignore
                 errorCount++;
                 addDiag(diag::EmbeddedNull, currentOffset());
-                advance();
             }
-            else {
-                advance();
-                handleNonPrintable(c);
-            }
+            advance();
         }
         else {
-            advance();
+            sawUTF8Error |= !scanUTF8Char(sawUTF8Error);
         }
     }
     addTrivia(TriviaKind::LineComment);
 }
 
 void Lexer::scanBlockComment() {
+    bool sawUTF8Error = false;
     while (true) {
         char c = peek();
-        if (c == '*' && peek(1) == '/') {
-            advance(2);
-            break;
-        }
-        else if (c == '/' && peek(1) == '*') {
-            // nested block comments disallowed by the standard; ignore and continue
-            addDiag(diag::NestedBlockComment, currentOffset());
-            advance(2);
-        }
-        else if (isPrintable(c)) {
-            advance();
-        }
-        else {
-            if (c == '\0') {
+        if (isASCII(c)) {
+            sawUTF8Error = false;
+            if (c == '*' && peek(1) == '/') {
+                advance(2);
+                break;
+            }
+            else if (c == '/' && peek(1) == '*') {
+                // nested block comments disallowed by the standard; ignore and continue
+                addDiag(diag::NestedBlockComment, currentOffset());
+                advance(2);
+            }
+            else if (c == '\0') {
                 if (reallyAtEnd()) {
                     addDiag(diag::UnterminatedBlockComment, currentOffset());
                     break;
@@ -1120,25 +1143,38 @@ void Lexer::scanBlockComment() {
             }
             else {
                 advance();
-                handleNonPrintable(c);
             }
+        }
+        else {
+            sawUTF8Error |= !scanUTF8Char(sawUTF8Error);
         }
     }
 
     addTrivia(TriviaKind::BlockComment);
 }
 
-void Lexer::handleNonPrintable(char c) {
-    errorCount++;
-    if (isASCII(c))
-        addDiag(diag::NonPrintableChar, currentOffset() - 1);
-    else {
-        addDiag(diag::UTF8Char, currentOffset() - 1);
-
-        // skip over UTF-8 sequences
-        int skip = utf8SeqBytes(c);
-        advance(std::min((int)(sourceEnd - sourceBuffer - 1), skip));
+bool Lexer::scanUTF8Char(bool alreadyErrored) {
+    int error;
+    uint32_t c;
+    auto curr = sourceBuffer;
+    if (sourceBuffer + 4 < sourceEnd) {
+        sourceBuffer = utf8Decode(sourceBuffer, &c, &error);
     }
+    else {
+        char buf[4] = {};
+        memcpy(buf, sourceBuffer, size_t(sourceEnd - sourceBuffer - 1));
+        utf8Decode(sourceBuffer, &c, &error);
+        sourceBuffer = sourceEnd - 1;
+    }
+
+    if (error) {
+        errorCount++;
+        if (!alreadyErrored)
+            addDiag(diag::InvalidUTF8Seq, (size_t)(curr - originalBegin));
+        return false;
+    }
+
+    return true;
 }
 
 template<typename... Args>
