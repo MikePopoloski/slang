@@ -658,7 +658,8 @@ Token Lexer::lexStringLiteral() {
                         addDiag(code, offset) << c;
                     }
                     else if (scanUTF8Char(sawUTF8Error)) {
-                        addDiag(diag::UnknownEscapeCode, offset) << string_view(curr, utf8Len(c));
+                        addDiag(diag::UnknownEscapeCode, offset)
+                            << string_view(curr, (size_t)utf8Len((unsigned char)c));
                         sourceBuffer = curr;
                     }
                     else {
@@ -694,7 +695,7 @@ Token Lexer::lexStringLiteral() {
         }
         else {
             auto curr = sourceBuffer;
-            int len = utf8Len(c);
+            int len = utf8Len((unsigned char)c);
             if (scanUTF8Char(sawUTF8Error)) {
                 for (int i = 0; i < len; i++)
                     stringBuffer.append(curr[i]);
