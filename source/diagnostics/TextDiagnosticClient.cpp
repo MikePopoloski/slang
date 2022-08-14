@@ -306,8 +306,10 @@ void TextDiagnosticClient::formatDiag(SourceLocation loc, span<const SourceRange
     if (hasLocation && includeSource) {
         string_view line = getSourceLine(loc, col);
         if (!line.empty() && line.length() < MaxLineLengthToPrint) {
-            // TODO: tab stop
-            SourceSnippet snippet(line, 4);
+            // We might want to make the tab width configurable at some point,
+            // but for now hardcode it to 8 to match the default on basically
+            // every terminal.
+            SourceSnippet snippet(line, 8);
             for (SourceRange range : ranges)
                 snippet.highlightRange(range, loc, col, line);
 
