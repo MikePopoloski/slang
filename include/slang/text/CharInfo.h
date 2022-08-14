@@ -28,6 +28,21 @@ constexpr bool isPrintableASCII(char c) {
 /// it's actually displayed on most terminals.
 bool isPrintableUnicode(uint32_t c);
 
+/// Gets the number of positions a character is likely to occupy when output
+/// on a terminal ("character width"). This depends on the implementation of the
+/// terminal, and there's no standard definition of character width.
+/// The implementation defines it in a way that is expected to be compatible
+/// with a generic Unicode-capable terminal.
+///
+/// @return Character width:
+///   * 0 for non-spacing and enclosing combining marks;
+///   * 2 for CJK characters excluding halfwidth forms;
+///   * 1 for all remaining characters.
+///
+/// @note Should not be called with a non-printable or invalid character,
+/// which will return 1 but in reality doesn't have any meaningful width.
+int charWidthUnicode(uint32_t c);
+
 /// Returns whether the given character is considered whitespace.
 constexpr bool isWhitespace(char c) {
     switch (c) {
