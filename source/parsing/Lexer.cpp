@@ -1164,7 +1164,7 @@ bool Lexer::scanUTF8Char(bool alreadyErrored) {
     else {
         char buf[4] = {};
         memcpy(buf, sourceBuffer, size_t(sourceEnd - sourceBuffer - 1));
-        utf8Decode(sourceBuffer, &c, &error);
+        utf8Decode(buf, &c, &error);
         sourceBuffer = sourceEnd - 1;
     }
 
