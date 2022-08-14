@@ -112,7 +112,7 @@ constexpr uint8_t getHexDigitValue(char c) {
 /// Gets the hexadecimal character for the given number (which should be less than 16).
 constexpr char getHexForDigit(uint32_t num, bool lowerCase = false) {
     constexpr const char LUT[] = "0123456789ABCDEF";
-    const uint8_t offset = lowerCase ? 32 : 0;
+    const char offset = lowerCase ? 32 : 0;
     return LUT[num] | offset;
 }
 

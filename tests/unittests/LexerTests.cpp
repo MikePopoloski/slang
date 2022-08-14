@@ -111,14 +111,15 @@ TEST_CASE("Line Comment (embedded null)") {
 }
 
 TEST_CASE("Line Comment (UTF8)") {
-    const char text[] = "// foo 的氣墊船 bar";
+    const char text[] = "// foo 的氣墊船\u00F7\n";
     auto str = std::string(text, text + sizeof(text) - 1);
     Token token = lexToken(string_view(str));
 
     CHECK(token.kind == TokenKind::EndOfFile);
     CHECK(token.toString() == str);
-    CHECK(token.trivia().size() == 1);
+    CHECK(token.trivia().size() == 2);
     CHECK(token.trivia()[0].kind == TriviaKind::LineComment);
+    CHECK(token.trivia()[1].kind == TriviaKind::EndOfLine);
     REQUIRE(diagnostics.empty());
 }
 
