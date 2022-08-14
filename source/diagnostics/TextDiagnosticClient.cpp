@@ -143,8 +143,11 @@ static void highlightRange(SourceRange range, SourceLocation caretLoc, size_t co
 void TextDiagnosticClient::formatDiag(SourceLocation loc, span<const SourceRange> ranges,
                                       DiagnosticSeverity severity, string_view message,
                                       string_view optionName) {
+    constexpr size_t MaxLineLengthToPrint = 4096;
+
     size_t col = 0;
-    if (loc != SourceLocation::NoLocation) {
+    bool hasLocation = loc.buffer() != SourceLocation::NoLocation.buffer();
+    if (hasLocation) {
         col = sourceManager->getColumnNumber(loc);
         if (includeLocation) {
             buffer->append(fg(filenameColor), sourceManager->getFileName(loc));
@@ -154,6 +157,10 @@ void TextDiagnosticClient::formatDiag(SourceLocation loc, span<const SourceRange
                 buffer->format(fg(locationColor), ":{}", col);
             buffer->append(": ");
         }
+
+        // Arbitrarily stop showing snippets when the line gets too long.
+        if (col > MaxLineLengthToPrint)
+            hasLocation = false;
     }
 
     buffer->format(fg(getSeverityColor(severity)), "{}: ", getSeverityString(severity));
@@ -166,9 +173,9 @@ void TextDiagnosticClient::formatDiag(SourceLocation loc, span<const SourceRange
     if (!optionName.empty() && includeOptionName)
         buffer->format(" [-W{}]", optionName);
 
-    if (loc != SourceLocation::NoLocation && includeSource) {
+    if (hasLocation && includeSource) {
         string_view line = getSourceLine(loc, col);
-        if (!line.empty()) {
+        if (!line.empty() && line.length() < MaxLineLengthToPrint) {
             buffer->format("\n{}\n", line);
 
             // Highlight any ranges and print the caret location.
