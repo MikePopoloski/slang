@@ -624,7 +624,15 @@ bool Driver::reportParseDiags() {
         diagEngine.issue(diag);
 
     OS::printE("{}", diagClient->getString());
-    return diagEngine.getNumErrors() == 0;
+
+    bool succeeded = diagEngine.getNumErrors() == 0;
+
+    if (succeeded) {
+        for (const auto& cb : onSuccessCallback)
+            cb(compilation->getRoot());
+    }
+
+    return succeeded;
 }
 
 bool Driver::reportCompilation(Compilation& compilation, bool quiet) {
@@ -642,6 +650,11 @@ bool Driver::reportCompilation(Compilation& compilation, bool quiet) {
         diagEngine.issue(diag);
 
     bool succeeded = diagEngine.getNumErrors() == 0;
+
+    if (succeeded) {
+        for (const auto& cb : onSuccessCallback)
+            cb(compilation.getRoot());
+    }
 
     std::string diagStr = diagClient->getString();
     OS::printE("{}", diagStr);

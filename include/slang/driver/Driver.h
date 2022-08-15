@@ -44,6 +44,9 @@ public:
     /// A list of syntax trees that have been parsed.
     std::vector<std::shared_ptr<SyntaxTree>> syntaxTrees;
 
+    /// A list of callback function on
+    std::vector<std::function<void(const RootSymbol&)>> onSuccessCallback;
+
     /// A container for various options that can be parsed and applied
     /// to the compilation process.
     struct Options {
@@ -277,6 +280,11 @@ public:
     /// If @a quiet is set to true, non-essential output will be suppressed.
     /// @returns true if compilation succeeded and false if errors were encountered.
     [[nodiscard]] bool reportCompilation(Compilation& compilation, bool quiet);
+
+    /// Add callback function on the compliation success
+    void add_success_callback(std::function<void(const RootSymbol&)> func) {
+        onSuccessCallback.push_back(std::move(func));
+    }
 };
 
 } // namespace slang
