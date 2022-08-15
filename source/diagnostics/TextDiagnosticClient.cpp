@@ -152,10 +152,10 @@ static bool printableTextForNextChar(string_view sourceLine, size_t& index, uint
 
     if (error) {
         // Not valid UTF-8, so print a placeholder instead.
-        char invalid = sourceLine[index++];
+        unsigned char invalid = (unsigned char)sourceLine[index++];
         out.appendRange("<XX>"sv);
-        out[1] = getHexForDigit(uint32_t(invalid / 16));
-        out[2] = getHexForDigit(uint32_t(invalid % 16));
+        out[1] = getHexForDigit(invalid / 16);
+        out[2] = getHexForDigit(invalid % 16);
         columnWidth = out.size();
         return false;
     }
@@ -165,7 +165,7 @@ static bool printableTextForNextChar(string_view sourceLine, size_t& index, uint
     if (!isPrintableUnicode(c)) {
         SmallVectorSized<char, 8> buf;
         while (c) {
-            out.append(getHexForDigit(c % 16));
+            buf.append(getHexForDigit(c % 16));
             c /= 16;
         }
 

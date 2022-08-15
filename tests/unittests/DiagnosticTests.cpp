@@ -526,3 +526,50 @@ source:11:5: warning: extra ';' has no effect [-Wempty-member]
     ^
 )");
 }
+
+TEST_CASE("Diagnostics with Unicode and tabs in source snippet") {
+    auto tree = SyntaxTree::fromText(u8R"(
+module m;
+    string s = "literal\🍌";
+    int 	/* // 꿽꿽꿽꿽꿽꿽꿽 */		갑곯꿽 = "꿽꿽꿽"; // 꿽꿽꿽꿽꿽꿽꿽
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diagnostics = compilation.getAllDiagnostics();
+    std::string result = "\n" + report(diagnostics);
+    CHECK(result == R"(
+source:3:24: warning: unknown character escape sequence '\🍌' [-Wunknown-escape-code]
+    string s = "literal\🍌";
+                       ^
+source:4:42: error: UTF-8 sequence in source text; SystemVerilog identifiers must be ASCII
+    int         /* // 꿽꿽꿽꿽꿽꿽꿽 */          갑곯꿽 = "꿽꿽꿽"; // 꿽꿽꿽꿽꿽꿽꿽
+                                                 ^
+source:4:42: error: expected declarator
+    int         /* // 꿽꿽꿽꿽꿽꿽꿽 */          갑곯꿽 = "꿽꿽꿽"; // 꿽꿽꿽꿽꿽꿽꿽
+                                                 ^
+)");
+}
+
+TEST_CASE("Diagnostics with invalid UTF8 printed") {
+    auto tree = SyntaxTree::fromText("module m;\n"
+                                     "    string s = \"literal \xed\xa0\x80\xed\xa0\x80\";\n"
+                                     "    int i = /* asdf a\u0308\u0019\U0001057B */ a;\n"
+                                     "endmodule\n");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diagnostics = compilation.getAllDiagnostics();
+    std::string result = "\n" + report(diagnostics);
+    CHECK(result == R"(
+source:2:25: error: invalid UTF-8 sequence in source text
+    string s = "literal <ED><A0><80><ED><A0><80>";
+                        ^
+source:3:33: error: use of undeclared identifier 'a'
+    int i = /* asdf ä<U+19><U+1057B> */ a;
+                                        ^
+)");
+}
