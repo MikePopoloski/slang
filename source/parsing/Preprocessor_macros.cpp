@@ -656,7 +656,9 @@ bool Preprocessor::expandIntrinsic(MacroIntrinsic intrinsic, MacroExpansion& exp
     switch (intrinsic) {
         case MacroIntrinsic::File: {
             string_view fileName = sourceManager.getFileName(loc);
+            text.append('"');
             text.appendRange(fileName);
+            text.append('"');
 
             string_view rawText = toStringView(text.copy(alloc));
             Token token(alloc, TokenKind::StringLiteral, {}, rawText, loc, fileName);
