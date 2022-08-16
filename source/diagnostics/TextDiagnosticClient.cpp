@@ -200,7 +200,8 @@ struct SourceSnippet {
 
             size_t columnWidth;
             buffer.clear();
-            printableTextForNextChar(sourceLine, i, tabStop, buffer, columnWidth);
+            if (!printableTextForNextChar(sourceLine, i, tabStop, buffer, columnWidth))
+                invalidRanges.append({ snippetLine.size(), buffer.size() });
 
             snippetLine.append(buffer.data(), buffer.size());
             column += columnWidth;
@@ -265,7 +266,32 @@ struct SourceSnippet {
 
     void trimHighlight() { highlightLine.erase(highlightLine.find_last_not_of(' ') + 1); }
 
+    void printTo(FormatBuffer& out, fmt::v9::terminal_color highlightColor) {
+        out.append("\n");
+
+        if (invalidRanges.empty()) {
+            out.append(snippetLine);
+        }
+        else {
+            size_t index = 0;
+            string_view view = snippetLine;
+            for (auto [start, count] : invalidRanges) {
+                ASSERT(start >= index);
+                out.append(view.substr(index, start - index));
+
+                out.append(fmt::emphasis::reverse, view.substr(start, count));
+                index = start + count;
+            }
+
+            out.append(view.substr(index));
+        }
+
+        out.append("\n");
+        out.append(fg(highlightColor), highlightLine);
+    }
+
     SmallVectorSized<int, 256> byteToColumn;
+    SmallVectorSized<std::pair<size_t, size_t>, 4> invalidRanges;
     std::string snippetLine;
     std::string highlightLine;
 };
@@ -315,11 +341,7 @@ void TextDiagnosticClient::formatDiag(SourceLocation loc, span<const SourceRange
 
             snippet.insertCaret(col);
             snippet.trimHighlight();
-
-            buffer->append("\n");
-            buffer->append(snippet.snippetLine);
-            buffer->append("\n");
-            buffer->append(fg(highlightColor), snippet.highlightLine);
+            snippet.printTo(*buffer, highlightColor);
         }
     }
 
