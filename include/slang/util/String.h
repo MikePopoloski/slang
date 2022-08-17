@@ -53,6 +53,15 @@ optional<double> strToDouble(string_view str, size_t* pos = nullptr);
 int editDistance(string_view left, string_view right, bool allowReplacements = true,
                  int maxDistance = 0);
 
+// TODO: remove once we have C++20
+inline bool startsWith(string_view str, string_view prefix) {
+    return str.size() >= prefix.size() && str.compare(0, prefix.size(), prefix) == 0;
+};
+inline bool endsWith(string_view str, string_view suffix) {
+    return str.size() >= suffix.size() &&
+           str.compare(str.size() - suffix.size(), suffix.size(), suffix) == 0;
+};
+
 #if defined(_MSC_VER)
 
 /// Widens the provided UTF8 string into UTF16 wchars.

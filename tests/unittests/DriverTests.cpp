@@ -93,20 +93,16 @@ TEST_CASE("Driver file preprocess") {
     CHECK(driver.runPreprocessor(true, false));
 
     auto output = OS::capturedStdout;
-    for (size_t pos = 0; (pos = output.find("\\", pos, 1)) != output.npos; pos++)
-        output.replace(pos, 1, "/", 1);
-
-    if (auto pos = output.find("../"); pos != output.npos)
-        output.erase(pos, 3);
-
-    CHECK(output == R"(
+    CHECK(startsWith(output, R"(
 module m;
     // hello
-    string s = "tests/unittests/data/test.sv";
+    string s = ")"));
+
+    CHECK(endsWith(output, R"(";
     begin end
 endmodule
 
-)");
+)"));
 }
 
 TEST_CASE("Driver file preprocess with error") {

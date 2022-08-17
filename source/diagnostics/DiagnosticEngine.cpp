@@ -12,6 +12,7 @@
 #include "slang/diagnostics/TextDiagnosticClient.h"
 #include "slang/text/SourceManager.h"
 #include "slang/util/StackContainer.h"
+#include "slang/util/String.h"
 
 namespace slang {
 
@@ -400,11 +401,6 @@ std::string DiagnosticEngine::reportAll(const SourceManager& sourceManager,
 
     return client->getString();
 }
-
-// TODO: remove once we have C++20
-static bool startsWith(string_view str, string_view prefix) {
-    return str.size() >= prefix.size() && str.compare(0, prefix.size(), prefix) == 0;
-};
 
 void DiagnosticEngine::setDefaultWarnings() {
     setIgnoreAllWarnings(true);
