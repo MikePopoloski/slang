@@ -83,7 +83,7 @@ private:
     void scanLineComment();
     void scanWhitespace();
     void scanIdentifier();
-    bool scanUTF8Char(bool alreadyErrored);
+    bool scanUTF8Char(bool alreadyErrored, uint32_t* code);
 
     template<typename... Args>
     Token create(TokenKind kind, Args&&... args);

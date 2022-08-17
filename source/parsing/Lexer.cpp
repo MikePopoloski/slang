@@ -579,7 +579,8 @@ Token Lexer::lexToken(KeywordVersion keywordVersion) {
 
                 bool sawUTF8Error = false;
                 do {
-                    sawUTF8Error |= !scanUTF8Char(sawUTF8Error);
+                    uint32_t unused;
+                    sawUTF8Error |= !scanUTF8Char(sawUTF8Error, &unused);
                 } while (!isASCII(peek()));
             }
             return create(TokenKind::Unknown);
@@ -646,25 +647,27 @@ Token Lexer::lexStringLiteral() {
                     }
                     break;
                 default: {
-                    // Back up so that we handle this character as a normal char in the outer loop.
                     auto curr = --sourceBuffer;
 
-                    if (isPrintableASCII(c)) {
-                        // '\%' is not an actual escape code but other tools silently allow it
-                        // and major UVM headers use it, so we'll issue a (fairly quiet) warning
-                        // about it. Otherwise issue a louder warning (on by default).
-                        DiagCode code =
-                            c == '%' ? diag::NonstandardEscapeCode : diag::UnknownEscapeCode;
-                        addDiag(code, offset) << c;
-                    }
-                    else if (scanUTF8Char(sawUTF8Error)) {
-                        addDiag(diag::UnknownEscapeCode, offset)
-                            << string_view(curr, (size_t)utf8Len((unsigned char)c));
-                        sourceBuffer = curr;
+                    uint32_t unicodeChar;
+                    if (scanUTF8Char(sawUTF8Error, &unicodeChar)) {
+                        if (isPrintableUnicode(unicodeChar)) {
+                            // '\%' is not an actual escape code but other tools silently allow it
+                            // and major UVM headers use it, so we'll issue a (fairly quiet) warning
+                            // about it. Otherwise issue a louder warning (on by default).
+                            DiagCode code =
+                                c == '%' ? diag::NonstandardEscapeCode : diag::UnknownEscapeCode;
+                            addDiag(code, offset)
+                                << string_view(curr, (size_t)utf8Len((unsigned char)c));
+                        }
                     }
                     else {
                         sawUTF8Error = true;
                     }
+
+                    // Back up so that we handle this character as a normal char in the outer loop,
+                    // regardless of whether it's valid or not.
+                    sourceBuffer = curr;
                     break;
                 }
             }
@@ -694,9 +697,10 @@ Token Lexer::lexStringLiteral() {
             sawUTF8Error = false;
         }
         else {
+            uint32_t unused;
             auto curr = sourceBuffer;
             int len = utf8Len((unsigned char)c);
-            if (scanUTF8Char(sawUTF8Error)) {
+            if (scanUTF8Char(sawUTF8Error, &unused)) {
                 for (int i = 0; i < len; i++)
                     stringBuffer.append(curr[i]);
             }
@@ -1110,7 +1114,8 @@ void Lexer::scanLineComment() {
             advance();
         }
         else {
-            sawUTF8Error |= !scanUTF8Char(sawUTF8Error);
+            uint32_t unused;
+            sawUTF8Error |= !scanUTF8Char(sawUTF8Error, &unused);
         }
     }
     addTrivia(TriviaKind::LineComment);
@@ -1147,25 +1152,25 @@ void Lexer::scanBlockComment() {
             }
         }
         else {
-            sawUTF8Error |= !scanUTF8Char(sawUTF8Error);
+            uint32_t unused;
+            sawUTF8Error |= !scanUTF8Char(sawUTF8Error, &unused);
         }
     }
 
     addTrivia(TriviaKind::BlockComment);
 }
 
-bool Lexer::scanUTF8Char(bool alreadyErrored) {
+bool Lexer::scanUTF8Char(bool alreadyErrored, uint32_t* code) {
     int error;
-    uint32_t c;
     auto curr = sourceBuffer;
     if (sourceBuffer + 4 < sourceEnd) {
-        sourceBuffer = utf8Decode(sourceBuffer, &c, &error);
+        sourceBuffer = utf8Decode(sourceBuffer, code, &error);
     }
     else {
         char buf[4] = {};
         memcpy(buf, sourceBuffer, size_t(sourceEnd - sourceBuffer - 1));
 
-        auto next = utf8Decode(buf, &c, &error);
+        auto next = utf8Decode(buf, code, &error);
         sourceBuffer += next - buf;
     }
 

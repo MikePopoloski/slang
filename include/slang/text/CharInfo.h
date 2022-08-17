@@ -15,10 +15,9 @@ constexpr bool isASCII(char c) {
     return static_cast<unsigned char>(c) < 128;
 }
 
-/// Returns whether the given character is considered "printable",
-/// which notably includes whitespace (while the c function `isprint` does not).
+/// Returns whether the given character is considered "printable".
 constexpr bool isPrintableASCII(char c) {
-    return (c >= 32 && c <= 126) || (c >= 9 && c <= 13);
+    return c >= 32 && c <= 126;
 }
 
 /// Returns whether the given Unicode character is considered "printable".
