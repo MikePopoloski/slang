@@ -3,6 +3,7 @@ add_executable(
   AssertionTests.cpp
   ClassTests.cpp
   CoverTests.cpp
+  DriverTests.cpp
   DiagnosticTests.cpp
   EvalTests.cpp
   ExpressionParsingTests.cpp

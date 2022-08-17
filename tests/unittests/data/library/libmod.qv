@@ -1,0 +1,6 @@
+`pragma diagnostic warn="-Wfoobaz"
+
+module libmod;
+    import pkg::*;
+    int k = pkg::bar;
+endmodule

@@ -328,16 +328,12 @@ bool Driver::processOptions() {
     }
 
     Diagnostics optionDiags = diagEngine.setWarningOptions(options.warningOptions);
-    Diagnostics pragmaDiags = diagEngine.setMappingsFromPragmas();
     if (options.ignoreUnknownModules == true)
         diagEngine.setSeverity(diag::UnknownModule, DiagnosticSeverity::Ignored);
     if (options.allowUseBeforeDeclare == true)
         diagEngine.setSeverity(diag::UsedBeforeDeclared, DiagnosticSeverity::Ignored);
 
     for (auto& diag : optionDiags)
-        diagEngine.issue(diag);
-
-    for (auto& diag : pragmaDiags)
         diagEngine.issue(diag);
 
     return true;
@@ -429,12 +425,6 @@ bool Driver::parseAllSources() {
         }
     }
 
-    auto handlePragms = [&](BufferID buffer) {
-        Diagnostics pragmaDiags = diagEngine.setMappingsFromPragmas(buffer);
-        for (auto& diag : pragmaDiags)
-            diagEngine.issue(diag);
-    };
-
     bool ok = true;
     for (auto& file : options.libraryFiles) {
         SourceBuffer buffer = readSource(file);
@@ -446,114 +436,117 @@ bool Driver::parseAllSources() {
         auto tree = SyntaxTree::fromBuffer(buffer, sourceManager, optionBag);
         tree->isLibrary = true;
         syntaxTrees.emplace_back(std::move(tree));
-        handlePragms(buffer.id);
     }
 
-    if (options.libDirs.empty())
-        return ok;
+    if (!options.libDirs.empty()) {
+        std::vector<fs::path> directories;
+        directories.reserve(options.libDirs.size());
+        for (auto& dir : options.libDirs)
+            directories.emplace_back(widen(dir));
 
-    std::vector<fs::path> directories;
-    directories.reserve(options.libDirs.size());
-    for (auto& dir : options.libDirs)
-        directories.emplace_back(widen(dir));
+        flat_hash_set<string_view> uniqueExtensions;
+        uniqueExtensions.emplace(".v"sv);
+        uniqueExtensions.emplace(".sv"sv);
+        for (auto& ext : options.libExts)
+            uniqueExtensions.emplace(ext);
 
-    flat_hash_set<string_view> uniqueExtensions;
-    uniqueExtensions.emplace(".v"sv);
-    uniqueExtensions.emplace(".sv"sv);
-    for (auto& ext : options.libExts)
-        uniqueExtensions.emplace(ext);
+        std::vector<fs::path> extensions;
+        for (auto ext : uniqueExtensions)
+            extensions.emplace_back(widen(ext));
 
-    std::vector<fs::path> extensions;
-    for (auto ext : uniqueExtensions)
-        extensions.emplace_back(widen(ext));
+        // If library directories are specified, see if we have any unknown instantiations
+        // or package names for which we should search for additional source files to load.
+        flat_hash_set<string_view> knownNames;
+        auto addKnownNames = [&](const std::shared_ptr<SyntaxTree>& tree) {
+            auto& meta = tree->getMetadata();
+            for (auto& [n, _] : meta.nodeMap) {
+                auto decl = &n->as<ModuleDeclarationSyntax>();
+                string_view name = decl->header->name.valueText();
+                if (!name.empty())
+                    knownNames.emplace(name);
+            }
 
-    // If library directories are specified, see if we have any unknown instantiations
-    // or package names for which we should search for additional source files to load.
-    flat_hash_set<string_view> knownNames;
-    auto addKnownNames = [&](const std::shared_ptr<SyntaxTree>& tree) {
-        auto& meta = tree->getMetadata();
-        for (auto& [n, _] : meta.nodeMap) {
-            auto decl = &n->as<ModuleDeclarationSyntax>();
-            string_view name = decl->header->name.valueText();
-            if (!name.empty())
-                knownNames.emplace(name);
-        }
+            for (auto classDecl : meta.classDecls) {
+                string_view name = classDecl->name.valueText();
+                if (!name.empty())
+                    knownNames.emplace(name);
+            }
+        };
 
-        for (auto classDecl : meta.classDecls) {
-            string_view name = classDecl->name.valueText();
-            if (!name.empty())
-                knownNames.emplace(name);
-        }
-    };
+        auto findMissingNames = [&](const std::shared_ptr<SyntaxTree>& tree,
+                                    flat_hash_set<string_view>& missing) {
+            auto& meta = tree->getMetadata();
+            for (auto name : meta.globalInstances) {
+                if (knownNames.find(name) == knownNames.end())
+                    missing.emplace(name);
+            }
 
-    auto findMissingNames = [&](const std::shared_ptr<SyntaxTree>& tree,
-                                flat_hash_set<string_view>& missing) {
-        auto& meta = tree->getMetadata();
-        for (auto name : meta.globalInstances) {
-            if (knownNames.find(name) == knownNames.end())
-                missing.emplace(name);
-        }
-
-        for (auto idName : meta.classPackageNames) {
-            string_view name = idName->identifier.valueText();
-            if (!name.empty() && knownNames.find(name) == knownNames.end())
-                missing.emplace(name);
-        }
-
-        for (auto importDecl : meta.packageImports) {
-            for (auto importItem : importDecl->items) {
-                string_view name = importItem->package.valueText();
+            for (auto idName : meta.classPackageNames) {
+                string_view name = idName->identifier.valueText();
                 if (!name.empty() && knownNames.find(name) == knownNames.end())
                     missing.emplace(name);
             }
-        }
-    };
 
-    for (auto& tree : syntaxTrees)
-        addKnownNames(tree);
+            for (auto importDecl : meta.packageImports) {
+                for (auto importItem : importDecl->items) {
+                    string_view name = importItem->package.valueText();
+                    if (!name.empty() && knownNames.find(name) == knownNames.end())
+                        missing.emplace(name);
+                }
+            }
+        };
 
-    flat_hash_set<string_view> missingNames;
-    for (auto& tree : syntaxTrees)
-        findMissingNames(tree, missingNames);
+        for (auto& tree : syntaxTrees)
+            addKnownNames(tree);
 
-    // Keep loading new files as long as we are making forward progress.
-    flat_hash_set<string_view> nextMissingNames;
-    while (true) {
-        for (auto name : missingNames) {
-            SourceBuffer buffer;
-            for (auto& dir : directories) {
-                fs::path path(dir);
-                path /= name;
+        flat_hash_set<string_view> missingNames;
+        for (auto& tree : syntaxTrees)
+            findMissingNames(tree, missingNames);
 
-                for (auto& ext : extensions) {
-                    path.replace_extension(ext);
-                    if (!sourceManager.isCached(path)) {
-                        buffer = sourceManager.readSource(path);
-                        if (buffer)
-                            break;
+        // Keep loading new files as long as we are making forward progress.
+        flat_hash_set<string_view> nextMissingNames;
+        while (true) {
+            for (auto name : missingNames) {
+                SourceBuffer buffer;
+                for (auto& dir : directories) {
+                    fs::path path(dir);
+                    path /= name;
+
+                    for (auto& ext : extensions) {
+                        path.replace_extension(ext);
+                        if (!sourceManager.isCached(path)) {
+                            buffer = sourceManager.readSource(path);
+                            if (buffer)
+                                break;
+                        }
                     }
+
+                    if (buffer)
+                        break;
                 }
 
-                if (buffer)
-                    break;
+                if (buffer) {
+                    auto tree = SyntaxTree::fromBuffer(buffer, sourceManager, optionBag);
+                    tree->isLibrary = true;
+                    syntaxTrees.emplace_back(tree);
+
+                    addKnownNames(tree);
+                    findMissingNames(tree, nextMissingNames);
+                }
             }
 
-            if (buffer) {
-                auto tree = SyntaxTree::fromBuffer(buffer, sourceManager, optionBag);
-                tree->isLibrary = true;
-                syntaxTrees.emplace_back(tree);
-                handlePragms(buffer.id);
+            if (nextMissingNames.empty())
+                break;
 
-                addKnownNames(tree);
-                findMissingNames(tree, nextMissingNames);
-            }
+            missingNames = std::move(nextMissingNames);
+            nextMissingNames.clear();
         }
+    }
 
-        if (nextMissingNames.empty())
-            break;
-
-        missingNames = std::move(nextMissingNames);
-        nextMissingNames.clear();
+    if (ok) {
+        Diagnostics pragmaDiags = diagEngine.setMappingsFromPragmas();
+        for (auto& diag : pragmaDiags)
+            diagEngine.issue(diag);
     }
 
     return ok;
