@@ -897,16 +897,16 @@ warning unknown-warning-option UnknownWarningOption "unknown warning option '{}'
 // The default group is the set of warnings that are enabled by default.
 
 group default = { real-underflow real-overflow vector-overflow int-overflow unconnected-port
-                  unconnected-unnamed-port event-const redef-macro not-supported unknown-pragma
+                  unconnected-unnamed-port redef-macro not-supported unknown-pragma unknown-warning-option
                   extra-pragma-args expected-diag-arg unknown-diag-arg pragma-diag-level explicit-static
                   static-skipped elem-not-found dynarray-index dynarray-range queue-range empty-queue
                   unknown-escape-code missing-top warning-task unsized-concat finish-num implicit-conv
                   nonblocking-final constraint-missing missing-format dpi-spec enum-range udp-port-empty
-                  lifetime-prototype nonstandard-sys-func nonstandard-foreach nonstandard-dist net-inconsistent
-                  port-coercion empty-body reversed-range }
+                  lifetime-prototype net-inconsistent port-coercion empty-body reversed-range }
 
 group extra = { empty-member empty-stmt dup-import pointless-void-cast case-gen-none case-gen-dup
-                unused-result format-real ignored-slice task-ignored width-trunc dup-attr }
+                unused-result format-real ignored-slice task-ignored width-trunc dup-attr event-const
+                ineffective-sign }
 
 group pedantic = { empty-pattern implicit-net-port nonstandard-escape-code nonstandard-generate format-multibit-strength
                    nonstandard-sys-func nonstandard-foreach nonstandard-dist }

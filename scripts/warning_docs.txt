@@ -368,7 +368,7 @@ endmodule
 -Wport-coercion
 An input net port has been coerced to 'inout' direction because it is assigned
 to in the instance body. Alternatively, an output net port has been coerced to
-'inout' direction because it is assigned to externally to the instance.
+'inout' direction because it is assigned externally to the instance.
 ```
 module m(input wire a, output b);
     assign a = 1;
