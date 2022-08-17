@@ -6,6 +6,8 @@
 //------------------------------------------------------------------------------
 #pragma once
 
+#include <utility>
+
 namespace slang {
 
 /// A simple guard class that ensures a given function is invoked when the
