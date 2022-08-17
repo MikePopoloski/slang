@@ -458,62 +458,81 @@ Diagnostics DiagnosticEngine::setWarningOptions(span<const std::string> options)
     return diags;
 }
 
-Diagnostics DiagnosticEngine::setMappingsFromPragmas() {
-    Diagnostics diags;
+template<typename TDirective>
+void DiagnosticEngine::setMappingsFromPragmasImpl(BufferID buffer,
+                                                  span<const TDirective> directives,
+                                                  Diagnostics& diags) {
 
-    sourceManager.visitDiagnosticDirectives([&](BufferID buffer, auto& directives) {
-        // Store the state of diagnostics each time the user pushes,
-        // and restore the state when they pop.
-        std::vector<flat_hash_map<DiagCode, DiagnosticSeverity>> mappingStack;
-        mappingStack.emplace_back();
+    // Store the state of diagnostics each time the user pushes,
+    // and restore the state when they pop.
+    std::vector<flat_hash_map<DiagCode, DiagnosticSeverity>> mappingStack;
+    mappingStack.emplace_back();
 
-        auto noteDiag = [&](DiagCode code, auto& directive) {
-            diagMappings[code][buffer].emplace_back(directive.offset, directive.severity);
-            mappingStack.back()[code] = directive.severity;
-        };
+    auto noteDiag = [&](DiagCode code, auto& directive) {
+        diagMappings[code][buffer].emplace_back(directive.offset, directive.severity);
+        mappingStack.back()[code] = directive.severity;
+    };
 
-        for (const SourceManager::DiagnosticDirectiveInfo& directive : directives) {
-            auto name = directive.name;
-            if (name == "__push__") {
-                mappingStack.emplace_back(mappingStack.back());
+    for (const SourceManager::DiagnosticDirectiveInfo& directive : directives) {
+        auto name = directive.name;
+        if (name == "__push__") {
+            mappingStack.emplace_back(mappingStack.back());
+        }
+        else if (name == "__pop__") {
+            // If the stack size is 1, push was never called, so just ignore.
+            if (mappingStack.size() <= 1)
+                continue;
+
+            // Any directives that were set revert to their previous values.
+            // If there is no previous value, they go back to the default (unset).
+            auto& prev = mappingStack[mappingStack.size() - 2];
+            for (auto [code, _] : mappingStack.back()) {
+                auto& mappings = diagMappings[code][buffer];
+                if (auto it = prev.find(code); it != prev.end())
+                    mappings.emplace_back(directive.offset, it->second);
+                else
+                    mappings.emplace_back(directive.offset, std::nullopt);
             }
-            else if (name == "__pop__") {
-                // If the stack size is 1, push was never called, so just ignore.
-                if (mappingStack.size() <= 1)
-                    continue;
+            mappingStack.pop_back();
+        }
+        else {
+            if (startsWith(name, "-W"sv))
+                name = name.substr(2);
 
-                // Any directives that were set revert to their previous values.
-                // If there is no previous value, they go back to the default (unset).
-                auto& prev = mappingStack[mappingStack.size() - 2];
-                for (auto [code, _] : mappingStack.back()) {
-                    auto& mappings = diagMappings[code][buffer];
-                    if (auto it = prev.find(code); it != prev.end())
-                        mappings.emplace_back(directive.offset, it->second);
-                    else
-                        mappings.emplace_back(directive.offset, std::nullopt);
-                }
-                mappingStack.pop_back();
+            if (auto group = findDiagGroup(name)) {
+                for (auto code : group->getDiags())
+                    noteDiag(code, directive);
+            }
+            else if (auto codes = findFromOptionName(name); !codes.empty()) {
+                for (auto code : codes)
+                    noteDiag(code, directive);
             }
             else {
-                if (startsWith(name, "-W"sv))
-                    name = name.substr(2);
-
-                if (auto group = findDiagGroup(name)) {
-                    for (auto code : group->getDiags())
-                        noteDiag(code, directive);
-                }
-                else if (auto codes = findFromOptionName(name); !codes.empty()) {
-                    for (auto code : codes)
-                        noteDiag(code, directive);
-                }
-                else {
-                    auto& diag = diags.add(diag::UnknownWarningOption,
-                                           SourceLocation(buffer, directive.offset));
-                    diag << name;
-                }
+                auto& diag =
+                    diags.add(diag::UnknownWarningOption, SourceLocation(buffer, directive.offset));
+                diag << name;
             }
         }
+    }
+}
+
+Diagnostics DiagnosticEngine::setMappingsFromPragmas() {
+    Diagnostics diags;
+    sourceManager.visitDiagnosticDirectives([&](BufferID buffer, auto& directives) {
+        setMappingsFromPragmasImpl<SourceManager::DiagnosticDirectiveInfo>(buffer, directives,
+                                                                           diags);
     });
+
+    return diags;
+}
+
+Diagnostics DiagnosticEngine::setMappingsFromPragmas(BufferID buffer) {
+    Diagnostics diags;
+    auto directives = sourceManager.getDiagnosticDirectives(buffer);
+    if (!directives.empty()) {
+        setMappingsFromPragmasImpl<SourceManager::DiagnosticDirectiveInfo>(buffer, directives,
+                                                                           diags);
+    }
 
     return diags;
 }

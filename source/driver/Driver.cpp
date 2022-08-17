@@ -299,7 +299,7 @@ bool Driver::processOptions() {
     if (anyErrors)
         return false;
 
-    if (buffers.empty()) {
+    if (buffers.empty() && options.libraryFiles.empty()) {
         OS::printE(fg(diagClient->errorColor), "error: ");
         OS::printE("no input files\n");
         return false;
@@ -429,6 +429,12 @@ bool Driver::parseAllSources() {
         }
     }
 
+    auto handlePragms = [&](BufferID buffer) {
+        Diagnostics pragmaDiags = diagEngine.setMappingsFromPragmas(buffer);
+        for (auto& diag : pragmaDiags)
+            diagEngine.issue(diag);
+    };
+
     bool ok = true;
     for (auto& file : options.libraryFiles) {
         SourceBuffer buffer = readSource(file);
@@ -440,6 +446,7 @@ bool Driver::parseAllSources() {
         auto tree = SyntaxTree::fromBuffer(buffer, sourceManager, optionBag);
         tree->isLibrary = true;
         syntaxTrees.emplace_back(std::move(tree));
+        handlePragms(buffer.id);
     }
 
     if (options.libDirs.empty())
@@ -535,6 +542,7 @@ bool Driver::parseAllSources() {
                 auto tree = SyntaxTree::fromBuffer(buffer, sourceManager, optionBag);
                 tree->isLibrary = true;
                 syntaxTrees.emplace_back(tree);
+                handlePragms(buffer.id);
 
                 addKnownNames(tree);
                 findMissingNames(tree, nextMissingNames);

@@ -180,6 +180,11 @@ public:
             func(buffer, directives);
     }
 
+    /// Gets the diagnostic directives associated with the given buffer, if any.
+    /// Note that the returned span is not safe to store; the underlying data can
+    /// be mutated by a call to @a addDiagnosticDirective and invalidate the span.
+    span<const DiagnosticDirectiveInfo> getDiagnosticDirectives(BufferID buffer) const;
+
 private:
     // Stores information specified in a `line directive, which alters the
     // line number and file name that we report in diagnostics.

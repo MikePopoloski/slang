@@ -172,6 +172,11 @@ public:
     /// while applying options are returned via the diagnostics set.
     Diagnostics setMappingsFromPragmas();
 
+    /// Sets diagnostic options from the `pragma diagnostic entries in the given
+    /// source file tracked by the engine's source manager. Any errors encountered
+    /// while applying options are returned via the diagnostics set.
+    Diagnostics setMappingsFromPragmas(BufferID buffer);
+
     /// A helper function that takes a set of source ranges and translates them
     /// to be relevant to the given context location. For normal file ranges
     /// this doesn't do anything, but ranges within macro expansions get adjusted
@@ -200,6 +205,10 @@ private:
 
     optional<DiagnosticSeverity> findMappedSeverity(DiagCode code, SourceLocation location) const;
     void issueImpl(const Diagnostic& diagnostic, DiagnosticSeverity severity);
+
+    template<typename TDirective>
+    void setMappingsFromPragmasImpl(BufferID buffer, span<const TDirective> directives,
+                                    Diagnostics& diags);
 
     // The source manager used to resolve locations into file names.
     const SourceManager& sourceManager;
