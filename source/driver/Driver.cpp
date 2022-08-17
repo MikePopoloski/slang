@@ -150,6 +150,15 @@ void Driver::addStandardArgs() {
                 "<filename>", /* isFileName */ true);
 }
 
+[[nodiscard]] bool Driver::parseCommandLine(string_view argList) {
+    if (!cmdLine.parse(argList)) {
+        for (auto& err : cmdLine.getErrors())
+            OS::printE("{}\n", err);
+        return false;
+    }
+    return true;
+}
+
 SourceBuffer Driver::readSource(const std::string& file) {
     SourceBuffer buffer = sourceManager.readSource(widen(file));
     if (!buffer) {
@@ -256,7 +265,6 @@ bool Driver::processOptions() {
     if (options.onlyLint == true && !options.ignoreUnknownModules.has_value())
         options.ignoreUnknownModules = true;
 
-    bool anyErrors = false;
     for (const std::string& dir : options.includeDirs) {
         try {
             sourceManager.addUserDirectory(string_view(dir));
@@ -277,6 +285,7 @@ bool Driver::processOptions() {
         }
     }
 
+    bool anyErrors = false;
     for (const std::string& file : options.sourceFiles) {
         SourceBuffer buffer = readSource(file);
         if (!buffer) {

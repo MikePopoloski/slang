@@ -233,6 +233,10 @@ public:
         return true;
     }
 
+    /// Parses command line arguments from the given string.
+    /// Any errors encountered will be printed to stderr.
+    [[nodiscard]] bool parseCommandLine(string_view argList);
+
     /// Reads a source file into the SourceManager and returns the buffer handle for it.
     /// If an error occurs a diagnostic will be issued to stderr.
     SourceBuffer readSource(const std::string& file);
