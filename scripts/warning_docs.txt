@@ -601,3 +601,6 @@ class C;
     }
 endclass
 ```
+
+-Winvalid-source-encoding
+<ignored>

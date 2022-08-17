@@ -540,7 +540,7 @@ endmodule
 
     auto& diagnostics = compilation.getAllDiagnostics();
     std::string result = "\n" + report(diagnostics);
-    CHECK(result == R"(
+    std::string check = R"(
 source:3:24: warning: unknown character escape sequence '\🍌' [-Wunknown-escape-code]
     string s = "literal\🍌";
                        ^
@@ -550,7 +550,8 @@ source:4:42: error: UTF-8 sequence in source text; SystemVerilog identifiers mus
 source:4:42: error: expected declarator
     int         /* // 꿽꿽꿽꿽꿽꿽꿽 */          갑곯꿽 = "꿽꿽꿽"; // 꿽꿽꿽꿽꿽꿽꿽
                                                  ^
-)");
+)";
+    CHECK(result == check);
 }
 
 TEST_CASE("Diagnostics with invalid UTF8 printed") {
@@ -565,7 +566,7 @@ TEST_CASE("Diagnostics with invalid UTF8 printed") {
     auto& diagnostics = compilation.getAllDiagnostics();
     std::string result = "\n" + report(diagnostics);
     CHECK(result == R"(
-source:2:25: error: invalid UTF-8 sequence in source text
+source:2:25: warning: invalid UTF-8 sequence in source text [-Winvalid-source-encoding]
     string s = "literal <ED><A0><80><ED><A0><80>";
                         ^
 source:3:33: error: use of undeclared identifier 'a'

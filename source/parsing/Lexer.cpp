@@ -697,16 +697,21 @@ Token Lexer::lexStringLiteral() {
             sawUTF8Error = false;
         }
         else {
-            uint32_t unused;
             auto curr = sourceBuffer;
+
+            uint32_t unused;
+            sawUTF8Error |= !scanUTF8Char(sawUTF8Error, &unused);
+
+            // Regardless of whether the character sequence was valid or not
+            // we want to add the bytes to the string, to allow for cases where
+            // the source is actually something like latin-1 encoded. Ignoring the
+            // warning and carrying on will do the right thing for them.
             int len = utf8Len((unsigned char)c);
-            if (scanUTF8Char(sawUTF8Error, &unused)) {
-                for (int i = 0; i < len; i++)
-                    stringBuffer.append(curr[i]);
-            }
-            else {
-                sawUTF8Error = true;
-            }
+            if (len == 0)
+                len = 1;
+
+            for (int i = 0; i < len; i++)
+                stringBuffer.append(curr[i]);
         }
     }
 

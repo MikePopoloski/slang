@@ -21,7 +21,6 @@ error NonPrintableChar "non-printable control character in source text"
 error UTF8Char "UTF-8 sequence in source text; SystemVerilog identifiers must be ASCII"
 error UnicodeBOM "UTF-16 BOM at start of source text; source encoding must be UTF-8"
 error EmbeddedNull "embedded NUL in source text"
-error InvalidUTF8Seq "invalid UTF-8 sequence in source text"
 error MisplacedDirectiveChar "expected directive name"
 error EscapedWhitespace "unexpected whitespace after escape character"
 error ExpectedClosingQuote "missing closing quote"
@@ -41,6 +40,7 @@ error BadHexDigit "expected hexadecimal digit"
 error TooManyLexerErrors "lexer has encountered too many errors (input is a binary file?)"
 warning unknown-escape-code UnknownEscapeCode "unknown character escape sequence '\\\\{}'"
 warning nonstandard-escape-code NonstandardEscapeCode "non-standard character escape sequence '\\\\{}'"
+warning invalid-source-encoding InvalidUTF8Seq "invalid UTF-8 sequence in source text"
 
 subsystem Numeric
 error LiteralSizeIsZero "size of vector literal cannot be zero"
@@ -902,7 +902,8 @@ group default = { real-underflow real-overflow vector-overflow int-overflow unco
                   static-skipped elem-not-found dynarray-index dynarray-range queue-range empty-queue
                   unknown-escape-code missing-top warning-task unsized-concat finish-num implicit-conv
                   nonblocking-final constraint-missing missing-format dpi-spec enum-range udp-port-empty
-                  lifetime-prototype net-inconsistent port-coercion empty-body reversed-range }
+                  lifetime-prototype net-inconsistent port-coercion empty-body reversed-range
+                  invalid-source-encoding }
 
 group extra = { empty-member empty-stmt dup-import pointless-void-cast case-gen-none case-gen-dup
                 unused-result format-real ignored-slice task-ignored width-trunc dup-attr event-const
