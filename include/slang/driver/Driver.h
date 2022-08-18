@@ -75,6 +75,9 @@ public:
         /// A list of macros that should be undefined in each compilation unit.
         std::vector<std::string> undefines;
 
+        /// If true, library files will inherit macro definitions from primary source files.
+        optional<bool> librariesInheritMacros;
+
         /// @}
         /// @name Parsing
         /// @{

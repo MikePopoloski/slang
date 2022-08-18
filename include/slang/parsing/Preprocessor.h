@@ -55,7 +55,8 @@ struct PreprocessorOptions {
 class Preprocessor {
 public:
     Preprocessor(SourceManager& sourceManager, BumpAllocator& alloc, Diagnostics& diagnostics,
-                 const Bag& options = {});
+                 const Bag& options = {},
+                 span<const DefineDirectiveSyntax* const> inheritedMacros = {});
 
     /// Gets the next token in the stream, after applying preprocessor rules.
     Token next();
@@ -188,12 +189,12 @@ private:
     // A saved macro definition; if it came from source code, we will have a parsed
     // DefineDirectiveSyntax. Otherwise, it's an intrinsic macro and we'll note that here.
     struct MacroDef {
-        DefineDirectiveSyntax* syntax = nullptr;
+        const DefineDirectiveSyntax* syntax = nullptr;
         MacroIntrinsic intrinsic = MacroIntrinsic::None;
         bool builtIn = false;
 
         MacroDef() = default;
-        MacroDef(DefineDirectiveSyntax* syntax) : syntax(syntax) {}
+        MacroDef(const DefineDirectiveSyntax* syntax) : syntax(syntax) {}
         MacroDef(MacroIntrinsic intrinsic) : intrinsic(intrinsic), builtIn(true) {}
 
         bool valid() const { return syntax || intrinsic != MacroIntrinsic::None; }
@@ -234,7 +235,7 @@ private:
                      MacroActualArgumentListSyntax* actualArgs);
     bool expandIntrinsic(MacroIntrinsic intrinsic, MacroExpansion& expansion);
     bool expandReplacementList(span<Token const>& tokens,
-                               SmallSet<DefineDirectiveSyntax*, 8>& alreadyExpanded);
+                               SmallSet<const DefineDirectiveSyntax*, 8>& alreadyExpanded);
     bool applyMacroOps(span<Token const> tokens, SmallVector<Token>& dest);
     void createBuiltInMacro(string_view name, int value, string_view valueStr = {});
 

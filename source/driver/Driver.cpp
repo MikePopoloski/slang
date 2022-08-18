@@ -48,6 +48,9 @@ void Driver::addStandardArgs() {
                 "Undefine macro name at the start of all source files", "<macro>");
     cmdLine.add("--max-include-depth", options.maxIncludeDepth,
                 "Maximum depth of nested include files allowed", "<depth>");
+    cmdLine.add("--libraries-inherit-macros", options.librariesInheritMacros,
+                "If true, library files will inherit macro definitions from the primary source "
+                "files. --single-unit must also be passed when this option is used.");
 
     // Parsing
     cmdLine.add("--max-parse-depth", options.maxParseDepth,
@@ -262,6 +265,12 @@ bool Driver::processOptions() {
         return false;
     }
 
+    if (options.librariesInheritMacros == true && !options.singleUnit.value_or(false)) {
+        OS::printE(fg(diagClient->errorColor), "error: ");
+        OS::printE("--single-unit must be set when --libraries-inherit-macros is used");
+        return false;
+    }
+
     if (options.onlyLint == true && !options.ignoreUnknownModules.has_value())
         options.ignoreUnknownModules = true;
 
@@ -425,6 +434,10 @@ bool Driver::parseAllSources() {
         }
     }
 
+    span<const DefineDirectiveSyntax* const> inheritedMacros;
+    if (options.librariesInheritMacros == true)
+        inheritedMacros = syntaxTrees.back()->getDefinedMacros();
+
     bool ok = true;
     for (auto& file : options.libraryFiles) {
         SourceBuffer buffer = readSource(file);
@@ -433,12 +446,13 @@ bool Driver::parseAllSources() {
             continue;
         }
 
-        auto tree = SyntaxTree::fromBuffer(buffer, sourceManager, optionBag);
+        auto tree = SyntaxTree::fromBuffer(buffer, sourceManager, optionBag, inheritedMacros);
         tree->isLibrary = true;
         syntaxTrees.emplace_back(std::move(tree));
     }
 
     if (!options.libDirs.empty()) {
+
         std::vector<fs::path> directories;
         directories.reserve(options.libDirs.size());
         for (auto& dir : options.libDirs)
@@ -526,7 +540,8 @@ bool Driver::parseAllSources() {
                 }
 
                 if (buffer) {
-                    auto tree = SyntaxTree::fromBuffer(buffer, sourceManager, optionBag);
+                    auto tree =
+                        SyntaxTree::fromBuffer(buffer, sourceManager, optionBag, inheritedMacros);
                     tree->isLibrary = true;
                     syntaxTrees.emplace_back(tree);
 

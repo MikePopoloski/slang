@@ -232,9 +232,9 @@ void registerUtil(py::module_& m) {
         .def("setDefaultWarnings", &DiagnosticEngine::setDefaultWarnings)
         .def("setWarningOptions", &DiagnosticEngine::setWarningOptions)
         .def("setMappingsFromPragmas",
-             py::overload_cast<BufferId>(&DiagnosticEngine::setMappingsFromPragmas))
-        .def("setMappingsFromPragmas",
              py::overload_cast<>(&DiagnosticEngine::setMappingsFromPragmas))
+        .def("setMappingsFromPragmas",
+             py::overload_cast<BufferID>(&DiagnosticEngine::setMappingsFromPragmas))
         .def_static("reportAll", &DiagnosticEngine::reportAll);
 
     py::class_<ReportedDiagnostic>(m, "ReportedDiagnostic")

@@ -18,7 +18,8 @@ namespace slang {
 using LF = LexerFacts;
 
 Preprocessor::Preprocessor(SourceManager& sourceManager, BumpAllocator& alloc,
-                           Diagnostics& diagnostics, const Bag& options_) :
+                           Diagnostics& diagnostics, const Bag& options_,
+                           span<const DefineDirectiveSyntax* const> inheritedMacros) :
     sourceManager(sourceManager),
     alloc(alloc), diagnostics(diagnostics), options(options_.getOrDefault<PreprocessorOptions>()),
     lexerOptions(options_.getOrDefault<LexerOptions>()), numberParser(diagnostics, alloc) {
@@ -26,6 +27,13 @@ Preprocessor::Preprocessor(SourceManager& sourceManager, BumpAllocator& alloc,
     keywordVersionStack.push_back(LF::getDefaultKeywordVersion());
     resetAllDirectives();
     undefineAll();
+
+    // Finally add in any inherited macros that aren't already set in our map.
+    for (auto define : inheritedMacros) {
+        auto name = define->name.valueText();
+        if (!name.empty())
+            macros.emplace(name, define);
+    }
 }
 
 Preprocessor::Preprocessor(const Preprocessor& other) :

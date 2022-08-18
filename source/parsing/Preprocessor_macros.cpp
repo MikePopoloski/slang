@@ -87,7 +87,7 @@ MacroActualArgumentListSyntax* Preprocessor::handleTopLevelMacro(Token directive
     // perform stringification or concatenation of tokens. It's possible that
     // after concatentation is performed we will have formed new valid macro
     // names that need to be expanded, which is why we loop here.
-    SmallSet<DefineDirectiveSyntax*, 8> alreadyExpanded;
+    SmallSet<const DefineDirectiveSyntax*, 8> alreadyExpanded;
     if (!macro.isIntrinsic())
         alreadyExpanded.insert(macro.syntax);
 
@@ -306,7 +306,7 @@ bool Preprocessor::expandMacro(MacroDef macro, MacroExpansion& expansion,
         return expandIntrinsic(macro.intrinsic, expansion);
     }
 
-    DefineDirectiveSyntax* directive = macro.syntax;
+    const DefineDirectiveSyntax* directive = macro.syntax;
     ASSERT(directive);
 
     // ignore empty macro
@@ -420,7 +420,7 @@ bool Preprocessor::expandMacro(MacroDef macro, MacroExpansion& expansion,
         // a usage of a macro in a replacement list is valid or an illegal recursion.
         if (!it->second.isExpanded) {
             span<const Token> argTokens = it->second;
-            SmallSet<DefineDirectiveSyntax*, 8> alreadyExpanded;
+            SmallSet<const DefineDirectiveSyntax*, 8> alreadyExpanded;
             if (!expandReplacementList(argTokens, alreadyExpanded))
                 return false;
 
@@ -588,8 +588,9 @@ void Preprocessor::MacroExpansion::append(Token token, SourceLocation location,
     }
 }
 
-bool Preprocessor::expandReplacementList(span<Token const>& tokens,
-                                         SmallSet<DefineDirectiveSyntax*, 8>& alreadyExpanded) {
+bool Preprocessor::expandReplacementList(
+    span<Token const>& tokens, SmallSet<const DefineDirectiveSyntax*, 8>& alreadyExpanded) {
+
     SmallVectorSized<Token, 64> outBuffer;
     SmallVectorSized<Token, 64> expansionBuffer;
 

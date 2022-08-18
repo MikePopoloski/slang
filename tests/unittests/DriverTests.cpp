@@ -68,6 +68,18 @@ TEST_CASE("Driver invalid include dirs") {
     CHECK(stderrContains("no input files"));
 }
 
+TEST_CASE("Driver missing single-unit for inherit macros") {
+    auto guard = OS::captureOutput();
+
+    Driver driver;
+    driver.addStandardArgs();
+
+    const char* argv[] = { "testfoo", "--libraries-inherit-macros" };
+    CHECK(driver.parseCommandLine(2, argv));
+    CHECK(!driver.processOptions());
+    CHECK(stderrContains("--single-unit must be set"));
+}
+
 TEST_CASE("Driver invalid source file") {
     auto guard = OS::captureOutput();
 
@@ -315,4 +327,22 @@ TEST_CASE("Driver unknown command file") {
     CHECK(driver.parseCommandLine(args));
     CHECK(!driver.processOptions());
     CHECK(stderrContains("no such file or directory"));
+}
+
+TEST_CASE("Driver allow defines to be inherited to lib files") {
+    auto guard = OS::captureOutput();
+
+    Driver driver;
+    driver.addStandardArgs();
+
+    auto args = fmt::format("testfoo \"{0}test3.sv\" --libdir \"{0}\"library --libext .qv --top=qq "
+                            "--single-unit --libraries-inherit-macros",
+                            findTestDir());
+    CHECK(driver.parseCommandLine(args));
+    CHECK(driver.processOptions());
+    CHECK(driver.parseAllSources());
+
+    auto compilation = driver.createCompilation();
+    CHECK(driver.reportCompilation(*compilation, false));
+    CHECK(stdoutContains("Build succeeded"));
 }

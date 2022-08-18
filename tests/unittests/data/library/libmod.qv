@@ -4,3 +4,8 @@ module libmod;
     import pkg::*;
     int k = pkg::bar;
 endmodule
+
+`ifdef SOME_DEF
+module qq;
+endmodule
+`endif

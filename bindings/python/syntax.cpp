@@ -163,9 +163,9 @@ void registerSyntax(py::module_& m) {
         .def_static("fromFileInMemory", &SyntaxTree::fromFileInMemory, "text"_a, "sourceManager"_a,
                     "name"_a = "source", "path"_a = "", "options"_a = Bag())
         .def_static("fromBuffer", &SyntaxTree::fromBuffer, "buffer"_a, "sourceManager"_a,
-                    "options"_a = Bag())
+                    "options"_a = Bag(), "inheritedMacros"_a = SyntaxTree::MacroList{})
         .def_static("fromBuffers", &SyntaxTree::fromBuffers, "buffers"_a, "sourceManager"_a,
-                    "options"_a = Bag())
+                    "options"_a = Bag(), "inheritedMacros"_a = SyntaxTree::MacroList{})
         .def_property_readonly("diagnostics", &SyntaxTree::diagnostics)
         .def_property_readonly("sourceManager", py::overload_cast<>(&SyntaxTree::sourceManager))
         .def_property_readonly("root", py::overload_cast<>(&SyntaxTree::root))

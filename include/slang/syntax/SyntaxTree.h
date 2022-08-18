@@ -16,6 +16,7 @@ namespace slang {
 
 class SourceManager;
 class SyntaxNode;
+struct DefineDirectiveSyntax;
 struct ParserMetadata;
 struct SourceBuffer;
 
@@ -26,6 +27,8 @@ struct SourceBuffer;
 /// live for as long as you need to access its syntax nodes.
 class SyntaxTree {
 public:
+    using MacroList = span<const DefineDirectiveSyntax* const>;
+
     /// Indicates whether this syntax tree represents a "library" compilation unit,
     /// which means that modules declared within it are not automatically instantiated.
     bool isLibrary = false;
@@ -99,20 +102,24 @@ public:
     /// @a buffer is the loaded source buffer.
     /// @a sourceManager is the manager that owns the buffer.
     /// @a options is an optional bag of lexer, preprocessor, and parser options.
+    /// @a inheritedMacros is a list of macros to predefine in the new syntax tree.
     /// @return the created and parsed syntax tree.
     static std::shared_ptr<SyntaxTree> fromBuffer(const SourceBuffer& buffer,
                                                   SourceManager& sourceManager,
-                                                  const Bag& options = {});
+                                                  const Bag& options = {},
+                                                  MacroList inheritedMacros = {});
 
     /// Creates a syntax tree by concatenating several loaded source buffers.
     /// @a buffers is the list of buffers that should be concatenated to form
     /// the compilation unit to parse.
     /// @a sourceManager is the manager that owns the buffers.
     /// @a options is an optional bag of lexer, preprocessor, and parser options.
+    /// @a inheritedMacros is a list of macros to predefine in the new syntax tree.
     /// @return the created and parsed syntax tree.
     static std::shared_ptr<SyntaxTree> fromBuffers(span<const SourceBuffer> buffers,
                                                    SourceManager& sourceManager,
-                                                   const Bag& options = {});
+                                                   const Bag& options = {},
+                                                   MacroList inheritedMacros = {});
 
     /// Gets any diagnostics generated while parsing.
     Diagnostics& diagnostics() { return diagnosticsBuffer; }
@@ -144,6 +151,9 @@ public:
     /// Gets various bits of metadata collected during parsing.
     const ParserMetadata& getMetadata() const { return *metadata; }
 
+    /// Gets the list of macros that were defined at the end of the loaded source file.
+    MacroList getDefinedMacros() const { return macros; }
+
     /// This is a shared default source manager for cases where the user doesn't
     /// care about managing the lifetime of loaded source. Note that all of
     /// the source loaded by this thing will live in memory for the lifetime of
@@ -152,11 +162,12 @@ public:
 
 private:
     SyntaxTree(SyntaxNode* root, SourceManager& sourceManager, BumpAllocator&& alloc,
-               Diagnostics&& diagnostics, ParserMetadata&& metadata, Bag options);
+               Diagnostics&& diagnostics, ParserMetadata&& metadata,
+               std::vector<const DefineDirectiveSyntax*>&& macros, Bag options);
 
     static std::shared_ptr<SyntaxTree> create(SourceManager& sourceManager,
                                               span<const SourceBuffer> source, const Bag& options,
-                                              bool guess);
+                                              MacroList inheritedMacros, bool guess);
 
     SyntaxNode* rootNode;
     SourceManager& sourceMan;
@@ -164,6 +175,7 @@ private:
     Diagnostics diagnosticsBuffer;
     Bag options_;
     std::unique_ptr<ParserMetadata> metadata;
+    std::vector<const DefineDirectiveSyntax*> macros;
     std::shared_ptr<SyntaxTree> parentTree;
 };
 
