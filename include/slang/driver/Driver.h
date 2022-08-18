@@ -198,19 +198,8 @@ public:
         /// compilation unit, meaning all of their text will be merged together.
         optional<bool> singleUnit;
 
-        /// A list of source files to include in the compilation.
-        std::vector<std::string> sourceFiles;
-
         /// A list of library files to include in the compilation.
         std::vector<std::string> libraryFiles;
-
-        /// A list of command files to process for more options.
-        /// Paths in the file are considered relative to the current directory.
-        std::vector<std::string> currCommandFiles;
-
-        /// A list of command files (relative to  to process for more options.
-        /// Paths in the file are considered relative to the file itself.
-        std::vector<std::string> relCommandFiles;
 
         /// @}
     } options;
@@ -233,7 +222,7 @@ public:
                 OS::printE("{}\n", err);
             return false;
         }
-        return true;
+        return !anyFailedLoads;
     }
 
     /// Parses command line arguments from the given string.
@@ -242,14 +231,14 @@ public:
 
     /// Reads a source file into the SourceManager and returns the buffer handle for it.
     /// If an error occurs a diagnostic will be issued to stderr.
-    SourceBuffer readSource(const std::string& file);
+    SourceBuffer readSource(string_view fileName);
 
     /// Processes the given command file for more options.
     /// Any errors encountered will be printed to stderr.
     /// @param makeRelative indicates whether paths in the file are relative to the file
     ///                     itself or to the current working directory.
     /// @returns true on success and false if errors were encountered.
-    [[nodiscard]] bool processCommandFile(const std::string& fileName, bool makeRelative);
+    [[nodiscard]] bool processCommandFile(string_view fileName, bool makeRelative);
 
     /// Processes and applies all configured options.
     /// @returns true on success and false if errors were encountered.
@@ -284,6 +273,9 @@ public:
     /// If @a quiet is set to true, non-essential output will be suppressed.
     /// @returns true if compilation succeeded and false if errors were encountered.
     [[nodiscard]] bool reportCompilation(Compilation& compilation, bool quiet);
+
+private:
+    bool anyFailedLoads = false;
 };
 
 } // namespace slang

@@ -132,25 +132,47 @@ void Driver::addStandardArgs() {
                 "disable the limit.",
                 "<limit>");
 
-    // File list
+    // File lists
     cmdLine.add("--single-unit", options.singleUnit,
                 "Treat all input files as a single compilation unit");
-    cmdLine.setPositional(options.sourceFiles, "files", /* isFileName */ true);
 
     cmdLine.add("-v", options.libraryFiles,
                 "One or more library files, which are separate compilation units "
                 "where modules are not automatically instantiated.",
                 "<filename>", /* isFileName */ true);
 
-    cmdLine.add("-f", options.currCommandFiles,
-                "One or more command files containing additional program options. "
-                "Paths in the file are considered relative to the current directory.",
-                "<filename>", /* isFileName */ true);
+    cmdLine.setPositional(
+        [this](string_view fileName) {
+            SourceBuffer buffer = readSource(fileName);
+            if (!buffer)
+                anyFailedLoads = true;
 
-    cmdLine.add("-F", options.relCommandFiles,
-                "One or more command files containing additional program options. "
-                "Paths in the file are considered relative to the file itself.",
-                "<filename>", /* isFileName */ true);
+            buffers.push_back(buffer);
+            return "";
+        },
+        "files", /* isFileName */ true);
+
+    cmdLine.add(
+        "-f",
+        [this](string_view fileName) {
+            if (!processCommandFile(fileName, /* makeRelative */ false))
+                anyFailedLoads = true;
+            return "";
+        },
+        "One or more command files containing additional program options. "
+        "Paths in the file are considered relative to the current directory.",
+        "<filename>", /* isFileName */ true);
+
+    cmdLine.add(
+        "-F",
+        [this](string_view fileName) {
+            if (!processCommandFile(fileName, /* makeRelative */ true))
+                anyFailedLoads = true;
+            return "";
+        },
+        "One or more command files containing additional program options. "
+        "Paths in the file are considered relative to the file itself.",
+        "<filename>", /* isFileName */ true);
 }
 
 [[nodiscard]] bool Driver::parseCommandLine(string_view argList) {
@@ -159,19 +181,19 @@ void Driver::addStandardArgs() {
             OS::printE("{}\n", err);
         return false;
     }
-    return true;
+    return !anyFailedLoads;
 }
 
-SourceBuffer Driver::readSource(const std::string& file) {
-    SourceBuffer buffer = sourceManager.readSource(widen(file));
+SourceBuffer Driver::readSource(string_view fileName) {
+    SourceBuffer buffer = sourceManager.readSource(widen(fileName));
     if (!buffer) {
         OS::printE(fg(diagClient->errorColor), "error: ");
-        OS::printE("no such file or directory: '{}'\n", file);
+        OS::printE("no such file or directory: '{}'\n", fileName);
     }
     return buffer;
 }
 
-bool Driver::processCommandFile(const std::string& fileName, bool makeRelative) {
+bool Driver::processCommandFile(string_view fileName, bool makeRelative) {
     std::error_code ec;
     fs::path path = fs::canonical(widen(fileName), ec);
     std::vector<char> buffer;
@@ -212,24 +234,6 @@ bool Driver::processCommandFile(const std::string& fileName, bool makeRelative) 
 }
 
 bool Driver::processOptions() {
-    // Process all command files, and keep processing them until we've run out.
-    while (!options.currCommandFiles.empty() || !options.relCommandFiles.empty()) {
-        auto copyCurrFiles = options.currCommandFiles;
-        auto copyRelFiles = options.relCommandFiles;
-        options.currCommandFiles.clear();
-        options.relCommandFiles.clear();
-
-        for (auto& file : copyCurrFiles) {
-            if (!processCommandFile(file, /* makeRelative */ false))
-                return false;
-        }
-
-        for (auto& file : copyRelFiles) {
-            if (!processCommandFile(file, /* makeRelative */ true))
-                return false;
-        }
-    }
-
     bool showColors;
     if (options.colorDiags.has_value())
         showColors = *options.colorDiags;
@@ -294,18 +298,7 @@ bool Driver::processOptions() {
         }
     }
 
-    bool anyErrors = false;
-    for (const std::string& file : options.sourceFiles) {
-        SourceBuffer buffer = readSource(file);
-        if (!buffer) {
-            anyErrors = true;
-            continue;
-        }
-
-        buffers.push_back(buffer);
-    }
-
-    if (anyErrors)
+    if (anyFailedLoads)
         return false;
 
     if (buffers.empty() && options.libraryFiles.empty()) {
@@ -452,7 +445,6 @@ bool Driver::parseAllSources() {
     }
 
     if (!options.libDirs.empty()) {
-
         std::vector<fs::path> directories;
         directories.reserve(options.libDirs.size());
         for (auto& dir : options.libDirs)

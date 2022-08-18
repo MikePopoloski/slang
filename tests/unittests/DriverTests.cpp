@@ -87,7 +87,7 @@ TEST_CASE("Driver invalid source file") {
     driver.addStandardArgs();
 
     const char* argv[] = { "testfoo", "blah.sv" };
-    CHECK(driver.parseCommandLine(2, argv));
+    CHECK(!driver.parseCommandLine(2, argv));
     CHECK(!driver.processOptions());
     CHECK(stderrContains("no such file"));
 }
@@ -312,7 +312,7 @@ TEST_CASE("Driver command file errors") {
         driver.addStandardArgs();
 
         auto args = fmt::format("testfoo -{} \"{}cmd2.f\"", type, findTestDir());
-        CHECK(driver.parseCommandLine(args));
+        CHECK(!driver.parseCommandLine(args));
         CHECK(!driver.processOptions());
     }
 }
@@ -324,7 +324,7 @@ TEST_CASE("Driver unknown command file") {
     driver.addStandardArgs();
 
     auto args = fmt::format("testfoo -F \"asdfasdf\"", findTestDir());
-    CHECK(driver.parseCommandLine(args));
+    CHECK(!driver.parseCommandLine(args));
     CHECK(!driver.processOptions());
     CHECK(stderrContains("no such file or directory"));
 }
@@ -345,4 +345,27 @@ TEST_CASE("Driver allow defines to be inherited to lib files") {
     auto compilation = driver.createCompilation();
     CHECK(driver.reportCompilation(*compilation, false));
     CHECK(stdoutContains("Build succeeded"));
+}
+
+TEST_CASE("Driver command files are processed strictly in order") {
+    auto guard = OS::captureOutput();
+
+    Driver driver;
+    driver.addStandardArgs();
+
+    auto args = fmt::format("testfoo \"{0}\"test.sv -F \"{0}cmd3.f\"", findTestDir());
+    CHECK(driver.parseCommandLine(args));
+    CHECK(driver.processOptions());
+
+    std::vector<string_view> fileNames;
+    for (auto buffer : driver.buffers) {
+        auto name = driver.sourceManager.getRawFileName(buffer.id);
+        if (auto idx = name.find_last_of("/\\"); idx != name.npos)
+            name = name.substr(idx + 1);
+
+        fileNames.push_back(name);
+    }
+
+    CHECK(fileNames.size() == 4);
+    CHECK(std::is_sorted(fileNames.begin(), fileNames.end()));
 }
