@@ -6,6 +6,7 @@
 //------------------------------------------------------------------------------
 #pragma once
 
+#include <functional>
 #include <map>
 #include <string>
 #include <variant>
@@ -188,13 +189,38 @@ public:
     void add(string_view name, std::vector<std::string>& value, string_view desc,
              string_view valueName = {}, bool isFileName = false);
 
+    using OptionCallback = std::function<std::string(string_view)>;
+
+    /// Register an option with @a name that will be parsed as a string and
+    /// forwarded to the given @a cb callback function for handling.
+    /// If the option is not provided on a command line, the callback
+    /// will never be invoked.
+    ///
+    /// @name is a comma separated list of long form and short form names
+    /// (including the dashes) that are accepted for this option.
+    /// @a desc is a human-friendly description for printing help text.
+    /// @a valueName is an example name for the value when printing help text.
+    /// @a isFileName indicates whether the parsed string is a filename that
+    ///               might be relative to the current directory.
+    void add(string_view name, OptionCallback cb, string_view desc, string_view valueName = {},
+             bool isFileName = false);
+
     /// Set a variable that will receive any positional arguments provided
     /// on the command line. They will be returned as a list of strings.
     /// @a valueName is for including in the help text.
     /// @a isFileName indicates whether the parsed string is a filename that
     ///               might be relative to the current directory.
+    /// @note only one variable or callback be set to receive positional arguments.
     void setPositional(std::vector<std::string>& values, string_view valueName,
                        bool isFileName = false);
+
+    /// Set a callback that will receive any positional arguments provided
+    /// on the command line.
+    /// @a valueName is for including in the help text.
+    /// @a isFileName indicates whether the parsed string is a filename that
+    ///               might be relative to the current directory.
+    /// @note only one variable or callback be set to receive positional arguments.
+    void setPositional(OptionCallback cb, string_view valueName, bool isFileName = false);
 
     /// Parse the provided command line (C-style).
     /// @return true on success, false if an errors occurs.
@@ -261,7 +287,8 @@ private:
         std::variant<optional<bool>*, optional<int32_t>*, optional<uint32_t>*, optional<int64_t>*,
                      optional<uint64_t>*, optional<double>*, optional<std::string>*,
                      std::vector<int32_t>*, std::vector<uint32_t>*, std::vector<int64_t>*,
-                     std::vector<uint64_t>*, std::vector<double>*, std::vector<std::string>*>;
+                     std::vector<uint64_t>*, std::vector<double>*, std::vector<std::string>*,
+                     OptionCallback>;
 
     class Option {
     public:
@@ -289,6 +316,7 @@ private:
         std::string set(std::vector<uint64_t>& target, string_view name, string_view value);
         std::string set(std::vector<double>& target, string_view name, string_view value);
         std::string set(std::vector<std::string>& target, string_view name, string_view value);
+        std::string set(OptionCallback& target, string_view name, string_view value);
 
         template<typename T>
         static constexpr bool allowValue(const optional<T>& target) {

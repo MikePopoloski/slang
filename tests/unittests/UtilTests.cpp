@@ -15,6 +15,7 @@ TEST_CASE("Test CommandLine -- basic") {
     optional<int64_t> used2;
     std::vector<std::string> multi;
     std::vector<std::string> vals;
+    int someCounter = 0;
 
     CommandLine cmdLine;
     cmdLine.add("-a", a, "SDF");
@@ -30,11 +31,19 @@ TEST_CASE("Test CommandLine -- basic") {
     cmdLine.add("--fiz,--faz", used1, "SDF");
     cmdLine.add("--fuz,--foz", used2, "SDF");
     cmdLine.add("-m,+multi", multi, "SDF");
+    cmdLine.add(
+        "--count",
+        [&](string_view) {
+            someCounter++;
+            return "";
+        },
+        "asdf");
     cmdLine.setPositional(vals, "vals");
 
-    CHECK(cmdLine.parse("prog -a -b --longFlag=False pos1 pos2 -c asdf -d -1234 --ext=9876 "
-                        "--ext2 9999.1234e12 pos3 --fiz=4321 --foz=-4321    - pos5 "
-                        "--longFlag2=true -ma +multi+b+cd+ef -- --buz --boz"sv));
+    CHECK(cmdLine.parse(
+        "prog -a -b --longFlag=False pos1 pos2 -c asdf -d -1234 --ext=9876 "
+        "--ext2 9999.1234e12 pos3 --fiz=4321 --foz=-4321    - pos5 "
+        "--longFlag2=true -ma +multi+b+cd+ef --count=foo --count=bar -- --buz --boz"sv));
 
     CHECK(cmdLine.getProgramName() == "prog");
     cmdLine.setProgramName("asdf");
@@ -63,6 +72,7 @@ TEST_CASE("Test CommandLine -- basic") {
     CHECK(*ext2 == 9999.1234e12);
     CHECK(used1 == 4321);
     CHECK(used2 == -4321);
+    CHECK(someCounter == 2);
 
     REQUIRE(multi.size() == 4);
     CHECK(multi[0] == "a");
@@ -99,6 +109,7 @@ OPTIONS:
   --fiz,--faz          SDF
   --fuz,--foz          SDF
   -m,+multi            SDF
+  --count              asdf
 )");
 }
 

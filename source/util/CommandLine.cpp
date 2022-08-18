@@ -83,6 +83,11 @@ void CommandLine::add(string_view name, std::vector<std::string>& value, string_
     addInternal(name, &value, desc, valueName, isFileName);
 }
 
+void CommandLine::add(string_view name, OptionCallback cb, string_view desc, string_view valueName,
+                      bool isFileName) {
+    addInternal(name, cb, desc, valueName, isFileName);
+}
+
 void CommandLine::addInternal(string_view name, OptionStorage storage, string_view desc,
                               string_view valueName, bool isFileName) {
     if (name.empty())
@@ -137,6 +142,16 @@ void CommandLine::setPositional(std::vector<std::string>& values, string_view va
     positional = std::make_shared<Option>();
     positional->valueName = valueName;
     positional->storage = &values;
+    positional->isFileName = isFileName;
+}
+
+void CommandLine::setPositional(OptionCallback cb, string_view valueName, bool isFileName) {
+    if (positional)
+        throw std::runtime_error("Can only set one positional argument");
+
+    positional = std::make_shared<Option>();
+    positional->valueName = valueName;
+    positional->storage = cb;
     positional->isFileName = isFileName;
 }
 
@@ -345,11 +360,11 @@ bool CommandLine::parse(span<const string_view> args, ParseOptions options) {
         args = args.subspan(1);
     }
 
-    SmallVectorSized<string_view, 8> positionalArgs;
     Option* expectingVal = nullptr;
     string_view expectingValName;
     bool doubleDash = false;
     bool hadUnknowns = false;
+    string_view firstPositional;
 
     for (auto arg : args) {
         // If we were previously expecting a value, set that now.
@@ -367,7 +382,12 @@ bool CommandLine::parse(span<const string_view> args, ParseOptions options) {
         // - Is exactly '-'
         // - Or we've seen a double dash already
         if (arg.length() <= 1 || doubleDash || (arg[0] != '-' && arg[0] != '+')) {
-            positionalArgs.append(arg);
+            if (firstPositional.empty())
+                firstPositional = arg;
+
+            if (positional)
+                positional->set(""sv, arg, options.ignoreDuplicates);
+
             continue;
         }
 
@@ -434,14 +454,10 @@ bool CommandLine::parse(span<const string_view> args, ParseOptions options) {
                                         expectingValName));
     }
 
-    if (positional) {
-        for (auto arg : positionalArgs)
-            positional->set(""sv, arg, options.ignoreDuplicates);
-    }
-    else if (!positionalArgs.empty() && !hadUnknowns) {
+    if (!positional && !firstPositional.empty() && !hadUnknowns) {
         errors.emplace_back(
             fmt::format("{}: positional arguments are not allowed (see e.g. '{}')"sv, programName,
-                        positionalArgs[0]));
+                        firstPositional));
     }
 
     return errors.empty();
@@ -624,12 +640,17 @@ std::string CommandLine::Option::set(string_view name, string_view value, bool i
 
     return std::visit(
         [&](auto&& arg) {
-            if (!allowValue(*arg)) {
-                if (ignoreDup)
-                    return std::string();
-                return fmt::format("more than one value provided for argument '{}'"sv, name);
+            if constexpr (std::is_same_v<OptionCallback, std::decay_t<decltype(arg)>>) {
+                return set(arg, name, value);
             }
-            return set(*arg, name, value);
+            else {
+                if (!allowValue(*arg)) {
+                    if (ignoreDup)
+                        return std::string();
+                    return fmt::format("more than one value provided for argument '{}'"sv, name);
+                }
+                return set(*arg, name, value);
+            }
         },
         storage);
 }
@@ -774,6 +795,10 @@ std::string CommandLine::Option::set(std::vector<std::string>& target, string_vi
                                      string_view value) {
     target.emplace_back(value);
     return {};
+}
+
+std::string CommandLine::Option::set(OptionCallback& target, string_view, string_view value) {
+    return target(value);
 }
 
 } // namespace slang
