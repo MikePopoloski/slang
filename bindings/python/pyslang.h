@@ -10,6 +10,7 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 
+#include "slang/symbols/ASTVisitor.h"
 #include "slang/syntax/SyntaxNode.h"
 #include "slang/util/Enum.h"
 #include "slang/util/Hash.h"
@@ -210,6 +211,27 @@ struct polymorphic_type_hook<T, detail::enable_if_t<std::is_base_of<SyntaxNode, 
         else {
             return src;
         }
+    }
+};
+
+template<typename T>
+struct polymorphic_type_hook<T, detail::enable_if_t<std::is_base_of<Symbol, T>::value>> {
+    struct SymbolDowncastVisitor {
+        template<typename U>
+        const void* visit(const U& u, const std::type_info*& type) {
+            type = &typeid(U);
+            return &u;
+        }
+    };
+
+    static const void* get(const T* src, const std::type_info*& type) {
+        if (!src) {
+            type = nullptr;
+            return src;
+        }
+
+        SymbolDowncastVisitor visitor;
+        return src->visit(visitor, type);
     }
 };
 

@@ -7,7 +7,11 @@
 #include "pyslang.h"
 
 #include "slang/binding/SystemSubroutine.h"
+#include "slang/compilation/Definition.h"
 #include "slang/compilation/ScriptSession.h"
+#include "slang/diagnostics/TextDiagnosticClient.h"
+#include "slang/driver/Driver.h"
+#include "slang/symbols/AttributeSymbol.h"
 #include "slang/symbols/CompilationUnitSymbols.h"
 #include "slang/syntax/AllSyntax.h"
 #include "slang/syntax/SyntaxTree.h"
@@ -15,6 +19,45 @@
 #include "slang/types/NetType.h"
 
 void registerCompilation(py::module_& m) {
+    EXPOSE_ENUM(m, VariableLifetime);
+    EXPOSE_ENUM(m, Visibility);
+    EXPOSE_ENUM(m, ArgumentDirection);
+    EXPOSE_ENUM(m, ProceduralBlockKind);
+    EXPOSE_ENUM(m, StatementBlockKind);
+    EXPOSE_ENUM(m, DefinitionKind);
+    EXPOSE_ENUM(m, UnconnectedDrive);
+    EXPOSE_ENUM(m, EdgeKind);
+    EXPOSE_ENUM(m, SubroutineKind);
+    EXPOSE_ENUM(m, AssertionKind);
+    EXPOSE_ENUM(m, ElabSystemTaskKind);
+    EXPOSE_ENUM(m, RandMode);
+    EXPOSE_ENUM(m, PrimitivePortDirection);
+    EXPOSE_ENUM(m, DriverKind);
+
+    py::class_<Definition>(m, "Definition")
+        .def_readonly("name", &Definition::name)
+        .def_readonly("location", &Definition::location)
+        .def_readonly("definitionKind", &Definition::definitionKind)
+        .def_readonly("defaultLifetime", &Definition::defaultLifetime)
+        .def_readonly("unconnectedDrive", &Definition::unconnectedDrive)
+        .def_readonly("timeScale", &Definition::timeScale)
+        .def_readonly("attributes", &Definition::attributes)
+        .def_property_readonly("syntax", [](const Definition& self) { return &self.syntax; })
+        .def_property_readonly("defaultNetType",
+                               [](const Definition& self) { return &self.defaultNetType; })
+        .def_property_readonly("scope", [](const Definition& self) { return &self.scope; })
+        .def_property_readonly("hierarchicalPath",
+                               [](const Definition& self) {
+                                   std::string str;
+                                   self.getHierarchicalPath(str);
+                                   return str;
+                               })
+        .def_property_readonly("isInstantiated", &Definition::isInstantiated)
+        .def("getKindString", &Definition::getKindString)
+        .def("getArticleKindString", &Definition::getArticleKindString)
+        .def("__repr__",
+             [](const Definition& self) { return fmt::format("Definition(\"{}\")", self.name); });
+
     py::enum_<MinTypMax>(m, "MinTypMax")
         .value("Min", MinTypMax::Min)
         .value("Typ", MinTypMax::Typ)
@@ -49,6 +92,7 @@ void registerCompilation(py::module_& m) {
         .def("addSyntaxTree", &Compilation::addSyntaxTree)
         .def("getSyntaxTrees", &Compilation::getSyntaxTrees)
         .def("getRoot", py::overload_cast<>(&Compilation::getRoot), byrefint)
+        // TODO:
         //.def("addSystemSubroutine", &Compilation::addSystemSubroutine)
         //.def("addSystemMethod", &Compilation::addSystemMethod)
         .def("getSystemSubroutine", &Compilation::getSystemSubroutine, byrefint)
@@ -87,4 +131,25 @@ void registerCompilation(py::module_& m) {
         .def("evalExpression", &ScriptSession::evalExpression)
         .def("evalStatement", &ScriptSession::evalStatement)
         .def("getDiagnostics", &ScriptSession::getDiagnostics);
+
+    py::class_<Driver>(m, "Driver")
+        .def(py::init<>())
+        .def_readonly("sourceManager", &Driver::sourceManager)
+        .def_readonly("diagEngine", &Driver::diagEngine)
+        .def_readonly("diagClient", &Driver::diagClient)
+        .def_readonly("buffers", &Driver::buffers)
+        .def_readonly("syntaxTrees", &Driver::syntaxTrees)
+        .def("addStandardArgs", &Driver::addStandardArgs)
+        .def("parseCommandLine",
+             [](Driver& self, string_view arg) { return self.parseCommandLine(arg); })
+        .def("readSource", &Driver::readSource)
+        .def("processCommandFile", &Driver::processCommandFile)
+        .def("processOptions", &Driver::processOptions)
+        .def("runPreprocessor", &Driver::runPreprocessor)
+        .def("reportMacros", &Driver::reportMacros)
+        .def("parseAllSources", &Driver::parseAllSources)
+        .def("createOptionBag", &Driver::createOptionBag)
+        .def("createCompilation", &Driver::createCompilation)
+        .def("reportParseDiags", &Driver::reportParseDiags)
+        .def("reportCompilation", &Driver::reportCompilation);
 }

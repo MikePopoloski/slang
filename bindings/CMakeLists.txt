@@ -13,7 +13,9 @@ pybind11_add_module(
   python/compilation.cpp
   python/numeric.cpp
   python/pyslang.cpp
+  python/symbols.cpp
   python/syntax.cpp
+  python/types.cpp
   python/util.cpp
   ${CMAKE_CURRENT_BINARY_DIR}/PySyntaxBindings.cpp)
 target_link_libraries(pyslang PUBLIC slangcompiler)
