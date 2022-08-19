@@ -75,9 +75,9 @@ public:
         llvm::TypeSize size = dl.getTypeAllocSize(elementType->getElementType());
         llvm::Align align(llvm::MinAlign(addr.getAlignment().value(), size * index));
 
-        llvm::Value* Ptr = addr.getPointer();
-        llvm::Type* Type = Ptr->getType()->getScalarType()->getPointerElementType();
-        return Address(CreateInBoundsGEP(Type, Ptr, { getSize(0), getSize(index) }, ""), align);
+        llvm::Value* ptr = addr.getPointer();
+        llvm::Type* ptrType = ptr->getType()->getScalarType()->getPointerElementType();
+        return Address(CreateInBoundsGEP(ptrType, ptr, { getSize(0), getSize(index) }, ""), align);
     }
 
 private:
