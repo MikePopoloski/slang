@@ -38,12 +38,14 @@ JIT::JIT() {
     // Register all exported simrt functions with the JIT.
     // Mangle names according to https://llvm.org/docs/ORCv2.html
     MangleAndInterner mangle(jit->getExecutionSession(), jit->getDataLayout());
+    SymbolMap m;
     for (auto& [name, ptr] : slang::runtime::getExportedFunctions()) {
         llvm::JITEvaluatedSymbol sym(static_cast<llvm::JITTargetAddress>(ptr), {});
-        auto err = jit->defineAbsolute(*mangle(llvm::StringRef(name.data(), name.length())), sym);
-        if (err)
-            report(std::move(err));
+        m[mangle(llvm::StringRef(name.data(), name.length()))] = sym;
     }
+    auto err = jit->getMainJITDylib().define(absoluteSymbols(std::move(m)));
+    if (err)
+        report(std::move(err));
 }
 
 JIT::~JIT() = default;

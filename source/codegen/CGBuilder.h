@@ -25,7 +25,7 @@ class Address {
 public:
     Address(llvm::Value* pointer, llvm::Align align) : ptr(pointer), align(align) {}
 
-    static Address invalid() { return Address(nullptr, llvm::Align::None()); }
+    static Address invalid() { return Address(nullptr, llvm::Align()); }
     bool isValid() const { return ptr != nullptr; }
     explicit operator bool() const { return isValid(); }
 
@@ -75,7 +75,9 @@ public:
         llvm::TypeSize size = dl.getTypeAllocSize(elementType->getElementType());
         llvm::Align align(llvm::MinAlign(addr.getAlignment().value(), size * index));
 
-        return Address(CreateInBoundsGEP(addr.getPointer(), { getSize(0), getSize(index) }), align);
+        llvm::Value* ptr = addr.getPointer();
+        llvm::Type* ptrType = ptr->getType()->getScalarType()->getPointerElementType();
+        return Address(CreateInBoundsGEP(ptrType, ptr, { getSize(0), getSize(index) }, ""), align);
     }
 
 private:
