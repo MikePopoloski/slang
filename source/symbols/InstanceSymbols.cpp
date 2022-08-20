@@ -880,6 +880,12 @@ span<string_view const> UnknownModuleSymbol::getPortNames() const {
     return portNames;
 }
 
+bool UnknownModuleSymbol::isChecker() const {
+    if (!ports)
+        getPortConnections();
+    return mustBeChecker;
+}
+
 void UnknownModuleSymbol::serializeTo(ASTSerializer& serializer) const {
     serializer.write("moduleName", moduleName);
 

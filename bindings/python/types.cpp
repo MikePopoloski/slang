@@ -11,6 +11,13 @@
 #include "slang/types/TypePrinter.h"
 
 void registerTypes(py::module_& m) {
+    py::enum_<IntegralFlags>(m, "IntegralFlags")
+        .value("Unsigned", IntegralFlags::Unsigned)
+        .value("TwoState", IntegralFlags::TwoState)
+        .value("Signed", IntegralFlags::Signed)
+        .value("FourState", IntegralFlags::FourState)
+        .value("Reg", IntegralFlags::Reg);
+
     py::class_<Type, Symbol>(m, "Type")
         .def_property_readonly("canonicalType", &Type::getCanonicalType)
         .def_property_readonly("bitWidth", &Type::getBitWidth)
@@ -131,4 +138,118 @@ void registerTypes(py::module_& m) {
         .def_property_readonly("initializerSyntax", &DeclaredType::getInitializerSyntax)
         .def_property_readonly("initializerLocation", &DeclaredType::getInitializerLocation)
         .def_property_readonly("isEvaluating", &DeclaredType::isEvaluating);
+
+    py::class_<IntegralType, Type>(m, "IntegralType")
+        .def("getBitVectorRange", &IntegralType::getBitVectorRange)
+        .def("isDeclaredReg", &IntegralType::isDeclaredReg);
+
+    py::class_<ScalarType, IntegralType> scalarType(m, "ScalarType");
+    scalarType.def_readonly("scalarKind", &ScalarType::scalarKind);
+
+    py::enum_<ScalarType::Kind>(scalarType, "Kind")
+        .value("Bit", ScalarType::Bit)
+        .value("Logic", ScalarType::Logic)
+        .value("Reg", ScalarType::Reg)
+        .export_values();
+
+    py::class_<PredefinedIntegerType, IntegralType> pdit(m, "PredefinedIntegerType");
+    pdit.def_readonly("integerKind", &PredefinedIntegerType::integerKind);
+
+    py::enum_<PredefinedIntegerType::Kind>(pdit, "Kind")
+        .value("ShortInt", PredefinedIntegerType::ShortInt)
+        .value("Int", PredefinedIntegerType::Int)
+        .value("LongInt", PredefinedIntegerType::LongInt)
+        .value("Byte", PredefinedIntegerType::Byte)
+        .value("Integer", PredefinedIntegerType::Integer)
+        .value("Time", PredefinedIntegerType::Time)
+        .export_values();
+
+    py::class_<FloatingType, Type> floating(m, "FloatingType");
+    floating.def_readonly("floatKind", &FloatingType::floatKind);
+
+    py::enum_<FloatingType::Kind>(floating, "Kind")
+        .value("Real", FloatingType::Real)
+        .value("ShortReal", FloatingType::ShortReal)
+        .value("RealTime", FloatingType::RealTime)
+        .export_values();
+
+    py::class_<EnumType, IntegralType, Scope>(m, "EnumType")
+        .def_property_readonly("baseType", [](const EnumType& self) { return &self.baseType; })
+        .def_readonly("systemId", &EnumType::systemId);
+
+    py::class_<PackedArrayType, IntegralType>(m, "PackedArrayType")
+        .def_property_readonly("elementType",
+                               [](const PackedArrayType& self) { return &self.elementType; })
+        .def_readonly("range", &PackedArrayType::range);
+
+    py::class_<FixedSizeUnpackedArrayType, Type>(m, "FixedSizeUnpackedArrayType")
+        .def_property_readonly(
+            "elementType", [](const FixedSizeUnpackedArrayType& self) { return &self.elementType; })
+        .def_readonly("range", &FixedSizeUnpackedArrayType::range);
+
+    py::class_<DynamicArrayType, Type>(m, "DynamicArrayType")
+        .def_property_readonly("elementType",
+                               [](const DynamicArrayType& self) { return &self.elementType; });
+
+    py::class_<AssociativeArrayType, Type>(m, "AssociativeArrayType")
+        .def_property_readonly("elementType",
+                               [](const AssociativeArrayType& self) { return &self.elementType; })
+        .def_property_readonly("indexType",
+                               [](const AssociativeArrayType& self) { return self.indexType; });
+
+    py::class_<QueueType, Type>(m, "QueueType")
+        .def_property_readonly("elementType",
+                               [](const QueueType& self) { return &self.elementType; })
+        .def_readonly("maxBound", &QueueType::maxBound);
+
+    py::class_<PackedStructType, IntegralType, Scope>(m, "PackedStructType")
+        .def_readonly("systemId", &PackedStructType::systemId);
+
+    py::class_<UnpackedStructType, Type, Scope>(m, "UnpackedStructType")
+        .def_readonly("systemId", &UnpackedStructType::systemId);
+
+    py::class_<PackedUnionType, IntegralType, Scope>(m, "PackedUnionType")
+        .def_readonly("systemId", &PackedUnionType::systemId)
+        .def_readonly("isTagged", &PackedUnionType::isTagged)
+        .def_readonly("tagBits", &PackedUnionType::tagBits);
+
+    py::class_<UnpackedUnionType, Type, Scope>(m, "UnpackedUnionType")
+        .def_readonly("systemId", &UnpackedUnionType::systemId)
+        .def_readonly("isTagged", &UnpackedUnionType::isTagged);
+
+#define SIMPLE_TYPE(name) py::class_<name, Type>(m, #name)
+    SIMPLE_TYPE(VoidType);
+    SIMPLE_TYPE(NullType);
+    SIMPLE_TYPE(CHandleType);
+    SIMPLE_TYPE(StringType);
+    SIMPLE_TYPE(EventType);
+    SIMPLE_TYPE(UnboundedType);
+    SIMPLE_TYPE(TypeRefType);
+    SIMPLE_TYPE(UntypedType);
+    SIMPLE_TYPE(SequenceType);
+    SIMPLE_TYPE(PropertyType);
+    SIMPLE_TYPE(ErrorType);
+
+    py::class_<VirtualInterfaceType, Type>(m, "VirtualInterfaceType")
+        .def_property_readonly("iface",
+                               [](const VirtualInterfaceType& self) { return &self.iface; })
+        .def_property_readonly("modport",
+                               [](const VirtualInterfaceType& self) { return self.modport; });
+
+    EXPOSE_ENUM(m, ForwardTypedefCategory);
+
+    py::class_<ForwardingTypedefSymbol, Symbol>(m, "ForwardingTypedefSymbol")
+        .def_readonly("category", &ForwardingTypedefSymbol::category)
+        .def_readonly("visibility", &ForwardingTypedefSymbol::visibility)
+        .def_property_readonly("nextForwardDecl", [](const ForwardingTypedefSymbol& self) {
+            return self.getNextForwardDecl();
+        });
+
+    py::class_<TypeAliasType, Type>(m, "TypeAliasType")
+        .def_property_readonly("targetType",
+                               [](const TypeAliasType& self) { return &self.targetType; })
+        .def_readonly("visibility", &TypeAliasType::visibility)
+        .def_property_readonly("firstForwardDecl", [](const TypeAliasType& self) {
+            return self.getFirstForwardDecl();
+        });
 }

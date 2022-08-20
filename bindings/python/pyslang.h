@@ -188,6 +188,23 @@ public:
     explicit operator not_null<type>() { return cast_op<type>(subcaster); }
 };
 
+template<typename type>
+class type_caster<bitmask<type>> {
+private:
+    using caster_t = make_caster<type>;
+    caster_t subcaster;
+
+public:
+    bool load(handle src, bool convert) { return subcaster.load(src, convert); }
+    static constexpr auto name = caster_t::name;
+    static handle cast(const bitmask<type>& src, return_value_policy policy, handle parent) {
+        return caster_t::cast(type(src.bits()), policy, parent);
+    }
+    template<typename T>
+    using cast_op_type = bitmask<type>;
+    explicit operator bitmask<type>() { return cast_op<type>(subcaster); }
+};
+
 } // namespace detail
 
 template<typename T>
@@ -232,6 +249,34 @@ struct polymorphic_type_hook<T, detail::enable_if_t<std::is_base_of<Symbol, T>::
 
         SymbolDowncastVisitor visitor;
         return src->visit(visitor, type);
+    }
+};
+
+template<>
+struct polymorphic_type_hook<RandSeqProductionSymbol::ProdBase> {
+    static const void* get(const RandSeqProductionSymbol::ProdBase* src,
+                           const std::type_info*& type) {
+        if (!src) {
+            type = nullptr;
+            return src;
+        }
+
+#define CASE(x, y)                                  \
+    case RandSeqProductionSymbol::ProdKind::x:      \
+        type = &typeid(RandSeqProductionSymbol::y); \
+        return static_cast<const RandSeqProductionSymbol::y*>(src)
+
+        switch (src->kind) {
+            CASE(Item, ProdItem);
+            CASE(CodeBlock, CodeBlockProd);
+            CASE(IfElse, IfElseProd);
+            CASE(Repeat, RepeatProd);
+            CASE(Case, CaseProd);
+        }
+#undef CASE
+
+        type = &typeid(RandSeqProductionSymbol::ProdBase);
+        return src;
     }
 };
 
