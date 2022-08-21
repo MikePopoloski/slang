@@ -252,4 +252,31 @@ void registerTypes(py::module_& m) {
         .def_property_readonly("firstForwardDecl", [](const TypeAliasType& self) {
             return self.getFirstForwardDecl();
         });
+
+    py::class_<ClassType, Type, Scope>(m, "ClassType")
+        .def_readonly("genericClass", &ClassType::genericClass)
+        .def_readonly("isAbstract", &ClassType::isAbstract)
+        .def_readonly("isInterface", &ClassType::isInterface)
+        .def_property_readonly("baseClass", &ClassType::getBaseClass)
+        .def_property_readonly("implementedInterfaces", &ClassType::getImplementedInterfaces)
+        .def_property_readonly("baseConstructorCall", &ClassType::getBaseConstructorCall)
+        .def_property_readonly("firstForwardDecl", &ClassType::getFirstForwardDecl);
+
+    py::class_<GenericClassDefSymbol, Symbol>(m, "GenericClassDefSymbol")
+        .def_readonly("isInterface", &GenericClassDefSymbol::isInterface)
+        .def_property_readonly("defaultSpecialization",
+                               &GenericClassDefSymbol::getDefaultSpecialization)
+        .def_property_readonly("invalidSpecialization",
+                               &GenericClassDefSymbol::getInvalidSpecialization)
+        .def_property_readonly("defaultSpecialization",
+                               &GenericClassDefSymbol::getDefaultSpecialization)
+        .def_property_readonly("firstForwardDecl", &GenericClassDefSymbol::getFirstForwardDecl);
+
+    py::class_<ConstraintBlockSymbol, Symbol, Scope>(m, "ConstraintBlockSymbol")
+        .def_readonly("thisVar", &ConstraintBlockSymbol::thisVar)
+        .def_readonly("isStatic", &ConstraintBlockSymbol::isStatic)
+        .def_readonly("isExtern", &ConstraintBlockSymbol::isExtern)
+        .def_readonly("isExplicitExtern", &ConstraintBlockSymbol::isExplicitExtern)
+        .def_readonly("isPure", &ConstraintBlockSymbol::isPure)
+        .def_property_readonly("constraints", &ConstraintBlockSymbol::getConstraints);
 }

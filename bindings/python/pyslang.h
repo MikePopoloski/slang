@@ -232,10 +232,23 @@ struct polymorphic_type_hook<T, detail::enable_if_t<std::is_base_of<SyntaxNode, 
 };
 
 template<typename T>
-struct polymorphic_type_hook<T, detail::enable_if_t<std::is_base_of<Symbol, T>::value>> {
-    struct SymbolDowncastVisitor {
+using CanDowncast =
+    detail::enable_if_t<std::is_base_of_v<Symbol, T> || std::is_base_of_v<Statement, T> ||
+                        std::is_base_of_v<Expression, T> || std::is_base_of_v<TimingControl, T> ||
+                        std::is_base_of_v<Constraint, T> || std::is_base_of_v<AssertionExpr, T> ||
+                        std::is_base_of_v<BinsSelectExpr, T> || std::is_base_of_v<Pattern, T>>;
+
+template<typename T>
+struct polymorphic_type_hook<T, CanDowncast<T>> {
+    struct DowncastVisitor {
         template<typename U>
         const void* visit(const U& u, const std::type_info*& type) {
+            type = &typeid(U);
+            return &u;
+        }
+
+        template<typename U>
+        const void* visitInvalid(const U& u, const std::type_info*& type) {
             type = &typeid(U);
             return &u;
         }
@@ -247,7 +260,7 @@ struct polymorphic_type_hook<T, detail::enable_if_t<std::is_base_of<Symbol, T>::
             return src;
         }
 
-        SymbolDowncastVisitor visitor;
+        DowncastVisitor visitor;
         return src->visit(visitor, type);
     }
 };

@@ -65,24 +65,28 @@ private:
 struct CastExpressionSyntax;
 struct SignedCastExpressionSyntax;
 
-enum class ConversionKind : uint8_t {
-    Implicit,
-    Propagated,
-    StreamingConcat,
-    Explicit,
-    BitstreamCast
-};
+// clang-format off
+#define CK(x) \
+    x(Implicit) \
+    x(Propagated) \
+    x(StreamingConcat) \
+    x(Explicit) \
+    x(BitstreamCast)
+// clang-format on
+ENUM(ConversionKind, CK)
+#undef CK
 
 /// Represents a type conversion expression (implicit or explicit).
 class ConversionExpression : public Expression {
 public:
     const ConversionKind conversionKind;
-    bool isImplicit() const { return conversionKind < ConversionKind::Explicit; }
 
     ConversionExpression(const Type& type, ConversionKind conversionKind, Expression& operand,
                          SourceRange sourceRange) :
         Expression(ExpressionKind::Conversion, type, sourceRange),
         conversionKind(conversionKind), operand_(&operand) {}
+
+    bool isImplicit() const { return conversionKind < ConversionKind::Explicit; }
 
     const Expression& operand() const { return *operand_; }
     Expression& operand() { return *operand_; }

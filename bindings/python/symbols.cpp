@@ -194,6 +194,10 @@ void registerSymbols(py::module_& m) {
         .def_readonly("inputSkew", &ClockVarSymbol::inputSkew)
         .def_readonly("outputSkew", &ClockVarSymbol::outputSkew);
 
+    py::class_<ClassPropertySymbol, VariableSymbol>(m, "ClassPropertySymbol")
+        .def_readonly("visibility", &ClassPropertySymbol::visibility)
+        .def_readonly("randMode", &ClassPropertySymbol::randMode);
+
     py::enum_<MethodFlags>(m, "MethodFlags")
         .value("None", MethodFlags::None)
         .value("Virtual", MethodFlags::Virtual)
