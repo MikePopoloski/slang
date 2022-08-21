@@ -912,6 +912,9 @@ const Diagnostics& Compilation::getSemanticDiagnostics() {
         }
     }
 
+    OnlyResetAssignment reg_visitor;
+    getRoot().visit(reg_visitor);
+
     Diagnostics results;
     for (auto& [key, diagList] : diagMap) {
         // If the location is NoLocation, just issue each diagnostic.

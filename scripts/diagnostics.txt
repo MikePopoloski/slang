@@ -429,6 +429,7 @@ warning dpi-spec DPISpecDisallowed "'DPI' specified subroutines are not supporte
 warning udp-port-empty EmptyUdpPort "primitive port connection is empty"
 warning net-inconsistent NetInconsistent "net type '{}' of connection is inconsistent with net type '{}' of port"
 warning net-inconsistent NetRangeInconsistent "net type '{}' of connection bits [{}:{}] is inconsistent with net type '{}' of corresponding port range"
+warning only-assigned-on-reset OnlyAssignedOnReset "register '{}' is only assigned on reset. This will cause warnings or errors in synthesis tools"
 
 subsystem Expressions
 error BadUnaryExpression "invalid operand type {} to unary expression"
@@ -903,7 +904,7 @@ group default = { real-underflow real-overflow vector-overflow int-overflow unco
                   unknown-escape-code missing-top warning-task unsized-concat finish-num implicit-conv
                   nonblocking-final constraint-missing missing-format dpi-spec enum-range udp-port-empty
                   lifetime-prototype net-inconsistent port-coercion empty-body reversed-range
-                  invalid-source-encoding }
+                  invalid-source-encoding only-assigned-on-reset }
 
 group extra = { empty-member empty-stmt dup-import pointless-void-cast case-gen-none case-gen-dup
                 unused-result format-real ignored-slice task-ignored width-trunc dup-attr event-const

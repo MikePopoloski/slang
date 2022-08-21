@@ -518,4 +518,72 @@ struct DefParamVisitor : public ASTVisitor<DefParamVisitor, false, false> {
     const InstanceSymbol* hierarchyProblem = nullptr;
 };
 
+// This visitor is for adding the only-assigned-on-reset diagnostic to the registers variables that
+// are only assigned on reset
+struct OnlyResetAssignment : public ASTVisitor<OnlyResetAssignment, true, false> {
+    struct AlwaysFFVisitor : public ASTVisitor<AlwaysFFVisitor, true, false> {
+        struct LookupLhsIdentifier : public ASTVisitor<LookupLhsIdentifier, true, true> {
+            explicit LookupLhsIdentifier(string_view name) : name(name) {}
+
+            void handle(const AssignmentExpression& expression) {
+                if (expression.left().kind == ExpressionKind::NamedValue) {
+                    auto namedValue = expression.left().as<NamedValueExpression>();
+                    if (namedValue.symbol.name == name)
+                        found = true;
+                }
+            }
+
+            string_view name;
+            bool found = false;
+        };
+
+        explicit AlwaysFFVisitor(string_view name) : name(name){};
+
+        void handle(const ConditionalStatement& statement) {
+            const auto& statementKind = statement.conditions.begin()->expr->kind;
+            if (statementKind == ExpressionKind::UnaryOp ||
+                statementKind == ExpressionKind::NamedValue) {
+                string_view identifier;
+                if (statementKind == ExpressionKind::UnaryOp)
+                    identifier = statement.conditions.begin()
+                                     ->expr->as<UnaryExpression>()
+                                     .operand()
+                                     .as<NamedValueExpression>()
+                                     .symbol.name;
+                else
+                    identifier =
+                        statement.conditions.begin()->expr->as<NamedValueExpression>().symbol.name;
+
+                const auto isReset = identifier.find("reset") != std::string_view::npos ||
+                                     identifier.find("rst") != std::string_view::npos;
+
+                if (isReset) {
+                    LookupLhsIdentifier visitor(name);
+                    statement.ifTrue.visit(visitor);
+                    if (visitor.found) {
+                        visitor.found = false;
+                        statement.ifFalse->visit(visitor);
+                        if (!visitor.found)
+                            error = true;
+                    }
+                }
+            }
+        }
+
+        string_view name;
+        bool error = false;
+    };
+
+    void handle(const VariableSymbol& symbol) const {
+        auto firstDriver = symbol.getFirstDriver();
+        if (firstDriver && firstDriver->isInAlwaysFFBlock()) {
+            AlwaysFFVisitor visitor(symbol.name);
+            firstDriver->containingSymbol->visit(visitor);
+            if (visitor.error) {
+                symbol.getParentScope()->addDiag(diag::OnlyAssignedOnReset, symbol.location)
+                    << symbol.name;
+            }
+        }
+    }
+};
 } // namespace slang

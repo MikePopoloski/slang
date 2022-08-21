@@ -83,6 +83,7 @@ public:
         bool isInSingleDriverProcedure() const;
         bool isInSubroutine() const;
         bool isInInitialBlock() const;
+        bool isInAlwaysFFBlock() const;
 
         bool overlaps(const Driver& other) const;
 

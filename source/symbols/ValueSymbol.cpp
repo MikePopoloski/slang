@@ -163,6 +163,12 @@ bool ValueSymbol::Driver::isInInitialBlock() const {
                ProceduralBlockKind::Initial;
 }
 
+bool ValueSymbol::Driver::isInAlwaysFFBlock() const {
+    return containingSymbol->kind == SymbolKind::ProceduralBlock &&
+           containingSymbol->as<ProceduralBlockSymbol>().procedureKind ==
+               ProceduralBlockKind::AlwaysFF;
+}
+
 span<const ConstantRange> ValueSymbol::Driver::getPrefix() const {
     return { reinterpret_cast<const ConstantRange*>(this + 1), numPrefixEntries };
 }
