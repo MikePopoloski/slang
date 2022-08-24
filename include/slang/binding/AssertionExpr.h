@@ -151,8 +151,6 @@ struct SequenceRange {
     static SequenceRange fromSyntax(const RangeSelectSyntax& syntax, const BindContext& context,
                                     bool allowUnbounded);
 
-    bool admitsEmpty() const;
-
     void serializeTo(ASTSerializer& serializer) const;
 };
 

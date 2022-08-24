@@ -470,4 +470,64 @@ void registerSymbols(py::module_& m) {
         .def_readonly("randJoinExpr", &RandSeqProductionSymbol::Rule::randJoinExpr)
         .def_readonly("codeBlock", &RandSeqProductionSymbol::Rule::codeBlock)
         .def_readonly("isRandJoin", &RandSeqProductionSymbol::Rule::isRandJoin);
+
+    py::class_<CoverageOptionSetter>(m, "CoverageOptionSetter")
+        .def_property_readonly("isTypeOption", &CoverageOptionSetter::isTypeOption)
+        .def_property_readonly("name", &CoverageOptionSetter::getName)
+        .def_property_readonly("expression", &CoverageOptionSetter::getExpression);
+
+    py::class_<CovergroupBodySymbol, Symbol, Scope>(m, "CovergroupBodySymbol")
+        .def_readonly("options", &CovergroupBodySymbol::options);
+
+    py::class_<CovergroupType, Type, Scope>(m, "CovergroupType")
+        .def_readonly("arguments", &CovergroupType::arguments)
+        .def_readonly("sampleArguments", &CovergroupType::sampleArguments)
+        .def_property_readonly("body", [](const CovergroupType& self) { return &self.body; })
+        .def_property_readonly("coverageEvent", &CovergroupType::getCoverageEvent);
+
+    py::class_<CoverageBinSymbol, Symbol> coverageBinSym(m, "CoverageBinSymbol");
+    coverageBinSym.def_readonly("binsKind", &CoverageBinSymbol::binsKind)
+        .def_readonly("isArray", &CoverageBinSymbol::isArray)
+        .def_readonly("isWildcard", &CoverageBinSymbol::isWildcard)
+        .def_readonly("isDefault", &CoverageBinSymbol::isDefault)
+        .def_readonly("isDefaultSequence", &CoverageBinSymbol::isDefaultSequence)
+        .def_property_readonly("iffExpr", &CoverageBinSymbol::getIffExpr)
+        .def_property_readonly("numberOfBinsExpr", &CoverageBinSymbol::getNumberOfBinsExpr)
+        .def_property_readonly("setCoverageExpr", &CoverageBinSymbol::getSetCoverageExpr)
+        .def_property_readonly("withExpr", &CoverageBinSymbol::getWithExpr)
+        .def_property_readonly("crossSelectExpr", &CoverageBinSymbol::getCrossSelectExpr)
+        .def_property_readonly("values", &CoverageBinSymbol::getValues);
+
+    py::class_<CoverageBinSymbol::TransRangeList> transRangeList(coverageBinSym, "TransRangeList");
+    transRangeList.def_readonly("items", &CoverageBinSymbol::TransRangeList::items)
+        .def_readonly("repeatFrom", &CoverageBinSymbol::TransRangeList::repeatFrom)
+        .def_readonly("repeatTo", &CoverageBinSymbol::TransRangeList::repeatTo)
+        .def_readonly("repeatKind", &CoverageBinSymbol::TransRangeList::repeatKind);
+
+    py::enum_<CoverageBinSymbol::TransRangeList::RepeatKind>(transRangeList, "RepeatKind")
+        .value("None", CoverageBinSymbol::TransRangeList::None)
+        .value("Consecutive", CoverageBinSymbol::TransRangeList::Consecutive)
+        .value("Nonconsecutive", CoverageBinSymbol::TransRangeList::Nonconsecutive)
+        .value("GoTo", CoverageBinSymbol::TransRangeList::GoTo)
+        .export_values();
+
+    py::enum_<CoverageBinSymbol::BinKind>(coverageBinSym, "BinKind")
+        .value("Bins", CoverageBinSymbol::Bins)
+        .value("IllegalBins", CoverageBinSymbol::IllegalBins)
+        .value("IgnoreBins", CoverageBinSymbol::IgnoreBins)
+        .export_values();
+
+    py::class_<CoverpointSymbol, Symbol, Scope>(m, "CoverpointSymbol")
+        .def_readonly("options", &CoverpointSymbol::options)
+        .def_property_readonly("type", &CoverpointSymbol::getType)
+        .def_property_readonly("coverageExpr", &CoverpointSymbol::getCoverageExpr)
+        .def_property_readonly("iffExpr", &CoverpointSymbol::getIffExpr);
+
+    py::class_<CoverCrossBodySymbol, Symbol, Scope>(m, "CoverCrossBodySymbol")
+        .def_readonly("crossQueueType", &CoverCrossBodySymbol::crossQueueType);
+
+    py::class_<CoverCrossSymbol, Symbol, Scope>(m, "CoverCrossSymbol")
+        .def_readonly("options", &CoverCrossSymbol::options)
+        .def_readonly("targets", &CoverCrossSymbol::targets)
+        .def_property_readonly("iffExpr", &CoverCrossSymbol::getIffExpr);
 }
