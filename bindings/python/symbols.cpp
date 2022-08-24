@@ -4,6 +4,7 @@
 //------------------------------------------------------------------------------
 #include "pyslang.h"
 
+#include "slang/binding/SystemSubroutine.h"
 #include "slang/compilation/Compilation.h"
 #include "slang/compilation/Definition.h"
 #include "slang/symbols/AttributeSymbol.h"
@@ -17,6 +18,68 @@
 
 void registerSymbols(py::module_& m) {
     EXPOSE_ENUM(m, SymbolKind);
+
+    py::enum_<LookupFlags>(m, "LookupFlags")
+        .value("None", LookupFlags::None)
+        .value("Type", LookupFlags::Type)
+        .value("AllowDeclaredAfter", LookupFlags::AllowDeclaredAfter)
+        .value("DisallowWildcardImport", LookupFlags::DisallowWildcardImport)
+        .value("NoUndeclaredError", LookupFlags::NoUndeclaredError)
+        .value("NoUndeclaredErrorIfUninstantiated", LookupFlags::NoUndeclaredErrorIfUninstantiated)
+        .value("TypedefTarget", LookupFlags::TypedefTarget)
+        .value("NoParentScope", LookupFlags::NoParentScope)
+        .value("NoSelectors", LookupFlags::NoSelectors)
+        .value("AllowRoot", LookupFlags::AllowRoot)
+        .value("ForceHierarchical", LookupFlags::ForceHierarchical);
+
+    py::class_<LookupLocation>(m, "LookupLocation")
+        .def(py::init<>())
+        .def(py::init<const Scope*, uint32_t>())
+        .def_property_readonly("scope", &LookupLocation::getScope)
+        .def_property_readonly("index", &LookupLocation::getIndex)
+        .def_static("before", &LookupLocation::before)
+        .def_static("after", &LookupLocation::after)
+        .def_readonly_static("max", &LookupLocation::max)
+        .def_readonly_static("min", &LookupLocation::min)
+        .def(py::self == py::self)
+        .def(py::self != py::self);
+
+    py::class_<LookupResult> lookupResult(m, "LookupResult");
+    lookupResult.def(py::init<>())
+        .def_readonly("found", &LookupResult::found)
+        .def_readonly("systemSubroutine", &LookupResult::systemSubroutine)
+        .def_readonly("wasImported", &LookupResult::wasImported)
+        .def_readonly("isHierarchical", &LookupResult::isHierarchical)
+        .def_readonly("suppressUndeclared", &LookupResult::suppressUndeclared)
+        .def_readonly("fromTypeParam", &LookupResult::fromTypeParam)
+        .def_readonly("fromForwardTypedef", &LookupResult::fromForwardTypedef)
+        .def_readonly("selectors", &LookupResult::selectors)
+        .def_property_readonly("diagnostics", &LookupResult::getDiagnostics)
+        .def_property_readonly("hasError", &LookupResult::hasError)
+        .def("clear", &LookupResult::clear)
+        .def("copyFrom", &LookupResult::copyFrom)
+        .def("reportDiags", &LookupResult::reportDiags)
+        .def("errorIfSelectors", &LookupResult::errorIfSelectors);
+
+    py::class_<LookupResult::MemberSelector>(lookupResult, "MemberSelector")
+        .def_readonly("name", &LookupResult::MemberSelector::name)
+        .def_readonly("dotLocation", &LookupResult::MemberSelector::dotLocation)
+        .def_readonly("nameRange", &LookupResult::MemberSelector::nameRange);
+
+    py::class_<Lookup>(m, "Lookup")
+        .def_static("name", &Lookup::name)
+        .def_static("unqualified", &Lookup::unqualified, byrefint)
+        .def_static("unqualifiedAt", &Lookup::unqualifiedAt, byrefint)
+        .def_static("findClass", &Lookup::findClass, byrefint)
+        .def_static("getContainingClass", &Lookup::getContainingClass, byrefint)
+        .def_static("getVisibility", &Lookup::getVisibility)
+        .def_static("isVisibleFrom", &Lookup::isVisibleFrom)
+        .def_static("isAccessibleFrom", &Lookup::isAccessibleFrom)
+        .def_static("ensureVisible", &Lookup::ensureVisible)
+        .def_static("ensureAccessible", &Lookup::ensureAccessible)
+        .def_static("findTempVar", &Lookup::findTempVar)
+        .def_static("withinClassRandomize", &Lookup::withinClassRandomize)
+        .def_static("findAssertionLocalVar", &Lookup::findAssertionLocalVar);
 
     py::class_<Symbol>(m, "Symbol")
         .def_readonly("kind", &Symbol::kind)
@@ -60,12 +123,11 @@ void registerSymbols(py::module_& m) {
         .def_property_readonly("containingInstance", &Scope::getContainingInstance)
         .def(
             "find", [](const Scope& self, string_view arg) { return self.find(arg); }, byrefint)
-        // TODO:
-        /*.def(
+        .def(
             "lookupName",
             [](const Scope& self, string_view arg, LookupLocation location,
                bitmask<LookupFlags> flags) { return self.lookupName(arg, location, flags); },
-            "name"_a, "location"_a = LookupLocation::max, "flags"_a = LookupFlags::None, byrefint)*/
+            "name"_a, "location"_a = LookupLocation::max, "flags"_a = LookupFlags::None, byrefint)
         .def("__len__", [](const Scope& self) { return self.members().size(); })
         .def(
             "__iter__",

@@ -24,6 +24,7 @@ void registerBinding(py::module_& m) {
     EXPOSE_ENUM(m, UnaryAssertionOperator);
     EXPOSE_ENUM(m, BinaryAssertionOperator);
     EXPOSE_ENUM(m, BinsSelectExprKind);
+    EXPOSE_ENUM(m, DimensionKind);
 
     py::enum_<EvalFlags>(m, "EvalFlags")
         .value("None", EvalFlags::None)
@@ -68,6 +69,109 @@ void registerBinding(py::module_& m) {
         .def("resolve", &LValue::resolve, byrefint)
         .def("load", &LValue::load)
         .def("store", &LValue::store);
+
+    py::enum_<BindFlags>(m, "BindFlags")
+        .value("None", BindFlags::None)
+        .value("InsideConcatenation", BindFlags::InsideConcatenation)
+        .value("UnevaluatedBranch", BindFlags::UnevaluatedBranch)
+        .value("AllowDataType", BindFlags::AllowDataType)
+        .value("EnumInitializer", BindFlags::EnumInitializer)
+        .value("NoAttributes", BindFlags::NoAttributes)
+        .value("AssignmentAllowed", BindFlags::AssignmentAllowed)
+        .value("AssignmentDisallowed", BindFlags::AssignmentDisallowed)
+        .value("NonProcedural", BindFlags::NonProcedural)
+        .value("StaticInitializer", BindFlags::StaticInitializer)
+        .value("StreamingAllowed", BindFlags::StreamingAllowed)
+        .value("TopLevelStatement", BindFlags::TopLevelStatement)
+        .value("AllowUnboundedLiteral", BindFlags::AllowUnboundedLiteral)
+        .value("AllowUnboundedLiteralArithmetic", BindFlags::AllowUnboundedLiteralArithmetic)
+        .value("Function", BindFlags::Function)
+        .value("Final", BindFlags::Final)
+        .value("NonBlockingTimingControl", BindFlags::NonBlockingTimingControl)
+        .value("EventExpression", BindFlags::EventExpression)
+        .value("AllowTypeReferences", BindFlags::AllowTypeReferences)
+        .value("AssertionExpr", BindFlags::AssertionExpr)
+        .value("AllowClockingBlock", BindFlags::AllowClockingBlock)
+        .value("AssertionInstanceArgCheck", BindFlags::AssertionInstanceArgCheck)
+        .value("AssertionDelayOrRepetition", BindFlags::AssertionDelayOrRepetition)
+        .value("LValue", BindFlags::LValue)
+        .value("PropertyNegation", BindFlags::PropertyNegation)
+        .value("PropertyTimeAdvance", BindFlags::PropertyTimeAdvance)
+        .value("RecursivePropertyArg", BindFlags::RecursivePropertyArg)
+        .value("ConcurrentAssertActionBlock", BindFlags::ConcurrentAssertActionBlock)
+        .value("AllowCoverageSampleFormal", BindFlags::AllowCoverageSampleFormal)
+        .value("AllowCoverpoint", BindFlags::AllowCoverpoint)
+        .value("AllowNetType", BindFlags::AllowNetType)
+        .value("OutputArg", BindFlags::OutputArg)
+        .value("ProceduralAssign", BindFlags::ProceduralAssign)
+        .value("ProceduralForceRelease", BindFlags::ProceduralForceRelease)
+        .value("AllowInterconnect", BindFlags::AllowInterconnect)
+        .value("UnrollableForLoop", BindFlags::UnrollableForLoop);
+
+    py::class_<EvaluatedDimension>(m, "EvaluatedDimension")
+        .def_readonly("kind", &EvaluatedDimension::kind)
+        .def_readonly("range", &EvaluatedDimension::range)
+        .def_readonly("associativeType", &EvaluatedDimension::associativeType)
+        .def_readonly("queueMaxSize", &EvaluatedDimension::queueMaxSize)
+        .def_property_readonly("isRange", &EvaluatedDimension::isRange);
+
+    py::class_<BindContext>(m, "BindContext")
+        .def(py::init<const Scope&, LookupLocation, bitmask<BindFlags>>(), "scope"_a,
+             "lookupLocation"_a, "flags"_a = BindFlags::None)
+        .def_readonly("scope", &BindContext::scope)
+        .def_readonly("lookupIndex", &BindContext::lookupIndex)
+        .def_readonly("flags", &BindContext::flags)
+        .def_property_readonly("getCompilation", &BindContext::getCompilation)
+        .def_property_readonly("getLocation", &BindContext::getLocation)
+        .def_property_readonly("inUnevaluatedBranch", &BindContext::inUnevaluatedBranch)
+        .def_property_readonly("getDriverKind", &BindContext::getDriverKind)
+        .def_property_readonly("getInstance", &BindContext::getInstance)
+        .def_property_readonly("getProceduralBlock", &BindContext::getProceduralBlock)
+        .def_property_readonly("getContainingSubroutine", &BindContext::getContainingSubroutine)
+        .def_property_readonly("inAlwaysCombLatch", &BindContext::inAlwaysCombLatch)
+        .def("addDiag",
+             py::overload_cast<DiagCode, SourceLocation>(&BindContext::addDiag, py::const_),
+             byrefint)
+        .def("addDiag", py::overload_cast<DiagCode, SourceRange>(&BindContext::addDiag, py::const_),
+             byrefint)
+        .def("requireIntegral",
+             py::overload_cast<const Expression&>(&BindContext::requireIntegral, py::const_))
+        .def("requireIntegral", py::overload_cast<const ConstantValue&, SourceRange>(
+                                    &BindContext::requireIntegral, py::const_))
+        .def("requireNoUnknowns", &BindContext::requireNoUnknowns)
+        .def("requirePositive", py::overload_cast<const SVInt&, SourceRange>(
+                                    &BindContext::requirePositive, py::const_))
+        .def("requirePositive", py::overload_cast<optional<int32_t>, SourceRange>(
+                                    &BindContext::requirePositive, py::const_))
+        .def("requireGtZero", &BindContext::requireGtZero)
+        .def("requireBooleanConvertible", &BindContext::requireBooleanConvertible)
+        .def("requireValidBitWidth", py::overload_cast<bitwidth_t, SourceRange>(
+                                         &BindContext::requireValidBitWidth, py::const_))
+        .def("requireValidBitWidth", py::overload_cast<const SVInt&, SourceRange>(
+                                         &BindContext::requireValidBitWidth, py::const_))
+        .def("eval", &BindContext::eval)
+        .def("tryEval", &BindContext::tryEval)
+        .def("evalInteger", py::overload_cast<const ExpressionSyntax&, bitmask<BindFlags>>(
+                                &BindContext::evalInteger, py::const_))
+        .def("evalInteger",
+             py::overload_cast<const Expression&>(&BindContext::evalInteger, py::const_))
+        .def("evalDimension", &BindContext::evalDimension)
+        .def("evalPackedDimension", py::overload_cast<const VariableDimensionSyntax&>(
+                                        &BindContext::evalPackedDimension, py::const_))
+        .def("evalPackedDimension", py::overload_cast<const ElementSelectSyntax&>(
+                                        &BindContext::evalPackedDimension, py::const_))
+        .def("evalUnpackedDimension", &BindContext::evalUnpackedDimension)
+        .def("requireSimpleExpr",
+             py::overload_cast<const PropertyExprSyntax&>(&BindContext::requireSimpleExpr,
+                                                          py::const_),
+             byrefint)
+        .def("requireSimpleExpr",
+             py::overload_cast<const PropertyExprSyntax&, DiagCode>(&BindContext::requireSimpleExpr,
+                                                                    py::const_),
+             byrefint)
+        .def("getRandMode", &BindContext::getRandMode)
+        .def("addAssertionBacktrace", &BindContext::addAssertionBacktrace)
+        .def("resetFlags", &BindContext::resetFlags);
 
     py::class_<Expression>(m, "Expression")
         .def_readonly("kind", &Expression::kind)

@@ -162,7 +162,17 @@ enum class BindFlags : uint64_t {
 };
 BITMASK(BindFlags, UnrollableForLoop)
 
-enum class DimensionKind { Unknown, Range, AbbreviatedRange, Dynamic, Associative, Queue };
+// clang-format off
+#define DK(x) \
+    x(Unknown) \
+    x(Range) \
+    x(AbbreviatedRange) \
+    x(Dynamic) \
+    x(Associative) \
+    x(Queue)
+// clang-format on
+ENUM(DimensionKind, DK)
+#undef DK
 
 struct EvaluatedDimension {
     DimensionKind kind = DimensionKind::Unknown;
