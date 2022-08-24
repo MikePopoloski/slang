@@ -152,6 +152,10 @@ void Driver::addStandardArgs() {
 
     cmdLine.setPositional(
         [this](string_view fileName) {
+            if (fileName.rfind(".e"sv) == fileName.size() - 2)
+                return "";
+            if (fileName.rfind(".vhd"sv) == fileName.size() - 4)
+                return "";
             SourceBuffer buffer = readSource(fileName);
             if (!buffer)
                 anyFailedLoads = true;
