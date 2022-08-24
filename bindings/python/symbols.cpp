@@ -479,12 +479,6 @@ void registerSymbols(py::module_& m) {
     py::class_<CovergroupBodySymbol, Symbol, Scope>(m, "CovergroupBodySymbol")
         .def_readonly("options", &CovergroupBodySymbol::options);
 
-    py::class_<CovergroupType, Type, Scope>(m, "CovergroupType")
-        .def_readonly("arguments", &CovergroupType::arguments)
-        .def_readonly("sampleArguments", &CovergroupType::sampleArguments)
-        .def_property_readonly("body", [](const CovergroupType& self) { return &self.body; })
-        .def_property_readonly("coverageEvent", &CovergroupType::getCoverageEvent);
-
     py::class_<CoverageBinSymbol, Symbol> coverageBinSym(m, "CoverageBinSymbol");
     coverageBinSym.def_readonly("binsKind", &CoverageBinSymbol::binsKind)
         .def_readonly("isArray", &CoverageBinSymbol::isArray)

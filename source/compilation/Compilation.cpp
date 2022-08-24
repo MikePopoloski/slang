@@ -540,11 +540,11 @@ void Compilation::addGateType(const PrimitiveSymbol& prim) {
     gateMap.emplace(prim.name, &prim);
 }
 
-void Compilation::addSystemSubroutine(std::unique_ptr<SystemSubroutine> subroutine) {
+void Compilation::addSystemSubroutine(std::shared_ptr<SystemSubroutine> subroutine) {
     subroutineMap.emplace(subroutine->name, std::move(subroutine));
 }
 
-void Compilation::addSystemMethod(SymbolKind typeKind, std::unique_ptr<SystemSubroutine> method) {
+void Compilation::addSystemMethod(SymbolKind typeKind, std::shared_ptr<SystemSubroutine> method) {
     methodMap.emplace(std::make_tuple(string_view(method->name), typeKind), std::move(method));
 }
 

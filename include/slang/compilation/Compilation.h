@@ -220,10 +220,10 @@ public:
     const PrimitiveSymbol* getGateType(string_view name) const;
 
     /// Registers a system subroutine handler, which can be accessed by compiled code.
-    void addSystemSubroutine(std::unique_ptr<SystemSubroutine> subroutine);
+    void addSystemSubroutine(std::shared_ptr<SystemSubroutine> subroutine);
 
     /// Registers a type-based system method handler, which can be accessed by compiled code.
-    void addSystemMethod(SymbolKind typeKind, std::unique_ptr<SystemSubroutine> method);
+    void addSystemMethod(SymbolKind typeKind, std::shared_ptr<SystemSubroutine> method);
 
     /// Gets a system subroutine with the given name, or null if there is no such subroutine
     /// registered.
@@ -500,10 +500,10 @@ private:
     flat_hash_map<string_view, const PackageSymbol*> packageMap;
 
     // The name map for system subroutines.
-    flat_hash_map<string_view, std::unique_ptr<SystemSubroutine>> subroutineMap;
+    flat_hash_map<string_view, std::shared_ptr<SystemSubroutine>> subroutineMap;
 
     // The name map for system methods.
-    flat_hash_map<std::tuple<string_view, SymbolKind>, std::unique_ptr<SystemSubroutine>> methodMap;
+    flat_hash_map<std::tuple<string_view, SymbolKind>, std::shared_ptr<SystemSubroutine>> methodMap;
 
     // Map from pointers (to symbols, statements, expressions) to their associated attributes.
     flat_hash_map<const void*, span<const AttributeSymbol* const>> attributeMap;

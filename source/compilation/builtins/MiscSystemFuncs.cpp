@@ -345,18 +345,18 @@ private:
 };
 
 void registerMiscSystemFuncs(Compilation& c) {
-#define REGISTER(name) c.addSystemSubroutine(std::make_unique<name##Function>())
+#define REGISTER(name) c.addSystemSubroutine(std::make_shared<name##Function>())
     REGISTER(ValuePlusArgs);
     REGISTER(ScopeRandomize);
     REGISTER(GlobalClock);
 #undef REGISTER
 
-    c.addSystemSubroutine(std::make_unique<SFormatFunction>("$sformatf", false));
-    c.addSystemSubroutine(std::make_unique<SFormatFunction>("$psprintf", true));
+    c.addSystemSubroutine(std::make_shared<SFormatFunction>("$sformatf", false));
+    c.addSystemSubroutine(std::make_shared<SFormatFunction>("$psprintf", true));
 
-    c.addSystemMethod(SymbolKind::ClassType, std::make_unique<ClassRandomizeFunction>());
-    c.addSystemMethod(SymbolKind::SequenceType, std::make_unique<SequenceMethod>("triggered"));
-    c.addSystemMethod(SymbolKind::SequenceType, std::make_unique<SequenceMethod>("matched"));
+    c.addSystemMethod(SymbolKind::ClassType, std::make_shared<ClassRandomizeFunction>());
+    c.addSystemMethod(SymbolKind::SequenceType, std::make_shared<SequenceMethod>("triggered"));
+    c.addSystemMethod(SymbolKind::SequenceType, std::make_shared<SequenceMethod>("matched"));
 }
 
 } // namespace slang::Builtins

@@ -944,7 +944,7 @@ public:
 
 void registerArrayMethods(Compilation& c) {
 #define REGISTER(kind, name, ...) \
-    c.addSystemMethod(kind, std::make_unique<name##Method>(__VA_ARGS__))
+    c.addSystemMethod(kind, std::make_shared<name##Method>(__VA_ARGS__))
 
     for (auto kind : { SymbolKind::FixedSizeUnpackedArrayType, SymbolKind::DynamicArrayType,
                        SymbolKind::AssociativeArrayType, SymbolKind::QueueType }) {
@@ -980,7 +980,7 @@ void registerArrayMethods(Compilation& c) {
         REGISTER(kind, ArrayReverse, );
 
         c.addSystemMethod(kind,
-                          std::make_unique<NonConstantFunction>("shuffle", c.getVoidType(), 0,
+                          std::make_shared<NonConstantFunction>("shuffle", c.getVoidType(), 0,
                                                                 std::vector<const Type*>{}, true));
     }
 

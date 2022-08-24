@@ -92,9 +92,8 @@ void registerCompilation(py::module_& m) {
         .def("addSyntaxTree", &Compilation::addSyntaxTree)
         .def("getSyntaxTrees", &Compilation::getSyntaxTrees)
         .def("getRoot", py::overload_cast<>(&Compilation::getRoot), byrefint)
-        // TODO:
-        //.def("addSystemSubroutine", &Compilation::addSystemSubroutine)
-        //.def("addSystemMethod", &Compilation::addSystemMethod)
+        .def("addSystemSubroutine", &Compilation::addSystemSubroutine)
+        .def("addSystemMethod", &Compilation::addSystemMethod)
         .def("getSystemSubroutine", &Compilation::getSystemSubroutine, byrefint)
         .def("getSystemMethod", &Compilation::getSystemMethod, byrefint)
         .def("parseName", &Compilation::parseName, byrefint)
@@ -152,4 +151,100 @@ void registerCompilation(py::module_& m) {
         .def("createCompilation", &Driver::createCompilation)
         .def("reportParseDiags", &Driver::reportParseDiags)
         .def("reportCompilation", &Driver::reportCompilation);
+
+    class PySystemSubroutine : public SystemSubroutine {
+    public:
+        PySystemSubroutine(const std::string& name, SubroutineKind kind) :
+            SystemSubroutine(name, kind) {}
+
+        bool allowEmptyArgument(size_t argIndex) const override {
+            PYBIND11_OVERRIDE(bool, SystemSubroutine, allowEmptyArgument, argIndex);
+        }
+
+        bool allowClockingArgument(size_t argIndex) const override {
+            PYBIND11_OVERRIDE(bool, SystemSubroutine, allowClockingArgument, argIndex);
+        }
+
+        const Expression& bindArgument(size_t argIndex, const BindContext& context,
+                                       const ExpressionSyntax& syntax,
+                                       const Args& previousArgs) const override {
+            PYBIND11_OVERRIDE(const Expression&, SystemSubroutine, bindArgument, argIndex, context,
+                              syntax, previousArgs);
+        }
+
+        const Type& checkArguments(const BindContext& context, const Args& args, SourceRange range,
+                                   const Expression* iterOrThis) const override {
+            PYBIND11_OVERRIDE_PURE(const Type&, SystemSubroutine, checkArguments, context, args,
+                                   range, iterOrThis);
+        }
+
+        ConstantValue eval(EvalContext& context, const Args& args, SourceRange range,
+                           const CallExpression::SystemCallInfo& callInfo) const override {
+            PYBIND11_OVERRIDE_PURE(ConstantValue, SystemSubroutine, eval, context, args, range,
+                                   callInfo);
+        }
+    };
+
+    class SystemSubroutinePublicist : public SystemSubroutine {
+    public:
+        using SystemSubroutine::badArg;
+        using SystemSubroutine::checkArgCount;
+        using SystemSubroutine::kindStr;
+        using SystemSubroutine::noHierarchical;
+        using SystemSubroutine::notConst;
+        using SystemSubroutine::SystemSubroutine;
+        using SystemSubroutine::unevaluatedContext;
+    };
+
+    py::class_<SystemSubroutine, PySystemSubroutine, std::shared_ptr<SystemSubroutine>> systemSub(
+        m, "SystemSubroutine");
+    systemSub.def(py::init_alias<const std::string&, SubroutineKind>())
+        .def_readwrite("name", &SystemSubroutine::name)
+        .def_readwrite("kind", &SystemSubroutine::kind)
+        .def_readwrite("hasOutputArgs", &SystemSubroutine::hasOutputArgs)
+        .def_readwrite("withClauseMode", &SystemSubroutine::withClauseMode)
+        .def("allowEmptyArgument", &SystemSubroutine::allowEmptyArgument)
+        .def("allowClockingArgument", &SystemSubroutine::allowClockingArgument)
+        .def("bindArgument", &SystemSubroutine::bindArgument)
+        .def("checkArguments", &SystemSubroutine::checkArguments)
+        .def("eval", &SystemSubroutine::eval)
+        .def("badArg", &SystemSubroutinePublicist::badArg)
+        .def("checkArgCount", &SystemSubroutinePublicist::checkArgCount)
+        .def("kindStr", &SystemSubroutinePublicist::kindStr)
+        .def("noHierarchical", &SystemSubroutinePublicist::noHierarchical)
+        .def("notConst", &SystemSubroutinePublicist::notConst)
+        .def("unevaluatedContext", &SystemSubroutinePublicist::unevaluatedContext)
+        .def("__repr__", [](const SystemSubroutine& self) { return self.name; });
+
+    py::enum_<SystemSubroutine::WithClauseMode>(systemSub, "WithClauseMode")
+        .value("None", SystemSubroutine::WithClauseMode::None)
+        .value("Iterator", SystemSubroutine::WithClauseMode::Iterator)
+        .value("Randomize", SystemSubroutine::WithClauseMode::Randomize);
+
+    class PySimpleSystemSubroutine : public SimpleSystemSubroutine {
+    public:
+        PySimpleSystemSubroutine(const std::string& name, SubroutineKind kind, size_t requiredArgs,
+                                 const std::vector<const Type*>& argTypes, const Type& returnType,
+                                 bool isMethod, bool isFirstArgLValue = false) :
+            SimpleSystemSubroutine(name, kind, requiredArgs, argTypes, returnType, isMethod,
+                                   isFirstArgLValue) {}
+
+        ConstantValue eval(EvalContext& context, const Args& args, SourceRange range,
+                           const CallExpression::SystemCallInfo& callInfo) const override {
+            PYBIND11_OVERRIDE_PURE(ConstantValue, SystemSubroutine, eval, context, args, range,
+                                   callInfo);
+        }
+    };
+
+    py::class_<SimpleSystemSubroutine, SystemSubroutine, PySimpleSystemSubroutine,
+               std::shared_ptr<SimpleSystemSubroutine>>(m, "SimpleSystemSubroutine")
+        .def(py::init_alias<const std::string&, SubroutineKind, size_t,
+                            const std::vector<const Type*>&, const Type&, bool, bool>());
+
+    py::class_<NonConstantFunction, SimpleSystemSubroutine, std::shared_ptr<NonConstantFunction>>(
+        m, "NonConstantFunction")
+        .def(py::init<const std::string&, const Type&, size_t, const std::vector<const Type*>&,
+                      bool>(),
+             "name"_a, "returnType"_a, "requiredArgs"_a = 0,
+             "argTypes"_a = std::vector<const Type*>{}, "isMethod"_a = false);
 }

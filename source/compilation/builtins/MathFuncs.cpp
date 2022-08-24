@@ -225,13 +225,13 @@ public:
 };
 
 void registerMathFuncs(Compilation& c) {
-    c.addSystemSubroutine(std::make_unique<Clog2Function>());
-    c.addSystemSubroutine(std::make_unique<CountBitsFunction>());
-    c.addSystemSubroutine(std::make_unique<CountOnesFunction>());
+    c.addSystemSubroutine(std::make_shared<Clog2Function>());
+    c.addSystemSubroutine(std::make_shared<CountBitsFunction>());
+    c.addSystemSubroutine(std::make_shared<CountOnesFunction>());
 
 #define REGISTER(name, kind) \
     c.addSystemSubroutine(   \
-        std::make_unique<BooleanBitVectorFunction>(name, BooleanBitVectorFunction::kind))
+        std::make_shared<BooleanBitVectorFunction>(name, BooleanBitVectorFunction::kind))
 
     REGISTER("$onehot", OneHot);
     REGISTER("$onehot0", OneHot0);
@@ -239,7 +239,7 @@ void registerMathFuncs(Compilation& c) {
 
 #undef REGISTER
 #define REGISTER(name, func) \
-    c.addSystemSubroutine(std::make_unique<RealMath1Function<(func)>>(c, name))
+    c.addSystemSubroutine(std::make_shared<RealMath1Function<(func)>>(c, name))
 
     REGISTER("$ln", std::log);
     REGISTER("$log10", std::log10);
@@ -262,7 +262,7 @@ void registerMathFuncs(Compilation& c) {
 
 #undef REGISTER
 #define REGISTER(name, func) \
-    c.addSystemSubroutine(std::make_unique<RealMath2Function<(func)>>(c, name))
+    c.addSystemSubroutine(std::make_shared<RealMath2Function<(func)>>(c, name))
 
     REGISTER("$pow", std::pow);
     REGISTER("$atan2", std::atan2);

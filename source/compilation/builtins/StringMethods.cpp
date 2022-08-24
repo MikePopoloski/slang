@@ -257,7 +257,7 @@ public:
 
 void registerStringMethods(Compilation& c) {
 #define REGISTER(kind, name, ...) \
-    c.addSystemMethod(kind, std::make_unique<name##Method>(__VA_ARGS__))
+    c.addSystemMethod(kind, std::make_shared<name##Method>(__VA_ARGS__))
     REGISTER(SymbolKind::StringType, StringLen, c);
     REGISTER(SymbolKind::StringType, StringPutc, c);
     REGISTER(SymbolKind::StringType, StringGetc, c);

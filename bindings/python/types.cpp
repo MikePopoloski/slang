@@ -279,4 +279,10 @@ void registerTypes(py::module_& m) {
         .def_readonly("isExplicitExtern", &ConstraintBlockSymbol::isExplicitExtern)
         .def_readonly("isPure", &ConstraintBlockSymbol::isPure)
         .def_property_readonly("constraints", &ConstraintBlockSymbol::getConstraints);
+
+    py::class_<CovergroupType, Type, Scope>(m, "CovergroupType")
+        .def_readonly("arguments", &CovergroupType::arguments)
+        .def_readonly("sampleArguments", &CovergroupType::sampleArguments)
+        .def_property_readonly("body", [](const CovergroupType& self) { return &self.body; })
+        .def_property_readonly("coverageEvent", &CovergroupType::getCoverageEvent);
 }

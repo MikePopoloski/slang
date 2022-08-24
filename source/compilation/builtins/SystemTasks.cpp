@@ -690,7 +690,7 @@ private:
 };
 
 void registerSystemTasks(Compilation& c) {
-#define REGISTER(type, name, base) c.addSystemSubroutine(std::make_unique<type>(name, base))
+#define REGISTER(type, name, base) c.addSystemSubroutine(std::make_shared<type>(name, base))
     REGISTER(DisplayTask, "$display", LiteralBase::Decimal);
     REGISTER(DisplayTask, "$displayb", LiteralBase::Binary);
     REGISTER(DisplayTask, "$displayo", LiteralBase::Octal);
@@ -713,7 +713,7 @@ void registerSystemTasks(Compilation& c) {
     REGISTER(DisplayTask, "$info", LiteralBase::Decimal);
 
 #undef REGISTER
-#define REGISTER(type, name) c.addSystemSubroutine(std::make_unique<type>(name))
+#define REGISTER(type, name) c.addSystemSubroutine(std::make_shared<type>(name))
     REGISTER(FileDisplayTask, "$fdisplay");
     REGISTER(FileDisplayTask, "$fdisplayb");
     REGISTER(FileDisplayTask, "$fdisplayo");
@@ -755,17 +755,17 @@ void registerSystemTasks(Compilation& c) {
     auto int_t = &c.getIntType();
     auto string_t = &c.getStringType();
 
-    c.addSystemSubroutine(std::make_unique<ReadWriteMemTask>("$readmemb", true));
-    c.addSystemSubroutine(std::make_unique<ReadWriteMemTask>("$readmemh", true));
-    c.addSystemSubroutine(std::make_unique<ReadWriteMemTask>("$writememb", false));
-    c.addSystemSubroutine(std::make_unique<ReadWriteMemTask>("$writememh", false));
-    c.addSystemSubroutine(std::make_unique<SimpleSystemTask>("$system", *int_t, 0,
+    c.addSystemSubroutine(std::make_shared<ReadWriteMemTask>("$readmemb", true));
+    c.addSystemSubroutine(std::make_shared<ReadWriteMemTask>("$readmemh", true));
+    c.addSystemSubroutine(std::make_shared<ReadWriteMemTask>("$writememb", false));
+    c.addSystemSubroutine(std::make_shared<ReadWriteMemTask>("$writememh", false));
+    c.addSystemSubroutine(std::make_shared<SimpleSystemTask>("$system", *int_t, 0,
                                                              std::vector<const Type*>{ string_t }));
-    c.addSystemSubroutine(std::make_unique<SdfAnnotateTask>());
-    c.addSystemSubroutine(std::make_unique<StaticAssertTask>());
+    c.addSystemSubroutine(std::make_shared<SdfAnnotateTask>());
+    c.addSystemSubroutine(std::make_shared<StaticAssertTask>());
 
 #define TASK(name, required, ...)                             \
-    c.addSystemSubroutine(std::make_unique<SimpleSystemTask>( \
+    c.addSystemSubroutine(std::make_shared<SimpleSystemTask>( \
         name, c.getVoidType(), required, std::vector<const Type*>{ __VA_ARGS__ }))
 
     TASK("$exit", 0, );
@@ -789,7 +789,7 @@ void registerSystemTasks(Compilation& c) {
 
 #undef TASK
 
-#define ASSERTCTRL(name) c.addSystemSubroutine(std::make_unique<AssertControlTask>(name))
+#define ASSERTCTRL(name) c.addSystemSubroutine(std::make_shared<AssertControlTask>(name))
     ASSERTCTRL("$assertcontrol");
     ASSERTCTRL("$asserton");
     ASSERTCTRL("$assertoff");
@@ -804,7 +804,7 @@ void registerSystemTasks(Compilation& c) {
 #undef ASSERTCTRL
 
 #define TASK(name, kind, input, output) \
-    c.addSystemSubroutine(std::make_unique<StochasticTask>(name, kind, input, output))
+    c.addSystemSubroutine(std::make_shared<StochasticTask>(name, kind, input, output))
     TASK("$q_initialize", SubroutineKind::Task, 3, 1);
     TASK("$q_add", SubroutineKind::Task, 3, 1);
     TASK("$q_remove", SubroutineKind::Task, 2, 2);
@@ -813,7 +813,7 @@ void registerSystemTasks(Compilation& c) {
 
 #undef TASK
 
-#define PLA_TASK(name) c.addSystemSubroutine(std::make_unique<PlaTask>(name))
+#define PLA_TASK(name) c.addSystemSubroutine(std::make_shared<PlaTask>(name))
     for (auto& fmt : { "$array", "$plane" }) {
         for (auto& gate : { "$and", "$or", "$nand", "$nor" }) {
             for (auto& type : { "$async", "$sync" }) {

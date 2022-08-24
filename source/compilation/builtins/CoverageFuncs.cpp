@@ -82,7 +82,7 @@ private:
 };
 
 void registerCoverageFuncs(Compilation& c) {
-#define REGISTER(name, ...) c.addSystemSubroutine(std::make_unique<name>(__VA_ARGS__))
+#define REGISTER(name, ...) c.addSystemSubroutine(std::make_shared<name>(__VA_ARGS__))
     REGISTER(CoverageNameOrHierFunc, "$coverage_control", c.getIntType(), 3, 4,
              std::vector{ &c.getIntType(), &c.getIntType(), &c.getIntType(), &c.getStringType() });
     REGISTER(CoverageNameOrHierFunc, "$coverage_get_max", c.getIntType(), 2, 3,
