@@ -92,8 +92,12 @@ void registerCompilation(py::module_& m) {
         .def("addSyntaxTree", &Compilation::addSyntaxTree)
         .def("getSyntaxTrees", &Compilation::getSyntaxTrees)
         .def("getRoot", py::overload_cast<>(&Compilation::getRoot), byrefint)
-        .def("addSystemSubroutine", &Compilation::addSystemSubroutine)
-        .def("addSystemMethod", &Compilation::addSystemMethod)
+        .def("addSystemSubroutine",
+             py::overload_cast<const SystemSubroutine&>(&Compilation::addSystemSubroutine),
+             py::keep_alive<1, 2>())
+        .def("addSystemMethod",
+             py::overload_cast<SymbolKind, const SystemSubroutine&>(&Compilation::addSystemMethod),
+             py::keep_alive<1, 3>())
         .def("getSystemSubroutine", &Compilation::getSystemSubroutine, byrefint)
         .def("getSystemMethod", &Compilation::getSystemMethod, byrefint)
         .def("parseName", &Compilation::parseName, byrefint)
@@ -174,13 +178,13 @@ void registerCompilation(py::module_& m) {
 
         const Type& checkArguments(const BindContext& context, const Args& args, SourceRange range,
                                    const Expression* iterOrThis) const override {
-            PYBIND11_OVERRIDE_PURE(const Type&, SystemSubroutine, checkArguments, context, args,
+            PYBIND11_OVERRIDE_PURE(const Type&, SystemSubroutine, checkArguments, &context, args,
                                    range, iterOrThis);
         }
 
         ConstantValue eval(EvalContext& context, const Args& args, SourceRange range,
                            const CallExpression::SystemCallInfo& callInfo) const override {
-            PYBIND11_OVERRIDE_PURE(ConstantValue, SystemSubroutine, eval, context, args, range,
+            PYBIND11_OVERRIDE_PURE(ConstantValue, SystemSubroutine, eval, &context, args, range,
                                    callInfo);
         }
     };
@@ -196,8 +200,7 @@ void registerCompilation(py::module_& m) {
         using SystemSubroutine::unevaluatedContext;
     };
 
-    py::class_<SystemSubroutine, PySystemSubroutine, std::shared_ptr<SystemSubroutine>> systemSub(
-        m, "SystemSubroutine");
+    py::class_<SystemSubroutine, PySystemSubroutine> systemSub(m, "SystemSubroutine");
     systemSub.def(py::init_alias<const std::string&, SubroutineKind>())
         .def_readwrite("name", &SystemSubroutine::name)
         .def_readwrite("kind", &SystemSubroutine::kind)
@@ -231,18 +234,17 @@ void registerCompilation(py::module_& m) {
 
         ConstantValue eval(EvalContext& context, const Args& args, SourceRange range,
                            const CallExpression::SystemCallInfo& callInfo) const override {
-            PYBIND11_OVERRIDE_PURE(ConstantValue, SystemSubroutine, eval, context, args, range,
-                                   callInfo);
+            PYBIND11_OVERRIDE_PURE(ConstantValue, SimpleSystemSubroutine, eval, &context, args,
+                                   range, callInfo);
         }
     };
 
-    py::class_<SimpleSystemSubroutine, SystemSubroutine, PySimpleSystemSubroutine,
-               std::shared_ptr<SimpleSystemSubroutine>>(m, "SimpleSystemSubroutine")
+    py::class_<SimpleSystemSubroutine, SystemSubroutine, PySimpleSystemSubroutine>(
+        m, "SimpleSystemSubroutine")
         .def(py::init_alias<const std::string&, SubroutineKind, size_t,
                             const std::vector<const Type*>&, const Type&, bool, bool>());
 
-    py::class_<NonConstantFunction, SimpleSystemSubroutine, std::shared_ptr<NonConstantFunction>>(
-        m, "NonConstantFunction")
+    py::class_<NonConstantFunction, SimpleSystemSubroutine>(m, "NonConstantFunction")
         .def(py::init<const std::string&, const Type&, size_t, const std::vector<const Type*>&,
                       bool>(),
              "name"_a, "returnType"_a, "requiredArgs"_a = 0,

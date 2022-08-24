@@ -540,26 +540,36 @@ void Compilation::addGateType(const PrimitiveSymbol& prim) {
     gateMap.emplace(prim.name, &prim);
 }
 
-void Compilation::addSystemSubroutine(std::shared_ptr<SystemSubroutine> subroutine) {
-    subroutineMap.emplace(subroutine->name, std::move(subroutine));
+void Compilation::addSystemSubroutine(std::unique_ptr<SystemSubroutine> subroutine) {
+    subroutineMap.emplace(subroutine->name, subroutine.get());
+    subroutineStorage.emplace_back(std::move(subroutine));
 }
 
-void Compilation::addSystemMethod(SymbolKind typeKind, std::shared_ptr<SystemSubroutine> method) {
-    methodMap.emplace(std::make_tuple(string_view(method->name), typeKind), std::move(method));
+void Compilation::addSystemSubroutine(const SystemSubroutine& subroutine) {
+    subroutineMap.emplace(subroutine.name, &subroutine);
+}
+
+void Compilation::addSystemMethod(SymbolKind typeKind, std::unique_ptr<SystemSubroutine> method) {
+    methodMap.emplace(std::make_tuple(string_view(method->name), typeKind), method.get());
+    subroutineStorage.emplace_back(std::move(method));
+}
+
+void Compilation::addSystemMethod(SymbolKind typeKind, const SystemSubroutine& method) {
+    methodMap.emplace(std::make_tuple(string_view(method.name), typeKind), &method);
 }
 
 const SystemSubroutine* Compilation::getSystemSubroutine(string_view name) const {
     auto it = subroutineMap.find(name);
     if (it == subroutineMap.end())
         return nullptr;
-    return it->second.get();
+    return it->second;
 }
 
 const SystemSubroutine* Compilation::getSystemMethod(SymbolKind typeKind, string_view name) const {
     auto it = methodMap.find(std::make_tuple(name, typeKind));
     if (it == methodMap.end())
         return nullptr;
-    return it->second.get();
+    return it->second;
 }
 
 void Compilation::setAttributes(const Symbol& symbol,

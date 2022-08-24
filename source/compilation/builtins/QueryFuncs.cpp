@@ -518,7 +518,7 @@ private:
 };
 
 void registerQueryFuncs(Compilation& c) {
-#define REGISTER(name) c.addSystemSubroutine(std::make_shared<name##Function>())
+#define REGISTER(name) c.addSystemSubroutine(std::make_unique<name##Function>())
     REGISTER(Bits);
     REGISTER(Typename);
     REGISTER(IsUnbounded);
@@ -530,8 +530,8 @@ void registerQueryFuncs(Compilation& c) {
     REGISTER(Increment);
 #undef REGISTER
 
-    c.addSystemSubroutine(std::make_shared<ArrayDimensionFunction>("$dimensions", false));
-    c.addSystemSubroutine(std::make_shared<ArrayDimensionFunction>("$unpacked_dimensions", true));
+    c.addSystemSubroutine(std::make_unique<ArrayDimensionFunction>("$dimensions", false));
+    c.addSystemSubroutine(std::make_unique<ArrayDimensionFunction>("$unpacked_dimensions", true));
 }
 
 } // namespace slang::Builtins

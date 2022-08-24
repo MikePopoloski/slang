@@ -319,6 +319,11 @@ void registerNumeric(py::module_& m) {
                 self.getVariant());
         });
 
+    py::implicitly_convertible<SVInt, ConstantValue>();
+    py::implicitly_convertible<std::string, ConstantValue>();
+    py::implicitly_convertible<int, ConstantValue>();
+    py::implicitly_convertible<double, ConstantValue>();
+
     py::class_<ConstantRange>(m, "ConstantRange")
         .def(py::init<>())
         .def(py::init([](int left, int right) {

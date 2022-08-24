@@ -128,6 +128,14 @@ void registerSymbols(py::module_& m) {
             [](const Scope& self, string_view arg, LookupLocation location,
                bitmask<LookupFlags> flags) { return self.lookupName(arg, location, flags); },
             "name"_a, "location"_a = LookupLocation::max, "flags"_a = LookupFlags::None, byrefint)
+        .def("__getitem__",
+             [](const Scope& self, size_t i) {
+                 auto members = self.members();
+                 if (i >= members.size())
+                     throw py::index_error();
+
+                 return py::cast(&(*std::next(members.begin(), i)));
+             })
         .def("__len__", [](const Scope& self) { return self.members().size(); })
         .def(
             "__iter__",

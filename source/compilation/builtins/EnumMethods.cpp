@@ -195,7 +195,7 @@ public:
 
 void registerEnumMethods(Compilation& c) {
 #define REGISTER(kind, name, ...) \
-    c.addSystemMethod(kind, std::make_shared<name##Method>(__VA_ARGS__))
+    c.addSystemMethod(kind, std::make_unique<name##Method>(__VA_ARGS__))
     REGISTER(SymbolKind::EnumType, EnumFirstLast, "first", true);
     REGISTER(SymbolKind::EnumType, EnumFirstLast, "last", false);
     REGISTER(SymbolKind::EnumType, EnumNextPrev, "next", true);
@@ -203,7 +203,7 @@ void registerEnumMethods(Compilation& c) {
     REGISTER(SymbolKind::EnumType, EnumName, c);
 #undef REGISTER
 
-    c.addSystemMethod(SymbolKind::EnumType, std::make_shared<EnumNumMethod>());
+    c.addSystemMethod(SymbolKind::EnumType, std::make_unique<EnumNumMethod>());
 }
 
 } // namespace slang::Builtins

@@ -158,7 +158,7 @@ public:
 };
 
 void registerConversionFuncs(Compilation& c) {
-#define REGISTER(name, ...) c.addSystemSubroutine(std::make_shared<name##Function>(__VA_ARGS__))
+#define REGISTER(name, ...) c.addSystemSubroutine(std::make_unique<name##Function>(__VA_ARGS__))
     REGISTER(SignedConversion, "$signed", true);
     REGISTER(SignedConversion, "$unsigned", false);
 

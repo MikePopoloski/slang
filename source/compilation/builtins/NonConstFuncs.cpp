@@ -393,7 +393,7 @@ private:
 };
 
 void registerNonConstFuncs(Compilation& c) {
-#define REGISTER(...) c.addSystemSubroutine(std::make_shared<NonConstantFunction>(__VA_ARGS__))
+#define REGISTER(...) c.addSystemSubroutine(std::make_unique<NonConstantFunction>(__VA_ARGS__))
 
     auto& intType = c.getIntType();
     auto& uintType = c.getUnsignedIntType();
@@ -420,7 +420,7 @@ void registerNonConstFuncs(Compilation& c) {
 
 #undef REGISTER
 
-#define FUNC(name, numArgs) c.addSystemSubroutine(std::make_shared<DistributionFunc>(name, numArgs))
+#define FUNC(name, numArgs) c.addSystemSubroutine(std::make_unique<DistributionFunc>(name, numArgs))
     FUNC("$dist_uniform", 3);
     FUNC("$dist_normal", 3);
     FUNC("$dist_exponential", 2);
@@ -430,7 +430,7 @@ void registerNonConstFuncs(Compilation& c) {
     FUNC("$dist_erlang", 3);
 #undef FUNC
 
-#define FUNC(name) c.addSystemSubroutine(std::make_shared<ValueChangeFunc>(name))
+#define FUNC(name) c.addSystemSubroutine(std::make_unique<ValueChangeFunc>(name))
     FUNC("$rose");
     FUNC("$fell");
     FUNC("$stable");
@@ -438,7 +438,7 @@ void registerNonConstFuncs(Compilation& c) {
 #undef FUNC
 
 #define FUNC(name, isFuture) \
-    c.addSystemSubroutine(std::make_shared<GlobalValueChangeFunc>(name, isFuture))
+    c.addSystemSubroutine(std::make_unique<GlobalValueChangeFunc>(name, isFuture))
     FUNC("$past_gclk", false);
     FUNC("$rose_gclk", false);
     FUNC("$fell_gclk", false);
@@ -451,22 +451,22 @@ void registerNonConstFuncs(Compilation& c) {
     FUNC("$changing_gclk", true);
 #undef FUNC
 
-    c.addSystemSubroutine(std::make_shared<FErrorFunc>());
-    c.addSystemSubroutine(std::make_shared<FGetsFunc>());
-    c.addSystemSubroutine(std::make_shared<ScanfFunc>(true));
-    c.addSystemSubroutine(std::make_shared<ScanfFunc>(false));
-    c.addSystemSubroutine(std::make_shared<FReadFunc>());
-    c.addSystemSubroutine(std::make_shared<SampledFunc>());
-    c.addSystemSubroutine(std::make_shared<PastFunc>());
+    c.addSystemSubroutine(std::make_unique<FErrorFunc>());
+    c.addSystemSubroutine(std::make_unique<FGetsFunc>());
+    c.addSystemSubroutine(std::make_unique<ScanfFunc>(true));
+    c.addSystemSubroutine(std::make_unique<ScanfFunc>(false));
+    c.addSystemSubroutine(std::make_unique<FReadFunc>());
+    c.addSystemSubroutine(std::make_unique<SampledFunc>());
+    c.addSystemSubroutine(std::make_unique<PastFunc>());
 
     c.addSystemMethod(SymbolKind::EventType,
-                      std::make_shared<NonConstantFunction>("triggered", c.getBitType(), 0,
+                      std::make_unique<NonConstantFunction>("triggered", c.getBitType(), 0,
                                                             std::vector<const Type*>{},
                                                             /* isMethod */ true));
 
-    c.addSystemMethod(SymbolKind::ClassProperty, std::make_shared<RandModeFunc>("rand_mode"));
+    c.addSystemMethod(SymbolKind::ClassProperty, std::make_unique<RandModeFunc>("rand_mode"));
     c.addSystemMethod(SymbolKind::ConstraintBlock,
-                      std::make_shared<RandModeFunc>("constraint_mode"));
+                      std::make_unique<RandModeFunc>("constraint_mode"));
 }
 
 } // namespace slang::Builtins
