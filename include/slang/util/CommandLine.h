@@ -189,6 +189,32 @@ public:
     void add(string_view name, std::vector<std::string>& value, string_view desc,
              string_view valueName = {}, bool isFileName = false);
 
+    /// Register an option with @a name that will be parsed as a 2-tuple of string,int.
+    /// The tuple is stored in a map, with tuple[0] being the key, and tuple[1] the value.
+    /// The option can be invoked multiple times, to add multiple entries to the map.
+    ///
+    /// @name is a comma separated list of long form and short form names
+    /// (including the dashes) that are accepted for this option.
+    /// @a desc is a human-friendly description for printing help text.
+    /// @a valueName is an example name for the value when printing help text.
+    /// @a isFileName indicates whether the parsed string is a filename that
+    ///               might be relative to the current directory.
+    void add(string_view name, std::map<std::string, int>& value, string_view desc,
+             string_view valueName);
+
+    /// Register an option with @a name that will be parsed as a 2-tuple of string,string.
+    /// The tuple is stored in a map, with tuple[0] being the key, and tuple[1] the value.
+    /// The option can be invoked multiple times, to add multiple entries to the map.
+    ///
+    /// @name is a comma separated list of long form and short form names
+    /// (including the dashes) that are accepted for this option.
+    /// @a desc is a human-friendly description for printing help text.
+    /// @a valueName is an example name for the value when printing help text.
+    /// @a isFileName indicates whether the parsed string is a filename that
+    ///               might be relative to the current directory.
+    void add(string_view name, std::map<std::string, std::string>& value, string_view desc,
+             string_view valueName);
+
     using OptionCallback = std::function<std::string(string_view)>;
 
     /// Register an option with @a name that will be parsed as a string and
@@ -288,7 +314,7 @@ private:
                      optional<uint64_t>*, optional<double>*, optional<std::string>*,
                      std::vector<int32_t>*, std::vector<uint32_t>*, std::vector<int64_t>*,
                      std::vector<uint64_t>*, std::vector<double>*, std::vector<std::string>*,
-                     OptionCallback>;
+                     OptionCallback, std::map<std::string, int>*, std::map<std::string, std::string>* >;
 
     class Option {
     public:
@@ -317,6 +343,8 @@ private:
         std::string set(std::vector<double>& target, string_view name, string_view value);
         std::string set(std::vector<std::string>& target, string_view name, string_view value);
         std::string set(OptionCallback& target, string_view name, string_view value);
+        std::string set(std::map<std::string, int>& target, string_view name, string_view value);
+        std::string set(std::map<std::string, std::string>& target, string_view name, string_view value);
 
         template<typename T>
         static constexpr bool allowValue(const optional<T>& target) {
@@ -325,6 +353,11 @@ private:
 
         template<typename T>
         static constexpr bool allowValue(const std::vector<T>&) {
+            return true;
+        }
+
+        template<typename T1, typename T2>
+        static constexpr bool allowValue(const std::map<T1, T2>&) {
             return true;
         }
     };
@@ -339,6 +372,7 @@ private:
 
     void handlePlusArg(string_view arg, ParseOptions options, bool& hadUnknowns);
 
+    Option* findOption(string_view arg) const;
     Option* findOption(string_view arg, string_view& value) const;
     Option* tryGroupOrPrefix(string_view& arg, string_view& value, ParseOptions options);
     std::string findNearestMatch(string_view arg) const;

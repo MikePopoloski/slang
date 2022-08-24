@@ -88,6 +88,16 @@ void CommandLine::add(string_view name, OptionCallback cb, string_view desc, str
     addInternal(name, cb, desc, valueName, isFileName);
 }
 
+void CommandLine::add(string_view name, std::map<std::string, int>& value, string_view desc,
+                      string_view valueName) {
+    addInternal(name, &value, desc, valueName);
+}
+
+void CommandLine::add(string_view name, std::map<std::string, std::string>& value, string_view desc,
+                      string_view valueName) {
+    addInternal(name, &value, desc, valueName);
+}
+
 void CommandLine::addInternal(string_view name, OptionStorage storage, string_view desc,
                               string_view valueName, bool isFileName) {
     if (name.empty())
@@ -366,7 +376,13 @@ bool CommandLine::parse(span<const string_view> args, ParseOptions options) {
     bool hadUnknowns = false;
     string_view firstPositional;
 
+    int skip = 0;
     for (auto arg : args) {
+        // Skip N arguments if needed
+        if (skip) {
+            skip--;
+            continue;
+        }
         // If we were previously expecting a value, set that now.
         if (expectingVal) {
             std::string result = expectingVal->set(expectingValName, arg, options.ignoreDuplicates);
@@ -395,6 +411,31 @@ bool CommandLine::parse(span<const string_view> args, ParseOptions options) {
         if (arg == "--"sv) {
             doubleDash = true;
             continue;
+        }
+
+        // check if arg is in the list of commands to skip
+        auto cmd_ignore_option = findOption("cmd_ignore");
+        std::map<std::string, int>* cmdIgnore = std::get<std::map<std::string, int>*>(cmd_ignore_option->storage);
+        string_view ignore_arg = arg;
+        // if we ignore a vendor command of the form +xx ,
+        // we match on any +xx+yyy command as +yy is the command's argument
+        if (arg[0] == '+') {
+            size_t plusIndex = arg.substr(1).find_first_of('+');
+            if (plusIndex != string_view::npos)
+                ignore_arg = arg.substr(0, plusIndex + 1); // +1 because we started from arg.substr(1)
+        }
+        if (auto it {cmdIgnore->find(std::string(ignore_arg))}; it != cmdIgnore->end()) {
+            // if yes, find how many args to skip
+            skip = it->second;
+            continue;
+        }
+
+        // check if arg is in the list of commands to translate
+        auto cmd_rename_option = findOption("cmd_rename");
+        std::map<std::string, std::string>* cmdRename = std::get<std::map<std::string, std::string>*>(cmd_rename_option->storage);
+        if (auto it {cmdRename->find(std::string(arg))}; it != cmdRename->end()) {
+            // if yes, rename argument
+            arg = it->second;
         }
 
         // Handle plus args, which are treated differently from all others.
@@ -492,11 +533,23 @@ std::string CommandLine::getHelpText(string_view overview) const {
     }
 
     // Finally append all groups to the output.
+    std::string indent = fmt::format("  {:{}}"sv, " "sv, maxLen);
     for (auto& [opt, key] : lines) {
         result += fmt::format("  {:{}}"sv, key, maxLen);
-        if (!opt->desc.empty())
-            result += fmt::format("  {}", opt->desc);
-        result += "\n";
+        if (!opt->desc.empty()) {
+            bool first = true;
+            std::istringstream iss(opt->desc);
+            std::string item;
+            while (std::getline(iss, item, '\n')) {
+                if (!first)
+                    result += indent;
+                result += item;
+                result += '\n';
+                first = false;
+            }
+        } else {
+            result += "\n";
+        }
     }
 
     return result;
@@ -550,6 +603,13 @@ void CommandLine::handlePlusArg(string_view arg, ParseOptions options, bool& had
 
     } while (!value.empty());
 }
+
+// Use this when your command line option has no use for '='
+// and you don't want to define a dummy string_view just to call findOption()
+CommandLine::Option* CommandLine::findOption(string_view arg) const {
+    static string_view findOpt_dummy;
+    return findOption(arg, findOpt_dummy);
+};
 
 CommandLine::Option* CommandLine::findOption(string_view arg, string_view& value) const {
     // If there is an equals sign, strip off the value.
@@ -799,6 +859,32 @@ std::string CommandLine::Option::set(std::vector<std::string>& target, string_vi
 
 std::string CommandLine::Option::set(OptionCallback& target, string_view, string_view value) {
     return target(value);
+}
+
+std::string CommandLine::Option::set(std::map<std::string, int>& target, string_view name, string_view value) {
+    size_t equalsIndex = value.find_first_of(',');
+    string_view num_args;
+    if (equalsIndex != string_view::npos) {
+        num_args = value.substr(equalsIndex + 1);
+        value = value.substr(0, equalsIndex);
+        std::string error;
+        auto result = parseInt<uint64_t>(name, num_args, error);
+        if (result)
+            target[std::string(value)] = *result;
+        return error;
+    }
+    return {};
+}
+
+std::string CommandLine::Option::set(std::map<std::string, std::string>& target, string_view, string_view value) {
+    size_t equalsIndex = value.find_first_of(',');
+    string_view slang_name;
+    if (equalsIndex != string_view::npos) {
+        slang_name = value.substr(equalsIndex + 1);
+        value = value.substr(0, equalsIndex);
+        target[std::string(value)] = slang_name;
+    }
+    return {};
 }
 
 } // namespace slang
