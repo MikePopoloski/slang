@@ -9,6 +9,7 @@
 #include <charconv>
 #include <cstdlib>
 #include <filesystem>
+#include <sstream>
 #include <fmt/format.h>
 
 #include "slang/text/CharInfo.h"
@@ -415,29 +416,32 @@ bool CommandLine::parse(span<const string_view> args, ParseOptions options) {
 
         // check if arg is in the list of commands to skip
         auto cmd_ignore_option = findOption("cmd_ignore");
-        std::map<std::string, int>* cmdIgnore = std::get<std::map<std::string, int>*>(cmd_ignore_option->storage);
-        string_view ignore_arg = arg;
-        // if we ignore a vendor command of the form +xx ,
-        // we match on any +xx+yyy command as +yy is the command's argument
-        if (arg[0] == '+') {
-            size_t plusIndex = arg.substr(1).find_first_of('+');
-            if (plusIndex != string_view::npos)
-                ignore_arg = arg.substr(0, plusIndex + 1); // +1 because we started from arg.substr(1)
-        }
-        if (auto it {cmdIgnore->find(std::string(ignore_arg))}; it != cmdIgnore->end()) {
-            // if yes, find how many args to skip
-            skip = it->second;
-            continue;
+        if (cmd_ignore_option) {
+            std::map<std::string, int>* cmdIgnore = std::get<std::map<std::string, int>*>(cmd_ignore_option->storage);
+            string_view ignore_arg = arg;
+            // if we ignore a vendor command of the form +xx ,
+            // we match on any +xx+yyy command as +yy is the command's argument
+            if (arg[0] == '+') {
+                size_t plusIndex = arg.substr(1).find_first_of('+');
+                if (plusIndex != string_view::npos)
+                    ignore_arg = arg.substr(0, plusIndex + 1); // +1 because we started from arg.substr(1)
+            }
+            if (auto it = cmdIgnore->find(std::string(ignore_arg)); it != cmdIgnore->end()) {
+                // if yes, find how many args to skip
+                skip = it->second;
+                continue;
+            }
         }
 
         // check if arg is in the list of commands to translate
         auto cmd_rename_option = findOption("cmd_rename");
-        std::map<std::string, std::string>* cmdRename = std::get<std::map<std::string, std::string>*>(cmd_rename_option->storage);
-        if (auto it {cmdRename->find(std::string(arg))}; it != cmdRename->end()) {
-            // if yes, rename argument
-            arg = it->second;
+        if (cmd_rename_option) {
+            std::map<std::string, std::string>* cmdRename = std::get<std::map<std::string, std::string>*>(cmd_rename_option->storage);
+            if (auto it = cmdRename->find(std::string(arg)); it != cmdRename->end()) {
+                // if yes, rename argument
+                arg = it->second;
+            }
         }
-
         // Handle plus args, which are treated differently from all others.
         if (arg[0] == '+') {
             handlePlusArg(arg, options, hadUnknowns);
@@ -531,6 +535,7 @@ std::string CommandLine::getHelpText(string_view overview) const {
         maxLen = std::max(maxLen, key.length());
         lines.emplace_back(opt.get(), std::move(key));
     }
+    maxLen += 2;
 
     // Finally append all groups to the output.
     std::string indent = fmt::format("  {:{}}"sv, " "sv, maxLen);
@@ -607,8 +612,8 @@ void CommandLine::handlePlusArg(string_view arg, ParseOptions options, bool& had
 // Use this when your command line option has no use for '='
 // and you don't want to define a dummy string_view just to call findOption()
 CommandLine::Option* CommandLine::findOption(string_view arg) const {
-    static string_view findOpt_dummy;
-    return findOption(arg, findOpt_dummy);
+    static string_view findOptDummy;
+    return findOption(arg, findOptDummy);
 };
 
 CommandLine::Option* CommandLine::findOption(string_view arg, string_view& value) const {
@@ -862,28 +867,28 @@ std::string CommandLine::Option::set(OptionCallback& target, string_view, string
 }
 
 std::string CommandLine::Option::set(std::map<std::string, int>& target, string_view name, string_view value) {
-    size_t equalsIndex = value.find_first_of(',');
-    string_view num_args;
-    if (equalsIndex != string_view::npos) {
-        num_args = value.substr(equalsIndex + 1);
-        value = value.substr(0, equalsIndex);
-        std::string error;
-        auto result = parseInt<uint64_t>(name, num_args, error);
-        if (result)
-            target[std::string(value)] = *result;
-        return error;
-    }
+    const size_t firstCommaIndex = value.find_first_of(',');
+    const size_t lastCommaIndex = value.find_last_of(',');
+    if ((firstCommaIndex == string_view::npos) || (firstCommaIndex != lastCommaIndex))
+        return fmt::format("missing or extra comma in argument '{}'", value);
+    const string_view numArgs = value.substr(firstCommaIndex + 1);
+    value = value.substr(0, firstCommaIndex);
+    std::string error;
+    auto result = parseInt<int>(name, numArgs, error);
+    if (result)
+        target[std::string(value)] = *result;
+    return error;
     return {};
 }
 
 std::string CommandLine::Option::set(std::map<std::string, std::string>& target, string_view, string_view value) {
-    size_t equalsIndex = value.find_first_of(',');
-    string_view slang_name;
-    if (equalsIndex != string_view::npos) {
-        slang_name = value.substr(equalsIndex + 1);
-        value = value.substr(0, equalsIndex);
-        target[std::string(value)] = slang_name;
-    }
+    const size_t firstCommaIndex = value.find_first_of(',');
+    const size_t lastCommaIndex = value.find_last_of(',');
+    if ((firstCommaIndex == string_view::npos) || (firstCommaIndex != lastCommaIndex))
+        return fmt::format("missing or extra comma in argument '{}'", value);
+    const string_view slangName = value.substr(firstCommaIndex + 1);
+    value = value.substr(0, firstCommaIndex);
+    target[std::string(value)] = slangName;
     return {};
 }
 

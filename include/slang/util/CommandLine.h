@@ -197,8 +197,6 @@ public:
     /// (including the dashes) that are accepted for this option.
     /// @a desc is a human-friendly description for printing help text.
     /// @a valueName is an example name for the value when printing help text.
-    /// @a isFileName indicates whether the parsed string is a filename that
-    ///               might be relative to the current directory.
     void add(string_view name, std::map<std::string, int>& value, string_view desc,
              string_view valueName);
 
@@ -210,8 +208,6 @@ public:
     /// (including the dashes) that are accepted for this option.
     /// @a desc is a human-friendly description for printing help text.
     /// @a valueName is an example name for the value when printing help text.
-    /// @a isFileName indicates whether the parsed string is a filename that
-    ///               might be relative to the current directory.
     void add(string_view name, std::map<std::string, std::string>& value, string_view desc,
              string_view valueName);
 
