@@ -64,9 +64,8 @@ public:
 
         // What we don't need:
         // A map of commands to be renameded, with next argument merged into a plusArg format
-        // (because all slang's plusargs have non plusargs aliases, so no reason to create a plusArg)
-        // What we MIGHT need:
-        // Split a vendor's plusArg into regular arguments
+        // (because all slang's plusargs have non plusargs aliases, so no reason to create a
+        // plusArg) What we MIGHT need: Split a vendor's plusArg into regular arguments
 
         /// @name Include paths
         /// @{

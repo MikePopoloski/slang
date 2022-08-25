@@ -310,7 +310,8 @@ private:
                      optional<uint64_t>*, optional<double>*, optional<std::string>*,
                      std::vector<int32_t>*, std::vector<uint32_t>*, std::vector<int64_t>*,
                      std::vector<uint64_t>*, std::vector<double>*, std::vector<std::string>*,
-                     OptionCallback, std::map<std::string, int>*, std::map<std::string, std::string>* >;
+                     OptionCallback, std::map<std::string, int>*,
+                     std::map<std::string, std::string>*>;
 
     class Option {
     public:
@@ -340,7 +341,8 @@ private:
         std::string set(std::vector<std::string>& target, string_view name, string_view value);
         std::string set(OptionCallback& target, string_view name, string_view value);
         std::string set(std::map<std::string, int>& target, string_view name, string_view value);
-        std::string set(std::map<std::string, std::string>& target, string_view name, string_view value);
+        std::string set(std::map<std::string, std::string>& target, string_view name,
+                        string_view value);
 
         template<typename T>
         static constexpr bool allowValue(const optional<T>& target) {
