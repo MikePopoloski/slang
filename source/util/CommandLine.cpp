@@ -875,10 +875,11 @@ std::string CommandLine::Option::set(std::map<std::string, int>& target, string_
     value = value.substr(0, firstCommaIndex);
     std::string error;
     auto result = parseInt<int>(name, numArgs, error);
-    if (result)
+    if (result) {
         target[std::string(value)] = *result;
+        return {};
+    }
     return error;
-    return {};
 }
 
 std::string CommandLine::Option::set(std::map<std::string, std::string>& target, string_view, string_view value) {
