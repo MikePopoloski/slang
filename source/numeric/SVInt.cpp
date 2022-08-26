@@ -765,7 +765,6 @@ void SVInt::writeTo(SmallVector<char>& buffer, LiteralBase base, bool includeBas
                 divide(tmp, tmp.getNumWords(), divisor, divisor.getNumWords(), &quotient,
                        &remainder);
                 tmp = quotient;
-                activeBits = tmp.getActiveBits();
             }
 
             // repeatedly divide by 10 to get each digit
