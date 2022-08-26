@@ -166,7 +166,8 @@ void Driver::addStandardArgs() {
             size_t extLength = string_view::npos;
             if (extIndex == string_view::npos) // no extension
                 extLength = 0;
-            if (this->options.uniqueExcludeExtensions.count(fileName.substr(extIndex + 1, extLength)))
+            if (this->options.uniqueExcludeExtensions.count(
+                    fileName.substr(extIndex + 1, extLength)))
                 return "";
             SourceBuffer buffer = readSource(fileName);
             if (!buffer)
