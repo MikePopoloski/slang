@@ -231,15 +231,21 @@ public:
     public:
         using ParentList = std::conditional_t<std::is_const_v<std::remove_pointer_t<U>>,
                                               const SeparatedSyntaxList, SeparatedSyntaxList>;
-        iterator_base(ParentList& list, size_t index) : list(list), index(index) {}
+        iterator_base(ParentList& list, size_t index) : list(&list), index(index) {}
+
+        iterator_base& operator=(const iterator_base& other) {
+            list = other.list;
+            index = other.index;
+            return *this;
+        }
 
         bool operator==(const iterator_base& other) const {
-            return &list == &other.list && index == other.index;
+            return list == other.list && index == other.index;
         }
 
         bool operator<(const iterator_base& other) const { return index < other.index; }
 
-        U operator*() const { return list[index]; }
+        U operator*() const { return (*list)[index]; }
 
         size_t operator-(const iterator_base& other) const { return index - other.index; }
 
@@ -253,7 +259,7 @@ public:
         }
 
     private:
-        ParentList& list;
+        ParentList* list;
         size_t index;
     };
 

@@ -79,36 +79,44 @@ void registerSyntax(py::module_& m) {
         .def("__str__", &Token::toString);
 
     class SyntaxNodeIterator
-        : public iterator_facade<SyntaxNodeIterator, std::random_access_iterator_tag, py::object> {
+        : public iterator_facade<SyntaxNodeIterator, std::forward_iterator_tag, py::object> {
     public:
-        SyntaxNodeIterator(const SyntaxNode& node, ptrdiff_t index) : node(node), index(index) {}
+        SyntaxNodeIterator(const SyntaxNode& node, size_t index) : node(&node), index(index) {
+            skipToNext();
+        }
+
+        SyntaxNodeIterator& operator=(const SyntaxNodeIterator& other) {
+            node = other.node;
+            index = other.index;
+            return *this;
+        }
 
         py::object operator*() const {
-            if (auto child = node.childNode(size_t(index)))
+            if (auto child = node->childNode(index))
                 return py::cast(child);
-            return py::cast(node.childToken(size_t(index)));
+            return py::cast(node->childToken(index));
         }
 
         bool operator==(const SyntaxNodeIterator& other) const {
-            return &node == &other.node && index == other.index;
+            return node == other.node && index == other.index;
         }
 
-        bool operator<(const SyntaxNodeIterator& other) const { return index < other.index; }
-
-        size_t operator-(const SyntaxNodeIterator& other) const { return index - other.index; }
-
-        SyntaxNodeIterator& operator+=(ptrdiff_t n) {
-            index = index + n;
-            return *this;
-        }
-        SyntaxNodeIterator& operator-=(ptrdiff_t n) {
-            index = index - n;
+        SyntaxNodeIterator& operator++() {
+            index++;
+            skipToNext();
             return *this;
         }
 
     private:
-        const SyntaxNode& node;
-        ptrdiff_t index;
+        void skipToNext() {
+            while (index < node->getChildCount() && !node->childNode(index) &&
+                   !node->childToken(index)) {
+                index++;
+            }
+        }
+
+        const SyntaxNode* node;
+        size_t index;
     };
 
     py::class_<SyntaxNode>(m, "SyntaxNode")
@@ -131,7 +139,7 @@ void registerSyntax(py::module_& m) {
             "__iter__",
             [](const SyntaxNode& s) {
                 return py::make_iterator(SyntaxNodeIterator(s, 0),
-                                         SyntaxNodeIterator(s, ptrdiff_t(s.getChildCount())));
+                                         SyntaxNodeIterator(s, s.getChildCount()));
             },
             py::keep_alive<0, 1>())
         .def("__repr__",

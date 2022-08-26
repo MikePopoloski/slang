@@ -236,7 +236,6 @@ string_view Token::rawText() const {
 
     // not a simple token, so extract info from our data pointer
     switch (kind) {
-        case TokenKind::Unknown:
         case TokenKind::Identifier:
         case TokenKind::SystemIdentifier:
         case TokenKind::IncludeFileName:
@@ -251,6 +250,10 @@ string_view Token::rawText() const {
         case TokenKind::EmptyMacroArgument:
         case TokenKind::LineContinuation:
             return string_view(info->rawTextPtr, rawLen);
+        case TokenKind::Unknown:
+            if (info)
+                return string_view(info->rawTextPtr, rawLen);
+            return "";
         case TokenKind::Placeholder:
         case TokenKind::EndOfFile:
             return "";
