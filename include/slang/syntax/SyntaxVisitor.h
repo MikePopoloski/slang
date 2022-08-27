@@ -63,16 +63,15 @@ namespace detail {
 struct SyntaxChange {
     const SyntaxNode* first = nullptr;
     SyntaxNode* second = nullptr;
-    Token separator = {};
+    Token separator;
 };
 
 struct RemoveChange : SyntaxChange {};
 struct ReplaceChange : SyntaxChange {};
 
-using InsertChangeMap = flat_hash_map<const SyntaxNode*, std::vector<detail::SyntaxChange>>;
-using ModifyChangeMap =
-    flat_hash_map<const SyntaxNode*, std::variant<detail::RemoveChange, detail::ReplaceChange>>;
-using ListChangeMap = flat_hash_map<const SyntaxNode*, std::vector<detail::SyntaxChange>>;
+using InsertChangeMap = flat_hash_map<const SyntaxNode*, std::vector<SyntaxChange>>;
+using ModifyChangeMap = flat_hash_map<const SyntaxNode*, std::variant<RemoveChange, ReplaceChange>>;
+using ListChangeMap = flat_hash_map<const SyntaxNode*, std::vector<SyntaxChange>>;
 
 struct ChangeCollection {
     InsertChangeMap insertBefore;
@@ -88,7 +87,8 @@ struct ChangeCollection {
         listInsertAtFront.clear();
         listInsertAtBack.clear();
     }
-    bool empty() {
+
+    bool empty() const {
         return insertBefore.empty() && insertAfter.empty() && removeOrReplace.empty() &&
                listInsertAtFront.empty() && listInsertAtBack.empty();
     }
@@ -137,18 +137,18 @@ protected:
     void remove(const SyntaxNode& oldNode) {
         if (auto [_, ok] = commits.removeOrReplace.emplace(
                 &oldNode, detail::RemoveChange{ &oldNode, nullptr });
-            !ok)
-            throw std::logic_error(std::string(__FILE__) + ":" + std::to_string(__LINE__) + ": " +
-                                   "Node only permit one remove/replace operation");
+            !ok) {
+            throw std::logic_error("Node only permit one remove/replace operation");
+        }
     }
 
     /// Replace the given @a oldNode with @a newNode in the rewritten tree.
     void replace(const SyntaxNode& oldNode, SyntaxNode& newNode) {
         if (auto [_, ok] = commits.removeOrReplace.emplace(
                 &oldNode, detail::ReplaceChange{ &oldNode, &newNode });
-            !ok)
-            throw std::logic_error(std::string(__FILE__) + ":" + std::to_string(__LINE__) + ": " +
-                                   "Node only permit one remove/replace operation");
+            !ok) {
+            throw std::logic_error("Node only permit one remove/replace operation");
+        }
     }
 
     /// Insert @a newNode before @a oldNode in the rewritten tree.

@@ -9,12 +9,13 @@
 namespace {
 
 using namespace slang;
+using namespace slang::detail;
 
 struct CloneVisitor {
     BumpAllocator& alloc;
-    const slang::detail::ChangeCollection& commits;
+    const ChangeCollection& commits;
 
-    CloneVisitor(BumpAllocator& alloc, const slang::detail::ChangeCollection& commits) :
+    CloneVisitor(BumpAllocator& alloc, const ChangeCollection& commits) :
         alloc(alloc), commits(commits) {}
 
 #ifdef _MSC_VER
@@ -32,7 +33,7 @@ struct CloneVisitor {
             if (auto it = commits.listInsertAtFront.find(&node);
                 it != commits.listInsertAtFront.end()) {
 
-                const slang::detail::SyntaxChange* lastChange = nullptr;
+                const SyntaxChange* lastChange = nullptr;
                 for (const auto& change : it->second) {
                     if (!listBuffer.empty() && change.separator)
                         listBuffer.append(change.separator);
@@ -53,23 +54,19 @@ struct CloneVisitor {
                 continue;
             }
 
-            // We might not know until we're part way through a list that we
-            // want to insert or remove elements from it. Once we see the first
-            // modification we start building the buffer instead, and then replace
-            // the whole list in one go at the end.
             if (auto it = commits.insertBefore.find(child); it != commits.insertBefore.end()) {
-                if (cloned->kind != SyntaxKind::SyntaxList &&
-                    cloned->kind != SyntaxKind::SeparatedList)
+                if (!IsList) {
                     throw std::logic_error(
                         "Can't use insertBefore or insertAfter on a non-list node");
+                }
+
                 for (const auto& change : it->second)
                     listBuffer.append(change.second);
             }
 
             if (auto it = commits.removeOrReplace.find(child);
                 it != commits.removeOrReplace.end()) {
-                if (auto replaceChange = std::get_if<detail::ReplaceChange>(&it->second);
-                    replaceChange) {
+                if (auto replaceChange = std::get_if<ReplaceChange>(&it->second)) {
                     if constexpr (IsList)
                         listBuffer.append(replaceChange->second);
                     else
@@ -82,15 +79,15 @@ struct CloneVisitor {
                 }
                 else {
                     cloned->setChild(i, child->visit(*this));
-                    listBuffer.append(cloned->getChild(i));
                 }
             }
 
             if (auto it = commits.insertAfter.find(child); it != commits.insertAfter.end()) {
-                if (cloned->kind != SyntaxKind::SyntaxList &&
-                    cloned->kind != SyntaxKind::SeparatedList)
+                if (!IsList) {
                     throw std::logic_error(
                         "Can't use insertBefore or insertAfter on a non-list node");
+                }
+
                 for (const auto& change : it->second)
                     listBuffer.append(change.second);
             }
