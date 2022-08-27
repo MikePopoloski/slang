@@ -63,19 +63,40 @@ namespace detail {
 struct SyntaxChange {
     const SyntaxNode* first = nullptr;
     SyntaxNode* second = nullptr;
-    Token separator;
-
-    enum Kind { Remove, Replace, InsertBefore, InsertAfter, InsertAtFront, InsertAtBack } kind;
-
-    SyntaxChange(Kind kind, const SyntaxNode* first, SyntaxNode* second, Token separator = {}) :
-        first(first), second(second), separator(separator), kind(kind) {}
+    Token separator = {};
 };
 
-using ChangeMap = flat_hash_map<const SyntaxNode*, detail::SyntaxChange>;
+struct RemoveChange : SyntaxChange {};
+struct ReplaceChange : SyntaxChange {};
+
+using InsertChangeMap = flat_hash_map<const SyntaxNode*, std::vector<detail::SyntaxChange>>;
+using ModifyChangeMap =
+    flat_hash_map<const SyntaxNode*, std::variant<detail::RemoveChange, detail::ReplaceChange>>;
 using ListChangeMap = flat_hash_map<const SyntaxNode*, std::vector<detail::SyntaxChange>>;
+
+struct ChangeCollection {
+    InsertChangeMap insertBefore;
+    InsertChangeMap insertAfter;
+    ModifyChangeMap removeOrReplace;
+    ListChangeMap listInsertAtFront;
+    ListChangeMap listInsertAtBack;
+
+    void clear() {
+        insertBefore.clear();
+        insertAfter.clear();
+        removeOrReplace.clear();
+        listInsertAtFront.clear();
+        listInsertAtBack.clear();
+    }
+    bool empty() {
+        return insertBefore.empty() && insertAfter.empty() && removeOrReplace.empty() &&
+               listInsertAtFront.empty() && listInsertAtBack.empty();
+    }
+};
+
 std::shared_ptr<SyntaxTree> transformTree(
-    BumpAllocator&& alloc, const std::shared_ptr<SyntaxTree>& tree, const ChangeMap& changes,
-    const ListChangeMap& listAdditions, const std::vector<std::shared_ptr<SyntaxTree>>& tempTrees);
+    BumpAllocator&& alloc, const std::shared_ptr<SyntaxTree>& tree, const ChangeCollection& commits,
+    const std::vector<std::shared_ptr<SyntaxTree>>& tempTrees);
 
 } // namespace detail
 
@@ -94,15 +115,15 @@ public:
     /// Otherwise, the changes are applied and the newly rewritten syntax tree is returned.
     std::shared_ptr<SyntaxTree> transform(const std::shared_ptr<SyntaxTree>& tree) {
         sourceManager = &tree->sourceManager();
-        changes.clear();
+        commits.clear();
         tempTrees.clear();
 
         tree->root().visit(*this);
 
-        if (changes.empty())
+        if (commits.empty())
             return tree;
 
-        return transformTree(std::move(alloc), tree, changes, listAdditions, tempTrees);
+        return transformTree(std::move(alloc), tree, commits, tempTrees);
     }
 
 protected:
@@ -114,38 +135,40 @@ protected:
 
     /// Register a removal for the given syntax node from the tree.
     void remove(const SyntaxNode& oldNode) {
-        changes.emplace(&oldNode,
-                        detail::SyntaxChange{ detail::SyntaxChange::Remove, &oldNode, nullptr });
+        if (auto [_, ok] = commits.removeOrReplace.emplace(
+                &oldNode, detail::RemoveChange{ &oldNode, nullptr });
+            !ok)
+            throw std::logic_error(std::string(__FILE__) + ":" + std::to_string(__LINE__) + ": " +
+                                   "Node only permit one remove/replace operation");
     }
 
     /// Replace the given @a oldNode with @a newNode in the rewritten tree.
     void replace(const SyntaxNode& oldNode, SyntaxNode& newNode) {
-        changes.emplace(&oldNode,
-                        detail::SyntaxChange{ detail::SyntaxChange::Replace, &oldNode, &newNode });
+        if (auto [_, ok] = commits.removeOrReplace.emplace(
+                &oldNode, detail::ReplaceChange{ &oldNode, &newNode });
+            !ok)
+            throw std::logic_error(std::string(__FILE__) + ":" + std::to_string(__LINE__) + ": " +
+                                   "Node only permit one remove/replace operation");
     }
 
     /// Insert @a newNode before @a oldNode in the rewritten tree.
     void insertBefore(const SyntaxNode& oldNode, SyntaxNode& newNode) {
-        changes.emplace(&oldNode, detail::SyntaxChange{ detail::SyntaxChange::InsertBefore,
-                                                        &oldNode, &newNode });
+        commits.insertBefore[&oldNode].push_back({ &oldNode, &newNode });
     }
 
     /// Insert @a newNode after @a oldNode in the rewritten tree.
     void insertAfter(const SyntaxNode& oldNode, SyntaxNode& newNode) {
-        changes.emplace(&oldNode, detail::SyntaxChange{ detail::SyntaxChange::InsertAfter, &oldNode,
-                                                        &newNode });
+        commits.insertAfter[&oldNode].push_back({ &oldNode, &newNode });
     }
 
     /// Insert @a newNode at the front of @a list in the rewritten tree.
     void insertAtFront(const SyntaxListBase& list, SyntaxNode& newNode, Token separator = {}) {
-        listAdditions[&list].push_back(
-            { detail::SyntaxChange::InsertAtFront, &list, &newNode, separator });
+        commits.listInsertAtFront[&list].push_back({ &list, &newNode, separator });
     }
 
     /// Insert @a newNode at the back of @a list in the rewritten tree.
     void insertAtBack(const SyntaxListBase& list, SyntaxNode& newNode, Token separator = {}) {
-        listAdditions[&list].push_back(
-            { detail::SyntaxChange::InsertAtBack, &list, &newNode, separator });
+        commits.listInsertAtBack[&list].push_back({ &list, &newNode, separator });
     }
 
     Token makeToken(TokenKind kind, string_view text) {
@@ -160,8 +183,7 @@ protected:
 
 private:
     SourceManager* sourceManager = nullptr;
-    detail::ChangeMap changes;
-    detail::ListChangeMap listAdditions;
+    detail::ChangeCollection commits;
     std::vector<std::shared_ptr<SyntaxTree>> tempTrees;
 };
 
