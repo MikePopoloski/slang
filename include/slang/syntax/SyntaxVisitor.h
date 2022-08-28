@@ -63,7 +63,7 @@ namespace detail {
 struct SyntaxChange {
     const SyntaxNode* first = nullptr;
     SyntaxNode* second = nullptr;
-    Token separator;
+    Token separator = {};
 };
 
 struct RemoveChange : SyntaxChange {};
