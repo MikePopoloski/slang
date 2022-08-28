@@ -51,8 +51,8 @@ ConstantValue LValue::load() const {
                     result = result.getSlice(arg.range.upper(), arg.range.lower(), nullptr);
                 }
                 else if constexpr (std::is_same_v<T, ElementIndex>) {
-                    if (result.isString()) {
-                        result = SVInt(8, (uint64_t)result.str()[size_t(arg.index)], false);
+                    if (arg.forceOutOfBounds) {
+                        result = arg.defaultValue;
                     }
                     else if (result.isUnion()) {
                         // If we're selecting the active member all is well. If not,
@@ -63,6 +63,9 @@ ConstantValue LValue::load() const {
                     }
                     else if (arg.index < 0 || size_t(arg.index) >= result.size()) {
                         result = arg.defaultValue;
+                    }
+                    else if (result.isString()) {
+                        result = SVInt(8, (uint64_t)result.str()[size_t(arg.index)], false);
                     }
                     else {
                         // Be careful not to assign to the result while
@@ -198,13 +201,14 @@ ConstantValue* LValue::resolveInternal(optional<ConstantRange>& range) {
                         range = range->subrange(arg.range);
                 }
                 else if constexpr (std::is_same_v<T, ElementIndex>) {
-                    if (target->isString()) {
-                        range = ConstantRange{ arg.index, arg.index };
+                    if (arg.forceOutOfBounds) {
+                        target = nullptr;
                     }
                     else if (target->isQueue()) {
                         auto& q = *target->queue();
-                        if (arg.index < 0 || (q.maxBound && uint32_t(arg.index) > q.maxBound))
+                        if (arg.index < 0 || (q.maxBound && uint32_t(arg.index) > q.maxBound)) {
                             target = nullptr;
+                        }
                         else {
                             // Queues can reference one past the end to insert a new element.
                             size_t idx = size_t(arg.index);
@@ -226,6 +230,12 @@ ConstantValue* LValue::resolveInternal(optional<ConstantRange>& range) {
                             unionVal->value = arg.defaultValue;
                         }
                         target = &unionVal->value;
+                    }
+                    else if (target->isString()) {
+                        if (arg.index < 0 || size_t(arg.index) >= target->str().size())
+                            target = nullptr;
+                        else
+                            range = ConstantRange{ arg.index, arg.index };
                     }
                     else {
                         auto elems = target->elements();
@@ -268,7 +278,15 @@ void LValue::addIndex(int32_t index, ConstantValue&& defaultValue) {
         return;
 
     auto& elems = std::get<Path>(value).elements;
-    elems.emplace(ElementIndex{ index, std::move(defaultValue) });
+    elems.emplace(ElementIndex{ index, std::move(defaultValue), false });
+}
+
+void LValue::addIndexOutOfBounds(ConstantValue&& defaultValue) {
+    if (bad())
+        return;
+
+    auto& elems = std::get<Path>(value).elements;
+    elems.emplace(ElementIndex{ 0, std::move(defaultValue), true });
 }
 
 void LValue::addArraySlice(ConstantRange range, ConstantValue&& defaultValue) {

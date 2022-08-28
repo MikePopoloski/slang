@@ -1267,9 +1267,11 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 2);
-    CHECK(diags[0].code == diag::BadRangeExpression);
+    REQUIRE(diags.size() == 4);
+    CHECK(diags[0].code == diag::WidthExpand);
     CHECK(diags[1].code == diag::BadRangeExpression);
+    CHECK(diags[2].code == diag::WidthExpand);
+    CHECK(diags[3].code == diag::BadRangeExpression);
 }
 
 std::string testStringLiteralsToByteArray(const std::string& text) {
@@ -2666,4 +2668,29 @@ endclass
     Compilation compilation;
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("String out-of-bounds accesses") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    localparam string s = "asdf";
+    int i = s[2:3];
+
+    localparam byte j = foo();
+    function byte foo;
+        automatic string t = s;
+        t[11] += 4;
+        return t[12];
+    endfunction
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 3);
+    CHECK(diags[0].code == diag::BadSliceType);
+    CHECK(diags[1].code == diag::ConstEvalDynamicArrayIndex);
+    CHECK(diags[2].code == diag::ConstEvalDynamicArrayIndex);
 }

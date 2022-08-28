@@ -152,6 +152,8 @@ size_t ConstantValue::size() const {
                 return arg->size();
             else if constexpr (std::is_same_v<T, Queue>)
                 return arg->size();
+            else if constexpr (std::is_same_v<T, std::string>)
+                return arg.size();
             else
                 return size_t(0);
         },

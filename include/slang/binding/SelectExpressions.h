@@ -54,6 +54,7 @@ public:
 private:
     Expression* value_;
     const Expression* selector_;
+    bool warnedAboutIndex = false;
 };
 
 struct RangeSelectSyntax;
@@ -61,8 +62,6 @@ struct RangeSelectSyntax;
 /// Represents a range selection expression.
 class RangeSelectExpression : public Expression {
 public:
-    RangeSelectionKind selectionKind;
-
     RangeSelectExpression(RangeSelectionKind selectionKind, const Type& type, Expression& value,
                           const Expression& left, const Expression& right,
                           SourceRange sourceRange) :
@@ -74,6 +73,8 @@ public:
 
     const Expression& left() const { return *left_; }
     const Expression& right() const { return *right_; }
+
+    RangeSelectionKind getSelectionKind() const { return selectionKind; }
 
     bool isConstantSelect(EvalContext& context) const;
 
@@ -107,6 +108,8 @@ private:
     Expression* value_;
     const Expression* left_;
     const Expression* right_;
+    RangeSelectionKind selectionKind;
+    bool warnedAboutRange = false;
 };
 
 class FieldSymbol;

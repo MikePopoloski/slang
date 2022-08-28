@@ -399,7 +399,7 @@ void registerBinding(py::module_& m) {
         .def_property_readonly("selector", &ElementSelectExpression::selector);
 
     py::class_<RangeSelectExpression, Expression>(m, "RangeSelectExpression")
-        .def_readonly("selectionKind", &RangeSelectExpression::selectionKind)
+        .def_property_readonly("selectionKind", &RangeSelectExpression::getSelectionKind)
         .def_property_readonly("value", py::overload_cast<>(&RangeSelectExpression::value))
         .def_property_readonly("left", &RangeSelectExpression::left)
         .def_property_readonly("right", &RangeSelectExpression::right);

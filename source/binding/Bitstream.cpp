@@ -939,7 +939,7 @@ optional<ConstantRange> Bitstream::evaluateWith(
 
         auto index = cs.integer().as<int32_t>();
         if (!index)
-            context.addDiag(diag::ConstEvalArrayIndexInvalid, expr.sourceRange) << cs << arrayType;
+            context.addDiag(diag::IndexValueInvalid, expr.sourceRange) << cs << arrayType;
 
         return index;
     };

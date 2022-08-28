@@ -37,6 +37,7 @@ public:
 
     void addBitSlice(ConstantRange range);
     void addIndex(int32_t index, ConstantValue&& defaultValue);
+    void addIndexOutOfBounds(ConstantValue&& defaultValue);
     void addArraySlice(ConstantRange range, ConstantValue&& defaultValue);
     void addArrayLookup(ConstantValue&& index, ConstantValue&& defaultValue);
 
@@ -52,6 +53,7 @@ private:
     struct ElementIndex {
         int32_t index = 0;
         ConstantValue defaultValue;
+        bool forceOutOfBounds = false;
     };
 
     // A selection of a range of elements from an array.
