@@ -359,7 +359,8 @@ optional<ConstantRange> ElementSelectExpression::evalIndex(EvalContext& context,
         }
     }
     else if (*index < 0) {
-        // TODO:
+        context.addDiag(diag::IndexValueInvalid, sourceRange) << cs << valType;
+        return std::nullopt;
     }
 
     return ConstantRange{ *index, *index };
@@ -487,12 +488,6 @@ Expression& RangeSelectExpression::fromSyntax(Compilation& compilation, Expressi
             if (!context.requireGtZero(rv, right.sourceRange))
                 return badExpr(compilation, result);
 
-            if (bitwidth_t(*rv) > valueRange.width()) {
-                auto& diag = context.addDiag(diag::RangeWidthTooLarge, right.sourceRange);
-                diag << *rv;
-                diag << valueType;
-            }
-
             // If the lhs is a known constant, we can check that now too.
             ConstantValue leftVal;
             if (!context.inUnevaluatedBranch() && (leftVal = context.tryEval(left))) {
@@ -517,6 +512,12 @@ Expression& RangeSelectExpression::fromSyntax(Compilation& compilation, Expressi
                 selectionRange =
                     ConstantRange::getIndexedRange(l, *rv, valueRange.isLittleEndian(),
                                                    selectionKind == RangeSelectionKind::IndexedUp);
+
+                if (bitwidth_t(*rv) > valueRange.width()) {
+                    auto& diag = context.addDiag(diag::RangeWidthTooLarge, right.sourceRange);
+                    diag << *rv;
+                    diag << valueType;
+                }
             }
         }
 
@@ -676,7 +677,6 @@ optional<ConstantRange> RangeSelectExpression::evalRange(EvalContext& context,
                                                     selectionKind == RangeSelectionKind::IndexedUp);
         }
 
-        // TODO: diagnostic range might need to be swapped
         if (!warnedAboutRange &&
             (!valueRange.containsPoint(result.left) || !valueRange.containsPoint(result.right))) {
             auto& diag = context.addDiag(diag::BadRangeExpression, sourceRange);
@@ -726,21 +726,20 @@ optional<ConstantRange> RangeSelectExpression::evalRange(EvalContext& context,
     }
 
     // Out of bounds ranges are allowed, we just issue a warning.
-    // TODO: double check direction of ranges here
     if (!val.bad()) {
         size_t size = val.size();
         if (result.left < 0 || result.right < 0 || size_t(result.left) >= size ||
             size_t(result.right) >= size) {
 
             auto& diag = context.addDiag(diag::ConstEvalDynamicArrayRange, sourceRange);
-            diag << result.right << result.left;
+            diag << result.left << result.right;
             diag << valueType;
             diag << size;
         }
     }
     else if (result.left < 0 || result.right < 0) {
         auto& diag = context.addDiag(diag::BadRangeExpression, sourceRange);
-        diag << result.right << result.left;
+        diag << result.left << result.right;
         diag << valueType;
     }
 

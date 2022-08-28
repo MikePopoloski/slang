@@ -2694,3 +2694,126 @@ endmodule
     CHECK(diags[1].code == diag::ConstEvalDynamicArrayIndex);
     CHECK(diags[2].code == diag::ConstEvalDynamicArrayIndex);
 }
+
+TEST_CASE("Out-of-bounds element selects in consteval") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    localparam string s[integer] = '{0: "hello", 2: "world"};
+    localparam string t = s[1];
+    localparam logic[6:1] u = 4;
+
+    localparam int i = foo();
+
+    int bar;
+    function automatic int foo;
+        string k = s['x];
+        logic l1 = 'x;
+        byte b = t[l1];
+        int q = 9;
+        logic l2 = u[q];
+
+        k[bar] = 1;
+    endfunction
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 5);
+    CHECK(diags[0].code == diag::ConstEvalAssociativeElementNotFound);
+    CHECK(diags[1].code == diag::ConstEvalAssociativeIndexInvalid);
+    CHECK(diags[2].code == diag::IndexValueInvalid);
+    CHECK(diags[3].code == diag::IndexValueInvalid);
+    CHECK(diags[4].code == diag::ConstEvalFunctionIdentifiersMustBeLocal);
+}
+
+TEST_CASE("Out-of-bounds range selects in consteval") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    string s[integer] = '{0: "hello", 2: "world"};
+    string t = s[2:1];
+
+    real r;
+    logic [7:0] u;
+    logic [1:0] v1 = u[r:0];
+    logic [1:0] v2 = u[0:r];
+    logic [1:0] v3 = u[1:2];
+    logic [1:0] v4 = u[1+:-1];
+    logic [9:0] v5 = u[1+:10];
+    logic [1:0] v6 = u['x+:2];
+    logic [9:0] v7 = u[u+:10];
+
+    int w[];
+    int x1[2] = w[u:1];
+    int x2[2] = w[u+:-1];
+
+    localparam int y[5] = {1,2,3,4,5};
+
+    localparam int i1 = f1();
+    localparam int i2 = f2();
+    localparam int i3 = f3();
+    localparam int i4 = f4();
+    localparam int i5 = f5();
+    localparam int i6 = f6();
+
+    function automatic int f1;
+        int a = -1;
+        int b = y[a+:3][0];
+        w[0:1] = {1,1};
+    endfunction
+
+    function automatic int f2;
+        int c[];
+        c[u+:2] = {1,2};
+    endfunction
+
+    function automatic int f3;
+        integer a = 'x;
+        int c[];
+        c[a+:2] = {1,2};
+    endfunction
+
+    function automatic int f4;
+        integer a = 'x;
+        int c[$];
+        c[2+:a] = {1,2};
+    endfunction
+
+    function automatic int f5;
+        integer a = 'x;
+        int c[3];
+        int d[2] = c[a+:2];
+    endfunction
+
+    function automatic int f6;
+        int c[];
+        int d[20] = c[-10+:20];
+    endfunction
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 17);
+    CHECK(diags[0].code == diag::RangeSelectAssociative);
+    CHECK(diags[1].code == diag::ExprMustBeIntegral);
+    CHECK(diags[2].code == diag::ExprMustBeIntegral);
+    CHECK(diags[3].code == diag::SelectEndianMismatch);
+    CHECK(diags[4].code == diag::ValueMustBePositive);
+    CHECK(diags[5].code == diag::BadRangeExpression);
+    CHECK(diags[6].code == diag::IndexValueInvalid);
+    CHECK(diags[7].code == diag::RangeWidthTooLarge);
+    CHECK(diags[8].code == diag::ConstEvalNonConstVariable);
+    CHECK(diags[9].code == diag::ValueMustBePositive);
+    CHECK(diags[10].code == diag::BadRangeExpression);
+    CHECK(diags[11].code == diag::ConstEvalFunctionIdentifiersMustBeLocal);
+    CHECK(diags[12].code == diag::ConstEvalFunctionIdentifiersMustBeLocal);
+    CHECK(diags[13].code == diag::IndexValueInvalid);
+    CHECK(diags[14].code == diag::IndexValueInvalid);
+    CHECK(diags[15].code == diag::IndexValueInvalid);
+    CHECK(diags[16].code == diag::ConstEvalDynamicArrayRange);
+}
