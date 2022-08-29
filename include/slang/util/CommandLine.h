@@ -226,6 +226,8 @@ public:
     /// @return true on success, false if an errors occurs.
     bool parse(int argc, const char* const argv[]);
 
+    std::string addIgnoreCommand(string_view value);
+    std::string addRenameCommand(string_view value);
 #if defined(_MSC_VER)
     /// Parse the provided command line (MSVC wchar-style).
     /// @return true on success, false if an errors occurs.
@@ -346,6 +348,18 @@ private:
     std::shared_ptr<Option> positional;
     std::map<std::string, std::shared_ptr<Option>> optionMap;
     std::vector<std::shared_ptr<Option>> orderedOptions;
+
+    /// A map of commands to be ignored.
+    /// key is the command name (including any leading +/- symbols)
+    /// value is an the number of arguments to be skipped (int)
+    /// If argument begins with a '+' then matching will ignore anything after a 2nd '+'
+    /// so that +vendorXYZ+vendorARG can be ignored by matching against +vendorXYZ
+    std::map<std::string, int> cmdIgnore;
+
+    /// A map of commands to be renamed, pointing to new name
+    /// key is the vendor command name (including any leading +/- symbols)
+    /// value is the slang command name to be used instead
+    std::map<std::string, std::string> cmdRename;
 
     std::string programName;
     std::vector<std::string> errors;

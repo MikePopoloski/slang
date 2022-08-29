@@ -10,6 +10,7 @@
 #include <cstdlib>
 #include <filesystem>
 #include <fmt/format.h>
+#include <sstream>
 
 #include "slang/text/CharInfo.h"
 #include "slang/util/SmallVector.h"
@@ -366,7 +367,13 @@ bool CommandLine::parse(span<const string_view> args, ParseOptions options) {
     bool hadUnknowns = false;
     string_view firstPositional;
 
+    int skip = 0;
     for (auto arg : args) {
+        // Skip N arguments if needed
+        if (skip) {
+            skip--;
+            continue;
+        }
         // If we were previously expecting a value, set that now.
         if (expectingVal) {
             std::string result = expectingVal->set(expectingValName, arg, options.ignoreDuplicates);
@@ -397,6 +404,31 @@ bool CommandLine::parse(span<const string_view> args, ParseOptions options) {
             continue;
         }
 
+        // check if arg is in the list of commands to skip
+        if (!cmdIgnore.empty()) {
+            string_view ignore_arg = arg;
+            // if we ignore a vendor command of the form +xx ,
+            // we match on any +xx+yyy command as +yy is the command's argument
+            if (arg[0] == '+') {
+                size_t plusIndex = arg.substr(1).find_first_of('+');
+                if (plusIndex != string_view::npos)
+                    ignore_arg =
+                        arg.substr(0, plusIndex + 1); // +1 because we started from arg.substr(1)
+            }
+            if (auto it = cmdIgnore.find(std::string(ignore_arg)); it != cmdIgnore.end()) {
+                // if yes, find how many args to skip
+                skip = it->second;
+                continue;
+            }
+        }
+
+        // check if arg is in the list of commands to translate
+        if (!cmdRename.empty()) {
+            if (auto it = cmdRename.find(std::string(arg)); it != cmdRename.end()) {
+                // if yes, rename argument
+                arg = it->second;
+            }
+        }
         // Handle plus args, which are treated differently from all others.
         if (arg[0] == '+') {
             handlePlusArg(arg, options, hadUnknowns);
@@ -490,13 +522,27 @@ std::string CommandLine::getHelpText(string_view overview) const {
         maxLen = std::max(maxLen, key.length());
         lines.emplace_back(opt.get(), std::move(key));
     }
+    maxLen += 2;
 
     // Finally append all groups to the output.
+    std::string indent = fmt::format("  {:{}}"sv, " "sv, maxLen);
     for (auto& [opt, key] : lines) {
         result += fmt::format("  {:{}}"sv, key, maxLen);
-        if (!opt->desc.empty())
-            result += fmt::format("  {}", opt->desc);
-        result += "\n";
+        if (!opt->desc.empty()) {
+            bool first = true;
+            std::istringstream iss(opt->desc);
+            std::string item;
+            while (std::getline(iss, item, '\n')) {
+                if (!first)
+                    result += indent;
+                result += item;
+                result += '\n';
+                first = false;
+            }
+        }
+        else {
+            result += "\n";
+        }
     }
 
     return result;
@@ -799,6 +845,33 @@ std::string CommandLine::Option::set(std::vector<std::string>& target, string_vi
 
 std::string CommandLine::Option::set(OptionCallback& target, string_view, string_view value) {
     return target(value);
+}
+
+std::string CommandLine::addIgnoreCommand(string_view value) {
+    const size_t firstCommaIndex = value.find_first_of(',');
+    const size_t lastCommaIndex = value.find_last_of(',');
+    if ((firstCommaIndex == string_view::npos) || (firstCommaIndex != lastCommaIndex))
+        return fmt::format("missing or extra comma in argument '{}'", value);
+    const string_view numArgs = value.substr(firstCommaIndex + 1);
+    value = value.substr(0, firstCommaIndex);
+    std::string error;
+    auto result = parseInt<int>("", numArgs, error);
+    if (result) {
+        cmdIgnore[std::string(value)] = *result;
+        return {};
+    }
+    return error;
+}
+
+std::string CommandLine::addRenameCommand(string_view value) {
+    const size_t firstCommaIndex = value.find_first_of(',');
+    const size_t lastCommaIndex = value.find_last_of(',');
+    if ((firstCommaIndex == string_view::npos) || (firstCommaIndex != lastCommaIndex))
+        return fmt::format("missing or extra comma in argument '{}'", value);
+    const string_view slangName = value.substr(firstCommaIndex + 1);
+    value = value.substr(0, firstCommaIndex);
+    cmdRename[std::string(value)] = slangName;
+    return {};
 }
 
 } // namespace slang

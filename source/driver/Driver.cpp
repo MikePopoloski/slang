@@ -39,6 +39,13 @@ void Driver::addStandardArgs() {
                 /* isFileName */ true);
     cmdLine.add("-Y,--libext", options.libExts, "Additional library file extensions to search",
                 "<ext>");
+    cmdLine.add(
+        "--exclude-ext",
+        [this](string_view value) {
+            options.excludeExts.emplace(value);
+            return "";
+        },
+        "Exclude files with these extensions", "<ext>");
 
     // Preprocessor
     cmdLine.add("-D,--define-macro,+define", options.defines,
@@ -51,6 +58,18 @@ void Driver::addStandardArgs() {
     cmdLine.add("--libraries-inherit-macros", options.librariesInheritMacros,
                 "If true, library files will inherit macro definitions from the primary source "
                 "files. --single-unit must also be passed when this option is used.");
+
+    // Legacy vendor commands support
+    cmdLine.add(
+        "--cmd-ignore", [this](string_view value) { return cmdLine.addIgnoreCommand(value); },
+        "Define rule to ignore vendor command <vendor_cmd> with its following <N> parameters.\n"
+        "A command of the form +xyz will also match any vendor command of the form +xyz+abc,\n"
+        "as +abc is the command's argument, and doesn't need to be matched.",
+        "<vendor_cmd>,<N>");
+    cmdLine.add(
+        "--cmd-rename", [this](string_view value) { return cmdLine.addRenameCommand(value); },
+        "Define rule to rename vendor command <vendor_cmd> into existing <slang_cmd>",
+        "<vendor_cmd>,<slang_cmd>");
 
     // Parsing
     cmdLine.add("--max-parse-depth", options.maxParseDepth,
@@ -143,6 +162,12 @@ void Driver::addStandardArgs() {
 
     cmdLine.setPositional(
         [this](string_view fileName) {
+            const size_t extIndex = fileName.find_last_of('.');
+            size_t extLength = string_view::npos;
+            if (extIndex == string_view::npos) // no extension
+                extLength = 0;
+            if (this->options.excludeExts.count(fileName.substr(extIndex + 1, extLength)))
+                return "";
             SourceBuffer buffer = readSource(fileName);
             if (!buffer)
                 anyFailedLoads = true;
