@@ -39,13 +39,13 @@ void Driver::addStandardArgs() {
                 /* isFileName */ true);
     cmdLine.add("-Y,--libext", options.libExts, "Additional library file extensions to search",
                 "<ext>");
-    cmdLine.add("--exclude-ext",
-                [this](string_view value) {
-                    options.excludeExts.emplace(value);
-                    return "";
-                }, 
-                "Exclude files with these extensions",
-                "<ext>");
+    cmdLine.add(
+        "--exclude-ext",
+        [this](string_view value) {
+            options.excludeExts.emplace(value);
+            return "";
+        },
+        "Exclude files with these extensions", "<ext>");
 
     // Preprocessor
     cmdLine.add("-D,--define-macro,+define", options.defines,
@@ -166,8 +166,7 @@ void Driver::addStandardArgs() {
             size_t extLength = string_view::npos;
             if (extIndex == string_view::npos) // no extension
                 extLength = 0;
-            if (this->options.excludeExts.count(
-                    fileName.substr(extIndex + 1, extLength)))
+            if (this->options.excludeExts.count(fileName.substr(extIndex + 1, extLength)))
                 return "";
             SourceBuffer buffer = readSource(fileName);
             if (!buffer)
