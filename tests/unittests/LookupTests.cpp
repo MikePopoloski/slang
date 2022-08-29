@@ -531,6 +531,7 @@ module m;
     always_comb array[-1+:-4][0].foo = 1;
     always_comb array[-1+:4][0].foo = 1;
 
+    always_comb array[-2147483647-:3][0].foo = 1;
 endmodule
 )");
 
@@ -547,6 +548,7 @@ endmodule
     CHECK((it++)->code == diag::InstanceArrayEndianMismatch);
     CHECK((it++)->code == diag::ValueMustBePositive);
     CHECK((it++)->code == diag::BadInstanceArrayRange);
+    CHECK((it++)->code == diag::RangeWidthOverflow);
     CHECK(it == diags.end());
 }
 

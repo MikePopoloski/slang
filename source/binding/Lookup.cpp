@@ -1032,8 +1032,15 @@ static const Symbol* selectChildRange(const InstanceArraySymbol& array,
             return nullptr;
         }
 
-        selRange = ConstantRange::getIndexedRange(*left, *right, array.range.isLittleEndian(),
-                                                  syntax.kind == SyntaxKind::AscendingRangeSelect);
+        auto range =
+            ConstantRange::getIndexedRange(*left, *right, array.range.isLittleEndian(),
+                                           syntax.kind == SyntaxKind::AscendingRangeSelect);
+        if (!range) {
+            result.addDiag(*context.scope, diag::RangeWidthOverflow, syntax.sourceRange());
+            return nullptr;
+        }
+
+        selRange = *range;
     }
 
     if (!array.range.containsPoint(selRange.left) || !array.range.containsPoint(selRange.right)) {

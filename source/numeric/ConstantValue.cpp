@@ -782,14 +782,14 @@ bool ConstantRange::overlaps(ConstantRange other) const {
     return lower() <= other.upper() && upper() >= other.lower();
 }
 
-ConstantRange ConstantRange::getIndexedRange(int32_t l, int32_t r, bool littleEndian,
-                                             bool indexedUp) {
+optional<ConstantRange> ConstantRange::getIndexedRange(int32_t l, int32_t r, bool littleEndian,
+                                                       bool indexedUp) {
     ConstantRange result;
     int32_t count = r - 1;
     if (indexedUp) {
         auto upper = checkedAddS32(l, count);
         if (!upper)
-            upper = INT32_MAX;
+            return std::nullopt;
 
         result.left = *upper;
         result.right = l;
@@ -797,7 +797,7 @@ ConstantRange ConstantRange::getIndexedRange(int32_t l, int32_t r, bool littleEn
     else {
         auto lower = checkedSubS32(l, count);
         if (!lower)
-            lower = INT32_MIN;
+            return std::nullopt;
 
         result.left = l;
         result.right = *lower;

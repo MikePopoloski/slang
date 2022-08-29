@@ -879,10 +879,15 @@ bool Bitstream::validStreamWithRange(const Type& arrayType, WithRangeKind kind,
                     *left, width, arrayType.getFixedRange().isLittleEndian(),
                     kind == WithRangeKind::IndexedUp);
 
-                auto bound = selection.right == *left ? selection.left : selection.right;
+                if (!selection) {
+                    addDiag(diag::RangeWidthOverflow, errorRange);
+                    return false;
+                }
+
+                auto bound = selection->right == *left ? selection->left : selection->right;
                 if (!arrayType.getFixedRange().containsPoint(bound)) {
                     auto& diag = addDiag(diag::BadRangeExpression, errorRange);
-                    diag << selection.left << selection.right;
+                    diag << selection->left << selection->right;
                     diag << arrayType;
                     return false;
                 }
@@ -968,10 +973,18 @@ optional<ConstantRange> Bitstream::evaluateWith(
 
     ConstantRange result = { *cl, *cr };
     if (with.kind == WithRangeKind::IndexedUp || with.kind == WithRangeKind::IndexedDown) {
-        result = ConstantRange::getIndexedRange(
+        auto range = ConstantRange::getIndexedRange(
             result.left, result.right,
             arrayType.hasFixedRange() ? arrayType.getFixedRange().isLittleEndian() : false,
             with.kind == WithRangeKind::IndexedUp);
+
+        if (!range) {
+            context.addDiag(diag::RangeWidthOverflow,
+                            SourceRange{ with.left->sourceRange.start(), rightRange.end() });
+            return std::nullopt;
+        }
+
+        result = *range;
     }
 
     if (arrayType.hasFixedRange()) {

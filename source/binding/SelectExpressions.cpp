@@ -499,19 +499,30 @@ Expression& RangeSelectExpression::fromSyntax(Compilation& compilation, Expressi
                     return badExpr(compilation, result);
                 }
 
-                selectionRange =
+                auto range =
                     ConstantRange::getIndexedRange(*index, *rv, valueRange.isLittleEndian(),
                                                    selectionKind == RangeSelectionKind::IndexedUp);
+                if (!range) {
+                    context.addDiag(diag::RangeWidthOverflow, errorRange);
+                    return badExpr(compilation, result);
+                }
 
+                selectionRange = *range;
                 validateRange(selectionRange);
             }
             else {
                 // Otherwise, the resulting range will start with the fixed lower bound of the type.
                 int32_t l = selectionKind == RangeSelectionKind::IndexedUp ? valueRange.lower()
                                                                            : valueRange.upper();
-                selectionRange =
+                auto range =
                     ConstantRange::getIndexedRange(l, *rv, valueRange.isLittleEndian(),
                                                    selectionKind == RangeSelectionKind::IndexedUp);
+                if (!range) {
+                    context.addDiag(diag::RangeWidthOverflow, errorRange);
+                    return badExpr(compilation, result);
+                }
+
+                selectionRange = *range;
 
                 if (bitwidth_t(*rv) > valueRange.width()) {
                     auto& diag = context.addDiag(diag::RangeWidthTooLarge, right.sourceRange);
@@ -670,11 +681,18 @@ optional<ConstantRange> RangeSelectExpression::evalRange(EvalContext& context,
                 return std::nullopt;
             }
 
-            // TODO: better detect overflow
             optional<int32_t> r = cr.integer().as<int32_t>();
             ASSERT(r);
-            result = ConstantRange::getIndexedRange(*l, *r, valueRange.isLittleEndian(),
-                                                    selectionKind == RangeSelectionKind::IndexedUp);
+
+            auto range =
+                ConstantRange::getIndexedRange(*l, *r, valueRange.isLittleEndian(),
+                                               selectionKind == RangeSelectionKind::IndexedUp);
+            if (!range) {
+                context.addDiag(diag::RangeWidthOverflow, sourceRange);
+                return std::nullopt;
+            }
+
+            result = *range;
         }
 
         if (!warnedAboutRange &&
@@ -721,8 +739,14 @@ optional<ConstantRange> RangeSelectExpression::evalRange(EvalContext& context,
         result = { l, r };
     }
     else {
-        result = ConstantRange::getIndexedRange(l, r, false,
-                                                selectionKind == RangeSelectionKind::IndexedUp);
+        auto range = ConstantRange::getIndexedRange(l, r, false,
+                                                    selectionKind == RangeSelectionKind::IndexedUp);
+        if (!range) {
+            context.addDiag(diag::RangeWidthOverflow, sourceRange);
+            return std::nullopt;
+        }
+
+        result = *range;
     }
 
     // Out of bounds ranges are allowed, we just issue a warning.

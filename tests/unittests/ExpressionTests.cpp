@@ -1260,6 +1260,23 @@ module m;
     logic [4:0] asdf;
     int i = asdf[2147483647+:2];
     int j = asdf[-2147483647-:3];
+
+    logic [2147483647:2147483646] foo;
+    int k = foo[i+:5];
+
+    localparam int l = func1();
+    function automatic int func1;
+        int a[3];
+        int b = 2147483647;
+        int c[2] = a[b+:2];
+    endfunction
+
+    localparam int n = func2();
+    function automatic int func2;
+        int a[];
+        int b = 2147483647;
+        int c[2] = a[b+:2];
+    endfunction
 endmodule
 )");
 
@@ -1267,11 +1284,12 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 4);
-    CHECK(diags[0].code == diag::WidthExpand);
-    CHECK(diags[1].code == diag::BadRangeExpression);
-    CHECK(diags[2].code == diag::WidthExpand);
-    CHECK(diags[3].code == diag::BadRangeExpression);
+    REQUIRE(diags.size() == 5);
+    CHECK(diags[0].code == diag::RangeWidthOverflow);
+    CHECK(diags[1].code == diag::RangeWidthOverflow);
+    CHECK(diags[2].code == diag::RangeWidthOverflow);
+    CHECK(diags[3].code == diag::RangeWidthOverflow);
+    CHECK(diags[4].code == diag::RangeWidthOverflow);
 }
 
 std::string testStringLiteralsToByteArray(const std::string& text) {
