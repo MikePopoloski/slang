@@ -47,26 +47,6 @@ public:
     /// A container for various options that can be parsed and applied
     /// to the compilation process.
     struct Options {
-        /// @name Command line transformation from Vendor arguments to slang arguments
-        /// @{
-
-        /// A map of commands to be ignored.
-        /// key is the command name (including any leading +/- symbols)
-        /// value is an the number of arguments to be skipped (int)
-        /// If argument begins with a '+' then matching will ignore anything after a 2nd '+'
-        /// so that +vendorXYZ+vendorARG can be ignored by matching against +vendorXYZ
-        std::map<std::string, int> cmdIgnore;
-
-        /// A map of commands to be renamed, pointing to new name
-        /// key is the vendor command name (including any leading +/- symbols)
-        /// value is the slang command name to be used instead
-        std::map<std::string, std::string> cmdRename;
-
-        // What we don't need:
-        // A map of commands to be renameded, with next argument merged into a plusArg format
-        // (because all slang's plusargs have non plusargs aliases, so no reason to create a
-        // plusArg) What we MIGHT need: Split a vendor's plusArg into regular arguments
-
         /// @name Include paths
         /// @{
 
@@ -84,7 +64,9 @@ public:
 
         /// A list of extensions that will be used to exclude files.
         std::vector<std::string> excludeExts;
-        // same, mapped to a set
+        // defaults to false, cleared after copying to uniqueExcludeExtensions
+        bool excludeExtDone;
+        // same as excludeExts, but mapped to a set
         flat_hash_set<string_view> uniqueExcludeExtensions;
 
         /// @}

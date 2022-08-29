@@ -89,16 +89,6 @@ void CommandLine::add(string_view name, OptionCallback cb, string_view desc, str
     addInternal(name, cb, desc, valueName, isFileName);
 }
 
-void CommandLine::add(string_view name, std::map<std::string, int>& value, string_view desc,
-                      string_view valueName) {
-    addInternal(name, &value, desc, valueName);
-}
-
-void CommandLine::add(string_view name, std::map<std::string, std::string>& value, string_view desc,
-                      string_view valueName) {
-    addInternal(name, &value, desc, valueName);
-}
-
 void CommandLine::addInternal(string_view name, OptionStorage storage, string_view desc,
                               string_view valueName, bool isFileName) {
     if (name.empty())
@@ -415,10 +405,7 @@ bool CommandLine::parse(span<const string_view> args, ParseOptions options) {
         }
 
         // check if arg is in the list of commands to skip
-        auto cmd_ignore_option = findOption("cmd_ignore");
-        if (cmd_ignore_option) {
-            std::map<std::string, int>* cmdIgnore =
-                std::get<std::map<std::string, int>*>(cmd_ignore_option->storage);
+        if (!cmdIgnore.empty()) {
             string_view ignore_arg = arg;
             // if we ignore a vendor command of the form +xx ,
             // we match on any +xx+yyy command as +yy is the command's argument
@@ -428,7 +415,7 @@ bool CommandLine::parse(span<const string_view> args, ParseOptions options) {
                     ignore_arg =
                         arg.substr(0, plusIndex + 1); // +1 because we started from arg.substr(1)
             }
-            if (auto it = cmdIgnore->find(std::string(ignore_arg)); it != cmdIgnore->end()) {
+            if (auto it = cmdIgnore.find(std::string(ignore_arg)); it != cmdIgnore.end()) {
                 // if yes, find how many args to skip
                 skip = it->second;
                 continue;
@@ -436,11 +423,8 @@ bool CommandLine::parse(span<const string_view> args, ParseOptions options) {
         }
 
         // check if arg is in the list of commands to translate
-        auto cmd_rename_option = findOption("cmd_rename");
-        if (cmd_rename_option) {
-            std::map<std::string, std::string>* cmdRename =
-                std::get<std::map<std::string, std::string>*>(cmd_rename_option->storage);
-            if (auto it = cmdRename->find(std::string(arg)); it != cmdRename->end()) {
+        if (!cmdRename.empty()) {
+            if (auto it = cmdRename.find(std::string(arg)); it != cmdRename.end()) {
                 // if yes, rename argument
                 arg = it->second;
             }
@@ -612,13 +596,6 @@ void CommandLine::handlePlusArg(string_view arg, ParseOptions options, bool& had
 
     } while (!value.empty());
 }
-
-// Use this when your command line option has no use for '='
-// and you don't want to define a dummy string_view just to call findOption()
-CommandLine::Option* CommandLine::findOption(string_view arg) const {
-    static string_view findOptDummy;
-    return findOption(arg, findOptDummy);
-};
 
 CommandLine::Option* CommandLine::findOption(string_view arg, string_view& value) const {
     // If there is an equals sign, strip off the value.
@@ -870,8 +847,7 @@ std::string CommandLine::Option::set(OptionCallback& target, string_view, string
     return target(value);
 }
 
-std::string CommandLine::Option::set(std::map<std::string, int>& target, string_view name,
-                                     string_view value) {
+std::string CommandLine::setIgnoreCommand(string_view value) {
     const size_t firstCommaIndex = value.find_first_of(',');
     const size_t lastCommaIndex = value.find_last_of(',');
     if ((firstCommaIndex == string_view::npos) || (firstCommaIndex != lastCommaIndex))
@@ -879,23 +855,22 @@ std::string CommandLine::Option::set(std::map<std::string, int>& target, string_
     const string_view numArgs = value.substr(firstCommaIndex + 1);
     value = value.substr(0, firstCommaIndex);
     std::string error;
-    auto result = parseInt<int>(name, numArgs, error);
+    auto result = parseInt<int>("", numArgs, error);
     if (result) {
-        target[std::string(value)] = *result;
+        cmdIgnore[std::string(value)] = *result;
         return {};
     }
     return error;
 }
 
-std::string CommandLine::Option::set(std::map<std::string, std::string>& target, string_view,
-                                     string_view value) {
+std::string CommandLine::setRenameCommand(string_view value) {
     const size_t firstCommaIndex = value.find_first_of(',');
     const size_t lastCommaIndex = value.find_last_of(',');
     if ((firstCommaIndex == string_view::npos) || (firstCommaIndex != lastCommaIndex))
         return fmt::format("missing or extra comma in argument '{}'", value);
     const string_view slangName = value.substr(firstCommaIndex + 1);
     value = value.substr(0, firstCommaIndex);
-    target[std::string(value)] = slangName;
+    cmdRename[std::string(value)] = slangName;
     return {};
 }
 

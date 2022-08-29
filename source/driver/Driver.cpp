@@ -56,12 +56,12 @@ void Driver::addStandardArgs() {
 
     // Legacy vendor commands support
     cmdLine.add(
-        "--cmd_ignore", options.cmdIgnore,
+        "--cmd-ignore", [this](string_view value) { return cmdLine.setIgnoreCommand(value); },
         "Define rule to ignore vendor command <vendor_cmd> with its following <N> parameters.\n"
         "A command of the form +xyz will also match any vendor command of the form +xyz+abc,\n"
         "as +abc is the command's argument, and doesn't need to be matched.",
         "<vendor_cmd>,<N>");
-    cmdLine.add("--cmd_rename", options.cmdRename,
+    cmdLine.add("--cmd-rename", [this](string_view value) { return cmdLine.setRenameCommand(value); },
                 "Define rule to rename vendor command <vendor_cmd> into existing <slang_cmd>",
                 "<vendor_cmd>,<slang_cmd>");
 
@@ -156,11 +156,11 @@ void Driver::addStandardArgs() {
 
     cmdLine.setPositional(
         [this](string_view fileName) {
-            static bool excludeExtDone = false;
-            if (!excludeExtDone) {
+            //static bool excludeExtDone = false;
+            if (!options.excludeExtDone) {
                 for (auto& ext : options.excludeExts)
                     this->options.uniqueExcludeExtensions.emplace(ext);
-                excludeExtDone = true;
+                options.excludeExtDone = true;
             }
             const size_t extIndex = fileName.find_last_of('.');
             size_t extLength = string_view::npos;

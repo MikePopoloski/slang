@@ -189,28 +189,6 @@ public:
     void add(string_view name, std::vector<std::string>& value, string_view desc,
              string_view valueName = {}, bool isFileName = false);
 
-    /// Register an option with @a name that will be parsed as a 2-tuple of string,int.
-    /// The tuple is stored in a map, with tuple[0] being the key, and tuple[1] the value.
-    /// The option can be invoked multiple times, to add multiple entries to the map.
-    ///
-    /// @name is a comma separated list of long form and short form names
-    /// (including the dashes) that are accepted for this option.
-    /// @a desc is a human-friendly description for printing help text.
-    /// @a valueName is an example name for the value when printing help text.
-    void add(string_view name, std::map<std::string, int>& value, string_view desc,
-             string_view valueName);
-
-    /// Register an option with @a name that will be parsed as a 2-tuple of string,string.
-    /// The tuple is stored in a map, with tuple[0] being the key, and tuple[1] the value.
-    /// The option can be invoked multiple times, to add multiple entries to the map.
-    ///
-    /// @name is a comma separated list of long form and short form names
-    /// (including the dashes) that are accepted for this option.
-    /// @a desc is a human-friendly description for printing help text.
-    /// @a valueName is an example name for the value when printing help text.
-    void add(string_view name, std::map<std::string, std::string>& value, string_view desc,
-             string_view valueName);
-
     using OptionCallback = std::function<std::string(string_view)>;
 
     /// Register an option with @a name that will be parsed as a string and
@@ -248,6 +226,8 @@ public:
     /// @return true on success, false if an errors occurs.
     bool parse(int argc, const char* const argv[]);
 
+    std::string setIgnoreCommand(string_view value);
+    std::string setRenameCommand(string_view value);
 #if defined(_MSC_VER)
     /// Parse the provided command line (MSVC wchar-style).
     /// @return true on success, false if an errors occurs.
@@ -310,8 +290,7 @@ private:
                      optional<uint64_t>*, optional<double>*, optional<std::string>*,
                      std::vector<int32_t>*, std::vector<uint32_t>*, std::vector<int64_t>*,
                      std::vector<uint64_t>*, std::vector<double>*, std::vector<std::string>*,
-                     OptionCallback, std::map<std::string, int>*,
-                     std::map<std::string, std::string>*>;
+                     OptionCallback>;
 
     class Option {
     public:
@@ -340,9 +319,6 @@ private:
         std::string set(std::vector<double>& target, string_view name, string_view value);
         std::string set(std::vector<std::string>& target, string_view name, string_view value);
         std::string set(OptionCallback& target, string_view name, string_view value);
-        std::string set(std::map<std::string, int>& target, string_view name, string_view value);
-        std::string set(std::map<std::string, std::string>& target, string_view name,
-                        string_view value);
 
         template<typename T>
         static constexpr bool allowValue(const optional<T>& target) {
@@ -351,11 +327,6 @@ private:
 
         template<typename T>
         static constexpr bool allowValue(const std::vector<T>&) {
-            return true;
-        }
-
-        template<typename T1, typename T2>
-        static constexpr bool allowValue(const std::map<T1, T2>&) {
             return true;
         }
     };
@@ -370,7 +341,6 @@ private:
 
     void handlePlusArg(string_view arg, ParseOptions options, bool& hadUnknowns);
 
-    Option* findOption(string_view arg) const;
     Option* findOption(string_view arg, string_view& value) const;
     Option* tryGroupOrPrefix(string_view& arg, string_view& value, ParseOptions options);
     std::string findNearestMatch(string_view arg) const;
@@ -378,6 +348,23 @@ private:
     std::shared_ptr<Option> positional;
     std::map<std::string, std::shared_ptr<Option>> optionMap;
     std::vector<std::shared_ptr<Option>> orderedOptions;
+
+    /// A map of commands to be ignored.
+    /// key is the command name (including any leading +/- symbols)
+    /// value is an the number of arguments to be skipped (int)
+    /// If argument begins with a '+' then matching will ignore anything after a 2nd '+'
+    /// so that +vendorXYZ+vendorARG can be ignored by matching against +vendorXYZ
+    std::map<std::string, int> cmdIgnore;
+
+    /// A map of commands to be renamed, pointing to new name
+    /// key is the vendor command name (including any leading +/- symbols)
+    /// value is the slang command name to be used instead
+    std::map<std::string, std::string> cmdRename;
+
+    // What we don't need:
+    // A map of commands to be renameded, with next argument merged into a plusArg format
+    // (because all slang's plusargs have non plusargs aliases, so no reason to create a
+    // plusArg) What we MIGHT need: Split a vendor's plusArg into regular arguments
 
     std::string programName;
     std::vector<std::string> errors;

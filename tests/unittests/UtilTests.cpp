@@ -21,7 +21,7 @@ TEST_CASE("Test CommandLine -- basic") {
     cmdLine.add("-a", a, "SDF");
     cmdLine.add("-b", b, "SDF");
     cmdLine.add("-z,-y,-x,--longFlag", longFlag, "This flag does fun stuff");
-    cmdLine.add("--longFlag2", longFlag2, "Another good thing");
+    cmdLine.add("--longFlag2", longFlag2, "Another\ngood\nthing");
     cmdLine.add("-c", c, "SDF");
     cmdLine.add("-d", d, "SDF");
     cmdLine.add("-e,--ext", ext, "Definitely should set me");
@@ -99,7 +99,9 @@ OPTIONS:
   -a                   SDF
   -b                   SDF
   -z,-y,-x,--longFlag  This flag does fun stuff
-  --longFlag2          Another good thing
+  --longFlag2          Another
+                       good
+                       thing
   -c                   SDF
   -d                   SDF
   -e,--ext             Definitely should set me
@@ -428,4 +430,43 @@ TEST_CASE("Test CommandLine -- ignore duplicates") {
     CHECK(cmdLine.parse("prog --foo 123 --foo 456", options));
 
     CHECK(foo == 123);
+}
+
+TEST_CASE("Test CommandLine -- check setIgnoreCommand()") {
+    optional<int32_t> foo;
+
+    CommandLine cmdLine;
+    cmdLine.add("--foo", foo, "");
+    cmdLine.setIgnoreCommand("--xxx,0");
+    cmdLine.setIgnoreCommand("--yyy,2");
+    CommandLine::ParseOptions options;
+    options.ignoreDuplicates = true;
+
+    CHECK(cmdLine.parse("prog --yyy --foo 456 --foo 123 --xxx", options));
+    // --foo 456 is skipped because it's not a real flag, it's --yyy's two parameters, which are ignored
+    CHECK(foo == 123);
+
+    auto errors = cmdLine.getErrors();
+    //std::cout << errors[0];
+    REQUIRE(errors.size() == 0);
+}
+
+TEST_CASE("Test CommandLine -- check setRenameCommand()") {
+    optional<int32_t> foo;
+    optional<int32_t> bar;
+
+    CommandLine cmdLine;
+    cmdLine.add("--foo", foo, "");
+    cmdLine.add("--bar", bar, "");
+    cmdLine.setRenameCommand("--xxx,--foo");
+    cmdLine.setRenameCommand("--yyy,--bar");
+    CommandLine::ParseOptions options;
+
+    CHECK(cmdLine.parse("prog --xxx 123 --yyy 456", options));
+    CHECK(foo == 123);
+    CHECK(bar == 456);
+
+    auto errors = cmdLine.getErrors();
+    //std::cout << errors[0];
+    REQUIRE(errors.size() == 0);
 }
