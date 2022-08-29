@@ -66,7 +66,7 @@ public:
                           const Expression& left, const Expression& right,
                           SourceRange sourceRange) :
         Expression(ExpressionKind::RangeSelect, type, sourceRange),
-        selectionKind(selectionKind), value_(&value), left_(&left), right_(&right) {}
+        value_(&value), left_(&left), right_(&right), selectionKind(selectionKind) {}
 
     const Expression& value() const { return *value_; }
     Expression& value() { return *value_; }
