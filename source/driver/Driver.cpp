@@ -41,6 +41,7 @@ void Driver::addStandardArgs() {
                 "<ext>");
     cmdLine.add("--exclude-ext", options.excludeExts, "Exclude files with these extensions",
                 "<ext>");
+    options.excludeExtDone = false;
 
     // Preprocessor
     cmdLine.add("-D,--define-macro,+define", options.defines,
