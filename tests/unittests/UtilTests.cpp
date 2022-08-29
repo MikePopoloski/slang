@@ -443,11 +443,12 @@ TEST_CASE("Test CommandLine -- check setIgnoreCommand()") {
     options.ignoreDuplicates = true;
 
     CHECK(cmdLine.parse("prog --yyy --foo 456 --foo 123 --xxx", options));
-    // --foo 456 is skipped because it's not a real flag, it's --yyy's two parameters, which are ignored
+    // --foo 456 is skipped because it's not a real flag, it's --yyy's two parameters, which are
+    // ignored
     CHECK(foo == 123);
 
     auto errors = cmdLine.getErrors();
-    //std::cout << errors[0];
+    // std::cout << errors[0];
     REQUIRE(errors.size() == 0);
 }
 
@@ -467,6 +468,6 @@ TEST_CASE("Test CommandLine -- check setRenameCommand()") {
     CHECK(bar == 456);
 
     auto errors = cmdLine.getErrors();
-    //std::cout << errors[0];
+    // std::cout << errors[0];
     REQUIRE(errors.size() == 0);
 }

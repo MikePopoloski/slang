@@ -61,9 +61,10 @@ void Driver::addStandardArgs() {
         "A command of the form +xyz will also match any vendor command of the form +xyz+abc,\n"
         "as +abc is the command's argument, and doesn't need to be matched.",
         "<vendor_cmd>,<N>");
-    cmdLine.add("--cmd-rename", [this](string_view value) { return cmdLine.setRenameCommand(value); },
-                "Define rule to rename vendor command <vendor_cmd> into existing <slang_cmd>",
-                "<vendor_cmd>,<slang_cmd>");
+    cmdLine.add(
+        "--cmd-rename", [this](string_view value) { return cmdLine.setRenameCommand(value); },
+        "Define rule to rename vendor command <vendor_cmd> into existing <slang_cmd>",
+        "<vendor_cmd>,<slang_cmd>");
 
     // Parsing
     cmdLine.add("--max-parse-depth", options.maxParseDepth,
@@ -156,7 +157,7 @@ void Driver::addStandardArgs() {
 
     cmdLine.setPositional(
         [this](string_view fileName) {
-            //static bool excludeExtDone = false;
+            // static bool excludeExtDone = false;
             if (!options.excludeExtDone) {
                 for (auto& ext : options.excludeExts)
                     this->options.uniqueExcludeExtensions.emplace(ext);
