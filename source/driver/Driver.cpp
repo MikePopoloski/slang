@@ -157,7 +157,6 @@ void Driver::addStandardArgs() {
 
     cmdLine.setPositional(
         [this](string_view fileName) {
-            // static bool excludeExtDone = false;
             if (!options.excludeExtDone) {
                 for (auto& ext : options.excludeExts)
                     this->options.uniqueExcludeExtensions.emplace(ext);

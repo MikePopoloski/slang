@@ -380,7 +380,7 @@ TEST_CASE("Driver flag --exclude-ext (multiple use)") {
     auto filePath2 = findTestDir() + "test.vhd";
     auto filePath3 = findTestDir() + "test.e";
     const char* argv[] = { "testfoo",         "--exclude-ext",  "vhd", "--exclude-ext", "e",
-                           filePath1.c_str(), filePath2.c_str() /*, filePath3.c_str()*/ };
+                           filePath1.c_str(), filePath2.c_str(), filePath3.c_str() };
     CHECK(driver.parseCommandLine(sizeof(argv) / sizeof(argv[0]), argv));
     CHECK(driver.processOptions());
 }
