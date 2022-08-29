@@ -226,8 +226,8 @@ public:
     /// @return true on success, false if an errors occurs.
     bool parse(int argc, const char* const argv[]);
 
-    std::string setIgnoreCommand(string_view value);
-    std::string setRenameCommand(string_view value);
+    std::string addIgnoreCommand(string_view value);
+    std::string addRenameCommand(string_view value);
 #if defined(_MSC_VER)
     /// Parse the provided command line (MSVC wchar-style).
     /// @return true on success, false if an errors occurs.
@@ -360,11 +360,6 @@ private:
     /// key is the vendor command name (including any leading +/- symbols)
     /// value is the slang command name to be used instead
     std::map<std::string, std::string> cmdRename;
-
-    // What we don't need:
-    // A map of commands to be renameded, with next argument merged into a plusArg format
-    // (because all slang's plusargs have non plusargs aliases, so no reason to create a
-    // plusArg) What we MIGHT need: Split a vendor's plusArg into regular arguments
 
     std::string programName;
     std::vector<std::string> errors;

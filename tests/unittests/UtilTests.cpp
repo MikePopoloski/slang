@@ -437,8 +437,8 @@ TEST_CASE("Test CommandLine -- check setIgnoreCommand()") {
 
     CommandLine cmdLine;
     cmdLine.add("--foo", foo, "");
-    cmdLine.setIgnoreCommand("--xxx,0");
-    cmdLine.setIgnoreCommand("--yyy,2");
+    cmdLine.addIgnoreCommand("--xxx,0");
+    cmdLine.addIgnoreCommand("--yyy,2");
     CommandLine::ParseOptions options;
     options.ignoreDuplicates = true;
 
@@ -459,8 +459,8 @@ TEST_CASE("Test CommandLine -- check setRenameCommand()") {
     CommandLine cmdLine;
     cmdLine.add("--foo", foo, "");
     cmdLine.add("--bar", bar, "");
-    cmdLine.setRenameCommand("--xxx,--foo");
-    cmdLine.setRenameCommand("--yyy,--bar");
+    cmdLine.addRenameCommand("--xxx,--foo");
+    cmdLine.addRenameCommand("--yyy,--bar");
     CommandLine::ParseOptions options;
 
     CHECK(cmdLine.parse("prog --xxx 123 --yyy 456", options));

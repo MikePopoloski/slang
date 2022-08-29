@@ -847,7 +847,7 @@ std::string CommandLine::Option::set(OptionCallback& target, string_view, string
     return target(value);
 }
 
-std::string CommandLine::setIgnoreCommand(string_view value) {
+std::string CommandLine::addIgnoreCommand(string_view value) {
     const size_t firstCommaIndex = value.find_first_of(',');
     const size_t lastCommaIndex = value.find_last_of(',');
     if ((firstCommaIndex == string_view::npos) || (firstCommaIndex != lastCommaIndex))
@@ -863,7 +863,7 @@ std::string CommandLine::setIgnoreCommand(string_view value) {
     return error;
 }
 
-std::string CommandLine::setRenameCommand(string_view value) {
+std::string CommandLine::addRenameCommand(string_view value) {
     const size_t firstCommaIndex = value.find_first_of(',');
     const size_t lastCommaIndex = value.find_last_of(',');
     if ((firstCommaIndex == string_view::npos) || (firstCommaIndex != lastCommaIndex))
