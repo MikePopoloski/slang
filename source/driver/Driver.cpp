@@ -39,9 +39,13 @@ void Driver::addStandardArgs() {
                 /* isFileName */ true);
     cmdLine.add("-Y,--libext", options.libExts, "Additional library file extensions to search",
                 "<ext>");
-    cmdLine.add("--exclude-ext", options.excludeExts, "Exclude files with these extensions",
+    cmdLine.add("--exclude-ext",
+                [this](string_view value) {
+                    options.excludeExts.emplace(value);
+                    return "";
+                }, 
+                "Exclude files with these extensions",
                 "<ext>");
-    options.excludeExtDone = false;
 
     // Preprocessor
     cmdLine.add("-D,--define-macro,+define", options.defines,
@@ -158,16 +162,11 @@ void Driver::addStandardArgs() {
 
     cmdLine.setPositional(
         [this](string_view fileName) {
-            if (!options.excludeExtDone) {
-                for (auto& ext : options.excludeExts)
-                    this->options.uniqueExcludeExtensions.emplace(ext);
-                options.excludeExtDone = true;
-            }
             const size_t extIndex = fileName.find_last_of('.');
             size_t extLength = string_view::npos;
             if (extIndex == string_view::npos) // no extension
                 extLength = 0;
-            if (this->options.uniqueExcludeExtensions.count(
+            if (this->options.excludeExts.count(
                     fileName.substr(extIndex + 1, extLength)))
                 return "";
             SourceBuffer buffer = readSource(fileName);
