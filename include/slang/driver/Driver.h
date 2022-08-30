@@ -143,6 +143,12 @@ public:
         /// also drive such signals.
         optional<bool> allowDupInitialDrivers;
 
+        /// Allow redefining a module in more than one file.
+        /// If not enabled (default), it will result in an error.
+        /// If explicitly enabled, the last version defined will be used for
+        /// all instances in the design.
+        optional<bool> allowRedefinition;
+
         /// If true, perform strict checking of variable drivers, which currently
         /// means not taking into account procedural for loop unrolling.
         optional<bool> strictDriverChecking;

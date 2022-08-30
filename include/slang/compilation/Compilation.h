@@ -118,6 +118,12 @@ struct CompilationOptions {
     /// also drive such signals.
     bool allowDupInitialDrivers = false;
 
+    /// Allow redefining a module in more than one file.
+    /// If not enabled (default), it will result in an error.
+    /// If explicitly enabled, the last version defined will be used for
+    /// all instances in the design.
+    bool allowRedefinition = false;
+
     /// If true, perform strict checking of variable drivers, which currently
     /// means not taking into account procedural for loop unrolling.
     bool strictDriverChecking = false;
