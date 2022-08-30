@@ -132,7 +132,8 @@ void registerUtil(py::module_& m) {
         .def("isCached", &SourceManager::isCached)
         .def("setDisableProximatePaths", &SourceManager::setDisableProximatePaths)
         .def("addLineDirective", &SourceManager::addLineDirective)
-        .def("addDiagnosticDirective", &SourceManager::addDiagnosticDirective);
+        .def("addDiagnosticDirective", &SourceManager::addDiagnosticDirective)
+        .def("getAllBuffers", &SourceManager::getAllBuffers);
 
     py::class_<VersionInfo>(m, "VersionInfo")
         .def_static("getMajor", &VersionInfo::getMajor)

@@ -426,6 +426,15 @@ span<const SourceManager::DiagnosticDirectiveInfo> SourceManager::getDiagnosticD
     return {};
 }
 
+std::vector<BufferID> SourceManager::getAllBuffers() const {
+    std::shared_lock lock(mut);
+    std::vector<BufferID> result;
+    for (size_t i = 1; i < bufferEntries.size(); i++)
+        result.push_back(BufferID((uint32_t)i, ""sv));
+
+    return result;
+}
+
 SourceManager::FileInfo* SourceManager::getFileInfo(BufferID buffer) {
     if (!buffer)
         return nullptr;

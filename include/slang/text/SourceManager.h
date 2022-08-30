@@ -185,6 +185,10 @@ public:
     /// be mutated by a call to @a addDiagnosticDirective and invalidate the span.
     span<const DiagnosticDirectiveInfo> getDiagnosticDirectives(BufferID buffer) const;
 
+    /// Returns a list of buffers (files and macros) that have been created in the
+    /// source manager.
+    std::vector<BufferID> getAllBuffers() const;
+
 private:
     // Stores information specified in a `line directive, which alters the
     // line number and file name that we report in diagnostics.
