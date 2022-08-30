@@ -439,17 +439,15 @@ TEST_CASE("Test CommandLine -- check setIgnoreCommand()") {
     cmdLine.add("--foo", foo, "");
     cmdLine.addIgnoreCommand("--xxx,0");
     cmdLine.addIgnoreCommand("--yyy,2");
-    CommandLine::ParseOptions options;
-    options.ignoreDuplicates = true;
+    cmdLine.addIgnoreCommand("+zzz,0");
 
-    CHECK(cmdLine.parse("prog --yyy --foo 456 --foo 123 --xxx", options));
-    // --foo 456 is skipped because it's not a real flag, it's --yyy's two parameters, which are
-    // ignored
+    CHECK(cmdLine.parse("prog --yyy --foo 456 --foo 123 --xxx +zzz+123+abc+456"));
+    // --foo 456 is skipped because it's not a real flag, it's --yyy's two parameters,
+    // which are ignored
     CHECK(foo == 123);
 
     auto errors = cmdLine.getErrors();
-    // std::cout << errors[0];
-    REQUIRE(errors.size() == 0);
+    REQUIRE(errors.empty());
 }
 
 TEST_CASE("Test CommandLine -- check setRenameCommand()") {
@@ -461,13 +459,18 @@ TEST_CASE("Test CommandLine -- check setRenameCommand()") {
     cmdLine.add("--bar", bar, "");
     cmdLine.addRenameCommand("--xxx,--foo");
     cmdLine.addRenameCommand("--yyy,--bar");
-    CommandLine::ParseOptions options;
 
-    CHECK(cmdLine.parse("prog --xxx 123 --yyy 456", options));
+    CHECK(cmdLine.parse("prog --xxx 123 --yyy 456"));
     CHECK(foo == 123);
     CHECK(bar == 456);
 
     auto errors = cmdLine.getErrors();
-    // std::cout << errors[0];
-    REQUIRE(errors.size() == 0);
+    REQUIRE(errors.empty());
+}
+
+TEST_CASE("Test CommandLine -- ignore and rename errors") {
+    CommandLine cmdLine;
+    CHECK(cmdLine.addRenameCommand("--xxx").find("missing or extra comma") != std::string::npos);
+    CHECK(cmdLine.addIgnoreCommand("--yyy,--bar,baz").find("missing or extra comma") !=
+          std::string::npos);
 }

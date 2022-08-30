@@ -42,10 +42,10 @@ void Driver::addStandardArgs() {
     cmdLine.add(
         "--exclude-ext",
         [this](string_view value) {
-            options.excludeExts.emplace(value);
+            options.excludeExts.emplace(std::string(value));
             return "";
         },
-        "Exclude files with these extensions", "<ext>");
+        "Exclude provided source files with these extensions", "<ext>");
 
     // Preprocessor
     cmdLine.add("-D,--define-macro,+define", options.defines,
@@ -162,12 +162,13 @@ void Driver::addStandardArgs() {
 
     cmdLine.setPositional(
         [this](string_view fileName) {
-            const size_t extIndex = fileName.find_last_of('.');
-            size_t extLength = string_view::npos;
-            if (extIndex == string_view::npos) // no extension
-                extLength = 0;
-            if (this->options.excludeExts.count(fileName.substr(extIndex + 1, extLength)))
-                return "";
+            if (!options.excludeExts.empty()) {
+                if (size_t extIndex = fileName.find_last_of('.'); extIndex != string_view::npos) {
+                    if (options.excludeExts.count(std::string(fileName.substr(extIndex + 1))))
+                        return "";
+                }
+            }
+
             SourceBuffer buffer = readSource(fileName);
             if (!buffer)
                 anyFailedLoads = true;

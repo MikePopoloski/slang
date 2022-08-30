@@ -222,12 +222,27 @@ public:
     /// @note only one variable or callback be set to receive positional arguments.
     void setPositional(OptionCallback cb, string_view valueName, bool isFileName = false);
 
+    /// Adds a command that will be ignored if encountered during argument parsing.
+    /// @param value a string containing a single comma-separated "name,value" pair,
+    ///              where the name is the argument to ignore (including any leading
+    ///              '+' and '-' characters) and the value is an integer indicating the
+    ///              (possibly zero) number of arguments to ignore following it in the
+    ///              argument list.
+    /// @returns a string containing an error message if the @a value is malformed.
+    std::string addIgnoreCommand(string_view value);
+
+    /// Adds a command that will be renamed to one of the existing commands already registered.
+    /// @param value a string containing a single comma-separated "from,to" pair, where the
+    ///              "from" is the command that should be renamed whenever encountered in the
+    ///              argument list (including any leading '+' and '-' characters), and "to" is
+    ///              the new name it should have.
+    /// @returns a string containing an error message if the @a value is malformed.
+    std::string addRenameCommand(string_view value);
+
     /// Parse the provided command line (C-style).
     /// @return true on success, false if an errors occurs.
     bool parse(int argc, const char* const argv[]);
 
-    std::string addIgnoreCommand(string_view value);
-    std::string addRenameCommand(string_view value);
 #if defined(_MSC_VER)
     /// Parse the provided command line (MSVC wchar-style).
     /// @return true on success, false if an errors occurs.
@@ -349,16 +364,16 @@ private:
     std::map<std::string, std::shared_ptr<Option>> optionMap;
     std::vector<std::shared_ptr<Option>> orderedOptions;
 
-    /// A map of commands to be ignored.
-    /// key is the command name (including any leading +/- symbols)
-    /// value is an the number of arguments to be skipped (int)
-    /// If argument begins with a '+' then matching will ignore anything after a 2nd '+'
-    /// so that +vendorXYZ+vendorARG can be ignored by matching against +vendorXYZ
+    // A map of commands to be ignored.
+    // key is the command name (including any leading +/- symbols)
+    // value is an the number of arguments to be skipped (int)
+    // If argument begins with a '+' then matching will ignore anything after a 2nd '+'
+    // so that +vendorXYZ+vendorARG can be ignored by matching against +vendorXYZ
     std::map<std::string, int> cmdIgnore;
 
     /// A map of commands to be renamed, pointing to new name
     /// key is the vendor command name (including any leading +/- symbols)
-    /// value is the slang command name to be used instead
+    /// value is the command name to be used instead
     std::map<std::string, std::string> cmdRename;
 
     std::string programName;

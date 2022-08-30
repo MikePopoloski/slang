@@ -62,8 +62,8 @@ public:
         /// A list of extensions that will be used to search for library files.
         std::vector<std::string> libExts;
 
-        // A set of extensions that will be used to exclude files.
-        flat_hash_set<string_view> excludeExts;
+        /// A set of extensions that will be used to exclude files.
+        flat_hash_set<std::string> excludeExts;
 
         /// @}
         /// @name Preprocessing
