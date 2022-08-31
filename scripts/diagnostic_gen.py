@@ -159,7 +159,7 @@ static const flat_hash_map<DiagCode, std::tuple<string_view, string_view, Diagno
 
     output += """};
 
-static const flat_hash_map<string_view, std::vector<DiagCode>> optionMap = {
+static flat_hash_map<string_view, std::vector<DiagCode>> optionMap = {
 """
 
     optionMap = {}
@@ -235,6 +235,10 @@ const DiagGroup* findDefaultDiagGroup(string_view name) {
     if (auto it = groupMap.find(name); it != groupMap.end())
         return &it->second;
     return nullptr;
+}
+
+void setOptionMap(string_view option, std::vector<DiagCode> codes) {
+    optionMap.insert_or_assign(option, codes);
 }
 
 static const DiagCode AllGeneratedCodes[] = {

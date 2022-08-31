@@ -22,6 +22,8 @@
 
 namespace slang {
 
+void setOptionMap(string_view option, std::vector<DiagCode> codes);
+
 Driver::Driver() : diagEngine(sourceManager) {
     diagClient = std::make_shared<TextDiagnosticClient>();
     diagEngine.addClient(diagClient);
@@ -347,6 +349,11 @@ bool Driver::processOptions() {
 
     diagEngine.setErrorLimit((int)options.errorLimit.value_or(20));
     diagEngine.setDefaultWarnings();
+
+    if (options.allowRedefinition) {
+        diagEngine.setSeverity(diag::Redefinition, DiagnosticSeverity::Warning);
+        setOptionMap("redefinition"sv, {diag::Redefinition});
+    }
 
     if (options.compat == "vcs") {
         diagEngine.setSeverity(diag::StaticInitializerMustBeExplicit, DiagnosticSeverity::Ignored);

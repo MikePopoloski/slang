@@ -461,12 +461,12 @@ void Compilation::createDefinition(const Scope& scope, LookupLocation location,
     bool redefined = false;
     std::tuple key(def->name, targetScope);
     if (auto it = definitionMap.find(key); it != definitionMap.end()) {
-        if (!options.allowRedefinition) {
-            reportRedefinition(scope, *def, *it->second);
-            return;
-        } else {
+        reportRedefinition(scope, *def, *it->second);
+        if (options.allowRedefinition) {
             redefined = true;
             topDefinitions.erase(it->second.get()->name);
+        } else {
+            return;
         }
     }
 
