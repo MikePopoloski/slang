@@ -462,12 +462,9 @@ void Compilation::createDefinition(const Scope& scope, LookupLocation location,
     std::tuple key(def->name, targetScope);
     if (auto it = definitionMap.find(key); it != definitionMap.end()) {
         reportRedefinition(scope, *def, *it->second);
-        if (options.allowRedefinition) {
-            redefined = true;
-            topDefinitions.erase(it->second.get()->name);
-        } else {
+        if (!options.allowRedefinition)
             return;
-        }
+        redefined = true;
     }
 
     auto [it, inserted] = definitionMap.insert_or_assign(key, std::move(def));
