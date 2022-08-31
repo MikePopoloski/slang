@@ -168,7 +168,7 @@ void Preprocessor::applyPragma(const PragmaDirectiveSyntax& pragma) {
 void Preprocessor::applyProtectPragma(const PragmaDirectiveSyntax& pragma) {
     if (pragma.args.empty()) {
         Token last = pragma.getLastToken();
-        addDiag(diag::ExpectedProtectKey, last.location() + last.rawText().length());
+        addDiag(diag::ExpectedProtectKeyword, last.location() + last.rawText().length());
         return;
     }
 
@@ -177,7 +177,7 @@ void Preprocessor::applyProtectPragma(const PragmaDirectiveSyntax& pragma) {
         if (auto it = pragmaProtectHandlers.find(text); it != pragmaProtectHandlers.end())
             (this->*(it->second))(keyword, args);
         else if (!text.empty())
-            addDiag(diag::UnknownProtectKey, keyword.range()) << text;
+            addDiag(diag::UnknownProtectKeyword, keyword.range()) << text;
     };
 
     for (auto arg : pragma.args) {
@@ -190,7 +190,7 @@ void Preprocessor::applyProtectPragma(const PragmaDirectiveSyntax& pragma) {
             handle(nvp.name, nvp.value);
         }
         else {
-            addDiag(diag::ExpectedProtectKey, arg->sourceRange());
+            addDiag(diag::ExpectedProtectKeyword, arg->sourceRange());
         }
     }
 }

@@ -91,8 +91,8 @@ warning extra-pragma-args ExtraPragmaArgs "too many arguments provided for pragm
 warning expected-diag-arg ExpectedDiagPragmaArg "expected diagnostic pragma argument"
 warning unknown-diag-arg UnknownDiagPragmaArg "unknown diagnostic pragma argument '{}'"
 warning pragma-diag-level ExpectedDiagPragmaLevel "expected diagnostic severity (ignore,warn,error,fatal)"
-warning expected-protect-key ExpectedProtectKey "expected pragma protect keyword"
-warning unknown-protect-key UnknownProtectKey "unknown pragma protect keyword '{}'"
+warning expected-protect-keyword ExpectedProtectKeyword "expected pragma protect keyword"
+warning unknown-protect-keyword UnknownProtectKeyword "unknown pragma protect keyword '{}'"
 warning expected-protect-arg ExpectedProtectArg "'{}' pragma expects a single string argument"
 warning nested-protect-begin NestedProtectBegin "nested pragma protect begin-end blocks are not allowed"
 warning extra-protect-end ExtraProtectEnd "pragma protect '{}' seen without corresponding start of block"
@@ -915,7 +915,7 @@ group default = { real-underflow real-overflow vector-overflow int-overflow unco
                   nonblocking-final constraint-missing missing-format dpi-spec enum-range udp-port-empty
                   lifetime-prototype net-inconsistent port-coercion empty-body reversed-range
                   invalid-source-encoding index-oob range-oob range-width-oob expected-protect-arg
-                  unknown-protect-key expected-protect-key nested-protect-begin extra-protect-end
+                  unknown-protect-keyword expected-protect-keyword nested-protect-begin extra-protect-end
                   protect-arglist unknown-protect-encoding unknown-protect-option invalid-pragma-number
                   invalid-pragma-viewport pragma-number-positive }
 
