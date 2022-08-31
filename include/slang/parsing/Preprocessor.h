@@ -183,6 +183,20 @@ private:
     void applyOncePragma(const PragmaDirectiveSyntax& pragma);
     void applyDiagnosticPragma(const PragmaDirectiveSyntax& pragma);
     void ensurePragmaArgs(const PragmaDirectiveSyntax& pragma, size_t count);
+    void ensureNoPragmaArgs(Token keyword, const PragmaExpressionSyntax* args);
+
+    // Pragma protect handlers
+    void handleProtectBegin(Token keyword, const PragmaExpressionSyntax* args);
+    void handleProtectEnd(Token keyword, const PragmaExpressionSyntax* args);
+    void handleProtectBeginProtected(Token keyword, const PragmaExpressionSyntax* args);
+    void handleProtectEndProtected(Token keyword, const PragmaExpressionSyntax* args);
+    void handleProtectSingleArgIgnore(Token keyword, const PragmaExpressionSyntax* args);
+    void handleProtectEncoding(Token keyword, const PragmaExpressionSyntax* args);
+    void handleProtectKey(Token keyword, const PragmaExpressionSyntax* args);
+    void handleProtectBlock(Token keyword, const PragmaExpressionSyntax* args);
+    void handleProtectLicense(Token keyword, const PragmaExpressionSyntax* args);
+    void handleProtectReset(Token keyword, const PragmaExpressionSyntax* args);
+    void handleProtectViewport(Token keyword, const PragmaExpressionSyntax* args);
 
     // Specifies possible macro intrinsics.
     enum class MacroIntrinsic { None, Line, File };
@@ -349,8 +363,10 @@ private:
     TokenKind defaultNetType = TokenKind::WireKeyword;
     TokenKind unconnectedDrive = TokenKind::Unknown;
 
-    uint32_t includeDepth = 0;
     int designElementDepth = 0;
+    uint32_t includeDepth = 0;
+    uint32_t protectEncryptDepth = 0;
+    uint32_t protectDecryptDepth = 0;
 
     // Parser for numeric literals in pragma expressions.
     NumberParser numberParser;
@@ -358,6 +374,10 @@ private:
 
     // Called by NumberParser to handle an error condition.
     void handleExponentSplit(Token token, size_t offset);
+
+    // A map of pragma protect keywords to their handler function.
+    flat_hash_map<string_view, void (Preprocessor::*)(Token, const PragmaExpressionSyntax*)>
+        pragmaProtectHandlers;
 };
 
 } // namespace slang

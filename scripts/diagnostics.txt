@@ -91,6 +91,11 @@ warning extra-pragma-args ExtraPragmaArgs "too many arguments provided for pragm
 warning expected-diag-arg ExpectedDiagPragmaArg "expected diagnostic pragma argument"
 warning unknown-diag-arg UnknownDiagPragmaArg "unknown diagnostic pragma argument '{}'"
 warning pragma-diag-level ExpectedDiagPragmaLevel "expected diagnostic severity (ignore,warn,error,fatal)"
+warning expected-protect-key ExpectedProtectKey "expected pragma protect keyword"
+warning unknown-protect-key UnknownProtectKey "unknown pragma protect keyword '{}'"
+warning expected-protect-arg ExpectedProtectArg "'{}' pragma expects a single string argument"
+warning nested-protect-begin NestedProtectBegin "nested pragma protect begin-end blocks are not allowed"
+warning extra-protect-end ExtraProtectEnd "pragma protect '{}' seen without corresponding start of block"
 
 subsystem Parser
 error ExpectedIdentifier "expected identifier"
@@ -903,7 +908,8 @@ group default = { real-underflow real-overflow vector-overflow int-overflow unco
                   unknown-escape-code missing-top warning-task unsized-concat finish-num implicit-conv
                   nonblocking-final constraint-missing missing-format dpi-spec enum-range udp-port-empty
                   lifetime-prototype net-inconsistent port-coercion empty-body reversed-range
-                  invalid-source-encoding index-oob range-oob range-width-oob }
+                  invalid-source-encoding index-oob range-oob range-width-oob expected-protect-arg
+                  unknown-protect-key expected-protect-key nested-protect-begin extra-protect-end }
 
 group extra = { empty-member empty-stmt dup-import pointless-void-cast case-gen-none case-gen-dup
                 unused-result format-real ignored-slice task-ignored width-trunc dup-attr event-const

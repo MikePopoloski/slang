@@ -50,6 +50,7 @@ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/util/Version.cpp.in
 
 set(slangcore_SOURCES
     ${CMAKE_CURRENT_BINARY_DIR}/DiagCode.cpp
+    ${CMAKE_CURRENT_BINARY_DIR}/slang/diagnostics/AllDiags.h
     diagnostics/DiagnosticClient.cpp
     diagnostics/DiagnosticEngine.cpp
     diagnostics/Diagnostics.cpp

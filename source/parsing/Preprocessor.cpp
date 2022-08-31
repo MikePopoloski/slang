@@ -28,12 +28,49 @@ Preprocessor::Preprocessor(SourceManager& sourceManager, BumpAllocator& alloc,
     resetAllDirectives();
     undefineAll();
 
-    // Finally add in any inherited macros that aren't already set in our map.
+    // Add in any inherited macros that aren't already set in our map.
     for (auto define : inheritedMacros) {
         auto name = define->name.valueText();
         if (!name.empty())
             macros.emplace(name, define);
     }
+
+    // clang-format off
+    pragmaProtectHandlers = {
+        { "begin", &Preprocessor::handleProtectBegin },
+        { "end", &Preprocessor::handleProtectEnd },
+        { "begin_protected", &Preprocessor::handleProtectBeginProtected },
+        { "end_protected", &Preprocessor::handleProtectEndProtected },
+        { "author", &Preprocessor::handleProtectSingleArgIgnore },
+        { "author_info", &Preprocessor::handleProtectSingleArgIgnore },
+        { "encrypt_agent", &Preprocessor::handleProtectSingleArgIgnore },
+        { "encrypt_agent_info", &Preprocessor::handleProtectSingleArgIgnore },
+        { "encoding", &Preprocessor::handleProtectEncoding },
+        { "data_keyowner", &Preprocessor::handleProtectSingleArgIgnore },
+        { "data_method", &Preprocessor::handleProtectSingleArgIgnore },
+        { "data_keyname", &Preprocessor::handleProtectSingleArgIgnore },
+        { "data_public_key", &Preprocessor::handleProtectKey },
+        { "data_decrypt_key", &Preprocessor::handleProtectKey },
+        { "data_block", &Preprocessor::handleProtectBlock },
+        { "digest_keyowner", &Preprocessor::handleProtectSingleArgIgnore },
+        { "digest_key_method", &Preprocessor::handleProtectSingleArgIgnore },
+        { "digest_keyname", &Preprocessor::handleProtectSingleArgIgnore },
+        { "digest_public_key", &Preprocessor::handleProtectKey },
+        { "digest_decrypt_key", &Preprocessor::handleProtectKey },
+        { "digest_method", &Preprocessor::handleProtectSingleArgIgnore },
+        { "digest_block", &Preprocessor::handleProtectBlock },
+        { "key_keyowner", &Preprocessor::handleProtectSingleArgIgnore },
+        { "key_method", &Preprocessor::handleProtectSingleArgIgnore },
+        { "key_keyname", &Preprocessor::handleProtectSingleArgIgnore },
+        { "key_public_key", &Preprocessor::handleProtectKey },
+        { "key_block", &Preprocessor::handleProtectBlock },
+        { "decrypt_license", &Preprocessor::handleProtectLicense },
+        { "runtime_license", &Preprocessor::handleProtectLicense },
+        { "comment", &Preprocessor::handleProtectSingleArgIgnore },
+        { "reset", &Preprocessor::handleProtectReset },
+        { "viewport", &Preprocessor::handleProtectViewport }
+    };
+    // clang-format on
 }
 
 Preprocessor::Preprocessor(const Preprocessor& other) :
@@ -1092,7 +1129,35 @@ void Preprocessor::applyPragma(const PragmaDirectiveSyntax& pragma) {
 }
 
 void Preprocessor::applyProtectPragma(const PragmaDirectiveSyntax& pragma) {
-    addDiag(diag::WarnNotYetSupported, pragma.name.range());
+    if (pragma.args.empty()) {
+        Token last = pragma.getLastToken();
+        addDiag(diag::ExpectedProtectKey, last.location() + last.rawText().length());
+        return;
+    }
+
+    auto handle = [&](Token keyword, const PragmaExpressionSyntax* args) {
+        if (auto it = pragmaProtectHandlers.find(keyword.valueText());
+            it != pragmaProtectHandlers.end()) {
+            (this->*(it->second))(keyword, args);
+        }
+        else {
+            addDiag(diag::UnknownProtectKey, keyword.range()) << keyword.valueText();
+        }
+    };
+
+    for (auto arg : pragma.args) {
+        if (arg->kind == SyntaxKind::SimplePragmaExpression) {
+            auto& simple = arg->as<SimplePragmaExpressionSyntax>();
+            handle(simple.value, nullptr);
+        }
+        else if (arg->kind == SyntaxKind::NameValuePragmaExpression) {
+            auto& nvp = arg->as<NameValuePragmaExpressionSyntax>();
+            handle(nvp.name, nvp.value);
+        }
+        else {
+            addDiag(diag::ExpectedProtectKey, arg->sourceRange());
+        }
+    }
 }
 
 void Preprocessor::applyResetPragma(const PragmaDirectiveSyntax& pragma) {
@@ -1208,6 +1273,13 @@ void Preprocessor::ensurePragmaArgs(const PragmaDirectiveSyntax& pragma, size_t 
     }
 }
 
+void Preprocessor::ensureNoPragmaArgs(Token keyword, const PragmaExpressionSyntax* args) {
+    if (args) {
+        auto& diag = addDiag(diag::ExtraPragmaArgs, args->sourceRange());
+        diag << keyword.valueText();
+    }
+}
+
 Token Preprocessor::peek() {
     if (!currentToken)
         currentToken = nextProcessed();
@@ -1237,6 +1309,64 @@ Diagnostic& Preprocessor::addDiag(DiagCode code, SourceLocation location) {
 
 Diagnostic& Preprocessor::addDiag(DiagCode code, SourceRange range) {
     return diagnostics.add(code, range);
+}
+
+void Preprocessor::handleProtectBegin(Token keyword, const PragmaExpressionSyntax* args) {
+    ensureNoPragmaArgs(keyword, args);
+
+    if (protectEncryptDepth)
+        addDiag(diag::NestedProtectBegin, keyword.range());
+    protectEncryptDepth++;
+}
+
+void Preprocessor::handleProtectEnd(Token keyword, const PragmaExpressionSyntax* args) {
+    ensureNoPragmaArgs(keyword, args);
+
+    if (protectEncryptDepth)
+        protectEncryptDepth--;
+    else
+        addDiag(diag::ExtraProtectEnd, keyword.range()) << keyword.valueText();
+}
+
+void Preprocessor::handleProtectBeginProtected(Token keyword, const PragmaExpressionSyntax* args) {
+    ensureNoPragmaArgs(keyword, args);
+    protectDecryptDepth++;
+}
+
+void Preprocessor::handleProtectEndProtected(Token keyword, const PragmaExpressionSyntax* args) {
+    ensureNoPragmaArgs(keyword, args);
+
+    if (protectDecryptDepth)
+        protectDecryptDepth--;
+    else
+        addDiag(diag::ExtraProtectEnd, keyword.range()) << keyword.valueText();
+}
+
+void Preprocessor::handleProtectSingleArgIgnore(Token keyword, const PragmaExpressionSyntax* args) {
+    if (!args || args->kind != SyntaxKind::SimplePragmaExpression ||
+        args->as<SimplePragmaExpressionSyntax>().value.kind != TokenKind::StringLiteral) {
+
+        SourceRange range = args ? args->sourceRange() : keyword.range();
+        addDiag(diag::ExpectedProtectArg, range) << keyword.valueText();
+    }
+}
+
+void Preprocessor::handleProtectEncoding(Token, const PragmaExpressionSyntax*) {
+}
+
+void Preprocessor::handleProtectKey(Token, const PragmaExpressionSyntax*) {
+}
+
+void Preprocessor::handleProtectBlock(Token, const PragmaExpressionSyntax*) {
+}
+
+void Preprocessor::handleProtectLicense(Token, const PragmaExpressionSyntax*) {
+}
+
+void Preprocessor::handleProtectReset(Token, const PragmaExpressionSyntax*) {
+}
+
+void Preprocessor::handleProtectViewport(Token, const PragmaExpressionSyntax*) {
 }
 
 } // namespace slang
