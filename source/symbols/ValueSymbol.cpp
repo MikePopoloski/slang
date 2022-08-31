@@ -93,17 +93,8 @@ ValueSymbol::Driver& ValueSymbol::Driver::create(EvalContext& evalContext, Drive
     auto prefixMem = reinterpret_cast<ConstantRange*>(mem + sizeof(Driver));
 
     for (size_t i = path.size(); i > 0; i--) {
-        ConstantValue unused;
         auto& elem = *path[i - 1];
-
-        optional<ConstantRange> elemRange;
-        if (elem.kind == ExpressionKind::ElementSelect)
-            elemRange = elem.as<ElementSelectExpression>().evalIndex(evalContext, nullptr, unused);
-        else if (elem.kind == ExpressionKind::RangeSelect)
-            elemRange = elem.as<RangeSelectExpression>().evalRange(evalContext, nullptr);
-        else if (elem.kind == ExpressionKind::MemberAccess)
-            elemRange = elem.as<MemberAccessExpression>().getSelectRange();
-
+        auto elemRange = elem.evalSelector(evalContext);
         if (!elemRange)
             result->hasError = true;
         else

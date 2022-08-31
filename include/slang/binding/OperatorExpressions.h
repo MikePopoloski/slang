@@ -254,12 +254,6 @@ private:
 
 struct StreamingConcatenationExpressionSyntax;
 
-/// @cond NOPE
-#define RANGE(x) x(Simple) x(IndexedUp) x(IndexedDown) x(Bit)
-ENUM(WithRangeKind, RANGE) // RangeSelectionKind + Bit
-#undef RANGE
-/// @endcond
-
 /// Represents a streaming concatenation.
 class StreamingConcatenationExpression : public Expression {
 public:
@@ -267,20 +261,10 @@ public:
     /// concatenation. Otherwise, it's a right-to-left concatenation.
     const size_t sliceSize;
 
-    struct WithExpression {
-        WithRangeKind kind;
-        not_null<const Expression*> left;
-        const Expression* right;
-        optional<int32_t> width; // elaboration-time constant width
-
-        static optional<WithExpression> fromSyntax(const Expression& expr,
-                                                   const ElementSelectSyntax& syntax,
-                                                   const BindContext& context);
-    };
-
     struct StreamExpression {
         not_null<const Expression*> operand;
-        optional<WithExpression> with;
+        const Expression* withExpr;
+        optional<bitwidth_t> constantWithWidth;
     };
 
     StreamingConcatenationExpression(const Type& type, size_t sliceSize,
@@ -308,11 +292,8 @@ public:
     void visitExprs(TVisitor&& visitor) const {
         for (auto& stream : streams()) {
             stream.operand->visit(visitor);
-            if (stream.with) {
-                stream.with->left->visit(visitor);
-                if (stream.with->right)
-                    stream.with->right->visit(visitor);
-            }
+            if (stream.withExpr)
+                stream.withExpr->visit(visitor);
         }
     }
 

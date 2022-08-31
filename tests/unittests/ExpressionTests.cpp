@@ -1359,8 +1359,12 @@ auto testBitstream(const std::string& text, DiagCode code = DiagCode()) {
     Compilation compilation;
     compilation.addSyntaxTree(tree);
     auto& diags = compilation.getAllDiagnostics();
-    if (!diags.empty() && code.getSubsystem() != DiagSubsystem::Invalid)
-        CHECK(diags.back().code == code);
+    if (!diags.empty() && code) {
+        if (diags.back().code != code) {
+            CHECK(diags.back().code == code);
+            FAIL_CHECK(report(diags));
+        }
+    }
 
     return diags.size();
 }
@@ -1593,19 +1597,20 @@ TEST_CASE("Stream expression with") {
         { "byte b[4]; int a = {<<3{b with[0.5]}};", diag::ExprMustBeIntegral },
         { "byte b[4]; int a = {<<3{b with[{65{1'b1}}]}};", diag::IndexValueInvalid },
         { "byte b[4]; int a = {<<3{b with[4]}};", diag::IndexValueInvalid },
-        { "byte b[]; int a = {<<3{b with[-1]}};", diag::ValueMustBePositive },
         { "byte b[4]; int a = {<<3{b with[2-:-1]}};", diag::ValueMustBePositive },
-        { "byte b[4]; int a = {<<3{b with[2+:5]}};", diag::RangeWidthTooLarge },
+        { "byte b[4]; logic [39:0] a = {<<3{b with[2+:5]}};", diag::BadRangeExpression },
         { "byte b[3:0]; int a = {<<3{b with[2+:3]}};", diag::BadRangeExpression },
-        { "byte b[0:3]; int a = {<<3{b with[2:5]}};", diag::IndexValueInvalid },
-        { "byte b[]; int a = {<<3{b with[3:2]}};", diag::SelectEndianMismatch },
+        { "byte b[0:3]; int a = {<<3{b with[2:5]}};", diag::BadRangeExpression },
+        { "byte b[]; int a = {<<3{b with[3:2]}};", diag::SelectEndianDynamic },
         { "byte b[], c[4]; always {>>{b, {<<3{c with[b[0]:b[1]]}}}} = 9;",
           diag::BadStreamWithOrder },
-        { "int a[],b[],c[];bit d;assign {>>{b}}={<<{a with [2+:3],c,d}};", diag::BadStreamSize },
+        { "int a[],b[],c[];bit d;always {>>{b}}={<<{a with [2+:3],c,d}};", diag::BadStreamSize },
     };
 
-    for (const auto& test : illegal)
-        CHECK(testBitstream(test.sv, test.msg) == 1);
+    for (const auto& test : illegal) {
+        if (testBitstream(test.sv, test.msg) != 1)
+            FAIL_CHECK(test.sv);
+    }
 
     std::string legal[] = {
         R"(

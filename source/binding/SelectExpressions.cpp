@@ -446,7 +446,17 @@ Expression& RangeSelectExpression::fromSyntax(Compilation& compilation, Expressi
         return *result;
     }
 
-    // If not a queue, rhs must always be a constant integer.
+    // If this is a streaming concatenation's "with" range, we also don't
+    // require a constant width, but we'll try to validate it if we see
+    // that the bounds are constant anyway.
+    if (context.flags.has(BindFlags::StreamingWithRange)) {
+        if (context.inUnevaluatedBranch() || !context.tryEval(right) ||
+            (selectionKind == RangeSelectionKind::Simple && !context.tryEval(left))) {
+            result->type = compilation.emplace<QueueType>(elementType, 0u);
+            return *result;
+        }
+    }
+
     optional<int32_t> rv = context.evalInteger(right);
     if (!rv)
         return badExpr(compilation, result);
@@ -667,34 +677,38 @@ optional<ConstantRange> RangeSelectExpression::evalRange(EvalContext& context,
         return std::nullopt;
 
     const Type& valueType = *value().type;
+    optional<int32_t> li = cl.integer().as<int32_t>();
+    optional<int32_t> ri = cr.integer().as<int32_t>();
+    if (!li) {
+        context.addDiag(diag::IndexValueInvalid, left().sourceRange) << cl << valueType;
+        return std::nullopt;
+    }
+    if (!ri) {
+        context.addDiag(diag::IndexValueInvalid, right().sourceRange) << cr << valueType;
+        return std::nullopt;
+    }
+
+    ConstantRange result;
+    if (selectionKind == RangeSelectionKind::Simple) {
+        result = { *li, *ri };
+    }
+    else {
+        bool isLittleEndian = false;
+        if (valueType.hasFixedRange())
+            isLittleEndian = valueType.getFixedRange().isLittleEndian();
+
+        auto range = ConstantRange::getIndexedRange(*li, *ri, isLittleEndian,
+                                                    selectionKind == RangeSelectionKind::IndexedUp);
+        if (!range) {
+            context.addDiag(diag::RangeWidthOverflow, sourceRange);
+            return std::nullopt;
+        }
+
+        result = *range;
+    }
+
     if (valueType.hasFixedRange()) {
-        ConstantRange result;
         ConstantRange valueRange = valueType.getFixedRange();
-
-        if (selectionKind == RangeSelectionKind::Simple) {
-            result = type->getFixedRange();
-        }
-        else {
-            optional<int32_t> l = cl.integer().as<int32_t>();
-            if (!l) {
-                context.addDiag(diag::IndexValueInvalid, left().sourceRange) << cl << valueType;
-                return std::nullopt;
-            }
-
-            optional<int32_t> r = cr.integer().as<int32_t>();
-            ASSERT(r);
-
-            auto range =
-                ConstantRange::getIndexedRange(*l, *r, valueRange.isLittleEndian(),
-                                               selectionKind == RangeSelectionKind::IndexedUp);
-            if (!range) {
-                context.addDiag(diag::RangeWidthOverflow, sourceRange);
-                return std::nullopt;
-            }
-
-            result = *range;
-        }
-
         if (!warnedAboutRange &&
             (!valueRange.containsPoint(result.left) || !valueRange.containsPoint(result.right))) {
             auto& diag = context.addDiag(diag::BadRangeExpression, sourceRange);
@@ -718,35 +732,6 @@ optional<ConstantRange> RangeSelectExpression::evalRange(EvalContext& context,
         result.right = valueRange.translateIndex(result.right) * width;
 
         return result;
-    }
-
-    optional<int32_t> li = cl.integer().as<int32_t>();
-    optional<int32_t> ri = cr.integer().as<int32_t>();
-    if (!li) {
-        context.addDiag(diag::IndexValueInvalid, left().sourceRange) << cl << valueType;
-        return std::nullopt;
-    }
-    if (!ri) {
-        context.addDiag(diag::IndexValueInvalid, right().sourceRange) << cr << valueType;
-        return std::nullopt;
-    }
-
-    int32_t l = *li;
-    int32_t r = *ri;
-    ConstantRange result;
-
-    if (selectionKind == RangeSelectionKind::Simple) {
-        result = { l, r };
-    }
-    else {
-        auto range = ConstantRange::getIndexedRange(l, r, false,
-                                                    selectionKind == RangeSelectionKind::IndexedUp);
-        if (!range) {
-            context.addDiag(diag::RangeWidthOverflow, sourceRange);
-            return std::nullopt;
-        }
-
-        result = *range;
     }
 
     // Out of bounds ranges are allowed, we just issue a warning.
