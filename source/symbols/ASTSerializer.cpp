@@ -168,7 +168,7 @@ void ASTSerializer::writeProperty(string_view name) {
 
 template<typename T>
 void ASTSerializer::visit(const T& elem, bool inMembersArray) {
-    // TODO: remove once we no longer support gcc-8
+    // TODO: remove once we no longer support gcc-10
     (void)inMembersArray;
 
     if constexpr (std::is_base_of_v<Expression, T>) {
