@@ -184,6 +184,8 @@ private:
     void applyDiagnosticPragma(const PragmaDirectiveSyntax& pragma);
     void ensurePragmaArgs(const PragmaDirectiveSyntax& pragma, size_t count);
     void ensureNoPragmaArgs(Token keyword, const PragmaExpressionSyntax* args);
+    optional<int32_t> requireInt32(const PragmaExpressionSyntax& expr);
+    optional<uint32_t> requireUInt32(const PragmaExpressionSyntax& expr);
 
     // Pragma protect handlers
     void handleProtectBegin(Token keyword, const PragmaExpressionSyntax* args);
@@ -367,6 +369,9 @@ private:
     uint32_t includeDepth = 0;
     uint32_t protectEncryptDepth = 0;
     uint32_t protectDecryptDepth = 0;
+    uint32_t protectLineLength = 0;
+    uint32_t protectBytes = 0;
+    ProtectEncoding protectEncoding = ProtectEncoding::Base64;
 
     // Parser for numeric literals in pragma expressions.
     NumberParser numberParser;

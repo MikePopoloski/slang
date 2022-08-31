@@ -1136,13 +1136,11 @@ void Preprocessor::applyProtectPragma(const PragmaDirectiveSyntax& pragma) {
     }
 
     auto handle = [&](Token keyword, const PragmaExpressionSyntax* args) {
-        if (auto it = pragmaProtectHandlers.find(keyword.valueText());
-            it != pragmaProtectHandlers.end()) {
+        auto text = keyword.valueText();
+        if (auto it = pragmaProtectHandlers.find(text); it != pragmaProtectHandlers.end())
             (this->*(it->second))(keyword, args);
-        }
-        else {
-            addDiag(diag::UnknownProtectKey, keyword.range()) << keyword.valueText();
-        }
+        else if (!text.empty())
+            addDiag(diag::UnknownProtectKey, keyword.range()) << text;
     };
 
     for (auto arg : pragma.args) {
@@ -1280,6 +1278,45 @@ void Preprocessor::ensureNoPragmaArgs(Token keyword, const PragmaExpressionSynta
     }
 }
 
+optional<int32_t> Preprocessor::requireInt32(const PragmaExpressionSyntax& expr) {
+    auto checkResult = [&](const SVInt& svi) -> optional<int32_t> {
+        auto value = svi.as<int32_t>();
+        if (!value) {
+            addDiag(diag::InvalidPragmaNumber, expr.sourceRange());
+            return {};
+        }
+
+        return *value;
+    };
+
+    if (expr.kind == SyntaxKind::SimplePragmaExpression) {
+        auto token = expr.as<SimplePragmaExpressionSyntax>().value;
+        if (token.kind == TokenKind::IntegerLiteral)
+            return checkResult(token.intValue());
+        else if (token.kind == TokenKind::RealLiteral)
+            return checkResult(SVInt::fromDouble(32, token.realValue(), true));
+    }
+    else if (expr.kind == SyntaxKind::NumberPragmaExpression) {
+        return checkResult(expr.as<NumberPragmaExpressionSyntax>().value.intValue());
+    }
+
+    addDiag(diag::InvalidPragmaNumber, expr.sourceRange());
+    return {};
+}
+
+optional<uint32_t> Preprocessor::requireUInt32(const PragmaExpressionSyntax& expr) {
+    auto result = requireInt32(expr);
+    if (!result)
+        return {};
+
+    if (*result < 0) {
+        addDiag(diag::PragmaNumberPositive, expr.sourceRange());
+        return {};
+    }
+
+    return uint32_t(*result);
+}
+
 Token Preprocessor::peek() {
     if (!currentToken)
         currentToken = nextProcessed();
@@ -1351,22 +1388,142 @@ void Preprocessor::handleProtectSingleArgIgnore(Token keyword, const PragmaExpre
     }
 }
 
-void Preprocessor::handleProtectEncoding(Token, const PragmaExpressionSyntax*) {
+void Preprocessor::handleProtectEncoding(Token keyword, const PragmaExpressionSyntax* args) {
+    if (!args || args->kind != SyntaxKind::ParenPragmaExpression ||
+        args->as<ParenPragmaExpressionSyntax>().values.empty()) {
+        addDiag(diag::ProtectArgList, args ? args->sourceRange() : keyword.range())
+            << keyword.valueText();
+        return;
+    }
+
+    for (auto arg : args->as<ParenPragmaExpressionSyntax>().values) {
+        if (arg->kind != SyntaxKind::NameValuePragmaExpression) {
+            addDiag(diag::ProtectArgList, arg->sourceRange()) << keyword.valueText();
+            continue;
+        }
+
+        auto& nvp = arg->as<NameValuePragmaExpressionSyntax>();
+        auto name = nvp.name.valueText();
+        if (name == "enctype"sv) {
+            auto value = nvp.value->getFirstToken();
+
+            std::string valueText(value.valueText());
+            strToLower(valueText);
+
+            if (valueText == "uuencode"sv) {
+                protectEncoding = ProtectEncoding::UUEncode;
+            }
+            else if (valueText == "base64"sv) {
+                protectEncoding = ProtectEncoding::Base64;
+            }
+            else if (valueText == "quoted-printable"sv) {
+                protectEncoding = ProtectEncoding::QuotedPrintable;
+            }
+            else if (valueText == "raw"sv) {
+                protectEncoding = ProtectEncoding::Raw;
+            }
+            else {
+                protectEncoding = ProtectEncoding::Raw;
+                addDiag(diag::UnknownProtectEncoding, value.range()) << value.valueText();
+            }
+        }
+        else if (name == "line_length"sv) {
+            if (auto num = requireUInt32(*nvp.value))
+                protectLineLength = *num;
+        }
+        else if (name == "bytes"sv) {
+            if (auto num = requireUInt32(*nvp.value))
+                protectBytes = *num;
+        }
+        else if (!name.empty()) {
+            addDiag(diag::UnknownProtectOption, nvp.name.range()) << keyword.valueText() << name;
+        }
+    }
 }
 
-void Preprocessor::handleProtectKey(Token, const PragmaExpressionSyntax*) {
+void Preprocessor::handleProtectKey(Token keyword, const PragmaExpressionSyntax* args) {
+    ensureNoPragmaArgs(keyword, args);
+
+    // TODO: skip the key
 }
 
-void Preprocessor::handleProtectBlock(Token, const PragmaExpressionSyntax*) {
+void Preprocessor::handleProtectBlock(Token keyword, const PragmaExpressionSyntax* args) {
+    ensureNoPragmaArgs(keyword, args);
+
+    // TODO: skip the block
 }
 
-void Preprocessor::handleProtectLicense(Token, const PragmaExpressionSyntax*) {
+void Preprocessor::handleProtectLicense(Token keyword, const PragmaExpressionSyntax* args) {
+    if (!args || args->kind != SyntaxKind::ParenPragmaExpression ||
+        args->as<ParenPragmaExpressionSyntax>().values.empty()) {
+        addDiag(diag::ProtectArgList, args ? args->sourceRange() : keyword.range())
+            << keyword.valueText();
+        return;
+    }
+
+    for (auto arg : args->as<ParenPragmaExpressionSyntax>().values) {
+        if (arg->kind != SyntaxKind::NameValuePragmaExpression) {
+            addDiag(diag::ProtectArgList, arg->sourceRange()) << keyword.valueText();
+            continue;
+        }
+
+        auto& nvp = arg->as<NameValuePragmaExpressionSyntax>();
+        auto name = nvp.name.valueText();
+        if (name == "library"sv || name == "entry"sv || name == "feature"sv || name == "exit"sv) {
+            if (nvp.value->kind != SyntaxKind::SimplePragmaExpression ||
+                nvp.value->as<SimplePragmaExpressionSyntax>().value.kind !=
+                    TokenKind::StringLiteral) {
+                addDiag(diag::ExpectedProtectArg, nvp.value->sourceRange()) << name;
+            }
+        }
+        else if (name == "match"sv) {
+            requireInt32(*nvp.value);
+        }
+        else if (!name.empty()) {
+            addDiag(diag::UnknownProtectOption, nvp.name.range()) << keyword.valueText() << name;
+        }
+    }
 }
 
-void Preprocessor::handleProtectReset(Token, const PragmaExpressionSyntax*) {
+void Preprocessor::handleProtectReset(Token keyword, const PragmaExpressionSyntax* args) {
+    ensureNoPragmaArgs(keyword, args);
+
+    // TODO: handle the reset
 }
 
-void Preprocessor::handleProtectViewport(Token, const PragmaExpressionSyntax*) {
+void Preprocessor::handleProtectViewport(Token keyword, const PragmaExpressionSyntax* args) {
+    if (!args || args->kind != SyntaxKind::ParenPragmaExpression ||
+        args->as<ParenPragmaExpressionSyntax>().values.size() != 2) {
+        addDiag(diag::InvalidPragmaViewport, args ? args->sourceRange() : keyword.range());
+        return;
+    }
+
+    auto checkOption = [&](size_t index, string_view name) {
+        auto syntax = args->as<ParenPragmaExpressionSyntax>().values[index];
+        if (syntax->kind != SyntaxKind::NameValuePragmaExpression) {
+            addDiag(diag::InvalidPragmaViewport, syntax->sourceRange());
+            return false;
+        }
+
+        auto& nvp = syntax->as<NameValuePragmaExpressionSyntax>();
+        if (nvp.name.valueText() != name) {
+            addDiag(diag::InvalidPragmaViewport, nvp.name.range());
+            return false;
+        }
+
+        if (nvp.value->kind != SyntaxKind::SimplePragmaExpression ||
+            nvp.value->as<SimplePragmaExpressionSyntax>().value.kind != TokenKind::StringLiteral) {
+            addDiag(diag::InvalidPragmaViewport, nvp.value->sourceRange());
+            return false;
+        }
+
+        return true;
+    };
+
+    if (!checkOption(0, "object"sv))
+        return;
+
+    checkOption(1, "access"sv);
 }
 
 } // namespace slang

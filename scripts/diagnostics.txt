@@ -96,6 +96,12 @@ warning unknown-protect-key UnknownProtectKey "unknown pragma protect keyword '{
 warning expected-protect-arg ExpectedProtectArg "'{}' pragma expects a single string argument"
 warning nested-protect-begin NestedProtectBegin "nested pragma protect begin-end blocks are not allowed"
 warning extra-protect-end ExtraProtectEnd "pragma protect '{}' seen without corresponding start of block"
+warning protect-arglist ProtectArgList "protect {} directive expects a parenthesized list of key=value options"
+warning unknown-protect-encoding UnknownProtectEncoding "unknown protect encoding '{}', treating as 'raw' -- source text may not be processed correctly"
+warning unknown-protect-option UnknownProtectOption "unknown protect {} option '{}'"
+warning invalid-pragma-number InvalidPragmaNumber "expected a 32-bit integer value for pragma option"
+warning pragma-number-positive PragmaNumberPositive "pragma option value must be positive"
+warning invalid-pragma-viewport InvalidPragmaViewport "pragma protect viewport requires options to be specified in the form (object = <string>, access = <string>)"
 
 subsystem Parser
 error ExpectedIdentifier "expected identifier"
@@ -909,7 +915,9 @@ group default = { real-underflow real-overflow vector-overflow int-overflow unco
                   nonblocking-final constraint-missing missing-format dpi-spec enum-range udp-port-empty
                   lifetime-prototype net-inconsistent port-coercion empty-body reversed-range
                   invalid-source-encoding index-oob range-oob range-width-oob expected-protect-arg
-                  unknown-protect-key expected-protect-key nested-protect-begin extra-protect-end }
+                  unknown-protect-key expected-protect-key nested-protect-begin extra-protect-end
+                  protect-arglist unknown-protect-encoding unknown-protect-option invalid-pragma-number
+                  invalid-pragma-viewport pragma-number-positive }
 
 group extra = { empty-member empty-stmt dup-import pointless-void-cast case-gen-none case-gen-dup
                 unused-result format-real ignored-slice task-ignored width-trunc dup-attr event-const

@@ -89,14 +89,10 @@ public:
             return nullptr;
 
         std::string& str = val.str();
-        if (upper) {
-            std::transform(str.begin(), str.end(), str.begin(),
-                           [](unsigned char c) { return std::toupper(c); });
-        }
-        else {
-            std::transform(str.begin(), str.end(), str.begin(),
-                           [](unsigned char c) { return std::tolower(c); });
-        }
+        if (upper)
+            strToUpper(str);
+        else
+            strToLower(str);
         return val;
     }
 

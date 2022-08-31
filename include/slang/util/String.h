@@ -43,6 +43,14 @@ optional<uint32_t> strToUInt(string_view str, size_t* pos = nullptr, int base = 
 /// @return the converted value, or nullopt if conversion fails (invalid string, overflow, etc).
 optional<double> strToDouble(string_view str, size_t* pos = nullptr);
 
+/// Converts the provided string to all uppercase characters (assuming ASCII contents).
+/// The string is converted in place.
+void strToUpper(std::string& str);
+
+/// Converts the provided string to all lowercase characters (assuming ASCII contents).
+/// The string is converted in place.
+void strToLower(std::string& str);
+
 /// Determines the number of edits to the left string that are required to
 /// change it into the right string.
 /// If @a allowReplacements is true, characters can be substituted as needed.
