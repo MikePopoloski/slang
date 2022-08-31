@@ -114,9 +114,6 @@ void Driver::addStandardArgs() {
     cmdLine.add("--allow-dup-initial-drivers", options.allowDupInitialDrivers,
                 "Allow signals driven in an always_comb or always_ff block to also be driven "
                 "by initial blocks.");
-    cmdLine.add(
-        "--allow-redefinition", options.allowRedefinition,
-        "Allow redefining a module. When elaborating, all instances will use the last definition");
     cmdLine.add("--strict-driver-checking", options.strictDriverChecking,
                 "Perform strict driver checking, which currently means disabling "
                 "procedural 'for' loop unrolling.");
@@ -349,8 +346,9 @@ bool Driver::processOptions() {
     diagEngine.setErrorLimit((int)options.errorLimit.value_or(20));
     diagEngine.setDefaultWarnings();
 
-    if (!options.allowRedefinition)
-        diagEngine.setSeverity(diag::Redefinition, DiagnosticSeverity::Error);
+    // Demoted to warning just to get the -W flag options, but we really
+    // want it to be an error by default.
+    diagEngine.setSeverity(diag::Redefinition, DiagnosticSeverity::Error);
 
     if (options.compat == "vcs") {
         diagEngine.setSeverity(diag::StaticInitializerMustBeExplicit, DiagnosticSeverity::Ignored);
@@ -631,8 +629,6 @@ Bag Driver::createOptionBag() const {
         coptions.allowHierarchicalConst = true;
     if (options.allowDupInitialDrivers == true)
         coptions.allowDupInitialDrivers = true;
-    if (options.allowRedefinition == true)
-        coptions.allowRedefinition = true;
     if (options.relaxEnumConversions == true)
         coptions.relaxEnumConversions = true;
     if (options.strictDriverChecking == true)
