@@ -629,7 +629,7 @@ endmodule
 
     auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 2);
-    CHECK(diags[0].code == diag::IndexValueInvalid);
+    CHECK(diags[0].code == diag::IndexOOB);
     CHECK(diags[1].code == diag::NotBooleanConvertible);
 }
 
@@ -1476,7 +1476,7 @@ endmodule
     CHECK(diags[4].code == diag::ExprMustBeIntegral);
     CHECK(diags[5].code == diag::NotAProduction);
     CHECK(diags[6].code == diag::TooFewArguments);
-    CHECK(diags[7].code == diag::IndexValueInvalid);
+    CHECK(diags[7].code == diag::IndexOOB);
     CHECK(diags[8].code == diag::TooFewArguments);
 }
 

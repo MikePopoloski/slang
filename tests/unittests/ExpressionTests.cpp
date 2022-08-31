@@ -793,12 +793,12 @@ endmodule
 
     auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 6);
-    CHECK(diags[0].code == diag::IndexValueInvalid);
-    CHECK(diags[1].code == diag::IndexValueInvalid);
-    CHECK(diags[2].code == diag::BadRangeExpression);
-    CHECK(diags[3].code == diag::BadRangeExpression);
-    CHECK(diags[4].code == diag::BadRangeExpression);
-    CHECK(diags[5].code == diag::BadRangeExpression);
+    CHECK(diags[0].code == diag::IndexOOB);
+    CHECK(diags[1].code == diag::IndexOOB);
+    CHECK(diags[2].code == diag::RangeOOB);
+    CHECK(diags[3].code == diag::RangeOOB);
+    CHECK(diags[4].code == diag::RangeOOB);
+    CHECK(diags[5].code == diag::RangeOOB);
 }
 
 TEST_CASE("Empty concat error") {
@@ -1595,12 +1595,12 @@ TEST_CASE("Stream expression with") {
         { "byte b[4]; int a = {<<3{b with[]}};", diag::ExpectedExpression },
         { "int a; byte b[4] = {<<3{a with [2]}};", diag::BadStreamWithType },
         { "byte b[4]; int a = {<<3{b with[0.5]}};", diag::ExprMustBeIntegral },
-        { "byte b[4]; int a = {<<3{b with[{65{1'b1}}]}};", diag::IndexValueInvalid },
-        { "byte b[4]; int a = {<<3{b with[4]}};", diag::IndexValueInvalid },
+        { "byte b[4]; int a = {<<3{b with[{65{1'b1}}]}};", diag::IndexOOB },
+        { "byte b[4]; int a = {<<3{b with[4]}};", diag::IndexOOB },
         { "byte b[4]; int a = {<<3{b with[2-:-1]}};", diag::ValueMustBePositive },
-        { "byte b[4]; logic [39:0] a = {<<3{b with[2+:5]}};", diag::BadRangeExpression },
-        { "byte b[3:0]; int a = {<<3{b with[2+:3]}};", diag::BadRangeExpression },
-        { "byte b[0:3]; int a = {<<3{b with[2:5]}};", diag::BadRangeExpression },
+        { "byte b[4]; logic [39:0] a = {<<3{b with[2+:5]}};", diag::RangeOOB },
+        { "byte b[3:0]; int a = {<<3{b with[2+:3]}};", diag::RangeOOB },
+        { "byte b[0:3]; int a = {<<3{b with[2:5]}};", diag::RangeOOB },
         { "byte b[]; int a = {<<3{b with[3:2]}};", diag::SelectEndianDynamic },
         { "byte b[], c[4]; always {>>{b, {<<3{c with[b[0]:b[1]]}}}} = 9;",
           diag::BadStreamWithOrder },
@@ -2747,8 +2747,8 @@ endmodule
     REQUIRE(diags.size() == 5);
     CHECK(diags[0].code == diag::ConstEvalAssociativeElementNotFound);
     CHECK(diags[1].code == diag::ConstEvalAssociativeIndexInvalid);
-    CHECK(diags[2].code == diag::IndexValueInvalid);
-    CHECK(diags[3].code == diag::IndexValueInvalid);
+    CHECK(diags[2].code == diag::IndexOOB);
+    CHECK(diags[3].code == diag::IndexOOB);
     CHECK(diags[4].code == diag::ConstEvalFunctionIdentifiersMustBeLocal);
 }
 
@@ -2827,12 +2827,12 @@ endmodule
     CHECK(diags[2].code == diag::ExprMustBeIntegral);
     CHECK(diags[3].code == diag::SelectEndianMismatch);
     CHECK(diags[4].code == diag::ValueMustBePositive);
-    CHECK(diags[5].code == diag::BadRangeExpression);
+    CHECK(diags[5].code == diag::RangeOOB);
     CHECK(diags[6].code == diag::IndexValueInvalid);
-    CHECK(diags[7].code == diag::RangeWidthTooLarge);
+    CHECK(diags[7].code == diag::RangeWidthOOB);
     CHECK(diags[8].code == diag::ConstEvalNonConstVariable);
     CHECK(diags[9].code == diag::ValueMustBePositive);
-    CHECK(diags[10].code == diag::BadRangeExpression);
+    CHECK(diags[10].code == diag::RangeOOB);
     CHECK(diags[11].code == diag::ConstEvalFunctionIdentifiersMustBeLocal);
     CHECK(diags[12].code == diag::ConstEvalFunctionIdentifiersMustBeLocal);
     CHECK(diags[13].code == diag::IndexValueInvalid);

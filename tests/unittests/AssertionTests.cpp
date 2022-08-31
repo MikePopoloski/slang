@@ -261,7 +261,7 @@ endmodule
     auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 5);
     CHECK(diags[0].code == diag::UnboundedNotAllowed);
-    CHECK(diags[1].code == diag::BadRangeExpression);
+    CHECK(diags[1].code == diag::RangeOOB);
     CHECK(diags[2].code == diag::ConstEvalNonConstVariable);
     CHECK(diags[3].code == diag::AssertionDelayFormalType);
     CHECK(diags[4].code == diag::BadBinaryExpression);

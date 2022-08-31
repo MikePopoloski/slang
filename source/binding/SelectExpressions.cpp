@@ -172,7 +172,7 @@ Expression& ElementSelectExpression::fromSyntax(Compilation& compilation, Expres
         if (!context.inUnevaluatedBranch() && (selVal = context.tryEval(*selector))) {
             optional<int32_t> index = selVal.integer().as<int32_t>();
             if (!index || !valueType.getFixedRange().containsPoint(*index)) {
-                auto& diag = context.addDiag(diag::IndexValueInvalid, selector->sourceRange);
+                auto& diag = context.addDiag(diag::IndexOOB, selector->sourceRange);
                 diag << selVal;
                 diag << *value.type;
 
@@ -321,7 +321,7 @@ optional<ConstantRange> ElementSelectExpression::evalIndex(EvalContext& context,
     optional<int32_t> index = cs.integer().as<int32_t>();
     if (!index) {
         if (!warnedAboutIndex)
-            context.addDiag(diag::IndexValueInvalid, sourceRange) << cs << valType;
+            context.addDiag(diag::IndexOOB, sourceRange) << cs << valType;
         return std::nullopt;
     }
 
@@ -329,7 +329,7 @@ optional<ConstantRange> ElementSelectExpression::evalIndex(EvalContext& context,
         ConstantRange range = valType.getFixedRange();
         if (!range.containsPoint(*index)) {
             if (!warnedAboutIndex)
-                context.addDiag(diag::IndexValueInvalid, sourceRange) << cs << valType;
+                context.addDiag(diag::IndexOOB, sourceRange) << cs << valType;
             return std::nullopt;
         }
 
@@ -359,7 +359,7 @@ optional<ConstantRange> ElementSelectExpression::evalIndex(EvalContext& context,
         }
     }
     else if (*index < 0) {
-        context.addDiag(diag::IndexValueInvalid, sourceRange) << cs << valType;
+        context.addDiag(diag::IndexOOB, sourceRange) << cs << valType;
         return std::nullopt;
     }
 
@@ -470,7 +470,7 @@ Expression& RangeSelectExpression::fromSyntax(Compilation& compilation, Expressi
         // Helper function for validating the bounds of the selection.
         auto validateRange = [&](ConstantRange range) {
             if (!valueRange.containsPoint(range.left) || !valueRange.containsPoint(range.right)) {
-                auto& diag = context.addDiag(diag::BadRangeExpression, errorRange);
+                auto& diag = context.addDiag(diag::RangeOOB, errorRange);
                 diag << range.left << range.right;
                 diag << valueType;
 
@@ -535,7 +535,7 @@ Expression& RangeSelectExpression::fromSyntax(Compilation& compilation, Expressi
                 selectionRange = *range;
 
                 if (bitwidth_t(*rv) > valueRange.width()) {
-                    auto& diag = context.addDiag(diag::RangeWidthTooLarge, right.sourceRange);
+                    auto& diag = context.addDiag(diag::RangeWidthOOB, right.sourceRange);
                     diag << *rv;
                     diag << valueType;
                 }
@@ -711,7 +711,7 @@ optional<ConstantRange> RangeSelectExpression::evalRange(EvalContext& context,
         ConstantRange valueRange = valueType.getFixedRange();
         if (!warnedAboutRange &&
             (!valueRange.containsPoint(result.left) || !valueRange.containsPoint(result.right))) {
-            auto& diag = context.addDiag(diag::BadRangeExpression, sourceRange);
+            auto& diag = context.addDiag(diag::RangeOOB, sourceRange);
             diag << result.left << result.right;
             diag << valueType;
         }
@@ -747,7 +747,7 @@ optional<ConstantRange> RangeSelectExpression::evalRange(EvalContext& context,
         }
     }
     else if (result.left < 0 || result.right < 0) {
-        auto& diag = context.addDiag(diag::BadRangeExpression, sourceRange);
+        auto& diag = context.addDiag(diag::RangeOOB, sourceRange);
         diag << result.left << result.right;
         diag << valueType;
     }
