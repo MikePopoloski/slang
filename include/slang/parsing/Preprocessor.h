@@ -134,6 +134,7 @@ private:
     // Internal methods to grab and handle the next token
     Token nextProcessed();
     Token nextRaw();
+    void popSource();
 
     // directive handling methods
     Token handleDirectives(Token token);
@@ -347,6 +348,8 @@ private:
     optional<TimeScale> activeTimeScale;
     TokenKind defaultNetType = TokenKind::WireKeyword;
     TokenKind unconnectedDrive = TokenKind::Unknown;
+
+    uint32_t includeDepth = 0;
     int designElementDepth = 0;
 
     // Parser for numeric literals in pragma expressions.

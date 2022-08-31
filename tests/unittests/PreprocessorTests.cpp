@@ -1911,3 +1911,15 @@ TEST_CASE("Single preproc token diag location regress") {
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::ExpectedMember);
 }
+
+TEST_CASE("Preprocessor max include depth regress GH #600") {
+    auto& text = R"(
+`include "local.svh"
+)";
+
+    PreprocessorOptions ppOptions;
+    ppOptions.maxIncludeDepth = 1;
+
+    preprocess(text, Bag(ppOptions));
+    CHECK_DIAGNOSTICS_EMPTY;
+}

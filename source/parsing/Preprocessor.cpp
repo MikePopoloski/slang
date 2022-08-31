@@ -57,6 +57,12 @@ void Preprocessor::pushSource(SourceBuffer buffer) {
     lexerStack.emplace_back(std::make_unique<Lexer>(buffer, alloc, diagnostics, lexerOptions));
 }
 
+void Preprocessor::popSource() {
+    if (includeDepth)
+        includeDepth--;
+    lexerStack.pop_back();
+}
+
 void Preprocessor::predefine(const std::string& definition, string_view name) {
     Preprocessor pp(*this);
     pp.pushSource("`define " + definition + "\n", name);
@@ -308,7 +314,7 @@ Token Preprocessor::nextRaw() {
 
     // don't return EndOfFile tokens for included files, fall
     // through to loop to merge trivia
-    lexerStack.pop_back();
+    popSource();
     if (lexerStack.empty())
         return token;
 
@@ -330,7 +336,7 @@ Token Preprocessor::nextRaw() {
         if (token.kind != TokenKind::EndOfFile)
             break;
 
-        lexerStack.pop_back();
+        popSource();
         if (lexerStack.empty())
             break;
     }
@@ -407,12 +413,16 @@ Trivia Preprocessor::handleIncludeDirective(Token directive) {
         bool isSystem = path[0] == '<';
         path = path.substr(1, path.length() - 2);
         SourceBuffer buffer = sourceManager.readHeader(path, directive.location(), isSystem);
-        if (!buffer.id)
+        if (!buffer.id) {
             addDiag(diag::CouldNotOpenIncludeFile, fileName.range());
-        else if (lexerStack.size() >= options.maxIncludeDepth)
+        }
+        else if (includeDepth >= options.maxIncludeDepth) {
             addDiag(diag::ExceededMaxIncludeDepth, fileName.range());
-        else if (includeOnceHeaders.find(buffer.data.data()) == includeOnceHeaders.end())
+        }
+        else if (includeOnceHeaders.find(buffer.data.data()) == includeOnceHeaders.end()) {
+            includeDepth++;
             pushSource(buffer);
+        }
     }
 
     auto syntax = alloc.emplace<IncludeDirectiveSyntax>(directive, fileName);
