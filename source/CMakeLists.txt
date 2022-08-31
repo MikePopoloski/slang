@@ -134,6 +134,7 @@ add_library(
   parsing/ParserBase.cpp
   parsing/Preprocessor.cpp
   parsing/Preprocessor_macros.cpp
+  parsing/Preprocessor_pragmas.cpp
   parsing/Token.cpp
   ${CMAKE_CURRENT_BINARY_DIR}/AllSyntax.cpp
   ${CMAKE_CURRENT_BINARY_DIR}/TokenKind.cpp
