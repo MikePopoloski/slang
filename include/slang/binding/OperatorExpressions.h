@@ -272,20 +272,27 @@ public:
         not_null<const Expression*> left;
         const Expression* right;
         optional<int32_t> width; // elaboration-time constant width
+
+        static optional<WithExpression> fromSyntax(const Expression& expr,
+                                                   const ElementSelectSyntax& syntax,
+                                                   const BindContext& context);
     };
 
     struct StreamExpression {
         not_null<const Expression*> operand;
-        const WithExpression* with;
+        optional<WithExpression> with;
     };
 
     StreamingConcatenationExpression(const Type& type, size_t sliceSize,
-                                     span<const StreamExpression* const> streams,
+                                     span<const StreamExpression> streams,
                                      SourceRange sourceRange) :
         Expression(ExpressionKind::Streaming, type, sourceRange),
         sliceSize(sliceSize), streams_(streams) {}
 
-    span<const StreamExpression* const> streams() const { return streams_; }
+    bool isFixedSize() const;
+    size_t bitstreamWidth() const;
+
+    span<const StreamExpression> streams() const { return streams_; }
 
     ConstantValue evalImpl(EvalContext& context) const;
 
@@ -299,21 +306,18 @@ public:
 
     template<typename TVisitor>
     void visitExprs(TVisitor&& visitor) const {
-        for (auto stream : streams()) {
-            stream->operand->visit(visitor);
-            if (stream->with) {
-                stream->with->left->visit(visitor);
-                if (stream->with->right)
-                    stream->with->right->visit(visitor);
+        for (auto& stream : streams()) {
+            stream.operand->visit(visitor);
+            if (stream.with) {
+                stream.with->left->visit(visitor);
+                if (stream.with->right)
+                    stream.with->right->visit(visitor);
             }
         }
     }
 
-    bool isFixedSize() const;
-    size_t bitstreamWidth() const;
-
 private:
-    span<const StreamExpression* const> streams_;
+    span<const StreamExpression> streams_;
 };
 
 struct OpenRangeExpressionSyntax;

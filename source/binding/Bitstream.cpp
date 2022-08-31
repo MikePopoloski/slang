@@ -99,16 +99,16 @@ static std::pair<size_t, size_t> dynamicBitstreamSize(
         return { 0, concat.bitstreamWidth() };
 
     size_t multiplier = 0, fixedSize = 0;
-    for (auto stream : concat.streams()) {
-        auto& operand = *stream->operand;
+    for (auto& stream : concat.streams()) {
+        auto& operand = *stream.operand;
         size_t multiplierStream = 0, fixedSizeStream = 0;
 
-        if (stream->with) {
+        if (stream.with) {
             auto [multiplierElem, fixedSizeElem] =
                 dynamicBitstreamSize(*operand.type->getArrayElementType(), mode);
             ASSERT(!multiplierElem);
-            if (stream->with->width) {
-                auto rw = static_cast<size_t>(*stream->with->width);
+            if (stream.with->width) {
+                auto rw = static_cast<size_t>(*stream.with->width);
                 multiplierStream = multiplierElem * rw;
                 fixedSizeStream = fixedSizeElem * rw;
             }
@@ -446,14 +446,14 @@ static bool withAfterDynamic(const StreamingConcatenationExpression& lhs,
     // The expression within the "with" is evaluated immediately before its corresponding array is
     // streamed. The first dynamically sized item without "with" constraints accept all the
     // available data. If the former appears after the latter, evaluation order has conflict.
-    for (auto stream : lhs.streams()) {
-        auto& operand = *stream->operand;
+    for (auto& stream : lhs.streams()) {
+        auto& operand = *stream.operand;
         if (operand.kind == ExpressionKind::Streaming) {
             if (withAfterDynamic(operand.as<StreamingConcatenationExpression>(), dynamic, with))
                 return true;
         }
-        else if (stream->with) {
-            with = &stream->with->left->sourceRange;
+        else if (stream.with) {
+            with = &stream.with->left->sourceRange;
             if (dynamic)
                 return true;
         }
@@ -646,8 +646,8 @@ static bool unpackConcatenation(const StreamingConcatenationExpression& lhs, Pac
                                 const PackIterator iterEnd, bitwidth_t& bitOffset,
                                 size_t& dynamicSize, EvalContext& context,
                                 SmallVector<ConstantValue>* dryRun = nullptr) {
-    for (auto stream : lhs.streams()) {
-        auto& operand = *stream->operand;
+    for (auto& stream : lhs.streams()) {
+        auto& operand = *stream.operand;
         if (operand.kind == ExpressionKind::Streaming) {
             auto& concat = operand.as<StreamingConcatenationExpression>();
             if (dryRun || !concat.sliceSize) {
@@ -688,8 +688,8 @@ static bool unpackConcatenation(const StreamingConcatenationExpression& lhs, Pac
             const Type* elemType = nullptr;
             ConstantRange with;
             ConstantValue rvalue;
-            if (stream->with) {
-                auto range = Bitstream::evaluateWith(arrayType, *stream->with, context);
+            if (stream.with) {
+                auto range = Bitstream::evaluateWith(arrayType, *stream.with, context);
                 if (!range)
                     return false;
 
@@ -697,7 +697,7 @@ static bool unpackConcatenation(const StreamingConcatenationExpression& lhs, Pac
                 elemType = arrayType.getArrayElementType();
                 ASSERT(elemType != nullptr);
 
-                if (dynamicSize > 0 && !stream->with->width) {
+                if (dynamicSize > 0 && !stream.with->width) {
                     auto withSize = elemType->bitstreamWidth() * with.width();
                     if (withSize >= dynamicSize)
                         dynamicSize = 0;
@@ -723,7 +723,7 @@ static bool unpackConcatenation(const StreamingConcatenationExpression& lhs, Pac
                 if (!lvalue)
                     return false;
 
-                if (stream->with) {
+                if (stream.with) {
                     if (with.left != with.right && arrayType.isQueue() && !rvalue.isQueue())
                         rvalue = constContainer(arrayType, rvalue.elements());
 

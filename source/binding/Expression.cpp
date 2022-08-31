@@ -397,9 +397,9 @@ bool Expression::requireLValue(const BindContext& context, SourceLocation locati
         case ExpressionKind::Streaming: {
             ASSERT(!longestStaticPrefix);
             auto& stream = as<StreamingConcatenationExpression>();
-            for (auto op : stream.streams()) {
-                if (!op->operand->requireLValue(context, location, flags | AssignFlags::InConcat,
-                                                longestStaticPrefix, customEvalContext)) {
+            for (auto& op : stream.streams()) {
+                if (!op.operand->requireLValue(context, location, flags | AssignFlags::InConcat,
+                                               longestStaticPrefix, customEvalContext)) {
                     return false;
                 }
             }
