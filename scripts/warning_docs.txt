@@ -662,9 +662,6 @@ A `pragma protect option expected a valid 32-bit integer value but received some
 `pragma protect encoding=(enctype="base64", line_length="hello")
 ```
 
--Wpragma-number-positive
-<ignored>
-
 -Winvalid-pragma-viewport
 A `pragma protect viewport directive was given invalid options. All such directives must be of
 the form (object = <string>, access = <string>)

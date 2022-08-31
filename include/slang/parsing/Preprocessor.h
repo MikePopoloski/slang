@@ -184,7 +184,6 @@ private:
     void applyDiagnosticPragma(const PragmaDirectiveSyntax& pragma);
     void ensurePragmaArgs(const PragmaDirectiveSyntax& pragma, size_t count);
     void ensureNoPragmaArgs(Token keyword, const PragmaExpressionSyntax* args);
-    optional<int32_t> requireInt32(const PragmaExpressionSyntax& expr);
     optional<uint32_t> requireUInt32(const PragmaExpressionSyntax& expr);
 
     // Pragma protect handlers

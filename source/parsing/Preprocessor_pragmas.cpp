@@ -315,15 +315,15 @@ void Preprocessor::ensureNoPragmaArgs(Token keyword, const PragmaExpressionSynta
     }
 }
 
-optional<int32_t> Preprocessor::requireInt32(const PragmaExpressionSyntax& expr) {
-    auto checkResult = [&](const SVInt& svi) -> optional<int32_t> {
+optional<uint32_t> Preprocessor::requireUInt32(const PragmaExpressionSyntax& expr) {
+    auto checkResult = [&](const SVInt& svi) -> optional<uint32_t> {
         auto value = svi.as<int32_t>();
-        if (!value) {
+        if (!value || *value < 0) {
             addDiag(diag::InvalidPragmaNumber, expr.sourceRange());
             return {};
         }
 
-        return *value;
+        return uint32_t(*value);
     };
 
     if (expr.kind == SyntaxKind::SimplePragmaExpression) {
@@ -339,19 +339,6 @@ optional<int32_t> Preprocessor::requireInt32(const PragmaExpressionSyntax& expr)
 
     addDiag(diag::InvalidPragmaNumber, expr.sourceRange());
     return {};
-}
-
-optional<uint32_t> Preprocessor::requireUInt32(const PragmaExpressionSyntax& expr) {
-    auto result = requireInt32(expr);
-    if (!result)
-        return {};
-
-    if (*result < 0) {
-        addDiag(diag::PragmaNumberPositive, expr.sourceRange());
-        return {};
-    }
-
-    return uint32_t(*result);
 }
 
 void Preprocessor::handleProtectBegin(Token keyword, const PragmaExpressionSyntax* args) {
@@ -483,7 +470,7 @@ void Preprocessor::handleProtectLicense(Token keyword, const PragmaExpressionSyn
             }
         }
         else if (name == "match"sv) {
-            requireInt32(*nvp.value);
+            requireUInt32(*nvp.value);
         }
         else if (!name.empty()) {
             addDiag(diag::UnknownProtectOption, nvp.name.range()) << keyword.valueText() << name;
