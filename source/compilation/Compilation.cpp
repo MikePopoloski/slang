@@ -440,7 +440,8 @@ const Definition* Compilation::getDefinition(const ModuleDeclarationSyntax& synt
 }
 
 template<typename T, typename U>
-static void reportRedefinition(const Scope& scope, const T& newSym, const U& oldSym, DiagCode code = diag::Redefinition) {
+static void reportRedefinition(const Scope& scope, const T& newSym, const U& oldSym,
+                               DiagCode code = diag::Redefinition) {
     if (!newSym.name.empty()) {
         auto& diag = scope.addDiag(code, newSym.location);
         diag << newSym.name;
