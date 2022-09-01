@@ -473,7 +473,8 @@ void Compilation::createDefinition(const Scope& scope, LookupLocation location,
     auto result = it->second.get();
     if (targetScope == root.get()) {
         auto& topDef = topDefinitions[result->name].first;
-        ASSERT(!topDef);
+        if (!redefined)
+            ASSERT(!topDef);
 
         topDef = result;
         if (auto primIt = udpMap.find(result->name); primIt != udpMap.end())
