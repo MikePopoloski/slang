@@ -57,7 +57,7 @@ jobs:
             flags: '-DCMAKE_BUILD_TYPE=Debug -DSLANG_COVERAGE=ON -DSLANG_SANITIZERS=undefined,address -DSLANG_RUN_CLANG_TIDY=ON'
           - compiler: g++-12
             flags: '-DCMAKE_BUILD_TYPE=Release'
-          - compiler: g++-8
+          - compiler: g++-9
             flags: '-DCMAKE_BUILD_TYPE=Debug'
 
     steps:
@@ -72,7 +72,7 @@ jobs:
         sudo add-apt-repository "deb http://apt.llvm.org/jammy/ llvm-toolchain-jammy-14 main"
         sudo add-apt-repository "deb http://archive.ubuntu.com/ubuntu focal main universe"
         sudo apt-get update
-        sudo apt-get install -y g++-12 g++-8 clang++-14 clang-tidy-14
+        sudo apt-get install -y g++-12 g++-9 clang++-14 clang-tidy-14
     - name: Build
       run: |
         export PATH="$HOME/.local/bin:$PATH"
