@@ -2840,3 +2840,24 @@ endmodule
     CHECK(diags[15].code == diag::IndexValueInvalid);
     CHECK(diags[16].code == diag::ConstEvalDynamicArrayRange);
 }
+
+TEST_CASE("Index oob tryEval regress GH #602") {
+    auto tree = SyntaxTree::fromText(R"(
+module top #(
+    parameter [2:0][4:0] IDX_MAP = {5'd1, 5'd3, 5'd4}
+);
+    logic [4:0] sig;
+
+    always_comb begin
+        for (int n = 0; n < 3; n++) begin
+            if (sig[IDX_MAP[n]] != 'h0) begin
+            end
+        end
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}

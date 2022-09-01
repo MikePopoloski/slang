@@ -215,10 +215,15 @@ ConstantValue ElementSelectExpression::evalImpl(EvalContext& context) const {
     if (!cv)
         return nullptr;
 
+    bool softFail = false;
     ConstantValue associativeIndex;
-    auto range = evalIndex(context, cv, associativeIndex);
-    if (!range && associativeIndex.bad())
-        return type->getDefaultValue();
+    auto range = evalIndex(context, cv, associativeIndex, softFail);
+    if (!range && associativeIndex.bad()) {
+        if (softFail)
+            return type->getDefaultValue();
+        else
+            return nullptr;
+    }
 
     // Handling for packed and unpacked arrays, all integer types.
     const Type& valType = *value().type;
@@ -263,9 +268,13 @@ LValue ElementSelectExpression::evalLValueImpl(EvalContext& context) const {
     if (!value().type->hasFixedRange())
         loadedVal = lval.load();
 
+    bool softFail = false;
     ConstantValue associativeIndex;
-    auto range = evalIndex(context, loadedVal, associativeIndex);
+    auto range = evalIndex(context, loadedVal, associativeIndex, softFail);
     if (!range && associativeIndex.bad()) {
+        if (!softFail)
+            return nullptr;
+
         // Add an out of bounds entry so that reads will return the default
         // and writes will be ignored.
         lval.addIndexOutOfBounds(type->getDefaultValue());
@@ -298,7 +307,8 @@ LValue ElementSelectExpression::evalLValueImpl(EvalContext& context) const {
 
 optional<ConstantRange> ElementSelectExpression::evalIndex(EvalContext& context,
                                                            const ConstantValue& val,
-                                                           ConstantValue& associativeIndex) const {
+                                                           ConstantValue& associativeIndex,
+                                                           bool& softFail) const {
     auto prevQ = context.getQueueTarget();
     if (val.isQueue())
         context.setQueueTarget(&val);
@@ -315,6 +325,7 @@ optional<ConstantRange> ElementSelectExpression::evalIndex(EvalContext& context,
             context.addDiag(diag::ConstEvalAssociativeIndexInvalid, selector().sourceRange) << cs;
         else
             associativeIndex = std::move(cs);
+        softFail = true;
         return std::nullopt;
     }
 
@@ -322,6 +333,7 @@ optional<ConstantRange> ElementSelectExpression::evalIndex(EvalContext& context,
     if (!index) {
         if (!warnedAboutIndex)
             context.addDiag(diag::IndexOOB, sourceRange) << cs << valType;
+        softFail = true;
         return std::nullopt;
     }
 
@@ -330,6 +342,7 @@ optional<ConstantRange> ElementSelectExpression::evalIndex(EvalContext& context,
         if (!range.containsPoint(*index)) {
             if (!warnedAboutIndex)
                 context.addDiag(diag::IndexOOB, sourceRange) << cs << valType;
+            softFail = true;
             return std::nullopt;
         }
 
@@ -355,11 +368,13 @@ optional<ConstantRange> ElementSelectExpression::evalIndex(EvalContext& context,
         if (*index < 0 || size_t(*index) >= maxIndex) {
             context.addDiag(diag::ConstEvalDynamicArrayIndex, sourceRange)
                 << cs << valType << maxIndex;
+            softFail = true;
             return std::nullopt;
         }
     }
     else if (*index < 0) {
         context.addDiag(diag::IndexOOB, sourceRange) << cs << valType;
+        softFail = true;
         return std::nullopt;
     }
 

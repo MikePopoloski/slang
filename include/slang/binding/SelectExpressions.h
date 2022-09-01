@@ -32,7 +32,7 @@ public:
                            EvalContext* customEvalContext) const;
 
     optional<ConstantRange> evalIndex(EvalContext& context, const ConstantValue& val,
-                                      ConstantValue& associativeIndex) const;
+                                      ConstantValue& associativeIndex, bool& softFail) const;
 
     void serializeTo(ASTSerializer& serializer) const;
 

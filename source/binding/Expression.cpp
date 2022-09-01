@@ -356,10 +356,11 @@ LValue Expression::evalLValue(EvalContext& context) const {
 }
 
 optional<ConstantRange> Expression::evalSelector(EvalContext& context) const {
-    ConstantValue unused;
+    ConstantValue unused1;
+    bool unused2;
     switch (kind) {
         case ExpressionKind::ElementSelect:
-            return as<ElementSelectExpression>().evalIndex(context, nullptr, unused);
+            return as<ElementSelectExpression>().evalIndex(context, nullptr, unused1, unused2);
         case ExpressionKind::RangeSelect:
             return as<RangeSelectExpression>().evalRange(context, nullptr);
         case ExpressionKind::MemberAccess:
