@@ -24,6 +24,9 @@ struct LexerOptions {
     uint32_t maxErrors = 16;
 };
 
+/// Possible encodings for encrypted text used in a pragma protect region.
+enum class ProtectEncoding { UUEncode, Base64, QuotedPrintable, Raw };
+
 /// The Lexer is responsible for taking source text and chopping it up into tokens.
 /// Tokens carry along leading "trivia", which is things like whitespace and comments,
 /// so that we can programmatically piece back together what the original file looked like.

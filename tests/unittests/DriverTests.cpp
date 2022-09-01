@@ -1,4 +1,5 @@
 #include "Test.h"
+#include <regex>
 
 #include "slang/driver/Driver.h"
 
@@ -105,16 +106,16 @@ TEST_CASE("Driver file preprocess") {
     CHECK(driver.runPreprocessor(true, false));
 
     auto output = OS::capturedStdout;
-    CHECK(startsWith(output, R"(
-module m;
-    // hello
-    string s = ")"));
+    output = std::regex_replace(output, std::regex("\r\n"), "\n");
 
-    CHECK(endsWith(output, R"(";
-    begin end
-endmodule
+    CHECK(startsWith(output, "\nmodule m;\n"
+                             "    // hello\n"
+                             "    string s = "));
 
-)"));
+    CHECK(endsWith(output, ";\n"
+                           "    begin end\n"
+                           "endmodule\n"
+                           "\n"));
 }
 
 TEST_CASE("Driver file preprocess with error") {

@@ -172,7 +172,7 @@ Expression& ElementSelectExpression::fromSyntax(Compilation& compilation, Expres
         if (!context.inUnevaluatedBranch() && (selVal = context.tryEval(*selector))) {
             optional<int32_t> index = selVal.integer().as<int32_t>();
             if (!index || !valueType.getFixedRange().containsPoint(*index)) {
-                auto& diag = context.addDiag(diag::IndexValueInvalid, selector->sourceRange);
+                auto& diag = context.addDiag(diag::IndexOOB, selector->sourceRange);
                 diag << selVal;
                 diag << *value.type;
 
@@ -215,10 +215,15 @@ ConstantValue ElementSelectExpression::evalImpl(EvalContext& context) const {
     if (!cv)
         return nullptr;
 
+    bool softFail = false;
     ConstantValue associativeIndex;
-    auto range = evalIndex(context, cv, associativeIndex);
-    if (!range && associativeIndex.bad())
-        return type->getDefaultValue();
+    auto range = evalIndex(context, cv, associativeIndex, softFail);
+    if (!range && associativeIndex.bad()) {
+        if (softFail)
+            return type->getDefaultValue();
+        else
+            return nullptr;
+    }
 
     // Handling for packed and unpacked arrays, all integer types.
     const Type& valType = *value().type;
@@ -263,9 +268,13 @@ LValue ElementSelectExpression::evalLValueImpl(EvalContext& context) const {
     if (!value().type->hasFixedRange())
         loadedVal = lval.load();
 
+    bool softFail = false;
     ConstantValue associativeIndex;
-    auto range = evalIndex(context, loadedVal, associativeIndex);
+    auto range = evalIndex(context, loadedVal, associativeIndex, softFail);
     if (!range && associativeIndex.bad()) {
+        if (!softFail)
+            return nullptr;
+
         // Add an out of bounds entry so that reads will return the default
         // and writes will be ignored.
         lval.addIndexOutOfBounds(type->getDefaultValue());
@@ -298,7 +307,8 @@ LValue ElementSelectExpression::evalLValueImpl(EvalContext& context) const {
 
 optional<ConstantRange> ElementSelectExpression::evalIndex(EvalContext& context,
                                                            const ConstantValue& val,
-                                                           ConstantValue& associativeIndex) const {
+                                                           ConstantValue& associativeIndex,
+                                                           bool& softFail) const {
     auto prevQ = context.getQueueTarget();
     if (val.isQueue())
         context.setQueueTarget(&val);
@@ -315,13 +325,15 @@ optional<ConstantRange> ElementSelectExpression::evalIndex(EvalContext& context,
             context.addDiag(diag::ConstEvalAssociativeIndexInvalid, selector().sourceRange) << cs;
         else
             associativeIndex = std::move(cs);
+        softFail = true;
         return std::nullopt;
     }
 
     optional<int32_t> index = cs.integer().as<int32_t>();
     if (!index) {
         if (!warnedAboutIndex)
-            context.addDiag(diag::IndexValueInvalid, sourceRange) << cs << valType;
+            context.addDiag(diag::IndexOOB, sourceRange) << cs << valType;
+        softFail = true;
         return std::nullopt;
     }
 
@@ -329,7 +341,8 @@ optional<ConstantRange> ElementSelectExpression::evalIndex(EvalContext& context,
         ConstantRange range = valType.getFixedRange();
         if (!range.containsPoint(*index)) {
             if (!warnedAboutIndex)
-                context.addDiag(diag::IndexValueInvalid, sourceRange) << cs << valType;
+                context.addDiag(diag::IndexOOB, sourceRange) << cs << valType;
+            softFail = true;
             return std::nullopt;
         }
 
@@ -355,11 +368,13 @@ optional<ConstantRange> ElementSelectExpression::evalIndex(EvalContext& context,
         if (*index < 0 || size_t(*index) >= maxIndex) {
             context.addDiag(diag::ConstEvalDynamicArrayIndex, sourceRange)
                 << cs << valType << maxIndex;
+            softFail = true;
             return std::nullopt;
         }
     }
     else if (*index < 0) {
-        context.addDiag(diag::IndexValueInvalid, sourceRange) << cs << valType;
+        context.addDiag(diag::IndexOOB, sourceRange) << cs << valType;
+        softFail = true;
         return std::nullopt;
     }
 
@@ -446,7 +461,17 @@ Expression& RangeSelectExpression::fromSyntax(Compilation& compilation, Expressi
         return *result;
     }
 
-    // If not a queue, rhs must always be a constant integer.
+    // If this is a streaming concatenation's "with" range, we also don't
+    // require a constant width, but we'll try to validate it if we see
+    // that the bounds are constant anyway.
+    if (context.flags.has(BindFlags::StreamingWithRange)) {
+        if (context.inUnevaluatedBranch() || !context.tryEval(right) ||
+            (selectionKind == RangeSelectionKind::Simple && !context.tryEval(left))) {
+            result->type = compilation.emplace<QueueType>(elementType, 0u);
+            return *result;
+        }
+    }
+
     optional<int32_t> rv = context.evalInteger(right);
     if (!rv)
         return badExpr(compilation, result);
@@ -460,7 +485,7 @@ Expression& RangeSelectExpression::fromSyntax(Compilation& compilation, Expressi
         // Helper function for validating the bounds of the selection.
         auto validateRange = [&](ConstantRange range) {
             if (!valueRange.containsPoint(range.left) || !valueRange.containsPoint(range.right)) {
-                auto& diag = context.addDiag(diag::BadRangeExpression, errorRange);
+                auto& diag = context.addDiag(diag::RangeOOB, errorRange);
                 diag << range.left << range.right;
                 diag << valueType;
 
@@ -525,7 +550,7 @@ Expression& RangeSelectExpression::fromSyntax(Compilation& compilation, Expressi
                 selectionRange = *range;
 
                 if (bitwidth_t(*rv) > valueRange.width()) {
-                    auto& diag = context.addDiag(diag::RangeWidthTooLarge, right.sourceRange);
+                    auto& diag = context.addDiag(diag::RangeWidthOOB, right.sourceRange);
                     diag << *rv;
                     diag << valueType;
                 }
@@ -667,37 +692,41 @@ optional<ConstantRange> RangeSelectExpression::evalRange(EvalContext& context,
         return std::nullopt;
 
     const Type& valueType = *value().type;
+    optional<int32_t> li = cl.integer().as<int32_t>();
+    optional<int32_t> ri = cr.integer().as<int32_t>();
+    if (!li) {
+        context.addDiag(diag::IndexValueInvalid, left().sourceRange) << cl << valueType;
+        return std::nullopt;
+    }
+    if (!ri) {
+        context.addDiag(diag::IndexValueInvalid, right().sourceRange) << cr << valueType;
+        return std::nullopt;
+    }
+
+    ConstantRange result;
+    if (selectionKind == RangeSelectionKind::Simple) {
+        result = { *li, *ri };
+    }
+    else {
+        bool isLittleEndian = false;
+        if (valueType.hasFixedRange())
+            isLittleEndian = valueType.getFixedRange().isLittleEndian();
+
+        auto range = ConstantRange::getIndexedRange(*li, *ri, isLittleEndian,
+                                                    selectionKind == RangeSelectionKind::IndexedUp);
+        if (!range) {
+            context.addDiag(diag::RangeWidthOverflow, sourceRange);
+            return std::nullopt;
+        }
+
+        result = *range;
+    }
+
     if (valueType.hasFixedRange()) {
-        ConstantRange result;
         ConstantRange valueRange = valueType.getFixedRange();
-
-        if (selectionKind == RangeSelectionKind::Simple) {
-            result = type->getFixedRange();
-        }
-        else {
-            optional<int32_t> l = cl.integer().as<int32_t>();
-            if (!l) {
-                context.addDiag(diag::IndexValueInvalid, left().sourceRange) << cl << valueType;
-                return std::nullopt;
-            }
-
-            optional<int32_t> r = cr.integer().as<int32_t>();
-            ASSERT(r);
-
-            auto range =
-                ConstantRange::getIndexedRange(*l, *r, valueRange.isLittleEndian(),
-                                               selectionKind == RangeSelectionKind::IndexedUp);
-            if (!range) {
-                context.addDiag(diag::RangeWidthOverflow, sourceRange);
-                return std::nullopt;
-            }
-
-            result = *range;
-        }
-
         if (!warnedAboutRange &&
             (!valueRange.containsPoint(result.left) || !valueRange.containsPoint(result.right))) {
-            auto& diag = context.addDiag(diag::BadRangeExpression, sourceRange);
+            auto& diag = context.addDiag(diag::RangeOOB, sourceRange);
             diag << result.left << result.right;
             diag << valueType;
         }
@@ -720,35 +749,6 @@ optional<ConstantRange> RangeSelectExpression::evalRange(EvalContext& context,
         return result;
     }
 
-    optional<int32_t> li = cl.integer().as<int32_t>();
-    optional<int32_t> ri = cr.integer().as<int32_t>();
-    if (!li) {
-        context.addDiag(diag::IndexValueInvalid, left().sourceRange) << cl << valueType;
-        return std::nullopt;
-    }
-    if (!ri) {
-        context.addDiag(diag::IndexValueInvalid, right().sourceRange) << cr << valueType;
-        return std::nullopt;
-    }
-
-    int32_t l = *li;
-    int32_t r = *ri;
-    ConstantRange result;
-
-    if (selectionKind == RangeSelectionKind::Simple) {
-        result = { l, r };
-    }
-    else {
-        auto range = ConstantRange::getIndexedRange(l, r, false,
-                                                    selectionKind == RangeSelectionKind::IndexedUp);
-        if (!range) {
-            context.addDiag(diag::RangeWidthOverflow, sourceRange);
-            return std::nullopt;
-        }
-
-        result = *range;
-    }
-
     // Out of bounds ranges are allowed, we just issue a warning.
     if (!val.bad()) {
         size_t size = val.size();
@@ -762,7 +762,7 @@ optional<ConstantRange> RangeSelectExpression::evalRange(EvalContext& context,
         }
     }
     else if (result.left < 0 || result.right < 0) {
-        auto& diag = context.addDiag(diag::BadRangeExpression, sourceRange);
+        auto& diag = context.addDiag(diag::RangeOOB, sourceRange);
         diag << result.left << result.right;
         diag << valueType;
     }

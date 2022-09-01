@@ -793,12 +793,12 @@ endmodule
 
     auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 6);
-    CHECK(diags[0].code == diag::IndexValueInvalid);
-    CHECK(diags[1].code == diag::IndexValueInvalid);
-    CHECK(diags[2].code == diag::BadRangeExpression);
-    CHECK(diags[3].code == diag::BadRangeExpression);
-    CHECK(diags[4].code == diag::BadRangeExpression);
-    CHECK(diags[5].code == diag::BadRangeExpression);
+    CHECK(diags[0].code == diag::IndexOOB);
+    CHECK(diags[1].code == diag::IndexOOB);
+    CHECK(diags[2].code == diag::RangeOOB);
+    CHECK(diags[3].code == diag::RangeOOB);
+    CHECK(diags[4].code == diag::RangeOOB);
+    CHECK(diags[5].code == diag::RangeOOB);
 }
 
 TEST_CASE("Empty concat error") {
@@ -1359,8 +1359,12 @@ auto testBitstream(const std::string& text, DiagCode code = DiagCode()) {
     Compilation compilation;
     compilation.addSyntaxTree(tree);
     auto& diags = compilation.getAllDiagnostics();
-    if (!diags.empty() && code.getSubsystem() != DiagSubsystem::Invalid)
-        CHECK(diags.back().code == code);
+    if (!diags.empty() && code) {
+        if (diags.back().code != code) {
+            CHECK(diags.back().code == code);
+            FAIL_CHECK(report(diags));
+        }
+    }
 
     return diags.size();
 }
@@ -1591,21 +1595,22 @@ TEST_CASE("Stream expression with") {
         { "byte b[4]; int a = {<<3{b with[]}};", diag::ExpectedExpression },
         { "int a; byte b[4] = {<<3{a with [2]}};", diag::BadStreamWithType },
         { "byte b[4]; int a = {<<3{b with[0.5]}};", diag::ExprMustBeIntegral },
-        { "byte b[4]; int a = {<<3{b with[{65{1'b1}}]}};", diag::IndexValueInvalid },
-        { "byte b[4]; int a = {<<3{b with[4]}};", diag::IndexValueInvalid },
-        { "byte b[]; int a = {<<3{b with[-1]}};", diag::ValueMustBePositive },
+        { "byte b[4]; int a = {<<3{b with[{65{1'b1}}]}};", diag::IndexOOB },
+        { "byte b[4]; int a = {<<3{b with[4]}};", diag::IndexOOB },
         { "byte b[4]; int a = {<<3{b with[2-:-1]}};", diag::ValueMustBePositive },
-        { "byte b[4]; int a = {<<3{b with[2+:5]}};", diag::RangeWidthTooLarge },
-        { "byte b[3:0]; int a = {<<3{b with[2+:3]}};", diag::BadRangeExpression },
-        { "byte b[0:3]; int a = {<<3{b with[2:5]}};", diag::IndexValueInvalid },
-        { "byte b[]; int a = {<<3{b with[3:2]}};", diag::SelectEndianMismatch },
+        { "byte b[4]; logic [39:0] a = {<<3{b with[2+:5]}};", diag::RangeOOB },
+        { "byte b[3:0]; int a = {<<3{b with[2+:3]}};", diag::RangeOOB },
+        { "byte b[0:3]; int a = {<<3{b with[2:5]}};", diag::RangeOOB },
+        { "byte b[]; int a = {<<3{b with[3:2]}};", diag::SelectEndianDynamic },
         { "byte b[], c[4]; always {>>{b, {<<3{c with[b[0]:b[1]]}}}} = 9;",
           diag::BadStreamWithOrder },
-        { "int a[],b[],c[];bit d;assign {>>{b}}={<<{a with [2+:3],c,d}};", diag::BadStreamSize },
+        { "int a[],b[],c[];bit d;always {>>{b}}={<<{a with [2+:3],c,d}};", diag::BadStreamSize },
     };
 
-    for (const auto& test : illegal)
-        CHECK(testBitstream(test.sv, test.msg) == 1);
+    for (const auto& test : illegal) {
+        if (testBitstream(test.sv, test.msg) != 1)
+            FAIL_CHECK(test.sv);
+    }
 
     std::string legal[] = {
         R"(
@@ -2742,8 +2747,8 @@ endmodule
     REQUIRE(diags.size() == 5);
     CHECK(diags[0].code == diag::ConstEvalAssociativeElementNotFound);
     CHECK(diags[1].code == diag::ConstEvalAssociativeIndexInvalid);
-    CHECK(diags[2].code == diag::IndexValueInvalid);
-    CHECK(diags[3].code == diag::IndexValueInvalid);
+    CHECK(diags[2].code == diag::IndexOOB);
+    CHECK(diags[3].code == diag::IndexOOB);
     CHECK(diags[4].code == diag::ConstEvalFunctionIdentifiersMustBeLocal);
 }
 
@@ -2822,16 +2827,37 @@ endmodule
     CHECK(diags[2].code == diag::ExprMustBeIntegral);
     CHECK(diags[3].code == diag::SelectEndianMismatch);
     CHECK(diags[4].code == diag::ValueMustBePositive);
-    CHECK(diags[5].code == diag::BadRangeExpression);
+    CHECK(diags[5].code == diag::RangeOOB);
     CHECK(diags[6].code == diag::IndexValueInvalid);
-    CHECK(diags[7].code == diag::RangeWidthTooLarge);
+    CHECK(diags[7].code == diag::RangeWidthOOB);
     CHECK(diags[8].code == diag::ConstEvalNonConstVariable);
     CHECK(diags[9].code == diag::ValueMustBePositive);
-    CHECK(diags[10].code == diag::BadRangeExpression);
+    CHECK(diags[10].code == diag::RangeOOB);
     CHECK(diags[11].code == diag::ConstEvalFunctionIdentifiersMustBeLocal);
     CHECK(diags[12].code == diag::ConstEvalFunctionIdentifiersMustBeLocal);
     CHECK(diags[13].code == diag::IndexValueInvalid);
     CHECK(diags[14].code == diag::IndexValueInvalid);
     CHECK(diags[15].code == diag::IndexValueInvalid);
     CHECK(diags[16].code == diag::ConstEvalDynamicArrayRange);
+}
+
+TEST_CASE("Index oob tryEval regress GH #602") {
+    auto tree = SyntaxTree::fromText(R"(
+module top #(
+    parameter [2:0][4:0] IDX_MAP = {5'd1, 5'd3, 5'd4}
+);
+    logic [4:0] sig;
+
+    always_comb begin
+        for (int n = 0; n < 3; n++) begin
+            if (sig[IDX_MAP[n]] != 'h0) begin
+            end
+        end
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
 }

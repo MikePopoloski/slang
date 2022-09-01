@@ -74,6 +74,16 @@ optional<double> strToDouble(string_view str, size_t* pos) {
     return val;
 }
 
+void strToUpper(std::string& str) {
+    std::transform(str.begin(), str.end(), str.begin(),
+                   [](unsigned char c) { return std::toupper(c); });
+}
+
+void strToLower(std::string& str) {
+    std::transform(str.begin(), str.end(), str.begin(),
+                   [](unsigned char c) { return std::tolower(c); });
+}
+
 int editDistance(string_view left, string_view right, bool allowReplacements, int maxDistance) {
     // See: http://en.wikipedia.org/wiki/Levenshtein_distance
     size_t m = left.size();

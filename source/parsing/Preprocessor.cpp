@@ -28,12 +28,49 @@ Preprocessor::Preprocessor(SourceManager& sourceManager, BumpAllocator& alloc,
     resetAllDirectives();
     undefineAll();
 
-    // Finally add in any inherited macros that aren't already set in our map.
+    // Add in any inherited macros that aren't already set in our map.
     for (auto define : inheritedMacros) {
         auto name = define->name.valueText();
         if (!name.empty())
             macros.emplace(name, define);
     }
+
+    // clang-format off
+    pragmaProtectHandlers = {
+        { "begin", &Preprocessor::handleProtectBegin },
+        { "end", &Preprocessor::handleProtectEnd },
+        { "begin_protected", &Preprocessor::handleProtectBeginProtected },
+        { "end_protected", &Preprocessor::handleProtectEndProtected },
+        { "author", &Preprocessor::handleProtectSingleArgIgnore },
+        { "author_info", &Preprocessor::handleProtectSingleArgIgnore },
+        { "encrypt_agent", &Preprocessor::handleProtectSingleArgIgnore },
+        { "encrypt_agent_info", &Preprocessor::handleProtectSingleArgIgnore },
+        { "encoding", &Preprocessor::handleProtectEncoding },
+        { "data_keyowner", &Preprocessor::handleProtectSingleArgIgnore },
+        { "data_method", &Preprocessor::handleProtectSingleArgIgnore },
+        { "data_keyname", &Preprocessor::handleProtectSingleArgIgnore },
+        { "data_public_key", &Preprocessor::handleProtectKey },
+        { "data_decrypt_key", &Preprocessor::handleProtectKey },
+        { "data_block", &Preprocessor::handleProtectBlock },
+        { "digest_keyowner", &Preprocessor::handleProtectSingleArgIgnore },
+        { "digest_key_method", &Preprocessor::handleProtectSingleArgIgnore },
+        { "digest_keyname", &Preprocessor::handleProtectSingleArgIgnore },
+        { "digest_public_key", &Preprocessor::handleProtectKey },
+        { "digest_decrypt_key", &Preprocessor::handleProtectKey },
+        { "digest_method", &Preprocessor::handleProtectSingleArgIgnore },
+        { "digest_block", &Preprocessor::handleProtectBlock },
+        { "key_keyowner", &Preprocessor::handleProtectSingleArgIgnore },
+        { "key_method", &Preprocessor::handleProtectSingleArgIgnore },
+        { "key_keyname", &Preprocessor::handleProtectSingleArgIgnore },
+        { "key_public_key", &Preprocessor::handleProtectKey },
+        { "key_block", &Preprocessor::handleProtectBlock },
+        { "decrypt_license", &Preprocessor::handleProtectLicense },
+        { "runtime_license", &Preprocessor::handleProtectLicense },
+        { "comment", &Preprocessor::handleProtectSingleArgIgnore },
+        { "reset", &Preprocessor::handleProtectReset },
+        { "viewport", &Preprocessor::handleProtectViewport }
+    };
+    // clang-format on
 }
 
 Preprocessor::Preprocessor(const Preprocessor& other) :
@@ -55,6 +92,12 @@ void Preprocessor::pushSource(SourceBuffer buffer) {
     ASSERT(buffer.id);
 
     lexerStack.emplace_back(std::make_unique<Lexer>(buffer, alloc, diagnostics, lexerOptions));
+}
+
+void Preprocessor::popSource() {
+    if (includeDepth)
+        includeDepth--;
+    lexerStack.pop_back();
 }
 
 void Preprocessor::predefine(const std::string& definition, string_view name) {
@@ -308,7 +351,7 @@ Token Preprocessor::nextRaw() {
 
     // don't return EndOfFile tokens for included files, fall
     // through to loop to merge trivia
-    lexerStack.pop_back();
+    popSource();
     if (lexerStack.empty())
         return token;
 
@@ -330,7 +373,7 @@ Token Preprocessor::nextRaw() {
         if (token.kind != TokenKind::EndOfFile)
             break;
 
-        lexerStack.pop_back();
+        popSource();
         if (lexerStack.empty())
             break;
     }
@@ -407,12 +450,16 @@ Trivia Preprocessor::handleIncludeDirective(Token directive) {
         bool isSystem = path[0] == '<';
         path = path.substr(1, path.length() - 2);
         SourceBuffer buffer = sourceManager.readHeader(path, directive.location(), isSystem);
-        if (!buffer.id)
+        if (!buffer.id) {
             addDiag(diag::CouldNotOpenIncludeFile, fileName.range());
-        else if (lexerStack.size() >= options.maxIncludeDepth)
+        }
+        else if (includeDepth >= options.maxIncludeDepth) {
             addDiag(diag::ExceededMaxIncludeDepth, fileName.range());
-        else if (includeOnceHeaders.find(buffer.data.data()) == includeOnceHeaders.end())
+        }
+        else if (includeOnceHeaders.find(buffer.data.data()) == includeOnceHeaders.end()) {
+            includeDepth++;
             pushSource(buffer);
+        }
     }
 
     auto syntax = alloc.emplace<IncludeDirectiveSyntax>(directive, fileName);
@@ -889,128 +936,6 @@ Trivia Preprocessor::handlePragmaDirective(Token directive) {
     return Trivia(TriviaKind::Directive, result);
 }
 
-std::pair<PragmaExpressionSyntax*, bool> Preprocessor::parsePragmaExpression() {
-    Token token = peek();
-    if (token.kind == TokenKind::Identifier || LexerFacts::isKeyword(token.kind)) {
-        auto name = consume();
-        if (peek().kind == TokenKind::Equals) {
-            auto equals = consume();
-            auto [expr, succeeded] = parsePragmaValue();
-            auto result = alloc.emplace<NameValuePragmaExpressionSyntax>(name, equals, *expr);
-            return { result, succeeded };
-        }
-
-        return { alloc.emplace<SimplePragmaExpressionSyntax>(name), true };
-    }
-
-    return parsePragmaValue();
-}
-
-std::pair<PragmaExpressionSyntax*, bool> Preprocessor::parsePragmaValue() {
-    if (auto pair = checkNextPragmaToken(); !pair.second)
-        return pair;
-
-    Token token = peek();
-    if (token.kind == TokenKind::IntegerBase || token.kind == TokenKind::IntegerLiteral) {
-        PragmaExpressionSyntax* expr;
-        auto result = numberParser.parseInteger(*this);
-        if (result.isSimple) {
-            expr = alloc.emplace<SimplePragmaExpressionSyntax>(result.value);
-        }
-        else {
-            expr =
-                alloc.emplace<NumberPragmaExpressionSyntax>(result.size, result.base, result.value);
-        }
-
-        return { expr, true };
-    }
-
-    if (token.kind == TokenKind::RealLiteral) {
-        auto result = numberParser.parseReal(*this);
-        return { alloc.emplace<SimplePragmaExpressionSyntax>(result), true };
-    }
-
-    if (token.kind == TokenKind::Identifier || token.kind == TokenKind::StringLiteral ||
-        LexerFacts::isKeyword(token.kind)) {
-        return { alloc.emplace<SimplePragmaExpressionSyntax>(consume()), true };
-    }
-
-    if (token.kind != TokenKind::OpenParenthesis) {
-        addDiag(diag::ExpectedPragmaExpression, token.location());
-
-        auto expected = Token::createMissing(alloc, TokenKind::Identifier, token.location());
-        return { alloc.emplace<SimplePragmaExpressionSyntax>(expected), false };
-    }
-
-    SmallVectorSized<TokenOrSyntax, 4> values;
-    Token openParen = consume();
-    bool wantComma = false;
-    bool ok = false;
-
-    // This keeps track of the last real token we've consumed before
-    // breaking from the loop; if there's an error it's possible we've
-    // gone on and parsed more directives into the resulting token,
-    // so this is necessary to correctly place the diagnostic.
-    Token lastToken = openParen;
-
-    token = peek();
-    while (token.kind != TokenKind::EndOfFile && token.isOnSameLine()) {
-        if (wantComma) {
-            if (token.kind == TokenKind::CloseParenthesis) {
-                ok = true;
-                break;
-            }
-
-            Token comma = expect(TokenKind::Comma);
-            values.append(comma);
-            wantComma = false;
-            lastToken = comma;
-        }
-        else {
-            auto [expr, succeeded] = parsePragmaExpression();
-            values.append(expr);
-            wantComma = true;
-
-            if (!succeeded)
-                break;
-
-            lastToken = expr->getLastToken();
-        }
-        token = peek();
-    }
-
-    token = peek();
-    Token closeParen;
-    if (token.kind == TokenKind::CloseParenthesis && token.isOnSameLine()) {
-        closeParen = consume();
-    }
-    else {
-        closeParen = Token::createExpected(alloc, diagnostics, token, TokenKind::CloseParenthesis,
-                                           lastToken, Token());
-    }
-
-    return { alloc.emplace<ParenPragmaExpressionSyntax>(openParen, values.copy(alloc), closeParen),
-             ok };
-}
-
-std::pair<PragmaExpressionSyntax*, bool> Preprocessor::checkNextPragmaToken() {
-    if (!peek().isOnSameLine()) {
-        auto loc = lastConsumed.location() + lastConsumed.rawText().length();
-        addDiag(diag::ExpectedPragmaExpression, loc);
-
-        auto expected = Token::createMissing(alloc, TokenKind::Identifier, loc);
-        return { alloc.emplace<SimplePragmaExpressionSyntax>(expected), false };
-    }
-    return { nullptr, true };
-}
-
-void Preprocessor::handleExponentSplit(Token token, size_t offset) {
-    // This is called by NumberParser to handle an error case, for example
-    // in the snippet 'h 3e+2 the +2 is not part of the number. We should
-    // just report an error and move on.
-    addDiag(diag::ExpectedPragmaExpression, token.location() + offset);
-}
-
 Trivia Preprocessor::handleUnconnectedDriveDirective(Token directive) {
     checkOutsideDesignElement(directive);
 
@@ -1048,154 +973,6 @@ Trivia Preprocessor::createSimpleDirective(Token directive) {
 void Preprocessor::checkOutsideDesignElement(Token directive) {
     if (designElementDepth)
         addDiag(diag::DirectiveInsideDesignElement, directive.range());
-}
-
-void Preprocessor::applyPragma(const PragmaDirectiveSyntax& pragma) {
-    string_view name = pragma.name.valueText();
-    if (name == "protect") {
-        applyProtectPragma(pragma);
-        return;
-    }
-
-    if (name == "reset") {
-        applyResetPragma(pragma);
-        return;
-    }
-
-    if (name == "resetall") {
-        applyResetAllPragma(pragma);
-        return;
-    }
-
-    if (name == "once") {
-        applyOncePragma(pragma);
-        return;
-    }
-
-    if (name == "diagnostic") {
-        applyDiagnosticPragma(pragma);
-        return;
-    }
-
-    // Otherwise, if the pragma is unknown warn and ignore.
-    addDiag(diag::UnknownPragma, pragma.name.range()) << name;
-}
-
-void Preprocessor::applyProtectPragma(const PragmaDirectiveSyntax& pragma) {
-    addDiag(diag::WarnNotYetSupported, pragma.name.range());
-}
-
-void Preprocessor::applyResetPragma(const PragmaDirectiveSyntax& pragma) {
-    // Just check that we know about the names being reset, and warn if we don't.
-    for (auto arg : pragma.args) {
-        if (arg->kind == SyntaxKind::SimplePragmaExpression) {
-            auto& simple = arg->as<SimplePragmaExpressionSyntax>();
-            if (simple.value.kind == TokenKind::Identifier) {
-                string_view name = simple.value.rawText();
-                if (!name.empty() && name != "protect" && name != "once" && name != "diagnostic")
-                    addDiag(diag::UnknownPragma, simple.value.range()) << name;
-
-                // Nothing to do here, we don't support any pragmas that can be reset.
-                continue;
-            }
-        }
-
-        // Otherwise this isn't even a pragma name, so it's ill-formed.
-        addDiag(diag::ExpectedPragmaName, arg->sourceRange());
-    }
-}
-
-void Preprocessor::applyResetAllPragma(const PragmaDirectiveSyntax& pragma) {
-    // Nothing to do here, we don't support any pragmas that can be reset.
-    // Just check that there aren't any extraneous arguments.
-    ensurePragmaArgs(pragma, 0);
-}
-
-void Preprocessor::applyOncePragma(const PragmaDirectiveSyntax& pragma) {
-    ensurePragmaArgs(pragma, 0);
-
-    auto text = sourceManager.getSourceText(pragma.directive.location().buffer());
-    if (!text.empty())
-        includeOnceHeaders.emplace(text.data());
-}
-
-void Preprocessor::applyDiagnosticPragma(const PragmaDirectiveSyntax& pragma) {
-    if (pragma.args.empty()) {
-        Token last = pragma.getLastToken();
-        addDiag(diag::ExpectedDiagPragmaArg, last.location() + last.rawText().length());
-        return;
-    }
-
-    for (auto arg : pragma.args) {
-        if (arg->kind == SyntaxKind::SimplePragmaExpression) {
-            auto& simple = arg->as<SimplePragmaExpressionSyntax>();
-            string_view action = simple.value.rawText();
-            if (simple.value.kind == TokenKind::Identifier && action == "push") {
-                sourceManager.addDiagnosticDirective(simple.value.location(), "__push__",
-                                                     DiagnosticSeverity::Ignored);
-            }
-            else if (simple.value.kind == TokenKind::Identifier && action == "pop") {
-                sourceManager.addDiagnosticDirective(simple.value.location(), "__pop__",
-                                                     DiagnosticSeverity::Ignored);
-            }
-            else {
-                addDiag(diag::UnknownDiagPragmaArg, simple.value.range()) << action;
-            }
-        }
-        else if (arg->kind == SyntaxKind::NameValuePragmaExpression) {
-            auto& nvp = arg->as<NameValuePragmaExpressionSyntax>();
-
-            DiagnosticSeverity severity;
-            string_view text = nvp.name.valueText();
-            if (text == "ignore")
-                severity = DiagnosticSeverity::Ignored;
-            else if (text == "warn")
-                severity = DiagnosticSeverity::Warning;
-            else if (text == "error")
-                severity = DiagnosticSeverity::Error;
-            else if (text == "fatal")
-                severity = DiagnosticSeverity::Fatal;
-            else {
-                addDiag(diag::ExpectedDiagPragmaLevel, nvp.name.range());
-                continue;
-            }
-
-            auto setDirective = [&](const PragmaExpressionSyntax& expr) {
-                if (expr.kind == SyntaxKind::SimplePragmaExpression) {
-                    auto& simple = expr.as<SimplePragmaExpressionSyntax>();
-                    if (simple.value.kind == TokenKind::StringLiteral) {
-                        sourceManager.addDiagnosticDirective(simple.value.location(),
-                                                             simple.value.valueText(), severity);
-                    }
-                    else {
-                        addDiag(diag::ExpectedDiagPragmaArg, simple.value.range());
-                    }
-                }
-                else {
-                    addDiag(diag::ExpectedDiagPragmaArg, expr.sourceRange());
-                }
-            };
-
-            if (nvp.value->kind == SyntaxKind::ParenPragmaExpression) {
-                auto& paren = nvp.value->as<ParenPragmaExpressionSyntax>();
-                for (auto value : paren.values)
-                    setDirective(*value);
-            }
-            else {
-                setDirective(*nvp.value);
-            }
-        }
-        else {
-            addDiag(diag::ExpectedDiagPragmaArg, arg->sourceRange());
-        }
-    }
-}
-
-void Preprocessor::ensurePragmaArgs(const PragmaDirectiveSyntax& pragma, size_t count) {
-    if (pragma.args.size() > count) {
-        auto& diag = addDiag(diag::ExtraPragmaArgs, pragma.args[count]->getFirstToken().location());
-        diag << pragma.name.valueText();
-    }
 }
 
 Token Preprocessor::peek() {

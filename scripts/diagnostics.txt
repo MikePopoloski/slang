@@ -91,6 +91,16 @@ warning extra-pragma-args ExtraPragmaArgs "too many arguments provided for pragm
 warning expected-diag-arg ExpectedDiagPragmaArg "expected diagnostic pragma argument"
 warning unknown-diag-arg UnknownDiagPragmaArg "unknown diagnostic pragma argument '{}'"
 warning pragma-diag-level ExpectedDiagPragmaLevel "expected diagnostic severity (ignore,warn,error,fatal)"
+warning expected-protect-keyword ExpectedProtectKeyword "expected pragma protect keyword"
+warning unknown-protect-keyword UnknownProtectKeyword "unknown pragma protect keyword '{}'"
+warning expected-protect-arg ExpectedProtectArg "'{}' pragma expects a single string argument"
+warning nested-protect-begin NestedProtectBegin "nested pragma protect begin-end blocks are not allowed"
+warning extra-protect-end ExtraProtectEnd "pragma protect '{}' seen without corresponding start of block"
+warning protect-arglist ProtectArgList "protect {} directive expects a parenthesized list of key=value options"
+warning unknown-protect-encoding UnknownProtectEncoding "unknown protect encoding '{}', treating as 'raw' -- source text may not be processed correctly"
+warning unknown-protect-option UnknownProtectOption "unknown protect {} option '{}'"
+warning invalid-pragma-number InvalidPragmaNumber "expected a 32-bit integer value for pragma option"
+warning invalid-pragma-viewport InvalidPragmaViewport "pragma protect viewport requires options to be specified in the form (object = <string>, access = <string>)"
 
 subsystem Parser
 error ExpectedIdentifier "expected identifier"
@@ -442,8 +452,6 @@ error BadOpenRange "invalid bounds in open range ({} and {})"
 error BadCastType "invalid casting type {}"
 error BadSetMembershipType "invalid type {} for {} expression"
 error ConcatWithStringInt "cannot mix strings and integers in a concatenation (use a cast if this is desired)"
-error BadRangeExpression "cannot select range of [{}:{}] from {}"
-error RangeWidthTooLarge "cannot select range of {} elements from {}"
 error RangeWidthOverflow "select range overflows the bounds of a signed 32-bit integer"
 error RangeSelectAssociative "cannot take a slice of an associative array"
 error CannotIndexScalar "scalar type cannot be indexed"
@@ -594,6 +602,9 @@ warning nonblocking-final NonblockingInFinal "nonblocking assignments in final b
 warning port-coercion InputPortCoercion "input net port '{}' coerced to 'inout'"
 warning port-coercion OutputPortCoercion "output net port '{}' coerced to 'inout'"
 warning reversed-range ReversedOpenRange "reversed range will behave as if it were empty"
+warning index-oob IndexOOB "cannot refer to element {} of {}"
+warning range-oob RangeOOB "cannot select range of [{}:{}] from {}"
+warning range-width-oob RangeWidthOOB "cannot select range of {} elements from {}"
 
 subsystem Statements
 error ReturnNotInSubroutine "return statement is only valid inside task and function blocks"
@@ -902,7 +913,10 @@ group default = { real-underflow real-overflow vector-overflow int-overflow unco
                   unknown-escape-code missing-top warning-task unsized-concat finish-num implicit-conv
                   nonblocking-final constraint-missing missing-format dpi-spec enum-range udp-port-empty
                   lifetime-prototype net-inconsistent port-coercion empty-body reversed-range
-                  invalid-source-encoding }
+                  invalid-source-encoding index-oob range-oob range-width-oob expected-protect-arg
+                  unknown-protect-keyword expected-protect-keyword nested-protect-begin extra-protect-end
+                  protect-arglist unknown-protect-encoding unknown-protect-option invalid-pragma-number
+                  invalid-pragma-viewport }
 
 group extra = { empty-member empty-stmt dup-import pointless-void-cast case-gen-none case-gen-dup
                 unused-result format-real ignored-slice task-ignored width-trunc dup-attr event-const

@@ -106,7 +106,8 @@ void registerBinding(py::module_& m) {
         .value("ProceduralAssign", BindFlags::ProceduralAssign)
         .value("ProceduralForceRelease", BindFlags::ProceduralForceRelease)
         .value("AllowInterconnect", BindFlags::AllowInterconnect)
-        .value("UnrollableForLoop", BindFlags::UnrollableForLoop);
+        .value("UnrollableForLoop", BindFlags::UnrollableForLoop)
+        .value("StreamingWithRange", BindFlags::StreamingWithRange);
 
     py::class_<EvaluatedDimension>(m, "EvaluatedDimension")
         .def_readonly("kind", &EvaluatedDimension::kind)
@@ -386,9 +387,19 @@ void registerBinding(py::module_& m) {
         .def_property_readonly("count", &ReplicationExpression::count)
         .def_property_readonly("concat", py::overload_cast<>(&ReplicationExpression::concat));
 
-    // TODO:
-    // py::class_<StreamingConcatenationExpression, Expression>(m,
-    // "StreamingConcatenationExpression")
+    py::class_<StreamingConcatenationExpression, Expression> streamConcatExpr(
+        m, "StreamingConcatenationExpression");
+    streamConcatExpr.def_readonly("sliceSize", &StreamingConcatenationExpression::sliceSize)
+        .def_property_readonly("isFixedSize", &StreamingConcatenationExpression::isFixedSize)
+        .def_property_readonly("bitstreamWidth", &StreamingConcatenationExpression::bitstreamWidth)
+        .def_property_readonly("streams", &StreamingConcatenationExpression::streams);
+
+    py::class_<StreamingConcatenationExpression::StreamExpression>(streamConcatExpr,
+                                                                   "StreamExpression")
+        .def_readonly("operand", &StreamingConcatenationExpression::StreamExpression::operand)
+        .def_readonly("withExpr", &StreamingConcatenationExpression::StreamExpression::withExpr)
+        .def_readonly("constantWithWidth",
+                      &StreamingConcatenationExpression::StreamExpression::constantWithWidth);
 
     py::class_<OpenRangeExpression, Expression>(m, "OpenRangeExpression")
         .def_property_readonly("left", py::overload_cast<>(&OpenRangeExpression::left))

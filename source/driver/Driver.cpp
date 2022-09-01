@@ -358,6 +358,13 @@ bool Driver::processOptions() {
         diagEngine.setSeverity(diag::NonstandardForeach, DiagnosticSeverity::Ignored);
         diagEngine.setSeverity(diag::NonstandardDist, DiagnosticSeverity::Ignored);
     }
+    else {
+        // These warnings are set to Error severity by default, unless we're in vcs compat mode.
+        // The user can always downgrade via warning options, which get set after this.
+        diagEngine.setSeverity(diag::IndexOOB, DiagnosticSeverity::Error);
+        diagEngine.setSeverity(diag::RangeOOB, DiagnosticSeverity::Error);
+        diagEngine.setSeverity(diag::RangeWidthOOB, DiagnosticSeverity::Error);
+    }
 
     Diagnostics optionDiags = diagEngine.setWarningOptions(options.warningOptions);
     if (options.ignoreUnknownModules == true)

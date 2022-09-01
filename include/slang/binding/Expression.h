@@ -247,9 +247,14 @@ public:
     /// will be stored in the evaluation context instead of issued to the compilation.
     ConstantValue eval(EvalContext& context) const;
 
-    /// Evaluates an expression as an lvalue. Note that this will throw an exception
+    /// Evaluates the expression as an lvalue. Note that this will throw an exception
     /// if the expression does not represent an lvalue.
     LValue evalLValue(EvalContext& context) const;
+
+    /// Evaluates the expression as a selector and returns the selection range that
+    /// results. If the evaluates fails or the expression does not represent a selection
+    /// std::nullopt will be returned.
+    optional<ConstantRange> evalSelector(EvalContext& context) const;
 
     /// Verifies that this expression is a valid lvalue and that each element
     /// of that lvalue can be assigned to. If it's not, appropriate diagnostics

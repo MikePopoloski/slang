@@ -158,9 +158,12 @@ enum class BindFlags : uint64_t {
 
     /// Binding is inside a potentially unrollable for loop, which means we
     /// should skip registering drivers and let the loop unroller do it.
-    UnrollableForLoop = 1ull << 34
+    UnrollableForLoop = 1ull << 34,
+
+    /// Bindings is for a range expression inside a streaming concatenation operator.
+    StreamingWithRange = 1ull << 35
 };
-BITMASK(BindFlags, UnrollableForLoop)
+BITMASK(BindFlags, StreamingWithRange)
 
 // clang-format off
 #define DK(x) \

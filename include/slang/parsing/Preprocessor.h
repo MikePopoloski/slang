@@ -134,6 +134,7 @@ private:
     // Internal methods to grab and handle the next token
     Token nextProcessed();
     Token nextRaw();
+    void popSource();
 
     // directive handling methods
     Token handleDirectives(Token token);
@@ -182,6 +183,21 @@ private:
     void applyOncePragma(const PragmaDirectiveSyntax& pragma);
     void applyDiagnosticPragma(const PragmaDirectiveSyntax& pragma);
     void ensurePragmaArgs(const PragmaDirectiveSyntax& pragma, size_t count);
+    void ensureNoPragmaArgs(Token keyword, const PragmaExpressionSyntax* args);
+    optional<uint32_t> requireUInt32(const PragmaExpressionSyntax& expr);
+
+    // Pragma protect handlers
+    void handleProtectBegin(Token keyword, const PragmaExpressionSyntax* args);
+    void handleProtectEnd(Token keyword, const PragmaExpressionSyntax* args);
+    void handleProtectBeginProtected(Token keyword, const PragmaExpressionSyntax* args);
+    void handleProtectEndProtected(Token keyword, const PragmaExpressionSyntax* args);
+    void handleProtectSingleArgIgnore(Token keyword, const PragmaExpressionSyntax* args);
+    void handleProtectEncoding(Token keyword, const PragmaExpressionSyntax* args);
+    void handleProtectKey(Token keyword, const PragmaExpressionSyntax* args);
+    void handleProtectBlock(Token keyword, const PragmaExpressionSyntax* args);
+    void handleProtectLicense(Token keyword, const PragmaExpressionSyntax* args);
+    void handleProtectReset(Token keyword, const PragmaExpressionSyntax* args);
+    void handleProtectViewport(Token keyword, const PragmaExpressionSyntax* args);
 
     // Specifies possible macro intrinsics.
     enum class MacroIntrinsic { None, Line, File };
@@ -347,7 +363,14 @@ private:
     optional<TimeScale> activeTimeScale;
     TokenKind defaultNetType = TokenKind::WireKeyword;
     TokenKind unconnectedDrive = TokenKind::Unknown;
+
     int designElementDepth = 0;
+    uint32_t includeDepth = 0;
+    uint32_t protectEncryptDepth = 0;
+    uint32_t protectDecryptDepth = 0;
+    uint32_t protectLineLength = 0;
+    uint32_t protectBytes = 0;
+    ProtectEncoding protectEncoding = ProtectEncoding::Base64;
 
     // Parser for numeric literals in pragma expressions.
     NumberParser numberParser;
@@ -355,6 +378,10 @@ private:
 
     // Called by NumberParser to handle an error condition.
     void handleExponentSplit(Token token, size_t offset);
+
+    // A map of pragma protect keywords to their handler function.
+    flat_hash_map<string_view, void (Preprocessor::*)(Token, const PragmaExpressionSyntax*)>
+        pragmaProtectHandlers;
 };
 
 } // namespace slang

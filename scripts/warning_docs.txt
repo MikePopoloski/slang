@@ -604,3 +604,92 @@ endclass
 
 -Winvalid-source-encoding
 <ignored>
+
+-Wexpected-protect-keyword
+A `pragma protect directive is missing the protect keyword to set.
+```
+`pragma protect
+```
+
+-Wunknown-protect-keyword
+A `pragma protect directive specified an unknown keyword.
+```
+`pragma protect foobar
+```
+
+-Wexpected-protect-arg
+An invalid argument is passed to a `pragma protect keyword expecting a string value.
+```
+`pragma protect author=3
+```
+
+-Wnested-protect-begin
+Nested `pragma protect begin directives were found, which is disallowed.
+```
+`pragma protect begin
+`pragma protect begin
+```
+
+-Wextra-protect-end
+An unpair `pragma protect end or end_protected was found in the source text.
+```
+`pragma protect end
+```
+
+-Wprotect-arglist
+A `pragma protect keyword expected a list of key=value options but did not receive them.
+```
+`pragma protect encoding=3
+```
+
+-Wunknown-protect-encoding
+The specified encoding name in a `pragma protect encoding directive is not known or supported.
+slang will try to work with the encoded data as though it were raw, which may or may not parse
+correctly depending on how the actual encoding functions.
+```
+`pragma protect encoding=(enctype="foobar")
+```
+
+-Wunknown-protect-option
+An unknown key=value option was passed to a `pragma protect keyword.
+```
+`pragma protect encoding=(enctype="base64", foo="bar")
+```
+
+-Winvalid-pragma-number
+A `pragma protect option expected a valid 32-bit integer value but received something else instead.
+```
+`pragma protect encoding=(enctype="base64", line_length="hello")
+```
+
+-Winvalid-pragma-viewport
+A `pragma protect viewport directive was given invalid options. All such directives must be of
+the form (object = <string>, access = <string>)
+```
+`pragma protect viewport=(not_object = "hello")
+```
+
+-Windex-oob
+An out-of-bounds value was used to index an array. This is an error by default but can be downgraded to
+a warning for compatibility with other tools.
+```
+logic [7:0] a;
+logic b = a[9];
+```
+
+-Wrange-oob
+An out-of-bounds range was used to select from an array. This is an error by default but can be downgraded to
+a warning for compatibility with other tools.
+```
+logic [7:0] a;
+logic [2:0] b = a[9:7];
+```
+
+-Wrange-width-oob
+An indexed part-select has a width that is wider than the bounds of the array it is selecting. This is an error
+by default but can be downgraded to a warning for compatibility with other tools.
+```
+logic [1:0] a;
+int b;
+logic [2:0] c = a[b+:3];
+```

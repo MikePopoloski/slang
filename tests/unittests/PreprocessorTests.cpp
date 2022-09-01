@@ -1518,9 +1518,6 @@ TEST_CASE("Pragma expressions -- errors") {
 `pragma reset (asdf, asdf), foo
 `pragma resetall asdf, asdf
 `pragma once asdf
-
-`pragma protect begin
-`pragma protect end
 )";
 
     preprocess(text);
@@ -1560,12 +1557,6 @@ source:17:1: error: expected pragma name
 source:16:9: warning: unknown pragma 'bar' [-Wunknown-pragma]
 `pragma bar 'h 3e+2
         ^~~
-source:25:9: warning: language feature not yet supported [-Wnot-supported]
-`pragma protect end
-        ^~~~~~~
-source:24:9: warning: language feature not yet supported [-Wnot-supported]
-`pragma protect begin
-        ^~~~~~~
 source:22:14: warning: too many arguments provided for pragma 'once' [-Wextra-pragma-args]
 `pragma once asdf
              ^
@@ -1910,4 +1901,16 @@ TEST_CASE("Single preproc token diag location regress") {
 
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::ExpectedMember);
+}
+
+TEST_CASE("Preprocessor max include depth regress GH #600") {
+    auto& text = R"(
+`include "local.svh"
+)";
+
+    PreprocessorOptions ppOptions;
+    ppOptions.maxIncludeDepth = 1;
+
+    preprocess(text, Bag(ppOptions));
+    CHECK_DIAGNOSTICS_EMPTY;
 }

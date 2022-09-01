@@ -441,7 +441,7 @@ Diagnostics DiagnosticEngine::setWarningOptions(span<const std::string> options)
             findAndSet(arg.substr(6), DiagnosticSeverity::Error, "-Werror=");
         }
         else if (startsWith(arg, "no-error=")) {
-            findAndSet(arg.substr(9), DiagnosticSeverity::Error, "-Wno-error=");
+            findAndSet(arg.substr(9), DiagnosticSeverity::Warning, "-Wno-error=");
         }
         else if (startsWith(arg, "no-")) {
             findAndSet(arg.substr(3), DiagnosticSeverity::Ignored, "-Wno-");

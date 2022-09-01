@@ -50,6 +50,7 @@ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/util/Version.cpp.in
 
 set(slangcore_SOURCES
     ${CMAKE_CURRENT_BINARY_DIR}/DiagCode.cpp
+    ${CMAKE_CURRENT_BINARY_DIR}/slang/diagnostics/AllDiags.h
     diagnostics/DiagnosticClient.cpp
     diagnostics/DiagnosticEngine.cpp
     diagnostics/Diagnostics.cpp
@@ -81,16 +82,6 @@ endif()
 
 add_library(slangcore ${slangcore_SOURCES})
 slang_define_lib(slangcore)
-
-if(NOT CMAKE_CXX_COMPILER_ID MATCHES "MSVC" AND NOT APPLE)
-  # Link against C++17 filesystem
-  if((CMAKE_CXX_COMPILER_ID MATCHES "GNU" AND CMAKE_CXX_COMPILER_VERSION
-                                              VERSION_LESS 9.1)
-     OR (CMAKE_CXX_COMPILER_ID MATCHES "Clang" AND CMAKE_CXX_COMPILER_VERSION
-                                                   VERSION_LESS 9.0))
-    target_link_libraries(slangcore PRIVATE stdc++fs)
-  endif()
-endif()
 
 target_link_libraries(slangcore PUBLIC fmt::fmt)
 if(SLANG_USE_SYSTEM_LIBS)
@@ -133,6 +124,7 @@ add_library(
   parsing/ParserBase.cpp
   parsing/Preprocessor.cpp
   parsing/Preprocessor_macros.cpp
+  parsing/Preprocessor_pragmas.cpp
   parsing/Token.cpp
   ${CMAKE_CURRENT_BINARY_DIR}/AllSyntax.cpp
   ${CMAKE_CURRENT_BINARY_DIR}/TokenKind.cpp

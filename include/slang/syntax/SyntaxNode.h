@@ -166,7 +166,7 @@ public:
     SyntaxList(nullptr_t) : SyntaxList(span<T*>()) {}
     SyntaxList(span<T*> elements);
 
-    // TODO: this is here to work around a bug in GCC 8
+    // TODO: this is here to work around a bug in GCC 9
     operator span<const T* const>() const {
         return span<const T* const>(this->data(), this->size());
     }

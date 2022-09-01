@@ -355,6 +355,21 @@ LValue Expression::evalLValue(EvalContext& context) const {
     return visit(visitor, context);
 }
 
+optional<ConstantRange> Expression::evalSelector(EvalContext& context) const {
+    ConstantValue unused1;
+    bool unused2;
+    switch (kind) {
+        case ExpressionKind::ElementSelect:
+            return as<ElementSelectExpression>().evalIndex(context, nullptr, unused1, unused2);
+        case ExpressionKind::RangeSelect:
+            return as<RangeSelectExpression>().evalRange(context, nullptr);
+        case ExpressionKind::MemberAccess:
+            return as<MemberAccessExpression>().getSelectRange();
+        default:
+            return {};
+    }
+}
+
 bool Expression::requireLValue(const BindContext& context, SourceLocation location,
                                bitmask<AssignFlags> flags, const Expression* longestStaticPrefix,
                                EvalContext* customEvalContext) const {
@@ -397,9 +412,9 @@ bool Expression::requireLValue(const BindContext& context, SourceLocation locati
         case ExpressionKind::Streaming: {
             ASSERT(!longestStaticPrefix);
             auto& stream = as<StreamingConcatenationExpression>();
-            for (auto op : stream.streams()) {
-                if (!op->operand->requireLValue(context, location, flags | AssignFlags::InConcat,
-                                                longestStaticPrefix, customEvalContext)) {
+            for (auto& op : stream.streams()) {
+                if (!op.operand->requireLValue(context, location, flags | AssignFlags::InConcat,
+                                               longestStaticPrefix, customEvalContext)) {
                     return false;
                 }
             }
