@@ -725,7 +725,8 @@ error NTResolveArgModify "resolution function for nettype '{}' cannot modify its
 warning enum-range EnumRangeLiteral "enum element ranges must be integer literals"
 
 subsystem Lookup
-warning redefinition Redefinition "redefinition of '{}'"
+warning duplicate-definition DuplicateDefinition "duplicate definition of '{}'"
+error Redefinition "redefinition of '{}'"
 error RedefinitionDifferentType "redefinition of '{}' with a different type: {} vs {}"
 error AmbiguousWildcardImport "multiple imports found for identifier '{}'"
 note NoteImportedFrom "imported from here"

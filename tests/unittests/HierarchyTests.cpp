@@ -82,7 +82,7 @@ endmodule
 
     auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 1);
-    CHECK(diags[0].code == diag::Redefinition);
+    CHECK(diags[0].code == diag::DuplicateDefinition);
 }
 
 TEST_CASE("Duplicate package") {
@@ -1673,7 +1673,7 @@ endmodule
 
     auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 1);
-    CHECK(diags[0].code == diag::Redefinition);
+    CHECK(diags[0].code == diag::DuplicateDefinition);
 
     auto& top = compilation.getRoot().lookupName<InstanceSymbol>("top").body;
     auto instances = top.membersOfType<InstanceSymbol>();

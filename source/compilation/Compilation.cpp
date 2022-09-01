@@ -448,6 +448,15 @@ static void reportRedefinition(const Scope& scope, const T& newSym, const U& old
     }
 }
 
+template<typename T, typename U>
+static void reportDuplicateDefinition(const Scope& scope, const T& newSym, const U& oldSym) {
+    if (!newSym.name.empty()) {
+        auto& diag = scope.addDiag(diag::DuplicateDefinition, newSym.location);
+        diag << newSym.name;
+        diag.addNote(diag::NotePreviousDefinition, oldSym.location);
+    }
+}
+
 void Compilation::createDefinition(const Scope& scope, LookupLocation location,
                                    const ModuleDeclarationSyntax& syntax) {
     auto& metadata = definitionMetadata[&syntax];
@@ -458,25 +467,13 @@ void Compilation::createDefinition(const Scope& scope, LookupLocation location,
     // Record that the given scope contains this definition. If the scope is a compilation unit, add
     // it to the root scope instead so that lookups from other compilation units will find it.
     auto targetScope = scope.asSymbol().kind == SymbolKind::CompilationUnit ? root.get() : &scope;
-    bool redefined = false;
     std::tuple key(def->name, targetScope);
-    if (auto it = definitionMap.find(key); it != definitionMap.end()) {
-        reportRedefinition(scope, *def, *it->second);
-        redefined = true;
-    }
+    if (auto it = definitionMap.find(key); it != definitionMap.end())
+        reportDuplicateDefinition(scope, *def, *it->second);
 
-    auto [it, inserted] = definitionMap.insert_or_assign(key, std::move(def));
-    if (!redefined) {
-        ASSERT(inserted);
-    }
-
-    auto result = it->second.get();
+    const auto& result = (definitionMap[key] = std::move(def));
     if (targetScope == root.get()) {
-        auto& topDef = topDefinitions[result->name].first;
-        if (!redefined)
-            ASSERT(!topDef);
-
-        topDef = result;
+        topDefinitions[result->name].first = result.get();
         if (auto primIt = udpMap.find(result->name); primIt != udpMap.end())
             reportRedefinition(scope, *result, *primIt->second);
     }

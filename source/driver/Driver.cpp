@@ -348,7 +348,7 @@ bool Driver::processOptions() {
 
     // Demoted to warning just to get the -W flag options, but we really
     // want it to be an error by default.
-    diagEngine.setSeverity(diag::Redefinition, DiagnosticSeverity::Error);
+    diagEngine.setSeverity(diag::DuplicateDefinition, DiagnosticSeverity::Error);
 
     if (options.compat == "vcs") {
         diagEngine.setSeverity(diag::StaticInitializerMustBeExplicit, DiagnosticSeverity::Ignored);
