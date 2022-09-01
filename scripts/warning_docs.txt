@@ -693,3 +693,16 @@ logic [1:0] a;
 int b;
 logic [2:0] c = a[b+:3];
 ```
+
+-Wduplicate-definition
+A module has been defined using the same name as a previously defined module. This is an error
+by default but can be downgraded to a warning for compatibility with other tools.
+This applies to both top level modules as well as nested modules (but only duplicated nested modules within the same scope,
+as it is OK to have modules with the same name in different scopes).
+```
+module a;
+endmodule;
+
+module a;
+endmodule
+```

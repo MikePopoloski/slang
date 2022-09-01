@@ -346,6 +346,10 @@ bool Driver::processOptions() {
     diagEngine.setErrorLimit((int)options.errorLimit.value_or(20));
     diagEngine.setDefaultWarnings();
 
+    // Some tools allow ignoring duplicate module/interface/program definitions,
+    // so this is a suppressible warning that we promote to an error by default.
+    diagEngine.setSeverity(diag::DuplicateDefinition, DiagnosticSeverity::Error);
+
     if (options.compat == "vcs") {
         diagEngine.setSeverity(diag::StaticInitializerMustBeExplicit, DiagnosticSeverity::Ignored);
         diagEngine.setSeverity(diag::ImplicitConvert, DiagnosticSeverity::Ignored);

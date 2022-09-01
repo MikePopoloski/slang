@@ -440,9 +440,10 @@ const Definition* Compilation::getDefinition(const ModuleDeclarationSyntax& synt
 }
 
 template<typename T, typename U>
-static void reportRedefinition(const Scope& scope, const T& newSym, const U& oldSym) {
+static void reportRedefinition(const Scope& scope, const T& newSym, const U& oldSym,
+                               DiagCode code = diag::Redefinition) {
     if (!newSym.name.empty()) {
-        auto& diag = scope.addDiag(diag::Redefinition, newSym.location);
+        auto& diag = scope.addDiag(code, newSym.location);
         diag << newSym.name;
         diag.addNote(diag::NotePreviousDefinition, oldSym.location);
     }
@@ -459,20 +460,12 @@ void Compilation::createDefinition(const Scope& scope, LookupLocation location,
     // it to the root scope instead so that lookups from other compilation units will find it.
     auto targetScope = scope.asSymbol().kind == SymbolKind::CompilationUnit ? root.get() : &scope;
     std::tuple key(def->name, targetScope);
-    if (auto it = definitionMap.find(key); it != definitionMap.end()) {
-        reportRedefinition(scope, *def, *it->second);
-        return;
-    }
+    if (auto it = definitionMap.find(key); it != definitionMap.end())
+        reportRedefinition(scope, *def, *it->second, diag::DuplicateDefinition);
 
-    auto [it, inserted] = definitionMap.emplace(key, std::move(def));
-    ASSERT(inserted);
-
-    auto result = it->second.get();
+    const auto& result = (definitionMap[key] = std::move(def));
     if (targetScope == root.get()) {
-        auto& topDef = topDefinitions[result->name].first;
-        ASSERT(!topDef);
-
-        topDef = result;
+        topDefinitions[result->name].first = result.get();
         if (auto primIt = udpMap.find(result->name); primIt != udpMap.end())
             reportRedefinition(scope, *result, *primIt->second);
     }
