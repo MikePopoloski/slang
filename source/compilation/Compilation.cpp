@@ -440,18 +440,9 @@ const Definition* Compilation::getDefinition(const ModuleDeclarationSyntax& synt
 }
 
 template<typename T, typename U>
-static void reportRedefinition(const Scope& scope, const T& newSym, const U& oldSym) {
+static void reportRedefinition(const Scope& scope, const T& newSym, const U& oldSym, DiagCode code = diag::Redefinition) {
     if (!newSym.name.empty()) {
-        auto& diag = scope.addDiag(diag::Redefinition, newSym.location);
-        diag << newSym.name;
-        diag.addNote(diag::NotePreviousDefinition, oldSym.location);
-    }
-}
-
-template<typename T, typename U>
-static void reportDuplicateDefinition(const Scope& scope, const T& newSym, const U& oldSym) {
-    if (!newSym.name.empty()) {
-        auto& diag = scope.addDiag(diag::DuplicateDefinition, newSym.location);
+        auto& diag = scope.addDiag(code, newSym.location);
         diag << newSym.name;
         diag.addNote(diag::NotePreviousDefinition, oldSym.location);
     }
@@ -469,7 +460,7 @@ void Compilation::createDefinition(const Scope& scope, LookupLocation location,
     auto targetScope = scope.asSymbol().kind == SymbolKind::CompilationUnit ? root.get() : &scope;
     std::tuple key(def->name, targetScope);
     if (auto it = definitionMap.find(key); it != definitionMap.end())
-        reportDuplicateDefinition(scope, *def, *it->second);
+        reportRedefinition(scope, *def, *it->second, diag::DuplicateDefinition);
 
     const auto& result = (definitionMap[key] = std::move(def));
     if (targetScope == root.get()) {

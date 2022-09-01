@@ -346,8 +346,8 @@ bool Driver::processOptions() {
     diagEngine.setErrorLimit((int)options.errorLimit.value_or(20));
     diagEngine.setDefaultWarnings();
 
-    // Demoted to warning just to get the -W flag options, but we really
-    // want it to be an error by default.
+    // Some tools allow ignoring duplicate module/interface/program definitions,
+    // so this is a suppressible warning that we promote to an error by default.
     diagEngine.setSeverity(diag::DuplicateDefinition, DiagnosticSeverity::Error);
 
     if (options.compat == "vcs") {
