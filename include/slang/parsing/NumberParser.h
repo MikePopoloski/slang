@@ -41,7 +41,7 @@ public:
         return IntResult::simple(token);
     }
 
-    template<typename TStream>
+    template<typename TStream, bool RequireSameLine = false>
     IntResult parseInteger(TStream& stream) {
         Token sizeToken;
         Token baseToken;
@@ -52,15 +52,28 @@ public:
             startVector(baseToken, Token());
         }
         else {
-            if (!stream.peek(TokenKind::IntegerBase)) {
+            auto createSimple = [&] {
                 if (token.intValue() > INT32_MAX)
                     reportIntOverflow(token);
                 return IntResult::simple(token);
+            };
+
+            if constexpr (RequireSameLine) {
+                if (!stream.peekSameLine())
+                    return createSimple();
             }
+
+            if (!stream.peek(TokenKind::IntegerBase))
+                return createSimple();
 
             sizeToken = token;
             baseToken = stream.consume();
             startVector(baseToken, sizeToken);
+        }
+
+        if constexpr (RequireSameLine) {
+            if (!stream.peekSameLine())
+                return reportMissingDigits(sizeToken, baseToken, Token());
         }
 
         // At this point we expect to see vector digits, but they could be split out into other
@@ -89,6 +102,11 @@ public:
                 // instead of trying to use the initial token's raw directly.
                 count++;
                 break;
+            }
+
+            if constexpr (RequireSameLine) {
+                if (!stream.peekSameLine())
+                    break;
             }
 
             next = stream.peek();

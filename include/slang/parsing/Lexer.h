@@ -47,6 +47,10 @@ public:
     /// an infinite stream of EndOfFile tokens will be generated
     Token lex(KeywordVersion keywordVersion = LexerFacts::getDefaultKeywordVersion());
 
+    /// Looks ahead in the source stream to see if the next token we would lex
+    /// is on the same line as the previous token we've lexed.
+    bool isNextTokenOnSameLine();
+
     /// Concatenates two tokens together; used for macro pasting.
     static Token concatenateTokens(BumpAllocator& alloc, Token left, Token right);
 
@@ -98,16 +102,16 @@ private:
     void mark() { marker = sourceBuffer; }
     void advance() { sourceBuffer++; }
     void advance(int count) { sourceBuffer += count; }
-    char peek() { return *sourceBuffer; }
-    char peek(int offset) { return sourceBuffer[offset]; }
-    size_t currentOffset();
+    char peek() const { return *sourceBuffer; }
+    char peek(int offset) const { return sourceBuffer[offset]; }
+    size_t currentOffset() const;
 
     // in order to detect embedded nulls gracefully, we call this whenever we
     // encounter a null to check whether we really are at the end of the buffer
-    bool reallyAtEnd() { return sourceBuffer >= sourceEnd - 1; }
+    bool reallyAtEnd() const { return sourceBuffer >= sourceEnd - 1; }
 
-    uint32_t lexemeLength() { return (uint32_t)(sourceBuffer - marker); }
-    string_view lexeme() { return string_view(marker, lexemeLength()); }
+    uint32_t lexemeLength() const { return (uint32_t)(sourceBuffer - marker); }
+    string_view lexeme() const { return string_view(marker, lexemeLength()); }
 
     bool consume(char c) {
         if (peek() == c) {

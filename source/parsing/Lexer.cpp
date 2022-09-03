@@ -15,6 +15,7 @@
 #include "slang/text/CharInfo.h"
 #include "slang/text/SourceManager.h"
 #include "slang/util/BumpAllocator.h"
+#include "slang/util/ScopeGuard.h"
 #include "slang/util/String.h"
 
 static_assert(std::numeric_limits<double>::is_iec559, "SystemVerilog requires IEEE 754");
@@ -208,6 +209,40 @@ Token Lexer::lex(KeywordVersion keywordVersion) {
     }
 
     return token;
+}
+
+bool Lexer::isNextTokenOnSameLine() {
+    auto guard = ScopeGuard([this, currBuff = sourceBuffer] { sourceBuffer = currBuff; });
+
+    while (true) {
+        switch (peek()) {
+            case ' ':
+            case '\t':
+            case '\v':
+            case '\f':
+                advance();
+                break;
+            case '/':
+                switch (peek(1)) {
+                    case '/':
+                        return false;
+                    case '*': {
+                        advance(2);
+                        scanBlockComment();
+                        break;
+                    }
+                    default:
+                        return true;
+                }
+                break;
+            case '\0':
+            case '\r':
+            case '\n':
+                return false;
+            default:
+                return true;
+        }
+    }
 }
 
 Token Lexer::lexToken(KeywordVersion keywordVersion) {
@@ -1204,7 +1239,7 @@ Diagnostic& Lexer::addDiag(DiagCode code, size_t offset) {
     return diagnostics.add(code, SourceLocation(bufferId, offset));
 }
 
-size_t Lexer::currentOffset() {
+size_t Lexer::currentOffset() const {
     return (size_t)(sourceBuffer - originalBegin);
 }
 

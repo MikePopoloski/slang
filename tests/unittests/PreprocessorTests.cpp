@@ -1539,36 +1539,36 @@ source:10:41: error: expected pragma expression
 source:11:34: error: expected ','
 `pragma bar "asdf", (asdf, "asdf" asdf)
                                  ^
-source:13:34: error: expected ')'
-`pragma bar "asdf", (asdf, "asdf"
-                                 ^
-source:12:35: error: expected ')'
-`pragma bar "asdf", (asdf, "asdf",
-                                  ^
 source:11:9: warning: unknown pragma 'bar' [-Wunknown-pragma]
 `pragma bar "asdf", (asdf, "asdf" asdf)
         ^~~
+source:12:35: error: expected ')'
+`pragma bar "asdf", (asdf, "asdf",
+                                  ^
+source:13:34: error: expected ')'
+`pragma bar "asdf", (asdf, "asdf"
+                                 ^
 source:16:18: error: expected pragma expression
 `pragma bar 'h 3e+2
                  ^
-source:17:1: error: expected pragma name
-`pragma /* asdf
-^
 source:16:9: warning: unknown pragma 'bar' [-Wunknown-pragma]
 `pragma bar 'h 3e+2
         ^~~
-source:22:14: warning: too many arguments provided for pragma 'once' [-Wextra-pragma-args]
-`pragma once asdf
-             ^
-source:21:18: warning: too many arguments provided for pragma 'resetall' [-Wextra-pragma-args]
-`pragma resetall asdf, asdf
-                 ^
+source:17:1: error: expected pragma name
+`pragma /* asdf
+^
 source:20:15: error: expected pragma name
 `pragma reset (asdf, asdf), foo
               ^~~~~~~~~~~~
 source:20:29: warning: unknown pragma 'foo' [-Wunknown-pragma]
 `pragma reset (asdf, asdf), foo
                             ^~~
+source:21:18: warning: too many arguments provided for pragma 'resetall' [-Wextra-pragma-args]
+`pragma resetall asdf, asdf
+                 ^
+source:22:14: warning: too many arguments provided for pragma 'once' [-Wextra-pragma-args]
+`pragma once asdf
+             ^
 )");
 }
 
@@ -1586,10 +1586,10 @@ TEST_CASE("Pragma diagnostic errors") {
 
     REQUIRE(diagnostics.size() == 6);
     CHECK(diagnostics[0].code == diag::ExpectedDiagPragmaArg);
-    CHECK(diagnostics[1].code == diag::ExpectedDiagPragmaArg);
-    CHECK(diagnostics[2].code == diag::ExpectedDiagPragmaLevel);
-    CHECK(diagnostics[3].code == diag::ExpectedDiagPragmaArg);
-    CHECK(diagnostics[4].code == diag::UnknownDiagPragmaArg);
+    CHECK(diagnostics[1].code == diag::UnknownDiagPragmaArg);
+    CHECK(diagnostics[2].code == diag::ExpectedDiagPragmaArg);
+    CHECK(diagnostics[3].code == diag::ExpectedDiagPragmaLevel);
+    CHECK(diagnostics[4].code == diag::ExpectedDiagPragmaArg);
     CHECK(diagnostics[5].code == diag::ExpectedDiagPragmaArg);
 }
 

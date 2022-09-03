@@ -288,8 +288,10 @@ NumberParser::IntResult NumberParser::reportMissingDigits(Token sizeToken, Token
                                                           Token first) {
     // If we issued this error in response to seeing an EOF token, back up and put
     // the error on the last consumed token instead.
-    SourceLocation errLoc = first.location();
-    if (first.kind == TokenKind::EndOfFile)
+    SourceLocation errLoc;
+    if (first && first.kind != TokenKind::EndOfFile)
+        errLoc = first.location();
+    else
         errLoc = baseToken.location() + baseToken.rawText().size();
 
     addDiag(diag::ExpectedVectorDigits, errLoc);

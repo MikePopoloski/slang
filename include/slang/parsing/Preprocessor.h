@@ -262,6 +262,7 @@ private:
     Token consume();
     Token expect(TokenKind kind);
     bool peek(TokenKind kind) { return peek().kind == kind; }
+    bool peekSameLine() const;
 
     Diagnostic& addDiag(DiagCode code, SourceLocation location);
     Diagnostic& addDiag(DiagCode code, SourceRange range);

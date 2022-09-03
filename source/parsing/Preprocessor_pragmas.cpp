@@ -16,7 +16,7 @@ std::pair<PragmaExpressionSyntax*, bool> Preprocessor::parsePragmaExpression() {
     Token token = peek();
     if (token.kind == TokenKind::Identifier || LexerFacts::isKeyword(token.kind)) {
         auto name = consume();
-        if (peek().kind == TokenKind::Equals) {
+        if (peekSameLine() && peek().kind == TokenKind::Equals) {
             auto equals = consume();
             auto [expr, succeeded] = parsePragmaValue();
             auto result = alloc.emplace<NameValuePragmaExpressionSyntax>(name, equals, *expr);
@@ -36,7 +36,7 @@ std::pair<PragmaExpressionSyntax*, bool> Preprocessor::parsePragmaValue() {
     Token token = peek();
     if (token.kind == TokenKind::IntegerBase || token.kind == TokenKind::IntegerLiteral) {
         PragmaExpressionSyntax* expr;
-        auto result = numberParser.parseInteger(*this);
+        auto result = numberParser.parseInteger<Preprocessor, true>(*this);
         if (result.isSimple) {
             expr = alloc.emplace<SimplePragmaExpressionSyntax>(result.value);
         }
@@ -76,8 +76,8 @@ std::pair<PragmaExpressionSyntax*, bool> Preprocessor::parsePragmaValue() {
     // so this is necessary to correctly place the diagnostic.
     Token lastToken = openParen;
 
-    token = peek();
-    while (token.kind != TokenKind::EndOfFile && token.isOnSameLine()) {
+    while (peekSameLine()) {
+        token = peek();
         if (wantComma) {
             if (token.kind == TokenKind::CloseParenthesis) {
                 ok = true;
@@ -99,16 +99,18 @@ std::pair<PragmaExpressionSyntax*, bool> Preprocessor::parsePragmaValue() {
 
             lastToken = expr->getLastToken();
         }
-        token = peek();
     }
 
-    token = peek();
+    Token nextUp = lastToken;
     Token closeParen;
-    if (token.kind == TokenKind::CloseParenthesis && token.isOnSameLine()) {
-        closeParen = consume();
+    if (peekSameLine()) {
+        nextUp = peek();
+        if (nextUp.kind == TokenKind::CloseParenthesis)
+            closeParen = consume();
     }
-    else {
-        closeParen = Token::createExpected(alloc, diagnostics, token, TokenKind::CloseParenthesis,
+
+    if (!closeParen) {
+        closeParen = Token::createExpected(alloc, diagnostics, nextUp, TokenKind::CloseParenthesis,
                                            lastToken, Token());
     }
 
@@ -117,7 +119,7 @@ std::pair<PragmaExpressionSyntax*, bool> Preprocessor::parsePragmaValue() {
 }
 
 std::pair<PragmaExpressionSyntax*, bool> Preprocessor::checkNextPragmaToken() {
-    if (!peek().isOnSameLine()) {
+    if (!peekSameLine()) {
         auto loc = lastConsumed.location() + lastConsumed.rawText().length();
         addDiag(diag::ExpectedPragmaExpression, loc);
 

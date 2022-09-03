@@ -907,11 +907,13 @@ Trivia Preprocessor::handlePragmaDirective(Token directive) {
 
     SmallVectorSized<TokenOrSyntax, 4> args;
     Token name = consume();
-    Token token = peek();
     bool wantComma = false;
     bool ok = true;
 
-    while (token.kind != TokenKind::EndOfFile && token.isOnSameLine()) {
+    // This loop needs to be careful not to prematurely peek() and pull a
+    // new token from the lexer, since some pragmas may change how we lex
+    // tokens on the following line (such as pragma protect encoded blocks).
+    while (peekSameLine()) {
         if (wantComma) {
             args.append(expect(TokenKind::Comma));
             wantComma = false;
@@ -926,7 +928,6 @@ Trivia Preprocessor::handlePragmaDirective(Token directive) {
                 break;
             }
         }
-        token = peek();
     }
 
     auto result = alloc.emplace<PragmaDirectiveSyntax>(directive, name, args.copy(alloc));
@@ -996,6 +997,16 @@ Token Preprocessor::expect(TokenKind kind) {
     lastConsumed = currentToken;
     currentToken = Token();
     return result;
+}
+
+bool Preprocessor::peekSameLine() const {
+    if (currentToken)
+        return currentToken.isOnSameLine();
+
+    if (currentMacroToken)
+        return currentMacroToken->isOnSameLine();
+
+    return lexerStack.back()->isNextTokenOnSameLine();
 }
 
 Diagnostic& Preprocessor::addDiag(DiagCode code, SourceLocation location) {
