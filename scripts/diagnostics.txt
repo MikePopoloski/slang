@@ -84,6 +84,8 @@ error ExpectedMacroStringifyEnd "expected closing quote to end macro stringifica
 error ExpectedPragmaName "expected pragma name"
 error ExpectedPragmaExpression "expected pragma expression"
 error DirectiveInsideDesignElement "directive is not allowed inside a design element"
+error MacroTokensAfterPragmaProtect "unexpected macro expansion after pragma protect directive"
+note NoteDirectiveHere "after protect directive here"
 warning ignored-macro-paste IgnoredMacroPaste "paste token is pointless because it is adjacent to whitespace"
 warning redef-macro RedefiningMacro "macro '{}' redefined"
 warning unknown-pragma UnknownPragma "unknown pragma '{}'"

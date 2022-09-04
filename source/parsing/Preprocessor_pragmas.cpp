@@ -136,10 +136,11 @@ void Preprocessor::handleExponentSplit(Token token, size_t offset) {
     addDiag(diag::ExpectedPragmaExpression, token.location() + offset);
 }
 
-void Preprocessor::applyPragma(const PragmaDirectiveSyntax& pragma) {
+void Preprocessor::applyPragma(const PragmaDirectiveSyntax& pragma,
+                               SmallVector<Token>& skippedTokens) {
     string_view name = pragma.name.valueText();
     if (name == "protect") {
-        applyProtectPragma(pragma);
+        applyProtectPragma(pragma, skippedTokens);
         return;
     }
 
@@ -167,7 +168,8 @@ void Preprocessor::applyPragma(const PragmaDirectiveSyntax& pragma) {
     addDiag(diag::UnknownPragma, pragma.name.range()) << name;
 }
 
-void Preprocessor::applyProtectPragma(const PragmaDirectiveSyntax& pragma) {
+void Preprocessor::applyProtectPragma(const PragmaDirectiveSyntax& pragma,
+                                      SmallVector<Token>& skippedTokens) {
     if (pragma.args.empty()) {
         Token last = pragma.getLastToken();
         addDiag(diag::ExpectedProtectKeyword, last.location() + last.rawText().length());
@@ -177,7 +179,7 @@ void Preprocessor::applyProtectPragma(const PragmaDirectiveSyntax& pragma) {
     auto handle = [&](Token keyword, const PragmaExpressionSyntax* args) {
         auto text = keyword.valueText();
         if (auto it = pragmaProtectHandlers.find(text); it != pragmaProtectHandlers.end())
-            (this->*(it->second))(keyword, args);
+            (this->*(it->second))(keyword, args, skippedTokens);
         else if (!text.empty())
             addDiag(diag::UnknownProtectKeyword, keyword.range()) << text;
     };
@@ -343,7 +345,28 @@ optional<uint32_t> Preprocessor::requireUInt32(const PragmaExpressionSyntax& exp
     return {};
 }
 
-void Preprocessor::handleProtectBegin(Token keyword, const PragmaExpressionSyntax* args) {
+void Preprocessor::skipMacroTokensBeforeProtectRegion(Token directive,
+                                                      SmallVector<Token>& skippedTokens) {
+    // We're about to lex an encoded / encrypted data block based on a pragma
+    // protect directive, so we don't expect there to be macro tokens still pending.
+    // If there are, issue an error and skip them.
+    ASSERT(!currentToken);
+    if (currentMacroToken) {
+        addDiag(diag::MacroTokensAfterPragmaProtect, currentMacroToken->range())
+            .addNote(diag::NoteDirectiveHere, directive.range());
+
+        do {
+            skippedTokens.append(*currentMacroToken);
+            currentMacroToken++;
+        } while (currentMacroToken != expandedTokens.end());
+
+        currentMacroToken = nullptr;
+        expandedTokens.clear();
+    }
+}
+
+void Preprocessor::handleProtectBegin(Token keyword, const PragmaExpressionSyntax* args,
+                                      SmallVector<Token>&) {
     ensureNoPragmaArgs(keyword, args);
 
     if (protectEncryptDepth)
@@ -351,7 +374,8 @@ void Preprocessor::handleProtectBegin(Token keyword, const PragmaExpressionSynta
     protectEncryptDepth++;
 }
 
-void Preprocessor::handleProtectEnd(Token keyword, const PragmaExpressionSyntax* args) {
+void Preprocessor::handleProtectEnd(Token keyword, const PragmaExpressionSyntax* args,
+                                    SmallVector<Token>&) {
     ensureNoPragmaArgs(keyword, args);
 
     if (protectEncryptDepth)
@@ -360,12 +384,14 @@ void Preprocessor::handleProtectEnd(Token keyword, const PragmaExpressionSyntax*
         addDiag(diag::ExtraProtectEnd, keyword.range()) << keyword.valueText();
 }
 
-void Preprocessor::handleProtectBeginProtected(Token keyword, const PragmaExpressionSyntax* args) {
+void Preprocessor::handleProtectBeginProtected(Token keyword, const PragmaExpressionSyntax* args,
+                                               SmallVector<Token>&) {
     ensureNoPragmaArgs(keyword, args);
     protectDecryptDepth++;
 }
 
-void Preprocessor::handleProtectEndProtected(Token keyword, const PragmaExpressionSyntax* args) {
+void Preprocessor::handleProtectEndProtected(Token keyword, const PragmaExpressionSyntax* args,
+                                             SmallVector<Token>&) {
     ensureNoPragmaArgs(keyword, args);
 
     if (protectDecryptDepth)
@@ -374,7 +400,8 @@ void Preprocessor::handleProtectEndProtected(Token keyword, const PragmaExpressi
         addDiag(diag::ExtraProtectEnd, keyword.range()) << keyword.valueText();
 }
 
-void Preprocessor::handleProtectSingleArgIgnore(Token keyword, const PragmaExpressionSyntax* args) {
+void Preprocessor::handleProtectSingleArgIgnore(Token keyword, const PragmaExpressionSyntax* args,
+                                                SmallVector<Token>&) {
     if (!args || args->kind != SyntaxKind::SimplePragmaExpression ||
         args->as<SimplePragmaExpressionSyntax>().value.kind != TokenKind::StringLiteral) {
 
@@ -383,7 +410,8 @@ void Preprocessor::handleProtectSingleArgIgnore(Token keyword, const PragmaExpre
     }
 }
 
-void Preprocessor::handleProtectEncoding(Token keyword, const PragmaExpressionSyntax* args) {
+void Preprocessor::handleProtectEncoding(Token keyword, const PragmaExpressionSyntax* args,
+                                         SmallVector<Token>&) {
     if (!args || args->kind != SyntaxKind::ParenPragmaExpression ||
         args->as<ParenPragmaExpressionSyntax>().values.empty()) {
         addDiag(diag::ProtectArgList, args ? args->sourceRange() : keyword.range())
@@ -436,19 +464,24 @@ void Preprocessor::handleProtectEncoding(Token keyword, const PragmaExpressionSy
     }
 }
 
-void Preprocessor::handleProtectKey(Token keyword, const PragmaExpressionSyntax* args) {
+void Preprocessor::handleProtectKey(Token keyword, const PragmaExpressionSyntax* args,
+                                    SmallVector<Token>& skippedTokens) {
     ensureNoPragmaArgs(keyword, args);
+    skipMacroTokensBeforeProtectRegion(keyword, skippedTokens);
 
     // TODO: skip the key
 }
 
-void Preprocessor::handleProtectBlock(Token keyword, const PragmaExpressionSyntax* args) {
+void Preprocessor::handleProtectBlock(Token keyword, const PragmaExpressionSyntax* args,
+                                      SmallVector<Token>& skippedTokens) {
     ensureNoPragmaArgs(keyword, args);
+    skipMacroTokensBeforeProtectRegion(keyword, skippedTokens);
 
     // TODO: skip the block
 }
 
-void Preprocessor::handleProtectLicense(Token keyword, const PragmaExpressionSyntax* args) {
+void Preprocessor::handleProtectLicense(Token keyword, const PragmaExpressionSyntax* args,
+                                        SmallVector<Token>&) {
     if (!args || args->kind != SyntaxKind::ParenPragmaExpression ||
         args->as<ParenPragmaExpressionSyntax>().values.empty()) {
         addDiag(diag::ProtectArgList, args ? args->sourceRange() : keyword.range())
@@ -480,13 +513,15 @@ void Preprocessor::handleProtectLicense(Token keyword, const PragmaExpressionSyn
     }
 }
 
-void Preprocessor::handleProtectReset(Token keyword, const PragmaExpressionSyntax* args) {
+void Preprocessor::handleProtectReset(Token keyword, const PragmaExpressionSyntax* args,
+                                      SmallVector<Token>&) {
     ensureNoPragmaArgs(keyword, args);
 
     // TODO: handle the reset
 }
 
-void Preprocessor::handleProtectViewport(Token keyword, const PragmaExpressionSyntax* args) {
+void Preprocessor::handleProtectViewport(Token keyword, const PragmaExpressionSyntax* args,
+                                         SmallVector<Token>&) {
     if (!args || args->kind != SyntaxKind::ParenPragmaExpression ||
         args->as<ParenPragmaExpressionSyntax>().values.size() != 2) {
         addDiag(diag::InvalidPragmaViewport, args ? args->sourceRange() : keyword.range());

@@ -153,10 +153,10 @@ private:
     Trivia handleUndefineAllDirective(Token directive);
     Trivia handleBeginKeywordsDirective(Token directive);
     Trivia handleEndKeywordsDirective(Token directive);
-    Trivia handlePragmaDirective(Token directive);
     Trivia handleUnconnectedDriveDirective(Token directive);
     Trivia handleNoUnconnectedDriveDirective(Token directive);
     Trivia createSimpleDirective(Token directive);
+    std::pair<Trivia, Trivia> handlePragmaDirective(Token directive);
 
     // Determines whether the else branch of a conditional directive should be taken
     bool shouldTakeElseBranch(SourceLocation location, bool isElseIf, string_view macroName);
@@ -176,28 +176,42 @@ private:
     std::pair<PragmaExpressionSyntax*, bool> checkNextPragmaToken();
 
     // Pragma action handlers
-    void applyPragma(const PragmaDirectiveSyntax& pragma);
-    void applyProtectPragma(const PragmaDirectiveSyntax& pragma);
+    void applyPragma(const PragmaDirectiveSyntax& pragma, SmallVector<Token>& skippedTokens);
+    void applyProtectPragma(const PragmaDirectiveSyntax& pragma, SmallVector<Token>& skippedTokens);
     void applyResetPragma(const PragmaDirectiveSyntax& pragma);
     void applyResetAllPragma(const PragmaDirectiveSyntax& pragma);
     void applyOncePragma(const PragmaDirectiveSyntax& pragma);
     void applyDiagnosticPragma(const PragmaDirectiveSyntax& pragma);
     void ensurePragmaArgs(const PragmaDirectiveSyntax& pragma, size_t count);
     void ensureNoPragmaArgs(Token keyword, const PragmaExpressionSyntax* args);
-    optional<uint32_t> requireUInt32(const PragmaExpressionSyntax& expr);
 
     // Pragma protect handlers
-    void handleProtectBegin(Token keyword, const PragmaExpressionSyntax* args);
-    void handleProtectEnd(Token keyword, const PragmaExpressionSyntax* args);
-    void handleProtectBeginProtected(Token keyword, const PragmaExpressionSyntax* args);
-    void handleProtectEndProtected(Token keyword, const PragmaExpressionSyntax* args);
-    void handleProtectSingleArgIgnore(Token keyword, const PragmaExpressionSyntax* args);
-    void handleProtectEncoding(Token keyword, const PragmaExpressionSyntax* args);
-    void handleProtectKey(Token keyword, const PragmaExpressionSyntax* args);
-    void handleProtectBlock(Token keyword, const PragmaExpressionSyntax* args);
-    void handleProtectLicense(Token keyword, const PragmaExpressionSyntax* args);
-    void handleProtectReset(Token keyword, const PragmaExpressionSyntax* args);
-    void handleProtectViewport(Token keyword, const PragmaExpressionSyntax* args);
+    void handleProtectBegin(Token keyword, const PragmaExpressionSyntax* args,
+                            SmallVector<Token>& skippedTokens);
+    void handleProtectEnd(Token keyword, const PragmaExpressionSyntax* args,
+                          SmallVector<Token>& skippedTokens);
+    void handleProtectBeginProtected(Token keyword, const PragmaExpressionSyntax* args,
+                                     SmallVector<Token>& skippedTokens);
+    void handleProtectEndProtected(Token keyword, const PragmaExpressionSyntax* args,
+                                   SmallVector<Token>& skippedTokens);
+    void handleProtectSingleArgIgnore(Token keyword, const PragmaExpressionSyntax* args,
+                                      SmallVector<Token>& skippedTokens);
+    void handleProtectEncoding(Token keyword, const PragmaExpressionSyntax* args,
+                               SmallVector<Token>& skippedTokens);
+    void handleProtectKey(Token keyword, const PragmaExpressionSyntax* args,
+                          SmallVector<Token>& skippedTokens);
+    void handleProtectBlock(Token keyword, const PragmaExpressionSyntax* args,
+                            SmallVector<Token>& skippedTokens);
+    void handleProtectLicense(Token keyword, const PragmaExpressionSyntax* args,
+                              SmallVector<Token>& skippedTokens);
+    void handleProtectReset(Token keyword, const PragmaExpressionSyntax* args,
+                            SmallVector<Token>& skippedTokens);
+    void handleProtectViewport(Token keyword, const PragmaExpressionSyntax* args,
+                               SmallVector<Token>& skippedTokens);
+
+    // Pragma helpers
+    optional<uint32_t> requireUInt32(const PragmaExpressionSyntax& expr);
+    void skipMacroTokensBeforeProtectRegion(Token directive, SmallVector<Token>& skippedTokens);
 
     // Specifies possible macro intrinsics.
     enum class MacroIntrinsic { None, Line, File };
@@ -381,7 +395,8 @@ private:
     void handleExponentSplit(Token token, size_t offset);
 
     // A map of pragma protect keywords to their handler function.
-    flat_hash_map<string_view, void (Preprocessor::*)(Token, const PragmaExpressionSyntax*)>
+    flat_hash_map<string_view,
+                  void (Preprocessor::*)(Token, const PragmaExpressionSyntax*, SmallVector<Token>&)>
         pragmaProtectHandlers;
 };
 

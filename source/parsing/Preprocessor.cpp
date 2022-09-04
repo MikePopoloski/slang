@@ -296,9 +296,13 @@ Token Preprocessor::handleDirectives(Token token) {
                     case SyntaxKind::EndKeywordsDirective:
                         trivia.append(handleEndKeywordsDirective(token));
                         break;
-                    case SyntaxKind::PragmaDirective:
-                        trivia.append(handlePragmaDirective(token));
+                    case SyntaxKind::PragmaDirective: {
+                        auto [directive, skipped] = handlePragmaDirective(token);
+                        trivia.append(directive);
+                        if (skipped)
+                            trivia.append(skipped);
                         break;
+                    }
                     case SyntaxKind::UnconnectedDriveDirective:
                         trivia.append(handleUnconnectedDriveDirective(token));
                         break;
@@ -899,13 +903,14 @@ Trivia Preprocessor::handleEndKeywordsDirective(Token directive) {
     return createSimpleDirective(directive);
 }
 
-Trivia Preprocessor::handlePragmaDirective(Token directive) {
+std::pair<Trivia, Trivia> Preprocessor::handlePragmaDirective(Token directive) {
     if (peek().kind != TokenKind::Identifier || !peek().isOnSameLine()) {
         addDiag(diag::ExpectedPragmaName, directive.location());
-        return createSimpleDirective(directive);
+        return { createSimpleDirective(directive), Trivia() };
     }
 
     SmallVectorSized<TokenOrSyntax, 4> args;
+    SmallVectorSized<Token, 4> skipped;
     Token name = consume();
     bool wantComma = false;
     bool ok = true;
@@ -924,6 +929,9 @@ Trivia Preprocessor::handlePragmaDirective(Token directive) {
             wantComma = true;
 
             if (!succeeded) {
+                while (peekSameLine())
+                    skipped.append(consume());
+
                 ok = false;
                 break;
             }
@@ -932,9 +940,13 @@ Trivia Preprocessor::handlePragmaDirective(Token directive) {
 
     auto result = alloc.emplace<PragmaDirectiveSyntax>(directive, name, args.copy(alloc));
     if (ok)
-        applyPragma(*result);
+        applyPragma(*result, skipped);
 
-    return Trivia(TriviaKind::Directive, result);
+    Trivia skippedTrivia;
+    if (!skipped.empty())
+        skippedTrivia = Trivia(TriviaKind::SkippedTokens, skipped.copy(alloc));
+
+    return { Trivia(TriviaKind::Directive, result), skippedTrivia };
 }
 
 Trivia Preprocessor::handleUnconnectedDriveDirective(Token directive) {
