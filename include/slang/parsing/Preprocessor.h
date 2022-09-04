@@ -385,7 +385,7 @@ private:
     uint32_t protectDecryptDepth = 0;
     uint32_t protectLineLength = 0;
     uint32_t protectBytes = 0;
-    ProtectEncoding protectEncoding = ProtectEncoding::Base64;
+    ProtectEncoding protectEncoding = ProtectEncoding::Raw;
 
     // Parser for numeric literals in pragma expressions.
     NumberParser numberParser;

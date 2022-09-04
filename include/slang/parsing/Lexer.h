@@ -51,6 +51,9 @@ public:
     /// is on the same line as the previous token we've lexed.
     bool isNextTokenOnSameLine();
 
+    /// Lexes a token that contains encoded text as part of a protected envelope.
+    Token lexEncodedText(ProtectEncoding encoding, uint32_t expectedBytes, bool singleLine);
+
     /// Concatenates two tokens together; used for macro pasting.
     static Token concatenateTokens(BumpAllocator& alloc, Token left, Token right);
 
@@ -91,6 +94,11 @@ private:
     void scanWhitespace();
     void scanIdentifier();
     bool scanUTF8Char(bool alreadyErrored, uint32_t* code);
+
+    void scanUUEncodeRegion(uint32_t expectedBytes, bool singleLine);
+    void scanBase64Region(uint32_t expectedBytes, bool singleLine);
+    void scanQuotedPrintableRegion(uint32_t expectedBytes, bool singleLine);
+    void scanRawRegion(uint32_t expectedBytes, bool singleLine);
 
     template<typename... Args>
     Token create(TokenKind kind, Args&&... args);

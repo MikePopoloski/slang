@@ -226,11 +226,10 @@ bool Lexer::isNextTokenOnSameLine() {
                 switch (peek(1)) {
                     case '/':
                         return false;
-                    case '*': {
+                    case '*':
                         advance(2);
                         scanBlockComment();
                         break;
-                    }
                     default:
                         return true;
                 }
@@ -243,6 +242,70 @@ bool Lexer::isNextTokenOnSameLine() {
                 return true;
         }
     }
+}
+
+Token Lexer::lexEncodedText(ProtectEncoding encoding, uint32_t expectedBytes, bool singleLine) {
+    triviaBuffer.clear();
+    mark();
+
+    // Skip over whitespace and trivia up to the first newline.
+    auto skipTrivia = [&] {
+        while (true) {
+            switch (peek()) {
+                case ' ':
+                case '\t':
+                case '\v':
+                case '\f':
+                    advance();
+                    break;
+                case '/':
+                    switch (peek(1)) {
+                        case '/':
+                            advance(2);
+                            scanLineComment();
+                            break;
+                        case '*':
+                            advance(2);
+                            scanBlockComment();
+                            break;
+                        default:
+                            return;
+                    }
+                    break;
+                case '\r':
+                    advance();
+                    if (peek() == '\n')
+                        advance();
+                    return;
+                case '\n':
+                    advance();
+                    return;
+                default:
+                    return;
+            }
+        }
+    };
+
+    skipTrivia();
+
+    switch (encoding) {
+        case ProtectEncoding::UUEncode:
+            scanUUEncodeRegion(expectedBytes, singleLine);
+            break;
+        case ProtectEncoding::Base64:
+            scanBase64Region(expectedBytes, singleLine);
+            break;
+        case ProtectEncoding::QuotedPrintable:
+            scanQuotedPrintableRegion(expectedBytes, singleLine);
+            break;
+        case ProtectEncoding::Raw:
+            scanRawRegion(expectedBytes, singleLine);
+            break;
+        default:
+            THROW_UNREACHABLE;
+    }
+
+    return create(TokenKind::Unknown);
 }
 
 Token Lexer::lexToken(KeywordVersion keywordVersion) {
@@ -1222,6 +1285,59 @@ bool Lexer::scanUTF8Char(bool alreadyErrored, uint32_t* code) {
     }
 
     return true;
+}
+
+void Lexer::scanUUEncodeRegion(uint32_t, bool) {
+}
+
+void Lexer::scanBase64Region(uint32_t, bool) {
+}
+
+void Lexer::scanQuotedPrintableRegion(uint32_t, bool) {
+}
+
+void Lexer::scanRawRegion(uint32_t expectedBytes, bool singleLine) {
+    uint32_t byteCount = 0;
+    while (true) {
+        char c = peek();
+        if (c == '\0' && reallyAtEnd())
+            return;
+
+        advance();
+        if (c == '\r' || c == '\n') {
+            // If this is a single line region then we're done here.
+            if (singleLine)
+                return;
+
+            // Otherwise continue on. This newline doesn't count toward our expected byte limit.
+            if (c == '\r' && peek() == '\n')
+                advance();
+            continue;
+        }
+
+        byteCount++;
+        if (byteCount == expectedBytes)
+            return;
+
+        if (!expectedBytes && !singleLine) {
+            // Encoding tools probably shouldn't do this but if they do we
+            // should try to gracefully guess the end of the region by looking
+            // for another pragma that ends it.
+            if (c == '`') {
+                int index = 0;
+                for (char d : "pragma"sv) {
+                    if (peek(index) != d)
+                        break;
+                    index++;
+                }
+
+                if (index == 6) {
+                    sourceBuffer--;
+                    return;
+                }
+            }
+        }
+    }
 }
 
 template<typename... Args>

@@ -1929,6 +1929,7 @@ TEST_CASE("Pragma protect error handling") {
 `pragma protect viewport=(1, 2)
 `pragma protect viewport=(foo=1, bar=2)
 `pragma protect viewport=(object=1, access=2)
+`pragma protect viewport=(object="hello", access="world")
 `pragma protect begin=1
 `pragma protect begin
 `pragma protect end
@@ -1985,4 +1986,38 @@ TEST_CASE("Pragma protect with multiline macro expansion") {
 
     REQUIRE(diagnostics.size() == 1);
     CHECK(diagnostics[0].code == diag::MacroTokensAfterPragmaProtect);
+}
+
+TEST_CASE("Pragma protect raw encoding block") {
+    auto text = "`pragma protect encoding=(enctype=\"raw\", line_length=76, bytes=10), key_block\n"
+                "\0\\\"asdf\r\n"
+                "89.\n"
+                "hello"s;
+
+    auto result = preprocess(text);
+    CHECK_DIAGNOSTICS_EMPTY;
+    CHECK(result == "\nhello");
+}
+
+TEST_CASE("Pragma protect raw encoding key") {
+    auto text = "`pragma protect encoding=(enctype=\"raw\"), data_public_key\n"
+                "\0\\\"asdf\r\n"
+                "hello"s;
+
+    auto result = preprocess(text);
+    CHECK_DIAGNOSTICS_EMPTY;
+    CHECK(result == "\nhello");
+}
+
+TEST_CASE("Pragma protect raw encoding guess ending") {
+    auto text = "`pragma protect begin_protected\n"
+                "`pragma protect encoding=(enctype=\"raw\"), key_block\n"
+                "\0\\\"asdf\r\n"
+                "89`pra.\n"
+                "`pragma protect end_protected\n"
+                "hello"s;
+
+    auto result = preprocess(text);
+    CHECK_DIAGNOSTICS_EMPTY;
+    CHECK(result == "\nhello");
 }

@@ -423,6 +423,9 @@ void Preprocessor::handleProtectEncoding(Token keyword, const PragmaExpressionSy
         return;
     }
 
+    protectLineLength = 0;
+    protectBytes = 0;
+
     for (auto arg : args->as<ParenPragmaExpressionSyntax>().values) {
         if (arg->kind != SyntaxKind::NameValuePragmaExpression) {
             addDiag(diag::ProtectArgList, arg->sourceRange()) << keyword.valueText();
@@ -473,7 +476,7 @@ void Preprocessor::handleProtectKey(Token keyword, const PragmaExpressionSyntax*
     ensureNoPragmaArgs(keyword, args);
     skipMacroTokensBeforeProtectRegion(keyword, skippedTokens);
 
-    // TODO: skip the key
+    skippedTokens.append(lexerStack.back()->lexEncodedText(protectEncoding, protectBytes, true));
 }
 
 void Preprocessor::handleProtectBlock(Token keyword, const PragmaExpressionSyntax* args,
@@ -481,7 +484,7 @@ void Preprocessor::handleProtectBlock(Token keyword, const PragmaExpressionSynta
     ensureNoPragmaArgs(keyword, args);
     skipMacroTokensBeforeProtectRegion(keyword, skippedTokens);
 
-    // TODO: skip the block
+    skippedTokens.append(lexerStack.back()->lexEncodedText(protectEncoding, protectBytes, false));
 }
 
 void Preprocessor::handleProtectLicense(Token keyword, const PragmaExpressionSyntax* args,
