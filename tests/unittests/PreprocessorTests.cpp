@@ -1914,3 +1914,75 @@ TEST_CASE("Preprocessor max include depth regress GH #600") {
     preprocess(text, Bag(ppOptions));
     CHECK_DIAGNOSTICS_EMPTY;
 }
+
+TEST_CASE("Pragma protect error handling") {
+    auto& text = R"(
+`pragma protect
+`pragma protect (a=1)
+`pragma protect "foo"
+`pragma protect foo=(1, 2, 3)
+`pragma protect author=1
+`pragma protect runtime_license
+`pragma protect runtime_license=(8'd4)
+`pragma protect runtime_license=(8'd4, library=foo, foo=bar, match=(1,2))
+`pragma protect viewport
+`pragma protect viewport=(1, 2)
+`pragma protect viewport=(foo=1, bar=2)
+`pragma protect viewport=(object=1, access=2)
+`pragma protect begin=1
+`pragma protect begin
+`pragma protect end
+`pragma protect end
+`pragma protect end
+`pragma protect end_protected
+`pragma protect encoding=1
+`pragma protect encoding=(1, foo=bar, enctype="blah", line_length=32'dx, bytes=9e99)
+`pragma protect encoding=32'd
+`pragma protect begin_protected, /
+)";
+
+    preprocess(text);
+
+    REQUIRE(diagnostics.size() == 27);
+    CHECK(diagnostics[0].code == diag::ExpectedProtectKeyword);
+    CHECK(diagnostics[1].code == diag::ExpectedProtectKeyword);
+    CHECK(diagnostics[2].code == diag::ExpectedProtectKeyword);
+    CHECK(diagnostics[3].code == diag::UnknownProtectKeyword);
+    CHECK(diagnostics[4].code == diag::ExpectedProtectArg);
+    CHECK(diagnostics[5].code == diag::ProtectArgList);
+    CHECK(diagnostics[6].code == diag::ProtectArgList);
+    CHECK(diagnostics[7].code == diag::ProtectArgList);
+    CHECK(diagnostics[8].code == diag::ExpectedProtectArg);
+    CHECK(diagnostics[9].code == diag::UnknownProtectOption);
+    CHECK(diagnostics[10].code == diag::InvalidPragmaNumber);
+    CHECK(diagnostics[11].code == diag::InvalidPragmaViewport);
+    CHECK(diagnostics[12].code == diag::InvalidPragmaViewport);
+    CHECK(diagnostics[13].code == diag::InvalidPragmaViewport);
+    CHECK(diagnostics[14].code == diag::InvalidPragmaViewport);
+    CHECK(diagnostics[15].code == diag::ExtraPragmaArgs);
+    CHECK(diagnostics[16].code == diag::NestedProtectBegin);
+    CHECK(diagnostics[17].code == diag::ExtraProtectEnd);
+    CHECK(diagnostics[18].code == diag::ExtraProtectEnd);
+    CHECK(diagnostics[19].code == diag::ProtectArgList);
+    CHECK(diagnostics[20].code == diag::ProtectArgList);
+    CHECK(diagnostics[21].code == diag::UnknownProtectOption);
+    CHECK(diagnostics[22].code == diag::UnknownProtectEncoding);
+    CHECK(diagnostics[23].code == diag::InvalidPragmaNumber);
+    CHECK(diagnostics[24].code == diag::ExpectedVectorDigits);
+    CHECK(diagnostics[25].code == diag::ProtectArgList);
+    CHECK(diagnostics[26].code == diag::ExpectedPragmaExpression);
+}
+
+TEST_CASE("Pragma protect with multiline macro expansion") {
+    auto& text = R"(
+`define PROTECT(x) `pragma protect x \
+    author="jghkj"
+
+`PROTECT(data_block)
+)";
+
+    preprocess(text);
+
+    REQUIRE(diagnostics.size() == 1);
+    CHECK(diagnostics[0].code == diag::MacroTokensAfterPragmaProtect);
+}

@@ -187,15 +187,19 @@ void Preprocessor::applyProtectPragma(const PragmaDirectiveSyntax& pragma,
     for (auto arg : pragma.args) {
         if (arg->kind == SyntaxKind::SimplePragmaExpression) {
             auto& simple = arg->as<SimplePragmaExpressionSyntax>();
-            handle(simple.value, nullptr);
+            if (simple.value.kind == TokenKind::Identifier ||
+                LexerFacts::isKeyword(simple.value.kind)) {
+                handle(simple.value, nullptr);
+                continue;
+            }
         }
         else if (arg->kind == SyntaxKind::NameValuePragmaExpression) {
             auto& nvp = arg->as<NameValuePragmaExpressionSyntax>();
             handle(nvp.name, nvp.value);
+            continue;
         }
-        else {
-            addDiag(diag::ExpectedProtectKeyword, arg->sourceRange());
-        }
+
+        addDiag(diag::ExpectedProtectKeyword, arg->sourceRange());
     }
 }
 
