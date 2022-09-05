@@ -2022,3 +2022,144 @@ TEST_CASE("Pragma protect raw encoding guess ending") {
     CHECK_DIAGNOSTICS_EMPTY;
     CHECK(result == "\nhello");
 }
+
+TEST_CASE("Pragma protect uuencode") {
+    auto& text = R"(
+`pragma protect encoding=(enctype="uuencode", bytes=9), data_block
+&ABCD1234
+`
+#FGHJ
+hello)";
+
+    auto result = preprocess(text);
+    CHECK_DIAGNOSTICS_EMPTY;
+    CHECK(result == "\nhello");
+}
+
+TEST_CASE("Pragma protect base64") {
+    auto& text = R"(
+`pragma protect encoding=(enctype="base64", bytes=7), data_block
+ABCD1234
+FG==
+hello)";
+
+    auto result = preprocess(text);
+    CHECK_DIAGNOSTICS_EMPTY;
+    CHECK(result == "\nhello");
+}
+
+TEST_CASE("Pragma protect quoted-printable") {
+    auto& text = "`pragma protect encoding=(enctype=\"quoted-printable\", bytes=20), data_block\r\n"
+                 "ABCD1234 =21=00 =\r\n"
+                 "ABCD\r\n"
+                 "AB\r\n"
+                 "hello";
+
+    auto result = preprocess(text);
+    CHECK_DIAGNOSTICS_EMPTY;
+    CHECK(result == "\r\nhello");
+}
+
+TEST_CASE("Pragma protect uuencode errors") {
+    auto& text = R"(
+`pragma protect begin_protected
+`pragma protect encoding=(enctype="uuencode", bytes=7), data_block
+ABCD!sdf
+`pragma protect end_protected
+`pragma protect data_block
+qqq
+)";
+
+    preprocess(text);
+
+    REQUIRE(diagnostics.size() == 2);
+    CHECK(diagnostics[0].code == diag::InvalidEncodingByte);
+    CHECK(diagnostics[1].code == diag::InvalidEncodingByte);
+}
+
+TEST_CASE("Pragma protect base64 errors") {
+    auto& text = R"(
+`pragma protect encoding=(enctype="base64", bytes=7), data_block  /* asdf */ //asdf
+ABCD!sdf
+hello)";
+
+    preprocess(text);
+
+    REQUIRE(diagnostics.size() == 1);
+    CHECK(diagnostics[0].code == diag::InvalidEncodingByte);
+}
+
+TEST_CASE("Pragma protect quoted-printable errors") {
+    auto& text =
+        "`pragma protect encoding=(enctype=\"quoted-printable\", bytes=14), data_public_key\n"
+        "ABCD!sdf\x04 asdf\n"
+        "`pragma protect data_block\n"
+        "=q";
+
+    preprocess(text);
+
+    REQUIRE(diagnostics.size() == 2);
+    CHECK(diagnostics[0].code == diag::InvalidEncodingByte);
+    CHECK(diagnostics[1].code == diag::InvalidEncodingByte);
+}
+
+TEST_CASE("Pragma protect wrong block byte count") {
+    auto& text = R"(
+`pragma protect encoding=(enctype="base64", bytes=7), data_block
+ABCD0123ABCD
+hello)";
+
+    preprocess(text);
+
+    REQUIRE(diagnostics.size() == 1);
+    CHECK(diagnostics[0].code == diag::ProtectEncodingBytes);
+}
+
+TEST_CASE("Pragma protect wrong line byte count") {
+    auto& text = R"(
+`pragma protect encoding=(enctype="raw", bytes=7), data_public_key
+ABCD0123ABCD
+hello)";
+
+    preprocess(text);
+
+    REQUIRE(diagnostics.size() == 1);
+    CHECK(diagnostics[0].code == diag::ProtectEncodingBytes);
+}
+
+TEST_CASE("Pragma protect LRM example") {
+    auto& text = R"(
+module secret (a, b);
+   input a;
+   output b;
+
+`pragma protect encoding=(enctype="raw")
+`pragma protect data_method="x-caesar", data_keyname="rot13", begin_protected
+`pragma protect encoding=(enctype="raw", bytes=192), data_block
+`centzn cebgrpg ehagvzr_yvprafr=(yvoenel="yvp.fb",srngher="ehaFrperg",ragel="pux",zngpu=42)
+   ert o;
+
+   vavgvny
+      ortva
+         o = 0;
+      raq
+
+   nyjnlf
+      ortva
+         #5 o = n;
+      raq
+`pragma protect end_protected
+`pragma reset protect
+
+endmodule // secret
+)";
+
+    auto result = preprocess(text);
+    CHECK_DIAGNOSTICS_EMPTY;
+    CHECK(result == R"(
+module secret (a, b);
+   input a;
+   output b;
+endmodule // secret
+)");
+}

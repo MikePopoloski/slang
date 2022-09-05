@@ -253,24 +253,16 @@ Token Lexer::lexEncodedText(ProtectEncoding encoding, uint32_t expectedBytes, bo
     auto skipTrivia = [&] {
         while (true) {
             switch (peek()) {
-                case ' ':
-                case '\t':
-                case '\v':
-                case '\f':
-                    advance();
-                    break;
                 case '/':
                     switch (peek(1)) {
                         case '/':
                             advance(2);
                             scanLineComment();
-                            break;
+                            continue;
                         case '*':
                             advance(2);
                             scanBlockComment();
-                            break;
-                        default:
-                            return;
+                            continue;
                     }
                     break;
                 case '\r':
@@ -281,9 +273,8 @@ Token Lexer::lexEncodedText(ProtectEncoding encoding, uint32_t expectedBytes, bo
                 case '\n':
                     advance();
                     return;
-                default:
-                    return;
             }
+            advance();
         }
     };
 
@@ -1287,7 +1278,7 @@ void Lexer::scanEncodedText(ProtectEncoding encoding, uint32_t expectedBytes, bo
     auto invalidByte = [&](char invalidChar, string_view name) {
         auto& diag = addDiag(diag::InvalidEncodingByte, currentOffset()) << name;
         diag << (isPrintableASCII(invalidChar) ? std::string(1, invalidChar)
-                                               : fmt::format("{:#02x}", invalidChar));
+                                               : fmt::format("{:#04x}", invalidChar));
 
         // Try to skip ahead to the next `pragma directive to get us out of this region.
         while (true) {
@@ -1298,15 +1289,20 @@ void Lexer::scanEncodedText(ProtectEncoding encoding, uint32_t expectedBytes, bo
             if (c == '`' && lookingAtPragma())
                 break;
 
+            if (singleLine && (c == '\r' || c == '\n'))
+                break;
+
             advance();
         }
     };
 
     uint32_t byteCount = 0;
     while (true) {
-        if (expectedBytes && byteCount >= expectedBytes) {
-            if (byteCount != expectedBytes)
-                addDiag(diag::ProtectEncodingBytes, currentOffset()) << byteCount << expectedBytes;
+        if (expectedBytes && byteCount >= expectedBytes && !singleLine) {
+            if (byteCount != expectedBytes) {
+                addDiag(diag::ProtectEncodingBytes, currentOffset() - 1)
+                    << byteCount << expectedBytes;
+            }
             return;
         }
 
@@ -1315,7 +1311,7 @@ void Lexer::scanEncodedText(ProtectEncoding encoding, uint32_t expectedBytes, bo
             // If this is a single line region then we're done here.
             if (singleLine) {
                 if (expectedBytes && byteCount != expectedBytes) {
-                    addDiag(diag::ProtectEncodingBytes, currentOffset())
+                    addDiag(diag::ProtectEncodingBytes, currentOffset() - 1)
                         << byteCount << expectedBytes;
                 }
                 return;
@@ -1329,7 +1325,7 @@ void Lexer::scanEncodedText(ProtectEncoding encoding, uint32_t expectedBytes, bo
 
             if (encoding == ProtectEncoding::QuotedPrintable) {
                 byteCount++;
-                if (c == '\r' && peek() == '\n')
+                if (c == '\r' && peek(-1) == '\n')
                     byteCount++;
             }
 
