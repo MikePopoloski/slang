@@ -1984,8 +1984,9 @@ TEST_CASE("Pragma protect with multiline macro expansion") {
 
     preprocess(text);
 
-    REQUIRE(diagnostics.size() == 1);
+    REQUIRE(diagnostics.size() == 2);
     CHECK(diagnostics[0].code == diag::MacroTokensAfterPragmaProtect);
+    CHECK(diagnostics[1].code == diag::RawProtectEOF);
 }
 
 TEST_CASE("Pragma protect raw encoding block") {
@@ -2006,7 +2007,7 @@ TEST_CASE("Pragma protect raw encoding key") {
 
     auto result = preprocess(text);
     CHECK_DIAGNOSTICS_EMPTY;
-    CHECK(result == "\nhello");
+    CHECK(result == "\r\nhello");
 }
 
 TEST_CASE("Pragma protect raw encoding guess ending") {

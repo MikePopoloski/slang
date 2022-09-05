@@ -8,6 +8,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <fmt/format.h>
 
 #include "slang/diagnostics/LexerDiags.h"
 #include "slang/diagnostics/NumericDiags.h"
@@ -287,23 +288,7 @@ Token Lexer::lexEncodedText(ProtectEncoding encoding, uint32_t expectedBytes, bo
     };
 
     skipTrivia();
-
-    switch (encoding) {
-        case ProtectEncoding::UUEncode:
-            scanUUEncodeRegion(expectedBytes, singleLine);
-            break;
-        case ProtectEncoding::Base64:
-            scanBase64Region(expectedBytes, singleLine);
-            break;
-        case ProtectEncoding::QuotedPrintable:
-            scanQuotedPrintableRegion(expectedBytes, singleLine);
-            break;
-        case ProtectEncoding::Raw:
-            scanRawRegion(expectedBytes, singleLine);
-            break;
-        default:
-            THROW_UNREACHABLE;
-    }
+    scanEncodedText(encoding, expectedBytes, singleLine);
 
     return create(TokenKind::Unknown);
 }
@@ -1287,55 +1272,163 @@ bool Lexer::scanUTF8Char(bool alreadyErrored, uint32_t* code) {
     return true;
 }
 
-void Lexer::scanUUEncodeRegion(uint32_t, bool) {
-}
+void Lexer::scanEncodedText(ProtectEncoding encoding, uint32_t expectedBytes, bool singleLine) {
+    // Helper function that returns true if the current position in the buffer
+    // is looking at the string "pragma".
+    auto lookingAtPragma = [&] {
+        int index = 0;
+        for (char c : "pragma"sv) {
+            if (peek(++index) != c)
+                return false;
+        }
+        return true;
+    };
 
-void Lexer::scanBase64Region(uint32_t, bool) {
-}
+    auto invalidByte = [&](char invalidChar, string_view name) {
+        auto& diag = addDiag(diag::InvalidEncodingByte, currentOffset()) << name;
+        diag << (isPrintableASCII(invalidChar) ? std::string(1, invalidChar)
+                                               : fmt::format("{:#02x}", invalidChar));
 
-void Lexer::scanQuotedPrintableRegion(uint32_t, bool) {
-}
+        // Try to skip ahead to the next `pragma directive to get us out of this region.
+        while (true) {
+            char c = peek();
+            if (c == '\0' && reallyAtEnd())
+                break;
 
-void Lexer::scanRawRegion(uint32_t expectedBytes, bool singleLine) {
+            if (c == '`' && lookingAtPragma())
+                break;
+
+            advance();
+        }
+    };
+
     uint32_t byteCount = 0;
     while (true) {
-        char c = peek();
-        if (c == '\0' && reallyAtEnd())
+        if (expectedBytes && byteCount >= expectedBytes) {
+            if (byteCount != expectedBytes)
+                addDiag(diag::ProtectEncodingBytes, currentOffset()) << byteCount << expectedBytes;
             return;
+        }
 
-        advance();
+        char c = peek();
         if (c == '\r' || c == '\n') {
             // If this is a single line region then we're done here.
-            if (singleLine)
+            if (singleLine) {
+                if (expectedBytes && byteCount != expectedBytes) {
+                    addDiag(diag::ProtectEncodingBytes, currentOffset())
+                        << byteCount << expectedBytes;
+                }
                 return;
+            }
 
-            // Otherwise continue on. This newline doesn't count toward our expected byte limit.
+            // Otherwise continue on. This newline doesn't count toward our expected byte limit,
+            // unless this is the quoted printable encoding.
+            advance();
             if (c == '\r' && peek() == '\n')
                 advance();
+
+            if (encoding == ProtectEncoding::QuotedPrintable) {
+                byteCount++;
+                if (c == '\r' && peek() == '\n')
+                    byteCount++;
+            }
+
             continue;
         }
 
-        byteCount++;
-        if (byteCount == expectedBytes)
-            return;
-
-        if (!expectedBytes && !singleLine) {
+        if (!expectedBytes && !singleLine && c == '`') {
             // Encoding tools probably shouldn't do this but if they do we
             // should try to gracefully guess the end of the region by looking
-            // for another pragma that ends it.
-            if (c == '`') {
-                int index = 0;
-                for (char d : "pragma"sv) {
-                    if (peek(index) != d)
-                        break;
-                    index++;
+            // for another non-encoded pragma that ends it.
+            if (lookingAtPragma())
+                return;
+        }
+
+        switch (encoding) {
+            case ProtectEncoding::UUEncode: {
+                // uuencode tells us the length of the line up front, so use that
+                // to read the whole line in one go. The encoding is invalid if that
+                // doesn't match up with what we find in the data.
+                if (c == '`') {
+                    // The grave character is a special case meaning 0 characters on this line.
+                    advance();
+                    continue;
                 }
 
-                if (index == 6) {
-                    sourceBuffer--;
+                if (c < 0x20 || c > 0x20 + 45) {
+                    invalidByte(c, "uuencode"sv);
                     return;
                 }
+
+                uint32_t count = uint32_t(c - 0x20);
+                byteCount += count;
+                advance();
+
+                uint32_t encodedCount = (uint32_t)ceil(count * 4 / 3.0);
+                for (uint32_t i = 0; i < encodedCount; i++) {
+                    c = peek();
+                    if (c < 0x20 || c > 0x60) {
+                        invalidByte(c, "uuencode"sv);
+                        return;
+                    }
+                    advance();
+                }
+                break;
             }
+            case ProtectEncoding::Base64:
+                byteCount += 3;
+                for (int i = 0; i < 4; i++) {
+                    c = peek();
+                    if (i > 1 && c == '=') {
+                        byteCount--;
+                    }
+                    else if (!isBase64Char(c)) {
+                        invalidByte(c, "base64"sv);
+                        return;
+                    }
+
+                    advance();
+                }
+                break;
+            case ProtectEncoding::QuotedPrintable:
+                if (!isPrintableASCII(c) && c != '\t') {
+                    invalidByte(c, "quoted-printable"sv);
+                    return;
+                }
+
+                advance();
+                if (c == '=') {
+                    // If this is a soft line break then it doesn't count
+                    // towards our byte count. Otherwise this is an escaped
+                    // character that does count.
+                    c = peek();
+                    if (c == '\r' || c == '\n') {
+                        advance();
+                        if (c == '\r' && peek() == '\n')
+                            advance();
+                        continue;
+                    }
+
+                    if (!isHexDigit(c) || !isHexDigit(peek(1))) {
+                        invalidByte(c, "quoted-printable"sv);
+                        return;
+                    }
+
+                    advance(2);
+                }
+                byteCount++;
+                break;
+            case ProtectEncoding::Raw:
+                if (c == '\0' && reallyAtEnd()) {
+                    addDiag(diag::RawProtectEOF, currentOffset() - 1);
+                    return;
+                }
+
+                advance();
+                byteCount++;
+                break;
+            default:
+                THROW_UNREACHABLE;
         }
     }
 }

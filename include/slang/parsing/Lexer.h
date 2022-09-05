@@ -94,11 +94,7 @@ private:
     void scanWhitespace();
     void scanIdentifier();
     bool scanUTF8Char(bool alreadyErrored, uint32_t* code);
-
-    void scanUUEncodeRegion(uint32_t expectedBytes, bool singleLine);
-    void scanBase64Region(uint32_t expectedBytes, bool singleLine);
-    void scanQuotedPrintableRegion(uint32_t expectedBytes, bool singleLine);
-    void scanRawRegion(uint32_t expectedBytes, bool singleLine);
+    void scanEncodedText(ProtectEncoding encoding, uint32_t expectedBytes, bool singleLine);
 
     template<typename... Args>
     Token create(TokenKind kind, Args&&... args);

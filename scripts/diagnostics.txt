@@ -41,6 +41,9 @@ error TooManyLexerErrors "lexer has encountered too many errors (input is a bina
 warning unknown-escape-code UnknownEscapeCode "unknown character escape sequence '\\\\{}'"
 warning nonstandard-escape-code NonstandardEscapeCode "non-standard character escape sequence '\\\\{}'"
 warning invalid-source-encoding InvalidUTF8Seq "invalid UTF-8 sequence in source text"
+warning protect-encoding-bytes ProtectEncodingBytes "{} bytes decoded in protected envelope but encoding pragma said to expect {}"
+warning invalid-encoding-byte InvalidEncodingByte "invalid {} byte '{}' -- attempting to skip remaining encoded text"
+warning raw-protect-eof RawProtectEOF "reached end of file while processing 'raw' encoded protected envelope"
 
 subsystem Numeric
 error LiteralSizeIsZero "size of vector literal cannot be zero"
@@ -919,7 +922,8 @@ group default = { real-underflow real-overflow vector-overflow int-overflow unco
                   invalid-source-encoding index-oob range-oob range-width-oob expected-protect-arg
                   unknown-protect-keyword expected-protect-keyword nested-protect-begin extra-protect-end
                   protect-arglist unknown-protect-encoding unknown-protect-option invalid-pragma-number
-                  invalid-pragma-viewport duplicate-definition }
+                  invalid-pragma-viewport duplicate-definition protect-encoding-bytes invalid-encoding-byte
+                  raw-protect-eof }
 
 group extra = { empty-member empty-stmt dup-import pointless-void-cast case-gen-none case-gen-dup
                 unused-result format-real ignored-slice task-ignored width-trunc dup-attr event-const

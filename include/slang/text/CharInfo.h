@@ -92,6 +92,11 @@ constexpr bool isValidCIdChar(char c) {
     return isAlphaNumeric(c) || c == '_';
 }
 
+/// Returns whether the given characrer is a valid in base64 encoding.
+constexpr bool isBase64Char(char c) {
+    return isAlphaNumeric(c) || c == '/' || c == '+';
+}
+
 /// Returns whether the given character is considered a special logic digit,
 /// which encompasses various ways to say Unknown (X) or High Impedance (Z).
 constexpr bool isLogicDigit(char c) {

@@ -706,3 +706,30 @@ endmodule;
 module a;
 endmodule
 ```
+
+-Wprotect-encoding-bytes
+An encoded block in a protected envelope differed in size from what was specified in
+a prior encoding pragma directive.
+```
+`pragma protect begin_protected
+`pragma protect encoding=(enctype="base64", bytes=6), data_public_key
+asdfas==
+`pragma protect end_protected
+```
+
+-Winvalid-encoding-byte
+A character in an encoded protected envelope is invalid for the kind of encoding specified.
+The rest of the protected envelope will be skipped by searching for an end pragma.
+```
+`pragma protect begin_protected
+`pragma protect encoding=(enctype="base64"), data_block
+asdf()0123
+`pragma protect end_protected
+```
+
+-Wraw-protect-eof
+A "raw" encoded protected envelope did not terminate before the end of the source file.
+```
+`pragma protect encoding=(enctype="raw"), data_block
+asdfasdf
+```
