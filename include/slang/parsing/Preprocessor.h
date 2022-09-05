@@ -184,6 +184,7 @@ private:
     void applyDiagnosticPragma(const PragmaDirectiveSyntax& pragma);
     void ensurePragmaArgs(const PragmaDirectiveSyntax& pragma, size_t count);
     void ensureNoPragmaArgs(Token keyword, const PragmaExpressionSyntax* args);
+    void resetProtectState();
 
     // Pragma protect handlers
     void handleProtectBegin(Token keyword, const PragmaExpressionSyntax* args,

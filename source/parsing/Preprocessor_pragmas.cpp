@@ -213,7 +213,9 @@ void Preprocessor::applyResetPragma(const PragmaDirectiveSyntax& pragma) {
                 if (!name.empty() && name != "protect" && name != "once" && name != "diagnostic")
                     addDiag(diag::UnknownPragma, simple.value.range()) << name;
 
-                // Nothing to do here, we don't support any pragmas that can be reset.
+                if (name == "protect")
+                    resetProtectState();
+
                 continue;
             }
         }
@@ -224,9 +226,8 @@ void Preprocessor::applyResetPragma(const PragmaDirectiveSyntax& pragma) {
 }
 
 void Preprocessor::applyResetAllPragma(const PragmaDirectiveSyntax& pragma) {
-    // Nothing to do here, we don't support any pragmas that can be reset.
-    // Just check that there aren't any extraneous arguments.
     ensurePragmaArgs(pragma, 0);
+    resetProtectState();
 }
 
 void Preprocessor::applyOncePragma(const PragmaDirectiveSyntax& pragma) {
@@ -321,6 +322,14 @@ void Preprocessor::ensureNoPragmaArgs(Token keyword, const PragmaExpressionSynta
         auto& diag = addDiag(diag::ExtraPragmaArgs, args->sourceRange());
         diag << keyword.valueText();
     }
+}
+
+void Preprocessor::resetProtectState() {
+    protectEncryptDepth = 0;
+    protectDecryptDepth = 0;
+    protectLineLength = 0;
+    protectBytes = 0;
+    protectEncoding = ProtectEncoding::Raw;
 }
 
 optional<uint32_t> Preprocessor::requireUInt32(const PragmaExpressionSyntax& expr) {
@@ -523,8 +532,7 @@ void Preprocessor::handleProtectLicense(Token keyword, const PragmaExpressionSyn
 void Preprocessor::handleProtectReset(Token keyword, const PragmaExpressionSyntax* args,
                                       SmallVector<Token>&) {
     ensureNoPragmaArgs(keyword, args);
-
-    // TODO: handle the reset
+    resetProtectState();
 }
 
 void Preprocessor::handleProtectViewport(Token keyword, const PragmaExpressionSyntax* args,

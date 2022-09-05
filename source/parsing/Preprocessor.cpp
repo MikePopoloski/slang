@@ -181,6 +181,7 @@ void Preprocessor::resetAllDirectives() {
     activeTimeScale = std::nullopt;
     defaultNetType = TokenKind::WireKeyword;
     unconnectedDrive = TokenKind::Unknown;
+    resetProtectState();
 }
 
 std::vector<const DefineDirectiveSyntax*> Preprocessor::getDefinedMacros() const {

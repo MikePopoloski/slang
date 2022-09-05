@@ -2150,6 +2150,7 @@ module secret (a, b);
       raq
 `pragma protect end_protected
 `pragma reset protect
+`pragma protect reset
 
 endmodule // secret
 )";
