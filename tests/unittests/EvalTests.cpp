@@ -2454,3 +2454,24 @@ endfunction
     CHECK(diags[0].code == diag::ConstEvalNoCaseItemsMatched);
     CHECK(diags[1].code == diag::ConstEvalCaseItemsNotUnique);
 }
+
+TEST_CASE("case statement eval regression") {
+    ScriptSession session;
+    session.eval(R"(
+function automatic int calc(int p);
+    case (p)
+        100,200:
+            return 1;
+        300:
+            return 2;
+    endcase
+    return 0;
+endfunction
+)");
+
+    CHECK(session.eval("calc(100);").integer() == 1);
+    CHECK(session.eval("calc(200);").integer() == 1);
+    CHECK(session.eval("calc(300);").integer() == 2);
+    CHECK(session.eval("calc(400);").integer() == 0);
+    NO_SESSION_ERRORS;
+}

@@ -1033,11 +1033,10 @@ Statement& CaseStatement::fromSyntax(Compilation& compilation, const CaseStateme
             case SyntaxKind::StandardCaseItem: {
                 auto& sci = item->as<StandardCaseItemSyntax>();
                 auto& stmt = Statement::bind(sci.clause->as<StatementSyntax>(), context, stmtCtx);
-                for (auto es : sci.expressions) {
+                for (auto es : sci.expressions)
                     expressions.append(es);
-                    statements.append(&stmt);
-                }
 
+                statements.append(&stmt);
                 bad |= stmt.bad();
                 break;
             }
@@ -1300,8 +1299,6 @@ ER PatternCaseStatement::evalImpl(EvalContext& context) const {
     auto cv = expr.eval(context);
     if (!cv)
         return ER::Fail;
-
-    // TODO: handle casex / casez pattern matching
 
     const Statement* matchedStmt = nullptr;
     SourceRange matchRange;
