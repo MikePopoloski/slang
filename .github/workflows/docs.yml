@@ -31,4 +31,4 @@ jobs:
     - name: Build
       run: |
         cmake -B build -DSLANG_INCLUDE_DOCS=ON -DSLANG_INCLUDE_TESTS=OFF -DDOXYGENPY_PATH=$GITHUB_WORKSPACE/m.css/documentation/doxygen.py
-        cmake --build build --target docs -j
+        cmake --build build --target docs -j8
