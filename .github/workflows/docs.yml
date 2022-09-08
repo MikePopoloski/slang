@@ -20,7 +20,8 @@ jobs:
         submodules: recursive
     - uses: actions/checkout@v2
       with:
-        name: MikePopoloski/m.css
+        repository: MikePopoloski/m.css
+        path: m.css
     - name: Install dependencies
       run: |
         pip install jinja2 pygments
