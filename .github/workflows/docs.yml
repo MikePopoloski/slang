@@ -24,9 +24,9 @@ jobs:
     - name: Install dependencies
       run: |
         pip install jinja2 pygments
-        wget http://doxygen.nl/files/doxygen-1.8.17.linux.bin.tar.gz
-        tar -xvf doxygen-1.8.17.linux.bin.tar.gz
-        cp doxygen-1.8.17/bin/doxygen /usr/local/bin
+        wget https://sourceforge.net/projects/doxygen/files/rel-1.9.5/doxygen-1.9.5.linux.bin.tar.gz
+        tar -xvf doxygen-1.9.5.linux.bin.tar.gz
+        cp doxygen-1.9.5/bin/doxygen /usr/local/bin
     - name: Build
       run: |
         cmake -B build -DSLANG_INCLUDE_DOCS=ON -DSLANG_INCLUDE_TESTS=OFF -DDOXYGENPY_PATH=m.css/documentation/doxygen.py
