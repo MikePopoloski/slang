@@ -11,7 +11,7 @@ on:
       - published
 
 jobs:
-  build_linux:
+  build:
     runs-on: ubuntu-22.04
     steps:
     - uses: actions/checkout@v2
@@ -30,5 +30,5 @@ jobs:
         cp doxygen-1.9.5/bin/doxygen /usr/local/bin
     - name: Build
       run: |
-        cmake -B build -DSLANG_INCLUDE_DOCS=ON -DSLANG_INCLUDE_TESTS=OFF -DDOXYGENPY_PATH=m.css/documentation/doxygen.py
-        cmake --build build --target docs
+        cmake -B build -DSLANG_INCLUDE_DOCS=ON -DSLANG_INCLUDE_TESTS=OFF -DDOXYGENPY_PATH=$GITHUB_WORKSPACE/m.css/documentation/doxygen.py
+        cmake --build build --target docs -j
