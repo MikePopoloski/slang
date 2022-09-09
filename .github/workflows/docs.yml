@@ -32,7 +32,7 @@ jobs:
       run: |
         cmake -B build -DSLANG_INCLUDE_DOCS=ON -DSLANG_INCLUDE_TESTS=OFF -DDOXYGENPY_PATH=$GITHUB_WORKSPACE/m.css/documentation/doxygen.py
         cmake --build build --target docs -j8
-        tar -cfzv slang.tar.gz build/docs build/bin/slang
+        tar -czvf slang.tar.gz build/docs build/bin/slang
     - name: Upload
       if: (github.event_name == 'release' && github.event.action == 'published') || github.event_name == 'workflow_dispatch'
       uses: appleboy/scp-action@master
