@@ -43,7 +43,7 @@ jobs:
         key: ${{ secrets.SSH_DEPLOY_KEY }}
         passphrase: ${{ secrets.SSH_DEPLOY_PASSPHRASE }}
         source: slang.tar.gz
-        target: slang.tar.gz
+        target: upload/
     - name: Deploy
       if: (github.event_name == 'release' && github.event.action == 'published') || github.event_name == 'workflow_dispatch'
       uses: appleboy/ssh-action@master
