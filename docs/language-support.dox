@@ -489,12 +489,26 @@ LRM | Feature | Supported
 {{m-dim}}     32.8 | SDF to SystemVerilog delay value mapping | N/A
 {{m-success}} 32.9 | Loading timing data from an SDF file | v0.7
 
-## Chapters 33-34
+## 33. Configuring the contents of a design
 
 LRM | Feature | Supported
 --- | ------- | ---------
-{{m-danger}}  33 | Configuring the contents of a design | no
-{{m-danger}}  34 | Protected envelopes | no
+{{m-danger}}  33.2 | Overview | no
+{{m-danger}}  33.3 | Libraries | no
+{{m-danger}}  33.4 | Configurations | no
+{{m-danger}}  33.5 | Using libraries and configs | no
+{{m-danger}}  33.6 | Configuration examples | no
+{{m-danger}}  33.7 | Displaying library binding information | no
+{{m-danger}}  33.8 | Library mapping examples | no
+
+## 34. Protected envelopes
+
+LRM | Feature | Supported
+--- | ------- | ---------
+{{m-dim}}     34.2 | Overview | N/A
+{{m-dim}}     34.3 | Processing protected envelopes | N/A
+{{m-success}} 34.4 | Protect pragma directives | v2.0
+{{m-success}} 34.5 | Protect pragma keywords | v2.0
 
 ## 35. Direct programming interface
 
