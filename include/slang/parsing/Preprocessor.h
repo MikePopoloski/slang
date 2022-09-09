@@ -209,6 +209,8 @@ private:
                             SmallVector<Token>& skippedTokens);
     void handleProtectViewport(Token keyword, const PragmaExpressionSyntax* args,
                                SmallVector<Token>& skippedTokens);
+    void handleEncryptedRegion(Token keyword, const PragmaExpressionSyntax* args,
+                               SmallVector<Token>& skippedTokens, bool isSingleLine);
 
     // Pragma helpers
     optional<uint32_t> requireUInt32(const PragmaExpressionSyntax& expr);

@@ -482,18 +482,23 @@ void Preprocessor::handleProtectEncoding(Token keyword, const PragmaExpressionSy
 
 void Preprocessor::handleProtectKey(Token keyword, const PragmaExpressionSyntax* args,
                                     SmallVector<Token>& skippedTokens) {
-    ensureNoPragmaArgs(keyword, args);
-    skipMacroTokensBeforeProtectRegion(keyword, skippedTokens);
-
-    skippedTokens.append(lexerStack.back()->lexEncodedText(protectEncoding, protectBytes, true));
+    handleEncryptedRegion(keyword, args, skippedTokens, true);
 }
 
 void Preprocessor::handleProtectBlock(Token keyword, const PragmaExpressionSyntax* args,
                                       SmallVector<Token>& skippedTokens) {
+    handleEncryptedRegion(keyword, args, skippedTokens, false);
+}
+
+void Preprocessor::handleEncryptedRegion(Token keyword, const PragmaExpressionSyntax* args,
+                                         SmallVector<Token>& skippedTokens, bool isSingleLine) {
     ensureNoPragmaArgs(keyword, args);
     skipMacroTokensBeforeProtectRegion(keyword, skippedTokens);
 
-    skippedTokens.append(lexerStack.back()->lexEncodedText(protectEncoding, protectBytes, false));
+    Token token = lexerStack.back()->lexEncodedText(protectEncoding, protectBytes, isSingleLine);
+    addDiag(diag::ProtectedEnvelope, token.location());
+
+    skippedTokens.append(token);
 }
 
 void Preprocessor::handleProtectLicense(Token keyword, const PragmaExpressionSyntax* args,

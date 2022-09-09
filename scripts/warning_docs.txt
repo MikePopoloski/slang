@@ -733,3 +733,15 @@ A "raw" encoded protected envelope did not terminate before the end of the sourc
 `pragma protect encoding=(enctype="raw"), data_block
 asdfasdf
 ```
+
+-Wprotected-envelope
+Any use of a pragma protect region in the source will trigger this warning, as slang is
+unable to actually decrypt the contents of that region (it is assumed that no IP vendor
+would be willing to share decryption keys with an open source tool anyway). The text will
+be decoded and skipped in its entirety, which may or may not result in a valid design.
+```
+`pragma protect begin_protected
+`pragma protect encoding=(enctype="raw"), data_block
+asdfasdf
+`pragma protect end_protected
+```

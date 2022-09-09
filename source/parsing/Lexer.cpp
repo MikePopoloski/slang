@@ -193,7 +193,7 @@ void Lexer::splitTokens(BumpAllocator& alloc, Diagnostics& diagnostics,
 
 Token Lexer::lex(KeywordVersion keywordVersion) {
     triviaBuffer.clear();
-    lexTrivia();
+    lexTrivia<false>();
 
     // lex the next token
     mark();
@@ -247,40 +247,9 @@ bool Lexer::isNextTokenOnSameLine() {
 
 Token Lexer::lexEncodedText(ProtectEncoding encoding, uint32_t expectedBytes, bool singleLine) {
     triviaBuffer.clear();
+    lexTrivia<true>();
     mark();
-
-    // Skip over whitespace and trivia up to the first newline.
-    auto skipTrivia = [&] {
-        while (true) {
-            switch (peek()) {
-                case '/':
-                    switch (peek(1)) {
-                        case '/':
-                            advance(2);
-                            scanLineComment();
-                            continue;
-                        case '*':
-                            advance(2);
-                            scanBlockComment();
-                            continue;
-                    }
-                    break;
-                case '\r':
-                    advance();
-                    if (peek() == '\n')
-                        advance();
-                    return;
-                case '\n':
-                    advance();
-                    return;
-            }
-            advance();
-        }
-    };
-
-    skipTrivia();
     scanEncodedText(encoding, expectedBytes, singleLine);
-
     return create(TokenKind::Unknown);
 }
 
@@ -1103,6 +1072,7 @@ optional<TimeUnit> Lexer::lexTimeLiteral() {
     return std::nullopt;
 }
 
+template<bool StopAfterNewline>
 void Lexer::lexTrivia() {
     while (true) {
         mark();
@@ -1134,10 +1104,14 @@ void Lexer::lexTrivia() {
                 advance();
                 consume('\n');
                 addTrivia(TriviaKind::EndOfLine);
+                if (StopAfterNewline)
+                    return;
                 break;
             case '\n':
                 advance();
                 addTrivia(TriviaKind::EndOfLine);
+                if (StopAfterNewline)
+                    return;
                 break;
             default:
                 return;

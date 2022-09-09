@@ -1984,9 +1984,10 @@ TEST_CASE("Pragma protect with multiline macro expansion") {
 
     preprocess(text);
 
-    REQUIRE(diagnostics.size() == 2);
+    REQUIRE(diagnostics.size() == 3);
     CHECK(diagnostics[0].code == diag::MacroTokensAfterPragmaProtect);
     CHECK(diagnostics[1].code == diag::RawProtectEOF);
+    CHECK(diagnostics[2].code == diag::ProtectedEnvelope);
 }
 
 TEST_CASE("Pragma protect raw encoding block") {
@@ -1996,8 +1997,10 @@ TEST_CASE("Pragma protect raw encoding block") {
                 "hello"s;
 
     auto result = preprocess(text);
-    CHECK_DIAGNOSTICS_EMPTY;
     CHECK(result == "\nhello");
+
+    REQUIRE(diagnostics.size() == 1);
+    CHECK(diagnostics[0].code == diag::ProtectedEnvelope);
 }
 
 TEST_CASE("Pragma protect raw encoding key") {
@@ -2006,8 +2009,10 @@ TEST_CASE("Pragma protect raw encoding key") {
                 "hello"s;
 
     auto result = preprocess(text);
-    CHECK_DIAGNOSTICS_EMPTY;
     CHECK(result == "\r\nhello");
+
+    REQUIRE(diagnostics.size() == 1);
+    CHECK(diagnostics[0].code == diag::ProtectedEnvelope);
 }
 
 TEST_CASE("Pragma protect raw encoding guess ending") {
@@ -2019,8 +2024,10 @@ TEST_CASE("Pragma protect raw encoding guess ending") {
                 "hello"s;
 
     auto result = preprocess(text);
-    CHECK_DIAGNOSTICS_EMPTY;
     CHECK(result == "\nhello");
+
+    REQUIRE(diagnostics.size() == 1);
+    CHECK(diagnostics[0].code == diag::ProtectedEnvelope);
 }
 
 TEST_CASE("Pragma protect uuencode") {
@@ -2032,8 +2039,10 @@ TEST_CASE("Pragma protect uuencode") {
 hello)";
 
     auto result = preprocess(text);
-    CHECK_DIAGNOSTICS_EMPTY;
     CHECK(result == "\nhello");
+
+    REQUIRE(diagnostics.size() == 1);
+    CHECK(diagnostics[0].code == diag::ProtectedEnvelope);
 }
 
 TEST_CASE("Pragma protect base64") {
@@ -2044,8 +2053,10 @@ FG==
 hello)";
 
     auto result = preprocess(text);
-    CHECK_DIAGNOSTICS_EMPTY;
     CHECK(result == "\nhello");
+
+    REQUIRE(diagnostics.size() == 1);
+    CHECK(diagnostics[0].code == diag::ProtectedEnvelope);
 }
 
 TEST_CASE("Pragma protect quoted-printable") {
@@ -2056,8 +2067,10 @@ TEST_CASE("Pragma protect quoted-printable") {
                  "hello";
 
     auto result = preprocess(text);
-    CHECK_DIAGNOSTICS_EMPTY;
     CHECK(result == "\r\nhello");
+
+    REQUIRE(diagnostics.size() == 1);
+    CHECK(diagnostics[0].code == diag::ProtectedEnvelope);
 }
 
 TEST_CASE("Pragma protect uuencode errors") {
@@ -2072,9 +2085,11 @@ qqq
 
     preprocess(text);
 
-    REQUIRE(diagnostics.size() == 2);
+    REQUIRE(diagnostics.size() == 4);
     CHECK(diagnostics[0].code == diag::InvalidEncodingByte);
-    CHECK(diagnostics[1].code == diag::InvalidEncodingByte);
+    CHECK(diagnostics[1].code == diag::ProtectedEnvelope);
+    CHECK(diagnostics[2].code == diag::InvalidEncodingByte);
+    CHECK(diagnostics[3].code == diag::ProtectedEnvelope);
 }
 
 TEST_CASE("Pragma protect base64 errors") {
@@ -2085,8 +2100,9 @@ hello)";
 
     preprocess(text);
 
-    REQUIRE(diagnostics.size() == 1);
+    REQUIRE(diagnostics.size() == 2);
     CHECK(diagnostics[0].code == diag::InvalidEncodingByte);
+    CHECK(diagnostics[1].code == diag::ProtectedEnvelope);
 }
 
 TEST_CASE("Pragma protect quoted-printable errors") {
@@ -2098,9 +2114,11 @@ TEST_CASE("Pragma protect quoted-printable errors") {
 
     preprocess(text);
 
-    REQUIRE(diagnostics.size() == 2);
+    REQUIRE(diagnostics.size() == 4);
     CHECK(diagnostics[0].code == diag::InvalidEncodingByte);
-    CHECK(diagnostics[1].code == diag::InvalidEncodingByte);
+    CHECK(diagnostics[1].code == diag::ProtectedEnvelope);
+    CHECK(diagnostics[2].code == diag::InvalidEncodingByte);
+    CHECK(diagnostics[3].code == diag::ProtectedEnvelope);
 }
 
 TEST_CASE("Pragma protect wrong block byte count") {
@@ -2111,8 +2129,9 @@ hello)";
 
     preprocess(text);
 
-    REQUIRE(diagnostics.size() == 1);
+    REQUIRE(diagnostics.size() == 2);
     CHECK(diagnostics[0].code == diag::ProtectEncodingBytes);
+    CHECK(diagnostics[1].code == diag::ProtectedEnvelope);
 }
 
 TEST_CASE("Pragma protect wrong line byte count") {
@@ -2123,8 +2142,9 @@ hello)";
 
     preprocess(text);
 
-    REQUIRE(diagnostics.size() == 1);
+    REQUIRE(diagnostics.size() == 2);
     CHECK(diagnostics[0].code == diag::ProtectEncodingBytes);
+    CHECK(diagnostics[1].code == diag::ProtectedEnvelope);
 }
 
 TEST_CASE("Pragma protect LRM example") {
@@ -2156,11 +2176,13 @@ endmodule // secret
 )";
 
     auto result = preprocess(text);
-    CHECK_DIAGNOSTICS_EMPTY;
     CHECK(result == R"(
 module secret (a, b);
    input a;
    output b;
 endmodule // secret
 )");
+
+    REQUIRE(diagnostics.size() == 1);
+    CHECK(diagnostics[0].code == diag::ProtectedEnvelope);
 }

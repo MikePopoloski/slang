@@ -87,6 +87,7 @@ private:
     Token lexStringLiteral();
     optional<TimeUnit> lexTimeLiteral();
 
+    template<bool StopAfterNewline>
     void lexTrivia();
 
     void scanBlockComment();

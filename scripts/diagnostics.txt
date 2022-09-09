@@ -106,6 +106,7 @@ warning unknown-protect-encoding UnknownProtectEncoding "unknown protect encodin
 warning unknown-protect-option UnknownProtectOption "unknown protect {} option '{}'"
 warning invalid-pragma-number InvalidPragmaNumber "expected a 32-bit integer value for pragma option"
 warning invalid-pragma-viewport InvalidPragmaViewport "pragma protect viewport requires options to be specified in the form (object = <string>, access = <string>)"
+warning protected-envelope ProtectedEnvelope "protected envelopes cannot be decrypted and will be skipped entirely"
 
 subsystem Parser
 error ExpectedIdentifier "expected identifier"
@@ -923,7 +924,7 @@ group default = { real-underflow real-overflow vector-overflow int-overflow unco
                   unknown-protect-keyword expected-protect-keyword nested-protect-begin extra-protect-end
                   protect-arglist unknown-protect-encoding unknown-protect-option invalid-pragma-number
                   invalid-pragma-viewport duplicate-definition protect-encoding-bytes invalid-encoding-byte
-                  raw-protect-eof }
+                  raw-protect-eof protected-envelope }
 
 group extra = { empty-member empty-stmt dup-import pointless-void-cast case-gen-none case-gen-dup
                 unused-result format-real ignored-slice task-ignored width-trunc dup-attr event-const
