@@ -371,8 +371,8 @@ bool NamedValueExpression::checkConstant(EvalContext& context) const {
             scope = scope->asSymbol().getParentScope();
 
         if (scope != subroutine) {
-            auto& diag =
-                context.addDiag(diag::ConstEvalFunctionIdentifiersMustBeLocal, sourceRange);
+            auto& diag = context.addDiag(diag::ConstEvalFunctionIdentifiersMustBeLocal,
+                                         sourceRange);
             diag.addNote(diag::NoteDeclarationHere, symbol.location);
             return false;
         }
@@ -526,7 +526,7 @@ static std::tuple<const SequenceExprSyntax*, const ExpressionSyntax*> decomposeP
         }
     }
 
-    return { seqExpr, regExpr };
+    return {seqExpr, regExpr};
 }
 
 static bool checkAssertionArg(const PropertyExprSyntax& propExpr, const AssertionPortSymbol& formal,
@@ -664,8 +664,8 @@ static const AssertionExpr& bindAssertionBody(const Symbol& symbol, const Syntax
         result.requireSequence(context);
 
         if (outputLocalVarArgLoc && result.admitsEmpty()) {
-            auto& diag =
-                context.addDiag(diag::LocalVarOutputEmptyMatch, sds.seqExpr->sourceRange());
+            auto& diag = context.addDiag(diag::LocalVarOutputEmptyMatch,
+                                         sds.seqExpr->sourceRange());
             diag << symbol.name;
             diag.addNote(diag::NoteDeclarationHere, outputLocalVarArgLoc);
         }
@@ -746,8 +746,9 @@ Expression& AssertionInstanceExpression::fromLookup(const Symbol& symbol,
             // the recursion.
             if (currInst->isRecursive) {
                 auto& body = *comp.emplace<InvalidAssertionExpr>(nullptr);
-                return *comp.emplace<AssertionInstanceExpression>(
-                    *type, symbol, body, /* isRecursiveProperty */ true, range);
+                return *comp.emplace<AssertionInstanceExpression>(*type, symbol, body,
+                                                                  /* isRecursiveProperty */ true,
+                                                                  range);
             }
             instance.isRecursive = true;
         }
@@ -849,7 +850,7 @@ Expression& AssertionInstanceExpression::fromLookup(const Symbol& symbol,
         if (!checkAssertionArg(*expr, *formal, *argCtx, arg, instance.isRecursive))
             bad = true;
         else
-            actualArgs.append({ formal, arg });
+            actualArgs.append({formal, arg});
 
         if (!outputLocalVarArgLoc && (formal->localVarDirection == ArgumentDirection::InOut ||
                                       formal->localVarDirection == ArgumentDirection::Out)) {
@@ -989,7 +990,7 @@ Expression& AssertionInstanceExpression::makeDefault(const Symbol& symbol) {
     auto& body = bindAssertionBody(symbol, *bodySyntax, bodyContext, outputLocalVarArgLoc, instance,
                                    localVars);
 
-    SourceRange range{ symbol.location, symbol.location + 1 };
+    SourceRange range{symbol.location, symbol.location + 1};
     auto result = comp.emplace<AssertionInstanceExpression>(*type, symbol, body,
                                                             /* isRecursiveProperty */ false, range);
     result->localVars = localVars.copy(comp);
@@ -1085,8 +1086,9 @@ Expression& AssertionInstanceExpression::bindPort(const Symbol& symbol, SourceRa
                 auto& result = AssertionExpr::bind(*propExpr, argCtx);
                 auto& resultType = seqExpr ? comp.getType(SyntaxKind::SequenceType)
                                            : comp.getType(SyntaxKind::PropertyType);
-                return *comp.emplace<AssertionInstanceExpression>(
-                    resultType, formal, result, /* isRecursiveProperty */ false, range);
+                return *comp.emplace<AssertionInstanceExpression>(resultType, formal, result,
+                                                                  /* isRecursiveProperty */ false,
+                                                                  range);
             }
         case SymbolKind::SequenceType:
         case SymbolKind::PropertyType: {
@@ -1095,8 +1097,9 @@ Expression& AssertionInstanceExpression::bindPort(const Symbol& symbol, SourceRa
                                    ? comp.getType(SyntaxKind::SequenceType)
                                    : comp.getType(SyntaxKind::PropertyType);
 
-            return *comp.emplace<AssertionInstanceExpression>(
-                resultType, formal, result, /* isRecursiveProperty */ false, range);
+            return *comp.emplace<AssertionInstanceExpression>(resultType, formal, result,
+                                                              /* isRecursiveProperty */ false,
+                                                              range);
         }
         case SymbolKind::EventType:
             // If an event expression is allowed here, bind and return. Otherwise issue
@@ -1207,8 +1210,8 @@ Expression& CopyClassExpression::fromSyntax(Compilation& compilation,
                                             const CopyClassExpressionSyntax& syntax,
                                             const BindContext& context) {
     auto& source = selfDetermined(compilation, *syntax.expr, context);
-    auto result =
-        compilation.emplace<CopyClassExpression>(*source.type, source, syntax.sourceRange());
+    auto result = compilation.emplace<CopyClassExpression>(*source.type, source,
+                                                           syntax.sourceRange());
     if (source.bad())
         return badExpr(compilation, result);
 
@@ -1244,12 +1247,12 @@ Expression& DistExpression::fromSyntax(Compilation& comp, const ExpressionOrDist
     SmallVectorSized<DistItem, 4> items;
     size_t index = 1;
     for (auto item : syntax.distribution->items) {
-        DistItem di{ *bound[index++], {} };
+        DistItem di{*bound[index++], {}};
         if (item->weight) {
             auto weightKind = item->weight->op.kind == TokenKind::ColonSlash ? DistWeight::PerRange
                                                                              : DistWeight::PerValue;
             auto& weightExpr = Expression::bind(*item->weight->expr, context);
-            di.weight.emplace(DistWeight{ weightKind, weightExpr });
+            di.weight.emplace(DistWeight{weightKind, weightExpr});
 
             if (!context.requireIntegral(weightExpr))
                 bad = true;

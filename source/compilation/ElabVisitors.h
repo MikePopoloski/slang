@@ -88,7 +88,7 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
                         conn = conn->as<InstanceSymbol>().body.find(symbol.modport);
 
                     if (conn && conn->kind == SymbolKind::Modport)
-                        modportsWithExports.append({ &symbol, &conn->as<ModportSymbol>() });
+                        modportsWithExports.append({&symbol, &conn->as<ModportSymbol>()});
                 }
             }
         }
@@ -258,8 +258,8 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
         // check the depth and bail out after a certain configurable point.
         auto guard = ScopeGuard([this, &symbol] { activeInstanceBodies.erase(&symbol.body); });
         if (activeInstanceBodies.size() > compilation.getOptions().maxInstanceDepth) {
-            auto& diag =
-                symbol.getParentScope()->addDiag(diag::MaxInstanceDepthExceeded, symbol.location);
+            auto& diag = symbol.getParentScope()->addDiag(diag::MaxInstanceDepthExceeded,
+                                                          symbol.location);
             diag << symbol.getDefinition().getKindString();
             diag << compilation.getOptions().maxInstanceDepth;
             hierarchyProblem = true;

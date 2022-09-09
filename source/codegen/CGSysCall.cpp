@@ -16,7 +16,7 @@ using namespace mir;
 // Simple wrapper to make getting function types more compact.
 template<typename TRet, typename... TParam>
 llvm::FunctionType* getFuncType(TRet&& ret, TParam&&... params) {
-    return llvm::FunctionType::get(std::forward<TRet>(ret), { std::forward<TParam>(params)... },
+    return llvm::FunctionType::get(std::forward<TRet>(ret), {std::forward<TParam>(params)...},
                                    /* isVarArg */ false);
 }
 

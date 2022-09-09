@@ -239,7 +239,7 @@ private:
     // determine ordering during lookups) will be set here.
     mutable const Scope* parentScope = nullptr;
     mutable const Symbol* nextInScope = nullptr;
-    mutable SymbolIndex indexInScope{ 0 };
+    mutable SymbolIndex indexInScope{0};
 
     const SyntaxNode* originatingSyntax = nullptr;
 };

@@ -946,8 +946,8 @@ void registerArrayMethods(Compilation& c) {
 #define REGISTER(kind, name, ...) \
     c.addSystemMethod(kind, std::make_unique<name##Method>(__VA_ARGS__))
 
-    for (auto kind : { SymbolKind::FixedSizeUnpackedArrayType, SymbolKind::DynamicArrayType,
-                       SymbolKind::AssociativeArrayType, SymbolKind::QueueType }) {
+    for (auto kind : {SymbolKind::FixedSizeUnpackedArrayType, SymbolKind::DynamicArrayType,
+                      SymbolKind::AssociativeArrayType, SymbolKind::QueueType}) {
         REGISTER(kind, ArrayReduction, "or", [](auto& l, auto& r) { l |= r; });
         REGISTER(kind, ArrayReduction, "and", [](auto& l, auto& r) { l &= r; });
         REGISTER(kind, ArrayReduction, "xor", [](auto& l, auto& r) { l ^= r; });
@@ -968,13 +968,13 @@ void registerArrayMethods(Compilation& c) {
         REGISTER(kind, ArrayUnique, "unique_index", true);
     }
 
-    for (auto kind : { SymbolKind::DynamicArrayType, SymbolKind::AssociativeArrayType,
-                       SymbolKind::QueueType }) {
+    for (auto kind :
+         {SymbolKind::DynamicArrayType, SymbolKind::AssociativeArrayType, SymbolKind::QueueType}) {
         REGISTER(kind, ArraySize, c, "size");
     }
 
-    for (auto kind : { SymbolKind::FixedSizeUnpackedArrayType, SymbolKind::DynamicArrayType,
-                       SymbolKind::QueueType }) {
+    for (auto kind : {SymbolKind::FixedSizeUnpackedArrayType, SymbolKind::DynamicArrayType,
+                      SymbolKind::QueueType}) {
         REGISTER(kind, ArraySort, "sort", false);
         REGISTER(kind, ArraySort, "rsort", true);
         REGISTER(kind, ArrayReverse, );

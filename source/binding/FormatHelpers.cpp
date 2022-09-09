@@ -108,7 +108,7 @@ static bool checkFormatString(const BindContext& context, const StringLiteral& a
     SourceLocation loc = arg.sourceRange.start() + 1;
     auto getRange = [&](size_t offset, size_t len) {
         SourceLocation sl = loc + offset;
-        return SourceRange{ sl, sl + len };
+        return SourceRange{sl, sl + len};
     };
 
     bool ok = true;
@@ -218,10 +218,10 @@ optional<std::string> FmtHelpers::formatArgs(string_view formatString, SourceLoc
     auto getRange = [&](size_t offset, size_t len) {
         // If this is not a string literal, we can't meaningfully get an offset.
         if (!isStringLiteral)
-            return SourceRange{ loc, loc };
+            return SourceRange{loc, loc};
 
         SourceLocation sl = loc + offset;
-        return SourceRange{ sl, sl + len };
+        return SourceRange{sl, sl + len};
     };
 
     std::string result;
@@ -372,9 +372,9 @@ static void lowerFormatArg(mir::Procedure& proc, const Expression& arg, char,
     mir::MIRValue argVal = proc.emitExpr(arg);
     const Type& type = arg.type->getCanonicalType();
     if (type.isIntegral()) {
-        auto args = { argVal, proc.emitInt(8, uint64_t(defaultBase), false),
-                      proc.emitInt(32, options.width.value_or(0), false),
-                      proc.emitInt(1, options.width.has_value(), false) };
+        auto args = {argVal, proc.emitInt(8, uint64_t(defaultBase), false),
+                     proc.emitInt(32, options.width.value_or(0), false),
+                     proc.emitInt(1, options.width.has_value(), false)};
         proc.emitCall(mir::SysCallKind::printInt, args);
         return;
     }

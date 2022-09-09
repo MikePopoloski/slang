@@ -18,8 +18,8 @@ static const double log2_10 = log2(10.0);
 
 namespace slang {
 
-const logic_t logic_t::x{ logic_t::X_VALUE };
-const logic_t logic_t::z{ logic_t::Z_VALUE };
+const logic_t logic_t::x{logic_t::X_VALUE};
+const logic_t logic_t::z{logic_t::Z_VALUE};
 
 const SVInt SVInt::Zero = 0u;
 const SVInt SVInt::One = 1u;
@@ -2093,8 +2093,8 @@ void SVInt::buildDivideResult(SVInt* result, uint32_t* value, bitwidth_t bitWidt
     else {
         *result = SVInt(bitWidth, 0, signFlag);
         for (uint32_t i = 0; i < numWords; i++)
-            result->pVal[i] =
-                uint64_t(value[i * 2]) | (uint64_t(value[i * 2 + 1]) << (BITS_PER_WORD / 2));
+            result->pVal[i] = uint64_t(value[i * 2]) |
+                              (uint64_t(value[i * 2 + 1]) << (BITS_PER_WORD / 2));
     }
 }
 

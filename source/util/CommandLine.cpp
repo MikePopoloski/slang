@@ -156,7 +156,7 @@ void CommandLine::setPositional(OptionCallback cb, string_view valueName, bool i
 }
 
 bool CommandLine::parse(int argc, const char* const argv[]) {
-    SmallVectorSized<string_view, 8> args{ size_t(argc) };
+    SmallVectorSized<string_view, 8> args{size_t(argc)};
     for (int i = 0; i < argc; i++)
         args.append(argv[i]);
 
@@ -166,8 +166,8 @@ bool CommandLine::parse(int argc, const char* const argv[]) {
 #if defined(_MSC_VER)
 
 bool CommandLine::parse(int argc, const wchar_t* const argv[]) {
-    SmallVectorSized<std::string, 8> storage{ size_t(argc) };
-    SmallVectorSized<string_view, 8> args{ size_t(argc) };
+    SmallVectorSized<std::string, 8> storage{size_t(argc)};
+    SmallVectorSized<string_view, 8> args{size_t(argc)};
     for (int i = 0; i < argc; i++) {
         storage.append(narrow(argv[i]));
         args.append(storage.back());
@@ -412,8 +412,8 @@ bool CommandLine::parse(span<const string_view> args, ParseOptions options) {
             if (arg[0] == '+') {
                 size_t plusIndex = arg.substr(1).find_first_of('+');
                 if (plusIndex != string_view::npos) {
-                    ignoreArg =
-                        arg.substr(0, plusIndex + 1); // +1 because we started from arg.substr(1)
+                    ignoreArg = arg.substr(0, plusIndex +
+                                                  1); // +1 because we started from arg.substr(1)
                 }
             }
 

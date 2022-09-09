@@ -138,7 +138,7 @@ ConstantRange IntegralType::getBitVectorRange() const {
     if (kind == SymbolKind::PackedArrayType)
         return as<PackedArrayType>().range;
 
-    return { int32_t(bitWidth - 1), 0 };
+    return {int32_t(bitWidth - 1), 0};
 }
 
 bool IntegralType::isDeclaredReg() const {
@@ -313,8 +313,8 @@ const Type& EnumType::fromSyntax(Compilation& compilation, const EnumTypeSyntax&
     SourceRange previousRange;
     bool first = true;
 
-    auto resultType =
-        compilation.emplace<EnumType>(compilation, syntax.keyword.location(), *base, context);
+    auto resultType = compilation.emplace<EnumType>(compilation, syntax.keyword.location(), *base,
+                                                    context);
     resultType->setSyntax(syntax);
 
     // Enum values must be unique; this set and lambda are used to check that.
@@ -648,8 +648,8 @@ const Type& FixedSizeUnpackedArrayType::fromDims(Compilation& compilation, const
     const Type* result = &elementType;
     size_t count = dimensions.size();
     for (size_t i = 0; i < count; i++) {
-        result =
-            compilation.emplace<FixedSizeUnpackedArrayType>(*result, dimensions[count - i - 1]);
+        result = compilation.emplace<FixedSizeUnpackedArrayType>(*result,
+                                                                 dimensions[count - i - 1]);
     }
 
     return *result;
@@ -704,8 +704,8 @@ const Type& PackedStructType::fromSyntax(Compilation& comp, const StructUnionTyp
     const bool isSigned = syntax.signing.kind == TokenKind::SignedKeyword;
     bool issuedError = false;
 
-    auto structType =
-        comp.emplace<PackedStructType>(comp, isSigned, syntax.keyword.location(), parentContext);
+    auto structType = comp.emplace<PackedStructType>(comp, isSigned, syntax.keyword.location(),
+                                                     parentContext);
     structType->setSyntax(syntax);
 
     BindContext context(*structType, LookupLocation::max, parentContext.flags);
@@ -725,8 +725,8 @@ const Type& PackedStructType::fromSyntax(Compilation& comp, const StructUnionTyp
         }
 
         for (auto decl : member->declarators) {
-            auto field =
-                comp.emplace<FieldSymbol>(decl->name.valueText(), decl->name.location(), 0u);
+            auto field = comp.emplace<FieldSymbol>(decl->name.valueText(), decl->name.location(),
+                                                   0u);
             field->setType(type);
             field->setSyntax(*decl);
             field->setAttributes(*context.scope, member->attributes);
@@ -958,8 +958,8 @@ const Type& UnpackedUnionType::fromSyntax(const BindContext& context,
 
     auto& comp = context.getCompilation();
     bool isTagged = syntax.tagged.valid();
-    auto result =
-        comp.emplace<UnpackedUnionType>(comp, isTagged, syntax.keyword.location(), context);
+    auto result = comp.emplace<UnpackedUnionType>(comp, isTagged, syntax.keyword.location(),
+                                                  context);
 
     uint32_t fieldIndex = 0;
     for (auto member : syntax.members) {
@@ -1077,8 +1077,9 @@ ForwardingTypedefSymbol& ForwardingTypedefSymbol::fromSyntax(
     const Scope& scope, const ForwardInterfaceClassTypedefDeclarationSyntax& syntax) {
 
     auto& comp = scope.getCompilation();
-    auto result = comp.emplace<ForwardingTypedefSymbol>(
-        syntax.name.valueText(), syntax.name.location(), ForwardTypedefCategory::InterfaceClass);
+    auto result = comp.emplace<ForwardingTypedefSymbol>(syntax.name.valueText(),
+                                                        syntax.name.location(),
+                                                        ForwardTypedefCategory::InterfaceClass);
     result->setSyntax(syntax);
     result->setAttributes(scope, syntax.attributes);
     return *result;

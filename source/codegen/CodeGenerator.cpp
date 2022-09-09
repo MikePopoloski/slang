@@ -30,7 +30,7 @@ GeneratedCode::~GeneratedCode() = default;
 
 std::pair<std::unique_ptr<llvm::LLVMContext>, std::unique_ptr<llvm::Module>> GeneratedCode::
     release() {
-    return { std::move(context), std::move(module) };
+    return {std::move(context), std::move(module)};
 }
 
 std::string GeneratedCode::toString() const {

@@ -577,7 +577,7 @@ endmodule
     NO_COMPILATION_ERRORS;
 
     auto& foo = compilation.getRoot().lookupName<VariableSymbol>("m.asdf.foo");
-    CHECK(foo.getType().getFixedRange() == ConstantRange{ 4, 2 });
+    CHECK(foo.getType().getFixedRange() == ConstantRange{4, 2});
 }
 
 TEST_CASE("If statement -- unevaluated branches -- valid") {

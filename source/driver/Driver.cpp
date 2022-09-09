@@ -569,8 +569,8 @@ bool Driver::parseAllSources() {
                 }
 
                 if (buffer) {
-                    auto tree =
-                        SyntaxTree::fromBuffer(buffer, sourceManager, optionBag, inheritedMacros);
+                    auto tree = SyntaxTree::fromBuffer(buffer, sourceManager, optionBag,
+                                                       inheritedMacros);
                     tree->isLibrary = true;
                     syntaxTrees.emplace_back(tree);
 

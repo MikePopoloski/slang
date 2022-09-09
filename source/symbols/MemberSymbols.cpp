@@ -157,9 +157,9 @@ ModportPortSymbol& ModportPortSymbol::fromSyntax(const BindContext& context,
     auto name = syntax.name;
     auto result = comp.emplace<ModportPortSymbol>(name.valueText(), name.location(), direction);
     result->setSyntax(syntax);
-    result->internalSymbol =
-        Lookup::unqualifiedAt(*context.scope, name.valueText(), context.getLocation(), name.range(),
-                              LookupFlags::NoParentScope);
+    result->internalSymbol = Lookup::unqualifiedAt(*context.scope, name.valueText(),
+                                                   context.getLocation(), name.range(),
+                                                   LookupFlags::NoParentScope);
 
     if (result->internalSymbol) {
         if (result->internalSymbol->kind == SymbolKind::Subroutine) {
@@ -192,7 +192,7 @@ ModportPortSymbol& ModportPortSymbol::fromSyntax(const BindContext& context,
 
         auto loc = result->location;
         auto& expr = ValueExpressionBase::fromSymbol(checkCtx, *result->internalSymbol, false,
-                                                     { loc, loc + result->name.length() });
+                                                     {loc, loc + result->name.length()});
 
         switch (direction) {
             case ArgumentDirection::In:
@@ -306,8 +306,8 @@ void ModportSymbol::fromSyntax(const BindContext& context, const ModportDeclarat
                                SmallVector<const ModportSymbol*>& results) {
     auto& comp = context.getCompilation();
     for (auto item : syntax.items) {
-        auto modport =
-            comp.emplace<ModportSymbol>(comp, item->name.valueText(), item->name.location());
+        auto modport = comp.emplace<ModportSymbol>(comp, item->name.valueText(),
+                                                   item->name.location());
         modport->setSyntax(*item);
         modport->setAttributes(*context.scope, syntax.attributes);
         results.append(modport);
@@ -436,8 +436,8 @@ const Expression& ContinuousAssignSymbol::getAssignment() const {
     ASSERT(scope && syntax);
 
     BindContext context(*scope, LookupLocation::after(*this), BindFlags::NonProcedural);
-    assign =
-        &Expression::bind(syntax->as<ExpressionSyntax>(), context, BindFlags::AssignmentAllowed);
+    assign = &Expression::bind(syntax->as<ExpressionSyntax>(), context,
+                               BindFlags::AssignmentAllowed);
 
     return *assign;
 }
@@ -771,8 +771,9 @@ PrimitiveSymbol& PrimitiveSymbol::fromSyntax(const Scope& scope,
                 auto& inputDecl = decl->as<UdpInputPortDeclSyntax>();
                 for (auto nameSyntax : inputDecl.names) {
                     auto name = nameSyntax->identifier;
-                    auto port = comp.emplace<PrimitivePortSymbol>(
-                        comp, name.valueText(), name.location(), PrimitivePortDirection::In);
+                    auto port = comp.emplace<PrimitivePortSymbol>(comp, name.valueText(),
+                                                                  name.location(),
+                                                                  PrimitivePortDirection::In);
 
                     port->setSyntax(*nameSyntax);
                     port->setAttributes(scope, decl->attributes);
@@ -817,8 +818,8 @@ PrimitiveSymbol& PrimitiveSymbol::fromSyntax(const Scope& scope,
                     // end once we've handled all of the regular declarations.
                     if (outputDecl.reg && !outputDecl.keyword) {
                         if (regSpecifier) {
-                            auto& diag =
-                                scope.addDiag(diag::PrimitiveRegDup, outputDecl.reg.range());
+                            auto& diag = scope.addDiag(diag::PrimitiveRegDup,
+                                                       outputDecl.reg.range());
                             diag.addNote(diag::NotePreviousDefinition,
                                          regSpecifier->reg.location());
                         }
@@ -1019,8 +1020,8 @@ void AssertionPortSymbol::buildPorts(Scope& scope, const AssertionItemPortListSy
     optional<ArgumentDirection> lastLocalDir;
 
     for (auto item : syntax.ports) {
-        auto port =
-            comp.emplace<AssertionPortSymbol>(item->name.valueText(), item->name.location());
+        auto port = comp.emplace<AssertionPortSymbol>(item->name.valueText(),
+                                                      item->name.location());
         port->setSyntax(*item);
         port->setAttributes(scope, item->attributes);
 
@@ -1111,8 +1112,8 @@ SequenceSymbol::SequenceSymbol(Compilation& compilation, string_view name, Sourc
 SequenceSymbol& SequenceSymbol::fromSyntax(const Scope& scope,
                                            const SequenceDeclarationSyntax& syntax) {
     auto& comp = scope.getCompilation();
-    auto result =
-        comp.emplace<SequenceSymbol>(comp, syntax.name.valueText(), syntax.name.location());
+    auto result = comp.emplace<SequenceSymbol>(comp, syntax.name.valueText(),
+                                               syntax.name.location());
     result->setSyntax(syntax);
 
     SmallVectorSized<const AssertionPortSymbol*, 4> ports;
@@ -1134,8 +1135,8 @@ PropertySymbol::PropertySymbol(Compilation& compilation, string_view name, Sourc
 PropertySymbol& PropertySymbol::fromSyntax(const Scope& scope,
                                            const PropertyDeclarationSyntax& syntax) {
     auto& comp = scope.getCompilation();
-    auto result =
-        comp.emplace<PropertySymbol>(comp, syntax.name.valueText(), syntax.name.location());
+    auto result = comp.emplace<PropertySymbol>(comp, syntax.name.valueText(),
+                                               syntax.name.location());
     result->setSyntax(syntax);
 
     SmallVectorSized<const AssertionPortSymbol*, 4> ports;
@@ -1203,8 +1204,8 @@ ClockingBlockSymbol& ClockingBlockSymbol::fromSyntax(const Scope& scope,
             auto& dir = *item->as<DefaultSkewItemSyntax>().direction;
             if (dir.inputSkew) {
                 if (inputSkew) {
-                    auto& diag =
-                        scope.addDiag(diag::MultipleDefaultInputSkew, dir.inputSkew->sourceRange());
+                    auto& diag = scope.addDiag(diag::MultipleDefaultInputSkew,
+                                               dir.inputSkew->sourceRange());
                     diag.addNote(diag::NotePreviousDefinition,
                                  inputSkew->getFirstToken().location());
                 }
@@ -1243,8 +1244,9 @@ const TimingControl& ClockingBlockSymbol::getEvent() const {
         ASSERT(scope && syntax);
 
         BindContext context(*scope, LookupLocation::before(*this));
-        event = &EventListControl::fromSyntax(
-            getCompilation(), *syntax->as<ClockingDeclarationSyntax>().event, context);
+        event = &EventListControl::fromSyntax(getCompilation(),
+                                              *syntax->as<ClockingDeclarationSyntax>().event,
+                                              context);
     }
     return *event;
 }
@@ -1433,7 +1435,7 @@ const RandSeqProductionSymbol::CaseProd& RandSeqProductionSymbol::createCaseProd
                 for (size_t i = 0; i < sci.expressions.size(); i++)
                     group.append(*boundIt++);
 
-                items.append({ group.copy(comp), *prodIt++ });
+                items.append({group.copy(comp), *prodIt++});
                 group.clear();
                 break;
             }
@@ -1528,15 +1530,15 @@ RandSeqProductionSymbol::Rule RandSeqProductionSymbol::createRule(
         block.getStatement(context, stmtCtx);
     }
 
-    return { ruleBlock, prods.copy(comp), weightExpr, randJoinExpr, codeBlock, isRandJoin };
+    return {ruleBlock, prods.copy(comp), weightExpr, randJoinExpr, codeBlock, isRandJoin};
 }
 
 void RandSeqProductionSymbol::createRuleVariables(const RsRuleSyntax& syntax, const Scope& scope,
                                                   SmallVector<const Symbol*>& results) {
     SmallMap<const RandSeqProductionSymbol*, uint32_t, 8> prodMap;
     auto countProd = [&](const RsProdItemSyntax& item) {
-        auto symbol =
-            Lookup::unqualified(scope, item.name.valueText(), LookupFlags::AllowDeclaredAfter);
+        auto symbol = Lookup::unqualified(scope, item.name.valueText(),
+                                          LookupFlags::AllowDeclaredAfter);
         if (symbol && symbol->kind == SymbolKind::RandSeqProduction) {
             auto& prod = symbol->as<RandSeqProductionSymbol>();
             auto& type = prod.getReturnType();
@@ -1594,9 +1596,9 @@ void RandSeqProductionSymbol::createRuleVariables(const RsRuleSyntax& syntax, co
             var->setType(symbol->getReturnType());
         }
         else {
-            ConstantRange range{ 1, int32_t(count) };
+            ConstantRange range{1, int32_t(count)};
             var->setType(
-                FixedSizeUnpackedArrayType::fromDims(comp, symbol->getReturnType(), { &range, 1 }));
+                FixedSizeUnpackedArrayType::fromDims(comp, symbol->getReturnType(), {&range, 1}));
         }
 
         results.append(var);

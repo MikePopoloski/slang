@@ -84,7 +84,7 @@ Expression* Expression::tryConnectPortArray(const BindContext& context, const Ty
         else {
             diag << name;
             if (instance.location)
-                diag << SourceRange{ instance.location, instance.location + name.length() };
+                diag << SourceRange{instance.location, instance.location + name.length()};
         }
 
         return &badExpr(comp, &expr);
@@ -209,7 +209,7 @@ Expression* Expression::tryConnectPortArray(const BindContext& context, const Ty
 
     int32_t width = int32_t(portWidth);
     offset *= width;
-    ConstantRange range{ offset + width - 1, offset };
+    ConstantRange range{offset + width - 1, offset};
     return &RangeSelectExpression::fromConstant(comp, *result, range, context);
 }
 
@@ -305,10 +305,10 @@ Expression& Expression::convertAssignment(const BindContext& context, const Type
         else if (expr.kind == ExpressionKind::OpenRange) {
             // Convert each side of the range and return that as a new range.
             auto& ore = expr.as<OpenRangeExpression>();
-            auto& left =
-                convertAssignment(context, type, ore.left(), location, lhsExpr, assignFlags);
-            auto& right =
-                convertAssignment(context, type, ore.right(), location, lhsExpr, assignFlags);
+            auto& left = convertAssignment(context, type, ore.left(), location, lhsExpr,
+                                           assignFlags);
+            auto& right = convertAssignment(context, type, ore.right(), location, lhsExpr,
+                                            assignFlags);
 
             result = comp.emplace<OpenRangeExpression>(*expr.type, left, right, expr.sourceRange);
             result->syntax = expr.syntax;
@@ -466,8 +466,9 @@ Expression& AssignmentExpression::fromComponents(
     Expression& lhs, Expression& rhs, SourceLocation assignLoc, const TimingControl* timingControl,
     SourceRange sourceRange, const BindContext& context) {
 
-    auto result = compilation.emplace<AssignmentExpression>(
-        op, flags.has(AssignFlags::NonBlocking), *lhs.type, lhs, rhs, timingControl, sourceRange);
+    auto result = compilation.emplace<AssignmentExpression>(op, flags.has(AssignFlags::NonBlocking),
+                                                            *lhs.type, lhs, rhs, timingControl,
+                                                            sourceRange);
 
     if (lhs.bad() || rhs.bad())
         return badExpr(compilation, result);
@@ -492,8 +493,8 @@ Expression& AssignmentExpression::fromComponents(
                                                            assignLoc, sourceRange, context);
     }
 
-    result->right_ =
-        &convertAssignment(context, *lhs.type, *result->right_, assignLoc, &result->left_, &flags);
+    result->right_ = &convertAssignment(context, *lhs.type, *result->right_, assignLoc,
+                                        &result->left_, &flags);
     if (result->right_->bad())
         return badExpr(compilation, result);
 
@@ -568,8 +569,8 @@ Expression& ConversionExpression::fromSyntax(Compilation& compilation,
                                              const CastExpressionSyntax& syntax,
                                              const BindContext& context) {
     auto& targetExpr = bind(*syntax.left, context, BindFlags::AllowDataType);
-    auto& operand =
-        selfDetermined(compilation, *syntax.right, context, BindFlags::StreamingAllowed);
+    auto& operand = selfDetermined(compilation, *syntax.right, context,
+                                   BindFlags::StreamingAllowed);
 
     const auto* type = &compilation.getErrorType();
     auto result = [&](ConversionKind cast = ConversionKind::Explicit) {
@@ -634,8 +635,9 @@ Expression& ConversionExpression::fromSyntax(Compilation& compilation,
                                              const SignedCastExpressionSyntax& syntax,
                                              const BindContext& context) {
     auto& operand = selfDetermined(compilation, *syntax.inner, context);
-    auto result = compilation.emplace<ConversionExpression>(
-        compilation.getErrorType(), ConversionKind::Explicit, operand, syntax.sourceRange());
+    auto result = compilation.emplace<ConversionExpression>(compilation.getErrorType(),
+                                                            ConversionKind::Explicit, operand,
+                                                            syntax.sourceRange());
     if (operand.bad())
         return badExpr(compilation, result);
 
@@ -977,9 +979,9 @@ Expression& NewClassExpression::fromSyntax(Compilation& compilation,
     Expression* constructorCall = nullptr;
     if (auto constructor = classType->find("new")) {
         Lookup::ensureVisible(*constructor, context, range);
-        constructorCall =
-            &CallExpression::fromArgs(compilation, &constructor->as<SubroutineSymbol>(), nullptr,
-                                      syntax.argList, range, context);
+        constructorCall = &CallExpression::fromArgs(compilation,
+                                                    &constructor->as<SubroutineSymbol>(), nullptr,
+                                                    syntax.argList, range, context);
     }
     else if (syntax.argList && !syntax.argList->parameters.empty()) {
         auto& diag = context.addDiag(diag::TooManyArguments, syntax.argList->sourceRange());
@@ -1253,8 +1255,8 @@ Expression& SimpleAssignmentPatternExpression::forStruct(
         bad |= expr.bad();
     }
 
-    auto result =
-        comp.emplace<SimpleAssignmentPatternExpression>(type, elems.copy(comp), sourceRange);
+    auto result = comp.emplace<SimpleAssignmentPatternExpression>(type, elems.copy(comp),
+                                                                  sourceRange);
     if (bad)
         return badExpr(comp, result);
 
@@ -1305,8 +1307,8 @@ Expression& SimpleAssignmentPatternExpression::forDynamicArray(
     const Type& type, const Type& elementType, SourceRange sourceRange) {
 
     bool bad = false;
-    auto elems =
-        bindExpressionList(type, elementType, 1, 0, syntax.items, context, sourceRange, bad);
+    auto elems = bindExpressionList(type, elementType, 1, 0, syntax.items, context, sourceRange,
+                                    bad);
 
     auto result = comp.emplace<SimpleAssignmentPatternExpression>(type, elems, sourceRange);
     if (bad)
@@ -1377,8 +1379,8 @@ static const Expression* matchElementValue(
             if (type.isError() || field.name.empty())
                 return nullptr;
 
-            auto elemExpr =
-                matchElementValue(context, type, &field, sourceRange, typeSetters, defaultSetter);
+            auto elemExpr = matchElementValue(context, type, &field, sourceRange, typeSetters,
+                                              defaultSetter);
             if (!elemExpr)
                 return nullptr;
 
@@ -1471,16 +1473,16 @@ Expression& StructuredAssignmentPatternExpression::forStruct(
                     continue;
                 }
 
-                memberSetters.emplace(MemberSetter{ member, &expr });
+                memberSetters.emplace(MemberSetter{member, &expr});
             }
             else {
                 auto found = Lookup::unqualified(*context.scope, name, LookupFlags::Type);
                 if (found && found->isType()) {
-                    auto& expr =
-                        bindRValue(found->as<Type>(), *item->expr, nameToken.location(), context);
+                    auto& expr = bindRValue(found->as<Type>(), *item->expr, nameToken.location(),
+                                            context);
                     bad |= expr.bad();
 
-                    typeSetters.emplace(TypeSetter{ &found->as<Type>(), &expr });
+                    typeSetters.emplace(TypeSetter{&found->as<Type>(), &expr});
                 }
                 else {
                     auto& diag = context.addDiag(diag::UnknownMember, item->key->sourceRange());
@@ -1496,7 +1498,7 @@ Expression& StructuredAssignmentPatternExpression::forStruct(
                 auto& expr = bindRValue(typeKey, *item->expr,
                                         item->expr->getFirstToken().location(), context);
 
-                typeSetters.emplace(TypeSetter{ &typeKey, &expr });
+                typeSetters.emplace(TypeSetter{&typeKey, &expr});
                 bad |= expr.bad();
             }
             else {
@@ -1524,8 +1526,8 @@ Expression& StructuredAssignmentPatternExpression::forStruct(
             continue;
         }
 
-        auto expr =
-            matchElementValue(context, fieldType, &field, sourceRange, typeSetters, defaultSetter);
+        auto expr = matchElementValue(context, fieldType, &field, sourceRange, typeSetters,
+                                      defaultSetter);
         if (!expr) {
             bad = true;
             continue;
@@ -1566,7 +1568,7 @@ static optional<int32_t> bindArrayIndexSetter(
         return std::nullopt;
     }
 
-    indexSetters.append({ &keyExpr, &expr });
+    indexSetters.append({&keyExpr, &expr});
     return *index;
 }
 
@@ -1604,7 +1606,7 @@ Expression& StructuredAssignmentPatternExpression::forFixedArray(
                 auto& expr = bindRValue(typeKey, *item->expr,
                                         item->expr->getFirstToken().location(), context);
 
-                typeSetters.emplace(TypeSetter{ &typeKey, &expr });
+                typeSetters.emplace(TypeSetter{&typeKey, &expr});
                 bad |= expr.bad();
             }
             else {
@@ -1781,7 +1783,7 @@ Expression& StructuredAssignmentPatternExpression::forAssociativeArray(
                                     item->expr->getFirstToken().location(), context);
             bad |= expr.bad() || indexExpr->bad();
 
-            indexSetters.append(IndexSetter{ indexExpr, &expr });
+            indexSetters.append(IndexSetter{indexExpr, &expr});
         }
     }
 
@@ -1876,8 +1878,9 @@ Expression& ReplicatedAssignmentPatternExpression::forStruct(
         }
     }
 
-    auto result = comp.emplace<ReplicatedAssignmentPatternExpression>(
-        type, countExpr, elems.copy(comp), sourceRange);
+    auto result = comp.emplace<ReplicatedAssignmentPatternExpression>(type, countExpr,
+                                                                      elems.copy(comp),
+                                                                      sourceRange);
     if (bad)
         return badExpr(comp, result);
 
@@ -1897,8 +1900,8 @@ Expression& ReplicatedAssignmentPatternExpression::forFixedArray(
     auto elems = bindExpressionList(type, elementType, count, numElements, syntax.items, context,
                                     sourceRange, bad);
 
-    auto result =
-        comp.emplace<ReplicatedAssignmentPatternExpression>(type, countExpr, elems, sourceRange);
+    auto result = comp.emplace<ReplicatedAssignmentPatternExpression>(type, countExpr, elems,
+                                                                      sourceRange);
     if (bad)
         return badExpr(comp, result);
 
@@ -1915,11 +1918,11 @@ Expression& ReplicatedAssignmentPatternExpression::forDynamicArray(
         return badExpr(comp, nullptr);
 
     bool bad = false;
-    auto elems =
-        bindExpressionList(type, elementType, count, 0, syntax.items, context, sourceRange, bad);
+    auto elems = bindExpressionList(type, elementType, count, 0, syntax.items, context, sourceRange,
+                                    bad);
 
-    auto result =
-        comp.emplace<ReplicatedAssignmentPatternExpression>(type, countExpr, elems, sourceRange);
+    auto result = comp.emplace<ReplicatedAssignmentPatternExpression>(type, countExpr, elems,
+                                                                      sourceRange);
     if (bad)
         return badExpr(comp, result);
 

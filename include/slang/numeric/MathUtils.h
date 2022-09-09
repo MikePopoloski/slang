@@ -75,8 +75,8 @@ inline uint32_t countPopulation64(uint64_t value) {
 inline std::optional<int32_t> checkedAddS32(int32_t a, int32_t b) {
 #if defined(_MSC_VER)
     int64_t p = int64_t(a) + int64_t(b);
-    bool fits =
-        p >= std::numeric_limits<int32_t>::min() && p <= std::numeric_limits<int32_t>::max();
+    bool fits = p >= std::numeric_limits<int32_t>::min() &&
+                p <= std::numeric_limits<int32_t>::max();
     return fits ? std::make_optional(int32_t(p)) : std::nullopt;
 #else
     int32_t result;
@@ -89,8 +89,8 @@ inline std::optional<int32_t> checkedAddS32(int32_t a, int32_t b) {
 inline std::optional<int32_t> checkedSubS32(int32_t a, int32_t b) {
 #if defined(_MSC_VER)
     int64_t p = int64_t(a) - int64_t(b);
-    bool fits =
-        p >= std::numeric_limits<int32_t>::min() && p <= std::numeric_limits<int32_t>::max();
+    bool fits = p >= std::numeric_limits<int32_t>::min() &&
+                p <= std::numeric_limits<int32_t>::max();
     return fits ? std::make_optional(int32_t(p)) : std::nullopt;
 #else
     int32_t result;

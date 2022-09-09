@@ -137,12 +137,13 @@ const Statement& Statement::bind(const StatementSyntax& syntax, const BindContex
             break;
         }
         case SyntaxKind::DisableStatement:
-            result =
-                &DisableStatement::fromSyntax(comp, syntax.as<DisableStatementSyntax>(), context);
+            result = &DisableStatement::fromSyntax(comp, syntax.as<DisableStatementSyntax>(),
+                                                   context);
             break;
         case SyntaxKind::ConditionalStatement:
-            result = &ConditionalStatement::fromSyntax(
-                comp, syntax.as<ConditionalStatementSyntax>(), context, stmtCtx);
+            result = &ConditionalStatement::fromSyntax(comp,
+                                                       syntax.as<ConditionalStatementSyntax>(),
+                                                       context, stmtCtx);
             break;
         case SyntaxKind::CaseStatement:
             result = &CaseStatement::fromSyntax(comp, syntax.as<CaseStatementSyntax>(), context,
@@ -169,8 +170,9 @@ const Statement& Statement::bind(const StatementSyntax& syntax, const BindContex
             if (auto block = stmtCtx.tryGetBlock(context, syntax))
                 return *block;
 
-            result = &ForeachLoopStatement::fromSyntax(
-                comp, syntax.as<ForeachLoopStatementSyntax>(), context, stmtCtx);
+            result = &ForeachLoopStatement::fromSyntax(comp,
+                                                       syntax.as<ForeachLoopStatementSyntax>(),
+                                                       context, stmtCtx);
             break;
         case SyntaxKind::DoWhileStatement:
             result = &DoWhileLoopStatement::fromSyntax(comp, syntax.as<DoWhileStatementSyntax>(),
@@ -185,8 +187,9 @@ const Statement& Statement::bind(const StatementSyntax& syntax, const BindContex
                                                       context, stmtCtx);
             break;
         case SyntaxKind::VoidCastedCallStatement:
-            result = &ExpressionStatement::fromSyntax(
-                comp, syntax.as<VoidCastedCallStatementSyntax>(), context);
+            result = &ExpressionStatement::fromSyntax(comp,
+                                                      syntax.as<VoidCastedCallStatementSyntax>(),
+                                                      context);
             break;
         case SyntaxKind::SequentialBlockStatement:
         case SyntaxKind::ParallelBlockStatement:
@@ -210,8 +213,8 @@ const Statement& Statement::bind(const StatementSyntax& syntax, const BindContex
                 comp, syntax.as<ImmediateAssertionStatementSyntax>(), context, stmtCtx);
             break;
         case SyntaxKind::DisableForkStatement:
-            result =
-                &DisableForkStatement::fromSyntax(comp, syntax.as<DisableForkStatementSyntax>());
+            result = &DisableForkStatement::fromSyntax(comp,
+                                                       syntax.as<DisableForkStatementSyntax>());
             break;
         case SyntaxKind::WaitStatement:
             result = &WaitStatement::fromSyntax(comp, syntax.as<WaitStatementSyntax>(), context,
@@ -226,8 +229,9 @@ const Statement& Statement::bind(const StatementSyntax& syntax, const BindContex
             break;
         case SyntaxKind::BlockingEventTriggerStatement:
         case SyntaxKind::NonblockingEventTriggerStatement:
-            result = &EventTriggerStatement::fromSyntax(
-                comp, syntax.as<EventTriggerStatementSyntax>(), context, stmtCtx);
+            result = &EventTriggerStatement::fromSyntax(comp,
+                                                        syntax.as<EventTriggerStatementSyntax>(),
+                                                        context, stmtCtx);
             break;
         case SyntaxKind::ProceduralAssignStatement:
         case SyntaxKind::ProceduralForceStatement:
@@ -257,8 +261,9 @@ const Statement& Statement::bind(const StatementSyntax& syntax, const BindContex
             if (auto block = stmtCtx.tryGetBlock(context, syntax))
                 return *block;
 
-            result = &RandSequenceStatement::fromSyntax(
-                comp, syntax.as<RandSequenceStatementSyntax>(), context);
+            result = &RandSequenceStatement::fromSyntax(comp,
+                                                        syntax.as<RandSequenceStatementSyntax>(),
+                                                        context);
             break;
         case SyntaxKind::CheckerInstanceStatement:
             context.addDiag(diag::NotYetSupported, syntax.sourceRange());
@@ -294,8 +299,8 @@ const Statement& Statement::bindBlock(const StatementBlockSymbol& block, const S
     if (syntax.kind == SyntaxKind::SequentialBlockStatement ||
         syntax.kind == SyntaxKind::ParallelBlockStatement) {
         auto& bss = syntax.as<BlockStatementSyntax>();
-        auto& bs =
-            BlockStatement::fromSyntax(comp, bss, context, stmtCtx, /* addInitializers */ true);
+        auto& bs = BlockStatement::fromSyntax(comp, bss, context, stmtCtx,
+                                              /* addInitializers */ true);
         if (bs.bad())
             return bs;
 
@@ -378,7 +383,7 @@ void Statement::bindScopeInitializers(const BindContext& context,
         // source range here, since we don't have the real one.
         auto& var = member.as<VariableSymbol>();
         if (!var.flags.has(VariableFlags::CompilerGenerated)) {
-            SourceRange range{ var.location, var.location + var.name.length() };
+            SourceRange range{var.location, var.location + var.name.length()};
             results.append(comp.emplace<VariableDeclStatement>(var, range));
         }
     }
@@ -632,9 +637,9 @@ void StatementList::serializeTo(ASTSerializer& serializer) const {
 }
 
 Statement& StatementList::makeEmpty(Compilation& compilation) {
-    return *compilation.emplace<StatementList>(
-        span<const Statement* const>(),
-        SourceRange(SourceLocation::NoLocation, SourceLocation::NoLocation));
+    return *compilation.emplace<StatementList>(span<const Statement* const>(),
+                                               SourceRange(SourceLocation::NoLocation,
+                                                           SourceLocation::NoLocation));
 }
 
 Statement& BlockStatement::fromSyntax(Compilation& comp, const BlockStatementSyntax& syntax,
@@ -673,8 +678,8 @@ Statement& BlockStatement::fromSyntax(Compilation& comp, const BlockStatementSyn
 
     for (auto item : syntax.items) {
         if (StatementSyntax::isKind(item->kind)) {
-            auto& stmt =
-                Statement::bind(item->as<StatementSyntax>(), context, stmtCtx, /* inList */ true);
+            auto& stmt = Statement::bind(item->as<StatementSyntax>(), context, stmtCtx,
+                                         /* inList */ true);
             buffer.append(&stmt);
             anyBad |= stmt.bad();
         }
@@ -915,7 +920,7 @@ Statement& ConditionalStatement::fromSyntax(Compilation& comp,
                 isTrue = false;
         }
 
-        conditions.append({ &cond, pattern });
+        conditions.append({&cond, pattern});
     }
 
     // If the condition is constant, we know which branch will be taken.
@@ -1015,7 +1020,7 @@ static std::tuple<CaseStatementCondition, CaseStatementCheck> getConditionAndChe
             THROW_UNREACHABLE;
     }
 
-    return { condition, check };
+    return {condition, check};
 }
 
 Statement& CaseStatement::fromSyntax(Compilation& compilation, const CaseStatementSyntax& syntax,
@@ -1062,9 +1067,9 @@ Statement& CaseStatement::fromSyntax(Compilation& compilation, const CaseStateme
     bool allowTypeRefs = !isInside && keyword == TokenKind::CaseKeyword;
     bool allowOpenRange = !wildcard;
 
-    bad |=
-        !Expression::bindMembershipExpressions(context, keyword, wildcard, isInside, allowTypeRefs,
-                                               allowOpenRange, *syntax.expr, expressions, bound);
+    bad |= !Expression::bindMembershipExpressions(context, keyword, wildcard, isInside,
+                                                  allowTypeRefs, allowOpenRange, *syntax.expr,
+                                                  expressions, bound);
 
     auto [condition, check] = getConditionAndCheck(syntax);
 
@@ -1094,7 +1099,7 @@ Statement& CaseStatement::fromSyntax(Compilation& compilation, const CaseStateme
                     group.append(*boundIt++);
                 }
 
-                items.append({ group.copy(compilation), *stmtIt++ });
+                items.append({group.copy(compilation), *stmtIt++});
                 group.clear();
                 break;
             }
@@ -1103,8 +1108,9 @@ Statement& CaseStatement::fromSyntax(Compilation& compilation, const CaseStateme
         }
     }
 
-    auto result = compilation.emplace<CaseStatement>(
-        condition, check, *expr, items.copy(compilation), defStmt, syntax.sourceRange());
+    auto result = compilation.emplace<CaseStatement>(condition, check, *expr,
+                                                     items.copy(compilation), defStmt,
+                                                     syntax.sourceRange());
     if (bad)
         return badStmt(compilation, result);
 
@@ -1268,7 +1274,7 @@ Statement& PatternCaseStatement::fromSyntax(Compilation& compilation,
                         bad = true;
                 }
 
-                items.append({ &pattern, filter, &stmt });
+                items.append({&pattern, filter, &stmt});
                 break;
             }
             case SyntaxKind::DefaultCaseItem:
@@ -1287,8 +1293,9 @@ Statement& PatternCaseStatement::fromSyntax(Compilation& compilation,
     }
 
     auto [condition, check] = getConditionAndCheck(syntax);
-    auto result = compilation.emplace<PatternCaseStatement>(
-        condition, check, expr, items.copy(compilation), defStmt, syntax.sourceRange());
+    auto result = compilation.emplace<PatternCaseStatement>(condition, check, expr,
+                                                            items.copy(compilation), defStmt,
+                                                            syntax.sourceRange());
     if (bad)
         return badStmt(compilation, result);
 
@@ -1652,8 +1659,8 @@ Statement& RepeatLoopStatement::fromSyntax(Compilation& compilation,
     }
 
     auto& bodyStmt = Statement::bind(*syntax.statement, context, stmtCtx);
-    auto result =
-        compilation.emplace<RepeatLoopStatement>(countExpr, bodyStmt, syntax.sourceRange());
+    auto result = compilation.emplace<RepeatLoopStatement>(countExpr, bodyStmt,
+                                                           syntax.sourceRange());
 
     if (bad || bodyStmt.bad())
         return badStmt(compilation, result);
@@ -1728,7 +1735,7 @@ const Expression* ForeachLoopStatement::buildLoopDims(const ForeachLoopListSynta
         }
 
         if (type->hasFixedRange())
-            dims.append({ type->getFixedRange() });
+            dims.append({type->getFixedRange()});
         else
             dims.emplace();
 
@@ -1773,8 +1780,8 @@ const Expression* ForeachLoopStatement::buildLoopDims(const ForeachLoopListSynta
 
         // Build the iterator variable and hook it up to our new context's
         // linked list of iterators.
-        auto it =
-            comp.emplace<IteratorSymbol>(name, idName.identifier.location(), currType, *indexType);
+        auto it = comp.emplace<IteratorSymbol>(name, idName.identifier.location(), currType,
+                                               *indexType);
         it->nextTemp = std::exchange(context.firstTempVar, it);
         dims.back().loopVar = it;
     }
@@ -1799,7 +1806,7 @@ Statement& ForeachLoopStatement::fromSyntax(Compilation& compilation,
 
     for (auto loopVar : syntax.loopList->loopVariables) {
         if (type->hasFixedRange())
-            dims.append({ type->getFixedRange() });
+            dims.append({type->getFixedRange()});
         else
             dims.emplace();
 
@@ -1908,7 +1915,7 @@ ER ForeachLoopStatement::evalRecursive(EvalContext& context, const ConstantValue
             isLittleEndian = range.isLittleEndian();
         }
         else {
-            range = { 0, int32_t(elements.size()) - 1 };
+            range = {0, int32_t(elements.size()) - 1};
             isLittleEndian = false;
         }
 
@@ -2009,8 +2016,8 @@ Statement& DoWhileLoopStatement::fromSyntax(Compilation& compilation,
         bad = true;
 
     auto& bodyStmt = Statement::bind(*syntax.statement, context, stmtCtx);
-    auto result =
-        compilation.emplace<DoWhileLoopStatement>(condExpr, bodyStmt, syntax.sourceRange());
+    auto result = compilation.emplace<DoWhileLoopStatement>(condExpr, bodyStmt,
+                                                            syntax.sourceRange());
 
     if (bad || bodyStmt.bad())
         return badStmt(compilation, result);
@@ -2245,8 +2252,8 @@ Statement& ImmediateAssertionStatement::fromSyntax(Compilation& compilation,
     if (isDeferred)
         isFinal = syntax.delay->finalKeyword.valid();
 
-    bool isCover =
-        assertKind == AssertionKind::CoverProperty || assertKind == AssertionKind::CoverSequence;
+    bool isCover = assertKind == AssertionKind::CoverProperty ||
+                   assertKind == AssertionKind::CoverSequence;
     if (isCover && ifFalse) {
         context.addDiag(diag::CoverStmtNoFail, syntax.action->elseClause->sourceRange());
         bad = true;
@@ -2259,8 +2266,9 @@ Statement& ImmediateAssertionStatement::fromSyntax(Compilation& compilation,
             checkDeferredAssertAction(*ifFalse, context);
     }
 
-    auto result = compilation.emplace<ImmediateAssertionStatement>(
-        assertKind, cond, ifTrue, ifFalse, isDeferred, isFinal, syntax.sourceRange());
+    auto result = compilation.emplace<ImmediateAssertionStatement>(assertKind, cond, ifTrue,
+                                                                   ifFalse, isDeferred, isFinal,
+                                                                   syntax.sourceRange());
     if (bad || (ifTrue && ifTrue->bad()) || (ifFalse && ifFalse->bad()))
         return badStmt(compilation, result);
 
@@ -2334,8 +2342,8 @@ Statement& ConcurrentAssertionStatement::fromSyntax(
                                    stmtCtx);
     }
 
-    const bool isCover =
-        assertKind == AssertionKind::CoverProperty || assertKind == AssertionKind::CoverSequence;
+    const bool isCover = assertKind == AssertionKind::CoverProperty ||
+                         assertKind == AssertionKind::CoverSequence;
     if (isCover && ifFalse) {
         ctx.addDiag(diag::CoverStmtNoFail, syntax.action->elseClause->sourceRange());
         bad = true;
@@ -2572,8 +2580,8 @@ Statement& ProceduralAssignStatement::fromSyntax(Compilation& compilation,
         bindFlags |= BindFlags::ProceduralAssign;
 
     auto& assign = Expression::bind(*syntax.expr, context, bindFlags);
-    auto result =
-        compilation.emplace<ProceduralAssignStatement>(assign, isForce, syntax.sourceRange());
+    auto result = compilation.emplace<ProceduralAssignStatement>(assign, isForce,
+                                                                 syntax.sourceRange());
     if (assign.bad())
         return badStmt(compilation, result);
 
@@ -2614,8 +2622,8 @@ Statement& ProceduralDeassignStatement::fromSyntax(Compilation& compilation,
     auto& lvalue = Expression::bind(*syntax.variable, ctx);
 
     bool isRelease = syntax.keyword.kind == TokenKind::ReleaseKeyword;
-    auto result =
-        compilation.emplace<ProceduralDeassignStatement>(lvalue, isRelease, syntax.sourceRange());
+    auto result = compilation.emplace<ProceduralDeassignStatement>(lvalue, isRelease,
+                                                                   syntax.sourceRange());
     if (lvalue.bad())
         return badStmt(compilation, result);
 
@@ -2656,15 +2664,15 @@ Statement& RandCaseStatement::fromSyntax(Compilation& compilation,
     for (auto item : syntax.items) {
         auto& expr = Expression::bind(*item->expr, context);
         auto& stmt = Statement::bind(*item->statement, context, stmtCtx);
-        items.append({ &expr, &stmt });
+        items.append({&expr, &stmt});
 
         if (stmt.bad() || !context.requireIntegral(expr)) {
             bad = true;
         }
     }
 
-    auto result =
-        compilation.emplace<RandCaseStatement>(items.copy(compilation), syntax.sourceRange());
+    auto result = compilation.emplace<RandCaseStatement>(items.copy(compilation),
+                                                         syntax.sourceRange());
     if (bad)
         return badStmt(compilation, result);
 
@@ -2701,7 +2709,7 @@ Statement& RandSequenceStatement::fromSyntax(Compilation& compilation,
         auto prodRange = context.scope->membersOfType<RandSeqProductionSymbol>();
         if (prodRange.begin() != prodRange.end()) {
             firstProd = &*prodRange.begin();
-            firstProdRange = { syntax.randsequence.location(), syntax.closeParen.range().end() };
+            firstProdRange = {syntax.randsequence.location(), syntax.closeParen.range().end()};
         }
     }
 

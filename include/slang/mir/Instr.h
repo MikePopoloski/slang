@@ -87,9 +87,9 @@ public:
     InstrKind kind;
 
     Instr(InstrKind kind, const Type& type, MIRValue op) noexcept :
-        type(type), kind(kind), immOps{ op, MIRValue{} } {}
+        type(type), kind(kind), immOps{op, MIRValue{}} {}
     Instr(InstrKind kind, const Type& type, MIRValue op0, MIRValue op1) noexcept :
-        type(type), kind(kind), immOps{ op0, op1 } {}
+        type(type), kind(kind), immOps{op0, op1} {}
 
     Instr(SysCallKind sysCall, const Type& returnType, span<const MIRValue> args) noexcept :
         type(returnType), kind(InstrKind::syscall), sysCallKind(sysCall), varOps(args) {}

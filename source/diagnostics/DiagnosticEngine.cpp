@@ -504,8 +504,8 @@ void DiagnosticEngine::setMappingsFromPragmasImpl(BufferID buffer,
                     noteDiag(code, directive);
             }
             else {
-                auto& diag =
-                    diags.add(diag::UnknownWarningOption, SourceLocation(buffer, directive.offset));
+                auto& diag = diags.add(diag::UnknownWarningOption,
+                                       SourceLocation(buffer, directive.offset));
                 diag << name;
             }
         }
@@ -545,9 +545,10 @@ optional<DiagnosticSeverity> DiagnosticEngine::findMappedSeverity(DiagCode code,
         return std::nullopt;
 
     const std::vector<DiagnosticMapping>& mappings = byBuffer->second;
-    auto byOffset = std::lower_bound(
-        mappings.begin(), mappings.end(), fileLoc.offset(),
-        [](const DiagnosticMapping& mapping, size_t off) { return mapping.offset < off; });
+    auto byOffset = std::lower_bound(mappings.begin(), mappings.end(), fileLoc.offset(),
+                                     [](const DiagnosticMapping& mapping, size_t off) {
+                                         return mapping.offset < off;
+                                     });
 
     if (byOffset == mappings.begin())
         return std::nullopt;

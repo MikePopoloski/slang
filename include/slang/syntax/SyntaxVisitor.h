@@ -135,8 +135,8 @@ protected:
 
     /// Register a removal for the given syntax node from the tree.
     void remove(const SyntaxNode& oldNode) {
-        if (auto [_, ok] = commits.removeOrReplace.emplace(
-                &oldNode, detail::RemoveChange{ &oldNode, nullptr });
+        if (auto [_, ok] = commits.removeOrReplace.emplace(&oldNode,
+                                                           detail::RemoveChange{&oldNode, nullptr});
             !ok) {
             throw std::logic_error("Node only permit one remove/replace operation");
         }
@@ -145,7 +145,7 @@ protected:
     /// Replace the given @a oldNode with @a newNode in the rewritten tree.
     void replace(const SyntaxNode& oldNode, SyntaxNode& newNode) {
         if (auto [_, ok] = commits.removeOrReplace.emplace(
-                &oldNode, detail::ReplaceChange{ &oldNode, &newNode });
+                &oldNode, detail::ReplaceChange{&oldNode, &newNode});
             !ok) {
             throw std::logic_error("Node only permit one remove/replace operation");
         }
@@ -153,22 +153,22 @@ protected:
 
     /// Insert @a newNode before @a oldNode in the rewritten tree.
     void insertBefore(const SyntaxNode& oldNode, SyntaxNode& newNode) {
-        commits.insertBefore[&oldNode].push_back({ &oldNode, &newNode });
+        commits.insertBefore[&oldNode].push_back({&oldNode, &newNode});
     }
 
     /// Insert @a newNode after @a oldNode in the rewritten tree.
     void insertAfter(const SyntaxNode& oldNode, SyntaxNode& newNode) {
-        commits.insertAfter[&oldNode].push_back({ &oldNode, &newNode });
+        commits.insertAfter[&oldNode].push_back({&oldNode, &newNode});
     }
 
     /// Insert @a newNode at the front of @a list in the rewritten tree.
     void insertAtFront(const SyntaxListBase& list, SyntaxNode& newNode, Token separator = {}) {
-        commits.listInsertAtFront[&list].push_back({ &list, &newNode, separator });
+        commits.listInsertAtFront[&list].push_back({&list, &newNode, separator});
     }
 
     /// Insert @a newNode at the back of @a list in the rewritten tree.
     void insertAtBack(const SyntaxListBase& list, SyntaxNode& newNode, Token separator = {}) {
-        commits.listInsertAtBack[&list].push_back({ &list, &newNode, separator });
+        commits.listInsertAtBack[&list].push_back({&list, &newNode, separator});
     }
 
     Token makeToken(TokenKind kind, string_view text) {

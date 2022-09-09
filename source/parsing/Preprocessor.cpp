@@ -703,12 +703,14 @@ Trivia Preprocessor::parseBranchDirective(Token directive, Token condition, bool
 
     SyntaxNode* syntax;
     if (condition) {
-        syntax = alloc.emplace<ConditionalBranchDirectiveSyntax>(
-            directive.directiveKind(), directive, condition, scratchTokenBuffer.copy(alloc));
+        syntax = alloc.emplace<ConditionalBranchDirectiveSyntax>(directive.directiveKind(),
+                                                                 directive, condition,
+                                                                 scratchTokenBuffer.copy(alloc));
     }
     else {
-        syntax = alloc.emplace<UnconditionalBranchDirectiveSyntax>(
-            directive.directiveKind(), directive, scratchTokenBuffer.copy(alloc));
+        syntax = alloc.emplace<UnconditionalBranchDirectiveSyntax>(directive.directiveKind(),
+                                                                   directive,
+                                                                   scratchTokenBuffer.copy(alloc));
     }
     return Trivia(TriviaKind::Directive, syntax);
 }
@@ -781,12 +783,12 @@ Trivia Preprocessor::handleTimeScaleDirective(Token directive) {
             diag << unitToken.range();
         }
         else {
-            activeTimeScale = { unit, precision };
+            activeTimeScale = {unit, precision};
         }
     }
 
-    auto timeScale =
-        alloc.emplace<TimeScaleDirectiveSyntax>(directive, unitToken, slash, precisionToken);
+    auto timeScale = alloc.emplace<TimeScaleDirectiveSyntax>(directive, unitToken, slash,
+                                                             precisionToken);
     return Trivia(TriviaKind::Directive, timeScale);
 }
 
@@ -907,7 +909,7 @@ Trivia Preprocessor::handleEndKeywordsDirective(Token directive) {
 std::pair<Trivia, Trivia> Preprocessor::handlePragmaDirective(Token directive) {
     if (peek().kind != TokenKind::Identifier || !peek().isOnSameLine()) {
         addDiag(diag::ExpectedPragmaName, directive.location());
-        return { createSimpleDirective(directive), Trivia() };
+        return {createSimpleDirective(directive), Trivia()};
     }
 
     SmallVectorSized<TokenOrSyntax, 4> args;
@@ -947,7 +949,7 @@ std::pair<Trivia, Trivia> Preprocessor::handlePragmaDirective(Token directive) {
     if (!skipped.empty())
         skippedTrivia = Trivia(TriviaKind::SkippedTokens, skipped.copy(alloc));
 
-    return { Trivia(TriviaKind::Directive, result), skippedTrivia };
+    return {Trivia(TriviaKind::Directive, result), skippedTrivia};
 }
 
 Trivia Preprocessor::handleUnconnectedDriveDirective(Token directive) {

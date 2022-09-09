@@ -23,8 +23,8 @@ CodeGenFunction::CodeGenFunction(CodeGenerator& codegen, const Procedure& proc) 
 
     // Create the function object itself.
     auto funcType = llvm::FunctionType::get(types.Void, /* isVarArg */ false);
-    generatedFunc =
-        llvm::Function::Create(funcType, llvm::Function::PrivateLinkage, "", codegen.getModule());
+    generatedFunc = llvm::Function::Create(funcType, llvm::Function::PrivateLinkage, "",
+                                           codegen.getModule());
 
     // Create the entry point basic block.
     auto bb = llvm::BasicBlock::Create(ctx, "entry", generatedFunc);
@@ -39,14 +39,14 @@ CodeGenFunction::CodeGenFunction(CodeGenerator& codegen, const Procedure& proc) 
     for (auto local : proc.getLocals()) {
         auto& astType = local->getType();
         auto alignedType = types.convertType(astType);
-        locals.append({ createTempAlloca(alignedType), &astType, alignedType.type });
+        locals.append({createTempAlloca(alignedType), &astType, alignedType.type});
     }
 
     // Emit all instructions.
     instrValues.reserve(proc.getInstructions().size());
     builder.SetInsertPoint(bb);
     for (auto& instr : proc.getInstructions()) {
-        instrValues.append({ emit(instr), &instr.type });
+        instrValues.append({emit(instr), &instr.type});
     }
 
     // All done!
@@ -158,15 +158,15 @@ const Type& CodeGenFunction::getTypeOf(MIRValue val) const {
 }
 
 Address CodeGenFunction::createTempAlloca(AlignedType type) {
-    auto inst =
-        new llvm::AllocaInst(type.type, codegen.getModule().getDataLayout().getAllocaAddrSpace(),
-                             nullptr, type.alignment, "", allocaInsertionPoint);
+    auto inst = new llvm::AllocaInst(type.type,
+                                     codegen.getModule().getDataLayout().getAllocaAddrSpace(),
+                                     nullptr, type.alignment, "", allocaInsertionPoint);
     return Address(inst, type.alignment);
 }
 
 Address CodeGenFunction::boxInt(llvm::Value* value, const Type& type) {
     // TODO: put alignment behind an ABI
-    auto addr = createTempAlloca({ types.BoxedInt, llvm::Align::Constant<8>() });
+    auto addr = createTempAlloca({types.BoxedInt, llvm::Align::Constant<8>()});
 
     // TODO: fix int types
     bitwidth_t bits = type.getBitWidth();

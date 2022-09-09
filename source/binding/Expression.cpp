@@ -157,12 +157,14 @@ struct Expression::PropagationVisitor {
         Expression* result = &expr;
         if (needConversion) {
             if (assignmentLoc) {
-                result = &ConversionExpression::makeImplicit(
-                    context, newType, ConversionKind::Implicit, expr, assignmentLoc);
+                result = &ConversionExpression::makeImplicit(context, newType,
+                                                             ConversionKind::Implicit, expr,
+                                                             assignmentLoc);
             }
             else {
-                result = &ConversionExpression::makeImplicit(
-                    context, newType, ConversionKind::Propagated, expr, expr.sourceRange.start());
+                result = &ConversionExpression::makeImplicit(context, newType,
+                                                             ConversionKind::Propagated, expr,
+                                                             expr.sourceRange.start());
             }
         }
 
@@ -187,7 +189,7 @@ const Expression& Expression::bindLValue(const ExpressionSyntax& lhs, const Type
     // Create a placeholder expression that will carry the type of the rhs.
     // Nothing will ever actually look at this expression, it's there only
     // to fill the space in the created AssignmentExpression.
-    SourceRange rhsRange{ location, location };
+    SourceRange rhsRange{location, location};
     auto rhsExpr = comp.emplace<EmptyArgumentExpression>(rhs, rhsRange);
     if (rhsExpr->bad())
         return badExpr(comp, nullptr);
@@ -196,8 +198,8 @@ const Expression& Expression::bindLValue(const ExpressionSyntax& lhs, const Type
     Expression* lhsExpr;
     if (lhs.kind == SyntaxKind::StreamingConcatenationExpression && !isInout &&
         (!instance || instance->arrayPath.empty())) {
-        lhsExpr =
-            &selfDetermined(comp, lhs, context, BindFlags::StreamingAllowed | BindFlags::LValue);
+        lhsExpr = &selfDetermined(comp, lhs, context,
+                                  BindFlags::StreamingAllowed | BindFlags::LValue);
     }
     else {
         lhsExpr = &create(comp, lhs, context, BindFlags::LValue, rhsExpr->type);
@@ -214,9 +216,10 @@ const Expression& Expression::bindLValue(const ExpressionSyntax& lhs, const Type
     }
 
     SourceRange lhsRange = lhs.sourceRange();
-    return AssignmentExpression::fromComponents(
-        comp, std::nullopt, assignFlags, *lhsExpr, *rhsExpr, lhsRange.start(),
-        /* timingControl */ nullptr, lhsRange, context.resetFlags(BindFlags::OutputArg));
+    return AssignmentExpression::fromComponents(comp, std::nullopt, assignFlags, *lhsExpr, *rhsExpr,
+                                                lhsRange.start(),
+                                                /* timingControl */ nullptr, lhsRange,
+                                                context.resetFlags(BindFlags::OutputArg));
 }
 
 const Expression& Expression::bindRValue(const Type& lhs, const ExpressionSyntax& rhs,
@@ -647,13 +650,15 @@ Expression& Expression::create(Compilation& compilation, const ExpressionSyntax&
         case SyntaxKind::UnaryLogicalNotExpression:
         case SyntaxKind::UnaryPreincrementExpression:
         case SyntaxKind::UnaryPredecrementExpression:
-            result = &UnaryExpression::fromSyntax(
-                compilation, syntax.as<PrefixUnaryExpressionSyntax>(), context);
+            result = &UnaryExpression::fromSyntax(compilation,
+                                                  syntax.as<PrefixUnaryExpressionSyntax>(),
+                                                  context);
             break;
         case SyntaxKind::PostincrementExpression:
         case SyntaxKind::PostdecrementExpression:
-            result = &UnaryExpression::fromSyntax(
-                compilation, syntax.as<PostfixUnaryExpressionSyntax>(), context);
+            result = &UnaryExpression::fromSyntax(compilation,
+                                                  syntax.as<PostfixUnaryExpressionSyntax>(),
+                                                  context);
             break;
         case SyntaxKind::AddExpression:
         case SyntaxKind::SubtractExpression:
@@ -700,12 +705,14 @@ Expression& Expression::create(Compilation& compilation, const ExpressionSyntax&
         case SyntaxKind::ArithmeticLeftShiftAssignmentExpression:
         case SyntaxKind::ArithmeticRightShiftAssignmentExpression:
         case SyntaxKind::NonblockingAssignmentExpression:
-            result = &AssignmentExpression::fromSyntax(
-                compilation, syntax.as<BinaryExpressionSyntax>(), context);
+            result = &AssignmentExpression::fromSyntax(compilation,
+                                                       syntax.as<BinaryExpressionSyntax>(),
+                                                       context);
             break;
         case SyntaxKind::InvocationExpression:
-            result = &CallExpression::fromSyntax(
-                compilation, syntax.as<InvocationExpressionSyntax>(), nullptr, context);
+            result = &CallExpression::fromSyntax(compilation,
+                                                 syntax.as<InvocationExpressionSyntax>(), nullptr,
+                                                 context);
 
             // The syntax node might have already been assigned after creating the
             // call expression, for cases like let decls that get expanded in place.
@@ -714,24 +721,27 @@ Expression& Expression::create(Compilation& compilation, const ExpressionSyntax&
                 return *result;
             break;
         case SyntaxKind::ConditionalExpression:
-            result = &ConditionalExpression::fromSyntax(
-                compilation, syntax.as<ConditionalExpressionSyntax>(), context, assignmentTarget);
+            result = &ConditionalExpression::fromSyntax(compilation,
+                                                        syntax.as<ConditionalExpressionSyntax>(),
+                                                        context, assignmentTarget);
             break;
         case SyntaxKind::InsideExpression:
             result = &InsideExpression::fromSyntax(compilation, syntax.as<InsideExpressionSyntax>(),
                                                    context);
             break;
         case SyntaxKind::MemberAccessExpression:
-            result = &MemberAccessExpression::fromSyntax(
-                compilation, syntax.as<MemberAccessExpressionSyntax>(), nullptr, nullptr, context);
+            result = &MemberAccessExpression::fromSyntax(compilation,
+                                                         syntax.as<MemberAccessExpressionSyntax>(),
+                                                         nullptr, nullptr, context);
             break;
         case SyntaxKind::ConcatenationExpression:
             result = &ConcatenationExpression::fromSyntax(
                 compilation, syntax.as<ConcatenationExpressionSyntax>(), context, assignmentTarget);
             break;
         case SyntaxKind::EmptyQueueExpression:
-            result = &ConcatenationExpression::fromEmpty(
-                compilation, syntax.as<EmptyQueueExpressionSyntax>(), context, assignmentTarget);
+            result = &ConcatenationExpression::fromEmpty(compilation,
+                                                         syntax.as<EmptyQueueExpressionSyntax>(),
+                                                         context, assignmentTarget);
             break;
         case SyntaxKind::MultipleConcatenationExpression:
             result = &ReplicationExpression::fromSyntax(
@@ -751,17 +761,19 @@ Expression& Expression::create(Compilation& compilation, const ExpressionSyntax&
                                                        syntax.as<CastExpressionSyntax>(), context);
             break;
         case SyntaxKind::SignedCastExpression:
-            result = &ConversionExpression::fromSyntax(
-                compilation, syntax.as<SignedCastExpressionSyntax>(), context);
+            result = &ConversionExpression::fromSyntax(compilation,
+                                                       syntax.as<SignedCastExpressionSyntax>(),
+                                                       context);
             break;
         case SyntaxKind::AssignmentPatternExpression:
-            result =
-                &bindAssignmentPattern(compilation, syntax.as<AssignmentPatternExpressionSyntax>(),
-                                       context, assignmentTarget);
+            result = &bindAssignmentPattern(compilation,
+                                            syntax.as<AssignmentPatternExpressionSyntax>(), context,
+                                            assignmentTarget);
             break;
         case SyntaxKind::OpenRangeExpression:
-            result = &OpenRangeExpression::fromSyntax(
-                compilation, syntax.as<OpenRangeExpressionSyntax>(), context);
+            result = &OpenRangeExpression::fromSyntax(compilation,
+                                                      syntax.as<OpenRangeExpressionSyntax>(),
+                                                      context);
             break;
         case SyntaxKind::ExpressionOrDist:
             result = &DistExpression::fromSyntax(compilation, syntax.as<ExpressionOrDistSyntax>(),
@@ -774,16 +786,19 @@ Expression& Expression::create(Compilation& compilation, const ExpressionSyntax&
             result = &badExpr(compilation, nullptr);
             break;
         case SyntaxKind::NewArrayExpression:
-            result = &NewArrayExpression::fromSyntax(
-                compilation, syntax.as<NewArrayExpressionSyntax>(), context, assignmentTarget);
+            result = &NewArrayExpression::fromSyntax(compilation,
+                                                     syntax.as<NewArrayExpressionSyntax>(), context,
+                                                     assignmentTarget);
             break;
         case SyntaxKind::NewClassExpression:
-            result = &NewClassExpression::fromSyntax(
-                compilation, syntax.as<NewClassExpressionSyntax>(), context, assignmentTarget);
+            result = &NewClassExpression::fromSyntax(compilation,
+                                                     syntax.as<NewClassExpressionSyntax>(), context,
+                                                     assignmentTarget);
             break;
         case SyntaxKind::CopyClassExpression:
-            result = &CopyClassExpression::fromSyntax(
-                compilation, syntax.as<CopyClassExpressionSyntax>(), context);
+            result = &CopyClassExpression::fromSyntax(compilation,
+                                                      syntax.as<CopyClassExpressionSyntax>(),
+                                                      context);
             break;
         case SyntaxKind::DefaultPatternKeyExpression:
             // This should not be reachable from any valid expression binding.
@@ -791,16 +806,18 @@ Expression& Expression::create(Compilation& compilation, const ExpressionSyntax&
             result = &badExpr(compilation, nullptr);
             break;
         case SyntaxKind::MinTypMaxExpression:
-            result = &MinTypMaxExpression::fromSyntax(
-                compilation, syntax.as<MinTypMaxExpressionSyntax>(), context, assignmentTarget);
+            result = &MinTypMaxExpression::fromSyntax(compilation,
+                                                      syntax.as<MinTypMaxExpressionSyntax>(),
+                                                      context, assignmentTarget);
             break;
         case SyntaxKind::ArrayOrRandomizeMethodExpression:
             result = &CallExpression::fromSyntax(
                 compilation, syntax.as<ArrayOrRandomizeMethodExpressionSyntax>(), context);
             break;
         case SyntaxKind::TaggedUnionExpression:
-            result = &TaggedUnionExpression::fromSyntax(
-                compilation, syntax.as<TaggedUnionExpressionSyntax>(), context, assignmentTarget);
+            result = &TaggedUnionExpression::fromSyntax(compilation,
+                                                        syntax.as<TaggedUnionExpressionSyntax>(),
+                                                        context, assignmentTarget);
             break;
         default:
             if (NameSyntax::isKind(syntax.kind)) {
@@ -877,7 +894,7 @@ Expression& Expression::bindName(Compilation& compilation, const NameSyntax& syn
         ASSERT(result.selectors.empty());
 
         SourceRange callRange = invocation ? invocation->sourceRange() : syntax.sourceRange();
-        CallExpression::SystemCallInfo callInfo{ result.systemSubroutine, context.scope, {} };
+        CallExpression::SystemCallInfo callInfo{result.systemSubroutine, context.scope, {}};
         return CallExpression::fromLookup(compilation, callInfo, nullptr, invocation, withClause,
                                           callRange, context);
     }
@@ -1046,17 +1063,19 @@ Expression& Expression::bindSelector(Compilation& compilation, Expression& value
     }
 
     // The full source range of the expression includes the value and the selector syntax.
-    SourceRange fullRange = { value.sourceRange.start(), syntax.sourceRange().end() };
+    SourceRange fullRange = {value.sourceRange.start(), syntax.sourceRange().end()};
 
     switch (selector->kind) {
         case SyntaxKind::BitSelect:
-            return ElementSelectExpression::fromSyntax(
-                compilation, value, *selector->as<BitSelectSyntax>().expr, fullRange, context);
+            return ElementSelectExpression::fromSyntax(compilation, value,
+                                                       *selector->as<BitSelectSyntax>().expr,
+                                                       fullRange, context);
         case SyntaxKind::SimpleRangeSelect:
         case SyntaxKind::AscendingRangeSelect:
         case SyntaxKind::DescendingRangeSelect:
-            return RangeSelectExpression::fromSyntax(
-                compilation, value, selector->as<RangeSelectSyntax>(), fullRange, context);
+            return RangeSelectExpression::fromSyntax(compilation, value,
+                                                     selector->as<RangeSelectSyntax>(), fullRange,
+                                                     context);
         default:
             THROW_UNREACHABLE;
     }

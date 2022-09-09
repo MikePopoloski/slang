@@ -32,35 +32,35 @@ static void gate(Compilation& c, string_view name,
 #define inout PrimitivePortDirection::InOut
 
 void registerGateTypes(Compilation& c) {
-    gate(c, "cmos", { out, in, in, in });
-    gate(c, "rcmos", { out, in, in, in });
-    gate(c, "bufif0", { out, in, in });
-    gate(c, "bufif1", { out, in, in });
-    gate(c, "notif0", { out, in, in });
-    gate(c, "notif1", { out, in, in });
-    gate(c, "nmos", { out, in, in });
-    gate(c, "pmos", { out, in, in });
-    gate(c, "rnmos", { out, in, in });
-    gate(c, "rpmos", { out, in, in });
-    gate(c, "tranif0", { inout, inout, in });
-    gate(c, "tranif1", { inout, inout, in });
-    gate(c, "rtranif0", { inout, inout, in });
-    gate(c, "rtranif1", { inout, inout, in });
-    gate(c, "tran", { inout, inout });
-    gate(c, "rtran", { inout, inout });
-    gate(c, "pullup", { out });
-    gate(c, "pulldown", { out });
+    gate(c, "cmos", {out, in, in, in});
+    gate(c, "rcmos", {out, in, in, in});
+    gate(c, "bufif0", {out, in, in});
+    gate(c, "bufif1", {out, in, in});
+    gate(c, "notif0", {out, in, in});
+    gate(c, "notif1", {out, in, in});
+    gate(c, "nmos", {out, in, in});
+    gate(c, "pmos", {out, in, in});
+    gate(c, "rnmos", {out, in, in});
+    gate(c, "rpmos", {out, in, in});
+    gate(c, "tranif0", {inout, inout, in});
+    gate(c, "tranif1", {inout, inout, in});
+    gate(c, "rtranif0", {inout, inout, in});
+    gate(c, "rtranif1", {inout, inout, in});
+    gate(c, "tran", {inout, inout});
+    gate(c, "rtran", {inout, inout});
+    gate(c, "pullup", {out});
+    gate(c, "pulldown", {out});
 
     // These are special in that they support an arbitrary number of
     // either inputs or outputs.
-    gate(c, "and", { out, in }, PrimitiveSymbol::NInput);
-    gate(c, "or", { out, in }, PrimitiveSymbol::NInput);
-    gate(c, "nand", { out, in }, PrimitiveSymbol::NInput);
-    gate(c, "nor", { out, in }, PrimitiveSymbol::NInput);
-    gate(c, "xor", { out, in }, PrimitiveSymbol::NInput);
-    gate(c, "xnor", { out, in }, PrimitiveSymbol::NInput);
-    gate(c, "buf", { out, in }, PrimitiveSymbol::NOutput);
-    gate(c, "not", { out, in }, PrimitiveSymbol::NOutput);
+    gate(c, "and", {out, in}, PrimitiveSymbol::NInput);
+    gate(c, "or", {out, in}, PrimitiveSymbol::NInput);
+    gate(c, "nand", {out, in}, PrimitiveSymbol::NInput);
+    gate(c, "nor", {out, in}, PrimitiveSymbol::NInput);
+    gate(c, "xor", {out, in}, PrimitiveSymbol::NInput);
+    gate(c, "xnor", {out, in}, PrimitiveSymbol::NInput);
+    gate(c, "buf", {out, in}, PrimitiveSymbol::NOutput);
+    gate(c, "not", {out, in}, PrimitiveSymbol::NOutput);
 }
 
 } // namespace slang::Builtins

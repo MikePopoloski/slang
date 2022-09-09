@@ -135,14 +135,14 @@ TEST_CASE("Advance rewriting") {
                 if (!portList)
                     return;
 
-                auto& argA =
-                    factory.functionPort(nullptr, {}, {}, {}, nullptr,
-                                         factory.declarator(makeId("argA"), nullptr, nullptr));
+                auto& argA = factory.functionPort(nullptr, {}, {}, {}, nullptr,
+                                                  factory.declarator(makeId("argA"), nullptr,
+                                                                     nullptr));
                 insertAtFront(portList->ports, argA, makeComma());
 
-                auto& argZ =
-                    factory.functionPort(nullptr, {}, {}, {}, nullptr,
-                                         factory.declarator(makeId("argZ"), nullptr, nullptr));
+                auto& argZ = factory.functionPort(nullptr, {}, {}, {}, nullptr,
+                                                  factory.declarator(makeId("argZ"), nullptr,
+                                                                     nullptr));
                 insertAtBack(portList->ports, argZ, makeComma());
             }
         };
@@ -205,14 +205,14 @@ endmodule
                 if (!portList)
                     return;
 
-                auto& argA =
-                    factory.functionPort(nullptr, {}, {}, {}, nullptr,
-                                         factory.declarator(makeId("argA"), nullptr, nullptr));
+                auto& argA = factory.functionPort(nullptr, {}, {}, {}, nullptr,
+                                                  factory.declarator(makeId("argA"), nullptr,
+                                                                     nullptr));
                 insertAtFront(portList->ports, argA, makeComma());
 
-                auto& argZ =
-                    factory.functionPort(nullptr, {}, {}, {}, nullptr,
-                                         factory.declarator(makeId("argZ"), nullptr, nullptr));
+                auto& argZ = factory.functionPort(nullptr, {}, {}, {}, nullptr,
+                                                  factory.declarator(makeId("argZ"), nullptr,
+                                                                     nullptr));
                 insertAtBack(portList->ports, argZ, makeComma());
             }
         };
@@ -270,14 +270,14 @@ endmodule
                 if (!portList)
                     return;
 
-                auto& argA =
-                    factory.functionPort(nullptr, {}, {}, {}, nullptr,
-                                         factory.declarator(makeId("argA"), nullptr, nullptr));
+                auto& argA = factory.functionPort(nullptr, {}, {}, {}, nullptr,
+                                                  factory.declarator(makeId("argA"), nullptr,
+                                                                     nullptr));
                 insertAtFront(portList->ports, argA, makeComma());
 
-                auto& argZ =
-                    factory.functionPort(nullptr, {}, {}, {}, nullptr,
-                                         factory.declarator(makeId("argZ"), nullptr, nullptr));
+                auto& argZ = factory.functionPort(nullptr, {}, {}, {}, nullptr,
+                                                  factory.declarator(makeId("argZ"), nullptr,
+                                                                     nullptr));
                 insertAtBack(portList->ports, argZ, makeComma());
             }
         };

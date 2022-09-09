@@ -209,7 +209,7 @@ void writeToFile(string_view fileName, string_view contents) {
         writeToFile(std::cout, "stdout", contents);
     }
     else {
-        std::ofstream file{ std::string(fileName) };
+        std::ofstream file{std::string(fileName)};
         writeToFile(file, fileName, contents);
     }
 }

@@ -49,7 +49,7 @@ private:
 class RtoIFunction : public SimpleSystemSubroutine {
 public:
     explicit RtoIFunction(Compilation& comp) :
-        SimpleSystemSubroutine("$rtoi", SubroutineKind::Function, 1, { &comp.getRealType() },
+        SimpleSystemSubroutine("$rtoi", SubroutineKind::Function, 1, {&comp.getRealType()},
                                comp.getIntegerType(), false) {}
 
     ConstantValue eval(EvalContext& context, const Args& args, SourceRange,
@@ -91,7 +91,7 @@ public:
 class RealToBitsFunction : public SimpleSystemSubroutine {
 public:
     explicit RealToBitsFunction(Compilation& comp) :
-        SimpleSystemSubroutine("$realtobits", SubroutineKind::Function, 1, { &comp.getRealType() },
+        SimpleSystemSubroutine("$realtobits", SubroutineKind::Function, 1, {&comp.getRealType()},
                                comp.getType(64, IntegralFlags::Unsigned), false) {}
 
     ConstantValue eval(EvalContext& context, const Args& args, SourceRange,
@@ -108,7 +108,7 @@ class BitsToRealFunction : public SimpleSystemSubroutine {
 public:
     explicit BitsToRealFunction(Compilation& comp) :
         SimpleSystemSubroutine("$bitstoreal", SubroutineKind::Function, 1,
-                               { &comp.getType(64, IntegralFlags::Unsigned) }, comp.getRealType(),
+                               {&comp.getType(64, IntegralFlags::Unsigned)}, comp.getRealType(),
                                false) {}
 
     ConstantValue eval(EvalContext& context, const Args& args, SourceRange,
@@ -126,7 +126,7 @@ class ShortRealToBitsFunction : public SimpleSystemSubroutine {
 public:
     explicit ShortRealToBitsFunction(Compilation& comp) :
         SimpleSystemSubroutine("$shortrealtobits", SubroutineKind::Function, 1,
-                               { &comp.getShortRealType() },
+                               {&comp.getShortRealType()},
                                comp.getType(32, IntegralFlags::Unsigned), false) {}
 
     ConstantValue eval(EvalContext& context, const Args& args, SourceRange,
@@ -143,7 +143,7 @@ class BitsToShortRealFunction : public SimpleSystemSubroutine {
 public:
     explicit BitsToShortRealFunction(Compilation& comp) :
         SimpleSystemSubroutine("$bitstoshortreal", SubroutineKind::Function, 1,
-                               { &comp.getType(32, IntegralFlags::Unsigned) },
+                               {&comp.getType(32, IntegralFlags::Unsigned)},
                                comp.getShortRealType(), false) {}
 
     ConstantValue eval(EvalContext& context, const Args& args, SourceRange,

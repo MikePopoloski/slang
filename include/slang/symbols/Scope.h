@@ -191,14 +191,14 @@ public:
     /// Gets an iterator to the members contained in the scope.
     iterator_range<iterator> members() const {
         ensureElaborated();
-        return { firstMember, nullptr };
+        return {firstMember, nullptr};
     }
 
     /// Gets an iterator to all of the members of the given type contained in the scope.
     template<typename T>
     iterator_range<specific_symbol_iterator<T>> membersOfType() const {
         ensureElaborated();
-        return { firstMember, nullptr };
+        return {firstMember, nullptr};
     }
 
     /// Gets a pointer to the first member in the scope. Note that this does not
@@ -319,11 +319,11 @@ private:
 
     // If this scope has any deferred member symbols they'll be temporarily
     // stored in a sideband list in the compilation object until we expand them.
-    mutable DeferredMemberIndex deferredMemberIndex{ 0 };
+    mutable DeferredMemberIndex deferredMemberIndex{0};
 
     // If this scope has any wildcard import directives we'll keep track of them
     // in a sideband list in the compilation object.
-    ImportDataIndex importDataIndex{ 0 };
+    ImportDataIndex importDataIndex{0};
 };
 
 } // namespace slang

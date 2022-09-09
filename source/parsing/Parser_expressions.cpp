@@ -286,8 +286,8 @@ ExpressionSyntax& Parser::parsePrimaryExpression(bitmask<ExpressionOptions> opti
 }
 
 ExpressionSyntax& Parser::parseIntegerExpression(bool disallowVector) {
-    auto result =
-        disallowVector ? numberParser.parseSimpleInt(*this) : numberParser.parseInteger(*this);
+    auto result = disallowVector ? numberParser.parseSimpleInt(*this)
+                                 : numberParser.parseInteger(*this);
 
     if (result.isSimple)
         return factory.literalExpression(SyntaxKind::IntegerLiteralExpression, result.value);
@@ -398,8 +398,8 @@ AssignmentPatternExpressionSyntax& Parser::parseAssignmentPatternExpression(Data
         // This is an empty pattern -- we'll just warn and continue on.
         addDiag(diag::EmptyAssignmentPattern, openBrace.location());
 
-        auto pattern =
-            &factory.simpleAssignmentPattern(openBrace, span<TokenOrSyntax>{}, consume());
+        auto pattern = &factory.simpleAssignmentPattern(openBrace, span<TokenOrSyntax>{},
+                                                        consume());
         return factory.assignmentPatternExpression(type, *pattern);
     }
     else {
@@ -425,8 +425,8 @@ AssignmentPatternExpressionSyntax& Parser::parseAssignmentPatternExpression(Data
                 closeBrace = expect(TokenKind::CloseBrace);
             }
 
-            pattern =
-                &factory.structuredAssignmentPattern(openBrace, buffer.copy(alloc), closeBrace);
+            pattern = &factory.structuredAssignmentPattern(openBrace, buffer.copy(alloc),
+                                                           closeBrace);
             break;
         case TokenKind::OpenBrace: {
             auto innerOpenBrace = consume();
@@ -574,8 +574,8 @@ ExpressionSyntax& Parser::parsePostfixExpression(ExpressionSyntax& lhs,
                                                               *expr, attributes, op);
                     }
                     case TokenKind::OpenParenthesis:
-                        expr =
-                            &factory.invocationExpression(*expr, attributes, &parseArgumentList());
+                        expr = &factory.invocationExpression(*expr, attributes,
+                                                             &parseArgumentList());
                         break;
                     default:
                         // otherwise, this has to be a function call without any arguments
@@ -810,9 +810,9 @@ ParamAssignmentSyntax& Parser::parseParamValue() {
         auto dot = consume();
         auto name = expect(TokenKind::Identifier);
 
-        auto [innerOpenParen, innerCloseParen, expr] =
-            parseGroupOrSkip(TokenKind::OpenParenthesis, TokenKind::CloseParenthesis,
-                             [this]() { return &parseMinTypMaxExpression(); });
+        auto [innerOpenParen, innerCloseParen,
+              expr] = parseGroupOrSkip(TokenKind::OpenParenthesis, TokenKind::CloseParenthesis,
+                                       [this]() { return &parseMinTypMaxExpression(); });
 
         return factory.namedParamAssignment(dot, name, innerOpenParen, expr, innerCloseParen);
     }
@@ -843,9 +843,9 @@ ArgumentSyntax& Parser::parseArgument() {
         auto dot = consume();
         auto name = expect(TokenKind::Identifier);
 
-        auto [innerOpenParen, innerCloseParen, expr] =
-            parseGroupOrSkip(TokenKind::OpenParenthesis, TokenKind::CloseParenthesis,
-                             [this]() { return &parsePropertyExpr(0); });
+        auto [innerOpenParen, innerCloseParen,
+              expr] = parseGroupOrSkip(TokenKind::OpenParenthesis, TokenKind::CloseParenthesis,
+                                       [this]() { return &parsePropertyExpr(0); });
 
         return factory.namedArgument(dot, name, innerOpenParen, expr, innerCloseParen);
     }
@@ -978,8 +978,8 @@ EventExpressionSyntax& Parser::parseEventExpression() {
         if (expr.kind == SyntaxKind::SignalEventExpression) {
             auto& see = expr.as<SignalEventExpressionSyntax>();
             if (!see.edge && !see.iffClause) {
-                ExpressionSyntax* newExpr =
-                    &factory.parenthesizedExpression(openParen, *see.expr, closeParen);
+                ExpressionSyntax* newExpr = &factory.parenthesizedExpression(openParen, *see.expr,
+                                                                             closeParen);
 
                 newExpr = &parsePostfixExpression(*newExpr, ExpressionOptions::None);
                 newExpr = &parseBinaryExpression(newExpr, ExpressionOptions::None, 0);
@@ -1279,9 +1279,10 @@ SequenceMatchListSyntax* Parser::parseSequenceMatchList(Token& closeParen) {
 
     Token comma;
     span<TokenOrSyntax> list;
-    parseList<isPossibleArgument, isEndOfParenList>(
-        TokenKind::Comma, TokenKind::CloseParenthesis, TokenKind::Comma, comma, list, closeParen,
-        RequireItems::True, diag::ExpectedExpression, [this] { return &parsePropertyExpr(0); });
+    parseList<isPossibleArgument, isEndOfParenList>(TokenKind::Comma, TokenKind::CloseParenthesis,
+                                                    TokenKind::Comma, comma, list, closeParen,
+                                                    RequireItems::True, diag::ExpectedExpression,
+                                                    [this] { return &parsePropertyExpr(0); });
 
     return &factory.sequenceMatchList(comma, list);
 }
@@ -1665,11 +1666,12 @@ PropertyExprSyntax& Parser::parsePropertyExpr(int precedence) {
             left->kind == SyntaxKind::SimplePropertyExpr &&
             right.kind == SyntaxKind::SimplePropertyExpr) {
 
-            auto& seqExpr = factory.binarySequenceExpr(
-                opKind == SyntaxKind::AndPropertyExpr ? SyntaxKind::AndSequenceExpr
-                                                      : SyntaxKind::OrSequenceExpr,
-                *left->as<SimplePropertyExprSyntax>().expr, opToken,
-                *right.as<SimplePropertyExprSyntax>().expr);
+            auto& seqExpr = factory.binarySequenceExpr(opKind == SyntaxKind::AndPropertyExpr
+                                                           ? SyntaxKind::AndSequenceExpr
+                                                           : SyntaxKind::OrSequenceExpr,
+                                                       *left->as<SimplePropertyExprSyntax>().expr,
+                                                       opToken,
+                                                       *right.as<SimplePropertyExprSyntax>().expr);
 
             left = &factory.simplePropertyExpr(seqExpr);
         }

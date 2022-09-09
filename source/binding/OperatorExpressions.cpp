@@ -321,8 +321,8 @@ Expression& UnaryExpression::fromSyntax(Compilation& compilation,
         case SyntaxKind::UnaryLogicalNotExpression:
             // Supported for both integral and real types. Result is a single bit.
             good = type->isNumeric();
-            result->type =
-                type->isFourState() ? &compilation.getLogicType() : &compilation.getBitType();
+            result->type = type->isFourState() ? &compilation.getLogicType()
+                                               : &compilation.getBitType();
             selfDetermined(context, result->operand_);
             break;
         case SyntaxKind::UnaryBitwiseNotExpression:
@@ -338,8 +338,8 @@ Expression& UnaryExpression::fromSyntax(Compilation& compilation,
         case SyntaxKind::UnaryBitwiseXnorExpression:
             // Supported for integral only. Result type is always a single bit.
             good = type->isIntegral();
-            result->type =
-                type->isFourState() ? &compilation.getLogicType() : &compilation.getBitType();
+            result->type = type->isFourState() ? &compilation.getLogicType()
+                                               : &compilation.getBitType();
             selfDetermined(context, result->operand_);
             break;
         case SyntaxKind::UnaryPreincrementExpression:
@@ -728,8 +728,8 @@ Expression& BinaryExpression::fromComponents(Expression& lhs, Expression& rhs, B
                 }
                 else {
                     good = bothIntegral;
-                    result->type =
-                        lt->isFourState() ? &compilation.getLogicType() : &compilation.getBitType();
+                    result->type = lt->isFourState() ? &compilation.getLogicType()
+                                                     : &compilation.getBitType();
                 }
 
                 // Result type is fixed but the two operands affect each other as they would
@@ -964,7 +964,7 @@ Expression& ConditionalExpression::fromSyntax(Compilation& comp,
                 isTrue = false;
         }
 
-        conditions.append({ &cond, pattern });
+        conditions.append({&cond, pattern});
     }
 
     // If the predicate is known at compile time, we can tell which branch will be unevaluated.
@@ -1399,9 +1399,10 @@ Expression& ConcatenationExpression::fromSyntax(Compilation& compilation,
     }
 
     if (errored) {
-        return badExpr(compilation, compilation.emplace<ConcatenationExpression>(
-                                        compilation.getErrorType(), span<const Expression*>(),
-                                        syntax.sourceRange()));
+        return badExpr(compilation,
+                       compilation.emplace<ConcatenationExpression>(compilation.getErrorType(),
+                                                                    span<const Expression*>(),
+                                                                    syntax.sourceRange()));
     }
 
     const Type* type;
@@ -1435,8 +1436,9 @@ Expression& ConcatenationExpression::fromEmpty(Compilation& compilation,
         return badExpr(compilation, nullptr);
     }
 
-    return *compilation.emplace<ConcatenationExpression>(
-        *assignmentTarget, span<const Expression* const>{}, syntax.sourceRange());
+    return *compilation.emplace<ConcatenationExpression>(*assignmentTarget,
+                                                         span<const Expression* const>{},
+                                                         syntax.sourceRange());
 }
 
 ConstantValue ConcatenationExpression::evalImpl(EvalContext& context) const {
@@ -1617,8 +1619,9 @@ Expression& ReplicationExpression::fromSyntax(Compilation& compilation,
     if (!width)
         return badExpr(compilation, result);
 
-    result->type = &compilation.getType(
-        *width, right->type->isFourState() ? IntegralFlags::FourState : IntegralFlags::TwoState);
+    result->type = &compilation.getType(*width, right->type->isFourState()
+                                                    ? IntegralFlags::FourState
+                                                    : IntegralFlags::TwoState);
     return *result;
 }
 
@@ -1723,8 +1726,8 @@ Expression& StreamingConcatenationExpression::fromSyntax(
                           assignmentTarget);
         }
         else {
-            arg =
-                &selfDetermined(comp, *argSyntax->expression, context, BindFlags::StreamingAllowed);
+            arg = &selfDetermined(comp, *argSyntax->expression, context,
+                                  BindFlags::StreamingAllowed);
         }
 
         if (arg->bad())
@@ -1771,13 +1774,14 @@ Expression& StreamingConcatenationExpression::fromSyntax(
             }
         }
 
-        buffer.append({ arg, withExpr, constantWithWidth });
+        buffer.append({arg, withExpr, constantWithWidth});
     }
 
     // Streaming concatenation has no explicit type. Use void to prevent problems when
     // its type is passed to context-determined expressions.
-    return *comp.emplace<StreamingConcatenationExpression>(
-        comp.getVoidType(), sliceSize, buffer.ccopy(comp), syntax.sourceRange());
+    return *comp.emplace<StreamingConcatenationExpression>(comp.getVoidType(), sliceSize,
+                                                           buffer.ccopy(comp),
+                                                           syntax.sourceRange());
 }
 
 ConstantValue StreamingConcatenationExpression::evalImpl(EvalContext& context) const {
@@ -1878,8 +1882,8 @@ Expression& OpenRangeExpression::fromSyntax(Compilation& comp,
     Expression& left = create(comp, *syntax.left, context, flags);
     Expression& right = create(comp, *syntax.right, context, flags);
 
-    auto result =
-        comp.emplace<OpenRangeExpression>(comp.getVoidType(), left, right, syntax.sourceRange());
+    auto result = comp.emplace<OpenRangeExpression>(comp.getVoidType(), left, right,
+                                                    syntax.sourceRange());
     if (left.bad() || right.bad())
         return badExpr(comp, result);
 

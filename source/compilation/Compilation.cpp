@@ -115,8 +115,8 @@ Compilation::Compilation(const Bag& options) :
     MAKE_NETTYPE(UWire);
     MAKE_NETTYPE(Interconnect);
 
-    knownNetTypes[TokenKind::Unknown] =
-        std::make_unique<NetType>(NetType::Unknown, "<error>", *logicType);
+    knownNetTypes[TokenKind::Unknown] = std::make_unique<NetType>(NetType::Unknown, "<error>",
+                                                                  *logicType);
     wireNetType = knownNetTypes[TokenKind::WireKeyword].get();
 
 #undef MAKE_NETTYPE
@@ -132,8 +132,8 @@ Compilation::Compilation(const Bag& options) :
     registerScalar(signedLogicType);
     registerScalar(signedRegType);
 
-    defaultTimeScale.base = { TimeUnit::Nanoseconds, TimeScaleMagnitude::One };
-    defaultTimeScale.precision = { TimeUnit::Nanoseconds, TimeScaleMagnitude::One };
+    defaultTimeScale.base = {TimeUnit::Nanoseconds, TimeScaleMagnitude::One};
+    defaultTimeScale.precision = {TimeUnit::Nanoseconds, TimeScaleMagnitude::One};
 
     root = std::make_unique<RootSymbol>(*this);
 
@@ -452,9 +452,9 @@ static void reportRedefinition(const Scope& scope, const T& newSym, const U& old
 void Compilation::createDefinition(const Scope& scope, LookupLocation location,
                                    const ModuleDeclarationSyntax& syntax) {
     auto& metadata = definitionMetadata[&syntax];
-    auto def =
-        std::make_unique<Definition>(scope, location, syntax, *metadata.defaultNetType,
-                                     metadata.unconnectedDrive, metadata.timeScale, metadata.tree);
+    auto def = std::make_unique<Definition>(scope, location, syntax, *metadata.defaultNetType,
+                                            metadata.unconnectedDrive, metadata.timeScale,
+                                            metadata.tree);
 
     // Record that the given scope contains this definition. If the scope is a compilation unit, add
     // it to the root scope instead so that lookups from other compilation units will find it.
@@ -485,8 +485,8 @@ const PackageSymbol* Compilation::getPackage(string_view lookupName) const {
 const PackageSymbol& Compilation::createPackage(const Scope& scope,
                                                 const ModuleDeclarationSyntax& syntax) {
     auto& metadata = definitionMetadata[&syntax];
-    auto& package =
-        PackageSymbol::fromSyntax(scope, syntax, *metadata.defaultNetType, metadata.timeScale);
+    auto& package = PackageSymbol::fromSyntax(scope, syntax, *metadata.defaultNetType,
+                                              metadata.timeScale);
 
     auto [it, inserted] = packageMap.emplace(package.name, &package);
     if (!inserted && !package.name.empty()) {
@@ -659,13 +659,13 @@ void Compilation::addOutOfBlockDecl(const Scope& scope, const ScopedNameSyntax& 
 std::tuple<const SyntaxNode*, SymbolIndex, bool*> Compilation::findOutOfBlockDecl(
     const Scope& scope, string_view className, string_view declName) const {
 
-    auto it = outOfBlockDecls.find({ className, declName, &scope });
+    auto it = outOfBlockDecls.find({className, declName, &scope});
     if (it != outOfBlockDecls.end()) {
         auto& [syntax, name, index, used] = it->second;
-        return { syntax, index, &used };
+        return {syntax, index, &used};
     }
 
-    return { nullptr, SymbolIndex(), nullptr };
+    return {nullptr, SymbolIndex(), nullptr};
 }
 
 void Compilation::addExternInterfaceMethod(const SubroutineSymbol& method) {
@@ -857,8 +857,9 @@ const Diagnostics& Compilation::getSemanticDiagnostics() {
             if (!used) {
                 auto& [className, declName, scope] = key;
                 auto classRange = name->left->sourceRange();
-                auto sym = Lookup::unqualifiedAt(
-                    *scope, className, LookupLocation(scope, uint32_t(index)), classRange);
+                auto sym = Lookup::unqualifiedAt(*scope, className,
+                                                 LookupLocation(scope, uint32_t(index)),
+                                                 classRange);
 
                 if (sym && !declName.empty() && !className.empty()) {
                     if (sym->kind == SymbolKind::ClassType ||
@@ -1020,7 +1021,7 @@ Diagnostic& Compilation::addDiag(Diagnostic diag) {
     }
 
     // Coalesce diagnostics that are at the same source location and have the same code.
-    if (auto it = diagMap.find({ diag.code, diag.location }); it != diagMap.end()) {
+    if (auto it = diagMap.find({diag.code, diag.location}); it != diagMap.end()) {
         auto& diagList = it->second;
         diagList.emplace_back(std::move(diag));
         return diagList.back();
@@ -1072,8 +1073,8 @@ const Type& Compilation::getType(bitwidth_t width, bitmask<IntegralFlags> flags)
     if (it != vectorTypeCache.end())
         return *it->second;
 
-    auto type =
-        emplace<PackedArrayType>(getScalarType(flags), ConstantRange{ int32_t(width - 1), 0 });
+    auto type = emplace<PackedArrayType>(getScalarType(flags),
+                                         ConstantRange{int32_t(width - 1), 0});
     vectorTypeCache.emplace_hint(it, key, type);
     return *type;
 }
@@ -1116,7 +1117,7 @@ void Compilation::trackImport(Scope::ImportDataIndex& index, const WildcardImpor
     if (index != Scope::ImportDataIndex::Invalid)
         importData[index].push_back(&import);
     else
-        index = importData.add({ &import });
+        index = importData.add({&import});
 }
 
 span<const WildcardImportSymbol*> Compilation::queryImports(Scope::ImportDataIndex index) {
@@ -1229,8 +1230,8 @@ void Compilation::checkDPIMethods(span<const SubroutineSymbol* const> dpiImports
             scope->addDiag(diag::DPISpecDisallowed, syntax->specString.range());
 
         auto name = syntax->name.valueText();
-        auto symbol =
-            Lookup::unqualifiedAt(*scope, name, LookupLocation::max, syntax->name.range());
+        auto symbol = Lookup::unqualifiedAt(*scope, name, LookupLocation::max,
+                                            syntax->name.range());
         if (!symbol)
             continue;
 
@@ -1247,8 +1248,8 @@ void Compilation::checkDPIMethods(span<const SubroutineSymbol* const> dpiImports
              syntax->functionOrTask.kind == TokenKind::TaskKeyword) ||
             (sub.subroutineKind == SubroutineKind::Task &&
              syntax->functionOrTask.kind == TokenKind::FunctionKeyword)) {
-            auto& diag =
-                scope->addDiag(diag::DPIExportKindMismatch, syntax->functionOrTask.range());
+            auto& diag = scope->addDiag(diag::DPIExportKindMismatch,
+                                        syntax->functionOrTask.range());
             diag.addNote(diag::NoteDeclarationHere, symbol->location);
             continue;
         }
@@ -1302,8 +1303,8 @@ void Compilation::checkDPIMethods(span<const SubroutineSymbol* const> dpiImports
                 auto [it, inserted] = nameMap.emplace(cId, &sub);
                 if (!inserted) {
                     if (!checkSignaturesMatch(sub, *it->second)) {
-                        auto& diag =
-                            scope->addDiag(diag::DPISignatureMismatch, syntax->name.range());
+                        auto& diag = scope->addDiag(diag::DPISignatureMismatch,
+                                                    syntax->name.range());
                         diag << cId;
                         diag.addNote(diag::NotePreviousDefinition, it->second->location);
                     }
@@ -1358,8 +1359,8 @@ void Compilation::checkModportExports(
                 }
 
                 if (!found) {
-                    auto& diag =
-                        port->getParentScope()->addDiag(diag::MissingExportImpl, port->location);
+                    auto& diag = port->getParentScope()->addDiag(diag::MissingExportImpl,
+                                                                 port->location);
                     diag << method.name << def->name;
                     diag.addNote(diag::NoteDeclarationHere, method.location);
                 }
@@ -1410,15 +1411,15 @@ void Compilation::resolveDefParams(size_t) {
             else {
                 std::string path;
                 target->getHierarchicalPath(path);
-                overrides.append({ std::move(path), target->getSyntax(), defparam->getValue() });
+                overrides.append({std::move(path), target->getSyntax(), defparam->getValue()});
             }
         }
     };
 
     auto checkProblem = [&](const DefParamVisitor& visitor) {
         if (visitor.hierarchyProblem) {
-            auto& diag =
-                root->addDiag(diag::MaxInstanceDepthExceeded, visitor.hierarchyProblem->location);
+            auto& diag = root->addDiag(diag::MaxInstanceDepthExceeded,
+                                       visitor.hierarchyProblem->location);
             diag << visitor.hierarchyProblem->getDefinition().getKindString();
             diag << options.maxInstanceDepth;
             return true;

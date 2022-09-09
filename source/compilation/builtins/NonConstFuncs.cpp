@@ -318,8 +318,9 @@ public:
             return comp.getErrorType();
 
         for (size_t i = 0; i < args.size() && i < 3; i++) {
-            AssertionExpr::checkSampledValueExpr(
-                *args[i], context, false, diag::SampledValueLocalVar, diag::SampledValueMatched);
+            AssertionExpr::checkSampledValueExpr(*args[i], context, false,
+                                                 diag::SampledValueLocalVar,
+                                                 diag::SampledValueMatched);
         }
 
         // TODO: check rules for inferring clocking
@@ -397,26 +398,26 @@ void registerNonConstFuncs(Compilation& c) {
 
     auto& intType = c.getIntType();
     auto& uintType = c.getUnsignedIntType();
-    std::vector<const Type*> intArg = { &intType };
+    std::vector<const Type*> intArg = {&intType};
 
     REGISTER("$time", c.getType(SyntaxKind::TimeType));
     REGISTER("$stime", c.getUnsignedIntType());
     REGISTER("$realtime", c.getType(SyntaxKind::RealTimeType));
     REGISTER("$random", intType, 0, intArg);
     REGISTER("$urandom", uintType, 0, intArg);
-    REGISTER("$urandom_range", uintType, 1, std::vector<const Type*>{ &uintType, &uintType });
+    REGISTER("$urandom_range", uintType, 1, std::vector<const Type*>{&uintType, &uintType});
 
-    REGISTER("$fopen", intType, 1, std::vector{ &c.getStringType(), &c.getStringType() });
+    REGISTER("$fopen", intType, 1, std::vector{&c.getStringType(), &c.getStringType()});
     REGISTER("$fclose", c.getVoidType(), 1, intArg);
     REGISTER("$fgetc", intType, 1, intArg);
-    REGISTER("$ungetc", intType, 2, std::vector{ &intType, &intType });
+    REGISTER("$ungetc", intType, 2, std::vector{&intType, &intType});
     REGISTER("$ftell", intType, 1, intArg);
-    REGISTER("$fseek", intType, 3, std::vector{ &intType, &intType, &intType });
+    REGISTER("$fseek", intType, 3, std::vector{&intType, &intType, &intType});
     REGISTER("$rewind", intType, 1, intArg);
     REGISTER("$fflush", c.getVoidType(), 0, intArg);
     REGISTER("$feof", intType, 1, intArg);
 
-    REGISTER("$test$plusargs", intType, 1, std::vector{ &c.getStringType() });
+    REGISTER("$test$plusargs", intType, 1, std::vector{&c.getStringType()});
 
 #undef REGISTER
 

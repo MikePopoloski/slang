@@ -63,15 +63,15 @@ ValueSymbol::Driver& ValueSymbol::Driver::create(EvalContext& evalContext, Drive
                 expr = &expr->as<ConversionExpression>().operand();
                 break;
             case ExpressionKind::ElementSelect:
-                path.append({ expr });
+                path.append({expr});
                 expr = &expr->as<ElementSelectExpression>().value();
                 break;
             case ExpressionKind::RangeSelect:
-                path.append({ expr });
+                path.append({expr});
                 expr = &expr->as<RangeSelectExpression>().value();
                 break;
             case ExpressionKind::MemberAccess:
-                path.append({ expr });
+                path.append({expr});
                 expr = &expr->as<MemberAccessExpression>().value();
                 break;
             default:
@@ -86,8 +86,8 @@ ValueSymbol::Driver& ValueSymbol::Driver::create(EvalContext& evalContext, Drive
 
     auto& comp = evalContext.compilation;
     auto mem = comp.allocate(allocSize, alignof(Driver));
-    auto result =
-        new (mem) Driver(kind, containingSymbol, flags, (uint32_t)path.size(), hasOriginalRange);
+    auto result = new (mem)
+        Driver(kind, containingSymbol, flags, (uint32_t)path.size(), hasOriginalRange);
     result->sourceRange = longestStaticPrefix.sourceRange;
 
     auto prefixMem = reinterpret_cast<ConstantRange*>(mem + sizeof(Driver));
@@ -155,7 +155,7 @@ bool ValueSymbol::Driver::isInInitialBlock() const {
 }
 
 span<const ConstantRange> ValueSymbol::Driver::getPrefix() const {
-    return { reinterpret_cast<const ConstantRange*>(this + 1), numPrefixEntries };
+    return {reinterpret_cast<const ConstantRange*>(this + 1), numPrefixEntries};
 }
 
 SourceRange ValueSymbol::Driver::getOriginalRange() const {
@@ -193,8 +193,8 @@ static bool handleOverlap(const Scope& scope, string_view name, const ValueSymbo
     // First check for more specialized cases here:
     // 1. If this is a non-uwire net for an input or output port
     // 2. If this is a variable for an input port
-    const bool isUnidirectionNetPort =
-        isNet && (curr.isUnidirectionalPort() || driver.isUnidirectionalPort());
+    const bool isUnidirectionNetPort = isNet && (curr.isUnidirectionalPort() ||
+                                                 driver.isUnidirectionalPort());
 
     if ((isUnidirectionNetPort && !isUWire && !isSingleDriverUDNT) ||
         (!isNet && (curr.isInputPort() || driver.isInputPort()))) {
@@ -219,8 +219,8 @@ static bool handleOverlap(const Scope& scope, string_view name, const ValueSymbo
         auto& diag = scope.addDiag(code, assignRange);
         diag << name;
 
-        auto note =
-            code == diag::OutputPortCoercion ? diag::NoteDrivenHere : diag::NoteDeclarationHere;
+        auto note = code == diag::OutputPortCoercion ? diag::NoteDrivenHere
+                                                     : diag::NoteDeclarationHere;
         diag.addNote(note, portRange);
 
         // For variable ports this is an error, for nets it's a warning.
@@ -358,7 +358,7 @@ void ValueSymbol::addDriverImpl(const Scope& scope, const Driver& driver) const 
         // initializer expression that should count as a driver as well.
         auto create = [&](DriverKind driverKind) {
             return &Driver::create(comp, driverKind, {}, scope.asSymbol(), AssignFlags::None,
-                                   { location, location + name.length() }, {});
+                                   {location, location + name.length()}, {});
         };
 
         switch (kind) {
@@ -394,8 +394,8 @@ void ValueSymbol::addDriverImpl(const Scope& scope, const Driver& driver) const 
     if (isNet) {
         netType = &as<NetSymbol>().netType;
         isUWire = netType->netKind == NetType::UWire;
-        isSingleDriverUDNT =
-            netType->netKind == NetType::UserDefined && netType->getResolutionFunction() == nullptr;
+        isSingleDriverUDNT = netType->netKind == NetType::UserDefined &&
+                             netType->getResolutionFunction() == nullptr;
     }
 
     const bool checkOverlap = (VariableSymbol::isKind(kind) &&

@@ -78,9 +78,10 @@ Token Parser::parseLifetime() {
 AnsiPortListSyntax& Parser::parseAnsiPortList(Token openParen) {
     Token closeParen;
     SmallVectorSized<TokenOrSyntax, 8> buffer;
-    parseList<isPossibleAnsiPort, isEndOfParenList>(
-        buffer, TokenKind::CloseParenthesis, TokenKind::Comma, closeParen, RequireItems::False,
-        diag::ExpectedAnsiPort, [this] { return &parseAnsiPort(); });
+    parseList<isPossibleAnsiPort, isEndOfParenList>(buffer, TokenKind::CloseParenthesis,
+                                                    TokenKind::Comma, closeParen,
+                                                    RequireItems::False, diag::ExpectedAnsiPort,
+                                                    [this] { return &parseAnsiPort(); });
     return factory.ansiPortList(openParen, buffer.copy(alloc), closeParen);
 }
 
@@ -96,8 +97,8 @@ ModuleHeaderSyntax& Parser::parseModuleHeader() {
         auto openParen = consume();
         if (peek(TokenKind::DotStar)) {
             auto dotStar = consume();
-            ports =
-                &factory.wildcardPortList(openParen, dotStar, expect(TokenKind::CloseParenthesis));
+            ports = &factory.wildcardPortList(openParen, dotStar,
+                                              expect(TokenKind::CloseParenthesis));
         }
         else if (isNonAnsiPort()) {
             Token closeParen;
@@ -468,8 +469,8 @@ StructUnionTypeSyntax& Parser::parseStructUnion(SyntaxKind syntaxKind) {
     auto dims = parseDimensionList();
     if (!packed) {
         if (!dims.empty()) {
-            SourceRange range{ dims.front()->getFirstToken().location(),
-                               dims.back()->getLastToken().range().end() };
+            SourceRange range{dims.front()->getFirstToken().location(),
+                              dims.back()->getLastToken().range().end()};
             addDiag(diag::PackedDimsOnUnpacked, range);
         }
 
@@ -896,11 +897,12 @@ template<bool (*IsEnd)(TokenKind)>
 span<TokenOrSyntax> Parser::parseDeclarators(TokenKind endKind, Token& end, bool allowMinTypMax,
                                              bool requireInitializers) {
     SmallVectorSized<TokenOrSyntax, 4> buffer;
-    parseList<isIdentifierOrComma, IsEnd>(
-        buffer, endKind, TokenKind::Comma, end, RequireItems::True, diag::ExpectedDeclarator,
-        [this, allowMinTypMax, requireInitializers] {
-            return &parseDeclarator(allowMinTypMax, requireInitializers);
-        });
+    parseList<isIdentifierOrComma, IsEnd>(buffer, endKind, TokenKind::Comma, end,
+                                          RequireItems::True, diag::ExpectedDeclarator,
+                                          [this, allowMinTypMax, requireInitializers] {
+                                              return &parseDeclarator(allowMinTypMax,
+                                                                      requireInitializers);
+                                          });
 
     return buffer.copy(alloc);
 }
@@ -983,9 +985,10 @@ ParameterDeclarationBaseSyntax& Parser::parseParameterDecl(Token keyword, Token*
 
         SmallVectorSized<TokenOrSyntax, 4> decls;
         if (semi) {
-            parseList<isIdentifierOrComma, isSemicolon>(
-                decls, TokenKind::Semicolon, TokenKind::Comma, *semi, RequireItems::True,
-                diag::ExpectedParameterPort, [this] { return &parseTypeAssignment(); });
+            parseList<isIdentifierOrComma, isSemicolon>(decls, TokenKind::Semicolon,
+                                                        TokenKind::Comma, *semi, RequireItems::True,
+                                                        diag::ExpectedParameterPort,
+                                                        [this] { return &parseTypeAssignment(); });
         }
         else {
             while (true) {

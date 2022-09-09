@@ -190,7 +190,7 @@ template<double Func(double)>
 class RealMath1Function : public SimpleSystemSubroutine {
 public:
     RealMath1Function(Compilation& comp, const std::string& name) :
-        SimpleSystemSubroutine(name, SubroutineKind::Function, 1, { &comp.getRealType() },
+        SimpleSystemSubroutine(name, SubroutineKind::Function, 1, {&comp.getRealType()},
                                comp.getRealType(), false) {}
 
     ConstantValue eval(EvalContext& context, const Args& args, SourceRange,
@@ -209,7 +209,7 @@ class RealMath2Function : public SimpleSystemSubroutine {
 public:
     RealMath2Function(Compilation& comp, const std::string& name) :
         SimpleSystemSubroutine(name, SubroutineKind::Function, 2,
-                               { &comp.getRealType(), &comp.getRealType() }, comp.getRealType(),
+                               {&comp.getRealType(), &comp.getRealType()}, comp.getRealType(),
                                false) {}
 
     ConstantValue eval(EvalContext& context, const Args& args, SourceRange,

@@ -93,12 +93,12 @@ const AssertionExpr& AssertionExpr::bind(const SequenceExprSyntax& syntax,
                                                           ctx);
             break;
         case SyntaxKind::ClockingSequenceExpr:
-            result =
-                &ClockingAssertionExpr::fromSyntax(syntax.as<ClockingSequenceExprSyntax>(), ctx);
+            result = &ClockingAssertionExpr::fromSyntax(syntax.as<ClockingSequenceExprSyntax>(),
+                                                        ctx);
             break;
         case SyntaxKind::SignalEventExpression:
-            result =
-                &ClockingAssertionExpr::fromSyntax(syntax.as<SignalEventExpressionSyntax>(), ctx);
+            result = &ClockingAssertionExpr::fromSyntax(syntax.as<SignalEventExpressionSyntax>(),
+                                                        ctx);
             break;
         default:
             THROW_UNREACHABLE;
@@ -154,8 +154,8 @@ const AssertionExpr& AssertionExpr::bind(const PropertyExprSyntax& syntax,
             return bind(*ppe.expr, context);
         }
         case SyntaxKind::ClockingPropertyExpr:
-            result =
-                &ClockingAssertionExpr::fromSyntax(syntax.as<ClockingPropertyExprSyntax>(), ctx);
+            result = &ClockingAssertionExpr::fromSyntax(syntax.as<ClockingPropertyExprSyntax>(),
+                                                        ctx);
             break;
         case SyntaxKind::StrongWeakPropertyExpr:
             result = &StrongWeakAssertionExpr::fromSyntax(syntax.as<StrongWeakPropertyExprSyntax>(),
@@ -165,8 +165,8 @@ const AssertionExpr& AssertionExpr::bind(const PropertyExprSyntax& syntax,
             result = &UnaryAssertionExpr::fromSyntax(syntax.as<UnaryPropertyExprSyntax>(), ctx);
             break;
         case SyntaxKind::UnarySelectPropertyExpr:
-            result =
-                &UnaryAssertionExpr::fromSyntax(syntax.as<UnarySelectPropertyExprSyntax>(), ctx);
+            result = &UnaryAssertionExpr::fromSyntax(syntax.as<UnarySelectPropertyExprSyntax>(),
+                                                     ctx);
             break;
         case SyntaxKind::AcceptOnPropertyExpr:
             result = &AbortAssertionExpr::fromSyntax(syntax.as<AcceptOnPropertyExprSyntax>(), ctx);
@@ -349,8 +349,8 @@ struct SampledValueExprVisitor {
     void visitInvalid(const AssertionExpr&) {}
 
     static inline const flat_hash_set<std::string_view> FutureGlobalNames = {
-        "$future_gclk"sv, "$rising_gclk"sv, "$falling_gclk"sv, "$steady_gclk"sv, "$changing_gclk"sv
-    };
+        "$future_gclk"sv, "$rising_gclk"sv, "$falling_gclk"sv, "$steady_gclk"sv,
+        "$changing_gclk"sv};
 };
 
 void AssertionExpr::checkSampledValueExpr(const Expression& expr, const BindContext& context,
@@ -561,8 +561,8 @@ AssertionExpr& SequenceConcatExpr::fromSyntax(const DelayedSequenceExprSyntax& s
         seq.requireSequence(context);
         ok &= !seq.bad();
 
-        SequenceRange delay{ 0, 0 };
-        elems.append(Element{ delay, &seq });
+        SequenceRange delay{0, 0};
+        elems.append(Element{delay, &seq});
     }
 
     for (auto es : syntax.elements) {
@@ -586,7 +586,7 @@ AssertionExpr& SequenceConcatExpr::fromSyntax(const DelayedSequenceExprSyntax& s
             delay.min = 1;
         }
 
-        elems.append(Element{ delay, &seq });
+        elems.append(Element{delay, &seq});
     }
 
     auto& comp = context.getCompilation();
@@ -684,9 +684,10 @@ static span<const Expression* const> bindMatchItems(const SequenceMatchListSynta
                 break;
             }
             case ExpressionKind::Call: {
-                AssertionExpr::checkAssertionCall(
-                    expr.as<CallExpression>(), context, diag::SubroutineMatchOutArg,
-                    diag::SubroutineMatchAutoRefArg, std::nullopt, expr.sourceRange);
+                AssertionExpr::checkAssertionCall(expr.as<CallExpression>(), context,
+                                                  diag::SubroutineMatchOutArg,
+                                                  diag::SubroutineMatchAutoRefArg, std::nullopt,
+                                                  expr.sourceRange);
                 break;
             }
             case ExpressionKind::Invalid:
@@ -793,8 +794,8 @@ AssertionExpr& UnaryAssertionExpr::fromSyntax(const UnarySelectPropertyExprSynta
 
     optional<SequenceRange> range;
     if (syntax.selector) {
-        bool allowUnbounded =
-            op == UnaryAssertionOperator::Always || op == UnaryAssertionOperator::SEventually;
+        bool allowUnbounded = op == UnaryAssertionOperator::Always ||
+                              op == UnaryAssertionOperator::SEventually;
         range = SequenceRange::fromSyntax(*syntax.selector, context, allowUnbounded);
     }
 
@@ -1138,14 +1139,14 @@ AssertionExpr& CaseAssertionExpr::fromSyntax(const CasePropertyExprSyntax& synta
             for (auto es : sci.expressions)
                 exprs.append(&bindExpr(*es, context));
 
-            items.append(ItemGroup{ exprs.copy(comp), &body });
+            items.append(ItemGroup{exprs.copy(comp), &body});
         }
         else {
             // The parser already errored for duplicate defaults,
             // so just ignore if it happens here.
             if (!defCase) {
-                defCase =
-                    &AssertionExpr::bind(*item->as<DefaultPropertyCaseItemSyntax>().expr, context);
+                defCase = &AssertionExpr::bind(*item->as<DefaultPropertyCaseItemSyntax>().expr,
+                                               context);
             }
         }
     }

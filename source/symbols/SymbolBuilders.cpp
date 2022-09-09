@@ -42,8 +42,8 @@ MethodBuilder::~MethodBuilder() {
 FormalArgumentSymbol& MethodBuilder::addArg(string_view name, const Type& type,
                                             ArgumentDirection direction,
                                             optional<SVInt> defaultValue) {
-    auto arg =
-        compilation.emplace<FormalArgumentSymbol>(name, NL, direction, VariableLifetime::Automatic);
+    auto arg = compilation.emplace<FormalArgumentSymbol>(name, NL, direction,
+                                                         VariableLifetime::Automatic);
     arg->setType(type);
     symbol.addMember(*arg);
     args.append(arg);
@@ -92,8 +92,9 @@ MethodBuilder ClassBuilder::addMethod(string_view name, const Type& retType, Sub
 }
 
 StructBuilder::StructBuilder(const Scope& scope, LookupLocation lookupLocation) :
-    compilation(scope.getCompilation()), type(*compilation.emplace<UnpackedStructType>(
-                                             compilation, NL, BindContext(scope, lookupLocation))) {
+    compilation(scope.getCompilation()),
+    type(*compilation.emplace<UnpackedStructType>(compilation, NL,
+                                                  BindContext(scope, lookupLocation))) {
 }
 
 void StructBuilder::addField(string_view name, const Type& fieldType,

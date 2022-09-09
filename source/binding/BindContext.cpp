@@ -326,8 +326,8 @@ optional<ConstantRange> BindContext::evalPackedDimension(const ElementSelectSynt
 
 optional<ConstantRange> BindContext::evalUnpackedDimension(
     const VariableDimensionSyntax& syntax) const {
-    EvaluatedDimension result =
-        evalDimension(syntax, /* requireRange */ true, /* isPacked */ false);
+    EvaluatedDimension result = evalDimension(syntax, /* requireRange */ true,
+                                              /* isPacked */ false);
     if (!result.isRange())
         return std::nullopt;
 
@@ -432,7 +432,7 @@ void BindContext::evalRangeDimension(const SelectorSyntax& syntax, bool isPacked
                     return;
 
                 result.kind = DimensionKind::AbbreviatedRange;
-                result.range = { 0, *value - 1 };
+                result.range = {0, *value - 1};
             }
             break;
         }
@@ -444,7 +444,7 @@ void BindContext::evalRangeDimension(const SelectorSyntax& syntax, bool isPacked
                 return;
 
             result.kind = DimensionKind::Range;
-            result.range = { *left, *right };
+            result.range = {*left, *right};
             break;
         }
         default:

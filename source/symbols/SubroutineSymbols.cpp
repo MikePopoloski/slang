@@ -78,8 +78,8 @@ SubroutineSymbol* SubroutineSymbol::fromSyntax(Compilation& compilation,
             // We should create the method like normal but not add it to
             // the parent name map (because it can only be looked up via
             // the interface instance).
-            auto result =
-                SubroutineSymbol::fromSyntax(compilation, syntax, parent, /* outOfBlock */ true);
+            auto result = SubroutineSymbol::fromSyntax(compilation, syntax, parent,
+                                                       /* outOfBlock */ true);
             ASSERT(result);
 
             result->setParent(parent, SymbolIndex(index));
@@ -115,8 +115,9 @@ SubroutineSymbol* SubroutineSymbol::fromSyntax(Compilation& compilation,
 
     auto subroutineKind = syntax.kind == SyntaxKind::TaskDeclaration ? SubroutineKind::Task
                                                                      : SubroutineKind::Function;
-    auto result = compilation.emplace<SubroutineSymbol>(
-        compilation, nameToken.valueText(), nameToken.location(), *lifetime, subroutineKind);
+    auto result = compilation.emplace<SubroutineSymbol>(compilation, nameToken.valueText(),
+                                                        nameToken.location(), *lifetime,
+                                                        subroutineKind);
 
     result->setSyntax(syntax);
     result->setAttributes(parent, syntax.attributes);
@@ -227,9 +228,10 @@ SubroutineSymbol& SubroutineSymbol::fromSyntax(Compilation& compilation,
     auto subroutineKind = proto.keyword.kind == TokenKind::TaskKeyword ? SubroutineKind::Task
                                                                        : SubroutineKind::Function;
 
-    auto result = compilation.emplace<SubroutineSymbol>(
-        compilation, nameToken.valueText(), nameToken.location(), VariableLifetime::Automatic,
-        subroutineKind);
+    auto result = compilation.emplace<SubroutineSymbol>(compilation, nameToken.valueText(),
+                                                        nameToken.location(),
+                                                        VariableLifetime::Automatic,
+                                                        subroutineKind);
     result->setSyntax(syntax);
     result->setAttributes(parent, syntax.attributes);
     result->flags = MethodFlags::DPIImport;
@@ -442,9 +444,10 @@ SubroutineSymbol& SubroutineSymbol::createFromPrototype(Compilation& compilation
                                                         const Scope& parent) {
     // Create a stub subroutine symbol that exists only to allow the normal expression
     // machinery to call it (checking argument types, return values, etc).
-    auto result = compilation.emplace<SubroutineSymbol>(
-        compilation, prototype.name, prototype.location, VariableLifetime::Automatic,
-        prototype.subroutineKind);
+    auto result = compilation.emplace<SubroutineSymbol>(compilation, prototype.name,
+                                                        prototype.location,
+                                                        VariableLifetime::Automatic,
+                                                        prototype.subroutineKind);
 
     result->setParent(parent, SymbolIndex(INT32_MAX));
     result->declaredReturnType.setLink(prototype.declaredReturnType);
@@ -579,8 +582,9 @@ void SubroutineSymbol::buildArguments(Scope& scope, const FunctionPortListSyntax
         }
 
         auto declarator = portSyntax->declarator;
-        auto arg = comp.emplace<FormalArgumentSymbol>(
-            declarator->name.valueText(), declarator->name.location(), direction, defaultLifetime);
+        auto arg = comp.emplace<FormalArgumentSymbol>(declarator->name.valueText(),
+                                                      declarator->name.location(), direction,
+                                                      defaultLifetime);
 
         if (portSyntax->constKeyword) {
             ASSERT(direction == ArgumentDirection::Ref);
@@ -823,8 +827,9 @@ MethodPrototypeSymbol& MethodPrototypeSymbol::fromSyntax(const Scope& scope,
     if (nameToken.valueText() == "new")
         flags |= MethodFlags::Constructor;
 
-    auto result = comp.emplace<MethodPrototypeSymbol>(
-        comp, nameToken.valueText(), nameToken.location(), subroutineKind, visibility, flags);
+    auto result = comp.emplace<MethodPrototypeSymbol>(comp, nameToken.valueText(),
+                                                      nameToken.location(), subroutineKind,
+                                                      visibility, flags);
     result->setSyntax(syntax);
     result->setAttributes(scope, syntax.attributes);
 
@@ -859,8 +864,9 @@ MethodPrototypeSymbol& MethodPrototypeSymbol::createForModport(const Scope& scop
     auto& comp = scope.getCompilation();
     auto flags = isExport ? MethodFlags::ModportExport : MethodFlags::ModportImport;
     auto name = nameToken.valueText();
-    auto result = comp.emplace<MethodPrototypeSymbol>(
-        comp, name, nameToken.location(), SubroutineKind::Function, Visibility::Public, flags);
+    auto result = comp.emplace<MethodPrototypeSymbol>(comp, name, nameToken.location(),
+                                                      SubroutineKind::Function, Visibility::Public,
+                                                      flags);
     result->setSyntax(syntax);
 
     // Find the target method we're importing or exporting from the parent interface.
@@ -895,8 +901,8 @@ MethodPrototypeSymbol& MethodPrototypeSymbol::fromSyntax(const Scope& scope,
                                                          bool isExport) {
     auto& comp = scope.getCompilation();
     auto& proto = *syntax.prototype;
-    auto& result =
-        createForModport(scope, syntax, syntax.prototype->name->getLastToken(), isExport);
+    auto& result = createForModport(scope, syntax, syntax.prototype->name->getLastToken(),
+                                    isExport);
 
     auto target = result.subroutine.value();
     if (!target)
@@ -944,9 +950,10 @@ MethodPrototypeSymbol& MethodPrototypeSymbol::createExternIfaceMethod(const Scop
     auto subroutineKind = proto.keyword.kind == TokenKind::TaskKeyword ? SubroutineKind::Task
                                                                        : SubroutineKind::Function;
 
-    auto result = comp.emplace<MethodPrototypeSymbol>(
-        comp, nameToken.valueText(), nameToken.location(), subroutineKind, Visibility::Public,
-        MethodFlags::InterfaceExtern);
+    auto result = comp.emplace<MethodPrototypeSymbol>(comp, nameToken.valueText(),
+                                                      nameToken.location(), subroutineKind,
+                                                      Visibility::Public,
+                                                      MethodFlags::InterfaceExtern);
 
     result->setSyntax(syntax);
 
@@ -1023,8 +1030,8 @@ const SubroutineSymbol* MethodPrototypeSymbol::getSubroutine() const {
     if (flags.has(MethodFlags::Pure)) {
         // A pure method should not have a body defined.
         if (syntax) {
-            auto& diag =
-                outerScope.addDiag(diag::BodyForPure, syntax->prototype->name->sourceRange());
+            auto& diag = outerScope.addDiag(diag::BodyForPure,
+                                            syntax->prototype->name->sourceRange());
             diag.addNote(diag::NoteDeclarationHere, location);
         }
         else {
@@ -1048,8 +1055,8 @@ const SubroutineSymbol* MethodPrototypeSymbol::getSubroutine() const {
         diag.addNote(diag::NoteDeclarationHere, parentSym.location);
     }
 
-    subroutine =
-        &SubroutineSymbol::createOutOfBlock(comp, *syntax, *this, nearScope, outerScope, index);
+    subroutine = &SubroutineSymbol::createOutOfBlock(comp, *syntax, *this, nearScope, outerScope,
+                                                     index);
     return *subroutine;
 }
 

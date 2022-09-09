@@ -95,9 +95,10 @@ private:
         ASSERT(syntax.decl);
         auto nameToken = syntax.decl->name;
         auto createEmpty = [&]() {
-            return compilation.emplace<InstanceArraySymbol>(
-                compilation, nameToken.valueText(), nameToken.location(),
-                span<const Symbol* const>{}, ConstantRange());
+            return compilation.emplace<InstanceArraySymbol>(compilation, nameToken.valueText(),
+                                                            nameToken.location(),
+                                                            span<const Symbol* const>{},
+                                                            ConstantRange());
         };
 
         auto& dimSyntax = **it;
@@ -233,9 +234,9 @@ InstanceSymbol& InstanceSymbol::createVirtual(
         paramBuilder.setAssignments(*paramAssignments);
 
     auto& comp = context.getCompilation();
-    auto& result =
-        *comp.emplace<InstanceSymbol>(comp, definition.name, loc, definition, paramBuilder,
-                                      /* isUninstantiated */ false);
+    auto& result = *comp.emplace<InstanceSymbol>(comp, definition.name, loc, definition,
+                                                 paramBuilder,
+                                                 /* isUninstantiated */ false);
 
     // Set the parent pointer so that traversing upwards still works to find
     // the instantiation scope. This "virtual" instance never actually gets
@@ -577,8 +578,9 @@ void InstanceSymbol::resolvePortConnections() const {
     if (!syntax)
         return;
 
-    PortConnection::makeConnections(
-        *this, portList, syntax->as<HierarchicalInstanceSyntax>().connections, *connections);
+    PortConnection::makeConnections(*this, portList,
+                                    syntax->as<HierarchicalInstanceSyntax>().connections,
+                                    *connections);
 }
 
 void InstanceSymbol::serializeTo(ASTSerializer& serializer) const {
@@ -944,9 +946,10 @@ Symbol* recursePrimArray(Compilation& compilation, const PrimitiveSymbol& primit
     ASSERT(instance.decl);
     auto nameToken = instance.decl->name;
     auto createEmpty = [&]() {
-        return compilation.emplace<InstanceArraySymbol>(
-            compilation, nameToken.valueText(), nameToken.location(), span<const Symbol* const>{},
-            ConstantRange());
+        return compilation.emplace<InstanceArraySymbol>(compilation, nameToken.valueText(),
+                                                        nameToken.location(),
+                                                        span<const Symbol* const>{},
+                                                        ConstantRange());
     };
 
     auto& dimSyntax = **it;
@@ -969,8 +972,8 @@ Symbol* recursePrimArray(Compilation& compilation, const PrimitiveSymbol& primit
     SmallVectorSized<const Symbol*, 8> elements;
     for (int32_t i = range.lower(); i <= range.upper(); i++) {
         path.append(i);
-        auto symbol =
-            recursePrimArray(compilation, primitive, instance, context, it, end, attributes, path);
+        auto symbol = recursePrimArray(compilation, primitive, instance, context, it, end,
+                                       attributes, path);
         path.pop();
 
         symbol->name = "";
@@ -1051,8 +1054,8 @@ void PrimitiveInstanceSymbol::fromSyntax(const PrimitiveInstantiationSyntax& syn
             while (currScope && currScope->asSymbol().kind != SymbolKind::InstanceBody)
                 currScope = currScope->asSymbol().getParentScope();
 
-            bool isUninstantiated =
-                currScope && currScope->asSymbol().as<InstanceBodySymbol>().isUninstantiated;
+            bool isUninstantiated = currScope &&
+                                    currScope->asSymbol().as<InstanceBodySymbol>().isUninstantiated;
 
             if (!isUninstantiated)
                 context.addDiag(diag::UnknownPrimitive, syntax.type.range()) << name;
@@ -1079,8 +1082,8 @@ span<const Expression* const> PrimitiveInstanceSymbol::getPortConnections() cons
         auto& his = syntax->as<HierarchicalInstanceSyntax>();
         for (auto port : his.connections) {
             if (port->kind == SyntaxKind::OrderedPortConnection) {
-                auto expr =
-                    context.requireSimpleExpr(*port->as<OrderedPortConnectionSyntax>().expr);
+                auto expr = context.requireSimpleExpr(
+                    *port->as<OrderedPortConnectionSyntax>().expr);
                 if (!expr) {
                     ports.emplace();
                     return *ports;
@@ -1125,8 +1128,8 @@ span<const Expression* const> PrimitiveInstanceSymbol::getPortConnections() cons
         }
         else {
             if (conns.size() != primitiveType.ports.size()) {
-                auto& diag =
-                    context.addDiag(diag::PrimitivePortCountWrong, his.openParen.location());
+                auto& diag = context.addDiag(diag::PrimitivePortCountWrong,
+                                             his.openParen.location());
                 diag << primitiveType.name;
                 diag << conns.size() << primitiveType.ports.size();
                 ports.emplace();

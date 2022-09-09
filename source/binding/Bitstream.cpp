@@ -39,16 +39,16 @@ enum class BitstreamSizeMode { Source, DestEmpty, DestFill };
 static std::pair<size_t, size_t> dynamicBitstreamSize(const Type& type, BitstreamSizeMode mode) {
     size_t fixedSize = type.getBitWidth();
     if (fixedSize > 0)
-        return { 0, fixedSize };
+        return {0, fixedSize};
 
     if (type.isString())
-        return { mode == BitstreamSizeMode::DestEmpty ? 0 : CHAR_BIT, 0 };
+        return {mode == BitstreamSizeMode::DestEmpty ? 0 : CHAR_BIT, 0};
 
     // TODO: check for overflow
     size_t multiplier = 0;
     if (type.isUnpackedArray()) {
-        auto [multiplierElem, fixedSizeElem] =
-            dynamicBitstreamSize(*type.getArrayElementType(), mode);
+        auto [multiplierElem, fixedSizeElem] = dynamicBitstreamSize(*type.getArrayElementType(),
+                                                                    mode);
 
         const auto& ct = type.getCanonicalType();
         if (ct.kind == SymbolKind::FixedSizeUnpackedArrayType) {
@@ -90,13 +90,13 @@ static std::pair<size_t, size_t> dynamicBitstreamSize(const Type& type, Bitstrea
         }
     }
 
-    return { multiplier, fixedSize };
+    return {multiplier, fixedSize};
 }
 
 static std::pair<size_t, size_t> dynamicBitstreamSize(
     const StreamingConcatenationExpression& concat, BitstreamSizeMode mode) {
     if (concat.isFixedSize())
-        return { 0, concat.bitstreamWidth() };
+        return {0, concat.bitstreamWidth()};
 
     size_t multiplier = 0, fixedSize = 0;
     for (auto& stream : concat.streams()) {
@@ -104,8 +104,8 @@ static std::pair<size_t, size_t> dynamicBitstreamSize(
         size_t multiplierStream = 0, fixedSizeStream = 0;
 
         if (stream.withExpr) {
-            auto [multiplierElem, fixedSizeElem] =
-                dynamicBitstreamSize(*operand.type->getArrayElementType(), mode);
+            auto [multiplierElem,
+                  fixedSizeElem] = dynamicBitstreamSize(*operand.type->getArrayElementType(), mode);
             ASSERT(!multiplierElem);
             if (stream.constantWithWidth) {
                 auto rw = *stream.constantWithWidth;
@@ -130,7 +130,7 @@ static std::pair<size_t, size_t> dynamicBitstreamSize(
         fixedSize += fixedSizeStream;
     }
 
-    return { multiplier, fixedSize };
+    return {multiplier, fixedSize};
 }
 
 template bool Bitstream::dynamicSizesMatch(const Type&, const Type&);
@@ -140,10 +140,10 @@ template bool Bitstream::dynamicSizesMatch(const Type&, const StreamingConcatena
 
 template<typename T1, typename T2>
 bool Bitstream::dynamicSizesMatch(const T1& destination, const T2& source) {
-    auto [sourceMultiplier, sourceFixedSize] =
-        dynamicBitstreamSize(source, BitstreamSizeMode::Source);
-    auto [destEmptyMultiplier, destEmptyFixedSize] =
-        dynamicBitstreamSize(destination, BitstreamSizeMode::DestEmpty);
+    auto [sourceMultiplier, sourceFixedSize] = dynamicBitstreamSize(source,
+                                                                    BitstreamSizeMode::Source);
+    auto [destEmptyMultiplier,
+          destEmptyFixedSize] = dynamicBitstreamSize(destination, BitstreamSizeMode::DestEmpty);
 
     if (destEmptyFixedSize >= sourceFixedSize) {
         auto diff = destEmptyFixedSize - sourceFixedSize;
@@ -160,8 +160,8 @@ bool Bitstream::dynamicSizesMatch(const T1& destination, const T2& source) {
             return true;
     }
 
-    auto [destFillMultiplier, destFillFixedSize] =
-        dynamicBitstreamSize(destination, BitstreamSizeMode::DestFill);
+    auto [destFillMultiplier,
+          destFillFixedSize] = dynamicBitstreamSize(destination, BitstreamSizeMode::DestFill);
 
     /* Follow IEEE standard to check dynamic-sized types at compile-time.
      // runtime error
@@ -199,8 +199,8 @@ static size_t bitstreamCastRemainingSize(const T& destination, size_t srcSize) {
     }
 
     // Check for the source size being too small to fill destination fixed size.
-    auto [destEmptyMultiplier, destEmptyFixedSize] =
-        dynamicBitstreamSize(destination, BitstreamSizeMode::DestEmpty);
+    auto [destEmptyMultiplier,
+          destEmptyFixedSize] = dynamicBitstreamSize(destination, BitstreamSizeMode::DestEmpty);
     if (destEmptyFixedSize > srcSize)
         return srcSize + 1; // cannot fit
 
@@ -208,8 +208,8 @@ static size_t bitstreamCastRemainingSize(const T& destination, size_t srcSize) {
         return 0;
 
     // Calculate remaining size to dynamically fill.
-    auto [destFillMultiplier, destFillFixedSize] =
-        dynamicBitstreamSize(destination, BitstreamSizeMode::DestFill);
+    auto [destFillMultiplier,
+          destFillFixedSize] = dynamicBitstreamSize(destination, BitstreamSizeMode::DestFill);
     if (srcSize < destFillFixedSize || (srcSize - destFillFixedSize) % destFillMultiplier != 0) {
         if (destEmptyMultiplier > 0 && (srcSize - destEmptyFixedSize) % destEmptyMultiplier == 0)
             return 0; // only for "with" range
@@ -737,9 +737,9 @@ static bool unpackConcatenation(const StreamingConcatenationExpression& lhs, Pac
                     ASSERT(with.left <= with.right);
                     auto oldValue = lvalue.load();
                     if (oldValue.size() <= static_cast<uint32_t>(with.right)) {
-                        auto newValue =
-                            Bitstream::resizeToRange(std::move(oldValue), { 0, with.right },
-                                                     elemType->getDefaultValue(), true);
+                        auto newValue = Bitstream::resizeToRange(std::move(oldValue),
+                                                                 {0, with.right},
+                                                                 elemType->getDefaultValue(), true);
                         lvalue.store(newValue);
                     }
                 }
@@ -786,8 +786,8 @@ ConstantValue Bitstream::evaluateTarget(const StreamingConcatenationExpression& 
 
         if (!lhs.isFixedSize()) {
             dynamicSize = srcSize - targetWidth;
-            auto [firstDynamicElemSize, notUsed] =
-                dynamicBitstreamSize(lhs, BitstreamSizeMode::DestFill);
+            auto [firstDynamicElemSize,
+                  notUsed] = dynamicBitstreamSize(lhs, BitstreamSizeMode::DestFill);
             if (firstDynamicElemSize)
                 dynamicSize -= dynamicSize % firstDynamicElemSize; // do not exceed srcSize
         }

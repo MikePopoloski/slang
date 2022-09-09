@@ -32,8 +32,9 @@ public:
             return SystemSubroutine::bindArgument(argIndex, context, syntax, args);
 
         if (argIndex == nameOrHierIndex && NameSyntax::isKind(syntax.kind)) {
-            return HierarchicalReferenceExpression::fromSyntax(
-                context.getCompilation(), syntax.as<NameSyntax>(), context, LookupFlags::AllowRoot);
+            return HierarchicalReferenceExpression::fromSyntax(context.getCompilation(),
+                                                               syntax.as<NameSyntax>(), context,
+                                                               LookupFlags::AllowRoot);
         }
 
         return Expression::bindArgument(*argTypes[argIndex], ArgumentDirection::In, syntax,
@@ -84,21 +85,21 @@ private:
 void registerCoverageFuncs(Compilation& c) {
 #define REGISTER(name, ...) c.addSystemSubroutine(std::make_unique<name>(__VA_ARGS__))
     REGISTER(CoverageNameOrHierFunc, "$coverage_control", c.getIntType(), 3, 4,
-             std::vector{ &c.getIntType(), &c.getIntType(), &c.getIntType(), &c.getStringType() });
+             std::vector{&c.getIntType(), &c.getIntType(), &c.getIntType(), &c.getStringType()});
     REGISTER(CoverageNameOrHierFunc, "$coverage_get_max", c.getIntType(), 2, 3,
-             std::vector{ &c.getIntType(), &c.getIntType(), &c.getStringType() });
+             std::vector{&c.getIntType(), &c.getIntType(), &c.getStringType()});
     REGISTER(CoverageNameOrHierFunc, "$coverage_get", c.getIntType(), 2, 3,
-             std::vector{ &c.getIntType(), &c.getIntType(), &c.getStringType() });
+             std::vector{&c.getIntType(), &c.getIntType(), &c.getStringType()});
 
     REGISTER(NonConstantFunction, "$coverage_merge", c.getIntType(), 2,
-             std::vector{ &c.getIntType(), &c.getStringType() });
+             std::vector{&c.getIntType(), &c.getStringType()});
     REGISTER(NonConstantFunction, "$coverage_save", c.getIntType(), 2,
-             std::vector{ &c.getIntType(), &c.getStringType() });
+             std::vector{&c.getIntType(), &c.getStringType()});
     REGISTER(NonConstantFunction, "$get_coverage", c.getRealType());
     REGISTER(NonConstantFunction, "$set_coverage_db_name", c.getVoidType(), 1,
-             std::vector{ &c.getStringType() });
+             std::vector{&c.getStringType()});
     REGISTER(NonConstantFunction, "$load_coverage_db", c.getVoidType(), 1,
-             std::vector{ &c.getStringType() });
+             std::vector{&c.getStringType()});
 #undef REGISTER
 }
 

@@ -49,19 +49,19 @@ std::tuple<bool, span<T>> loadSpanFromBuffer(handle src) {
         auto cleanup = ScopeGuard([&view] { PyBuffer_Release(&view); });
         if (view.ndim == 1 && view.strides[0] == sizeof(T) &&
             view.format[0] == format_descriptor<T>::c) {
-            return { true, span(static_cast<T*>(view.buf), view.shape[0]) };
+            return {true, span(static_cast<T*>(view.buf), view.shape[0])};
         }
     }
     else {
         // Clear the buffer error (failure is reported in the return value).
         PyErr_Clear();
     }
-    return { false, span<T>() };
+    return {false, span<T>()};
 }
 // If T is not a numeric type, the buffer interface cannot be used.
 template<typename T, typename std::enable_if<!std::is_arithmetic<T>::value, bool>::type = true>
 constexpr std::tuple<bool, span<T>> loadSpanFromBuffer(handle src) {
-    return { false, span<T>() };
+    return {false, span<T>()};
 }
 
 template<typename T>

@@ -172,8 +172,8 @@ private:
     uint64_t charOffset : 36;
 };
 
-inline constexpr const SourceLocation SourceLocation::NoLocation{ BufferID((1u << 28) - 1, ""),
-                                                                  (1ull << 36) - 1 };
+inline constexpr const SourceLocation SourceLocation::NoLocation{BufferID((1u << 28) - 1, ""),
+                                                                 (1ull << 36) - 1};
 
 #ifndef DEBUG
 static_assert(sizeof(SourceLocation) == 8);

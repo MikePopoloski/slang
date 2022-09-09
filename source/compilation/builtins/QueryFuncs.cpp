@@ -208,7 +208,7 @@ protected:
 
         DimResult() : hardFail(true) {}
         DimResult(ConstantRange range) : range(range) {}
-        DimResult(size_t dynamicSize) : range{ 0, int32_t(dynamicSize) - 1 }, isDynamic(true) {}
+        DimResult(size_t dynamicSize) : range{0, int32_t(dynamicSize) - 1}, isDynamic(true) {}
         DimResult(AssociativeArray&& map, const Type* indexType) :
             map(std::move(map)), indexType(indexType) {}
 

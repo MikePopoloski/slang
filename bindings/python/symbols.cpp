@@ -206,8 +206,9 @@ void registerSymbols(py::module_& m) {
     py::class_<TypeParameterSymbol, Symbol, ParameterSymbolBase>(m, "TypeParameterSymbol")
         .def_property_readonly("targetType",
                                [](const TypeParameterSymbol& self) { return &self.targetType; })
-        .def_property_readonly(
-            "typeAlias", [](const TypeParameterSymbol& self) { return &self.getTypeAlias(); });
+        .def_property_readonly("typeAlias", [](const TypeParameterSymbol& self) {
+            return &self.getTypeAlias();
+        });
 
     py::class_<DefParamSymbol, Symbol>(m, "DefParamSymbol")
         .def_property_readonly("target",
@@ -386,9 +387,10 @@ void registerSymbols(py::module_& m) {
         .def_property_readonly("isChecker", &UnknownModuleSymbol::isChecker);
 
     py::class_<PrimitiveInstanceSymbol, InstanceSymbolBase>(m, "PrimitiveInstanceSymbol")
-        .def_property_readonly(
-            "primitiveType",
-            [](const PrimitiveInstanceSymbol& self) { return &self.primitiveType; })
+        .def_property_readonly("primitiveType",
+                               [](const PrimitiveInstanceSymbol& self) {
+                                   return &self.primitiveType;
+                               })
         .def_property_readonly("portConnections", &PrimitiveInstanceSymbol::getPortConnections)
         .def_property_readonly("delay", &PrimitiveInstanceSymbol::getDelay);
 
@@ -471,8 +473,9 @@ void registerSymbols(py::module_& m) {
 
     py::class_<AssertionPortSymbol, Symbol>(m, "AssertionPortSymbol")
         .def_readonly("localVarDirection", &AssertionPortSymbol::localVarDirection)
-        .def_property_readonly(
-            "type", [](const AssertionPortSymbol& self) { return &self.declaredType.getType(); });
+        .def_property_readonly("type", [](const AssertionPortSymbol& self) {
+            return &self.declaredType.getType();
+        });
 
     py::class_<SequenceSymbol, Symbol, Scope>(m, "SequenceSymbol")
         .def_readonly("ports", &SequenceSymbol::ports);

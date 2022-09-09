@@ -412,10 +412,11 @@ void SourceManager::addDiagnosticDirective(SourceLocation location, string_view 
         // Keep the list in sorted order. Typically new additions should be at the end,
         // in which case we'll hit the condition above, but just in case we will do the
         // full search and insert here.
-        vec.emplace(
-            std::upper_bound(vec.begin(), vec.end(), offset,
-                             [](size_t offset, auto& diag) { return offset < diag.offset; }),
-            name, offset, severity);
+        vec.emplace(std::upper_bound(vec.begin(), vec.end(), offset,
+                                     [](size_t offset, auto& diag) {
+                                         return offset < diag.offset;
+                                     }),
+                    name, offset, severity);
     }
 }
 
@@ -459,8 +460,8 @@ SourceBuffer SourceManager::createBufferEntry(FileData* fd, SourceLocation inclu
                                               std::unique_lock<std::shared_mutex>&) {
     ASSERT(fd);
     bufferEntries.emplace_back(FileInfo(fd, includedFrom));
-    return SourceBuffer{ string_view(fd->mem.data(), fd->mem.size()),
-                         BufferID((uint32_t)(bufferEntries.size() - 1), fd->name) };
+    return SourceBuffer{string_view(fd->mem.data(), fd->mem.size()),
+                        BufferID((uint32_t)(bufferEntries.size() - 1), fd->name)};
 }
 
 bool SourceManager::isCached(const fs::path& path) const {

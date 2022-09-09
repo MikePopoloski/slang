@@ -58,7 +58,7 @@ AlignedType CodeGenTypes::convertType(const Type& type) {
         lt = llvm::Type::getIntNTy(codegen.getContext(), bits);
 
     // TODO: alignment
-    AlignedType result{ lt, llvm::Align::Constant<8>() };
+    AlignedType result{lt, llvm::Align::Constant<8>()};
     typeMap.emplace(&type, result);
     return result;
 }

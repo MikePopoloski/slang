@@ -53,8 +53,7 @@ ModuleDeclarationSyntax& Parser::parseModule(AttrList attributes, SyntaxKind par
     }
 
     SyntaxKind declKind = getModuleDeclarationKind(header.moduleKeyword.kind);
-    ParserMetadata::Node node{ pp.getDefaultNetType(), pp.getUnconnectedDrive(),
-                               pp.getTimeScale() };
+    ParserMetadata::Node node{pp.getDefaultNetType(), pp.getUnconnectedDrive(), pp.getTimeScale()};
 
     auto savedDefinitionKind = currentDefinitionKind;
     currentDefinitionKind = declKind;
@@ -71,8 +70,8 @@ ModuleDeclarationSyntax& Parser::parseModule(AttrList attributes, SyntaxKind par
     auto endName = parseNamedBlockClause();
     checkBlockNames(header.name, endName);
 
-    auto& result =
-        factory.moduleDeclaration(declKind, attributes, header, members, endmodule, endName);
+    auto& result = factory.moduleDeclaration(declKind, attributes, header, members, endmodule,
+                                             endName);
 
     meta.nodeMap[&result] = node;
     return result;
@@ -117,9 +116,9 @@ MemberSyntax* Parser::parseMember(SyntaxKind parentKind, bool& anyLocalModules) 
         case TokenKind::BeginKeyword:
             errorIfAttributes(attributes);
             if (!attributes.empty()) {
-                return &factory.emptyMember(
-                    attributes, nullptr,
-                    Token::createMissing(alloc, TokenKind::Semicolon, token.location()));
+                return &factory.emptyMember(attributes, nullptr,
+                                            Token::createMissing(alloc, TokenKind::Semicolon,
+                                                                 token.location()));
             }
 
             // It's definitely not legal to have a generate block here on its own
@@ -360,9 +359,9 @@ MemberSyntax* Parser::parseMember(SyntaxKind parentKind, bool& anyLocalModules) 
 
     // if we got attributes but don't know what comes next, we have some kind of nonsense
     if (!attributes.empty()) {
-        return &factory.emptyMember(
-            attributes, nullptr,
-            Token::createMissing(alloc, TokenKind::Semicolon, token.location()));
+        return &factory.emptyMember(attributes, nullptr,
+                                    Token::createMissing(alloc, TokenKind::Semicolon,
+                                                         token.location()));
     }
 
     // Otherwise, we got nothing and should just return null so that our
@@ -433,10 +432,10 @@ MemberSyntax& Parser::parseModportSubroutinePortList(AttrList attributes) {
     SmallVectorSized<TokenOrSyntax, 8> buffer;
     while (true) {
         if (peek(TokenKind::FunctionKeyword) || peek(TokenKind::TaskKeyword)) {
-            auto& proto =
-                parseFunctionPrototype(SyntaxKind::Unknown, FunctionOptions::AllowEmptyArgNames |
-                                                                FunctionOptions::AllowTasks |
-                                                                FunctionOptions::IsPrototype);
+            auto& proto = parseFunctionPrototype(SyntaxKind::Unknown,
+                                                 FunctionOptions::AllowEmptyArgNames |
+                                                     FunctionOptions::AllowTasks |
+                                                     FunctionOptions::IsPrototype);
             buffer.append(&factory.modportSubroutinePort(proto));
         }
         else {
@@ -672,9 +671,10 @@ FunctionDeclarationSyntax& Parser::parseFunctionDeclaration(AttrList attributes,
                                                             SyntaxKind parentKind) {
     Token end;
     bool isConstructor;
-    auto& prototype = parseFunctionPrototype(
-        parentKind, FunctionOptions::AllowImplicitReturn | FunctionOptions::AllowTasks,
-        &isConstructor);
+    auto& prototype = parseFunctionPrototype(parentKind,
+                                             FunctionOptions::AllowImplicitReturn |
+                                                 FunctionOptions::AllowTasks,
+                                             &isConstructor);
 
     auto semi = expect(TokenKind::Semicolon);
     auto items = parseBlockItems(endKind, end, isConstructor);
@@ -874,9 +874,10 @@ ImplementsClauseSyntax* Parser::parseImplementsClause(TokenKind keywordKind, Tok
 
     auto implements = consume();
     SmallVectorSized<TokenOrSyntax, 8> buffer;
-    parseList<isPossibleExpressionOrComma, isSemicolon>(
-        buffer, TokenKind::Semicolon, TokenKind::Comma, semi, RequireItems::True,
-        diag::ExpectedInterfaceClassName, [this] { return &parseName(); });
+    parseList<isPossibleExpressionOrComma, isSemicolon>(buffer, TokenKind::Semicolon,
+                                                        TokenKind::Comma, semi, RequireItems::True,
+                                                        diag::ExpectedInterfaceClassName,
+                                                        [this] { return &parseName(); });
 
     return &factory.implementsClause(implements, buffer.copy(alloc));
 }
@@ -1172,9 +1173,9 @@ MemberSyntax* Parser::parseClassMember(bool isIfaceClass) {
 
         // Pure or extern functions don't have bodies.
         if (isPureOrExtern) {
-            auto& proto =
-                parseFunctionPrototype(SyntaxKind::ClassDeclaration,
-                                       FunctionOptions::AllowTasks | FunctionOptions::IsPrototype);
+            auto& proto = parseFunctionPrototype(SyntaxKind::ClassDeclaration,
+                                                 FunctionOptions::AllowTasks |
+                                                     FunctionOptions::IsPrototype);
             checkProto(proto, false);
 
             return &factory.classMethodPrototype(attributes, qualifiers, proto,
@@ -1185,8 +1186,8 @@ MemberSyntax* Parser::parseClassMember(bool isIfaceClass) {
                                                            : SyntaxKind::FunctionDeclaration;
             auto endKind = kind == TokenKind::TaskKeyword ? TokenKind::EndTaskKeyword
                                                           : TokenKind::EndFunctionKeyword;
-            auto& funcDecl =
-                parseFunctionDeclaration({}, declKind, endKind, SyntaxKind::ClassDeclaration);
+            auto& funcDecl = parseFunctionDeclaration({}, declKind, endKind,
+                                                      SyntaxKind::ClassDeclaration);
             checkProto(*funcDecl.prototype, true);
 
             // If this is a scoped name, it should be an out-of-block definition for
@@ -1208,9 +1209,9 @@ MemberSyntax* Parser::parseClassMember(bool isIfaceClass) {
     // Qualifiers aren't allowed past this point, so return an empty member to hold them.
     if (!qualifiers.empty()) {
         addDiag(diag::UnexpectedQualifiers, qualifiers[0].location());
-        return &factory.emptyMember(
-            attributes, qualifiers,
-            Token::createMissing(alloc, TokenKind::Semicolon, peek().location()));
+        return &factory.emptyMember(attributes, qualifiers,
+                                    Token::createMissing(alloc, TokenKind::Semicolon,
+                                                         peek().location()));
     }
 
     switch (kind) {
@@ -1239,9 +1240,9 @@ MemberSyntax* Parser::parseClassMember(bool isIfaceClass) {
 
     // If we got attributes but don't know what comes next, we have some kind of nonsense.
     if (!attributes.empty()) {
-        return &factory.emptyMember(
-            attributes, qualifiers,
-            Token::createMissing(alloc, TokenKind::Semicolon, peek().location()));
+        return &factory.emptyMember(attributes, qualifiers,
+                                    Token::createMissing(alloc, TokenKind::Semicolon,
+                                                         peek().location()));
     }
 
     // Otherwise, we got nothing and should just return null so that our caller will skip and try
@@ -1356,9 +1357,9 @@ MemberSyntax* Parser::parseCoverageMember() {
 
     // if we got attributes but don't know what comes next, we have some kind of nonsense
     if (!attributes.empty()) {
-        return &factory.emptyMember(
-            attributes, nullptr,
-            Token::createMissing(alloc, TokenKind::Semicolon, peek().location()));
+        return &factory.emptyMember(attributes, nullptr,
+                                    Token::createMissing(alloc, TokenKind::Semicolon,
+                                                         peek().location()));
     }
 
     // otherwise, we got nothing and should just return null so that our caller will skip and try
@@ -1684,8 +1685,8 @@ BinsSelectExpressionSyntax& Parser::parseBinsSelectPrimary() {
         auto& expr = parseExpression();
         auto closeParen = expect(TokenKind::CloseParenthesis);
         auto matches = parseMatches();
-        result =
-            &factory.binSelectWithFilterExpr(*result, with, openParen, expr, closeParen, matches);
+        result = &factory.binSelectWithFilterExpr(*result, with, openParen, expr, closeParen,
+                                                  matches);
     }
 
     return *result;
@@ -1888,8 +1889,8 @@ ConstraintItemSyntax* Parser::parseConstraintItem(bool allowBlock, bool isTopLev
             ElseConstraintClauseSyntax* elseClause = nullptr;
             if (peek(TokenKind::ElseKeyword)) {
                 auto elseKeyword = consume();
-                elseClause =
-                    &factory.elseConstraintClause(elseKeyword, *parseConstraintItem(true, false));
+                elseClause = &factory.elseConstraintClause(elseKeyword,
+                                                           *parseConstraintItem(true, false));
             }
             return &factory.conditionalConstraint(ifKeyword, openParen, condition, closeParen,
                                                   constraints, elseClause);
@@ -2044,8 +2045,8 @@ DPIImportSyntax& Parser::parseDPIImport(AttrList attributes) {
         equals = expect(TokenKind::Equals);
     }
 
-    bitmask<FunctionOptions> options =
-        FunctionOptions::AllowEmptyArgNames | FunctionOptions::IsPrototype;
+    bitmask<FunctionOptions> options = FunctionOptions::AllowEmptyArgNames |
+                                       FunctionOptions::IsPrototype;
     if (property.kind != TokenKind::PureKeyword)
         options |= FunctionOptions::AllowTasks;
 
@@ -2380,9 +2381,10 @@ HierarchyInstantiationSyntax& Parser::parseHierarchyInstantiation(AttrList attri
 
     Token semi;
     SmallVectorSized<TokenOrSyntax, 8> items;
-    parseList<isPossibleInstance, isSemicolon>(
-        items, TokenKind::Semicolon, TokenKind::Comma, semi, RequireItems::True,
-        diag::ExpectedHierarchicalInstantiation, [this] { return &parseHierarchicalInstance(); });
+    parseList<isPossibleInstance, isSemicolon>(items, TokenKind::Semicolon, TokenKind::Comma, semi,
+                                               RequireItems::True,
+                                               diag::ExpectedHierarchicalInstantiation,
+                                               [this] { return &parseHierarchicalInstance(); });
 
     return factory.hierarchyInstantiation(attributes, type, parameters, items.copy(alloc), semi);
 }
@@ -2466,9 +2468,10 @@ PrimitiveInstantiationSyntax& Parser::parsePrimitiveInstantiation(AttrList attri
 
     Token semi;
     SmallVectorSized<TokenOrSyntax, 8> items;
-    parseList<isPossibleInstance, isSemicolon>(
-        items, TokenKind::Semicolon, TokenKind::Comma, semi, RequireItems::True,
-        diag::ExpectedHierarchicalInstantiation, [this] { return &parseHierarchicalInstance(); });
+    parseList<isPossibleInstance, isSemicolon>(items, TokenKind::Semicolon, TokenKind::Comma, semi,
+                                               RequireItems::True,
+                                               diag::ExpectedHierarchicalInstantiation,
+                                               [this] { return &parseHierarchicalInstance(); });
 
     return factory.primitiveInstantiation(attributes, type, strength, delay, items.copy(alloc),
                                           semi);
@@ -2480,9 +2483,10 @@ CheckerInstantiationSyntax& Parser::parseCheckerInstantiation(AttrList attribute
 
     Token semi;
     SmallVectorSized<TokenOrSyntax, 8> items;
-    parseList<isPossibleInstance, isSemicolon>(
-        items, TokenKind::Semicolon, TokenKind::Comma, semi, RequireItems::True,
-        diag::ExpectedHierarchicalInstantiation, [this] { return &parseHierarchicalInstance(); });
+    parseList<isPossibleInstance, isSemicolon>(items, TokenKind::Semicolon, TokenKind::Comma, semi,
+                                               RequireItems::True,
+                                               diag::ExpectedHierarchicalInstantiation,
+                                               [this] { return &parseHierarchicalInstance(); });
 
     return factory.checkerInstantiation(attributes, type, parameters, items.copy(alloc), semi);
 }
@@ -2578,9 +2582,10 @@ UdpPortListSyntax& Parser::parseUdpPortList() {
     else if (peek(TokenKind::OutputKeyword) || peek(TokenKind::InputKeyword)) {
         Token closeParen;
         SmallVectorSized<TokenOrSyntax, 4> ports;
-        parseList<isPossibleUdpPort, isEndOfParenList>(
-            ports, TokenKind::CloseParenthesis, TokenKind::Comma, closeParen, RequireItems::True,
-            diag::ExpectedUdpPort, [this] { return &parseUdpPortDecl(); });
+        parseList<isPossibleUdpPort, isEndOfParenList>(ports, TokenKind::CloseParenthesis,
+                                                       TokenKind::Comma, closeParen,
+                                                       RequireItems::True, diag::ExpectedUdpPort,
+                                                       [this] { return &parseUdpPortDecl(); });
 
         return factory.ansiUdpPortList(openParen, ports.copy(alloc), closeParen,
                                        expect(TokenKind::Semicolon));
@@ -2716,9 +2721,10 @@ SpecparamDeclarationSyntax& Parser::parseSpecparam(AttrList attr) {
 
     Token semi;
     SmallVectorSized<TokenOrSyntax, 4> buffer;
-    parseList<isIdentifierOrComma, isNotIdOrComma>(
-        buffer, TokenKind::Semicolon, TokenKind::Comma, semi, RequireItems::True,
-        diag::ExpectedDeclarator, [this] { return &parseSpecparamDeclarator(); });
+    parseList<isIdentifierOrComma, isNotIdOrComma>(buffer, TokenKind::Semicolon, TokenKind::Comma,
+                                                   semi, RequireItems::True,
+                                                   diag::ExpectedDeclarator,
+                                                   [this] { return &parseSpecparamDeclarator(); });
 
     return factory.specparamDeclaration(attr, keyword, type, buffer.copy(alloc), semi);
 }
@@ -2806,8 +2812,8 @@ PathDeclarationSyntax& Parser::parsePathDeclaration() {
     }
 
     auto closeParen = expect(TokenKind::CloseParenthesis);
-    auto& desc =
-        factory.pathDescription(openParen, edge, inputs, polarity, op, *suffix, closeParen);
+    auto& desc = factory.pathDescription(openParen, edge, inputs, polarity, op, *suffix,
+                                         closeParen);
 
     auto equals = expect(TokenKind::Equals);
 
@@ -2856,7 +2862,7 @@ EdgeDescriptorSyntax& Parser::parseEdgeDescriptor() {
 
     SourceRange range = t1.range();
     if (t2)
-        range = { t1.range().start(), t2.range().end() };
+        range = {t1.range().start(), t2.range().end()};
 
     if (t1Raw.length() + t2Raw.length() != 2) {
         addDiag(diag::InvalidEdgeDescriptor, range);

@@ -256,9 +256,10 @@ const Symbol& CovergroupType::fromSyntax(const Scope& scope,
     body->options = options.get();
 
     if (inClass) {
-        auto var =
-            comp.emplace<ClassPropertySymbol>(syntax.name.valueText(), syntax.name.location(),
-                                              VariableLifetime::Automatic, Visibility::Public);
+        auto var = comp.emplace<ClassPropertySymbol>(syntax.name.valueText(),
+                                                     syntax.name.location(),
+                                                     VariableLifetime::Automatic,
+                                                     Visibility::Public);
         var->setType(*result);
         var->flags |= VariableFlags::Const;
         return *var;
@@ -287,8 +288,8 @@ const TimingControl* CovergroupType::getCoverageEvent() const {
                 return *event;
             }
             else if (evSyntax->kind == SyntaxKind::EventControlWithExpression) {
-                event =
-                    &TimingControl::bind(evSyntax->as<EventControlWithExpressionSyntax>(), context);
+                event = &TimingControl::bind(evSyntax->as<EventControlWithExpressionSyntax>(),
+                                             context);
                 return *event;
             }
         }
@@ -492,8 +493,8 @@ void CoverageBinSymbol::resolve() const {
 
     auto& binsSyntax = syntax->as<CoverageBinsSyntax>();
     if (binsSyntax.iff) {
-        iffExpr =
-            &Expression::bind(*binsSyntax.iff->expr, context, BindFlags::AllowCoverageSampleFormal);
+        iffExpr = &Expression::bind(*binsSyntax.iff->expr, context,
+                                    BindFlags::AllowCoverageSampleFormal);
         context.requireBooleanConvertible(*iffExpr);
     }
 
@@ -562,8 +563,8 @@ void CoverageBinSymbol::resolve() const {
                 if (!t.isArray() || t.isAssociativeArray() ||
                     !type.isAssignmentCompatible(*t.getArrayElementType())) {
 
-                    auto& diag =
-                        context.addDiag(diag::CoverageSetType, setCoverageExpr->sourceRange);
+                    auto& diag = context.addDiag(diag::CoverageSetType,
+                                                 setCoverageExpr->sourceRange);
                     diag << t << coverpoint.name << type;
                 }
             }
@@ -913,12 +914,12 @@ const BinsSelectExpr& BinsSelectExpr::bind(const BinsSelectExpressionSyntax& syn
                 syntax.as<BinsSelectConditionExprSyntax>(), context);
             break;
         case SyntaxKind::UnaryBinsSelectExpr:
-            result =
-                &UnaryBinsSelectExpr::fromSyntax(syntax.as<UnaryBinsSelectExprSyntax>(), context);
+            result = &UnaryBinsSelectExpr::fromSyntax(syntax.as<UnaryBinsSelectExprSyntax>(),
+                                                      context);
             break;
         case SyntaxKind::BinaryBinsSelectExpr:
-            result =
-                &BinaryBinsSelectExpr::fromSyntax(syntax.as<BinaryBinsSelectExprSyntax>(), context);
+            result = &BinaryBinsSelectExpr::fromSyntax(syntax.as<BinaryBinsSelectExprSyntax>(),
+                                                       context);
             break;
         case SyntaxKind::SimpleBinsSelectExpr:
             result = &SetExprBinsSelectExpr::fromSyntax(syntax.as<SimpleBinsSelectExprSyntax>(),

@@ -123,10 +123,10 @@ void registerUtil(py::module_& m) {
         .def("assignText",
              py::overload_cast<string_view, SourceLocation>(&SourceManager::assignText), "text"_a,
              "includedFrom"_a = SourceLocation())
-        .def(
-            "assignText",
-            py::overload_cast<string_view, string_view, SourceLocation>(&SourceManager::assignText),
-            "path"_a, "text"_a, "includedFrom"_a = SourceLocation())
+        .def("assignText",
+             py::overload_cast<string_view, string_view, SourceLocation>(
+                 &SourceManager::assignText),
+             "path"_a, "text"_a, "includedFrom"_a = SourceLocation())
         .def("readSource", &SourceManager::readSource)
         .def("readHeader", &SourceManager::readHeader)
         .def("isCached", &SourceManager::isCached)
@@ -239,9 +239,10 @@ void registerUtil(py::module_& m) {
         .def_static("reportAll", &DiagnosticEngine::reportAll);
 
     py::class_<ReportedDiagnostic>(m, "ReportedDiagnostic")
-        .def_property_readonly(
-            "originalDiagnostic",
-            [](const ReportedDiagnostic& self) { return self.originalDiagnostic; })
+        .def_property_readonly("originalDiagnostic",
+                               [](const ReportedDiagnostic& self) {
+                                   return self.originalDiagnostic;
+                               })
         .def_readonly("expansionLocs", &ReportedDiagnostic::expansionLocs)
         .def_readonly("ranges", &ReportedDiagnostic::ranges)
         .def_readonly("location", &ReportedDiagnostic::location)

@@ -24,27 +24,27 @@ const Constraint& Constraint::bind(const ConstraintItemSyntax& syntax, const Bin
             result = &ConstraintList::fromSyntax(syntax.as<ConstraintBlockSyntax>(), ctx);
             break;
         case SyntaxKind::ExpressionConstraint:
-            result =
-                &ExpressionConstraint::fromSyntax(syntax.as<ExpressionConstraintSyntax>(), ctx);
+            result = &ExpressionConstraint::fromSyntax(syntax.as<ExpressionConstraintSyntax>(),
+                                                       ctx);
             break;
         case SyntaxKind::ImplicationConstraint:
-            result =
-                &ImplicationConstraint::fromSyntax(syntax.as<ImplicationConstraintSyntax>(), ctx);
+            result = &ImplicationConstraint::fromSyntax(syntax.as<ImplicationConstraintSyntax>(),
+                                                        ctx);
             break;
         case SyntaxKind::ConditionalConstraint:
-            result =
-                &ConditionalConstraint::fromSyntax(syntax.as<ConditionalConstraintSyntax>(), ctx);
+            result = &ConditionalConstraint::fromSyntax(syntax.as<ConditionalConstraintSyntax>(),
+                                                        ctx);
             break;
         case SyntaxKind::UniquenessConstraint:
-            result =
-                &UniquenessConstraint::fromSyntax(syntax.as<UniquenessConstraintSyntax>(), ctx);
+            result = &UniquenessConstraint::fromSyntax(syntax.as<UniquenessConstraintSyntax>(),
+                                                       ctx);
             break;
         case SyntaxKind::DisableConstraint:
             result = &DisableSoftConstraint::fromSyntax(syntax.as<DisableConstraintSyntax>(), ctx);
             break;
         case SyntaxKind::SolveBeforeConstraint:
-            result =
-                &SolveBeforeConstraint::fromSyntax(syntax.as<SolveBeforeConstraintSyntax>(), ctx);
+            result = &SolveBeforeConstraint::fromSyntax(syntax.as<SolveBeforeConstraintSyntax>(),
+                                                        ctx);
             break;
         case SyntaxKind::LoopConstraint:
             result = &ForeachConstraint::fromSyntax(syntax.as<LoopConstraintSyntax>(), ctx);
@@ -366,8 +366,8 @@ Constraint& UniquenessConstraint::fromSyntax(const UniquenessConstraintSyntax& s
                 else if (!commonType->isEquivalent(*symType)) {
                     // All variables used in a uniqueness constraint must have equivalent types.
                     if (!bad && !commonType->isError() && !symType->isError()) {
-                        auto& diag =
-                            context.addDiag(diag::InequivalentUniquenessTypes, expr.sourceRange);
+                        auto& diag = context.addDiag(diag::InequivalentUniquenessTypes,
+                                                     expr.sourceRange);
                         diag << sym->name << *symType << *commonType;
                         bad = true;
                     }

@@ -128,7 +128,7 @@ public:
     GenericClassDefSymbol(string_view name, SourceLocation loc,
                           function_ref<void(Compilation&, ClassType&)> specializeFunc) :
         Symbol(SymbolKind::GenericClassDef, name, loc),
-        specializeFunc{ specializeFunc } {}
+        specializeFunc{specializeFunc} {}
 
     /// Gets the default specialization for the class, or nullptr if the generic
     /// class has no default specialization (because some parameters are not defaulted).
@@ -233,7 +233,7 @@ public:
 
     /// Gets an iterator to the specializations created for the generic class.
     iterator_range<iterator> specializations() const {
-        return { iterator(specMap.begin()), iterator(specMap.end()) };
+        return {iterator(specMap.begin()), iterator(specMap.end())};
     }
 };
 
@@ -281,7 +281,7 @@ private:
     void addThisVar(const Type& type);
 
     mutable const Constraint* constraint = nullptr;
-    mutable SymbolIndex outOfBlockIndex{ 0 };
+    mutable SymbolIndex outOfBlockIndex{0};
 };
 
 } // namespace slang

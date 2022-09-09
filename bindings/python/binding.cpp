@@ -305,8 +305,9 @@ void registerBinding(py::module_& m) {
     py::class_<EmptyArgumentExpression, Expression>(m, "EmptyArgumentExpression");
 
     py::class_<TypeReferenceExpression, Expression>(m, "TypeReferenceExpression")
-        .def_property_readonly(
-            "targetType", [](const TypeReferenceExpression& self) { return &self.targetType; });
+        .def_property_readonly("targetType", [](const TypeReferenceExpression& self) {
+            return &self.targetType;
+        });
 
     py::class_<HierarchicalReferenceExpression, Expression>(m, "HierarchicalReferenceExpression")
         .def_readonly("symbol", &HierarchicalReferenceExpression::symbol);
@@ -547,9 +548,10 @@ void registerBinding(py::module_& m) {
         .def_readonly("isFinal", &ImmediateAssertionStatement::isFinal);
 
     py::class_<ConcurrentAssertionStatement, Statement>(m, "ConcurrentAssertionStatement")
-        .def_property_readonly(
-            "propertySpec",
-            [](const ConcurrentAssertionStatement& self) { return &self.propertySpec; })
+        .def_property_readonly("propertySpec",
+                               [](const ConcurrentAssertionStatement& self) {
+                                   return &self.propertySpec;
+                               })
         .def_readonly("ifTrue", &ConcurrentAssertionStatement::ifTrue)
         .def_readonly("ifFalse", &ConcurrentAssertionStatement::ifFalse)
         .def_readonly("assertionKind", &ConcurrentAssertionStatement::assertionKind);

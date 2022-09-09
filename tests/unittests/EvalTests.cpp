@@ -1600,7 +1600,7 @@ TEST_CASE("Array query functions") {
     EVAL("$low(arr, k)", SVInt::createFillX(32, true));
     EVAL("$increment(arr, 3)", 1);
 
-    for (auto& func : { "$left", "$right", "$low", "$high", "$increment", "$size" }) {
+    for (auto& func : {"$left", "$right", "$low", "$high", "$increment", "$size"}) {
         EVAL(func + "(arr, j)"s, SVInt::createFillX(32, true));
     }
 

@@ -44,14 +44,14 @@ TEST_CASE("Evaluate assignment expression") {
     auto& scope = compilation.createScriptScope();
 
     auto varToken = syntax->root().getFirstToken();
-    VariableSymbol local{ varToken.valueText(), varToken.location(), VariableLifetime::Automatic };
+    VariableSymbol local{varToken.valueText(), varToken.location(), VariableLifetime::Automatic};
     local.setType(compilation.getIntType());
 
     // Bind the expression tree to the symbol
     scope.addMember(local);
-    auto& bound =
-        Expression::bind(syntax->root().as<ExpressionSyntax>(),
-                         BindContext(scope, LookupLocation::max), BindFlags::AssignmentAllowed);
+    auto& bound = Expression::bind(syntax->root().as<ExpressionSyntax>(),
+                                   BindContext(scope, LookupLocation::max),
+                                   BindFlags::AssignmentAllowed);
     REQUIRE(syntax->diagnostics().empty());
 
     // Initialize `i` to 1.
@@ -79,14 +79,14 @@ TEST_CASE("Check type propagation") {
     auto& scope = compilation.createScriptScope();
 
     auto varToken = syntax->root().getFirstToken();
-    VariableSymbol local{ varToken.valueText(), varToken.location(), VariableLifetime::Automatic };
+    VariableSymbol local{varToken.valueText(), varToken.location(), VariableLifetime::Automatic};
     local.setType(compilation.getType(20, IntegralFlags::Unsigned));
 
     // Bind the expression tree to the symbol
     scope.addMember(local);
-    auto& bound =
-        Expression::bind(syntax->root().as<ExpressionSyntax>(),
-                         BindContext(scope, LookupLocation::max), BindFlags::AssignmentAllowed);
+    auto& bound = Expression::bind(syntax->root().as<ExpressionSyntax>(),
+                                   BindContext(scope, LookupLocation::max),
+                                   BindFlags::AssignmentAllowed);
 
     REQUIRE(syntax->diagnostics().empty());
 
@@ -108,14 +108,14 @@ TEST_CASE("Check type propagation 2") {
 
     // Fabricate a symbol for the `i` variable
     auto varToken = syntax->root().getFirstToken();
-    VariableSymbol local{ varToken.valueText(), varToken.location(), VariableLifetime::Automatic };
+    VariableSymbol local{varToken.valueText(), varToken.location(), VariableLifetime::Automatic};
     local.setType(compilation.getType(20, IntegralFlags::Unsigned));
 
     // Bind the expression tree to the symbol
     scope.addMember(local);
-    auto& bound =
-        Expression::bind(syntax->root().as<ExpressionSyntax>(),
-                         BindContext(scope, LookupLocation::max), BindFlags::AssignmentAllowed);
+    auto& bound = Expression::bind(syntax->root().as<ExpressionSyntax>(),
+                                   BindContext(scope, LookupLocation::max),
+                                   BindFlags::AssignmentAllowed);
     REQUIRE(syntax->diagnostics().empty());
 
     CHECK(bound.type->getBitWidth() == 20);
@@ -143,14 +143,14 @@ TEST_CASE("Check type propagation real") {
 
     // Fabricate a symbol for the `i` variable
     auto varToken = syntax->root().getFirstToken();
-    VariableSymbol local{ varToken.valueText(), varToken.location(), VariableLifetime::Automatic };
+    VariableSymbol local{varToken.valueText(), varToken.location(), VariableLifetime::Automatic};
     local.setType(compilation.getType(20, IntegralFlags::Unsigned));
 
     // Bind the expression tree to the symbol
     scope.addMember(local);
-    auto& bound =
-        Expression::bind(syntax->root().as<ExpressionSyntax>(),
-                         BindContext(scope, LookupLocation::max), BindFlags::AssignmentAllowed);
+    auto& bound = Expression::bind(syntax->root().as<ExpressionSyntax>(),
+                                   BindContext(scope, LookupLocation::max),
+                                   BindFlags::AssignmentAllowed);
     REQUIRE(syntax->diagnostics().empty());
     CHECK(bound.type->getBitWidth() == 20);
 
@@ -1372,15 +1372,15 @@ auto testBitstream(const std::string& text, DiagCode code = DiagCode()) {
 TEST_CASE("$bits on non-fixed-size array") {
     std::string intBits = "int b = $bits(a);";
     std::string paramBits = "localparam b = $bits(a);";
-    std::string types[] = { "string a;",
-                            "logic[1:0] a[];",
-                            "bit a[$];",
-                            "byte a[int];",
-                            "struct { string a; int b; } a;",
-                            "string a[1:0];",
-                            "bit a[1:0][];",
-                            "bit a[1:0][$];",
-                            "bit a[1:0][int];" };
+    std::string types[] = {"string a;",
+                           "logic[1:0] a[];",
+                           "bit a[$];",
+                           "byte a[int];",
+                           "struct { string a; int b; } a;",
+                           "string a[1:0];",
+                           "bit a[1:0][];",
+                           "bit a[1:0][$];",
+                           "bit a[1:0][int];"};
 
     std::string typeDef = "typedef ";
     for (const auto& type : types) {
@@ -1410,8 +1410,7 @@ dest_t b = dest_t'(a);
         R"(
         typedef struct { bit a[int]; int b; } asso;
         asso x = asso'(64'b0);
-)"
-    };
+)"};
 
     for (const auto& code : illegal)
         CHECK(testBitstream(code, diag::BadConversion) == 1);
@@ -1439,8 +1438,7 @@ typedef byte channel_type[$];
 Packet genPkt;
 channel_type channel = channel_type'(genPkt);
 Packet p = Packet'( channel[0 : 1] );
-)"
-    };
+)"};
 
     for (const auto& code : legal)
         CHECK(testBitstream(code) == 0);
@@ -1460,8 +1458,7 @@ localparam c d = c'(str);
 localparam string str = "hello";
 typedef struct { shortint a[]; byte b[1:0]; } c;
 localparam c d = c'(str);
-)"
-    };
+)"};
 
     for (const auto& code : eval)
         CHECK(testBitstream(code, diag::ConstEvalBitstreamCastSize) == 1);
@@ -1475,39 +1472,39 @@ TEST_CASE("Streaming operators") {
         std::string sv;
         DiagCode msg;
     } illegal[] = {
-        { "int a; int b = {>>{a}} + 2;", diag::BadStreamContext },
-        { "shortint a,b; int c = {{>>{a}}, b};", diag::BadStreamContext },
-        { "int a,b; always_comb {>>{a}} += b;", diag::BadStreamContext },
-        { "int a; int b = {<< string {a}};", diag::BadStreamSlice },
-        { "typedef bit t[]; int a; int b = {<<t{a}};", diag::BadStreamSlice },
-        { "int a, c; int b = {<< c {a}};", diag::ConstEvalNonConstVariable },
-        { "int a; int b = {<< 0 {a}};", diag::ValueMustBePositive },
-        { "real a; int b = {<< 5 {a}};", diag::BadStreamExprType },
-        { "int a; real b = {<< 2 {a}};", diag::BadStreamTargetType },
-        { "int a[2]; real b = $itor(a);", diag::BadSystemSubroutineArg },
-        { "int a; int b = {>> 4 {a}};", diag::IgnoredSlice },
-        { "int a; real b; assign {<< 2 {a}} = b;", diag::BadStreamSourceType },
-        { "int a; shortint b; assign {<< 2 {a}} = b;", diag::BadStreamSize },
-        { "int a; shortint b; assign b = {<< 4 {a}};", diag::BadStreamSize },
-        { "int a; shortint b; assign {>>{b}} = {<< 4 {a}};", diag::BadStreamSize },
-        { "int a; real b = real'({<< 4 {a}});", diag::BadStreamCast },
-        { "int a; shortint b = shortint'({<< 4 {a}});", diag::BadStreamCast },
-        { "typedef struct {byte a[$]; bit b;} dest_t; int a; dest_t b = dest_t'({<<{a}});",
-          diag::BadStreamCast },
-        { "typedef struct {byte a[$]; bit b;} dest_t;int a;dest_t b;assign {>>{b}}={<<{a}};",
-          diag::BadStreamSize },
+        {"int a; int b = {>>{a}} + 2;", diag::BadStreamContext},
+        {"shortint a,b; int c = {{>>{a}}, b};", diag::BadStreamContext},
+        {"int a,b; always_comb {>>{a}} += b;", diag::BadStreamContext},
+        {"int a; int b = {<< string {a}};", diag::BadStreamSlice},
+        {"typedef bit t[]; int a; int b = {<<t{a}};", diag::BadStreamSlice},
+        {"int a, c; int b = {<< c {a}};", diag::ConstEvalNonConstVariable},
+        {"int a; int b = {<< 0 {a}};", diag::ValueMustBePositive},
+        {"real a; int b = {<< 5 {a}};", diag::BadStreamExprType},
+        {"int a; real b = {<< 2 {a}};", diag::BadStreamTargetType},
+        {"int a[2]; real b = $itor(a);", diag::BadSystemSubroutineArg},
+        {"int a; int b = {>> 4 {a}};", diag::IgnoredSlice},
+        {"int a; real b; assign {<< 2 {a}} = b;", diag::BadStreamSourceType},
+        {"int a; shortint b; assign {<< 2 {a}} = b;", diag::BadStreamSize},
+        {"int a; shortint b; assign b = {<< 4 {a}};", diag::BadStreamSize},
+        {"int a; shortint b; assign {>>{b}} = {<< 4 {a}};", diag::BadStreamSize},
+        {"int a; real b = real'({<< 4 {a}});", diag::BadStreamCast},
+        {"int a; shortint b = shortint'({<< 4 {a}});", diag::BadStreamCast},
+        {"typedef struct {byte a[$]; bit b;} dest_t; int a; dest_t b = dest_t'({<<{a}});",
+         diag::BadStreamCast},
+        {"typedef struct {byte a[$]; bit b;} dest_t;int a;dest_t b;assign {>>{b}}={<<{a}};",
+         diag::BadStreamSize},
 
-        { "localparam string s=\"AB\"; localparam byte j= {<<2{s}};", diag::BadStreamSize },
-        { "localparam string s=\"AB\"; localparam int j= byte'({<<{s}}) - 5;",
-          diag::ConstEvalBitstreamCastSize },
-        { "localparam string s=\"AB\"; localparam int j= int'({<<{s}}) - 5;",
-          diag::ConstEvalBitstreamCastSize },
+        {"localparam string s=\"AB\"; localparam byte j= {<<2{s}};", diag::BadStreamSize},
+        {"localparam string s=\"AB\"; localparam int j= byte'({<<{s}}) - 5;",
+         diag::ConstEvalBitstreamCastSize},
+        {"localparam string s=\"AB\"; localparam int j= int'({<<{s}}) - 5;",
+         diag::ConstEvalBitstreamCastSize},
 
-        { "int a,b,c; assign {>>{a,b,c}}=23'b1;", diag::BadStreamSize },
-        { "int a,b,c; int j={>>{a,b,c}};", diag::BadStreamSize },
-        { "int a,b,c; assign {>>{a+b}}=c;", diag::ExpressionNotAssignable },
+        {"int a,b,c; assign {>>{a,b,c}}=23'b1;", diag::BadStreamSize},
+        {"int a,b,c; int j={>>{a,b,c}};", diag::BadStreamSize},
+        {"int a,b,c; assign {>>{a+b}}=c;", diag::ExpressionNotAssignable},
 
-        { R"(
+        {R"(
 function int foo(byte bar[]);
     int a;
     {>>{a}} = bar;
@@ -1515,8 +1512,8 @@ function int foo(byte bar[]);
 endfunction
 localparam t=foo("AB");
 )",
-          diag::BadStreamSize },
-        { R"(
+         diag::BadStreamSize},
+        {R"(
 function int foo(byte bar[]);
     int a;
     {>>{a}} = {<<{bar}};
@@ -1524,38 +1521,38 @@ return a;
 endfunction
 localparam t=foo("ABCDE");
 )",
-          diag::BadStreamSize },
+         diag::BadStreamSize},
 
-        { R"(
+        {R"(
     bit [0:2] c [2:0];
     sub u({>>{c}});
 endmodule
 module sub(output byte b);
 )",
-          diag::BadStreamSize },
+         diag::BadStreamSize},
 
-        { R"(
+        {R"(
     sub u({>>{2}});
 endmodule
 module sub(input bit[3:0] a[0:3]);
 )",
-          diag::BadStreamSize },
+         diag::BadStreamSize},
 
-        { R"(
+        {R"(
     bit [0:1] c [1:0];
     sub u({>>{c}});
 endmodule
 module sub(inout logic[7:0] b);
             )",
-          diag::BadStreamContext },
+         diag::BadStreamContext},
 
-        { R"(
+        {R"(
     byte c [3:0];
     sub u[3:0] ({>>{c}});
 endmodule
 module sub(input byte b);
 )",
-          diag::BadStreamContext },
+         diag::BadStreamContext},
     };
 
     for (const auto& test : illegal) {
@@ -1580,8 +1577,7 @@ module sub(input byte b);
     sub u({<<3{shortint'(100)}}, {>>{c}});
 endmodule
 module sub(input bit[3:0] a[0:3], output byte b);
-)"
-    };
+)"};
 
     for (const auto& test : legal)
         CHECK(testBitstream(test) == 0);
@@ -1592,19 +1588,18 @@ TEST_CASE("Stream expression with") {
         std::string sv;
         DiagCode msg;
     } illegal[] = {
-        { "byte b[4]; int a = {<<3{b with[]}};", diag::ExpectedExpression },
-        { "int a; byte b[4] = {<<3{a with [2]}};", diag::BadStreamWithType },
-        { "byte b[4]; int a = {<<3{b with[0.5]}};", diag::ExprMustBeIntegral },
-        { "byte b[4]; int a = {<<3{b with[{65{1'b1}}]}};", diag::IndexOOB },
-        { "byte b[4]; int a = {<<3{b with[4]}};", diag::IndexOOB },
-        { "byte b[4]; int a = {<<3{b with[2-:-1]}};", diag::ValueMustBePositive },
-        { "byte b[4]; logic [39:0] a = {<<3{b with[2+:5]}};", diag::RangeOOB },
-        { "byte b[3:0]; int a = {<<3{b with[2+:3]}};", diag::RangeOOB },
-        { "byte b[0:3]; int a = {<<3{b with[2:5]}};", diag::RangeOOB },
-        { "byte b[]; int a = {<<3{b with[3:2]}};", diag::SelectEndianDynamic },
-        { "byte b[], c[4]; always {>>{b, {<<3{c with[b[0]:b[1]]}}}} = 9;",
-          diag::BadStreamWithOrder },
-        { "int a[],b[],c[];bit d;always {>>{b}}={<<{a with [2+:3],c,d}};", diag::BadStreamSize },
+        {"byte b[4]; int a = {<<3{b with[]}};", diag::ExpectedExpression},
+        {"int a; byte b[4] = {<<3{a with [2]}};", diag::BadStreamWithType},
+        {"byte b[4]; int a = {<<3{b with[0.5]}};", diag::ExprMustBeIntegral},
+        {"byte b[4]; int a = {<<3{b with[{65{1'b1}}]}};", diag::IndexOOB},
+        {"byte b[4]; int a = {<<3{b with[4]}};", diag::IndexOOB},
+        {"byte b[4]; int a = {<<3{b with[2-:-1]}};", diag::ValueMustBePositive},
+        {"byte b[4]; logic [39:0] a = {<<3{b with[2+:5]}};", diag::RangeOOB},
+        {"byte b[3:0]; int a = {<<3{b with[2+:3]}};", diag::RangeOOB},
+        {"byte b[0:3]; int a = {<<3{b with[2:5]}};", diag::RangeOOB},
+        {"byte b[]; int a = {<<3{b with[3:2]}};", diag::SelectEndianDynamic},
+        {"byte b[], c[4]; always {>>{b, {<<3{c with[b[0]:b[1]]}}}} = 9;", diag::BadStreamWithOrder},
+        {"int a[],b[],c[];bit d;always {>>{b}}={<<{a with [2+:3],c,d}};", diag::BadStreamSize},
     };
 
     for (const auto& test : illegal) {
@@ -1625,8 +1620,7 @@ initial begin
     pkt = {<< 8 {i_header, i_len, i_data, i_crc}};
     {<< 8 {o_header, o_len, o_data with [0 +: o_len], o_crc}} = pkt;
 end
-)"
-    };
+)"};
 
     for (const auto& test : legal)
         CHECK(testBitstream(test) == 0);

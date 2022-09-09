@@ -302,7 +302,7 @@ struct ConstantRange {
     bool isLittleEndian() const { return left >= right; }
 
     /// Reverses the bit ordering of the range.
-    [[nodiscard]] ConstantRange reverse() const { return { right, left }; }
+    [[nodiscard]] ConstantRange reverse() const { return {right, left}; }
 
     /// Selects a subrange of this range, correctly handling both forms of
     /// bit endianness. This will assert that the given subrange is not wider.

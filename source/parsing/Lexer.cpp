@@ -74,12 +74,11 @@ Token Lexer::concatenateTokens(BumpAllocator& alloc, Token left, Token right) {
     leftText.copy(mem, leftText.length());
     rightText.copy(mem + leftText.length(), rightText.length());
     mem[newLength - 1] = '\0';
-    string_view combined{ mem, newLength };
+    string_view combined{mem, newLength};
 
     Diagnostics unused;
     Lexer lexer{
-        BufferID::getPlaceholder(), combined, combined.data(), alloc, unused, LexerOptions{}
-    };
+        BufferID::getPlaceholder(), combined, combined.data(), alloc, unused, LexerOptions{}};
 
     auto token = lexer.lex();
     if (token.kind == TokenKind::Unknown || token.rawText().empty())
@@ -132,7 +131,7 @@ Token Lexer::stringify(BumpAllocator& alloc, SourceLocation location, span<Trivi
     string_view raw = toStringView(text.copy(alloc));
 
     Diagnostics unused;
-    Lexer lexer{ BufferID::getPlaceholder(), raw, raw.data(), alloc, unused, LexerOptions{} };
+    Lexer lexer{BufferID::getPlaceholder(), raw, raw.data(), alloc, unused, LexerOptions{}};
 
     auto token = lexer.lex();
     ASSERT(token.kind == TokenKind::StringLiteral);
@@ -158,7 +157,7 @@ Trivia Lexer::commentify(BumpAllocator& alloc, Token* begin, Token* end) {
     string_view raw = toStringView(text.copy(alloc));
 
     Diagnostics unused;
-    Lexer lexer{ BufferID::getPlaceholder(), raw, raw.data(), alloc, unused, LexerOptions{} };
+    Lexer lexer{BufferID::getPlaceholder(), raw, raw.data(), alloc, unused, LexerOptions{}};
 
     auto token = lexer.lex();
     ASSERT(token.kind == TokenKind::EndOfFile);
@@ -177,8 +176,8 @@ void Lexer::splitTokens(BumpAllocator& alloc, Diagnostics& diagnostics,
     auto sourceText = sourceManager.getSourceText(loc.buffer());
     ASSERT(!sourceText.empty());
 
-    Lexer lexer{ loc.buffer(), sourceText,  sourceToken.rawText().substr(offset).data(),
-                 alloc,        diagnostics, LexerOptions{} };
+    Lexer lexer{loc.buffer(), sourceText,  sourceToken.rawText().substr(offset).data(),
+                alloc,        diagnostics, LexerOptions{}};
 
     size_t endOffset = loc.offset() + sourceToken.rawText().length();
     while (true) {
@@ -698,8 +697,8 @@ Token Lexer::lexStringLiteral() {
                             // '\%' is not an actual escape code but other tools silently allow it
                             // and major UVM headers use it, so we'll issue a (fairly quiet) warning
                             // about it. Otherwise issue a louder warning (on by default).
-                            DiagCode code =
-                                c == '%' ? diag::NonstandardEscapeCode : diag::UnknownEscapeCode;
+                            DiagCode code = c == '%' ? diag::NonstandardEscapeCode
+                                                     : diag::UnknownEscapeCode;
                             addDiag(code, offset)
                                 << string_view(curr, (size_t)utf8Len((unsigned char)c));
                         }

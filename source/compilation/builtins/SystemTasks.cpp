@@ -381,8 +381,8 @@ public:
                 return *comp.emplace<InvalidExpression>(nullptr, comp.getErrorType());
             }
 
-            auto& ref =
-                HierarchicalReferenceExpression::fromSyntax(comp, syntax.as<NameSyntax>(), context);
+            auto& ref = HierarchicalReferenceExpression::fromSyntax(comp, syntax.as<NameSyntax>(),
+                                                                    context);
 
             if (ref.kind == ExpressionKind::HierarchicalReference) {
                 auto& sym = *ref.as<HierarchicalReferenceExpression>().symbol;
@@ -602,8 +602,8 @@ public:
                 return *comp.emplace<InvalidExpression>(nullptr, comp.getErrorType());
             }
 
-            auto& ref =
-                HierarchicalReferenceExpression::fromSyntax(comp, syntax.as<NameSyntax>(), context);
+            auto& ref = HierarchicalReferenceExpression::fromSyntax(comp, syntax.as<NameSyntax>(),
+                                                                    context);
 
             if (ref.kind == ExpressionKind::HierarchicalReference) {
                 auto& sym = *ref.as<HierarchicalReferenceExpression>().symbol;
@@ -760,13 +760,13 @@ void registerSystemTasks(Compilation& c) {
     c.addSystemSubroutine(std::make_unique<ReadWriteMemTask>("$writememb", false));
     c.addSystemSubroutine(std::make_unique<ReadWriteMemTask>("$writememh", false));
     c.addSystemSubroutine(std::make_unique<SimpleSystemTask>("$system", *int_t, 0,
-                                                             std::vector<const Type*>{ string_t }));
+                                                             std::vector<const Type*>{string_t}));
     c.addSystemSubroutine(std::make_unique<SdfAnnotateTask>());
     c.addSystemSubroutine(std::make_unique<StaticAssertTask>());
 
 #define TASK(name, required, ...)                             \
     c.addSystemSubroutine(std::make_unique<SimpleSystemTask>( \
-        name, c.getVoidType(), required, std::vector<const Type*>{ __VA_ARGS__ }))
+        name, c.getVoidType(), required, std::vector<const Type*>{__VA_ARGS__}))
 
     TASK("$exit", 0, );
 
@@ -814,9 +814,9 @@ void registerSystemTasks(Compilation& c) {
 #undef TASK
 
 #define PLA_TASK(name) c.addSystemSubroutine(std::make_unique<PlaTask>(name))
-    for (auto& fmt : { "$array", "$plane" }) {
-        for (auto& gate : { "$and", "$or", "$nand", "$nor" }) {
-            for (auto& type : { "$async", "$sync" }) {
+    for (auto& fmt : {"$array", "$plane"}) {
+        for (auto& gate : {"$and", "$or", "$nand", "$nor"}) {
+            for (auto& type : {"$async", "$sync"}) {
                 std::string name(type);
                 name.append(gate);
                 name.append(fmt);

@@ -31,20 +31,22 @@ TimingControl& TimingControl::bind(const TimingControlSyntax& syntax, const Bind
             result = &Delay3Control::fromSyntax(comp, syntax.as<Delay3Syntax>(), context);
             break;
         case SyntaxKind::EventControl:
-            result =
-                &SignalEventControl::fromSyntax(comp, syntax.as<EventControlSyntax>(), context);
+            result = &SignalEventControl::fromSyntax(comp, syntax.as<EventControlSyntax>(),
+                                                     context);
             break;
         case SyntaxKind::EventControlWithExpression:
             result = &EventListControl::fromSyntax(
                 comp, *syntax.as<EventControlWithExpressionSyntax>().expr, context);
             break;
         case SyntaxKind::ImplicitEventControl:
-            result = &ImplicitEventControl::fromSyntax(
-                comp, syntax.as<ImplicitEventControlSyntax>(), context);
+            result = &ImplicitEventControl::fromSyntax(comp,
+                                                       syntax.as<ImplicitEventControlSyntax>(),
+                                                       context);
             break;
         case SyntaxKind::RepeatedEventControl:
-            result = &RepeatedEventControl::fromSyntax(
-                comp, syntax.as<RepeatedEventControlSyntax>(), context);
+            result = &RepeatedEventControl::fromSyntax(comp,
+                                                       syntax.as<RepeatedEventControlSyntax>(),
+                                                       context);
             break;
         case SyntaxKind::OneStepDelay:
             result = comp.emplace<OneStepDelayControl>(syntax.sourceRange());
@@ -76,12 +78,13 @@ TimingControl& TimingControl::bind(const PropertyExprSyntax& syntax, const BindC
         case SyntaxKind::SimplePropertyExpr:
             return bind(*syntax.as<SimplePropertyExprSyntax>().expr, context);
         case SyntaxKind::ParenthesizedPropertyExpr:
-            result = &EventListControl::fromSyntax(
-                comp, syntax.as<ParenthesizedPropertyExprSyntax>(), context);
+            result = &EventListControl::fromSyntax(comp,
+                                                   syntax.as<ParenthesizedPropertyExprSyntax>(),
+                                                   context);
             break;
         case SyntaxKind::OrPropertyExpr:
-            result =
-                &EventListControl::fromSyntax(comp, syntax.as<BinaryPropertyExprSyntax>(), context);
+            result = &EventListControl::fromSyntax(comp, syntax.as<BinaryPropertyExprSyntax>(),
+                                                   context);
             break;
         case SyntaxKind::IffPropertyExpr:
             result = &SignalEventControl::fromSyntax(comp, syntax.as<BinaryPropertyExprSyntax>(),
@@ -105,12 +108,13 @@ TimingControl& TimingControl::bind(const SequenceExprSyntax& syntax, const BindC
                                                      context);
             break;
         case SyntaxKind::ParenthesizedSequenceExpr:
-            result = &EventListControl::fromSyntax(
-                comp, syntax.as<ParenthesizedSequenceExprSyntax>(), context);
+            result = &EventListControl::fromSyntax(comp,
+                                                   syntax.as<ParenthesizedSequenceExprSyntax>(),
+                                                   context);
             break;
         case SyntaxKind::OrSequenceExpr:
-            result =
-                &EventListControl::fromSyntax(comp, syntax.as<BinarySequenceExprSyntax>(), context);
+            result = &EventListControl::fromSyntax(comp, syntax.as<BinarySequenceExprSyntax>(),
+                                                   context);
             break;
         case SyntaxKind::SignalEventExpression:
             result = &SignalEventControl::fromSyntax(comp, syntax.as<SignalEventExpressionSyntax>(),
@@ -214,7 +218,7 @@ TimingControl& Delay3Control::fromParams(Compilation& compilation,
         return badCtrl(compilation, nullptr);
     }
 
-    const Expression* delays[3] = { nullptr };
+    const Expression* delays[3] = {nullptr};
     for (size_t i = 0; i < items.size(); i++) {
         if (items[i]->kind != SyntaxKind::OrderedParamAssignment) {
             context.addDiag(diag::ExpectedNetDelay, items[i]->sourceRange());
@@ -412,8 +416,8 @@ TimingControl& EventListControl::fromSyntax(Compilation& compilation, const Synt
     if (events.size() == 1)
         return *events[0];
 
-    auto result =
-        compilation.emplace<EventListControl>(events.ccopy(compilation), syntax.sourceRange());
+    auto result = compilation.emplace<EventListControl>(events.ccopy(compilation),
+                                                        syntax.sourceRange());
     for (auto ev : events) {
         if (ev->bad())
             return badCtrl(compilation, result);
@@ -509,7 +513,7 @@ TimingControl& BlockEventListControl::fromSyntax(const BlockEventExpressionSynta
             return false;
         }
 
-        events.append({ nullptr, evSyntax.keyword.kind == TokenKind::BeginKeyword });
+        events.append({nullptr, evSyntax.keyword.kind == TokenKind::BeginKeyword});
         return true;
     };
 

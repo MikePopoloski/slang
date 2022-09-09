@@ -159,8 +159,8 @@ Expression& ElementSelectExpression::fromSyntax(Compilation& compilation, Expres
             return badExpr(compilation, nullptr);
     }
 
-    auto result =
-        compilation.emplace<ElementSelectExpression>(resultType, value, *selector, fullRange);
+    auto result = compilation.emplace<ElementSelectExpression>(resultType, value, *selector,
+                                                               fullRange);
     if (selector->bad() || result->bad())
         return badExpr(compilation, result);
 
@@ -350,14 +350,14 @@ optional<ConstantRange> ElementSelectExpression::evalIndex(EvalContext& context,
             // Unpacked arrays are stored reversed in memory, so reverse the range here.
             range = range.reverse();
             int32_t i = range.translateIndex(*index);
-            return ConstantRange{ i, i };
+            return ConstantRange{i, i};
         }
 
         // For packed arrays, we're selecting bit ranges, not necessarily single bits,
         // so multiply out by the width of each element.
         int32_t width = (int32_t)type->getBitWidth();
         int32_t i = range.translateIndex(*index) * width;
-        return ConstantRange{ i + width - 1, i };
+        return ConstantRange{i + width - 1, i};
     }
 
     if (val) {
@@ -378,7 +378,7 @@ optional<ConstantRange> ElementSelectExpression::evalIndex(EvalContext& context,
         return std::nullopt;
     }
 
-    return ConstantRange{ *index, *index };
+    return ConstantRange{*index, *index};
 }
 
 bool ElementSelectExpression::requireLValueImpl(const BindContext& context, SourceLocation location,
@@ -429,8 +429,9 @@ Expression& RangeSelectExpression::fromSyntax(Compilation& compilation, Expressi
     auto& left = bind(*syntax.left, context, extraFlags);
     auto& right = bind(*syntax.right, context, extraFlags);
 
-    auto result = compilation.emplace<RangeSelectExpression>(
-        selectionKind, compilation.getErrorType(), value, left, right, fullRange);
+    auto result = compilation.emplace<RangeSelectExpression>(selectionKind,
+                                                             compilation.getErrorType(), value,
+                                                             left, right, fullRange);
 
     if (value.bad() || left.bad() || right.bad())
         return badExpr(compilation, result);
@@ -477,7 +478,7 @@ Expression& RangeSelectExpression::fromSyntax(Compilation& compilation, Expressi
         return badExpr(compilation, result);
 
     // If the array type has a fixed range, validate that the range we're selecting is allowed.
-    SourceRange errorRange{ left.sourceRange.start(), right.sourceRange.end() };
+    SourceRange errorRange{left.sourceRange.start(), right.sourceRange.end()};
     if (valueType.hasFixedRange()) {
         ConstantRange selectionRange;
         ConstantRange valueRange = valueType.getFixedRange();
@@ -498,7 +499,7 @@ Expression& RangeSelectExpression::fromSyntax(Compilation& compilation, Expressi
             if (!lv)
                 return badExpr(compilation, result);
 
-            selectionRange = { *lv, *rv };
+            selectionRange = {*lv, *rv};
             if (selectionRange.isLittleEndian() != valueRange.isLittleEndian() &&
                 selectionRange.width() > 1) {
                 auto& diag = context.addDiag(diag::SelectEndianMismatch, errorRange);
@@ -539,9 +540,9 @@ Expression& RangeSelectExpression::fromSyntax(Compilation& compilation, Expressi
                 // Otherwise, the resulting range will start with the fixed lower bound of the type.
                 int32_t l = selectionKind == RangeSelectionKind::IndexedUp ? valueRange.lower()
                                                                            : valueRange.upper();
-                auto range =
-                    ConstantRange::getIndexedRange(l, *rv, valueRange.isLittleEndian(),
-                                                   selectionKind == RangeSelectionKind::IndexedUp);
+                auto range = ConstantRange::getIndexedRange(l, *rv, valueRange.isLittleEndian(),
+                                                            selectionKind ==
+                                                                RangeSelectionKind::IndexedUp);
                 if (!range) {
                     context.addDiag(diag::RangeWidthOverflow, errorRange);
                     return badExpr(compilation, result);
@@ -560,8 +561,8 @@ Expression& RangeSelectExpression::fromSyntax(Compilation& compilation, Expressi
         // At this point, all expressions are good, ranges have been validated and
         // we know the final width of the selection, so pick the result type and we're done.
         if (valueType.isUnpackedArray()) {
-            result->type =
-                compilation.emplace<FixedSizeUnpackedArrayType>(elementType, selectionRange);
+            result->type = compilation.emplace<FixedSizeUnpackedArrayType>(elementType,
+                                                                           selectionRange);
         }
         else {
             result->type = compilation.emplace<PackedArrayType>(elementType, selectionRange);
@@ -577,7 +578,7 @@ Expression& RangeSelectExpression::fromSyntax(Compilation& compilation, Expressi
             if (!lv)
                 return badExpr(compilation, result);
 
-            selectionRange = { *lv, *rv };
+            selectionRange = {*lv, *rv};
             if (selectionRange.isLittleEndian() && selectionRange.width() > 1) {
                 auto& diag = context.addDiag(diag::SelectEndianDynamic, errorRange);
                 diag << selectionRange.left << selectionRange.right;
@@ -614,8 +615,8 @@ Expression& RangeSelectExpression::fromConstant(Compilation& compilation, Expres
         return badExpr(compilation, result);
 
     const Type& valueType = *value.type;
-    const Type& elementType =
-        getIndexedType(compilation, context, valueType, value.sourceRange, value.sourceRange, true);
+    const Type& elementType = getIndexedType(compilation, context, valueType, value.sourceRange,
+                                             value.sourceRange, true);
 
     if (elementType.isError())
         return badExpr(compilation, result);
@@ -705,7 +706,7 @@ optional<ConstantRange> RangeSelectExpression::evalRange(EvalContext& context,
 
     ConstantRange result;
     if (selectionKind == RangeSelectionKind::Simple) {
-        result = { *li, *ri };
+        result = {*li, *ri};
     }
     else {
         bool isLittleEndian = false;
@@ -818,7 +819,7 @@ Expression& MemberAccessExpression::fromSelector(
         return badExpr(compilation, &expr);
 
     // The source range of the entire member access starts from the value being selected.
-    SourceRange range{ expr.sourceRange.start(), selector.nameRange.end() };
+    SourceRange range{expr.sourceRange.start(), selector.nameRange.end()};
 
     // Special cases for built-in iterator methods that don't cleanly fit the general
     // mold of looking up members via the type of the expression.
@@ -1225,11 +1226,11 @@ LValue MemberAccessExpression::evalLValueImpl(EvalContext& context) const {
         }
 
         int32_t width = (int32_t)type->getBitWidth();
-        lval.addBitSlice({ width - 1, 0 });
+        lval.addBitSlice({width - 1, 0});
     }
     else {
         int32_t width = (int32_t)type->getBitWidth();
-        lval.addBitSlice({ width + io - 1, io });
+        lval.addBitSlice({width + io - 1, io});
     }
 
     return lval;
@@ -1239,18 +1240,18 @@ ConstantRange MemberAccessExpression::getSelectRange() const {
     int32_t io = (int32_t)offset;
     auto& valueType = value().type->getCanonicalType();
     if (valueType.isUnpackedStruct()) {
-        return { io, io };
+        return {io, io};
     }
     else if (valueType.isUnpackedUnion()) {
-        return { 0, 0 };
+        return {0, 0};
     }
     else if (valueType.isPackedUnion()) {
         int32_t width = (int32_t)type->getBitWidth();
-        return { width - 1, 0 };
+        return {width - 1, 0};
     }
     else {
         int32_t width = (int32_t)type->getBitWidth();
-        return { width + io - 1, io };
+        return {width + io - 1, io};
     }
 }
 

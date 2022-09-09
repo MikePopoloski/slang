@@ -90,8 +90,9 @@ void ClassPropertySymbol::fromSyntax(const Scope& scope,
     }
 
     for (auto declarator : dataSyntax.declarators) {
-        auto var = comp.emplace<ClassPropertySymbol>(
-            declarator->name.valueText(), declarator->name.location(), lifetime, visibility);
+        auto var = comp.emplace<ClassPropertySymbol>(declarator->name.valueText(),
+                                                     declarator->name.location(), lifetime,
+                                                     visibility);
         var->randMode = randMode;
         var->setDeclaredType(*dataSyntax.type);
         var->setFromDeclarator(*declarator);
@@ -183,10 +184,10 @@ void ClassType::populate(const Scope& scope, const ClassDeclarationSyntax& synta
     };
 
     auto& scopeNameMap = getUnelaboratedNameMap();
-    auto makeFunc = [&](string_view funcName, const Type& returnType, bool allowOverride,
-                        bitmask<MethodFlags> extraFlags = MethodFlags::None,
-                        SubroutineKind subroutineKind =
-                            SubroutineKind::Function) -> optional<MethodBuilder> {
+    auto makeFunc =
+        [&](string_view funcName, const Type& returnType, bool allowOverride,
+            bitmask<MethodFlags> extraFlags = MethodFlags::None,
+            SubroutineKind subroutineKind = SubroutineKind::Function) -> optional<MethodBuilder> {
         if (auto it = scopeNameMap.find(funcName); it != scopeNameMap.end()) {
             auto existing = it->second;
             if (allowOverride) {
@@ -224,13 +225,13 @@ void ClassType::populate(const Scope& scope, const ClassDeclarationSyntax& synta
     if (srandom)
         srandom->addArg("seed", int_t);
 
-    auto rand_mode =
-        makeFunc("rand_mode", void_t, false, MethodFlags::None, SubroutineKind::Function);
+    auto rand_mode = makeFunc("rand_mode", void_t, false, MethodFlags::None,
+                              SubroutineKind::Function);
     if (rand_mode)
         rand_mode->addArg("on_ff", comp.getBitType());
 
-    auto constraint_mode =
-        makeFunc("constraint_mode", void_t, false, MethodFlags::None, SubroutineKind::Function);
+    auto constraint_mode = makeFunc("constraint_mode", void_t, false, MethodFlags::None,
+                                    SubroutineKind::Function);
     if (constraint_mode)
         constraint_mode->addArg("on_ff", comp.getBitType());
 
@@ -327,8 +328,8 @@ void ClassType::handleExtends(const ExtendsClauseSyntax& extendsClause, const Bi
             auto& sub = toWrap->as<MethodPrototypeSymbol>();
             if (sub.flags & MethodFlags::Pure) {
                 if (!pureVirtualError) {
-                    auto& diag =
-                        context.addDiag(diag::InheritFromAbstract, extendsClause.sourceRange());
+                    auto& diag = context.addDiag(diag::InheritFromAbstract,
+                                                 extendsClause.sourceRange());
                     diag << name;
                     diag << baseType->name;
                     diag << sub.name;
@@ -399,9 +400,10 @@ void ClassType::handleExtends(const ExtendsClauseSyntax& extendsClause, const Bi
 
             if (auto baseSub = proto.getOverride()) {
                 if (auto protoSub = proto.getSubroutine()) {
-                    SubroutineSymbol::checkVirtualMethodMatch(
-                        *context.scope, baseSub->as<SubroutineSymbol>(), *protoSub,
-                        /* allowDerivedReturn */ true);
+                    SubroutineSymbol::checkVirtualMethodMatch(*context.scope,
+                                                              baseSub->as<SubroutineSymbol>(),
+                                                              *protoSub,
+                                                              /* allowDerivedReturn */ true);
                 }
             }
         }
@@ -417,8 +419,8 @@ void ClassType::handleExtends(const ExtendsClauseSyntax& extendsClause, const Bi
                         if (baseConstraint.isPure &&
                             baseConstraint.isStatic !=
                                 member.as<ConstraintBlockSymbol>().isStatic) {
-                            auto& diag =
-                                context.addDiag(diag::MismatchStaticConstraint, member.location);
+                            auto& diag = context.addDiag(diag::MismatchStaticConstraint,
+                                                         member.location);
                             diag.addNote(diag::NoteDeclarationHere, found->location);
                         }
                     }
@@ -519,8 +521,8 @@ const Expression* ClassType::getBaseConstructorCall() const {
     if (baseConstructor && !callExpr) {
         for (auto arg : baseConstructor->as<SubroutineSymbol>().getArguments()) {
             if (!arg->getInitializer()) {
-                auto& diag =
-                    context.addDiag(diag::BaseConstructorNotCalled, extendsClause.sourceRange());
+                auto& diag = context.addDiag(diag::BaseConstructorNotCalled,
+                                             extendsClause.sourceRange());
                 diag << name << baseClass->name;
                 diag.addNote(diag::NoteDeclarationHere, baseConstructor->location);
                 return nullptr;
@@ -605,8 +607,8 @@ void ClassType::handleImplements(const ImplementsClauseSyntax& implementsClause,
                             auto parent = existing.getParentScope();
                             ASSERT(parent);
 
-                            auto& diag =
-                                context.addDiag(diag::IfaceNameConflict, nameSyntax->sourceRange());
+                            auto& diag = context.addDiag(diag::IfaceNameConflict,
+                                                         nameSyntax->sourceRange());
                             diag << member.name << iface->name << parent->asSymbol().name;
                             diag.addNote(diag::NoteDeclarationHere, toWrap->location);
                             diag.addNote(diag::NoteDeclarationHere, existing.location);
@@ -672,8 +674,8 @@ void ClassType::handleImplements(const ImplementsClauseSyntax& implementsClause,
 
                 auto impl = find(method.name);
                 if (!impl || impl->kind != SymbolKind::Subroutine) {
-                    auto& diag =
-                        context.addDiag(diag::IfaceMethodNoImpl, nameSyntax->sourceRange());
+                    auto& diag = context.addDiag(diag::IfaceMethodNoImpl,
+                                                 nameSyntax->sourceRange());
                     diag << name << method.name << iface->name;
                     continue;
                 }
@@ -681,8 +683,8 @@ void ClassType::handleImplements(const ImplementsClauseSyntax& implementsClause,
                 // The method must be virtual in order to be a valid implementation.
                 auto& implSub = impl->as<SubroutineSymbol>();
                 if (!implSub.isVirtual()) {
-                    auto& diag =
-                        context.addDiag(diag::IfaceMethodNotVirtual, nameSyntax->sourceRange());
+                    auto& diag = context.addDiag(diag::IfaceMethodNotVirtual,
+                                                 nameSyntax->sourceRange());
                     diag << name << method.name << iface->name;
                     diag.addNote(diag::NoteDeclarationHere, impl->location);
                     continue;
@@ -786,7 +788,7 @@ const Type* GenericClassDefSymbol::getSpecializationImpl(
     if (syntax)
         paramBuilder.setAssignments(*syntax);
 
-    SourceRange instRange = { instanceLoc, instanceLoc + 1 };
+    SourceRange instRange = {instanceLoc, instanceLoc + 1};
 
     SmallVectorSized<const ConstantValue*, 8> paramValues;
     SmallVectorSized<const Type*, 8> typeParams;
@@ -931,8 +933,8 @@ ConstraintBlockSymbol* ConstraintBlockSymbol::fromSyntax(
         scope.addDiag(diag::ConstraintNotInClass, syntax.sourceRange());
 
     auto nameToken = syntax.name->getLastToken();
-    auto result =
-        comp.emplace<ConstraintBlockSymbol>(comp, nameToken.valueText(), nameToken.location());
+    auto result = comp.emplace<ConstraintBlockSymbol>(comp, nameToken.valueText(),
+                                                      nameToken.location());
     result->setSyntax(syntax);
     result->setAttributes(scope, syntax.attributes);
 
@@ -958,8 +960,8 @@ ConstraintBlockSymbol& ConstraintBlockSymbol::fromSyntax(const Scope& scope,
                                                          const ConstraintPrototypeSyntax& syntax) {
     auto& comp = scope.getCompilation();
     auto nameToken = syntax.name->getLastToken();
-    auto result =
-        comp.emplace<ConstraintBlockSymbol>(comp, nameToken.valueText(), nameToken.location());
+    auto result = comp.emplace<ConstraintBlockSymbol>(comp, nameToken.valueText(),
+                                                      nameToken.location());
     result->setSyntax(syntax);
     result->setAttributes(scope, syntax.attributes);
     result->isExtern = true;
@@ -1045,8 +1047,8 @@ const Constraint& ConstraintBlockSymbol::getConstraints() const {
         }
 
         if (declStatic != isStatic) {
-            auto& diag =
-                outerScope.addDiag(diag::MismatchStaticConstraint, cds.getFirstToken().location());
+            auto& diag = outerScope.addDiag(diag::MismatchStaticConstraint,
+                                            cds.getFirstToken().location());
             diag.addNote(diag::NoteDeclarationHere, location);
         }
 

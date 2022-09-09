@@ -104,8 +104,8 @@ Definition::Definition(const Scope& scope, LookupLocation lookupLocation,
     defaultLifetime =
         SemanticFacts::getVariableLifetime(header.lifetime).value_or(VariableLifetime::Static);
     attributes = AttributeSymbol::fromSyntax(syntax.attributes, scope, lookupLocation);
-    hasNonAnsiPorts =
-        syntax.header->ports && syntax.header->ports->kind == SyntaxKind::NonAnsiPortList;
+    hasNonAnsiPorts = syntax.header->ports &&
+                      syntax.header->ports->kind == SyntaxKind::NonAnsiPortList;
 
     // Find all port parameters.
     bool hasPortParams = header.parameters != nullptr;
@@ -131,8 +131,8 @@ Definition::Definition(const Scope& scope, LookupLocation lookupLocation,
         }
         else if (member->kind == SyntaxKind::ParameterDeclarationStatement) {
             auto declaration = member->as<ParameterDeclarationStatementSyntax>().parameter;
-            bool isLocal =
-                hasPortParams || declaration->keyword.kind == TokenKind::LocalParamKeyword;
+            bool isLocal = hasPortParams ||
+                           declaration->keyword.kind == TokenKind::LocalParamKeyword;
 
             ParameterBuilder::createDecls(scope, *declaration, isLocal, /* isPort */ false,
                                           parameters);

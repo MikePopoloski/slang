@@ -15,10 +15,8 @@
 namespace slang {
 
 const static StringTable<TimeUnit> strToUnit = {
-    { "s", TimeUnit::Seconds },       { "ms", TimeUnit::Milliseconds },
-    { "us", TimeUnit::Microseconds }, { "ns", TimeUnit::Nanoseconds },
-    { "ps", TimeUnit::Picoseconds },  { "fs", TimeUnit::Femtoseconds }
-};
+    {"s", TimeUnit::Seconds},      {"ms", TimeUnit::Milliseconds}, {"us", TimeUnit::Microseconds},
+    {"ns", TimeUnit::Nanoseconds}, {"ps", TimeUnit::Picoseconds},  {"fs", TimeUnit::Femtoseconds}};
 
 bool suffixToTimeUnit(string_view timeSuffix, TimeUnit& unit) {
     return strToUnit.lookup(timeSuffix, unit);
@@ -99,8 +97,8 @@ std::ostream& operator<<(std::ostream& os, const TimeScaleValue& tv) {
 double TimeScale::apply(double value, TimeUnit unit) const {
     // First scale the value by the difference between our base and the provided unit.
     // TimeUnits are from 0-5, so we need 11 entries.
-    static constexpr double scales[] = { 1e15, 1e12, 1e9,  1e6,   1e3,  1e0,
-                                         1e-3, 1e-6, 1e-9, 1e-12, 1e-15 };
+    static constexpr double scales[] = {1e15, 1e12, 1e9,  1e6,   1e3,  1e0,
+                                        1e-3, 1e-6, 1e-9, 1e-12, 1e-15};
     int diff = int(unit) - int(base.unit);
     double scale = scales[diff + int(TimeUnit::Femtoseconds)] / int(base.magnitude);
     value *= scale;

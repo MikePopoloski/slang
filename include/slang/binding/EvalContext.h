@@ -123,8 +123,8 @@ public:
     /// object that when destructed will restore the previous caching mode.
     /// Otherwise does nothing.
     [[nodiscard]] auto disableCaching() {
-        auto guard =
-            ScopeGuard([this, saved = flags.has(EvalFlags::CacheResults), pushed = !inFunction()] {
+        auto guard = ScopeGuard(
+            [this, saved = flags.has(EvalFlags::CacheResults), pushed = !inFunction()] {
                 if (pushed)
                     popFrame();
 

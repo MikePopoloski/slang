@@ -26,10 +26,10 @@ public:
         Token value;
         bool isSimple = true;
 
-        static IntResult simple(Token value) { return { Token(), Token(), value, true }; }
+        static IntResult simple(Token value) { return {Token(), Token(), value, true}; }
 
         static IntResult vector(Token size, Token base, Token value) {
-            return { size, base, value, false };
+            return {size, base, value, false};
         }
     };
 

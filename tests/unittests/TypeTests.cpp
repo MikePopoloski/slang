@@ -179,8 +179,8 @@ endmodule
     CHECK(instance.find("BAR"));
 
     // Try to look up after the parameter but before the function; should fail.
-    CHECK(!instance.lookupName(
-        "SDF", LookupLocation::before(instance.memberAt<TransparentMemberSymbol>(0))));
+    CHECK(!instance.lookupName("SDF", LookupLocation::before(
+                                          instance.memberAt<TransparentMemberSymbol>(0))));
 
     const auto& foshizzle = instance.memberAt<SubroutineSymbol>(5);
     CHECK(instance.lookupName("SDF", LookupLocation::after(foshizzle)));
@@ -440,7 +440,7 @@ endmodule
 
     const auto& fType = instance.find<NetSymbol>("f").getType();
     CHECK(fType.isPackedArray());
-    CHECK(fType.as<PackedArrayType>().range == ConstantRange{ 0, 3 });
+    CHECK(fType.as<PackedArrayType>().range == ConstantRange{0, 3});
 
     NO_COMPILATION_ERRORS;
 }
@@ -457,14 +457,14 @@ endmodule
 
     const auto& fType = instance.find<NetSymbol>("f").getType();
     CHECK(fType.isUnpackedArray());
-    CHECK(fType.as<FixedSizeUnpackedArrayType>().range == ConstantRange{ 0, 2 });
+    CHECK(fType.as<FixedSizeUnpackedArrayType>().range == ConstantRange{0, 2});
 
     const auto& gType = instance.find<NetSymbol>("g").getType();
     CHECK(!gType.isUnpackedArray());
 
     const auto& hType = instance.find<NetSymbol>("h").getType();
     CHECK(hType.isUnpackedArray());
-    CHECK(hType.as<FixedSizeUnpackedArrayType>().range == ConstantRange{ 0, 1 });
+    CHECK(hType.as<FixedSizeUnpackedArrayType>().range == ConstantRange{0, 1});
 
     NO_COMPILATION_ERRORS;
 }
@@ -933,7 +933,7 @@ endmodule
     NO_COMPILATION_ERRORS;
 
     auto& m = compilation.getRoot().lookupName<InstanceSymbol>("m").body;
-    for (auto& name : { "s"s, "u"s, "e"s }) {
+    for (auto& name : {"s"s, "u"s, "e"s}) {
         auto& type = m.find<VariableSymbol>(name).getType();
         REQUIRE(type.isPackedArray());
         CHECK(type.as<PackedArrayType>().range.upper() == 4);

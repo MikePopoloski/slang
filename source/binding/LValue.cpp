@@ -75,8 +75,8 @@ ConstantValue LValue::load() const {
                     }
                 }
                 else if constexpr (std::is_same_v<T, ArraySlice>) {
-                    result =
-                        result.getSlice(arg.range.upper(), arg.range.lower(), arg.defaultValue);
+                    result = result.getSlice(arg.range.upper(), arg.range.lower(),
+                                             arg.defaultValue);
                 }
                 else if constexpr (std::is_same_v<T, ArrayLookup>) {
                     auto& map = *result.map();
@@ -235,7 +235,7 @@ ConstantValue* LValue::resolveInternal(optional<ConstantRange>& range) {
                         if (arg.index < 0 || size_t(arg.index) >= target->str().size())
                             target = nullptr;
                         else
-                            range = ConstantRange{ arg.index, arg.index };
+                            range = ConstantRange{arg.index, arg.index};
                     }
                     else {
                         auto elems = target->elements();
@@ -250,8 +250,8 @@ ConstantValue* LValue::resolveInternal(optional<ConstantRange>& range) {
                 }
                 else if constexpr (std::is_same_v<T, ArrayLookup>) {
                     auto& map = *target->map();
-                    auto [it, inserted] =
-                        map.try_emplace(std::move(arg.index), std::move(arg.defaultValue));
+                    auto [it, inserted] = map.try_emplace(std::move(arg.index),
+                                                          std::move(arg.defaultValue));
 
                     target = &it->second;
                 }
@@ -270,7 +270,7 @@ void LValue::addBitSlice(ConstantRange range) {
         return;
 
     auto& elems = std::get<Path>(value).elements;
-    elems.emplace(BitSlice{ range });
+    elems.emplace(BitSlice{range});
 }
 
 void LValue::addIndex(int32_t index, ConstantValue&& defaultValue) {
@@ -278,7 +278,7 @@ void LValue::addIndex(int32_t index, ConstantValue&& defaultValue) {
         return;
 
     auto& elems = std::get<Path>(value).elements;
-    elems.emplace(ElementIndex{ index, std::move(defaultValue), false });
+    elems.emplace(ElementIndex{index, std::move(defaultValue), false});
 }
 
 void LValue::addIndexOutOfBounds(ConstantValue&& defaultValue) {
@@ -286,7 +286,7 @@ void LValue::addIndexOutOfBounds(ConstantValue&& defaultValue) {
         return;
 
     auto& elems = std::get<Path>(value).elements;
-    elems.emplace(ElementIndex{ 0, std::move(defaultValue), true });
+    elems.emplace(ElementIndex{0, std::move(defaultValue), true});
 }
 
 void LValue::addArraySlice(ConstantRange range, ConstantValue&& defaultValue) {
@@ -294,7 +294,7 @@ void LValue::addArraySlice(ConstantRange range, ConstantValue&& defaultValue) {
         return;
 
     auto& elems = std::get<Path>(value).elements;
-    elems.emplace(ArraySlice{ range, std::move(defaultValue) });
+    elems.emplace(ArraySlice{range, std::move(defaultValue)});
 }
 
 void LValue::addArrayLookup(ConstantValue&& index, ConstantValue&& defaultValue) {
@@ -302,7 +302,7 @@ void LValue::addArrayLookup(ConstantValue&& index, ConstantValue&& defaultValue)
         return;
 
     auto& elems = std::get<Path>(value).elements;
-    elems.emplace(ArrayLookup{ std::move(index), std::move(defaultValue) });
+    elems.emplace(ArrayLookup{std::move(index), std::move(defaultValue)});
 }
 
 } // namespace slang

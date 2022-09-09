@@ -45,8 +45,9 @@ Expression& CallExpression::fromSyntaxImpl(Compilation& compilation, const Expre
                                            const ArrayOrRandomizeMethodExpressionSyntax* withClause,
                                            const BindContext& context) {
     if (left.kind == SyntaxKind::MemberAccessExpression) {
-        return MemberAccessExpression::fromSyntax(
-            compilation, left.as<MemberAccessExpressionSyntax>(), invocation, withClause, context);
+        return MemberAccessExpression::fromSyntax(compilation,
+                                                  left.as<MemberAccessExpressionSyntax>(),
+                                                  invocation, withClause, context);
     }
 
     if (!NameSyntax::isKind(left.kind)) {
@@ -432,8 +433,8 @@ static const Expression* bindIteratorExpr(Compilation& compilation,
 
     // Create the iterator variable and set it up with a bind context so that it
     // can be found by the iteration expression.
-    auto it =
-        compilation.emplace<IteratorSymbol>(*context.scope, iteratorName, iteratorLoc, arrayType);
+    auto it = compilation.emplace<IteratorSymbol>(*context.scope, iteratorName, iteratorLoc,
+                                                  arrayType);
     iterVar = it;
 
     BindContext iterCtx = context;
@@ -449,7 +450,7 @@ Expression& CallExpression::createSystemCall(
     const ArrayOrRandomizeMethodExpressionSyntax* withClause, SourceRange range,
     const BindContext& context, const Scope* randomizeScope) {
 
-    SystemCallInfo callInfo{ &subroutine, context.scope, {} };
+    SystemCallInfo callInfo{&subroutine, context.scope, {}};
     SmallVectorSized<const Expression*, 8> buffer;
     if (firstArg)
         buffer.append(firstArg);
@@ -474,7 +475,7 @@ Expression& CallExpression::createSystemCall(
             if (!iterOrThis || iterOrThis->bad())
                 return badExpr(compilation, iterOrThis);
 
-            callInfo.extraInfo = IteratorCallInfo{ iterOrThis, iterVar };
+            callInfo.extraInfo = IteratorCallInfo{iterOrThis, iterVar};
         }
     }
     else {
@@ -601,8 +602,9 @@ Expression& CallExpression::createSystemCall(
     }
 
     const Type& type = subroutine.checkArguments(context, buffer, range, iterOrThis);
-    auto expr = compilation.emplace<CallExpression>(
-        callInfo, type, nullptr, buffer.copy(compilation), context.getLocation(), range);
+    auto expr = compilation.emplace<CallExpression>(callInfo, type, nullptr,
+                                                    buffer.copy(compilation), context.getLocation(),
+                                                    range);
 
     if (type.isError())
         return badExpr(compilation, expr);
@@ -730,8 +732,8 @@ std::pair<const Expression*, const ValueSymbol*> CallExpression::SystemCallInfo:
     const {
     auto itInfo = std::get_if<IteratorCallInfo>(&extraInfo);
     if (!itInfo)
-        return { nullptr, nullptr };
-    return { itInfo->iterExpr, itInfo->iterVar };
+        return {nullptr, nullptr};
+    return {itInfo->iterExpr, itInfo->iterVar};
 }
 
 string_view CallExpression::getSubroutineName() const {

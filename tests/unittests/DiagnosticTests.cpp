@@ -467,8 +467,7 @@ TEST_CASE("DiagnosticEngine stuff") {
 TEST_CASE("DiagnosticEngine::setWarningOptions") {
     auto options = std::vector{
         "everything"s, "none"s,     "error"s, "error=case-gen-dup"s, "no-error=empty-member"s,
-        "empty-stmt"s, "no-extra"s, "asdf"s
-    };
+        "empty-stmt"s, "no-extra"s, "asdf"s};
 
     DiagnosticEngine engine(getSourceManager());
     engine.setDefaultWarnings();

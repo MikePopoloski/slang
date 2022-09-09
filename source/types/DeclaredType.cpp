@@ -101,9 +101,9 @@ void DeclaredType::resolveType(const BindContext& typeContext,
             if (flags.has(DeclaredTypeFlags::AllowUnboundedLiteral))
                 extraFlags = BindFlags::AllowUnboundedLiteral;
 
-            initializer =
-                &Expression::bindImplicitParam(*syntax, *initializerSyntax, initializerLocation,
-                                               initializerContext, typeContext, extraFlags);
+            initializer = &Expression::bindImplicitParam(*syntax, *initializerSyntax,
+                                                         initializerLocation, initializerContext,
+                                                         typeContext, extraFlags);
             type = initializer->type;
         }
     }
@@ -208,9 +208,10 @@ void DeclaredType::checkType(const BindContext& context) const {
             if (auto var = parent.as<FormalArgumentSymbol>().getMergedVariable()) {
                 ASSERT(!hasLink);
                 ASSERT(typeOrLink.typeSyntax);
-                mergePortTypes(
-                    context, *var, typeOrLink.typeSyntax->as<ImplicitTypeSyntax>(), parent.location,
-                    dimensions ? *dimensions : span<const VariableDimensionSyntax* const>{});
+                mergePortTypes(context, *var, typeOrLink.typeSyntax->as<ImplicitTypeSyntax>(),
+                               parent.location,
+                               dimensions ? *dimensions
+                                          : span<const VariableDimensionSyntax* const>{});
             }
             break;
         case uint32_t(DeclaredTypeFlags::Rand): {
@@ -304,8 +305,8 @@ void DeclaredType::mergePortTypes(
         if (!sourceType->isIntegral()) {
             if (sourceSymbol.kind == SymbolKind::Net &&
                 sourceSymbol.as<NetSymbol>().netType.netKind == NetType::Interconnect) {
-                auto& diag =
-                    context.addDiag(diag::InterconnectTypeSyntax, implicit.signing.range());
+                auto& diag = context.addDiag(diag::InterconnectTypeSyntax,
+                                             implicit.signing.range());
                 diag.addNote(diag::NoteDeclarationHere, sourceSymbol.location);
             }
             else {

@@ -23,8 +23,8 @@ IntegerLiteral::IntegerLiteral(BumpAllocator& alloc, const Type& type, const SVI
     if (value.isSingleWord())
         valueStorage.val = *value.getRawPtr();
     else {
-        valueStorage.pVal =
-            (uint64_t*)alloc.allocate(sizeof(uint64_t) * value.getNumWords(), alignof(uint64_t));
+        valueStorage.pVal = (uint64_t*)alloc.allocate(sizeof(uint64_t) * value.getNumWords(),
+                                                      alignof(uint64_t));
         memcpy(valueStorage.pVal, value.getRawPtr(), sizeof(uint64_t) * value.getNumWords());
     }
 }

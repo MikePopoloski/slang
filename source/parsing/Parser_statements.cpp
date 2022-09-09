@@ -178,8 +178,8 @@ ConditionalStatementSyntax& Parser::parseConditionalStatement(NamedLabelSyntax* 
     auto openParen = expect(TokenKind::OpenParenthesis);
 
     Token closeParen;
-    auto& predicate =
-        parseConditionalPredicate(parseExpression(), TokenKind::CloseParenthesis, closeParen);
+    auto& predicate = parseConditionalPredicate(parseExpression(), TokenKind::CloseParenthesis,
+                                                closeParen);
     auto& statement = parseStatement();
     auto elseClause = parseElseClause();
 
@@ -342,9 +342,9 @@ SyntaxNode& Parser::parseForInitializer() {
         auto varKeyword = consumeIf(TokenKind::VarKeyword);
         auto& type = parseDataType();
 
-        return factory.forVariableDeclaration(
-            varKeyword, &type,
-            parseDeclarator(/* allowMinTypMax */ false, /* requireInitializers */ true));
+        return factory.forVariableDeclaration(varKeyword, &type,
+                                              parseDeclarator(/* allowMinTypMax */ false,
+                                                              /* requireInitializers */ true));
     }
 
     return factory.forVariableDeclaration(Token(), nullptr, parseDeclarator());
@@ -529,8 +529,8 @@ StatementSyntax& Parser::parseAssertionStatement(NamedLabelSyntax* label, AttrLi
 
     auto openParen = expect(TokenKind::OpenParenthesis);
     auto& expr = parseExpression();
-    auto& parenExpr =
-        factory.parenthesizedExpression(openParen, expr, expect(TokenKind::CloseParenthesis));
+    auto& parenExpr = factory.parenthesizedExpression(openParen, expr,
+                                                      expect(TokenKind::CloseParenthesis));
     auto& actionBlock = parseActionBlock();
     return factory.immediateAssertionStatement(assertionKind, label, attributes, keyword, deferred,
                                                parenExpr, actionBlock);
@@ -578,8 +578,9 @@ ConcurrentAssertionStatementSyntax& Parser::parseConcurrentAssertion(NamedLabelS
     auto closeParen = expect(TokenKind::CloseParenthesis);
     auto& action = parseActionBlock();
 
-    return factory.concurrentAssertionStatement(
-        kind, label, attributes, keyword, propertyOrSequence, openParen, spec, closeParen, action);
+    return factory.concurrentAssertionStatement(kind, label, attributes, keyword,
+                                                propertyOrSequence, openParen, spec, closeParen,
+                                                action);
 }
 
 PropertySpecSyntax& Parser::parsePropertySpec() {
@@ -593,8 +594,8 @@ PropertySpecSyntax& Parser::parsePropertySpec() {
         auto iff = expect(TokenKind::IffKeyword);
         auto openParen = expect(TokenKind::OpenParenthesis);
         auto& expr = parseExpressionOrDist();
-        disable =
-            &factory.disableIff(keyword, iff, openParen, expr, expect(TokenKind::CloseParenthesis));
+        disable = &factory.disableIff(keyword, iff, openParen, expr,
+                                      expect(TokenKind::CloseParenthesis));
     }
 
     return factory.propertySpec(timing, disable, parsePropertyExpr(0));
@@ -731,9 +732,10 @@ WaitOrderStatementSyntax& Parser::parseWaitOrderStatement(NamedLabelSyntax* labe
     SmallVectorSized<TokenOrSyntax, 4> buffer;
 
     Token closeParen;
-    parseList<isIdentifierOrComma, isEndOfParenList>(
-        buffer, TokenKind::CloseParenthesis, TokenKind::Comma, closeParen, RequireItems::True,
-        diag::ExpectedIdentifier, [this] { return &parseName(); });
+    parseList<isIdentifierOrComma, isEndOfParenList>(buffer, TokenKind::CloseParenthesis,
+                                                     TokenKind::Comma, closeParen,
+                                                     RequireItems::True, diag::ExpectedIdentifier,
+                                                     [this] { return &parseName(); });
 
     return factory.waitOrderStatement(label, attributes, keyword, openParen, buffer.copy(alloc),
                                       closeParen, parseActionBlock());
@@ -926,7 +928,7 @@ RsRuleSyntax& Parser::parseRsRule() {
     if (randJoin && prods.size() < 2) {
         SourceRange range = randJoin->sourceRange();
         if (!prods.empty())
-            range = SourceRange{ range.start(), prods.back()->getLastToken().range().end() };
+            range = SourceRange{range.start(), prods.back()->getLastToken().range().end()};
 
         addDiag(diag::RandJoinNotEnough, range);
     }

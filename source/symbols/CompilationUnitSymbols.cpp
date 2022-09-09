@@ -21,8 +21,8 @@ CompilationUnitSymbol::CompilationUnitSymbol(Compilation& compilation) :
 
     // All compilation units import the std package automatically.
     auto& stdPkg = compilation.getStdPackage();
-    auto import =
-        compilation.emplace<WildcardImportSymbol>(stdPkg.name, SourceLocation::NoLocation);
+    auto import = compilation.emplace<WildcardImportSymbol>(stdPkg.name,
+                                                            SourceLocation::NoLocation);
     import->setPackage(stdPkg);
     addWildcardImport(*import);
 }

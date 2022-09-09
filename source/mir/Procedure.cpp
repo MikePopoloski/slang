@@ -269,7 +269,7 @@ void Procedure::emitCall(SysCallKind sysCall, span<const MIRValue> args) {
 }
 
 void Procedure::emitCall(SysCallKind sysCall, MIRValue arg0) {
-    emitCall(sysCall, { &arg0, 1 });
+    emitCall(sysCall, {&arg0, 1});
 }
 
 MIRValue Procedure::emitInstr(InstrKind kind, const Type& type, MIRValue op0) {
@@ -333,7 +333,7 @@ span<const MIRValue> Procedure::copyValues(span<const MIRValue> values) {
     auto data = (MIRValue*)builder.allocate(bytes, alignof(MIRValue));
     memcpy(data, values.data(), bytes);
 
-    return { data, values.size() };
+    return {data, values.size()};
 }
 
 } // namespace slang::mir

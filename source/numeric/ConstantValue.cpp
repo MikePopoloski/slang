@@ -195,7 +195,7 @@ ConstantValue ConstantValue::getSlice(int32_t upper, int32_t lower,
 
     if (isUnpacked()) {
         span<const ConstantValue> elems = elements();
-        std::vector<ConstantValue> result{ size_t(upper - lower + 1) };
+        std::vector<ConstantValue> result{size_t(upper - lower + 1)};
         ConstantValue* dest = result.data();
 
         for (int32_t i = lower; i <= upper; i++) {

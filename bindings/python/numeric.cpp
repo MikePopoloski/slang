@@ -327,7 +327,7 @@ void registerNumeric(py::module_& m) {
     py::class_<ConstantRange>(m, "ConstantRange")
         .def(py::init<>())
         .def(py::init([](int left, int right) {
-            return ConstantRange{ left, right };
+            return ConstantRange{left, right};
         }))
         .def_readwrite("left", &ConstantRange::left)
         .def_readwrite("right", &ConstantRange::right)

@@ -151,10 +151,10 @@ void registerSyntax(py::module_& m) {
     py::class_<SyntaxTree, std::shared_ptr<SyntaxTree>>(m, "SyntaxTree")
         .def_readonly("isLibrary", &SyntaxTree::isLibrary)
         .def_static("fromFile", py::overload_cast<string_view>(&SyntaxTree::fromFile))
-        .def_static(
-            "fromFile",
-            py::overload_cast<string_view, SourceManager&, const Bag&>(&SyntaxTree::fromFile),
-            "path"_a, "sourceManager"_a, "options"_a = Bag())
+        .def_static("fromFile",
+                    py::overload_cast<string_view, SourceManager&, const Bag&>(
+                        &SyntaxTree::fromFile),
+                    "path"_a, "sourceManager"_a, "options"_a = Bag())
         .def_static("fromFiles", py::overload_cast<span<const string_view>>(&SyntaxTree::fromFiles))
         .def_static("fromFiles",
                     py::overload_cast<span<const string_view>, SourceManager&, const Bag&>(

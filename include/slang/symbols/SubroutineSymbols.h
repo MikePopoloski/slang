@@ -82,7 +82,7 @@ public:
     SubroutineKind subroutineKind;
     Visibility visibility = Visibility::Public;
     bitmask<MethodFlags> flags = MethodFlags::None;
-    SymbolIndex outOfBlockIndex{ 0 };
+    SymbolIndex outOfBlockIndex{0};
 
     const VariableSymbol* returnValVar = nullptr;
     const VariableSymbol* thisVar = nullptr;

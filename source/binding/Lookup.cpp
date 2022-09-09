@@ -33,8 +33,8 @@
 
 namespace slang {
 
-const LookupLocation LookupLocation::max{ nullptr, UINT_MAX };
-const LookupLocation LookupLocation::min{ nullptr, 0 };
+const LookupLocation LookupLocation::max{nullptr, UINT_MAX};
+const LookupLocation LookupLocation::min{nullptr, 0};
 
 LookupLocation LookupLocation::before(const Symbol& symbol) {
     return LookupLocation(symbol.getParentScope(), (uint32_t)symbol.getIndex());
@@ -203,7 +203,7 @@ const NameSyntax* splitScopedName(const ScopedNameSyntax& syntax,
     // left-recursive name tree, so that's all we'll bother to handle.
     const ScopedNameSyntax* scoped = &syntax;
     while (true) {
-        nameParts.append({ *scoped->right, scoped->separator.location(), scoped->right->kind });
+        nameParts.append({*scoped->right, scoped->separator.location(), scoped->right->kind});
         if (scoped->separator.kind == TokenKind::Dot)
             colonParts = 0;
         else
@@ -290,7 +290,7 @@ bool lookupDownward(span<const NamePlusLoc> nameParts, NameComponents name,
             for (; it != nameParts.rend(); it++) {
                 auto& memberName = it->name;
                 result.selectors.append(LookupResult::MemberSelector{
-                    memberName.text, it->dotLocation, memberName.range });
+                    memberName.text, it->dotLocation, memberName.range});
 
                 result.selectors.appendRange(memberName.selectors);
 
@@ -665,7 +665,7 @@ bool resolveColonNames(SmallVectorSized<NamePlusLoc, 8>& nameParts, int colonPar
             Token last = name.selectors.back()->getLastToken();
 
             result.addDiag(*context.scope, diag::InvalidScopeIndexExpression,
-                           { first.location(), last.location() });
+                           {first.location(), last.location()});
             return false;
         }
 
@@ -853,8 +853,8 @@ void Lookup::name(const NameSyntax& syntax, const BindContext& context, bitmask<
             // If this is a system name, look up directly in the compilation.
             Token nameToken = syntax.as<SystemNameSyntax>().systemIdentifier;
             result.found = nullptr;
-            result.systemSubroutine =
-                scope.getCompilation().getSystemSubroutine(nameToken.valueText());
+            result.systemSubroutine = scope.getCompilation().getSystemSubroutine(
+                nameToken.valueText());
 
             if (!result.systemSubroutine) {
                 result.addDiag(scope, diag::UnknownSystemName, nameToken.range())
@@ -976,8 +976,8 @@ static const Symbol* selectSingleChild(const Symbol& symbol, const BitSelectSynt
             return nullptr;
 
         if (!array.range.containsPoint(*index)) {
-            auto& diag =
-                result.addDiag(*context.scope, diag::ScopeIndexOutOfRange, syntax.sourceRange());
+            auto& diag = result.addDiag(*context.scope, diag::ScopeIndexOutOfRange,
+                                        syntax.sourceRange());
             diag << *index;
             diag.addNote(diag::NoteDeclarationHere, symbol.location);
             return nullptr;
@@ -995,8 +995,8 @@ static const Symbol* selectSingleChild(const Symbol& symbol, const BitSelectSynt
                 return entry;
         }
 
-        auto& diag =
-            result.addDiag(*context.scope, diag::ScopeIndexOutOfRange, syntax.sourceRange());
+        auto& diag = result.addDiag(*context.scope, diag::ScopeIndexOutOfRange,
+                                    syntax.sourceRange());
         diag << *index;
         diag.addNote(diag::NoteDeclarationHere, symbol.location);
         return nullptr;
@@ -1017,7 +1017,7 @@ static const Symbol* selectChildRange(const InstanceArraySymbol& array,
 
     ConstantRange selRange;
     if (syntax.kind == SyntaxKind::SimpleRangeSelect) {
-        selRange = { *left, *right };
+        selRange = {*left, *right};
         if (selRange.isLittleEndian() != array.range.isLittleEndian() && selRange.width() > 1) {
             auto& diag = result.addDiag(*context.scope, diag::InstanceArrayEndianMismatch,
                                         syntax.sourceRange());
@@ -1032,9 +1032,9 @@ static const Symbol* selectChildRange(const InstanceArraySymbol& array,
             return nullptr;
         }
 
-        auto range =
-            ConstantRange::getIndexedRange(*left, *right, array.range.isLittleEndian(),
-                                           syntax.kind == SyntaxKind::AscendingRangeSelect);
+        auto range = ConstantRange::getIndexedRange(*left, *right, array.range.isLittleEndian(),
+                                                    syntax.kind ==
+                                                        SyntaxKind::AscendingRangeSelect);
         if (!range) {
             result.addDiag(*context.scope, diag::RangeWidthOverflow, syntax.sourceRange());
             return nullptr;
@@ -1044,8 +1044,8 @@ static const Symbol* selectChildRange(const InstanceArraySymbol& array,
     }
 
     if (!array.range.containsPoint(selRange.left) || !array.range.containsPoint(selRange.right)) {
-        auto& diag =
-            result.addDiag(*context.scope, diag::BadInstanceArrayRange, syntax.sourceRange());
+        auto& diag = result.addDiag(*context.scope, diag::BadInstanceArrayRange,
+                                    syntax.sourceRange());
         diag << selRange.left << selRange.right;
         diag << array.range.left << array.range.right;
         return nullptr;
@@ -1058,7 +1058,7 @@ static const Symbol* selectChildRange(const InstanceArraySymbol& array,
 
     auto elems = array.elements.subspan(size_t(begin), size_t(end - begin) + 1);
 
-    ConstantRange newRange{ int32_t(selRange.width()) - 1, 0 };
+    ConstantRange newRange{int32_t(selRange.width()) - 1, 0};
     if (!selRange.isLittleEndian())
         newRange = newRange.reverse();
 
@@ -1076,8 +1076,8 @@ const Symbol* Lookup::selectChild(const Symbol& initialSymbol,
             symbol->kind != SymbolKind::GenerateBlockArray) {
             // I think it's safe to assume that the symbol name here will not be empty
             // because if it was, it'd be an instance array or generate array.
-            auto& diag =
-                result.addDiag(*context.scope, diag::ScopeNotIndexable, syntax->sourceRange());
+            auto& diag = result.addDiag(*context.scope, diag::ScopeNotIndexable,
+                                        syntax->sourceRange());
             diag << symbol->name;
             diag.addNote(diag::NoteDeclarationHere, symbol->location);
             return nullptr;
@@ -1105,9 +1105,9 @@ const Symbol* Lookup::selectChild(const Symbol& initialSymbol,
                 if (symbol->kind != SymbolKind::InstanceArray)
                     return selectorError();
 
-                symbol =
-                    selectChildRange(symbol->as<InstanceArraySymbol>(),
-                                     syntax->selector->as<RangeSelectSyntax>(), context, result);
+                symbol = selectChildRange(symbol->as<InstanceArraySymbol>(),
+                                          syntax->selector->as<RangeSelectSyntax>(), context,
+                                          result);
                 if (!symbol)
                     return nullptr;
                 break;
@@ -1225,9 +1225,9 @@ std::pair<const ClassType*, bool> Lookup::getContainingClass(const Scope& scope)
     }
 
     if (parent->kind == SymbolKind::ClassType)
-        return { &parent->as<ClassType>(), inStatic };
+        return {&parent->as<ClassType>(), inStatic};
 
-    return { nullptr, inStatic };
+    return {nullptr, inStatic};
 }
 
 Visibility Lookup::getVisibility(const Symbol& symbol) {
@@ -1600,7 +1600,7 @@ void Lookup::unqualifiedImpl(const Scope& scope, string_view name, LookupLocatio
 
             const Symbol* imported = package->findForImport(name);
             if (imported && importDedup.emplace(imported).second)
-                imports.emplace(Import{ imported, import });
+                imports.emplace(Import{imported, import});
         }
 
         if (!imports.empty()) {
@@ -1941,8 +1941,8 @@ void Lookup::reportUndeclared(const Scope& initialScope, string_view name, Sourc
                     if (member.name.empty() || !isViable(member))
                         continue;
 
-                    int dist =
-                        editDistance(member.name, name, /* allowReplacements */ true, bestDistance);
+                    int dist = editDistance(member.name, name, /* allowReplacements */ true,
+                                            bestDistance);
                     if (dist < bestDistance) {
                         closestSym = &member;
                         bestDistance = dist;

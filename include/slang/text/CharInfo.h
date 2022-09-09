@@ -138,8 +138,8 @@ constexpr char getHexForDigit(uint32_t num, bool lowerCase = false) {
 /// Gets the length of the UTF-8 sequence starting with the given first character.
 /// Returns 0 if the given character is invalid for a UTF-8 sequence.
 constexpr int utf8Len(unsigned char first) {
-    constexpr const char lengths[] = { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-                                       0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 2, 2, 3, 3, 4, 0 };
+    constexpr const char lengths[] = {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+                                      0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 2, 2, 3, 3, 4, 0};
     return lengths[first >> 3];
 }
 
@@ -162,10 +162,10 @@ constexpr int utf8Len(unsigned char first) {
 /// error, but it will always advance at least one byte.
 ///
 constexpr const char* utf8Decode(const char* b, uint32_t* c, int* e) {
-    constexpr const int masks[] = { 0x00, 0x7f, 0x1f, 0x0f, 0x07 };
-    constexpr const uint32_t mins[] = { 4194304, 0, 128, 2048, 65536 };
-    constexpr const int shiftc[] = { 0, 18, 12, 6, 0 };
-    constexpr const int shifte[] = { 0, 6, 4, 2, 0 };
+    constexpr const int masks[] = {0x00, 0x7f, 0x1f, 0x0f, 0x07};
+    constexpr const uint32_t mins[] = {4194304, 0, 128, 2048, 65536};
+    constexpr const int shiftc[] = {0, 18, 12, 6, 0};
+    constexpr const int shifte[] = {0, 6, 4, 2, 0};
 
     using uc = unsigned char;
     int len = utf8Len(uc(*b));

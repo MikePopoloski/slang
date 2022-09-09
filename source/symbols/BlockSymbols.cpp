@@ -53,10 +53,10 @@ static std::pair<string_view, SourceLocation> getLabel(const StatementSyntax& sy
                                                        SourceLocation defaultLoc) {
     if (syntax.label) {
         auto token = syntax.label->name;
-        return { token.valueText(), token.location() };
+        return {token.valueText(), token.location()};
     }
 
-    return { ""sv, defaultLoc };
+    return {""sv, defaultLoc};
 }
 
 static StatementBlockSymbol* createBlock(
@@ -101,8 +101,8 @@ StatementBlockSymbol& StatementBlockSymbol::fromSyntax(const Scope& scope,
         std::tie(name, loc) = getLabel(syntax, syntax.begin.location());
     }
 
-    auto result =
-        createBlock(scope, syntax, name, loc, SemanticFacts::getStatementBlockKind(syntax));
+    auto result = createBlock(scope, syntax, name, loc,
+                              SemanticFacts::getStatementBlockKind(syntax));
 
     result->blocks = Statement::createAndAddBlockItems(*result, syntax.items);
     return *result;
@@ -118,15 +118,15 @@ StatementBlockSymbol& StatementBlockSymbol::fromSyntax(const Scope& scope,
     auto& comp = scope.getCompilation();
     const VariableSymbol* lastVar = nullptr;
     for (auto init : syntax.initializers) {
-        auto& var =
-            VariableSymbol::fromSyntax(comp, init->as<ForVariableDeclarationSyntax>(), lastVar);
+        auto& var = VariableSymbol::fromSyntax(comp, init->as<ForVariableDeclarationSyntax>(),
+                                               lastVar);
 
         lastVar = &var;
         result->addMember(var);
     }
 
-    result->blocks =
-        Statement::createAndAddBlockItems(*result, *syntax.statement, /* labelHandled */ false);
+    result->blocks = Statement::createAndAddBlockItems(*result, *syntax.statement,
+                                                       /* labelHandled */ false);
     return *result;
 }
 
@@ -134,8 +134,8 @@ StatementBlockSymbol& StatementBlockSymbol::fromSyntax(const Scope& scope,
                                                        const ForeachLoopStatementSyntax& syntax) {
     auto [name, loc] = getLabel(syntax, syntax.keyword.location());
     auto result = createBlock(scope, syntax, name, loc);
-    result->blocks =
-        Statement::createAndAddBlockItems(*result, *syntax.statement, /* labelHandled */ false);
+    result->blocks = Statement::createAndAddBlockItems(*result, *syntax.statement,
+                                                       /* labelHandled */ false);
 
     // This block needs elaboration to collect iteration variables.
     result->setNeedElaboration();
@@ -576,8 +576,8 @@ GenerateBlockArraySymbol& GenerateBlockArraySymbol::fromSyntax(Compilation& comp
                                                                uint32_t constructIndex) {
     string_view name = getGenerateBlockName(*syntax.block);
     SourceLocation loc = syntax.block->getFirstToken().location();
-    auto result =
-        compilation.emplace<GenerateBlockArraySymbol>(compilation, name, loc, constructIndex);
+    auto result = compilation.emplace<GenerateBlockArraySymbol>(compilation, name, loc,
+                                                                constructIndex);
     result->setSyntax(syntax);
     result->setAttributes(*context.scope, syntax.attributes);
 
@@ -611,8 +611,8 @@ GenerateBlockArraySymbol& GenerateBlockArraySymbol::fromSyntax(Compilation& comp
     auto createBlock = [&](ConstantValue value, bool isInstantiated) {
         // Spec: each generate block gets their own scope, with an implicit
         // localparam of the same name as the genvar.
-        auto block =
-            compilation.emplace<GenerateBlockSymbol>(compilation, "", loc, 1u, isInstantiated);
+        auto block = compilation.emplace<GenerateBlockSymbol>(compilation, "", loc, 1u,
+                                                              isInstantiated);
         auto implicitParam = compilation.emplace<ParameterSymbol>(
             genvar.valueText(), genvar.location(), true /* isLocal */, false /* isPort */);
 
@@ -637,8 +637,9 @@ GenerateBlockArraySymbol& GenerateBlockArraySymbol::fromSyntax(Compilation& comp
         return *result;
 
     // Fabricate a local variable that will serve as the loop iteration variable.
-    auto& iterScope = *compilation.emplace<StatementBlockSymbol>(
-        compilation, "", loc, StatementBlockKind::Sequential, VariableLifetime::Automatic);
+    auto& iterScope = *compilation.emplace<StatementBlockSymbol>(compilation, "", loc,
+                                                                 StatementBlockKind::Sequential,
+                                                                 VariableLifetime::Automatic);
     auto& local = *compilation.emplace<VariableSymbol>(genvar.valueText(), genvar.location(),
                                                        VariableLifetime::Automatic);
     local.setType(compilation.getIntegerType());
@@ -650,8 +651,8 @@ GenerateBlockArraySymbol& GenerateBlockArraySymbol::fromSyntax(Compilation& comp
     // Bind the stop and iteration expressions so we can reuse them on each iteration.
     BindContext iterContext(iterScope, LookupLocation::max);
     auto& stopExpr = Expression::bind(*syntax.stopExpr, iterContext);
-    auto& iterExpr =
-        Expression::bind(*syntax.iterationExpr, iterContext, BindFlags::AssignmentAllowed);
+    auto& iterExpr = Expression::bind(*syntax.iterationExpr, iterContext,
+                                      BindFlags::AssignmentAllowed);
     if (stopExpr.bad() || iterExpr.bad())
         return *result;
 

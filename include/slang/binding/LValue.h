@@ -25,7 +25,7 @@ public:
     LValue(LValue&& other) = default;
 
     explicit LValue(Concat&& concat) : value(std::move(concat)) {}
-    explicit LValue(ConstantValue& base) : value(Path{ base }) {}
+    explicit LValue(ConstantValue& base) : value(Path{base}) {}
 
     bool bad() const { return std::holds_alternative<std::monostate>(value); }
     explicit operator bool() const { return !bad(); }

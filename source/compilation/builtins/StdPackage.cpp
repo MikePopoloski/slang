@@ -26,7 +26,7 @@ static const Symbol& createProcessClass(Compilation& c) {
     stateEnum->systemId = INT32_MAX - 2048;
 
     uint64_t index = 0;
-    for (auto name : { "FINISHED", "RUNNING", "WAITING", "SUSPENDED", "KILLED" }) {
+    for (auto name : {"FINISHED", "RUNNING", "WAITING", "SUSPENDED", "KILLED"}) {
         auto ev = c.emplace<EnumValueSymbol>(name, NL);
         ev->setType(*stateEnum);
         stateEnum->addMember(*ev);

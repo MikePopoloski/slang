@@ -76,15 +76,15 @@ void NumericTokenFlags::setOutOfRange(bool value) {
     raw |= uint8_t(value) << 6;
 }
 
-Trivia::Trivia() : rawText{ "", 0 }, kind(TriviaKind::Unknown) {
+Trivia::Trivia() : rawText{"", 0}, kind(TriviaKind::Unknown) {
 }
 
 Trivia::Trivia(TriviaKind kind, string_view rawText) :
-    rawText{ rawText.data(), (uint32_t)rawText.size() }, kind(kind) {
+    rawText{rawText.data(), (uint32_t)rawText.size()}, kind(kind) {
 }
 
 Trivia::Trivia(TriviaKind kind, span<Token const> tokens) :
-    tokens{ tokens.data(), (uint32_t)tokens.size() }, kind(kind) {
+    tokens{tokens.data(), (uint32_t)tokens.size()}, kind(kind) {
 }
 
 Trivia::Trivia(TriviaKind kind, SyntaxNode* syntax) : syntaxNode(syntax), kind(kind) {
@@ -140,14 +140,14 @@ string_view Trivia::getRawText() const {
         default:
             if (hasFullLocation)
                 return fullLocation->text;
-            return { rawText.ptr, rawText.len };
+            return {rawText.ptr, rawText.len};
     }
 }
 
 span<Token const> Trivia::getSkippedTokens() const {
     if (kind != TriviaKind::SkippedTokens)
         return {};
-    return { tokens.ptr, tokens.len };
+    return {tokens.ptr, tokens.len};
 }
 
 Token::Token() :
@@ -189,8 +189,8 @@ Token::Token(BumpAllocator& alloc, TokenKind kind, span<Trivia const> trivia, st
     if (value.isSingleWord())
         storage.val = *value.getRawPtr();
     else {
-        storage.pVal =
-            (uint64_t*)alloc.allocate(sizeof(uint64_t) * value.getNumWords(), alignof(uint64_t));
+        storage.pVal = (uint64_t*)alloc.allocate(sizeof(uint64_t) * value.getNumWords(),
+                                                 alignof(uint64_t));
         memcpy(storage.pVal, value.getRawPtr(), sizeof(uint64_t) * value.getNumWords());
     }
 
@@ -281,10 +281,10 @@ span<Trivia const> Token::trivia() const {
     if (triviaCountSmall == MaxTriviaSmallCount + 1) {
         size_t size;
         memcpy(&size, ptr + sizeof(trivia), sizeof(size_t));
-        return { trivia, size };
+        return {trivia, size};
     }
 
-    return { trivia, triviaCountSmall };
+    return {trivia, triviaCountSmall};
 }
 
 std::string Token::toString() const {

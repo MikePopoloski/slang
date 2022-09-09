@@ -260,8 +260,9 @@ void Scope::addMembers(const SyntaxNode& syntax) {
             break;
         case SyntaxKind::FunctionDeclaration:
         case SyntaxKind::TaskDeclaration: {
-            auto subroutine = SubroutineSymbol::fromSyntax(
-                compilation, syntax.as<FunctionDeclarationSyntax>(), *this, /* outOfBlock */ false);
+            auto subroutine = SubroutineSymbol::fromSyntax(compilation,
+                                                           syntax.as<FunctionDeclarationSyntax>(),
+                                                           *this, /* outOfBlock */ false);
             if (subroutine)
                 addMember(*subroutine);
             break;
@@ -293,8 +294,9 @@ void Scope::addMembers(const SyntaxNode& syntax) {
         }
         case SyntaxKind::ParameterDeclarationStatement: {
             SmallVectorSized<Symbol*, 8> params;
-            ParameterSymbolBase::fromLocalSyntax(
-                *this, syntax.as<ParameterDeclarationStatementSyntax>(), params);
+            ParameterSymbolBase::fromLocalSyntax(*this,
+                                                 syntax.as<ParameterDeclarationStatementSyntax>(),
+                                                 params);
             for (auto param : params)
                 addMember(*param);
             break;
@@ -306,8 +308,9 @@ void Scope::addMembers(const SyntaxNode& syntax) {
         case SyntaxKind::InitialBlock:
         case SyntaxKind::FinalBlock: {
             span<const StatementBlockSymbol* const> additional;
-            auto& block = ProceduralBlockSymbol::fromSyntax(
-                *this, syntax.as<ProceduralBlockSyntax>(), additional);
+            auto& block = ProceduralBlockSymbol::fromSyntax(*this,
+                                                            syntax.as<ProceduralBlockSyntax>(),
+                                                            additional);
 
             for (auto b : additional)
                 addMember(*b);
@@ -592,7 +595,7 @@ void Scope::insertMember(const Symbol* member, const Symbol* at, bool isElaborat
     ASSERT(!member->nextInScope);
 
     if (!at) {
-        member->indexInScope = SymbolIndex{ 1 };
+        member->indexInScope = SymbolIndex{1};
         member->nextInScope = std::exchange(firstMember, member);
     }
     else {
@@ -1313,8 +1316,8 @@ void Scope::addWildcardImport(const PackageImportItemSyntax& item,
         }
     }
 
-    auto import =
-        compilation.emplace<WildcardImportSymbol>(item.package.valueText(), item.item.location());
+    auto import = compilation.emplace<WildcardImportSymbol>(item.package.valueText(),
+                                                            item.item.location());
 
     import->setSyntax(item);
     import->setAttributes(*this, attributes);

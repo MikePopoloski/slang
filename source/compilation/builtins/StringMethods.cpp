@@ -30,8 +30,8 @@ class StringPutcMethod : public SimpleSystemSubroutine {
 public:
     explicit StringPutcMethod(Compilation& comp) :
         SimpleSystemSubroutine("putc", SubroutineKind::Function, 2,
-                               { &comp.getIntType(), &comp.getByteType() }, comp.getVoidType(),
-                               true, /* isFirstArgLValue */ true) {}
+                               {&comp.getIntType(), &comp.getByteType()}, comp.getVoidType(), true,
+                               /* isFirstArgLValue */ true) {}
 
     ConstantValue eval(EvalContext& context, const Args& args, SourceRange,
                        const CallExpression::SystemCallInfo&) const final {
@@ -57,7 +57,7 @@ public:
 class StringGetcMethod : public SimpleSystemSubroutine {
 public:
     explicit StringGetcMethod(Compilation& comp) :
-        SimpleSystemSubroutine("getc", SubroutineKind::Function, 1, { &comp.getIntType() },
+        SimpleSystemSubroutine("getc", SubroutineKind::Function, 1, {&comp.getIntType()},
                                comp.getByteType(), true) {}
 
     ConstantValue eval(EvalContext& context, const Args& args, SourceRange,
@@ -103,7 +103,7 @@ private:
 class StringCompareMethod : public SimpleSystemSubroutine {
 public:
     StringCompareMethod(Compilation& comp, const std::string& name, bool ignoreCase) :
-        SimpleSystemSubroutine(name, SubroutineKind::Function, 1, { &comp.getStringType() },
+        SimpleSystemSubroutine(name, SubroutineKind::Function, 1, {&comp.getStringType()},
                                comp.getIntType(), true),
         ignoreCase(ignoreCase) {}
 
@@ -146,7 +146,7 @@ class StringSubstrMethod : public SimpleSystemSubroutine {
 public:
     explicit StringSubstrMethod(Compilation& comp) :
         SimpleSystemSubroutine("substr", SubroutineKind::Function, 2,
-                               { &comp.getIntType(), &comp.getIntType() }, comp.getStringType(),
+                               {&comp.getIntType(), &comp.getIntType()}, comp.getStringType(),
                                true) {}
 
     ConstantValue eval(EvalContext& context, const Args& args, SourceRange,
@@ -214,7 +214,7 @@ public:
 class StringItoAMethod : public SimpleSystemSubroutine {
 public:
     StringItoAMethod(Compilation& comp, const std::string& name, LiteralBase base) :
-        SimpleSystemSubroutine(name, SubroutineKind::Function, 1, { &comp.getIntegerType() },
+        SimpleSystemSubroutine(name, SubroutineKind::Function, 1, {&comp.getIntegerType()},
                                comp.getVoidType(), true, /* isFirstArgLValue */ true),
         base(base) {}
 
@@ -236,7 +236,7 @@ private:
 class StringRealtoAMethod : public SimpleSystemSubroutine {
 public:
     explicit StringRealtoAMethod(Compilation& comp) :
-        SimpleSystemSubroutine("realtoa", SubroutineKind::Function, 1, { &comp.getRealType() },
+        SimpleSystemSubroutine("realtoa", SubroutineKind::Function, 1, {&comp.getRealType()},
                                comp.getVoidType(), true, /* isFirstArgLValue */ true) {}
 
     ConstantValue eval(EvalContext& context, const Args& args, SourceRange,

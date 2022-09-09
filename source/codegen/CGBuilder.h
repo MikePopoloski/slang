@@ -77,7 +77,7 @@ public:
 
         llvm::Value* ptr = addr.getPointer();
         llvm::Type* ptrType = ptr->getType()->getScalarType()->getPointerElementType();
-        return Address(CreateInBoundsGEP(ptrType, ptr, { getSize(0), getSize(index) }, ""), align);
+        return Address(CreateInBoundsGEP(ptrType, ptr, {getSize(0), getSize(index)}, ""), align);
     }
 
 private:

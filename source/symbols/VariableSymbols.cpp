@@ -172,8 +172,9 @@ void FormalArgumentSymbol::fromSyntax(const Scope& scope, const PortDeclarationS
     }
 
     for (auto declarator : syntax.declarators) {
-        auto arg = comp.emplace<FormalArgumentSymbol>(
-            declarator->name.valueText(), declarator->name.location(), direction, lifetime);
+        auto arg = comp.emplace<FormalArgumentSymbol>(declarator->name.valueText(),
+                                                      declarator->name.location(), direction,
+                                                      lifetime);
         arg->setDeclaredType(*header.dataType);
         arg->setFromDeclarator(*declarator);
         arg->setAttributes(scope, syntax.attributes);
@@ -449,8 +450,7 @@ void ClockVarSymbol::fromSyntax(const Scope& scope, const ClockingItemSyntax& sy
 
                 if (dir != ArgumentDirection::In) {
                     auto& valExpr = ValueExpressionBase::fromSymbol(
-                        context, *sym, false,
-                        { arg->location, arg->location + arg->name.length() });
+                        context, *sym, false, {arg->location, arg->location + arg->name.length()});
 
                     sym->as<ValueSymbol>().addDriver(DriverKind::Continuous, valExpr,
                                                      scope.asSymbol(), AssignFlags::ClockVar);

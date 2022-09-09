@@ -45,8 +45,8 @@ void Preprocessor::createBuiltInMacro(string_view name, int value, string_view v
                       SVInt(32, uint64_t(value), true)));
 
     MacroDef def;
-    def.syntax =
-        alloc.emplace<DefineDirectiveSyntax>(directive, nameTok, nullptr, body.copy(alloc));
+    def.syntax = alloc.emplace<DefineDirectiveSyntax>(directive, nameTok, nullptr,
+                                                      body.copy(alloc));
     def.builtIn = true;
     macros[name] = def;
 
@@ -78,7 +78,7 @@ MacroActualArgumentListSyntax* Preprocessor::handleTopLevelMacro(Token directive
 
     // Expand out the macro
     SmallVectorSized<Token, 32> buffer;
-    MacroExpansion expansion{ sourceManager, alloc, buffer, directive, true };
+    MacroExpansion expansion{sourceManager, alloc, buffer, directive, true};
     if (!expandMacro(macro, expansion, actualArgs))
         return actualArgs;
 
@@ -166,8 +166,8 @@ bool Preprocessor::applyMacroOps(span<Token const> tokens, SmallVector<Token>& d
                     if (stringifyBuffer.empty() || tokens[i + 1].kind == TokenKind::MacroQuote)
                         addDiag(diag::IgnoredMacroPaste, token.location());
                     else {
-                        newToken =
-                            Lexer::concatenateTokens(alloc, stringifyBuffer.back(), tokens[i + 1]);
+                        newToken = Lexer::concatenateTokens(alloc, stringifyBuffer.back(),
+                                                            tokens[i + 1]);
                         if (newToken) {
                             stringifyBuffer.pop();
                             ++i;
@@ -319,8 +319,8 @@ bool Preprocessor::expandMacro(MacroDef macro, MacroExpansion& expansion,
     if (!directive->formalArguments) {
         // each macro expansion gets its own location entry
         SourceLocation start = body[0].location();
-        SourceLocation expansionLoc =
-            sourceManager.createExpansionLoc(start, expansion.getRange(), macroName);
+        SourceLocation expansionLoc = sourceManager.createExpansionLoc(start, expansion.getRange(),
+                                                                       macroName);
 
         // simple macro; just take body tokens
         for (auto token : body)
@@ -374,8 +374,8 @@ bool Preprocessor::expandMacro(MacroDef macro, MacroExpansion& expansion,
                                endOfArgs.location() + endOfArgs.rawText().length());
 
     SourceLocation start = body[0].location();
-    SourceLocation expansionLoc =
-        sourceManager.createExpansionLoc(start, expansionRange, macroName);
+    SourceLocation expansionLoc = sourceManager.createExpansionLoc(start, expansionRange,
+                                                                   macroName);
 
     auto append = [&](Token token) {
         expansion.append(token, expansionLoc, start, expansionRange);
@@ -540,7 +540,7 @@ bool Preprocessor::expandMacro(MacroDef macro, MacroExpansion& expansion,
 }
 
 SourceRange Preprocessor::MacroExpansion::getRange() const {
-    return { usageSite.location(), usageSite.location() + usageSite.rawText().length() };
+    return {usageSite.location(), usageSite.location() + usageSite.rawText().length()};
 }
 
 SourceLocation Preprocessor::MacroExpansion::adjustLoc(Token token, SourceLocation& macroLoc,
@@ -629,7 +629,7 @@ bool Preprocessor::expandReplacementList(
         }
 
         expansionBuffer.clear();
-        MacroExpansion expansion{ sourceManager, alloc, expansionBuffer, token, false };
+        MacroExpansion expansion{sourceManager, alloc, expansionBuffer, token, false};
         if (!expandMacro(macro, expansion, actualArgs))
             return false;
 

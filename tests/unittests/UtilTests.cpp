@@ -120,7 +120,7 @@ TEST_CASE("Test CommandLine -- nonspan") {
     CommandLine cmdLine;
     cmdLine.add("-a", a, "SDF");
 
-    std::array args = { "prog", "-a" };
+    std::array args = {"prog", "-a"};
     CHECK(cmdLine.parse((int)args.size(), args.data()));
 
     CHECK(a == true);
@@ -145,12 +145,12 @@ TEST_CASE("Test CommandLine -- vectors") {
     CHECK(cmdLine.parse("prog -a 1 --longa 99 -f fff --longf=ffff -e 4.1 "
                         "-d 5 -d 5 -d 5 --longc 8 -c 9 -b -42 -b -43"sv));
 
-    CHECK(groupa == std::vector<int32_t>{ 1, 99 });
-    CHECK(groupb == std::vector<int64_t>{ -42ll, -43ll });
-    CHECK(groupc == std::vector<uint32_t>{ 8u, 9u });
-    CHECK(groupd == std::vector<uint64_t>{ 5ull, 5ull, 5ull });
-    CHECK(groupe == std::vector{ 4.1 });
-    CHECK(groupf == std::vector{ "fff"s, "ffff"s });
+    CHECK(groupa == std::vector<int32_t>{1, 99});
+    CHECK(groupb == std::vector<int64_t>{-42ll, -43ll});
+    CHECK(groupc == std::vector<uint32_t>{8u, 9u});
+    CHECK(groupd == std::vector<uint64_t>{5ull, 5ull, 5ull});
+    CHECK(groupe == std::vector{4.1});
+    CHECK(groupf == std::vector{"fff"s, "ffff"s});
 }
 
 TEST_CASE("Test CommandLine -- splitting") {
@@ -162,7 +162,7 @@ TEST_CASE("Test CommandLine -- splitting") {
     auto args = R"(prog -a \ -a \-a asdf '--longa=bar baz bif \' -a "f foo \" biz \\" -a 1)"sv;
     CHECK(cmdLine.parse(args));
 
-    CHECK(stuff == std::vector{ " -a"s, "asdf"s, "bar baz bif \\"s, "f foo \" biz \\"s, "1"s });
+    CHECK(stuff == std::vector{" -a"s, "asdf"s, "bar baz bif \\"s, "f foo \" biz \\"s, "1"s});
 }
 
 TEST_CASE("Test CommandLine -- comments") {
@@ -183,7 +183,7 @@ foo#comment!!
     CHECK(cmdLine.parse(args, options));
 
     CHECK(stuff ==
-          std::vector{ "foo"s, "foo/bar//not_comment"s, "foo/bar/*/not_comment/*"s, "value"s });
+          std::vector{"foo"s, "foo/bar//not_comment"s, "foo/bar/*/not_comment/*"s, "value"s});
 }
 
 TEST_CASE("Test CommandLine -- env vars") {
@@ -208,7 +208,7 @@ $)qq"sv;
     CHECK(cmdLine.parse(args, options));
 
     CHECK(stuff ==
-          std::vector{ "$&"s, "asdf/abc"s, "123/bar"s, "some string"s, "987654"s, "${"s, "$"s });
+          std::vector{"$&"s, "asdf/abc"s, "123/bar"s, "some string"s, "987654"s, "${"s, "$"s});
 }
 
 TEST_CASE("Test CommandLine -- programmer errors") {

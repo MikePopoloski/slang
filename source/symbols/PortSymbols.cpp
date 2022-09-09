@@ -67,7 +67,7 @@ std::tuple<const Definition*, string_view> getInterfacePortInfo(
         }
     }
 
-    return { def, modport };
+    return {def, modport};
 }
 
 // This checks factors other than types when making a port connection
@@ -271,8 +271,8 @@ private:
             symbol = comp.emplace<NetSymbol>(port->name, port->location, *netType);
         }
         else {
-            symbol =
-                comp.emplace<VariableSymbol>(port->name, port->location, VariableLifetime::Static);
+            symbol = comp.emplace<VariableSymbol>(port->name, port->location,
+                                                  VariableLifetime::Static);
         }
 
         if (type) {
@@ -358,8 +358,8 @@ public:
                 auto& port = syntax->as<PortDeclarationSyntax>();
                 for (auto decl : port.declarators) {
                     if (auto name = decl->name; !name.isMissing()) {
-                        auto [it, inserted] =
-                            portInfos.emplace(name.valueText(), PortInfo{ *decl, port.attributes });
+                        auto [it, inserted] = portInfos.emplace(name.valueText(),
+                                                                PortInfo{*decl, port.attributes});
 
                         if (inserted) {
                             handleIODecl(*port.header, it->second, insertionPoint);
@@ -383,8 +383,8 @@ public:
 
                 for (auto decl : data.declarators) {
                     if (auto name = decl->name; !name.isMissing()) {
-                        auto [it, inserted] =
-                            portInfos.emplace(name.valueText(), PortInfo{ *decl, data.attributes });
+                        auto [it, inserted] = portInfos.emplace(name.valueText(),
+                                                                PortInfo{*decl, data.attributes});
 
                         if (inserted) {
                             auto& info = it->second;
@@ -443,8 +443,8 @@ public:
     }
 
     Symbol* createPort(const EmptyNonAnsiPortSyntax& syntax) {
-        auto port =
-            comp.emplace<PortSymbol>("", syntax.placeholder.location(), /* isAnsiPort */ false);
+        auto port = comp.emplace<PortSymbol>("", syntax.placeholder.location(),
+                                             /* isAnsiPort */ false);
         port->direction = ArgumentDirection::In;
         port->setSyntax(syntax);
         port->isNullPort = true;
@@ -502,15 +502,15 @@ private:
                         auto typeName = SyntaxFacts::getSimpleTypeName(*varHeader.dataType);
                         auto result = Lookup::unqualified(scope, typeName, LookupFlags::Type);
                         if (result && result->kind == SymbolKind::NetType) {
-                            auto net =
-                                comp.emplace<NetSymbol>(name, declLoc, result->as<NetType>());
+                            auto net = comp.emplace<NetSymbol>(name, declLoc,
+                                                               result->as<NetType>());
                             setInternalSymbol(*net, decl, nullptr, info, insertionPoint);
                             break;
                         }
                     }
 
-                    auto variable =
-                        comp.emplace<VariableSymbol>(name, declLoc, VariableLifetime::Static);
+                    auto variable = comp.emplace<VariableSymbol>(name, declLoc,
+                                                                 VariableLifetime::Static);
                     setInternalSymbol(*variable, decl, varHeader.dataType, info, insertionPoint);
                 }
                 else if (auto symbol = scope.find(name);
@@ -524,8 +524,8 @@ private:
 
                     // If the I/O declaration is located prior to the symbol, we should update
                     // its index so that lookups in between will resolve correctly.
-                    uint32_t ioIndex =
-                        insertionPoint ? uint32_t(insertionPoint->getIndex()) + 1 : 1;
+                    uint32_t ioIndex = insertionPoint ? uint32_t(insertionPoint->getIndex()) + 1
+                                                      : 1;
                     if (uint32_t(symbol->getIndex()) > ioIndex) {
                         val.getDeclaredType()->setOverrideIndex(symbol->getIndex());
                         val.setIndex(SymbolIndex(ioIndex));
@@ -536,8 +536,8 @@ private:
                 }
                 else {
                     // No symbol and no data type defaults to a basic net.
-                    auto net =
-                        comp.emplace<NetSymbol>(name, declLoc, getDefaultNetType(scope, declLoc));
+                    auto net = comp.emplace<NetSymbol>(name, declLoc,
+                                                       getDefaultNetType(scope, declLoc));
                     setInternalSymbol(*net, decl, varHeader.dataType, info, insertionPoint);
                 }
 
@@ -552,8 +552,8 @@ private:
                 info.direction = SemanticFacts::getDirection(netHeader.direction.kind);
 
                 // Create a new symbol to represent this port internally to the instance.
-                auto net =
-                    comp.emplace<NetSymbol>(name, declLoc, comp.getNetType(netHeader.netType.kind));
+                auto net = comp.emplace<NetSymbol>(name, declLoc,
+                                                   comp.getNetType(netHeader.netType.kind));
                 setInternalSymbol(*net, decl, netHeader.dataType, info, insertionPoint);
                 break;
             }
@@ -770,12 +770,12 @@ public:
             else if (conn->kind == SyntaxKind::WildcardPortConnection) {
                 if (!std::exchange(hasWildcard, true)) {
                     wildcardRange = conn->sourceRange();
-                    wildcardAttrs =
-                        AttributeSymbol::fromSyntax(conn->attributes, scope, lookupLocation);
+                    wildcardAttrs = AttributeSymbol::fromSyntax(conn->attributes, scope,
+                                                                lookupLocation);
                 }
                 else {
-                    auto& diag =
-                        scope.addDiag(diag::DuplicateWildcardPortConnection, conn->sourceRange());
+                    auto& diag = scope.addDiag(diag::DuplicateWildcardPortConnection,
+                                               conn->sourceRange());
                     diag.addNote(diag::NotePreviousUsage, wildcardRange);
                 }
             }
@@ -785,8 +785,8 @@ public:
                 if (!name.empty()) {
                     auto pair = namedConns.emplace(name, std::make_pair(&npc, false));
                     if (!pair.second) {
-                        auto& diag =
-                            scope.addDiag(diag::DuplicatePortConnection, npc.name.location());
+                        auto& diag = scope.addDiag(diag::DuplicatePortConnection,
+                                                   npc.name.location());
                         diag << name;
                         diag.addNote(diag::NotePreviousUsage,
                                      pair.first->second.first->name.location());
@@ -812,8 +812,8 @@ public:
             if (port.direction == ArgumentDirection::Ref) {
                 if (port.name.empty()) {
                     if (!unnamedRefError) {
-                        auto& diag =
-                            scope.addDiag(diag::RefPortUnnamedUnconnected, instance.location);
+                        auto& diag = scope.addDiag(diag::RefPortUnnamedUnconnected,
+                                                   instance.location);
                         diag.addNote(diag::NoteDeclarationHere, port.location);
                         unnamedRefError = true;
                     }
@@ -972,8 +972,8 @@ public:
                 // We marked all the connections that we used, so anything left over is a connection
                 // for a non-existent port.
                 if (!pair.second.second) {
-                    auto& diag =
-                        scope.addDiag(diag::PortDoesNotExist, pair.second.first->name.location());
+                    auto& diag = scope.addDiag(diag::PortDoesNotExist,
+                                               pair.second.first->name.location());
                     diag << pair.second.first->name.valueText();
                     diag << instance.body.getDefinition().name;
                 }
@@ -1336,7 +1336,7 @@ const Type& PortSymbol::getType() const {
         BindContext context(*scope, LookupLocation::before(*this), bindFlags);
 
         auto& valExpr = ValueExpressionBase::fromSymbol(context, *internalSymbol, false,
-                                                        { location, location + name.length() });
+                                                        {location, location + name.length()});
 
         if (syntax->kind == SyntaxKind::PortReference) {
             auto& prs = syntax->as<PortReferenceSyntax>();
@@ -1420,8 +1420,8 @@ const Expression* PortSymbol::getInitializer() const {
             ll = LookupLocation::after(*internalSymbol);
 
         BindContext context(*scope, ll, BindFlags::NonProcedural | BindFlags::StaticInitializer);
-        initializer =
-            &Expression::bindRValue(getType(), *initializerSyntax, initializerLoc, context);
+        initializer = &Expression::bindRValue(getType(), *initializerSyntax, initializerLoc,
+                                              context);
         context.eval(*initializer);
     }
 
@@ -1441,7 +1441,7 @@ static void getNetRanges(const Expression& expr, SmallVector<PortSymbol::NetType
         if (!ranges.empty() && ranges.back().netType == &nt)
             ranges.back().width += width;
         else
-            ranges.append({ &nt, width });
+            ranges.append({&nt, width});
     }
     else if (expr.kind == ExpressionKind::Concatenation) {
         for (auto op : expr.as<ConcatenationExpression>().operands())
@@ -1465,7 +1465,7 @@ void PortSymbol::getNetTypes(SmallVector<NetTypeRange>& ranges) const {
     }
     else if (internalSymbol && internalSymbol->kind == SymbolKind::Net) {
         auto& nt = internalSymbol->as<NetSymbol>().netType;
-        ranges.append({ &nt, getType().getBitWidth() });
+        ranges.append({&nt, getType().getBitWidth()});
     }
 }
 
@@ -1510,7 +1510,7 @@ void PortSymbol::fromSyntax(
 
     switch (syntax.kind) {
         case SyntaxKind::AnsiPortList: {
-            AnsiPortListBuilder builder{ scope, implicitMembers };
+            AnsiPortListBuilder builder{scope, implicitMembers};
             for (auto port : syntax.as<AnsiPortListSyntax>().ports) {
                 switch (port->kind) {
                     case SyntaxKind::ImplicitAnsiPort:
@@ -1531,7 +1531,7 @@ void PortSymbol::fromSyntax(
             break;
         }
         case SyntaxKind::NonAnsiPortList: {
-            NonAnsiPortListBuilder builder{ scope, portDeclarations, implicitMembers };
+            NonAnsiPortListBuilder builder{scope, portDeclarations, implicitMembers};
             for (auto port : syntax.as<NonAnsiPortListSyntax>().ports) {
                 switch (port->kind) {
                     case SyntaxKind::ImplicitNonAnsiPort:
@@ -1726,11 +1726,11 @@ const Symbol* PortConnection::getIfaceInstance() const {
 static std::pair<ArgumentDirection, const Type*> getDirAndType(const Symbol& port) {
     if (port.kind == SymbolKind::Port) {
         auto& ps = port.as<PortSymbol>();
-        return { ps.direction, &ps.getType() };
+        return {ps.direction, &ps.getType()};
     }
     else {
         auto& mp = port.as<MultiPortSymbol>();
-        return { mp.direction, &mp.getType() };
+        return {mp.direction, &mp.getType()};
     }
 }
 
@@ -1777,8 +1777,8 @@ const Expression* PortConnection::getExpression() const {
                     }
                 }
                 else if (!e->bad() && !type->isError()) {
-                    auto& diag =
-                        context.addDiag(diag::ImplicitNamedPortTypeMismatch, implicitNameRange);
+                    auto& diag = context.addDiag(diag::ImplicitNamedPortTypeMismatch,
+                                                 implicitNameRange);
                     diag << port.name;
                     diag << *type;
                     diag << *e->type;

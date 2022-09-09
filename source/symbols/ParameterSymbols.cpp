@@ -276,8 +276,8 @@ void DefParamSymbol::resolve() const {
 
     if (typeSyntax && typeSyntax->kind == SyntaxKind::ImplicitType) {
         BindContext typeContext(*param.getParentScope(), LookupLocation::before(param));
-        initializer =
-            &Expression::bindImplicitParam(*typeSyntax, expr, equalsLoc, context, typeContext);
+        initializer = &Expression::bindImplicitParam(*typeSyntax, expr, equalsLoc, context,
+                                                     typeContext);
     }
     else {
         initializer = &Expression::bindRValue(declType->getType(), expr, equalsLoc, context);

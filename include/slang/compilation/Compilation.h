@@ -467,7 +467,7 @@ private:
 
     // A table to look up scalar types based on combinations of the three flags: signed, fourstate,
     // reg. Two of the entries are not valid and will be nullptr (!fourstate & reg).
-    Type* scalarTypeTable[8]{ nullptr };
+    Type* scalarTypeTable[8]{nullptr};
 
     // Instances of all the built-in types.
     Type* bitType;

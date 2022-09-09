@@ -201,7 +201,7 @@ struct SourceSnippet {
             size_t columnWidth;
             buffer.clear();
             if (!printableTextForNextChar(sourceLine, i, tabStop, buffer, columnWidth))
-                invalidRanges.append({ snippetLine.size(), buffer.size() });
+                invalidRanges.append({snippetLine.size(), buffer.size()});
 
             snippetLine.append(buffer.data(), buffer.size());
             column += columnWidth;

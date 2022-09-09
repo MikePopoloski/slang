@@ -16,7 +16,7 @@ TEST_CASE("Driver basic") {
     driver.addStandardArgs();
 
     auto filePath = findTestDir() + "test.sv";
-    const char* argv[] = { "testfoo", filePath.c_str() };
+    const char* argv[] = {"testfoo", filePath.c_str()};
     CHECK(driver.parseCommandLine(2, argv));
     CHECK(driver.processOptions());
 }
@@ -27,7 +27,7 @@ TEST_CASE("Driver invalid command line arg") {
     Driver driver;
     driver.addStandardArgs();
 
-    const char* argv[] = { "testfoo", "--foo=bar" };
+    const char* argv[] = {"testfoo", "--foo=bar"};
     CHECK(!driver.parseCommandLine(2, argv));
     CHECK(stderrContains("unknown command line arg"));
 }
@@ -38,7 +38,7 @@ TEST_CASE("Driver invalid compat") {
     Driver driver;
     driver.addStandardArgs();
 
-    const char* argv[] = { "testfoo", "--compat=baz" };
+    const char* argv[] = {"testfoo", "--compat=baz"};
     CHECK(driver.parseCommandLine(2, argv));
     CHECK(!driver.processOptions());
     CHECK(stderrContains("invalid value for compat option"));
@@ -50,7 +50,7 @@ TEST_CASE("Driver invalid timing") {
     Driver driver;
     driver.addStandardArgs();
 
-    const char* argv[] = { "testfoo", "-TFoo" };
+    const char* argv[] = {"testfoo", "-TFoo"};
     CHECK(driver.parseCommandLine(2, argv));
     CHECK(!driver.processOptions());
     CHECK(stderrContains("invalid value for timing option"));
@@ -62,7 +62,7 @@ TEST_CASE("Driver invalid include dirs") {
     Driver driver;
     driver.addStandardArgs();
 
-    const char* argv[] = { "testfoo", "-Ifoo/bar/baz/", "--isystem=foo/bar/baz/" };
+    const char* argv[] = {"testfoo", "-Ifoo/bar/baz/", "--isystem=foo/bar/baz/"};
     CHECK(driver.parseCommandLine(3, argv));
     CHECK(!driver.processOptions());
     CHECK(stderrContains("does not exist"));
@@ -75,7 +75,7 @@ TEST_CASE("Driver missing single-unit for inherit macros") {
     Driver driver;
     driver.addStandardArgs();
 
-    const char* argv[] = { "testfoo", "--libraries-inherit-macros" };
+    const char* argv[] = {"testfoo", "--libraries-inherit-macros"};
     CHECK(driver.parseCommandLine(2, argv));
     CHECK(!driver.processOptions());
     CHECK(stderrContains("--single-unit must be set"));
@@ -87,7 +87,7 @@ TEST_CASE("Driver invalid source file") {
     Driver driver;
     driver.addStandardArgs();
 
-    const char* argv[] = { "testfoo", "blah.sv" };
+    const char* argv[] = {"testfoo", "blah.sv"};
     CHECK(!driver.parseCommandLine(2, argv));
     CHECK(!driver.processOptions());
     CHECK(stderrContains("no such file"));
@@ -100,7 +100,7 @@ TEST_CASE("Driver file preprocess") {
     driver.addStandardArgs();
 
     auto filePath = findTestDir() + "test.sv";
-    const char* argv[] = { "testfoo", filePath.c_str() };
+    const char* argv[] = {"testfoo", filePath.c_str()};
     CHECK(driver.parseCommandLine(2, argv));
     CHECK(driver.processOptions());
     CHECK(driver.runPreprocessor(true, false));
@@ -125,7 +125,7 @@ TEST_CASE("Driver file preprocess with error") {
     driver.addStandardArgs();
 
     auto filePath = findTestDir() + "test2.sv";
-    const char* argv[] = { "testfoo", filePath.c_str() };
+    const char* argv[] = {"testfoo", filePath.c_str()};
     CHECK(driver.parseCommandLine(2, argv));
     CHECK(driver.processOptions());
     CHECK(!driver.runPreprocessor(true, false));
@@ -139,7 +139,7 @@ TEST_CASE("Driver report macros") {
     driver.addStandardArgs();
 
     auto filePath = findTestDir() + "test.sv";
-    const char* argv[] = { "testfoo", filePath.c_str() };
+    const char* argv[] = {"testfoo", filePath.c_str()};
     CHECK(driver.parseCommandLine(2, argv));
     CHECK(driver.processOptions());
     driver.reportMacros();
@@ -204,7 +204,7 @@ TEST_CASE("Driver invalid library module file") {
     Driver driver;
     driver.addStandardArgs();
 
-    const char* argv[] = { "testfoo", "-vblah.sv" };
+    const char* argv[] = {"testfoo", "-vblah.sv"};
     CHECK(driver.parseCommandLine(2, argv));
     CHECK(driver.processOptions());
     CHECK(!driver.parseAllSources());
@@ -246,7 +246,7 @@ TEST_CASE("Driver full compilation with defines and param overrides") {
 }
 
 TEST_CASE("Driver setting a bunch of compilation options") {
-    for (auto timing : { "min", "typ", "max" }) {
+    for (auto timing : {"min", "typ", "max"}) {
         auto guard = OS::captureOutput();
 
         Driver driver;
@@ -306,7 +306,7 @@ TEST_CASE("Driver command files") {
 }
 
 TEST_CASE("Driver command file errors") {
-    for (auto type : { "f", "F" }) {
+    for (auto type : {"f", "F"}) {
         auto guard = OS::captureOutput();
 
         Driver driver;
@@ -382,8 +382,7 @@ TEST_CASE("Driver flag --exclude-ext (multiple use)") {
     auto filePath3 = findTestDir() + "test.e";
     const char* argv[] = {
         "testfoo",         "--exclude-ext",  "vhd", "--exclude-ext", "e", filePath1.c_str(),
-        filePath2.c_str(), filePath3.c_str()
-    };
+        filePath2.c_str(), filePath3.c_str()};
     CHECK(driver.parseCommandLine(sizeof(argv) / sizeof(argv[0]), argv));
     CHECK(driver.processOptions());
 }

@@ -20,10 +20,10 @@ std::pair<PragmaExpressionSyntax*, bool> Preprocessor::parsePragmaExpression() {
             auto equals = consume();
             auto [expr, succeeded] = parsePragmaValue();
             auto result = alloc.emplace<NameValuePragmaExpressionSyntax>(name, equals, *expr);
-            return { result, succeeded };
+            return {result, succeeded};
         }
 
-        return { alloc.emplace<SimplePragmaExpressionSyntax>(name), true };
+        return {alloc.emplace<SimplePragmaExpressionSyntax>(name), true};
     }
 
     return parsePragmaValue();
@@ -41,28 +41,28 @@ std::pair<PragmaExpressionSyntax*, bool> Preprocessor::parsePragmaValue() {
             expr = alloc.emplace<SimplePragmaExpressionSyntax>(result.value);
         }
         else {
-            expr =
-                alloc.emplace<NumberPragmaExpressionSyntax>(result.size, result.base, result.value);
+            expr = alloc.emplace<NumberPragmaExpressionSyntax>(result.size, result.base,
+                                                               result.value);
         }
 
-        return { expr, true };
+        return {expr, true};
     }
 
     if (token.kind == TokenKind::RealLiteral) {
         auto result = numberParser.parseReal(*this);
-        return { alloc.emplace<SimplePragmaExpressionSyntax>(result), true };
+        return {alloc.emplace<SimplePragmaExpressionSyntax>(result), true};
     }
 
     if (token.kind == TokenKind::Identifier || token.kind == TokenKind::StringLiteral ||
         LexerFacts::isKeyword(token.kind)) {
-        return { alloc.emplace<SimplePragmaExpressionSyntax>(consume()), true };
+        return {alloc.emplace<SimplePragmaExpressionSyntax>(consume()), true};
     }
 
     if (token.kind != TokenKind::OpenParenthesis) {
         addDiag(diag::ExpectedPragmaExpression, token.location());
 
         auto expected = Token::createMissing(alloc, TokenKind::Identifier, token.location());
-        return { alloc.emplace<SimplePragmaExpressionSyntax>(expected), false };
+        return {alloc.emplace<SimplePragmaExpressionSyntax>(expected), false};
     }
 
     SmallVectorSized<TokenOrSyntax, 4> values;
@@ -114,8 +114,8 @@ std::pair<PragmaExpressionSyntax*, bool> Preprocessor::parsePragmaValue() {
                                            lastToken, Token());
     }
 
-    return { alloc.emplace<ParenPragmaExpressionSyntax>(openParen, values.copy(alloc), closeParen),
-             ok };
+    return {alloc.emplace<ParenPragmaExpressionSyntax>(openParen, values.copy(alloc), closeParen),
+            ok};
 }
 
 std::pair<PragmaExpressionSyntax*, bool> Preprocessor::checkNextPragmaToken() {
@@ -124,9 +124,9 @@ std::pair<PragmaExpressionSyntax*, bool> Preprocessor::checkNextPragmaToken() {
         addDiag(diag::ExpectedPragmaExpression, loc);
 
         auto expected = Token::createMissing(alloc, TokenKind::Identifier, loc);
-        return { alloc.emplace<SimplePragmaExpressionSyntax>(expected), false };
+        return {alloc.emplace<SimplePragmaExpressionSyntax>(expected), false};
     }
-    return { nullptr, true };
+    return {nullptr, true};
 }
 
 void Preprocessor::handleExponentSplit(Token token, size_t offset) {

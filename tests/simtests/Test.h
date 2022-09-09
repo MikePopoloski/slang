@@ -19,8 +19,8 @@ inline void compile(Compilation& compilation, const std::string& text) {
 
     auto& diags = compilation.getAllDiagnostics();
     if (!diags.empty()) {
-        std::string report =
-            DiagnosticEngine::reportAll(SyntaxTree::getDefaultSourceManager(), diags);
+        std::string report = DiagnosticEngine::reportAll(SyntaxTree::getDefaultSourceManager(),
+                                                         diags);
         FAIL_CHECK(report);
     }
 }
