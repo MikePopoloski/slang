@@ -609,7 +609,7 @@ bool SequenceConcatExpr::admitsEmptyImpl() const {
         if (!it->sequence->admitsEmpty())
             return false;
 
-        if (it->delay.min == 0 && it->delay.max == 0)
+        if (it->delay.min == 0u && it->delay.max == 0u)
             return false;
 
         if (it->delay.min > 1)

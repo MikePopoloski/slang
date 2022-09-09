@@ -12,6 +12,7 @@
 #include <fmt/format.h>
 
 #include "slang/text/CharInfo.h"
+#include "slang/util/OS.h"
 #include "slang/util/SmallVector.h"
 #include "slang/util/String.h"
 
@@ -305,14 +306,6 @@ void CommandLine::parseStr(string_view argList, ParseOptions options, bool& hasA
 }
 
 std::string CommandLine::expandVar(const char*& ptr, const char* end) {
-    auto getEnv = [](const std::string& name) -> std::string {
-        char* result = getenv(name.c_str());
-        if (result)
-            return result;
-        else
-            return {};
-    };
-
     // Three forms for environment variables to try:
     // $VAR
     // $(VAR)
@@ -325,7 +318,7 @@ std::string CommandLine::expandVar(const char*& ptr, const char* end) {
         while (ptr != end) {
             c = *ptr++;
             if (c == endDelim)
-                return getEnv(varName);
+                return OS::getEnv(varName);
 
             varName += c;
         }
@@ -340,7 +333,7 @@ std::string CommandLine::expandVar(const char*& ptr, const char* end) {
         while (ptr != end && isValidCIdChar(*ptr))
             varName += *ptr++;
 
-        return getEnv(varName);
+        return OS::getEnv(varName);
     }
     else {
         // This is not a possible variable name so just return what we have.

@@ -11,10 +11,34 @@ if(NOT DEFINED SLANG_MASTER_PROJECT)
   endif()
 endif()
 
+# Protect against in-tree builds.
+if(CMAKE_SOURCE_DIR STREQUAL CMAKE_BINARY_DIR)
+  message(
+    FATAL_ERROR "In-source builds are not supported. You may need to delete "
+                "'CMakeCache.txt' and 'CMakeFiles/' before building again.")
+endif()
+
+# Set path for additional cmake modules.
 set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake" ${CMAKE_MODULE_PATH})
+
+# Determine our project version by looking at git tags.
 include(gitversion)
 get_git_version(SLANG_VERSION_MAJOR SLANG_VERSION_MINOR SLANG_VERSION_PATCH
                 SLANG_VERSION_HASH SLANG_VERSION_STRING)
+
+# Set the default build type if none is set explicitly, but only for
+# single-config generators.
+get_property(isMultiConfig GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
+if(SLANG_MASTER_PROJECT
+   AND NOT isMultiConfig
+   AND NOT CMAKE_BUILD_TYPE)
+  set(CMAKE_BUILD_TYPE
+      Release
+      CACHE
+        STRING
+        "Choose the type of build, options are: None Debug Release RelWithDebInfo MinSizeRel."
+        FORCE)
+endif()
 
 project(
   slang
@@ -46,23 +70,18 @@ set(SLANG_SANITIZERS
     ""
     CACHE STRING "List of Clang sanitizers to include in build")
 
-# Default build type if none is set
-if(SLANG_MASTER_PROJECT AND NOT CMAKE_BUILD_TYPE)
-  set(CMAKE_BUILD_TYPE
-      "Release"
-      CACHE STRING "Build type (Release/Debug/RelWithDebInfo/MinSizeRel)" FORCE)
-endif()
-
+# Include built-in cmake modules.
 include(GNUInstallDirs)
 include(CMakePackageConfigHelpers)
 
+# Variables used by subdirectories.
 set(SCRIPTS_DIR ${PROJECT_SOURCE_DIR}/scripts)
-
 if(NOT SLANG_EXPORT_NAME)
   set(SLANG_EXPORT_NAME "${PROJECT_NAME}Targets")
 endif()
 
-# Find Python
+# Find Python. If we're building python bindings we need the development modules
+# as well.
 if(SLANG_INCLUDE_PYLIB)
   find_package(Python REQUIRED COMPONENTS Interpreter Development.Module)
 else()
@@ -70,57 +89,59 @@ else()
 endif()
 
 # Set saner / consistent build directories on all platforms
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/bin)
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELWITHDEBINFO
-    ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_MINSIZEREL ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
+foreach(
+  var
+  CMAKE_RUNTIME_OUTPUT_DIRECTORY
+  CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE
+  CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELWITHDEBINFO
+  CMAKE_RUNTIME_OUTPUT_DIRECTORY_MINSIZEREL
+  CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG)
+  if(NOT ${var})
+    set(${var} ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_INSTALL_BINDIR})
+  endif()
+endforeach()
+foreach(
+  var
+  CMAKE_ARCHIVE_OUTPUT_DIRECTORY
+  CMAKE_ARCHIVE_OUTPUT_DIRECTORY_RELEASE
+  CMAKE_ARCHIVE_OUTPUT_DIRECTORY_RELWITHDEBINFO
+  CMAKE_ARCHIVE_OUTPUT_DIRECTORY_MINSIZEREL
+  CMAKE_ARCHIVE_OUTPUT_DIRECTORY_DEBUG
+  CMAKE_LIBRARY_OUTPUT_DIRECTORY
+  CMAKE_LIBRARY_OUTPUT_DIRECTORY_RELEASE
+  CMAKE_LIBRARY_OUTPUT_DIRECTORY_RELWITHDEBINFO
+  CMAKE_LIBRARY_OUTPUT_DIRECTORY_MINSIZEREL
+  CMAKE_LIBRARY_OUTPUT_DIRECTORY_DEBUG)
+  if(NOT ${var})
+    set(${var} ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR})
+  endif()
+endforeach()
 
-set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/lib)
-set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_RELEASE ${CMAKE_ARCHIVE_OUTPUT_DIRECTORY})
-set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_RELWITHDEBINFO
-    ${CMAKE_ARCHIVE_OUTPUT_DIRECTORY})
-set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_MINSIZEREL ${CMAKE_ARCHIVE_OUTPUT_DIRECTORY})
-set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_DEBUG ${CMAKE_ARCHIVE_OUTPUT_DIRECTORY})
-
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/lib)
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY_RELEASE ${CMAKE_LIBRARY_OUTPUT_DIRECTORY})
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY_RELWITHDEBINFO
-    ${CMAKE_LIBRARY_OUTPUT_DIRECTORY})
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY_MINSIZEREL ${CMAKE_LIBRARY_OUTPUT_DIRECTORY})
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY_DEBUG ${CMAKE_LIBRARY_OUTPUT_DIRECTORY})
-
-# Defaults for a bunch of Windows-specific junk
+# The Unicode defines need to be set for all modern Windows projects (newer than
+# Windows 98).
 if(CMAKE_SYSTEM_NAME MATCHES "Windows")
-  add_definitions(/DNOMINMAX)
   add_definitions(/DUNICODE)
   add_definitions(/D_UNICODE)
-  add_definitions(/DWIN32_LEAN_AND_MEAN)
-  add_definitions(/DNTDDI_VERSION=0x06010000)
-  add_definitions(/D_WIN32_WINNT=0x0601)
-  add_definitions(/D_SCL_SECURE_NO_WARNINGS)
-  add_definitions(/D_CRT_SECURE_NO_WARNINGS)
-  add_definitions(/D_CRT_SECURE_NO_DEPRECATE)
 endif()
 
-# Always require C++17 or later, no extensions
+# Always require C++17 or later, no extensions.
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 if(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
-  # Prefer the latest standard, and enable full conformance
-  add_compile_options(/std:c++17)
-  add_compile_options(/utf-8)
+  # Disable MSVC language extensions, which for some reason are not covered by
+  # the CMAKE_CXX_EXTENSIONS option.
   add_compile_options(/permissive-)
+  add_compile_options(/Zc:__cplusplus)
+  add_compile_options(/Zc:externConstexpr)
   add_compile_options(/Zc:inline)
-  add_compile_options(/Gy) # Function-level linking
-  add_compile_options(/D_SILENCE_CXX17_ITERATOR_BASE_CLASS_DEPRECATION_WARNING)
+  add_compile_options(/Zc:preprocessor)
+  add_compile_options(/Zc:throwingNew)
+  add_compile_options(/utf-8)
 
   # Ignore warnings in external headers
-  add_compile_options(/experimental:external /external:anglebrackets
-                      /external:W0)
+  add_compile_options(/external:anglebrackets /external:W0)
 
   if(CMAKE_BUILD_TYPE MATCHES "Debug")
     # Use fast linking
@@ -240,11 +261,6 @@ elseif(CMAKE_CXX_COMPILER_ID MATCHES "GNU")
       -Wduplicated-cond
       -Wtype-limits
       -Wno-maybe-uninitialized)
-endif()
-
-if(CMAKE_GENERATOR MATCHES "Visual Studio")
-  # Only MSBuild needs this, other generators will compile one file at a time
-  add_compile_options("/MP")
 endif()
 
 if(NOT SLANG_USE_SYSTEM_LIBS)

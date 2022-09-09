@@ -184,7 +184,6 @@ void writeToFile(Stream& os, string_view fileName, String contents) {
 }
 
 #if defined(_MSC_VER)
-#    include <Windows.h>
 
 void writeToFile(string_view fileName, string_view contents) {
     if (fileName == "-") {

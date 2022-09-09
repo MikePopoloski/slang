@@ -88,6 +88,8 @@ public:
         }
     }
 
+    static std::string getEnv(const std::string& name);
+
     static auto captureOutput() {
         capturedStdout.clear();
         capturedStderr.clear();

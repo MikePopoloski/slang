@@ -12,6 +12,8 @@
 #include "slang/util/SmallVector.h"
 
 #if defined(_MSC_VER)
+#    define NOMINMAX
+#    define WIN32_LEAN_AND_MEAN
 #    include <Windows.h>
 #endif
 
@@ -76,12 +78,12 @@ optional<double> strToDouble(string_view str, size_t* pos) {
 
 void strToUpper(std::string& str) {
     std::transform(str.begin(), str.end(), str.begin(),
-                   [](unsigned char c) { return std::toupper(c); });
+                   [](unsigned char c) { return (char)std::toupper(c); });
 }
 
 void strToLower(std::string& str) {
     std::transform(str.begin(), str.end(), str.begin(),
-                   [](unsigned char c) { return std::tolower(c); });
+                   [](unsigned char c) { return (char)std::tolower(c); });
 }
 
 int editDistance(string_view left, string_view right, bool allowReplacements, int maxDistance) {
