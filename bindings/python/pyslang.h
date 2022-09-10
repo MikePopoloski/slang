@@ -23,12 +23,12 @@ namespace py = pybind11;
 using namespace pybind11::literals;
 using namespace slang;
 
-#define EXPOSE_ENUM(handle, name)                         \
-    do {                                                  \
-        py::enum_<name> e(handle, #name);                 \
-        for (auto m : name##_traits::values) {            \
-            e.value(std::string(toString(m)).c_str(), m); \
-        }                                                 \
+#define EXPOSE_ENUM(handle, name)                                   \
+    do {                                                            \
+        py::enum_<name> e(handle, #name);                           \
+        for (auto member : name##_traits::values) {                 \
+            e.value(std::string(toString(member)).c_str(), member); \
+        }                                                           \
     } while (0)
 
 static constexpr auto byref = py::return_value_policy::reference;
@@ -60,7 +60,7 @@ std::tuple<bool, span<T>> loadSpanFromBuffer(handle src) {
 }
 // If T is not a numeric type, the buffer interface cannot be used.
 template<typename T, typename std::enable_if<!std::is_arithmetic<T>::value, bool>::type = true>
-constexpr std::tuple<bool, span<T>> loadSpanFromBuffer(handle src) {
+constexpr std::tuple<bool, span<T>> loadSpanFromBuffer(handle) {
     return {false, span<T>()};
 }
 

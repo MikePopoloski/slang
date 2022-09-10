@@ -131,7 +131,7 @@ void registerSymbols(py::module_& m) {
         .def("__getitem__",
              [](const Scope& self, size_t i) {
                  auto members = self.members();
-                 if (i >= members.size())
+                 if (ptrdiff_t(i) >= members.size())
                      throw py::index_error();
 
                  return py::cast(&(*std::next(members.begin(), i)));

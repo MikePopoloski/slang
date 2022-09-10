@@ -2,21 +2,6 @@
   "version": 3,
   "configurePresets": [
     {
-      "name": "dev-mode",
-      "hidden": true,
-      "warnings": {
-        "dev": true,
-        "deprecated": true,
-        "uninitialized": true,
-        "unusedCli": true,
-        "systemVars": false
-      },
-      "errors": {
-        "dev": true,
-        "deprecated": true
-      }
-    },
-    {
       "name": "windows-base",
       "hidden": true,
       "generator": "Ninja",

@@ -36,7 +36,7 @@ static SVInt SVIntFromPyInt(const py::int_& value) {
     if (r == -1)
         throw py::error_already_set();
 
-    return SVInt(bits, mem, true);
+    return SVInt(bitwidth_t(bits), mem, true);
 }
 
 static py::int_ PyIntFromSVInt(const SVInt& value) {
@@ -214,7 +214,7 @@ void registerNumeric(py::module_& m) {
              [](const SVInt& self, size_t i) {
                  if (i >= self.getBitWidth())
                      throw py::index_error();
-                 return self[i];
+                 return self[int32_t(i)];
              })
         .def("__int__", [](const SVInt& self) { return PyIntFromSVInt(self); })
         .def("__float__", [](const SVInt& self) { return self.toDouble(); });
