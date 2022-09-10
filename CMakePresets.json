@@ -23,6 +23,7 @@
       "binaryDir": "${sourceDir}/build/${presetName}",
       "installDir": "${sourceDir}/install/${presetName}",
       "cacheVariables": {
+        "CMAKE_CXX_COMPILER": "cl.exe",
         "CMAKE_CXX_FLAGS": "/nologo /DWIN32 /D_WINDOWS /MP /W4 /WX /utf-8 /external:anglebrackets /external:W0 /permissive- /volatile:iso /Zc:inline /Zc:preprocessor /EHsc /Zc:__cplusplus /Zc:externConstexpr /Zc:throwingNew"
       },
       "condition": {
