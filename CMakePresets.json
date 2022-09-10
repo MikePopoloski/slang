@@ -23,7 +23,6 @@
       "binaryDir": "${sourceDir}/build/${presetName}",
       "installDir": "${sourceDir}/install/${presetName}",
       "cacheVariables": {
-        "CMAKE_CXX_COMPILER": "cl.exe",
         "CMAKE_CXX_FLAGS": "/nologo /DWIN32 /D_WINDOWS /MP /W4 /WX /utf-8 /external:anglebrackets /external:W0 /permissive- /volatile:iso /Zc:inline /Zc:preprocessor /EHsc /Zc:__cplusplus /Zc:externConstexpr /Zc:throwingNew"
       },
       "condition": {
@@ -39,8 +38,7 @@
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
         "CMAKE_CXX_FLAGS_DEBUG": "/MDd /Zi /Ob0 /Od /RTC1",
-        "CMAKE_EXE_LINKER_FLAGS_DEBUG": "/nologo /DEBUG:FASTLINK",
-        "CMAKE_SHARED_LINKER_FLAGS_DEBUG": "/nologo /DEBUG:FASTLINK"
+        "CMAKE_EXE_LINKER_FLAGS_DEBUG": "/nologo /DEBUG:FASTLINK"
       }
     },
     {
