@@ -70,7 +70,7 @@ TEST_CASE("Test CommandLine -- basic") {
     CHECK(*d == -1234);
     CHECK(*ext == 9876);
     CHECK(*ext2 == 9999.1234e12);
-    CHECK(used1 == 4321);
+    CHECK(used1 == 4321u);
     CHECK(used2 == -4321);
     CHECK(someCounter == 2);
 

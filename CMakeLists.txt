@@ -1,5 +1,5 @@
 # slang - cmake entry point
-cmake_minimum_required(VERSION 3.15)
+cmake_minimum_required(VERSION 3.15...3.24)
 
 # Determine if slang is built as a subproject (using add_subdirectory) or if it
 # is the master project.
@@ -18,10 +18,8 @@ if(CMAKE_SOURCE_DIR STREQUAL CMAKE_BINARY_DIR)
                 "'CMakeCache.txt' and 'CMakeFiles/' before building again.")
 endif()
 
-# Set path for additional cmake modules.
-set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake" ${CMAKE_MODULE_PATH})
-
 # Determine our project version by looking at git tags.
+set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake" ${CMAKE_MODULE_PATH})
 include(gitversion)
 get_git_version(SLANG_VERSION_MAJOR SLANG_VERSION_MINOR SLANG_VERSION_PATCH
                 SLANG_VERSION_HASH SLANG_VERSION_STRING)
@@ -117,11 +115,22 @@ foreach(
   endif()
 endforeach()
 
-# The Unicode defines need to be set for all modern Windows projects (newer than
-# Windows 98).
+# Defaults for a bunch of Windows-specific junk. These are required by all
+# targets to build and run correctly and don't affect ABI so shouldn't need
+# target_ specific commands.
 if(CMAKE_SYSTEM_NAME MATCHES "Windows")
-  add_definitions(/DUNICODE)
-  add_definitions(/D_UNICODE)
+  add_compile_definitions(NOMINMAX)
+  add_compile_definitions(UNICODE)
+  add_compile_definitions(_UNICODE)
+  add_compile_definitions(WIN32_LEAN_AND_MEAN)
+  add_compile_definitions(_SCL_SECURE_NO_WARNINGS)
+  add_compile_definitions(_CRT_SECURE_NO_WARNINGS)
+  add_compile_definitions(_CRT_SECURE_NO_DEPRECATE)
+  add_compile_definitions(_CRT_NONSTDC_NO_WARNINGS)
+endif()
+
+if(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
+  add_compile_options(/utf-8)
 endif()
 
 # Always require C++17 or later, no extensions.
@@ -130,59 +139,13 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 if(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
-  # Disable MSVC language extensions, which for some reason are not covered by
-  # the CMAKE_CXX_EXTENSIONS option.
-  add_compile_options(/permissive-)
-  add_compile_options(/Zc:__cplusplus)
-  add_compile_options(/Zc:externConstexpr)
-  add_compile_options(/Zc:inline)
-  add_compile_options(/Zc:preprocessor)
-  add_compile_options(/Zc:throwingNew)
-  add_compile_options(/utf-8)
-
-  # Ignore warnings in external headers
-  add_compile_options(/external:anglebrackets /external:W0)
-
   if(CMAKE_BUILD_TYPE MATCHES "Debug")
-    # Use fast linking
-    string(REGEX
-           REPLACE "/debug" "/DEBUG:FASTLINK" CMAKE_EXE_LINKER_FLAGS_DEBUG
-                   "${CMAKE_EXE_LINKER_FLAGS_DEBUG}")
-    string(REGEX
-           REPLACE "/debug" "/DEBUG:FASTLINK" CMAKE_SHARED_LINKER_FLAGS_DEBUG
-                   "${CMAKE_SHARED_LINKER_FLAGS_DEBUG}")
     add_compile_options(/DDEBUG)
-
-    # Ignore annoying "missing pdb" warnings
-    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /ignore:4099")
-  else()
-    add_compile_options(/GS-) # Disable buffer overrun checks
-    add_compile_options(/GL) # Whole program optimization
-    add_compile_options(/Zi) # Generate debug info even in release
-
-    set(REL_LINK_FLAGS "/LTCG /DEBUG:FULL /OPT:REF /OPT:ICF /INCREMENTAL:NO")
-    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${REL_LINK_FLAGS}")
-    set(CMAKE_SHARED_LINKER_FLAGS
-        "${CMAKE_SHARED_LINKER_FLAGS} ${REL_LINK_FLAGS}")
-    set(CMAKE_STATIC_LINKER_FLAGS "${CMAKE_STATIC_LINKER_FLAGS} /LTCG")
   endif()
-
-  # Ignore annoying DELAYLOAD warnings
-  set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /ignore:4199")
-
-  set(SLANG_WARN_FLAGS "/W4" "/WX")
+  set(SLANG_WARN_FLAGS "")
 else()
   # Always include debug info
   add_compile_options(-g)
-
-  # Color in diagnostics please
-  if(CMAKE_GENERATOR MATCHES "Ninja")
-    if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-      add_compile_options(-Xclang -fcolor-diagnostics)
-    else()
-      add_compile_options(-fdiagnostics-color)
-    endif()
-  endif()
 
   if(CMAKE_BUILD_TYPE MATCHES "Debug")
     add_compile_options(-DDEBUG)

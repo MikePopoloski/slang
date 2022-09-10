@@ -7,9 +7,6 @@
 #include "slang/util/OS.h"
 
 #if defined(_MSC_VER)
-#    pragma warning(disable : 4996) // _CRT_SECURE_NO_WARNINGS
-#    define NOMINMAX
-#    define WIN32_LEAN_AND_MEAN
 #    include <Windows.h>
 #    include <fcntl.h>
 #    include <io.h>

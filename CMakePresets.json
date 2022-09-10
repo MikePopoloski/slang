@@ -1,0 +1,92 @@
+{
+  "version": 3,
+  "configurePresets": [
+    {
+      "name": "dev-mode",
+      "hidden": true,
+      "warnings": {
+        "dev": true,
+        "deprecated": true,
+        "uninitialized": true,
+        "unusedCli": true,
+        "systemVars": false
+      },
+      "errors": {
+        "dev": true,
+        "deprecated": true
+      }
+    },
+    {
+      "name": "windows-base",
+      "hidden": true,
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/${presetName}",
+      "installDir": "${sourceDir}/install/${presetName}",
+      "cacheVariables": {
+        "CMAKE_CXX_COMPILER": "cl.exe",
+        "CMAKE_CXX_FLAGS": "/nologo /DWIN32 /D_WINDOWS /MP /W4 /WX /utf-8 /external:anglebrackets /external:W0 /permissive- /volatile:iso /Zc:inline /Zc:preprocessor /EHsc /Zc:__cplusplus /Zc:externConstexpr /Zc:throwingNew"
+      },
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Windows"
+      }
+    },
+    {
+      "name": "windows-debug",
+      "hidden": true,
+      "inherits": "windows-base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_CXX_FLAGS_DEBUG": "/MDd /Zi /Ob0 /Od /RTC1",
+        "CMAKE_EXE_LINKER_FLAGS_DEBUG": "/nologo /DEBUG:FASTLINK",
+        "CMAKE_SHARED_LINKER_FLAGS_DEBUG": "/nologo /DEBUG:FASTLINK"
+      }
+    },
+    {
+      "name": "windows-release",
+      "hidden": true,
+      "inherits": "windows-base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "CMAKE_CXX_FLAGS_RELEASE": "/MD /O2 /Ob3 /GS- /DNDEBUG"
+      }
+    },
+    {
+      "name": "win64-debug",
+      "displayName": "Win64 Debug",
+      "inherits": "windows-debug",
+      "architecture": {
+        "value": "x64",
+        "strategy": "external"
+      }
+    },
+    {
+      "name": "win64-release",
+      "displayName": "Win64 Release",
+      "inherits": "windows-release",
+      "architecture": {
+        "value": "x64",
+        "strategy": "external"
+      }
+    },
+    {
+      "name": "win32-debug",
+      "displayName": "Win32 Debug",
+      "inherits": "windows-debug",
+      "architecture": {
+        "value": "x86",
+        "strategy": "external"
+      }
+    },
+    {
+      "name": "win32-release",
+      "displayName": "Win32 Release",
+      "inherits": "windows-release",
+      "architecture": {
+        "value": "x86",
+        "strategy": "external"
+      }
+    }
+  ]
+}

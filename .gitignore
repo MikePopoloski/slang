@@ -1,7 +1,13 @@
 .vs/
 .vscode/
 .venv/
+.idea/
 build/
+install/
 compile_commands.json
 CMakeSettings.json
 *egg-info/
+cmake-build-*/
+prefix/
+CMakeLists.txt.user
+CMakeUserPresets.json

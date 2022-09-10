@@ -16,17 +16,13 @@ jobs:
         submodules: recursive
     - uses: microsoft/setup-msbuild@v1.0.2
     - name: Configure
-      shell: bash
-      run: |
-        mkdir build
-        cd build
-        cmake .. -G "Visual Studio 17 2022" -DCMAKE_INSTALL_PREFIX=$HOME/slang/ -DSLANG_INCLUDE_PYLIB=ON
+      run: cmake --preset win64-release -DSLANG_INCLUDE_PYLIB=ON
     - name: Build
-      run: msbuild build/INSTALL.vcxproj -m -p:configuration=release -p:platform=x64
+      run: cmake --build build --target install -j8
     - name: Run tests
       run: |
         cd build
-        ctest -C Release --output-on-failure
+        ctest --output-on-failure
 
   build_macos:
     runs-on: macos-latest
