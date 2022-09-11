@@ -28,8 +28,9 @@ function(slang_define_lib libname)
     set_target_properties(${libname} PROPERTIES POSITION_INDEPENDENT_CODE ON)
   endif()
 
-  if(SLANG_RUN_CLANG_TIDY)
-    set_target_properties(${libname} PROPERTIES CXX_CLANG_TIDY clang-tidy)
+  if(SLANG_CLANG_TIDY)
+    set_target_properties(${libname} PROPERTIES CXX_CLANG_TIDY
+                                                ${SLANG_CLANG_TIDY})
   endif()
 endfunction()
 

@@ -11,7 +11,7 @@ jobs:
     strategy:
       matrix:
         include:
-          - preset: clang-ci-coverage
+          - preset: clang-sanitize
             os: ubuntu-22.04
           - preset: gcc-release
             os: ubuntu-22.04
@@ -46,12 +46,12 @@ jobs:
       run: |
         cd build/${{ matrix.preset }}
         ctest --output-on-failure
-    - name: Upload code coverage
-      if: matrix.preset == 'clang-ci-coverage'
-      run: |
-        cd build/${{ matrix.preset }}
-        find . -name *.profraw -exec llvm-profdata-14 merge -o merged.profdata -sparse {} + ;
-        llvm-cov-14 show bin/unittests -instr-profile=merged.profdata > coverage.txt
-        curl -Os https://uploader.codecov.io/latest/linux/codecov
-        chmod +x codecov
-        ./codecov
+    #- name: Upload code coverage
+    #  if: matrix.preset == 'clang-ci-coverage'
+    #  run: |
+    #    cd build/${{ matrix.preset }}
+    #    find . -name *.profraw -exec llvm-profdata-14 merge -o merged.profdata -sparse {} + ;
+    #    llvm-cov-14 show bin/unittests -instr-profile=merged.profdata > coverage.txt
+    #    curl -Os https://uploader.codecov.io/latest/linux/codecov
+    #    chmod +x codecov
+    #    ./codecov

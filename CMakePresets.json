@@ -136,19 +136,19 @@
       }
     },
     {
-      "name": "clang-ci-coverage",
-      "displayName": "Clang CI",
-      "description": "clang debug build for CI with coverage and sanitizers enabled",
+      "name": "clang-sanitize",
+      "displayName": "Clang Sanitize",
+      "description": "clang analysis with sanitizers enabled",
       "inherits": [
         "linux-base",
         "clang-flags"
       ],
       "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_BUILD_TYPE": "RelWithDebInfo",
         "CMAKE_CXX_COMPILER": "clang++-14",
-        "SLANG_COVERAGE": "ON",
-        "SLANG_SANITIZERS": "undefined,address",
-        "SLANG_RUN_CLANG_TIDY": "ON"
+        "CMAKE_CXX_FLAGS": "-fsanitize=undefined,address",
+        "CMAKE_EXE_LINKER_FLAGS": "-fsanitize=undefined,address",
+        "SLANG_CLANG_TIDY": "clang-tidy-14"
       }
     },
     {

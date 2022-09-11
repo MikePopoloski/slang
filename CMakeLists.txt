@@ -59,17 +59,16 @@ option(SLANG_INCLUDE_INSTALL "Include installation targets"
        ${SLANG_MASTER_PROJECT})
 option(STATIC_BUILD "Make the linked binaries static" OFF)
 option(BUILD_SHARED_LIBS "Generate a shared library instead of static" OFF)
-option(SLANG_RUN_CLANG_TIDY "Run clang-tidy during the build" OFF)
+
+set(SLANG_CLANG_TIDY
+    ""
+    CACHE STRING "Run clang-tidy during the build with the given binary")
 set(SLANG_WARN_FLAGS
     ""
     CACHE STRING "Extra warning flags to apply to the slang library build")
 set(DOXYGENPY_PATH
     ""
     CACHE STRING "When building docs, the path to doxygen.py tool")
-
-set(SLANG_SANITIZERS
-    ""
-    CACHE STRING "List of Clang sanitizers to include in build")
 
 # Include built-in cmake modules.
 include(GNUInstallDirs)
@@ -143,24 +142,15 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
   add_compile_options(/utf-8)
 endif()
 
-if(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
-
-else()
-  if(SLANG_COVERAGE)
-    if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-      add_compile_options(-fprofile-instr-generate -fcoverage-mapping)
-      link_libraries(-fprofile-instr-generate -fcoverage-mapping)
-    else()
-      add_compile_options(
-        --coverage -fno-omit-frame-pointer -fno-optimize-sibling-calls
-        -fno-inline -fno-inline-small-functions -fno-default-inline)
-      link_libraries(--coverage)
-    endif()
-  endif()
-
-  if(SLANG_SANITIZERS)
-    add_compile_options("-fsanitize=${SLANG_SANITIZERS}")
-    link_libraries("-fsanitize=${SLANG_SANITIZERS}")
+if(SLANG_COVERAGE)
+  if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    add_compile_options(-fprofile-instr-generate -fcoverage-mapping)
+    link_libraries(-fprofile-instr-generate -fcoverage-mapping)
+  else()
+    add_compile_options(
+      --coverage -fno-omit-frame-pointer -fno-optimize-sibling-calls
+      -fno-inline -fno-inline-small-functions -fno-default-inline)
+    link_libraries(--coverage)
   endif()
 endif()
 
