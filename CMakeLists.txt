@@ -60,6 +60,9 @@ option(SLANG_INCLUDE_INSTALL "Include installation targets"
 option(STATIC_BUILD "Make the linked binaries static" OFF)
 option(BUILD_SHARED_LIBS "Generate a shared library instead of static" OFF)
 option(SLANG_RUN_CLANG_TIDY "Run clang-tidy during the build" OFF)
+set(SLANG_WARN_FLAGS
+    ""
+    CACHE STRING "Extra warning flags to apply to the slang library build")
 set(DOXYGENPY_PATH
     ""
     CACHE STRING "When building docs, the path to doxygen.py tool")
@@ -124,6 +127,8 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 # targets to build and run correctly and don't affect ABI so shouldn't need
 # target_ specific commands.
 if(CMAKE_SYSTEM_NAME MATCHES "Windows")
+  add_compile_definitions(WIN32)
+  add_compile_definitions(_WINDOWS)
   add_compile_definitions(NOMINMAX)
   add_compile_definitions(UNICODE)
   add_compile_definitions(_UNICODE)
