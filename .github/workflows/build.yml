@@ -44,7 +44,6 @@ jobs:
       run: cmake --build build/${{ matrix.preset }} -j8
     - name: Run tests
       run: |
-        export LLVM_PROFILE_FILE=%p.profraw
         cd build/${{ matrix.preset }}
         ctest --output-on-failure
     - name: Upload code coverage
