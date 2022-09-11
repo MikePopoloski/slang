@@ -115,6 +115,11 @@ foreach(
   endif()
 endforeach()
 
+# Always require C++17 or later, no extensions.
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+
 # Defaults for a bunch of Windows-specific junk. These are required by all
 # targets to build and run correctly and don't affect ABI so shouldn't need
 # target_ specific commands.
@@ -133,16 +138,10 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
   add_compile_options(/utf-8)
 endif()
 
-# Always require C++17 or later, no extensions.
-set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_CXX_EXTENSIONS OFF)
-
 if(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
   if(CMAKE_BUILD_TYPE MATCHES "Debug")
     add_compile_options(/DDEBUG)
   endif()
-  set(SLANG_WARN_FLAGS "")
 else()
   # Always include debug info
   add_compile_options(-g)
@@ -170,36 +169,6 @@ else()
 endif()
 
 if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-  set(SLANG_WARN_FLAGS
-      -Wall
-      -Wextra
-      -Werror
-      -Warray-bounds-pointer-arithmetic
-      -Wassign-enum
-      -Wbad-function-cast
-      -Wcast-qual
-      -Wchar-subscripts
-      -Wcomma
-      -Wconditional-uninitialized
-      -Wconversion
-      -Wdelete-non-virtual-dtor
-      -Wdeprecated
-      -Wduplicate-enum
-      -Wduplicate-method-arg
-      -Wembedded-directive
-      -Wfor-loop-analysis
-      -Wformat-pedantic
-      -Widiomatic-parentheses
-      -Wimplicit-fallthrough
-      -Wpedantic
-      -Wrange-loop-analysis
-      -Wredundant-parens
-      -Wreserved-id-macro
-      -Wshadow
-      -Wundefined-reinterpret-cast
-      -Wunreachable-code-aggressive
-      -Wzero-as-null-pointer-constant
-      -Wno-missing-braces)
   add_compile_options(-xc++)
 
   if(APPLE)
@@ -209,21 +178,6 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
       message(SEND_ERROR "STATIC_BUILD=ON not supported on macOS.")
     endif()
   endif()
-elseif(CMAKE_CXX_COMPILER_ID MATCHES "GNU")
-  set(SLANG_WARN_FLAGS
-      -Wall
-      -Wextra
-      -Werror
-      -Wunused-value
-      -Wformat-security
-      -Wimplicit-fallthrough=5
-      -Walloc-zero
-      -Wlogical-op
-      -Wlogical-not-parentheses
-      -Wvla
-      -Wduplicated-cond
-      -Wtype-limits
-      -Wno-maybe-uninitialized)
 endif()
 
 if(NOT SLANG_USE_SYSTEM_LIBS)

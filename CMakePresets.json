@@ -71,6 +71,107 @@
         "value": "x86",
         "strategy": "external"
       }
+    },
+    {
+      "name": "gcc-flags",
+      "hidden": true,
+      "cacheVariables": {
+        "CMAKE_CXX_FLAGS": "-Wall -Wextra -Werror -Wunused-value -Wformat-security -Wimplicit-fallthrough=5 -Walloc-zero -Wlogical-op -Wlogical-not-parentheses -Wvla -Wduplicated-cond -Wtype-limits -Wno-maybe-uninitialized"
+      }
+    },
+    {
+      "name": "clang-flags",
+      "hidden": true,
+      "cacheVariables": {
+        "CMAKE_CXX_FLAGS": "-Wall -Wextra -Werror -Warray-bounds-pointer-arithmetic -Wassign-enum -Wbad-function-cast -Wcast-qual -Wchar-subscripts -Wcomma -Wconditional-uninitialized -Wconversion -Wdelete-non-virtual-dtor -Wdeprecated -Wduplicate-enum -Wduplicate-method-arg -Wembedded-directive -Wfor-loop-analysis -Wformat-pedantic -Widiomatic-parentheses -Wimplicit-fallthrough -Wpedantic -Wrange-loop-analysis -Wredundant-parens -Wreserved-id-macro -Wshadow -Wundefined-reinterpret-cast -Wunreachable-code-aggressive -Wzero-as-null-pointer-constant -Wno-missing-braces"
+      }
+    },
+    {
+      "name": "linux-base",
+      "hidden": true,
+      "generator": "Unix Makefiles",
+      "binaryDir": "${sourceDir}/build/${presetName}",
+      "installDir": "${sourceDir}/install/${presetName}",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Linux"
+      }
+    },
+    {
+      "name": "clang-release",
+      "displayName": "Clang Release",
+      "inherits": [
+        "linux-base",
+        "clang-flags"
+      ],
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "CMAKE_CXX_COMPILER": "clang++-14"
+      }
+    },
+    {
+      "name": "gcc-release",
+      "displayName": "GCC Release",
+      "inherits": [
+        "linux-base",
+        "gcc-flags"
+      ],
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "CMAKE_CXX_COMPILER": "g++-12"
+      }
+    },
+    {
+      "name": "gcc-9-release",
+      "displayName": "GCC Release",
+      "inherits": [
+        "linux-base",
+        "gcc-flags"
+      ],
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "CMAKE_CXX_COMPILER": "g++-9"
+      }
+    },
+    {
+      "name": "clang-ci-coverage",
+      "displayName": "Clang CI",
+      "description": "clang debug build for CI with coverage and sanitizers enabled",
+      "inherits": [
+        "linux-base",
+        "clang-flags"
+      ],
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_CXX_COMPILER": "clang++-14",
+        "SLANG_COVERAGE": "ON",
+        "SLANG_SANITIZERS": "undefined,address",
+        "SLANG_RUN_CLANG_TIDY": "ON"
+      }
+    },
+    {
+      "name": "macos-base",
+      "hidden": true,
+      "generator": "Unix Makefiles",
+      "binaryDir": "${sourceDir}/out/build/${presetName}",
+      "installDir": "${sourceDir}/out/install/${presetName}",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Darwin"
+      }
+    },
+    {
+      "name": "macos-release",
+      "displayName": "macOS Release",
+      "inherits": [
+        "macos-base",
+        "clang-flags"
+      ],
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release"
+      }
     }
   ]
 }

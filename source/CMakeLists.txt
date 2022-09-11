@@ -1,6 +1,5 @@
 # Helper function that defines library targets
 function(slang_define_lib libname)
-  target_compile_options(${libname} PRIVATE ${SLANG_WARN_FLAGS})
   target_include_directories(
     ${libname}
     PUBLIC "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../include/>"
