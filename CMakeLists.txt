@@ -144,17 +144,8 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
 endif()
 
 if(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
-  if(CMAKE_BUILD_TYPE MATCHES "Debug")
-    add_compile_options(/DDEBUG)
-  endif()
+
 else()
-  # Always include debug info
-  add_compile_options(-g)
-
-  if(CMAKE_BUILD_TYPE MATCHES "Debug")
-    add_compile_options(-DDEBUG)
-  endif()
-
   if(SLANG_COVERAGE)
     if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
       add_compile_options(-fprofile-instr-generate -fcoverage-mapping)
