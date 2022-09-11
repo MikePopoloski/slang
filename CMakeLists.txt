@@ -45,7 +45,6 @@ project(
   HOMEPAGE_URL https://sv-lang.com/
   DESCRIPTION "SystemVerilog compiler and language services")
 
-option(SLANG_COVERAGE "Enable code coverage" OFF)
 option(CI_BUILD "Enable longer running tests for CI builds" OFF)
 option(FUZZ_TARGET "Enables changes to make binaries easier to fuzz test" OFF)
 option(SLANG_INCLUDE_TOOLS "Include tools targets in the build"
@@ -57,6 +56,7 @@ option(SLANG_INCLUDE_LLVM "Include LLVM in the build for code generation" OFF)
 option(SLANG_INCLUDE_PYLIB "Include the pyslang python module in the build" OFF)
 option(SLANG_INCLUDE_INSTALL "Include installation targets"
        ${SLANG_MASTER_PROJECT})
+option(SLANG_INCLUDE_COVERAGE "Enable code coverage" OFF)
 option(STATIC_BUILD "Make the linked binaries static" OFF)
 option(BUILD_SHARED_LIBS "Generate a shared library instead of static" OFF)
 
@@ -142,18 +142,6 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
   add_compile_options(/utf-8)
 endif()
 
-if(SLANG_COVERAGE)
-  if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-    add_compile_options(-fprofile-instr-generate -fcoverage-mapping)
-    link_libraries(-fprofile-instr-generate -fcoverage-mapping)
-  else()
-    add_compile_options(
-      --coverage -fno-omit-frame-pointer -fno-optimize-sibling-calls
-      -fno-inline -fno-inline-small-functions -fno-default-inline)
-    link_libraries(--coverage)
-  endif()
-endif()
-
 if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-xc++)
 
@@ -200,6 +188,10 @@ endif()
 if(SLANG_INCLUDE_PYLIB)
   add_subdirectory(external/pybind11)
   add_subdirectory(bindings)
+endif()
+
+if(SLANG_INCLUDE_COVERAGE)
+  include(cmake/coverage.cmake)
 endif()
 
 if(SLANG_INCLUDE_INSTALL)

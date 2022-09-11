@@ -23,7 +23,6 @@ jobs:
             os: windows-latest
 
     runs-on: ${{ matrix.os }}
-
     steps:
     - uses: actions/checkout@v2
       with:
@@ -46,12 +45,29 @@ jobs:
       run: |
         cd build/${{ matrix.preset }}
         ctest --output-on-failure
-    #- name: Upload code coverage
-    #  if: matrix.preset == 'clang-ci-coverage'
-    #  run: |
-    #    cd build/${{ matrix.preset }}
-    #    find . -name *.profraw -exec llvm-profdata-14 merge -o merged.profdata -sparse {} + ;
-    #    llvm-cov-14 show bin/unittests -instr-profile=merged.profdata > coverage.txt
-    #    curl -Os https://uploader.codecov.io/latest/linux/codecov
-    #    chmod +x codecov
-    #    ./codecov
+
+  coverage:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+      with:
+        fetch-depth: 0
+        submodules: recursive
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y g++-12 lcov
+    - name: Configure
+      run: cmake --preset=ci-coverage
+    - name: Build
+      run: cmake --build build/ci-coverage -j8
+    - name: Run tests
+      working-directory: build/ci-coverage
+      run: ctest --output-on-failure
+    - name: Process coverage info
+      run: cmake --build build/ci-coverage -t coverage
+    - name: Submit to codecov.io
+      uses: codecov/codecov-action@v3
+      with:
+        files: build/coverage/coverage.info
+        verbose: true
