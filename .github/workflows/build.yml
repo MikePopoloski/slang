@@ -12,11 +12,11 @@ jobs:
       matrix:
         include:
           - preset: clang-ci-coverage
-            os: ubuntu-latest
+            os: ubuntu-22.04
           - preset: gcc-release
-            os: ubuntu-latest
+            os: ubuntu-22.04
           - preset: gcc-9-release
-            os: ubuntu-latest
+            os: ubuntu-22.04
           - preset: macos-release
             os: macos-latest
           - preset: win64-release
@@ -30,7 +30,7 @@ jobs:
         fetch-depth: 0
         submodules: recursive
     - name: Install dependencies
-      if: matrix.os == 'ubuntu-latest'
+      if: matrix.os == 'ubuntu-22.04'
       run: |
         wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
         sudo add-apt-repository "deb http://apt.llvm.org/jammy/ llvm-toolchain-jammy-14 main"
