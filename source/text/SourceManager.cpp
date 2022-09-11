@@ -465,10 +465,16 @@ SourceBuffer SourceManager::createBufferEntry(FileData* fd, SourceLocation inclu
 }
 
 bool SourceManager::isCached(const fs::path& path) const {
-    std::error_code ec;
-    fs::path absPath = fs::weakly_canonical(path, ec);
-    if (ec)
-        return false;
+    fs::path absPath;
+    if (!disableProximatePaths) {
+        std::error_code ec;
+        absPath = fs::weakly_canonical(path, ec);
+        if (ec)
+            return false;
+    }
+    else {
+        absPath = path;
+    }
 
     std::shared_lock lock(mut);
     auto it = lookupCache.find(absPath.u8string());
@@ -476,10 +482,16 @@ bool SourceManager::isCached(const fs::path& path) const {
 }
 
 SourceBuffer SourceManager::openCached(const fs::path& fullPath, SourceLocation includedFrom) {
-    std::error_code ec;
-    fs::path absPath = fs::weakly_canonical(fullPath, ec);
-    if (ec)
-        return SourceBuffer();
+    fs::path absPath;
+    if (!disableProximatePaths) {
+        std::error_code ec;
+        absPath = fs::weakly_canonical(fullPath, ec);
+        if (ec)
+            return SourceBuffer();
+    }
+    else {
+        absPath = fullPath;
+    }
 
     // first see if we have this file cached
     {
