@@ -69,5 +69,5 @@ jobs:
     - name: Submit to codecov.io
       uses: codecov/codecov-action@v3
       with:
-        files: build/coverage/coverage.info
+        files: build/ci-coverage/coverage.info
         verbose: true
