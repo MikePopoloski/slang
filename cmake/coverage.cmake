@@ -1,6 +1,11 @@
+set(COVERAGE_GCOV_TOOL
+    "gcov"
+    CACHE STRING "Name of the gcov binary to run")
+
 set(COVERAGE_TRACE_COMMAND
-    lcov -c -q -o "${PROJECT_BINARY_DIR}/coverage.info" -d
-    "${PROJECT_BINARY_DIR}" --include "${PROJECT_SOURCE_DIR}/source/*" --include
+    lcov -c -q -o "${PROJECT_BINARY_DIR}/coverage.info" --gcov-tool
+    ${COVERAGE_GCOV_TOOL} -d "${PROJECT_BINARY_DIR}" --include
+    "${PROJECT_SOURCE_DIR}/source/*" --include
     "${PROJECT_SOURCE_DIR}/include/slang/*"
     CACHE STRING
           "; separated command to generate a trace for the 'coverage' target")

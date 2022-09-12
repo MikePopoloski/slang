@@ -177,7 +177,8 @@
         "CMAKE_CXX_FLAGS_COVERAGE": "-Og -g --coverage -fno-omit-frame-pointer -fno-optimize-sibling-calls -fno-inline -fno-inline-small-functions -fno-default-inline",
         "CMAKE_EXE_LINKER_FLAGS_COVERAGE": "--coverage",
         "CMAKE_SHARED_LINKER_FLAGS_COVERAGE": "--coverage",
-        "SLANG_INCLUDE_COVERAGE": "ON"
+        "SLANG_INCLUDE_COVERAGE": "ON",
+        "COVERAGE_GCOV_TOOL": "gcov-12"
       }
     },
     {
