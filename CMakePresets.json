@@ -174,7 +174,7 @@
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Coverage",
         "CMAKE_CXX_COMPILER": "g++-12",
-        "CMAKE_CXX_FLAGS_COVERAGE": "-Og -g --coverage -fkeep-inline-functions -fkeep-static-functions -fno-omit-frame-pointer -fno-optimize-sibling-calls -fno-inline -fno-inline-small-functions -fno-default-inline",
+        "CMAKE_CXX_FLAGS_COVERAGE": "-Og -g --coverage -fno-omit-frame-pointer -fno-optimize-sibling-calls -fno-inline -fno-inline-small-functions -fno-default-inline",
         "CMAKE_EXE_LINKER_FLAGS_COVERAGE": "--coverage",
         "CMAKE_SHARED_LINKER_FLAGS_COVERAGE": "--coverage",
         "SLANG_INCLUDE_COVERAGE": "ON"
