@@ -30,7 +30,7 @@ add_executable(
 target_link_libraries(unittests PRIVATE slangcompiler Catch2::Catch2)
 target_compile_definitions(unittests PRIVATE UNITTESTS)
 
-if(CI_BUILD)
+if(SLANG_CI_BUILD)
   message("Running CI build")
   target_compile_definitions(unittests PRIVATE CI_BUILD)
 endif()
@@ -46,7 +46,7 @@ add_test(NAME unittests COMMAND unittests)
 
 # Set timeout property based on CI_BUILD and SLANG_COVERAGE
 set(timeout 5)
-if(CI_BUILD)
+if(SLANG_CI_BUILD)
   math(EXPR timeout "${timeout} * 4")
 endif()
 set_tests_properties(unittests PROPERTIES TIMEOUT ${timeout})

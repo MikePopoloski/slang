@@ -38,7 +38,7 @@ jobs:
     - uses: ilammy/msvc-dev-cmd@v1
       if: matrix.os == 'windows-latest'
     - name: Configure
-      run: cmake --preset ${{ matrix.preset }} -DCI_BUILD=ON
+      run: cmake --preset ${{ matrix.preset }} -DSLANG_CI_BUILD=ON
     - name: Build
       run: cmake --build build/${{ matrix.preset }} -j8
     - name: Run tests

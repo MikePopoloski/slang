@@ -101,6 +101,18 @@
       }
     },
     {
+      "name": "clang-debug",
+      "displayName": "Clang Debug",
+      "inherits": [
+        "linux-base",
+        "clang-flags"
+      ],
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_CXX_COMPILER": "clang++-14"
+      }
+    },
+    {
       "name": "clang-release",
       "displayName": "Clang Release",
       "inherits": [

@@ -45,8 +45,6 @@ project(
   HOMEPAGE_URL https://sv-lang.com/
   DESCRIPTION "SystemVerilog compiler and language services")
 
-option(CI_BUILD "Enable longer running tests for CI builds" OFF)
-option(FUZZ_TARGET "Enables changes to make binaries easier to fuzz test" OFF)
 option(SLANG_INCLUDE_TOOLS "Include tools targets in the build"
        ${SLANG_MASTER_PROJECT})
 option(SLANG_INCLUDE_TESTS "Include test targets in the build"
@@ -57,8 +55,9 @@ option(SLANG_INCLUDE_PYLIB "Include the pyslang python module in the build" OFF)
 option(SLANG_INCLUDE_INSTALL "Include installation targets"
        ${SLANG_MASTER_PROJECT})
 option(SLANG_INCLUDE_COVERAGE "Enable code coverage" OFF)
-option(STATIC_BUILD "Make the linked binaries static" OFF)
-option(BUILD_SHARED_LIBS "Generate a shared library instead of static" OFF)
+option(SLANG_CI_BUILD "Enable longer running tests for CI builds" OFF)
+option(SLANG_FUZZ_TARGET "Enables changes to make binaries easier to fuzz test"
+       OFF)
 
 set(SLANG_CLANG_TIDY
     ""
@@ -140,18 +139,6 @@ endif()
 
 if(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
   add_compile_options(/utf-8)
-endif()
-
-if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-  add_compile_options(-xc++)
-
-  if(APPLE)
-    set(CMAKE_SHARED_LIBRARY_CREATE_CXX_FLAGS
-        "${CMAKE_SHARED_LIBRARY_CREATE_CXX_FLAGS} -undefined dynamic_lookup")
-    if(STATIC_BUILD)
-      message(SEND_ERROR "STATIC_BUILD=ON not supported on macOS.")
-    endif()
-  endif()
 endif()
 
 if(NOT SLANG_USE_SYSTEM_LIBS)
