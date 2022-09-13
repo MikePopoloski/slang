@@ -21,6 +21,8 @@ jobs:
             os: macos-latest
           - preset: win64-release
             os: windows-latest
+          - preset: win32-release
+            os: windows-latest
 
     runs-on: ${{ matrix.os }}
     steps:

@@ -64,7 +64,7 @@ void TextDiagnosticClient::report(const ReportedDiagnostic& diag) {
     // Print out the hierarchy where the diagnostic occurred, if we know it.
     auto& od = diag.originalDiagnostic;
     if (od.coalesceCount && od.symbol && symbolPathCB && includeHierarchy) {
-        if (od.coalesceCount == 1)
+        if (od.coalesceCount == 1u)
             buffer->append("  in instance: "sv);
         else
             buffer->format("  in {} instances, e.g. ", *od.coalesceCount);

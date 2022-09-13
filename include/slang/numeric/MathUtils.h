@@ -19,8 +19,18 @@ namespace slang {
 inline uint32_t clog2(uint64_t value) {
 #if defined(_MSC_VER)
     unsigned long index;
+#    if defined(_M_IX86)
+    if (value >> 32) {
+        _BitScanReverse(&index, (unsigned long)(value >> 32));
+        index += 32;
+    }
+    else if (!_BitScanReverse(&index, (unsigned long)value)) {
+        return 0;
+    }
+#    else
     if (!_BitScanReverse64(&index, value))
         return 0;
+#    endif
     return index + (value & (value - 1) ? 1 : 0);
 #else
     if (value == 0)
@@ -50,9 +60,16 @@ inline uint32_t countLeadingZeros64(uint64_t value) {
     if (value == 0)
         return 64;
 #if defined(_MSC_VER)
+#    if defined(_M_IX86)
+    if (value >> 32)
+        return countLeadingZeros32((unsigned long)(value >> 32));
+    else
+        return countLeadingZeros32((unsigned long)value) + 32;
+#    else
     unsigned long index;
     _BitScanReverse64(&index, value);
     return index ^ 63;
+#    endif
 #else
     return (uint32_t)__builtin_clzll(value);
 #endif
@@ -64,7 +81,11 @@ inline uint32_t countLeadingOnes64(uint64_t value) {
 
 inline uint32_t countPopulation64(uint64_t value) {
 #if defined(_MSC_VER)
+#    if defined(_M_IX86)
+    return __popcnt((unsigned int)value) + __popcnt((unsigned int)(value >> 32));
+#    else
     return (uint32_t)__popcnt64(value);
+#    endif
 #else
     return (uint32_t)__builtin_popcountll(value);
 #endif

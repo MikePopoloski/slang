@@ -125,16 +125,11 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 # targets to build and run correctly and don't affect ABI so shouldn't need
 # target_ specific commands.
 if(CMAKE_SYSTEM_NAME MATCHES "Windows")
-  add_compile_definitions(WIN32)
-  add_compile_definitions(_WINDOWS)
-  add_compile_definitions(NOMINMAX)
-  add_compile_definitions(UNICODE)
-  add_compile_definitions(_UNICODE)
-  add_compile_definitions(WIN32_LEAN_AND_MEAN)
-  add_compile_definitions(_SCL_SECURE_NO_WARNINGS)
-  add_compile_definitions(_CRT_SECURE_NO_WARNINGS)
-  add_compile_definitions(_CRT_SECURE_NO_DEPRECATE)
-  add_compile_definitions(_CRT_NONSTDC_NO_WARNINGS)
+  add_compile_definitions(WIN32 _WINDOWS NTDDI_VERSION=0x06010000
+                          _WIN32_WINNT=0x0601)
+  add_compile_definitions(UNICODE _UNICODE NOMINMAX WIN32_LEAN_AND_MEAN)
+  add_compile_definitions(_SCL_SECURE_NO_WARNINGS _CRT_SECURE_NO_WARNINGS)
+  add_compile_definitions(_CRT_SECURE_NO_DEPRECATE _CRT_NONSTDC_NO_WARNINGS)
 endif()
 
 if(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")

@@ -224,12 +224,19 @@ protected:
     size_t len = 0;
     size_t capacity = 0;
 
+#ifdef _MSC_VER
+#    pragma warning(push)
+#    pragma warning(disable : 4324) // structure was padded due to alignment specifier
+#endif
     // Always allocate room for one element, the first stack allocated element.
     // This way the base class can be generic with respect to how many elements
     // can actually fit onto the stack.
     alignas(T) char firstElement[sizeof(T)];
     // Don't put any variables after firstElement; we expect that the derived
     // class will fill in stack space here.
+#ifdef _MSC_VER
+#    pragma warning(pop)
+#endif
 
     void realloc() {
         T* newData = (T*)malloc(capacity * sizeof(T));

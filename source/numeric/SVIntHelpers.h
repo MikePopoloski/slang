@@ -38,6 +38,31 @@ static uint8_t subborrow64(uint8_t c, uint64_t a, uint64_t b, calc_out_t* out) {
 }
 #endif
 
+#if defined(_MSC_VER) && defined(_M_IX86)
+uint64_t _umul128(uint64_t multiplier, uint64_t multiplicand, uint64_t* product_hi) {
+    // multiplier   = ab = a * 2^32 + b
+    // multiplicand = cd = c * 2^32 + d
+    // ab * cd = a * c * 2^64 + (a * d + b * c) * 2^32 + b * d
+    uint32_t a = (uint32_t)(multiplier >> 32);
+    uint32_t b = (uint32_t)multiplier;
+    uint32_t c = (uint32_t)(multiplicand >> 32);
+    uint32_t d = (uint32_t)multiplicand;
+
+    uint64_t ad = __emulu(a, d);
+    uint64_t bd = __emulu(b, d);
+
+    uint64_t adbc = ad + __emulu(b, c);
+    uint64_t adbc_carry = (adbc < ad);
+
+    // multiplier * multiplicand = product_hi * 2^64 + product_lo
+    uint64_t product_lo = bd + (adbc << 32);
+    uint64_t product_lo_carry = (product_lo < bd);
+    *product_hi = __emulu(a, c) + (adbc >> 32) + (adbc_carry << 32) + product_lo_carry;
+
+    return product_lo;
+}
+#endif
+
 namespace slang {
 
 /// Provides a temporary storage region of dynamic size. If that size is less than

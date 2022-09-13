@@ -85,7 +85,7 @@ private:
 class SourceLocation {
 public:
     constexpr SourceLocation() : bufferID(0), charOffset(0) {}
-    constexpr SourceLocation(BufferID buffer, size_t offset) :
+    constexpr SourceLocation(BufferID buffer, uint64_t offset) :
 #ifdef DEBUG
         bufferName(buffer.name),
 #endif
@@ -103,7 +103,7 @@ public:
 
     /// @return the character offset of this location within the source buffer.
     [[nodiscard]] size_t offset() const {
-        return charOffset;
+        return (size_t)charOffset;
     }
 
     /// @return true if the location is valid, and false if not.
