@@ -65,9 +65,6 @@ set(SLANG_CLANG_TIDY
 set(SLANG_WARN_FLAGS
     ""
     CACHE STRING "Extra warning flags to apply to the slang library build")
-set(DOXYGENPY_PATH
-    ""
-    CACHE STRING "When building docs, the path to doxygen.py tool")
 
 # Include built-in cmake modules.
 include(GNUInstallDirs)

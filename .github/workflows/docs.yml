@@ -18,10 +18,6 @@ jobs:
       with:
         fetch-depth: 0
         submodules: recursive
-    - uses: actions/checkout@v2
-      with:
-        repository: MikePopoloski/m.css
-        path: m.css
     - name: Install dependencies
       run: |
         pip install jinja2 pygments
@@ -30,7 +26,7 @@ jobs:
         cp doxygen-1.9.5/bin/doxygen /usr/local/bin
     - name: Build
       run: |
-        cmake -B build -DSLANG_INCLUDE_DOCS=ON -DSLANG_INCLUDE_TESTS=OFF -DDOXYGENPY_PATH=$GITHUB_WORKSPACE/m.css/documentation/doxygen.py
+        cmake -B build -DSLANG_INCLUDE_DOCS=ON -DSLANG_INCLUDE_TESTS=OFF
         cmake --build build --target docs -j8
         tar -czvf slang.tar.gz build/docs build/bin/slang
     - name: Upload

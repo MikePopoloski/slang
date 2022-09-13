@@ -1,3 +1,12 @@
+include(FetchContent)
+FetchContent_Declare(
+  mcss
+  URL https://github.com/MikePopoloski/m.css/releases/download/release-1/mcss.zip
+  URL_HASH MD5=00cd2757ebafb9bcba7f5d399b3bec7f
+  SOURCE_DIR "${PROJECT_BINARY_DIR}/mcss"
+  UPDATE_DISCONNECTED YES)
+FetchContent_MakeAvailable(mcss)
+
 # Find all the public headers of the slang project, the only one we currently
 # document
 file(GLOB_RECURSE SLANG_PUBLIC_HEADERS ${PROJECT_SOURCE_DIR}/include/*.h)
@@ -13,6 +22,7 @@ set(DOXYGEN_INDEX_FILE ${DOXYGEN_OUTPUT_DIR}/html/index.html)
 set(DOXYFILE_IN ${CMAKE_CURRENT_SOURCE_DIR}/Doxyfile.in)
 set(DOXYFILE_OUT ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile)
 set(SCRIPTS_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../scripts)
+set(DOXYGENPY_PATH "${mcss_SOURCE_DIR}/documentation/doxygen.py")
 
 configure_file(${DOXYFILE_IN} ${DOXYFILE_OUT} @ONLY)
 
@@ -28,9 +38,7 @@ add_custom_command(
   OUTPUT ${DOXYGEN_INDEX_FILE}
   DEPENDS ${SLANG_PUBLIC_HEADERS} ${SLANG_DOX_FILES}
           ${CMAKE_CURRENT_BINARY_DIR}/warnings.dox
-  COMMAND ${Python_EXECUTABLE} ${PROJECT_SOURCE_DIR}/scripts/rmdir.py
-          ${CMAKE_CURRENT_BINARY_DIR}/html
-  COMMAND ${Python_EXECUTABLE} ${PROJECT_SOURCE_DIR}/scripts/rmdir.py
+  COMMAND "${CMAKE_COMMAND}" -E -rf ${CMAKE_CURRENT_BINARY_DIR}/html
           ${CMAKE_CURRENT_BINARY_DIR}/xml
   COMMAND ${Python_EXECUTABLE} ${DOXYGENPY_PATH} ${DOXYFILE_OUT}
   MAIN_DEPENDENCY ${DOXYFILE_OUT}
