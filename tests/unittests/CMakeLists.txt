@@ -43,10 +43,4 @@ add_custom_command(
           ${CMAKE_CURRENT_BINARY_DIR}/data)
 
 add_test(NAME unittests COMMAND unittests)
-
-# Set timeout property based on CI_BUILD and SLANG_COVERAGE
-set(timeout 5)
-if(SLANG_CI_BUILD)
-  math(EXPR timeout "${timeout} * 4")
-endif()
-set_tests_properties(unittests PROPERTIES TIMEOUT ${timeout})
+set_tests_properties(unittests PROPERTIES TIMEOUT 30)
