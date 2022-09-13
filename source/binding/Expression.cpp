@@ -293,7 +293,7 @@ const Expression& Expression::bindArgument(const Type& argType, ArgumentDirectio
         case ArgumentDirection::Ref:
             return bindRefArg(argType, isConstRef, syntax, loc, context);
     }
-    THROW_UNREACHABLE;
+    ASSUME_UNREACHABLE;
 }
 
 const Expression& Expression::bindImplicitParam(
@@ -829,7 +829,7 @@ Expression& Expression::create(Compilation& compilation, const ExpressionSyntax&
                                                          context);
                 break;
             }
-            THROW_UNREACHABLE;
+            ASSUME_UNREACHABLE;
     }
 
     result->syntax = &syntax;
@@ -1077,7 +1077,7 @@ Expression& Expression::bindSelector(Compilation& compilation, Expression& value
                                                      selector->as<RangeSelectSyntax>(), fullRange,
                                                      context);
         default:
-            THROW_UNREACHABLE;
+            ASSUME_UNREACHABLE;
     }
 }
 

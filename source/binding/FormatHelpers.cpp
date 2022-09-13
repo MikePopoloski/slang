@@ -297,7 +297,7 @@ static char getDefaultSpecifier(const Expression& expr, LiteralBase defaultBase)
             case LiteralBase::Binary:
                 return 'b';
             default:
-                THROW_UNREACHABLE;
+                ASSUME_UNREACHABLE;
         }
     }
 
@@ -386,7 +386,7 @@ static void lowerFormatArg(mir::Procedure& proc, const Expression& arg, char,
         case SymbolKind::CHandleType:
         case SymbolKind::ClassType:
         case SymbolKind::NullType:
-            THROW_UNREACHABLE;
+            ASSUME_UNREACHABLE;
         default:
             // Should only be reachable by invalid display calls,
             // in which case an error will already have been reported.

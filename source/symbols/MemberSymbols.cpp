@@ -335,7 +335,7 @@ void ModportSymbol::fromSyntax(const BindContext& context, const ModportDeclarat
                                 break;
                             }
                             default:
-                                THROW_UNREACHABLE;
+                                ASSUME_UNREACHABLE;
                         }
                     }
                     break;
@@ -364,7 +364,7 @@ void ModportSymbol::fromSyntax(const BindContext& context, const ModportDeclarat
                                 break;
                             }
                             default:
-                                THROW_UNREACHABLE;
+                                ASSUME_UNREACHABLE;
                         }
                     }
                     break;
@@ -377,7 +377,7 @@ void ModportSymbol::fromSyntax(const BindContext& context, const ModportDeclarat
                     break;
                 }
                 default: {
-                    THROW_UNREACHABLE;
+                    ASSUME_UNREACHABLE;
                 }
             }
         }
@@ -588,7 +588,7 @@ string_view ElabSystemTaskSymbol::getMessage() const {
                     comp.emplace<EmptyArgumentExpression>(comp.getVoidType(), arg->sourceRange()));
                 break;
             default:
-                THROW_UNREACHABLE;
+                ASSUME_UNREACHABLE;
         }
 
         if (args.back()->bad())
@@ -712,7 +712,7 @@ void ElabSystemTaskSymbol::issueDiagnostic() const {
             reportStaticAssert(*scope, location, msg, assertCondition);
             return;
         default:
-            THROW_UNREACHABLE;
+            ASSUME_UNREACHABLE;
     }
 
     scope->addDiag(code, location).addStringAllowEmpty(std::string(msg));
@@ -896,7 +896,7 @@ PrimitiveSymbol& PrimitiveSymbol::fromSyntax(const Scope& scope,
         // TODO:
     }
     else {
-        THROW_UNREACHABLE;
+        ASSUME_UNREACHABLE;
     }
 
     if (ports.size() < 2)
@@ -1410,7 +1410,7 @@ const RandSeqProductionSymbol::CaseProd& RandSeqProductionSymbol::createCaseProd
                     defItem = createProdItem(*item->as<DefaultRsCaseItemSyntax>().item, context);
                 break;
             default:
-                THROW_UNREACHABLE;
+                ASSUME_UNREACHABLE;
         }
     }
 
@@ -1494,7 +1494,7 @@ RandSeqProductionSymbol::Rule RandSeqProductionSymbol::createRule(
                 prods.append(&createCaseProd(p->as<RsCaseSyntax>(), context));
                 break;
             default:
-                THROW_UNREACHABLE;
+                ASSUME_UNREACHABLE;
         }
     }
 
@@ -1577,12 +1577,12 @@ void RandSeqProductionSymbol::createRuleVariables(const RsRuleSyntax& syntax, co
                             countProd(*item->as<DefaultRsCaseItemSyntax>().item);
                             break;
                         default:
-                            THROW_UNREACHABLE;
+                            ASSUME_UNREACHABLE;
                     }
                 }
                 break;
             default:
-                THROW_UNREACHABLE;
+                ASSUME_UNREACHABLE;
         }
     }
 
@@ -1681,7 +1681,7 @@ void RandSeqProductionSymbol::serializeTo(ASTSerializer& serializer) const {
                     break;
                 }
                 default:
-                    THROW_UNREACHABLE;
+                    ASSUME_UNREACHABLE;
             }
             serializer.endObject();
         }

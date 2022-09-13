@@ -248,7 +248,7 @@ static ConstantValue constContainer(const Type& type, span<ConstantValue> elems)
             return result;
         }
         default:
-            THROW_UNREACHABLE;
+            ASSUME_UNREACHABLE;
     }
 }
 

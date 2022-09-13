@@ -434,7 +434,7 @@ ConstantValue HierarchicalValueExpression::evalImpl(EvalContext& context) const 
         case SymbolKind::Specparam:
             return symbol.as<SpecparamSymbol>().getValue(sourceRange);
         default:
-            THROW_UNREACHABLE;
+            ASSUME_UNREACHABLE;
     }
 }
 
@@ -710,7 +710,7 @@ Expression& AssertionInstanceExpression::fromLookup(const Symbol& symbol,
             break;
         }
         default:
-            THROW_UNREACHABLE;
+            ASSUME_UNREACHABLE;
     }
 
     SmallVectorSized<const SyntaxNode*, 8> orderedArgs;
@@ -944,7 +944,7 @@ Expression& AssertionInstanceExpression::makeDefault(const Symbol& symbol) {
             break;
         }
         default:
-            THROW_UNREACHABLE;
+            ASSUME_UNREACHABLE;
     }
 
     BindContext::AssertionInstanceDetails instance;

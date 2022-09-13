@@ -3241,7 +3241,7 @@ void Parser::checkMemberAllowed(const SyntaxNode& member, SyntaxKind parentKind)
         case SyntaxKind::SpecifyBlock:
             return;
         default:
-            THROW_UNREACHABLE;
+            ASSUME_UNREACHABLE;
     }
 }
 

@@ -20,7 +20,7 @@ std::optional<VariableLifetime> SemanticFacts::getVariableLifetime(Token token) 
         case TokenKind::AutomaticKeyword: return VariableLifetime::Automatic;
         case TokenKind::StaticKeyword: return VariableLifetime::Static;
         case TokenKind::Unknown: return std::nullopt;
-        default: THROW_UNREACHABLE;
+        default: ASSUME_UNREACHABLE;
     }
 }
 
@@ -30,7 +30,7 @@ ArgumentDirection SemanticFacts::getDirection(TokenKind kind) {
         case TokenKind::InOutKeyword: return ArgumentDirection::InOut;
         case TokenKind::OutputKeyword: return ArgumentDirection::Out;
         case TokenKind::RefKeyword: return ArgumentDirection::Ref;
-        default: THROW_UNREACHABLE;
+        default: ASSUME_UNREACHABLE;
     }
 }
 
@@ -42,7 +42,7 @@ ProceduralBlockKind SemanticFacts::getProceduralBlockKind(SyntaxKind kind) {
         case SyntaxKind::AlwaysFFBlock: return ProceduralBlockKind::AlwaysFF;
         case SyntaxKind::InitialBlock: return ProceduralBlockKind::Initial;
         case SyntaxKind::FinalBlock: return ProceduralBlockKind::Final;
-        default: THROW_UNREACHABLE;
+        default: ASSUME_UNREACHABLE;
     }
 }
 
@@ -51,7 +51,7 @@ DefinitionKind SemanticFacts::getDefinitionKind(SyntaxKind kind) {
         case SyntaxKind::ModuleDeclaration: return DefinitionKind::Module;
         case SyntaxKind::InterfaceDeclaration: return DefinitionKind::Interface;
         case SyntaxKind::ProgramDeclaration: return DefinitionKind::Program;
-        default: THROW_UNREACHABLE;
+        default: ASSUME_UNREACHABLE;
     }
 }
 
@@ -75,7 +75,7 @@ AssertionKind SemanticFacts::getAssertKind(SyntaxKind kind) {
         case SyntaxKind::CoverSequenceStatement: return AssertionKind::CoverSequence;
         case SyntaxKind::ExpectPropertyStatement: return AssertionKind::Expect;
         case SyntaxKind::RestrictPropertyStatement: return AssertionKind::Restrict;
-        default: THROW_UNREACHABLE;
+        default: ASSUME_UNREACHABLE;
     }
 }
 
@@ -91,7 +91,7 @@ ElabSystemTaskKind SemanticFacts::getElabSystemTaskKind(Token token) {
         return ElabSystemTaskKind::Info;
     if (name == "$static_assert"sv)
         return ElabSystemTaskKind::StaticAssert;
-    THROW_UNREACHABLE;
+    ASSUME_UNREACHABLE;
 }
 // clang-format on
 
@@ -110,7 +110,7 @@ string_view SemanticFacts::getProcedureKindStr(ProceduralBlockKind kind) {
         case ProceduralBlockKind::AlwaysFF:
             return "always_ff"sv;
     }
-    THROW_UNREACHABLE;
+    ASSUME_UNREACHABLE;
 }
 
 StatementBlockKind SemanticFacts::getStatementBlockKind(const BlockStatementSyntax& syntax) {

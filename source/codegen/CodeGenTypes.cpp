@@ -39,7 +39,7 @@ AlignedType CodeGenTypes::convertType(const Type& type) {
 
     // TODO: handle other types
     if (!type.isIntegral())
-        THROW_UNREACHABLE;
+        ASSUME_UNREACHABLE;
 
     // Underlying representation for integer types:
     // - Two state types: use the bitwidth as specified

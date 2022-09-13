@@ -101,7 +101,7 @@ const AssertionExpr& AssertionExpr::bind(const SequenceExprSyntax& syntax,
                                                         ctx);
             break;
         default:
-            THROW_UNREACHABLE;
+            ASSUME_UNREACHABLE;
     }
 
     result->syntax = &syntax;
@@ -179,7 +179,7 @@ const AssertionExpr& AssertionExpr::bind(const PropertyExprSyntax& syntax,
             result = &CaseAssertionExpr::fromSyntax(syntax.as<CasePropertyExprSyntax>(), ctx);
             break;
         default:
-            THROW_UNREACHABLE;
+            ASSUME_UNREACHABLE;
     }
 
     result->syntax = &syntax;
@@ -239,7 +239,7 @@ void AssertionExpr::requireSequence(const BindContext& context, DiagCode code) c
         case AssertionExprKind::Invalid:
             return;
     }
-    THROW_UNREACHABLE;
+    ASSUME_UNREACHABLE;
 }
 
 bool AssertionExpr::admitsEmpty() const {
@@ -455,7 +455,7 @@ SequenceRepetition::AdmitsEmpty SequenceRepetition::admitsEmpty() const {
                 return AdmitsEmpty::Yes;
             return AdmitsEmpty::No;
     }
-    THROW_UNREACHABLE;
+    ASSUME_UNREACHABLE;
 }
 
 void SequenceRepetition::serializeTo(ASTSerializer& serializer) const {
@@ -755,7 +755,7 @@ static UnaryAssertionOperator getUnaryOp(TokenKind kind) {
         case TokenKind::SAlwaysKeyword: return UnaryAssertionOperator::SAlways;
         case TokenKind::EventuallyKeyword: return UnaryAssertionOperator::Eventually;
         case TokenKind::SEventuallyKeyword: return UnaryAssertionOperator::SEventually;
-        default: THROW_UNREACHABLE;
+        default: ASSUME_UNREACHABLE;
     }
     // clang-format on
 }
@@ -835,7 +835,7 @@ AssertionExpr& BinaryAssertionExpr::fromSyntax(const BinarySequenceExprSyntax& s
         case SyntaxKind::IntersectSequenceExpr: op = BinaryAssertionOperator::Intersect; break;
         case SyntaxKind::ThroughoutSequenceExpr: op = BinaryAssertionOperator::Throughout; break;
         case SyntaxKind::WithinSequenceExpr: op = BinaryAssertionOperator::Within; break;
-        default: THROW_UNREACHABLE;
+        default: ASSUME_UNREACHABLE;
     }
     // clang-format on
 
@@ -904,7 +904,7 @@ AssertionExpr& BinaryAssertionExpr::fromSyntax(const BinaryPropertyExprSyntax& s
                                                               BinaryAssertionOperator::NonOverlappedFollowedBy;
             break;
         default:
-            THROW_UNREACHABLE;
+            ASSUME_UNREACHABLE;
     }
     // clang-format on
 
@@ -936,7 +936,7 @@ void BinaryAssertionExpr::requireSequence(const BindContext& context, DiagCode c
             context.addDiag(code, syntax->sourceRange());
             return;
     }
-    THROW_UNREACHABLE;
+    ASSUME_UNREACHABLE;
 }
 
 bool BinaryAssertionExpr::admitsEmptyImpl() const {
@@ -1088,7 +1088,7 @@ AssertionExpr& AbortAssertionExpr::fromSyntax(const AcceptOnPropertyExprSyntax& 
             isSync = true;
             break;
         default:
-            THROW_UNREACHABLE;
+            ASSUME_UNREACHABLE;
     }
 
     checkSampledValueExpr(cond, context, false, diag::PropAbortLocalVar, diag::PropAbortMatched);

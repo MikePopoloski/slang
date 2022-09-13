@@ -32,7 +32,7 @@ struct GetDefaultVisitor {
             return type.getDefaultValueImpl();
         }
         else {
-            THROW_UNREACHABLE;
+            ASSUME_UNREACHABLE;
         }
     }
 };
@@ -91,7 +91,7 @@ bitwidth_t Type::getBitWidth() const {
             case FloatingType::ShortReal:
                 return 32;
             default:
-                THROW_UNREACHABLE;
+                ASSUME_UNREACHABLE;
         }
     }
     return 0;
@@ -965,7 +965,7 @@ const Type& Type::fromSyntax(Compilation& compilation, const DataTypeSyntax& nod
         case SyntaxKind::VirtualInterfaceType:
             return VirtualInterfaceType::fromSyntax(context, node.as<VirtualInterfaceTypeSyntax>());
         default:
-            THROW_UNREACHABLE;
+            ASSUME_UNREACHABLE;
     }
 }
 

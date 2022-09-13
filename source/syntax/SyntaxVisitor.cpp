@@ -114,7 +114,7 @@ struct CloneVisitor {
 #endif
 
     SyntaxNode* visitInvalid(const SyntaxNode&) {
-        THROW_UNREACHABLE;
+        ASSUME_UNREACHABLE;
     }
 };
 

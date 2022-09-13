@@ -291,7 +291,7 @@ EvaluatedDimension BindContext::evalDimension(const VariableDimensionSyntax& syn
                                    isPacked, result);
                 break;
             default:
-                THROW_UNREACHABLE;
+                ASSUME_UNREACHABLE;
         }
     }
 
@@ -507,7 +507,7 @@ void BindContext::addAssertionBacktrace(Diagnostic& diag) const {
                     note << "let declaration"sv;
                     break;
                 default:
-                    THROW_UNREACHABLE;
+                    ASSUME_UNREACHABLE;
             }
             note << inst.symbol->name;
         }

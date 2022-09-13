@@ -37,7 +37,7 @@ ConstantValue evalLogicalOp(BinaryOperator op, const TL& l, const TR& r) {
         OP(LogicalImplication, SVInt(SVInt::logicalImpl(l, r)));
         OP(LogicalEquivalence, SVInt(SVInt::logicalEquiv(l, r)));
         default:
-            THROW_UNREACHABLE;
+            ASSUME_UNREACHABLE;
     }
 }
 
@@ -65,7 +65,7 @@ ConstantValue evalFloatOp(BinaryOperator op, TFloat l, TFloat r) {
         OP(LogicalImplication, SVInt(!bl || br));
         OP(LogicalEquivalence, SVInt((!bl || br) && (!br || bl)));
         default:
-            THROW_UNREACHABLE;
+            ASSUME_UNREACHABLE;
     }
 }
 #undef OP
@@ -363,7 +363,7 @@ Expression& UnaryExpression::fromSyntax(Compilation& compilation,
 
             break;
         default:
-            THROW_UNREACHABLE;
+            ASSUME_UNREACHABLE;
     }
 
     if (!good) {
@@ -429,7 +429,7 @@ bool UnaryExpression::propagateType(const BindContext& context, const Type& newT
             // Operand is self determined and already folded.
             return false;
     }
-    THROW_UNREACHABLE;
+    ASSUME_UNREACHABLE;
 }
 
 optional<bitwidth_t> UnaryExpression::getEffectiveWidthImpl() const {
@@ -506,7 +506,7 @@ ConstantValue UnaryExpression::evalImpl(EvalContext& context) const {
 #undef OP
         }
 
-        THROW_UNREACHABLE;
+        ASSUME_UNREACHABLE;
     }
 
     ConstantValue cv = operand().eval(context);
@@ -556,7 +556,7 @@ ConstantValue UnaryExpression::evalImpl(EvalContext& context) const {
     }
 
 #undef OP
-    THROW_UNREACHABLE;
+    ASSUME_UNREACHABLE;
 }
 
 void UnaryExpression::serializeTo(ASTSerializer& serializer) const {
@@ -794,7 +794,7 @@ Expression& BinaryExpression::fromComponents(Expression& lhs, Expression& rhs, B
             }
             break;
         default:
-            THROW_UNREACHABLE;
+            ASSUME_UNREACHABLE;
     }
 
     if (!good) {
@@ -849,7 +849,7 @@ bool BinaryExpression::propagateType(const BindContext& context, const Type& new
             contextDetermined(context, left_, newType);
             return true;
     }
-    THROW_UNREACHABLE;
+    ASSUME_UNREACHABLE;
 }
 
 optional<bitwidth_t> BinaryExpression::getEffectiveWidthImpl() const {
@@ -908,7 +908,7 @@ ConstantValue BinaryExpression::evalImpl(EvalContext& context) const {
                     return SVInt(true);
                 break;
             default:
-                THROW_UNREACHABLE;
+                ASSUME_UNREACHABLE;
         }
     }
 
@@ -1972,7 +1972,7 @@ UnaryOperator Expression::getUnaryOperator(SyntaxKind kind) {
         case SyntaxKind::PostdecrementExpression:
             return UnaryOperator::Postdecrement;
         default:
-            THROW_UNREACHABLE;
+            ASSUME_UNREACHABLE;
     }
 }
 
@@ -2059,7 +2059,7 @@ BinaryOperator Expression::getBinaryOperator(SyntaxKind kind) {
         case SyntaxKind::ArithmeticRightShiftAssignmentExpression:
             return BinaryOperator::ArithmeticShiftRight;
         default:
-            THROW_UNREACHABLE;
+            ASSUME_UNREACHABLE;
     }
 }
 
@@ -2167,7 +2167,7 @@ ConstantValue Expression::evalBinaryOperator(BinaryOperator op, const ConstantVa
             OP(CaseEquality, SVInt(l == r));
             OP(CaseInequality, SVInt(l != r));
             default:
-                THROW_UNREACHABLE;
+                ASSUME_UNREACHABLE;
         }
     }
     else if (cvl.isNullHandle()) {
@@ -2179,12 +2179,12 @@ ConstantValue Expression::evalBinaryOperator(BinaryOperator op, const ConstantVa
             OP(CaseEquality, SVInt(true));
             OP(CaseInequality, SVInt(false));
             default:
-                THROW_UNREACHABLE;
+                ASSUME_UNREACHABLE;
         }
     }
 
 #undef OP
-    THROW_UNREACHABLE;
+    ASSUME_UNREACHABLE;
 }
 
 } // namespace slang

@@ -1397,7 +1397,7 @@ void Lexer::scanEncodedText(ProtectEncoding encoding, uint32_t expectedBytes, bo
                 byteCount++;
                 break;
             default:
-                THROW_UNREACHABLE;
+                ASSUME_UNREACHABLE;
         }
     }
 }

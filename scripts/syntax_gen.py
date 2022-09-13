@@ -379,7 +379,7 @@ size_t SyntaxNode::getChildCount() const {
         cppf.write("        case SyntaxKind::{}: return {};\n".format(k, count))
 
     cppf.write("    }\n")
-    cppf.write("    THROW_UNREACHABLE;\n")
+    cppf.write("    ASSUME_UNREACHABLE;\n")
     cppf.write("}\n\n")
 
     # Build a reverse mapping from class types to their syntax kinds.
@@ -476,7 +476,7 @@ size_t SyntaxNode::getChildCount() const {
                             "{} = &child.node()->as<{}>(); return;\n".format(m[1], m[2])
                         )
 
-                cppf.write("        default: THROW_UNREACHABLE;\n")
+                cppf.write("        default: ASSUME_UNREACHABLE;\n")
                 cppf.write("    }\n")
             else:
                 cppf.write("    (void)index;\n")
@@ -613,7 +613,7 @@ const std::type_info* typeFromSyntaxKind(SyntaxKind kind) {
         alltypes.pop(v, None)
 
     outf.write("    }\n")
-    outf.write("    THROW_UNREACHABLE;\n")
+    outf.write("    ASSUME_UNREACHABLE;\n")
     outf.write("}\n\n")
     outf.write("}\n\n")
 

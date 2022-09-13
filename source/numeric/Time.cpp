@@ -37,7 +37,7 @@ string_view timeUnitToSuffix(TimeUnit unit) {
         case TimeUnit::Femtoseconds:
             return "fs";
     }
-    THROW_UNREACHABLE;
+    ASSUME_UNREACHABLE;
 }
 
 TimeScaleValue::TimeScaleValue(string_view str) {

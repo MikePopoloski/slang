@@ -676,7 +676,7 @@ bool Preprocessor::expandIntrinsic(MacroIntrinsic intrinsic, MacroExpansion& exp
             break;
         }
         case MacroIntrinsic::None:
-            THROW_UNREACHABLE;
+            ASSUME_UNREACHABLE;
     }
 
     return true;

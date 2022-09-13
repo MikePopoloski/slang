@@ -211,7 +211,7 @@ SubroutineSymbol* SubroutineSymbol::fromSyntax(Compilation& compilation,
                 // Parser already issued errors for these, so just ignore them here.
                 break;
             default:
-                THROW_UNREACHABLE;
+                ASSUME_UNREACHABLE;
         }
     }
 
@@ -820,7 +820,7 @@ MethodPrototypeSymbol& MethodPrototypeSymbol::fromSyntax(const Scope& scope,
                 // Parser already issued errors for these, so just ignore them here.
                 break;
             default:
-                THROW_UNREACHABLE;
+                ASSUME_UNREACHABLE;
         }
     }
 

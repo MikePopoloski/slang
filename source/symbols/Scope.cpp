@@ -519,7 +519,7 @@ void Scope::addMembers(const SyntaxNode& syntax) {
             addDiag(diag::NotYetSupported, syntax.sourceRange());
             break;
         default:
-            THROW_UNREACHABLE;
+            ASSUME_UNREACHABLE;
     }
 }
 
@@ -1006,7 +1006,7 @@ void Scope::elaborate() const {
                 hasNestedDefs = true;
                 break;
             default:
-                THROW_UNREACHABLE;
+                ASSUME_UNREACHABLE;
         }
     }
 
@@ -1295,7 +1295,7 @@ void Scope::handleExportedMethods(span<Symbol* const> deferredMembers) const {
                             break;
                         }
                         default:
-                            THROW_UNREACHABLE;
+                            ASSUME_UNREACHABLE;
                     }
                 }
             }
@@ -1388,7 +1388,7 @@ static size_t countGenMembers(const SyntaxNode& syntax) {
                         count += countGenMembers(*item->as<DefaultCaseItemSyntax>().clause);
                         break;
                     default:
-                        THROW_UNREACHABLE;
+                        ASSUME_UNREACHABLE;
                 }
             }
             return count;
@@ -1433,7 +1433,7 @@ static size_t countMembers(const SyntaxNode& syntax) {
         case SyntaxKind::ProgramDeclaration:
             return 1;
         default:
-            THROW_UNREACHABLE;
+            ASSUME_UNREACHABLE;
     }
 }
 

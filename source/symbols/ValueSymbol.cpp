@@ -75,7 +75,7 @@ ValueSymbol::Driver& ValueSymbol::Driver::create(EvalContext& evalContext, Drive
                 expr = &expr->as<MemberAccessExpression>().value();
                 break;
             default:
-                THROW_UNREACHABLE;
+                ASSUME_UNREACHABLE;
         }
     } while (expr);
 

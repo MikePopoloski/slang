@@ -66,7 +66,7 @@ void VariableSymbol::fromSyntax(Compilation& compilation, const DataDeclarationS
                 }
                 break;
             default:
-                THROW_UNREACHABLE;
+                ASSUME_UNREACHABLE;
         }
     }
 

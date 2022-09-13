@@ -316,7 +316,7 @@ Token Preprocessor::handleDirectives(Token token) {
                         trivia.append(createSimpleDirective(token));
                         break;
                     default:
-                        THROW_UNREACHABLE;
+                        ASSUME_UNREACHABLE;
                 }
                 break;
             default:

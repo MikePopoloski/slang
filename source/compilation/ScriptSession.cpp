@@ -72,7 +72,7 @@ ConstantValue ScriptSession::eval(string_view text) {
             else {
                 // If this throws, ScriptSession doesn't currently support whatever construct
                 // you were trying to evaluate. Add support to the case above.
-                THROW_UNREACHABLE;
+                ASSUME_UNREACHABLE;
             }
     }
 }

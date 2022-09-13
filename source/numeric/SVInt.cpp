@@ -799,7 +799,7 @@ void SVInt::writeTo(SmallVector<char>& buffer, LiteralBase base, bool includeBas
                 maskAmount = 15;
                 break;
             case LiteralBase::Decimal:
-                THROW_UNREACHABLE;
+                ASSUME_UNREACHABLE;
         }
 
         // if we have unknown values here, the comparison will return X

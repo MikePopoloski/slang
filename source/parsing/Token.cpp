@@ -258,7 +258,7 @@ string_view Token::rawText() const {
         case TokenKind::EndOfFile:
             return "";
         default:
-            THROW_UNREACHABLE;
+            ASSUME_UNREACHABLE;
     }
 }
 

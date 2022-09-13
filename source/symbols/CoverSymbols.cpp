@@ -573,7 +573,7 @@ void CoverageBinSymbol::resolve() const {
             // Already handled at construction time.
             break;
         default:
-            THROW_UNREACHABLE;
+            ASSUME_UNREACHABLE;
     }
 }
 
@@ -600,7 +600,7 @@ CoverageBinSymbol::TransRangeList::TransRangeList(const TransRangeSyntax& syntax
                 repeatKind = GoTo;
                 break;
             default:
-                THROW_UNREACHABLE;
+                ASSUME_UNREACHABLE;
         }
 
         auto bindCount = [&](const ExpressionSyntax& exprSyntax) {
@@ -930,7 +930,7 @@ const BinsSelectExpr& BinsSelectExpr::bind(const BinsSelectExpressionSyntax& syn
                 syntax.as<BinSelectWithFilterExprSyntax>(), context);
             break;
         default:
-            THROW_UNREACHABLE;
+            ASSUME_UNREACHABLE;
     }
 
     result->syntax = &syntax;

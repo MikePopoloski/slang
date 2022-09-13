@@ -35,7 +35,7 @@ llvm::Function* CodeGenFunction::getSysFunc(mir::SysCallKind kind) const {
             ft = getFuncType(types.Void, ptr(types.BoxedInt), types.Int8, types.Int32, types.Int1);
             break;
         default:
-            THROW_UNREACHABLE;
+            ASSUME_UNREACHABLE;
     }
 
     auto name = toString(kind);

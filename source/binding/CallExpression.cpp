@@ -576,7 +576,7 @@ Expression& CallExpression::createSystemCall(
                         }
                         break;
                     default:
-                        THROW_UNREACHABLE;
+                        ASSUME_UNREACHABLE;
                 }
             }
         }

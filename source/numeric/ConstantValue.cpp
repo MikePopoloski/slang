@@ -169,7 +169,7 @@ ConstantValue& ConstantValue::at(size_t index) {
             else if constexpr (std::is_same_v<T, Queue>)
                 return arg->at(index);
             else
-                THROW_UNREACHABLE;
+                ASSUME_UNREACHABLE;
         },
         value);
 }
@@ -183,7 +183,7 @@ const ConstantValue& ConstantValue::at(size_t index) const {
             else if constexpr (std::is_same_v<T, Queue>)
                 return arg->at(index);
             else
-                THROW_UNREACHABLE;
+                ASSUME_UNREACHABLE;
         },
         value);
 }
@@ -694,7 +694,7 @@ CVIterator begin(ConstantValue& cv) {
                 return arg->begin();
             }
             else {
-                THROW_UNREACHABLE;
+                ASSUME_UNREACHABLE;
             }
         },
         cv.getVariant());
@@ -712,7 +712,7 @@ CVIterator end(ConstantValue& cv) {
                 return arg->end();
             }
             else {
-                THROW_UNREACHABLE;
+                ASSUME_UNREACHABLE;
             }
         },
         cv.getVariant());
@@ -730,7 +730,7 @@ CVConstIterator begin(const ConstantValue& cv) {
                 return arg->begin();
             }
             else {
-                THROW_UNREACHABLE;
+                ASSUME_UNREACHABLE;
             }
         },
         cv.getVariant());
@@ -748,7 +748,7 @@ CVConstIterator end(const ConstantValue& cv) {
                 return arg->end();
             }
             else {
-                THROW_UNREACHABLE;
+                ASSUME_UNREACHABLE;
             }
         },
         cv.getVariant());

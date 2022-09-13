@@ -152,7 +152,7 @@ string_view Definition::getKindString() const {
         case DefinitionKind::Program:
             return "program"sv;
         default:
-            THROW_UNREACHABLE;
+            ASSUME_UNREACHABLE;
     }
 }
 
@@ -165,7 +165,7 @@ string_view Definition::getArticleKindString() const {
         case DefinitionKind::Program:
             return "a program"sv;
         default:
-            THROW_UNREACHABLE;
+            ASSUME_UNREACHABLE;
     }
 }
 

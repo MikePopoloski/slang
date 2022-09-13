@@ -766,7 +766,7 @@ ConstantValue ConversionExpression::convert(EvalContext& context, const Type& fr
             case 64:
                 return value.convertToReal();
             default:
-                THROW_UNREACHABLE;
+                ASSUME_UNREACHABLE;
         }
     }
 
@@ -824,7 +824,7 @@ ConstantValue ConversionExpression::convert(EvalContext& context, const Type& fr
     if (from.isNull())
         return std::move(value);
 
-    THROW_UNREACHABLE;
+    ASSUME_UNREACHABLE;
 }
 
 optional<bitwidth_t> ConversionExpression::getEffectiveWidthImpl() const {
@@ -1106,7 +1106,7 @@ Expression& Expression::bindAssignmentPattern(Compilation& comp,
                     comp, p.as<ReplicatedAssignmentPatternSyntax>(), context, type, *structScope,
                     range);
             default:
-                THROW_UNREACHABLE;
+                ASSUME_UNREACHABLE;
         }
     }
     else if (ct.kind == SymbolKind::DynamicArrayType || ct.kind == SymbolKind::QueueType) {
@@ -1124,7 +1124,7 @@ Expression& Expression::bindAssignmentPattern(Compilation& comp,
                     comp, p.as<ReplicatedAssignmentPatternSyntax>(), context, type, *elementType,
                     range);
             default:
-                THROW_UNREACHABLE;
+                ASSUME_UNREACHABLE;
         }
     }
     else if (ct.kind == SymbolKind::AssociativeArrayType) {
@@ -1138,7 +1138,7 @@ Expression& Expression::bindAssignmentPattern(Compilation& comp,
                     comp, p.as<StructuredAssignmentPatternSyntax>(), context, type, *elementType,
                     range);
             default:
-                THROW_UNREACHABLE;
+                ASSUME_UNREACHABLE;
         }
     }
     else {
@@ -1156,7 +1156,7 @@ Expression& Expression::bindAssignmentPattern(Compilation& comp,
                     comp, p.as<ReplicatedAssignmentPatternSyntax>(), context, type, *elementType,
                     numElements, range);
             default:
-                THROW_UNREACHABLE;
+                ASSUME_UNREACHABLE;
         }
     }
 }

@@ -287,7 +287,7 @@ const NetType& NetType::getSimulatedNetType(const NetType& internal, const NetTy
             }
             return internal;
         default:
-            THROW_UNREACHABLE;
+            ASSUME_UNREACHABLE;
     }
 }
 

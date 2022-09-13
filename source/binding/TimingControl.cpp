@@ -55,7 +55,7 @@ TimingControl& TimingControl::bind(const TimingControlSyntax& syntax, const Bind
             result = &CycleDelayControl::fromSyntax(comp, syntax.as<DelaySyntax>(), context);
             break;
         default:
-            THROW_UNREACHABLE;
+            ASSUME_UNREACHABLE;
     }
 
     result->syntax = &syntax;
@@ -404,7 +404,7 @@ static void collectEvents(const BindContext& context, const SyntaxNode& expr,
             break;
         }
         default:
-            THROW_UNREACHABLE;
+            ASSUME_UNREACHABLE;
     }
 }
 

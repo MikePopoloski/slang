@@ -65,7 +65,7 @@ Pattern& Pattern::bind(const PatternSyntax& syntax, const Type& targetType, VarM
                                                    varMap, context);
             break;
         default:
-            THROW_UNREACHABLE;
+            ASSUME_UNREACHABLE;
     }
 
     result->syntax = &syntax;

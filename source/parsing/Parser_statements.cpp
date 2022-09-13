@@ -511,7 +511,7 @@ StatementSyntax& Parser::parseAssertionStatement(NamedLabelSyntax* label, AttrLi
             assertionKind = SyntaxKind::ImmediateCoverStatement;
             break;
         default:
-            THROW_UNREACHABLE;
+            ASSUME_UNREACHABLE;
     }
 
     Token keyword = consume();
@@ -570,7 +570,7 @@ ConcurrentAssertionStatementSyntax& Parser::parseConcurrentAssertion(NamedLabelS
             kind = SyntaxKind::ExpectPropertyStatement;
             break;
         default:
-            THROW_UNREACHABLE;
+            ASSUME_UNREACHABLE;
     }
 
     auto openParen = expect(TokenKind::OpenParenthesis);

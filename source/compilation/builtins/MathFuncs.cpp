@@ -178,7 +178,7 @@ public:
             case IsUnknown:
                 return SVInt(1, uint64_t(iv.hasUnknown()), false);
             default:
-                THROW_UNREACHABLE;
+                ASSUME_UNREACHABLE;
         }
     }
 

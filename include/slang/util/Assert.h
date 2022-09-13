@@ -30,7 +30,7 @@
                 slang::assert::assertFailed(#cond, __FILE__, __LINE__, ASSERT_FUNCTION); \
         } while (false)
 
-#    define THROW_UNREACHABLE                                                                  \
+#    define ASSUME_UNREACHABLE                                                                 \
         throw std::logic_error(std::string(__FILE__) + ":" + std::to_string(__LINE__) + ": " + \
                                "Default case should be unreachable!")
 
@@ -41,11 +41,11 @@
         } while (false)
 
 #    if defined(__GNUC__) || defined(__clang__)
-#        define THROW_UNREACHABLE __builtin_unreachable()
+#        define ASSUME_UNREACHABLE __builtin_unreachable()
 #    elif defined(_MSC_VER)
-#        define THROW_UNREACHABLE __assume(false)
+#        define ASSUME_UNREACHABLE __assume(false)
 #    else
-#        define THROW_UNREACHABLE
+#        define ASSUME_UNREACHABLE
 #    endif
 
 #endif

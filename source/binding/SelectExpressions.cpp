@@ -412,7 +412,7 @@ Expression& RangeSelectExpression::fromSyntax(Compilation& compilation, Expressi
             selectionKind = RangeSelectionKind::IndexedDown;
             break;
         default:
-            THROW_UNREACHABLE;
+            ASSUME_UNREACHABLE;
     }
 
     if (!value.bad() && value.type->isAssociativeArray()) {

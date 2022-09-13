@@ -538,7 +538,7 @@ public:
                         break;
                     }
                     default:
-                        THROW_UNREACHABLE;
+                        ASSUME_UNREACHABLE;
                 }
             }
 

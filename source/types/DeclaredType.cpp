@@ -245,7 +245,7 @@ void DeclaredType::checkType(const BindContext& context) const {
                 context.addDiag(diag::NonIntegralCoverageExpr, parent.location) << *type;
             break;
         default:
-            THROW_UNREACHABLE;
+            ASSUME_UNREACHABLE;
     }
 }
 

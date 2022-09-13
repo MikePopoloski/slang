@@ -161,7 +161,7 @@ int NumberParser::append(Token token, bool isFirst) {
             }
             break;
         default:
-            THROW_UNREACHABLE;
+            ASSUME_UNREACHABLE;
     }
 
     valid = true;
@@ -225,7 +225,7 @@ Token NumberParser::finishValue(Token firstToken, bool singleToken) {
                 multiplier = 4;
                 break;
             default:
-                THROW_UNREACHABLE;
+                ASSUME_UNREACHABLE;
         }
 
         // All of the digits in the number require `multiplier` bits, except for

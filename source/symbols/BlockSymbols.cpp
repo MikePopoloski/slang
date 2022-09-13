@@ -416,7 +416,7 @@ void GenerateBlockSymbol::fromSyntax(Compilation& compilation, const CaseGenerat
                 defBlock = item->as<DefaultCaseItemSyntax>().clause;
                 break;
             default:
-                THROW_UNREACHABLE;
+                ASSUME_UNREACHABLE;
         }
     }
 

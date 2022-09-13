@@ -81,8 +81,8 @@ to check things that should always be true if the programmer has not made any
 mistakes. User errors must instead be handled gracefully.
 - It's very common to have big switch statements that cover all expected
 possibilities but need a default case to handle programmer bugs; in those cases,
-you can use the THROW_UNREACHABLE macro which unconditionally throws a
-std::logic_error.
+you can use the ASSUME_UNREACHABLE macro which unconditionally throws a
+std::logic_error in debug builds and marks the path unreachable in release builds.
 - The ENUM macro is used to define scoped enumerations that have a toString()
 method. Ideally C++ will expose this at the language level at some point but
 until then we're on our own.

@@ -203,7 +203,7 @@ public:
                 return add(decl, definition, modport, /* isGeneric */ false, syntax.attributes);
             }
             default:
-                THROW_UNREACHABLE;
+                ASSUME_UNREACHABLE;
         }
     }
 
@@ -416,7 +416,7 @@ public:
             case SyntaxKind::PortConcatenation:
                 return &createPort(""sv, loc, syntax.expr->as<PortConcatenationSyntax>());
             default:
-                THROW_UNREACHABLE;
+                ASSUME_UNREACHABLE;
         }
     }
 
@@ -438,7 +438,7 @@ public:
             case SyntaxKind::PortConcatenation:
                 return &createPort(name, loc, syntax.expr->as<PortConcatenationSyntax>());
             default:
-                THROW_UNREACHABLE;
+                ASSUME_UNREACHABLE;
         }
     }
 
@@ -571,7 +571,7 @@ private:
                 break;
             }
             default:
-                THROW_UNREACHABLE;
+                ASSUME_UNREACHABLE;
         }
 
         const bool isNet = info.internalSymbol && info.internalSymbol->kind == SymbolKind::Net;
@@ -1520,7 +1520,7 @@ void PortSymbol::fromSyntax(
                         results.append(builder.createPort(port->as<ExplicitAnsiPortSyntax>()));
                         break;
                     default:
-                        THROW_UNREACHABLE;
+                        ASSUME_UNREACHABLE;
                 }
             }
 
@@ -1544,7 +1544,7 @@ void PortSymbol::fromSyntax(
                         results.append(builder.createPort(port->as<EmptyNonAnsiPortSyntax>()));
                         break;
                     default:
-                        THROW_UNREACHABLE;
+                        ASSUME_UNREACHABLE;
                 }
             }
             builder.finalize();
@@ -1554,7 +1554,7 @@ void PortSymbol::fromSyntax(
             scope.addDiag(diag::NotYetSupported, syntax.sourceRange());
             break;
         default:
-            THROW_UNREACHABLE;
+            ASSUME_UNREACHABLE;
     }
 }
 

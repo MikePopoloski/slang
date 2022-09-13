@@ -158,7 +158,7 @@ struct NameComponents {
                 set(name.as<KeywordNameSyntax>().keyword);
                 break;
             default:
-                THROW_UNREACHABLE;
+                ASSUME_UNREACHABLE;
         }
     }
 
@@ -891,7 +891,7 @@ void Lookup::name(const NameSyntax& syntax, const BindContext& context, bitmask<
             // These error cases can't happen here because the parser will always
             // wrap them into a scoped name.
         default:
-            THROW_UNREACHABLE;
+            ASSUME_UNREACHABLE;
     }
 
     // If the parser added a missing identifier token, it already issued an appropriate error.
@@ -1112,7 +1112,7 @@ const Symbol* Lookup::selectChild(const Symbol& initialSymbol,
                     return nullptr;
                 break;
             default:
-                THROW_UNREACHABLE;
+                ASSUME_UNREACHABLE;
         }
     }
 
@@ -1792,7 +1792,7 @@ void Lookup::qualified(const ScopedNameSyntax& syntax, const BindContext& contex
             result.addDiag(scope, diag::UnexpectedNameToken, first.range) << name;
             return;
         default:
-            THROW_UNREACHABLE;
+            ASSUME_UNREACHABLE;
     }
 
     if (result.hasError())

@@ -269,7 +269,7 @@ const Statement& Statement::bind(const StatementSyntax& syntax, const BindContex
             context.addDiag(diag::NotYetSupported, syntax.sourceRange());
             return badStmt(comp, nullptr);
         default:
-            THROW_UNREACHABLE;
+            ASSUME_UNREACHABLE;
     }
 
     result->syntax = &syntax;
@@ -458,7 +458,7 @@ static void findBlocks(const Scope& scope, const StatementSyntax& syntax,
                         recurse(&item->as<DefaultCaseItemSyntax>().clause->as<StatementSyntax>());
                         break;
                     default:
-                        THROW_UNREACHABLE;
+                        ASSUME_UNREACHABLE;
                 }
             }
             return;
@@ -555,7 +555,7 @@ static void findBlocks(const Scope& scope, const StatementSyntax& syntax,
             }
             return;
         default:
-            THROW_UNREACHABLE;
+            ASSUME_UNREACHABLE;
     }
 }
 
@@ -999,7 +999,7 @@ static std::tuple<CaseStatementCondition, CaseStatementCheck> getConditionAndChe
             condition = CaseStatementCondition::WildcardJustZ;
             break;
         default:
-            THROW_UNREACHABLE;
+            ASSUME_UNREACHABLE;
     }
 
     CaseStatementCheck check;
@@ -1017,7 +1017,7 @@ static std::tuple<CaseStatementCondition, CaseStatementCheck> getConditionAndChe
             check = CaseStatementCheck::Priority;
             break;
         default:
-            THROW_UNREACHABLE;
+            ASSUME_UNREACHABLE;
     }
 
     return {condition, check};
@@ -1056,7 +1056,7 @@ Statement& CaseStatement::fromSyntax(Compilation& compilation, const CaseStateme
                 }
                 break;
             default:
-                THROW_UNREACHABLE;
+                ASSUME_UNREACHABLE;
         }
     }
 
@@ -1288,7 +1288,7 @@ Statement& PatternCaseStatement::fromSyntax(Compilation& compilation,
                 }
                 break;
             default:
-                THROW_UNREACHABLE;
+                ASSUME_UNREACHABLE;
         }
     }
 

@@ -74,7 +74,7 @@ llvm::Value* CodeGenFunction::emit(const Instr& instr) {
         default:
             break;
     }
-    THROW_UNREACHABLE;
+    ASSUME_UNREACHABLE;
 }
 
 llvm::Value* CodeGenFunction::emit(MIRValue val) {
@@ -93,7 +93,7 @@ llvm::Value* CodeGenFunction::emit(MIRValue val) {
         case MIRValue::Empty:
             break;
     }
-    THROW_UNREACHABLE;
+    ASSUME_UNREACHABLE;
 }
 
 llvm::Value* CodeGenFunction::emitConstant(const Type& type, const ConstantValue& cv) {
@@ -154,7 +154,7 @@ const Type& CodeGenFunction::getTypeOf(MIRValue val) const {
         case MIRValue::Empty:
             break;
     }
-    THROW_UNREACHABLE;
+    ASSUME_UNREACHABLE;
 }
 
 Address CodeGenFunction::createTempAlloca(AlignedType type) {

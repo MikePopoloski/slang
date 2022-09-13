@@ -69,7 +69,7 @@ void ClassPropertySymbol::fromSyntax(const Scope& scope,
                 // so just ignore them here.
                 break;
             default:
-                THROW_UNREACHABLE;
+                ASSUME_UNREACHABLE;
         }
     }
 
@@ -85,7 +85,7 @@ void ClassPropertySymbol::fromSyntax(const Scope& scope,
                 lifetime = VariableLifetime::Static;
                 break;
             default:
-                THROW_UNREACHABLE;
+                ASSUME_UNREACHABLE;
         }
     }
 

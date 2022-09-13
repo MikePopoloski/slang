@@ -163,7 +163,7 @@ SVInt UnbasedUnsizedIntegerLiteral::getValue() const {
         case logic_t::Z_VALUE:
             return SVInt::createFillZ(width, isSigned);
         default:
-            THROW_UNREACHABLE;
+            ASSUME_UNREACHABLE;
     }
 }
 

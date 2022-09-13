@@ -341,7 +341,7 @@ void formatStrength(std::string& result, const SVInt& value) {
                 result += "HiZ";
                 break;
             default:
-                THROW_UNREACHABLE;
+                ASSUME_UNREACHABLE;
         }
 
         if (i != 1)
@@ -392,7 +392,7 @@ void formatArg(std::string& result, const ConstantValue& arg, char specifier,
             formatString(result, arg.convertToStr().str(), options);
             return;
         default:
-            THROW_UNREACHABLE;
+            ASSUME_UNREACHABLE;
     }
 }
 
