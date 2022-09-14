@@ -2,7 +2,8 @@
 // SourceManager.cpp
 // Source file management
 //
-// File is under the MIT license; see LICENSE for details
+// SPDX-FileCopyrightText: Michael Popoloski
+// SPDX-License-Identifier: MIT
 //------------------------------------------------------------------------------
 #include "slang/text/SourceManager.h"
 

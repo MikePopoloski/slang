@@ -2,7 +2,8 @@
 // SVIntHelpers.h
 // Contains internal helper functions for SVInt implementations
 //
-// File is under the MIT license; see LICENSE for details
+// SPDX-FileCopyrightText: Michael Popoloski
+// SPDX-License-Identifier: MIT
 //------------------------------------------------------------------------------
 #pragma once
 

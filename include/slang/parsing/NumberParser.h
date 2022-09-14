@@ -2,7 +2,8 @@
 //! @file NumberParser.h
 //! @brief Helper type to parse numeric literals
 //
-// File is under the MIT license; see LICENSE for details
+// SPDX-FileCopyrightText: Michael Popoloski
+// SPDX-License-Identifier: MIT
 //------------------------------------------------------------------------------
 #pragma once
 

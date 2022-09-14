@@ -1,3 +1,8 @@
+# ~~~
+# SPDX-FileCopyrightText: Michael Popoloski
+# SPDX-License-Identifier: MIT
+# ~~~
+
 add_executable(simtests BitcodeTests.cpp JITTests.cpp)
 
 target_link_libraries(simtests PRIVATE slangcodegen slangruntime

@@ -2,7 +2,8 @@
 //! @file Util.h
 //! @brief Various utility functions and basic types used throughout the library
 //
-// File is under the MIT license; see LICENSE for details
+// SPDX-FileCopyrightText: Michael Popoloski
+// SPDX-License-Identifier: MIT
 //------------------------------------------------------------------------------
 #pragma once
 

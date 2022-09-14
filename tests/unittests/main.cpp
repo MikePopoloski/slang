@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: Michael Popoloski
+// SPDX-License-Identifier: MIT
+
 #include <catch2/catch_session.hpp>
 
 #include "slang/diagnostics/Diagnostics.h"

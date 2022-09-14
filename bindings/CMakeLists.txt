@@ -1,3 +1,8 @@
+# ~~~
+# SPDX-FileCopyrightText: Michael Popoloski
+# SPDX-License-Identifier: MIT
+# ~~~
+
 # Generate bindings for syntax node types
 add_custom_command(
   COMMAND ${Python_EXECUTABLE} ${SCRIPTS_DIR}/syntax_gen.py --dir

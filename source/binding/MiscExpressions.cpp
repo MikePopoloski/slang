@@ -2,7 +2,8 @@
 // MiscExpressions.cpp
 // Definitions for miscellaneous expressions
 //
-// File is under the MIT license; see LICENSE for details
+// SPDX-FileCopyrightText: Michael Popoloski
+// SPDX-License-Identifier: MIT
 //------------------------------------------------------------------------------
 #include "slang/binding/MiscExpressions.h"
 

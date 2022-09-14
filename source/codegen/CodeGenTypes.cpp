@@ -2,7 +2,8 @@
 // CodeGenTypes.cpp
 // Conversion between SystemVerilog types and LLVM generated types
 //
-// File is under the MIT license; see LICENSE for details
+// SPDX-FileCopyrightText: Michael Popoloski
+// SPDX-License-Identifier: MIT
 //------------------------------------------------------------------------------
 #include "CodeGenTypes.h"
 

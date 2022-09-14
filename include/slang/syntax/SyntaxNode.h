@@ -2,7 +2,8 @@
 //! @file SyntaxNode.h
 //! @brief Base class and utilities for syntax nodes
 //
-// File is under the MIT license; see LICENSE for details
+// SPDX-FileCopyrightText: Michael Popoloski
+// SPDX-License-Identifier: MIT
 //------------------------------------------------------------------------------
 #pragma once
 

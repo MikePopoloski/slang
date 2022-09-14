@@ -2,7 +2,8 @@
 // Bitstream.cpp
 // Helpers for implementing bit-stream casting and streaming operators
 //
-// File is under the MIT license; see LICENSE for details
+// SPDX-FileCopyrightText: Michael Popoloski
+// SPDX-License-Identifier: MIT
 //------------------------------------------------------------------------------
 #include "slang/binding/Bitstream.h"
 

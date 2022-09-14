@@ -2,7 +2,8 @@
 // LiteralExpressions.cpp
 // Definitions for literal expressions
 //
-// File is under the MIT license; see LICENSE for details
+// SPDX-FileCopyrightText: Michael Popoloski
+// SPDX-License-Identifier: MIT
 //------------------------------------------------------------------------------
 #include "slang/binding/LiteralExpressions.h"
 

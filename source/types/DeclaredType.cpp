@@ -2,7 +2,8 @@
 // DeclaredType.cpp
 // Glue logic between symbols and their declared types
 //
-// File is under the MIT license; see LICENSE for details
+// SPDX-FileCopyrightText: Michael Popoloski
+// SPDX-License-Identifier: MIT
 //------------------------------------------------------------------------------
 #include "slang/types/DeclaredType.h"
 

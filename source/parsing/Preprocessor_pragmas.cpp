@@ -2,7 +2,8 @@
 // Preprocessor_pragmas.cpp
 // Pragma-related preprocessor support
 //
-// File is under the MIT license; see LICENSE for details
+// SPDX-FileCopyrightText: Michael Popoloski
+// SPDX-License-Identifier: MIT
 //------------------------------------------------------------------------------
 #include "slang/diagnostics/PreprocessorDiags.h"
 #include "slang/parsing/Preprocessor.h"

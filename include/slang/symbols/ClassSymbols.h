@@ -2,7 +2,8 @@
 //! @file ClassSymbols.h
 //! @brief Class-related symbol definitions
 //
-// File is under the MIT license; see LICENSE for details
+// SPDX-FileCopyrightText: Michael Popoloski
+// SPDX-License-Identifier: MIT
 //------------------------------------------------------------------------------
 #pragma once
 

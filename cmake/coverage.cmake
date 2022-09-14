@@ -1,3 +1,8 @@
+# ~~~
+# SPDX-FileCopyrightText: Michael Popoloski
+# SPDX-License-Identifier: MIT
+# ~~~
+
 set(COVERAGE_GCOV_TOOL
     "gcov"
     CACHE STRING "Name of the gcov binary to run")

@@ -1,3 +1,8 @@
+# ~~~
+# SPDX-FileCopyrightText: Michael Popoloski
+# SPDX-License-Identifier: MIT
+# ~~~
+
 # slang - cmake entry point
 cmake_minimum_required(VERSION 3.15...3.24)
 

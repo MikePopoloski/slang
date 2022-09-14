@@ -2,7 +2,8 @@
 // InstanceSymbols.cpp
 // Contains instance-related symbol definitions
 //
-// File is under the MIT license; see LICENSE for details
+// SPDX-FileCopyrightText: Michael Popoloski
+// SPDX-License-Identifier: MIT
 //------------------------------------------------------------------------------
 #include "slang/symbols/InstanceSymbols.h"
 

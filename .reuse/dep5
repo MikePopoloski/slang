@@ -1,0 +1,16 @@
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Upstream-Name: slang
+Upstream-Contact: Michael Popoloski <mike@popoloski.com>
+Source: https://sv-lang.com/
+
+Files: *
+Copyright: Michael Popoloski
+License: MIT
+
+Files: external/flat_hash_map.hpp
+Copyright: Malte Skarupke 2017
+License: BSL-1.0
+
+Files: external/flat_hash_map.hpp
+Copyright: 2018-2020 Martin Moene
+License: BSL-1.0

@@ -2,7 +2,8 @@
 //! @file LiteralExpressions.h
 //! @brief Definitions for literal expressions
 //
-// File is under the MIT license; see LICENSE for details
+// SPDX-FileCopyrightText: Michael Popoloski
+// SPDX-License-Identifier: MIT
 //------------------------------------------------------------------------------
 #pragma once
 

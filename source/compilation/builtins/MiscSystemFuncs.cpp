@@ -2,7 +2,8 @@
 // MiscSystemFuncs.cpp
 // Built-in miscellaneous system functions
 //
-// File is under the MIT license; see LICENSE for details
+// SPDX-FileCopyrightText: Michael Popoloski
+// SPDX-License-Identifier: MIT
 //------------------------------------------------------------------------------
 #include "slang/binding/AssertionExpr.h"
 #include "slang/binding/FormatHelpers.h"

@@ -2,7 +2,8 @@
 // ArrayMethods.cpp
 // Built-in methods on arrays
 //
-// File is under the MIT license; see LICENSE for details
+// SPDX-FileCopyrightText: Michael Popoloski
+// SPDX-License-Identifier: MIT
 //------------------------------------------------------------------------------
 #include "slang/binding/MiscExpressions.h"
 #include "slang/binding/SystemSubroutine.h"

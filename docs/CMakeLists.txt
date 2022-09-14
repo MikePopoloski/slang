@@ -1,3 +1,8 @@
+# ~~~
+# SPDX-FileCopyrightText: Michael Popoloski
+# SPDX-License-Identifier: MIT
+# ~~~
+
 include(FetchContent)
 FetchContent_Declare(
   mcss

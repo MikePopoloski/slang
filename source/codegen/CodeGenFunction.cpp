@@ -2,7 +2,8 @@
 // CodeGenFunction.cpp
 // LLVM code generation for SystemVerilog procedures
 //
-// File is under the MIT license; see LICENSE for details
+// SPDX-FileCopyrightText: Michael Popoloski
+// SPDX-License-Identifier: MIT
 //------------------------------------------------------------------------------
 #include "CodeGenFunction.h"
 

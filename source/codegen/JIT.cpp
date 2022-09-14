@@ -3,7 +3,8 @@
 // Just-in-time code execution
 // NOTE: Only included if slang is configured to use LLVM
 //
-// File is under the MIT license; see LICENSE for details
+// SPDX-FileCopyrightText: Michael Popoloski
+// SPDX-License-Identifier: MIT
 //------------------------------------------------------------------------------
 #include "slang/codegen/JIT.h"
 

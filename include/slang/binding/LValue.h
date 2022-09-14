@@ -2,7 +2,8 @@
 //! @file LValue.h
 //! @brief Compile-time lvalue representation (for constant evaluation)
 //
-// File is under the MIT license; see LICENSE for details
+// SPDX-FileCopyrightText: Michael Popoloski
+// SPDX-License-Identifier: MIT
 //------------------------------------------------------------------------------
 #pragma once
 

@@ -2,7 +2,8 @@
 // CGExpr.cpp
 // CodeGenFunction methods related to expressions
 //
-// File is under the MIT license; see LICENSE for details
+// SPDX-FileCopyrightText: Michael Popoloski
+// SPDX-License-Identifier: MIT
 //------------------------------------------------------------------------------
 #include "CodeGenFunction.h"
 #include "CodeGenTypes.h"

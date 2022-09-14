@@ -2,7 +2,8 @@
 //! @file Iterator.h
 //! @brief Helper classes for working with iterators
 //
-// File is under the MIT license; see LICENSE for details
+// SPDX-FileCopyrightText: Michael Popoloski
+// SPDX-License-Identifier: MIT
 //------------------------------------------------------------------------------
 #pragma once
 

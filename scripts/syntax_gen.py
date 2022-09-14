@@ -1,5 +1,9 @@
 #!/usr/bin/env python
 # This script generates C++ source for parse tree syntax nodes from a data file.
+#
+# SPDX-FileCopyrightText: Michael Popoloski
+# SPDX-License-Identifier: MIT
+
 import argparse
 import os
 
@@ -255,7 +259,8 @@ def generateSyntax(builddir, alltypes, kindmap):
 //! @file AllSyntax.h
 //! @brief All generated syntax node data structures
 //
-// File is under the MIT license; see LICENSE for details
+// SPDX-FileCopyrightText: Michael Popoloski
+// SPDX-License-Identifier: MIT
 //------------------------------------------------------------------------------
 #pragma once
 
@@ -334,7 +339,8 @@ namespace slang {
 // AllSyntax.cpp
 // All generated syntax node data structures
 //
-// File is under the MIT license; see LICENSE for details
+// SPDX-FileCopyrightText: Michael Popoloski
+// SPDX-License-Identifier: MIT
 //------------------------------------------------------------------------------
 #include "slang/syntax/AllSyntax.h"
 #include "slang/util/TypeTraits.h"
@@ -651,7 +657,8 @@ const std::type_info* typeFromSyntaxKind(SyntaxKind kind) {
 //! @file SyntaxKind.h
 //! @brief Generated SyntaxKind enum
 //
-// File is under the MIT license; see LICENSE for details
+// SPDX-FileCopyrightText: Michael Popoloski
+// SPDX-License-Identifier: MIT
 //------------------------------------------------------------------------------
 #pragma once
 
@@ -782,7 +789,8 @@ def generateTokenKinds(ourdir, builddir):
 //! @file TokenKind.h
 //! @brief Generated TokenKind and TriviaKind enums
 //
-// File is under the MIT license; see LICENSE for details
+// SPDX-FileCopyrightText: Michael Popoloski
+// SPDX-License-Identifier: MIT
 //------------------------------------------------------------------------------
 #pragma once
 
@@ -805,7 +813,8 @@ namespace slang {
 // TokenKind.cpp
 // Generated TokenKind and TriviaKind enums
 //
-// File is under the MIT license; see LICENSE for details
+// SPDX-FileCopyrightText: Michael Popoloski
+// SPDX-License-Identifier: MIT
 //------------------------------------------------------------------------------
 #include "slang/parsing/TokenKind.h"
 
@@ -826,7 +835,8 @@ def generatePyBindings(builddir, alltypes):
 // PySyntaxBindings.cpp
 // Generated Python bindings for syntax types
 //
-// File is under the MIT license; see LICENSE for details
+// SPDX-FileCopyrightText: Michael Popoloski
+// SPDX-License-Identifier: MIT
 //------------------------------------------------------------------------------
 #include "pyslang.h"
 

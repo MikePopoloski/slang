@@ -2,7 +2,8 @@
 //! @file CopyPtr.h
 //! @brief Value-copying smart pointer
 //
-// File is under the MIT license; see LICENSE for details
+// SPDX-FileCopyrightText: Michael Popoloski
+// SPDX-License-Identifier: MIT
 //------------------------------------------------------------------------------
 #pragma once
 

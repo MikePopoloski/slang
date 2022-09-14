@@ -1,6 +1,7 @@
 //------------------------------------------------------------------------------
 // types.cpp
-// File is under the MIT license; see LICENSE for details
+// SPDX-FileCopyrightText: Michael Popoloski
+// SPDX-License-Identifier: MIT
 //------------------------------------------------------------------------------
 #include "pyslang.h"
 

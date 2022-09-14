@@ -1,3 +1,8 @@
+# ~~~
+# SPDX-FileCopyrightText: Michael Popoloski
+# SPDX-License-Identifier: MIT
+# ~~~
+
 # The functionality here is based on the work by Ryan Pavlik:
 # https://github.com/rpavlik/cmake-modules/blob/main/GetGitRevisionDescription.cmake
 

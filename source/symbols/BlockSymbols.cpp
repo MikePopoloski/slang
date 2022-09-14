@@ -2,7 +2,8 @@
 // BlockSymbols.cpp
 // Contains block-related hierarchy symbol definitions
 //
-// File is under the MIT license; see LICENSE for details
+// SPDX-FileCopyrightText: Michael Popoloski
+// SPDX-License-Identifier: MIT
 //------------------------------------------------------------------------------
 #include "slang/symbols/BlockSymbols.h"
 

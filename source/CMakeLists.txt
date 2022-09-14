@@ -1,3 +1,8 @@
+# ~~~
+# SPDX-FileCopyrightText: Michael Popoloski
+# SPDX-License-Identifier: MIT
+# ~~~
+
 # Helper function that defines library targets
 function(slang_define_lib libname)
   target_compile_options(${libname} PRIVATE ${SLANG_WARN_FLAGS})

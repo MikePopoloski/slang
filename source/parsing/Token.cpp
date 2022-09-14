@@ -2,7 +2,8 @@
 // Token.cpp
 // Contains Token class and related helpers
 //
-// File is under the MIT license; see LICENSE for details
+// SPDX-FileCopyrightText: Michael Popoloski
+// SPDX-License-Identifier: MIT
 //------------------------------------------------------------------------------
 #include "slang/parsing/Token.h"
 

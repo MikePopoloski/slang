@@ -2,7 +2,8 @@
 // StdPackage.cpp
 // Definitions for the built-in 'std' package
 //
-// File is under the MIT license; see LICENSE for details
+// SPDX-FileCopyrightText: Michael Popoloski
+// SPDX-License-Identifier: MIT
 //------------------------------------------------------------------------------
 #include "slang/compilation/Compilation.h"
 #include "slang/symbols/ClassSymbols.h"

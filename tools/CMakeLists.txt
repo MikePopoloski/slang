@@ -1,3 +1,8 @@
+# ~~~
+# SPDX-FileCopyrightText: Michael Popoloski
+# SPDX-License-Identifier: MIT
+# ~~~
+
 add_executable(driver driver/driver.cpp)
 target_link_libraries(driver PRIVATE slangcompiler)
 set_target_properties(driver PROPERTIES OUTPUT_NAME "slang")

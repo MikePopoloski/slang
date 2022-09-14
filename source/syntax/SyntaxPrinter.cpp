@@ -2,7 +2,8 @@
 // SyntaxPrinter.cpp
 // Support for printing syntax nodes and tokens
 //
-// File is under the MIT license; see LICENSE for details
+// SPDX-FileCopyrightText: Michael Popoloski
+// SPDX-License-Identifier: MIT
 //------------------------------------------------------------------------------
 #include "slang/syntax/SyntaxPrinter.h"
 

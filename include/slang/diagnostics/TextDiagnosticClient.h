@@ -2,7 +2,8 @@
 //! @file TextDiagnosticClient.h
 //! @brief Diagnostic client that formats to a text string
 //
-// File is under the MIT license; see LICENSE for details
+// SPDX-FileCopyrightText: Michael Popoloski
+// SPDX-License-Identifier: MIT
 //------------------------------------------------------------------------------
 #pragma once
 

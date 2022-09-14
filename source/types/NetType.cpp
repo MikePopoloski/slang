@@ -2,7 +2,8 @@
 // NetType.cpp
 // Type class for nettypes
 //
-// File is under the MIT license; see LICENSE for details
+// SPDX-FileCopyrightText: Michael Popoloski
+// SPDX-License-Identifier: MIT
 //------------------------------------------------------------------------------
 #include "slang/types/NetType.h"
 

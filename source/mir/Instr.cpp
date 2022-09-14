@@ -2,7 +2,8 @@
 // Instr.cpp
 // MIR instruction definitions
 //
-// File is under the MIT license; see LICENSE for details
+// SPDX-FileCopyrightText: Michael Popoloski
+// SPDX-License-Identifier: MIT
 //------------------------------------------------------------------------------
 #include "slang/mir/Instr.h"
 

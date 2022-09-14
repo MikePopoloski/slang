@@ -2,7 +2,8 @@
 // MIRBuilder.cpp
 // MIR construction
 //
-// File is under the MIT license; see LICENSE for details
+// SPDX-FileCopyrightText: Michael Popoloski
+// SPDX-License-Identifier: MIT
 //------------------------------------------------------------------------------
 #include "slang/mir/MIRBuilder.h"
 

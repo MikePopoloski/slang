@@ -2,7 +2,8 @@
 // driver.cpp
 // Entry point for the primary driver program.
 //
-// File is under the MIT license; see LICENSE for details
+// SPDX-FileCopyrightText: Michael Popoloski
+// SPDX-License-Identifier: MIT
 //------------------------------------------------------------------------------
 #include "slang/driver/Driver.h"
 

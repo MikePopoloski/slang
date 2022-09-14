@@ -2,7 +2,8 @@
 // ValueSymbol.cpp
 // Base class for all value symbols
 //
-// File is under the MIT license; see LICENSE for details
+// SPDX-FileCopyrightText: Michael Popoloski
+// SPDX-License-Identifier: MIT
 //------------------------------------------------------------------------------
 #include "slang/symbols/ValueSymbol.h"
 

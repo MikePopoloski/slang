@@ -2,7 +2,8 @@
 //! @file Type.h
 //! @brief Base class for all expression types
 //
-// File is under the MIT license; see LICENSE for details
+// SPDX-FileCopyrightText: Michael Popoloski
+// SPDX-License-Identifier: MIT
 //------------------------------------------------------------------------------
 #pragma once
 

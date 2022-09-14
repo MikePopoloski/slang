@@ -2,7 +2,8 @@
 // ConstantValue.cpp
 // Compile-time constant representation
 //
-// File is under the MIT license; see LICENSE for details
+// SPDX-FileCopyrightText: Michael Popoloski
+// SPDX-License-Identifier: MIT
 //------------------------------------------------------------------------------
 #include "slang/numeric/ConstantValue.h"
 

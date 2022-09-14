@@ -2,7 +2,8 @@
 // SemanticModel.cpp
 // Query semantic information for a syntax tree
 //
-// File is under the MIT license; see LICENSE for details
+// SPDX-FileCopyrightText: Michael Popoloski
+// SPDX-License-Identifier: MIT
 //------------------------------------------------------------------------------
 #include "slang/compilation/SemanticModel.h"
 

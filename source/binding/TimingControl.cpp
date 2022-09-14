@@ -2,7 +2,8 @@
 // TimingControl.cpp
 // Timing control creation and analysis
 //
-// File is under the MIT license; see LICENSE for details
+// SPDX-FileCopyrightText: Michael Popoloski
+// SPDX-License-Identifier: MIT
 //------------------------------------------------------------------------------
 #include "slang/binding/TimingControl.h"
 

@@ -2,7 +2,8 @@
 // Version.cpp
 // Input file for build-time version source generation
 //
-// File is under the MIT license; see LICENSE for details.
+// SPDX-FileCopyrightText: Michael Popoloski
+// SPDX-License-Identifier: MIT
 //------------------------------------------------------------------------------
 #include "slang/util/Version.h"
 

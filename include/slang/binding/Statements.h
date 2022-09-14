@@ -2,7 +2,8 @@
 //! @file Statements.h
 //! @brief Statement creation and analysis
 //
-// File is under the MIT license; see LICENSE for details
+// SPDX-FileCopyrightText: Michael Popoloski
+// SPDX-License-Identifier: MIT
 //------------------------------------------------------------------------------
 #pragma once
 
