@@ -99,7 +99,7 @@ private:
     span<const StatementBlockSymbol* const> blocks;
     const StatementSyntax* stmtSyntax = nullptr;
     mutable const Statement* stmt = nullptr;
-    mutable bool isBinding = false;
+    mutable bool isConstructing = false;
 
     static ProceduralBlockSymbol& createProceduralBlock(
         const Scope& scope, ProceduralBlockKind kind, SourceLocation location,

@@ -246,10 +246,10 @@ ProceduralBlockSymbol::ProceduralBlockSymbol(SourceLocation loc,
 
 const Statement& ProceduralBlockSymbol::getBody() const {
     if (!stmt) {
-        ASSERT(!isBinding);
+        ASSERT(!isConstructing);
 
-        isBinding = true;
-        auto guard = ScopeGuard([this] { isBinding = false; });
+        isConstructing = true;
+        auto guard = ScopeGuard([this] { isConstructing = false; });
 
         auto scope = getParentScope();
         ASSERT(scope && stmtSyntax);

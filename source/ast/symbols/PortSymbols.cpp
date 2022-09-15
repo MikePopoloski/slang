@@ -687,7 +687,7 @@ private:
 
                 // We need to merge the port direction with all of the other component port
                 // directions to come up with our "effective" direction, which is what we use
-                // to bind connection expressions. The rules here are not spelled out in the
+                // to create connection expressions. The rules here are not spelled out in the
                 // LRM, but here's what I think makes sense based on other language rules:
                 // - If all the directions are the same, that's the effective direction.
                 // - inputs and outputs can be freely mixed; output direction dominates.
@@ -1368,7 +1368,7 @@ const Type& PortSymbol::getType() const {
         auto& eaps = syntax->as<ExplicitAnsiPortSyntax>();
         ASSERT(eaps.expr);
 
-        // The direction of binding is reversed, as data coming in to an input
+        // The direction of the connection is reversed, as data coming in to an input
         // port flows out to the internal symbol, and vice versa. Inout and ref
         // ports don't change.
         bitmask<ASTFlags> astFlags = ASTFlags::NonProcedural;

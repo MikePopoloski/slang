@@ -1386,8 +1386,8 @@ class UnrollVisitor : public ASTVisitor<UnrollVisitor, true, false> {
 public:
     bool anyErrors = false;
 
-    explicit UnrollVisitor(const ASTContext& bindCtx) :
-        bindCtx(bindCtx.resetFlags({})), evalCtx(bindCtx.getCompilation()) {
+    explicit UnrollVisitor(const ASTContext& astCtx) :
+        astCtx(astCtx.resetFlags({})), evalCtx(astCtx.getCompilation()) {
         evalCtx.pushEmptyFrame();
     }
 
@@ -1492,7 +1492,7 @@ public:
         if (stmt.expr.kind == ExpressionKind::Assignment) {
             auto& assign = stmt.expr.as<AssignmentExpression>();
             auto flags = assign.isNonBlocking() ? AssignFlags::NonBlocking : AssignFlags::None;
-            anyErrors |= !assign.left().requireLValue(bindCtx, {}, flags, nullptr, &evalCtx);
+            anyErrors |= !assign.left().requireLValue(astCtx, {}, flags, nullptr, &evalCtx);
         }
     }
 
@@ -1505,7 +1505,7 @@ private:
         return true;
     }
 
-    ASTContext bindCtx;
+    ASTContext astCtx;
     EvalContext evalCtx;
 };
 

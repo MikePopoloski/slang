@@ -391,7 +391,7 @@ SequenceRange SequenceRange::fromSyntax(const RangeSelectSyntax& syntax, const A
     if (context.requirePositive(l, syntax.left->sourceRange()))
         range.min = uint32_t(*l);
 
-    // The rhs can be an unbounded '$' so we need extra bind flags.
+    // The rhs can be an unbounded '$' so we need extra AST flags.
     bitmask<ASTFlags> flags = ASTFlags::AssertionExpr | ASTFlags::AssertionDelayOrRepetition;
     if (allowUnbounded)
         flags |= ASTFlags::AllowUnboundedLiteral;
@@ -645,7 +645,7 @@ static span<const Expression* const> bindMatchItems(const SequenceMatchListSynta
     ASTContext ctx = context;
     ctx.flags &= ~ASTFlags::AssignmentDisallowed;
 
-    // If we are binding an argument, these "match items" might actually be part of
+    // If we are creating an argument, these "match items" might actually be part of
     // a comma-separated event expression. We need to avoid erroring in that case.
     // Just do the bare minimum to check the expressions here.
     if (ctx.flags.has(ASTFlags::AssertionInstanceArgCheck)) {
@@ -1015,7 +1015,7 @@ AssertionExpr& ClockingAssertionExpr::fromSyntax(const ClockingPropertyExprSynta
 
 AssertionExpr& ClockingAssertionExpr::fromSyntax(const SignalEventExpressionSyntax& syntax,
                                                  const ASTContext& context) {
-    // If we are binding an argument then assume it's possible it could be used in an
+    // If we are creating an argument then assume it's possible it could be used in an
     // event expression and allow this. Actual usage later on will report an error if
     // this ends up not being true. Otherwise this is just an error.
     auto& comp = context.getCompilation();

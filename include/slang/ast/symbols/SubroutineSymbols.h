@@ -165,7 +165,7 @@ private:
     mutable const SubroutineSymbol* overrides = nullptr;
     mutable const MethodPrototypeSymbol* prototype = nullptr;
     mutable optional<bool> cachedHasOutputArgs;
-    mutable bool isBinding = false;
+    mutable bool isConstructing = false;
 };
 
 struct ClassMethodPrototypeSyntax;

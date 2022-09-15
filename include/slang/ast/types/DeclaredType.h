@@ -191,11 +191,11 @@ public:
     void mergeImplicitPort(const ImplicitTypeSyntax& implicit, SourceLocation location,
                            span<const VariableDimensionSyntax* const> unpackedDimensions);
 
-    /// Resolves the initializer using the given bind context, which could
+    /// Resolves the initializer using the given AST context, which could
     /// differ from the AST context that is used for type resolution.
     void resolveAt(const ASTContext& context) const;
 
-    /// Forces resolution of both the type and the initializer using the given bind context
+    /// Forces resolution of both the type and the initializer using the given AST context
     /// instead of using the normal logic built into DeclaredType to determine the context.
     void forceResolveAt(const ASTContext& context) const;
 

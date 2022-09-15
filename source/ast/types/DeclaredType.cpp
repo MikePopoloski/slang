@@ -464,7 +464,7 @@ T DeclaredType::getASTContext() const {
         return ASTContext(*scope, LookupLocation::before(*inst), astFlags);
     }
 
-    // The location depends on whether we are binding the initializer or the type.
+    // The location depends on whether we are creating the initializer or the type.
     // Initializer lookup happens *after* the parent symbol, so that it can reference
     // the symbol itself. Type lookup happens *before*, since it can't yet see the
     // symbol declaration. There is an exception for parameters, which also can't

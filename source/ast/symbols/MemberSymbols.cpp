@@ -569,20 +569,20 @@ string_view ElabSystemTaskSymbol::getMessage() const {
 
     // Bind all arguments.
     auto& comp = scope->getCompilation();
-    ASTContext bindCtx(*scope, LookupLocation::before(*this));
+    ASTContext astCtx(*scope, LookupLocation::before(*this));
     SmallVectorSized<const Expression*, 4> args;
     for (auto arg : argSyntax->parameters) {
         switch (arg->kind) {
             case SyntaxKind::OrderedArgument: {
                 const auto& oa = arg->as<OrderedArgumentSyntax>();
-                if (auto exSyn = bindCtx.requireSimpleExpr(*oa.expr))
-                    args.append(&Expression::bind(*exSyn, bindCtx));
+                if (auto exSyn = astCtx.requireSimpleExpr(*oa.expr))
+                    args.append(&Expression::bind(*exSyn, astCtx));
                 else
                     return empty();
                 break;
             }
             case SyntaxKind::NamedArgument:
-                bindCtx.addDiag(diag::NamedArgNotAllowed, arg->sourceRange());
+                astCtx.addDiag(diag::NamedArgNotAllowed, arg->sourceRange());
                 return empty();
             case SyntaxKind::EmptyArgument:
                 args.append(
@@ -601,14 +601,14 @@ string_view ElabSystemTaskSymbol::getMessage() const {
         if (taskKind == ElabSystemTaskKind::Fatal) {
             // If this is a $fatal task, check the finish number. We don't use this
             // for anything, but enforce that it's 0, 1, or 2.
-            if (!FmtHelpers::checkFinishNum(bindCtx, *argSpan[0]))
+            if (!FmtHelpers::checkFinishNum(astCtx, *argSpan[0]))
                 return empty();
 
             argSpan = argSpan.subspan(1);
         }
         else if (taskKind == ElabSystemTaskKind::StaticAssert) {
             // The first argument is the condition to check.
-            if (!bindCtx.requireBooleanConvertible(*argSpan[0]) || !bindCtx.eval(*argSpan[0]))
+            if (!astCtx.requireBooleanConvertible(*argSpan[0]) || !astCtx.eval(*argSpan[0]))
                 return empty();
 
             assertCondition = argSpan[0];
@@ -616,7 +616,7 @@ string_view ElabSystemTaskSymbol::getMessage() const {
         }
     }
 
-    message = createMessage(bindCtx, argSpan);
+    message = createMessage(astCtx, argSpan);
     return *message;
 }
 

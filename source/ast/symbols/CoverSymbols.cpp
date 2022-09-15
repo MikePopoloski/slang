@@ -505,7 +505,7 @@ void CoverageBinSymbol::resolve() const {
     }
 
     auto bindWithExpr = [&](const WithClauseSyntax& withSyntax) {
-        // Create the iterator variable and set it up with a bind context so that it
+        // Create the iterator variable and set it up with an AST context so that it
         // can be found by the iteration expression.
         auto it = comp.emplace<IteratorSymbol>(*context.scope, "item"sv, coverpoint.location, type);
 

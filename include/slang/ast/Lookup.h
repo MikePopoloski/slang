@@ -187,7 +187,7 @@ struct LookupResult {
     /// Copies result members from the given result object.
     void copyFrom(const LookupResult& other);
 
-    /// Reports any diagnostics that have occurred during lookup to the given bind
+    /// Reports any diagnostics that have occurred during lookup to the given AST
     /// context, which will ensure they are visible to the compilation.
     void reportDiags(const ASTContext& context) const;
 

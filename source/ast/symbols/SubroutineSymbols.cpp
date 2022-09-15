@@ -31,14 +31,14 @@ const Statement& SubroutineSymbol::getBody() const {
             // don't have a real body.
             stmt = &StatementList::makeEmpty(getCompilation());
         }
-        else if (isBinding) {
+        else if (isConstructing) {
             // Avoid issues with recursive function calls re-entering this
-            // method while we're still binding.
+            // method while we're still constructing.
             return InvalidStatement::Instance;
         }
         else {
-            isBinding = true;
-            auto guard = ScopeGuard([this] { isBinding = false; });
+            isConstructing = true;
+            auto guard = ScopeGuard([this] { isConstructing = false; });
 
             ASTContext context(*this, LookupLocation::max);
             if (subroutineKind == SubroutineKind::Function)

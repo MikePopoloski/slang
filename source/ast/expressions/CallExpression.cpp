@@ -432,7 +432,7 @@ static const Expression* bindIteratorExpr(Compilation& compilation,
     if (iteratorName.empty())
         iteratorName = "item"sv;
 
-    // Create the iterator variable and set it up with a bind context so that it
+    // Create the iterator variable and set it up with an AST context so that it
     // can be found by the iteration expression.
     auto it = compilation.emplace<IteratorSymbol>(*context.scope, iteratorName, iteratorLoc,
                                                   arrayType);
