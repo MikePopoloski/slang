@@ -55,7 +55,6 @@ option(SLANG_INCLUDE_TOOLS "Include tools targets in the build"
 option(SLANG_INCLUDE_TESTS "Include test targets in the build"
        ${SLANG_MASTER_PROJECT})
 option(SLANG_INCLUDE_DOCS "Include documentation targets in the build" OFF)
-option(SLANG_INCLUDE_LLVM "Include LLVM in the build for code generation" OFF)
 option(SLANG_INCLUDE_PYLIB "Include the pyslang python module in the build" OFF)
 option(SLANG_INCLUDE_INSTALL "Include installation targets"
        ${SLANG_MASTER_PROJECT})
@@ -159,10 +158,6 @@ if(SLANG_INCLUDE_TESTS)
 
   add_subdirectory(tests/regression)
   add_subdirectory(tests/unittests)
-
-  if(SLANG_INCLUDE_LLVM)
-    add_subdirectory(tests/simtests)
-  endif()
 endif()
 
 if(SLANG_INCLUDE_DOCS)

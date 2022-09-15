@@ -11,7 +11,6 @@
 #include "slang/binding/LiteralExpressions.h"
 #include "slang/compilation/Definition.h"
 #include "slang/diagnostics/SysFuncsDiags.h"
-#include "slang/mir/Procedure.h"
 #include "slang/symbols/VariableSymbols.h"
 #include "slang/text/SFormat.h"
 #include "slang/types/AllTypes.h"
@@ -365,82 +364,6 @@ optional<std::string> FmtHelpers::formatDisplay(const Scope& scope, EvalContext&
     }
 
     return result;
-}
-
-static void lowerFormatArg(mir::Procedure& proc, const Expression& arg, char,
-                           const SFormat::FormatOptions& options, LiteralBase defaultBase) {
-    // TODO: actually use the options
-    mir::MIRValue argVal = proc.emitExpr(arg);
-    const Type& type = arg.type->getCanonicalType();
-    if (type.isIntegral()) {
-        auto args = {argVal, proc.emitInt(8, uint64_t(defaultBase), false),
-                     proc.emitInt(32, options.width.value_or(0), false),
-                     proc.emitInt(1, options.width.has_value(), false)};
-        proc.emitCall(mir::SysCallKind::printInt, args);
-        return;
-    }
-
-    switch (type.kind) {
-        case SymbolKind::FloatingType:
-        case SymbolKind::StringType:
-        case SymbolKind::EventType:
-        case SymbolKind::CHandleType:
-        case SymbolKind::ClassType:
-        case SymbolKind::NullType:
-            ASSUME_UNREACHABLE;
-        default:
-            // Should only be reachable by invalid display calls,
-            // in which case an error will already have been reported.
-            break;
-    }
-}
-
-void FmtHelpers::lowerFormatArgs(mir::Procedure& proc, const Args& args, LiteralBase defaultBase,
-                                 bool newline) {
-    auto argIt = args.begin();
-    while (argIt != args.end()) {
-        auto arg = *argIt++;
-        if (arg->bad())
-            return;
-
-        // Empty arguments always print a space.
-        if (arg->kind == ExpressionKind::EmptyArgument) {
-            proc.emitCall(mir::SysCallKind::printStr, proc.emitString(" "));
-            continue;
-        }
-
-        // Handle string literals as format strings.
-        if (arg->kind == ExpressionKind::StringLiteral) {
-            // Strip quotes from the raw string.
-            auto& lit = arg->as<StringLiteral>();
-            string_view fmt = lit.getRawValue();
-            if (fmt.length() >= 2)
-                fmt = fmt.substr(1, fmt.length() - 2);
-
-            bool result = SFormat::parse(
-                fmt,
-                [&](string_view text) {
-                    proc.emitCall(mir::SysCallKind::printStr, proc.emitString(std::string(text)));
-                },
-                [&](char specifier, size_t, size_t, const SFormat::FormatOptions& options) {
-                    if (argIt != args.end()) {
-                        auto currentArg = *argIt++;
-                        lowerFormatArg(proc, *currentArg, specifier, options, defaultBase);
-                    }
-                },
-                [](DiagCode, size_t, size_t, optional<char>) {});
-
-            if (!result)
-                return;
-        }
-        else {
-            // Otherwise, print the value with default options.
-            // TODO: set correct specifier
-            lowerFormatArg(proc, *arg, ' ', {}, defaultBase);
-        }
-    }
-
-    proc.emitCall(mir::SysCallKind::flush, proc.emitBool(newline));
 }
 
 bool FmtHelpers::checkFinishNum(const BindContext& context, const Expression& arg) {

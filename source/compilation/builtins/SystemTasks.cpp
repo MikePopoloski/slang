@@ -10,7 +10,6 @@
 #include "slang/binding/SystemSubroutine.h"
 #include "slang/compilation/Compilation.h"
 #include "slang/diagnostics/SysFuncsDiags.h"
-#include "slang/mir/Procedure.h"
 #include "slang/symbols/ASTVisitor.h"
 #include "slang/symbols/InstanceSymbols.h"
 #include "slang/symbols/MemberSymbols.h"
@@ -60,10 +59,6 @@ public:
             return comp.getErrorType();
 
         return comp.getVoidType();
-    }
-
-    void lower(mir::Procedure& proc, const Args& args) const final {
-        FmtHelpers::lowerFormatArgs(proc, args, defaultIntFmt, /* newline */ true);
     }
 };
 

@@ -17,11 +17,6 @@
 #include "slang/text/Json.h"
 #include "slang/util/Version.h"
 
-#if defined(INCLUDE_SIM)
-#    include "slang/codegen/JIT.h"
-#    include "slang/mir/MIRBuilder.h"
-#endif
-
 using namespace slang;
 
 void writeToFile(string_view fileName, string_view contents);
@@ -45,22 +40,6 @@ void printJson(Compilation& compilation, const std::string& fileName,
 
     writeToFile(fileName, writer.view());
 }
-
-#if defined(INCLUDE_SIM)
-using namespace slang::mir;
-
-bool runSim(Compilation& compilation) {
-    MIRBuilder builder(compilation);
-    builder.elaborate();
-
-    CodeGenerator codegen(compilation);
-    codegen.emitAll(builder);
-
-    JIT jit;
-    jit.addCode(codegen.finish());
-    return jit.run() == 0;
-}
-#endif
 
 template<typename TArgs>
 int driverMain(int argc, TArgs argv) try {
@@ -104,11 +83,6 @@ int driverMain(int argc, TArgs argv) try {
                        "When dumping AST to JSON, include only the scopes specified by the "
                        "given hierarchical paths",
                        "<path>");
-
-#if defined(INCLUDE_SIM)
-    optional<bool> shouldSim;
-    driver.cmdLine.add("--sim", shouldSim, "After compiling, try to simulate the design");
-#endif
 
     if (!driver.parseCommandLine(argc, argv))
         return 1;
@@ -156,12 +130,6 @@ int driverMain(int argc, TArgs argv) try {
 
             if (astJsonFile)
                 printJson(*compilation, *astJsonFile, astJsonScopes);
-
-#if defined(INCLUDE_SIM)
-            if (ok && shouldSim == true) {
-                ok &= runSim(*compilation);
-            }
-#endif
         }
     }
     catch (const std::exception& e) {

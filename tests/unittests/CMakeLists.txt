@@ -20,7 +20,6 @@ add_executable(
   main.cpp
   MemberParsingTests.cpp
   MemberTests.cpp
-  MIRTests.cpp
   NumericTests.cpp
   PortTests.cpp
   PreprocessorTests.cpp

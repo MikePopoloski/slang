@@ -18,10 +18,6 @@ class Expression;
 class EvalContext;
 class Scope;
 
-namespace mir {
-class Procedure;
-}
-
 class FmtHelpers {
 public:
     static bool checkDisplayArgs(const BindContext& context,
@@ -37,9 +33,6 @@ public:
 
     static optional<std::string> formatDisplay(const Scope& scope, EvalContext& context,
                                                const span<const Expression* const>& args);
-
-    static void lowerFormatArgs(mir::Procedure& proc, const span<const Expression* const>& args,
-                                LiteralBase defaultIntFmt, bool newline);
 
     static bool checkFinishNum(const BindContext& context, const Expression& arg);
 

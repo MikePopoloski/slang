@@ -16,10 +16,6 @@
 
 namespace slang {
 
-namespace mir {
-class Procedure;
-}
-
 class SystemSubroutine {
 public:
     virtual ~SystemSubroutine() = default;
@@ -42,8 +38,6 @@ public:
                                        SourceRange range, const Expression* iterOrThis) const = 0;
     virtual ConstantValue eval(EvalContext& context, const Args& args, SourceRange range,
                                const CallExpression::SystemCallInfo& callInfo) const = 0;
-
-    virtual void lower(mir::Procedure&, const Args&) const {}
 
 protected:
     SystemSubroutine(const std::string& name, SubroutineKind kind) : name(name), kind(kind) {}

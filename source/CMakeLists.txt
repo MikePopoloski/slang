@@ -184,10 +184,6 @@ add_library(
   compilation/ScriptSession.cpp
   compilation/SemanticModel.cpp
   driver/Driver.cpp
-  mir/Instr.cpp
-  mir/MIRBuilder.cpp
-  mir/MIRPrinter.cpp
-  mir/Procedure.cpp
   symbols/ASTSerializer.cpp
   symbols/AttributeSymbol.cpp
   symbols/BlockSymbols.cpp
@@ -214,33 +210,6 @@ add_library(
 slang_define_lib(slangcompiler)
 add_dependencies(slangcompiler slangparser)
 target_link_libraries(slangcompiler PUBLIC slangparser)
-
-# -------- Runtime library
-add_library(slangruntime runtime/SimIO.cpp runtime/Runtime.cpp)
-slang_define_lib(slangruntime)
-add_dependencies(slangruntime slangcore)
-target_link_libraries(slangruntime PUBLIC slangcore)
-
-# -------- Codegen library
-if(SLANG_INCLUDE_LLVM)
-  add_library(
-    slangcodegen
-    codegen/CGExpr.cpp codegen/CGSysCall.cpp codegen/CodeGenerator.cpp
-    codegen/CodeGenFunction.cpp codegen/CodeGenTypes.cpp codegen/JIT.cpp)
-  slang_define_lib(slangcodegen)
-  add_dependencies(slangcodegen slangparser)
-  target_link_libraries(slangcodegen PUBLIC slangcompiler)
-
-  find_package(LLVM REQUIRED CONFIG)
-
-  message(STATUS "Found LLVM ${LLVM_PACKAGE_VERSION}")
-  message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")
-  target_include_directories(slangcodegen SYSTEM PRIVATE ${LLVM_INCLUDE_DIRS})
-
-  llvm_map_components_to_libnames(llvm_libs support core orcjit native
-                                  nativecodegen)
-  target_link_libraries(slangcodegen PRIVATE ${llvm_libs})
-endif()
 
 # Installation rules
 if(SLANG_INCLUDE_INSTALL)
