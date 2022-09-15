@@ -15,7 +15,7 @@ add_custom_command(
 pybind11_add_module(
   pyslang
   MODULE
-  python/binding.cpp
+  python/ast.cpp
   python/compilation.cpp
   python/numeric.cpp
   python/pyslang.cpp

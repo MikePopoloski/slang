@@ -1,5 +1,5 @@
 //------------------------------------------------------------------------------
-// binding.cpp
+// ast.cpp
 // SPDX-FileCopyrightText: Michael Popoloski
 // SPDX-License-Identifier: MIT
 //------------------------------------------------------------------------------
@@ -9,7 +9,7 @@
 #include "slang/compilation/Compilation.h"
 #include "slang/syntax/AllSyntax.h"
 
-void registerBinding(py::module_& m) {
+void registerAST(py::module_& m) {
     EXPOSE_ENUM(m, ExpressionKind);
     EXPOSE_ENUM(m, UnaryOperator);
     EXPOSE_ENUM(m, BinaryOperator);
