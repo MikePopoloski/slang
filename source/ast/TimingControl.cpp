@@ -14,7 +14,7 @@
 #include "slang/diagnostics/StatementsDiags.h"
 #include "slang/syntax/AllSyntax.h"
 
-namespace slang {
+namespace slang::ast {
 
 TimingControl& TimingControl::bind(const TimingControlSyntax& syntax, const ASTContext& context) {
     auto& comp = context.getCompilation();
@@ -545,4 +545,4 @@ void BlockEventListControl::serializeTo(ASTSerializer& serializer) const {
     serializer.endArray();
 }
 
-} // namespace slang
+} // namespace slang::ast

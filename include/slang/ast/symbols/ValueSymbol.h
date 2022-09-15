@@ -11,8 +11,9 @@
 #include "slang/ast/Symbol.h"
 #include "slang/ast/types/DeclaredType.h"
 
-namespace slang {
+namespace slang::ast {
 
+class Compilation;
 class EvalContext;
 class ProceduralBlockSymbol;
 
@@ -124,4 +125,4 @@ private:
     mutable const Driver* firstDriver = nullptr;
 };
 
-} // namespace slang
+} // namespace slang::ast

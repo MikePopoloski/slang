@@ -32,7 +32,7 @@
 #include "slang/syntax/AllSyntax.h"
 #include "slang/util/String.h"
 
-namespace slang {
+namespace slang::ast {
 
 const LookupLocation LookupLocation::max{nullptr, UINT_MAX};
 const LookupLocation LookupLocation::min{nullptr, 0};
@@ -2004,4 +2004,4 @@ void Lookup::reportUndeclared(const Scope& initialScope, string_view name, Sourc
     result.addDiag(initialScope, diag::UndeclaredIdentifier, range) << name;
 }
 
-} // namespace slang
+} // namespace slang::ast

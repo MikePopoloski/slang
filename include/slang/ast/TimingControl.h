@@ -10,9 +10,10 @@
 #include "slang/ast/ASTSerializer.h"
 #include "slang/ast/Expression.h"
 #include "slang/ast/SemanticFacts.h"
+#include "slang/syntax/SyntaxFwd.h"
 #include "slang/util/Util.h"
 
-namespace slang {
+namespace slang::ast {
 
 // clang-format off
 #define CONTROL(x) \
@@ -31,10 +32,6 @@ ENUM(TimingControlKind, CONTROL)
 // clang-format on
 
 class ASTContext;
-class Compilation;
-struct PropertyExprSyntax;
-struct SequenceExprSyntax;
-struct TimingControlSyntax;
 
 class TimingControl {
 public:
@@ -84,9 +81,6 @@ public:
     void serializeTo(ASTSerializer& serializer) const;
 };
 
-struct DelaySyntax;
-struct ParameterValueAssignmentSyntax;
-
 class DelayControl : public TimingControl {
 public:
     const Expression& expr;
@@ -110,8 +104,6 @@ public:
         expr.visit(visitor);
     }
 };
-
-struct Delay3Syntax;
 
 class Delay3Control : public TimingControl {
 public:
@@ -144,11 +136,6 @@ public:
             expr3->visit(visitor);
     }
 };
-
-struct BinaryPropertyExprSyntax;
-struct EventControlSyntax;
-struct SignalEventExpressionSyntax;
-struct SimpleSequenceExprSyntax;
 
 class SignalEventControl : public TimingControl {
 public:
@@ -193,8 +180,6 @@ private:
                                    SourceRange sourceRange);
 };
 
-struct EventExpressionSyntax;
-
 class EventListControl : public TimingControl {
 public:
     span<const TimingControl* const> events;
@@ -216,8 +201,6 @@ public:
     }
 };
 
-struct ImplicitEventControlSyntax;
-
 class ImplicitEventControl : public TimingControl {
 public:
     explicit ImplicitEventControl(SourceRange sourceRange) :
@@ -231,8 +214,6 @@ public:
 
     void serializeTo(ASTSerializer&) const {}
 };
-
-struct RepeatedEventControlSyntax;
 
 class RepeatedEventControl : public TimingControl {
 public:
@@ -289,8 +270,6 @@ public:
     }
 };
 
-struct BlockEventExpressionSyntax;
-
 class BlockEventListControl : public TimingControl {
 public:
     struct Event {
@@ -311,4 +290,4 @@ public:
     void serializeTo(ASTSerializer& serializer) const;
 };
 
-} // namespace slang
+} // namespace slang::ast

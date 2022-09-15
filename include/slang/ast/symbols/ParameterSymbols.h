@@ -8,11 +8,9 @@
 #pragma once
 
 #include "slang/ast/symbols/ValueSymbol.h"
+#include "slang/syntax/SyntaxFwd.h"
 
-namespace slang {
-
-struct ClassPropertyDeclarationSyntax;
-struct ParameterDeclarationStatementSyntax;
+namespace slang::ast {
 
 class ParameterSymbolBase {
 public:
@@ -35,8 +33,6 @@ private:
     bool isLocal = false;
     bool isPort = false;
 };
-
-struct ParameterDeclarationSyntax;
 
 /// Represents a parameter value.
 class ParameterSymbol : public ValueSymbol, public ParameterSymbolBase {
@@ -62,8 +58,6 @@ private:
     mutable bool evaluating = false;
 };
 
-struct TypeParameterDeclarationSyntax;
-
 class TypeParameterSymbol : public Symbol, public ParameterSymbolBase {
 public:
     DeclaredType targetType;
@@ -82,8 +76,6 @@ public:
 private:
     mutable const Type* typeAlias = nullptr;
 };
-
-struct DefParamSyntax;
 
 /// Represents a defparam directive.
 class DefParamSymbol : public Symbol {
@@ -108,8 +100,6 @@ private:
     mutable const Symbol* target = nullptr;
 };
 
-struct SpecparamDeclarationSyntax;
-
 /// Represents a specify parameter.
 class SpecparamSymbol : public ValueSymbol {
 public:
@@ -129,4 +119,4 @@ private:
     mutable bool evaluating = false;
 };
 
-} // namespace slang
+} // namespace slang::ast

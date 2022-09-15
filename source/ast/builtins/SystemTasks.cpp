@@ -15,7 +15,7 @@
 #include "slang/diagnostics/SysFuncsDiags.h"
 #include "slang/syntax/AllSyntax.h"
 
-namespace slang::Builtins {
+namespace slang::ast::builtins {
 
 class SystemTaskBase : public SystemSubroutine {
 public:
@@ -824,4 +824,4 @@ void registerSystemTasks(Compilation& c) {
 #undef PLA_TASK
 }
 
-} // namespace slang::Builtins
+} // namespace slang::ast::builtins

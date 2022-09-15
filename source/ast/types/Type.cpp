@@ -19,7 +19,7 @@
 #include "slang/syntax/AllSyntax.h"
 #include "slang/util/StackContainer.h"
 
-namespace slang {
+namespace slang::ast {
 
 namespace {
 
@@ -1128,4 +1128,4 @@ Diagnostic& operator<<(Diagnostic& diag, const Type& arg) {
     return diag;
 }
 
-} // namespace slang
+} // namespace slang::ast

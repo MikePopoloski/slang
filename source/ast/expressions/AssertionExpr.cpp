@@ -25,7 +25,7 @@
 
 namespace {
 
-using namespace slang;
+using namespace slang::ast;
 
 struct AdmitsEmptyVisitor {
     template<typename T>
@@ -41,7 +41,7 @@ struct AdmitsEmptyVisitor {
 
 } // namespace
 
-namespace slang {
+namespace slang::ast {
 
 static const Expression& bindExpr(const ExpressionSyntax& syntax, const ASTContext& context,
                                   bool allowInstances = false) {
@@ -1196,4 +1196,4 @@ void DisableIffAssertionExpr::serializeTo(ASTSerializer& serializer) const {
     serializer.write("expr", expr);
 }
 
-} // namespace slang
+} // namespace slang::ast

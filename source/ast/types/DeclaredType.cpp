@@ -24,7 +24,7 @@
 #include "slang/syntax/AllSyntax.h"
 #include "slang/util/ScopeGuard.h"
 
-namespace slang {
+namespace slang::ast {
 
 DeclaredType::DeclaredType(const Symbol& parent, bitmask<DeclaredTypeFlags> flags) :
     parent(parent), flags(flags), overrideIndex(0), evaluating(false), hasLink(false) {
@@ -486,4 +486,4 @@ T DeclaredType::getASTContext() const {
     return ASTContext(*scope, location, astFlags);
 }
 
-} // namespace slang
+} // namespace slang::ast

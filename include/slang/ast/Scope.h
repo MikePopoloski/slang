@@ -17,19 +17,18 @@
 
 namespace slang {
 
+class SyntaxNode;
+
+} // namespace slang
+
+namespace slang::ast {
+
 class ASTContext;
 class Compilation;
 class ForwardingTypedefSymbol;
 class InstanceBodySymbol;
 class NetType;
 class WildcardImportSymbol;
-struct AttributeInstanceSyntax;
-struct DataDeclarationSyntax;
-struct ModuleDeclarationSyntax;
-struct NameSyntax;
-struct PackageImportItemSyntax;
-struct PortConnectionSyntax;
-struct UserDefinedNetDeclarationSyntax;
 
 using SymbolMap = flat_hash_map<string_view, const Symbol*>;
 using PointerMap = flat_hash_map<uintptr_t, uintptr_t>;
@@ -327,4 +326,4 @@ private:
     ImportDataIndex importDataIndex{0};
 };
 
-} // namespace slang
+} // namespace slang::ast

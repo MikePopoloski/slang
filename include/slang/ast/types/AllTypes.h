@@ -10,14 +10,12 @@
 #include "slang/ast/Scope.h"
 #include "slang/ast/symbols/ValueSymbol.h"
 #include "slang/ast/types/Type.h"
+#include "slang/syntax/SyntaxFwd.h"
 
-namespace slang {
+namespace slang::ast {
 
-class Compilation;
 class InstanceSymbol;
 class ModportSymbol;
-
-struct IntegerTypeSyntax;
 
 /// A base class for integral types, which include all scalar types, predefined integer types,
 /// packed arrays, packed structures, packed unions, and enum types.
@@ -93,7 +91,6 @@ public:
 };
 
 class EnumValueSymbol;
-struct EnumTypeSyntax;
 
 /// Represents an enumerated type.
 class EnumType : public IntegralType, public Scope {
@@ -206,8 +203,6 @@ public:
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::QueueType; }
 };
-
-struct StructUnionTypeSyntax;
 
 /// Represents a packed structure of members.
 class PackedStructType : public IntegralType, public Scope {
@@ -373,8 +368,6 @@ public:
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::PropertyType; }
 };
 
-struct VirtualInterfaceTypeSyntax;
-
 /// Represents a virtual interface type.
 class VirtualInterfaceType : public Type {
 public:
@@ -393,10 +386,6 @@ public:
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::VirtualInterfaceType; }
 };
-
-struct ClassPropertyDeclarationSyntax;
-struct ForwardInterfaceClassTypedefDeclarationSyntax;
-struct ForwardTypedefDeclarationSyntax;
 
 #define CATEGORY(x) x(None) x(Enum) x(Struct) x(Union) x(Class) x(InterfaceClass)
 ENUM(ForwardTypedefCategory, CATEGORY);
@@ -435,8 +424,6 @@ public:
 private:
     mutable const ForwardingTypedefSymbol* next = nullptr;
 };
-
-struct TypedefDeclarationSyntax;
 
 /// Represents a type alias, which is introduced via a typedef or type parameter.
 class TypeAliasType : public Type {
@@ -482,4 +469,4 @@ public:
     static const ErrorType Instance;
 };
 
-} // namespace slang
+} // namespace slang::ast

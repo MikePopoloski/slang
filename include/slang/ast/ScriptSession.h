@@ -9,12 +9,10 @@
 
 #include "slang/ast/Compilation.h"
 #include "slang/ast/EvalContext.h"
+#include "slang/syntax/SyntaxFwd.h"
 #include "slang/syntax/SyntaxTree.h"
 
-namespace slang {
-
-struct ExpressionSyntax;
-struct StatementSyntax;
+namespace slang::ast {
 
 /// A helper class that allows evaluating arbitrary snippets of SystemVerilog
 /// source code and maintaining state across multiple eval calls.
@@ -36,4 +34,4 @@ private:
     EvalContext evalContext;
 };
 
-} // namespace slang
+} // namespace slang::ast

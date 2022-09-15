@@ -21,7 +21,6 @@ namespace slang {
 extern BumpAllocator alloc;
 extern Diagnostics diagnostics;
 
-class InstanceSymbol;
 struct ClassDeclarationSyntax;
 struct CompilationUnitSyntax;
 struct ExpressionSyntax;
@@ -29,9 +28,14 @@ struct MemberSyntax;
 struct ModuleDeclarationSyntax;
 struct StatementSyntax;
 
+namespace ast {
+class InstanceSymbol;
+}
+
 } // namespace slang
 
 using namespace slang;
+using namespace slang::ast;
 
 #define CHECK_DIAGNOSTICS_EMPTY               \
     do {                                      \

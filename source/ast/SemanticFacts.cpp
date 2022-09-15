@@ -13,7 +13,7 @@
 #include "slang/diagnostics/PreprocessorDiags.h"
 #include "slang/syntax/AllSyntax.h"
 
-namespace slang {
+namespace slang::ast {
 
 // clang-format off
 std::optional<VariableLifetime> SemanticFacts::getVariableLifetime(Token token) {
@@ -236,4 +236,4 @@ void ClockingSkew::serializeTo(ASTSerializer& serializer) const {
         serializer.write("delay", *delay);
 }
 
-} // namespace slang
+} // namespace slang::ast

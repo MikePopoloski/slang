@@ -14,7 +14,7 @@
 #include "slang/syntax/AllSyntax.h"
 #include "slang/util/StackContainer.h"
 
-namespace slang {
+namespace slang::ast {
 
 AttributeSymbol::AttributeSymbol(string_view name, SourceLocation loc, const Symbol& symbol,
                                  const ExpressionSyntax& expr) :
@@ -124,4 +124,4 @@ span<const AttributeSymbol* const> AttributeSymbol::fromSyntax(
         });
 }
 
-} // namespace slang
+} // namespace slang::ast

@@ -9,11 +9,11 @@
 
 #include "slang/ast/Symbol.h"
 #include "slang/ast/types/DeclaredType.h"
+#include "slang/syntax/SyntaxFwd.h"
 
-namespace slang {
+namespace slang::ast {
 
 class SubroutineSymbol;
-struct NetTypeDeclarationSyntax;
 
 /// Base class for all net types in SystemVerilog.
 ///
@@ -68,4 +68,4 @@ private:
     mutable optional<const SubroutineSymbol*> resolver;
 };
 
-} // namespace slang
+} // namespace slang::ast

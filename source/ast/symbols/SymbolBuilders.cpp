@@ -14,7 +14,7 @@
 #include "slang/ast/types/AllTypes.h"
 #include "slang/ast/types/Type.h"
 
-namespace slang {
+namespace slang::ast {
 
 #define NL SourceLocation::NoLocation
 
@@ -116,4 +116,4 @@ void StructBuilder::addField(string_view name, const DeclaredType& typeLink,
     currFieldIndex++;
 }
 
-} // namespace slang
+} // namespace slang::ast

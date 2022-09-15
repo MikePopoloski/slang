@@ -18,6 +18,7 @@
 #include "slang/util/Version.h"
 
 using namespace slang;
+using namespace slang::ast;
 
 void writeToFile(string_view fileName, string_view contents);
 

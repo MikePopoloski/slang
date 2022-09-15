@@ -25,6 +25,7 @@
 namespace {
 
 using namespace slang;
+using namespace slang::ast;
 
 #define OP(k, v)            \
     case BinaryOperator::k: \
@@ -96,7 +97,7 @@ bool isShortCircuitOp(BinaryOperator op) {
 
 } // namespace
 
-namespace slang {
+namespace slang::ast {
 
 const Type* Expression::binaryOperatorType(Compilation& compilation, const Type* lt, const Type* rt,
                                            bool forceFourState, bool signednessFromRt) {
@@ -2188,4 +2189,4 @@ ConstantValue Expression::evalBinaryOperator(BinaryOperator op, const ConstantVa
     ASSUME_UNREACHABLE;
 }
 
-} // namespace slang
+} // namespace slang::ast

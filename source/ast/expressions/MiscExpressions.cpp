@@ -26,7 +26,7 @@
 #include "slang/diagnostics/StatementsDiags.h"
 #include "slang/syntax/AllSyntax.h"
 
-namespace slang {
+namespace slang::ast {
 
 Expression& ValueExpressionBase::fromSymbol(const ASTContext& context, const Symbol& symbol,
                                             bool isHierarchical, SourceRange sourceRange,
@@ -1372,4 +1372,4 @@ void TaggedUnionExpression::serializeTo(ASTSerializer& serializer) const {
         serializer.write("valueExpr", *valueExpr);
 }
 
-} // namespace slang
+} // namespace slang::ast

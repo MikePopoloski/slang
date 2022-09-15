@@ -21,7 +21,10 @@ enum class terminal_color : uint8_t;
 namespace slang {
 
 class FormatBuffer;
+
+namespace ast {
 class Symbol;
+}
 
 class TextDiagnosticClient : public DiagnosticClient {
 public:
@@ -72,7 +75,7 @@ private:
     bool includeExpansion = true;
     bool includeHierarchy = true;
 
-    using SymbolPathCB = std::function<std::string(const Symbol&)>;
+    using SymbolPathCB = std::function<std::string(const ast::Symbol&)>;
     SymbolPathCB symbolPathCB;
     static SymbolPathCB defaultSymbolPathCB;
 

@@ -267,7 +267,7 @@ public:
     [[nodiscard]] Bag createOptionBag() const;
 
     /// Creates a compilation object from all of the current loaded state of the driver.
-    [[nodiscard]] std::unique_ptr<Compilation> createCompilation() const;
+    [[nodiscard]] std::unique_ptr<ast::Compilation> createCompilation() const;
 
     /// Reports all parsing diagnostics found in all of the @a syntaxTrees
     /// @returns true on success and false if errors were encountered.
@@ -276,7 +276,7 @@ public:
     /// Reports the result of compilation.
     /// If @a quiet is set to true, non-essential output will be suppressed.
     /// @returns true if compilation succeeded and false if errors were encountered.
-    [[nodiscard]] bool reportCompilation(Compilation& compilation, bool quiet);
+    [[nodiscard]] bool reportCompilation(ast::Compilation& compilation, bool quiet);
 
 private:
     bool anyFailedLoads = false;

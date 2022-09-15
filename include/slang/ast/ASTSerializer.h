@@ -12,11 +12,16 @@
 
 namespace slang {
 
+class ConstantValue;
+
+} // namespace slang
+
+namespace slang::ast {
+
 class AssertionExpr;
 class AttributeSymbol;
 class BinsSelectExpr;
 class Compilation;
-class ConstantValue;
 class Constraint;
 class Expression;
 class Pattern;
@@ -108,4 +113,4 @@ private:
     bool includeAddrs = true;
 };
 
-} // namespace slang
+} // namespace slang::ast

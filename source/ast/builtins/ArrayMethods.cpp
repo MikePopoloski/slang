@@ -13,7 +13,7 @@
 #include "slang/diagnostics/SysFuncsDiags.h"
 #include "slang/util/Function.h"
 
-namespace slang::Builtins {
+namespace slang::ast::builtins {
 
 static bool isComparable(const Type& type) {
     return type.isNumeric() || type.isString();
@@ -1011,4 +1011,4 @@ void registerArrayMethods(Compilation& c) {
     REGISTER(SymbolKind::Iterator, IteratorIndex, );
 }
 
-} // namespace slang::Builtins
+} // namespace slang::ast::builtins

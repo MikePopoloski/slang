@@ -9,9 +9,10 @@
 
 #include "slang/ast/Statements.h"
 #include "slang/ast/symbols/ValueSymbol.h"
+#include "slang/syntax/SyntaxFwd.h"
 #include "slang/util/Enum.h"
 
-namespace slang {
+namespace slang::ast {
 
 class FormalArgumentSymbol;
 
@@ -68,10 +69,6 @@ enum class MethodFlags : uint16_t {
 BITMASK(MethodFlags, ForkJoin)
 
 class MethodPrototypeSymbol;
-struct ClassMethodDeclarationSyntax;
-struct DPIImportSyntax;
-struct FunctionDeclarationSyntax;
-struct FunctionPortListSyntax;
 
 /// Represents a subroutine (task or function).
 class SubroutineSymbol : public Symbol, public Scope {
@@ -168,11 +165,6 @@ private:
     mutable bool isConstructing = false;
 };
 
-struct ClassMethodPrototypeSyntax;
-struct ExternInterfaceMethodSyntax;
-struct ModportNamedPortSyntax;
-struct ModportSubroutinePortSyntax;
-
 class MethodPrototypeSymbol : public Symbol, public Scope {
 public:
     DeclaredType declaredReturnType;
@@ -243,4 +235,4 @@ private:
     mutable const ExternImpl* firstExternImpl = nullptr;
 };
 
-} // namespace slang
+} // namespace slang::ast

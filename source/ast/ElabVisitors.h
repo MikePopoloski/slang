@@ -12,7 +12,7 @@
 #include "slang/diagnostics/DeclarationsDiags.h"
 #include "slang/util/StackContainer.h"
 
-namespace slang {
+namespace slang::ast {
 
 // This visitor is used to touch every node in the AST to ensure that all lazily
 // evaluated members have been realized and we have recorded every diagnostic.
@@ -519,4 +519,4 @@ struct DefParamVisitor : public ASTVisitor<DefParamVisitor, false, false> {
     const InstanceSymbol* hierarchyProblem = nullptr;
 };
 
-} // namespace slang
+} // namespace slang::ast

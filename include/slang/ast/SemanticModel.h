@@ -12,11 +12,10 @@
 #include "slang/ast/symbols/InstanceSymbols.h"
 #include "slang/ast/symbols/SubroutineSymbols.h"
 #include "slang/ast/types/AllTypes.h"
+#include "slang/syntax/SyntaxFwd.h"
 #include "slang/util/Hash.h"
 
-namespace slang {
-
-struct CompilationUnitSyntax;
+namespace slang::ast {
 
 class SemanticModel {
 public:
@@ -42,4 +41,4 @@ private:
     flat_hash_map<const SyntaxNode*, const Symbol*> symbolCache;
 };
 
-} // namespace slang
+} // namespace slang::ast

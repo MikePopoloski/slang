@@ -22,7 +22,7 @@
 #include "slang/diagnostics/TypesDiags.h"
 #include "slang/syntax/AllSyntax.h"
 
-namespace slang {
+namespace slang::ast {
 
 DriverKind ASTContext::getDriverKind() const {
     if (flags.has(ASTFlags::ProceduralAssign))
@@ -514,4 +514,4 @@ void ASTContext::addAssertionBacktrace(Diagnostic& diag) const {
     inst.prevContext->addAssertionBacktrace(diag);
 }
 
-} // namespace slang
+} // namespace slang::ast

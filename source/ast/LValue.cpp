@@ -7,7 +7,7 @@
 //------------------------------------------------------------------------------
 #include "slang/ast/LValue.h"
 
-namespace slang {
+namespace slang::ast {
 
 template<typename T>
 struct always_false : std::false_type {};
@@ -306,4 +306,4 @@ void LValue::addArrayLookup(ConstantValue&& index, ConstantValue&& defaultValue)
     elems.emplace(ArrayLookup{std::move(index), std::move(defaultValue)});
 }
 
-} // namespace slang
+} // namespace slang::ast

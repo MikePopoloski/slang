@@ -8,11 +8,11 @@
 #pragma once
 
 #include "slang/ast/Expression.h"
+#include "slang/syntax/SyntaxFwd.h"
 
-namespace slang {
+namespace slang::ast {
 
 class TimingControl;
-struct BinaryExpressionSyntax;
 
 /// Represents an assignment expression.
 class AssignmentExpression : public Expression {
@@ -62,9 +62,6 @@ private:
     Expression* right_;
     bool nonBlocking;
 };
-
-struct CastExpressionSyntax;
-struct SignedCastExpressionSyntax;
 
 // clang-format off
 #define CK(x) \
@@ -122,8 +119,6 @@ private:
     Expression* operand_;
 };
 
-struct NewArrayExpressionSyntax;
-
 /// Represents a new[] expression that creates a dynamic array.
 class NewArrayExpression : public Expression {
 public:
@@ -155,8 +150,6 @@ private:
     const Expression* sizeExpr_;
     const Expression* initializer_;
 };
-
-struct NewClassExpressionSyntax;
 
 /// Represents a `new` expression that creates a class instance.
 class NewClassExpression : public Expression {
@@ -242,8 +235,6 @@ private:
     span<const Expression* const> elements_;
 };
 
-struct SimpleAssignmentPatternSyntax;
-
 /// Represents an assignment pattern expression.
 class SimpleAssignmentPatternExpression : public AssignmentPatternExpressionBase {
 public:
@@ -272,8 +263,6 @@ public:
         return kind == ExpressionKind::SimpleAssignmentPattern;
     }
 };
-
-struct StructuredAssignmentPatternSyntax;
 
 /// Represents an assignment pattern expression.
 class StructuredAssignmentPatternExpression : public AssignmentPatternExpressionBase {
@@ -336,8 +325,6 @@ public:
     }
 };
 
-struct ReplicatedAssignmentPatternSyntax;
-
 /// Represents a replicated assignment pattern expression.
 class ReplicatedAssignmentPatternExpression : public AssignmentPatternExpressionBase {
 public:
@@ -385,4 +372,4 @@ private:
     const Expression* count_;
 };
 
-} // namespace slang
+} // namespace slang::ast

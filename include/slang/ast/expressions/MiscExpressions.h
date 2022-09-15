@@ -11,8 +11,9 @@
 #include "slang/ast/TimingControl.h"
 #include "slang/ast/expressions/AssertionExpr.h"
 #include "slang/ast/symbols/ValueSymbol.h"
+#include "slang/syntax/SyntaxFwd.h"
 
-namespace slang {
+namespace slang::ast {
 
 /// Common base class for both NamedValueExpression and HierarchicalValueExpression.
 class ValueExpressionBase : public Expression {
@@ -162,8 +163,6 @@ public:
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::EmptyArgument; }
 };
 
-struct ClockingPropertyExprSyntax;
-
 /// Represents a clocking event expression. This is a special kind of expression that is only
 /// allowed with the sampled value system functions and assertion instance arguments.
 class ClockingEventExpression : public Expression {
@@ -232,8 +231,6 @@ public:
     }
 };
 
-struct MinTypMaxExpressionSyntax;
-
 /// Represents a min:typ:max expression.
 class MinTypMaxExpression : public Expression {
 public:
@@ -279,8 +276,6 @@ private:
     Expression* max_;
 };
 
-struct CopyClassExpressionSyntax;
-
 /// Represents a `new` expression that copies a class instance.
 class CopyClassExpression : public Expression {
 public:
@@ -306,8 +301,6 @@ public:
 private:
     const Expression& sourceExpr_;
 };
-
-struct ExpressionOrDistSyntax;
 
 /// Denotes an expression along with a distribution of probabilities for that
 /// expression. This can't occur in normal expression code; it's used as part
@@ -356,8 +349,6 @@ private:
     span<DistItem> items_;
 };
 
-struct TaggedUnionExpressionSyntax;
-
 /// Represents a tagged union member setter expression.
 class TaggedUnionExpression : public Expression {
 public:
@@ -386,4 +377,4 @@ public:
     }
 };
 
-} // namespace slang
+} // namespace slang::ast

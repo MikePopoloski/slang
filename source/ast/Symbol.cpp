@@ -22,6 +22,7 @@
 namespace {
 
 using namespace slang;
+using namespace slang::ast;
 
 struct AsScopeVisitor {
     template<typename T>
@@ -38,7 +39,7 @@ struct AsScopeVisitor {
 
 } // namespace
 
-namespace slang {
+namespace slang::ast {
 
 bool Symbol::isType() const {
     return Type::isKind(kind);
@@ -254,4 +255,4 @@ const Scope* Symbol::scopeOrNull() const {
     return visit(visitor);
 }
 
-} // namespace slang
+} // namespace slang::ast

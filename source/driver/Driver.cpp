@@ -23,6 +23,8 @@
 
 namespace slang {
 
+using namespace ast;
+
 Driver::Driver() : diagEngine(sourceManager) {
     diagClient = std::make_shared<TextDiagnosticClient>();
     diagEngine.addClient(diagClient);

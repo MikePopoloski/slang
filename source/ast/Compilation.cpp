@@ -22,7 +22,7 @@
 #include "slang/text/CharInfo.h"
 #include "slang/text/SourceManager.h"
 
-namespace slang::Builtins {
+namespace slang::ast::builtins {
 
 void registerArrayMethods(Compilation&);
 void registerConversionFuncs(Compilation&);
@@ -37,9 +37,9 @@ void registerSystemTasks(Compilation&);
 void registerGateTypes(Compilation&);
 const PackageSymbol& createStdPackage(Compilation&);
 
-} // namespace slang::Builtins
+} // namespace slang::ast::builtins
 
-namespace slang {
+namespace slang::ast {
 
 Compilation::Compilation(const Bag& options) :
     options(options.getOrDefault<CompilationOptions>()), tempDiag({}, {}) {
@@ -139,23 +139,23 @@ Compilation::Compilation(const Bag& options) :
     root = std::make_unique<RootSymbol>(*this);
 
     // Register all system tasks, functions, and methods.
-    Builtins::registerArrayMethods(*this);
-    Builtins::registerConversionFuncs(*this);
-    Builtins::registerCoverageFuncs(*this);
-    Builtins::registerEnumMethods(*this);
-    Builtins::registerMathFuncs(*this);
-    Builtins::registerMiscSystemFuncs(*this);
-    Builtins::registerNonConstFuncs(*this);
-    Builtins::registerQueryFuncs(*this);
-    Builtins::registerStringMethods(*this);
-    Builtins::registerSystemTasks(*this);
+    builtins::registerArrayMethods(*this);
+    builtins::registerConversionFuncs(*this);
+    builtins::registerCoverageFuncs(*this);
+    builtins::registerEnumMethods(*this);
+    builtins::registerMathFuncs(*this);
+    builtins::registerMiscSystemFuncs(*this);
+    builtins::registerNonConstFuncs(*this);
+    builtins::registerQueryFuncs(*this);
+    builtins::registerStringMethods(*this);
+    builtins::registerSystemTasks(*this);
 
     // Register the built-in std package.
-    stdPkg = &Builtins::createStdPackage(*this);
+    stdPkg = &builtins::createStdPackage(*this);
     packageMap.emplace(stdPkg->name, stdPkg);
 
     // Register the built-in gate types.
-    Builtins::registerGateTypes(*this);
+    builtins::registerGateTypes(*this);
 
     // Set a default handler for printing types and symbol paths, for convenience.
     DiagnosticEngine::setDefaultFormatter<const Type*>(std::make_unique<TypeArgFormatter>());
@@ -1522,4 +1522,4 @@ void Compilation::resolveDefParams(size_t) {
     copyOverrides(*this);
 }
 
-} // namespace slang
+} // namespace slang::ast

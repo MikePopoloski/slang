@@ -18,7 +18,7 @@ Diagnostic::Diagnostic(DiagCode code, SourceLocation location) noexcept :
     code(code), location(location) {
 }
 
-Diagnostic::Diagnostic(const Symbol& source, DiagCode code, SourceLocation location) noexcept :
+Diagnostic::Diagnostic(const ast::Symbol& source, DiagCode code, SourceLocation location) noexcept :
     code(code), location(location), symbol(&source) {
 }
 
@@ -129,13 +129,13 @@ Diagnostic& Diagnostics::add(DiagCode code, SourceRange range) {
     return add(code, range.start()) << range;
 }
 
-Diagnostic& Diagnostics::add(const Symbol& source, DiagCode code, SourceLocation location) {
+Diagnostic& Diagnostics::add(const ast::Symbol& source, DiagCode code, SourceLocation location) {
     ASSERT(location);
     emplace(source, code, location);
     return back();
 }
 
-Diagnostic& Diagnostics::add(const Symbol& source, DiagCode code, SourceRange range) {
+Diagnostic& Diagnostics::add(const ast::Symbol& source, DiagCode code, SourceRange range) {
     return add(source, code, range.start()) << range;
 }
 

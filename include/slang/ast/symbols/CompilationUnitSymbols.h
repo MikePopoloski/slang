@@ -9,11 +9,11 @@
 
 #include "slang/ast/Scope.h"
 #include "slang/ast/Symbol.h"
+#include "slang/syntax/SyntaxFwd.h"
 
-namespace slang {
+namespace slang::ast {
 
 class InstanceSymbol;
-struct ModuleDeclarationSyntax;
 
 /// The root of a single compilation unit.
 class CompilationUnitSymbol : public Symbol, public Scope {
@@ -34,8 +34,6 @@ private:
     optional<SourceRange> unitsRange;
     optional<SourceRange> precisionRange;
 };
-
-struct PackageImportItemSyntax;
 
 /// A SystemVerilog package construct.
 class PackageSymbol : public Symbol, public Scope {
@@ -83,4 +81,4 @@ public:
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::Root; }
 };
 
-} // namespace slang
+} // namespace slang::ast

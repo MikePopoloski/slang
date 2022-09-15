@@ -11,16 +11,13 @@
 #include "slang/text/SourceLocation.h"
 #include "slang/util/Util.h"
 
-namespace slang {
+namespace slang::ast {
 
 class ASTSerializer;
-class Compilation;
 class DeclaredType;
 class Definition;
 class Scope;
-class SyntaxNode;
 class Type;
-struct AttributeInstanceSyntax;
 enum class RandMode;
 
 // clang-format off
@@ -263,4 +260,4 @@ inline SymbolIndex& operator-=(SymbolIndex& si, uint32_t offset) {
     return si;
 }
 
-} // namespace slang
+} // namespace slang::ast

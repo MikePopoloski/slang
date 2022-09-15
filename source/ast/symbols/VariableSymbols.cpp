@@ -26,7 +26,7 @@
 #include "slang/syntax/AllSyntax.h"
 #include "slang/syntax/SyntaxFacts.h"
 
-namespace slang {
+namespace slang::ast {
 
 static VariableLifetime getDefaultLifetime(const Scope& scope) {
     const Symbol& sym = scope.asSymbol();
@@ -507,4 +507,4 @@ void LocalAssertionVarSymbol::fromSyntax(const Scope& scope,
     }
 }
 
-} // namespace slang
+} // namespace slang::ast

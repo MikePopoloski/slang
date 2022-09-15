@@ -11,14 +11,16 @@
 #include "slang/ast/Scope.h"
 #include "slang/ast/symbols/VariableSymbols.h"
 #include "slang/ast/types/Type.h"
+#include "slang/syntax/SyntaxFwd.h"
 #include "slang/util/Function.h"
 #include "slang/util/Hash.h"
 
-namespace slang {
+namespace slang::ast {
 
 class ASTContext;
 class Constraint;
-struct ClassPropertyDeclarationSyntax;
+class Expression;
+class GenericClassDefSymbol;
 
 class ClassPropertySymbol : public VariableSymbol {
 public:
@@ -35,12 +37,6 @@ public:
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::ClassProperty; }
 };
-
-class Expression;
-class GenericClassDefSymbol;
-struct ClassDeclarationSyntax;
-struct ExtendsClauseSyntax;
-struct ImplementsClauseSyntax;
 
 /// Represents a class definition type.
 class ClassType : public Type, public Scope {
@@ -112,8 +108,6 @@ private:
     mutable span<const Type* const> implementsIfaces;
     SymbolIndex headerIndex;
 };
-
-struct ParameterValueAssignmentSyntax;
 
 /// Represents a generic class definition, which is a parameterized class that has not
 /// yet had its parameter values specified. This is a not a type -- the generic class
@@ -237,9 +231,6 @@ public:
     }
 };
 
-struct ConstraintDeclarationSyntax;
-struct ConstraintPrototypeSyntax;
-
 /// Represents a named constraint block declaration within a class.
 class ConstraintBlockSymbol : public Symbol, public Scope {
 public:
@@ -284,4 +275,4 @@ private:
     mutable SymbolIndex outOfBlockIndex{0};
 };
 
-} // namespace slang
+} // namespace slang::ast

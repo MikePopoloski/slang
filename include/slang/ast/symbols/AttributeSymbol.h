@@ -9,12 +9,10 @@
 
 #include "slang/ast/Scope.h"
 #include "slang/ast/Symbol.h"
+#include "slang/syntax/SyntaxFwd.h"
 #include "slang/text/SourceLocation.h"
 
-namespace slang {
-
-struct AttributeInstanceSyntax;
-struct ExpressionSyntax;
+namespace slang::ast {
 
 class AttributeSymbol : public Symbol {
 public:
@@ -48,4 +46,4 @@ private:
     LookupLocation lookupLocation;
 };
 
-} // namespace slang
+} // namespace slang::ast

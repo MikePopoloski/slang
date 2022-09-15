@@ -11,12 +11,11 @@
 #include "slang/ast/Scope.h"
 #include "slang/ast/types/DeclaredType.h"
 #include "slang/ast/types/Type.h"
+#include "slang/syntax/SyntaxFwd.h"
 
-namespace slang {
+namespace slang::ast {
 
 class FormalArgumentSymbol;
-struct CoverageOptionSyntax;
-struct CovergroupDeclarationSyntax;
 
 class CoverageOptionSetter {
 public:
@@ -77,9 +76,6 @@ private:
 };
 
 class BinsSelectExpr;
-struct BinsSelectionSyntax;
-struct CoverageBinsSyntax;
-struct TransRangeSyntax;
 
 class CoverageBinSymbol : public Symbol {
 public:
@@ -148,9 +144,6 @@ private:
     mutable bool isResolved = false;
 };
 
-struct CoverpointSyntax;
-struct IdentifierNameSyntax;
-
 class CoverpointSymbol : public Symbol, public Scope {
 public:
     DeclaredType declaredType;
@@ -202,8 +195,6 @@ public:
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::CoverCrossBody; }
 };
 
-struct CoverCrossSyntax;
-
 class CoverCrossSymbol : public Symbol, public Scope {
 public:
     span<const CoverpointSymbol* const> targets;
@@ -246,8 +237,6 @@ private:
 ENUM(BinsSelectExprKind, EXPR)
 #undef EXPR
 // clang-format on
-
-struct BinsSelectExpressionSyntax;
 
 class BinsSelectExpr {
 public:
@@ -293,8 +282,6 @@ public:
     void serializeTo(ASTSerializer& serializer) const;
 };
 
-struct BinsSelectConditionExprSyntax;
-
 class ConditionBinsSelectExpr : public BinsSelectExpr {
 public:
     const Symbol& target;
@@ -316,8 +303,6 @@ public:
             expr->visit(visitor);
     }
 };
-
-struct UnaryBinsSelectExprSyntax;
 
 class UnaryBinsSelectExpr : public BinsSelectExpr {
 public:
@@ -343,8 +328,6 @@ public:
     }
 };
 
-struct BinaryBinsSelectExprSyntax;
-
 class BinaryBinsSelectExpr : public BinsSelectExpr {
 public:
     const BinsSelectExpr& left;
@@ -368,8 +351,6 @@ public:
     }
 };
 
-struct SimpleBinsSelectExprSyntax;
-
 class SetExprBinsSelectExpr : public BinsSelectExpr {
 public:
     const Expression& expr;
@@ -392,8 +373,6 @@ public:
             matchesExpr->visit(visitor);
     }
 };
-
-struct BinSelectWithFilterExprSyntax;
 
 class BinSelectWithFilterExpr : public BinsSelectExpr {
 public:
@@ -453,4 +432,4 @@ void CoverageBinSymbol::visitExprs(TVisitor&& visitor) const {
     }
 }
 
-} // namespace slang
+} // namespace slang::ast

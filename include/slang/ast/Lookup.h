@@ -8,10 +8,11 @@
 #pragma once
 
 #include "slang/diagnostics/Diagnostics.h"
+#include "slang/syntax/SyntaxFwd.h"
 #include "slang/text/SourceLocation.h"
 #include "slang/util/Util.h"
 
-namespace slang {
+namespace slang::ast {
 
 class ASTContext;
 class ClassType;
@@ -20,9 +21,6 @@ class Symbol;
 class SystemSubroutine;
 class TempVarSymbol;
 class Type;
-struct ElementSelectSyntax;
-struct NameSyntax;
-struct ScopedNameSyntax;
 
 enum class SymbolIndex : uint32_t;
 enum class Visibility;
@@ -306,4 +304,4 @@ private:
                                  LookupResult& result);
 };
 
-} // namespace slang
+} // namespace slang::ast

@@ -15,7 +15,7 @@
 #include "slang/diagnostics/DeclarationsDiags.h"
 #include "slang/syntax/AllSyntax.h"
 
-namespace slang {
+namespace slang::ast {
 
 void ParameterSymbolBase::fromLocalSyntax(const Scope& scope,
                                           const ParameterDeclarationStatementSyntax& syntax,
@@ -349,4 +349,4 @@ void SpecparamSymbol::serializeTo(ASTSerializer& serializer) const {
     serializer.write("value", getValue());
 }
 
-} // namespace slang
+} // namespace slang::ast

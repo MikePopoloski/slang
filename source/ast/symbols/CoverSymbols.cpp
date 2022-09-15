@@ -22,6 +22,7 @@
 namespace {
 
 using namespace slang;
+using namespace slang::ast;
 
 class OptionBuilder {
 public:
@@ -52,7 +53,7 @@ private:
 
 } // namespace
 
-namespace slang {
+namespace slang::ast {
 
 CoverageOptionSetter::CoverageOptionSetter(const Scope& scope, const CoverageOptionSyntax& syntax) :
     scope(&scope), syntax(&syntax) {
@@ -1103,4 +1104,4 @@ void BinSelectWithFilterExpr::serializeTo(ASTSerializer& serializer) const {
         serializer.write("matchesExpr", *matchesExpr);
 }
 
-} // namespace slang
+} // namespace slang::ast

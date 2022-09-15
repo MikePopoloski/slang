@@ -9,7 +9,7 @@
 #include "slang/ast/SystemSubroutine.h"
 #include "slang/diagnostics/SysFuncsDiags.h"
 
-namespace slang::Builtins {
+namespace slang::ast::builtins {
 
 class SignedConversionFunction : public SystemSubroutine {
 public:
@@ -172,4 +172,4 @@ void registerConversionFuncs(Compilation& c) {
 #undef REGISTER
 }
 
-} // namespace slang::Builtins
+} // namespace slang::ast::builtins

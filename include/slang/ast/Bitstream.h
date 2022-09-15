@@ -9,7 +9,7 @@
 
 #include "slang/ast/expressions/OperatorExpressions.h"
 
-namespace slang {
+namespace slang::ast {
 
 class Bitstream {
 public:
@@ -54,4 +54,4 @@ private:
     Bitstream() = default;
 };
 
-} // namespace slang
+} // namespace slang::ast

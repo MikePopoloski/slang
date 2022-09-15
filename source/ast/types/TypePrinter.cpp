@@ -11,7 +11,7 @@
 
 #include "slang/ast/ASTVisitor.h"
 
-namespace slang {
+namespace slang::ast {
 
 static std::string getLexicalPath(const Scope* scope) {
     if (!scope || scope->asSymbol().kind == SymbolKind::CompilationUnit)
@@ -470,4 +470,4 @@ void TypeArgFormatter::format(FormatArgStore& argStore, const std::any& arg) {
     argStore.push_back(printer.toString());
 }
 
-} // namespace slang
+} // namespace slang::ast

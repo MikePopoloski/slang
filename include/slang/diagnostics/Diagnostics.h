@@ -20,7 +20,10 @@
 namespace slang {
 
 class SourceManager;
+
+namespace ast {
 class Symbol;
+}
 
 // clang-format off
 #define DS(x) \
@@ -100,13 +103,13 @@ public:
     SourceLocation location;
 
     /// The symbol in which the diagnostic occurred, or null if not applicable.
-    const Symbol* symbol = nullptr;
+    const ast::Symbol* symbol = nullptr;
 
     /// Constructs a new Diagnostic entry with the given code and location.
     Diagnostic(DiagCode code, SourceLocation location) noexcept;
 
     /// Constructs a new Diagnostic entry with the given symbol, code and location.
-    Diagnostic(const Symbol& source, DiagCode code, SourceLocation location) noexcept;
+    Diagnostic(const ast::Symbol& source, DiagCode code, SourceLocation location) noexcept;
 
     /// Returns true if this diagnostic's code is intrinsically considered an error,
     /// regardless of what severity mapping rules might be in place.
@@ -158,10 +161,10 @@ public:
     Diagnostic& add(DiagCode code, SourceRange range);
 
     /// Adds a new diagnostic to the collection, pointing to the given source location.
-    Diagnostic& add(const Symbol& source, DiagCode code, SourceLocation location);
+    Diagnostic& add(const ast::Symbol& source, DiagCode code, SourceLocation location);
 
     /// Adds a new diagnostic to the collection, highlighting the given source range.
-    Diagnostic& add(const Symbol& source, DiagCode code, SourceRange range);
+    Diagnostic& add(const ast::Symbol& source, DiagCode code, SourceRange range);
 
     /// Sorts the diagnostics in the collection based on source file and line number.
     void sort(const SourceManager& sourceManager);

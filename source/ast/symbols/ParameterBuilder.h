@@ -10,16 +10,12 @@
 #include "slang/ast/Definition.h"
 #include "slang/util/StackContainer.h"
 
-namespace slang {
+namespace slang::ast {
 
 class ParameterSymbolBase;
 class Scope;
 class Type;
-struct ExpressionSyntax;
 struct ParamOverrideNode;
-struct ParameterDeclarationBaseSyntax;
-struct ParameterPortListSyntax;
-struct ParameterValueAssignmentSyntax;
 
 /// This is a helper type for turning parameter-related syntax nodes into actual
 /// parameter symbols and applying values to them. The logic here is factored out
@@ -62,4 +58,4 @@ private:
     bool anyErrors = false;
 };
 
-} // namespace slang
+} // namespace slang::ast

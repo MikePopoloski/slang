@@ -9,7 +9,7 @@
 #include "slang/ast/SystemSubroutine.h"
 #include "slang/diagnostics/SysFuncsDiags.h"
 
-namespace slang::Builtins {
+namespace slang::ast::builtins {
 
 class Clog2Function : public SystemSubroutine {
 public:
@@ -272,4 +272,4 @@ void registerMathFuncs(Compilation& c) {
 #undef REGISTER
 }
 
-} // namespace slang::Builtins
+} // namespace slang::ast::builtins

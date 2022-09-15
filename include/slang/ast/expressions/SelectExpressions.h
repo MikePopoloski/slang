@@ -8,8 +8,11 @@
 #pragma once
 
 #include "slang/ast/Expression.h"
+#include "slang/syntax/SyntaxFwd.h"
 
-namespace slang {
+namespace slang::ast {
+
+class FieldSymbol;
 
 /// Represents a single element selection expression.
 class ElementSelectExpression : public Expression {
@@ -57,8 +60,6 @@ private:
     const Expression* selector_;
     bool warnedAboutIndex = false;
 };
-
-struct RangeSelectSyntax;
 
 /// Represents a range selection expression.
 class RangeSelectExpression : public Expression {
@@ -113,9 +114,6 @@ private:
     bool warnedAboutRange = false;
 };
 
-class FieldSymbol;
-struct MemberAccessExpressionSyntax;
-
 /// Represents an access of a structure variable's members.
 class MemberAccessExpression : public Expression {
 public:
@@ -158,4 +156,4 @@ private:
     Expression* value_;
 };
 
-} // namespace slang
+} // namespace slang::ast

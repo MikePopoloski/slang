@@ -27,7 +27,7 @@
 #include "slang/diagnostics/LookupDiags.h"
 #include "slang/syntax/AllSyntax.h"
 
-namespace slang {
+namespace slang::ast {
 
 static const Type& getIndexedType(Compilation& compilation, const ASTContext& context,
                                   const Type& valueType, SourceRange exprRange,
@@ -1330,4 +1330,4 @@ void MemberAccessExpression::serializeTo(ASTSerializer& serializer) const {
     serializer.write("value", value());
 }
 
-} // namespace slang
+} // namespace slang::ast

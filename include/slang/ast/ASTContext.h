@@ -12,12 +12,12 @@
 #include "slang/ast/EvalContext.h"
 #include "slang/ast/Lookup.h"
 #include "slang/numeric/ConstantValue.h"
+#include "slang/syntax/SyntaxFwd.h"
 #include "slang/util/Hash.h"
 #include "slang/util/Util.h"
 
-namespace slang {
+namespace slang::ast {
 
-class Compilation;
 class Expression;
 class InstanceSymbolBase;
 class ProceduralBlockSymbol;
@@ -26,11 +26,6 @@ class Statement;
 class TempVarSymbol;
 class Type;
 class VariableSymbol;
-struct AttributeInstanceSyntax;
-struct ExpressionSyntax;
-struct PropertyExprSyntax;
-struct SelectorSyntax;
-struct VariableDimensionSyntax;
 enum class RandMode;
 
 /// Specifies flags that control expression and statement creation.
@@ -355,4 +350,4 @@ private:
                             EvaluatedDimension& result) const;
 };
 
-} // namespace slang
+} // namespace slang::ast

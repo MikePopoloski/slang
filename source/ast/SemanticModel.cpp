@@ -11,7 +11,7 @@
 #include "slang/ast/Definition.h"
 #include "slang/syntax/AllSyntax.h"
 
-namespace slang {
+namespace slang::ast {
 
 SemanticModel::SemanticModel(Compilation& compilation) : compilation(compilation) {
 }
@@ -122,4 +122,4 @@ const TypeAliasType* SemanticModel::getDeclaredSymbol(const TypedefDeclarationSy
     return result ? &result->as<TypeAliasType>() : nullptr;
 }
 
-} // namespace slang
+} // namespace slang::ast

@@ -27,7 +27,7 @@
 #include "slang/syntax/SyntaxFacts.h"
 #include "slang/util/StackContainer.h"
 
-namespace slang {
+namespace slang::ast {
 
 namespace {
 
@@ -2069,4 +2069,4 @@ void PortConnection::serializeTo(ASTSerializer& serializer) const {
     }
 }
 
-} // namespace slang
+} // namespace slang::ast

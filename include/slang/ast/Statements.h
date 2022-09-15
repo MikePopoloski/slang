@@ -12,10 +12,11 @@
 #include "slang/ast/SemanticFacts.h"
 #include "slang/ast/TimingControl.h"
 #include "slang/ast/expressions/AssertionExpr.h"
+#include "slang/syntax/SyntaxFwd.h"
 #include "slang/util/Enum.h"
 #include "slang/util/ScopeGuard.h"
 
-namespace slang {
+namespace slang::ast {
 
 class BlockStatement;
 class IteratorSymbol;
@@ -23,9 +24,6 @@ class ProceduralBlockSymbol;
 class RandSeqProductionSymbol;
 class StatementBlockSymbol;
 class VariableSymbol;
-struct ForLoopStatementSyntax;
-struct ForeachLoopStatementSyntax;
-struct StatementSyntax;
 
 // clang-format off
 #define STATEMENT(x) \
@@ -280,8 +278,6 @@ public:
     }
 };
 
-struct BlockStatementSyntax;
-
 /// Represents a sequential or parallel block statement.
 class BlockStatement : public Statement {
 public:
@@ -310,8 +306,6 @@ public:
     }
 };
 
-struct ReturnStatementSyntax;
-
 class ReturnStatement : public Statement {
 public:
     const Expression* expr;
@@ -334,8 +328,6 @@ public:
             expr->visit(visitor);
     }
 };
-
-struct JumpStatementSyntax;
 
 class BreakStatement : public Statement {
 public:
@@ -366,8 +358,6 @@ public:
 
     static bool isKind(StatementKind kind) { return kind == StatementKind::Continue; }
 };
-
-struct DisableStatementSyntax;
 
 class DisableStatement : public Statement {
 public:
@@ -401,8 +391,6 @@ public:
 
     static bool isKind(StatementKind kind) { return kind == StatementKind::VariableDeclaration; }
 };
-
-struct ConditionalStatementSyntax;
 
 class ConditionalStatement : public Statement {
 public:
@@ -442,8 +430,6 @@ public:
             ifFalse->visit(visitor);
     }
 };
-
-struct CaseStatementSyntax;
 
 class CaseStatement : public Statement {
 public:
@@ -577,8 +563,6 @@ public:
     }
 };
 
-struct LoopStatementSyntax;
-
 class RepeatLoopStatement : public Statement {
 public:
     const Expression& count;
@@ -606,9 +590,6 @@ public:
         body.visit(visitor);
     }
 };
-
-struct ForeachLoopListSyntax;
-struct ForeachLoopStatementSyntax;
 
 class ForeachLoopStatement : public Statement {
 public:
@@ -687,8 +668,6 @@ public:
     }
 };
 
-struct DoWhileStatementSyntax;
-
 class DoWhileLoopStatement : public Statement {
 public:
     const Expression& cond;
@@ -717,8 +696,6 @@ public:
     }
 };
 
-struct ForeverStatementSyntax;
-
 class ForeverLoopStatement : public Statement {
 public:
     const Statement& body;
@@ -740,9 +717,6 @@ public:
         body.visit(visitor);
     }
 };
-
-struct ExpressionStatementSyntax;
-struct VoidCastedCallStatementSyntax;
 
 class ExpressionStatement : public Statement {
 public:
@@ -769,8 +743,6 @@ public:
         expr.visit(visitor);
     }
 };
-
-struct TimingControlStatementSyntax;
 
 class TimedStatement : public Statement {
 public:
@@ -800,8 +772,6 @@ public:
         stmt.visit(visitor);
     }
 };
-
-struct ImmediateAssertionStatementSyntax;
 
 class ImmediateAssertionStatement : public Statement {
 public:
@@ -843,8 +813,6 @@ public:
     }
 };
 
-struct ConcurrentAssertionStatementSyntax;
-
 class ConcurrentAssertionStatement : public Statement {
 public:
     const AssertionExpr& propertySpec;
@@ -883,8 +851,6 @@ public:
     }
 };
 
-struct DisableForkStatementSyntax;
-
 class DisableForkStatement : public Statement {
 public:
     explicit DisableForkStatement(SourceRange sourceRange) :
@@ -899,8 +865,6 @@ public:
 
     static bool isKind(StatementKind kind) { return kind == StatementKind::DisableFork; }
 };
-
-struct WaitStatementSyntax;
 
 class WaitStatement : public Statement {
 public:
@@ -930,8 +894,6 @@ public:
     }
 };
 
-struct WaitForkStatementSyntax;
-
 class WaitForkStatement : public Statement {
 public:
     explicit WaitForkStatement(SourceRange sourceRange) :
@@ -945,8 +907,6 @@ public:
 
     static bool isKind(StatementKind kind) { return kind == StatementKind::WaitFork; }
 };
-
-struct WaitOrderStatementSyntax;
 
 class WaitOrderStatement : public Statement {
 public:
@@ -983,8 +943,6 @@ public:
     }
 };
 
-struct EventTriggerStatementSyntax;
-
 class EventTriggerStatement : public Statement {
 public:
     const Expression& target;
@@ -1014,8 +972,6 @@ public:
     }
 };
 
-struct ProceduralAssignStatementSyntax;
-
 class ProceduralAssignStatement : public Statement {
 public:
     const Expression& assignment;
@@ -1041,8 +997,6 @@ public:
     }
 };
 
-struct ProceduralDeassignStatementSyntax;
-
 class ProceduralDeassignStatement : public Statement {
 public:
     const Expression& lvalue;
@@ -1067,8 +1021,6 @@ public:
         lvalue.visit(visitor);
     }
 };
-
-struct RandCaseStatementSyntax;
 
 class RandCaseStatement : public Statement {
 public:
@@ -1104,8 +1056,6 @@ public:
     }
 };
 
-struct RandSequenceStatementSyntax;
-
 class RandSequenceStatement : public Statement {
 public:
     const RandSeqProductionSymbol* firstProduction;
@@ -1124,4 +1074,4 @@ public:
     static bool isKind(StatementKind kind) { return kind == StatementKind::RandSequence; }
 };
 
-} // namespace slang
+} // namespace slang::ast

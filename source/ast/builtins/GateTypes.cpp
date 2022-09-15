@@ -8,7 +8,7 @@
 #include "slang/ast/Compilation.h"
 #include "slang/ast/symbols/MemberSymbols.h"
 
-namespace slang::Builtins {
+namespace slang::ast::builtins {
 
 #define NL SourceLocation::NoLocation
 
@@ -64,4 +64,4 @@ void registerGateTypes(Compilation& c) {
     gate(c, "not", {out, in}, PrimitiveSymbol::NOutput);
 }
 
-} // namespace slang::Builtins
+} // namespace slang::ast::builtins

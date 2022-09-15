@@ -8,10 +8,11 @@
 #pragma once
 
 #include "slang/ast/Expression.h"
+#include "slang/syntax/SyntaxFwd.h"
 #include "slang/util/Enum.h"
 #include "slang/util/StackContainer.h"
 
-namespace slang {
+namespace slang::ast {
 
 class FieldSymbol;
 class PatternVarSymbol;
@@ -28,8 +29,6 @@ enum class CaseStatementCondition;
 ENUM(PatternKind, PATTERN)
 #undef PATTERN
 // clang-format on
-
-struct PatternSyntax;
 
 /// Base class for "patterns", as used in pattern matching conditional
 /// statements and expressions.
@@ -92,8 +91,6 @@ public:
     void serializeTo(ASTSerializer& serializer) const;
 };
 
-struct WildcardPatternSyntax;
-
 class WildcardPattern : public Pattern {
 public:
     explicit WildcardPattern(SourceRange sourceRange) :
@@ -108,8 +105,6 @@ public:
 
     void serializeTo(ASTSerializer&) const {}
 };
-
-struct ExpressionPatternSyntax;
 
 class ConstantPattern : public Pattern {
 public:
@@ -129,8 +124,6 @@ public:
     void serializeTo(ASTSerializer& serializer) const;
 };
 
-struct VariablePatternSyntax;
-
 class VariablePattern : public Pattern {
 public:
     const PatternVarSymbol& variable;
@@ -148,8 +141,6 @@ public:
 
     void serializeTo(ASTSerializer& serializer) const;
 };
-
-struct TaggedPatternSyntax;
 
 class TaggedPattern : public Pattern {
 public:
@@ -169,8 +160,6 @@ public:
 
     void serializeTo(ASTSerializer& serializer) const;
 };
-
-struct StructurePatternSyntax;
 
 class StructurePattern : public Pattern {
 public:
@@ -195,4 +184,4 @@ public:
     void serializeTo(ASTSerializer& serializer) const;
 };
 
-} // namespace slang
+} // namespace slang::ast

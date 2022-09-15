@@ -12,9 +12,14 @@
 
 namespace slang {
 
+class FormatBuffer;
+
+}
+
+namespace slang::ast {
+
 class ClassType;
 class CovergroupType;
-class FormatBuffer;
 
 struct TypePrintingOptions {
     bool addSingleQuotes = false;
@@ -92,4 +97,4 @@ private:
     flat_hash_set<const Type*> seenTypes;
 };
 
-} // namespace slang
+} // namespace slang::ast

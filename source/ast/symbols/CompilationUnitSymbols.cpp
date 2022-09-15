@@ -11,7 +11,7 @@
 #include "slang/ast/symbols/MemberSymbols.h"
 #include "slang/syntax/AllSyntax.h"
 
-namespace slang {
+namespace slang::ast {
 
 CompilationUnitSymbol::CompilationUnitSymbol(Compilation& compilation) :
     Symbol(SymbolKind::CompilationUnit, "", SourceLocation()), Scope(compilation, this) {
@@ -149,4 +149,4 @@ void PackageSymbol::noteImport(const Symbol& symbol) const {
     }
 }
 
-} // namespace slang
+} // namespace slang::ast

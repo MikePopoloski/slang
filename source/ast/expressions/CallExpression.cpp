@@ -21,7 +21,7 @@
 #include "slang/diagnostics/ParserDiags.h"
 #include "slang/syntax/AllSyntax.h"
 
-namespace slang {
+namespace slang::ast {
 
 Expression& CallExpression::fromSyntax(Compilation& compilation,
                                        const InvocationExpressionSyntax& syntax,
@@ -848,4 +848,4 @@ static void addSubroutineDrivers(const Symbol& procedure, const SubroutineSymbol
     sub.getBody().visit(visitor);
 }
 
-} // namespace slang
+} // namespace slang::ast

@@ -11,9 +11,10 @@
 #include "slang/ast/Expression.h"
 #include "slang/ast/TimingControl.h"
 #include "slang/diagnostics/Diagnostics.h"
+#include "slang/syntax/SyntaxFwd.h"
 #include "slang/util/Util.h"
 
-namespace slang {
+namespace slang::ast {
 
 // clang-format off
 #define EXPR(x) \
@@ -66,11 +67,6 @@ ENUM(BinaryAssertionOperator, OP)
 
 class ASTContext;
 class CallExpression;
-class Compilation;
-class SyntaxNode;
-struct PropertyExprSyntax;
-struct PropertySpecSyntax;
-struct SequenceExprSyntax;
 
 class AssertionExpr {
 public:
@@ -135,10 +131,6 @@ public:
     void serializeTo(ASTSerializer& serializer) const;
 };
 
-struct RangeSelectSyntax;
-struct SelectorSyntax;
-struct SequenceRepetitionSyntax;
-
 /// Represents a range of potential sequence matches.
 struct SequenceRange {
     /// The minimum length of the range.
@@ -181,8 +173,6 @@ struct SequenceRepetition {
     void serializeTo(ASTSerializer& serializer) const;
 };
 
-struct SimpleSequenceExprSyntax;
-
 /// Represents an assertion expression defined as a simple regular expression.
 class SimpleAssertionExpr : public AssertionExpr {
 public:
@@ -207,8 +197,6 @@ public:
         expr.visit(visitor);
     }
 };
-
-struct DelayedSequenceExprSyntax;
 
 /// Represents an assertion expression defined as a delayed concatenation of other expressions.
 class SequenceConcatExpr : public AssertionExpr {
@@ -238,8 +226,6 @@ public:
             elem.sequence->visit(visitor);
     }
 };
-
-struct ParenthesizedSequenceExprSyntax;
 
 /// Represents a sequence expression along with a list of actions to perform upon matching
 /// and/or instructions for repetition.
@@ -273,9 +259,6 @@ public:
     }
 };
 
-struct UnaryPropertyExprSyntax;
-struct UnarySelectPropertyExprSyntax;
-
 /// Represents a unary operator in a property expression.
 class UnaryAssertionExpr : public AssertionExpr {
 public:
@@ -305,9 +288,6 @@ public:
         expr.visit(visitor);
     }
 };
-
-struct BinarySequenceExprSyntax;
-struct BinaryPropertyExprSyntax;
 
 /// Represents a binary operator in a sequence or property expression.
 class BinaryAssertionExpr : public AssertionExpr {
@@ -341,8 +321,6 @@ public:
     }
 };
 
-struct FirstMatchSequenceExprSyntax;
-
 /// Represents a first_match operator in a sequence expression.
 class FirstMatchAssertionExpr : public AssertionExpr {
 public:
@@ -368,10 +346,6 @@ public:
             item->visit(visitor);
     }
 };
-
-struct ClockingSequenceExprSyntax;
-struct ClockingPropertyExprSyntax;
-struct SignalEventExpressionSyntax;
 
 /// Represents an assertion expression with attached clocking control.
 class ClockingAssertionExpr : public AssertionExpr {
@@ -407,8 +381,6 @@ public:
     }
 };
 
-struct StrongWeakPropertyExprSyntax;
-
 /// Represents a strong or weak operator in a property expression.
 class StrongWeakAssertionExpr : public AssertionExpr {
 public:
@@ -432,8 +404,6 @@ public:
         expr.visit(visitor);
     }
 };
-
-struct AcceptOnPropertyExprSyntax;
 
 /// Represents an abort (accept_on / reject_on) property expression.
 class AbortAssertionExpr : public AssertionExpr {
@@ -464,8 +434,6 @@ public:
     }
 };
 
-struct ConditionalPropertyExprSyntax;
-
 /// Represents a conditional operator in a property expression.
 class ConditionalAssertionExpr : public AssertionExpr {
 public:
@@ -495,8 +463,6 @@ public:
             elseExpr->visit(visitor);
     }
 };
-
-struct CasePropertyExprSyntax;
 
 /// Represents a case operator in a property expression.
 class CaseAssertionExpr : public AssertionExpr {
@@ -538,8 +504,6 @@ public:
     }
 };
 
-struct DisableIffSyntax;
-
 /// Represents a disable iff condition in a property spec.
 class DisableIffAssertionExpr : public AssertionExpr {
 public:
@@ -565,4 +529,4 @@ public:
     }
 };
 
-} // namespace slang
+} // namespace slang::ast

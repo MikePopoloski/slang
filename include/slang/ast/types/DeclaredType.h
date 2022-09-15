@@ -7,23 +7,23 @@
 //------------------------------------------------------------------------------
 #pragma once
 
+#include "slang/syntax/SyntaxFwd.h"
 #include "slang/syntax/SyntaxNode.h"
 
 namespace slang {
 
-class ASTContext;
 class ConstantValue;
+
+}
+
+namespace slang::ast {
+
+class ASTContext;
 class Expression;
 class Scope;
 class Symbol;
 class Type;
 class ValueSymbol;
-
-struct DataTypeSyntax;
-struct DeclaratorSyntax;
-struct ExpressionSyntax;
-struct ImplicitTypeSyntax;
-struct VariableDimensionSyntax;
 
 enum class SymbolIndex : uint32_t;
 
@@ -229,4 +229,4 @@ private:
     mutable uint32_t hasLink : 1;
 };
 
-} // namespace slang
+} // namespace slang::ast

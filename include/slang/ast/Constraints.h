@@ -10,9 +10,10 @@
 #include "slang/ast/ASTSerializer.h"
 #include "slang/ast/Statements.h"
 #include "slang/numeric/ConstantValue.h"
+#include "slang/syntax/SyntaxFwd.h"
 #include "slang/util/Util.h"
 
-namespace slang {
+namespace slang::ast {
 
 // clang-format off
 #define CONSTRAINT(x) \
@@ -30,8 +31,6 @@ ENUM(ConstraintKind, CONSTRAINT)
 // clang-format on
 
 class ASTContext;
-class Compilation;
-struct ConstraintItemSyntax;
 
 class Constraint {
 public:
@@ -76,8 +75,6 @@ public:
     void serializeTo(ASTSerializer& serializer) const;
 };
 
-struct ConstraintBlockSyntax;
-
 /// Represents a list of constraints.
 class ConstraintList : public Constraint {
 public:
@@ -98,8 +95,6 @@ public:
             item->visit(visitor);
     }
 };
-
-struct ExpressionConstraintSyntax;
 
 /// Represents a constraint defined by a logical expression.
 class ExpressionConstraint : public Constraint {
@@ -123,8 +118,6 @@ public:
     }
 };
 
-struct ImplicationConstraintSyntax;
-
 /// Represents a constraint defined by an implication.
 class ImplicationConstraint : public Constraint {
 public:
@@ -147,8 +140,6 @@ public:
         body.visit(visitor);
     }
 };
-
-struct ConditionalConstraintSyntax;
 
 /// Represents a constraint defined by an if-else condition.
 class ConditionalConstraint : public Constraint {
@@ -178,8 +169,6 @@ public:
     }
 };
 
-struct UniquenessConstraintSyntax;
-
 /// Represents a constraint that enforces uniqueness of variables.
 class UniquenessConstraint : public Constraint {
 public:
@@ -202,8 +191,6 @@ public:
     }
 };
 
-struct DisableConstraintSyntax;
-
 /// Represents a constraint that disables a soft random variable.
 class DisableSoftConstraint : public Constraint {
 public:
@@ -223,8 +210,6 @@ public:
         target.visit(visitor);
     }
 };
-
-struct SolveBeforeConstraintSyntax;
 
 /// Represents a constraint that enforces ordering of solving variables.
 class SolveBeforeConstraint : public Constraint {
@@ -253,8 +238,6 @@ public:
     }
 };
 
-struct LoopConstraintSyntax;
-
 /// Represents a constraint that iterates over the elements of an array.
 class ForeachConstraint : public Constraint {
 public:
@@ -280,4 +263,4 @@ public:
     }
 };
 
-} // namespace slang
+} // namespace slang::ast

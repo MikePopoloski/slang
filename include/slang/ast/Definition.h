@@ -9,25 +9,25 @@
 
 #include "slang/ast/Lookup.h"
 #include "slang/ast/SemanticFacts.h"
+#include "slang/syntax/SyntaxFwd.h"
 #include "slang/util/Hash.h"
 #include "slang/util/SmallVector.h"
 #include "slang/util/Util.h"
 
 namespace slang {
 
+class SyntaxTree;
+
+}
+
+namespace slang::ast {
+
 class AttributeSymbol;
 class Compilation;
 class Expression;
 class NetType;
 class Scope;
-class SyntaxTree;
 class Type;
-
-struct DeclaratorSyntax;
-struct ModuleDeclarationSyntax;
-struct ParameterDeclarationSyntax;
-struct TypeAssignmentSyntax;
-struct TypeParameterDeclarationSyntax;
 
 class Definition {
 public:
@@ -101,4 +101,4 @@ private:
     mutable bool instantiated = false;
 };
 
-} // namespace slang
+} // namespace slang::ast

@@ -8,11 +8,9 @@
 #pragma once
 
 #include "slang/ast/Expression.h"
+#include "slang/syntax/SyntaxFwd.h"
 
-namespace slang {
-
-struct LiteralExpressionSyntax;
-struct IntegerVectorExpressionSyntax;
+namespace slang::ast {
 
 /// Represents an integer literal.
 class IntegerLiteral : public Expression {
@@ -160,4 +158,4 @@ private:
     ConstantValue* intStorage;
 };
 
-} // namespace slang
+} // namespace slang::ast

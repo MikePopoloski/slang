@@ -9,7 +9,7 @@
 
 #include "slang/numeric/ConstantValue.h"
 
-namespace slang {
+namespace slang::ast {
 
 /// An lvalue is anything that can appear on the left hand side of an assignment
 /// expression. It represents some storage location in memory that can be read
@@ -82,4 +82,4 @@ private:
     std::variant<std::monostate, Path, Concat> value;
 };
 
-} // namespace slang
+} // namespace slang::ast

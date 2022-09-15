@@ -13,12 +13,19 @@
 #include "slang/ast/Symbol.h"
 #include "slang/diagnostics/Diagnostics.h"
 #include "slang/numeric/Time.h"
+#include "slang/syntax/SyntaxFwd.h"
 #include "slang/syntax/SyntaxNode.h"
 #include "slang/util/Bag.h"
 #include "slang/util/BumpAllocator.h"
 #include "slang/util/SafeIndexedVector.h"
 
 namespace slang {
+
+class SyntaxTree;
+
+}
+
+namespace slang::ast {
 
 class AttributeSymbol;
 class ASTContext;
@@ -35,20 +42,7 @@ class PortConnection;
 class RootSymbol;
 class Statement;
 class SubroutineSymbol;
-class SyntaxTree;
 class SystemSubroutine;
-
-struct BindDirectiveSyntax;
-struct CompilationUnitSyntax;
-struct DataTypeSyntax;
-struct DefaultClockingReferenceSyntax;
-struct DPIExportSyntax;
-struct FunctionDeclarationSyntax;
-struct ImplicitTypeSyntax;
-struct ModuleDeclarationSyntax;
-struct ScopedNameSyntax;
-struct UdpDeclarationSyntax;
-struct VariableDimensionSyntax;
 
 enum class IntegralFlags : uint8_t;
 enum class UnconnectedDrive;
@@ -629,4 +623,4 @@ private:
     const PackageSymbol* stdPkg = nullptr;
 };
 
-} // namespace slang
+} // namespace slang::ast

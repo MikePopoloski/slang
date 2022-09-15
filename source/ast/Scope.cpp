@@ -30,6 +30,7 @@
 namespace {
 
 using namespace slang;
+using namespace slang::ast;
 
 // This is a placeholder symbol that we insert into a scope's member list where we need to
 // later pull it out and replace it with a real member (that can't be known until full elaboration).
@@ -45,7 +46,7 @@ public:
 
 } // namespace
 
-namespace slang {
+namespace slang::ast {
 
 static size_t countMembers(const SyntaxNode& syntax);
 
@@ -1438,4 +1439,4 @@ static size_t countMembers(const SyntaxNode& syntax) {
     }
 }
 
-} // namespace slang
+} // namespace slang::ast

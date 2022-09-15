@@ -25,6 +25,7 @@
 namespace {
 
 using namespace slang;
+using namespace slang::ast;
 
 // clang-format off
 bitwidth_t getWidth(PredefinedIntegerType::Kind kind) {
@@ -111,7 +112,7 @@ const Type& createPackedDims(const ASTContext& context, const Type* type,
 
 } // namespace
 
-namespace slang {
+namespace slang::ast {
 
 const ErrorType ErrorType::Instance;
 
@@ -1253,4 +1254,4 @@ void TypeAliasType::serializeTo(ASTSerializer& serializer) const {
         serializer.write("forward", *firstForward);
 }
 
-} // namespace slang
+} // namespace slang::ast

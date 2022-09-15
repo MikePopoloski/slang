@@ -9,15 +9,12 @@
 
 #include "slang/ast/SemanticFacts.h"
 #include "slang/ast/symbols/ValueSymbol.h"
+#include "slang/syntax/SyntaxFwd.h"
 
-namespace slang {
+namespace slang::ast {
 
 class NetType;
 class TimingControl;
-
-struct IdentifierNameSyntax;
-struct DataDeclarationSyntax;
-struct ForVariableDeclarationSyntax;
 
 /// Specifies various flags that can apply to variables.
 enum class VariableFlags : uint16_t {
@@ -80,8 +77,6 @@ protected:
                    VariableLifetime lifetime);
 };
 
-struct PortDeclarationSyntax;
-
 /// Represents a formal argument in subroutine (task or function).
 class FormalArgumentSymbol : public VariableSymbol {
 public:
@@ -121,9 +116,6 @@ public:
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::Field; }
 };
-
-struct NetDeclarationSyntax;
-struct UserDefinedNetDeclarationSyntax;
 
 /// Represents a net declaration.
 class NetSymbol : public ValueSymbol {
@@ -206,8 +198,6 @@ public:
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::PatternVar; }
 };
 
-struct ClockingItemSyntax;
-
 /// Represents a clocking block signal.
 class ClockVarSymbol : public VariableSymbol {
 public:
@@ -226,8 +216,6 @@ public:
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::ClockVar; }
 };
 
-struct LocalVariableDeclarationSyntax;
-
 /// Represents a local variable declared inside an assertion item,
 /// such as a sequence or property.
 class LocalAssertionVarSymbol : public VariableSymbol {
@@ -240,4 +228,4 @@ public:
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::LocalAssertionVar; }
 };
 
-} // namespace slang
+} // namespace slang::ast

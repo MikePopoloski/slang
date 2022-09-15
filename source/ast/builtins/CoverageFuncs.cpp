@@ -12,7 +12,7 @@
 #include "slang/diagnostics/SysFuncsDiags.h"
 #include "slang/syntax/AllSyntax.h"
 
-namespace slang::Builtins {
+namespace slang::ast::builtins {
 
 class CoverageNameOrHierFunc : public SystemSubroutine {
 public:
@@ -104,4 +104,4 @@ void registerCoverageFuncs(Compilation& c) {
 #undef REGISTER
 }
 
-} // namespace slang::Builtins
+} // namespace slang::ast::builtins

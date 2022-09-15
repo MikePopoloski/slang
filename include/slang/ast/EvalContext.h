@@ -13,7 +13,7 @@
 #include "slang/numeric/ConstantValue.h"
 #include "slang/util/ScopeGuard.h"
 
-namespace slang {
+namespace slang::ast {
 
 class ASTContext;
 class LValue;
@@ -197,4 +197,4 @@ private:
     SourceRange disableRange;
 };
 
-} // namespace slang
+} // namespace slang::ast

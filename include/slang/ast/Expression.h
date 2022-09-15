@@ -13,19 +13,11 @@
 #include "slang/ast/SemanticFacts.h"
 #include "slang/util/StackContainer.h"
 
-namespace slang {
+namespace slang::ast {
 
 class ASTSerializer;
 class InstanceSymbolBase;
 class Type;
-struct ArgumentListSyntax;
-struct ArrayOrRandomizeMethodExpressionSyntax;
-struct AssignmentPatternExpressionSyntax;
-struct DataTypeSyntax;
-struct ElementSelectExpressionSyntax;
-struct ExpressionSyntax;
-struct InvocationExpressionSyntax;
-struct NamedArgumentSyntax;
 
 // clang-format off
 #define EXPRESSION(x) \
@@ -393,4 +385,4 @@ public:
     static const InvalidExpression Instance;
 };
 
-} // namespace slang
+} // namespace slang::ast

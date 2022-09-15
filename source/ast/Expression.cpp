@@ -20,6 +20,7 @@
 namespace {
 
 using namespace slang;
+using namespace slang::ast;
 
 struct EvalVisitor {
     template<typename T>
@@ -111,7 +112,7 @@ struct HierarchicalVisitor {
 
 } // namespace
 
-namespace slang {
+namespace slang::ast {
 
 // This visitor handles inserting implicit conversions into an expression
 // tree where necessary. SystemVerilog has an additional weird feature where
@@ -1209,4 +1210,4 @@ void InvalidExpression::serializeTo(ASTSerializer& serializer) const {
         serializer.write("child", *child);
 }
 
-} // namespace slang
+} // namespace slang::ast

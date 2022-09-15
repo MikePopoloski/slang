@@ -11,16 +11,15 @@
 #include "slang/ast/Scope.h"
 #include "slang/ast/SemanticFacts.h"
 #include "slang/ast/symbols/ValueSymbol.h"
+#include "slang/syntax/SyntaxFwd.h"
 
-namespace slang {
+namespace slang::ast {
 
 class AssertionExpr;
 class FormalArgumentSymbol;
 class PackageSymbol;
 class StatementBlockSymbol;
 class TimingControl;
-
-struct EmptyMemberSyntax;
 
 /// Represents an empty member, i.e. a standalone semicolon.
 /// This exists as a symbol mostly to provide a place to attach attributes.
@@ -101,9 +100,6 @@ private:
     mutable optional<const PackageSymbol*> package;
 };
 
-struct ModportExplicitPortSyntax;
-struct ModportNamedPortSyntax;
-
 /// Represents a single port specifier in a modport declaration.
 class ModportPortSymbol : public ValueSymbol {
 public:
@@ -132,8 +128,6 @@ public:
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::ModportPort; }
 };
 
-struct ModportClockingPortSyntax;
-
 /// Represents a clocking block port.
 class ModportClockingSymbol : public Symbol {
 public:
@@ -150,8 +144,6 @@ public:
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::ModportClocking; }
 };
 
-struct ModportDeclarationSyntax;
-
 /// Represents a modport within an interface definition.
 class ModportSymbol : public Symbol, public Scope {
 public:
@@ -166,8 +158,6 @@ public:
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::Modport; }
 };
-
-struct ContinuousAssignSyntax;
 
 /// Represents a continuous assignment statement.
 class ContinuousAssignSymbol : public Symbol {
@@ -196,8 +186,6 @@ private:
     mutable optional<const TimingControl*> delay;
 };
 
-struct GenvarDeclarationSyntax;
-
 /// Represents a genvar declaration.
 class GenvarSymbol : public Symbol {
 public:
@@ -210,8 +198,6 @@ public:
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::Genvar; }
 };
-
-struct ElabSystemTaskSyntax;
 
 /// Represents an elaboration system task, such as $error or $warning.
 class ElabSystemTaskSymbol : public Symbol {
@@ -253,8 +239,6 @@ public:
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::PrimitivePort; }
 };
 
-struct UdpDeclarationSyntax;
-
 class PrimitiveSymbol : public Symbol, public Scope {
 public:
     span<const PrimitivePortSymbol* const> ports;
@@ -274,8 +258,6 @@ public:
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::Primitive; }
 };
 
-struct SpecifyBlockSyntax;
-
 class SpecifyBlockSymbol : public Symbol, public Scope {
 public:
     SpecifyBlockSymbol(Compilation& compilation, SourceLocation loc);
@@ -286,9 +268,6 @@ public:
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::SpecifyBlock; }
 };
-
-struct AssertionItemPortListSyntax;
-struct PropertyExprSyntax;
 
 /// Represents a formal argument / port of an assertion construct, such
 /// as a sequence, property, or let construct.
@@ -310,8 +289,6 @@ public:
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::AssertionPort; }
 };
 
-struct SequenceDeclarationSyntax;
-
 /// Represents a named sequence object.
 class SequenceSymbol : public Symbol, public Scope {
 public:
@@ -328,8 +305,6 @@ public:
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::Sequence; }
 };
 
-struct PropertyDeclarationSyntax;
-
 /// Represents a named property object.
 class PropertySymbol : public Symbol, public Scope {
 public:
@@ -345,8 +320,6 @@ public:
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::Property; }
 };
-
-struct LetDeclarationSyntax;
 
 /// Represents a let declaration.
 class LetDeclSymbol : public Symbol, public Scope {
@@ -365,9 +338,6 @@ public:
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::LetDecl; }
 };
-
-struct ClockingDeclarationSyntax;
-struct ClockingSkewSyntax;
 
 /// Represents a clocking block.
 class ClockingBlockSymbol : public Symbol, public Scope {
@@ -392,11 +362,6 @@ private:
     const ClockingSkewSyntax* inputSkewSyntax = nullptr;
     const ClockingSkewSyntax* outputSkewSyntax = nullptr;
 };
-
-struct ProductionSyntax;
-struct RsCaseSyntax;
-struct RsProdItemSyntax;
-struct RsRuleSyntax;
 
 class RandSeqProductionSymbol : public Symbol, public Scope {
 public:
@@ -559,4 +524,4 @@ private:
     mutable optional<span<const Rule>> rules;
 };
 
-} // namespace slang
+} // namespace slang::ast

@@ -277,6 +277,7 @@ namespace slang {
     )
 
     # Write all type definitions.
+    alltypesSaved = alltypes.copy()
     for name, currtype in alltypes.items():
         if name == "SyntaxNode":
             continue
@@ -697,6 +698,32 @@ const std::type_info* typeFromSyntaxKind(SyntaxKind kind);
             len(kindmap.items()) + 4
         )
     )
+
+    # Write the forward declaration header file.
+    outf = open(os.path.join(headerdir, "SyntaxFwd.h"), "w")
+    outf.write(
+        """//------------------------------------------------------------------------------
+//! @file SyntaxFwd.h
+//! @brief Forward declarations for syntax node types
+//
+// SPDX-FileCopyrightText: Michael Popoloski
+// SPDX-License-Identifier: MIT
+//------------------------------------------------------------------------------
+#pragma once
+
+namespace slang {
+
+class SyntaxNode;
+"""
+    )
+
+    # Write all type names.
+    for name, _ in alltypesSaved.items():
+        if name == "SyntaxNode":
+            continue
+
+        outf.write("struct {};\n".format(name))
+    outf.write("\n}\n")
 
 
 def loadkinds(ourdir, filename):

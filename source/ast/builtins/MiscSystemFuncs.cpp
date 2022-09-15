@@ -16,7 +16,7 @@
 #include "slang/diagnostics/DeclarationsDiags.h"
 #include "slang/diagnostics/SysFuncsDiags.h"
 
-namespace slang::Builtins {
+namespace slang::ast::builtins {
 
 class SFormatFunction : public SystemSubroutine {
 public:
@@ -360,4 +360,4 @@ void registerMiscSystemFuncs(Compilation& c) {
     c.addSystemMethod(SymbolKind::SequenceType, std::make_unique<SequenceMethod>("matched"));
 }
 
-} // namespace slang::Builtins
+} // namespace slang::ast::builtins

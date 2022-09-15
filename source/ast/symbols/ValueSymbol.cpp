@@ -20,7 +20,7 @@
 #include "slang/diagnostics/ExpressionsDiags.h"
 #include "slang/syntax/AllSyntax.h"
 
-namespace slang {
+namespace slang::ast {
 
 ValueSymbol::ValueSymbol(SymbolKind kind, string_view name, SourceLocation location,
                          bitmask<DeclaredTypeFlags> flags) :
@@ -465,4 +465,4 @@ void ValueSymbol::addDriverImpl(const Scope& scope, const Driver& driver) const 
     }
 }
 
-} // namespace slang
+} // namespace slang::ast

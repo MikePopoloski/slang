@@ -21,7 +21,7 @@
 #include "slang/syntax/AllSyntax.h"
 #include "slang/syntax/SyntaxFacts.h"
 
-namespace slang {
+namespace slang::ast {
 
 const Statement& SubroutineSymbol::getBody() const {
     if (!stmt) {
@@ -1145,4 +1145,4 @@ void MethodPrototypeSymbol::serializeTo(ASTSerializer& serializer) const {
     serializer.endArray();
 }
 
-} // namespace slang
+} // namespace slang::ast

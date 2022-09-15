@@ -9,8 +9,9 @@
 
 #include "slang/ast/Constraints.h"
 #include "slang/ast/Expression.h"
+#include "slang/syntax/SyntaxFwd.h"
 
-namespace slang {
+namespace slang::ast {
 
 class FormalArgumentSymbol;
 
@@ -143,4 +144,4 @@ private:
     LookupLocation lookupLocation;
 };
 
-} // namespace slang
+} // namespace slang::ast

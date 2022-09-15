@@ -31,6 +31,7 @@
 namespace {
 
 using namespace slang;
+using namespace slang::ast;
 
 std::pair<string_view, SourceLocation> getNameLoc(const HierarchicalInstanceSyntax& syntax) {
     string_view name;
@@ -187,7 +188,7 @@ void getInstanceArrayDimensions(const InstanceArraySymbol& array,
 
 } // namespace
 
-namespace slang {
+namespace slang::ast {
 
 string_view InstanceSymbolBase::getArrayName() const {
     auto scope = getParentScope();
@@ -1211,4 +1212,4 @@ void PrimitiveInstanceSymbol::serializeTo(ASTSerializer& serializer) const {
         serializer.write("delay", *delayCtrl);
 }
 
-} // namespace slang
+} // namespace slang::ast

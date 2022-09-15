@@ -24,7 +24,7 @@
 #include "slang/diagnostics/TypesDiags.h"
 #include "slang/syntax/AllSyntax.h"
 
-namespace slang {
+namespace slang::ast {
 
 ClassPropertySymbol::ClassPropertySymbol(string_view name, SourceLocation loc,
                                          VariableLifetime lifetime, Visibility visibility) :
@@ -1077,4 +1077,4 @@ void ConstraintBlockSymbol::addThisVar(const Type& type) {
     addMember(*thisVar);
 }
 
-} // namespace slang
+} // namespace slang::ast

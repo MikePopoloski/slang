@@ -9,7 +9,7 @@
 #include "slang/ast/SystemSubroutine.h"
 #include "slang/diagnostics/SysFuncsDiags.h"
 
-namespace slang::Builtins {
+namespace slang::ast::builtins {
 
 class EnumFirstLastMethod : public SystemSubroutine {
 public:
@@ -207,4 +207,4 @@ void registerEnumMethods(Compilation& c) {
     c.addSystemMethod(SymbolKind::EnumType, std::make_unique<EnumNumMethod>());
 }
 
-} // namespace slang::Builtins
+} // namespace slang::ast::builtins

@@ -17,7 +17,7 @@
 #include "slang/syntax/AllSyntax.h"
 #include "slang/syntax/SyntaxFacts.h"
 
-namespace slang {
+namespace slang::ast {
 
 Definition::ParameterDecl::ParameterDecl(const Scope& scope,
                                          const ParameterDeclarationSyntax& syntax,
@@ -180,4 +180,4 @@ void Definition::getHierarchicalPath(std::string& buffer) const {
     buffer.append(name);
 }
 
-} // namespace slang
+} // namespace slang::ast

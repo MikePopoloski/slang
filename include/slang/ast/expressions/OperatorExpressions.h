@@ -8,12 +8,11 @@
 #pragma once
 
 #include "slang/ast/Expression.h"
+#include "slang/syntax/SyntaxFwd.h"
 
-namespace slang {
+namespace slang::ast {
 
 class Pattern;
-struct PostfixUnaryExpressionSyntax;
-struct PrefixUnaryExpressionSyntax;
 
 /// Represents a unary operator expression.
 class UnaryExpression : public Expression {
@@ -52,8 +51,6 @@ public:
 private:
     Expression* operand_;
 };
-
-struct BinaryExpressionSyntax;
 
 /// Represents a binary operator expression.
 class BinaryExpression : public Expression {
@@ -96,8 +93,6 @@ private:
     Expression* left_;
     Expression* right_;
 };
-
-struct ConditionalExpressionSyntax;
 
 /// Represents a conditional operator expression.
 class ConditionalExpression : public Expression {
@@ -145,8 +140,6 @@ private:
     Expression* right_;
 };
 
-struct InsideExpressionSyntax;
-
 /// Represents a set membership operator expression.
 class InsideExpression : public Expression {
 public:
@@ -179,9 +172,6 @@ private:
     const Expression* left_;
     span<const Expression* const> rangeList_;
 };
-
-struct ConcatenationExpressionSyntax;
-struct EmptyQueueExpressionSyntax;
 
 /// Represents a concatenation expression.
 class ConcatenationExpression : public Expression {
@@ -217,8 +207,6 @@ private:
     span<const Expression* const> operands_;
 };
 
-struct MultipleConcatenationExpressionSyntax;
-
 /// Represents a replication expression.
 class ReplicationExpression : public Expression {
 public:
@@ -252,8 +240,6 @@ private:
     const Expression* count_;
     Expression* concat_;
 };
-
-struct StreamingConcatenationExpressionSyntax;
 
 /// Represents a streaming concatenation.
 class StreamingConcatenationExpression : public Expression {
@@ -302,8 +288,6 @@ private:
     span<const StreamExpression> streams_;
 };
 
-struct OpenRangeExpressionSyntax;
-
 /// Denotes a range of values by providing expressions for the lower and upper
 /// bounds of the range. This expression needs special handling in the various
 /// places that allow it, since it doesn't really have a type.
@@ -343,4 +327,4 @@ private:
     Expression* right_;
 };
 
-} // namespace slang
+} // namespace slang::ast

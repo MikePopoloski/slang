@@ -18,7 +18,7 @@
 #include "slang/diagnostics/TypesDiags.h"
 #include "slang/syntax/AllSyntax.h"
 
-namespace slang {
+namespace slang::ast {
 
 NetType::NetType(NetKind netKind, string_view name, const Type& dataType) :
     Symbol(SymbolKind::NetType, name, SourceLocation()), declaredType(*this), netKind(netKind) {
@@ -292,4 +292,4 @@ const NetType& NetType::getSimulatedNetType(const NetType& internal, const NetTy
     }
 }
 
-} // namespace slang
+} // namespace slang::ast

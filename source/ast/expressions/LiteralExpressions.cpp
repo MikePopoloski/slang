@@ -13,7 +13,7 @@
 #include "slang/diagnostics/ExpressionsDiags.h"
 #include "slang/syntax/AllSyntax.h"
 
-namespace slang {
+namespace slang::ast {
 
 IntegerLiteral::IntegerLiteral(BumpAllocator& alloc, const Type& type, const SVInt& value,
                                bool isDeclaredUnsized, SourceRange sourceRange) :
@@ -262,4 +262,4 @@ void StringLiteral::serializeTo(ASTSerializer& serializer) const {
     serializer.write("literal", value);
 }
 
-} // namespace slang
+} // namespace slang::ast

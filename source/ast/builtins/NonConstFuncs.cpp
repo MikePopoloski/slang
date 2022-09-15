@@ -11,7 +11,7 @@
 #include "slang/ast/symbols/MemberSymbols.h"
 #include "slang/diagnostics/SysFuncsDiags.h"
 
-namespace slang::Builtins {
+namespace slang::ast::builtins {
 
 class FErrorFunc : public SystemSubroutine {
 public:
@@ -471,4 +471,4 @@ void registerNonConstFuncs(Compilation& c) {
                       std::make_unique<RandModeFunc>("constraint_mode"));
 }
 
-} // namespace slang::Builtins
+} // namespace slang::ast::builtins

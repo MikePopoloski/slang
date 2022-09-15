@@ -10,7 +10,7 @@
 #include "slang/ast/symbols/SubroutineSymbols.h"
 #include "slang/ast/symbols/VariableSymbols.h"
 
-namespace slang {
+namespace slang::ast {
 
 class UnpackedStructType;
 
@@ -88,4 +88,4 @@ private:
     uint32_t currFieldIndex = 0;
 };
 
-} // namespace slang
+} // namespace slang::ast

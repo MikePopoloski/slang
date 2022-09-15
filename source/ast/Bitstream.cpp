@@ -18,7 +18,7 @@
 #include "slang/diagnostics/ExpressionsDiags.h"
 #include "slang/diagnostics/NumericDiags.h"
 
-namespace slang {
+namespace slang::ast {
 
 enum class BitstreamSizeMode { Source, DestEmpty, DestFill };
 
@@ -864,4 +864,4 @@ ConstantValue Bitstream::resizeToRange(ConstantValue&& value, ConstantRange rang
     return std::move(value);
 }
 
-} // namespace slang
+} // namespace slang::ast

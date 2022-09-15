@@ -29,7 +29,7 @@
 #include "slang/syntax/AllSyntax.h"
 #include "slang/util/StackContainer.h"
 
-namespace slang {
+namespace slang::ast {
 
 EmptyMemberSymbol& EmptyMemberSymbol::fromSyntax(Compilation& compilation, const Scope& scope,
                                                  const EmptyMemberSyntax& syntax) {
@@ -1700,4 +1700,4 @@ void RandSeqProductionSymbol::serializeTo(ASTSerializer& serializer) const {
     serializer.endArray();
 }
 
-} // namespace slang
+} // namespace slang::ast

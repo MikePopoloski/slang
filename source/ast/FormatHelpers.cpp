@@ -15,7 +15,7 @@
 #include "slang/diagnostics/SysFuncsDiags.h"
 #include "slang/text/SFormat.h"
 
-namespace slang {
+namespace slang::ast {
 
 using Args = span<const Expression* const>;
 
@@ -378,4 +378,4 @@ bool FmtHelpers::checkFinishNum(const ASTContext& context, const Expression& arg
     return false;
 }
 
-} // namespace slang
+} // namespace slang::ast

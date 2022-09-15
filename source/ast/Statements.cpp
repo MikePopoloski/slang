@@ -24,6 +24,8 @@
 namespace {
 
 using namespace slang;
+using namespace slang::ast;
+
 using ER = Statement::EvalResult;
 
 struct EvalVisitor {
@@ -43,7 +45,7 @@ struct EvalVisitor {
 
 } // namespace
 
-namespace slang {
+namespace slang::ast {
 
 const InvalidStatement InvalidStatement::Instance(nullptr);
 
@@ -2735,4 +2737,4 @@ void RandSequenceStatement::serializeTo(ASTSerializer& serializer) const {
         serializer.writeLink("firstProduction", *firstProduction);
 }
 
-} // namespace slang
+} // namespace slang::ast

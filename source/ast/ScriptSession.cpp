@@ -14,7 +14,7 @@
 #include "slang/ast/symbols/VariableSymbols.h"
 #include "slang/syntax/AllSyntax.h"
 
-namespace slang {
+namespace slang::ast {
 
 static CompilationOptions createOptions() {
     CompilationOptions options;
@@ -104,4 +104,4 @@ Diagnostics ScriptSession::getDiagnostics() {
     return result;
 }
 
-} // namespace slang
+} // namespace slang::ast

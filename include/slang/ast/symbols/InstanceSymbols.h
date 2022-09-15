@@ -11,9 +11,10 @@
 #include "slang/ast/SemanticFacts.h"
 #include "slang/ast/Symbol.h"
 #include "slang/numeric/ConstantValue.h"
+#include "slang/syntax/SyntaxFwd.h"
 #include "slang/util/Function.h"
 
-namespace slang {
+namespace slang::ast {
 
 class AssertionExpr;
 class Definition;
@@ -27,11 +28,6 @@ class PortConnection;
 class PortSymbol;
 class PrimitiveSymbol;
 class TimingControl;
-
-struct BindDirectiveSyntax;
-struct DataDeclarationSyntax;
-struct HierarchicalInstanceSyntax;
-struct HierarchyInstantiationSyntax;
 struct ParamOverrideNode;
 
 /// Common functionality for module, interface, program, and primitive instances.
@@ -50,8 +46,6 @@ public:
 protected:
     using Symbol::Symbol;
 };
-
-struct ParameterValueAssignmentSyntax;
 
 class InstanceSymbol : public InstanceSymbolBase {
 public:
@@ -186,8 +180,6 @@ public:
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::InstanceArray; }
 };
 
-struct PrimitiveInstantiationSyntax;
-
 /// Represents an instance of some unknown module (or interface / program).
 /// This is a placeholder in the AST so that we don't record further errors
 /// after the initial one about the unknown module itself.
@@ -268,4 +260,4 @@ private:
     mutable optional<const TimingControl*> delay;
 };
 
-} // namespace slang
+} // namespace slang::ast

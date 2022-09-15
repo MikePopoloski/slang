@@ -12,7 +12,7 @@
 #include "slang/diagnostics/ConstEvalDiags.h"
 #include "slang/diagnostics/SysFuncsDiags.h"
 
-namespace slang::Builtins {
+namespace slang::ast::builtins {
 
 class BitsFunction : public SystemSubroutine {
 public:
@@ -535,4 +535,4 @@ void registerQueryFuncs(Compilation& c) {
     c.addSystemSubroutine(std::make_unique<ArrayDimensionFunction>("$unpacked_dimensions", true));
 }
 
-} // namespace slang::Builtins
+} // namespace slang::ast::builtins

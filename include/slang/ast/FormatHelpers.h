@@ -11,7 +11,7 @@
 #include "slang/text/SourceLocation.h"
 #include "slang/util/Util.h"
 
-namespace slang {
+namespace slang::ast {
 
 class ASTContext;
 class Expression;
@@ -40,4 +40,4 @@ private:
     FmtHelpers() = default;
 };
 
-} // namespace slang
+} // namespace slang::ast

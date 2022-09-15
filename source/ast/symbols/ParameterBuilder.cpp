@@ -15,7 +15,7 @@
 #include "slang/diagnostics/DeclarationsDiags.h"
 #include "slang/syntax/AllSyntax.h"
 
-namespace slang {
+namespace slang::ast {
 
 ParameterBuilder::ParameterBuilder(const Scope& scope, string_view definitionName,
                                    span<const Decl> parameterDecls) :
@@ -285,4 +285,4 @@ void ParameterBuilder::createDecls(const Scope& scope, const ParameterPortListSy
     }
 }
 
-} // namespace slang
+} // namespace slang::ast

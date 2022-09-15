@@ -16,7 +16,7 @@
 #include "slang/ast/types/Type.h"
 #include "slang/diagnostics/ConstEvalDiags.h"
 
-namespace slang {
+namespace slang::ast {
 
 ConstantValue* EvalContext::createLocal(const ValueSymbol* symbol, ConstantValue value) {
     ASSERT(!stack.empty());
@@ -190,4 +190,4 @@ void EvalContext::reportStack(Diagnostic& diag) const {
         reportFrame(diag, *it);
 }
 
-} // namespace slang
+} // namespace slang::ast

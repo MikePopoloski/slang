@@ -13,7 +13,7 @@
 #include "slang/syntax/AllSyntax.h"
 #include "slang/util/TypeTraits.h"
 
-namespace slang {
+namespace slang::ast {
 
 const Constraint& Constraint::bind(const ConstraintItemSyntax& syntax, const ASTContext& context) {
     ASTContext ctx(context);
@@ -499,4 +499,4 @@ void ForeachConstraint::serializeTo(ASTSerializer& serializer) const {
     serializer.write("body", body);
 }
 
-} // namespace slang
+} // namespace slang::ast

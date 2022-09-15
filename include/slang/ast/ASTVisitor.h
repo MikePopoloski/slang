@@ -33,7 +33,7 @@
 #include "slang/ast/types/NetType.h"
 #include "slang/util/TypeTraits.h"
 
-namespace slang {
+namespace slang::ast {
 
 struct ASTDetectors {
     template<typename T, typename Arg>
@@ -446,4 +446,4 @@ decltype(auto) Pattern::visit(TVisitor& visitor, Args&&... args) const {
 
 /// @endcond
 
-} // namespace slang
+} // namespace slang::ast

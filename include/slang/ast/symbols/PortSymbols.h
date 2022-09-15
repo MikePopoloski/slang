@@ -10,17 +10,15 @@
 #include "slang/ast/Expression.h"
 #include "slang/ast/SemanticFacts.h"
 #include "slang/numeric/ConstantValue.h"
+#include "slang/syntax/SyntaxFwd.h"
 
-namespace slang {
+namespace slang::ast {
 
 class AttributeSymbol;
 class Definition;
 class InstanceBodySymbol;
 class InstanceSymbol;
 class InstanceCacheKey;
-
-struct ImplicitTypeSyntax;
-struct PortListSyntax;
 
 /// Represents the public-facing side of a module / program / interface port.
 /// The port symbol itself is not directly referenceable from within the instance;
@@ -188,4 +186,4 @@ private:
     bool useDefault = false;
 };
 
-} // namespace slang
+} // namespace slang::ast

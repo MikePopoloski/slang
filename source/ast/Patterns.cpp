@@ -18,6 +18,7 @@
 namespace {
 
 using namespace slang;
+using namespace slang::ast;
 
 struct EvalVisitor {
     template<typename T>
@@ -37,7 +38,7 @@ struct EvalVisitor {
 
 } // namespace
 
-namespace slang {
+namespace slang::ast {
 
 Pattern& Pattern::bind(const PatternSyntax& syntax, const Type& targetType, VarMap& varMap,
                        ASTContext& context) {
@@ -386,4 +387,4 @@ void StructurePattern::serializeTo(ASTSerializer& serializer) const {
     serializer.endArray();
 }
 
-} // namespace slang
+} // namespace slang::ast

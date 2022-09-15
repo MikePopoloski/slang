@@ -10,17 +10,16 @@
 #include <optional>
 
 #include "slang/parsing/Token.h"
+#include "slang/syntax/SyntaxFwd.h"
 #include "slang/syntax/SyntaxNode.h"
 
-namespace slang {
+namespace slang::ast {
 
 class ASTSerializer;
 class ASTContext;
 class Scope;
 class TimingControl;
 enum class SymbolKind;
-struct BlockStatementSyntax;
-struct TimeUnitsDeclarationSyntax;
 
 #define LIFETIME(x) x(Automatic) x(Static)
 /// Specifies the storage lifetime of a variable.
@@ -168,8 +167,6 @@ private:
     SemanticFacts() = default;
 };
 
-struct ClockingSkewSyntax;
-
 /// Represents a skew value that is applied to clocking block signals.
 class ClockingSkew {
 public:
@@ -188,4 +185,4 @@ public:
     static ClockingSkew fromSyntax(const ClockingSkewSyntax& syntax, const ASTContext& context);
 };
 
-} // namespace slang
+} // namespace slang::ast

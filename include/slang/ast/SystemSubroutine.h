@@ -14,7 +14,7 @@
 #include "slang/util/SmallVector.h"
 #include "slang/util/Util.h"
 
-namespace slang {
+namespace slang::ast {
 
 class SystemSubroutine {
 public:
@@ -96,4 +96,4 @@ public:
     }
 };
 
-} // namespace slang
+} // namespace slang::ast

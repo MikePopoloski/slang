@@ -12,9 +12,9 @@
 #include "slang/numeric/ConstantValue.h"
 #include "slang/syntax/SyntaxNode.h"
 
-namespace slang {
+namespace slang::ast {
 
-struct NameSyntax;
+class Compilation;
 enum class RandMode;
 
 /// Specifies possible traits for integral types.
@@ -37,9 +37,6 @@ enum class IntegralFlags : uint8_t {
     Reg = 4
 };
 BITMASK(IntegralFlags, Reg)
-
-struct DataTypeSyntax;
-struct VariableDimensionSyntax;
 
 /// Base class for all data types in SystemVerilog.
 ///
@@ -334,4 +331,4 @@ private:
 
 Diagnostic& operator<<(Diagnostic& diag, const Type& arg);
 
-} // namespace slang
+} // namespace slang::ast

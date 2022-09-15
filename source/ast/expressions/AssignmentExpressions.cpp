@@ -31,6 +31,7 @@
 namespace {
 
 using namespace slang;
+using namespace slang::ast;
 
 bool checkEnumInitializer(const ASTContext& context, const Type& lt, const Expression& rhs) {
     // [6.19] says that the initializer for an enum value must be an integer expression that
@@ -69,7 +70,7 @@ bool isSameEnum(const Expression& expr, const Type& enumType) {
 
 } // namespace
 
-namespace slang {
+namespace slang::ast {
 
 Expression* Expression::tryConnectPortArray(const ASTContext& context, const Type& portType,
                                             Expression& expr, const InstanceSymbolBase& instance) {
@@ -1934,4 +1935,4 @@ void ReplicatedAssignmentPatternExpression::serializeTo(ASTSerializer& serialize
     AssignmentPatternExpressionBase::serializeTo(serializer);
 }
 
-} // namespace slang
+} // namespace slang::ast

@@ -14,7 +14,7 @@
 #include "slang/ast/symbols/SymbolBuilders.h"
 #include "slang/ast/types/AllTypes.h"
 
-namespace slang::Builtins {
+namespace slang::ast::builtins {
 
 #define NL SourceLocation::NoLocation
 
@@ -147,4 +147,4 @@ const PackageSymbol& createStdPackage(Compilation& c) {
     return *pkg;
 }
 
-} // namespace slang::Builtins
+} // namespace slang::ast::builtins

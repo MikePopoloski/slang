@@ -23,7 +23,7 @@
 #include "slang/syntax/AllSyntax.h"
 #include "slang/util/StackContainer.h"
 
-namespace slang {
+namespace slang::ast {
 
 const Statement& StatementBlockSymbol::getStatement(const ASTContext& parentContext,
                                                     Statement::StatementContext& stmtCtx) const {
@@ -741,4 +741,4 @@ void GenerateBlockArraySymbol::serializeTo(ASTSerializer& serializer) const {
     serializer.write("constructIndex", constructIndex);
 }
 
-} // namespace slang
+} // namespace slang::ast

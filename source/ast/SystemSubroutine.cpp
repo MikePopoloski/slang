@@ -13,7 +13,7 @@
 #include "slang/diagnostics/ExpressionsDiags.h"
 #include "slang/diagnostics/SysFuncsDiags.h"
 
-namespace slang {
+namespace slang::ast {
 
 bool SystemSubroutine::allowEmptyArgument(size_t) const {
     return false;
@@ -110,4 +110,4 @@ const Type& SimpleSystemSubroutine::checkArguments(const ASTContext& context, co
     return *returnType;
 }
 
-} // namespace slang
+} // namespace slang::ast

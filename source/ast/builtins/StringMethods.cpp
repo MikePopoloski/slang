@@ -10,7 +10,7 @@
 #include "slang/diagnostics/SysFuncsDiags.h"
 #include "slang/util/String.h"
 
-namespace slang::Builtins {
+namespace slang::ast::builtins {
 
 class StringLenMethod : public SimpleSystemSubroutine {
 public:
@@ -277,4 +277,4 @@ void registerStringMethods(Compilation& c) {
 #undef REGISTER
 }
 
-} // namespace slang::Builtins
+} // namespace slang::ast::builtins
