@@ -24,7 +24,7 @@ static_assert(std::numeric_limits<double>::is_iec559, "SystemVerilog requires IE
 
 static const double BitsPerDecimal = log2(10.0);
 
-namespace slang {
+namespace slang::parsing {
 
 using LF = LexerFacts;
 
@@ -1422,4 +1422,4 @@ size_t Lexer::currentOffset() const {
     return (size_t)(sourceBuffer - originalBegin);
 }
 
-} // namespace slang
+} // namespace slang::parsing

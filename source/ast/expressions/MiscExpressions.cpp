@@ -28,6 +28,8 @@
 
 namespace slang::ast {
 
+using namespace parsing;
+
 Expression& ValueExpressionBase::fromSymbol(const ASTContext& context, const Symbol& symbol,
                                             bool isHierarchical, SourceRange sourceRange,
                                             bool constraintAllowed) {

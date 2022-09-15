@@ -11,7 +11,7 @@
 #include "slang/text/SourceManager.h"
 #include "slang/util/String.h"
 
-namespace slang {
+namespace slang::parsing {
 
 std::pair<PragmaExpressionSyntax*, bool> Preprocessor::parsePragmaExpression() {
     Token token = peek();
@@ -577,4 +577,4 @@ void Preprocessor::handleProtectViewport(Token keyword, const PragmaExpressionSy
     checkOption(1, "access"sv);
 }
 
-} // namespace slang
+} // namespace slang::parsing

@@ -34,6 +34,8 @@
 
 namespace slang::ast {
 
+using namespace parsing;
+
 const LookupLocation LookupLocation::max{nullptr, UINT_MAX};
 const LookupLocation LookupLocation::min{nullptr, 0};
 

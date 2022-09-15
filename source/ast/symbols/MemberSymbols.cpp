@@ -31,6 +31,8 @@
 
 namespace slang::ast {
 
+using namespace parsing;
+
 EmptyMemberSymbol& EmptyMemberSymbol::fromSyntax(Compilation& compilation, const Scope& scope,
                                                  const EmptyMemberSyntax& syntax) {
     auto result = compilation.emplace<EmptyMemberSymbol>(syntax.semi.location());

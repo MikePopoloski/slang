@@ -13,6 +13,8 @@
 
 namespace slang {
 
+using namespace parsing;
+
 SyntaxTree::SyntaxTree(SyntaxNode* root, SourceManager& sourceManager, BumpAllocator&& alloc,
                        std::shared_ptr<SyntaxTree> parent) :
     rootNode(root),

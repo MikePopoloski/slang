@@ -378,7 +378,7 @@ public:
 
     const Type& getType(bitwidth_t width, bitmask<IntegralFlags> flags);
     const Type& getScalarType(bitmask<IntegralFlags> flags);
-    const NetType& getNetType(TokenKind kind) const;
+    const NetType& getNetType(parsing::TokenKind kind) const;
 
     /// Various built-in type symbols for easy access.
     const Type& getBitType() const { return *bitType; }
@@ -496,7 +496,7 @@ private:
     flat_hash_map<SyntaxKind, const Type*> knownTypes;
 
     // Map from token kinds to the built-in net types.
-    flat_hash_map<TokenKind, std::unique_ptr<NetType>> knownNetTypes;
+    flat_hash_map<parsing::TokenKind, std::unique_ptr<NetType>> knownNetTypes;
 
     // The name map for packages. Note that packages have their own namespace,
     // which is why they can't share the definitions name table.

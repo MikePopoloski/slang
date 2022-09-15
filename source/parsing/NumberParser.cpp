@@ -11,7 +11,7 @@
 #include "slang/text/CharInfo.h"
 #include "slang/util/String.h"
 
-namespace slang {
+namespace slang::parsing {
 
 static logic_t getLogicCharValue(char c) {
     switch (c) {
@@ -307,4 +307,4 @@ void NumberParser::reportIntOverflow(Token token) {
     addDiag(diag::SignedIntegerOverflow, token.location()) << val;
 }
 
-} // namespace slang
+} // namespace slang::parsing

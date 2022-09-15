@@ -19,6 +19,8 @@
 #include "slang/syntax/SyntaxTree.h"
 #include "slang/text/SourceManager.h"
 
+using namespace slang::driver;
+
 void registerCompilation(py::module_& m) {
     EXPOSE_ENUM(m, VariableLifetime);
     EXPOSE_ENUM(m, Visibility);

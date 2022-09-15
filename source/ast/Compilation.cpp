@@ -22,6 +22,8 @@
 #include "slang/text/CharInfo.h"
 #include "slang/text/SourceManager.h"
 
+using namespace slang::parsing;
+
 namespace slang::ast::builtins {
 
 void registerArrayMethods(Compilation&);

@@ -13,7 +13,7 @@
 #include "slang/syntax/SyntaxPrinter.h"
 #include "slang/util/BumpAllocator.h"
 
-namespace slang {
+namespace slang::parsing {
 
 // Heap-allocated info block. This structure is variably sized based on the
 // actual type of token. Type-specific data is stored at the end, followed
@@ -495,4 +495,4 @@ Token Token::createExpected(BumpAllocator& alloc, Diagnostics& diagnostics, Toke
     return Token::createMissing(alloc, expected, location);
 }
 
-} // namespace slang
+} // namespace slang::parsing

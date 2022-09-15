@@ -72,6 +72,8 @@ bool isSameEnum(const Expression& expr, const Type& enumType) {
 
 namespace slang::ast {
 
+using namespace parsing;
+
 Expression* Expression::tryConnectPortArray(const ASTContext& context, const Type& portType,
                                             Expression& expr, const InstanceSymbolBase& instance) {
     // This lambda is shared code for reporting an error and returning an invalid expression.

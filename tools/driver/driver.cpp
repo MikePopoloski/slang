@@ -19,6 +19,7 @@
 
 using namespace slang;
 using namespace slang::ast;
+using namespace slang::driver;
 
 void writeToFile(string_view fileName, string_view contents);
 

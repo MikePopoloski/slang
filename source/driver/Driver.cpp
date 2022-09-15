@@ -21,9 +21,10 @@
 #include "slang/syntax/SyntaxPrinter.h"
 #include "slang/syntax/SyntaxTree.h"
 
-namespace slang {
+namespace slang::driver {
 
 using namespace ast;
+using namespace parsing;
 
 Driver::Driver() : diagEngine(sourceManager) {
     diagClient = std::make_shared<TextDiagnosticClient>();
@@ -720,4 +721,4 @@ bool Driver::reportCompilation(Compilation& compilation, bool quiet) {
     return succeeded;
 }
 
-} // namespace slang
+} // namespace slang::driver

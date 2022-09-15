@@ -13,6 +13,8 @@
 #include "slang/diagnostics/PreprocessorDiags.h"
 #include "slang/syntax/AllSyntax.h"
 
+using namespace slang::parsing;
+
 namespace slang::ast {
 
 // clang-format off

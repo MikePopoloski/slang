@@ -47,6 +47,8 @@ struct EvalVisitor {
 
 namespace slang::ast {
 
+using namespace parsing;
+
 const InvalidStatement InvalidStatement::Instance(nullptr);
 
 void InvalidStatement::serializeTo(ASTSerializer& serializer) const {

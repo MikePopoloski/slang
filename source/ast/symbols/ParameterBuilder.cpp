@@ -278,8 +278,9 @@ void ParameterBuilder::createDecls(const Scope& scope, const ParameterPortListSy
         // It's legal to leave off the parameter keyword in the parameter port list.
         // If you do so, we "inherit" the parameter or localparam keyword from the
         // previous entry.
-        if (declaration->keyword)
-            lastLocal = declaration->keyword.kind == TokenKind::LocalParamKeyword;
+        if (declaration->keyword) {
+            lastLocal = declaration->keyword.kind == parsing::TokenKind::LocalParamKeyword;
+        }
 
         createDecls(scope, *declaration, lastLocal, /* isPort */ true, results);
     }

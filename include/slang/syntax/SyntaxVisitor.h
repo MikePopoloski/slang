@@ -57,7 +57,7 @@ public:
 
 private:
     // This is to make things compile if the derived class doesn't provide an implementation.
-    void visitToken(Token) {}
+    void visitToken(parsing::Token) {}
 };
 
 namespace detail {
@@ -65,7 +65,7 @@ namespace detail {
 struct SyntaxChange {
     const SyntaxNode* first = nullptr;
     SyntaxNode* second = nullptr;
-    Token separator = {};
+    parsing::Token separator = {};
 };
 
 struct RemoveChange : SyntaxChange {};
@@ -129,6 +129,8 @@ public:
     }
 
 protected:
+    using Token = parsing::Token;
+
     /// A helper for derived classes that parses some text into syntax nodes.
     SyntaxNode& parse(string_view text) {
         tempTrees.emplace_back(SyntaxTree::fromText(text, *sourceManager));
@@ -173,12 +175,12 @@ protected:
         commits.listInsertAtBack[&list].push_back({&list, &newNode, separator});
     }
 
-    Token makeToken(TokenKind kind, string_view text) {
+    Token makeToken(parsing::TokenKind kind, string_view text) {
         return Token(alloc, kind, {}, text, SourceLocation::NoLocation);
     }
 
-    Token makeId(string_view text) { return makeToken(TokenKind::Identifier, text); }
-    Token makeComma() { return makeToken(TokenKind::Comma, ","sv); }
+    Token makeId(string_view text) { return makeToken(parsing::TokenKind::Identifier, text); }
+    Token makeComma() { return makeToken(parsing::TokenKind::Comma, ","sv); }
 
     BumpAllocator alloc;
     SyntaxFactory factory;

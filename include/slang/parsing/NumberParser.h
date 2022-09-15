@@ -15,7 +15,7 @@
 #include "slang/text/SourceLocation.h"
 #include "slang/util/SmallVector.h"
 
-namespace slang {
+namespace slang::parsing {
 
 class NumberParser {
 public:
@@ -156,4 +156,4 @@ private:
     SmallVectorSized<char, 64> text;
 };
 
-} // namespace slang
+} // namespace slang::parsing

@@ -21,6 +21,8 @@
 
 namespace slang::ast {
 
+using namespace parsing;
+
 namespace {
 
 struct GetDefaultVisitor {

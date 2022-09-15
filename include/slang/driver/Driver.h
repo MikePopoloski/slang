@@ -20,6 +20,10 @@ namespace slang {
 class SyntaxTree;
 class TextDiagnosticClient;
 
+} // namespace slang
+
+namespace slang::driver {
+
 /// A top-level class that handles argument parsing, option preparation,
 /// and invoking various parts of the slang compilation process.
 /// This is exposed as a convenience wrapper around the various components
@@ -282,4 +286,4 @@ private:
     bool anyFailedLoads = false;
 };
 
-} // namespace slang
+} // namespace slang::driver

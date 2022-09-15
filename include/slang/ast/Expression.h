@@ -205,7 +205,7 @@ public:
     ///
     /// @returns true if all expressions are legal, otherwise false and appropriate
     /// diagnostics are issued.
-    static bool bindMembershipExpressions(const ASTContext& context, TokenKind keyword,
+    static bool bindMembershipExpressions(const ASTContext& context, parsing::TokenKind keyword,
                                           bool requireIntegral, bool unwrapUnpacked,
                                           bool allowTypeReferences, bool allowOpenRange,
                                           const ExpressionSyntax& valueExpr,
@@ -216,7 +216,7 @@ public:
     /// to look them up in the given context. If they can't be found, their name tokens are
     /// returned in the given @a results vector.
     static void findPotentiallyImplicitNets(const SyntaxNode& expr, const ASTContext& context,
-                                            SmallVector<Token>& results);
+                                            SmallVector<parsing::Token>& results);
 
     /// Converts an expression to be of the given type, following the rules for
     /// implicit conversions, array port slicing, etc.

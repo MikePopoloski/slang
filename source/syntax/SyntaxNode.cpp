@@ -47,7 +47,7 @@ std::string SyntaxNode::toString() const {
     return SyntaxPrinter().print(*this).str();
 }
 
-Token SyntaxNode::getFirstToken() const {
+parsing::Token SyntaxNode::getFirstToken() const {
     size_t childCount = getChildCount();
     for (size_t i = 0; i < childCount; i++) {
         auto child = getChild(i);
@@ -64,7 +64,7 @@ Token SyntaxNode::getFirstToken() const {
     return Token();
 }
 
-Token SyntaxNode::getLastToken() const {
+parsing::Token SyntaxNode::getLastToken() const {
     size_t childCount = getChildCount();
     for (ptrdiff_t i = ptrdiff_t(childCount) - 1; i >= 0; i--) {
         auto child = getChild(size_t(i));
@@ -111,7 +111,7 @@ SyntaxNode* SyntaxNode::childNode(size_t index) {
     return child.node();
 }
 
-Token SyntaxNode::childToken(size_t index) const {
+parsing::Token SyntaxNode::childToken(size_t index) const {
     auto child = getChild(index);
     if (!child.isToken())
         return Token();

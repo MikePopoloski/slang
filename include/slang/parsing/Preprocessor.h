@@ -30,6 +30,10 @@ struct MacroFormalArgumentSyntax;
 struct PragmaDirectiveSyntax;
 struct PragmaExpressionSyntax;
 
+} // namespace slang
+
+namespace slang::parsing {
+
 /// Contains various options that can control preprocessing behavior.
 struct PreprocessorOptions {
     /// The maximum depth of the include stack; further attempts to include
@@ -404,4 +408,4 @@ private:
         pragmaProtectHandlers;
 };
 
-} // namespace slang
+} // namespace slang::parsing

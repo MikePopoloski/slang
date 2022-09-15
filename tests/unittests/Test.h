@@ -35,6 +35,7 @@ class InstanceSymbol;
 } // namespace slang
 
 using namespace slang;
+using namespace slang::parsing;
 using namespace slang::ast;
 
 #define CHECK_DIAGNOSTICS_EMPTY               \

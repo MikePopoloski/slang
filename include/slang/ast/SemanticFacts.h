@@ -133,22 +133,22 @@ BITMASK(AssignFlags, ModportConn)
 class SemanticFacts {
 public:
     /// Interprets a keyword token as a variable lifetime value.
-    static std::optional<VariableLifetime> getVariableLifetime(Token token);
+    static std::optional<VariableLifetime> getVariableLifetime(parsing::Token token);
 
     /// Interprets a token type as an argument direction value.
-    static ArgumentDirection getDirection(TokenKind kind);
+    static ArgumentDirection getDirection(parsing::TokenKind kind);
 
     static ProceduralBlockKind getProceduralBlockKind(SyntaxKind kind);
 
     static DefinitionKind getDefinitionKind(SyntaxKind kind);
 
-    static EdgeKind getEdgeKind(TokenKind kind);
+    static EdgeKind getEdgeKind(parsing::TokenKind kind);
 
     static AssertionKind getAssertKind(SyntaxKind kind);
 
     static StatementBlockKind getStatementBlockKind(const BlockStatementSyntax& syntax);
 
-    static ElabSystemTaskKind getElabSystemTaskKind(Token token);
+    static ElabSystemTaskKind getElabSystemTaskKind(parsing::Token token);
 
     static string_view getProcedureKindStr(ProceduralBlockKind kind);
 

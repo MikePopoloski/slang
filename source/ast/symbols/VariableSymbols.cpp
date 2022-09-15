@@ -28,6 +28,8 @@
 
 namespace slang::ast {
 
+using namespace parsing;
+
 static VariableLifetime getDefaultLifetime(const Scope& scope) {
     const Symbol& sym = scope.asSymbol();
     switch (sym.kind) {

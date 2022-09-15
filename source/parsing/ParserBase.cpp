@@ -11,7 +11,7 @@
 #include "slang/parsing/Preprocessor.h"
 #include "slang/util/BumpAllocator.h"
 
-namespace slang {
+namespace slang::parsing {
 
 using SF = SyntaxFacts;
 
@@ -261,4 +261,4 @@ void ParserBase::Window::insertHead(span<const Token> tokens) {
     count = tokens.size() + existing;
 }
 
-} // namespace slang
+} // namespace slang::parsing

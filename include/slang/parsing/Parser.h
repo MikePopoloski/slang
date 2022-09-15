@@ -15,7 +15,7 @@
 #include "slang/util/Bag.h"
 #include "slang/util/Hash.h"
 
-namespace slang {
+namespace slang::parsing {
 
 class Preprocessor;
 
@@ -522,4 +522,4 @@ bool Parser::scanTypePart(uint32_t& index, TokenKind start, TokenKind end) {
     }
 }
 
-} // namespace slang
+} // namespace slang::parsing

@@ -502,6 +502,7 @@ size_t SyntaxNode::getChildCount() const {
     # Write out syntax factory methods.
     outf.write("class SyntaxFactory {\n")
     outf.write("public:\n")
+    outf.write("    using Token = parsing::Token;\n\n")
     outf.write("    explicit SyntaxFactory(BumpAllocator& alloc) : alloc(alloc) {}\n")
     outf.write("\n")
 
@@ -825,7 +826,7 @@ def generateTokenKinds(ourdir, builddir):
 
 #include "slang/util/Util.h"
 
-namespace slang {
+namespace slang::parsing {
 
 """
     )
@@ -845,7 +846,7 @@ namespace slang {
 //------------------------------------------------------------------------------
 #include "slang/parsing/TokenKind.h"
 
-namespace slang {
+namespace slang::parsing {
 
 """
     )

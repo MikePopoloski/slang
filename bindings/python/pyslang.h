@@ -24,6 +24,7 @@ namespace py = pybind11;
 using namespace pybind11::literals;
 
 using namespace slang;
+using namespace slang::parsing;
 using namespace slang::ast;
 
 #define EXPOSE_ENUM(handle, name)                                   \

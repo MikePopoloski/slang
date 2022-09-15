@@ -23,6 +23,8 @@
 
 namespace slang::ast {
 
+using namespace parsing;
+
 const Statement& SubroutineSymbol::getBody() const {
     if (!stmt) {
         auto syntax = getSyntax();

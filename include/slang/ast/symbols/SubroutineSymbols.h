@@ -222,7 +222,7 @@ public:
 
 private:
     static MethodPrototypeSymbol& createForModport(const Scope& scope, const SyntaxNode& syntax,
-                                                   Token nameToken, bool isExport);
+                                                   parsing::Token nameToken, bool isExport);
 
     template<typename TSyntax>
     static MethodPrototypeSymbol& createExternIfaceMethod(const Scope& scope,

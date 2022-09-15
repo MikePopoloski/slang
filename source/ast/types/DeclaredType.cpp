@@ -26,6 +26,8 @@
 
 namespace slang::ast {
 
+using namespace parsing;
+
 DeclaredType::DeclaredType(const Symbol& parent, bitmask<DeclaredTypeFlags> flags) :
     parent(parent), flags(flags), overrideIndex(0), evaluating(false), hasLink(false) {
     // If this assert fires you need to update Symbol::getDeclaredType

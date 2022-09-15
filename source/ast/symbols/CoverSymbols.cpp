@@ -55,6 +55,8 @@ private:
 
 namespace slang::ast {
 
+using namespace parsing;
+
 CoverageOptionSetter::CoverageOptionSetter(const Scope& scope, const CoverageOptionSyntax& syntax) :
     scope(&scope), syntax(&syntax) {
 }

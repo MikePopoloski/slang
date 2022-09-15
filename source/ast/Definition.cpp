@@ -19,6 +19,8 @@
 
 namespace slang::ast {
 
+using namespace parsing;
+
 Definition::ParameterDecl::ParameterDecl(const Scope& scope,
                                          const ParameterDeclarationSyntax& syntax,
                                          const DeclaratorSyntax& decl, bool isLocal, bool isPort) :

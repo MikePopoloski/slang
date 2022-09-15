@@ -19,6 +19,11 @@ namespace slang {
 enum class SyntaxKind;
 class Diagnostics;
 class SyntaxNode;
+
+} // namespace slang
+
+namespace slang::parsing {
+
 class Token;
 
 /// Various flags for numeric tokens.
@@ -210,4 +215,4 @@ static_assert(sizeof(Token) == 16);
 #endif
 static_assert(std::is_trivially_copyable_v<Token>);
 
-} // namespace slang
+} // namespace slang::parsing

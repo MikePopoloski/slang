@@ -22,11 +22,11 @@ class SyntaxNode;
 
 /// A base class template for a sum type representing either a token or a syntax node.
 template<typename TNode>
-struct TokenOrSyntaxBase : public std::variant<Token, TNode> {
-    using Base = std::variant<Token, TNode>;
-    TokenOrSyntaxBase(Token token) : Base(token) {}
+struct TokenOrSyntaxBase : public std::variant<parsing::Token, TNode> {
+    using Base = std::variant<parsing::Token, TNode>;
+    TokenOrSyntaxBase(parsing::Token token) : Base(token) {}
     TokenOrSyntaxBase(TNode node) : Base(node) {}
-    TokenOrSyntaxBase(nullptr_t) : Base(Token()) {}
+    TokenOrSyntaxBase(nullptr_t) : Base(parsing::Token()) {}
 
     /// @return true if the object is a token.
     bool isToken() const { return this->index() == 0; }
@@ -36,7 +36,7 @@ struct TokenOrSyntaxBase : public std::variant<Token, TNode> {
 
     /// Gets access to the object as a token (throwing an exception
     /// if it's not actually a token).
-    Token token() const { return std::get<0>(*this); }
+    parsing::Token token() const { return std::get<0>(*this); }
 
     /// Gets access to the object as a syntax node (throwing an exception
     /// if it's not actually a syntax node).
@@ -61,6 +61,8 @@ struct ConstTokenOrSyntax : public TokenOrSyntaxBase<const SyntaxNode*> {
 /// Base class for all syntax nodes.
 class SyntaxNode {
 public:
+    using Token = parsing::Token;
+
     /// The parent node of this syntax node. The root of the syntax
     /// tree does not have a parent (will be nullptr).
     SyntaxNode* parent = nullptr;
@@ -200,7 +202,7 @@ private:
 };
 
 /// A syntax node that represents a list of child tokens.
-class TokenList : public SyntaxListBase, public span<Token> {
+class TokenList : public SyntaxListBase, public span<parsing::Token> {
 public:
     TokenList(nullptr_t) : TokenList(span<Token>()) {}
     TokenList(span<Token> elements);

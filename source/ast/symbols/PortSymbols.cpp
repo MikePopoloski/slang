@@ -29,6 +29,8 @@
 
 namespace slang::ast {
 
+using namespace parsing;
+
 namespace {
 
 const NetType& getDefaultNetType(const Scope& scope, SourceLocation location) {

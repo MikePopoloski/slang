@@ -6,6 +6,8 @@
 
 #include "slang/driver/Driver.h"
 
+using namespace slang::driver;
+
 static bool stdoutContains(string_view text) {
     return OS::capturedStdout.find(text) != std::string::npos;
 }

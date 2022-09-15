@@ -16,6 +16,8 @@
 
 namespace slang::ast {
 
+using namespace parsing;
+
 TimingControl& TimingControl::bind(const TimingControlSyntax& syntax, const ASTContext& context) {
     auto& comp = context.getCompilation();
     if (context.flags.has(ASTFlags::Function | ASTFlags::Final) || context.inAlwaysCombLatch()) {

@@ -13,6 +13,8 @@
 
 namespace slang {
 
+using namespace parsing;
+
 SyntaxPrinter::SyntaxPrinter(const SourceManager& sourceManager) : sourceManager(&sourceManager) {
 }
 

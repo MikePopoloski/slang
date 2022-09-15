@@ -10,7 +10,7 @@
 #include "slang/diagnostics/ParserDiags.h"
 #include "slang/parsing/Preprocessor.h"
 
-namespace slang {
+namespace slang::parsing {
 
 Parser::Parser(Preprocessor& preprocessor, const Bag& options) :
     ParserBase::ParserBase(preprocessor), factory(alloc),
@@ -1413,4 +1413,4 @@ void Parser::handleTooDeep() {
     throw RecursionException("");
 }
 
-} // namespace slang
+} // namespace slang::parsing

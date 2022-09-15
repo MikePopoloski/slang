@@ -10,7 +10,7 @@
 #include "slang/parsing/Parser.h"
 #include "slang/parsing/Preprocessor.h"
 
-namespace slang {
+namespace slang::parsing {
 
 ExpressionSyntax& Parser::parseExpression() {
     return parseSubExpression(ExpressionOptions::None, 0);
@@ -1684,4 +1684,4 @@ PropertyExprSyntax& Parser::parsePropertyExpr(int precedence) {
     return *left;
 }
 
-} // namespace slang
+} // namespace slang::parsing

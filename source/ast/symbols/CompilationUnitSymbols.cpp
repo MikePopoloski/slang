@@ -11,6 +11,8 @@
 #include "slang/ast/symbols/MemberSymbols.h"
 #include "slang/syntax/AllSyntax.h"
 
+using namespace slang::parsing;
+
 namespace slang::ast {
 
 CompilationUnitSymbol::CompilationUnitSymbol(Compilation& compilation) :

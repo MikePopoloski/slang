@@ -12,7 +12,10 @@
 namespace slang {
 
 enum class SyntaxKind;
+
+namespace parsing {
 enum class TokenKind : uint16_t;
+}
 
 struct DataTypeSyntax;
 
@@ -20,6 +23,8 @@ struct DataTypeSyntax;
 /// to tokens and syntax nodes.
 class SyntaxFacts {
 public:
+    using TokenKind = parsing::TokenKind;
+
     /// @return the kind of syntax that should be created for the given
     /// unary prefix operator token.
     static SyntaxKind getUnaryPrefixExpression(TokenKind kind);

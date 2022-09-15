@@ -9,7 +9,7 @@
 
 #include "slang/syntax/SyntaxNode.h"
 
-namespace slang {
+namespace slang::parsing {
 
 // clang-format off
 const static StringTable<TokenKind> systemIdentifierKeywords = {
@@ -1028,4 +1028,4 @@ string_view LexerFacts::getTokenKindText(TokenKind kind) {
 }
 // clang-format on
 
-} // namespace slang
+} // namespace slang::parsing

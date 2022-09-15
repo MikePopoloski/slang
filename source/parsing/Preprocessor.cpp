@@ -14,7 +14,7 @@
 #include "slang/util/String.h"
 #include "slang/util/Version.h"
 
-namespace slang {
+namespace slang::parsing {
 
 using LF = LexerFacts;
 
@@ -1033,4 +1033,4 @@ Diagnostic& Preprocessor::addDiag(DiagCode code, SourceRange range) {
     return diagnostics.add(code, range);
 }
 
-} // namespace slang
+} // namespace slang::parsing

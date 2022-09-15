@@ -14,7 +14,7 @@
 #include "slang/text/SourceLocation.h"
 #include "slang/util/SmallVector.h"
 
-namespace slang {
+namespace slang::parsing {
 
 class Preprocessor;
 
@@ -232,4 +232,4 @@ private:
     SmallVectorSized<Token, 4> openDelims;
 };
 
-} // namespace slang
+} // namespace slang::parsing

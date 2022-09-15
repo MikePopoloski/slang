@@ -15,6 +15,8 @@
 
 namespace slang::ast {
 
+using namespace parsing;
+
 const Constraint& Constraint::bind(const ConstraintItemSyntax& syntax, const ASTContext& context) {
     ASTContext ctx(context);
     ctx.flags |= ASTFlags::AssignmentDisallowed;

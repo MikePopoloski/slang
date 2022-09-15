@@ -18,6 +18,10 @@ namespace slang {
 
 class BumpAllocator;
 
+}
+
+namespace slang::parsing {
+
 /// Contains various options that can control lexing behavior.
 struct LexerOptions {
     /// The maximum number of errors that can occur before the rest of the source
@@ -147,4 +151,4 @@ private:
     SmallVectorSized<Trivia, 32> triviaBuffer;
 };
 
-} // namespace slang
+} // namespace slang::parsing

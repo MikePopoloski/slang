@@ -9,7 +9,7 @@
 #include "slang/parsing/Parser.h"
 #include "slang/parsing/Preprocessor.h"
 
-namespace slang {
+namespace slang::parsing {
 
 CompilationUnitSyntax& Parser::parseCompilationUnit() {
     try {
@@ -3246,4 +3246,4 @@ void Parser::checkMemberAllowed(const SyntaxNode& member, SyntaxKind parentKind)
     }
 }
 
-} // namespace slang
+} // namespace slang::parsing

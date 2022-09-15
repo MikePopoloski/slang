@@ -13,7 +13,7 @@
 #include "slang/text/SourceManager.h"
 #include "slang/util/String.h"
 
-namespace slang {
+namespace slang::parsing {
 
 using LF = LexerFacts;
 
@@ -876,4 +876,4 @@ bool Preprocessor::isSameMacro(const DefineDirectiveSyntax& left,
     return isSameTokenList(left.body, right.body);
 }
 
-} // namespace slang
+} // namespace slang::parsing

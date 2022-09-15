@@ -12,6 +12,11 @@
 namespace slang {
 
 enum class SyntaxKind;
+
+}
+
+namespace slang::parsing {
+
 enum class TokenKind : uint16_t;
 
 /// Different restricted sets of keywords that can be set using the
@@ -48,4 +53,4 @@ private:
     LexerFacts() = default;
 };
 
-} // namespace slang
+} // namespace slang::parsing

@@ -18,8 +18,11 @@ namespace slang {
 class SourceManager;
 class SyntaxNode;
 struct DefineDirectiveSyntax;
-struct ParserMetadata;
 struct SourceBuffer;
+
+namespace parsing {
+struct ParserMetadata;
+}
 
 /// The SyntaxTree is the easiest way to interface with the lexer / preprocessor /
 /// parser stack. Give it some source text and it produces a parse tree.
@@ -150,7 +153,7 @@ public:
     const SyntaxTree* getParentTree() const { return parentTree.get(); }
 
     /// Gets various bits of metadata collected during parsing.
-    const ParserMetadata& getMetadata() const { return *metadata; }
+    const parsing::ParserMetadata& getMetadata() const { return *metadata; }
 
     /// Gets the list of macros that were defined at the end of the loaded source file.
     MacroList getDefinedMacros() const { return macros; }
@@ -163,7 +166,7 @@ public:
 
 private:
     SyntaxTree(SyntaxNode* root, SourceManager& sourceManager, BumpAllocator&& alloc,
-               Diagnostics&& diagnostics, ParserMetadata&& metadata,
+               Diagnostics&& diagnostics, parsing::ParserMetadata&& metadata,
                std::vector<const DefineDirectiveSyntax*>&& macros, Bag options);
 
     static std::shared_ptr<SyntaxTree> create(SourceManager& sourceManager,
@@ -175,7 +178,7 @@ private:
     BumpAllocator alloc;
     Diagnostics diagnosticsBuffer;
     Bag options_;
-    std::unique_ptr<ParserMetadata> metadata;
+    std::unique_ptr<parsing::ParserMetadata> metadata;
     std::vector<const DefineDirectiveSyntax*> macros;
     std::shared_ptr<SyntaxTree> parentTree;
 };

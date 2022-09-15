@@ -28,11 +28,11 @@ public:
 
     /// Print the provided @a trivia to the internal buffer.
     /// @return a reference to this object, to allow chaining additional method calls.
-    SyntaxPrinter& print(Trivia trivia);
+    SyntaxPrinter& print(parsing::Trivia trivia);
 
     /// Print the provided @a token to the internal buffer.
     /// @return a reference to this object, to allow chaining additional method calls.
-    SyntaxPrinter& print(Token token);
+    SyntaxPrinter& print(parsing::Token token);
 
     /// Print the provided @a node to the internal buffer.
     /// @return a reference to this object, to allow chaining additional method calls.

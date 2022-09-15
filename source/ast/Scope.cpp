@@ -48,6 +48,8 @@ public:
 
 namespace slang::ast {
 
+using namespace parsing;
+
 static size_t countMembers(const SyntaxNode& syntax);
 
 Scope::Scope(Compilation& compilation_, const Symbol* thisSym_) :

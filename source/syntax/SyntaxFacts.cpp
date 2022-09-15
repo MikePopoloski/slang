@@ -491,7 +491,7 @@ SyntaxKind SyntaxFacts::getModuleDeclarationKind(TokenKind kind) {
     }
 }
 
-TokenKind SyntaxFacts::getModuleEndKind(TokenKind kind) {
+parsing::TokenKind SyntaxFacts::getModuleEndKind(TokenKind kind) {
     switch (kind) {
         case TokenKind::ModuleKeyword: return TokenKind::EndModuleKeyword;
         case TokenKind::MacromoduleKeyword: return TokenKind::EndModuleKeyword;
@@ -502,7 +502,7 @@ TokenKind SyntaxFacts::getModuleEndKind(TokenKind kind) {
     }
 }
 
-TokenKind SyntaxFacts::getDelimCloseKind(TokenKind kind) {
+parsing::TokenKind SyntaxFacts::getDelimCloseKind(TokenKind kind) {
     switch (kind) {
         case TokenKind::OpenParenthesis: return TokenKind::CloseParenthesis;
         case TokenKind::OpenBrace: return TokenKind::CloseBrace;
@@ -513,7 +513,7 @@ TokenKind SyntaxFacts::getDelimCloseKind(TokenKind kind) {
     }
 }
 
-TokenKind SyntaxFacts::getSkipToKind(TokenKind kind) {
+parsing::TokenKind SyntaxFacts::getSkipToKind(TokenKind kind) {
     switch (kind) {
         case TokenKind::OpenParenthesis: return TokenKind::CloseParenthesis;
         case TokenKind::OpenBrace: return TokenKind::CloseBrace;

@@ -114,6 +114,8 @@ const Type& createPackedDims(const ASTContext& context, const Type* type,
 
 namespace slang::ast {
 
+using namespace parsing;
+
 const ErrorType ErrorType::Instance;
 
 IntegralType::IntegralType(SymbolKind kind, string_view name, SourceLocation loc,

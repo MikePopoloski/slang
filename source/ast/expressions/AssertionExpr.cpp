@@ -43,6 +43,8 @@ struct AdmitsEmptyVisitor {
 
 namespace slang::ast {
 
+using namespace parsing;
+
 static const Expression& bindExpr(const ExpressionSyntax& syntax, const ASTContext& context,
                                   bool allowInstances = false) {
     auto& expr = Expression::bind(syntax, context, ASTFlags::AssertionExpr);

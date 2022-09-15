@@ -9,7 +9,7 @@
 #include "slang/parsing/LexerFacts.h"
 #include "slang/parsing/Parser.h"
 
-namespace slang {
+namespace slang::parsing {
 
 StatementSyntax& Parser::parseStatement(bool allowEmpty, bool allowSuperNew) {
     auto dg = setDepthGuard();
@@ -1009,4 +1009,4 @@ void Parser::checkEmptyBody(const SyntaxNode& syntax, Token prevToken, string_vi
     addDiag(diag::EmptyBody, ess.semicolon.location()) << syntaxName;
 }
 
-} // namespace slang
+} // namespace slang::parsing
