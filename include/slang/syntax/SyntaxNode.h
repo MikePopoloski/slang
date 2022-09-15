@@ -40,10 +40,6 @@ struct TokenOrSyntaxBase : public std::variant<Token, TNode> {
 
     /// Gets access to the object as a syntax node (throwing an exception
     /// if it's not actually a syntax node).
-    TNode node() { return std::get<1>(*this); }
-
-    /// Gets access to the object as a syntax node (throwing an exception
-    /// if it's not actually a syntax node).
     TNode node() const { return std::get<1>(*this); }
 
 protected:
