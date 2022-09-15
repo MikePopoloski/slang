@@ -40,6 +40,10 @@ struct TokenOrSyntaxBase : public std::variant<Token, TNode> {
 
     /// Gets access to the object as a syntax node (throwing an exception
     /// if it's not actually a syntax node).
+    TNode node() { return std::get<1>(*this); }
+
+    /// Gets access to the object as a syntax node (throwing an exception
+    /// if it's not actually a syntax node).
     TNode node() const { return std::get<1>(*this); }
 
 protected:
@@ -83,6 +87,10 @@ public:
     /// Gets the child syntax node at the specified index. If the child at
     /// the given index is not a node (probably a token) then this returns null.
     const SyntaxNode* childNode(size_t index) const;
+
+    /// Gets the child syntax node at the specified index. If the child at
+    /// the given index is not a node (probably a token) then this returns null.
+    SyntaxNode* childNode(size_t index);
 
     /// Gets the child token at the specified index. If the child at
     /// the given index is not a token (probably a node) then this returns
@@ -128,6 +136,7 @@ protected:
 
 private:
     ConstTokenOrSyntax getChild(size_t index) const;
+    TokenOrSyntax getChild(size_t index);
 };
 
 /// A base class for syntax nodes that represent a list of items.
