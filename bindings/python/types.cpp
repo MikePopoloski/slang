@@ -5,11 +5,11 @@
 //------------------------------------------------------------------------------
 #include "pyslang.h"
 
+#include "slang/ast/types/AllTypes.h"
+#include "slang/ast/types/DeclaredType.h"
+#include "slang/ast/types/NetType.h"
+#include "slang/ast/types/TypePrinter.h"
 #include "slang/syntax/AllSyntax.h"
-#include "slang/types/AllTypes.h"
-#include "slang/types/DeclaredType.h"
-#include "slang/types/NetType.h"
-#include "slang/types/TypePrinter.h"
 
 void registerTypes(py::module_& m) {
     py::enum_<IntegralFlags>(m, "IntegralFlags")

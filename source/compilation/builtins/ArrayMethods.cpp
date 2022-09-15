@@ -5,12 +5,12 @@
 // SPDX-FileCopyrightText: Michael Popoloski
 // SPDX-License-Identifier: MIT
 //------------------------------------------------------------------------------
-#include "slang/binding/MiscExpressions.h"
-#include "slang/binding/SystemSubroutine.h"
+#include "slang/ast/SystemSubroutine.h"
+#include "slang/ast/expressions/MiscExpressions.h"
+#include "slang/ast/symbols/VariableSymbols.h"
 #include "slang/compilation/Compilation.h"
 #include "slang/diagnostics/ConstEvalDiags.h"
 #include "slang/diagnostics/SysFuncsDiags.h"
-#include "slang/symbols/VariableSymbols.h"
 #include "slang/util/Function.h"
 
 namespace slang::Builtins {

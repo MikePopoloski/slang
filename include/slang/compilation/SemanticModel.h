@@ -7,11 +7,11 @@
 //------------------------------------------------------------------------------
 #pragma once
 
-#include "slang/symbols/BlockSymbols.h"
-#include "slang/symbols/CompilationUnitSymbols.h"
-#include "slang/symbols/InstanceSymbols.h"
-#include "slang/symbols/SubroutineSymbols.h"
-#include "slang/types/AllTypes.h"
+#include "slang/ast/symbols/BlockSymbols.h"
+#include "slang/ast/symbols/CompilationUnitSymbols.h"
+#include "slang/ast/symbols/InstanceSymbols.h"
+#include "slang/ast/symbols/SubroutineSymbols.h"
+#include "slang/ast/types/AllTypes.h"
 #include "slang/util/Hash.h"
 
 namespace slang {

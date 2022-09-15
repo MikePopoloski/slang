@@ -7,17 +7,17 @@
 
 #include "pyslang.h"
 
-#include "slang/binding/SystemSubroutine.h"
+#include "slang/ast/SystemSubroutine.h"
+#include "slang/ast/symbols/AttributeSymbol.h"
+#include "slang/ast/symbols/CompilationUnitSymbols.h"
+#include "slang/ast/types/NetType.h"
 #include "slang/compilation/Definition.h"
 #include "slang/compilation/ScriptSession.h"
 #include "slang/diagnostics/TextDiagnosticClient.h"
 #include "slang/driver/Driver.h"
-#include "slang/symbols/AttributeSymbol.h"
-#include "slang/symbols/CompilationUnitSymbols.h"
 #include "slang/syntax/AllSyntax.h"
 #include "slang/syntax/SyntaxTree.h"
 #include "slang/text/SourceManager.h"
-#include "slang/types/NetType.h"
 
 void registerCompilation(py::module_& m) {
     EXPOSE_ENUM(m, VariableLifetime);

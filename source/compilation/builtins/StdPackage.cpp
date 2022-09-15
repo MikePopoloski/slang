@@ -5,14 +5,14 @@
 // SPDX-FileCopyrightText: Michael Popoloski
 // SPDX-License-Identifier: MIT
 //------------------------------------------------------------------------------
+#include "slang/ast/symbols/ClassSymbols.h"
+#include "slang/ast/symbols/CompilationUnitSymbols.h"
+#include "slang/ast/symbols/MemberSymbols.h"
+#include "slang/ast/symbols/ParameterSymbols.h"
+#include "slang/ast/symbols/SubroutineSymbols.h"
+#include "slang/ast/symbols/SymbolBuilders.h"
+#include "slang/ast/types/AllTypes.h"
 #include "slang/compilation/Compilation.h"
-#include "slang/symbols/ClassSymbols.h"
-#include "slang/symbols/CompilationUnitSymbols.h"
-#include "slang/symbols/MemberSymbols.h"
-#include "slang/symbols/ParameterSymbols.h"
-#include "slang/symbols/SubroutineSymbols.h"
-#include "slang/symbols/SymbolBuilders.h"
-#include "slang/types/AllTypes.h"
 
 namespace slang::Builtins {
 

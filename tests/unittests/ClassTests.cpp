@@ -3,12 +3,12 @@
 
 #include "Test.h"
 
-#include "slang/binding/Expression.h"
-#include "slang/symbols/ClassSymbols.h"
-#include "slang/symbols/CompilationUnitSymbols.h"
-#include "slang/symbols/InstanceSymbols.h"
-#include "slang/symbols/ParameterSymbols.h"
-#include "slang/symbols/SubroutineSymbols.h"
+#include "slang/ast/Expression.h"
+#include "slang/ast/symbols/ClassSymbols.h"
+#include "slang/ast/symbols/CompilationUnitSymbols.h"
+#include "slang/ast/symbols/InstanceSymbols.h"
+#include "slang/ast/symbols/ParameterSymbols.h"
+#include "slang/ast/symbols/SubroutineSymbols.h"
 #include "slang/syntax/AllSyntax.h"
 
 static constexpr const char* PacketClass = R"(

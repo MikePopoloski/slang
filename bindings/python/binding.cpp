@@ -5,7 +5,7 @@
 //------------------------------------------------------------------------------
 #include "pyslang.h"
 
-#include "slang/binding/SystemSubroutine.h"
+#include "slang/ast/SystemSubroutine.h"
 #include "slang/compilation/Compilation.h"
 #include "slang/syntax/AllSyntax.h"
 

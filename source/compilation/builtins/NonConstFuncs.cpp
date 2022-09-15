@@ -5,11 +5,11 @@
 // SPDX-FileCopyrightText: Michael Popoloski
 // SPDX-License-Identifier: MIT
 //------------------------------------------------------------------------------
-#include "slang/binding/SystemSubroutine.h"
+#include "slang/ast/ASTVisitor.h"
+#include "slang/ast/SystemSubroutine.h"
+#include "slang/ast/symbols/MemberSymbols.h"
 #include "slang/compilation/Compilation.h"
 #include "slang/diagnostics/SysFuncsDiags.h"
-#include "slang/symbols/ASTVisitor.h"
-#include "slang/symbols/MemberSymbols.h"
 
 namespace slang::Builtins {
 

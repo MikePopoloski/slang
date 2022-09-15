@@ -3,11 +3,11 @@
 
 #include "Test.h"
 
-#include "slang/binding/Expression.h"
-#include "slang/symbols/CompilationUnitSymbols.h"
-#include "slang/symbols/ParameterSymbols.h"
+#include "slang/ast/Expression.h"
+#include "slang/ast/symbols/CompilationUnitSymbols.h"
+#include "slang/ast/symbols/ParameterSymbols.h"
+#include "slang/ast/types/Type.h"
 #include "slang/syntax/AllSyntax.h"
-#include "slang/types/Type.h"
 
 TEST_CASE("I/O system tasks") {
     auto tree = SyntaxTree::fromText(R"(

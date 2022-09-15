@@ -5,8 +5,8 @@
 // SPDX-FileCopyrightText: Michael Popoloski
 // SPDX-License-Identifier: MIT
 //------------------------------------------------------------------------------
+#include "slang/ast/symbols/MemberSymbols.h"
 #include "slang/compilation/Compilation.h"
-#include "slang/symbols/MemberSymbols.h"
 
 namespace slang::Builtins {
 

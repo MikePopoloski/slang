@@ -5,17 +5,17 @@
 //------------------------------------------------------------------------------
 #include "pyslang.h"
 
-#include "slang/binding/SystemSubroutine.h"
+#include "slang/ast/Scope.h"
+#include "slang/ast/Symbol.h"
+#include "slang/ast/SystemSubroutine.h"
+#include "slang/ast/symbols/AttributeSymbol.h"
+#include "slang/ast/symbols/CompilationUnitSymbols.h"
+#include "slang/ast/symbols/InstanceSymbols.h"
+#include "slang/ast/types/DeclaredType.h"
+#include "slang/ast/types/NetType.h"
 #include "slang/compilation/Compilation.h"
 #include "slang/compilation/Definition.h"
-#include "slang/symbols/AttributeSymbol.h"
-#include "slang/symbols/CompilationUnitSymbols.h"
-#include "slang/symbols/InstanceSymbols.h"
-#include "slang/symbols/Scope.h"
-#include "slang/symbols/Symbol.h"
 #include "slang/syntax/AllSyntax.h"
-#include "slang/types/DeclaredType.h"
-#include "slang/types/NetType.h"
 
 void registerSymbols(py::module_& m) {
     EXPOSE_ENUM(m, SymbolKind);

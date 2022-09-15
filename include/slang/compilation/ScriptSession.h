@@ -7,7 +7,7 @@
 //------------------------------------------------------------------------------
 #pragma once
 
-#include "slang/binding/EvalContext.h"
+#include "slang/ast/EvalContext.h"
 #include "slang/compilation/Compilation.h"
 #include "slang/syntax/SyntaxTree.h"
 

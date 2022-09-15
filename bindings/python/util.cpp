@@ -5,6 +5,7 @@
 //------------------------------------------------------------------------------
 #include "pyslang.h"
 
+#include "slang/ast/Symbol.h"
 #include "slang/compilation/Compilation.h"
 #include "slang/diagnostics/DiagnosticClient.h"
 #include "slang/diagnostics/DiagnosticEngine.h"
@@ -13,7 +14,6 @@
 #include "slang/parsing/Lexer.h"
 #include "slang/parsing/Parser.h"
 #include "slang/parsing/Preprocessor.h"
-#include "slang/symbols/Symbol.h"
 #include "slang/text/SourceLocation.h"
 #include "slang/text/SourceManager.h"
 #include "slang/util/Bag.h"

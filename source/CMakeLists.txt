@@ -148,25 +148,48 @@ target_link_libraries(slangparser PUBLIC slangcore)
 # -------- Compiler library
 add_library(
   slangcompiler
-  binding/AssertionExpr.cpp
-  binding/AssignmentExpressions.cpp
-  binding/Bitstream.cpp
-  binding/CallExpression.cpp
-  binding/Constraints.cpp
-  binding/BindContext.cpp
-  binding/EvalContext.cpp
-  binding/Expression.cpp
-  binding/FormatHelpers.cpp
-  binding/LiteralExpressions.cpp
-  binding/Lookup.cpp
-  binding/LValue.cpp
-  binding/MiscExpressions.cpp
-  binding/OperatorExpressions.cpp
-  binding/Patterns.cpp
-  binding/SelectExpressions.cpp
-  binding/Statements.cpp
-  binding/SystemSubroutine.cpp
-  binding/TimingControl.cpp
+  ast/expressions/AssertionExpr.cpp
+  ast/expressions/AssignmentExpressions.cpp
+  ast/expressions/CallExpression.cpp
+  ast/expressions/LiteralExpressions.cpp
+  ast/expressions/MiscExpressions.cpp
+  ast/expressions/OperatorExpressions.cpp
+  ast/expressions/SelectExpressions.cpp
+  ast/symbols/AttributeSymbol.cpp
+  ast/symbols/BlockSymbols.cpp
+  ast/symbols/ClassSymbols.cpp
+  ast/symbols/CompilationUnitSymbols.cpp
+  ast/symbols/CoverSymbols.cpp
+  ast/symbols/InstanceSymbols.cpp
+  ast/symbols/MemberSymbols.cpp
+  ast/symbols/ParameterBuilder.cpp
+  ast/symbols/ParameterSymbols.cpp
+  ast/symbols/PortSymbols.cpp
+  ast/symbols/SubroutineSymbols.cpp
+  ast/symbols/SymbolBuilders.cpp
+  ast/symbols/ValueSymbol.cpp
+  ast/symbols/VariableSymbols.cpp
+  ast/types/AllTypes.cpp
+  ast/types/DeclaredType.cpp
+  ast/types/NetType.cpp
+  ast/types/TypePrinter.cpp
+  ast/types/Type.cpp
+  ast/ASTSerializer.cpp
+  ast/Bitstream.cpp
+  ast/Constraints.cpp
+  ast/BindContext.cpp
+  ast/EvalContext.cpp
+  ast/Expression.cpp
+  ast/FormatHelpers.cpp
+  ast/Lookup.cpp
+  ast/LValue.cpp
+  ast/Patterns.cpp
+  ast/Scope.cpp
+  ast/SemanticFacts.cpp
+  ast/Statements.cpp
+  ast/Symbol.cpp
+  ast/SystemSubroutine.cpp
+  ast/TimingControl.cpp
   compilation/builtins/ArrayMethods.cpp
   compilation/builtins/ConversionFuncs.cpp
   compilation/builtins/CoverageFuncs.cpp
@@ -183,30 +206,7 @@ add_library(
   compilation/Definition.cpp
   compilation/ScriptSession.cpp
   compilation/SemanticModel.cpp
-  driver/Driver.cpp
-  symbols/ASTSerializer.cpp
-  symbols/AttributeSymbol.cpp
-  symbols/BlockSymbols.cpp
-  symbols/ClassSymbols.cpp
-  symbols/CompilationUnitSymbols.cpp
-  symbols/CoverSymbols.cpp
-  symbols/InstanceSymbols.cpp
-  symbols/MemberSymbols.cpp
-  symbols/ParameterBuilder.cpp
-  symbols/ParameterSymbols.cpp
-  symbols/PortSymbols.cpp
-  symbols/Scope.cpp
-  symbols/SemanticFacts.cpp
-  symbols/SubroutineSymbols.cpp
-  symbols/Symbol.cpp
-  symbols/SymbolBuilders.cpp
-  symbols/ValueSymbol.cpp
-  symbols/VariableSymbols.cpp
-  types/AllTypes.cpp
-  types/DeclaredType.cpp
-  types/NetType.cpp
-  types/TypePrinter.cpp
-  types/Type.cpp)
+  driver/Driver.cpp)
 slang_define_lib(slangcompiler)
 add_dependencies(slangcompiler slangparser)
 target_link_libraries(slangcompiler PUBLIC slangparser)

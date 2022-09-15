@@ -9,7 +9,8 @@
 
 #include "ElabVisitors.h"
 
-#include "slang/binding/SystemSubroutine.h"
+#include "slang/ast/SystemSubroutine.h"
+#include "slang/ast/types/TypePrinter.h"
 #include "slang/compilation/Definition.h"
 #include "slang/compilation/ScriptSession.h"
 #include "slang/diagnostics/DiagnosticEngine.h"
@@ -20,7 +21,6 @@
 #include "slang/syntax/SyntaxTree.h"
 #include "slang/text/CharInfo.h"
 #include "slang/text/SourceManager.h"
-#include "slang/types/TypePrinter.h"
 
 namespace slang::Builtins {
 

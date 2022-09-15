@@ -8,6 +8,8 @@
 //------------------------------------------------------------------------------
 #include "slang/driver/Driver.h"
 
+#include "slang/ast/symbols/CompilationUnitSymbols.h"
+#include "slang/ast/symbols/InstanceSymbols.h"
 #include "slang/diagnostics/DeclarationsDiags.h"
 #include "slang/diagnostics/ExpressionsDiags.h"
 #include "slang/diagnostics/LookupDiags.h"
@@ -16,8 +18,6 @@
 #include "slang/diagnostics/TextDiagnosticClient.h"
 #include "slang/parsing/Parser.h"
 #include "slang/parsing/Preprocessor.h"
-#include "slang/symbols/CompilationUnitSymbols.h"
-#include "slang/symbols/InstanceSymbols.h"
 #include "slang/syntax/SyntaxPrinter.h"
 #include "slang/syntax/SyntaxTree.h"
 

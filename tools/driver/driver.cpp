@@ -10,9 +10,9 @@
 #include <fstream>
 #include <iostream>
 
+#include "slang/ast/ASTSerializer.h"
+#include "slang/ast/symbols/CompilationUnitSymbols.h"
 #include "slang/diagnostics/TextDiagnosticClient.h"
-#include "slang/symbols/ASTSerializer.h"
-#include "slang/symbols/CompilationUnitSymbols.h"
 #include "slang/syntax/SyntaxTree.h"
 #include "slang/text/Json.h"
 #include "slang/util/Version.h"

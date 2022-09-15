@@ -3,16 +3,16 @@
 
 #include "Test.h"
 
-#include "slang/binding/AssignmentExpressions.h"
-#include "slang/binding/MiscExpressions.h"
+#include "slang/ast/expressions/AssignmentExpressions.h"
+#include "slang/ast/expressions/MiscExpressions.h"
+#include "slang/ast/symbols/BlockSymbols.h"
+#include "slang/ast/symbols/CompilationUnitSymbols.h"
+#include "slang/ast/symbols/InstanceSymbols.h"
+#include "slang/ast/symbols/ParameterSymbols.h"
+#include "slang/ast/symbols/VariableSymbols.h"
+#include "slang/ast/types/Type.h"
 #include "slang/compilation/Compilation.h"
-#include "slang/symbols/BlockSymbols.h"
-#include "slang/symbols/CompilationUnitSymbols.h"
-#include "slang/symbols/InstanceSymbols.h"
-#include "slang/symbols/ParameterSymbols.h"
-#include "slang/symbols/VariableSymbols.h"
 #include "slang/syntax/SyntaxTree.h"
-#include "slang/types/Type.h"
 
 TEST_CASE("Explicit import lookup") {
     auto tree = SyntaxTree::fromText(R"(

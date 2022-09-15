@@ -11,7 +11,7 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 
-#include "slang/symbols/ASTVisitor.h"
+#include "slang/ast/ASTVisitor.h"
 #include "slang/syntax/SyntaxNode.h"
 #include "slang/util/Enum.h"
 #include "slang/util/Hash.h"

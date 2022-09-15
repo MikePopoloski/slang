@@ -3,10 +3,10 @@
 
 #include "Test.h"
 
-#include "slang/symbols/BlockSymbols.h"
-#include "slang/symbols/CompilationUnitSymbols.h"
-#include "slang/symbols/InstanceSymbols.h"
-#include "slang/symbols/ParameterSymbols.h"
+#include "slang/ast/symbols/BlockSymbols.h"
+#include "slang/ast/symbols/CompilationUnitSymbols.h"
+#include "slang/ast/symbols/InstanceSymbols.h"
+#include "slang/ast/symbols/ParameterSymbols.h"
 #include "slang/text/SourceManager.h"
 
 TEST_CASE("Finding top level") {

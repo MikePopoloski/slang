@@ -1,0 +1,1256 @@
+//------------------------------------------------------------------------------
+// AllTypes.cpp
+// All type symbol definitions
+//
+// SPDX-FileCopyrightText: Michael Popoloski
+// SPDX-License-Identifier: MIT
+//------------------------------------------------------------------------------
+#include "slang/ast/types/AllTypes.h"
+
+#include "slang/ast/ASTSerializer.h"
+#include "slang/ast/BindContext.h"
+#include "slang/ast/Expression.h"
+#include "slang/ast/symbols/ClassSymbols.h"
+#include "slang/ast/symbols/InstanceSymbols.h"
+#include "slang/ast/symbols/MemberSymbols.h"
+#include "slang/ast/symbols/VariableSymbols.h"
+#include "slang/compilation/Compilation.h"
+#include "slang/diagnostics/ConstEvalDiags.h"
+#include "slang/diagnostics/DeclarationsDiags.h"
+#include "slang/diagnostics/LookupDiags.h"
+#include "slang/diagnostics/TypesDiags.h"
+#include "slang/syntax/AllSyntax.h"
+#include "slang/util/StackContainer.h"
+
+namespace {
+
+using namespace slang;
+
+// clang-format off
+bitwidth_t getWidth(PredefinedIntegerType::Kind kind) {
+    switch (kind) {
+        case PredefinedIntegerType::ShortInt: return 16;
+        case PredefinedIntegerType::Int: return 32;
+        case PredefinedIntegerType::LongInt: return 64;
+        case PredefinedIntegerType::Byte: return 8;
+        case PredefinedIntegerType::Integer: return 32;
+        case PredefinedIntegerType::Time: return 64;
+        default: ASSUME_UNREACHABLE;
+    }
+}
+
+bool getSigned(PredefinedIntegerType::Kind kind) {
+    switch (kind) {
+        case PredefinedIntegerType::ShortInt: return true;
+        case PredefinedIntegerType::Int: return true;
+        case PredefinedIntegerType::LongInt: return true;
+        case PredefinedIntegerType::Byte: return true;
+        case PredefinedIntegerType::Integer: return true;
+        case PredefinedIntegerType::Time: return false;
+        default: ASSUME_UNREACHABLE;
+    }
+}
+
+bool getFourState(PredefinedIntegerType::Kind kind) {
+    switch (kind) {
+        case PredefinedIntegerType::ShortInt: return false;
+        case PredefinedIntegerType::Int: return false;
+        case PredefinedIntegerType::LongInt: return false;
+        case PredefinedIntegerType::Byte: return false;
+        case PredefinedIntegerType::Integer: return true;
+        case PredefinedIntegerType::Time: return true;
+        default: ASSUME_UNREACHABLE;
+    }
+}
+
+string_view getName(PredefinedIntegerType::Kind kind) {
+    switch (kind) {
+        case PredefinedIntegerType::ShortInt: return "shortint"sv;
+        case PredefinedIntegerType::Int: return "int"sv;
+        case PredefinedIntegerType::LongInt: return "longint"sv;
+        case PredefinedIntegerType::Byte: return "byte"sv;
+        case PredefinedIntegerType::Integer: return "integer"sv;
+        case PredefinedIntegerType::Time: return "time"sv;
+        default: ASSUME_UNREACHABLE;
+    }
+}
+
+string_view getName(ScalarType::Kind kind) {
+    switch (kind) {
+        case ScalarType::Bit: return "bit"sv;
+        case ScalarType::Logic: return "logic"sv;
+        case ScalarType::Reg: return "reg"sv;
+        default: ASSUME_UNREACHABLE;
+    }
+}
+
+string_view getName(FloatingType::Kind kind) {
+    switch (kind) {
+        case FloatingType::Real: return "real"sv;
+        case FloatingType::ShortReal: return "shortreal"sv;
+        case FloatingType::RealTime: return "realtime"sv;
+        default: ASSUME_UNREACHABLE;
+    }
+}
+// clang-format on
+
+const Type& createPackedDims(const BindContext& context, const Type* type,
+                             const SyntaxList<VariableDimensionSyntax>& dimensions) {
+    size_t count = dimensions.size();
+    for (size_t i = 0; i < count; i++) {
+        auto& dimSyntax = *dimensions[count - i - 1];
+        auto dim = context.evalPackedDimension(dimSyntax);
+        if (!dim)
+            return context.getCompilation().getErrorType();
+
+        type = &PackedArrayType::fromSyntax(*context.scope, *type, *dim, dimSyntax);
+    }
+
+    return *type;
+}
+
+} // namespace
+
+namespace slang {
+
+const ErrorType ErrorType::Instance;
+
+IntegralType::IntegralType(SymbolKind kind, string_view name, SourceLocation loc,
+                           bitwidth_t bitWidth_, bool isSigned_, bool isFourState_) :
+    Type(kind, name, loc),
+    bitWidth(bitWidth_), isSigned(isSigned_), isFourState(isFourState_) {
+}
+
+bool IntegralType::isKind(SymbolKind kind) {
+    switch (kind) {
+        case SymbolKind::PredefinedIntegerType:
+        case SymbolKind::ScalarType:
+        case SymbolKind::EnumType:
+        case SymbolKind::PackedArrayType:
+        case SymbolKind::PackedStructType:
+        case SymbolKind::PackedUnionType:
+            return true;
+        default:
+            return false;
+    }
+}
+
+ConstantRange IntegralType::getBitVectorRange() const {
+    if (kind == SymbolKind::PackedArrayType)
+        return as<PackedArrayType>().range;
+
+    return {int32_t(bitWidth - 1), 0};
+}
+
+bool IntegralType::isDeclaredReg() const {
+    const Type* type = this;
+    while (type->kind == SymbolKind::PackedArrayType)
+        type = &type->as<PackedArrayType>().elementType.getCanonicalType();
+
+    if (type->isScalar())
+        return type->as<ScalarType>().scalarKind == ScalarType::Reg;
+
+    return false;
+}
+
+const Type& IntegralType::fromSyntax(Compilation& compilation, SyntaxKind integerKind,
+                                     span<const VariableDimensionSyntax* const> dimensions,
+                                     bool isSigned, const BindContext& context) {
+    // This is a simple integral vector (possibly of just one element).
+    SmallVectorSized<std::pair<ConstantRange, const SyntaxNode*>, 4> dims;
+    for (auto dimSyntax : dimensions) {
+        auto dim = context.evalPackedDimension(*dimSyntax);
+        if (!dim)
+            return compilation.getErrorType();
+
+        dims.emplace(*dim, dimSyntax);
+    }
+
+    if (dims.empty())
+        return getPredefinedType(compilation, integerKind, isSigned);
+
+    bitmask<IntegralFlags> flags;
+    if (integerKind == SyntaxKind::RegType)
+        flags |= IntegralFlags::Reg;
+    if (isSigned)
+        flags |= IntegralFlags::Signed;
+    if (integerKind != SyntaxKind::BitType)
+        flags |= IntegralFlags::FourState;
+
+    if (dims.size() == 1 && dims[0].first.right == 0 && dims[0].first.left >= 0) {
+        // if we have the common case of only one dimension and lsb == 0
+        // then we can use the shared representation
+        return compilation.getType(dims[0].first.width(), flags);
+    }
+
+    const Type* result = &compilation.getScalarType(flags);
+    size_t count = dims.size();
+    for (size_t i = 0; i < count; i++) {
+        auto& pair = dims[count - i - 1];
+        result = &PackedArrayType::fromSyntax(*context.scope, *result, pair.first, *pair.second);
+    }
+
+    return *result;
+}
+
+const Type& IntegralType::fromSyntax(Compilation& compilation, const IntegerTypeSyntax& syntax,
+                                     const BindContext& context) {
+    return fromSyntax(compilation, syntax.kind, syntax.dimensions,
+                      syntax.signing.kind == TokenKind::SignedKeyword, context);
+}
+
+ConstantValue IntegralType::getDefaultValueImpl() const {
+    if (isEnum())
+        return as<EnumType>().baseType.getDefaultValue();
+
+    if (isFourState)
+        return SVInt::createFillX(bitWidth, isSigned);
+    else
+        return SVInt(bitWidth, 0, isSigned);
+}
+
+PredefinedIntegerType::PredefinedIntegerType(Kind integerKind) :
+    PredefinedIntegerType(integerKind, getSigned(integerKind)) {
+}
+
+PredefinedIntegerType::PredefinedIntegerType(Kind integerKind, bool isSigned) :
+    IntegralType(SymbolKind::PredefinedIntegerType, getName(integerKind), SourceLocation(),
+                 getWidth(integerKind), isSigned, getFourState(integerKind)),
+    integerKind(integerKind) {
+}
+
+bool PredefinedIntegerType::isDefaultSigned(Kind integerKind) {
+    return getSigned(integerKind);
+}
+
+ScalarType::ScalarType(Kind scalarKind) : ScalarType(scalarKind, false) {
+}
+
+ScalarType::ScalarType(Kind scalarKind, bool isSigned) :
+    IntegralType(SymbolKind::ScalarType, getName(scalarKind), SourceLocation(), 1, isSigned,
+                 scalarKind != Kind::Bit),
+    scalarKind(scalarKind) {
+}
+
+FloatingType::FloatingType(Kind floatKind_) :
+    Type(SymbolKind::FloatingType, getName(floatKind_), SourceLocation()), floatKind(floatKind_) {
+}
+
+ConstantValue FloatingType::getDefaultValueImpl() const {
+    if (floatKind == ShortReal)
+        return shortreal_t(0.0f);
+
+    return real_t(0.0);
+}
+
+EnumType::EnumType(Compilation& compilation, SourceLocation loc, const Type& baseType_,
+                   const BindContext& context) :
+    IntegralType(SymbolKind::EnumType, "", loc, baseType_.getBitWidth(), baseType_.isSigned(),
+                 baseType_.isFourState()),
+    Scope(compilation, this), baseType(baseType_), systemId(compilation.getNextEnumSystemId()) {
+
+    // Enum types don't live as members of the parent scope (they're "owned" by the declaration
+    // containing them) but we hook up the parent pointer so that it can participate in name
+    // lookups.
+    setParent(*context.scope, context.lookupIndex);
+}
+
+static void checkEnumRange(const BindContext& context, const VariableDimensionSyntax& syntax) {
+    auto checkExpr = [&](const ExpressionSyntax& expr) {
+        if (expr.kind != SyntaxKind::IntegerLiteralExpression &&
+            expr.kind != SyntaxKind::IntegerVectorExpression) {
+            context.addDiag(diag::EnumRangeLiteral, expr.sourceRange());
+        }
+    };
+
+    ASSERT(syntax.specifier && syntax.specifier->kind == SyntaxKind::RangeDimensionSpecifier);
+    auto& sel = *syntax.specifier->as<RangeDimensionSpecifierSyntax>().selector;
+    if (sel.kind == SyntaxKind::BitSelect) {
+        auto& expr = *sel.as<BitSelectSyntax>().expr;
+        checkExpr(expr);
+    }
+    else if (sel.kind == SyntaxKind::SimpleRangeSelect) {
+        auto& range = sel.as<RangeSelectSyntax>();
+        checkExpr(*range.left);
+        checkExpr(*range.right);
+    }
+}
+
+const Type& EnumType::fromSyntax(Compilation& compilation, const EnumTypeSyntax& syntax,
+                                 const BindContext& context, const Type* typedefTarget) {
+    const Type* base;
+    const Type* cb;
+    bitwidth_t bitWidth;
+
+    if (!syntax.baseType) {
+        // If no explicit base type is specified we default to an int.
+        base = &compilation.getIntType();
+        cb = base;
+        bitWidth = cb->getBitWidth();
+    }
+    else {
+        base = &compilation.getType(*syntax.baseType, context);
+        cb = &base->getCanonicalType();
+        if (cb->isError())
+            return *cb;
+
+        // Error if the named type is invalid for an enum base type. Other invalid types
+        // will have been diagnosed already by the parser.
+        if (!cb->isSimpleBitVector() && syntax.baseType->kind == SyntaxKind::NamedType) {
+            context.addDiag(diag::InvalidEnumBase, syntax.baseType->getFirstToken().location())
+                << *base;
+            return compilation.getErrorType();
+        }
+
+        bitWidth = cb->getBitWidth();
+        ASSERT(bitWidth);
+    }
+
+    SVInt allOnes(bitWidth, 0, cb->isSigned());
+    allOnes.setAllOnes();
+
+    SVInt one(bitWidth, 1, cb->isSigned());
+    ConstantValue previous;
+    SourceRange previousRange;
+    bool first = true;
+
+    auto resultType = compilation.emplace<EnumType>(compilation, syntax.keyword.location(), *base,
+                                                    context);
+    resultType->setSyntax(syntax);
+
+    // Enum values must be unique; this set and lambda are used to check that.
+    SmallMap<SVInt, SourceLocation, 8> usedValues;
+    auto checkValue = [&usedValues, &context](const ConstantValue& cv, SourceLocation loc) {
+        if (!cv)
+            return;
+
+        auto& value = cv.integer();
+        auto pair = usedValues.emplace(value, loc);
+        if (!pair.second) {
+            auto& diag = context.addDiag(diag::EnumValueDuplicate, loc) << value;
+            diag.addNote(diag::NotePreviousDefinition, pair.first->second);
+        }
+    };
+
+    // For enumerands that have an initializer, set it up appropriately.
+    auto setInitializer = [&](EnumValueSymbol& ev, const EqualsValueClauseSyntax& initializer) {
+        ev.setInitializerSyntax(*initializer.expr, initializer.equals.location());
+
+        first = false;
+        previous = ev.getValue();
+        previousRange = ev.getInitializer()->sourceRange;
+
+        if (!previous)
+            return;
+
+        auto loc = previousRange.start();
+        auto& value = previous.integer(); // checkEnumInitializer ensures previous is integral
+
+        // An enumerated name with x or z assignments assigned to an enum with no explicit data type
+        // or an explicit 2-state declaration shall be a syntax error.
+        if (!base->isFourState() && value.hasUnknown()) {
+            context.addDiag(diag::EnumValueUnknownBits, loc) << value << *base;
+            ev.setValue(nullptr);
+            previous = nullptr;
+            return;
+        }
+
+        // Any enumeration encoding value that is outside the representable range of the enum base
+        // type shall be an error. For an unsigned base type, this occurs if the cast truncates the
+        // value and any of the discarded bits are nonzero. For a signed base type, this occurs if
+        // the cast truncates the value and any of the discarded bits are not equal to the sign bit
+        // of the result.
+        if (value.getBitWidth() > bitWidth) {
+            bool good = true;
+            if (!base->isSigned()) {
+                good = exactlyEqual(value[int32_t(bitWidth)], logic_t(false)) &&
+                       value.isSignExtendedFrom(bitWidth);
+            }
+            else {
+                good = value.isSignExtendedFrom(bitWidth - 1);
+            }
+
+            if (!good) {
+                context.addDiag(diag::EnumValueOutOfRange, loc) << value << *base;
+                ev.setValue(nullptr);
+                previous = nullptr;
+                return;
+            }
+        }
+
+        // Implicit casting to base type to ensure value matches the underlying type.
+        if (value.getBitWidth() != bitWidth) {
+            auto cv = previous.convertToInt(bitWidth, base->isSigned(), base->isFourState());
+            ev.setValue(cv);
+            previous = std::move(cv);
+        }
+        else {
+            if (!base->isFourState())
+                value.flattenUnknowns();
+            value.setSigned(base->isSigned());
+        }
+
+        checkValue(previous, loc);
+    };
+
+    // For enumerands that have no initializer, infer the value via this function.
+    auto inferValue = [&](EnumValueSymbol& ev, SourceRange range) {
+        auto loc = range.start();
+        SVInt value;
+        if (first) {
+            value = SVInt(bitWidth, 0, cb->isSigned());
+            first = false;
+        }
+        else if (!previous) {
+            return;
+        }
+        else {
+            auto& prev = previous.integer();
+            if (prev.hasUnknown()) {
+                auto& diag = context.addDiag(diag::EnumIncrementUnknown, loc);
+                diag << prev << *base << previousRange;
+                previous = nullptr;
+                return;
+            }
+            else if (prev == allOnes) {
+                auto& diag = context.addDiag(diag::EnumValueOverflow, loc);
+                diag << prev << *base << previousRange;
+                previous = nullptr;
+                return;
+            }
+
+            value = prev + one;
+        }
+
+        checkValue(value, loc);
+
+        ev.setValue(value);
+        previous = std::move(value);
+        previousRange = range;
+    };
+
+    for (auto member : syntax.members) {
+        if (member->dimensions.empty()) {
+            auto& ev = EnumValueSymbol::fromSyntax(compilation, *member, *resultType, std::nullopt);
+            resultType->addMember(ev);
+
+            if (member->initializer)
+                setInitializer(ev, *member->initializer);
+            else
+                inferValue(ev, member->sourceRange());
+        }
+        else {
+            if (member->dimensions.size() > 1) {
+                context.addDiag(diag::EnumRangeMultiDimensional, member->dimensions.sourceRange());
+                return compilation.getErrorType();
+            }
+
+            auto range = context.evalUnpackedDimension(*member->dimensions[0]);
+            if (!range)
+                return compilation.getErrorType();
+
+            // Range must be positive.
+            if (!context.requirePositive(optional(range->left),
+                                         member->dimensions[0]->sourceRange()) ||
+                !context.requirePositive(optional(range->right),
+                                         member->dimensions[0]->sourceRange())) {
+                return compilation.getErrorType();
+            }
+
+            // Enum ranges must be integer literals.
+            checkEnumRange(context, *member->dimensions[0]);
+
+            // Set up the first element using the initializer. All other elements (if there are any)
+            // don't get the initializer.
+            int32_t index = range->left;
+            {
+                auto& ev = EnumValueSymbol::fromSyntax(compilation, *member, *resultType, index);
+                resultType->addMember(ev);
+
+                if (member->initializer)
+                    setInitializer(ev, *member->initializer);
+                else
+                    inferValue(ev, member->sourceRange());
+            }
+
+            bool down = range->isLittleEndian();
+            while (index != range->right) {
+                index = down ? index - 1 : index + 1;
+
+                auto& ev = EnumValueSymbol::fromSyntax(compilation, *member, *resultType, index);
+                resultType->addMember(ev);
+
+                inferValue(ev, member->sourceRange());
+            }
+        }
+    }
+
+    // If this enum is inside a typedef, override the types of each member to be
+    // the typedef instead of the enum itself. This is done as a separate pass
+    // so that we don't try to access the type of the enum values while we're
+    // still in the middle of resolving it.
+    if (typedefTarget) {
+        for (auto& value : resultType->membersOfType<EnumValueSymbol>())
+            const_cast<EnumValueSymbol&>(value).getDeclaredType()->setType(*typedefTarget);
+    }
+
+    return createPackedDims(context, resultType, syntax.dimensions);
+}
+
+static string_view getEnumValueName(Compilation& comp, string_view name, int32_t index) {
+    if (!name.empty()) {
+        ASSERT(index >= 0);
+
+        size_t sz = (size_t)snprintf(nullptr, 0, "%d", index);
+        char* mem = (char*)comp.allocate(sz + name.size() + 1, 1);
+        memcpy(mem, name.data(), name.size());
+        snprintf(mem + name.size(), sz + 1, "%d", index);
+
+        name = string_view(mem, sz + name.size());
+    }
+    return name;
+}
+
+void EnumType::createDefaultMembers(const BindContext& context, const EnumTypeSyntax& syntax,
+                                    SmallVector<const Symbol*>& members) {
+    auto& comp = context.getCompilation();
+    for (auto member : syntax.members) {
+        string_view name = member->name.valueText();
+        SourceLocation loc = member->name.location();
+
+        if (member->dimensions.empty()) {
+            auto ev = comp.emplace<EnumValueSymbol>(name, loc);
+            ev->setType(comp.getErrorType());
+            members.append(ev);
+        }
+        else {
+            auto dims = member->dimensions[0];
+            auto range = context.evalUnpackedDimension(*dims);
+            if (!range)
+                continue;
+
+            SourceRange dimRange = dims->sourceRange();
+            if (!context.requirePositive(optional(range->left), dimRange) ||
+                !context.requirePositive(optional(range->right), dimRange)) {
+                continue;
+            }
+
+            int32_t low = range->lower();
+            for (uint32_t i = 0; i < range->width(); i++) {
+                int32_t index = int32_t(i) + low;
+                auto ev = comp.emplace<EnumValueSymbol>(getEnumValueName(comp, name, index), loc);
+                ev->setType(comp.getErrorType());
+                members.append(ev);
+            }
+        }
+    }
+}
+
+EnumValueSymbol::EnumValueSymbol(string_view name, SourceLocation loc) :
+    ValueSymbol(SymbolKind::EnumValue, name, loc, DeclaredTypeFlags::InitializerCantSeeParent) {
+}
+
+EnumValueSymbol& EnumValueSymbol::fromSyntax(Compilation& compilation,
+                                             const DeclaratorSyntax& syntax, const Type& type,
+                                             optional<int32_t> index) {
+    string_view name = syntax.name.valueText();
+    if (index)
+        name = getEnumValueName(compilation, name, *index);
+
+    auto ev = compilation.emplace<EnumValueSymbol>(name, syntax.name.location());
+    ev->setType(type);
+    ev->setSyntax(syntax);
+    return *ev;
+}
+
+const ConstantValue& EnumValueSymbol::getValue(SourceRange referencingRange) const {
+    if (!value) {
+        // If no value has been explicitly set, try to set it
+        // from our initializer.
+        auto init = getInitializer();
+        if (init) {
+            auto scope = getParentScope();
+            ASSERT(scope);
+
+            BindContext ctx(*scope, LookupLocation::max);
+
+            if (evaluating) {
+                ASSERT(referencingRange.start());
+
+                auto& diag = ctx.addDiag(diag::ConstEvalParamCycle, location) << name;
+                diag.addNote(diag::NoteReferencedHere, referencingRange) << referencingRange;
+                return ConstantValue::Invalid;
+            }
+
+            evaluating = true;
+            auto guard = ScopeGuard([this] { evaluating = false; });
+
+            value = scope->getCompilation().allocConstant(ctx.eval(*init));
+        }
+        else {
+            value = &ConstantValue::Invalid;
+        }
+    }
+    return *value;
+}
+
+void EnumValueSymbol::setValue(ConstantValue newValue) {
+    auto scope = getParentScope();
+    ASSERT(scope);
+    value = scope->getCompilation().allocConstant(std::move(newValue));
+}
+
+void EnumValueSymbol::serializeTo(ASTSerializer& serializer) const {
+    serializer.write("value", getValue());
+}
+
+PackedArrayType::PackedArrayType(const Type& elementType, ConstantRange range) :
+    IntegralType(SymbolKind::PackedArrayType, "", SourceLocation(),
+                 elementType.getBitWidth() * range.width(), elementType.isSigned(),
+                 elementType.isFourState()),
+    elementType(elementType), range(range) {
+}
+
+const Type& PackedArrayType::fromSyntax(const Scope& scope, const Type& elementType,
+                                        ConstantRange range, const SyntaxNode& syntax) {
+    if (elementType.isError())
+        return elementType;
+
+    auto& comp = scope.getCompilation();
+    if (!elementType.isIntegral()) {
+        scope.addDiag(diag::PackedArrayNotIntegral, syntax.sourceRange()) << elementType;
+        return comp.getErrorType();
+    }
+
+    auto width = checkedMulU32(elementType.getBitWidth(), range.width());
+    if (!width || width > (uint32_t)SVInt::MAX_BITS) {
+        uint64_t fullWidth = uint64_t(elementType.getBitWidth()) * range.width();
+        scope.addDiag(diag::PackedArrayTooLarge, syntax.sourceRange())
+            << fullWidth << (uint32_t)SVInt::MAX_BITS;
+        return comp.getErrorType();
+    }
+
+    auto result = comp.emplace<PackedArrayType>(elementType, range);
+    result->setSyntax(syntax);
+    return *result;
+}
+
+FixedSizeUnpackedArrayType::FixedSizeUnpackedArrayType(const Type& elementType,
+                                                       ConstantRange range) :
+    Type(SymbolKind::FixedSizeUnpackedArrayType, "", SourceLocation()),
+    elementType(elementType), range(range) {
+}
+
+const Type& FixedSizeUnpackedArrayType::fromDims(Compilation& compilation, const Type& elementType,
+                                                 span<const ConstantRange> dimensions) {
+    if (elementType.isError())
+        return elementType;
+
+    const Type* result = &elementType;
+    size_t count = dimensions.size();
+    for (size_t i = 0; i < count; i++) {
+        result = compilation.emplace<FixedSizeUnpackedArrayType>(*result,
+                                                                 dimensions[count - i - 1]);
+    }
+
+    return *result;
+}
+
+ConstantValue FixedSizeUnpackedArrayType::getDefaultValueImpl() const {
+    return std::vector<ConstantValue>(range.width(), elementType.getDefaultValue());
+}
+
+DynamicArrayType::DynamicArrayType(const Type& elementType) :
+    Type(SymbolKind::DynamicArrayType, "", SourceLocation()), elementType(elementType) {
+}
+
+ConstantValue DynamicArrayType::getDefaultValueImpl() const {
+    return std::vector<ConstantValue>();
+}
+
+AssociativeArrayType::AssociativeArrayType(const Type& elementType, const Type* indexType) :
+    Type(SymbolKind::AssociativeArrayType, "", SourceLocation()), elementType(elementType),
+    indexType(indexType) {
+}
+
+ConstantValue AssociativeArrayType::getDefaultValueImpl() const {
+    return AssociativeArray();
+}
+
+QueueType::QueueType(const Type& elementType, uint32_t maxBound) :
+    Type(SymbolKind::QueueType, "", SourceLocation()), elementType(elementType),
+    maxBound(maxBound) {
+}
+
+ConstantValue QueueType::getDefaultValueImpl() const {
+    SVQueue result;
+    result.maxBound = maxBound;
+    return result;
+}
+
+PackedStructType::PackedStructType(Compilation& compilation, bool isSigned, SourceLocation loc,
+                                   const BindContext& context) :
+    IntegralType(SymbolKind::PackedStructType, "", loc, 0, isSigned, false),
+    Scope(compilation, this), systemId(compilation.getNextStructSystemId()) {
+
+    // Struct types don't live as members of the parent scope (they're "owned" by
+    // the declaration containing them) but we hook up the parent pointer so that
+    // it can participate in name lookups.
+    setParent(*context.scope, context.lookupIndex);
+}
+
+const Type& PackedStructType::fromSyntax(Compilation& comp, const StructUnionTypeSyntax& syntax,
+                                         const BindContext& parentContext) {
+    ASSERT(syntax.packed);
+    const bool isSigned = syntax.signing.kind == TokenKind::SignedKeyword;
+    bool issuedError = false;
+
+    auto structType = comp.emplace<PackedStructType>(comp, isSigned, syntax.keyword.location(),
+                                                     parentContext);
+    structType->setSyntax(syntax);
+
+    BindContext context(*structType, LookupLocation::max, parentContext.flags);
+
+    SmallVectorSized<FieldSymbol*, 8> members;
+    for (auto member : syntax.members) {
+        const Type& type = comp.getType(*member->type, context);
+        structType->isFourState |= type.isFourState();
+        issuedError |= type.isError();
+
+        if (!issuedError && !type.isIntegral()) {
+            issuedError = true;
+            auto& diag = context.addDiag(diag::PackedMemberNotIntegral,
+                                         member->type->getFirstToken().location());
+            diag << type;
+            diag << member->type->sourceRange();
+        }
+
+        for (auto decl : member->declarators) {
+            auto field = comp.emplace<FieldSymbol>(decl->name.valueText(), decl->name.location(),
+                                                   0u);
+            field->setType(type);
+            field->setSyntax(*decl);
+            field->setAttributes(*context.scope, member->attributes);
+            structType->addMember(*field);
+            members.append(field);
+
+            // Unpacked arrays are disallowed in packed structs.
+            if (const Type& dimType = comp.getType(type, decl->dimensions, context);
+                dimType.isUnpackedArray() && !issuedError) {
+
+                auto& diag = context.addDiag(diag::PackedMemberNotIntegral, decl->name.range());
+                diag << dimType;
+                diag << decl->dimensions.sourceRange();
+                issuedError = true;
+            }
+
+            structType->bitWidth += type.getBitWidth();
+
+            if (decl->initializer) {
+                auto& diag = context.addDiag(diag::PackedMemberHasInitializer,
+                                             decl->initializer->equals.location());
+                diag << decl->initializer->expr->sourceRange();
+            }
+        }
+    }
+
+    if (!structType->bitWidth || issuedError)
+        return comp.getErrorType();
+
+    // We added the fields in reverse order, so compute their actual
+    // offsets in the right order now.
+    bitwidth_t offset = 0;
+    for (auto member : make_reverse_range(members)) {
+        member->offset = offset;
+        offset += member->getType().getBitWidth();
+    }
+
+    return createPackedDims(parentContext, structType, syntax.dimensions);
+}
+
+UnpackedStructType::UnpackedStructType(Compilation& compilation, SourceLocation loc,
+                                       const BindContext& context) :
+    Type(SymbolKind::UnpackedStructType, "", loc),
+    Scope(compilation, this), systemId(compilation.getNextStructSystemId()) {
+
+    // Struct types don't live as members of the parent scope (they're "owned" by
+    // the declaration containing them) but we hook up the parent pointer so that
+    // it can participate in name lookups.
+    setParent(*context.scope, context.lookupIndex);
+}
+
+ConstantValue UnpackedStructType::getDefaultValueImpl() const {
+    std::vector<ConstantValue> elements;
+    for (auto& field : membersOfType<FieldSymbol>())
+        elements.emplace_back(field.getType().getDefaultValue());
+
+    return elements;
+}
+
+const Type& UnpackedStructType::fromSyntax(const BindContext& context,
+                                           const StructUnionTypeSyntax& syntax) {
+    ASSERT(!syntax.packed);
+
+    uint32_t fieldIndex = 0;
+    auto& comp = context.getCompilation();
+    auto result = comp.emplace<UnpackedStructType>(comp, syntax.keyword.location(), context);
+
+    for (auto member : syntax.members) {
+        RandMode randMode = RandMode::None;
+        switch (member->randomQualifier.kind) {
+            case TokenKind::RandKeyword:
+                randMode = RandMode::Rand;
+                break;
+            case TokenKind::RandCKeyword:
+                randMode = RandMode::RandC;
+                break;
+            default:
+                break;
+        }
+
+        for (auto decl : member->declarators) {
+            auto field = comp.emplace<FieldSymbol>(decl->name.valueText(), decl->name.location(),
+                                                   fieldIndex);
+            field->setDeclaredType(*member->type);
+            field->setFromDeclarator(*decl);
+            field->setAttributes(*context.scope, member->attributes);
+            field->randMode = randMode;
+
+            if (randMode != RandMode::None)
+                field->getDeclaredType()->addFlags(DeclaredTypeFlags::Rand);
+
+            result->addMember(*field);
+            fieldIndex++;
+        }
+    }
+
+    for (auto& field : result->membersOfType<FieldSymbol>()) {
+        // Force resolution of the type right away, otherwise nothing
+        // is required to force it later.
+        field.getType();
+        field.getInitializer();
+    }
+
+    result->setSyntax(syntax);
+    return *result;
+}
+
+PackedUnionType::PackedUnionType(Compilation& compilation, bool isSigned, bool isTagged,
+                                 SourceLocation loc, const BindContext& context) :
+    IntegralType(SymbolKind::PackedUnionType, "", loc, 0, isSigned, false),
+    Scope(compilation, this), systemId(compilation.getNextUnionSystemId()), isTagged(isTagged),
+    tagBits(0) {
+
+    // Union types don't live as members of the parent scope (they're "owned" by
+    // the declaration containing them) but we hook up the parent pointer so that
+    // it can participate in name lookups.
+    setParent(*context.scope, context.lookupIndex);
+}
+
+const Type& PackedUnionType::fromSyntax(Compilation& comp, const StructUnionTypeSyntax& syntax,
+                                        const BindContext& parentContext) {
+    ASSERT(syntax.packed);
+    const bool isSigned = syntax.signing.kind == TokenKind::SignedKeyword;
+    const bool isTagged = syntax.tagged.valid();
+    bool issuedError = false;
+    uint32_t fieldIndex = 0;
+
+    auto unionType = comp.emplace<PackedUnionType>(comp, isSigned, isTagged,
+                                                   syntax.keyword.location(), parentContext);
+    unionType->setSyntax(syntax);
+
+    BindContext context(*unionType, LookupLocation::max, parentContext.flags);
+
+    for (auto member : syntax.members) {
+        const Type& type = comp.getType(*member->type, context);
+        unionType->isFourState |= type.isFourState();
+        issuedError |= type.isError();
+
+        if (!issuedError && !type.isIntegral() && (!isTagged || !type.isVoid())) {
+            issuedError = true;
+            auto& diag = context.addDiag(diag::PackedMemberNotIntegral,
+                                         member->type->getFirstToken().location());
+            diag << type;
+            diag << member->type->sourceRange();
+        }
+
+        for (auto decl : member->declarators) {
+            auto name = decl->name;
+            auto field = comp.emplace<FieldSymbol>(name.valueText(), name.location(), fieldIndex++);
+            field->setType(type);
+            field->setSyntax(*decl);
+            field->setAttributes(*context.scope, member->attributes);
+            unionType->addMember(*field);
+
+            // Unpacked arrays are disallowed in packed unions.
+            if (const Type& dimType = comp.getType(type, decl->dimensions, context);
+                dimType.isUnpackedArray() && !issuedError) {
+
+                auto& diag = context.addDiag(diag::PackedMemberNotIntegral, decl->name.range());
+                diag << dimType;
+                diag << decl->dimensions.sourceRange();
+                issuedError = true;
+            }
+
+            if (!unionType->bitWidth) {
+                unionType->bitWidth = type.getBitWidth();
+            }
+            else if (isTagged) {
+                // In tagged unions the members don't all have to have the same width.
+                unionType->bitWidth = std::max(unionType->bitWidth, type.getBitWidth());
+            }
+            else if (unionType->bitWidth != type.getBitWidth() && !issuedError &&
+                     !name.valueText().empty()) {
+                auto& diag = context.addDiag(diag::PackedUnionWidthMismatch, name.range());
+                diag << name.valueText() << type.getBitWidth() << unionType->bitWidth;
+                issuedError = true;
+            }
+
+            if (decl->initializer) {
+                auto& diag = context.addDiag(diag::PackedMemberHasInitializer,
+                                             decl->initializer->equals.location());
+                diag << decl->initializer->expr->sourceRange();
+            }
+        }
+    }
+
+    // In tagged unions the tag contributes to the total number of packed bits.
+    if (isTagged) {
+        unionType->tagBits = clog2(fieldIndex);
+        unionType->bitWidth += unionType->tagBits;
+    }
+
+    if (!unionType->bitWidth || issuedError)
+        return comp.getErrorType();
+
+    return createPackedDims(context, unionType, syntax.dimensions);
+}
+
+UnpackedUnionType::UnpackedUnionType(Compilation& compilation, bool isTagged, SourceLocation loc,
+                                     const BindContext& context) :
+    Type(SymbolKind::UnpackedUnionType, "", loc),
+    Scope(compilation, this), systemId(compilation.getNextUnionSystemId()), isTagged(isTagged) {
+
+    // Union types don't live as members of the parent scope (they're "owned" by
+    // the declaration containing them) but we hook up the parent pointer so that
+    // it can participate in name lookups.
+    setParent(*context.scope, context.lookupIndex);
+}
+
+ConstantValue UnpackedUnionType::getDefaultValueImpl() const {
+    auto range = membersOfType<FieldSymbol>();
+    auto it = range.begin();
+    if (it == range.end())
+        return nullptr;
+
+    SVUnion u;
+    u.value = it->getType().getDefaultValue();
+
+    // Tagged unions start out with no active member.
+    if (!isTagged)
+        u.activeMember = 0;
+
+    return u;
+}
+
+const Type& UnpackedUnionType::fromSyntax(const BindContext& context,
+                                          const StructUnionTypeSyntax& syntax) {
+    ASSERT(!syntax.packed);
+
+    auto& comp = context.getCompilation();
+    bool isTagged = syntax.tagged.valid();
+    auto result = comp.emplace<UnpackedUnionType>(comp, isTagged, syntax.keyword.location(),
+                                                  context);
+
+    uint32_t fieldIndex = 0;
+    for (auto member : syntax.members) {
+        for (auto decl : member->declarators) {
+            auto field = comp.emplace<FieldSymbol>(decl->name.valueText(), decl->name.location(),
+                                                   fieldIndex++);
+            field->setDeclaredType(*member->type);
+            field->setFromDeclarator(*decl);
+            field->setAttributes(*context.scope, member->attributes);
+            result->addMember(*field);
+        }
+    }
+
+    for (auto& field : result->membersOfType<FieldSymbol>()) {
+        auto& varType = field.getType();
+        if (!isTagged && (varType.isCHandle() || varType.isDynamicallySizedArray()))
+            context.addDiag(diag::InvalidUnionMember, field.location) << varType;
+        else if (varType.isVirtualInterface())
+            context.addDiag(diag::VirtualInterfaceUnionMember, field.location);
+
+        // Force resolution of the initializer right away, otherwise nothing
+        // is required to force it later.
+        field.getInitializer();
+    }
+
+    result->setSyntax(syntax);
+    return *result;
+}
+
+ConstantValue NullType::getDefaultValueImpl() const {
+    return ConstantValue::NullPlaceholder{};
+}
+
+ConstantValue CHandleType::getDefaultValueImpl() const {
+    return ConstantValue::NullPlaceholder{};
+}
+
+ConstantValue StringType::getDefaultValueImpl() const {
+    return ""s;
+}
+
+ConstantValue EventType::getDefaultValueImpl() const {
+    return ConstantValue::NullPlaceholder{};
+}
+
+const Type& VirtualInterfaceType::fromSyntax(const BindContext& context,
+                                             const VirtualInterfaceTypeSyntax& syntax) {
+    auto& comp = context.getCompilation();
+    auto ifaceName = syntax.name.valueText();
+    if (ifaceName.empty())
+        return comp.getErrorType();
+
+    auto definition = comp.getDefinition(ifaceName, *context.scope);
+    if (!definition || definition->definitionKind != DefinitionKind::Interface) {
+        context.addDiag(diag::UnknownInterface, syntax.name.range()) << ifaceName;
+        return comp.getErrorType();
+    }
+
+    auto loc = syntax.name.location();
+    auto& iface = InstanceSymbol::createVirtual(context, loc, *definition, syntax.parameters);
+
+    const ModportSymbol* modport = nullptr;
+    string_view modportName = syntax.modport ? syntax.modport->member.valueText() : ""sv;
+    if (!modportName.empty()) {
+        auto sym = iface.body.find(modportName);
+        if (!sym || sym->kind != SymbolKind::Modport) {
+            ASSERT(syntax.modport);
+            auto& diag = context.addDiag(diag::NotAModport, syntax.modport->member.range());
+            diag << modportName;
+            diag << definition->name;
+        }
+        else {
+            modport = &sym->as<ModportSymbol>();
+        }
+    }
+
+    return *comp.emplace<VirtualInterfaceType>(iface, modport, loc);
+}
+
+ConstantValue VirtualInterfaceType::getDefaultValueImpl() const {
+    return ConstantValue::NullPlaceholder{};
+}
+
+ForwardingTypedefSymbol& ForwardingTypedefSymbol::fromSyntax(
+    const Scope& scope, const ForwardTypedefDeclarationSyntax& syntax) {
+
+    ForwardTypedefCategory category;
+    switch (syntax.keyword.kind) {
+        case TokenKind::EnumKeyword:
+            category = ForwardTypedefCategory::Enum;
+            break;
+        case TokenKind::StructKeyword:
+            category = ForwardTypedefCategory::Struct;
+            break;
+        case TokenKind::UnionKeyword:
+            category = ForwardTypedefCategory::Union;
+            break;
+        case TokenKind::ClassKeyword:
+            category = ForwardTypedefCategory::Class;
+            break;
+        default:
+            category = ForwardTypedefCategory::None;
+            break;
+    }
+
+    auto& comp = scope.getCompilation();
+    auto result = comp.emplace<ForwardingTypedefSymbol>(syntax.name.valueText(),
+                                                        syntax.name.location(), category);
+    result->setSyntax(syntax);
+    result->setAttributes(scope, syntax.attributes);
+    return *result;
+}
+
+ForwardingTypedefSymbol& ForwardingTypedefSymbol::fromSyntax(
+    const Scope& scope, const ForwardInterfaceClassTypedefDeclarationSyntax& syntax) {
+
+    auto& comp = scope.getCompilation();
+    auto result = comp.emplace<ForwardingTypedefSymbol>(syntax.name.valueText(),
+                                                        syntax.name.location(),
+                                                        ForwardTypedefCategory::InterfaceClass);
+    result->setSyntax(syntax);
+    result->setAttributes(scope, syntax.attributes);
+    return *result;
+}
+
+ForwardingTypedefSymbol& ForwardingTypedefSymbol::fromSyntax(
+    const Scope& scope, const ClassPropertyDeclarationSyntax& syntax) {
+
+    ForwardingTypedefSymbol* result;
+    if (syntax.declaration->kind == SyntaxKind::ForwardInterfaceClassTypedefDeclaration) {
+        result = &fromSyntax(
+            scope, syntax.declaration->as<ForwardInterfaceClassTypedefDeclarationSyntax>());
+    }
+    else {
+        result = &fromSyntax(scope, syntax.declaration->as<ForwardTypedefDeclarationSyntax>());
+    }
+
+    for (Token qual : syntax.qualifiers) {
+        switch (qual.kind) {
+            case TokenKind::LocalKeyword:
+                result->visibility = Visibility::Local;
+                break;
+            case TokenKind::ProtectedKeyword:
+                result->visibility = Visibility::Protected;
+                break;
+            default:
+                // Everything else is not allowed on typedefs; the parser will issue
+                // a diagnostic so just ignore them here.
+                break;
+        }
+    }
+
+    result->setAttributes(scope, syntax.attributes);
+    return *result;
+}
+
+void ForwardingTypedefSymbol::addForwardDecl(const ForwardingTypedefSymbol& decl) const {
+    if (!next)
+        next = &decl;
+    else
+        next->addForwardDecl(decl);
+}
+
+void ForwardingTypedefSymbol::checkType(ForwardTypedefCategory checkCategory,
+                                        Visibility checkVisibility, SourceLocation declLoc) const {
+    if (category != ForwardTypedefCategory::None && checkCategory != ForwardTypedefCategory::None &&
+        category != checkCategory) {
+        auto& diag = getParentScope()->addDiag(diag::ForwardTypedefDoesNotMatch, location);
+        switch (category) {
+            case ForwardTypedefCategory::Enum:
+                diag << "enum"sv;
+                break;
+            case ForwardTypedefCategory::Struct:
+                diag << "struct"sv;
+                break;
+            case ForwardTypedefCategory::Union:
+                diag << "union"sv;
+                break;
+            case ForwardTypedefCategory::Class:
+                diag << "class"sv;
+                break;
+            case ForwardTypedefCategory::InterfaceClass:
+                diag << "interface class"sv;
+                break;
+            default:
+                ASSUME_UNREACHABLE;
+        }
+        diag.addNote(diag::NoteDeclarationHere, declLoc);
+        return;
+    }
+
+    if (visibility && visibility != checkVisibility) {
+        auto& diag = getParentScope()->addDiag(diag::ForwardTypedefVisibility, location);
+        diag.addNote(diag::NoteDeclarationHere, declLoc);
+        return;
+    }
+
+    if (next)
+        next->checkType(checkCategory, checkVisibility, declLoc);
+}
+
+void ForwardingTypedefSymbol::serializeTo(ASTSerializer& serializer) const {
+    serializer.write("category", toString(category));
+    if (next)
+        serializer.write("next", *next);
+}
+
+TypeAliasType::TypeAliasType(string_view name, SourceLocation loc) :
+    Type(SymbolKind::TypeAlias, name, loc), targetType(*this, DeclaredTypeFlags::TypedefTarget) {
+    canonical = nullptr;
+}
+
+TypeAliasType& TypeAliasType::fromSyntax(const Scope& scope,
+                                         const TypedefDeclarationSyntax& syntax) {
+    // TODO: interface based typedefs
+    auto& comp = scope.getCompilation();
+    auto result = comp.emplace<TypeAliasType>(syntax.name.valueText(), syntax.name.location());
+    result->targetType.setTypeSyntax(*syntax.type);
+    result->targetType.setDimensionSyntax(syntax.dimensions);
+    result->setSyntax(syntax);
+    result->setAttributes(scope, syntax.attributes);
+    return *result;
+}
+
+TypeAliasType& TypeAliasType::fromSyntax(const Scope& scope,
+                                         const ClassPropertyDeclarationSyntax& syntax) {
+    auto& result = fromSyntax(scope, syntax.declaration->as<TypedefDeclarationSyntax>());
+    for (Token qual : syntax.qualifiers) {
+        switch (qual.kind) {
+            case TokenKind::LocalKeyword:
+                result.visibility = Visibility::Local;
+                break;
+            case TokenKind::ProtectedKeyword:
+                result.visibility = Visibility::Protected;
+                break;
+            default:
+                // Everything else is not allowed on typedefs; the parser will issue
+                // a diagnostic so just ignore them here.
+                break;
+        }
+    }
+
+    result.setAttributes(scope, syntax.attributes);
+    return result;
+}
+
+void TypeAliasType::addForwardDecl(const ForwardingTypedefSymbol& decl) const {
+    if (!firstForward)
+        firstForward = &decl;
+    else
+        firstForward->addForwardDecl(decl);
+}
+
+void TypeAliasType::checkForwardDecls() const {
+    auto& ct = targetType.getType().getCanonicalType();
+    ForwardTypedefCategory category;
+    switch (ct.kind) {
+        case SymbolKind::PackedStructType:
+        case SymbolKind::UnpackedStructType:
+            category = ForwardTypedefCategory::Struct;
+            break;
+        case SymbolKind::PackedUnionType:
+        case SymbolKind::UnpackedUnionType:
+            category = ForwardTypedefCategory::Union;
+            break;
+        case SymbolKind::EnumType:
+            category = ForwardTypedefCategory::Enum;
+            break;
+        case SymbolKind::ClassType:
+            category = ForwardTypedefCategory::Class;
+            if (ct.as<ClassType>().isInterface)
+                category = ForwardTypedefCategory::InterfaceClass;
+            break;
+        default:
+            category = ForwardTypedefCategory::None;
+            break;
+    }
+
+    if (firstForward)
+        firstForward->checkType(category, visibility, location);
+}
+
+ConstantValue TypeAliasType::getDefaultValueImpl() const {
+    return targetType.getType().getDefaultValue();
+}
+
+void TypeAliasType::serializeTo(ASTSerializer& serializer) const {
+    serializer.write("target", targetType.getType());
+    if (firstForward)
+        serializer.write("forward", *firstForward);
+}
+
+} // namespace slang

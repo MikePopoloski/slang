@@ -7,11 +7,11 @@
 //------------------------------------------------------------------------------
 #include "slang/compilation/ScriptSession.h"
 
-#include "slang/binding/Expression.h"
-#include "slang/binding/Statements.h"
-#include "slang/symbols/BlockSymbols.h"
-#include "slang/symbols/CompilationUnitSymbols.h"
-#include "slang/symbols/VariableSymbols.h"
+#include "slang/ast/Expression.h"
+#include "slang/ast/Statements.h"
+#include "slang/ast/symbols/BlockSymbols.h"
+#include "slang/ast/symbols/CompilationUnitSymbols.h"
+#include "slang/ast/symbols/VariableSymbols.h"
 #include "slang/syntax/AllSyntax.h"
 
 namespace slang {

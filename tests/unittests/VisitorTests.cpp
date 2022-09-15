@@ -4,8 +4,8 @@
 #include "Test.h"
 #include <fmt/format.h>
 
+#include "slang/ast/ASTVisitor.h"
 #include "slang/compilation/SemanticModel.h"
-#include "slang/symbols/ASTVisitor.h"
 #include "slang/syntax/SyntaxPrinter.h"
 #include "slang/syntax/SyntaxVisitor.h"
 

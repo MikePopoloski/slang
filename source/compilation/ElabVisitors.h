@@ -7,9 +7,9 @@
 //------------------------------------------------------------------------------
 #pragma once
 
+#include "slang/ast/ASTVisitor.h"
 #include "slang/diagnostics/CompilationDiags.h"
 #include "slang/diagnostics/DeclarationsDiags.h"
-#include "slang/symbols/ASTVisitor.h"
 #include "slang/util/StackContainer.h"
 
 namespace slang {

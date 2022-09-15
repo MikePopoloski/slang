@@ -9,10 +9,10 @@
 
 #include <memory>
 
+#include "slang/ast/Scope.h"
+#include "slang/ast/Symbol.h"
 #include "slang/diagnostics/Diagnostics.h"
 #include "slang/numeric/Time.h"
-#include "slang/symbols/Scope.h"
-#include "slang/symbols/Symbol.h"
 #include "slang/syntax/SyntaxNode.h"
 #include "slang/util/Bag.h"
 #include "slang/util/BumpAllocator.h"

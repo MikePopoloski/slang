@@ -1,0 +1,489 @@
+//------------------------------------------------------------------------------
+// DeclaredType.cpp
+// Glue logic between symbols and their declared types
+//
+// SPDX-FileCopyrightText: Michael Popoloski
+// SPDX-License-Identifier: MIT
+//------------------------------------------------------------------------------
+#include "slang/ast/types/DeclaredType.h"
+
+#include "slang/ast/Expression.h"
+#include "slang/ast/Scope.h"
+#include "slang/ast/Symbol.h"
+#include "slang/ast/symbols/ClassSymbols.h"
+#include "slang/ast/symbols/InstanceSymbols.h"
+#include "slang/ast/symbols/SubroutineSymbols.h"
+#include "slang/ast/symbols/VariableSymbols.h"
+#include "slang/ast/types/AllTypes.h"
+#include "slang/ast/types/NetType.h"
+#include "slang/compilation/Compilation.h"
+#include "slang/diagnostics/DeclarationsDiags.h"
+#include "slang/diagnostics/ParserDiags.h"
+#include "slang/diagnostics/StatementsDiags.h"
+#include "slang/diagnostics/TypesDiags.h"
+#include "slang/syntax/AllSyntax.h"
+#include "slang/util/ScopeGuard.h"
+
+namespace slang {
+
+DeclaredType::DeclaredType(const Symbol& parent, bitmask<DeclaredTypeFlags> flags) :
+    parent(parent), flags(flags), overrideIndex(0), evaluating(false), hasLink(false) {
+    // If this assert fires you need to update Symbol::getDeclaredType
+    ASSERT(parent.getDeclaredType() == this);
+}
+
+const Type& DeclaredType::getType() const {
+    if (!type)
+        resolveType(getBindContext<false>(), getBindContext<true>());
+    return *type;
+}
+
+void DeclaredType::setLink(const DeclaredType& target) {
+    ASSERT(hasLink || !typeOrLink.typeSyntax);
+    ASSERT(!type && !dimensions && !initializer);
+
+    hasLink = true;
+    typeOrLink.link = &target;
+}
+
+void DeclaredType::setDimensionSyntax(const SyntaxList<VariableDimensionSyntax>& newDimensions) {
+    ASSERT(!type);
+    dimensions = &newDimensions;
+}
+
+void DeclaredType::mergeImplicitPort(
+    const ImplicitTypeSyntax& implicit, SourceLocation location,
+    span<const VariableDimensionSyntax* const> unpackedDimensions) {
+    mergePortTypes(getBindContext<false>(), parent.as<ValueSymbol>(), implicit, location,
+                   unpackedDimensions);
+}
+
+void DeclaredType::resolveType(const BindContext& typeContext,
+                               const BindContext& initializerContext) const {
+    auto& comp = typeContext.getCompilation();
+    if (hasLink) {
+        ASSERT(typeOrLink.link);
+        type = &typeOrLink.link->getType();
+        if (dimensions)
+            type = &comp.getType(*type, *dimensions, typeContext);
+        return;
+    }
+
+    auto syntax = typeOrLink.typeSyntax;
+    ASSERT(syntax);
+    if (!syntax) {
+        type = &comp.getErrorType();
+        return;
+    }
+
+    ASSERT(!evaluating);
+    evaluating = true;
+    auto guard = ScopeGuard([this] { evaluating = false; });
+
+    // If we are configured to infer implicit types, bind the initializer expression
+    // first so that we can derive our type from whatever that happens to be.
+    if (syntax->kind == SyntaxKind::ImplicitType && flags.has(DeclaredTypeFlags::InferImplicit)) {
+        if (dimensions) {
+            auto& its = syntax->as<ImplicitTypeSyntax>();
+            if (its.signing || !its.dimensions.empty()) {
+                type = &comp.getType(*syntax, typeContext, nullptr);
+                type = &comp.getType(*type, *dimensions, typeContext);
+            }
+            else {
+                typeContext.addDiag(diag::UnpackedArrayParamType, dimensions->sourceRange());
+                type = &comp.getErrorType();
+            }
+        }
+        else if (!initializerSyntax) {
+            type = &comp.getErrorType();
+        }
+        else {
+            bitmask<BindFlags> extraFlags;
+            if (flags.has(DeclaredTypeFlags::AllowUnboundedLiteral))
+                extraFlags = BindFlags::AllowUnboundedLiteral;
+
+            initializer = &Expression::bindImplicitParam(*syntax, *initializerSyntax,
+                                                         initializerLocation, initializerContext,
+                                                         typeContext, extraFlags);
+            type = initializer->type;
+        }
+    }
+    else if (flags.has(DeclaredTypeFlags::InterconnectNet)) {
+        // An interconnect net is always untyped (or some array of untyped elements).
+        type = &comp.getType(SyntaxKind::Untyped);
+        if (syntax->kind == SyntaxKind::ImplicitType) {
+            // This should always be an implicit type unless there's an
+            // error (diagnosed by the parser).
+            auto& its = syntax->as<ImplicitTypeSyntax>();
+            if (!its.dimensions.empty())
+                type = &comp.getType(*type, its.dimensions,
+                                     typeContext.resetFlags(BindFlags::AllowInterconnect));
+        }
+
+        if (dimensions) {
+            type = &comp.getType(*type, *dimensions,
+                                 typeContext.resetFlags(BindFlags::AllowInterconnect));
+        }
+
+        // Return early to skip additional checks for net types.
+        return;
+    }
+    else {
+        const Type* typedefTarget = nullptr;
+        if (flags.has(DeclaredTypeFlags::TypedefTarget))
+            typedefTarget = &parent.as<Type>();
+
+        type = &comp.getType(*syntax, typeContext, typedefTarget);
+        if (dimensions)
+            type = &comp.getType(*type, *dimensions, typeContext);
+    }
+
+    if (flags.has(DeclaredTypeFlags::NeedsTypeCheck) && !type->isError())
+        checkType(initializerContext);
+}
+
+static bool isValidForNet(const Type& type) {
+    auto& ct = type.getCanonicalType();
+    if (ct.isIntegral())
+        return ct.isFourState();
+
+    if (ct.kind == SymbolKind::FixedSizeUnpackedArrayType)
+        return isValidForNet(ct.as<FixedSizeUnpackedArrayType>().elementType);
+
+    if (ct.isUnpackedStruct()) {
+        for (auto& field : ct.as<UnpackedStructType>().membersOfType<FieldSymbol>()) {
+            if (!isValidForNet(field.getType()))
+                return false;
+        }
+        return true;
+    }
+
+    return false;
+}
+
+static bool isValidForUserDefinedNet(const Type& type) {
+    auto& ct = type.getCanonicalType();
+    if (ct.isIntegral() || ct.isFloating())
+        return true;
+
+    if (ct.kind == SymbolKind::FixedSizeUnpackedArrayType)
+        return isValidForUserDefinedNet(ct.as<FixedSizeUnpackedArrayType>().elementType);
+
+    if (ct.isUnpackedStruct()) {
+        for (auto& field : ct.as<UnpackedStructType>().membersOfType<FieldSymbol>()) {
+            if (!isValidForUserDefinedNet(field.getType()))
+                return false;
+        }
+        return true;
+    }
+
+    if (ct.isUnpackedUnion()) {
+        for (auto& field : ct.as<UnpackedUnionType>().membersOfType<FieldSymbol>()) {
+            if (!isValidForUserDefinedNet(field.getType()))
+                return false;
+        }
+        return true;
+    }
+
+    return false;
+}
+
+void DeclaredType::checkType(const BindContext& context) const {
+    uint32_t masked = (flags & DeclaredTypeFlags::NeedsTypeCheck).bits();
+    ASSERT(countPopulation64(masked) == 1);
+
+    switch (masked) {
+        case uint32_t(DeclaredTypeFlags::NetType): {
+            auto& net = parent.as<NetSymbol>();
+            if (net.netType.netKind != NetType::UserDefined && !isValidForNet(*type))
+                context.addDiag(diag::InvalidNetType, parent.location) << *type;
+            else if (type->getBitWidth() == 1 && net.expansionHint != NetSymbol::None)
+                context.addDiag(diag::SingleBitVectored, parent.location);
+            break;
+        }
+        case uint32_t(DeclaredTypeFlags::UserDefinedNetType):
+            if (!isValidForUserDefinedNet(*type))
+                context.addDiag(diag::InvalidUserDefinedNetType, parent.location) << *type;
+            break;
+        case uint32_t(DeclaredTypeFlags::FormalArgMergeVar):
+            if (auto var = parent.as<FormalArgumentSymbol>().getMergedVariable()) {
+                ASSERT(!hasLink);
+                ASSERT(typeOrLink.typeSyntax);
+                mergePortTypes(context, *var, typeOrLink.typeSyntax->as<ImplicitTypeSyntax>(),
+                               parent.location,
+                               dimensions ? *dimensions
+                                          : span<const VariableDimensionSyntax* const>{});
+            }
+            break;
+        case uint32_t(DeclaredTypeFlags::Rand): {
+            RandMode mode = parent.getRandMode();
+            if (!type->isValidForRand(mode)) {
+                auto& diag = context.addDiag(diag::InvalidRandType, parent.location) << *type;
+                if (mode == RandMode::Rand)
+                    diag << "rand"sv;
+                else
+                    diag << "randc"sv;
+            }
+            break;
+        }
+        case uint32_t(DeclaredTypeFlags::DPIReturnType): {
+            if (!type->isValidForDPIReturn())
+                context.addDiag(diag::InvalidDPIReturnType, parent.location) << *type;
+            else if (parent.as<SubroutineSymbol>().flags.has(MethodFlags::Pure) && type->isVoid())
+                context.addDiag(diag::DPIPureReturn, parent.location);
+            break;
+        }
+        case uint32_t(DeclaredTypeFlags::DPIArg):
+            if (!type->isValidForDPIArg())
+                context.addDiag(diag::InvalidDPIArgType, parent.location) << *type;
+            break;
+        case uint32_t(DeclaredTypeFlags::RequireSequenceType):
+            if (!type->isValidForSequence())
+                context.addDiag(diag::AssertionExprType, parent.location) << *type;
+            break;
+        case uint32_t(DeclaredTypeFlags::CoverageType):
+            if (!type->isIntegral())
+                context.addDiag(diag::NonIntegralCoverageExpr, parent.location) << *type;
+            break;
+        default:
+            ASSUME_UNREACHABLE;
+    }
+}
+
+static const Type* makeSigned(Compilation& compilation, const Type& type) {
+    // This deliberately does not look at the canonical type; type aliases
+    // are not convertible to a different signedness.
+    SmallVectorSized<ConstantRange, 4> dims;
+    const Type* curr = &type;
+    while (curr->kind == SymbolKind::PackedArrayType) {
+        dims.append(curr->getFixedRange());
+        curr = curr->getArrayElementType();
+    }
+
+    if (curr->kind != SymbolKind::ScalarType)
+        return &type;
+
+    auto flags = curr->getIntegralFlags() | IntegralFlags::Signed;
+    if (dims.size() == 1)
+        return &compilation.getType(type.getBitWidth(), flags);
+
+    curr = &compilation.getScalarType(flags);
+    size_t count = dims.size();
+    for (size_t i = 0; i < count; i++)
+        curr = compilation.emplace<PackedArrayType>(*curr, dims[count - i - 1]);
+
+    return curr;
+}
+
+void DeclaredType::mergePortTypes(
+    const BindContext& context, const ValueSymbol& sourceSymbol, const ImplicitTypeSyntax& implicit,
+    SourceLocation location, span<const VariableDimensionSyntax* const> unpackedDimensions) const {
+
+    // There's this really terrible "feature" where the port declaration can influence the type
+    // of the actual symbol somewhere else in the tree. This is ugly but should be safe since
+    // nobody else can look at that symbol's type until we've gone through elaboration.
+    //
+    // In this context, the sourceSymbol is the actual variable declaration with, presumably,
+    // a full type declared. The implicit syntax is from the port I/O declaration, which needs
+    // to be merged. For example:
+    //
+    //   input signed [1:0] foo;    // implicit + unpackedDimensions + location
+    //   logic foo;                 // sourceSymbol
+    const Type* destType = &sourceSymbol.getType();
+
+    if (implicit.signing) {
+        // Drill past any unpacked arrays to figure out if this thing is even integral.
+        SmallVectorSized<ConstantRange, 4> destDims;
+        const Type* sourceType = destType;
+        while (sourceType->getCanonicalType().kind == SymbolKind::FixedSizeUnpackedArrayType) {
+            destDims.append(sourceType->getFixedRange());
+            sourceType = sourceType->getArrayElementType();
+        }
+
+        if (sourceType->isError())
+            return;
+
+        if (!sourceType->isIntegral()) {
+            if (sourceSymbol.kind == SymbolKind::Net &&
+                sourceSymbol.as<NetSymbol>().netType.netKind == NetType::Interconnect) {
+                auto& diag = context.addDiag(diag::InterconnectTypeSyntax,
+                                             implicit.signing.range());
+                diag.addNote(diag::NoteDeclarationHere, sourceSymbol.location);
+            }
+            else {
+                auto& diag = context.addDiag(diag::CantDeclarePortSigned, location);
+                diag << sourceSymbol.name << implicit.signing.valueText() << *destType;
+                diag.addNote(diag::NoteDeclarationHere, sourceSymbol.location);
+            }
+            return;
+        }
+
+        auto warnSignedness = [&] {
+            auto& diag = context.addDiag(diag::SignednessNoEffect, implicit.signing.range());
+            diag << implicit.signing.valueText() << *destType;
+            diag.addNote(diag::NoteDeclarationHere, sourceSymbol.location);
+        };
+
+        bool shouldBeSigned = implicit.signing.kind == TokenKind::SignedKeyword;
+        if (shouldBeSigned && !sourceType->isSigned()) {
+            sourceType = makeSigned(context.getCompilation(), *sourceType);
+            if (!sourceType->isSigned()) {
+                warnSignedness();
+            }
+            else {
+                // Put the unpacked dimensions back on the type now that it
+                // has been made signed.
+                destType = &FixedSizeUnpackedArrayType::fromDims(context.getCompilation(),
+                                                                 *sourceType, destDims);
+            }
+        }
+        else if (!shouldBeSigned && sourceType->isSigned()) {
+            warnSignedness();
+        }
+    }
+
+    // Our declared type takes on the merged type from the variable definition.
+    this->type = destType;
+
+    auto errorDims = [&](auto& dims) {
+        auto& diag = context.addDiag(diag::PortDeclDimensionsMismatch, dims.sourceRange());
+        diag << sourceSymbol.name;
+        diag.addNote(diag::NoteDeclarationHere, sourceSymbol.location);
+    };
+
+    auto checkDims = [&](auto& dims, SymbolKind arrayKind, bool isPacked) {
+        if (!dims.empty()) {
+            auto it = dims.begin();
+            while (destType->getCanonicalType().kind == arrayKind) {
+                if (it == dims.end()) {
+                    errorDims(*dims.back());
+                    return;
+                }
+
+                auto dim = isPacked ? context.evalPackedDimension(**it)
+                                    : context.evalUnpackedDimension(**it);
+                if (!dim || destType->getFixedRange() != *dim) {
+                    errorDims(**it);
+                    return;
+                }
+
+                destType = destType->getArrayElementType();
+                it++;
+            }
+
+            if (it != dims.end() && !destType->isError()) {
+                errorDims(**it);
+                return;
+            }
+        }
+    };
+
+    // Unpacked dim checks have to come first because it unwraps the destType
+    // for the packed one to look at.
+    checkDims(unpackedDimensions, SymbolKind::FixedSizeUnpackedArrayType, false);
+    checkDims(implicit.dimensions, SymbolKind::PackedArrayType, true);
+}
+
+void DeclaredType::resolveAt(const BindContext& context) const {
+    if (!type) {
+        resolveType(getBindContext<false>(), context);
+        if (initializer)
+            return;
+    }
+
+    if (!initializerSyntax)
+        return;
+
+    // Enums are special in that their initializers target the base type of the enum
+    // instead of the actual enum type (which doesn't allow implicit conversions from
+    // normal integral values).
+    auto& scope = *context.scope;
+    bitmask<BindFlags> extraFlags;
+    const Type* targetType = type;
+    if (targetType->isEnum() && scope.asSymbol().kind == SymbolKind::EnumType) {
+        targetType = &targetType->as<EnumType>().baseType;
+        extraFlags = BindFlags::EnumInitializer;
+    }
+    else if (flags.has(DeclaredTypeFlags::AllowUnboundedLiteral)) {
+        extraFlags = BindFlags::AllowUnboundedLiteral;
+    }
+
+    initializer = &Expression::bindRValue(*targetType, *initializerSyntax, initializerLocation,
+                                          context, extraFlags);
+}
+
+void DeclaredType::forceResolveAt(const BindContext& context) const {
+    if (!type)
+        resolveType(context, context);
+
+    if (!initializer)
+        resolveAt(context);
+}
+
+const Expression* DeclaredType::getInitializer() const {
+    if (initializer)
+        return initializer;
+
+    resolveAt(getBindContext<true>());
+    return initializer;
+}
+
+void DeclaredType::setFromDeclarator(const DeclaratorSyntax& decl) {
+    if (!decl.dimensions.empty())
+        setDimensionSyntax(decl.dimensions);
+    if (decl.initializer)
+        setInitializerSyntax(*decl.initializer->expr, decl.initializer->equals.location());
+}
+
+template<bool IsInitializer, typename T>
+T DeclaredType::getBindContext() const {
+    bitmask<BindFlags> bindFlags;
+    if (flags.has(DeclaredTypeFlags::NetType))
+        bindFlags |= BindFlags::NonProcedural;
+    if (!flags.has(DeclaredTypeFlags::AutomaticInitializer))
+        bindFlags |= BindFlags::StaticInitializer;
+    if (flags.has(DeclaredTypeFlags::CoverageType))
+        bindFlags |= BindFlags::AllowCoverageSampleFormal;
+    if (flags.has(DeclaredTypeFlags::UserDefinedNetType))
+        bindFlags |= BindFlags::AllowNetType;
+
+    const Scope* scope = parent.getParentScope();
+    ASSERT(scope);
+
+    // If this type/initializer has been overridden by a parameter override,
+    // we should use the instantiation scope and not the parameter's scope
+    // when resolving.
+    if ((IsInitializer && flags.has(DeclaredTypeFlags::InitializerOverridden)) ||
+        (!IsInitializer && flags.has(DeclaredTypeFlags::TypeOverridden))) {
+        auto inst = scope->asSymbol().as<InstanceBodySymbol>().parentInstance;
+        ASSERT(inst);
+
+        scope = inst->getParentScope();
+        ASSERT(scope);
+
+        return BindContext(*scope, LookupLocation::before(*inst), bindFlags);
+    }
+
+    // The location depends on whether we are binding the initializer or the type.
+    // Initializer lookup happens *after* the parent symbol, so that it can reference
+    // the symbol itself. Type lookup happens *before*, since it can't yet see the
+    // symbol declaration. There is an exception for parameters, which also can't
+    // see its own declaration (which would result in infinite recursion).
+    LookupLocation location;
+    if (overrideIndex) {
+        location = LookupLocation(parent.getParentScope(), overrideIndex);
+    }
+    else if (IsInitializer) {
+        if (flags.has(DeclaredTypeFlags::InitializerCantSeeParent))
+            location = LookupLocation::before(parent);
+        else
+            location = LookupLocation::after(parent);
+    }
+    else {
+        location = LookupLocation::before(parent);
+    }
+
+    return BindContext(*scope, location, bindFlags);
+}
+
+} // namespace slang

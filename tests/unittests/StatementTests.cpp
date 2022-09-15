@@ -3,13 +3,13 @@
 
 #include "Test.h"
 
-#include "slang/symbols/BlockSymbols.h"
-#include "slang/symbols/CompilationUnitSymbols.h"
-#include "slang/symbols/InstanceSymbols.h"
-#include "slang/symbols/MemberSymbols.h"
-#include "slang/symbols/ParameterSymbols.h"
-#include "slang/symbols/VariableSymbols.h"
-#include "slang/types/Type.h"
+#include "slang/ast/symbols/BlockSymbols.h"
+#include "slang/ast/symbols/CompilationUnitSymbols.h"
+#include "slang/ast/symbols/InstanceSymbols.h"
+#include "slang/ast/symbols/MemberSymbols.h"
+#include "slang/ast/symbols/ParameterSymbols.h"
+#include "slang/ast/symbols/VariableSymbols.h"
+#include "slang/ast/types/Type.h"
 
 TEST_CASE("For loop statements") {
     auto tree = SyntaxTree::fromText(R"(

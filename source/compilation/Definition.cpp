@@ -7,13 +7,13 @@
 //------------------------------------------------------------------------------
 #include "slang/compilation/Definition.h"
 
-#include "../symbols/ParameterBuilder.h"
+#include "../ast/symbols/ParameterBuilder.h"
 
+#include "slang/ast/Scope.h"
+#include "slang/ast/symbols/AttributeSymbol.h"
+#include "slang/ast/symbols/ParameterSymbols.h"
 #include "slang/compilation/Compilation.h"
 #include "slang/diagnostics/DeclarationsDiags.h"
-#include "slang/symbols/AttributeSymbol.h"
-#include "slang/symbols/ParameterSymbols.h"
-#include "slang/symbols/Scope.h"
 #include "slang/syntax/AllSyntax.h"
 #include "slang/syntax/SyntaxFacts.h"
 

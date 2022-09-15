@@ -3,17 +3,17 @@
 
 #include "Test.h"
 
-#include "slang/binding/AssignmentExpressions.h"
-#include "slang/binding/Expression.h"
-#include "slang/binding/MiscExpressions.h"
-#include "slang/binding/OperatorExpressions.h"
-#include "slang/symbols/BlockSymbols.h"
-#include "slang/symbols/CompilationUnitSymbols.h"
-#include "slang/symbols/InstanceSymbols.h"
-#include "slang/symbols/ParameterSymbols.h"
-#include "slang/symbols/VariableSymbols.h"
+#include "slang/ast/Expression.h"
+#include "slang/ast/expressions/AssignmentExpressions.h"
+#include "slang/ast/expressions/MiscExpressions.h"
+#include "slang/ast/expressions/OperatorExpressions.h"
+#include "slang/ast/symbols/BlockSymbols.h"
+#include "slang/ast/symbols/CompilationUnitSymbols.h"
+#include "slang/ast/symbols/InstanceSymbols.h"
+#include "slang/ast/symbols/ParameterSymbols.h"
+#include "slang/ast/symbols/VariableSymbols.h"
+#include "slang/ast/types/Type.h"
 #include "slang/syntax/AllSyntax.h"
-#include "slang/types/Type.h"
 
 SVInt testParameter(const std::string& text, uint32_t index = 0) {
     const auto& fullText = "module Top; " + text + " endmodule";
