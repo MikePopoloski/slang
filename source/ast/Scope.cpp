@@ -553,7 +553,7 @@ const Symbol* Scope::find(string_view name) const {
 const Symbol* Scope::lookupName(string_view name, LookupLocation location,
                                 bitmask<LookupFlags> flags) const {
     LookupResult result;
-    BindContext context(*this, location);
+    ASTContext context(*this, location);
     Lookup::name(compilation.parseName(name), context, flags, result);
     ASSERT(result.selectors.empty());
     return result.found;
@@ -820,7 +820,7 @@ void Scope::elaborate() const {
             ASSERT(type->kind == SymbolKind::ErrorType);
 
             SmallVectorSized<const Symbol*, 8> members;
-            BindContext context(*this, LookupLocation::max);
+            ASTContext context(*this, LookupLocation::max);
             EnumType::createDefaultMembers(context, syntax->as<EnumTypeSyntax>(), members);
 
             for (auto member : members) {
@@ -878,7 +878,7 @@ void Scope::elaborate() const {
     uint32_t constructIndex = 1;
 
     for (auto symbol : deferred) {
-        BindContext context(*this, LookupLocation::before(*symbol));
+        ASTContext context(*this, LookupLocation::before(*symbol));
         auto& member = symbol->as<DeferredMemberSymbol>();
 
         switch (member.node.kind) {
@@ -1167,7 +1167,7 @@ bool Scope::handleDataDeclaration(const DataDeclarationSyntax& syntax) {
     return true;
 }
 
-void Scope::tryFixupInstances(const DataDeclarationSyntax& syntax, const BindContext& context,
+void Scope::tryFixupInstances(const DataDeclarationSyntax& syntax, const ASTContext& context,
                               SmallVector<const Symbol*>& results) const {
     auto& namedType = syntax.type->as<NamedTypeSyntax>();
     string_view name = getIdentifierName(namedType);

@@ -16,7 +16,7 @@ public:
     SignedConversionFunction(const std::string& name, bool toSigned) :
         SystemSubroutine(name, SubroutineKind::Function), toSigned(toSigned) {}
 
-    const Type& checkArguments(const BindContext& context, const Args& args, SourceRange range,
+    const Type& checkArguments(const ASTContext& context, const Args& args, SourceRange range,
                                const Expression*) const final {
         auto& comp = context.getCompilation();
         if (!checkArgCount(context, false, args, range, 1, 1))
@@ -67,7 +67,7 @@ class ItoRFunction : public SystemSubroutine {
 public:
     explicit ItoRFunction(Compilation&) : SystemSubroutine("$itor", SubroutineKind::Function) {}
 
-    const Type& checkArguments(const BindContext& context, const Args& args, SourceRange range,
+    const Type& checkArguments(const ASTContext& context, const Args& args, SourceRange range,
                                const Expression*) const final {
         auto& comp = context.getCompilation();
         if (!checkArgCount(context, false, args, range, 1, 1))

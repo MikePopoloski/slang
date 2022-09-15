@@ -32,7 +32,7 @@ namespace {
 
 using namespace slang;
 
-bool checkEnumInitializer(const BindContext& context, const Type& lt, const Expression& rhs) {
+bool checkEnumInitializer(const ASTContext& context, const Type& lt, const Expression& rhs) {
     // [6.19] says that the initializer for an enum value must be an integer expression that
     // does not truncate any bits. Furthermore, if a sized literal constant is used, it must
     // be sized exactly to the size of the enum base type.
@@ -71,7 +71,7 @@ bool isSameEnum(const Expression& expr, const Type& enumType) {
 
 namespace slang {
 
-Expression* Expression::tryConnectPortArray(const BindContext& context, const Type& portType,
+Expression* Expression::tryConnectPortArray(const ASTContext& context, const Type& portType,
                                             Expression& expr, const InstanceSymbolBase& instance) {
     // This lambda is shared code for reporting an error and returning an invalid expression.
     auto& comp = context.getCompilation();
@@ -231,7 +231,7 @@ bool Expression::isImplicitlyAssignableTo(Compilation& compilation, const Type& 
     return false;
 }
 
-Expression& Expression::convertAssignment(const BindContext& context, const Type& type,
+Expression& Expression::convertAssignment(const ASTContext& context, const Type& type,
                                           Expression& expr, SourceLocation location,
                                           Expression** lhsExpr, bitmask<AssignFlags>* assignFlags) {
     if (expr.bad())
@@ -317,7 +317,7 @@ Expression& Expression::convertAssignment(const BindContext& context, const Type
         }
 
         DiagCode code = diag::BadAssignment;
-        if (!context.flags.has(BindFlags::OutputArg) &&
+        if (!context.flags.has(ASTFlags::OutputArg) &&
             (type.isCastCompatible(*rt) || type.isBitstreamCastable(*rt))) {
             code = diag::NoImplicitConversion;
         }
@@ -332,7 +332,7 @@ Expression& Expression::convertAssignment(const BindContext& context, const Type
     }
 
     if (type.isNumeric() && rt->isNumeric()) {
-        if (context.flags.has(BindFlags::EnumInitializer) &&
+        if (context.flags.has(ASTFlags::EnumInitializer) &&
             !checkEnumInitializer(context, type, *result)) {
             return badExpr(comp, &expr);
         }
@@ -350,7 +350,7 @@ Expression& Expression::convertAssignment(const BindContext& context, const Type
             return *result;
 
         // Do not convert (truncate) enum initializer so out of range value can be checked.
-        if (context.flags.has(BindFlags::EnumInitializer)) {
+        if (context.flags.has(ASTFlags::EnumInitializer)) {
             selfDetermined(context, result);
             return *result;
         }
@@ -362,20 +362,20 @@ Expression& Expression::convertAssignment(const BindContext& context, const Type
 
 Expression& AssignmentExpression::fromSyntax(Compilation& compilation,
                                              const BinaryExpressionSyntax& syntax,
-                                             const BindContext& context) {
+                                             const ASTContext& context) {
     bitmask<AssignFlags> assignFlags;
     bool isNonBlocking = syntax.kind == SyntaxKind::NonblockingAssignmentExpression;
     if (isNonBlocking)
         assignFlags = AssignFlags::NonBlocking;
 
-    if (isNonBlocking && context.flags.has(BindFlags::Final)) {
+    if (isNonBlocking && context.flags.has(ASTFlags::Final)) {
         context.addDiag(diag::NonblockingInFinal, syntax.sourceRange());
         return badExpr(compilation, nullptr);
     }
 
-    if (!context.flags.has(BindFlags::AssignmentAllowed)) {
-        if (!context.flags.has(BindFlags::NonProcedural) &&
-            !context.flags.has(BindFlags::AssignmentDisallowed)) {
+    if (!context.flags.has(ASTFlags::AssignmentAllowed)) {
+        if (!context.flags.has(ASTFlags::NonProcedural) &&
+            !context.flags.has(ASTFlags::AssignmentDisallowed)) {
             context.addDiag(diag::AssignmentRequiresParens, syntax.sourceRange());
         }
         else {
@@ -384,14 +384,14 @@ Expression& AssignmentExpression::fromSyntax(Compilation& compilation,
         return badExpr(compilation, nullptr);
     }
 
-    bitmask<BindFlags> extraFlags = BindFlags::None;
+    bitmask<ASTFlags> extraFlags = ASTFlags::None;
     optional<BinaryOperator> op;
     if (syntax.kind != SyntaxKind::AssignmentExpression &&
         syntax.kind != SyntaxKind::NonblockingAssignmentExpression) {
         op = getBinaryOperator(syntax.kind);
     }
     else {
-        extraFlags |= BindFlags::StreamingAllowed;
+        extraFlags |= ASTFlags::StreamingAllowed;
     }
 
     const ExpressionSyntax* rightExpr = syntax.right;
@@ -399,13 +399,13 @@ Expression& AssignmentExpression::fromSyntax(Compilation& compilation,
     // If we're in a top-level statement, check for an intra-assignment timing control.
     // Otherwise, we'll let this fall through to the default handler which will issue an error.
     const TimingControl* timingControl = nullptr;
-    if (context.flags.has(BindFlags::TopLevelStatement) &&
+    if (context.flags.has(ASTFlags::TopLevelStatement) &&
         rightExpr->kind == SyntaxKind::TimingControlExpression) {
 
-        BindContext timingCtx = context;
-        timingCtx.flags |= BindFlags::LValue;
+        ASTContext timingCtx = context;
+        timingCtx.flags |= ASTFlags::LValue;
         if (isNonBlocking)
-            timingCtx.flags |= BindFlags::NonBlockingTimingControl;
+            timingCtx.flags |= ASTFlags::NonBlockingTimingControl;
 
         auto& tce = rightExpr->as<TimingControlExpressionSyntax>();
         timingControl = &TimingControl::bind(*tce.timing, timingCtx);
@@ -428,7 +428,7 @@ Expression& AssignmentExpression::fromSyntax(Compilation& compilation,
             if (rhs->bad())
                 return badExpr(compilation, rhs);
 
-            auto lhs = &create(compilation, *syntax.left, context, BindFlags::LValue, rhs->type);
+            auto lhs = &create(compilation, *syntax.left, context, ASTFlags::LValue, rhs->type);
             selfDetermined(context, lhs);
 
             return fromComponents(compilation, op, assignFlags, *lhs, *rhs,
@@ -437,7 +437,7 @@ Expression& AssignmentExpression::fromSyntax(Compilation& compilation,
         }
     }
 
-    auto& lhs = selfDetermined(compilation, *syntax.left, context, extraFlags | BindFlags::LValue);
+    auto& lhs = selfDetermined(compilation, *syntax.left, context, extraFlags | ASTFlags::LValue);
 
     Expression* rhs = nullptr;
     if (lhs.type->isVirtualInterface())
@@ -465,7 +465,7 @@ Expression& AssignmentExpression::fromSyntax(Compilation& compilation,
 Expression& AssignmentExpression::fromComponents(
     Compilation& compilation, optional<BinaryOperator> op, bitmask<AssignFlags> flags,
     Expression& lhs, Expression& rhs, SourceLocation assignLoc, const TimingControl* timingControl,
-    SourceRange sourceRange, const BindContext& context) {
+    SourceRange sourceRange, const ASTContext& context) {
 
     auto result = compilation.emplace<AssignmentExpression>(op, flags.has(AssignFlags::NonBlocking),
                                                             *lhs.type, lhs, rhs, timingControl,
@@ -568,10 +568,9 @@ void AssignmentExpression::serializeTo(ASTSerializer& serializer) const {
 
 Expression& ConversionExpression::fromSyntax(Compilation& compilation,
                                              const CastExpressionSyntax& syntax,
-                                             const BindContext& context) {
-    auto& targetExpr = bind(*syntax.left, context, BindFlags::AllowDataType);
-    auto& operand = selfDetermined(compilation, *syntax.right, context,
-                                   BindFlags::StreamingAllowed);
+                                             const ASTContext& context) {
+    auto& targetExpr = bind(*syntax.left, context, ASTFlags::AllowDataType);
+    auto& operand = selfDetermined(compilation, *syntax.right, context, ASTFlags::StreamingAllowed);
 
     const auto* type = &compilation.getErrorType();
     auto result = [&](ConversionKind cast = ConversionKind::Explicit) {
@@ -634,7 +633,7 @@ Expression& ConversionExpression::fromSyntax(Compilation& compilation,
 
 Expression& ConversionExpression::fromSyntax(Compilation& compilation,
                                              const SignedCastExpressionSyntax& syntax,
-                                             const BindContext& context) {
+                                             const ASTContext& context) {
     auto& operand = selfDetermined(compilation, *syntax.inner, context);
     auto result = compilation.emplace<ConversionExpression>(compilation.getErrorType(),
                                                             ConversionKind::Explicit, operand,
@@ -664,7 +663,7 @@ Expression& ConversionExpression::fromSyntax(Compilation& compilation,
     return *result;
 }
 
-static void checkImplicitConversions(const BindContext& context, const Type& targetType,
+static void checkImplicitConversions(const ASTContext& context, const Type& targetType,
                                      const Expression& op, SourceLocation loc) {
     auto isStructUnionEnum = [](const Type& t) {
         return t.kind == SymbolKind::PackedStructType || t.kind == SymbolKind::PackedUnionType ||
@@ -713,7 +712,7 @@ static void checkImplicitConversions(const BindContext& context, const Type& tar
     }
 }
 
-Expression& ConversionExpression::makeImplicit(const BindContext& context, const Type& targetType,
+Expression& ConversionExpression::makeImplicit(const ASTContext& context, const Type& targetType,
                                                ConversionKind conversionKind, Expression& expr,
                                                SourceLocation loc) {
     auto& comp = context.getCompilation();
@@ -840,7 +839,7 @@ void ConversionExpression::serializeTo(ASTSerializer& serializer) const {
 
 Expression& NewArrayExpression::fromSyntax(Compilation& compilation,
                                            const NewArrayExpressionSyntax& syntax,
-                                           const BindContext& context,
+                                           const ASTContext& context,
                                            const Type* assignmentTarget) {
     if (!assignmentTarget ||
         assignmentTarget->getCanonicalType().kind != SymbolKind::DynamicArrayType) {
@@ -908,7 +907,7 @@ void NewArrayExpression::serializeTo(ASTSerializer& serializer) const {
 
 Expression& NewClassExpression::fromSyntax(Compilation& compilation,
                                            const NewClassExpressionSyntax& syntax,
-                                           const BindContext& context,
+                                           const ASTContext& context,
                                            const Type* assignmentTarget) {
     // If the new expression is typed, look up that type as the target.
     // Otherwise, the target must come from the expression context.
@@ -1008,7 +1007,7 @@ void NewClassExpression::serializeTo(ASTSerializer& serializer) const {
 
 Expression& NewCovergroupExpression::fromSyntax(Compilation& compilation,
                                                 const NewClassExpressionSyntax& syntax,
-                                                const BindContext& context,
+                                                const ASTContext& context,
                                                 const Type& assignmentTarget) {
     auto range = syntax.sourceRange();
     auto& coverType = assignmentTarget.getCanonicalType().as<CovergroupType>();
@@ -1037,7 +1036,7 @@ void NewCovergroupExpression::serializeTo(ASTSerializer& serializer) const {
 
 Expression& Expression::bindAssignmentPattern(Compilation& comp,
                                               const AssignmentPatternExpressionSyntax& syntax,
-                                              const BindContext& context,
+                                              const ASTContext& context,
                                               const Type* assignmentTarget) {
     SourceRange range = syntax.sourceRange();
 
@@ -1233,7 +1232,7 @@ void AssignmentPatternExpressionBase::serializeTo(ASTSerializer& serializer) con
 }
 
 Expression& SimpleAssignmentPatternExpression::forStruct(
-    Compilation& comp, const SimpleAssignmentPatternSyntax& syntax, const BindContext& context,
+    Compilation& comp, const SimpleAssignmentPatternSyntax& syntax, const ASTContext& context,
     const Type& type, const Scope& structScope, SourceRange sourceRange) {
 
     SmallVectorSized<const Type*, 8> types;
@@ -1266,7 +1265,7 @@ Expression& SimpleAssignmentPatternExpression::forStruct(
 
 static span<const Expression* const> bindExpressionList(
     const Type& patternType, const Type& elementType, size_t replCount, bitwidth_t expectedCount,
-    const SeparatedSyntaxList<ExpressionSyntax>& items, const BindContext& context,
+    const SeparatedSyntaxList<ExpressionSyntax>& items, const ASTContext& context,
     SourceRange sourceRange, bool& bad) {
 
     SmallVectorSized<const Expression*, 8> elems;
@@ -1289,7 +1288,7 @@ static span<const Expression* const> bindExpressionList(
 }
 
 Expression& SimpleAssignmentPatternExpression::forFixedArray(
-    Compilation& comp, const SimpleAssignmentPatternSyntax& syntax, const BindContext& context,
+    Compilation& comp, const SimpleAssignmentPatternSyntax& syntax, const ASTContext& context,
     const Type& type, const Type& elementType, bitwidth_t numElements, SourceRange sourceRange) {
 
     bool bad = false;
@@ -1304,7 +1303,7 @@ Expression& SimpleAssignmentPatternExpression::forFixedArray(
 }
 
 Expression& SimpleAssignmentPatternExpression::forDynamicArray(
-    Compilation& comp, const SimpleAssignmentPatternSyntax& syntax, const BindContext& context,
+    Compilation& comp, const SimpleAssignmentPatternSyntax& syntax, const ASTContext& context,
     const Type& type, const Type& elementType, SourceRange sourceRange) {
 
     bool bad = false;
@@ -1319,7 +1318,7 @@ Expression& SimpleAssignmentPatternExpression::forDynamicArray(
 }
 
 static const Expression* matchElementValue(
-    const BindContext& context, const Type& elementType, const FieldSymbol* targetField,
+    const ASTContext& context, const Type& elementType, const FieldSymbol* targetField,
     SourceRange sourceRange,
     span<const StructuredAssignmentPatternExpression::TypeSetter> typeSetters,
     const Expression* defaultSetter) {
@@ -1432,7 +1431,7 @@ static const Expression* matchElementValue(
 }
 
 Expression& StructuredAssignmentPatternExpression::forStruct(
-    Compilation& comp, const StructuredAssignmentPatternSyntax& syntax, const BindContext& context,
+    Compilation& comp, const StructuredAssignmentPatternSyntax& syntax, const ASTContext& context,
     const Type& type, const Scope& structScope, SourceRange sourceRange) {
 
     bool bad = false;
@@ -1548,7 +1547,7 @@ Expression& StructuredAssignmentPatternExpression::forStruct(
 }
 
 static optional<int32_t> bindArrayIndexSetter(
-    const BindContext& context, const Expression& keyExpr, const Type& elementType,
+    const ASTContext& context, const Expression& keyExpr, const Type& elementType,
     const ExpressionSyntax& valueSyntax, SmallMap<int32_t, const Expression*, 8>& indexMap,
     SmallVector<StructuredAssignmentPatternExpression::IndexSetter>& indexSetters) {
 
@@ -1574,7 +1573,7 @@ static optional<int32_t> bindArrayIndexSetter(
 }
 
 Expression& StructuredAssignmentPatternExpression::forFixedArray(
-    Compilation& comp, const StructuredAssignmentPatternSyntax& syntax, const BindContext& context,
+    Compilation& comp, const StructuredAssignmentPatternSyntax& syntax, const ASTContext& context,
     const Type& type, const Type& elementType, SourceRange sourceRange) {
 
     bool bad = false;
@@ -1595,7 +1594,7 @@ Expression& StructuredAssignmentPatternExpression::forFixedArray(
         }
 
         // The key is either an array index or a data type setter.
-        auto& keyExpr = Expression::bind(*item->key, context, BindFlags::AllowDataType);
+        auto& keyExpr = Expression::bind(*item->key, context, ASTFlags::AllowDataType);
         if (keyExpr.bad()) {
             bad = true;
             continue;
@@ -1666,7 +1665,7 @@ Expression& StructuredAssignmentPatternExpression::forFixedArray(
 }
 
 Expression& StructuredAssignmentPatternExpression::forDynamicArray(
-    Compilation& comp, const StructuredAssignmentPatternSyntax& syntax, const BindContext& context,
+    Compilation& comp, const StructuredAssignmentPatternSyntax& syntax, const ASTContext& context,
     const Type& type, const Type& elementType, SourceRange sourceRange) {
 
     bool bad = false;
@@ -1682,7 +1681,7 @@ Expression& StructuredAssignmentPatternExpression::forDynamicArray(
         }
 
         // The key is either an array index or a data type setter.
-        auto& keyExpr = Expression::bind(*item->key, context, BindFlags::AllowDataType);
+        auto& keyExpr = Expression::bind(*item->key, context, ASTFlags::AllowDataType);
         if (keyExpr.bad()) {
             bad = true;
             continue;
@@ -1731,7 +1730,7 @@ Expression& StructuredAssignmentPatternExpression::forDynamicArray(
 }
 
 Expression& StructuredAssignmentPatternExpression::forAssociativeArray(
-    Compilation& comp, const StructuredAssignmentPatternSyntax& syntax, const BindContext& context,
+    Compilation& comp, const StructuredAssignmentPatternSyntax& syntax, const ASTContext& context,
     const Type& type, const Type& elementType, SourceRange sourceRange) {
 
     bool bad = false;
@@ -1837,7 +1836,7 @@ void StructuredAssignmentPatternExpression::serializeTo(ASTSerializer& serialize
 }
 
 const Expression& ReplicatedAssignmentPatternExpression::bindReplCount(
-    Compilation& comp, const ExpressionSyntax& syntax, const BindContext& context, size_t& count) {
+    Compilation& comp, const ExpressionSyntax& syntax, const ASTContext& context, size_t& count) {
 
     const Expression& expr = bind(syntax, context);
     optional<int32_t> c = context.evalInteger(expr);
@@ -1849,7 +1848,7 @@ const Expression& ReplicatedAssignmentPatternExpression::bindReplCount(
 }
 
 Expression& ReplicatedAssignmentPatternExpression::forStruct(
-    Compilation& comp, const ReplicatedAssignmentPatternSyntax& syntax, const BindContext& context,
+    Compilation& comp, const ReplicatedAssignmentPatternSyntax& syntax, const ASTContext& context,
     const Type& type, const Scope& structScope, SourceRange sourceRange) {
 
     size_t count = 0;
@@ -1889,7 +1888,7 @@ Expression& ReplicatedAssignmentPatternExpression::forStruct(
 }
 
 Expression& ReplicatedAssignmentPatternExpression::forFixedArray(
-    Compilation& comp, const ReplicatedAssignmentPatternSyntax& syntax, const BindContext& context,
+    Compilation& comp, const ReplicatedAssignmentPatternSyntax& syntax, const ASTContext& context,
     const Type& type, const Type& elementType, bitwidth_t numElements, SourceRange sourceRange) {
 
     size_t count = 0;
@@ -1910,7 +1909,7 @@ Expression& ReplicatedAssignmentPatternExpression::forFixedArray(
 }
 
 Expression& ReplicatedAssignmentPatternExpression::forDynamicArray(
-    Compilation& comp, const ReplicatedAssignmentPatternSyntax& syntax, const BindContext& context,
+    Compilation& comp, const ReplicatedAssignmentPatternSyntax& syntax, const ASTContext& context,
     const Type& type, const Type& elementType, SourceRange sourceRange) {
 
     size_t count = 0;

@@ -79,8 +79,8 @@ ConstantValue ScriptSession::eval(string_view text) {
 }
 
 ConstantValue ScriptSession::evalExpression(const ExpressionSyntax& expr) {
-    BindContext context(scope, LookupLocation::max);
-    auto& bound = Expression::bind(expr, context, BindFlags::AssignmentAllowed);
+    ASTContext context(scope, LookupLocation::max);
+    auto& bound = Expression::bind(expr, context, ASTFlags::AssignmentAllowed);
     return bound.eval(evalContext);
 }
 
@@ -88,7 +88,7 @@ void ScriptSession::evalStatement(const StatementSyntax& stmt) {
     auto& block = StatementBlockSymbol::fromLabeledStmt(scope, stmt);
     scope.addMember(block);
 
-    BindContext context(scope, LookupLocation::max);
+    ASTContext context(scope, LookupLocation::max);
     Statement::StatementContext stmtCtx(context);
     block.getStatement(context, stmtCtx).eval(evalContext);
 }

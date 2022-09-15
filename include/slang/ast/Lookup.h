@@ -13,7 +13,7 @@
 
 namespace slang {
 
-class BindContext;
+class ASTContext;
 class ClassType;
 class Scope;
 class Symbol;
@@ -189,10 +189,10 @@ struct LookupResult {
 
     /// Reports any diagnostics that have occurred during lookup to the given bind
     /// context, which will ensure they are visible to the compilation.
-    void reportDiags(const BindContext& context) const;
+    void reportDiags(const ASTContext& context) const;
 
     /// Issues a diagnostic if there are selectors in the lookup result.
-    void errorIfSelectors(const BindContext& context) const;
+    void errorIfSelectors(const ASTContext& context) const;
 
 private:
     Diagnostics diagnostics;
@@ -203,7 +203,7 @@ class Lookup {
 public:
     /// Performs a full fledged name lookup starting in the current scope, following all
     /// SystemVerilog rules for qualified or unqualified name resolution.
-    static void name(const NameSyntax& syntax, const BindContext& context,
+    static void name(const NameSyntax& syntax, const ASTContext& context,
                      bitmask<LookupFlags> flags, LookupResult& result);
 
     /// Performs an unqualified lookup in this scope, then recursively up the parent
@@ -223,20 +223,20 @@ public:
     /// If any errors occur, diagnostics are issued to @a result and nullptr is returned.
     static const Symbol* selectChild(const Symbol& symbol,
                                      span<const ElementSelectSyntax* const> selectors,
-                                     const BindContext& context, LookupResult& result);
+                                     const ASTContext& context, LookupResult& result);
 
     /// Applies the given @a selectors to the @a virtualInterface type and returns the
     /// selected child in @result -- if any errors occur, diagnostics are issued to
     /// the result object and nullptr is returned.
     static void selectChild(const Type& virtualInterface, SourceRange range,
-                            span<LookupResult::Selector> selectors, const BindContext& context,
+                            span<LookupResult::Selector> selectors, const ASTContext& context,
                             LookupResult& result);
 
     /// Searches for a class with the given @a name within @a context -- if no symbol is
     /// found, or if the found symbol is not a class type, appropriate diagnostics are issued.
     /// If @a requireInterfaceClass is given the resulting class will be required to be
     /// an interface class; nullptr will be returned and a diagnostic issued if it's not.
-    static const ClassType* findClass(const NameSyntax& name, const BindContext& context,
+    static const ClassType* findClass(const NameSyntax& name, const ASTContext& context,
                                       optional<DiagCode> requireInterfaceClass = {});
 
     /// Gets the containing class for the given scope. The return value is a pair, with
@@ -263,14 +263,14 @@ public:
     /// Otherwise, if the member is visible from the provided context, returns true.
     /// If it's not visible, and @a sourceRange is provided, an appropriate diganostic will
     /// be issued and false returned.
-    static bool ensureVisible(const Symbol& symbol, const BindContext& context,
+    static bool ensureVisible(const Symbol& symbol, const ASTContext& context,
                               optional<SourceRange> sourceRange);
 
     /// If the given symbol is not a class member, returns true without doing any other work.
     /// Otherwise, if the member is accessible from the provided context (in terms of static
     /// vs instance members), returns true. If it's not accessible, and @a sourceRange is provided,
     /// an appropriate diganostic will be issued and false returned.
-    static bool ensureAccessible(const Symbol& symbol, const BindContext& context,
+    static bool ensureAccessible(const Symbol& symbol, const ASTContext& context,
                                  optional<SourceRange> sourceRange);
 
     /// Searches a linked list of temporary variable symbols to see if any match the given name.
@@ -282,13 +282,13 @@ public:
     /// restrictions provided. If the symbol is not found, or if the name starts with 'local::',
     /// it is expected that the caller will then perform a normal lookup in the local scope.
     /// Returns true if the symbol is found and false otherwise.
-    static bool withinClassRandomize(const BindContext& context, const NameSyntax& syntax,
+    static bool withinClassRandomize(const ASTContext& context, const NameSyntax& syntax,
                                      bitmask<LookupFlags> flags, LookupResult& result);
 
     /// Performs a lookup within an expanding sequence or property to try to find a
     /// local variable matching the given name. If one is found, populates @a result
     /// and returns true. Otherwise returns false.
-    static bool findAssertionLocalVar(const BindContext& context, const NameSyntax& name,
+    static bool findAssertionLocalVar(const ASTContext& context, const NameSyntax& name,
                                       LookupResult& result);
 
 private:
@@ -298,7 +298,7 @@ private:
                                 optional<SourceRange> sourceRange, bitmask<LookupFlags> flags,
                                 SymbolIndex outOfBlockIndex, LookupResult& result);
 
-    static void qualified(const ScopedNameSyntax& syntax, const BindContext& context,
+    static void qualified(const ScopedNameSyntax& syntax, const ASTContext& context,
                           bitmask<LookupFlags> flags, LookupResult& result);
 
     static void reportUndeclared(const Scope& scope, string_view name, SourceRange range,

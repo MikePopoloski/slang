@@ -23,7 +23,7 @@ bool SystemSubroutine::allowClockingArgument(size_t) const {
     return false;
 }
 
-const Expression& SystemSubroutine::bindArgument(size_t, const BindContext& context,
+const Expression& SystemSubroutine::bindArgument(size_t, const ASTContext& context,
                                                  const ExpressionSyntax& syntax,
                                                  const Args&) const {
     return Expression::bind(syntax, context);
@@ -33,7 +33,7 @@ string_view SystemSubroutine::kindStr() const {
     return kind == SubroutineKind::Task ? "task"sv : "function"sv;
 }
 
-bool SystemSubroutine::checkArgCount(const BindContext& context, bool isMethod, const Args& args,
+bool SystemSubroutine::checkArgCount(const ASTContext& context, bool isMethod, const Args& args,
                                      SourceRange callRange, size_t min, size_t max) const {
     for (auto arg : args) {
         if (arg->bad())
@@ -59,13 +59,13 @@ bool SystemSubroutine::checkArgCount(const BindContext& context, bool isMethod, 
     return true;
 }
 
-BindContext SystemSubroutine::unevaluatedContext(const BindContext& sourceContext) {
-    BindContext result = sourceContext;
-    result.flags &= ~BindFlags::StaticInitializer;
+ASTContext SystemSubroutine::unevaluatedContext(const ASTContext& sourceContext) {
+    ASTContext result = sourceContext;
+    result.flags &= ~ASTFlags::StaticInitializer;
     return result;
 }
 
-const Type& SystemSubroutine::badArg(const BindContext& context, const Expression& arg) const {
+const Type& SystemSubroutine::badArg(const ASTContext& context, const Expression& arg) const {
     context.addDiag(diag::BadSystemSubroutineArg, arg.sourceRange) << *arg.type << kindStr();
     return context.getCompilation().getErrorType();
 }
@@ -86,7 +86,7 @@ bool SystemSubroutine::noHierarchical(EvalContext& context, const Expression& ex
     return true;
 }
 
-const Expression& SimpleSystemSubroutine::bindArgument(size_t argIndex, const BindContext& context,
+const Expression& SimpleSystemSubroutine::bindArgument(size_t argIndex, const ASTContext& context,
                                                        const ExpressionSyntax& syntax,
                                                        const Args& args) const {
     if (isMethod)
@@ -98,7 +98,7 @@ const Expression& SimpleSystemSubroutine::bindArgument(size_t argIndex, const Bi
     return Expression::bindArgument(*argTypes[argIndex], ArgumentDirection::In, syntax, context);
 }
 
-const Type& SimpleSystemSubroutine::checkArguments(const BindContext& context, const Args& args,
+const Type& SimpleSystemSubroutine::checkArguments(const ASTContext& context, const Args& args,
                                                    SourceRange range, const Expression*) const {
     auto& comp = context.getCompilation();
     if (!checkArgCount(context, isMethod, args, range, requiredArgs, argTypes.size()))

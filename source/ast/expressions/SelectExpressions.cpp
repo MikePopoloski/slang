@@ -29,7 +29,7 @@
 
 namespace slang {
 
-static const Type& getIndexedType(Compilation& compilation, const BindContext& context,
+static const Type& getIndexedType(Compilation& compilation, const ASTContext& context,
                                   const Type& valueType, SourceRange exprRange,
                                   SourceRange valueRange, bool isRangeSelect) {
     const Type& ct = valueType.getCanonicalType();
@@ -60,7 +60,7 @@ static const Type& getIndexedType(Compilation& compilation, const BindContext& c
 }
 
 static void checkForVectoredSelect(const Expression& value, SourceRange range,
-                                   const BindContext& context) {
+                                   const ASTContext& context) {
     if (value.kind != ExpressionKind::NamedValue && value.kind != ExpressionKind::HierarchicalValue)
         return;
 
@@ -72,7 +72,7 @@ static void checkForVectoredSelect(const Expression& value, SourceRange range,
 }
 
 template<typename T>
-bool requireLValueHelper(const T& expr, const BindContext& context, SourceLocation location,
+bool requireLValueHelper(const T& expr, const ASTContext& context, SourceLocation location,
                          bitmask<AssignFlags> flags, const Expression* longestStaticPrefix,
                          EvalContext* customEvalContext) {
     auto& val = expr.value();
@@ -97,7 +97,7 @@ bool requireLValueHelper(const T& expr, const BindContext& context, SourceLocati
         }
     }
 
-    if (context.flags.has(BindFlags::NonProcedural)) {
+    if (context.flags.has(ASTFlags::NonProcedural)) {
         if constexpr (std::is_same_v<T, RangeSelectExpression>) {
             if (!context.eval(expr.left()) || !context.eval(expr.right()))
                 return false;
@@ -130,7 +130,7 @@ bool requireLValueHelper(const T& expr, const BindContext& context, SourceLocati
 
 Expression& ElementSelectExpression::fromSyntax(Compilation& compilation, Expression& value,
                                                 const ExpressionSyntax& syntax,
-                                                SourceRange fullRange, const BindContext& context) {
+                                                SourceRange fullRange, const ASTContext& context) {
     if (value.bad())
         return badExpr(compilation, nullptr);
 
@@ -151,9 +151,9 @@ Expression& ElementSelectExpression::fromSyntax(Compilation& compilation, Expres
     }
 
     if (!selector) {
-        bitmask<BindFlags> flags;
+        bitmask<ASTFlags> flags;
         if (valueType.isQueue())
-            flags = BindFlags::AllowUnboundedLiteral | BindFlags::AllowUnboundedLiteralArithmetic;
+            flags = ASTFlags::AllowUnboundedLiteral | ASTFlags::AllowUnboundedLiteralArithmetic;
 
         selector = &selfDetermined(compilation, syntax, context, flags);
         if (!selector->type->isUnbounded() && !context.requireIntegral(*selector))
@@ -183,7 +183,7 @@ Expression& ElementSelectExpression::fromSyntax(Compilation& compilation, Expres
             }
         }
     }
-    else if (context.flags.has(BindFlags::NonProcedural)) {
+    else if (context.flags.has(ASTFlags::NonProcedural)) {
         context.addDiag(diag::DynamicNotProcedural, fullRange);
         return badExpr(compilation, result);
     }
@@ -192,7 +192,7 @@ Expression& ElementSelectExpression::fromSyntax(Compilation& compilation, Expres
 }
 
 Expression& ElementSelectExpression::fromConstant(Compilation& compilation, Expression& value,
-                                                  int32_t index, const BindContext& context) {
+                                                  int32_t index, const ASTContext& context) {
     Expression* indexExpr = &IntegerLiteral::fromConstant(compilation, index);
     selfDetermined(context, indexExpr);
 
@@ -382,7 +382,7 @@ optional<ConstantRange> ElementSelectExpression::evalIndex(EvalContext& context,
     return ConstantRange{*index, *index};
 }
 
-bool ElementSelectExpression::requireLValueImpl(const BindContext& context, SourceLocation location,
+bool ElementSelectExpression::requireLValueImpl(const ASTContext& context, SourceLocation location,
                                                 bitmask<AssignFlags> flags,
                                                 const Expression* longestStaticPrefix,
                                                 EvalContext* customEvalContext) const {
@@ -397,7 +397,7 @@ void ElementSelectExpression::serializeTo(ASTSerializer& serializer) const {
 
 Expression& RangeSelectExpression::fromSyntax(Compilation& compilation, Expression& value,
                                               const RangeSelectSyntax& syntax,
-                                              SourceRange fullRange, const BindContext& context) {
+                                              SourceRange fullRange, const ASTContext& context) {
     // Left and right are either the extents of a part-select, in which case they must
     // both be constant, or the left hand side is the start and the right hand side is
     // the width of an indexed part select, in which case only the rhs need be constant.
@@ -422,10 +422,10 @@ Expression& RangeSelectExpression::fromSyntax(Compilation& compilation, Expressi
     }
 
     // Selection expressions don't need to be const if we're selecting from a queue.
-    bitmask<BindFlags> extraFlags;
+    bitmask<ASTFlags> extraFlags;
     bool isQueue = value.type->isQueue();
     if (isQueue)
-        extraFlags = BindFlags::AllowUnboundedLiteral | BindFlags::AllowUnboundedLiteralArithmetic;
+        extraFlags = ASTFlags::AllowUnboundedLiteral | ASTFlags::AllowUnboundedLiteralArithmetic;
 
     auto& left = bind(*syntax.left, context, extraFlags);
     auto& right = bind(*syntax.right, context, extraFlags);
@@ -452,7 +452,7 @@ Expression& RangeSelectExpression::fromSyntax(Compilation& compilation, Expressi
     // Selects of vectored nets are disallowed.
     checkForVectoredSelect(value, fullRange, context);
 
-    if (!valueType.hasFixedRange() && context.flags.has(BindFlags::NonProcedural)) {
+    if (!valueType.hasFixedRange() && context.flags.has(ASTFlags::NonProcedural)) {
         context.addDiag(diag::DynamicNotProcedural, fullRange);
         return badExpr(compilation, result);
     }
@@ -466,7 +466,7 @@ Expression& RangeSelectExpression::fromSyntax(Compilation& compilation, Expressi
     // If this is a streaming concatenation's "with" range, we also don't
     // require a constant width, but we'll try to validate it if we see
     // that the bounds are constant anyway.
-    if (context.flags.has(BindFlags::StreamingWithRange)) {
+    if (context.flags.has(ASTFlags::StreamingWithRange)) {
         if (context.inUnevaluatedBranch() || !context.tryEval(right) ||
             (selectionKind == RangeSelectionKind::Simple && !context.tryEval(left))) {
             result->type = compilation.emplace<QueueType>(elementType, 0u);
@@ -602,7 +602,7 @@ Expression& RangeSelectExpression::fromSyntax(Compilation& compilation, Expressi
 }
 
 Expression& RangeSelectExpression::fromConstant(Compilation& compilation, Expression& value,
-                                                ConstantRange range, const BindContext& context) {
+                                                ConstantRange range, const ASTContext& context) {
     Expression* left = &IntegerLiteral::fromConstant(compilation, range.left);
     selfDetermined(context, left);
 
@@ -772,7 +772,7 @@ optional<ConstantRange> RangeSelectExpression::evalRange(EvalContext& context,
     return result;
 }
 
-bool RangeSelectExpression::requireLValueImpl(const BindContext& context, SourceLocation location,
+bool RangeSelectExpression::requireLValueImpl(const ASTContext& context, SourceLocation location,
                                               bitmask<AssignFlags> flags,
                                               const Expression* longestStaticPrefix,
                                               EvalContext* customEvalContext) const {
@@ -791,7 +791,7 @@ static Expression* tryBindSpecialMethod(Compilation& compilation, const Expressi
                                         const LookupResult::MemberSelector& selector,
                                         const InvocationExpressionSyntax* invocation,
                                         const ArrayOrRandomizeMethodExpressionSyntax* withClause,
-                                        const BindContext& context) {
+                                        const ASTContext& context) {
     auto sym = expr.getSymbolReference();
     if (!sym)
         return nullptr;
@@ -813,7 +813,7 @@ static Expression* tryBindSpecialMethod(Compilation& compilation, const Expressi
 Expression& MemberAccessExpression::fromSelector(
     Compilation& compilation, Expression& expr, const LookupResult::MemberSelector& selector,
     const InvocationExpressionSyntax* invocation,
-    const ArrayOrRandomizeMethodExpressionSyntax* withClause, const BindContext& context) {
+    const ArrayOrRandomizeMethodExpressionSyntax* withClause, const ASTContext& context) {
 
     // If the selector name is invalid just give up early.
     if (selector.name.empty())
@@ -835,14 +835,14 @@ Expression& MemberAccessExpression::fromSelector(
     }
 
     auto errorIfNotProcedural = [&] {
-        if (context.flags.has(BindFlags::NonProcedural)) {
+        if (context.flags.has(ASTFlags::NonProcedural)) {
             context.addDiag(diag::DynamicNotProcedural, range);
             return true;
         }
         return false;
     };
     auto errorIfAssertion = [&] {
-        if (context.flags.has(BindFlags::AssertionExpr)) {
+        if (context.flags.has(ASTFlags::AssertionExpr)) {
             context.addDiag(diag::ClassMemberInAssertion, range);
             return true;
         }
@@ -988,7 +988,7 @@ Expression& MemberAccessExpression::fromSelector(
 Expression& MemberAccessExpression::fromSyntax(
     Compilation& compilation, const MemberAccessExpressionSyntax& syntax,
     const InvocationExpressionSyntax* invocation,
-    const ArrayOrRandomizeMethodExpressionSyntax* withClause, const BindContext& context) {
+    const ArrayOrRandomizeMethodExpressionSyntax* withClause, const ASTContext& context) {
 
     auto name = syntax.name.valueText();
     Expression& lhs = selfDetermined(compilation, *syntax.left, context);
@@ -1273,7 +1273,7 @@ static bool isWithinCovergroup(const Symbol& field, const Scope& usageScope) {
     return false;
 }
 
-bool MemberAccessExpression::requireLValueImpl(const BindContext& context, SourceLocation location,
+bool MemberAccessExpression::requireLValueImpl(const ASTContext& context, SourceLocation location,
                                                bitmask<AssignFlags> flags,
                                                const Expression* longestStaticPrefix,
                                                EvalContext* customEvalContext) const {

@@ -40,11 +40,11 @@ public:
     bool isDeclaredReg() const;
 
     static const Type& fromSyntax(Compilation& compilation, const IntegerTypeSyntax& syntax,
-                                  const BindContext& context);
+                                  const ASTContext& context);
 
     static const Type& fromSyntax(Compilation& compilation, SyntaxKind integerKind,
                                   span<const VariableDimensionSyntax* const> dimensions,
-                                  bool isSigned, const BindContext& context);
+                                  bool isSigned, const ASTContext& context);
 
     ConstantValue getDefaultValueImpl() const;
 
@@ -102,13 +102,13 @@ public:
     int systemId;
 
     EnumType(Compilation& compilation, SourceLocation loc, const Type& baseType,
-             const BindContext& context);
+             const ASTContext& context);
 
     static const Type& fromSyntax(Compilation& compilation, const EnumTypeSyntax& syntax,
-                                  const BindContext& context, const Type* typedefTarget);
+                                  const ASTContext& context, const Type* typedefTarget);
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::EnumType; }
 
-    static void createDefaultMembers(const BindContext& context, const EnumTypeSyntax& syntax,
+    static void createDefaultMembers(const ASTContext& context, const EnumTypeSyntax& syntax,
                                      SmallVector<const Symbol*>& members);
 
     iterator_range<specific_symbol_iterator<EnumValueSymbol>> values() const {
@@ -215,10 +215,10 @@ public:
     int systemId;
 
     PackedStructType(Compilation& compilation, bool isSigned, SourceLocation loc,
-                     const BindContext& context);
+                     const ASTContext& context);
 
     static const Type& fromSyntax(Compilation& compilation, const StructUnionTypeSyntax& syntax,
-                                  const BindContext& context);
+                                  const ASTContext& context);
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::PackedStructType; }
 };
@@ -228,9 +228,9 @@ class UnpackedStructType : public Type, public Scope {
 public:
     int systemId;
 
-    UnpackedStructType(Compilation& compilation, SourceLocation loc, const BindContext& context);
+    UnpackedStructType(Compilation& compilation, SourceLocation loc, const ASTContext& context);
 
-    static const Type& fromSyntax(const BindContext& context, const StructUnionTypeSyntax& syntax);
+    static const Type& fromSyntax(const ASTContext& context, const StructUnionTypeSyntax& syntax);
 
     ConstantValue getDefaultValueImpl() const;
 
@@ -245,10 +245,10 @@ public:
     uint32_t tagBits;
 
     PackedUnionType(Compilation& compilation, bool isSigned, bool isTagged, SourceLocation loc,
-                    const BindContext& context);
+                    const ASTContext& context);
 
     static const Type& fromSyntax(Compilation& compilation, const StructUnionTypeSyntax& syntax,
-                                  const BindContext& context);
+                                  const ASTContext& context);
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::PackedUnionType; }
 };
@@ -260,9 +260,9 @@ public:
     bool isTagged;
 
     UnpackedUnionType(Compilation& compilation, bool isTagged, SourceLocation loc,
-                      const BindContext& context);
+                      const ASTContext& context);
 
-    static const Type& fromSyntax(const BindContext& context, const StructUnionTypeSyntax& syntax);
+    static const Type& fromSyntax(const ASTContext& context, const StructUnionTypeSyntax& syntax);
 
     ConstantValue getDefaultValueImpl() const;
 
@@ -388,7 +388,7 @@ public:
 
     ConstantValue getDefaultValueImpl() const;
 
-    static const Type& fromSyntax(const BindContext& context,
+    static const Type& fromSyntax(const ASTContext& context,
                                   const VirtualInterfaceTypeSyntax& syntax);
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::VirtualInterfaceType; }

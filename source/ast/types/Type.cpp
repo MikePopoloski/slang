@@ -894,7 +894,7 @@ const Type* Type::getCommonBase(const Type& left, const Type& right) {
 }
 
 const Type& Type::fromSyntax(Compilation& compilation, const DataTypeSyntax& node,
-                             const BindContext& context, const Type* typedefTarget) {
+                             const ASTContext& context, const Type* typedefTarget) {
     switch (node.kind) {
         case SyntaxKind::BitType:
         case SyntaxKind::LogicType:
@@ -957,7 +957,7 @@ const Type& Type::fromSyntax(Compilation& compilation, const DataTypeSyntax& nod
         }
         case SyntaxKind::TypeReference: {
             auto& exprSyntax = *node.as<TypeReferenceSyntax>().expr;
-            auto& expr = Expression::bind(exprSyntax, context, BindFlags::AllowDataType);
+            auto& expr = Expression::bind(exprSyntax, context, ASTFlags::AllowDataType);
             if (expr.hasHierarchicalReference() && !compilation.getOptions().allowHierarchicalConst)
                 context.addDiag(diag::TypeRefHierarchical, exprSyntax.sourceRange());
 
@@ -972,7 +972,7 @@ const Type& Type::fromSyntax(Compilation& compilation, const DataTypeSyntax& nod
 
 const Type& Type::fromSyntax(Compilation& compilation, const Type& elementType,
                              const SyntaxList<VariableDimensionSyntax>& dimensions,
-                             const BindContext& context) {
+                             const ASTContext& context) {
     if (elementType.isError() || dimensions.empty())
         return elementType;
 
@@ -980,7 +980,7 @@ const Type& Type::fromSyntax(Compilation& compilation, const Type& elementType,
         case SymbolKind::SequenceType:
         case SymbolKind::PropertyType:
         case SymbolKind::UntypedType:
-            if (!context.flags.has(BindFlags::AllowInterconnect)) {
+            if (!context.flags.has(ASTFlags::AllowInterconnect)) {
                 context.addDiag(diag::InvalidArrayElemType, dimensions.sourceRange())
                     << elementType;
                 return compilation.getErrorType();
@@ -1067,7 +1067,7 @@ void Type::resolveCanonical() const {
 }
 
 const Type& Type::lookupNamedType(Compilation& compilation, const NameSyntax& syntax,
-                                  const BindContext& context, bool isTypedefTarget) {
+                                  const ASTContext& context, bool isTypedefTarget) {
     bitmask<LookupFlags> flags = LookupFlags::Type;
     if (isTypedefTarget)
         flags |= LookupFlags::TypedefTarget;
@@ -1080,13 +1080,13 @@ const Type& Type::lookupNamedType(Compilation& compilation, const NameSyntax& sy
 }
 
 const Type& Type::fromLookupResult(Compilation& compilation, const LookupResult& result,
-                                   SourceRange sourceRange, const BindContext& context) {
+                                   SourceRange sourceRange, const ASTContext& context) {
     const Symbol* symbol = result.found;
     if (!symbol)
         return compilation.getErrorType();
 
     if (!symbol->isType()) {
-        if (symbol->kind == SymbolKind::NetType && context.flags.has(BindFlags::AllowNetType)) {
+        if (symbol->kind == SymbolKind::NetType && context.flags.has(ASTFlags::AllowNetType)) {
             result.errorIfSelectors(context);
             return symbol->as<NetType>().getDataType();
         }

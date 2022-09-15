@@ -16,7 +16,7 @@ public:
     EnumFirstLastMethod(const std::string& name, bool first) :
         SystemSubroutine(name, SubroutineKind::Function), first(first) {}
 
-    const Type& checkArguments(const BindContext& context, const Args& args, SourceRange range,
+    const Type& checkArguments(const ASTContext& context, const Args& args, SourceRange range,
                                const Expression*) const final {
         auto& comp = context.getCompilation();
         if (!checkArgCount(context, true, args, range, 0, 0))
@@ -61,7 +61,7 @@ public:
     EnumNextPrevMethod(const std::string& name, bool next) :
         SystemSubroutine(name, SubroutineKind::Function), next(next) {}
 
-    const Expression& bindArgument(size_t argIndex, const BindContext& context,
+    const Expression& bindArgument(size_t argIndex, const ASTContext& context,
                                    const ExpressionSyntax& syntax, const Args& args) const final {
         if (argIndex > 1)
             return SystemSubroutine::bindArgument(argIndex, context, syntax, args);
@@ -70,7 +70,7 @@ public:
                                         ArgumentDirection::In, syntax, context);
     }
 
-    const Type& checkArguments(const BindContext& context, const Args& args, SourceRange range,
+    const Type& checkArguments(const ASTContext& context, const Args& args, SourceRange range,
                                const Expression*) const final {
         auto& comp = context.getCompilation();
         if (!checkArgCount(context, true, args, range, 0, 1))
@@ -148,7 +148,7 @@ class EnumNumMethod : public SystemSubroutine {
 public:
     EnumNumMethod() : SystemSubroutine("num", SubroutineKind::Function) {}
 
-    const Type& checkArguments(const BindContext& context, const Args& args, SourceRange range,
+    const Type& checkArguments(const ASTContext& context, const Args& args, SourceRange range,
                                const Expression*) const final {
         auto& comp = context.getCompilation();
         if (!checkArgCount(context, true, args, range, 0, 0))

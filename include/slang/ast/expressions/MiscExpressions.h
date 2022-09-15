@@ -19,18 +19,18 @@ class ValueExpressionBase : public Expression {
 public:
     const ValueSymbol& symbol;
 
-    bool requireLValueImpl(const BindContext& context, SourceLocation location,
+    bool requireLValueImpl(const ASTContext& context, SourceLocation location,
                            bitmask<AssignFlags> flags, const Expression* longestStaticPrefix,
                            EvalContext* customEvalContext) const;
     optional<bitwidth_t> getEffectiveWidthImpl() const;
 
     void serializeTo(ASTSerializer& serializer) const;
 
-    static Expression& fromSymbol(const BindContext& context, const Symbol& symbol,
+    static Expression& fromSymbol(const ASTContext& context, const Symbol& symbol,
                                   bool isHierarchical, SourceRange sourceRange,
                                   bool constraintAllowed = false);
 
-    static bool checkVariableAssignment(const BindContext& context, const VariableSymbol& var,
+    static bool checkVariableAssignment(const ASTContext& context, const VariableSymbol& var,
                                         bitmask<AssignFlags> flags, SourceLocation assignLoc,
                                         SourceRange varRange);
 
@@ -84,7 +84,7 @@ public:
     void serializeTo(ASTSerializer&) const {}
 
     static Expression& fromSyntax(Compilation& compilation, const DataTypeSyntax& syntax,
-                                  const BindContext& context);
+                                  const ASTContext& context);
 
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::DataType; }
 };
@@ -125,7 +125,7 @@ public:
     void serializeTo(ASTSerializer& serializer) const;
 
     static Expression& fromSyntax(Compilation& compilation, const NameSyntax& syntax,
-                                  const BindContext& context,
+                                  const ASTContext& context,
                                   bitmask<LookupFlags> extraLookupFlags = {});
 
     static bool isKind(ExpressionKind kind) {
@@ -178,7 +178,7 @@ public:
     ConstantValue evalImpl(EvalContext&) const { return nullptr; }
 
     static Expression& fromSyntax(const ClockingPropertyExprSyntax& syntax,
-                                  const BindContext& context);
+                                  const ASTContext& context);
 
     void serializeTo(ASTSerializer& serializer) const;
 
@@ -210,12 +210,11 @@ public:
     ConstantValue evalImpl(EvalContext&) const { return nullptr; }
 
     static Expression& fromLookup(const Symbol& symbol, const InvocationExpressionSyntax* syntax,
-                                  SourceRange range, const BindContext& context);
+                                  SourceRange range, const ASTContext& context);
 
     static Expression& makeDefault(const Symbol& symbol);
 
-    static Expression& bindPort(const Symbol& symbol, SourceRange range,
-                                const BindContext& context);
+    static Expression& bindPort(const Symbol& symbol, SourceRange range, const ASTContext& context);
 
     void serializeTo(ASTSerializer& serializer) const;
 
@@ -256,13 +255,13 @@ public:
     Expression& selected() { return *selected_; }
 
     ConstantValue evalImpl(EvalContext& context) const;
-    bool propagateType(const BindContext& context, const Type& newType);
+    bool propagateType(const ASTContext& context, const Type& newType);
     optional<bitwidth_t> getEffectiveWidthImpl() const;
 
     void serializeTo(ASTSerializer& serializer) const;
 
     static Expression& fromSyntax(Compilation& compilation, const MinTypMaxExpressionSyntax& syntax,
-                                  const BindContext& context, const Type* assignmentTarget);
+                                  const ASTContext& context, const Type* assignmentTarget);
 
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::MinTypMax; }
 
@@ -295,7 +294,7 @@ public:
     void serializeTo(ASTSerializer& serializer) const;
 
     static Expression& fromSyntax(Compilation& compilation, const CopyClassExpressionSyntax& syntax,
-                                  const BindContext& context);
+                                  const ASTContext& context);
 
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::CopyClass; }
 
@@ -338,7 +337,7 @@ public:
     void serializeTo(ASTSerializer& serializer) const;
 
     static Expression& fromSyntax(Compilation& comp, const ExpressionOrDistSyntax& syntax,
-                                  const BindContext& context);
+                                  const ASTContext& context);
 
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::Dist; }
 
@@ -376,7 +375,7 @@ public:
 
     static Expression& fromSyntax(Compilation& compilation,
                                   const TaggedUnionExpressionSyntax& syntax,
-                                  const BindContext& context, const Type* assignmentTarget);
+                                  const ASTContext& context, const Type* assignmentTarget);
 
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::TaggedUnion; }
 

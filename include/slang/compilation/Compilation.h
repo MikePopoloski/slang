@@ -21,7 +21,7 @@
 namespace slang {
 
 class AttributeSymbol;
-class BindContext;
+class ASTContext;
 class CompilationUnitSymbol;
 class Definition;
 class Expression;
@@ -308,7 +308,7 @@ public:
     void noteDefaultClocking(const Scope& scope, const Symbol& clocking, SourceRange range);
 
     /// Notes that there is a default clocking block associated with the specified scope.
-    void noteDefaultClocking(const BindContext& context,
+    void noteDefaultClocking(const ASTContext& context,
                              const DefaultClockingReferenceSyntax& syntax);
 
     /// Finds an applicable default clocking block for the given scope, or returns nullptr
@@ -357,7 +357,7 @@ public:
     /// Gets the diagnostics produced during lexing, preprocessing, and syntax parsing.
     const Diagnostics& getParseDiagnostics();
 
-    /// Gets the diagnostics produced during semantic analysis, including the binding of
+    /// Gets the diagnostics produced during semantic analysis, including the creation of
     /// symbols, type checking, and name lookup. Note that this will finalize the compilation,
     /// including forcing the evaluation of any symbols or expressions that were still waiting
     /// for lazy evaluation.
@@ -376,11 +376,11 @@ public:
     TimeScale getDefaultTimeScale() const { return defaultTimeScale; }
 
     const Type& getType(SyntaxKind kind) const;
-    const Type& getType(const DataTypeSyntax& node, const BindContext& context,
+    const Type& getType(const DataTypeSyntax& node, const ASTContext& context,
                         const Type* typedefTarget = nullptr);
     const Type& getType(const Type& elementType,
                         const SyntaxList<VariableDimensionSyntax>& dimensions,
-                        const BindContext& context);
+                        const ASTContext& context);
 
     const Type& getType(bitwidth_t width, bitmask<IntegralFlags> flags);
     const Type& getScalarType(bitmask<IntegralFlags> flags);

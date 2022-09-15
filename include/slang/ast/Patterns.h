@@ -1,6 +1,6 @@
 //------------------------------------------------------------------------------
 //! @file Patterns.h
-//! @brief Definitions for pattern matching binding
+//! @brief AST definitions for pattern matching
 //
 // SPDX-FileCopyrightText: Michael Popoloski
 // SPDX-License-Identifier: MIT
@@ -50,7 +50,7 @@ public:
     using VarMap = SmallMap<string_view, const PatternVarSymbol*, 4>;
 
     static Pattern& bind(const PatternSyntax& syntax, const Type& targetType, VarMap& varMap,
-                         BindContext& context);
+                         ASTContext& context);
 
     /// Evaluates the pattern under the given evaluation context. Any errors that occur
     /// will be stored in the evaluation context instead of issued to the compilation.
@@ -77,7 +77,7 @@ protected:
 
     static Pattern& badPattern(Compilation& compilation, const Pattern* child);
     static void createPlaceholderVars(const PatternSyntax& syntax, VarMap& varMap,
-                                      BindContext& context);
+                                      ASTContext& context);
 };
 
 class InvalidPattern : public Pattern {
@@ -99,7 +99,7 @@ public:
     explicit WildcardPattern(SourceRange sourceRange) :
         Pattern(PatternKind::Wildcard, sourceRange) {}
 
-    static Pattern& fromSyntax(const WildcardPatternSyntax& syntax, const BindContext& context);
+    static Pattern& fromSyntax(const WildcardPatternSyntax& syntax, const ASTContext& context);
 
     ConstantValue evalImpl(EvalContext& context, const ConstantValue& value,
                            CaseStatementCondition conditionKind) const;
@@ -119,7 +119,7 @@ public:
         Pattern(PatternKind::Constant, sourceRange), expr(expr) {}
 
     static Pattern& fromSyntax(const ExpressionPatternSyntax& syntax, const Type& targetType,
-                               const BindContext& context);
+                               const ASTContext& context);
 
     ConstantValue evalImpl(EvalContext& context, const ConstantValue& value,
                            CaseStatementCondition conditionKind) const;
@@ -139,7 +139,7 @@ public:
         Pattern(PatternKind::Variable, sourceRange), variable(variable) {}
 
     static Pattern& fromSyntax(const VariablePatternSyntax& syntax, const Type& targetType,
-                               VarMap& varMap, BindContext& context);
+                               VarMap& varMap, ASTContext& context);
 
     ConstantValue evalImpl(EvalContext& context, const ConstantValue& value,
                            CaseStatementCondition conditionKind) const;
@@ -160,7 +160,7 @@ public:
         Pattern(PatternKind::Tagged, sourceRange), member(member), valuePattern(valuePattern) {}
 
     static Pattern& fromSyntax(const TaggedPatternSyntax& syntax, const Type& targetType,
-                               VarMap& varMap, BindContext& context);
+                               VarMap& varMap, ASTContext& context);
 
     ConstantValue evalImpl(EvalContext& context, const ConstantValue& value,
                            CaseStatementCondition conditionKind) const;
@@ -185,7 +185,7 @@ public:
         Pattern(PatternKind::Structure, sourceRange), patterns(patterns) {}
 
     static Pattern& fromSyntax(const StructurePatternSyntax& syntax, const Type& targetType,
-                               VarMap& varMap, BindContext& context);
+                               VarMap& varMap, ASTContext& context);
 
     ConstantValue evalImpl(EvalContext& context, const ConstantValue& value,
                            CaseStatementCondition conditionKind) const;

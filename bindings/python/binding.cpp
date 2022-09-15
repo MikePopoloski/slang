@@ -71,44 +71,44 @@ void registerBinding(py::module_& m) {
         .def("load", &LValue::load)
         .def("store", &LValue::store);
 
-    py::enum_<BindFlags>(m, "BindFlags")
-        .value("None", BindFlags::None)
-        .value("InsideConcatenation", BindFlags::InsideConcatenation)
-        .value("UnevaluatedBranch", BindFlags::UnevaluatedBranch)
-        .value("AllowDataType", BindFlags::AllowDataType)
-        .value("EnumInitializer", BindFlags::EnumInitializer)
-        .value("NoAttributes", BindFlags::NoAttributes)
-        .value("AssignmentAllowed", BindFlags::AssignmentAllowed)
-        .value("AssignmentDisallowed", BindFlags::AssignmentDisallowed)
-        .value("NonProcedural", BindFlags::NonProcedural)
-        .value("StaticInitializer", BindFlags::StaticInitializer)
-        .value("StreamingAllowed", BindFlags::StreamingAllowed)
-        .value("TopLevelStatement", BindFlags::TopLevelStatement)
-        .value("AllowUnboundedLiteral", BindFlags::AllowUnboundedLiteral)
-        .value("AllowUnboundedLiteralArithmetic", BindFlags::AllowUnboundedLiteralArithmetic)
-        .value("Function", BindFlags::Function)
-        .value("Final", BindFlags::Final)
-        .value("NonBlockingTimingControl", BindFlags::NonBlockingTimingControl)
-        .value("EventExpression", BindFlags::EventExpression)
-        .value("AllowTypeReferences", BindFlags::AllowTypeReferences)
-        .value("AssertionExpr", BindFlags::AssertionExpr)
-        .value("AllowClockingBlock", BindFlags::AllowClockingBlock)
-        .value("AssertionInstanceArgCheck", BindFlags::AssertionInstanceArgCheck)
-        .value("AssertionDelayOrRepetition", BindFlags::AssertionDelayOrRepetition)
-        .value("LValue", BindFlags::LValue)
-        .value("PropertyNegation", BindFlags::PropertyNegation)
-        .value("PropertyTimeAdvance", BindFlags::PropertyTimeAdvance)
-        .value("RecursivePropertyArg", BindFlags::RecursivePropertyArg)
-        .value("ConcurrentAssertActionBlock", BindFlags::ConcurrentAssertActionBlock)
-        .value("AllowCoverageSampleFormal", BindFlags::AllowCoverageSampleFormal)
-        .value("AllowCoverpoint", BindFlags::AllowCoverpoint)
-        .value("AllowNetType", BindFlags::AllowNetType)
-        .value("OutputArg", BindFlags::OutputArg)
-        .value("ProceduralAssign", BindFlags::ProceduralAssign)
-        .value("ProceduralForceRelease", BindFlags::ProceduralForceRelease)
-        .value("AllowInterconnect", BindFlags::AllowInterconnect)
-        .value("UnrollableForLoop", BindFlags::UnrollableForLoop)
-        .value("StreamingWithRange", BindFlags::StreamingWithRange);
+    py::enum_<ASTFlags>(m, "ASTFlags")
+        .value("None", ASTFlags::None)
+        .value("InsideConcatenation", ASTFlags::InsideConcatenation)
+        .value("UnevaluatedBranch", ASTFlags::UnevaluatedBranch)
+        .value("AllowDataType", ASTFlags::AllowDataType)
+        .value("EnumInitializer", ASTFlags::EnumInitializer)
+        .value("NoAttributes", ASTFlags::NoAttributes)
+        .value("AssignmentAllowed", ASTFlags::AssignmentAllowed)
+        .value("AssignmentDisallowed", ASTFlags::AssignmentDisallowed)
+        .value("NonProcedural", ASTFlags::NonProcedural)
+        .value("StaticInitializer", ASTFlags::StaticInitializer)
+        .value("StreamingAllowed", ASTFlags::StreamingAllowed)
+        .value("TopLevelStatement", ASTFlags::TopLevelStatement)
+        .value("AllowUnboundedLiteral", ASTFlags::AllowUnboundedLiteral)
+        .value("AllowUnboundedLiteralArithmetic", ASTFlags::AllowUnboundedLiteralArithmetic)
+        .value("Function", ASTFlags::Function)
+        .value("Final", ASTFlags::Final)
+        .value("NonBlockingTimingControl", ASTFlags::NonBlockingTimingControl)
+        .value("EventExpression", ASTFlags::EventExpression)
+        .value("AllowTypeReferences", ASTFlags::AllowTypeReferences)
+        .value("AssertionExpr", ASTFlags::AssertionExpr)
+        .value("AllowClockingBlock", ASTFlags::AllowClockingBlock)
+        .value("AssertionInstanceArgCheck", ASTFlags::AssertionInstanceArgCheck)
+        .value("AssertionDelayOrRepetition", ASTFlags::AssertionDelayOrRepetition)
+        .value("LValue", ASTFlags::LValue)
+        .value("PropertyNegation", ASTFlags::PropertyNegation)
+        .value("PropertyTimeAdvance", ASTFlags::PropertyTimeAdvance)
+        .value("RecursivePropertyArg", ASTFlags::RecursivePropertyArg)
+        .value("ConcurrentAssertActionBlock", ASTFlags::ConcurrentAssertActionBlock)
+        .value("AllowCoverageSampleFormal", ASTFlags::AllowCoverageSampleFormal)
+        .value("AllowCoverpoint", ASTFlags::AllowCoverpoint)
+        .value("AllowNetType", ASTFlags::AllowNetType)
+        .value("OutputArg", ASTFlags::OutputArg)
+        .value("ProceduralAssign", ASTFlags::ProceduralAssign)
+        .value("ProceduralForceRelease", ASTFlags::ProceduralForceRelease)
+        .value("AllowInterconnect", ASTFlags::AllowInterconnect)
+        .value("UnrollableForLoop", ASTFlags::UnrollableForLoop)
+        .value("StreamingWithRange", ASTFlags::StreamingWithRange);
 
     py::class_<EvaluatedDimension>(m, "EvaluatedDimension")
         .def_readonly("kind", &EvaluatedDimension::kind)
@@ -117,63 +117,63 @@ void registerBinding(py::module_& m) {
         .def_readonly("queueMaxSize", &EvaluatedDimension::queueMaxSize)
         .def_property_readonly("isRange", &EvaluatedDimension::isRange);
 
-    py::class_<BindContext>(m, "BindContext")
-        .def(py::init<const Scope&, LookupLocation, bitmask<BindFlags>>(), "scope"_a,
-             "lookupLocation"_a, "flags"_a = BindFlags::None)
-        .def_readonly("scope", &BindContext::scope)
-        .def_readonly("lookupIndex", &BindContext::lookupIndex)
-        .def_readonly("flags", &BindContext::flags)
-        .def_property_readonly("getCompilation", &BindContext::getCompilation)
-        .def_property_readonly("getLocation", &BindContext::getLocation)
-        .def_property_readonly("inUnevaluatedBranch", &BindContext::inUnevaluatedBranch)
-        .def_property_readonly("getDriverKind", &BindContext::getDriverKind)
-        .def_property_readonly("getInstance", &BindContext::getInstance)
-        .def_property_readonly("getProceduralBlock", &BindContext::getProceduralBlock)
-        .def_property_readonly("getContainingSubroutine", &BindContext::getContainingSubroutine)
-        .def_property_readonly("inAlwaysCombLatch", &BindContext::inAlwaysCombLatch)
+    py::class_<ASTContext>(m, "ASTContext")
+        .def(py::init<const Scope&, LookupLocation, bitmask<ASTFlags>>(), "scope"_a,
+             "lookupLocation"_a, "flags"_a = ASTFlags::None)
+        .def_readonly("scope", &ASTContext::scope)
+        .def_readonly("lookupIndex", &ASTContext::lookupIndex)
+        .def_readonly("flags", &ASTContext::flags)
+        .def_property_readonly("getCompilation", &ASTContext::getCompilation)
+        .def_property_readonly("getLocation", &ASTContext::getLocation)
+        .def_property_readonly("inUnevaluatedBranch", &ASTContext::inUnevaluatedBranch)
+        .def_property_readonly("getDriverKind", &ASTContext::getDriverKind)
+        .def_property_readonly("getInstance", &ASTContext::getInstance)
+        .def_property_readonly("getProceduralBlock", &ASTContext::getProceduralBlock)
+        .def_property_readonly("getContainingSubroutine", &ASTContext::getContainingSubroutine)
+        .def_property_readonly("inAlwaysCombLatch", &ASTContext::inAlwaysCombLatch)
         .def("addDiag",
-             py::overload_cast<DiagCode, SourceLocation>(&BindContext::addDiag, py::const_),
+             py::overload_cast<DiagCode, SourceLocation>(&ASTContext::addDiag, py::const_),
              byrefint)
-        .def("addDiag", py::overload_cast<DiagCode, SourceRange>(&BindContext::addDiag, py::const_),
+        .def("addDiag", py::overload_cast<DiagCode, SourceRange>(&ASTContext::addDiag, py::const_),
              byrefint)
         .def("requireIntegral",
-             py::overload_cast<const Expression&>(&BindContext::requireIntegral, py::const_))
+             py::overload_cast<const Expression&>(&ASTContext::requireIntegral, py::const_))
         .def("requireIntegral", py::overload_cast<const ConstantValue&, SourceRange>(
-                                    &BindContext::requireIntegral, py::const_))
-        .def("requireNoUnknowns", &BindContext::requireNoUnknowns)
-        .def("requirePositive", py::overload_cast<const SVInt&, SourceRange>(
-                                    &BindContext::requirePositive, py::const_))
+                                    &ASTContext::requireIntegral, py::const_))
+        .def("requireNoUnknowns", &ASTContext::requireNoUnknowns)
+        .def("requirePositive",
+             py::overload_cast<const SVInt&, SourceRange>(&ASTContext::requirePositive, py::const_))
         .def("requirePositive", py::overload_cast<optional<int32_t>, SourceRange>(
-                                    &BindContext::requirePositive, py::const_))
-        .def("requireGtZero", &BindContext::requireGtZero)
-        .def("requireBooleanConvertible", &BindContext::requireBooleanConvertible)
+                                    &ASTContext::requirePositive, py::const_))
+        .def("requireGtZero", &ASTContext::requireGtZero)
+        .def("requireBooleanConvertible", &ASTContext::requireBooleanConvertible)
         .def("requireValidBitWidth", py::overload_cast<bitwidth_t, SourceRange>(
-                                         &BindContext::requireValidBitWidth, py::const_))
+                                         &ASTContext::requireValidBitWidth, py::const_))
         .def("requireValidBitWidth", py::overload_cast<const SVInt&, SourceRange>(
-                                         &BindContext::requireValidBitWidth, py::const_))
-        .def("eval", &BindContext::eval)
-        .def("tryEval", &BindContext::tryEval)
-        .def("evalInteger", py::overload_cast<const ExpressionSyntax&, bitmask<BindFlags>>(
-                                &BindContext::evalInteger, py::const_))
+                                         &ASTContext::requireValidBitWidth, py::const_))
+        .def("eval", &ASTContext::eval)
+        .def("tryEval", &ASTContext::tryEval)
+        .def("evalInteger", py::overload_cast<const ExpressionSyntax&, bitmask<ASTFlags>>(
+                                &ASTContext::evalInteger, py::const_))
         .def("evalInteger",
-             py::overload_cast<const Expression&>(&BindContext::evalInteger, py::const_))
-        .def("evalDimension", &BindContext::evalDimension)
+             py::overload_cast<const Expression&>(&ASTContext::evalInteger, py::const_))
+        .def("evalDimension", &ASTContext::evalDimension)
         .def("evalPackedDimension", py::overload_cast<const VariableDimensionSyntax&>(
-                                        &BindContext::evalPackedDimension, py::const_))
+                                        &ASTContext::evalPackedDimension, py::const_))
         .def("evalPackedDimension", py::overload_cast<const ElementSelectSyntax&>(
-                                        &BindContext::evalPackedDimension, py::const_))
-        .def("evalUnpackedDimension", &BindContext::evalUnpackedDimension)
+                                        &ASTContext::evalPackedDimension, py::const_))
+        .def("evalUnpackedDimension", &ASTContext::evalUnpackedDimension)
         .def("requireSimpleExpr",
-             py::overload_cast<const PropertyExprSyntax&>(&BindContext::requireSimpleExpr,
+             py::overload_cast<const PropertyExprSyntax&>(&ASTContext::requireSimpleExpr,
                                                           py::const_),
              byrefint)
         .def("requireSimpleExpr",
-             py::overload_cast<const PropertyExprSyntax&, DiagCode>(&BindContext::requireSimpleExpr,
+             py::overload_cast<const PropertyExprSyntax&, DiagCode>(&ASTContext::requireSimpleExpr,
                                                                     py::const_),
              byrefint)
-        .def("getRandMode", &BindContext::getRandMode)
-        .def("addAssertionBacktrace", &BindContext::addAssertionBacktrace)
-        .def("resetFlags", &BindContext::resetFlags);
+        .def("getRandMode", &ASTContext::getRandMode)
+        .def("addAssertionBacktrace", &ASTContext::addAssertionBacktrace)
+        .def("resetFlags", &ASTContext::resetFlags);
 
     py::class_<Expression>(m, "Expression")
         .def_readonly("kind", &Expression::kind)

@@ -7,8 +7,8 @@
 //------------------------------------------------------------------------------
 #include "slang/ast/types/NetType.h"
 
+#include "slang/ast/ASTContext.h"
 #include "slang/ast/ASTSerializer.h"
-#include "slang/ast/BindContext.h"
 #include "slang/ast/Scope.h"
 #include "slang/ast/symbols/SubroutineSymbols.h"
 #include "slang/ast/symbols/VariableSymbols.h"
@@ -31,7 +31,7 @@ NetType::NetType(string_view name, SourceLocation location) :
 }
 
 static void validateResolver(const NetType& netType, const SubroutineSymbol& resolver,
-                             SourceRange range, const BindContext& context) {
+                             SourceRange range, const ASTContext& context) {
     auto& netTypeType = netType.declaredType.getType();
     if (netType.isError() || netTypeType.isError())
         return;
@@ -102,7 +102,7 @@ const SubroutineSymbol* NetType::getResolutionFunction() const {
 
     auto& declSyntax = syntax->as<NetTypeDeclarationSyntax>();
     if (declSyntax.withFunction) {
-        BindContext context(*scope, LookupLocation::after(*this));
+        ASTContext context(*scope, LookupLocation::after(*this));
         LookupResult result;
         Lookup::name(*declSyntax.withFunction->name, context,
                      LookupFlags::ForceHierarchical | LookupFlags::NoSelectors, result);

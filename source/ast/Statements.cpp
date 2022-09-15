@@ -59,13 +59,13 @@ ER Statement::eval(EvalContext& context) const {
 
 Statement::StatementContext::~StatementContext() {
     if (!lastEventControl.start()) {
-        auto proc = rootBindContext.getProceduralBlock();
+        auto proc = rootAstContext.getProceduralBlock();
         if (proc && proc->procedureKind == ProceduralBlockKind::AlwaysFF && !proc->getBody().bad())
-            rootBindContext.addDiag(diag::AlwaysFFEventControl, proc->location);
+            rootAstContext.addDiag(diag::AlwaysFFEventControl, proc->location);
     }
 }
 
-const Statement* Statement::StatementContext::tryGetBlock(const BindContext& context,
+const Statement* Statement::StatementContext::tryGetBlock(const ASTContext& context,
                                                           const SyntaxNode& target) {
     if (!blocks.empty() && blocks[0]->getSyntax() == &target) {
         auto& result = blocks[0]->getStatement(context, *this);
@@ -76,19 +76,19 @@ const Statement* Statement::StatementContext::tryGetBlock(const BindContext& con
 }
 
 void Statement::StatementContext::observeTiming(const TimingControl& timing) {
-    auto proc = rootBindContext.getProceduralBlock();
+    auto proc = rootAstContext.getProceduralBlock();
     if (!proc || proc->procedureKind != ProceduralBlockKind::AlwaysFF || timing.bad())
         return;
 
     if (timing.kind != TimingControlKind::SignalEvent &&
         timing.kind != TimingControlKind::EventList &&
         timing.kind != TimingControlKind::ImplicitEvent) {
-        rootBindContext.addDiag(diag::BlockingInAlwaysFF, timing.sourceRange);
+        rootAstContext.addDiag(diag::BlockingInAlwaysFF, timing.sourceRange);
         return;
     }
 
     if (lastEventControl.start() && !flags.has(StatementFlags::HasTimingError)) {
-        auto& diag = rootBindContext.addDiag(diag::AlwaysFFEventControl, timing.sourceRange);
+        auto& diag = rootAstContext.addDiag(diag::AlwaysFFEventControl, timing.sourceRange);
         diag.addNote(diag::NotePreviousUsage, lastEventControl);
 
         flags |= StatementFlags::HasTimingError;
@@ -108,7 +108,7 @@ static bool hasSimpleLabel(const StatementSyntax& syntax) {
            syntax.kind != SyntaxKind::RandSequenceStatement;
 }
 
-const Statement& Statement::bind(const StatementSyntax& syntax, const BindContext& context,
+const Statement& Statement::bind(const StatementSyntax& syntax, const ASTContext& context,
                                  StatementContext& stmtCtx, bool inList, bool labelHandled) {
     auto& comp = context.getCompilation();
 
@@ -292,7 +292,7 @@ static BlockStatement* createBlockStatement(
 }
 
 const Statement& Statement::bindBlock(const StatementBlockSymbol& block, const SyntaxNode& syntax,
-                                      const BindContext& context, StatementContext& stmtCtx) {
+                                      const ASTContext& context, StatementContext& stmtCtx) {
     BlockStatement* result;
     bool anyBad = false;
     auto& comp = context.getCompilation();
@@ -347,7 +347,7 @@ const Statement& Statement::bindBlock(const StatementBlockSymbol& block, const S
 }
 
 const Statement& Statement::bindItems(const SyntaxList<SyntaxNode>& items,
-                                      const BindContext& context, StatementContext& stmtCtx) {
+                                      const ASTContext& context, StatementContext& stmtCtx) {
     SmallVectorSized<const Statement*, 8> buffer;
     bindScopeInitializers(context, buffer);
 
@@ -365,7 +365,7 @@ const Statement& Statement::bindItems(const SyntaxList<SyntaxNode>& items,
     return *comp.emplace<StatementList>(buffer.copy(comp), SourceRange());
 }
 
-void Statement::bindScopeInitializers(const BindContext& context,
+void Statement::bindScopeInitializers(const ASTContext& context,
                                       SmallVector<const Statement*>& results) {
     // This relies on the language requiring all declarations be at the
     // start of a statement block. Additional work would be required to
@@ -644,11 +644,11 @@ Statement& StatementList::makeEmpty(Compilation& compilation) {
 }
 
 Statement& BlockStatement::fromSyntax(Compilation& comp, const BlockStatementSyntax& syntax,
-                                      const BindContext& sourceCtx, StatementContext& stmtCtx,
+                                      const ASTContext& sourceCtx, StatementContext& stmtCtx,
                                       bool addInitializers) {
-    BindContext context = sourceCtx;
+    ASTContext context = sourceCtx;
     auto blockKind = SemanticFacts::getStatementBlockKind(syntax);
-    if (context.flags.has(BindFlags::Function | BindFlags::Final)) {
+    if (context.flags.has(ASTFlags::Function | ASTFlags::Final)) {
         if (blockKind == StatementBlockKind::JoinAll || blockKind == StatementBlockKind::JoinAny) {
             context.addDiag(diag::TimingInFuncNotAllowed, syntax.end.range());
             return badStmt(comp, nullptr);
@@ -656,7 +656,7 @@ Statement& BlockStatement::fromSyntax(Compilation& comp, const BlockStatementSyn
         else if (blockKind == StatementBlockKind::JoinNone) {
             // The "function body" flag does not propagate through fork-join_none
             // blocks, as all statements are allowed in those.
-            context.flags &= ~BindFlags::Function & ~BindFlags::Final;
+            context.flags &= ~ASTFlags::Function & ~ASTFlags::Final;
         }
     }
     else if (blockKind != StatementBlockKind::Sequential && context.inAlwaysCombLatch()) {
@@ -734,7 +734,7 @@ ER BlockStatement::evalImpl(EvalContext& context) const {
 
 Statement& ReturnStatement::fromSyntax(Compilation& compilation,
                                        const ReturnStatementSyntax& syntax,
-                                       const BindContext& context, StatementContext& stmtCtx) {
+                                       const ASTContext& context, StatementContext& stmtCtx) {
     if (stmtCtx.flags.has(StatementFlags::InForkJoin)) {
         context.addDiag(diag::ReturnInParallel, syntax.sourceRange());
         return badStmt(compilation, nullptr);
@@ -790,7 +790,7 @@ void ReturnStatement::serializeTo(ASTSerializer& serializer) const {
 }
 
 Statement& BreakStatement::fromSyntax(Compilation& compilation, const JumpStatementSyntax& syntax,
-                                      const BindContext& context, StatementContext& stmtCtx) {
+                                      const ASTContext& context, StatementContext& stmtCtx) {
     auto result = compilation.emplace<BreakStatement>(syntax.sourceRange());
     if (!stmtCtx.flags.has(StatementFlags::InLoop | StatementFlags::InRandSeq)) {
         context.addDiag(diag::StatementNotInLoop, syntax.sourceRange());
@@ -805,7 +805,7 @@ ER BreakStatement::evalImpl(EvalContext&) const {
 
 Statement& ContinueStatement::fromSyntax(Compilation& compilation,
                                          const JumpStatementSyntax& syntax,
-                                         const BindContext& context, StatementContext& stmtCtx) {
+                                         const ASTContext& context, StatementContext& stmtCtx) {
     auto result = compilation.emplace<ContinueStatement>(syntax.sourceRange());
     if (!stmtCtx.flags.has(StatementFlags::InLoop)) {
         context.addDiag(diag::StatementNotInLoop, syntax.sourceRange());
@@ -820,7 +820,7 @@ ER ContinueStatement::evalImpl(EvalContext&) const {
 
 Statement& DisableStatement::fromSyntax(Compilation& compilation,
                                         const DisableStatementSyntax& syntax,
-                                        const BindContext& context) {
+                                        const ASTContext& context) {
     LookupResult result;
     Lookup::name(*syntax.name, context, LookupFlags::ForceHierarchical | LookupFlags::NoSelectors,
                  result);
@@ -887,12 +887,12 @@ void VariableDeclStatement::serializeTo(ASTSerializer& serializer) const {
 
 Statement& ConditionalStatement::fromSyntax(Compilation& comp,
                                             const ConditionalStatementSyntax& syntax,
-                                            const BindContext& context, StatementContext& stmtCtx) {
+                                            const ASTContext& context, StatementContext& stmtCtx) {
     bool bad = false;
     bool isConst = true;
     bool isTrue = true;
     SmallVectorSized<Condition, 2> conditions;
-    BindContext trueContext = context;
+    ASTContext trueContext = context;
 
     for (auto condSyntax : syntax.predicate->conditions) {
         auto& cond = Expression::bind(*condSyntax->expr, trueContext);
@@ -925,13 +925,13 @@ Statement& ConditionalStatement::fromSyntax(Compilation& comp,
     }
 
     // If the condition is constant, we know which branch will be taken.
-    BindFlags ifFlags = BindFlags::None;
-    BindFlags elseFlags = BindFlags::None;
+    ASTFlags ifFlags = ASTFlags::None;
+    ASTFlags elseFlags = ASTFlags::None;
     if (isConst) {
         if (isTrue)
-            elseFlags = BindFlags::UnevaluatedBranch;
+            elseFlags = ASTFlags::UnevaluatedBranch;
         else
-            ifFlags = BindFlags::UnevaluatedBranch;
+            ifFlags = ASTFlags::UnevaluatedBranch;
     }
 
     auto& ifTrue = Statement::bind(*syntax.statement, trueContext.resetFlags(ifFlags), stmtCtx);
@@ -1025,7 +1025,7 @@ static std::tuple<CaseStatementCondition, CaseStatementCheck> getConditionAndChe
 }
 
 Statement& CaseStatement::fromSyntax(Compilation& compilation, const CaseStatementSyntax& syntax,
-                                     const BindContext& context, StatementContext& stmtCtx) {
+                                     const ASTContext& context, StatementContext& stmtCtx) {
     if (syntax.matchesOrInside.kind == TokenKind::MatchesKeyword)
         return PatternCaseStatement::fromSyntax(compilation, syntax, context, stmtCtx);
 
@@ -1248,7 +1248,7 @@ void CaseStatement::serializeTo(ASTSerializer& serializer) const {
 
 Statement& PatternCaseStatement::fromSyntax(Compilation& compilation,
                                             const CaseStatementSyntax& syntax,
-                                            const BindContext& context, StatementContext& stmtCtx) {
+                                            const ASTContext& context, StatementContext& stmtCtx) {
     ASSERT(syntax.matchesOrInside.kind == TokenKind::MatchesKeyword);
 
     auto& expr = Expression::bind(*syntax.expr, context);
@@ -1261,7 +1261,7 @@ Statement& PatternCaseStatement::fromSyntax(Compilation& compilation,
         switch (item->kind) {
             case SyntaxKind::PatternCaseItem: {
                 Pattern::VarMap varMap;
-                BindContext localCtx = context;
+                ASTContext localCtx = context;
 
                 auto& pci = item->as<PatternCaseItemSyntax>();
                 auto& pattern = Pattern::bind(*pci.pattern, *expr.type, varMap, localCtx);
@@ -1386,7 +1386,7 @@ class UnrollVisitor : public ASTVisitor<UnrollVisitor, true, false> {
 public:
     bool anyErrors = false;
 
-    explicit UnrollVisitor(const BindContext& bindCtx) :
+    explicit UnrollVisitor(const ASTContext& bindCtx) :
         bindCtx(bindCtx.resetFlags({})), evalCtx(bindCtx.getCompilation()) {
         evalCtx.pushEmptyFrame();
     }
@@ -1505,13 +1505,13 @@ private:
         return true;
     }
 
-    BindContext bindCtx;
+    ASTContext bindCtx;
     EvalContext evalCtx;
 };
 
 Statement& ForLoopStatement::fromSyntax(Compilation& compilation,
                                         const ForLoopStatementSyntax& syntax,
-                                        const BindContext& context, StatementContext& stmtCtx) {
+                                        const ASTContext& context, StatementContext& stmtCtx) {
     SmallVectorSized<const Expression*, 4> initializers;
     SmallVectorSized<const VariableSymbol*, 4> loopVars;
     bool anyBad = false;
@@ -1527,7 +1527,7 @@ Statement& ForLoopStatement::fromSyntax(Compilation& compilation,
     else {
         for (auto initializer : syntax.initializers) {
             auto& init = Expression::bind(initializer->as<ExpressionSyntax>(), context,
-                                          BindFlags::AssignmentAllowed);
+                                          ASTFlags::AssignmentAllowed);
             initializers.append(&init);
             anyBad |= init.bad();
         }
@@ -1539,7 +1539,7 @@ Statement& ForLoopStatement::fromSyntax(Compilation& compilation,
 
     SmallVectorSized<const Expression*, 2> steps;
     for (auto step : syntax.steps) {
-        auto& expr = Expression::bind(*step, context, BindFlags::AssignmentAllowed);
+        auto& expr = Expression::bind(*step, context, ASTFlags::AssignmentAllowed);
         steps.append(&expr);
         anyBad |= expr.bad();
 
@@ -1649,7 +1649,7 @@ void ForLoopStatement::serializeTo(ASTSerializer& serializer) const {
 
 Statement& RepeatLoopStatement::fromSyntax(Compilation& compilation,
                                            const LoopStatementSyntax& syntax,
-                                           const BindContext& context, StatementContext& stmtCtx) {
+                                           const ASTContext& context, StatementContext& stmtCtx) {
     auto guard = stmtCtx.enterLoop();
     auto& countExpr = Expression::bind(*syntax.expr, context);
 
@@ -1704,7 +1704,7 @@ void RepeatLoopStatement::serializeTo(ASTSerializer& serializer) const {
 }
 
 const Expression* ForeachLoopStatement::buildLoopDims(const ForeachLoopListSyntax& loopList,
-                                                      BindContext& context,
+                                                      ASTContext& context,
                                                       SmallVector<LoopDim>& dims) {
     // Find the array over which we are looping. Make sure it's actually iterable:
     // - Must be a referenceable variable, class property, etc.
@@ -1792,7 +1792,7 @@ const Expression* ForeachLoopStatement::buildLoopDims(const ForeachLoopListSynta
 
 Statement& ForeachLoopStatement::fromSyntax(Compilation& compilation,
                                             const ForeachLoopStatementSyntax& syntax,
-                                            const BindContext& context, StatementContext& stmtCtx) {
+                                            const ASTContext& context, StatementContext& stmtCtx) {
     auto guard = stmtCtx.enterLoop();
 
     auto& arrayRef = Expression::bind(*syntax.loopList->arrayName, context);
@@ -1964,7 +1964,7 @@ void ForeachLoopStatement::serializeTo(ASTSerializer& serializer) const {
 
 Statement& WhileLoopStatement::fromSyntax(Compilation& compilation,
                                           const LoopStatementSyntax& syntax,
-                                          const BindContext& context, StatementContext& stmtCtx) {
+                                          const ASTContext& context, StatementContext& stmtCtx) {
     auto guard = stmtCtx.enterLoop();
 
     bool bad = false;
@@ -2008,7 +2008,7 @@ void WhileLoopStatement::serializeTo(ASTSerializer& serializer) const {
 
 Statement& DoWhileLoopStatement::fromSyntax(Compilation& compilation,
                                             const DoWhileStatementSyntax& syntax,
-                                            const BindContext& context, StatementContext& stmtCtx) {
+                                            const ASTContext& context, StatementContext& stmtCtx) {
     auto guard = stmtCtx.enterLoop();
 
     bool bad = false;
@@ -2053,7 +2053,7 @@ void DoWhileLoopStatement::serializeTo(ASTSerializer& serializer) const {
 
 Statement& ForeverLoopStatement::fromSyntax(Compilation& compilation,
                                             const ForeverStatementSyntax& syntax,
-                                            const BindContext& context, StatementContext& stmtCtx) {
+                                            const ASTContext& context, StatementContext& stmtCtx) {
     auto guard = stmtCtx.enterLoop();
 
     auto& bodyStmt = Statement::bind(*syntax.statement, context, stmtCtx);
@@ -2084,12 +2084,12 @@ void ForeverLoopStatement::serializeTo(ASTSerializer& serializer) const {
 
 Statement& ExpressionStatement::fromSyntax(Compilation& compilation,
                                            const ExpressionStatementSyntax& syntax,
-                                           const BindContext& context, StatementContext& stmtCtx) {
-    bitmask<BindFlags> extraFlags = BindFlags::AssignmentAllowed | BindFlags::TopLevelStatement;
+                                           const ASTContext& context, StatementContext& stmtCtx) {
+    bitmask<ASTFlags> extraFlags = ASTFlags::AssignmentAllowed | ASTFlags::TopLevelStatement;
     if (stmtCtx.flags.has(StatementFlags::InForLoop) &&
         BinaryExpressionSyntax::isKind(syntax.expr->kind) &&
         !compilation.getOptions().strictDriverChecking) {
-        extraFlags |= BindFlags::UnrollableForLoop;
+        extraFlags |= ASTFlags::UnrollableForLoop;
     }
 
     auto& expr = Expression::bind(*syntax.expr, context, extraFlags);
@@ -2141,7 +2141,7 @@ Statement& ExpressionStatement::fromSyntax(Compilation& compilation,
 
 Statement& ExpressionStatement::fromSyntax(Compilation& compilation,
                                            const VoidCastedCallStatementSyntax& syntax,
-                                           const BindContext& context) {
+                                           const ASTContext& context) {
     auto& expr = Expression::bind(*syntax.expr, context);
     auto result = compilation.emplace<ExpressionStatement>(expr, syntax.sourceRange());
     if (expr.bad())
@@ -2180,7 +2180,7 @@ void ExpressionStatement::serializeTo(ASTSerializer& serializer) const {
 
 Statement& TimedStatement::fromSyntax(Compilation& compilation,
                                       const TimingControlStatementSyntax& syntax,
-                                      const BindContext& context, StatementContext& stmtCtx) {
+                                      const ASTContext& context, StatementContext& stmtCtx) {
     auto& timing = TimingControl::bind(*syntax.timingControl, context);
     stmtCtx.observeTiming(timing);
 
@@ -2206,7 +2206,7 @@ void TimedStatement::serializeTo(ASTSerializer& serializer) const {
     serializer.write("stmt", stmt);
 }
 
-static void checkDeferredAssertAction(const Statement& stmt, const BindContext& context) {
+static void checkDeferredAssertAction(const Statement& stmt, const ASTContext& context) {
     if (stmt.bad() || stmt.kind == StatementKind::Empty)
         return;
 
@@ -2229,7 +2229,7 @@ static void checkDeferredAssertAction(const Statement& stmt, const BindContext& 
 
 Statement& ImmediateAssertionStatement::fromSyntax(Compilation& compilation,
                                                    const ImmediateAssertionStatementSyntax& syntax,
-                                                   const BindContext& context,
+                                                   const ASTContext& context,
                                                    StatementContext& stmtCtx) {
     AssertionKind assertKind = SemanticFacts::getAssertKind(syntax.kind);
     auto& cond = Expression::bind(*syntax.expr->expression, context);
@@ -2317,22 +2317,22 @@ void ImmediateAssertionStatement::serializeTo(ASTSerializer& serializer) const {
 
 Statement& ConcurrentAssertionStatement::fromSyntax(
     Compilation& compilation, const ConcurrentAssertionStatementSyntax& syntax,
-    const BindContext& context, StatementContext& stmtCtx) {
+    const ASTContext& context, StatementContext& stmtCtx) {
 
-    if (context.flags.has(BindFlags::ConcurrentAssertActionBlock)) {
+    if (context.flags.has(ASTFlags::ConcurrentAssertActionBlock)) {
         context.addDiag(diag::ConcurrentAssertActionBlock, syntax.sourceRange())
             << syntax.keyword.valueText();
         return badStmt(compilation, nullptr);
     }
 
-    BindContext ctx = context;
+    ASTContext ctx = context;
     ctx.clearInstanceAndProc();
 
     AssertionKind assertKind = SemanticFacts::getAssertKind(syntax.kind);
     auto& prop = AssertionExpr::bind(*syntax.propertySpec, ctx);
     bool bad = prop.bad();
 
-    ctx.flags |= BindFlags::ConcurrentAssertActionBlock;
+    ctx.flags |= ASTFlags::ConcurrentAssertActionBlock;
     const Statement* ifTrue = nullptr;
     const Statement* ifFalse = nullptr;
     if (syntax.action->statement)
@@ -2388,7 +2388,7 @@ ER DisableForkStatement::evalImpl(EvalContext& context) const {
 }
 
 Statement& WaitStatement::fromSyntax(Compilation& compilation, const WaitStatementSyntax& syntax,
-                                     const BindContext& context, StatementContext& stmtCtx) {
+                                     const ASTContext& context, StatementContext& stmtCtx) {
     auto& cond = Expression::bind(*syntax.expr, context);
     auto& stmt = Statement::bind(*syntax.statement, context, stmtCtx);
     auto result = compilation.emplace<WaitStatement>(cond, stmt, syntax.sourceRange());
@@ -2398,7 +2398,7 @@ Statement& WaitStatement::fromSyntax(Compilation& compilation, const WaitStateme
     if (!context.requireBooleanConvertible(cond))
         return badStmt(compilation, result);
 
-    if (context.flags.has(BindFlags::Function | BindFlags::Final) || context.inAlwaysCombLatch()) {
+    if (context.flags.has(ASTFlags::Function | ASTFlags::Final) || context.inAlwaysCombLatch()) {
         context.addDiag(diag::TimingInFuncNotAllowed, syntax.sourceRange());
         return badStmt(compilation, result);
     }
@@ -2428,7 +2428,7 @@ ER WaitForkStatement::evalImpl(EvalContext& context) const {
 
 Statement& WaitOrderStatement::fromSyntax(Compilation& compilation,
                                           const WaitOrderStatementSyntax& syntax,
-                                          const BindContext& context, StatementContext& stmtCtx) {
+                                          const ASTContext& context, StatementContext& stmtCtx) {
     SmallVectorSized<const Expression*, 4> events;
     for (auto name : syntax.names) {
         auto& ev = Expression::bind(*name, context);
@@ -2455,7 +2455,7 @@ Statement& WaitOrderStatement::fromSyntax(Compilation& compilation,
 
     auto result = compilation.emplace<WaitOrderStatement>(events.copy(compilation), ifTrue, ifFalse,
                                                           syntax.sourceRange());
-    if (context.flags.has(BindFlags::Function) || context.flags.has(BindFlags::Final) ||
+    if (context.flags.has(ASTFlags::Function) || context.flags.has(ASTFlags::Final) ||
         context.inAlwaysCombLatch()) {
         context.addDiag(diag::TimingInFuncNotAllowed, syntax.sourceRange());
         return badStmt(compilation, result);
@@ -2486,8 +2486,7 @@ void WaitOrderStatement::serializeTo(ASTSerializer& serializer) const {
 
 Statement& EventTriggerStatement::fromSyntax(Compilation& compilation,
                                              const EventTriggerStatementSyntax& syntax,
-                                             const BindContext& context,
-                                             StatementContext& stmtCtx) {
+                                             const ASTContext& context, StatementContext& stmtCtx) {
     auto& target = Expression::bind(*syntax.name, context);
     if (target.bad())
         return badStmt(compilation, nullptr);
@@ -2541,7 +2540,7 @@ static bool isValidAssignLVal(const Expression& expr) {
     }
 }
 
-static bool isValidForceLVal(const Expression& expr, const BindContext& context, bool inSelect) {
+static bool isValidForceLVal(const Expression& expr, const ASTContext& context, bool inSelect) {
     switch (expr.kind) {
         case ExpressionKind::NamedValue:
         case ExpressionKind::HierarchicalValue:
@@ -2572,15 +2571,15 @@ static bool isValidForceLVal(const Expression& expr, const BindContext& context,
 
 Statement& ProceduralAssignStatement::fromSyntax(Compilation& compilation,
                                                  const ProceduralAssignStatementSyntax& syntax,
-                                                 const BindContext& context) {
+                                                 const ASTContext& context) {
     bool isForce = syntax.keyword.kind == TokenKind::ForceKeyword;
-    bitmask<BindFlags> bindFlags = BindFlags::NonProcedural | BindFlags::AssignmentAllowed;
+    bitmask<ASTFlags> astFlags = ASTFlags::NonProcedural | ASTFlags::AssignmentAllowed;
     if (isForce)
-        bindFlags |= BindFlags::ProceduralForceRelease;
+        astFlags |= ASTFlags::ProceduralForceRelease;
     else
-        bindFlags |= BindFlags::ProceduralAssign;
+        astFlags |= ASTFlags::ProceduralAssign;
 
-    auto& assign = Expression::bind(*syntax.expr, context, bindFlags);
+    auto& assign = Expression::bind(*syntax.expr, context, astFlags);
     auto result = compilation.emplace<ProceduralAssignStatement>(assign, isForce,
                                                                  syntax.sourceRange());
     if (assign.bad())
@@ -2617,9 +2616,9 @@ void ProceduralAssignStatement::serializeTo(ASTSerializer& serializer) const {
 
 Statement& ProceduralDeassignStatement::fromSyntax(Compilation& compilation,
                                                    const ProceduralDeassignStatementSyntax& syntax,
-                                                   const BindContext& context) {
-    auto ctx = context.resetFlags(BindFlags::NonProcedural | BindFlags::ProceduralForceRelease |
-                                  BindFlags::LValue);
+                                                   const ASTContext& context) {
+    auto ctx = context.resetFlags(ASTFlags::NonProcedural | ASTFlags::ProceduralForceRelease |
+                                  ASTFlags::LValue);
     auto& lvalue = Expression::bind(*syntax.variable, ctx);
 
     bool isRelease = syntax.keyword.kind == TokenKind::ReleaseKeyword;
@@ -2659,7 +2658,7 @@ void ProceduralDeassignStatement::serializeTo(ASTSerializer& serializer) const {
 
 Statement& RandCaseStatement::fromSyntax(Compilation& compilation,
                                          const RandCaseStatementSyntax& syntax,
-                                         const BindContext& context, StatementContext& stmtCtx) {
+                                         const ASTContext& context, StatementContext& stmtCtx) {
     bool bad = false;
     SmallVectorSized<Item, 8> items;
     for (auto item : syntax.items) {
@@ -2698,7 +2697,7 @@ void RandCaseStatement::serializeTo(ASTSerializer& serializer) const {
 
 Statement& RandSequenceStatement::fromSyntax(Compilation& compilation,
                                              const RandSequenceStatementSyntax& syntax,
-                                             const BindContext& context) {
+                                             const ASTContext& context) {
     SourceRange firstProdRange;
     const RandSeqProductionSymbol* firstProd = nullptr;
     if (syntax.firstProduction) {
@@ -2721,7 +2720,7 @@ Statement& RandSequenceStatement::fromSyntax(Compilation& compilation,
                                  context, args);
     }
 
-    // All of the logic for binding productions is in the RandSeqProduction symbol.
+    // All of the logic for creating productions is in the RandSeqProduction symbol.
     auto result = compilation.emplace<RandSequenceStatement>(firstProd, syntax.sourceRange());
     return *result;
 }

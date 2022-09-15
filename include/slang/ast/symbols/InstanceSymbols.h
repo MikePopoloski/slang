@@ -76,11 +76,11 @@ public:
     void serializeTo(ASTSerializer& serializer) const;
 
     static void fromSyntax(Compilation& compilation, const HierarchyInstantiationSyntax& syntax,
-                           const BindContext& context, SmallVector<const Symbol*>& results,
+                           const ASTContext& context, SmallVector<const Symbol*>& results,
                            SmallVector<const Symbol*>& implicitNets);
 
     static void fromFixupSyntax(Compilation& compilation, const Definition& definition,
-                                const DataDeclarationSyntax& syntax, const BindContext& context,
+                                const DataDeclarationSyntax& syntax, const ASTContext& context,
                                 SmallVector<const Symbol*>& results);
 
     /// Creates one or more instances and binds them into a target scoped, based on the
@@ -93,7 +93,7 @@ public:
                                          const ParamOverrideNode* paramOverrideNode);
 
     /// Creates a placeholder instance for a virtual interface type declaration.
-    static InstanceSymbol& createVirtual(const BindContext& context, SourceLocation loc,
+    static InstanceSymbol& createVirtual(const ASTContext& context, SourceLocation loc,
                                          const Definition& definition,
                                          const ParameterValueAssignmentSyntax* paramAssignments);
 
@@ -221,11 +221,11 @@ public:
     bool isChecker() const;
 
     static void fromSyntax(Compilation& compilation, const HierarchyInstantiationSyntax& syntax,
-                           const BindContext& context, SmallVector<const Symbol*>& results,
+                           const ASTContext& context, SmallVector<const Symbol*>& results,
                            SmallVector<const Symbol*>& implicitNets);
 
     static void fromSyntax(Compilation& compilation, const PrimitiveInstantiationSyntax& syntax,
-                           const BindContext& context, SmallVector<const Symbol*>& results,
+                           const ASTContext& context, SmallVector<const Symbol*>& results,
                            SmallVector<const Symbol*>& implicitNets);
 
     void serializeTo(ASTSerializer& serializer) const;
@@ -251,11 +251,11 @@ public:
     const TimingControl* getDelay() const;
 
     static void fromSyntax(const PrimitiveSymbol& primitive,
-                           const HierarchyInstantiationSyntax& syntax, const BindContext& context,
+                           const HierarchyInstantiationSyntax& syntax, const ASTContext& context,
                            SmallVector<const Symbol*>& results,
                            SmallVector<const Symbol*>& implicitNets);
 
-    static void fromSyntax(const PrimitiveInstantiationSyntax& syntax, const BindContext& context,
+    static void fromSyntax(const PrimitiveInstantiationSyntax& syntax, const ASTContext& context,
                            SmallVector<const Symbol*>& results,
                            SmallVector<const Symbol*>& implicitNets);
 

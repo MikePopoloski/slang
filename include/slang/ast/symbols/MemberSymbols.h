@@ -123,10 +123,10 @@ public:
 
     void serializeTo(ASTSerializer& serializer) const;
 
-    static ModportPortSymbol& fromSyntax(const BindContext& context, ArgumentDirection direction,
+    static ModportPortSymbol& fromSyntax(const ASTContext& context, ArgumentDirection direction,
                                          const ModportNamedPortSyntax& syntax);
 
-    static ModportPortSymbol& fromSyntax(const BindContext& context, ArgumentDirection direction,
+    static ModportPortSymbol& fromSyntax(const ASTContext& context, ArgumentDirection direction,
                                          const ModportExplicitPortSyntax& syntax);
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::ModportPort; }
@@ -144,7 +144,7 @@ public:
 
     void serializeTo(ASTSerializer& serializer) const;
 
-    static ModportClockingSymbol& fromSyntax(const BindContext& context,
+    static ModportClockingSymbol& fromSyntax(const ASTContext& context,
                                              const ModportClockingPortSyntax& syntax);
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::ModportClocking; }
@@ -161,7 +161,7 @@ public:
 
     void serializeTo(ASTSerializer&) const {}
 
-    static void fromSyntax(const BindContext& context, const ModportDeclarationSyntax& syntax,
+    static void fromSyntax(const ASTContext& context, const ModportDeclarationSyntax& syntax,
                            SmallVector<const ModportSymbol*>& results);
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::Modport; }
@@ -181,7 +181,7 @@ public:
     void serializeTo(ASTSerializer& serializer) const;
 
     static void fromSyntax(Compilation& compilation, const ContinuousAssignSyntax& syntax,
-                           const BindContext& context, SmallVector<const Symbol*>& results,
+                           const ASTContext& context, SmallVector<const Symbol*>& results,
                            SmallVector<const Symbol*>& implicitNets);
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::ContinuousAssign; }
@@ -229,8 +229,7 @@ public:
     static ElabSystemTaskSymbol& fromSyntax(Compilation& compilation,
                                             const ElabSystemTaskSyntax& syntax);
 
-    static string_view createMessage(const BindContext& context,
-                                     span<const Expression* const> args);
+    static string_view createMessage(const ASTContext& context, span<const Expression* const> args);
 
     static void reportStaticAssert(const Scope& scope, SourceLocation loc, string_view message,
                                    const Expression* condition);
@@ -493,7 +492,7 @@ public:
                                                const ProductionSyntax& syntax);
 
     static const RandSeqProductionSymbol* findProduction(string_view name, SourceRange nameRange,
-                                                         const BindContext& context);
+                                                         const ASTContext& context);
 
     static void createRuleVariables(const RsRuleSyntax& syntax, const Scope& scope,
                                     SmallVector<const Symbol*>& results);
@@ -552,10 +551,10 @@ public:
     }
 
 private:
-    static Rule createRule(const RsRuleSyntax& syntax, const BindContext& context,
+    static Rule createRule(const RsRuleSyntax& syntax, const ASTContext& context,
                            const StatementBlockSymbol& ruleBlock);
-    static ProdItem createProdItem(const RsProdItemSyntax& syntax, const BindContext& context);
-    static const CaseProd& createCaseProd(const RsCaseSyntax& syntax, const BindContext& context);
+    static ProdItem createProdItem(const RsProdItemSyntax& syntax, const ASTContext& context);
+    static const CaseProd& createCaseProd(const RsCaseSyntax& syntax, const ASTContext& context);
 
     mutable optional<span<const Rule>> rules;
 };

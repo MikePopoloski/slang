@@ -15,7 +15,7 @@ class Clog2Function : public SystemSubroutine {
 public:
     Clog2Function() : SystemSubroutine("$clog2", SubroutineKind::Function) {}
 
-    const Type& checkArguments(const BindContext& context, const Args& args, SourceRange range,
+    const Type& checkArguments(const ASTContext& context, const Args& args, SourceRange range,
                                const Expression*) const final {
         auto& comp = context.getCompilation();
         if (!checkArgCount(context, false, args, range, 1, 1))
@@ -43,7 +43,7 @@ class CountBitsFunction : public SystemSubroutine {
 public:
     CountBitsFunction() : SystemSubroutine("$countbits", SubroutineKind::Function) {}
 
-    const Type& checkArguments(const BindContext& context, const Args& args, SourceRange range,
+    const Type& checkArguments(const ASTContext& context, const Args& args, SourceRange range,
                                const Expression*) const final {
         auto& comp = context.getCompilation();
         if (!checkArgCount(context, false, args, range, 2, INT32_MAX))
@@ -117,7 +117,7 @@ class CountOnesFunction : public SystemSubroutine {
 public:
     CountOnesFunction() : SystemSubroutine("$countones", SubroutineKind::Function) {}
 
-    const Type& checkArguments(const BindContext& context, const Args& args, SourceRange range,
+    const Type& checkArguments(const ASTContext& context, const Args& args, SourceRange range,
                                const Expression*) const final {
         auto& comp = context.getCompilation();
         if (!checkArgCount(context, false, args, range, 1, 1))
@@ -150,7 +150,7 @@ public:
     BooleanBitVectorFunction(const std::string& name, BVFKind kind) :
         SystemSubroutine(name, SubroutineKind::Function), kind(kind) {}
 
-    const Type& checkArguments(const BindContext& context, const Args& args, SourceRange range,
+    const Type& checkArguments(const ASTContext& context, const Args& args, SourceRange range,
                                const Expression*) const final {
         auto& comp = context.getCompilation();
         if (!checkArgCount(context, false, args, range, 1, 1))

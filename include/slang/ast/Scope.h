@@ -17,7 +17,7 @@
 
 namespace slang {
 
-class BindContext;
+class ASTContext;
 class Compilation;
 class ForwardingTypedefSymbol;
 class InstanceBodySymbol;
@@ -299,7 +299,7 @@ private:
     void addWildcardImport(const PackageImportItemSyntax& item,
                            span<const AttributeInstanceSyntax* const> attributes);
     void addDeferredMembers(const SyntaxNode& syntax);
-    void tryFixupInstances(const DataDeclarationSyntax& syntax, const BindContext& context,
+    void tryFixupInstances(const DataDeclarationSyntax& syntax, const ASTContext& context,
                            SmallVector<const Symbol*>& results) const;
 
     // The compilation that owns this scope.

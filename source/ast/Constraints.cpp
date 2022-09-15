@@ -15,9 +15,9 @@
 
 namespace slang {
 
-const Constraint& Constraint::bind(const ConstraintItemSyntax& syntax, const BindContext& context) {
-    BindContext ctx(context);
-    ctx.flags |= BindFlags::AssignmentDisallowed;
+const Constraint& Constraint::bind(const ConstraintItemSyntax& syntax, const ASTContext& context) {
+    ASTContext ctx(context);
+    ctx.flags |= ASTFlags::AssignmentDisallowed;
 
     Constraint* result;
     switch (syntax.kind) {
@@ -68,7 +68,7 @@ void InvalidConstraint::serializeTo(ASTSerializer& serializer) const {
 }
 
 Constraint& ConstraintList::fromSyntax(const ConstraintBlockSyntax& syntax,
-                                       const BindContext& context) {
+                                       const ASTContext& context) {
     bool anyBad = false;
     SmallVectorSized<const Constraint*, 8> buffer;
     for (auto item : syntax.items) {
@@ -94,10 +94,10 @@ void ConstraintList::serializeTo(ASTSerializer& serializer) const {
 }
 
 struct DistVarVisitor {
-    const BindContext& context;
+    const ASTContext& context;
     bool anyRandVars = false;
 
-    DistVarVisitor(const BindContext& context) : context(context) {}
+    DistVarVisitor(const ASTContext& context) : context(context) {}
 
     template<typename T>
     void visit(const T& expr) {
@@ -130,11 +130,11 @@ struct DistVarVisitor {
 };
 
 struct ConstraintExprVisitor {
-    const BindContext& context;
+    const ASTContext& context;
     bool failed = false;
     bool isSoft;
 
-    ConstraintExprVisitor(const BindContext& context, bool isSoft) :
+    ConstraintExprVisitor(const ASTContext& context, bool isSoft) :
         context(context), isSoft(isSoft) {}
 
     template<typename T>
@@ -254,7 +254,7 @@ struct ConstraintExprVisitor {
 };
 
 Constraint& ExpressionConstraint::fromSyntax(const ExpressionConstraintSyntax& syntax,
-                                             const BindContext& context) {
+                                             const ASTContext& context) {
     auto& comp = context.getCompilation();
     bool isSoft = syntax.soft.kind == TokenKind::SoftKeyword;
     auto& expr = Expression::bind(*syntax.expr, context);
@@ -275,7 +275,7 @@ void ExpressionConstraint::serializeTo(ASTSerializer& serializer) const {
 }
 
 Constraint& ImplicationConstraint::fromSyntax(const ImplicationConstraintSyntax& syntax,
-                                              const BindContext& context) {
+                                              const ASTContext& context) {
     auto& comp = context.getCompilation();
     auto& pred = Expression::bind(*syntax.left, context);
     auto& body = Constraint::bind(*syntax.constraints, context);
@@ -296,7 +296,7 @@ void ImplicationConstraint::serializeTo(ASTSerializer& serializer) const {
 }
 
 Constraint& ConditionalConstraint::fromSyntax(const ConditionalConstraintSyntax& syntax,
-                                              const BindContext& context) {
+                                              const ASTContext& context) {
     auto& comp = context.getCompilation();
     auto& pred = Expression::bind(*syntax.condition, context);
     auto& ifBody = Constraint::bind(*syntax.constraints, context);
@@ -334,7 +334,7 @@ static bool isAllowedForUniqueness(const Type& type) {
 }
 
 Constraint& UniquenessConstraint::fromSyntax(const UniquenessConstraintSyntax& syntax,
-                                             const BindContext& context) {
+                                             const ASTContext& context) {
     auto& comp = context.getCompilation();
     bool bad = false;
     const Type* commonType = nullptr;
@@ -392,7 +392,7 @@ void UniquenessConstraint::serializeTo(ASTSerializer& serializer) const {
 }
 
 Constraint& DisableSoftConstraint::fromSyntax(const DisableConstraintSyntax& syntax,
-                                              const BindContext& context) {
+                                              const ASTContext& context) {
     auto& comp = context.getCompilation();
     auto& expr = Expression::bind(*syntax.name, context);
     auto result = comp.emplace<DisableSoftConstraint>(expr);
@@ -413,7 +413,7 @@ void DisableSoftConstraint::serializeTo(ASTSerializer& serializer) const {
 }
 
 Constraint& SolveBeforeConstraint::fromSyntax(const SolveBeforeConstraintSyntax& syntax,
-                                              const BindContext& context) {
+                                              const ASTContext& context) {
     bool bad = false;
     auto bindExprs = [&](auto& list, auto& results) {
         for (auto item : list) {
@@ -458,10 +458,10 @@ void SolveBeforeConstraint::serializeTo(ASTSerializer& serializer) const {
 }
 
 Constraint& ForeachConstraint::fromSyntax(const LoopConstraintSyntax& syntax,
-                                          const BindContext& context) {
+                                          const ASTContext& context) {
     auto& comp = context.getCompilation();
 
-    BindContext iterCtx = context;
+    ASTContext iterCtx = context;
     SmallVectorSized<ForeachLoopStatement::LoopDim, 4> dims;
     auto arrayRef = ForeachLoopStatement::buildLoopDims(*syntax.loopList, iterCtx, dims);
     if (!arrayRef)

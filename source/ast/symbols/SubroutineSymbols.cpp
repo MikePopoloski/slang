@@ -40,9 +40,9 @@ const Statement& SubroutineSymbol::getBody() const {
             isBinding = true;
             auto guard = ScopeGuard([this] { isBinding = false; });
 
-            BindContext context(*this, LookupLocation::max);
+            ASTContext context(*this, LookupLocation::max);
             if (subroutineKind == SubroutineKind::Function)
-                context.flags |= BindFlags::Function;
+                context.flags |= ASTFlags::Function;
 
             Statement::StatementContext stmtCtx(context);
             stmtCtx.blocks = blocks;
@@ -396,8 +396,8 @@ SubroutineSymbol& SubroutineSymbol::createOutOfBlock(Compilation& compilation,
         else if (pe) {
             // Copy the prototype default into the definition. The const_cast here is gross
             // but ok since we literally just created these symbols when we called fromSyntax().
-            // NOTE: there is an ambiguity here -- we could copy the bound expression, or we
-            // could copy the expression syntax nodes and re-bind them in the context of the
+            // NOTE: there is an ambiguity here -- we could copy the AST expression, or we
+            // could copy the expression syntax nodes and recreate them in the context of the
             // definition. This has subtle effects for cases like:
             //
             //   localparam int k = 1;
@@ -928,7 +928,7 @@ MethodPrototypeSymbol& MethodPrototypeSymbol::fromSyntax(const Scope& scope,
     return result;
 }
 
-MethodPrototypeSymbol& MethodPrototypeSymbol::fromSyntax(const BindContext& context,
+MethodPrototypeSymbol& MethodPrototypeSymbol::fromSyntax(const ASTContext& context,
                                                          const ModportNamedPortSyntax& syntax,
                                                          bool isExport) {
     auto& result = createForModport(*context.scope, syntax, syntax.name, isExport);

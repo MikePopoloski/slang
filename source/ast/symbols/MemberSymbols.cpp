@@ -151,7 +151,7 @@ ModportPortSymbol::ModportPortSymbol(string_view name, SourceLocation loc,
     direction(direction) {
 }
 
-ModportPortSymbol& ModportPortSymbol::fromSyntax(const BindContext& context,
+ModportPortSymbol& ModportPortSymbol::fromSyntax(const ASTContext& context,
                                                  ArgumentDirection direction,
                                                  const ModportNamedPortSyntax& syntax) {
     auto& comp = context.getCompilation();
@@ -189,7 +189,7 @@ ModportPortSymbol& ModportPortSymbol::fromSyntax(const BindContext& context,
     // Perform checking on the connected symbol to make sure it's allowed
     // given the modport's direction.
     if (direction != ArgumentDirection::In) {
-        BindContext checkCtx = context.resetFlags(BindFlags::NonProcedural);
+        ASTContext checkCtx = context.resetFlags(ASTFlags::NonProcedural);
 
         auto loc = result->location;
         auto& expr = ValueExpressionBase::fromSymbol(checkCtx, *result->internalSymbol, false,
@@ -216,10 +216,10 @@ ModportPortSymbol& ModportPortSymbol::fromSyntax(const BindContext& context,
     return *result;
 }
 
-ModportPortSymbol& ModportPortSymbol::fromSyntax(const BindContext& parentContext,
+ModportPortSymbol& ModportPortSymbol::fromSyntax(const ASTContext& parentContext,
                                                  ArgumentDirection direction,
                                                  const ModportExplicitPortSyntax& syntax) {
-    BindContext context = parentContext.resetFlags(BindFlags::NonProcedural);
+    ASTContext context = parentContext.resetFlags(ASTFlags::NonProcedural);
     auto& comp = context.getCompilation();
     auto name = syntax.name;
     auto result = comp.emplace<ModportPortSymbol>(name.valueText(), name.location(), direction);
@@ -230,9 +230,9 @@ ModportPortSymbol& ModportPortSymbol::fromSyntax(const BindContext& parentContex
         return *result;
     }
 
-    BindFlags extraFlags = BindFlags::None;
+    ASTFlags extraFlags = ASTFlags::None;
     if (direction == ArgumentDirection::Out || direction == ArgumentDirection::InOut)
-        extraFlags = BindFlags::LValue;
+        extraFlags = ASTFlags::LValue;
 
     auto& expr = Expression::bind(*syntax.expr, context, extraFlags);
     result->explicitConnection = &expr;
@@ -274,7 +274,7 @@ ModportClockingSymbol::ModportClockingSymbol(string_view name, SourceLocation lo
     Symbol(SymbolKind::ModportClocking, name, loc) {
 }
 
-ModportClockingSymbol& ModportClockingSymbol::fromSyntax(const BindContext& context,
+ModportClockingSymbol& ModportClockingSymbol::fromSyntax(const ASTContext& context,
                                                          const ModportClockingPortSyntax& syntax) {
     auto& comp = context.getCompilation();
     auto name = syntax.name;
@@ -303,7 +303,7 @@ ModportSymbol::ModportSymbol(Compilation& compilation, string_view name, SourceL
     Symbol(SymbolKind::Modport, name, loc), Scope(compilation, this) {
 }
 
-void ModportSymbol::fromSyntax(const BindContext& context, const ModportDeclarationSyntax& syntax,
+void ModportSymbol::fromSyntax(const ASTContext& context, const ModportDeclarationSyntax& syntax,
                                SmallVector<const ModportSymbol*>& results) {
     auto& comp = context.getCompilation();
     for (auto item : syntax.items) {
@@ -397,10 +397,10 @@ ContinuousAssignSymbol::ContinuousAssignSymbol(SourceLocation loc, const Express
 
 void ContinuousAssignSymbol::fromSyntax(Compilation& compilation,
                                         const ContinuousAssignSyntax& syntax,
-                                        const BindContext& parentContext,
+                                        const ASTContext& parentContext,
                                         SmallVector<const Symbol*>& results,
                                         SmallVector<const Symbol*>& implicitNets) {
-    BindContext context = parentContext.resetFlags(BindFlags::NonProcedural);
+    ASTContext context = parentContext.resetFlags(ASTFlags::NonProcedural);
     auto& netType = context.scope->getDefaultNetType();
 
     for (auto expr : syntax.assignments) {
@@ -436,9 +436,9 @@ const Expression& ContinuousAssignSymbol::getAssignment() const {
     auto syntax = getSyntax();
     ASSERT(scope && syntax);
 
-    BindContext context(*scope, LookupLocation::after(*this), BindFlags::NonProcedural);
+    ASTContext context(*scope, LookupLocation::after(*this), ASTFlags::NonProcedural);
     assign = &Expression::bind(syntax->as<ExpressionSyntax>(), context,
-                               BindFlags::AssignmentAllowed);
+                               ASTFlags::AssignmentAllowed);
 
     return *assign;
 }
@@ -489,7 +489,7 @@ const TimingControl* ContinuousAssignSymbol::getDelay() const {
         return nullptr;
     }
 
-    BindContext context(*scope, LookupLocation::before(*this), BindFlags::NonProcedural);
+    ASTContext context(*scope, LookupLocation::before(*this), ASTFlags::NonProcedural);
     delay = &TimingControl::bind(*delaySyntax, context);
 
     // A multi-delay is disallowed if the lhs references variables.
@@ -569,7 +569,7 @@ string_view ElabSystemTaskSymbol::getMessage() const {
 
     // Bind all arguments.
     auto& comp = scope->getCompilation();
-    BindContext bindCtx(*scope, LookupLocation::before(*this));
+    ASTContext bindCtx(*scope, LookupLocation::before(*this));
     SmallVectorSized<const Expression*, 4> args;
     for (auto arg : argSyntax->parameters) {
         switch (arg->kind) {
@@ -620,7 +620,7 @@ string_view ElabSystemTaskSymbol::getMessage() const {
     return *message;
 }
 
-string_view ElabSystemTaskSymbol::createMessage(const BindContext& context,
+string_view ElabSystemTaskSymbol::createMessage(const ASTContext& context,
                                                 span<const Expression* const> args) {
     // Check all arguments.
     if (!FmtHelpers::checkDisplayArgs(context, args))
@@ -949,7 +949,7 @@ PrimitiveSymbol& PrimitiveSymbol::fromSyntax(const Scope& scope,
         }
 
         if (initExpr) {
-            BindContext context(scope, LookupLocation::max);
+            ASTContext context(scope, LookupLocation::max);
             auto& expr = Expression::bind(*initExpr, context);
             if (!expr.bad()) {
                 if (expr.kind == ExpressionKind::IntegerLiteral &&
@@ -1244,7 +1244,7 @@ const TimingControl& ClockingBlockSymbol::getEvent() const {
         auto syntax = getSyntax();
         ASSERT(scope && syntax);
 
-        BindContext context(*scope, LookupLocation::before(*this));
+        ASTContext context(*scope, LookupLocation::before(*this));
         event = &EventListControl::fromSyntax(getCompilation(),
                                               *syntax->as<ClockingDeclarationSyntax>().event,
                                               context);
@@ -1258,7 +1258,7 @@ ClockingSkew ClockingBlockSymbol::getDefaultInputSkew() const {
             auto scope = getParentScope();
             ASSERT(scope);
 
-            BindContext context(*scope, LookupLocation::before(*this));
+            ASTContext context(*scope, LookupLocation::before(*this));
             defaultInputSkew = ClockingSkew::fromSyntax(*inputSkewSyntax, context);
         }
         else {
@@ -1274,7 +1274,7 @@ ClockingSkew ClockingBlockSymbol::getDefaultOutputSkew() const {
             auto scope = getParentScope();
             ASSERT(scope);
 
-            BindContext context(*scope, LookupLocation::before(*this));
+            ASTContext context(*scope, LookupLocation::before(*this));
             defaultOutputSkew = ClockingSkew::fromSyntax(*outputSkewSyntax, context);
         }
         else {
@@ -1339,7 +1339,7 @@ span<const RandSeqProductionSymbol::Rule> RandSeqProductionSymbol::getRules() co
         auto syntax = getSyntax();
         ASSERT(syntax);
 
-        BindContext context(*this, LookupLocation::max);
+        ASTContext context(*this, LookupLocation::max);
 
         auto blocks = membersOfType<StatementBlockSymbol>();
         auto blockIt = blocks.begin();
@@ -1357,7 +1357,7 @@ span<const RandSeqProductionSymbol::Rule> RandSeqProductionSymbol::getRules() co
 
 const RandSeqProductionSymbol* RandSeqProductionSymbol::findProduction(string_view name,
                                                                        SourceRange nameRange,
-                                                                       const BindContext& context) {
+                                                                       const ASTContext& context) {
     auto symbol = Lookup::unqualifiedAt(*context.scope, name, context.getLocation(), nameRange,
                                         LookupFlags::AllowDeclaredAfter);
     if (!symbol)
@@ -1373,7 +1373,7 @@ const RandSeqProductionSymbol* RandSeqProductionSymbol::findProduction(string_vi
 }
 
 RandSeqProductionSymbol::ProdItem RandSeqProductionSymbol::createProdItem(
-    const RsProdItemSyntax& syntax, const BindContext& context) {
+    const RsProdItemSyntax& syntax, const ASTContext& context) {
 
     auto symbol = findProduction(syntax.name.valueText(), syntax.name.range(), context);
     if (!symbol)
@@ -1387,7 +1387,7 @@ RandSeqProductionSymbol::ProdItem RandSeqProductionSymbol::createProdItem(
 }
 
 const RandSeqProductionSymbol::CaseProd& RandSeqProductionSymbol::createCaseProd(
-    const RsCaseSyntax& syntax, const BindContext& context) {
+    const RsCaseSyntax& syntax, const ASTContext& context) {
 
     SmallVectorSized<const ExpressionSyntax*, 8> expressions;
     SmallVectorSized<ProdItem, 8> prods;
@@ -1449,7 +1449,7 @@ const RandSeqProductionSymbol::CaseProd& RandSeqProductionSymbol::createCaseProd
 }
 
 RandSeqProductionSymbol::Rule RandSeqProductionSymbol::createRule(
-    const RsRuleSyntax& syntax, const BindContext& context, const StatementBlockSymbol& ruleBlock) {
+    const RsRuleSyntax& syntax, const ASTContext& context, const StatementBlockSymbol& ruleBlock) {
 
     auto blockRange = ruleBlock.membersOfType<StatementBlockSymbol>();
     auto blockIt = blockRange.begin();

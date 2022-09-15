@@ -28,12 +28,12 @@ public:
     /// Compile-time check that streaming concatenation target has a bit-stream type source with
     /// enough bits. If the target is definitely invalid, a diagnostic will be issued.
     static bool canBeTarget(const StreamingConcatenationExpression& lhs, const Expression& rhs,
-                            SourceLocation assignLoc, const BindContext& context);
+                            SourceLocation assignLoc, const ASTContext& context);
 
     /// Compile-time check that streaming concatenation source has a bit-stream target type with
     /// enough bits. If the source is definitely invalid, a diagnostic will be issued.
     static bool canBeSource(const Type& target, const StreamingConcatenationExpression& rhs,
-                            SourceLocation assignLoc, const BindContext& context);
+                            SourceLocation assignLoc, const ASTContext& context);
 
     /// Compile-time check that bit-streaming cast on a streaming operator is valid.
     static bool isBitstreamCast(const Type& type, const StreamingConcatenationExpression& arg);

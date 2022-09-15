@@ -25,7 +25,7 @@
 
 namespace slang {
 
-const Statement& StatementBlockSymbol::getStatement(const BindContext& parentContext,
+const Statement& StatementBlockSymbol::getStatement(const ASTContext& parentContext,
                                                     Statement::StatementContext& stmtCtx) const {
     if (!stmt) {
         ensureElaborated();
@@ -37,7 +37,7 @@ const Statement& StatementBlockSymbol::getStatement(const BindContext& parentCon
             stmt = &BlockStatement::makeEmpty(parentContext.getCompilation());
         }
         else {
-            BindContext context = parentContext;
+            ASTContext context = parentContext;
             context.scope = this;
             context.lookupIndex = SymbolIndex(UINT32_MAX);
 
@@ -222,7 +222,7 @@ void StatementBlockSymbol::elaborateVariables(function_ref<void(const Symbol&)> 
     }
     else if (syntax->kind == SyntaxKind::ForeachLoopStatement) {
         SmallVectorSized<ForeachLoopStatement::LoopDim, 4> dims;
-        BindContext context(*this, LookupLocation::max);
+        ASTContext context(*this, LookupLocation::max);
 
         if (!ForeachLoopStatement::buildLoopDims(*syntax->as<ForeachLoopStatementSyntax>().loopList,
                                                  context, dims)) {
@@ -254,11 +254,11 @@ const Statement& ProceduralBlockSymbol::getBody() const {
         auto scope = getParentScope();
         ASSERT(scope && stmtSyntax);
 
-        BindContext context(*scope, LookupLocation::after(*this));
+        ASTContext context(*scope, LookupLocation::after(*this));
         context.setProceduralBlock(*this);
 
         if (procedureKind == ProceduralBlockKind::Final)
-            context.flags |= BindFlags::Final;
+            context.flags |= ASTFlags::Final;
 
         Statement::StatementContext stmtCtx(context);
         stmtCtx.blocks = blocks;
@@ -341,7 +341,7 @@ static void addBlockMembers(GenerateBlockSymbol& block, const SyntaxNode& syntax
 }
 
 static void createCondGenBlock(Compilation& compilation, const SyntaxNode& syntax,
-                               const BindContext& context, uint32_t constructIndex,
+                               const ASTContext& context, uint32_t constructIndex,
                                bool isInstantiated,
                                const SyntaxList<AttributeInstanceSyntax>& attributes,
                                SmallVector<GenerateBlockSymbol*>& results) {
@@ -377,7 +377,7 @@ static void createCondGenBlock(Compilation& compilation, const SyntaxNode& synta
 }
 
 void GenerateBlockSymbol::fromSyntax(Compilation& compilation, const IfGenerateSyntax& syntax,
-                                     const BindContext& context, uint32_t constructIndex,
+                                     const ASTContext& context, uint32_t constructIndex,
                                      bool isInstantiated,
                                      SmallVector<GenerateBlockSymbol*>& results) {
     optional<bool> selector;
@@ -397,7 +397,7 @@ void GenerateBlockSymbol::fromSyntax(Compilation& compilation, const IfGenerateS
 }
 
 void GenerateBlockSymbol::fromSyntax(Compilation& compilation, const CaseGenerateSyntax& syntax,
-                                     const BindContext& context, uint32_t constructIndex,
+                                     const ASTContext& context, uint32_t constructIndex,
                                      bool isInstantiated,
                                      SmallVector<GenerateBlockSymbol*>& results) {
 
@@ -573,7 +573,7 @@ static uint64_t getGenerateLoopCount(const Scope& parent) {
 GenerateBlockArraySymbol& GenerateBlockArraySymbol::fromSyntax(Compilation& compilation,
                                                                const LoopGenerateSyntax& syntax,
                                                                SymbolIndex scopeIndex,
-                                                               const BindContext& context,
+                                                               const ASTContext& context,
                                                                uint32_t constructIndex) {
     string_view name = getGenerateBlockName(*syntax.block);
     SourceLocation loc = syntax.block->getFirstToken().location();
@@ -650,10 +650,10 @@ GenerateBlockArraySymbol& GenerateBlockArraySymbol::fromSyntax(Compilation& comp
     iterScope.addMember(local);
 
     // Bind the stop and iteration expressions so we can reuse them on each iteration.
-    BindContext iterContext(iterScope, LookupLocation::max);
+    ASTContext iterContext(iterScope, LookupLocation::max);
     auto& stopExpr = Expression::bind(*syntax.stopExpr, iterContext);
     auto& iterExpr = Expression::bind(*syntax.iterationExpr, iterContext,
-                                      BindFlags::AssignmentAllowed);
+                                      ASTFlags::AssignmentAllowed);
     if (stopExpr.bad() || iterExpr.bad())
         return *result;
 

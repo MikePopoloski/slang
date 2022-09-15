@@ -16,7 +16,7 @@
 
 namespace slang {
 
-class BindContext;
+class ASTContext;
 class Constraint;
 struct ClassPropertyDeclarationSyntax;
 
@@ -100,10 +100,9 @@ private:
 
     void populate(const Scope& scope, const ClassDeclarationSyntax& syntax);
     void inheritMembers(function_ref<void(const Symbol&)> insertCB) const;
-    void handleExtends(const ExtendsClauseSyntax& extendsClause, const BindContext& context,
+    void handleExtends(const ExtendsClauseSyntax& extendsClause, const ASTContext& context,
                        function_ref<void(const Symbol&)> insertCB) const;
-    void handleImplements(const ImplementsClauseSyntax& implementsClause,
-                          const BindContext& context,
+    void handleImplements(const ImplementsClauseSyntax& implementsClause, const ASTContext& context,
                           function_ref<void(const Symbol&)> insertCB) const;
 
     mutable const Type* baseClass = nullptr;
@@ -137,7 +136,7 @@ public:
 
     /// Gets the specialization for the class given the specified parameter value
     /// assignments. The result is cached and reused if requested more than once.
-    const Type& getSpecialization(const BindContext& context,
+    const Type& getSpecialization(const ASTContext& context,
                                   const ParameterValueAssignmentSyntax& syntax) const;
 
     /// Forces a specialization with all parameters set to invalid values. This allows
@@ -188,7 +187,7 @@ private:
         size_t operator()(const SpecializationKey& key) const { return key.hash(); }
     };
 
-    const Type* getSpecializationImpl(const BindContext& context, SourceLocation instanceLoc,
+    const Type* getSpecializationImpl(const ASTContext& context, SourceLocation instanceLoc,
                                       bool forceInvalidParams,
                                       const ParameterValueAssignmentSyntax* syntax) const;
 

@@ -31,10 +31,10 @@ public:
 
     virtual bool allowEmptyArgument(size_t argIndex) const;
     virtual bool allowClockingArgument(size_t argIndex) const;
-    virtual const Expression& bindArgument(size_t argIndex, const BindContext& context,
+    virtual const Expression& bindArgument(size_t argIndex, const ASTContext& context,
                                            const ExpressionSyntax& syntax,
                                            const Args& previousArgs) const;
-    virtual const Type& checkArguments(const BindContext& context, const Args& args,
+    virtual const Type& checkArguments(const ASTContext& context, const Args& args,
                                        SourceRange range, const Expression* iterOrThis) const = 0;
     virtual ConstantValue eval(EvalContext& context, const Args& args, SourceRange range,
                                const CallExpression::SystemCallInfo& callInfo) const = 0;
@@ -43,25 +43,25 @@ protected:
     SystemSubroutine(const std::string& name, SubroutineKind kind) : name(name), kind(kind) {}
 
     string_view kindStr() const;
-    const Type& badArg(const BindContext& context, const Expression& arg) const;
+    const Type& badArg(const ASTContext& context, const Expression& arg) const;
 
     bool notConst(EvalContext& context, SourceRange range) const;
     bool noHierarchical(EvalContext& context, const Expression& expr) const;
 
-    bool checkArgCount(const BindContext& context, bool isMethod, const Args& args,
+    bool checkArgCount(const ASTContext& context, bool isMethod, const Args& args,
                        SourceRange callRange, size_t min, size_t max) const;
 
-    static BindContext unevaluatedContext(const BindContext& sourceContext);
+    static ASTContext unevaluatedContext(const ASTContext& sourceContext);
 };
 
 /// An implementation of the SystemSubroutine interface that has
 /// basic argument types and a well-defined return type.
 class SimpleSystemSubroutine : public SystemSubroutine {
 public:
-    const Expression& bindArgument(size_t argIndex, const BindContext& context,
+    const Expression& bindArgument(size_t argIndex, const ASTContext& context,
                                    const ExpressionSyntax& syntax,
                                    const Args& previousArgs) const final;
-    const Type& checkArguments(const BindContext& context, const Args& args, SourceRange range,
+    const Type& checkArguments(const ASTContext& context, const Args& args, SourceRange range,
                                const Expression* iterExpr) const final;
 
 protected:

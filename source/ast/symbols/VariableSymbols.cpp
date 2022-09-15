@@ -7,8 +7,8 @@
 //------------------------------------------------------------------------------
 #include "slang/ast/symbols/VariableSymbols.h"
 
+#include "slang/ast/ASTContext.h"
 #include "slang/ast/ASTSerializer.h"
-#include "slang/ast/BindContext.h"
 #include "slang/ast/Scope.h"
 #include "slang/ast/TimingControl.h"
 #include "slang/ast/expressions/MiscExpressions.h"
@@ -293,7 +293,7 @@ const TimingControl* NetSymbol::getDelay() const {
         return nullptr;
     }
 
-    BindContext context(*scope, LookupLocation::before(*this), BindFlags::NonProcedural);
+    ASTContext context(*scope, LookupLocation::before(*this), ASTFlags::NonProcedural);
 
     auto& parent = *syntax->parent;
     if (parent.kind == SyntaxKind::NetDeclaration) {
@@ -392,7 +392,7 @@ void ClockVarSymbol::fromSyntax(const Scope& scope, const ClockingItemSyntax& sy
     ASSERT(parent);
 
     LookupLocation ll = LookupLocation::before(scope.asSymbol());
-    BindContext context(*parent, ll);
+    ASTContext context(*parent, ll);
 
     ArgumentDirection dir = ArgumentDirection::In;
     ClockingSkew inputSkew, outputSkew;
@@ -424,11 +424,11 @@ void ClockVarSymbol::fromSyntax(const Scope& scope, const ClockingItemSyntax& sy
         // Otherwise we need to lookup the signal in our parent scope and
         // take the type from that.
         if (decl->value) {
-            bitmask<BindFlags> bindFlags = BindFlags::NonProcedural;
+            bitmask<ASTFlags> astFlags = ASTFlags::NonProcedural;
             if (dir == ArgumentDirection::Out || dir == ArgumentDirection::InOut)
-                bindFlags |= BindFlags::LValue;
+                astFlags |= ASTFlags::LValue;
 
-            auto& expr = Expression::bind(*decl->value->expr, context, bindFlags);
+            auto& expr = Expression::bind(*decl->value->expr, context, astFlags);
             arg->setType(*expr.type);
             arg->setInitializer(expr);
 

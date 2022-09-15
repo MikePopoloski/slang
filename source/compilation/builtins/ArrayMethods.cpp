@@ -28,7 +28,7 @@ public:
         withClauseMode = WithClauseMode::Iterator;
     }
 
-    const Type& checkArguments(const BindContext& context, const Args& args, SourceRange range,
+    const Type& checkArguments(const ASTContext& context, const Args& args, SourceRange range,
                                const Expression* iterExpr) const final {
         auto& comp = context.getCompilation();
         if (!checkArgCount(context, true, args, range, 0, 0))
@@ -114,7 +114,7 @@ public:
         withClauseMode = WithClauseMode::Iterator;
     }
 
-    const Type& checkArguments(const BindContext& context, const Args& args, SourceRange range,
+    const Type& checkArguments(const ASTContext& context, const Args& args, SourceRange range,
                                const Expression* iterExpr) const final {
         auto& comp = context.getCompilation();
         if (!checkArgCount(context, true, args, range, 0, 0))
@@ -211,7 +211,7 @@ class ArrayReverseMethod : public SystemSubroutine {
 public:
     ArrayReverseMethod() : SystemSubroutine("reverse", SubroutineKind::Function) {}
 
-    const Type& checkArguments(const BindContext& context, const Args& args, SourceRange range,
+    const Type& checkArguments(const ASTContext& context, const Args& args, SourceRange range,
                                const Expression*) const final {
         auto& comp = context.getCompilation();
         if (!checkArgCount(context, true, args, range, 0, 0))
@@ -253,7 +253,7 @@ public:
         withClauseMode = WithClauseMode::Iterator;
     }
 
-    const Type& checkArguments(const BindContext& context, const Args& args, SourceRange range,
+    const Type& checkArguments(const ASTContext& context, const Args& args, SourceRange range,
                                const Expression* iterExpr) const final {
         auto& comp = context.getCompilation();
         if (!checkArgCount(context, true, args, range, 0, 0))
@@ -364,7 +364,7 @@ public:
         withClauseMode = WithClauseMode::Iterator;
     }
 
-    const Type& checkArguments(const BindContext& context, const Args& args, SourceRange range,
+    const Type& checkArguments(const ASTContext& context, const Args& args, SourceRange range,
                                const Expression* iterExpr) const final {
         auto& comp = context.getCompilation();
         if (!checkArgCount(context, true, args, range, 0, 0))
@@ -456,7 +456,7 @@ public:
         withClauseMode = WithClauseMode::Iterator;
     }
 
-    const Type& checkArguments(const BindContext& context, const Args& args, SourceRange range,
+    const Type& checkArguments(const ASTContext& context, const Args& args, SourceRange range,
                                const Expression*) const final {
         auto& comp = context.getCompilation();
         if (!checkArgCount(context, true, args, range, 0, 0))
@@ -565,7 +565,7 @@ class AssocArrayDeleteMethod : public SystemSubroutine {
 public:
     AssocArrayDeleteMethod() : SystemSubroutine("delete", SubroutineKind::Function) {}
 
-    const Expression& bindArgument(size_t argIndex, const BindContext& context,
+    const Expression& bindArgument(size_t argIndex, const ASTContext& context,
                                    const ExpressionSyntax& syntax, const Args& args) const final {
         // Argument type comes from the index type of the previous argument.
         if (argIndex == 1) {
@@ -577,7 +577,7 @@ public:
         return SystemSubroutine::bindArgument(argIndex, context, syntax, args);
     }
 
-    const Type& checkArguments(const BindContext& context, const Args& args, SourceRange range,
+    const Type& checkArguments(const ASTContext& context, const Args& args, SourceRange range,
                                const Expression*) const final {
         auto& comp = context.getCompilation();
         if (!checkArgCount(context, true, args, range, 0, 1))
@@ -625,7 +625,7 @@ class AssocArrayExistsMethod : public SystemSubroutine {
 public:
     AssocArrayExistsMethod() : SystemSubroutine("exists", SubroutineKind::Function) {}
 
-    const Expression& bindArgument(size_t argIndex, const BindContext& context,
+    const Expression& bindArgument(size_t argIndex, const ASTContext& context,
                                    const ExpressionSyntax& syntax, const Args& args) const final {
         // Argument type comes from the index type of the previous argument.
         if (argIndex == 1) {
@@ -637,7 +637,7 @@ public:
         return SystemSubroutine::bindArgument(argIndex, context, syntax, args);
     }
 
-    const Type& checkArguments(const BindContext& context, const Args& args, SourceRange range,
+    const Type& checkArguments(const ASTContext& context, const Args& args, SourceRange range,
                                const Expression*) const final {
         auto& comp = context.getCompilation();
         if (!checkArgCount(context, true, args, range, 1, 1))
@@ -670,7 +670,7 @@ public:
         hasOutputArgs = true;
     }
 
-    const Expression& bindArgument(size_t argIndex, const BindContext& context,
+    const Expression& bindArgument(size_t argIndex, const ASTContext& context,
                                    const ExpressionSyntax& syntax, const Args& args) const final {
         // Argument type comes from the index type of the previous argument.
         if (argIndex == 1) {
@@ -683,7 +683,7 @@ public:
         return SystemSubroutine::bindArgument(argIndex, context, syntax, args);
     }
 
-    const Type& checkArguments(const BindContext& context, const Args& args, SourceRange range,
+    const Type& checkArguments(const ASTContext& context, const Args& args, SourceRange range,
                                const Expression*) const final {
         auto& comp = context.getCompilation();
         if (!checkArgCount(context, true, args, range, 1, 1))
@@ -711,7 +711,7 @@ public:
     QueuePopMethod(const std::string& name, bool front) :
         SystemSubroutine(name, SubroutineKind::Function), front(front) {}
 
-    const Type& checkArguments(const BindContext& context, const Args& args, SourceRange range,
+    const Type& checkArguments(const ASTContext& context, const Args& args, SourceRange range,
                                const Expression*) const final {
         auto& comp = context.getCompilation();
         if (!checkArgCount(context, true, args, range, 0, 0))
@@ -756,7 +756,7 @@ public:
     QueuePushMethod(const std::string& name, bool front) :
         SystemSubroutine(name, SubroutineKind::Function), front(front) {}
 
-    const Expression& bindArgument(size_t argIndex, const BindContext& context,
+    const Expression& bindArgument(size_t argIndex, const ASTContext& context,
                                    const ExpressionSyntax& syntax, const Args& args) const final {
         // Argument type comes from the element type of the queue.
         if (argIndex == 1) {
@@ -768,7 +768,7 @@ public:
         return SystemSubroutine::bindArgument(argIndex, context, syntax, args);
     }
 
-    const Type& checkArguments(const BindContext& context, const Args& args, SourceRange range,
+    const Type& checkArguments(const ASTContext& context, const Args& args, SourceRange range,
                                const Expression*) const final {
         auto& comp = context.getCompilation();
         if (!checkArgCount(context, true, args, range, 1, 1))
@@ -808,7 +808,7 @@ class QueueInsertMethod : public SystemSubroutine {
 public:
     QueueInsertMethod() : SystemSubroutine("insert", SubroutineKind::Function) {}
 
-    const Expression& bindArgument(size_t argIndex, const BindContext& context,
+    const Expression& bindArgument(size_t argIndex, const ASTContext& context,
                                    const ExpressionSyntax& syntax, const Args& args) const final {
         // Argument type comes from the element type of the queue.
         if (argIndex == 2) {
@@ -820,7 +820,7 @@ public:
         return SystemSubroutine::bindArgument(argIndex, context, syntax, args);
     }
 
-    const Type& checkArguments(const BindContext& context, const Args& args, SourceRange range,
+    const Type& checkArguments(const ASTContext& context, const Args& args, SourceRange range,
                                const Expression*) const final {
         auto& comp = context.getCompilation();
         if (!checkArgCount(context, true, args, range, 2, 2))
@@ -864,7 +864,7 @@ class QueueDeleteMethod : public SystemSubroutine {
 public:
     QueueDeleteMethod() : SystemSubroutine("delete", SubroutineKind::Function) {}
 
-    const Type& checkArguments(const BindContext& context, const Args& args, SourceRange range,
+    const Type& checkArguments(const ASTContext& context, const Args& args, SourceRange range,
                                const Expression*) const final {
         auto& comp = context.getCompilation();
         if (!checkArgCount(context, true, args, range, 0, 1))
@@ -914,7 +914,7 @@ class IteratorIndexMethod : public SystemSubroutine {
 public:
     IteratorIndexMethod() : SystemSubroutine("index", SubroutineKind::Function) {}
 
-    const Type& checkArguments(const BindContext& context, const Args& args, SourceRange range,
+    const Type& checkArguments(const ASTContext& context, const Args& args, SourceRange range,
                                const Expression*) const final {
         auto& comp = context.getCompilation();
         if (!checkArgCount(context, true, args, range, 0, 1))

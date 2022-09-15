@@ -170,14 +170,14 @@ void registerCompilation(py::module_& m) {
             PYBIND11_OVERRIDE(bool, SystemSubroutine, allowClockingArgument, argIndex);
         }
 
-        const Expression& bindArgument(size_t argIndex, const BindContext& context,
+        const Expression& bindArgument(size_t argIndex, const ASTContext& context,
                                        const ExpressionSyntax& syntax,
                                        const Args& previousArgs) const override {
             PYBIND11_OVERRIDE(const Expression&, SystemSubroutine, bindArgument, argIndex, context,
                               syntax, previousArgs);
         }
 
-        const Type& checkArguments(const BindContext& context, const Args& args, SourceRange range,
+        const Type& checkArguments(const ASTContext& context, const Args& args, SourceRange range,
                                    const Expression* iterOrThis) const override {
             PYBIND11_OVERRIDE_PURE(const Type&, SystemSubroutine, checkArguments, &context, args,
                                    range, iterOrThis);

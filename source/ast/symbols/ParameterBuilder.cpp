@@ -7,7 +7,7 @@
 //------------------------------------------------------------------------------
 #include "ParameterBuilder.h"
 
-#include "slang/ast/BindContext.h"
+#include "slang/ast/ASTContext.h"
 #include "slang/ast/Scope.h"
 #include "slang/ast/symbols/ParameterSymbols.h"
 #include "slang/ast/types/Type.h"

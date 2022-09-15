@@ -89,8 +89,7 @@ public:
         const Expression* repeatTo = nullptr;
         enum RepeatKind { None, Consecutive, Nonconsecutive, GoTo } repeatKind = None;
 
-        TransRangeList(const TransRangeSyntax& syntax, const Type& type,
-                       const BindContext& context);
+        TransRangeList(const TransRangeSyntax& syntax, const Type& type, const ASTContext& context);
 
         void serializeTo(ASTSerializer& serializer) const;
 
@@ -259,7 +258,7 @@ public:
     bool bad() const { return kind == BinsSelectExprKind::Invalid; }
 
     static const BinsSelectExpr& bind(const BinsSelectExpressionSyntax& syntax,
-                                      const BindContext& context);
+                                      const ASTContext& context);
 
     template<typename T>
     T& as() {
@@ -305,7 +304,7 @@ public:
         BinsSelectExpr(BinsSelectExprKind::Condition), target(target) {}
 
     static BinsSelectExpr& fromSyntax(const BinsSelectConditionExprSyntax& syntax,
-                                      const BindContext& context);
+                                      const ASTContext& context);
 
     void serializeTo(ASTSerializer& serializer) const;
 
@@ -332,7 +331,7 @@ public:
         BinsSelectExpr(BinsSelectExprKind::Unary), expr(expr) {}
 
     static BinsSelectExpr& fromSyntax(const UnaryBinsSelectExprSyntax& syntax,
-                                      const BindContext& context);
+                                      const ASTContext& context);
 
     void serializeTo(ASTSerializer& serializer) const;
 
@@ -356,7 +355,7 @@ public:
         BinsSelectExpr(BinsSelectExprKind::Binary), left(left), right(right), op(op) {}
 
     static BinsSelectExpr& fromSyntax(const BinaryBinsSelectExprSyntax& syntax,
-                                      const BindContext& context);
+                                      const ASTContext& context);
 
     void serializeTo(ASTSerializer& serializer) const;
 
@@ -380,7 +379,7 @@ public:
         BinsSelectExpr(BinsSelectExprKind::SetExpr), expr(expr), matchesExpr(matchesExpr) {}
 
     static BinsSelectExpr& fromSyntax(const SimpleBinsSelectExprSyntax& syntax,
-                                      const BindContext& context);
+                                      const ASTContext& context);
 
     void serializeTo(ASTSerializer& serializer) const;
 
@@ -408,7 +407,7 @@ public:
         expr(expr), filter(filter), matchesExpr(matchesExpr) {}
 
     static BinsSelectExpr& fromSyntax(const BinSelectWithFilterExprSyntax& syntax,
-                                      const BindContext& context);
+                                      const ASTContext& context);
 
     void serializeTo(ASTSerializer& serializer) const;
 

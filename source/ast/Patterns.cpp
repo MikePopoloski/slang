@@ -1,6 +1,6 @@
 //------------------------------------------------------------------------------
 // Patterns.cpp
-// Definitions for pattern matching binding
+// AST definitions for pattern matching
 //
 // SPDX-FileCopyrightText: Michael Popoloski
 // SPDX-License-Identifier: MIT
@@ -40,7 +40,7 @@ struct EvalVisitor {
 namespace slang {
 
 Pattern& Pattern::bind(const PatternSyntax& syntax, const Type& targetType, VarMap& varMap,
-                       BindContext& context) {
+                       ASTContext& context) {
     Pattern* result;
     switch (syntax.kind) {
         case SyntaxKind::ParenthesizedPattern:
@@ -74,7 +74,7 @@ Pattern& Pattern::bind(const PatternSyntax& syntax, const Type& targetType, VarM
 }
 
 void Pattern::createPlaceholderVars(const PatternSyntax& syntax, VarMap& varMap,
-                                    BindContext& context) {
+                                    ASTContext& context) {
     switch (syntax.kind) {
         case SyntaxKind::ParenthesizedPattern:
             createPlaceholderVars(*syntax.as<ParenthesizedPatternSyntax>().pattern, varMap,
@@ -122,7 +122,7 @@ void InvalidPattern::serializeTo(ASTSerializer& serializer) const {
 }
 
 Pattern& WildcardPattern::fromSyntax(const WildcardPatternSyntax& syntax,
-                                     const BindContext& context) {
+                                     const ASTContext& context) {
     auto& comp = context.getCompilation();
     return *comp.emplace<WildcardPattern>(syntax.sourceRange());
 }
@@ -134,7 +134,7 @@ ConstantValue WildcardPattern::evalImpl(EvalContext&, const ConstantValue&,
 }
 
 Pattern& ConstantPattern::fromSyntax(const ExpressionPatternSyntax& syntax, const Type& targetType,
-                                     const BindContext& context) {
+                                     const ASTContext& context) {
     // Bind the expression (it must be a constant).
     // We force integral types to be four-state here so that if we need to do a casex / casez
     // condition we will get the right result for unknowns.
@@ -181,7 +181,7 @@ void ConstantPattern::serializeTo(ASTSerializer& serializer) const {
 }
 
 Pattern& VariablePattern::fromSyntax(const VariablePatternSyntax& syntax, const Type& targetType,
-                                     VarMap& varMap, BindContext& context) {
+                                     VarMap& varMap, ASTContext& context) {
     auto& comp = context.getCompilation();
     auto var = comp.emplace<PatternVarSymbol>(syntax.variableName.valueText(),
                                               syntax.variableName.location(), targetType);
@@ -215,7 +215,7 @@ void VariablePattern::serializeTo(ASTSerializer& serializer) const {
 }
 
 Pattern& TaggedPattern::fromSyntax(const TaggedPatternSyntax& syntax, const Type& targetType,
-                                   VarMap& varMap, BindContext& context) {
+                                   VarMap& varMap, ASTContext& context) {
     auto& comp = context.getCompilation();
     if (!targetType.isTaggedUnion()) {
         if (!targetType.isError())
@@ -274,7 +274,7 @@ void TaggedPattern::serializeTo(ASTSerializer& serializer) const {
 }
 
 Pattern& StructurePattern::fromSyntax(const StructurePatternSyntax& syntax, const Type& targetType,
-                                      VarMap& varMap, BindContext& context) {
+                                      VarMap& varMap, ASTContext& context) {
     auto& comp = context.getCompilation();
     if (!targetType.isStruct() || syntax.members.empty()) {
         if (!targetType.isError() && !syntax.members.empty())

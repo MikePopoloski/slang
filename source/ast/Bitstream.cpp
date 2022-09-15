@@ -466,7 +466,7 @@ static bool withAfterDynamic(const StreamingConcatenationExpression& lhs,
 }
 
 bool Bitstream::canBeTarget(const StreamingConcatenationExpression& lhs, const Expression& rhs,
-                            SourceLocation assignLoc, const BindContext& context) {
+                            SourceLocation assignLoc, const ASTContext& context) {
     if (rhs.kind != ExpressionKind::Streaming && !rhs.type->isBitstreamType()) {
         context.addDiag(diag::BadStreamSourceType, assignLoc) << *rhs.type << lhs.sourceRange;
         return false;
@@ -520,7 +520,7 @@ bool Bitstream::canBeTarget(const StreamingConcatenationExpression& lhs, const E
 }
 
 bool Bitstream::canBeSource(const Type& target, const StreamingConcatenationExpression& rhs,
-                            SourceLocation assignLoc, const BindContext& context) {
+                            SourceLocation assignLoc, const ASTContext& context) {
     if (!target.isBitstreamType(true)) {
         context.addDiag(diag::BadStreamTargetType, assignLoc) << target << rhs.sourceRange;
         return false;

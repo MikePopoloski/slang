@@ -18,12 +18,12 @@ class BitsFunction : public SystemSubroutine {
 public:
     BitsFunction() : SystemSubroutine("$bits", SubroutineKind::Function) {}
 
-    const Expression& bindArgument(size_t, const BindContext& context,
+    const Expression& bindArgument(size_t, const ASTContext& context,
                                    const ExpressionSyntax& syntax, const Args&) const final {
-        return Expression::bind(syntax, unevaluatedContext(context), BindFlags::AllowDataType);
+        return Expression::bind(syntax, unevaluatedContext(context), ASTFlags::AllowDataType);
     }
 
-    const Type& checkArguments(const BindContext& context, const Args& args, SourceRange range,
+    const Type& checkArguments(const ASTContext& context, const Args& args, SourceRange range,
                                const Expression*) const final {
         auto& comp = context.getCompilation();
         if (!checkArgCount(context, false, args, range, 1, 1))
@@ -71,12 +71,12 @@ class TypenameFunction : public SystemSubroutine {
 public:
     TypenameFunction() : SystemSubroutine("$typename", SubroutineKind::Function) {}
 
-    const Expression& bindArgument(size_t, const BindContext& context,
+    const Expression& bindArgument(size_t, const ASTContext& context,
                                    const ExpressionSyntax& syntax, const Args&) const final {
-        return Expression::bind(syntax, unevaluatedContext(context), BindFlags::AllowDataType);
+        return Expression::bind(syntax, unevaluatedContext(context), ASTFlags::AllowDataType);
     }
 
-    const Type& checkArguments(const BindContext& context, const Args& args, SourceRange range,
+    const Type& checkArguments(const ASTContext& context, const Args& args, SourceRange range,
                                const Expression*) const final {
         auto& comp = context.getCompilation();
         if (!checkArgCount(context, false, args, range, 1, 1))
@@ -100,13 +100,13 @@ class IsUnboundedFunction : public SystemSubroutine {
 public:
     IsUnboundedFunction() : SystemSubroutine("$isunbounded", SubroutineKind::Function) {}
 
-    const Expression& bindArgument(size_t, const BindContext& context,
+    const Expression& bindArgument(size_t, const ASTContext& context,
                                    const ExpressionSyntax& syntax, const Args&) const final {
         return Expression::bind(syntax, unevaluatedContext(context),
-                                BindFlags::AllowUnboundedLiteral);
+                                ASTFlags::AllowUnboundedLiteral);
     }
 
-    const Type& checkArguments(const BindContext& context, const Args& args, SourceRange range,
+    const Type& checkArguments(const ASTContext& context, const Args& args, SourceRange range,
                                const Expression*) const final {
         auto& comp = context.getCompilation();
         if (!checkArgCount(context, false, args, range, 1, 1))
@@ -137,15 +137,15 @@ class ArrayQueryFunction : public SystemSubroutine {
 public:
     using SystemSubroutine::SystemSubroutine;
 
-    const Expression& bindArgument(size_t index, const BindContext& context,
+    const Expression& bindArgument(size_t index, const ASTContext& context,
                                    const ExpressionSyntax& syntax, const Args&) const final {
         if (index == 0)
-            return Expression::bind(syntax, unevaluatedContext(context), BindFlags::AllowDataType);
+            return Expression::bind(syntax, unevaluatedContext(context), ASTFlags::AllowDataType);
         else
             return Expression::bind(syntax, context);
     }
 
-    const Type& checkArguments(const BindContext& context, const Args& args, SourceRange range,
+    const Type& checkArguments(const ASTContext& context, const Args& args, SourceRange range,
                                const Expression*) const final {
         auto& comp = context.getCompilation();
         if (!checkArgCount(context, false, args, range, 1, 2))
@@ -293,7 +293,7 @@ protected:
         return cv.size();
     }
 
-    static bool checkDim(const BindContext& context, const Args& args, int32_t& resultIndex) {
+    static bool checkDim(const ASTContext& context, const Args& args, int32_t& resultIndex) {
         // Similar logic to what's above, except we're just verifying a constant index here.
         // It's ok for it not to be constant, it will be evaluated at runtime.
         ConstantValue iv = context.tryEval(*args[1]);
@@ -467,12 +467,12 @@ public:
     ArrayDimensionFunction(const std::string& name, bool unpackedOnly) :
         SystemSubroutine(name, FUNC), unpackedOnly(unpackedOnly) {}
 
-    const Expression& bindArgument(size_t, const BindContext& context,
+    const Expression& bindArgument(size_t, const ASTContext& context,
                                    const ExpressionSyntax& syntax, const Args&) const final {
-        return Expression::bind(syntax, unevaluatedContext(context), BindFlags::AllowDataType);
+        return Expression::bind(syntax, unevaluatedContext(context), ASTFlags::AllowDataType);
     }
 
-    const Type& checkArguments(const BindContext& context, const Args& args, SourceRange range,
+    const Type& checkArguments(const ASTContext& context, const Args& args, SourceRange range,
                                const Expression*) const final {
         auto& comp = context.getCompilation();
         if (!checkArgCount(context, false, args, range, 1, 1))

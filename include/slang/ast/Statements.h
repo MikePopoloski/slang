@@ -129,31 +129,31 @@ public:
     /// Evaluates the statement under the given evaluation context.
     EvalResult eval(EvalContext& context) const;
 
-    /// Additional information passed along during statement binding.
+    /// Additional information passed along during statement creation.
     struct StatementContext {
-        /// A series of block symbols that are expected to be bound, in order,
+        /// A series of block symbols that are expected to be used, in order,
         /// during the creation of the statement tree. Each statement created
         /// can pop blocks off the beginning of this list.
         span<const StatementBlockSymbol* const> blocks;
 
-        /// Tracks various bits of context about where we are in statement binding.
+        /// Tracks various bits of context about where we are in statement creation.
         bitmask<StatementFlags> flags;
 
         /// A source range indicating the last event control observed
-        /// while binding statements. This is only updated in always_ff blocks.
+        /// while creating statements. This is only updated in always_ff blocks.
         SourceRange lastEventControl;
 
-        /// The context used for binding statements.
-        const BindContext& rootBindContext;
+        /// The context used for creating statements.
+        const ASTContext& rootAstContext;
 
-        explicit StatementContext(const BindContext& context) : rootBindContext(context) {}
+        explicit StatementContext(const ASTContext& context) : rootAstContext(context) {}
         ~StatementContext();
 
         /// Attempts to match up the head of the block list with the given
         /// statement syntax node. If they match, the block symbol is popped
         /// and returned wrapped inside a BlockStatement.
         /// Otherwise nullptr is returned.
-        const Statement* tryGetBlock(const BindContext& context, const SyntaxNode& syntax);
+        const Statement* tryGetBlock(const ASTContext& context, const SyntaxNode& syntax);
 
         /// Observes that the given timing control has been created and checks it
         /// for correctness given the current statement context.
@@ -177,17 +177,17 @@ public:
     };
 
     /// Binds a statement tree from the given syntax nodes.
-    static const Statement& bind(const StatementSyntax& syntax, const BindContext& context,
+    static const Statement& bind(const StatementSyntax& syntax, const ASTContext& context,
                                  StatementContext& stmtCtx, bool inList = false,
                                  bool labelHandled = false);
 
     /// Binds a statement tree that forms the contents of a block.
     static const Statement& bindBlock(const StatementBlockSymbol& block, const SyntaxNode& syntax,
-                                      const BindContext& context, StatementContext& stmtCtx);
+                                      const ASTContext& context, StatementContext& stmtCtx);
 
     /// Binds a list of statement items.
     static const Statement& bindItems(const SyntaxList<SyntaxNode>& items,
-                                      const BindContext& context, StatementContext& stmtCtx);
+                                      const ASTContext& context, StatementContext& stmtCtx);
 
     /// Creates any symbols declared by the given statement syntax, such as local variables.
     static span<const StatementBlockSymbol* const> createBlockItems(const Scope& scope,
@@ -223,7 +223,7 @@ protected:
     Statement(StatementKind kind, SourceRange sourceRange) : kind(kind), sourceRange(sourceRange) {}
 
     static Statement& badStmt(Compilation& compilation, const Statement* stmt);
-    static void bindScopeInitializers(const BindContext& context,
+    static void bindScopeInitializers(const ASTContext& context,
                                       SmallVector<const Statement*>& results);
 };
 
@@ -297,7 +297,7 @@ public:
     void serializeTo(ASTSerializer& serializer) const;
 
     static Statement& fromSyntax(Compilation& compilation, const BlockStatementSyntax& syntax,
-                                 const BindContext& context, StatementContext& stmtCtx,
+                                 const ASTContext& context, StatementContext& stmtCtx,
                                  bool addInitializers = false);
 
     static Statement& makeEmpty(Compilation& compilation);
@@ -322,7 +322,7 @@ public:
     EvalResult evalImpl(EvalContext& context) const;
 
     static Statement& fromSyntax(Compilation& compilation, const ReturnStatementSyntax& syntax,
-                                 const BindContext& context, StatementContext& stmtCtx);
+                                 const ASTContext& context, StatementContext& stmtCtx);
 
     void serializeTo(ASTSerializer& serializer) const;
 
@@ -345,7 +345,7 @@ public:
     EvalResult evalImpl(EvalContext& context) const;
 
     static Statement& fromSyntax(Compilation& compilation, const JumpStatementSyntax& syntax,
-                                 const BindContext& context, StatementContext& stmtCtx);
+                                 const ASTContext& context, StatementContext& stmtCtx);
 
     void serializeTo(const ASTSerializer&) const {}
 
@@ -360,7 +360,7 @@ public:
     EvalResult evalImpl(EvalContext& context) const;
 
     static Statement& fromSyntax(Compilation& compilation, const JumpStatementSyntax& syntax,
-                                 const BindContext& context, StatementContext& stmtCtx);
+                                 const ASTContext& context, StatementContext& stmtCtx);
 
     void serializeTo(ASTSerializer&) const {}
 
@@ -381,7 +381,7 @@ public:
     EvalResult evalImpl(EvalContext& context) const;
 
     static Statement& fromSyntax(Compilation& compilation, const DisableStatementSyntax& syntax,
-                                 const BindContext& context);
+                                 const ASTContext& context);
 
     void serializeTo(ASTSerializer& serializer) const;
 
@@ -423,7 +423,7 @@ public:
     EvalResult evalImpl(EvalContext& context) const;
 
     static Statement& fromSyntax(Compilation& compilation, const ConditionalStatementSyntax& syntax,
-                                 const BindContext& context, StatementContext& stmtCtx);
+                                 const ASTContext& context, StatementContext& stmtCtx);
 
     void serializeTo(ASTSerializer& serializer) const;
 
@@ -467,7 +467,7 @@ public:
     EvalResult evalImpl(EvalContext& context) const;
 
     static Statement& fromSyntax(Compilation& compilation, const CaseStatementSyntax& syntax,
-                                 const BindContext& context, StatementContext& stmtCtx);
+                                 const ASTContext& context, StatementContext& stmtCtx);
 
     void serializeTo(ASTSerializer& serializer) const;
 
@@ -514,7 +514,7 @@ public:
     EvalResult evalImpl(EvalContext& context) const;
 
     static Statement& fromSyntax(Compilation& compilation, const CaseStatementSyntax& syntax,
-                                 const BindContext& context, StatementContext& stmtCtx);
+                                 const ASTContext& context, StatementContext& stmtCtx);
 
     void serializeTo(ASTSerializer& serializer) const;
 
@@ -555,7 +555,7 @@ public:
     EvalResult evalImpl(EvalContext& context) const;
 
     static Statement& fromSyntax(Compilation& compilation, const ForLoopStatementSyntax& syntax,
-                                 const BindContext& context, StatementContext& stmtCtx);
+                                 const ASTContext& context, StatementContext& stmtCtx);
 
     void serializeTo(ASTSerializer& serializer) const;
 
@@ -590,7 +590,7 @@ public:
     EvalResult evalImpl(EvalContext& context) const;
 
     static Statement& fromSyntax(Compilation& compilation, const LoopStatementSyntax& syntax,
-                                 const BindContext& context, StatementContext& stmtCtx);
+                                 const ASTContext& context, StatementContext& stmtCtx);
 
     void serializeTo(ASTSerializer& serializer) const;
 
@@ -635,12 +635,12 @@ public:
     EvalResult evalImpl(EvalContext& context) const;
 
     static Statement& fromSyntax(Compilation& compilation, const ForeachLoopStatementSyntax& syntax,
-                                 const BindContext& context, StatementContext& stmtCtx);
+                                 const ASTContext& context, StatementContext& stmtCtx);
 
     void serializeTo(ASTSerializer& serializer) const;
 
     static const Expression* buildLoopDims(const ForeachLoopListSyntax& loopList,
-                                           BindContext& context, SmallVector<LoopDim>& dims);
+                                           ASTContext& context, SmallVector<LoopDim>& dims);
 
     static bool isKind(StatementKind kind) { return kind == StatementKind::ForeachLoop; }
 
@@ -670,7 +670,7 @@ public:
     EvalResult evalImpl(EvalContext& context) const;
 
     static Statement& fromSyntax(Compilation& compilation, const LoopStatementSyntax& syntax,
-                                 const BindContext& context, StatementContext& stmtCtx);
+                                 const ASTContext& context, StatementContext& stmtCtx);
 
     void serializeTo(ASTSerializer& serializer) const;
 
@@ -700,7 +700,7 @@ public:
     EvalResult evalImpl(EvalContext& context) const;
 
     static Statement& fromSyntax(Compilation& compilation, const DoWhileStatementSyntax& syntax,
-                                 const BindContext& context, StatementContext& stmtCtx);
+                                 const ASTContext& context, StatementContext& stmtCtx);
 
     void serializeTo(ASTSerializer& serializer) const;
 
@@ -729,7 +729,7 @@ public:
     EvalResult evalImpl(EvalContext& context) const;
 
     static Statement& fromSyntax(Compilation& compilation, const ForeverStatementSyntax& syntax,
-                                 const BindContext& context, StatementContext& stmtCtx);
+                                 const ASTContext& context, StatementContext& stmtCtx);
 
     void serializeTo(ASTSerializer& serializer) const;
 
@@ -754,11 +754,11 @@ public:
     EvalResult evalImpl(EvalContext& context) const;
 
     static Statement& fromSyntax(Compilation& compilation, const ExpressionStatementSyntax& syntax,
-                                 const BindContext& context, StatementContext& stmtCtx);
+                                 const ASTContext& context, StatementContext& stmtCtx);
 
     static Statement& fromSyntax(Compilation& compilation,
                                  const VoidCastedCallStatementSyntax& syntax,
-                                 const BindContext& context);
+                                 const ASTContext& context);
 
     void serializeTo(ASTSerializer& serializer) const;
 
@@ -784,7 +784,7 @@ public:
 
     static Statement& fromSyntax(Compilation& compilation,
                                  const TimingControlStatementSyntax& syntax,
-                                 const BindContext& context, StatementContext& stmtCtx);
+                                 const ASTContext& context, StatementContext& stmtCtx);
 
     void serializeTo(ASTSerializer& serializer) const;
 
@@ -823,7 +823,7 @@ public:
 
     static Statement& fromSyntax(Compilation& compilation,
                                  const ImmediateAssertionStatementSyntax& syntax,
-                                 const BindContext& context, StatementContext& stmtCtx);
+                                 const ASTContext& context, StatementContext& stmtCtx);
 
     void serializeTo(ASTSerializer& serializer) const;
 
@@ -863,7 +863,7 @@ public:
 
     static Statement& fromSyntax(Compilation& compilation,
                                  const ConcurrentAssertionStatementSyntax& syntax,
-                                 const BindContext& context, StatementContext& stmtCtx);
+                                 const ASTContext& context, StatementContext& stmtCtx);
 
     void serializeTo(ASTSerializer& serializer) const;
 
@@ -913,7 +913,7 @@ public:
     EvalResult evalImpl(EvalContext& context) const;
 
     static Statement& fromSyntax(Compilation& compilation, const WaitStatementSyntax& syntax,
-                                 const BindContext& context, StatementContext& stmtCtx);
+                                 const ASTContext& context, StatementContext& stmtCtx);
 
     void serializeTo(ASTSerializer& serializer) const;
 
@@ -962,7 +962,7 @@ public:
     EvalResult evalImpl(EvalContext& context) const;
 
     static Statement& fromSyntax(Compilation& compilation, const WaitOrderStatementSyntax& syntax,
-                                 const BindContext& context, StatementContext& stmtCtx);
+                                 const ASTContext& context, StatementContext& stmtCtx);
 
     void serializeTo(ASTSerializer& serializer) const;
 
@@ -1000,7 +1000,7 @@ public:
 
     static Statement& fromSyntax(Compilation& compilation,
                                  const EventTriggerStatementSyntax& syntax,
-                                 const BindContext& context, StatementContext& stmtCtx);
+                                 const ASTContext& context, StatementContext& stmtCtx);
 
     void serializeTo(ASTSerializer& serializer) const;
 
@@ -1029,7 +1029,7 @@ public:
 
     static Statement& fromSyntax(Compilation& compilation,
                                  const ProceduralAssignStatementSyntax& syntax,
-                                 const BindContext& context);
+                                 const ASTContext& context);
 
     void serializeTo(ASTSerializer& serializer) const;
 
@@ -1056,7 +1056,7 @@ public:
 
     static Statement& fromSyntax(Compilation& compilation,
                                  const ProceduralDeassignStatementSyntax& syntax,
-                                 const BindContext& context);
+                                 const ASTContext& context);
 
     void serializeTo(ASTSerializer& serializer) const;
 
@@ -1085,7 +1085,7 @@ public:
     EvalResult evalImpl(EvalContext& context) const;
 
     static Statement& fromSyntax(Compilation& compilation, const RandCaseStatementSyntax& syntax,
-                                 const BindContext& context, StatementContext& stmtCtx);
+                                 const ASTContext& context, StatementContext& stmtCtx);
 
     void serializeTo(ASTSerializer& serializer) const;
 
@@ -1117,7 +1117,7 @@ public:
 
     static Statement& fromSyntax(Compilation& compilation,
                                  const RandSequenceStatementSyntax& syntax,
-                                 const BindContext& context);
+                                 const ASTContext& context);
 
     void serializeTo(ASTSerializer& serializer) const;
 

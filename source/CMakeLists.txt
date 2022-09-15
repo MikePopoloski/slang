@@ -174,10 +174,10 @@ add_library(
   ast/types/NetType.cpp
   ast/types/TypePrinter.cpp
   ast/types/Type.cpp
+  ast/ASTContext.cpp
   ast/ASTSerializer.cpp
   ast/Bitstream.cpp
   ast/Constraints.cpp
-  ast/BindContext.cpp
   ast/EvalContext.cpp
   ast/Expression.cpp
   ast/FormatHelpers.cpp

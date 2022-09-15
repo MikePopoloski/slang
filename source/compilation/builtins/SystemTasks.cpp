@@ -52,7 +52,7 @@ public:
 
     bool allowEmptyArgument(size_t) const final { return true; }
 
-    const Type& checkArguments(const BindContext& context, const Args& args, SourceRange,
+    const Type& checkArguments(const ASTContext& context, const Args& args, SourceRange,
                                const Expression*) const override {
         auto& comp = context.getCompilation();
         if (!FmtHelpers::checkDisplayArgs(context, args))
@@ -63,9 +63,9 @@ public:
 };
 
 struct MonitorVisitor : public ASTVisitor<MonitorVisitor, true, true> {
-    const BindContext& context;
+    const ASTContext& context;
 
-    MonitorVisitor(const BindContext& context) : context(context) {}
+    MonitorVisitor(const ASTContext& context) : context(context) {}
 
     void handle(const ValueExpressionBase& expr) {
         if (VariableSymbol::isKind(expr.symbol.kind) &&
@@ -79,7 +79,7 @@ class MonitorTask : public DisplayTask {
 public:
     using DisplayTask::DisplayTask;
 
-    const Type& checkArguments(const BindContext& context, const Args& args, SourceRange range,
+    const Type& checkArguments(const ASTContext& context, const Args& args, SourceRange range,
                                const Expression* iterOrThis) const final {
         auto& result = DisplayTask::checkArguments(context, args, range, iterOrThis);
         if (result.isError())
@@ -98,7 +98,7 @@ class FinishControlTask : public SystemTaskBase {
 public:
     using SystemTaskBase::SystemTaskBase;
 
-    const Type& checkArguments(const BindContext& context, const Args& args, SourceRange range,
+    const Type& checkArguments(const ASTContext& context, const Args& args, SourceRange range,
                                const Expression*) const final {
         auto& comp = context.getCompilation();
         if (!checkArgCount(context, false, args, range, 0, 1))
@@ -119,7 +119,7 @@ public:
 
     bool allowEmptyArgument(size_t index) const final { return index != 0; }
 
-    const Type& checkArguments(const BindContext& context, const Args& args, SourceRange,
+    const Type& checkArguments(const ASTContext& context, const Args& args, SourceRange,
                                const Expression*) const final {
         auto& comp = context.getCompilation();
         if (!args.empty()) {
@@ -143,7 +143,7 @@ public:
 
     bool allowEmptyArgument(size_t index) const final { return index != 0; }
 
-    const Type& checkArguments(const BindContext& context, const Args& args, SourceRange range,
+    const Type& checkArguments(const ASTContext& context, const Args& args, SourceRange range,
                                const Expression*) const final {
         auto& comp = context.getCompilation();
 
@@ -175,7 +175,7 @@ public:
 
     bool allowEmptyArgument(size_t index) const final { return index != 0; }
 
-    const Type& checkArguments(const BindContext& context, const Args& args, SourceRange range,
+    const Type& checkArguments(const ASTContext& context, const Args& args, SourceRange range,
                                const Expression*) const override {
         auto& comp = context.getCompilation();
         if (!checkArgCount(context, false, args, range, 1, INT32_MAX))
@@ -195,7 +195,7 @@ class FileMonitorTask : public FileDisplayTask {
 public:
     using FileDisplayTask::FileDisplayTask;
 
-    const Type& checkArguments(const BindContext& context, const Args& args, SourceRange range,
+    const Type& checkArguments(const ASTContext& context, const Args& args, SourceRange range,
                                const Expression* iterOrThis) const final {
         auto& result = FileDisplayTask::checkArguments(context, args, range, iterOrThis);
         if (result.isError())
@@ -218,7 +218,7 @@ public:
 
     bool allowEmptyArgument(size_t index) const final { return index != 0; }
 
-    const Type& checkArguments(const BindContext& context, const Args& args, SourceRange range,
+    const Type& checkArguments(const ASTContext& context, const Args& args, SourceRange range,
                                const Expression*) const final {
         auto& comp = context.getCompilation();
         if (!checkArgCount(context, false, args, range, 1, INT32_MAX))
@@ -246,7 +246,7 @@ public:
         hasOutputArgs = true;
     }
 
-    const Type& checkArguments(const BindContext& context, const Args& args, SourceRange range,
+    const Type& checkArguments(const ASTContext& context, const Args& args, SourceRange range,
                                const Expression*) const final {
         auto& comp = context.getCompilation();
         if (!checkArgCount(context, false, args, range, 2, INT32_MAX))
@@ -277,7 +277,7 @@ public:
         hasOutputArgs = isInput;
     }
 
-    const Type& checkArguments(const BindContext& context, const Args& args, SourceRange range,
+    const Type& checkArguments(const ASTContext& context, const Args& args, SourceRange range,
                                const Expression*) const final {
         auto& comp = context.getCompilation();
         if (!checkArgCount(context, false, args, range, 2, 4))
@@ -329,7 +329,7 @@ class PrintTimeScaleTask : public SystemTaskBase {
 public:
     using SystemTaskBase::SystemTaskBase;
 
-    const Expression& bindArgument(size_t argIndex, const BindContext& context,
+    const Expression& bindArgument(size_t argIndex, const ASTContext& context,
                                    const ExpressionSyntax& syntax, const Args& args) const final {
         if (argIndex == 0) {
             auto& comp = context.getCompilation();
@@ -345,7 +345,7 @@ public:
         return SystemTaskBase::bindArgument(argIndex, context, syntax, args);
     }
 
-    const Type& checkArguments(const BindContext& context, const Args& args, SourceRange range,
+    const Type& checkArguments(const ASTContext& context, const Args& args, SourceRange range,
                                const Expression*) const final {
         auto& comp = context.getCompilation();
         if (!checkArgCount(context, false, args, range, 0, 1))
@@ -368,7 +368,7 @@ class DumpVarsTask : public SystemTaskBase {
 public:
     using SystemTaskBase::SystemTaskBase;
 
-    const Expression& bindArgument(size_t argIndex, const BindContext& context,
+    const Expression& bindArgument(size_t argIndex, const ASTContext& context,
                                    const ExpressionSyntax& syntax, const Args& args) const final {
         if (argIndex > 0) {
             auto& comp = context.getCompilation();
@@ -400,7 +400,7 @@ public:
         return SystemTaskBase::bindArgument(argIndex, context, syntax, args);
     }
 
-    const Type& checkArguments(const BindContext& context, const Args& args, SourceRange range,
+    const Type& checkArguments(const ASTContext& context, const Args& args, SourceRange range,
                                const Expression*) const final {
         auto& comp = context.getCompilation();
         if (!checkArgCount(context, false, args, range, 0, INT32_MAX))
@@ -421,7 +421,7 @@ public:
 
     bool allowEmptyArgument(size_t argIndex) const final { return argIndex == 0; }
 
-    const Expression& bindArgument(size_t argIndex, const BindContext& context,
+    const Expression& bindArgument(size_t argIndex, const ASTContext& context,
                                    const ExpressionSyntax& syntax, const Args& args) const final {
         if (NameSyntax::isKind(syntax.kind)) {
             return HierarchicalReferenceExpression::fromSyntax(context.getCompilation(),
@@ -431,7 +431,7 @@ public:
         return SystemTaskBase::bindArgument(argIndex, context, syntax, args);
     }
 
-    const Type& checkArguments(const BindContext& context, const Args& args, SourceRange range,
+    const Type& checkArguments(const ASTContext& context, const Args& args, SourceRange range,
                                const Expression*) const final {
         auto& comp = context.getCompilation();
         if (!checkArgCount(context, false, args, range, 0, INT32_MAX))
@@ -472,7 +472,7 @@ class CastTask : public SystemTaskBase {
 public:
     explicit CastTask(const std::string& name) : SystemTaskBase(name) { hasOutputArgs = true; }
 
-    const Type& checkArguments(const BindContext& context, const Args& args, SourceRange range,
+    const Type& checkArguments(const ASTContext& context, const Args& args, SourceRange range,
                                const Expression*) const final {
         auto& comp = context.getCompilation();
         if (!checkArgCount(context, false, args, range, 2, 2))
@@ -500,7 +500,7 @@ public:
     explicit AssertControlTask(const std::string& name) :
         SystemTaskBase(name), isFullMethod(name == "$assertcontrol") {}
 
-    const Expression& bindArgument(size_t argIndex, const BindContext& context,
+    const Expression& bindArgument(size_t argIndex, const ASTContext& context,
                                    const ExpressionSyntax& syntax, const Args& args) const final {
         if ((isFullMethod && argIndex < 4) || (!isFullMethod && argIndex == 0) ||
             !NameSyntax::isKind(syntax.kind)) {
@@ -511,7 +511,7 @@ public:
                                                            syntax.as<NameSyntax>(), context);
     }
 
-    const Type& checkArguments(const BindContext& context, const Args& args, SourceRange range,
+    const Type& checkArguments(const ASTContext& context, const Args& args, SourceRange range,
                                const Expression*) const final {
         auto& comp = context.getCompilation();
         if (!checkArgCount(context, false, args, range, isFullMethod ? 1 : 0, INT32_MAX))
@@ -551,7 +551,7 @@ public:
         hasOutputArgs = outputArgs > 0;
     }
 
-    const Type& checkArguments(const BindContext& context, const Args& args, SourceRange range,
+    const Type& checkArguments(const ASTContext& context, const Args& args, SourceRange range,
                                const Expression*) const final {
         auto& comp = context.getCompilation();
         size_t totalArgs = inputArgs + outputArgs;
@@ -589,7 +589,7 @@ class SdfAnnotateTask : public SystemTaskBase {
 public:
     SdfAnnotateTask() : SystemTaskBase("$sdf_annotate") {}
 
-    const Expression& bindArgument(size_t argIndex, const BindContext& context,
+    const Expression& bindArgument(size_t argIndex, const ASTContext& context,
                                    const ExpressionSyntax& syntax, const Args& args) const final {
         if (argIndex == 1) {
             auto& comp = context.getCompilation();
@@ -616,7 +616,7 @@ public:
         return SystemTaskBase::bindArgument(argIndex, context, syntax, args);
     }
 
-    const Type& checkArguments(const BindContext& context, const Args& args, SourceRange range,
+    const Type& checkArguments(const ASTContext& context, const Args& args, SourceRange range,
                                const Expression*) const final {
         auto& comp = context.getCompilation();
         if (!checkArgCount(context, false, args, range, 1, 7))
@@ -635,7 +635,7 @@ class PlaTask : public SystemTaskBase {
 public:
     PlaTask(const std::string& name) : SystemTaskBase(name){};
 
-    const Type& checkArguments(const BindContext& context, const Args& args, SourceRange range,
+    const Type& checkArguments(const ASTContext& context, const Args& args, SourceRange range,
                                const Expression*) const final {
         auto& comp = context.getCompilation();
 
@@ -679,7 +679,7 @@ private:
         return range.right >= range.left;
     }
 
-    static const Type& badRange(const BindContext& context, const Expression& arg) {
+    static const Type& badRange(const ASTContext& context, const Expression& arg) {
         context.addDiag(diag::PlaRangeInAscendingOrder, arg.sourceRange) << *arg.type;
         return context.getCompilation().getErrorType();
     }

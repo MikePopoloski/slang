@@ -246,7 +246,7 @@ void ClassType::inheritMembers(function_ref<void(const Symbol&)> insertCB) const
     auto syntax = getSyntax();
     ASSERT(syntax);
 
-    BindContext context(*this, LookupLocation(this, uint32_t(headerIndex)));
+    ASTContext context(*this, LookupLocation(this, uint32_t(headerIndex)));
 
     auto& classSyntax = syntax->as<ClassDeclarationSyntax>();
     if (classSyntax.extendsClause)
@@ -256,7 +256,7 @@ void ClassType::inheritMembers(function_ref<void(const Symbol&)> insertCB) const
         handleImplements(*classSyntax.implementsClause, context, insertCB);
 }
 
-void ClassType::handleExtends(const ExtendsClauseSyntax& extendsClause, const BindContext& context,
+void ClassType::handleExtends(const ExtendsClauseSyntax& extendsClause, const ASTContext& context,
                               function_ref<void(const Symbol&)> insertCB) const {
     auto& comp = context.getCompilation();
     auto baseType = Lookup::findClass(*extendsClause.baseName, context);
@@ -489,7 +489,7 @@ const Expression* ClassType::getBaseConstructorCall() const {
         }
     }
 
-    BindContext context(*this, LookupLocation(this, uint32_t(headerIndex)));
+    ASTContext context(*this, LookupLocation(this, uint32_t(headerIndex)));
     auto& extendsClause = *classSyntax.extendsClause;
 
     if (auto extendsArgs = extendsClause.arguments) {
@@ -556,7 +556,7 @@ static void findIfaces(const ClassType& type, SmallVector<const Type*>& ifaces,
 }
 
 void ClassType::handleImplements(const ImplementsClauseSyntax& implementsClause,
-                                 const BindContext& context,
+                                 const ASTContext& context,
                                  function_ref<void(const Symbol&)> insertCB) const {
     auto& comp = context.getCompilation();
     SmallVectorSized<const Type*, 4> ifaces;
@@ -734,14 +734,14 @@ const Type* GenericClassDefSymbol::getDefaultSpecialization() const {
     auto scope = getParentScope();
     ASSERT(scope);
 
-    auto result = getSpecializationImpl(BindContext(*scope, LookupLocation::max), location,
+    auto result = getSpecializationImpl(ASTContext(*scope, LookupLocation::max), location,
                                         /* forceInvalidParams */ false, nullptr);
     defaultSpecialization = result;
     return result;
 }
 
 const Type& GenericClassDefSymbol::getSpecialization(
-    const BindContext& context, const ParameterValueAssignmentSyntax& syntax) const {
+    const ASTContext& context, const ParameterValueAssignmentSyntax& syntax) const {
 
     auto result = getSpecializationImpl(context, syntax.getFirstToken().location(),
                                         /* forceInvalidParams */ false, &syntax);
@@ -755,7 +755,7 @@ const Type& GenericClassDefSymbol::getInvalidSpecialization() const {
     auto scope = getParentScope();
     ASSERT(scope);
 
-    auto result = getSpecializationImpl(BindContext(*scope, LookupLocation::max), location,
+    auto result = getSpecializationImpl(ASTContext(*scope, LookupLocation::max), location,
                                         /* forceInvalidParams */ true, nullptr);
     if (!result)
         return scope->getCompilation().getErrorType();
@@ -764,7 +764,7 @@ const Type& GenericClassDefSymbol::getInvalidSpecialization() const {
 }
 
 const Type* GenericClassDefSymbol::getSpecializationImpl(
-    const BindContext& context, SourceLocation instanceLoc, bool forceInvalidParams,
+    const ASTContext& context, SourceLocation instanceLoc, bool forceInvalidParams,
     const ParameterValueAssignmentSyntax* syntax) const {
 
     auto& comp = context.getCompilation();
@@ -1002,7 +1002,7 @@ const Constraint& ConstraintBlockSymbol::getConstraints() const {
     auto syntax = getSyntax();
     auto scope = getParentScope();
     ASSERT(syntax && scope);
-    BindContext context(*this, LookupLocation::max);
+    ASTContext context(*this, LookupLocation::max);
 
     if (syntax->kind == SyntaxKind::ConstraintPrototype) {
         // The out-of-block definition must be in our parent scope.

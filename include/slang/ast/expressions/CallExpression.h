@@ -64,38 +64,38 @@ public:
     static Expression& fromSyntax(Compilation& compilation,
                                   const InvocationExpressionSyntax& syntax,
                                   const ArrayOrRandomizeMethodExpressionSyntax* withClause,
-                                  const BindContext& context);
+                                  const ASTContext& context);
 
     static Expression& fromSyntax(Compilation& compilation,
                                   const ArrayOrRandomizeMethodExpressionSyntax& syntax,
-                                  const BindContext& context);
+                                  const ASTContext& context);
 
     static Expression& fromLookup(Compilation& compilation, const Subroutine& subroutine,
                                   const Expression* thisClass,
                                   const InvocationExpressionSyntax* syntax,
                                   const ArrayOrRandomizeMethodExpressionSyntax* withClause,
-                                  SourceRange range, const BindContext& context);
+                                  SourceRange range, const ASTContext& context);
 
     static Expression& fromArgs(Compilation& compilation, const Subroutine& subroutine,
                                 const Expression* thisClass, const ArgumentListSyntax* argSyntax,
-                                SourceRange range, const BindContext& context);
+                                SourceRange range, const ASTContext& context);
 
     static Expression& fromSystemMethod(Compilation& compilation, const Expression& expr,
                                         const LookupResult::MemberSelector& selector,
                                         const InvocationExpressionSyntax* syntax,
                                         const ArrayOrRandomizeMethodExpressionSyntax* withClause,
-                                        const BindContext& context);
+                                        const ASTContext& context);
 
     static Expression* fromBuiltInMethod(Compilation& compilation, SymbolKind rootKind,
                                          const Expression& expr,
                                          const LookupResult::MemberSelector& selector,
                                          const InvocationExpressionSyntax* syntax,
                                          const ArrayOrRandomizeMethodExpressionSyntax* withClause,
-                                         const BindContext& context);
+                                         const ASTContext& context);
 
     static bool bindArgs(const ArgumentListSyntax* argSyntax,
                          span<const FormalArgumentSymbol* const> formalArgs, string_view symbolName,
-                         SourceRange range, const BindContext& context,
+                         SourceRange range, const ASTContext& context,
                          SmallVector<const Expression*>& boundArgs);
 
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::Call; }
@@ -125,14 +125,14 @@ private:
     static Expression& fromSyntaxImpl(Compilation& compilation, const ExpressionSyntax& left,
                                       const InvocationExpressionSyntax* invocation,
                                       const ArrayOrRandomizeMethodExpressionSyntax* withClause,
-                                      const BindContext& context);
+                                      const ASTContext& context);
 
     static Expression& createSystemCall(Compilation& compilation,
                                         const SystemSubroutine& subroutine,
                                         const Expression* firstArg,
                                         const InvocationExpressionSyntax* syntax,
                                         const ArrayOrRandomizeMethodExpressionSyntax* withClause,
-                                        SourceRange range, const BindContext& context,
+                                        SourceRange range, const ASTContext& context,
                                         const Scope* randomizeScope = nullptr);
 
     static bool checkConstant(EvalContext& context, const SubroutineSymbol& subroutine,

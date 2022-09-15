@@ -34,7 +34,7 @@ DeclaredType::DeclaredType(const Symbol& parent, bitmask<DeclaredTypeFlags> flag
 
 const Type& DeclaredType::getType() const {
     if (!type)
-        resolveType(getBindContext<false>(), getBindContext<true>());
+        resolveType(getASTContext<false>(), getASTContext<true>());
     return *type;
 }
 
@@ -54,12 +54,12 @@ void DeclaredType::setDimensionSyntax(const SyntaxList<VariableDimensionSyntax>&
 void DeclaredType::mergeImplicitPort(
     const ImplicitTypeSyntax& implicit, SourceLocation location,
     span<const VariableDimensionSyntax* const> unpackedDimensions) {
-    mergePortTypes(getBindContext<false>(), parent.as<ValueSymbol>(), implicit, location,
+    mergePortTypes(getASTContext<false>(), parent.as<ValueSymbol>(), implicit, location,
                    unpackedDimensions);
 }
 
-void DeclaredType::resolveType(const BindContext& typeContext,
-                               const BindContext& initializerContext) const {
+void DeclaredType::resolveType(const ASTContext& typeContext,
+                               const ASTContext& initializerContext) const {
     auto& comp = typeContext.getCompilation();
     if (hasLink) {
         ASSERT(typeOrLink.link);
@@ -98,9 +98,9 @@ void DeclaredType::resolveType(const BindContext& typeContext,
             type = &comp.getErrorType();
         }
         else {
-            bitmask<BindFlags> extraFlags;
+            bitmask<ASTFlags> extraFlags;
             if (flags.has(DeclaredTypeFlags::AllowUnboundedLiteral))
-                extraFlags = BindFlags::AllowUnboundedLiteral;
+                extraFlags = ASTFlags::AllowUnboundedLiteral;
 
             initializer = &Expression::bindImplicitParam(*syntax, *initializerSyntax,
                                                          initializerLocation, initializerContext,
@@ -117,12 +117,12 @@ void DeclaredType::resolveType(const BindContext& typeContext,
             auto& its = syntax->as<ImplicitTypeSyntax>();
             if (!its.dimensions.empty())
                 type = &comp.getType(*type, its.dimensions,
-                                     typeContext.resetFlags(BindFlags::AllowInterconnect));
+                                     typeContext.resetFlags(ASTFlags::AllowInterconnect));
         }
 
         if (dimensions) {
             type = &comp.getType(*type, *dimensions,
-                                 typeContext.resetFlags(BindFlags::AllowInterconnect));
+                                 typeContext.resetFlags(ASTFlags::AllowInterconnect));
         }
 
         // Return early to skip additional checks for net types.
@@ -188,7 +188,7 @@ static bool isValidForUserDefinedNet(const Type& type) {
     return false;
 }
 
-void DeclaredType::checkType(const BindContext& context) const {
+void DeclaredType::checkType(const ASTContext& context) const {
     uint32_t masked = (flags & DeclaredTypeFlags::NeedsTypeCheck).bits();
     ASSERT(countPopulation64(masked) == 1);
 
@@ -276,7 +276,7 @@ static const Type* makeSigned(Compilation& compilation, const Type& type) {
 }
 
 void DeclaredType::mergePortTypes(
-    const BindContext& context, const ValueSymbol& sourceSymbol, const ImplicitTypeSyntax& implicit,
+    const ASTContext& context, const ValueSymbol& sourceSymbol, const ImplicitTypeSyntax& implicit,
     SourceLocation location, span<const VariableDimensionSyntax* const> unpackedDimensions) const {
 
     // There's this really terrible "feature" where the port declaration can influence the type
@@ -384,9 +384,9 @@ void DeclaredType::mergePortTypes(
     checkDims(implicit.dimensions, SymbolKind::PackedArrayType, true);
 }
 
-void DeclaredType::resolveAt(const BindContext& context) const {
+void DeclaredType::resolveAt(const ASTContext& context) const {
     if (!type) {
-        resolveType(getBindContext<false>(), context);
+        resolveType(getASTContext<false>(), context);
         if (initializer)
             return;
     }
@@ -398,21 +398,21 @@ void DeclaredType::resolveAt(const BindContext& context) const {
     // instead of the actual enum type (which doesn't allow implicit conversions from
     // normal integral values).
     auto& scope = *context.scope;
-    bitmask<BindFlags> extraFlags;
+    bitmask<ASTFlags> extraFlags;
     const Type* targetType = type;
     if (targetType->isEnum() && scope.asSymbol().kind == SymbolKind::EnumType) {
         targetType = &targetType->as<EnumType>().baseType;
-        extraFlags = BindFlags::EnumInitializer;
+        extraFlags = ASTFlags::EnumInitializer;
     }
     else if (flags.has(DeclaredTypeFlags::AllowUnboundedLiteral)) {
-        extraFlags = BindFlags::AllowUnboundedLiteral;
+        extraFlags = ASTFlags::AllowUnboundedLiteral;
     }
 
     initializer = &Expression::bindRValue(*targetType, *initializerSyntax, initializerLocation,
                                           context, extraFlags);
 }
 
-void DeclaredType::forceResolveAt(const BindContext& context) const {
+void DeclaredType::forceResolveAt(const ASTContext& context) const {
     if (!type)
         resolveType(context, context);
 
@@ -424,7 +424,7 @@ const Expression* DeclaredType::getInitializer() const {
     if (initializer)
         return initializer;
 
-    resolveAt(getBindContext<true>());
+    resolveAt(getASTContext<true>());
     return initializer;
 }
 
@@ -436,16 +436,16 @@ void DeclaredType::setFromDeclarator(const DeclaratorSyntax& decl) {
 }
 
 template<bool IsInitializer, typename T>
-T DeclaredType::getBindContext() const {
-    bitmask<BindFlags> bindFlags;
+T DeclaredType::getASTContext() const {
+    bitmask<ASTFlags> astFlags;
     if (flags.has(DeclaredTypeFlags::NetType))
-        bindFlags |= BindFlags::NonProcedural;
+        astFlags |= ASTFlags::NonProcedural;
     if (!flags.has(DeclaredTypeFlags::AutomaticInitializer))
-        bindFlags |= BindFlags::StaticInitializer;
+        astFlags |= ASTFlags::StaticInitializer;
     if (flags.has(DeclaredTypeFlags::CoverageType))
-        bindFlags |= BindFlags::AllowCoverageSampleFormal;
+        astFlags |= ASTFlags::AllowCoverageSampleFormal;
     if (flags.has(DeclaredTypeFlags::UserDefinedNetType))
-        bindFlags |= BindFlags::AllowNetType;
+        astFlags |= ASTFlags::AllowNetType;
 
     const Scope* scope = parent.getParentScope();
     ASSERT(scope);
@@ -461,7 +461,7 @@ T DeclaredType::getBindContext() const {
         scope = inst->getParentScope();
         ASSERT(scope);
 
-        return BindContext(*scope, LookupLocation::before(*inst), bindFlags);
+        return ASTContext(*scope, LookupLocation::before(*inst), astFlags);
     }
 
     // The location depends on whether we are binding the initializer or the type.
@@ -483,7 +483,7 @@ T DeclaredType::getBindContext() const {
         location = LookupLocation::before(parent);
     }
 
-    return BindContext(*scope, location, bindFlags);
+    return ASTContext(*scope, location, astFlags);
 }
 
 } // namespace slang

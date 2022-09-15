@@ -99,11 +99,11 @@ void LookupResult::copyFrom(const LookupResult& other) {
     diagnostics.appendRange(other.diagnostics);
 }
 
-void LookupResult::reportDiags(const BindContext& context) const {
+void LookupResult::reportDiags(const ASTContext& context) const {
     context.getCompilation().addDiagnostics(diagnostics);
 }
 
-void LookupResult::errorIfSelectors(const BindContext& context) const {
+void LookupResult::errorIfSelectors(const ASTContext& context) const {
     if (selectors.empty())
         return;
 
@@ -218,9 +218,9 @@ const NameSyntax* splitScopedName(const ScopedNameSyntax& syntax,
     return scoped->left;
 }
 
-const Symbol* getVirtualInterfaceTarget(const Type& type, const BindContext& context,
+const Symbol* getVirtualInterfaceTarget(const Type& type, const ASTContext& context,
                                         SourceRange range) {
-    if (context.flags.has(BindFlags::NonProcedural))
+    if (context.flags.has(ASTFlags::NonProcedural))
         context.addDiag(diag::DynamicNotProcedural, range);
 
     auto& vit = type.getCanonicalType().as<VirtualInterfaceType>();
@@ -234,7 +234,7 @@ const Symbol* getVirtualInterfaceTarget(const Type& type, const BindContext& con
 // looking up in other ways. Returns false if the entire lookup has failed and should be
 // aborted.
 bool lookupDownward(span<const NamePlusLoc> nameParts, NameComponents name,
-                    const BindContext& context, LookupResult& result) {
+                    const ASTContext& context, LookupResult& result) {
     const Symbol* symbol = std::exchange(result.found, nullptr);
     ASSERT(symbol);
 
@@ -447,7 +447,7 @@ bool lookupDownward(span<const NamePlusLoc> nameParts, NameComponents name,
 // looking up in other ways. Returns false if the entire lookup has failed and should be
 // aborted.
 bool lookupUpward(span<const NamePlusLoc> nameParts, const NameComponents& name,
-                  const BindContext& context, LookupResult& result) {
+                  const ASTContext& context, LookupResult& result) {
     // Upward lookups can match either a scope name, or a module definition name (on any of the
     // instances). Imports are not considered.
     const Symbol* firstMatch = nullptr;
@@ -580,7 +580,7 @@ bool checkVisibility(const Symbol& symbol, const Scope& scope, optional<SourceRa
 
 bool resolveColonNames(SmallVectorSized<NamePlusLoc, 8>& nameParts, int colonParts,
                        NameComponents& name, bitmask<LookupFlags> flags, LookupResult& result,
-                       const BindContext& context) {
+                       const ASTContext& context) {
     // Unwrap the symbol if it's a type parameter, and bail early if it's an error type.
     const Symbol* symbol = std::exchange(result.found, nullptr);
     if (symbol) {
@@ -830,7 +830,7 @@ bool withinCovergroup(const Symbol& symbol, const Scope& initialScope) {
 
 } // namespace
 
-void Lookup::name(const NameSyntax& syntax, const BindContext& context, bitmask<LookupFlags> flags,
+void Lookup::name(const NameSyntax& syntax, const ASTContext& context, bitmask<LookupFlags> flags,
                   LookupResult& result) {
     auto& scope = *context.scope;
     NameComponents name;
@@ -966,7 +966,7 @@ const Symbol* Lookup::unqualifiedAt(const Scope& scope, string_view name, Lookup
 }
 
 static const Symbol* selectSingleChild(const Symbol& symbol, const BitSelectSyntax& syntax,
-                                       const BindContext& context, LookupResult& result) {
+                                       const ASTContext& context, LookupResult& result) {
     auto index = context.evalInteger(*syntax.expr);
     if (!index)
         return nullptr;
@@ -1005,7 +1005,7 @@ static const Symbol* selectSingleChild(const Symbol& symbol, const BitSelectSynt
 }
 
 static const Symbol* selectChildRange(const InstanceArraySymbol& array,
-                                      const RangeSelectSyntax& syntax, const BindContext& context,
+                                      const RangeSelectSyntax& syntax, const ASTContext& context,
                                       LookupResult& result) {
     if (array.elements.empty())
         return nullptr;
@@ -1070,7 +1070,7 @@ static const Symbol* selectChildRange(const InstanceArraySymbol& array,
 
 const Symbol* Lookup::selectChild(const Symbol& initialSymbol,
                                   span<const ElementSelectSyntax* const> selectors,
-                                  const BindContext& context, LookupResult& result) {
+                                  const ASTContext& context, LookupResult& result) {
     const Symbol* symbol = &initialSymbol;
     for (const ElementSelectSyntax* syntax : selectors) {
         if (symbol->kind != SymbolKind::InstanceArray &&
@@ -1121,7 +1121,7 @@ const Symbol* Lookup::selectChild(const Symbol& initialSymbol,
 }
 
 void Lookup::selectChild(const Type& virtualInterface, SourceRange range,
-                         span<LookupResult::Selector> selectors, const BindContext& context,
+                         span<LookupResult::Selector> selectors, const ASTContext& context,
                          LookupResult& result) {
     NameComponents unused;
     SmallVectorSized<NamePlusLoc, 4> nameParts;
@@ -1153,7 +1153,7 @@ void Lookup::selectChild(const Type& virtualInterface, SourceRange range,
     lookupDownward(namePartsReversed, unused, context, result);
 }
 
-const ClassType* Lookup::findClass(const NameSyntax& className, const BindContext& context,
+const ClassType* Lookup::findClass(const NameSyntax& className, const ASTContext& context,
                                    optional<DiagCode> requireInterfaceClass) {
     LookupResult result;
     Lookup::name(className, context, LookupFlags::Type | LookupFlags::NoSelectors, result);
@@ -1264,7 +1264,7 @@ bool Lookup::isAccessibleFrom(const Symbol& target, const Symbol& sourceScope) {
     return targetType.isAssignmentCompatible(sourceType);
 }
 
-bool Lookup::ensureVisible(const Symbol& symbol, const BindContext& context,
+bool Lookup::ensureVisible(const Symbol& symbol, const ASTContext& context,
                            optional<SourceRange> sourceRange) {
     LookupResult result;
     if (checkVisibility(symbol, *context.scope, sourceRange, result))
@@ -1274,7 +1274,7 @@ bool Lookup::ensureVisible(const Symbol& symbol, const BindContext& context,
     return false;
 }
 
-bool Lookup::ensureAccessible(const Symbol& symbol, const BindContext& context,
+bool Lookup::ensureAccessible(const Symbol& symbol, const ASTContext& context,
                               optional<SourceRange> sourceRange) {
     if (context.randomizeDetails && context.randomizeDetails->classType &&
         Lookup::isAccessibleFrom(symbol, context.randomizeDetails->classType->asSymbol())) {
@@ -1289,7 +1289,7 @@ bool Lookup::ensureAccessible(const Symbol& symbol, const BindContext& context,
         }
         return false;
     }
-    else if (inStatic || context.flags.has(BindFlags::StaticInitializer) ||
+    else if (inStatic || context.flags.has(ASTFlags::StaticInitializer) ||
              (!parent && !withinCovergroup(symbol, *context.scope))) {
         if (sourceRange)
             context.addDiag(diag::NonStaticClassProperty, *sourceRange) << symbol.name;
@@ -1332,11 +1332,11 @@ bool Lookup::findTempVar(const Scope& scope, const TempVarSymbol& symbol, const 
     if (!result.found)
         return false;
 
-    BindContext context(scope, LookupLocation::max);
+    ASTContext context(scope, LookupLocation::max);
     return lookupDownward(nameParts, name, context, result);
 }
 
-bool Lookup::withinClassRandomize(const BindContext& context, const NameSyntax& syntax,
+bool Lookup::withinClassRandomize(const ASTContext& context, const NameSyntax& syntax,
                                   bitmask<LookupFlags> flags, LookupResult& result) {
     int colonParts = 0;
     SmallVectorSized<NamePlusLoc, 8> nameParts;
@@ -1405,7 +1405,7 @@ bool Lookup::withinClassRandomize(const BindContext& context, const NameSyntax& 
     if (!result.found)
         return false;
 
-    BindContext classContext(classScope, LookupLocation::max);
+    ASTContext classContext(classScope, LookupLocation::max);
     if (colonParts) {
         // Disallow package lookups in this function.
         auto isClass = isClassType(*result.found);
@@ -1418,7 +1418,7 @@ bool Lookup::withinClassRandomize(const BindContext& context, const NameSyntax& 
     return lookupDownward(nameParts, name, classContext, result);
 }
 
-bool Lookup::findAssertionLocalVar(const BindContext& context, const NameSyntax& syntax,
+bool Lookup::findAssertionLocalVar(const ASTContext& context, const NameSyntax& syntax,
                                    LookupResult& result) {
     int colonParts = 0;
     SmallVectorSized<NamePlusLoc, 8> nameParts;
@@ -1690,7 +1690,7 @@ void Lookup::unqualifiedImpl(const Scope& scope, string_view name, LookupLocatio
                            outOfBlockIndex, result);
 }
 
-void Lookup::qualified(const ScopedNameSyntax& syntax, const BindContext& context,
+void Lookup::qualified(const ScopedNameSyntax& syntax, const ASTContext& context,
                        bitmask<LookupFlags> flags, LookupResult& result) {
     // Split the name into easier to manage chunks. The parser will always produce a
     // left-recursive name tree, so that's all we'll bother to handle.

@@ -28,7 +28,7 @@
 
 namespace slang {
 
-Expression& ValueExpressionBase::fromSymbol(const BindContext& context, const Symbol& symbol,
+Expression& ValueExpressionBase::fromSymbol(const ASTContext& context, const Symbol& symbol,
                                             bool isHierarchical, SourceRange sourceRange,
                                             bool constraintAllowed) {
     // Automatic variables have additional restrictions.
@@ -42,24 +42,24 @@ Expression& ValueExpressionBase::fromSymbol(const BindContext& context, const Sy
             if (!Lookup::ensureAccessible(symbol, context, sourceRange))
                 return badExpr(comp, nullptr);
         }
-        else if (context.flags.has(BindFlags::NonProcedural)) {
+        else if (context.flags.has(ASTFlags::NonProcedural)) {
             context.addDiag(diag::AutoFromNonProcedural, sourceRange) << symbol.name;
             return badExpr(comp, nullptr);
         }
-        else if (context.flags.has(BindFlags::StaticInitializer)) {
+        else if (context.flags.has(ASTFlags::StaticInitializer)) {
             context.addDiag(diag::AutoFromStaticInit, sourceRange) << symbol.name;
             return badExpr(comp, nullptr);
         }
-        else if (context.flags.has(BindFlags::NonBlockingTimingControl)) {
+        else if (context.flags.has(ASTFlags::NonBlockingTimingControl)) {
             context.addDiag(diag::AutoFromNonBlockingTiming, sourceRange) << symbol.name;
             return badExpr(comp, nullptr);
         }
-        else if (!context.flags.has(BindFlags::AllowCoverageSampleFormal) &&
+        else if (!context.flags.has(ASTFlags::AllowCoverageSampleFormal) &&
                  symbol.as<VariableSymbol>().flags.has(VariableFlags::CoverageSampleFormal)) {
             context.addDiag(diag::CoverageSampleFormal, sourceRange) << symbol.name;
             return badExpr(comp, nullptr);
         }
-        else if (context.flags.has(BindFlags::EventExpression) &&
+        else if (context.flags.has(ASTFlags::EventExpression) &&
                  symbol.kind == SymbolKind::LocalAssertionVar) {
             context.addDiag(diag::LocalVarEventExpr, sourceRange) << symbol.name;
             return badExpr(comp, nullptr);
@@ -70,18 +70,18 @@ Expression& ValueExpressionBase::fromSymbol(const BindContext& context, const Sy
             Lookup::ensureAccessible(symbol, context, sourceRange);
     }
     else if (symbol.kind == SymbolKind::Parameter &&
-             !context.flags.has(BindFlags::AllowUnboundedLiteral) &&
+             !context.flags.has(ASTFlags::AllowUnboundedLiteral) &&
              symbol.as<ParameterSymbol>().getValue(sourceRange).isUnbounded()) {
         context.addDiag(diag::UnboundedNotAllowed, sourceRange);
         return badExpr(comp, nullptr);
     }
     else if (symbol.kind == SymbolKind::Net &&
              symbol.as<NetSymbol>().netType.netKind == NetType::Interconnect &&
-             !context.flags.has(BindFlags::AllowInterconnect)) {
+             !context.flags.has(ASTFlags::AllowInterconnect)) {
         context.addDiag(diag::InterconnectReference, sourceRange) << symbol.name;
         return badExpr(comp, nullptr);
     }
-    else if (symbol.kind == SymbolKind::ClockVar && !context.flags.has(BindFlags::LValue) &&
+    else if (symbol.kind == SymbolKind::ClockVar && !context.flags.has(ASTFlags::LValue) &&
              symbol.as<ClockVarSymbol>().direction == ArgumentDirection::Out) {
         context.addDiag(diag::ClockVarOutputRead, sourceRange) << symbol.name;
         return badExpr(comp, nullptr);
@@ -89,10 +89,10 @@ Expression& ValueExpressionBase::fromSymbol(const BindContext& context, const Sy
 
     if (!symbol.isValue()) {
         if ((symbol.kind == SymbolKind::ClockingBlock &&
-             context.flags.has(BindFlags::AllowClockingBlock)) ||
+             context.flags.has(ASTFlags::AllowClockingBlock)) ||
             (symbol.kind == SymbolKind::ConstraintBlock && constraintAllowed) ||
             (symbol.kind == SymbolKind::Coverpoint &&
-             context.flags.has(BindFlags::AllowCoverpoint))) {
+             context.flags.has(ASTFlags::AllowCoverpoint))) {
             // Special case for event expressions and constraint block built-in methods.
             return *comp.emplace<HierarchicalReferenceExpression>(symbol, comp.getVoidType(),
                                                                   sourceRange);
@@ -104,7 +104,7 @@ Expression& ValueExpressionBase::fromSymbol(const BindContext& context, const Sy
 
     // chandles can't be referenced in sequence expressions
     auto& value = symbol.as<ValueSymbol>();
-    if (context.flags.has(BindFlags::AssertionExpr) && value.getType().isCHandle()) {
+    if (context.flags.has(ASTFlags::AssertionExpr) && value.getType().isCHandle()) {
         context.addDiag(diag::CHandleInAssertion, sourceRange);
         return badExpr(comp, nullptr);
     }
@@ -115,7 +115,7 @@ Expression& ValueExpressionBase::fromSymbol(const BindContext& context, const Sy
         return *comp.emplace<NamedValueExpression>(value, sourceRange);
 }
 
-bool ValueExpressionBase::requireLValueImpl(const BindContext& context, SourceLocation location,
+bool ValueExpressionBase::requireLValueImpl(const ASTContext& context, SourceLocation location,
                                             bitmask<AssignFlags> flags,
                                             const Expression* longestStaticPrefix,
                                             EvalContext* customEvalContext) const {
@@ -130,7 +130,7 @@ bool ValueExpressionBase::requireLValueImpl(const BindContext& context, SourceLo
         return false;
     }
 
-    if (context.flags.has(BindFlags::NonProcedural)) {
+    if (context.flags.has(ASTFlags::NonProcedural)) {
         // chandles can only be assigned in procedural contexts.
         if (symbol.getType().isCHandle()) {
             context.addDiag(diag::AssignToCHandle, sourceRange);
@@ -174,7 +174,7 @@ bool ValueExpressionBase::requireLValueImpl(const BindContext& context, SourceLo
     return true;
 }
 
-bool ValueExpressionBase::checkVariableAssignment(const BindContext& context,
+bool ValueExpressionBase::checkVariableAssignment(const ASTContext& context,
                                                   const VariableSymbol& var,
                                                   bitmask<AssignFlags> flags,
                                                   SourceLocation assignLoc, SourceRange varRange) {
@@ -440,15 +440,15 @@ ConstantValue HierarchicalValueExpression::evalImpl(EvalContext& context) const 
 }
 
 Expression& DataTypeExpression::fromSyntax(Compilation& compilation, const DataTypeSyntax& syntax,
-                                           const BindContext& context) {
+                                           const ASTContext& context) {
     const Type& type = compilation.getType(syntax, context);
     if (syntax.kind == SyntaxKind::TypeReference &&
-        context.flags.has(BindFlags::AllowTypeReferences)) {
+        context.flags.has(ASTFlags::AllowTypeReferences)) {
         return *compilation.emplace<TypeReferenceExpression>(compilation.getTypeRefType(), type,
                                                              syntax.sourceRange());
     }
 
-    if (!context.flags.has(BindFlags::AllowDataType)) {
+    if (!context.flags.has(ASTFlags::AllowDataType)) {
         context.addDiag(diag::ExpectedExpression, syntax.sourceRange());
         return badExpr(compilation, nullptr);
     }
@@ -462,7 +462,7 @@ void TypeReferenceExpression::serializeTo(ASTSerializer& serializer) const {
 
 Expression& HierarchicalReferenceExpression::fromSyntax(Compilation& compilation,
                                                         const NameSyntax& syntax,
-                                                        const BindContext& context,
+                                                        const ASTContext& context,
                                                         bitmask<LookupFlags> extraLookupFlags) {
     LookupResult result;
     Lookup::name(syntax, context,
@@ -492,12 +492,12 @@ ConstantValue LValueReferenceExpression::evalImpl(EvalContext& context) const {
 }
 
 Expression& ClockingEventExpression::fromSyntax(const ClockingPropertyExprSyntax& syntax,
-                                                const BindContext& argContext) {
+                                                const ASTContext& argContext) {
     // Clocking event expressions are only used in special system function calls,
     // where they don't actually pass any time but instead tell the function which
     // clock to use. We don't want usage inside of an always_comb to report an error
     // about passing time, so clear out the context's procedure to avoid that.
-    BindContext context(argContext);
+    ASTContext context(argContext);
     context.clearInstanceAndProc();
 
     auto& comp = context.getCompilation();
@@ -531,12 +531,12 @@ static std::tuple<const SequenceExprSyntax*, const ExpressionSyntax*> decomposeP
 }
 
 static bool checkAssertionArg(const PropertyExprSyntax& propExpr, const AssertionPortSymbol& formal,
-                              const BindContext& context,
+                              const ASTContext& context,
                               AssertionInstanceExpression::ActualArg& result,
                               bool isRecursiveProp) {
     auto [seqExpr, regExpr] = decomposePropExpr(propExpr);
 
-    BindContext ctx = context;
+    ASTContext ctx = context;
     if (isRecursiveProp && !formal.isLocalVar()) {
         // For every recursive instance of property q in the declaration of property p,
         // each actual argument expression e of the instance must satisfy at least one
@@ -545,7 +545,7 @@ static bool checkAssertionArg(const PropertyExprSyntax& propExpr, const Assertio
         // 2. No formal argument of p appears in e.
         // 3. e is bound to a local variable formal argument of q.
         if (!regExpr)
-            ctx.flags |= BindFlags::RecursivePropertyArg;
+            ctx.flags |= ASTFlags::RecursivePropertyArg;
         else {
             auto expr = regExpr;
             while (expr->kind == SyntaxKind::ParenthesizedExpression)
@@ -553,7 +553,7 @@ static bool checkAssertionArg(const PropertyExprSyntax& propExpr, const Assertio
 
             // This check filters out cases where the entire argument is a formal argument.
             if (expr->kind != SyntaxKind::IdentifierName)
-                ctx.flags |= BindFlags::RecursivePropertyArg;
+                ctx.flags |= ASTFlags::RecursivePropertyArg;
         }
     }
 
@@ -564,12 +564,12 @@ static bool checkAssertionArg(const PropertyExprSyntax& propExpr, const Assertio
             // name resolution errors even if the argument ends up being unused in the
             // body of the sequence / property.
             if (regExpr) {
-                auto& bound = Expression::bind(*regExpr, ctx, BindFlags::AllowUnboundedLiteral);
+                auto& bound = Expression::bind(*regExpr, ctx, ASTFlags::AllowUnboundedLiteral);
                 result = &bound;
                 return !bound.bad();
             }
             else {
-                ctx.flags |= BindFlags::AssertionInstanceArgCheck;
+                ctx.flags |= ASTFlags::AssertionInstanceArgCheck;
                 auto& bound = AssertionExpr::bind(propExpr, ctx);
                 result = &bound;
                 return !bound.bad();
@@ -638,9 +638,9 @@ static bool checkAssertionArg(const PropertyExprSyntax& propExpr, const Assertio
 }
 
 static const AssertionExpr& bindAssertionBody(const Symbol& symbol, const SyntaxNode& syntax,
-                                              const BindContext& context,
+                                              const ASTContext& context,
                                               SourceLocation outputLocalVarArgLoc,
-                                              BindContext::AssertionInstanceDetails& instance,
+                                              ASTContext::AssertionInstanceDetails& instance,
                                               SmallVector<const Symbol*>& localVars) {
     auto createLocals = [&](auto& syntaxType) {
         for (auto varSyntax : syntaxType.variables) {
@@ -682,7 +682,7 @@ static const AssertionExpr& bindAssertionBody(const Symbol& symbol, const Syntax
 
 Expression& AssertionInstanceExpression::fromLookup(const Symbol& symbol,
                                                     const InvocationExpressionSyntax* syntax,
-                                                    SourceRange range, const BindContext& context) {
+                                                    SourceRange range, const ASTContext& context) {
     auto& comp = context.getCompilation();
     const Type* type;
     const Scope* symbolScope;
@@ -721,7 +721,7 @@ Expression& AssertionInstanceExpression::fromLookup(const Symbol& symbol,
             return badExpr(comp, nullptr);
     }
 
-    BindContext::AssertionInstanceDetails instance;
+    ASTContext::AssertionInstanceDetails instance;
     instance.symbol = &symbol;
     instance.prevContext = &context;
     instance.instanceLoc = range.start();
@@ -769,9 +769,9 @@ Expression& AssertionInstanceExpression::fromLookup(const Symbol& symbol,
     SmallVectorSized<std::tuple<const Symbol*, ActualArg>, 8> actualArgs;
 
     for (auto formal : formalPorts) {
-        const BindContext* argCtx = &context;
+        const ASTContext* argCtx = &context;
         const PropertyExprSyntax* expr = nullptr;
-        optional<BindContext> defValCtx;
+        optional<ASTContext> defValCtx;
 
         auto setDefault = [&] {
             expr = formal->defaultValueSyntax;
@@ -879,14 +879,14 @@ Expression& AssertionInstanceExpression::fromLookup(const Symbol& symbol,
         }
     }
 
-    BindContext bodyContext(*symbolScope, LookupLocation::max);
+    ASTContext bodyContext(*symbolScope, LookupLocation::max);
     bodyContext.assertionInstance = &instance;
 
     // Let declarations expand directly to an expression.
     if (symbol.kind == SymbolKind::LetDecl)
         return create(comp, *symbol.as<LetDeclSymbol>().exprSyntax, bodyContext);
 
-    // Now instantiate by binding the assertion expression of the sequence / property body.
+    // Now instantiate by creating the assertion expression of the sequence / property body.
     auto bodySyntax = symbol.getSyntax();
     ASSERT(bodySyntax);
 
@@ -900,9 +900,9 @@ Expression& AssertionInstanceExpression::fromLookup(const Symbol& symbol,
     result->localVars = localVars.copy(comp);
 
     if (instance.isRecursive) {
-        if (!context.flags.has(BindFlags::PropertyTimeAdvance))
+        if (!context.flags.has(ASTFlags::PropertyTimeAdvance))
             context.addDiag(diag::RecursivePropTimeAdvance, range);
-        else if (context.flags.has(BindFlags::PropertyNegation))
+        else if (context.flags.has(ASTFlags::PropertyNegation))
             context.addDiag(diag::RecursivePropNegation, range);
     }
 
@@ -916,7 +916,7 @@ Expression& AssertionInstanceExpression::makeDefault(const Symbol& symbol) {
     auto parentScope = symbol.getParentScope();
     ASSERT(parentScope);
 
-    BindContext context(*parentScope, LookupLocation::before(symbol));
+    ASTContext context(*parentScope, LookupLocation::before(symbol));
     auto& comp = context.getCompilation();
     const Type* type;
     const Scope* symbolScope;
@@ -948,7 +948,7 @@ Expression& AssertionInstanceExpression::makeDefault(const Symbol& symbol) {
             ASSUME_UNREACHABLE;
     }
 
-    BindContext::AssertionInstanceDetails instance;
+    ASTContext::AssertionInstanceDetails instance;
     instance.symbol = &symbol;
     instance.prevContext = &context;
     instance.instanceLoc = symbol.location;
@@ -961,7 +961,7 @@ Expression& AssertionInstanceExpression::makeDefault(const Symbol& symbol) {
                                          std::make_tuple((PropertyExprSyntax*)nullptr, context));
         }
         else {
-            BindContext ctx(*symbolScope, LookupLocation::after(*formal));
+            ASTContext ctx(*symbolScope, LookupLocation::after(*formal));
             ctx.assertionInstance = &instance;
 
             auto expr = formal->defaultValueSyntax;
@@ -977,7 +977,7 @@ Expression& AssertionInstanceExpression::makeDefault(const Symbol& symbol) {
         }
     }
 
-    BindContext bodyContext(*symbolScope, LookupLocation::max);
+    ASTContext bodyContext(*symbolScope, LookupLocation::max);
     bodyContext.assertionInstance = &instance;
 
     // Let declarations expand directly to an expression.
@@ -999,7 +999,7 @@ Expression& AssertionInstanceExpression::makeDefault(const Symbol& symbol) {
 }
 
 Expression& AssertionInstanceExpression::bindPort(const Symbol& symbol, SourceRange range,
-                                                  const BindContext& instanceCtx) {
+                                                  const ASTContext& instanceCtx) {
     Compilation& comp = instanceCtx.getCompilation();
     auto inst = instanceCtx.assertionInstance;
     ASSERT(inst);
@@ -1020,7 +1020,7 @@ Expression& AssertionInstanceExpression::bindPort(const Symbol& symbol, SourceRa
     auto typeKind = type.getCanonicalType().kind;
 
     if (typeKind != SymbolKind::ErrorType && typeKind != SymbolKind::UntypedType) {
-        if (instanceCtx.flags.has(BindFlags::AssertionDelayOrRepetition)) {
+        if (instanceCtx.flags.has(ASTFlags::AssertionDelayOrRepetition)) {
             auto isAllowedIntType = [&] {
                 if (typeKind != SymbolKind::PredefinedIntegerType)
                     return false;
@@ -1038,13 +1038,13 @@ Expression& AssertionInstanceExpression::bindPort(const Symbol& symbol, SourceRa
             }
         }
 
-        if (instanceCtx.flags.has(BindFlags::LValue) && !formal.localVarDirection) {
+        if (instanceCtx.flags.has(ASTFlags::LValue) && !formal.localVarDirection) {
             instanceCtx.addDiag(diag::AssertionPortTypedLValue, range) << formal.name;
             return badExpr(comp, nullptr);
         }
     }
 
-    if (instanceCtx.flags.has(BindFlags::RecursivePropertyArg)) {
+    if (instanceCtx.flags.has(ASTFlags::RecursivePropertyArg)) {
         instanceCtx.addDiag(diag::RecursivePropArgExpr, range) << formal.name;
         return badExpr(comp, nullptr);
     }
@@ -1058,10 +1058,10 @@ Expression& AssertionInstanceExpression::bindPort(const Symbol& symbol, SourceRa
 
     auto [seqExpr, regExpr] = decomposePropExpr(*propExpr);
 
-    // Inherit any binding flags that are specific to this argument's instantiation.
+    // Inherit any AST flags that are specific to this argument's instantiation.
     argCtx.flags = instanceCtx.flags;
 
-    BindContext::AssertionInstanceDetails details;
+    ASTContext::AssertionInstanceDetails details;
     details.argExpansionLoc = range.start();
     details.prevContext = &instanceCtx;
     details.argDetails = argCtx.assertionInstance;
@@ -1076,8 +1076,8 @@ Expression& AssertionInstanceExpression::bindPort(const Symbol& symbol, SourceRa
                 result.sourceRange = range;
                 return result;
             }
-            else if (instanceCtx.flags.has(BindFlags::EventExpression) &&
-                     instanceCtx.flags.has(BindFlags::AllowClockingBlock)) {
+            else if (instanceCtx.flags.has(ASTFlags::EventExpression) &&
+                     instanceCtx.flags.has(ASTFlags::AllowClockingBlock)) {
                 // In an event expression, a referenced argument gets interpreted
                 // as an event expression itself and not as an assertion expression.
                 auto& timing = TimingControl::bind(*propExpr, argCtx);
@@ -1106,8 +1106,8 @@ Expression& AssertionInstanceExpression::bindPort(const Symbol& symbol, SourceRa
             // If an event expression is allowed here, bind and return. Otherwise issue
             // an error, since an 'event' argument can only be used where event expressions
             // are allowed, regardless of what the actual argument expression looks like.
-            if (instanceCtx.flags.has(BindFlags::EventExpression) &&
-                instanceCtx.flags.has(BindFlags::AllowClockingBlock)) {
+            if (instanceCtx.flags.has(ASTFlags::EventExpression) &&
+                instanceCtx.flags.has(ASTFlags::AllowClockingBlock)) {
                 auto& timing = TimingControl::bind(*propExpr, argCtx);
                 return *comp.emplace<ClockingEventExpression>(comp.getVoidType(), timing, range);
             }
@@ -1145,21 +1145,21 @@ void AssertionInstanceExpression::serializeTo(ASTSerializer& serializer) const {
 
 Expression& MinTypMaxExpression::fromSyntax(Compilation& compilation,
                                             const MinTypMaxExpressionSyntax& syntax,
-                                            const BindContext& context,
+                                            const ASTContext& context,
                                             const Type* assignmentTarget) {
     // Only one of the expressions will be considered evaluated.
-    auto minFlags = BindFlags::UnevaluatedBranch;
-    auto typFlags = BindFlags::UnevaluatedBranch;
-    auto maxFlags = BindFlags::UnevaluatedBranch;
+    auto minFlags = ASTFlags::UnevaluatedBranch;
+    auto typFlags = ASTFlags::UnevaluatedBranch;
+    auto maxFlags = ASTFlags::UnevaluatedBranch;
     switch (compilation.getOptions().minTypMax) {
         case MinTypMax::Min:
-            minFlags = BindFlags::None;
+            minFlags = ASTFlags::None;
             break;
         case MinTypMax::Typ:
-            typFlags = BindFlags::None;
+            typFlags = ASTFlags::None;
             break;
         case MinTypMax::Max:
-            maxFlags = BindFlags::None;
+            maxFlags = ASTFlags::None;
             break;
     }
 
@@ -1188,7 +1188,7 @@ Expression& MinTypMaxExpression::fromSyntax(Compilation& compilation,
     return *result;
 }
 
-bool MinTypMaxExpression::propagateType(const BindContext& context, const Type& newType) {
+bool MinTypMaxExpression::propagateType(const ASTContext& context, const Type& newType) {
     // Only the selected expression gets a propagated type.
     type = &newType;
     contextDetermined(context, selected_, newType);
@@ -1209,7 +1209,7 @@ void MinTypMaxExpression::serializeTo(ASTSerializer& serializer) const {
 
 Expression& CopyClassExpression::fromSyntax(Compilation& compilation,
                                             const CopyClassExpressionSyntax& syntax,
-                                            const BindContext& context) {
+                                            const ASTContext& context) {
     auto& source = selfDetermined(compilation, *syntax.expr, context);
     auto result = compilation.emplace<CopyClassExpression>(*source.type, source,
                                                            syntax.sourceRange());
@@ -1234,7 +1234,7 @@ void CopyClassExpression::serializeTo(ASTSerializer& serializer) const {
 }
 
 Expression& DistExpression::fromSyntax(Compilation& comp, const ExpressionOrDistSyntax& syntax,
-                                       const BindContext& context) {
+                                       const ASTContext& context) {
     SmallVectorSized<const ExpressionSyntax*, 8> expressions;
     for (auto item : syntax.distribution->items)
         expressions.append(item->range);
@@ -1288,7 +1288,7 @@ void DistExpression::serializeTo(ASTSerializer& serializer) const {
 
 Expression& TaggedUnionExpression::fromSyntax(Compilation& compilation,
                                               const TaggedUnionExpressionSyntax& syntax,
-                                              const BindContext& context,
+                                              const ASTContext& context,
                                               const Type* assignmentTarget) {
     if (!assignmentTarget || !assignmentTarget->isTaggedUnion()) {
         if (!assignmentTarget || !assignmentTarget->isError())

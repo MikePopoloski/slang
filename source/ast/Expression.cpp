@@ -121,11 +121,11 @@ struct Expression::PropagationVisitor {
     template<typename T, typename... Args>
     using propagate_t = decltype(std::declval<T>().propagateType(std::declval<Args>()...));
 
-    const BindContext& context;
+    const ASTContext& context;
     const Type& newType;
     SourceLocation assignmentLoc;
 
-    PropagationVisitor(const BindContext& context, const Type& newType,
+    PropagationVisitor(const ASTContext& context, const Type& newType,
                        SourceLocation assignmentLoc) :
         context(context),
         newType(newType), assignmentLoc(assignmentLoc) {}
@@ -145,7 +145,7 @@ struct Expression::PropagationVisitor {
         // check if the conversion should be pushed further down the tree. Otherwise we
         // should insert the implicit conversion here.
         bool needConversion = !newType.isEquivalent(*expr.type);
-        if constexpr (is_detected_v<propagate_t, T, const BindContext&, const Type&>) {
+        if constexpr (is_detected_v<propagate_t, T, const ASTContext&, const Type&>) {
             if ((newType.isFloating() && expr.type->isFloating()) ||
                 (newType.isIntegral() && expr.type->isIntegral()) || newType.isString() ||
                 expr.kind == ExpressionKind::OpenRange) {
@@ -177,13 +177,13 @@ struct Expression::PropagationVisitor {
 
 const InvalidExpression InvalidExpression::Instance(nullptr, ErrorType::Instance);
 
-const Expression& Expression::bind(const ExpressionSyntax& syntax, const BindContext& context,
-                                   bitmask<BindFlags> extraFlags) {
+const Expression& Expression::bind(const ExpressionSyntax& syntax, const ASTContext& context,
+                                   bitmask<ASTFlags> extraFlags) {
     return selfDetermined(context.getCompilation(), syntax, context, extraFlags);
 }
 
 const Expression& Expression::bindLValue(const ExpressionSyntax& lhs, const Type& rhs,
-                                         SourceLocation location, const BindContext& context,
+                                         SourceLocation location, const ASTContext& context,
                                          bool isInout) {
     Compilation& comp = context.getCompilation();
 
@@ -200,10 +200,10 @@ const Expression& Expression::bindLValue(const ExpressionSyntax& lhs, const Type
     if (lhs.kind == SyntaxKind::StreamingConcatenationExpression && !isInout &&
         (!instance || instance->arrayPath.empty())) {
         lhsExpr = &selfDetermined(comp, lhs, context,
-                                  BindFlags::StreamingAllowed | BindFlags::LValue);
+                                  ASTFlags::StreamingAllowed | ASTFlags::LValue);
     }
     else {
-        lhsExpr = &create(comp, lhs, context, BindFlags::LValue, rhsExpr->type);
+        lhsExpr = &create(comp, lhs, context, ASTFlags::LValue, rhsExpr->type);
     }
 
     selfDetermined(context, lhsExpr);
@@ -220,15 +220,15 @@ const Expression& Expression::bindLValue(const ExpressionSyntax& lhs, const Type
     return AssignmentExpression::fromComponents(comp, std::nullopt, assignFlags, *lhsExpr, *rhsExpr,
                                                 lhsRange.start(),
                                                 /* timingControl */ nullptr, lhsRange,
-                                                context.resetFlags(BindFlags::OutputArg));
+                                                context.resetFlags(ASTFlags::OutputArg));
 }
 
 const Expression& Expression::bindRValue(const Type& lhs, const ExpressionSyntax& rhs,
-                                         SourceLocation location, const BindContext& context,
-                                         bitmask<BindFlags> extraFlags) {
+                                         SourceLocation location, const ASTContext& context,
+                                         bitmask<ASTFlags> extraFlags) {
     Compilation& comp = context.getCompilation();
 
-    BindContext ctx = context.resetFlags(extraFlags);
+    ASTContext ctx = context.resetFlags(extraFlags);
     if (lhs.isVirtualInterface()) {
         if (auto ref = tryBindInterfaceRef(ctx, rhs, lhs))
             return *ref;
@@ -236,7 +236,7 @@ const Expression& Expression::bindRValue(const Type& lhs, const ExpressionSyntax
 
     auto instance = context.getInstance();
     if (!instance || instance->arrayPath.empty())
-        extraFlags |= BindFlags::StreamingAllowed;
+        extraFlags |= ASTFlags::StreamingAllowed;
 
     Expression& expr = create(comp, rhs, ctx, extraFlags, &lhs);
     return convertAssignment(ctx, lhs, expr, location);
@@ -244,7 +244,7 @@ const Expression& Expression::bindRValue(const Type& lhs, const ExpressionSyntax
 
 const Expression& Expression::bindRefArg(const Type& lhs, bool isConstRef,
                                          const ExpressionSyntax& rhs, SourceLocation location,
-                                         const BindContext& context) {
+                                         const ASTContext& context) {
     Compilation& comp = context.getCompilation();
     Expression& expr = selfDetermined(comp, rhs, context);
     if (expr.bad())
@@ -283,7 +283,7 @@ const Expression& Expression::bindRefArg(const Type& lhs, bool isConstRef,
 
 const Expression& Expression::bindArgument(const Type& argType, ArgumentDirection direction,
                                            const ExpressionSyntax& syntax,
-                                           const BindContext& context, bool isConstRef) {
+                                           const ASTContext& context, bool isConstRef) {
     auto loc = syntax.getFirstToken().location();
     switch (direction) {
         case ArgumentDirection::In:
@@ -299,7 +299,7 @@ const Expression& Expression::bindArgument(const Type& argType, ArgumentDirectio
 
 const Expression& Expression::bindImplicitParam(
     const DataTypeSyntax& typeSyntax, const ExpressionSyntax& rhs, SourceLocation location,
-    const BindContext& exprContext, const BindContext& typeContext, bitmask<BindFlags> extraFlags) {
+    const ASTContext& exprContext, const ASTContext& typeContext, bitmask<ASTFlags> extraFlags) {
 
     Compilation& comp = exprContext.getCompilation();
     Expression& expr = create(comp, rhs, exprContext, extraFlags);
@@ -345,7 +345,7 @@ const Expression& Expression::bindImplicitParam(
 }
 
 const Expression& Expression::bindSelector(Expression& value, const ElementSelectSyntax& syntax,
-                                           const BindContext& context) {
+                                           const ASTContext& context) {
     return bindSelector(context.getCompilation(), value, syntax, context);
 }
 
@@ -374,7 +374,7 @@ optional<ConstantRange> Expression::evalSelector(EvalContext& context) const {
     }
 }
 
-bool Expression::requireLValue(const BindContext& context, SourceLocation location,
+bool Expression::requireLValue(const ASTContext& context, SourceLocation location,
                                bitmask<AssignFlags> flags, const Expression* longestStaticPrefix,
                                EvalContext* customEvalContext) const {
     switch (kind) {
@@ -595,9 +595,9 @@ bool Expression::hasHierarchicalReference() const {
 }
 
 Expression& Expression::create(Compilation& compilation, const ExpressionSyntax& syntax,
-                               const BindContext& ctx, bitmask<BindFlags> extraFlags,
+                               const ASTContext& ctx, bitmask<ASTFlags> extraFlags,
                                const Type* assignmentTarget) {
-    BindContext context = ctx.resetFlags(extraFlags);
+    ASTContext context = ctx.resetFlags(extraFlags);
     Expression* result;
     switch (syntax.kind) {
         case SyntaxKind::BadExpression:
@@ -631,9 +631,9 @@ Expression& Expression::create(Compilation& compilation, const ExpressionSyntax&
             break;
         case SyntaxKind::ParenthesizedExpression:
             // Parenthesis re-allows assignments if we're in a procedural statement.
-            if (!context.flags.has(BindFlags::NonProcedural) &&
-                !context.flags.has(BindFlags::AssignmentDisallowed)) {
-                extraFlags |= BindFlags::AssignmentAllowed;
+            if (!context.flags.has(ASTFlags::NonProcedural) &&
+                !context.flags.has(ASTFlags::AssignmentDisallowed)) {
+                extraFlags |= ASTFlags::AssignmentAllowed;
             }
 
             result = &create(compilation, *syntax.as<ParenthesizedExpressionSyntax>().expression,
@@ -802,7 +802,7 @@ Expression& Expression::create(Compilation& compilation, const ExpressionSyntax&
                                                       context);
             break;
         case SyntaxKind::DefaultPatternKeyExpression:
-            // This should not be reachable from any valid expression binding.
+            // This should not be reachable from any valid expression creation.
             context.addDiag(diag::ExpectedExpression, syntax.sourceRange());
             result = &badExpr(compilation, nullptr);
             break;
@@ -840,7 +840,7 @@ Expression& Expression::create(Compilation& compilation, const ExpressionSyntax&
 Expression& Expression::bindName(Compilation& compilation, const NameSyntax& syntax,
                                  const InvocationExpressionSyntax* invocation,
                                  const ArrayOrRandomizeMethodExpressionSyntax* withClause,
-                                 const BindContext& context) {
+                                 const ASTContext& context) {
     bitmask<LookupFlags> flags = LookupFlags::None;
     if (invocation && invocation->arguments)
         flags |= LookupFlags::AllowDeclaredAfter;
@@ -908,7 +908,7 @@ Expression& Expression::bindLookupResult(Compilation& compilation, LookupResult&
                                          SourceRange sourceRange,
                                          const InvocationExpressionSyntax* invocation,
                                          const ArrayOrRandomizeMethodExpressionSyntax* withClause,
-                                         const BindContext& context) {
+                                         const ASTContext& context) {
     const Symbol* symbol = result.found;
     if (!symbol)
         return badExpr(compilation, nullptr);
@@ -930,7 +930,7 @@ Expression& Expression::bindLookupResult(Compilation& compilation, LookupResult&
         return true;
     };
 
-    if (context.flags.has(BindFlags::AllowDataType) && symbol->isType()) {
+    if (context.flags.has(ASTFlags::AllowDataType) && symbol->isType()) {
         // We looked up a named data type and we were allowed to do so, so return it.
         const Type& resultType = Type::fromLookupResult(compilation, result, sourceRange, context);
         auto expr = compilation.emplace<DataTypeExpression>(resultType, sourceRange);
@@ -1049,14 +1049,13 @@ Expression& Expression::bindLookupResult(Compilation& compilation, LookupResult&
 
 Expression& Expression::bindSelectExpression(Compilation& compilation,
                                              const ElementSelectExpressionSyntax& syntax,
-                                             const BindContext& context) {
+                                             const ASTContext& context) {
     Expression& value = create(compilation, *syntax.left, context);
     return bindSelector(compilation, value, *syntax.select, context);
 }
 
 Expression& Expression::bindSelector(Compilation& compilation, Expression& value,
-                                     const ElementSelectSyntax& syntax,
-                                     const BindContext& context) {
+                                     const ElementSelectSyntax& syntax, const ASTContext& context) {
     const SelectorSyntax* selector = syntax.selector;
     if (!selector) {
         context.addDiag(diag::ExpectedExpression, syntax.sourceRange());
@@ -1082,7 +1081,7 @@ Expression& Expression::bindSelector(Compilation& compilation, Expression& value
     }
 }
 
-Expression* Expression::tryBindInterfaceRef(const BindContext& context,
+Expression* Expression::tryBindInterfaceRef(const ASTContext& context,
                                             const ExpressionSyntax& syntax,
                                             const Type& targetType) {
     const ExpressionSyntax* expr = &syntax;
@@ -1117,7 +1116,7 @@ Expression* Expression::tryBindInterfaceRef(const BindContext& context,
 
         if (!symbol) {
             // Returning nullptr from this function means to try doing normal expression
-            // binding, but if we hit this case here we found the iface and simply failed
+            // creation, but if we hit this case here we found the iface and simply failed
             // to connect it, likely because we're in an uninstantiated context. Return
             // a badExpr here to silence any follow on errors that might otherwise result.
             return &badExpr(comp, nullptr);
@@ -1156,10 +1155,10 @@ Expression* Expression::tryBindInterfaceRef(const BindContext& context,
     return comp.emplace<HierarchicalReferenceExpression>(*symbol, targetType, syntax.sourceRange());
 }
 
-void Expression::findPotentiallyImplicitNets(const SyntaxNode& expr, const BindContext& context,
+void Expression::findPotentiallyImplicitNets(const SyntaxNode& expr, const ASTContext& context,
                                              SmallVector<Token>& results) {
     struct Visitor : public SyntaxVisitor<Visitor> {
-        Visitor(const BindContext& context, SmallVector<Token>& results) :
+        Visitor(const ASTContext& context, SmallVector<Token>& results) :
             context(context), results(results) {}
 
         void handle(const NameSyntax& nameSyntax) {
@@ -1167,14 +1166,14 @@ void Expression::findPotentiallyImplicitNets(const SyntaxNode& expr, const BindC
                 return;
 
             LookupResult result;
-            BindContext ctx(*context.scope, LookupLocation::max);
+            ASTContext ctx(*context.scope, LookupLocation::max);
             Lookup::name(nameSyntax, ctx, LookupFlags::NoUndeclaredError, result);
 
             if (!result.found && !result.hasError())
                 results.append(nameSyntax.as<IdentifierNameSyntax>().identifier);
         }
 
-        const BindContext& context;
+        const ASTContext& context;
         SmallVector<Token>& results;
     };
 
@@ -1182,20 +1181,20 @@ void Expression::findPotentiallyImplicitNets(const SyntaxNode& expr, const BindC
     expr.visit(visitor);
 }
 
-void Expression::contextDetermined(const BindContext& context, Expression*& expr,
+void Expression::contextDetermined(const ASTContext& context, Expression*& expr,
                                    const Type& newType, SourceLocation assignmentLoc) {
     PropagationVisitor visitor(context, newType, assignmentLoc);
     expr = &expr->visit(visitor);
 }
 
-void Expression::selfDetermined(const BindContext& context, Expression*& expr) {
+void Expression::selfDetermined(const ASTContext& context, Expression*& expr) {
     ASSERT(expr->type);
     PropagationVisitor visitor(context, *expr->type, {});
     expr = &expr->visit(visitor);
 }
 
 Expression& Expression::selfDetermined(Compilation& compilation, const ExpressionSyntax& syntax,
-                                       const BindContext& context, bitmask<BindFlags> extraFlags) {
+                                       const ASTContext& context, bitmask<ASTFlags> extraFlags) {
     Expression* expr = &create(compilation, syntax, context, extraFlags);
     selfDetermined(context, expr);
     return *expr;

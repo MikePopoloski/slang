@@ -64,7 +64,7 @@ ENUM(BinaryAssertionOperator, OP)
 #undef OP
 // clang-format on
 
-class BindContext;
+class ASTContext;
 class CallExpression;
 class Compilation;
 class SyntaxNode;
@@ -78,27 +78,27 @@ public:
 
     const SyntaxNode* syntax = nullptr;
 
-    void requireSequence(const BindContext& context) const;
-    void requireSequence(const BindContext& context, DiagCode code) const;
+    void requireSequence(const ASTContext& context) const;
+    void requireSequence(const ASTContext& context, DiagCode code) const;
     bool bad() const { return kind == AssertionExprKind::Invalid; }
 
     /// Returns true if this is a sequence expression that admits an empty match,
     /// and false otherwise.
     bool admitsEmpty() const;
 
-    static const AssertionExpr& bind(const SequenceExprSyntax& syntax, const BindContext& context,
+    static const AssertionExpr& bind(const SequenceExprSyntax& syntax, const ASTContext& context,
                                      bool allowDisable = false);
 
-    static const AssertionExpr& bind(const PropertyExprSyntax& syntax, const BindContext& context,
+    static const AssertionExpr& bind(const PropertyExprSyntax& syntax, const ASTContext& context,
                                      bool allowDisable = false, bool allowSeqAdmitEmpty = false);
 
-    static const AssertionExpr& bind(const PropertySpecSyntax& syntax, const BindContext& context);
+    static const AssertionExpr& bind(const PropertySpecSyntax& syntax, const ASTContext& context);
 
-    static bool checkAssertionCall(const CallExpression& call, const BindContext& context,
+    static bool checkAssertionCall(const CallExpression& call, const ASTContext& context,
                                    DiagCode outArgCode, DiagCode refArgCode,
                                    optional<DiagCode> sysTaskCode, SourceRange range);
 
-    static void checkSampledValueExpr(const Expression& expr, const BindContext& context,
+    static void checkSampledValueExpr(const Expression& expr, const ASTContext& context,
                                       bool isFutureGlobal, DiagCode localVarCode,
                                       DiagCode matchedCode);
 
@@ -147,9 +147,9 @@ struct SequenceRange {
     /// The maximum length of the range. If unset, the maximum is unbounded.
     optional<uint32_t> max;
 
-    static SequenceRange fromSyntax(const SelectorSyntax& syntax, const BindContext& context,
+    static SequenceRange fromSyntax(const SelectorSyntax& syntax, const ASTContext& context,
                                     bool allowUnbounded);
-    static SequenceRange fromSyntax(const RangeSelectSyntax& syntax, const BindContext& context,
+    static SequenceRange fromSyntax(const RangeSelectSyntax& syntax, const ASTContext& context,
                                     bool allowUnbounded);
 
     void serializeTo(ASTSerializer& serializer) const;
@@ -173,7 +173,7 @@ struct SequenceRepetition {
     /// The range of cycles over which to repeat.
     SequenceRange range;
 
-    SequenceRepetition(const SequenceRepetitionSyntax& syntax, const BindContext& context);
+    SequenceRepetition(const SequenceRepetitionSyntax& syntax, const ASTContext& context);
 
     enum class AdmitsEmpty { Yes, No, Depends };
     AdmitsEmpty admitsEmpty() const;
@@ -192,11 +192,11 @@ public:
     SimpleAssertionExpr(const Expression& expr, optional<SequenceRepetition> repetition) :
         AssertionExpr(AssertionExprKind::Simple), expr(expr), repetition(repetition) {}
 
-    void requireSequence(const BindContext& context, DiagCode code) const;
+    void requireSequence(const ASTContext& context, DiagCode code) const;
     bool admitsEmptyImpl() const;
 
     static AssertionExpr& fromSyntax(const SimpleSequenceExprSyntax& syntax,
-                                     const BindContext& context, bool allowDisable);
+                                     const ASTContext& context, bool allowDisable);
 
     void serializeTo(ASTSerializer& serializer) const;
 
@@ -226,7 +226,7 @@ public:
     bool admitsEmptyImpl() const;
 
     static AssertionExpr& fromSyntax(const DelayedSequenceExprSyntax& syntax,
-                                     const BindContext& context);
+                                     const ASTContext& context);
 
     void serializeTo(ASTSerializer& serializer) const;
 
@@ -257,7 +257,7 @@ public:
     bool admitsEmptyImpl() const;
 
     static AssertionExpr& fromSyntax(const ParenthesizedSequenceExprSyntax& syntax,
-                                     const BindContext& context);
+                                     const ASTContext& context);
 
     void serializeTo(ASTSerializer& serializer) const;
 
@@ -291,10 +291,10 @@ public:
     bool admitsEmptyImpl() const { return false; }
 
     static AssertionExpr& fromSyntax(const UnaryPropertyExprSyntax& syntax,
-                                     const BindContext& context);
+                                     const ASTContext& context);
 
     static AssertionExpr& fromSyntax(const UnarySelectPropertyExprSyntax& syntax,
-                                     const BindContext& context);
+                                     const ASTContext& context);
 
     void serializeTo(ASTSerializer& serializer) const;
 
@@ -321,14 +321,14 @@ public:
         AssertionExpr(AssertionExprKind::Binary),
         op(op), left(left), right(right) {}
 
-    void requireSequence(const BindContext& context, DiagCode code) const;
+    void requireSequence(const ASTContext& context, DiagCode code) const;
     bool admitsEmptyImpl() const;
 
     static AssertionExpr& fromSyntax(const BinarySequenceExprSyntax& syntax,
-                                     const BindContext& context);
+                                     const ASTContext& context);
 
     static AssertionExpr& fromSyntax(const BinaryPropertyExprSyntax& syntax,
-                                     const BindContext& context);
+                                     const ASTContext& context);
 
     void serializeTo(ASTSerializer& serializer) const;
 
@@ -355,7 +355,7 @@ public:
     bool admitsEmptyImpl() const;
 
     static AssertionExpr& fromSyntax(const FirstMatchSequenceExprSyntax& syntax,
-                                     const BindContext& context);
+                                     const ASTContext& context);
 
     void serializeTo(ASTSerializer& serializer) const;
 
@@ -385,16 +385,16 @@ public:
     bool admitsEmptyImpl() const;
 
     static AssertionExpr& fromSyntax(const ClockingSequenceExprSyntax& syntax,
-                                     const BindContext& context);
+                                     const ASTContext& context);
 
     static AssertionExpr& fromSyntax(const ClockingPropertyExprSyntax& syntax,
-                                     const BindContext& context);
+                                     const ASTContext& context);
 
     static AssertionExpr& fromSyntax(const SignalEventExpressionSyntax& syntax,
-                                     const BindContext& context);
+                                     const ASTContext& context);
 
     static AssertionExpr& fromSyntax(const TimingControlSyntax& syntax, const AssertionExpr& expr,
-                                     const BindContext& context);
+                                     const ASTContext& context);
 
     void serializeTo(ASTSerializer& serializer) const;
 
@@ -421,7 +421,7 @@ public:
     bool admitsEmptyImpl() const { return false; }
 
     static AssertionExpr& fromSyntax(const StrongWeakPropertyExprSyntax& syntax,
-                                     const BindContext& context);
+                                     const ASTContext& context);
 
     void serializeTo(ASTSerializer& serializer) const;
 
@@ -451,7 +451,7 @@ public:
     bool admitsEmptyImpl() const { return false; }
 
     static AssertionExpr& fromSyntax(const AcceptOnPropertyExprSyntax& syntax,
-                                     const BindContext& context);
+                                     const ASTContext& context);
 
     void serializeTo(ASTSerializer& serializer) const;
 
@@ -481,7 +481,7 @@ public:
     bool admitsEmptyImpl() const { return false; }
 
     static AssertionExpr& fromSyntax(const ConditionalPropertyExprSyntax& syntax,
-                                     const BindContext& context);
+                                     const ASTContext& context);
 
     void serializeTo(ASTSerializer& serializer) const;
 
@@ -518,7 +518,7 @@ public:
     bool admitsEmptyImpl() const { return false; }
 
     static AssertionExpr& fromSyntax(const CasePropertyExprSyntax& syntax,
-                                     const BindContext& context);
+                                     const ASTContext& context);
 
     void serializeTo(ASTSerializer& serializer) const;
 
@@ -552,7 +552,7 @@ public:
     bool admitsEmptyImpl() const { return false; }
 
     static AssertionExpr& fromSyntax(const DisableIffSyntax& syntax, const AssertionExpr& expr,
-                                     const BindContext& context);
+                                     const ASTContext& context);
 
     void serializeTo(ASTSerializer& serializer) const;
 

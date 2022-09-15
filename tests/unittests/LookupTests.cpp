@@ -29,7 +29,7 @@ import Foo::x;
     const CompilationUnitSymbol* unit = compilation.getRoot().compilationUnits[0];
 
     LookupResult result;
-    BindContext context(*unit, LookupLocation::max);
+    ASTContext context(*unit, LookupLocation::max);
     Lookup::name(compilation.parseName("x"), context, LookupFlags::None, result);
 
     CHECK(result.wasImported);
@@ -68,7 +68,7 @@ endmodule
 
     // Lookup at (1); should return the local parameter
     LookupResult result;
-    BindContext context(gen_b, LookupLocation::after(param));
+    ASTContext context(gen_b, LookupLocation::after(param));
     Lookup::name(compilation.parseName("x"), context, LookupFlags::None, result);
 
     const Symbol* symbol = result.found;

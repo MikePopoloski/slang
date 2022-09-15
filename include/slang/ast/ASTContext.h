@@ -1,6 +1,6 @@
 //------------------------------------------------------------------------------
-//! @file BindContext.h
-//! @brief Expression binding context
+//! @file ASTContext.h
+//! @brief AST creation context
 //
 // SPDX-FileCopyrightText: Michael Popoloski
 // SPDX-License-Identifier: MIT
@@ -33,13 +33,13 @@ struct SelectorSyntax;
 struct VariableDimensionSyntax;
 enum class RandMode;
 
-/// Specifies flags that control expression and statement binding.
-enum class BindFlags : uint64_t {
-    /// No special binding behavior specified.
+/// Specifies flags that control expression and statement creation.
+enum class ASTFlags : uint64_t {
+    /// No special behavior specified.
     None = 0,
 
     /// The expression is inside a concatenation; this enables slightly
-    /// different binding rules.
+    /// different creation rules.
     InsideConcatenation = 1ull << 0,
 
     /// The expression is inside the unevaluated side of a conditional branch.
@@ -50,7 +50,7 @@ enum class BindFlags : uint64_t {
     /// the first argument to system methods like $bits
     AllowDataType = 1ull << 2,
 
-    /// The expression being bound is an enum value initializer.
+    /// The expression being created is an enum value initializer.
     EnumInitializer = 1ull << 3,
 
     /// Attributes are disallowed on expressions in this context.
@@ -88,54 +88,54 @@ enum class BindFlags : uint64_t {
     /// Expression is allowed to do arithmetic with an unbounded literal.
     AllowUnboundedLiteralArithmetic = 1ull << 12,
 
-    /// Binding is happening within a function body
+    /// AST creation is happening within a function body
     Function = 1ull << 13,
 
-    /// Binding is happening within a final block.
+    /// AST creation is happening within a final block.
     Final = 1ull << 14,
 
-    /// Binding is happening within the intra-assignment timing control of
+    /// AST creation is happening within the intra-assignment timing control of
     /// a non-blocking assignment expression.
     NonBlockingTimingControl = 1ull << 15,
 
-    /// Binding is happening within an event expression.
+    /// AST creation is happening within an event expression.
     EventExpression = 1ull << 16,
 
-    /// Binding is in a context where type reference expressions are allowed.
+    /// AST creation is in a context where type reference expressions are allowed.
     AllowTypeReferences = 1ull << 17,
 
-    /// Binding is happening within an assertion expression (sequence or property).
+    /// AST creation is happening within an assertion expression (sequence or property).
     AssertionExpr = 1ull << 18,
 
     /// Allow binding a clocking block as part of a top-level event expression.
     AllowClockingBlock = 1ull << 19,
 
-    /// Binding is for checking an assertion argument, prior to it being expanded as
+    /// AST creation is for checking an assertion argument, prior to it being expanded as
     /// part of an actual instance.
     AssertionInstanceArgCheck = 1ull << 20,
 
-    /// Binding is for a cycle delay or sequence repetition, where references to
+    /// AST creation is for a cycle delay or sequence repetition, where references to
     /// assertion formal ports have specific type requirements.
     AssertionDelayOrRepetition = 1ull << 21,
 
-    /// Binding is for the left hand side of an assignment operation.
+    /// AST creation is for the left hand side of an assignment operation.
     LValue = 1ull << 22,
 
-    /// Binding is for the negation of a property, which disallows recursive
+    /// AST creation is for the negation of a property, which disallows recursive
     /// instantiations.
     PropertyNegation = 1ull << 23,
 
-    /// Binding is for a property that has come after a positive advancement
+    /// AST creation is for a property that has come after a positive advancement
     /// of time within the parent property definition.
     PropertyTimeAdvance = 1ull << 24,
 
-    /// Binding is for an argument passed to a recursive property instance.
+    /// AST creation is for an argument passed to a recursive property instance.
     RecursivePropertyArg = 1ull << 25,
 
-    /// Binding is inside a concurrent assertion's action block.
+    /// AST creation is inside a concurrent assertion's action block.
     ConcurrentAssertActionBlock = 1ull << 26,
 
-    /// Binding is for a covergroup expression that permits referencing a
+    /// AST creation is for a covergroup expression that permits referencing a
     /// formal argument of an overridden sample method.
     AllowCoverageSampleFormal = 1ull << 27,
 
@@ -145,26 +145,26 @@ enum class BindFlags : uint64_t {
     /// User-defined nettypes are allowed to be looked up in this context.
     AllowNetType = 1ull << 29,
 
-    /// Binding is for an output (or inout) port or function argument.
+    /// AST creation is for an output (or inout) port or function argument.
     OutputArg = 1ull << 30,
 
-    /// Binding is for a procedural assign statement.
+    /// AST creation is for a procedural assign statement.
     ProceduralAssign = 1ull << 31,
 
-    /// Binding is for a procedural force / release / deassign statement.
+    /// AST creation is for a procedural force / release / deassign statement.
     ProceduralForceRelease = 1ull << 32,
 
-    /// Binding is in a context that allows interconnect nets.
+    /// AST creation is in a context that allows interconnect nets.
     AllowInterconnect = 1ull << 33,
 
-    /// Binding is inside a potentially unrollable for loop, which means we
+    /// AST creation is inside a potentially unrollable for loop, which means we
     /// should skip registering drivers and let the loop unroller do it.
     UnrollableForLoop = 1ull << 34,
 
-    /// Bindings is for a range expression inside a streaming concatenation operator.
+    /// AST creation is for a range expression inside a streaming concatenation operator.
     StreamingWithRange = 1ull << 35
 };
-BITMASK(BindFlags, StreamingWithRange)
+BITMASK(ASTFlags, StreamingWithRange)
 
 // clang-format off
 #define DK(x) \
@@ -191,17 +191,17 @@ struct EvaluatedDimension {
 
 /// Contains required context for binding syntax nodes with symbols to form
 /// an AST. Expressions, statements, timing controls, constraints, and assertion
-/// items all use this for binding.
-class BindContext {
+/// items all use this for creation.
+class ASTContext {
 public:
-    /// The scope where the binding is occurring.
+    /// The scope where the AST creation is occurring.
     not_null<const Scope*> scope;
 
-    /// The location to use when looking up names during binding.
+    /// The location to use when looking up names.
     SymbolIndex lookupIndex;
 
-    /// Various flags that control how binding is performed.
-    bitmask<BindFlags> flags;
+    /// Various flags that control how AST creation is performed.
+    bitmask<ASTFlags> flags;
 
 private:
     const Symbol* instanceOrProc = nullptr;
@@ -232,7 +232,7 @@ public:
         flat_hash_set<const Symbol*> scopeRandVars;
     };
 
-    /// If this context is for binding an inline constraint block for a randomize
+    /// If this context is for creating an inline constraint block for a randomize
     /// function call, this points to information about the scope. Name lookups
     /// happen inside the class scope before going through the normal local lookup,
     /// for example.
@@ -243,17 +243,16 @@ public:
         /// The assertion member being instantiated.
         const Symbol* symbol = nullptr;
 
-        /// The previous binding context used to start the instantiation.
+        /// The previous AST context used to start the instantiation.
         /// This effectively forms a linked list when expanding a nested
         /// stack of sequence and property instances.
-        const BindContext* prevContext = nullptr;
+        const ASTContext* prevContext = nullptr;
 
         /// The location where the instance is being instantiated.
         SourceLocation instanceLoc;
 
         /// A map of formal argument symbols to their actual replacements.
-        flat_hash_map<const Symbol*, std::tuple<const PropertyExprSyntax*, BindContext>>
-            argumentMap;
+        flat_hash_map<const Symbol*, std::tuple<const PropertyExprSyntax*, ASTContext>> argumentMap;
 
         /// A map of local variables declared in the assertion item.
         /// These don't exist in any scope because their types can depend
@@ -265,7 +264,7 @@ public:
         SourceLocation argExpansionLoc;
 
         /// If an argument is being expanded, this is the context in which the
-        /// argument was originally being bound (as opposed to where it is being
+        /// argument was originally being created (as opposed to where it is being
         /// expanded now).
         const AssertionInstanceDetails* argDetails = nullptr;
 
@@ -275,12 +274,12 @@ public:
         bool isRecursive = false;
     };
 
-    /// If this context is for binding an instantiation of a sequence or
-    /// property instance this points to information about that instantiation.
+    /// If this context is for creating an instantiation of a sequence or
+    /// property this points to information about that instantiation.
     const AssertionInstanceDetails* assertionInstance = nullptr;
 
-    BindContext(const Scope& scope, LookupLocation lookupLocation,
-                bitmask<BindFlags> flags = BindFlags::None) :
+    ASTContext(const Scope& scope, LookupLocation lookupLocation,
+               bitmask<ASTFlags> flags = ASTFlags::None) :
         scope(&scope),
         lookupIndex(lookupLocation.getIndex()), flags(flags) {
         ASSERT(!lookupLocation.getScope() || lookupLocation.getScope() == &scope);
@@ -288,7 +287,7 @@ public:
 
     Compilation& getCompilation() const { return scope->getCompilation(); }
     LookupLocation getLocation() const { return LookupLocation(scope, uint32_t(lookupIndex)); }
-    bool inUnevaluatedBranch() const { return (flags & BindFlags::UnevaluatedBranch) != 0; }
+    bool inUnevaluatedBranch() const { return (flags & ASTFlags::UnevaluatedBranch) != 0; }
 
     DriverKind getDriverKind() const;
     const InstanceSymbolBase* getInstance() const;
@@ -326,7 +325,7 @@ public:
     ConstantValue tryEval(const Expression& expr) const;
 
     optional<int32_t> evalInteger(const ExpressionSyntax& syntax,
-                                  bitmask<BindFlags> extraFlags = {}) const;
+                                  bitmask<ASTFlags> extraFlags = {}) const;
     optional<int32_t> evalInteger(const Expression& expr) const;
     EvaluatedDimension evalDimension(const VariableDimensionSyntax& syntax, bool requireRange,
                                      bool isPacked) const;
@@ -349,7 +348,7 @@ public:
     /// instance was expanded to the given diagnostic; otherwise, do nothing.
     void addAssertionBacktrace(Diagnostic& diag) const;
 
-    BindContext resetFlags(bitmask<BindFlags> addedFlags) const;
+    ASTContext resetFlags(bitmask<ASTFlags> addedFlags) const;
 
 private:
     void evalRangeDimension(const SelectorSyntax& syntax, bool isPacked,

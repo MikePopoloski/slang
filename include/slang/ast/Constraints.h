@@ -29,7 +29,7 @@ ENUM(ConstraintKind, CONSTRAINT)
 #undef CONTROL
 // clang-format on
 
-class BindContext;
+class ASTContext;
 class Compilation;
 struct ConstraintItemSyntax;
 
@@ -41,7 +41,7 @@ public:
 
     bool bad() const { return kind == ConstraintKind::Invalid; }
 
-    static const Constraint& bind(const ConstraintItemSyntax& syntax, const BindContext& context);
+    static const Constraint& bind(const ConstraintItemSyntax& syntax, const ASTContext& context);
 
     template<typename T>
     T& as() {
@@ -86,7 +86,7 @@ public:
     explicit ConstraintList(span<const Constraint* const> list) :
         Constraint(ConstraintKind::List), list(list) {}
 
-    static Constraint& fromSyntax(const ConstraintBlockSyntax& syntax, const BindContext& context);
+    static Constraint& fromSyntax(const ConstraintBlockSyntax& syntax, const ASTContext& context);
 
     void serializeTo(ASTSerializer& serializer) const;
 
@@ -111,7 +111,7 @@ public:
         Constraint(ConstraintKind::Expression), expr(expr), isSoft(isSoft) {}
 
     static Constraint& fromSyntax(const ExpressionConstraintSyntax& syntax,
-                                  const BindContext& context);
+                                  const ASTContext& context);
 
     void serializeTo(ASTSerializer& serializer) const;
 
@@ -135,7 +135,7 @@ public:
         Constraint(ConstraintKind::Implication), predicate(predicate), body(body) {}
 
     static Constraint& fromSyntax(const ImplicationConstraintSyntax& syntax,
-                                  const BindContext& context);
+                                  const ASTContext& context);
 
     void serializeTo(ASTSerializer& serializer) const;
 
@@ -163,7 +163,7 @@ public:
         predicate(predicate), ifBody(ifBody), elseBody(elseBody) {}
 
     static Constraint& fromSyntax(const ConditionalConstraintSyntax& syntax,
-                                  const BindContext& context);
+                                  const ASTContext& context);
 
     void serializeTo(ASTSerializer& serializer) const;
 
@@ -189,7 +189,7 @@ public:
         Constraint(ConstraintKind::Uniqueness), items(items) {}
 
     static Constraint& fromSyntax(const UniquenessConstraintSyntax& syntax,
-                                  const BindContext& context);
+                                  const ASTContext& context);
 
     void serializeTo(ASTSerializer& serializer) const;
 
@@ -212,8 +212,7 @@ public:
     explicit DisableSoftConstraint(const Expression& target) :
         Constraint(ConstraintKind::DisableSoft), target(target) {}
 
-    static Constraint& fromSyntax(const DisableConstraintSyntax& syntax,
-                                  const BindContext& context);
+    static Constraint& fromSyntax(const DisableConstraintSyntax& syntax, const ASTContext& context);
 
     void serializeTo(ASTSerializer& serializer) const;
 
@@ -239,7 +238,7 @@ public:
         solve(solve), before(before) {}
 
     static Constraint& fromSyntax(const SolveBeforeConstraintSyntax& syntax,
-                                  const BindContext& context);
+                                  const ASTContext& context);
 
     void serializeTo(ASTSerializer& serializer) const;
 
@@ -268,7 +267,7 @@ public:
         Constraint(ConstraintKind::Foreach),
         arrayRef(arrayRef), loopDims(loopDims), body(body) {}
 
-    static Constraint& fromSyntax(const LoopConstraintSyntax& syntax, const BindContext& context);
+    static Constraint& fromSyntax(const LoopConstraintSyntax& syntax, const ASTContext& context);
 
     void serializeTo(ASTSerializer& serializer) const;
 

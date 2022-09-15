@@ -42,12 +42,12 @@ public:
     void serializeTo(ASTSerializer& serializer) const;
 
     static Expression& fromSyntax(Compilation& compilation, const BinaryExpressionSyntax& syntax,
-                                  const BindContext& context);
+                                  const ASTContext& context);
 
     static Expression& fromComponents(Compilation& compilation, optional<BinaryOperator> op,
                                       bitmask<AssignFlags> flags, Expression& lhs, Expression& rhs,
                                       SourceLocation assignLoc, const TimingControl* timingControl,
-                                      SourceRange sourceRange, const BindContext& context);
+                                      SourceRange sourceRange, const ASTContext& context);
 
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::Assignment; }
 
@@ -98,12 +98,12 @@ public:
     void serializeTo(ASTSerializer& serializer) const;
 
     static Expression& fromSyntax(Compilation& compilation, const CastExpressionSyntax& syntax,
-                                  const BindContext& context);
+                                  const ASTContext& context);
     static Expression& fromSyntax(Compilation& compilation,
                                   const SignedCastExpressionSyntax& syntax,
-                                  const BindContext& context);
+                                  const ASTContext& context);
 
-    static Expression& makeImplicit(const BindContext& context, const Type& targetType,
+    static Expression& makeImplicit(const ASTContext& context, const Type& targetType,
                                     ConversionKind conversionKind, Expression& expr,
                                     SourceLocation loc);
 
@@ -140,7 +140,7 @@ public:
     void serializeTo(ASTSerializer& serializer) const;
 
     static Expression& fromSyntax(Compilation& compilation, const NewArrayExpressionSyntax& syntax,
-                                  const BindContext& context, const Type* assignmentTarget);
+                                  const ASTContext& context, const Type* assignmentTarget);
 
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::NewArray; }
 
@@ -176,7 +176,7 @@ public:
     void serializeTo(ASTSerializer& serializer) const;
 
     static Expression& fromSyntax(Compilation& compilation, const NewClassExpressionSyntax& syntax,
-                                  const BindContext& context, const Type* assignmentTarget);
+                                  const ASTContext& context, const Type* assignmentTarget);
 
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::NewClass; }
 
@@ -205,7 +205,7 @@ public:
     void serializeTo(ASTSerializer& serializer) const;
 
     static Expression& fromSyntax(Compilation& compilation, const NewClassExpressionSyntax& syntax,
-                                  const BindContext& context, const Type& assignmentTarget);
+                                  const ASTContext& context, const Type& assignmentTarget);
 
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::NewCovergroup; }
 
@@ -254,18 +254,18 @@ public:
 
     static Expression& forStruct(Compilation& compilation,
                                  const SimpleAssignmentPatternSyntax& syntax,
-                                 const BindContext& context, const Type& type,
+                                 const ASTContext& context, const Type& type,
                                  const Scope& structScope, SourceRange sourceRange);
 
     static Expression& forFixedArray(Compilation& compilation,
                                      const SimpleAssignmentPatternSyntax& syntax,
-                                     const BindContext& context, const Type& type,
+                                     const ASTContext& context, const Type& type,
                                      const Type& elementType, bitwidth_t numElements,
                                      SourceRange sourceRange);
 
     static Expression& forDynamicArray(Compilation& compilation,
                                        const SimpleAssignmentPatternSyntax& syntax,
-                                       const BindContext& context, const Type& type,
+                                       const ASTContext& context, const Type& type,
                                        const Type& elementType, SourceRange sourceRange);
 
     static bool isKind(ExpressionKind kind) {
@@ -313,22 +313,22 @@ public:
 
     static Expression& forStruct(Compilation& compilation,
                                  const StructuredAssignmentPatternSyntax& syntax,
-                                 const BindContext& context, const Type& type,
+                                 const ASTContext& context, const Type& type,
                                  const Scope& structScope, SourceRange sourceRange);
 
     static Expression& forFixedArray(Compilation& compilation,
                                      const StructuredAssignmentPatternSyntax& syntax,
-                                     const BindContext& context, const Type& type,
+                                     const ASTContext& context, const Type& type,
                                      const Type& elementType, SourceRange sourceRange);
 
     static Expression& forDynamicArray(Compilation& compilation,
                                        const StructuredAssignmentPatternSyntax& syntax,
-                                       const BindContext& context, const Type& type,
+                                       const ASTContext& context, const Type& type,
                                        const Type& elementType, SourceRange sourceRange);
 
     static Expression& forAssociativeArray(Compilation& compilation,
                                            const StructuredAssignmentPatternSyntax& syntax,
-                                           const BindContext& context, const Type& type,
+                                           const ASTContext& context, const Type& type,
                                            const Type& elementType, SourceRange sourceRange);
 
     static bool isKind(ExpressionKind kind) {
@@ -354,18 +354,18 @@ public:
 
     static Expression& forStruct(Compilation& compilation,
                                  const ReplicatedAssignmentPatternSyntax& syntax,
-                                 const BindContext& context, const Type& type,
+                                 const ASTContext& context, const Type& type,
                                  const Scope& structScope, SourceRange sourceRange);
 
     static Expression& forFixedArray(Compilation& compilation,
                                      const ReplicatedAssignmentPatternSyntax& syntax,
-                                     const BindContext& context, const Type& type,
+                                     const ASTContext& context, const Type& type,
                                      const Type& elementType, bitwidth_t numElements,
                                      SourceRange sourceRange);
 
     static Expression& forDynamicArray(Compilation& compilation,
                                        const ReplicatedAssignmentPatternSyntax& syntax,
-                                       const BindContext& context, const Type& type,
+                                       const ASTContext& context, const Type& type,
                                        const Type& elementType, SourceRange sourceRange);
 
     static bool isKind(ExpressionKind kind) {
@@ -380,7 +380,7 @@ public:
 
 private:
     static const Expression& bindReplCount(Compilation& comp, const ExpressionSyntax& syntax,
-                                           const BindContext& context, size_t& count);
+                                           const ASTContext& context, size_t& count);
 
     const Expression* count_;
 };

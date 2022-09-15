@@ -218,7 +218,7 @@ public:
     static MethodPrototypeSymbol& fromSyntax(const Scope& scope,
                                              const ModportSubroutinePortSyntax& syntax,
                                              bool isExport);
-    static MethodPrototypeSymbol& fromSyntax(const BindContext& context,
+    static MethodPrototypeSymbol& fromSyntax(const ASTContext& context,
                                              const ModportNamedPortSyntax& syntax, bool isExport);
     static MethodPrototypeSymbol& fromSyntax(const Scope& scope,
                                              const ExternInterfaceMethodSyntax& syntax);

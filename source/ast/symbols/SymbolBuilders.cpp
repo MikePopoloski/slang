@@ -95,7 +95,7 @@ MethodBuilder ClassBuilder::addMethod(string_view name, const Type& retType, Sub
 StructBuilder::StructBuilder(const Scope& scope, LookupLocation lookupLocation) :
     compilation(scope.getCompilation()),
     type(*compilation.emplace<UnpackedStructType>(compilation, NL,
-                                                  BindContext(scope, lookupLocation))) {
+                                                  ASTContext(scope, lookupLocation))) {
 }
 
 void StructBuilder::addField(string_view name, const Type& fieldType,

@@ -98,7 +98,7 @@ static bool checkArgType(TContext& context, const Expression& arg, char spec, So
     return false;
 }
 
-static bool checkFormatString(const BindContext& context, const StringLiteral& arg,
+static bool checkFormatString(const ASTContext& context, const StringLiteral& arg,
                               Args::iterator& argIt, Args::iterator argEnd) {
     // Strip quotes from the raw string.
     string_view fmt = arg.getRawValue();
@@ -151,7 +151,7 @@ static bool checkFormatString(const BindContext& context, const StringLiteral& a
     return ok;
 }
 
-bool FmtHelpers::checkDisplayArgs(const BindContext& context, const Args& args) {
+bool FmtHelpers::checkDisplayArgs(const ASTContext& context, const Args& args) {
     auto argIt = args.begin();
     while (argIt != args.end()) {
         auto arg = *argIt++;
@@ -175,7 +175,7 @@ bool FmtHelpers::checkDisplayArgs(const BindContext& context, const Args& args) 
     return true;
 }
 
-bool FmtHelpers::checkSFormatArgs(const BindContext& context, const Args& args) {
+bool FmtHelpers::checkSFormatArgs(const ASTContext& context, const Args& args) {
     // If the format string is known at compile time, check it for correctness now.
     // Otherwise this will wait until runtime.
     auto argIt = args.begin();
@@ -265,7 +265,7 @@ optional<std::string> FmtHelpers::formatArgs(string_view formatString, SourceLoc
         },
         [&](DiagCode code, size_t offset, size_t len, optional<char> specifier) {
             // If this is from a string literal format string, we already checked
-            // the string as expression binding time, so don't re-issue diagnostics.
+            // the string at expression creation time, so don't re-issue diagnostics.
             if (isStringLiteral)
                 return;
 
@@ -366,7 +366,7 @@ optional<std::string> FmtHelpers::formatDisplay(const Scope& scope, EvalContext&
     return result;
 }
 
-bool FmtHelpers::checkFinishNum(const BindContext& context, const Expression& arg) {
+bool FmtHelpers::checkFinishNum(const ASTContext& context, const Expression& arg) {
     ConstantValue cv = context.tryEval(arg);
     if (cv.isInteger()) {
         auto& val = cv.integer();

@@ -29,18 +29,18 @@ public:
     Expression& operand() { return *operand_; }
 
     ConstantValue evalImpl(EvalContext& context) const;
-    bool propagateType(const BindContext& context, const Type& newType);
+    bool propagateType(const ASTContext& context, const Type& newType);
     optional<bitwidth_t> getEffectiveWidthImpl() const;
 
     void serializeTo(ASTSerializer& serializer) const;
 
     static Expression& fromSyntax(Compilation& compilation,
                                   const PrefixUnaryExpressionSyntax& syntax,
-                                  const BindContext& context);
+                                  const ASTContext& context);
 
     static Expression& fromSyntax(Compilation& compilation,
                                   const PostfixUnaryExpressionSyntax& syntax,
-                                  const BindContext& context);
+                                  const ASTContext& context);
 
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::UnaryOp; }
 
@@ -72,17 +72,17 @@ public:
     Expression& right() { return *right_; }
 
     ConstantValue evalImpl(EvalContext& context) const;
-    bool propagateType(const BindContext& context, const Type& newType);
+    bool propagateType(const ASTContext& context, const Type& newType);
     optional<bitwidth_t> getEffectiveWidthImpl() const;
 
     void serializeTo(ASTSerializer& serializer) const;
 
     static Expression& fromSyntax(Compilation& compilation, const BinaryExpressionSyntax& syntax,
-                                  const BindContext& context);
+                                  const ASTContext& context);
 
     static Expression& fromComponents(Expression& lhs, Expression& rhs, BinaryOperator op,
                                       SourceLocation opLoc, SourceRange sourceRange,
-                                      const BindContext& context);
+                                      const ASTContext& context);
 
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::BinaryOp; }
 
@@ -120,14 +120,14 @@ public:
     Expression& right() { return *right_; }
 
     ConstantValue evalImpl(EvalContext& context) const;
-    bool propagateType(const BindContext& context, const Type& newType);
+    bool propagateType(const ASTContext& context, const Type& newType);
     optional<bitwidth_t> getEffectiveWidthImpl() const;
 
     void serializeTo(ASTSerializer& serializer) const;
 
     static Expression& fromSyntax(Compilation& compilation,
                                   const ConditionalExpressionSyntax& syntax,
-                                  const BindContext& context, const Type* assignmentTarget);
+                                  const ASTContext& context, const Type* assignmentTarget);
 
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::ConditionalOp; }
 
@@ -164,7 +164,7 @@ public:
     void serializeTo(ASTSerializer& serializer) const;
 
     static Expression& fromSyntax(Compilation& compilation, const InsideExpressionSyntax& syntax,
-                                  const BindContext& context);
+                                  const ASTContext& context);
 
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::Inside; }
 
@@ -200,10 +200,10 @@ public:
 
     static Expression& fromSyntax(Compilation& compilation,
                                   const ConcatenationExpressionSyntax& syntax,
-                                  const BindContext& context, const Type* assignmentTarget);
+                                  const ASTContext& context, const Type* assignmentTarget);
 
     static Expression& fromEmpty(Compilation& compilation, const EmptyQueueExpressionSyntax& syntax,
-                                 const BindContext& context, const Type* assignmentTarget);
+                                 const ASTContext& context, const Type* assignmentTarget);
 
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::Concatenation; }
 
@@ -238,7 +238,7 @@ public:
 
     static Expression& fromSyntax(Compilation& compilation,
                                   const MultipleConcatenationExpressionSyntax& syntax,
-                                  const BindContext& context);
+                                  const ASTContext& context);
 
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::Replication; }
 
@@ -285,7 +285,7 @@ public:
 
     static Expression& fromSyntax(Compilation& compilation,
                                   const StreamingConcatenationExpressionSyntax& syntax,
-                                  const BindContext& context, const Type* assignmentTarget);
+                                  const ASTContext& context, const Type* assignmentTarget);
 
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::Streaming; }
 
@@ -321,14 +321,14 @@ public:
     Expression& right() { return *right_; }
 
     ConstantValue evalImpl(EvalContext& context) const;
-    bool propagateType(const BindContext& context, const Type& newType);
+    bool propagateType(const ASTContext& context, const Type& newType);
 
     ConstantValue checkInside(EvalContext& context, const ConstantValue& val) const;
 
     void serializeTo(ASTSerializer& serializer) const;
 
     static Expression& fromSyntax(Compilation& comp, const OpenRangeExpressionSyntax& syntax,
-                                  const BindContext& context);
+                                  const ASTContext& context);
 
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::OpenRange; }
 

@@ -17,7 +17,7 @@ class FErrorFunc : public SystemSubroutine {
 public:
     FErrorFunc() : SystemSubroutine("$ferror", SubroutineKind::Function) { hasOutputArgs = true; }
 
-    const Type& checkArguments(const BindContext& context, const Args& args, SourceRange range,
+    const Type& checkArguments(const ASTContext& context, const Args& args, SourceRange range,
                                const Expression*) const final {
         auto& comp = context.getCompilation();
         if (!checkArgCount(context, false, args, range, 2, 2))
@@ -49,7 +49,7 @@ class FGetsFunc : public SystemSubroutine {
 public:
     FGetsFunc() : SystemSubroutine("$fgets", SubroutineKind::Function) { hasOutputArgs = true; }
 
-    const Type& checkArguments(const BindContext& context, const Args& args, SourceRange range,
+    const Type& checkArguments(const ASTContext& context, const Args& args, SourceRange range,
                                const Expression*) const final {
         auto& comp = context.getCompilation();
         if (!checkArgCount(context, false, args, range, 2, 2))
@@ -85,7 +85,7 @@ public:
         hasOutputArgs = true;
     }
 
-    const Type& checkArguments(const BindContext& context, const Args& args, SourceRange range,
+    const Type& checkArguments(const ASTContext& context, const Args& args, SourceRange range,
                                const Expression*) const final {
         auto& comp = context.getCompilation();
         if (!checkArgCount(context, false, args, range, 2, INT32_MAX))
@@ -131,7 +131,7 @@ public:
 
     bool allowEmptyArgument(size_t argIndex) const final { return argIndex == 2; }
 
-    const Type& checkArguments(const BindContext& context, const Args& args, SourceRange range,
+    const Type& checkArguments(const ASTContext& context, const Args& args, SourceRange range,
                                const Expression*) const final {
         auto& comp = context.getCompilation();
         if (!checkArgCount(context, false, args, range, 2, 4))
@@ -174,12 +174,12 @@ class RandModeFunc : public SystemSubroutine {
 public:
     RandModeFunc(const std::string& name) : SystemSubroutine(name, SubroutineKind::Function) {}
 
-    const Type& checkArguments(const BindContext& context, const Args& args, SourceRange range,
+    const Type& checkArguments(const ASTContext& context, const Args& args, SourceRange range,
                                const Expression*) const final {
         // The number of arguments required is 1 if called as a task
         // and 0 if called as a function.
         auto& comp = context.getCompilation();
-        size_t numArgs = context.flags.has(BindFlags::TopLevelStatement) ? 1 : 0;
+        size_t numArgs = context.flags.has(ASTFlags::TopLevelStatement) ? 1 : 0;
         if (!checkArgCount(context, true, args, range, numArgs, numArgs))
             return comp.getErrorType();
 
@@ -206,7 +206,7 @@ public:
         hasOutputArgs = true;
     }
 
-    const Type& checkArguments(const BindContext& context, const Args& args, SourceRange range,
+    const Type& checkArguments(const ASTContext& context, const Args& args, SourceRange range,
                                const Expression*) const final {
         auto& comp = context.getCompilation();
         if (!checkArgCount(context, false, args, range, numArgs, numArgs))
@@ -237,12 +237,12 @@ class SampledFunc : public SystemSubroutine {
 public:
     SampledFunc() : SystemSubroutine("$sampled", SubroutineKind::Function) {}
 
-    const Expression& bindArgument(size_t, const BindContext& context,
+    const Expression& bindArgument(size_t, const ASTContext& context,
                                    const ExpressionSyntax& syntax, const Args&) const final {
-        return Expression::bind(syntax, context, BindFlags::AssertionExpr);
+        return Expression::bind(syntax, context, ASTFlags::AssertionExpr);
     }
 
-    const Type& checkArguments(const BindContext& context, const Args& args, SourceRange range,
+    const Type& checkArguments(const ASTContext& context, const Args& args, SourceRange range,
                                const Expression*) const final {
         auto& comp = context.getCompilation();
         if (!checkArgCount(context, false, args, range, 1, 1))
@@ -265,14 +265,14 @@ class ValueChangeFunc : public SystemSubroutine {
 public:
     ValueChangeFunc(const std::string& name) : SystemSubroutine(name, SubroutineKind::Function) {}
 
-    const Expression& bindArgument(size_t, const BindContext& context,
+    const Expression& bindArgument(size_t, const ASTContext& context,
                                    const ExpressionSyntax& syntax, const Args&) const final {
-        return Expression::bind(syntax, context, BindFlags::AssertionExpr);
+        return Expression::bind(syntax, context, ASTFlags::AssertionExpr);
     }
 
     bool allowClockingArgument(size_t argIndex) const final { return argIndex == 1; }
 
-    const Type& checkArguments(const BindContext& context, const Args& args, SourceRange range,
+    const Type& checkArguments(const ASTContext& context, const Args& args, SourceRange range,
                                const Expression*) const final {
         auto& comp = context.getCompilation();
         if (!checkArgCount(context, false, args, range, 1, 2))
@@ -300,11 +300,11 @@ class PastFunc : public SystemSubroutine {
 public:
     PastFunc() : SystemSubroutine("$past", SubroutineKind::Function) {}
 
-    const Expression& bindArgument(size_t argIndex, const BindContext& context,
+    const Expression& bindArgument(size_t argIndex, const ASTContext& context,
                                    const ExpressionSyntax& syntax, const Args&) const final {
-        bitmask<BindFlags> extraFlags = BindFlags::None;
+        bitmask<ASTFlags> extraFlags = ASTFlags::None;
         if (argIndex == 0 || argIndex == 2)
-            extraFlags = BindFlags::AssertionExpr;
+            extraFlags = ASTFlags::AssertionExpr;
 
         return Expression::bind(syntax, context, extraFlags);
     }
@@ -312,7 +312,7 @@ public:
     bool allowEmptyArgument(size_t argIndex) const final { return argIndex == 1 || argIndex == 2; }
     bool allowClockingArgument(size_t argIndex) const final { return argIndex == 3; }
 
-    const Type& checkArguments(const BindContext& context, const Args& args, SourceRange range,
+    const Type& checkArguments(const ASTContext& context, const Args& args, SourceRange range,
                                const Expression*) const final {
         auto& comp = context.getCompilation();
         if (!checkArgCount(context, false, args, range, 1, 4))
@@ -355,12 +355,12 @@ public:
     GlobalValueChangeFunc(const std::string& name, bool isFuture) :
         SystemSubroutine(name, SubroutineKind::Function), isFuture(isFuture) {}
 
-    const Expression& bindArgument(size_t, const BindContext& context,
+    const Expression& bindArgument(size_t, const ASTContext& context,
                                    const ExpressionSyntax& syntax, const Args&) const final {
-        return Expression::bind(syntax, context, BindFlags::AssertionExpr);
+        return Expression::bind(syntax, context, ASTFlags::AssertionExpr);
     }
 
-    const Type& checkArguments(const BindContext& context, const Args& args, SourceRange range,
+    const Type& checkArguments(const ASTContext& context, const Args& args, SourceRange range,
                                const Expression*) const final {
         auto& comp = context.getCompilation();
         if (!checkArgCount(context, false, args, range, 1, 1))
@@ -371,7 +371,7 @@ public:
             return comp.getErrorType();
         }
 
-        if (!context.flags.has(BindFlags::AssertionExpr) && isFuture) {
+        if (!context.flags.has(ASTFlags::AssertionExpr) && isFuture) {
             context.addDiag(diag::GlobalSampledValueAssertionExpr, range);
             return comp.getErrorType();
         }

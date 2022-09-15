@@ -159,13 +159,13 @@ const Type* Expression::binaryOperatorType(Compilation& compilation, const Type*
     return result;
 }
 
-bool Expression::bindMembershipExpressions(const BindContext& context, TokenKind keyword,
+bool Expression::bindMembershipExpressions(const ASTContext& context, TokenKind keyword,
                                            bool requireIntegral, bool unwrapUnpacked,
                                            bool allowTypeReferences, bool allowOpenRange,
                                            const ExpressionSyntax& valueExpr,
                                            span<const ExpressionSyntax* const> expressions,
                                            SmallVector<const Expression*>& results) {
-    auto extraFlags = allowTypeReferences ? BindFlags::AllowTypeReferences : BindFlags::None;
+    auto extraFlags = allowTypeReferences ? ASTFlags::AllowTypeReferences : ASTFlags::None;
     Compilation& comp = context.getCompilation();
     Expression& valueRes = create(comp, valueExpr, context, extraFlags);
     results.append(&valueRes);
@@ -296,11 +296,11 @@ bool Expression::bindMembershipExpressions(const BindContext& context, TokenKind
 
 Expression& UnaryExpression::fromSyntax(Compilation& compilation,
                                         const PrefixUnaryExpressionSyntax& syntax,
-                                        const BindContext& context) {
+                                        const ASTContext& context) {
     auto op = getUnaryOperator(syntax.kind);
-    bitmask<BindFlags> extraFlags;
+    bitmask<ASTFlags> extraFlags;
     if (isLValueOp(op))
-        extraFlags = BindFlags::LValue;
+        extraFlags = ASTFlags::LValue;
 
     Expression& operand = create(compilation, *syntax.operand, context, extraFlags);
     const Type* type = operand.type;
@@ -345,9 +345,9 @@ Expression& UnaryExpression::fromSyntax(Compilation& compilation,
             break;
         case SyntaxKind::UnaryPreincrementExpression:
         case SyntaxKind::UnaryPredecrementExpression:
-            if ((context.flags.has(BindFlags::NonProcedural) &&
-                 !context.flags.has(BindFlags::AssignmentAllowed)) ||
-                context.flags.has(BindFlags::AssignmentDisallowed)) {
+            if ((context.flags.has(ASTFlags::NonProcedural) &&
+                 !context.flags.has(ASTFlags::AssignmentAllowed)) ||
+                context.flags.has(ASTFlags::AssignmentDisallowed)) {
                 context.addDiag(diag::IncDecNotAllowed, syntax.sourceRange());
                 return badExpr(compilation, result);
             }
@@ -379,10 +379,10 @@ Expression& UnaryExpression::fromSyntax(Compilation& compilation,
 
 Expression& UnaryExpression::fromSyntax(Compilation& compilation,
                                         const PostfixUnaryExpressionSyntax& syntax,
-                                        const BindContext& context) {
+                                        const ASTContext& context) {
     // This method is only ever called for postincrement and postdecrement operators, so
     // the operand must be an lvalue.
-    Expression& operand = create(compilation, *syntax.operand, context, BindFlags::LValue);
+    Expression& operand = create(compilation, *syntax.operand, context, ASTFlags::LValue);
     const Type* type = operand.type;
 
     Expression* result = compilation.emplace<UnaryExpression>(getUnaryOperator(syntax.kind), *type,
@@ -390,9 +390,9 @@ Expression& UnaryExpression::fromSyntax(Compilation& compilation,
     if (operand.bad() || !operand.requireLValue(context, syntax.operatorToken.location()))
         return badExpr(compilation, result);
 
-    if ((context.flags.has(BindFlags::NonProcedural) &&
-         !context.flags.has(BindFlags::AssignmentAllowed)) ||
-        context.flags.has(BindFlags::AssignmentDisallowed)) {
+    if ((context.flags.has(ASTFlags::NonProcedural) &&
+         !context.flags.has(ASTFlags::AssignmentAllowed)) ||
+        context.flags.has(ASTFlags::AssignmentDisallowed)) {
         context.addDiag(diag::IncDecNotAllowed, syntax.sourceRange());
         return badExpr(compilation, result);
     }
@@ -408,7 +408,7 @@ Expression& UnaryExpression::fromSyntax(Compilation& compilation,
     return *result;
 }
 
-bool UnaryExpression::propagateType(const BindContext& context, const Type& newType) {
+bool UnaryExpression::propagateType(const ASTContext& context, const Type& newType) {
     switch (op) {
         case UnaryOperator::Plus:
         case UnaryOperator::Minus:
@@ -567,18 +567,18 @@ void UnaryExpression::serializeTo(ASTSerializer& serializer) const {
 
 Expression& BinaryExpression::fromSyntax(Compilation& compilation,
                                          const BinaryExpressionSyntax& syntax,
-                                         const BindContext& context) {
+                                         const ASTContext& context) {
     // If we are allowed unbounded literals here, pass that along to subexpressions.
-    bitmask<BindFlags> flags = BindFlags::None;
-    if (context.flags.has(BindFlags::AllowUnboundedLiteral) &&
-        context.flags.has(BindFlags::AllowUnboundedLiteralArithmetic)) {
-        flags = BindFlags::AllowUnboundedLiteral;
+    bitmask<ASTFlags> flags = ASTFlags::None;
+    if (context.flags.has(ASTFlags::AllowUnboundedLiteral) &&
+        context.flags.has(ASTFlags::AllowUnboundedLiteralArithmetic)) {
+        flags = ASTFlags::AllowUnboundedLiteral;
     }
 
     auto op = getBinaryOperator(syntax.kind);
     if (op == BinaryOperator::Equality || op == BinaryOperator::Inequality ||
         op == BinaryOperator::CaseEquality || op == BinaryOperator::CaseInequality) {
-        flags |= BindFlags::AllowTypeReferences;
+        flags |= ASTFlags::AllowTypeReferences;
     }
 
     Expression& lhs = create(compilation, *syntax.left, context, flags);
@@ -593,7 +593,7 @@ Expression& BinaryExpression::fromSyntax(Compilation& compilation,
 
 Expression& BinaryExpression::fromComponents(Expression& lhs, Expression& rhs, BinaryOperator op,
                                              SourceLocation opLoc, SourceRange sourceRange,
-                                             const BindContext& context) {
+                                             const ASTContext& context) {
     auto& compilation = context.getCompilation();
     const Type* lt = lhs.type;
     const Type* rt = rhs.type;
@@ -809,7 +809,7 @@ Expression& BinaryExpression::fromComponents(Expression& lhs, Expression& rhs, B
     return *result;
 }
 
-bool BinaryExpression::propagateType(const BindContext& context, const Type& newType) {
+bool BinaryExpression::propagateType(const ASTContext& context, const Type& newType) {
     switch (op) {
         case BinaryOperator::Add:
         case BinaryOperator::Subtract:
@@ -928,14 +928,14 @@ void BinaryExpression::serializeTo(ASTSerializer& serializer) const {
 
 Expression& ConditionalExpression::fromSyntax(Compilation& comp,
                                               const ConditionalExpressionSyntax& syntax,
-                                              const BindContext& context,
+                                              const ASTContext& context,
                                               const Type* assignmentTarget) {
     bool bad = false;
     bool isConst = true;
     bool isTrue = true;
     bool isFourState = false;
     SmallVectorSized<Condition, 2> conditions;
-    BindContext trueContext = context;
+    ASTContext trueContext = context;
 
     for (auto condSyntax : syntax.predicate->conditions) {
         auto& cond = selfDetermined(comp, *condSyntax->expr, trueContext);
@@ -969,20 +969,20 @@ Expression& ConditionalExpression::fromSyntax(Compilation& comp,
     }
 
     // If the predicate is known at compile time, we can tell which branch will be unevaluated.
-    bitmask<BindFlags> leftFlags = BindFlags::None;
-    bitmask<BindFlags> rightFlags = BindFlags::None;
+    bitmask<ASTFlags> leftFlags = ASTFlags::None;
+    bitmask<ASTFlags> rightFlags = ASTFlags::None;
     if (isConst) {
         if (isTrue)
-            rightFlags = BindFlags::UnevaluatedBranch;
+            rightFlags = ASTFlags::UnevaluatedBranch;
         else
-            leftFlags = BindFlags::UnevaluatedBranch;
+            leftFlags = ASTFlags::UnevaluatedBranch;
     }
 
     // Pass through the flag allowing unbounded literals.
-    if (context.flags.has(BindFlags::AllowUnboundedLiteral) &&
-        context.flags.has(BindFlags::AllowUnboundedLiteralArithmetic)) {
-        leftFlags |= BindFlags::AllowUnboundedLiteral;
-        rightFlags |= BindFlags::AllowUnboundedLiteral;
+    if (context.flags.has(ASTFlags::AllowUnboundedLiteral) &&
+        context.flags.has(ASTFlags::AllowUnboundedLiteralArithmetic)) {
+        leftFlags |= ASTFlags::AllowUnboundedLiteral;
+        rightFlags |= ASTFlags::AllowUnboundedLiteral;
     }
 
     auto& left = create(comp, *syntax.left, trueContext, leftFlags, assignmentTarget);
@@ -1051,7 +1051,7 @@ Expression& ConditionalExpression::fromSyntax(Compilation& comp,
     return *result;
 }
 
-bool ConditionalExpression::propagateType(const BindContext& context, const Type& newType) {
+bool ConditionalExpression::propagateType(const ASTContext& context, const Type& newType) {
     // The predicate is self determined so no need to handle it here.
     type = &newType;
     contextDetermined(context, left_, newType);
@@ -1153,7 +1153,7 @@ void ConditionalExpression::serializeTo(ASTSerializer& serializer) const {
 
 Expression& InsideExpression::fromSyntax(Compilation& compilation,
                                          const InsideExpressionSyntax& syntax,
-                                         const BindContext& context) {
+                                         const ASTContext& context) {
     SmallVectorSized<const ExpressionSyntax*, 8> expressions;
     for (auto elemSyntax : syntax.ranges->valueRanges)
         expressions.append(elemSyntax);
@@ -1243,7 +1243,7 @@ void InsideExpression::serializeTo(ASTSerializer& serializer) const {
 
 Expression& ConcatenationExpression::fromSyntax(Compilation& compilation,
                                                 const ConcatenationExpressionSyntax& syntax,
-                                                const BindContext& context,
+                                                const ASTContext& context,
                                                 const Type* assignmentTarget) {
     // If we are in an assignment-like context with a target type that is an unpacked array,
     // this is an array concatenation (as opposed to a vector or string concatenation).
@@ -1323,11 +1323,11 @@ Expression& ConcatenationExpression::fromSyntax(Compilation& compilation,
 
     for (auto argSyntax : syntax.expressions) {
         // Replications inside of concatenations have a special feature that allows them to have
-        // a width of zero. Check now if we're going to be binding a replication and if so set
+        // a width of zero. Check now if we're going to be creating a replication and if so set
         // an additional flag so that it knows it's ok to have that zero count.
         Expression* arg;
         if (argSyntax->kind == SyntaxKind::MultipleConcatenationExpression)
-            arg = &create(compilation, *argSyntax, context, BindFlags::InsideConcatenation);
+            arg = &create(compilation, *argSyntax, context, ASTFlags::InsideConcatenation);
         else
             arg = &create(compilation, *argSyntax, context);
         buffer.append(arg);
@@ -1418,7 +1418,7 @@ Expression& ConcatenationExpression::fromSyntax(Compilation& compilation,
 
 Expression& ConcatenationExpression::fromEmpty(Compilation& compilation,
                                                const EmptyQueueExpressionSyntax& syntax,
-                                               const BindContext& context,
+                                               const ASTContext& context,
                                                const Type* assignmentTarget) {
     // Empty concatenation can only target arrays.
     if (!assignmentTarget || !assignmentTarget->isUnpackedArray()) {
@@ -1551,7 +1551,7 @@ void ConcatenationExpression::serializeTo(ASTSerializer& serializer) const {
 
 Expression& ReplicationExpression::fromSyntax(Compilation& compilation,
                                               const MultipleConcatenationExpressionSyntax& syntax,
-                                              const BindContext& context) {
+                                              const ASTContext& context) {
     Expression& left = selfDetermined(compilation, *syntax.expression, context);
     Expression* right = &create(compilation, *syntax.concatenation, context);
 
@@ -1596,7 +1596,7 @@ Expression& ReplicationExpression::fromSyntax(Compilation& compilation,
     }
 
     if (*count == 0) {
-        if ((context.flags & BindFlags::InsideConcatenation) == 0) {
+        if ((context.flags & ASTFlags::InsideConcatenation) == 0) {
             context.addDiag(diag::ReplicationZeroOutsideConcat, left.sourceRange);
             return badExpr(compilation, result);
         }
@@ -1660,7 +1660,7 @@ void ReplicationExpression::serializeTo(ASTSerializer& serializer) const {
 
 Expression& StreamingConcatenationExpression::fromSyntax(
     Compilation& comp, const StreamingConcatenationExpressionSyntax& syntax,
-    const BindContext& context, const Type* assignmentTarget) {
+    const ASTContext& context, const Type* assignmentTarget) {
 
     // The sole purpose of assignmentTarget here is to know whether this is a
     // "destination" stream (i.e. an unpack operation) or whether it is a source / pack.
@@ -1677,7 +1677,7 @@ Expression& StreamingConcatenationExpression::fromSyntax(
                                  syntax.sourceRange()));
     };
 
-    if (!context.flags.has(BindFlags::StreamingAllowed)) {
+    if (!context.flags.has(ASTFlags::StreamingAllowed)) {
         context.addDiag(diag::BadStreamContext, syntax.operatorToken.location());
         return badResult();
     }
@@ -1685,7 +1685,7 @@ Expression& StreamingConcatenationExpression::fromSyntax(
     if (syntax.sliceSize) {
         // The slice_size determines the size of each block. If specified, it may be a constant
         // integral expression or a simple type.
-        auto& sliceExpr = bind(*syntax.sliceSize, context, BindFlags::AllowDataType);
+        auto& sliceExpr = bind(*syntax.sliceSize, context, ASTFlags::AllowDataType);
         if (sliceExpr.bad())
             return badResult();
 
@@ -1723,12 +1723,12 @@ Expression& StreamingConcatenationExpression::fromSyntax(
         Expression* arg;
         if (assignmentTarget &&
             argSyntax->expression->kind == SyntaxKind::StreamingConcatenationExpression) {
-            arg = &create(comp, *argSyntax->expression, context, BindFlags::StreamingAllowed,
+            arg = &create(comp, *argSyntax->expression, context, ASTFlags::StreamingAllowed,
                           assignmentTarget);
         }
         else {
             arg = &selfDetermined(comp, *argSyntax->expression, context,
-                                  BindFlags::StreamingAllowed);
+                                  ASTFlags::StreamingAllowed);
         }
 
         if (arg->bad())
@@ -1748,7 +1748,7 @@ Expression& StreamingConcatenationExpression::fromSyntax(
             }
 
             withExpr = &bindSelector(comp, *arg, *argSyntax->withRange->range,
-                                     context.resetFlags(BindFlags::StreamingWithRange));
+                                     context.resetFlags(ASTFlags::StreamingWithRange));
             if (withExpr->bad())
                 return badResult();
 
@@ -1874,11 +1874,11 @@ size_t StreamingConcatenationExpression::bitstreamWidth() const {
 
 Expression& OpenRangeExpression::fromSyntax(Compilation& comp,
                                             const OpenRangeExpressionSyntax& syntax,
-                                            const BindContext& context) {
+                                            const ASTContext& context) {
     // If we are allowed unbounded literals here, pass that along to subexpressions.
-    bitmask<BindFlags> flags = BindFlags::None;
-    if (context.flags.has(BindFlags::AllowUnboundedLiteral))
-        flags = BindFlags::AllowUnboundedLiteral;
+    bitmask<ASTFlags> flags = ASTFlags::None;
+    if (context.flags.has(ASTFlags::AllowUnboundedLiteral))
+        flags = ASTFlags::AllowUnboundedLiteral;
 
     Expression& left = create(comp, *syntax.left, context, flags);
     Expression& right = create(comp, *syntax.right, context, flags);
@@ -1914,7 +1914,7 @@ Expression& OpenRangeExpression::fromSyntax(Compilation& comp,
     return *result;
 }
 
-bool OpenRangeExpression::propagateType(const BindContext& context, const Type& newType) {
+bool OpenRangeExpression::propagateType(const ASTContext& context, const Type& newType) {
     contextDetermined(context, left_, newType);
     contextDetermined(context, right_, newType);
     return true;

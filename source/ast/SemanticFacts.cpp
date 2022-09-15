@@ -219,8 +219,7 @@ bool SemanticFacts::isAllowedInModport(SymbolKind kind) {
     }
 }
 
-ClockingSkew ClockingSkew::fromSyntax(const ClockingSkewSyntax& syntax,
-                                      const BindContext& context) {
+ClockingSkew ClockingSkew::fromSyntax(const ClockingSkewSyntax& syntax, const ASTContext& context) {
     ClockingSkew result;
     result.edge = SemanticFacts::getEdgeKind(syntax.edge.kind);
 

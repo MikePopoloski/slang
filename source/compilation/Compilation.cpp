@@ -682,7 +682,7 @@ void Compilation::noteDefaultClocking(const Scope& scope, const Symbol& clocking
     }
 }
 
-void Compilation::noteDefaultClocking(const BindContext& context,
+void Compilation::noteDefaultClocking(const ASTContext& context,
                                       const DefaultClockingReferenceSyntax& syntax) {
     auto name = syntax.name.valueText();
     auto range = syntax.name.range();
@@ -1055,14 +1055,14 @@ const Type& Compilation::getType(SyntaxKind typeKind) const {
     return it == knownTypes.end() ? *errorType : *it->second;
 }
 
-const Type& Compilation::getType(const DataTypeSyntax& node, const BindContext& context,
+const Type& Compilation::getType(const DataTypeSyntax& node, const ASTContext& context,
                                  const Type* typedefTarget) {
     return Type::fromSyntax(*this, node, context, typedefTarget);
 }
 
 const Type& Compilation::getType(const Type& elementType,
                                  const SyntaxList<VariableDimensionSyntax>& dimensions,
-                                 const BindContext& context) {
+                                 const ASTContext& context) {
     return Type::fromSyntax(*this, elementType, dimensions, context);
 }
 

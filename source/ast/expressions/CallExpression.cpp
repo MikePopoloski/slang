@@ -26,13 +26,13 @@ namespace slang {
 Expression& CallExpression::fromSyntax(Compilation& compilation,
                                        const InvocationExpressionSyntax& syntax,
                                        const ArrayOrRandomizeMethodExpressionSyntax* withClause,
-                                       const BindContext& context) {
+                                       const ASTContext& context) {
     return fromSyntaxImpl(compilation, *syntax.left, &syntax, withClause, context);
 }
 
 Expression& CallExpression::fromSyntax(Compilation& compilation,
                                        const ArrayOrRandomizeMethodExpressionSyntax& syntax,
-                                       const BindContext& context) {
+                                       const ASTContext& context) {
     if (syntax.method->kind == SyntaxKind::InvocationExpression) {
         auto& invoc = syntax.method->as<InvocationExpressionSyntax>();
         return fromSyntax(compilation, invoc, &syntax, context);
@@ -44,7 +44,7 @@ Expression& CallExpression::fromSyntax(Compilation& compilation,
 Expression& CallExpression::fromSyntaxImpl(Compilation& compilation, const ExpressionSyntax& left,
                                            const InvocationExpressionSyntax* invocation,
                                            const ArrayOrRandomizeMethodExpressionSyntax* withClause,
-                                           const BindContext& context) {
+                                           const ASTContext& context) {
     if (left.kind == SyntaxKind::MemberAccessExpression) {
         return MemberAccessExpression::fromSyntax(compilation,
                                                   left.as<MemberAccessExpressionSyntax>(),
@@ -67,7 +67,7 @@ Expression& CallExpression::fromLookup(Compilation& compilation, const Subroutin
                                        const Expression* thisClass,
                                        const InvocationExpressionSyntax* syntax,
                                        const ArrayOrRandomizeMethodExpressionSyntax* withClause,
-                                       SourceRange range, const BindContext& context) {
+                                       SourceRange range, const ASTContext& context) {
     if (subroutine.index() == 1) {
         ASSERT(!thisClass);
         const SystemCallInfo& info = std::get<1>(subroutine);
@@ -93,7 +93,7 @@ Expression& CallExpression::fromLookup(Compilation& compilation, const Subroutin
                 diag << parent->name;
                 return badExpr(compilation, nullptr);
             }
-            else if (!parent || inStatic || context.flags.has(BindFlags::StaticInitializer)) {
+            else if (!parent || inStatic || context.flags.has(ASTFlags::StaticInitializer)) {
                 context.addDiag(diag::NonStaticClassMethod, range);
                 return badExpr(compilation, nullptr);
             }
@@ -138,7 +138,7 @@ Expression& CallExpression::fromLookup(Compilation& compilation, const Subroutin
     return result;
 }
 
-bool Expression::collectArgs(const BindContext& context, const ArgumentListSyntax& syntax,
+bool Expression::collectArgs(const ASTContext& context, const ArgumentListSyntax& syntax,
                              SmallVector<const SyntaxNode*>& orderedArgs, NamedArgMap& namedArgs) {
     // Collect all arguments into a list of ordered expressions (which can
     // optionally be nullptr to indicate an empty argument) and a map of
@@ -173,18 +173,18 @@ bool Expression::collectArgs(const BindContext& context, const ArgumentListSynta
     return true;
 }
 
-static bool checkOutputArgs(const BindContext& context, bool hasOutputArgs, SourceRange range) {
-    if (context.flags.has(BindFlags::NonProcedural) && hasOutputArgs) {
+static bool checkOutputArgs(const ASTContext& context, bool hasOutputArgs, SourceRange range) {
+    if (context.flags.has(ASTFlags::NonProcedural) && hasOutputArgs) {
         context.addDiag(diag::NonProceduralFuncArg, range);
         return false;
     }
 
-    if (context.flags.has(BindFlags::EventExpression) && hasOutputArgs) {
+    if (context.flags.has(ASTFlags::EventExpression) && hasOutputArgs) {
         context.addDiag(diag::EventExpressionFuncArg, range);
         return false;
     }
 
-    if (context.flags.has(BindFlags::AssertionExpr) && hasOutputArgs) {
+    if (context.flags.has(ASTFlags::AssertionExpr) && hasOutputArgs) {
         context.addDiag(diag::AssertionFuncArg, range);
         return false;
     }
@@ -194,7 +194,7 @@ static bool checkOutputArgs(const BindContext& context, bool hasOutputArgs, Sour
 
 bool CallExpression::bindArgs(const ArgumentListSyntax* argSyntax,
                               span<const FormalArgumentSymbol* const> formalArgs,
-                              string_view symbolName, SourceRange range, const BindContext& context,
+                              string_view symbolName, SourceRange range, const ASTContext& context,
                               SmallVector<const Expression*>& boundArgs) {
     SmallVectorSized<const SyntaxNode*, 8> orderedArgs;
     NamedArgMap namedArgs;
@@ -303,7 +303,7 @@ static void addSubroutineDrivers(const Symbol& procedure, const SubroutineSymbol
 Expression& CallExpression::fromArgs(Compilation& compilation, const Subroutine& subroutine,
                                      const Expression* thisClass,
                                      const ArgumentListSyntax* argSyntax, SourceRange range,
-                                     const BindContext& context) {
+                                     const ASTContext& context) {
     SmallVectorSized<const Expression*, 8> boundArgs;
     const SubroutineSymbol& symbol = *std::get<0>(subroutine);
     bool bad = !bindArgs(argSyntax, symbol.getArguments(), symbol.name, range, context, boundArgs);
@@ -314,7 +314,7 @@ Expression& CallExpression::fromArgs(Compilation& compilation, const Subroutine&
     if (bad)
         return badExpr(compilation, result);
 
-    if (context.flags.has(BindFlags::Function | BindFlags::Final) &&
+    if (context.flags.has(ASTFlags::Function | ASTFlags::Final) &&
         symbol.subroutineKind == SubroutineKind::Task) {
         const Scope* scope = context.scope;
         while (scope && scope->asSymbol().kind == SymbolKind::StatementBlock)
@@ -344,7 +344,7 @@ Expression& CallExpression::fromArgs(Compilation& compilation, const Subroutine&
 Expression& CallExpression::fromSystemMethod(
     Compilation& compilation, const Expression& expr, const LookupResult::MemberSelector& selector,
     const InvocationExpressionSyntax* syntax,
-    const ArrayOrRandomizeMethodExpressionSyntax* withClause, const BindContext& context) {
+    const ArrayOrRandomizeMethodExpressionSyntax* withClause, const ASTContext& context) {
 
     const Type& type = expr.type->getCanonicalType();
     auto subroutine = compilation.getSystemMethod(type.kind, selector.name);
@@ -369,7 +369,7 @@ Expression& CallExpression::fromSystemMethod(
 Expression* CallExpression::fromBuiltInMethod(
     Compilation& compilation, SymbolKind rootKind, const Expression& expr,
     const LookupResult::MemberSelector& selector, const InvocationExpressionSyntax* syntax,
-    const ArrayOrRandomizeMethodExpressionSyntax* withClause, const BindContext& context) {
+    const ArrayOrRandomizeMethodExpressionSyntax* withClause, const ASTContext& context) {
 
     auto subroutine = compilation.getSystemMethod(rootKind, selector.name);
     if (!subroutine)
@@ -382,7 +382,7 @@ Expression* CallExpression::fromBuiltInMethod(
 static const Expression* bindIteratorExpr(Compilation& compilation,
                                           const InvocationExpressionSyntax* invocation,
                                           const ArrayOrRandomizeMethodExpressionSyntax& withClause,
-                                          const Type& arrayType, const BindContext& context,
+                                          const Type& arrayType, const ASTContext& context,
                                           const ValueSymbol*& iterVar) {
     // Can't be a constraint block here.
     if (withClause.constraints) {
@@ -438,9 +438,9 @@ static const Expression* bindIteratorExpr(Compilation& compilation,
                                                   arrayType);
     iterVar = it;
 
-    BindContext iterCtx = context;
+    ASTContext iterCtx = context;
     it->nextTemp = std::exchange(iterCtx.firstTempVar, it);
-    iterCtx.flags &= ~BindFlags::StaticInitializer;
+    iterCtx.flags &= ~ASTFlags::StaticInitializer;
 
     return &Expression::bind(*withClause.args->expressions[0], iterCtx);
 }
@@ -449,7 +449,7 @@ Expression& CallExpression::createSystemCall(
     Compilation& compilation, const SystemSubroutine& subroutine, const Expression* firstArg,
     const InvocationExpressionSyntax* syntax,
     const ArrayOrRandomizeMethodExpressionSyntax* withClause, SourceRange range,
-    const BindContext& context, const Scope* randomizeScope) {
+    const ASTContext& context, const Scope* randomizeScope) {
 
     SystemCallInfo callInfo{&subroutine, context.scope, {}};
     SmallVectorSized<const Expression*, 8> buffer;
@@ -480,8 +480,8 @@ Expression& CallExpression::createSystemCall(
         }
     }
     else {
-        BindContext::RandomizeDetails randomizeDetails;
-        BindContext argContext = context;
+        ASTContext::RandomizeDetails randomizeDetails;
+        ASTContext argContext = context;
 
         if (subroutine.withClauseMode == WithClauseMode::Randomize) {
             // If this is a class-scoped randomize call, setup the scope properly

@@ -48,7 +48,7 @@ std::pair<string_view, SourceLocation> getNameLoc(const HierarchicalInstanceSynt
 
 class InstanceBuilder {
 public:
-    InstanceBuilder(const BindContext& context, const Definition& definition,
+    InstanceBuilder(const ASTContext& context, const Definition& definition,
                     ParameterBuilder& paramBuilder,
                     span<const AttributeInstanceSyntax* const> attributes, bool isUninstantiated) :
         compilation(context.getCompilation()),
@@ -71,7 +71,7 @@ private:
     using DimIterator = span<VariableDimensionSyntax*>::iterator;
 
     Compilation& compilation;
-    const BindContext& context;
+    const ASTContext& context;
     const Definition& definition;
     SmallVectorSized<int32_t, 4> path;
     ParameterBuilder& paramBuilder;
@@ -139,7 +139,7 @@ private:
     }
 };
 
-void createImplicitNets(const HierarchicalInstanceSyntax& instance, const BindContext& context,
+void createImplicitNets(const HierarchicalInstanceSyntax& instance, const ASTContext& context,
                         const NetType& netType, SmallSet<string_view, 8>& implicitNetNames,
                         SmallVector<const Symbol*>& results) {
     // If no default nettype is set, we don't create implicit nets.
@@ -226,7 +226,7 @@ InstanceSymbol& InstanceSymbol::createDefault(Compilation& compilation,
 }
 
 InstanceSymbol& InstanceSymbol::createVirtual(
-    const BindContext& context, SourceLocation loc, const Definition& definition,
+    const ASTContext& context, SourceLocation loc, const Definition& definition,
     const ParameterValueAssignmentSyntax* paramAssignments) {
 
     ParameterBuilder paramBuilder(*context.scope, definition.name, definition.parameters);
@@ -274,7 +274,7 @@ static const ParamOverrideNode* findParentOverrideNode(const Scope& scope) {
 
 void InstanceSymbol::fromSyntax(Compilation& compilation,
                                 const HierarchyInstantiationSyntax& syntax,
-                                const BindContext& context, SmallVector<const Symbol*>& results,
+                                const ASTContext& context, SmallVector<const Symbol*>& results,
                                 SmallVector<const Symbol*>& implicitNets) {
     // Find our parent instance.
     const Scope* currScope = context.scope;
@@ -373,8 +373,7 @@ void InstanceSymbol::fromSyntax(Compilation& compilation,
 }
 
 void InstanceSymbol::fromFixupSyntax(Compilation& comp, const Definition& definition,
-                                     const DataDeclarationSyntax& syntax,
-                                     const BindContext& context,
+                                     const DataDeclarationSyntax& syntax, const ASTContext& context,
                                      SmallVector<const Symbol*>& results) {
     auto missing = [&](TokenKind tk, SourceLocation loc) {
         return Token::createMissing(comp, tk, loc);
@@ -417,7 +416,7 @@ void InstanceSymbol::fromBindDirective(const Scope& scope, const BindDirectiveSy
     auto createInstances = [&](const Scope& targetScope) {
         SmallVectorSized<const Symbol*, 4> instances;
         SmallVectorSized<const Symbol*, 4> implicitNets;
-        BindContext ctx(targetScope, LookupLocation::max);
+        ASTContext ctx(targetScope, LookupLocation::max);
         fromSyntax(comp, *syntax.instantiation, ctx, instances, implicitNets);
 
         // If instances is an empty array, an error must have occurred and we should
@@ -441,7 +440,7 @@ void InstanceSymbol::fromBindDirective(const Scope& scope, const BindDirectiveSy
     // If an instance list is given, then the target name must be a definition name.
     // Otherwise, the target name can be either an instance name or a definition name,
     // preferencing the instance if found.
-    BindContext context(scope, LookupLocation::max);
+    ASTContext context(scope, LookupLocation::max);
     if (syntax.targetInstances) {
         comp.noteBindDirective(syntax, nullptr);
 
@@ -746,7 +745,7 @@ void InstanceArraySymbol::serializeTo(ASTSerializer& serializer) const {
 
 template<typename TSyntax>
 static void createUnknownModules(Compilation& compilation, const TSyntax& syntax,
-                                 string_view moduleName, const BindContext& context,
+                                 string_view moduleName, const ASTContext& context,
                                  span<const Expression* const> params,
                                  SmallVector<const Symbol*>& results,
                                  SmallVector<const Symbol*>& implicitNets) {
@@ -765,11 +764,11 @@ static void createUnknownModules(Compilation& compilation, const TSyntax& syntax
 
 void UnknownModuleSymbol::fromSyntax(Compilation& compilation,
                                      const HierarchyInstantiationSyntax& syntax,
-                                     const BindContext& parentContext,
+                                     const ASTContext& parentContext,
                                      SmallVector<const Symbol*>& results,
                                      SmallVector<const Symbol*>& implicitNets) {
     SmallVectorSized<const Expression*, 8> params;
-    BindContext context = parentContext.resetFlags(BindFlags::NonProcedural);
+    ASTContext context = parentContext.resetFlags(ASTFlags::NonProcedural);
 
     if (syntax.parameters) {
         for (auto expr : syntax.parameters->parameters) {
@@ -779,7 +778,7 @@ void UnknownModuleSymbol::fromSyntax(Compilation& compilation,
                     &Expression::bind(*expr->as<OrderedParamAssignmentSyntax>().expr, context));
             else if (expr->kind == SyntaxKind::NamedParamAssignment) {
                 if (auto ex = expr->as<NamedParamAssignmentSyntax>().expr)
-                    params.append(&Expression::bind(*ex, context, BindFlags::AllowDataType));
+                    params.append(&Expression::bind(*ex, context, ASTFlags::AllowDataType));
             }
         }
     }
@@ -791,15 +790,15 @@ void UnknownModuleSymbol::fromSyntax(Compilation& compilation,
 
 void UnknownModuleSymbol::fromSyntax(Compilation& compilation,
                                      const PrimitiveInstantiationSyntax& syntax,
-                                     const BindContext& parentContext,
+                                     const ASTContext& parentContext,
                                      SmallVector<const Symbol*>& results,
                                      SmallVector<const Symbol*>& implicitNets) {
-    BindContext context = parentContext.resetFlags(BindFlags::NonProcedural);
+    ASTContext context = parentContext.resetFlags(ASTFlags::NonProcedural);
     createUnknownModules(compilation, syntax, syntax.type.valueText(), context, {}, results,
                          implicitNets);
 }
 
-static const AssertionExpr* bindUnknownPortConn(const BindContext& context,
+static const AssertionExpr* bindUnknownPortConn(const ASTContext& context,
                                                 const PropertyExprSyntax& syntax) {
     // We have to check for a simple reference to an interface instance or port here,
     // since we don't know whether this is an interface port connection or even
@@ -844,7 +843,7 @@ span<const AssertionExpr* const> UnknownModuleSymbol::getPortConnections() const
         ASSERT(syntax && scope);
 
         auto& comp = scope->getCompilation();
-        BindContext context(*scope, LookupLocation::after(*this));
+        ASTContext context(*scope, LookupLocation::after(*this));
 
         SmallVectorSized<const AssertionExpr*, 8> results;
         SmallVectorSized<string_view, 8> names;
@@ -937,7 +936,7 @@ PrimitiveInstanceSymbol* createPrimInst(Compilation& compilation, const Scope& s
 using DimIterator = span<VariableDimensionSyntax*>::iterator;
 
 Symbol* recursePrimArray(Compilation& compilation, const PrimitiveSymbol& primitive,
-                         const HierarchicalInstanceSyntax& instance, const BindContext& context,
+                         const HierarchicalInstanceSyntax& instance, const ASTContext& context,
                          DimIterator it, DimIterator end,
                          span<const AttributeInstanceSyntax* const> attributes,
                          SmallVector<int32_t>& path) {
@@ -992,7 +991,7 @@ Symbol* recursePrimArray(Compilation& compilation, const PrimitiveSymbol& primit
 
 template<typename TSyntax>
 void createPrimitives(const PrimitiveSymbol& primitive, const TSyntax& syntax,
-                      const BindContext& context, SmallVector<const Symbol*>& results,
+                      const ASTContext& context, SmallVector<const Symbol*>& results,
                       SmallVector<const Symbol*>& implicitNets) {
     SmallSet<string_view, 8> implicitNetNames;
     SmallVectorSized<int32_t, 4> path;
@@ -1021,14 +1020,14 @@ void createPrimitives(const PrimitiveSymbol& primitive, const TSyntax& syntax,
 
 void PrimitiveInstanceSymbol::fromSyntax(const PrimitiveSymbol& primitive,
                                          const HierarchyInstantiationSyntax& syntax,
-                                         const BindContext& context,
+                                         const ASTContext& context,
                                          SmallVector<const Symbol*>& results,
                                          SmallVector<const Symbol*>& implicitNets) {
     createPrimitives(primitive, syntax, context, results, implicitNets);
 }
 
 void PrimitiveInstanceSymbol::fromSyntax(const PrimitiveInstantiationSyntax& syntax,
-                                         const BindContext& context,
+                                         const ASTContext& context,
                                          SmallVector<const Symbol*>& results,
                                          SmallVector<const Symbol*>& implicitNets) {
     auto& comp = context.getCompilation();
@@ -1076,7 +1075,7 @@ span<const Expression* const> PrimitiveInstanceSymbol::getPortConnections() cons
         ASSERT(syntax && scope);
 
         auto& comp = scope->getCompilation();
-        BindContext context(*scope, LookupLocation::after(*this), BindFlags::NonProcedural);
+        ASTContext context(*scope, LookupLocation::after(*this), ASTFlags::NonProcedural);
         context.setInstance(*this);
 
         SmallVectorSized<const ExpressionSyntax*, 8> conns;
@@ -1175,7 +1174,7 @@ const TimingControl* PrimitiveInstanceSymbol::getDelay() const {
         return nullptr;
     }
 
-    BindContext context(*scope, LookupLocation::before(*this), BindFlags::NonProcedural);
+    ASTContext context(*scope, LookupLocation::before(*this), ASTFlags::NonProcedural);
 
     auto& parent = *syntax->parent;
     if (parent.kind == SyntaxKind::HierarchyInstantiation) {

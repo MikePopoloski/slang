@@ -15,7 +15,7 @@
 
 namespace slang {
 
-class BindContext;
+class ASTContext;
 class LValue;
 class SubroutineSymbol;
 class ValueSymbol;
@@ -181,8 +181,8 @@ public:
     Diagnostic& addDiag(DiagCode code, SourceRange range);
     void addDiags(const Diagnostics& diags);
 
-    /// Issues all recorded diagnostics to the given binding context.
-    void reportDiags(const BindContext& context);
+    /// Issues all recorded diagnostics to the given AST context.
+    void reportDiags(const ASTContext& context);
 
     /// Reports the current function call stack as notes to the given diagnostic.
     void reportStack(Diagnostic& diag) const;

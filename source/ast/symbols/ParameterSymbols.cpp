@@ -85,7 +85,7 @@ const ConstantValue& ParameterSymbol::getValue(SourceRange referencingRange) con
             auto scope = getParentScope();
             ASSERT(scope);
 
-            BindContext ctx(*scope, LookupLocation::max);
+            ASTContext ctx(*scope, LookupLocation::max);
 
             if (evaluating) {
                 ASSERT(referencingRange.start());
@@ -239,7 +239,7 @@ void DefParamSymbol::resolve() const {
     auto& comp = scope->getCompilation();
     auto& assignment = syntax->as<DefParamAssignmentSyntax>();
 
-    BindContext context(*scope, LookupLocation::before(*this));
+    ASTContext context(*scope, LookupLocation::before(*this));
     LookupResult result;
     Lookup::name(*assignment.name, context, LookupFlags::NoSelectors, result);
     result.reportDiags(context);
@@ -276,7 +276,7 @@ void DefParamSymbol::resolve() const {
     auto typeSyntax = declType->getTypeSyntax();
 
     if (typeSyntax && typeSyntax->kind == SyntaxKind::ImplicitType) {
-        BindContext typeContext(*param.getParentScope(), LookupLocation::before(param));
+        ASTContext typeContext(*param.getParentScope(), LookupLocation::before(param));
         initializer = &Expression::bindImplicitParam(*typeSyntax, expr, equalsLoc, context,
                                                      typeContext);
     }
@@ -309,7 +309,7 @@ const ConstantValue& SpecparamSymbol::getValue(SourceRange referencingRange) con
             auto scope = getParentScope();
             ASSERT(scope);
 
-            BindContext ctx(*scope, LookupLocation::before(*this));
+            ASTContext ctx(*scope, LookupLocation::before(*this));
 
             if (evaluating) {
                 ASSERT(referencingRange.start());

@@ -38,7 +38,7 @@ public:
     void setOverrides(const ParamOverrideNode* newVal) { overrideNode = newVal; }
     void setForceInvalidValues(bool set) { forceInvalidValues = set; }
     void setSuppressErrors(bool set) { suppressErrors = set; }
-    void setInstanceContext(const BindContext& context) { instanceContext = &context; }
+    void setInstanceContext(const ASTContext& context) { instanceContext = &context; }
 
     const ParamOverrideNode* getOverrides() const { return overrideNode; }
 
@@ -55,7 +55,7 @@ private:
     string_view definitionName;
     span<const Decl> parameterDecls;
     SmallMap<string_view, const ExpressionSyntax*, 8> assignments;
-    const BindContext* instanceContext = nullptr;
+    const ASTContext* instanceContext = nullptr;
     const ParamOverrideNode* overrideNode = nullptr;
     bool forceInvalidValues = false;
     bool suppressErrors = false;

@@ -74,8 +74,7 @@ public:
 
     void serializeTo(ASTSerializer&) const;
 
-    static Expression& fromSyntax(const BindContext& context,
-                                  const LiteralExpressionSyntax& syntax);
+    static Expression& fromSyntax(const ASTContext& context, const LiteralExpressionSyntax& syntax);
 
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::TimeLiteral; }
 
@@ -93,7 +92,7 @@ public:
     SVInt getValue() const;
 
     ConstantValue evalImpl(EvalContext& context) const;
-    bool propagateType(const BindContext& context, const Type& newType);
+    bool propagateType(const ASTContext& context, const Type& newType);
 
     void serializeTo(ASTSerializer&) const;
 
@@ -132,8 +131,7 @@ public:
 
     void serializeTo(ASTSerializer&) const {}
 
-    static Expression& fromSyntax(const BindContext& context,
-                                  const LiteralExpressionSyntax& syntax);
+    static Expression& fromSyntax(const ASTContext& context, const LiteralExpressionSyntax& syntax);
 
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::UnboundedLiteral; }
 };

@@ -621,7 +621,7 @@ TEST_CASE("Type matching") {
 
     auto typeof = [&](const std::string& source) {
         auto tree = SyntaxTree::fromText(string_view(source));
-        BindContext context(scope, LookupLocation::max);
+        ASTContext context(scope, LookupLocation::max);
         return Expression::bind(tree->root().as<ExpressionSyntax>(), context).type;
     };
 
@@ -748,7 +748,7 @@ TEST_CASE("Type equivalence") {
 
     auto typeof = [&](const std::string& source) {
         auto tree = SyntaxTree::fromText(string_view(source));
-        BindContext context(scope, LookupLocation::max);
+        ASTContext context(scope, LookupLocation::max);
         return Expression::bind(tree->root().as<ExpressionSyntax>(), context).type;
     };
 
@@ -817,7 +817,7 @@ TEST_CASE("Assignment compatibility") {
 
     auto typeof = [&](const std::string& source) {
         auto tree = SyntaxTree::fromText(string_view(source));
-        BindContext context(scope, LookupLocation::max);
+        ASTContext context(scope, LookupLocation::max);
         return Expression::bind(tree->root().as<ExpressionSyntax>(), context).type;
     };
 

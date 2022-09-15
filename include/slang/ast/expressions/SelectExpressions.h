@@ -28,7 +28,7 @@ public:
 
     ConstantValue evalImpl(EvalContext& context) const;
     LValue evalLValueImpl(EvalContext& context) const;
-    bool requireLValueImpl(const BindContext& context, SourceLocation location,
+    bool requireLValueImpl(const ASTContext& context, SourceLocation location,
                            bitmask<AssignFlags> flags, const Expression* longestStaticPrefix,
                            EvalContext* customEvalContext) const;
 
@@ -39,10 +39,10 @@ public:
 
     static Expression& fromSyntax(Compilation& compilation, Expression& value,
                                   const ExpressionSyntax& syntax, SourceRange fullRange,
-                                  const BindContext& context);
+                                  const ASTContext& context);
 
     static Expression& fromConstant(Compilation& compilation, Expression& value, int32_t index,
-                                    const BindContext& context);
+                                    const ASTContext& context);
 
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::ElementSelect; }
 
@@ -81,7 +81,7 @@ public:
 
     ConstantValue evalImpl(EvalContext& context) const;
     LValue evalLValueImpl(EvalContext& context) const;
-    bool requireLValueImpl(const BindContext& context, SourceLocation location,
+    bool requireLValueImpl(const ASTContext& context, SourceLocation location,
                            bitmask<AssignFlags> flags, const Expression* longestStaticPrefix,
                            EvalContext* customEvalContext) const;
 
@@ -91,10 +91,10 @@ public:
 
     static Expression& fromSyntax(Compilation& compilation, Expression& value,
                                   const RangeSelectSyntax& syntax, SourceRange fullRange,
-                                  const BindContext& context);
+                                  const ASTContext& context);
 
     static Expression& fromConstant(Compilation& compilation, Expression& value,
-                                    ConstantRange range, const BindContext& context);
+                                    ConstantRange range, const ASTContext& context);
 
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::RangeSelect; }
 
@@ -132,7 +132,7 @@ public:
 
     ConstantValue evalImpl(EvalContext& context) const;
     LValue evalLValueImpl(EvalContext& context) const;
-    bool requireLValueImpl(const BindContext& context, SourceLocation location,
+    bool requireLValueImpl(const ASTContext& context, SourceLocation location,
                            bitmask<AssignFlags> flags, const Expression* longestStaticPrefix,
                            EvalContext* customEvalContext) const;
 
@@ -144,13 +144,13 @@ public:
                                     const LookupResult::MemberSelector& selector,
                                     const InvocationExpressionSyntax* invocation,
                                     const ArrayOrRandomizeMethodExpressionSyntax* withClause,
-                                    const BindContext& context);
+                                    const ASTContext& context);
 
     static Expression& fromSyntax(Compilation& compilation,
                                   const MemberAccessExpressionSyntax& syntax,
                                   const InvocationExpressionSyntax* invocation,
                                   const ArrayOrRandomizeMethodExpressionSyntax* withClause,
-                                  const BindContext& context);
+                                  const ASTContext& context);
 
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::MemberAccess; }
 

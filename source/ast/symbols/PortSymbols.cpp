@@ -74,7 +74,7 @@ std::tuple<const Definition*, string_view> getInterfacePortInfo(
 // This checks factors other than types when making a port connection
 // to a specific symbol.
 void checkSymbolConnection(const Expression& expr, ArgumentDirection direction,
-                           const BindContext& context, SourceLocation loc,
+                           const ASTContext& context, SourceLocation loc,
                            bitmask<AssignFlags> flags) {
     switch (direction) {
         case ArgumentDirection::In:
@@ -1023,7 +1023,7 @@ private:
             return emptyConnection(port);
         }
 
-        BindContext context(scope, lookupLocation, BindFlags::NonProcedural);
+        ASTContext context(scope, lookupLocation, ASTFlags::NonProcedural);
         auto exprSyntax = context.requireSimpleExpr(syntax);
         if (!exprSyntax)
             return emptyConnection(port);
@@ -1082,7 +1082,7 @@ private:
     PortConnection* getInterfaceExpr(const InterfacePortSymbol& port,
                                      const PropertyExprSyntax& syntax,
                                      span<const AttributeSymbol* const> attributes) {
-        BindContext context(scope, lookupLocation, BindFlags::NonProcedural);
+        ASTContext context(scope, lookupLocation, ASTFlags::NonProcedural);
         auto expr = context.requireSimpleExpr(syntax);
         if (!expr)
             return emptyConnection(port);
@@ -1330,11 +1330,11 @@ const Type& PortSymbol::getType() const {
         ASSERT(dt);
         type = &dt->getType();
 
-        bitmask<BindFlags> bindFlags = BindFlags::NonProcedural | BindFlags::AllowInterconnect;
+        bitmask<ASTFlags> astFlags = ASTFlags::NonProcedural | ASTFlags::AllowInterconnect;
         if (direction == ArgumentDirection::In || direction == ArgumentDirection::InOut)
-            bindFlags |= BindFlags::LValue;
+            astFlags |= ASTFlags::LValue;
 
-        BindContext context(*scope, LookupLocation::before(*this), bindFlags);
+        ASTContext context(*scope, LookupLocation::before(*this), astFlags);
 
         auto& valExpr = ValueExpressionBase::fromSymbol(context, *internalSymbol, false,
                                                         {location, location + name.length()});
@@ -1371,24 +1371,24 @@ const Type& PortSymbol::getType() const {
         // The direction of binding is reversed, as data coming in to an input
         // port flows out to the internal symbol, and vice versa. Inout and ref
         // ports don't change.
-        bitmask<BindFlags> bindFlags = BindFlags::NonProcedural;
+        bitmask<ASTFlags> astFlags = ASTFlags::NonProcedural;
         ArgumentDirection checkDir = direction;
         switch (direction) {
             case ArgumentDirection::In:
                 checkDir = ArgumentDirection::Out;
-                bindFlags |= BindFlags::LValue;
+                astFlags |= ASTFlags::LValue;
                 break;
             case ArgumentDirection::Out:
                 checkDir = ArgumentDirection::In;
                 break;
             case ArgumentDirection::InOut:
-                bindFlags |= BindFlags::LValue;
+                astFlags |= ASTFlags::LValue;
                 break;
             case ArgumentDirection::Ref:
                 break;
         }
 
-        BindContext context(*scope, LookupLocation::max, bindFlags);
+        ASTContext context(*scope, LookupLocation::max, astFlags);
         internalExpr = &Expression::bind(*eaps.expr, context);
         type = internalExpr->type;
 
@@ -1420,7 +1420,7 @@ const Expression* PortSymbol::getInitializer() const {
         else
             ll = LookupLocation::after(*internalSymbol);
 
-        BindContext context(*scope, ll, BindFlags::NonProcedural | BindFlags::StaticInitializer);
+        ASTContext context(*scope, ll, ASTFlags::NonProcedural | ASTFlags::StaticInitializer);
         initializer = &Expression::bindRValue(getType(), *initializerSyntax, initializerLoc,
                                               context);
         context.eval(*initializer);
@@ -1586,7 +1586,7 @@ const Type& MultiPortSymbol::getType() const {
 
     auto& comp = scope->getCompilation();
 
-    BindContext context(*scope, LookupLocation::before(*this), BindFlags::NonProcedural);
+    ASTContext context(*scope, LookupLocation::before(*this), ASTFlags::NonProcedural);
     bitwidth_t totalWidth = 0;
     bitmask<IntegralFlags> flags;
 
@@ -1651,7 +1651,7 @@ optional<span<const ConstantRange>> InterfacePortSymbol::getDeclaredRange() cons
     auto scope = getParentScope();
     ASSERT(scope);
 
-    BindContext context(*scope, LookupLocation::before(*this), BindFlags::NonProcedural);
+    ASTContext context(*scope, LookupLocation::before(*this), ASTFlags::NonProcedural);
 
     SmallVectorSized<ConstantRange, 4> buffer;
     for (auto dimSyntax : syntax->as<DeclaratorSyntax>().dimensions) {
@@ -1747,13 +1747,13 @@ const Expression* PortConnection::getExpression() const {
         const bool isNetPort = port.kind == SymbolKind::Port && port.as<PortSymbol>().isNetPort();
         auto [direction, type] = getDirAndType(port);
 
-        bitmask<BindFlags> flags = BindFlags::NonProcedural;
+        bitmask<ASTFlags> flags = ASTFlags::NonProcedural;
         if (isNetPort)
-            flags |= BindFlags::AllowInterconnect;
+            flags |= ASTFlags::AllowInterconnect;
         if (direction == ArgumentDirection::Out || direction == ArgumentDirection::InOut)
-            flags |= BindFlags::LValue;
+            flags |= ASTFlags::LValue;
 
-        BindContext context(*scope, ll, flags);
+        ASTContext context(*scope, ll, flags);
         context.setInstance(parentInstance);
 
         if (connectedSymbol) {

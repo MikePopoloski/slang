@@ -9,7 +9,7 @@
 
 #include "../text/FormatBuffer.h"
 
-#include "slang/ast/BindContext.h"
+#include "slang/ast/ASTContext.h"
 #include "slang/ast/symbols/SubroutineSymbols.h"
 #include "slang/ast/symbols/VariableSymbols.h"
 #include "slang/ast/types/Type.h"
@@ -137,7 +137,7 @@ void EvalContext::addDiags(const Diagnostics& additional) {
     }
 }
 
-void EvalContext::reportDiags(const BindContext& context) {
+void EvalContext::reportDiags(const ASTContext& context) {
     if (diags.empty())
         return;
 

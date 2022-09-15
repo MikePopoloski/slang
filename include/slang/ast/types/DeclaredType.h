@@ -11,7 +11,7 @@
 
 namespace slang {
 
-class BindContext;
+class ASTContext;
 class ConstantValue;
 class Expression;
 class Scope;
@@ -37,7 +37,7 @@ enum class DeclaredTypeFlags {
     /// will be resolved as 'logic' if implicit syntax is provided.
     InferImplicit = 1 << 0,
 
-    /// The bound initializer cannot refer to the parent symbol in its expression.
+    /// The initializer expression cannot refer to the parent symbol.
     /// This is used for parameters which would otherwise be infinitely
     /// recursive if they referenced themselves.
     InitializerCantSeeParent = 1 << 1,
@@ -53,27 +53,27 @@ enum class DeclaredTypeFlags {
     /// The initializer is for an automatic variable.
     AutomaticInitializer = 1 << 4,
 
-    /// The type being bound is the target of a typedef.
+    /// The declared type is the target of a typedef.
     TypedefTarget = 1 << 5,
 
-    /// The type being bound is a net type.
+    /// The declared type is a net type.
     NetType = 1 << 6,
 
-    /// The type being bound is a user-defined net type.
+    /// The declared type is a user-defined net type.
     UserDefinedNetType = 1 << 7,
 
-    /// The type being bound is part of a port I/O declaration
+    /// The declared type is part of a port I/O declaration
     /// and should be merged with the formal argument declared
     /// elsewhere in the scope.
     FormalArgMergeVar = 1 << 8,
 
-    /// The type being bound is for a random variable
+    /// The declared type is for a random variable
     Rand = 1 << 9,
 
-    /// The type being bound is a DPI return type.
+    /// The declared type is a DPI return type.
     DPIReturnType = 1 << 10,
 
-    /// The type being bound is for a DPI argument.
+    /// The declared type is for a DPI argument.
     DPIArg = 1 << 11,
 
     /// Allow use of the unbounded literal '$' in the initializer expression.
@@ -172,7 +172,7 @@ public:
     /// This is used to detect cycles in the the type resolution process.
     bool isEvaluating() const { return evaluating; }
 
-    /// Sets a separate, later position in the parent scope for binding the
+    /// Sets a separate, later position in the parent scope for creating the
     /// declared type and initializer. This is used for merged port symbols
     /// because their declared I/O location and symbol location may differ.
     void setOverrideIndex(SymbolIndex index) { overrideIndex = uint32_t(index); }
@@ -192,23 +192,23 @@ public:
                            span<const VariableDimensionSyntax* const> unpackedDimensions);
 
     /// Resolves the initializer using the given bind context, which could
-    /// differ from the binding context that is used for type resolution.
-    void resolveAt(const BindContext& context) const;
+    /// differ from the AST context that is used for type resolution.
+    void resolveAt(const ASTContext& context) const;
 
     /// Forces resolution of both the type and the initializer using the given bind context
     /// instead of using the normal logic built into DeclaredType to determine the context.
-    void forceResolveAt(const BindContext& context) const;
+    void forceResolveAt(const ASTContext& context) const;
 
 private:
-    void resolveType(const BindContext& typeContext, const BindContext& initializerContext) const;
-    void checkType(const BindContext& context) const;
-    void mergePortTypes(const BindContext& context, const ValueSymbol& sourceSymbol,
+    void resolveType(const ASTContext& typeContext, const ASTContext& initializerContext) const;
+    void checkType(const ASTContext& context) const;
+    void mergePortTypes(const ASTContext& context, const ValueSymbol& sourceSymbol,
                         const ImplicitTypeSyntax& implicit, SourceLocation location,
                         span<const VariableDimensionSyntax* const> unpackedDimensions) const;
 
     template<bool IsInitializer,
-             typename T = BindContext> // templated to avoid having to include BindContext.h
-    T getBindContext() const;
+             typename T = ASTContext> // templated to avoid having to include ASTContext.h
+    T getASTContext() const;
 
     const Symbol& parent;
 

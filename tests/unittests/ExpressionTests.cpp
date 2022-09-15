@@ -53,8 +53,8 @@ TEST_CASE("Evaluate assignment expression") {
     // Bind the expression tree to the symbol
     scope.addMember(local);
     auto& bound = Expression::bind(syntax->root().as<ExpressionSyntax>(),
-                                   BindContext(scope, LookupLocation::max),
-                                   BindFlags::AssignmentAllowed);
+                                   ASTContext(scope, LookupLocation::max),
+                                   ASTFlags::AssignmentAllowed);
     REQUIRE(syntax->diagnostics().empty());
 
     // Initialize `i` to 1.
@@ -88,8 +88,8 @@ TEST_CASE("Check type propagation") {
     // Bind the expression tree to the symbol
     scope.addMember(local);
     auto& bound = Expression::bind(syntax->root().as<ExpressionSyntax>(),
-                                   BindContext(scope, LookupLocation::max),
-                                   BindFlags::AssignmentAllowed);
+                                   ASTContext(scope, LookupLocation::max),
+                                   ASTFlags::AssignmentAllowed);
 
     REQUIRE(syntax->diagnostics().empty());
 
@@ -117,8 +117,8 @@ TEST_CASE("Check type propagation 2") {
     // Bind the expression tree to the symbol
     scope.addMember(local);
     auto& bound = Expression::bind(syntax->root().as<ExpressionSyntax>(),
-                                   BindContext(scope, LookupLocation::max),
-                                   BindFlags::AssignmentAllowed);
+                                   ASTContext(scope, LookupLocation::max),
+                                   ASTFlags::AssignmentAllowed);
     REQUIRE(syntax->diagnostics().empty());
 
     CHECK(bound.type->getBitWidth() == 20);
@@ -152,8 +152,8 @@ TEST_CASE("Check type propagation real") {
     // Bind the expression tree to the symbol
     scope.addMember(local);
     auto& bound = Expression::bind(syntax->root().as<ExpressionSyntax>(),
-                                   BindContext(scope, LookupLocation::max),
-                                   BindFlags::AssignmentAllowed);
+                                   ASTContext(scope, LookupLocation::max),
+                                   ASTFlags::AssignmentAllowed);
     REQUIRE(syntax->diagnostics().empty());
     CHECK(bound.type->getBitWidth() == 20);
 
@@ -200,7 +200,7 @@ TEST_CASE("Expression types") {
 
     auto typeof = [&](const std::string& source) {
         auto tree = SyntaxTree::fromText(string_view(source));
-        BindContext context(scope, LookupLocation::max);
+        ASTContext context(scope, LookupLocation::max);
         return Expression::bind(tree->root().as<ExpressionSyntax>(), context).type->toString();
     };
 

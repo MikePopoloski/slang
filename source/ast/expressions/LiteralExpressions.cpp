@@ -101,7 +101,7 @@ void RealLiteral::serializeTo(ASTSerializer& serializer) const {
     serializer.write("value", getValue());
 }
 
-Expression& TimeLiteral::fromSyntax(const BindContext& context,
+Expression& TimeLiteral::fromSyntax(const ASTContext& context,
                                     const LiteralExpressionSyntax& syntax) {
     ASSERT(syntax.kind == SyntaxKind::TimeLiteralExpression);
 
@@ -138,7 +138,7 @@ Expression& UnbasedUnsizedIntegerLiteral::fromSyntax(Compilation& compilation,
         val, syntax.sourceRange());
 }
 
-bool UnbasedUnsizedIntegerLiteral::propagateType(const BindContext&, const Type& newType) {
+bool UnbasedUnsizedIntegerLiteral::propagateType(const ASTContext&, const Type& newType) {
     bitwidth_t newWidth = newType.getBitWidth();
     ASSERT(newType.isIntegral());
     ASSERT(newWidth);
@@ -186,12 +186,12 @@ ConstantValue NullLiteral::evalImpl(EvalContext&) const {
     return ConstantValue::NullPlaceholder{};
 }
 
-Expression& UnboundedLiteral::fromSyntax(const BindContext& context,
+Expression& UnboundedLiteral::fromSyntax(const ASTContext& context,
                                          const LiteralExpressionSyntax& syntax) {
     ASSERT(syntax.kind == SyntaxKind::WildcardLiteralExpression);
 
     auto& comp = context.getCompilation();
-    if (!context.flags.has(BindFlags::AllowUnboundedLiteral)) {
+    if (!context.flags.has(ASTFlags::AllowUnboundedLiteral)) {
         context.addDiag(diag::UnboundedNotAllowed, syntax.sourceRange());
         return badExpr(comp, nullptr);
     }

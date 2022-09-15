@@ -13,17 +13,17 @@
 
 namespace slang {
 
-class BindContext;
+class ASTContext;
 class Expression;
 class EvalContext;
 class Scope;
 
 class FmtHelpers {
 public:
-    static bool checkDisplayArgs(const BindContext& context,
+    static bool checkDisplayArgs(const ASTContext& context,
                                  const span<const Expression* const>& args);
 
-    static bool checkSFormatArgs(const BindContext& context,
+    static bool checkSFormatArgs(const ASTContext& context,
                                  const span<const Expression* const>& args);
 
     static optional<std::string> formatArgs(string_view formatString, SourceLocation loc,
@@ -34,7 +34,7 @@ public:
     static optional<std::string> formatDisplay(const Scope& scope, EvalContext& context,
                                                const span<const Expression* const>& args);
 
-    static bool checkFinishNum(const BindContext& context, const Expression& arg);
+    static bool checkFinishNum(const ASTContext& context, const Expression& arg);
 
 private:
     FmtHelpers() = default;

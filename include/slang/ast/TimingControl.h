@@ -30,7 +30,7 @@ ENUM(TimingControlKind, CONTROL)
 #undef CONTROL
 // clang-format on
 
-class BindContext;
+class ASTContext;
 class Compilation;
 struct PropertyExprSyntax;
 struct SequenceExprSyntax;
@@ -46,9 +46,9 @@ public:
 
     bool bad() const { return kind == TimingControlKind::Invalid; }
 
-    static TimingControl& bind(const TimingControlSyntax& syntax, const BindContext& context);
-    static TimingControl& bind(const PropertyExprSyntax& syntax, const BindContext& context);
-    static TimingControl& bind(const SequenceExprSyntax& syntax, const BindContext& context);
+    static TimingControl& bind(const TimingControlSyntax& syntax, const ASTContext& context);
+    static TimingControl& bind(const PropertyExprSyntax& syntax, const ASTContext& context);
+    static TimingControl& bind(const SequenceExprSyntax& syntax, const ASTContext& context);
 
     template<typename T>
     T& as() {
@@ -95,11 +95,11 @@ public:
         TimingControl(TimingControlKind::Delay, sourceRange), expr(expr) {}
 
     static TimingControl& fromSyntax(Compilation& compilation, const DelaySyntax& syntax,
-                                     const BindContext& context);
+                                     const ASTContext& context);
 
     static TimingControl& fromParams(Compilation& compilation,
                                      const ParameterValueAssignmentSyntax& exprs,
-                                     const BindContext& context);
+                                     const ASTContext& context);
 
     static bool isKind(TimingControlKind kind) { return kind == TimingControlKind::Delay; }
 
@@ -125,11 +125,11 @@ public:
         expr1(expr1), expr2(expr2), expr3(expr3) {}
 
     static TimingControl& fromSyntax(Compilation& compilation, const Delay3Syntax& syntax,
-                                     const BindContext& context);
+                                     const ASTContext& context);
 
     static TimingControl& fromParams(Compilation& compilation,
                                      const ParameterValueAssignmentSyntax& exprs,
-                                     const BindContext& context);
+                                     const ASTContext& context);
 
     static bool isKind(TimingControlKind kind) { return kind == TimingControlKind::Delay3; }
 
@@ -163,18 +163,18 @@ public:
 
     static TimingControl& fromSyntax(Compilation& compilation,
                                      const SignalEventExpressionSyntax& syntax,
-                                     const BindContext& context);
+                                     const ASTContext& context);
 
     static TimingControl& fromSyntax(Compilation& compilation, const EventControlSyntax& syntax,
-                                     const BindContext& context);
+                                     const ASTContext& context);
 
     static TimingControl& fromSyntax(Compilation& compilation,
                                      const BinaryPropertyExprSyntax& syntax,
-                                     const BindContext& context);
+                                     const ASTContext& context);
 
     static TimingControl& fromSyntax(Compilation& compilation,
                                      const SimpleSequenceExprSyntax& syntax,
-                                     const BindContext& context);
+                                     const ASTContext& context);
 
     static bool isKind(TimingControlKind kind) { return kind == TimingControlKind::SignalEvent; }
 
@@ -189,7 +189,7 @@ public:
 
 private:
     static TimingControl& fromExpr(Compilation& compilation, EdgeKind edge, const Expression& expr,
-                                   const Expression* iffCondition, const BindContext& context,
+                                   const Expression* iffCondition, const ASTContext& context,
                                    SourceRange sourceRange);
 };
 
@@ -203,7 +203,7 @@ public:
         TimingControl(TimingControlKind::EventList, sourceRange), events(events) {}
 
     static TimingControl& fromSyntax(Compilation& compilation, const SyntaxNode& syntax,
-                                     const BindContext& context);
+                                     const ASTContext& context);
 
     static bool isKind(TimingControlKind kind) { return kind == TimingControlKind::EventList; }
 
@@ -225,7 +225,7 @@ public:
 
     static TimingControl& fromSyntax(Compilation& compilation,
                                      const ImplicitEventControlSyntax& syntax,
-                                     const BindContext& context);
+                                     const ASTContext& context);
 
     static bool isKind(TimingControlKind kind) { return kind == TimingControlKind::ImplicitEvent; }
 
@@ -246,7 +246,7 @@ public:
 
     static TimingControl& fromSyntax(Compilation& compilation,
                                      const RepeatedEventControlSyntax& syntax,
-                                     const BindContext& context);
+                                     const ASTContext& context);
 
     static bool isKind(TimingControlKind kind) { return kind == TimingControlKind::RepeatedEvent; }
 
@@ -277,7 +277,7 @@ public:
         TimingControl(TimingControlKind::CycleDelay, sourceRange), expr(expr) {}
 
     static TimingControl& fromSyntax(Compilation& compilation, const DelaySyntax& syntax,
-                                     const BindContext& context);
+                                     const ASTContext& context);
 
     static bool isKind(TimingControlKind kind) { return kind == TimingControlKind::CycleDelay; }
 
@@ -304,7 +304,7 @@ public:
         TimingControl(TimingControlKind::BlockEventList, sourceRange), events(events) {}
 
     static TimingControl& fromSyntax(const BlockEventExpressionSyntax& syntax,
-                                     const BindContext& context);
+                                     const ASTContext& context);
 
     static bool isKind(TimingControlKind kind) { return kind == TimingControlKind::BlockEventList; }
 

@@ -27,7 +27,7 @@ public:
         ASSERT(requiredArgs > nameOrHierIndex);
     };
 
-    const Expression& bindArgument(size_t argIndex, const BindContext& context,
+    const Expression& bindArgument(size_t argIndex, const ASTContext& context,
                                    const ExpressionSyntax& syntax, const Args& args) const final {
         if (argIndex >= argTypes.size())
             return SystemSubroutine::bindArgument(argIndex, context, syntax, args);
@@ -42,7 +42,7 @@ public:
                                         context);
     }
 
-    const Type& checkArguments(const BindContext& context, const Args& args, SourceRange range,
+    const Type& checkArguments(const ASTContext& context, const Args& args, SourceRange range,
                                const Expression*) const final {
         auto& comp = context.getCompilation();
         if (!checkArgCount(context, false, args, range, requiredArgs, argTypes.size()))

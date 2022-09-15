@@ -160,7 +160,7 @@ private:
 class TempVarSymbol : public VariableSymbol {
 public:
     /// For efficiency purposes, each temp var symbol can form a linked list so
-    /// that when binding nested expressions we don't need to manage memory separately
+    /// that when creating nested expressions we don't need to manage memory separately
     /// for list nodes. This member is otherwise not useful to other consumers.
     const TempVarSymbol* nextTemp = nullptr;
 

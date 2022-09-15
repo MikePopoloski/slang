@@ -28,7 +28,7 @@ public:
         Scope(compilation, this), blockKind(blockKind), defaultLifetime(defaultLifetime) {}
 
     void setTemporaryParent(const Scope& scope, SymbolIndex index) { setParent(scope, index); }
-    const Statement& getStatement(const BindContext& context,
+    const Statement& getStatement(const ASTContext& context,
                                   Statement::StatementContext& stmtCtx) const;
 
     void serializeTo(ASTSerializer&) const {}
@@ -129,11 +129,11 @@ public:
     void serializeTo(ASTSerializer& serializer) const;
 
     static void fromSyntax(Compilation& compilation, const IfGenerateSyntax& syntax,
-                           const BindContext& context, uint32_t constructIndex, bool isInstantiated,
+                           const ASTContext& context, uint32_t constructIndex, bool isInstantiated,
                            SmallVector<GenerateBlockSymbol*>& results);
 
     static void fromSyntax(Compilation& compilation, const CaseGenerateSyntax& syntax,
-                           const BindContext& context, uint32_t constructIndex, bool isInstantiated,
+                           const ASTContext& context, uint32_t constructIndex, bool isInstantiated,
                            SmallVector<GenerateBlockSymbol*>& results);
 
     static GenerateBlockSymbol& fromSyntax(const Scope& scope, const GenerateBlockSyntax& syntax,
@@ -163,7 +163,7 @@ public:
     /// Creates a generate block array from the given loop-generate syntax node.
     static GenerateBlockArraySymbol& fromSyntax(Compilation& compilation,
                                                 const LoopGenerateSyntax& syntax,
-                                                SymbolIndex scopeIndex, const BindContext& context,
+                                                SymbolIndex scopeIndex, const ASTContext& context,
                                                 uint32_t constructIndex);
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::GenerateBlockArray; }

@@ -1,11 +1,11 @@
 //------------------------------------------------------------------------------
-// BindContext.cpp
-// Expression binding context
+// ASTContext.cpp
+// AST creation context
 //
 // SPDX-FileCopyrightText: Michael Popoloski
 // SPDX-License-Identifier: MIT
 //------------------------------------------------------------------------------
-#include "slang/ast/BindContext.h"
+#include "slang/ast/ASTContext.h"
 
 #include "slang/ast/expressions/MiscExpressions.h"
 #include "slang/ast/symbols/AttributeSymbol.h"
@@ -24,29 +24,29 @@
 
 namespace slang {
 
-DriverKind BindContext::getDriverKind() const {
-    if (flags.has(BindFlags::ProceduralAssign))
+DriverKind ASTContext::getDriverKind() const {
+    if (flags.has(ASTFlags::ProceduralAssign))
         return DriverKind::Procedural;
-    if (flags.has(BindFlags::ProceduralForceRelease))
+    if (flags.has(ASTFlags::ProceduralForceRelease))
         return DriverKind::Other;
-    if (flags.has(BindFlags::NonProcedural))
+    if (flags.has(ASTFlags::NonProcedural))
         return DriverKind::Continuous;
     return DriverKind::Procedural;
 }
 
-const InstanceSymbolBase* BindContext::getInstance() const {
+const InstanceSymbolBase* ASTContext::getInstance() const {
     if (instanceOrProc && instanceOrProc->kind != SymbolKind::ProceduralBlock)
         return (const InstanceSymbolBase*)instanceOrProc;
     return nullptr;
 }
 
-const ProceduralBlockSymbol* BindContext::getProceduralBlock() const {
+const ProceduralBlockSymbol* ASTContext::getProceduralBlock() const {
     if (instanceOrProc && instanceOrProc->kind == SymbolKind::ProceduralBlock)
         return &instanceOrProc->as<ProceduralBlockSymbol>();
     return nullptr;
 }
 
-const SubroutineSymbol* BindContext::getContainingSubroutine() const {
+const SubroutineSymbol* ASTContext::getContainingSubroutine() const {
     if (instanceOrProc)
         return nullptr;
 
@@ -64,7 +64,7 @@ const SubroutineSymbol* BindContext::getContainingSubroutine() const {
     return nullptr;
 }
 
-bool BindContext::inAlwaysCombLatch() const {
+bool ASTContext::inAlwaysCombLatch() const {
     if (auto proc = getProceduralBlock()) {
         return proc->procedureKind == ProceduralBlockKind::AlwaysComb ||
                proc->procedureKind == ProceduralBlockKind::AlwaysLatch;
@@ -72,18 +72,18 @@ bool BindContext::inAlwaysCombLatch() const {
     return false;
 }
 
-void BindContext::setInstance(const InstanceSymbolBase& inst) {
+void ASTContext::setInstance(const InstanceSymbolBase& inst) {
     ASSERT(!instanceOrProc);
     instanceOrProc = &inst;
 }
 
-void BindContext::setProceduralBlock(const ProceduralBlockSymbol& block) {
+void ASTContext::setProceduralBlock(const ProceduralBlockSymbol& block) {
     ASSERT(!instanceOrProc);
     instanceOrProc = &block;
 }
 
-void BindContext::setAttributes(const Statement& stmt,
-                                span<const AttributeInstanceSyntax* const> syntax) const {
+void ASTContext::setAttributes(const Statement& stmt,
+                               span<const AttributeInstanceSyntax* const> syntax) const {
     if (syntax.empty())
         return;
 
@@ -91,12 +91,12 @@ void BindContext::setAttributes(const Statement& stmt,
                                    AttributeSymbol::fromSyntax(syntax, *scope, getLocation()));
 }
 
-void BindContext::setAttributes(const Expression& expr,
-                                span<const AttributeInstanceSyntax* const> syntax) const {
+void ASTContext::setAttributes(const Expression& expr,
+                               span<const AttributeInstanceSyntax* const> syntax) const {
     if (syntax.empty())
         return;
 
-    if (flags & BindFlags::NoAttributes) {
+    if (flags & ASTFlags::NoAttributes) {
         addDiag(diag::AttributesNotAllowed, expr.sourceRange);
         return;
     }
@@ -105,10 +105,9 @@ void BindContext::setAttributes(const Expression& expr,
                                    AttributeSymbol::fromSyntax(syntax, *scope, getLocation()));
 }
 
-void BindContext::addDriver(const ValueSymbol& symbol, const Expression& longestStaticPrefix,
-                            bitmask<AssignFlags> assignFlags,
-                            EvalContext* customEvalContext) const {
-    if (flags.has(BindFlags::UnrollableForLoop) || assignFlags.has(AssignFlags::ModportConn))
+void ASTContext::addDriver(const ValueSymbol& symbol, const Expression& longestStaticPrefix,
+                           bitmask<AssignFlags> assignFlags, EvalContext* customEvalContext) const {
+    if (flags.has(ASTFlags::UnrollableForLoop) || assignFlags.has(AssignFlags::ModportConn))
         return;
 
     const Symbol* containingSym = getProceduralBlock();
@@ -122,21 +121,21 @@ void BindContext::addDriver(const ValueSymbol& symbol, const Expression& longest
                      customEvalContext);
 }
 
-Diagnostic& BindContext::addDiag(DiagCode code, SourceLocation location) const {
+Diagnostic& ASTContext::addDiag(DiagCode code, SourceLocation location) const {
     auto& diag = scope->addDiag(code, location);
     if (assertionInstance)
         addAssertionBacktrace(diag);
     return diag;
 }
 
-Diagnostic& BindContext::addDiag(DiagCode code, SourceRange sourceRange) const {
+Diagnostic& ASTContext::addDiag(DiagCode code, SourceRange sourceRange) const {
     auto& diag = scope->addDiag(code, sourceRange);
     if (assertionInstance)
         addAssertionBacktrace(diag);
     return diag;
 }
 
-bool BindContext::requireIntegral(const Expression& expr) const {
+bool ASTContext::requireIntegral(const Expression& expr) const {
     if (expr.bad())
         return false;
 
@@ -148,7 +147,7 @@ bool BindContext::requireIntegral(const Expression& expr) const {
     return true;
 }
 
-bool BindContext::requireIntegral(const ConstantValue& cv, SourceRange range) const {
+bool ASTContext::requireIntegral(const ConstantValue& cv, SourceRange range) const {
     if (cv.bad())
         return false;
 
@@ -159,7 +158,7 @@ bool BindContext::requireIntegral(const ConstantValue& cv, SourceRange range) co
     return true;
 }
 
-bool BindContext::requireNoUnknowns(const SVInt& value, SourceRange range) const {
+bool ASTContext::requireNoUnknowns(const SVInt& value, SourceRange range) const {
     if (value.hasUnknown()) {
         addDiag(diag::ValueMustNotBeUnknown, range);
         return false;
@@ -167,7 +166,7 @@ bool BindContext::requireNoUnknowns(const SVInt& value, SourceRange range) const
     return true;
 }
 
-bool BindContext::requirePositive(const SVInt& value, SourceRange range) const {
+bool ASTContext::requirePositive(const SVInt& value, SourceRange range) const {
     if (value.isSigned() && value.isNegative()) {
         addDiag(diag::ValueMustBePositive, range);
         return false;
@@ -175,7 +174,7 @@ bool BindContext::requirePositive(const SVInt& value, SourceRange range) const {
     return true;
 }
 
-bool BindContext::requirePositive(optional<int32_t> value, SourceRange range) const {
+bool ASTContext::requirePositive(optional<int32_t> value, SourceRange range) const {
     if (!value)
         return false;
 
@@ -186,7 +185,7 @@ bool BindContext::requirePositive(optional<int32_t> value, SourceRange range) co
     return true;
 }
 
-bool BindContext::requireGtZero(optional<int32_t> value, SourceRange range) const {
+bool ASTContext::requireGtZero(optional<int32_t> value, SourceRange range) const {
     if (!value)
         return false;
 
@@ -197,7 +196,7 @@ bool BindContext::requireGtZero(optional<int32_t> value, SourceRange range) cons
     return true;
 }
 
-bool BindContext::requireBooleanConvertible(const Expression& expr) const {
+bool ASTContext::requireBooleanConvertible(const Expression& expr) const {
     if (expr.bad())
         return false;
 
@@ -208,7 +207,7 @@ bool BindContext::requireBooleanConvertible(const Expression& expr) const {
     return true;
 }
 
-bool BindContext::requireValidBitWidth(bitwidth_t width, SourceRange range) const {
+bool ASTContext::requireValidBitWidth(bitwidth_t width, SourceRange range) const {
     if (width > SVInt::MAX_BITS) {
         addDiag(diag::ValueExceedsMaxBitWidth, range) << (int)SVInt::MAX_BITS;
         return false;
@@ -216,20 +215,19 @@ bool BindContext::requireValidBitWidth(bitwidth_t width, SourceRange range) cons
     return true;
 }
 
-ConstantValue BindContext::eval(const Expression& expr, bitmask<EvalFlags> extraFlags) const {
+ConstantValue ASTContext::eval(const Expression& expr, bitmask<EvalFlags> extraFlags) const {
     EvalContext ctx(getCompilation(), extraFlags | EvalFlags::CacheResults);
     ConstantValue result = expr.eval(ctx);
     ctx.reportDiags(*this);
     return result;
 }
 
-ConstantValue BindContext::tryEval(const Expression& expr) const {
+ConstantValue ASTContext::tryEval(const Expression& expr) const {
     EvalContext ctx(getCompilation(), EvalFlags::CacheResults);
     return expr.eval(ctx);
 }
 
-optional<bitwidth_t> BindContext::requireValidBitWidth(const SVInt& value,
-                                                       SourceRange range) const {
+optional<bitwidth_t> ASTContext::requireValidBitWidth(const SVInt& value, SourceRange range) const {
     auto result = value.as<bitwidth_t>();
     if (!result)
         addDiag(diag::ValueExceedsMaxBitWidth, range) << (int)SVInt::MAX_BITS;
@@ -238,12 +236,12 @@ optional<bitwidth_t> BindContext::requireValidBitWidth(const SVInt& value,
     return result;
 }
 
-optional<int32_t> BindContext::evalInteger(const ExpressionSyntax& syntax,
-                                           bitmask<BindFlags> extraFlags) const {
+optional<int32_t> ASTContext::evalInteger(const ExpressionSyntax& syntax,
+                                          bitmask<ASTFlags> extraFlags) const {
     return evalInteger(Expression::bind(syntax, *this, extraFlags));
 }
 
-optional<int32_t> BindContext::evalInteger(const Expression& expr) const {
+optional<int32_t> ASTContext::evalInteger(const Expression& expr) const {
     if (!requireIntegral(expr))
         return std::nullopt;
 
@@ -265,8 +263,8 @@ optional<int32_t> BindContext::evalInteger(const Expression& expr) const {
     return coerced;
 }
 
-EvaluatedDimension BindContext::evalDimension(const VariableDimensionSyntax& syntax,
-                                              bool requireRange, bool isPacked) const {
+EvaluatedDimension ASTContext::evalDimension(const VariableDimensionSyntax& syntax,
+                                             bool requireRange, bool isPacked) const {
     EvaluatedDimension result;
     if (!syntax.specifier) {
         result.kind = DimensionKind::Dynamic;
@@ -302,7 +300,7 @@ EvaluatedDimension BindContext::evalDimension(const VariableDimensionSyntax& syn
     return result;
 }
 
-optional<ConstantRange> BindContext::evalPackedDimension(
+optional<ConstantRange> ASTContext::evalPackedDimension(
     const VariableDimensionSyntax& syntax) const {
     EvaluatedDimension result = evalDimension(syntax, /* requireRange */ true, /* isPacked */ true);
     if (!result.isRange())
@@ -311,7 +309,7 @@ optional<ConstantRange> BindContext::evalPackedDimension(
     return result.range;
 }
 
-optional<ConstantRange> BindContext::evalPackedDimension(const ElementSelectSyntax& syntax) const {
+optional<ConstantRange> ASTContext::evalPackedDimension(const ElementSelectSyntax& syntax) const {
     EvaluatedDimension result;
     if (syntax.selector)
         evalRangeDimension(*syntax.selector, /* isPacked */ true, result);
@@ -325,7 +323,7 @@ optional<ConstantRange> BindContext::evalPackedDimension(const ElementSelectSynt
     return result.range;
 }
 
-optional<ConstantRange> BindContext::evalUnpackedDimension(
+optional<ConstantRange> ASTContext::evalUnpackedDimension(
     const VariableDimensionSyntax& syntax) const {
     EvaluatedDimension result = evalDimension(syntax, /* requireRange */ true,
                                               /* isPacked */ false);
@@ -335,13 +333,12 @@ optional<ConstantRange> BindContext::evalUnpackedDimension(
     return result.range;
 }
 
-const ExpressionSyntax* BindContext::requireSimpleExpr(
-    const PropertyExprSyntax& initialExpr) const {
+const ExpressionSyntax* ASTContext::requireSimpleExpr(const PropertyExprSyntax& initialExpr) const {
     return requireSimpleExpr(initialExpr, diag::InvalidArgumentExpr);
 }
 
-const ExpressionSyntax* BindContext::requireSimpleExpr(const PropertyExprSyntax& initialExpr,
-                                                       DiagCode code) const {
+const ExpressionSyntax* ASTContext::requireSimpleExpr(const PropertyExprSyntax& initialExpr,
+                                                      DiagCode code) const {
     const SyntaxNode* expr = &initialExpr;
     if (expr->kind == SyntaxKind::SimplePropertyExpr) {
         expr = expr->as<SimplePropertyExprSyntax>().expr;
@@ -356,7 +353,7 @@ const ExpressionSyntax* BindContext::requireSimpleExpr(const PropertyExprSyntax&
     return nullptr;
 }
 
-RandMode BindContext::getRandMode(const Symbol& symbol) const {
+RandMode ASTContext::getRandMode(const Symbol& symbol) const {
     RandMode mode = symbol.getRandMode();
     if (mode != RandMode::None)
         return mode;
@@ -399,12 +396,12 @@ static bool checkIndexType(const Type& type) {
     return true;
 }
 
-void BindContext::evalRangeDimension(const SelectorSyntax& syntax, bool isPacked,
-                                     EvaluatedDimension& result) const {
+void ASTContext::evalRangeDimension(const SelectorSyntax& syntax, bool isPacked,
+                                    EvaluatedDimension& result) const {
     switch (syntax.kind) {
         case SyntaxKind::BitSelect: {
             auto& expr = Expression::bind(*syntax.as<BitSelectSyntax>().expr, *this,
-                                          BindFlags::AllowDataType);
+                                          ASTFlags::AllowDataType);
 
             // If this expression is actually a data type, this is an associative array dimension
             // instead of a normal packed / unpacked array.
@@ -471,21 +468,20 @@ void BindContext::evalRangeDimension(const SelectorSyntax& syntax, bool isPacked
     }
 }
 
-BindContext BindContext::resetFlags(bitmask<BindFlags> addedFlags) const {
+ASTContext ASTContext::resetFlags(bitmask<ASTFlags> addedFlags) const {
     // Remove non-sticky flags, add in any extras specified by addedFlags
-    static constexpr bitmask<BindFlags> NonSticky =
-        BindFlags::InsideConcatenation | BindFlags::AllowDataType | BindFlags::AssignmentAllowed |
-        BindFlags::StreamingAllowed | BindFlags::TopLevelStatement |
-        BindFlags::AllowUnboundedLiteral | BindFlags::AllowTypeReferences |
-        BindFlags::AllowClockingBlock | BindFlags::UnrollableForLoop;
+    static constexpr bitmask<ASTFlags> NonSticky =
+        ASTFlags::InsideConcatenation | ASTFlags::AllowDataType | ASTFlags::AssignmentAllowed |
+        ASTFlags::StreamingAllowed | ASTFlags::TopLevelStatement | ASTFlags::AllowUnboundedLiteral |
+        ASTFlags::AllowTypeReferences | ASTFlags::AllowClockingBlock | ASTFlags::UnrollableForLoop;
 
-    BindContext result(*this);
+    ASTContext result(*this);
     result.flags &= ~NonSticky;
     result.flags |= addedFlags;
     return result;
 }
 
-void BindContext::addAssertionBacktrace(Diagnostic& diag) const {
+void ASTContext::addAssertionBacktrace(Diagnostic& diag) const {
     if (!assertionInstance)
         return;
 

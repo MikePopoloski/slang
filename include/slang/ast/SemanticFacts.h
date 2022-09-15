@@ -15,7 +15,7 @@
 namespace slang {
 
 class ASTSerializer;
-class BindContext;
+class ASTContext;
 class Scope;
 class TimingControl;
 enum class SymbolKind;
@@ -185,7 +185,7 @@ public:
 
     void serializeTo(ASTSerializer& serializer) const;
 
-    static ClockingSkew fromSyntax(const ClockingSkewSyntax& syntax, const BindContext& context);
+    static ClockingSkew fromSyntax(const ClockingSkewSyntax& syntax, const ASTContext& context);
 };
 
 } // namespace slang

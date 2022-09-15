@@ -88,12 +88,12 @@ string_view CoverageOptionSetter::getName() const {
 
 const Expression& CoverageOptionSetter::getExpression() const {
     if (!expr) {
-        bitmask<BindFlags> flags = BindFlags::AssignmentAllowed;
+        bitmask<ASTFlags> flags = ASTFlags::AssignmentAllowed;
         bool isTypeOpt = isTypeOption();
         if (isTypeOpt)
-            flags |= BindFlags::StaticInitializer;
+            flags |= ASTFlags::StaticInitializer;
 
-        BindContext context(*scope, LookupLocation(scope, 3));
+        ASTContext context(*scope, LookupLocation(scope, 3));
         expr = &Expression::bind(*syntax->expr, context, flags);
         context.setAttributes(*expr, syntax->attributes);
 
@@ -281,7 +281,7 @@ const TimingControl* CovergroupType::getCoverageEvent() const {
             if (!arguments.empty())
                 ll = LookupLocation::after(*arguments.back());
 
-            BindContext context(*this, ll);
+            ASTContext context(*this, ll);
 
             if (evSyntax->kind == SyntaxKind::BlockCoverageEvent) {
                 event = &BlockEventListControl::fromSyntax(
@@ -450,9 +450,9 @@ CoverageBinSymbol& CoverageBinSymbol::fromSyntax(const Scope& scope,
 }
 
 static const Expression& bindCovergroupExpr(const ExpressionSyntax& syntax,
-                                            const BindContext& context,
+                                            const ASTContext& context,
                                             const Type* lvalueType = nullptr,
-                                            bitmask<BindFlags> extraFlags = {}) {
+                                            bitmask<ASTFlags> extraFlags = {}) {
     const Expression* expr;
     if (lvalueType) {
         expr = &Expression::bindRValue(*lvalueType, syntax, syntax.getFirstToken().location(),
@@ -475,13 +475,13 @@ void CoverageBinSymbol::resolve() const {
     ASSERT(syntax && scope);
 
     auto& comp = scope->getCompilation();
-    BindContext context(*scope, LookupLocation::before(*this));
+    ASTContext context(*scope, LookupLocation::before(*this));
 
     if (syntax->kind == SyntaxKind::BinsSelection) {
         auto& binsSyntax = syntax->as<BinsSelectionSyntax>();
         if (binsSyntax.iff) {
             iffExpr = &Expression::bind(*binsSyntax.iff->expr, context,
-                                        BindFlags::AllowCoverageSampleFormal);
+                                        ASTFlags::AllowCoverageSampleFormal);
             context.requireBooleanConvertible(*iffExpr);
         }
 
@@ -495,7 +495,7 @@ void CoverageBinSymbol::resolve() const {
     auto& binsSyntax = syntax->as<CoverageBinsSyntax>();
     if (binsSyntax.iff) {
         iffExpr = &Expression::bind(*binsSyntax.iff->expr, context,
-                                    BindFlags::AllowCoverageSampleFormal);
+                                    ASTFlags::AllowCoverageSampleFormal);
         context.requireBooleanConvertible(*iffExpr);
     }
 
@@ -509,7 +509,7 @@ void CoverageBinSymbol::resolve() const {
         // can be found by the iteration expression.
         auto it = comp.emplace<IteratorSymbol>(*context.scope, "item"sv, coverpoint.location, type);
 
-        BindContext iterCtx = context;
+        ASTContext iterCtx = context;
         it->nextTemp = std::exchange(iterCtx.firstTempVar, it);
 
         withExpr = &bindCovergroupExpr(*withSyntax.expr, iterCtx);
@@ -522,9 +522,9 @@ void CoverageBinSymbol::resolve() const {
             SmallVectorSized<const Expression*, 4> buffer;
             auto& rcbis = init->as<RangeCoverageBinInitializerSyntax>();
             for (auto elem : rcbis.ranges->valueRanges) {
-                bitmask<BindFlags> flags;
+                bitmask<ASTFlags> flags;
                 if (elem->kind == SyntaxKind::OpenRangeExpression)
-                    flags = BindFlags::AllowUnboundedLiteral;
+                    flags = ASTFlags::AllowUnboundedLiteral;
 
                 auto& expr = bindCovergroupExpr(*elem, context, &type, flags);
                 buffer.append(&expr);
@@ -579,7 +579,7 @@ void CoverageBinSymbol::resolve() const {
 }
 
 CoverageBinSymbol::TransRangeList::TransRangeList(const TransRangeSyntax& syntax, const Type& type,
-                                                  const BindContext& context) {
+                                                  const ASTContext& context) {
     SmallVectorSized<const Expression*, 4> buffer;
     for (auto elem : syntax.items) {
         auto& expr = bindCovergroupExpr(*elem, context, &type);
@@ -753,9 +753,9 @@ const Expression* CoverpointSymbol::getIffExpr() const {
             if (!iffSyntax)
                 iffExpr = nullptr;
             else {
-                BindContext context(*scope, LookupLocation::min);
+                ASTContext context(*scope, LookupLocation::min);
                 iffExpr = &Expression::bind(*iffSyntax->expr, context,
-                                            BindFlags::AllowCoverageSampleFormal);
+                                            ASTFlags::AllowCoverageSampleFormal);
                 context.requireBooleanConvertible(*iffExpr.value());
             }
         }
@@ -874,9 +874,9 @@ const Expression* CoverCrossSymbol::getIffExpr() const {
             if (!iffSyntax)
                 iffExpr = nullptr;
             else {
-                BindContext context(*scope, LookupLocation::min);
+                ASTContext context(*scope, LookupLocation::min);
                 iffExpr = &Expression::bind(*iffSyntax->expr, context,
-                                            BindFlags::AllowCoverageSampleFormal);
+                                            ASTFlags::AllowCoverageSampleFormal);
                 context.requireBooleanConvertible(*iffExpr.value());
             }
         }
@@ -905,7 +905,7 @@ void CoverCrossSymbol::serializeTo(ASTSerializer& serializer) const {
 }
 
 const BinsSelectExpr& BinsSelectExpr::bind(const BinsSelectExpressionSyntax& syntax,
-                                           const BindContext& context) {
+                                           const ASTContext& context) {
     BinsSelectExpr* result;
     switch (syntax.kind) {
         case SyntaxKind::ParenthesizedBinsSelectExpr:
@@ -948,9 +948,9 @@ void InvalidBinsSelectExpr::serializeTo(ASTSerializer& serializer) const {
 }
 
 BinsSelectExpr& ConditionBinsSelectExpr::fromSyntax(const BinsSelectConditionExprSyntax& syntax,
-                                                    const BindContext& context) {
+                                                    const ASTContext& context) {
     auto& comp = context.getCompilation();
-    auto& nameExpr = Expression::bind(*syntax.name, context, BindFlags::AllowCoverpoint);
+    auto& nameExpr = Expression::bind(*syntax.name, context, ASTFlags::AllowCoverpoint);
     if (nameExpr.bad())
         return badExpr(comp, nullptr);
 
@@ -973,9 +973,9 @@ BinsSelectExpr& ConditionBinsSelectExpr::fromSyntax(const BinsSelectConditionExp
 
         SmallVectorSized<const Expression*, 4> buffer;
         for (auto elem : syntax.intersects->ranges->valueRanges) {
-            bitmask<BindFlags> flags;
+            bitmask<ASTFlags> flags;
             if (elem->kind == SyntaxKind::OpenRangeExpression)
-                flags = BindFlags::AllowUnboundedLiteral;
+                flags = ASTFlags::AllowUnboundedLiteral;
 
             auto& elemExpr = bindCovergroupExpr(*elem, context, type, flags);
             buffer.append(&elemExpr);
@@ -997,7 +997,7 @@ void ConditionBinsSelectExpr::serializeTo(ASTSerializer& serializer) const {
 }
 
 BinsSelectExpr& UnaryBinsSelectExpr::fromSyntax(const UnaryBinsSelectExprSyntax& syntax,
-                                                const BindContext& context) {
+                                                const ASTContext& context) {
     auto& comp = context.getCompilation();
     auto& expr = bind(*syntax.expr, context);
     return *comp.emplace<UnaryBinsSelectExpr>(expr);
@@ -1009,7 +1009,7 @@ void UnaryBinsSelectExpr::serializeTo(ASTSerializer& serializer) const {
 }
 
 BinsSelectExpr& BinaryBinsSelectExpr::fromSyntax(const BinaryBinsSelectExprSyntax& syntax,
-                                                 const BindContext& context) {
+                                                 const ASTContext& context) {
     auto& comp = context.getCompilation();
     auto& left = bind(*syntax.left, context);
     auto& right = bind(*syntax.right, context);
@@ -1024,7 +1024,7 @@ void BinaryBinsSelectExpr::serializeTo(ASTSerializer& serializer) const {
 }
 
 BinsSelectExpr& SetExprBinsSelectExpr::fromSyntax(const SimpleBinsSelectExprSyntax& syntax,
-                                                  const BindContext& context) {
+                                                  const ASTContext& context) {
     auto& body = context.scope->asSymbol().as<CoverCrossBodySymbol>();
     ASSERT(body.crossQueueType);
 
@@ -1048,7 +1048,7 @@ BinsSelectExpr& SetExprBinsSelectExpr::fromSyntax(const SimpleBinsSelectExprSynt
     if (syntax.matchesClause) {
         matches =
             &bindCovergroupExpr(*syntax.matchesClause->pattern->as<ExpressionPatternSyntax>().expr,
-                                context, nullptr, BindFlags::AllowUnboundedLiteral);
+                                context, nullptr, ASTFlags::AllowUnboundedLiteral);
         if (!matches->bad() && !matches->type->isUnbounded())
             context.requireIntegral(*matches);
     }
@@ -1066,13 +1066,13 @@ void SetExprBinsSelectExpr::serializeTo(ASTSerializer& serializer) const {
 }
 
 BinsSelectExpr& BinSelectWithFilterExpr::fromSyntax(const BinSelectWithFilterExprSyntax& syntax,
-                                                    const BindContext& context) {
+                                                    const ASTContext& context) {
     auto& comp = context.getCompilation();
     auto& expr = bind(*syntax.expr, context);
 
     // Create the iterator variables for all of the parent cross items
     // and then bind the filter expression.
-    BindContext iterCtx = context;
+    ASTContext iterCtx = context;
 
     auto& cross = context.scope->asSymbol().getParentScope()->asSymbol().as<CoverCrossSymbol>();
     for (auto target : cross.targets) {
@@ -1088,7 +1088,7 @@ BinsSelectExpr& BinSelectWithFilterExpr::fromSyntax(const BinSelectWithFilterExp
     if (syntax.matchesClause) {
         matches =
             &bindCovergroupExpr(*syntax.matchesClause->pattern->as<ExpressionPatternSyntax>().expr,
-                                context, nullptr, BindFlags::AllowUnboundedLiteral);
+                                context, nullptr, ASTFlags::AllowUnboundedLiteral);
         if (!matches->bad() && !matches->type->isUnbounded())
             context.requireIntegral(*matches);
     }

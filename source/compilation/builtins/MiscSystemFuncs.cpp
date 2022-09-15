@@ -23,7 +23,7 @@ public:
     SFormatFunction(const std::string& name, bool isNonStandard) :
         SystemSubroutine(name, SubroutineKind::Function), isNonStandard(isNonStandard) {}
 
-    const Type& checkArguments(const BindContext& context, const Args& args, SourceRange range,
+    const Type& checkArguments(const ASTContext& context, const Args& args, SourceRange range,
                                const Expression*) const final {
         auto& comp = context.getCompilation();
         if (!checkArgCount(context, false, args, range, 1, INT32_MAX))
@@ -69,7 +69,7 @@ public:
         hasOutputArgs = true;
     }
 
-    const Type& checkArguments(const BindContext& context, const Args& args, SourceRange range,
+    const Type& checkArguments(const ASTContext& context, const Args& args, SourceRange range,
                                const Expression*) const final {
         auto& comp = context.getCompilation();
         if (!checkArgCount(context, false, args, range, 2, 2))
@@ -106,7 +106,7 @@ public:
         withClauseMode = WithClauseMode::Randomize;
     }
 
-    const Type& checkArguments(const BindContext& context, const Args& args, SourceRange range,
+    const Type& checkArguments(const ASTContext& context, const Args& args, SourceRange range,
                                const Expression* thisExpr) const final {
         bool isMethod = thisExpr != nullptr;
         auto& comp = context.getCompilation();
@@ -163,7 +163,7 @@ public:
         withClauseMode = WithClauseMode::Randomize;
     }
 
-    const Type& checkArguments(const BindContext& context, const Args& args, SourceRange range,
+    const Type& checkArguments(const ASTContext& context, const Args& args, SourceRange range,
                                const Expression*) const final {
         auto& comp = context.getCompilation();
         if (!checkArgCount(context, false, args, range, 0, INT32_MAX))
@@ -198,13 +198,13 @@ class GlobalClockFunction : public SystemSubroutine {
 public:
     GlobalClockFunction() : SystemSubroutine("$global_clock", SubroutineKind::Function) {}
 
-    const Type& checkArguments(const BindContext& context, const Args& args, SourceRange range,
+    const Type& checkArguments(const ASTContext& context, const Args& args, SourceRange range,
                                const Expression*) const final {
         auto& comp = context.getCompilation();
         if (!checkArgCount(context, false, args, range, 0, 0))
             return comp.getErrorType();
 
-        if (!context.flags.has(BindFlags::AllowClockingBlock)) {
+        if (!context.flags.has(ASTFlags::AllowClockingBlock)) {
             context.addDiag(diag::GlobalClockEventExpr, range);
             return comp.getErrorType();
         }
@@ -225,10 +225,10 @@ public:
 };
 
 struct SequenceMethodExprVisitor {
-    const BindContext& context;
+    const ASTContext& context;
     std::string name;
 
-    SequenceMethodExprVisitor(const BindContext& context, std::string name) :
+    SequenceMethodExprVisitor(const ASTContext& context, std::string name) :
         context(context), name(std::move(name)) {}
 
     template<typename T>
@@ -257,7 +257,7 @@ class SequenceMethod : public SystemSubroutine {
 public:
     SequenceMethod(const std::string& name) : SystemSubroutine(name, SubroutineKind::Function) {}
 
-    const Type& checkArguments(const BindContext& context, const Args& args, SourceRange range,
+    const Type& checkArguments(const ASTContext& context, const Args& args, SourceRange range,
                                const Expression*) const final {
         auto& comp = context.getCompilation();
         if (!checkArgCount(context, true, args, range, 0, 0))
@@ -278,7 +278,7 @@ private:
     template<typename T>
     struct always_false : std::false_type {};
 
-    void checkLocalVars(const Expression& expr, const BindContext& context,
+    void checkLocalVars(const Expression& expr, const ASTContext& context,
                         SourceRange range) const {
         if (expr.kind == ExpressionKind::AssertionInstance) {
             auto& aie = expr.as<AssertionInstanceExpression>();

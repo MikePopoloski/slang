@@ -193,7 +193,7 @@ TEST_CASE("Utility system functions") {
 
     auto typeof = [&](const std::string& source) {
         auto tree = SyntaxTree::fromText(string_view(source));
-        BindContext context(scope, LookupLocation::max);
+        ASTContext context(scope, LookupLocation::max);
         return Expression::bind(tree->root().as<ExpressionSyntax>(), context).type->toString();
     };
 
@@ -246,7 +246,7 @@ TEST_CASE("Conversion system functions") {
 
     auto typeof = [&](const std::string& source) {
         auto tree = SyntaxTree::fromText(string_view(source));
-        BindContext context(scope, LookupLocation::max);
+        ASTContext context(scope, LookupLocation::max);
         return Expression::bind(tree->root().as<ExpressionSyntax>(), context).type->toString();
     };
 

@@ -7,8 +7,8 @@
 //------------------------------------------------------------------------------
 #include "slang/ast/types/AllTypes.h"
 
+#include "slang/ast/ASTContext.h"
 #include "slang/ast/ASTSerializer.h"
-#include "slang/ast/BindContext.h"
 #include "slang/ast/Expression.h"
 #include "slang/ast/symbols/ClassSymbols.h"
 #include "slang/ast/symbols/InstanceSymbols.h"
@@ -94,7 +94,7 @@ string_view getName(FloatingType::Kind kind) {
 }
 // clang-format on
 
-const Type& createPackedDims(const BindContext& context, const Type* type,
+const Type& createPackedDims(const ASTContext& context, const Type* type,
                              const SyntaxList<VariableDimensionSyntax>& dimensions) {
     size_t count = dimensions.size();
     for (size_t i = 0; i < count; i++) {
@@ -155,7 +155,7 @@ bool IntegralType::isDeclaredReg() const {
 
 const Type& IntegralType::fromSyntax(Compilation& compilation, SyntaxKind integerKind,
                                      span<const VariableDimensionSyntax* const> dimensions,
-                                     bool isSigned, const BindContext& context) {
+                                     bool isSigned, const ASTContext& context) {
     // This is a simple integral vector (possibly of just one element).
     SmallVectorSized<std::pair<ConstantRange, const SyntaxNode*>, 4> dims;
     for (auto dimSyntax : dimensions) {
@@ -194,7 +194,7 @@ const Type& IntegralType::fromSyntax(Compilation& compilation, SyntaxKind intege
 }
 
 const Type& IntegralType::fromSyntax(Compilation& compilation, const IntegerTypeSyntax& syntax,
-                                     const BindContext& context) {
+                                     const ASTContext& context) {
     return fromSyntax(compilation, syntax.kind, syntax.dimensions,
                       syntax.signing.kind == TokenKind::SignedKeyword, context);
 }
@@ -244,7 +244,7 @@ ConstantValue FloatingType::getDefaultValueImpl() const {
 }
 
 EnumType::EnumType(Compilation& compilation, SourceLocation loc, const Type& baseType_,
-                   const BindContext& context) :
+                   const ASTContext& context) :
     IntegralType(SymbolKind::EnumType, "", loc, baseType_.getBitWidth(), baseType_.isSigned(),
                  baseType_.isFourState()),
     Scope(compilation, this), baseType(baseType_), systemId(compilation.getNextEnumSystemId()) {
@@ -255,7 +255,7 @@ EnumType::EnumType(Compilation& compilation, SourceLocation loc, const Type& bas
     setParent(*context.scope, context.lookupIndex);
 }
 
-static void checkEnumRange(const BindContext& context, const VariableDimensionSyntax& syntax) {
+static void checkEnumRange(const ASTContext& context, const VariableDimensionSyntax& syntax) {
     auto checkExpr = [&](const ExpressionSyntax& expr) {
         if (expr.kind != SyntaxKind::IntegerLiteralExpression &&
             expr.kind != SyntaxKind::IntegerVectorExpression) {
@@ -277,7 +277,7 @@ static void checkEnumRange(const BindContext& context, const VariableDimensionSy
 }
 
 const Type& EnumType::fromSyntax(Compilation& compilation, const EnumTypeSyntax& syntax,
-                                 const BindContext& context, const Type* typedefTarget) {
+                                 const ASTContext& context, const Type* typedefTarget) {
     const Type* base;
     const Type* cb;
     bitwidth_t bitWidth;
@@ -511,7 +511,7 @@ static string_view getEnumValueName(Compilation& comp, string_view name, int32_t
     return name;
 }
 
-void EnumType::createDefaultMembers(const BindContext& context, const EnumTypeSyntax& syntax,
+void EnumType::createDefaultMembers(const ASTContext& context, const EnumTypeSyntax& syntax,
                                     SmallVector<const Symbol*>& members) {
     auto& comp = context.getCompilation();
     for (auto member : syntax.members) {
@@ -572,7 +572,7 @@ const ConstantValue& EnumValueSymbol::getValue(SourceRange referencingRange) con
             auto scope = getParentScope();
             ASSERT(scope);
 
-            BindContext ctx(*scope, LookupLocation::max);
+            ASTContext ctx(*scope, LookupLocation::max);
 
             if (evaluating) {
                 ASSERT(referencingRange.start());
@@ -689,7 +689,7 @@ ConstantValue QueueType::getDefaultValueImpl() const {
 }
 
 PackedStructType::PackedStructType(Compilation& compilation, bool isSigned, SourceLocation loc,
-                                   const BindContext& context) :
+                                   const ASTContext& context) :
     IntegralType(SymbolKind::PackedStructType, "", loc, 0, isSigned, false),
     Scope(compilation, this), systemId(compilation.getNextStructSystemId()) {
 
@@ -700,7 +700,7 @@ PackedStructType::PackedStructType(Compilation& compilation, bool isSigned, Sour
 }
 
 const Type& PackedStructType::fromSyntax(Compilation& comp, const StructUnionTypeSyntax& syntax,
-                                         const BindContext& parentContext) {
+                                         const ASTContext& parentContext) {
     ASSERT(syntax.packed);
     const bool isSigned = syntax.signing.kind == TokenKind::SignedKeyword;
     bool issuedError = false;
@@ -709,7 +709,7 @@ const Type& PackedStructType::fromSyntax(Compilation& comp, const StructUnionTyp
                                                      parentContext);
     structType->setSyntax(syntax);
 
-    BindContext context(*structType, LookupLocation::max, parentContext.flags);
+    ASTContext context(*structType, LookupLocation::max, parentContext.flags);
 
     SmallVectorSized<FieldSymbol*, 8> members;
     for (auto member : syntax.members) {
@@ -769,7 +769,7 @@ const Type& PackedStructType::fromSyntax(Compilation& comp, const StructUnionTyp
 }
 
 UnpackedStructType::UnpackedStructType(Compilation& compilation, SourceLocation loc,
-                                       const BindContext& context) :
+                                       const ASTContext& context) :
     Type(SymbolKind::UnpackedStructType, "", loc),
     Scope(compilation, this), systemId(compilation.getNextStructSystemId()) {
 
@@ -787,7 +787,7 @@ ConstantValue UnpackedStructType::getDefaultValueImpl() const {
     return elements;
 }
 
-const Type& UnpackedStructType::fromSyntax(const BindContext& context,
+const Type& UnpackedStructType::fromSyntax(const ASTContext& context,
                                            const StructUnionTypeSyntax& syntax) {
     ASSERT(!syntax.packed);
 
@@ -836,7 +836,7 @@ const Type& UnpackedStructType::fromSyntax(const BindContext& context,
 }
 
 PackedUnionType::PackedUnionType(Compilation& compilation, bool isSigned, bool isTagged,
-                                 SourceLocation loc, const BindContext& context) :
+                                 SourceLocation loc, const ASTContext& context) :
     IntegralType(SymbolKind::PackedUnionType, "", loc, 0, isSigned, false),
     Scope(compilation, this), systemId(compilation.getNextUnionSystemId()), isTagged(isTagged),
     tagBits(0) {
@@ -848,7 +848,7 @@ PackedUnionType::PackedUnionType(Compilation& compilation, bool isSigned, bool i
 }
 
 const Type& PackedUnionType::fromSyntax(Compilation& comp, const StructUnionTypeSyntax& syntax,
-                                        const BindContext& parentContext) {
+                                        const ASTContext& parentContext) {
     ASSERT(syntax.packed);
     const bool isSigned = syntax.signing.kind == TokenKind::SignedKeyword;
     const bool isTagged = syntax.tagged.valid();
@@ -859,7 +859,7 @@ const Type& PackedUnionType::fromSyntax(Compilation& comp, const StructUnionType
                                                    syntax.keyword.location(), parentContext);
     unionType->setSyntax(syntax);
 
-    BindContext context(*unionType, LookupLocation::max, parentContext.flags);
+    ASTContext context(*unionType, LookupLocation::max, parentContext.flags);
 
     for (auto member : syntax.members) {
         const Type& type = comp.getType(*member->type, context);
@@ -927,7 +927,7 @@ const Type& PackedUnionType::fromSyntax(Compilation& comp, const StructUnionType
 }
 
 UnpackedUnionType::UnpackedUnionType(Compilation& compilation, bool isTagged, SourceLocation loc,
-                                     const BindContext& context) :
+                                     const ASTContext& context) :
     Type(SymbolKind::UnpackedUnionType, "", loc),
     Scope(compilation, this), systemId(compilation.getNextUnionSystemId()), isTagged(isTagged) {
 
@@ -953,7 +953,7 @@ ConstantValue UnpackedUnionType::getDefaultValueImpl() const {
     return u;
 }
 
-const Type& UnpackedUnionType::fromSyntax(const BindContext& context,
+const Type& UnpackedUnionType::fromSyntax(const ASTContext& context,
                                           const StructUnionTypeSyntax& syntax) {
     ASSERT(!syntax.packed);
 
@@ -1006,7 +1006,7 @@ ConstantValue EventType::getDefaultValueImpl() const {
     return ConstantValue::NullPlaceholder{};
 }
 
-const Type& VirtualInterfaceType::fromSyntax(const BindContext& context,
+const Type& VirtualInterfaceType::fromSyntax(const ASTContext& context,
                                              const VirtualInterfaceTypeSyntax& syntax) {
     auto& comp = context.getCompilation();
     auto ifaceName = syntax.name.valueText();

@@ -7,7 +7,7 @@
 //------------------------------------------------------------------------------
 #pragma once
 
-#include "slang/ast/BindContext.h"
+#include "slang/ast/ASTContext.h"
 #include "slang/ast/EvalContext.h"
 #include "slang/ast/LValue.h"
 #include "slang/ast/SemanticFacts.h"
@@ -150,50 +150,50 @@ public:
     SourceRange sourceRange;
 
     /// Binds an expression tree from the given syntax nodes.
-    static const Expression& bind(const ExpressionSyntax& syntax, const BindContext& context,
-                                  bitmask<BindFlags> extraFlags = BindFlags::None);
+    static const Expression& bind(const ExpressionSyntax& syntax, const ASTContext& context,
+                                  bitmask<ASTFlags> extraFlags = ASTFlags::None);
 
     /// Binds the left hand side of an assignment-like expression from the given syntax nodes.
     static const Expression& bindLValue(const ExpressionSyntax& lhs, const Type& rhs,
-                                        SourceLocation location, const BindContext& context,
+                                        SourceLocation location, const ASTContext& context,
                                         bool isInout);
 
     /// Binds the right hand side of an assignment-like expression from the given syntax nodes.
     static const Expression& bindRValue(const Type& lhs, const ExpressionSyntax& rhs,
-                                        SourceLocation location, const BindContext& context,
-                                        bitmask<BindFlags> extraFlags = BindFlags::None);
+                                        SourceLocation location, const ASTContext& context,
+                                        bitmask<ASTFlags> extraFlags = ASTFlags::None);
 
     /// Binds a connection to a ref argument from the given syntax nodes.
     static const Expression& bindRefArg(const Type& lhs, bool isConstRef,
                                         const ExpressionSyntax& rhs, SourceLocation location,
-                                        const BindContext& context);
+                                        const ASTContext& context);
 
     /// Binds an argument or port connection with the given direction and syntax nodes.
     static const Expression& bindArgument(const Type& argType, ArgumentDirection direction,
-                                          const ExpressionSyntax& syntax,
-                                          const BindContext& context, bool isConstRef = false);
+                                          const ExpressionSyntax& syntax, const ASTContext& context,
+                                          bool isConstRef = false);
 
     /// Binds an initializer expression for an implicitly typed parameter.
     /// There are special inference rules for parameters.
     static const Expression& bindImplicitParam(const DataTypeSyntax& implicitType,
                                                const ExpressionSyntax& rhs, SourceLocation location,
-                                               const BindContext& exprContext,
-                                               const BindContext& typeContext,
-                                               bitmask<BindFlags> extraFlags = BindFlags::None);
+                                               const ASTContext& exprContext,
+                                               const ASTContext& typeContext,
+                                               bitmask<ASTFlags> extraFlags = ASTFlags::None);
 
     /// Bind a selector expression given an already existing value to select from.
     static const Expression& bindSelector(Expression& value, const ElementSelectSyntax& syntax,
-                                          const BindContext& context);
+                                          const ASTContext& context);
 
-    /// Specialized method for binding all of the expressions in a set membership check.
+    /// Specialized method for creating all of the expressions in a set membership check.
     /// This is used for case statements and the 'inside' operator.
     ///
-    /// @param context The context used for binding expressions.
+    /// @param context The context used for creating expressions.
     /// @param valueExpr The value being checked for membership.
     /// @param expressions Denotes the set to check within. All of the expressions influence
     /// each other for purposes of finding a common comparison type.
     ///
-    /// @param keyword The kind of membership being bound, which is used to customize
+    /// @param keyword The kind of membership being created, which is used to customize
     /// any diagnostics produced.
     ///
     /// @param requireIntegral If set to true, expression types will be restricted to
@@ -206,14 +206,14 @@ public:
     /// @param allowOpenRange If set to true, open range expressions will be allowed.
     /// Otherwise an error will be issued for them.
     ///
-    /// @param allowTypeReferences If set to true the bound expressions are allowed to
+    /// @param allowTypeReferences If set to true the created expressions are allowed to
     /// be type reference expressions. Otherwise an error will be issued.
     ///
-    /// @param results A vector that will be filled with the bound membership expressions.
+    /// @param results A vector that will be filled with the created membership expressions.
     ///
     /// @returns true if all expressions are legal, otherwise false and appropriate
     /// diagnostics are issued.
-    static bool bindMembershipExpressions(const BindContext& context, TokenKind keyword,
+    static bool bindMembershipExpressions(const ASTContext& context, TokenKind keyword,
                                           bool requireIntegral, bool unwrapUnpacked,
                                           bool allowTypeReferences, bool allowOpenRange,
                                           const ExpressionSyntax& valueExpr,
@@ -223,12 +223,12 @@ public:
     /// This method finds all unqualified name references in the given expression and attempts
     /// to look them up in the given context. If they can't be found, their name tokens are
     /// returned in the given @a results vector.
-    static void findPotentiallyImplicitNets(const SyntaxNode& expr, const BindContext& context,
+    static void findPotentiallyImplicitNets(const SyntaxNode& expr, const ASTContext& context,
                                             SmallVector<Token>& results);
 
     /// Converts an expression to be of the given type, following the rules for
     /// implicit conversions, array port slicing, etc.
-    static Expression& convertAssignment(const BindContext& context, const Type& type,
+    static Expression& convertAssignment(const ASTContext& context, const Type& type,
                                          Expression& expr, SourceLocation location,
                                          Expression** lhsExpr = nullptr,
                                          bitmask<AssignFlags>* assignFlags = nullptr);
@@ -261,7 +261,7 @@ public:
     /// of that lvalue can be assigned to. If it's not, appropriate diagnostics
     /// will be issued. Information about the source expression driving the lvalue
     /// will be registered with the various symbols involved.
-    bool requireLValue(const BindContext& context, SourceLocation location = {},
+    bool requireLValue(const ASTContext& context, SourceLocation location = {},
                        bitmask<AssignFlags> flags = {},
                        const Expression* longestStaticPrefix = nullptr,
                        EvalContext* customEvalContext = nullptr) const;
@@ -322,56 +322,57 @@ protected:
                                             const ConstantValue& cvr);
 
     static Expression& create(Compilation& compilation, const ExpressionSyntax& syntax,
-                              const BindContext& context,
-                              bitmask<BindFlags> extraFlags = BindFlags::None,
+                              const ASTContext& context,
+                              bitmask<ASTFlags> extraFlags = ASTFlags::None,
                               const Type* assignmentTarget = nullptr);
 
     static Expression& bindName(Compilation& compilation, const NameSyntax& syntax,
                                 const InvocationExpressionSyntax* invocation,
                                 const ArrayOrRandomizeMethodExpressionSyntax* withClause,
-                                const BindContext& context);
+                                const ASTContext& context);
 
     static Expression& bindLookupResult(Compilation& compilation, LookupResult& result,
                                         SourceRange sourceRange,
                                         const InvocationExpressionSyntax* invocation,
                                         const ArrayOrRandomizeMethodExpressionSyntax* withClause,
-                                        const BindContext& context);
+                                        const ASTContext& context);
 
     static Expression& bindSelectExpression(Compilation& compilation,
                                             const ElementSelectExpressionSyntax& syntax,
-                                            const BindContext& context);
+                                            const ASTContext& context);
     static Expression& bindSelector(Compilation& compilation, Expression& value,
-                                    const ElementSelectSyntax& syntax, const BindContext& context);
+                                    const ElementSelectSyntax& syntax, const ASTContext& context);
 
     static Expression& bindAssignmentPattern(Compilation& compilation,
                                              const AssignmentPatternExpressionSyntax& syntax,
-                                             const BindContext& context,
+                                             const ASTContext& context,
                                              const Type* assignmentTarget);
 
-    static Expression* tryConnectPortArray(const BindContext& context, const Type& type,
+    static Expression* tryConnectPortArray(const ASTContext& context, const Type& type,
                                            Expression& expr, const InstanceSymbolBase& instance);
 
-    static Expression* tryBindInterfaceRef(const BindContext& context,
+    static Expression* tryBindInterfaceRef(const ASTContext& context,
                                            const ExpressionSyntax& syntax, const Type& targetType);
 
     static Expression& badExpr(Compilation& compilation, const Expression* expr);
 
     // Perform type propagation and constant folding of a context-determined subexpression.
-    static void contextDetermined(const BindContext& context, Expression*& expr,
-                                  const Type& newType, SourceLocation assignmentLoc = {});
+    static void contextDetermined(const ASTContext& context, Expression*& expr, const Type& newType,
+                                  SourceLocation assignmentLoc = {});
 
     // Perform type propagation and constant folding of a self-determined subexpression.
-    static void selfDetermined(const BindContext& context, Expression*& expr);
-    [[nodiscard]] static Expression& selfDetermined(
-        Compilation& compilation, const ExpressionSyntax& syntax, const BindContext& context,
-        bitmask<BindFlags> extraFlags = BindFlags::None);
+    static void selfDetermined(const ASTContext& context, Expression*& expr);
+    [[nodiscard]] static Expression& selfDetermined(Compilation& compilation,
+                                                    const ExpressionSyntax& syntax,
+                                                    const ASTContext& context,
+                                                    bitmask<ASTFlags> extraFlags = ASTFlags::None);
     struct PropagationVisitor;
 
     template<typename TExpression, typename TVisitor, typename... Args>
     decltype(auto) visitExpression(TExpression* expr, TVisitor&& visitor, Args&&... args) const;
 
     using NamedArgMap = SmallMap<string_view, std::pair<const NamedArgumentSyntax*, bool>, 8>;
-    static bool collectArgs(const BindContext& context, const ArgumentListSyntax& syntax,
+    static bool collectArgs(const ASTContext& context, const ArgumentListSyntax& syntax,
                             SmallVector<const SyntaxNode*>& orderedArgs, NamedArgMap& namedArgs);
 };
 
