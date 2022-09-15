@@ -84,6 +84,10 @@ public:
     /// the given index is not a node (probably a token) then this returns null.
     const SyntaxNode* childNode(size_t index) const;
 
+    /// Gets the child syntax node at the specified index. If the child at
+    /// the given index is not a node (probably a token) then this returns null.
+    SyntaxNode* childNode(size_t index);
+
     /// Gets the child token at the specified index. If the child at
     /// the given index is not a token (probably a node) then this returns
     /// an empty Token.
@@ -128,6 +132,7 @@ protected:
 
 private:
     ConstTokenOrSyntax getChild(size_t index) const;
+    TokenOrSyntax getChild(size_t index);
 };
 
 /// A base class for syntax nodes that represent a list of items.

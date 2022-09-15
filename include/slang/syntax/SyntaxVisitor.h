@@ -24,12 +24,12 @@ namespace slang {
 template<typename TDerived>
 class SyntaxVisitor {
     template<typename T, typename Arg>
-    using handle_t = decltype(std::declval<T>().handle(std::declval<Arg>()));
+    using handle_t = decltype(std::declval<T>().handle(std::declval<Arg&&>()));
 
 public:
     /// Visit the provided node, of static type T.
     template<typename T>
-    void visit(const T& t) {
+    void visit(T&& t) {
         if constexpr (is_detected_v<handle_t, TDerived, T>)
             DERIVED->handle(t);
         else
@@ -38,7 +38,8 @@ public:
 
     /// The default handler invoked when no visit() method is overridden for a particular type.
     /// Will visit all child nodes by default.
-    void visitDefault(const SyntaxNode& node) {
+    template<typename T>
+    void visitDefault(T&& node) {
         for (uint32_t i = 0; i < node.getChildCount(); i++) {
             auto child = node.childNode(i);
             if (child)

@@ -14,13 +14,22 @@ namespace {
 
 using namespace slang;
 
-struct GetChildVisitor {
+struct ConstGetChildVisitor {
     template<typename T>
     ConstTokenOrSyntax visit(const T& node, size_t index) {
         return node.getChild(index);
     }
 
     ConstTokenOrSyntax visitInvalid(const SyntaxNode&, size_t) { return nullptr; }
+};
+
+struct GetChildVisitor {
+    template<typename T>
+    TokenOrSyntax visit(T& node, size_t index) {
+        return node.getChild(index);
+    }
+
+    TokenOrSyntax visitInvalid(SyntaxNode&, size_t) { return nullptr; }
 };
 
 } // namespace
@@ -79,11 +88,23 @@ SourceRange SyntaxNode::sourceRange() const {
 }
 
 ConstTokenOrSyntax SyntaxNode::getChild(size_t index) const {
+    ConstGetChildVisitor visitor;
+    return visit(visitor, index);
+}
+
+TokenOrSyntax SyntaxNode::getChild(size_t index) {
     GetChildVisitor visitor;
     return visit(visitor, index);
 }
 
 const SyntaxNode* SyntaxNode::childNode(size_t index) const {
+    auto child = getChild(index);
+    if (child.isToken())
+        return nullptr;
+    return child.node();
+}
+
+SyntaxNode* SyntaxNode::childNode(size_t index) {
     auto child = getChild(index);
     if (child.isToken())
         return nullptr;
