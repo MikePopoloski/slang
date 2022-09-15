@@ -7,8 +7,8 @@
 //------------------------------------------------------------------------------
 #pragma once
 
+#include "slang/ast/Compilation.h"
 #include "slang/ast/EvalContext.h"
-#include "slang/compilation/Compilation.h"
 #include "slang/syntax/SyntaxTree.h"
 
 namespace slang {

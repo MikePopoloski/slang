@@ -7,8 +7,8 @@
 //------------------------------------------------------------------------------
 #include "slang/ast/symbols/CompilationUnitSymbols.h"
 
+#include "slang/ast/Compilation.h"
 #include "slang/ast/symbols/MemberSymbols.h"
-#include "slang/compilation/Compilation.h"
 #include "slang/syntax/AllSyntax.h"
 
 namespace slang {

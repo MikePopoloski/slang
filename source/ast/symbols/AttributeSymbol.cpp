@@ -8,8 +8,8 @@
 #include "slang/ast/symbols/AttributeSymbol.h"
 
 #include "slang/ast/ASTSerializer.h"
+#include "slang/ast/Compilation.h"
 #include "slang/ast/Expression.h"
-#include "slang/compilation/Compilation.h"
 #include "slang/diagnostics/DeclarationsDiags.h"
 #include "slang/syntax/AllSyntax.h"
 #include "slang/util/StackContainer.h"

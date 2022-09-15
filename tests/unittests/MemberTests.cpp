@@ -4,6 +4,7 @@
 #include "Test.h"
 
 #include "slang/ast/ASTSerializer.h"
+#include "slang/ast/Definition.h"
 #include "slang/ast/Statements.h"
 #include "slang/ast/expressions/AssignmentExpressions.h"
 #include "slang/ast/expressions/CallExpression.h"
@@ -19,7 +20,6 @@
 #include "slang/ast/symbols/VariableSymbols.h"
 #include "slang/ast/types/NetType.h"
 #include "slang/ast/types/Type.h"
-#include "slang/compilation/Definition.h"
 #include "slang/text/Json.h"
 
 TEST_CASE("Nets") {

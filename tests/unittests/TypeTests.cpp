@@ -3,6 +3,7 @@
 
 #include "Test.h"
 
+#include "slang/ast/ScriptSession.h"
 #include "slang/ast/symbols/CompilationUnitSymbols.h"
 #include "slang/ast/symbols/InstanceSymbols.h"
 #include "slang/ast/symbols/MemberSymbols.h"
@@ -10,7 +11,6 @@
 #include "slang/ast/symbols/SubroutineSymbols.h"
 #include "slang/ast/symbols/VariableSymbols.h"
 #include "slang/ast/types/AllTypes.h"
-#include "slang/compilation/ScriptSession.h"
 #include "slang/syntax/AllSyntax.h"
 
 TEST_CASE("Enum declaration") {

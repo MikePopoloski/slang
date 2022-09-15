@@ -7,11 +7,11 @@
 //------------------------------------------------------------------------------
 #include "slang/ast/FormatHelpers.h"
 
+#include "slang/ast/Definition.h"
 #include "slang/ast/Expression.h"
 #include "slang/ast/expressions/LiteralExpressions.h"
 #include "slang/ast/symbols/VariableSymbols.h"
 #include "slang/ast/types/AllTypes.h"
-#include "slang/compilation/Definition.h"
 #include "slang/diagnostics/SysFuncsDiags.h"
 #include "slang/text/SFormat.h"
 

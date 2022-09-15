@@ -8,7 +8,7 @@
 //------------------------------------------------------------------------------
 #pragma once
 
-#include "slang/compilation/Compilation.h"
+#include "slang/ast/Compilation.h"
 #include "slang/diagnostics/DiagnosticEngine.h"
 #include "slang/text/SourceManager.h"
 #include "slang/util/CommandLine.h"

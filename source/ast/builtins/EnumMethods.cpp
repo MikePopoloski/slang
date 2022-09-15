@@ -5,8 +5,8 @@
 // SPDX-FileCopyrightText: Michael Popoloski
 // SPDX-License-Identifier: MIT
 //------------------------------------------------------------------------------
+#include "slang/ast/Compilation.h"
 #include "slang/ast/SystemSubroutine.h"
-#include "slang/compilation/Compilation.h"
 #include "slang/diagnostics/SysFuncsDiags.h"
 
 namespace slang::Builtins {

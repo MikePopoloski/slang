@@ -5,6 +5,8 @@
 //------------------------------------------------------------------------------
 #include "pyslang.h"
 
+#include "slang/ast/Compilation.h"
+#include "slang/ast/Definition.h"
 #include "slang/ast/Scope.h"
 #include "slang/ast/Symbol.h"
 #include "slang/ast/SystemSubroutine.h"
@@ -13,8 +15,6 @@
 #include "slang/ast/symbols/InstanceSymbols.h"
 #include "slang/ast/types/DeclaredType.h"
 #include "slang/ast/types/NetType.h"
-#include "slang/compilation/Compilation.h"
-#include "slang/compilation/Definition.h"
 #include "slang/syntax/AllSyntax.h"
 
 void registerSymbols(py::module_& m) {

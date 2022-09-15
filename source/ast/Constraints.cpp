@@ -8,7 +8,7 @@
 #include "slang/ast/Constraints.h"
 
 #include "slang/ast/ASTVisitor.h"
-#include "slang/compilation/Compilation.h"
+#include "slang/ast/Compilation.h"
 #include "slang/diagnostics/StatementsDiags.h"
 #include "slang/syntax/AllSyntax.h"
 #include "slang/util/TypeTraits.h"

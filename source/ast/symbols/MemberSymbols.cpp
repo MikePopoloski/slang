@@ -9,6 +9,8 @@
 
 #include "slang/ast/ASTSerializer.h"
 #include "slang/ast/ASTVisitor.h"
+#include "slang/ast/Compilation.h"
+#include "slang/ast/Definition.h"
 #include "slang/ast/Expression.h"
 #include "slang/ast/FormatHelpers.h"
 #include "slang/ast/TimingControl.h"
@@ -20,8 +22,6 @@
 #include "slang/ast/symbols/VariableSymbols.h"
 #include "slang/ast/types/NetType.h"
 #include "slang/ast/types/Type.h"
-#include "slang/compilation/Compilation.h"
-#include "slang/compilation/Definition.h"
 #include "slang/diagnostics/DeclarationsDiags.h"
 #include "slang/diagnostics/ExpressionsDiags.h"
 #include "slang/diagnostics/LookupDiags.h"

@@ -5,7 +5,7 @@
 #include <fmt/format.h>
 
 #include "slang/ast/ASTVisitor.h"
-#include "slang/compilation/SemanticModel.h"
+#include "slang/ast/SemanticModel.h"
 #include "slang/syntax/SyntaxPrinter.h"
 #include "slang/syntax/SyntaxVisitor.h"
 

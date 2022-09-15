@@ -5,14 +5,14 @@
 // SPDX-FileCopyrightText: Michael Popoloski
 // SPDX-License-Identifier: MIT
 //------------------------------------------------------------------------------
-#include "slang/compilation/Definition.h"
+#include "slang/ast/Definition.h"
 
 #include "../ast/symbols/ParameterBuilder.h"
 
+#include "slang/ast/Compilation.h"
 #include "slang/ast/Scope.h"
 #include "slang/ast/symbols/AttributeSymbol.h"
 #include "slang/ast/symbols/ParameterSymbols.h"
-#include "slang/compilation/Compilation.h"
 #include "slang/diagnostics/DeclarationsDiags.h"
 #include "slang/syntax/AllSyntax.h"
 #include "slang/syntax/SyntaxFacts.h"

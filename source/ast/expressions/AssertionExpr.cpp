@@ -9,6 +9,7 @@
 
 #include "slang/ast/ASTContext.h"
 #include "slang/ast/ASTVisitor.h"
+#include "slang/ast/Compilation.h"
 #include "slang/ast/Expression.h"
 #include "slang/ast/SystemSubroutine.h"
 #include "slang/ast/TimingControl.h"
@@ -19,7 +20,6 @@
 #include "slang/ast/symbols/MemberSymbols.h"
 #include "slang/ast/symbols/VariableSymbols.h"
 #include "slang/ast/types/Type.h"
-#include "slang/compilation/Compilation.h"
 #include "slang/diagnostics/StatementsDiags.h"
 #include "slang/syntax/AllSyntax.h"
 

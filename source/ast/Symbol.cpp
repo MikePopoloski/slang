@@ -10,11 +10,11 @@
 #include "../text/FormatBuffer.h"
 
 #include "slang/ast/ASTVisitor.h"
+#include "slang/ast/Compilation.h"
+#include "slang/ast/Definition.h"
 #include "slang/ast/symbols/CompilationUnitSymbols.h"
 #include "slang/ast/symbols/MemberSymbols.h"
 #include "slang/ast/types/Type.h"
-#include "slang/compilation/Compilation.h"
-#include "slang/compilation/Definition.h"
 #include "slang/syntax/AllSyntax.h"
 #include "slang/text/SourceManager.h"
 #include "slang/util/StackContainer.h"

@@ -7,10 +7,10 @@
 //------------------------------------------------------------------------------
 #pragma once
 
+#include "slang/ast/Definition.h"
 #include "slang/ast/Scope.h"
 #include "slang/ast/symbols/VariableSymbols.h"
 #include "slang/ast/types/Type.h"
-#include "slang/compilation/Definition.h"
 #include "slang/util/Function.h"
 #include "slang/util/Hash.h"
 

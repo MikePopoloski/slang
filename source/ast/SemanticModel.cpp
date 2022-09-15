@@ -5,10 +5,10 @@
 // SPDX-FileCopyrightText: Michael Popoloski
 // SPDX-License-Identifier: MIT
 //------------------------------------------------------------------------------
-#include "slang/compilation/SemanticModel.h"
+#include "slang/ast/SemanticModel.h"
 
-#include "slang/compilation/Compilation.h"
-#include "slang/compilation/Definition.h"
+#include "slang/ast/Compilation.h"
+#include "slang/ast/Definition.h"
 #include "slang/syntax/AllSyntax.h"
 
 namespace slang {

@@ -8,9 +8,9 @@
 #include "slang/ast/symbols/ParameterSymbols.h"
 
 #include "slang/ast/ASTSerializer.h"
+#include "slang/ast/Compilation.h"
 #include "slang/ast/Expression.h"
 #include "slang/ast/types/AllTypes.h"
-#include "slang/compilation/Compilation.h"
 #include "slang/diagnostics/ConstEvalDiags.h"
 #include "slang/diagnostics/DeclarationsDiags.h"
 #include "slang/syntax/AllSyntax.h"

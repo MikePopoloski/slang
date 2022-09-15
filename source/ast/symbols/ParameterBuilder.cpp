@@ -8,10 +8,10 @@
 #include "ParameterBuilder.h"
 
 #include "slang/ast/ASTContext.h"
+#include "slang/ast/Compilation.h"
 #include "slang/ast/Scope.h"
 #include "slang/ast/symbols/ParameterSymbols.h"
 #include "slang/ast/types/Type.h"
-#include "slang/compilation/Compilation.h"
 #include "slang/diagnostics/DeclarationsDiags.h"
 #include "slang/syntax/AllSyntax.h"
 

@@ -6,9 +6,9 @@
 // SPDX-License-Identifier: MIT
 //------------------------------------------------------------------------------
 #include "slang/ast/ASTVisitor.h"
+#include "slang/ast/Compilation.h"
 #include "slang/ast/SystemSubroutine.h"
 #include "slang/ast/symbols/MemberSymbols.h"
-#include "slang/compilation/Compilation.h"
 #include "slang/diagnostics/SysFuncsDiags.h"
 
 namespace slang::Builtins {

@@ -5,7 +5,7 @@
 // SPDX-FileCopyrightText: Michael Popoloski
 // SPDX-License-Identifier: MIT
 //------------------------------------------------------------------------------
-#include "slang/compilation/ScriptSession.h"
+#include "slang/ast/ScriptSession.h"
 
 #include "slang/ast/Expression.h"
 #include "slang/ast/Statements.h"

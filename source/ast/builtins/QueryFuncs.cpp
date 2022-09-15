@@ -5,10 +5,10 @@
 // SPDX-FileCopyrightText: Michael Popoloski
 // SPDX-License-Identifier: MIT
 //------------------------------------------------------------------------------
+#include "slang/ast/Compilation.h"
 #include "slang/ast/SystemSubroutine.h"
 #include "slang/ast/symbols/ParameterSymbols.h"
 #include "slang/ast/types/TypePrinter.h"
-#include "slang/compilation/Compilation.h"
 #include "slang/diagnostics/ConstEvalDiags.h"
 #include "slang/diagnostics/SysFuncsDiags.h"
 

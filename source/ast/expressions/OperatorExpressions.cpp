@@ -9,6 +9,7 @@
 
 #include "slang/ast/ASTSerializer.h"
 #include "slang/ast/Bitstream.h"
+#include "slang/ast/Compilation.h"
 #include "slang/ast/Patterns.h"
 #include "slang/ast/Statements.h"
 #include "slang/ast/expressions/AssignmentExpressions.h"
@@ -16,7 +17,6 @@
 #include "slang/ast/expressions/MiscExpressions.h"
 #include "slang/ast/expressions/SelectExpressions.h"
 #include "slang/ast/types/AllTypes.h"
-#include "slang/compilation/Compilation.h"
 #include "slang/diagnostics/ConstEvalDiags.h"
 #include "slang/diagnostics/ExpressionsDiags.h"
 #include "slang/parsing/LexerFacts.h"

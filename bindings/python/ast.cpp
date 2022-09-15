@@ -5,8 +5,8 @@
 //------------------------------------------------------------------------------
 #include "pyslang.h"
 
+#include "slang/ast/Compilation.h"
 #include "slang/ast/SystemSubroutine.h"
-#include "slang/compilation/Compilation.h"
 #include "slang/syntax/AllSyntax.h"
 
 void registerAST(py::module_& m) {

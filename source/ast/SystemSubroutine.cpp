@@ -8,8 +8,8 @@
 #include "slang/ast/SystemSubroutine.h"
 
 #include "slang/ast/ASTVisitor.h"
+#include "slang/ast/Compilation.h"
 #include "slang/ast/Expression.h"
-#include "slang/compilation/Compilation.h"
 #include "slang/diagnostics/ExpressionsDiags.h"
 #include "slang/diagnostics/SysFuncsDiags.h"
 

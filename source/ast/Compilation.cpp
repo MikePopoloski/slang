@@ -5,14 +5,14 @@
 // SPDX-FileCopyrightText: Michael Popoloski
 // SPDX-License-Identifier: MIT
 //------------------------------------------------------------------------------
-#include "slang/compilation/Compilation.h"
+#include "slang/ast/Compilation.h"
 
 #include "ElabVisitors.h"
 
+#include "slang/ast/Definition.h"
+#include "slang/ast/ScriptSession.h"
 #include "slang/ast/SystemSubroutine.h"
 #include "slang/ast/types/TypePrinter.h"
-#include "slang/compilation/Definition.h"
-#include "slang/compilation/ScriptSession.h"
 #include "slang/diagnostics/DiagnosticEngine.h"
 #include "slang/diagnostics/LookupDiags.h"
 #include "slang/diagnostics/TextDiagnosticClient.h"

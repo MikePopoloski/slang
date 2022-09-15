@@ -3,16 +3,16 @@
 // SPDX-FileCopyrightText: Michael Popoloski
 // SPDX-License-Identifier: MIT
 //------------------------------------------------------------------------------
-#include "slang/compilation/Compilation.h"
+#include "slang/ast/Compilation.h"
 
 #include "pyslang.h"
 
+#include "slang/ast/Definition.h"
+#include "slang/ast/ScriptSession.h"
 #include "slang/ast/SystemSubroutine.h"
 #include "slang/ast/symbols/AttributeSymbol.h"
 #include "slang/ast/symbols/CompilationUnitSymbols.h"
 #include "slang/ast/types/NetType.h"
-#include "slang/compilation/Definition.h"
-#include "slang/compilation/ScriptSession.h"
 #include "slang/diagnostics/TextDiagnosticClient.h"
 #include "slang/driver/Driver.h"
 #include "slang/syntax/AllSyntax.h"

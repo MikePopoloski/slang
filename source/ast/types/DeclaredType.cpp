@@ -7,6 +7,7 @@
 //------------------------------------------------------------------------------
 #include "slang/ast/types/DeclaredType.h"
 
+#include "slang/ast/Compilation.h"
 #include "slang/ast/Expression.h"
 #include "slang/ast/Scope.h"
 #include "slang/ast/Symbol.h"
@@ -16,7 +17,6 @@
 #include "slang/ast/symbols/VariableSymbols.h"
 #include "slang/ast/types/AllTypes.h"
 #include "slang/ast/types/NetType.h"
-#include "slang/compilation/Compilation.h"
 #include "slang/diagnostics/DeclarationsDiags.h"
 #include "slang/diagnostics/ParserDiags.h"
 #include "slang/diagnostics/StatementsDiags.h"

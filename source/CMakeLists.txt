@@ -148,6 +148,18 @@ target_link_libraries(slangparser PUBLIC slangcore)
 # -------- Compiler library
 add_library(
   slangcompiler
+  ast/builtins/ArrayMethods.cpp
+  ast/builtins/ConversionFuncs.cpp
+  ast/builtins/CoverageFuncs.cpp
+  ast/builtins/EnumMethods.cpp
+  ast/builtins/GateTypes.cpp
+  ast/builtins/MathFuncs.cpp
+  ast/builtins/MiscSystemFuncs.cpp
+  ast/builtins/NonConstFuncs.cpp
+  ast/builtins/QueryFuncs.cpp
+  ast/builtins/StdPackage.cpp
+  ast/builtins/StringMethods.cpp
+  ast/builtins/SystemTasks.cpp
   ast/expressions/AssertionExpr.cpp
   ast/expressions/AssignmentExpressions.cpp
   ast/expressions/CallExpression.cpp
@@ -177,7 +189,9 @@ add_library(
   ast/ASTContext.cpp
   ast/ASTSerializer.cpp
   ast/Bitstream.cpp
+  ast/Compilation.cpp
   ast/Constraints.cpp
+  ast/Definition.cpp
   ast/EvalContext.cpp
   ast/Expression.cpp
   ast/FormatHelpers.cpp
@@ -185,27 +199,13 @@ add_library(
   ast/LValue.cpp
   ast/Patterns.cpp
   ast/Scope.cpp
+  ast/ScriptSession.cpp
   ast/SemanticFacts.cpp
+  ast/SemanticModel.cpp
   ast/Statements.cpp
   ast/Symbol.cpp
   ast/SystemSubroutine.cpp
   ast/TimingControl.cpp
-  compilation/builtins/ArrayMethods.cpp
-  compilation/builtins/ConversionFuncs.cpp
-  compilation/builtins/CoverageFuncs.cpp
-  compilation/builtins/EnumMethods.cpp
-  compilation/builtins/GateTypes.cpp
-  compilation/builtins/MathFuncs.cpp
-  compilation/builtins/MiscSystemFuncs.cpp
-  compilation/builtins/NonConstFuncs.cpp
-  compilation/builtins/QueryFuncs.cpp
-  compilation/builtins/StdPackage.cpp
-  compilation/builtins/StringMethods.cpp
-  compilation/builtins/SystemTasks.cpp
-  compilation/Compilation.cpp
-  compilation/Definition.cpp
-  compilation/ScriptSession.cpp
-  compilation/SemanticModel.cpp
   driver/Driver.cpp)
 slang_define_lib(slangcompiler)
 add_dependencies(slangcompiler slangparser)

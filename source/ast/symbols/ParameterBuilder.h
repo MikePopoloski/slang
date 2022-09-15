@@ -7,7 +7,7 @@
 //------------------------------------------------------------------------------
 #pragma once
 
-#include "slang/compilation/Definition.h"
+#include "slang/ast/Definition.h"
 #include "slang/util/StackContainer.h"
 
 namespace slang {

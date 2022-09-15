@@ -3,6 +3,7 @@
 
 #include "Test.h"
 
+#include "slang/ast/Compilation.h"
 #include "slang/ast/expressions/AssignmentExpressions.h"
 #include "slang/ast/expressions/MiscExpressions.h"
 #include "slang/ast/symbols/BlockSymbols.h"
@@ -11,7 +12,6 @@
 #include "slang/ast/symbols/ParameterSymbols.h"
 #include "slang/ast/symbols/VariableSymbols.h"
 #include "slang/ast/types/Type.h"
-#include "slang/compilation/Compilation.h"
 #include "slang/syntax/SyntaxTree.h"
 
 TEST_CASE("Explicit import lookup") {

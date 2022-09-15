@@ -6,12 +6,12 @@
 // SPDX-License-Identifier: MIT
 //------------------------------------------------------------------------------
 #include "slang/ast/ASTVisitor.h"
+#include "slang/ast/Compilation.h"
 #include "slang/ast/FormatHelpers.h"
 #include "slang/ast/SystemSubroutine.h"
 #include "slang/ast/expressions/MiscExpressions.h"
 #include "slang/ast/symbols/InstanceSymbols.h"
 #include "slang/ast/symbols/MemberSymbols.h"
-#include "slang/compilation/Compilation.h"
 #include "slang/diagnostics/SysFuncsDiags.h"
 #include "slang/syntax/AllSyntax.h"
 

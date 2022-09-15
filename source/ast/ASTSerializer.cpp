@@ -8,7 +8,7 @@
 #include "slang/ast/ASTSerializer.h"
 
 #include "slang/ast/ASTVisitor.h"
-#include "slang/compilation/Compilation.h"
+#include "slang/ast/Compilation.h"
 
 namespace slang {
 

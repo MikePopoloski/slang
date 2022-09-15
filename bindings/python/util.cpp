@@ -5,8 +5,8 @@
 //------------------------------------------------------------------------------
 #include "pyslang.h"
 
+#include "slang/ast/Compilation.h"
 #include "slang/ast/Symbol.h"
-#include "slang/compilation/Compilation.h"
 #include "slang/diagnostics/DiagnosticClient.h"
 #include "slang/diagnostics/DiagnosticEngine.h"
 #include "slang/diagnostics/Diagnostics.h"

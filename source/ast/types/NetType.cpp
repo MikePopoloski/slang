@@ -9,11 +9,11 @@
 
 #include "slang/ast/ASTContext.h"
 #include "slang/ast/ASTSerializer.h"
+#include "slang/ast/Compilation.h"
 #include "slang/ast/Scope.h"
 #include "slang/ast/symbols/SubroutineSymbols.h"
 #include "slang/ast/symbols/VariableSymbols.h"
 #include "slang/ast/types/Type.h"
-#include "slang/compilation/Compilation.h"
 #include "slang/diagnostics/LookupDiags.h"
 #include "slang/diagnostics/TypesDiags.h"
 #include "slang/syntax/AllSyntax.h"

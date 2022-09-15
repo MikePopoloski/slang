@@ -7,12 +7,12 @@
 //------------------------------------------------------------------------------
 #include "slang/ast/symbols/SymbolBuilders.h"
 
+#include "slang/ast/Compilation.h"
 #include "slang/ast/expressions/LiteralExpressions.h"
 #include "slang/ast/symbols/ClassSymbols.h"
 #include "slang/ast/symbols/VariableSymbols.h"
 #include "slang/ast/types/AllTypes.h"
 #include "slang/ast/types/Type.h"
-#include "slang/compilation/Compilation.h"
 
 namespace slang {
 
