@@ -15,6 +15,8 @@
 
 namespace slang::ast {
 
+using namespace syntax;
+
 IntegerLiteral::IntegerLiteral(BumpAllocator& alloc, const Type& type, const SVInt& value,
                                bool isDeclaredUnsized, SourceRange sourceRange) :
     Expression(ExpressionKind::IntegerLiteral, type, sourceRange),

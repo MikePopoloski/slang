@@ -73,6 +73,7 @@ bool isSameEnum(const Expression& expr, const Type& enumType) {
 namespace slang::ast {
 
 using namespace parsing;
+using namespace syntax;
 
 Expression* Expression::tryConnectPortArray(const ASTContext& context, const Type& portType,
                                             Expression& expr, const InstanceSymbolBase& instance) {

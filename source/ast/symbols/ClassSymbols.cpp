@@ -27,6 +27,7 @@
 namespace slang::ast {
 
 using namespace parsing;
+using namespace syntax;
 
 ClassPropertySymbol::ClassPropertySymbol(string_view name, SourceLocation loc,
                                          VariableLifetime lifetime, Visibility visibility) :

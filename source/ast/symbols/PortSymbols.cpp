@@ -30,6 +30,7 @@
 namespace slang::ast {
 
 using namespace parsing;
+using namespace syntax;
 
 namespace {
 

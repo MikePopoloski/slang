@@ -15,6 +15,8 @@
 
 namespace slang::ast::builtins {
 
+using namespace syntax;
+
 static bool isComparable(const Type& type) {
     return type.isNumeric() || type.isString();
 }

@@ -11,7 +11,7 @@
 #include "slang/syntax/SyntaxTree.h"
 #include "slang/text/SourceManager.h"
 
-namespace slang {
+namespace slang::syntax {
 
 using namespace parsing;
 
@@ -158,4 +158,4 @@ SyntaxPrinter& SyntaxPrinter::append(string_view text) {
     return *this;
 }
 
-} // namespace slang
+} // namespace slang::syntax

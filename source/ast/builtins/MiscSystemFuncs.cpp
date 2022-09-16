@@ -18,6 +18,8 @@
 
 namespace slang::ast::builtins {
 
+using namespace syntax;
+
 class SFormatFunction : public SystemSubroutine {
 public:
     SFormatFunction(const std::string& name, bool isNonStandard) :

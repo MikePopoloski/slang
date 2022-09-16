@@ -19,6 +19,7 @@
 #include "slang/syntax/SyntaxTree.h"
 
 using namespace slang;
+using namespace slang::syntax;
 
 int main(int argc, char** argv) try {
     if (argc != 2) {

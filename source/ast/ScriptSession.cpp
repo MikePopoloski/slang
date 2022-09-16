@@ -16,6 +16,8 @@
 
 namespace slang::ast {
 
+using namespace syntax;
+
 static CompilationOptions createOptions() {
     CompilationOptions options;
     options.allowHierarchicalConst = true;

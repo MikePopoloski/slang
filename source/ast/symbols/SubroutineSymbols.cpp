@@ -24,6 +24,7 @@
 namespace slang::ast {
 
 using namespace parsing;
+using namespace syntax;
 
 const Statement& SubroutineSymbol::getBody() const {
     if (!stmt) {

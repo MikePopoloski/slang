@@ -22,6 +22,7 @@
 namespace {
 
 using namespace slang;
+using namespace slang::syntax;
 using namespace slang::ast;
 
 class OptionBuilder {
@@ -56,6 +57,7 @@ private:
 namespace slang::ast {
 
 using namespace parsing;
+using namespace syntax;
 
 CoverageOptionSetter::CoverageOptionSetter(const Scope& scope, const CoverageOptionSyntax& syntax) :
     scope(&scope), syntax(&syntax) {

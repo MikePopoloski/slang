@@ -100,6 +100,7 @@ bool isShortCircuitOp(BinaryOperator op) {
 namespace slang::ast {
 
 using namespace parsing;
+using namespace syntax;
 
 const Type* Expression::binaryOperatorType(Compilation& compilation, const Type* lt, const Type* rt,
                                            bool forceFourState, bool signednessFromRt) {

@@ -38,7 +38,7 @@ public:
     PatternKind kind;
 
     /// The syntax node used to create the pattern, if it came from source code.
-    const SyntaxNode* syntax = nullptr;
+    const syntax::SyntaxNode* syntax = nullptr;
 
     /// The source range where this pattern occurs, if it came from source code.
     SourceRange sourceRange;
@@ -48,8 +48,8 @@ public:
 
     using VarMap = SmallMap<string_view, const PatternVarSymbol*, 4>;
 
-    static Pattern& bind(const PatternSyntax& syntax, const Type& targetType, VarMap& varMap,
-                         ASTContext& context);
+    static Pattern& bind(const syntax::PatternSyntax& syntax, const Type& targetType,
+                         VarMap& varMap, ASTContext& context);
 
     /// Evaluates the pattern under the given evaluation context. Any errors that occur
     /// will be stored in the evaluation context instead of issued to the compilation.
@@ -75,7 +75,7 @@ protected:
     Pattern(PatternKind kind, SourceRange sourceRange) : kind(kind), sourceRange(sourceRange) {}
 
     static Pattern& badPattern(Compilation& compilation, const Pattern* child);
-    static void createPlaceholderVars(const PatternSyntax& syntax, VarMap& varMap,
+    static void createPlaceholderVars(const syntax::PatternSyntax& syntax, VarMap& varMap,
                                       ASTContext& context);
 };
 
@@ -96,7 +96,8 @@ public:
     explicit WildcardPattern(SourceRange sourceRange) :
         Pattern(PatternKind::Wildcard, sourceRange) {}
 
-    static Pattern& fromSyntax(const WildcardPatternSyntax& syntax, const ASTContext& context);
+    static Pattern& fromSyntax(const syntax::WildcardPatternSyntax& syntax,
+                               const ASTContext& context);
 
     ConstantValue evalImpl(EvalContext& context, const ConstantValue& value,
                            CaseStatementCondition conditionKind) const;
@@ -113,8 +114,8 @@ public:
     ConstantPattern(const Expression& expr, SourceRange sourceRange) :
         Pattern(PatternKind::Constant, sourceRange), expr(expr) {}
 
-    static Pattern& fromSyntax(const ExpressionPatternSyntax& syntax, const Type& targetType,
-                               const ASTContext& context);
+    static Pattern& fromSyntax(const syntax::ExpressionPatternSyntax& syntax,
+                               const Type& targetType, const ASTContext& context);
 
     ConstantValue evalImpl(EvalContext& context, const ConstantValue& value,
                            CaseStatementCondition conditionKind) const;
@@ -131,7 +132,7 @@ public:
     VariablePattern(const PatternVarSymbol& variable, SourceRange sourceRange) :
         Pattern(PatternKind::Variable, sourceRange), variable(variable) {}
 
-    static Pattern& fromSyntax(const VariablePatternSyntax& syntax, const Type& targetType,
+    static Pattern& fromSyntax(const syntax::VariablePatternSyntax& syntax, const Type& targetType,
                                VarMap& varMap, ASTContext& context);
 
     ConstantValue evalImpl(EvalContext& context, const ConstantValue& value,
@@ -150,7 +151,7 @@ public:
     TaggedPattern(const FieldSymbol& member, const Pattern* valuePattern, SourceRange sourceRange) :
         Pattern(PatternKind::Tagged, sourceRange), member(member), valuePattern(valuePattern) {}
 
-    static Pattern& fromSyntax(const TaggedPatternSyntax& syntax, const Type& targetType,
+    static Pattern& fromSyntax(const syntax::TaggedPatternSyntax& syntax, const Type& targetType,
                                VarMap& varMap, ASTContext& context);
 
     ConstantValue evalImpl(EvalContext& context, const ConstantValue& value,
@@ -173,7 +174,7 @@ public:
     StructurePattern(span<const FieldPattern> patterns, SourceRange sourceRange) :
         Pattern(PatternKind::Structure, sourceRange), patterns(patterns) {}
 
-    static Pattern& fromSyntax(const StructurePatternSyntax& syntax, const Type& targetType,
+    static Pattern& fromSyntax(const syntax::StructurePatternSyntax& syntax, const Type& targetType,
                                VarMap& varMap, ASTContext& context);
 
     ConstantValue evalImpl(EvalContext& context, const ConstantValue& value,

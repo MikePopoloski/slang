@@ -29,6 +29,8 @@
 
 namespace slang::ast {
 
+using namespace syntax;
+
 static const Type& getIndexedType(Compilation& compilation, const ASTContext& context,
                                   const Type& valueType, SourceRange exprRange,
                                   SourceRange valueRange, bool isRangeSelect) {

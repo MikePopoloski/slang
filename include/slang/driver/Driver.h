@@ -17,8 +17,11 @@
 
 namespace slang {
 
-class SyntaxTree;
 class TextDiagnosticClient;
+
+namespace syntax {
+class SyntaxTree;
+}
 
 } // namespace slang
 
@@ -47,7 +50,7 @@ public:
     std::vector<SourceBuffer> buffers;
 
     /// A list of syntax trees that have been parsed.
-    std::vector<std::shared_ptr<SyntaxTree>> syntaxTrees;
+    std::vector<std::shared_ptr<syntax::SyntaxTree>> syntaxTrees;
 
     /// A container for various options that can be parsed and applied
     /// to the compilation process.

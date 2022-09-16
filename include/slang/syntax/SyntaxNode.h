@@ -16,7 +16,7 @@
 #include "slang/util/SmallVector.h"
 #include "slang/util/Util.h"
 
-namespace slang {
+namespace slang::syntax {
 
 class SyntaxNode;
 
@@ -331,4 +331,4 @@ SeparatedSyntaxList<T>::SeparatedSyntaxList(span<TokenOrSyntax> elements) :
     SyntaxListBase(SyntaxKind::SeparatedList, elements.size()), elements(elements) {
 }
 
-} // namespace slang
+} // namespace slang::syntax

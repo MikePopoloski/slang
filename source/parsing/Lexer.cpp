@@ -26,6 +26,8 @@ static const double BitsPerDecimal = log2(10.0);
 
 namespace slang::parsing {
 
+using namespace syntax;
+
 using LF = LexerFacts;
 
 Lexer::Lexer(SourceBuffer buffer, BumpAllocator& alloc, Diagnostics& diagnostics,

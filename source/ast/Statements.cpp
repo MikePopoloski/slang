@@ -48,6 +48,7 @@ struct EvalVisitor {
 namespace slang::ast {
 
 using namespace parsing;
+using namespace syntax;
 
 const InvalidStatement InvalidStatement::Instance(nullptr);
 

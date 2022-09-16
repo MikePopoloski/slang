@@ -16,6 +16,8 @@
 
 namespace slang::ast::builtins {
 
+using namespace syntax;
+
 #define NL SourceLocation::NoLocation
 
 static const Symbol& createProcessClass(Compilation& c) {

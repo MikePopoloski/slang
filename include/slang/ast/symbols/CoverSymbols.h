@@ -19,7 +19,7 @@ class FormalArgumentSymbol;
 
 class CoverageOptionSetter {
 public:
-    CoverageOptionSetter(const Scope& scope, const CoverageOptionSyntax& syntax);
+    CoverageOptionSetter(const Scope& scope, const syntax::CoverageOptionSyntax& syntax);
 
     bool isTypeOption() const;
     string_view getName() const;
@@ -34,7 +34,7 @@ public:
 
 private:
     not_null<const Scope*> scope;
-    not_null<const CoverageOptionSyntax*> syntax;
+    not_null<const syntax::CoverageOptionSyntax*> syntax;
     mutable const Expression* expr = nullptr;
 };
 
@@ -62,7 +62,8 @@ public:
     CovergroupType(Compilation& compilation, string_view name, SourceLocation loc,
                    const CovergroupBodySymbol& body);
 
-    static const Symbol& fromSyntax(const Scope& scope, const CovergroupDeclarationSyntax& syntax);
+    static const Symbol& fromSyntax(const Scope& scope,
+                                    const syntax::CovergroupDeclarationSyntax& syntax);
 
     const TimingControl* getCoverageEvent() const;
     ConstantValue getDefaultValueImpl() const;
@@ -85,7 +86,8 @@ public:
         const Expression* repeatTo = nullptr;
         enum RepeatKind { None, Consecutive, Nonconsecutive, GoTo } repeatKind = None;
 
-        TransRangeList(const TransRangeSyntax& syntax, const Type& type, const ASTContext& context);
+        TransRangeList(const syntax::TransRangeSyntax& syntax, const Type& type,
+                       const ASTContext& context);
 
         void serializeTo(ASTSerializer& serializer) const;
 
@@ -123,8 +125,10 @@ public:
 
     void serializeTo(ASTSerializer& serializer) const;
 
-    static CoverageBinSymbol& fromSyntax(const Scope& scope, const CoverageBinsSyntax& syntax);
-    static CoverageBinSymbol& fromSyntax(const Scope& scope, const BinsSelectionSyntax& syntax);
+    static CoverageBinSymbol& fromSyntax(const Scope& scope,
+                                         const syntax::CoverageBinsSyntax& syntax);
+    static CoverageBinSymbol& fromSyntax(const Scope& scope,
+                                         const syntax::BinsSelectionSyntax& syntax);
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::CoverageBin; }
 
@@ -151,8 +155,9 @@ public:
 
     CoverpointSymbol(Compilation& compilation, string_view name, SourceLocation loc);
 
-    static CoverpointSymbol& fromSyntax(const Scope& scope, const CoverpointSyntax& syntax);
-    static CoverpointSymbol& fromImplicit(const Scope& scope, const IdentifierNameSyntax& syntax);
+    static CoverpointSymbol& fromSyntax(const Scope& scope, const syntax::CoverpointSyntax& syntax);
+    static CoverpointSymbol& fromImplicit(const Scope& scope,
+                                          const syntax::IdentifierNameSyntax& syntax);
 
     const Type& getType() const { return declaredType.getType(); }
 
@@ -203,7 +208,7 @@ public:
     CoverCrossSymbol(Compilation& compilation, string_view name, SourceLocation loc,
                      span<const CoverpointSymbol* const> targets);
 
-    static void fromSyntax(const Scope& scope, const CoverCrossSyntax& syntax,
+    static void fromSyntax(const Scope& scope, const syntax::CoverCrossSyntax& syntax,
                            SmallVector<const Symbol*>& results);
 
     const Expression* getIffExpr() const;
@@ -242,11 +247,11 @@ class BinsSelectExpr {
 public:
     BinsSelectExprKind kind;
 
-    const SyntaxNode* syntax = nullptr;
+    const syntax::SyntaxNode* syntax = nullptr;
 
     bool bad() const { return kind == BinsSelectExprKind::Invalid; }
 
-    static const BinsSelectExpr& bind(const BinsSelectExpressionSyntax& syntax,
+    static const BinsSelectExpr& bind(const syntax::BinsSelectExpressionSyntax& syntax,
                                       const ASTContext& context);
 
     template<typename T>
@@ -290,7 +295,7 @@ public:
     explicit ConditionBinsSelectExpr(const Symbol& target) :
         BinsSelectExpr(BinsSelectExprKind::Condition), target(target) {}
 
-    static BinsSelectExpr& fromSyntax(const BinsSelectConditionExprSyntax& syntax,
+    static BinsSelectExpr& fromSyntax(const syntax::BinsSelectConditionExprSyntax& syntax,
                                       const ASTContext& context);
 
     void serializeTo(ASTSerializer& serializer) const;
@@ -315,7 +320,7 @@ public:
     explicit UnaryBinsSelectExpr(const BinsSelectExpr& expr) :
         BinsSelectExpr(BinsSelectExprKind::Unary), expr(expr) {}
 
-    static BinsSelectExpr& fromSyntax(const UnaryBinsSelectExprSyntax& syntax,
+    static BinsSelectExpr& fromSyntax(const syntax::UnaryBinsSelectExprSyntax& syntax,
                                       const ASTContext& context);
 
     void serializeTo(ASTSerializer& serializer) const;
@@ -337,7 +342,7 @@ public:
     BinaryBinsSelectExpr(const BinsSelectExpr& left, const BinsSelectExpr& right, Op op) :
         BinsSelectExpr(BinsSelectExprKind::Binary), left(left), right(right), op(op) {}
 
-    static BinsSelectExpr& fromSyntax(const BinaryBinsSelectExprSyntax& syntax,
+    static BinsSelectExpr& fromSyntax(const syntax::BinaryBinsSelectExprSyntax& syntax,
                                       const ASTContext& context);
 
     void serializeTo(ASTSerializer& serializer) const;
@@ -359,7 +364,7 @@ public:
     SetExprBinsSelectExpr(const Expression& expr, const Expression* matchesExpr) :
         BinsSelectExpr(BinsSelectExprKind::SetExpr), expr(expr), matchesExpr(matchesExpr) {}
 
-    static BinsSelectExpr& fromSyntax(const SimpleBinsSelectExprSyntax& syntax,
+    static BinsSelectExpr& fromSyntax(const syntax::SimpleBinsSelectExprSyntax& syntax,
                                       const ASTContext& context);
 
     void serializeTo(ASTSerializer& serializer) const;
@@ -385,7 +390,7 @@ public:
         BinsSelectExpr(BinsSelectExprKind::WithFilter),
         expr(expr), filter(filter), matchesExpr(matchesExpr) {}
 
-    static BinsSelectExpr& fromSyntax(const BinSelectWithFilterExprSyntax& syntax,
+    static BinsSelectExpr& fromSyntax(const syntax::BinSelectWithFilterExprSyntax& syntax,
                                       const ASTContext& context);
 
     void serializeTo(ASTSerializer& serializer) const;

@@ -110,17 +110,17 @@ protected:
     /// with bookend tokens in a way that robustly handles bad tokens.
     template<bool (*IsExpected)(TokenKind), bool (*IsEnd)(TokenKind), typename TParserFunc>
     void parseList(TokenKind openKind, TokenKind closeKind, TokenKind separatorKind,
-                   Token& openToken, span<TokenOrSyntax>& list, Token& closeToken,
+                   Token& openToken, span<syntax::TokenOrSyntax>& list, Token& closeToken,
                    RequireItems requireItems, DiagCode code, TParserFunc&& parseItem,
                    AllowEmpty allowEmpty = {}) {
         openToken = expect(openKind);
         if (openToken.isMissing()) {
             closeToken = missingToken(closeKind, openToken.location());
-            list = span<TokenOrSyntax>();
+            list = span<syntax::TokenOrSyntax>();
             return;
         }
 
-        SmallVectorSized<TokenOrSyntax, 32> buffer;
+        SmallVectorSized<syntax::TokenOrSyntax, 32> buffer;
         parseList<IsExpected, IsEnd, TParserFunc>(buffer, closeKind, separatorKind, closeToken,
                                                   requireItems, code,
                                                   std::forward<TParserFunc>(parseItem), allowEmpty);
@@ -128,9 +128,9 @@ protected:
     }
 
     template<bool (*IsExpected)(TokenKind), bool (*IsEnd)(TokenKind), typename TParserFunc>
-    void parseList(SmallVector<TokenOrSyntax>& buffer, TokenKind closeKind, TokenKind separatorKind,
-                   Token& closeToken, RequireItems requireItems, DiagCode code,
-                   TParserFunc&& parseItem, AllowEmpty allowEmpty = {}) {
+    void parseList(SmallVector<syntax::TokenOrSyntax>& buffer, TokenKind closeKind,
+                   TokenKind separatorKind, Token& closeToken, RequireItems requireItems,
+                   DiagCode code, TParserFunc&& parseItem, AllowEmpty allowEmpty = {}) {
         auto current = peek();
         if (IsEnd(current.kind)) {
             if (requireItems == RequireItems::True)
@@ -209,7 +209,7 @@ protected:
         auto current = peek();
         do {
             if (current.kind == TokenKind::EndOfFile || IsAbort(current.kind) ||
-                SyntaxFacts::isEndKeyword(current.kind)) {
+                syntax::SyntaxFacts::isEndKeyword(current.kind)) {
                 return false;
             }
 

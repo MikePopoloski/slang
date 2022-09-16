@@ -24,13 +24,13 @@ public:
     ScriptSession();
 
     ConstantValue eval(string_view text);
-    ConstantValue evalExpression(const ExpressionSyntax& expr);
-    void evalStatement(const StatementSyntax& expr);
+    ConstantValue evalExpression(const syntax::ExpressionSyntax& expr);
+    void evalStatement(const syntax::StatementSyntax& expr);
 
     Diagnostics getDiagnostics();
 
 private:
-    std::vector<std::shared_ptr<SyntaxTree>> syntaxTrees;
+    std::vector<std::shared_ptr<syntax::SyntaxTree>> syntaxTrees;
     EvalContext evalContext;
 };
 

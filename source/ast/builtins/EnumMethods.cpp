@@ -11,6 +11,8 @@
 
 namespace slang::ast::builtins {
 
+using namespace syntax;
+
 class EnumFirstLastMethod : public SystemSubroutine {
 public:
     EnumFirstLastMethod(const std::string& name, bool first) :

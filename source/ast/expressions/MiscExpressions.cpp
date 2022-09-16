@@ -29,6 +29,7 @@
 namespace slang::ast {
 
 using namespace parsing;
+using namespace syntax;
 
 Expression& ValueExpressionBase::fromSymbol(const ASTContext& context, const Symbol& symbol,
                                             bool isHierarchical, SourceRange sourceRange,

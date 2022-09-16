@@ -25,7 +25,7 @@ int main(int argc, char* argv[]) {
     setvbuf(stdout, nullptr, _IOFBF, 1000);
 #endif
 
-    slang::SyntaxTree::getDefaultSourceManager().setDisableProximatePaths(true);
+    slang::syntax::SyntaxTree::getDefaultSourceManager().setDisableProximatePaths(true);
 
     Catch::Session session;
     session.configData().defaultColourMode = Catch::ColourMode::ANSI;

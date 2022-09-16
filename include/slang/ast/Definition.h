@@ -14,7 +14,7 @@
 #include "slang/util/SmallVector.h"
 #include "slang/util/Util.h"
 
-namespace slang {
+namespace slang::syntax {
 
 class SyntaxTree;
 
@@ -33,14 +33,14 @@ class Definition {
 public:
     struct ParameterDecl {
         union {
-            const ParameterDeclarationSyntax* valueSyntax;
-            const TypeParameterDeclarationSyntax* typeSyntax;
+            const syntax::ParameterDeclarationSyntax* valueSyntax;
+            const syntax::TypeParameterDeclarationSyntax* typeSyntax;
             const Type* givenType;
         };
 
         union {
-            const DeclaratorSyntax* valueDecl;
-            const TypeAssignmentSyntax* typeDecl;
+            const syntax::DeclaratorSyntax* valueDecl;
+            const syntax::TypeAssignmentSyntax* typeDecl;
             const Expression* givenInitializer;
         };
 
@@ -51,10 +51,10 @@ public:
         bool isPortParam;
         bool hasSyntax;
 
-        ParameterDecl(const Scope& scope, const ParameterDeclarationSyntax& syntax,
-                      const DeclaratorSyntax& decl, bool isLocal, bool isPort);
-        ParameterDecl(const Scope& scope, const TypeParameterDeclarationSyntax& syntax,
-                      const TypeAssignmentSyntax& decl, bool isLocal, bool isPort);
+        ParameterDecl(const Scope& scope, const syntax::ParameterDeclarationSyntax& syntax,
+                      const syntax::DeclaratorSyntax& decl, bool isLocal, bool isPort);
+        ParameterDecl(const Scope& scope, const syntax::TypeParameterDeclarationSyntax& syntax,
+                      const syntax::TypeAssignmentSyntax& decl, bool isLocal, bool isPort);
         ParameterDecl(string_view name, SourceLocation location, const Type& givenType,
                       bool isLocal, bool isPort, const Expression* givenInitializer);
         ParameterDecl(string_view name, SourceLocation location, bool isLocal, bool isPort,
@@ -65,7 +65,7 @@ public:
 
     string_view name;
     SourceLocation location;
-    const ModuleDeclarationSyntax& syntax;
+    const syntax::ModuleDeclarationSyntax& syntax;
     const NetType& defaultNetType;
     const Scope& scope;
     SymbolIndex indexInScope;
@@ -76,13 +76,13 @@ public:
     SmallVectorSized<ParameterDecl, 8> parameters;
     flat_hash_set<string_view> modports;
     span<const AttributeSymbol* const> attributes;
-    const SyntaxTree* syntaxTree;
+    const syntax::SyntaxTree* syntaxTree;
     bool hasNonAnsiPorts;
 
     Definition(const Scope& scope, LookupLocation lookupLocation,
-               const ModuleDeclarationSyntax& syntax, const NetType& defaultNetType,
+               const syntax::ModuleDeclarationSyntax& syntax, const NetType& defaultNetType,
                UnconnectedDrive unconnectedDrive, optional<TimeScale> directiveTimeScale,
-               const SyntaxTree* syntaxTree);
+               const syntax::SyntaxTree* syntaxTree);
 
     /// Returns a string description of the definition kind, such as "module",
     /// "interface", or "program".

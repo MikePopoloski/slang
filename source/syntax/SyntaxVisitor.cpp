@@ -10,7 +10,8 @@
 namespace {
 
 using namespace slang;
-using namespace slang::detail;
+using namespace slang::syntax;
+using namespace slang::syntax::detail;
 
 struct CloneVisitor {
     BumpAllocator& alloc;
@@ -121,7 +122,7 @@ struct CloneVisitor {
 
 } // namespace
 
-namespace slang::detail {
+namespace slang::syntax::detail {
 
 std::shared_ptr<SyntaxTree> transformTree(
     BumpAllocator&& alloc, const std::shared_ptr<SyntaxTree>& tree, const ChangeCollection& commits,
@@ -138,4 +139,4 @@ std::shared_ptr<SyntaxTree> transformTree(
     return std::make_shared<SyntaxTree>(root, tree->sourceManager(), std::move(alloc), tree);
 }
 
-} // namespace slang::detail
+} // namespace slang::syntax::detail

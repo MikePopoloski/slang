@@ -117,7 +117,7 @@ public:
 
     /// Sets the source syntax for the type, which will later be used when
     /// resolution is requested.
-    void setTypeSyntax(const DataTypeSyntax& newType) {
+    void setTypeSyntax(const syntax::DataTypeSyntax& newType) {
         ASSERT(!type);
         typeOrLink.typeSyntax = &newType;
         hasLink = false;
@@ -129,16 +129,19 @@ public:
 
     /// Gets the type syntax that was previously set via @a setTypeSyntax -- if any.
     /// Otherwise returns nullptr.
-    const DataTypeSyntax* getTypeSyntax() const {
+    const syntax::DataTypeSyntax* getTypeSyntax() const {
         return hasLink ? nullptr : typeOrLink.typeSyntax;
     }
 
     /// Sets an additional set of dimensions that represent the unpacked portion of
     /// the type declaration.
-    void setDimensionSyntax(const SyntaxList<VariableDimensionSyntax>& newDimensions);
+    void setDimensionSyntax(
+        const syntax::SyntaxList<syntax::VariableDimensionSyntax>& newDimensions);
 
     /// Gets any previously set unpacked dimensions.
-    const SyntaxList<VariableDimensionSyntax>* getDimensionSyntax() const { return dimensions; }
+    const syntax::SyntaxList<syntax::VariableDimensionSyntax>* getDimensionSyntax() const {
+        return dimensions;
+    }
 
     /// Resolves and returns the initializer expression, if present. Otherwise returns nullptr.
     const Expression* getInitializer() const;
@@ -151,14 +154,14 @@ public:
     /// when resolution is requested.
     /// @param syntax The initializer expression syntax.
     /// @param loc The source location to use when reporting diagnostics about the initializer.
-    void setInitializerSyntax(const ExpressionSyntax& syntax, SourceLocation loc) {
+    void setInitializerSyntax(const syntax::ExpressionSyntax& syntax, SourceLocation loc) {
         ASSERT(!initializer);
         initializerSyntax = &syntax;
         initializerLocation = loc;
     }
 
     /// Gets the initializer syntax previously set by @a setInitializerSyntax
-    const ExpressionSyntax* getInitializerSyntax() const { return initializerSyntax; }
+    const syntax::ExpressionSyntax* getInitializerSyntax() const { return initializerSyntax; }
 
     /// Gets the initializer location previously set by @a setInitializerSyntax
     SourceLocation getInitializerLocation() const { return initializerLocation; }
@@ -166,7 +169,7 @@ public:
     /// Sets type and initializer information from the given declarator syntax.
     /// This is just convenient shorthand for invoking @a setTypeSyntax and
     /// @a setInitializerSyntax manually.
-    void setFromDeclarator(const DeclaratorSyntax& decl);
+    void setFromDeclarator(const syntax::DeclaratorSyntax& decl);
 
     /// Returns true if this declared type is in the process of being resolved.
     /// This is used to detect cycles in the the type resolution process.
@@ -188,8 +191,8 @@ public:
     /// Perform a merge of implicit port information; this facilitates the non-ascii
     /// port system permitted by Verilog, where port I/O declarations are separate
     /// from the actual symbol declaration but may still carry some type info.
-    void mergeImplicitPort(const ImplicitTypeSyntax& implicit, SourceLocation location,
-                           span<const VariableDimensionSyntax* const> unpackedDimensions);
+    void mergeImplicitPort(const syntax::ImplicitTypeSyntax& implicit, SourceLocation location,
+                           span<const syntax::VariableDimensionSyntax* const> unpackedDimensions);
 
     /// Resolves the initializer using the given AST context, which could
     /// differ from the AST context that is used for type resolution.
@@ -202,9 +205,10 @@ public:
 private:
     void resolveType(const ASTContext& typeContext, const ASTContext& initializerContext) const;
     void checkType(const ASTContext& context) const;
-    void mergePortTypes(const ASTContext& context, const ValueSymbol& sourceSymbol,
-                        const ImplicitTypeSyntax& implicit, SourceLocation location,
-                        span<const VariableDimensionSyntax* const> unpackedDimensions) const;
+    void mergePortTypes(
+        const ASTContext& context, const ValueSymbol& sourceSymbol,
+        const syntax::ImplicitTypeSyntax& implicit, SourceLocation location,
+        span<const syntax::VariableDimensionSyntax* const> unpackedDimensions) const;
 
     template<bool IsInitializer,
              typename T = ASTContext> // templated to avoid having to include ASTContext.h
@@ -214,13 +218,13 @@ private:
 
     mutable const Type* type = nullptr;
     union {
-        const DataTypeSyntax* typeSyntax = nullptr;
+        const syntax::DataTypeSyntax* typeSyntax = nullptr;
         const DeclaredType* link;
     } typeOrLink;
-    const SyntaxList<VariableDimensionSyntax>* dimensions = nullptr;
+    const syntax::SyntaxList<syntax::VariableDimensionSyntax>* dimensions = nullptr;
 
     mutable const Expression* initializer = nullptr;
-    const ExpressionSyntax* initializerSyntax = nullptr;
+    const syntax::ExpressionSyntax* initializerSyntax = nullptr;
     SourceLocation initializerLocation;
 
     bitmask<DeclaredTypeFlags> flags;

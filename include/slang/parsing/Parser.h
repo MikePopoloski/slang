@@ -134,7 +134,7 @@ struct ParserMetadata {
 
     /// Specific metadata that was in effect when certain syntax nodes were parsed
     /// (such as various bits of preprocessor state).
-    flat_hash_map<const SyntaxNode*, Node> nodeMap;
+    flat_hash_map<const syntax::SyntaxNode*, Node> nodeMap;
 
     /// A set of names of all instantiations of global modules/interfaces/programs.
     /// This can be used to determine which modules should be considered as top-level
@@ -143,19 +143,19 @@ struct ParserMetadata {
 
     /// A list of all names parsed that could represent a package or class name,
     /// since they are simple names that appear on the left-hand side of a double colon.
-    std::vector<const IdentifierNameSyntax*> classPackageNames;
+    std::vector<const syntax::IdentifierNameSyntax*> classPackageNames;
 
     /// A list of all package import declarations parsed.
-    std::vector<const PackageImportDeclarationSyntax*> packageImports;
+    std::vector<const syntax::PackageImportDeclarationSyntax*> packageImports;
 
     /// A list of all defparams parsed.
-    std::vector<const DefParamSyntax*> defparams;
+    std::vector<const syntax::DefParamSyntax*> defparams;
 
     /// A list of all class declarations parsed.
-    std::vector<const ClassDeclarationSyntax*> classDecls;
+    std::vector<const syntax::ClassDeclarationSyntax*> classDecls;
 
     /// A list of all bind directives parsed.
-    std::vector<const BindDirectiveSyntax*> bindDirectives;
+    std::vector<const syntax::BindDirectiveSyntax*> bindDirectives;
 
     /// The EOF token, if one has already been consumed by the parser.
     /// Otherwise an empty token.
@@ -163,28 +163,28 @@ struct ParserMetadata {
 };
 
 /// Implements a full syntax parser for SystemVerilog.
-class Parser : ParserBase, SyntaxFacts {
+class Parser : ParserBase, syntax::SyntaxFacts {
 public:
     explicit Parser(Preprocessor& preprocessor, const Bag& options = {});
 
     /// Parse a whole compilation unit.
-    CompilationUnitSyntax& parseCompilationUnit();
+    syntax::CompilationUnitSyntax& parseCompilationUnit();
 
     /// Parse an expression / statement / module / class / name.
     /// These are mostly for testing; only use if you know that the
     /// source stream is currently looking at one of these.
-    ExpressionSyntax& parseExpression();
-    StatementSyntax& parseStatement(bool allowEmpty = true, bool allowSuperNew = false);
-    ModuleDeclarationSyntax& parseModule();
-    ClassDeclarationSyntax& parseClass();
-    MemberSyntax* parseSingleMember(SyntaxKind parentKind);
-    NameSyntax& parseName();
+    syntax::ExpressionSyntax& parseExpression();
+    syntax::StatementSyntax& parseStatement(bool allowEmpty = true, bool allowSuperNew = false);
+    syntax::ModuleDeclarationSyntax& parseModule();
+    syntax::ClassDeclarationSyntax& parseClass();
+    syntax::MemberSyntax* parseSingleMember(syntax::SyntaxKind parentKind);
+    syntax::NameSyntax& parseName();
 
     /// Generalized node parse function that tries to figure out what we're
     /// looking at and parse that specifically. A normal batch compile won't call
     /// this, since in a well formed program every file is a compilation unit,
     /// but for snippets of code this can be convenient.
-    SyntaxNode& parseGuess();
+    syntax::SyntaxNode& parseGuess();
 
     /// Check whether the parser has consumed the entire input stream.
     bool isDone();
@@ -197,221 +197,222 @@ private:
     using NameOptions = detail::NameOptions;
     using TypeOptions = detail::TypeOptions;
     using FunctionOptions = detail::FunctionOptions;
-    using AttrList = span<AttributeInstanceSyntax*>;
+    using AttrList = span<syntax::AttributeInstanceSyntax*>;
 
     // ---- Recursive-descent parsing routines, by syntax type ----
 
     // clang-format off
-    ExpressionSyntax& parseMinTypMaxExpression(bitmask<ExpressionOptions> options = {});
-    ExpressionSyntax& parsePrimaryExpression(bitmask<ExpressionOptions> options);
-    ExpressionSyntax& parseIntegerExpression(bool disallowVector);
-    ExpressionSyntax& parseInsideExpression(ExpressionSyntax& expr);
-    ExpressionSyntax& parsePostfixExpression(ExpressionSyntax& expr, bitmask<ExpressionOptions> options);
-    ExpressionSyntax& parseNewExpression(NameSyntax& expr, bitmask<ExpressionOptions> options);
-    ConcatenationExpressionSyntax& parseConcatenation(Token openBrace, ExpressionSyntax* first);
-    StreamingConcatenationExpressionSyntax& parseStreamConcatenation(Token openBrace);
-    StreamExpressionSyntax& parseStreamExpression();
-    OpenRangeListSyntax& parseOpenRangeList();
-    ExpressionSyntax& parseOpenRangeElement(bitmask<ExpressionOptions> options = {});
-    ElementSelectSyntax& parseElementSelect();
-    SelectorSyntax* parseElementSelector();
-    NameSyntax& parseName(bitmask<NameOptions> options);
-    NameSyntax& parseNamePart(bitmask<NameOptions> options);
-    ParameterValueAssignmentSyntax* parseParameterValueAssignment();
-    ArgumentListSyntax& parseArgumentList();
-    ParamAssignmentSyntax& parseParamValue();
-    ArgumentSyntax& parseArgument();
-    PatternSyntax& parsePattern();
-    StructurePatternMemberSyntax& parseMemberPattern();
-    AssignmentPatternExpressionSyntax& parseAssignmentPatternExpression(DataTypeSyntax* type);
-    AssignmentPatternItemSyntax& parseAssignmentPatternItem(ExpressionSyntax* key);
-    EventExpressionSyntax& parseSignalEvent();
-    EventExpressionSyntax& parseEventExpression();
-    NamedBlockClauseSyntax* parseNamedBlockClause();
-    TimingControlSyntax* parseTimingControl();
-    ConditionalPredicateSyntax& parseConditionalPredicate(ExpressionSyntax& first, TokenKind endKind, Token& end);
-    ConditionalPatternSyntax& parseConditionalPattern();
-    ConditionalStatementSyntax& parseConditionalStatement(NamedLabelSyntax* label, AttrList attributes, Token uniqueOrPriority);
-    ElseClauseSyntax* parseElseClause();
-    CaseStatementSyntax& parseCaseStatement(NamedLabelSyntax* label, AttrList attributes, Token uniqueOrPriority, Token caseKeyword);
-    DefaultCaseItemSyntax& parseDefaultCaseItem();
-    LoopStatementSyntax& parseLoopStatement(NamedLabelSyntax* label, AttrList attributes);
-    DoWhileStatementSyntax& parseDoWhileStatement(NamedLabelSyntax* label, AttrList attributes);
-    ForLoopStatementSyntax& parseForLoopStatement(NamedLabelSyntax* label, AttrList attributes);
-    SyntaxNode& parseForInitializer();
-    NameSyntax& parseForeachLoopVariable();
-    ForeachLoopListSyntax& parseForeachLoopVariables();
-    ForeachLoopStatementSyntax& parseForeachLoopStatement(NamedLabelSyntax* label, AttrList attributes);
-    ReturnStatementSyntax& parseReturnStatement(NamedLabelSyntax* label, AttrList attributes);
-    JumpStatementSyntax& parseJumpStatement(NamedLabelSyntax* label, AttrList attributes);
-    ProceduralAssignStatementSyntax& parseProceduralAssignStatement(NamedLabelSyntax* label, AttrList attributes, SyntaxKind kind);
-    ProceduralDeassignStatementSyntax& parseProceduralDeassignStatement(NamedLabelSyntax* label, AttrList attributes, SyntaxKind kind);
-    StatementSyntax& parseDisableStatement(NamedLabelSyntax* label, AttrList attributes);
-    StatementSyntax& parseAssertionStatement(NamedLabelSyntax* label, AttrList attributes);
-    StatementSyntax& parseVoidCallStatement(NamedLabelSyntax* label, AttrList attributes);
-    StatementSyntax& parseRandSequenceStatement(NamedLabelSyntax* label, AttrList attributes);
-    StatementSyntax& parseCheckerStatement(NamedLabelSyntax* label, AttrList attributes);
-    ConcurrentAssertionStatementSyntax& parseConcurrentAssertion(NamedLabelSyntax* label, AttrList attributes);
-    PropertySpecSyntax& parsePropertySpec();
-    ActionBlockSyntax& parseActionBlock();
-    BlockStatementSyntax& parseBlock(SyntaxKind blockKind, TokenKind endKind, NamedLabelSyntax* label, AttrList attributes);
-    StatementSyntax& parseWaitStatement(NamedLabelSyntax* label, AttrList attributes);
-    WaitOrderStatementSyntax& parseWaitOrderStatement(NamedLabelSyntax* label, AttrList attributes);
-    RandCaseStatementSyntax& parseRandCaseStatement(NamedLabelSyntax* label, AttrList attributes);
-    EventTriggerStatementSyntax& parseEventTriggerStatement(NamedLabelSyntax* label, AttrList attributes);
+    syntax::ExpressionSyntax& parseMinTypMaxExpression(bitmask<ExpressionOptions> options = {});
+    syntax::ExpressionSyntax& parsePrimaryExpression(bitmask<ExpressionOptions> options);
+    syntax::ExpressionSyntax& parseIntegerExpression(bool disallowVector);
+    syntax::ExpressionSyntax& parseInsideExpression(syntax::ExpressionSyntax& expr);
+    syntax::ExpressionSyntax& parsePostfixExpression(syntax::ExpressionSyntax& expr, bitmask<ExpressionOptions> options);
+    syntax::ExpressionSyntax& parseNewExpression(syntax::NameSyntax& expr, bitmask<ExpressionOptions> options);
+    syntax::ConcatenationExpressionSyntax& parseConcatenation(Token openBrace, syntax::ExpressionSyntax* first);
+    syntax::StreamingConcatenationExpressionSyntax& parseStreamConcatenation(Token openBrace);
+    syntax::StreamExpressionSyntax& parseStreamExpression();
+    syntax::OpenRangeListSyntax& parseOpenRangeList();
+    syntax::ExpressionSyntax& parseOpenRangeElement(bitmask<ExpressionOptions> options = {});
+    syntax::ElementSelectSyntax& parseElementSelect();
+    syntax::SelectorSyntax* parseElementSelector();
+    syntax::NameSyntax& parseName(bitmask<NameOptions> options);
+    syntax::NameSyntax& parseNamePart(bitmask<NameOptions> options);
+    syntax::ParameterValueAssignmentSyntax* parseParameterValueAssignment();
+    syntax::ArgumentListSyntax& parseArgumentList();
+    syntax::ParamAssignmentSyntax& parseParamValue();
+    syntax::ArgumentSyntax& parseArgument();
+    syntax::PatternSyntax& parsePattern();
+    syntax::StructurePatternMemberSyntax& parseMemberPattern();
+    syntax::AssignmentPatternExpressionSyntax& parseAssignmentPatternExpression(syntax::DataTypeSyntax* type);
+    syntax::AssignmentPatternItemSyntax& parseAssignmentPatternItem(syntax::ExpressionSyntax* key);
+    syntax::EventExpressionSyntax& parseSignalEvent();
+    syntax::EventExpressionSyntax& parseEventExpression();
+    syntax::NamedBlockClauseSyntax* parseNamedBlockClause();
+    syntax::TimingControlSyntax* parseTimingControl();
+    syntax::ConditionalPredicateSyntax& parseConditionalPredicate(syntax::ExpressionSyntax& first, TokenKind endKind, Token& end);
+    syntax::ConditionalPatternSyntax& parseConditionalPattern();
+    syntax::ConditionalStatementSyntax& parseConditionalStatement(syntax::NamedLabelSyntax* label, AttrList attributes, Token uniqueOrPriority);
+    syntax::ElseClauseSyntax* parseElseClause();
+    syntax::CaseStatementSyntax& parseCaseStatement(syntax::NamedLabelSyntax* label, AttrList attributes, Token uniqueOrPriority, Token caseKeyword);
+    syntax::DefaultCaseItemSyntax& parseDefaultCaseItem();
+    syntax::LoopStatementSyntax& parseLoopStatement(syntax::NamedLabelSyntax* label, AttrList attributes);
+    syntax::DoWhileStatementSyntax& parseDoWhileStatement(syntax::NamedLabelSyntax* label, AttrList attributes);
+    syntax::ForLoopStatementSyntax& parseForLoopStatement(syntax::NamedLabelSyntax* label, AttrList attributes);
+    syntax::SyntaxNode& parseForInitializer();
+    syntax::NameSyntax& parseForeachLoopVariable();
+    syntax::ForeachLoopListSyntax& parseForeachLoopVariables();
+    syntax::ForeachLoopStatementSyntax& parseForeachLoopStatement(syntax::NamedLabelSyntax* label, AttrList attributes);
+    syntax::ReturnStatementSyntax& parseReturnStatement(syntax::NamedLabelSyntax* label, AttrList attributes);
+    syntax::JumpStatementSyntax& parseJumpStatement(syntax::NamedLabelSyntax* label, AttrList attributes);
+    syntax::ProceduralAssignStatementSyntax& parseProceduralAssignStatement(syntax::NamedLabelSyntax* label, AttrList attributes, syntax::SyntaxKind kind);
+    syntax::ProceduralDeassignStatementSyntax& parseProceduralDeassignStatement(syntax::NamedLabelSyntax* label, AttrList attributes, syntax::SyntaxKind kind);
+    syntax::StatementSyntax& parseDisableStatement(syntax::NamedLabelSyntax* label, AttrList attributes);
+    syntax::StatementSyntax& parseAssertionStatement(syntax::NamedLabelSyntax* label, AttrList attributes);
+    syntax::StatementSyntax& parseVoidCallStatement(syntax::NamedLabelSyntax* label, AttrList attributes);
+    syntax::StatementSyntax& parseRandSequenceStatement(syntax::NamedLabelSyntax* label, AttrList attributes);
+    syntax::StatementSyntax& parseCheckerStatement(syntax::NamedLabelSyntax* label, AttrList attributes);
+    syntax::ConcurrentAssertionStatementSyntax& parseConcurrentAssertion(syntax::NamedLabelSyntax* label, AttrList attributes);
+    syntax::PropertySpecSyntax& parsePropertySpec();
+    syntax::ActionBlockSyntax& parseActionBlock();
+    syntax::BlockStatementSyntax& parseBlock(syntax::SyntaxKind blockKind, TokenKind endKind, syntax::NamedLabelSyntax* label, AttrList attributes);
+    syntax::StatementSyntax& parseWaitStatement(syntax::NamedLabelSyntax* label, AttrList attributes);
+    syntax::WaitOrderStatementSyntax& parseWaitOrderStatement(syntax::NamedLabelSyntax* label, AttrList attributes);
+    syntax::RandCaseStatementSyntax& parseRandCaseStatement(syntax::NamedLabelSyntax* label, AttrList attributes);
+    syntax::EventTriggerStatementSyntax& parseEventTriggerStatement(syntax::NamedLabelSyntax* label, AttrList attributes);
     Token parseSigning();
-    VariableDimensionSyntax* parseDimension();
-    span<VariableDimensionSyntax*> parseDimensionList();
-    StructUnionTypeSyntax& parseStructUnion(SyntaxKind syntaxKind);
-    EnumTypeSyntax& parseEnum();
-    DataTypeSyntax& parseDataType(bitmask<TypeOptions> options = {});
-    DotMemberClauseSyntax* parseDotMemberClause();
+    syntax::VariableDimensionSyntax* parseDimension();
+    span<syntax::VariableDimensionSyntax*> parseDimensionList();
+    syntax::StructUnionTypeSyntax& parseStructUnion(syntax::SyntaxKind syntaxKind);
+    syntax::EnumTypeSyntax& parseEnum();
+    syntax::DataTypeSyntax& parseDataType(bitmask<TypeOptions> options = {});
+    syntax::DotMemberClauseSyntax* parseDotMemberClause();
     AttrList parseAttributes();
-    AttributeSpecSyntax& parseAttributeSpec();
-    MemberSyntax* parseMember(SyntaxKind parentKind, bool& anyLocalModules);
-    ModuleHeaderSyntax& parseModuleHeader();
-    ParameterPortListSyntax* parseParameterPortList();
-    ModuleDeclarationSyntax& parseModule(AttrList attributes, SyntaxKind parentKind, bool& anyLocalModules);
-    MemberSyntax& parseModportSubroutinePortList(AttrList attributes);
-    MemberSyntax& parseModportPort();
-    ModportItemSyntax& parseModportItem();
-    ModportDeclarationSyntax& parseModportDeclaration(AttrList attributes);
-    PortReferenceSyntax& parsePortReference();
-    PortExpressionSyntax& parsePortExpression();
-    NonAnsiPortSyntax& parseNonAnsiPort();
-    MemberSyntax& parseAnsiPort();
-    AnsiPortListSyntax& parseAnsiPortList(Token openParen);
-    PortHeaderSyntax& parsePortHeader(Token constKeyword, Token direction);
-    PortDeclarationSyntax& parsePortDeclaration(AttrList attributes);
-    TimeUnitsDeclarationSyntax& parseTimeUnitsDeclaration(AttrList attributes);
-    span<PackageImportDeclarationSyntax*> parsePackageImports();
-    PackageImportDeclarationSyntax& parseImportDeclaration(AttrList attributes);
-    MemberSyntax& parseExportDeclaration(AttrList attributes);
-    PackageImportItemSyntax& parsePackageImportItem();
-    NetTypeDeclarationSyntax& parseNetTypeDecl(AttrList attributes);
-    DPIImportSyntax& parseDPIImport(AttrList attributes);
-    DPIExportSyntax& parseDPIExport(AttrList attributes);
-    ElabSystemTaskSyntax* parseElabSystemTask(AttrList attributes);
-    AssertionItemPortSyntax& parseAssertionItemPort(SyntaxKind parentKind);
-    AssertionItemPortListSyntax* parseAssertionItemPortList(SyntaxKind parentKind);
-    PropertyDeclarationSyntax& parsePropertyDeclaration(AttrList attributes);
-    SequenceDeclarationSyntax& parseSequenceDeclaration(AttrList attributes);
-    CheckerDeclarationSyntax& parseCheckerDeclaration(AttrList attributes);
-    ParameterDeclarationBaseSyntax& parseParameterPort();
-    ParameterDeclarationBaseSyntax& parseParameterDecl(Token keyword, Token* semi);
-    TypeAssignmentSyntax& parseTypeAssignment();
-    ClockingSkewSyntax* parseClockingSkew();
-    MemberSyntax* parseClockingItem();
-    MemberSyntax& parseClockingDeclaration(AttrList attributes);
-    MemberSyntax& parseDefaultDisable(AttrList attributes);
-    MemberSyntax& parseVariableDeclaration(AttrList attributes);
-    DataDeclarationSyntax& parseDataDeclaration(AttrList attributes);
-    LocalVariableDeclarationSyntax& parseLocalVariableDeclaration();
-    MemberSyntax& parseNetDeclaration(AttrList attributes);
-    DriveStrengthSyntax* parseDriveStrength();
-    NetStrengthSyntax* parsePullStrength(Token type);
-    TimingControlSyntax* parseDelay3();
-    HierarchyInstantiationSyntax& parseHierarchyInstantiation(AttrList attributes);
-    HierarchicalInstanceSyntax& parseHierarchicalInstance();
-    PrimitiveInstantiationSyntax& parsePrimitiveInstantiation(AttrList attributes);
-    CheckerInstantiationSyntax& parseCheckerInstantiation(AttrList attributes);
-    PortConnectionSyntax& parsePortConnection();
-    FunctionPortSyntax& parseFunctionPort(bool allowEmptyName);
-    FunctionPortListSyntax* parseFunctionPortList(bool allowEmptyNames);
-    FunctionPrototypeSyntax& parseFunctionPrototype(SyntaxKind parentKind, bitmask<FunctionOptions> options, bool* isConstructor = nullptr);
-    FunctionDeclarationSyntax& parseFunctionDeclaration(AttrList attributes, SyntaxKind functionKind, TokenKind endKind, SyntaxKind parentKind);
+    syntax::AttributeSpecSyntax& parseAttributeSpec();
+    syntax::MemberSyntax* parseMember(syntax::SyntaxKind parentKind, bool& anyLocalModules);
+    syntax::ModuleHeaderSyntax& parseModuleHeader();
+    syntax::ParameterPortListSyntax* parseParameterPortList();
+    syntax::ModuleDeclarationSyntax& parseModule(AttrList attributes, syntax::SyntaxKind parentKind, bool& anyLocalModules);
+    syntax::MemberSyntax& parseModportSubroutinePortList(AttrList attributes);
+    syntax::MemberSyntax& parseModportPort();
+    syntax::ModportItemSyntax& parseModportItem();
+    syntax::ModportDeclarationSyntax& parseModportDeclaration(AttrList attributes);
+    syntax::PortReferenceSyntax& parsePortReference();
+    syntax::PortExpressionSyntax& parsePortExpression();
+    syntax::NonAnsiPortSyntax& parseNonAnsiPort();
+    syntax::MemberSyntax& parseAnsiPort();
+    syntax::AnsiPortListSyntax& parseAnsiPortList(Token openParen);
+    syntax::PortHeaderSyntax& parsePortHeader(Token constKeyword, Token direction);
+    syntax::PortDeclarationSyntax& parsePortDeclaration(AttrList attributes);
+    syntax::TimeUnitsDeclarationSyntax& parseTimeUnitsDeclaration(AttrList attributes);
+    span<syntax::PackageImportDeclarationSyntax*> parsePackageImports();
+    syntax::PackageImportDeclarationSyntax& parseImportDeclaration(AttrList attributes);
+    syntax::MemberSyntax& parseExportDeclaration(AttrList attributes);
+    syntax::PackageImportItemSyntax& parsePackageImportItem();
+    syntax::NetTypeDeclarationSyntax& parseNetTypeDecl(AttrList attributes);
+    syntax::DPIImportSyntax& parseDPIImport(AttrList attributes);
+    syntax::DPIExportSyntax& parseDPIExport(AttrList attributes);
+    syntax::ElabSystemTaskSyntax* parseElabSystemTask(AttrList attributes);
+    syntax::AssertionItemPortSyntax& parseAssertionItemPort(syntax::SyntaxKind parentKind);
+    syntax::AssertionItemPortListSyntax* parseAssertionItemPortList(syntax::SyntaxKind parentKind);
+    syntax::PropertyDeclarationSyntax& parsePropertyDeclaration(AttrList attributes);
+    syntax::SequenceDeclarationSyntax& parseSequenceDeclaration(AttrList attributes);
+    syntax::CheckerDeclarationSyntax& parseCheckerDeclaration(AttrList attributes);
+    syntax::ParameterDeclarationBaseSyntax& parseParameterPort();
+    syntax::ParameterDeclarationBaseSyntax& parseParameterDecl(Token keyword, Token* semi);
+    syntax::TypeAssignmentSyntax& parseTypeAssignment();
+    syntax::ClockingSkewSyntax* parseClockingSkew();
+    syntax::MemberSyntax* parseClockingItem();
+    syntax::MemberSyntax& parseClockingDeclaration(AttrList attributes);
+    syntax::MemberSyntax& parseDefaultDisable(AttrList attributes);
+    syntax::MemberSyntax& parseVariableDeclaration(AttrList attributes);
+    syntax::DataDeclarationSyntax& parseDataDeclaration(AttrList attributes);
+    syntax::LocalVariableDeclarationSyntax& parseLocalVariableDeclaration();
+    syntax::MemberSyntax& parseNetDeclaration(AttrList attributes);
+    syntax::DriveStrengthSyntax* parseDriveStrength();
+    syntax::NetStrengthSyntax* parsePullStrength(Token type);
+    syntax::TimingControlSyntax* parseDelay3();
+    syntax::HierarchyInstantiationSyntax& parseHierarchyInstantiation(AttrList attributes);
+    syntax::HierarchicalInstanceSyntax& parseHierarchicalInstance();
+    syntax::PrimitiveInstantiationSyntax& parsePrimitiveInstantiation(AttrList attributes);
+    syntax::CheckerInstantiationSyntax& parseCheckerInstantiation(AttrList attributes);
+    syntax::PortConnectionSyntax& parsePortConnection();
+    syntax::FunctionPortSyntax& parseFunctionPort(bool allowEmptyName);
+    syntax::FunctionPortListSyntax* parseFunctionPortList(bool allowEmptyNames);
+    syntax::FunctionPrototypeSyntax& parseFunctionPrototype(syntax::SyntaxKind parentKind, bitmask<FunctionOptions> options, bool* isConstructor = nullptr);
+    syntax::FunctionDeclarationSyntax& parseFunctionDeclaration(AttrList attributes, syntax::SyntaxKind functionKind, TokenKind endKind, syntax::SyntaxKind parentKind);
     Token parseLifetime();
-    span<SyntaxNode*> parseBlockItems(TokenKind endKind, Token& end, bool inConstructor);
-    GenvarDeclarationSyntax& parseGenvarDeclaration(AttrList attributes);
-    LoopGenerateSyntax& parseLoopGenerateConstruct(AttrList attributes);
-    IfGenerateSyntax& parseIfGenerateConstruct(AttrList attributes);
-    CaseGenerateSyntax& parseCaseGenerateConstruct(AttrList attributes);
-    MemberSyntax& parseGenerateBlock();
-    ImplementsClauseSyntax* parseImplementsClause(TokenKind keywordKind, Token& semi);
-    ClassDeclarationSyntax& parseClassDeclaration(AttrList attributes, Token virtualOrInterface);
-    MemberSyntax* parseClassMember(bool isIfaceClass);
-    ContinuousAssignSyntax& parseContinuousAssign(AttrList attributes);
-    DeclaratorSyntax& parseDeclarator(bool allowMinTypMax = false, bool requireInitializers = false);
-    MemberSyntax* parseCoverageMember();
-    BlockEventExpressionSyntax& parseBlockEventExpression();
-    WithClauseSyntax* parseWithClause();
-    CovergroupDeclarationSyntax& parseCovergroupDeclaration(AttrList attributes);
-    CoverpointSyntax* parseCoverpoint(AttrList attributes, DataTypeSyntax* type, NamedLabelSyntax* label);
-    CoverCrossSyntax* parseCoverCross(AttrList attributes, NamedLabelSyntax* label);
-    CoverageOptionSyntax* parseCoverageOption(AttrList attributes);
-    CoverageIffClauseSyntax* parseCoverageIffClause();
-    MemberSyntax* parseCoverpointMember();
-    MemberSyntax* parseCoverCrossMember();
-    BinsSelectExpressionSyntax& parseBinsSelectPrimary();
-    BinsSelectExpressionSyntax& parseBinsSelectExpression();
-    MemberSyntax& parseConstraint(AttrList attributes, span<Token> qualifiers);
-    ConstraintBlockSyntax& parseConstraintBlock(bool isTopLevel);
-    ConstraintItemSyntax* parseConstraintItem(bool allowBlock, bool isTopLevel);
-    DistConstraintListSyntax& parseDistConstraintList();
-    DistItemSyntax& parseDistItem();
-    ExpressionSyntax& parseArrayOrRandomizeMethod(ExpressionSyntax& expr);
-    DefParamAssignmentSyntax& parseDefParamAssignment();
-    DefParamSyntax& parseDefParam(AttrList attributes);
-    ExpressionSyntax& parseExpressionOrDist(bitmask<ExpressionOptions> options = {});
-    TransRangeSyntax& parseTransRange();
-    TransSetSyntax& parseTransSet();
-    TransListCoverageBinInitializerSyntax& parseTransListInitializer();
-    ExpressionSyntax& parseSubExpression(bitmask<ExpressionOptions> options, int precedence);
-    ExpressionSyntax& parseBinaryExpression(ExpressionSyntax* left, bitmask<ExpressionOptions> options, int precedence);
-    BindDirectiveSyntax& parseBindDirective(AttrList attributes);
-    UdpPortListSyntax& parseUdpPortList();
-    UdpDeclarationSyntax& parseUdpDeclaration(AttrList attributes);
-    UdpPortDeclSyntax& parseUdpPortDecl();
-    UdpBodySyntax& parseUdpBody();
-    UdpEntrySyntax& parseUdpEntry();
-    SpecparamDeclaratorSyntax& parseSpecparamDeclarator();
-    SpecparamDeclarationSyntax& parseSpecparam(AttrList attributes);
-    MemberSyntax* parseSpecifyItem();
-    SpecifyBlockSyntax& parseSpecifyBlock(AttrList attributes);
-    NetAliasSyntax& parseNetAlias(AttrList attributes);
-    PathDeclarationSyntax& parsePathDeclaration();
-    SystemTimingCheckSyntax& parseSystemTimingCheck();
-    TimingCheckArgSyntax& parseTimingCheckArg();
-    EdgeDescriptorSyntax& parseEdgeDescriptor();
-    SelectorSyntax* parseSequenceRange();
-    SequenceExprSyntax& parseDelayedSequenceExpr(SequenceExprSyntax* first);
-    SequenceExprSyntax& parseParenthesizedSeqExpr(Token openParen, SequenceExprSyntax& expr);
-    SequenceExprSyntax& parseSequencePrimary();
-    SequenceExprSyntax& parseSequenceExpr(int precedence, bool isInProperty);
-    SequenceExprSyntax& parseBinarySequenceExpr(SequenceExprSyntax* left, int precedence, bool isInProperty);
-    PropertyExprSyntax& parseCasePropertyExpr();
-    PropertyExprSyntax& parsePropertyPrimary();
-    PropertyExprSyntax& parsePropertyExpr(int precedence);
-    SequenceMatchListSyntax* parseSequenceMatchList(Token& closeParen);
-    SequenceRepetitionSyntax* parseSequenceRepetition();
-    ProductionSyntax& parseProduction();
-    RsRuleSyntax& parseRsRule();
-    RsProdSyntax* parseRsProd();
-    RsProdItemSyntax& parseRsProdItem();
-    RsCodeBlockSyntax& parseRsCodeBlock();
-    RsCaseSyntax& parseRsCase();
-    MemberSyntax* parseExternMember(SyntaxKind parentKind, AttrList attributes);
-    ConfigCellIdentifierSyntax& parseConfigCellIdentifier();
-    ConfigLiblistSyntax& parseConfigLiblist();
-    ConfigUseClauseSyntax& parseConfigUseClause();
-    ConfigDeclarationSyntax& parseConfigDeclaration(AttrList attributes);
+    span<syntax::SyntaxNode*> parseBlockItems(TokenKind endKind, Token& end, bool inConstructor);
+    syntax::GenvarDeclarationSyntax& parseGenvarDeclaration(AttrList attributes);
+    syntax::LoopGenerateSyntax& parseLoopGenerateConstruct(AttrList attributes);
+    syntax::IfGenerateSyntax& parseIfGenerateConstruct(AttrList attributes);
+    syntax::CaseGenerateSyntax& parseCaseGenerateConstruct(AttrList attributes);
+    syntax::MemberSyntax& parseGenerateBlock();
+    syntax::ImplementsClauseSyntax* parseImplementsClause(TokenKind keywordKind, Token& semi);
+    syntax::ClassDeclarationSyntax& parseClassDeclaration(AttrList attributes, Token virtualOrInterface);
+    syntax::MemberSyntax* parseClassMember(bool isIfaceClass);
+    syntax::ContinuousAssignSyntax& parseContinuousAssign(AttrList attributes);
+    syntax::DeclaratorSyntax& parseDeclarator(bool allowMinTypMax = false, bool requireInitializers = false);
+    syntax::MemberSyntax* parseCoverageMember();
+    syntax::BlockEventExpressionSyntax& parseBlockEventExpression();
+    syntax::WithClauseSyntax* parseWithClause();
+    syntax::CovergroupDeclarationSyntax& parseCovergroupDeclaration(AttrList attributes);
+    syntax::CoverpointSyntax* parseCoverpoint(AttrList attributes, syntax::DataTypeSyntax* type, syntax::NamedLabelSyntax* label);
+    syntax::CoverCrossSyntax* parseCoverCross(AttrList attributes, syntax::NamedLabelSyntax* label);
+    syntax::CoverageOptionSyntax* parseCoverageOption(AttrList attributes);
+    syntax::CoverageIffClauseSyntax* parseCoverageIffClause();
+    syntax::MemberSyntax* parseCoverpointMember();
+    syntax::MemberSyntax* parseCoverCrossMember();
+    syntax::BinsSelectExpressionSyntax& parseBinsSelectPrimary();
+    syntax::BinsSelectExpressionSyntax& parseBinsSelectExpression();
+    syntax::MemberSyntax& parseConstraint(AttrList attributes, span<Token> qualifiers);
+    syntax::ConstraintBlockSyntax& parseConstraintBlock(bool isTopLevel);
+    syntax::ConstraintItemSyntax* parseConstraintItem(bool allowBlock, bool isTopLevel);
+    syntax::DistConstraintListSyntax& parseDistConstraintList();
+    syntax::DistItemSyntax& parseDistItem();
+    syntax::ExpressionSyntax& parseArrayOrRandomizeMethod(syntax::ExpressionSyntax& expr);
+    syntax::DefParamAssignmentSyntax& parseDefParamAssignment();
+    syntax::DefParamSyntax& parseDefParam(AttrList attributes);
+    syntax::ExpressionSyntax& parseExpressionOrDist(bitmask<ExpressionOptions> options = {});
+    syntax::TransRangeSyntax& parseTransRange();
+    syntax::TransSetSyntax& parseTransSet();
+    syntax::TransListCoverageBinInitializerSyntax& parseTransListInitializer();
+    syntax::ExpressionSyntax& parseSubExpression(bitmask<ExpressionOptions> options, int precedence);
+    syntax::ExpressionSyntax& parseBinaryExpression(syntax::ExpressionSyntax* left, bitmask<ExpressionOptions> options, int precedence);
+    syntax::BindDirectiveSyntax& parseBindDirective(AttrList attributes);
+    syntax::UdpPortListSyntax& parseUdpPortList();
+    syntax::UdpDeclarationSyntax& parseUdpDeclaration(AttrList attributes);
+    syntax::UdpPortDeclSyntax& parseUdpPortDecl();
+    syntax::UdpBodySyntax& parseUdpBody();
+    syntax::UdpEntrySyntax& parseUdpEntry();
+    syntax::SpecparamDeclaratorSyntax& parseSpecparamDeclarator();
+    syntax::SpecparamDeclarationSyntax& parseSpecparam(AttrList attributes);
+    syntax::MemberSyntax* parseSpecifyItem();
+    syntax::SpecifyBlockSyntax& parseSpecifyBlock(AttrList attributes);
+    syntax::NetAliasSyntax& parseNetAlias(AttrList attributes);
+    syntax::PathDeclarationSyntax& parsePathDeclaration();
+    syntax::SystemTimingCheckSyntax& parseSystemTimingCheck();
+    syntax::TimingCheckArgSyntax& parseTimingCheckArg();
+    syntax::EdgeDescriptorSyntax& parseEdgeDescriptor();
+    syntax::SelectorSyntax* parseSequenceRange();
+    syntax::SequenceExprSyntax& parseDelayedSequenceExpr(syntax::SequenceExprSyntax* first);
+    syntax::SequenceExprSyntax& parseParenthesizedSeqExpr(Token openParen, syntax::SequenceExprSyntax& expr);
+    syntax::SequenceExprSyntax& parseSequencePrimary();
+    syntax::SequenceExprSyntax& parseSequenceExpr(int precedence, bool isInProperty);
+    syntax::SequenceExprSyntax& parseBinarySequenceExpr(syntax::SequenceExprSyntax* left, int precedence, bool isInProperty);
+    syntax::PropertyExprSyntax& parseCasePropertyExpr();
+    syntax::PropertyExprSyntax& parsePropertyPrimary();
+    syntax::PropertyExprSyntax& parsePropertyExpr(int precedence);
+    syntax::SequenceMatchListSyntax* parseSequenceMatchList(Token& closeParen);
+    syntax::SequenceRepetitionSyntax* parseSequenceRepetition();
+    syntax::ProductionSyntax& parseProduction();
+    syntax::RsRuleSyntax& parseRsRule();
+    syntax::RsProdSyntax* parseRsProd();
+    syntax::RsProdItemSyntax& parseRsProdItem();
+    syntax::RsCodeBlockSyntax& parseRsCodeBlock();
+    syntax::RsCaseSyntax& parseRsCase();
+    syntax::MemberSyntax* parseExternMember(syntax::SyntaxKind parentKind, AttrList attributes);
+    syntax::ConfigCellIdentifierSyntax& parseConfigCellIdentifier();
+    syntax::ConfigLiblistSyntax& parseConfigLiblist();
+    syntax::ConfigUseClauseSyntax& parseConfigUseClause();
+    syntax::ConfigDeclarationSyntax& parseConfigDeclaration(AttrList attributes);
     // clang-format on
 
     template<bool (*IsEnd)(TokenKind)>
-    span<TokenOrSyntax> parseDeclarators(TokenKind endKind, Token& end, bool allowMinTypMax = false,
-                                         bool requireInitializers = false);
-    span<TokenOrSyntax> parseDeclarators(Token& semi, bool allowMinTypMax = false,
-                                         bool requireInitializers = false);
+    span<syntax::TokenOrSyntax> parseDeclarators(TokenKind endKind, Token& end,
+                                                 bool allowMinTypMax = false,
+                                                 bool requireInitializers = false);
+    span<syntax::TokenOrSyntax> parseDeclarators(Token& semi, bool allowMinTypMax = false,
+                                                 bool requireInitializers = false);
 
     template<typename TMember, typename TParseFunc>
-    span<TMember*> parseMemberList(TokenKind endKind, Token& endToken, SyntaxKind parentKind,
-                                   TParseFunc&& parseFunc);
+    span<TMember*> parseMemberList(TokenKind endKind, Token& endToken,
+                                   syntax::SyntaxKind parentKind, TParseFunc&& parseFunc);
 
     template<typename IsItemFunc, typename ParseItemFunc>
-    bool parseCaseItems(TokenKind caseKind, SmallVector<CaseItemSyntax*>& itemBuffer,
+    bool parseCaseItems(TokenKind caseKind, SmallVector<syntax::CaseItemSyntax*>& itemBuffer,
                         IsItemFunc&& isItem, ParseItemFunc&& parseItem);
 
-    span<TokenOrSyntax> parsePathTerminals();
+    span<syntax::TokenOrSyntax> parsePathTerminals();
 
     void checkClassQualifiers(span<const Token> qualifiers, bool isConstraint);
     Token parseDPISpecString();
@@ -465,20 +466,21 @@ private:
 
     // Report errors for incorrectly specified block names.
     void checkBlockNames(string_view begin, string_view end, SourceLocation loc);
-    void checkBlockNames(Token nameToken, const NamedBlockClauseSyntax* endBlock);
-    void checkBlockNames(const NamedBlockClauseSyntax* beginBlock,
-                         const NamedBlockClauseSyntax* endBlock, const NamedLabelSyntax* label);
+    void checkBlockNames(Token nameToken, const syntax::NamedBlockClauseSyntax* endBlock);
+    void checkBlockNames(const syntax::NamedBlockClauseSyntax* beginBlock,
+                         const syntax::NamedBlockClauseSyntax* endBlock,
+                         const syntax::NamedLabelSyntax* label);
 
     // Report errors for invalid members in specific kinds of blocks.
-    void checkMemberAllowed(const SyntaxNode& member, SyntaxKind parentKind);
+    void checkMemberAllowed(const syntax::SyntaxNode& member, syntax::SyntaxKind parentKind);
 
     // Report warnings for misleading empty loop / conditional bodies.
-    void checkEmptyBody(const SyntaxNode& syntax, Token prevToken, string_view syntaxName);
+    void checkEmptyBody(const syntax::SyntaxNode& syntax, Token prevToken, string_view syntaxName);
 
     // ---- Member variables ----
 
     // The factory used to create new syntax nodes.
-    SyntaxFactory factory;
+    syntax::SyntaxFactory factory;
 
     // Stored parse options.
     ParserOptions parseOptions;
@@ -500,7 +502,7 @@ private:
 
     // The kind of definition currently being parsed, which could be a module,
     // interface, program, etc.
-    SyntaxKind currentDefinitionKind = SyntaxKind::Unknown;
+    syntax::SyntaxKind currentDefinitionKind = syntax::SyntaxKind::Unknown;
 };
 
 template<bool (*IsEnd)(TokenKind)>

@@ -14,6 +14,8 @@
 
 namespace slang::ast::builtins {
 
+using namespace syntax;
+
 class CoverageNameOrHierFunc : public SystemSubroutine {
 public:
     CoverageNameOrHierFunc(const std::string& name, const Type& returnType,

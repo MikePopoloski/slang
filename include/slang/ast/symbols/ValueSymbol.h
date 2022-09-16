@@ -32,9 +32,11 @@ public:
     not_null<DeclaredType*> getDeclaredType() { return &declaredType; }
 
     /// Sets the symbol's declared type.
-    void setDeclaredType(const DataTypeSyntax& newType) { declaredType.setTypeSyntax(newType); }
-    void setDeclaredType(const DataTypeSyntax& newType,
-                         const SyntaxList<VariableDimensionSyntax>& newDimensions) {
+    void setDeclaredType(const syntax::DataTypeSyntax& newType) {
+        declaredType.setTypeSyntax(newType);
+    }
+    void setDeclaredType(const syntax::DataTypeSyntax& newType,
+                         const syntax::SyntaxList<syntax::VariableDimensionSyntax>& newDimensions) {
         declaredType.setTypeSyntax(newType);
         declaredType.setDimensionSyntax(newDimensions);
     }
@@ -46,12 +48,12 @@ public:
     void setInitializer(const Expression& expr) { declaredType.setInitializer(expr); }
 
     /// Sets the expression tree used to initialize this value.
-    void setInitializerSyntax(const ExpressionSyntax& syntax, SourceLocation initLocation) {
+    void setInitializerSyntax(const syntax::ExpressionSyntax& syntax, SourceLocation initLocation) {
         declaredType.setInitializerSyntax(syntax, initLocation);
     }
 
     /// Initializes the value's dimension and initializer syntax from the given declarator.
-    void setFromDeclarator(const DeclaratorSyntax& decl);
+    void setFromDeclarator(const syntax::DeclaratorSyntax& decl);
 
     static bool isKind(SymbolKind kind);
 

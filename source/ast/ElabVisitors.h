@@ -14,6 +14,8 @@
 
 namespace slang::ast {
 
+using namespace syntax;
+
 // This visitor is used to touch every node in the AST to ensure that all lazily
 // evaluated members have been realized and we have recorded every diagnostic.
 struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {

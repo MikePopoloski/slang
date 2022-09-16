@@ -20,7 +20,7 @@
 #include "slang/util/SmallVector.h"
 #include "slang/util/StackContainer.h"
 
-namespace slang {
+namespace slang::syntax {
 
 struct DefineDirectiveSyntax;
 struct MacroActualArgumentListSyntax;
@@ -30,7 +30,7 @@ struct MacroFormalArgumentSyntax;
 struct PragmaDirectiveSyntax;
 struct PragmaExpressionSyntax;
 
-} // namespace slang
+} // namespace slang::syntax
 
 namespace slang::parsing {
 
@@ -61,7 +61,7 @@ class Preprocessor {
 public:
     Preprocessor(SourceManager& sourceManager, BumpAllocator& alloc, Diagnostics& diagnostics,
                  const Bag& options = {},
-                 span<const DefineDirectiveSyntax* const> inheritedMacros = {});
+                 span<const syntax::DefineDirectiveSyntax* const> inheritedMacros = {});
 
     /// Gets the next token in the stream, after applying preprocessor rules.
     Token next();
@@ -130,7 +130,7 @@ public:
     Diagnostics& getDiagnostics() const { return diagnostics; }
 
     /// Gets all macros that have been defined thus far in the preprocessor.
-    std::vector<const DefineDirectiveSyntax*> getDefinedMacros() const;
+    std::vector<const syntax::DefineDirectiveSyntax*> getDefinedMacros() const;
 
 private:
     Preprocessor(const Preprocessor& other);
@@ -176,49 +176,51 @@ private:
     void checkOutsideDesignElement(Token directive);
 
     // Pragma expression parsers
-    std::pair<PragmaExpressionSyntax*, bool> parsePragmaExpression();
-    std::pair<PragmaExpressionSyntax*, bool> parsePragmaValue();
-    std::pair<PragmaExpressionSyntax*, bool> checkNextPragmaToken();
+    std::pair<syntax::PragmaExpressionSyntax*, bool> parsePragmaExpression();
+    std::pair<syntax::PragmaExpressionSyntax*, bool> parsePragmaValue();
+    std::pair<syntax::PragmaExpressionSyntax*, bool> checkNextPragmaToken();
 
     // Pragma action handlers
-    void applyPragma(const PragmaDirectiveSyntax& pragma, SmallVector<Token>& skippedTokens);
-    void applyProtectPragma(const PragmaDirectiveSyntax& pragma, SmallVector<Token>& skippedTokens);
-    void applyResetPragma(const PragmaDirectiveSyntax& pragma);
-    void applyResetAllPragma(const PragmaDirectiveSyntax& pragma);
-    void applyOncePragma(const PragmaDirectiveSyntax& pragma);
-    void applyDiagnosticPragma(const PragmaDirectiveSyntax& pragma);
-    void ensurePragmaArgs(const PragmaDirectiveSyntax& pragma, size_t count);
-    void ensureNoPragmaArgs(Token keyword, const PragmaExpressionSyntax* args);
+    void applyPragma(const syntax::PragmaDirectiveSyntax& pragma,
+                     SmallVector<Token>& skippedTokens);
+    void applyProtectPragma(const syntax::PragmaDirectiveSyntax& pragma,
+                            SmallVector<Token>& skippedTokens);
+    void applyResetPragma(const syntax::PragmaDirectiveSyntax& pragma);
+    void applyResetAllPragma(const syntax::PragmaDirectiveSyntax& pragma);
+    void applyOncePragma(const syntax::PragmaDirectiveSyntax& pragma);
+    void applyDiagnosticPragma(const syntax::PragmaDirectiveSyntax& pragma);
+    void ensurePragmaArgs(const syntax::PragmaDirectiveSyntax& pragma, size_t count);
+    void ensureNoPragmaArgs(Token keyword, const syntax::PragmaExpressionSyntax* args);
     void resetProtectState();
 
     // Pragma protect handlers
-    void handleProtectBegin(Token keyword, const PragmaExpressionSyntax* args,
+    void handleProtectBegin(Token keyword, const syntax::PragmaExpressionSyntax* args,
                             SmallVector<Token>& skippedTokens);
-    void handleProtectEnd(Token keyword, const PragmaExpressionSyntax* args,
+    void handleProtectEnd(Token keyword, const syntax::PragmaExpressionSyntax* args,
                           SmallVector<Token>& skippedTokens);
-    void handleProtectBeginProtected(Token keyword, const PragmaExpressionSyntax* args,
+    void handleProtectBeginProtected(Token keyword, const syntax::PragmaExpressionSyntax* args,
                                      SmallVector<Token>& skippedTokens);
-    void handleProtectEndProtected(Token keyword, const PragmaExpressionSyntax* args,
+    void handleProtectEndProtected(Token keyword, const syntax::PragmaExpressionSyntax* args,
                                    SmallVector<Token>& skippedTokens);
-    void handleProtectSingleArgIgnore(Token keyword, const PragmaExpressionSyntax* args,
+    void handleProtectSingleArgIgnore(Token keyword, const syntax::PragmaExpressionSyntax* args,
                                       SmallVector<Token>& skippedTokens);
-    void handleProtectEncoding(Token keyword, const PragmaExpressionSyntax* args,
+    void handleProtectEncoding(Token keyword, const syntax::PragmaExpressionSyntax* args,
                                SmallVector<Token>& skippedTokens);
-    void handleProtectKey(Token keyword, const PragmaExpressionSyntax* args,
+    void handleProtectKey(Token keyword, const syntax::PragmaExpressionSyntax* args,
                           SmallVector<Token>& skippedTokens);
-    void handleProtectBlock(Token keyword, const PragmaExpressionSyntax* args,
+    void handleProtectBlock(Token keyword, const syntax::PragmaExpressionSyntax* args,
                             SmallVector<Token>& skippedTokens);
-    void handleProtectLicense(Token keyword, const PragmaExpressionSyntax* args,
+    void handleProtectLicense(Token keyword, const syntax::PragmaExpressionSyntax* args,
                               SmallVector<Token>& skippedTokens);
-    void handleProtectReset(Token keyword, const PragmaExpressionSyntax* args,
+    void handleProtectReset(Token keyword, const syntax::PragmaExpressionSyntax* args,
                             SmallVector<Token>& skippedTokens);
-    void handleProtectViewport(Token keyword, const PragmaExpressionSyntax* args,
+    void handleProtectViewport(Token keyword, const syntax::PragmaExpressionSyntax* args,
                                SmallVector<Token>& skippedTokens);
-    void handleEncryptedRegion(Token keyword, const PragmaExpressionSyntax* args,
+    void handleEncryptedRegion(Token keyword, const syntax::PragmaExpressionSyntax* args,
                                SmallVector<Token>& skippedTokens, bool isSingleLine);
 
     // Pragma helpers
-    optional<uint32_t> requireUInt32(const PragmaExpressionSyntax& expr);
+    optional<uint32_t> requireUInt32(const syntax::PragmaExpressionSyntax& expr);
     void skipMacroTokensBeforeProtectRegion(Token directive, SmallVector<Token>& skippedTokens);
 
     // Specifies possible macro intrinsics.
@@ -227,12 +229,12 @@ private:
     // A saved macro definition; if it came from source code, we will have a parsed
     // DefineDirectiveSyntax. Otherwise, it's an intrinsic macro and we'll note that here.
     struct MacroDef {
-        const DefineDirectiveSyntax* syntax = nullptr;
+        const syntax::DefineDirectiveSyntax* syntax = nullptr;
         MacroIntrinsic intrinsic = MacroIntrinsic::None;
         bool builtIn = false;
 
         MacroDef() = default;
-        MacroDef(const DefineDirectiveSyntax* syntax) : syntax(syntax) {}
+        MacroDef(const syntax::DefineDirectiveSyntax* syntax) : syntax(syntax) {}
         MacroDef(MacroIntrinsic intrinsic) : intrinsic(intrinsic), builtIn(true) {}
 
         bool valid() const { return syntax || intrinsic != MacroIntrinsic::None; }
@@ -268,16 +270,17 @@ private:
 
     // Macro handling methods
     MacroDef findMacro(Token directive);
-    MacroActualArgumentListSyntax* handleTopLevelMacro(Token directive);
+    syntax::MacroActualArgumentListSyntax* handleTopLevelMacro(Token directive);
     bool expandMacro(MacroDef macro, MacroExpansion& expansion,
-                     MacroActualArgumentListSyntax* actualArgs);
+                     syntax::MacroActualArgumentListSyntax* actualArgs);
     bool expandIntrinsic(MacroIntrinsic intrinsic, MacroExpansion& expansion);
     bool expandReplacementList(span<Token const>& tokens,
-                               SmallSet<const DefineDirectiveSyntax*, 8>& alreadyExpanded);
+                               SmallSet<const syntax::DefineDirectiveSyntax*, 8>& alreadyExpanded);
     bool applyMacroOps(span<Token const> tokens, SmallVector<Token>& dest);
     void createBuiltInMacro(string_view name, int value, string_view valueStr = {});
 
-    static bool isSameMacro(const DefineDirectiveSyntax& left, const DefineDirectiveSyntax& right);
+    static bool isSameMacro(const syntax::DefineDirectiveSyntax& left,
+                            const syntax::DefineDirectiveSyntax& right);
 
     // functions to advance the underlying token stream
     Token peek();
@@ -323,15 +326,15 @@ private:
         // a macro replacement list.
         Token next();
 
-        MacroActualArgumentListSyntax* parseActualArgumentList(Token prevToken);
-        MacroFormalArgumentListSyntax* parseFormalArgumentList();
+        syntax::MacroActualArgumentListSyntax* parseActualArgumentList(Token prevToken);
+        syntax::MacroFormalArgumentListSyntax* parseFormalArgumentList();
 
     private:
         template<typename TFunc>
-        void parseArgumentList(SmallVector<TokenOrSyntax>& buffer, TFunc&& parseItem);
+        void parseArgumentList(SmallVector<syntax::TokenOrSyntax>& buffer, TFunc&& parseItem);
 
-        MacroActualArgumentSyntax* parseActualArgument();
-        MacroFormalArgumentSyntax* parseFormalArgument();
+        syntax::MacroActualArgumentSyntax* parseActualArgument();
+        syntax::MacroFormalArgumentSyntax* parseFormalArgument();
         span<Token> parseTokenList(bool allowNewlines);
 
         Token peek();
@@ -403,8 +406,8 @@ private:
     void handleExponentSplit(Token token, size_t offset);
 
     // A map of pragma protect keywords to their handler function.
-    flat_hash_map<string_view,
-                  void (Preprocessor::*)(Token, const PragmaExpressionSyntax*, SmallVector<Token>&)>
+    flat_hash_map<string_view, void (Preprocessor::*)(Token, const syntax::PragmaExpressionSyntax*,
+                                                      SmallVector<Token>&)>
         pragmaProtectHandlers;
 };
 

@@ -17,6 +17,8 @@
 
 namespace slang::ast::builtins {
 
+using namespace syntax;
+
 class SystemTaskBase : public SystemSubroutine {
 public:
     explicit SystemTaskBase(const std::string& name) :

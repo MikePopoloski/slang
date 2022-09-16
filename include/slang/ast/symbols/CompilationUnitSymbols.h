@@ -22,7 +22,7 @@ public:
 
     explicit CompilationUnitSymbol(Compilation& compilation);
 
-    void addMembers(const SyntaxNode& syntax);
+    void addMembers(const syntax::SyntaxNode& syntax);
 
     void serializeTo(ASTSerializer&) const {}
 
@@ -41,7 +41,7 @@ public:
     const NetType& defaultNetType;
     TimeScale timeScale;
     VariableLifetime defaultLifetime;
-    span<const PackageImportItemSyntax* const> exportDecls;
+    span<const syntax::PackageImportItemSyntax* const> exportDecls;
     bool hasExportAll = false;
 
     PackageSymbol(Compilation& compilation, string_view name, SourceLocation loc,
@@ -57,7 +57,8 @@ public:
 
     void serializeTo(ASTSerializer&) const {}
 
-    static PackageSymbol& fromSyntax(const Scope& scope, const ModuleDeclarationSyntax& syntax,
+    static PackageSymbol& fromSyntax(const Scope& scope,
+                                     const syntax::ModuleDeclarationSyntax& syntax,
                                      const NetType& defaultNetType,
                                      optional<TimeScale> directiveTimeScale);
 

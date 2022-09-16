@@ -9,7 +9,7 @@
 
 #include "slang/syntax/AllSyntax.h"
 
-namespace slang {
+namespace slang::syntax {
 
 string_view SyntaxFacts::getSimpleTypeName(const DataTypeSyntax& syntax) {
     if (syntax.kind == SyntaxKind::NamedType) {
@@ -1465,4 +1465,4 @@ bool SyntaxFacts::isStrength1(TokenKind kind) {
 
 // clang-format on
 
-} // namespace slang
+} // namespace slang::syntax

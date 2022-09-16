@@ -40,6 +40,8 @@ struct EvalVisitor {
 
 namespace slang::ast {
 
+using namespace syntax;
+
 Pattern& Pattern::bind(const PatternSyntax& syntax, const Type& targetType, VarMap& varMap,
                        ASTContext& context) {
     Pattern* result;

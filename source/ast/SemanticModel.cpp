@@ -13,6 +13,8 @@
 
 namespace slang::ast {
 
+using namespace syntax;
+
 SemanticModel::SemanticModel(Compilation& compilation) : compilation(compilation) {
 }
 

@@ -22,6 +22,8 @@
 
 namespace slang::ast {
 
+using namespace syntax;
+
 ValueSymbol::ValueSymbol(SymbolKind kind, string_view name, SourceLocation location,
                          bitmask<DeclaredTypeFlags> flags) :
     Symbol(kind, name, location),

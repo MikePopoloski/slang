@@ -11,6 +11,8 @@
 
 namespace slang::parsing {
 
+using namespace syntax;
+
 CompilationUnitSyntax& Parser::parseCompilationUnit() {
     try {
         auto members = parseMemberList<MemberSyntax>(

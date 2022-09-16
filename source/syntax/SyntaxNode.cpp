@@ -13,6 +13,7 @@
 namespace {
 
 using namespace slang;
+using namespace slang::syntax;
 
 struct ConstGetChildVisitor {
     template<typename T>
@@ -34,7 +35,7 @@ struct GetChildVisitor {
 
 } // namespace
 
-namespace slang {
+namespace slang::syntax {
 
 ConstTokenOrSyntax::ConstTokenOrSyntax(TokenOrSyntax tos) {
     if (tos.isNode())
@@ -129,4 +130,4 @@ bool SyntaxListBase::isKind(SyntaxKind kind) {
     }
 }
 
-} // namespace slang
+} // namespace slang::syntax

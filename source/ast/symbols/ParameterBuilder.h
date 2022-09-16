@@ -30,7 +30,7 @@ public:
 
     bool hasErrors() const { return anyErrors; }
 
-    void setAssignments(const ParameterValueAssignmentSyntax& syntax);
+    void setAssignments(const syntax::ParameterValueAssignmentSyntax& syntax);
     void setOverrides(const ParamOverrideNode* newVal) { overrideNode = newVal; }
     void setForceInvalidValues(bool set) { forceInvalidValues = set; }
     void setSuppressErrors(bool set) { suppressErrors = set; }
@@ -41,16 +41,17 @@ public:
     const ParameterSymbolBase& createParam(const Definition::ParameterDecl& decl, Scope& newScope,
                                            SourceLocation instanceLoc);
 
-    static void createDecls(const Scope& scope, const ParameterDeclarationBaseSyntax& syntax,
-                            bool isLocal, bool isPort, SmallVector<Decl>& results);
-    static void createDecls(const Scope& scope, const ParameterPortListSyntax& syntax,
+    static void createDecls(const Scope& scope,
+                            const syntax::ParameterDeclarationBaseSyntax& syntax, bool isLocal,
+                            bool isPort, SmallVector<Decl>& results);
+    static void createDecls(const Scope& scope, const syntax::ParameterPortListSyntax& syntax,
                             SmallVector<Decl>& results);
 
 private:
     const Scope& scope;
     string_view definitionName;
     span<const Decl> parameterDecls;
-    SmallMap<string_view, const ExpressionSyntax*, 8> assignments;
+    SmallMap<string_view, const syntax::ExpressionSyntax*, 8> assignments;
     const ASTContext* instanceContext = nullptr;
     const ParamOverrideNode* overrideNode = nullptr;
     bool forceInvalidValues = false;

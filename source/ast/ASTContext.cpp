@@ -24,6 +24,8 @@
 
 namespace slang::ast {
 
+using namespace syntax;
+
 DriverKind ASTContext::getDriverKind() const {
     if (flags.has(ASTFlags::ProceduralAssign))
         return DriverKind::Procedural;

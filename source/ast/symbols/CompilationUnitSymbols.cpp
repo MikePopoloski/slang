@@ -11,9 +11,10 @@
 #include "slang/ast/symbols/MemberSymbols.h"
 #include "slang/syntax/AllSyntax.h"
 
-using namespace slang::parsing;
-
 namespace slang::ast {
+
+using namespace parsing;
+using namespace syntax;
 
 CompilationUnitSymbol::CompilationUnitSymbol(Compilation& compilation) :
     Symbol(SymbolKind::CompilationUnit, "", SourceLocation()), Scope(compilation, this) {

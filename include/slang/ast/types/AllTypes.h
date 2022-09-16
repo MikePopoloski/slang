@@ -37,11 +37,11 @@ public:
     /// Indicates whether the underlying type was declared using the 'reg' keyword.
     bool isDeclaredReg() const;
 
-    static const Type& fromSyntax(Compilation& compilation, const IntegerTypeSyntax& syntax,
+    static const Type& fromSyntax(Compilation& compilation, const syntax::IntegerTypeSyntax& syntax,
                                   const ASTContext& context);
 
-    static const Type& fromSyntax(Compilation& compilation, SyntaxKind integerKind,
-                                  span<const VariableDimensionSyntax* const> dimensions,
+    static const Type& fromSyntax(Compilation& compilation, syntax::SyntaxKind integerKind,
+                                  span<const syntax::VariableDimensionSyntax* const> dimensions,
                                   bool isSigned, const ASTContext& context);
 
     ConstantValue getDefaultValueImpl() const;
@@ -101,11 +101,12 @@ public:
     EnumType(Compilation& compilation, SourceLocation loc, const Type& baseType,
              const ASTContext& context);
 
-    static const Type& fromSyntax(Compilation& compilation, const EnumTypeSyntax& syntax,
+    static const Type& fromSyntax(Compilation& compilation, const syntax::EnumTypeSyntax& syntax,
                                   const ASTContext& context, const Type* typedefTarget);
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::EnumType; }
 
-    static void createDefaultMembers(const ASTContext& context, const EnumTypeSyntax& syntax,
+    static void createDefaultMembers(const ASTContext& context,
+                                     const syntax::EnumTypeSyntax& syntax,
                                      SmallVector<const Symbol*>& members);
 
     iterator_range<specific_symbol_iterator<EnumValueSymbol>> values() const {
@@ -123,8 +124,9 @@ public:
 
     void serializeTo(ASTSerializer& serializer) const;
 
-    static EnumValueSymbol& fromSyntax(Compilation& compilation, const DeclaratorSyntax& syntax,
-                                       const Type& type, optional<int32_t> index);
+    static EnumValueSymbol& fromSyntax(Compilation& compilation,
+                                       const syntax::DeclaratorSyntax& syntax, const Type& type,
+                                       optional<int32_t> index);
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::EnumValue; }
 
@@ -143,7 +145,7 @@ public:
     PackedArrayType(const Type& elementType, ConstantRange range);
 
     static const Type& fromSyntax(const Scope& scope, const Type& elementType, ConstantRange range,
-                                  const SyntaxNode& syntax);
+                                  const syntax::SyntaxNode& syntax);
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::PackedArrayType; }
 };
@@ -212,7 +214,8 @@ public:
     PackedStructType(Compilation& compilation, bool isSigned, SourceLocation loc,
                      const ASTContext& context);
 
-    static const Type& fromSyntax(Compilation& compilation, const StructUnionTypeSyntax& syntax,
+    static const Type& fromSyntax(Compilation& compilation,
+                                  const syntax::StructUnionTypeSyntax& syntax,
                                   const ASTContext& context);
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::PackedStructType; }
@@ -225,7 +228,8 @@ public:
 
     UnpackedStructType(Compilation& compilation, SourceLocation loc, const ASTContext& context);
 
-    static const Type& fromSyntax(const ASTContext& context, const StructUnionTypeSyntax& syntax);
+    static const Type& fromSyntax(const ASTContext& context,
+                                  const syntax::StructUnionTypeSyntax& syntax);
 
     ConstantValue getDefaultValueImpl() const;
 
@@ -242,7 +246,8 @@ public:
     PackedUnionType(Compilation& compilation, bool isSigned, bool isTagged, SourceLocation loc,
                     const ASTContext& context);
 
-    static const Type& fromSyntax(Compilation& compilation, const StructUnionTypeSyntax& syntax,
+    static const Type& fromSyntax(Compilation& compilation,
+                                  const syntax::StructUnionTypeSyntax& syntax,
                                   const ASTContext& context);
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::PackedUnionType; }
@@ -257,7 +262,8 @@ public:
     UnpackedUnionType(Compilation& compilation, bool isTagged, SourceLocation loc,
                       const ASTContext& context);
 
-    static const Type& fromSyntax(const ASTContext& context, const StructUnionTypeSyntax& syntax);
+    static const Type& fromSyntax(const ASTContext& context,
+                                  const syntax::StructUnionTypeSyntax& syntax);
 
     ConstantValue getDefaultValueImpl() const;
 
@@ -382,7 +388,7 @@ public:
     ConstantValue getDefaultValueImpl() const;
 
     static const Type& fromSyntax(const ASTContext& context,
-                                  const VirtualInterfaceTypeSyntax& syntax);
+                                  const syntax::VirtualInterfaceTypeSyntax& syntax);
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::VirtualInterfaceType; }
 };
@@ -402,14 +408,14 @@ public:
     ForwardingTypedefSymbol(string_view name, SourceLocation loc, ForwardTypedefCategory category) :
         Symbol(SymbolKind::ForwardingTypedef, name, loc), category(category) {}
 
-    static ForwardingTypedefSymbol& fromSyntax(const Scope& scope,
-                                               const ForwardTypedefDeclarationSyntax& syntax);
+    static ForwardingTypedefSymbol& fromSyntax(
+        const Scope& scope, const syntax::ForwardTypedefDeclarationSyntax& syntax);
 
     static ForwardingTypedefSymbol& fromSyntax(
-        const Scope& scope, const ForwardInterfaceClassTypedefDeclarationSyntax& syntax);
+        const Scope& scope, const syntax::ForwardInterfaceClassTypedefDeclarationSyntax& syntax);
 
-    static ForwardingTypedefSymbol& fromSyntax(const Scope& scope,
-                                               const ClassPropertyDeclarationSyntax& syntax);
+    static ForwardingTypedefSymbol& fromSyntax(
+        const Scope& scope, const syntax::ClassPropertyDeclarationSyntax& syntax);
 
     void addForwardDecl(const ForwardingTypedefSymbol& decl) const;
     const ForwardingTypedefSymbol* getNextForwardDecl() const { return next; }
@@ -433,9 +439,10 @@ public:
 
     TypeAliasType(string_view name, SourceLocation loc);
 
-    static TypeAliasType& fromSyntax(const Scope& scope, const TypedefDeclarationSyntax& syntax);
     static TypeAliasType& fromSyntax(const Scope& scope,
-                                     const ClassPropertyDeclarationSyntax& syntax);
+                                     const syntax::TypedefDeclarationSyntax& syntax);
+    static TypeAliasType& fromSyntax(const Scope& scope,
+                                     const syntax::ClassPropertyDeclarationSyntax& syntax);
 
     void addForwardDecl(const ForwardingTypedefSymbol& decl) const;
     const ForwardingTypedefSymbol* getFirstForwardDecl() const { return firstForward; }

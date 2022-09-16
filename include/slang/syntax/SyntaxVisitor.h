@@ -14,7 +14,7 @@
 #include "slang/util/Hash.h"
 #include "slang/util/TypeTraits.h"
 
-namespace slang {
+namespace slang::syntax {
 
 #define DERIVED static_cast<TDerived*>(this)
 
@@ -193,4 +193,4 @@ private:
 
 #undef DERIVED
 
-} // namespace slang
+} // namespace slang::syntax

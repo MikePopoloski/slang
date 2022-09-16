@@ -16,6 +16,8 @@
 
 namespace slang::ast {
 
+using namespace syntax;
+
 AttributeSymbol::AttributeSymbol(string_view name, SourceLocation loc, const Symbol& symbol,
                                  const ExpressionSyntax& expr) :
     Symbol(SymbolKind::Attribute, name, loc),

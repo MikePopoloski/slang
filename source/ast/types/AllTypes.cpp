@@ -25,6 +25,7 @@
 namespace {
 
 using namespace slang;
+using namespace slang::syntax;
 using namespace slang::ast;
 
 // clang-format off
@@ -115,6 +116,7 @@ const Type& createPackedDims(const ASTContext& context, const Type* type,
 namespace slang::ast {
 
 using namespace parsing;
+using namespace syntax;
 
 const ErrorType ErrorType::Instance;
 

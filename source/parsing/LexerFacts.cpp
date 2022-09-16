@@ -11,6 +11,8 @@
 
 namespace slang::parsing {
 
+using namespace syntax;
+
 // clang-format off
 const static StringTable<TokenKind> systemIdentifierKeywords = {
     { "$root", TokenKind::RootSystemName },

@@ -32,7 +32,7 @@ public:
 
     void serializeTo(ASTSerializer& serializer) const;
 
-    static void fromSyntax(const Scope& scope, const ClassPropertyDeclarationSyntax& syntax,
+    static void fromSyntax(const Scope& scope, const syntax::ClassPropertyDeclarationSyntax& syntax,
                            SmallVector<const ClassPropertySymbol*>& results);
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::ClassProperty; }
@@ -75,7 +75,8 @@ public:
     /// invoke that method. Otherwise returns nullptr.
     const Expression* getBaseConstructorCall() const;
 
-    static const Symbol& fromSyntax(const Scope& scope, const ClassDeclarationSyntax& syntax);
+    static const Symbol& fromSyntax(const Scope& scope,
+                                    const syntax::ClassDeclarationSyntax& syntax);
 
     void addForwardDecl(const ForwardingTypedefSymbol& decl) const;
     const ForwardingTypedefSymbol* getFirstForwardDecl() const { return firstForward; }
@@ -94,11 +95,12 @@ private:
     friend class Scope;
     friend class GenericClassDefSymbol;
 
-    void populate(const Scope& scope, const ClassDeclarationSyntax& syntax);
+    void populate(const Scope& scope, const syntax::ClassDeclarationSyntax& syntax);
     void inheritMembers(function_ref<void(const Symbol&)> insertCB) const;
-    void handleExtends(const ExtendsClauseSyntax& extendsClause, const ASTContext& context,
+    void handleExtends(const syntax::ExtendsClauseSyntax& extendsClause, const ASTContext& context,
                        function_ref<void(const Symbol&)> insertCB) const;
-    void handleImplements(const ImplementsClauseSyntax& implementsClause, const ASTContext& context,
+    void handleImplements(const syntax::ImplementsClauseSyntax& implementsClause,
+                          const ASTContext& context,
                           function_ref<void(const Symbol&)> insertCB) const;
 
     mutable const Type* baseClass = nullptr;
@@ -131,7 +133,7 @@ public:
     /// Gets the specialization for the class given the specified parameter value
     /// assignments. The result is cached and reused if requested more than once.
     const Type& getSpecialization(const ASTContext& context,
-                                  const ParameterValueAssignmentSyntax& syntax) const;
+                                  const syntax::ParameterValueAssignmentSyntax& syntax) const;
 
     /// Forces a specialization with all parameters set to invalid values. This allows
     /// determining members that aren't dependent on parameters.
@@ -154,7 +156,8 @@ public:
 
     void serializeTo(ASTSerializer& serializer) const;
 
-    static const Symbol& fromSyntax(const Scope& scope, const ClassDeclarationSyntax& syntax);
+    static const Symbol& fromSyntax(const Scope& scope,
+                                    const syntax::ClassDeclarationSyntax& syntax);
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::GenericClassDef; }
 
@@ -183,7 +186,7 @@ private:
 
     const Type* getSpecializationImpl(const ASTContext& context, SourceLocation instanceLoc,
                                       bool forceInvalidParams,
-                                      const ParameterValueAssignmentSyntax* syntax) const;
+                                      const syntax::ParameterValueAssignmentSyntax* syntax) const;
 
     SmallVectorSized<Definition::ParameterDecl, 8> paramDecls;
 
@@ -261,10 +264,10 @@ public:
     void serializeTo(ASTSerializer& serializer) const;
 
     static ConstraintBlockSymbol* fromSyntax(const Scope& scope,
-                                             const ConstraintDeclarationSyntax& syntax);
+                                             const syntax::ConstraintDeclarationSyntax& syntax);
 
     static ConstraintBlockSymbol& fromSyntax(const Scope& scope,
-                                             const ConstraintPrototypeSyntax& syntax);
+                                             const syntax::ConstraintPrototypeSyntax& syntax);
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::ConstraintBlock; }
 

@@ -15,6 +15,8 @@
 
 namespace slang::parsing {
 
+using namespace syntax;
+
 using LF = LexerFacts;
 
 Preprocessor::MacroDef Preprocessor::findMacro(Token directive) {

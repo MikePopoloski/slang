@@ -63,38 +63,40 @@ public:
     void serializeTo(ASTSerializer& serializer) const;
 
     static Expression& fromSyntax(Compilation& compilation,
-                                  const InvocationExpressionSyntax& syntax,
-                                  const ArrayOrRandomizeMethodExpressionSyntax* withClause,
+                                  const syntax::InvocationExpressionSyntax& syntax,
+                                  const syntax::ArrayOrRandomizeMethodExpressionSyntax* withClause,
                                   const ASTContext& context);
 
     static Expression& fromSyntax(Compilation& compilation,
-                                  const ArrayOrRandomizeMethodExpressionSyntax& syntax,
+                                  const syntax::ArrayOrRandomizeMethodExpressionSyntax& syntax,
                                   const ASTContext& context);
 
     static Expression& fromLookup(Compilation& compilation, const Subroutine& subroutine,
                                   const Expression* thisClass,
-                                  const InvocationExpressionSyntax* syntax,
-                                  const ArrayOrRandomizeMethodExpressionSyntax* withClause,
+                                  const syntax::InvocationExpressionSyntax* syntax,
+                                  const syntax::ArrayOrRandomizeMethodExpressionSyntax* withClause,
                                   SourceRange range, const ASTContext& context);
 
     static Expression& fromArgs(Compilation& compilation, const Subroutine& subroutine,
-                                const Expression* thisClass, const ArgumentListSyntax* argSyntax,
-                                SourceRange range, const ASTContext& context);
+                                const Expression* thisClass,
+                                const syntax::ArgumentListSyntax* argSyntax, SourceRange range,
+                                const ASTContext& context);
 
-    static Expression& fromSystemMethod(Compilation& compilation, const Expression& expr,
-                                        const LookupResult::MemberSelector& selector,
-                                        const InvocationExpressionSyntax* syntax,
-                                        const ArrayOrRandomizeMethodExpressionSyntax* withClause,
-                                        const ASTContext& context);
+    static Expression& fromSystemMethod(
+        Compilation& compilation, const Expression& expr,
+        const LookupResult::MemberSelector& selector,
+        const syntax::InvocationExpressionSyntax* syntax,
+        const syntax::ArrayOrRandomizeMethodExpressionSyntax* withClause,
+        const ASTContext& context);
 
-    static Expression* fromBuiltInMethod(Compilation& compilation, SymbolKind rootKind,
-                                         const Expression& expr,
-                                         const LookupResult::MemberSelector& selector,
-                                         const InvocationExpressionSyntax* syntax,
-                                         const ArrayOrRandomizeMethodExpressionSyntax* withClause,
-                                         const ASTContext& context);
+    static Expression* fromBuiltInMethod(
+        Compilation& compilation, SymbolKind rootKind, const Expression& expr,
+        const LookupResult::MemberSelector& selector,
+        const syntax::InvocationExpressionSyntax* syntax,
+        const syntax::ArrayOrRandomizeMethodExpressionSyntax* withClause,
+        const ASTContext& context);
 
-    static bool bindArgs(const ArgumentListSyntax* argSyntax,
+    static bool bindArgs(const syntax::ArgumentListSyntax* argSyntax,
                          span<const FormalArgumentSymbol* const> formalArgs, string_view symbolName,
                          SourceRange range, const ASTContext& context,
                          SmallVector<const Expression*>& boundArgs);
@@ -123,18 +125,17 @@ public:
     }
 
 private:
-    static Expression& fromSyntaxImpl(Compilation& compilation, const ExpressionSyntax& left,
-                                      const InvocationExpressionSyntax* invocation,
-                                      const ArrayOrRandomizeMethodExpressionSyntax* withClause,
-                                      const ASTContext& context);
+    static Expression& fromSyntaxImpl(
+        Compilation& compilation, const ExpressionSyntax& left,
+        const syntax::InvocationExpressionSyntax* invocation,
+        const syntax::ArrayOrRandomizeMethodExpressionSyntax* withClause,
+        const ASTContext& context);
 
-    static Expression& createSystemCall(Compilation& compilation,
-                                        const SystemSubroutine& subroutine,
-                                        const Expression* firstArg,
-                                        const InvocationExpressionSyntax* syntax,
-                                        const ArrayOrRandomizeMethodExpressionSyntax* withClause,
-                                        SourceRange range, const ASTContext& context,
-                                        const Scope* randomizeScope = nullptr);
+    static Expression& createSystemCall(
+        Compilation& compilation, const SystemSubroutine& subroutine, const Expression* firstArg,
+        const syntax::InvocationExpressionSyntax* syntax,
+        const syntax::ArrayOrRandomizeMethodExpressionSyntax* withClause, SourceRange range,
+        const ASTContext& context, const Scope* randomizeScope = nullptr);
 
     static bool checkConstant(EvalContext& context, const SubroutineSymbol& subroutine,
                               SourceRange range);

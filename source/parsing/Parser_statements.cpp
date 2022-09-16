@@ -11,6 +11,8 @@
 
 namespace slang::parsing {
 
+using namespace syntax;
+
 StatementSyntax& Parser::parseStatement(bool allowEmpty, bool allowSuperNew) {
     auto dg = setDepthGuard();
 

@@ -17,6 +17,8 @@
 
 namespace slang::ast {
 
+using namespace syntax;
+
 void ParameterSymbolBase::fromLocalSyntax(const Scope& scope,
                                           const ParameterDeclarationStatementSyntax& syntax,
                                           SmallVector<Symbol*>& results) {

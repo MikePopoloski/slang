@@ -16,9 +16,14 @@
 
 namespace slang {
 
-enum class SyntaxKind;
 class Diagnostics;
+
+namespace syntax {
+
 class SyntaxNode;
+enum class SyntaxKind;
+
+} // namespace syntax
 
 } // namespace slang
 
@@ -62,7 +67,7 @@ private:
     union {
         ShortStringView rawText;
         ShortTokenSpan tokens;
-        SyntaxNode* syntaxNode;
+        syntax::SyntaxNode* syntaxNode;
         FullLocation* fullLocation;
     };
 #pragma pack(pop)
@@ -80,7 +85,7 @@ public:
     Trivia();
     Trivia(TriviaKind kind, string_view rawText);
     Trivia(TriviaKind kind, span<Token const> tokens);
-    Trivia(TriviaKind kind, SyntaxNode* syntax);
+    Trivia(TriviaKind kind, syntax::SyntaxNode* syntax);
 
     bool valid() const {
         return kind != TriviaKind::Unknown;
@@ -101,7 +106,7 @@ public:
 
     /// If this trivia is tracking a skipped syntax node or a directive, returns that node.
     /// Otherwise returns nullptr.
-    SyntaxNode* syntax() const;
+    syntax::SyntaxNode* syntax() const;
 
     /// Get the raw text of the trivia, if any.
     string_view getRawText() const;
@@ -132,7 +137,7 @@ public:
     Token(BumpAllocator& alloc, TokenKind kind, span<Trivia const> trivia, string_view rawText,
           SourceLocation location, string_view strText);
     Token(BumpAllocator& alloc, TokenKind kind, span<Trivia const> trivia, string_view rawText,
-          SourceLocation location, SyntaxKind directive);
+          SourceLocation location, syntax::SyntaxKind directive);
     Token(BumpAllocator& alloc, TokenKind kind, span<Trivia const> trivia, string_view rawText,
           SourceLocation location, logic_t bit);
     Token(BumpAllocator& alloc, TokenKind kind, span<Trivia const> trivia, string_view rawText,
@@ -165,7 +170,7 @@ public:
     double realValue() const;
     logic_t bitValue() const;
     NumericTokenFlags numericFlags() const;
-    SyntaxKind directiveKind() const;
+    syntax::SyntaxKind directiveKind() const;
 
     /// Returns true if this token is on the same line as the token before it.
     /// This is detected by examining the leading trivia of this token for newlines.

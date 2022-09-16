@@ -22,7 +22,7 @@ public:
     bool hasDefault() const;
 
     static void fromLocalSyntax(const Scope& scope,
-                                const ParameterDeclarationStatementSyntax& syntax,
+                                const syntax::ParameterDeclarationStatementSyntax& syntax,
                                 SmallVector<Symbol*>& results);
 
 protected:
@@ -39,7 +39,7 @@ class ParameterSymbol : public ValueSymbol, public ParameterSymbolBase {
 public:
     ParameterSymbol(string_view name, SourceLocation loc, bool isLocal, bool isPort);
 
-    static void fromSyntax(const Scope& scope, const ParameterDeclarationSyntax& syntax,
+    static void fromSyntax(const Scope& scope, const syntax::ParameterDeclarationSyntax& syntax,
                            bool isLocal, bool isPort, SmallVector<ParameterSymbol*>& results);
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::Parameter; }
@@ -64,7 +64,7 @@ public:
 
     TypeParameterSymbol(string_view name, SourceLocation loc, bool isLocal, bool isPort);
 
-    static void fromSyntax(const Scope& scope, const TypeParameterDeclarationSyntax& syntax,
+    static void fromSyntax(const Scope& scope, const syntax::TypeParameterDeclarationSyntax& syntax,
                            bool isLocal, bool isPort, SmallVector<TypeParameterSymbol*>& results);
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::TypeParameter; }
@@ -86,7 +86,7 @@ public:
     const Expression& getInitializer() const;
     const ConstantValue& getValue() const;
 
-    static void fromSyntax(const Scope& scope, const DefParamSyntax& syntax,
+    static void fromSyntax(const Scope& scope, const syntax::DefParamSyntax& syntax,
                            SmallVector<const DefParamSymbol*>& results);
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::DefParam; }
@@ -107,7 +107,7 @@ public:
 
     const ConstantValue& getValue(SourceRange referencingRange = {}) const;
 
-    static void fromSyntax(const Scope& scope, const SpecparamDeclarationSyntax& syntax,
+    static void fromSyntax(const Scope& scope, const syntax::SpecparamDeclarationSyntax& syntax,
                            SmallVector<const SpecparamSymbol*>& results);
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::Specparam; }

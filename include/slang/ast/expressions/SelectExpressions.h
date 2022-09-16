@@ -41,7 +41,7 @@ public:
     void serializeTo(ASTSerializer& serializer) const;
 
     static Expression& fromSyntax(Compilation& compilation, Expression& value,
-                                  const ExpressionSyntax& syntax, SourceRange fullRange,
+                                  const syntax::ExpressionSyntax& syntax, SourceRange fullRange,
                                   const ASTContext& context);
 
     static Expression& fromConstant(Compilation& compilation, Expression& value, int32_t index,
@@ -91,7 +91,7 @@ public:
     void serializeTo(ASTSerializer& serializer) const;
 
     static Expression& fromSyntax(Compilation& compilation, Expression& value,
-                                  const RangeSelectSyntax& syntax, SourceRange fullRange,
+                                  const syntax::RangeSelectSyntax& syntax, SourceRange fullRange,
                                   const ASTContext& context);
 
     static Expression& fromConstant(Compilation& compilation, Expression& value,
@@ -138,16 +138,16 @@ public:
 
     void serializeTo(ASTSerializer& serializer) const;
 
-    static Expression& fromSelector(Compilation& compilation, Expression& expr,
-                                    const LookupResult::MemberSelector& selector,
-                                    const InvocationExpressionSyntax* invocation,
-                                    const ArrayOrRandomizeMethodExpressionSyntax* withClause,
-                                    const ASTContext& context);
+    static Expression& fromSelector(
+        Compilation& compilation, Expression& expr, const LookupResult::MemberSelector& selector,
+        const syntax::InvocationExpressionSyntax* invocation,
+        const syntax::ArrayOrRandomizeMethodExpressionSyntax* withClause,
+        const ASTContext& context);
 
     static Expression& fromSyntax(Compilation& compilation,
-                                  const MemberAccessExpressionSyntax& syntax,
-                                  const InvocationExpressionSyntax* invocation,
-                                  const ArrayOrRandomizeMethodExpressionSyntax* withClause,
+                                  const syntax::MemberAccessExpressionSyntax& syntax,
+                                  const syntax::InvocationExpressionSyntax* invocation,
+                                  const syntax::ArrayOrRandomizeMethodExpressionSyntax* withClause,
                                   const ASTContext& context);
 
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::MemberAccess; }

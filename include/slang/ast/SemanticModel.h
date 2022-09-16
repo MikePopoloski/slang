@@ -21,24 +21,24 @@ class SemanticModel {
 public:
     explicit SemanticModel(Compilation& compilation);
 
-    void withContext(const SyntaxNode& node, const Symbol& symbol);
+    void withContext(const syntax::SyntaxNode& node, const Symbol& symbol);
 
-    const Symbol* getDeclaredSymbol(const SyntaxNode& syntax);
+    const Symbol* getDeclaredSymbol(const syntax::SyntaxNode& syntax);
 
-    const CompilationUnitSymbol* getDeclaredSymbol(const CompilationUnitSyntax& syntax);
-    const InstanceSymbol* getDeclaredSymbol(const HierarchyInstantiationSyntax& syntax);
-    const StatementBlockSymbol* getDeclaredSymbol(const BlockStatementSyntax& syntax);
-    const ProceduralBlockSymbol* getDeclaredSymbol(const ProceduralBlockSyntax& syntax);
-    const GenerateBlockSymbol* getDeclaredSymbol(const IfGenerateSyntax& syntax);
-    const GenerateBlockArraySymbol* getDeclaredSymbol(const LoopGenerateSyntax& syntax);
-    const SubroutineSymbol* getDeclaredSymbol(const FunctionDeclarationSyntax& syntax);
-    const EnumType* getDeclaredSymbol(const EnumTypeSyntax& syntax);
-    const TypeAliasType* getDeclaredSymbol(const TypedefDeclarationSyntax& syntax);
+    const CompilationUnitSymbol* getDeclaredSymbol(const syntax::CompilationUnitSyntax& syntax);
+    const InstanceSymbol* getDeclaredSymbol(const syntax::HierarchyInstantiationSyntax& syntax);
+    const StatementBlockSymbol* getDeclaredSymbol(const syntax::BlockStatementSyntax& syntax);
+    const ProceduralBlockSymbol* getDeclaredSymbol(const syntax::ProceduralBlockSyntax& syntax);
+    const GenerateBlockSymbol* getDeclaredSymbol(const syntax::IfGenerateSyntax& syntax);
+    const GenerateBlockArraySymbol* getDeclaredSymbol(const syntax::LoopGenerateSyntax& syntax);
+    const SubroutineSymbol* getDeclaredSymbol(const syntax::FunctionDeclarationSyntax& syntax);
+    const EnumType* getDeclaredSymbol(const syntax::EnumTypeSyntax& syntax);
+    const TypeAliasType* getDeclaredSymbol(const syntax::TypedefDeclarationSyntax& syntax);
 
 private:
     Compilation& compilation;
 
-    flat_hash_map<const SyntaxNode*, const Symbol*> symbolCache;
+    flat_hash_map<const syntax::SyntaxNode*, const Symbol*> symbolCache;
 };
 
 } // namespace slang::ast

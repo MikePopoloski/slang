@@ -20,6 +20,8 @@
 
 namespace slang::ast {
 
+using namespace syntax;
+
 NetType::NetType(NetKind netKind, string_view name, const Type& dataType) :
     Symbol(SymbolKind::NetType, name, SourceLocation()), declaredType(*this), netKind(netKind) {
     declaredType.setType(dataType);

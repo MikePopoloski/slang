@@ -31,16 +31,19 @@ public:
 
     void serializeTo(ASTSerializer&) const {}
 
-    static StatementBlockSymbol& fromSyntax(const Scope& scope, const BlockStatementSyntax& syntax);
     static StatementBlockSymbol& fromSyntax(const Scope& scope,
-                                            const ForLoopStatementSyntax& syntax);
+                                            const syntax::BlockStatementSyntax& syntax);
     static StatementBlockSymbol& fromSyntax(const Scope& scope,
-                                            const ForeachLoopStatementSyntax& syntax);
+                                            const syntax::ForLoopStatementSyntax& syntax);
     static StatementBlockSymbol& fromSyntax(const Scope& scope,
-                                            const RandSequenceStatementSyntax& syntax);
-    static StatementBlockSymbol& fromSyntax(const Scope& scope, const RsRuleSyntax& syntax);
-    static StatementBlockSymbol& fromSyntax(const Scope& scope, const RsCodeBlockSyntax& syntax);
-    static StatementBlockSymbol& fromLabeledStmt(const Scope& scope, const StatementSyntax& syntax);
+                                            const syntax::ForeachLoopStatementSyntax& syntax);
+    static StatementBlockSymbol& fromSyntax(const Scope& scope,
+                                            const syntax::RandSequenceStatementSyntax& syntax);
+    static StatementBlockSymbol& fromSyntax(const Scope& scope, const syntax::RsRuleSyntax& syntax);
+    static StatementBlockSymbol& fromSyntax(const Scope& scope,
+                                            const syntax::RsCodeBlockSyntax& syntax);
+    static StatementBlockSymbol& fromLabeledStmt(const Scope& scope,
+                                                 const syntax::StatementSyntax& syntax);
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::StatementBlock; }
 
@@ -69,15 +72,15 @@ public:
     }
 
     static ProceduralBlockSymbol& fromSyntax(
-        const Scope& scope, const ProceduralBlockSyntax& syntax,
+        const Scope& scope, const syntax::ProceduralBlockSyntax& syntax,
         span<const StatementBlockSymbol* const>& additionalBlocks);
 
     static ProceduralBlockSymbol& fromSyntax(
-        const Scope& scope, const ImmediateAssertionMemberSyntax& syntax,
+        const Scope& scope, const syntax::ImmediateAssertionMemberSyntax& syntax,
         span<const StatementBlockSymbol* const>& additionalBlocks);
 
     static ProceduralBlockSymbol& fromSyntax(
-        const Scope& scope, const ConcurrentAssertionMemberSyntax& syntax,
+        const Scope& scope, const syntax::ConcurrentAssertionMemberSyntax& syntax,
         span<const StatementBlockSymbol* const>& additionalBlocks);
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::ProceduralBlock; }
@@ -89,13 +92,13 @@ public:
 
 private:
     span<const StatementBlockSymbol* const> blocks;
-    const StatementSyntax* stmtSyntax = nullptr;
+    const syntax::StatementSyntax* stmtSyntax = nullptr;
     mutable const Statement* stmt = nullptr;
     mutable bool isConstructing = false;
 
     static ProceduralBlockSymbol& createProceduralBlock(
         const Scope& scope, ProceduralBlockKind kind, SourceLocation location,
-        const MemberSyntax& syntax, const StatementSyntax& stmtSyntax,
+        const syntax::MemberSyntax& syntax, const syntax::StatementSyntax& stmtSyntax,
         span<const StatementBlockSymbol* const>& additionalBlocks);
 };
 
@@ -116,15 +119,16 @@ public:
 
     void serializeTo(ASTSerializer& serializer) const;
 
-    static void fromSyntax(Compilation& compilation, const IfGenerateSyntax& syntax,
+    static void fromSyntax(Compilation& compilation, const syntax::IfGenerateSyntax& syntax,
                            const ASTContext& context, uint32_t constructIndex, bool isInstantiated,
                            SmallVector<GenerateBlockSymbol*>& results);
 
-    static void fromSyntax(Compilation& compilation, const CaseGenerateSyntax& syntax,
+    static void fromSyntax(Compilation& compilation, const syntax::CaseGenerateSyntax& syntax,
                            const ASTContext& context, uint32_t constructIndex, bool isInstantiated,
                            SmallVector<GenerateBlockSymbol*>& results);
 
-    static GenerateBlockSymbol& fromSyntax(const Scope& scope, const GenerateBlockSyntax& syntax,
+    static GenerateBlockSymbol& fromSyntax(const Scope& scope,
+                                           const syntax::GenerateBlockSyntax& syntax,
                                            uint32_t constructIndex);
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::GenerateBlock; }
@@ -148,7 +152,7 @@ public:
 
     /// Creates a generate block array from the given loop-generate syntax node.
     static GenerateBlockArraySymbol& fromSyntax(Compilation& compilation,
-                                                const LoopGenerateSyntax& syntax,
+                                                const syntax::LoopGenerateSyntax& syntax,
                                                 SymbolIndex scopeIndex, const ASTContext& context,
                                                 uint32_t constructIndex);
 

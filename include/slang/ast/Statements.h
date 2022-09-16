@@ -91,6 +91,8 @@ BITMASK(StatementFlags, HasTimingError)
 /// The base class for all statements in SystemVerilog.
 class Statement {
 public:
+    using StatementSyntax = syntax::StatementSyntax;
+
     /// The kind of statement; indicates the type of derived class.
     StatementKind kind;
 
@@ -151,7 +153,7 @@ public:
         /// statement syntax node. If they match, the block symbol is popped
         /// and returned wrapped inside a BlockStatement.
         /// Otherwise nullptr is returned.
-        const Statement* tryGetBlock(const ASTContext& context, const SyntaxNode& syntax);
+        const Statement* tryGetBlock(const ASTContext& context, const syntax::SyntaxNode& syntax);
 
         /// Observes that the given timing control has been created and checks it
         /// for correctness given the current statement context.
@@ -180,11 +182,12 @@ public:
                                  bool labelHandled = false);
 
     /// Binds a statement tree that forms the contents of a block.
-    static const Statement& bindBlock(const StatementBlockSymbol& block, const SyntaxNode& syntax,
-                                      const ASTContext& context, StatementContext& stmtCtx);
+    static const Statement& bindBlock(const StatementBlockSymbol& block,
+                                      const syntax::SyntaxNode& syntax, const ASTContext& context,
+                                      StatementContext& stmtCtx);
 
     /// Binds a list of statement items.
-    static const Statement& bindItems(const SyntaxList<SyntaxNode>& items,
+    static const Statement& bindItems(const syntax::SyntaxList<syntax::SyntaxNode>& items,
                                       const ASTContext& context, StatementContext& stmtCtx);
 
     /// Creates any symbols declared by the given statement syntax, such as local variables.
@@ -195,7 +198,7 @@ public:
     /// Creates any symbols declared by the given list of syntax nodes, such as local variables,
     /// and ignores any statement syntax nodes. The created symbols are added to the given scope.
     static span<const StatementBlockSymbol* const> createAndAddBlockItems(
-        Scope& scope, const SyntaxList<SyntaxNode>& items);
+        Scope& scope, const syntax::SyntaxList<syntax::SyntaxNode>& items);
 
     /// Creates any symbols declared by the given statement syntax, such as local variables.
     /// The created symbols are added to the given scope.
@@ -292,7 +295,8 @@ public:
 
     void serializeTo(ASTSerializer& serializer) const;
 
-    static Statement& fromSyntax(Compilation& compilation, const BlockStatementSyntax& syntax,
+    static Statement& fromSyntax(Compilation& compilation,
+                                 const syntax::BlockStatementSyntax& syntax,
                                  const ASTContext& context, StatementContext& stmtCtx,
                                  bool addInitializers = false);
 
@@ -315,7 +319,8 @@ public:
 
     EvalResult evalImpl(EvalContext& context) const;
 
-    static Statement& fromSyntax(Compilation& compilation, const ReturnStatementSyntax& syntax,
+    static Statement& fromSyntax(Compilation& compilation,
+                                 const syntax::ReturnStatementSyntax& syntax,
                                  const ASTContext& context, StatementContext& stmtCtx);
 
     void serializeTo(ASTSerializer& serializer) const;
@@ -336,7 +341,8 @@ public:
 
     EvalResult evalImpl(EvalContext& context) const;
 
-    static Statement& fromSyntax(Compilation& compilation, const JumpStatementSyntax& syntax,
+    static Statement& fromSyntax(Compilation& compilation,
+                                 const syntax::JumpStatementSyntax& syntax,
                                  const ASTContext& context, StatementContext& stmtCtx);
 
     void serializeTo(const ASTSerializer&) const {}
@@ -351,7 +357,8 @@ public:
 
     EvalResult evalImpl(EvalContext& context) const;
 
-    static Statement& fromSyntax(Compilation& compilation, const JumpStatementSyntax& syntax,
+    static Statement& fromSyntax(Compilation& compilation,
+                                 const syntax::JumpStatementSyntax& syntax,
                                  const ASTContext& context, StatementContext& stmtCtx);
 
     void serializeTo(ASTSerializer&) const {}
@@ -370,7 +377,8 @@ public:
 
     EvalResult evalImpl(EvalContext& context) const;
 
-    static Statement& fromSyntax(Compilation& compilation, const DisableStatementSyntax& syntax,
+    static Statement& fromSyntax(Compilation& compilation,
+                                 const syntax::DisableStatementSyntax& syntax,
                                  const ASTContext& context);
 
     void serializeTo(ASTSerializer& serializer) const;
@@ -410,7 +418,8 @@ public:
 
     EvalResult evalImpl(EvalContext& context) const;
 
-    static Statement& fromSyntax(Compilation& compilation, const ConditionalStatementSyntax& syntax,
+    static Statement& fromSyntax(Compilation& compilation,
+                                 const syntax::ConditionalStatementSyntax& syntax,
                                  const ASTContext& context, StatementContext& stmtCtx);
 
     void serializeTo(ASTSerializer& serializer) const;
@@ -452,7 +461,8 @@ public:
 
     EvalResult evalImpl(EvalContext& context) const;
 
-    static Statement& fromSyntax(Compilation& compilation, const CaseStatementSyntax& syntax,
+    static Statement& fromSyntax(Compilation& compilation,
+                                 const syntax::CaseStatementSyntax& syntax,
                                  const ASTContext& context, StatementContext& stmtCtx);
 
     void serializeTo(ASTSerializer& serializer) const;
@@ -499,7 +509,8 @@ public:
 
     EvalResult evalImpl(EvalContext& context) const;
 
-    static Statement& fromSyntax(Compilation& compilation, const CaseStatementSyntax& syntax,
+    static Statement& fromSyntax(Compilation& compilation,
+                                 const syntax::CaseStatementSyntax& syntax,
                                  const ASTContext& context, StatementContext& stmtCtx);
 
     void serializeTo(ASTSerializer& serializer) const;
@@ -540,7 +551,8 @@ public:
 
     EvalResult evalImpl(EvalContext& context) const;
 
-    static Statement& fromSyntax(Compilation& compilation, const ForLoopStatementSyntax& syntax,
+    static Statement& fromSyntax(Compilation& compilation,
+                                 const syntax::ForLoopStatementSyntax& syntax,
                                  const ASTContext& context, StatementContext& stmtCtx);
 
     void serializeTo(ASTSerializer& serializer) const;
@@ -573,7 +585,8 @@ public:
 
     EvalResult evalImpl(EvalContext& context) const;
 
-    static Statement& fromSyntax(Compilation& compilation, const LoopStatementSyntax& syntax,
+    static Statement& fromSyntax(Compilation& compilation,
+                                 const syntax::LoopStatementSyntax& syntax,
                                  const ASTContext& context, StatementContext& stmtCtx);
 
     void serializeTo(ASTSerializer& serializer) const;
@@ -615,12 +628,13 @@ public:
 
     EvalResult evalImpl(EvalContext& context) const;
 
-    static Statement& fromSyntax(Compilation& compilation, const ForeachLoopStatementSyntax& syntax,
+    static Statement& fromSyntax(Compilation& compilation,
+                                 const syntax::ForeachLoopStatementSyntax& syntax,
                                  const ASTContext& context, StatementContext& stmtCtx);
 
     void serializeTo(ASTSerializer& serializer) const;
 
-    static const Expression* buildLoopDims(const ForeachLoopListSyntax& loopList,
+    static const Expression* buildLoopDims(const syntax::ForeachLoopListSyntax& loopList,
                                            ASTContext& context, SmallVector<LoopDim>& dims);
 
     static bool isKind(StatementKind kind) { return kind == StatementKind::ForeachLoop; }
@@ -650,7 +664,8 @@ public:
 
     EvalResult evalImpl(EvalContext& context) const;
 
-    static Statement& fromSyntax(Compilation& compilation, const LoopStatementSyntax& syntax,
+    static Statement& fromSyntax(Compilation& compilation,
+                                 const syntax::LoopStatementSyntax& syntax,
                                  const ASTContext& context, StatementContext& stmtCtx);
 
     void serializeTo(ASTSerializer& serializer) const;
@@ -678,7 +693,8 @@ public:
 
     EvalResult evalImpl(EvalContext& context) const;
 
-    static Statement& fromSyntax(Compilation& compilation, const DoWhileStatementSyntax& syntax,
+    static Statement& fromSyntax(Compilation& compilation,
+                                 const syntax::DoWhileStatementSyntax& syntax,
                                  const ASTContext& context, StatementContext& stmtCtx);
 
     void serializeTo(ASTSerializer& serializer) const;
@@ -705,7 +721,8 @@ public:
 
     EvalResult evalImpl(EvalContext& context) const;
 
-    static Statement& fromSyntax(Compilation& compilation, const ForeverStatementSyntax& syntax,
+    static Statement& fromSyntax(Compilation& compilation,
+                                 const syntax::ForeverStatementSyntax& syntax,
                                  const ASTContext& context, StatementContext& stmtCtx);
 
     void serializeTo(ASTSerializer& serializer) const;
@@ -727,11 +744,12 @@ public:
 
     EvalResult evalImpl(EvalContext& context) const;
 
-    static Statement& fromSyntax(Compilation& compilation, const ExpressionStatementSyntax& syntax,
+    static Statement& fromSyntax(Compilation& compilation,
+                                 const syntax::ExpressionStatementSyntax& syntax,
                                  const ASTContext& context, StatementContext& stmtCtx);
 
     static Statement& fromSyntax(Compilation& compilation,
-                                 const VoidCastedCallStatementSyntax& syntax,
+                                 const syntax::VoidCastedCallStatementSyntax& syntax,
                                  const ASTContext& context);
 
     void serializeTo(ASTSerializer& serializer) const;
@@ -755,7 +773,7 @@ public:
     EvalResult evalImpl(EvalContext& context) const;
 
     static Statement& fromSyntax(Compilation& compilation,
-                                 const TimingControlStatementSyntax& syntax,
+                                 const syntax::TimingControlStatementSyntax& syntax,
                                  const ASTContext& context, StatementContext& stmtCtx);
 
     void serializeTo(ASTSerializer& serializer) const;
@@ -792,7 +810,7 @@ public:
     EvalResult evalImpl(EvalContext& context) const;
 
     static Statement& fromSyntax(Compilation& compilation,
-                                 const ImmediateAssertionStatementSyntax& syntax,
+                                 const syntax::ImmediateAssertionStatementSyntax& syntax,
                                  const ASTContext& context, StatementContext& stmtCtx);
 
     void serializeTo(ASTSerializer& serializer) const;
@@ -830,7 +848,7 @@ public:
     EvalResult evalImpl(EvalContext& context) const;
 
     static Statement& fromSyntax(Compilation& compilation,
-                                 const ConcurrentAssertionStatementSyntax& syntax,
+                                 const syntax::ConcurrentAssertionStatementSyntax& syntax,
                                  const ASTContext& context, StatementContext& stmtCtx);
 
     void serializeTo(ASTSerializer& serializer) const;
@@ -859,7 +877,7 @@ public:
     EvalResult evalImpl(EvalContext& context) const;
 
     static Statement& fromSyntax(Compilation& compilation,
-                                 const DisableForkStatementSyntax& syntax);
+                                 const syntax::DisableForkStatementSyntax& syntax);
 
     void serializeTo(const ASTSerializer&) const {}
 
@@ -876,7 +894,8 @@ public:
 
     EvalResult evalImpl(EvalContext& context) const;
 
-    static Statement& fromSyntax(Compilation& compilation, const WaitStatementSyntax& syntax,
+    static Statement& fromSyntax(Compilation& compilation,
+                                 const syntax::WaitStatementSyntax& syntax,
                                  const ASTContext& context, StatementContext& stmtCtx);
 
     void serializeTo(ASTSerializer& serializer) const;
@@ -901,7 +920,8 @@ public:
 
     EvalResult evalImpl(EvalContext& context) const;
 
-    static Statement& fromSyntax(Compilation& compilation, const WaitForkStatementSyntax& syntax);
+    static Statement& fromSyntax(Compilation& compilation,
+                                 const syntax::WaitForkStatementSyntax& syntax);
 
     void serializeTo(const ASTSerializer&) const {}
 
@@ -921,7 +941,8 @@ public:
 
     EvalResult evalImpl(EvalContext& context) const;
 
-    static Statement& fromSyntax(Compilation& compilation, const WaitOrderStatementSyntax& syntax,
+    static Statement& fromSyntax(Compilation& compilation,
+                                 const syntax::WaitOrderStatementSyntax& syntax,
                                  const ASTContext& context, StatementContext& stmtCtx);
 
     void serializeTo(ASTSerializer& serializer) const;
@@ -957,7 +978,7 @@ public:
     EvalResult evalImpl(EvalContext& context) const;
 
     static Statement& fromSyntax(Compilation& compilation,
-                                 const EventTriggerStatementSyntax& syntax,
+                                 const syntax::EventTriggerStatementSyntax& syntax,
                                  const ASTContext& context, StatementContext& stmtCtx);
 
     void serializeTo(ASTSerializer& serializer) const;
@@ -984,7 +1005,7 @@ public:
     EvalResult evalImpl(EvalContext& context) const;
 
     static Statement& fromSyntax(Compilation& compilation,
-                                 const ProceduralAssignStatementSyntax& syntax,
+                                 const syntax::ProceduralAssignStatementSyntax& syntax,
                                  const ASTContext& context);
 
     void serializeTo(ASTSerializer& serializer) const;
@@ -1009,7 +1030,7 @@ public:
     EvalResult evalImpl(EvalContext& context) const;
 
     static Statement& fromSyntax(Compilation& compilation,
-                                 const ProceduralDeassignStatementSyntax& syntax,
+                                 const syntax::ProceduralDeassignStatementSyntax& syntax,
                                  const ASTContext& context);
 
     void serializeTo(ASTSerializer& serializer) const;
@@ -1036,7 +1057,8 @@ public:
 
     EvalResult evalImpl(EvalContext& context) const;
 
-    static Statement& fromSyntax(Compilation& compilation, const RandCaseStatementSyntax& syntax,
+    static Statement& fromSyntax(Compilation& compilation,
+                                 const syntax::RandCaseStatementSyntax& syntax,
                                  const ASTContext& context, StatementContext& stmtCtx);
 
     void serializeTo(ASTSerializer& serializer) const;
@@ -1066,7 +1088,7 @@ public:
     EvalResult evalImpl(EvalContext& context) const;
 
     static Statement& fromSyntax(Compilation& compilation,
-                                 const RandSequenceStatementSyntax& syntax,
+                                 const syntax::RandSequenceStatementSyntax& syntax,
                                  const ASTContext& context);
 
     void serializeTo(ASTSerializer& serializer) const;

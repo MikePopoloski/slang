@@ -31,7 +31,7 @@ public:
     void serializeTo(ASTSerializer&) const {}
 
     static EmptyMemberSymbol& fromSyntax(Compilation& compilation, const Scope& scope,
-                                         const EmptyMemberSyntax& syntax);
+                                         const syntax::EmptyMemberSyntax& syntax);
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::EmptyMember; }
 };
@@ -120,10 +120,10 @@ public:
     void serializeTo(ASTSerializer& serializer) const;
 
     static ModportPortSymbol& fromSyntax(const ASTContext& context, ArgumentDirection direction,
-                                         const ModportNamedPortSyntax& syntax);
+                                         const syntax::ModportNamedPortSyntax& syntax);
 
     static ModportPortSymbol& fromSyntax(const ASTContext& context, ArgumentDirection direction,
-                                         const ModportExplicitPortSyntax& syntax);
+                                         const syntax::ModportExplicitPortSyntax& syntax);
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::ModportPort; }
 };
@@ -139,7 +139,7 @@ public:
     void serializeTo(ASTSerializer& serializer) const;
 
     static ModportClockingSymbol& fromSyntax(const ASTContext& context,
-                                             const ModportClockingPortSyntax& syntax);
+                                             const syntax::ModportClockingPortSyntax& syntax);
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::ModportClocking; }
 };
@@ -153,7 +153,8 @@ public:
 
     void serializeTo(ASTSerializer&) const {}
 
-    static void fromSyntax(const ASTContext& context, const ModportDeclarationSyntax& syntax,
+    static void fromSyntax(const ASTContext& context,
+                           const syntax::ModportDeclarationSyntax& syntax,
                            SmallVector<const ModportSymbol*>& results);
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::Modport; }
@@ -162,7 +163,7 @@ public:
 /// Represents a continuous assignment statement.
 class ContinuousAssignSymbol : public Symbol {
 public:
-    explicit ContinuousAssignSymbol(const ExpressionSyntax& syntax);
+    explicit ContinuousAssignSymbol(const syntax::ExpressionSyntax& syntax);
     ContinuousAssignSymbol(SourceLocation loc, const Expression& assignment);
 
     const Expression& getAssignment() const;
@@ -170,7 +171,7 @@ public:
 
     void serializeTo(ASTSerializer& serializer) const;
 
-    static void fromSyntax(Compilation& compilation, const ContinuousAssignSyntax& syntax,
+    static void fromSyntax(Compilation& compilation, const syntax::ContinuousAssignSyntax& syntax,
                            const ASTContext& context, SmallVector<const Symbol*>& results,
                            SmallVector<const Symbol*>& implicitNets);
 
@@ -193,7 +194,7 @@ public:
 
     void serializeTo(ASTSerializer&) const {}
 
-    static void fromSyntax(const Scope& parent, const GenvarDeclarationSyntax& syntax,
+    static void fromSyntax(const Scope& parent, const syntax::GenvarDeclarationSyntax& syntax,
                            SmallVector<const GenvarSymbol*>& results);
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::Genvar; }
@@ -213,7 +214,7 @@ public:
     void serializeTo(ASTSerializer& serializer) const;
 
     static ElabSystemTaskSymbol& fromSyntax(Compilation& compilation,
-                                            const ElabSystemTaskSyntax& syntax);
+                                            const syntax::ElabSystemTaskSyntax& syntax);
 
     static string_view createMessage(const ASTContext& context, span<const Expression* const> args);
 
@@ -251,7 +252,8 @@ public:
         Symbol(SymbolKind::Primitive, name, loc),
         Scope(compilation, this), primitiveKind(primitiveKind) {}
 
-    static PrimitiveSymbol& fromSyntax(const Scope& scope, const UdpDeclarationSyntax& syntax);
+    static PrimitiveSymbol& fromSyntax(const Scope& scope,
+                                       const syntax::UdpDeclarationSyntax& syntax);
 
     void serializeTo(ASTSerializer& serializer) const;
 
@@ -262,7 +264,7 @@ class SpecifyBlockSymbol : public Symbol, public Scope {
 public:
     SpecifyBlockSymbol(Compilation& compilation, SourceLocation loc);
 
-    static SpecifyBlockSymbol& fromSyntax(Scope& scope, const SpecifyBlockSyntax& syntax);
+    static SpecifyBlockSymbol& fromSyntax(Scope& scope, const syntax::SpecifyBlockSyntax& syntax);
 
     void serializeTo(ASTSerializer&) const {}
 
@@ -274,14 +276,14 @@ public:
 class AssertionPortSymbol : public Symbol {
 public:
     DeclaredType declaredType;
-    const PropertyExprSyntax* defaultValueSyntax = nullptr;
+    const syntax::PropertyExprSyntax* defaultValueSyntax = nullptr;
     optional<ArgumentDirection> localVarDirection;
 
     AssertionPortSymbol(string_view name, SourceLocation loc);
 
     bool isLocalVar() const { return localVarDirection.has_value(); }
 
-    static void buildPorts(Scope& scope, const AssertionItemPortListSyntax& syntax,
+    static void buildPorts(Scope& scope, const syntax::AssertionItemPortListSyntax& syntax,
                            SmallVector<const AssertionPortSymbol*>& results);
 
     void serializeTo(ASTSerializer& serializer) const;
@@ -296,7 +298,8 @@ public:
 
     SequenceSymbol(Compilation& compilation, string_view name, SourceLocation loc);
 
-    static SequenceSymbol& fromSyntax(const Scope& scope, const SequenceDeclarationSyntax& syntax);
+    static SequenceSymbol& fromSyntax(const Scope& scope,
+                                      const syntax::SequenceDeclarationSyntax& syntax);
 
     void makeDefaultInstance() const;
 
@@ -312,7 +315,8 @@ public:
 
     PropertySymbol(Compilation& compilation, string_view name, SourceLocation loc);
 
-    static PropertySymbol& fromSyntax(const Scope& scope, const PropertyDeclarationSyntax& syntax);
+    static PropertySymbol& fromSyntax(const Scope& scope,
+                                      const syntax::PropertyDeclarationSyntax& syntax);
 
     void makeDefaultInstance() const;
 
@@ -325,12 +329,13 @@ public:
 class LetDeclSymbol : public Symbol, public Scope {
 public:
     span<const AssertionPortSymbol* const> ports;
-    not_null<const ExpressionSyntax*> exprSyntax;
+    not_null<const syntax::ExpressionSyntax*> exprSyntax;
 
-    LetDeclSymbol(Compilation& compilation, const ExpressionSyntax& exprSyntax, string_view name,
-                  SourceLocation loc);
+    LetDeclSymbol(Compilation& compilation, const syntax::ExpressionSyntax& exprSyntax,
+                  string_view name, SourceLocation loc);
 
-    static LetDeclSymbol& fromSyntax(const Scope& scope, const LetDeclarationSyntax& syntax);
+    static LetDeclSymbol& fromSyntax(const Scope& scope,
+                                     const syntax::LetDeclarationSyntax& syntax);
 
     void makeDefaultInstance() const;
 
@@ -349,7 +354,7 @@ public:
     ClockingSkew getDefaultOutputSkew() const;
 
     static ClockingBlockSymbol& fromSyntax(const Scope& scope,
-                                           const ClockingDeclarationSyntax& syntax);
+                                           const syntax::ClockingDeclarationSyntax& syntax);
 
     void serializeTo(ASTSerializer& serializer) const;
 
@@ -359,8 +364,8 @@ private:
     mutable const TimingControl* event = nullptr;
     mutable optional<ClockingSkew> defaultInputSkew;
     mutable optional<ClockingSkew> defaultOutputSkew;
-    const ClockingSkewSyntax* inputSkewSyntax = nullptr;
-    const ClockingSkewSyntax* outputSkewSyntax = nullptr;
+    const syntax::ClockingSkewSyntax* inputSkewSyntax = nullptr;
+    const syntax::ClockingSkewSyntax* outputSkewSyntax = nullptr;
 };
 
 class RandSeqProductionSymbol : public Symbol, public Scope {
@@ -454,12 +459,12 @@ public:
     void serializeTo(ASTSerializer& serializer) const;
 
     static RandSeqProductionSymbol& fromSyntax(Compilation& compilation,
-                                               const ProductionSyntax& syntax);
+                                               const syntax::ProductionSyntax& syntax);
 
     static const RandSeqProductionSymbol* findProduction(string_view name, SourceRange nameRange,
                                                          const ASTContext& context);
 
-    static void createRuleVariables(const RsRuleSyntax& syntax, const Scope& scope,
+    static void createRuleVariables(const syntax::RsRuleSyntax& syntax, const Scope& scope,
                                     SmallVector<const Symbol*>& results);
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::RandSeqProduction; }
@@ -516,10 +521,12 @@ public:
     }
 
 private:
-    static Rule createRule(const RsRuleSyntax& syntax, const ASTContext& context,
+    static Rule createRule(const syntax::RsRuleSyntax& syntax, const ASTContext& context,
                            const StatementBlockSymbol& ruleBlock);
-    static ProdItem createProdItem(const RsProdItemSyntax& syntax, const ASTContext& context);
-    static const CaseProd& createCaseProd(const RsCaseSyntax& syntax, const ASTContext& context);
+    static ProdItem createProdItem(const syntax::RsProdItemSyntax& syntax,
+                                   const ASTContext& context);
+    static const CaseProd& createCaseProd(const syntax::RsCaseSyntax& syntax,
+                                          const ASTContext& context);
 
     mutable optional<span<const Rule>> rules;
 };

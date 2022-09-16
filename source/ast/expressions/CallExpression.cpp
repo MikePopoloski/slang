@@ -23,6 +23,8 @@
 
 namespace slang::ast {
 
+using namespace syntax;
+
 Expression& CallExpression::fromSyntax(Compilation& compilation,
                                        const InvocationExpressionSyntax& syntax,
                                        const ArrayOrRandomizeMethodExpressionSyntax* withClause,

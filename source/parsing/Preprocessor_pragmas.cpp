@@ -13,6 +13,8 @@
 
 namespace slang::parsing {
 
+using namespace syntax;
+
 std::pair<PragmaExpressionSyntax*, bool> Preprocessor::parsePragmaExpression() {
     Token token = peek();
     if (token.kind == TokenKind::Identifier || LexerFacts::isKeyword(token.kind)) {

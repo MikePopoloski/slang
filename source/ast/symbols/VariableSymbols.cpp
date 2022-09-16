@@ -29,6 +29,7 @@
 namespace slang::ast {
 
 using namespace parsing;
+using namespace syntax;
 
 static VariableLifetime getDefaultLifetime(const Scope& scope) {
     const Symbol& sym = scope.asSymbol();

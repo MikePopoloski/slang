@@ -9,13 +9,15 @@
 
 #include "slang/util/Util.h"
 
-namespace slang {
+namespace slang::parsing {
+
+enum class TokenKind : uint16_t;
+
+}
+
+namespace slang::syntax {
 
 enum class SyntaxKind;
-
-namespace parsing {
-enum class TokenKind : uint16_t;
-}
 
 struct DataTypeSyntax;
 
@@ -325,4 +327,4 @@ protected:
     SyntaxFacts() = default;
 };
 
-} // namespace slang
+} // namespace slang::syntax

@@ -247,7 +247,8 @@ public:
         SourceLocation instanceLoc;
 
         /// A map of formal argument symbols to their actual replacements.
-        flat_hash_map<const Symbol*, std::tuple<const PropertyExprSyntax*, ASTContext>> argumentMap;
+        flat_hash_map<const Symbol*, std::tuple<const syntax::PropertyExprSyntax*, ASTContext>>
+            argumentMap;
 
         /// A map of local variables declared in the assertion item.
         /// These don't exist in any scope because their types can depend
@@ -295,10 +296,10 @@ public:
     void clearInstanceAndProc() { instanceOrProc = nullptr; }
 
     void setAttributes(const Statement& stmt,
-                       span<const AttributeInstanceSyntax* const> syntax) const;
+                       span<const syntax::AttributeInstanceSyntax* const> syntax) const;
 
     void setAttributes(const Expression& expr,
-                       span<const AttributeInstanceSyntax* const> syntax) const;
+                       span<const syntax::AttributeInstanceSyntax* const> syntax) const;
 
     void addDriver(const ValueSymbol& symbol, const Expression& longestStaticPrefix,
                    bitmask<AssignFlags> assignFlags, EvalContext* customEvalContext) const;
@@ -319,21 +320,24 @@ public:
     ConstantValue eval(const Expression& expr, bitmask<EvalFlags> extraFlags = {}) const;
     ConstantValue tryEval(const Expression& expr) const;
 
-    optional<int32_t> evalInteger(const ExpressionSyntax& syntax,
+    optional<int32_t> evalInteger(const syntax::ExpressionSyntax& syntax,
                                   bitmask<ASTFlags> extraFlags = {}) const;
     optional<int32_t> evalInteger(const Expression& expr) const;
-    EvaluatedDimension evalDimension(const VariableDimensionSyntax& syntax, bool requireRange,
-                                     bool isPacked) const;
+    EvaluatedDimension evalDimension(const syntax::VariableDimensionSyntax& syntax,
+                                     bool requireRange, bool isPacked) const;
 
-    optional<ConstantRange> evalPackedDimension(const VariableDimensionSyntax& syntax) const;
-    optional<ConstantRange> evalPackedDimension(const ElementSelectSyntax& syntax) const;
-    optional<ConstantRange> evalUnpackedDimension(const VariableDimensionSyntax& syntax) const;
+    optional<ConstantRange> evalPackedDimension(
+        const syntax::VariableDimensionSyntax& syntax) const;
+    optional<ConstantRange> evalPackedDimension(const syntax::ElementSelectSyntax& syntax) const;
+    optional<ConstantRange> evalUnpackedDimension(
+        const syntax::VariableDimensionSyntax& syntax) const;
 
     /// Subroutine argument expressions are parsed as property expressions, since we don't know
     /// up front whether they will be used to instantiate a property or a sequence or are actually
     /// for a subroutine. This method unwraps for the case where we are calling a subroutine.
-    const ExpressionSyntax* requireSimpleExpr(const PropertyExprSyntax& expr) const;
-    const ExpressionSyntax* requireSimpleExpr(const PropertyExprSyntax& expr, DiagCode code) const;
+    const syntax::ExpressionSyntax* requireSimpleExpr(const syntax::PropertyExprSyntax& expr) const;
+    const syntax::ExpressionSyntax* requireSimpleExpr(const syntax::PropertyExprSyntax& expr,
+                                                      DiagCode code) const;
 
     /// Gets the rand mode for the given symbol, taking into account any randomize
     /// scope that may be active in this context.
@@ -346,7 +350,7 @@ public:
     ASTContext resetFlags(bitmask<ASTFlags> addedFlags) const;
 
 private:
-    void evalRangeDimension(const SelectorSyntax& syntax, bool isPacked,
+    void evalRangeDimension(const syntax::SelectorSyntax& syntax, bool isPacked,
                             EvaluatedDimension& result) const;
 };
 

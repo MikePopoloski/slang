@@ -14,6 +14,8 @@
 
 namespace slang::ast::builtins {
 
+using namespace syntax;
+
 class BitsFunction : public SystemSubroutine {
 public:
     BitsFunction() : SystemSubroutine("$bits", SubroutineKind::Function) {}

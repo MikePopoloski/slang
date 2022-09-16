@@ -27,6 +27,7 @@
 namespace slang::ast {
 
 using namespace parsing;
+using namespace syntax;
 
 DeclaredType::DeclaredType(const Symbol& parent, bitmask<DeclaredTypeFlags> flags) :
     parent(parent), flags(flags), overrideIndex(0), evaluating(false), hasLink(false) {

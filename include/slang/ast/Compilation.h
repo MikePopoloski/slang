@@ -19,7 +19,7 @@
 #include "slang/util/BumpAllocator.h"
 #include "slang/util/SafeIndexedVector.h"
 
-namespace slang {
+namespace slang::syntax {
 
 class SyntaxTree;
 
@@ -160,14 +160,15 @@ public:
 
     /// Adds a syntax tree to the compilation. If the compilation has already been finalized
     /// by calling @a getRoot this call will throw an exception.
-    void addSyntaxTree(std::shared_ptr<SyntaxTree> tree);
+    void addSyntaxTree(std::shared_ptr<syntax::SyntaxTree> tree);
 
     /// Gets the set of syntax trees that have been added to the compilation.
-    span<const std::shared_ptr<SyntaxTree>> getSyntaxTrees() const;
+    span<const std::shared_ptr<syntax::SyntaxTree>> getSyntaxTrees() const;
 
     /// Gets the compilation unit for the given syntax node. The compilation unit must have
     /// already been added to the compilation previously via a call to @a addSyntaxTree
-    const CompilationUnitSymbol* getCompilationUnit(const CompilationUnitSyntax& syntax) const;
+    const CompilationUnitSymbol* getCompilationUnit(
+        const syntax::CompilationUnitSyntax& syntax) const;
 
     /// Gets the set of compilation units that have been added to the compilation.
     span<const CompilationUnitSymbol* const> getCompilationUnits() const;
@@ -187,11 +188,11 @@ public:
     const Definition* getDefinition(string_view name, const Scope& scope) const;
 
     /// Gets the definition for the given syntax node, or nullptr if it does not exist.
-    const Definition* getDefinition(const ModuleDeclarationSyntax& syntax) const;
+    const Definition* getDefinition(const syntax::ModuleDeclarationSyntax& syntax) const;
 
     /// Creates a new definition in the given scope based on the given syntax.
     void createDefinition(const Scope& scope, LookupLocation location,
-                          const ModuleDeclarationSyntax& syntax);
+                          const syntax::ModuleDeclarationSyntax& syntax);
 
     /// Gets the package with the give name, or null if there is no such package.
     const PackageSymbol* getPackage(string_view name) const;
@@ -200,13 +201,15 @@ public:
     const PackageSymbol& getStdPackage() const { return *stdPkg; }
 
     /// Creates a new package in the given scope based on the given syntax.
-    const PackageSymbol& createPackage(const Scope& scope, const ModuleDeclarationSyntax& syntax);
+    const PackageSymbol& createPackage(const Scope& scope,
+                                       const syntax::ModuleDeclarationSyntax& syntax);
 
     /// Gets the primitive with the given name, or null if there is no such primitive.
     const PrimitiveSymbol* getPrimitive(string_view name) const;
 
     /// Creates a new primitive in the given scope based on the given syntax.
-    const PrimitiveSymbol& createPrimitive(const Scope& scope, const UdpDeclarationSyntax& syntax);
+    const PrimitiveSymbol& createPrimitive(const Scope& scope,
+                                           const syntax::UdpDeclarationSyntax& syntax);
 
     /// Registers a built-in gate symbol.
     void addGateType(const PrimitiveSymbol& primitive);
@@ -276,22 +279,22 @@ public:
     /// given definition, which needs special handling.
     /// @returns true if this is the first time this directive has been encountered,
     /// and false if it's already been elaborated (thus constituting an error).
-    bool noteBindDirective(const BindDirectiveSyntax& syntax, const Definition* targetDef);
+    bool noteBindDirective(const syntax::BindDirectiveSyntax& syntax, const Definition* targetDef);
 
     /// Notes the presence of a DPI export directive. These will be checked for correctness
     /// but are otherwise unused by SystemVerilog code.
-    void noteDPIExportDirective(const DPIExportSyntax& syntax, const Scope& scope);
+    void noteDPIExportDirective(const syntax::DPIExportSyntax& syntax, const Scope& scope);
 
     /// Tracks the existence of an out-of-block declaration (method or constraint) in the
     /// given scope. This can later be retrieved by calling findOutOfBlockDecl().
-    void addOutOfBlockDecl(const Scope& scope, const ScopedNameSyntax& name,
-                           const SyntaxNode& syntax, SymbolIndex index);
+    void addOutOfBlockDecl(const Scope& scope, const syntax::ScopedNameSyntax& name,
+                           const syntax::SyntaxNode& syntax, SymbolIndex index);
 
     /// Searches for an out-of-block declaration in the given @a scope with @a declName
     /// for a @a className class. Returns a tuple of syntax pointer and symbol
     /// index in the defining scope, along with a pointer that should be set to true if
     /// the resulting decl is considered "used". If not found, the syntax pointer will be null.
-    std::tuple<const SyntaxNode*, SymbolIndex, bool*> findOutOfBlockDecl(
+    std::tuple<const syntax::SyntaxNode*, SymbolIndex, bool*> findOutOfBlockDecl(
         const Scope& scope, string_view className, string_view declName) const;
 
     /// Tracks the existence of an extern interface method implementation. These are later
@@ -303,7 +306,7 @@ public:
 
     /// Notes that there is a default clocking block associated with the specified scope.
     void noteDefaultClocking(const ASTContext& context,
-                             const DefaultClockingReferenceSyntax& syntax);
+                             const syntax::DefaultClockingReferenceSyntax& syntax);
 
     /// Finds an applicable default clocking block for the given scope, or returns nullptr
     /// if no default clocking is in effect.
@@ -331,12 +334,12 @@ public:
     /// of syntax nodes. This is mostly for testing and API purposes; normal
     /// compilation never does this.
     /// Throws an exception if there are errors parsing the name.
-    const NameSyntax& parseName(string_view name);
+    const syntax::NameSyntax& parseName(string_view name);
 
     /// A convenience method for parsing a name string and turning it into a set
     /// of syntax nodes. This is mostly for testing and API purposes. Errors are
     /// added to the provided diagnostics bag.
-    const NameSyntax& tryParseName(string_view name, Diagnostics& diags);
+    const syntax::NameSyntax& tryParseName(string_view name, Diagnostics& diags);
 
     /// Creates a new compilation unit within the design that can be modified dynamically,
     /// which is useful in runtime scripting scenarios. Note that this call will succeed
@@ -369,11 +372,11 @@ public:
     /// Gets the default time scale to use when none is specified in the source code.
     TimeScale getDefaultTimeScale() const { return defaultTimeScale; }
 
-    const Type& getType(SyntaxKind kind) const;
-    const Type& getType(const DataTypeSyntax& node, const ASTContext& context,
+    const Type& getType(syntax::SyntaxKind kind) const;
+    const Type& getType(const syntax::DataTypeSyntax& node, const ASTContext& context,
                         const Type* typedefTarget = nullptr);
     const Type& getType(const Type& elementType,
-                        const SyntaxList<VariableDimensionSyntax>& dimensions,
+                        const syntax::SyntaxList<syntax::VariableDimensionSyntax>& dimensions,
                         const ASTContext& context);
 
     const Type& getType(bitwidth_t width, bitmask<IntegralFlags> flags);
@@ -417,7 +420,7 @@ public:
         return genericClassAllocator.emplace(std::forward<Args>(args)...);
     }
 
-    const ImplicitTypeSyntax& createEmptyTypeSyntax(SourceLocation loc);
+    const syntax::ImplicitTypeSyntax& createEmptyTypeSyntax(SourceLocation loc);
 
     /// Forces the given symbol and all children underneath it in the hierarchy to
     /// be elaborated and any relevant diagnostics to be issued.
@@ -493,7 +496,7 @@ private:
     flat_hash_map<uint32_t, const Type*> vectorTypeCache;
 
     // Map from syntax kinds to the built-in types.
-    flat_hash_map<SyntaxKind, const Type*> knownTypes;
+    flat_hash_map<syntax::SyntaxKind, const Type*> knownTypes;
 
     // Map from token kinds to the built-in net types.
     flat_hash_map<parsing::TokenKind, std::unique_ptr<NetType>> knownNetTypes;
@@ -516,14 +519,14 @@ private:
     flat_hash_set<string_view> globalInstantiations;
 
     struct DefinitionMetadata {
-        const SyntaxTree* tree = nullptr;
+        const syntax::SyntaxTree* tree = nullptr;
         const NetType* defaultNetType = nullptr;
         optional<TimeScale> timeScale;
         UnconnectedDrive unconnectedDrive = UnconnectedDrive::None;
     };
 
     // Map from syntax nodes to parse-time metadata about them.
-    flat_hash_map<const ModuleDeclarationSyntax*, DefinitionMetadata> definitionMetadata;
+    flat_hash_map<const syntax::ModuleDeclarationSyntax*, DefinitionMetadata> definitionMetadata;
 
     // The name map for all module, interface, and program definitions.
     // The key is a combination of definition name + the scope in which it was declared.
@@ -538,8 +541,9 @@ private:
     // registered when we find the initial declaration and later get used when we see
     // the class prototype. The value also includes a boolean indicating whether anything
     // has used this declaration -- an error is issued if it's never used.
-    mutable flat_hash_map<std::tuple<string_view, string_view, const Scope*>,
-                          std::tuple<const SyntaxNode*, const ScopedNameSyntax*, SymbolIndex, bool>>
+    mutable flat_hash_map<
+        std::tuple<string_view, string_view, const Scope*>,
+        std::tuple<const syntax::SyntaxNode*, const syntax::ScopedNameSyntax*, SymbolIndex, bool>>
         outOfBlockDecls;
 
     std::unique_ptr<RootSymbol> root;
@@ -566,7 +570,7 @@ private:
     std::vector<const CompilationUnitSymbol*> compilationUnits;
 
     // Storage for syntax trees that have been added to the compilation.
-    std::vector<std::shared_ptr<SyntaxTree>> syntaxTrees;
+    std::vector<std::shared_ptr<syntax::SyntaxTree>> syntaxTrees;
 
     // A list of definitions that are unreferenced in any instantiations and
     // are also not automatically instantiated as top-level.
@@ -582,11 +586,12 @@ private:
 
     // A map from definitions to bind directives that will create
     // instances within those definitions.
-    flat_hash_map<const Definition*, std::vector<const BindDirectiveSyntax*>> bindDirectivesByDef;
+    flat_hash_map<const Definition*, std::vector<const syntax::BindDirectiveSyntax*>>
+        bindDirectivesByDef;
 
     // A set tracking all bind directives we've encountered during elaboration,
     // which is used to know when we've seen them all and can stop doing early scanning.
-    flat_hash_set<const BindDirectiveSyntax*> seenBindDirectives;
+    flat_hash_set<const syntax::BindDirectiveSyntax*> seenBindDirectives;
 
     // A tree of parameter overrides to apply when elaborating.
     // Note that instances store pointers into this tree so it must not be
@@ -594,7 +599,7 @@ private:
     ParamOverrideNode paramOverrides;
 
     // A list of DPI export directives we've encountered during elaboration.
-    std::vector<std::pair<const DPIExportSyntax*, const Scope*>> dpiExports;
+    std::vector<std::pair<const syntax::DPIExportSyntax*, const Scope*>> dpiExports;
 
     // A map of packages to the set of names that are candidates for being
     // exported from those packages.

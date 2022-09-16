@@ -36,11 +36,12 @@ class Constraint {
 public:
     ConstraintKind kind;
 
-    const ConstraintItemSyntax* syntax = nullptr;
+    const syntax::ConstraintItemSyntax* syntax = nullptr;
 
     bool bad() const { return kind == ConstraintKind::Invalid; }
 
-    static const Constraint& bind(const ConstraintItemSyntax& syntax, const ASTContext& context);
+    static const Constraint& bind(const syntax::ConstraintItemSyntax& syntax,
+                                  const ASTContext& context);
 
     template<typename T>
     T& as() {
@@ -83,7 +84,8 @@ public:
     explicit ConstraintList(span<const Constraint* const> list) :
         Constraint(ConstraintKind::List), list(list) {}
 
-    static Constraint& fromSyntax(const ConstraintBlockSyntax& syntax, const ASTContext& context);
+    static Constraint& fromSyntax(const syntax::ConstraintBlockSyntax& syntax,
+                                  const ASTContext& context);
 
     void serializeTo(ASTSerializer& serializer) const;
 
@@ -105,7 +107,7 @@ public:
     ExpressionConstraint(const Expression& expr, bool isSoft) :
         Constraint(ConstraintKind::Expression), expr(expr), isSoft(isSoft) {}
 
-    static Constraint& fromSyntax(const ExpressionConstraintSyntax& syntax,
+    static Constraint& fromSyntax(const syntax::ExpressionConstraintSyntax& syntax,
                                   const ASTContext& context);
 
     void serializeTo(ASTSerializer& serializer) const;
@@ -127,7 +129,7 @@ public:
     ImplicationConstraint(const Expression& predicate, const Constraint& body) :
         Constraint(ConstraintKind::Implication), predicate(predicate), body(body) {}
 
-    static Constraint& fromSyntax(const ImplicationConstraintSyntax& syntax,
+    static Constraint& fromSyntax(const syntax::ImplicationConstraintSyntax& syntax,
                                   const ASTContext& context);
 
     void serializeTo(ASTSerializer& serializer) const;
@@ -153,7 +155,7 @@ public:
         Constraint(ConstraintKind::Conditional),
         predicate(predicate), ifBody(ifBody), elseBody(elseBody) {}
 
-    static Constraint& fromSyntax(const ConditionalConstraintSyntax& syntax,
+    static Constraint& fromSyntax(const syntax::ConditionalConstraintSyntax& syntax,
                                   const ASTContext& context);
 
     void serializeTo(ASTSerializer& serializer) const;
@@ -177,7 +179,7 @@ public:
     explicit UniquenessConstraint(span<const Expression* const> items) :
         Constraint(ConstraintKind::Uniqueness), items(items) {}
 
-    static Constraint& fromSyntax(const UniquenessConstraintSyntax& syntax,
+    static Constraint& fromSyntax(const syntax::UniquenessConstraintSyntax& syntax,
                                   const ASTContext& context);
 
     void serializeTo(ASTSerializer& serializer) const;
@@ -199,7 +201,8 @@ public:
     explicit DisableSoftConstraint(const Expression& target) :
         Constraint(ConstraintKind::DisableSoft), target(target) {}
 
-    static Constraint& fromSyntax(const DisableConstraintSyntax& syntax, const ASTContext& context);
+    static Constraint& fromSyntax(const syntax::DisableConstraintSyntax& syntax,
+                                  const ASTContext& context);
 
     void serializeTo(ASTSerializer& serializer) const;
 
@@ -222,7 +225,7 @@ public:
         Constraint(ConstraintKind::SolveBefore),
         solve(solve), before(before) {}
 
-    static Constraint& fromSyntax(const SolveBeforeConstraintSyntax& syntax,
+    static Constraint& fromSyntax(const syntax::SolveBeforeConstraintSyntax& syntax,
                                   const ASTContext& context);
 
     void serializeTo(ASTSerializer& serializer) const;
@@ -250,7 +253,8 @@ public:
         Constraint(ConstraintKind::Foreach),
         arrayRef(arrayRef), loopDims(loopDims), body(body) {}
 
-    static Constraint& fromSyntax(const LoopConstraintSyntax& syntax, const ASTContext& context);
+    static Constraint& fromSyntax(const syntax::LoopConstraintSyntax& syntax,
+                                  const ASTContext& context);
 
     void serializeTo(ASTSerializer& serializer) const;
 

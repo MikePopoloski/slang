@@ -299,12 +299,13 @@ public:
     /// in their inheritance chain, return that common type. Otherwise, returns nullptr.
     static const Type* getCommonBase(const Type& left, const Type& right);
 
-    static const Type& fromSyntax(Compilation& compilation, const DataTypeSyntax& syntax,
+    static const Type& fromSyntax(Compilation& compilation, const syntax::DataTypeSyntax& syntax,
                                   const ASTContext& context, const Type* typedefTarget);
 
-    static const Type& fromSyntax(Compilation& compilation, const Type& elementType,
-                                  const SyntaxList<VariableDimensionSyntax>& dimensions,
-                                  const ASTContext& context);
+    static const Type& fromSyntax(
+        Compilation& compilation, const Type& elementType,
+        const syntax::SyntaxList<syntax::VariableDimensionSyntax>& dimensions,
+        const ASTContext& context);
 
     /// Constructs a type from the results of a lookup operation. Note that this will
     /// not issue any diagnostics from the result object; the caller must do that
@@ -318,14 +319,15 @@ protected:
     Type(SymbolKind kind, string_view name, SourceLocation loc) :
         Symbol(kind, name, loc), canonical(this) {}
 
-    static const Type& getPredefinedType(Compilation& compilation, SyntaxKind kind, bool isSigned);
+    static const Type& getPredefinedType(Compilation& compilation, syntax::SyntaxKind kind,
+                                         bool isSigned);
 
     mutable const Type* canonical;
 
 private:
     void resolveCanonical() const;
 
-    static const Type& lookupNamedType(Compilation& compilation, const NameSyntax& syntax,
+    static const Type& lookupNamedType(Compilation& compilation, const syntax::NameSyntax& syntax,
                                        const ASTContext& context, bool isTypedefTarget);
 };
 

@@ -138,22 +138,22 @@ public:
     /// Interprets a token type as an argument direction value.
     static ArgumentDirection getDirection(parsing::TokenKind kind);
 
-    static ProceduralBlockKind getProceduralBlockKind(SyntaxKind kind);
+    static ProceduralBlockKind getProceduralBlockKind(syntax::SyntaxKind kind);
 
-    static DefinitionKind getDefinitionKind(SyntaxKind kind);
+    static DefinitionKind getDefinitionKind(syntax::SyntaxKind kind);
 
     static EdgeKind getEdgeKind(parsing::TokenKind kind);
 
-    static AssertionKind getAssertKind(SyntaxKind kind);
+    static AssertionKind getAssertKind(syntax::SyntaxKind kind);
 
-    static StatementBlockKind getStatementBlockKind(const BlockStatementSyntax& syntax);
+    static StatementBlockKind getStatementBlockKind(const syntax::BlockStatementSyntax& syntax);
 
     static ElabSystemTaskKind getElabSystemTaskKind(parsing::Token token);
 
     static string_view getProcedureKindStr(ProceduralBlockKind kind);
 
     static void populateTimeScale(TimeScale& timeScale, const Scope& scope,
-                                  const TimeUnitsDeclarationSyntax& syntax,
+                                  const syntax::TimeUnitsDeclarationSyntax& syntax,
                                   optional<SourceRange>& unitsRange,
                                   optional<SourceRange>& precisionRange, bool isFirst);
 
@@ -182,7 +182,8 @@ public:
 
     void serializeTo(ASTSerializer& serializer) const;
 
-    static ClockingSkew fromSyntax(const ClockingSkewSyntax& syntax, const ASTContext& context);
+    static ClockingSkew fromSyntax(const syntax::ClockingSkewSyntax& syntax,
+                                   const ASTContext& context);
 };
 
 } // namespace slang::ast

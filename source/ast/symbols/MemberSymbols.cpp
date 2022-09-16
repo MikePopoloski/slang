@@ -32,6 +32,7 @@
 namespace slang::ast {
 
 using namespace parsing;
+using namespace syntax;
 
 EmptyMemberSymbol& EmptyMemberSymbol::fromSyntax(Compilation& compilation, const Scope& scope,
                                                  const EmptyMemberSyntax& syntax) {

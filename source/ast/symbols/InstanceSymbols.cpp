@@ -33,6 +33,7 @@ namespace {
 using namespace slang;
 using namespace slang::ast;
 using namespace slang::parsing;
+using namespace slang::syntax;
 
 std::pair<string_view, SourceLocation> getNameLoc(const HierarchicalInstanceSyntax& syntax) {
     string_view name;

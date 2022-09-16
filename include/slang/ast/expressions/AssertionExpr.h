@@ -72,7 +72,7 @@ class AssertionExpr {
 public:
     AssertionExprKind kind;
 
-    const SyntaxNode* syntax = nullptr;
+    const syntax::SyntaxNode* syntax = nullptr;
 
     void requireSequence(const ASTContext& context) const;
     void requireSequence(const ASTContext& context, DiagCode code) const;
@@ -82,13 +82,15 @@ public:
     /// and false otherwise.
     bool admitsEmpty() const;
 
-    static const AssertionExpr& bind(const SequenceExprSyntax& syntax, const ASTContext& context,
-                                     bool allowDisable = false);
+    static const AssertionExpr& bind(const syntax::SequenceExprSyntax& syntax,
+                                     const ASTContext& context, bool allowDisable = false);
 
-    static const AssertionExpr& bind(const PropertyExprSyntax& syntax, const ASTContext& context,
-                                     bool allowDisable = false, bool allowSeqAdmitEmpty = false);
+    static const AssertionExpr& bind(const syntax::PropertyExprSyntax& syntax,
+                                     const ASTContext& context, bool allowDisable = false,
+                                     bool allowSeqAdmitEmpty = false);
 
-    static const AssertionExpr& bind(const PropertySpecSyntax& syntax, const ASTContext& context);
+    static const AssertionExpr& bind(const syntax::PropertySpecSyntax& syntax,
+                                     const ASTContext& context);
 
     static bool checkAssertionCall(const CallExpression& call, const ASTContext& context,
                                    DiagCode outArgCode, DiagCode refArgCode,
@@ -139,10 +141,10 @@ struct SequenceRange {
     /// The maximum length of the range. If unset, the maximum is unbounded.
     optional<uint32_t> max;
 
-    static SequenceRange fromSyntax(const SelectorSyntax& syntax, const ASTContext& context,
+    static SequenceRange fromSyntax(const syntax::SelectorSyntax& syntax, const ASTContext& context,
                                     bool allowUnbounded);
-    static SequenceRange fromSyntax(const RangeSelectSyntax& syntax, const ASTContext& context,
-                                    bool allowUnbounded);
+    static SequenceRange fromSyntax(const syntax::RangeSelectSyntax& syntax,
+                                    const ASTContext& context, bool allowUnbounded);
 
     void serializeTo(ASTSerializer& serializer) const;
 };
@@ -165,7 +167,7 @@ struct SequenceRepetition {
     /// The range of cycles over which to repeat.
     SequenceRange range;
 
-    SequenceRepetition(const SequenceRepetitionSyntax& syntax, const ASTContext& context);
+    SequenceRepetition(const syntax::SequenceRepetitionSyntax& syntax, const ASTContext& context);
 
     enum class AdmitsEmpty { Yes, No, Depends };
     AdmitsEmpty admitsEmpty() const;
@@ -185,7 +187,7 @@ public:
     void requireSequence(const ASTContext& context, DiagCode code) const;
     bool admitsEmptyImpl() const;
 
-    static AssertionExpr& fromSyntax(const SimpleSequenceExprSyntax& syntax,
+    static AssertionExpr& fromSyntax(const syntax::SimpleSequenceExprSyntax& syntax,
                                      const ASTContext& context, bool allowDisable);
 
     void serializeTo(ASTSerializer& serializer) const;
@@ -213,7 +215,7 @@ public:
 
     bool admitsEmptyImpl() const;
 
-    static AssertionExpr& fromSyntax(const DelayedSequenceExprSyntax& syntax,
+    static AssertionExpr& fromSyntax(const syntax::DelayedSequenceExprSyntax& syntax,
                                      const ASTContext& context);
 
     void serializeTo(ASTSerializer& serializer) const;
@@ -242,7 +244,7 @@ public:
 
     bool admitsEmptyImpl() const;
 
-    static AssertionExpr& fromSyntax(const ParenthesizedSequenceExprSyntax& syntax,
+    static AssertionExpr& fromSyntax(const syntax::ParenthesizedSequenceExprSyntax& syntax,
                                      const ASTContext& context);
 
     void serializeTo(ASTSerializer& serializer) const;
@@ -273,10 +275,10 @@ public:
 
     bool admitsEmptyImpl() const { return false; }
 
-    static AssertionExpr& fromSyntax(const UnaryPropertyExprSyntax& syntax,
+    static AssertionExpr& fromSyntax(const syntax::UnaryPropertyExprSyntax& syntax,
                                      const ASTContext& context);
 
-    static AssertionExpr& fromSyntax(const UnarySelectPropertyExprSyntax& syntax,
+    static AssertionExpr& fromSyntax(const syntax::UnarySelectPropertyExprSyntax& syntax,
                                      const ASTContext& context);
 
     void serializeTo(ASTSerializer& serializer) const;
@@ -304,10 +306,10 @@ public:
     void requireSequence(const ASTContext& context, DiagCode code) const;
     bool admitsEmptyImpl() const;
 
-    static AssertionExpr& fromSyntax(const BinarySequenceExprSyntax& syntax,
+    static AssertionExpr& fromSyntax(const syntax::BinarySequenceExprSyntax& syntax,
                                      const ASTContext& context);
 
-    static AssertionExpr& fromSyntax(const BinaryPropertyExprSyntax& syntax,
+    static AssertionExpr& fromSyntax(const syntax::BinaryPropertyExprSyntax& syntax,
                                      const ASTContext& context);
 
     void serializeTo(ASTSerializer& serializer) const;
@@ -332,7 +334,7 @@ public:
 
     bool admitsEmptyImpl() const;
 
-    static AssertionExpr& fromSyntax(const FirstMatchSequenceExprSyntax& syntax,
+    static AssertionExpr& fromSyntax(const syntax::FirstMatchSequenceExprSyntax& syntax,
                                      const ASTContext& context);
 
     void serializeTo(ASTSerializer& serializer) const;
@@ -358,17 +360,17 @@ public:
 
     bool admitsEmptyImpl() const;
 
-    static AssertionExpr& fromSyntax(const ClockingSequenceExprSyntax& syntax,
+    static AssertionExpr& fromSyntax(const syntax::ClockingSequenceExprSyntax& syntax,
                                      const ASTContext& context);
 
-    static AssertionExpr& fromSyntax(const ClockingPropertyExprSyntax& syntax,
+    static AssertionExpr& fromSyntax(const syntax::ClockingPropertyExprSyntax& syntax,
                                      const ASTContext& context);
 
-    static AssertionExpr& fromSyntax(const SignalEventExpressionSyntax& syntax,
+    static AssertionExpr& fromSyntax(const syntax::SignalEventExpressionSyntax& syntax,
                                      const ASTContext& context);
 
-    static AssertionExpr& fromSyntax(const TimingControlSyntax& syntax, const AssertionExpr& expr,
-                                     const ASTContext& context);
+    static AssertionExpr& fromSyntax(const syntax::TimingControlSyntax& syntax,
+                                     const AssertionExpr& expr, const ASTContext& context);
 
     void serializeTo(ASTSerializer& serializer) const;
 
@@ -392,7 +394,7 @@ public:
 
     bool admitsEmptyImpl() const { return false; }
 
-    static AssertionExpr& fromSyntax(const StrongWeakPropertyExprSyntax& syntax,
+    static AssertionExpr& fromSyntax(const syntax::StrongWeakPropertyExprSyntax& syntax,
                                      const ASTContext& context);
 
     void serializeTo(ASTSerializer& serializer) const;
@@ -420,7 +422,7 @@ public:
 
     bool admitsEmptyImpl() const { return false; }
 
-    static AssertionExpr& fromSyntax(const AcceptOnPropertyExprSyntax& syntax,
+    static AssertionExpr& fromSyntax(const syntax::AcceptOnPropertyExprSyntax& syntax,
                                      const ASTContext& context);
 
     void serializeTo(ASTSerializer& serializer) const;
@@ -448,7 +450,7 @@ public:
 
     bool admitsEmptyImpl() const { return false; }
 
-    static AssertionExpr& fromSyntax(const ConditionalPropertyExprSyntax& syntax,
+    static AssertionExpr& fromSyntax(const syntax::ConditionalPropertyExprSyntax& syntax,
                                      const ASTContext& context);
 
     void serializeTo(ASTSerializer& serializer) const;
@@ -483,7 +485,7 @@ public:
 
     bool admitsEmptyImpl() const { return false; }
 
-    static AssertionExpr& fromSyntax(const CasePropertyExprSyntax& syntax,
+    static AssertionExpr& fromSyntax(const syntax::CasePropertyExprSyntax& syntax,
                                      const ASTContext& context);
 
     void serializeTo(ASTSerializer& serializer) const;
@@ -515,8 +517,8 @@ public:
 
     bool admitsEmptyImpl() const { return false; }
 
-    static AssertionExpr& fromSyntax(const DisableIffSyntax& syntax, const AssertionExpr& expr,
-                                     const ASTContext& context);
+    static AssertionExpr& fromSyntax(const syntax::DisableIffSyntax& syntax,
+                                     const AssertionExpr& expr, const ASTContext& context);
 
     void serializeTo(ASTSerializer& serializer) const;
 

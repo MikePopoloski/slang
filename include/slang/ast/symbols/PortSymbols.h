@@ -52,7 +52,7 @@ public:
     bool hasInitializer() const { return initializer || initializerSyntax; }
     const Expression* getInitializer() const;
 
-    void setInitializerSyntax(const ExpressionSyntax& syntax, SourceLocation loc) {
+    void setInitializerSyntax(const syntax::ExpressionSyntax& syntax, SourceLocation loc) {
         initializerSyntax = &syntax;
         initializerLoc = loc;
     }
@@ -70,9 +70,10 @@ public:
     void serializeTo(ASTSerializer& serializer) const;
 
     static void fromSyntax(
-        const PortListSyntax& syntax, const Scope& scope, SmallVector<const Symbol*>& results,
+        const syntax::PortListSyntax& syntax, const Scope& scope,
+        SmallVector<const Symbol*>& results,
         SmallVector<std::pair<Symbol*, const Symbol*>>& implicitMembers,
-        span<std::pair<const SyntaxNode*, const Symbol*> const> portDeclarations);
+        span<std::pair<const syntax::SyntaxNode*, const Symbol*> const> portDeclarations);
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::Port; }
 
@@ -82,7 +83,7 @@ private:
     mutable const Type* type = nullptr;
     mutable const Expression* initializer = nullptr;
     mutable const Expression* internalExpr = nullptr;
-    const ExpressionSyntax* initializerSyntax = nullptr;
+    const syntax::ExpressionSyntax* initializerSyntax = nullptr;
     SourceLocation initializerLoc;
 };
 
@@ -159,7 +160,7 @@ public:
 
     PortConnection(const Symbol& port, const InstanceSymbol& parentInstance);
     PortConnection(const Symbol& port, const InstanceSymbol& parentInstance,
-                   const ExpressionSyntax& expr);
+                   const syntax::ExpressionSyntax& expr);
     PortConnection(const Symbol& port, const InstanceSymbol& parentInstance, bool useDefault);
     PortConnection(const InterfacePortSymbol& port, const InstanceSymbol& parentInstance,
                    const Symbol* connectedSymbol);
@@ -172,15 +173,16 @@ public:
 
     void serializeTo(ASTSerializer& serializer) const;
 
-    static void makeConnections(const InstanceSymbol& instance, span<const Symbol* const> ports,
-                                const SeparatedSyntaxList<PortConnectionSyntax>& portConnections,
-                                PointerMap& results);
+    static void makeConnections(
+        const InstanceSymbol& instance, span<const Symbol* const> ports,
+        const syntax::SeparatedSyntaxList<syntax::PortConnectionSyntax>& portConnections,
+        PointerMap& results);
 
 private:
     const Symbol* connectedSymbol = nullptr;
     mutable const Expression* expr = nullptr;
     union {
-        const ExpressionSyntax* exprSyntax = nullptr;
+        const syntax::ExpressionSyntax* exprSyntax = nullptr;
         SourceRange implicitNameRange;
     };
     bool useDefault = false;

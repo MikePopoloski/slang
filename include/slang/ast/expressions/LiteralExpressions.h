@@ -29,9 +29,10 @@ public:
 
     void serializeTo(ASTSerializer&) const;
 
-    static Expression& fromSyntax(Compilation& compilation, const LiteralExpressionSyntax& syntax);
     static Expression& fromSyntax(Compilation& compilation,
-                                  const IntegerVectorExpressionSyntax& syntax);
+                                  const syntax::LiteralExpressionSyntax& syntax);
+    static Expression& fromSyntax(Compilation& compilation,
+                                  const syntax::IntegerVectorExpressionSyntax& syntax);
     static Expression& fromConstant(Compilation& compilation, const SVInt& value);
 
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::IntegerLiteral; }
@@ -52,7 +53,8 @@ public:
 
     void serializeTo(ASTSerializer&) const;
 
-    static Expression& fromSyntax(Compilation& compilation, const LiteralExpressionSyntax& syntax);
+    static Expression& fromSyntax(Compilation& compilation,
+                                  const syntax::LiteralExpressionSyntax& syntax);
 
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::RealLiteral; }
 
@@ -72,7 +74,8 @@ public:
 
     void serializeTo(ASTSerializer&) const;
 
-    static Expression& fromSyntax(const ASTContext& context, const LiteralExpressionSyntax& syntax);
+    static Expression& fromSyntax(const ASTContext& context,
+                                  const syntax::LiteralExpressionSyntax& syntax);
 
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::TimeLiteral; }
 
@@ -94,7 +97,8 @@ public:
 
     void serializeTo(ASTSerializer&) const;
 
-    static Expression& fromSyntax(Compilation& compilation, const LiteralExpressionSyntax& syntax);
+    static Expression& fromSyntax(Compilation& compilation,
+                                  const syntax::LiteralExpressionSyntax& syntax);
 
     static bool isKind(ExpressionKind kind) {
         return kind == ExpressionKind::UnbasedUnsizedIntegerLiteral;
@@ -114,7 +118,8 @@ public:
 
     void serializeTo(ASTSerializer&) const {}
 
-    static Expression& fromSyntax(Compilation& compilation, const LiteralExpressionSyntax& syntax);
+    static Expression& fromSyntax(Compilation& compilation,
+                                  const syntax::LiteralExpressionSyntax& syntax);
 
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::NullLiteral; }
 };
@@ -129,7 +134,8 @@ public:
 
     void serializeTo(ASTSerializer&) const {}
 
-    static Expression& fromSyntax(const ASTContext& context, const LiteralExpressionSyntax& syntax);
+    static Expression& fromSyntax(const ASTContext& context,
+                                  const syntax::LiteralExpressionSyntax& syntax);
 
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::UnboundedLiteral; }
 };
@@ -148,7 +154,8 @@ public:
 
     void serializeTo(ASTSerializer& serializer) const;
 
-    static Expression& fromSyntax(Compilation& compilation, const LiteralExpressionSyntax& syntax);
+    static Expression& fromSyntax(Compilation& compilation,
+                                  const syntax::LiteralExpressionSyntax& syntax);
 
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::StringLiteral; }
 

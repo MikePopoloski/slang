@@ -13,6 +13,8 @@
 
 namespace slang::ast::builtins {
 
+using namespace syntax;
+
 class FErrorFunc : public SystemSubroutine {
 public:
     FErrorFunc() : SystemSubroutine("$ferror", SubroutineKind::Function) { hasOutputArgs = true; }

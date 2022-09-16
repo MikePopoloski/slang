@@ -115,6 +115,7 @@ struct HierarchicalVisitor {
 namespace slang::ast {
 
 using namespace parsing;
+using namespace syntax;
 
 // This visitor handles inserting implicit conversions into an expression
 // tree where necessary. SystemVerilog has an additional weird feature where

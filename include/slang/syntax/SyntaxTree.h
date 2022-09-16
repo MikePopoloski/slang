@@ -16,13 +16,18 @@
 namespace slang {
 
 class SourceManager;
-class SyntaxNode;
-struct DefineDirectiveSyntax;
 struct SourceBuffer;
 
 namespace parsing {
 struct ParserMetadata;
 }
+
+} // namespace slang
+
+namespace slang::syntax {
+
+class SyntaxNode;
+struct DefineDirectiveSyntax;
 
 /// The SyntaxTree is the easiest way to interface with the lexer / preprocessor /
 /// parser stack. Give it some source text and it produces a parse tree.
@@ -183,4 +188,4 @@ private:
     std::shared_ptr<SyntaxTree> parentTree;
 };
 
-} // namespace slang
+} // namespace slang::syntax

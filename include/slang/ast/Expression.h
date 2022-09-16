@@ -123,6 +123,8 @@ ENUM(RangeSelectionKind, RANGE)
 /// The base class for all expressions in SystemVerilog.
 class Expression {
 public:
+    using ExpressionSyntax = syntax::ExpressionSyntax;
+
     /// The kind of expression; indicates the type of derived class.
     ExpressionKind kind;
 
@@ -167,14 +169,15 @@ public:
 
     /// Binds an initializer expression for an implicitly typed parameter.
     /// There are special inference rules for parameters.
-    static const Expression& bindImplicitParam(const DataTypeSyntax& implicitType,
+    static const Expression& bindImplicitParam(const syntax::DataTypeSyntax& implicitType,
                                                const ExpressionSyntax& rhs, SourceLocation location,
                                                const ASTContext& exprContext,
                                                const ASTContext& typeContext,
                                                bitmask<ASTFlags> extraFlags = ASTFlags::None);
 
     /// Bind a selector expression given an already existing value to select from.
-    static const Expression& bindSelector(Expression& value, const ElementSelectSyntax& syntax,
+    static const Expression& bindSelector(Expression& value,
+                                          const syntax::ElementSelectSyntax& syntax,
                                           const ASTContext& context);
 
     /// Specialized method for creating all of the expressions in a set membership check.
@@ -215,7 +218,8 @@ public:
     /// This method finds all unqualified name references in the given expression and attempts
     /// to look them up in the given context. If they can't be found, their name tokens are
     /// returned in the given @a results vector.
-    static void findPotentiallyImplicitNets(const SyntaxNode& expr, const ASTContext& context,
+    static void findPotentiallyImplicitNets(const syntax::SyntaxNode& expr,
+                                            const ASTContext& context,
                                             SmallVector<parsing::Token>& results);
 
     /// Converts an expression to be of the given type, following the rules for
@@ -304,8 +308,8 @@ protected:
     Expression(ExpressionKind kind, const Type& type, SourceRange sourceRange) :
         kind(kind), type(&type), sourceRange(sourceRange) {}
 
-    static UnaryOperator getUnaryOperator(SyntaxKind kind);
-    static BinaryOperator getBinaryOperator(SyntaxKind kind);
+    static UnaryOperator getUnaryOperator(syntax::SyntaxKind kind);
+    static BinaryOperator getBinaryOperator(syntax::SyntaxKind kind);
 
     static const Type* binaryOperatorType(Compilation& compilation, const Type* lt, const Type* rt,
                                           bool forceFourState, bool signednessFromRt = false);
@@ -318,27 +322,27 @@ protected:
                               bitmask<ASTFlags> extraFlags = ASTFlags::None,
                               const Type* assignmentTarget = nullptr);
 
-    static Expression& bindName(Compilation& compilation, const NameSyntax& syntax,
-                                const InvocationExpressionSyntax* invocation,
-                                const ArrayOrRandomizeMethodExpressionSyntax* withClause,
+    static Expression& bindName(Compilation& compilation, const syntax::NameSyntax& syntax,
+                                const syntax::InvocationExpressionSyntax* invocation,
+                                const syntax::ArrayOrRandomizeMethodExpressionSyntax* withClause,
                                 const ASTContext& context);
 
-    static Expression& bindLookupResult(Compilation& compilation, LookupResult& result,
-                                        SourceRange sourceRange,
-                                        const InvocationExpressionSyntax* invocation,
-                                        const ArrayOrRandomizeMethodExpressionSyntax* withClause,
-                                        const ASTContext& context);
+    static Expression& bindLookupResult(
+        Compilation& compilation, LookupResult& result, SourceRange sourceRange,
+        const syntax::InvocationExpressionSyntax* invocation,
+        const syntax::ArrayOrRandomizeMethodExpressionSyntax* withClause,
+        const ASTContext& context);
 
     static Expression& bindSelectExpression(Compilation& compilation,
-                                            const ElementSelectExpressionSyntax& syntax,
+                                            const syntax::ElementSelectExpressionSyntax& syntax,
                                             const ASTContext& context);
     static Expression& bindSelector(Compilation& compilation, Expression& value,
-                                    const ElementSelectSyntax& syntax, const ASTContext& context);
+                                    const syntax::ElementSelectSyntax& syntax,
+                                    const ASTContext& context);
 
-    static Expression& bindAssignmentPattern(Compilation& compilation,
-                                             const AssignmentPatternExpressionSyntax& syntax,
-                                             const ASTContext& context,
-                                             const Type* assignmentTarget);
+    static Expression& bindAssignmentPattern(
+        Compilation& compilation, const syntax::AssignmentPatternExpressionSyntax& syntax,
+        const ASTContext& context, const Type* assignmentTarget);
 
     static Expression* tryConnectPortArray(const ASTContext& context, const Type& type,
                                            Expression& expr, const InstanceSymbolBase& instance);
@@ -363,9 +367,11 @@ protected:
     template<typename TExpression, typename TVisitor, typename... Args>
     decltype(auto) visitExpression(TExpression* expr, TVisitor&& visitor, Args&&... args) const;
 
-    using NamedArgMap = SmallMap<string_view, std::pair<const NamedArgumentSyntax*, bool>, 8>;
-    static bool collectArgs(const ASTContext& context, const ArgumentListSyntax& syntax,
-                            SmallVector<const SyntaxNode*>& orderedArgs, NamedArgMap& namedArgs);
+    using NamedArgMap =
+        SmallMap<string_view, std::pair<const syntax::NamedArgumentSyntax*, bool>, 8>;
+    static bool collectArgs(const ASTContext& context, const syntax::ArgumentListSyntax& syntax,
+                            SmallVector<const syntax::SyntaxNode*>& orderedArgs,
+                            NamedArgMap& namedArgs);
 };
 
 /// Represents an invalid expression, which is usually generated and inserted

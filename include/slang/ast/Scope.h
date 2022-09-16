@@ -15,11 +15,11 @@
 #include "slang/util/Iterator.h"
 #include "slang/util/Util.h"
 
-namespace slang {
+namespace slang::syntax {
 
 class SyntaxNode;
 
-} // namespace slang
+} // namespace slang::syntax
 
 namespace slang::ast {
 
@@ -41,7 +41,7 @@ public:
     void addMember(const Symbol& symbol);
 
     /// Creates and adds one or more member symbols to the scope from the given syntax node.
-    void addMembers(const SyntaxNode& syntax);
+    void addMembers(const syntax::SyntaxNode& syntax);
 
     const Symbol& asSymbol() const { return *thisSym; }
 
@@ -257,8 +257,8 @@ private:
         void addForwardingTypedef(const ForwardingTypedefSymbol& symbol);
         span<const ForwardingTypedefSymbol* const> getForwardingTypedefs() const;
 
-        void addPortDeclaration(const SyntaxNode& syntax, const Symbol* insertion);
-        span<std::pair<const SyntaxNode*, const Symbol*> const> getPortDeclarations() const;
+        void addPortDeclaration(const syntax::SyntaxNode& syntax, const Symbol* insertion);
+        span<std::pair<const syntax::SyntaxNode*, const Symbol*> const> getPortDeclarations() const;
 
     private:
         // A list of deferred member symbols.
@@ -275,7 +275,7 @@ private:
 
         // Track a list of non-ANSI port declarations declared in the scope; once we've fully
         // elaborated we'll go back and make sure they're valid.
-        std::vector<std::pair<const SyntaxNode*, const Symbol*>> portDecls;
+        std::vector<std::pair<const syntax::SyntaxNode*, const Symbol*>> portDecls;
     };
 
     // Sideband collection of wildcard imports stored in the Compilation object.
@@ -289,16 +289,16 @@ private:
     void handleNameConflict(const Symbol& member) const;
     void handleNameConflict(const Symbol& member, const Symbol*& existing,
                             bool isElaborating) const;
-    bool handleDataDeclaration(const DataDeclarationSyntax& syntax);
-    void handleUserDefinedNet(const UserDefinedNetDeclarationSyntax& syntax);
-    void handleNestedDefinition(const ModuleDeclarationSyntax& syntax) const;
+    bool handleDataDeclaration(const syntax::DataDeclarationSyntax& syntax);
+    void handleUserDefinedNet(const syntax::UserDefinedNetDeclarationSyntax& syntax);
+    void handleNestedDefinition(const syntax::ModuleDeclarationSyntax& syntax) const;
     void handleExportedMethods(span<Symbol* const> deferredMembers) const;
     void reportNameConflict(const Symbol& member, const Symbol& existing) const;
     void checkImportConflict(const Symbol& member, const Symbol& existing) const;
-    void addWildcardImport(const PackageImportItemSyntax& item,
-                           span<const AttributeInstanceSyntax* const> attributes);
-    void addDeferredMembers(const SyntaxNode& syntax);
-    void tryFixupInstances(const DataDeclarationSyntax& syntax, const ASTContext& context,
+    void addWildcardImport(const syntax::PackageImportItemSyntax& item,
+                           span<const syntax::AttributeInstanceSyntax* const> attributes);
+    void addDeferredMembers(const syntax::SyntaxNode& syntax);
+    void tryFixupInstances(const syntax::DataDeclarationSyntax& syntax, const ASTContext& context,
                            SmallVector<const Symbol*>& results) const;
 
     // The compilation that owns this scope.

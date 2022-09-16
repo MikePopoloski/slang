@@ -16,6 +16,8 @@
 
 namespace slang::parsing {
 
+using namespace syntax;
+
 using LF = LexerFacts;
 
 Preprocessor::Preprocessor(SourceManager& sourceManager, BumpAllocator& alloc,

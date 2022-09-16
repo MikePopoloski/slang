@@ -11,7 +11,7 @@
 
 #include "slang/syntax/SyntaxNode.h"
 
-namespace slang {
+namespace slang::syntax {
 
 class SyntaxTree;
 
@@ -111,4 +111,4 @@ private:
     bool squashNewlines = true;
 };
 
-} // namespace slang
+} // namespace slang::syntax

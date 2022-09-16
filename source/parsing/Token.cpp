@@ -15,6 +15,8 @@
 
 namespace slang::parsing {
 
+using namespace syntax;
+
 // Heap-allocated info block. This structure is variably sized based on the
 // actual type of token. Type-specific data is stored at the end, followed
 // by any trivia if the token has it.

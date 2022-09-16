@@ -57,7 +57,7 @@ public:
 
     void serializeTo(ASTSerializer& serializer) const;
 
-    static NetType& fromSyntax(const Scope& scope, const NetTypeDeclarationSyntax& syntax);
+    static NetType& fromSyntax(const Scope& scope, const syntax::NetTypeDeclarationSyntax& syntax);
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::NetType; }
 

@@ -9,7 +9,7 @@
 
 #include "slang/util/StringTable.h"
 
-namespace slang {
+namespace slang::syntax {
 
 enum class SyntaxKind;
 
@@ -41,8 +41,8 @@ public:
     static optional<KeywordVersion> getKeywordVersion(string_view text);
     static const StringTable<TokenKind>* getKeywordTable(KeywordVersion version);
 
-    static SyntaxKind getDirectiveKind(string_view directive);
-    static string_view getDirectiveText(SyntaxKind kind);
+    static syntax::SyntaxKind getDirectiveKind(string_view directive);
+    static string_view getDirectiveText(syntax::SyntaxKind kind);
 
     /// This checks all keywords, regardless of the current keyword table. Should
     /// only be used when it is ok to get a false positive for a keyword that may

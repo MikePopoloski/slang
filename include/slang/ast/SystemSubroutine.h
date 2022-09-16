@@ -32,7 +32,7 @@ public:
     virtual bool allowEmptyArgument(size_t argIndex) const;
     virtual bool allowClockingArgument(size_t argIndex) const;
     virtual const Expression& bindArgument(size_t argIndex, const ASTContext& context,
-                                           const ExpressionSyntax& syntax,
+                                           const syntax::ExpressionSyntax& syntax,
                                            const Args& previousArgs) const;
     virtual const Type& checkArguments(const ASTContext& context, const Args& args,
                                        SourceRange range, const Expression* iterOrThis) const = 0;
@@ -59,7 +59,7 @@ protected:
 class SimpleSystemSubroutine : public SystemSubroutine {
 public:
     const Expression& bindArgument(size_t argIndex, const ASTContext& context,
-                                   const ExpressionSyntax& syntax,
+                                   const syntax::ExpressionSyntax& syntax,
                                    const Args& previousArgs) const final;
     const Type& checkArguments(const ASTContext& context, const Args& args, SourceRange range,
                                const Expression* iterExpr) const final;

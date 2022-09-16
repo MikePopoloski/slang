@@ -11,7 +11,7 @@
 #include "slang/parsing/Preprocessor.h"
 #include "slang/text/SourceManager.h"
 
-namespace slang {
+namespace slang::syntax {
 
 using namespace parsing;
 
@@ -142,4 +142,4 @@ std::shared_ptr<SyntaxTree> SyntaxTree::create(SourceManager& sourceManager,
                                                       preprocessor.getDefinedMacros(), options));
 }
 
-} // namespace slang
+} // namespace slang::syntax

@@ -17,6 +17,8 @@
 
 namespace slang::ast {
 
+using namespace syntax;
+
 ParameterBuilder::ParameterBuilder(const Scope& scope, string_view definitionName,
                                    span<const Decl> parameterDecls) :
     scope(scope),

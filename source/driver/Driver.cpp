@@ -25,6 +25,7 @@ namespace slang::driver {
 
 using namespace ast;
 using namespace parsing;
+using namespace syntax;
 
 Driver::Driver() : diagEngine(sourceManager) {
     diagClient = std::make_shared<TextDiagnosticClient>();

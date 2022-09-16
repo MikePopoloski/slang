@@ -69,17 +69,18 @@ public:
 
     void serializeTo(ASTSerializer& serializer) const;
 
-    static void fromSyntax(Compilation& compilation, const HierarchyInstantiationSyntax& syntax,
+    static void fromSyntax(Compilation& compilation,
+                           const syntax::HierarchyInstantiationSyntax& syntax,
                            const ASTContext& context, SmallVector<const Symbol*>& results,
                            SmallVector<const Symbol*>& implicitNets);
 
     static void fromFixupSyntax(Compilation& compilation, const Definition& definition,
-                                const DataDeclarationSyntax& syntax, const ASTContext& context,
-                                SmallVector<const Symbol*>& results);
+                                const syntax::DataDeclarationSyntax& syntax,
+                                const ASTContext& context, SmallVector<const Symbol*>& results);
 
     /// Creates one or more instances and binds them into a target scoped, based on the
     /// provided syntax directive.
-    static void fromBindDirective(const Scope& scope, const BindDirectiveSyntax& syntax);
+    static void fromBindDirective(const Scope& scope, const syntax::BindDirectiveSyntax& syntax);
 
     /// Creates a default-instantiated instance of the given definition. All parameters must
     /// have defaults specified.
@@ -87,9 +88,9 @@ public:
                                          const ParamOverrideNode* paramOverrideNode);
 
     /// Creates a placeholder instance for a virtual interface type declaration.
-    static InstanceSymbol& createVirtual(const ASTContext& context, SourceLocation loc,
-                                         const Definition& definition,
-                                         const ParameterValueAssignmentSyntax* paramAssignments);
+    static InstanceSymbol& createVirtual(
+        const ASTContext& context, SourceLocation loc, const Definition& definition,
+        const syntax::ParameterValueAssignmentSyntax* paramAssignments);
 
     /// Creates an intentionally invalid instance by forcing all parameters to null values.
     /// This allows type checking instance members as long as they don't depend on any parameters.
@@ -212,11 +213,13 @@ public:
     /// based on the syntax used to instantiate it.
     bool isChecker() const;
 
-    static void fromSyntax(Compilation& compilation, const HierarchyInstantiationSyntax& syntax,
+    static void fromSyntax(Compilation& compilation,
+                           const syntax::HierarchyInstantiationSyntax& syntax,
                            const ASTContext& context, SmallVector<const Symbol*>& results,
                            SmallVector<const Symbol*>& implicitNets);
 
-    static void fromSyntax(Compilation& compilation, const PrimitiveInstantiationSyntax& syntax,
+    static void fromSyntax(Compilation& compilation,
+                           const syntax::PrimitiveInstantiationSyntax& syntax,
                            const ASTContext& context, SmallVector<const Symbol*>& results,
                            SmallVector<const Symbol*>& implicitNets);
 
@@ -243,12 +246,12 @@ public:
     const TimingControl* getDelay() const;
 
     static void fromSyntax(const PrimitiveSymbol& primitive,
-                           const HierarchyInstantiationSyntax& syntax, const ASTContext& context,
-                           SmallVector<const Symbol*>& results,
+                           const syntax::HierarchyInstantiationSyntax& syntax,
+                           const ASTContext& context, SmallVector<const Symbol*>& results,
                            SmallVector<const Symbol*>& implicitNets);
 
-    static void fromSyntax(const PrimitiveInstantiationSyntax& syntax, const ASTContext& context,
-                           SmallVector<const Symbol*>& results,
+    static void fromSyntax(const syntax::PrimitiveInstantiationSyntax& syntax,
+                           const ASTContext& context, SmallVector<const Symbol*>& results,
                            SmallVector<const Symbol*>& implicitNets);
 
     void serializeTo(ASTSerializer& serializer) const;

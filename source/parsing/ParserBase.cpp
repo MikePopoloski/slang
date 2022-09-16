@@ -13,6 +13,8 @@
 
 namespace slang::parsing {
 
+using namespace syntax;
+
 using SF = SyntaxFacts;
 
 ParserBase::ParserBase(Preprocessor& preprocessor) :

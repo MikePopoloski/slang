@@ -80,7 +80,7 @@ public:
         // At this point we expect to see vector digits, but they could be split out into other
         // token types because of hex literals.
         auto first = stream.peek();
-        if (!SyntaxFacts::isPossibleVectorDigit(first.kind))
+        if (!syntax::SyntaxFacts::isPossibleVectorDigit(first.kind))
             return reportMissingDigits(sizeToken, baseToken, first);
 
         int count = 0;
@@ -111,7 +111,7 @@ public:
             }
 
             next = stream.peek();
-        } while (SyntaxFacts::isPossibleVectorDigit(next.kind) && next.trivia().empty());
+        } while (syntax::SyntaxFacts::isPossibleVectorDigit(next.kind) && next.trivia().empty());
 
         return IntResult::vector(sizeToken, baseToken, finishValue(first, count == 1));
     }

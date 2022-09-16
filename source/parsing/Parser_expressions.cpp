@@ -12,6 +12,8 @@
 
 namespace slang::parsing {
 
+using namespace syntax;
+
 ExpressionSyntax& Parser::parseExpression() {
     return parseSubExpression(ExpressionOptions::None, 0);
 }

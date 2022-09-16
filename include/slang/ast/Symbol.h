@@ -142,7 +142,7 @@ public:
 
     /// Gets the syntax node that was used to create this symbol, if any. Symbols can
     /// be created without any originating syntax; in those cases, this returns nullptr.
-    const SyntaxNode* getSyntax() const { return originatingSyntax; }
+    const syntax::SyntaxNode* getSyntax() const { return originatingSyntax; }
 
     /// Determines whether this symbol also represents a scope.
     bool isScope() const { return scopeOrNull(); }
@@ -179,7 +179,8 @@ public:
     /// Otherwise returns RandMode::None.
     RandMode getRandMode() const;
 
-    void setAttributes(const Scope& scope, span<const AttributeInstanceSyntax* const> syntax);
+    void setAttributes(const Scope& scope,
+                       span<const syntax::AttributeInstanceSyntax* const> syntax);
 
     template<typename T>
     decltype(auto) as() {
@@ -206,7 +207,7 @@ public:
 
     /// Sets the syntax that was used to create this symbol. Mostly called by
     /// various factory functions.
-    void setSyntax(const SyntaxNode& node) { originatingSyntax = &node; }
+    void setSyntax(const syntax::SyntaxNode& node) { originatingSyntax = &node; }
 
     /// Returns the next sibling symbol in the parent scope, if one exists.
     const Symbol* getNextSibling() const { return nextInScope; }
@@ -239,7 +240,7 @@ private:
     mutable const Symbol* nextInScope = nullptr;
     mutable SymbolIndex indexInScope{0};
 
-    const SyntaxNode* originatingSyntax = nullptr;
+    const syntax::SyntaxNode* originatingSyntax = nullptr;
 };
 
 inline SymbolIndex operator+(SymbolIndex si, uint32_t offset) {

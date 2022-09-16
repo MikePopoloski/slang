@@ -15,6 +15,8 @@
 
 namespace slang::ast {
 
+using namespace syntax;
+
 bool SystemSubroutine::allowEmptyArgument(size_t) const {
     return false;
 }

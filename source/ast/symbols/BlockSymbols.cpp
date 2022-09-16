@@ -26,6 +26,7 @@
 namespace slang::ast {
 
 using namespace parsing;
+using namespace syntax;
 
 const Statement& StatementBlockSymbol::getStatement(const ASTContext& parentContext,
                                                     Statement::StatementContext& stmtCtx) const {

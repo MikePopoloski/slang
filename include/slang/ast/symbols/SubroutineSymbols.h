@@ -118,18 +118,18 @@ public:
     void serializeTo(ASTSerializer& serializer) const;
 
     static SubroutineSymbol* fromSyntax(Compilation& compilation,
-                                        const FunctionDeclarationSyntax& syntax,
+                                        const syntax::FunctionDeclarationSyntax& syntax,
                                         const Scope& parent, bool outOfBlock);
 
     static SubroutineSymbol* fromSyntax(Compilation& compilation,
-                                        const ClassMethodDeclarationSyntax& syntax,
+                                        const syntax::ClassMethodDeclarationSyntax& syntax,
                                         const Scope& parent);
 
-    static SubroutineSymbol& fromSyntax(Compilation& compilation, const DPIImportSyntax& syntax,
-                                        const Scope& parent);
+    static SubroutineSymbol& fromSyntax(Compilation& compilation,
+                                        const syntax::DPIImportSyntax& syntax, const Scope& parent);
 
     static SubroutineSymbol& createOutOfBlock(Compilation& compilation,
-                                              const FunctionDeclarationSyntax& syntax,
+                                              const syntax::FunctionDeclarationSyntax& syntax,
                                               const MethodPrototypeSymbol& prototype,
                                               const Scope& newParent, const Scope& definitionScope,
                                               SymbolIndex outOfBlockIndex);
@@ -138,7 +138,7 @@ public:
                                                  const MethodPrototypeSymbol& prototype,
                                                  const Scope& parent);
 
-    static void buildArguments(Scope& scope, const FunctionPortListSyntax& syntax,
+    static void buildArguments(Scope& scope, const syntax::FunctionPortListSyntax& syntax,
                                VariableLifetime defaultLifetime,
                                SmallVector<const FormalArgumentSymbol*>& arguments);
 
@@ -206,22 +206,24 @@ public:
     void serializeTo(ASTSerializer& serializer) const;
 
     static MethodPrototypeSymbol& fromSyntax(const Scope& scope,
-                                             const ClassMethodPrototypeSyntax& syntax);
+                                             const syntax::ClassMethodPrototypeSyntax& syntax);
     static MethodPrototypeSymbol& fromSyntax(const Scope& scope,
-                                             const ModportSubroutinePortSyntax& syntax,
+                                             const syntax::ModportSubroutinePortSyntax& syntax,
                                              bool isExport);
     static MethodPrototypeSymbol& fromSyntax(const ASTContext& context,
-                                             const ModportNamedPortSyntax& syntax, bool isExport);
+                                             const syntax::ModportNamedPortSyntax& syntax,
+                                             bool isExport);
     static MethodPrototypeSymbol& fromSyntax(const Scope& scope,
-                                             const ExternInterfaceMethodSyntax& syntax);
+                                             const syntax::ExternInterfaceMethodSyntax& syntax);
 
     static MethodPrototypeSymbol& implicitExtern(const Scope& scope,
-                                                 const ModportSubroutinePortSyntax& syntax);
+                                                 const syntax::ModportSubroutinePortSyntax& syntax);
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::MethodPrototype; }
 
 private:
-    static MethodPrototypeSymbol& createForModport(const Scope& scope, const SyntaxNode& syntax,
+    static MethodPrototypeSymbol& createForModport(const Scope& scope,
+                                                   const syntax::SyntaxNode& syntax,
                                                    parsing::Token nameToken, bool isExport);
 
     template<typename TSyntax>

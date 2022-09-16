@@ -155,7 +155,7 @@ struct LookupResult {
     /// A type that represents a kind of selector for picking a child member
     /// from a found symbol. This can either be a dotted member select or
     /// an indexed element select (from an array).
-    using Selector = std::variant<const ElementSelectSyntax*, MemberSelector>;
+    using Selector = std::variant<const syntax::ElementSelectSyntax*, MemberSelector>;
 
     /// A list of selectors that should be applied to the found symbol.
     /// Only applicable if the found symbol is a value symbol.
@@ -201,7 +201,7 @@ class Lookup {
 public:
     /// Performs a full fledged name lookup starting in the current scope, following all
     /// SystemVerilog rules for qualified or unqualified name resolution.
-    static void name(const NameSyntax& syntax, const ASTContext& context,
+    static void name(const syntax::NameSyntax& syntax, const ASTContext& context,
                      bitmask<LookupFlags> flags, LookupResult& result);
 
     /// Performs an unqualified lookup in this scope, then recursively up the parent
@@ -220,7 +220,7 @@ public:
     /// Applies the given @a selectors to the @a symbol and returns the selected child.
     /// If any errors occur, diagnostics are issued to @a result and nullptr is returned.
     static const Symbol* selectChild(const Symbol& symbol,
-                                     span<const ElementSelectSyntax* const> selectors,
+                                     span<const syntax::ElementSelectSyntax* const> selectors,
                                      const ASTContext& context, LookupResult& result);
 
     /// Applies the given @a selectors to the @a virtualInterface type and returns the
@@ -234,7 +234,7 @@ public:
     /// found, or if the found symbol is not a class type, appropriate diagnostics are issued.
     /// If @a requireInterfaceClass is given the resulting class will be required to be
     /// an interface class; nullptr will be returned and a diagnostic issued if it's not.
-    static const ClassType* findClass(const NameSyntax& name, const ASTContext& context,
+    static const ClassType* findClass(const syntax::NameSyntax& name, const ASTContext& context,
                                       optional<DiagCode> requireInterfaceClass = {});
 
     /// Gets the containing class for the given scope. The return value is a pair, with
@@ -273,20 +273,20 @@ public:
 
     /// Searches a linked list of temporary variable symbols to see if any match the given name.
     /// If one is found, populates @a result and returns true. Otherwise returns false.
-    static bool findTempVar(const Scope& scope, const TempVarSymbol& symbol, const NameSyntax& name,
-                            LookupResult& result);
+    static bool findTempVar(const Scope& scope, const TempVarSymbol& symbol,
+                            const syntax::NameSyntax& name, LookupResult& result);
 
     /// Performs a lookup within the given class randomize() scope, respecting the name
     /// restrictions provided. If the symbol is not found, or if the name starts with 'local::',
     /// it is expected that the caller will then perform a normal lookup in the local scope.
     /// Returns true if the symbol is found and false otherwise.
-    static bool withinClassRandomize(const ASTContext& context, const NameSyntax& syntax,
+    static bool withinClassRandomize(const ASTContext& context, const syntax::NameSyntax& syntax,
                                      bitmask<LookupFlags> flags, LookupResult& result);
 
     /// Performs a lookup within an expanding sequence or property to try to find a
     /// local variable matching the given name. If one is found, populates @a result
     /// and returns true. Otherwise returns false.
-    static bool findAssertionLocalVar(const ASTContext& context, const NameSyntax& name,
+    static bool findAssertionLocalVar(const ASTContext& context, const syntax::NameSyntax& name,
                                       LookupResult& result);
 
 private:
@@ -296,7 +296,7 @@ private:
                                 optional<SourceRange> sourceRange, bitmask<LookupFlags> flags,
                                 SymbolIndex outOfBlockIndex, LookupResult& result);
 
-    static void qualified(const ScopedNameSyntax& syntax, const ASTContext& context,
+    static void qualified(const syntax::ScopedNameSyntax& syntax, const ASTContext& context,
                           bitmask<LookupFlags> flags, LookupResult& result);
 
     static void reportUndeclared(const Scope& scope, string_view name, SourceRange range,

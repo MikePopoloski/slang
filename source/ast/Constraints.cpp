@@ -16,6 +16,7 @@
 namespace slang::ast {
 
 using namespace parsing;
+using namespace syntax;
 
 const Constraint& Constraint::bind(const ConstraintItemSyntax& syntax, const ASTContext& context) {
     ASTContext ctx(context);

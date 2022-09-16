@@ -20,6 +20,7 @@
 namespace slang::ast {
 
 using namespace parsing;
+using namespace syntax;
 
 Definition::ParameterDecl::ParameterDecl(const Scope& scope,
                                          const ParameterDeclarationSyntax& syntax,

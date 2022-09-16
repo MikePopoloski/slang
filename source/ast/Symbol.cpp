@@ -41,6 +41,8 @@ struct AsScopeVisitor {
 
 namespace slang::ast {
 
+using namespace syntax;
+
 bool Symbol::isType() const {
     return Type::isKind(kind);
 }

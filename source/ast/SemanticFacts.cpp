@@ -13,9 +13,10 @@
 #include "slang/diagnostics/PreprocessorDiags.h"
 #include "slang/syntax/AllSyntax.h"
 
-using namespace slang::parsing;
-
 namespace slang::ast {
+
+using namespace parsing;
+using namespace syntax;
 
 // clang-format off
 std::optional<VariableLifetime> SemanticFacts::getVariableLifetime(Token token) {
