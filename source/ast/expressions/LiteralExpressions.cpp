@@ -141,9 +141,8 @@ Expression& UnbasedUnsizedIntegerLiteral::fromSyntax(Compilation& compilation,
 }
 
 bool UnbasedUnsizedIntegerLiteral::propagateType(const ASTContext&, const Type& newType) {
-    bitwidth_t newWidth = newType.getBitWidth();
     ASSERT(newType.isIntegral());
-    ASSERT(newWidth);
+    ASSERT(newType.getBitWidth());
 
     type = &newType;
     return true;

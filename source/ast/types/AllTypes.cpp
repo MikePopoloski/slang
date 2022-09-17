@@ -1029,7 +1029,7 @@ const Type& VirtualInterfaceType::fromSyntax(const ASTContext& context,
 
     const ModportSymbol* modport = nullptr;
     string_view modportName = syntax.modport ? syntax.modport->member.valueText() : ""sv;
-    if (!modportName.empty()) {
+    if (!modportName.empty() && syntax.modport) {
         auto sym = iface.body.find(modportName);
         if (!sym || sym->kind != SymbolKind::Modport) {
             ASSERT(syntax.modport);

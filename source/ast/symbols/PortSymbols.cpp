@@ -1411,8 +1411,7 @@ const Type& PortSymbol::getType() const {
 const Expression* PortSymbol::getInitializer() const {
     if (!initializer && initializerSyntax) {
         auto scope = getParentScope();
-        auto syntax = getSyntax();
-        ASSERT(scope && syntax);
+        ASSERT(scope);
         ASSERT(internalSymbol);
 
         // Ansi ports bind their initializers in the context of the port list,

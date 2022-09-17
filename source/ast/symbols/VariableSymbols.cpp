@@ -194,9 +194,8 @@ bool FormalArgumentSymbol::mergeVariable(const VariableSymbol& variable) {
     if (mergedVar)
         return false;
 
-    auto scope = getParentScope();
     auto syntax = getSyntax();
-    ASSERT(scope && syntax && syntax->parent);
+    ASSERT(syntax && syntax->parent);
     if (syntax->parent->kind != SyntaxKind::PortDeclaration)
         return false;
 

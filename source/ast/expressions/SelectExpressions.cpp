@@ -625,8 +625,7 @@ Expression& RangeSelectExpression::fromConstant(Compilation& compilation, Expres
         return badExpr(compilation, result);
 
     // This method is only called on expressions with a fixed range type.
-    ConstantRange valueRange = valueType.getFixedRange();
-    ASSERT(range.isLittleEndian() == valueRange.isLittleEndian());
+    ASSERT(range.isLittleEndian() == valueType.getFixedRange().isLittleEndian());
     ASSERT(valueType.hasFixedRange());
 
     if (valueType.isUnpackedArray())
