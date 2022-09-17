@@ -165,32 +165,41 @@ include(GenerateExportHeader)
 generate_export_header(slang_slang BASE_NAME slang CUSTOM_CONTENT_FROM_VARIABLE
                        suppress_export_warnings)
 
-# Installation rules
+# Installation rules for headers.
 if(SLANG_INCLUDE_INSTALL)
-  install(DIRECTORY ../include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
-  install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/slang/diagnostics/
-          DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/slang/diagnostics)
-  install(FILES ${CMAKE_CURRENT_BINARY_DIR}/slang/syntax/AllSyntax.h
-          DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/slang/syntax/)
-  install(FILES ${CMAKE_CURRENT_BINARY_DIR}/slang/syntax/SyntaxKind.h
-          DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/slang/syntax/)
-  install(FILES ${CMAKE_CURRENT_BINARY_DIR}/slang/parsing/TokenKind.h
-          DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/slang/parsing/)
-  install(DIRECTORY ../external/ieee1800/
-          DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/ieee1800)
-  install(FILES ../external/flat_hash_map.hpp ../external/span.hpp
-          DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+  install(
+    DIRECTORY ../include/
+    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+    COMPONENT slang_Development)
+  install(
+    DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/slang/diagnostics/
+    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/slang/diagnostics
+    COMPONENT slang_Development)
+  install(
+    FILES ${CMAKE_CURRENT_BINARY_DIR}/slang/syntax/AllSyntax.h
+    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/slang/syntax/
+    COMPONENT slang_Development)
+  install(
+    FILES ${CMAKE_CURRENT_BINARY_DIR}/slang/syntax/SyntaxKind.h
+    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/slang/syntax/
+    COMPONENT slang_Development)
+  install(
+    FILES ${CMAKE_CURRENT_BINARY_DIR}/slang/parsing/TokenKind.h
+    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/slang/parsing/
+    COMPONENT slang_Development)
+  install(
+    DIRECTORY ../external/ieee1800/
+    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/ieee1800
+    COMPONENT slang_Development)
+  install(
+    FILES ../external/flat_hash_map.hpp ../external/span.hpp
+    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+    COMPONENT slang_Development)
 
   if(NOT SLANG_USE_SYSTEM_LIBS)
-    install(FILES ../external/xxHash/xxhash.h
-            DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/xxhash)
+    install(
+      FILES ../external/xxHash/xxhash.h
+      DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/xxhash
+      COMPONENT slang_Development)
   endif()
-
-  install(
-    TARGETS slang_slang
-    EXPORT ${SLANG_EXPORT_NAME}
-    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
-    INCLUDES
-    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 endif()

@@ -74,9 +74,6 @@ set(SLANG_WARN_FLAGS
 # Variables used by subdirectories.
 include(GNUInstallDirs)
 set(SCRIPTS_DIR ${PROJECT_SOURCE_DIR}/scripts)
-if(NOT SLANG_EXPORT_NAME)
-  set(SLANG_EXPORT_NAME "${PROJECT_NAME}Targets")
-endif()
 
 # Find Python. If we're building python bindings we need the development modules
 # as well.
@@ -173,37 +170,5 @@ if(SLANG_INCLUDE_COVERAGE)
 endif()
 
 if(SLANG_INCLUDE_INSTALL)
-  include(CMakePackageConfigHelpers)
-
-  # Package export / installation rules
-  set(SLANG_CMAKECONFIG_INSTALL_DIR
-      "${CMAKE_INSTALL_DATAROOTDIR}/cmake/${PROJECT_NAME}"
-      CACHE STRING "install path for slangConfig.cmake")
-
-  install(
-    EXPORT ${SLANG_EXPORT_NAME}
-    NAMESPACE "slang::"
-    DESTINATION ${SLANG_CMAKECONFIG_INSTALL_DIR})
-
-  configure_package_config_file(
-    ${CMAKE_CURRENT_SOURCE_DIR}/cmake/slangConfig.cmake.in
-    "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}Config.cmake"
-    INSTALL_DESTINATION ${SLANG_CMAKECONFIG_INSTALL_DIR})
-
-  write_basic_package_version_file(
-    ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}ConfigVersion.cmake
-    VERSION ${PROJECT_VERSION}
-    COMPATIBILITY SameMajorVersion)
-
-  install(FILES ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}Config.cmake
-                ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}ConfigVersion.cmake
-          DESTINATION ${SLANG_CMAKECONFIG_INSTALL_DIR})
-
-  if(UNIX)
-    # Install pkg-config input file
-    configure_file(${CMAKE_CURRENT_SOURCE_DIR}/scripts/sv-lang.pc.in
-                   ${CMAKE_CURRENT_BINARY_DIR}/sv-lang.pc @ONLY)
-    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/sv-lang.pc
-            DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/pkgconfig)
-  endif()
+  include(cmake/install-rules.cmake)
 endif()
