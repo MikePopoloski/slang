@@ -32,8 +32,9 @@ set(DOXYGENPY_PATH "${mcss_SOURCE_DIR}/documentation/doxygen.py")
 configure_file(${DOXYFILE_IN} ${DOXYFILE_OUT} @ONLY)
 
 add_custom_command(
-  COMMAND ${Python_EXECUTABLE} ${SCRIPTS_DIR}/diagnostic_gen.py --outDir
-          ${CMAKE_CURRENT_BINARY_DIR} --docs --slangBin $<TARGET_FILE:driver>
+  COMMAND
+    ${Python_EXECUTABLE} ${SCRIPTS_DIR}/diagnostic_gen.py --outDir
+    ${CMAKE_CURRENT_BINARY_DIR} --docs --slangBin $<TARGET_FILE:slang::driver>
   OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/warnings.dox
   DEPENDS ${SCRIPTS_DIR}/diagnostic_gen.py ${SCRIPTS_DIR}/diagnostics.txt
           ${SCRIPTS_DIR}/warning_docs.txt
