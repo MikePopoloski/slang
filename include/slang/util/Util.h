@@ -7,36 +7,38 @@
 //------------------------------------------------------------------------------
 #pragma once
 
-#include <cstddef>     // for std::byte
-#include <cstdint>     // for sized integer types
-#include <cstring>     // for memcpy
-#include <string_view> // for std::string_view
-#include <utility>     // for many random utility functions
+#include <cstddef>
+#include <cstdint>
+#include <cstring>
+#include <span.hpp>
+#include <string_view>
+#include <utility>
 
 #include "slang/util/Assert.h"
 #include "slang/util/Enum.h"
 #include "slang/util/NotNull.h"
 
-using std::byte;
-using std::int16_t;
-using std::int32_t;
-using std::int64_t;
-using std::int8_t;
-using std::intptr_t;
-using std::nullptr_t;
-using std::ptrdiff_t;
-using std::size_t;
-using std::string_view;
-using std::uint16_t;
-using std::uint32_t;
-using std::uint64_t;
-using std::uint8_t;
-using std::uintptr_t;
-
 using namespace std::literals;
 
-#include <span.hpp>
+namespace slang {
+
 using nonstd::span;
+using string_view = std::string_view;
+using byte = std::byte;
+using int16_t = std::int16_t;
+using int32_t = std::int32_t;
+using int64_t = std::int64_t;
+using int8_t = std::int8_t;
+using intptr_t = std::intptr_t;
+using nullptr_t = std::nullptr_t;
+using ptrdiff_t = std::ptrdiff_t;
+using size_t = std::size_t;
+using string_view = std::string_view;
+using uint16_t = std::uint16_t;
+using uint32_t = std::uint32_t;
+using uint64_t = std::uint64_t;
+using uint8_t = std::uint8_t;
+using uintptr_t = std::uintptr_t;
 
 // TODO: remove once C++20 bit_cast is available
 template<typename Dest, typename Source>
@@ -51,3 +53,5 @@ inline Dest bit_cast(const Source& src) noexcept {
     std::memcpy(&dst, &src, sizeof(Dest));
     return dst;
 }
+
+} // namespace slang
