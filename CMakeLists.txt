@@ -156,9 +156,7 @@ endif()
 if(SLANG_INCLUDE_TESTS)
   include(CTest)
   add_subdirectory(external/Catch2)
-
-  add_subdirectory(tests/regression)
-  add_subdirectory(tests/unittests)
+  add_subdirectory(tests)
 endif()
 
 if(SLANG_INCLUDE_DOCS)

@@ -46,7 +46,7 @@ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/util/Version.cpp.in
 
 # -------- Primary library target
 add_library(
-  slang
+  slang_slang
   ${CMAKE_CURRENT_BINARY_DIR}/AllSyntax.cpp
   ${CMAKE_CURRENT_BINARY_DIR}/DiagCode.cpp
   ${CMAKE_CURRENT_BINARY_DIR}/TokenKind.cpp
@@ -90,11 +90,21 @@ add_library(
 
 add_subdirectory(ast)
 
+add_library(slang::slang ALIAS slang_slang)
+set_target_properties(
+  slang_slang
+  PROPERTIES CXX_VISIBILITY_PRESET hidden
+             VISIBILITY_INLINES_HIDDEN YES
+             VERSION ${PROJECT_VERSION}
+             SOVERSION ${PROJECT_VERSION_MAJOR}
+             EXPORT_NAME slang
+             OUTPUT_NAME slang)
+
 # Add xxhash source if we aren't linking to a system package.
 if(SLANG_USE_SYSTEM_LIBS)
-  target_link_libraries(slang PRIVATE xxHash::xxhash)
+  target_link_libraries(slang_slang PRIVATE xxHash::xxhash)
 else()
-  target_sources(slang PRIVATE ../external/xxHash/xxhash.c)
+  target_sources(slang_slang PRIVATE ../external/xxHash/xxhash.c)
   set_source_files_properties(../external/xxHash/xxhash.c PROPERTIES LANGUAGE
                                                                      CXX)
   if(NOT CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
@@ -104,47 +114,41 @@ else()
 endif()
 
 # Compile options
-target_compile_options(slang PRIVATE ${SLANG_WARN_FLAGS})
-target_compile_definitions(slang PUBLIC $<$<CONFIG:Debug>:DEBUG>)
+target_compile_options(slang_slang PRIVATE ${SLANG_WARN_FLAGS})
+target_compile_definitions(slang_slang PUBLIC $<$<CONFIG:Debug>:DEBUG>)
 
 # Include directories
 target_include_directories(
-  slang
+  slang_slang
   PUBLIC "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../include/>"
          "$<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>"
          "$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>")
 target_include_directories(
-  slang SYSTEM
+  slang_slang SYSTEM
   PUBLIC "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../external/>")
 
 # Link libraries
-target_link_libraries(slang PRIVATE ${CMAKE_THREAD_LIBS_INIT})
-target_link_libraries(slang PRIVATE fmt::fmt)
+target_link_libraries(slang_slang PRIVATE ${CMAKE_THREAD_LIBS_INIT})
+target_link_libraries(slang_slang PRIVATE fmt::fmt)
 
 # If building the Python library we'll end up with a shared lib no matter what,
 # so make sure we always build with PIC.
 if(SLANG_INCLUDE_PYLIB)
-  set_target_properties(slang PROPERTIES POSITION_INDEPENDENT_CODE ON)
+  set_target_properties(slang_slang PROPERTIES POSITION_INDEPENDENT_CODE ON)
 endif()
 
 # Run clang-tidy if desired. This is a separate project-specific variable so
 # that it can apply just to the project itself and not any dependencies.
 if(SLANG_CLANG_TIDY)
-  set_target_properties(slang PROPERTIES CXX_CLANG_TIDY ${SLANG_CLANG_TIDY})
+  set_target_properties(slang_slang PROPERTIES CXX_CLANG_TIDY
+                                               ${SLANG_CLANG_TIDY})
 endif()
 
 # Set the magic _STATIC_DEFINE definition to assist with building combo static
 # and shared libs in the same build.
 if(NOT BUILD_SHARED_LIBS)
-  target_compile_definitions(slang PUBLIC SLANG_STATIC_DEFINE)
+  target_compile_definitions(slang_slang PUBLIC SLANG_STATIC_DEFINE)
 endif()
-
-set_target_properties(
-  slang
-  PROPERTIES CXX_VISIBILITY_PRESET hidden
-             VISIBILITY_INLINES_HIDDEN YES
-             VERSION ${PROJECT_VERSION}
-             SOVERSION ${PROJECT_VERSION_MAJOR})
 
 # For the generated export header, suppress annoying warnings
 set(suppress_export_warnings
@@ -158,7 +162,7 @@ set(suppress_export_warnings
 ")
 
 include(GenerateExportHeader)
-generate_export_header(slang BASE_NAME slang CUSTOM_CONTENT_FROM_VARIABLE
+generate_export_header(slang_slang BASE_NAME slang CUSTOM_CONTENT_FROM_VARIABLE
                        suppress_export_warnings)
 
 # Installation rules
@@ -183,7 +187,7 @@ if(SLANG_INCLUDE_INSTALL)
   endif()
 
   install(
-    TARGETS slang
+    TARGETS slang_slang
     EXPORT ${SLANG_EXPORT_NAME}
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}

@@ -4,7 +4,7 @@
 # ~~~
 
 target_sources(
-  slang
+  slang_slang
   PRIVATE builtins/ArrayMethods.cpp
           builtins/ConversionFuncs.cpp
           builtins/CoverageFuncs.cpp
