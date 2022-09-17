@@ -3,43 +3,18 @@
 # SPDX-License-Identifier: MIT
 # ~~~
 
-# Helper function that defines library targets
-function(slang_define_lib libname)
-  target_compile_options(${libname} PRIVATE ${SLANG_WARN_FLAGS})
-  target_compile_definitions(${libname} PUBLIC $<$<CONFIG:Debug>:DEBUG>)
-
-  target_include_directories(
-    ${libname}
-    PUBLIC "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../include/>"
-           "$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>")
-  target_include_directories(
-    ${libname} PUBLIC "$<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>"
-                      "$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>")
-  target_include_directories(
-    ${libname} SYSTEM
-    PUBLIC "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../external/>")
-
-  if(SLANG_INCLUDE_INSTALL)
-    install(
-      TARGETS ${libname}
-      EXPORT ${SLANG_EXPORT_NAME}
-      LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-      ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
-      INCLUDES
-      DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
-  endif()
-
+# -------- Dependencies
+find_package(Threads)
+if(SLANG_USE_SYSTEM_LIBS)
+  find_package(fmt)
+  find_package(xxHash)
+else()
   if(SLANG_INCLUDE_PYLIB)
-    set_target_properties(${libname} PROPERTIES POSITION_INDEPENDENT_CODE ON)
+    set_target_properties(fmt PROPERTIES POSITION_INDEPENDENT_CODE ON)
   endif()
+endif()
 
-  if(SLANG_CLANG_TIDY)
-    set_target_properties(${libname} PROPERTIES CXX_CLANG_TIDY
-                                                ${SLANG_CLANG_TIDY})
-  endif()
-endfunction()
-
-# -------- Core library - depended on by everything else
+# -------- Generate code
 
 # Generate diagnostic headers
 add_custom_command(
@@ -51,61 +26,6 @@ add_custom_command(
          ${CMAKE_CURRENT_BINARY_DIR}/DiagCode.cpp
   DEPENDS ${SCRIPTS_DIR}/diagnostic_gen.py ${SCRIPTS_DIR}/diagnostics.txt
   COMMENT "Generating diagnostics")
-
-# Generate version header
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/util/Version.cpp.in
-               ${CMAKE_CURRENT_BINARY_DIR}/Version.cpp @ONLY)
-
-set(slangcore_SOURCES
-    ${CMAKE_CURRENT_BINARY_DIR}/DiagCode.cpp
-    ${CMAKE_CURRENT_BINARY_DIR}/slang/diagnostics/AllDiags.h
-    diagnostics/DiagnosticClient.cpp
-    diagnostics/DiagnosticEngine.cpp
-    diagnostics/Diagnostics.cpp
-    diagnostics/TextDiagnosticClient.cpp
-    numeric/ConstantValue.cpp
-    numeric/SVInt.cpp
-    numeric/Time.cpp
-    text/CharInfo.cpp
-    text/Json.cpp
-    text/SFormat.cpp
-    text/SourceManager.cpp
-    ${CMAKE_CURRENT_BINARY_DIR}/Version.cpp
-    util/Assert.cpp
-    util/BumpAllocator.cpp
-    util/CommandLine.cpp
-    util/OS.cpp
-    util/String.cpp)
-
-if(NOT SLANG_USE_SYSTEM_LIBS)
-  set(slangcore_SOURCES ${slangcore_SOURCES} ../external/xxHash/xxhash.c)
-
-  set_source_files_properties(../external/xxHash/xxhash.c PROPERTIES LANGUAGE
-                                                                     CXX)
-  if(NOT CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
-    set_source_files_properties(../external/xxHash/xxhash.c
-                                PROPERTIES COMPILE_FLAGS -w)
-  endif()
-endif()
-
-add_library(slangcore ${slangcore_SOURCES})
-slang_define_lib(slangcore)
-
-target_link_libraries(slangcore PUBLIC fmt::fmt)
-if(SLANG_USE_SYSTEM_LIBS)
-  find_package(fmt)
-  find_package(xxHash)
-  target_link_libraries(slangcore PRIVATE xxHash::xxhash)
-else()
-  if(SLANG_INCLUDE_PYLIB)
-    set_target_properties(fmt PROPERTIES POSITION_INDEPENDENT_CODE ON)
-  endif()
-endif()
-
-find_package(Threads)
-target_link_libraries(slangcore PRIVATE ${CMAKE_THREAD_LIBS_INIT})
-
-# -------- Parsing / syntax library
 
 # Generate syntax headers and sources
 add_custom_command(
@@ -120,8 +40,26 @@ add_custom_command(
           ${SCRIPTS_DIR}/triviakinds.txt ${SCRIPTS_DIR}/tokenkinds.txt
   COMMENT "Generating syntax")
 
+# Generate version header
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/util/Version.cpp.in
+               ${CMAKE_CURRENT_BINARY_DIR}/Version.cpp @ONLY)
+
+# -------- Primary library target
 add_library(
-  slangparser
+  slang
+  ${CMAKE_CURRENT_BINARY_DIR}/AllSyntax.cpp
+  ${CMAKE_CURRENT_BINARY_DIR}/DiagCode.cpp
+  ${CMAKE_CURRENT_BINARY_DIR}/TokenKind.cpp
+  ${CMAKE_CURRENT_BINARY_DIR}/Version.cpp
+  ${CMAKE_CURRENT_BINARY_DIR}/slang/diagnostics/AllDiags.h
+  diagnostics/DiagnosticClient.cpp
+  diagnostics/DiagnosticEngine.cpp
+  diagnostics/Diagnostics.cpp
+  diagnostics/TextDiagnosticClient.cpp
+  driver/Driver.cpp
+  numeric/ConstantValue.cpp
+  numeric/SVInt.cpp
+  numeric/Time.cpp
   parsing/Lexer.cpp
   parsing/LexerFacts.cpp
   parsing/NumberParser.cpp
@@ -134,82 +72,63 @@ add_library(
   parsing/Preprocessor_macros.cpp
   parsing/Preprocessor_pragmas.cpp
   parsing/Token.cpp
-  ${CMAKE_CURRENT_BINARY_DIR}/AllSyntax.cpp
-  ${CMAKE_CURRENT_BINARY_DIR}/TokenKind.cpp
   syntax/SyntaxFacts.cpp
   syntax/SyntaxNode.cpp
   syntax/SyntaxPrinter.cpp
   syntax/SyntaxTree.cpp
-  syntax/SyntaxVisitor.cpp)
-slang_define_lib(slangparser)
-add_dependencies(slangparser slangcore)
-target_link_libraries(slangparser PUBLIC slangcore)
+  syntax/SyntaxVisitor.cpp
+  text/CharInfo.cpp
+  text/Json.cpp
+  text/SFormat.cpp
+  text/SourceManager.cpp
+  util/Assert.cpp
+  util/BumpAllocator.cpp
+  util/CommandLine.cpp
+  util/OS.cpp
+  util/String.cpp)
 
-# -------- Compiler library
-add_library(
-  slangcompiler
-  ast/builtins/ArrayMethods.cpp
-  ast/builtins/ConversionFuncs.cpp
-  ast/builtins/CoverageFuncs.cpp
-  ast/builtins/EnumMethods.cpp
-  ast/builtins/GateTypes.cpp
-  ast/builtins/MathFuncs.cpp
-  ast/builtins/MiscSystemFuncs.cpp
-  ast/builtins/NonConstFuncs.cpp
-  ast/builtins/QueryFuncs.cpp
-  ast/builtins/StdPackage.cpp
-  ast/builtins/StringMethods.cpp
-  ast/builtins/SystemTasks.cpp
-  ast/expressions/AssertionExpr.cpp
-  ast/expressions/AssignmentExpressions.cpp
-  ast/expressions/CallExpression.cpp
-  ast/expressions/LiteralExpressions.cpp
-  ast/expressions/MiscExpressions.cpp
-  ast/expressions/OperatorExpressions.cpp
-  ast/expressions/SelectExpressions.cpp
-  ast/symbols/AttributeSymbol.cpp
-  ast/symbols/BlockSymbols.cpp
-  ast/symbols/ClassSymbols.cpp
-  ast/symbols/CompilationUnitSymbols.cpp
-  ast/symbols/CoverSymbols.cpp
-  ast/symbols/InstanceSymbols.cpp
-  ast/symbols/MemberSymbols.cpp
-  ast/symbols/ParameterBuilder.cpp
-  ast/symbols/ParameterSymbols.cpp
-  ast/symbols/PortSymbols.cpp
-  ast/symbols/SubroutineSymbols.cpp
-  ast/symbols/SymbolBuilders.cpp
-  ast/symbols/ValueSymbol.cpp
-  ast/symbols/VariableSymbols.cpp
-  ast/types/AllTypes.cpp
-  ast/types/DeclaredType.cpp
-  ast/types/NetType.cpp
-  ast/types/TypePrinter.cpp
-  ast/types/Type.cpp
-  ast/ASTContext.cpp
-  ast/ASTSerializer.cpp
-  ast/Bitstream.cpp
-  ast/Compilation.cpp
-  ast/Constraints.cpp
-  ast/Definition.cpp
-  ast/EvalContext.cpp
-  ast/Expression.cpp
-  ast/FormatHelpers.cpp
-  ast/Lookup.cpp
-  ast/LValue.cpp
-  ast/Patterns.cpp
-  ast/Scope.cpp
-  ast/ScriptSession.cpp
-  ast/SemanticFacts.cpp
-  ast/SemanticModel.cpp
-  ast/Statements.cpp
-  ast/Symbol.cpp
-  ast/SystemSubroutine.cpp
-  ast/TimingControl.cpp
-  driver/Driver.cpp)
-slang_define_lib(slangcompiler)
-add_dependencies(slangcompiler slangparser)
-target_link_libraries(slangcompiler PUBLIC slangparser)
+add_subdirectory(ast)
+
+# Add xxhash source if we aren't linking to a system package.
+if(SLANG_USE_SYSTEM_LIBS)
+  target_link_libraries(slang PRIVATE xxHash::xxhash)
+else()
+  target_sources(slang PRIVATE ../external/xxHash/xxhash.c)
+  set_source_files_properties(../external/xxHash/xxhash.c PROPERTIES LANGUAGE
+                                                                     CXX)
+  if(NOT CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
+    set_source_files_properties(../external/xxHash/xxhash.c
+                                PROPERTIES COMPILE_FLAGS -w)
+  endif()
+endif()
+
+# Compile options
+target_compile_options(slang PRIVATE ${SLANG_WARN_FLAGS})
+target_compile_definitions(slang PUBLIC $<$<CONFIG:Debug>:DEBUG>)
+
+# Include directories
+target_include_directories(
+  slang
+  PUBLIC "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../include/>"
+         "$<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>"
+         "$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>")
+target_include_directories(
+  slang SYSTEM
+  PUBLIC "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../external/>")
+
+# Link libraries
+target_link_libraries(slang PRIVATE ${CMAKE_THREAD_LIBS_INIT})
+target_link_libraries(slang PUBLIC fmt::fmt)
+
+# If building the Python library we'll end up with a shared lib no matter what,
+# so make sure we always build with PIC.
+if(SLANG_INCLUDE_PYLIB)
+  set_target_properties(slang PROPERTIES POSITION_INDEPENDENT_CODE ON)
+endif()
+
+if(SLANG_CLANG_TIDY)
+  set_target_properties(slang PROPERTIES CXX_CLANG_TIDY ${SLANG_CLANG_TIDY})
+endif()
 
 # Installation rules
 if(SLANG_INCLUDE_INSTALL)
@@ -231,4 +150,12 @@ if(SLANG_INCLUDE_INSTALL)
     install(FILES ../external/xxHash/xxhash.h
             DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/xxhash)
   endif()
+
+  install(
+    TARGETS slang
+    EXPORT ${SLANG_EXPORT_NAME}
+    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    INCLUDES
+    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 endif()

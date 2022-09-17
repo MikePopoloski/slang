@@ -62,6 +62,7 @@ option(SLANG_INCLUDE_COVERAGE "Enable code coverage" OFF)
 option(SLANG_CI_BUILD "Enable longer running tests for CI builds" OFF)
 option(SLANG_FUZZ_TARGET "Enables changes to make binaries easier to fuzz test"
        OFF)
+option(BUILD_SHARED_LIBS "Generate shared libraries instead of static" OFF)
 
 set(SLANG_CLANG_TIDY
     ""
@@ -70,11 +71,8 @@ set(SLANG_WARN_FLAGS
     ""
     CACHE STRING "Extra warning flags to apply to the slang library build")
 
-# Include built-in cmake modules.
-include(GNUInstallDirs)
-include(CMakePackageConfigHelpers)
-
 # Variables used by subdirectories.
+include(GNUInstallDirs)
 set(SCRIPTS_DIR ${PROJECT_SOURCE_DIR}/scripts)
 if(NOT SLANG_EXPORT_NAME)
   set(SLANG_EXPORT_NAME "${PROJECT_NAME}Targets")
@@ -174,6 +172,8 @@ if(SLANG_INCLUDE_COVERAGE)
 endif()
 
 if(SLANG_INCLUDE_INSTALL)
+  include(CMakePackageConfigHelpers)
+
   # Package export / installation rules
   set(SLANG_CMAKECONFIG_INSTALL_DIR
       "${CMAKE_INSTALL_DATAROOTDIR}/cmake/${PROJECT_NAME}"
