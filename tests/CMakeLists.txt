@@ -3,6 +3,20 @@
 # SPDX-License-Identifier: MIT
 # ~~~
 
+set(find_pkg_args "")
+if(${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.24.0")
+  set(find_pkg_args "FIND_PACKAGE_ARGS")
+endif()
+
+include(FetchContent)
+FetchContent_Declare(
+  Catch2
+  GIT_REPOSITORY https://github.com/catchorg/Catch2.git
+  GIT_TAG v3.1.0
+  GIT_SHALLOW ON
+  ${find_pkg_args})
+FetchContent_MakeAvailable(Catch2)
+
 add_executable(
   unittests
   unittests/AssertionTests.cpp
@@ -47,6 +61,8 @@ add_custom_command(
     ${CMAKE_COMMAND} -E copy_directory
     ${CMAKE_CURRENT_SOURCE_DIR}/unittests/data
     ${CMAKE_CURRENT_BINARY_DIR}/unittests/data)
+
+include(CTest)
 
 add_test(NAME unittests COMMAND unittests)
 set_tests_properties(unittests PROPERTIES TIMEOUT 30)
