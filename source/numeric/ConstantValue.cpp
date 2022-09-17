@@ -8,6 +8,7 @@
 #include "slang/numeric/ConstantValue.h"
 
 #include "../text/FormatBuffer.h"
+#include <ostream>
 
 #include "slang/util/Hash.h"
 

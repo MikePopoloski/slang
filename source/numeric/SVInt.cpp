@@ -9,6 +9,7 @@
 
 #include "SVIntHelpers.h"
 #include <fmt/core.h>
+#include <ostream>
 #include <stdexcept>
 
 #include "slang/text/CharInfo.h"

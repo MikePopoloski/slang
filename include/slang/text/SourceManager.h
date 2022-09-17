@@ -14,7 +14,6 @@
 #include <mutex>
 #include <set>
 #include <shared_mutex>
-#include <unordered_map>
 #include <variant>
 #include <vector>
 
@@ -260,7 +259,7 @@ private:
     std::deque<std::variant<FileInfo, ExpansionInfo>> bufferEntries;
 
     // cache for file lookups; this holds on to the actual file data
-    std::unordered_map<std::string, std::unique_ptr<FileData>> lookupCache;
+    flat_hash_map<std::string, std::unique_ptr<FileData>> lookupCache;
 
     // directories for system and user includes
     std::vector<fs::path> systemDirectories;

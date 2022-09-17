@@ -7,7 +7,7 @@
 //-----------------------------------------------------------------------------
 #pragma once
 
-#include <ostream>
+#include <iosfwd>
 
 #include "slang/numeric/MathUtils.h"
 #include "slang/util/SmallVector.h"

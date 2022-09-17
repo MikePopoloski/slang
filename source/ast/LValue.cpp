@@ -7,6 +7,8 @@
 //------------------------------------------------------------------------------
 #include "slang/ast/LValue.h"
 
+#include <ostream>
+
 namespace slang::ast {
 
 template<typename T>

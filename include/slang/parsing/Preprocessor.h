@@ -8,8 +8,8 @@
 #pragma once
 
 #include <deque>
+#include <flat_hash_map.hpp>
 #include <memory>
-#include <unordered_map>
 
 #include "slang/parsing/Lexer.h"
 #include "slang/parsing/NumberParser.h"
@@ -360,7 +360,7 @@ private:
     std::deque<BranchEntry> branchStack;
 
     // map from macro name to macro definition
-    std::unordered_map<string_view, MacroDef> macros;
+    flat_hash_map<string_view, MacroDef> macros;
 
     // list of expanded macro tokens to drain before continuing with active lexer
     SmallVectorSized<Token, 16> expandedTokens;
