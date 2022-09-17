@@ -7,6 +7,8 @@
 //------------------------------------------------------------------------------
 #pragma once
 
+#include <optional>
+
 #include "slang/util/SmallVector.h"
 #include "slang/util/Util.h"
 
@@ -28,21 +30,21 @@ void uintToStr(SmallVector<char>& buffer, uint64_t value);
 /// source string that was not part of the conversion.
 ///
 /// @return the converted value, or nullopt if conversion fails (invalid string, overflow, etc).
-optional<int32_t> strToInt(string_view str, size_t* pos = nullptr, int base = 10);
+std::optional<int32_t> strToInt(string_view str, size_t* pos = nullptr, int base = 10);
 
 /// Parses the provided @a str in the specified @a base into an unsigned integer.
 /// If @a pos is non-null, it will be set to point to the first character in the
 /// source string that was not part of the conversion.
 ///
 /// @return the converted value, or nullopt if conversion fails (invalid string, overflow, etc).
-optional<uint32_t> strToUInt(string_view str, size_t* pos = nullptr, int base = 10);
+std::optional<uint32_t> strToUInt(string_view str, size_t* pos = nullptr, int base = 10);
 
 /// Parses the provided @a str into a floating point value.
 /// If @a pos is non-null, it will be set to point to the first character in the
 /// source string that was not part of the conversion.
 ///
 /// @return the converted value, or nullopt if conversion fails (invalid string, overflow, etc).
-optional<double> strToDouble(string_view str, size_t* pos = nullptr);
+std::optional<double> strToDouble(string_view str, size_t* pos = nullptr);
 
 /// Converts the provided string to all uppercase characters (assuming ASCII contents).
 /// The string is converted in place.

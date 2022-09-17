@@ -176,7 +176,7 @@ bool ASTContext::requirePositive(const SVInt& value, SourceRange range) const {
     return true;
 }
 
-bool ASTContext::requirePositive(optional<int32_t> value, SourceRange range) const {
+bool ASTContext::requirePositive(std::optional<int32_t> value, SourceRange range) const {
     if (!value)
         return false;
 
@@ -187,7 +187,7 @@ bool ASTContext::requirePositive(optional<int32_t> value, SourceRange range) con
     return true;
 }
 
-bool ASTContext::requireGtZero(optional<int32_t> value, SourceRange range) const {
+bool ASTContext::requireGtZero(std::optional<int32_t> value, SourceRange range) const {
     if (!value)
         return false;
 
@@ -229,7 +229,8 @@ ConstantValue ASTContext::tryEval(const Expression& expr) const {
     return expr.eval(ctx);
 }
 
-optional<bitwidth_t> ASTContext::requireValidBitWidth(const SVInt& value, SourceRange range) const {
+std::optional<bitwidth_t> ASTContext::requireValidBitWidth(const SVInt& value,
+                                                           SourceRange range) const {
     auto result = value.as<bitwidth_t>();
     if (!result)
         addDiag(diag::ValueExceedsMaxBitWidth, range) << (int)SVInt::MAX_BITS;
@@ -238,12 +239,12 @@ optional<bitwidth_t> ASTContext::requireValidBitWidth(const SVInt& value, Source
     return result;
 }
 
-optional<int32_t> ASTContext::evalInteger(const ExpressionSyntax& syntax,
-                                          bitmask<ASTFlags> extraFlags) const {
+std::optional<int32_t> ASTContext::evalInteger(const ExpressionSyntax& syntax,
+                                               bitmask<ASTFlags> extraFlags) const {
     return evalInteger(Expression::bind(syntax, *this, extraFlags));
 }
 
-optional<int32_t> ASTContext::evalInteger(const Expression& expr) const {
+std::optional<int32_t> ASTContext::evalInteger(const Expression& expr) const {
     if (!requireIntegral(expr))
         return std::nullopt;
 
@@ -302,7 +303,7 @@ EvaluatedDimension ASTContext::evalDimension(const VariableDimensionSyntax& synt
     return result;
 }
 
-optional<ConstantRange> ASTContext::evalPackedDimension(
+std::optional<ConstantRange> ASTContext::evalPackedDimension(
     const VariableDimensionSyntax& syntax) const {
     EvaluatedDimension result = evalDimension(syntax, /* requireRange */ true, /* isPacked */ true);
     if (!result.isRange())
@@ -311,7 +312,8 @@ optional<ConstantRange> ASTContext::evalPackedDimension(
     return result.range;
 }
 
-optional<ConstantRange> ASTContext::evalPackedDimension(const ElementSelectSyntax& syntax) const {
+std::optional<ConstantRange> ASTContext::evalPackedDimension(
+    const ElementSelectSyntax& syntax) const {
     EvaluatedDimension result;
     if (syntax.selector)
         evalRangeDimension(*syntax.selector, /* isPacked */ true, result);
@@ -325,7 +327,7 @@ optional<ConstantRange> ASTContext::evalPackedDimension(const ElementSelectSynta
     return result.range;
 }
 
-optional<ConstantRange> ASTContext::evalUnpackedDimension(
+std::optional<ConstantRange> ASTContext::evalUnpackedDimension(
     const VariableDimensionSyntax& syntax) const {
     EvaluatedDimension result = evalDimension(syntax, /* requireRange */ true,
                                               /* isPacked */ false);

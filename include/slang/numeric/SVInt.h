@@ -240,7 +240,7 @@ public:
     /// Checks whether it's possible to convert the value to a simple built-in
     /// integer type and if so returns it.
     template<typename T, typename = std::enable_if_t<std::is_integral_v<T> || std::is_enum_v<T>>>
-    optional<T> as() const {
+    std::optional<T> as() const {
         bitwidth_t bits = getMinRepresentedBits();
         if (unknownFlag || bits > sizeof(T) * CHAR_BIT)
             return std::nullopt;

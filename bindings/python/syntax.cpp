@@ -42,7 +42,7 @@ void registerSyntax(py::module_& m) {
         .def(py::init<BumpAllocator&, TokenKind, span<Trivia const>, string_view, SourceLocation,
                       const SVInt&>())
         .def(py::init<BumpAllocator&, TokenKind, span<Trivia const>, string_view, SourceLocation,
-                      double, bool, optional<TimeUnit>>())
+                      double, bool, std::optional<TimeUnit>>())
         .def(py::init<BumpAllocator&, TokenKind, span<Trivia const>, string_view, SourceLocation,
                       LiteralBase, bool>())
         .def_readonly("kind", &Token::kind)

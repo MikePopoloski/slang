@@ -849,7 +849,7 @@ public:
         ASSERT(target && target->isQueue());
 
         auto& q = *target->queue();
-        optional<int32_t> index = ci.integer().as<int32_t>();
+        std::optional<int32_t> index = ci.integer().as<int32_t>();
         if (!index || *index < 0 || size_t(*index) >= q.size() + 1) {
             context.addDiag(diag::ConstEvalDynamicArrayIndex, args[1]->sourceRange)
                 << ci << *args[0]->type << q.size() + 1;
@@ -900,7 +900,7 @@ public:
         }
 
         auto ci = args[1]->eval(context);
-        optional<int32_t> index = ci.integer().as<int32_t>();
+        std::optional<int32_t> index = ci.integer().as<int32_t>();
         if (!index || *index < 0 || size_t(*index) >= q.size()) {
             context.addDiag(diag::ConstEvalDynamicArrayIndex, args[1]->sourceRange)
                 << ci << *args[0]->type << q.size();

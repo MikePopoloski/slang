@@ -136,7 +136,7 @@ public:
 
     /// Gets the set of dimensions for specifying interface arrays.
     /// Returns nullopt if an error occurs evaluating the dimensions.
-    optional<span<const ConstantRange>> getDeclaredRange() const;
+    std::optional<span<const ConstantRange>> getDeclaredRange() const;
 
     /// Gets the interface instance that this port connects to.
     const Symbol* getConnection() const;
@@ -150,7 +150,7 @@ public:
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::InterfacePort; }
 
 private:
-    mutable optional<span<const ConstantRange>> range;
+    mutable std::optional<span<const ConstantRange>> range;
 };
 
 class PortConnection {

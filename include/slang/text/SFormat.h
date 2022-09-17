@@ -19,10 +19,10 @@ namespace SFormat {
 /// A collection of options that can be applied to the SFormat string formatting functions.
 struct FormatOptions {
     /// The width of a numeric field. If left empty a default will be used.
-    optional<uint32_t> width;
+    std::optional<uint32_t> width;
 
     /// An optional precision to apply when formatting floating point values.
-    optional<uint32_t> precision;
+    std::optional<uint32_t> precision;
 
     /// Set to true to left justify instead of right justify the field within
     /// its specified width.
@@ -45,7 +45,8 @@ bool parse(
     string_view formatString, function_ref<void(string_view text)> onText,
     function_ref<void(char specifier, size_t offset, size_t len, const FormatOptions& options)>
         onArg,
-    function_ref<void(DiagCode code, size_t offset, size_t len, optional<char> specifier)> onError);
+    function_ref<void(DiagCode code, size_t offset, size_t len, std::optional<char> specifier)>
+        onError);
 
 /// Format the given @a value into a string and append it to @a result according
 /// to the provided @a options

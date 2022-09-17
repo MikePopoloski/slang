@@ -7,6 +7,8 @@
 //------------------------------------------------------------------------------
 #pragma once
 
+#include <optional>
+
 #include "slang/text/SourceLocation.h"
 #include "slang/util/Util.h"
 
@@ -47,7 +49,7 @@ struct TimeScaleValue {
 
     std::string toString() const;
 
-    static optional<TimeScaleValue> fromLiteral(double value, TimeUnit unit);
+    static std::optional<TimeScaleValue> fromLiteral(double value, TimeUnit unit);
 
     bool operator>(const TimeScaleValue& rhs) const;
     bool operator==(const TimeScaleValue& rhs) const;

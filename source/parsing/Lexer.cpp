@@ -912,7 +912,7 @@ Token Lexer::lexNumericLiteral() {
     // If `FOO is defined to be 'h this represents an expression: 62 + 2
     // Otherwise, this represents a real literal: 300.0
 
-    optional<TimeUnit> timeSuffix;
+    std::optional<TimeUnit> timeSuffix;
     char c = peek();
     if (c == 'e' || c == 'E') {
         bool hasDecimal = !floatChars.empty();
@@ -1047,7 +1047,7 @@ Token Lexer::lexApostrophe() {
     }
 }
 
-optional<TimeUnit> Lexer::lexTimeLiteral() {
+std::optional<TimeUnit> Lexer::lexTimeLiteral() {
 #define CASE(c, flag)              \
     case c:                        \
         if (peek(1) == 's') {      \

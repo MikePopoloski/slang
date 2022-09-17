@@ -97,7 +97,7 @@ public:
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::WildcardImport; }
 
 private:
-    mutable optional<const PackageSymbol*> package;
+    mutable std::optional<const PackageSymbol*> package;
 };
 
 /// Represents a single port specifier in a modport declaration.
@@ -184,7 +184,7 @@ public:
 
 private:
     mutable const Expression* assign = nullptr;
-    mutable optional<const TimingControl*> delay;
+    mutable std::optional<const TimingControl*> delay;
 };
 
 /// Represents a genvar declaration.
@@ -224,7 +224,7 @@ public:
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::ElabSystemTask; }
 
 private:
-    mutable optional<string_view> message;
+    mutable std::optional<string_view> message;
     mutable const Expression* assertCondition = nullptr;
 };
 
@@ -277,7 +277,7 @@ class AssertionPortSymbol : public Symbol {
 public:
     DeclaredType declaredType;
     const syntax::PropertyExprSyntax* defaultValueSyntax = nullptr;
-    optional<ArgumentDirection> localVarDirection;
+    std::optional<ArgumentDirection> localVarDirection;
 
     AssertionPortSymbol(string_view name, SourceLocation loc);
 
@@ -362,8 +362,8 @@ public:
 
 private:
     mutable const TimingControl* event = nullptr;
-    mutable optional<ClockingSkew> defaultInputSkew;
-    mutable optional<ClockingSkew> defaultOutputSkew;
+    mutable std::optional<ClockingSkew> defaultInputSkew;
+    mutable std::optional<ClockingSkew> defaultOutputSkew;
     const syntax::ClockingSkewSyntax* inputSkewSyntax = nullptr;
     const syntax::ClockingSkewSyntax* outputSkewSyntax = nullptr;
 };
@@ -402,9 +402,9 @@ public:
     struct IfElseProd : public ProdBase {
         not_null<const Expression*> expr;
         ProdItem ifItem;
-        optional<ProdItem> elseItem;
+        std::optional<ProdItem> elseItem;
 
-        IfElseProd(const Expression& expr, ProdItem ifItem, optional<ProdItem> elseItem) :
+        IfElseProd(const Expression& expr, ProdItem ifItem, std::optional<ProdItem> elseItem) :
             ProdBase(ProdKind::IfElse), expr(&expr), ifItem(ifItem), elseItem(elseItem) {}
     };
 
@@ -424,10 +424,10 @@ public:
     struct CaseProd : public ProdBase {
         not_null<const Expression*> expr;
         span<const CaseItem> items;
-        optional<ProdItem> defaultItem;
+        std::optional<ProdItem> defaultItem;
 
         CaseProd(const Expression& expr, span<const CaseItem> items,
-                 optional<ProdItem> defaultItem) :
+                 std::optional<ProdItem> defaultItem) :
             ProdBase(ProdKind::Case),
             expr(&expr), items(items), defaultItem(defaultItem) {}
     };
@@ -437,12 +437,12 @@ public:
         span<const ProdBase* const> prods;
         const Expression* weightExpr;
         const Expression* randJoinExpr;
-        optional<CodeBlockProd> codeBlock;
+        std::optional<CodeBlockProd> codeBlock;
         bool isRandJoin;
 
         Rule(const StatementBlockSymbol& ruleBlock, span<const ProdBase* const> prods,
              const Expression* weightExpr, const Expression* randJoinExpr,
-             optional<CodeBlockProd> codeBlock, bool isRandJoin) :
+             std::optional<CodeBlockProd> codeBlock, bool isRandJoin) :
             ruleBlock(&ruleBlock),
             prods(prods), weightExpr(weightExpr), randJoinExpr(randJoinExpr), codeBlock(codeBlock),
             isRandJoin(isRandJoin) {}
@@ -528,7 +528,7 @@ private:
     static const CaseProd& createCaseProd(const syntax::RsCaseSyntax& syntax,
                                           const ASTContext& context);
 
-    mutable optional<span<const Rule>> rules;
+    mutable std::optional<span<const Rule>> rules;
 };
 
 } // namespace slang::ast

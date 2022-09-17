@@ -455,9 +455,9 @@ const Type& EnumType::fromSyntax(Compilation& compilation, const EnumTypeSyntax&
                 return compilation.getErrorType();
 
             // Range must be positive.
-            if (!context.requirePositive(optional(range->left),
+            if (!context.requirePositive(std::optional(range->left),
                                          member->dimensions[0]->sourceRange()) ||
-                !context.requirePositive(optional(range->right),
+                !context.requirePositive(std::optional(range->right),
                                          member->dimensions[0]->sourceRange())) {
                 return compilation.getErrorType();
             }
@@ -535,8 +535,8 @@ void EnumType::createDefaultMembers(const ASTContext& context, const EnumTypeSyn
                 continue;
 
             SourceRange dimRange = dims->sourceRange();
-            if (!context.requirePositive(optional(range->left), dimRange) ||
-                !context.requirePositive(optional(range->right), dimRange)) {
+            if (!context.requirePositive(std::optional(range->left), dimRange) ||
+                !context.requirePositive(std::optional(range->right), dimRange)) {
                 continue;
             }
 
@@ -557,7 +557,7 @@ EnumValueSymbol::EnumValueSymbol(string_view name, SourceLocation loc) :
 
 EnumValueSymbol& EnumValueSymbol::fromSyntax(Compilation& compilation,
                                              const DeclaratorSyntax& syntax, const Type& type,
-                                             optional<int32_t> index) {
+                                             std::optional<int32_t> index) {
     string_view name = syntax.name.valueText();
     if (index)
         name = getEnumValueName(compilation, name, *index);

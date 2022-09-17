@@ -43,7 +43,7 @@ public:
     void addArrayLookup(ConstantValue&& index, ConstantValue&& defaultValue);
 
 private:
-    ConstantValue* resolveInternal(optional<ConstantRange>& range);
+    ConstantValue* resolveInternal(std::optional<ConstantRange>& range);
 
     // A selection of a range of bits from an integral value.
     struct BitSlice {

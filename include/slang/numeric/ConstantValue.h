@@ -202,7 +202,7 @@ struct SVQueue : public std::deque<ConstantValue> {
 /// Represents a SystemVerilog unpacked union, for use during constant evaluation.
 struct SVUnion {
     ConstantValue value;
-    optional<uint32_t> activeMember;
+    std::optional<uint32_t> activeMember;
 };
 
 /// An iterator for child elements in a ConstantValue, if it represents an
@@ -323,8 +323,8 @@ struct ConstantRange {
 
     /// Creates a constant range based on a left / right value that is either indexed up
     /// or indexed down. This implements the SystemVerilog range operators of '+:' and '-:'
-    static optional<ConstantRange> getIndexedRange(int32_t l, int32_t r, bool littleEndian,
-                                                   bool indexedUp);
+    static std::optional<ConstantRange> getIndexedRange(int32_t l, int32_t r, bool littleEndian,
+                                                        bool indexedUp);
 
     std::string toString() const;
 

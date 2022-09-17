@@ -17,10 +17,10 @@ class TimingControl;
 /// Represents an assignment expression.
 class AssignmentExpression : public Expression {
 public:
-    optional<BinaryOperator> op;
+    std::optional<BinaryOperator> op;
     const TimingControl* timingControl;
 
-    AssignmentExpression(optional<BinaryOperator> op, bool nonBlocking, const Type& type,
+    AssignmentExpression(std::optional<BinaryOperator> op, bool nonBlocking, const Type& type,
                          Expression& left, Expression& right, const TimingControl* timingControl,
                          SourceRange sourceRange) :
         Expression(ExpressionKind::Assignment, type, sourceRange),
@@ -45,7 +45,7 @@ public:
                                   const syntax::BinaryExpressionSyntax& syntax,
                                   const ASTContext& context);
 
-    static Expression& fromComponents(Compilation& compilation, optional<BinaryOperator> op,
+    static Expression& fromComponents(Compilation& compilation, std::optional<BinaryOperator> op,
                                       bitmask<AssignFlags> flags, Expression& lhs, Expression& rhs,
                                       SourceLocation assignLoc, const TimingControl* timingControl,
                                       SourceRange sourceRange, const ASTContext& context);
@@ -91,7 +91,7 @@ public:
     Expression& operand() { return *operand_; }
 
     ConstantValue evalImpl(EvalContext& context) const;
-    optional<bitwidth_t> getEffectiveWidthImpl() const;
+    std::optional<bitwidth_t> getEffectiveWidthImpl() const;
 
     void serializeTo(ASTSerializer& serializer) const;
 

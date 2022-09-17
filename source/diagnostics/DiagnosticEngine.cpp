@@ -536,8 +536,8 @@ Diagnostics DiagnosticEngine::setMappingsFromPragmas(BufferID buffer) {
     return diags;
 }
 
-optional<DiagnosticSeverity> DiagnosticEngine::findMappedSeverity(DiagCode code,
-                                                                  SourceLocation location) const {
+std::optional<DiagnosticSeverity> DiagnosticEngine::findMappedSeverity(
+    DiagCode code, SourceLocation location) const {
     auto byCode = diagMappings.find(code);
     if (byCode == diagMappings.end())
         return std::nullopt;

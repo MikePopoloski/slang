@@ -673,12 +673,12 @@ static TVal toIEEE754(SVInt value) {
 
     // Optimize for single word case.
     if (value.isSigned()) {
-        optional<int64_t> i64 = value.as<int64_t>();
+        auto i64 = value.as<int64_t>();
         if (i64)
             return TVal(*i64);
     }
     else {
-        optional<uint64_t> u64 = value.as<uint64_t>();
+        auto u64 = value.as<uint64_t>();
         if (u64)
             return TVal(*u64);
     }

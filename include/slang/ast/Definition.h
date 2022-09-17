@@ -81,7 +81,7 @@ public:
 
     Definition(const Scope& scope, LookupLocation lookupLocation,
                const syntax::ModuleDeclarationSyntax& syntax, const NetType& defaultNetType,
-               UnconnectedDrive unconnectedDrive, optional<TimeScale> directiveTimeScale,
+               UnconnectedDrive unconnectedDrive, std::optional<TimeScale> directiveTimeScale,
                const syntax::SyntaxTree* syntaxTree);
 
     /// Returns a string description of the definition kind, such as "module",

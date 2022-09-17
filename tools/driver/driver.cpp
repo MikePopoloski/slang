@@ -51,16 +51,16 @@ int driverMain(int argc, TArgs argv) try {
     Driver driver;
     driver.addStandardArgs();
 
-    optional<bool> showHelp;
-    optional<bool> showVersion;
-    optional<bool> quiet;
+    std::optional<bool> showHelp;
+    std::optional<bool> showVersion;
+    std::optional<bool> quiet;
     driver.cmdLine.add("-h,--help", showHelp, "Display available options");
     driver.cmdLine.add("--version", showVersion, "Display version information and exit");
     driver.cmdLine.add("-q,--quiet", quiet, "Suppress non-essential output");
 
-    optional<bool> onlyPreprocess;
-    optional<bool> onlyParse;
-    optional<bool> onlyMacros;
+    std::optional<bool> onlyPreprocess;
+    std::optional<bool> onlyParse;
+    std::optional<bool> onlyMacros;
     driver.cmdLine.add("-E,--preprocess", onlyPreprocess,
                        "Only run the preprocessor (and print preprocessed files to stdout)");
     driver.cmdLine.add("--macros-only", onlyMacros, "Print a list of found macros and exit");
@@ -68,14 +68,14 @@ int driverMain(int argc, TArgs argv) try {
         "--parse-only", onlyParse,
         "Stop after parsing input files, don't perform elaboration or type checking");
 
-    optional<bool> includeComments;
-    optional<bool> includeDirectives;
+    std::optional<bool> includeComments;
+    std::optional<bool> includeDirectives;
     driver.cmdLine.add("--comments", includeComments,
                        "Include comments in preprocessed output (with -E)");
     driver.cmdLine.add("--directives", includeDirectives,
                        "Include compiler directives in preprocessed output (with -E)");
 
-    optional<std::string> astJsonFile;
+    std::optional<std::string> astJsonFile;
     driver.cmdLine.add(
         "--ast-json", astJsonFile,
         "Dump the compiled AST in JSON format to the specified file, or '-' for stdout", "<file>",

@@ -198,13 +198,14 @@ private:
     // sets a diagnostic to the given severity.
     struct DiagnosticMapping {
         size_t offset = 0;
-        optional<DiagnosticSeverity> severity;
+        std::optional<DiagnosticSeverity> severity;
 
-        DiagnosticMapping(size_t offset, optional<DiagnosticSeverity> severity) noexcept :
+        DiagnosticMapping(size_t offset, std::optional<DiagnosticSeverity> severity) noexcept :
             offset(offset), severity(severity) {}
     };
 
-    optional<DiagnosticSeverity> findMappedSeverity(DiagCode code, SourceLocation location) const;
+    std::optional<DiagnosticSeverity> findMappedSeverity(DiagCode code,
+                                                         SourceLocation location) const;
     void issueImpl(const Diagnostic& diagnostic, DiagnosticSeverity severity);
 
     template<typename TDirective>

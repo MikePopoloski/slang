@@ -9,6 +9,7 @@
 
 #include <functional>
 #include <map>
+#include <optional>
 #include <string>
 #include <variant>
 #include <vector>
@@ -64,7 +65,7 @@ public:
     /// @name is a comma separated list of long form and short form names
     /// (including the dashes) that are accepted for this option.
     /// @a desc is a human-friendly description for printing help text.
-    void add(string_view name, optional<bool>& value, string_view desc);
+    void add(string_view name, std::optional<bool>& value, string_view desc);
 
     /// Register an option with @a name that will be parsed as an int32.
     /// If the option is not provided on a command line, the value will remain unset.
@@ -73,7 +74,7 @@ public:
     /// (including the dashes) that are accepted for this option.
     /// @a desc is a human-friendly description for printing help text.
     /// @a valueName is an example name for the value when printing help text.
-    void add(string_view name, optional<int32_t>& value, string_view desc,
+    void add(string_view name, std::optional<int32_t>& value, string_view desc,
              string_view valueName = {});
 
     /// Register an option with @a name that will be parsed as a uint32.
@@ -83,7 +84,7 @@ public:
     /// (including the dashes) that are accepted for this option.
     /// @a desc is a human-friendly description for printing help text.
     /// @a valueName is an example name for the value when printing help text.
-    void add(string_view name, optional<uint32_t>& value, string_view desc,
+    void add(string_view name, std::optional<uint32_t>& value, string_view desc,
              string_view valueName = {});
 
     /// Register an option with @a name that will be parsed as an int64.
@@ -93,7 +94,7 @@ public:
     /// (including the dashes) that are accepted for this option.
     /// @a desc is a human-friendly description for printing help text.
     /// @a valueName is an example name for the value when printing help text.
-    void add(string_view name, optional<int64_t>& value, string_view desc,
+    void add(string_view name, std::optional<int64_t>& value, string_view desc,
              string_view valueName = {});
 
     /// Register an option with @a name that will be parsed as a uint64.
@@ -103,7 +104,7 @@ public:
     /// (including the dashes) that are accepted for this option.
     /// @a desc is a human-friendly description for printing help text.
     /// @a valueName is an example name for the value when printing help text.
-    void add(string_view name, optional<uint64_t>& value, string_view desc,
+    void add(string_view name, std::optional<uint64_t>& value, string_view desc,
              string_view valueName = {});
 
     /// Register an option with @a name that will be parsed as a double.
@@ -113,7 +114,7 @@ public:
     /// (including the dashes) that are accepted for this option.
     /// @a desc is a human-friendly description for printing help text.
     /// @a valueName is an example name for the value when printing help text.
-    void add(string_view name, optional<double>& value, string_view desc,
+    void add(string_view name, std::optional<double>& value, string_view desc,
              string_view valueName = {});
 
     /// Register an option with @a name that will be parsed as a string.
@@ -125,7 +126,7 @@ public:
     /// @a valueName is an example name for the value when printing help text.
     /// @a isFileName indicates whether the parsed string is a filename that
     ///               might be relative to the current directory.
-    void add(string_view name, optional<std::string>& value, string_view desc,
+    void add(string_view name, std::optional<std::string>& value, string_view desc,
              string_view valueName = {}, bool isFileName = false);
 
     /// Register an option with @a name that will be parsed as a list of int32s.
@@ -302,11 +303,11 @@ public:
 
 private:
     using OptionStorage =
-        std::variant<optional<bool>*, optional<int32_t>*, optional<uint32_t>*, optional<int64_t>*,
-                     optional<uint64_t>*, optional<double>*, optional<std::string>*,
-                     std::vector<int32_t>*, std::vector<uint32_t>*, std::vector<int64_t>*,
-                     std::vector<uint64_t>*, std::vector<double>*, std::vector<std::string>*,
-                     OptionCallback>;
+        std::variant<std::optional<bool>*, std::optional<int32_t>*, std::optional<uint32_t>*,
+                     std::optional<int64_t>*, std::optional<uint64_t>*, std::optional<double>*,
+                     std::optional<std::string>*, std::vector<int32_t>*, std::vector<uint32_t>*,
+                     std::vector<int64_t>*, std::vector<uint64_t>*, std::vector<double>*,
+                     std::vector<std::string>*, OptionCallback>;
 
     class Option {
     public:
@@ -321,13 +322,13 @@ private:
         std::string set(string_view name, string_view value, bool ignoreDup);
 
     private:
-        std::string set(optional<bool>& target, string_view name, string_view value);
-        std::string set(optional<int32_t>& target, string_view name, string_view value);
-        std::string set(optional<uint32_t>& target, string_view name, string_view value);
-        std::string set(optional<int64_t>& target, string_view name, string_view value);
-        std::string set(optional<uint64_t>& target, string_view name, string_view value);
-        std::string set(optional<double>& target, string_view name, string_view value);
-        std::string set(optional<std::string>& target, string_view name, string_view value);
+        std::string set(std::optional<bool>& target, string_view name, string_view value);
+        std::string set(std::optional<int32_t>& target, string_view name, string_view value);
+        std::string set(std::optional<uint32_t>& target, string_view name, string_view value);
+        std::string set(std::optional<int64_t>& target, string_view name, string_view value);
+        std::string set(std::optional<uint64_t>& target, string_view name, string_view value);
+        std::string set(std::optional<double>& target, string_view name, string_view value);
+        std::string set(std::optional<std::string>& target, string_view name, string_view value);
         std::string set(std::vector<int32_t>& target, string_view name, string_view value);
         std::string set(std::vector<uint32_t>& target, string_view name, string_view value);
         std::string set(std::vector<int64_t>& target, string_view name, string_view value);
@@ -337,7 +338,7 @@ private:
         std::string set(OptionCallback& target, string_view name, string_view value);
 
         template<typename T>
-        static constexpr bool allowValue(const optional<T>& target) {
+        static constexpr bool allowValue(const std::optional<T>& target) {
             return !target.has_value();
         }
 

@@ -7,6 +7,8 @@
 //------------------------------------------------------------------------------
 #pragma once
 
+#include <new>
+
 #include "slang/util/Util.h"
 
 namespace slang {

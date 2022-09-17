@@ -112,7 +112,7 @@ Trivia Trivia::withLocation(BumpAllocator& alloc, SourceLocation location) const
     return result;
 }
 
-optional<SourceLocation> Trivia::getExplicitLocation() const {
+std::optional<SourceLocation> Trivia::getExplicitLocation() const {
     switch (kind) {
         case TriviaKind::Directive:
         case TriviaKind::SkippedSyntax:
@@ -201,7 +201,8 @@ Token::Token(BumpAllocator& alloc, TokenKind kind, span<Trivia const> trivia, st
 }
 
 Token::Token(BumpAllocator& alloc, TokenKind kind, span<Trivia const> trivia, string_view rawText,
-             SourceLocation location, double value, bool outOfRange, optional<TimeUnit> timeUnit) {
+             SourceLocation location, double value, bool outOfRange,
+             std::optional<TimeUnit> timeUnit) {
     ASSERT(kind == TokenKind::RealLiteral || kind == TokenKind::TimeLiteral);
     init(alloc, kind, trivia, rawText, location);
     info->real() = value;

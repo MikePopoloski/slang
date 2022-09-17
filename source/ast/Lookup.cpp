@@ -189,7 +189,7 @@ const Symbol* unwrapTypeParam(const Symbol* symbol) {
     return symbol;
 }
 
-optional<bool> isClassType(const Symbol& symbol) {
+std::optional<bool> isClassType(const Symbol& symbol) {
     if (symbol.isType()) {
         auto& type = symbol.as<Type>();
         if (type.isError())
@@ -514,8 +514,8 @@ bool lookupUpward(span<const NamePlusLoc> nameParts, const NameComponents& name,
     return true;
 }
 
-bool checkVisibility(const Symbol& symbol, const Scope& scope, optional<SourceRange> sourceRange,
-                     LookupResult& result) {
+bool checkVisibility(const Symbol& symbol, const Scope& scope,
+                     std::optional<SourceRange> sourceRange, LookupResult& result) {
     // All public members and all non-class symbols are visible by default.
     Visibility visibility = Lookup::getVisibility(symbol);
     if (visibility == Visibility::Public)
@@ -743,7 +743,7 @@ bool resolveColonNames(SmallVectorSized<NamePlusLoc, 8>& nameParts, int colonPar
     return lookupDownward(nameParts, name, context, result);
 }
 
-void unwrapResult(const Scope& scope, optional<SourceRange> range, LookupResult& result,
+void unwrapResult(const Scope& scope, std::optional<SourceRange> range, LookupResult& result,
                   bool unwrapGenericClasses = true) {
     if (!result.found)
         return;
@@ -1157,7 +1157,7 @@ void Lookup::selectChild(const Type& virtualInterface, SourceRange range,
 }
 
 const ClassType* Lookup::findClass(const NameSyntax& className, const ASTContext& context,
-                                   optional<DiagCode> requireInterfaceClass) {
+                                   std::optional<DiagCode> requireInterfaceClass) {
     LookupResult result;
     Lookup::name(className, context, LookupFlags::Type | LookupFlags::NoSelectors, result);
     result.reportDiags(context);
@@ -1268,7 +1268,7 @@ bool Lookup::isAccessibleFrom(const Symbol& target, const Symbol& sourceScope) {
 }
 
 bool Lookup::ensureVisible(const Symbol& symbol, const ASTContext& context,
-                           optional<SourceRange> sourceRange) {
+                           std::optional<SourceRange> sourceRange) {
     LookupResult result;
     if (checkVisibility(symbol, *context.scope, sourceRange, result))
         return true;
@@ -1278,7 +1278,7 @@ bool Lookup::ensureVisible(const Symbol& symbol, const ASTContext& context,
 }
 
 bool Lookup::ensureAccessible(const Symbol& symbol, const ASTContext& context,
-                              optional<SourceRange> sourceRange) {
+                              std::optional<SourceRange> sourceRange) {
     if (context.randomizeDetails && context.randomizeDetails->classType &&
         Lookup::isAccessibleFrom(symbol, context.randomizeDetails->classType->asSymbol())) {
         return true;
@@ -1459,7 +1459,7 @@ bool Lookup::findAssertionLocalVar(const ASTContext& context, const NameSyntax& 
 }
 
 void Lookup::unqualifiedImpl(const Scope& scope, string_view name, LookupLocation location,
-                             optional<SourceRange> sourceRange, bitmask<LookupFlags> flags,
+                             std::optional<SourceRange> sourceRange, bitmask<LookupFlags> flags,
                              SymbolIndex outOfBlockIndex, LookupResult& result) {
     auto reportRecursiveError = [&](const Symbol& symbol) {
         if (sourceRange) {

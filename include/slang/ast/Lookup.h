@@ -235,7 +235,7 @@ public:
     /// If @a requireInterfaceClass is given the resulting class will be required to be
     /// an interface class; nullptr will be returned and a diagnostic issued if it's not.
     static const ClassType* findClass(const syntax::NameSyntax& name, const ASTContext& context,
-                                      optional<DiagCode> requireInterfaceClass = {});
+                                      std::optional<DiagCode> requireInterfaceClass = {});
 
     /// Gets the containing class for the given scope. The return value is a pair, with
     /// the first element being the found class or nullptr if the scope is not within a
@@ -262,14 +262,14 @@ public:
     /// If it's not visible, and @a sourceRange is provided, an appropriate diganostic will
     /// be issued and false returned.
     static bool ensureVisible(const Symbol& symbol, const ASTContext& context,
-                              optional<SourceRange> sourceRange);
+                              std::optional<SourceRange> sourceRange);
 
     /// If the given symbol is not a class member, returns true without doing any other work.
     /// Otherwise, if the member is accessible from the provided context (in terms of static
     /// vs instance members), returns true. If it's not accessible, and @a sourceRange is provided,
     /// an appropriate diganostic will be issued and false returned.
     static bool ensureAccessible(const Symbol& symbol, const ASTContext& context,
-                                 optional<SourceRange> sourceRange);
+                                 std::optional<SourceRange> sourceRange);
 
     /// Searches a linked list of temporary variable symbols to see if any match the given name.
     /// If one is found, populates @a result and returns true. Otherwise returns false.
@@ -293,7 +293,7 @@ private:
     Lookup() = default;
 
     static void unqualifiedImpl(const Scope& scope, string_view name, LookupLocation location,
-                                optional<SourceRange> sourceRange, bitmask<LookupFlags> flags,
+                                std::optional<SourceRange> sourceRange, bitmask<LookupFlags> flags,
                                 SymbolIndex outOfBlockIndex, LookupResult& result);
 
     static void qualified(const syntax::ScopedNameSyntax& syntax, const ASTContext& context,

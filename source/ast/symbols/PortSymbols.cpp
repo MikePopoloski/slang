@@ -1639,7 +1639,7 @@ void MultiPortSymbol::serializeTo(ASTSerializer& serializer) const {
     serializer.endArray();
 }
 
-optional<span<const ConstantRange>> InterfacePortSymbol::getDeclaredRange() const {
+std::optional<span<const ConstantRange>> InterfacePortSymbol::getDeclaredRange() const {
     if (range)
         return *range;
 

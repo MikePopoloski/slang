@@ -389,7 +389,7 @@ Expression& AssignmentExpression::fromSyntax(Compilation& compilation,
     }
 
     bitmask<ASTFlags> extraFlags = ASTFlags::None;
-    optional<BinaryOperator> op;
+    std::optional<BinaryOperator> op;
     if (syntax.kind != SyntaxKind::AssignmentExpression &&
         syntax.kind != SyntaxKind::NonblockingAssignmentExpression) {
         op = getBinaryOperator(syntax.kind);
@@ -467,7 +467,7 @@ Expression& AssignmentExpression::fromSyntax(Compilation& compilation,
 }
 
 Expression& AssignmentExpression::fromComponents(
-    Compilation& compilation, optional<BinaryOperator> op, bitmask<AssignFlags> flags,
+    Compilation& compilation, std::optional<BinaryOperator> op, bitmask<AssignFlags> flags,
     Expression& lhs, Expression& rhs, SourceLocation assignLoc, const TimingControl* timingControl,
     SourceRange sourceRange, const ASTContext& context) {
 
@@ -696,7 +696,7 @@ static void checkImplicitConversions(const ASTContext& context, const Type& targ
         // to the minimum width necessary to represent them. Otherwise, even
         // code as simple as this will result in a warning:
         //    logic [3:0] a = 1;
-        optional<bitwidth_t> effective = op.getEffectiveWidth();
+        std::optional<bitwidth_t> effective = op.getEffectiveWidth();
         if (!effective)
             return;
 
@@ -831,7 +831,7 @@ ConstantValue ConversionExpression::convert(EvalContext& context, const Type& fr
     ASSUME_UNREACHABLE;
 }
 
-optional<bitwidth_t> ConversionExpression::getEffectiveWidthImpl() const {
+std::optional<bitwidth_t> ConversionExpression::getEffectiveWidthImpl() const {
     if (isImplicit())
         return operand().getEffectiveWidth();
     return type->getBitWidth();
@@ -874,7 +874,7 @@ ConstantValue NewArrayExpression::evalImpl(EvalContext& context) const {
     if (!sz)
         return nullptr;
 
-    optional<int64_t> size = sz.integer().as<int64_t>();
+    std::optional<int64_t> size = sz.integer().as<int64_t>();
     if (!size || *size < 0) {
         context.addDiag(diag::InvalidArraySize, sizeExpr().sourceRange) << sz;
         return nullptr;
@@ -1550,12 +1550,12 @@ Expression& StructuredAssignmentPatternExpression::forStruct(
     return *result;
 }
 
-static optional<int32_t> bindArrayIndexSetter(
+static std::optional<int32_t> bindArrayIndexSetter(
     const ASTContext& context, const Expression& keyExpr, const Type& elementType,
     const ExpressionSyntax& valueSyntax, SmallMap<int32_t, const Expression*, 8>& indexMap,
     SmallVector<StructuredAssignmentPatternExpression::IndexSetter>& indexSetters) {
 
-    optional<int32_t> index = context.evalInteger(keyExpr);
+    std::optional<int32_t> index = context.evalInteger(keyExpr);
     if (!index)
         return std::nullopt;
 
@@ -1636,7 +1636,7 @@ Expression& StructuredAssignmentPatternExpression::forFixedArray(
     }
 
     SmallVectorSized<const Expression*, 8> elements;
-    optional<const Expression*> cachedVal;
+    std::optional<const Expression*> cachedVal;
     auto arrayRange = type.getFixedRange();
 
     for (int32_t i = arrayRange.lower(); i <= arrayRange.upper(); i++) {
@@ -1843,7 +1843,7 @@ const Expression& ReplicatedAssignmentPatternExpression::bindReplCount(
     Compilation& comp, const ExpressionSyntax& syntax, const ASTContext& context, size_t& count) {
 
     const Expression& expr = bind(syntax, context);
-    optional<int32_t> c = context.evalInteger(expr);
+    std::optional<int32_t> c = context.evalInteger(expr);
     if (!context.requireGtZero(c, expr.sourceRange))
         return badExpr(comp, &expr);
 

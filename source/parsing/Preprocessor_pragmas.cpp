@@ -335,8 +335,8 @@ void Preprocessor::resetProtectState() {
     protectEncoding = ProtectEncoding::Raw;
 }
 
-optional<uint32_t> Preprocessor::requireUInt32(const PragmaExpressionSyntax& expr) {
-    auto checkResult = [&](const SVInt& svi) -> optional<uint32_t> {
+std::optional<uint32_t> Preprocessor::requireUInt32(const PragmaExpressionSyntax& expr) {
+    auto checkResult = [&](const SVInt& svi) -> std::optional<uint32_t> {
         auto value = svi.as<int32_t>();
         if (!value || *value < 0) {
             addDiag(diag::InvalidPragmaNumber, expr.sourceRange());

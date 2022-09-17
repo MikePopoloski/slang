@@ -118,7 +118,7 @@ ModuleHeaderSyntax& Parser::parseModuleHeader() {
     }
 
     if (moduleKeyword.kind == TokenKind::PackageKeyword) {
-        optional<SourceRange> errorRange;
+        std::optional<SourceRange> errorRange;
         if (!imports.empty())
             errorRange = imports[0]->sourceRange();
         else if (parameterList)
@@ -1281,7 +1281,7 @@ bool Parser::isHierarchyInstantiation(bool requireName) {
     if (peek(index++).kind != TokenKind::Identifier)
         return false;
 
-    // skip over optional parameter value assignment
+    // skip over std::optional parameter value assignment
     if (peek(index).kind == TokenKind::Hash) {
         if (peek(++index).kind != TokenKind::OpenParenthesis)
             return false;

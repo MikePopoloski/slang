@@ -180,11 +180,11 @@ void Symbol::getLexicalPath(std::string& buffer) const {
     getLexicalPathImpl(*this, buffer);
 }
 
-optional<bool> Symbol::isDeclaredBefore(const Symbol& target) const {
+std::optional<bool> Symbol::isDeclaredBefore(const Symbol& target) const {
     return isDeclaredBefore(LookupLocation::before(target));
 }
 
-optional<bool> Symbol::isDeclaredBefore(LookupLocation target) const {
+std::optional<bool> Symbol::isDeclaredBefore(LookupLocation target) const {
     LookupLocation ll = LookupLocation::before(*this);
     if (!target.getScope())
         return ll < target;

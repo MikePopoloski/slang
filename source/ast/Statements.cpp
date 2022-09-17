@@ -1678,7 +1678,7 @@ ER RepeatLoopStatement::evalImpl(EvalContext& context) const {
     if (cv.bad())
         return ER::Fail;
 
-    optional<int64_t> oc = cv.integer().as<int64_t>();
+    std::optional<int64_t> oc = cv.integer().as<int64_t>();
     if (!oc || oc < 0) {
         if (cv.integer().hasUnknown())
             oc = 0;

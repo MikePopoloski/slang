@@ -129,7 +129,7 @@ struct ParserMetadata {
     struct Node {
         TokenKind defaultNetType;
         TokenKind unconnectedDrive;
-        optional<TimeScale> timeScale;
+        std::optional<TimeScale> timeScale;
     };
 
     /// Specific metadata that was in effect when certain syntax nodes were parsed

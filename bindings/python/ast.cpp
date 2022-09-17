@@ -143,7 +143,7 @@ void registerAST(py::module_& m) {
         .def("requireNoUnknowns", &ASTContext::requireNoUnknowns)
         .def("requirePositive",
              py::overload_cast<const SVInt&, SourceRange>(&ASTContext::requirePositive, py::const_))
-        .def("requirePositive", py::overload_cast<optional<int32_t>, SourceRange>(
+        .def("requirePositive", py::overload_cast<std::optional<int32_t>, SourceRange>(
                                     &ASTContext::requirePositive, py::const_))
         .def("requireGtZero", &ASTContext::requireGtZero)
         .def("requireBooleanConvertible", &ASTContext::requireBooleanConvertible)

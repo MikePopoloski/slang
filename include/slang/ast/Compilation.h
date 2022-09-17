@@ -521,7 +521,7 @@ private:
     struct DefinitionMetadata {
         const syntax::SyntaxTree* tree = nullptr;
         const NetType* defaultNetType = nullptr;
-        optional<TimeScale> timeScale;
+        std::optional<TimeScale> timeScale;
         UnconnectedDrive unconnectedDrive = UnconnectedDrive::None;
     };
 
@@ -562,9 +562,9 @@ private:
     // that have been supressed we need space to return *something* to the caller.
     Diagnostic tempDiag;
 
-    optional<Diagnostics> cachedParseDiagnostics;
-    optional<Diagnostics> cachedSemanticDiagnostics;
-    optional<Diagnostics> cachedAllDiagnostics;
+    std::optional<Diagnostics> cachedParseDiagnostics;
+    std::optional<Diagnostics> cachedSemanticDiagnostics;
+    std::optional<Diagnostics> cachedAllDiagnostics;
 
     // A list of compilation units that have been added to the compilation.
     std::vector<const CompilationUnitSymbol*> compilationUnits;

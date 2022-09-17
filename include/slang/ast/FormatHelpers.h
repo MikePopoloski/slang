@@ -26,13 +26,13 @@ public:
     static bool checkSFormatArgs(const ASTContext& context,
                                  const span<const Expression* const>& args);
 
-    static optional<std::string> formatArgs(string_view formatString, SourceLocation loc,
-                                            const Scope& scope, EvalContext& context,
-                                            const span<const Expression* const>& args,
-                                            bool isStringLiteral);
+    static std::optional<std::string> formatArgs(string_view formatString, SourceLocation loc,
+                                                 const Scope& scope, EvalContext& context,
+                                                 const span<const Expression* const>& args,
+                                                 bool isStringLiteral);
 
-    static optional<std::string> formatDisplay(const Scope& scope, EvalContext& context,
-                                               const span<const Expression* const>& args);
+    static std::optional<std::string> formatDisplay(const Scope& scope, EvalContext& context,
+                                                    const span<const Expression* const>& args);
 
     static bool checkFinishNum(const ASTContext& context, const Expression& arg);
 

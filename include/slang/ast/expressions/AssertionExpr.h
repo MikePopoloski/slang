@@ -94,7 +94,7 @@ public:
 
     static bool checkAssertionCall(const CallExpression& call, const ASTContext& context,
                                    DiagCode outArgCode, DiagCode refArgCode,
-                                   optional<DiagCode> sysTaskCode, SourceRange range);
+                                   std::optional<DiagCode> sysTaskCode, SourceRange range);
 
     static void checkSampledValueExpr(const Expression& expr, const ASTContext& context,
                                       bool isFutureGlobal, DiagCode localVarCode,
@@ -139,7 +139,7 @@ struct SequenceRange {
     uint32_t min = 1;
 
     /// The maximum length of the range. If unset, the maximum is unbounded.
-    optional<uint32_t> max;
+    std::optional<uint32_t> max;
 
     static SequenceRange fromSyntax(const syntax::SelectorSyntax& syntax, const ASTContext& context,
                                     bool allowUnbounded);
@@ -179,9 +179,9 @@ struct SequenceRepetition {
 class SimpleAssertionExpr : public AssertionExpr {
 public:
     const Expression& expr;
-    optional<SequenceRepetition> repetition;
+    std::optional<SequenceRepetition> repetition;
 
-    SimpleAssertionExpr(const Expression& expr, optional<SequenceRepetition> repetition) :
+    SimpleAssertionExpr(const Expression& expr, std::optional<SequenceRepetition> repetition) :
         AssertionExpr(AssertionExprKind::Simple), expr(expr), repetition(repetition) {}
 
     void requireSequence(const ASTContext& context, DiagCode code) const;
@@ -234,10 +234,10 @@ public:
 class SequenceWithMatchExpr : public AssertionExpr {
 public:
     const AssertionExpr& expr;
-    optional<SequenceRepetition> repetition;
+    std::optional<SequenceRepetition> repetition;
     span<const Expression* const> matchItems;
 
-    SequenceWithMatchExpr(const AssertionExpr& expr, optional<SequenceRepetition> repetition,
+    SequenceWithMatchExpr(const AssertionExpr& expr, std::optional<SequenceRepetition> repetition,
                           span<const Expression* const> matchItems) :
         AssertionExpr(AssertionExprKind::SequenceWithMatch),
         expr(expr), repetition(repetition), matchItems(matchItems) {}
@@ -266,10 +266,10 @@ class UnaryAssertionExpr : public AssertionExpr {
 public:
     UnaryAssertionOperator op;
     const AssertionExpr& expr;
-    optional<SequenceRange> range;
+    std::optional<SequenceRange> range;
 
     UnaryAssertionExpr(UnaryAssertionOperator op, const AssertionExpr& expr,
-                       optional<SequenceRange> range) :
+                       std::optional<SequenceRange> range) :
         AssertionExpr(AssertionExprKind::Unary),
         op(op), expr(expr), range(range) {}
 

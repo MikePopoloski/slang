@@ -144,7 +144,7 @@ public:
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::Net; }
 
 private:
-    mutable optional<const TimingControl*> delay;
+    mutable std::optional<const TimingControl*> delay;
 };
 
 /// Represents a temporary variable materialized within a limited scope

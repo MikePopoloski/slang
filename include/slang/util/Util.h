@@ -7,12 +7,9 @@
 //------------------------------------------------------------------------------
 #pragma once
 
-#include <climits>     // for type size macros
 #include <cstddef>     // for std::byte
 #include <cstdint>     // for sized integer types
 #include <cstring>     // for memcpy
-#include <new>         // for placement new
-#include <optional>    // for std::optional
 #include <string_view> // for std::string_view
 #include <utility>     // for many random utility functions
 
@@ -27,7 +24,6 @@ using std::int64_t;
 using std::int8_t;
 using std::intptr_t;
 using std::nullptr_t;
-using std::optional;
 using std::ptrdiff_t;
 using std::size_t;
 using std::string_view;

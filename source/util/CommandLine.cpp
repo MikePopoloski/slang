@@ -21,36 +21,36 @@ namespace fs = std::filesystem;
 
 namespace slang {
 
-void CommandLine::add(string_view name, optional<bool>& value, string_view desc) {
+void CommandLine::add(string_view name, std::optional<bool>& value, string_view desc) {
     addInternal(name, &value, desc, {});
 }
 
-void CommandLine::add(string_view name, optional<int32_t>& value, string_view desc,
+void CommandLine::add(string_view name, std::optional<int32_t>& value, string_view desc,
                       string_view valueName) {
     addInternal(name, &value, desc, valueName);
 }
 
-void CommandLine::add(string_view name, optional<uint32_t>& value, string_view desc,
+void CommandLine::add(string_view name, std::optional<uint32_t>& value, string_view desc,
                       string_view valueName) {
     addInternal(name, &value, desc, valueName);
 }
 
-void CommandLine::add(string_view name, optional<int64_t>& value, string_view desc,
+void CommandLine::add(string_view name, std::optional<int64_t>& value, string_view desc,
                       string_view valueName) {
     addInternal(name, &value, desc, valueName);
 }
 
-void CommandLine::add(string_view name, optional<uint64_t>& value, string_view desc,
+void CommandLine::add(string_view name, std::optional<uint64_t>& value, string_view desc,
                       string_view valueName) {
     addInternal(name, &value, desc, valueName);
 }
 
-void CommandLine::add(string_view name, optional<double>& value, string_view desc,
+void CommandLine::add(string_view name, std::optional<double>& value, string_view desc,
                       string_view valueName) {
     addInternal(name, &value, desc, valueName);
 }
 
-void CommandLine::add(string_view name, optional<std::string>& value, string_view desc,
+void CommandLine::add(string_view name, std::optional<std::string>& value, string_view desc,
                       string_view valueName, bool isFileName) {
     addInternal(name, &value, desc, valueName, isFileName);
 }
@@ -700,7 +700,7 @@ std::string CommandLine::Option::set(string_view name, string_view value, bool i
         storage);
 }
 
-static optional<bool> parseBool(string_view name, string_view value, std::string& error) {
+static std::optional<bool> parseBool(string_view name, string_view value, std::string& error) {
     if (value.empty())
         return true;
     if (value == "True" || value == "true")
@@ -713,7 +713,7 @@ static optional<bool> parseBool(string_view name, string_view value, std::string
 }
 
 template<typename T>
-static optional<T> parseInt(string_view name, string_view value, std::string& error) {
+static std::optional<T> parseInt(string_view name, string_view value, std::string& error) {
     if (value.empty()) {
         error = fmt::format("expected value for argument '{}'", name);
         return {};
@@ -730,62 +730,63 @@ static optional<T> parseInt(string_view name, string_view value, std::string& er
     return val;
 }
 
-static optional<double> parseDouble(string_view name, string_view value, std::string& error) {
+static std::optional<double> parseDouble(string_view name, string_view value, std::string& error) {
     if (value.empty()) {
         error = fmt::format("expected value for argument '{}'", name);
         return {};
     }
 
     size_t pos;
-    optional<double> val = strToDouble(value, &pos);
+    std::optional<double> val = strToDouble(value, &pos);
     if (!val || pos != value.size())
         error = fmt::format("invalid value '{}' for float argument '{}'", value, name);
 
     return val;
 }
 
-std::string CommandLine::Option::set(optional<bool>& target, string_view name, string_view value) {
+std::string CommandLine::Option::set(std::optional<bool>& target, string_view name,
+                                     string_view value) {
     std::string error;
     target = parseBool(name, value, error);
     return error;
 }
 
-std::string CommandLine::Option::set(optional<int32_t>& target, string_view name,
+std::string CommandLine::Option::set(std::optional<int32_t>& target, string_view name,
                                      string_view value) {
     std::string error;
     target = parseInt<int32_t>(name, value, error);
     return error;
 }
 
-std::string CommandLine::Option::set(optional<uint32_t>& target, string_view name,
+std::string CommandLine::Option::set(std::optional<uint32_t>& target, string_view name,
                                      string_view value) {
     std::string error;
     target = parseInt<uint32_t>(name, value, error);
     return error;
 }
 
-std::string CommandLine::Option::set(optional<int64_t>& target, string_view name,
+std::string CommandLine::Option::set(std::optional<int64_t>& target, string_view name,
                                      string_view value) {
     std::string error;
     target = parseInt<int64_t>(name, value, error);
     return error;
 }
 
-std::string CommandLine::Option::set(optional<uint64_t>& target, string_view name,
+std::string CommandLine::Option::set(std::optional<uint64_t>& target, string_view name,
                                      string_view value) {
     std::string error;
     target = parseInt<uint64_t>(name, value, error);
     return error;
 }
 
-std::string CommandLine::Option::set(optional<double>& target, string_view name,
+std::string CommandLine::Option::set(std::optional<double>& target, string_view name,
                                      string_view value) {
     std::string error;
     target = parseDouble(name, value, error);
     return error;
 }
 
-std::string CommandLine::Option::set(optional<std::string>& target, string_view,
+std::string CommandLine::Option::set(std::optional<std::string>& target, string_view,
                                      string_view value) {
     target = value;
     return {};

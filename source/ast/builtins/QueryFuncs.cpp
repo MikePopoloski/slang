@@ -234,7 +234,7 @@ protected:
             if (!iv)
                 return {};
 
-            optional<int32_t> oi = iv.integer().as<int32_t>();
+            std::optional<int32_t> oi = iv.integer().as<int32_t>();
             if (!oi || *oi <= 0)
                 return DimResult::OutOfRange();
 
@@ -308,7 +308,7 @@ protected:
             return false;
         };
 
-        optional<int32_t> index = iv.integer().as<int32_t>();
+        std::optional<int32_t> index = iv.integer().as<int32_t>();
         if (!index || *index <= 0)
             return error();
 

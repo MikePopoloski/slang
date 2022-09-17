@@ -230,8 +230,8 @@ bool ValueExpressionBase::checkVariableAssignment(const ASTContext& context,
     return true;
 }
 
-optional<bitwidth_t> ValueExpressionBase::getEffectiveWidthImpl() const {
-    auto cvToWidth = [this](const ConstantValue& cv) -> optional<bitwidth_t> {
+std::optional<bitwidth_t> ValueExpressionBase::getEffectiveWidthImpl() const {
+    auto cvToWidth = [this](const ConstantValue& cv) -> std::optional<bitwidth_t> {
         if (!cv.isInteger())
             return std::nullopt;
 
@@ -774,7 +774,7 @@ Expression& AssertionInstanceExpression::fromLookup(const Symbol& symbol,
     for (auto formal : formalPorts) {
         const ASTContext* argCtx = &context;
         const PropertyExprSyntax* expr = nullptr;
-        optional<ASTContext> defValCtx;
+        std::optional<ASTContext> defValCtx;
 
         auto setDefault = [&] {
             expr = formal->defaultValueSyntax;
@@ -1202,7 +1202,7 @@ ConstantValue MinTypMaxExpression::evalImpl(EvalContext& context) const {
     return selected().eval(context);
 }
 
-optional<bitwidth_t> MinTypMaxExpression::getEffectiveWidthImpl() const {
+std::optional<bitwidth_t> MinTypMaxExpression::getEffectiveWidthImpl() const {
     return selected().getEffectiveWidth();
 }
 

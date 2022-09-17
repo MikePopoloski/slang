@@ -18,7 +18,7 @@ static const double log2_10 = log2(10.0);
 
 namespace slang::SFormat {
 
-static optional<uint32_t> parseUInt(const char*& ptr, const char* end) {
+static std::optional<uint32_t> parseUInt(const char*& ptr, const char* end) {
     size_t pos;
     auto result = strToUInt(string_view(ptr, size_t(end - ptr)), &pos);
     if (result)
@@ -29,12 +29,12 @@ static optional<uint32_t> parseUInt(const char*& ptr, const char* end) {
 
 bool parse(string_view str, function_ref<void(string_view)> onText,
            function_ref<void(char, size_t, size_t, const FormatOptions&)> onArg,
-           function_ref<void(DiagCode, size_t, size_t, optional<char>)> onError) {
+           function_ref<void(DiagCode, size_t, size_t, std::optional<char>)> onError) {
     SmallVectorSized<char, 16> text;
     const char* ptr = str.data();
     const char* end = str.data() + str.length();
 
-    auto err = [&](DiagCode code, const char* curr, optional<char> spec = {}) {
+    auto err = [&](DiagCode code, const char* curr, std::optional<char> spec = {}) {
         onError(code, size_t(curr - str.data()), size_t(ptr - curr), spec);
     };
 

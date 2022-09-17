@@ -43,7 +43,7 @@ string_view timeUnitToSuffix(TimeUnit unit) {
 
 TimeScaleValue::TimeScaleValue(string_view str) {
     size_t idx;
-    optional<int> i = strToInt(str, &idx);
+    auto i = strToInt(str, &idx);
     if (!i)
         throw std::invalid_argument("Not a valid timescale magnitude");
 
@@ -61,7 +61,7 @@ TimeScaleValue::TimeScaleValue(string_view str) {
     *this = *tv;
 }
 
-optional<TimeScaleValue> TimeScaleValue::fromLiteral(double value, TimeUnit unit) {
+std::optional<TimeScaleValue> TimeScaleValue::fromLiteral(double value, TimeUnit unit) {
     if (value == 1)
         return TimeScaleValue(unit, TimeScaleMagnitude::One);
     if (value == 10)

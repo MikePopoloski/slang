@@ -154,11 +154,11 @@ public:
 
     static void populateTimeScale(TimeScale& timeScale, const Scope& scope,
                                   const syntax::TimeUnitsDeclarationSyntax& syntax,
-                                  optional<SourceRange>& unitsRange,
-                                  optional<SourceRange>& precisionRange, bool isFirst);
+                                  std::optional<SourceRange>& unitsRange,
+                                  std::optional<SourceRange>& precisionRange, bool isFirst);
 
     static void populateTimeScale(TimeScale& timeScale, const Scope& scope,
-                                  optional<TimeScale> directiveTimeScale, bool hasBase,
+                                  std::optional<TimeScale> directiveTimeScale, bool hasBase,
                                   bool hasPrecision);
 
     static bool isAllowedInModport(SymbolKind kind);

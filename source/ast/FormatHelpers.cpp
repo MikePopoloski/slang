@@ -142,7 +142,7 @@ static bool checkFormatString(const ASTContext& context, const StringLiteral& ar
 
             ok &= checkArgType(context, *arg, spec, range);
         },
-        [&](DiagCode code, size_t offset, size_t len, optional<char> specifier) {
+        [&](DiagCode code, size_t offset, size_t len, std::optional<char> specifier) {
             auto& diag = context.addDiag(code, getRange(offset, len));
             if (specifier)
                 diag << *specifier;
@@ -211,10 +211,10 @@ static bool formatSpecialArg(char spec, const Scope& scope, std::string& result)
     }
 }
 
-optional<std::string> FmtHelpers::formatArgs(string_view formatString, SourceLocation loc,
-                                             const Scope& scope, EvalContext& context,
-                                             const span<const Expression* const>& args,
-                                             bool isStringLiteral) {
+std::optional<std::string> FmtHelpers::formatArgs(string_view formatString, SourceLocation loc,
+                                                  const Scope& scope, EvalContext& context,
+                                                  const span<const Expression* const>& args,
+                                                  bool isStringLiteral) {
     auto getRange = [&](size_t offset, size_t len) {
         // If this is not a string literal, we can't meaningfully get an offset.
         if (!isStringLiteral)
@@ -263,7 +263,7 @@ optional<std::string> FmtHelpers::formatArgs(string_view formatString, SourceLoc
 
             SFormat::formatArg(result, value, spec, options);
         },
-        [&](DiagCode code, size_t offset, size_t len, optional<char> specifier) {
+        [&](DiagCode code, size_t offset, size_t len, std::optional<char> specifier) {
             // If this is from a string literal format string, we already checked
             // the string at expression creation time, so don't re-issue diagnostics.
             if (isStringLiteral)
@@ -310,8 +310,8 @@ static char getDefaultSpecifier(const Expression& expr, LiteralBase defaultBase)
     return 'p';
 }
 
-optional<std::string> FmtHelpers::formatDisplay(const Scope& scope, EvalContext& context,
-                                                const span<const Expression* const>& args) {
+std::optional<std::string> FmtHelpers::formatDisplay(const Scope& scope, EvalContext& context,
+                                                     const span<const Expression* const>& args) {
     std::string result;
     auto argIt = args.begin();
     while (argIt != args.end()) {
@@ -348,7 +348,7 @@ optional<std::string> FmtHelpers::formatDisplay(const Scope& scope, EvalContext&
                         SFormat::formatArg(result, value, specifier, options);
                     }
                 },
-                [](DiagCode, size_t, size_t, optional<char>) {});
+                [](DiagCode, size_t, size_t, std::optional<char>) {});
 
             if (!ok)
                 return std::nullopt;

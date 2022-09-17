@@ -35,7 +35,7 @@ public:
     /// @a defaultValue is provided, the type must be integral.
     FormalArgumentSymbol& addArg(string_view name, const Type& type,
                                  ArgumentDirection direction = ArgumentDirection::In,
-                                 optional<SVInt> defaultValue = {});
+                                 std::optional<SVInt> defaultValue = {});
 
     /// Makes a copy of the given argument and adds it to this method.
     FormalArgumentSymbol& copyArg(const FormalArgumentSymbol& fromArg);

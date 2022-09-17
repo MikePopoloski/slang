@@ -610,7 +610,7 @@ public:
     struct LoopDim {
         /// The static range of the dimension, or nullopt if the
         /// dimension is dynamically sized.
-        optional<ConstantRange> range;
+        std::optional<ConstantRange> range;
 
         /// The loop variable for this dimension, or nullptr if
         /// the dimension is being skipped.

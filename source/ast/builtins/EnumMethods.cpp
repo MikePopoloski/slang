@@ -101,7 +101,7 @@ public:
             count.setSigned(true);
         }
 
-        optional<size_t> foundIndex;
+        std::optional<size_t> foundIndex;
         SmallVectorSized<const EnumValueSymbol*, 8> values;
         const EnumType& type = args[0]->type->getCanonicalType().as<EnumType>();
         auto& targetInt = val.integer();

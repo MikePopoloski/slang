@@ -228,7 +228,7 @@ public:
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::UnknownModule; }
 
 private:
-    mutable optional<span<const AssertionExpr* const>> ports;
+    mutable std::optional<span<const AssertionExpr* const>> ports;
     mutable span<string_view const> portNames;
     mutable bool mustBeChecker = false;
 };
@@ -259,8 +259,8 @@ public:
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::PrimitiveInstance; }
 
 private:
-    mutable optional<span<const Expression* const>> ports;
-    mutable optional<const TimingControl*> delay;
+    mutable std::optional<span<const Expression* const>> ports;
+    mutable std::optional<const TimingControl*> delay;
 };
 
 } // namespace slang::ast

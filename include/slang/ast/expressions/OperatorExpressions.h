@@ -29,7 +29,7 @@ public:
 
     ConstantValue evalImpl(EvalContext& context) const;
     bool propagateType(const ASTContext& context, const Type& newType);
-    optional<bitwidth_t> getEffectiveWidthImpl() const;
+    std::optional<bitwidth_t> getEffectiveWidthImpl() const;
 
     void serializeTo(ASTSerializer& serializer) const;
 
@@ -70,7 +70,7 @@ public:
 
     ConstantValue evalImpl(EvalContext& context) const;
     bool propagateType(const ASTContext& context, const Type& newType);
-    optional<bitwidth_t> getEffectiveWidthImpl() const;
+    std::optional<bitwidth_t> getEffectiveWidthImpl() const;
 
     void serializeTo(ASTSerializer& serializer) const;
 
@@ -117,7 +117,7 @@ public:
 
     ConstantValue evalImpl(EvalContext& context) const;
     bool propagateType(const ASTContext& context, const Type& newType);
-    optional<bitwidth_t> getEffectiveWidthImpl() const;
+    std::optional<bitwidth_t> getEffectiveWidthImpl() const;
 
     void serializeTo(ASTSerializer& serializer) const;
 
@@ -254,7 +254,7 @@ public:
     struct StreamExpression {
         not_null<const Expression*> operand;
         const Expression* withExpr;
-        optional<bitwidth_t> constantWithWidth;
+        std::optional<bitwidth_t> constantWithWidth;
     };
 
     StreamingConcatenationExpression(const Type& type, size_t sliceSize,

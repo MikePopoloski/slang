@@ -173,7 +173,7 @@ Expression& ElementSelectExpression::fromSyntax(Compilation& compilation, Expres
     if (valueType.hasFixedRange()) {
         ConstantValue selVal;
         if (!context.inUnevaluatedBranch() && (selVal = context.tryEval(*selector))) {
-            optional<int32_t> index = selVal.integer().as<int32_t>();
+            std::optional<int32_t> index = selVal.integer().as<int32_t>();
             if (!index || !valueType.getFixedRange().containsPoint(*index)) {
                 auto& diag = context.addDiag(diag::IndexOOB, selector->sourceRange);
                 diag << selVal;
@@ -308,10 +308,10 @@ LValue ElementSelectExpression::evalLValueImpl(EvalContext& context) const {
     return lval;
 }
 
-optional<ConstantRange> ElementSelectExpression::evalIndex(EvalContext& context,
-                                                           const ConstantValue& val,
-                                                           ConstantValue& associativeIndex,
-                                                           bool& softFail) const {
+std::optional<ConstantRange> ElementSelectExpression::evalIndex(EvalContext& context,
+                                                                const ConstantValue& val,
+                                                                ConstantValue& associativeIndex,
+                                                                bool& softFail) const {
     auto prevQ = context.getQueueTarget();
     if (val.isQueue())
         context.setQueueTarget(&val);
@@ -332,7 +332,7 @@ optional<ConstantRange> ElementSelectExpression::evalIndex(EvalContext& context,
         return std::nullopt;
     }
 
-    optional<int32_t> index = cs.integer().as<int32_t>();
+    std::optional<int32_t> index = cs.integer().as<int32_t>();
     if (!index) {
         if (!warnedAboutIndex)
             context.addDiag(diag::IndexOOB, sourceRange) << cs << valType;
@@ -476,7 +476,7 @@ Expression& RangeSelectExpression::fromSyntax(Compilation& compilation, Expressi
         }
     }
 
-    optional<int32_t> rv = context.evalInteger(right);
+    std::optional<int32_t> rv = context.evalInteger(right);
     if (!rv)
         return badExpr(compilation, result);
 
@@ -498,7 +498,7 @@ Expression& RangeSelectExpression::fromSyntax(Compilation& compilation, Expressi
         };
 
         if (selectionKind == RangeSelectionKind::Simple) {
-            optional<int32_t> lv = context.evalInteger(left);
+            std::optional<int32_t> lv = context.evalInteger(left);
             if (!lv)
                 return badExpr(compilation, result);
 
@@ -520,7 +520,7 @@ Expression& RangeSelectExpression::fromSyntax(Compilation& compilation, Expressi
             // If the lhs is a known constant, we can check that now too.
             ConstantValue leftVal;
             if (!context.inUnevaluatedBranch() && (leftVal = context.tryEval(left))) {
-                optional<int32_t> index = leftVal.integer().as<int32_t>();
+                std::optional<int32_t> index = leftVal.integer().as<int32_t>();
                 if (!index) {
                     auto& diag = context.addDiag(diag::IndexValueInvalid, left.sourceRange);
                     diag << leftVal;
@@ -577,7 +577,7 @@ Expression& RangeSelectExpression::fromSyntax(Compilation& compilation, Expressi
         // permit big endian [0..N] ordering.
         ConstantRange selectionRange;
         if (selectionKind == RangeSelectionKind::Simple) {
-            optional<int32_t> lv = context.evalInteger(left);
+            std::optional<int32_t> lv = context.evalInteger(left);
             if (!lv)
                 return badExpr(compilation, result);
 
@@ -682,8 +682,8 @@ LValue RangeSelectExpression::evalLValueImpl(EvalContext& context) const {
     return lval;
 }
 
-optional<ConstantRange> RangeSelectExpression::evalRange(EvalContext& context,
-                                                         const ConstantValue& val) const {
+std::optional<ConstantRange> RangeSelectExpression::evalRange(EvalContext& context,
+                                                              const ConstantValue& val) const {
     auto prevQ = context.getQueueTarget();
     if (val.isQueue())
         context.setQueueTarget(&val);
@@ -696,8 +696,8 @@ optional<ConstantRange> RangeSelectExpression::evalRange(EvalContext& context,
         return std::nullopt;
 
     const Type& valueType = *value().type;
-    optional<int32_t> li = cl.integer().as<int32_t>();
-    optional<int32_t> ri = cr.integer().as<int32_t>();
+    std::optional<int32_t> li = cl.integer().as<int32_t>();
+    std::optional<int32_t> ri = cr.integer().as<int32_t>();
     if (!li) {
         context.addDiag(diag::IndexValueInvalid, left().sourceRange) << cl << valueType;
         return std::nullopt;

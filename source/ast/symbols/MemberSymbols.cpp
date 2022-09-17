@@ -632,7 +632,7 @@ string_view ElabSystemTaskSymbol::createMessage(const ASTContext& context,
     // Format the message to string.
     auto& comp = context.getCompilation();
     EvalContext evalCtx(comp);
-    optional<std::string> str = FmtHelpers::formatDisplay(*context.scope, evalCtx, args);
+    std::optional<std::string> str = FmtHelpers::formatDisplay(*context.scope, evalCtx, args);
     evalCtx.reportDiags(context);
 
     if (!str || str->empty())
@@ -1021,7 +1021,7 @@ void AssertionPortSymbol::buildPorts(Scope& scope, const AssertionItemPortListSy
     auto& comp = scope.getCompilation();
     auto& untyped = comp.getType(SyntaxKind::Untyped);
     const DataTypeSyntax* lastType = nullptr;
-    optional<ArgumentDirection> lastLocalDir;
+    std::optional<ArgumentDirection> lastLocalDir;
 
     for (auto item : syntax.ports) {
         auto port = comp.emplace<AssertionPortSymbol>(item->name.valueText(),
@@ -1394,7 +1394,7 @@ const RandSeqProductionSymbol::CaseProd& RandSeqProductionSymbol::createCaseProd
 
     SmallVectorSized<const ExpressionSyntax*, 8> expressions;
     SmallVectorSized<ProdItem, 8> prods;
-    optional<ProdItem> defItem;
+    std::optional<ProdItem> defItem;
 
     for (auto item : syntax.items) {
         switch (item->kind) {
@@ -1475,7 +1475,7 @@ RandSeqProductionSymbol::Rule RandSeqProductionSymbol::createRule(
                 auto& expr = Expression::bind(*ries.condition, context);
                 auto ifItem = createProdItem(*ries.ifItem, context);
 
-                optional<ProdItem> elseItem;
+                std::optional<ProdItem> elseItem;
                 if (ries.elseClause)
                     elseItem = createProdItem(*ries.elseClause->item, context);
 
@@ -1503,7 +1503,7 @@ RandSeqProductionSymbol::Rule RandSeqProductionSymbol::createRule(
     }
 
     const Expression* weightExpr = nullptr;
-    optional<CodeBlockProd> codeBlock;
+    std::optional<CodeBlockProd> codeBlock;
     if (auto wc = syntax.weightClause) {
         weightExpr = &Expression::bind(*wc->weight, context);
         context.requireIntegral(*weightExpr);

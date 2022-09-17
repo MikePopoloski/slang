@@ -7,12 +7,12 @@
 //------------------------------------------------------------------------------
 #pragma once
 
+#include <optional>
+
 #include "slang/util/StringTable.h"
 
 namespace slang::syntax {
-
 enum class SyntaxKind;
-
 }
 
 namespace slang::parsing {
@@ -38,7 +38,7 @@ public:
     static TokenKind getSystemKeywordKind(string_view text);
     static string_view getTokenKindText(TokenKind kind);
     static KeywordVersion getDefaultKeywordVersion();
-    static optional<KeywordVersion> getKeywordVersion(string_view text);
+    static std::optional<KeywordVersion> getKeywordVersion(string_view text);
     static const StringTable<TokenKind>* getKeywordTable(KeywordVersion version);
 
     static syntax::SyntaxKind getDirectiveKind(string_view directive);

@@ -161,7 +161,7 @@ private:
     ArgList arguments;
     mutable const SubroutineSymbol* overrides = nullptr;
     mutable const MethodPrototypeSymbol* prototype = nullptr;
-    mutable optional<bool> cachedHasOutputArgs;
+    mutable std::optional<bool> cachedHasOutputArgs;
     mutable bool isConstructing = false;
 };
 
@@ -231,7 +231,7 @@ private:
                                                           const TSyntax& syntax);
 
     span<const FormalArgumentSymbol* const> arguments;
-    mutable optional<const SubroutineSymbol*> subroutine;
+    mutable std::optional<const SubroutineSymbol*> subroutine;
     mutable const Symbol* overrides = nullptr;
     mutable bool needsMatchCheck = false;
     mutable const ExternImpl* firstExternImpl = nullptr;

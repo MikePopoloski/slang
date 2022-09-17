@@ -35,8 +35,8 @@ public:
                            bitmask<AssignFlags> flags, const Expression* longestStaticPrefix,
                            EvalContext* customEvalContext) const;
 
-    optional<ConstantRange> evalIndex(EvalContext& context, const ConstantValue& val,
-                                      ConstantValue& associativeIndex, bool& softFail) const;
+    std::optional<ConstantRange> evalIndex(EvalContext& context, const ConstantValue& val,
+                                           ConstantValue& associativeIndex, bool& softFail) const;
 
     void serializeTo(ASTSerializer& serializer) const;
 
@@ -86,7 +86,7 @@ public:
                            bitmask<AssignFlags> flags, const Expression* longestStaticPrefix,
                            EvalContext* customEvalContext) const;
 
-    optional<ConstantRange> evalRange(EvalContext& context, const ConstantValue& val) const;
+    std::optional<ConstantRange> evalRange(EvalContext& context, const ConstantValue& val) const;
 
     void serializeTo(ASTSerializer& serializer) const;
 

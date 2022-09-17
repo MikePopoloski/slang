@@ -168,8 +168,8 @@ public:
     /// given symbol, in the same compilation unit. If it is, this method returns true.
     /// Otherwise it returns false. If the given symbol is not even in the same
     /// compilation unit as this one, returns std::nullopt.
-    optional<bool> isDeclaredBefore(const Symbol& symbol) const;
-    optional<bool> isDeclaredBefore(LookupLocation location) const;
+    std::optional<bool> isDeclaredBefore(const Symbol& symbol) const;
+    std::optional<bool> isDeclaredBefore(LookupLocation location) const;
 
     /// Gets the definition in which this symbol is declared. If the symbol isn't
     /// declared in a definition, returns nullptr.

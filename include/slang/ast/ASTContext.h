@@ -311,25 +311,26 @@ public:
     bool requireIntegral(const ConstantValue& cv, SourceRange range) const;
     bool requireNoUnknowns(const SVInt& value, SourceRange range) const;
     bool requirePositive(const SVInt& value, SourceRange range) const;
-    bool requirePositive(optional<int32_t> value, SourceRange range) const;
-    bool requireGtZero(optional<int32_t> value, SourceRange range) const;
+    bool requirePositive(std::optional<int32_t> value, SourceRange range) const;
+    bool requireGtZero(std::optional<int32_t> value, SourceRange range) const;
     bool requireBooleanConvertible(const Expression& expr) const;
     bool requireValidBitWidth(bitwidth_t width, SourceRange range) const;
-    optional<bitwidth_t> requireValidBitWidth(const SVInt& value, SourceRange range) const;
+    std::optional<bitwidth_t> requireValidBitWidth(const SVInt& value, SourceRange range) const;
 
     ConstantValue eval(const Expression& expr, bitmask<EvalFlags> extraFlags = {}) const;
     ConstantValue tryEval(const Expression& expr) const;
 
-    optional<int32_t> evalInteger(const syntax::ExpressionSyntax& syntax,
-                                  bitmask<ASTFlags> extraFlags = {}) const;
-    optional<int32_t> evalInteger(const Expression& expr) const;
+    std::optional<int32_t> evalInteger(const syntax::ExpressionSyntax& syntax,
+                                       bitmask<ASTFlags> extraFlags = {}) const;
+    std::optional<int32_t> evalInteger(const Expression& expr) const;
     EvaluatedDimension evalDimension(const syntax::VariableDimensionSyntax& syntax,
                                      bool requireRange, bool isPacked) const;
 
-    optional<ConstantRange> evalPackedDimension(
+    std::optional<ConstantRange> evalPackedDimension(
         const syntax::VariableDimensionSyntax& syntax) const;
-    optional<ConstantRange> evalPackedDimension(const syntax::ElementSelectSyntax& syntax) const;
-    optional<ConstantRange> evalUnpackedDimension(
+    std::optional<ConstantRange> evalPackedDimension(
+        const syntax::ElementSelectSyntax& syntax) const;
+    std::optional<ConstantRange> evalUnpackedDimension(
         const syntax::VariableDimensionSyntax& syntax) const;
 
     /// Subroutine argument expressions are parsed as property expressions, since we don't know

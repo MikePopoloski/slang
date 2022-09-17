@@ -76,7 +76,7 @@ class EffectiveWidthVisitor {
 
 public:
     template<typename T>
-    optional<bitwidth_t> visit(const T& expr) {
+    std::optional<bitwidth_t> visit(const T& expr) {
         if constexpr (is_detected_v<getEffectiveWidth_t, T>) {
             if (expr.bad())
                 return std::nullopt;
@@ -88,7 +88,7 @@ public:
         }
     }
 
-    optional<bitwidth_t> visitInvalid(const Expression&) { return std::nullopt; }
+    std::optional<bitwidth_t> visitInvalid(const Expression&) { return std::nullopt; }
 };
 
 struct HierarchicalVisitor {
@@ -363,7 +363,7 @@ LValue Expression::evalLValue(EvalContext& context) const {
     return visit(visitor, context);
 }
 
-optional<ConstantRange> Expression::evalSelector(EvalContext& context) const {
+std::optional<ConstantRange> Expression::evalSelector(EvalContext& context) const {
     ConstantValue unused1;
     bool unused2;
     switch (kind) {
@@ -476,7 +476,7 @@ bool Expression::canConnectToRefArg(bool isConstRef, bool allowConstClassHandle)
     }
 }
 
-optional<bitwidth_t> Expression::getEffectiveWidth() const {
+std::optional<bitwidth_t> Expression::getEffectiveWidth() const {
     EffectiveWidthVisitor visitor;
     return visit(visitor);
 }

@@ -36,7 +36,7 @@ void uintToStr(SmallVector<char>& buffer, uint64_t value) {
     uintToStrImpl(buffer, "%lu", value);
 }
 
-optional<int32_t> strToInt(string_view str, size_t* pos, int base) {
+std::optional<int32_t> strToInt(string_view str, size_t* pos, int base) {
     int32_t value;
     auto result = std::from_chars(str.data(), str.data() + str.size(), value, base);
     if (result.ec != std::errc())
@@ -47,7 +47,7 @@ optional<int32_t> strToInt(string_view str, size_t* pos, int base) {
     return value;
 }
 
-optional<uint32_t> strToUInt(string_view str, size_t* pos, int base) {
+std::optional<uint32_t> strToUInt(string_view str, size_t* pos, int base) {
     uint32_t value;
     auto result = std::from_chars(str.data(), str.data() + str.size(), value, base);
     if (result.ec != std::errc())
@@ -59,7 +59,7 @@ optional<uint32_t> strToUInt(string_view str, size_t* pos, int base) {
 }
 
 // TODO: improve this once std::from_chars is available everywhere
-optional<double> strToDouble(string_view str, size_t* pos) {
+std::optional<double> strToDouble(string_view str, size_t* pos) {
     std::string copy(str);
     const char* start = copy.c_str();
 

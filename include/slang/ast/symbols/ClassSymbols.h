@@ -105,7 +105,7 @@ private:
 
     mutable const Type* baseClass = nullptr;
     mutable const Symbol* baseConstructor = nullptr;
-    mutable optional<const Expression*> baseConstructorCall;
+    mutable std::optional<const Expression*> baseConstructorCall;
     mutable const ForwardingTypedefSymbol* firstForward = nullptr;
     mutable span<const Type* const> implementsIfaces;
     SymbolIndex headerIndex;
@@ -192,7 +192,7 @@ private:
 
     using SpecMap = flat_hash_map<SpecializationKey, const Type*, Hasher>;
     mutable SpecMap specMap;
-    mutable optional<const Type*> defaultSpecialization;
+    mutable std::optional<const Type*> defaultSpecialization;
     mutable const ForwardingTypedefSymbol* firstForward = nullptr;
     function_ref<void(Compilation&, ClassType&)> specializeFunc;
 

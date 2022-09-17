@@ -126,7 +126,7 @@ public:
 
     static EnumValueSymbol& fromSyntax(Compilation& compilation,
                                        const syntax::DeclaratorSyntax& syntax, const Type& type,
-                                       optional<int32_t> index);
+                                       std::optional<int32_t> index);
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::EnumValue; }
 
@@ -403,7 +403,7 @@ ENUM(ForwardTypedefCategory, CATEGORY);
 class ForwardingTypedefSymbol : public Symbol {
 public:
     ForwardTypedefCategory category;
-    optional<Visibility> visibility;
+    std::optional<Visibility> visibility;
 
     ForwardingTypedefSymbol(string_view name, SourceLocation loc, ForwardTypedefCategory category) :
         Symbol(SymbolKind::ForwardingTypedef, name, loc), category(category) {}

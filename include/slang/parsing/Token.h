@@ -102,7 +102,7 @@ public:
 
     /// Gets the source location of the trivia if one is explicitly known. If not, nullopt
     /// is returned to signify that the location is implicitly relative to the parent token.
-    optional<SourceLocation> getExplicitLocation() const;
+    std::optional<SourceLocation> getExplicitLocation() const;
 
     /// If this trivia is tracking a skipped syntax node or a directive, returns that node.
     /// Otherwise returns nullptr.
@@ -143,7 +143,7 @@ public:
     Token(BumpAllocator& alloc, TokenKind kind, span<Trivia const> trivia, string_view rawText,
           SourceLocation location, const SVInt& value);
     Token(BumpAllocator& alloc, TokenKind kind, span<Trivia const> trivia, string_view rawText,
-          SourceLocation location, double value, bool outOfRange, optional<TimeUnit> timeUnit);
+          SourceLocation location, double value, bool outOfRange, std::optional<TimeUnit> timeUnit);
     Token(BumpAllocator& alloc, TokenKind kind, span<Trivia const> trivia, string_view rawText,
           SourceLocation location, LiteralBase base, bool isSigned);
 

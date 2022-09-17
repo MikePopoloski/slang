@@ -25,7 +25,7 @@ public:
     SVInt getValue() const { return valueStorage; }
 
     ConstantValue evalImpl(EvalContext& context) const;
-    optional<bitwidth_t> getEffectiveWidthImpl() const;
+    std::optional<bitwidth_t> getEffectiveWidthImpl() const;
 
     void serializeTo(ASTSerializer&) const;
 

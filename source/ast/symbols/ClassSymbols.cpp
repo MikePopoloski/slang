@@ -188,10 +188,10 @@ void ClassType::populate(const Scope& scope, const ClassDeclarationSyntax& synta
     };
 
     auto& scopeNameMap = getUnelaboratedNameMap();
-    auto makeFunc =
-        [&](string_view funcName, const Type& returnType, bool allowOverride,
-            bitmask<MethodFlags> extraFlags = MethodFlags::None,
-            SubroutineKind subroutineKind = SubroutineKind::Function) -> optional<MethodBuilder> {
+    auto makeFunc = [&](string_view funcName, const Type& returnType, bool allowOverride,
+                        bitmask<MethodFlags> extraFlags = MethodFlags::None,
+                        SubroutineKind subroutineKind =
+                            SubroutineKind::Function) -> std::optional<MethodBuilder> {
         if (auto it = scopeNameMap.find(funcName); it != scopeNameMap.end()) {
             auto existing = it->second;
             if (allowOverride) {

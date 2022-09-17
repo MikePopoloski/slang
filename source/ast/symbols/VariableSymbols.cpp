@@ -49,7 +49,7 @@ void VariableSymbol::fromSyntax(Compilation& compilation, const DataDeclarationS
                                 const Scope& scope, SmallVector<const ValueSymbol*>& results) {
     bool isConst = false;
     bool inProceduralContext = scope.isProceduralContext();
-    optional<VariableLifetime> lifetime;
+    std::optional<VariableLifetime> lifetime;
     for (Token mod : syntax.modifiers) {
         switch (mod.kind) {
             case TokenKind::VarKeyword:

@@ -65,7 +65,7 @@ public:
                                               bool& shouldWarn);
 
 private:
-    mutable optional<const SubroutineSymbol*> resolver;
+    mutable std::optional<const SubroutineSymbol*> resolver;
 };
 
 } // namespace slang::ast

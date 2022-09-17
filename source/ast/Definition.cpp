@@ -93,8 +93,8 @@ bool Definition::ParameterDecl::hasDefault() const {
 
 Definition::Definition(const Scope& scope, LookupLocation lookupLocation,
                        const ModuleDeclarationSyntax& syntax, const NetType& defaultNetType,
-                       UnconnectedDrive unconnectedDrive, optional<TimeScale> directiveTimeScale,
-                       const SyntaxTree* syntaxTree) :
+                       UnconnectedDrive unconnectedDrive,
+                       std::optional<TimeScale> directiveTimeScale, const SyntaxTree* syntaxTree) :
     syntax(syntax),
     defaultNetType(defaultNetType), scope(scope), unconnectedDrive(unconnectedDrive),
     syntaxTree(syntaxTree) {
@@ -117,8 +117,8 @@ Definition::Definition(const Scope& scope, LookupLocation lookupLocation,
         ParameterBuilder::createDecls(scope, *header.parameters, parameters);
 
     bool first = true;
-    optional<SourceRange> unitsRange;
-    optional<SourceRange> precisionRange;
+    std::optional<SourceRange> unitsRange;
+    std::optional<SourceRange> precisionRange;
 
     for (auto member : syntax.members) {
         if (member->kind == SyntaxKind::TimeUnitsDeclaration) {

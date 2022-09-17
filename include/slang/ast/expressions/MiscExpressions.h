@@ -23,7 +23,7 @@ public:
     bool requireLValueImpl(const ASTContext& context, SourceLocation location,
                            bitmask<AssignFlags> flags, const Expression* longestStaticPrefix,
                            EvalContext* customEvalContext) const;
-    optional<bitwidth_t> getEffectiveWidthImpl() const;
+    std::optional<bitwidth_t> getEffectiveWidthImpl() const;
 
     void serializeTo(ASTSerializer& serializer) const;
 
@@ -254,7 +254,7 @@ public:
 
     ConstantValue evalImpl(EvalContext& context) const;
     bool propagateType(const ASTContext& context, const Type& newType);
-    optional<bitwidth_t> getEffectiveWidthImpl() const;
+    std::optional<bitwidth_t> getEffectiveWidthImpl() const;
 
     void serializeTo(ASTSerializer& serializer) const;
 
@@ -317,7 +317,7 @@ public:
 
     struct DistItem {
         const Expression& value;
-        optional<DistWeight> weight;
+        std::optional<DistWeight> weight;
     };
 
     DistExpression(const Type& type, const Expression& left, span<DistItem> items,

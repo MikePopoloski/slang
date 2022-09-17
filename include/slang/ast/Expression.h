@@ -251,7 +251,7 @@ public:
     /// Evaluates the expression as a selector and returns the selection range that
     /// results. If the evaluates fails or the expression does not represent a selection
     /// std::nullopt will be returned.
-    optional<ConstantRange> evalSelector(EvalContext& context) const;
+    std::optional<ConstantRange> evalSelector(EvalContext& context) const;
 
     /// Verifies that this expression is a valid lvalue and that each element
     /// of that lvalue can be assigned to. If it's not, appropriate diagnostics
@@ -273,7 +273,7 @@ public:
     /// Traverses the expression tree and computes what its width would be (in bits)
     /// if the types of all known constants were declared with only the bits necessary to
     /// represent them. If any encountered expressions have errors, returns nullopt.
-    optional<bitwidth_t> getEffectiveWidth() const;
+    std::optional<bitwidth_t> getEffectiveWidth() const;
 
     /// If this expression is a reference to a symbol, returns a pointer to that symbol.
     /// Otherwise, returns null. If the expression is a member access of a struct

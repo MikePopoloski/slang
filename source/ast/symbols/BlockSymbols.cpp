@@ -66,7 +66,7 @@ static std::pair<string_view, SourceLocation> getLabel(const StatementSyntax& sy
 static StatementBlockSymbol* createBlock(
     const Scope& scope, const StatementSyntax& syntax, string_view name, SourceLocation loc,
     StatementBlockKind blockKind = StatementBlockKind::Sequential,
-    optional<VariableLifetime> lifetime = {}) {
+    std::optional<VariableLifetime> lifetime = {}) {
 
     if (!lifetime.has_value()) {
         auto& scopeSym = scope.asSymbol();
@@ -383,7 +383,7 @@ void GenerateBlockSymbol::fromSyntax(Compilation& compilation, const IfGenerateS
                                      const ASTContext& context, uint32_t constructIndex,
                                      bool isInstantiated,
                                      SmallVector<GenerateBlockSymbol*>& results) {
-    optional<bool> selector;
+    std::optional<bool> selector;
     if (isInstantiated) {
         auto& cond = Expression::bind(*syntax.condition, context);
         ConstantValue cv = context.eval(cond);

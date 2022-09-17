@@ -73,7 +73,7 @@ public:
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::CovergroupType; }
 
 private:
-    mutable optional<const TimingControl*> event;
+    mutable std::optional<const TimingControl*> event;
 };
 
 class BinsSelectExpr;
@@ -183,7 +183,7 @@ public:
     }
 
 private:
-    mutable optional<const Expression*> iffExpr;
+    mutable std::optional<const Expression*> iffExpr;
 };
 
 /// Represents the body of a cover cross type, separated out because the
@@ -227,7 +227,7 @@ public:
     }
 
 private:
-    mutable optional<const Expression*> iffExpr;
+    mutable std::optional<const Expression*> iffExpr;
 };
 
 // clang-format off

@@ -111,7 +111,7 @@ public:
     void popDesignElementStack() { designElementDepth--; }
 
     /// Gets the currently active time scale value, if any has been set by the user.
-    const optional<TimeScale>& getTimeScale() const { return activeTimeScale; }
+    const std::optional<TimeScale>& getTimeScale() const { return activeTimeScale; }
 
     /// Gets the default net type to use if none is specified. This is set via
     /// the `default_nettype directive. If it is set to "none" by the user, this
@@ -220,7 +220,7 @@ private:
                                SmallVector<Token>& skippedTokens, bool isSingleLine);
 
     // Pragma helpers
-    optional<uint32_t> requireUInt32(const syntax::PragmaExpressionSyntax& expr);
+    std::optional<uint32_t> requireUInt32(const syntax::PragmaExpressionSyntax& expr);
     void skipMacroTokensBeforeProtectRegion(Token directive, SmallVector<Token>& skippedTokens);
 
     // Specifies possible macro intrinsics.
@@ -386,7 +386,7 @@ private:
 
     /// Various state set by preprocessor directives.
     std::vector<KeywordVersion> keywordVersionStack;
-    optional<TimeScale> activeTimeScale;
+    std::optional<TimeScale> activeTimeScale;
     TokenKind defaultNetType = TokenKind::WireKeyword;
     TokenKind unconnectedDrive = TokenKind::Unknown;
 

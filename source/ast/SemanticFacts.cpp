@@ -134,10 +134,10 @@ StatementBlockKind SemanticFacts::getStatementBlockKind(const BlockStatementSynt
 
 void SemanticFacts::populateTimeScale(TimeScale& timeScale, const Scope& scope,
                                       const TimeUnitsDeclarationSyntax& syntax,
-                                      optional<SourceRange>& unitsRange,
-                                      optional<SourceRange>& precisionRange, bool isFirst) {
+                                      std::optional<SourceRange>& unitsRange,
+                                      std::optional<SourceRange>& precisionRange, bool isFirst) {
     bool errored = false;
-    auto handle = [&](Token token, optional<SourceRange>& prevRange, TimeScaleValue& value) {
+    auto handle = [&](Token token, std::optional<SourceRange>& prevRange, TimeScaleValue& value) {
         // If there were syntax errors just bail out, diagnostics have already been issued.
         if (token.isMissing() || token.kind != TokenKind::TimeLiteral)
             return;
@@ -185,7 +185,7 @@ void SemanticFacts::populateTimeScale(TimeScale& timeScale, const Scope& scope,
 }
 
 void SemanticFacts::populateTimeScale(TimeScale& timeScale, const Scope& scope,
-                                      optional<TimeScale> directiveTimeScale, bool hasBase,
+                                      std::optional<TimeScale> directiveTimeScale, bool hasBase,
                                       bool hasPrecision) {
     // If no time unit was set, infer one based on the following rules:
     // - If the scope is nested (inside another definition), inherit from that definition.
@@ -195,7 +195,7 @@ void SemanticFacts::populateTimeScale(TimeScale& timeScale, const Scope& scope,
     if (hasBase && hasPrecision)
         return;
 
-    optional<TimeScale> ts;
+    std::optional<TimeScale> ts;
     if (scope.asSymbol().kind == SymbolKind::CompilationUnit)
         ts = directiveTimeScale;
 

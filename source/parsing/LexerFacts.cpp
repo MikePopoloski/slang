@@ -641,7 +641,7 @@ KeywordVersion LexerFacts::getDefaultKeywordVersion() {
     return KeywordVersion::v1800_2017;
 }
 
-optional<KeywordVersion> LexerFacts::getKeywordVersion(string_view text) {
+std::optional<KeywordVersion> LexerFacts::getKeywordVersion(string_view text) {
     KeywordVersion version;
     if (keywordVersionTable.lookup(text, version))
         return version;

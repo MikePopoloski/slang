@@ -90,7 +90,7 @@ private:
     Token lexApostrophe();
 
     Token lexStringLiteral();
-    optional<TimeUnit> lexTimeLiteral();
+    std::optional<TimeUnit> lexTimeLiteral();
 
     template<bool StopAfterNewline>
     void lexTrivia();

@@ -9,7 +9,7 @@
 
 #include <cstdlib>
 #include <cstring>
-#include <iterator>
+#include <new>
 
 #include "slang/util/BumpAllocator.h"
 

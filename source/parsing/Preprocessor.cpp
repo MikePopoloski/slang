@@ -803,8 +803,8 @@ Trivia Preprocessor::handleLineDirective(Token directive) {
     auto result = alloc.emplace<LineDirectiveSyntax>(directive, lineNumber, fileName, level);
 
     if (!lineNumber.isMissing() && !fileName.isMissing() && !level.isMissing()) {
-        optional<uint8_t> levNum = level.intValue().as<uint8_t>();
-        optional<size_t> lineNum = lineNumber.intValue().as<size_t>();
+        auto levNum = level.intValue().as<uint8_t>();
+        auto lineNum = lineNumber.intValue().as<size_t>();
 
         if (!levNum.has_value() || (*levNum != 0 && *levNum != 1 && *levNum != 2)) {
             // We don't actually use the level for anything, but the spec allows

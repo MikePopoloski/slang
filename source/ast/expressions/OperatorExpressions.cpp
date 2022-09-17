@@ -437,7 +437,7 @@ bool UnaryExpression::propagateType(const ASTContext& context, const Type& newTy
     ASSUME_UNREACHABLE;
 }
 
-optional<bitwidth_t> UnaryExpression::getEffectiveWidthImpl() const {
+std::optional<bitwidth_t> UnaryExpression::getEffectiveWidthImpl() const {
     switch (op) {
         case UnaryOperator::Plus:
         case UnaryOperator::Minus:
@@ -857,7 +857,7 @@ bool BinaryExpression::propagateType(const ASTContext& context, const Type& newT
     ASSUME_UNREACHABLE;
 }
 
-optional<bitwidth_t> BinaryExpression::getEffectiveWidthImpl() const {
+std::optional<bitwidth_t> BinaryExpression::getEffectiveWidthImpl() const {
     switch (op) {
         case BinaryOperator::Add:
         case BinaryOperator::Subtract:
@@ -1063,7 +1063,7 @@ bool ConditionalExpression::propagateType(const ASTContext& context, const Type&
     return true;
 }
 
-optional<bitwidth_t> ConditionalExpression::getEffectiveWidthImpl() const {
+std::optional<bitwidth_t> ConditionalExpression::getEffectiveWidthImpl() const {
     return std::max(left().getEffectiveWidth(), right().getEffectiveWidth());
 }
 
@@ -1590,7 +1590,7 @@ Expression& ReplicationExpression::fromSyntax(Compilation& compilation,
         return *result;
     }
 
-    optional<int32_t> count = context.evalInteger(left);
+    std::optional<int32_t> count = context.evalInteger(left);
     if (!count)
         return badExpr(compilation, result);
 
@@ -1641,7 +1641,7 @@ ConstantValue ReplicationExpression::evalImpl(EvalContext& context) const {
         return ConstantValue::NullPlaceholder();
 
     if (type->isString()) {
-        optional<int32_t> optCount = c.integer().as<int32_t>();
+        std::optional<int32_t> optCount = c.integer().as<int32_t>();
         if (!optCount || *optCount < 0) {
             context.addDiag(diag::ConstEvalReplicationCountInvalid, count().sourceRange) << c;
             return nullptr;
@@ -1704,7 +1704,7 @@ Expression& StreamingConcatenationExpression::fromSyntax(
         }
         else {
             // It shall be an error for the value to be zero or negative.
-            optional<int32_t> count = context.evalInteger(sliceExpr);
+            std::optional<int32_t> count = context.evalInteger(sliceExpr);
             if (!context.requireGtZero(count, sliceExpr.sourceRange))
                 return badResult();
             sliceSize = static_cast<size_t>(*count);
@@ -1739,7 +1739,7 @@ Expression& StreamingConcatenationExpression::fromSyntax(
             return badResult();
 
         const Expression* withExpr = nullptr;
-        optional<bitwidth_t> constantWithWidth;
+        std::optional<bitwidth_t> constantWithWidth;
         if (argSyntax->withRange) {
             // The expression before the with can be any one-dimensional unpacked array
             // (including a queue). Interpreted as fixed-sized unpacked arrays,

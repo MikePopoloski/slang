@@ -257,7 +257,7 @@ AssertionExpr& AssertionExpr::badExpr(Compilation& compilation, const AssertionE
 
 bool AssertionExpr::checkAssertionCall(const CallExpression& call, const ASTContext& context,
                                        DiagCode outArgCode, DiagCode refArgCode,
-                                       optional<DiagCode> sysTaskCode, SourceRange range) {
+                                       std::optional<DiagCode> sysTaskCode, SourceRange range) {
     if (call.isSystemCall()) {
         auto& sub = *std::get<1>(call.subroutine).subroutine;
         if (sub.kind == SubroutineKind::Function && sysTaskCode) {
@@ -486,7 +486,7 @@ AssertionExpr& SimpleAssertionExpr::fromSyntax(const SimpleSequenceExprSyntax& s
     auto& comp = context.getCompilation();
     auto& expr = bindExpr(*syntax.expr, context, /* allowInstances */ true);
 
-    optional<SequenceRepetition> repetition;
+    std::optional<SequenceRepetition> repetition;
     if (syntax.repetition) {
         repetition.emplace(*syntax.repetition, context);
 
@@ -716,7 +716,7 @@ AssertionExpr& SequenceWithMatchExpr::fromSyntax(const ParenthesizedSequenceExpr
     auto& expr = bind(*syntax.expr, context);
     expr.requireSequence(context);
 
-    optional<SequenceRepetition> repetition;
+    std::optional<SequenceRepetition> repetition;
     if (syntax.repetition) {
         repetition.emplace(*syntax.repetition, context);
         if (repetition->kind != SequenceRepetition::Consecutive)
@@ -796,7 +796,7 @@ AssertionExpr& UnaryAssertionExpr::fromSyntax(const UnarySelectPropertyExprSynta
     auto& comp = context.getCompilation();
     auto op = getUnaryOp(syntax.op.kind);
 
-    optional<SequenceRange> range;
+    std::optional<SequenceRange> range;
     if (syntax.selector) {
         bool allowUnbounded = op == UnaryAssertionOperator::Always ||
                               op == UnaryAssertionOperator::SEventually;

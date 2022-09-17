@@ -7,15 +7,15 @@
 #include "slang/util/CommandLine.h"
 
 TEST_CASE("Test CommandLine -- basic") {
-    optional<bool> a, b, longFlag, longFlag2;
-    optional<std::string> c;
-    optional<int32_t> d;
-    optional<uint64_t> ext;
-    optional<double> ext2;
-    optional<uint32_t> unused1;
-    optional<int64_t> unused2;
-    optional<uint32_t> used1;
-    optional<int64_t> used2;
+    std::optional<bool> a, b, longFlag, longFlag2;
+    std::optional<std::string> c;
+    std::optional<int32_t> d;
+    std::optional<uint64_t> ext;
+    std::optional<double> ext2;
+    std::optional<uint32_t> unused1;
+    std::optional<int64_t> unused2;
+    std::optional<uint32_t> used1;
+    std::optional<int64_t> used2;
     std::vector<std::string> multi;
     std::vector<std::string> vals;
     int someCounter = 0;
@@ -119,7 +119,7 @@ OPTIONS:
 }
 
 TEST_CASE("Test CommandLine -- nonspan") {
-    optional<bool> a;
+    std::optional<bool> a;
     CommandLine cmdLine;
     cmdLine.add("-a", a, "SDF");
 
@@ -215,7 +215,7 @@ $)qq"sv;
 }
 
 TEST_CASE("Test CommandLine -- programmer errors") {
-    optional<bool> foo;
+    std::optional<bool> foo;
 
     CommandLine cmdLine;
 
@@ -237,9 +237,9 @@ TEST_CASE("Test CommandLine -- programmer errors") {
 }
 
 TEST_CASE("Test CommandLine -- user errors") {
-    optional<int32_t> foo;
-    optional<double> bar;
-    optional<bool> frob;
+    std::optional<int32_t> foo;
+    std::optional<double> bar;
+    std::optional<bool> frob;
     std::vector<std::string> multi;
 
     CommandLine cmdLine;
@@ -265,9 +265,9 @@ TEST_CASE("Test CommandLine -- user errors") {
 }
 
 TEST_CASE("Test CommandLine -- grouping") {
-    optional<bool> a;
-    optional<bool> b;
-    optional<std::string> foo;
+    std::optional<bool> a;
+    std::optional<bool> b;
+    std::optional<std::string> foo;
 
     CommandLine cmdLine;
     cmdLine.add("-a", a, "");
@@ -282,9 +282,9 @@ TEST_CASE("Test CommandLine -- grouping") {
 }
 
 TEST_CASE("Test CommandLine -- grouping with space") {
-    optional<bool> a;
-    optional<bool> b;
-    optional<std::string> foo;
+    std::optional<bool> a;
+    std::optional<bool> b;
+    std::optional<std::string> foo;
 
     CommandLine cmdLine;
     cmdLine.add("-a", a, "");
@@ -299,9 +299,9 @@ TEST_CASE("Test CommandLine -- grouping with space") {
 }
 
 TEST_CASE("Test CommandLine -- grouping with equals") {
-    optional<bool> a;
-    optional<bool> b;
-    optional<std::string> foo;
+    std::optional<bool> a;
+    std::optional<bool> b;
+    std::optional<std::string> foo;
 
     CommandLine cmdLine;
     cmdLine.add("-a", a, "");
@@ -316,9 +316,9 @@ TEST_CASE("Test CommandLine -- grouping with equals") {
 }
 
 TEST_CASE("Test CommandLine -- grouping no value") {
-    optional<bool> a;
-    optional<bool> b;
-    optional<bool> c;
+    std::optional<bool> a;
+    std::optional<bool> b;
+    std::optional<bool> c;
 
     CommandLine cmdLine;
     cmdLine.add("-a", a, "");
@@ -333,8 +333,8 @@ TEST_CASE("Test CommandLine -- grouping no value") {
 }
 
 TEST_CASE("Test CommandLine -- grouping error") {
-    optional<bool> a;
-    optional<std::string> foo;
+    std::optional<bool> a;
+    std::optional<std::string> foo;
 
     CommandLine cmdLine;
     cmdLine.add("-a", a, "");
@@ -348,9 +348,9 @@ TEST_CASE("Test CommandLine -- grouping error") {
 }
 
 TEST_CASE("Test CommandLine -- grouping trailing error") {
-    optional<bool> a;
-    optional<bool> b;
-    optional<std::string> foo;
+    std::optional<bool> a;
+    std::optional<bool> b;
+    std::optional<std::string> foo;
 
     CommandLine cmdLine;
     cmdLine.add("-a", a, "");
@@ -365,7 +365,7 @@ TEST_CASE("Test CommandLine -- grouping trailing error") {
 }
 
 TEST_CASE("Test CommandLine -- nearest match tests") {
-    optional<std::string> foo;
+    std::optional<std::string> foo;
 
     CommandLine cmdLine;
     cmdLine.add("--foo", foo, "");
@@ -379,7 +379,7 @@ TEST_CASE("Test CommandLine -- nearest match tests") {
 }
 
 TEST_CASE("Test CommandLine -- positional not allowed") {
-    optional<std::string> foo;
+    std::optional<std::string> foo;
 
     CommandLine cmdLine;
     cmdLine.add("--foo", foo, "");
@@ -392,9 +392,9 @@ TEST_CASE("Test CommandLine -- positional not allowed") {
 }
 
 TEST_CASE("Test CommandLine -- plusarg errors") {
-    optional<bool> flag;
-    optional<std::string> foo;
-    optional<double> num;
+    std::optional<bool> flag;
+    std::optional<std::string> foo;
+    std::optional<double> num;
 
     CommandLine cmdLine;
     cmdLine.add("+flag", flag, "");
@@ -411,7 +411,7 @@ TEST_CASE("Test CommandLine -- plusarg errors") {
 }
 
 TEST_CASE("Test CommandLine -- file names") {
-    optional<std::string> foo;
+    std::optional<std::string> foo;
 
     CommandLine cmdLine;
     cmdLine.add("+foo", foo, "", "", /* isFileName */ true);
@@ -422,7 +422,7 @@ TEST_CASE("Test CommandLine -- file names") {
 }
 
 TEST_CASE("Test CommandLine -- ignore duplicates") {
-    optional<int32_t> foo;
+    std::optional<int32_t> foo;
 
     CommandLine cmdLine;
     cmdLine.add("--foo", foo, "");
@@ -436,7 +436,7 @@ TEST_CASE("Test CommandLine -- ignore duplicates") {
 }
 
 TEST_CASE("Test CommandLine -- check setIgnoreCommand()") {
-    optional<int32_t> foo;
+    std::optional<int32_t> foo;
 
     CommandLine cmdLine;
     cmdLine.add("--foo", foo, "");
@@ -454,8 +454,8 @@ TEST_CASE("Test CommandLine -- check setIgnoreCommand()") {
 }
 
 TEST_CASE("Test CommandLine -- check setRenameCommand()") {
-    optional<int32_t> foo;
-    optional<int32_t> bar;
+    std::optional<int32_t> foo;
+    std::optional<int32_t> bar;
 
     CommandLine cmdLine;
     cmdLine.add("--foo", foo, "");

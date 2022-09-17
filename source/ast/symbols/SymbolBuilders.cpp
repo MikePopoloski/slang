@@ -42,7 +42,7 @@ MethodBuilder::~MethodBuilder() {
 
 FormalArgumentSymbol& MethodBuilder::addArg(string_view name, const Type& type,
                                             ArgumentDirection direction,
-                                            optional<SVInt> defaultValue) {
+                                            std::optional<SVInt> defaultValue) {
     auto arg = compilation.emplace<FormalArgumentSymbol>(name, NL, direction,
                                                          VariableLifetime::Automatic);
     arg->setType(type);

@@ -31,8 +31,8 @@ public:
 private:
     // Used for tracking whether a time scale directive is first in scope.
     bool anyMembers = false;
-    optional<SourceRange> unitsRange;
-    optional<SourceRange> precisionRange;
+    std::optional<SourceRange> unitsRange;
+    std::optional<SourceRange> precisionRange;
 };
 
 /// A SystemVerilog package construct.
@@ -60,7 +60,7 @@ public:
     static PackageSymbol& fromSyntax(const Scope& scope,
                                      const syntax::ModuleDeclarationSyntax& syntax,
                                      const NetType& defaultNetType,
-                                     optional<TimeScale> directiveTimeScale);
+                                     std::optional<TimeScale> directiveTimeScale);
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::Package; }
 

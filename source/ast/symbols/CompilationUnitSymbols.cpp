@@ -58,7 +58,7 @@ PackageSymbol::PackageSymbol(Compilation& compilation, string_view name, SourceL
 
 PackageSymbol& PackageSymbol::fromSyntax(const Scope& scope, const ModuleDeclarationSyntax& syntax,
                                          const NetType& defaultNetType,
-                                         optional<TimeScale> directiveTimeScale) {
+                                         std::optional<TimeScale> directiveTimeScale) {
     auto& comp = scope.getCompilation();
     auto lifetime = SemanticFacts::getVariableLifetime(syntax.header->lifetime);
     auto result = comp.emplace<PackageSymbol>(comp, syntax.header->name.valueText(),
@@ -68,8 +68,8 @@ PackageSymbol& PackageSymbol::fromSyntax(const Scope& scope, const ModuleDeclara
     result->setAttributes(scope, syntax.attributes);
 
     bool first = true;
-    optional<SourceRange> unitsRange;
-    optional<SourceRange> precisionRange;
+    std::optional<SourceRange> unitsRange;
+    std::optional<SourceRange> precisionRange;
     SmallVectorSized<const PackageImportItemSyntax*, 8> exportDecls;
 
     for (auto member : syntax.members) {

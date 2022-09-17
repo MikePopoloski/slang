@@ -18,7 +18,7 @@ ConstantValue* LValue::resolve() {
     if (!std::holds_alternative<Path>(value))
         return nullptr;
 
-    optional<ConstantRange> range;
+    std::optional<ConstantRange> range;
     ConstantValue* target = resolveInternal(range);
 
     // If there is no singular target, return nullptr to indicate.
@@ -125,7 +125,7 @@ void LValue::store(const ConstantValue& newValue) {
         return;
     }
 
-    optional<ConstantRange> range;
+    std::optional<ConstantRange> range;
     ConstantValue* target = resolveInternal(range);
     if (!target || target->bad())
         return;
@@ -186,7 +186,7 @@ void LValue::store(const ConstantValue& newValue) {
     }
 }
 
-ConstantValue* LValue::resolveInternal(optional<ConstantRange>& range) {
+ConstantValue* LValue::resolveInternal(std::optional<ConstantRange>& range) {
     auto& path = std::get<Path>(value);
     ConstantValue* target = path.base;
 

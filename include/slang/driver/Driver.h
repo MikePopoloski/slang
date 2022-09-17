@@ -78,7 +78,7 @@ public:
         /// @{
 
         /// The maximum depth of included files before an error is issued.
-        optional<uint32_t> maxIncludeDepth;
+        std::optional<uint32_t> maxIncludeDepth;
 
         /// A list of macros that should be defined in each compilation unit.
         std::vector<std::string> defines;
@@ -87,17 +87,17 @@ public:
         std::vector<std::string> undefines;
 
         /// If true, library files will inherit macro definitions from primary source files.
-        optional<bool> librariesInheritMacros;
+        std::optional<bool> librariesInheritMacros;
 
         /// @}
         /// @name Parsing
         /// @{
 
         /// The maximum call stack depth of parsing before an error is issued.
-        optional<uint32_t> maxParseDepth;
+        std::optional<uint32_t> maxParseDepth;
 
         /// The maximum number of lexer errors that can be encountered before giving up.
-        optional<uint32_t> maxLexerErrors;
+        std::optional<uint32_t> maxLexerErrors;
 
         /// @}
         /// @name Compilation
@@ -105,58 +105,58 @@ public:
 
         /// The maximum depth of nested module instances (and interfaces/programs),
         /// to detect infinite recursion.
-        optional<uint32_t> maxInstanceDepth;
+        std::optional<uint32_t> maxInstanceDepth;
 
         /// The maximum number of steps that will be taken when expanding a single
         /// generate construct, to detect infinite loops.
-        optional<uint32_t> maxGenerateSteps;
+        std::optional<uint32_t> maxGenerateSteps;
 
         /// The maximum depth of nested function calls in constant expressions,
         /// to detect infinite recursion.
-        optional<uint32_t> maxConstexprDepth;
+        std::optional<uint32_t> maxConstexprDepth;
 
         /// The maximum number of steps to allow when evaluating a constant expressions,
         /// to detect infinite loops.
-        optional<uint32_t> maxConstexprSteps;
+        std::optional<uint32_t> maxConstexprSteps;
 
         /// The maximum number of frames in a callstack to display in diagnostics
         /// before abbreviating them.
-        optional<uint32_t> maxConstexprBacktrace;
+        std::optional<uint32_t> maxConstexprBacktrace;
 
         /// The maximum number of instances allowed in a single instance array.
-        optional<uint32_t> maxInstanceArray;
+        std::optional<uint32_t> maxInstanceArray;
 
         /// A string indicating a member of @a CompatMode to use for tailoring
         /// other compilation options.
-        optional<std::string> compat;
+        std::optional<std::string> compat;
 
         /// A string indicating a member of @a MinTypMax to indicate which set
         /// of (min:typ:max) expressions is valid for this compilation.
-        optional<std::string> minTypMax;
+        std::optional<std::string> minTypMax;
 
         /// If true, allow various to be referenced before they are declared.
-        optional<bool> allowUseBeforeDeclare;
+        std::optional<bool> allowUseBeforeDeclare;
 
         /// If true, ignore errors about unknown modules.
-        optional<bool> ignoreUnknownModules;
+        std::optional<bool> ignoreUnknownModules;
 
         /// If true, allow all integral types to convert implicitly to enum types.
-        optional<bool> relaxEnumConversions;
+        std::optional<bool> relaxEnumConversions;
 
         /// If true, allow hierarchical names in constant expressions.
-        optional<bool> allowHierarchicalConst;
+        std::optional<bool> allowHierarchicalConst;
 
         /// Signals driven by an always_comb are normally not allowed to be driven
         /// by any other process. Setting this option allows initial blocks to
         /// also drive such signals.
-        optional<bool> allowDupInitialDrivers;
+        std::optional<bool> allowDupInitialDrivers;
 
         /// If true, perform strict checking of variable drivers, which currently
         /// means not taking into account procedural for loop unrolling.
-        optional<bool> strictDriverChecking;
+        std::optional<bool> strictDriverChecking;
 
         /// If true, only perform linting of code, don't try to elaborate a full hierarchy.
-        optional<bool> onlyLint;
+        std::optional<bool> onlyLint;
 
         /// If non-empty, specifies the list of modules that should serve as the
         /// top modules in the design. If empty, this will be automatically determined
@@ -172,31 +172,31 @@ public:
         /// @{
 
         /// If true, print diagnostics with color.
-        optional<bool> colorDiags;
+        std::optional<bool> colorDiags;
 
         /// If true, include column numbers in printed diagnostics.
-        optional<bool> diagColumn;
+        std::optional<bool> diagColumn;
 
         /// If true, include location information in printed diagnostics.
-        optional<bool> diagLocation;
+        std::optional<bool> diagLocation;
 
         /// If true, include source line context in printed diagnostics.
-        optional<bool> diagSourceLine;
+        std::optional<bool> diagSourceLine;
 
         /// If true, include warning option names in printed diagnostics.
-        optional<bool> diagOptionName;
+        std::optional<bool> diagOptionName;
 
         /// If true, include file include stacks in printed diagnostics.
-        optional<bool> diagIncludeStack;
+        std::optional<bool> diagIncludeStack;
 
         /// If true, include macro expansion information in printed diagnostics.
-        optional<bool> diagMacroExpansion;
+        std::optional<bool> diagMacroExpansion;
 
         /// If true, include hierarchy paths in printed diagnostics.
-        optional<bool> diagHierarchy;
+        std::optional<bool> diagHierarchy;
 
         /// The maximum number of errors to print before giving up.
-        optional<uint32_t> errorLimit;
+        std::optional<uint32_t> errorLimit;
 
         /// A list of warning options that will be passed to the DiagnosticEngine.
         std::vector<std::string> warningOptions;
@@ -207,7 +207,7 @@ public:
 
         /// If set to true, all source files will be treated as part of a single
         /// compilation unit, meaning all of their text will be merged together.
-        optional<bool> singleUnit;
+        std::optional<bool> singleUnit;
 
         /// A list of library files to include in the compilation.
         std::vector<std::string> libraryFiles;
