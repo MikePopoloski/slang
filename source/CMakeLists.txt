@@ -130,6 +130,10 @@ if(SLANG_CLANG_TIDY)
   set_target_properties(slang PROPERTIES CXX_CLANG_TIDY ${SLANG_CLANG_TIDY})
 endif()
 
+# Library version info
+set_target_properties(slang PROPERTIES VERSION ${PROJECT_VERSION}
+                                       SOVERSION ${PROJECT_VERSION_MAJOR})
+
 # Installation rules
 if(SLANG_INCLUDE_INSTALL)
   install(DIRECTORY ../include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
