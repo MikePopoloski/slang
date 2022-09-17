@@ -8,6 +8,7 @@
 #include "slang/ast/Compilation.h"
 
 #include "ElabVisitors.h"
+#include <fmt/core.h>
 
 #include "slang/ast/Definition.h"
 #include "slang/ast/ScriptSession.h"

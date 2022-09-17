@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 #include "Test.h"
-#include <fmt/format.h>
+#include <fmt/core.h>
 
 #include "slang/ast/ASTVisitor.h"
 #include "slang/ast/SemanticModel.h"

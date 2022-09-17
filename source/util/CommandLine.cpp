@@ -10,7 +10,7 @@
 #include <charconv>
 #include <cstdlib>
 #include <filesystem>
-#include <fmt/format.h>
+#include <fmt/core.h>
 
 #include "slang/text/CharInfo.h"
 #include "slang/util/OS.h"

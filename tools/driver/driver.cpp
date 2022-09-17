@@ -7,6 +7,7 @@
 //------------------------------------------------------------------------------
 #include "slang/driver/Driver.h"
 
+#include <fmt/color.h>
 #include <fstream>
 #include <iostream>
 
@@ -90,13 +91,14 @@ int driverMain(int argc, TArgs argv) try {
         return 1;
 
     if (showHelp == true) {
-        OS::print("{}", driver.cmdLine.getHelpText("slang SystemVerilog compiler"));
+        OS::print(fmt::format("{}", driver.cmdLine.getHelpText("slang SystemVerilog compiler")));
         return 0;
     }
 
     if (showVersion == true) {
-        OS::print("slang version {}.{}.{}+{}\n", VersionInfo::getMajor(), VersionInfo::getMinor(),
-                  VersionInfo::getPatch(), VersionInfo::getHash());
+        OS::print(fmt::format("slang version {}.{}.{}+{}\n", VersionInfo::getMajor(),
+                              VersionInfo::getMinor(), VersionInfo::getPatch(),
+                              VersionInfo::getHash()));
         return 0;
     }
 
@@ -107,8 +109,8 @@ int driverMain(int argc, TArgs argv) try {
             driver.options.onlyLint.has_value() >
         1) {
         OS::printE(fg(driver.diagClient->errorColor), "error: ");
-        OS::printE(
-            "can only specify one of --preprocess, --macros-only, --parse-only, --lint-only");
+        OS::printE("can only specify one of --preprocess, --macros-only, "
+                   "--parse-only, --lint-only");
         return 3;
     }
 
@@ -135,14 +137,14 @@ int driverMain(int argc, TArgs argv) try {
         }
     }
     catch (const std::exception& e) {
-        OS::printE("internal compiler error: {}\n", e.what());
+        OS::printE(fmt::format("internal compiler error: {}\n", e.what()));
         return 4;
     }
 
     return ok ? 0 : 5;
 }
 catch (const std::exception& e) {
-    OS::printE("{}\n", e.what());
+    OS::printE(fmt::format("{}\n", e.what()));
     return 6;
 }
 

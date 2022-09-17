@@ -460,14 +460,14 @@ void TypeArgFormatter::startMessage(const Diagnostic&) {
     // TODO: build a list of used types so we can disambiguate if necessary
 }
 
-void TypeArgFormatter::format(FormatArgStore& argStore, const std::any& arg) {
+std::string TypeArgFormatter::format(const std::any& arg) {
     const Type& type = *std::any_cast<const Type*>(arg);
     bool unique = seenTypes.insert(&type).second;
     printer.options.printAKA = unique;
 
     printer.clear();
     printer.append(type);
-    argStore.push_back(printer.toString());
+    return printer.toString();
 }
 
 } // namespace slang::ast

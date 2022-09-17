@@ -16,6 +16,7 @@
 #    include <unistd.h>
 #endif
 
+#include <fmt/color.h>
 #include <fstream>
 
 namespace fs = std::filesystem;
@@ -106,6 +107,38 @@ bool OS::readFile(const fs::path& path, std::vector<char>& buffer) {
     buffer[sz] = '\0';
 
     return true;
+}
+
+void OS::print(string_view text) {
+    if (capturingOutput)
+        capturedStdout += text;
+    else
+        fmt::detail::print(stdout, fmt::detail::to_string_view(text));
+}
+
+void OS::print(const fmt::text_style& style, string_view text) {
+    if (capturingOutput)
+        capturedStdout += text;
+    else if (showColorsStdout)
+        fmt::print(stdout, style, "{}"sv, text);
+    else
+        fmt::detail::print(stdout, fmt::detail::to_string_view(text));
+}
+
+void OS::printE(string_view text) {
+    if (capturingOutput)
+        capturedStderr += text;
+    else
+        fmt::detail::print(stderr, fmt::detail::to_string_view(text));
+}
+
+void OS::printE(const fmt::text_style& style, string_view text) {
+    if (capturingOutput)
+        capturedStderr += text;
+    else if (showColorsStderr)
+        fmt::print(stderr, style, "{}"sv, text);
+    else
+        fmt::detail::print(stderr, fmt::detail::to_string_view(text));
 }
 
 std::string OS::getEnv(const std::string& name) {

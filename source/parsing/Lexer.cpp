@@ -9,7 +9,7 @@
 
 #include <algorithm>
 #include <cmath>
-#include <fmt/format.h>
+#include <fmt/core.h>
 
 #include "slang/diagnostics/LexerDiags.h"
 #include "slang/diagnostics/NumericDiags.h"

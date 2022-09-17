@@ -230,7 +230,7 @@ public:
     [[nodiscard]] bool parseCommandLine(int argc, TArgs argv) {
         if (!cmdLine.parse(argc, argv)) {
             for (auto& err : cmdLine.getErrors())
-                OS::printE("{}\n", err);
+                OS::printE(err + '\n');
             return false;
         }
         return !anyFailedLoads;

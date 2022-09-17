@@ -8,6 +8,8 @@
 //------------------------------------------------------------------------------
 #include "slang/driver/Driver.h"
 
+#include <fmt/color.h>
+
 #include "slang/ast/symbols/CompilationUnitSymbols.h"
 #include "slang/ast/symbols/InstanceSymbols.h"
 #include "slang/diagnostics/DeclarationsDiags.h"
@@ -209,7 +211,7 @@ void Driver::addStandardArgs() {
 [[nodiscard]] bool Driver::parseCommandLine(string_view argList) {
     if (!cmdLine.parse(argList)) {
         for (auto& err : cmdLine.getErrors())
-            OS::printE("{}\n", err);
+            OS::printE(fmt::format("{}\n", err));
         return false;
     }
     return !anyFailedLoads;
@@ -219,7 +221,7 @@ SourceBuffer Driver::readSource(string_view fileName) {
     SourceBuffer buffer = sourceManager.readSource(widen(fileName));
     if (!buffer) {
         OS::printE(fg(diagClient->errorColor), "error: ");
-        OS::printE("no such file or directory: '{}'\n", fileName);
+        OS::printE(fmt::format("no such file or directory: '{}'\n", fileName));
     }
     return buffer;
 }
@@ -230,7 +232,7 @@ bool Driver::processCommandFile(string_view fileName, bool makeRelative) {
     std::vector<char> buffer;
     if (ec || !OS::readFile(path, buffer)) {
         OS::printE(fg(diagClient->errorColor), "error: ");
-        OS::printE("no such file or directory: '{}'\n", fileName);
+        OS::printE(fmt::format("no such file or directory: '{}'\n", fileName));
         return false;
     }
 
@@ -257,7 +259,7 @@ bool Driver::processCommandFile(string_view fileName, bool makeRelative) {
 
     if (!result) {
         for (auto& err : cmdLine.getErrors())
-            OS::printE("{}\n", err);
+            OS::printE(fmt::format("{}\n", err));
         return false;
     }
 
@@ -288,7 +290,7 @@ bool Driver::processOptions() {
         }
         else {
             OS::printE(fg(diagClient->errorColor), "error: ");
-            OS::printE("invalid value for compat option: '{}'", *options.compat);
+            OS::printE(fmt::format("invalid value for compat option: '{}'", *options.compat));
             return false;
         }
     }
@@ -296,7 +298,7 @@ bool Driver::processOptions() {
     if (options.minTypMax.has_value() && options.minTypMax != "min" && options.minTypMax != "typ" &&
         options.minTypMax != "max") {
         OS::printE(fg(diagClient->errorColor), "error: ");
-        OS::printE("invalid value for timing option: '{}'", *options.minTypMax);
+        OS::printE(fmt::format("invalid value for timing option: '{}'", *options.minTypMax));
         return false;
     }
 
@@ -315,7 +317,7 @@ bool Driver::processOptions() {
         }
         catch (const std::exception&) {
             OS::printE(fg(diagClient->warningColor), "warning: ");
-            OS::printE("include directory '{}' does not exist\n", dir);
+            OS::printE(fmt::format("include directory '{}' does not exist\n", dir));
         }
     }
 
@@ -325,7 +327,7 @@ bool Driver::processOptions() {
         }
         catch (const std::exception&) {
             OS::printE(fg(diagClient->warningColor), "warning: ");
-            OS::printE("include directory '{}' does not exist\n", dir);
+            OS::printE(fmt::format("include directory '{}' does not exist\n", dir));
         }
     }
 
@@ -405,12 +407,12 @@ bool Driver::runPreprocessor(bool includeComments, bool includeDirectives) {
     // Only print diagnostics if actual errors occurred.
     for (auto& diag : diagnostics) {
         if (diag.isError()) {
-            OS::printE("{}", DiagnosticEngine::reportAll(sourceManager, diagnostics));
+            OS::printE(fmt::format("{}", DiagnosticEngine::reportAll(sourceManager, diagnostics)));
             return false;
         }
     }
 
-    OS::print("{}\n", output.str());
+    OS::print(fmt::format("{}\n", output.str()));
     return true;
 }
 
@@ -443,7 +445,7 @@ void Driver::reportMacros() {
 
         printer.print(macro->body);
 
-        OS::print("{}\n", printer.str());
+        OS::print(fmt::format("{}\n", printer.str()));
     }
 }
 
@@ -682,7 +684,7 @@ bool Driver::reportParseDiags() {
     for (auto& diag : compilation->getParseDiagnostics())
         diagEngine.issue(diag);
 
-    OS::printE("{}", diagClient->getString());
+    OS::printE(fmt::format("{}", diagClient->getString()));
     return diagEngine.getNumErrors() == 0;
 }
 
@@ -692,7 +694,7 @@ bool Driver::reportCompilation(Compilation& compilation, bool quiet) {
         if (!topInstances.empty()) {
             OS::print(fg(diagClient->warningColor), "Top level design units:\n");
             for (auto inst : topInstances)
-                OS::print("    {}\n", inst->name);
+                OS::print(fmt::format("    {}\n", inst->name));
             OS::print("\n");
         }
     }
@@ -703,7 +705,7 @@ bool Driver::reportCompilation(Compilation& compilation, bool quiet) {
     bool succeeded = diagEngine.getNumErrors() == 0;
 
     std::string diagStr = diagClient->getString();
-    OS::printE("{}", diagStr);
+    OS::printE(fmt::format("{}", diagStr));
 
     if (!quiet) {
         if (diagStr.size() > 1)
@@ -714,9 +716,10 @@ bool Driver::reportCompilation(Compilation& compilation, bool quiet) {
         else
             OS::print(fg(diagClient->errorColor), "Build failed: ");
 
-        OS::print("{} error{}, {} warning{}\n", diagEngine.getNumErrors(),
-                  diagEngine.getNumErrors() == 1 ? "" : "s", diagEngine.getNumWarnings(),
-                  diagEngine.getNumWarnings() == 1 ? "" : "s");
+        OS::print(fmt::format("{} error{}, {} warning{}\n", diagEngine.getNumErrors(),
+                              diagEngine.getNumErrors() == 1 ? "" : "s",
+                              diagEngine.getNumWarnings(),
+                              diagEngine.getNumWarnings() == 1 ? "" : "s"));
     }
 
     return succeeded;

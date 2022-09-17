@@ -8,7 +8,7 @@
 #include "slang/numeric/SVInt.h"
 
 #include "SVIntHelpers.h"
-#include <fmt/format.h>
+#include <fmt/core.h>
 #include <stdexcept>
 
 #include "slang/text/CharInfo.h"

@@ -7,6 +7,8 @@
 //------------------------------------------------------------------------------
 #include "slang/diagnostics/DiagnosticEngine.h"
 
+#include <fmt/args.h>
+
 #include "slang/diagnostics/DiagArgFormatter.h"
 #include "slang/diagnostics/DiagnosticClient.h"
 #include "slang/diagnostics/MetaDiags.h"
@@ -250,7 +252,7 @@ std::string DiagnosticEngine::formatMessage(const Diagnostic& diag) const {
                 using T = std::decay_t<decltype(t)>;
                 if constexpr (std::is_same_v<std::any, T>) {
                     if (auto it = formatters.find(t.type()); it != formatters.end())
-                        it->second->format(args, t);
+                        args.push_back(it->second->format(t));
                     else
                         throw std::runtime_error("No diagnostic formatter for type");
                 }

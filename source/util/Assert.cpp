@@ -7,7 +7,7 @@
 //------------------------------------------------------------------------------
 #include "slang/util/Assert.h"
 
-#include <fmt/format.h>
+#include <fmt/core.h>
 
 namespace slang::assert {
 

@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 #include "Test.h"
+#include <fmt/core.h>
 #include <regex>
 
 #include "slang/driver/Driver.h"

@@ -118,7 +118,7 @@ target_include_directories(
 
 # Link libraries
 target_link_libraries(slang PRIVATE ${CMAKE_THREAD_LIBS_INIT})
-target_link_libraries(slang PUBLIC fmt::fmt)
+target_link_libraries(slang PRIVATE fmt::fmt)
 
 # If building the Python library we'll end up with a shared lib no matter what,
 # so make sure we always build with PIC.

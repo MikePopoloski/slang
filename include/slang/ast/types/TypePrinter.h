@@ -90,7 +90,7 @@ public:
     void setOptions(const TypePrintingOptions& options) { printer.options = options; }
 
     void startMessage(const Diagnostic& diag) final;
-    void format(FormatArgStore& argStore, const std::any& arg) final;
+    std::string format(const std::any& arg) final;
 
 private:
     TypePrinter printer;

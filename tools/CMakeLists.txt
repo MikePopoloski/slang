@@ -4,7 +4,7 @@
 # ~~~
 
 add_executable(driver driver/driver.cpp)
-target_link_libraries(driver PRIVATE slang)
+target_link_libraries(driver PRIVATE slang fmt::fmt)
 set_target_properties(driver PROPERTIES OUTPUT_NAME "slang")
 
 add_executable(rewriter rewriter/rewriter.cpp)

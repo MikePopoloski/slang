@@ -8,7 +8,6 @@
 #include "slang/numeric/ConstantValue.h"
 
 #include "../text/FormatBuffer.h"
-#include <fmt/format.h>
 
 #include "slang/util/Hash.h"
 
