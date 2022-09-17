@@ -32,7 +32,7 @@ ENUM(ConstraintKind, CONSTRAINT)
 
 class ASTContext;
 
-class Constraint {
+class SLANG_EXPORT Constraint {
 public:
     ConstraintKind kind;
 
@@ -64,7 +64,7 @@ protected:
     static Constraint& badConstraint(Compilation& compilation, const Constraint* ctrl);
 };
 
-class InvalidConstraint : public Constraint {
+class SLANG_EXPORT InvalidConstraint : public Constraint {
 public:
     const Constraint* child;
 
@@ -77,7 +77,7 @@ public:
 };
 
 /// Represents a list of constraints.
-class ConstraintList : public Constraint {
+class SLANG_EXPORT ConstraintList : public Constraint {
 public:
     span<const Constraint* const> list;
 
@@ -99,7 +99,7 @@ public:
 };
 
 /// Represents a constraint defined by a logical expression.
-class ExpressionConstraint : public Constraint {
+class SLANG_EXPORT ExpressionConstraint : public Constraint {
 public:
     const Expression& expr;
     bool isSoft;
@@ -121,7 +121,7 @@ public:
 };
 
 /// Represents a constraint defined by an implication.
-class ImplicationConstraint : public Constraint {
+class SLANG_EXPORT ImplicationConstraint : public Constraint {
 public:
     const Expression& predicate;
     const Constraint& body;
@@ -144,7 +144,7 @@ public:
 };
 
 /// Represents a constraint defined by an if-else condition.
-class ConditionalConstraint : public Constraint {
+class SLANG_EXPORT ConditionalConstraint : public Constraint {
 public:
     const Expression& predicate;
     const Constraint& ifBody;
@@ -172,7 +172,7 @@ public:
 };
 
 /// Represents a constraint that enforces uniqueness of variables.
-class UniquenessConstraint : public Constraint {
+class SLANG_EXPORT UniquenessConstraint : public Constraint {
 public:
     span<const Expression* const> items;
 
@@ -194,7 +194,7 @@ public:
 };
 
 /// Represents a constraint that disables a soft random variable.
-class DisableSoftConstraint : public Constraint {
+class SLANG_EXPORT DisableSoftConstraint : public Constraint {
 public:
     const Expression& target;
 
@@ -215,7 +215,7 @@ public:
 };
 
 /// Represents a constraint that enforces ordering of solving variables.
-class SolveBeforeConstraint : public Constraint {
+class SLANG_EXPORT SolveBeforeConstraint : public Constraint {
 public:
     span<const Expression* const> solve;
     span<const Expression* const> before;
@@ -242,7 +242,7 @@ public:
 };
 
 /// Represents a constraint that iterates over the elements of an array.
-class ForeachConstraint : public Constraint {
+class SLANG_EXPORT ForeachConstraint : public Constraint {
 public:
     const Expression& arrayRef;
     span<const ForeachLoopStatement::LoopDim> loopDims;

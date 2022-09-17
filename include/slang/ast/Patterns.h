@@ -32,7 +32,7 @@ ENUM(PatternKind, PATTERN)
 
 /// Base class for "patterns", as used in pattern matching conditional
 /// statements and expressions.
-class Pattern {
+class SLANG_EXPORT Pattern {
 public:
     /// The kind of pattern represented by this instance.
     PatternKind kind;
@@ -79,7 +79,7 @@ protected:
                                       ASTContext& context);
 };
 
-class InvalidPattern : public Pattern {
+class SLANG_EXPORT InvalidPattern : public Pattern {
 public:
     const Pattern* child;
 
@@ -91,7 +91,7 @@ public:
     void serializeTo(ASTSerializer& serializer) const;
 };
 
-class WildcardPattern : public Pattern {
+class SLANG_EXPORT WildcardPattern : public Pattern {
 public:
     explicit WildcardPattern(SourceRange sourceRange) :
         Pattern(PatternKind::Wildcard, sourceRange) {}
@@ -107,7 +107,7 @@ public:
     void serializeTo(ASTSerializer&) const {}
 };
 
-class ConstantPattern : public Pattern {
+class SLANG_EXPORT ConstantPattern : public Pattern {
 public:
     const Expression& expr;
 
@@ -125,7 +125,7 @@ public:
     void serializeTo(ASTSerializer& serializer) const;
 };
 
-class VariablePattern : public Pattern {
+class SLANG_EXPORT VariablePattern : public Pattern {
 public:
     const PatternVarSymbol& variable;
 
@@ -143,7 +143,7 @@ public:
     void serializeTo(ASTSerializer& serializer) const;
 };
 
-class TaggedPattern : public Pattern {
+class SLANG_EXPORT TaggedPattern : public Pattern {
 public:
     const FieldSymbol& member;
     const Pattern* valuePattern;
@@ -162,7 +162,7 @@ public:
     void serializeTo(ASTSerializer& serializer) const;
 };
 
-class StructurePattern : public Pattern {
+class SLANG_EXPORT StructurePattern : public Pattern {
 public:
     struct FieldPattern {
         not_null<const FieldSymbol*> field;

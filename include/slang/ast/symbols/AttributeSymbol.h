@@ -14,7 +14,7 @@
 
 namespace slang::ast {
 
-class AttributeSymbol : public Symbol {
+class SLANG_EXPORT AttributeSymbol : public Symbol {
 public:
     AttributeSymbol(string_view name, SourceLocation loc, const Symbol& symbol,
                     const syntax::ExpressionSyntax& expr);

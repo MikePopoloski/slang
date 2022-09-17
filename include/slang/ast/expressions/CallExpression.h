@@ -16,7 +16,7 @@ namespace slang::ast {
 class FormalArgumentSymbol;
 
 /// Represents a subroutine call.
-class CallExpression : public Expression {
+class SLANG_EXPORT CallExpression : public Expression {
 public:
     struct IteratorCallInfo {
         const Expression* iterExpr = nullptr;

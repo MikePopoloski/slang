@@ -12,7 +12,7 @@
 
 namespace slang::ast {
 
-class ParameterSymbolBase {
+class SLANG_EXPORT ParameterSymbolBase {
 public:
     const Symbol& symbol;
 
@@ -35,7 +35,7 @@ private:
 };
 
 /// Represents a parameter value.
-class ParameterSymbol : public ValueSymbol, public ParameterSymbolBase {
+class SLANG_EXPORT ParameterSymbol : public ValueSymbol, public ParameterSymbolBase {
 public:
     ParameterSymbol(string_view name, SourceLocation loc, bool isLocal, bool isPort);
 
@@ -58,7 +58,7 @@ private:
     mutable bool evaluating = false;
 };
 
-class TypeParameterSymbol : public Symbol, public ParameterSymbolBase {
+class SLANG_EXPORT TypeParameterSymbol : public Symbol, public ParameterSymbolBase {
 public:
     DeclaredType targetType;
 
@@ -78,7 +78,7 @@ private:
 };
 
 /// Represents a defparam directive.
-class DefParamSymbol : public Symbol {
+class SLANG_EXPORT DefParamSymbol : public Symbol {
 public:
     explicit DefParamSymbol(SourceLocation loc) : Symbol(SymbolKind::DefParam, "", loc) {}
 
@@ -101,7 +101,7 @@ private:
 };
 
 /// Represents a specify parameter.
-class SpecparamSymbol : public ValueSymbol {
+class SLANG_EXPORT SpecparamSymbol : public ValueSymbol {
 public:
     SpecparamSymbol(string_view name, SourceLocation loc);
 

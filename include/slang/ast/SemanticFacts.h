@@ -91,7 +91,7 @@ ENUM(DriverKind, DRIVER)
 #undef DRIVER
 
 /// A set of flags that control how assignments are checked.
-enum class AssignFlags {
+enum class SLANG_EXPORT AssignFlags {
     /// No special assignment behavior specified.
     None = 0,
 
@@ -130,7 +130,7 @@ enum class AssignFlags {
 };
 BITMASK(AssignFlags, ModportConn)
 
-class SemanticFacts {
+class SLANG_EXPORT SemanticFacts {
 public:
     /// Interprets a keyword token as a variable lifetime value.
     static std::optional<VariableLifetime> getVariableLifetime(parsing::Token token);
@@ -168,7 +168,7 @@ private:
 };
 
 /// Represents a skew value that is applied to clocking block signals.
-class ClockingSkew {
+class SLANG_EXPORT ClockingSkew {
 public:
     /// The edge on which the signal should be sampled.
     EdgeKind edge = EdgeKind::None;

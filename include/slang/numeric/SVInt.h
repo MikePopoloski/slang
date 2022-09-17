@@ -34,7 +34,7 @@ bool literalBaseFromChar(char base, LiteralBase& result);
 /// Represents a single 4-state bit. The usual bit values of 0 and 1 are
 /// augmented with X (unknown) and Z (high impedance). Both X and Z are
 /// considered "unknown" for most computation purposes.
-struct logic_t {
+struct SLANG_EXPORT logic_t {
     // limited from 0 to 15, plus x or z
     uint8_t value;
 
@@ -95,12 +95,12 @@ struct logic_t {
         return !isUnknown() && value != 0;
     }
 
-    friend bool exactlyEqual(logic_t lhs, logic_t rhs) {
+    SLANG_EXPORT friend bool exactlyEqual(logic_t lhs, logic_t rhs) {
         return lhs.value == rhs.value;
     }
 
     char toChar() const;
-    friend std::ostream& operator<<(std::ostream& os, const logic_t& rhs);
+    SLANG_EXPORT friend std::ostream& operator<<(std::ostream& os, const logic_t& rhs);
 
     static constexpr uint8_t X_VALUE = 1 << 7;
     static constexpr uint8_t Z_VALUE = 1 << 6;
@@ -111,7 +111,7 @@ struct logic_t {
 /// POD base class for SVInt that contains all data members. The purpose of this
 /// is so that other types can manage the backing memory for SVInts with really
 /// large bit widths.
-class SVIntStorage {
+class SLANG_EXPORT SVIntStorage {
 public:
     SVIntStorage() : val(0), bitWidth(1), signFlag(false), unknownFlag(false) {}
     SVIntStorage(bitwidth_t bits, bool signFlag, bool unknownFlag) :
@@ -146,7 +146,7 @@ public:
 /// words are allocated adjacent in memory. The bits in these extra words indicate whether the
 /// corresponding bits in the low words are unknown or normal.
 ///
-class SVInt : SVIntStorage {
+class SLANG_EXPORT SVInt : SVIntStorage {
 public:
     /// Simple default constructor for convenience, results in a 1 bit zero value.
     SVInt() {}
@@ -522,22 +522,22 @@ public:
 
     /// Stream formatting operator. Guesses a nice base to use and writes the string representation
     /// into the stream.
-    friend std::ostream& operator<<(std::ostream& os, const SVInt& rhs);
+    SLANG_EXPORT friend std::ostream& operator<<(std::ostream& os, const SVInt& rhs);
 
     /// Stricter equality, taking into account unknown bits.
-    friend bool exactlyEqual(const SVInt& lhs, const SVInt& rhs);
+    SLANG_EXPORT friend bool exactlyEqual(const SVInt& lhs, const SVInt& rhs);
 
     /// Wildcard based equality, with unknown bits as wildcards.
     /// This method only looks for wildcard bits on the rhs, as needed by the conditional operator.
-    friend logic_t condWildcardEqual(const SVInt& lhs, const SVInt& rhs);
+    SLANG_EXPORT friend logic_t condWildcardEqual(const SVInt& lhs, const SVInt& rhs);
 
     /// Wildcard based equality, with unknown bits as wildcards.
     /// This method implements matching as required by casex statements.
-    friend bool caseXWildcardEqual(const SVInt& lhs, const SVInt& rhs);
+    SLANG_EXPORT friend bool caseXWildcardEqual(const SVInt& lhs, const SVInt& rhs);
 
     /// Wildcard based equality, with Z bits as wildcards.
     /// This method implements matching as required by casez statements.
-    friend bool caseZWildcardEqual(const SVInt& lhs, const SVInt& rhs);
+    SLANG_EXPORT friend bool caseZWildcardEqual(const SVInt& lhs, const SVInt& rhs);
 
     enum {
         BITS_PER_WORD = sizeof(uint64_t) * CHAR_BIT,
@@ -676,7 +676,7 @@ inline logic_t SVInt::logicalEquiv(const SVInt& lhs, const SVInt& rhs) {
 }
 
 /// Returns the ceiling of the log_2 of the value. If value is zero, returns zero.
-inline uint32_t clog2(const SVInt& v) {
+inline SLANG_EXPORT uint32_t clog2(const SVInt& v) {
     if (v == 0)
         return 0;
     return v.getBitWidth() - (v - SVInt::One).countLeadingZeros();

@@ -62,20 +62,20 @@ private:
 
 namespace detail {
 
-struct SyntaxChange {
+struct SLANG_EXPORT SyntaxChange {
     const SyntaxNode* first = nullptr;
     SyntaxNode* second = nullptr;
     parsing::Token separator = {};
 };
 
-struct RemoveChange : SyntaxChange {};
-struct ReplaceChange : SyntaxChange {};
+struct SLANG_EXPORT RemoveChange : SyntaxChange {};
+struct SLANG_EXPORT ReplaceChange : SyntaxChange {};
 
 using InsertChangeMap = flat_hash_map<const SyntaxNode*, std::vector<SyntaxChange>>;
 using ModifyChangeMap = flat_hash_map<const SyntaxNode*, std::variant<RemoveChange, ReplaceChange>>;
 using ListChangeMap = flat_hash_map<const SyntaxNode*, std::vector<SyntaxChange>>;
 
-struct ChangeCollection {
+struct SLANG_EXPORT ChangeCollection {
     InsertChangeMap insertBefore;
     InsertChangeMap insertAfter;
     ModifyChangeMap removeOrReplace;
@@ -96,7 +96,7 @@ struct ChangeCollection {
     }
 };
 
-std::shared_ptr<SyntaxTree> transformTree(
+SLANG_EXPORT std::shared_ptr<SyntaxTree> transformTree(
     BumpAllocator&& alloc, const std::shared_ptr<SyntaxTree>& tree, const ChangeCollection& commits,
     const std::vector<std::shared_ptr<SyntaxTree>>& tempTrees);
 

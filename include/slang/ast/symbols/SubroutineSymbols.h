@@ -17,7 +17,7 @@ namespace slang::ast {
 class FormalArgumentSymbol;
 
 /// Specifies various flags that can apply to subroutines.
-enum class MethodFlags : uint16_t {
+enum class SLANG_EXPORT MethodFlags : uint16_t {
     /// No specific flags specified.
     None = 0,
 
@@ -71,7 +71,7 @@ BITMASK(MethodFlags, ForkJoin)
 class MethodPrototypeSymbol;
 
 /// Represents a subroutine (task or function).
-class SubroutineSymbol : public Symbol, public Scope {
+class SLANG_EXPORT SubroutineSymbol : public Symbol, public Scope {
 public:
     using ArgList = span<const FormalArgumentSymbol* const>;
 
@@ -165,7 +165,7 @@ private:
     mutable bool isConstructing = false;
 };
 
-class MethodPrototypeSymbol : public Symbol, public Scope {
+class SLANG_EXPORT MethodPrototypeSymbol : public Symbol, public Scope {
 public:
     DeclaredType declaredReturnType;
     SubroutineKind subroutineKind;

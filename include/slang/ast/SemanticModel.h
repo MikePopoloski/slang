@@ -17,7 +17,7 @@
 
 namespace slang::ast {
 
-class SemanticModel {
+class SLANG_EXPORT SemanticModel {
 public:
     explicit SemanticModel(Compilation& compilation);
 

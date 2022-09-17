@@ -18,7 +18,7 @@ class Compilation;
 enum class RandMode;
 
 /// Specifies possible traits for integral types.
-enum class IntegralFlags : uint8_t {
+enum class SLANG_EXPORT IntegralFlags : uint8_t {
     /// The type is unsigned. This is the default.
     Unsigned = 0,
 
@@ -45,7 +45,7 @@ BITMASK(IntegralFlags, Reg)
 /// points to itself and for type aliases points to the fully unwrapped target type. Most
 /// methods on this class that query traits drill down to the canonical type.
 ///
-class Type : public Symbol {
+class SLANG_EXPORT Type : public Symbol {
 public:
     /// Gets the canonical type for this type, which involves unwrapping any type aliases.
     const Type& getCanonicalType() const {

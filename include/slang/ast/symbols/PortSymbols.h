@@ -23,7 +23,7 @@ class InstanceCacheKey;
 /// Represents the public-facing side of a module / program / interface port.
 /// The port symbol itself is not directly referenceable from within the instance;
 /// it can however connect directly to a symbol that is.
-class PortSymbol : public Symbol {
+class SLANG_EXPORT PortSymbol : public Symbol {
 public:
     /// An instance-internal symbol that this port connects to, if any.
     /// Ports that do not connect directly to an internal symbol will have
@@ -90,7 +90,7 @@ private:
 /// Represents a multi-port, which is a port symbol that externally appears as
 /// a single connection but internally connects to multiple names, potentially
 /// with varying directions.
-class MultiPortSymbol : public Symbol {
+class SLANG_EXPORT MultiPortSymbol : public Symbol {
 public:
     span<const PortSymbol* const> ports;
 
@@ -122,7 +122,7 @@ private:
 
 /// Represents the public-facing side of a module / program / interface port
 /// that is also a connection to an interface instance (optionally with a modport restriction).
-class InterfacePortSymbol : public Symbol {
+class SLANG_EXPORT InterfacePortSymbol : public Symbol {
 public:
     /// A pointer to the definition for the interface.
     const Definition* interfaceDef = nullptr;
@@ -153,7 +153,7 @@ private:
     mutable std::optional<span<const ConstantRange>> range;
 };
 
-class PortConnection {
+class SLANG_EXPORT PortConnection {
 public:
     const Symbol& port;
     const InstanceSymbol& parentInstance;

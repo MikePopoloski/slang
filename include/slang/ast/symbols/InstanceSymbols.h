@@ -31,7 +31,7 @@ class TimingControl;
 struct ParamOverrideNode;
 
 /// Common functionality for module, interface, program, and primitive instances.
-class InstanceSymbolBase : public Symbol {
+class SLANG_EXPORT InstanceSymbolBase : public Symbol {
 public:
     span<const int32_t> arrayPath;
 
@@ -47,7 +47,7 @@ protected:
     using Symbol::Symbol;
 };
 
-class InstanceSymbol : public InstanceSymbolBase {
+class SLANG_EXPORT InstanceSymbol : public InstanceSymbolBase {
 public:
     const InstanceBodySymbol& body;
 
@@ -107,7 +107,7 @@ private:
     mutable PointerMap* connections = nullptr;
 };
 
-class InstanceBodySymbol : public Symbol, public Scope {
+class SLANG_EXPORT InstanceBodySymbol : public Symbol, public Scope {
 public:
     /// The parent instance for which this is the body.
     const InstanceSymbol* parentInstance = nullptr;
@@ -162,7 +162,7 @@ private:
     mutable span<const Symbol* const> portList;
 };
 
-class InstanceArraySymbol : public Symbol, public Scope {
+class SLANG_EXPORT InstanceArraySymbol : public Symbol, public Scope {
 public:
     span<const Symbol* const> elements;
     ConstantRange range;
@@ -184,7 +184,7 @@ public:
 /// Represents an instance of some unknown module (or interface / program).
 /// This is a placeholder in the AST so that we don't record further errors
 /// after the initial one about the unknown module itself.
-class UnknownModuleSymbol : public Symbol {
+class SLANG_EXPORT UnknownModuleSymbol : public Symbol {
 public:
     /// The name of the unknown module being instantiated.
     string_view moduleName;
@@ -233,7 +233,7 @@ private:
     mutable bool mustBeChecker = false;
 };
 
-class PrimitiveInstanceSymbol : public InstanceSymbolBase {
+class SLANG_EXPORT PrimitiveInstanceSymbol : public InstanceSymbolBase {
 public:
     const PrimitiveSymbol& primitiveType;
 

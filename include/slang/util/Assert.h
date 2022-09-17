@@ -7,6 +7,7 @@
 //------------------------------------------------------------------------------
 #pragma once
 
+#include "slang_export.h"
 #include <stdexcept>
 
 #if !defined(ASSERT_ENABLED)
@@ -61,13 +62,14 @@
 namespace slang::assert {
 
 /// An exception thrown when an ASSERT condition fails.
-class AssertionException : public std::logic_error {
+class SLANG_EXPORT AssertionException : public std::logic_error {
 public:
     AssertionException(const std::string& message) : std::logic_error(message) {}
 };
 
 /// A handler that runs when an ASSERT condition fails; it will unconditionally
 /// thrown an exception.
-[[noreturn]] void assertFailed(const char* expr, const char* file, int line, const char* func);
+[[noreturn]] SLANG_EXPORT void assertFailed(const char* expr, const char* file, int line,
+                                            const char* func);
 
 } // namespace slang::assert

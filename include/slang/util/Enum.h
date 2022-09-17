@@ -18,7 +18,7 @@
 /// along with a toString() method and an overload of operator<< for formatting.
 #define ENUM(name, elements) ENUM_SIZED(name, int, elements)
 #define ENUM_SIZED(name, underlying, elements)                                                  \
-    enum class name : underlying { elements(UTIL_ENUM_ELEMENT) };                               \
+    enum class SLANG_EXPORT name : underlying { elements(UTIL_ENUM_ELEMENT) };                  \
     inline string_view toString(name e) {                                                       \
         static const char* strings[] = {elements(UTIL_ENUM_STRING)};                            \
         return strings[static_cast<std::underlying_type_t<name>>(e)];                           \
@@ -121,7 +121,7 @@ inline constexpr bitmask_detail::underlying_type_t<T> get_enum_mask(const T&) no
 /// of bitwise-combined flags. Built-in strongly-typed C++ enums are not otherwise
 /// combinable via operators like | and &.
 template<typename T>
-class bitmask {
+class SLANG_EXPORT bitmask {
 public:
     using underlying_type = bitmask_detail::underlying_type_t<T>;
 

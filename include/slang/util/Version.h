@@ -7,12 +7,13 @@
 //------------------------------------------------------------------------------
 #pragma once
 
+#include "slang_export.h"
 #include <string_view>
 
 namespace slang {
 
 /// Provides access to compile-time generated version info about the library.
-class VersionInfo {
+class SLANG_EXPORT VersionInfo {
 public:
     /// Gets the major version number of the library.
     static int getMajor();

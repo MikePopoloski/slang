@@ -26,7 +26,7 @@ struct SVUnion;
 /// Represents an IEEE754 double precision floating point number.
 /// This is a separate type from `double` to make it less likely that
 /// an implicit C++ conversion will mess us up somewhere.
-struct real_t {
+struct SLANG_EXPORT real_t {
     double v;
 
     real_t() : v(0.0) {}
@@ -37,7 +37,7 @@ struct real_t {
 /// Represents an IEEE754 single precision floating point number.
 /// This is a separate type from `double` to make it less likely that
 /// an implicit C++ conversion will mess us up somewhere.
-struct shortreal_t {
+struct SLANG_EXPORT shortreal_t {
     float v;
 
     shortreal_t() : v(0.0) {}
@@ -49,7 +49,7 @@ struct shortreal_t {
 /// By default the value is indeterminate, or "bad". Expressions involving bad
 /// values result in bad values, as you might expect.
 ///
-class ConstantValue {
+class SLANG_EXPORT ConstantValue {
 public:
     /// This type represents the null value (class handles, etc) in expressions.
     struct NullPlaceholder : std::monostate {};
@@ -173,23 +173,23 @@ public:
 
     static const ConstantValue Invalid;
 
-    friend std::ostream& operator<<(std::ostream& os, const ConstantValue& cv);
-    friend bool operator==(const ConstantValue& lhs, const ConstantValue& rhs);
-    friend bool operator!=(const ConstantValue& lhs, const ConstantValue& rhs);
-    friend bool operator<(const ConstantValue& lhs, const ConstantValue& rhs);
+    SLANG_EXPORT friend std::ostream& operator<<(std::ostream& os, const ConstantValue& cv);
+    SLANG_EXPORT friend bool operator==(const ConstantValue& lhs, const ConstantValue& rhs);
+    SLANG_EXPORT friend bool operator!=(const ConstantValue& lhs, const ConstantValue& rhs);
+    SLANG_EXPORT friend bool operator<(const ConstantValue& lhs, const ConstantValue& rhs);
 
 private:
     Variant value;
 };
 
 /// Represents a SystemVerilog associative array, for use during constant evaluation.
-struct AssociativeArray : public std::map<ConstantValue, ConstantValue> {
+struct SLANG_EXPORT AssociativeArray : public std::map<ConstantValue, ConstantValue> {
     using std::map<ConstantValue, ConstantValue>::map;
     ConstantValue defaultValue;
 };
 
 /// Represents a SystemVerilog queue, for use during constant evaluation.
-struct SVQueue : public std::deque<ConstantValue> {
+struct SLANG_EXPORT SVQueue : public std::deque<ConstantValue> {
     using std::deque<ConstantValue>::deque;
     uint32_t maxBound = 0;
 
@@ -200,7 +200,7 @@ struct SVQueue : public std::deque<ConstantValue> {
 };
 
 /// Represents a SystemVerilog unpacked union, for use during constant evaluation.
-struct SVUnion {
+struct SLANG_EXPORT SVUnion {
     ConstantValue value;
     std::optional<uint32_t> activeMember;
 };
@@ -280,7 +280,7 @@ CVConstIterator end(const ConstantValue& cv);
 /// Note that this class makes no attempt to handle overflow of the underlying integer;
 /// SystemVerilog places tighter bounds on possible ranges anyway so it shouldn't be an issue.
 ///
-struct ConstantRange {
+struct SLANG_EXPORT ConstantRange {
     int32_t left = 0;
     int32_t right = 0;
 
@@ -333,7 +333,7 @@ struct ConstantRange {
     }
 
     bool operator!=(const ConstantRange& rhs) const { return !(*this == rhs); }
-    friend std::ostream& operator<<(std::ostream& os, const ConstantRange& cr);
+    SLANG_EXPORT friend std::ostream& operator<<(std::ostream& os, const ConstantRange& cr);
 };
 
 } // namespace slang

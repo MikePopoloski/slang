@@ -20,7 +20,7 @@ class Preprocessor;
 
 /// Base class for the Parser, which contains helpers and language-agnostic parsing routines.
 /// Mostly this helps keep the main Parser smaller and more focused.
-class ParserBase {
+class SLANG_EXPORT ParserBase {
 protected:
     ParserBase(Preprocessor& preprocessor);
 

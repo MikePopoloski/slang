@@ -68,7 +68,7 @@ ENUM(BinaryAssertionOperator, OP)
 class ASTContext;
 class CallExpression;
 
-class AssertionExpr {
+class SLANG_EXPORT AssertionExpr {
 public:
     AssertionExprKind kind;
 
@@ -121,7 +121,7 @@ protected:
     static AssertionExpr& badExpr(Compilation& compilation, const AssertionExpr* expr);
 };
 
-class InvalidAssertionExpr : public AssertionExpr {
+class SLANG_EXPORT InvalidAssertionExpr : public AssertionExpr {
 public:
     const AssertionExpr* child;
 
@@ -176,7 +176,7 @@ struct SequenceRepetition {
 };
 
 /// Represents an assertion expression defined as a simple regular expression.
-class SimpleAssertionExpr : public AssertionExpr {
+class SLANG_EXPORT SimpleAssertionExpr : public AssertionExpr {
 public:
     const Expression& expr;
     std::optional<SequenceRepetition> repetition;
@@ -201,7 +201,7 @@ public:
 };
 
 /// Represents an assertion expression defined as a delayed concatenation of other expressions.
-class SequenceConcatExpr : public AssertionExpr {
+class SLANG_EXPORT SequenceConcatExpr : public AssertionExpr {
 public:
     struct Element {
         SequenceRange delay;
@@ -231,7 +231,7 @@ public:
 
 /// Represents a sequence expression along with a list of actions to perform upon matching
 /// and/or instructions for repetition.
-class SequenceWithMatchExpr : public AssertionExpr {
+class SLANG_EXPORT SequenceWithMatchExpr : public AssertionExpr {
 public:
     const AssertionExpr& expr;
     std::optional<SequenceRepetition> repetition;
@@ -262,7 +262,7 @@ public:
 };
 
 /// Represents a unary operator in a property expression.
-class UnaryAssertionExpr : public AssertionExpr {
+class SLANG_EXPORT UnaryAssertionExpr : public AssertionExpr {
 public:
     UnaryAssertionOperator op;
     const AssertionExpr& expr;
@@ -292,7 +292,7 @@ public:
 };
 
 /// Represents a binary operator in a sequence or property expression.
-class BinaryAssertionExpr : public AssertionExpr {
+class SLANG_EXPORT BinaryAssertionExpr : public AssertionExpr {
 public:
     BinaryAssertionOperator op;
     const AssertionExpr& left;
@@ -324,7 +324,7 @@ public:
 };
 
 /// Represents a first_match operator in a sequence expression.
-class FirstMatchAssertionExpr : public AssertionExpr {
+class SLANG_EXPORT FirstMatchAssertionExpr : public AssertionExpr {
 public:
     const AssertionExpr& seq;
     span<const Expression* const> matchItems;
@@ -350,7 +350,7 @@ public:
 };
 
 /// Represents an assertion expression with attached clocking control.
-class ClockingAssertionExpr : public AssertionExpr {
+class SLANG_EXPORT ClockingAssertionExpr : public AssertionExpr {
 public:
     const TimingControl& clocking;
     const AssertionExpr& expr;
@@ -384,7 +384,7 @@ public:
 };
 
 /// Represents a strong or weak operator in a property expression.
-class StrongWeakAssertionExpr : public AssertionExpr {
+class SLANG_EXPORT StrongWeakAssertionExpr : public AssertionExpr {
 public:
     const AssertionExpr& expr;
     enum Strength { Strong, Weak } strength;
@@ -408,7 +408,7 @@ public:
 };
 
 /// Represents an abort (accept_on / reject_on) property expression.
-class AbortAssertionExpr : public AssertionExpr {
+class SLANG_EXPORT AbortAssertionExpr : public AssertionExpr {
 public:
     const Expression& condition;
     const AssertionExpr& expr;
@@ -437,7 +437,7 @@ public:
 };
 
 /// Represents a conditional operator in a property expression.
-class ConditionalAssertionExpr : public AssertionExpr {
+class SLANG_EXPORT ConditionalAssertionExpr : public AssertionExpr {
 public:
     const Expression& condition;
     const AssertionExpr& ifExpr;
@@ -467,7 +467,7 @@ public:
 };
 
 /// Represents a case operator in a property expression.
-class CaseAssertionExpr : public AssertionExpr {
+class SLANG_EXPORT CaseAssertionExpr : public AssertionExpr {
 public:
     struct ItemGroup {
         span<const Expression* const> expressions;
@@ -507,7 +507,7 @@ public:
 };
 
 /// Represents a disable iff condition in a property spec.
-class DisableIffAssertionExpr : public AssertionExpr {
+class SLANG_EXPORT DisableIffAssertionExpr : public AssertionExpr {
 public:
     const Expression& condition;
     const AssertionExpr& expr;

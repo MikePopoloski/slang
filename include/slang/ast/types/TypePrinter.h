@@ -21,7 +21,7 @@ namespace slang::ast {
 class ClassType;
 class CovergroupType;
 
-struct TypePrintingOptions {
+struct SLANG_EXPORT TypePrintingOptions {
     bool addSingleQuotes = false;
     bool elideScopeNames = false;
     bool printAKA = false;
@@ -29,7 +29,7 @@ struct TypePrintingOptions {
     enum AnonymousTypeStyle { SystemName, FriendlyName } anonymousTypeStyle = SystemName;
 };
 
-class TypePrinter {
+class SLANG_EXPORT TypePrinter {
 public:
     TypePrintingOptions options;
 
@@ -83,7 +83,7 @@ private:
     std::unique_ptr<FormatBuffer> buffer;
 };
 
-class TypeArgFormatter : public DiagArgFormatter {
+class SLANG_EXPORT TypeArgFormatter : public DiagArgFormatter {
 public:
     TypeArgFormatter();
 

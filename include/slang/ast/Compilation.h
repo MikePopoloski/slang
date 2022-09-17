@@ -49,7 +49,7 @@ enum class UnconnectedDrive;
 
 /// Specifies which set of min:typ:max expressions should
 /// be used during compilation.
-enum class MinTypMax {
+enum class SLANG_EXPORT MinTypMax {
     /// Use the "min" delay expressions.
     Min,
 
@@ -61,7 +61,7 @@ enum class MinTypMax {
 };
 
 /// Contains various options that can control compilation behavior.
-struct CompilationOptions {
+struct SLANG_EXPORT CompilationOptions {
     /// The maximum depth of nested module instances (and interfaces/programs),
     /// to detect infinite recursion.
     uint32_t maxInstanceDepth = 128;
@@ -148,7 +148,7 @@ struct ParamOverrideNode {
 /// A centralized location for creating and caching symbols. This includes
 /// creating symbols from syntax nodes as well as fabricating them synthetically.
 /// Common symbols such as built in types are exposed here as well.
-class Compilation : public BumpAllocator {
+class SLANG_EXPORT Compilation : public BumpAllocator {
 public:
     explicit Compilation(const Bag& options = {});
     Compilation(const Compilation& other) = delete;

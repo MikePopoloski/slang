@@ -55,7 +55,7 @@ namespace slang {
 /// an error is reported. If the name is "close" to one of the registered names,
 /// the error will provide a helpful "did you mean" hint.
 ///
-class CommandLine {
+class SLANG_EXPORT CommandLine {
 public:
     /// Register a flag with @a name that will be parsed as a boolean value,
     /// setting to `true` if no value is provided, and otherwise accepting

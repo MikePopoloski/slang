@@ -14,6 +14,8 @@
 #include <stdexcept>
 #include <type_traits>
 
+#include "slang_export.h"
+
 #ifdef _MSC_VER
 #define SKA_NOINLINE(...) __declspec(noinline) __VA_ARGS__
 #else
@@ -170,11 +172,6 @@ struct sherwood_v3_entry
     ~sherwood_v3_entry()
     {
     }
-    static sherwood_v3_entry * empty_default_table()
-    {
-        static sherwood_v3_entry result[min_lookups] = { {}, {}, {}, {special_end_value} };
-        return result;
-    }
 
     bool has_value() const
     {
@@ -205,6 +202,18 @@ struct sherwood_v3_entry
     static constexpr int8_t special_end_value = 0;
     union { T value; };
 };
+
+template<typename T>
+SLANG_EXPORT
+#if defined(_MSC_VER)
+inline
+#endif
+sherwood_v3_entry<T> * empty_default_table()
+{
+    static constexpr int8_t special_end_value = 0;
+    static sherwood_v3_entry<T> result[min_lookups] = { {}, {}, {}, {special_end_value} };
+    return result;
+}
 
 inline int8_t log2(size_t value)
 {
@@ -789,7 +798,7 @@ public:
     }
 
 private:
-    EntryPointer entries = Entry::empty_default_table();
+    EntryPointer entries = empty_default_table<T>();
     size_t num_slots_minus_one = 0;
     typename HashPolicySelector<ArgumentHash>::type hash_policy;
     int8_t max_lookups = detailv3::min_lookups - 1;
@@ -875,7 +884,7 @@ private:
 
     void deallocate_data(EntryPointer begin, size_t num_slots_minus_one, int8_t max_lookups)
     {
-        if (begin != Entry::empty_default_table())
+        if (begin != empty_default_table<T>())
         {
             AllocatorTraits::deallocate(*this, begin, num_slots_minus_one + max_lookups + 1);
         }
@@ -884,7 +893,7 @@ private:
     void reset_to_empty_state()
     {
         deallocate_data(entries, num_slots_minus_one, max_lookups);
-        entries = Entry::empty_default_table();
+        entries = empty_default_table<T>();
         num_slots_minus_one = 0;
         hash_policy.reset();
         max_lookups = detailv3::min_lookups - 1;

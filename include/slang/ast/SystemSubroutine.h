@@ -16,7 +16,7 @@
 
 namespace slang::ast {
 
-class SystemSubroutine {
+class SLANG_EXPORT SystemSubroutine {
 public:
     virtual ~SystemSubroutine() = default;
 
@@ -56,7 +56,7 @@ protected:
 
 /// An implementation of the SystemSubroutine interface that has
 /// basic argument types and a well-defined return type.
-class SimpleSystemSubroutine : public SystemSubroutine {
+class SLANG_EXPORT SimpleSystemSubroutine : public SystemSubroutine {
 public:
     const Expression& bindArgument(size_t argIndex, const ASTContext& context,
                                    const syntax::ExpressionSyntax& syntax,
@@ -82,7 +82,7 @@ private:
     bool isFirstArgLValue;
 };
 
-class NonConstantFunction : public SimpleSystemSubroutine {
+class SLANG_EXPORT NonConstantFunction : public SimpleSystemSubroutine {
 public:
     NonConstantFunction(const std::string& name, const Type& returnType, size_t requiredArgs = 0,
                         const std::vector<const Type*>& argTypes = {}, bool isMethod = false) :

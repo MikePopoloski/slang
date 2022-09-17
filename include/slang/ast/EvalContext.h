@@ -21,7 +21,7 @@ class SubroutineSymbol;
 class ValueSymbol;
 
 /// Various flags that can be applied to a constant expression evaluation.
-enum class EvalFlags : uint8_t {
+enum class SLANG_EXPORT EvalFlags : uint8_t {
     /// No special flags specified.
     None = 0,
 
@@ -50,7 +50,7 @@ BITMASK(EvalFlags, AllowUnboundedPlaceholder)
 /// A container for all context required to evaluate a statement or expression.
 /// Mostly this involves tracking the callstack and maintaining
 /// storage for local variables.
-class EvalContext {
+class SLANG_EXPORT EvalContext {
 public:
     Compilation& compilation;
     bitmask<EvalFlags> flags;

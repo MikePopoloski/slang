@@ -12,7 +12,7 @@
 
 namespace slang {
 
-class DiagnosticClient {
+class SLANG_EXPORT DiagnosticClient {
 public:
     virtual ~DiagnosticClient() = default;
     virtual void report(const ReportedDiagnostic& diagnostic) = 0;

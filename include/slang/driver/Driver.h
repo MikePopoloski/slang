@@ -31,7 +31,7 @@ namespace slang::driver {
 /// and invoking various parts of the slang compilation process.
 /// This is exposed as a convenience wrapper around the various components
 /// that could otherwise be used on their own.
-class Driver {
+class SLANG_EXPORT Driver {
 public:
     /// The command line object that will be used to parse
     /// arguments if the @a parseCommandLine method is called.

@@ -23,7 +23,7 @@ class TimingControl;
 
 /// Represents an empty member, i.e. a standalone semicolon.
 /// This exists as a symbol mostly to provide a place to attach attributes.
-class EmptyMemberSymbol : public Symbol {
+class SLANG_EXPORT EmptyMemberSymbol : public Symbol {
 public:
     explicit EmptyMemberSymbol(SourceLocation location) :
         Symbol(SymbolKind::EmptyMember, "", location) {}
@@ -39,7 +39,7 @@ public:
 /// A class that wraps a hoisted transparent type member, such as an enum value
 /// or a symbol inherited from a base class, into a scope. Whenever lookup finds
 /// one of these symbols, it will be unwrapped into the underlying symbol instead.
-class TransparentMemberSymbol : public Symbol {
+class SLANG_EXPORT TransparentMemberSymbol : public Symbol {
 public:
     const Symbol& wrapped;
 
@@ -54,7 +54,7 @@ public:
 };
 
 /// Represents an explicit import from a package.
-class ExplicitImportSymbol : public Symbol {
+class SLANG_EXPORT ExplicitImportSymbol : public Symbol {
 public:
     string_view packageName;
     string_view importName;
@@ -81,7 +81,7 @@ private:
 /// that it won't be returned by a lookup, and won't even be in the name
 /// map of a symbol at all. Instead there is a sideband list used to
 /// resolve names via wildcard.
-class WildcardImportSymbol : public Symbol {
+class SLANG_EXPORT WildcardImportSymbol : public Symbol {
 public:
     string_view packageName;
     bool isFromExport = false;
@@ -101,7 +101,7 @@ private:
 };
 
 /// Represents a single port specifier in a modport declaration.
-class ModportPortSymbol : public ValueSymbol {
+class SLANG_EXPORT ModportPortSymbol : public ValueSymbol {
 public:
     /// The direction of data flowing across the port.
     ArgumentDirection direction = ArgumentDirection::InOut;
@@ -129,7 +129,7 @@ public:
 };
 
 /// Represents a clocking block port.
-class ModportClockingSymbol : public Symbol {
+class SLANG_EXPORT ModportClockingSymbol : public Symbol {
 public:
     /// The target clocking block of the modport.
     const Symbol* target = nullptr;
@@ -145,7 +145,7 @@ public:
 };
 
 /// Represents a modport within an interface definition.
-class ModportSymbol : public Symbol, public Scope {
+class SLANG_EXPORT ModportSymbol : public Symbol, public Scope {
 public:
     bool hasExports = false;
 
@@ -161,7 +161,7 @@ public:
 };
 
 /// Represents a continuous assignment statement.
-class ContinuousAssignSymbol : public Symbol {
+class SLANG_EXPORT ContinuousAssignSymbol : public Symbol {
 public:
     explicit ContinuousAssignSymbol(const syntax::ExpressionSyntax& syntax);
     ContinuousAssignSymbol(SourceLocation loc, const Expression& assignment);
@@ -188,7 +188,7 @@ private:
 };
 
 /// Represents a genvar declaration.
-class GenvarSymbol : public Symbol {
+class SLANG_EXPORT GenvarSymbol : public Symbol {
 public:
     GenvarSymbol(string_view name, SourceLocation loc);
 
@@ -201,7 +201,7 @@ public:
 };
 
 /// Represents an elaboration system task, such as $error or $warning.
-class ElabSystemTaskSymbol : public Symbol {
+class SLANG_EXPORT ElabSystemTaskSymbol : public Symbol {
 public:
     ElabSystemTaskKind taskKind;
 
@@ -228,7 +228,7 @@ private:
     mutable const Expression* assertCondition = nullptr;
 };
 
-class PrimitivePortSymbol : public ValueSymbol {
+class SLANG_EXPORT PrimitivePortSymbol : public ValueSymbol {
 public:
     PrimitivePortDirection direction;
 
@@ -240,7 +240,7 @@ public:
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::PrimitivePort; }
 };
 
-class PrimitiveSymbol : public Symbol, public Scope {
+class SLANG_EXPORT PrimitiveSymbol : public Symbol, public Scope {
 public:
     span<const PrimitivePortSymbol* const> ports;
     const ConstantValue* initVal = nullptr;
@@ -260,7 +260,7 @@ public:
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::Primitive; }
 };
 
-class SpecifyBlockSymbol : public Symbol, public Scope {
+class SLANG_EXPORT SpecifyBlockSymbol : public Symbol, public Scope {
 public:
     SpecifyBlockSymbol(Compilation& compilation, SourceLocation loc);
 
@@ -273,7 +273,7 @@ public:
 
 /// Represents a formal argument / port of an assertion construct, such
 /// as a sequence, property, or let construct.
-class AssertionPortSymbol : public Symbol {
+class SLANG_EXPORT AssertionPortSymbol : public Symbol {
 public:
     DeclaredType declaredType;
     const syntax::PropertyExprSyntax* defaultValueSyntax = nullptr;
@@ -292,7 +292,7 @@ public:
 };
 
 /// Represents a named sequence object.
-class SequenceSymbol : public Symbol, public Scope {
+class SLANG_EXPORT SequenceSymbol : public Symbol, public Scope {
 public:
     span<const AssertionPortSymbol* const> ports;
 
@@ -309,7 +309,7 @@ public:
 };
 
 /// Represents a named property object.
-class PropertySymbol : public Symbol, public Scope {
+class SLANG_EXPORT PropertySymbol : public Symbol, public Scope {
 public:
     span<const AssertionPortSymbol* const> ports;
 
@@ -326,7 +326,7 @@ public:
 };
 
 /// Represents a let declaration.
-class LetDeclSymbol : public Symbol, public Scope {
+class SLANG_EXPORT LetDeclSymbol : public Symbol, public Scope {
 public:
     span<const AssertionPortSymbol* const> ports;
     not_null<const syntax::ExpressionSyntax*> exprSyntax;
@@ -345,7 +345,7 @@ public:
 };
 
 /// Represents a clocking block.
-class ClockingBlockSymbol : public Symbol, public Scope {
+class SLANG_EXPORT ClockingBlockSymbol : public Symbol, public Scope {
 public:
     ClockingBlockSymbol(Compilation& compilation, string_view name, SourceLocation loc);
 
@@ -368,7 +368,7 @@ private:
     const syntax::ClockingSkewSyntax* outputSkewSyntax = nullptr;
 };
 
-class RandSeqProductionSymbol : public Symbol, public Scope {
+class SLANG_EXPORT RandSeqProductionSymbol : public Symbol, public Scope {
 public:
     enum class ProdKind { Item, CodeBlock, IfElse, Repeat, Case };
 

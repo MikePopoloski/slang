@@ -8,7 +8,6 @@
 #pragma once
 
 #include <deque>
-#include <flat_hash_map.hpp>
 #include <memory>
 
 #include "slang/parsing/Lexer.h"
@@ -35,7 +34,7 @@ struct PragmaExpressionSyntax;
 namespace slang::parsing {
 
 /// Contains various options that can control preprocessing behavior.
-struct PreprocessorOptions {
+struct SLANG_EXPORT PreprocessorOptions {
     /// The maximum depth of the include stack; further attempts to include
     /// a file will result in an error.
     uint32_t maxIncludeDepth = 1024;
@@ -57,7 +56,7 @@ struct PreprocessorOptions {
 /// This class handles the messy interface between various source file lexers, include directives,
 /// and macro expansion, and the actual SystemVerilog parser that wants a nice coherent stream
 /// of tokens to consume.
-class Preprocessor {
+class SLANG_EXPORT Preprocessor {
 public:
     Preprocessor(SourceManager& sourceManager, BumpAllocator& alloc, Diagnostics& diagnostics,
                  const Bag& options = {},

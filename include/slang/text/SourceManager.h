@@ -34,7 +34,7 @@ enum class DiagnosticSeverity;
 /// See SourceLocation for more details.
 ///
 /// The methods in this class are thread safe.
-class SourceManager {
+class SLANG_EXPORT SourceManager {
 public:
     SourceManager();
     SourceManager(const SourceManager&) = delete;

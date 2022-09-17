@@ -35,7 +35,7 @@ using PointerMap = flat_hash_map<uintptr_t, uintptr_t>;
 
 /// Base class for symbols that represent a name scope; that is, they contain children and can
 /// participate in name lookup.
-class Scope {
+class SLANG_EXPORT Scope {
 public:
     /// Adds a symbol as a member to the scope.
     void addMember(const Symbol& symbol);
@@ -128,9 +128,9 @@ public:
         const Symbol& operator*() const { return *current; }
         const Symbol& operator*() { return *current; }
 
-        iterator& operator++();
+        SLANG_EXPORT iterator& operator++();
 
-        iterator operator++(int) {
+        SLANG_EXPORT iterator operator++(int) {
             iterator tmp = *this;
             ++(*this);
             return tmp;

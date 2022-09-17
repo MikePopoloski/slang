@@ -16,7 +16,7 @@ namespace slang::ast {
 
 /// A helper class that allows evaluating arbitrary snippets of SystemVerilog
 /// source code and maintaining state across multiple eval calls.
-class ScriptSession {
+class SLANG_EXPORT ScriptSession {
 public:
     Compilation compilation;
     CompilationUnitSymbol& scope;

@@ -17,7 +17,7 @@ namespace slang::ast {
 
 class FormalArgumentSymbol;
 
-class CoverageOptionSetter {
+class SLANG_EXPORT CoverageOptionSetter {
 public:
     CoverageOptionSetter(const Scope& scope, const syntax::CoverageOptionSyntax& syntax);
 
@@ -41,7 +41,7 @@ private:
 /// Represents the body of a covergroup type, separated out because the
 /// arguments of a covergroup need to live in their own scope so that
 /// they can be shadowed by body members.
-class CovergroupBodySymbol : public Symbol, public Scope {
+class SLANG_EXPORT CovergroupBodySymbol : public Symbol, public Scope {
 public:
     span<const CoverageOptionSetter> options;
 
@@ -53,7 +53,7 @@ public:
 };
 
 /// Represents a covergroup definition type.
-class CovergroupType : public Type, public Scope {
+class SLANG_EXPORT CovergroupType : public Type, public Scope {
 public:
     span<const FormalArgumentSymbol* const> arguments;
     span<const FormalArgumentSymbol* const> sampleArguments;
@@ -78,7 +78,7 @@ private:
 
 class BinsSelectExpr;
 
-class CoverageBinSymbol : public Symbol {
+class SLANG_EXPORT CoverageBinSymbol : public Symbol {
 public:
     struct TransRangeList {
         span<const Expression* const> items;
@@ -148,7 +148,7 @@ private:
     mutable bool isResolved = false;
 };
 
-class CoverpointSymbol : public Symbol, public Scope {
+class SLANG_EXPORT CoverpointSymbol : public Symbol, public Scope {
 public:
     DeclaredType declaredType;
     span<const CoverageOptionSetter> options;
@@ -188,7 +188,7 @@ private:
 
 /// Represents the body of a cover cross type, separated out because the
 /// members of the cross body can't be accessed outside of the cross itself.
-class CoverCrossBodySymbol : public Symbol, public Scope {
+class SLANG_EXPORT CoverCrossBodySymbol : public Symbol, public Scope {
 public:
     const Type* crossQueueType = nullptr;
 
@@ -200,7 +200,7 @@ public:
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::CoverCrossBody; }
 };
 
-class CoverCrossSymbol : public Symbol, public Scope {
+class SLANG_EXPORT CoverCrossSymbol : public Symbol, public Scope {
 public:
     span<const CoverpointSymbol* const> targets;
     span<const CoverageOptionSetter> options;
@@ -243,7 +243,7 @@ ENUM(BinsSelectExprKind, EXPR)
 #undef EXPR
 // clang-format on
 
-class BinsSelectExpr {
+class SLANG_EXPORT BinsSelectExpr {
 public:
     BinsSelectExprKind kind;
 
@@ -275,7 +275,7 @@ protected:
     static BinsSelectExpr& badExpr(Compilation& compilation, const BinsSelectExpr* expr);
 };
 
-class InvalidBinsSelectExpr : public BinsSelectExpr {
+class SLANG_EXPORT InvalidBinsSelectExpr : public BinsSelectExpr {
 public:
     const BinsSelectExpr* child;
 
@@ -287,7 +287,7 @@ public:
     void serializeTo(ASTSerializer& serializer) const;
 };
 
-class ConditionBinsSelectExpr : public BinsSelectExpr {
+class SLANG_EXPORT ConditionBinsSelectExpr : public BinsSelectExpr {
 public:
     const Symbol& target;
     span<const Expression* const> intersects;
@@ -309,7 +309,7 @@ public:
     }
 };
 
-class UnaryBinsSelectExpr : public BinsSelectExpr {
+class SLANG_EXPORT UnaryBinsSelectExpr : public BinsSelectExpr {
 public:
     const BinsSelectExpr& expr;
 
@@ -333,7 +333,7 @@ public:
     }
 };
 
-class BinaryBinsSelectExpr : public BinsSelectExpr {
+class SLANG_EXPORT BinaryBinsSelectExpr : public BinsSelectExpr {
 public:
     const BinsSelectExpr& left;
     const BinsSelectExpr& right;
@@ -356,7 +356,7 @@ public:
     }
 };
 
-class SetExprBinsSelectExpr : public BinsSelectExpr {
+class SLANG_EXPORT SetExprBinsSelectExpr : public BinsSelectExpr {
 public:
     const Expression& expr;
     const Expression* matchesExpr;
@@ -379,7 +379,7 @@ public:
     }
 };
 
-class BinSelectWithFilterExpr : public BinsSelectExpr {
+class SLANG_EXPORT BinSelectWithFilterExpr : public BinsSelectExpr {
 public:
     const BinsSelectExpr& expr;
     const Expression& filter;
@@ -406,7 +406,7 @@ public:
     }
 };
 
-class CrossIdBinsSelectExpr : public BinsSelectExpr {
+class SLANG_EXPORT CrossIdBinsSelectExpr : public BinsSelectExpr {
 public:
     CrossIdBinsSelectExpr() : BinsSelectExpr(BinsSelectExprKind::CrossId) {}
 

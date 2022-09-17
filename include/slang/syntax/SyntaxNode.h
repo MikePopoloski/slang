@@ -22,7 +22,7 @@ class SyntaxNode;
 
 /// A base class template for a sum type representing either a token or a syntax node.
 template<typename TNode>
-struct TokenOrSyntaxBase : public std::variant<parsing::Token, TNode> {
+struct SLANG_EXPORT TokenOrSyntaxBase : public std::variant<parsing::Token, TNode> {
     using Base = std::variant<parsing::Token, TNode>;
     TokenOrSyntaxBase(parsing::Token token) : Base(token) {}
     TokenOrSyntaxBase(TNode node) : Base(node) {}
@@ -47,19 +47,19 @@ protected:
 };
 
 /// A token or a syntax node.
-struct TokenOrSyntax : public TokenOrSyntaxBase<SyntaxNode*> {
+struct SLANG_EXPORT TokenOrSyntax : public TokenOrSyntaxBase<SyntaxNode*> {
     using TokenOrSyntaxBase::TokenOrSyntaxBase;
 };
 
 /// A token or a constant syntax node.
-struct ConstTokenOrSyntax : public TokenOrSyntaxBase<const SyntaxNode*> {
+struct SLANG_EXPORT ConstTokenOrSyntax : public TokenOrSyntaxBase<const SyntaxNode*> {
     using TokenOrSyntaxBase::TokenOrSyntaxBase;
 
     ConstTokenOrSyntax(TokenOrSyntax tos);
 };
 
 /// Base class for all syntax nodes.
-class SyntaxNode {
+class SLANG_EXPORT SyntaxNode {
 public:
     using Token = parsing::Token;
 
@@ -138,7 +138,7 @@ private:
 };
 
 /// A base class for syntax nodes that represent a list of items.
-class SyntaxListBase : public SyntaxNode {
+class SLANG_EXPORT SyntaxListBase : public SyntaxNode {
 public:
     /// Gets the number of child items in the node.
     size_t getChildCount() const { return childCount; }
@@ -169,10 +169,11 @@ protected:
 
 /// A syntax node that represents a list of child syntax nodes.
 template<typename T>
-class SyntaxList : public SyntaxListBase, public span<T*> {
+class SLANG_EXPORT SyntaxList : public SyntaxListBase, public span<T*> {
 public:
     SyntaxList(nullptr_t) : SyntaxList(span<T*>()) {}
-    SyntaxList(span<T*> elements);
+    SyntaxList(span<T*> elements) :
+        SyntaxListBase(SyntaxKind::SyntaxList, elements.size()), span<T*>(elements) {}
 
     // TODO: this is here to work around a bug in GCC 9
     operator span<const T* const>() const {
@@ -202,10 +203,11 @@ private:
 };
 
 /// A syntax node that represents a list of child tokens.
-class TokenList : public SyntaxListBase, public span<parsing::Token> {
+class SLANG_EXPORT TokenList : public SyntaxListBase, public span<parsing::Token> {
 public:
     TokenList(nullptr_t) : TokenList(span<Token>()) {}
-    TokenList(span<Token> elements);
+    TokenList(span<Token> elements) :
+        SyntaxListBase(SyntaxKind::TokenList, elements.size()), span<Token>(elements) {}
 
 private:
     TokenOrSyntax getChild(size_t index) final { return (*this)[index]; }
@@ -229,7 +231,7 @@ private:
 /// A syntax node that represents a token-separated list of child syntax nodes.
 /// The stored children are assumed to alternate between delimiters (such as a comma) and nodes.
 template<typename T>
-class SeparatedSyntaxList : public SyntaxListBase {
+class SLANG_EXPORT SeparatedSyntaxList : public SyntaxListBase {
 public:
     /// An iterator that will iterate over just the nodes (and skip the delimiters) in the
     /// parent SeparatedSyntaxList.
@@ -272,7 +274,8 @@ public:
     using const_iterator = iterator_base<const T*>;
 
     SeparatedSyntaxList(nullptr_t) : SeparatedSyntaxList(span<TokenOrSyntax>()) {}
-    SeparatedSyntaxList(span<TokenOrSyntax> elements);
+    SeparatedSyntaxList(span<TokenOrSyntax> elements) :
+        SyntaxListBase(SyntaxKind::SeparatedList, elements.size()), elements(elements) {}
 
     /// @return true if the list is empty, and false if it has elements.
     [[nodiscard]] bool empty() const { return elements.empty(); }
@@ -316,19 +319,5 @@ private:
 
     span<TokenOrSyntax> elements;
 };
-
-template<typename T>
-SyntaxList<T>::SyntaxList(span<T*> elements) :
-    SyntaxListBase(SyntaxKind::SyntaxList, elements.size()), span<T*>(elements) {
-}
-
-inline TokenList::TokenList(span<Token> elements) :
-    SyntaxListBase(SyntaxKind::TokenList, elements.size()), span<Token>(elements) {
-}
-
-template<typename T>
-SeparatedSyntaxList<T>::SeparatedSyntaxList(span<TokenOrSyntax> elements) :
-    SyntaxListBase(SyntaxKind::SeparatedList, elements.size()), elements(elements) {
-}
 
 } // namespace slang::syntax

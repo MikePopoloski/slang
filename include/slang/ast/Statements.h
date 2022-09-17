@@ -89,7 +89,7 @@ enum class StatementFlags {
 BITMASK(StatementFlags, HasTimingError)
 
 /// The base class for all statements in SystemVerilog.
-class Statement {
+class SLANG_EXPORT Statement {
 public:
     using StatementSyntax = syntax::StatementSyntax;
 
@@ -230,7 +230,7 @@ protected:
 
 /// Represents an invalid statement, which is usually generated and inserted
 /// into a statement list due to violation of language semantics or type checking.
-class InvalidStatement : public Statement {
+class SLANG_EXPORT InvalidStatement : public Statement {
 public:
     /// A wrapped sub-statement that is considered invalid.
     const Statement* child;
@@ -246,7 +246,7 @@ public:
 };
 
 /// Represents an empty statement, used as a placeholder or an anchor for attributes.
-class EmptyStatement : public Statement {
+class SLANG_EXPORT EmptyStatement : public Statement {
 public:
     explicit EmptyStatement(SourceRange sourceRange) :
         Statement(StatementKind::Empty, sourceRange) {}
@@ -259,7 +259,7 @@ public:
 };
 
 /// Represents a list of statements.
-class StatementList : public Statement {
+class SLANG_EXPORT StatementList : public Statement {
 public:
     span<const Statement* const> list;
 
@@ -282,7 +282,7 @@ public:
 };
 
 /// Represents a sequential or parallel block statement.
-class BlockStatement : public Statement {
+class SLANG_EXPORT BlockStatement : public Statement {
 public:
     const Statement& body;
     const StatementBlockSymbol* blockSymbol = nullptr;
@@ -310,7 +310,7 @@ public:
     }
 };
 
-class ReturnStatement : public Statement {
+class SLANG_EXPORT ReturnStatement : public Statement {
 public:
     const Expression* expr;
 
@@ -334,7 +334,7 @@ public:
     }
 };
 
-class BreakStatement : public Statement {
+class SLANG_EXPORT BreakStatement : public Statement {
 public:
     explicit BreakStatement(SourceRange sourceRange) :
         Statement(StatementKind::Break, sourceRange) {}
@@ -350,7 +350,7 @@ public:
     static bool isKind(StatementKind kind) { return kind == StatementKind::Break; }
 };
 
-class ContinueStatement : public Statement {
+class SLANG_EXPORT ContinueStatement : public Statement {
 public:
     explicit ContinueStatement(SourceRange sourceRange) :
         Statement(StatementKind::Continue, sourceRange) {}
@@ -366,7 +366,7 @@ public:
     static bool isKind(StatementKind kind) { return kind == StatementKind::Continue; }
 };
 
-class DisableStatement : public Statement {
+class SLANG_EXPORT DisableStatement : public Statement {
 public:
     const Symbol& target;
     bool isHierarchical;
@@ -386,7 +386,7 @@ public:
     static bool isKind(StatementKind kind) { return kind == StatementKind::Disable; }
 };
 
-class VariableDeclStatement : public Statement {
+class SLANG_EXPORT VariableDeclStatement : public Statement {
 public:
     const VariableSymbol& symbol;
 
@@ -400,7 +400,7 @@ public:
     static bool isKind(StatementKind kind) { return kind == StatementKind::VariableDeclaration; }
 };
 
-class ConditionalStatement : public Statement {
+class SLANG_EXPORT ConditionalStatement : public Statement {
 public:
     struct Condition {
         not_null<const Expression*> expr;
@@ -440,7 +440,7 @@ public:
     }
 };
 
-class CaseStatement : public Statement {
+class SLANG_EXPORT CaseStatement : public Statement {
 public:
     struct ItemGroup {
         span<const Expression* const> expressions;
@@ -487,7 +487,7 @@ public:
     }
 };
 
-class PatternCaseStatement : public Statement {
+class SLANG_EXPORT PatternCaseStatement : public Statement {
 public:
     struct ItemGroup {
         not_null<const Pattern*> pattern;
@@ -535,7 +535,7 @@ public:
     }
 };
 
-class ForLoopStatement : public Statement {
+class SLANG_EXPORT ForLoopStatement : public Statement {
 public:
     span<const Expression* const> initializers;
     span<const VariableSymbol* const> loopVars;
@@ -575,7 +575,7 @@ public:
     }
 };
 
-class RepeatLoopStatement : public Statement {
+class SLANG_EXPORT RepeatLoopStatement : public Statement {
 public:
     const Expression& count;
     const Statement& body;
@@ -604,7 +604,7 @@ public:
     }
 };
 
-class ForeachLoopStatement : public Statement {
+class SLANG_EXPORT ForeachLoopStatement : public Statement {
 public:
     /// Describes one dimension that will be iterated by the loop.
     struct LoopDim {
@@ -654,7 +654,7 @@ private:
                              span<const LoopDim> loopDims) const;
 };
 
-class WhileLoopStatement : public Statement {
+class SLANG_EXPORT WhileLoopStatement : public Statement {
 public:
     const Expression& cond;
     const Statement& body;
@@ -683,7 +683,7 @@ public:
     }
 };
 
-class DoWhileLoopStatement : public Statement {
+class SLANG_EXPORT DoWhileLoopStatement : public Statement {
 public:
     const Expression& cond;
     const Statement& body;
@@ -712,7 +712,7 @@ public:
     }
 };
 
-class ForeverLoopStatement : public Statement {
+class SLANG_EXPORT ForeverLoopStatement : public Statement {
 public:
     const Statement& body;
 
@@ -735,7 +735,7 @@ public:
     }
 };
 
-class ExpressionStatement : public Statement {
+class SLANG_EXPORT ExpressionStatement : public Statement {
 public:
     const Expression& expr;
 
@@ -762,7 +762,7 @@ public:
     }
 };
 
-class TimedStatement : public Statement {
+class SLANG_EXPORT TimedStatement : public Statement {
 public:
     const TimingControl& timing;
     const Statement& stmt;
@@ -791,7 +791,7 @@ public:
     }
 };
 
-class ImmediateAssertionStatement : public Statement {
+class SLANG_EXPORT ImmediateAssertionStatement : public Statement {
 public:
     const Expression& cond;
     const Statement* ifTrue;
@@ -831,7 +831,7 @@ public:
     }
 };
 
-class ConcurrentAssertionStatement : public Statement {
+class SLANG_EXPORT ConcurrentAssertionStatement : public Statement {
 public:
     const AssertionExpr& propertySpec;
     const Statement* ifTrue;
@@ -869,7 +869,7 @@ public:
     }
 };
 
-class DisableForkStatement : public Statement {
+class SLANG_EXPORT DisableForkStatement : public Statement {
 public:
     explicit DisableForkStatement(SourceRange sourceRange) :
         Statement(StatementKind::DisableFork, sourceRange) {}
@@ -884,7 +884,7 @@ public:
     static bool isKind(StatementKind kind) { return kind == StatementKind::DisableFork; }
 };
 
-class WaitStatement : public Statement {
+class SLANG_EXPORT WaitStatement : public Statement {
 public:
     const Expression& cond;
     const Statement& stmt;
@@ -913,7 +913,7 @@ public:
     }
 };
 
-class WaitForkStatement : public Statement {
+class SLANG_EXPORT WaitForkStatement : public Statement {
 public:
     explicit WaitForkStatement(SourceRange sourceRange) :
         Statement(StatementKind::WaitFork, sourceRange) {}
@@ -928,7 +928,7 @@ public:
     static bool isKind(StatementKind kind) { return kind == StatementKind::WaitFork; }
 };
 
-class WaitOrderStatement : public Statement {
+class SLANG_EXPORT WaitOrderStatement : public Statement {
 public:
     span<const Expression* const> events;
     const Statement* ifTrue;
@@ -964,7 +964,7 @@ public:
     }
 };
 
-class EventTriggerStatement : public Statement {
+class SLANG_EXPORT EventTriggerStatement : public Statement {
 public:
     const Expression& target;
     const TimingControl* timing;
@@ -993,7 +993,7 @@ public:
     }
 };
 
-class ProceduralAssignStatement : public Statement {
+class SLANG_EXPORT ProceduralAssignStatement : public Statement {
 public:
     const Expression& assignment;
     bool isForce;
@@ -1018,7 +1018,7 @@ public:
     }
 };
 
-class ProceduralDeassignStatement : public Statement {
+class SLANG_EXPORT ProceduralDeassignStatement : public Statement {
 public:
     const Expression& lvalue;
     bool isRelease;
@@ -1043,7 +1043,7 @@ public:
     }
 };
 
-class RandCaseStatement : public Statement {
+class SLANG_EXPORT RandCaseStatement : public Statement {
 public:
     struct Item {
         not_null<const Expression*> expr;
@@ -1078,7 +1078,7 @@ public:
     }
 };
 
-class RandSequenceStatement : public Statement {
+class SLANG_EXPORT RandSequenceStatement : public Statement {
 public:
     const RandSeqProductionSymbol* firstProduction;
 

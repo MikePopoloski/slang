@@ -10,6 +10,7 @@
 #include <memory>
 
 #include "slang/diagnostics/Diagnostics.h"
+#include "slang/parsing/ParserMetadata.h"
 #include "slang/util/Bag.h"
 #include "slang/util/BumpAllocator.h"
 
@@ -18,23 +19,16 @@ namespace slang {
 class SourceManager;
 struct SourceBuffer;
 
-namespace parsing {
-struct ParserMetadata;
-}
-
 } // namespace slang
 
 namespace slang::syntax {
-
-class SyntaxNode;
-struct DefineDirectiveSyntax;
 
 /// The SyntaxTree is the easiest way to interface with the lexer / preprocessor /
 /// parser stack. Give it some source text and it produces a parse tree.
 ///
 /// The SyntaxTree object owns all of the memory for the parse tree, so it must
 /// live for as long as you need to access its syntax nodes.
-class SyntaxTree {
+class SLANG_EXPORT SyntaxTree {
 public:
     using MacroList = span<const DefineDirectiveSyntax* const>;
 

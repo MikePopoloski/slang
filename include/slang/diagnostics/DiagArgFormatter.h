@@ -13,7 +13,7 @@ namespace slang {
 
 class Diagnostic;
 
-class DiagArgFormatter {
+class SLANG_EXPORT DiagArgFormatter {
 public:
     virtual ~DiagArgFormatter() {}
 

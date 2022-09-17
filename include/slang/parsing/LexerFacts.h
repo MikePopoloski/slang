@@ -22,7 +22,7 @@ enum class TokenKind : uint16_t;
 /// Different restricted sets of keywords that can be set using the
 /// `begin_keywords directive. The values of the enum correspond to indexes to
 /// allKeywords[] in LexerFacts.cpp
-enum class KeywordVersion : uint8_t {
+enum class SLANG_EXPORT KeywordVersion : uint8_t {
     v1364_1995 = 0,
     v1364_2001_noconfig = 1,
     v1364_2001 = 2,
@@ -33,7 +33,7 @@ enum class KeywordVersion : uint8_t {
     v1800_2017 = 7,
 };
 
-class LexerFacts {
+class SLANG_EXPORT LexerFacts {
 public:
     static TokenKind getSystemKeywordKind(string_view text);
     static string_view getTokenKindText(TokenKind kind);

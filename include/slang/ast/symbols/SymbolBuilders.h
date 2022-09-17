@@ -15,7 +15,7 @@ namespace slang::ast {
 class UnpackedStructType;
 
 /// A helper class for constructing method symbols programmatically.
-class MethodBuilder {
+class SLANG_EXPORT MethodBuilder {
 public:
     /// The compilation used to construct symbols.
     Compilation& compilation;
@@ -48,7 +48,7 @@ private:
 };
 
 /// A helper class for constructing class types programmatically.
-class ClassBuilder {
+class SLANG_EXPORT ClassBuilder {
 public:
     /// The compilation used to construct symbols.
     Compilation& compilation;
@@ -66,7 +66,7 @@ public:
 };
 
 /// A helper class for constructing struct types programmatically.
-class StructBuilder {
+class SLANG_EXPORT StructBuilder {
 public:
     /// The compilation used to construct symbols.
     Compilation& compilation;

@@ -26,7 +26,7 @@ enum class SymbolIndex : uint32_t;
 enum class Visibility;
 
 /// Additional modifiers for a lookup operation.
-enum class LookupFlags {
+enum class SLANG_EXPORT LookupFlags {
     /// No special modifiers.
     None = 0,
 
@@ -72,7 +72,7 @@ BITMASK(LookupFlags, AllowRoot)
 /// This type denotes the ordering of symbols within a particular scope, for the purposes of
 /// determining whether a found symbol is visible compared to the given location.
 /// For example, variables cannot be referenced before they are declared.
-class LookupLocation {
+class SLANG_EXPORT LookupLocation {
 public:
     LookupLocation() = default;
     LookupLocation(const Scope* scope_, uint32_t index) : scope(scope_), index(index) {}
@@ -109,7 +109,7 @@ private:
 };
 
 /// A structure that contains the results of a name lookup operation.
-struct LookupResult {
+struct SLANG_EXPORT LookupResult {
     /// The symbol that was found by the lookup, or nullptr if no symbol was found.
     /// Note that there can still be errors even if a symbol is found.
     const Symbol* found = nullptr;
@@ -197,7 +197,7 @@ private:
 };
 
 /// Centralized functionality for looking up symbols by name in the AST.
-class Lookup {
+class SLANG_EXPORT Lookup {
 public:
     /// Performs a full fledged name lookup starting in the current scope, following all
     /// SystemVerilog rules for qualified or unqualified name resolution.

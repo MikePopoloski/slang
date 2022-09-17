@@ -22,7 +22,7 @@ class text_style;
 namespace slang {
 
 /// A collection of various OS-specific utility functions.
-class OS {
+class SLANG_EXPORT OS {
 public:
     /// Tries to enable color output support for stdout and stderr.
     /// @return true if successful and false otherwise.

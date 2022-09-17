@@ -32,7 +32,7 @@ namespace slang::parsing {
 class Token;
 
 /// Various flags for numeric tokens.
-struct NumericTokenFlags {
+struct SLANG_EXPORT NumericTokenFlags {
     uint8_t raw = 0;
 
     LiteralBase base() const { return LiteralBase(raw & 0b11); }
@@ -48,7 +48,7 @@ struct NumericTokenFlags {
 /// The Trivia class holds on to a piece of source text that should otherwise
 /// not turn into a token; for example, a preprocessor directive, a line continuation
 /// character, or a comment.
-class Trivia {
+class SLANG_EXPORT Trivia {
 private:
 #pragma pack(push, 4)
     struct ShortStringView {
@@ -125,7 +125,7 @@ static_assert(sizeof(Trivia) == 16);
 /// This class is a lightweight immutable structure designed to be copied around and stored
 /// wherever. The bulk of the token's data is stored in a heap allocated block. Most of the
 /// hot path only cares about the token's kind, so that's given priority.
-class Token {
+class SLANG_EXPORT Token {
 public:
     /// The kind of the token; this is not in the info block because
     /// we almost always want to look at it (perf).

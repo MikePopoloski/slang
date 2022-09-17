@@ -35,7 +35,7 @@
 
 namespace slang::ast {
 
-struct ASTDetectors {
+struct SLANG_EXPORT ASTDetectors {
     template<typename T, typename Arg>
     using handle_t = decltype(std::declval<T>().handle(std::declval<Arg>()));
 

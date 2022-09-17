@@ -17,11 +17,15 @@ jobs:
             os: ubuntu-22.04
           - preset: gcc-9-release
             os: ubuntu-22.04
+          - preset: gcc-debug-shared
+            os: ubuntu-22.04
           - preset: macos-release
             os: macos-latest
           - preset: win64-release
             os: windows-latest
           - preset: win32-release
+            os: windows-latest
+          - preset: win64-debug-shared
             os: windows-latest
 
     runs-on: ${{ matrix.os }}

@@ -20,7 +20,7 @@ class SourceManager;
 /// from text in memory, or they can represent a macro expansion.
 /// Each time a macro is expanded a new BufferID is allocated to track
 /// the expansion location and original definition location.
-struct BufferID {
+struct SLANG_EXPORT BufferID {
     BufferID() = default;
     constexpr BufferID(uint32_t value, string_view name) :
 #ifdef DEBUG
@@ -83,7 +83,7 @@ private:
 /// The SourceManager can decode this into file, line, and column information if
 /// it's a file location, or into expanded and original locations if it's a
 /// macro location.
-class SourceLocation {
+class SLANG_EXPORT SourceLocation {
 public:
     constexpr SourceLocation() : bufferID(0), charOffset(0) {}
     constexpr SourceLocation(BufferID buffer, uint64_t offset) :
@@ -173,15 +173,12 @@ private:
     uint64_t charOffset : 36;
 };
 
-inline constexpr const SourceLocation SourceLocation::NoLocation{BufferID((1u << 28) - 1, ""),
-                                                                 (1ull << 36) - 1};
-
 #ifndef DEBUG
 static_assert(sizeof(SourceLocation) == 8);
 #endif
 
 /// Combines a pair of source locations that denote a range of source text.
-class SourceRange {
+class SLANG_EXPORT SourceRange {
 public:
     SourceRange() {}
     SourceRange(SourceLocation startLoc, SourceLocation endLoc) :
@@ -207,7 +204,7 @@ private:
 /// Represents a source buffer; that is, the actual text of the source
 /// code along with an identifier for the buffer which potentially
 /// encodes its include stack.
-struct SourceBuffer {
+struct SLANG_EXPORT SourceBuffer {
     /// A view into the text comprising the buffer.
     string_view data;
 

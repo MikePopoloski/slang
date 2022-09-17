@@ -76,10 +76,10 @@ inline bool endsWith(string_view str, string_view suffix) {
 #if defined(_MSC_VER)
 
 /// Widens the provided UTF8 string into UTF16 wchars.
-std::wstring widen(string_view str);
+SLANG_EXPORT std::wstring widen(string_view str);
 
 /// Widens the provided UTF16 string into UTF8.
-std::string narrow(std::wstring_view str);
+SLANG_EXPORT std::string narrow(std::wstring_view str);
 
 #else
 

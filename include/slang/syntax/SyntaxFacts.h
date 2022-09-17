@@ -23,7 +23,7 @@ struct DataTypeSyntax;
 
 /// A collection of static methods that query various facts related
 /// to tokens and syntax nodes.
-class SyntaxFacts {
+class SLANG_EXPORT SyntaxFacts {
 public:
     using TokenKind = parsing::TokenKind;
 

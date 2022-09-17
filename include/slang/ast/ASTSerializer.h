@@ -30,7 +30,7 @@ class Symbol;
 class Type;
 class TimingControl;
 
-class ASTSerializer {
+class SLANG_EXPORT ASTSerializer {
 public:
     ASTSerializer(Compilation& compilation, JsonWriter& writer);
 

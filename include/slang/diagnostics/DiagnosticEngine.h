@@ -21,7 +21,7 @@ class DiagArgFormatter;
 class DiagnosticClient;
 class SourceManager;
 
-struct ReportedDiagnostic {
+struct SLANG_EXPORT ReportedDiagnostic {
     const Diagnostic& originalDiagnostic;
     span<const SourceLocation> expansionLocs;
     span<const SourceRange> ranges;
@@ -42,7 +42,7 @@ struct ReportedDiagnostic {
 /// - Register one or more DiagnosticClient derived classes with addClient()
 /// - Issue diagnostics by calling issue()
 ///
-class DiagnosticEngine {
+class SLANG_EXPORT DiagnosticEngine {
 public:
     /// Constructs a new diagnostic engine, using the specified source manager
     /// for reporting source-based information from diagnostics.

@@ -7,6 +7,7 @@
 //------------------------------------------------------------------------------
 #pragma once
 
+#include "slang_export.h"
 #include <cstddef>
 #include <cstdint>
 #include <cstring>

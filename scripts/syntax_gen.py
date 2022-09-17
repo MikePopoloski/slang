@@ -282,7 +282,9 @@ namespace slang::syntax {
         if name == "SyntaxNode":
             continue
 
-        outf.write("struct {} : public {} {{\n".format(name, currtype.base))
+        outf.write(
+            "struct SLANG_EXPORT {} : public {} {{\n".format(name, currtype.base)
+        )
 
         for m in currtype.members:
             outf.write("    {} {};\n".format(m[0], m[1]))
@@ -500,7 +502,7 @@ size_t SyntaxNode::getChildCount() const {
             cppf.write("}\n\n")
 
     # Write out syntax factory methods.
-    outf.write("class SyntaxFactory {\n")
+    outf.write("class SLANG_EXPORT SyntaxFactory {\n")
     outf.write("public:\n")
     outf.write("    using Token = parsing::Token;\n\n")
     outf.write("    explicit SyntaxFactory(BumpAllocator& alloc) : alloc(alloc) {}\n")
@@ -670,7 +672,7 @@ namespace std { class type_info; }
 
 namespace slang::syntax {
 
-enum class SyntaxKind {
+enum class SLANG_EXPORT SyntaxKind {
     Unknown,
     SyntaxList,
     TokenList,
@@ -684,15 +686,15 @@ enum class SyntaxKind {
     outf.write(
         """}};
 
-std::ostream& operator<<(std::ostream& os, SyntaxKind kind);
-string_view toString(SyntaxKind kind);
+SLANG_EXPORT std::ostream& operator<<(std::ostream& os, SyntaxKind kind);
+SLANG_EXPORT string_view toString(SyntaxKind kind);
 
-class SyntaxKind_traits {{
+class SLANG_EXPORT SyntaxKind_traits {{
 public:
     static const std::array<SyntaxKind, {}> values;
 }};
 
-const std::type_info* typeFromSyntaxKind(SyntaxKind kind);
+SLANG_EXPORT const std::type_info* typeFromSyntaxKind(SyntaxKind kind);
 
 }}
 """.format(
@@ -740,17 +742,17 @@ def loadkinds(ourdir, filename):
 
 
 def writekinddecl(outf, name, basetype, kinds):
-    outf.write("enum class {} : {} {{\n".format(name, basetype))
+    outf.write("enum class SLANG_EXPORT {} : {} {{\n".format(name, basetype))
     for k in kinds:
         outf.write("    {},\n".format(k))
 
     outf.write(
         """}};
 
-std::ostream& operator<<(std::ostream& os, {} kind);
-string_view toString({} kind);
+SLANG_EXPORT std::ostream& operator<<(std::ostream& os, {} kind);
+SLANG_EXPORT string_view toString({} kind);
 
-class {}_traits {{
+class SLANG_EXPORT {}_traits {{
 public:
     static const std::array<{}, {}> values;
 }};

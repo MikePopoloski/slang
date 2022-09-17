@@ -18,7 +18,7 @@ namespace slang {
 /// Allocates items sequentially in memory, with underlying memory allocated in
 /// blocks as needed. Individual items cannot be deallocated; the entire thing
 /// must be destroyed to release the memory.
-class BumpAllocator {
+class SLANG_EXPORT BumpAllocator {
 public:
     BumpAllocator();
     ~BumpAllocator();

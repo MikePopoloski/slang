@@ -75,6 +75,16 @@
       }
     },
     {
+      "name": "win64-debug-shared",
+      "displayName": "Win64 Debug Shared",
+      "inherits": [
+        "win64-debug"
+      ],
+      "cacheVariables": {
+        "BUILD_SHARED_LIBS": "ON"
+      }
+    },
+    {
       "name": "gcc-flags",
       "hidden": true,
       "cacheVariables": {
@@ -139,6 +149,19 @@
         "CMAKE_EXE_LINKER_FLAGS": "-fsanitize=undefined,address",
         "CMAKE_SHARED_LINKER_FLAGS": "-fsanitize=undefined,address",
         "SLANG_CLANG_TIDY": "clang-tidy-14"
+      }
+    },
+    {
+      "name": "gcc-debug-shared",
+      "displayName": "GCC Debug Shared",
+      "inherits": [
+        "linux-base",
+        "gcc-flags"
+      ],
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_CXX_COMPILER": "g++-12",
+        "BUILD_SHARED_LIBS": "ON"
       }
     },
     {

@@ -19,7 +19,7 @@ class ProceduralBlockSymbol;
 
 /// A base class for symbols that represent a value (for example a variable or a parameter).
 /// The common functionality is that they all have a type.
-class ValueSymbol : public Symbol {
+class SLANG_EXPORT ValueSymbol : public Symbol {
 public:
     /// Gets the type of the value.
     const Type& getType() const { return declaredType.getType(); }

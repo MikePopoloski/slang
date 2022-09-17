@@ -33,7 +33,7 @@ ENUM(TimingControlKind, CONTROL)
 
 class ASTContext;
 
-class TimingControl {
+class SLANG_EXPORT TimingControl {
 public:
     TimingControlKind kind;
 
@@ -70,7 +70,7 @@ protected:
     static TimingControl& badCtrl(Compilation& compilation, const TimingControl* ctrl);
 };
 
-class InvalidTimingControl : public TimingControl {
+class SLANG_EXPORT InvalidTimingControl : public TimingControl {
 public:
     const TimingControl* child;
 
@@ -82,7 +82,7 @@ public:
     void serializeTo(ASTSerializer& serializer) const;
 };
 
-class DelayControl : public TimingControl {
+class SLANG_EXPORT DelayControl : public TimingControl {
 public:
     const Expression& expr;
 
@@ -106,7 +106,7 @@ public:
     }
 };
 
-class Delay3Control : public TimingControl {
+class SLANG_EXPORT Delay3Control : public TimingControl {
 public:
     const Expression& expr1;
     const Expression* expr2;
@@ -138,7 +138,7 @@ public:
     }
 };
 
-class SignalEventControl : public TimingControl {
+class SLANG_EXPORT SignalEventControl : public TimingControl {
 public:
     const Expression& expr;
     const Expression* iffCondition;
@@ -182,7 +182,7 @@ private:
                                    SourceRange sourceRange);
 };
 
-class EventListControl : public TimingControl {
+class SLANG_EXPORT EventListControl : public TimingControl {
 public:
     span<const TimingControl* const> events;
 
@@ -203,7 +203,7 @@ public:
     }
 };
 
-class ImplicitEventControl : public TimingControl {
+class SLANG_EXPORT ImplicitEventControl : public TimingControl {
 public:
     explicit ImplicitEventControl(SourceRange sourceRange) :
         TimingControl(TimingControlKind::ImplicitEvent, sourceRange) {}
@@ -217,7 +217,7 @@ public:
     void serializeTo(ASTSerializer&) const {}
 };
 
-class RepeatedEventControl : public TimingControl {
+class SLANG_EXPORT RepeatedEventControl : public TimingControl {
 public:
     const Expression& expr;
     const TimingControl& event;
@@ -242,7 +242,7 @@ public:
     }
 };
 
-class OneStepDelayControl : public TimingControl {
+class SLANG_EXPORT OneStepDelayControl : public TimingControl {
 public:
     explicit OneStepDelayControl(SourceRange sourceRange) :
         TimingControl(TimingControlKind::OneStepDelay, sourceRange) {}
@@ -252,7 +252,7 @@ public:
     void serializeTo(ASTSerializer&) const {}
 };
 
-class CycleDelayControl : public TimingControl {
+class SLANG_EXPORT CycleDelayControl : public TimingControl {
 public:
     const Expression& expr;
 
@@ -272,7 +272,7 @@ public:
     }
 };
 
-class BlockEventListControl : public TimingControl {
+class SLANG_EXPORT BlockEventListControl : public TimingControl {
 public:
     struct Event {
         const Symbol* target = nullptr;

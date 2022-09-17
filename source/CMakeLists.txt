@@ -80,6 +80,7 @@ add_library(
   text/CharInfo.cpp
   text/Json.cpp
   text/SFormat.cpp
+  text/SourceLocation.cpp
   text/SourceManager.cpp
   util/Assert.cpp
   util/BumpAllocator.cpp
@@ -126,13 +127,39 @@ if(SLANG_INCLUDE_PYLIB)
   set_target_properties(slang PROPERTIES POSITION_INDEPENDENT_CODE ON)
 endif()
 
+# Run clang-tidy if desired. This is a separate project-specific variable so
+# that it can apply just to the project itself and not any dependencies.
 if(SLANG_CLANG_TIDY)
   set_target_properties(slang PROPERTIES CXX_CLANG_TIDY ${SLANG_CLANG_TIDY})
 endif()
 
-# Library version info
-set_target_properties(slang PROPERTIES VERSION ${PROJECT_VERSION}
-                                       SOVERSION ${PROJECT_VERSION_MAJOR})
+# Set the magic _STATIC_DEFINE definition to assist with building combo static
+# and shared libs in the same build.
+if(NOT BUILD_SHARED_LIBS)
+  target_compile_definitions(slang PUBLIC SLANG_STATIC_DEFINE)
+endif()
+
+set_target_properties(
+  slang
+  PROPERTIES CXX_VISIBILITY_PRESET hidden
+             VISIBILITY_INLINES_HIDDEN YES
+             VERSION ${PROJECT_VERSION}
+             SOVERSION ${PROJECT_VERSION_MAJOR})
+
+# For the generated export header, suppress annoying warnings
+set(suppress_export_warnings
+    "
+#if defined(_MSC_VER) && !defined(__ICL)
+  #pragma warning(disable:4251)
+  #pragma warning(disable:4275)
+#elif defined(__GNUC__) && !defined(__clang__)
+  #pragma GCC diagnostic ignored \"-Wattributes\"
+#endif
+")
+
+include(GenerateExportHeader)
+generate_export_header(slang BASE_NAME slang CUSTOM_CONTENT_FROM_VARIABLE
+                       suppress_export_warnings)
 
 # Installation rules
 if(SLANG_INCLUDE_INSTALL)

@@ -29,7 +29,7 @@ class NetType;
 class Scope;
 class Type;
 
-class Definition {
+class SLANG_EXPORT Definition {
 public:
     struct ParameterDecl {
         union {

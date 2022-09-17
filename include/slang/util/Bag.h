@@ -21,7 +21,7 @@ namespace slang {
 /// be looked up by their original type. This is useful for things like passing
 /// around a collection of various options to different subsystems without needing
 /// to have cross dependencies between them.
-class Bag {
+class SLANG_EXPORT Bag {
 public:
     Bag() = default;
 

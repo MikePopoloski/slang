@@ -15,7 +15,7 @@ namespace slang::ast {
 /// expression. It represents some storage location in memory that can be read
 /// from and written to.
 ///
-class LValue {
+class SLANG_EXPORT LValue {
 public:
     /// A concatenation of lvalues is also an lvalue and can be assigned to.
     using Concat = std::vector<LValue>;

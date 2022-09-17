@@ -23,14 +23,14 @@ class BumpAllocator;
 namespace slang::parsing {
 
 /// Contains various options that can control lexing behavior.
-struct LexerOptions {
+struct SLANG_EXPORT LexerOptions {
     /// The maximum number of errors that can occur before the rest of the source
     /// buffer is skipped.
     uint32_t maxErrors = 16;
 };
 
 /// Possible encodings for encrypted text used in a pragma protect region.
-enum class ProtectEncoding { UUEncode, Base64, QuotedPrintable, Raw };
+enum class SLANG_EXPORT ProtectEncoding { UUEncode, Base64, QuotedPrintable, Raw };
 
 /// The Lexer is responsible for taking source text and chopping it up into tokens.
 /// Tokens carry along leading "trivia", which is things like whitespace and comments,
@@ -38,7 +38,7 @@ enum class ProtectEncoding { UUEncode, Base64, QuotedPrintable, Raw };
 ///
 /// There are also helper methods on this class that handle token manipulation on the
 /// character level.
-class Lexer {
+class SLANG_EXPORT Lexer {
 public:
     Lexer(SourceBuffer buffer, BumpAllocator& alloc, Diagnostics& diagnostics,
           LexerOptions options = LexerOptions{});

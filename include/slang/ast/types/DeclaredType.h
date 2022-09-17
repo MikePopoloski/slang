@@ -28,7 +28,7 @@ class ValueSymbol;
 enum class SymbolIndex : uint32_t;
 
 /// Various flags that control declared type resolution.
-enum class DeclaredTypeFlags {
+enum class SLANG_EXPORT DeclaredTypeFlags {
     /// No special flags specified.
     None = 0,
 
@@ -99,7 +99,7 @@ BITMASK(DeclaredTypeFlags, CoverageType)
 /// along with the logic necessary to resolve that type. Optionally includes an
 /// initializer expression as well, which can be necessary when resolving types that
 /// are implicitly inferred from the initializer.
-class DeclaredType {
+class SLANG_EXPORT DeclaredType {
 public:
     /// Constructs a new instance of the class.
     /// @param parent The parent symbol that owns the declared type.

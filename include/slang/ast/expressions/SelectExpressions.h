@@ -15,7 +15,7 @@ namespace slang::ast {
 class FieldSymbol;
 
 /// Represents a single element selection expression.
-class ElementSelectExpression : public Expression {
+class SLANG_EXPORT ElementSelectExpression : public Expression {
 public:
     ElementSelectExpression(const Type& type, Expression& value, const Expression& selector,
                             SourceRange sourceRange) :
@@ -62,7 +62,7 @@ private:
 };
 
 /// Represents a range selection expression.
-class RangeSelectExpression : public Expression {
+class SLANG_EXPORT RangeSelectExpression : public Expression {
 public:
     RangeSelectExpression(RangeSelectionKind selectionKind, const Type& type, Expression& value,
                           const Expression& left, const Expression& right,
@@ -115,7 +115,7 @@ private:
 };
 
 /// Represents an access of a structure variable's members.
-class MemberAccessExpression : public Expression {
+class SLANG_EXPORT MemberAccessExpression : public Expression {
 public:
     const Symbol& member;
     uint32_t offset;

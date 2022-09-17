@@ -17,7 +17,7 @@ class NetType;
 class TimingControl;
 
 /// Specifies various flags that can apply to variables.
-enum class VariableFlags : uint16_t {
+enum class SLANG_EXPORT VariableFlags : uint16_t {
     /// No specific flags specified.
     None = 0,
 
@@ -37,7 +37,7 @@ enum class VariableFlags : uint16_t {
 BITMASK(VariableFlags, CoverageSampleFormal)
 
 /// Represents a variable declaration.
-class VariableSymbol : public ValueSymbol {
+class SLANG_EXPORT VariableSymbol : public ValueSymbol {
 public:
     VariableLifetime lifetime;
     bitmask<VariableFlags> flags;
@@ -78,7 +78,7 @@ protected:
 };
 
 /// Represents a formal argument in subroutine (task or function).
-class FormalArgumentSymbol : public VariableSymbol {
+class SLANG_EXPORT FormalArgumentSymbol : public VariableSymbol {
 public:
     ArgumentDirection direction = ArgumentDirection::In;
 
@@ -100,7 +100,7 @@ private:
 };
 
 /// Represents a field member of a struct or union.
-class FieldSymbol : public VariableSymbol {
+class SLANG_EXPORT FieldSymbol : public VariableSymbol {
 public:
     /// The offset of the field within its parent structure or union. If the parent type is
     /// packed, this is an offset in bits. Otherwise it's an index into the list of fields.
@@ -118,7 +118,7 @@ public:
 };
 
 /// Represents a net declaration.
-class NetSymbol : public ValueSymbol {
+class SLANG_EXPORT NetSymbol : public ValueSymbol {
 public:
     const NetType& netType;
     enum ExpansionHint { None, Vectored, Scalared } expansionHint = None;
@@ -150,7 +150,7 @@ private:
 /// Represents a temporary variable materialized within a limited scope
 /// such as a single expression. Used for things like iterators used in
 /// array manipulation methods and for pattern identifiers.
-class TempVarSymbol : public VariableSymbol {
+class SLANG_EXPORT TempVarSymbol : public VariableSymbol {
 public:
     /// For efficiency purposes, each temp var symbol can form a linked list so
     /// that when creating nested expressions we don't need to manage memory separately
@@ -175,7 +175,7 @@ protected:
 };
 
 /// Represents an iterator variable created for array manipulation methods.
-class IteratorSymbol : public TempVarSymbol {
+class SLANG_EXPORT IteratorSymbol : public TempVarSymbol {
 public:
     /// The type of the array that this iterator traverses.
     const Type& arrayType;
@@ -190,7 +190,7 @@ public:
 };
 
 /// Represents a pattern variable materialized for a pattern matching expression.
-class PatternVarSymbol : public TempVarSymbol {
+class SLANG_EXPORT PatternVarSymbol : public TempVarSymbol {
 public:
     PatternVarSymbol(string_view name, SourceLocation loc, const Type& type);
 
@@ -200,7 +200,7 @@ public:
 };
 
 /// Represents a clocking block signal.
-class ClockVarSymbol : public VariableSymbol {
+class SLANG_EXPORT ClockVarSymbol : public VariableSymbol {
 public:
     ArgumentDirection direction;
     ClockingSkew inputSkew;
@@ -219,7 +219,7 @@ public:
 
 /// Represents a local variable declared inside an assertion item,
 /// such as a sequence or property.
-class LocalAssertionVarSymbol : public VariableSymbol {
+class SLANG_EXPORT LocalAssertionVarSymbol : public VariableSymbol {
 public:
     LocalAssertionVarSymbol(string_view name, SourceLocation loc);
 

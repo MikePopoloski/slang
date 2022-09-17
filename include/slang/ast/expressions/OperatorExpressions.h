@@ -15,7 +15,7 @@ namespace slang::ast {
 class Pattern;
 
 /// Represents a unary operator expression.
-class UnaryExpression : public Expression {
+class SLANG_EXPORT UnaryExpression : public Expression {
 public:
     UnaryOperator op;
 
@@ -53,7 +53,7 @@ private:
 };
 
 /// Represents a binary operator expression.
-class BinaryExpression : public Expression {
+class SLANG_EXPORT BinaryExpression : public Expression {
 public:
     BinaryOperator op;
 
@@ -96,7 +96,7 @@ private:
 };
 
 /// Represents a conditional operator expression.
-class ConditionalExpression : public Expression {
+class SLANG_EXPORT ConditionalExpression : public Expression {
 public:
     struct Condition {
         not_null<const Expression*> expr;
@@ -142,7 +142,7 @@ private:
 };
 
 /// Represents a set membership operator expression.
-class InsideExpression : public Expression {
+class SLANG_EXPORT InsideExpression : public Expression {
 public:
     InsideExpression(const Type& type, const Expression& left,
                      span<const Expression* const> rangeList, SourceRange sourceRange) :
@@ -176,7 +176,7 @@ private:
 };
 
 /// Represents a concatenation expression.
-class ConcatenationExpression : public Expression {
+class SLANG_EXPORT ConcatenationExpression : public Expression {
 public:
     ConcatenationExpression(const Type& type, span<const Expression* const> operands,
                             SourceRange sourceRange) :
@@ -211,7 +211,7 @@ private:
 };
 
 /// Represents a replication expression.
-class ReplicationExpression : public Expression {
+class SLANG_EXPORT ReplicationExpression : public Expression {
 public:
     ReplicationExpression(const Type& type, const Expression& count, Expression& concat,
                           SourceRange sourceRange) :
@@ -245,7 +245,7 @@ private:
 };
 
 /// Represents a streaming concatenation.
-class StreamingConcatenationExpression : public Expression {
+class SLANG_EXPORT StreamingConcatenationExpression : public Expression {
 public:
     /// The size of the blocks to slice and reorder: if 0, this is a left-to-right
     /// concatenation. Otherwise, it's a right-to-left concatenation.
@@ -294,7 +294,7 @@ private:
 /// Denotes a range of values by providing expressions for the lower and upper
 /// bounds of the range. This expression needs special handling in the various
 /// places that allow it, since it doesn't really have a type.
-class OpenRangeExpression : public Expression {
+class SLANG_EXPORT OpenRangeExpression : public Expression {
 public:
     OpenRangeExpression(const Type& type, Expression& left, Expression& right,
                         SourceRange sourceRange) :

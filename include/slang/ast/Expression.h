@@ -121,7 +121,7 @@ ENUM(RangeSelectionKind, RANGE)
 // clang-format on
 
 /// The base class for all expressions in SystemVerilog.
-class Expression {
+class SLANG_EXPORT Expression {
 public:
     using ExpressionSyntax = syntax::ExpressionSyntax;
 
@@ -376,7 +376,7 @@ protected:
 
 /// Represents an invalid expression, which is usually generated and inserted
 /// into an expression tree due to violation of language semantics or type checking.
-class InvalidExpression : public Expression {
+class SLANG_EXPORT InvalidExpression : public Expression {
 public:
     /// A wrapped sub-expression that is considered invalid.
     const Expression* child;

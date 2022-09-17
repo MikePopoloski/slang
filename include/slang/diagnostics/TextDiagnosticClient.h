@@ -26,7 +26,7 @@ namespace ast {
 class Symbol;
 }
 
-class TextDiagnosticClient : public DiagnosticClient {
+class SLANG_EXPORT TextDiagnosticClient : public DiagnosticClient {
 public:
     fmt::terminal_color noteColor;
     fmt::terminal_color warningColor;

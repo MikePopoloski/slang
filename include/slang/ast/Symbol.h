@@ -119,11 +119,11 @@ ENUM(SymbolKind, SYMBOLKIND)
 
 /// A numeric index that can be used to compare the relative ordering of symbols
 /// within a single lexical scope.
-enum class SymbolIndex : uint32_t {};
+enum class SLANG_EXPORT SymbolIndex : uint32_t {};
 
 /// Base class for all symbols (logical code constructs) such as modules, types,
 /// functions, variables, etc.
-class Symbol {
+class SLANG_EXPORT Symbol {
 public:
     /// The type of symbol.
     SymbolKind kind;

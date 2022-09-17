@@ -1,0 +1,58 @@
+//------------------------------------------------------------------------------
+//! @file ParserMetadata.h
+//! @brief Metadata collected during parsing
+//
+// SPDX-FileCopyrightText: Michael Popoloski
+// SPDX-License-Identifier: MIT
+//------------------------------------------------------------------------------
+#pragma once
+
+#include <optional>
+#include <vector>
+
+#include "slang/parsing/Token.h"
+#include "slang/syntax/SyntaxFwd.h"
+#include "slang/util/Util.h"
+
+namespace slang::parsing {
+
+/// Various bits of metadata collected during parsing.
+struct SLANG_EXPORT ParserMetadata {
+    /// Collection of metadata that can be associated with a syntax node at parse time.
+    struct Node {
+        TokenKind defaultNetType;
+        TokenKind unconnectedDrive;
+        std::optional<TimeScale> timeScale;
+    };
+
+    /// Specific metadata that was in effect when certain syntax nodes were parsed
+    /// (such as various bits of preprocessor state).
+    flat_hash_map<const syntax::SyntaxNode*, Node> nodeMap;
+
+    /// A set of names of all instantiations of global modules/interfaces/programs.
+    /// This can be used to determine which modules should be considered as top-level
+    /// roots of the design.
+    flat_hash_set<string_view> globalInstances;
+
+    /// A list of all names parsed that could represent a package or class name,
+    /// since they are simple names that appear on the left-hand side of a double colon.
+    std::vector<const syntax::IdentifierNameSyntax*> classPackageNames;
+
+    /// A list of all package import declarations parsed.
+    std::vector<const syntax::PackageImportDeclarationSyntax*> packageImports;
+
+    /// A list of all defparams parsed.
+    std::vector<const syntax::DefParamSyntax*> defparams;
+
+    /// A list of all class declarations parsed.
+    std::vector<const syntax::ClassDeclarationSyntax*> classDecls;
+
+    /// A list of all bind directives parsed.
+    std::vector<const syntax::BindDirectiveSyntax*> bindDirectives;
+
+    /// The EOF token, if one has already been consumed by the parser.
+    /// Otherwise an empty token.
+    Token eofToken;
+};
+
+} // namespace slang::parsing

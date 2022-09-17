@@ -11,7 +11,7 @@
 
 namespace slang::ast {
 
-class Bitstream {
+class SLANG_EXPORT Bitstream {
 public:
     /// Compile-time check that the source and destination types have the same dynamic bit-stream
     /// sizes.

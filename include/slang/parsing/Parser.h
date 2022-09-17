@@ -9,6 +9,7 @@
 
 #include "slang/parsing/NumberParser.h"
 #include "slang/parsing/ParserBase.h"
+#include "slang/parsing/ParserMetadata.h"
 #include "slang/parsing/Token.h"
 #include "slang/syntax/AllSyntax.h"
 #include "slang/syntax/SyntaxFacts.h"
@@ -117,53 +118,14 @@ BITMASK(FunctionOptions, AllowImplicitReturn)
 } // namespace detail
 
 /// Contains various options that can control parsing behavior.
-struct ParserOptions {
+struct SLANG_EXPORT ParserOptions {
     /// The maximum depth of nested language constructs (statements, exceptions) before
     /// we give up for fear of stack overflow.
     uint32_t maxRecursionDepth = 1024;
 };
 
-/// Various bits of metadata collected during parsing.
-struct ParserMetadata {
-    /// Collection of metadata that can be associated with a syntax node at parse time.
-    struct Node {
-        TokenKind defaultNetType;
-        TokenKind unconnectedDrive;
-        std::optional<TimeScale> timeScale;
-    };
-
-    /// Specific metadata that was in effect when certain syntax nodes were parsed
-    /// (such as various bits of preprocessor state).
-    flat_hash_map<const syntax::SyntaxNode*, Node> nodeMap;
-
-    /// A set of names of all instantiations of global modules/interfaces/programs.
-    /// This can be used to determine which modules should be considered as top-level
-    /// roots of the design.
-    flat_hash_set<string_view> globalInstances;
-
-    /// A list of all names parsed that could represent a package or class name,
-    /// since they are simple names that appear on the left-hand side of a double colon.
-    std::vector<const syntax::IdentifierNameSyntax*> classPackageNames;
-
-    /// A list of all package import declarations parsed.
-    std::vector<const syntax::PackageImportDeclarationSyntax*> packageImports;
-
-    /// A list of all defparams parsed.
-    std::vector<const syntax::DefParamSyntax*> defparams;
-
-    /// A list of all class declarations parsed.
-    std::vector<const syntax::ClassDeclarationSyntax*> classDecls;
-
-    /// A list of all bind directives parsed.
-    std::vector<const syntax::BindDirectiveSyntax*> bindDirectives;
-
-    /// The EOF token, if one has already been consumed by the parser.
-    /// Otherwise an empty token.
-    Token eofToken;
-};
-
 /// Implements a full syntax parser for SystemVerilog.
-class Parser : ParserBase, syntax::SyntaxFacts {
+class SLANG_EXPORT Parser : ParserBase, syntax::SyntaxFacts {
 public:
     explicit Parser(Preprocessor& preprocessor, const Bag& options = {});
 

@@ -56,7 +56,7 @@ ENUM_SIZED(DiagSubsystem, uint16_t, DS)
 ENUM(DiagnosticSeverity, DS)
 // clang-format on
 
-class DiagCode {
+class SLANG_EXPORT DiagCode {
 public:
     constexpr DiagCode() : subsystem(DiagSubsystem::Invalid), code(0) {}
     constexpr DiagCode(DiagSubsystem subsystem, uint16_t code) : subsystem(subsystem), code(code) {}
@@ -83,11 +83,11 @@ private:
     uint16_t code;
 };
 
-std::ostream& operator<<(std::ostream& os, DiagCode code);
-string_view toString(DiagCode code);
+SLANG_EXPORT std::ostream& operator<<(std::ostream& os, DiagCode code);
+SLANG_EXPORT string_view toString(DiagCode code);
 
 /// Wraps up a reported diagnostic along with location in source and any arguments.
-class Diagnostic {
+class SLANG_EXPORT Diagnostic {
 public:
     // Diagnostic-specific arguments that can be used to better report messages.
     using Arg = std::variant<std::string, int64_t, uint64_t, char, ConstantValue, std::any>;
@@ -149,7 +149,7 @@ public:
 };
 
 /// A collection of diagnostics.
-class Diagnostics : public SmallVectorSized<Diagnostic, 2> {
+class SLANG_EXPORT Diagnostics : public SmallVectorSized<Diagnostic, 2> {
 public:
     Diagnostics() = default;
     Diagnostics(Diagnostics&& other) noexcept = default;
@@ -170,7 +170,7 @@ public:
     void sort(const SourceManager& sourceManager);
 };
 
-class DiagGroup {
+class SLANG_EXPORT DiagGroup {
 public:
     explicit DiagGroup(const std::string& name, const std::vector<DiagCode>& diags) :
         name(name), diags(diags) {}

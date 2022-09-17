@@ -29,7 +29,7 @@ class VariableSymbol;
 enum class RandMode;
 
 /// Specifies flags that control expression and statement creation.
-enum class ASTFlags : uint64_t {
+enum class SLANG_EXPORT ASTFlags : uint64_t {
     /// No special behavior specified.
     None = 0,
 
@@ -173,7 +173,7 @@ BITMASK(ASTFlags, StreamingWithRange)
 ENUM(DimensionKind, DK)
 #undef DK
 
-struct EvaluatedDimension {
+struct SLANG_EXPORT EvaluatedDimension {
     DimensionKind kind = DimensionKind::Unknown;
     ConstantRange range;
     const Type* associativeType = nullptr;
@@ -187,7 +187,7 @@ struct EvaluatedDimension {
 /// Contains required context for binding syntax nodes with symbols to form
 /// an AST. Expressions, statements, timing controls, constraints, and assertion
 /// items all use this for creation.
-class ASTContext {
+class SLANG_EXPORT ASTContext {
 public:
     /// The scope where the AST creation is occurring.
     not_null<const Scope*> scope;

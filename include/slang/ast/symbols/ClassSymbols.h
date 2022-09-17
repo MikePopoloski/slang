@@ -22,7 +22,7 @@ class Constraint;
 class Expression;
 class GenericClassDefSymbol;
 
-class ClassPropertySymbol : public VariableSymbol {
+class SLANG_EXPORT ClassPropertySymbol : public VariableSymbol {
 public:
     Visibility visibility;
     RandMode randMode = RandMode::None;
@@ -39,7 +39,7 @@ public:
 };
 
 /// Represents a class definition type.
-class ClassType : public Type, public Scope {
+class SLANG_EXPORT ClassType : public Type, public Scope {
 public:
     /// If the class type was specialized from a generic class, this is
     /// a pointer to that generic class definition.
@@ -114,7 +114,7 @@ private:
 /// Represents a generic class definition, which is a parameterized class that has not
 /// yet had its parameter values specified. This is a not a type -- the generic class
 /// must first be specialized in order to be a type usable in expressions and declarations.
-class GenericClassDefSymbol : public Symbol {
+class SLANG_EXPORT GenericClassDefSymbol : public Symbol {
 public:
     /// Set to true if the generic class is an interface class.
     bool isInterface = false;
@@ -235,7 +235,7 @@ public:
 };
 
 /// Represents a named constraint block declaration within a class.
-class ConstraintBlockSymbol : public Symbol, public Scope {
+class SLANG_EXPORT ConstraintBlockSymbol : public Symbol, public Scope {
 public:
     /// If this is a non-static constraint block, this is a variable
     /// that represents the 'this' class handle.

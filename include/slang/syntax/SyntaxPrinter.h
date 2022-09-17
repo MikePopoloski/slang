@@ -17,7 +17,7 @@ class SyntaxTree;
 
 /// Provides support for printing tokens, trivia, or whole syntax trees
 /// back to source code.
-class SyntaxPrinter {
+class SLANG_EXPORT SyntaxPrinter {
 public:
     SyntaxPrinter() = default;
     explicit SyntaxPrinter(const SourceManager& sourceManager);

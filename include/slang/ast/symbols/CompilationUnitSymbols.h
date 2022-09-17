@@ -16,7 +16,7 @@ namespace slang::ast {
 class InstanceSymbol;
 
 /// The root of a single compilation unit.
-class CompilationUnitSymbol : public Symbol, public Scope {
+class SLANG_EXPORT CompilationUnitSymbol : public Symbol, public Scope {
 public:
     TimeScale timeScale;
 
@@ -36,7 +36,7 @@ private:
 };
 
 /// A SystemVerilog package construct.
-class PackageSymbol : public Symbol, public Scope {
+class SLANG_EXPORT PackageSymbol : public Symbol, public Scope {
 public:
     const NetType& defaultNetType;
     TimeScale timeScale;
@@ -69,7 +69,7 @@ private:
 };
 
 /// Represents the entirety of a design, along with all contained compilation units.
-class RootSymbol : public Symbol, public Scope {
+class SLANG_EXPORT RootSymbol : public Symbol, public Scope {
 public:
     span<const InstanceSymbol* const> topInstances;
     span<const CompilationUnitSymbol* const> compilationUnits;

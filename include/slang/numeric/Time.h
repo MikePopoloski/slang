@@ -32,10 +32,10 @@ string_view timeUnitToSuffix(TimeUnit unit);
 
 /// As allowed by SystemVerilog, time scales can be expressed
 /// in one of only a few magnitudes.
-enum class TimeScaleMagnitude : uint8_t { One = 1, Ten = 10, Hundred = 100 };
+enum class SLANG_EXPORT TimeScaleMagnitude : uint8_t { One = 1, Ten = 10, Hundred = 100 };
 
 /// A combination of a unit and magnitude for a time scale value.
-struct TimeScaleValue {
+struct SLANG_EXPORT TimeScaleValue {
     TimeUnit unit = TimeUnit::Seconds;
     TimeScaleMagnitude magnitude = TimeScaleMagnitude::One;
 
@@ -55,12 +55,12 @@ struct TimeScaleValue {
     bool operator==(const TimeScaleValue& rhs) const;
     bool operator!=(const TimeScaleValue& rhs) const { return !(*this == rhs); }
 
-    friend std::ostream& operator<<(std::ostream& os, const TimeScaleValue& tv);
+    SLANG_EXPORT friend std::ostream& operator<<(std::ostream& os, const TimeScaleValue& tv);
 };
 
 /// A collection of a base time and a precision value that
 /// determines the scale of simulation time steps.
-struct TimeScale {
+struct SLANG_EXPORT TimeScale {
     TimeScaleValue base;
     TimeScaleValue precision;
 
@@ -74,7 +74,7 @@ struct TimeScale {
     bool operator==(const TimeScale& rhs) const;
     bool operator!=(const TimeScale& rhs) const { return !(*this == rhs); }
 
-    friend std::ostream& operator<<(std::ostream& os, const TimeScale& ts);
+    SLANG_EXPORT friend std::ostream& operator<<(std::ostream& os, const TimeScale& ts);
 };
 
 } // namespace slang

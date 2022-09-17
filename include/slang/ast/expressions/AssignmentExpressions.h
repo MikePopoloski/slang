@@ -15,7 +15,7 @@ namespace slang::ast {
 class TimingControl;
 
 /// Represents an assignment expression.
-class AssignmentExpression : public Expression {
+class SLANG_EXPORT AssignmentExpression : public Expression {
 public:
     std::optional<BinaryOperator> op;
     const TimingControl* timingControl;
@@ -76,7 +76,7 @@ ENUM(ConversionKind, CK)
 #undef CK
 
 /// Represents a type conversion expression (implicit or explicit).
-class ConversionExpression : public Expression {
+class SLANG_EXPORT ConversionExpression : public Expression {
 public:
     const ConversionKind conversionKind;
 
@@ -122,7 +122,7 @@ private:
 };
 
 /// Represents a new[] expression that creates a dynamic array.
-class NewArrayExpression : public Expression {
+class SLANG_EXPORT NewArrayExpression : public Expression {
 public:
     NewArrayExpression(const Type& type, const Expression& sizeExpr, const Expression* initializer,
                        SourceRange sourceRange) :
@@ -155,7 +155,7 @@ private:
 };
 
 /// Represents a `new` expression that creates a class instance.
-class NewClassExpression : public Expression {
+class SLANG_EXPORT NewClassExpression : public Expression {
 public:
     /// Set to true if this is invoking a super class's constructor.
     bool isSuperClass = false;
@@ -188,7 +188,7 @@ private:
 };
 
 /// Represents a `new` expression that creates a covergroup instance.
-class NewCovergroupExpression : public Expression {
+class SLANG_EXPORT NewCovergroupExpression : public Expression {
 public:
     span<const Expression* const> arguments;
 
@@ -215,7 +215,7 @@ public:
 };
 
 /// Base class for assignment pattern expressions.
-class AssignmentPatternExpressionBase : public Expression {
+class SLANG_EXPORT AssignmentPatternExpressionBase : public Expression {
 public:
     span<const Expression* const> elements() const { return elements_; }
 
@@ -241,7 +241,7 @@ private:
 };
 
 /// Represents an assignment pattern expression.
-class SimpleAssignmentPatternExpression : public AssignmentPatternExpressionBase {
+class SLANG_EXPORT SimpleAssignmentPatternExpression : public AssignmentPatternExpressionBase {
 public:
     SimpleAssignmentPatternExpression(const Type& type, span<const Expression* const> elements,
                                       SourceRange sourceRange) :
@@ -270,7 +270,7 @@ public:
 };
 
 /// Represents an assignment pattern expression.
-class StructuredAssignmentPatternExpression : public AssignmentPatternExpressionBase {
+class SLANG_EXPORT StructuredAssignmentPatternExpression : public AssignmentPatternExpressionBase {
 public:
     struct MemberSetter {
         not_null<const Symbol*> member;
@@ -331,7 +331,7 @@ public:
 };
 
 /// Represents a replicated assignment pattern expression.
-class ReplicatedAssignmentPatternExpression : public AssignmentPatternExpressionBase {
+class SLANG_EXPORT ReplicatedAssignmentPatternExpression : public AssignmentPatternExpressionBase {
 public:
     ReplicatedAssignmentPatternExpression(const Type& type, const Expression& count,
                                           span<const Expression* const> elements,
