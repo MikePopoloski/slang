@@ -73,3 +73,19 @@ jobs:
       with:
         files: build/ci-coverage/coverage.info
         verbose: true
+
+  bindings:
+    runs-on: windows-latest
+    steps:
+    - uses: actions/checkout@v2
+      with:
+        fetch-depth: 0
+        submodules: recursive
+    - uses: ilammy/msvc-dev-cmd@v1
+    - name: Configure
+      run: cmake -B build -DSLANG_INCLUDE_PYLIB=ON
+    - name: Build
+      run: cmake --build build -j8
+    - name: Run tests
+      working-directory: build
+      run: ctest --output-on-failure

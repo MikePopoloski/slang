@@ -129,6 +129,9 @@ if(CMAKE_SYSTEM_NAME MATCHES "Windows")
   add_compile_definitions(UNICODE _UNICODE NOMINMAX WIN32_LEAN_AND_MEAN)
   add_compile_definitions(_SCL_SECURE_NO_WARNINGS _CRT_SECURE_NO_WARNINGS)
   add_compile_definitions(_CRT_SECURE_NO_DEPRECATE _CRT_NONSTDC_NO_WARNINGS)
+
+  # Project won't build out of the box without this flag.
+  add_compile_options(/permissive-)
 endif()
 
 if(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")

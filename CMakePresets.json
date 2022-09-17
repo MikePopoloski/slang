@@ -9,7 +9,7 @@
       "installDir": "${sourceDir}/install/${presetName}",
       "cacheVariables": {
         "CMAKE_CXX_COMPILER": "cl.exe",
-        "CMAKE_CXX_FLAGS": "/nologo /MP /permissive- /volatile:iso /Zc:inline /Zc:preprocessor /EHsc /Zc:__cplusplus /Zc:externConstexpr /Zc:throwingNew",
+        "CMAKE_CXX_FLAGS": "/nologo /MP /volatile:iso /Zc:inline /Zc:preprocessor /EHsc /Zc:__cplusplus /Zc:externConstexpr /Zc:throwingNew",
         "SLANG_WARN_FLAGS": "/W4;/WX;/external:anglebrackets;/external:W0"
       },
       "condition": {
