@@ -87,9 +87,9 @@ jobs:
         submodules: recursive
     - uses: ilammy/msvc-dev-cmd@v1
     - name: Configure
-      run: cmake -B build --config Release -DSLANG_INCLUDE_PYLIB=ON
+      run: cmake -B build -DSLANG_INCLUDE_PYLIB=ON
     - name: Build
-      run: cmake --build build -j8
+      run: cmake --build build --config Release -j8
     - name: Run tests
       working-directory: build
       run: ctest --output-on-failure -C Release
