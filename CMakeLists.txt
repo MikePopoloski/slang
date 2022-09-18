@@ -160,7 +160,6 @@ if(SLANG_INCLUDE_DOCS)
 endif()
 
 if(SLANG_INCLUDE_PYLIB)
-  add_subdirectory(external/pybind11)
   add_subdirectory(bindings)
 endif()
 
