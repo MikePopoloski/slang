@@ -462,6 +462,11 @@ TEST_CASE("Power") {
     v = v.pow(1234).slice(9000000, 8994500);
     CHECK(v == "5500'd64053931454776197655165648478290003146695"_si);
 #endif
+
+    // Test optimization of 2**y.
+    SVInt z = SVInt(999, 2, false).pow("934'd934"_si);
+    CHECK(z.countOnes() == 1);
+    CHECK(z.lshr(934) == 1);
 }
 
 TEST_CASE("Shifting") {

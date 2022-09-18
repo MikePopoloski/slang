@@ -896,6 +896,11 @@ SVInt SVInt::pow(const SVInt& rhs) const {
         else
             return modPow(-(*this), rhs, signFlag);
     }
+
+    // Optimization for the common case of 2**y
+    if (lhsBits == 2 && getRawData()[0] == 2)
+        return SVInt(bitWidth, 1, signFlag).shl(rhs);
+
     return modPow(*this, rhs, signFlag);
 }
 
