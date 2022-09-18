@@ -5,10 +5,9 @@
 
 set(find_pkg_args "")
 if(${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.24.0")
-  set(find_pkg_args "FIND_PACKAGE_ARGS")
+  set(find_pkg_args "FIND_PACKAGE_ARGS" "3.0.0")
 endif()
 
-include(FetchContent)
 FetchContent_Declare(
   Catch2
   GIT_REPOSITORY https://github.com/catchorg/Catch2.git

@@ -3,6 +3,19 @@
 # SPDX-License-Identifier: MIT
 # ~~~
 
+set(find_pkg_args "")
+if(${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.24.0")
+  set(find_pkg_args "FIND_PACKAGE_ARGS" "2.10.0")
+endif()
+
+FetchContent_Declare(
+  pybind11
+  GIT_REPOSITORY https://github.com/pybind/pybind11.git
+  GIT_TAG v2.10.0
+  GIT_SHALLOW ON
+  ${find_pkg_args})
+FetchContent_MakeAvailable(pybind11)
+
 # Generate bindings for syntax node types
 add_custom_command(
   COMMAND ${Python_EXECUTABLE} ${SCRIPTS_DIR}/syntax_gen.py --dir

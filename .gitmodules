@@ -8,8 +8,3 @@
 	url = https://github.com/fmtlib/fmt.git
 	branch = master
 	shallow = true
-[submodule "external/pybind11"]
-	path = external/pybind11
-	url = https://github.com/pybind/pybind11.git
-	branch = stable
-	shallow = true

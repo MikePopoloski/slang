@@ -3,7 +3,6 @@
 # SPDX-License-Identifier: MIT
 # ~~~
 
-include(FetchContent)
 FetchContent_Declare(
   mcss
   URL https://github.com/MikePopoloski/m.css/releases/download/release-1/mcss.zip

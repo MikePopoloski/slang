@@ -72,6 +72,7 @@ set(SLANG_WARN_FLAGS
     CACHE STRING "Extra warning flags to apply to the slang library build")
 
 # Variables used by subdirectories.
+include(FetchContent)
 include(GNUInstallDirs)
 set(SCRIPTS_DIR ${PROJECT_SOURCE_DIR}/scripts)
 
