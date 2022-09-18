@@ -1,11 +1,6 @@
-# ~~~
-# SPDX-FileCopyrightText: Michael Popoloski
-# SPDX-License-Identifier: MIT
-# ~~~
-
 @PACKAGE_INIT@
 
 include(CMakeFindDependencyMacro)
 find_dependency(fmt)
 
-include("${CMAKE_CURRENT_LIST_DIR}/@CMAKE_PROJECT_NAME@Targets.cmake")
+include("${CMAKE_CURRENT_LIST_DIR}/slangTargets.cmake")

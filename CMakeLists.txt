@@ -149,15 +149,7 @@ if(NOT CMAKE_INSTALL_RPATH AND BUILD_SHARED_LIBS)
   set(CMAKE_INSTALL_RPATH ${base} ${base}/${relDir})
 endif()
 
-if(NOT SLANG_USE_SYSTEM_LIBS)
-  if(SLANG_INCLUDE_INSTALL)
-    set(FMT_INSTALL ON)
-    set(FMT_CMAKE_DIR "${CMAKE_INSTALL_DATAROOTDIR}/cmake/fmt")
-    set(FMT_PKGCONFIG_DIR "${CMAKE_INSTALL_DATAROOTDIR}/pkgconfig")
-  endif()
-  add_subdirectory(external/fmt)
-endif()
-
+add_subdirectory(external)
 add_subdirectory(source)
 
 if(SLANG_INCLUDE_TOOLS)
