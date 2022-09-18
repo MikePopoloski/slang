@@ -1750,7 +1750,7 @@ endprimitive
     REQUIRE(diags.size() == 20);
     CHECK(diags[0].code == diag::PrimitiveOutputFirst);
     CHECK(diags[1].code == diag::PrimitiveAnsiMix);
-    CHECK(diags[2].code == diag::Redefinition);
+    CHECK(diags[2].code == diag::DuplicateDefinition);
     CHECK(diags[3].code == diag::PrimitiveTwoPorts);
     CHECK(diags[4].code == diag::PrimitivePortDup);
     CHECK(diags[5].code == diag::PrimitiveRegDup);

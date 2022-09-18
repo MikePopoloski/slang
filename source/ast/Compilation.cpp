@@ -512,15 +512,12 @@ const PrimitiveSymbol& Compilation::createPrimitive(const Scope& scope,
                                                     const UdpDeclarationSyntax& syntax) {
     auto& prim = PrimitiveSymbol::fromSyntax(scope, syntax);
     if (!prim.name.empty()) {
-        auto [it, inserted] = udpMap.emplace(prim.name, &prim);
-        if (!inserted) {
-            auto& diag = root->addDiag(diag::Redefinition, prim.location);
-            diag << prim.name;
-            diag.addNote(diag::NotePreviousDefinition, it->second->location);
-        }
+        if (auto ps = getPrimitive(prim.name))
+            reportRedefinition(*root, prim, *ps, diag::DuplicateDefinition);
         else if (auto defIt = topDefinitions.find(prim.name); defIt != topDefinitions.end()) {
             reportRedefinition(*root, prim, *defIt->second.first);
         }
+        udpMap[prim.name] = &prim;
     }
 
     return prim;
