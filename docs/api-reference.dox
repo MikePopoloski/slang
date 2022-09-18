@@ -5,15 +5,15 @@ The @ref slang root namespace contains most of the entry points for using the li
 See the individual listing pages for a complete reference, but some useful starting
 points for exploration are:
 
-- The @ref slang::SyntaxTree class is a convenient way to parse a source file (or some source
+- The @ref slang::syntax::SyntaxTree class is a convenient way to parse a source file (or some source
 text in memory) into syntax nodes.
-- The @ref slang::SyntaxVisitor class can be used to walk a syntax tree.
-- The @ref slang::SyntaxRewriter class is a SyntaxVisitor with helper methods for rewriting
+- The @ref slang::syntax::SyntaxVisitor class can be used to walk a syntax tree.
+- The @ref slang::syntax::SyntaxRewriter class is a SyntaxVisitor with helper methods for rewriting
 syntax nodes into some new form (which would be useful for refactoring tools).
-- The @ref slang::Compilation class is the main entry point for type checking and elaboration.
-- The @ref slang::SemanticModel class can be used to get semantic information about a particular
+- The @ref slang::ast::Compilation class is the main entry point for type checking and elaboration.
+- The @ref slang::ast::SemanticModel class can be used to get semantic information about a particular
 syntax node without necessarily compiling the whole design.
-- The @ref slang::ScriptSession is a high level code interpreter; you can give it some source
+- The @ref slang::ast::ScriptSession is a high level code interpreter; you can give it some source
 code and it will return a constant value that is the result of executing that code.
 
 */

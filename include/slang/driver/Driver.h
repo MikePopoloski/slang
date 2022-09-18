@@ -246,6 +246,7 @@ public:
 
     /// Processes the given command file for more options.
     /// Any errors encountered will be printed to stderr.
+    /// @param fileName The name (and potentially the path) of the command file to process.
     /// @param makeRelative indicates whether paths in the file are relative to the file
     ///                     itself or to the current working directory.
     /// @returns true on success and false if errors were encountered.

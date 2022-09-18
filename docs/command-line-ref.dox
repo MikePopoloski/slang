@@ -52,7 +52,7 @@ See @ref command-files for more information about command files.
 
 `--exclude-ext <ext>`
 
-Any provided positional arguments that have extensions matching <ext> will be ignored.
+Any provided positional arguments that have extensions matching &lt;ext> will be ignored.
 This option is typically used when projects have existing command files listing sources
 that are not SystemVerilog code.
 
@@ -333,11 +333,11 @@ Treat warning "foo" as an error.
 
 Turn warning "foo" into a warning even if `-Werror` is specified.
 
-@section diag-control Legacy Vendor Command Support
+@section vendor-cmds Legacy Vendor Command Support
 
 `--cmd-ignore <vendor_cmd>,<N>`
 
-Define rule to ignore vendor command <vendor_cmd> with its following <N> parameters.
+Define rule to ignore vendor command &lt;vendor_cmd> with its following &lt;N> parameters.
 A command of the form +xyz will also match any vendor command of the form +xyz+abc,
 as +abc is the command's argument, and doesn't need to be matched.
 This option is typically used to ignore commands listed in command files that are meant
@@ -345,7 +345,7 @@ for some other tool.
 
 `--cmd-rename <vendor_cmd>,<slang_cmd>`
 
-Define rule to rename vendor command <vendor_cmd> into existing <slang_cmd>.
+Define rule to rename vendor command &lt;vendor_cmd> into existing &lt;slang_cmd>.
 Similarly to `--cmd-ignore`, this exists to support existing command files that
 specify options with different names.
 

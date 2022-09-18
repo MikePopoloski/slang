@@ -28,12 +28,14 @@ slang requires the following dependencies in order to build:
 @section building-start Quick Start
 
 The build should work out of the box on all supported platforms with the same set of steps:
+
 @code{.ansi}
 cmake -B build
 cmake --build build
 @endcode
 
 Tests are included in the configuration by default. You can run them via ctest:
+
 @code{.ansi}
 cd build && ctest --output-on-failure
 @endcode
