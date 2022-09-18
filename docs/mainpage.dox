@@ -6,6 +6,8 @@ an executable tool that can compile and lint any SystemVerilog project,
 but it is also intended to be usable as a front end for synthesis tools,
 simulators, linters, code editors, and refactoring tools.
 
+slang is the fastest and most compliant SystemVerilog frontend (according to the open source [chipsalliance test suite](https://github.com/chipsalliance/sv-tests)).
+
 @section mainpage-features Features
 
 -   Fully parse, analyze, and elaborate all SystemVerilog features -
@@ -18,6 +20,17 @@ simulators, linters, code editors, and refactoring tools.
 -   Provide great error messages, ala clang.
 -   Be fast and robust in the face of production-scale projects.
 
+@section use-cases Use Cases
+
+Some examples of things you can use slang for:
+-   Very fast syntax checking and linting tool
+-   Dumping the AST of your project to JSON
+-   Source code introspection via included Python bindings
+-   SystemVerilog code generation and refactoring
+-   As the engine for an editor language server
+-   As a fast and robust preprocessor that sits in front of downstream tools
+-   As a frontend for a synthesis or simulation tool, by including slang as a library
+
 @section mainpage-getting-started Getting Started
 
 Instructions on building slang from source are here: @ref building
@@ -29,16 +42,14 @@ If you're looking to use slang as a library, please read through the @ref develo
 
 @section mainpage-try Try It Out
 
-Experiment with parsing, type checking, and error detection [live on the web](https://sv-lang.com/explore/)
-(this tool is inspired by Matt Godbolt's excellent Compiler Explorer). It's still
-pretty rough but useful for exploring the interactive behavior of the toolchain.
+Experiment with parsing, type checking, and error detection live [on the web](https://sv-lang.com/explore/)
+(inspired by Matt Godbolt's excellent Compiler Explorer).
 
 @section mainpage-contact Contact & Support
 
 If you encounter a bug, have questions, or want to contribute, please get in touch
-by opening a GitHub issue or posting a message on Gitter:
+by opening a GitHub issue or discussion thread:
 -	GitHub --- https://github.com/MikePopoloski/slang
--	Gitter chat --- https://gitter.im/MikePopoloski/slang
 
 Contributions are welcome, whether they be in the form of bug reports, comments,
 suggestions, documentation improvements, or full fledged new features via pull requests.

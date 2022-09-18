@@ -1,17 +1,29 @@
 /** @dir slang
-@brief Namspace @ref slang
+@brief Root of the @ref slang library
 */
 
-/** @dir slang/binding
-@brief Expression and statement definitions
+/** @dir slang/ast
+@brief The SystemVerilog AST
 */
 
-/** @dir slang/compilation
-@brief Top-level compilation types
+/** @dir slang/ast/expressions
+@brief Expression definitions
+*/
+
+/** @dir slang/ast/symbols
+@brief Symbol definitions
+*/
+
+/** @dir slang/ast/types
+@brief Type definitions
 */
 
 /** @dir slang/diagnostics
 @brief Diagnostic definitions
+*/
+
+/** @dir slang/driver
+@brief Frontend tool driver
 */
 
 /** @dir slang/numeric
@@ -20,10 +32,6 @@
 
 /** @dir slang/parsing
 @brief Lexing, preprocessing, and parsing functionality
-*/
-
-/** @dir slang/symbols
-@brief Symbol definitions
 */
 
 /** @dir slang/syntax
@@ -40,4 +48,20 @@
 
 /** @namespace slang
 @brief Root namespace
+*/
+
+/** @namespace slang::ast
+@brief The SystemVerilog AST
+*/
+
+/** @namespace slang::driver
+@brief Frontend tool driver
+*/
+
+/** @namespace slang::parsing
+@brief Lexing, preprocessing, and parsing functionality
+*/
+
+/** @namespace slang::syntax
+@brief Syntax tree manipulation
 */

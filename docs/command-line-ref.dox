@@ -50,6 +50,12 @@ the file are relative to the command file itself.
 
 See @ref command-files for more information about command files.
 
+`--exclude-ext <ext>`
+
+Any provided positional arguments that have extensions matching <ext> will be ignored.
+This option is typically used when projects have existing command files listing sources
+that are not SystemVerilog code.
+
 @section Actions
 
 These options control what action the tool will perform when run.
@@ -71,6 +77,10 @@ No diagnostics will be printed.
 
 Perform parsing of all input files but don't perform type checking and elaboration.
 All diagnostics encountered will be printed.
+
+`--lint-only`
+
+Only perform linting of code, don't try to elaborate a full hierarchy.
 
 @section include-paths Include paths and macros
 
@@ -117,6 +127,12 @@ When running in preprocessor-only mode (using `-E`) include directives in the pr
 
 Set the maximum depth of nested include files. Exceeding this limit will cause an error.
 The default is 1024.
+
+`--libraries-inherit-macros`
+
+If true, library files will inherit macro definitions from the primary source files.
+By default library files are independent and will not inherit macros from the main project.
+`--single-unit` must also be passed when this option is used.
 
 @section clr-parsing Parsing
 
@@ -196,6 +212,12 @@ The default is 100000.
 Set the maximum number of frames to show when printing a constant evaluation
 backtrace in diagnostics; the rest will be abbreviated to avoid spamming output.
 The default is 10.
+
+`--max-instance-array <limit>`
+
+Set the maximum number of instances allowed in a single instance array.
+The limit exists to prevent runaway compilation times on invalid input.
+The default is 65535.
 
 `--compat vcs`
 
@@ -310,5 +332,21 @@ Treat warning "foo" as an error.
 `-Wno-error=foo`
 
 Turn warning "foo" into a warning even if `-Werror` is specified.
+
+@section diag-control Legacy Vendor Command Support
+
+`--cmd-ignore <vendor_cmd>,<N>`
+
+Define rule to ignore vendor command <vendor_cmd> with its following <N> parameters.
+A command of the form +xyz will also match any vendor command of the form +xyz+abc,
+as +abc is the command's argument, and doesn't need to be matched.
+This option is typically used to ignore commands listed in command files that are meant
+for some other tool.
+
+`--cmd-rename <vendor_cmd>,<slang_cmd>`
+
+Define rule to rename vendor command <vendor_cmd> into existing <slang_cmd>.
+Similarly to `--cmd-ignore`, this exists to support existing command files that
+specify options with different names.
 
 */

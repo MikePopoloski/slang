@@ -11,58 +11,32 @@ All source code is hosted on [GitHub](https://github.com/MikePopoloski/slang)
 git clone https://github.com/MikePopoloski/slang.git
 @endcode
 
-git submodules are used for some dependencies, so they need to be pulled as well:
-
-@code{.ansi}
-git submodule update --init --recursive
-@endcode
-
 @section dependencies Dependencies
 
 slang requires the following dependencies in order to build:
 - [python 3](https://www.python.org/)
 - [CMake](https://cmake.org/) (3.15 or later)
 - C++17 compatible compiler
+    - GCC 9.1 is the minimum supported version
+    - clang 10 is the minimum supported version
+    - MSVC support is tested only against the most recent update of VS 2022
+    - Other compilers (including earlier versions of the ones listed above) may or may not work.
+      Note that AppleClang has its own versioning scheme -- you generally need a newer AppleClang
+      to get full C++17 support, and Apple ties Xcode updates to OS versions so you may be forced
+      to update your OS.
 
 @section building-start Quick Start
 
-Instructions on quickly getting a build going for common platforms.
-
-## Linux
-
-On many common systems, a modern C++ compiler is not configured as the default.
-This assumes you've installed [GCC 9](https://gcc.gnu.org/gcc-9/) and that it's
-available on your path, and that you want a release build that will be installed
-to `/usr/local/bin`.
-
+The build should work out of the box on all supported platforms with the same set of steps:
 @code{.ansi}
-mkdir build && cd build
-cmake -DCMAKE_CXX_COMPILER=g++-9 -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr/local/bin ..
-make -j8
+cmake -B build
+cmake --build build
 @endcode
 
-Tests are built by default. You can run them via ctest:
-
+Tests are included in the configuration by default. You can run them via ctest:
 @code{.ansi}
-ctest
+cd build && ctest --output-on-failure
 @endcode
-
-Or run the unit tests directly:
-
-@code{.ansi}
-bin/unittests
-@endcode
-
-Installation:
-
-@code{.ansi}
-make install
-@endcode
-
-## Windows
-
-VisualStudio 2019 has built-in support for cmake; simply open the slang root folder
-and press build.
 
 @section build-options Build Options
 
@@ -70,16 +44,18 @@ Besides the built-in cmake options, there are slang-specific options that may be
 set to customize the build:
 Option | Description | Default
 ------ | ----------- | -------
+SLANG_INCLUDE_TOOLS | Include tools targets in the build (such as the slang driver executable) | ON
 SLANG_INCLUDE_TESTS | Include tests in the build | ON
+SLANG_INCLUDE_INSTALL | Include installation targets in the build | ON
 SLANG_INCLUDE_DOCS | Include docs in the build | OFF
-SLANG_INCLUDE_LLVM | Include LLVM in the build for generating simulation binaries | OFF
+SLANG_INCLUDE_PYLIB | Include Python bindings in the build | OFF
+SLANG_INCLUDE_COVERAGE | Include code coverage targets in the build | OFF
 BUILD_SHARED_LIBS | Build a shared library instead of static | OFF
-SLANG_COVERAGE | Enable Clang code coverage | OFF
-SLANG_SANITIZERS | A list of Clang sanitizers to include in the build | ""
-FUZZ_TARGET | Turn on to enable some changes to make binaries easier to fuzz test | OFF
-CI_BUILD | Enable additional longer-running tests for automated builds | OFF
-DOXYGENPY_PATH | When building docs, the path to the doxygen.py tool | ""
-SLANG_USE_SYSTEM_LIBS | Configures the build to use dependencies already installed on the system (such as fmt and xxhash) instead of the ones included in the repo | OFF
+SLANG_FUZZ_TARGET | Turn on to enable some changes to make binaries easier to fuzz test | OFF
+SLANG_CI_BUILD | Enable additional longer-running tests for automated builds | OFF
+SLANG_CLANG_TIDY | The path to a clang-tidy binary to run against the slang sources | ""
+SLANG_WARN_FLAGS | Extra compiler warning flags to enable when building slang | ""
+SLANG_CMAKECONFIG_INSTALL_DIR | If install rules are included, this path is used to install the generated cmake config for the slang package | ${CMAKE_INSTALL_LIBDIR}/cmake/slang
 
 @section build-scripts Build Scripts
 
@@ -109,22 +85,16 @@ This section contains instructions for building the documentation.
 ## Dependencies
 
 - [doxygen](http://www.doxygen.nl/) - at least 1.8.17
-- [doc build environment](https://github.com/MikePopoloski/m.css)
 
 ## Steps
 
-Run cmake with docs enabled and the path to the `doxygen.py` script in the `m.css` checkout:
+Run cmake with docs enabled:
 
 @code{.ansi}
-cmake -DSLANG_INCLUDE_DOCS=ON -DDOXYGENPY_PATH=/path/to/m.css/documentation/doxygen.py
+cmake -B build -DSLANG_INCLUDE_DOCS=ON
+cmake --build build --target docs
 @endcode
 
-Run the build:
-
-@code{.ansi}
-make docs
-@endcode
-
-The output website is located at `docs/html/`
+The output website is located at `build/docs/html/`
 
 */

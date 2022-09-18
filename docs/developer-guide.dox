@@ -7,7 +7,7 @@ like linting tools, code editor completion, code generation as part of a build,
 automated refactoring tools, runtime JITing or interpretation, simulators,
 and synthesis tools.
 
-This section tries to give an overview of the slang libraries and codebase,
+This section gives an overview of the slang libraries and codebase,
 and serves as a starting point for learning to use it in your own projects.
 
 - @ref building - Instructions for obtaining and building the library

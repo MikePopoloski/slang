@@ -171,4 +171,53 @@ The limitations of this feature are as follows:
 - Conditional statements inside of for loops that depend on the iteration variable will work as expected.
 - All other forms of flow control inside each for loop (including break / continue) are ignored.
 
+@section slang-pragmas Pragmas
+
+slang supports the following pragma directives as extensions to the base set specified by the LRM:
+
+`\`pragma once`
+
+Files that contain this directive will not be included more than once into any given compilation unit,
+regardless of how many times they are specified via a \`include directive. This is analagous to the
+`#pragma once` directive supported widely by C++ compilers, and can replace the more traditional usage
+of preprocessor header guards via `\`ifdef`.
+
+`\`pragma diagnostic options...`
+
+A set of pragmas that can control diagnostic warning output for various regions of source text.
+These options mirror those provided on the command line but have the advantage of being scoped
+to specific parts of your code.
+
+The possible values for options are:
+-   `push` and `pop` -- create a scope via `push` for further diagnostic options that can later be reverted
+                        back to their previous state via a `pop` option.
+-   `ignore` -- One or more warning flags to ignore.
+-   `warn` -- One or more warning flags to enable.
+-   `error` -- One or more warning flags to turn into errors.
+-   `fatal` -- One or more warning flags to turn into hard fatal errors.
+
+Example:
+
+@code{.sv}
+module m;
+    ; // warn
+`pragma diagnostic ignore="-Wempty-member"
+    ; // hidden
+`pragma diagnostic push
+    ; // also hidden
+`pragma diagnostic error="-Wempty-member"
+    ; // error
+`pragma diagnostic warn="-Wempty-member"
+    ; // warn
+`pragma diagnostic pop
+`pragma diagnostic pop  // does nothing
+    ; // hidden again
+
+`pragma diagnostic fatal="empty-member" // ok to not use -W
+`pragma diagnostic ignore=("default", "empty-member")
+    ; // ignored
+endmodule
+@endcode
+
+
 */

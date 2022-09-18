@@ -7,6 +7,8 @@ slang - SystemVerilog Language Services
 
 slang is a software library that provides various components for lexing, parsing, type checking, and elaborating SystemVerilog code. It comes with an executable tool that can compile and lint any SystemVerilog project, but it is also intended to be usable as a front end for synthesis tools, simulators, linters, code editors, and refactoring tools.
 
+slang is the fastest and most compliant SystemVerilog frontend (according to the open source [chipsalliance test suite](https://github.com/chipsalliance/sv-tests)).
+
 Full documentation is available on the website: https://sv-lang.com
 
 ### Features
@@ -16,14 +18,19 @@ Full documentation is available on the website: https://sv-lang.com
 -   Provide great error messages, ala clang.
 -   Be fast and robust in the face of production-scale projects.
 
+### Use Cases
+Some examples of things you can use slang for:
+-   Very fast syntax checking and linting tool
+-   Dumping the AST of your project to JSON
+-   Source code introspection via included Python bindings
+-   SystemVerilog code generation and refactoring
+-   As the engine for an editor language server
+-   As a fast and robust preprocessor that sits in front of downstream tools
+-   As a frontend for a synthesis or simulation tool, by including slang as a library
+
 ### Getting Started
 
 Instructions on building slang from source are [here](https://sv-lang.com/building.html).
-
-Note that git submodules are used for some dependencies, so they need to be pulled as well:
-```
-git submodule update --init --recursive
-```
 
 The slang binary can be run on your code right out of the box; check out the [user manual](https://sv-lang.com/user-manual.html) for more information about how it works.
 
@@ -31,11 +38,11 @@ If you're looking to use slang as a library, please read through the [developer 
 
 ### Try It Out
 
-Experiment with parsing, type checking, and error detection live [on the web](https://sv-lang.com/explore/) (this tool is inspired by Matt Godbolt's excellent [Compiler Explorer](https://godbolt.org/)). It's still pretty rough but useful for exploring the interactive behavior of the toolchain.
+Experiment with parsing, type checking, and error detection live [on the web](https://sv-lang.com/explore/) (inspired by Matt Godbolt's excellent [Compiler Explorer](https://godbolt.org/)).
 
 ### Contact & Support
 
-If you encounter a bug, have questions, or want to contribute, please get in touch by opening a GitHub issue or posting a message on Gitter.
+If you encounter a bug, have questions, or want to contribute, please get in touch by opening a GitHub issue or discussion thread.
 
 Contributions are welcome, whether they be in the form of bug reports, comments, suggestions, documentation improvements, or full fledged new features via pull requests.
 

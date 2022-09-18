@@ -3,10 +3,9 @@
 
 @tableofcontents
 
-This is a rough attempt at giving an overview of which SystemVerilog features
-slang supports, and those which it does not. This is not a promise that features
-marked "supported" are bug-free, but should imply that any such bugs are as of yet
-unknown to me and should be reported if discovered.
+This is an overview of which SystemVerilog features slang supports, and those which
+it yet does not. This is not a promise that features marked "supported" are bug-free,
+but should imply that any such bugs are as of yet unknown and should be reported if discovered.
 
 Features are expressed via references to chapters and sections within the
 IEEE 1800-2017 SystemVerilog Language Reference Manual (LRM).
