@@ -27,6 +27,13 @@ if(SLANG_INCLUDE_PYLIB)
   set_target_properties(fmt PROPERTIES POSITION_INDEPENDENT_CODE ON)
 endif()
 
+FetchContent_Declare(
+  unordered_dense
+  GIT_REPOSITORY https://github.com/martinus/unordered_dense.git
+  GIT_TAG v1.3.2
+  GIT_SHALLOW ON)
+FetchContent_MakeAvailable(unordered_dense)
+
 if(SLANG_INCLUDE_INSTALL)
   install(
     DIRECTORY ../external/ieee1800/
@@ -34,6 +41,10 @@ if(SLANG_INCLUDE_INSTALL)
     COMPONENT slang_Development)
   install(
     FILES ../external/flat_hash_map.hpp ../external/span.hpp
+    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+    COMPONENT slang_Development)
+  install(
+    DIRECTORY ${unordered_dense_SOURCE_DIR}/include/ankerl
     DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
     COMPONENT slang_Development)
 
@@ -44,4 +55,6 @@ if(SLANG_INCLUDE_INSTALL)
     ARCHIVE COMPONENT slang_Development
     PUBLIC_HEADER EXCLUDE_FROM_ALL
     PRIVATE_HEADER EXCLUDE_FROM_ALL)
+
+  install(TARGETS unordered_dense EXPORT slangTargets)
 endif()

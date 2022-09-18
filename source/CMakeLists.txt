@@ -3,12 +3,6 @@
 # SPDX-License-Identifier: MIT
 # ~~~
 
-# -------- Dependencies
-find_package(Threads)
-if(SLANG_USE_SYSTEM_LIBS)
-  find_package(xxHash)
-endif()
-
 # -------- Generate code
 
 # Generate diagnostic headers
@@ -95,19 +89,6 @@ set_target_properties(
              EXPORT_NAME slang
              OUTPUT_NAME slang)
 
-# Add xxhash source if we aren't linking to a system package.
-if(SLANG_USE_SYSTEM_LIBS)
-  target_link_libraries(slang_slang PRIVATE xxHash::xxhash)
-else()
-  target_sources(slang_slang PRIVATE ../external/xxHash/xxhash.c)
-  set_source_files_properties(../external/xxHash/xxhash.c PROPERTIES LANGUAGE
-                                                                     CXX)
-  if(NOT CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
-    set_source_files_properties(../external/xxHash/xxhash.c
-                                PROPERTIES COMPILE_FLAGS -w)
-  endif()
-endif()
-
 # Compile options
 target_compile_options(slang_slang PRIVATE ${SLANG_WARN_FLAGS})
 target_compile_definitions(slang_slang PUBLIC $<$<CONFIG:Debug>:DEBUG>)
@@ -123,8 +104,10 @@ target_include_directories(
   PUBLIC "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../external/>")
 
 # Link libraries
+find_package(Threads)
 target_link_libraries(slang_slang PRIVATE ${CMAKE_THREAD_LIBS_INIT})
 target_link_libraries(slang_slang PRIVATE fmt::fmt)
+target_link_libraries(slang_slang PUBLIC unordered_dense::unordered_dense)
 
 # If building the Python library we'll end up with a shared lib no matter what,
 # so make sure we always build with PIC.
@@ -176,11 +159,4 @@ if(SLANG_INCLUDE_INSTALL)
           ${CMAKE_CURRENT_BINARY_DIR}/slang/parsing/TokenKind.h
     DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/slang/syntax/
     COMPONENT slang_Development)
-
-  if(NOT SLANG_USE_SYSTEM_LIBS)
-    install(
-      FILES ../external/xxHash/xxhash.h
-      DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/xxhash
-      COMPONENT slang_Development)
-  endif()
 endif()

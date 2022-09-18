@@ -7,18 +7,12 @@
 //------------------------------------------------------------------------------
 #pragma once
 
+#include <ankerl/unordered_dense.h>
 #include <flat_hash_map.hpp>
 
 #include "slang/util/Util.h"
 
-extern "C" uint64_t XXH3_64bits(const void* data, size_t len);
-
 namespace slang {
-
-/// Hashes the provided input using the xxhash XXH3 algorithm.
-inline size_t xxhash(const void* input, size_t len) {
-    return (size_t)XXH3_64bits(input, len);
-}
 
 inline void hash_combine(size_t&) {
 }
