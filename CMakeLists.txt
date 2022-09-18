@@ -136,6 +136,19 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
   add_compile_options(/utf-8)
 endif()
 
+# Get sane install RPATH handling by default if none has been provided.
+if(NOT CMAKE_INSTALL_RPATH AND BUILD_SHARED_LIBS)
+  if(APPLE)
+    set(base @loader_path)
+  else()
+    set(base $ORIGIN)
+  endif()
+
+  file(RELATIVE_PATH relDir ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_INSTALL_BINDIR}
+       ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR})
+  set(CMAKE_INSTALL_RPATH ${base} ${base}/${relDir})
+endif()
+
 if(NOT SLANG_USE_SYSTEM_LIBS)
   if(SLANG_INCLUDE_INSTALL)
     set(FMT_INSTALL ON)
