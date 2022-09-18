@@ -18,7 +18,6 @@ class AttributeSymbol;
 class Definition;
 class InstanceBodySymbol;
 class InstanceSymbol;
-class InstanceCacheKey;
 
 /// Represents the public-facing side of a module / program / interface port.
 /// The port symbol itself is not directly referenceable from within the instance;
