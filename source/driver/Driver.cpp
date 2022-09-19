@@ -19,9 +19,11 @@
 #include "slang/diagnostics/SysFuncsDiags.h"
 #include "slang/diagnostics/TextDiagnosticClient.h"
 #include "slang/parsing/Parser.h"
+#include "slang/parsing/Lexer.h"
 #include "slang/parsing/Preprocessor.h"
 #include "slang/syntax/SyntaxPrinter.h"
 #include "slang/syntax/SyntaxTree.h"
+#include "slang/syntax/SyntaxKind.h"
 
 namespace slang::driver {
 
@@ -77,6 +79,10 @@ void Driver::addStandardArgs() {
         "--cmd-rename", [this](string_view value) { return cmdLine.addRenameCommand(value); },
         "Define rule to rename vendor command <vendor_cmd> into existing <slang_cmd>",
         "<vendor_cmd>,<slang_cmd>");
+    cmdLine.add(
+        "--ignore-directive", options.ignoreDirectives,
+        "Ignore preprocessor directive and all its arguments until EOL", "<directive>");
+
 
     // Parsing
     cmdLine.add("--max-parse-depth", options.maxParseDepth,
@@ -614,6 +620,10 @@ Bag Driver::createOptionBag() const {
     LexerOptions loptions;
     if (options.maxLexerErrors.has_value())
         loptions.maxErrors = *options.maxLexerErrors;
+    for (const auto& d : options.ignoreDirectives)
+        loptions.ignoreDirectives.push_back(
+            std::make_pair(std::string_view(d),
+                           syntax::SyntaxKind::UnknownDirective));
 
     ParserOptions poptions;
     if (options.maxParseDepth.has_value())

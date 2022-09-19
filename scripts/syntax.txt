@@ -2135,7 +2135,7 @@ SimpleDirective base=Directive multiKind=true
 
 kindmap<SimpleDirective>
 CellDefineDirective NoUnconnectedDriveDirective EndCellDefineDirective EndKeywordsDirective
-ResetAllDirective UndefineAllDirective
+ResetAllDirective UndefineAllDirective UnknownDirective
 
 IncludeDirective base=Directive
 token fileName

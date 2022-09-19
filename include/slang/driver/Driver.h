@@ -73,6 +73,9 @@ public:
         /// A set of extensions that will be used to exclude files.
         flat_hash_set<std::string> excludeExts;
 
+        /// A set of preprocessor directives to be ignored
+        std::vector<std::string> ignoreDirectives;
+
         /// @}
         /// @name Preprocessing
         /// @{

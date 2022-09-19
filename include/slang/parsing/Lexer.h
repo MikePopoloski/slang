@@ -13,6 +13,8 @@
 #include "slang/text/SourceLocation.h"
 #include "slang/util/SmallVector.h"
 #include "slang/util/Util.h"
+#include "slang/util/StringTable.h"
+#include "slang/syntax/SyntaxKind.h"
 
 namespace slang {
 
@@ -27,6 +29,9 @@ struct SLANG_EXPORT LexerOptions {
     /// The maximum number of errors that can occur before the rest of the source
     /// buffer is skipped.
     uint32_t maxErrors = 16;
+
+    /// A set of preprocessor directives to be ignored
+    std::vector<std::pair<std::string_view, syntax::SyntaxKind> > ignoreDirectives;
 };
 
 /// Possible encodings for encrypted text used in a pragma protect region.
@@ -149,6 +154,9 @@ private:
 
     // temporary storage for building arrays of trivia
     SmallVectorSized<Trivia, 32> triviaBuffer;
+
+    // Unified Directives and unknown directives hash for quick lookup
+    StringTable<syntax::SyntaxKind> *allDirectives;
 };
 
 } // namespace slang::parsing
