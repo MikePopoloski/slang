@@ -11,6 +11,7 @@
 #include "slang/diagnostics/CompilationDiags.h"
 #include "slang/diagnostics/DeclarationsDiags.h"
 #include "slang/util/StackContainer.h"
+#include "slang/util/TimeTrace.h"
 
 namespace slang::ast {
 
@@ -234,6 +235,12 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
     void handle(const InstanceSymbol& symbol) {
         if (numErrors > errorLimit || hierarchyProblem)
             return;
+
+        TimeTraceScope timeScope("AST Instance", [&] {
+            std::string buffer;
+            symbol.getHierarchicalPath(buffer);
+            return buffer;
+        });
 
         instanceCount[&symbol.getDefinition()]++;
 
