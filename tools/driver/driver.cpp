@@ -157,7 +157,11 @@ int driverMain(int argc, TArgs argv) try {
     }
 
     if (timeTrace) {
+#if defined(_MSC_VER)
         std::ofstream file(widen(*timeTrace));
+#else
+        std::ofstream file(*timeTrace);
+#endif
         TimeTrace::write(file);
         if (!file.flush())
             throw std::runtime_error(fmt::format("Unable to write time trace to '{}'", *timeTrace));
