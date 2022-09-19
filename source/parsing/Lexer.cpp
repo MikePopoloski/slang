@@ -59,7 +59,8 @@ Lexer::Lexer(BufferID bufferId, string_view source, const char* startPtr, BumpAl
                 advance(3);
         }
     }
-    allDirectives = new StringTable<syntax::SyntaxKind>(LF::LexerFacts::getDirectiveTable(), options.ignoreDirectives);
+    allDirectives = new StringTable<syntax::SyntaxKind>(LF::LexerFacts::getDirectiveTable(),
+                                                        options.ignoreDirectives);
 }
 
 Token Lexer::concatenateTokens(BumpAllocator& alloc, Token left, Token right) {

@@ -10,11 +10,11 @@
 #include "slang/diagnostics/Diagnostics.h"
 #include "slang/parsing/LexerFacts.h"
 #include "slang/parsing/Token.h"
+#include "slang/syntax/SyntaxKind.h"
 #include "slang/text/SourceLocation.h"
 #include "slang/util/SmallVector.h"
-#include "slang/util/Util.h"
 #include "slang/util/StringTable.h"
-#include "slang/syntax/SyntaxKind.h"
+#include "slang/util/Util.h"
 
 namespace slang {
 
@@ -31,7 +31,7 @@ struct SLANG_EXPORT LexerOptions {
     uint32_t maxErrors = 16;
 
     /// A set of preprocessor directives to be ignored
-    std::vector<std::pair<std::string_view, syntax::SyntaxKind> > ignoreDirectives;
+    std::vector<std::pair<std::string_view, syntax::SyntaxKind>> ignoreDirectives;
 };
 
 /// Possible encodings for encrypted text used in a pragma protect region.
@@ -156,7 +156,7 @@ private:
     SmallVectorSized<Trivia, 32> triviaBuffer;
 
     // Unified Directives and unknown directives hash for quick lookup
-    StringTable<syntax::SyntaxKind> *allDirectives;
+    StringTable<syntax::SyntaxKind>* allDirectives;
 };
 
 } // namespace slang::parsing
