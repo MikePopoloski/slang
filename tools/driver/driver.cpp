@@ -16,6 +16,7 @@
 #include "slang/diagnostics/TextDiagnosticClient.h"
 #include "slang/syntax/SyntaxTree.h"
 #include "slang/text/Json.h"
+#include "slang/util/TimeTrace.h"
 #include "slang/util/Version.h"
 
 using namespace slang;
@@ -87,6 +88,12 @@ int driverMain(int argc, TArgs argv) try {
                        "given hierarchical paths",
                        "<path>");
 
+    std::optional<std::string> timeTrace;
+    driver.cmdLine.add("--time-trace", timeTrace,
+                       "Do performance profiling of the slang compiler and output "
+                       "the results to the given file in Chrome Event Tracing JSON format",
+                       "<path>");
+
     if (!driver.parseCommandLine(argc, argv))
         return 1;
 
@@ -114,6 +121,9 @@ int driverMain(int argc, TArgs argv) try {
         return 3;
     }
 
+    if (timeTrace)
+        TimeTrace::initialize();
+
     bool ok = true;
     try {
         if (onlyPreprocess == true) {
@@ -127,18 +137,30 @@ int driverMain(int argc, TArgs argv) try {
             ok &= driver.reportParseDiags();
         }
         else {
-            ok = driver.parseAllSources();
+            {
+                TimeTraceScope timeScope("parseAllSources"sv, ""sv);
+                ok = driver.parseAllSources();
+            }
 
-            auto compilation = driver.createCompilation();
-            ok &= driver.reportCompilation(*compilation, quiet == true);
-
-            if (astJsonFile)
-                printJson(*compilation, *astJsonFile, astJsonScopes);
+            {
+                TimeTraceScope timeScope("elaboration"sv, ""sv);
+                auto compilation = driver.createCompilation();
+                ok &= driver.reportCompilation(*compilation, quiet == true);
+                if (astJsonFile)
+                    printJson(*compilation, *astJsonFile, astJsonScopes);
+            }
         }
     }
     catch (const std::exception& e) {
         OS::printE(fmt::format("internal compiler error: {}\n", e.what()));
         return 4;
+    }
+
+    if (timeTrace) {
+        std::ofstream file(widen(*timeTrace));
+        TimeTrace::write(file);
+        if (!file.flush())
+            throw std::runtime_error(fmt::format("Unable to write time trace to '{}'", *timeTrace));
     }
 
     return ok ? 0 : 5;

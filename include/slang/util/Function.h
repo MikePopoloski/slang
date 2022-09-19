@@ -20,10 +20,10 @@ namespace slang {
 ///
 /// NOTE: This is based on the type of the same name from the LLVM project.
 template<typename Fn>
-class SLANG_EXPORT function_ref;
+class function_ref;
 
 template<typename Ret, typename... Params>
-class SLANG_EXPORT function_ref<Ret(Params...)> {
+class function_ref<Ret(Params...)> {
     Ret (*callback)(intptr_t callable, Params... params) = nullptr;
     intptr_t callable;
 

@@ -349,4 +349,13 @@ Define rule to rename vendor command &lt;vendor_cmd> into existing &lt;slang_cmd
 Similarly to `--cmd-ignore`, this exists to support existing command files that
 specify options with different names.
 
+@section clr-profiling Profiling
+
+`--time-trace <path>`
+
+Run slang with time tracing enabled, which collects information about how long
+various parts of the compilation take. When the program exits it will write the
+trace results to the given file, which is JSON text containing events in
+the Chrome Trace Event format.
+
 */

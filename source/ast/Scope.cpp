@@ -26,6 +26,7 @@
 #include "slang/diagnostics/LookupDiags.h"
 #include "slang/syntax/AllSyntax.h"
 #include "slang/util/StackContainer.h"
+#include "slang/util/TimeTrace.h"
 
 namespace {
 
@@ -794,6 +795,14 @@ void Scope::checkImportConflict(const Symbol& member, const Symbol& existing) co
 }
 
 void Scope::elaborate() const {
+    if (thisSym->kind == SymbolKind::InstanceBody && TimeTrace::isEnabled()) {
+        TimeTrace::beginTrace("elaborate scope"sv, [&] {
+            std::string buffer;
+            thisSym->getHierarchicalPath(buffer);
+            return buffer;
+        });
+    }
+
     ASSERT(deferredMemberIndex != DeferredMemberIndex::Invalid);
     auto deferredData = compilation.getOrAddDeferredData(deferredMemberIndex);
     deferredMemberIndex = DeferredMemberIndex::Invalid;
@@ -1101,6 +1110,8 @@ void Scope::elaborate() const {
     }
 
     ASSERT(deferredMemberIndex == DeferredMemberIndex::Invalid);
+    if (thisSym->kind == SymbolKind::InstanceBody && TimeTrace::isEnabled())
+        TimeTrace::endTrace();
 }
 
 static string_view getIdentifierName(const NamedTypeSyntax& syntax) {

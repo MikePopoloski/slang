@@ -75,7 +75,8 @@ add_library(
   util/BumpAllocator.cpp
   util/CommandLine.cpp
   util/OS.cpp
-  util/String.cpp)
+  util/String.cpp
+  util/TimeTrace.cpp)
 
 add_subdirectory(ast)
 

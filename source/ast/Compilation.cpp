@@ -22,6 +22,7 @@
 #include "slang/syntax/SyntaxTree.h"
 #include "slang/text/CharInfo.h"
 #include "slang/text/SourceManager.h"
+#include "slang/util/TimeTrace.h"
 
 using namespace slang::parsing;
 
@@ -1371,6 +1372,8 @@ void Compilation::checkModportExports(
 }
 
 void Compilation::resolveDefParams(size_t) {
+    TimeTraceScope timeScope("resolveDefParams"sv, ""sv);
+
     struct OverrideEntry {
         std::string path;
         const SyntaxNode* node = nullptr;

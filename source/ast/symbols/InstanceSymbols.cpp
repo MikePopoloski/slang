@@ -27,6 +27,7 @@
 #include "slang/diagnostics/ParserDiags.h"
 #include "slang/syntax/AllSyntax.h"
 #include "slang/util/StackContainer.h"
+#include "slang/util/TimeTrace.h"
 
 namespace {
 
@@ -279,6 +280,9 @@ void InstanceSymbol::fromSyntax(Compilation& compilation,
                                 const HierarchyInstantiationSyntax& syntax,
                                 const ASTContext& context, SmallVector<const Symbol*>& results,
                                 SmallVector<const Symbol*>& implicitNets) {
+    TimeTraceScope timeScope("createInstances"sv,
+                             [&] { return std::string(syntax.type.valueText()); });
+
     // Find our parent instance.
     const Scope* currScope = context.scope;
     while (currScope && currScope->asSymbol().kind != SymbolKind::InstanceBody)

@@ -10,6 +10,7 @@
 #include "slang/parsing/Parser.h"
 #include "slang/parsing/Preprocessor.h"
 #include "slang/text/SourceManager.h"
+#include "slang/util/TimeTrace.h"
 
 namespace slang::syntax {
 
@@ -119,6 +120,13 @@ SyntaxTree::SyntaxTree(SyntaxNode* root, SourceManager& sourceManager, BumpAlloc
 std::shared_ptr<SyntaxTree> SyntaxTree::create(SourceManager& sourceManager,
                                                span<const SourceBuffer> sources, const Bag& options,
                                                MacroList inheritedMacros, bool guess) {
+    TimeTraceScope timeScope("parseFile"sv, [&] {
+        if (sources.size() == 1)
+            return std::string(sourceManager.getRawFileName(sources[0].id));
+        else
+            return "<multi-buffer>"s;
+    });
+
     BumpAllocator alloc;
     Diagnostics diagnostics;
     Preprocessor preprocessor(sourceManager, alloc, diagnostics, options, inheritedMacros);
