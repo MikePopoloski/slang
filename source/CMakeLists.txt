@@ -22,6 +22,7 @@ add_custom_command(
           ${CMAKE_CURRENT_BINARY_DIR}
   OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/slang/syntax/AllSyntax.h
          ${CMAKE_CURRENT_BINARY_DIR}/AllSyntax.cpp
+         ${CMAKE_CURRENT_BINARY_DIR}/SyntaxClone.cpp
          ${CMAKE_CURRENT_BINARY_DIR}/slang/syntax/SyntaxKind.h
          ${CMAKE_CURRENT_BINARY_DIR}/slang/parsing/TokenKind.h
          ${CMAKE_CURRENT_BINARY_DIR}/TokenKind.cpp
@@ -37,6 +38,7 @@ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/util/Version.cpp.in
 add_library(
   slang_slang
   ${CMAKE_CURRENT_BINARY_DIR}/AllSyntax.cpp
+  ${CMAKE_CURRENT_BINARY_DIR}/SyntaxClone.cpp
   ${CMAKE_CURRENT_BINARY_DIR}/DiagCode.cpp
   ${CMAKE_CURRENT_BINARY_DIR}/TokenKind.cpp
   ${CMAKE_CURRENT_BINARY_DIR}/Version.cpp

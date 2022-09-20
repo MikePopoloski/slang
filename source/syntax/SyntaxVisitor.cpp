@@ -26,7 +26,7 @@ struct CloneVisitor {
 #endif
     template<typename T>
     SyntaxNode* visit(const T& node) {
-        T* cloned = node.clone(alloc);
+        T* cloned = clone(node, alloc);
 
         constexpr bool IsList = std::is_same_v<T, SyntaxListBase>;
         SmallVectorSized<TokenOrSyntax, 8> listBuffer;
