@@ -17,13 +17,11 @@ namespace slang::syntax {
 using namespace parsing;
 
 SyntaxTree::SyntaxTree(SyntaxNode* root, SourceManager& sourceManager, BumpAllocator&& alloc,
+                       std::unique_ptr<ParserMetadata> metadata,
                        std::shared_ptr<SyntaxTree> parent) :
     rootNode(root),
-    sourceMan(sourceManager), alloc(std::move(alloc)), parentTree(std::move(parent)) {
-    if (parentTree)
-        metadata = std::make_unique<ParserMetadata>(parentTree->getMetadata());
-    else
-        metadata = std::make_unique<ParserMetadata>();
+    sourceMan(sourceManager), alloc(std::move(alloc)), metadata(std::move(metadata)),
+    parentTree(std::move(parent)) {
 }
 
 SyntaxTree::~SyntaxTree() = default;

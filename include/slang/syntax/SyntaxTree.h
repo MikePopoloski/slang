@@ -37,6 +37,7 @@ public:
     bool isLibrary = false;
 
     SyntaxTree(SyntaxNode* root, SourceManager& sourceManager, BumpAllocator&& alloc,
+               std::unique_ptr<slang::parsing::ParserMetadata> metadata,
                std::shared_ptr<SyntaxTree> parent = nullptr);
 
     SyntaxTree(SyntaxTree&& other) = default;
