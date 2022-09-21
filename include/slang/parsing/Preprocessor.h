@@ -49,6 +49,9 @@ struct SLANG_EXPORT PreprocessorOptions {
 
     /// A set of macro names to undefine at the start of file preprocessing.
     std::vector<std::string> undefines;
+
+    /// A set of preprocessor directives to be ignored
+    flat_hash_set<string_view> ignoreDirectives;
 };
 
 /// Preprocessor - Interface between lexer and parser

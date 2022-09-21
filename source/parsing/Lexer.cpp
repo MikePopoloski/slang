@@ -19,7 +19,6 @@
 #include "slang/util/BumpAllocator.h"
 #include "slang/util/ScopeGuard.h"
 #include "slang/util/String.h"
-#include "slang/util/StringTable.h"
 
 static_assert(std::numeric_limits<double>::is_iec559, "SystemVerilog requires IEEE 754");
 
@@ -59,8 +58,6 @@ Lexer::Lexer(BufferID bufferId, string_view source, const char* startPtr, BumpAl
                 advance(3);
         }
     }
-    allDirectives = new StringTable<syntax::SyntaxKind>(LF::LexerFacts::getDirectiveTable(),
-                                                        options.ignoreDirectives);
 }
 
 Token Lexer::concatenateTokens(BumpAllocator& alloc, Token left, Token right) {
@@ -827,9 +824,7 @@ Token Lexer::lexDirective() {
         return create(TokenKind::Unknown);
     }
 
-    SyntaxKind directive;
-    if (!allDirectives->lookup(lexeme().substr(1), directive))
-        directive = SyntaxKind::MacroUsage;
+    SyntaxKind directive = LF::getDirectiveKind(lexeme().substr(1));
     return create(TokenKind::Directive, directive);
 }
 

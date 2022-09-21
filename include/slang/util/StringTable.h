@@ -40,45 +40,6 @@ public:
         }
     }
 
-    // Construct a new StringTable<> from an existing StringTable<>,
-    // (possible statically constructed from an initializer)
-    // and a new list of members probably given dynamically (not known at compile time).
-    StringTable(const StringTable& st, span<std::pair<string_view, T>> entries) {
-        // Give ourselves a bunch of room for entries to hash by using double
-        // the required number of entries. Also round up to power of two so that
-        // we can use bitwise AND instead of mod for wraparound.
-        capacity = (uint32_t)entries.size();
-        for (size_t i = 0; i < st.capacity; i++) {
-            if (st.table[i].hashCode)
-                capacity++;
-        }
-        capacity = roundUpToPow2(2 * capacity);
-        table = std::make_unique<Entry[]>(capacity);
-
-        for (size_t i = 0; i < st.capacity; i++) {
-            if (st.table[i].hashCode) {
-                size_t hc = st.table[i].hashCode; // hashcode is size independent, can be reused
-                uint32_t index = hc & (capacity - 1);
-                while (table[index].hashCode != 0)
-                    index = (index + 1) & (capacity - 1);
-
-                table[index].key = st.table[i].key;
-                table[index].value = st.table[i].value;
-                table[index].hashCode = hc;
-            }
-        }
-        for (auto& entry : entries) {
-            size_t hc = std::hash<string_view>()(entry.first);
-            uint32_t index = hc & (capacity - 1);
-            while (table[index].hashCode != 0)
-                index = (index + 1) & (capacity - 1);
-
-            table[index].key = entry.first;
-            table[index].value = entry.second;
-            table[index].hashCode = hc;
-        }
-    }
-
     /// Looks for an entry with the given @a key and sets @a value if found.
     /// @return true if the element is found, and false otherwise.
     bool lookup(string_view key, T& value) const {

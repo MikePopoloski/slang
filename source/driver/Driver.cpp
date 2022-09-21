@@ -18,10 +18,8 @@
 #include "slang/diagnostics/ParserDiags.h"
 #include "slang/diagnostics/SysFuncsDiags.h"
 #include "slang/diagnostics/TextDiagnosticClient.h"
-#include "slang/parsing/Lexer.h"
 #include "slang/parsing/Parser.h"
 #include "slang/parsing/Preprocessor.h"
-#include "slang/syntax/SyntaxKind.h"
 #include "slang/syntax/SyntaxPrinter.h"
 #include "slang/syntax/SyntaxTree.h"
 
@@ -614,13 +612,12 @@ Bag Driver::createOptionBag() const {
     ppoptions.predefineSource = "<command-line>";
     if (options.maxIncludeDepth.has_value())
         ppoptions.maxIncludeDepth = *options.maxIncludeDepth;
+    for (const auto& d : options.ignoreDirectives)
+        ppoptions.ignoreDirectives.emplace(std::string_view(d));
 
     LexerOptions loptions;
     if (options.maxLexerErrors.has_value())
         loptions.maxErrors = *options.maxLexerErrors;
-    for (const auto& d : options.ignoreDirectives)
-        loptions.ignoreDirectives.push_back(
-            std::make_pair(std::string_view(d), syntax::SyntaxKind::UnknownDirective));
 
     ParserOptions poptions;
     if (options.maxParseDepth.has_value())

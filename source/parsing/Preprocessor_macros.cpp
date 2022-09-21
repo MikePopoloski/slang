@@ -59,6 +59,16 @@ void Preprocessor::createBuiltInMacro(string_view name, int value, string_view v
 MacroActualArgumentListSyntax* Preprocessor::handleTopLevelMacro(Token directive) {
     auto macro = findMacro(directive);
     if (!macro.valid()) {
+        if (options.ignoreDirectives.find(directive.valueText().substr(1)) != options.ignoreDirectives.end()) {
+            SmallVectorSized<Trivia, 16> trivia;
+
+            trivia.append(createSimpleDirective(directive));
+            while (currentToken.kind != TokenKind::EndOfFile && peekSameLine())
+                consume();
+            trivia.appendRange(directive.trivia());
+            //return directive.withTrivia(alloc, trivia.copy(alloc));
+            return nullptr;
+        }
         addDiag(diag::UnknownDirective, directive.location()) << directive.valueText();
 
         // If we see a parenthesis next, let's assume they tried to invoke a function-like macro

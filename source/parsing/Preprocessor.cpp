@@ -318,11 +318,6 @@ Token Preprocessor::handleDirectives(Token token) {
                         // we don't do anything with celldefine directives
                         trivia.append(createSimpleDirective(token));
                         break;
-                    case SyntaxKind::UnknownDirective:
-                        trivia.append(createSimpleDirective(token));
-                        while (currentToken.kind != TokenKind::EndOfFile && peekSameLine())
-                            consume();
-                        break;
                     default:
                         ASSUME_UNREACHABLE;
                 }

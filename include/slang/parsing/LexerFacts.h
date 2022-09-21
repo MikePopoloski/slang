@@ -43,7 +43,6 @@ public:
 
     static syntax::SyntaxKind getDirectiveKind(string_view directive);
     static string_view getDirectiveText(syntax::SyntaxKind kind);
-    static const StringTable<syntax::SyntaxKind>& getDirectiveTable();
 
     /// This checks all keywords, regardless of the current keyword table. Should
     /// only be used when it is ok to get a false positive for a keyword that may

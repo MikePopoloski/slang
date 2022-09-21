@@ -652,10 +652,6 @@ const StringTable<TokenKind>* LexerFacts::getKeywordTable(KeywordVersion version
     return &allKeywords[(uint8_t)version];
 }
 
-const StringTable<SyntaxKind>& LexerFacts::getDirectiveTable() {
-    return slang::parsing::directiveTable;
-}
-
 // clang-format off
 string_view LexerFacts::getDirectiveText(SyntaxKind kind) {
     switch (kind) {

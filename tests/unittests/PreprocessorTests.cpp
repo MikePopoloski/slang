@@ -2189,3 +2189,27 @@ endmodule // secret
     REQUIRE(diagnostics.size() == 1);
     CHECK(diagnostics[0].code == diag::ProtectedEnvelope);
 }
+
+TEST_CASE("Unknown directive or macro") {
+    auto& text = R"(
+`unknown_pragma
+)";
+
+    auto result = preprocess(text);
+    CHECK(result == "\n");
+
+    REQUIRE(diagnostics.size() == 1);
+    CHECK(diagnostics.back().code == diag::UnknownDirective);
+}
+
+TEST_CASE("Unknown but ignored directive") {
+    auto& text = R"(
+`unknown_pragma
+)";
+
+    auto result = preprocess(text);
+    CHECK(result == "\n");
+
+    REQUIRE(diagnostics.size() == 1);
+    CHECK(diagnostics.back().code == diag::UnknownDirective);
+}
