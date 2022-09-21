@@ -664,7 +664,7 @@ A `pragma protect option expected a valid 32-bit integer value but received some
 
 -Winvalid-pragma-viewport
 A `pragma protect viewport directive was given invalid options. All such directives must be of
-the form (object = <string>, access = <string>)
+the form (object = &lt;string>, access = &lt;string>)
 ```
 `pragma protect viewport=(not_object = "hello")
 ```

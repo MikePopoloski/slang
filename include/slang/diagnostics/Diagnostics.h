@@ -56,26 +56,48 @@ ENUM_SIZED(DiagSubsystem, uint16_t, DS)
 ENUM(DiagnosticSeverity, DS)
 // clang-format on
 
+/// @brief A compact code that represents a diagnostic.
+///
+/// Diagnostics are messages issued to users in the form of notes,
+/// warnings, or errors. DiagCodes are partitioned into subystems
+/// to help keep unrelated diagnostics separated from each other.
 class SLANG_EXPORT DiagCode {
 public:
+    /// Default constructor, object will return false for @a valid
     constexpr DiagCode() : subsystem(DiagSubsystem::Invalid), code(0) {}
+
+    /// Constructs a new DiagCode with the given subsystem and code number.
     constexpr DiagCode(DiagSubsystem subsystem, uint16_t code) : subsystem(subsystem), code(code) {}
 
+    /// Gets the subsystem with which this DiagCode is associated.
     constexpr DiagSubsystem getSubsystem() const { return subsystem; }
+
+    /// Gets the raw numeric code of this DiagCode, unique within its subsystem.
     constexpr uint16_t getCode() const { return code; }
 
+    /// @brief Checks whether the DiagCode is valid.
+    ///
+    /// Any DiagCode with a subsystem of @ref DiagSubsystem::Invalid will return false,
+    /// (which is true for a default constructed DiagCode object).
     constexpr bool valid() const { return subsystem != DiagSubsystem::Invalid; }
 
+    /// Explicit boolean conversion operator that defers to @a valid
     constexpr explicit operator bool() const { return valid(); }
 
+    /// Equality comparison.
     constexpr bool operator==(DiagCode other) const {
         return subsystem == other.subsystem && code == other.code;
     }
 
+    /// Inequality comparison.
     constexpr bool operator!=(DiagCode other) const { return !(*this == other); }
 
+    /// Less-than comparison.
     constexpr bool operator<(DiagCode other) const { return code < other.code; }
 
+    /// @brief A list of all "known" DiagCodes.
+    ///
+    /// Known codes are ones baked into the library by the diagnostic_gen.py tool.
     static const span<const DiagCode> KnownCodes;
 
 private:

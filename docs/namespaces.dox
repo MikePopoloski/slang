@@ -1,48 +1,48 @@
-/** @dir slang
+/** @dir include/slang
 @brief Root of the @ref slang library
 */
 
-/** @dir slang/ast
+/** @dir include/slang/ast
 @brief The SystemVerilog AST
 */
 
-/** @dir slang/ast/expressions
+/** @dir include/slang/ast/expressions
 @brief Expression definitions
 */
 
-/** @dir slang/ast/symbols
+/** @dir include/slang/ast/symbols
 @brief Symbol definitions
 */
 
-/** @dir slang/ast/types
+/** @dir include/slang/ast/types
 @brief Type definitions
 */
 
-/** @dir slang/diagnostics
+/** @dir include/slang/diagnostics
 @brief Diagnostic definitions
 */
 
-/** @dir slang/driver
+/** @dir include/slang/driver
 @brief Frontend tool driver
 */
 
-/** @dir slang/numeric
+/** @dir include/slang/numeric
 @brief Numeric-related utility types
 */
 
-/** @dir slang/parsing
+/** @dir include/slang/parsing
 @brief Lexing, preprocessing, and parsing functionality
 */
 
-/** @dir slang/syntax
+/** @dir include/slang/syntax
 @brief Syntax tree manipulation
 */
 
-/** @dir slang/text
+/** @dir include/slang/text
 @brief Source file and text manipulation
 */
 
-/** @dir slang/util
+/** @dir include/slang/util
 @brief Various generic utility types
 */
 
