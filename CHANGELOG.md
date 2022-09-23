@@ -5,6 +5,64 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
+### Highlights
+...
+
+### Language Support
+* Added support for modport port expressions
+* Added support for modport exports and `extern` interface methods (including the rules for `extern forkjoin` methods)
+* Directionality of modport ports is now enforced (e.g. assigning to an input modport port is now an error)
+* Added full support for SystemVerilog's pattern matching feature, including usage in constant expressions
+* Added parsing support for config declarations
+* The parser now enforces syntax rules around specify block edge descriptors
+* Port connection slicing across arrays of instances is now also allowed with implicit port connections
+* Access to static class data members via an incomplete forward typedef is now allowed
+* Compile-time constant out-of-bounds element and range selects have always been an error in slang. The LRM allows for them to either be an error or optionally to result in `'x` and compilation to continue -- to support this option the resulting errors have been changed to suppressible warnings (though still set to errors by default).
+* `` `pragma protect`` directives are now validated for correctness and encoded text is now decoded by slang (in all four decoding formats mentioned by the LRM). Actual encrypted text is not decrypted but just skipped instead -- it's very unlikely any IP vendor will ever provide slang with a decryption key so there's little point in implementing it.
+* Duplicate module / interface / program / primitive definitions have been made a suppressible error to support legacy workflows (thanks to @udif)
+
+### General Features
+* New warning: [-Wempty-body](https://sv-lang.com/warning-ref.html#empty-body) (on by default) warns about likely accidental usage of semicolons after a loop or if condition that causes the body to be empty
+* New warning: [-Wreversed-range](https://sv-lang.com/warning-ref.html#reversed-range) (on by default) warns about a reversed open range that will behave as if it's an empty set instead
+* Added [Python bindings](https://github.com/MikePopoloski/pyslang) for the library
+* Driver code has been factored out of the slang-driver tool into a [Driver class](https://sv-lang.com/classslang_1_1driver_1_1_driver.html) that can be consumed by users of the library that are creating their own frontend tools
+* slang now treats all input source files as being UTF-8 encoded. Previously slang required all sources to be ASCII encoded but did not strictly enforce that, and could behave incorrectly when encountering non-ASCII characters. Now all characters are validated and UTF-8 sequences are handled correctly (and are allowed without issue inside string literals and code comments). Invalid UTF-8 sequences are diagnosed and a warning will be issued.
+* The default set of warnings was tweaked - some were added and some removed. See the [Warning Reference](https://sv-lang.com/warning-ref.html) for more information about which are on by default.
+* The `--libraries-inherit-macros` flag was added to allow macros defined in primary source files to bleed over into automatically loaded library files. The `--single-unit` option must also be used when providing this option.
+* New options `--cmd-ignore` and `--cmd-rename` can be used when you have existing command files with option flags designed for another tool to process (thanks to @udif)
+* Added `--time-trace` to profile where slang is spending its compilation time
+
+### Improvements
+* slang now reports a better error when you forget to put parenthesis after a module or interface instantiation
+* Lots of internal code cleanup, whitespace fixes, static analysis and lint fixes, and cleanup of TODOs in this release
+* Large integers printed in diagnostics will now be abbreviated to avoid filling the console with tons of digits
+* Added a limit to the size of instance arrays, to avoid hangs and running out of memory when typos produce huge array sizes. Use `--max-instance-array` if you run into the limit in a real design.
+* Made several improvements to parser error recovery to cover common coding errors
+* Several improvements were made to the SyntaxVisitor and SyntaxRewriter helper classes (thanks to @HungMingWu)
+* Many improvements were made to the cmake build and installation flow. slang should be much more easily consumed as a library in downstream projects.
+* Wrote more documentation and improved the doc build and its presentation
+* A lot of code was reorganized internally into more easily discovered locations. Library code is now organized into namespaces.
+* slang should now build correctly as a shared library out of the box
+* Made several minor optimizations across the library that should add up to about 10-15% compilation speed improvement for typical workflows
+
+### Fixes
+* Fixed ICE when a subroutine declaration refers to itself in its own return type declaration
+* Fixed several issues with Unicode path handling on Windows
+* Fixed a parser bug where a colon followed immediately by a line comment would be parsed incorrectly (thanks to @HungMingWu)
+* Fixed a parsing bug with `restrict property` statements
+* Fixed several crashes and internal assertions in corner cases discovered by fuzz testing
+* Fixed a number of cases where a proper diagnostic in an error scenario would be followed by one or more spurious diagnostics -- now only the one proper diagnostic is issued
+* Fixed a number of cases where a diagnostic with a formatted message might put an empty string into that message, which was confusing and not helpful
+* Constraint blocks are now correctly disallowed outside of class declarations
+* The `$bits` system function can now correctly reference automatic variables from static initializers
+* Fixed struct member declarations that referred to other members in the same struct type as part of their type declaration
+* Fixed handling of defparams when there are infinitely recursive modules in the design
+* The macro list printed by `--macros-only` is now sorted for consistent ordering between runs
+* Fixed a bug where diagnostic pragmas were not correctly handled when found in automatically loaded library source files
+* Source files listed in command files are now processed strictly in order relative to files listed in other command files, which gives predictable behavior when treating them as a single unit
+* The check for maximum include stack depth was erroneously including all files in its count when using single-unit builds
+* Fixed a bug that could cause case statements in constant expression to be misevaluated under certain conditions
+
 
 ## [v1.0] - 2022-06-25
 ### Highlights
