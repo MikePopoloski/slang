@@ -53,6 +53,9 @@ struct SLANG_EXPORT ParserMetadata {
     /// The EOF token, if one has already been consumed by the parser.
     /// Otherwise an empty token.
     Token eofToken;
+
+    /// Constructs a new set of parser metadata by walking the provided syntax tree.
+    static ParserMetadata fromSyntax(const syntax::SyntaxNode& root);
 };
 
 } // namespace slang::parsing

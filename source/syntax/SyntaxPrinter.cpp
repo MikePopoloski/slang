@@ -114,6 +114,7 @@ std::string SyntaxPrinter::printFile(const SyntaxTree& tree) {
         .setIncludeSkipped(true)
         .setIncludeTrivia(true)
         .setIncludePreprocessed(false)
+        .setSquashNewlines(false)
         .print(tree)
         .str();
 }

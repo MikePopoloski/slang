@@ -63,6 +63,7 @@ endmodule
 module M;
     typedef enum int { FOO = 1, BAR = 2, BAZ = 3 } test_t;
     localparam int test_t__count = 3;
+
     function void foo(argA,int i, output r,argZ);
     endfunction
 endmodule
@@ -92,6 +93,7 @@ endmodule
         BAR = 2,\
         BAZ = 3\
     } asdf;
+
 module M;
     `ENUM_MACRO(test_t)
     localparam int test_t__count = 3;
@@ -99,7 +101,7 @@ endmodule
 )");
 }
 
-TEST_CASE("Advance rewriting") {
+TEST_CASE("Advanced rewriting") {
     SECTION("Insert multiple newNodes surrounding oldNodes") {
         class MultipleRewriter : public SyntaxRewriter<MultipleRewriter> {
         public:
@@ -168,6 +170,7 @@ module M;
     typedef enum int { FOO = 1, BAR = 2, BAZ = 3 } test_t;
     localparam int test_t__count3 = 3;
     localparam int test_t__count4 = 3;
+
     function void foo(argA,int i, output r,argZ);
     endfunction
 endmodule
@@ -235,6 +238,7 @@ module M;
     localparam int test_t__count1 = 3;
     localparam int test_t__count2 = 3;
     localparam int test_t__count3 = 3;
+
     function void foo(argA,int i, output r,argZ);
     endfunction
 endmodule
@@ -299,6 +303,7 @@ endmodule
 module M;
     localparam int test_t__count1 = 3;
     localparam int test_t__count2 = 3;
+
     function void foo(argA,int i, output r,argZ);
     endfunction
 endmodule
@@ -370,16 +375,10 @@ module m;
     reg tmp;
 endmodule
 )");
+
     SECTION("Shallow Clone") {
         class CloneRewriter : public SyntaxRewriter<CloneRewriter> {
         public:
-            Compilation compilation;
-            SemanticModel model;
-
-            explicit CloneRewriter(const std::shared_ptr<SyntaxTree>& tree) : model(compilation) {
-                compilation.addSyntaxTree(tree);
-            }
-
             void handle(const DataDeclarationSyntax& syntax) {
                 auto op = [this, &syntax](string_view str) {
                     auto cloned = clone(syntax, alloc);
@@ -392,7 +391,8 @@ endmodule
                 op("tmp3");
             }
         };
-        tree = CloneRewriter(tree).transform(tree);
+
+        tree = CloneRewriter().transform(tree);
         CHECK(SyntaxPrinter::printFile(*tree) == R"(
 module m;
     reg tmp3;
@@ -402,15 +402,10 @@ module m;
 endmodule
 )");
     }
+
     SECTION("Deep Clone") {
         class CloneRewriter : public SyntaxRewriter<CloneRewriter> {
         public:
-            Compilation compilation;
-            SemanticModel model;
-
-            explicit CloneRewriter(const std::shared_ptr<SyntaxTree>& tree) : model(compilation) {
-                compilation.addSyntaxTree(tree);
-            }
             void handle(const DataDeclarationSyntax& syntax) {
                 auto op = [this, &syntax](string_view str) {
                     auto cloned = deepClone(syntax, alloc);
@@ -423,7 +418,8 @@ endmodule
                 op("tmp3");
             }
         };
-        tree = CloneRewriter(tree).transform(tree);
+
+        tree = CloneRewriter().transform(tree);
         CHECK(SyntaxPrinter::printFile(*tree) == R"(
 module m;
     reg tmp;
@@ -432,5 +428,90 @@ module m;
     reg tmp3;
 endmodule
 )");
+    }
+}
+
+TEST_CASE("Syntax rewriting with metadata updates") {
+    auto tree = SyntaxTree::fromFileInMemory(R"(
+`default_nettype none
+`unconnected_drive pull0
+`timescale 1ns/1ps
+`define FOO
+
+module m;
+    module n;
+    endmodule
+    reg tmp;
+    n n();
+    if (1) begin end
+endmodule
+
+module top;
+    import bar::*;
+    FooBar fooBar();
+    defparam a = 1;
+    bind A: Ainst Abind Abind_inst();
+
+    initial a::b = 1;
+endmodule
+
+class C; endclass
+
+`nounconnected_drive
+`resetall
+)",
+                                             SyntaxTree::getDefaultSourceManager());
+
+    CHECK(tree->diagnostics().empty());
+
+    class ModuleChanger : public SyntaxRewriter<ModuleChanger> {
+    public:
+        void handle(const ModuleDeclarationSyntax& syntax) {
+            if (syntax.header->name.valueText() == "m") {
+                auto newMod = clone(syntax, alloc);
+                newMod->header->name = makeId("FooBar", SingleSpace);
+                replace(syntax, *newMod);
+            }
+        }
+    };
+
+    tree = ModuleChanger().transform(tree);
+    CHECK(SyntaxPrinter::printFile(*tree) == R"(
+`default_nettype none
+`unconnected_drive pull0
+`timescale 1ns/1ps
+`define FOO
+
+module FooBar;
+    module n;
+    endmodule
+    reg tmp;
+    n n();
+    if (1) begin end
+endmodule
+
+module top;
+    import bar::*;
+    FooBar fooBar();
+    defparam a = 1;
+    bind A: Ainst Abind Abind_inst();
+
+    initial a::b = 1;
+endmodule
+
+class C; endclass
+
+`nounconnected_drive
+`resetall
+)");
+
+    auto& meta = tree->getMetadata();
+    CHECK(meta.nodeMap.size() == 3);
+
+    for (auto& [key, node] : meta.nodeMap) {
+        if (key->as<ModuleDeclarationSyntax>().header->name.valueText() == "FooBar") {
+            CHECK(node.timeScale->base.unit == TimeUnit::Nanoseconds);
+            CHECK(node.unconnectedDrive == TokenKind::Pull0Keyword);
+        }
     }
 }

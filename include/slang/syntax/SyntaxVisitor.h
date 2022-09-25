@@ -175,21 +175,35 @@ protected:
         commits.listInsertAtBack[&list].push_back({&list, &newNode, separator});
     }
 
-    Token makeToken(parsing::TokenKind kind, string_view text) {
-        return Token(alloc, kind, {}, text, SourceLocation::NoLocation);
+    Token makeToken(parsing::TokenKind kind, string_view text,
+                    span<const parsing::Trivia> trivia = {}) {
+        return Token(alloc, kind, trivia, text, SourceLocation::NoLocation);
     }
 
-    Token makeId(string_view text) { return makeToken(parsing::TokenKind::Identifier, text); }
+    Token makeId(string_view text, span<const parsing::Trivia> trivia = {}) {
+        return makeToken(parsing::TokenKind::Identifier, text, trivia);
+    }
+
+    Token makeId(string_view text, parsing::Trivia trivia) {
+        auto triviaPtr = alloc.emplace<parsing::Trivia>(trivia);
+        return makeId(text, {triviaPtr, 1});
+    }
+
     Token makeComma() { return makeToken(parsing::TokenKind::Comma, ","sv); }
 
     BumpAllocator alloc;
     SyntaxFactory factory;
+
+    static const parsing::Trivia SingleSpace;
 
 private:
     SourceManager* sourceManager = nullptr;
     detail::ChangeCollection commits;
     std::vector<std::shared_ptr<SyntaxTree>> tempTrees;
 };
+
+template<typename TDerived>
+const parsing::Trivia SyntaxRewriter<TDerived>::SingleSpace{parsing::TriviaKind::Whitespace, " "sv};
 
 #undef DERIVED
 

@@ -59,6 +59,7 @@ add_library(
   parsing/Parser_members.cpp
   parsing/Parser_statements.cpp
   parsing/ParserBase.cpp
+  parsing/ParserMetadata.cpp
   parsing/Preprocessor.cpp
   parsing/Preprocessor_macros.cpp
   parsing/Preprocessor_pragmas.cpp

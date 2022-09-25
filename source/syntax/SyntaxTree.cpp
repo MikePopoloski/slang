@@ -20,10 +20,9 @@ SyntaxTree::SyntaxTree(SyntaxNode* root, SourceManager& sourceManager, BumpAlloc
                        std::shared_ptr<SyntaxTree> parent) :
     rootNode(root),
     sourceMan(sourceManager), alloc(std::move(alloc)), parentTree(std::move(parent)) {
-    if (parentTree)
-        metadata = std::make_unique<ParserMetadata>(parentTree->getMetadata());
-    else
-        metadata = std::make_unique<ParserMetadata>();
+    metadata = std::make_unique<ParserMetadata>(ParserMetadata::fromSyntax(*root));
+    if (!metadata->eofToken && parentTree)
+        metadata->eofToken = parentTree->getMetadata().eofToken;
 }
 
 SyntaxTree::~SyntaxTree() = default;
