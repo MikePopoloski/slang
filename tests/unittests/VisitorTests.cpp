@@ -363,3 +363,74 @@ endmodule
     compilation.getRoot().visit(visitor);
     CHECK(visitor.count == 11);
 }
+
+TEST_CASE("Clone and DeepClone") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    reg tmp;
+endmodule
+)");
+    SECTION("Shallow Clone") {
+        class CloneRewriter : public SyntaxRewriter<CloneRewriter> {
+        public:
+            Compilation compilation;
+            SemanticModel model;
+
+            CloneRewriter(const std::shared_ptr<SyntaxTree>& tree) : model(compilation) {
+                compilation.addSyntaxTree(tree);
+            }
+
+            void handle(const slang::syntax::DataDeclarationSyntax& syntax) {
+                auto op = [this, &syntax](std::string_view str) {
+                    auto cloned_ptr = clone(syntax, alloc);
+                    cloned_ptr->declarators[0]->name =
+                        cloned_ptr->declarators[0]->name.withRawText(alloc, str);
+                    insertAfter(syntax, *cloned_ptr);
+                };
+                op("tmp1");
+                op("tmp2");
+                op("tmp3");
+            }
+        };
+        tree = CloneRewriter(tree).transform(tree);
+        CHECK(SyntaxPrinter::printFile(*tree) == R"(
+module m;
+    reg tmp3;
+    reg tmp3;
+    reg tmp3;
+    reg tmp3;
+endmodule
+)");
+    }
+    SECTION("Deep Clone") {
+        class CloneRewriter : public SyntaxRewriter<CloneRewriter> {
+        public:
+            Compilation compilation;
+            SemanticModel model;
+
+            CloneRewriter(const std::shared_ptr<SyntaxTree>& tree) : model(compilation) {
+                compilation.addSyntaxTree(tree);
+            }
+            void handle(const slang::syntax::DataDeclarationSyntax& syntax) {
+                auto op = [this, &syntax](std::string_view str) {
+                    auto cloned_ptr = deepClone(syntax, alloc);
+                    cloned_ptr->declarators[0]->name =
+                        cloned_ptr->declarators[0]->name.withRawText(alloc, str);
+                    insertAfter(syntax, *cloned_ptr);
+                };
+                op("tmp1");
+                op("tmp2");
+                op("tmp3");
+            }
+        };
+        tree = CloneRewriter(tree).transform(tree);
+        CHECK(SyntaxPrinter::printFile(*tree) == R"(
+module m;
+    reg tmp;
+    reg tmp1;
+    reg tmp2;
+    reg tmp3;
+endmodule
+)");
+    }
+}

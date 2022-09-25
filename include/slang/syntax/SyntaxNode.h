@@ -14,6 +14,7 @@
 #include "slang/syntax/SyntaxKind.h"
 #include "slang/util/Iterator.h"
 #include "slang/util/SmallVector.h"
+#include "slang/util/TypeTraits.h"
 #include "slang/util/Util.h"
 
 namespace slang::syntax {
@@ -137,6 +138,23 @@ private:
     TokenOrSyntax getChild(size_t index);
 };
 
+SLANG_EXPORT SyntaxNode* clone(const SyntaxNode&, BumpAllocator&);
+SLANG_EXPORT SyntaxNode* deepClone(const SyntaxNode&, BumpAllocator&);
+
+// Helper function for clone
+
+template<typename T>
+T* clone(const T& node, BumpAllocator& alloc) {
+    static_assert(std::is_base_of_v<SyntaxNode, T>);
+    return static_cast<T*>(clone(static_cast<const SyntaxNode&>(node), alloc));
+}
+
+template<typename T>
+T* deepClone(const T& node, BumpAllocator& alloc) {
+    static_assert(std::is_base_of_v<SyntaxNode, T>);
+    return static_cast<T*>(deepClone(static_cast<const SyntaxNode&>(node), alloc));
+}
+
 /// A base class for syntax nodes that represent a list of items.
 class SLANG_EXPORT SyntaxListBase : public SyntaxNode {
 public:
@@ -201,6 +219,15 @@ private:
         childCount = buffer.size();
     }
 };
+
+template<typename T>
+SyntaxList<T>* deepClone(const SyntaxList<T>& node, BumpAllocator& alloc) {
+    SmallVectorSized<T*, 8> buffer(node.size());
+    for (const auto& t : node)
+        buffer.append(slang::syntax::deepClone<T>(*t, alloc));
+
+    return alloc.emplace<SyntaxList<T>>(buffer.copy(alloc));
+}
 
 /// A syntax node that represents a list of child tokens.
 class SLANG_EXPORT TokenList : public SyntaxListBase, public span<parsing::Token> {
@@ -277,6 +304,12 @@ public:
     SeparatedSyntaxList(span<TokenOrSyntax> elements) :
         SyntaxListBase(SyntaxKind::SeparatedList, elements.size()), elements(elements) {}
 
+    /// @return the elements of nodes in the list
+    [[nodiscard]] span<const TokenOrSyntax> elems() const { return elements; }
+
+    /// @return the elements of nodes in the list
+    [[nodiscard]] span<TokenOrSyntax> elems() { return elements; }
+
     /// @return true if the list is empty, and false if it has elements.
     [[nodiscard]] bool empty() const { return elements.empty(); }
 
@@ -319,5 +352,19 @@ private:
 
     span<TokenOrSyntax> elements;
 };
+
+template<typename T>
+SeparatedSyntaxList<T>* deepClone(const SeparatedSyntaxList<T>& node, BumpAllocator& alloc) {
+    SmallVectorSized<TokenOrSyntax, 8> buffer(node.size());
+    for (const auto& ele : node.elems()) {
+        if (ele.isToken()) {
+            buffer.append(ele);
+        }
+        else {
+            buffer.append(slang::syntax::deepClone(ele.node()->template as<T>(), alloc));
+        }
+    }
+    return alloc.emplace<SeparatedSyntaxList<T>>(buffer.copy(alloc));
+}
 
 } // namespace slang::syntax
