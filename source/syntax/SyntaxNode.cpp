@@ -37,13 +37,6 @@ struct GetChildVisitor {
 
 namespace slang::syntax {
 
-ConstTokenOrSyntax::ConstTokenOrSyntax(TokenOrSyntax tos) {
-    if (tos.isNode())
-        *this = tos.node();
-    else
-        *this = tos.token();
-}
-
 std::string SyntaxNode::toString() const {
     return SyntaxPrinter().print(*this).str();
 }

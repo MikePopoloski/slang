@@ -376,16 +376,16 @@ endmodule
             Compilation compilation;
             SemanticModel model;
 
-            CloneRewriter(const std::shared_ptr<SyntaxTree>& tree) : model(compilation) {
+            explicit CloneRewriter(const std::shared_ptr<SyntaxTree>& tree) : model(compilation) {
                 compilation.addSyntaxTree(tree);
             }
 
-            void handle(const slang::syntax::DataDeclarationSyntax& syntax) {
-                auto op = [this, &syntax](std::string_view str) {
-                    auto cloned_ptr = clone(syntax, alloc);
-                    cloned_ptr->declarators[0]->name =
-                        cloned_ptr->declarators[0]->name.withRawText(alloc, str);
-                    insertAfter(syntax, *cloned_ptr);
+            void handle(const DataDeclarationSyntax& syntax) {
+                auto op = [this, &syntax](string_view str) {
+                    auto cloned = clone(syntax, alloc);
+                    cloned->declarators[0]->name = cloned->declarators[0]->name.withRawText(alloc,
+                                                                                            str);
+                    insertAfter(syntax, *cloned);
                 };
                 op("tmp1");
                 op("tmp2");
@@ -408,15 +408,15 @@ endmodule
             Compilation compilation;
             SemanticModel model;
 
-            CloneRewriter(const std::shared_ptr<SyntaxTree>& tree) : model(compilation) {
+            explicit CloneRewriter(const std::shared_ptr<SyntaxTree>& tree) : model(compilation) {
                 compilation.addSyntaxTree(tree);
             }
-            void handle(const slang::syntax::DataDeclarationSyntax& syntax) {
-                auto op = [this, &syntax](std::string_view str) {
-                    auto cloned_ptr = deepClone(syntax, alloc);
-                    cloned_ptr->declarators[0]->name =
-                        cloned_ptr->declarators[0]->name.withRawText(alloc, str);
-                    insertAfter(syntax, *cloned_ptr);
+            void handle(const DataDeclarationSyntax& syntax) {
+                auto op = [this, &syntax](string_view str) {
+                    auto cloned = deepClone(syntax, alloc);
+                    cloned->declarators[0]->name = cloned->declarators[0]->name.withRawText(alloc,
+                                                                                            str);
+                    insertAfter(syntax, *cloned);
                 };
                 op("tmp1");
                 op("tmp2");

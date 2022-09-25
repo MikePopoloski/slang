@@ -14,20 +14,18 @@
 #include "slang/syntax/SyntaxKind.h"
 #include "slang/util/Iterator.h"
 #include "slang/util/SmallVector.h"
-#include "slang/util/TypeTraits.h"
 #include "slang/util/Util.h"
 
 namespace slang::syntax {
 
 class SyntaxNode;
 
-/// A base class template for a sum type representing either a token or a syntax node.
-template<typename TNode>
-struct SLANG_EXPORT TokenOrSyntaxBase : public std::variant<parsing::Token, TNode> {
-    using Base = std::variant<parsing::Token, TNode>;
-    TokenOrSyntaxBase(parsing::Token token) : Base(token) {}
-    TokenOrSyntaxBase(TNode node) : Base(node) {}
-    TokenOrSyntaxBase(nullptr_t) : Base(parsing::Token()) {}
+/// A token or a constant syntax node.
+struct SLANG_EXPORT ConstTokenOrSyntax : public std::variant<parsing::Token, const SyntaxNode*> {
+    using Base = std::variant<parsing::Token, const SyntaxNode*>;
+    ConstTokenOrSyntax(parsing::Token token) : Base(token) {}
+    ConstTokenOrSyntax(const SyntaxNode* node) : Base(node) {}
+    ConstTokenOrSyntax(nullptr_t) : Base(parsing::Token()) {}
 
     /// @return true if the object is a token.
     bool isToken() const { return this->index() == 0; }
@@ -41,22 +39,22 @@ struct SLANG_EXPORT TokenOrSyntaxBase : public std::variant<parsing::Token, TNod
 
     /// Gets access to the object as a syntax node (throwing an exception
     /// if it's not actually a syntax node).
-    TNode node() const { return std::get<1>(*this); }
-
-protected:
-    TokenOrSyntaxBase() = default;
+    const SyntaxNode* node() const { return std::get<1>(*this); }
 };
 
 /// A token or a syntax node.
-struct SLANG_EXPORT TokenOrSyntax : public TokenOrSyntaxBase<SyntaxNode*> {
-    using TokenOrSyntaxBase::TokenOrSyntaxBase;
-};
+struct SLANG_EXPORT TokenOrSyntax : public ConstTokenOrSyntax {
+    TokenOrSyntax(parsing::Token token) : ConstTokenOrSyntax(token) {}
+    TokenOrSyntax(SyntaxNode* node) : ConstTokenOrSyntax(node) {}
+    TokenOrSyntax(nullptr_t) : ConstTokenOrSyntax(parsing::Token()) {}
 
-/// A token or a constant syntax node.
-struct SLANG_EXPORT ConstTokenOrSyntax : public TokenOrSyntaxBase<const SyntaxNode*> {
-    using TokenOrSyntaxBase::TokenOrSyntaxBase;
-
-    ConstTokenOrSyntax(TokenOrSyntax tos);
+    /// Gets access to the object as a syntax node (throwing an exception
+    /// if it's not actually a syntax node).
+    SyntaxNode* node() const {
+        // const_cast is safe because we only could have constructed this
+        // object with a non-const pointer.
+        return const_cast<SyntaxNode*>(std::get<1>(*this));
+    }
 };
 
 /// Base class for all syntax nodes.
@@ -141,17 +139,13 @@ private:
 SLANG_EXPORT SyntaxNode* clone(const SyntaxNode&, BumpAllocator&);
 SLANG_EXPORT SyntaxNode* deepClone(const SyntaxNode&, BumpAllocator&);
 
-// Helper function for clone
-
-template<typename T>
+template<typename T, typename = std::enable_if_t<std::is_base_of_v<SyntaxNode, T>>>
 T* clone(const T& node, BumpAllocator& alloc) {
-    static_assert(std::is_base_of_v<SyntaxNode, T>);
     return static_cast<T*>(clone(static_cast<const SyntaxNode&>(node), alloc));
 }
 
-template<typename T>
+template<typename T, typename = std::enable_if_t<std::is_base_of_v<SyntaxNode, T>>>
 T* deepClone(const T& node, BumpAllocator& alloc) {
-    static_assert(std::is_base_of_v<SyntaxNode, T>);
     return static_cast<T*>(deepClone(static_cast<const SyntaxNode&>(node), alloc));
 }
 
@@ -224,7 +218,7 @@ template<typename T>
 SyntaxList<T>* deepClone(const SyntaxList<T>& node, BumpAllocator& alloc) {
     SmallVectorSized<T*, 8> buffer(node.size());
     for (const auto& t : node)
-        buffer.append(slang::syntax::deepClone<T>(*t, alloc));
+        buffer.append(deepClone(*t, alloc));
 
     return alloc.emplace<SyntaxList<T>>(buffer.copy(alloc));
 }
@@ -305,7 +299,9 @@ public:
         SyntaxListBase(SyntaxKind::SeparatedList, elements.size()), elements(elements) {}
 
     /// @return the elements of nodes in the list
-    [[nodiscard]] span<const TokenOrSyntax> elems() const { return elements; }
+    [[nodiscard]] span<const ConstTokenOrSyntax> elems() const {
+        return span<const ConstTokenOrSyntax>(elements.data(), elements.size());
+    }
 
     /// @return the elements of nodes in the list
     [[nodiscard]] span<TokenOrSyntax> elems() { return elements; }
@@ -357,12 +353,10 @@ template<typename T>
 SeparatedSyntaxList<T>* deepClone(const SeparatedSyntaxList<T>& node, BumpAllocator& alloc) {
     SmallVectorSized<TokenOrSyntax, 8> buffer(node.size());
     for (const auto& ele : node.elems()) {
-        if (ele.isToken()) {
-            buffer.append(ele);
-        }
-        else {
-            buffer.append(slang::syntax::deepClone(ele.node()->template as<T>(), alloc));
-        }
+        if (ele.isToken())
+            buffer.append(ele.token());
+        else
+            buffer.append(static_cast<T*>(deepClone(*ele.node(), alloc)));
     }
     return alloc.emplace<SeparatedSyntaxList<T>>(buffer.copy(alloc));
 }
