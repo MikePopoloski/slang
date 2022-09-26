@@ -299,10 +299,20 @@ public:
     /// allocation right away.
     explicit SmallVectorSized(size_t capacity) : SmallVector<T>(N) { this->reserve(capacity); }
 
-    SmallVectorSized(SmallVectorSized<T, N>&& other) noexcept :
+    SmallVectorSized(const SmallVectorSized& other) :
+        SmallVectorSized(static_cast<const SmallVector<T>&>(other)) {}
+
+    SmallVectorSized(const SmallVector<T>& other) {
+        this->len = 0;
+        this->capacity = N;
+        this->data_ = reinterpret_cast<T*>(&this->firstElement[0]);
+        this->appendRange(other.begin(), other.end());
+    }
+
+    SmallVectorSized(SmallVectorSized&& other) :
         SmallVectorSized(static_cast<SmallVector<T>&&>(other)) {}
 
-    SmallVectorSized(SmallVector<T>&& other) noexcept {
+    SmallVectorSized(SmallVector<T>&& other) {
         if (other.isSmall()) {
             this->len = 0;
             this->capacity = N;
@@ -320,13 +330,17 @@ public:
         }
     }
 
-    // not copyable
-    SmallVectorSized(const SmallVectorSized&) = delete;
-    SmallVectorSized& operator=(const SmallVectorSized&) = delete;
-
-    SmallVectorSized& operator=(SmallVector<T>&& other) noexcept {
+    SmallVectorSized& operator=(const SmallVector<T>& other) {
         if (this != &other) {
-            this->cleanup();
+            this->~SmallVectorSized();
+            new (this) SmallVectorSized(other);
+        }
+        return *this;
+    }
+
+    SmallVectorSized& operator=(SmallVector<T>&& other) {
+        if (this != &other) {
+            this->~SmallVectorSized();
             new (this) SmallVectorSized(std::move(other));
         }
         return *this;
