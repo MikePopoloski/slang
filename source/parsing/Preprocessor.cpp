@@ -261,8 +261,12 @@ Token Preprocessor::handleDirectives(Token token) {
                     case SyntaxKind::DefineDirective:
                         trivia.append(handleDefineDirective(token));
                         break;
-                    case SyntaxKind::MacroUsage:
-                        trivia.append(handleMacroUsage(token));
+                    case SyntaxKind::MacroUsage: {
+                            const std::pair<Trivia, Trivia>& macroTrivia = handleMacroUsage(token);
+                            trivia.append(macroTrivia.first);
+                            if (macroTrivia.second.valid())
+                                trivia.append(macroTrivia.second);
+                        }
                         break;
                     case SyntaxKind::IfDefDirective:
                         trivia.append(handleIfDefDirective(token, false));
@@ -599,14 +603,14 @@ Trivia Preprocessor::handleDefineDirective(Token directive) {
     return Trivia(TriviaKind::Directive, result);
 }
 
-Trivia Preprocessor::handleMacroUsage(Token directive) {
+std::pair<Trivia, Trivia> Preprocessor::handleMacroUsage(Token directive) {
     // delegate to a nested function to simplify the error handling paths
     inMacroBody = true;
-    auto actualArgs = handleTopLevelMacro(directive);
+    const std::pair<MacroActualArgumentListSyntax*, Trivia>& actualArgs = handleTopLevelMacro(directive);
     inMacroBody = false;
 
-    auto syntax = alloc.emplace<MacroUsageSyntax>(directive, actualArgs);
-    return Trivia(TriviaKind::Directive, syntax);
+    auto syntax = alloc.emplace<MacroUsageSyntax>(directive, actualArgs.first);
+    return std::make_pair(Trivia(TriviaKind::Directive, syntax), actualArgs.second);
 }
 
 Trivia Preprocessor::handleIfDefDirective(Token directive, bool inverted) {

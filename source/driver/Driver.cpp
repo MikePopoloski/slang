@@ -613,7 +613,7 @@ Bag Driver::createOptionBag() const {
     if (options.maxIncludeDepth.has_value())
         ppoptions.maxIncludeDepth = *options.maxIncludeDepth;
     for (const auto& d : options.ignoreDirectives)
-        ppoptions.ignoreDirectives.emplace(std::string_view(d));
+        ppoptions.ignoreDirectives.emplace(d);
 
     LexerOptions loptions;
     if (options.maxLexerErrors.has_value())

@@ -50,7 +50,7 @@ struct SLANG_EXPORT PreprocessorOptions {
     /// A set of macro names to undefine at the start of file preprocessing.
     std::vector<std::string> undefines;
 
-    /// A set of preprocessor directives to be ignored
+    /// A set of preprocessor directives to be ignored.
     flat_hash_set<string_view> ignoreDirectives;
 };
 
@@ -148,7 +148,7 @@ private:
     Trivia handleIncludeDirective(Token directive);
     Trivia handleResetAllDirective(Token directive);
     Trivia handleDefineDirective(Token directive);
-    Trivia handleMacroUsage(Token directive);
+    std::pair<Trivia, Trivia> handleMacroUsage(Token directive);
     Trivia handleIfDefDirective(Token directive, bool inverted);
     Trivia handleElsIfDirective(Token directive);
     Trivia handleElseDirective(Token directive);
@@ -272,7 +272,7 @@ private:
 
     // Macro handling methods
     MacroDef findMacro(Token directive);
-    syntax::MacroActualArgumentListSyntax* handleTopLevelMacro(Token directive);
+    std::pair<syntax::MacroActualArgumentListSyntax*, Trivia> handleTopLevelMacro(Token directive);
     bool expandMacro(MacroDef macro, MacroExpansion& expansion,
                      syntax::MacroActualArgumentListSyntax* actualArgs);
     bool expandIntrinsic(MacroIntrinsic intrinsic, MacroExpansion& expansion);

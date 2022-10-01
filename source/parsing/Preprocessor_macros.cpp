@@ -56,27 +56,27 @@ void Preprocessor::createBuiltInMacro(string_view name, int value, string_view v
 #undef NL
 }
 
-MacroActualArgumentListSyntax* Preprocessor::handleTopLevelMacro(Token directive) {
+std::pair<MacroActualArgumentListSyntax*, Trivia> Preprocessor::handleTopLevelMacro(Token directive) {
+    Trivia emptyTrivia(TriviaKind::Unknown, string_view(nullptr, 0));
     auto macro = findMacro(directive);
     if (!macro.valid()) {
         if (options.ignoreDirectives.find(directive.valueText().substr(1)) !=
             options.ignoreDirectives.end()) {
-            SmallVectorSized<Trivia, 16> trivia;
-
-            trivia.append(createSimpleDirective(directive));
-            while (currentToken.kind != TokenKind::EndOfFile && peekSameLine())
-                consume();
-            trivia.appendRange(directive.trivia());
-            // return directive.withTrivia(alloc, trivia.copy(alloc));
-            return nullptr;
+                std::vector<Token> ignore_tokens;
+                while (currentToken.kind != TokenKind::EndOfFile && peekSameLine())
+                    ignore_tokens.push_back(consume());
+                if (ignore_tokens.empty())
+                    return std::make_pair(nullptr, emptyTrivia);
+                else
+                    return std::make_pair(nullptr, Trivia(TriviaKind::SkippedTokens, ignore_tokens));
         }
         addDiag(diag::UnknownDirective, directive.location()) << directive.valueText();
 
         // If we see a parenthesis next, let's assume they tried to invoke a function-like macro
         // and skip over the tokens.
         if (peek(TokenKind::OpenParenthesis))
-            return MacroParser(*this).parseActualArgumentList(directive);
-        return nullptr;
+            return std::make_pair(MacroParser(*this).parseActualArgumentList(directive), emptyTrivia);
+        return std::make_pair(nullptr, emptyTrivia);
     }
 
     // if this assert fires, we failed to fully expand nested macros at a previous point
@@ -87,14 +87,14 @@ MacroActualArgumentListSyntax* Preprocessor::handleTopLevelMacro(Token directive
     if (macro.needsArgs()) {
         actualArgs = MacroParser(*this).parseActualArgumentList(directive);
         if (!actualArgs)
-            return nullptr;
+            return std::make_pair(nullptr, emptyTrivia);
     }
 
     // Expand out the macro
     SmallVectorSized<Token, 32> buffer;
     MacroExpansion expansion{sourceManager, alloc, buffer, directive, true};
     if (!expandMacro(macro, expansion, actualArgs))
-        return actualArgs;
+        return std::make_pair(actualArgs, emptyTrivia);
 
     // The macro is now expanded out into tokens, but some of those tokens might
     // be more macros that need to be expanded, or special characters that
@@ -113,7 +113,7 @@ MacroActualArgumentListSyntax* Preprocessor::handleTopLevelMacro(Token directive
         // pass. This ensures that we don't miss expanding a constructed macro.
         const Token* ptr = tokens.data();
         if (!expandReplacementList(tokens, alreadyExpanded))
-            return actualArgs;
+            return std::make_pair(actualArgs, emptyTrivia);
 
         // Now that all macros have been expanded, handle token concatenation and stringification.
         expandedTokens.clear();
@@ -128,7 +128,7 @@ MacroActualArgumentListSyntax* Preprocessor::handleTopLevelMacro(Token directive
     if (!expandedTokens.empty())
         currentMacroToken = expandedTokens.begin();
 
-    return actualArgs;
+    return std::make_pair(actualArgs, emptyTrivia);
 }
 
 bool Preprocessor::applyMacroOps(span<Token const> tokens, SmallVector<Token>& dest) {
