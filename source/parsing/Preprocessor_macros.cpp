@@ -56,26 +56,28 @@ void Preprocessor::createBuiltInMacro(string_view name, int value, string_view v
 #undef NL
 }
 
-std::pair<MacroActualArgumentListSyntax*, Trivia> Preprocessor::handleTopLevelMacro(Token directive) {
+std::pair<MacroActualArgumentListSyntax*, Trivia> Preprocessor::handleTopLevelMacro(
+    Token directive) {
     Trivia emptyTrivia(TriviaKind::Unknown, string_view(nullptr, 0));
     auto macro = findMacro(directive);
     if (!macro.valid()) {
         if (options.ignoreDirectives.find(directive.valueText().substr(1)) !=
             options.ignoreDirectives.end()) {
-                std::vector<Token> ignore_tokens;
-                while (currentToken.kind != TokenKind::EndOfFile && peekSameLine())
-                    ignore_tokens.push_back(consume());
-                if (ignore_tokens.empty())
-                    return std::make_pair(nullptr, emptyTrivia);
-                else
-                    return std::make_pair(nullptr, Trivia(TriviaKind::SkippedTokens, ignore_tokens));
+            std::vector<Token> ignore_tokens;
+            while (currentToken.kind != TokenKind::EndOfFile && peekSameLine())
+                ignore_tokens.push_back(consume());
+            if (ignore_tokens.empty())
+                return std::make_pair(nullptr, emptyTrivia);
+            else
+                return std::make_pair(nullptr, Trivia(TriviaKind::SkippedTokens, ignore_tokens));
         }
         addDiag(diag::UnknownDirective, directive.location()) << directive.valueText();
 
         // If we see a parenthesis next, let's assume they tried to invoke a function-like macro
         // and skip over the tokens.
         if (peek(TokenKind::OpenParenthesis))
-            return std::make_pair(MacroParser(*this).parseActualArgumentList(directive), emptyTrivia);
+            return std::make_pair(MacroParser(*this).parseActualArgumentList(directive),
+                                  emptyTrivia);
         return std::make_pair(nullptr, emptyTrivia);
     }
 
