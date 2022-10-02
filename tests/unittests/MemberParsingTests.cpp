@@ -1027,3 +1027,17 @@ endconfig
     parseCompilationUnit(text);
     CHECK_DIAGNOSTICS_EMPTY;
 }
+
+TEST_CASE("Parser::parseGuess testing of top-level attributes") {
+    auto tree = SyntaxTree::fromText(R"(
+(* myattrib *)
+module dummy();
+endmodule
+)");
+
+    CHECK(tree->diagnostics().empty());
+
+    auto& attributes = tree->root().as<ModuleDeclarationSyntax>().attributes;
+    REQUIRE(attributes.size() == 1);
+    CHECK(attributes[0]->specs[0]->name.valueText() == "myattrib");
+}

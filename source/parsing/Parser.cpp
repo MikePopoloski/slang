@@ -21,15 +21,12 @@ Parser::Parser(Preprocessor& preprocessor, const Bag& options) :
 
 SyntaxNode& Parser::parseGuess() {
     // First try to parse as some kind of declaration.
-    auto attributes = parseAttributes();
-    if (isHierarchyInstantiation(/* requireName */ true))
-        return parseHierarchyInstantiation(attributes);
-    if (isNetDeclaration())
-        return parseNetDeclaration(attributes);
-    if (isVariableDeclaration())
-        return parseVariableDeclaration(attributes);
-
-    ASSERT(attributes.empty());
+    if (isMember()) {
+        bool anyLocalModules = false;
+        auto member = parseMember(SyntaxKind::CompilationUnit, anyLocalModules);
+        ASSERT(member);
+        return *member;
+    }
 
     // Try to parse as an expression if possible.
     if (isPossibleExpression(peek().kind)) {
@@ -1052,6 +1049,64 @@ PortConnectionSyntax& Parser::parsePortConnection() {
         return factory.namedPortConnection(attributes, dot, name, openParen, expr, closeParen);
     }
     return factory.orderedPortConnection(attributes, parsePropertyExpr(0));
+}
+
+bool Parser::isMember() {
+    // Any attributes found should indicate a member.
+    uint32_t index = 0;
+    scanAttributes(index);
+    if (index > 0)
+        return true;
+
+    if (isHierarchyInstantiation(/* requireName */ true) || isNetDeclaration() ||
+        isVariableDeclaration()) {
+        return true;
+    }
+
+    switch (peek().kind) {
+        case TokenKind::GenerateKeyword:
+        case TokenKind::TimeUnitKeyword:
+        case TokenKind::TimePrecisionKeyword:
+        case TokenKind::ModuleKeyword:
+        case TokenKind::MacromoduleKeyword:
+        case TokenKind::ProgramKeyword:
+        case TokenKind::PackageKeyword:
+        case TokenKind::InterfaceKeyword:
+        case TokenKind::ModPortKeyword:
+        case TokenKind::BindKeyword:
+        case TokenKind::SpecParamKeyword:
+        case TokenKind::AliasKeyword:
+        case TokenKind::SpecifyKeyword:
+        case TokenKind::AssignKeyword:
+        case TokenKind::InitialKeyword:
+        case TokenKind::FinalKeyword:
+        case TokenKind::AlwaysKeyword:
+        case TokenKind::AlwaysCombKeyword:
+        case TokenKind::AlwaysFFKeyword:
+        case TokenKind::AlwaysLatchKeyword:
+        case TokenKind::GenVarKeyword:
+        case TokenKind::TaskKeyword:
+        case TokenKind::FunctionKeyword:
+        case TokenKind::CoverGroupKeyword:
+        case TokenKind::ClassKeyword:
+        case TokenKind::VirtualKeyword:
+        case TokenKind::DefParamKeyword:
+        case TokenKind::ImportKeyword:
+        case TokenKind::ExportKeyword:
+        case TokenKind::PropertyKeyword:
+        case TokenKind::SequenceKeyword:
+        case TokenKind::CheckerKeyword:
+        case TokenKind::GlobalKeyword:
+        case TokenKind::DefaultKeyword:
+        case TokenKind::ClockingKeyword:
+        case TokenKind::ConstraintKeyword:
+        case TokenKind::PrimitiveKeyword:
+        case TokenKind::ConfigKeyword:
+        case TokenKind::Semicolon:
+            return true;
+        default:
+            return isGateType(peek().kind);
+    }
 }
 
 bool Parser::isPortDeclaration(bool inStatement) {

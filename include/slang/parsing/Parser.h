@@ -382,6 +382,7 @@ private:
 
     // ---- Lookahead routines, for determining which kind of syntax to parse ----
 
+    bool isMember();
     bool isPortDeclaration(bool inStatement);
     bool isNetDeclaration();
     bool isVariableDeclaration();
