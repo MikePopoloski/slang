@@ -48,13 +48,15 @@ if(SLANG_INCLUDE_INSTALL)
     DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
     COMPONENT slang_Development)
 
-  install(
-    TARGETS fmt
-    EXPORT slangTargets
-    LIBRARY COMPONENT slang_Development
-    ARCHIVE COMPONENT slang_Development
-    PUBLIC_HEADER EXCLUDE_FROM_ALL
-    PRIVATE_HEADER EXCLUDE_FROM_ALL)
+  if(NOT fmt_FOUND)
+    install(
+      TARGETS fmt
+      EXPORT slangTargets
+      LIBRARY COMPONENT slang_Development
+      ARCHIVE COMPONENT slang_Development
+      PUBLIC_HEADER EXCLUDE_FROM_ALL
+      PRIVATE_HEADER EXCLUDE_FROM_ALL)
+  endif()
 
   install(TARGETS unordered_dense EXPORT slangTargets)
 endif()

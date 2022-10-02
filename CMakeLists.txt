@@ -149,7 +149,7 @@ if(NOT CMAKE_INSTALL_RPATH AND BUILD_SHARED_LIBS)
   set(CMAKE_INSTALL_RPATH ${base} ${base}/${relDir})
 endif()
 
-add_subdirectory(external)
+include(external/CMakeLists.txt)
 add_subdirectory(source)
 
 if(SLANG_INCLUDE_TOOLS)
