@@ -58,7 +58,7 @@ void Preprocessor::createBuiltInMacro(string_view name, int value, string_view v
 
 std::pair<MacroActualArgumentListSyntax*, Trivia> Preprocessor::handleTopLevelMacro(
     Token directive) {
-    Trivia emptyTrivia(TriviaKind::Unknown, string_view(nullptr, 0));
+    static Trivia emptyTrivia(TriviaKind::Unknown, string_view(nullptr, 0));
     auto macro = findMacro(directive);
     if (!macro.valid()) {
         if (options.ignoreDirectives.find(directive.valueText().substr(1)) !=
