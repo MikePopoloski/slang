@@ -173,9 +173,6 @@ public:
 /// A collection of diagnostics.
 class SLANG_EXPORT Diagnostics : public SmallVectorSized<Diagnostic, 2> {
 public:
-    Diagnostics() = default;
-    Diagnostics(Diagnostics&& other) noexcept = default;
-
     /// Adds a new diagnostic to the collection, pointing to the given source location.
     Diagnostic& add(DiagCode code, SourceLocation location);
 
