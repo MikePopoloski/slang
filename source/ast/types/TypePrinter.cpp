@@ -101,7 +101,8 @@ void TypePrinter::visit(const EnumType& type, string_view overrideName) {
         }
         buffer->append("}");
 
-        if (!overrideName.empty())
+        if (options.skipScopedTypeNames);
+        else if (!overrideName.empty())
             buffer->append(overrideName);
         else {
             printScope(type.getParentScope());
@@ -142,7 +143,8 @@ void TypePrinter::visit(const PackedStructType& type, string_view overrideName) 
 
         appendMembers(type);
 
-        if (!overrideName.empty())
+        if (options.skipScopedTypeNames);
+        else if (!overrideName.empty())
             buffer->append(overrideName);
         else {
             printScope(type.getParentScope());
@@ -167,7 +169,8 @@ void TypePrinter::visit(const PackedUnionType& type, string_view overrideName) {
 
         appendMembers(type);
 
-        if (!overrideName.empty())
+        if (options.skipScopedTypeNames);
+        else if (!overrideName.empty())
             buffer->append(overrideName);
         else {
             printScope(type.getParentScope());
@@ -241,7 +244,8 @@ void TypePrinter::visit(const UnpackedStructType& type, string_view overrideName
         buffer->append("struct");
         appendMembers(type);
 
-        if (!overrideName.empty())
+        if (options.skipScopedTypeNames);
+        else if (!overrideName.empty())
             buffer->append(overrideName);
         else {
             printScope(type.getParentScope());
@@ -263,7 +267,8 @@ void TypePrinter::visit(const UnpackedUnionType& type, string_view overrideName)
         buffer->append("union");
         appendMembers(type);
 
-        if (!overrideName.empty())
+        if (options.skipScopedTypeNames);
+        else if (!overrideName.empty())
             buffer->append(overrideName);
         else {
             printScope(type.getParentScope());
