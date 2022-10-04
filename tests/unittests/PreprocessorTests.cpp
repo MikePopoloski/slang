@@ -2217,6 +2217,7 @@ TEST_CASE("Unknown but ignored directive") {
 
     REQUIRE(diagnostics.size() == 0);
 
-    auto tree = SyntaxTree::fromText(text, SyntaxTree::getDefaultSourceManager(), "source"sv, "", options);
+    auto tree = SyntaxTree::fromText(text, SyntaxTree::getDefaultSourceManager(), "source"sv, "",
+                                     options);
     CHECK(SyntaxPrinter::printFile(*tree) == text);
 }
