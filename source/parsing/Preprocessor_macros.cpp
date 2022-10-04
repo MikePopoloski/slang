@@ -63,13 +63,13 @@ std::pair<MacroActualArgumentListSyntax*, Trivia> Preprocessor::handleTopLevelMa
     if (!macro.valid()) {
         if (options.ignoreDirectives.find(directive.valueText().substr(1)) !=
             options.ignoreDirectives.end()) {
-            std::vector<Token> ignore_tokens;
+            SmallVectorSized<Token, 4> ignore_tokens;
             while (currentToken.kind != TokenKind::EndOfFile && peekSameLine())
-                ignore_tokens.push_back(consume());
+                ignore_tokens.append(consume());
             if (ignore_tokens.empty())
                 return std::make_pair(nullptr, emptyTrivia);
             else
-                return std::make_pair(nullptr, Trivia(TriviaKind::SkippedTokens, ignore_tokens));
+                return std::make_pair(nullptr, Trivia(TriviaKind::SkippedTokens, ignore_tokens.copy(alloc)));
         }
         addDiag(diag::UnknownDirective, directive.location()) << directive.valueText();
 
