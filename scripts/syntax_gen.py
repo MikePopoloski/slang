@@ -763,6 +763,12 @@ SyntaxNode* clone(const SyntaxListBase&, BumpAllocator&) {
                             m[0][9:-2], m[1]
                         )
                     )
+                elif m[1] in v.optionalMembers:
+                    clonef.write(
+                        "        node.{0} ? deepClone(*node.{0}, alloc) : nullptr".format(
+                            m[1]
+                        )
+                    )
                 elif m[0].startswith("SyntaxList") or m[0].startswith(
                     "SeparatedSyntaxList"
                 ):
