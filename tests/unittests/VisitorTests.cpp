@@ -429,6 +429,25 @@ module m;
 endmodule
 )");
     }
+
+    SECTION("Deep Clone With different object life cycle") {
+        auto tree = SyntaxTree::fromText(R"(module m; reg tmp; endmodule)");
+        class CloneRewriter : public SyntaxVisitor<CloneRewriter> {
+            std::shared_ptr<SyntaxTree>& tree;
+
+        public:
+            CloneRewriter(std::shared_ptr<SyntaxTree>& tree) : tree(tree) {}
+            void handle(const ModuleDeclarationSyntax& decl) {
+                BumpAllocator newAlloc;
+                auto newModule = slang::syntax::deepClone(decl, newAlloc);
+                tree = std::make_shared<SyntaxTree>(newModule, tree->sourceManager(),
+                                                    std::move(newAlloc));
+            }
+        };
+        CloneRewriter visitor(tree);
+        tree->root().visit(visitor);
+        CHECK(SyntaxPrinter::printFile(*tree) == R"(module m; reg tmp; endmodule)");
+    }
 }
 
 TEST_CASE("Syntax rewriting with metadata updates") {

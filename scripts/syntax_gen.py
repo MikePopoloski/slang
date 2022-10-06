@@ -773,6 +773,8 @@ SyntaxNode* clone(const SyntaxListBase&, BumpAllocator&) {
                     "SeparatedSyntaxList"
                 ):
                     clonef.write("        *deepClone(node.{0}, alloc)".format(m[1]))
+                elif m[0] == "Token":
+                    clonef.write("        node.{0}.deepClone(alloc)".format(m[1]))
                 else:
                     clonef.write("        node.{0}".format(m[1]))
                 if i != len(v.combinedMembers) - 1:
