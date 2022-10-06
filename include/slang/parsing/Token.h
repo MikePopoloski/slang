@@ -114,6 +114,8 @@ public:
     /// If the trivia represents skipped tokens, returns the list of tokens that were
     /// skipped. Otherwise returns an empty span.
     span<Token const> getSkippedTokens() const;
+
+    Trivia clone(BumpAllocator& alloc) const;
 };
 #if !defined(_M_IX86)
 static_assert(sizeof(Trivia) == 16);
@@ -188,6 +190,7 @@ public:
     [[nodiscard]] Token withRawText(BumpAllocator& alloc, string_view rawText) const;
     [[nodiscard]] Token clone(BumpAllocator& alloc, span<Trivia const> trivia, string_view rawText,
                               SourceLocation location) const;
+    [[nodiscard]] Token deepClone(BumpAllocator& alloc) const;
 
     static Token createMissing(BumpAllocator& alloc, TokenKind kind, SourceLocation location);
     static Token createExpected(BumpAllocator& alloc, Diagnostics& diagnostics, Token actual,

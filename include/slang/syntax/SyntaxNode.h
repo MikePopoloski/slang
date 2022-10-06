@@ -354,7 +354,7 @@ SeparatedSyntaxList<T>* deepClone(const SeparatedSyntaxList<T>& node, BumpAlloca
     SmallVectorSized<TokenOrSyntax, 8> buffer(node.size());
     for (const auto& ele : node.elems()) {
         if (ele.isToken())
-            buffer.append(ele.token());
+            buffer.append(ele.token().deepClone(alloc));
         else
             buffer.append(static_cast<T*>(deepClone(*ele.node(), alloc)));
     }

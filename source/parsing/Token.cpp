@@ -153,6 +153,34 @@ span<Token const> Trivia::getSkippedTokens() const {
     return {tokens.ptr, tokens.len};
 }
 
+Trivia Trivia::clone(BumpAllocator& alloc) const {
+    Trivia result;
+    result.kind = kind;
+    result.hasFullLocation = hasFullLocation;
+
+    switch (kind) {
+        case TriviaKind::Directive:
+        case TriviaKind::SkippedSyntax:
+            result.syntaxNode = syntaxNode;
+            break;
+        case TriviaKind::SkippedTokens:
+            result.tokens = tokens;
+            break;
+        default:
+            if (hasFullLocation) {
+                result.fullLocation = alloc.emplace<FullLocation>();
+                result.fullLocation->text = fullLocation->text;
+                result.fullLocation->location = fullLocation->location;
+            }
+            else {
+                result.rawText = rawText;
+            }
+            break;
+    }
+
+    return result;
+}
+
 Token::Token() :
     kind(TokenKind::Unknown), missing(false), triviaCountSmall(0), reserved(0), numFlags() {
 }
@@ -271,6 +299,8 @@ SourceRange Token::range() const {
 }
 
 SourceLocation Token::location() const {
+    if (!info)
+        return SourceLocation::NoLocation;
     return info->location;
 }
 
@@ -368,6 +398,20 @@ Token Token::clone(BumpAllocator& alloc, span<Trivia const> trivia, string_view 
     memcpy(&result.numFlags, &numFlags, 1);
 
     return result;
+}
+
+Token Token::deepClone(BumpAllocator& alloc) const {
+    if (!info) {
+        // No extra information, don't alloc extra info
+        // If allocated it, the valid() function would fail
+        return *this;
+    }
+    else {
+        SmallVectorSized<Trivia, 32> triviaBuffer;
+        for (const auto& t : trivia())
+            triviaBuffer.append(t.clone(alloc));
+        return clone(alloc, triviaBuffer.copy(alloc), rawText(), location());
+    }
 }
 
 void Token::init(BumpAllocator& alloc, TokenKind kind_, span<Trivia const> trivia,
