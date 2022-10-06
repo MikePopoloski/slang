@@ -349,6 +349,16 @@ Define rule to rename vendor command &lt;vendor_cmd> into existing &lt;slang_cmd
 Similarly to `--cmd-ignore`, this exists to support existing command files that
 specify options with different names.
 
+`--ignore-directive <vendor_directive>`
+
+Some tool vendors declare custom preprocessor directives, and slang fails when
+encountering those. By using this command line option with the vendor's directive,
+it will be ignored (the vendor directive should be specified without the leading \`
+symbol). It is possible to use this command line option multiple times, to ignore
+multiple vendor directives.
+Please note that any vendor directive ignored also ignores all optional parameters
+until the end of the line.
+
 @section clr-profiling Profiling
 
 `--time-trace <path>`

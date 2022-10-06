@@ -77,6 +77,8 @@ void Driver::addStandardArgs() {
         "--cmd-rename", [this](string_view value) { return cmdLine.addRenameCommand(value); },
         "Define rule to rename vendor command <vendor_cmd> into existing <slang_cmd>",
         "<vendor_cmd>,<slang_cmd>");
+    cmdLine.add("--ignore-directive", options.ignoreDirectives,
+                "Ignore preprocessor directive and all its arguments until EOL", "<directive>");
 
     // Parsing
     cmdLine.add("--max-parse-depth", options.maxParseDepth,
@@ -610,6 +612,8 @@ Bag Driver::createOptionBag() const {
     ppoptions.predefineSource = "<command-line>";
     if (options.maxIncludeDepth.has_value())
         ppoptions.maxIncludeDepth = *options.maxIncludeDepth;
+    for (const auto& d : options.ignoreDirectives)
+        ppoptions.ignoreDirectives.emplace(d);
 
     LexerOptions loptions;
     if (options.maxLexerErrors.has_value())
