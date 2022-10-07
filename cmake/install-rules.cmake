@@ -12,7 +12,9 @@ install(
   INCLUDES
   DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 
-install(TARGETS slang_driver RUNTIME COMPONENT slang_Runtime)
+if(SLANG_INCLUDE_TOOLS)
+  install(TARGETS slang_driver RUNTIME COMPONENT slang_Runtime)
+endif()
 
 include(CMakePackageConfigHelpers)
 
