@@ -2209,15 +2209,11 @@ TEST_CASE("Unknown but ignored directive") {
     PreprocessorOptions ppOptions;
     ppOptions.ignoreDirectives.emplace("unknown_pragma");
 
-    Bag options;
-    options.set(ppOptions);
-
-    auto result = preprocess(text, options);
+    auto result = preprocess(text, ppOptions);
     CHECK(result == "\n");
-
-    REQUIRE(diagnostics.size() == 0);
+    CHECK(diagnostics.empty());
 
     auto tree = SyntaxTree::fromText(text, SyntaxTree::getDefaultSourceManager(), "source"sv, "",
-                                     options);
+                                     ppOptions);
     CHECK(SyntaxPrinter::printFile(*tree) == text);
 }

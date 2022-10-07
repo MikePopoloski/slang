@@ -30,6 +30,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * The default set of warnings was tweaked - some were added and some removed. See the [Warning Reference](https://sv-lang.com/warning-ref.html) for more information about which are on by default.
 * The `--libraries-inherit-macros` flag was added to allow macros defined in primary source files to bleed over into automatically loaded library files. The `--single-unit` option must also be used when providing this option.
 * New options `--cmd-ignore` and `--cmd-rename` can be used when you have existing command files with option flags designed for another tool to process (thanks to @udif)
+* New option `--ignore-directive` can be used to ignore vendor-specific preprocessor directives that would otherwise cause slang to flag an error
 * Added `--time-trace` to profile where slang is spending its compilation time
 
 ### Improvements
