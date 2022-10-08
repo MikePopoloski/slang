@@ -22,7 +22,7 @@ template<typename T>
 void uintToStrImpl(SmallVectorBase<char>& buffer, const char* format, T value) {
     size_t sz = (size_t)snprintf(nullptr, 0, format, value);
     size_t offset = buffer.size();
-    buffer.extend(sz + 1);
+    buffer.resize(buffer.size() + sz + 1);
 
     snprintf(&buffer[offset], sz + 1, format, value);
     buffer.pop_back();

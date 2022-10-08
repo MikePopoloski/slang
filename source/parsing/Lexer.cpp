@@ -105,7 +105,7 @@ Token Lexer::stringify(BumpAllocator& alloc, SourceLocation location, span<Trivi
 
         for (const Trivia& t : cur.trivia()) {
             if (t.kind == TriviaKind::Whitespace)
-                text.appendRange(t.getRawText());
+                text.append(t.getRawText());
         }
 
         if (cur.kind == TokenKind::MacroEscapedQuote) {
@@ -118,13 +118,13 @@ Token Lexer::stringify(BumpAllocator& alloc, SourceLocation location, span<Trivi
 
             auto raw = cur.rawText();
             if (raw.size() > 2)
-                text.appendRange(raw.substr(1, raw.size() - 2));
+                text.append(raw.substr(1, raw.size() - 2));
 
             text.push_back('\\');
             text.push_back('"');
         }
         else if (cur.kind != TokenKind::EmptyMacroArgument) {
-            text.appendRange(cur.rawText());
+            text.append(cur.rawText());
         }
         begin++;
     }
@@ -148,10 +148,10 @@ Trivia Lexer::commentify(BumpAllocator& alloc, Token* begin, Token* end) {
     while (begin != end) {
         Token cur = *begin;
         for (const Trivia& t : cur.trivia())
-            text.appendRange(t.getRawText());
+            text.append(t.getRawText());
 
         if (cur.kind != TokenKind::EmptyMacroArgument)
-            text.appendRange(cur.rawText());
+            text.append(cur.rawText());
 
         begin++;
     }

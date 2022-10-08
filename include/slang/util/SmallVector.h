@@ -12,18 +12,29 @@
 #include <new>
 
 #include "slang/util/BumpAllocator.h"
+#include "slang/util/TypeTraits.h"
 
 namespace slang {
 
-/// SmallVectorBase<T> - A fast growable array.
+namespace detail {
+
+[[noreturn]] void throwOutOfRange();
+[[noreturn]] void throwLengthError();
+void* allocArray(size_t capacity, size_t typeSize);
+
+} // namespace detail
+
+/// @brief Base class for a fast growable array
 ///
 /// SmallVector is a vector-like growable array that allocates its first N elements
 /// on the stack. As long as you don't need more room than that, there are no
 /// heap allocations -- otherwise we spill over into the heap. This is the base class
-/// for the actual sized implementation; it's split apart so that this one can be
-/// used in more general interfaces that don't care about the explicit stack size.
+/// that erases the stack size template parameter for use with generic code.
 template<typename T>
 class SmallVectorBase {
+    // TODO: turn this on after fixing cases where it's not true
+    // static_assert(std::is_nothrow_move_constructible_v<T>);
+
 public:
     using value_type = T;
     using size_type = size_t;
@@ -39,168 +50,292 @@ public:
     using const_pointer = const T*;
     using const_reference = const T&;
 
-    /// @return a pointer / iterator to the beginning of the array.
-    [[nodiscard]] iterator begin() { return data_; }
+    /// @return an iterator to the beginning of the array.
+    [[nodiscard]] constexpr iterator begin() noexcept { return data_; }
 
-    /// @return a pointer / iterator to the end of the array.
-    [[nodiscard]] iterator end() { return data_ + len; }
+    /// @return an iterator to the end of the array.
+    [[nodiscard]] constexpr iterator end() noexcept { return data_ + len; }
 
-    /// @return a pointer / iterator to the beginning of the array.
-    [[nodiscard]] const_iterator begin() const { return data_; }
+    /// @return an iterator to the beginning of the array.
+    [[nodiscard]] constexpr const_iterator begin() const noexcept { return data_; }
 
-    /// @return a pointer / iterator to the end of the array.
-    [[nodiscard]] const_iterator end() const { return data_ + len; }
+    /// @return an iterator to the end of the array.
+    [[nodiscard]] constexpr const_iterator end() const noexcept { return data_ + len; }
+
+    /// @return a reverse iterator to the end of the array.
+    [[nodiscard]] constexpr reverse_iterator rbegin() noexcept { return reverse_iterator(end()); }
+
+    /// @return a reverse iterator to the end of the array.
+    [[nodiscard]] constexpr const_reverse_iterator rbegin() const noexcept {
+        return const_reverse_iterator(end());
+    }
+
+    /// @return a reverse iterator to the end of the array.
+    [[nodiscard]] constexpr reverse_iterator rend() noexcept { return reverse_iterator(begin()); }
+
+    /// @return a reverse iterator to the end of the array.
+    [[nodiscard]] constexpr const_reverse_iterator rend() const noexcept {
+        return const_reverse_iterator(begin());
+    }
 
     /// @return a reference to the first element in the array. The array must not be empty!
-    [[nodiscard]] const T& front() const {
+    [[nodiscard]] constexpr const_reference front() const {
         ASSERT(len);
         return data_[0];
     }
 
     /// @return a reference to the last element in the array. The array must not be empty!
-    [[nodiscard]] const T& back() const {
+    [[nodiscard]] constexpr const_reference back() const {
         ASSERT(len);
         return data_[len - 1];
     }
 
     /// @return a reference to the first element in the array. The array must not be empty!
-    [[nodiscard]] T& front() {
+    [[nodiscard]] constexpr reference front() {
         ASSERT(len);
         return data_[0];
     }
 
     /// @return a reference to the last element in the array. The array must not be empty!
-    [[nodiscard]] T& back() {
+    [[nodiscard]] constexpr reference back() {
         ASSERT(len);
         return data_[len - 1];
     }
 
     /// @return a pointer to the underlying array.
-    [[nodiscard]] T* data() const noexcept { return data_; }
+    [[nodiscard]] constexpr pointer data() noexcept { return data_; }
+
+    /// @return a pointer to the underlying array.
+    [[nodiscard]] constexpr const_pointer data() const noexcept { return data_; }
 
     /// @return the number of elements in the array.
-    [[nodiscard]] size_t size() const noexcept { return len; }
+    [[nodiscard]] constexpr size_type size() const noexcept { return len; }
+
+    /// @return the number of elements that can be held in currently allocated storage.
+    [[nodiscard]] constexpr size_type capacity() const noexcept { return cap; }
+
+    /// @return the maximum number of elements that could ever fit in the array,
+    /// assuming the system had enough memory to support it.
+    [[nodiscard]] constexpr size_type max_size() const noexcept {
+        return std::numeric_limits<difference_type>::max();
+    }
 
     /// @return true if the array is empty, and false if it has elements in it.
-    [[nodiscard]] bool empty() const noexcept { return len == 0; }
+    [[nodiscard]] constexpr bool empty() const noexcept { return len == 0; }
 
-    /// Clear all elements but retain underlying storage.
-    void clear() {
-        destructElements();
+    /// Ensures that there is enough allocated memory in the array for at least @a size objects.
+    void reserve(size_type newCapacity) {
+        if (newCapacity > cap) {
+            if (newCapacity > max_size())
+                detail::throwLengthError();
+
+            auto newData = (pointer)detail::allocArray(newCapacity, sizeof(T));
+            std::uninitialized_move(begin(), end(), newData);
+
+            cleanup();
+            cap = newCapacity;
+            data_ = newData;
+        }
+    }
+
+    /// Resizes the array. If larger than the current size, value constructs new elements to
+    /// fill the gap. If smaller than the current size, the length is shrunk and elements
+    /// are destructed.
+    void resize(size_type newSize) { resizeImpl(newSize, ValueInitTag()); }
+
+    /// Resizes the array. If larger than the current size, adds new elements as copies of
+    /// @a value to fill the gap. If smaller than the current size, the length is shrunk and
+    /// elements are destructed.
+    void resize(size_t newSize, const T& value) { resizeImpl(newSize, value); }
+
+    /// Clears all elements but retain underlying storage.
+    void clear() noexcept {
+        std::destroy(begin(), end());
         len = 0;
     }
 
-    /// Remove the last element from the array. Asserts if empty.
+    /// Removes the last element from the array. The array must not be empty!
     void pop_back() {
         ASSERT(len);
         len--;
-        data_[len].~T();
+        std::destroy_at(data_ + len);
     }
 
-    /// Add an element to the end of the array.
-    void push_back(const T& item) {
-        amortizeCapacity();
-        new (&data_[len++]) T(item);
-    }
+    /// Adds an element to the end of the array.
+    void push_back(const T& item) { emplace_back(item); }
 
-    /// Add a range of elements to the end of the array.
-    template<typename Container>
-    void appendRange(const Container& container) {
-        appendIterator(std::begin(container), std::end(container));
-    }
+    /// Adds an element to the end of the array.
+    void push_back(T&& item) { emplace_back(std::move(item)); }
 
-    /// Add a range of elements to the end of the array.
-    void appendRange(const T* begin, const T* end) {
-        if constexpr (std::is_trivially_copyable<T>()) {
-            size_t count = (size_t)std::distance(begin, end);
-            size_t newLen = len + count;
-            ensureCapacity(newLen);
-
-            T* ptr = data_ + len;
-            memcpy(ptr, begin, count * sizeof(T));
-            len = newLen;
-        }
-        else {
-            appendIterator(begin, end);
-        }
-    }
-
-    /// Add a range of elements to the end of the array, supporting
-    /// simple forward iterators.
-    template<typename It>
-    void appendIterator(It begin, It end) {
-        size_t count = (size_t)(end - begin);
-        size_t newLen = len + count;
-        ensureCapacity(newLen);
-
-        T* ptr = data_ + len;
-        while (begin != end)
-            new (ptr++) T(*begin++);
-
-        len = newLen;
-    }
-
-    /// Construct a new element at the end of the array.
+    /// Constructs a new element at the end of the array.
     template<typename... Args>
-    void emplace_back(Args&&... args) {
-        amortizeCapacity();
-        new (&data_[len++]) T(std::forward<Args>(args)...);
+    reference emplace_back(Args&&... args) {
+        if (len == cap)
+            return *emplaceRealloc(end(), std::forward<Args>(args)...);
+
+        new (end()) T(std::forward<Args>(args)...);
+        len++;
+        return back();
     }
 
-    /// Adds @a size elements to the array (default constructed).
-    void extend(size_t size) {
-        ensureCapacity(len + size);
-        len += size;
+    /// Appends a range of elements to the end of the array.
+    template<typename TIter, typename = std::enable_if_t<is_iterator_v<TIter>>>
+    void append(TIter first, TIter last) {
+        auto numElems = static_cast<size_type>(std::distance(first, last));
+        auto newSize = len + numElems;
+        reserve(newSize);
+
+        std::uninitialized_copy(first, last, end());
+        len = newSize;
     }
 
-    /// Ensure that there is enough allocated memory in the array for at least @a size objects.
-    void reserve(size_t size) { ensureCapacity(size); }
-
-    /// Resize the array. If larger than the current size, default construct new elements to
-    /// fill the gap. If smaller than the current size, the length is shrunk as if by repeatedly
-    /// calling pop().
-    void resize(size_t size) {
-        if (size > len) {
-            ensureCapacity(size);
-            for (size_t i = len; i < size; i++)
-                new (&data_[i]) T();
-        }
-        else {
-            if constexpr (!std::is_trivially_destructible<T>()) {
-                for (size_t i = size; i < len; i++)
-                    data_[i].~T();
-            }
-        }
-        len = size;
+    /// Appends a range of elements to the end of the array.
+    template<typename TContainer>
+    void append(const TContainer& container) {
+        append(std::begin(container), std::end(container));
     }
 
-    /// Resize the array. If larger than the current size, add new elements as copies of
-    /// @a value to fill the gap. If smaller than the current size, the length is shrunk
-    /// as if by repeatedly calling pop().
-    void resize(size_t size, const T& value) {
-        if (size > len) {
-            ensureCapacity(size);
-            for (size_t i = len; i < size; i++)
-                new (&data_[i]) T(value);
+    /// Appends @a count copies of @a value to the end of the array.
+    void append(size_type count, const T& value) {
+        // Make a temporary copy of the value in case it already lives inside our array.
+        T temp(value);
+
+        auto newSize = len + count;
+        reserve(newSize);
+
+        std::uninitialized_fill_n(end(), count, temp);
+        len = newSize;
+    }
+
+    /// Constructs a new element at the specified position in the array.
+    template<typename... Args>
+    iterator emplace(const_iterator pos, Args&&... args) {
+        if (len == cap)
+            return emplaceRealloc(pos, std::forward<Args>(args)...);
+
+        if (pos == end()) {
+            // Emplace at end can be constructed in place.
+            new (end()) T(std::forward<Args>(args)...);
+            len++;
+            return pos;
         }
-        else {
-            if constexpr (!std::is_trivially_destructible<T>()) {
-                for (size_t i = size; i < len; i++)
-                    data_[i].~T();
-            }
+
+        // Construct a temporary to avoid aliasing an existing element we're about to move.
+        T temp(std::forward<Args>(args)...);
+
+        // Manually move the last element backward by one because it's uninitialized space.
+        new (end()) T(std::move(back()));
+
+        // Now move everything else and insert our temporary.
+        std::move_backward(pos, end() - 1, end());
+        *pos = std::move(temp);
+
+        len++;
+        return pos;
+    }
+
+    /// Inserts the given value at the specified position in the array.
+    iterator insert(const_iterator pos, const T& val) { return emplace(pos, val); }
+
+    /// Inserts the given value at the specified position in the array.
+    iterator insert(const_iterator pos, T&& val) { return emplace(pos, std::move(val)); }
+
+    /// Inserts a range of elements at the specified position in the array.
+    template<typename TIter, typename = std::enable_if_t<is_iterator_v<TIter>>>
+    iterator insert(const_iterator pos, TIter first, TIter last) {
+        auto offset = static_cast<size_type>(pos - begin());
+        if (pos == end()) {
+            append(first, last);
+            return begin() + offset;
         }
-        len = size;
+
+        // Make space for new elements.
+        auto numElems = static_cast<size_type>(std::distance(first, last));
+        auto newSize = len + numElems;
+        reserve(newSize);
+
+        // Reset the iterator since reserve() may have invalidated it.
+        pos = begin() + offset;
+
+        // If there are more existing elements between the insertion point and
+        // the end of the range than there are being inserted we can use a
+        // simpler approach for insertion.
+        auto existingOverlap = static_cast<size_type>(end() - pos);
+        if (existingOverlap >= numElems) {
+            auto oldEnd = end();
+            append(std::move_iterator<iterator>(end() - numElems),
+                   std::move_iterator<iterator>(end()));
+
+            std::move_backward(pos, oldEnd - numElems, oldEnd);
+            std::copy(first, last, pos);
+            return pos;
+        }
+
+        // Move over elements we're about to overwrite.
+        std::uninitialized_move(pos, end(), begin() + newSize - existingOverlap);
+
+        // Copy in the new elements.
+        std::copy_n(first, existingOverlap, pos);
+        first += existingOverlap;
+
+        // Insert the non-overwritten middle part.
+        std::uninitialized_copy(first, last, end());
+        len = newSize;
+        return pos;
+    }
+
+    /// Inserts @a count copies of @a value at the specified position in the array.
+    iterator insert(const_iterator pos, size_type count, const T& value) {
+        auto offset = static_cast<size_type>(pos - begin());
+        if (pos == end()) {
+            append(count, value);
+            return begin() + offset;
+        }
+
+        // Make a temporary copy of the value in case it already lives inside our array.
+        T temp(value);
+
+        // Make space for new elements.
+        auto newSize = len + count;
+        reserve(newSize);
+
+        // Reset the iterator since reserve() may have invalidated it.
+        pos = begin() + offset;
+
+        // If there are more existing elements between the insertion point and
+        // the end of the range than there are being inserted we can use a
+        // simpler approach for insertion.
+        auto existingOverlap = static_cast<size_type>(end() - pos);
+        if (existingOverlap >= count) {
+            auto oldEnd = end();
+            append(std::move_iterator<iterator>(end() - count),
+                   std::move_iterator<iterator>(end()));
+
+            std::move_backward(pos, oldEnd - count, oldEnd);
+            std::fill_n(pos, count, temp);
+            return pos;
+        }
+
+        // Move over elements we're about to overwrite.
+        std::uninitialized_move(pos, end(), begin() + newSize - existingOverlap);
+
+        // Copy in the new elements.
+        std::fill_n(pos, existingOverlap, temp);
+
+        // Insert the non-overwritten middle part.
+        std::uninitialized_fill_n(end(), count - existingOverlap, temp);
+        len = newSize;
+        return pos;
     }
 
     /// Creates a copy of the array using the given allocator.
-    span<T> copy(BumpAllocator& alloc) const {
+    [[nodiscard]] span<T> copy(BumpAllocator& alloc) const {
         if (len == 0)
             return {};
 
-        const T* source = data_;
-        T* dest = reinterpret_cast<T*>(alloc.allocate(len * sizeof(T), alignof(T)));
-        for (size_t i = 0; i < len; i++)
-            new (&dest[i]) T(*source++);
+        pointer dest = reinterpret_cast<pointer>(alloc.allocate(len * sizeof(T), alignof(T)));
+        std::uninitialized_copy(begin(), end(), dest);
+
         return span<T>(dest, len);
     }
 
@@ -209,43 +344,59 @@ public:
 
     /// Creates a constant copy of the array using the given allocator.
     /// If the array holds pointers, const is added to the pointed-to type as well.
-    span<ConstElem> ccopy(BumpAllocator& alloc) const {
+    [[nodiscard]] span<ConstElem> ccopy(BumpAllocator& alloc) const {
         auto copied = copy(alloc);
         return span<ConstElem>(copied.data(), copied.size());
     }
 
-    T& operator[](size_t index) { return data_[index]; }
-    const T& operator[](size_t index) const { return data_[index]; }
+    /// @return the element at the given position in the array.
+    constexpr reference operator[](size_type index) {
+        ASSERT(index < len);
+        return data_[index];
+    }
 
-#if defined(__GNUC__) && !defined(__clang__)
-#    pragma GCC diagnostic push
-#    pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
-#endif
+    /// @return the element at the given position in the array.
+    constexpr const_reference operator[](size_type index) const {
+        ASSERT(index < len);
+        return data_[index];
+    }
+
+    /// @return the element at the given position in the array.
+    constexpr reference at(size_type index) {
+        if (index >= len)
+            detail::throwOutOfRange();
+        return data_[index];
+    }
+
+    /// @return the element at the given position in the array.
+    constexpr const_reference at(size_type index) const {
+        if (index >= len)
+            detail::throwOutOfRange();
+        return data_[index];
+    }
+
     /// Indicates whether we are still "small", which means we are still on the stack.
-    bool isSmall() const {
+    [[nodiscard]] constexpr bool isSmall() const noexcept {
         return (void*)data_ == (void*)firstElement;
     }
-#if defined(__GNUC__) && !defined(__clang__)
-#    pragma GCC diagnostic pop
-#endif
 
 protected:
     // Protected to disallow construction or deletion via base class.
     // This way we don't need a virtual destructor, or vtable at all.
-    SmallVectorBase() {
-    }
-    explicit SmallVectorBase(size_t capacity) : capacity(capacity) {
-    }
-    ~SmallVectorBase() {
-        cleanup();
-    }
+    SmallVectorBase() noexcept = default;
+    explicit SmallVectorBase(size_type capacity) noexcept : cap(capacity) {}
+    ~SmallVectorBase() { cleanup(); }
 
+    SmallVectorBase& operator=(const SmallVectorBase& rhs);
+    SmallVectorBase& operator=(SmallVectorBase&& rhs);
+
+private:
     template<typename TType, size_t N>
     friend class SmallVector;
 
-    T* data_ = reinterpret_cast<T*>(&firstElement[0]);
-    size_t len = 0;
-    size_t capacity = 0;
+    pointer data_ = reinterpret_cast<pointer>(&firstElement[0]);
+    size_type len = 0;
+    size_type cap = 0;
 
 #ifdef _MSC_VER
 #    pragma warning(push)
@@ -261,48 +412,54 @@ protected:
 #    pragma warning(pop)
 #endif
 
-    void realloc() {
-        T* newData = (T*)malloc(capacity * sizeof(T));
-        if constexpr (std::is_trivially_copyable<T>())
-            memcpy(newData, data_, len * sizeof(T));
-        else {
-            // We assume we can trivially std::move elements here. Don't do anything dumb like
-            // putting throwing move types into this container.
-            for (size_t i = 0; i < len; i++)
-                new (&newData[i]) T(std::move(data_[i]));
-        }
-
-        cleanup();
-        data_ = newData;
-    }
-
-    void amortizeCapacity() {
-        if (len == capacity) {
-            capacity = capacity * 2;
-            if (capacity == 0)
-                capacity = 4;
-            realloc();
-        }
-    }
-
-    void ensureCapacity(size_t size) {
-        if (size > capacity) {
-            capacity = size;
-            realloc();
-        }
-    }
-
-    void destructElements() {
-        if constexpr (!std::is_trivially_destructible<T>()) {
-            for (size_t i = 0; i < len; i++)
-                data_[i].~T();
-        }
-    }
+    struct ValueInitTag {};
 
     void cleanup() {
-        destructElements();
+        std::destroy(begin(), end());
         if (!isSmall())
             free(data_);
+    }
+
+    template<typename... Args>
+    pointer emplaceRealloc(const pointer pos, Args&&... args);
+
+    template<typename TVal>
+    void resizeRealloc(size_type newSize, const TVal& val);
+
+    template<typename TVal>
+    void resizeImpl(size_type newSize, const TVal& val) {
+        if (newSize < len) {
+            std::destroy(begin() + newSize, end());
+            len = newSize;
+            return;
+        }
+
+        if (newSize > len) {
+            if (newSize > cap) {
+                resizeRealloc(newSize, val);
+                return;
+            }
+
+            if constexpr (std::is_same_v<T, TVal>) {
+                std::uninitialized_fill_n(end(), newSize - len, val);
+            }
+            else {
+                std::uninitialized_value_construct_n(end(), newSize - len);
+            }
+            len = newSize;
+        }
+    }
+
+    constexpr size_type calculateGrowth(size_type newSize) const {
+        const auto max = max_size();
+        if (cap > max - cap / 2)
+            return max;
+
+        const size_type geometric = cap + cap / 2;
+        if (geometric < newSize)
+            return newSize;
+
+        return geometric;
     }
 };
 
@@ -328,61 +485,193 @@ class SmallVector : public SmallVectorBase<T> {
     static_assert(sizeof(T) * N <= 1024, "Initial size of SmallVector is over 1KB");
 
 public:
-    SmallVector() : SmallVectorBase<T>(N) {}
+    using size_type = SmallVectorBase<T>::size_type;
+
+    /// Default constructs the SmallVector.
+    SmallVector() noexcept : SmallVectorBase<T>(N) {}
 
     /// Constructs the SmallVector with the given capacity. If that capacity is less than
     /// the preallocated stack size `N` it will be ignored. Otherwise it will perform a heap
-    /// allocation right away.
-    explicit SmallVector(size_t capacity) : SmallVectorBase<T>(N) { this->reserve(capacity); }
+    /// allocation right away. Unlike std::vector this does not add any elements to the container.
+    explicit SmallVector(size_type capacity) : SmallVectorBase<T>(N) { this->reserve(capacity); }
 
     SmallVector(const SmallVector& other) :
         SmallVector(static_cast<const SmallVectorBase<T>&>(other)) {}
 
-    SmallVector(const SmallVectorBase<T>& other) {
-        this->len = 0;
-        this->capacity = N;
-        this->data_ = reinterpret_cast<T*>(&this->firstElement[0]);
-        this->appendRange(other.begin(), other.end());
+    SmallVector(const SmallVectorBase<T>& other) : SmallVectorBase<T>(N) {
+        this->append(other.begin(), other.end());
     }
 
     SmallVector(SmallVector&& other) : SmallVector(static_cast<SmallVectorBase<T>&&>(other)) {}
 
     SmallVector(SmallVectorBase<T>&& other) {
         if (other.isSmall()) {
-            this->len = 0;
-            this->capacity = N;
-            this->data_ = reinterpret_cast<T*>(&this->firstElement[0]);
-            this->appendRange(other.begin(), other.end());
+            this->cap = N;
+            this->append(std::move_iterator(other.begin()), std::move_iterator(other.end()));
         }
         else {
-            this->data_ = other.data_;
-            this->len = other.len;
-            this->capacity = other.capacity;
-
-            other.data_ = nullptr;
-            other.len = 0;
-            other.capacity = 0;
+            this->data_ = std::exchange(other.data_, nullptr);
+            this->len = std::exchange(other.len, 0);
+            this->cap = std::exchange(other.cap, 0);
         }
     }
 
-    SmallVector& operator=(const SmallVectorBase<T>& other) {
-        if (this != &other) {
-            this->~SmallVector();
-            new (this) SmallVector(other);
-        }
+    SmallVector& operator=(const SmallVectorBase<T>& rhs) {
+        SmallVectorBase<T>::operator=(rhs);
         return *this;
     }
 
-    SmallVector& operator=(SmallVectorBase<T>&& other) {
-        if (this != &other) {
-            this->~SmallVector();
-            new (this) SmallVector(std::move(other));
-        }
+    SmallVector& operator=(SmallVectorBase<T>&& rhs) {
+        SmallVectorBase<T>::operator=(std::move(rhs));
         return *this;
     }
 
 private:
     alignas(T) char stackBase[(N - 1) * sizeof(T)];
 };
+
+template<typename T>
+SmallVectorBase<T>& SmallVectorBase<T>::operator=(const SmallVectorBase<T>& rhs) {
+    if (this == &rhs)
+        return *this;
+
+    // If we already have sufficient space assign the common elements,
+    // then destroy any excess.
+    if (len >= rhs.size()) {
+        iterator newEnd;
+        if (rhs.size())
+            newEnd = std::copy(rhs.begin(), rhs.end(), begin());
+        else
+            newEnd = begin();
+
+        std::destroy(newEnd, end());
+        len = rhs.size();
+        return *this;
+    }
+
+    if (capacity() < rhs.size()) {
+        // If we have to grow to have enough elements, destroy the current elements.
+        // This allows us to avoid copying them during the grow.
+        clear();
+        reserve(rhs.size());
+    }
+    else if (len) {
+        // Otherwise, use assignment for the already-constructed elements.
+        std::copy(rhs.begin(), rhs.begin() + len, begin());
+    }
+
+    // Copy construct the new elements in place.
+    std::uninitialized_copy(rhs.begin() + len, rhs.end(), begin() + len);
+    len = rhs.size();
+    return *this;
+}
+
+template<typename T>
+SmallVectorBase<T>& SmallVectorBase<T>::operator=(SmallVectorBase<T>&& rhs) {
+    if (this == &rhs)
+        return *this;
+
+    // If the rhs isn't small, clear this vector and then steal its buffer.
+    if (!rhs.isSmall()) {
+        cleanup();
+        this->data_ = std::exchange(rhs.data_, nullptr);
+        this->len = std::exchange(rhs.len, 0);
+        this->cap = std::exchange(rhs.cap, 0);
+        return *this;
+    }
+
+    // If we already have sufficient space assign the common elements,
+    // then destroy any excess.
+    if (len >= rhs.size()) {
+        iterator newEnd;
+        if (rhs.size())
+            newEnd = std::move(rhs.begin(), rhs.end(), begin());
+        else
+            newEnd = begin();
+
+        std::destroy(newEnd, end());
+        len = rhs.size();
+        rhs.clear();
+        return *this;
+    }
+
+    if (capacity() < rhs.size()) {
+        // If we have to grow to have enough elements, destroy the current elements.
+        // This allows us to avoid copying them during the grow.
+        clear();
+        reserve(rhs.size());
+    }
+    else if (len) {
+        // Otherwise, use assignment for the already-constructed elements.
+        std::move(rhs.begin(), rhs.begin() + len, begin());
+    }
+
+    // Move construct the new elements in place.
+    std::uninitialized_move(rhs.begin() + len, rhs.end(), begin() + len);
+    len = rhs.size();
+    rhs.clear();
+    return *this;
+}
+
+template<typename T>
+SmallVectorBase<T>& SmallVectorBase<T>::operator=(SmallVectorBase<T>&& other);
+
+template<typename T>
+template<typename... Args>
+typename SmallVectorBase<T>::pointer SmallVectorBase<T>::emplaceRealloc(const pointer pos,
+                                                                        Args&&... args) {
+    if (len == max_size())
+        detail::throwLengthError();
+
+    auto newCap = calculateGrowth(len + 1);
+    auto offset = static_cast<size_type>(pos - begin());
+    auto newData = (pointer)detail::allocArray(newCap, sizeof(T));
+
+    // First construct the new element in the new memory,
+    // so that we don't corrupt the new element if it relied on
+    // existing elements we're about to move around.
+    auto newPos = newData + offset;
+    new (newPos) T(std::forward<Args>(args)...);
+
+    // Now move elements to the new memory.
+    if (pos == end()) {
+        std::uninitialized_move(begin(), end(), newData);
+    }
+    else {
+        std::uninitialized_move(begin(), pos, newData);
+        std::uninitialized_move(pos, end(), newPos + 1);
+    }
+
+    cleanup();
+    len++;
+    cap = newCap;
+    data_ = newData;
+    return newPos;
+}
+
+template<typename T>
+template<typename TVal>
+void SmallVectorBase<T>::resizeRealloc(size_type newSize, const TVal& val) {
+    ASSERT(newSize > len);
+    if (newSize > max_size())
+        detail::throwLengthError();
+
+    auto newCap = calculateGrowth(newSize);
+    auto newData = (pointer)detail::allocArray(newCap, sizeof(T));
+
+    std::uninitialized_move(begin(), end(), newData);
+
+    if constexpr (std::is_same_v<T, TVal>) {
+        std::uninitialized_fill_n(newData + len, newSize - len, val);
+    }
+    else {
+        std::uninitialized_value_construct_n(newData + len, newSize - len);
+    }
+
+    cleanup();
+    len = newSize;
+    cap = newCap;
+    data_ = newData;
+}
 
 } // namespace slang

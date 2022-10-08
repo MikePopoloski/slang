@@ -340,7 +340,7 @@ private:
 
     void resetAll(BumpAllocator& alloc, span<const TokenOrSyntax> children) final {
         SmallVector<TokenOrSyntax> buffer(children.size());
-        buffer.appendRange(children);
+        buffer.append(children);
 
         elements = buffer.copy(alloc);
         childCount = buffer.size();

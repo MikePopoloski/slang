@@ -800,7 +800,7 @@ const Diagnostics& Compilation::getParseDiagnostics() {
 
     cachedParseDiagnostics.emplace();
     for (const auto& tree : syntaxTrees)
-        cachedParseDiagnostics->appendRange(tree->diagnostics());
+        cachedParseDiagnostics->append(tree->diagnostics());
 
     if (sourceManager)
         cachedParseDiagnostics->sort(*sourceManager);
@@ -988,8 +988,8 @@ const Diagnostics& Compilation::getAllDiagnostics() {
         return *cachedAllDiagnostics;
 
     cachedAllDiagnostics.emplace();
-    cachedAllDiagnostics->appendRange(getParseDiagnostics());
-    cachedAllDiagnostics->appendRange(getSemanticDiagnostics());
+    cachedAllDiagnostics->append(getParseDiagnostics());
+    cachedAllDiagnostics->append(getSemanticDiagnostics());
 
     if (sourceManager)
         cachedAllDiagnostics->sort(*sourceManager);

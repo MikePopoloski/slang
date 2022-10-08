@@ -58,7 +58,7 @@ void NumberParser::startVector(Token baseToken, Token sizeToken) {
 }
 
 int NumberParser::append(Token token, bool isFirst) {
-    text.appendRange(token.rawText());
+    text.append(token.rawText());
 
     // If we've had an error thus far, don't bother doing anything else that
     // might just add more errors on the pile.

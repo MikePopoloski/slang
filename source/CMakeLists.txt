@@ -78,6 +78,7 @@ add_library(
   util/BumpAllocator.cpp
   util/CommandLine.cpp
   util/OS.cpp
+  util/SmallVector.cpp
   util/String.cpp
   util/TimeTrace.cpp)
 

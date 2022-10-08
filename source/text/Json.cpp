@@ -140,7 +140,7 @@ void JsonWriter::writeQuoted(string_view str) {
                     snprintf(buf, sizeof(buf), "%04x", int(c));
                     vec.push_back('\\');
                     vec.push_back('u');
-                    vec.appendRange(buf, buf + 4);
+                    vec.append(buf, buf + 4);
                 }
                 else {
                     // all other characters are added as-is

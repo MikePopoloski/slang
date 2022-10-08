@@ -24,7 +24,7 @@ ParserBase::ParserBase(Preprocessor& preprocessor) :
 void ParserBase::prependSkippedTokens(Token& token) {
     SmallVector<Trivia, 8> buffer;
     buffer.push_back(Trivia{TriviaKind::SkippedTokens, skippedTokens.copy(alloc)});
-    buffer.appendRange(token.trivia());
+    buffer.append(token.trivia());
 
     token = token.withTrivia(alloc, buffer.copy(alloc));
     skippedTokens.clear();

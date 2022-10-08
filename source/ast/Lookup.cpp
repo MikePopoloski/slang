@@ -96,10 +96,10 @@ void LookupResult::copyFrom(const LookupResult& other) {
     fromForwardTypedef = other.fromForwardTypedef;
 
     selectors.clear();
-    selectors.appendRange(other.selectors);
+    selectors.append(other.selectors);
 
     diagnostics.clear();
-    diagnostics.appendRange(other.diagnostics);
+    diagnostics.append(other.diagnostics);
 }
 
 void LookupResult::reportDiags(const ASTContext& context) const {
@@ -289,14 +289,14 @@ bool lookupDownward(span<const NamePlusLoc> nameParts, NameComponents name,
 
         // If we found a value, the remaining dots are member access expressions.
         if (isValueLike(symbol)) {
-            result.selectors.appendRange(name.selectors);
+            result.selectors.append(name.selectors);
 
             for (; it != nameParts.rend(); it++) {
                 auto& memberName = it->name;
                 result.selectors.push_back(LookupResult::MemberSelector{
                     memberName.text, it->dotLocation, memberName.range});
 
-                result.selectors.appendRange(memberName.selectors);
+                result.selectors.append(memberName.selectors);
 
                 if (!checkClassParams(memberName))
                     return false;
@@ -441,7 +441,7 @@ bool lookupDownward(span<const NamePlusLoc> nameParts, NameComponents name,
     }
 
     result.found = symbol;
-    result.selectors.appendRange(name.selectors);
+    result.selectors.append(name.selectors);
 
     return true;
 }
@@ -929,7 +929,7 @@ void Lookup::name(const NameSyntax& syntax, const ASTContext& context, bitmask<L
             result.found = selectChild(*result.found, name.selectors, context, result);
         }
         else {
-            result.selectors.appendRange(name.selectors);
+            result.selectors.append(name.selectors);
             if (flags.has(LookupFlags::NoSelectors))
                 result.errorIfSelectors(context);
         }

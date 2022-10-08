@@ -173,7 +173,7 @@ bool Preprocessor::applyMacroOps(span<Token const> tokens, SmallVectorBase<Token
 
                     // We're ignoring this token, but don't lose its trivia or our
                     // spacing can get messed up.
-                    emptyArgTrivia.appendRange(token.trivia());
+                    emptyArgTrivia.append(token.trivia());
                 }
                 else if (stringify) {
                     // If this is right after the opening quote or right before the closing quote,
@@ -197,7 +197,7 @@ bool Preprocessor::applyMacroOps(span<Token const> tokens, SmallVectorBase<Token
                         commentBuffer.push_back(tokens[i + 1]);
                         i++;
 
-                        emptyArgTrivia.appendRange(syntheticComment.trivia());
+                        emptyArgTrivia.append(syntheticComment.trivia());
                         emptyArgTrivia.push_back(
                             Lexer::commentify(alloc, commentBuffer.begin(), commentBuffer.end()));
                         syntheticComment = Token();
@@ -260,12 +260,12 @@ bool Preprocessor::applyMacroOps(span<Token const> tokens, SmallVectorBase<Token
         // we find. Note that this can be left over at the end of applying ops; that's fine,
         // nothing is relying on observing this after the end of the macro's tokens.
         if (newToken.kind == TokenKind::EmptyMacroArgument) {
-            emptyArgTrivia.appendRange(newToken.trivia());
+            emptyArgTrivia.append(newToken.trivia());
             continue;
         }
 
         if (!emptyArgTrivia.empty()) {
-            emptyArgTrivia.appendRange(newToken.trivia());
+            emptyArgTrivia.append(newToken.trivia());
             newToken = newToken.withTrivia(alloc, emptyArgTrivia.copy(alloc));
             emptyArgTrivia.clear();
         }
@@ -592,7 +592,7 @@ void Preprocessor::MacroExpansion::append(Token token, SourceLocation location,
     // Line continuations get stripped out when we expand macros and become newline trivia instead.
     if (token.kind == TokenKind::LineContinuation && !allowLineContinuation) {
         SmallVector<Trivia, 8> newTrivia;
-        newTrivia.appendRange(token.trivia());
+        newTrivia.append(token.trivia());
         newTrivia.push_back(Trivia(TriviaKind::EndOfLine, token.rawText().substr(1)));
 
         dest.push_back(
@@ -656,7 +656,7 @@ bool Preprocessor::expandReplacementList(
             return false;
 
         alreadyExpanded.erase(macro.syntax);
-        outBuffer.appendRange(expanded);
+        outBuffer.append(expanded);
         expandedSomething = true;
     }
 
@@ -673,7 +673,7 @@ bool Preprocessor::expandIntrinsic(MacroIntrinsic intrinsic, MacroExpansion& exp
         case MacroIntrinsic::File: {
             string_view fileName = sourceManager.getFileName(loc);
             text.push_back('"');
-            text.appendRange(fileName);
+            text.append(fileName);
             text.push_back('"');
 
             string_view rawText = toStringView(text.copy(alloc));

@@ -98,10 +98,10 @@ void ScriptSession::evalStatement(const StatementSyntax& stmt) {
 Diagnostics ScriptSession::getDiagnostics() {
     Diagnostics result;
     for (auto& tree : syntaxTrees)
-        result.appendRange(tree->diagnostics());
+        result.append(tree->diagnostics());
 
-    result.appendRange(compilation.getAllDiagnostics());
-    result.appendRange(evalContext.getDiagnostics());
+    result.append(compilation.getAllDiagnostics());
+    result.append(evalContext.getDiagnostics());
     result.sort(SyntaxTree::getDefaultSourceManager());
     return result;
 }

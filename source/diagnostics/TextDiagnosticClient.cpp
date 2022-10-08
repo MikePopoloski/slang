@@ -154,7 +154,7 @@ static bool printableTextForNextChar(string_view sourceLine, size_t& index, uint
     if (error) {
         // Not valid UTF-8, so print a placeholder instead.
         unsigned char invalid = (unsigned char)sourceLine[index++];
-        out.appendRange("<XX>"sv);
+        out.append("<XX>"sv);
         out[1] = getHexForDigit(invalid / 16);
         out[2] = getHexForDigit(invalid % 16);
         columnWidth = out.size();
@@ -170,15 +170,15 @@ static bool printableTextForNextChar(string_view sourceLine, size_t& index, uint
             c /= 16;
         }
 
-        out.appendRange("<U+"sv);
-        out.appendRange(make_reverse_range(buf));
+        out.append("<U+"sv);
+        out.append(make_reverse_range(buf));
         out.push_back('>');
         columnWidth = out.size();
         return false;
     }
 
     // Otherwise this is a normal printable character.
-    out.appendIterator(originalData, data);
+    out.append(originalData, data);
     columnWidth = (size_t)charWidthUnicode(c);
     return true;
 }
