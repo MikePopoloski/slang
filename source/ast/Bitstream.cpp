@@ -319,7 +319,7 @@ static ConstantValue unpackBitstream(const Type& type, PackIterator& iter,
                                      size_t& dynamicSize) {
 
     auto concatPacked = [&](bitwidth_t width, bool isFourState) {
-        SmallVector<SVInt, 8> buffer;
+        SmallVector<SVInt> buffer;
         while (width > 0) {
             auto ci = slicePacked(iter, iterEnd, bit, width);
             ASSERT(ci.getBitWidth() <= width);
@@ -360,7 +360,7 @@ static ConstantValue unpackBitstream(const Type& type, PackIterator& iter,
 
     if (type.isUnpackedArray()) {
         auto& ct = type.getCanonicalType();
-        SmallVector<ConstantValue, 16> buffer;
+        SmallVector<ConstantValue> buffer;
         if (ct.kind != SymbolKind::FixedSizeUnpackedArrayType) {
             // dynamicSize is the remaining size: For unbounded dynamically sized types, the
             // conversion process is greedy: adjust the size of the first dynamically sized item in
@@ -396,7 +396,7 @@ static ConstantValue unpackBitstream(const Type& type, PackIterator& iter,
     }
 
     if (type.isUnpackedStruct()) {
-        SmallVector<ConstantValue, 16> buffer;
+        SmallVector<ConstantValue> buffer;
         auto& ct = type.getCanonicalType();
         for (auto& field : ct.as<UnpackedStructType>().membersOfType<FieldSymbol>())
             buffer.emplace_back(unpackBitstream(field.getType(), iter, iterEnd, bit, dynamicSize));
@@ -431,7 +431,7 @@ ConstantValue Bitstream::evaluateCast(const Type& type, ConstantValue&& value,
         }
     }
 
-    SmallVector<ConstantValue*, 8> packed;
+    SmallVector<ConstantValue*> packed;
     packBitstream(value, packed);
 
     bitwidth_t bitOffset = 0;
@@ -560,7 +560,7 @@ ConstantValue Bitstream::reOrder(ConstantValue&& value, size_t sliceSize, size_t
     if (numBlocks <= 1)
         return std::move(value);
 
-    SmallVector<ConstantValue*, 8> packed;
+    SmallVector<ConstantValue*> packed;
     packBitstream(value, packed);
     if (packed.empty())
         return std::move(value);
@@ -660,7 +660,7 @@ static bool unpackConcatenation(const StreamingConcatenationExpression& lhs, Pac
 
             // A dry run collects rvalue without storing lvalue
             size_t dynamicSizeSave = dynamicSize;
-            SmallVector<ConstantValue, 8> toBeOrdered;
+            SmallVector<ConstantValue> toBeOrdered;
             if (!unpackConcatenation(concat, iter, iterEnd, bitOffset, dynamicSize, context,
                                      &toBeOrdered)) {
                 return false;
@@ -670,7 +670,7 @@ static bool unpackConcatenation(const StreamingConcatenationExpression& lhs, Pac
             ConstantValue cv = std::vector(toBeOrdered.begin(), toBeOrdered.end());
             auto rvalue = Bitstream::reOrder(std::move(cv), concat.sliceSize, cv.bitstreamWidth());
 
-            SmallVector<ConstantValue*, 8> packed;
+            SmallVector<ConstantValue*> packed;
             packBitstream(rvalue, packed);
 
             // A real pass stores lvalue from new rvalue
@@ -797,7 +797,7 @@ ConstantValue Bitstream::evaluateTarget(const StreamingConcatenationExpression& 
     if (lhs.sliceSize > 0)
         rvalue = reOrder(std::move(rvalue), lhs.sliceSize, targetWidth + dynamicSize);
 
-    SmallVector<ConstantValue*, 8> packed;
+    SmallVector<ConstantValue*> packed;
     packBitstream(rvalue, packed);
 
     bitwidth_t bitOffset = 0;

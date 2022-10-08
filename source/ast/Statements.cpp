@@ -315,7 +315,7 @@ const Statement& Statement::bindBlock(const StatementBlockSymbol& block, const S
         context.setAttributes(*result, bss.attributes);
     }
     else if (syntax.kind == SyntaxKind::RsCodeBlock) {
-        SmallVector<const Statement*, 8> buffer;
+        SmallVector<const Statement*> buffer;
         bindScopeInitializers(context, buffer);
 
         for (auto item : syntax.as<RsCodeBlockSyntax>().items) {
@@ -330,7 +330,7 @@ const Statement& Statement::bindBlock(const StatementBlockSymbol& block, const S
         result = createBlockStatement(comp, buffer, syntax);
     }
     else {
-        SmallVector<const Statement*, 8> buffer;
+        SmallVector<const Statement*> buffer;
         bindScopeInitializers(context, buffer);
 
         auto& ss = syntax.as<StatementSyntax>();
@@ -353,7 +353,7 @@ const Statement& Statement::bindBlock(const StatementBlockSymbol& block, const S
 
 const Statement& Statement::bindItems(const SyntaxList<SyntaxNode>& items,
                                       const ASTContext& context, StatementContext& stmtCtx) {
-    SmallVector<const Statement*, 8> buffer;
+    SmallVector<const Statement*> buffer;
     bindScopeInitializers(context, buffer);
 
     for (auto item : items) {
@@ -568,7 +568,7 @@ static void findBlocks(const Scope& scope, const StatementSyntax& syntax,
 span<const StatementBlockSymbol* const> Statement::createAndAddBlockItems(
     Scope& scope, const SyntaxList<SyntaxNode>& items) {
 
-    SmallVector<const StatementBlockSymbol*, 8> buffer;
+    SmallVector<const StatementBlockSymbol*> buffer;
     for (auto item : items) {
         switch (item->kind) {
             case SyntaxKind::DataDeclaration:
@@ -583,7 +583,7 @@ span<const StatementBlockSymbol* const> Statement::createAndAddBlockItems(
                 break;
             case SyntaxKind::PortDeclaration:
                 if (scope.asSymbol().kind == SymbolKind::Subroutine) {
-                    SmallVector<const FormalArgumentSymbol*, 8> args;
+                    SmallVector<const FormalArgumentSymbol*> args;
                     FormalArgumentSymbol::fromSyntax(scope, item->as<PortDeclarationSyntax>(),
                                                      args);
                     for (auto arg : args)
@@ -609,7 +609,7 @@ span<const StatementBlockSymbol* const> Statement::createAndAddBlockItems(
 span<const StatementBlockSymbol* const> Statement::createBlockItems(const Scope& scope,
                                                                     const StatementSyntax& syntax,
                                                                     bool labelHandled) {
-    SmallVector<const StatementBlockSymbol*, 8> buffer;
+    SmallVector<const StatementBlockSymbol*> buffer;
     findBlocks(scope, syntax, buffer, labelHandled);
     return buffer.copy(scope.getCompilation());
 }
@@ -677,7 +677,7 @@ Statement& BlockStatement::fromSyntax(Compilation& comp, const BlockStatementSyn
         stmtCtx.flags |= StatementFlags::InForkJoin;
 
     bool anyBad = false;
-    SmallVector<const Statement*, 8> buffer;
+    SmallVector<const Statement*> buffer;
 
     if (addInitializers)
         bindScopeInitializers(context, buffer);
@@ -896,7 +896,7 @@ Statement& ConditionalStatement::fromSyntax(Compilation& comp,
     bool bad = false;
     bool isConst = true;
     bool isTrue = true;
-    SmallVector<Condition, 2> conditions;
+    SmallVector<Condition> conditions;
     ASTContext trueContext = context;
 
     for (auto condSyntax : syntax.predicate->conditions) {
@@ -1034,8 +1034,8 @@ Statement& CaseStatement::fromSyntax(Compilation& compilation, const CaseStateme
     if (syntax.matchesOrInside.kind == TokenKind::MatchesKeyword)
         return PatternCaseStatement::fromSyntax(compilation, syntax, context, stmtCtx);
 
-    SmallVector<const ExpressionSyntax*, 8> expressions;
-    SmallVector<const Statement*, 8> statements;
+    SmallVector<const ExpressionSyntax*> expressions;
+    SmallVector<const Statement*> statements;
     const Statement* defStmt = nullptr;
     bool bad = false;
 
@@ -1066,7 +1066,7 @@ Statement& CaseStatement::fromSyntax(Compilation& compilation, const CaseStateme
         }
     }
 
-    SmallVector<const Expression*, 8> bound;
+    SmallVector<const Expression*> bound;
     TokenKind keyword = syntax.caseKeyword.kind;
     bool isInside = syntax.matchesOrInside.kind == TokenKind::InsideKeyword;
     bool wildcard = !isInside && keyword != TokenKind::CaseKeyword;
@@ -1089,7 +1089,7 @@ Statement& CaseStatement::fromSyntax(Compilation& compilation, const CaseStateme
     }
 
     SmallVector<ItemGroup, 8> items;
-    SmallVector<const Expression*, 8> group;
+    SmallVector<const Expression*> group;
     auto boundIt = bound.begin();
     auto stmtIt = statements.begin();
 
@@ -1410,7 +1410,7 @@ public:
             loop.body.visit(*this);
         };
 
-        SmallVector<ConstantValue*, 2> localPtrs;
+        SmallVector<ConstantValue*> localPtrs;
         for (auto var : loop.loopVars) {
             auto init = var->getInitializer();
             if (!init) {
@@ -1517,8 +1517,8 @@ private:
 Statement& ForLoopStatement::fromSyntax(Compilation& compilation,
                                         const ForLoopStatementSyntax& syntax,
                                         const ASTContext& context, StatementContext& stmtCtx) {
-    SmallVector<const Expression*, 4> initializers;
-    SmallVector<const VariableSymbol*, 4> loopVars;
+    SmallVector<const Expression*> initializers;
+    SmallVector<const VariableSymbol*> loopVars;
     bool anyBad = false;
 
     const bool hasVarDecls = !syntax.initializers.empty() &&
@@ -1542,7 +1542,7 @@ Statement& ForLoopStatement::fromSyntax(Compilation& compilation,
     if (syntax.stopExpr)
         stopExpr = &Expression::bind(*syntax.stopExpr, context);
 
-    SmallVector<const Expression*, 2> steps;
+    SmallVector<const Expression*> steps;
     for (auto step : syntax.steps) {
         auto& expr = Expression::bind(*step, context, ASTFlags::AssignmentAllowed);
         steps.push_back(&expr);
@@ -2434,7 +2434,7 @@ ER WaitForkStatement::evalImpl(EvalContext& context) const {
 Statement& WaitOrderStatement::fromSyntax(Compilation& compilation,
                                           const WaitOrderStatementSyntax& syntax,
                                           const ASTContext& context, StatementContext& stmtCtx) {
-    SmallVector<const Expression*, 4> events;
+    SmallVector<const Expression*> events;
     for (auto name : syntax.names) {
         auto& ev = Expression::bind(*name, context);
         if (ev.bad())
@@ -2720,7 +2720,7 @@ Statement& RandSequenceStatement::fromSyntax(Compilation& compilation,
 
     if (firstProd) {
         // Make sure the first production doesn't require arguments.
-        SmallVector<const Expression*, 8> args;
+        SmallVector<const Expression*> args;
         CallExpression::bindArgs(nullptr, firstProd->arguments, firstProd->name, firstProdRange,
                                  context, args);
     }

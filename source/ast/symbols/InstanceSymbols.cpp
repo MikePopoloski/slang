@@ -77,7 +77,7 @@ private:
     Compilation& compilation;
     const ASTContext& context;
     const Definition& definition;
-    SmallVector<int32_t, 4> path;
+    SmallVector<int32_t> path;
     ParameterBuilder& paramBuilder;
     span<const AttributeInstanceSyntax* const> attributes;
     bool isUninstantiated = false;
@@ -123,7 +123,7 @@ private:
             return createEmpty();
         }
 
-        SmallVector<const Symbol*, 8> elements;
+        SmallVector<const Symbol*> elements;
         for (int32_t i = range.lower(); i <= range.upper(); i++) {
             path.push_back(i);
             auto symbol = recurse(syntax, it, end);
@@ -409,7 +409,7 @@ void InstanceSymbol::fromFixupSyntax(Compilation& comp, const Definition& defini
         span<AttributeInstanceSyntax*>(), syntax.type->getFirstToken(), nullptr,
         instances.copy(comp), syntax.semi);
 
-    SmallVector<const Symbol*, 8> implicitNets;
+    SmallVector<const Symbol*> implicitNets;
     fromSyntax(comp, *instantiation, context, results, implicitNets);
     ASSERT(implicitNets.empty());
 }
@@ -421,8 +421,8 @@ void InstanceSymbol::fromBindDirective(const Scope& scope, const BindDirectiveSy
     // TODO: check results of noteBindDirective
 
     auto createInstances = [&](const Scope& targetScope) {
-        SmallVector<const Symbol*, 4> instances;
-        SmallVector<const Symbol*, 4> implicitNets;
+        SmallVector<const Symbol*> instances;
+        SmallVector<const Symbol*> implicitNets;
         ASTContext ctx(targetScope, LookupLocation::max);
         fromSyntax(comp, *syntax.instantiation, ctx, instances, implicitNets);
 
@@ -641,7 +641,7 @@ InstanceBodySymbol& InstanceBodySymbol::fromDefinition(Compilation& comp,
         result->addMembers(*import);
 
     // Add in all parameter ports.
-    SmallVector<const ParameterSymbolBase*, 8> params;
+    SmallVector<const ParameterSymbolBase*> params;
     auto paramIt = definition.parameters.begin();
     while (paramIt != definition.parameters.end()) {
         auto& decl = *paramIt;
@@ -774,7 +774,7 @@ void UnknownModuleSymbol::fromSyntax(Compilation& compilation,
                                      const ASTContext& parentContext,
                                      SmallVectorBase<const Symbol*>& results,
                                      SmallVectorBase<const Symbol*>& implicitNets) {
-    SmallVector<const Expression*, 8> params;
+    SmallVector<const Expression*> params;
     ASTContext context = parentContext.resetFlags(ASTFlags::NonProcedural);
 
     if (syntax.parameters) {
@@ -852,7 +852,7 @@ span<const AssertionExpr* const> UnknownModuleSymbol::getPortConnections() const
         auto& comp = scope->getCompilation();
         ASTContext context(*scope, LookupLocation::after(*this));
 
-        SmallVector<const AssertionExpr*, 8> results;
+        SmallVector<const AssertionExpr*> results;
         SmallVector<string_view, 8> names;
         for (auto port : syntax->as<HierarchicalInstanceSyntax>().connections) {
             if (port->kind == SyntaxKind::OrderedPortConnection) {
@@ -976,7 +976,7 @@ Symbol* recursePrimArray(Compilation& compilation, const PrimitiveSymbol& primit
         return createEmpty();
     }
 
-    SmallVector<const Symbol*, 8> elements;
+    SmallVector<const Symbol*> elements;
     for (int32_t i = range.lower(); i <= range.upper(); i++) {
         path.push_back(i);
         auto symbol = recursePrimArray(compilation, primitive, instance, context, it, end,
@@ -1001,7 +1001,7 @@ void createPrimitives(const PrimitiveSymbol& primitive, const TSyntax& syntax,
                       const ASTContext& context, SmallVectorBase<const Symbol*>& results,
                       SmallVectorBase<const Symbol*>& implicitNets) {
     SmallSet<string_view, 8> implicitNetNames;
-    SmallVector<int32_t, 4> path;
+    SmallVector<int32_t> path;
 
     auto& comp = context.getCompilation();
     auto& netType = context.scope->getDefaultNetType();
@@ -1085,7 +1085,7 @@ span<const Expression* const> PrimitiveInstanceSymbol::getPortConnections() cons
         ASTContext context(*scope, LookupLocation::after(*this), ASTFlags::NonProcedural);
         context.setInstance(*this);
 
-        SmallVector<const ExpressionSyntax*, 8> conns;
+        SmallVector<const ExpressionSyntax*> conns;
         auto& his = syntax->as<HierarchicalInstanceSyntax>();
         for (auto port : his.connections) {
             if (port->kind == SyntaxKind::OrderedPortConnection) {
@@ -1110,7 +1110,7 @@ span<const Expression* const> PrimitiveInstanceSymbol::getPortConnections() cons
             }
         }
 
-        SmallVector<const Expression*, 8> results;
+        SmallVector<const Expression*> results;
         if (primitiveType.primitiveKind == PrimitiveSymbol::NInput ||
             primitiveType.primitiveKind == PrimitiveSymbol::NOutput) {
             // Some of the built-in gates allow n-inputs or n-outputs; handle those specially.

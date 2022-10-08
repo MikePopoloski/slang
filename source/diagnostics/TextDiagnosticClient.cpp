@@ -51,7 +51,7 @@ fmt::terminal_color TextDiagnosticClient::getSeverityColor(DiagnosticSeverity se
 
 void TextDiagnosticClient::report(const ReportedDiagnostic& diag) {
     if (diag.shouldShowIncludeStack && includeFileStack) {
-        SmallVector<SourceLocation, 8> includeStack;
+        SmallVector<SourceLocation> includeStack;
         getIncludeStack(diag.location.buffer(), includeStack);
 
         // Show the stack in reverse.
@@ -75,7 +75,7 @@ void TextDiagnosticClient::report(const ReportedDiagnostic& diag) {
     }
 
     // Get all highlight ranges mapped into the reported location of the diagnostic.
-    SmallVector<SourceRange, 8> mappedRanges;
+    SmallVector<SourceRange> mappedRanges;
     engine->mapSourceRanges(diag.location, diag.ranges, mappedRanges);
 
     // Write the diagnostic.
@@ -92,7 +92,7 @@ void TextDiagnosticClient::report(const ReportedDiagnostic& diag) {
             else
                 name = fmt::format("expanded from macro '{}'", name);
 
-            SmallVector<SourceRange, 8> macroRanges;
+            SmallVector<SourceRange> macroRanges;
             engine->mapSourceRanges(loc, diag.ranges, macroRanges);
             formatDiag(sourceManager->getFullyOriginalLoc(loc), macroRanges,
                        DiagnosticSeverity::Note, name, "");
@@ -193,7 +193,7 @@ struct SourceSnippet {
 
         snippetLine.reserve(sourceLine.size());
 
-        SmallVector<char, 16> buffer;
+        SmallVector<char> buffer;
         size_t column = 0;
         size_t i = 0;
         while (i < sourceLine.size()) {
@@ -291,7 +291,7 @@ struct SourceSnippet {
         out.append(fg(highlightColor), highlightLine);
     }
 
-    SmallVector<int, 256> byteToColumn;
+    SmallVector<int> byteToColumn;
     SmallVector<std::pair<size_t, size_t>, 4> invalidRanges;
     std::string snippetLine;
     std::string highlightLine;

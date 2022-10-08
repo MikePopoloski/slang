@@ -573,7 +573,7 @@ string_view ElabSystemTaskSymbol::getMessage() const {
     // Bind all arguments.
     auto& comp = scope->getCompilation();
     ASTContext astCtx(*scope, LookupLocation::before(*this));
-    SmallVector<const Expression*, 4> args;
+    SmallVector<const Expression*> args;
     for (auto arg : argSyntax->parameters) {
         switch (arg->kind) {
             case SyntaxKind::OrderedArgument: {
@@ -755,7 +755,7 @@ PrimitiveSymbol& PrimitiveSymbol::fromSyntax(const Scope& scope,
     prim->setAttributes(scope, syntax.attributes);
     prim->setSyntax(syntax);
 
-    SmallVector<const PrimitivePortSymbol*, 4> ports;
+    SmallVector<const PrimitivePortSymbol*> ports;
     if (syntax.portList->kind == SyntaxKind::AnsiUdpPortList) {
         for (auto decl : syntax.portList->as<AnsiUdpPortListSyntax>().ports) {
             if (decl->kind == SyntaxKind::UdpOutputPortDecl) {
@@ -1120,7 +1120,7 @@ SequenceSymbol& SequenceSymbol::fromSyntax(const Scope& scope,
                                                syntax.name.location());
     result->setSyntax(syntax);
 
-    SmallVector<const AssertionPortSymbol*, 4> ports;
+    SmallVector<const AssertionPortSymbol*> ports;
     if (syntax.portList)
         AssertionPortSymbol::buildPorts(*result, *syntax.portList, ports);
     result->ports = ports.copy(comp);
@@ -1143,7 +1143,7 @@ PropertySymbol& PropertySymbol::fromSyntax(const Scope& scope,
                                                syntax.name.location());
     result->setSyntax(syntax);
 
-    SmallVector<const AssertionPortSymbol*, 4> ports;
+    SmallVector<const AssertionPortSymbol*> ports;
     if (syntax.portList)
         AssertionPortSymbol::buildPorts(*result, *syntax.portList, ports);
     result->ports = ports.copy(comp);
@@ -1167,7 +1167,7 @@ LetDeclSymbol& LetDeclSymbol::fromSyntax(const Scope& scope, const LetDeclaratio
                                               syntax.identifier.location());
     result->setSyntax(syntax);
 
-    SmallVector<const AssertionPortSymbol*, 4> ports;
+    SmallVector<const AssertionPortSymbol*> ports;
     if (syntax.portList)
         AssertionPortSymbol::buildPorts(*result, *syntax.portList, ports);
     result->ports = ports.copy(comp);
@@ -1323,7 +1323,7 @@ RandSeqProductionSymbol& RandSeqProductionSymbol::fromSyntax(Compilation& compil
         result->declaredReturnType.setType(compilation.getVoidType());
 
     if (syntax.portList) {
-        SmallVector<const FormalArgumentSymbol*, 8> args;
+        SmallVector<const FormalArgumentSymbol*> args;
         SubroutineSymbol::buildArguments(*result, *syntax.portList, VariableLifetime::Automatic,
                                          args);
         result->arguments = args.copy(compilation);
@@ -1382,7 +1382,7 @@ RandSeqProductionSymbol::ProdItem RandSeqProductionSymbol::createProdItem(
     if (!symbol)
         return ProdItem(nullptr, {});
 
-    SmallVector<const Expression*, 8> args;
+    SmallVector<const Expression*> args;
     CallExpression::bindArgs(syntax.argList, symbol->arguments, symbol->name, syntax.sourceRange(),
                              context, args);
 
@@ -1392,7 +1392,7 @@ RandSeqProductionSymbol::ProdItem RandSeqProductionSymbol::createProdItem(
 const RandSeqProductionSymbol::CaseProd& RandSeqProductionSymbol::createCaseProd(
     const RsCaseSyntax& syntax, const ASTContext& context) {
 
-    SmallVector<const ExpressionSyntax*, 8> expressions;
+    SmallVector<const ExpressionSyntax*> expressions;
     SmallVector<ProdItem, 8> prods;
     std::optional<ProdItem> defItem;
 
@@ -1418,7 +1418,7 @@ const RandSeqProductionSymbol::CaseProd& RandSeqProductionSymbol::createCaseProd
         }
     }
 
-    SmallVector<const Expression*, 8> bound;
+    SmallVector<const Expression*> bound;
     Expression::bindMembershipExpressions(context, TokenKind::CaseKeyword,
                                           /* requireIntegral */ false,
                                           /* unwrapUnpacked */ false,
@@ -1426,7 +1426,7 @@ const RandSeqProductionSymbol::CaseProd& RandSeqProductionSymbol::createCaseProd
                                           *syntax.expr, expressions, bound);
 
     SmallVector<CaseItem, 8> items;
-    SmallVector<const Expression*, 8> group;
+    SmallVector<const Expression*> group;
     auto& comp = context.getCompilation();
     auto boundIt = bound.begin();
     auto prodIt = prods.begin();
@@ -1458,7 +1458,7 @@ RandSeqProductionSymbol::Rule RandSeqProductionSymbol::createRule(
     auto blockIt = blockRange.begin();
 
     auto& comp = context.getCompilation();
-    SmallVector<const ProdBase*, 8> prods;
+    SmallVector<const ProdBase*> prods;
     for (auto p : syntax.prods) {
         switch (p->kind) {
             case SyntaxKind::RsProdItem:

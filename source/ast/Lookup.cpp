@@ -581,8 +581,8 @@ bool checkVisibility(const Symbol& symbol, const Scope& scope,
     return false;
 }
 
-bool resolveColonNames(SmallVector<NamePlusLoc, 8>& nameParts, int colonParts, NameComponents& name,
-                       bitmask<LookupFlags> flags, LookupResult& result,
+bool resolveColonNames(SmallVectorBase<NamePlusLoc>& nameParts, int colonParts,
+                       NameComponents& name, bitmask<LookupFlags> flags, LookupResult& result,
                        const ASTContext& context) {
     // Unwrap the symbol if it's a type parameter, and bail early if it's an error type.
     const Symbol* symbol = std::exchange(result.found, nullptr);
@@ -1128,7 +1128,7 @@ void Lookup::selectChild(const Type& virtualInterface, SourceRange range,
                          LookupResult& result) {
     NameComponents unused;
     SmallVector<NamePlusLoc, 4> nameParts;
-    SmallVector<const ElementSelectSyntax*, 8> elementSelects;
+    SmallVector<const ElementSelectSyntax*> elementSelects;
     auto& comp = context.getCompilation();
 
     for (auto& selector : selectors) {
@@ -1304,7 +1304,7 @@ bool Lookup::ensureAccessible(const Symbol& symbol, const ASTContext& context,
 bool Lookup::findTempVar(const Scope& scope, const TempVarSymbol& symbol, const NameSyntax& syntax,
                          LookupResult& result) {
     int colonParts = 0;
-    SmallVector<NamePlusLoc, 8> nameParts;
+    SmallVector<NamePlusLoc, 4> nameParts;
     const NameSyntax* first = &syntax;
     if (syntax.kind == SyntaxKind::ScopedName) {
         first = splitScopedName(syntax.as<ScopedNameSyntax>(), nameParts, colonParts);
@@ -1342,7 +1342,7 @@ bool Lookup::findTempVar(const Scope& scope, const TempVarSymbol& symbol, const 
 bool Lookup::withinClassRandomize(const ASTContext& context, const NameSyntax& syntax,
                                   bitmask<LookupFlags> flags, LookupResult& result) {
     int colonParts = 0;
-    SmallVector<NamePlusLoc, 8> nameParts;
+    SmallVector<NamePlusLoc, 4> nameParts;
     const NameSyntax* first = &syntax;
     if (syntax.kind == SyntaxKind::ScopedName)
         first = splitScopedName(syntax.as<ScopedNameSyntax>(), nameParts, colonParts);
@@ -1424,7 +1424,7 @@ bool Lookup::withinClassRandomize(const ASTContext& context, const NameSyntax& s
 bool Lookup::findAssertionLocalVar(const ASTContext& context, const NameSyntax& syntax,
                                    LookupResult& result) {
     int colonParts = 0;
-    SmallVector<NamePlusLoc, 8> nameParts;
+    SmallVector<NamePlusLoc, 4> nameParts;
     const NameSyntax* first = &syntax;
     if (syntax.kind == SyntaxKind::ScopedName) {
         first = splitScopedName(syntax.as<ScopedNameSyntax>(), nameParts, colonParts);
@@ -1589,7 +1589,7 @@ void Lookup::unqualifiedImpl(const Scope& scope, string_view name, LookupLocatio
             const Symbol* imported;
             const WildcardImportSymbol* import;
         };
-        SmallVector<Import, 8> imports;
+        SmallVector<Import, 4> imports;
         SmallSet<const Symbol*, 2> importDedup;
 
         for (auto import : wildcardImports) {
@@ -1698,7 +1698,7 @@ void Lookup::qualified(const ScopedNameSyntax& syntax, const ASTContext& context
     // Split the name into easier to manage chunks. The parser will always produce a
     // left-recursive name tree, so that's all we'll bother to handle.
     int colonParts = 0;
-    SmallVector<NamePlusLoc, 8> nameParts;
+    SmallVector<NamePlusLoc, 4> nameParts;
     auto leftMost = splitScopedName(syntax, nameParts, colonParts);
 
     SyntaxKind firstKind = leftMost->kind;

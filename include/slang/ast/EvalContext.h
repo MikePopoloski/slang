@@ -192,7 +192,7 @@ private:
     const Symbol* disableTarget = nullptr;
     const ConstantValue* queueTarget = nullptr;
     SmallVector<Frame, 4> stack;
-    SmallVector<LValue*, 2> lvalStack;
+    SmallVector<LValue*> lvalStack;
     Diagnostics diags;
     SourceRange disableRange;
 };

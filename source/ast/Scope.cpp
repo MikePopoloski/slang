@@ -283,7 +283,7 @@ void Scope::addMembers(const SyntaxNode& syntax) {
                     break;
             }
 
-            SmallVector<const ValueSymbol*, 4> symbols;
+            SmallVector<const ValueSymbol*> symbols;
             VariableSymbol::fromSyntax(compilation, dataDecl, *this, symbols);
             for (auto symbol : symbols)
                 addMember(*symbol);
@@ -293,14 +293,14 @@ void Scope::addMembers(const SyntaxNode& syntax) {
             handleUserDefinedNet(syntax.as<UserDefinedNetDeclarationSyntax>());
             break;
         case SyntaxKind::NetDeclaration: {
-            SmallVector<const NetSymbol*, 4> nets;
+            SmallVector<const NetSymbol*> nets;
             NetSymbol::fromSyntax(*this, syntax.as<NetDeclarationSyntax>(), nets);
             for (auto net : nets)
                 addMember(*net);
             break;
         }
         case SyntaxKind::ParameterDeclarationStatement: {
-            SmallVector<Symbol*, 8> params;
+            SmallVector<Symbol*> params;
             ParameterSymbolBase::fromLocalSyntax(*this,
                                                  syntax.as<ParameterDeclarationStatementSyntax>(),
                                                  params);
@@ -377,7 +377,7 @@ void Scope::addMembers(const SyntaxNode& syntax) {
             // These are handled elsewhere; just ignore here.
             break;
         case SyntaxKind::GenvarDeclaration: {
-            SmallVector<const GenvarSymbol*, 16> genvars;
+            SmallVector<const GenvarSymbol*> genvars;
             GenvarSymbol::fromSyntax(*this, syntax.as<GenvarDeclarationSyntax>(), genvars);
             for (auto genvar : genvars)
                 addMember(*genvar);
@@ -390,7 +390,7 @@ void Scope::addMembers(const SyntaxNode& syntax) {
             auto& cpd = syntax.as<ClassPropertyDeclarationSyntax>();
             switch (cpd.declaration->kind) {
                 case SyntaxKind::DataDeclaration: {
-                    SmallVector<const ClassPropertySymbol*, 4> symbols;
+                    SmallVector<const ClassPropertySymbol*> symbols;
                     ClassPropertySymbol::fromSyntax(*this, cpd, symbols);
                     for (auto symbol : symbols)
                         addMember(*symbol);
@@ -407,7 +407,7 @@ void Scope::addMembers(const SyntaxNode& syntax) {
                     break;
                 }
                 case SyntaxKind::ParameterDeclarationStatement: {
-                    SmallVector<Symbol*, 8> params;
+                    SmallVector<Symbol*> params;
                     ParameterSymbolBase::fromLocalSyntax(
                         *this, cpd.declaration->as<ParameterDeclarationStatementSyntax>(), params);
                     for (auto param : params)
@@ -454,14 +454,14 @@ void Scope::addMembers(const SyntaxNode& syntax) {
                 ConstraintBlockSymbol::fromSyntax(*this, syntax.as<ConstraintPrototypeSyntax>()));
             break;
         case SyntaxKind::DefParam: {
-            SmallVector<const DefParamSymbol*, 4> defparams;
+            SmallVector<const DefParamSymbol*> defparams;
             DefParamSymbol::fromSyntax(*this, syntax.as<DefParamSyntax>(), defparams);
             for (auto defparam : defparams)
                 addMember(*defparam);
             break;
         }
         case SyntaxKind::SpecparamDeclaration: {
-            SmallVector<const SpecparamSymbol*, 8> params;
+            SmallVector<const SpecparamSymbol*> params;
             SpecparamSymbol::fromSyntax(*this, syntax.as<SpecparamDeclarationSyntax>(), params);
             for (auto param : params)
                 addMember(*param);
@@ -496,7 +496,7 @@ void Scope::addMembers(const SyntaxNode& syntax) {
             addMember(CoverageBinSymbol::fromSyntax(*this, syntax.as<BinsSelectionSyntax>()));
             break;
         case SyntaxKind::CoverCross: {
-            SmallVector<const Symbol*, 8> symbols;
+            SmallVector<const Symbol*> symbols;
             CoverCrossSymbol::fromSyntax(*this, syntax.as<CoverCrossSyntax>(), symbols);
             for (auto sym : symbols)
                 addMember(*sym);
@@ -833,7 +833,7 @@ void Scope::elaborate() const {
             ASSERT(syntax);
             ASSERT(type->kind == SymbolKind::ErrorType);
 
-            SmallVector<const Symbol*, 8> members;
+            SmallVector<const Symbol*> members;
             ASTContext context(*this, LookupLocation::max);
             EnumType::createDefaultMembers(context, syntax->as<EnumTypeSyntax>(), members);
 
@@ -897,8 +897,8 @@ void Scope::elaborate() const {
 
         switch (member.node.kind) {
             case SyntaxKind::HierarchyInstantiation: {
-                SmallVector<const Symbol*, 8> instances;
-                SmallVector<const Symbol*, 8> implicitNets;
+                SmallVector<const Symbol*> instances;
+                SmallVector<const Symbol*> implicitNets;
                 InstanceSymbol::fromSyntax(compilation,
                                            member.node.as<HierarchyInstantiationSyntax>(), context,
                                            instances, implicitNets);
@@ -906,15 +906,15 @@ void Scope::elaborate() const {
                 break;
             }
             case SyntaxKind::PrimitiveInstantiation: {
-                SmallVector<const Symbol*, 8> instances;
-                SmallVector<const Symbol*, 8> implicitNets;
+                SmallVector<const Symbol*> instances;
+                SmallVector<const Symbol*> implicitNets;
                 PrimitiveInstanceSymbol::fromSyntax(member.node.as<PrimitiveInstantiationSyntax>(),
                                                     context, instances, implicitNets);
                 insertMembersAndNets(instances, implicitNets, symbol);
                 break;
             }
             case SyntaxKind::IfGenerate: {
-                SmallVector<GenerateBlockSymbol*, 8> blocks;
+                SmallVector<GenerateBlockSymbol*> blocks;
                 GenerateBlockSymbol::fromSyntax(compilation, member.node.as<IfGenerateSyntax>(),
                                                 context, constructIndex, true, blocks);
                 constructIndex++;
@@ -922,7 +922,7 @@ void Scope::elaborate() const {
                 break;
             }
             case SyntaxKind::CaseGenerate: {
-                SmallVector<GenerateBlockSymbol*, 8> blocks;
+                SmallVector<GenerateBlockSymbol*> blocks;
                 GenerateBlockSymbol::fromSyntax(compilation, member.node.as<CaseGenerateSyntax>(),
                                                 context, constructIndex, true, blocks);
                 constructIndex++;
@@ -946,8 +946,8 @@ void Scope::elaborate() const {
                 break;
             case SyntaxKind::AnsiPortList:
             case SyntaxKind::NonAnsiPortList: {
-                SmallVector<const Symbol*, 8> ports;
-                SmallVector<std::pair<Symbol*, const Symbol*>, 8> implicitMembers;
+                SmallVector<const Symbol*> ports;
+                SmallVector<std::pair<Symbol*, const Symbol*>, 4> implicitMembers;
                 PortSymbol::fromSyntax(member.node.as<PortListSyntax>(), *this, ports,
                                        implicitMembers, deferredData.getPortDeclarations());
                 insertMembers(ports, symbol);
@@ -963,8 +963,8 @@ void Scope::elaborate() const {
                 break;
             }
             case SyntaxKind::ContinuousAssign: {
-                SmallVector<const Symbol*, 4> symbols;
-                SmallVector<const Symbol*, 8> implicitNets;
+                SmallVector<const Symbol*> symbols;
+                SmallVector<const Symbol*> implicitNets;
                 ContinuousAssignSymbol::fromSyntax(compilation,
                                                    member.node.as<ContinuousAssignSyntax>(),
                                                    context, symbols, implicitNets);
@@ -972,7 +972,7 @@ void Scope::elaborate() const {
                 break;
             }
             case SyntaxKind::ModportDeclaration: {
-                SmallVector<const ModportSymbol*, 4> results;
+                SmallVector<const ModportSymbol*> results;
                 ModportSymbol::fromSyntax(context, member.node.as<ModportDeclarationSyntax>(),
                                           results);
                 insertMembers(results, symbol);
@@ -982,7 +982,7 @@ void Scope::elaborate() const {
                 InstanceSymbol::fromBindDirective(*this, member.node.as<BindDirectiveSyntax>());
                 break;
             case SyntaxKind::ClockingItem: {
-                SmallVector<const ClockVarSymbol*, 4> vars;
+                SmallVector<const ClockVarSymbol*> vars;
                 ClockVarSymbol::fromSyntax(*this, member.node.as<ClockingItemSyntax>(), vars);
                 insertMembers(vars, symbol);
                 break;
@@ -1010,7 +1010,7 @@ void Scope::elaborate() const {
                 // Nothing to do here, handled by port creation.
                 break;
             case SyntaxKind::DataDeclaration: {
-                SmallVector<const Symbol*, 8> instances;
+                SmallVector<const Symbol*> instances;
                 tryFixupInstances(member.node.as<DataDeclarationSyntax>(), context, instances);
                 insertMembers(instances, symbol);
                 break;
@@ -1212,7 +1212,7 @@ void Scope::handleUserDefinedNet(const UserDefinedNetDeclarationSyntax& syntax) 
                                         syntax.netType.range());
     deferredMemberIndex = savedIndex;
 
-    SmallVector<const NetSymbol*, 4> results;
+    SmallVector<const NetSymbol*> results;
     NetSymbol::fromSyntax(*this, syntax, symbol, results);
     for (auto sym : results)
         addMember(*sym);

@@ -365,7 +365,7 @@ private:
     flat_hash_map<string_view, MacroDef> macros;
 
     // list of expanded macro tokens to drain before continuing with active lexer
-    SmallVector<Token, 16> expandedTokens;
+    SmallVector<Token> expandedTokens;
     Token* currentMacroToken = nullptr;
 
     // the latest token pulled from a lexer
@@ -380,7 +380,7 @@ private:
     bool inMacroBody = false;
 
     // A buffer used to hold tokens while we're busy consuming them for directives.
-    SmallVector<Token, 16> scratchTokenBuffer;
+    SmallVector<Token> scratchTokenBuffer;
 
     // A set of files (identified by a pointer to the start of their text buffer) that
     // have been marked `pragma once so that we avoid trying to include them more than once.

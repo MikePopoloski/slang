@@ -292,8 +292,8 @@ static void getMacroArgExpansions(const SourceManager& sm, SourceLocation loc, b
 // Finds all macro argument expansions that are common in both start and end.
 static void getCommonMacroArgExpansions(const SourceManager& sm, SourceLocation start,
                                         SourceLocation end, std::vector<BufferID>& results) {
-    SmallVector<BufferID, 8> startArgExpansions;
-    SmallVector<BufferID, 8> endArgExpansions;
+    SmallVector<BufferID> startArgExpansions;
+    SmallVector<BufferID> endArgExpansions;
     getMacroArgExpansions(sm, start, true, startArgExpansions);
     getMacroArgExpansions(sm, end, false, endArgExpansions);
     std::stable_sort(startArgExpansions.begin(), startArgExpansions.end());

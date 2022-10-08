@@ -149,6 +149,9 @@ private:
 
     // temporary storage for building arrays of trivia
     SmallVector<Trivia, 32> triviaBuffer;
+
+    // temporary storage for building string literals
+    SmallVector<char> stringBuffer;
 };
 
 } // namespace slang::parsing

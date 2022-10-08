@@ -18,7 +18,7 @@ static void gate(Compilation& c, string_view name,
     auto& prim = *c.emplace<PrimitiveSymbol>(c, name, NL, primitiveKind);
     c.addGateType(prim);
 
-    SmallVector<const PrimitivePortSymbol*, 4> ports;
+    SmallVector<const PrimitivePortSymbol*> ports;
     for (auto dir : portDirs) {
         auto port = c.emplace<PrimitivePortSymbol>(c, "", NL, dir);
         prim.addMember(*port);

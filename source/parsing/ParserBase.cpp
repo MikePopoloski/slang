@@ -133,7 +133,7 @@ void ParserBase::skipToken(std::optional<DiagCode> diagCode) {
     if (skipKind == TokenKind::Unknown)
         return;
 
-    SmallVector<TokenKind, 16> delimStack;
+    SmallVector<TokenKind> delimStack;
     while (true) {
         token = peek();
         if (token.kind == TokenKind::EndOfFile)

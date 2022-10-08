@@ -390,7 +390,7 @@ VariableDimensionSyntax* Parser::parseDimension() {
 }
 
 span<VariableDimensionSyntax*> Parser::parseDimensionList() {
-    SmallVector<VariableDimensionSyntax*, 4> buffer;
+    SmallVector<VariableDimensionSyntax*> buffer;
     while (true) {
         auto dim = parseDimension();
         if (!dim)
@@ -416,7 +416,7 @@ StructUnionTypeSyntax& Parser::parseStructUnion(SyntaxKind syntaxKind) {
     auto openBrace = expect(TokenKind::OpenBrace);
 
     Token closeBrace;
-    SmallVector<StructUnionMemberSyntax*, 8> buffer;
+    SmallVector<StructUnionMemberSyntax*> buffer;
 
     if (openBrace.isMissing())
         closeBrace = missingToken(TokenKind::CloseBrace, openBrace.location());
@@ -914,7 +914,7 @@ span<TokenOrSyntax> Parser::parseDeclarators(Token& semi, bool allowMinTypMax,
 }
 
 Parser::AttrList Parser::parseAttributes() {
-    SmallVector<AttributeInstanceSyntax*, 4> buffer;
+    SmallVector<AttributeInstanceSyntax*> buffer;
     while (peek(TokenKind::OpenParenthesisStar)) {
         Token openParen;
         Token closeParen;

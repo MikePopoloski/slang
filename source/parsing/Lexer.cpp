@@ -97,7 +97,7 @@ Token Lexer::concatenateTokens(BumpAllocator& alloc, Token left, Token right) {
 
 Token Lexer::stringify(BumpAllocator& alloc, SourceLocation location, span<Trivia const> trivia,
                        Token* begin, Token* end) {
-    SmallVector<char, 64> text;
+    SmallVector<char> text;
     text.push_back('"');
 
     while (begin != end) {
@@ -144,7 +144,7 @@ Token Lexer::stringify(BumpAllocator& alloc, SourceLocation location, span<Trivi
 }
 
 Trivia Lexer::commentify(BumpAllocator& alloc, Token* begin, Token* end) {
-    SmallVector<char, 64> text;
+    SmallVector<char> text;
     while (begin != end) {
         Token cur = *begin;
         for (const Trivia& t : cur.trivia())
@@ -633,8 +633,8 @@ Token Lexer::lexToken(KeywordVersion keywordVersion) {
 }
 
 Token Lexer::lexStringLiteral() {
+    stringBuffer.clear();
     bool sawUTF8Error = false;
-    SmallVector<char, 128> stringBuffer;
     while (true) {
         size_t offset = currentOffset();
         char c = peek();
@@ -850,8 +850,8 @@ Token Lexer::lexNumericLiteral() {
     // instead. Since we expect many more ints than floats, it makes sense to
     // not waste time populating that array up front.
     size_t startOfNum = currentOffset();
-    SmallVector<logic_t, 32> digits;
-    SmallVector<char, 32> floatChars;
+    SmallVector<logic_t> digits;
+    SmallVector<char> floatChars;
 
     while (true) {
         char c = peek();

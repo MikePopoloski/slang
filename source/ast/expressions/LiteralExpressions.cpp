@@ -239,7 +239,7 @@ Expression& StringLiteral::fromSyntax(Compilation& compilation,
 
         // String literals represented as integers put the first character on the
         // left, which translates to the msb, so we have to reverse the string.
-        SmallVector<byte, 64> bytes;
+        SmallVector<byte> bytes;
         for (char c : make_reverse_range(value))
             bytes.push_back((byte)c);
 

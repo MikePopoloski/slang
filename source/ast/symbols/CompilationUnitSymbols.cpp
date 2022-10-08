@@ -70,7 +70,7 @@ PackageSymbol& PackageSymbol::fromSyntax(const Scope& scope, const ModuleDeclara
     bool first = true;
     std::optional<SourceRange> unitsRange;
     std::optional<SourceRange> precisionRange;
-    SmallVector<const PackageImportItemSyntax*, 8> exportDecls;
+    SmallVector<const PackageImportItemSyntax*> exportDecls;
 
     for (auto member : syntax.members) {
         if (member->kind == SyntaxKind::TimeUnitsDeclaration) {

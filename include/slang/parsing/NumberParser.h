@@ -152,8 +152,8 @@ private:
     SVInt decimalValue;
     Diagnostics& diagnostics;
     BumpAllocator& alloc;
-    SmallVector<logic_t, 16> digits;
-    SmallVector<char, 64> text;
+    SmallVector<logic_t> digits;
+    SmallVector<char> text;
 };
 
 } // namespace slang::parsing

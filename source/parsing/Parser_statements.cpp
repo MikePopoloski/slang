@@ -237,7 +237,7 @@ CaseStatementSyntax& Parser::parseCaseStatement(NamedLabelSyntax* label, AttrLis
     auto closeParen = expect(TokenKind::CloseParenthesis);
 
     Token matchesOrInside;
-    SmallVector<CaseItemSyntax*, 16> itemBuffer;
+    SmallVector<CaseItemSyntax*> itemBuffer;
     bool errored = false;
 
     switch (peek().kind) {
@@ -747,7 +747,7 @@ WaitOrderStatementSyntax& Parser::parseWaitOrderStatement(NamedLabelSyntax* labe
 RandCaseStatementSyntax& Parser::parseRandCaseStatement(NamedLabelSyntax* label,
                                                         AttrList attributes) {
     auto randCase = consume();
-    SmallVector<RandCaseItemSyntax*, 16> itemBuffer;
+    SmallVector<RandCaseItemSyntax*> itemBuffer;
 
     while (isPossibleExpression(peek().kind)) {
         auto& expr = parseExpression();
@@ -817,7 +817,7 @@ RsCaseSyntax& Parser::parseRsCase() {
     auto& condition = parseExpression();
     auto closeParen = expect(TokenKind::CloseParenthesis);
 
-    SmallVector<RsCaseItemSyntax*, 8> itemBuffer;
+    SmallVector<RsCaseItemSyntax*> itemBuffer;
     SourceLocation lastDefault;
     bool errored = false;
 
@@ -918,7 +918,7 @@ RsRuleSyntax& Parser::parseRsRule() {
         randJoin = &factory.randJoinClause(rand, join, parenExpr);
     }
 
-    SmallVector<RsProdSyntax*, 16> prods;
+    SmallVector<RsProdSyntax*> prods;
     while (true) {
         auto prod = parseRsProd();
         if (!prod)
@@ -982,7 +982,7 @@ StatementSyntax& Parser::parseRandSequenceStatement(NamedLabelSyntax* label, Att
     auto firstProd = consumeIf(TokenKind::Identifier);
     auto closeParen = expect(TokenKind::CloseParenthesis);
 
-    SmallVector<ProductionSyntax*, 16> productions;
+    SmallVector<ProductionSyntax*> productions;
     while (isPossibleDataType(peek().kind))
         productions.push_back(&parseProduction());
 

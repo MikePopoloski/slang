@@ -387,7 +387,7 @@ MemberSyntax* Parser::parseSingleMember(SyntaxKind parentKind) {
 template<typename TMember, typename TParseFunc>
 span<TMember*> Parser::parseMemberList(TokenKind endKind, Token& endToken, SyntaxKind parentKind,
                                        TParseFunc&& parseFunc) {
-    SmallVector<TMember*, 16> members;
+    SmallVector<TMember*, 8> members;
     bool errored = false;
     bool anyLocalModules = false;
 
@@ -791,7 +791,7 @@ CaseGenerateSyntax& Parser::parseCaseGenerateConstruct(AttrList attributes) {
     auto& condition = parseExpression();
     auto closeParen = expect(TokenKind::CloseParenthesis);
 
-    SmallVector<CaseItemSyntax*, 8> itemBuffer;
+    SmallVector<CaseItemSyntax*> itemBuffer;
     SourceLocation lastDefault;
     bool errored = false;
 
@@ -1973,7 +1973,7 @@ DistItemSyntax& Parser::parseDistItem() {
 }
 
 span<PackageImportDeclarationSyntax*> Parser::parsePackageImports() {
-    SmallVector<PackageImportDeclarationSyntax*, 4> buffer;
+    SmallVector<PackageImportDeclarationSyntax*> buffer;
     while (peek(TokenKind::ImportKeyword))
         buffer.push_back(&parseImportDeclaration({}));
     return buffer.copy(alloc);
@@ -2168,7 +2168,7 @@ PropertyDeclarationSyntax& Parser::parsePropertyDeclaration(AttrList attributes)
     auto portList = parseAssertionItemPortList(SyntaxKind::PropertyDeclaration);
     auto semi = expect(TokenKind::Semicolon);
 
-    SmallVector<LocalVariableDeclarationSyntax*, 4> declarations;
+    SmallVector<LocalVariableDeclarationSyntax*> declarations;
     while (isLocalVariableDeclaration())
         declarations.push_back(&parseLocalVariableDeclaration());
 
@@ -2189,7 +2189,7 @@ SequenceDeclarationSyntax& Parser::parseSequenceDeclaration(AttrList attributes)
     auto portList = parseAssertionItemPortList(SyntaxKind::SequenceDeclaration);
     auto semi = expect(TokenKind::Semicolon);
 
-    SmallVector<LocalVariableDeclarationSyntax*, 4> declarations;
+    SmallVector<LocalVariableDeclarationSyntax*> declarations;
     while (isLocalVariableDeclaration())
         declarations.push_back(&parseLocalVariableDeclaration());
 
@@ -2683,7 +2683,7 @@ UdpBodySyntax& Parser::parseUdpBody() {
 
     auto table = expect(TokenKind::TableKeyword);
 
-    SmallVector<UdpEntrySyntax*, 8> entries;
+    SmallVector<UdpEntrySyntax*> entries;
     while (isPossibleUdpEntry(peek().kind))
         entries.push_back(&parseUdpEntry());
 
@@ -2716,7 +2716,7 @@ SpecparamDeclarationSyntax& Parser::parseSpecparam(AttrList attr) {
     auto keyword = consume();
 
     auto dim = parseDimension();
-    SmallVector<VariableDimensionSyntax*, 2> dims;
+    SmallVector<VariableDimensionSyntax*> dims;
     if (dim)
         dims.push_back(dim);
 
@@ -3103,7 +3103,7 @@ ConfigDeclarationSyntax& Parser::parseConfigDeclaration(AttrList attributes) {
     auto name = expect(TokenKind::Identifier);
     auto semi1 = expect(TokenKind::Semicolon);
 
-    SmallVector<ParameterDeclarationStatementSyntax*, 4> localparams;
+    SmallVector<ParameterDeclarationStatementSyntax*> localparams;
     while (peek(TokenKind::LocalParamKeyword)) {
         Token paramSemi;
         auto& paramBase = parseParameterDecl(consume(), &paramSemi);
@@ -3113,13 +3113,13 @@ ConfigDeclarationSyntax& Parser::parseConfigDeclaration(AttrList attributes) {
 
     auto design = expect(TokenKind::DesignKeyword);
 
-    SmallVector<ConfigCellIdentifierSyntax*, 4> topCells;
+    SmallVector<ConfigCellIdentifierSyntax*> topCells;
     while (peek(TokenKind::Identifier))
         topCells.push_back(&parseConfigCellIdentifier());
 
     auto semi2 = expect(TokenKind::Semicolon);
 
-    SmallVector<ConfigRuleSyntax*, 4> rules;
+    SmallVector<ConfigRuleSyntax*> rules;
     while (true) {
         auto token = peek();
         if (token.kind == TokenKind::DefaultKeyword) {
@@ -3145,7 +3145,7 @@ ConfigDeclarationSyntax& Parser::parseConfigDeclaration(AttrList attributes) {
             consume();
             auto topModule = expect(TokenKind::Identifier);
 
-            SmallVector<ConfigInstanceIdentifierSyntax*, 4> instanceNames;
+            SmallVector<ConfigInstanceIdentifierSyntax*> instanceNames;
             while (peek(TokenKind::Dot)) {
                 auto dot = consume();
                 instanceNames.push_back(

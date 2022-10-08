@@ -414,7 +414,7 @@ static void collectEvents(const ASTContext& context, const SyntaxNode& expr,
 
 TimingControl& EventListControl::fromSyntax(Compilation& compilation, const SyntaxNode& syntax,
                                             const ASTContext& context) {
-    SmallVector<TimingControl*, 4> events;
+    SmallVector<TimingControl*> events;
     collectEvents(context, syntax, events);
 
     if (events.size() == 1)

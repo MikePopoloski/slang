@@ -938,7 +938,7 @@ Expression& ConditionalExpression::fromSyntax(Compilation& comp,
     bool isConst = true;
     bool isTrue = true;
     bool isFourState = false;
-    SmallVector<Condition, 2> conditions;
+    SmallVector<Condition> conditions;
     ASTContext trueContext = context;
 
     for (auto condSyntax : syntax.predicate->conditions) {
@@ -1158,11 +1158,11 @@ void ConditionalExpression::serializeTo(ASTSerializer& serializer) const {
 Expression& InsideExpression::fromSyntax(Compilation& compilation,
                                          const InsideExpressionSyntax& syntax,
                                          const ASTContext& context) {
-    SmallVector<const ExpressionSyntax*, 8> expressions;
+    SmallVector<const ExpressionSyntax*> expressions;
     for (auto elemSyntax : syntax.ranges->valueRanges)
         expressions.push_back(elemSyntax);
 
-    SmallVector<const Expression*, 8> bound;
+    SmallVector<const Expression*> bound;
     bool bad =
         !bindMembershipExpressions(context, TokenKind::InsideKeyword, /* requireIntegral */ false,
                                    /* unwrapUnpacked */ true, /* allowTypeReferences */ false,
@@ -1262,7 +1262,7 @@ Expression& ConcatenationExpression::fromSyntax(Compilation& compilation,
         size_t totalElems = 0;
         const Type& type = *assignmentTarget;
         const Type& elemType = *type.getArrayElementType();
-        SmallVector<Expression*, 8> buffer;
+        SmallVector<Expression*> buffer;
 
         for (auto argSyntax : syntax.expressions) {
             Expression* arg = &create(compilation, *argSyntax, context);
@@ -1323,7 +1323,7 @@ Expression& ConcatenationExpression::fromSyntax(Compilation& compilation,
     bool anyStrings = false;
     bitmask<IntegralFlags> flags;
     bitwidth_t totalWidth = 0;
-    SmallVector<Expression*, 8> buffer;
+    SmallVector<Expression*> buffer;
 
     for (auto argSyntax : syntax.expressions) {
         // Replications inside of concatenations have a special feature that allows them to have
@@ -1514,7 +1514,7 @@ ConstantValue ConcatenationExpression::evalImpl(EvalContext& context) const {
         return result;
     }
 
-    SmallVector<SVInt, 8> values;
+    SmallVector<SVInt, 4> values;
     for (auto operand : operands()) {
         ConstantValue v = operand->eval(context);
         if (!v)
@@ -1722,7 +1722,7 @@ Expression& StreamingConcatenationExpression::fromSyntax(
         sliceSize = 1;
     }
 
-    SmallVector<StreamExpression, 8> buffer;
+    SmallVector<StreamExpression, 4> buffer;
     for (const auto argSyntax : syntax.expressions) {
         Expression* arg;
         if (assignmentTarget &&

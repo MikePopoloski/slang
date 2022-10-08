@@ -306,9 +306,23 @@ protected:
     }
 };
 
+namespace detail {
+
+template<typename T>
+constexpr size_t calculateDefaultSmallVectorElems() {
+    // As a default, try to fit the vector into one cache line.
+    // Assume 64 is a reasonable approximation of modern cache line sizes.
+    size_t preferredSize = 64;
+    size_t availableSize = preferredSize - sizeof(T*) - 2 * sizeof(size_t);
+    size_t numElems = availableSize / sizeof(T);
+    return numElems < 2 ? 2 : numElems;
+}
+
+} // namespace detail
+
 /// A concrete, sized version of the SmallVectorBase<T> template.
 /// The template parameter N is the number of elements that will be allocated on the stack.
-template<typename T, size_t N>
+template<typename T, size_t N = detail::calculateDefaultSmallVectorElems<T>()>
 class SmallVector : public SmallVectorBase<T> {
     static_assert(N > 1, "Must have at least two elements in SmallVector stack size");
     static_assert(sizeof(T) * N <= 1024, "Initial size of SmallVector is over 1KB");

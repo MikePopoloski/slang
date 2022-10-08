@@ -716,7 +716,7 @@ const Type& PackedStructType::fromSyntax(Compilation& comp, const StructUnionTyp
 
     ASTContext context(*structType, LookupLocation::max, parentContext.flags);
 
-    SmallVector<FieldSymbol*, 8> members;
+    SmallVector<FieldSymbol*> members;
     for (auto member : syntax.members) {
         const Type& type = comp.getType(*member->type, context);
         structType->isFourState |= type.isFourState();

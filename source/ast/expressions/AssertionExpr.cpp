@@ -566,7 +566,7 @@ AssertionExpr& SequenceConcatExpr::fromSyntax(const DelayedSequenceExprSyntax& s
         ok &= !seq.bad();
 
         SequenceRange delay{0, 0};
-        elems.push_back(Element{delay, &seq});
+        elems.push_back({delay, &seq});
     }
 
     for (auto es : syntax.elements) {
@@ -657,7 +657,7 @@ static span<const Expression* const> bindMatchItems(const SequenceMatchListSynta
         return {};
     }
 
-    SmallVector<const Expression*, 4> results;
+    SmallVector<const Expression*> results;
     for (auto item : syntax.items) {
         auto exprSyn = context.requireSimpleExpr(*item, diag::InvalidMatchItem);
         if (!exprSyn)
@@ -1139,7 +1139,7 @@ AssertionExpr& CaseAssertionExpr::fromSyntax(const CasePropertyExprSyntax& synta
             auto& sci = item->as<StandardPropertyCaseItemSyntax>();
             auto& body = AssertionExpr::bind(*sci.expr, context);
 
-            SmallVector<const Expression*, 4> exprs;
+            SmallVector<const Expression*> exprs;
             for (auto es : sci.expressions)
                 exprs.push_back(&bindExpr(*es, context));
 

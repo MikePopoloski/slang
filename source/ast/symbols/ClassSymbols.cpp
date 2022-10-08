@@ -562,7 +562,7 @@ void ClassType::handleImplements(const ImplementsClauseSyntax& implementsClause,
                                  const ASTContext& context,
                                  function_ref<void(const Symbol&)> insertCB) const {
     auto& comp = context.getCompilation();
-    SmallVector<const Type*, 4> ifaces;
+    SmallVector<const Type*> ifaces;
     SmallSet<const Symbol*, 4> seenIfaces;
 
     if (isInterface) {
@@ -794,8 +794,8 @@ const Type* GenericClassDefSymbol::getSpecializationImpl(
 
     SourceRange instRange = {instanceLoc, instanceLoc + 1};
 
-    SmallVector<const ConstantValue*, 8> paramValues;
-    SmallVector<const Type*, 8> typeParams;
+    SmallVector<const ConstantValue*> paramValues;
+    SmallVector<const Type*> typeParams;
     for (auto& decl : paramDecls) {
         auto& param = paramBuilder.createParam(decl, *classType, instanceLoc);
         if (paramBuilder.hasErrors()) {

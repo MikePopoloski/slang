@@ -211,7 +211,7 @@ const Symbol& CovergroupType::fromSyntax(const Scope& scope,
     result->setAttributes(scope, syntax.attributes);
 
     if (syntax.portList) {
-        SmallVector<const FormalArgumentSymbol*, 8> args;
+        SmallVector<const FormalArgumentSymbol*> args;
         SubroutineSymbol::buildArguments(*result, *syntax.portList, VariableLifetime::Automatic,
                                          args);
         result->arguments = args.copy(comp);
@@ -230,7 +230,7 @@ const Symbol& CovergroupType::fromSyntax(const Scope& scope,
     if (syntax.event && syntax.event->kind == SyntaxKind::WithFunctionSample) {
         auto& wfs = syntax.event->as<WithFunctionSampleSyntax>();
         if (wfs.portList) {
-            SmallVector<const FormalArgumentSymbol*, 8> args;
+            SmallVector<const FormalArgumentSymbol*> args;
             SubroutineSymbol::buildArguments(*result, *wfs.portList, VariableLifetime::Automatic,
                                              args);
 
@@ -524,7 +524,7 @@ void CoverageBinSymbol::resolve() const {
     auto init = binsSyntax.initializer;
     switch (init->kind) {
         case SyntaxKind::RangeCoverageBinInitializer: {
-            SmallVector<const Expression*, 4> buffer;
+            SmallVector<const Expression*> buffer;
             auto& rcbis = init->as<RangeCoverageBinInitializerSyntax>();
             for (auto elem : rcbis.ranges->valueRanges) {
                 bitmask<ASTFlags> flags;
@@ -585,7 +585,7 @@ void CoverageBinSymbol::resolve() const {
 
 CoverageBinSymbol::TransRangeList::TransRangeList(const TransRangeSyntax& syntax, const Type& type,
                                                   const ASTContext& context) {
-    SmallVector<const Expression*, 4> buffer;
+    SmallVector<const Expression*> buffer;
     for (auto elem : syntax.items) {
         auto& expr = bindCovergroupExpr(*elem, context, &type);
         buffer.push_back(&expr);
@@ -817,7 +817,7 @@ void CoverCrossSymbol::fromSyntax(const Scope& scope, const CoverCrossSyntax& sy
         loc = syntax.cross.location();
     }
 
-    SmallVector<const CoverpointSymbol*, 4> targets;
+    SmallVector<const CoverpointSymbol*> targets;
     for (auto item : syntax.items) {
         auto symbol = scope.find(item->identifier.valueText());
         if (symbol && symbol->kind == SymbolKind::Coverpoint) {
@@ -976,7 +976,7 @@ BinsSelectExpr& ConditionBinsSelectExpr::fromSyntax(const BinsSelectConditionExp
         else
             type = &sym->getParentScope()->asSymbol().as<CoverpointSymbol>().declaredType.getType();
 
-        SmallVector<const Expression*, 4> buffer;
+        SmallVector<const Expression*> buffer;
         for (auto elem : syntax.intersects->ranges->valueRanges) {
             bitmask<ASTFlags> flags;
             if (elem->kind == SyntaxKind::OpenRangeExpression)

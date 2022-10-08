@@ -665,7 +665,7 @@ private:
     Symbol& createPort(string_view name, SourceLocation externalLoc,
                        const PortConcatenationSyntax& syntax) {
         ArgumentDirection dir = ArgumentDirection::In;
-        SmallVector<const PortSymbol*, 4> buffer;
+        SmallVector<const PortSymbol*> buffer;
         bool allNets = true;
         bool allVars = true;
         bool hadError = false;
@@ -1111,7 +1111,7 @@ private:
 
             symbol = ifacePort.getConnection();
             if (symbol && !result.selectors.empty()) {
-                SmallVector<const ElementSelectSyntax*, 4> selectors;
+                SmallVector<const ElementSelectSyntax*> selectors;
                 for (auto& sel : result.selectors)
                     selectors.push_back(std::get<0>(sel));
 
@@ -1301,7 +1301,7 @@ private:
     const InstanceSymbol& instance;
     Compilation& comp;
     SmallVector<ConstantRange, 4> instanceDims;
-    SmallVector<const PortConnectionSyntax*, 8> orderedConns;
+    SmallVector<const PortConnectionSyntax*> orderedConns;
     SmallMap<string_view, std::pair<const NamedPortConnectionSyntax*, bool>, 8> namedConns;
     span<const AttributeSymbol* const> wildcardAttrs;
     LookupLocation lookupLocation;

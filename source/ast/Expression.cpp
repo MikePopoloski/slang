@@ -1108,7 +1108,7 @@ Expression* Expression::tryBindInterfaceRef(const ASTContext& context,
 
         symbol = ifacePort.getConnection();
         if (symbol && !result.selectors.empty()) {
-            SmallVector<const ElementSelectSyntax*, 4> selectors;
+            SmallVector<const ElementSelectSyntax*> selectors;
             for (auto& sel : result.selectors)
                 selectors.push_back(std::get<0>(sel));
 

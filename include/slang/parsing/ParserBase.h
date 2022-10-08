@@ -120,7 +120,7 @@ protected:
             return;
         }
 
-        SmallVector<syntax::TokenOrSyntax, 32> buffer;
+        SmallVector<syntax::TokenOrSyntax, 16> buffer;
         parseList<IsExpected, IsEnd, TParserFunc>(buffer, closeKind, separatorKind, closeToken,
                                                   requireItems, code,
                                                   std::forward<TParserFunc>(parseItem), allowEmpty);
@@ -228,8 +228,8 @@ private:
     void reportMisplacedSeparator();
 
     Window window;
-    SmallVector<Token, 4> skippedTokens;
-    SmallVector<Token, 4> openDelims;
+    SmallVector<Token> skippedTokens;
+    SmallVector<Token> openDelims;
 };
 
 } // namespace slang::parsing

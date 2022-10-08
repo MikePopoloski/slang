@@ -31,7 +31,7 @@ void ParameterBuilder::setAssignments(const ParameterValueAssignmentSyntax& synt
     // use one method or the other.
     bool hasParamAssignments = false;
     bool orderedAssignments = true;
-    SmallVector<const OrderedParamAssignmentSyntax*, 8> orderedParams;
+    SmallVector<const OrderedParamAssignmentSyntax*> orderedParams;
     SmallMap<string_view, std::pair<const NamedParamAssignmentSyntax*, bool>, 8> namedParams;
 
     for (auto paramBase : syntax.parameters) {

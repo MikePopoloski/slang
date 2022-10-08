@@ -748,7 +748,7 @@ NameSyntax& Parser::parseNamePart(bitmask<NameOptions> options) {
                 // brackets need to be parsed specially because they declare
                 // loop variable names. All the selectors prior can be
                 // parsed as normal selectors.
-                SmallVector<ElementSelectSyntax*, 4> buffer;
+                SmallVector<ElementSelectSyntax*> buffer;
                 do {
                     uint32_t index = 1;
                     scanTypePart<isSemicolon>(index, TokenKind::OpenBracket,
@@ -767,7 +767,7 @@ NameSyntax& Parser::parseNamePart(bitmask<NameOptions> options) {
                 return factory.identifierSelectName(identifier, buffer.copy(alloc));
             }
             else {
-                SmallVector<ElementSelectSyntax*, 4> buffer;
+                SmallVector<ElementSelectSyntax*> buffer;
                 do {
                     // Inside a sequence expression this could be a repetition directive
                     // instead of a selection.
@@ -1211,7 +1211,7 @@ SelectorSyntax* Parser::parseSequenceRange() {
 }
 
 SequenceExprSyntax& Parser::parseDelayedSequenceExpr(SequenceExprSyntax* first) {
-    SmallVector<DelayedSequenceElementSyntax*, 4> elements;
+    SmallVector<DelayedSequenceElementSyntax*> elements;
     do {
         Token op, openBracket, closeBracket;
         SelectorSyntax* selector = nullptr;
@@ -1441,7 +1441,7 @@ PropertyExprSyntax& Parser::parseCasePropertyExpr() {
     auto& condition = parseExpressionOrDist();
     auto closeParen = expect(TokenKind::CloseParenthesis);
 
-    SmallVector<PropertyCaseItemSyntax*, 8> itemBuffer;
+    SmallVector<PropertyCaseItemSyntax*> itemBuffer;
     SourceLocation lastDefault;
     bool errored = false;
 

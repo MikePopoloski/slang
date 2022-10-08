@@ -24,7 +24,7 @@ void ParameterSymbolBase::fromLocalSyntax(const Scope& scope,
                                           SmallVectorBase<Symbol*>& results) {
     auto paramBase = syntax.parameter;
     if (paramBase->kind == SyntaxKind::ParameterDeclaration) {
-        SmallVector<ParameterSymbol*, 8> params;
+        SmallVector<ParameterSymbol*> params;
         ParameterSymbol::fromSyntax(scope, paramBase->as<ParameterDeclarationSyntax>(),
                                     /* isLocal */ true, /* isPort */ false, params);
         for (auto param : params) {
@@ -33,7 +33,7 @@ void ParameterSymbolBase::fromLocalSyntax(const Scope& scope,
         }
     }
     else {
-        SmallVector<TypeParameterSymbol*, 8> params;
+        SmallVector<TypeParameterSymbol*> params;
         TypeParameterSymbol::fromSyntax(scope, paramBase->as<TypeParameterDeclarationSyntax>(),
                                         /* isLocal */ true, /* isPort */ false, params);
         for (auto param : params) {

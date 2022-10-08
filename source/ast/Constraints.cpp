@@ -73,7 +73,7 @@ void InvalidConstraint::serializeTo(ASTSerializer& serializer) const {
 Constraint& ConstraintList::fromSyntax(const ConstraintBlockSyntax& syntax,
                                        const ASTContext& context) {
     bool anyBad = false;
-    SmallVector<const Constraint*, 8> buffer;
+    SmallVector<const Constraint*> buffer;
     for (auto item : syntax.items) {
         auto& constraint = Constraint::bind(*item, context);
         buffer.push_back(&constraint);
@@ -341,7 +341,7 @@ Constraint& UniquenessConstraint::fromSyntax(const UniquenessConstraintSyntax& s
     auto& comp = context.getCompilation();
     bool bad = false;
     const Type* commonType = nullptr;
-    SmallVector<const Expression*, 4> items;
+    SmallVector<const Expression*> items;
     for (auto item : syntax.ranges->valueRanges) {
         auto& expr = Expression::bind(*item, context);
         items.push_back(&expr);
@@ -436,8 +436,8 @@ Constraint& SolveBeforeConstraint::fromSyntax(const SolveBeforeConstraintSyntax&
     };
 
     auto& comp = context.getCompilation();
-    SmallVector<const Expression*, 4> solve;
-    SmallVector<const Expression*, 4> before;
+    SmallVector<const Expression*> solve;
+    SmallVector<const Expression*> before;
     bindExprs(syntax.beforeExpr, solve);
     bindExprs(syntax.afterExpr, before);
 

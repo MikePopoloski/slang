@@ -45,7 +45,7 @@ ConstantValue ScriptSession::eval(string_view text) {
             scope.addMembers(node);
             return nullptr;
         case SyntaxKind::DataDeclaration: {
-            SmallVector<const ValueSymbol*, 2> symbols;
+            SmallVector<const ValueSymbol*> symbols;
             VariableSymbol::fromSyntax(compilation, node.as<DataDeclarationSyntax>(), scope,
                                        symbols);
 

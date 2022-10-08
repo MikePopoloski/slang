@@ -218,7 +218,7 @@ void StatementBlockSymbol::elaborateVariables(function_ref<void(const Symbol&)> 
     if (syntax->kind == SyntaxKind::RsRule) {
         // Create variables to hold results from all non-void productions
         // invoked by this rule.
-        SmallVector<const Symbol*, 8> vars;
+        SmallVector<const Symbol*> vars;
         RandSeqProductionSymbol::createRuleVariables(syntax->as<RsRuleSyntax>(), *this, vars);
         for (auto var : vars)
             insertCB(*var);
@@ -404,7 +404,7 @@ void GenerateBlockSymbol::fromSyntax(Compilation& compilation, const CaseGenerat
                                      bool isInstantiated,
                                      SmallVectorBase<GenerateBlockSymbol*>& results) {
 
-    SmallVector<const ExpressionSyntax*, 8> expressions;
+    SmallVector<const ExpressionSyntax*> expressions;
     const SyntaxNode* defBlock = nullptr;
     for (auto item : syntax.items) {
         switch (item->kind) {
@@ -424,7 +424,7 @@ void GenerateBlockSymbol::fromSyntax(Compilation& compilation, const CaseGenerat
         }
     }
 
-    SmallVector<const Expression*, 8> bound;
+    SmallVector<const Expression*> bound;
     if (!Expression::bindMembershipExpressions(
             context, TokenKind::CaseKeyword, /* requireIntegral */ false,
             /* unwrapUnpacked */ false, /* allowTypeReferences */ true, /* allowOpenRange */ true,
@@ -611,7 +611,7 @@ GenerateBlockArraySymbol& GenerateBlockArraySymbol::fromSyntax(Compilation& comp
         }
     }
 
-    SmallVector<const GenerateBlockSymbol*, 8> entries;
+    SmallVector<const GenerateBlockSymbol*> entries;
     auto createBlock = [&](ConstantValue value, bool isInstantiated) {
         // Spec: each generate block gets their own scope, with an implicit
         // localparam of the same name as the genvar.

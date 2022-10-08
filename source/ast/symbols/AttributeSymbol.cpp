@@ -64,7 +64,7 @@ static span<const AttributeSymbol* const> createAttributes(
     span<const AttributeInstanceSyntax* const> syntax, const Scope& scope, TFunc&& factory) {
 
     SmallMap<string_view, size_t, 4> nameMap;
-    SmallVector<const AttributeSymbol*, 8> attrs;
+    SmallVector<const AttributeSymbol*> attrs;
 
     auto& comp = scope.getCompilation();
     for (auto inst : syntax) {

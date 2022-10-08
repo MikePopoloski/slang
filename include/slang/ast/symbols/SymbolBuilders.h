@@ -44,7 +44,7 @@ public:
     void addFlags(bitmask<MethodFlags> flags);
 
 private:
-    SmallVector<const FormalArgumentSymbol*, 4> args;
+    SmallVector<const FormalArgumentSymbol*> args;
 };
 
 /// A helper class for constructing class types programmatically.
