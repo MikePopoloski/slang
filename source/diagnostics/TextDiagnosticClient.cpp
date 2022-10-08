@@ -128,7 +128,7 @@ static bool printableTextForNextChar(string_view sourceLine, size_t& index, uint
         index++;
 
         for (uint32_t j = 0; j < numSpaces; j++)
-            out.append(' ');
+            out.push_back(' ');
 
         columnWidth = out.size();
         return true;
@@ -166,13 +166,13 @@ static bool printableTextForNextChar(string_view sourceLine, size_t& index, uint
     if (!isPrintableUnicode(c)) {
         SmallVectorSized<char, 8> buf;
         while (c) {
-            buf.append(getHexForDigit(c % 16));
+            buf.push_back(getHexForDigit(c % 16));
             c /= 16;
         }
 
         out.appendRange("<U+"sv);
         out.appendRange(make_reverse_range(buf));
-        out.append('>');
+        out.push_back('>');
         columnWidth = out.size();
         return false;
     }
@@ -202,7 +202,7 @@ struct SourceSnippet {
             size_t columnWidth;
             buffer.clear();
             if (!printableTextForNextChar(sourceLine, i, tabStop, buffer, columnWidth))
-                invalidRanges.append({snippetLine.size(), buffer.size()});
+                invalidRanges.push_back({snippetLine.size(), buffer.size()});
 
             snippetLine.append(buffer.data(), buffer.size());
             column += columnWidth;

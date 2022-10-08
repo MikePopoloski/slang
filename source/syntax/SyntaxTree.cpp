@@ -52,7 +52,7 @@ std::shared_ptr<SyntaxTree> SyntaxTree::fromFiles(span<const string_view> paths,
         if (!buffer)
             return nullptr;
 
-        buffers.append(buffer);
+        buffers.push_back(buffer);
     }
 
     return create(sourceManager, buffers, options, {}, false);

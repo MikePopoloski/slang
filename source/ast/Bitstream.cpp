@@ -256,11 +256,11 @@ static ConstantValue constContainer(const Type& type, span<ConstantValue> elems)
 /// Performs pack operation to create a bit-stream.
 static void packBitstream(ConstantValue& value, SmallVector<ConstantValue*>& packed) {
     if (value.isInteger()) {
-        packed.append(&value);
+        packed.push_back(&value);
     }
     else if (value.isString()) {
         if (!value.str().empty())
-            packed.append(&value);
+            packed.push_back(&value);
     }
     else if (value.isUnpacked()) {
         for (auto& cv : value.elements())
@@ -327,7 +327,7 @@ static ConstantValue unpackBitstream(const Type& type, PackIterator& iter,
             if (!isFourState)
                 ci.flattenUnknowns();
 
-            buffer.emplace(std::move(ci));
+            buffer.emplace_back(std::move(ci));
         }
 
         ASSERT(!buffer.empty());
@@ -377,8 +377,8 @@ static ConstantValue unpackBitstream(const Type& type, PackIterator& iter,
                 // number of elements that make it as wide as or wider than dynamicSize
                 size_t num = (dynamicSize + elemWidth - 1) / elemWidth;
                 for (size_t i = num; i > 0; i--) {
-                    buffer.emplace(unpackBitstream(*type.getArrayElementType(), iter, iterEnd, bit,
-                                                   dynamicSize));
+                    buffer.emplace_back(unpackBitstream(*type.getArrayElementType(), iter, iterEnd,
+                                                        bit, dynamicSize));
                 }
 
                 ASSERT(!dynamicSize || type.getArrayElementType()->isFixedSize());
@@ -389,7 +389,7 @@ static ConstantValue unpackBitstream(const Type& type, PackIterator& iter,
             auto& fsua = ct.as<FixedSizeUnpackedArrayType>();
             auto& elem = fsua.elementType;
             for (auto width = fsua.range.width(); width > 0; width--)
-                buffer.emplace(unpackBitstream(elem, iter, iterEnd, bit, dynamicSize));
+                buffer.emplace_back(unpackBitstream(elem, iter, iterEnd, bit, dynamicSize));
         }
 
         return constContainer(ct, buffer);
@@ -399,7 +399,7 @@ static ConstantValue unpackBitstream(const Type& type, PackIterator& iter,
         SmallVectorSized<ConstantValue, 16> buffer;
         auto& ct = type.getCanonicalType();
         for (auto& field : ct.as<UnpackedStructType>().membersOfType<FieldSymbol>())
-            buffer.emplace(unpackBitstream(field.getType(), iter, iterEnd, bit, dynamicSize));
+            buffer.emplace_back(unpackBitstream(field.getType(), iter, iterEnd, bit, dynamicSize));
 
         return constContainer(ct, buffer);
     }
@@ -435,10 +435,10 @@ ConstantValue Bitstream::evaluateCast(const Type& type, ConstantValue&& value,
     packBitstream(value, packed);
 
     bitwidth_t bitOffset = 0;
-    auto iter = packed.cbegin();
-    auto cv = unpackBitstream(type, iter, packed.cend(), bitOffset, dynamicSize);
+    auto iter = std::cbegin(packed);
+    auto cv = unpackBitstream(type, iter, std::cend(packed), bitOffset, dynamicSize);
     ASSERT(!dynamicSize);
-    ASSERT(isImplicit || (iter == packed.cend() && !bitOffset));
+    ASSERT(isImplicit || (iter == std::cend(packed) && !bitOffset));
     return cv;
 }
 
@@ -592,7 +592,7 @@ ConstantValue Bitstream::reOrder(ConstantValue&& value, size_t sliceSize, size_t
             result.emplace_back(std::move(**iter));
         else {
             bitwidth_t bit = 0;
-            result.emplace_back(slicePacked(iter, packed.cend(), bit, rightWidth));
+            result.emplace_back(slicePacked(iter, std::cend(packed), bit, rightWidth));
         }
     };
 
@@ -612,11 +612,11 @@ ConstantValue Bitstream::reOrder(ConstantValue&& value, size_t sliceSize, size_t
 
         // A block composed of bits from the last "slice" bits of packed[index] to the first
         // "rightWidth" bits of packed[rightIndex].
-        auto iter = packed.cbegin() + index;
+        auto iter = std::cbegin(packed) + index;
         if (slice) {
             auto bit = static_cast<bitwidth_t>(width - slice);
             result.emplace_back(
-                slicePacked(iter, packed.cend(), bit, static_cast<bitwidth_t>(slice)));
+                slicePacked(iter, std::cend(packed), bit, static_cast<bitwidth_t>(slice)));
             width -= static_cast<bitwidth_t>(slice);
         }
 
@@ -634,7 +634,7 @@ ConstantValue Bitstream::reOrder(ConstantValue&& value, size_t sliceSize, size_t
     }
 
     // For pack, the last block may be smaller than slice size.
-    auto iter = packed.cbegin();
+    auto iter = std::cbegin(packed);
     for (size_t i = 0; i < rightIndex; i++)
         result.emplace_back(std::move(**iter++));
     sliceOrAppend(iter);
@@ -674,15 +674,15 @@ static bool unpackConcatenation(const StreamingConcatenationExpression& lhs, Pac
             packBitstream(rvalue, packed);
 
             // A real pass stores lvalue from new rvalue
-            auto iterConcat = packed.cbegin();
+            auto iterConcat = std::cbegin(packed);
             bitwidth_t bit = 0;
-            if (!unpackConcatenation(concat, iterConcat, packed.cend(), bit, dynamicSizeSave,
+            if (!unpackConcatenation(concat, iterConcat, std::cend(packed), bit, dynamicSizeSave,
                                      context)) {
                 return false;
             }
 
             ASSERT(dynamicSizeSave == dynamicSize);
-            ASSERT(iterConcat == packed.cend() && !bit);
+            ASSERT(iterConcat == std::cend(packed) && !bit);
         }
         else {
             auto& arrayType = *operand.type;
@@ -719,7 +719,7 @@ static bool unpackConcatenation(const StreamingConcatenationExpression& lhs, Pac
             }
 
             if (dryRun) {
-                dryRun->emplace(std::move(rvalue));
+                dryRun->emplace_back(std::move(rvalue));
                 continue;
             }
 
@@ -801,8 +801,8 @@ ConstantValue Bitstream::evaluateTarget(const StreamingConcatenationExpression& 
     packBitstream(rvalue, packed);
 
     bitwidth_t bitOffset = 0;
-    auto iter = packed.cbegin();
-    auto iterEnd = packed.cend();
+    auto iter = std::cbegin(packed);
+    auto iterEnd = std::cend(packed);
     if (!unpackConcatenation(lhs, iter, iterEnd, bitOffset, dynamicSize, context))
         return nullptr;
 

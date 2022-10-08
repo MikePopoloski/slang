@@ -322,7 +322,7 @@ const Statement& Statement::bindBlock(const StatementBlockSymbol& block, const S
             if (StatementSyntax::isKind(item->kind)) {
                 auto& stmt = bind(item->as<StatementSyntax>(), context, stmtCtx,
                                   /* inList */ true);
-                buffer.append(&stmt);
+                buffer.push_back(&stmt);
                 anyBad |= stmt.bad();
             }
         }
@@ -336,7 +336,7 @@ const Statement& Statement::bindBlock(const StatementBlockSymbol& block, const S
         auto& ss = syntax.as<StatementSyntax>();
         auto& stmt = bind(ss, context, stmtCtx, /* inList */ false,
                           /* labelHandled */ true);
-        buffer.append(&stmt);
+        buffer.push_back(&stmt);
         anyBad |= stmt.bad();
 
         result = createBlockStatement(comp, buffer, syntax);
@@ -358,8 +358,8 @@ const Statement& Statement::bindItems(const SyntaxList<SyntaxNode>& items,
 
     for (auto item : items) {
         if (StatementSyntax::isKind(item->kind)) {
-            buffer.append(&bind(item->as<StatementSyntax>(), context, stmtCtx,
-                                /* inList */ true));
+            buffer.push_back(&bind(item->as<StatementSyntax>(), context, stmtCtx,
+                                   /* inList */ true));
         }
     }
 
@@ -390,7 +390,7 @@ void Statement::bindScopeInitializers(const ASTContext& context,
         auto& var = member.as<VariableSymbol>();
         if (!var.flags.has(VariableFlags::CompilerGenerated)) {
             SourceRange range{var.location, var.location + var.name.length()};
-            results.append(comp.emplace<VariableDeclStatement>(var, range));
+            results.push_back(comp.emplace<VariableDeclStatement>(var, range));
         }
     }
 }
@@ -402,7 +402,7 @@ Statement& Statement::badStmt(Compilation& compilation, const Statement* stmt) {
 static void findBlocks(const Scope& scope, const StatementSyntax& syntax,
                        SmallVector<const StatementBlockSymbol*>& results, bool labelHandled) {
     if (!labelHandled && hasSimpleLabel(syntax)) {
-        results.append(&StatementBlockSymbol::fromLabeledStmt(scope, syntax));
+        results.push_back(&StatementBlockSymbol::fromLabeledStmt(scope, syntax));
         return;
     }
 
@@ -434,14 +434,14 @@ static void findBlocks(const Scope& scope, const StatementSyntax& syntax,
             // - They are unnamed but have variable declarations within them
             auto& block = syntax.as<BlockStatementSyntax>();
             if (block.blockName || block.label) {
-                results.append(&StatementBlockSymbol::fromSyntax(scope, block));
+                results.push_back(&StatementBlockSymbol::fromSyntax(scope, block));
                 return;
             }
 
             for (auto item : block.items) {
                 // If we find any decls at all, this block gets its own scope.
                 if (!StatementSyntax::isKind(item->kind)) {
-                    results.append(&StatementBlockSymbol::fromSyntax(scope, block));
+                    results.push_back(&StatementBlockSymbol::fromSyntax(scope, block));
                     return;
                 }
             }
@@ -490,10 +490,10 @@ static void findBlocks(const Scope& scope, const StatementSyntax& syntax,
             auto& forLoop = syntax.as<ForLoopStatementSyntax>();
             if (!forLoop.initializers.empty() &&
                 forLoop.initializers[0]->kind == SyntaxKind::ForVariableDeclaration) {
-                results.append(&StatementBlockSymbol::fromSyntax(scope, forLoop));
+                results.push_back(&StatementBlockSymbol::fromSyntax(scope, forLoop));
             }
             else if (syntax.label) {
-                results.append(&StatementBlockSymbol::fromLabeledStmt(scope, syntax));
+                results.push_back(&StatementBlockSymbol::fromLabeledStmt(scope, syntax));
             }
             else {
                 recurse(forLoop.statement);
@@ -504,7 +504,7 @@ static void findBlocks(const Scope& scope, const StatementSyntax& syntax,
             // A foreach loop always creates a block, but we need to check labelHandled
             // here to make sure we don't infinitely recurse.
             if (!labelHandled) {
-                results.append(&StatementBlockSymbol::fromSyntax(
+                results.push_back(&StatementBlockSymbol::fromSyntax(
                     scope, syntax.as<ForeachLoopStatementSyntax>()));
             }
             else {
@@ -556,7 +556,7 @@ static void findBlocks(const Scope& scope, const StatementSyntax& syntax,
             // A randsequence statement always creates a block, but we need to check
             // labelHandled here to make sure we don't infinitely recurse.
             if (!labelHandled) {
-                results.append(&StatementBlockSymbol::fromSyntax(
+                results.push_back(&StatementBlockSymbol::fromSyntax(
                     scope, syntax.as<RandSequenceStatementSyntax>()));
             }
             return;
@@ -686,7 +686,7 @@ Statement& BlockStatement::fromSyntax(Compilation& comp, const BlockStatementSyn
         if (StatementSyntax::isKind(item->kind)) {
             auto& stmt = Statement::bind(item->as<StatementSyntax>(), context, stmtCtx,
                                          /* inList */ true);
-            buffer.append(&stmt);
+            buffer.push_back(&stmt);
             anyBad |= stmt.bad();
         }
     }
@@ -926,7 +926,7 @@ Statement& ConditionalStatement::fromSyntax(Compilation& comp,
                 isTrue = false;
         }
 
-        conditions.append({&cond, pattern});
+        conditions.push_back({&cond, pattern});
     }
 
     // If the condition is constant, we know which branch will be taken.
@@ -1045,9 +1045,9 @@ Statement& CaseStatement::fromSyntax(Compilation& compilation, const CaseStateme
                 auto& sci = item->as<StandardCaseItemSyntax>();
                 auto& stmt = Statement::bind(sci.clause->as<StatementSyntax>(), context, stmtCtx);
                 for (auto es : sci.expressions)
-                    expressions.append(es);
+                    expressions.push_back(es);
 
-                statements.append(&stmt);
+                statements.push_back(&stmt);
                 bad |= stmt.bad();
                 break;
             }
@@ -1102,10 +1102,10 @@ Statement& CaseStatement::fromSyntax(Compilation& compilation, const CaseStateme
                 auto& sci = item->as<StandardCaseItemSyntax>();
                 for (size_t i = 0; i < sci.expressions.size(); i++) {
                     bad |= (*boundIt)->bad();
-                    group.append(*boundIt++);
+                    group.push_back(*boundIt++);
                 }
 
-                items.append({group.copy(compilation), *stmtIt++});
+                items.push_back({group.copy(compilation), *stmtIt++});
                 group.clear();
                 break;
             }
@@ -1280,7 +1280,7 @@ Statement& PatternCaseStatement::fromSyntax(Compilation& compilation,
                         bad = true;
                 }
 
-                items.append({&pattern, filter, &stmt});
+                items.push_back({&pattern, filter, &stmt});
                 break;
             }
             case SyntaxKind::DefaultCaseItem:
@@ -1424,7 +1424,7 @@ public:
                 return;
             }
 
-            localPtrs.append(evalCtx.createLocal(var, std::move(cv)));
+            localPtrs.push_back(evalCtx.createLocal(var, std::move(cv)));
         }
 
         SmallVectorSized<ConstantValue, 16> values;
@@ -1439,7 +1439,7 @@ public:
                 break;
 
             for (auto local : localPtrs)
-                values.emplace(*local);
+                values.emplace_back(*local);
 
             for (auto step : loop.steps) {
                 if (!step->eval(evalCtx)) {
@@ -1527,13 +1527,13 @@ Statement& ForLoopStatement::fromSyntax(Compilation& compilation,
         // The block should have already been created for us containing the
         // variable declarations.
         for (auto& var : context.scope->membersOfType<VariableSymbol>())
-            loopVars.append(&var);
+            loopVars.push_back(&var);
     }
     else {
         for (auto initializer : syntax.initializers) {
             auto& init = Expression::bind(initializer->as<ExpressionSyntax>(), context,
                                           ASTFlags::AssignmentAllowed);
-            initializers.append(&init);
+            initializers.push_back(&init);
             anyBad |= init.bad();
         }
     }
@@ -1545,7 +1545,7 @@ Statement& ForLoopStatement::fromSyntax(Compilation& compilation,
     SmallVectorSized<const Expression*, 2> steps;
     for (auto step : syntax.steps) {
         auto& expr = Expression::bind(*step, context, ASTFlags::AssignmentAllowed);
-        steps.append(&expr);
+        steps.push_back(&expr);
         anyBad |= expr.bad();
 
         bool stepOk;
@@ -1741,9 +1741,9 @@ const Expression* ForeachLoopStatement::buildLoopDims(const ForeachLoopListSynta
         }
 
         if (type->hasFixedRange())
-            dims.append({type->getFixedRange()});
+            dims.push_back({type->getFixedRange()});
         else
-            dims.emplace();
+            dims.emplace_back();
 
         const Type& currType = *type;
         type = type->getArrayElementType();
@@ -1812,9 +1812,9 @@ Statement& ForeachLoopStatement::fromSyntax(Compilation& compilation,
 
     for (auto loopVar : syntax.loopList->loopVariables) {
         if (type->hasFixedRange())
-            dims.append({type->getFixedRange()});
+            dims.push_back({type->getFixedRange()});
         else
-            dims.emplace();
+            dims.emplace_back();
 
         type = type->getArrayElementType();
 
@@ -2445,7 +2445,7 @@ Statement& WaitOrderStatement::fromSyntax(Compilation& compilation,
             return badStmt(compilation, nullptr);
         }
 
-        events.append(&ev);
+        events.push_back(&ev);
     }
 
     const Statement* ifTrue = nullptr;
@@ -2669,7 +2669,7 @@ Statement& RandCaseStatement::fromSyntax(Compilation& compilation,
     for (auto item : syntax.items) {
         auto& expr = Expression::bind(*item->expr, context);
         auto& stmt = Statement::bind(*item->statement, context, stmtCtx);
-        items.append({&expr, &stmt});
+        items.push_back({&expr, &stmt});
 
         if (stmt.bad() || !context.requireIntegral(expr)) {
             bad = true;

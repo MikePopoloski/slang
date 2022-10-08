@@ -46,7 +46,7 @@ void ParameterBuilder::setAssignments(const ParameterValueAssignmentSyntax& synt
         }
 
         if (isOrdered)
-            orderedParams.append(&paramBase->as<OrderedParamAssignmentSyntax>());
+            orderedParams.push_back(&paramBase->as<OrderedParamAssignmentSyntax>());
         else {
             auto& nas = paramBase->as<NamedParamAssignmentSyntax>();
             auto name = nas.name.valueText();
@@ -264,12 +264,12 @@ void ParameterBuilder::createDecls(const Scope& scope, const ParameterDeclaratio
     if (syntax.kind == SyntaxKind::ParameterDeclaration) {
         auto& paramSyntax = syntax.as<ParameterDeclarationSyntax>();
         for (auto decl : paramSyntax.declarators)
-            results.emplace(scope, paramSyntax, *decl, isLocal, isPort);
+            results.emplace_back(scope, paramSyntax, *decl, isLocal, isPort);
     }
     else {
         auto& paramSyntax = syntax.as<TypeParameterDeclarationSyntax>();
         for (auto decl : paramSyntax.declarators)
-            results.emplace(scope, paramSyntax, *decl, isLocal, isPort);
+            results.emplace_back(scope, paramSyntax, *decl, isLocal, isPort);
     }
 }
 

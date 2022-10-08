@@ -291,7 +291,7 @@ private:
         symbol->setSyntax(decl);
         symbol->setAttributes(scope, attrs);
         port->internalSymbol = symbol;
-        implicitMembers.emplace(symbol, port);
+        implicitMembers.emplace_back(symbol, port);
 
         if (decl.initializer) {
             if (netType && netType->netKind == NetType::Interconnect) {
@@ -596,7 +596,7 @@ private:
                            const Symbol* insertionPoint) {
         symbol.setSyntax(decl);
         symbol.setAttributes(scope, info.attrs);
-        implicitMembers.emplace(&symbol, insertionPoint);
+        implicitMembers.emplace_back(&symbol, insertionPoint);
         info.internalSymbol = &symbol;
 
         if (dataType)
@@ -685,7 +685,7 @@ private:
                 if (!sym)
                     continue;
 
-                buffer.append(&ps);
+                buffer.push_back(&ps);
                 ps.setParent(scope);
 
                 // We need to merge the port direction with all of the other component port
@@ -769,7 +769,7 @@ public:
             }
 
             if (isOrdered) {
-                orderedConns.append(conn);
+                orderedConns.push_back(conn);
             }
             else if (conn->kind == SyntaxKind::WildcardPortConnection) {
                 if (!std::exchange(hasWildcard, true)) {
@@ -804,7 +804,7 @@ public:
         auto parent = &scope;
         while (parent && parent->asSymbol().kind == SymbolKind::InstanceArray) {
             auto& sym = parent->asSymbol().as<InstanceArraySymbol>();
-            instanceDims.append(sym.range);
+            instanceDims.push_back(sym.range);
             parent = sym.getParentScope();
         }
         std::reverse(instanceDims.begin(), instanceDims.end());
@@ -1113,7 +1113,7 @@ private:
             if (symbol && !result.selectors.empty()) {
                 SmallVectorSized<const ElementSelectSyntax*, 4> selectors;
                 for (auto& sel : result.selectors)
-                    selectors.append(std::get<0>(sel));
+                    selectors.push_back(std::get<0>(sel));
 
                 symbol = Lookup::selectChild(*symbol, selectors, context, result);
             }
@@ -1230,7 +1230,7 @@ private:
             if (array.elements.empty())
                 return nullptr;
 
-            dims.append(array.range);
+            dims.push_back(array.range);
             child = array.elements[0];
         }
 
@@ -1444,7 +1444,7 @@ static void getNetRanges(const Expression& expr, SmallVector<PortSymbol::NetType
         if (!ranges.empty() && ranges.back().netType == &nt)
             ranges.back().width += width;
         else
-            ranges.append({&nt, width});
+            ranges.push_back({&nt, width});
     }
     else if (expr.kind == ExpressionKind::Concatenation) {
         for (auto op : expr.as<ConcatenationExpression>().operands())
@@ -1468,7 +1468,7 @@ void PortSymbol::getNetTypes(SmallVector<NetTypeRange>& ranges) const {
     }
     else if (internalSymbol && internalSymbol->kind == SymbolKind::Net) {
         auto& nt = internalSymbol->as<NetSymbol>().netType;
-        ranges.append({&nt, getType().getBitWidth()});
+        ranges.push_back({&nt, getType().getBitWidth()});
     }
 }
 
@@ -1517,10 +1517,10 @@ void PortSymbol::fromSyntax(
             for (auto port : syntax.as<AnsiPortListSyntax>().ports) {
                 switch (port->kind) {
                     case SyntaxKind::ImplicitAnsiPort:
-                        results.append(builder.createPort(port->as<ImplicitAnsiPortSyntax>()));
+                        results.push_back(builder.createPort(port->as<ImplicitAnsiPortSyntax>()));
                         break;
                     case SyntaxKind::ExplicitAnsiPort:
-                        results.append(builder.createPort(port->as<ExplicitAnsiPortSyntax>()));
+                        results.push_back(builder.createPort(port->as<ExplicitAnsiPortSyntax>()));
                         break;
                     default:
                         ASSUME_UNREACHABLE;
@@ -1538,13 +1538,15 @@ void PortSymbol::fromSyntax(
             for (auto port : syntax.as<NonAnsiPortListSyntax>().ports) {
                 switch (port->kind) {
                     case SyntaxKind::ImplicitNonAnsiPort:
-                        results.append(builder.createPort(port->as<ImplicitNonAnsiPortSyntax>()));
+                        results.push_back(
+                            builder.createPort(port->as<ImplicitNonAnsiPortSyntax>()));
                         break;
                     case SyntaxKind::ExplicitNonAnsiPort:
-                        results.append(builder.createPort(port->as<ExplicitNonAnsiPortSyntax>()));
+                        results.push_back(
+                            builder.createPort(port->as<ExplicitNonAnsiPortSyntax>()));
                         break;
                     case SyntaxKind::EmptyNonAnsiPort:
-                        results.append(builder.createPort(port->as<EmptyNonAnsiPortSyntax>()));
+                        results.push_back(builder.createPort(port->as<EmptyNonAnsiPortSyntax>()));
                         break;
                     default:
                         ASSUME_UNREACHABLE;
@@ -1661,7 +1663,7 @@ std::optional<span<const ConstantRange>> InterfacePortSymbol::getDeclaredRange()
         if (!dim.isRange())
             return std::nullopt;
 
-        buffer.append(dim.range);
+        buffer.push_back(dim.range);
     }
 
     range = buffer.copy(scope->getCompilation());

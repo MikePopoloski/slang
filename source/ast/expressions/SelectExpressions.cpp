@@ -1065,7 +1065,7 @@ private:
             }
 
             curr = stack.back();
-            stack.pop();
+            stack.pop_back();
 
             curr.next();
             prepNext();
@@ -1073,7 +1073,7 @@ private:
         else {
             auto& type = curr.fieldIt->getType();
             if (type.isUnpackedStruct()) {
-                stack.emplace(curr);
+                stack.emplace_back(curr);
 
                 auto range =
                     type.getCanonicalType().as<UnpackedStructType>().membersOfType<FieldSymbol>();

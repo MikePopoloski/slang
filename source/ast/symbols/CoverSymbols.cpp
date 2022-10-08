@@ -30,7 +30,7 @@ public:
     explicit OptionBuilder(const Scope& scope) : scope(scope) {}
 
     void add(const CoverageOptionSyntax& syntax) {
-        options.emplace(scope, syntax);
+        options.emplace_back(scope, syntax);
 
         if (auto name = options.back().getName(); !name.empty()) {
             auto names = options.back().isTypeOption() ? &typeNames : &instNames;
@@ -532,7 +532,7 @@ void CoverageBinSymbol::resolve() const {
                     flags = ASTFlags::AllowUnboundedLiteral;
 
                 auto& expr = bindCovergroupExpr(*elem, context, &type, flags);
-                buffer.append(&expr);
+                buffer.push_back(&expr);
             }
             values = buffer.copy(comp);
 
@@ -554,8 +554,8 @@ void CoverageBinSymbol::resolve() const {
             for (auto setElem : init->as<TransListCoverageBinInitializerSyntax>().sets) {
                 SmallVectorSized<TransRangeList, 4> setBuffer;
                 for (auto rangeElem : setElem->ranges)
-                    setBuffer.emplace(*rangeElem, type, context);
-                listBuffer.append(setBuffer.copy(comp));
+                    setBuffer.emplace_back(*rangeElem, type, context);
+                listBuffer.push_back(setBuffer.copy(comp));
             }
             transList = listBuffer.copy(comp);
             break;
@@ -588,7 +588,7 @@ CoverageBinSymbol::TransRangeList::TransRangeList(const TransRangeSyntax& syntax
     SmallVectorSized<const Expression*, 4> buffer;
     for (auto elem : syntax.items) {
         auto& expr = bindCovergroupExpr(*elem, context, &type);
-        buffer.append(&expr);
+        buffer.push_back(&expr);
     }
 
     auto& comp = context.getCompilation();
@@ -821,14 +821,14 @@ void CoverCrossSymbol::fromSyntax(const Scope& scope, const CoverCrossSyntax& sy
     for (auto item : syntax.items) {
         auto symbol = scope.find(item->identifier.valueText());
         if (symbol && symbol->kind == SymbolKind::Coverpoint) {
-            targets.append(&symbol->as<CoverpointSymbol>());
+            targets.push_back(&symbol->as<CoverpointSymbol>());
         }
         else {
             // If we didn't find a coverpoint, create one implicitly
             // that will be initialized with this expression.
             auto& newPoint = CoverpointSymbol::fromImplicit(scope, *item);
-            targets.append(&newPoint);
-            results.append(&newPoint);
+            targets.push_back(&newPoint);
+            results.push_back(&newPoint);
         }
     }
 
@@ -863,7 +863,7 @@ void CoverCrossSymbol::fromSyntax(const Scope& scope, const CoverCrossSyntax& sy
     }
 
     result->options = options.get();
-    results.append(result);
+    results.push_back(result);
 }
 
 const Expression* CoverCrossSymbol::getIffExpr() const {
@@ -983,7 +983,7 @@ BinsSelectExpr& ConditionBinsSelectExpr::fromSyntax(const BinsSelectConditionExp
                 flags = ASTFlags::AllowUnboundedLiteral;
 
             auto& elemExpr = bindCovergroupExpr(*elem, context, type, flags);
-            buffer.append(&elemExpr);
+            buffer.push_back(&elemExpr);
         }
         expr->intersects = buffer.copy(comp);
     }

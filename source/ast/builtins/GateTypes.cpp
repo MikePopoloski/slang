@@ -22,7 +22,7 @@ static void gate(Compilation& c, string_view name,
     for (auto dir : portDirs) {
         auto port = c.emplace<PrimitivePortSymbol>(c, "", NL, dir);
         prim.addMember(*port);
-        ports.append(port);
+        ports.push_back(port);
     }
 
     prim.ports = ports.copy(c);

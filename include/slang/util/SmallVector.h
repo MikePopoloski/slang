@@ -26,28 +26,30 @@ template<typename T>
 class SmallVector {
 public:
     using value_type = T;
-    using index_type = int;
+    using size_type = size_t;
+    using difference_type = ptrdiff_t;
+    using const_iterator = const T*;
+    using iterator = T*;
+
+    using const_reverse_iterator = std::reverse_iterator<const_iterator>;
+    using reverse_iterator = std::reverse_iterator<iterator>;
+
     using pointer = T*;
     using reference = T&;
-    using size_type = size_t;
+    using const_pointer = const T*;
+    using const_reference = const T&;
 
     /// @return a pointer / iterator to the beginning of the array.
-    [[nodiscard]] T* begin() { return data_; }
+    [[nodiscard]] iterator begin() { return data_; }
 
     /// @return a pointer / iterator to the end of the array.
-    [[nodiscard]] T* end() { return data_ + len; }
+    [[nodiscard]] iterator end() { return data_ + len; }
 
     /// @return a pointer / iterator to the beginning of the array.
-    [[nodiscard]] const T* begin() const { return data_; }
+    [[nodiscard]] const_iterator begin() const { return data_; }
 
     /// @return a pointer / iterator to the end of the array.
-    [[nodiscard]] const T* end() const { return data_ + len; }
-
-    /// @return a pointer / iterator to the beginning of the array.
-    [[nodiscard]] const T* cbegin() const { return data_; }
-
-    /// @return a pointer / iterator to the end of the array.
-    [[nodiscard]] const T* cend() const { return data_ + len; }
+    [[nodiscard]] const_iterator end() const { return data_ + len; }
 
     /// @return a reference to the first element in the array. The array must not be empty!
     [[nodiscard]] const T& front() const {
@@ -89,14 +91,14 @@ public:
     }
 
     /// Remove the last element from the array. Asserts if empty.
-    void pop() {
+    void pop_back() {
         ASSERT(len);
         len--;
         data_[len].~T();
     }
 
     /// Add an element to the end of the array.
-    void append(const T& item) {
+    void push_back(const T& item) {
         amortizeCapacity();
         new (&data_[len++]) T(item);
     }
@@ -140,7 +142,7 @@ public:
 
     /// Construct a new element at the end of the array.
     template<typename... Args>
-    void emplace(Args&&... args) {
+    void emplace_back(Args&&... args) {
         amortizeCapacity();
         new (&data_[len++]) T(std::forward<Args>(args)...);
     }
@@ -160,6 +162,26 @@ public:
     void resize(size_t size) {
         if (size > len) {
             ensureCapacity(size);
+            for (size_t i = len; i < size; i++)
+                new (&data_[i]) T();
+        }
+        else {
+            if constexpr (!std::is_trivially_destructible<T>()) {
+                for (size_t i = size; i < len; i++)
+                    data_[i].~T();
+            }
+        }
+        len = size;
+    }
+
+    /// Resize the array. If larger than the current size, add new elements as copies of
+    /// @a value to fill the gap. If smaller than the current size, the length is shrunk
+    /// as if by repeatedly calling pop().
+    void resize(size_t size, const T& value) {
+        if (size > len) {
+            ensureCapacity(size);
+            for (size_t i = len; i < size; i++)
+                new (&data_[i]) T(value);
         }
         else {
             if constexpr (!std::is_trivially_destructible<T>()) {

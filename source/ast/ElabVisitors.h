@@ -92,7 +92,7 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
                         conn = conn->as<InstanceSymbol>().body.find(symbol.modport);
 
                     if (conn && conn->kind == SymbolKind::Modport)
-                        modportsWithExports.append({&symbol, &conn->as<ModportSymbol>()});
+                        modportsWithExports.push_back({&symbol, &conn->as<ModportSymbol>()});
                 }
             }
         }
@@ -132,7 +132,7 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
             handle(*sub);
 
         if (symbol.flags.has(MethodFlags::InterfaceExtern))
-            externIfaceProtos.append(&symbol);
+            externIfaceProtos.push_back(&symbol);
     }
 
     void handle(const GenericClassDefSymbol& symbol) {
@@ -141,7 +141,7 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
 
         // Save this for later; we need to revist all generic classes
         // once we've finished checking everything else.
-        genericClasses.append(&symbol);
+        genericClasses.push_back(&symbol);
     }
 
     void handle(const NetType& symbol) {
@@ -290,7 +290,7 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
             return;
 
         if (symbol.flags.has(MethodFlags::DPIImport))
-            dpiImports.append(&symbol);
+            dpiImports.push_back(&symbol);
     }
 
     void handle(const DefParamSymbol& symbol) {
@@ -342,7 +342,7 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
             for (auto symbol : genericClasses) {
                 for (auto& spec : symbol->specializations()) {
                     if (visitedSpecs.emplace(&spec).second)
-                        toVisit.append(&spec);
+                        toVisit.push_back(&spec);
                 }
 
                 for (auto spec : toVisit) {
@@ -448,7 +448,7 @@ struct DefParamVisitor : public ASTVisitor<DefParamVisitor, false, false> {
 
     void handle(const DefParamSymbol& symbol) {
         if (generateDepth <= generateLevel)
-            found.append(&symbol);
+            found.push_back(&symbol);
     }
 
     void handle(const InstanceSymbol& symbol) {

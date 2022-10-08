@@ -114,7 +114,7 @@ void TypePrinter::visit(const PackedArrayType& type, string_view) {
     SmallVectorSized<ConstantRange, 8> dims;
     const PackedArrayType* curr = &type;
     while (true) {
-        dims.append(curr->range);
+        dims.push_back(curr->range);
         if (!curr->elementType.isPackedArray())
             break;
 

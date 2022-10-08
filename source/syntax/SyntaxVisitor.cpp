@@ -38,13 +38,13 @@ struct CloneVisitor {
                 const SyntaxChange* lastChange = nullptr;
                 for (const auto& change : it->second) {
                     if (!listBuffer.empty() && change.separator)
-                        listBuffer.append(change.separator);
-                    listBuffer.append(change.second);
+                        listBuffer.push_back(change.separator);
+                    listBuffer.push_back(change.second);
                     lastChange = &change;
                 }
 
                 if (lastChange && node.getChildCount() && lastChange->separator)
-                    listBuffer.append(lastChange->separator);
+                    listBuffer.push_back(lastChange->separator);
             }
         }
 
@@ -52,7 +52,7 @@ struct CloneVisitor {
             auto child = node.childNode(i);
             if (!child) {
                 if constexpr (IsList)
-                    listBuffer.append(node.childToken(i));
+                    listBuffer.push_back(node.childToken(i));
                 continue;
             }
 
@@ -63,21 +63,21 @@ struct CloneVisitor {
                 }
 
                 for (const auto& change : it->second)
-                    listBuffer.append(change.second);
+                    listBuffer.push_back(change.second);
             }
 
             if (auto it = commits.removeOrReplace.find(child);
                 it != commits.removeOrReplace.end()) {
                 if (auto replaceChange = std::get_if<ReplaceChange>(&it->second)) {
                     if constexpr (IsList)
-                        listBuffer.append(replaceChange->second);
+                        listBuffer.push_back(replaceChange->second);
                     else
                         cloned->setChild(i, replaceChange->second);
                 }
             }
             else {
                 if constexpr (IsList) {
-                    listBuffer.append(child->visit(*this));
+                    listBuffer.push_back(child->visit(*this));
                 }
                 else {
                     cloned->setChild(i, child->visit(*this));
@@ -91,7 +91,7 @@ struct CloneVisitor {
                 }
 
                 for (const auto& change : it->second)
-                    listBuffer.append(change.second);
+                    listBuffer.push_back(change.second);
             }
         }
 
@@ -101,8 +101,8 @@ struct CloneVisitor {
 
                 for (const auto& change : it->second) {
                     if (!listBuffer.empty() && change.separator)
-                        listBuffer.append(change.separator);
-                    listBuffer.append(change.second);
+                        listBuffer.push_back(change.separator);
+                    listBuffer.push_back(change.second);
                 }
             }
 

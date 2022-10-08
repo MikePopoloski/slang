@@ -98,36 +98,36 @@ void JsonWriter::writeValue(bool value) {
 
 void JsonWriter::writeQuoted(string_view str) {
     SmallVectorSized<char, 32> vec(str.size() + 2);
-    vec.append('"');
+    vec.push_back('"');
     for (char c : str) {
         switch (c) {
             case '"':
-                vec.append('\\');
-                vec.append('"');
+                vec.push_back('\\');
+                vec.push_back('"');
                 break;
             case '\\':
-                vec.append('\\');
-                vec.append('\\');
+                vec.push_back('\\');
+                vec.push_back('\\');
                 break;
             case '\b':
-                vec.append('\\');
-                vec.append('b');
+                vec.push_back('\\');
+                vec.push_back('b');
                 break;
             case '\f':
-                vec.append('\\');
-                vec.append('f');
+                vec.push_back('\\');
+                vec.push_back('f');
                 break;
             case '\n':
-                vec.append('\\');
-                vec.append('n');
+                vec.push_back('\\');
+                vec.push_back('n');
                 break;
             case '\r':
-                vec.append('\\');
-                vec.append('r');
+                vec.push_back('\\');
+                vec.push_back('r');
                 break;
             case '\t':
-                vec.append('\\');
-                vec.append('t');
+                vec.push_back('\\');
+                vec.push_back('t');
                 break;
             default:
 #if CHAR_MIN < 0
@@ -138,19 +138,19 @@ void JsonWriter::writeQuoted(string_view str) {
                     // print character c as \uxxxx
                     char buf[5];
                     snprintf(buf, sizeof(buf), "%04x", int(c));
-                    vec.append('\\');
-                    vec.append('u');
+                    vec.push_back('\\');
+                    vec.push_back('u');
                     vec.appendRange(buf, buf + 4);
                 }
                 else {
                     // all other characters are added as-is
-                    vec.append(c);
+                    vec.push_back(c);
                 }
                 break;
         }
     }
 
-    vec.append('"');
+    vec.push_back('"');
     buffer->append(toStringView(vec));
 }
 

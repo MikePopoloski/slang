@@ -373,7 +373,7 @@ static void createCondGenBlock(Compilation& compilation, const SyntaxNode& synta
                                                           isInstantiated);
     block->setSyntax(syntax);
     block->setAttributes(*context.scope, attributes);
-    results.append(block);
+    results.push_back(block);
 
     if (isInstantiated)
         addBlockMembers(*block, syntax);
@@ -411,7 +411,7 @@ void GenerateBlockSymbol::fromSyntax(Compilation& compilation, const CaseGenerat
             case SyntaxKind::StandardCaseItem: {
                 auto& sci = item->as<StandardCaseItemSyntax>();
                 for (auto es : sci.expressions)
-                    expressions.append(es);
+                    expressions.push_back(es);
                 break;
             }
             case SyntaxKind::DefaultCaseItem:
@@ -630,7 +630,7 @@ GenerateBlockArraySymbol& GenerateBlockArraySymbol::fromSyntax(Compilation& comp
         implicitParam->setValue(compilation, std::move(value), /* needsCoercion */ false);
 
         block->arrayIndex = &implicitParam->getValue().integer();
-        entries.append(block);
+        entries.push_back(block);
     };
 
     // Bind the initialization expression.
@@ -690,7 +690,7 @@ GenerateBlockArraySymbol& GenerateBlockArraySymbol::fromSyntax(Compilation& comp
             break;
         }
 
-        indices.emplace(loopVal->integer());
+        indices.emplace_back(loopVal->integer());
         auto pair = usedValues.emplace(loopVal->integer());
         if (!pair.second) {
             iterContext.addDiag(diag::GenvarDuplicate, genvar.range()) << *loopVal;

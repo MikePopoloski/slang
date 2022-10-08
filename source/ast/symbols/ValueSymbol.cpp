@@ -68,15 +68,15 @@ ValueSymbol::Driver& ValueSymbol::Driver::create(EvalContext& evalContext, Drive
                 expr = &expr->as<ConversionExpression>().operand();
                 break;
             case ExpressionKind::ElementSelect:
-                path.append({expr});
+                path.push_back({expr});
                 expr = &expr->as<ElementSelectExpression>().value();
                 break;
             case ExpressionKind::RangeSelect:
-                path.append({expr});
+                path.push_back({expr});
                 expr = &expr->as<RangeSelectExpression>().value();
                 break;
             case ExpressionKind::MemberAccess:
-                path.append({expr});
+                path.push_back({expr});
                 expr = &expr->as<MemberAccessExpression>().value();
                 break;
             default:

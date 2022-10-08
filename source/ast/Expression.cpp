@@ -1110,7 +1110,7 @@ Expression* Expression::tryBindInterfaceRef(const ASTContext& context,
         if (symbol && !result.selectors.empty()) {
             SmallVectorSized<const ElementSelectSyntax*, 4> selectors;
             for (auto& sel : result.selectors)
-                selectors.append(std::get<0>(sel));
+                selectors.push_back(std::get<0>(sel));
 
             symbol = Lookup::selectChild(*symbol, selectors, context, result);
             if (symbol && !modportName.empty()) {
@@ -1174,7 +1174,7 @@ void Expression::findPotentiallyImplicitNets(const SyntaxNode& expr, const ASTCo
             Lookup::name(nameSyntax, ctx, LookupFlags::NoUndeclaredError, result);
 
             if (!result.found && !result.hasError())
-                results.append(nameSyntax.as<IdentifierNameSyntax>().identifier);
+                results.push_back(nameSyntax.as<IdentifierNameSyntax>().identifier);
         }
 
         const ASTContext& context;

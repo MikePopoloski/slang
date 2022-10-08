@@ -117,7 +117,7 @@ public:
             if (cv.integer() == targetInt)
                 foundIndex = current;
 
-            values.append(&enumerand);
+            values.push_back(&enumerand);
             current++;
         }
 

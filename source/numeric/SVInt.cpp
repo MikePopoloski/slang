@@ -172,7 +172,7 @@ SVInt SVInt::fromString(string_view str) {
                 value = logic_t(getHexDigitValue(d));
                 break;
         }
-        digits.append(value);
+        digits.push_back(value);
     }
 
     SVInt result = fromDigits(bits, base, isSigned, isUnknown, digits);
@@ -624,7 +624,7 @@ SVInt SVInt::replicate(const SVInt& times) const {
     uint32_t n = times.as<uint32_t>().value();
     SmallVectorSized<SVInt, 8> buffer;
     for (size_t i = 0; i < n; ++i)
-        buffer.append(*this);
+        buffer.push_back(*this);
     return concat(span<SVInt const>(buffer.begin(), buffer.end()));
 }
 
@@ -678,7 +678,7 @@ void SVInt::writeTo(SmallVector<char>& buffer, LiteralBase base, bool includeBas
     SVInt tmp(*this);
     if (signFlag && !unknownFlag && isNegative()) {
         tmp = -tmp;
-        buffer.append('-');
+        buffer.push_back('-');
     }
 
     // If the number is larger than the threshold to abbreviate,
@@ -691,21 +691,21 @@ void SVInt::writeTo(SmallVector<char>& buffer, LiteralBase base, bool includeBas
 
     if (includeBase) {
         uintToStr(buffer, bitWidth);
-        buffer.append('\'');
+        buffer.push_back('\'');
         if (signFlag)
-            buffer.append('s');
+            buffer.push_back('s');
         switch (base) {
             case LiteralBase::Binary:
-                buffer.append('b');
+                buffer.push_back('b');
                 break;
             case LiteralBase::Octal:
-                buffer.append('o');
+                buffer.push_back('o');
                 break;
             case LiteralBase::Decimal:
-                buffer.append('d');
+                buffer.push_back('d');
                 break;
             case LiteralBase::Hex:
-                buffer.append('h');
+                buffer.push_back('h');
                 break;
         }
     }
@@ -746,13 +746,13 @@ void SVInt::writeTo(SmallVector<char>& buffer, LiteralBase base, bool includeBas
 
             bool upperOnes = all(words, UINT64_MAX);
             if (upperOnes && all(0, UINT64_MAX))
-                buffer.append('z');
+                buffer.push_back('z');
             else if (upperOnes && all(0, 0))
-                buffer.append('x');
+                buffer.push_back('x');
             else if (anyXs())
-                buffer.append('X');
+                buffer.push_back('X');
             else
-                buffer.append('Z');
+                buffer.push_back('Z');
         }
         else {
             // Limit the size of the output string based on the given threshold.
@@ -778,7 +778,7 @@ void SVInt::writeTo(SmallVector<char>& buffer, LiteralBase base, bool includeBas
                        &remainder);
                 uint64_t digit = remainder.as<uint64_t>().value();
                 ASSERT(digit < 10);
-                buffer.append(Digits[digit]);
+                buffer.push_back(Digits[digit]);
                 tmp = quotient;
             }
         }
@@ -814,19 +814,19 @@ void SVInt::writeTo(SmallVector<char>& buffer, LiteralBase base, bool includeBas
 
             uint32_t digit = uint32_t(tmp.getRawData()[0]) & maskAmount;
             if (!tmp.unknownFlag)
-                buffer.append(Digits[digit]);
+                buffer.push_back(Digits[digit]);
             else {
                 uint32_t u = uint32_t(tmp.pVal[getNumWords(bitWidth, false)]) & maskAmount;
                 if (!u)
-                    buffer.append(Digits[digit]);
+                    buffer.push_back(Digits[digit]);
                 else if (u == maskAmount && (digit & maskAmount) == 0)
-                    buffer.append('x');
+                    buffer.push_back('x');
                 else if (u == maskAmount && digit == maskAmount)
-                    buffer.append('z');
+                    buffer.push_back('z');
                 else if (~digit & u)
-                    buffer.append('X');
+                    buffer.push_back('X');
                 else
-                    buffer.append('Z');
+                    buffer.push_back('Z');
             }
             // this shift might shift away the unknown digits, at which point
             // it converts back to being a normal 2-state value
@@ -838,7 +838,7 @@ void SVInt::writeTo(SmallVector<char>& buffer, LiteralBase base, bool includeBas
 
     // no digits means this is zero
     if (startOffset == buffer.size())
-        buffer.append('0');
+        buffer.push_back('0');
     else {
         // reverse the digits
         std::reverse(buffer.begin() + startOffset, buffer.end());

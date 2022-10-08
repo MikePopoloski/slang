@@ -87,7 +87,7 @@ PackageSymbol& PackageSymbol::fromSyntax(const Scope& scope, const ModuleDeclara
         }
         else if (member->kind == SyntaxKind::PackageExportDeclaration) {
             for (auto item : member->as<PackageExportDeclarationSyntax>().items)
-                exportDecls.append(item);
+                exportDecls.push_back(item);
         }
 
         result->addMembers(*member);

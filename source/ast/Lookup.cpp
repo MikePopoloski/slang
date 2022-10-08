@@ -207,7 +207,7 @@ const NameSyntax* splitScopedName(const ScopedNameSyntax& syntax,
     // left-recursive name tree, so that's all we'll bother to handle.
     const ScopedNameSyntax* scoped = &syntax;
     while (true) {
-        nameParts.append({*scoped->right, scoped->separator.location(), scoped->right->kind});
+        nameParts.push_back({*scoped->right, scoped->separator.location(), scoped->right->kind});
         if (scoped->separator.kind == TokenKind::Dot)
             colonParts = 0;
         else
@@ -293,7 +293,7 @@ bool lookupDownward(span<const NamePlusLoc> nameParts, NameComponents name,
 
             for (; it != nameParts.rend(); it++) {
                 auto& memberName = it->name;
-                result.selectors.append(LookupResult::MemberSelector{
+                result.selectors.push_back(LookupResult::MemberSelector{
                     memberName.text, it->dotLocation, memberName.range});
 
                 result.selectors.appendRange(memberName.selectors);
@@ -724,7 +724,7 @@ bool resolveColonNames(SmallVectorSized<NamePlusLoc, 8>& nameParts, int colonPar
             return false;
         }
 
-        nameParts.pop();
+        nameParts.pop_back();
 
         // The initial symbol found cannot be resolved via a forward typedef (i.e. "incomplete")
         // unless this is within a typedef declaration.
@@ -1139,18 +1139,18 @@ void Lookup::selectChild(const Type& virtualInterface, SourceRange range,
             npl.name.range = memberSel->nameRange;
             npl.name.selectors = elementSelects.copy(comp);
 
-            nameParts.append(npl);
+            nameParts.push_back(npl);
             elementSelects.clear();
         }
         else {
-            elementSelects.append(std::get<const ElementSelectSyntax*>(selector));
+            elementSelects.push_back(std::get<const ElementSelectSyntax*>(selector));
         }
     }
 
     // lookupDownward expects names in reverse order...
     SmallVectorSized<NamePlusLoc, 4> namePartsReversed(nameParts.size());
     for (auto& npl : make_reverse_range(nameParts))
-        namePartsReversed.append(npl);
+        namePartsReversed.push_back(npl);
 
     result.found = getVirtualInterfaceTarget(virtualInterface, context, range);
     lookupDownward(namePartsReversed, unused, context, result);
@@ -1390,7 +1390,7 @@ bool Lookup::withinClassRandomize(const ASTContext& context, const NameSyntax& s
                 // Handle "this.super.whatever" the same as if the user had just
                 // written "super.whatever".
                 name = nameParts.back().name;
-                nameParts.pop();
+                nameParts.pop_back();
                 result.found = findSuperHandle(findSuperScope(), name.range, result);
                 colonParts = 1;
             }
@@ -1604,7 +1604,7 @@ void Lookup::unqualifiedImpl(const Scope& scope, string_view name, LookupLocatio
 
             const Symbol* imported = package->findForImport(name);
             if (imported && importDedup.emplace(imported).second)
-                imports.emplace(Import{imported, import});
+                imports.emplace_back(Import{imported, import});
         }
 
         if (!imports.empty()) {
@@ -1708,7 +1708,7 @@ void Lookup::qualified(const ScopedNameSyntax& syntax, const ASTContext& context
     auto popFront = [&] {
         first = nameParts.back().name;
         firstKind = nameParts.back().kind;
-        nameParts.pop();
+        nameParts.pop_back();
         name = first.text;
         if (colonParts)
             colonParts--;
@@ -1775,7 +1775,7 @@ void Lookup::qualified(const ScopedNameSyntax& syntax, const ASTContext& context
                 // Handle "this.super.whatever" the same as if the user had just
                 // written "super.whatever".
                 first = nameParts.back().name;
-                nameParts.pop();
+                nameParts.pop_back();
                 result.found = findSuperHandle(scope, first.range, result);
                 colonParts = 1;
             }

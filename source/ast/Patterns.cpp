@@ -310,7 +310,7 @@ Pattern& StructurePattern::fromSyntax(const StructurePatternSyntax& syntax, cons
             auto& pattern = bind(patternSyntax, it->getType(), varMap, context);
             bad |= pattern.bad();
 
-            patterns.append({&(*it), &pattern});
+            patterns.push_back({&(*it), &pattern});
             it++;
         }
 
@@ -339,7 +339,7 @@ Pattern& StructurePattern::fromSyntax(const StructurePatternSyntax& syntax, cons
             auto& pattern = bind(*nspms.pattern, field.getType(), varMap, context);
             bad |= pattern.bad();
 
-            patterns.append({&field, &pattern});
+            patterns.push_back({&field, &pattern});
         }
     }
 

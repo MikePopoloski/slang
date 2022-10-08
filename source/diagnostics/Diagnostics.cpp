@@ -121,7 +121,7 @@ bool Diagnostic::operator==(const Diagnostic& rhs) const {
 
 Diagnostic& Diagnostics::add(DiagCode code, SourceLocation location) {
     ASSERT(location);
-    emplace(code, location);
+    emplace_back(code, location);
     return back();
 }
 
@@ -131,7 +131,7 @@ Diagnostic& Diagnostics::add(DiagCode code, SourceRange range) {
 
 Diagnostic& Diagnostics::add(const ast::Symbol& source, DiagCode code, SourceLocation location) {
     ASSERT(location);
-    emplace(source, code, location);
+    emplace_back(source, code, location);
     return back();
 }
 

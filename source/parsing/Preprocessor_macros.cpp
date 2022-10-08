@@ -44,8 +44,8 @@ void Preprocessor::createBuiltInMacro(string_view name, int value, string_view v
     Token nameTok(alloc, TokenKind::Identifier, {}, name, NL);
 
     SmallVectorSized<Token, 2> body;
-    body.append(Token(alloc, TokenKind::IntegerLiteral, {}, valueStr, NL,
-                      SVInt(32, uint64_t(value), true)));
+    body.push_back(Token(alloc, TokenKind::IntegerLiteral, {}, valueStr, NL,
+                         SVInt(32, uint64_t(value), true)));
 
     MacroDef def;
     def.syntax = alloc.emplace<DefineDirectiveSyntax>(directive, nameTok, nullptr,
@@ -64,7 +64,7 @@ std::pair<MacroActualArgumentListSyntax*, Trivia> Preprocessor::handleTopLevelMa
             options.ignoreDirectives.end()) {
             SmallVectorSized<Token, 4> ignoreTokens;
             while (peekSameLine() && peek().kind != TokenKind::EndOfFile)
-                ignoreTokens.append(consume());
+                ignoreTokens.push_back(consume());
 
             if (ignoreTokens.empty())
                 return {nullptr, Trivia()};
@@ -184,7 +184,7 @@ bool Preprocessor::applyMacroOps(span<Token const> tokens, SmallVector<Token>& d
                         newToken = Lexer::concatenateTokens(alloc, stringifyBuffer.back(),
                                                             tokens[i + 1]);
                         if (newToken) {
-                            stringifyBuffer.pop();
+                            stringifyBuffer.pop_back();
                             ++i;
                         }
                     }
@@ -194,11 +194,11 @@ bool Preprocessor::applyMacroOps(span<Token const> tokens, SmallVector<Token>& d
                     // since this is just going to become a comment anyway.
                     if (commentBuffer.back().kind == TokenKind::Star &&
                         tokens[i + 1].kind == TokenKind::Slash) {
-                        commentBuffer.append(tokens[i + 1]);
+                        commentBuffer.push_back(tokens[i + 1]);
                         i++;
 
                         emptyArgTrivia.appendRange(syntheticComment.trivia());
-                        emptyArgTrivia.append(
+                        emptyArgTrivia.push_back(
                             Lexer::commentify(alloc, commentBuffer.begin(), commentBuffer.end()));
                         syntheticComment = Token();
                     }
@@ -214,16 +214,16 @@ bool Preprocessor::applyMacroOps(span<Token const> tokens, SmallVector<Token>& d
                     if (left.kind == TokenKind::Slash && right.kind == TokenKind::Star) {
                         commentBuffer.clear();
                         syntheticComment = left;
-                        dest.pop();
+                        dest.pop_back();
                         ++i;
 
-                        commentBuffer.append(left.withTrivia(alloc, {}));
+                        commentBuffer.push_back(left.withTrivia(alloc, {}));
                         newToken = right;
                     }
                     else {
                         newToken = Lexer::concatenateTokens(alloc, dest.back(), tokens[i + 1]);
                         if (newToken) {
-                            dest.pop();
+                            dest.pop_back();
                             ++i;
 
                             nextDidConcat = true;
@@ -240,7 +240,7 @@ bool Preprocessor::applyMacroOps(span<Token const> tokens, SmallVector<Token>& d
                 if (didConcat && token.trivia().empty() && emptyArgTrivia.empty()) {
                     newToken = Lexer::concatenateTokens(alloc, dest.back(), token);
                     if (newToken) {
-                        dest.pop();
+                        dest.pop_back();
                         nextDidConcat = true;
                         break;
                     }
@@ -272,9 +272,9 @@ bool Preprocessor::applyMacroOps(span<Token const> tokens, SmallVector<Token>& d
 
         if (!stringify) {
             if (syntheticComment)
-                commentBuffer.append(newToken);
+                commentBuffer.push_back(newToken);
             else
-                dest.append(newToken);
+                dest.push_back(newToken);
             continue;
         }
 
@@ -288,10 +288,10 @@ bool Preprocessor::applyMacroOps(span<Token const> tokens, SmallVector<Token>& d
                 // Split the token, finish the stringification.
                 Token split(alloc, TokenKind::Identifier, newToken.trivia(),
                             newToken.rawText().substr(0, offset), newToken.location());
-                stringifyBuffer.append(split);
+                stringifyBuffer.push_back(split);
 
-                dest.append(Lexer::stringify(alloc, stringify.location(), stringify.trivia(),
-                                             stringifyBuffer.begin(), stringifyBuffer.end()));
+                dest.push_back(Lexer::stringify(alloc, stringify.location(), stringify.trivia(),
+                                                stringifyBuffer.begin(), stringifyBuffer.end()));
                 stringify = Token();
 
                 // Now we have the unfortunate task of re-lexing the remaining stuff after the split
@@ -304,7 +304,7 @@ bool Preprocessor::applyMacroOps(span<Token const> tokens, SmallVector<Token>& d
             }
         }
 
-        stringifyBuffer.append(newToken);
+        stringifyBuffer.push_back(newToken);
     }
 
     if (stringify)
@@ -533,7 +533,7 @@ bool Preprocessor::expandMacro(MacroDef macro, MacroExpansion& expansion,
                 // the escaped identifier once it gets concatenated again.
                 if (!splits.empty()) {
                     SmallVectorSized<Trivia, 2> triviaBuf;
-                    triviaBuf.emplace(TriviaKind::Whitespace, " "sv);
+                    triviaBuf.emplace_back(TriviaKind::Whitespace, " "sv);
 
                     auto loc = splits.back().location() + splits.back().rawText().length();
                     Token empty(alloc, TokenKind::EmptyMacroArgument, triviaBuf.copy(alloc), ""sv,
@@ -593,13 +593,13 @@ void Preprocessor::MacroExpansion::append(Token token, SourceLocation location,
     if (token.kind == TokenKind::LineContinuation && !allowLineContinuation) {
         SmallVectorSized<Trivia, 8> newTrivia;
         newTrivia.appendRange(token.trivia());
-        newTrivia.append(Trivia(TriviaKind::EndOfLine, token.rawText().substr(1)));
+        newTrivia.push_back(Trivia(TriviaKind::EndOfLine, token.rawText().substr(1)));
 
-        dest.append(
+        dest.push_back(
             Token(alloc, TokenKind::EmptyMacroArgument, newTrivia.copy(alloc), "", location));
     }
     else {
-        dest.append(token.withLocation(alloc, location));
+        dest.push_back(token.withLocation(alloc, location));
     }
 }
 
@@ -617,7 +617,7 @@ bool Preprocessor::expandReplacementList(
     Token token;
     while ((token = parser.next())) {
         if (token.kind != TokenKind::Directive || token.directiveKind() != SyntaxKind::MacroUsage) {
-            outBuffer.append(token);
+            outBuffer.push_back(token);
             continue;
         }
 
@@ -626,7 +626,7 @@ bool Preprocessor::expandReplacementList(
         if (!macro.valid()) {
             // If we couldn't find the macro, just keep trucking.
             // It's possible that a future expansion will make this valid.
-            outBuffer.append(token);
+            outBuffer.push_back(token);
             continue;
         }
 
@@ -672,9 +672,9 @@ bool Preprocessor::expandIntrinsic(MacroIntrinsic intrinsic, MacroExpansion& exp
     switch (intrinsic) {
         case MacroIntrinsic::File: {
             string_view fileName = sourceManager.getFileName(loc);
-            text.append('"');
+            text.push_back('"');
             text.appendRange(fileName);
-            text.append('"');
+            text.push_back('"');
 
             string_view rawText = toStringView(text.copy(alloc));
             Token token(alloc, TokenKind::StringLiteral, {}, rawText, loc, fileName);
@@ -731,10 +731,10 @@ template<typename TFunc>
 void Preprocessor::MacroParser::parseArgumentList(SmallVector<TokenOrSyntax>& results,
                                                   TFunc&& parseItem) {
     while (true) {
-        results.append(parseItem());
+        results.push_back(parseItem());
 
         if (peek().kind == TokenKind::Comma)
-            results.append(consume());
+            results.push_back(consume());
         else {
             // Just break out of the loop. Our caller will expect
             // that there is a closing parenthesis here.
@@ -784,14 +784,15 @@ span<Token> Preprocessor::MacroParser::parseTokenList(bool allowNewlines) {
             if ((kind == TokenKind::Comma || kind == TokenKind::CloseParenthesis))
                 break;
         }
-        else if (delimPairStack.back() == kind)
-            delimPairStack.pop();
+        else if (delimPairStack.back() == kind) {
+            delimPairStack.pop_back();
+        }
 
-        tokens.append(consume());
+        tokens.push_back(consume());
 
         TokenKind closeKind = SyntaxFacts::getDelimCloseKind(kind);
         if (closeKind != TokenKind::Unknown)
-            delimPairStack.append(closeKind);
+            delimPairStack.push_back(closeKind);
     }
     return tokens.copy(pp.alloc);
 }

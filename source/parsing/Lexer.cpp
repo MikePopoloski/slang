@@ -98,7 +98,7 @@ Token Lexer::concatenateTokens(BumpAllocator& alloc, Token left, Token right) {
 Token Lexer::stringify(BumpAllocator& alloc, SourceLocation location, span<Trivia const> trivia,
                        Token* begin, Token* end) {
     SmallVectorSized<char, 64> text;
-    text.append('"');
+    text.push_back('"');
 
     while (begin != end) {
         Token cur = *begin;
@@ -109,27 +109,27 @@ Token Lexer::stringify(BumpAllocator& alloc, SourceLocation location, span<Trivi
         }
 
         if (cur.kind == TokenKind::MacroEscapedQuote) {
-            text.append('\\');
-            text.append('"');
+            text.push_back('\\');
+            text.push_back('"');
         }
         else if (cur.kind == TokenKind::StringLiteral) {
-            text.append('\\');
-            text.append('"');
+            text.push_back('\\');
+            text.push_back('"');
 
             auto raw = cur.rawText();
             if (raw.size() > 2)
                 text.appendRange(raw.substr(1, raw.size() - 2));
 
-            text.append('\\');
-            text.append('"');
+            text.push_back('\\');
+            text.push_back('"');
         }
         else if (cur.kind != TokenKind::EmptyMacroArgument) {
             text.appendRange(cur.rawText());
         }
         begin++;
     }
-    text.append('"');
-    text.append('\0');
+    text.push_back('"');
+    text.push_back('\0');
 
     string_view raw = toStringView(text.copy(alloc));
 
@@ -155,7 +155,7 @@ Trivia Lexer::commentify(BumpAllocator& alloc, Token* begin, Token* end) {
 
         begin++;
     }
-    text.append('\0');
+    text.push_back('\0');
 
     string_view raw = toStringView(text.copy(alloc));
 
@@ -189,7 +189,7 @@ void Lexer::splitTokens(BumpAllocator& alloc, Diagnostics& diagnostics,
             token.location().offset() >= endOffset)
             break;
 
-        results.append(token);
+        results.push_back(token);
     }
 }
 
@@ -206,7 +206,7 @@ Token Lexer::lex(KeywordVersion keywordVersion) {
         addDiag(diag::TooManyLexerErrors, currentOffset());
         sourceBuffer = sourceEnd - 1;
 
-        triviaBuffer.append(Trivia(TriviaKind::DisabledText, lexeme()));
+        triviaBuffer.push_back(Trivia(TriviaKind::DisabledText, lexeme()));
         return Token(alloc, TokenKind::EndOfFile, triviaBuffer.copy(alloc), token.rawText(),
                      token.location());
     }
@@ -647,13 +647,13 @@ Token Lexer::lexStringLiteral() {
             uint32_t charCode;
             switch (c) {
                     // clang-format off
-                case 'n': stringBuffer.append('\n'); break;
-                case 't': stringBuffer.append('\t'); break;
-                case '\\': stringBuffer.append('\\'); break;
-                case '"': stringBuffer.append('"'); break;
-                case 'v': stringBuffer.append('\v'); break;
-                case 'f': stringBuffer.append('\f'); break;
-                case 'a': stringBuffer.append('\a'); break;
+                case 'n': stringBuffer.push_back('\n'); break;
+                case 't': stringBuffer.push_back('\t'); break;
+                case '\\': stringBuffer.push_back('\\'); break;
+                case '"': stringBuffer.push_back('"'); break;
+                case 'v': stringBuffer.push_back('\v'); break;
+                case 'f': stringBuffer.push_back('\f'); break;
+                case 'a': stringBuffer.push_back('\a'); break;
                 case '\n': break;
                 case '\r': consume('\n'); break;
                 case '0': case '1': case '2': case '3':
@@ -673,14 +673,14 @@ Token Lexer::lexStringLiteral() {
                             }
                         }
                     }
-                    stringBuffer.append((char)charCode);
+                    stringBuffer.push_back((char)charCode);
                     break;
                 case 'x':
                     c = peek();
                     advance();
                     if (!isHexDigit(c)) {
                         addDiag(diag::InvalidHexEscapeCode, offset);
-                        stringBuffer.append(c);
+                        stringBuffer.push_back(c);
                     }
                     else {
                         charCode = getHexDigitValue(c);
@@ -688,7 +688,7 @@ Token Lexer::lexStringLiteral() {
                             advance();
                             charCode = (charCode * 16) + getHexDigitValue(c);
                         }
-                        stringBuffer.append((char)charCode);
+                        stringBuffer.push_back((char)charCode);
                     }
                     break;
                 default: {
@@ -738,7 +738,7 @@ Token Lexer::lexStringLiteral() {
         }
         else if (isASCII(c)) {
             advance();
-            stringBuffer.append(c);
+            stringBuffer.push_back(c);
             sawUTF8Error = false;
         }
         else {
@@ -756,7 +756,7 @@ Token Lexer::lexStringLiteral() {
                 len = 1;
 
             for (int i = 0; i < len; i++)
-                stringBuffer.append(curr[i]);
+                stringBuffer.push_back(curr[i]);
         }
     }
 
@@ -860,17 +860,17 @@ Token Lexer::lexNumericLiteral() {
         else if (!isDecimalDigit(c))
             break;
         else {
-            digits.append(logic_t(getDigitValue(c)));
+            digits.push_back(logic_t(getDigitValue(c)));
             advance();
         }
     }
 
     auto populateChars = [&]() {
         if (digits.empty())
-            floatChars.append('0');
+            floatChars.push_back('0');
         else {
             for (auto d : digits)
-                floatChars.append(char((char)d.value + '0'));
+                floatChars.push_back(char((char)d.value + '0'));
         }
     };
 
@@ -878,7 +878,7 @@ Token Lexer::lexNumericLiteral() {
     if (peek() == '.') {
         advance();
         populateChars();
-        floatChars.append('.');
+        floatChars.push_back('.');
 
         if (peek() == '_')
             addDiag(diag::DigitsLeadingUnderscore, currentOffset());
@@ -892,14 +892,14 @@ Token Lexer::lexNumericLiteral() {
                 break;
             else {
                 any = true;
-                floatChars.append(c);
+                floatChars.push_back(c);
                 advance();
             }
         }
 
         if (!any) {
             addDiag(diag::MissingFractionalDigits, currentOffset());
-            floatChars.append('0');
+            floatChars.push_back('0');
         }
     }
 
@@ -919,13 +919,13 @@ Token Lexer::lexNumericLiteral() {
         if (!hasDecimal)
             populateChars();
 
-        floatChars.append('e');
+        floatChars.push_back('e');
 
         // skip over leading sign
         int index = 1;
         c = peek(index);
         if (c == '+' || c == '-') {
-            floatChars.append(c);
+            floatChars.push_back(c);
             c = peek(++index);
         }
 
@@ -940,7 +940,7 @@ Token Lexer::lexNumericLiteral() {
                 break;
             else {
                 any = true;
-                floatChars.append(c);
+                floatChars.push_back(c);
                 c = peek(++index);
             }
         }
@@ -949,7 +949,7 @@ Token Lexer::lexNumericLiteral() {
             advance(index);
             if (!any) {
                 addDiag(diag::MissingExponentDigits, currentOffset());
-                floatChars.append('1');
+                floatChars.push_back('1');
             }
         }
         else {
@@ -970,7 +970,7 @@ Token Lexer::lexNumericLiteral() {
         // We have a floating point result. Let the standard library do the heavy lifting of
         // converting and rounding correctly. Note that we depend on this code returning
         // 0 for underflow and +inf for overflow.
-        floatChars.append('\0');
+        floatChars.push_back('\0');
 
         char* end;
         errno = 0;
@@ -1413,7 +1413,7 @@ Token Lexer::create(TokenKind kind, Args&&... args) {
 }
 
 void Lexer::addTrivia(TriviaKind kind) {
-    triviaBuffer.emplace(kind, lexeme());
+    triviaBuffer.emplace_back(kind, lexeme());
 }
 
 Diagnostic& Lexer::addDiag(DiagCode code, size_t offset) {

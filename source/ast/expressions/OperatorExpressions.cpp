@@ -172,7 +172,7 @@ bool Expression::bindMembershipExpressions(const ASTContext& context, TokenKind 
     auto extraFlags = allowTypeReferences ? ASTFlags::AllowTypeReferences : ASTFlags::None;
     Compilation& comp = context.getCompilation();
     Expression& valueRes = create(comp, valueExpr, context, extraFlags);
-    results.append(&valueRes);
+    results.push_back(&valueRes);
 
     const Type* type = valueRes.type;
     bool bad = valueRes.bad();
@@ -231,7 +231,7 @@ bool Expression::bindMembershipExpressions(const ASTContext& context, TokenKind 
     // case statement, the types can only be integral. Otherwise all singular types are allowed.
     for (auto expr : expressions) {
         Expression* bound = &create(comp, *expr, context, extraFlags);
-        results.append(bound);
+        results.push_back(bound);
         bad |= bound->bad();
         if (bad)
             continue;
@@ -969,7 +969,7 @@ Expression& ConditionalExpression::fromSyntax(Compilation& comp,
                 isTrue = false;
         }
 
-        conditions.append({&cond, pattern});
+        conditions.push_back({&cond, pattern});
     }
 
     // If the predicate is known at compile time, we can tell which branch will be unevaluated.
@@ -1160,7 +1160,7 @@ Expression& InsideExpression::fromSyntax(Compilation& compilation,
                                          const ASTContext& context) {
     SmallVectorSized<const ExpressionSyntax*, 8> expressions;
     for (auto elemSyntax : syntax.ranges->valueRanges)
-        expressions.append(elemSyntax);
+        expressions.push_back(elemSyntax);
 
     SmallVectorSized<const Expression*, 8> bound;
     bool bad =
@@ -1272,8 +1272,8 @@ Expression& ConcatenationExpression::fromSyntax(Compilation& compilation,
             }
 
             if (arg->isImplicitlyAssignableTo(compilation, elemType)) {
-                buffer.append(&convertAssignment(context, elemType, *arg,
-                                                 argSyntax->getFirstToken().location()));
+                buffer.push_back(&convertAssignment(context, elemType, *arg,
+                                                    argSyntax->getFirstToken().location()));
                 totalElems++;
                 continue;
             }
@@ -1291,7 +1291,7 @@ Expression& ConcatenationExpression::fromSyntax(Compilation& compilation,
                     anyDynamic = true;
 
                 selfDetermined(context, arg);
-                buffer.append(arg);
+                buffer.push_back(arg);
                 continue;
             }
 
@@ -1299,7 +1299,7 @@ Expression& ConcatenationExpression::fromSyntax(Compilation& compilation,
             bad = true;
             context.addDiag(diag::BadConcatExpression, arg->sourceRange) << argType;
             selfDetermined(context, arg);
-            buffer.append(arg);
+            buffer.push_back(arg);
         }
 
         // If we have a fixed size source and target, check that they match in size.
@@ -1334,7 +1334,7 @@ Expression& ConcatenationExpression::fromSyntax(Compilation& compilation,
             arg = &create(compilation, *argSyntax, context, ASTFlags::InsideConcatenation);
         else
             arg = &create(compilation, *argSyntax, context);
-        buffer.append(arg);
+        buffer.push_back(arg);
 
         if (arg->bad()) {
             errored = true;
@@ -1524,7 +1524,7 @@ ConstantValue ConcatenationExpression::evalImpl(EvalContext& context) const {
         if (operand->type->isVoid())
             continue;
 
-        values.append(v.integer());
+        values.push_back(v.integer());
     }
 
     return SVInt::concat(values);
@@ -1779,7 +1779,7 @@ Expression& StreamingConcatenationExpression::fromSyntax(
             }
         }
 
-        buffer.append({arg, withExpr, constantWithWidth});
+        buffer.push_back({arg, withExpr, constantWithWidth});
     }
 
     // Streaming concatenation has no explicit type. Use void to prevent problems when

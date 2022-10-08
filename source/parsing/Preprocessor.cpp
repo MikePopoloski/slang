@@ -245,82 +245,82 @@ Token Preprocessor::handleDirectives(Token token) {
             case TokenKind::MacroPaste:
             case TokenKind::LineContinuation: {
                 SmallVectorSized<Token, 2> tokens;
-                tokens.append(token);
-                trivia.append(Trivia(TriviaKind::SkippedTokens, tokens.copy(alloc)));
+                tokens.push_back(token);
+                trivia.push_back(Trivia(TriviaKind::SkippedTokens, tokens.copy(alloc)));
                 addDiag(diag::MacroOpsOutsideDefinition, token.range());
                 break;
             }
             case TokenKind::Directive:
                 switch (token.directiveKind()) {
                     case SyntaxKind::IncludeDirective:
-                        trivia.append(handleIncludeDirective(token));
+                        trivia.push_back(handleIncludeDirective(token));
                         break;
                     case SyntaxKind::ResetAllDirective:
-                        trivia.append(handleResetAllDirective(token));
+                        trivia.push_back(handleResetAllDirective(token));
                         break;
                     case SyntaxKind::DefineDirective:
-                        trivia.append(handleDefineDirective(token));
+                        trivia.push_back(handleDefineDirective(token));
                         break;
                     case SyntaxKind::MacroUsage: {
                         auto [directive, extra] = handleMacroUsage(token);
-                        trivia.append(directive);
+                        trivia.push_back(directive);
                         if (extra)
-                            trivia.append(extra);
+                            trivia.push_back(extra);
                         break;
                     }
                     case SyntaxKind::IfDefDirective:
-                        trivia.append(handleIfDefDirective(token, false));
+                        trivia.push_back(handleIfDefDirective(token, false));
                         break;
                     case SyntaxKind::IfNDefDirective:
-                        trivia.append(handleIfDefDirective(token, true));
+                        trivia.push_back(handleIfDefDirective(token, true));
                         break;
                     case SyntaxKind::ElsIfDirective:
-                        trivia.append(handleElsIfDirective(token));
+                        trivia.push_back(handleElsIfDirective(token));
                         break;
                     case SyntaxKind::ElseDirective:
-                        trivia.append(handleElseDirective(token));
+                        trivia.push_back(handleElseDirective(token));
                         break;
                     case SyntaxKind::EndIfDirective:
-                        trivia.append(handleEndIfDirective(token));
+                        trivia.push_back(handleEndIfDirective(token));
                         break;
                     case SyntaxKind::TimeScaleDirective:
-                        trivia.append(handleTimeScaleDirective(token));
+                        trivia.push_back(handleTimeScaleDirective(token));
                         break;
                     case SyntaxKind::DefaultNetTypeDirective:
-                        trivia.append(handleDefaultNetTypeDirective(token));
+                        trivia.push_back(handleDefaultNetTypeDirective(token));
                         break;
                     case SyntaxKind::LineDirective:
-                        trivia.append(handleLineDirective(token));
+                        trivia.push_back(handleLineDirective(token));
                         break;
                     case SyntaxKind::UndefDirective:
-                        trivia.append(handleUndefDirective(token));
+                        trivia.push_back(handleUndefDirective(token));
                         break;
                     case SyntaxKind::UndefineAllDirective:
-                        trivia.append(handleUndefineAllDirective(token));
+                        trivia.push_back(handleUndefineAllDirective(token));
                         break;
                     case SyntaxKind::BeginKeywordsDirective:
-                        trivia.append(handleBeginKeywordsDirective(token));
+                        trivia.push_back(handleBeginKeywordsDirective(token));
                         break;
                     case SyntaxKind::EndKeywordsDirective:
-                        trivia.append(handleEndKeywordsDirective(token));
+                        trivia.push_back(handleEndKeywordsDirective(token));
                         break;
                     case SyntaxKind::PragmaDirective: {
                         auto [directive, skipped] = handlePragmaDirective(token);
-                        trivia.append(directive);
+                        trivia.push_back(directive);
                         if (skipped)
-                            trivia.append(skipped);
+                            trivia.push_back(skipped);
                         break;
                     }
                     case SyntaxKind::UnconnectedDriveDirective:
-                        trivia.append(handleUnconnectedDriveDirective(token));
+                        trivia.push_back(handleUnconnectedDriveDirective(token));
                         break;
                     case SyntaxKind::NoUnconnectedDriveDirective:
-                        trivia.append(handleNoUnconnectedDriveDirective(token));
+                        trivia.push_back(handleNoUnconnectedDriveDirective(token));
                         break;
                     case SyntaxKind::CellDefineDirective:
                     case SyntaxKind::EndCellDefineDirective:
                         // we don't do anything with celldefine directives
-                        trivia.append(createSimpleDirective(token));
+                        trivia.push_back(createSimpleDirective(token));
                         break;
                     default:
                         ASSUME_UNREACHABLE;
@@ -373,7 +373,7 @@ Token Preprocessor::nextRaw() {
     auto appendTrivia = [&trivia, this](Token token) {
         SourceLocation loc = token.location();
         for (const auto& t : token.trivia())
-            trivia.append(t.withLocation(alloc, loc));
+            trivia.push_back(t.withLocation(alloc, loc));
     };
 
     appendTrivia(token);
@@ -412,7 +412,7 @@ Trivia Preprocessor::handleIncludeDirective(Token directive) {
                 fileName = expect(TokenKind::IncludeFileName);
                 if (!tokens.empty()) {
                     SmallVectorSized<Trivia, 4> trivia;
-                    trivia.append(Trivia(TriviaKind::SkippedTokens, tokens.copy(alloc)));
+                    trivia.push_back(Trivia(TriviaKind::SkippedTokens, tokens.copy(alloc)));
                     trivia.appendRange(fileName.trivia());
                     fileName = fileName.withTrivia(alloc, trivia.copy(alloc));
                 }
@@ -422,7 +422,7 @@ Trivia Preprocessor::handleIncludeDirective(Token directive) {
             if (token.kind == TokenKind::GreaterThan) {
                 consume();
                 SmallVectorSized<char, 64> text;
-                text.append('<');
+                text.push_back('<');
 
                 for (Token cur : tokens) {
                     for (Trivia t : cur.trivia())
@@ -432,14 +432,14 @@ Trivia Preprocessor::handleIncludeDirective(Token directive) {
 
                 for (Trivia t : token.trivia())
                     text.appendRange(t.getRawText());
-                text.append('>');
+                text.push_back('>');
 
                 fileName = Token(alloc, TokenKind::IncludeFileName, fileName.trivia(),
                                  toStringView(text.copy(alloc)), fileName.location());
                 break;
             }
 
-            tokens.append(consume());
+            tokens.push_back(consume());
         }
     }
     else if (fileName.kind == TokenKind::StringLiteral) {
@@ -528,7 +528,7 @@ Trivia Preprocessor::handleDefineDirective(Token directive) {
         if (t.kind == TokenKind::EndOfFile)
             break;
         if (t.kind == TokenKind::LineContinuation) {
-            scratchTokenBuffer.append(consume());
+            scratchTokenBuffer.push_back(consume());
             continue;
         }
 
@@ -579,7 +579,7 @@ Trivia Preprocessor::handleDefineDirective(Token directive) {
         if (done)
             break;
 
-        scratchTokenBuffer.append(consume());
+        scratchTokenBuffer.push_back(consume());
     }
     inMacroBody = false;
 
@@ -704,7 +704,7 @@ Trivia Preprocessor::parseBranchDirective(Token directive, Token condition, bool
                 currentToken = token;
                 break;
             }
-            scratchTokenBuffer.append(token);
+            scratchTokenBuffer.push_back(token);
         }
     }
 
@@ -930,17 +930,17 @@ std::pair<Trivia, Trivia> Preprocessor::handlePragmaDirective(Token directive) {
     // tokens on the following line (such as pragma protect encoded blocks).
     while (peekSameLine()) {
         if (wantComma) {
-            args.append(expect(TokenKind::Comma));
+            args.push_back(expect(TokenKind::Comma));
             wantComma = false;
         }
         else {
             auto [expr, succeeded] = parsePragmaExpression();
-            args.append(expr);
+            args.push_back(expr);
             wantComma = true;
 
             if (!succeeded) {
                 while (peekSameLine())
-                    skipped.append(consume());
+                    skipped.push_back(consume());
 
                 ok = false;
                 break;

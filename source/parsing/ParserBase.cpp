@@ -23,7 +23,7 @@ ParserBase::ParserBase(Preprocessor& preprocessor) :
 
 void ParserBase::prependSkippedTokens(Token& token) {
     SmallVectorSized<Trivia, 8> buffer;
-    buffer.append(Trivia{TriviaKind::SkippedTokens, skippedTokens.copy(alloc)});
+    buffer.push_back(Trivia{TriviaKind::SkippedTokens, skippedTokens.copy(alloc)});
     buffer.appendRange(token.trivia());
 
     token = token.withTrivia(alloc, buffer.copy(alloc));
@@ -77,9 +77,9 @@ Token ParserBase::consume() {
         prependSkippedTokens(result);
 
     if (SF::isOpenDelimOrKeyword(result.kind))
-        openDelims.append(result);
+        openDelims.push_back(result);
     else if (SF::isCloseDelimOrKeyword(result.kind) && !openDelims.empty())
-        openDelims.pop();
+        openDelims.pop_back();
 
     return result;
 }
@@ -101,7 +101,7 @@ Token ParserBase::expect(TokenKind kind) {
     if (SF::isCloseDelimOrKeyword(kind) && !openDelims.empty()) {
         if (SF::isMatchingDelims(openDelims.back().kind, kind)) {
             matchingDelim = openDelims.back();
-            openDelims.pop();
+            openDelims.pop_back();
         }
         else {
             // If we hit this point assume that our stack of delims has
@@ -120,7 +120,7 @@ void ParserBase::skipToken(std::optional<DiagCode> diagCode) {
     ASSERT(token.kind != TokenKind::EndOfFile);
 
     bool haveDiag = haveDiagAtCurrentLoc();
-    skippedTokens.append(token);
+    skippedTokens.push_back(token);
     window.moveToNext();
 
     if (diagCode && !haveDiag)
@@ -148,11 +148,11 @@ void ParserBase::skipToken(std::optional<DiagCode> diagCode) {
                     return;
 
                 skipKind = delimStack.back();
-                delimStack.pop();
+                delimStack.pop_back();
             }
         }
 
-        skippedTokens.append(token);
+        skippedTokens.push_back(token);
         window.moveToNext();
 
         if (token.kind == skipKind) {
@@ -160,12 +160,12 @@ void ParserBase::skipToken(std::optional<DiagCode> diagCode) {
                 return;
 
             skipKind = delimStack.back();
-            delimStack.pop();
+            delimStack.pop_back();
         }
         else {
             TokenKind newSkipKind = SF::getSkipToKind(token.kind);
             if (newSkipKind != TokenKind::Unknown) {
-                delimStack.append(skipKind);
+                delimStack.push_back(skipKind);
                 skipKind = newSkipKind;
             }
         }

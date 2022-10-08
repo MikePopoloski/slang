@@ -66,7 +66,7 @@ SyntaxPrinter& SyntaxPrinter::print(Token token) {
             // relative to something ahead of it (a directive or the token itself).
             SmallVectorSized<const Trivia*, 8> pending;
             for (const auto& trivia : token.trivia()) {
-                pending.append(&trivia);
+                pending.push_back(&trivia);
                 auto loc = trivia.getExplicitLocation();
                 if (loc) {
                     if (!sourceManager->isPreprocessedLoc(*loc)) {

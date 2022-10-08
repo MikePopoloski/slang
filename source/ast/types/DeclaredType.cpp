@@ -259,7 +259,7 @@ static const Type* makeSigned(Compilation& compilation, const Type& type) {
     SmallVectorSized<ConstantRange, 4> dims;
     const Type* curr = &type;
     while (curr->kind == SymbolKind::PackedArrayType) {
-        dims.append(curr->getFixedRange());
+        dims.push_back(curr->getFixedRange());
         curr = curr->getArrayElementType();
     }
 
@@ -299,7 +299,7 @@ void DeclaredType::mergePortTypes(
         SmallVectorSized<ConstantRange, 4> destDims;
         const Type* sourceType = destType;
         while (sourceType->getCanonicalType().kind == SymbolKind::FixedSizeUnpackedArrayType) {
-            destDims.append(sourceType->getFixedRange());
+            destDims.push_back(sourceType->getFixedRange());
             sourceType = sourceType->getArrayElementType();
         }
 

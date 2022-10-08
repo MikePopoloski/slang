@@ -76,7 +76,7 @@ Constraint& ConstraintList::fromSyntax(const ConstraintBlockSyntax& syntax,
     SmallVectorSized<const Constraint*, 8> buffer;
     for (auto item : syntax.items) {
         auto& constraint = Constraint::bind(*item, context);
-        buffer.append(&constraint);
+        buffer.push_back(&constraint);
         anyBad |= constraint.bad();
     }
 
@@ -344,7 +344,7 @@ Constraint& UniquenessConstraint::fromSyntax(const UniquenessConstraintSyntax& s
     SmallVectorSized<const Expression*, 4> items;
     for (auto item : syntax.ranges->valueRanges) {
         auto& expr = Expression::bind(*item, context);
-        items.append(&expr);
+        items.push_back(&expr);
 
         if (expr.bad()) {
             bad = true;
@@ -421,7 +421,7 @@ Constraint& SolveBeforeConstraint::fromSyntax(const SolveBeforeConstraintSyntax&
     auto bindExprs = [&](auto& list, auto& results) {
         for (auto item : list) {
             auto& expr = Expression::bind(*item, context);
-            results.append(&expr);
+            results.push_back(&expr);
 
             if (expr.bad())
                 bad = true;

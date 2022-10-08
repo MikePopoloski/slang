@@ -48,7 +48,7 @@ ModuleDeclarationSyntax& Parser::parseModule(AttrList attributes, SyntaxKind par
         auto name = header.name.valueText();
         if (!name.empty()) {
             if (!anyLocalModules) {
-                moduleDeclStack.emplace();
+                moduleDeclStack.emplace_back();
                 anyLocalModules = true;
             }
             moduleDeclStack.back().emplace(name);
@@ -350,7 +350,7 @@ MemberSyntax* Parser::parseMember(SyntaxKind parentKind, bool& anyLocalModules) 
             SmallVectorSized<Token, 4> quals;
             for (uint32_t i = 0; i < index; i++) {
                 Token qual = consume();
-                quals.append(qual);
+                quals.push_back(qual);
 
                 if (qual.kind != TokenKind::StaticKeyword && isConstraintQualifier(qual.kind))
                     addDiag(diag::ConstraintQualOutOfBlock, qual.range()) << qual.valueText();
@@ -376,7 +376,7 @@ MemberSyntax* Parser::parseSingleMember(SyntaxKind parentKind) {
     bool anyLocalModules = false;
     auto result = parseMember(parentKind, anyLocalModules);
     if (anyLocalModules)
-        moduleDeclStack.pop();
+        moduleDeclStack.pop_back();
 
     if (result)
         checkMemberAllowed(*result, parentKind);
@@ -399,7 +399,7 @@ span<TMember*> Parser::parseMemberList(TokenKind endKind, Token& endToken, Synta
         auto member = parseFunc(parentKind, anyLocalModules);
         if (member) {
             checkMemberAllowed(*member, parentKind);
-            members.append(member);
+            members.push_back(member);
             errored = false;
         }
         else {
@@ -409,7 +409,7 @@ span<TMember*> Parser::parseMemberList(TokenKind endKind, Token& endToken, Synta
     }
 
     if (anyLocalModules)
-        moduleDeclStack.pop();
+        moduleDeclStack.pop_back();
 
     endToken = expect(endKind);
     return members.copy(alloc);
@@ -439,11 +439,11 @@ MemberSyntax& Parser::parseModportSubroutinePortList(AttrList attributes) {
                                                  FunctionOptions::AllowEmptyArgNames |
                                                      FunctionOptions::AllowTasks |
                                                      FunctionOptions::IsPrototype);
-            buffer.append(&factory.modportSubroutinePort(proto));
+            buffer.push_back(&factory.modportSubroutinePort(proto));
         }
         else {
             auto name = expect(TokenKind::Identifier);
-            buffer.append(&factory.modportNamedPort(name));
+            buffer.push_back(&factory.modportNamedPort(name));
             if (name.isMissing())
                 break;
         }
@@ -454,7 +454,7 @@ MemberSyntax& Parser::parseModportSubroutinePortList(AttrList attributes) {
             break;
         }
 
-        buffer.append(consume());
+        buffer.push_back(consume());
     }
 
     return factory.modportSubroutinePortList(attributes, importExport, buffer.copy(alloc));
@@ -495,12 +495,12 @@ MemberSyntax& Parser::parseModportPort() {
             if (!peek(TokenKind::CloseParenthesis))
                 expr = &parseExpression();
 
-            buffer.append(&factory.modportExplicitPort(dot, name, openParen, expr,
-                                                       expect(TokenKind::CloseParenthesis)));
+            buffer.push_back(&factory.modportExplicitPort(dot, name, openParen, expr,
+                                                          expect(TokenKind::CloseParenthesis)));
         }
         else {
             auto name = expect(TokenKind::Identifier);
-            buffer.append(&factory.modportNamedPort(name));
+            buffer.push_back(&factory.modportNamedPort(name));
             if (name.isMissing())
                 break;
         }
@@ -510,7 +510,7 @@ MemberSyntax& Parser::parseModportPort() {
             break;
         }
 
-        buffer.append(consume());
+        buffer.push_back(consume());
     }
 
     return factory.modportSimplePortList(attributes, direction, buffer.copy(alloc));
@@ -808,7 +808,7 @@ CaseGenerateSyntax& Parser::parseCaseGenerateConstruct(AttrList attributes) {
 
             auto def = consume();
             auto colon = consumeIf(TokenKind::Colon);
-            itemBuffer.append(&factory.defaultCaseItem(def, colon, parseGenerateBlock()));
+            itemBuffer.push_back(&factory.defaultCaseItem(def, colon, parseGenerateBlock()));
         }
         else if (isPossibleExpression(kind)) {
             Token colon;
@@ -816,7 +816,7 @@ CaseGenerateSyntax& Parser::parseCaseGenerateConstruct(AttrList attributes) {
             parseList<isPossibleExpressionOrComma, isEndOfCaseItem>(
                 buffer, TokenKind::Colon, TokenKind::Comma, colon, RequireItems::True,
                 diag::ExpectedExpression, [this] { return &parseExpression(); });
-            itemBuffer.append(
+            itemBuffer.push_back(
                 &factory.standardCaseItem(buffer.copy(alloc), colon, parseGenerateBlock()));
         }
         else {
@@ -1051,7 +1051,7 @@ MemberSyntax* Parser::parseClassMember(bool isIfaceClass) {
         }
 
         Token t = consume();
-        qualifierBuffer.append(t);
+        qualifierBuffer.push_back(t);
         if (t.kind == TokenKind::PureKeyword || t.kind == TokenKind::ExternKeyword)
             isPureOrExtern = true;
     }
@@ -1514,11 +1514,11 @@ MemberSyntax* Parser::parseCoverpointMember() {
 TransRangeSyntax& Parser::parseTransRange() {
     SmallVectorSized<TokenOrSyntax, 8> buffer;
     while (true) {
-        buffer.append(&parseOpenRangeElement(ExpressionOptions::SequenceExpr));
+        buffer.push_back(&parseOpenRangeElement(ExpressionOptions::SequenceExpr));
         if (!peek(TokenKind::Comma))
             break;
 
-        buffer.append(consume());
+        buffer.push_back(consume());
     }
 
     TransRepeatRangeSyntax* repeat = nullptr;
@@ -1561,11 +1561,11 @@ TransSetSyntax& Parser::parseTransSet() {
 TransListCoverageBinInitializerSyntax& Parser::parseTransListInitializer() {
     SmallVectorSized<TokenOrSyntax, 8> buffer;
     while (true) {
-        buffer.append(&parseTransSet());
+        buffer.push_back(&parseTransSet());
         if (!peek(TokenKind::Comma))
             break;
 
-        buffer.append(consume());
+        buffer.push_back(consume());
     }
 
     return factory.transListCoverageBinInitializer(buffer.copy(alloc));
@@ -1600,11 +1600,11 @@ CoverCrossSyntax* Parser::parseCoverCross(AttrList attributes, NamedLabelSyntax*
     SmallVectorSized<TokenOrSyntax, 8> buffer;
     while (true) {
         auto name = expect(TokenKind::Identifier);
-        buffer.append(&factory.identifierName(name));
+        buffer.push_back(&factory.identifierName(name));
         if (!peek(TokenKind::Comma))
             break;
 
-        buffer.append(consume());
+        buffer.push_back(consume());
     }
 
     if (buffer.size() < 2)
@@ -1975,7 +1975,7 @@ DistItemSyntax& Parser::parseDistItem() {
 span<PackageImportDeclarationSyntax*> Parser::parsePackageImports() {
     SmallVectorSized<PackageImportDeclarationSyntax*, 4> buffer;
     while (peek(TokenKind::ImportKeyword))
-        buffer.append(&parseImportDeclaration({}));
+        buffer.push_back(&parseImportDeclaration({}));
     return buffer.copy(alloc);
 }
 
@@ -2170,7 +2170,7 @@ PropertyDeclarationSyntax& Parser::parsePropertyDeclaration(AttrList attributes)
 
     SmallVectorSized<LocalVariableDeclarationSyntax*, 4> declarations;
     while (isLocalVariableDeclaration())
-        declarations.append(&parseLocalVariableDeclaration());
+        declarations.push_back(&parseLocalVariableDeclaration());
 
     auto& spec = parsePropertySpec();
     Token optSemi = consumeIf(TokenKind::Semicolon);
@@ -2191,7 +2191,7 @@ SequenceDeclarationSyntax& Parser::parseSequenceDeclaration(AttrList attributes)
 
     SmallVectorSized<LocalVariableDeclarationSyntax*, 4> declarations;
     while (isLocalVariableDeclaration())
-        declarations.append(&parseLocalVariableDeclaration());
+        declarations.push_back(&parseLocalVariableDeclaration());
 
     auto& expr = parseSequenceExpr(0, /* isInProperty */ false);
     auto semi2 = expect(TokenKind::Semicolon);
@@ -2523,11 +2523,11 @@ BindDirectiveSyntax& Parser::parseBindDirective(AttrList attr) {
 
         SmallVectorSized<TokenOrSyntax, 4> names;
         while (true) {
-            names.append(&parseName());
+            names.push_back(&parseName());
             if (!peek(TokenKind::Comma))
                 break;
 
-            names.append(consume());
+            names.push_back(consume());
         }
 
         targetInstances = &factory.bindTargetList(colon, names.copy(alloc));
@@ -2562,12 +2562,12 @@ UdpPortDeclSyntax& Parser::parseUdpPortDecl() {
     SmallVectorSized<TokenOrSyntax, 4> ports;
     while (true) {
         auto name = expect(TokenKind::Identifier);
-        ports.append(&factory.identifierName(name));
+        ports.push_back(&factory.identifierName(name));
 
         if (!peek(TokenKind::Comma) || peek(1).kind != TokenKind::Identifier)
             break;
 
-        ports.append(consume());
+        ports.push_back(consume());
     }
 
     return factory.udpInputPortDecl(attrs, input, ports.copy(alloc));
@@ -2629,7 +2629,7 @@ UdpEntrySyntax& Parser::parseUdpEntry() {
         if (!next)
             break;
 
-        preInputs.append(next);
+        preInputs.push_back(next);
     }
 
     UdpEdgeIndicatorSyntax* edgeIndicator = nullptr;
@@ -2645,7 +2645,7 @@ UdpEntrySyntax& Parser::parseUdpEntry() {
             if (!next)
                 break;
 
-            postInputs.append(next);
+            postInputs.push_back(next);
         }
     }
 
@@ -2667,8 +2667,8 @@ UdpEntrySyntax& Parser::parseUdpEntry() {
 UdpBodySyntax& Parser::parseUdpBody() {
     SmallVectorSized<TokenOrSyntax, 4> portDecls;
     while (isPossibleUdpPort(peek().kind)) {
-        portDecls.append(&parseUdpPortDecl());
-        portDecls.append(expect(TokenKind::Semicolon));
+        portDecls.push_back(&parseUdpPortDecl());
+        portDecls.push_back(expect(TokenKind::Semicolon));
     }
 
     UdpInitialStmtSyntax* initial = nullptr;
@@ -2685,7 +2685,7 @@ UdpBodySyntax& Parser::parseUdpBody() {
 
     SmallVectorSized<UdpEntrySyntax*, 8> entries;
     while (isPossibleUdpEntry(peek().kind))
-        entries.append(&parseUdpEntry());
+        entries.push_back(&parseUdpEntry());
 
     auto endtable = expect(TokenKind::EndTableKeyword);
     return factory.udpBody(portDecls.copy(alloc), initial, table, entries.copy(alloc), endtable);
@@ -2718,7 +2718,7 @@ SpecparamDeclarationSyntax& Parser::parseSpecparam(AttrList attr) {
     auto dim = parseDimension();
     SmallVectorSized<VariableDimensionSyntax*, 2> dims;
     if (dim)
-        dims.append(dim);
+        dims.push_back(dim);
 
     auto& type = factory.implicitType(Token(), dims.copy(alloc), placeholderToken());
 
@@ -2735,11 +2735,11 @@ SpecparamDeclarationSyntax& Parser::parseSpecparam(AttrList attr) {
 span<TokenOrSyntax> Parser::parsePathTerminals() {
     SmallVectorSized<TokenOrSyntax, 4> results;
     while (true) {
-        results.append(&parseName());
+        results.push_back(&parseName());
         if (!peek(TokenKind::Comma))
             break;
 
-        results.append(consume());
+        results.push_back(consume());
     }
 
     return results.copy(alloc);
@@ -3075,7 +3075,7 @@ ConfigLiblistSyntax& Parser::parseConfigLiblist() {
 
     SmallVectorSized<Token, 4> tokens;
     while (peek(TokenKind::Identifier))
-        tokens.append(consume());
+        tokens.push_back(consume());
 
     return factory.configLiblist(liblist, tokens.copy(alloc));
 }
@@ -3107,14 +3107,15 @@ ConfigDeclarationSyntax& Parser::parseConfigDeclaration(AttrList attributes) {
     while (peek(TokenKind::LocalParamKeyword)) {
         Token paramSemi;
         auto& paramBase = parseParameterDecl(consume(), &paramSemi);
-        localparams.append(&factory.parameterDeclarationStatement(nullptr, paramBase, paramSemi));
+        localparams.push_back(
+            &factory.parameterDeclarationStatement(nullptr, paramBase, paramSemi));
     }
 
     auto design = expect(TokenKind::DesignKeyword);
 
     SmallVectorSized<ConfigCellIdentifierSyntax*, 4> topCells;
     while (peek(TokenKind::Identifier))
-        topCells.append(&parseConfigCellIdentifier());
+        topCells.push_back(&parseConfigCellIdentifier());
 
     auto semi2 = expect(TokenKind::Semicolon);
 
@@ -3124,7 +3125,8 @@ ConfigDeclarationSyntax& Parser::parseConfigDeclaration(AttrList attributes) {
         if (token.kind == TokenKind::DefaultKeyword) {
             consume();
             auto& liblist = parseConfigLiblist();
-            rules.append(&factory.defaultConfigRule(token, liblist, expect(TokenKind::Semicolon)));
+            rules.push_back(
+                &factory.defaultConfigRule(token, liblist, expect(TokenKind::Semicolon)));
         }
         else if (token.kind == TokenKind::CellKeyword) {
             consume();
@@ -3136,7 +3138,7 @@ ConfigDeclarationSyntax& Parser::parseConfigDeclaration(AttrList attributes) {
             else
                 rule = &parseConfigLiblist();
 
-            rules.append(
+            rules.push_back(
                 &factory.cellConfigRule(token, cellName, *rule, expect(TokenKind::Semicolon)));
         }
         else if (token.kind == TokenKind::InstanceKeyword) {
@@ -3146,7 +3148,7 @@ ConfigDeclarationSyntax& Parser::parseConfigDeclaration(AttrList attributes) {
             SmallVectorSized<ConfigInstanceIdentifierSyntax*, 4> instanceNames;
             while (peek(TokenKind::Dot)) {
                 auto dot = consume();
-                instanceNames.append(
+                instanceNames.push_back(
                     &factory.configInstanceIdentifier(dot, expect(TokenKind::Identifier)));
             }
 
@@ -3156,8 +3158,8 @@ ConfigDeclarationSyntax& Parser::parseConfigDeclaration(AttrList attributes) {
             else
                 rule = &parseConfigLiblist();
 
-            rules.append(&factory.instanceConfigRule(token, topModule, instanceNames.copy(alloc),
-                                                     *rule, expect(TokenKind::Semicolon)));
+            rules.push_back(&factory.instanceConfigRule(token, topModule, instanceNames.copy(alloc),
+                                                        *rule, expect(TokenKind::Semicolon)));
         }
         else {
             break;

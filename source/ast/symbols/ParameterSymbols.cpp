@@ -29,7 +29,7 @@ void ParameterSymbolBase::fromLocalSyntax(const Scope& scope,
                                     /* isLocal */ true, /* isPort */ false, params);
         for (auto param : params) {
             param->setAttributes(scope, syntax.attributes);
-            results.append(param);
+            results.push_back(param);
         }
     }
     else {
@@ -38,7 +38,7 @@ void ParameterSymbolBase::fromLocalSyntax(const Scope& scope,
                                         /* isLocal */ true, /* isPort */ false, params);
         for (auto param : params) {
             param->setAttributes(scope, syntax.attributes);
-            results.append(param);
+            results.push_back(param);
         }
     }
 }
@@ -74,7 +74,7 @@ void ParameterSymbol::fromSyntax(const Scope& scope, const ParameterDeclarationS
                 scope.addDiag(diag::LocalParamNoInitializer, loc);
         }
 
-        results.append(param);
+        results.push_back(param);
     }
 }
 
@@ -175,7 +175,7 @@ void TypeParameterSymbol::fromSyntax(const Scope& scope,
             param->targetType.setTypeSyntax(*decl->assignment->type);
         }
 
-        results.append(param);
+        results.push_back(param);
     }
 }
 
@@ -211,7 +211,7 @@ void DefParamSymbol::fromSyntax(const Scope& scope, const DefParamSyntax& syntax
         auto sym = comp.emplace<DefParamSymbol>(assignment->getFirstToken().location());
         sym->setSyntax(*assignment);
         sym->setAttributes(scope, syntax.attributes);
-        results.append(sym);
+        results.push_back(sym);
     }
 }
 
@@ -343,7 +343,7 @@ void SpecparamSymbol::fromSyntax(const Scope& scope, const SpecparamDeclarationS
         param->setDeclaredType(*syntax.type);
         param->setInitializerSyntax(*decl->value, decl->equals.location());
         param->setAttributes(scope, syntax.attributes);
-        results.append(param);
+        results.push_back(param);
     }
 }
 

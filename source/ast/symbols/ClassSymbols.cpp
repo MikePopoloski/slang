@@ -101,7 +101,7 @@ void ClassPropertySymbol::fromSyntax(const Scope& scope,
         var->setDeclaredType(*dataSyntax.type);
         var->setFromDeclarator(*declarator);
         var->setAttributes(scope, syntax.attributes);
-        results.append(var);
+        results.push_back(var);
 
         if (isConst)
             var->flags |= VariableFlags::Const;
@@ -546,12 +546,12 @@ static void findIfaces(const ClassType& type, SmallVector<const Type*>& ifaces,
                        SmallSet<const Symbol*, 4>& visited) {
     if (type.isInterface) {
         if (visited.emplace(&type).second)
-            ifaces.append(&type);
+            ifaces.push_back(&type);
     }
 
     for (auto iface : type.getImplementedInterfaces()) {
         if (visited.emplace(iface).second)
-            ifaces.append(iface);
+            ifaces.push_back(iface);
     }
 
     if (auto base = type.getBaseClass(); base && !base->isError())
@@ -810,11 +810,11 @@ const Type* GenericClassDefSymbol::getSpecializationImpl(
             auto& sym = param.symbol;
             if (sym.kind == SymbolKind::Parameter) {
                 auto& ps = sym.as<ParameterSymbol>();
-                paramValues.append(&ps.getValue(instRange));
+                paramValues.push_back(&ps.getValue(instRange));
             }
             else {
                 auto& tps = sym.as<TypeParameterSymbol>();
-                typeParams.append(&tps.targetType.getType());
+                typeParams.push_back(&tps.targetType.getType());
             }
         }
     }
@@ -851,7 +851,7 @@ void GenericClassDefSymbol::checkForwardDecls() const {
 }
 
 void GenericClassDefSymbol::addParameterDecl(const Definition::ParameterDecl& decl) {
-    paramDecls.append(decl);
+    paramDecls.push_back(decl);
 }
 
 void GenericClassDefSymbol::serializeTo(ASTSerializer& serializer) const {

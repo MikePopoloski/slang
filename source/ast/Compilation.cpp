@@ -304,7 +304,7 @@ const RootSymbol& Compilation::getRoot(bool skipDefParamResolution) {
                 if (definition->definitionKind == DefinitionKind::Module) {
                     if (isValidTop(*definition)) {
                         // This module can be automatically instantiated.
-                        topDefs.append(definition.get());
+                        topDefs.push_back(definition.get());
                         continue;
                     }
                 }
@@ -329,7 +329,7 @@ const RootSymbol& Compilation::getRoot(bool skipDefParamResolution) {
 
                     // Make sure this is actually valid as a top-level module.
                     if (isValidTop(*definition)) {
-                        topDefs.append(definition.get());
+                        topDefs.push_back(definition.get());
                         continue;
                     }
 
@@ -377,7 +377,7 @@ const RootSymbol& Compilation::getRoot(bool skipDefParamResolution) {
 
         auto& instance = InstanceSymbol::createDefault(*this, *def, paramOverrideNode);
         root->addMember(instance);
-        topList.append(&instance);
+        topList.push_back(&instance);
     }
 
     if (!options.suppressUnused && topDefs.empty())
@@ -923,7 +923,7 @@ const Diagnostics& Compilation::getSemanticDiagnostics() {
         // If the location is NoLocation, just issue each diagnostic.
         if (std::get<1>(key) == SourceLocation::NoLocation) {
             for (auto& diag : diagList)
-                results.emplace(diag);
+                results.emplace_back(diag);
             continue;
         }
 
@@ -962,16 +962,16 @@ const Diagnostics& Compilation::getSemanticDiagnostics() {
             Diagnostic diag = *found;
             diag.symbol = inst;
             diag.coalesceCount = count;
-            results.emplace(std::move(diag));
+            results.emplace_back(std::move(diag));
         }
         else {
             auto it = diagList.begin();
             ASSERT(it != diagList.end());
 
-            results.emplace(*it);
+            results.emplace_back(*it);
             for (++it; it != diagList.end(); ++it) {
                 if (*it != results.back())
-                    results.emplace(*it);
+                    results.emplace_back(*it);
             }
         }
     }
@@ -1411,11 +1411,11 @@ void Compilation::resolveDefParams(size_t) {
         for (auto defparam : visitor.found) {
             auto target = defparam->getTarget();
             if (!target)
-                overrides.emplace();
+                overrides.emplace_back();
             else {
                 std::string path;
                 target->getHierarchicalPath(path);
-                overrides.append({std::move(path), target->getSyntax(), defparam->getValue()});
+                overrides.push_back({std::move(path), target->getSyntax(), defparam->getValue()});
             }
         }
     };

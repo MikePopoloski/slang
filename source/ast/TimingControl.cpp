@@ -377,11 +377,11 @@ static void collectEvents(const ASTContext& context, const SyntaxNode& expr,
         }
         case SyntaxKind::SimplePropertyExpr:
         case SyntaxKind::IffPropertyExpr:
-            results.append(&TimingControl::bind(expr.as<PropertyExprSyntax>(), context));
+            results.push_back(&TimingControl::bind(expr.as<PropertyExprSyntax>(), context));
             break;
         case SyntaxKind::SimpleSequenceExpr:
         case SyntaxKind::SignalEventExpression:
-            results.append(&TimingControl::bind(expr.as<SequenceExprSyntax>(), context));
+            results.push_back(&TimingControl::bind(expr.as<SequenceExprSyntax>(), context));
             break;
         case SyntaxKind::ParenthesizedPropertyExpr: {
             auto& ppe = expr.as<ParenthesizedPropertyExprSyntax>();
@@ -396,7 +396,7 @@ static void collectEvents(const ASTContext& context, const SyntaxNode& expr,
             auto& pse = expr.as<ParenthesizedSequenceExprSyntax>();
             if (pse.repetition) {
                 context.addDiag(diag::InvalidSyntaxInEventExpr, expr.sourceRange());
-                results.append(context.getCompilation().emplace<InvalidTimingControl>(nullptr));
+                results.push_back(context.getCompilation().emplace<InvalidTimingControl>(nullptr));
             }
             else {
                 collectEvents(context, *pse.expr, results);
@@ -517,7 +517,7 @@ TimingControl& BlockEventListControl::fromSyntax(const BlockEventExpressionSynta
             return false;
         }
 
-        events.append({nullptr, evSyntax.keyword.kind == TokenKind::BeginKeyword});
+        events.push_back({nullptr, evSyntax.keyword.kind == TokenKind::BeginKeyword});
         return true;
     };
 

@@ -47,7 +47,7 @@ FormalArgumentSymbol& MethodBuilder::addArg(string_view name, const Type& type,
                                                          VariableLifetime::Automatic);
     arg->setType(type);
     symbol.addMember(*arg);
-    args.append(arg);
+    args.push_back(arg);
 
     if (defaultValue) {
         ASSERT(type.isIntegral());
@@ -62,7 +62,7 @@ FormalArgumentSymbol& MethodBuilder::copyArg(const FormalArgumentSymbol& fromArg
                                                          fromArg.direction, fromArg.lifetime);
     arg->flags = fromArg.flags;
     symbol.addMember(*arg);
-    args.append(arg);
+    args.push_back(arg);
 
     auto& argDT = *arg->getDeclaredType();
     auto& fromDT = *fromArg.getDeclaredType();

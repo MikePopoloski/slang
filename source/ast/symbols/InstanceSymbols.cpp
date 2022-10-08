@@ -125,12 +125,12 @@ private:
 
         SmallVectorSized<const Symbol*, 8> elements;
         for (int32_t i = range.lower(); i <= range.upper(); i++) {
-            path.append(i);
+            path.push_back(i);
             auto symbol = recurse(syntax, it, end);
-            path.pop();
+            path.pop_back();
 
             symbol->name = "";
-            elements.append(symbol);
+            elements.push_back(symbol);
         }
 
         auto result = compilation.emplace<InstanceArraySymbol>(compilation, nameToken.valueText(),
@@ -174,7 +174,7 @@ void createImplicitNets(const HierarchicalInstanceSyntax& instance, const ASTCon
                 auto& comp = context.getCompilation();
                 auto net = comp.emplace<NetSymbol>(t.valueText(), t.location(), netType);
                 net->setType(comp.getLogicType());
-                results.append(net);
+                results.push_back(net);
             }
         }
     }
@@ -186,7 +186,7 @@ void getInstanceArrayDimensions(const InstanceArraySymbol& array,
     if (scope && scope->asSymbol().kind == SymbolKind::InstanceArray)
         getInstanceArrayDimensions(scope->asSymbol().as<InstanceArraySymbol>(), dimensions);
 
-    dimensions.append(array.range);
+    dimensions.push_back(array.range);
 }
 
 } // namespace
@@ -353,7 +353,7 @@ void InstanceSymbol::fromSyntax(Compilation& compilation,
 
         for (auto instanceSyntax : syntax.instances) {
             createImplicitNets(*instanceSyntax, context, netType, implicitNetNames, implicitNets);
-            results.append(builder.create(*instanceSyntax));
+            results.push_back(builder.create(*instanceSyntax));
         }
     }
     else {
@@ -374,7 +374,7 @@ void InstanceSymbol::fromSyntax(Compilation& compilation,
                                     isUninstantiated);
 
             createImplicitNets(*instanceSyntax, context, netType, implicitNetNames, implicitNets);
-            results.append(builder.create(*instanceSyntax));
+            results.push_back(builder.create(*instanceSyntax));
         }
     }
 }
@@ -392,7 +392,7 @@ void InstanceSymbol::fromFixupSyntax(Compilation& comp, const Definition& defini
     for (auto decl : syntax.declarators) {
         auto loc = decl->name.location();
         if (!instances.empty())
-            instances.append(missing(TokenKind::Comma, loc));
+            instances.push_back(missing(TokenKind::Comma, loc));
 
         loc = loc + decl->name.rawText().length();
         context.addDiag(diag::InstanceMissingParens, loc) << definition.getKindString();
@@ -402,7 +402,7 @@ void InstanceSymbol::fromFixupSyntax(Compilation& comp, const Definition& defini
             instName, missing(TokenKind::OpenParenthesis, loc), span<TokenOrSyntax>(),
             missing(TokenKind::CloseParenthesis, loc));
 
-        instances.append(instance);
+        instances.push_back(instance);
     }
 
     auto instantiation = comp.emplace<HierarchyInstantiationSyntax>(
@@ -649,7 +649,7 @@ InstanceBodySymbol& InstanceBodySymbol::fromDefinition(Compilation& comp,
             break;
 
         auto& param = paramBuilder.createParam(decl, *result, instanceLoc);
-        params.append(&param);
+        params.push_back(&param);
         paramIt++;
     }
 
@@ -671,7 +671,7 @@ InstanceBodySymbol& InstanceBodySymbol::fromDefinition(Compilation& comp,
                 ASSERT(declarator.name.valueText() == decl.name);
 
                 auto& param = paramBuilder.createParam(decl, *result, instanceLoc);
-                params.append(&param);
+                params.push_back(&param);
                 paramIt++;
             };
 
@@ -765,7 +765,7 @@ static void createUnknownModules(Compilation& compilation, const TSyntax& syntax
         auto sym = compilation.emplace<UnknownModuleSymbol>(name, loc, moduleName, params);
         sym->setSyntax(*instanceSyntax);
         sym->setAttributes(*context.scope, syntax.attributes);
-        results.append(sym);
+        results.push_back(sym);
     }
 }
 
@@ -781,11 +781,11 @@ void UnknownModuleSymbol::fromSyntax(Compilation& compilation,
         for (auto expr : syntax.parameters->parameters) {
             // Empty expressions are just ignored here.
             if (expr->kind == SyntaxKind::OrderedParamAssignment)
-                params.append(
+                params.push_back(
                     &Expression::bind(*expr->as<OrderedParamAssignmentSyntax>().expr, context));
             else if (expr->kind == SyntaxKind::NamedParamAssignment) {
                 if (auto ex = expr->as<NamedParamAssignmentSyntax>().expr)
-                    params.append(&Expression::bind(*ex, context, ASTFlags::AllowDataType));
+                    params.push_back(&Expression::bind(*ex, context, ASTFlags::AllowDataType));
             }
         }
     }
@@ -856,16 +856,16 @@ span<const AssertionExpr* const> UnknownModuleSymbol::getPortConnections() const
         SmallVectorSized<string_view, 8> names;
         for (auto port : syntax->as<HierarchicalInstanceSyntax>().connections) {
             if (port->kind == SyntaxKind::OrderedPortConnection) {
-                names.append(""sv);
-                results.append(
+                names.push_back(""sv);
+                results.push_back(
                     bindUnknownPortConn(context, *port->as<OrderedPortConnectionSyntax>().expr));
             }
             else if (port->kind == SyntaxKind::NamedPortConnection) {
                 auto& npc = port->as<NamedPortConnectionSyntax>();
-                names.append(npc.name.valueText());
+                names.push_back(npc.name.valueText());
 
                 if (auto ex = npc.expr)
-                    results.append(bindUnknownPortConn(context, *ex));
+                    results.push_back(bindUnknownPortConn(context, *ex));
             }
         }
 
@@ -978,13 +978,13 @@ Symbol* recursePrimArray(Compilation& compilation, const PrimitiveSymbol& primit
 
     SmallVectorSized<const Symbol*, 8> elements;
     for (int32_t i = range.lower(); i <= range.upper(); i++) {
-        path.append(i);
+        path.push_back(i);
         auto symbol = recursePrimArray(compilation, primitive, instance, context, it, end,
                                        attributes, path);
-        path.pop();
+        path.pop_back();
 
         symbol->name = "";
-        elements.append(symbol);
+        elements.push_back(symbol);
     }
 
     auto result = compilation.emplace<InstanceArraySymbol>(compilation, nameToken.valueText(),
@@ -1011,14 +1011,14 @@ void createPrimitives(const PrimitiveSymbol& primitive, const TSyntax& syntax,
         createImplicitNets(*instance, context, netType, implicitNetNames, implicitNets);
 
         if (!instance->decl) {
-            results.append(createPrimInst(comp, *context.scope, primitive, *instance,
-                                          syntax.attributes, path));
+            results.push_back(createPrimInst(comp, *context.scope, primitive, *instance,
+                                             syntax.attributes, path));
         }
         else {
             auto dims = instance->decl->dimensions;
             auto symbol = recursePrimArray(comp, primitive, *instance, context, dims.begin(),
                                            dims.end(), syntax.attributes, path);
-            results.append(symbol);
+            results.push_back(symbol);
         }
     }
 }
@@ -1096,7 +1096,7 @@ span<const Expression* const> PrimitiveInstanceSymbol::getPortConnections() cons
                     return *ports;
                 }
 
-                conns.append(expr);
+                conns.push_back(expr);
             }
             else if (port->kind != SyntaxKind::EmptyPortConnection ||
                      primitiveType.primitiveKind != PrimitiveSymbol::UserDefined) {
@@ -1106,7 +1106,7 @@ span<const Expression* const> PrimitiveInstanceSymbol::getPortConnections() cons
             }
             else {
                 context.addDiag(diag::EmptyUdpPort, port->sourceRange());
-                conns.append(nullptr);
+                conns.push_back(nullptr);
             }
         }
 
@@ -1129,7 +1129,7 @@ span<const Expression* const> PrimitiveInstanceSymbol::getPortConnections() cons
                     dir = conns.size() - 1 ? ArgumentDirection::In : ArgumentDirection::Out;
 
                 ASSERT(conns[i]);
-                results.append(
+                results.push_back(
                     &Expression::bindArgument(comp.getLogicType(), dir, *conns[i], context));
             }
         }
@@ -1160,7 +1160,7 @@ span<const Expression* const> PrimitiveInstanceSymbol::getPortConnections() cons
                         dir = ArgumentDirection::Out;
                         break;
                 }
-                results.append(
+                results.push_back(
                     &Expression::bindArgument(comp.getLogicType(), dir, *conns[i], context));
             }
         }

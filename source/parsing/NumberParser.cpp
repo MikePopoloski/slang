@@ -211,7 +211,7 @@ Token NumberParser::finishValue(Token firstToken, bool singleToken) {
     }
 
     if (digits.empty()) {
-        digits.append(logic_t(0));
+        digits.push_back(logic_t(0));
     }
     else if (literalBase != LiteralBase::Decimal) {
         uint32_t multiplier = 0;
@@ -275,10 +275,10 @@ void NumberParser::addDigit(logic_t digit, int maxValue) {
                 return; // at most one leading zero
 
             // If first nonzero not unknown, no leading zeros
-            digits.pop();
+            digits.pop_back();
         }
     }
-    digits.append(digit);
+    digits.push_back(digit);
 }
 
 Diagnostic& NumberParser::addDiag(DiagCode code, SourceLocation location) {

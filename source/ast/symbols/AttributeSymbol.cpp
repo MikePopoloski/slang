@@ -90,7 +90,7 @@ static span<const AttributeSymbol* const> createAttributes(
                 attrs[it->second] = attr;
             }
             else {
-                attrs.append(attr);
+                attrs.push_back(attr);
                 nameMap.emplace(name, attrs.size() - 1);
             }
         }

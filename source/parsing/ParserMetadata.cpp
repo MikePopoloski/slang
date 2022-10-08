@@ -67,9 +67,9 @@ public:
     }
 
     void handle(const GenerateBlockSyntax& syntax) {
-        moduleDeclStack.emplace();
+        moduleDeclStack.emplace_back();
         visitDefault(syntax);
-        moduleDeclStack.pop();
+        moduleDeclStack.pop_back();
     }
 
     void handle(const ModuleDeclarationSyntax& syntax) {
@@ -78,9 +78,9 @@ public:
             moduleDeclStack.back().emplace(name);
         }
 
-        moduleDeclStack.emplace();
+        moduleDeclStack.emplace_back();
         visitDefault(syntax);
-        moduleDeclStack.pop();
+        moduleDeclStack.pop_back();
 
         // Needs to come after we visitDefault because visiting the first token
         // might update our preproc state.

@@ -151,7 +151,7 @@ protected:
         while (true) {
             // Parse the next item in the list.
             current = peek();
-            buffer.append(parseItem());
+            buffer.push_back(parseItem());
 
             // If we found the end token, we're done with list processing.
             if (IsEnd(peek().kind))
@@ -182,7 +182,7 @@ protected:
                 } while (!peek(separatorKind));
             }
 
-            buffer.append(expect(separatorKind));
+            buffer.push_back(expect(separatorKind));
 
             if (IsEnd(peek().kind)) {
                 if (allowEmpty == AllowEmpty::True)

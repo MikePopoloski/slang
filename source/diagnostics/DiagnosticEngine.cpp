@@ -194,11 +194,11 @@ void DiagnosticEngine::issueImpl(const Diagnostic& diagnostic, DiagnosticSeverit
         while (sourceManager.isMacroLoc(loc)) {
             SourceLocation prevLoc = loc;
             if (sourceManager.isMacroArgLoc(loc)) {
-                expansionLocs.append(sourceManager.getExpansionLoc(loc));
+                expansionLocs.push_back(sourceManager.getExpansionLoc(loc));
                 loc = sourceManager.getOriginalLoc(loc);
             }
             else {
-                expansionLocs.append(loc);
+                expansionLocs.push_back(loc);
                 loc = sourceManager.getExpansionLoc(loc);
             }
 
@@ -279,7 +279,7 @@ static void getMacroArgExpansions(const SourceManager& sm, SourceLocation loc, b
                                   SmallVector<BufferID>& results) {
     while (sm.isMacroLoc(loc)) {
         if (sm.isMacroArgLoc(loc)) {
-            results.append(loc.buffer());
+            results.push_back(loc.buffer());
             loc = sm.getOriginalLoc(loc);
         }
         else {
@@ -388,7 +388,7 @@ void DiagnosticEngine::mapSourceRanges(SourceLocation loc, span<const SourceRang
             start = sm.getFullyOriginalLoc(start);
             end = sm.getFullyOriginalLoc(end);
         }
-        mapped.emplace(start, end);
+        mapped.emplace_back(start, end);
     }
 }
 

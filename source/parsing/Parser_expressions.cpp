@@ -343,11 +343,11 @@ ConcatenationExpressionSyntax& Parser::parseConcatenation(Token openBrace,
     if (first) {
         // it's possible to have just one element in the concatenation list, so check for a close
         // brace
-        buffer.append(first);
+        buffer.push_back(first);
         if (peek(TokenKind::CloseBrace))
             return factory.concatenationExpression(openBrace, buffer.copy(alloc), consume());
 
-        buffer.append(expect(TokenKind::Comma));
+        buffer.push_back(expect(TokenKind::Comma));
     }
 
     Token closeBrace;
@@ -415,9 +415,9 @@ AssignmentPatternExpressionSyntax& Parser::parseAssignmentPatternExpression(Data
 
     switch (peek().kind) {
         case TokenKind::Colon:
-            buffer.append(&parseAssignmentPatternItem(firstExpr));
+            buffer.push_back(&parseAssignmentPatternItem(firstExpr));
             if (peek(TokenKind::Comma)) {
-                buffer.append(consume());
+                buffer.push_back(consume());
 
                 parseList<isPossibleExpressionOrCommaOrDefault, isEndOfBracedList>(
                     buffer, TokenKind::CloseBrace, TokenKind::Comma, closeBrace,
@@ -443,8 +443,8 @@ AssignmentPatternExpressionSyntax& Parser::parseAssignmentPatternExpression(Data
             break;
         }
         case TokenKind::Comma:
-            buffer.append(firstExpr);
-            buffer.append(consume());
+            buffer.push_back(firstExpr);
+            buffer.push_back(consume());
 
             parseList<isPossibleExpressionOrComma, isEndOfBracedList>(
                 buffer, TokenKind::CloseBrace, TokenKind::Comma, closeBrace, RequireItems::True,
@@ -452,14 +452,14 @@ AssignmentPatternExpressionSyntax& Parser::parseAssignmentPatternExpression(Data
             pattern = &factory.simpleAssignmentPattern(openBrace, buffer.copy(alloc), closeBrace);
             break;
         case TokenKind::CloseBrace:
-            buffer.append(firstExpr);
+            buffer.push_back(firstExpr);
             closeBrace = consume();
             pattern = &factory.simpleAssignmentPattern(openBrace, buffer.copy(alloc), closeBrace);
             break;
         default:
             // This is an error case; let the list handling code get us out of it.
-            buffer.append(firstExpr);
-            buffer.append(expect(TokenKind::Comma));
+            buffer.push_back(firstExpr);
+            buffer.push_back(expect(TokenKind::Comma));
 
             parseList<isPossibleExpressionOrComma, isEndOfBracedList>(
                 buffer, TokenKind::CloseBrace, TokenKind::Comma, closeBrace, RequireItems::False,
@@ -758,7 +758,7 @@ NameSyntax& Parser::parseNamePart(bitmask<NameOptions> options) {
                         break;
                     }
 
-                    buffer.append(&parseElementSelect());
+                    buffer.push_back(&parseElementSelect());
                 } while (peek(TokenKind::OpenBracket));
 
                 if (buffer.empty())
@@ -778,7 +778,7 @@ NameSyntax& Parser::parseNamePart(bitmask<NameOptions> options) {
                             return factory.identifierSelectName(identifier, buffer.copy(alloc));
                     }
 
-                    buffer.append(&parseElementSelect());
+                    buffer.push_back(&parseElementSelect());
                 } while (peek(TokenKind::OpenBracket));
 
                 return factory.identifierSelectName(identifier, buffer.copy(alloc));
@@ -926,10 +926,10 @@ ConditionalPredicateSyntax& Parser::parseConditionalPredicate(ExpressionSyntax& 
         matchesClause = &factory.matchesClause(matches, parsePattern());
     }
 
-    buffer.append(&factory.conditionalPattern(first, matchesClause));
+    buffer.push_back(&factory.conditionalPattern(first, matchesClause));
 
     if (peek(TokenKind::TripleAnd)) {
-        buffer.append(consume());
+        buffer.push_back(consume());
         parseList<isPossibleExpressionOrTripleAnd, isEndOfConditionalPredicate>(
             buffer, endKind, TokenKind::TripleAnd, end, RequireItems::True,
             diag::ExpectedConditionalPattern, [this] { return &parseConditionalPattern(); });
@@ -1235,8 +1235,8 @@ SequenceExprSyntax& Parser::parseDelayedSequenceExpr(SequenceExprSyntax* first) 
         }
 
         auto& expr = parseSequencePrimary();
-        elements.append(&factory.delayedSequenceElement(hash, delayVal, openBracket, op, selector,
-                                                        closeBracket, expr));
+        elements.push_back(&factory.delayedSequenceElement(hash, delayVal, openBracket, op,
+                                                           selector, closeBracket, expr));
 
     } while (peek(TokenKind::DoubleHash));
 
@@ -1460,7 +1460,7 @@ PropertyExprSyntax& Parser::parseCasePropertyExpr() {
             auto colon = consumeIf(TokenKind::Colon);
             auto& expr = parsePropertyExpr(0);
             auto semi = expect(TokenKind::Semicolon);
-            itemBuffer.append(&factory.defaultPropertyCaseItem(def, colon, expr, semi));
+            itemBuffer.push_back(&factory.defaultPropertyCaseItem(def, colon, expr, semi));
         }
         else if (isPossibleExpression(kind)) {
             Token colon;
@@ -1471,7 +1471,7 @@ PropertyExprSyntax& Parser::parseCasePropertyExpr() {
 
             auto& expr = parsePropertyExpr(0);
             auto semi = expect(TokenKind::Semicolon);
-            itemBuffer.append(
+            itemBuffer.push_back(
                 &factory.standardPropertyCaseItem(buffer.copy(alloc), colon, expr, semi));
         }
         else {

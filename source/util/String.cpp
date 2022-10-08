@@ -25,7 +25,7 @@ void uintToStrImpl(SmallVector<char>& buffer, const char* format, T value) {
     buffer.extend(sz + 1);
 
     snprintf(&buffer[offset], sz + 1, format, value);
-    buffer.pop();
+    buffer.pop_back();
 }
 
 void uintToStr(SmallVector<char>& buffer, uint32_t value) {
@@ -92,7 +92,7 @@ int editDistance(string_view left, string_view right, bool allowReplacements, in
 
     SmallVectorSized<int, 32> row;
     for (int i = 0; i <= int(n); i++)
-        row.append(i);
+        row.push_back(i);
 
     for (size_t y = 1; y <= m; y++) {
         row[0] = int(y);

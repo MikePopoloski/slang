@@ -169,7 +169,7 @@ SubroutineSymbol* SubroutineSymbol::fromSyntax(Compilation& compilation,
             }
 
             auto& arg = last->as<FormalArgumentSymbol>();
-            arguments.append(&arg);
+            arguments.push_back(&arg);
 
             if (lifetime == VariableLifetime::Static && arg.direction == ArgumentDirection::Ref)
                 parent.addDiag(diag::RefArgAutomaticFunc, last->location);
@@ -437,7 +437,7 @@ static span<const FormalArgumentSymbol* const> cloneArguments(
             copied->getDeclaredType()->setInitializer(*init);
 
         newParent.addMember(*copied);
-        arguments.append(copied);
+        arguments.push_back(copied);
     }
 
     return arguments.copy(compilation);
@@ -614,7 +614,7 @@ void SubroutineSymbol::buildArguments(Scope& scope, const FunctionPortListSyntax
         arg->setAttributes(scope, portSyntax->attributes);
 
         scope.addMember(*arg);
-        arguments.append(arg);
+        arguments.push_back(arg);
         lastDirection = direction;
     }
 }

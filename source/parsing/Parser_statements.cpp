@@ -212,10 +212,10 @@ bool Parser::parseCaseItems(TokenKind caseKind, SmallVector<CaseItemSyntax*>& it
             }
 
             lastDefault = peek().location();
-            itemBuffer.append(&parseDefaultCaseItem());
+            itemBuffer.push_back(&parseDefaultCaseItem());
         }
         else if (isItem(kind)) {
-            itemBuffer.append(parseItem());
+            itemBuffer.push_back(parseItem());
         }
         else if (kind == TokenKind::EndOfFile || isEndKeyword(kind)) {
             break;
@@ -669,7 +669,7 @@ span<SyntaxNode*> Parser::parseBlockItems(TokenKind endKind, Token& end, bool in
         }
 
         if (newNode) {
-            buffer.append(newNode);
+            buffer.push_back(newNode);
             errored = false;
 
             if (!erroredAboutDecls && !isStmt && sawStatement) {
@@ -758,7 +758,7 @@ RandCaseStatementSyntax& Parser::parseRandCaseStatement(NamedLabelSyntax* label,
             stmt.as<EmptyStatementSyntax>().semicolon.isMissing() && loc == peek().location()) {
             skipToken(std::nullopt);
         }
-        itemBuffer.append(&factory.randCaseItem(expr, colon, stmt));
+        itemBuffer.push_back(&factory.randCaseItem(expr, colon, stmt));
     }
 
     auto endcase = expect(TokenKind::EndCaseKeyword);
@@ -836,7 +836,7 @@ RsCaseSyntax& Parser::parseRsCase() {
             auto colon = consumeIf(TokenKind::Colon);
             auto& item = parseRsProdItem();
             auto semi = expect(TokenKind::Semicolon);
-            itemBuffer.append(&factory.defaultRsCaseItem(def, colon, item, semi));
+            itemBuffer.push_back(&factory.defaultRsCaseItem(def, colon, item, semi));
         }
         else if (isPossibleExpression(kind)) {
             Token colon;
@@ -847,7 +847,8 @@ RsCaseSyntax& Parser::parseRsCase() {
 
             auto& item = parseRsProdItem();
             auto semi = expect(TokenKind::Semicolon);
-            itemBuffer.append(&factory.standardRsCaseItem(buffer.copy(alloc), colon, item, semi));
+            itemBuffer.push_back(
+                &factory.standardRsCaseItem(buffer.copy(alloc), colon, item, semi));
         }
         else {
             break;
@@ -923,7 +924,7 @@ RsRuleSyntax& Parser::parseRsRule() {
         if (!prod)
             break;
 
-        prods.append(prod);
+        prods.push_back(prod);
         if (randJoin && prod->kind != SyntaxKind::RsProdItem)
             addDiag(diag::RandJoinProdItem, prod->sourceRange());
     }
@@ -983,7 +984,7 @@ StatementSyntax& Parser::parseRandSequenceStatement(NamedLabelSyntax* label, Att
 
     SmallVectorSized<ProductionSyntax*, 16> productions;
     while (isPossibleDataType(peek().kind))
-        productions.append(&parseProduction());
+        productions.push_back(&parseProduction());
 
     if (productions.empty())
         addDiag(diag::ExpectedRsRule, peek().location());

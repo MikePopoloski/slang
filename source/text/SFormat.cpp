@@ -41,14 +41,14 @@ bool parse(string_view str, function_ref<void(string_view)> onText,
     while (ptr != end) {
         const char* start = ptr;
         if (char c = *ptr++; c != '%') {
-            text.append(c);
+            text.push_back(c);
             continue;
         }
 
         // %% collapses to a single %
         if (ptr != end && *ptr == '%') {
             ptr++;
-            text.append('%');
+            text.push_back('%');
             continue;
         }
 
@@ -92,7 +92,7 @@ bool parse(string_view str, function_ref<void(string_view)> onText,
 
         if (ptr == end) {
             err(diag::MissingFormatSpecifier, start);
-            text.append('%');
+            text.push_back('%');
             break;
         }
 
@@ -224,19 +224,19 @@ void formatInt(std::string& result, const SVInt& value, LiteralBase base,
 static void formatFloat(std::string& result, double value, char specifier,
                         const FormatOptions& options) {
     SmallVectorSized<char, 8> fmt;
-    fmt.append('%');
+    fmt.push_back('%');
     if (options.leftJustify)
-        fmt.append('-');
+        fmt.push_back('-');
     if (options.zeroPad)
-        fmt.append('0');
+        fmt.push_back('0');
     if (options.width)
         uintToStr(fmt, *options.width);
     if (options.precision) {
-        fmt.append('.');
+        fmt.push_back('.');
         uintToStr(fmt, *options.precision);
     }
-    fmt.append(specifier);
-    fmt.append('\0');
+    fmt.push_back(specifier);
+    fmt.push_back('\0');
 
     size_t cur = result.size();
     size_t sz = (size_t)snprintf(nullptr, 0, fmt.data(), value);

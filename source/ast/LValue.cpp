@@ -36,7 +36,7 @@ ConstantValue LValue::load() const {
     if (concat) {
         SmallVectorSized<SVInt, 4> vals;
         for (auto& elem : *concat)
-            vals.append(elem.load().integer());
+            vals.push_back(elem.load().integer());
         return SVInt::concat(vals);
     }
 
@@ -273,7 +273,7 @@ void LValue::addBitSlice(ConstantRange range) {
         return;
 
     auto& elems = std::get<Path>(value).elements;
-    elems.emplace(BitSlice{range});
+    elems.emplace_back(BitSlice{range});
 }
 
 void LValue::addIndex(int32_t index, ConstantValue&& defaultValue) {
@@ -281,7 +281,7 @@ void LValue::addIndex(int32_t index, ConstantValue&& defaultValue) {
         return;
 
     auto& elems = std::get<Path>(value).elements;
-    elems.emplace(ElementIndex{index, std::move(defaultValue), false});
+    elems.emplace_back(ElementIndex{index, std::move(defaultValue), false});
 }
 
 void LValue::addIndexOutOfBounds(ConstantValue&& defaultValue) {
@@ -289,7 +289,7 @@ void LValue::addIndexOutOfBounds(ConstantValue&& defaultValue) {
         return;
 
     auto& elems = std::get<Path>(value).elements;
-    elems.emplace(ElementIndex{0, std::move(defaultValue), true});
+    elems.emplace_back(ElementIndex{0, std::move(defaultValue), true});
 }
 
 void LValue::addArraySlice(ConstantRange range, ConstantValue&& defaultValue) {
@@ -297,7 +297,7 @@ void LValue::addArraySlice(ConstantRange range, ConstantValue&& defaultValue) {
         return;
 
     auto& elems = std::get<Path>(value).elements;
-    elems.emplace(ArraySlice{range, std::move(defaultValue)});
+    elems.emplace_back(ArraySlice{range, std::move(defaultValue)});
 }
 
 void LValue::addArrayLookup(ConstantValue&& index, ConstantValue&& defaultValue) {
@@ -305,7 +305,7 @@ void LValue::addArrayLookup(ConstantValue&& index, ConstantValue&& defaultValue)
         return;
 
     auto& elems = std::get<Path>(value).elements;
-    elems.emplace(ArrayLookup{std::move(index), std::move(defaultValue)});
+    elems.emplace_back(ArrayLookup{std::move(index), std::move(defaultValue)});
 }
 
 } // namespace slang::ast

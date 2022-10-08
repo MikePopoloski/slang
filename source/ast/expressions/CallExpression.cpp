@@ -167,9 +167,9 @@ bool Expression::collectArgs(const ASTContext& context, const ArgumentListSyntax
             }
 
             if (arg->kind == SyntaxKind::EmptyArgument)
-                orderedArgs.append(arg);
+                orderedArgs.push_back(arg);
             else
-                orderedArgs.append(arg->as<OrderedArgumentSyntax>().expr);
+                orderedArgs.push_back(arg->as<OrderedArgumentSyntax>().expr);
         }
     }
     return true;
@@ -272,7 +272,7 @@ bool CallExpression::bindArgs(const ArgumentListSyntax* argSyntax,
         }
         else {
             bad |= expr->bad();
-            boundArgs.append(expr);
+            boundArgs.push_back(expr);
         }
     }
 
@@ -456,7 +456,7 @@ Expression& CallExpression::createSystemCall(
     SystemCallInfo callInfo{&subroutine, context.scope, {}};
     SmallVectorSized<const Expression*, 8> buffer;
     if (firstArg)
-        buffer.append(firstArg);
+        buffer.push_back(firstArg);
 
     const Expression* iterOrThis = nullptr;
     const ValueSymbol* iterVar = nullptr;
@@ -521,7 +521,7 @@ Expression& CallExpression::createSystemCall(
                             continue;
                         }
 
-                        names.append(expr->as<IdentifierNameSyntax>().identifier.valueText());
+                        names.push_back(expr->as<IdentifierNameSyntax>().identifier.valueText());
                     }
 
                     randInfo.constraintRestrictions = names.copy(argContext.getCompilation());
@@ -546,7 +546,7 @@ Expression& CallExpression::createSystemCall(
                         const auto& arg = actualArgs[i]->as<OrderedArgumentSyntax>();
                         if (arg.expr->kind == SyntaxKind::ClockingPropertyExpr) {
                             if (subroutine.allowClockingArgument(index)) {
-                                buffer.append(&ClockingEventExpression::fromSyntax(
+                                buffer.push_back(&ClockingEventExpression::fromSyntax(
                                     arg.expr->as<ClockingPropertyExprSyntax>(), argContext));
                             }
                             else {
@@ -556,7 +556,7 @@ Expression& CallExpression::createSystemCall(
                             }
                         }
                         else if (auto exSyn = context.requireSimpleExpr(*arg.expr)) {
-                            buffer.append(
+                            buffer.push_back(
                                 &subroutine.bindArgument(index, argContext, *exSyn, buffer));
                         }
                         else {
@@ -569,7 +569,7 @@ Expression& CallExpression::createSystemCall(
                         return badExpr(compilation, nullptr);
                     case SyntaxKind::EmptyArgument:
                         if (subroutine.allowEmptyArgument(index)) {
-                            buffer.append(compilation.emplace<EmptyArgumentExpression>(
+                            buffer.push_back(compilation.emplace<EmptyArgumentExpression>(
                                 compilation.getVoidType(), actualArgs[i]->sourceRange()));
                         }
                         else {
@@ -650,7 +650,7 @@ ConstantValue CallExpression::evalImpl(EvalContext& context) const {
         ConstantValue v = arg->eval(context);
         if (!v)
             return nullptr;
-        args.emplace(std::move(v));
+        args.emplace_back(std::move(v));
     }
 
     // Push a new stack frame, push argument values as locals.

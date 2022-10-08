@@ -314,7 +314,7 @@ void ModportSymbol::fromSyntax(const ASTContext& context, const ModportDeclarati
                                                    item->name.location());
         modport->setSyntax(*item);
         modport->setAttributes(*context.scope, syntax.attributes);
-        results.append(modport);
+        results.push_back(modport);
 
         for (auto port : item->ports->ports) {
             switch (port->kind) {
@@ -420,14 +420,14 @@ void ContinuousAssignSymbol::fromSyntax(Compilation& compilation,
                 for (Token t : implicitNetNames) {
                     auto net = compilation.emplace<NetSymbol>(t.valueText(), t.location(), netType);
                     net->setType(compilation.getLogicType());
-                    implicitNets.append(net);
+                    implicitNets.push_back(net);
                 }
             }
         }
 
         auto symbol = compilation.emplace<ContinuousAssignSymbol>(*expr);
         symbol->setAttributes(*context.scope, syntax.attributes);
-        results.append(symbol);
+        results.push_back(symbol);
     }
 }
 
@@ -533,7 +533,7 @@ void GenvarSymbol::fromSyntax(const Scope& parent, const GenvarDeclarationSyntax
         auto genvar = comp.emplace<GenvarSymbol>(name.valueText(), name.location());
         genvar->setSyntax(*id);
         genvar->setAttributes(parent, syntax.attributes);
-        results.append(genvar);
+        results.push_back(genvar);
     }
 }
 
@@ -579,7 +579,7 @@ string_view ElabSystemTaskSymbol::getMessage() const {
             case SyntaxKind::OrderedArgument: {
                 const auto& oa = arg->as<OrderedArgumentSyntax>();
                 if (auto exSyn = astCtx.requireSimpleExpr(*oa.expr))
-                    args.append(&Expression::bind(*exSyn, astCtx));
+                    args.push_back(&Expression::bind(*exSyn, astCtx));
                 else
                     return empty();
                 break;
@@ -588,7 +588,7 @@ string_view ElabSystemTaskSymbol::getMessage() const {
                 astCtx.addDiag(diag::NamedArgNotAllowed, arg->sourceRange());
                 return empty();
             case SyntaxKind::EmptyArgument:
-                args.append(
+                args.push_back(
                     comp.emplace<EmptyArgumentExpression>(comp.getVoidType(), arg->sourceRange()));
                 break;
             default:
@@ -768,7 +768,7 @@ PrimitiveSymbol& PrimitiveSymbol::fromSyntax(const Scope& scope,
                                                               outputDecl.name.location(), dir);
                 port->setSyntax(*decl);
                 port->setAttributes(scope, decl->attributes);
-                ports.append(port);
+                ports.push_back(port);
                 prim->addMember(*port);
             }
             else {
@@ -781,7 +781,7 @@ PrimitiveSymbol& PrimitiveSymbol::fromSyntax(const Scope& scope,
 
                     port->setSyntax(*nameSyntax);
                     port->setAttributes(scope, decl->attributes);
-                    ports.append(port);
+                    ports.push_back(port);
                     prim->addMember(*port);
                 }
             }
@@ -798,7 +798,7 @@ PrimitiveSymbol& PrimitiveSymbol::fromSyntax(const Scope& scope,
             auto name = nameSyntax->identifier;
             auto port = comp.emplace<PrimitivePortSymbol>(comp, name.valueText(), name.location(),
                                                           PrimitivePortDirection::In);
-            ports.append(port);
+            ports.push_back(port);
             prim->addMember(*port);
             if (!name.valueText().empty())
                 portMap.emplace(name.valueText(), port);
@@ -1100,7 +1100,7 @@ void AssertionPortSymbol::buildPorts(Scope& scope, const AssertionItemPortListSy
         }
 
         scope.addMember(*port);
-        results.append(port);
+        results.push_back(port);
     }
 }
 
@@ -1350,7 +1350,7 @@ span<const RandSeqProductionSymbol::Rule> RandSeqProductionSymbol::getRules() co
         SmallVectorSized<Rule, 8> buffer;
         for (auto rule : syntax->as<ProductionSyntax>().rules) {
             ASSERT(blockIt != blocks.end());
-            buffer.append(createRule(*rule, context, *blockIt++));
+            buffer.push_back(createRule(*rule, context, *blockIt++));
         }
 
         rules = buffer.copy(context.getCompilation());
@@ -1402,8 +1402,8 @@ const RandSeqProductionSymbol::CaseProd& RandSeqProductionSymbol::createCaseProd
                 auto& sci = item->as<StandardRsCaseItemSyntax>();
                 auto pi = createProdItem(*sci.item, context);
                 for (auto es : sci.expressions) {
-                    expressions.append(es);
-                    prods.append(pi);
+                    expressions.push_back(es);
+                    prods.push_back(pi);
                 }
                 break;
             }
@@ -1437,9 +1437,9 @@ const RandSeqProductionSymbol::CaseProd& RandSeqProductionSymbol::createCaseProd
             case SyntaxKind::StandardRsCaseItem: {
                 auto& sci = item->as<StandardRsCaseItemSyntax>();
                 for (size_t i = 0; i < sci.expressions.size(); i++)
-                    group.append(*boundIt++);
+                    group.push_back(*boundIt++);
 
-                items.append({group.copy(comp), *prodIt++});
+                items.push_back({group.copy(comp), *prodIt++});
                 group.clear();
                 break;
             }
@@ -1462,12 +1462,12 @@ RandSeqProductionSymbol::Rule RandSeqProductionSymbol::createRule(
     for (auto p : syntax.prods) {
         switch (p->kind) {
             case SyntaxKind::RsProdItem:
-                prods.append(
+                prods.push_back(
                     comp.emplace<ProdItem>(createProdItem(p->as<RsProdItemSyntax>(), context)));
                 break;
             case SyntaxKind::RsCodeBlock: {
                 ASSERT(blockIt != blockRange.end());
-                prods.append(comp.emplace<CodeBlockProd>(*blockIt++));
+                prods.push_back(comp.emplace<CodeBlockProd>(*blockIt++));
                 break;
             }
             case SyntaxKind::RsIfElse: {
@@ -1482,20 +1482,20 @@ RandSeqProductionSymbol::Rule RandSeqProductionSymbol::createRule(
                 if (!expr.bad())
                     context.requireBooleanConvertible(expr);
 
-                prods.append(comp.emplace<IfElseProd>(expr, ifItem, elseItem));
+                prods.push_back(comp.emplace<IfElseProd>(expr, ifItem, elseItem));
                 break;
             }
             case SyntaxKind::RsRepeat: {
                 auto& rrs = p->as<RsRepeatSyntax>();
                 auto& expr = Expression::bind(*rrs.expr, context);
                 auto item = createProdItem(*rrs.item, context);
-                prods.append(comp.emplace<RepeatProd>(expr, item));
+                prods.push_back(comp.emplace<RepeatProd>(expr, item));
 
                 context.requireIntegral(expr);
                 break;
             }
             case SyntaxKind::RsCase:
-                prods.append(&createCaseProd(p->as<RsCaseSyntax>(), context));
+                prods.push_back(&createCaseProd(p->as<RsCaseSyntax>(), context));
                 break;
             default:
                 ASSUME_UNREACHABLE;
@@ -1605,7 +1605,7 @@ void RandSeqProductionSymbol::createRuleVariables(const RsRuleSyntax& syntax, co
                 FixedSizeUnpackedArrayType::fromDims(comp, symbol->getReturnType(), {&range, 1}));
         }
 
-        results.append(var);
+        results.push_back(var);
     }
 }
 

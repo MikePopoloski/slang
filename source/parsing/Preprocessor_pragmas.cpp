@@ -88,13 +88,13 @@ std::pair<PragmaExpressionSyntax*, bool> Preprocessor::parsePragmaValue() {
             }
 
             Token comma = expect(TokenKind::Comma);
-            values.append(comma);
+            values.push_back(comma);
             wantComma = false;
             lastToken = comma;
         }
         else {
             auto [expr, succeeded] = parsePragmaExpression();
-            values.append(expr);
+            values.push_back(expr);
             wantComma = true;
 
             if (!succeeded)
@@ -372,7 +372,7 @@ void Preprocessor::skipMacroTokensBeforeProtectRegion(Token directive,
             .addNote(diag::NoteDirectiveHere, directive.range());
 
         do {
-            skippedTokens.append(*currentMacroToken);
+            skippedTokens.push_back(*currentMacroToken);
             currentMacroToken++;
         } while (currentMacroToken != expandedTokens.end());
 
@@ -501,7 +501,7 @@ void Preprocessor::handleEncryptedRegion(Token keyword, const PragmaExpressionSy
     Token token = lexerStack.back()->lexEncodedText(protectEncoding, protectBytes, isSingleLine);
     addDiag(diag::ProtectedEnvelope, token.location());
 
-    skippedTokens.append(token);
+    skippedTokens.push_back(token);
 }
 
 void Preprocessor::handleProtectLicense(Token keyword, const PragmaExpressionSyntax* args,

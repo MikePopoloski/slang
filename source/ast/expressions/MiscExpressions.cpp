@@ -651,7 +651,7 @@ static const AssertionExpr& bindAssertionBody(const Symbol& symbol, const Syntax
             LocalAssertionVarSymbol::fromSyntax(*context.scope, *varSyntax, vars);
             for (auto var : vars) {
                 var->getDeclaredType()->forceResolveAt(context);
-                localVars.append(var);
+                localVars.push_back(var);
                 if (!var->name.empty()) {
                     // TODO: check duplicates
                     instance.localVars.emplace(var->name, var);
@@ -854,7 +854,7 @@ Expression& AssertionInstanceExpression::fromLookup(const Symbol& symbol,
         if (!checkAssertionArg(*expr, *formal, *argCtx, arg, instance.isRecursive))
             bad = true;
         else
-            actualArgs.append({formal, arg});
+            actualArgs.push_back({formal, arg});
 
         if (!outputLocalVarArgLoc && (formal->localVarDirection == ArgumentDirection::InOut ||
                                       formal->localVarDirection == ArgumentDirection::Out)) {
@@ -1240,7 +1240,7 @@ Expression& DistExpression::fromSyntax(Compilation& comp, const ExpressionOrDist
                                        const ASTContext& context) {
     SmallVectorSized<const ExpressionSyntax*, 8> expressions;
     for (auto item : syntax.distribution->items)
-        expressions.append(item->range);
+        expressions.push_back(item->range);
 
     SmallVectorSized<const Expression*, 8> bound;
     bool bad =
@@ -1262,7 +1262,7 @@ Expression& DistExpression::fromSyntax(Compilation& comp, const ExpressionOrDist
                 bad = true;
         }
 
-        items.emplace(di);
+        items.emplace_back(di);
     }
 
     auto result = comp.emplace<DistExpression>(comp.getVoidType(), *bound[0], items.copy(comp),

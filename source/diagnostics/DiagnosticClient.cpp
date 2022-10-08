@@ -26,7 +26,7 @@ void DiagnosticClient::getIncludeStack(BufferID buffer, SmallVector<SourceLocati
         if (!loc.buffer())
             break;
 
-        stack.append(loc);
+        stack.push_back(loc);
         buffer = loc.buffer();
     }
 }

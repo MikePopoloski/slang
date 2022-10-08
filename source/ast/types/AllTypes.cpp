@@ -168,7 +168,7 @@ const Type& IntegralType::fromSyntax(Compilation& compilation, SyntaxKind intege
         if (!dim)
             return compilation.getErrorType();
 
-        dims.emplace(*dim, dimSyntax);
+        dims.emplace_back(*dim, dimSyntax);
     }
 
     if (dims.empty())
@@ -526,7 +526,7 @@ void EnumType::createDefaultMembers(const ASTContext& context, const EnumTypeSyn
         if (member->dimensions.empty()) {
             auto ev = comp.emplace<EnumValueSymbol>(name, loc);
             ev->setType(comp.getErrorType());
-            members.append(ev);
+            members.push_back(ev);
         }
         else {
             auto dims = member->dimensions[0];
@@ -545,7 +545,7 @@ void EnumType::createDefaultMembers(const ASTContext& context, const EnumTypeSyn
                 int32_t index = int32_t(i) + low;
                 auto ev = comp.emplace<EnumValueSymbol>(getEnumValueName(comp, name, index), loc);
                 ev->setType(comp.getErrorType());
-                members.append(ev);
+                members.push_back(ev);
             }
         }
     }
@@ -737,7 +737,7 @@ const Type& PackedStructType::fromSyntax(Compilation& comp, const StructUnionTyp
             field->setSyntax(*decl);
             field->setAttributes(*context.scope, member->attributes);
             structType->addMember(*field);
-            members.append(field);
+            members.push_back(field);
 
             // Unpacked arrays are disallowed in packed structs.
             if (const Type& dimType = comp.getType(type, decl->dimensions, context);

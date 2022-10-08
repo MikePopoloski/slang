@@ -566,7 +566,7 @@ AssertionExpr& SequenceConcatExpr::fromSyntax(const DelayedSequenceExprSyntax& s
         ok &= !seq.bad();
 
         SequenceRange delay{0, 0};
-        elems.append(Element{delay, &seq});
+        elems.push_back(Element{delay, &seq});
     }
 
     for (auto es : syntax.elements) {
@@ -590,7 +590,7 @@ AssertionExpr& SequenceConcatExpr::fromSyntax(const DelayedSequenceExprSyntax& s
             delay.min = 1;
         }
 
-        elems.append(Element{delay, &seq});
+        elems.push_back(Element{delay, &seq});
     }
 
     auto& comp = context.getCompilation();
@@ -664,7 +664,7 @@ static span<const Expression* const> bindMatchItems(const SequenceMatchListSynta
             continue;
 
         auto& expr = Expression::bind(*exprSyn, ctx, ASTFlags::AssignmentAllowed);
-        results.append(&expr);
+        results.push_back(&expr);
 
         switch (expr.kind) {
             case ExpressionKind::Assignment: {
@@ -1141,9 +1141,9 @@ AssertionExpr& CaseAssertionExpr::fromSyntax(const CasePropertyExprSyntax& synta
 
             SmallVectorSized<const Expression*, 4> exprs;
             for (auto es : sci.expressions)
-                exprs.append(&bindExpr(*es, context));
+                exprs.push_back(&bindExpr(*es, context));
 
-            items.append(ItemGroup{exprs.copy(comp), &body});
+            items.push_back(ItemGroup{exprs.copy(comp), &body});
         }
         else {
             // The parser already errored for duplicate defaults,

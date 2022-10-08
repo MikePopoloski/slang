@@ -332,7 +332,7 @@ ConstantValue ConstantValue::convertToInt(bitwidth_t width, bool isSigned, bool 
         SmallVectorSized<byte, 8> buffer;
         auto& s = str();
         for (auto it = s.rbegin(); it != s.rend(); it++)
-            buffer.append(static_cast<byte>(*it));
+            buffer.push_back(static_cast<byte>(*it));
 
         SVInt result(width, buffer, isSigned);
         if (!isFourState)

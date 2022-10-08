@@ -85,7 +85,7 @@ void VariableSymbol::fromSyntax(Compilation& compilation, const DataDeclarationS
         variable->setDeclaredType(*syntax.type);
         variable->setFromDeclarator(*declarator);
         variable->setAttributes(scope, syntax.attributes);
-        results.append(variable);
+        results.push_back(variable);
 
         if (isConst)
             variable->flags |= VariableFlags::Const;
@@ -182,7 +182,7 @@ void FormalArgumentSymbol::fromSyntax(const Scope& scope, const PortDeclarationS
         arg->setDeclaredType(*header.dataType);
         arg->setFromDeclarator(*declarator);
         arg->setAttributes(scope, syntax.attributes);
-        results.append(arg);
+        results.push_back(arg);
 
         if (isConst)
             arg->flags |= VariableFlags::Const;
@@ -257,7 +257,7 @@ void NetSymbol::fromSyntax(const Scope& scope, const NetDeclarationSyntax& synta
         net->setDeclaredType(*syntax.type);
         net->setFromDeclarator(*declarator);
         net->setAttributes(scope, syntax.attributes);
-        results.append(net);
+        results.push_back(net);
     }
 }
 
@@ -280,7 +280,7 @@ void NetSymbol::fromSyntax(const Scope& scope, const UserDefinedNetDeclarationSy
                                            declarator->name.location(), *netType);
         net->setFromDeclarator(*declarator);
         net->setAttributes(scope, syntax.attributes);
-        results.append(net);
+        results.push_back(net);
     }
 }
 
@@ -420,7 +420,7 @@ void ClockVarSymbol::fromSyntax(const Scope& scope, const ClockingItemSyntax& sy
                                                 outputSkew);
         arg->setSyntax(*decl);
         arg->setAttributes(*parent, syntax.attributes);
-        results.append(arg);
+        results.push_back(arg);
 
         // If there is an initializer expression we take our type from that.
         // Otherwise we need to lookup the signal in our parent scope and
@@ -501,7 +501,7 @@ void LocalAssertionVarSymbol::fromSyntax(const Scope& scope,
         var->setDeclaredType(*syntax.type);
         var->setFromDeclarator(*declarator);
         var->setAttributes(scope, syntax.attributes);
-        results.append(var);
+        results.push_back(var);
 
         // Local variables don't get added to any scope as members but
         // we still need a parent pointer set so they can participate in lookups.

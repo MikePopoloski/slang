@@ -241,7 +241,7 @@ Expression& StringLiteral::fromSyntax(Compilation& compilation,
         // left, which translates to the msb, so we have to reverse the string.
         SmallVectorSized<byte, 64> bytes;
         for (char c : make_reverse_range(value))
-            bytes.append((byte)c);
+            bytes.push_back((byte)c);
 
         intVal = compilation.allocConstant(SVInt(width, bytes, false));
     }

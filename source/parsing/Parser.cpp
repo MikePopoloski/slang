@@ -44,7 +44,7 @@ SyntaxNode& Parser::parseGuess() {
     if (statement.kind == SyntaxKind::EmptyStatement &&
         statement.as<EmptyStatementSyntax>().semicolon.isMissing()) {
 
-        getDiagnostics().pop();
+        getDiagnostics().pop_back();
         auto& unit = parseCompilationUnit();
 
         // If there's only one member, pull it out for convenience
@@ -395,7 +395,7 @@ span<VariableDimensionSyntax*> Parser::parseDimensionList() {
         auto dim = parseDimension();
         if (!dim)
             break;
-        buffer.append(dim);
+        buffer.push_back(dim);
     }
     return buffer.copy(alloc);
 }
@@ -448,7 +448,7 @@ StructUnionTypeSyntax& Parser::parseStructUnion(SyntaxKind syntaxKind) {
             Token semi;
             auto declarators = parseDeclarators(semi);
 
-            buffer.append(
+            buffer.push_back(
                 &factory.structUnionMember(attributes, randomQualifier, type, declarators, semi));
 
             // If we failed to consume any tokens for this member, skip whatever token is
@@ -817,7 +817,7 @@ DataDeclarationSyntax& Parser::parseDataDeclaration(AttrList attributes) {
 
     while (isDeclarationModifier(peek().kind)) {
         Token t = consume();
-        modifiers.append(t);
+        modifiers.push_back(t);
         if (t.kind == TokenKind::VarKeyword)
             hasVar = true;
 
@@ -925,7 +925,7 @@ Parser::AttrList Parser::parseAttributes() {
             openParen, list, closeParen, RequireItems::True, diag::ExpectedAttribute,
             [this] { return &parseAttributeSpec(); });
 
-        buffer.append(&factory.attributeInstance(openParen, list, closeParen));
+        buffer.push_back(&factory.attributeInstance(openParen, list, closeParen));
     }
     return buffer.copy(alloc);
 }
@@ -992,13 +992,13 @@ ParameterDeclarationBaseSyntax& Parser::parseParameterDecl(Token keyword, Token*
         }
         else {
             while (true) {
-                decls.append(&parseTypeAssignment());
+                decls.push_back(&parseTypeAssignment());
                 if (!peek(TokenKind::Comma) || peek(1).kind != TokenKind::Identifier ||
                     (peek(2).kind != TokenKind::Equals && peek(2).kind != TokenKind::Comma)) {
                     break;
                 }
 
-                decls.append(consume());
+                decls.push_back(consume());
             }
         }
 
@@ -1014,7 +1014,7 @@ ParameterDeclarationBaseSyntax& Parser::parseParameterDecl(Token keyword, Token*
             decls = parseDeclarators(*semi, /* allowMinTypMax */ true);
         else {
             SmallVectorSized<TokenOrSyntax, 2> buffer;
-            buffer.append(&parseDeclarator(/* allowMinTypMax */ true));
+            buffer.push_back(&parseDeclarator(/* allowMinTypMax */ true));
             decls = buffer.copy(alloc);
         }
 

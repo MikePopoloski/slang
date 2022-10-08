@@ -64,24 +64,24 @@ bool EvalContext::pushFrame(const SubroutineSymbol& subroutine, SourceLocation c
     frame.subroutine = &subroutine;
     frame.callLocation = callLocation;
     frame.lookupLocation = lookupLocation;
-    stack.emplace(std::move(frame));
+    stack.emplace_back(std::move(frame));
     return true;
 }
 
 void EvalContext::pushEmptyFrame() {
-    stack.emplace(Frame{});
+    stack.emplace_back(Frame{});
 }
 
 void EvalContext::popFrame() {
-    stack.pop();
+    stack.pop_back();
 }
 
 void EvalContext::pushLValue(LValue& lval) {
-    lvalStack.append(&lval);
+    lvalStack.push_back(&lval);
 }
 
 void EvalContext::popLValue() {
-    lvalStack.pop();
+    lvalStack.pop_back();
 }
 
 LValue* EvalContext::getTopLValue() const {
@@ -128,11 +128,11 @@ void EvalContext::addDiags(const Diagnostics& additional) {
         if (first) {
             Diagnostic copy = diag;
             reportStack(copy);
-            diags.emplace(std::move(copy));
+            diags.emplace_back(std::move(copy));
             first = false;
         }
         else {
-            diags.append(diag);
+            diags.push_back(diag);
         }
     }
 }

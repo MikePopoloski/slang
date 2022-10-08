@@ -112,7 +112,7 @@ Expression* Expression::tryConnectPortArray(const ASTContext& context, const Typ
         SmallVectorSized<ConstantRange, 8> unpackedDimVec;
         const FixedSizeUnpackedArrayType* curr = &ct->as<FixedSizeUnpackedArrayType>();
         while (true) {
-            unpackedDimVec.append(curr->range);
+            unpackedDimVec.push_back(curr->range);
             ct = &curr->elementType.getCanonicalType();
             if (ct->kind != SymbolKind::FixedSizeUnpackedArrayType)
                 break;
@@ -1173,7 +1173,7 @@ ConstantValue AssignmentPatternExpressionBase::evalImpl(EvalContext& context) co
             if (!v)
                 return nullptr;
 
-            values.append(v.integer());
+            values.push_back(v.integer());
         }
 
         return SVInt::concat(values);
@@ -1241,7 +1241,7 @@ Expression& SimpleAssignmentPatternExpression::forStruct(
 
     SmallVectorSized<const Type*, 8> types;
     for (auto& field : structScope.membersOfType<FieldSymbol>())
-        types.append(&field.getType());
+        types.push_back(&field.getType());
 
     if (types.size() != syntax.items.size()) {
         auto& diag = context.addDiag(diag::WrongNumberAssignmentPatterns, sourceRange);
@@ -1255,7 +1255,7 @@ Expression& SimpleAssignmentPatternExpression::forStruct(
     for (auto item : syntax.items) {
         auto& expr = Expression::bindRValue(*types[index++], *item,
                                             item->getFirstToken().location(), context);
-        elems.append(&expr);
+        elems.push_back(&expr);
         bad |= expr.bad();
     }
 
@@ -1277,7 +1277,7 @@ static span<const Expression* const> bindExpressionList(
         for (auto item : items) {
             auto& expr = Expression::bindRValue(elementType, *item,
                                                 item->getFirstToken().location(), context);
-            elems.append(&expr);
+            elems.push_back(&expr);
             bad |= expr.bad();
         }
     }
@@ -1388,7 +1388,7 @@ static const Expression* matchElementValue(
             if (!elemExpr)
                 return nullptr;
 
-            elements.append(elemExpr);
+            elements.push_back(elemExpr);
         }
 
         auto& comp = context.getCompilation();
@@ -1408,7 +1408,7 @@ static const Expression* matchElementValue(
         SmallVectorSized<const Expression*, 8> elements;
         auto arrayRange = elementType.getFixedRange();
         for (int32_t i = arrayRange.lower(); i <= arrayRange.upper(); i++)
-            elements.append(elemExpr);
+            elements.push_back(elemExpr);
 
         auto& comp = context.getCompilation();
         return comp.emplace<SimpleAssignmentPatternExpression>(elementType, elements.copy(comp),
@@ -1477,7 +1477,7 @@ Expression& StructuredAssignmentPatternExpression::forStruct(
                     continue;
                 }
 
-                memberSetters.emplace(MemberSetter{member, &expr});
+                memberSetters.emplace_back(MemberSetter{member, &expr});
             }
             else {
                 auto found = Lookup::unqualified(*context.scope, name, LookupFlags::Type);
@@ -1486,7 +1486,7 @@ Expression& StructuredAssignmentPatternExpression::forStruct(
                                             context);
                     bad |= expr.bad();
 
-                    typeSetters.emplace(TypeSetter{&found->as<Type>(), &expr});
+                    typeSetters.emplace_back(TypeSetter{&found->as<Type>(), &expr});
                 }
                 else {
                     auto& diag = context.addDiag(diag::UnknownMember, item->key->sourceRange());
@@ -1502,7 +1502,7 @@ Expression& StructuredAssignmentPatternExpression::forStruct(
                 auto& expr = bindRValue(typeKey, *item->expr,
                                         item->expr->getFirstToken().location(), context);
 
-                typeSetters.emplace(TypeSetter{&typeKey, &expr});
+                typeSetters.emplace_back(TypeSetter{&typeKey, &expr});
                 bad |= expr.bad();
             }
             else {
@@ -1520,7 +1520,7 @@ Expression& StructuredAssignmentPatternExpression::forStruct(
     for (auto& field : structScope.membersOfType<FieldSymbol>()) {
         // If we already have a setter for this field we don't have to do anything else.
         if (auto it = memberMap.find(&field); it != memberMap.end()) {
-            elements.append(it->second);
+            elements.push_back(it->second);
             continue;
         }
 
@@ -1537,7 +1537,7 @@ Expression& StructuredAssignmentPatternExpression::forStruct(
             continue;
         }
 
-        elements.append(expr);
+        elements.push_back(expr);
     }
 
     auto result = comp.emplace<StructuredAssignmentPatternExpression>(
@@ -1572,7 +1572,7 @@ static std::optional<int32_t> bindArrayIndexSetter(
         return std::nullopt;
     }
 
-    indexSetters.append({&keyExpr, &expr});
+    indexSetters.push_back({&keyExpr, &expr});
     return *index;
 }
 
@@ -1610,7 +1610,7 @@ Expression& StructuredAssignmentPatternExpression::forFixedArray(
                 auto& expr = bindRValue(typeKey, *item->expr,
                                         item->expr->getFirstToken().location(), context);
 
-                typeSetters.emplace(TypeSetter{&typeKey, &expr});
+                typeSetters.emplace_back(TypeSetter{&typeKey, &expr});
                 bad |= expr.bad();
             }
             else {
@@ -1642,7 +1642,7 @@ Expression& StructuredAssignmentPatternExpression::forFixedArray(
     for (int32_t i = arrayRange.lower(); i <= arrayRange.upper(); i++) {
         // If we already have a setter for this index we don't have to do anything else.
         if (auto it = indexMap.find(i); it != indexMap.end()) {
-            elements.append(it->second);
+            elements.push_back(it->second);
             continue;
         }
 
@@ -1655,7 +1655,7 @@ Expression& StructuredAssignmentPatternExpression::forFixedArray(
             }
         }
 
-        elements.append(*cachedVal);
+        elements.push_back(*cachedVal);
     }
 
     auto result = comp.emplace<StructuredAssignmentPatternExpression>(
@@ -1719,7 +1719,7 @@ Expression& StructuredAssignmentPatternExpression::forDynamicArray(
         for (size_t i = 0; i <= maxIndex; i++) {
             auto expr = indexMap[int32_t(i)];
             ASSERT(expr);
-            elements.append(expr);
+            elements.push_back(expr);
         }
     }
 
@@ -1787,7 +1787,7 @@ Expression& StructuredAssignmentPatternExpression::forAssociativeArray(
                                     item->expr->getFirstToken().location(), context);
             bad |= expr.bad() || indexExpr->bad();
 
-            indexSetters.append(IndexSetter{indexExpr, &expr});
+            indexSetters.push_back(IndexSetter{indexExpr, &expr});
         }
     }
 
@@ -1862,7 +1862,7 @@ Expression& ReplicatedAssignmentPatternExpression::forStruct(
 
     SmallVectorSized<const Type*, 8> types;
     for (auto& field : structScope.membersOfType<FieldSymbol>())
-        types.append(&field.getType());
+        types.push_back(&field.getType());
 
     if (types.size() != syntax.items.size() * count) {
         auto& diag = context.addDiag(diag::WrongNumberAssignmentPatterns, sourceRange);
@@ -1877,7 +1877,7 @@ Expression& ReplicatedAssignmentPatternExpression::forStruct(
         for (auto item : syntax.items) {
             auto& expr = Expression::bindRValue(*types[index++], *item,
                                                 item->getFirstToken().location(), context);
-            elems.append(&expr);
+            elems.push_back(&expr);
             bad |= expr.bad();
         }
     }
