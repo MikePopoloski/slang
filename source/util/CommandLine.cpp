@@ -158,7 +158,7 @@ void CommandLine::setPositional(OptionCallback cb, string_view valueName, bool i
 }
 
 bool CommandLine::parse(int argc, const char* const argv[]) {
-    SmallVector<string_view, 8> args{size_t(argc)};
+    SmallVector<string_view, 8> args{size_t(argc), UninitializedTag()};
     for (int i = 0; i < argc; i++)
         args.push_back(argv[i]);
 
@@ -168,8 +168,8 @@ bool CommandLine::parse(int argc, const char* const argv[]) {
 #if defined(_MSC_VER)
 
 bool CommandLine::parse(int argc, const wchar_t* const argv[]) {
-    SmallVector<std::string, 8> storage{size_t(argc)};
-    SmallVector<string_view, 8> args{size_t(argc)};
+    SmallVector<std::string, 8> storage{size_t(argc), UninitializedTag()};
+    SmallVector<string_view, 8> args{size_t(argc), UninitializedTag()};
     for (int i = 0; i < argc; i++) {
         storage.push_back(narrow(argv[i]));
         args.push_back(storage.back());
@@ -190,7 +190,7 @@ bool CommandLine::parse(string_view argList, ParseOptions options) {
     if (hasArg)
         storage.emplace_back(std::move(current));
 
-    SmallVector<string_view, 8> args(storage.size());
+    SmallVector<string_view, 8> args(storage.size(), UninitializedTag());
     for (auto& arg : storage)
         args.push_back(arg);
 

@@ -539,6 +539,11 @@ constexpr size_t calculateDefaultSmallVectorElems() {
 
 } // namespace detail
 
+/// A tag type used in a SmallVector constructor to indicate that the passed
+/// capacity parameter is only for reserving uninitialized memory and not
+/// actually adding elements to the container.
+struct UninitializedTag {};
+
 /// A concrete, sized version of the SmallVectorBase<T> template.
 /// The template parameter N is the number of elements that will be allocated on the stack.
 template<typename T, size_t N = detail::calculateDefaultSmallVectorElems<T>()>
@@ -557,7 +562,9 @@ public:
     /// Constructs the SmallVector with the given capacity. If that capacity is less than
     /// the preallocated stack size `N` it will be ignored. Otherwise it will perform a heap
     /// allocation right away. Unlike std::vector this does not add any elements to the container.
-    explicit SmallVector(size_type capacity) : Base(N) { this->reserve(capacity); }
+    explicit SmallVector(size_type capacity, UninitializedTag) : Base(N) {
+        this->reserve(capacity);
+    }
 
     /// Constructs the SmallVector from the given range of elements.
     template<typename TIter, typename = std::enable_if_t<is_iterator_v<TIter>>>

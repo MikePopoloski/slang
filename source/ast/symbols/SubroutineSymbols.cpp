@@ -427,7 +427,7 @@ SubroutineSymbol& SubroutineSymbol::createOutOfBlock(Compilation& compilation,
 static span<const FormalArgumentSymbol* const> cloneArguments(
     Compilation& compilation, Scope& newParent, span<const FormalArgumentSymbol* const> source) {
 
-    SmallVector<const FormalArgumentSymbol*> arguments(source.size());
+    SmallVector<const FormalArgumentSymbol*> arguments(source.size(), UninitializedTag());
     for (auto arg : source) {
         auto copied = compilation.emplace<FormalArgumentSymbol>(arg->name, arg->location,
                                                                 arg->direction, arg->lifetime);

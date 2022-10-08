@@ -406,12 +406,11 @@ Token Token::deepClone(BumpAllocator& alloc) const {
         // If allocated it, the valid() function would fail
         return *this;
     }
-    else {
-        SmallVector<Trivia> triviaBuffer(trivia().size());
-        for (const auto& t : trivia())
-            triviaBuffer.push_back(t.clone(alloc));
-        return clone(alloc, triviaBuffer.copy(alloc), rawText(), location());
-    }
+
+    SmallVector<Trivia> triviaBuffer(trivia().size(), UninitializedTag());
+    for (const auto& t : trivia())
+        triviaBuffer.push_back(t.clone(alloc));
+    return clone(alloc, triviaBuffer.copy(alloc), rawText(), location());
 }
 
 void Token::init(BumpAllocator& alloc, TokenKind kind_, span<Trivia const> trivia,

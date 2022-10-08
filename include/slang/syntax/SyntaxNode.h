@@ -205,7 +205,7 @@ private:
     }
 
     void resetAll(BumpAllocator& alloc, span<const TokenOrSyntax> children) final {
-        SmallVector<T*> buffer(children.size());
+        SmallVector<T*> buffer(children.size(), UninitializedTag());
         for (auto& t : children)
             buffer.push_back(&t.node()->as<T>());
 
@@ -216,7 +216,7 @@ private:
 
 template<typename T>
 SyntaxList<T>* deepClone(const SyntaxList<T>& node, BumpAllocator& alloc) {
-    SmallVector<T*> buffer(node.size());
+    SmallVector<T*> buffer(node.size(), UninitializedTag());
     for (auto& t : node)
         buffer.push_back(deepClone(*t, alloc));
 
@@ -240,7 +240,7 @@ private:
     }
 
     void resetAll(BumpAllocator& alloc, span<const TokenOrSyntax> children) final {
-        SmallVector<Token> buffer(children.size());
+        SmallVector<Token> buffer(children.size(), UninitializedTag());
         for (auto& t : children)
             buffer.push_back(t.token());
 
@@ -339,7 +339,7 @@ private:
     }
 
     void resetAll(BumpAllocator& alloc, span<const TokenOrSyntax> children) final {
-        SmallVector<TokenOrSyntax> buffer(children.size());
+        SmallVector<TokenOrSyntax> buffer(children.size(), UninitializedTag());
         buffer.append(children);
 
         elements = buffer.copy(alloc);
@@ -351,7 +351,7 @@ private:
 
 template<typename T>
 SeparatedSyntaxList<T>* deepClone(const SeparatedSyntaxList<T>& node, BumpAllocator& alloc) {
-    SmallVector<TokenOrSyntax> buffer(node.size());
+    SmallVector<TokenOrSyntax> buffer(node.size(), UninitializedTag());
     for (const auto& ele : node.elems()) {
         if (ele.isToken())
             buffer.push_back(ele.token().deepClone(alloc));

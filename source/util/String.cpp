@@ -90,7 +90,7 @@ int editDistance(string_view left, string_view right, bool allowReplacements, in
     size_t m = left.size();
     size_t n = right.size();
 
-    SmallVector<int, 32> row(n);
+    SmallVector<int, 32> row(n, UninitializedTag());
     for (int i = 0; i <= int(n); i++)
         row.push_back(i);
 

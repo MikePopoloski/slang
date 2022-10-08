@@ -622,7 +622,7 @@ SVInt SVInt::ashr(bitwidth_t amount) const {
 
 SVInt SVInt::replicate(const SVInt& times) const {
     uint32_t n = times.as<uint32_t>().value();
-    SmallVector<SVInt> buffer(n);
+    SmallVector<SVInt> buffer(n, UninitializedTag());
     for (size_t i = 0; i < n; ++i)
         buffer.push_back(*this);
     return concat(span<SVInt const>(buffer.begin(), buffer.end()));

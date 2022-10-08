@@ -46,7 +46,7 @@ std::shared_ptr<SyntaxTree> SyntaxTree::fromFiles(span<const string_view> paths)
 std::shared_ptr<SyntaxTree> SyntaxTree::fromFiles(span<const string_view> paths,
                                                   SourceManager& sourceManager,
                                                   const Bag& options) {
-    SmallVector<SourceBuffer, 4> buffers(paths.size());
+    SmallVector<SourceBuffer, 4> buffers(paths.size(), UninitializedTag());
     for (auto path : paths) {
         SourceBuffer buffer = sourceManager.readSource(path);
         if (!buffer)
