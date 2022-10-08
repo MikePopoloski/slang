@@ -29,7 +29,7 @@ struct CloneVisitor {
         T* cloned = clone(node, alloc);
 
         constexpr bool IsList = std::is_same_v<T, SyntaxListBase>;
-        SmallVectorSized<TokenOrSyntax, 8> listBuffer;
+        SmallVector<TokenOrSyntax, 8> listBuffer;
 
         if constexpr (IsList) {
             if (auto it = commits.listInsertAtFront.find(&node);

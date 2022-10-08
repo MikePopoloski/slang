@@ -124,7 +124,7 @@ static void getHierarchicalPathImpl(const Symbol& symbol, FormatBuffer& buffer) 
     else if (current->kind == SymbolKind::Instance) {
         auto& inst = current->as<InstanceSymbol>();
         if (!inst.arrayPath.empty()) {
-            SmallVectorSized<ConstantRange, 8> instanceDimVec;
+            SmallVector<ConstantRange, 8> instanceDimVec;
             inst.getArrayDimensions(instanceDimVec);
 
             span<const ConstantRange> instanceDims = instanceDimVec;

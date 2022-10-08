@@ -46,7 +46,7 @@ static VariableLifetime getDefaultLifetime(const Scope& scope) {
 }
 
 void VariableSymbol::fromSyntax(Compilation& compilation, const DataDeclarationSyntax& syntax,
-                                const Scope& scope, SmallVector<const ValueSymbol*>& results) {
+                                const Scope& scope, SmallVectorBase<const ValueSymbol*>& results) {
     bool isConst = false;
     bool inProceduralContext = scope.isProceduralContext();
     std::optional<VariableLifetime> lifetime;
@@ -158,7 +158,7 @@ FormalArgumentSymbol::FormalArgumentSymbol(string_view name, SourceLocation loc,
 }
 
 void FormalArgumentSymbol::fromSyntax(const Scope& scope, const PortDeclarationSyntax& syntax,
-                                      SmallVector<const FormalArgumentSymbol*>& results) {
+                                      SmallVectorBase<const FormalArgumentSymbol*>& results) {
     if (syntax.header->kind != SyntaxKind::VariablePortHeader) {
         scope.addDiag(diag::ExpectedFunctionPort, syntax.header->sourceRange());
         return;
@@ -234,7 +234,7 @@ NetSymbol::NetSymbol(string_view name, SourceLocation loc, const NetType& netTyp
 }
 
 void NetSymbol::fromSyntax(const Scope& scope, const NetDeclarationSyntax& syntax,
-                           SmallVector<const NetSymbol*>& results) {
+                           SmallVectorBase<const NetSymbol*>& results) {
     auto& comp = scope.getCompilation();
     const NetType& netType = comp.getNetType(syntax.netType.kind);
 
@@ -262,7 +262,7 @@ void NetSymbol::fromSyntax(const Scope& scope, const NetDeclarationSyntax& synta
 }
 
 void NetSymbol::fromSyntax(const Scope& scope, const UserDefinedNetDeclarationSyntax& syntax,
-                           const Symbol* netTypeSym, SmallVector<const NetSymbol*>& results) {
+                           const Symbol* netTypeSym, SmallVectorBase<const NetSymbol*>& results) {
     auto& comp = scope.getCompilation();
     if (netTypeSym && netTypeSym->kind != SymbolKind::NetType) {
         scope.addDiag(diag::VarDeclWithDelay, syntax.delay->sourceRange());
@@ -386,7 +386,7 @@ ClockVarSymbol::ClockVarSymbol(string_view name, SourceLocation loc, ArgumentDir
 }
 
 void ClockVarSymbol::fromSyntax(const Scope& scope, const ClockingItemSyntax& syntax,
-                                SmallVector<const ClockVarSymbol*>& results) {
+                                SmallVectorBase<const ClockVarSymbol*>& results) {
     // Lookups should happen in the parent of the clocking block, since other
     // clocking block members cannot reference each other.
     auto& comp = scope.getCompilation();
@@ -493,7 +493,7 @@ LocalAssertionVarSymbol::LocalAssertionVarSymbol(string_view name, SourceLocatio
 
 void LocalAssertionVarSymbol::fromSyntax(const Scope& scope,
                                          const LocalVariableDeclarationSyntax& syntax,
-                                         SmallVector<const LocalAssertionVarSymbol*>& results) {
+                                         SmallVectorBase<const LocalAssertionVarSymbol*>& results) {
     auto& comp = scope.getCompilation();
     for (auto declarator : syntax.declarators) {
         auto var = comp.emplace<LocalAssertionVarSymbol>(declarator->name.valueText(),

@@ -133,7 +133,7 @@ public:
     }
 
 private:
-    SmallVectorSized<flat_hash_set<string_view>, 4> moduleDeclStack;
+    SmallVector<flat_hash_set<string_view>, 4> moduleDeclStack;
     TokenKind defaultNetType = TokenKind::Unknown;
     TokenKind unconnectedDrive = TokenKind::Unknown;
     std::optional<TimeScale> timeScale;

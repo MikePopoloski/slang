@@ -335,7 +335,7 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
         // a specialization can trigger more specializations to be made for the
         // same or other generic classs, so we need to be careful here when iterating.
         SmallSet<const Type*, 8> visitedSpecs;
-        SmallVectorSized<const Type*, 8> toVisit;
+        SmallVector<const Type*, 8> toVisit;
         bool didSomething;
         do {
             didSomething = false;
@@ -369,11 +369,10 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
     flat_hash_set<const InstanceBodySymbol*> activeInstanceBodies;
     flat_hash_set<const Definition*> usedIfacePorts;
     uint32_t errorLimit;
-    SmallVectorSized<const GenericClassDefSymbol*, 8> genericClasses;
-    SmallVectorSized<const SubroutineSymbol*, 4> dpiImports;
-    SmallVectorSized<const MethodPrototypeSymbol*, 4> externIfaceProtos;
-    SmallVectorSized<std::pair<const InterfacePortSymbol*, const ModportSymbol*>, 4>
-        modportsWithExports;
+    SmallVector<const GenericClassDefSymbol*, 8> genericClasses;
+    SmallVector<const SubroutineSymbol*, 4> dpiImports;
+    SmallVector<const MethodPrototypeSymbol*, 4> externIfaceProtos;
+    SmallVector<std::pair<const InterfacePortSymbol*, const ModportSymbol*>, 4> modportsWithExports;
     bool hierarchyProblem = false;
 };
 
@@ -517,7 +516,7 @@ struct DefParamVisitor : public ASTVisitor<DefParamVisitor, false, false> {
     template<typename T>
     void handle(const T&) {}
 
-    SmallVectorSized<const DefParamSymbol*, 8> found;
+    SmallVector<const DefParamSymbol*, 8> found;
     flat_hash_set<const Definition*> activeInstances;
     size_t instanceDepth = 0;
     size_t maxInstanceDepth = 0;

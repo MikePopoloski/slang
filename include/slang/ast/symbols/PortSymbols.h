@@ -62,7 +62,7 @@ public:
         const NetType* netType = nullptr;
         bitwidth_t width = 0;
     };
-    void getNetTypes(SmallVector<NetTypeRange>& ranges) const;
+    void getNetTypes(SmallVectorBase<NetTypeRange>& ranges) const;
 
     bool isNetPort() const;
 
@@ -70,8 +70,8 @@ public:
 
     static void fromSyntax(
         const syntax::PortListSyntax& syntax, const Scope& scope,
-        SmallVector<const Symbol*>& results,
-        SmallVector<std::pair<Symbol*, const Symbol*>>& implicitMembers,
+        SmallVectorBase<const Symbol*>& results,
+        SmallVectorBase<std::pair<Symbol*, const Symbol*>>& implicitMembers,
         span<std::pair<const syntax::SyntaxNode*, const Symbol*> const> portDeclarations);
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::Port; }

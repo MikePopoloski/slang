@@ -1108,7 +1108,7 @@ Expression* Expression::tryBindInterfaceRef(const ASTContext& context,
 
         symbol = ifacePort.getConnection();
         if (symbol && !result.selectors.empty()) {
-            SmallVectorSized<const ElementSelectSyntax*, 4> selectors;
+            SmallVector<const ElementSelectSyntax*, 4> selectors;
             for (auto& sel : result.selectors)
                 selectors.push_back(std::get<0>(sel));
 
@@ -1160,9 +1160,9 @@ Expression* Expression::tryBindInterfaceRef(const ASTContext& context,
 }
 
 void Expression::findPotentiallyImplicitNets(const SyntaxNode& expr, const ASTContext& context,
-                                             SmallVector<Token>& results) {
+                                             SmallVectorBase<Token>& results) {
     struct Visitor : public SyntaxVisitor<Visitor> {
-        Visitor(const ASTContext& context, SmallVector<Token>& results) :
+        Visitor(const ASTContext& context, SmallVectorBase<Token>& results) :
             context(context), results(results) {}
 
         void handle(const NameSyntax& nameSyntax) {
@@ -1178,7 +1178,7 @@ void Expression::findPotentiallyImplicitNets(const SyntaxNode& expr, const ASTCo
         }
 
         const ASTContext& context;
-        SmallVector<Token>& results;
+        SmallVectorBase<Token>& results;
     };
 
     Visitor visitor(context, results);

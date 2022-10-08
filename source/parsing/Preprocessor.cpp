@@ -236,7 +236,7 @@ Token Preprocessor::nextProcessed() {
 
 Token Preprocessor::handleDirectives(Token token) {
     // burn through any preprocessor directives we find and convert them to trivia
-    SmallVectorSized<Trivia, 16> trivia;
+    SmallVector<Trivia, 16> trivia;
     while (true) {
         lastConsumed = token;
         switch (token.kind) {
@@ -244,7 +244,7 @@ Token Preprocessor::handleDirectives(Token token) {
             case TokenKind::MacroEscapedQuote:
             case TokenKind::MacroPaste:
             case TokenKind::LineContinuation: {
-                SmallVectorSized<Token, 2> tokens;
+                SmallVector<Token, 2> tokens;
                 tokens.push_back(token);
                 trivia.push_back(Trivia(TriviaKind::SkippedTokens, tokens.copy(alloc)));
                 addDiag(diag::MacroOpsOutsideDefinition, token.range());
@@ -369,7 +369,7 @@ Token Preprocessor::nextRaw() {
 
     // Rare case: we have an EoF from an include file... we don't want to return
     // that one, but we do want to merge its trivia with whatever comes next.
-    SmallVectorSized<Trivia, 16> trivia;
+    SmallVector<Trivia, 16> trivia;
     auto appendTrivia = [&trivia, this](Token token) {
         SourceLocation loc = token.location();
         for (const auto& t : token.trivia())
@@ -403,7 +403,7 @@ Trivia Preprocessor::handleIncludeDirective(Token directive) {
     }
     else if (fileName.kind == TokenKind::LessThan) {
         // Piece together all tokens to form a single filename string.
-        SmallVectorSized<Token, 8> tokens;
+        SmallVector<Token, 8> tokens;
         consume();
 
         while (true) {
@@ -411,7 +411,7 @@ Trivia Preprocessor::handleIncludeDirective(Token directive) {
             if (token.kind == TokenKind::EndOfFile || !token.isOnSameLine()) {
                 fileName = expect(TokenKind::IncludeFileName);
                 if (!tokens.empty()) {
-                    SmallVectorSized<Trivia, 4> trivia;
+                    SmallVector<Trivia, 4> trivia;
                     trivia.push_back(Trivia(TriviaKind::SkippedTokens, tokens.copy(alloc)));
                     trivia.appendRange(fileName.trivia());
                     fileName = fileName.withTrivia(alloc, trivia.copy(alloc));
@@ -421,7 +421,7 @@ Trivia Preprocessor::handleIncludeDirective(Token directive) {
 
             if (token.kind == TokenKind::GreaterThan) {
                 consume();
-                SmallVectorSized<char, 64> text;
+                SmallVector<char, 64> text;
                 text.push_back('<');
 
                 for (Token cur : tokens) {
@@ -919,8 +919,8 @@ std::pair<Trivia, Trivia> Preprocessor::handlePragmaDirective(Token directive) {
         return {createSimpleDirective(directive), Trivia()};
     }
 
-    SmallVectorSized<TokenOrSyntax, 4> args;
-    SmallVectorSized<Token, 4> skipped;
+    SmallVector<TokenOrSyntax, 4> args;
+    SmallVector<Token, 4> skipped;
     Token name = consume();
     bool wantComma = false;
     bool ok = true;

@@ -171,7 +171,7 @@ public:
 };
 
 /// A collection of diagnostics.
-class SLANG_EXPORT Diagnostics : public SmallVectorSized<Diagnostic, 2> {
+class SLANG_EXPORT Diagnostics : public SmallVector<Diagnostic, 2> {
 public:
     /// Adds a new diagnostic to the collection, pointing to the given source location.
     Diagnostic& add(DiagCode code, SourceLocation location);

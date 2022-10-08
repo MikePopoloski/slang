@@ -644,10 +644,10 @@ static const AssertionExpr& bindAssertionBody(const Symbol& symbol, const Syntax
                                               const ASTContext& context,
                                               SourceLocation outputLocalVarArgLoc,
                                               ASTContext::AssertionInstanceDetails& instance,
-                                              SmallVector<const Symbol*>& localVars) {
+                                              SmallVectorBase<const Symbol*>& localVars) {
     auto createLocals = [&](auto& syntaxType) {
         for (auto varSyntax : syntaxType.variables) {
-            SmallVectorSized<const LocalAssertionVarSymbol*, 4> vars;
+            SmallVector<const LocalAssertionVarSymbol*, 4> vars;
             LocalAssertionVarSymbol::fromSyntax(*context.scope, *varSyntax, vars);
             for (auto var : vars) {
                 var->getDeclaredType()->forceResolveAt(context);
@@ -717,7 +717,7 @@ Expression& AssertionInstanceExpression::fromLookup(const Symbol& symbol,
             ASSUME_UNREACHABLE;
     }
 
-    SmallVectorSized<const SyntaxNode*, 8> orderedArgs;
+    SmallVector<const SyntaxNode*, 8> orderedArgs;
     NamedArgMap namedArgs;
     if (syntax && syntax->arguments) {
         if (!collectArgs(context, *syntax->arguments, orderedArgs, namedArgs))
@@ -769,7 +769,7 @@ Expression& AssertionInstanceExpression::fromLookup(const Symbol& symbol,
     bool bad = false;
     uint32_t orderedIndex = 0;
     SourceLocation outputLocalVarArgLoc;
-    SmallVectorSized<std::tuple<const Symbol*, ActualArg>, 8> actualArgs;
+    SmallVector<std::tuple<const Symbol*, ActualArg>, 8> actualArgs;
 
     for (auto formal : formalPorts) {
         const ASTContext* argCtx = &context;
@@ -893,7 +893,7 @@ Expression& AssertionInstanceExpression::fromLookup(const Symbol& symbol,
     auto bodySyntax = symbol.getSyntax();
     ASSERT(bodySyntax);
 
-    SmallVectorSized<const Symbol*, 8> localVars;
+    SmallVector<const Symbol*, 8> localVars;
     auto& body = bindAssertionBody(symbol, *bodySyntax, bodyContext, outputLocalVarArgLoc, instance,
                                    localVars);
 
@@ -990,7 +990,7 @@ Expression& AssertionInstanceExpression::makeDefault(const Symbol& symbol) {
     auto bodySyntax = symbol.getSyntax();
     ASSERT(bodySyntax);
 
-    SmallVectorSized<const Symbol*, 8> localVars;
+    SmallVector<const Symbol*, 8> localVars;
     auto& body = bindAssertionBody(symbol, *bodySyntax, bodyContext, outputLocalVarArgLoc, instance,
                                    localVars);
 
@@ -1238,17 +1238,17 @@ void CopyClassExpression::serializeTo(ASTSerializer& serializer) const {
 
 Expression& DistExpression::fromSyntax(Compilation& comp, const ExpressionOrDistSyntax& syntax,
                                        const ASTContext& context) {
-    SmallVectorSized<const ExpressionSyntax*, 8> expressions;
+    SmallVector<const ExpressionSyntax*, 8> expressions;
     for (auto item : syntax.distribution->items)
         expressions.push_back(item->range);
 
-    SmallVectorSized<const Expression*, 8> bound;
+    SmallVector<const Expression*, 8> bound;
     bool bad =
         !bindMembershipExpressions(context, TokenKind::DistKeyword, /* requireIntegral */ true,
                                    /* unwrapUnpacked */ false, /* allowTypeReferences */ false,
                                    /* allowOpenRange */ true, *syntax.expr, expressions, bound);
 
-    SmallVectorSized<DistItem, 4> items;
+    SmallVector<DistItem, 4> items;
     size_t index = 1;
     for (auto item : syntax.distribution->items) {
         DistItem di{*bound[index++], {}};

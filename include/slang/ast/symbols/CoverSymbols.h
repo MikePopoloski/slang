@@ -209,7 +209,7 @@ public:
                      span<const CoverpointSymbol* const> targets);
 
     static void fromSyntax(const Scope& scope, const syntax::CoverCrossSyntax& syntax,
-                           SmallVector<const Symbol*>& results);
+                           SmallVectorBase<const Symbol*>& results);
 
     const Expression* getIffExpr() const;
 

@@ -121,11 +121,11 @@ public:
 
     static void fromSyntax(Compilation& compilation, const syntax::IfGenerateSyntax& syntax,
                            const ASTContext& context, uint32_t constructIndex, bool isInstantiated,
-                           SmallVector<GenerateBlockSymbol*>& results);
+                           SmallVectorBase<GenerateBlockSymbol*>& results);
 
     static void fromSyntax(Compilation& compilation, const syntax::CaseGenerateSyntax& syntax,
                            const ASTContext& context, uint32_t constructIndex, bool isInstantiated,
-                           SmallVector<GenerateBlockSymbol*>& results);
+                           SmallVectorBase<GenerateBlockSymbol*>& results);
 
     static GenerateBlockSymbol& fromSyntax(const Scope& scope,
                                            const syntax::GenerateBlockSyntax& syntax,

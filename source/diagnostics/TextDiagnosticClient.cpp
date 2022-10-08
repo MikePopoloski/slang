@@ -51,7 +51,7 @@ fmt::terminal_color TextDiagnosticClient::getSeverityColor(DiagnosticSeverity se
 
 void TextDiagnosticClient::report(const ReportedDiagnostic& diag) {
     if (diag.shouldShowIncludeStack && includeFileStack) {
-        SmallVectorSized<SourceLocation, 8> includeStack;
+        SmallVector<SourceLocation, 8> includeStack;
         getIncludeStack(diag.location.buffer(), includeStack);
 
         // Show the stack in reverse.
@@ -75,7 +75,7 @@ void TextDiagnosticClient::report(const ReportedDiagnostic& diag) {
     }
 
     // Get all highlight ranges mapped into the reported location of the diagnostic.
-    SmallVectorSized<SourceRange, 8> mappedRanges;
+    SmallVector<SourceRange, 8> mappedRanges;
     engine->mapSourceRanges(diag.location, diag.ranges, mappedRanges);
 
     // Write the diagnostic.
@@ -92,7 +92,7 @@ void TextDiagnosticClient::report(const ReportedDiagnostic& diag) {
             else
                 name = fmt::format("expanded from macro '{}'", name);
 
-            SmallVectorSized<SourceRange, 8> macroRanges;
+            SmallVector<SourceRange, 8> macroRanges;
             engine->mapSourceRanges(loc, diag.ranges, macroRanges);
             formatDiag(sourceManager->getFullyOriginalLoc(loc), macroRanges,
                        DiagnosticSeverity::Note, name, "");
@@ -109,7 +109,7 @@ std::string TextDiagnosticClient::getString() const {
 }
 
 static bool printableTextForNextChar(string_view sourceLine, size_t& index, uint32_t tabStop,
-                                     SmallVector<char>& out, size_t& columnWidth) {
+                                     SmallVectorBase<char>& out, size_t& columnWidth) {
     ASSERT(index < sourceLine.size());
 
     // Expand tabs based on tabStop setting.
@@ -164,7 +164,7 @@ static bool printableTextForNextChar(string_view sourceLine, size_t& index, uint
     index = size_t(data - sourceLine.data());
 
     if (!isPrintableUnicode(c)) {
-        SmallVectorSized<char, 8> buf;
+        SmallVector<char, 8> buf;
         while (c) {
             buf.push_back(getHexForDigit(c % 16));
             c /= 16;
@@ -193,7 +193,7 @@ struct SourceSnippet {
 
         snippetLine.reserve(sourceLine.size());
 
-        SmallVectorSized<char, 16> buffer;
+        SmallVector<char, 16> buffer;
         size_t column = 0;
         size_t i = 0;
         while (i < sourceLine.size()) {
@@ -291,8 +291,8 @@ struct SourceSnippet {
         out.append(fg(highlightColor), highlightLine);
     }
 
-    SmallVectorSized<int, 256> byteToColumn;
-    SmallVectorSized<std::pair<size_t, size_t>, 4> invalidRanges;
+    SmallVector<int, 256> byteToColumn;
+    SmallVector<std::pair<size_t, size_t>, 4> invalidRanges;
     std::string snippetLine;
     std::string highlightLine;
 };

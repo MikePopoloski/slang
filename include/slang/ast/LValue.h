@@ -72,7 +72,7 @@ private:
     using PathElement = std::variant<BitSlice, ElementIndex, ArraySlice, ArrayLookup>;
     struct Path {
         ConstantValue* base = nullptr;
-        SmallVectorSized<PathElement, 4> elements;
+        SmallVector<PathElement, 4> elements;
 
         explicit Path(ConstantValue& base) : base(&base) {}
     };

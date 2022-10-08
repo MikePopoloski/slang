@@ -162,7 +162,7 @@ const Type& IntegralType::fromSyntax(Compilation& compilation, SyntaxKind intege
                                      span<const VariableDimensionSyntax* const> dimensions,
                                      bool isSigned, const ASTContext& context) {
     // This is a simple integral vector (possibly of just one element).
-    SmallVectorSized<std::pair<ConstantRange, const SyntaxNode*>, 4> dims;
+    SmallVector<std::pair<ConstantRange, const SyntaxNode*>, 4> dims;
     for (auto dimSyntax : dimensions) {
         auto dim = context.evalPackedDimension(*dimSyntax);
         if (!dim)
@@ -517,7 +517,7 @@ static string_view getEnumValueName(Compilation& comp, string_view name, int32_t
 }
 
 void EnumType::createDefaultMembers(const ASTContext& context, const EnumTypeSyntax& syntax,
-                                    SmallVector<const Symbol*>& members) {
+                                    SmallVectorBase<const Symbol*>& members) {
     auto& comp = context.getCompilation();
     for (auto member : syntax.members) {
         string_view name = member->name.valueText();
@@ -716,7 +716,7 @@ const Type& PackedStructType::fromSyntax(Compilation& comp, const StructUnionTyp
 
     ASTContext context(*structType, LookupLocation::max, parentContext.flags);
 
-    SmallVectorSized<FieldSymbol*, 8> members;
+    SmallVector<FieldSymbol*, 8> members;
     for (auto member : syntax.members) {
         const Type& type = comp.getType(*member->type, context);
         structType->isFourState |= type.isFourState();

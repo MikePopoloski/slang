@@ -149,7 +149,7 @@ SVInt SVInt::fromString(string_view str) {
     // convert the remaining chars to an array of digits to pass to the other
     // constructor
     bool isUnknown = false;
-    SmallVectorSized<logic_t, 16> digits;
+    SmallVector<logic_t, 16> digits;
     for (; c != end; ++c) {
         char d = *c;
         if (d == '_')
@@ -622,7 +622,7 @@ SVInt SVInt::ashr(bitwidth_t amount) const {
 
 SVInt SVInt::replicate(const SVInt& times) const {
     uint32_t n = times.as<uint32_t>().value();
-    SmallVectorSized<SVInt, 8> buffer;
+    SmallVector<SVInt, 8> buffer;
     for (size_t i = 0; i < n; ++i)
         buffer.push_back(*this);
     return concat(span<SVInt const>(buffer.begin(), buffer.end()));
@@ -654,25 +654,25 @@ std::string SVInt::toString(LiteralBase base) const {
     // Append the base unless we're a signed 32-bit base 10 integer.
     bool includeBase = base != LiteralBase::Decimal || bitWidth != 32 || !signFlag || unknownFlag;
 
-    SmallVectorSized<char, 32> buffer;
+    SmallVector<char, 32> buffer;
     writeTo(buffer, base, includeBase, DefaultStringAbbreviationThresholdBits);
     return std::string(buffer.begin(), buffer.end());
 }
 
 std::string SVInt::toString(LiteralBase base, bool includeBase,
                             bitwidth_t abbreviateThresholdBits) const {
-    SmallVectorSized<char, 32> buffer;
+    SmallVector<char, 32> buffer;
     writeTo(buffer, base, includeBase, abbreviateThresholdBits);
     return std::string(buffer.begin(), buffer.end());
 }
 
-void SVInt::writeTo(SmallVector<char>& buffer, LiteralBase base) const {
+void SVInt::writeTo(SmallVectorBase<char>& buffer, LiteralBase base) const {
     // Append the base unless we're a signed 32-bit base 10 integer.
     bool includeBase = base != LiteralBase::Decimal || bitWidth != 32 || !signFlag || unknownFlag;
     writeTo(buffer, base, includeBase);
 }
 
-void SVInt::writeTo(SmallVector<char>& buffer, LiteralBase base, bool includeBase,
+void SVInt::writeTo(SmallVectorBase<char>& buffer, LiteralBase base, bool includeBase,
                     bitwidth_t abbreviateThresholdBits) const {
     // negative sign if necessary
     SVInt tmp(*this);

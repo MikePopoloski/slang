@@ -202,7 +202,7 @@ std::optional<bool> isClassType(const Symbol& symbol) {
 }
 
 const NameSyntax* splitScopedName(const ScopedNameSyntax& syntax,
-                                  SmallVector<NamePlusLoc>& nameParts, int& colonParts) {
+                                  SmallVectorBase<NamePlusLoc>& nameParts, int& colonParts) {
     // Split the name into easier to manage chunks. The parser will always produce a
     // left-recursive name tree, so that's all we'll bother to handle.
     const ScopedNameSyntax* scoped = &syntax;
@@ -581,8 +581,8 @@ bool checkVisibility(const Symbol& symbol, const Scope& scope,
     return false;
 }
 
-bool resolveColonNames(SmallVectorSized<NamePlusLoc, 8>& nameParts, int colonParts,
-                       NameComponents& name, bitmask<LookupFlags> flags, LookupResult& result,
+bool resolveColonNames(SmallVector<NamePlusLoc, 8>& nameParts, int colonParts, NameComponents& name,
+                       bitmask<LookupFlags> flags, LookupResult& result,
                        const ASTContext& context) {
     // Unwrap the symbol if it's a type parameter, and bail early if it's an error type.
     const Symbol* symbol = std::exchange(result.found, nullptr);
@@ -1127,8 +1127,8 @@ void Lookup::selectChild(const Type& virtualInterface, SourceRange range,
                          span<LookupResult::Selector> selectors, const ASTContext& context,
                          LookupResult& result) {
     NameComponents unused;
-    SmallVectorSized<NamePlusLoc, 4> nameParts;
-    SmallVectorSized<const ElementSelectSyntax*, 8> elementSelects;
+    SmallVector<NamePlusLoc, 4> nameParts;
+    SmallVector<const ElementSelectSyntax*, 8> elementSelects;
     auto& comp = context.getCompilation();
 
     for (auto& selector : selectors) {
@@ -1148,7 +1148,7 @@ void Lookup::selectChild(const Type& virtualInterface, SourceRange range,
     }
 
     // lookupDownward expects names in reverse order...
-    SmallVectorSized<NamePlusLoc, 4> namePartsReversed(nameParts.size());
+    SmallVector<NamePlusLoc, 4> namePartsReversed(nameParts.size());
     for (auto& npl : make_reverse_range(nameParts))
         namePartsReversed.push_back(npl);
 
@@ -1304,7 +1304,7 @@ bool Lookup::ensureAccessible(const Symbol& symbol, const ASTContext& context,
 bool Lookup::findTempVar(const Scope& scope, const TempVarSymbol& symbol, const NameSyntax& syntax,
                          LookupResult& result) {
     int colonParts = 0;
-    SmallVectorSized<NamePlusLoc, 8> nameParts;
+    SmallVector<NamePlusLoc, 8> nameParts;
     const NameSyntax* first = &syntax;
     if (syntax.kind == SyntaxKind::ScopedName) {
         first = splitScopedName(syntax.as<ScopedNameSyntax>(), nameParts, colonParts);
@@ -1342,7 +1342,7 @@ bool Lookup::findTempVar(const Scope& scope, const TempVarSymbol& symbol, const 
 bool Lookup::withinClassRandomize(const ASTContext& context, const NameSyntax& syntax,
                                   bitmask<LookupFlags> flags, LookupResult& result) {
     int colonParts = 0;
-    SmallVectorSized<NamePlusLoc, 8> nameParts;
+    SmallVector<NamePlusLoc, 8> nameParts;
     const NameSyntax* first = &syntax;
     if (syntax.kind == SyntaxKind::ScopedName)
         first = splitScopedName(syntax.as<ScopedNameSyntax>(), nameParts, colonParts);
@@ -1424,7 +1424,7 @@ bool Lookup::withinClassRandomize(const ASTContext& context, const NameSyntax& s
 bool Lookup::findAssertionLocalVar(const ASTContext& context, const NameSyntax& syntax,
                                    LookupResult& result) {
     int colonParts = 0;
-    SmallVectorSized<NamePlusLoc, 8> nameParts;
+    SmallVector<NamePlusLoc, 8> nameParts;
     const NameSyntax* first = &syntax;
     if (syntax.kind == SyntaxKind::ScopedName) {
         first = splitScopedName(syntax.as<ScopedNameSyntax>(), nameParts, colonParts);
@@ -1589,7 +1589,7 @@ void Lookup::unqualifiedImpl(const Scope& scope, string_view name, LookupLocatio
             const Symbol* imported;
             const WildcardImportSymbol* import;
         };
-        SmallVectorSized<Import, 8> imports;
+        SmallVector<Import, 8> imports;
         SmallSet<const Symbol*, 2> importDedup;
 
         for (auto import : wildcardImports) {
@@ -1698,7 +1698,7 @@ void Lookup::qualified(const ScopedNameSyntax& syntax, const ASTContext& context
     // Split the name into easier to manage chunks. The parser will always produce a
     // left-recursive name tree, so that's all we'll bother to handle.
     int colonParts = 0;
-    SmallVectorSized<NamePlusLoc, 8> nameParts;
+    SmallVector<NamePlusLoc, 8> nameParts;
     auto leftMost = splitScopedName(syntax, nameParts, colonParts);
 
     SyntaxKind firstKind = leftMost->kind;

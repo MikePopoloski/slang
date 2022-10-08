@@ -352,7 +352,7 @@ void SignalEventControl::serializeTo(ASTSerializer& serializer) const {
 }
 
 static void collectEvents(const ASTContext& context, const SyntaxNode& expr,
-                          SmallVector<TimingControl*>& results) {
+                          SmallVectorBase<TimingControl*>& results) {
     switch (expr.kind) {
         case SyntaxKind::ParenthesizedEventExpression:
             collectEvents(context, *expr.as<ParenthesizedEventExpressionSyntax>().expr, results);
@@ -414,7 +414,7 @@ static void collectEvents(const ASTContext& context, const SyntaxNode& expr,
 
 TimingControl& EventListControl::fromSyntax(Compilation& compilation, const SyntaxNode& syntax,
                                             const ASTContext& context) {
-    SmallVectorSized<TimingControl*, 4> events;
+    SmallVector<TimingControl*, 4> events;
     collectEvents(context, syntax, events);
 
     if (events.size() == 1)
@@ -500,7 +500,7 @@ void CycleDelayControl::serializeTo(ASTSerializer& serializer) const {
 TimingControl& BlockEventListControl::fromSyntax(const BlockEventExpressionSyntax& syntax,
                                                  const ASTContext& context) {
     auto& comp = context.getCompilation();
-    SmallVectorSized<Event, 4> events;
+    SmallVector<Event, 4> events;
 
     auto addEvent = [&](const PrimaryBlockEventExpressionSyntax& evSyntax) {
         LookupResult result;

@@ -50,7 +50,7 @@ public:
     /// this might actually construct net symbols if the data type syntax refers to
     /// a user defined net type or alias.
     static void fromSyntax(Compilation& compilation, const syntax::DataDeclarationSyntax& syntax,
-                           const Scope& scope, SmallVector<const ValueSymbol*>& results);
+                           const Scope& scope, SmallVectorBase<const ValueSymbol*>& results);
 
     static VariableSymbol& fromSyntax(Compilation& compilation,
                                       const syntax::ForVariableDeclarationSyntax& syntax,
@@ -91,7 +91,7 @@ public:
     void serializeTo(ASTSerializer& serializer) const;
 
     static void fromSyntax(const Scope& scope, const syntax::PortDeclarationSyntax& syntax,
-                           SmallVector<const FormalArgumentSymbol*>& results);
+                           SmallVectorBase<const FormalArgumentSymbol*>& results);
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::FormalArgument; }
 
@@ -135,11 +135,11 @@ public:
     void serializeTo(ASTSerializer& serializer) const;
 
     static void fromSyntax(const Scope& scope, const syntax::NetDeclarationSyntax& syntax,
-                           SmallVector<const NetSymbol*>& results);
+                           SmallVectorBase<const NetSymbol*>& results);
 
     static void fromSyntax(const Scope& scope,
                            const syntax::UserDefinedNetDeclarationSyntax& syntax,
-                           const Symbol* netTypeSym, SmallVector<const NetSymbol*>& results);
+                           const Symbol* netTypeSym, SmallVectorBase<const NetSymbol*>& results);
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::Net; }
 
@@ -210,7 +210,7 @@ public:
                    ClockingSkew inputSkew, ClockingSkew outputSkew);
 
     static void fromSyntax(const Scope& scope, const syntax::ClockingItemSyntax& syntax,
-                           SmallVector<const ClockVarSymbol*>& results);
+                           SmallVectorBase<const ClockVarSymbol*>& results);
 
     void serializeTo(ASTSerializer& serializer) const;
 
@@ -224,7 +224,7 @@ public:
     LocalAssertionVarSymbol(string_view name, SourceLocation loc);
 
     static void fromSyntax(const Scope& scope, const syntax::LocalVariableDeclarationSyntax& syntax,
-                           SmallVector<const LocalAssertionVarSymbol*>& results);
+                           SmallVectorBase<const LocalAssertionVarSymbol*>& results);
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::LocalAssertionVar; }
 };

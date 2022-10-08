@@ -347,7 +347,7 @@ MemberSyntax* Parser::parseMember(SyntaxKind parentKind, bool& anyLocalModules) 
         if (t.kind == TokenKind::ConstraintKeyword) {
             // Out-of-block constraints can legitimately have the 'static' keyword,
             // but nothing else.
-            SmallVectorSized<Token, 4> quals;
+            SmallVector<Token, 4> quals;
             for (uint32_t i = 0; i < index; i++) {
                 Token qual = consume();
                 quals.push_back(qual);
@@ -387,7 +387,7 @@ MemberSyntax* Parser::parseSingleMember(SyntaxKind parentKind) {
 template<typename TMember, typename TParseFunc>
 span<TMember*> Parser::parseMemberList(TokenKind endKind, Token& endToken, SyntaxKind parentKind,
                                        TParseFunc&& parseFunc) {
-    SmallVectorSized<TMember*, 16> members;
+    SmallVector<TMember*, 16> members;
     bool errored = false;
     bool anyLocalModules = false;
 
@@ -432,7 +432,7 @@ TimeUnitsDeclarationSyntax& Parser::parseTimeUnitsDeclaration(AttrList attribute
 MemberSyntax& Parser::parseModportSubroutinePortList(AttrList attributes) {
     auto importExport = consume();
 
-    SmallVectorSized<TokenOrSyntax, 8> buffer;
+    SmallVector<TokenOrSyntax, 8> buffer;
     while (true) {
         if (peek(TokenKind::FunctionKeyword) || peek(TokenKind::TaskKeyword)) {
             auto& proto = parseFunctionPrototype(SyntaxKind::Unknown,
@@ -484,7 +484,7 @@ MemberSyntax& Parser::parseModportPort() {
             break;
     }
 
-    SmallVectorSized<TokenOrSyntax, 8> buffer;
+    SmallVector<TokenOrSyntax, 8> buffer;
     while (true) {
         if (peek(TokenKind::Dot)) {
             auto dot = consume();
@@ -534,7 +534,7 @@ ModportDeclarationSyntax& Parser::parseModportDeclaration(AttrList attributes) {
     auto keyword = consume();
 
     Token semi;
-    SmallVectorSized<TokenOrSyntax, 8> buffer;
+    SmallVector<TokenOrSyntax, 8> buffer;
     parseList<isIdentifierOrComma, isSemicolon>(buffer, TokenKind::Semicolon, TokenKind::Comma,
                                                 semi, RequireItems::True, diag::ExpectedIdentifier,
                                                 [this] { return &parseModportItem(); });
@@ -593,7 +593,7 @@ FunctionPortListSyntax* Parser::parseFunctionPortList(bool allowEmptyNames) {
 
     auto openParen = consume();
     Token closeParen;
-    SmallVectorSized<TokenOrSyntax, 8> buffer;
+    SmallVector<TokenOrSyntax, 8> buffer;
     parseList<isPossibleFunctionPort, isEndOfParenList>(
         buffer, TokenKind::CloseParenthesis, TokenKind::Comma, closeParen, RequireItems::False,
         diag::ExpectedFunctionPort,
@@ -791,7 +791,7 @@ CaseGenerateSyntax& Parser::parseCaseGenerateConstruct(AttrList attributes) {
     auto& condition = parseExpression();
     auto closeParen = expect(TokenKind::CloseParenthesis);
 
-    SmallVectorSized<CaseItemSyntax*, 8> itemBuffer;
+    SmallVector<CaseItemSyntax*, 8> itemBuffer;
     SourceLocation lastDefault;
     bool errored = false;
 
@@ -812,7 +812,7 @@ CaseGenerateSyntax& Parser::parseCaseGenerateConstruct(AttrList attributes) {
         }
         else if (isPossibleExpression(kind)) {
             Token colon;
-            SmallVectorSized<TokenOrSyntax, 8> buffer;
+            SmallVector<TokenOrSyntax, 8> buffer;
             parseList<isPossibleExpressionOrComma, isEndOfCaseItem>(
                 buffer, TokenKind::Colon, TokenKind::Comma, colon, RequireItems::True,
                 diag::ExpectedExpression, [this] { return &parseExpression(); });
@@ -876,7 +876,7 @@ ImplementsClauseSyntax* Parser::parseImplementsClause(TokenKind keywordKind, Tok
     }
 
     auto implements = consume();
-    SmallVectorSized<TokenOrSyntax, 8> buffer;
+    SmallVector<TokenOrSyntax, 8> buffer;
     parseList<isPossibleExpressionOrComma, isSemicolon>(buffer, TokenKind::Semicolon,
                                                         TokenKind::Comma, semi, RequireItems::True,
                                                         diag::ExpectedInterfaceClassName,
@@ -1035,7 +1035,7 @@ MemberSyntax* Parser::parseClassMember(bool isIfaceClass) {
     }
 
     bool isPureOrExtern = false;
-    SmallVectorSized<Token, 4> qualifierBuffer;
+    SmallVector<Token, 4> qualifierBuffer;
     while (isMemberQualifier(peek().kind)) {
         // As mentioned above, the virtual keyword needs special handling
         // because it might be a virtual method or a virtual interface property.
@@ -1259,7 +1259,7 @@ ContinuousAssignSyntax& Parser::parseContinuousAssign(AttrList attributes) {
     auto delay = parseDelay3();
 
     Token semi;
-    SmallVectorSized<TokenOrSyntax, 8> buffer;
+    SmallVector<TokenOrSyntax, 8> buffer;
     parseList<isPossibleExpressionOrComma, isSemicolon>(
         buffer, TokenKind::Semicolon, TokenKind::Comma, semi, RequireItems::True,
         diag::ExpectedContinuousAssignment, [this] {
@@ -1283,7 +1283,7 @@ DefParamSyntax& Parser::parseDefParam(AttrList attributes) {
     auto defparam = consume();
 
     Token semi;
-    SmallVectorSized<TokenOrSyntax, 8> buffer;
+    SmallVector<TokenOrSyntax, 8> buffer;
     parseList<isPossibleExpressionOrComma, isSemicolon>(
         buffer, TokenKind::Semicolon, TokenKind::Comma, semi, RequireItems::True,
         diag::ExpectedVariableAssignment, [this] { return &parseDefParamAssignment(); });
@@ -1512,7 +1512,7 @@ MemberSyntax* Parser::parseCoverpointMember() {
 }
 
 TransRangeSyntax& Parser::parseTransRange() {
-    SmallVectorSized<TokenOrSyntax, 8> buffer;
+    SmallVector<TokenOrSyntax, 8> buffer;
     while (true) {
         buffer.push_back(&parseOpenRangeElement(ExpressionOptions::SequenceExpr));
         if (!peek(TokenKind::Comma))
@@ -1559,7 +1559,7 @@ TransSetSyntax& Parser::parseTransSet() {
 }
 
 TransListCoverageBinInitializerSyntax& Parser::parseTransListInitializer() {
-    SmallVectorSized<TokenOrSyntax, 8> buffer;
+    SmallVector<TokenOrSyntax, 8> buffer;
     while (true) {
         buffer.push_back(&parseTransSet());
         if (!peek(TokenKind::Comma))
@@ -1597,7 +1597,7 @@ BlockEventExpressionSyntax& Parser::parseBlockEventExpression() {
 CoverCrossSyntax* Parser::parseCoverCross(AttrList attributes, NamedLabelSyntax* label) {
     auto keyword = expect(TokenKind::CrossKeyword);
 
-    SmallVectorSized<TokenOrSyntax, 8> buffer;
+    SmallVector<TokenOrSyntax, 8> buffer;
     while (true) {
         auto name = expect(TokenKind::Identifier);
         buffer.push_back(&factory.identifierName(name));
@@ -1855,14 +1855,14 @@ ConstraintItemSyntax* Parser::parseConstraintItem(bool allowBlock, bool isTopLev
                 addDiag(diag::SolveBeforeDisallowed, solve.range());
 
             Token before;
-            SmallVectorSized<TokenOrSyntax, 4> beforeBuffer;
+            SmallVector<TokenOrSyntax, 4> beforeBuffer;
             parseList<isPossibleExpressionOrComma, isBeforeOrSemicolon>(
                 beforeBuffer, TokenKind::BeforeKeyword, TokenKind::Comma, before,
                 RequireItems::True, diag::ExpectedExpression,
                 [this] { return &parsePrimaryExpression(ExpressionOptions::None); });
 
             Token semi;
-            SmallVectorSized<TokenOrSyntax, 4> afterBuffer;
+            SmallVector<TokenOrSyntax, 4> afterBuffer;
             parseList<isPossibleExpressionOrComma, isSemicolon>(
                 afterBuffer, TokenKind::Semicolon, TokenKind::Comma, semi, RequireItems::True,
                 diag::ExpectedExpression,
@@ -1973,7 +1973,7 @@ DistItemSyntax& Parser::parseDistItem() {
 }
 
 span<PackageImportDeclarationSyntax*> Parser::parsePackageImports() {
-    SmallVectorSized<PackageImportDeclarationSyntax*, 4> buffer;
+    SmallVector<PackageImportDeclarationSyntax*, 4> buffer;
     while (peek(TokenKind::ImportKeyword))
         buffer.push_back(&parseImportDeclaration({}));
     return buffer.copy(alloc);
@@ -1983,7 +1983,7 @@ PackageImportDeclarationSyntax& Parser::parseImportDeclaration(AttrList attribut
     auto keyword = consume();
 
     Token semi;
-    SmallVectorSized<TokenOrSyntax, 4> items;
+    SmallVector<TokenOrSyntax, 4> items;
     parseList<isIdentifierOrComma, isSemicolon>(items, TokenKind::Semicolon, TokenKind::Comma, semi,
                                                 RequireItems::True, diag::ExpectedPackageImport,
                                                 [this] { return &parsePackageImportItem(); });
@@ -2019,7 +2019,7 @@ MemberSyntax& Parser::parseExportDeclaration(AttrList attributes) {
     }
 
     Token semi;
-    SmallVectorSized<TokenOrSyntax, 4> items;
+    SmallVector<TokenOrSyntax, 4> items;
     parseList<isIdentifierOrComma, isSemicolon>(items, TokenKind::Semicolon, TokenKind::Comma, semi,
                                                 RequireItems::True, diag::ExpectedPackageImport,
                                                 [this] { return &parsePackageImportItem(); });
@@ -2152,7 +2152,7 @@ AssertionItemPortListSyntax* Parser::parseAssertionItemPortList(SyntaxKind paren
 
     auto openParen = consume();
 
-    SmallVectorSized<TokenOrSyntax, 4> buffer;
+    SmallVector<TokenOrSyntax, 4> buffer;
     Token closeParen;
     parseList<isPossiblePropertyPortItem, isEndOfParenList>(
         buffer, TokenKind::CloseParenthesis, TokenKind::Comma, closeParen, RequireItems::True,
@@ -2168,7 +2168,7 @@ PropertyDeclarationSyntax& Parser::parsePropertyDeclaration(AttrList attributes)
     auto portList = parseAssertionItemPortList(SyntaxKind::PropertyDeclaration);
     auto semi = expect(TokenKind::Semicolon);
 
-    SmallVectorSized<LocalVariableDeclarationSyntax*, 4> declarations;
+    SmallVector<LocalVariableDeclarationSyntax*, 4> declarations;
     while (isLocalVariableDeclaration())
         declarations.push_back(&parseLocalVariableDeclaration());
 
@@ -2189,7 +2189,7 @@ SequenceDeclarationSyntax& Parser::parseSequenceDeclaration(AttrList attributes)
     auto portList = parseAssertionItemPortList(SyntaxKind::SequenceDeclaration);
     auto semi = expect(TokenKind::Semicolon);
 
-    SmallVectorSized<LocalVariableDeclarationSyntax*, 4> declarations;
+    SmallVector<LocalVariableDeclarationSyntax*, 4> declarations;
     while (isLocalVariableDeclaration())
         declarations.push_back(&parseLocalVariableDeclaration());
 
@@ -2299,7 +2299,7 @@ MemberSyntax* Parser::parseClockingItem() {
         return &factory.defaultSkewItem(nullptr, def, direction, expect(TokenKind::Semicolon));
 
     Token semi;
-    SmallVectorSized<TokenOrSyntax, 4> decls;
+    SmallVector<TokenOrSyntax, 4> decls;
     parseList<isIdentifierOrComma, isSemicolon>(decls, TokenKind::Semicolon, TokenKind::Comma, semi,
                                                 RequireItems::True, diag::ExpectedIdentifier,
                                                 [this] { return &parseAttributeSpec(); });
@@ -2383,7 +2383,7 @@ HierarchyInstantiationSyntax& Parser::parseHierarchyInstantiation(AttrList attri
     }
 
     Token semi;
-    SmallVectorSized<TokenOrSyntax, 8> items;
+    SmallVector<TokenOrSyntax, 8> items;
     parseList<isPossibleInstance, isSemicolon>(items, TokenKind::Semicolon, TokenKind::Comma, semi,
                                                RequireItems::True,
                                                diag::ExpectedHierarchicalInstantiation,
@@ -2470,7 +2470,7 @@ PrimitiveInstantiationSyntax& Parser::parsePrimitiveInstantiation(AttrList attri
     }
 
     Token semi;
-    SmallVectorSized<TokenOrSyntax, 8> items;
+    SmallVector<TokenOrSyntax, 8> items;
     parseList<isPossibleInstance, isSemicolon>(items, TokenKind::Semicolon, TokenKind::Comma, semi,
                                                RequireItems::True,
                                                diag::ExpectedHierarchicalInstantiation,
@@ -2485,7 +2485,7 @@ CheckerInstantiationSyntax& Parser::parseCheckerInstantiation(AttrList attribute
     auto parameters = parseParameterValueAssignment();
 
     Token semi;
-    SmallVectorSized<TokenOrSyntax, 8> items;
+    SmallVector<TokenOrSyntax, 8> items;
     parseList<isPossibleInstance, isSemicolon>(items, TokenKind::Semicolon, TokenKind::Comma, semi,
                                                RequireItems::True,
                                                diag::ExpectedHierarchicalInstantiation,
@@ -2521,7 +2521,7 @@ BindDirectiveSyntax& Parser::parseBindDirective(AttrList attr) {
     if (peek(TokenKind::Colon)) {
         auto colon = consume();
 
-        SmallVectorSized<TokenOrSyntax, 4> names;
+        SmallVector<TokenOrSyntax, 4> names;
         while (true) {
             names.push_back(&parseName());
             if (!peek(TokenKind::Comma))
@@ -2559,7 +2559,7 @@ UdpPortDeclSyntax& Parser::parseUdpPortDecl() {
 
     auto input = expect(TokenKind::InputKeyword);
 
-    SmallVectorSized<TokenOrSyntax, 4> ports;
+    SmallVector<TokenOrSyntax, 4> ports;
     while (true) {
         auto name = expect(TokenKind::Identifier);
         ports.push_back(&factory.identifierName(name));
@@ -2584,7 +2584,7 @@ UdpPortListSyntax& Parser::parseUdpPortList() {
     }
     else if (peek(TokenKind::OutputKeyword) || peek(TokenKind::InputKeyword)) {
         Token closeParen;
-        SmallVectorSized<TokenOrSyntax, 4> ports;
+        SmallVector<TokenOrSyntax, 4> ports;
         parseList<isPossibleUdpPort, isEndOfParenList>(ports, TokenKind::CloseParenthesis,
                                                        TokenKind::Comma, closeParen,
                                                        RequireItems::True, diag::ExpectedUdpPort,
@@ -2595,7 +2595,7 @@ UdpPortListSyntax& Parser::parseUdpPortList() {
     }
     else {
         Token closeParen;
-        SmallVectorSized<TokenOrSyntax, 4> ports;
+        SmallVector<TokenOrSyntax, 4> ports;
         parseList<isIdentifierOrComma, isEndOfParenList>(
             ports, TokenKind::CloseParenthesis, TokenKind::Comma, closeParen, RequireItems::True,
             diag::ExpectedUdpPort, [this] { return &factory.identifierName(consume()); });
@@ -2622,8 +2622,8 @@ UdpEntrySyntax& Parser::parseUdpEntry() {
         }
     };
 
-    SmallVectorSized<Token, 4> preInputs;
-    SmallVectorSized<Token, 4> postInputs;
+    SmallVector<Token, 4> preInputs;
+    SmallVector<Token, 4> postInputs;
     while (true) {
         auto next = nextSymbol(false);
         if (!next)
@@ -2665,7 +2665,7 @@ UdpEntrySyntax& Parser::parseUdpEntry() {
 }
 
 UdpBodySyntax& Parser::parseUdpBody() {
-    SmallVectorSized<TokenOrSyntax, 4> portDecls;
+    SmallVector<TokenOrSyntax, 4> portDecls;
     while (isPossibleUdpPort(peek().kind)) {
         portDecls.push_back(&parseUdpPortDecl());
         portDecls.push_back(expect(TokenKind::Semicolon));
@@ -2683,7 +2683,7 @@ UdpBodySyntax& Parser::parseUdpBody() {
 
     auto table = expect(TokenKind::TableKeyword);
 
-    SmallVectorSized<UdpEntrySyntax*, 8> entries;
+    SmallVector<UdpEntrySyntax*, 8> entries;
     while (isPossibleUdpEntry(peek().kind))
         entries.push_back(&parseUdpEntry());
 
@@ -2716,14 +2716,14 @@ SpecparamDeclarationSyntax& Parser::parseSpecparam(AttrList attr) {
     auto keyword = consume();
 
     auto dim = parseDimension();
-    SmallVectorSized<VariableDimensionSyntax*, 2> dims;
+    SmallVector<VariableDimensionSyntax*, 2> dims;
     if (dim)
         dims.push_back(dim);
 
     auto& type = factory.implicitType(Token(), dims.copy(alloc), placeholderToken());
 
     Token semi;
-    SmallVectorSized<TokenOrSyntax, 4> buffer;
+    SmallVector<TokenOrSyntax, 4> buffer;
     parseList<isIdentifierOrComma, isNotIdOrComma>(buffer, TokenKind::Semicolon, TokenKind::Comma,
                                                    semi, RequireItems::True,
                                                    diag::ExpectedDeclarator,
@@ -2733,7 +2733,7 @@ SpecparamDeclarationSyntax& Parser::parseSpecparam(AttrList attr) {
 }
 
 span<TokenOrSyntax> Parser::parsePathTerminals() {
-    SmallVectorSized<TokenOrSyntax, 4> results;
+    SmallVector<TokenOrSyntax, 4> results;
     while (true) {
         results.push_back(&parseName());
         if (!peek(TokenKind::Comma))
@@ -2832,7 +2832,7 @@ PathDeclarationSyntax& Parser::parsePathDeclaration() {
         semi = expect(TokenKind::Semicolon);
     }
     else {
-        SmallVectorSized<TokenOrSyntax, 4> buffer;
+        SmallVector<TokenOrSyntax, 4> buffer;
         parseList<isPossibleExpressionOrComma, isSemicolon>(
             buffer, TokenKind::Semicolon, TokenKind::Comma, semi, RequireItems::True,
             diag::ExpectedExpression, [this] { return &parseMinTypMaxExpression(); });
@@ -3008,7 +3008,7 @@ NetAliasSyntax& Parser::parseNetAlias(AttrList attributes) {
     auto keyword = consume();
 
     Token semi;
-    SmallVectorSized<TokenOrSyntax, 8> buffer;
+    SmallVector<TokenOrSyntax, 8> buffer;
     parseList<isPossibleExpressionOrEquals, isSemicolon>(
         buffer, TokenKind::Semicolon, TokenKind::Equals, semi, RequireItems::True,
         diag::ExpectedExpression, [this] { return &parseExpression(); });
@@ -3073,7 +3073,7 @@ ConfigCellIdentifierSyntax& Parser::parseConfigCellIdentifier() {
 ConfigLiblistSyntax& Parser::parseConfigLiblist() {
     auto liblist = expect(TokenKind::LibListKeyword);
 
-    SmallVectorSized<Token, 4> tokens;
+    SmallVector<Token, 4> tokens;
     while (peek(TokenKind::Identifier))
         tokens.push_back(consume());
 
@@ -3103,7 +3103,7 @@ ConfigDeclarationSyntax& Parser::parseConfigDeclaration(AttrList attributes) {
     auto name = expect(TokenKind::Identifier);
     auto semi1 = expect(TokenKind::Semicolon);
 
-    SmallVectorSized<ParameterDeclarationStatementSyntax*, 4> localparams;
+    SmallVector<ParameterDeclarationStatementSyntax*, 4> localparams;
     while (peek(TokenKind::LocalParamKeyword)) {
         Token paramSemi;
         auto& paramBase = parseParameterDecl(consume(), &paramSemi);
@@ -3113,13 +3113,13 @@ ConfigDeclarationSyntax& Parser::parseConfigDeclaration(AttrList attributes) {
 
     auto design = expect(TokenKind::DesignKeyword);
 
-    SmallVectorSized<ConfigCellIdentifierSyntax*, 4> topCells;
+    SmallVector<ConfigCellIdentifierSyntax*, 4> topCells;
     while (peek(TokenKind::Identifier))
         topCells.push_back(&parseConfigCellIdentifier());
 
     auto semi2 = expect(TokenKind::Semicolon);
 
-    SmallVectorSized<ConfigRuleSyntax*, 4> rules;
+    SmallVector<ConfigRuleSyntax*, 4> rules;
     while (true) {
         auto token = peek();
         if (token.kind == TokenKind::DefaultKeyword) {
@@ -3145,7 +3145,7 @@ ConfigDeclarationSyntax& Parser::parseConfigDeclaration(AttrList attributes) {
             consume();
             auto topModule = expect(TokenKind::Identifier);
 
-            SmallVectorSized<ConfigInstanceIdentifierSyntax*, 4> instanceNames;
+            SmallVector<ConfigInstanceIdentifierSyntax*, 4> instanceNames;
             while (peek(TokenKind::Dot)) {
                 auto dot = consume();
                 instanceNames.push_back(

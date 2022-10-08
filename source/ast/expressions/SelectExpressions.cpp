@@ -1103,7 +1103,7 @@ private:
     };
 
     State curr;
-    SmallVectorSized<State, 4> stack;
+    SmallVector<State, 4> stack;
 };
 
 static bool translateUnionMembers(ConstantValue& result, const Type& targetType,

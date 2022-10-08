@@ -20,10 +20,10 @@ inline string_view toStringView(span<char> text) {
 }
 
 /// Converts the provided @a value into a string, storing it into @a buffer.
-void uintToStr(SmallVector<char>& buffer, uint32_t value);
+void uintToStr(SmallVectorBase<char>& buffer, uint32_t value);
 
 /// Converts the provided @a value into a string, storing it into @a buffer.
-void uintToStr(SmallVector<char>& buffer, uint64_t value);
+void uintToStr(SmallVectorBase<char>& buffer, uint64_t value);
 
 /// Parses the provided @a str in the specified @a base into a signed integer.
 /// If @a pos is non-null, it will be set to point to the first character in the

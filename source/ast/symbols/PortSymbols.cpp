@@ -100,7 +100,7 @@ void checkSymbolConnection(const Expression& expr, ArgumentDirection direction,
 class AnsiPortListBuilder {
 public:
     AnsiPortListBuilder(const Scope& scope,
-                        SmallVector<std::pair<Symbol*, const Symbol*>>& implicitMembers) :
+                        SmallVectorBase<std::pair<Symbol*, const Symbol*>>& implicitMembers) :
         comp(scope.getCompilation()),
         scope(scope), implicitMembers(implicitMembers) {}
 
@@ -338,7 +338,7 @@ private:
 
     Compilation& comp;
     const Scope& scope;
-    SmallVector<std::pair<Symbol*, const Symbol*>>& implicitMembers;
+    SmallVectorBase<std::pair<Symbol*, const Symbol*>>& implicitMembers;
 
     ArgumentDirection lastDirection = ArgumentDirection::InOut;
     const DataTypeSyntax* lastType = nullptr;
@@ -352,7 +352,7 @@ class NonAnsiPortListBuilder {
 public:
     NonAnsiPortListBuilder(const Scope& scope,
                            span<std::pair<const SyntaxNode*, const Symbol*> const> portDeclarations,
-                           SmallVector<std::pair<Symbol*, const Symbol*>>& implicitMembers) :
+                           SmallVectorBase<std::pair<Symbol*, const Symbol*>>& implicitMembers) :
         comp(scope.getCompilation()),
         scope(scope), implicitMembers(implicitMembers) {
 
@@ -466,7 +466,7 @@ public:
 private:
     Compilation& comp;
     const Scope& scope;
-    SmallVector<std::pair<Symbol*, const Symbol*>>& implicitMembers;
+    SmallVectorBase<std::pair<Symbol*, const Symbol*>>& implicitMembers;
 
     struct PortInfo {
         not_null<const DeclaratorSyntax*> syntax;
@@ -665,7 +665,7 @@ private:
     Symbol& createPort(string_view name, SourceLocation externalLoc,
                        const PortConcatenationSyntax& syntax) {
         ArgumentDirection dir = ArgumentDirection::In;
-        SmallVectorSized<const PortSymbol*, 4> buffer;
+        SmallVector<const PortSymbol*, 4> buffer;
         bool allNets = true;
         bool allVars = true;
         bool hadError = false;
@@ -1111,7 +1111,7 @@ private:
 
             symbol = ifacePort.getConnection();
             if (symbol && !result.selectors.empty()) {
-                SmallVectorSized<const ElementSelectSyntax*, 4> selectors;
+                SmallVector<const ElementSelectSyntax*, 4> selectors;
                 for (auto& sel : result.selectors)
                     selectors.push_back(std::get<0>(sel));
 
@@ -1223,7 +1223,7 @@ private:
         }
 
         // Make sure the thing we're connecting to is an interface or array of interfaces.
-        SmallVectorSized<ConstantRange, 4> dims;
+        SmallVector<ConstantRange, 4> dims;
         const Symbol* child = symbol;
         while (child->kind == SymbolKind::InstanceArray) {
             auto& array = child->as<InstanceArraySymbol>();
@@ -1300,8 +1300,8 @@ private:
     const Scope& scope;
     const InstanceSymbol& instance;
     Compilation& comp;
-    SmallVectorSized<ConstantRange, 4> instanceDims;
-    SmallVectorSized<const PortConnectionSyntax*, 8> orderedConns;
+    SmallVector<ConstantRange, 4> instanceDims;
+    SmallVector<const PortConnectionSyntax*, 8> orderedConns;
     SmallMap<string_view, std::pair<const NamedPortConnectionSyntax*, bool>, 8> namedConns;
     span<const AttributeSymbol* const> wildcardAttrs;
     LookupLocation lookupLocation;
@@ -1436,7 +1436,8 @@ const Expression* PortSymbol::getInternalExpr() const {
     return internalExpr;
 }
 
-static void getNetRanges(const Expression& expr, SmallVector<PortSymbol::NetTypeRange>& ranges) {
+static void getNetRanges(const Expression& expr,
+                         SmallVectorBase<PortSymbol::NetTypeRange>& ranges) {
     if (auto sym = expr.getSymbolReference(); sym && sym->kind == SymbolKind::Net) {
         auto& nt = sym->as<NetSymbol>().netType;
         bitwidth_t width = expr.type->getBitWidth();
@@ -1462,7 +1463,7 @@ static void getNetRanges(const Expression& expr, SmallVector<PortSymbol::NetType
     }
 }
 
-void PortSymbol::getNetTypes(SmallVector<NetTypeRange>& ranges) const {
+void PortSymbol::getNetTypes(SmallVectorBase<NetTypeRange>& ranges) const {
     if (auto ie = getInternalExpr()) {
         getNetRanges(*ie, ranges);
     }
@@ -1507,8 +1508,8 @@ bool PortSymbol::isNetPort() const {
 }
 
 void PortSymbol::fromSyntax(
-    const PortListSyntax& syntax, const Scope& scope, SmallVector<const Symbol*>& results,
-    SmallVector<std::pair<Symbol*, const Symbol*>>& implicitMembers,
+    const PortListSyntax& syntax, const Scope& scope, SmallVectorBase<const Symbol*>& results,
+    SmallVectorBase<std::pair<Symbol*, const Symbol*>>& implicitMembers,
     span<std::pair<const SyntaxNode*, const Symbol*> const> portDeclarations) {
 
     switch (syntax.kind) {
@@ -1657,7 +1658,7 @@ std::optional<span<const ConstantRange>> InterfacePortSymbol::getDeclaredRange()
 
     ASTContext context(*scope, LookupLocation::before(*this), ASTFlags::NonProcedural);
 
-    SmallVectorSized<ConstantRange, 4> buffer;
+    SmallVector<ConstantRange, 4> buffer;
     for (auto dimSyntax : syntax->as<DeclaratorSyntax>().dimensions) {
         auto dim = context.evalDimension(*dimSyntax, /* requireRange */ true, /* isPacked */ false);
         if (!dim.isRange())
@@ -1829,7 +1830,7 @@ void PortConnection::checkSimulatedNetTypes() const {
     if (!expr || expr->bad())
         return;
 
-    SmallVectorSized<PortSymbol::NetTypeRange, 4> internal;
+    SmallVector<PortSymbol::NetTypeRange, 4> internal;
     if (port.kind == SymbolKind::Port)
         port.as<PortSymbol>().getNetTypes(internal);
     else {
@@ -1837,7 +1838,7 @@ void PortConnection::checkSimulatedNetTypes() const {
             p->getNetTypes(internal);
     }
 
-    SmallVectorSized<PortSymbol::NetTypeRange, 4> external;
+    SmallVector<PortSymbol::NetTypeRange, 4> external;
     getNetRanges(*expr, external);
 
     // There might not be any nets, in which case we should just leave.

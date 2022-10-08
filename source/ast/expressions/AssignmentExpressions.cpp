@@ -98,7 +98,7 @@ Expression* Expression::tryConnectPortArray(const ASTContext& context, const Typ
     // Collect all of the dimensions of the instance array that owns the provided instance, ex:
     // MyMod instArray [3][4] (.conn(vec));
     //                 ^~~~~~  // these guys
-    SmallVectorSized<ConstantRange, 8> instanceDimVec;
+    SmallVector<ConstantRange, 8> instanceDimVec;
     instance.getArrayDimensions(instanceDimVec);
 
     span<const ConstantRange> instanceDims = instanceDimVec;
@@ -109,7 +109,7 @@ Expression* Expression::tryConnectPortArray(const ASTContext& context, const Typ
     Expression* result = &expr;
     const Type* ct = &expr.type->getCanonicalType();
     if (ct->kind == SymbolKind::FixedSizeUnpackedArrayType) {
-        SmallVectorSized<ConstantRange, 8> unpackedDimVec;
+        SmallVector<ConstantRange, 8> unpackedDimVec;
         const FixedSizeUnpackedArrayType* curr = &ct->as<FixedSizeUnpackedArrayType>();
         while (true) {
             unpackedDimVec.push_back(curr->range);
@@ -1016,7 +1016,7 @@ Expression& NewCovergroupExpression::fromSyntax(Compilation& compilation,
     auto range = syntax.sourceRange();
     auto& coverType = assignmentTarget.getCanonicalType().as<CovergroupType>();
 
-    SmallVectorSized<const Expression*, 8> args;
+    SmallVector<const Expression*, 8> args;
     if (!CallExpression::bindArgs(syntax.argList, coverType.arguments, "new"sv, range, context,
                                   args)) {
         return badExpr(compilation, nullptr);
@@ -1167,7 +1167,7 @@ Expression& Expression::bindAssignmentPattern(Compilation& comp,
 
 ConstantValue AssignmentPatternExpressionBase::evalImpl(EvalContext& context) const {
     if (type->isIntegral()) {
-        SmallVectorSized<SVInt, 8> values;
+        SmallVector<SVInt, 8> values;
         for (auto elem : elements()) {
             ConstantValue v = elem->eval(context);
             if (!v)
@@ -1239,7 +1239,7 @@ Expression& SimpleAssignmentPatternExpression::forStruct(
     Compilation& comp, const SimpleAssignmentPatternSyntax& syntax, const ASTContext& context,
     const Type& type, const Scope& structScope, SourceRange sourceRange) {
 
-    SmallVectorSized<const Type*, 8> types;
+    SmallVector<const Type*, 8> types;
     for (auto& field : structScope.membersOfType<FieldSymbol>())
         types.push_back(&field.getType());
 
@@ -1251,7 +1251,7 @@ Expression& SimpleAssignmentPatternExpression::forStruct(
 
     bool bad = false;
     uint32_t index = 0;
-    SmallVectorSized<const Expression*, 8> elems;
+    SmallVector<const Expression*, 8> elems;
     for (auto item : syntax.items) {
         auto& expr = Expression::bindRValue(*types[index++], *item,
                                             item->getFirstToken().location(), context);
@@ -1272,7 +1272,7 @@ static span<const Expression* const> bindExpressionList(
     const SeparatedSyntaxList<ExpressionSyntax>& items, const ASTContext& context,
     SourceRange sourceRange, bool& bad) {
 
-    SmallVectorSized<const Expression*, 8> elems;
+    SmallVector<const Expression*, 8> elems;
     for (size_t i = 0; i < replCount; i++) {
         for (auto item : items) {
             auto& expr = Expression::bindRValue(elementType, *item,
@@ -1377,7 +1377,7 @@ static const Expression* matchElementValue(
         else
             structScope = &elementType.getCanonicalType().as<PackedStructType>();
 
-        SmallVectorSized<const Expression*, 8> elements;
+        SmallVector<const Expression*, 8> elements;
         for (auto& field : structScope->membersOfType<FieldSymbol>()) {
             const Type& type = field.getType();
             if (type.isError() || field.name.empty())
@@ -1405,7 +1405,7 @@ static const Expression* matchElementValue(
         if (!elemExpr)
             return nullptr;
 
-        SmallVectorSized<const Expression*, 8> elements;
+        SmallVector<const Expression*, 8> elements;
         auto arrayRange = elementType.getFixedRange();
         for (int32_t i = arrayRange.lower(); i <= arrayRange.upper(); i++)
             elements.push_back(elemExpr);
@@ -1441,8 +1441,8 @@ Expression& StructuredAssignmentPatternExpression::forStruct(
     bool bad = false;
     const Expression* defaultSetter = nullptr;
     SmallMap<const Symbol*, const Expression*, 8> memberMap;
-    SmallVectorSized<MemberSetter, 4> memberSetters;
-    SmallVectorSized<TypeSetter, 4> typeSetters;
+    SmallVector<MemberSetter, 4> memberSetters;
+    SmallVector<TypeSetter, 4> typeSetters;
 
     for (auto item : syntax.items) {
         if (item->key->kind == SyntaxKind::DefaultPatternKeyExpression) {
@@ -1516,7 +1516,7 @@ Expression& StructuredAssignmentPatternExpression::forStruct(
         }
     }
 
-    SmallVectorSized<const Expression*, 8> elements;
+    SmallVector<const Expression*, 8> elements;
     for (auto& field : structScope.membersOfType<FieldSymbol>()) {
         // If we already have a setter for this field we don't have to do anything else.
         if (auto it = memberMap.find(&field); it != memberMap.end()) {
@@ -1553,7 +1553,7 @@ Expression& StructuredAssignmentPatternExpression::forStruct(
 static std::optional<int32_t> bindArrayIndexSetter(
     const ASTContext& context, const Expression& keyExpr, const Type& elementType,
     const ExpressionSyntax& valueSyntax, SmallMap<int32_t, const Expression*, 8>& indexMap,
-    SmallVector<StructuredAssignmentPatternExpression::IndexSetter>& indexSetters) {
+    SmallVectorBase<StructuredAssignmentPatternExpression::IndexSetter>& indexSetters) {
 
     std::optional<int32_t> index = context.evalInteger(keyExpr);
     if (!index)
@@ -1583,8 +1583,8 @@ Expression& StructuredAssignmentPatternExpression::forFixedArray(
     bool bad = false;
     const Expression* defaultSetter = nullptr;
     SmallMap<int32_t, const Expression*, 8> indexMap;
-    SmallVectorSized<IndexSetter, 4> indexSetters;
-    SmallVectorSized<TypeSetter, 4> typeSetters;
+    SmallVector<IndexSetter, 4> indexSetters;
+    SmallVector<TypeSetter, 4> typeSetters;
 
     for (auto item : syntax.items) {
         if (item->key->kind == SyntaxKind::DefaultPatternKeyExpression) {
@@ -1635,7 +1635,7 @@ Expression& StructuredAssignmentPatternExpression::forFixedArray(
         }
     }
 
-    SmallVectorSized<const Expression*, 8> elements;
+    SmallVector<const Expression*, 8> elements;
     std::optional<const Expression*> cachedVal;
     auto arrayRange = type.getFixedRange();
 
@@ -1674,7 +1674,7 @@ Expression& StructuredAssignmentPatternExpression::forDynamicArray(
 
     bool bad = false;
     SmallMap<int32_t, const Expression*, 8> indexMap;
-    SmallVectorSized<IndexSetter, 4> indexSetters;
+    SmallVector<IndexSetter, 4> indexSetters;
     size_t maxIndex = 0;
 
     for (auto item : syntax.items) {
@@ -1707,7 +1707,7 @@ Expression& StructuredAssignmentPatternExpression::forDynamicArray(
         maxIndex = std::max(maxIndex, size_t(*index));
     }
 
-    SmallVectorSized<const Expression*, 8> elements;
+    SmallVector<const Expression*, 8> elements;
     if (indexMap.size() != maxIndex + 1) {
         if (!bad) {
             context.addDiag(diag::AssignmentPatternMissingElements, sourceRange);
@@ -1739,7 +1739,7 @@ Expression& StructuredAssignmentPatternExpression::forAssociativeArray(
 
     bool bad = false;
     const Expression* defaultSetter = nullptr;
-    SmallVectorSized<IndexSetter, 4> indexSetters;
+    SmallVector<IndexSetter, 4> indexSetters;
     SmallMap<ConstantValue, SourceRange, 8> indexMap;
 
     const Type* indexType = type.getAssociativeIndexType();
@@ -1860,7 +1860,7 @@ Expression& ReplicatedAssignmentPatternExpression::forStruct(
     if (countExpr.bad())
         return badExpr(comp, nullptr);
 
-    SmallVectorSized<const Type*, 8> types;
+    SmallVector<const Type*, 8> types;
     for (auto& field : structScope.membersOfType<FieldSymbol>())
         types.push_back(&field.getType());
 
@@ -1872,7 +1872,7 @@ Expression& ReplicatedAssignmentPatternExpression::forStruct(
 
     bool bad = false;
     size_t index = 0;
-    SmallVectorSized<const Expression*, 8> elems;
+    SmallVector<const Expression*, 8> elems;
     for (size_t i = 0; i < count; i++) {
         for (auto item : syntax.items) {
             auto& expr = Expression::bindRValue(*types[index++], *item,

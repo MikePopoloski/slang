@@ -352,7 +352,7 @@ private:
                      string_view valueName, bool isFileName = false);
 
     void parseStr(string_view argList, ParseOptions options, bool& hasArg, std::string& current,
-                  SmallVector<std::string>& storage);
+                  SmallVectorBase<std::string>& storage);
 
     static std::string expandVar(const char*& ptr, const char* end);
 

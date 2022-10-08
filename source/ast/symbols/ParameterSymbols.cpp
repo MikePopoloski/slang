@@ -21,10 +21,10 @@ using namespace syntax;
 
 void ParameterSymbolBase::fromLocalSyntax(const Scope& scope,
                                           const ParameterDeclarationStatementSyntax& syntax,
-                                          SmallVector<Symbol*>& results) {
+                                          SmallVectorBase<Symbol*>& results) {
     auto paramBase = syntax.parameter;
     if (paramBase->kind == SyntaxKind::ParameterDeclaration) {
-        SmallVectorSized<ParameterSymbol*, 8> params;
+        SmallVector<ParameterSymbol*, 8> params;
         ParameterSymbol::fromSyntax(scope, paramBase->as<ParameterDeclarationSyntax>(),
                                     /* isLocal */ true, /* isPort */ false, params);
         for (auto param : params) {
@@ -33,7 +33,7 @@ void ParameterSymbolBase::fromLocalSyntax(const Scope& scope,
         }
     }
     else {
-        SmallVectorSized<TypeParameterSymbol*, 8> params;
+        SmallVector<TypeParameterSymbol*, 8> params;
         TypeParameterSymbol::fromSyntax(scope, paramBase->as<TypeParameterDeclarationSyntax>(),
                                         /* isLocal */ true, /* isPort */ false, params);
         for (auto param : params) {
@@ -59,7 +59,7 @@ ParameterSymbol::ParameterSymbol(string_view name, SourceLocation loc, bool isLo
 
 void ParameterSymbol::fromSyntax(const Scope& scope, const ParameterDeclarationSyntax& syntax,
                                  bool isLocal, bool isPort,
-                                 SmallVector<ParameterSymbol*>& results) {
+                                 SmallVectorBase<ParameterSymbol*>& results) {
     for (auto decl : syntax.declarators) {
         auto loc = decl->name.location();
         auto param = scope.getCompilation().emplace<ParameterSymbol>(decl->name.valueText(), loc,
@@ -155,7 +155,7 @@ TypeParameterSymbol::TypeParameterSymbol(string_view name, SourceLocation loc, b
 
 void TypeParameterSymbol::fromSyntax(const Scope& scope,
                                      const TypeParameterDeclarationSyntax& syntax, bool isLocal,
-                                     bool isPort, SmallVector<TypeParameterSymbol*>& results) {
+                                     bool isPort, SmallVectorBase<TypeParameterSymbol*>& results) {
     auto& comp = scope.getCompilation();
     for (auto decl : syntax.declarators) {
         auto name = decl->name.valueText();
@@ -205,7 +205,7 @@ void TypeParameterSymbol::serializeTo(ASTSerializer& serializer) const {
 }
 
 void DefParamSymbol::fromSyntax(const Scope& scope, const DefParamSyntax& syntax,
-                                SmallVector<const DefParamSymbol*>& results) {
+                                SmallVectorBase<const DefParamSymbol*>& results) {
     auto& comp = scope.getCompilation();
     for (auto assignment : syntax.assignments) {
         auto sym = comp.emplace<DefParamSymbol>(assignment->getFirstToken().location());
@@ -335,7 +335,7 @@ const ConstantValue& SpecparamSymbol::getValue(SourceRange referencingRange) con
 }
 
 void SpecparamSymbol::fromSyntax(const Scope& scope, const SpecparamDeclarationSyntax& syntax,
-                                 SmallVector<const SpecparamSymbol*>& results) {
+                                 SmallVectorBase<const SpecparamSymbol*>& results) {
     for (auto decl : syntax.declarators) {
         auto loc = decl->name.location();
         auto param = scope.getCompilation().emplace<SpecparamSymbol>(decl->name.valueText(), loc);

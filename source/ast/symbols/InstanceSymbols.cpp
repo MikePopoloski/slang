@@ -77,7 +77,7 @@ private:
     Compilation& compilation;
     const ASTContext& context;
     const Definition& definition;
-    SmallVectorSized<int32_t, 4> path;
+    SmallVector<int32_t, 4> path;
     ParameterBuilder& paramBuilder;
     span<const AttributeInstanceSyntax* const> attributes;
     bool isUninstantiated = false;
@@ -123,7 +123,7 @@ private:
             return createEmpty();
         }
 
-        SmallVectorSized<const Symbol*, 8> elements;
+        SmallVector<const Symbol*, 8> elements;
         for (int32_t i = range.lower(); i <= range.upper(); i++) {
             path.push_back(i);
             auto symbol = recurse(syntax, it, end);
@@ -145,7 +145,7 @@ private:
 
 void createImplicitNets(const HierarchicalInstanceSyntax& instance, const ASTContext& context,
                         const NetType& netType, SmallSet<string_view, 8>& implicitNetNames,
-                        SmallVector<const Symbol*>& results) {
+                        SmallVectorBase<const Symbol*>& results) {
     // If no default nettype is set, we don't create implicit nets.
     if (netType.isError())
         return;
@@ -166,7 +166,7 @@ void createImplicitNets(const HierarchicalInstanceSyntax& instance, const ASTCon
         if (!expr)
             continue;
 
-        SmallVectorSized<Token, 8> implicitNets;
+        SmallVector<Token, 8> implicitNets;
         Expression::findPotentiallyImplicitNets(*expr, context, implicitNets);
 
         for (Token t : implicitNets) {
@@ -181,7 +181,7 @@ void createImplicitNets(const HierarchicalInstanceSyntax& instance, const ASTCon
 }
 
 void getInstanceArrayDimensions(const InstanceArraySymbol& array,
-                                SmallVector<ConstantRange>& dimensions) {
+                                SmallVectorBase<ConstantRange>& dimensions) {
     auto scope = array.getParentScope();
     if (scope && scope->asSymbol().kind == SymbolKind::InstanceArray)
         getInstanceArrayDimensions(scope->asSymbol().as<InstanceArraySymbol>(), dimensions);
@@ -201,7 +201,7 @@ string_view InstanceSymbolBase::getArrayName() const {
     return name;
 }
 
-void InstanceSymbolBase::getArrayDimensions(SmallVector<ConstantRange>& dimensions) const {
+void InstanceSymbolBase::getArrayDimensions(SmallVectorBase<ConstantRange>& dimensions) const {
     auto scope = getParentScope();
     if (scope && scope->asSymbol().kind == SymbolKind::InstanceArray)
         getInstanceArrayDimensions(scope->asSymbol().as<InstanceArraySymbol>(), dimensions);
@@ -278,8 +278,8 @@ static const ParamOverrideNode* findParentOverrideNode(const Scope& scope) {
 
 void InstanceSymbol::fromSyntax(Compilation& compilation,
                                 const HierarchyInstantiationSyntax& syntax,
-                                const ASTContext& context, SmallVector<const Symbol*>& results,
-                                SmallVector<const Symbol*>& implicitNets) {
+                                const ASTContext& context, SmallVectorBase<const Symbol*>& results,
+                                SmallVectorBase<const Symbol*>& implicitNets) {
     TimeTraceScope timeScope("createInstances"sv,
                              [&] { return std::string(syntax.type.valueText()); });
 
@@ -381,14 +381,14 @@ void InstanceSymbol::fromSyntax(Compilation& compilation,
 
 void InstanceSymbol::fromFixupSyntax(Compilation& comp, const Definition& definition,
                                      const DataDeclarationSyntax& syntax, const ASTContext& context,
-                                     SmallVector<const Symbol*>& results) {
+                                     SmallVectorBase<const Symbol*>& results) {
     auto missing = [&](TokenKind tk, SourceLocation loc) {
         return Token::createMissing(comp, tk, loc);
     };
 
     // Fabricate a fake instantiation syntax to let us reuse all of the real logic
     // for this fixup case.
-    SmallVectorSized<TokenOrSyntax, 4> instances;
+    SmallVector<TokenOrSyntax, 4> instances;
     for (auto decl : syntax.declarators) {
         auto loc = decl->name.location();
         if (!instances.empty())
@@ -409,7 +409,7 @@ void InstanceSymbol::fromFixupSyntax(Compilation& comp, const Definition& defini
         span<AttributeInstanceSyntax*>(), syntax.type->getFirstToken(), nullptr,
         instances.copy(comp), syntax.semi);
 
-    SmallVectorSized<const Symbol*, 8> implicitNets;
+    SmallVector<const Symbol*, 8> implicitNets;
     fromSyntax(comp, *instantiation, context, results, implicitNets);
     ASSERT(implicitNets.empty());
 }
@@ -421,8 +421,8 @@ void InstanceSymbol::fromBindDirective(const Scope& scope, const BindDirectiveSy
     // TODO: check results of noteBindDirective
 
     auto createInstances = [&](const Scope& targetScope) {
-        SmallVectorSized<const Symbol*, 4> instances;
-        SmallVectorSized<const Symbol*, 4> implicitNets;
+        SmallVector<const Symbol*, 4> instances;
+        SmallVector<const Symbol*, 4> implicitNets;
         ASTContext ctx(targetScope, LookupLocation::max);
         fromSyntax(comp, *syntax.instantiation, ctx, instances, implicitNets);
 
@@ -641,7 +641,7 @@ InstanceBodySymbol& InstanceBodySymbol::fromDefinition(Compilation& comp,
         result->addMembers(*import);
 
     // Add in all parameter ports.
-    SmallVectorSized<const ParameterSymbolBase*, 8> params;
+    SmallVector<const ParameterSymbolBase*, 8> params;
     auto paramIt = definition.parameters.begin();
     while (paramIt != definition.parameters.end()) {
         auto& decl = *paramIt;
@@ -754,8 +754,8 @@ template<typename TSyntax>
 static void createUnknownModules(Compilation& compilation, const TSyntax& syntax,
                                  string_view moduleName, const ASTContext& context,
                                  span<const Expression* const> params,
-                                 SmallVector<const Symbol*>& results,
-                                 SmallVector<const Symbol*>& implicitNets) {
+                                 SmallVectorBase<const Symbol*>& results,
+                                 SmallVectorBase<const Symbol*>& implicitNets) {
     SmallSet<string_view, 8> implicitNetNames;
     auto& netType = context.scope->getDefaultNetType();
     for (auto instanceSyntax : syntax.instances) {
@@ -772,9 +772,9 @@ static void createUnknownModules(Compilation& compilation, const TSyntax& syntax
 void UnknownModuleSymbol::fromSyntax(Compilation& compilation,
                                      const HierarchyInstantiationSyntax& syntax,
                                      const ASTContext& parentContext,
-                                     SmallVector<const Symbol*>& results,
-                                     SmallVector<const Symbol*>& implicitNets) {
-    SmallVectorSized<const Expression*, 8> params;
+                                     SmallVectorBase<const Symbol*>& results,
+                                     SmallVectorBase<const Symbol*>& implicitNets) {
+    SmallVector<const Expression*, 8> params;
     ASTContext context = parentContext.resetFlags(ASTFlags::NonProcedural);
 
     if (syntax.parameters) {
@@ -798,8 +798,8 @@ void UnknownModuleSymbol::fromSyntax(Compilation& compilation,
 void UnknownModuleSymbol::fromSyntax(Compilation& compilation,
                                      const PrimitiveInstantiationSyntax& syntax,
                                      const ASTContext& parentContext,
-                                     SmallVector<const Symbol*>& results,
-                                     SmallVector<const Symbol*>& implicitNets) {
+                                     SmallVectorBase<const Symbol*>& results,
+                                     SmallVectorBase<const Symbol*>& implicitNets) {
     ASTContext context = parentContext.resetFlags(ASTFlags::NonProcedural);
     createUnknownModules(compilation, syntax, syntax.type.valueText(), context, {}, results,
                          implicitNets);
@@ -852,8 +852,8 @@ span<const AssertionExpr* const> UnknownModuleSymbol::getPortConnections() const
         auto& comp = scope->getCompilation();
         ASTContext context(*scope, LookupLocation::after(*this));
 
-        SmallVectorSized<const AssertionExpr*, 8> results;
-        SmallVectorSized<string_view, 8> names;
+        SmallVector<const AssertionExpr*, 8> results;
+        SmallVector<string_view, 8> names;
         for (auto port : syntax->as<HierarchicalInstanceSyntax>().connections) {
             if (port->kind == SyntaxKind::OrderedPortConnection) {
                 names.push_back(""sv);
@@ -931,7 +931,7 @@ PrimitiveInstanceSymbol* createPrimInst(Compilation& compilation, const Scope& s
                                         const PrimitiveSymbol& primitive,
                                         const HierarchicalInstanceSyntax& syntax,
                                         span<const AttributeInstanceSyntax* const> attributes,
-                                        SmallVector<int32_t>& path) {
+                                        SmallVectorBase<int32_t>& path) {
     auto [name, loc] = getNameLoc(syntax);
     auto result = compilation.emplace<PrimitiveInstanceSymbol>(name, loc, primitive);
     result->arrayPath = path.copy(compilation);
@@ -946,7 +946,7 @@ Symbol* recursePrimArray(Compilation& compilation, const PrimitiveSymbol& primit
                          const HierarchicalInstanceSyntax& instance, const ASTContext& context,
                          DimIterator it, DimIterator end,
                          span<const AttributeInstanceSyntax* const> attributes,
-                         SmallVector<int32_t>& path) {
+                         SmallVectorBase<int32_t>& path) {
     if (it == end)
         return createPrimInst(compilation, *context.scope, primitive, instance, attributes, path);
 
@@ -976,7 +976,7 @@ Symbol* recursePrimArray(Compilation& compilation, const PrimitiveSymbol& primit
         return createEmpty();
     }
 
-    SmallVectorSized<const Symbol*, 8> elements;
+    SmallVector<const Symbol*, 8> elements;
     for (int32_t i = range.lower(); i <= range.upper(); i++) {
         path.push_back(i);
         auto symbol = recursePrimArray(compilation, primitive, instance, context, it, end,
@@ -998,10 +998,10 @@ Symbol* recursePrimArray(Compilation& compilation, const PrimitiveSymbol& primit
 
 template<typename TSyntax>
 void createPrimitives(const PrimitiveSymbol& primitive, const TSyntax& syntax,
-                      const ASTContext& context, SmallVector<const Symbol*>& results,
-                      SmallVector<const Symbol*>& implicitNets) {
+                      const ASTContext& context, SmallVectorBase<const Symbol*>& results,
+                      SmallVectorBase<const Symbol*>& implicitNets) {
     SmallSet<string_view, 8> implicitNetNames;
-    SmallVectorSized<int32_t, 4> path;
+    SmallVector<int32_t, 4> path;
 
     auto& comp = context.getCompilation();
     auto& netType = context.scope->getDefaultNetType();
@@ -1028,15 +1028,15 @@ void createPrimitives(const PrimitiveSymbol& primitive, const TSyntax& syntax,
 void PrimitiveInstanceSymbol::fromSyntax(const PrimitiveSymbol& primitive,
                                          const HierarchyInstantiationSyntax& syntax,
                                          const ASTContext& context,
-                                         SmallVector<const Symbol*>& results,
-                                         SmallVector<const Symbol*>& implicitNets) {
+                                         SmallVectorBase<const Symbol*>& results,
+                                         SmallVectorBase<const Symbol*>& implicitNets) {
     createPrimitives(primitive, syntax, context, results, implicitNets);
 }
 
 void PrimitiveInstanceSymbol::fromSyntax(const PrimitiveInstantiationSyntax& syntax,
                                          const ASTContext& context,
-                                         SmallVector<const Symbol*>& results,
-                                         SmallVector<const Symbol*>& implicitNets) {
+                                         SmallVectorBase<const Symbol*>& results,
+                                         SmallVectorBase<const Symbol*>& implicitNets) {
     auto& comp = context.getCompilation();
     auto name = syntax.type.valueText();
     auto prim = syntax.type.kind == TokenKind::Identifier ? comp.getPrimitive(name)
@@ -1085,7 +1085,7 @@ span<const Expression* const> PrimitiveInstanceSymbol::getPortConnections() cons
         ASTContext context(*scope, LookupLocation::after(*this), ASTFlags::NonProcedural);
         context.setInstance(*this);
 
-        SmallVectorSized<const ExpressionSyntax*, 8> conns;
+        SmallVector<const ExpressionSyntax*, 8> conns;
         auto& his = syntax->as<HierarchicalInstanceSyntax>();
         for (auto port : his.connections) {
             if (port->kind == SyntaxKind::OrderedPortConnection) {
@@ -1110,7 +1110,7 @@ span<const Expression* const> PrimitiveInstanceSymbol::getPortConnections() cons
             }
         }
 
-        SmallVectorSized<const Expression*, 8> results;
+        SmallVector<const Expression*, 8> results;
         if (primitiveType.primitiveKind == PrimitiveSymbol::NInput ||
             primitiveType.primitiveKind == PrimitiveSymbol::NOutput) {
             // Some of the built-in gates allow n-inputs or n-outputs; handle those specially.

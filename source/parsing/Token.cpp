@@ -407,7 +407,7 @@ Token Token::deepClone(BumpAllocator& alloc) const {
         return *this;
     }
     else {
-        SmallVectorSized<Trivia, 32> triviaBuffer;
+        SmallVector<Trivia, 32> triviaBuffer;
         for (const auto& t : trivia())
             triviaBuffer.push_back(t.clone(alloc));
         return clone(alloc, triviaBuffer.copy(alloc), rawText(), location());

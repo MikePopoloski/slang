@@ -37,7 +37,7 @@ ClassPropertySymbol::ClassPropertySymbol(string_view name, SourceLocation loc,
 
 void ClassPropertySymbol::fromSyntax(const Scope& scope,
                                      const ClassPropertyDeclarationSyntax& syntax,
-                                     SmallVector<const ClassPropertySymbol*>& results) {
+                                     SmallVectorBase<const ClassPropertySymbol*>& results) {
     auto& comp = scope.getCompilation();
     auto& dataSyntax = syntax.declaration->as<DataDeclarationSyntax>();
 
@@ -542,7 +542,7 @@ const Expression* ClassType::getBaseConstructorCall() const {
 
 // Recursively finds interface classes that are implemented and adds them
 // to the vector, if they haven't been added already.
-static void findIfaces(const ClassType& type, SmallVector<const Type*>& ifaces,
+static void findIfaces(const ClassType& type, SmallVectorBase<const Type*>& ifaces,
                        SmallSet<const Symbol*, 4>& visited) {
     if (type.isInterface) {
         if (visited.emplace(&type).second)
@@ -562,7 +562,7 @@ void ClassType::handleImplements(const ImplementsClauseSyntax& implementsClause,
                                  const ASTContext& context,
                                  function_ref<void(const Symbol&)> insertCB) const {
     auto& comp = context.getCompilation();
-    SmallVectorSized<const Type*, 4> ifaces;
+    SmallVector<const Type*, 4> ifaces;
     SmallSet<const Symbol*, 4> seenIfaces;
 
     if (isInterface) {
@@ -794,8 +794,8 @@ const Type* GenericClassDefSymbol::getSpecializationImpl(
 
     SourceRange instRange = {instanceLoc, instanceLoc + 1};
 
-    SmallVectorSized<const ConstantValue*, 8> paramValues;
-    SmallVectorSized<const Type*, 8> typeParams;
+    SmallVector<const ConstantValue*, 8> paramValues;
+    SmallVector<const Type*, 8> typeParams;
     for (auto& decl : paramDecls) {
         auto& param = paramBuilder.createParam(decl, *classType, instanceLoc);
         if (paramBuilder.hasErrors()) {

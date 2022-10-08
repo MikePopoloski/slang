@@ -299,7 +299,7 @@ private:
                            span<const syntax::AttributeInstanceSyntax* const> attributes);
     void addDeferredMembers(const syntax::SyntaxNode& syntax);
     void tryFixupInstances(const syntax::DataDeclarationSyntax& syntax, const ASTContext& context,
-                           SmallVector<const Symbol*>& results) const;
+                           SmallVectorBase<const Symbol*>& results) const;
 
     // The compilation that owns this scope.
     Compilation& compilation;

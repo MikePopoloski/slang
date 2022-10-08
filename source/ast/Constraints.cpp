@@ -73,7 +73,7 @@ void InvalidConstraint::serializeTo(ASTSerializer& serializer) const {
 Constraint& ConstraintList::fromSyntax(const ConstraintBlockSyntax& syntax,
                                        const ASTContext& context) {
     bool anyBad = false;
-    SmallVectorSized<const Constraint*, 8> buffer;
+    SmallVector<const Constraint*, 8> buffer;
     for (auto item : syntax.items) {
         auto& constraint = Constraint::bind(*item, context);
         buffer.push_back(&constraint);
@@ -341,7 +341,7 @@ Constraint& UniquenessConstraint::fromSyntax(const UniquenessConstraintSyntax& s
     auto& comp = context.getCompilation();
     bool bad = false;
     const Type* commonType = nullptr;
-    SmallVectorSized<const Expression*, 4> items;
+    SmallVector<const Expression*, 4> items;
     for (auto item : syntax.ranges->valueRanges) {
         auto& expr = Expression::bind(*item, context);
         items.push_back(&expr);
@@ -436,8 +436,8 @@ Constraint& SolveBeforeConstraint::fromSyntax(const SolveBeforeConstraintSyntax&
     };
 
     auto& comp = context.getCompilation();
-    SmallVectorSized<const Expression*, 4> solve;
-    SmallVectorSized<const Expression*, 4> before;
+    SmallVector<const Expression*, 4> solve;
+    SmallVector<const Expression*, 4> before;
     bindExprs(syntax.beforeExpr, solve);
     bindExprs(syntax.afterExpr, before);
 
@@ -465,7 +465,7 @@ Constraint& ForeachConstraint::fromSyntax(const LoopConstraintSyntax& syntax,
     auto& comp = context.getCompilation();
 
     ASTContext iterCtx = context;
-    SmallVectorSized<ForeachLoopStatement::LoopDim, 4> dims;
+    SmallVector<ForeachLoopStatement::LoopDim, 4> dims;
     auto arrayRef = ForeachLoopStatement::buildLoopDims(*syntax.loopList, iterCtx, dims);
     if (!arrayRef)
         return badConstraint(comp, nullptr);

@@ -140,7 +140,7 @@ public:
 
     static void buildArguments(Scope& scope, const syntax::FunctionPortListSyntax& syntax,
                                VariableLifetime defaultLifetime,
-                               SmallVector<const FormalArgumentSymbol*>& arguments);
+                               SmallVectorBase<const FormalArgumentSymbol*>& arguments);
 
     static void checkVirtualMethodMatch(const Scope& scope, const SubroutineSymbol& parentMethod,
                                         const SubroutineSymbol& derivedMethod,

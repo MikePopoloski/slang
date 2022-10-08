@@ -30,7 +30,7 @@ static std::optional<uint32_t> parseUInt(const char*& ptr, const char* end) {
 bool parse(string_view str, function_ref<void(string_view)> onText,
            function_ref<void(char, size_t, size_t, const FormatOptions&)> onArg,
            function_ref<void(DiagCode, size_t, size_t, std::optional<char>)> onError) {
-    SmallVectorSized<char, 16> text;
+    SmallVector<char, 16> text;
     const char* ptr = str.data();
     const char* end = str.data() + str.length();
 
@@ -168,7 +168,7 @@ bool parse(string_view str, function_ref<void(string_view)> onText,
 
 void formatInt(std::string& result, const SVInt& value, LiteralBase base,
                const FormatOptions& options) {
-    SmallVectorSized<char, 32> buffer;
+    SmallVector<char, 32> buffer;
     if (base != LiteralBase::Decimal && value.isSigned()) {
         // Non-decimal bases don't print as signed ever.
         SVInt copy = value;
@@ -223,7 +223,7 @@ void formatInt(std::string& result, const SVInt& value, LiteralBase base,
 
 static void formatFloat(std::string& result, double value, char specifier,
                         const FormatOptions& options) {
-    SmallVectorSized<char, 8> fmt;
+    SmallVector<char, 8> fmt;
     fmt.push_back('%');
     if (options.leftJustify)
         fmt.push_back('-');

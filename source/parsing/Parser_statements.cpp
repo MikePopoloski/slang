@@ -196,7 +196,7 @@ ConditionalStatementSyntax& Parser::parseConditionalStatement(NamedLabelSyntax* 
 }
 
 template<typename IsItemFunc, typename ParseItemFunc>
-bool Parser::parseCaseItems(TokenKind caseKind, SmallVector<CaseItemSyntax*>& itemBuffer,
+bool Parser::parseCaseItems(TokenKind caseKind, SmallVectorBase<CaseItemSyntax*>& itemBuffer,
                             IsItemFunc&& isItem, ParseItemFunc&& parseItem) {
     SourceLocation lastDefault;
     bool errored = false;
@@ -237,7 +237,7 @@ CaseStatementSyntax& Parser::parseCaseStatement(NamedLabelSyntax* label, AttrLis
     auto closeParen = expect(TokenKind::CloseParenthesis);
 
     Token matchesOrInside;
-    SmallVectorSized<CaseItemSyntax*, 16> itemBuffer;
+    SmallVector<CaseItemSyntax*, 16> itemBuffer;
     bool errored = false;
 
     switch (peek().kind) {
@@ -269,7 +269,7 @@ CaseStatementSyntax& Parser::parseCaseStatement(NamedLabelSyntax* label, AttrLis
                 [](auto kind) { return isPossibleOpenRangeElement(kind); },
                 [this] {
                     Token colon;
-                    SmallVectorSized<TokenOrSyntax, 8> buffer;
+                    SmallVector<TokenOrSyntax, 8> buffer;
 
                     parseList<isPossibleOpenRangeElement, isEndOfCaseItem>(
                         buffer, TokenKind::Colon, TokenKind::Comma, colon, RequireItems::True,
@@ -284,7 +284,7 @@ CaseStatementSyntax& Parser::parseCaseStatement(NamedLabelSyntax* label, AttrLis
                 caseKeyword.kind, itemBuffer, [](auto kind) { return isPossibleExpression(kind); },
                 [this] {
                     Token colon;
-                    SmallVectorSized<TokenOrSyntax, 8> buffer;
+                    SmallVector<TokenOrSyntax, 8> buffer;
 
                     parseList<isPossibleExpressionOrComma, isEndOfCaseItem>(
                         buffer, TokenKind::Colon, TokenKind::Comma, colon, RequireItems::True,
@@ -359,7 +359,7 @@ ForLoopStatementSyntax& Parser::parseForLoopStatement(NamedLabelSyntax* label,
     auto openParen = expect(TokenKind::OpenParenthesis);
 
     Token semi1;
-    SmallVectorSized<TokenOrSyntax, 4> initializers;
+    SmallVector<TokenOrSyntax, 4> initializers;
 
     if (isVariableDeclaration()) {
         parseList<isPossibleForInitializer, isEndOfParenList>(
@@ -392,7 +392,7 @@ ForLoopStatementSyntax& Parser::parseForLoopStatement(NamedLabelSyntax* label,
     }
 
     Token closeParen;
-    SmallVectorSized<TokenOrSyntax, 4> steps;
+    SmallVector<TokenOrSyntax, 4> steps;
     parseList<isPossibleExpressionOrComma, isEndOfParenList>(
         steps, TokenKind::CloseParenthesis, TokenKind::Comma, closeParen, RequireItems::False,
         diag::ExpectedExpression, [this] { return &parseExpression(); });
@@ -635,7 +635,7 @@ NamedBlockClauseSyntax* Parser::parseNamedBlockClause() {
 }
 
 span<SyntaxNode*> Parser::parseBlockItems(TokenKind endKind, Token& end, bool inConstructor) {
-    SmallVectorSized<SyntaxNode*, 16> buffer;
+    SmallVector<SyntaxNode*, 16> buffer;
     auto kind = peek().kind;
     bool errored = false;
     bool sawStatement = false;
@@ -732,7 +732,7 @@ WaitOrderStatementSyntax& Parser::parseWaitOrderStatement(NamedLabelSyntax* labe
                                                           AttrList attributes) {
     auto keyword = consume();
     auto openParen = expect(TokenKind::OpenParenthesis);
-    SmallVectorSized<TokenOrSyntax, 4> buffer;
+    SmallVector<TokenOrSyntax, 4> buffer;
 
     Token closeParen;
     parseList<isIdentifierOrComma, isEndOfParenList>(buffer, TokenKind::CloseParenthesis,
@@ -747,7 +747,7 @@ WaitOrderStatementSyntax& Parser::parseWaitOrderStatement(NamedLabelSyntax* labe
 RandCaseStatementSyntax& Parser::parseRandCaseStatement(NamedLabelSyntax* label,
                                                         AttrList attributes) {
     auto randCase = consume();
-    SmallVectorSized<RandCaseItemSyntax*, 16> itemBuffer;
+    SmallVector<RandCaseItemSyntax*, 16> itemBuffer;
 
     while (isPossibleExpression(peek().kind)) {
         auto& expr = parseExpression();
@@ -817,7 +817,7 @@ RsCaseSyntax& Parser::parseRsCase() {
     auto& condition = parseExpression();
     auto closeParen = expect(TokenKind::CloseParenthesis);
 
-    SmallVectorSized<RsCaseItemSyntax*, 8> itemBuffer;
+    SmallVector<RsCaseItemSyntax*, 8> itemBuffer;
     SourceLocation lastDefault;
     bool errored = false;
 
@@ -840,7 +840,7 @@ RsCaseSyntax& Parser::parseRsCase() {
         }
         else if (isPossibleExpression(kind)) {
             Token colon;
-            SmallVectorSized<TokenOrSyntax, 8> buffer;
+            SmallVector<TokenOrSyntax, 8> buffer;
             parseList<isPossibleExpressionOrComma, isEndOfCaseItem>(
                 buffer, TokenKind::Colon, TokenKind::Comma, colon, RequireItems::True,
                 diag::ExpectedExpression, [this] { return &parseExpression(); });
@@ -918,7 +918,7 @@ RsRuleSyntax& Parser::parseRsRule() {
         randJoin = &factory.randJoinClause(rand, join, parenExpr);
     }
 
-    SmallVectorSized<RsProdSyntax*, 16> prods;
+    SmallVector<RsProdSyntax*, 16> prods;
     while (true) {
         auto prod = parseRsProd();
         if (!prod)
@@ -968,7 +968,7 @@ ProductionSyntax& Parser::parseProduction() {
     auto colon = expect(TokenKind::Colon);
 
     Token semi;
-    SmallVectorSized<TokenOrSyntax, 8> buffer;
+    SmallVector<TokenOrSyntax, 8> buffer;
     parseList<isPossibleRsRule, isSemicolon>(buffer, TokenKind::Semicolon, TokenKind::Or, semi,
                                              RequireItems::True, diag::ExpectedRsRule,
                                              [this] { return &parseRsRule(); });
@@ -982,7 +982,7 @@ StatementSyntax& Parser::parseRandSequenceStatement(NamedLabelSyntax* label, Att
     auto firstProd = consumeIf(TokenKind::Identifier);
     auto closeParen = expect(TokenKind::CloseParenthesis);
 
-    SmallVectorSized<ProductionSyntax*, 16> productions;
+    SmallVector<ProductionSyntax*, 16> productions;
     while (isPossibleDataType(peek().kind))
         productions.push_back(&parseProduction());
 

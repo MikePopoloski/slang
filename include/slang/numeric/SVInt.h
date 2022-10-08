@@ -296,8 +296,8 @@ public:
     static SVInt createFillZ(bitwidth_t bitWidth, bool isSigned);
 
     [[nodiscard]] size_t hash() const;
-    void writeTo(SmallVector<char>& buffer, LiteralBase base) const;
-    void writeTo(SmallVector<char>& buffer, LiteralBase base, bool includeBase,
+    void writeTo(SmallVectorBase<char>& buffer, LiteralBase base) const;
+    void writeTo(SmallVectorBase<char>& buffer, LiteralBase base, bool includeBase,
                  bitwidth_t abbreviateThresholdBits = MAX_BITS) const;
     std::string toString() const;
     std::string toString(LiteralBase base) const;

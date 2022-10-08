@@ -107,7 +107,7 @@ public:
 
     static void createDefaultMembers(const ASTContext& context,
                                      const syntax::EnumTypeSyntax& syntax,
-                                     SmallVector<const Symbol*>& members);
+                                     SmallVectorBase<const Symbol*>& members);
 
     iterator_range<specific_symbol_iterator<EnumValueSymbol>> values() const {
         return membersOfType<EnumValueSymbol>();

@@ -55,7 +55,7 @@ ValueSymbol::Driver& ValueSymbol::Driver::create(EvalContext& evalContext, Drive
                                                  const Expression& longestStaticPrefix,
                                                  const Symbol& containingSymbol,
                                                  bitmask<AssignFlags> flags, SourceRange range) {
-    SmallVectorSized<const Expression*, 4> path;
+    SmallVector<const Expression*, 4> path;
     auto expr = &longestStaticPrefix;
     do {
         switch (expr->kind) {

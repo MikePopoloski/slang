@@ -225,7 +225,7 @@ protected:
 
     static Statement& badStmt(Compilation& compilation, const Statement* stmt);
     static void bindScopeInitializers(const ASTContext& context,
-                                      SmallVector<const Statement*>& results);
+                                      SmallVectorBase<const Statement*>& results);
 };
 
 /// Represents an invalid statement, which is usually generated and inserted
@@ -635,7 +635,7 @@ public:
     void serializeTo(ASTSerializer& serializer) const;
 
     static const Expression* buildLoopDims(const syntax::ForeachLoopListSyntax& loopList,
-                                           ASTContext& context, SmallVector<LoopDim>& dims);
+                                           ASTContext& context, SmallVectorBase<LoopDim>& dims);
 
     static bool isKind(StatementKind kind) { return kind == StatementKind::ForeachLoop; }
 

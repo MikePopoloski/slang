@@ -102,7 +102,7 @@ public:
         }
 
         std::optional<size_t> foundIndex;
-        SmallVectorSized<const EnumValueSymbol*, 8> values;
+        SmallVector<const EnumValueSymbol*, 8> values;
         const EnumType& type = args[0]->type->getCanonicalType().as<EnumType>();
         auto& targetInt = val.integer();
 

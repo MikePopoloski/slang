@@ -290,7 +290,7 @@ Pattern& StructurePattern::fromSyntax(const StructurePatternSyntax& syntax, cons
     bool bad = false;
     auto& structScope = targetType.getCanonicalType().as<Scope>();
 
-    SmallVectorSized<FieldPattern, 4> patterns;
+    SmallVector<FieldPattern, 4> patterns;
     if (syntax.members[0]->kind == SyntaxKind::OrderedStructurePatternMember) {
         auto fields = structScope.membersOfType<FieldSymbol>();
         auto it = fields.begin();

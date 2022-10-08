@@ -97,7 +97,7 @@ void JsonWriter::writeValue(bool value) {
 }
 
 void JsonWriter::writeQuoted(string_view str) {
-    SmallVectorSized<char, 32> vec(str.size() + 2);
+    SmallVector<char, 32> vec(str.size() + 2);
     vec.push_back('"');
     for (char c : str) {
         switch (c) {

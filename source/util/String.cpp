@@ -19,7 +19,7 @@
 namespace slang {
 
 template<typename T>
-void uintToStrImpl(SmallVector<char>& buffer, const char* format, T value) {
+void uintToStrImpl(SmallVectorBase<char>& buffer, const char* format, T value) {
     size_t sz = (size_t)snprintf(nullptr, 0, format, value);
     size_t offset = buffer.size();
     buffer.extend(sz + 1);
@@ -28,11 +28,11 @@ void uintToStrImpl(SmallVector<char>& buffer, const char* format, T value) {
     buffer.pop_back();
 }
 
-void uintToStr(SmallVector<char>& buffer, uint32_t value) {
+void uintToStr(SmallVectorBase<char>& buffer, uint32_t value) {
     uintToStrImpl(buffer, "%u", value);
 }
 
-void uintToStr(SmallVector<char>& buffer, uint64_t value) {
+void uintToStr(SmallVectorBase<char>& buffer, uint64_t value) {
     uintToStrImpl(buffer, "%lu", value);
 }
 
@@ -90,7 +90,7 @@ int editDistance(string_view left, string_view right, bool allowReplacements, in
     size_t m = left.size();
     size_t n = right.size();
 
-    SmallVectorSized<int, 32> row;
+    SmallVector<int, 32> row;
     for (int i = 0; i <= int(n); i++)
         row.push_back(i);
 

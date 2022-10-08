@@ -286,7 +286,7 @@ const RootSymbol& Compilation::getRoot(bool skipDefParamResolution) {
     // Find top level modules that form the root of the design. Iterate the definitions
     // map before instantiating any top level modules, since that can cause changes
     // to the definition map itself.
-    SmallVectorSized<const Definition*, 8> topDefs;
+    SmallVector<const Definition*, 8> topDefs;
     if (options.topModules.empty()) {
         for (auto& [key, definition] : definitionMap) {
             // Ignore definitions that are not top level. Top level definitions are:
@@ -365,7 +365,7 @@ const RootSymbol& Compilation::getRoot(bool skipDefParamResolution) {
         }
     }
 
-    SmallVectorSized<const InstanceSymbol*, 4> topList;
+    SmallVector<const InstanceSymbol*, 4> topList;
     for (auto def : topDefs) {
         const ParamOverrideNode* paramOverrideNode = nullptr;
         if (!paramOverrides.childNodes.empty()) {
@@ -1379,7 +1379,7 @@ void Compilation::resolveDefParams(size_t) {
         const SyntaxNode* node = nullptr;
         ConstantValue value;
     };
-    SmallVectorSized<OverrideEntry, 4> overrides;
+    SmallVector<OverrideEntry, 4> overrides;
 
     auto copyOverrides = [&](Compilation& c) {
         for (auto& entry : overrides) {

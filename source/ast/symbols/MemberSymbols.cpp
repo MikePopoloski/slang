@@ -307,7 +307,7 @@ ModportSymbol::ModportSymbol(Compilation& compilation, string_view name, SourceL
 }
 
 void ModportSymbol::fromSyntax(const ASTContext& context, const ModportDeclarationSyntax& syntax,
-                               SmallVector<const ModportSymbol*>& results) {
+                               SmallVectorBase<const ModportSymbol*>& results) {
     auto& comp = context.getCompilation();
     for (auto item : syntax.items) {
         auto modport = comp.emplace<ModportSymbol>(comp, item->name.valueText(),
@@ -401,8 +401,8 @@ ContinuousAssignSymbol::ContinuousAssignSymbol(SourceLocation loc, const Express
 void ContinuousAssignSymbol::fromSyntax(Compilation& compilation,
                                         const ContinuousAssignSyntax& syntax,
                                         const ASTContext& parentContext,
-                                        SmallVector<const Symbol*>& results,
-                                        SmallVector<const Symbol*>& implicitNets) {
+                                        SmallVectorBase<const Symbol*>& results,
+                                        SmallVectorBase<const Symbol*>& implicitNets) {
     ASTContext context = parentContext.resetFlags(ASTFlags::NonProcedural);
     auto& netType = context.scope->getDefaultNetType();
 
@@ -413,7 +413,7 @@ void ContinuousAssignSymbol::fromSyntax(Compilation& compilation,
             // The expression here should always be an assignment expression unless
             // the program is already ill-formed (diagnosed by the parser).
             if (expr->kind == SyntaxKind::AssignmentExpression) {
-                SmallVectorSized<Token, 8> implicitNetNames;
+                SmallVector<Token, 8> implicitNetNames;
                 Expression::findPotentiallyImplicitNets(*expr->as<BinaryExpressionSyntax>().left,
                                                         context, implicitNetNames);
 
@@ -523,7 +523,7 @@ GenvarSymbol::GenvarSymbol(string_view name, SourceLocation loc) :
 }
 
 void GenvarSymbol::fromSyntax(const Scope& parent, const GenvarDeclarationSyntax& syntax,
-                              SmallVector<const GenvarSymbol*>& results) {
+                              SmallVectorBase<const GenvarSymbol*>& results) {
     auto& comp = parent.getCompilation();
     for (auto id : syntax.identifiers) {
         auto name = id->identifier;
@@ -573,7 +573,7 @@ string_view ElabSystemTaskSymbol::getMessage() const {
     // Bind all arguments.
     auto& comp = scope->getCompilation();
     ASTContext astCtx(*scope, LookupLocation::before(*this));
-    SmallVectorSized<const Expression*, 4> args;
+    SmallVector<const Expression*, 4> args;
     for (auto arg : argSyntax->parameters) {
         switch (arg->kind) {
             case SyntaxKind::OrderedArgument: {
@@ -755,7 +755,7 @@ PrimitiveSymbol& PrimitiveSymbol::fromSyntax(const Scope& scope,
     prim->setAttributes(scope, syntax.attributes);
     prim->setSyntax(syntax);
 
-    SmallVectorSized<const PrimitivePortSymbol*, 4> ports;
+    SmallVector<const PrimitivePortSymbol*, 4> ports;
     if (syntax.portList->kind == SyntaxKind::AnsiUdpPortList) {
         for (auto decl : syntax.portList->as<AnsiUdpPortListSyntax>().ports) {
             if (decl->kind == SyntaxKind::UdpOutputPortDecl) {
@@ -1009,7 +1009,7 @@ AssertionPortSymbol::AssertionPortSymbol(string_view name, SourceLocation loc) :
 }
 
 void AssertionPortSymbol::buildPorts(Scope& scope, const AssertionItemPortListSyntax& syntax,
-                                     SmallVector<const AssertionPortSymbol*>& results) {
+                                     SmallVectorBase<const AssertionPortSymbol*>& results) {
     auto isEmpty = [](const DataTypeSyntax& syntax) {
         if (syntax.kind != SyntaxKind::ImplicitType)
             return false;
@@ -1120,7 +1120,7 @@ SequenceSymbol& SequenceSymbol::fromSyntax(const Scope& scope,
                                                syntax.name.location());
     result->setSyntax(syntax);
 
-    SmallVectorSized<const AssertionPortSymbol*, 4> ports;
+    SmallVector<const AssertionPortSymbol*, 4> ports;
     if (syntax.portList)
         AssertionPortSymbol::buildPorts(*result, *syntax.portList, ports);
     result->ports = ports.copy(comp);
@@ -1143,7 +1143,7 @@ PropertySymbol& PropertySymbol::fromSyntax(const Scope& scope,
                                                syntax.name.location());
     result->setSyntax(syntax);
 
-    SmallVectorSized<const AssertionPortSymbol*, 4> ports;
+    SmallVector<const AssertionPortSymbol*, 4> ports;
     if (syntax.portList)
         AssertionPortSymbol::buildPorts(*result, *syntax.portList, ports);
     result->ports = ports.copy(comp);
@@ -1167,7 +1167,7 @@ LetDeclSymbol& LetDeclSymbol::fromSyntax(const Scope& scope, const LetDeclaratio
                                               syntax.identifier.location());
     result->setSyntax(syntax);
 
-    SmallVectorSized<const AssertionPortSymbol*, 4> ports;
+    SmallVector<const AssertionPortSymbol*, 4> ports;
     if (syntax.portList)
         AssertionPortSymbol::buildPorts(*result, *syntax.portList, ports);
     result->ports = ports.copy(comp);
@@ -1323,7 +1323,7 @@ RandSeqProductionSymbol& RandSeqProductionSymbol::fromSyntax(Compilation& compil
         result->declaredReturnType.setType(compilation.getVoidType());
 
     if (syntax.portList) {
-        SmallVectorSized<const FormalArgumentSymbol*, 8> args;
+        SmallVector<const FormalArgumentSymbol*, 8> args;
         SubroutineSymbol::buildArguments(*result, *syntax.portList, VariableLifetime::Automatic,
                                          args);
         result->arguments = args.copy(compilation);
@@ -1347,7 +1347,7 @@ span<const RandSeqProductionSymbol::Rule> RandSeqProductionSymbol::getRules() co
         auto blocks = membersOfType<StatementBlockSymbol>();
         auto blockIt = blocks.begin();
 
-        SmallVectorSized<Rule, 8> buffer;
+        SmallVector<Rule, 8> buffer;
         for (auto rule : syntax->as<ProductionSyntax>().rules) {
             ASSERT(blockIt != blocks.end());
             buffer.push_back(createRule(*rule, context, *blockIt++));
@@ -1382,7 +1382,7 @@ RandSeqProductionSymbol::ProdItem RandSeqProductionSymbol::createProdItem(
     if (!symbol)
         return ProdItem(nullptr, {});
 
-    SmallVectorSized<const Expression*, 8> args;
+    SmallVector<const Expression*, 8> args;
     CallExpression::bindArgs(syntax.argList, symbol->arguments, symbol->name, syntax.sourceRange(),
                              context, args);
 
@@ -1392,8 +1392,8 @@ RandSeqProductionSymbol::ProdItem RandSeqProductionSymbol::createProdItem(
 const RandSeqProductionSymbol::CaseProd& RandSeqProductionSymbol::createCaseProd(
     const RsCaseSyntax& syntax, const ASTContext& context) {
 
-    SmallVectorSized<const ExpressionSyntax*, 8> expressions;
-    SmallVectorSized<ProdItem, 8> prods;
+    SmallVector<const ExpressionSyntax*, 8> expressions;
+    SmallVector<ProdItem, 8> prods;
     std::optional<ProdItem> defItem;
 
     for (auto item : syntax.items) {
@@ -1418,15 +1418,15 @@ const RandSeqProductionSymbol::CaseProd& RandSeqProductionSymbol::createCaseProd
         }
     }
 
-    SmallVectorSized<const Expression*, 8> bound;
+    SmallVector<const Expression*, 8> bound;
     Expression::bindMembershipExpressions(context, TokenKind::CaseKeyword,
                                           /* requireIntegral */ false,
                                           /* unwrapUnpacked */ false,
                                           /* allowTypeReferences */ true, /* allowOpenRange */ true,
                                           *syntax.expr, expressions, bound);
 
-    SmallVectorSized<CaseItem, 8> items;
-    SmallVectorSized<const Expression*, 8> group;
+    SmallVector<CaseItem, 8> items;
+    SmallVector<const Expression*, 8> group;
     auto& comp = context.getCompilation();
     auto boundIt = bound.begin();
     auto prodIt = prods.begin();
@@ -1458,7 +1458,7 @@ RandSeqProductionSymbol::Rule RandSeqProductionSymbol::createRule(
     auto blockIt = blockRange.begin();
 
     auto& comp = context.getCompilation();
-    SmallVectorSized<const ProdBase*, 8> prods;
+    SmallVector<const ProdBase*, 8> prods;
     for (auto p : syntax.prods) {
         switch (p->kind) {
             case SyntaxKind::RsProdItem:
@@ -1538,7 +1538,7 @@ RandSeqProductionSymbol::Rule RandSeqProductionSymbol::createRule(
 }
 
 void RandSeqProductionSymbol::createRuleVariables(const RsRuleSyntax& syntax, const Scope& scope,
-                                                  SmallVector<const Symbol*>& results) {
+                                                  SmallVectorBase<const Symbol*>& results) {
     SmallMap<const RandSeqProductionSymbol*, uint32_t, 8> prodMap;
     auto countProd = [&](const RsProdItemSyntax& item) {
         auto symbol = Lookup::unqualified(scope, item.name.valueText(),

@@ -31,7 +31,7 @@ void ParameterBuilder::setAssignments(const ParameterValueAssignmentSyntax& synt
     // use one method or the other.
     bool hasParamAssignments = false;
     bool orderedAssignments = true;
-    SmallVectorSized<const OrderedParamAssignmentSyntax*, 8> orderedParams;
+    SmallVector<const OrderedParamAssignmentSyntax*, 8> orderedParams;
     SmallMap<string_view, std::pair<const NamedParamAssignmentSyntax*, bool>, 8> namedParams;
 
     for (auto paramBase : syntax.parameters) {
@@ -260,7 +260,7 @@ const ParameterSymbolBase& ParameterBuilder::createParam(const Definition::Param
 }
 
 void ParameterBuilder::createDecls(const Scope& scope, const ParameterDeclarationBaseSyntax& syntax,
-                                   bool isLocal, bool isPort, SmallVector<Decl>& results) {
+                                   bool isLocal, bool isPort, SmallVectorBase<Decl>& results) {
     if (syntax.kind == SyntaxKind::ParameterDeclaration) {
         auto& paramSyntax = syntax.as<ParameterDeclarationSyntax>();
         for (auto decl : paramSyntax.declarators)
@@ -274,7 +274,7 @@ void ParameterBuilder::createDecls(const Scope& scope, const ParameterDeclaratio
 }
 
 void ParameterBuilder::createDecls(const Scope& scope, const ParameterPortListSyntax& syntax,
-                                   SmallVector<Decl>& results) {
+                                   SmallVectorBase<Decl>& results) {
     bool lastLocal = false;
     for (auto declaration : syntax.declarations) {
         // It's legal to leave off the parameter keyword in the parameter port list.

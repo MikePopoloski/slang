@@ -137,7 +137,7 @@ static bool checkMacroArgRanges(const DiagnosticEngine& engine, SourceLocation l
 
     loc = sm.getExpansionLoc(loc);
 
-    SmallVectorSized<SourceRange, 8> mappedRanges;
+    SmallVector<SourceRange, 8> mappedRanges;
     engine.mapSourceRanges(loc, ranges, mappedRanges, false);
 
     if (ranges.size() > mappedRanges.size())
@@ -185,7 +185,7 @@ void DiagnosticEngine::issue(const Diagnostic& diagnostic) {
 
 void DiagnosticEngine::issueImpl(const Diagnostic& diagnostic, DiagnosticSeverity severity) {
     // Walk out until we find a location for this diagnostic that isn't inside a macro.
-    SmallVectorSized<SourceLocation, 8> expansionLocs;
+    SmallVector<SourceLocation, 8> expansionLocs;
     SourceLocation loc = diagnostic.location;
     size_t ignoreUntil = 0;
     bool showIncludeStack = false;
@@ -276,7 +276,7 @@ std::string DiagnosticEngine::formatMessage(const Diagnostic& diag) const {
 
 // Walks up a chain of macro argument expansions and collects their buffer IDs.
 static void getMacroArgExpansions(const SourceManager& sm, SourceLocation loc, bool isStart,
-                                  SmallVector<BufferID>& results) {
+                                  SmallVectorBase<BufferID>& results) {
     while (sm.isMacroLoc(loc)) {
         if (sm.isMacroArgLoc(loc)) {
             results.push_back(loc.buffer());
@@ -292,8 +292,8 @@ static void getMacroArgExpansions(const SourceManager& sm, SourceLocation loc, b
 // Finds all macro argument expansions that are common in both start and end.
 static void getCommonMacroArgExpansions(const SourceManager& sm, SourceLocation start,
                                         SourceLocation end, std::vector<BufferID>& results) {
-    SmallVectorSized<BufferID, 8> startArgExpansions;
-    SmallVectorSized<BufferID, 8> endArgExpansions;
+    SmallVector<BufferID, 8> startArgExpansions;
+    SmallVector<BufferID, 8> endArgExpansions;
     getMacroArgExpansions(sm, start, true, startArgExpansions);
     getMacroArgExpansions(sm, end, false, endArgExpansions);
     std::stable_sort(startArgExpansions.begin(), startArgExpansions.end());
@@ -345,7 +345,7 @@ static SourceLocation getMatchingMacroLoc(const SourceManager& sm, SourceLocatio
 }
 
 void DiagnosticEngine::mapSourceRanges(SourceLocation loc, span<const SourceRange> ranges,
-                                       SmallVector<SourceRange>& mapped,
+                                       SmallVectorBase<SourceRange>& mapped,
                                        bool mapOriginalLocations) const {
     const SourceManager& sm = sourceManager;
 

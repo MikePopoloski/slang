@@ -76,7 +76,7 @@ public:
     /// portion of the split is lexed into new tokens and appened to @a results
     static void splitTokens(BumpAllocator& alloc, Diagnostics& diagnostics,
                             const SourceManager& sourceManager, Token sourceToken, size_t offset,
-                            KeywordVersion keywordVersion, SmallVector<Token>& results);
+                            KeywordVersion keywordVersion, SmallVectorBase<Token>& results);
 
 private:
     Lexer(BufferID bufferId, string_view source, const char* startPtr, BumpAllocator& alloc,
@@ -148,7 +148,7 @@ private:
     uint32_t errorCount = 0;
 
     // temporary storage for building arrays of trivia
-    SmallVectorSized<Trivia, 32> triviaBuffer;
+    SmallVector<Trivia, 32> triviaBuffer;
 };
 
 } // namespace slang::parsing

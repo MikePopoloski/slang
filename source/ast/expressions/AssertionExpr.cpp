@@ -559,7 +559,7 @@ void SimpleAssertionExpr::serializeTo(ASTSerializer& serializer) const {
 AssertionExpr& SequenceConcatExpr::fromSyntax(const DelayedSequenceExprSyntax& syntax,
                                               const ASTContext& context) {
     bool ok = true;
-    SmallVectorSized<Element, 8> elems;
+    SmallVector<Element, 8> elems;
     if (syntax.first) {
         auto& seq = bind(*syntax.first, context);
         seq.requireSequence(context);
@@ -657,7 +657,7 @@ static span<const Expression* const> bindMatchItems(const SequenceMatchListSynta
         return {};
     }
 
-    SmallVectorSized<const Expression*, 4> results;
+    SmallVector<const Expression*, 4> results;
     for (auto item : syntax.items) {
         auto exprSyn = context.requireSimpleExpr(*item, diag::InvalidMatchItem);
         if (!exprSyn)
@@ -1133,13 +1133,13 @@ AssertionExpr& CaseAssertionExpr::fromSyntax(const CasePropertyExprSyntax& synta
     auto& expr = bindExpr(*syntax.expr, context);
 
     const AssertionExpr* defCase = nullptr;
-    SmallVectorSized<ItemGroup, 4> items;
+    SmallVector<ItemGroup, 4> items;
     for (auto item : syntax.items) {
         if (item->kind == SyntaxKind::StandardPropertyCaseItem) {
             auto& sci = item->as<StandardPropertyCaseItemSyntax>();
             auto& body = AssertionExpr::bind(*sci.expr, context);
 
-            SmallVectorSized<const Expression*, 4> exprs;
+            SmallVector<const Expression*, 4> exprs;
             for (auto es : sci.expressions)
                 exprs.push_back(&bindExpr(*es, context));
 

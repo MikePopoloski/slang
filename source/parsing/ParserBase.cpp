@@ -22,7 +22,7 @@ ParserBase::ParserBase(Preprocessor& preprocessor) :
 }
 
 void ParserBase::prependSkippedTokens(Token& token) {
-    SmallVectorSized<Trivia, 8> buffer;
+    SmallVector<Trivia, 8> buffer;
     buffer.push_back(Trivia{TriviaKind::SkippedTokens, skippedTokens.copy(alloc)});
     buffer.appendRange(token.trivia());
 
@@ -133,7 +133,7 @@ void ParserBase::skipToken(std::optional<DiagCode> diagCode) {
     if (skipKind == TokenKind::Unknown)
         return;
 
-    SmallVectorSized<TokenKind, 16> delimStack;
+    SmallVector<TokenKind, 16> delimStack;
     while (true) {
         token = peek();
         if (token.kind == TokenKind::EndOfFile)

@@ -43,7 +43,7 @@ void Preprocessor::createBuiltInMacro(string_view name, int value, string_view v
     Token directive(alloc, TokenKind::Directive, {}, valueStr, NL, SyntaxKind::DefineDirective);
     Token nameTok(alloc, TokenKind::Identifier, {}, name, NL);
 
-    SmallVectorSized<Token, 2> body;
+    SmallVector<Token, 2> body;
     body.push_back(Token(alloc, TokenKind::IntegerLiteral, {}, valueStr, NL,
                          SVInt(32, uint64_t(value), true)));
 
@@ -62,7 +62,7 @@ std::pair<MacroActualArgumentListSyntax*, Trivia> Preprocessor::handleTopLevelMa
     if (!macro.valid()) {
         if (options.ignoreDirectives.find(directive.valueText().substr(1)) !=
             options.ignoreDirectives.end()) {
-            SmallVectorSized<Token, 4> ignoreTokens;
+            SmallVector<Token, 4> ignoreTokens;
             while (peekSameLine() && peek().kind != TokenKind::EndOfFile)
                 ignoreTokens.push_back(consume());
 
@@ -92,7 +92,7 @@ std::pair<MacroActualArgumentListSyntax*, Trivia> Preprocessor::handleTopLevelMa
     }
 
     // Expand out the macro
-    SmallVectorSized<Token, 32> buffer;
+    SmallVector<Token, 32> buffer;
     MacroExpansion expansion{sourceManager, alloc, buffer, directive, true};
     if (!expandMacro(macro, expansion, actualArgs))
         return {actualArgs, Trivia()};
@@ -132,10 +132,10 @@ std::pair<MacroActualArgumentListSyntax*, Trivia> Preprocessor::handleTopLevelMa
     return {actualArgs, Trivia()};
 }
 
-bool Preprocessor::applyMacroOps(span<Token const> tokens, SmallVector<Token>& dest) {
-    SmallVectorSized<Trivia, 16> emptyArgTrivia;
-    SmallVectorSized<Token, 16> stringifyBuffer;
-    SmallVectorSized<Token, 16> commentBuffer;
+bool Preprocessor::applyMacroOps(span<Token const> tokens, SmallVectorBase<Token>& dest) {
+    SmallVector<Trivia, 16> emptyArgTrivia;
+    SmallVector<Token, 16> stringifyBuffer;
+    SmallVector<Token, 16> commentBuffer;
     Token stringify;
     Token syntheticComment;
     bool anyNewMacros = false;
@@ -296,7 +296,7 @@ bool Preprocessor::applyMacroOps(span<Token const> tokens, SmallVector<Token>& d
 
                 // Now we have the unfortunate task of re-lexing the remaining stuff after the split
                 // and then appending those tokens to the destination as well.
-                SmallVectorSized<Token, 8> splits;
+                SmallVector<Token, 8> splits;
                 Lexer::splitTokens(alloc, diagnostics, sourceManager, newToken, offset + 2,
                                    getCurrentKeywordVersion(), splits);
                 anyNewMacros |= applyMacroOps(splits, dest);
@@ -520,7 +520,7 @@ bool Preprocessor::expandMacro(MacroDef macro, MacroExpansion& expansion,
                 if (!handleToken(first))
                     return false;
 
-                SmallVectorSized<Token, 8> splits;
+                SmallVector<Token, 8> splits;
                 Lexer::splitTokens(alloc, diagnostics, sourceManager, token, index,
                                    getCurrentKeywordVersion(), splits);
 
@@ -532,7 +532,7 @@ bool Preprocessor::expandMacro(MacroDef macro, MacroExpansion& expansion,
                 // Add an empty argument in here so we can make sure a space ends
                 // the escaped identifier once it gets concatenated again.
                 if (!splits.empty()) {
-                    SmallVectorSized<Trivia, 2> triviaBuf;
+                    SmallVector<Trivia, 2> triviaBuf;
                     triviaBuf.emplace_back(TriviaKind::Whitespace, " "sv);
 
                     auto loc = splits.back().location() + splits.back().rawText().length();
@@ -591,7 +591,7 @@ void Preprocessor::MacroExpansion::append(Token token, SourceLocation location,
 
     // Line continuations get stripped out when we expand macros and become newline trivia instead.
     if (token.kind == TokenKind::LineContinuation && !allowLineContinuation) {
-        SmallVectorSized<Trivia, 8> newTrivia;
+        SmallVector<Trivia, 8> newTrivia;
         newTrivia.appendRange(token.trivia());
         newTrivia.push_back(Trivia(TriviaKind::EndOfLine, token.rawText().substr(1)));
 
@@ -606,8 +606,8 @@ void Preprocessor::MacroExpansion::append(Token token, SourceLocation location,
 bool Preprocessor::expandReplacementList(
     span<Token const>& tokens, SmallSet<const DefineDirectiveSyntax*, 8>& alreadyExpanded) {
 
-    SmallVectorSized<Token, 64> outBuffer;
-    SmallVectorSized<Token, 64> expansionBuffer;
+    SmallVector<Token, 64> outBuffer;
+    SmallVector<Token, 64> expansionBuffer;
 
     bool expandedSomething = false;
     MacroParser parser(*this);
@@ -668,7 +668,7 @@ bool Preprocessor::expandReplacementList(
 
 bool Preprocessor::expandIntrinsic(MacroIntrinsic intrinsic, MacroExpansion& expansion) {
     auto loc = expansion.getRange().start();
-    SmallVectorSized<char, 64> text;
+    SmallVector<char, 64> text;
     switch (intrinsic) {
         case MacroIntrinsic::File: {
             string_view fileName = sourceManager.getFileName(loc);
@@ -704,7 +704,7 @@ bool Preprocessor::MacroDef::needsArgs() const {
 MacroFormalArgumentListSyntax* Preprocessor::MacroParser::parseFormalArgumentList() {
     // parse all formal arguments
     auto openParen = consume();
-    SmallVectorSized<TokenOrSyntax, 16> arguments;
+    SmallVector<TokenOrSyntax, 16> arguments;
     parseArgumentList(arguments, [this]() { return parseFormalArgument(); });
 
     return pp.alloc.emplace<MacroFormalArgumentListSyntax>(openParen, arguments.copy(pp.alloc),
@@ -719,7 +719,7 @@ MacroActualArgumentListSyntax* Preprocessor::MacroParser::parseActualArgumentLis
     }
 
     auto openParen = consume();
-    SmallVectorSized<TokenOrSyntax, 16> arguments;
+    SmallVector<TokenOrSyntax, 16> arguments;
     parseArgumentList(arguments, [this]() { return parseActualArgument(); });
 
     auto closeParen = expect(TokenKind::CloseParenthesis);
@@ -728,7 +728,7 @@ MacroActualArgumentListSyntax* Preprocessor::MacroParser::parseActualArgumentLis
 }
 
 template<typename TFunc>
-void Preprocessor::MacroParser::parseArgumentList(SmallVector<TokenOrSyntax>& results,
+void Preprocessor::MacroParser::parseArgumentList(SmallVectorBase<TokenOrSyntax>& results,
                                                   TFunc&& parseItem) {
     while (true) {
         results.push_back(parseItem());
@@ -768,8 +768,8 @@ span<Token> Preprocessor::MacroParser::parseTokenList(bool allowNewlines) {
     // comma and right parenthesis only end the default token list if they are
     // not inside a nested pair of (), [], or {}
     // otherwise, keep swallowing tokens as part of the default
-    SmallVectorSized<Token, 64> tokens;
-    SmallVectorSized<TokenKind, 16> delimPairStack;
+    SmallVector<Token, 64> tokens;
+    SmallVector<TokenKind, 16> delimPairStack;
     while (true) {
         auto kind = peek().kind;
         if (kind == TokenKind::EndOfFile || (!allowNewlines && !peek().isOnSameLine())) {

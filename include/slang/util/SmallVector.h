@@ -15,7 +15,7 @@
 
 namespace slang {
 
-/// SmallVector<T> - A fast growable array.
+/// SmallVectorBase<T> - A fast growable array.
 ///
 /// SmallVector is a vector-like growable array that allocates its first N elements
 /// on the stack. As long as you don't need more room than that, there are no
@@ -23,7 +23,7 @@ namespace slang {
 /// for the actual sized implementation; it's split apart so that this one can be
 /// used in more general interfaces that don't care about the explicit stack size.
 template<typename T>
-class SmallVector {
+class SmallVectorBase {
 public:
     using value_type = T;
     using size_type = size_t;
@@ -232,16 +232,16 @@ public:
 protected:
     // Protected to disallow construction or deletion via base class.
     // This way we don't need a virtual destructor, or vtable at all.
-    SmallVector() {
+    SmallVectorBase() {
     }
-    explicit SmallVector(size_t capacity) : capacity(capacity) {
+    explicit SmallVectorBase(size_t capacity) : capacity(capacity) {
     }
-    ~SmallVector() {
+    ~SmallVectorBase() {
         cleanup();
     }
 
     template<typename TType, size_t N>
-    friend class SmallVectorSized;
+    friend class SmallVector;
 
     T* data_ = reinterpret_cast<T*>(&firstElement[0]);
     size_t len = 0;
@@ -306,35 +306,34 @@ protected:
     }
 };
 
-/// A concrete, sized version of the SmallVector<T> template.
+/// A concrete, sized version of the SmallVectorBase<T> template.
 /// The template parameter N is the number of elements that will be allocated on the stack.
 template<typename T, size_t N>
-class SmallVectorSized : public SmallVector<T> {
+class SmallVector : public SmallVectorBase<T> {
     static_assert(N > 1, "Must have at least two elements in SmallVector stack size");
     static_assert(sizeof(T) * N <= 1024, "Initial size of SmallVector is over 1KB");
 
 public:
-    SmallVectorSized() : SmallVector<T>(N) {}
+    SmallVector() : SmallVectorBase<T>(N) {}
 
-    /// Constructs the SmallVectorSized with the given capacity. If that capacity is less than
+    /// Constructs the SmallVector with the given capacity. If that capacity is less than
     /// the preallocated stack size `N` it will be ignored. Otherwise it will perform a heap
     /// allocation right away.
-    explicit SmallVectorSized(size_t capacity) : SmallVector<T>(N) { this->reserve(capacity); }
+    explicit SmallVector(size_t capacity) : SmallVectorBase<T>(N) { this->reserve(capacity); }
 
-    SmallVectorSized(const SmallVectorSized& other) :
-        SmallVectorSized(static_cast<const SmallVector<T>&>(other)) {}
+    SmallVector(const SmallVector& other) :
+        SmallVector(static_cast<const SmallVectorBase<T>&>(other)) {}
 
-    SmallVectorSized(const SmallVector<T>& other) {
+    SmallVector(const SmallVectorBase<T>& other) {
         this->len = 0;
         this->capacity = N;
         this->data_ = reinterpret_cast<T*>(&this->firstElement[0]);
         this->appendRange(other.begin(), other.end());
     }
 
-    SmallVectorSized(SmallVectorSized&& other) :
-        SmallVectorSized(static_cast<SmallVector<T>&&>(other)) {}
+    SmallVector(SmallVector&& other) : SmallVector(static_cast<SmallVectorBase<T>&&>(other)) {}
 
-    SmallVectorSized(SmallVector<T>&& other) {
+    SmallVector(SmallVectorBase<T>&& other) {
         if (other.isSmall()) {
             this->len = 0;
             this->capacity = N;
@@ -352,18 +351,18 @@ public:
         }
     }
 
-    SmallVectorSized& operator=(const SmallVector<T>& other) {
+    SmallVector& operator=(const SmallVectorBase<T>& other) {
         if (this != &other) {
-            this->~SmallVectorSized();
-            new (this) SmallVectorSized(other);
+            this->~SmallVector();
+            new (this) SmallVector(other);
         }
         return *this;
     }
 
-    SmallVectorSized& operator=(SmallVector<T>&& other) {
+    SmallVector& operator=(SmallVectorBase<T>&& other) {
         if (this != &other) {
-            this->~SmallVectorSized();
-            new (this) SmallVectorSized(std::move(other));
+            this->~SmallVector();
+            new (this) SmallVector(std::move(other));
         }
         return *this;
     }

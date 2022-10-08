@@ -141,7 +141,8 @@ Expression& CallExpression::fromLookup(Compilation& compilation, const Subroutin
 }
 
 bool Expression::collectArgs(const ASTContext& context, const ArgumentListSyntax& syntax,
-                             SmallVector<const SyntaxNode*>& orderedArgs, NamedArgMap& namedArgs) {
+                             SmallVectorBase<const SyntaxNode*>& orderedArgs,
+                             NamedArgMap& namedArgs) {
     // Collect all arguments into a list of ordered expressions (which can
     // optionally be nullptr to indicate an empty argument) and a map of
     // named argument assignments.
@@ -197,8 +198,8 @@ static bool checkOutputArgs(const ASTContext& context, bool hasOutputArgs, Sourc
 bool CallExpression::bindArgs(const ArgumentListSyntax* argSyntax,
                               span<const FormalArgumentSymbol* const> formalArgs,
                               string_view symbolName, SourceRange range, const ASTContext& context,
-                              SmallVector<const Expression*>& boundArgs) {
-    SmallVectorSized<const SyntaxNode*, 8> orderedArgs;
+                              SmallVectorBase<const Expression*>& boundArgs) {
+    SmallVector<const SyntaxNode*, 8> orderedArgs;
     NamedArgMap namedArgs;
     if (argSyntax) {
         if (!collectArgs(context, *argSyntax, orderedArgs, namedArgs))
@@ -306,7 +307,7 @@ Expression& CallExpression::fromArgs(Compilation& compilation, const Subroutine&
                                      const Expression* thisClass,
                                      const ArgumentListSyntax* argSyntax, SourceRange range,
                                      const ASTContext& context) {
-    SmallVectorSized<const Expression*, 8> boundArgs;
+    SmallVector<const Expression*, 8> boundArgs;
     const SubroutineSymbol& symbol = *std::get<0>(subroutine);
     bool bad = !bindArgs(argSyntax, symbol.getArguments(), symbol.name, range, context, boundArgs);
 
@@ -454,7 +455,7 @@ Expression& CallExpression::createSystemCall(
     const ASTContext& context, const Scope* randomizeScope) {
 
     SystemCallInfo callInfo{&subroutine, context.scope, {}};
-    SmallVectorSized<const Expression*, 8> buffer;
+    SmallVector<const Expression*, 8> buffer;
     if (firstArg)
         buffer.push_back(firstArg);
 
@@ -514,7 +515,7 @@ Expression& CallExpression::createSystemCall(
                         return badExpr(compilation, nullptr);
                     }
 
-                    SmallVectorSized<string_view, 4> names;
+                    SmallVector<string_view, 4> names;
                     for (auto expr : withClause->args->expressions) {
                         if (expr->kind != SyntaxKind::IdentifierName) {
                             argContext.addDiag(diag::ExpectedIdentifier, expr->sourceRange());
@@ -645,7 +646,7 @@ ConstantValue CallExpression::evalImpl(EvalContext& context) const {
         return nullptr;
 
     // Evaluate all argument in the current stack frame.
-    SmallVectorSized<ConstantValue, 4> args;
+    SmallVector<ConstantValue, 4> args;
     for (auto arg : arguments()) {
         ConstantValue v = arg->eval(context);
         if (!v)

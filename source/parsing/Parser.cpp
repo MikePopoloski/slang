@@ -77,7 +77,7 @@ Token Parser::parseLifetime() {
 
 AnsiPortListSyntax& Parser::parseAnsiPortList(Token openParen) {
     Token closeParen;
-    SmallVectorSized<TokenOrSyntax, 8> buffer;
+    SmallVector<TokenOrSyntax, 8> buffer;
     parseList<isPossibleAnsiPort, isEndOfParenList>(buffer, TokenKind::CloseParenthesis,
                                                     TokenKind::Comma, closeParen,
                                                     RequireItems::False, diag::ExpectedAnsiPort,
@@ -102,7 +102,7 @@ ModuleHeaderSyntax& Parser::parseModuleHeader() {
         }
         else if (isNonAnsiPort()) {
             Token closeParen;
-            SmallVectorSized<TokenOrSyntax, 8> buffer;
+            SmallVector<TokenOrSyntax, 8> buffer;
             parseList<isPossibleNonAnsiPort, isEndOfParenList>(
                 buffer, TokenKind::CloseParenthesis, TokenKind::Comma, closeParen,
                 RequireItems::True, diag::ExpectedNonAnsiPort,
@@ -390,7 +390,7 @@ VariableDimensionSyntax* Parser::parseDimension() {
 }
 
 span<VariableDimensionSyntax*> Parser::parseDimensionList() {
-    SmallVectorSized<VariableDimensionSyntax*, 4> buffer;
+    SmallVector<VariableDimensionSyntax*, 4> buffer;
     while (true) {
         auto dim = parseDimension();
         if (!dim)
@@ -416,7 +416,7 @@ StructUnionTypeSyntax& Parser::parseStructUnion(SyntaxKind syntaxKind) {
     auto openBrace = expect(TokenKind::OpenBrace);
 
     Token closeBrace;
-    SmallVectorSized<StructUnionMemberSyntax*, 8> buffer;
+    SmallVector<StructUnionMemberSyntax*, 8> buffer;
 
     if (openBrace.isMissing())
         closeBrace = missingToken(TokenKind::CloseBrace, openBrace.location());
@@ -807,7 +807,7 @@ MemberSyntax& Parser::parseVariableDeclaration(AttrList attributes) {
 }
 
 DataDeclarationSyntax& Parser::parseDataDeclaration(AttrList attributes) {
-    SmallVectorSized<Token, 4> modifiers;
+    SmallVector<Token, 4> modifiers;
     SmallMap<TokenKind, Token, 4> modifierSet;
     Token lastLifetime;
     bool hasVar = false;
@@ -896,7 +896,7 @@ DeclaratorSyntax& Parser::parseDeclarator(bool allowMinTypMax, bool requireIniti
 template<bool (*IsEnd)(TokenKind)>
 span<TokenOrSyntax> Parser::parseDeclarators(TokenKind endKind, Token& end, bool allowMinTypMax,
                                              bool requireInitializers) {
-    SmallVectorSized<TokenOrSyntax, 4> buffer;
+    SmallVector<TokenOrSyntax, 4> buffer;
     parseList<isIdentifierOrComma, IsEnd>(buffer, endKind, TokenKind::Comma, end,
                                           RequireItems::True, diag::ExpectedDeclarator,
                                           [this, allowMinTypMax, requireInitializers] {
@@ -914,7 +914,7 @@ span<TokenOrSyntax> Parser::parseDeclarators(Token& semi, bool allowMinTypMax,
 }
 
 Parser::AttrList Parser::parseAttributes() {
-    SmallVectorSized<AttributeInstanceSyntax*, 4> buffer;
+    SmallVector<AttributeInstanceSyntax*, 4> buffer;
     while (peek(TokenKind::OpenParenthesisStar)) {
         Token openParen;
         Token closeParen;
@@ -983,7 +983,7 @@ ParameterDeclarationBaseSyntax& Parser::parseParameterDecl(Token keyword, Token*
     if (peek(TokenKind::TypeKeyword) && peek(1).kind != TokenKind::OpenParenthesis) {
         auto typeKeyword = consume();
 
-        SmallVectorSized<TokenOrSyntax, 4> decls;
+        SmallVector<TokenOrSyntax, 4> decls;
         if (semi) {
             parseList<isIdentifierOrComma, isSemicolon>(decls, TokenKind::Semicolon,
                                                         TokenKind::Comma, *semi, RequireItems::True,
@@ -1013,7 +1013,7 @@ ParameterDeclarationBaseSyntax& Parser::parseParameterDecl(Token keyword, Token*
         if (semi)
             decls = parseDeclarators(*semi, /* allowMinTypMax */ true);
         else {
-            SmallVectorSized<TokenOrSyntax, 2> buffer;
+            SmallVector<TokenOrSyntax, 2> buffer;
             buffer.push_back(&parseDeclarator(/* allowMinTypMax */ true));
             decls = buffer.copy(alloc);
         }

@@ -159,7 +159,7 @@ struct SLANG_EXPORT LookupResult {
 
     /// A list of selectors that should be applied to the found symbol.
     /// Only applicable if the found symbol is a value symbol.
-    SmallVectorSized<Selector, 4> selectors;
+    SmallVector<Selector, 4> selectors;
 
     /// Reports a diagnostic that occurred during lookup. The stored diagnostics
     /// are not automatically emitted to the compilation, letting them be suppressed

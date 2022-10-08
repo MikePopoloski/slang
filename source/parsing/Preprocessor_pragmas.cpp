@@ -68,7 +68,7 @@ std::pair<PragmaExpressionSyntax*, bool> Preprocessor::parsePragmaValue() {
         return {alloc.emplace<SimplePragmaExpressionSyntax>(expected), false};
     }
 
-    SmallVectorSized<TokenOrSyntax, 4> values;
+    SmallVector<TokenOrSyntax, 4> values;
     Token openParen = consume();
     bool wantComma = false;
     bool ok = false;
@@ -140,7 +140,7 @@ void Preprocessor::handleExponentSplit(Token token, size_t offset) {
 }
 
 void Preprocessor::applyPragma(const PragmaDirectiveSyntax& pragma,
-                               SmallVector<Token>& skippedTokens) {
+                               SmallVectorBase<Token>& skippedTokens) {
     string_view name = pragma.name.valueText();
     if (name == "protect") {
         applyProtectPragma(pragma, skippedTokens);
@@ -172,7 +172,7 @@ void Preprocessor::applyPragma(const PragmaDirectiveSyntax& pragma,
 }
 
 void Preprocessor::applyProtectPragma(const PragmaDirectiveSyntax& pragma,
-                                      SmallVector<Token>& skippedTokens) {
+                                      SmallVectorBase<Token>& skippedTokens) {
     if (pragma.args.empty()) {
         Token last = pragma.getLastToken();
         addDiag(diag::ExpectedProtectKeyword, last.location() + last.rawText().length());
@@ -362,7 +362,7 @@ std::optional<uint32_t> Preprocessor::requireUInt32(const PragmaExpressionSyntax
 }
 
 void Preprocessor::skipMacroTokensBeforeProtectRegion(Token directive,
-                                                      SmallVector<Token>& skippedTokens) {
+                                                      SmallVectorBase<Token>& skippedTokens) {
     // We're about to lex an encoded / encrypted data block based on a pragma
     // protect directive, so we don't expect there to be macro tokens still pending.
     // If there are, issue an error and skip them.
@@ -382,7 +382,7 @@ void Preprocessor::skipMacroTokensBeforeProtectRegion(Token directive,
 }
 
 void Preprocessor::handleProtectBegin(Token keyword, const PragmaExpressionSyntax* args,
-                                      SmallVector<Token>&) {
+                                      SmallVectorBase<Token>&) {
     ensureNoPragmaArgs(keyword, args);
 
     if (protectEncryptDepth)
@@ -391,7 +391,7 @@ void Preprocessor::handleProtectBegin(Token keyword, const PragmaExpressionSynta
 }
 
 void Preprocessor::handleProtectEnd(Token keyword, const PragmaExpressionSyntax* args,
-                                    SmallVector<Token>&) {
+                                    SmallVectorBase<Token>&) {
     ensureNoPragmaArgs(keyword, args);
 
     if (protectEncryptDepth)
@@ -401,13 +401,13 @@ void Preprocessor::handleProtectEnd(Token keyword, const PragmaExpressionSyntax*
 }
 
 void Preprocessor::handleProtectBeginProtected(Token keyword, const PragmaExpressionSyntax* args,
-                                               SmallVector<Token>&) {
+                                               SmallVectorBase<Token>&) {
     ensureNoPragmaArgs(keyword, args);
     protectDecryptDepth++;
 }
 
 void Preprocessor::handleProtectEndProtected(Token keyword, const PragmaExpressionSyntax* args,
-                                             SmallVector<Token>&) {
+                                             SmallVectorBase<Token>&) {
     ensureNoPragmaArgs(keyword, args);
 
     if (protectDecryptDepth)
@@ -417,7 +417,7 @@ void Preprocessor::handleProtectEndProtected(Token keyword, const PragmaExpressi
 }
 
 void Preprocessor::handleProtectSingleArgIgnore(Token keyword, const PragmaExpressionSyntax* args,
-                                                SmallVector<Token>&) {
+                                                SmallVectorBase<Token>&) {
     if (!args || args->kind != SyntaxKind::SimplePragmaExpression ||
         args->as<SimplePragmaExpressionSyntax>().value.kind != TokenKind::StringLiteral) {
 
@@ -427,7 +427,7 @@ void Preprocessor::handleProtectSingleArgIgnore(Token keyword, const PragmaExpre
 }
 
 void Preprocessor::handleProtectEncoding(Token keyword, const PragmaExpressionSyntax* args,
-                                         SmallVector<Token>&) {
+                                         SmallVectorBase<Token>&) {
     if (!args || args->kind != SyntaxKind::ParenPragmaExpression ||
         args->as<ParenPragmaExpressionSyntax>().values.empty()) {
         addDiag(diag::ProtectArgList, args ? args->sourceRange() : keyword.range())
@@ -484,17 +484,17 @@ void Preprocessor::handleProtectEncoding(Token keyword, const PragmaExpressionSy
 }
 
 void Preprocessor::handleProtectKey(Token keyword, const PragmaExpressionSyntax* args,
-                                    SmallVector<Token>& skippedTokens) {
+                                    SmallVectorBase<Token>& skippedTokens) {
     handleEncryptedRegion(keyword, args, skippedTokens, true);
 }
 
 void Preprocessor::handleProtectBlock(Token keyword, const PragmaExpressionSyntax* args,
-                                      SmallVector<Token>& skippedTokens) {
+                                      SmallVectorBase<Token>& skippedTokens) {
     handleEncryptedRegion(keyword, args, skippedTokens, false);
 }
 
 void Preprocessor::handleEncryptedRegion(Token keyword, const PragmaExpressionSyntax* args,
-                                         SmallVector<Token>& skippedTokens, bool isSingleLine) {
+                                         SmallVectorBase<Token>& skippedTokens, bool isSingleLine) {
     ensureNoPragmaArgs(keyword, args);
     skipMacroTokensBeforeProtectRegion(keyword, skippedTokens);
 
@@ -505,7 +505,7 @@ void Preprocessor::handleEncryptedRegion(Token keyword, const PragmaExpressionSy
 }
 
 void Preprocessor::handleProtectLicense(Token keyword, const PragmaExpressionSyntax* args,
-                                        SmallVector<Token>&) {
+                                        SmallVectorBase<Token>&) {
     if (!args || args->kind != SyntaxKind::ParenPragmaExpression ||
         args->as<ParenPragmaExpressionSyntax>().values.empty()) {
         addDiag(diag::ProtectArgList, args ? args->sourceRange() : keyword.range())
@@ -538,13 +538,13 @@ void Preprocessor::handleProtectLicense(Token keyword, const PragmaExpressionSyn
 }
 
 void Preprocessor::handleProtectReset(Token keyword, const PragmaExpressionSyntax* args,
-                                      SmallVector<Token>&) {
+                                      SmallVectorBase<Token>&) {
     ensureNoPragmaArgs(keyword, args);
     resetProtectState();
 }
 
 void Preprocessor::handleProtectViewport(Token keyword, const PragmaExpressionSyntax* args,
-                                         SmallVector<Token>&) {
+                                         SmallVectorBase<Token>&) {
     if (!args || args->kind != SyntaxKind::ParenPragmaExpression ||
         args->as<ParenPragmaExpressionSyntax>().values.size() != 2) {
         addDiag(diag::InvalidPragmaViewport, args ? args->sourceRange() : keyword.range());

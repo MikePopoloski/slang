@@ -23,7 +23,7 @@ protected:
     const DiagnosticEngine* engine = nullptr;
     const SourceManager* sourceManager = nullptr;
 
-    void getIncludeStack(BufferID buffer, SmallVector<SourceLocation>& stack) const;
+    void getIncludeStack(BufferID buffer, SmallVectorBase<SourceLocation>& stack) const;
     string_view getSourceLine(SourceLocation location, size_t col) const;
     static string_view getSeverityString(DiagnosticSeverity severity);
 };

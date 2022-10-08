@@ -99,7 +99,7 @@ public:
     static bool bindArgs(const syntax::ArgumentListSyntax* argSyntax,
                          span<const FormalArgumentSymbol* const> formalArgs, string_view symbolName,
                          SourceRange range, const ASTContext& context,
-                         SmallVector<const Expression*>& boundArgs);
+                         SmallVectorBase<const Expression*>& boundArgs);
 
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::Call; }
 

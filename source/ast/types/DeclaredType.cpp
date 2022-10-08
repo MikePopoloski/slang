@@ -256,7 +256,7 @@ void DeclaredType::checkType(const ASTContext& context) const {
 static const Type* makeSigned(Compilation& compilation, const Type& type) {
     // This deliberately does not look at the canonical type; type aliases
     // are not convertible to a different signedness.
-    SmallVectorSized<ConstantRange, 4> dims;
+    SmallVector<ConstantRange, 4> dims;
     const Type* curr = &type;
     while (curr->kind == SymbolKind::PackedArrayType) {
         dims.push_back(curr->getFixedRange());
@@ -296,7 +296,7 @@ void DeclaredType::mergePortTypes(
 
     if (implicit.signing) {
         // Drill past any unpacked arrays to figure out if this thing is even integral.
-        SmallVectorSized<ConstantRange, 4> destDims;
+        SmallVector<ConstantRange, 4> destDims;
         const Type* sourceType = destType;
         while (sourceType->getCanonicalType().kind == SymbolKind::FixedSizeUnpackedArrayType) {
             destDims.push_back(sourceType->getFixedRange());

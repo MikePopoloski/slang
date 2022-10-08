@@ -41,7 +41,7 @@ public:
 
     /// Gets the set of dimensions describing the instance array that contains this instance.
     /// If this instance is not part of an array, does not add any dimensions to the given list.
-    void getArrayDimensions(SmallVector<ConstantRange>& dimensions) const;
+    void getArrayDimensions(SmallVectorBase<ConstantRange>& dimensions) const;
 
 protected:
     using Symbol::Symbol;
@@ -71,12 +71,12 @@ public:
 
     static void fromSyntax(Compilation& compilation,
                            const syntax::HierarchyInstantiationSyntax& syntax,
-                           const ASTContext& context, SmallVector<const Symbol*>& results,
-                           SmallVector<const Symbol*>& implicitNets);
+                           const ASTContext& context, SmallVectorBase<const Symbol*>& results,
+                           SmallVectorBase<const Symbol*>& implicitNets);
 
     static void fromFixupSyntax(Compilation& compilation, const Definition& definition,
                                 const syntax::DataDeclarationSyntax& syntax,
-                                const ASTContext& context, SmallVector<const Symbol*>& results);
+                                const ASTContext& context, SmallVectorBase<const Symbol*>& results);
 
     /// Creates one or more instances and binds them into a target scoped, based on the
     /// provided syntax directive.
@@ -215,13 +215,13 @@ public:
 
     static void fromSyntax(Compilation& compilation,
                            const syntax::HierarchyInstantiationSyntax& syntax,
-                           const ASTContext& context, SmallVector<const Symbol*>& results,
-                           SmallVector<const Symbol*>& implicitNets);
+                           const ASTContext& context, SmallVectorBase<const Symbol*>& results,
+                           SmallVectorBase<const Symbol*>& implicitNets);
 
     static void fromSyntax(Compilation& compilation,
                            const syntax::PrimitiveInstantiationSyntax& syntax,
-                           const ASTContext& context, SmallVector<const Symbol*>& results,
-                           SmallVector<const Symbol*>& implicitNets);
+                           const ASTContext& context, SmallVectorBase<const Symbol*>& results,
+                           SmallVectorBase<const Symbol*>& implicitNets);
 
     void serializeTo(ASTSerializer& serializer) const;
 
@@ -247,12 +247,12 @@ public:
 
     static void fromSyntax(const PrimitiveSymbol& primitive,
                            const syntax::HierarchyInstantiationSyntax& syntax,
-                           const ASTContext& context, SmallVector<const Symbol*>& results,
-                           SmallVector<const Symbol*>& implicitNets);
+                           const ASTContext& context, SmallVectorBase<const Symbol*>& results,
+                           SmallVectorBase<const Symbol*>& implicitNets);
 
     static void fromSyntax(const syntax::PrimitiveInstantiationSyntax& syntax,
-                           const ASTContext& context, SmallVector<const Symbol*>& results,
-                           SmallVector<const Symbol*>& implicitNets);
+                           const ASTContext& context, SmallVectorBase<const Symbol*>& results,
+                           SmallVectorBase<const Symbol*>& implicitNets);
 
     void serializeTo(ASTSerializer& serializer) const;
 

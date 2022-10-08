@@ -218,13 +218,13 @@ void StatementBlockSymbol::elaborateVariables(function_ref<void(const Symbol&)> 
     if (syntax->kind == SyntaxKind::RsRule) {
         // Create variables to hold results from all non-void productions
         // invoked by this rule.
-        SmallVectorSized<const Symbol*, 8> vars;
+        SmallVector<const Symbol*, 8> vars;
         RandSeqProductionSymbol::createRuleVariables(syntax->as<RsRuleSyntax>(), *this, vars);
         for (auto var : vars)
             insertCB(*var);
     }
     else if (syntax->kind == SyntaxKind::ForeachLoopStatement) {
-        SmallVectorSized<ForeachLoopStatement::LoopDim, 4> dims;
+        SmallVector<ForeachLoopStatement::LoopDim, 4> dims;
         ASTContext context(*this, LookupLocation::max);
 
         if (!ForeachLoopStatement::buildLoopDims(*syntax->as<ForeachLoopStatementSyntax>().loopList,
@@ -347,7 +347,7 @@ static void createCondGenBlock(Compilation& compilation, const SyntaxNode& synta
                                const ASTContext& context, uint32_t constructIndex,
                                bool isInstantiated,
                                const SyntaxList<AttributeInstanceSyntax>& attributes,
-                               SmallVector<GenerateBlockSymbol*>& results) {
+                               SmallVectorBase<GenerateBlockSymbol*>& results) {
     // [27.5] If a generate block in a conditional generate construct consists of only one item
     // that is itself a conditional generate construct and if that item is not surrounded by
     // begin-end keywords, then this generate block is not treated as a separate scope. The
@@ -382,7 +382,7 @@ static void createCondGenBlock(Compilation& compilation, const SyntaxNode& synta
 void GenerateBlockSymbol::fromSyntax(Compilation& compilation, const IfGenerateSyntax& syntax,
                                      const ASTContext& context, uint32_t constructIndex,
                                      bool isInstantiated,
-                                     SmallVector<GenerateBlockSymbol*>& results) {
+                                     SmallVectorBase<GenerateBlockSymbol*>& results) {
     std::optional<bool> selector;
     if (isInstantiated) {
         auto& cond = Expression::bind(*syntax.condition, context);
@@ -402,9 +402,9 @@ void GenerateBlockSymbol::fromSyntax(Compilation& compilation, const IfGenerateS
 void GenerateBlockSymbol::fromSyntax(Compilation& compilation, const CaseGenerateSyntax& syntax,
                                      const ASTContext& context, uint32_t constructIndex,
                                      bool isInstantiated,
-                                     SmallVector<GenerateBlockSymbol*>& results) {
+                                     SmallVectorBase<GenerateBlockSymbol*>& results) {
 
-    SmallVectorSized<const ExpressionSyntax*, 8> expressions;
+    SmallVector<const ExpressionSyntax*, 8> expressions;
     const SyntaxNode* defBlock = nullptr;
     for (auto item : syntax.items) {
         switch (item->kind) {
@@ -424,7 +424,7 @@ void GenerateBlockSymbol::fromSyntax(Compilation& compilation, const CaseGenerat
         }
     }
 
-    SmallVectorSized<const Expression*, 8> bound;
+    SmallVector<const Expression*, 8> bound;
     if (!Expression::bindMembershipExpressions(
             context, TokenKind::CaseKeyword, /* requireIntegral */ false,
             /* unwrapUnpacked */ false, /* allowTypeReferences */ true, /* allowOpenRange */ true,
@@ -611,7 +611,7 @@ GenerateBlockArraySymbol& GenerateBlockArraySymbol::fromSyntax(Compilation& comp
         }
     }
 
-    SmallVectorSized<const GenerateBlockSymbol*, 8> entries;
+    SmallVector<const GenerateBlockSymbol*, 8> entries;
     auto createBlock = [&](ConstantValue value, bool isInstantiated) {
         // Spec: each generate block gets their own scope, with an implicit
         // localparam of the same name as the genvar.
@@ -676,7 +676,7 @@ GenerateBlockArraySymbol& GenerateBlockArraySymbol::fromSyntax(Compilation& comp
     // to generate more hierarchy.
     uint64_t loopCount = 0;
     SmallSet<SVInt, 8> usedValues;
-    SmallVectorSized<SVInt, 8> indices;
+    SmallVector<SVInt, 8> indices;
     while (true) {
         loopCount += baseCount;
         if (loopCount > loopLimit) {

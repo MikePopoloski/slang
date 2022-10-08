@@ -168,7 +168,7 @@ bool Expression::bindMembershipExpressions(const ASTContext& context, TokenKind 
                                            bool allowTypeReferences, bool allowOpenRange,
                                            const ExpressionSyntax& valueExpr,
                                            span<const ExpressionSyntax* const> expressions,
-                                           SmallVector<const Expression*>& results) {
+                                           SmallVectorBase<const Expression*>& results) {
     auto extraFlags = allowTypeReferences ? ASTFlags::AllowTypeReferences : ASTFlags::None;
     Compilation& comp = context.getCompilation();
     Expression& valueRes = create(comp, valueExpr, context, extraFlags);
@@ -938,7 +938,7 @@ Expression& ConditionalExpression::fromSyntax(Compilation& comp,
     bool isConst = true;
     bool isTrue = true;
     bool isFourState = false;
-    SmallVectorSized<Condition, 2> conditions;
+    SmallVector<Condition, 2> conditions;
     ASTContext trueContext = context;
 
     for (auto condSyntax : syntax.predicate->conditions) {
@@ -1158,11 +1158,11 @@ void ConditionalExpression::serializeTo(ASTSerializer& serializer) const {
 Expression& InsideExpression::fromSyntax(Compilation& compilation,
                                          const InsideExpressionSyntax& syntax,
                                          const ASTContext& context) {
-    SmallVectorSized<const ExpressionSyntax*, 8> expressions;
+    SmallVector<const ExpressionSyntax*, 8> expressions;
     for (auto elemSyntax : syntax.ranges->valueRanges)
         expressions.push_back(elemSyntax);
 
-    SmallVectorSized<const Expression*, 8> bound;
+    SmallVector<const Expression*, 8> bound;
     bool bad =
         !bindMembershipExpressions(context, TokenKind::InsideKeyword, /* requireIntegral */ false,
                                    /* unwrapUnpacked */ true, /* allowTypeReferences */ false,
@@ -1262,7 +1262,7 @@ Expression& ConcatenationExpression::fromSyntax(Compilation& compilation,
         size_t totalElems = 0;
         const Type& type = *assignmentTarget;
         const Type& elemType = *type.getArrayElementType();
-        SmallVectorSized<Expression*, 8> buffer;
+        SmallVector<Expression*, 8> buffer;
 
         for (auto argSyntax : syntax.expressions) {
             Expression* arg = &create(compilation, *argSyntax, context);
@@ -1323,7 +1323,7 @@ Expression& ConcatenationExpression::fromSyntax(Compilation& compilation,
     bool anyStrings = false;
     bitmask<IntegralFlags> flags;
     bitwidth_t totalWidth = 0;
-    SmallVectorSized<Expression*, 8> buffer;
+    SmallVector<Expression*, 8> buffer;
 
     for (auto argSyntax : syntax.expressions) {
         // Replications inside of concatenations have a special feature that allows them to have
@@ -1514,7 +1514,7 @@ ConstantValue ConcatenationExpression::evalImpl(EvalContext& context) const {
         return result;
     }
 
-    SmallVectorSized<SVInt, 8> values;
+    SmallVector<SVInt, 8> values;
     for (auto operand : operands()) {
         ConstantValue v = operand->eval(context);
         if (!v)
@@ -1722,7 +1722,7 @@ Expression& StreamingConcatenationExpression::fromSyntax(
         sliceSize = 1;
     }
 
-    SmallVectorSized<StreamExpression, 8> buffer;
+    SmallVector<StreamExpression, 8> buffer;
     for (const auto argSyntax : syntax.expressions) {
         Expression* arg;
         if (assignmentTarget &&

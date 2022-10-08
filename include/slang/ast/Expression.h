@@ -213,14 +213,14 @@ public:
                                           bool allowTypeReferences, bool allowOpenRange,
                                           const ExpressionSyntax& valueExpr,
                                           span<const ExpressionSyntax* const> expressions,
-                                          SmallVector<const Expression*>& results);
+                                          SmallVectorBase<const Expression*>& results);
 
     /// This method finds all unqualified name references in the given expression and attempts
     /// to look them up in the given context. If they can't be found, their name tokens are
     /// returned in the given @a results vector.
     static void findPotentiallyImplicitNets(const syntax::SyntaxNode& expr,
                                             const ASTContext& context,
-                                            SmallVector<parsing::Token>& results);
+                                            SmallVectorBase<parsing::Token>& results);
 
     /// Converts an expression to be of the given type, following the rules for
     /// implicit conversions, array port slicing, etc.
@@ -370,7 +370,7 @@ protected:
     using NamedArgMap =
         SmallMap<string_view, std::pair<const syntax::NamedArgumentSyntax*, bool>, 8>;
     static bool collectArgs(const ASTContext& context, const syntax::ArgumentListSyntax& syntax,
-                            SmallVector<const syntax::SyntaxNode*>& orderedArgs,
+                            SmallVectorBase<const syntax::SyntaxNode*>& orderedArgs,
                             NamedArgMap& namedArgs);
 };
 

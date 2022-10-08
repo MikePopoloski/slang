@@ -73,7 +73,7 @@ public:
     VariableLifetime defaultLifetime;
     UnconnectedDrive unconnectedDrive;
     TimeScale timeScale;
-    SmallVectorSized<ParameterDecl, 8> parameters;
+    SmallVector<ParameterDecl, 8> parameters;
     flat_hash_set<string_view> modports;
     span<const AttributeSymbol* const> attributes;
     const syntax::SyntaxTree* syntaxTree;

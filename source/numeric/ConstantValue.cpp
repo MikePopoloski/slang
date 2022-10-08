@@ -329,7 +329,7 @@ ConstantValue ConstantValue::convertToInt(bitwidth_t width, bool isSigned, bool 
         return SVInt::fromFloat(width, shortReal(), isSigned);
 
     if (isString()) {
-        SmallVectorSized<byte, 8> buffer;
+        SmallVector<byte, 8> buffer;
         auto& s = str();
         for (auto it = s.rbegin(); it != s.rend(); it++)
             buffer.push_back(static_cast<byte>(*it));

@@ -23,7 +23,7 @@ public:
 
     static void fromLocalSyntax(const Scope& scope,
                                 const syntax::ParameterDeclarationStatementSyntax& syntax,
-                                SmallVector<Symbol*>& results);
+                                SmallVectorBase<Symbol*>& results);
 
 protected:
     ParameterSymbolBase(const Symbol& symbol, bool isLocal, bool isPort) :
@@ -40,7 +40,7 @@ public:
     ParameterSymbol(string_view name, SourceLocation loc, bool isLocal, bool isPort);
 
     static void fromSyntax(const Scope& scope, const syntax::ParameterDeclarationSyntax& syntax,
-                           bool isLocal, bool isPort, SmallVector<ParameterSymbol*>& results);
+                           bool isLocal, bool isPort, SmallVectorBase<ParameterSymbol*>& results);
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::Parameter; }
 
@@ -65,7 +65,8 @@ public:
     TypeParameterSymbol(string_view name, SourceLocation loc, bool isLocal, bool isPort);
 
     static void fromSyntax(const Scope& scope, const syntax::TypeParameterDeclarationSyntax& syntax,
-                           bool isLocal, bool isPort, SmallVector<TypeParameterSymbol*>& results);
+                           bool isLocal, bool isPort,
+                           SmallVectorBase<TypeParameterSymbol*>& results);
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::TypeParameter; }
 
@@ -87,7 +88,7 @@ public:
     const ConstantValue& getValue() const;
 
     static void fromSyntax(const Scope& scope, const syntax::DefParamSyntax& syntax,
-                           SmallVector<const DefParamSymbol*>& results);
+                           SmallVectorBase<const DefParamSymbol*>& results);
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::DefParam; }
 
@@ -108,7 +109,7 @@ public:
     const ConstantValue& getValue(SourceRange referencingRange = {}) const;
 
     static void fromSyntax(const Scope& scope, const syntax::SpecparamDeclarationSyntax& syntax,
-                           SmallVector<const SpecparamSymbol*>& results);
+                           SmallVectorBase<const SpecparamSymbol*>& results);
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::Specparam; }
 

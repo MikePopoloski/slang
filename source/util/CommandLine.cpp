@@ -158,7 +158,7 @@ void CommandLine::setPositional(OptionCallback cb, string_view valueName, bool i
 }
 
 bool CommandLine::parse(int argc, const char* const argv[]) {
-    SmallVectorSized<string_view, 8> args{size_t(argc)};
+    SmallVector<string_view, 8> args{size_t(argc)};
     for (int i = 0; i < argc; i++)
         args.push_back(argv[i]);
 
@@ -168,8 +168,8 @@ bool CommandLine::parse(int argc, const char* const argv[]) {
 #if defined(_MSC_VER)
 
 bool CommandLine::parse(int argc, const wchar_t* const argv[]) {
-    SmallVectorSized<std::string, 8> storage{size_t(argc)};
-    SmallVectorSized<string_view, 8> args{size_t(argc)};
+    SmallVector<std::string, 8> storage{size_t(argc)};
+    SmallVector<string_view, 8> args{size_t(argc)};
     for (int i = 0; i < argc; i++) {
         storage.push_back(narrow(argv[i]));
         args.push_back(storage.back());
@@ -183,14 +183,14 @@ bool CommandLine::parse(int argc, const wchar_t* const argv[]) {
 bool CommandLine::parse(string_view argList, ParseOptions options) {
     bool hasArg = false;
     std::string current;
-    SmallVectorSized<std::string, 8> storage;
+    SmallVector<std::string, 8> storage;
 
     parseStr(argList, options, hasArg, current, storage);
 
     if (hasArg)
         storage.emplace_back(std::move(current));
 
-    SmallVectorSized<string_view, 8> args(storage.size());
+    SmallVector<string_view, 8> args(storage.size());
     for (auto& arg : storage)
         args.push_back(arg);
 
@@ -198,7 +198,7 @@ bool CommandLine::parse(string_view argList, ParseOptions options) {
 }
 
 void CommandLine::parseStr(string_view argList, ParseOptions options, bool& hasArg,
-                           std::string& current, SmallVector<std::string>& storage) {
+                           std::string& current, SmallVectorBase<std::string>& storage) {
     auto pushArg = [&]() {
         if (hasArg) {
             storage.emplace_back(std::move(current));

@@ -187,7 +187,8 @@ public:
     /// be specified in their original textual locations. Otherwise they will
     /// remain as macro locations.
     void mapSourceRanges(SourceLocation loc, span<const SourceRange> ranges,
-                         SmallVector<SourceRange>& mapped, bool mapOriginalLocations = true) const;
+                         SmallVectorBase<SourceRange>& mapped,
+                         bool mapOriginalLocations = true) const;
 
     /// A helper method used as a shortcut to turn all of the specified diagnostics into
     /// a human-friendly string. This is mostly intended to be used for things like tests.

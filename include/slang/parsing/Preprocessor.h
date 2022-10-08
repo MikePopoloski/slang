@@ -184,9 +184,9 @@ private:
 
     // Pragma action handlers
     void applyPragma(const syntax::PragmaDirectiveSyntax& pragma,
-                     SmallVector<Token>& skippedTokens);
+                     SmallVectorBase<Token>& skippedTokens);
     void applyProtectPragma(const syntax::PragmaDirectiveSyntax& pragma,
-                            SmallVector<Token>& skippedTokens);
+                            SmallVectorBase<Token>& skippedTokens);
     void applyResetPragma(const syntax::PragmaDirectiveSyntax& pragma);
     void applyResetAllPragma(const syntax::PragmaDirectiveSyntax& pragma);
     void applyOncePragma(const syntax::PragmaDirectiveSyntax& pragma);
@@ -197,33 +197,33 @@ private:
 
     // Pragma protect handlers
     void handleProtectBegin(Token keyword, const syntax::PragmaExpressionSyntax* args,
-                            SmallVector<Token>& skippedTokens);
+                            SmallVectorBase<Token>& skippedTokens);
     void handleProtectEnd(Token keyword, const syntax::PragmaExpressionSyntax* args,
-                          SmallVector<Token>& skippedTokens);
+                          SmallVectorBase<Token>& skippedTokens);
     void handleProtectBeginProtected(Token keyword, const syntax::PragmaExpressionSyntax* args,
-                                     SmallVector<Token>& skippedTokens);
+                                     SmallVectorBase<Token>& skippedTokens);
     void handleProtectEndProtected(Token keyword, const syntax::PragmaExpressionSyntax* args,
-                                   SmallVector<Token>& skippedTokens);
+                                   SmallVectorBase<Token>& skippedTokens);
     void handleProtectSingleArgIgnore(Token keyword, const syntax::PragmaExpressionSyntax* args,
-                                      SmallVector<Token>& skippedTokens);
+                                      SmallVectorBase<Token>& skippedTokens);
     void handleProtectEncoding(Token keyword, const syntax::PragmaExpressionSyntax* args,
-                               SmallVector<Token>& skippedTokens);
+                               SmallVectorBase<Token>& skippedTokens);
     void handleProtectKey(Token keyword, const syntax::PragmaExpressionSyntax* args,
-                          SmallVector<Token>& skippedTokens);
+                          SmallVectorBase<Token>& skippedTokens);
     void handleProtectBlock(Token keyword, const syntax::PragmaExpressionSyntax* args,
-                            SmallVector<Token>& skippedTokens);
+                            SmallVectorBase<Token>& skippedTokens);
     void handleProtectLicense(Token keyword, const syntax::PragmaExpressionSyntax* args,
-                              SmallVector<Token>& skippedTokens);
+                              SmallVectorBase<Token>& skippedTokens);
     void handleProtectReset(Token keyword, const syntax::PragmaExpressionSyntax* args,
-                            SmallVector<Token>& skippedTokens);
+                            SmallVectorBase<Token>& skippedTokens);
     void handleProtectViewport(Token keyword, const syntax::PragmaExpressionSyntax* args,
-                               SmallVector<Token>& skippedTokens);
+                               SmallVectorBase<Token>& skippedTokens);
     void handleEncryptedRegion(Token keyword, const syntax::PragmaExpressionSyntax* args,
-                               SmallVector<Token>& skippedTokens, bool isSingleLine);
+                               SmallVectorBase<Token>& skippedTokens, bool isSingleLine);
 
     // Pragma helpers
     std::optional<uint32_t> requireUInt32(const syntax::PragmaExpressionSyntax& expr);
-    void skipMacroTokensBeforeProtectRegion(Token directive, SmallVector<Token>& skippedTokens);
+    void skipMacroTokensBeforeProtectRegion(Token directive, SmallVectorBase<Token>& skippedTokens);
 
     // Specifies possible macro intrinsics.
     enum class MacroIntrinsic { None, Line, File };
@@ -247,8 +247,8 @@ private:
     // Helper class for tracking state used during expansion of a macro.
     class MacroExpansion {
     public:
-        MacroExpansion(SourceManager& sourceManager, BumpAllocator& alloc, SmallVector<Token>& dest,
-                       Token usageSite, bool isTopLevel) :
+        MacroExpansion(SourceManager& sourceManager, BumpAllocator& alloc,
+                       SmallVectorBase<Token>& dest, Token usageSite, bool isTopLevel) :
             sourceManager(sourceManager),
             alloc(alloc), dest(dest), usageSite(usageSite), isTopLevel(isTopLevel) {}
 
@@ -264,7 +264,7 @@ private:
     private:
         SourceManager& sourceManager;
         BumpAllocator& alloc;
-        SmallVector<Token>& dest;
+        SmallVectorBase<Token>& dest;
         Token usageSite;
         bool any = false;
         bool isTopLevel = false;
@@ -278,7 +278,7 @@ private:
     bool expandIntrinsic(MacroIntrinsic intrinsic, MacroExpansion& expansion);
     bool expandReplacementList(span<Token const>& tokens,
                                SmallSet<const syntax::DefineDirectiveSyntax*, 8>& alreadyExpanded);
-    bool applyMacroOps(span<Token const> tokens, SmallVector<Token>& dest);
+    bool applyMacroOps(span<Token const> tokens, SmallVectorBase<Token>& dest);
     void createBuiltInMacro(string_view name, int value, string_view valueStr = {});
 
     static bool isSameMacro(const syntax::DefineDirectiveSyntax& left,
@@ -333,7 +333,7 @@ private:
 
     private:
         template<typename TFunc>
-        void parseArgumentList(SmallVector<syntax::TokenOrSyntax>& buffer, TFunc&& parseItem);
+        void parseArgumentList(SmallVectorBase<syntax::TokenOrSyntax>& buffer, TFunc&& parseItem);
 
         syntax::MacroActualArgumentSyntax* parseActualArgument();
         syntax::MacroFormalArgumentSyntax* parseFormalArgument();
@@ -365,7 +365,7 @@ private:
     flat_hash_map<string_view, MacroDef> macros;
 
     // list of expanded macro tokens to drain before continuing with active lexer
-    SmallVectorSized<Token, 16> expandedTokens;
+    SmallVector<Token, 16> expandedTokens;
     Token* currentMacroToken = nullptr;
 
     // the latest token pulled from a lexer
@@ -380,7 +380,7 @@ private:
     bool inMacroBody = false;
 
     // A buffer used to hold tokens while we're busy consuming them for directives.
-    SmallVectorSized<Token, 16> scratchTokenBuffer;
+    SmallVector<Token, 16> scratchTokenBuffer;
 
     // A set of files (identified by a pointer to the start of their text buffer) that
     // have been marked `pragma once so that we avoid trying to include them more than once.
@@ -409,7 +409,7 @@ private:
 
     // A map of pragma protect keywords to their handler function.
     flat_hash_map<string_view, void (Preprocessor::*)(Token, const syntax::PragmaExpressionSyntax*,
-                                                      SmallVector<Token>&)>
+                                                      SmallVectorBase<Token>&)>
         pragmaProtectHandlers;
 };
 

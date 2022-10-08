@@ -299,7 +299,7 @@ ExpressionSyntax& Parser::parseIntegerExpression(bool disallowVector) {
 }
 
 void Parser::handleExponentSplit(Token token, size_t offset) {
-    SmallVectorSized<Token, 4> split;
+    SmallVector<Token, 4> split;
     Lexer::splitTokens(alloc, getDiagnostics(), getPP().getSourceManager(), token, offset,
                        getPP().getCurrentKeywordVersion(), split);
 
@@ -339,7 +339,7 @@ ExpressionSyntax& Parser::parseOpenRangeElement(bitmask<ExpressionOptions> optio
 
 ConcatenationExpressionSyntax& Parser::parseConcatenation(Token openBrace,
                                                           ExpressionSyntax* first) {
-    SmallVectorSized<TokenOrSyntax, 8> buffer;
+    SmallVector<TokenOrSyntax, 8> buffer;
     if (first) {
         // it's possible to have just one element in the concatenation list, so check for a close
         // brace
@@ -411,7 +411,7 @@ AssignmentPatternExpressionSyntax& Parser::parseAssignmentPatternExpression(Data
 
     Token closeBrace;
     AssignmentPatternSyntax* pattern;
-    SmallVectorSized<TokenOrSyntax, 8> buffer;
+    SmallVector<TokenOrSyntax, 8> buffer;
 
     switch (peek().kind) {
         case TokenKind::Colon:
@@ -748,7 +748,7 @@ NameSyntax& Parser::parseNamePart(bitmask<NameOptions> options) {
                 // brackets need to be parsed specially because they declare
                 // loop variable names. All the selectors prior can be
                 // parsed as normal selectors.
-                SmallVectorSized<ElementSelectSyntax*, 4> buffer;
+                SmallVector<ElementSelectSyntax*, 4> buffer;
                 do {
                     uint32_t index = 1;
                     scanTypePart<isSemicolon>(index, TokenKind::OpenBracket,
@@ -767,7 +767,7 @@ NameSyntax& Parser::parseNamePart(bitmask<NameOptions> options) {
                 return factory.identifierSelectName(identifier, buffer.copy(alloc));
             }
             else {
-                SmallVectorSized<ElementSelectSyntax*, 4> buffer;
+                SmallVector<ElementSelectSyntax*, 4> buffer;
                 do {
                     // Inside a sequence expression this could be a repetition directive
                     // instead of a selection.
@@ -883,7 +883,7 @@ PatternSyntax& Parser::parsePattern() {
         case TokenKind::ApostropheOpenBrace: {
             auto openBrace = consume();
             Token closeBrace;
-            SmallVectorSized<TokenOrSyntax, 4> buffer;
+            SmallVector<TokenOrSyntax, 4> buffer;
 
             if (peek(TokenKind::Identifier) && peek(1).kind == TokenKind::Colon) {
                 parseList<isIdentifierOrComma, isCloseBrace>(
@@ -918,7 +918,7 @@ StructurePatternMemberSyntax& Parser::parseMemberPattern() {
 
 ConditionalPredicateSyntax& Parser::parseConditionalPredicate(ExpressionSyntax& first,
                                                               TokenKind endKind, Token& end) {
-    SmallVectorSized<TokenOrSyntax, 4> buffer;
+    SmallVector<TokenOrSyntax, 4> buffer;
 
     MatchesClauseSyntax* matchesClause = nullptr;
     if (peek(TokenKind::MatchesKeyword)) {
@@ -1211,7 +1211,7 @@ SelectorSyntax* Parser::parseSequenceRange() {
 }
 
 SequenceExprSyntax& Parser::parseDelayedSequenceExpr(SequenceExprSyntax* first) {
-    SmallVectorSized<DelayedSequenceElementSyntax*, 4> elements;
+    SmallVector<DelayedSequenceElementSyntax*, 4> elements;
     do {
         Token op, openBracket, closeBracket;
         SelectorSyntax* selector = nullptr;
@@ -1441,7 +1441,7 @@ PropertyExprSyntax& Parser::parseCasePropertyExpr() {
     auto& condition = parseExpressionOrDist();
     auto closeParen = expect(TokenKind::CloseParenthesis);
 
-    SmallVectorSized<PropertyCaseItemSyntax*, 8> itemBuffer;
+    SmallVector<PropertyCaseItemSyntax*, 8> itemBuffer;
     SourceLocation lastDefault;
     bool errored = false;
 
@@ -1464,7 +1464,7 @@ PropertyExprSyntax& Parser::parseCasePropertyExpr() {
         }
         else if (isPossibleExpression(kind)) {
             Token colon;
-            SmallVectorSized<TokenOrSyntax, 8> buffer;
+            SmallVector<TokenOrSyntax, 8> buffer;
             parseList<isPossibleExpressionOrComma, isEndOfCaseItem>(
                 buffer, TokenKind::Colon, TokenKind::Comma, colon, RequireItems::True,
                 diag::ExpectedExpression, [this] { return &parseExpressionOrDist(); });

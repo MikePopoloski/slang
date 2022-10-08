@@ -111,7 +111,7 @@ void TypePrinter::visit(const EnumType& type, string_view overrideName) {
 }
 
 void TypePrinter::visit(const PackedArrayType& type, string_view) {
-    SmallVectorSized<ConstantRange, 8> dims;
+    SmallVector<ConstantRange, 8> dims;
     const PackedArrayType* curr = &type;
     while (true) {
         dims.push_back(curr->range);

@@ -155,7 +155,7 @@ public:
 
     static void fromSyntax(const ASTContext& context,
                            const syntax::ModportDeclarationSyntax& syntax,
-                           SmallVector<const ModportSymbol*>& results);
+                           SmallVectorBase<const ModportSymbol*>& results);
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::Modport; }
 };
@@ -172,8 +172,8 @@ public:
     void serializeTo(ASTSerializer& serializer) const;
 
     static void fromSyntax(Compilation& compilation, const syntax::ContinuousAssignSyntax& syntax,
-                           const ASTContext& context, SmallVector<const Symbol*>& results,
-                           SmallVector<const Symbol*>& implicitNets);
+                           const ASTContext& context, SmallVectorBase<const Symbol*>& results,
+                           SmallVectorBase<const Symbol*>& implicitNets);
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::ContinuousAssign; }
 
@@ -195,7 +195,7 @@ public:
     void serializeTo(ASTSerializer&) const {}
 
     static void fromSyntax(const Scope& parent, const syntax::GenvarDeclarationSyntax& syntax,
-                           SmallVector<const GenvarSymbol*>& results);
+                           SmallVectorBase<const GenvarSymbol*>& results);
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::Genvar; }
 };
@@ -284,7 +284,7 @@ public:
     bool isLocalVar() const { return localVarDirection.has_value(); }
 
     static void buildPorts(Scope& scope, const syntax::AssertionItemPortListSyntax& syntax,
-                           SmallVector<const AssertionPortSymbol*>& results);
+                           SmallVectorBase<const AssertionPortSymbol*>& results);
 
     void serializeTo(ASTSerializer& serializer) const;
 
@@ -465,7 +465,7 @@ public:
                                                          const ASTContext& context);
 
     static void createRuleVariables(const syntax::RsRuleSyntax& syntax, const Scope& scope,
-                                    SmallVector<const Symbol*>& results);
+                                    SmallVectorBase<const Symbol*>& results);
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::RandSeqProduction; }
 

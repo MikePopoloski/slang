@@ -97,7 +97,7 @@ Token Lexer::concatenateTokens(BumpAllocator& alloc, Token left, Token right) {
 
 Token Lexer::stringify(BumpAllocator& alloc, SourceLocation location, span<Trivia const> trivia,
                        Token* begin, Token* end) {
-    SmallVectorSized<char, 64> text;
+    SmallVector<char, 64> text;
     text.push_back('"');
 
     while (begin != end) {
@@ -144,7 +144,7 @@ Token Lexer::stringify(BumpAllocator& alloc, SourceLocation location, span<Trivi
 }
 
 Trivia Lexer::commentify(BumpAllocator& alloc, Token* begin, Token* end) {
-    SmallVectorSized<char, 64> text;
+    SmallVector<char, 64> text;
     while (begin != end) {
         Token cur = *begin;
         for (const Trivia& t : cur.trivia())
@@ -171,7 +171,7 @@ Trivia Lexer::commentify(BumpAllocator& alloc, Token* begin, Token* end) {
 
 void Lexer::splitTokens(BumpAllocator& alloc, Diagnostics& diagnostics,
                         const SourceManager& sourceManager, Token sourceToken, size_t offset,
-                        KeywordVersion keywordVersion, SmallVector<Token>& results) {
+                        KeywordVersion keywordVersion, SmallVectorBase<Token>& results) {
     auto loc = sourceToken.location();
     if (sourceManager.isMacroLoc(loc))
         loc = sourceManager.getOriginalLoc(loc);
@@ -634,7 +634,7 @@ Token Lexer::lexToken(KeywordVersion keywordVersion) {
 
 Token Lexer::lexStringLiteral() {
     bool sawUTF8Error = false;
-    SmallVectorSized<char, 128> stringBuffer;
+    SmallVector<char, 128> stringBuffer;
     while (true) {
         size_t offset = currentOffset();
         char c = peek();
@@ -850,8 +850,8 @@ Token Lexer::lexNumericLiteral() {
     // instead. Since we expect many more ints than floats, it makes sense to
     // not waste time populating that array up front.
     size_t startOfNum = currentOffset();
-    SmallVectorSized<logic_t, 32> digits;
-    SmallVectorSized<char, 32> floatChars;
+    SmallVector<logic_t, 32> digits;
+    SmallVector<char, 32> floatChars;
 
     while (true) {
         char c = peek();

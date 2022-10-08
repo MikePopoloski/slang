@@ -33,7 +33,7 @@ public:
     void serializeTo(ASTSerializer& serializer) const;
 
     static void fromSyntax(const Scope& scope, const syntax::ClassPropertyDeclarationSyntax& syntax,
-                           SmallVector<const ClassPropertySymbol*>& results);
+                           SmallVectorBase<const ClassPropertySymbol*>& results);
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::ClassProperty; }
 };
@@ -188,7 +188,7 @@ private:
                                       bool forceInvalidParams,
                                       const syntax::ParameterValueAssignmentSyntax* syntax) const;
 
-    SmallVectorSized<Definition::ParameterDecl, 8> paramDecls;
+    SmallVector<Definition::ParameterDecl, 8> paramDecls;
 
     using SpecMap = flat_hash_map<SpecializationKey, const Type*, Hasher>;
     mutable SpecMap specMap;

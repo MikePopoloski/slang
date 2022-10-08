@@ -371,7 +371,7 @@ private:
                                    syntax::SyntaxKind parentKind, TParseFunc&& parseFunc);
 
     template<typename IsItemFunc, typename ParseItemFunc>
-    bool parseCaseItems(TokenKind caseKind, SmallVector<syntax::CaseItemSyntax*>& itemBuffer,
+    bool parseCaseItems(TokenKind caseKind, SmallVectorBase<syntax::CaseItemSyntax*>& itemBuffer,
                         IsItemFunc&& isItem, ParseItemFunc&& parseItem);
 
     span<syntax::TokenOrSyntax> parsePathTerminals();
@@ -458,7 +458,7 @@ private:
     // A stack of names of modules declared locally within the given scope.
     // This is used to detect and ignore instantiations of local modules when
     // trying to find the set of globally instantiated modules.
-    SmallVectorSized<flat_hash_set<string_view>, 4> moduleDeclStack;
+    SmallVector<flat_hash_set<string_view>, 4> moduleDeclStack;
 
     // The current depth of recursion in the parser.
     size_t recursionDepth = 0;

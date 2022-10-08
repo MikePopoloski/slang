@@ -34,7 +34,7 @@ ConstantValue LValue::load() const {
 
     auto concat = std::get_if<Concat>(&value);
     if (concat) {
-        SmallVectorSized<SVInt, 4> vals;
+        SmallVector<SVInt, 4> vals;
         for (auto& elem : *concat)
             vals.push_back(elem.load().integer());
         return SVInt::concat(vals);

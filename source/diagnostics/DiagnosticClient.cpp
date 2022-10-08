@@ -19,7 +19,8 @@ void DiagnosticClient::setEngine(const DiagnosticEngine& newEngine) {
     sourceManager = &engine->getSourceManager();
 }
 
-void DiagnosticClient::getIncludeStack(BufferID buffer, SmallVector<SourceLocation>& stack) const {
+void DiagnosticClient::getIncludeStack(BufferID buffer,
+                                       SmallVectorBase<SourceLocation>& stack) const {
     stack.clear();
     while (buffer) {
         SourceLocation loc = sourceManager->getIncludedFrom(buffer);
