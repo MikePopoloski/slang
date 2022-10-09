@@ -18,8 +18,8 @@ namespace slang {
 
 namespace detail {
 
-SLANG_EXPORT [[noreturn]] void throwOutOfRange();
-SLANG_EXPORT [[noreturn]] void throwLengthError();
+[[noreturn]] SLANG_EXPORT void throwOutOfRange();
+[[noreturn]] SLANG_EXPORT void throwLengthError();
 SLANG_EXPORT void* allocArray(size_t capacity, size_t typeSize);
 
 } // namespace detail
