@@ -191,7 +191,7 @@ private:
     uint32_t steps = 0;
     const Symbol* disableTarget = nullptr;
     const ConstantValue* queueTarget = nullptr;
-    SmallVector<Frame, 4> stack;
+    SmallVector<Frame> stack;
     SmallVector<LValue*> lvalStack;
     Diagnostics diags;
     SourceRange disableRange;

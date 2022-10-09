@@ -7,7 +7,6 @@
 //------------------------------------------------------------------------------
 #pragma once
 
-#include <deque>
 #include <memory>
 
 #include "slang/parsing/Lexer.h"
@@ -356,10 +355,10 @@ private:
     LexerOptions lexerOptions;
 
     // stack of active lexers; each `include pushes a new lexer
-    std::deque<std::unique_ptr<Lexer>> lexerStack;
+    SmallVector<std::unique_ptr<Lexer>, 2> lexerStack;
 
     // keep track of nested processor branches (ifdef, ifndef, else, elsif, endif)
-    std::deque<BranchEntry> branchStack;
+    SmallVector<BranchEntry, 2> branchStack;
 
     // map from macro name to macro definition
     flat_hash_map<string_view, MacroDef> macros;

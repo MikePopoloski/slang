@@ -116,12 +116,6 @@ public:
     public:
         iterator() : current(nullptr) {}
         iterator(const Symbol* firstSymbol) : current(firstSymbol) {}
-        iterator(const iterator& other) : current(other.current) {}
-
-        iterator& operator=(const iterator& other) {
-            current = other.current;
-            return *this;
-        }
 
         bool operator==(const iterator& other) const { return current == other.current; }
 
@@ -147,12 +141,6 @@ public:
     public:
         specific_symbol_iterator() : current(nullptr) {}
         specific_symbol_iterator(const Symbol* firstSymbol) : current(firstSymbol) { skipToNext(); }
-        specific_symbol_iterator(const specific_symbol_iterator& other) : current(other.current) {}
-
-        specific_symbol_iterator& operator=(const specific_symbol_iterator& other) {
-            current = other.current;
-            return *this;
-        }
 
         bool operator==(const specific_symbol_iterator& other) const {
             return current == other.current;

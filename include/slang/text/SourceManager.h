@@ -8,7 +8,6 @@
 #pragma once
 
 #include <atomic>
-#include <deque>
 #include <filesystem>
 #include <memory>
 #include <mutex>
@@ -256,7 +255,7 @@ private:
     mutable std::shared_mutex mut;
 
     // index from BufferID to buffer metadata
-    std::deque<std::variant<FileInfo, ExpansionInfo>> bufferEntries;
+    std::vector<std::variant<FileInfo, ExpansionInfo>> bufferEntries;
 
     // cache for file lookups; this holds on to the actual file data
     flat_hash_map<std::string, std::unique_ptr<FileData>> lookupCache;

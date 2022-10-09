@@ -32,9 +32,6 @@ void* allocArray(size_t capacity, size_t typeSize);
 /// that erases the stack size template parameter for use with generic code.
 template<typename T>
 class SmallVectorBase {
-    // TODO: turn this on after fixing cases where it's not true
-    // static_assert(std::is_nothrow_move_constructible_v<T>);
-
 public:
     using value_type = T;
     using size_type = size_t;
