@@ -133,7 +133,7 @@ if(CMAKE_SYSTEM_NAME MATCHES "Windows")
 endif()
 
 if(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
-  add_compile_options(/utf-8)
+  add_compile_options(/utf-8 /bigobj)
 endif()
 
 # Get sane install RPATH handling by default if none has been provided.

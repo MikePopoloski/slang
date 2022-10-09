@@ -233,14 +233,15 @@ public:
     /// Constructs a new element at the specified position in the array.
     template<typename... Args>
     iterator emplace(const_iterator pos, Args&&... args) {
+        auto result = const_cast<iterator>(pos);
         if (len == cap)
-            return emplaceRealloc(pos, std::forward<Args>(args)...);
+            return emplaceRealloc(result, std::forward<Args>(args)...);
 
         if (pos == end()) {
             // Emplace at end can be constructed in place.
             new (end()) T(std::forward<Args>(args)...);
             len++;
-            return pos;
+            return result;
         }
 
         // Construct a temporary to avoid aliasing an existing element we're about to move.
@@ -250,11 +251,11 @@ public:
         new (end()) T(std::move(back()));
 
         // Now move everything else and insert our temporary.
-        std::move_backward(pos, end() - 1, end());
-        *pos = std::move(temp);
+        std::move_backward(result, end() - 1, end());
+        *result = std::move(temp);
 
         len++;
-        return pos;
+        return result;
     }
 
     /// Inserts the given value at the specified position in the array.
@@ -323,32 +324,32 @@ public:
         reserve(newSize);
 
         // Reset the iterator since reserve() may have invalidated it.
-        pos = begin() + offset;
+        auto result = begin() + offset;
 
         // If there are more existing elements between the insertion point and
         // the end of the range than there are being inserted we can use a
         // simpler approach for insertion.
-        auto existingOverlap = static_cast<size_type>(end() - pos);
+        auto existingOverlap = static_cast<size_type>(end() - result);
         if (existingOverlap >= count) {
             auto oldEnd = end();
             append(std::move_iterator<iterator>(end() - count),
                    std::move_iterator<iterator>(end()));
 
-            std::move_backward(pos, oldEnd - count, oldEnd);
-            std::fill_n(pos, count, temp);
-            return pos;
+            std::move_backward(result, oldEnd - count, oldEnd);
+            std::fill_n(result, count, temp);
+            return result;
         }
 
         // Move over elements we're about to overwrite.
-        std::uninitialized_move(pos, end(), begin() + newSize - existingOverlap);
+        std::uninitialized_move(result, end(), begin() + newSize - existingOverlap);
 
         // Copy in the new elements.
-        std::fill_n(pos, existingOverlap, temp);
+        std::fill_n(result, existingOverlap, temp);
 
         // Insert the non-overwritten middle part.
         std::uninitialized_fill_n(end(), count - existingOverlap, temp);
         len = newSize;
-        return pos;
+        return result;
     }
 
     /// Removes the elements at @a pos from the array.
@@ -356,7 +357,7 @@ public:
         // const_cast is fine, this is a non-const member function.
         iterator result = const_cast<iterator>(pos);
 
-        std::move(pos + 1, end(), pos);
+        std::move(result + 1, end(), result);
         pop_back();
         return result;
     }
@@ -367,7 +368,8 @@ public:
         iterator result = const_cast<iterator>(first);
 
         if (first != last) {
-            auto newLast = std::move(last, end(), first);
+            auto newLast = std::move(const_cast<iterator>(last), end(),
+                                     const_cast<iterator>(first));
             std::destroy(newLast, end());
             len = static_cast<size_type>(newLast - begin());
         }

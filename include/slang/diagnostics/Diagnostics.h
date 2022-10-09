@@ -127,6 +127,9 @@ public:
     /// The symbol in which the diagnostic occurred, or null if not applicable.
     const ast::Symbol* symbol = nullptr;
 
+    /// Default constructs a new Diagnostic entry.
+    Diagnostic() noexcept;
+
     /// Constructs a new Diagnostic entry with the given code and location.
     Diagnostic(DiagCode code, SourceLocation location) noexcept;
 
