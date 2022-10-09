@@ -822,3 +822,38 @@ endmodule
     REQUIRE(diagnostics.size() == 1);
     CHECK(diagnostics[0].code == diag::ExpectedIntegerLiteral);
 }
+
+TEST_CASE("Event control parsing regress GH #630") {
+    auto& text = R"(
+module t;
+event e;
+wire w;
+
+// Named event, no parentheses, no delay, works
+always @e
+ begin
+ end
+
+// Named event, parentheses, delay, works
+always @(e)
+ #1
+ begin
+ end
+
+// named event, no parenthesis, delay, doesn't work
+always @e
+ #1
+ begin
+ end
+
+// wire, no parenthesis, delay, doesn't work
+always @w
+ #1
+ begin
+ end
+
+endmodule
+)";
+    parseCompilationUnit(text);
+    CHECK_DIAGNOSTICS_EMPTY;
+}

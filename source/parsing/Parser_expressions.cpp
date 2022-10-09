@@ -738,6 +738,9 @@ NameSyntax& Parser::parseNamePart(bitmask<NameOptions> options) {
 
     switch (peek().kind) {
         case TokenKind::Hash: {
+            if (options.has(NameOptions::NoClassScope))
+                return factory.identifierName(identifier);
+
             auto parameterValues = parseParameterValueAssignment();
             ASSERT(parameterValues);
             return factory.className(identifier, *parameterValues);
@@ -1124,7 +1127,7 @@ TimingControlSyntax* Parser::parseTimingControl() {
                 case TokenKind::Star:
                     return &factory.implicitEventControl(at, Token(), consume(), Token());
                 default:
-                    return &factory.eventControl(at, parseName());
+                    return &factory.eventControl(at, parseName(NameOptions::NoClassScope));
             }
         }
         case TokenKind::RepeatKeyword: {

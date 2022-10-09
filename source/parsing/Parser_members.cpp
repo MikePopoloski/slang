@@ -2481,7 +2481,7 @@ PrimitiveInstantiationSyntax& Parser::parsePrimitiveInstantiation(AttrList attri
 }
 
 CheckerInstantiationSyntax& Parser::parseCheckerInstantiation(AttrList attributes) {
-    auto& type = parseName();
+    auto& type = parseName(NameOptions::NoClassScope);
     auto parameters = parseParameterValueAssignment();
 
     Token semi;

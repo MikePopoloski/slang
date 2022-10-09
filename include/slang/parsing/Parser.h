@@ -78,9 +78,12 @@ enum class NameOptions {
     ExpectingExpression = 1 << 4,
 
     /// This name is inside a sequence expression.
-    SequenceExpr = 1 << 5
+    SequenceExpr = 1 << 5,
+
+    /// This name does not allow class scope components.
+    NoClassScope = 1 << 6
 };
-BITMASK(NameOptions, SequenceExpr)
+BITMASK(NameOptions, NoClassScope)
 
 /// Various options for parsing types.
 enum class TypeOptions {
