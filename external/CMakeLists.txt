@@ -23,7 +23,7 @@ set(BUILD_SHARED_LIBS OFF)
 FetchContent_MakeAvailable(fmt)
 set(BUILD_SHARED_LIBS ${saved_build_shared_libs})
 
-if(SLANG_INCLUDE_PYLIB OR BUILD_SHARED_LIBS)
+if((SLANG_INCLUDE_PYLIB OR BUILD_SHARED_LIBS) AND NOT fmt_FOUND)
   set_target_properties(fmt PROPERTIES POSITION_INDEPENDENT_CODE ON)
 endif()
 

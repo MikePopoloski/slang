@@ -18,9 +18,9 @@ namespace slang {
 
 namespace detail {
 
-[[noreturn]] void throwOutOfRange();
-[[noreturn]] void throwLengthError();
-void* allocArray(size_t capacity, size_t typeSize);
+SLANG_EXPORT [[noreturn]] void throwOutOfRange();
+SLANG_EXPORT [[noreturn]] void throwLengthError();
+SLANG_EXPORT void* allocArray(size_t capacity, size_t typeSize);
 
 } // namespace detail
 
