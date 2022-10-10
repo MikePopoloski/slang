@@ -11,7 +11,7 @@ endif()
 FetchContent_Declare(
   fmt
   GIT_REPOSITORY https://github.com/fmtlib/fmt.git
-  GIT_TAG 9.0.0
+  GIT_TAG 9.1.0
   GIT_SHALLOW ON
   ${find_pkg_args})
 
@@ -30,7 +30,7 @@ endif()
 FetchContent_Declare(
   unordered_dense
   GIT_REPOSITORY https://github.com/martinus/unordered_dense.git
-  GIT_TAG v1.3.2
+  GIT_TAG v2.0.0
   GIT_SHALLOW ON)
 FetchContent_MakeAvailable(unordered_dense)
 
