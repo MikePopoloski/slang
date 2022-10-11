@@ -74,6 +74,10 @@ struct CloneVisitor {
                     else
                         cloned->setChild(i, replaceChange->second);
                 }
+                else {
+                    static SyntaxNode* emptyNode = nullptr;
+                    cloned->setChild(i, emptyNode);
+                }
             }
             else {
                 if constexpr (IsList) {

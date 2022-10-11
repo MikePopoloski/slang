@@ -462,7 +462,9 @@ size_t SyntaxNode::getChildCount() const {
                         )
                     else:
                         cppf.write(
-                            "{} = &child.node()->as<{}>(); return;\n".format(m[1], m[2])
+                            "{} = child.node() ? &child.node()->as<{}>() : nullptr; return;\n".format(
+                                m[1], m[2]
+                            )
                         )
 
                 cppf.write("        default: ASSUME_UNREACHABLE;\n")
