@@ -101,6 +101,23 @@ endmodule
 )");
 }
 
+TEST_CASE("Remove node from cloned object") {
+    auto tree = SyntaxTree::fromText(R"(
+module m #(parameter P = 8)();
+    reg tmp;
+endmodule
+)");
+    struct RemoveWriter : public SyntaxRewriter<RemoveWriter> {
+        void handle(const ParameterPortListSyntax& decl) { remove(decl); }
+    };
+    tree = RemoveWriter().transform(tree);
+    CHECK(SyntaxPrinter::printFile(*tree) == R"(
+module m();
+    reg tmp;
+endmodule
+)");
+}
+
 TEST_CASE("Advanced rewriting") {
     SECTION("Insert multiple newNodes surrounding oldNodes") {
         class MultipleRewriter : public SyntaxRewriter<MultipleRewriter> {
