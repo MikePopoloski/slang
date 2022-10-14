@@ -729,7 +729,7 @@ void ClassType::serializeTo(ASTSerializer& serializer) const {
         if (extendsArgs) {
             serializer.startArray("baseClassParamArgs");
             for (auto param : extendsArgs->parameters ) {
-
+                 serializer.serialize(param->toString());
             }
             serializer.endArray();
         }
