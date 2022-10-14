@@ -711,6 +711,13 @@ void ClassType::serializeTo(ASTSerializer& serializer) const {
         serializer.write("forward", *firstForward);
     if (genericClass)
         serializer.writeLink("genericClass", *genericClass);
+    auto syntax = getSyntax();
+    ASSERT(syntax);
+    auto& classSyntax = syntax->as<syntax::ClassDeclarationSyntax>();
+    if (classSyntax.extendsClause)
+        serializer.write("extends", classSyntax.extendsClause->toString());
+    if (classSyntax.implementsClause)
+        serializer.write("implements", classSyntax.implementsClause->toString());
 }
 
 const Symbol& GenericClassDefSymbol::fromSyntax(const Scope& scope,
