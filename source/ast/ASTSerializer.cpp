@@ -254,7 +254,7 @@ void ASTSerializer::visit(const T& elem, bool inMembersArray) {
         }
 
         if constexpr (std::is_same_v<ClassType, T>) {
-            auto syntax = (const_cast <ClassType&> (elem)).getSyntax();
+            auto syntax = (const_cast<ClassType&>(elem)).getSyntax();
             ASSERT(syntax);
             auto& classSyntax = syntax->as<syntax::ClassDeclarationSyntax>();
             if (classSyntax.extendsClause)
