@@ -9,7 +9,6 @@
 
 #include "slang/ast/ASTVisitor.h"
 #include "slang/ast/Compilation.h"
-
 #include "slang/syntax/AllSyntax.h"
 namespace slang::ast {
 
@@ -253,13 +252,13 @@ void ASTSerializer::visit(const T& elem, bool inMembersArray) {
             if (auto init = elem.getInitializer())
                 write("initializer", *init);
         }
-        
+
         if constexpr (std::is_same_v<ClassType, T>) {
             auto syntax = ((ClassType&)elem).getSyntax();
             ASSERT(syntax);
             auto& classSyntax = syntax->as<syntax::ClassDeclarationSyntax>();
             if (classSyntax.extendsClause)
-                write("extends",    classSyntax.extendsClause->toString());
+                write("extends", classSyntax.extendsClause->toString());
             if (classSyntax.implementsClause)
                 write("implements", classSyntax.implementsClause->toString());
         }
