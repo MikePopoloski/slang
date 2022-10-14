@@ -540,22 +540,22 @@ const Expression* ClassType::getBaseConstructorCall() const {
     return callExpr;
 }
 
-// Recursively finds interface classes that are implemented and adds them
+// Finds interface classes that are implemented and adds them
 // to the vector, if they haven't been added already.
 static void findIfaces(const ClassType& type, SmallVectorBase<const Type*>& ifaces,
-                       SmallSet<const Symbol*, 4>& visited) {
+                       SmallSet<const Symbol*, 4>& visited, bool recurse) {
     if (type.isInterface) {
         if (visited.emplace(&type).second)
             ifaces.push_back(&type);
     }
 
-    for (auto iface : type.getImplementedInterfaces()) {
+    for (auto iface : (recurse) ? type.getImplementedInterfacesImmediate() : type.getImplementedInterfaces()) {
         if (visited.emplace(iface).second)
             ifaces.push_back(iface);
     }
 
-    if (auto base = type.getBaseClass(); base && !base->isError())
-        findIfaces(base->getCanonicalType().as<ClassType>(), ifaces, visited);
+    if (auto base = type.getBaseClass(); recurse && base && !base->isError())
+        findIfaces(base->getCanonicalType().as<ClassType>(), ifaces, visited, recurse);
 }
 
 void ClassType::handleImplements(const ImplementsClauseSyntax& implementsClause,
@@ -564,6 +564,8 @@ void ClassType::handleImplements(const ImplementsClauseSyntax& implementsClause,
     auto& comp = context.getCompilation();
     SmallVector<const Type*> ifaces;
     SmallSet<const Symbol*, 4> seenIfaces;
+    SmallVector<const Type*> ifacesImmediate;
+    SmallSet<const Symbol*, 4> seenIfacesImmediate;
 
     if (isInterface) {
         // For an interface class, the implements clause actually uses the "extends"
@@ -649,7 +651,8 @@ void ClassType::handleImplements(const ImplementsClauseSyntax& implementsClause,
                 insertCB(*wrapper);
             }
 
-            findIfaces(*iface, ifaces, seenIfaces);
+            findIfaces(*iface, ifaces,         seenIfaces         , true);
+            findIfaces(*iface, ifacesImmediate, seenIfacesImmediate, false);
         }
     }
     else {
@@ -699,11 +702,13 @@ void ClassType::handleImplements(const ImplementsClauseSyntax& implementsClause,
                                                           /* allowDerivedReturn */ false);
             }
 
-            findIfaces(*iface, ifaces, seenIfaces);
+            findIfaces(*iface, ifaces,         seenIfaces         , true);
+            findIfaces(*iface, ifacesImmediate, seenIfacesImmediate, false);
         }
     }
 
-    implementsIfaces = ifaces.copy(comp);
+    implementsIfaces          = ifaces.copy(comp);
+    implementsIfacesImmediate = ifacesImmediate.copy(comp);
 }
 
 void ClassType::serializeTo(ASTSerializer& serializer) const {
@@ -711,13 +716,31 @@ void ClassType::serializeTo(ASTSerializer& serializer) const {
         serializer.write("forward", *firstForward);
     if (genericClass)
         serializer.writeLink("genericClass", *genericClass);
-    auto syntax = getSyntax();
-    ASSERT(syntax);
-    auto& classSyntax = syntax->as<syntax::ClassDeclarationSyntax>();
-    if (classSyntax.extendsClause)
-        serializer.write("extends", classSyntax.extendsClause->toString());
-    if (classSyntax.implementsClause)
-        serializer.write("implements", classSyntax.implementsClause->toString());
+    
+    serializer.writeProperty("extends");
+    serializer.startObject();
+    if (getBaseClass()) {
+        serializer.write("baseClassName", getBaseClass()->getCanonicalType().toString() );
+
+        auto extendsClause = getSyntax()->as<syntax::ClassDeclarationSyntax>().extendsClause;
+        serializer.write("syntax", extendsClause->toString());
+
+        auto extendsArgs = extendsClause->arguments;
+        if (extendsArgs) {
+            serializer.startArray("baseClassParamArgs");
+            for (auto param : extendsArgs->parameters ) {
+
+            }
+            serializer.endArray();
+        }
+    }
+    serializer.endObject();
+
+    serializer.startArray("implements");
+    for (auto& iface : getImplementedInterfacesImmediate()) {
+        serializer.serialize(iface->toString());
+    }
+    serializer.endArray();
 }
 
 const Symbol& GenericClassDefSymbol::fromSyntax(const Scope& scope,
