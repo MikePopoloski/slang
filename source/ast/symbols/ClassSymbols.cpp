@@ -550,7 +550,7 @@ static void findIfaces(const ClassType& type, SmallVectorBase<const Type*>& ifac
     }
 
     for (auto iface :
-         (recurse) ? type.getImplementedInterfacesImmediate() : type.getImplementedInterfaces()) {
+         (recurse) ? type.getImplementedInterfaces() : type.getImplementedInterfacesImmediate() ) {
         if (visited.emplace(iface).second)
             ifaces.push_back(iface);
     }
