@@ -729,8 +729,8 @@ void ClassType::serializeTo(ASTSerializer& serializer) const {
         auto extendsArgs = extendsClause->arguments;
         if (extendsArgs) {
             serializer.startArray("baseClassParamArgs");
-            for (auto param : extendsArgs->parameters ) {
-                 serializer.serialize(param->toString());
+            for (auto param : extendsArgs->parameters) {
+                serializer.serialize(param->toString());
             }
             serializer.endArray();
         }
