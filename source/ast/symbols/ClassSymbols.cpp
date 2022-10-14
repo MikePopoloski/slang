@@ -549,7 +549,8 @@ static void findIfaces(const ClassType& type, SmallVectorBase<const Type*>& ifac
             ifaces.push_back(&type);
     }
 
-    for (auto iface : (recurse) ? type.getImplementedInterfacesImmediate() : type.getImplementedInterfaces()) {
+    for (auto iface :
+         (recurse) ? type.getImplementedInterfacesImmediate() : type.getImplementedInterfaces()) {
         if (visited.emplace(iface).second)
             ifaces.push_back(iface);
     }
@@ -651,7 +652,7 @@ void ClassType::handleImplements(const ImplementsClauseSyntax& implementsClause,
                 insertCB(*wrapper);
             }
 
-            findIfaces(*iface, ifaces,         seenIfaces         , true);
+            findIfaces(*iface, ifaces, seenIfaces, true);
             findIfaces(*iface, ifacesImmediate, seenIfacesImmediate, false);
         }
     }
@@ -702,12 +703,12 @@ void ClassType::handleImplements(const ImplementsClauseSyntax& implementsClause,
                                                           /* allowDerivedReturn */ false);
             }
 
-            findIfaces(*iface, ifaces,         seenIfaces         , true);
+            findIfaces(*iface, ifaces, seenIfaces, true);
             findIfaces(*iface, ifacesImmediate, seenIfacesImmediate, false);
         }
     }
 
-    implementsIfaces          = ifaces.copy(comp);
+    implementsIfaces = ifaces.copy(comp);
     implementsIfacesImmediate = ifacesImmediate.copy(comp);
 }
 
@@ -716,11 +717,11 @@ void ClassType::serializeTo(ASTSerializer& serializer) const {
         serializer.write("forward", *firstForward);
     if (genericClass)
         serializer.writeLink("genericClass", *genericClass);
-    
+
     serializer.writeProperty("extends");
     serializer.startObject();
     if (getBaseClass()) {
-        serializer.write("baseClassName", getBaseClass()->getCanonicalType().toString() );
+        serializer.write("baseClassName", getBaseClass()->getCanonicalType().toString());
 
         auto extendsClause = getSyntax()->as<syntax::ClassDeclarationSyntax>().extendsClause;
         serializer.write("syntax", extendsClause->toString());
@@ -728,8 +729,7 @@ void ClassType::serializeTo(ASTSerializer& serializer) const {
         auto extendsArgs = extendsClause->arguments;
         if (extendsArgs) {
             serializer.startArray("baseClassParamArgs");
-            for (auto param : extendsArgs->parameters ) {
-
+            for (auto param : extendsArgs->parameters) {
             }
             serializer.endArray();
         }
