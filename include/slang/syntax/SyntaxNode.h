@@ -197,7 +197,10 @@ private:
     ConstTokenOrSyntax getChild(size_t index) const final { return (*this)[index]; }
 
     void setChild(size_t index, TokenOrSyntax child) final {
-        (*this)[index] = &child.node()->as<T>();
+        if (auto node = child.node())
+            (*this)[index] = &node->as<T>();
+        else
+            (*this)[index] = nullptr;
     }
 
     SyntaxListBase* clone(BumpAllocator& alloc) const final {
