@@ -301,7 +301,7 @@ const Expression& Expression::bindArgument(const Type& argType, ArgumentDirectio
     ASSUME_UNREACHABLE;
 }
 
-const Expression& Expression::bindImplicitParam(
+std::tuple<const Expression*, const Type*> Expression::bindImplicitParam(
     const DataTypeSyntax& typeSyntax, const ExpressionSyntax& rhs, SourceLocation location,
     const ASTContext& exprContext, const ASTContext& typeContext, bitmask<ASTFlags> extraFlags) {
 
@@ -345,7 +345,7 @@ const Expression& Expression::bindImplicitParam(
         }
     }
 
-    return convertAssignment(exprContext, *lhsType, expr, location);
+    return {&convertAssignment(exprContext, *lhsType, expr, location), lhsType};
 }
 
 const Expression& Expression::bindSelector(Expression& value, const ElementSelectSyntax& syntax,

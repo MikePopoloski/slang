@@ -169,11 +169,10 @@ public:
 
     /// Binds an initializer expression for an implicitly typed parameter.
     /// There are special inference rules for parameters.
-    static const Expression& bindImplicitParam(const syntax::DataTypeSyntax& implicitType,
-                                               const ExpressionSyntax& rhs, SourceLocation location,
-                                               const ASTContext& exprContext,
-                                               const ASTContext& typeContext,
-                                               bitmask<ASTFlags> extraFlags = ASTFlags::None);
+    static std::tuple<const Expression*, const Type*> bindImplicitParam(
+        const syntax::DataTypeSyntax& implicitType, const ExpressionSyntax& rhs,
+        SourceLocation location, const ASTContext& exprContext, const ASTContext& typeContext,
+        bitmask<ASTFlags> extraFlags = ASTFlags::None);
 
     /// Bind a selector expression given an already existing value to select from.
     static const Expression& bindSelector(Expression& value,

@@ -272,18 +272,19 @@ void DefParamSymbol::resolve() const {
 
     // We need to know the parameter's type (or lack thereof) in order to
     // correctly bind a value for it.
-    auto& expr = *assignment.setter->expr;
+    auto& exprSyntax = *assignment.setter->expr;
     auto equalsLoc = assignment.setter->equals.location();
     auto declType = param.getDeclaredType();
     auto typeSyntax = declType->getTypeSyntax();
 
     if (typeSyntax && typeSyntax->kind == SyntaxKind::ImplicitType) {
         ASTContext typeContext(*param.getParentScope(), LookupLocation::before(param));
-        initializer = &Expression::bindImplicitParam(*typeSyntax, expr, equalsLoc, context,
-                                                     typeContext);
+        auto [expr, type] = Expression::bindImplicitParam(*typeSyntax, exprSyntax, equalsLoc,
+                                                          context, typeContext);
+        initializer = expr;
     }
     else {
-        initializer = &Expression::bindRValue(declType->getType(), expr, equalsLoc, context);
+        initializer = &Expression::bindRValue(declType->getType(), exprSyntax, equalsLoc, context);
     }
 
     context.eval(*initializer);

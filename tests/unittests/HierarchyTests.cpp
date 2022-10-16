@@ -1759,3 +1759,29 @@ endmodule
     CHECK(diags[0].code == diag::ExpectedVariableAssignment);
     CHECK(diags[1].code == diag::MaxInstanceDepthExceeded);
 }
+
+TEST_CASE("Implicit parameter typing in instances regress GH #635") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    localparam WIDE=32'h12345678;
+
+    n #(.P(WIDE[31:16])) n1 ();
+    n #(.P(WIDE[15:0]))  n2 ();
+endmodule
+
+module n #(parameter P=0) ();
+    int i = P[15:0];
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    auto& m = compilation.getRoot().lookupName<InstanceSymbol>("m");
+    auto p = &m.body.lookupName<ParameterSymbol>("n1.P");
+    CHECK(p->getValue().integer() == 0x1234);
+
+    p = &m.body.lookupName<ParameterSymbol>("n2.P");
+    CHECK(p->getValue().integer() == 0x5678);
+}

@@ -105,10 +105,10 @@ void DeclaredType::resolveType(const ASTContext& typeContext,
             if (flags.has(DeclaredTypeFlags::AllowUnboundedLiteral))
                 extraFlags = ASTFlags::AllowUnboundedLiteral;
 
-            initializer = &Expression::bindImplicitParam(*syntax, *initializerSyntax,
-                                                         initializerLocation, initializerContext,
-                                                         typeContext, extraFlags);
-            type = initializer->type;
+            std::tie(initializer, type) = Expression::bindImplicitParam(*syntax, *initializerSyntax,
+                                                                        initializerLocation,
+                                                                        initializerContext,
+                                                                        typeContext, extraFlags);
         }
     }
     else if (flags.has(DeclaredTypeFlags::InterconnectNet)) {
