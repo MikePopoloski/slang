@@ -677,7 +677,6 @@ error OutRefFuncConstraint "cannot call a function with ref or output arguments 
 error BadDisableSoft "target of 'disable soft' constraint must be a 'rand' variable"
 error BadSolveBefore "target of 'solve before' constraint must be a random variable"
 error BadProceduralAssign "lvalue of procedural assign/deassign must be a variable or concatenation of variables -- bit-selects, part-selects, and references to nets are disallowed"
-error BadProceduralForce "lvalue of force/release must be a net, a variable, a constant select of a net, or a concatenation of these"
 error BadForceNetType "force and release cannot be applied to nets with a user-defined nettype"
 error TimingInFuncNotAllowed "statements that pass time are not allowed in this context"
 error AssertionExprType "expression of type {} is not valid in concurrent assertions; type must be cast compatible with an integral type"
@@ -721,6 +720,7 @@ warning event-const EventExpressionConstant "edge expression is constant"
 warning empty-stmt EmptyStatement "extra ';' has no effect"
 warning pointless-void-cast PointlessVoidCast "cast to void for void-returning function '{}' has no effect"
 warning unused-result UnusedResult "ignoring return value of '{}', cast to void to suppress"
+warning bad-procedural-force BadProceduralForce "lvalue of force/release must be a net, a variable, a constant select of a net, or a concatenation of these"
 note NoteWhileExpanding "while expanding {} '{}'"
 note NoteExpandedHere "expanded here"
 
@@ -971,7 +971,7 @@ group default = { real-underflow real-overflow vector-overflow int-overflow unco
                   protect-arglist unknown-protect-encoding unknown-protect-option invalid-pragma-number
                   invalid-pragma-viewport duplicate-definition protect-encoding-bytes invalid-encoding-byte
                   raw-protect-eof protected-envelope specify-param dup-timing-path invalid-pulsestyle
-                  negative-timing-limit }
+                  negative-timing-limit bad-procedural-force }
 
 group extra = { empty-member empty-stmt dup-import pointless-void-cast case-gen-none case-gen-dup
                 unused-result format-real ignored-slice task-ignored width-trunc dup-attr event-const

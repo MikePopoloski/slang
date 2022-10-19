@@ -16,6 +16,7 @@
 #include "slang/diagnostics/ExpressionsDiags.h"
 #include "slang/diagnostics/LookupDiags.h"
 #include "slang/diagnostics/ParserDiags.h"
+#include "slang/diagnostics/StatementsDiags.h"
 #include "slang/diagnostics/SysFuncsDiags.h"
 #include "slang/diagnostics/TextDiagnosticClient.h"
 #include "slang/parsing/Parser.h"
@@ -356,9 +357,15 @@ bool Driver::processOptions() {
     diagEngine.setErrorLimit((int)options.errorLimit.value_or(20));
     diagEngine.setDefaultWarnings();
 
-    // Some tools allow ignoring duplicate module/interface/program definitions,
-    // so this is a suppressible warning that we promote to an error by default.
+    // Some tools violate the standard in various ways, but in order to allow
+    // compatibility with these tools, we change the respective errors into a
+    // suppressible warning that we promote to an error by default, allowing
+    // the user to turn this back into a warning, ot turn it off altogether.
+
+    // allow ignoring duplicate module/interface/program definitions,
     diagEngine.setSeverity(diag::DuplicateDefinition, DiagnosticSeverity::Error);
+    // allow procedural force on variable part-select
+    diagEngine.setSeverity(diag::BadProceduralForce, DiagnosticSeverity::Error);
 
     if (options.compat == "vcs") {
         diagEngine.setSeverity(diag::StaticInitializerMustBeExplicit, DiagnosticSeverity::Ignored);
