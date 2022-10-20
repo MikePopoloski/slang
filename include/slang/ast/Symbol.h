@@ -137,6 +137,9 @@ public:
     /// for reporting errors.
     SourceLocation location;
 
+    Symbol(const Symbol&) = delete;
+    Symbol& operator=(const Symbol&) = delete;
+
     /// Gets the logical parent scope that contains this symbol.
     const Scope* getParentScope() const { return parentScope; }
 
@@ -218,8 +221,6 @@ public:
 protected:
     Symbol(SymbolKind kind, string_view name, SourceLocation location) :
         kind(kind), name(name), location(location) {}
-
-    Symbol(const Symbol&) = delete;
 
     void setParent(const Scope& scope) { parentScope = &scope; }
     void setParent(const Scope& scope, SymbolIndex index) {

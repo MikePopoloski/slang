@@ -249,6 +249,9 @@ public:
 
     const syntax::SyntaxNode* syntax = nullptr;
 
+    BinsSelectExpr(const BinsSelectExpr&) = delete;
+    BinsSelectExpr& operator=(const BinsSelectExpr&) = delete;
+
     bool bad() const { return kind == BinsSelectExprKind::Invalid; }
 
     static const BinsSelectExpr& bind(const syntax::BinsSelectExpressionSyntax& syntax,

@@ -43,6 +43,9 @@ public:
     /// The source range where this pattern occurs, if it came from source code.
     SourceRange sourceRange;
 
+    Pattern(const Pattern&) = delete;
+    Pattern& operator=(const Pattern&) = delete;
+
     /// Returns true if the pattern had an error and is therefore invalid.
     bool bad() const { return kind == PatternKind::Invalid; }
 

@@ -38,6 +38,9 @@ public:
 
     const syntax::ConstraintItemSyntax* syntax = nullptr;
 
+    Constraint(const Constraint&) = delete;
+    Constraint& operator=(const Constraint&) = delete;
+
     bool bad() const { return kind == ConstraintKind::Invalid; }
 
     static const Constraint& bind(const syntax::ConstraintItemSyntax& syntax,

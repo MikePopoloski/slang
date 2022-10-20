@@ -143,6 +143,9 @@ public:
     /// The source range of this expression, if it originated from source code.
     SourceRange sourceRange;
 
+    Expression(const Expression&) = delete;
+    Expression& operator=(const Expression&) = delete;
+
     /// Binds an expression tree from the given syntax nodes.
     static const Expression& bind(const ExpressionSyntax& syntax, const ASTContext& context,
                                   bitmask<ASTFlags> extraFlags = ASTFlags::None);

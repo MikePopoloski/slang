@@ -102,6 +102,9 @@ public:
     /// The source range of this statement, if it originated from source code.
     SourceRange sourceRange;
 
+    Statement(const Statement&) = delete;
+    Statement& operator=(const Statement&) = delete;
+
     /// Indicates whether the statement is invalid.
     bool bad() const { return kind == StatementKind::Invalid; }
 

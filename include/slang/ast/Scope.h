@@ -37,6 +37,9 @@ using PointerMap = flat_hash_map<uintptr_t, uintptr_t>;
 /// participate in name lookup.
 class SLANG_EXPORT Scope {
 public:
+    Scope(const Scope&) = delete;
+    Scope& operator=(const Scope&) = delete;
+
     /// Adds a symbol as a member to the scope.
     void addMember(const Symbol& symbol);
 

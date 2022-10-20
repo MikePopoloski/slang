@@ -41,6 +41,9 @@ public:
 
     SourceRange sourceRange;
 
+    TimingControl(const TimingControl&) = delete;
+    TimingControl& operator=(const TimingControl&) = delete;
+
     bool bad() const { return kind == TimingControlKind::Invalid; }
 
     static TimingControl& bind(const syntax::TimingControlSyntax& syntax,
