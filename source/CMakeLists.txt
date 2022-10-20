@@ -24,6 +24,7 @@ add_custom_command(
          ${CMAKE_CURRENT_BINARY_DIR}/AllSyntax.cpp
          ${CMAKE_CURRENT_BINARY_DIR}/SyntaxClone.cpp
          ${CMAKE_CURRENT_BINARY_DIR}/slang/syntax/SyntaxKind.h
+         ${CMAKE_CURRENT_BINARY_DIR}/slang/syntax/SyntaxFwd.h
          ${CMAKE_CURRENT_BINARY_DIR}/slang/parsing/TokenKind.h
          ${CMAKE_CURRENT_BINARY_DIR}/TokenKind.cpp
   DEPENDS ${SCRIPTS_DIR}/syntax_gen.py ${SCRIPTS_DIR}/syntax.txt
@@ -145,8 +146,14 @@ set(suppress_export_warnings
 ")
 
 include(GenerateExportHeader)
-generate_export_header(slang_slang BASE_NAME slang CUSTOM_CONTENT_FROM_VARIABLE
-                       suppress_export_warnings)
+generate_export_header(
+  slang_slang
+  BASE_NAME
+  slang
+  EXPORT_FILE_NAME
+  ${CMAKE_CURRENT_BINARY_DIR}/slang/slang_export.h
+  CUSTOM_CONTENT_FROM_VARIABLE
+  suppress_export_warnings)
 
 # Installation rules for headers.
 if(SLANG_INCLUDE_INSTALL)
@@ -161,7 +168,15 @@ if(SLANG_INCLUDE_INSTALL)
   install(
     FILES ${CMAKE_CURRENT_BINARY_DIR}/slang/syntax/AllSyntax.h
           ${CMAKE_CURRENT_BINARY_DIR}/slang/syntax/SyntaxKind.h
-          ${CMAKE_CURRENT_BINARY_DIR}/slang/parsing/TokenKind.h
+          ${CMAKE_CURRENT_BINARY_DIR}/slang/syntax/SyntaxFwd.h
     DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/slang/syntax/
+    COMPONENT slang_Development)
+  install(
+    FILES ${CMAKE_CURRENT_BINARY_DIR}/slang/parsing/TokenKind.h
+    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/slang/parsing/
+    COMPONENT slang_Development)
+  install(
+    FILES ${CMAKE_CURRENT_BINARY_DIR}/slang/slang_export.h
+    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/slang/
     COMPONENT slang_Development)
 endif()

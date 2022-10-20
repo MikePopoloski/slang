@@ -14,7 +14,7 @@
 #include <stdexcept>
 #include <type_traits>
 
-#include "slang_export.h"
+#include "slang/slang_export.h"
 
 #ifdef _MSC_VER
 #define SKA_NOINLINE(...) __declspec(noinline) __VA_ARGS__

@@ -1,6 +1,7 @@
 @PACKAGE_INIT@
 
 include(CMakeFindDependencyMacro)
-find_dependency(fmt)
+
+@FMT_FIND_DEP@
 
 include("${CMAKE_CURRENT_LIST_DIR}/slangTargets.cmake")

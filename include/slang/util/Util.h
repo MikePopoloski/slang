@@ -7,7 +7,6 @@
 //------------------------------------------------------------------------------
 #pragma once
 
-#include "slang_export.h"
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
@@ -15,6 +14,7 @@
 #include <string_view>
 #include <utility>
 
+#include "slang/slang_export.h"
 #include "slang/util/Assert.h"
 #include "slang/util/Enum.h"
 #include "slang/util/NotNull.h"

@@ -29,6 +29,10 @@ install(
   DESTINATION ${SLANG_CMAKECONFIG_INSTALL_DIR}
   COMPONENT slang_Development)
 
+if(fmt_FOUND)
+  set(FMT_FIND_DEP "find_dependency(fmt)")
+endif()
+
 configure_package_config_file(
   ${CMAKE_CURRENT_SOURCE_DIR}/cmake/slangConfig.cmake.in
   "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}Config.cmake"

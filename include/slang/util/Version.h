@@ -7,8 +7,9 @@
 //------------------------------------------------------------------------------
 #pragma once
 
-#include "slang_export.h"
 #include <string_view>
+
+#include "slang/slang_export.h"
 
 namespace slang {
 

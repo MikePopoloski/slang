@@ -7,8 +7,9 @@
 //------------------------------------------------------------------------------
 #pragma once
 
-#include "slang_export.h"
 #include <stdexcept>
+
+#include "slang/slang_export.h"
 
 #if !defined(ASSERT_ENABLED)
 #    if !defined(NDEBUG)
