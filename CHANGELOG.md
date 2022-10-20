@@ -30,12 +30,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * The default set of warnings was tweaked - some were added and some removed. See the [Warning Reference](https://sv-lang.com/warning-ref.html) for more information about which are on by default.
 * The `--libraries-inherit-macros` flag was added to allow macros defined in primary source files to bleed over into automatically loaded library files. The `--single-unit` option must also be used when providing this option.
 * New options `--cmd-ignore` and `--cmd-rename` can be used when you have existing command files with option flags designed for another tool to process (thanks to @udif)
-* New option `--ignore-directive` can be used to ignore vendor-specific preprocessor directives that would otherwise cause slang to flag an error
+* New option `--ignore-directive` can be used to ignore vendor-specific preprocessor directives that would otherwise cause slang to flag an error (thanks to @udif)
 * Added `--time-trace` to profile where slang is spending its compilation time
 
 ### Improvements
 * slang now reports a better error when you forget to put parenthesis after a module or interface instantiation
-* Lots of internal code cleanup, whitespace fixes, static analysis and lint fixes, and cleanup of TODOs in this release
+* Lots of internal code cleanup, static analysis and lint fixes, and cleanup of TODOs in this release
 * Large integers printed in diagnostics will now be abbreviated to avoid filling the console with tons of digits
 * Added a limit to the size of instance arrays, to avoid hangs and running out of memory when typos produce huge array sizes. Use `--max-instance-array` if you run into the limit in a real design.
 * Made several improvements to parser error recovery to cover common coding errors
@@ -45,6 +45,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * A lot of code was reorganized internally into more easily discovered locations. Library code is now organized into namespaces.
 * slang should now build correctly as a shared library out of the box
 * Made several minor optimizations across the library that should add up to about 10-15% compilation speed improvement for typical workflows
+* The minimum compiler version for slang was bumped to GCC 9. This will move to GCC 10 (and allow use of C++20 features) after the next release.
 
 ### Fixes
 * Fixed ICE when a subroutine declaration refers to itself in its own return type declaration
@@ -63,6 +64,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * Source files listed in command files are now processed strictly in order relative to files listed in other command files, which gives predictable behavior when treating them as a single unit
 * The check for maximum include stack depth was erroneously including all files in its count when using single-unit builds
 * Fixed a bug that could cause case statements in constant expression to be misevaluated under certain conditions
+* Fixed the inferred type of untyped parameters when initialized from an equivalent but not matching type expression
+* Fixed a bug in the parser that could misparse delayed statements after an event control expression
 
 
 ## [v1.0] - 2022-06-25
