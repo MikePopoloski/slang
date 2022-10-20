@@ -23,11 +23,16 @@ if(CMAKE_SOURCE_DIR STREQUAL CMAKE_BINARY_DIR)
                 "'CMakeCache.txt' and 'CMakeFiles/' before building again.")
 endif()
 
-# Determine our project version by looking at git tags.
+# Determine our patch version by looking at git tags.
 set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake" ${CMAKE_MODULE_PATH})
 include(gitversion)
-get_git_version(SLANG_VERSION_MAJOR SLANG_VERSION_MINOR SLANG_VERSION_PATCH
-                SLANG_VERSION_HASH SLANG_VERSION_STRING)
+get_git_version(SLANG_VERSION_PATCH SLANG_VERSION_HASH)
+
+set(SLANG_VERSION_MAJOR 1)
+set(SLANG_VERSION_MINOR 0)
+set(SLANG_VERSION_STRING
+    "${SLANG_VERSION_MAJOR}.${SLANG_VERSION_MINOR}.${SLANG_VERSION_PATCH}")
+message(STATUS "slang version: ${SLANG_VERSION_STRING}+${SLANG_VERSION_HASH}")
 
 # Set the default build type if none is set explicitly, but only for
 # single-config generators.

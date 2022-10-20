@@ -126,26 +126,17 @@ function(get_git_head_revision _refspecvar _hashvar)
       PARENT_SCOPE)
 endfunction()
 
-function(get_git_version _major _minor _patch _hash _string)
+function(get_git_version _patch _hash)
   if(NOT GIT_FOUND)
     find_package(Git QUIET)
   endif()
   get_git_head_revision(refspec hash)
 
-  set(${_major}
-      0
-      PARENT_SCOPE)
-  set(${_minor}
-      0
-      PARENT_SCOPE)
   set(${_patch}
       0
       PARENT_SCOPE)
   set(${_hash}
       0
-      PARENT_SCOPE)
-  set(${_string}
-      0.0.0
       PARENT_SCOPE)
 
   if(NOT GIT_FOUND OR NOT hash)
@@ -153,14 +144,10 @@ function(get_git_version _major _minor _patch _hash _string)
   endif()
 
   execute_process(
-    COMMAND ${GIT_EXECUTABLE} describe --tags --dirty --always
+    COMMAND ${GIT_EXECUTABLE} describe --tags --dirty
     WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
     OUTPUT_VARIABLE _version_string
     ERROR_QUIET OUTPUT_STRIP_TRAILING_WHITESPACE)
-
-  string(REGEX REPLACE "^v?([0-9]+).*" "\\1" local_major "${_version_string}")
-  string(REGEX REPLACE "^v?[0-9]+\\.([0-9]+).*" "\\1" local_minor
-                       "${_version_string}")
 
   if(${_version_string} MATCHES ".+-([0-9]+-g[0-9a-z]+).*")
     string(REGEX REPLACE "^v?[0-9]+\\.[0-9]+-([0-9]+).*" "\\1" local_patch
@@ -176,24 +163,10 @@ function(get_git_version _major _minor _patch _hash _string)
       ERROR_QUIET OUTPUT_STRIP_TRAILING_WHITESPACE)
   endif()
 
-  set(${_major}
-      ${local_major}
-      PARENT_SCOPE)
-  set(${_minor}
-      ${local_minor}
-      PARENT_SCOPE)
   set(${_patch}
       ${local_patch}
       PARENT_SCOPE)
   set(${_hash}
       ${local_hash}
       PARENT_SCOPE)
-  set(${_string}
-      ${local_major}.${local_minor}.${local_patch}
-      PARENT_SCOPE)
-
-  message(
-    STATUS
-      "project version from git: ${local_major}.${local_minor}.${local_patch}+${local_hash}"
-  )
 endfunction()
