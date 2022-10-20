@@ -513,14 +513,14 @@ private:
 
     constexpr size_type calculateGrowth(size_type newSize) const {
         const auto max = max_size();
-        if (cap > max - cap / 2)
+        if (cap > max - cap)
             return max;
 
-        const size_type geometric = cap + cap / 2;
-        if (geometric < newSize)
+        const size_type doubled = cap * 2;
+        if (doubled < newSize)
             return newSize;
 
-        return geometric;
+        return doubled;
     }
 };
 
