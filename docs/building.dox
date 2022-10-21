@@ -42,7 +42,7 @@ cd build && ctest --output-on-failure
 
 @section build-options Build Options
 
-Besides the built-in cmake options, there are slang-specific options that may be
+Besides the built-in CMake options, there are slang-specific options that may be
 set to customize the build:
 Option | Description | Default
 ------ | ----------- | -------
@@ -57,7 +57,7 @@ SLANG_FUZZ_TARGET | Turn on to enable some changes to make binaries easier to fu
 SLANG_CI_BUILD | Enable additional longer-running tests for automated builds | OFF
 SLANG_CLANG_TIDY | The path to a clang-tidy binary to run against the slang sources | ""
 SLANG_WARN_FLAGS | Extra compiler warning flags to enable when building slang | ""
-SLANG_CMAKECONFIG_INSTALL_DIR | If install rules are included, this path is used to install the generated cmake config for the slang package | ${CMAKE_INSTALL_LIBDIR}/cmake/slang
+SLANG_CMAKECONFIG_INSTALL_DIR | If install rules are included, this path is used to install the generated CMake config for the slang package | ${CMAKE_INSTALL_LIBDIR}/cmake/slang
 
 @section build-scripts Build Scripts
 
@@ -90,7 +90,7 @@ This section contains instructions for building the documentation.
 
 ## Steps
 
-Run cmake with docs enabled:
+Run CMake with docs enabled:
 
 @code{.ansi}
 cmake -B build -DSLANG_INCLUDE_DOCS=ON
@@ -98,5 +98,69 @@ cmake --build build --target docs
 @endcode
 
 The output website is located at `build/docs/html/`
+
+@section installation Installation
+
+CMake can be used to install slang.
+
+@code{.ansi}
+cmake --install build --strip
+@endcode
+
+You can use the `--prefix` option to control where the installation gets placed in case you
+want something other than the default on your system.
+
+@section integration Integration
+
+Integrating the slang library into your own build is straightforward if you use CMake.
+Link your target to the `slang::slang` CMake target and everything else should be
+set up for you automatically.
+
+Some possible options for locating the slang package are as follows:
+
+## External Package
+
+If you followed the installation steps above and installed the slang package on your system
+in one of the default locations, you should be able to use a simple `find_package` to pull
+it into your build.
+
+```
+cmake_minimum_required(VERSION 3.15)
+project(example)
+
+find_package(slang 1.0.0)
+
+add_executable(example example.cpp)
+target_link_libraries(example PRIVATE slang::slang)
+```
+
+See [this GitHub project](https://github.com/MikePopoloski/slang_package_example) as an example of integrating slang using this method.
+
+## FetchContent
+
+Instead of installing the slang package on your system, you can instead instruct CMake to pull the source
+from GitHub and build it as part of your own project.
+
+```
+cmake_minimum_required(VERSION 3.15)
+project(example)
+
+# Note: this example just pulls the head master branch
+# for slang, but a real project would very likely pin
+# this to a specific tag and only update when ready
+# to accept a new version.
+include(FetchContent)
+FetchContent_Declare(
+  slang
+  GIT_REPOSITORY https://github.com/MikePopoloski/slang.git
+  GIT_SHALLOW ON)
+FetchContent_MakeAvailable(slang)
+
+add_executable(example example.cpp)
+target_link_libraries(example PRIVATE slang::slang)
+```
+
+See [this GitHub project](https://github.com/MikePopoloski/slang_subproject_example) as an example of integrating slang using this method.
+
 
 */
