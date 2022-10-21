@@ -25,25 +25,25 @@ the lifetime of each one separately, arena based allocation is preferred.
 All objects are allocated out of slabs of memory, and only the entire arena
 can be deallocated if that memory is no longer needed.
 
-This is supported by the slang::BumpAllocator class, which is used heavily
-throughout the library. Commonly slang::BumpAllocator::emplace is used to
+This is supported by the @ref slang::BumpAllocator class, which is used heavily
+throughout the library. Commonly @ref slang::BumpAllocator::emplace is used to
 create new objects. Note that this only supports trivially destructible objects
 (which most library objects are designed to be). If you really need to allocate
 objects which are not trivially destructible, you can instantiate a dedicated
-slang::TypedBumpAllocator to handle them.
+@ref slang::TypedBumpAllocator to handle them.
 
 A common operation is to build up dynamic lists of objects; using the arena
 allocator for the construction process would waste lots of memory (since it
 can't be freed until the entire arena is destroyed). Instead, the lists are
 built locally, ideally on the stack, and then once the full set is known it
-is copied to a chunk of memory within the arena. The type slang::SmallVector is
+is copied to a chunk of memory within the arena. The type @ref slang::SmallVector is
 designed exactly for this purpose. It exposes a similar API to std::vector but
 always allocates N elements on the stack. In the common case where N is
-sufficiently large, no heap memory is needed. slang::SmallVector::copy performs
+sufficiently large, no heap memory is needed. @ref slang::SmallVector::copy performs
 the allocation and copy into a BumpAllocator.
 
 @code{.cpp}
-SmallVectorSized<int, 4> smallVec;
+SmallVector<int> smallVec;
 smallVec.append(3);
 smallVec.append(4);
 smallVec.append(5);
@@ -51,10 +51,6 @@ smallVec.append(5);
 BumpAllocator alloc;
 span<int> finalList = smallVec.copy(alloc);
 @endcode
-
-slang::SmallVectorSized templates the size of the stack buffer, while
-SmallVector, the parent class, is generic across all instantiations and
-therefore is easier to pass across functions.
 
 Note the use of std::span here; spans are the preferred mechanism for
 representing lists of things that have been allocated in an arena somewhere.
@@ -71,10 +67,10 @@ that stored source.
 @section other Other Useful Components
 
 Some other useful components to know:
-- The slang::not_null template decorates pointers that can be assumed to never
+- The @ref slang::not_null template decorates pointers that can be assumed to never
 be null. Otherwise, any pointer (that's not in a dynamically sized list) must
 be assumed to potentially be null.
-- The slang::ScopeGuard template makes it easy to have a function (typically
+- The @ref slang::ScopeGuard template makes it easy to have a function (typically
 given via a lambda) that should run once the guard is destructed.
 - The ASSERT macro does runtime checking of invariants. It should only be used
 to check things that should always be true if the programmer has not made any
@@ -86,11 +82,11 @@ std::logic_error in debug builds and marks the path unreachable in release build
 - The ENUM macro is used to define scoped enumerations that have a toString()
 method. Ideally C++ will expose this at the language level at some point but
 until then we're on our own.
-- The slang::bitmask template wraps scoped enumerations that should be treated
+- The @ref slang::bitmask template wraps scoped enumerations that should be treated
 as a set of flag bits. It gives them a bunch of expected operators like & and |.
-- Similarly to SmallVector, there is a slang::SmallSet and slang::SmallMap that
+- Similarly to SmallVector, there is a @ref slang::SmallSet and @ref slang::SmallMap that
 allocate their first few elements on the stack to try to avoid heap allocations.
 - For any hash tables that do need to live outside the stack, flat_hash_map
-should be used over std::unordered_map, always.
+should be used over std::unordered_map, always, as it's much more efficient.
 
 */

@@ -3,17 +3,22 @@
 
 Like most production compilers, slang's parser is hand-written recursive
 descent. It is designed to be robust in the face of errors in the source text;
-no matter how poorly formed the parser should gracefully consume the text and
+no matter how poorly formed, the parser should gracefully consume the text and
 continue working. This makes the parser usable in editing scenarios, where 90%
 of the time it will be operating on broken source since the user is in the
 middle of typing it.
 
 The parsing process is implemented via several layers that work together to
-product the final parse tree. The sections here describe each layer in turn.
+produce the final parse tree. The sections here describe each layer in turn.
+
+Note that everything described here is operating on the level of a "parse tree",
+or equivalently a "concrete syntax tree". The *abstract* syntax tree is at a
+higher level of abstraction and is built in a separate step, entirely distinct
+from the parsing process.
 
 @section syntax-nodes Syntax Nodes
 
-The actual parse tree is literally a tree of slang::SyntaxNode derived
+The actual parse tree is literally a tree of @ref slang::syntax::SyntaxNode derived
 classes. Each derived class represents a single piece of the SystemVerilog
 grammar. All of the derived classes are described via a DSL in the
 scripts/syntax.txt file and turned into C++ classes via a Python script during
@@ -23,52 +28,53 @@ Each syntax node provides members and methods for accessing its member nodes,
 as well as to iterate through them in a generic fashion. They also each contain
 a link to their parent node, which will be set for all nodes except the root.
 
-At the leaves of the tree are slang::Token instances. Tokens are produced by
-lexing the source text, and represent individual syntactic elements of the
-language, such as keywords, identifiers, and punctuation. They can carry with
-them a variety of data; for example, an integer literal might carry the numeric
-value represented by the token's text. Each token also carries location
+At the leaves of the tree are @ref slang::parsing::Token instances.
+Tokens are produced by lexing the source text, and represent individual syntactic
+elements of the language, such as keywords, identifiers, and punctuation. They can
+carry with them a variety of data; for example, an integer literal might carry the
+numeric value represented by the token's text. Each token also carries location
 information about where it came from in the original source, along with any
 preceding "trivia". Trivia is extra bits of source text that don't contribute
 to the final program. This might include, for example, whitespace and code
 comments. These are attached to the next valid token produced by the lexer.
 This makes it possible for any piece of the parse tree to be converted back to
-the original code that created it.
+the original source code that created it by doing a simple depth-first traversal
+and examining each token and its trivia.
 
 Other parts of the parser can create new trivia. If there are unknown or
 unexpected tokens in the source, for example, the parser can take them and
 turn them into skipped trivia and continue parsing once it reaches a valid
-state. Trivia is represented by the slang::Trivia class.
+state. Trivia is represented by the @ref slang::parsing::Trivia class.
 
 There are three additional special syntax nodes that are worth mentioning here.
-The slang::SyntaxList, slang::TokenList, and slang::SeparatedSyntaxList nodes
-represent lists of child nodes and provide various APIs for accessing child
-elements by offset. SyntaxList contains a simple list of child nodes,
-TokenList contains a list only of source code tokens, and SeparatedSyntaxList
-contains a token-delimited list of child nodes (typically the delimiters
-are commas).
+The @ref slang::syntax::SyntaxList, @ref slang::syntax::TokenList, and
+@ref slang::syntax::SeparatedSyntaxList nodes represent lists of child nodes and
+provide various APIs for accessing child elements by offset. SyntaxList contains a
+simple list of child nodes, TokenList contains a list only of source code tokens,
+and SeparatedSyntaxList contains a token-delimited list of child nodes
+(typically the delimiters are commas).
 
 @section lexing Lexing
 
-The slang::Lexer class implements the process of lexing SystemVerilog source
+The @ref slang::parsing::Lexer class implements the process of lexing SystemVerilog source
 code; that is, turning the source text into a stream of tokens (and trivia).
-The Lexer is created with a slang::SourceBuffer and then expects you to
-repeatedly call slang::Lexer::lex to produce each successive token.
+The Lexer is created with a @ref slang::SourceBuffer and then expects you to
+repeatedly call @ref slang::parsing::Lexer::lex to produce each successive token.
 
 It also contains some useful static methods that are used elsewhere in the
-parsing process. For example, slang::Lexer::stringify can take a list of
+parsing process. For example, @ref slang::parsing::Lexer::stringify can take a list of
 tokens and turn them into a string literal token, and
-slang::Lexer::concatenateTokens can combine two tokens into one.
+@ref slang::parsing::Lexer::concatenateTokens can combine two tokens into one.
 
 The lexer is fairly low level and unlikely to be useful on its own; you
 probably want to use it in combination with other parsing layers.
 
 @section preprocessor Preprocessor
 
-The slang::Preprocessor class implements all of the SystemVerilog preprocessing
-rules (referred to in the spec as "compiler directives"). The preprocessor
-takes as input a stream of tokens (via one or more Lexer instances) and
-produces as output a single coherent stream of tokens with all of the
+The @ref slang::parsing::Preprocessor class implements all of the SystemVerilog
+preprocessing rules (referred to in the spec as "compiler directives").
+The preprocessor takes as input a stream of tokens (via one or more Lexer instances)
+and produces as output a single coherent stream of tokens with all of the
 directives removed and the various actions implied by those directives
 performed.
 
@@ -85,31 +91,31 @@ include file are drained, that Lexer is popped and the original file is
 continued.
 
 There are some useful methods on the preprocessor class that can be used to
-control its operation. slang::Preprocessor::predefine lets you programmatically
-define a macro, slang::Preprocessor::isDefined lets you check whether a
+control its operation. @ref slang::parsing::Preprocessor::predefine lets you programmatically
+define a macro, @ref slang::parsing::Preprocessor::isDefined lets you check whether a
 given macro is defined at the current point in the token stream, and
-slang::Preprocessor::getDefinedMacros will return a list of all macros
+@ref slang::parsing::Preprocessor::getDefinedMacros will return a list of all macros
 currently defined.
 
 The output stream of tokens from the preprocessor, obtained by continually
-calling slang::Preprocessor::next, can actually be parsed according to the
+calling @ref slang::parsing::Preprocessor::next, can actually be parsed according to the
 SystemVerilog language grammar.
 
 @section parser Parser
 
-The slang::Parser class implements a full SystemVerilog language parser.
-It takes as input a slang::Preprocessor instance, repeatedly obtains tokens
-from it, and from those tokens creates a tree of slang::SyntaxNode objects
+The @ref slang::parsing::Parser class implements a full SystemVerilog language parser.
+It takes as input a @ref slang::parsing::Preprocessor instance, repeatedly obtains tokens
+from it, and from those tokens creates a tree of @ref slang::syntax::SyntaxNode objects
 that represent the entire source text.
 
 In a typical scenario where you're operating on a complete source file, you
-can simply call slang::Parser::parseCompilationUnit to get the full tree.
+can simply call @ref slang::parsing::Parser::parseCompilationUnit to get the full tree.
 If you know you only have a specific snippet of source in the token stream
 (possibly because you constructed it programmatically or for a unit test) you
 can call one of the more specialized methods like
-slang::Parser::parseExpression.
+@ref slang::parsing::Parser::parseExpression.
 
-The slang::Parser::parseGuess method is useful to note; it tries to figure
+The @ref slang::parsing::Parser::parseGuess method is useful to note; it tries to figure
 out the most likely code construct by examining the first few tokens in the
 stream. This is useful in a REPL scenario where the user is typing random
 bits of code and expecting the tool to figure out what they mean.
@@ -118,14 +124,14 @@ bits of code and expecting the tool to figure out what they mean.
 
 The whole lex / preprocess / parser operation, along with a BumpAllocator for
 arena based allocation and a Diagnostics buffer for collecting diagnostics,
-is wrapped up inside the slang::SyntaxTree class to provide a convenient API.
+is wrapped up inside the @ref slang::syntax::SyntaxTree class to provide a convenient API.
 While the individual components involved are designed to be usable on their
 own to a certain extent, the SyntaxTree class is the easiest way to just parse
 some code and look at the result.
 
 The class has several static methods for constructing a syntax tree from
-various sources; for example, slang::SyntaxTree::fromFile for constructing
-from a source file on disk and slang::SyntaxTree::fromText for constructing
+various sources; for example, @ref slang::syntax::SyntaxTree::fromFile for constructing
+from a source file on disk and @ref slang::syntax::SyntaxTree::fromText for constructing
 from source text in memory. The result is a std::shared_ptr to the SyntaxTree
 object, which owns all of the memory for the parsed syntax tree and any
 diagnostics that occurred.
@@ -141,18 +147,18 @@ auto tree2 = SyntaxTree::fromText("module m; endmodule");
 
 Once you have a syntax tree you can examine it or manipulate it in various
 ways as you see fit. To make the process of walking the tree easier, the
-slang::SyntaxVisitor class exists. You can derive from this class and implement
+@ref slang::syntax::SyntaxVisitor class exists. You can derive from this class and implement
 a `handle()` method for the specific kinds of syntax nodes you care about, and
 the process of actually walking the tree and invoking the right methods will
 be handled automatically.
 
 If you want to walk the tree *and* modify the tree, say as part of some
 automated refactoring process, you can instead derive from
-slang::SyntaxRewriter. This class adds useful helper methods for replacing
+@ref slang::syntax::SyntaxRewriter. This class adds useful helper methods for replacing
 parts of the tree or inserting new nodes into the tree on the fly.
 
 A syntax tree, or subsets of a syntax tree, can be turned back into source
-text via the slang::SyntaxPrinter class. This class has a variety of options
+text via the @ref slang::syntax::SyntaxPrinter class. This class has a variety of options
 for how you'd like the text printed, and then will print any tokens, trivia,
 or syntax nodes you give it.
 

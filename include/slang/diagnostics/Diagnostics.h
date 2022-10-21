@@ -77,7 +77,7 @@ public:
 
     /// @brief Checks whether the DiagCode is valid.
     ///
-    /// Any DiagCode with a subsystem of @ref DiagSubsystem::Invalid will return false,
+    /// Any DiagCode with a subsystem of DiagSubsystem::Invalid will return false,
     /// (which is true for a default constructed DiagCode object).
     constexpr bool valid() const { return subsystem != DiagSubsystem::Invalid; }
 

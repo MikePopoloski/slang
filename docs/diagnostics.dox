@@ -3,15 +3,15 @@
 
 @section diagnostic-class Diagnostic Class
 
-The slang::Diagnostic class represents a diagnostic that has been created in
+The @ref slang::Diagnostic class represents a diagnostic that has been created in
 response to some issue with the user's source code. It contains a
-slang::DiagCode that indicates what that issue is, a collection of arguments
+@ref slang::DiagCode that indicates what that issue is, a collection of arguments
 that may be used to format a human-friendly message describing the issue,
 and some other metadata like the location where the issue occurred.
-The Diagnostic class provides several operator<< overloads that can be used to
+The Diagnostic class provides several `operator<<` overloads that can be used to
 add arguments and metadata when constructing a new diagnostic.
 
-There is a slang::Diagnostics class, which derives from slang::SmallVectorSized
+There is a @ref slang::Diagnostics class, which derives from @ref slang::SmallVector
 and adds a few helper methods for creating diagnostics. An example of
 constructing a new diagnostic:
 
@@ -30,23 +30,23 @@ create its own DiagCode and issue them via the diagnostic system.
 
 @section diagnostic-engine Diagnostic Engine
 
-The slang::Diagnostics class is just a simple collection of diagnostics.
+The @ref slang::Diagnostics class is just a simple collection of diagnostics.
 A richer set of functionality for formatting, filtering, and controlling those
-diagnostics is provided by the slang::DiagnosticEngine class. The engine
+diagnostics is provided by the @ref slang::DiagnosticEngine class. The engine
 provides methods for things like setting limits on the number of diagnostics to
 issue, options that can hide all or some subset of warnings, and the ability to
 remap the default severity of a given diagnostic code.
 
 Each Diagnostic that is issued to a DiagnosticEngine is formatted and, assuming
-it's not supressed, forwarded to all registered slang::DiagnosticClient
+it's not supressed, forwarded to all registered @ref slang::DiagnosticClient
 instances. Clients are registered with the engine via
-slang::DiagnosticEngine::addClient. It's the client's job to actually do
+@ref slang::DiagnosticEngine::addClient. It's the client's job to actually do
 something with the diagnostic; for example, it may write the text to an internal
 buffer, or dump the diagnostic to a JSON file, or send it over a pipe to
 another process.
 
 You can make a DiagnosticClient to do whatever you want, but the built in
-slang::TextDiagnosticClient formats each diagnostic to an internal string
+@ref slang::TextDiagnosticClient formats each diagnostic to an internal string
 buffer that you can then access to get a report. It can also add terminal color
 codes to the report if you're going to be outputing it to a console.
 
