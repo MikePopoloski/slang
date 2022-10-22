@@ -20,6 +20,7 @@ add_executable(
   unittests
   unittests/AssertionTests.cpp
   unittests/ClassTests.cpp
+  unittests/CommandLineTests.cpp
   unittests/CoverTests.cpp
   unittests/DriverTests.cpp
   unittests/DiagnosticTests.cpp
@@ -28,6 +29,7 @@ add_executable(
   unittests/ExpressionTests.cpp
   unittests/FileTests.cpp
   unittests/HierarchyTests.cpp
+  unittests/IntervalMapTests.cpp
   unittests/LexerTests.cpp
   unittests/LookupTests.cpp
   unittests/main.cpp
@@ -41,7 +43,6 @@ add_executable(
   unittests/SystemFuncTests.cpp
   unittests/Test.cpp
   unittests/TypeTests.cpp
-  unittests/UtilTests.cpp
   unittests/VisitorTests.cpp)
 
 target_link_libraries(unittests PRIVATE slang::slang Catch2::Catch2 fmt::fmt)

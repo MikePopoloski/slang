@@ -78,6 +78,7 @@ add_library(
   util/Assert.cpp
   util/BumpAllocator.cpp
   util/CommandLine.cpp
+  util/IntervalMap.cpp
   util/OS.cpp
   util/SmallVector.cpp
   util/String.cpp
