@@ -135,7 +135,7 @@ struct NodeRef {
     NodeRef() = default;
 
     template<typename T>
-    NodeRef(T* node, uint32_t s) : pip(node, s) {
+    NodeRef(T* node, uint32_t s) : pip(node, s - 1) {
         ASSERT(s);
     }
 
@@ -241,7 +241,7 @@ struct BranchNode : public NodeBase<NodeRef, interval<TKey>, Capacity> {
         ASSERT(size < Capacity);
         ASSERT(i <= size);
 
-        this->moveRight(i, i + 1, size - 1);
+        this->moveRight(i, i + 1, size - i);
         childAt(i) = node;
         keyAt(i) = key;
     }
@@ -271,10 +271,7 @@ struct Path {
     uint32_t offset(uint32_t level) const { return path[level].offset; }
     uint32_t& offset(uint32_t level) { return path[level].offset; }
 
-    uint32_t height() const {
-        ASSERT(valid());
-        return uint32_t(path.size() - 1);
-    }
+    uint32_t height() const { return uint32_t(path.size() - 1); }
 
     // Gets the subtree referenced at the given level.
     NodeRef& childAt(uint32_t level) const { return path[level].childAt(path[level].offset); }
@@ -656,7 +653,7 @@ uint32_t LeafNode<TKey, TValue, Capacity>::insertFrom(uint32_t i, uint32_t size,
         if (size == Capacity)
             return Capacity + 1;
 
-        this->moveRight(i, i + 1, size);
+        this->moveRight(i, i + 1, size - i);
     }
 
     this->first[i] = key;

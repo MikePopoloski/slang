@@ -14,6 +14,7 @@ TEST_CASE("IntervalMap -- empty map") {
     CHECK(map.begin() == map.begin());
     CHECK(map.end() == map.begin());
     CHECK(map.end() == map.end());
+    CHECK(!map.begin().valid());
 
     CHECK(std::cbegin(map) == map.begin());
     CHECK(std::cend(map) == map.end());
@@ -54,4 +55,16 @@ TEST_CASE("IntervalMap -- small num elems in root leaf") {
     it--;
     CHECK(it.left() == 2);
     CHECK(*it == 3);
+}
+
+TEST_CASE("IntervalMap -- branching inserts") {
+    IntervalMap<int32_t, int32_t> map;
+    BumpAllocator ba;
+    IntervalMap<int32_t, int32_t>::Allocator alloc(ba);
+
+    // Insert a bunch of elements to force branching.
+    for (int32_t i = 1; i < 1000; i++)
+        map.insert(10 * i, 10 * i + 5, i, alloc);
+
+    CHECK(!map.empty());
 }
