@@ -172,20 +172,15 @@ private:
     PointerIntPair<void*, Log2CacheLine, Log2CacheLine> pip;
 };
 
-// Leaf nodes store the actual elements. The keys array contains the
-// actual inserted intervals, sorted in order by their start values
-// (and then their end values if equal start values). The values array is
-// whatever value those entries map to, as given by the insert() call.
-template<typename TKey, typename TValue, uint32_t Capacity>
-struct LeafNode : public NodeBase<interval<TKey>, TValue, Capacity> {
-    const interval<TKey>& keyAt(uint32_t i) const { return this->first[i]; }
-    const TValue& valueAt(uint32_t i) const { return this->second[i]; }
-    TValue& valueAt(uint32_t i) { return this->second[i]; }
-
+// A helper base class to provide common implementations for routines templated
+// on the derived type of the node itself.
+template<typename TKey, typename TDerived>
+struct NodeImpl {
     uint32_t findFrom(uint32_t i, uint32_t size, const interval<TKey>& key) const {
-        ASSERT(i <= size && size <= Capacity);
-        ASSERT(i == 0 || keyAt(i - 1) < key);
-        while (i != size && keyAt(i) < key)
+        auto& self = *static_cast<const TDerived*>(this);
+        ASSERT(i <= size && size <= TDerived::Capacity);
+        ASSERT(i == 0 || self.keyAt(i - 1) < key);
+        while (i != size && self.keyAt(i) < key)
             i++;
         return i;
     }
@@ -194,47 +189,49 @@ struct LeafNode : public NodeBase<interval<TKey>, TValue, Capacity> {
     // safe to call this on this particular branch and we'll always find a slot
     // before hitting the end of the child array.
     uint32_t safeFind(uint32_t i, const interval<TKey>& key) const {
-        ASSERT(i < Capacity);
-        ASSERT(i == 0 || keyAt(i - 1) < key);
-        while (keyAt(i) < key)
+        auto& self = *static_cast<const TDerived*>(this);
+        ASSERT(i < TDerived::Capacity);
+        ASSERT(i == 0 || self.keyAt(i - 1) < key);
+        while (self.keyAt(i) < key)
             i++;
 
-        ASSERT(i < Capacity);
+        ASSERT(i < TDerived::Capacity);
         return i;
     }
+
+    interval<TKey> getBounds(uint32_t size) const {
+        ASSERT(size);
+        auto& self = *static_cast<const TDerived*>(this);
+        auto result = self.keyAt(0);
+        for (uint32_t i = 1; i < size; i++)
+            result.right = std::max(result.right, self.keyAt(i).right);
+        return result;
+    }
+};
+
+// Leaf nodes store the actual elements. The keys array contains the
+// actual inserted intervals, sorted in order by their start values
+// (and then their end values if equal start values). The values array is
+// whatever value those entries map to, as given by the insert() call.
+template<typename TKey, typename TValue, uint32_t Capacity>
+struct LeafNode : public NodeBase<interval<TKey>, TValue, Capacity>,
+                  public NodeImpl<TKey, LeafNode<TKey, TValue, Capacity>> {
+    const interval<TKey>& keyAt(uint32_t i) const { return this->first[i]; }
+    const TValue& valueAt(uint32_t i) const { return this->second[i]; }
+    TValue& valueAt(uint32_t i) { return this->second[i]; }
 
     uint32_t insertFrom(uint32_t i, uint32_t size, const interval<TKey>& key, const TValue& value);
 };
 
 // Branch nodes store references to subtree nodes, all of the same height.
 template<typename TKey, uint32_t Capacity>
-struct BranchNode : public NodeBase<NodeRef, interval<TKey>, Capacity> {
+struct BranchNode : public NodeBase<NodeRef, interval<TKey>, Capacity>,
+                    public NodeImpl<TKey, BranchNode<TKey, Capacity>> {
     const interval<TKey>& keyAt(uint32_t i) const { return this->second[i]; }
     interval<TKey>& keyAt(uint32_t i) { return this->second[i]; }
 
     const NodeRef& childAt(uint32_t i) const { return this->first[i]; }
     NodeRef& childAt(uint32_t i) { return this->first[i]; }
-
-    uint32_t findFrom(uint32_t i, uint32_t size, const interval<TKey>& key) const {
-        ASSERT(i <= size && size <= Capacity);
-        ASSERT(i == 0 || keyAt(i - 1) < key);
-        while (i != size && keyAt(i) < key)
-            i++;
-        return i;
-    }
-
-    // Same as findFrom except that we don't need the size because we know it's
-    // safe to call this on this particular branch and we'll always find a slot
-    // before hitting the end of the child array.
-    uint32_t safeFind(uint32_t i, const interval<TKey>& key) const {
-        ASSERT(i < Capacity);
-        ASSERT(i == 0 || keyAt(i - 1) < key);
-        while (keyAt(i) < key)
-            i++;
-
-        ASSERT(i < Capacity);
-        return i;
-    }
 
     // Inserts a new node into the branch at the given position.
     void insert(uint32_t i, uint32_t size, NodeRef node, const interval<TKey>& key) {
@@ -444,14 +441,28 @@ public:
 
     overlap_iterator find(TKey left, TKey right) const;
 
+    std::pair<TKey, TKey> getBounds() const {
+        ASSERT(!empty());
+        auto ival = isFlat() ? rootLeaf.getBounds(rootSize) : rootBranch.getBounds(rootSize);
+        return {ival.left, ival.right};
+    }
+
 private:
     friend class iterator;
     friend class const_iterator;
 
     bool isFlat() const { return height == 0; }
 
-    IntervalMapDetails::IndexPair switchToBranch(uint32_t position, Allocator& alloc);
-    IntervalMapDetails::IndexPair splitRoot(uint32_t position, Allocator& alloc);
+    template<typename TNode, bool SwitchToBranch>
+    IntervalMapDetails::IndexPair modifyRoot(TNode& rootNode, uint32_t position, Allocator& alloc);
+
+    IntervalMapDetails::IndexPair switchToBranch(uint32_t position, Allocator& alloc) {
+        return modifyRoot<Leaf, true>(rootLeaf, position, alloc);
+    }
+
+    IntervalMapDetails::IndexPair splitRoot(uint32_t position, Allocator& alloc) {
+        return modifyRoot<Branch, false>(rootBranch, position, alloc);
+    }
 
     union {
         Leaf rootLeaf;
@@ -664,11 +675,13 @@ uint32_t LeafNode<TKey, TValue, Capacity>::insertFrom(uint32_t i, uint32_t size,
 } // namespace IntervalMapDetails
 
 template<typename TKey, typename TValue>
-IntervalMapDetails::IndexPair IntervalMap<TKey, TValue>::switchToBranch(uint32_t position,
-                                                                        Allocator& alloc) {
+template<typename TNode, bool SwitchToBranch>
+IntervalMapDetails::IndexPair IntervalMap<TKey, TValue>::modifyRoot(TNode& rootNode,
+                                                                    uint32_t position,
+                                                                    Allocator& alloc) {
     using namespace IntervalMapDetails;
 
-    // Split the root leaf node into two new leaf nodes.
+    // Split the root branch node into two new nodes.
     constexpr uint32_t NumNodes = 2;
     uint32_t sizes[NumNodes];
     IndexPair newOffset = distribute(NumNodes, rootSize, Leaf::Capacity, sizes, position,
@@ -678,59 +691,22 @@ IntervalMapDetails::IndexPair IntervalMap<TKey, TValue>::switchToBranch(uint32_t
     uint32_t pos = 0;
     NodeRef nodes[NumNodes];
     for (uint32_t i = 0; i < NumNodes; i++) {
-        auto leaf = alloc.emplace<Leaf>();
+        auto newNode = alloc.emplace<TNode>();
         uint32_t size = sizes[i];
 
-        leaf->copy(rootLeaf, pos, 0, size);
-        nodes[i] = NodeRef(leaf, size);
+        newNode->copy(rootNode, pos, 0, size);
+        nodes[i] = NodeRef(newNode, size);
         pos += size;
     }
 
-    // Destroy the old root leaf and switch it to a branch node.
-    rootLeaf.~Leaf();
-    height = 1;
-    new (&rootBranch) Branch();
-
-    for (uint32_t i = 0; i < NumNodes; i++) {
-        // The interval of this new child node is the start of the
-        // first child's interval and the end of the last child's interval.
-        auto& leaf = nodes[i].template get<Leaf>();
-        rootBranch.keyAt(i) = {leaf.keyAt(0).left, leaf.keyAt(sizes[i] - 1).right};
-        rootBranch.childAt(i) = nodes[i];
-    }
-
-    rootSize = NumNodes;
-    return newOffset;
-}
-
-template<typename TKey, typename TValue>
-IntervalMapDetails::IndexPair IntervalMap<TKey, TValue>::splitRoot(uint32_t position,
-                                                                   Allocator& alloc) {
-    using namespace IntervalMapDetails;
-
-    // Split the root branch node into two new branch nodes.
-    constexpr uint32_t NumNodes = 2;
-    uint32_t sizes[NumNodes];
-    IndexPair newOffset = distribute(NumNodes, rootSize, Leaf::Capacity, sizes, position,
-                                     /* grow */ true);
-
-    // Construct new nodes.
-    uint32_t pos = 0;
-    NodeRef nodes[NumNodes];
-    for (uint32_t i = 0; i < NumNodes; i++) {
-        auto branch = alloc.emplace<Branch>();
-        uint32_t size = sizes[i];
-
-        branch->copy(rootBranch, pos, 0, size);
-        nodes[i] = NodeRef(branch, size);
-        pos += size;
+    if (SwitchToBranch) {
+        // Destroy the old root leaf and switch it to a branch node.
+        rootLeaf.~Leaf();
+        new (&rootBranch) Branch();
     }
 
     for (uint32_t i = 0; i < NumNodes; i++) {
-        // The interval of this new child node is the start of the
-        // first child's interval and the end of the last child's interval.
-        auto& branch = nodes[i].template get<Branch>();
-        rootBranch.keyAt(i) = {branch.keyAt(0).left, branch.keyAt(sizes[i] - 1).right};
+        rootBranch.keyAt(i) = nodes[i].template get<TNode>().getBounds(sizes[i]);
         rootBranch.childAt(i) = nodes[i];
     }
 
@@ -785,8 +761,10 @@ template<typename TKey, typename TValue>
 void IntervalMap<TKey, TValue>::iterator::updateParentBounds(
     uint32_t level, const IntervalMapDetails::interval<TKey>& key) {
     auto& path = this->path;
-    while (--level)
+    while (level) {
+        --level;
         path.node<Branch>(level).keyAt(path.offset(level)).unionWith(key);
+    }
 }
 
 template<typename TKey, typename TValue>

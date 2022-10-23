@@ -1,6 +1,8 @@
 // SPDX-FileCopyrightText: Michael Popoloski
 // SPDX-License-Identifier: MIT
 
+#define CATCH_CONFIG_ENABLE_PAIR_STRINGMAKER
+
 #include "Test.h"
 #include <fmt/format.h>
 
@@ -55,6 +57,8 @@ TEST_CASE("IntervalMap -- small num elems in root leaf") {
     it--;
     CHECK(it.left() == 2);
     CHECK(*it == 3);
+
+    CHECK(map.getBounds() == std::pair{1, 42});
 }
 
 TEST_CASE("IntervalMap -- branching inserts") {
@@ -63,8 +67,10 @@ TEST_CASE("IntervalMap -- branching inserts") {
     IntervalMap<int32_t, int32_t>::Allocator alloc(ba);
 
     // Insert a bunch of elements to force branching.
-    for (int32_t i = 1; i < 1000; i++)
+    for (int32_t i = 1; i < 1000; i++) {
         map.insert(10 * i, 10 * i + 5, i, alloc);
+        CHECK(map.getBounds() == std::pair{10, 10 * i + 5});
+    }
 
     CHECK(!map.empty());
 }
