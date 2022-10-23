@@ -64,6 +64,50 @@ void Path::moveRight(uint32_t level) {
     path[l] = Entry(nodeRef, 0);
 }
 
+NodeRef Path::getLeftSibling(uint32_t level) const {
+    // Root has no siblings.
+    if (level == 0)
+        return NodeRef();
+
+    // Go up until we can go left.
+    uint32_t l = level - 1;
+    while (l && path[l].offset == 0)
+        --l;
+
+    // If we hit the root there is no left sibling.
+    if (path[l].offset == 0)
+        return NodeRef();
+
+    // Start with left subtree and go down to the right
+    // until we reach the original level.
+    NodeRef node = path[l].childAt(path[l].offset - 1);
+    for (++l; l != level; ++l)
+        node = node.childAt(node.size() - 1);
+    return node;
+}
+
+NodeRef Path::getRightSibling(uint32_t level) const {
+    // Root has no siblings.
+    if (level == 0)
+        return NodeRef();
+
+    // Go up until we can go right.
+    uint32_t l = level - 1;
+    while (l && path[l].offset == path[l].size - 1)
+        --l;
+
+    // If we hit the root there is no right sibling.
+    if (path[l].offset == path[l].size - 1)
+        return NodeRef();
+
+    // Start with right subtree and go down to the left
+    // until we reach the original level.
+    NodeRef node = path[l].childAt(path[l].offset + 1);
+    for (++l; l != level; ++l)
+        node = node.childAt(0);
+    return node;
+}
+
 IndexPair distribute(uint32_t numNodes, uint32_t numElements, uint32_t capacity, uint32_t* newSizes,
                      uint32_t position, bool grow) {
     ASSERT(numElements + grow <= numNodes * capacity);

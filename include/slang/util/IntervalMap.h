@@ -66,12 +66,50 @@ struct NodeBase {
         }
     }
 
+    // Moves child nodes to the left, from [src, src+count) to [dst, dst+count)
+    void moveLeft(uint32_t src, uint32_t dst, uint32_t count) {
+        ASSERT(dst <= src);
+        copy(*this, src, dst, count);
+    }
+
     // Moves child nodes to the right, from [src, src+count) to [dst, dst+count)
     void moveRight(uint32_t src, uint32_t dst, uint32_t count) {
         ASSERT(src <= dst && dst + count <= Capacity);
         while (count--) {
             first[dst + count] = first[src + count];
             second[dst + count] = second[src + count];
+        }
+    }
+
+    // Erase elements in the given range.
+    void erase(uint32_t start, uint32_t end, uint32_t size) { moveLeft(end, start, size - end); }
+
+    // Transfer (move) elements to left sibling node.
+    void transferToLeftSib(uint32_t size, NodeBase& sib, uint32_t sibSize, uint32_t count) {
+        sib.copy(*this, 0, sibSize, count);
+        erase(0, count, size);
+    }
+
+    // Transfer (move) elements to right sibling node.
+    void transferToRightSib(uint32_t size, NodeBase& sib, uint32_t sibSize, uint32_t count) {
+        sib.moveRight(0, count, sibSize);
+        sib.copy(*this, size - count, 0, count);
+    }
+
+    // Adjust the number of elements in this node by moving elements to or from
+    // a left sibling node.
+    int adjustFromLeftSib(uint32_t size, NodeBase& sib, uint32_t sibSize, int toAdd) {
+        if (toAdd > 0) {
+            // Copy from sibling.
+            uint32_t count = std::min(std::min(uint32_t(toAdd), sibSize), Capacity - size);
+            sib.transferToRightSib(sibSize, *this, size, count);
+            return count;
+        }
+        else {
+            // Copy to sibling.
+            uint32_t count = std::min(std::min(uint32_t(-toAdd), size), Capacity - sibSize);
+            transferToLeftSib(size, sib, sibSize, count);
+            return -count;
         }
     }
 };
@@ -197,6 +235,16 @@ struct BranchNode : public NodeBase<NodeRef, interval<TKey>, Capacity> {
         ASSERT(i < Capacity);
         return i;
     }
+
+    // Inserts a new node into the branch at the given position.
+    void insert(uint32_t i, uint32_t size, NodeRef node, const interval<TKey>& key) {
+        ASSERT(size < Capacity);
+        ASSERT(i <= size);
+
+        this->moveRight(i, i + 1, size - 1);
+        childAt(i) = node;
+        keyAt(i) = key;
+    }
 };
 
 // Represents a position in the b+ tree and a path to get there from the root.
@@ -256,7 +304,14 @@ struct Path {
     void moveLeft(uint32_t level);
     void moveRight(uint32_t level);
 
+    NodeRef getLeftSibling(uint32_t level) const;
+    NodeRef getRightSibling(uint32_t level) const;
+
     void push(NodeRef node, uint32_t offset) { path.emplace_back(node, offset); }
+
+    // Resets the cached information about the node at the given level after it's
+    // been modified by some other operation.
+    void reset(uint32_t level) { path[level] = Entry(childAt(level - 1), offset(level)); }
 
     // Makes sure the current path is prepared for insertion at the given level.
     // This is always true except when path is at the end (i.e. not valid()) and
@@ -349,13 +404,9 @@ public:
 
     /// Not copyable.
     IntervalMap(const IntervalMap&) = delete;
-    /// Not movable.
-    IntervalMap(IntervalMap&&) = delete;
 
     /// Not copyable.
     IntervalMap& operator=(const IntervalMap&) = delete;
-    /// Not movable.
-    IntervalMap& operator=(IntervalMap&&) = delete;
 
     bool empty() const { return rootSize == 0; }
 
@@ -403,6 +454,7 @@ private:
     bool isFlat() const { return height == 0; }
 
     IntervalMapDetails::IndexPair switchToBranch(uint32_t position, Allocator& alloc);
+    IntervalMapDetails::IndexPair splitRoot(uint32_t position, Allocator& alloc);
 
     union {
         Leaf rootLeaf;
@@ -577,6 +629,11 @@ private:
 
     void treeInsert(TKey left, TKey right, const TValue& value, Allocator& alloc);
     void updateParentBounds(uint32_t level, const IntervalMapDetails::interval<TKey>& key);
+    bool insertNode(uint32_t level, IntervalMapDetails::NodeRef node,
+                    const IntervalMapDetails::interval<TKey>& key, Allocator& alloc);
+
+    template<typename TNode>
+    bool overflow(uint32_t level, Allocator& alloc);
 };
 
 namespace IntervalMapDetails {
@@ -650,6 +707,42 @@ IntervalMapDetails::IndexPair IntervalMap<TKey, TValue>::switchToBranch(uint32_t
 }
 
 template<typename TKey, typename TValue>
+IntervalMapDetails::IndexPair IntervalMap<TKey, TValue>::splitRoot(uint32_t position,
+                                                                   Allocator& alloc) {
+    using namespace IntervalMapDetails;
+
+    // Split the root branch node into two new branch nodes.
+    constexpr uint32_t NumNodes = 2;
+    uint32_t sizes[NumNodes];
+    IndexPair newOffset = distribute(NumNodes, rootSize, Leaf::Capacity, sizes, position,
+                                     /* grow */ true);
+
+    // Construct new nodes.
+    uint32_t pos = 0;
+    NodeRef nodes[NumNodes];
+    for (uint32_t i = 0; i < NumNodes; i++) {
+        auto branch = alloc.emplace<Branch>();
+        uint32_t size = sizes[i];
+
+        branch->copy(rootBranch, pos, 0, size);
+        nodes[i] = NodeRef(branch, size);
+        pos += size;
+    }
+
+    for (uint32_t i = 0; i < NumNodes; i++) {
+        // The interval of this new child node is the start of the
+        // first child's interval and the end of the last child's interval.
+        auto& branch = nodes[i].template get<Branch>();
+        rootBranch.keyAt(i) = {branch.keyAt(0).left, branch.keyAt(sizes[i] - 1).right};
+        rootBranch.childAt(i) = nodes[i];
+    }
+
+    rootSize = NumNodes;
+    height++;
+    return newOffset;
+}
+
+template<typename TKey, typename TValue>
 void IntervalMap<TKey, TValue>::const_iterator::treeFind(TKey left, TKey right) {
     using namespace IntervalMapDetails;
 
@@ -681,7 +774,9 @@ void IntervalMap<TKey, TValue>::iterator::treeInsert(TKey left, TKey right, cons
     size = path.leaf<Leaf>().insertFrom(path.leafOffset(), size, ival, value);
 
     if (size > Leaf::Capacity) {
-        // TODO: Leaf was full, overflow and try again.
+        // If the new element didn't fit, overflow the node and try again.
+        overflow<Leaf>(path.height(), alloc);
+        size = path.leaf<Leaf>().insertFrom(path.leafOffset(), path.leafSize(), ival, value);
     }
 
     // Update path to match the newly inserted element.
@@ -695,6 +790,175 @@ void IntervalMap<TKey, TValue>::iterator::updateParentBounds(
     auto& path = this->path;
     while (--level)
         path.node<Branch>(level).keyAt(path.offset(level)).unionWith(key);
+}
+
+template<typename TKey, typename TValue>
+template<typename TNode>
+bool IntervalMap<TKey, TValue>::iterator::overflow(uint32_t level, Allocator& alloc) {
+    using namespace IntervalMapDetails;
+
+    auto& path = this->path;
+    uint32_t offset = path.offset(level);
+    uint32_t numElems = 0;
+    uint32_t nodeIndex = 0;
+    TNode* nodes[4];
+    uint32_t curSizes[4];
+
+    // Handle left sibling, if it exists.
+    NodeRef leftSib = path.getLeftSibling(level);
+    if (leftSib) {
+        numElems = curSizes[0] = leftSib.size();
+        offset += numElems;
+        nodes[nodeIndex++] = &leftSib.get<TNode>();
+    }
+
+    // Handle the current node.
+    numElems += curSizes[nodeIndex] = path.size(level);
+    nodes[nodeIndex++] = &path.node<TNode>(level);
+
+    // Handle right sibling, if it exists.
+    NodeRef rightSib = path.getRightSibling(level);
+    if (rightSib) {
+        numElems += curSizes[nodeIndex] = rightSib.size();
+        nodes[nodeIndex++] = &rightSib.get<TNode>();
+    }
+
+    // Check if we need to allocate a new node.
+    uint32_t newNode = 0;
+    if (numElems + 1 > nodeIndex * TNode::Capacity) {
+        // Insert new node at the penultimate position, or after a single node if only one.
+        newNode = nodeIndex == 1 ? 1 : nodeIndex - 1;
+        curSizes[nodeIndex] = curSizes[newNode];
+        nodes[nodeIndex] = nodes[newNode];
+        curSizes[newNode] = 0;
+        nodes[newNode] = alloc.emplace<TNode>();
+        nodeIndex++;
+    }
+
+    // Redistribute elements among the nodes.
+    uint32_t newSizes[4];
+    IndexPair newOffset = distribute(nodeIndex, numElems, TNode::Capacity, newSizes, offset,
+                                     /* grow */ true);
+
+    // Move elements right.
+    for (uint32_t n = nodeIndex - 1; n; --n) {
+        if (curSizes[n] == newSizes[n])
+            continue;
+
+        for (int m = int(n - 1); m != -1; --m) {
+            int delta = nodes[n]->adjustFromLeftSib(curSizes[n], *nodes[m], curSizes[m],
+                                                    newSizes[n] - curSizes[n]);
+            curSizes[m] -= delta;
+            curSizes[n] += delta;
+
+            // If the current node was exhausted we can bail out.
+            if (curSizes[n] >= newSizes[n])
+                break;
+        }
+    }
+
+    // Move elements left.
+    for (uint32_t n = 0; n < nodeIndex - 1; n++) {
+        if (curSizes[n] == newSizes[n])
+            continue;
+
+        for (uint32_t m = n + 1; m < nodeIndex; m++) {
+            int delta = nodes[m]->adjustFromLeftSib(curSizes[m], *nodes[n], curSizes[n],
+                                                    curSizes[n] - newSizes[n]);
+            curSizes[m] += delta;
+            curSizes[n] -= delta;
+
+            // If the current node was exhausted we can bail out.
+            if (curSizes[n] >= newSizes[n])
+                break;
+        }
+    }
+
+    // Move the path to the leftmost node.
+    if (leftSib)
+        path.moveLeft(level);
+
+    // Elements have been moved, update node sizes and interval bounds.
+    bool split = false;
+    uint32_t pos = 0;
+    while (true) {
+        auto ival = nodes[pos]->keyAt(newSizes[pos] - 1);
+        if (newNode && pos == newNode) {
+            // Actually insert the new node that we created earlier.
+            split = insertNode(level, NodeRef(nodes[pos], newSizes[pos]), ival, alloc);
+            if (split)
+                level++;
+        }
+        else {
+            // Otherwise just update the size and bounds.
+            path.setSize(level, newSizes[pos]);
+            updateParentBounds(level, ival);
+        }
+
+        if (pos + 1 == nodeIndex)
+            break;
+
+        path.moveRight(level);
+        ++pos;
+    }
+
+    // Move our path to the new offset of the element we used to be pointing at.
+    while (pos != newOffset.first) {
+        path.moveLeft(level);
+        --pos;
+    }
+
+    path.offset(level) = newOffset.second;
+    return split;
+}
+
+template<typename TKey, typename TValue>
+bool IntervalMap<TKey, TValue>::iterator::insertNode(uint32_t level,
+                                                     IntervalMapDetails::NodeRef node,
+                                                     const IntervalMapDetails::interval<TKey>& key,
+                                                     Allocator& alloc) {
+    ASSERT(level > 0);
+
+    bool split = false;
+    auto& map = *this->map;
+    auto& path = this->path;
+
+    if (level == 1) {
+        // Insert into the root branch node.
+        if (map.rootSize < Branch::Capacity) {
+            map.rootBranch.insert(path.offset(0), map.rootSize, node, key);
+            path.setSize(0, ++map.rootSize);
+            path.reset(level);
+            return false;
+        }
+
+        // We need to split the root while keeping our position.
+        split = true;
+        auto newOffset = map.splitRoot(path.offset(0), alloc);
+        path.replaceRoot(&map.rootBranch, map.rootSize, newOffset);
+
+        // Fall through to insert at the new higher level.
+        level++;
+    }
+
+    // When inserting before end, make sure we have a valid path.
+    path.legalizeForInsert(--level);
+
+    if (path.size(level) == Branch::Capacity) {
+        // Branch node is full, we need to split it.
+        ASSERT(!split);
+        split = overflow<Branch>(level, alloc);
+        if (split)
+            level++;
+    }
+
+    // Actualy insert into the branch node.
+    path.node<Branch>(level).insert(path.offset(level), path.size(level), node, key);
+    path.setSize(level, path.size(level) + 1);
+    updateParentBounds(level, key);
+
+    path.reset(level + 1);
+    return split;
 }
 
 } // namespace slang
