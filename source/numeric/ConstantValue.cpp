@@ -37,7 +37,7 @@ std::string ConstantValue::toString() const {
                 return "$"s;
             else if constexpr (std::is_same_v<T, Elements>) {
                 FormatBuffer buffer;
-                buffer.append("[");
+                buffer.append("'{");
                 for (auto& element : arg) {
                     buffer.append(element.toString());
                     buffer.append(",");
@@ -45,14 +45,14 @@ std::string ConstantValue::toString() const {
 
                 if (!arg.empty())
                     buffer.pop_back();
-                buffer.append("]");
+                buffer.append("}");
                 return buffer.str();
             }
             else if constexpr (std::is_same_v<T, std::string>)
                 return fmt::format("\"{}\"", arg);
             else if constexpr (std::is_same_v<T, Map>) {
                 FormatBuffer buffer;
-                buffer.append("[");
+                buffer.append("'{");
                 for (auto& [key, val] : *arg)
                     buffer.format("{}:{},", key.toString(), val.toString());
 
@@ -61,12 +61,12 @@ std::string ConstantValue::toString() const {
                 else if (!arg->empty())
                     buffer.pop_back();
 
-                buffer.append("]");
+                buffer.append("}");
                 return buffer.str();
             }
             else if constexpr (std::is_same_v<T, Queue>) {
                 FormatBuffer buffer;
-                buffer.append("[");
+                buffer.append("'{");
                 for (auto& element : *arg) {
                     buffer.append(element.toString());
                     buffer.append(",");
@@ -74,7 +74,7 @@ std::string ConstantValue::toString() const {
 
                 if (!arg->empty())
                     buffer.pop_back();
-                buffer.append("]");
+                buffer.append("}");
                 return buffer.str();
             }
             else if constexpr (std::is_same_v<T, Union>) {
