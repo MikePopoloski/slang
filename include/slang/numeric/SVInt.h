@@ -301,7 +301,7 @@ public:
     void writeTo(SmallVectorBase<char>& buffer, LiteralBase base, bool includeBase,
                  bitwidth_t abbreviateThresholdBits = MAX_BITS) const;
     std::string toString(bitwidth_t abbreviateThresholdBits =
-            DefaultStringAbbreviationThresholdBits) const;
+            DefaultStringAbbreviationThresholdBits, bool exactUnknowns = false) const;
     std::string toString(LiteralBase base, bitwidth_t abbreviateThresholdBits =
             DefaultStringAbbreviationThresholdBits) const;
     std::string toString(LiteralBase base, bool includeBase,

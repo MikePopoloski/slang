@@ -19,14 +19,14 @@ struct always_false : std::false_type {};
 
 const ConstantValue ConstantValue::Invalid;
 
-std::string ConstantValue::toString(bitwidth_t abbreviateThresholdBits) const {
+std::string ConstantValue::toString(bitwidth_t abbreviateThresholdBits, bool exactUnknowns) const {
     return std::visit(
-        [abbreviateThresholdBits](auto&& arg) {
+        [abbreviateThresholdBits, exactUnknowns](auto&& arg) {
             using T = std::decay_t<decltype(arg)>;
             if constexpr (std::is_same_v<T, std::monostate>)
                 return "<unset>"s;
             else if constexpr (std::is_same_v<T, SVInt>)
-                return arg.toString(abbreviateThresholdBits);
+                return arg.toString(abbreviateThresholdBits, exactUnknowns);
             else if constexpr (std::is_same_v<T, real_t>)
                 return fmt::format("{}", double(arg));
             else if constexpr (std::is_same_v<T, shortreal_t>)

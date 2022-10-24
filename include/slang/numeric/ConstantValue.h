@@ -148,7 +148,7 @@ public:
     const Variant& getVariant() const { return value; }
 
     std::string toString(bitwidth_t abbreviateThresholdBits =
-            SVInt::DefaultStringAbbreviationThresholdBits) const;
+            SVInt::DefaultStringAbbreviationThresholdBits, bool exactUnknowns = false) const;
     size_t hash() const;
 
     [[nodiscard]] bool empty() const;
