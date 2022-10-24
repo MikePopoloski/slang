@@ -296,11 +296,14 @@ public:
     static SVInt createFillZ(bitwidth_t bitWidth, bool isSigned);
 
     [[nodiscard]] size_t hash() const;
-    void writeTo(SmallVectorBase<char>& buffer, LiteralBase base) const;
+    void writeTo(SmallVectorBase<char>& buffer, LiteralBase base, bitwidth_t
+        abbreviateThresholdBits = DefaultStringAbbreviationThresholdBits) const;
     void writeTo(SmallVectorBase<char>& buffer, LiteralBase base, bool includeBase,
                  bitwidth_t abbreviateThresholdBits = MAX_BITS) const;
-    std::string toString() const;
-    std::string toString(LiteralBase base) const;
+    std::string toString(bitwidth_t abbreviateThresholdBits =
+            DefaultStringAbbreviationThresholdBits) const;
+    std::string toString(LiteralBase base, bitwidth_t abbreviateThresholdBits =
+            DefaultStringAbbreviationThresholdBits) const;
     std::string toString(LiteralBase base, bool includeBase,
                          bitwidth_t abbreviateThresholdBits = MAX_BITS) const;
 
@@ -550,7 +553,7 @@ public:
     static const SVInt One;
 
     /// The default threshold, in bits, to use for abbreviating toString results
-    /// when calling one of the simple toString() methods that doesn't take a user
+    /// when calling one of the simple toString() methods without passing a user
     /// provided threshold.
     static constexpr bitwidth_t DefaultStringAbbreviationThresholdBits = 128;
 

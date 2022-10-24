@@ -19,14 +19,14 @@ struct always_false : std::false_type {};
 
 const ConstantValue ConstantValue::Invalid;
 
-std::string ConstantValue::toString() const {
+std::string ConstantValue::toString(bitwidth_t abbreviateThresholdBits) const {
     return std::visit(
-        [](auto&& arg) {
+        [abbreviateThresholdBits](auto&& arg) {
             using T = std::decay_t<decltype(arg)>;
             if constexpr (std::is_same_v<T, std::monostate>)
                 return "<unset>"s;
             else if constexpr (std::is_same_v<T, SVInt>)
-                return arg.toString();
+                return arg.toString(abbreviateThresholdBits);
             else if constexpr (std::is_same_v<T, real_t>)
                 return fmt::format("{}", double(arg));
             else if constexpr (std::is_same_v<T, shortreal_t>)
@@ -39,7 +39,7 @@ std::string ConstantValue::toString() const {
                 FormatBuffer buffer;
                 buffer.append("'{");
                 for (auto& element : arg) {
-                    buffer.append(element.toString());
+                    buffer.append(element.toString(abbreviateThresholdBits));
                     buffer.append(",");
                 }
 
@@ -54,10 +54,12 @@ std::string ConstantValue::toString() const {
                 FormatBuffer buffer;
                 buffer.append("'{");
                 for (auto& [key, val] : *arg)
-                    buffer.format("{}:{},", key.toString(), val.toString());
+                    buffer.format("{}:{},", key.toString(abbreviateThresholdBits),
+                                  val.toString(abbreviateThresholdBits));
 
                 if (arg->defaultValue)
-                    buffer.format("default:{}", arg->defaultValue.toString());
+                    buffer.format("default:{}",
+                                  arg->defaultValue.toString(abbreviateThresholdBits));
                 else if (!arg->empty())
                     buffer.pop_back();
 
@@ -68,7 +70,7 @@ std::string ConstantValue::toString() const {
                 FormatBuffer buffer;
                 buffer.append("'{");
                 for (auto& element : *arg) {
-                    buffer.append(element.toString());
+                    buffer.append(element.toString(abbreviateThresholdBits));
                     buffer.append(",");
                 }
 
@@ -81,7 +83,7 @@ std::string ConstantValue::toString() const {
                 if (!arg->activeMember)
                     return "(unset)"s;
 
-                return fmt::format("({}) {}", *arg->activeMember, arg->value.toString());
+                return fmt::format("({}) {}", *arg->activeMember, arg->value.toString(abbreviateThresholdBits));
             }
             else {
                 static_assert(always_false<T>::value, "Missing case");
