@@ -6,7 +6,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 ### Highlights
-...
+This release focuses on making slang much more usable as a library. There's been a large amount of refactoring
+and reorganizing to make usage more straightforward. The CMake build was rewritten, and documentation showing how to
+integrate the library has been improved. Python bindings have been added to make it easy to use slang in scripts and tools.
 
 ### Language Support
 * Added support for modport port expressions
