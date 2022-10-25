@@ -320,11 +320,8 @@ private:
 //   sum(newSizes[0..idx-1]) <= Position
 //   sum(newSizes[0..idx])   >= Position
 //
-// The last equality, sum(newSizes[0..idx]) == position, can only happen when
-// grow is set and newSizes[idx] == capacity-1. The index points to the node
-// before the one holding the position element where there is room for an insertion.
 IndexPair distribute(uint32_t numNodes, uint32_t numElements, uint32_t capacity, uint32_t* newSizes,
-                     uint32_t position, bool grow);
+                     uint32_t position);
 
 } // namespace IntervalMapDetails
 
@@ -378,15 +375,15 @@ public:
     bool empty() const { return rootSize == 0; }
 
     void insert(TKey left, TKey right, const TValue& value, Allocator& alloc) {
-        if (!isFlat() || rootSize == Leaf::Capacity) {
+        if (isFlat() && rootSize != Leaf::Capacity) {
+            uint32_t i = rootLeaf.find(rootSize, {left, right});
+            rootSize = rootLeaf.insertFrom(i, rootSize, {left, right}, value);
+        }
+        else {
             iterator it(*this);
             it.setToFind(left, right);
             it.insert(left, right, value, alloc);
-            return;
         }
-
-        uint32_t i = rootLeaf.find(rootSize, {left, right});
-        rootSize = rootLeaf.insertFrom(i, rootSize, {left, right}, value);
     }
 
     iterator begin() {
@@ -548,10 +545,10 @@ protected:
     void setToEnd() { setRoot(map->rootSize); }
 
     void setToFind(TKey left, TKey right) {
-        if (!isFlat())
-            treeFind(left, right);
-        else
+        if (isFlat())
             setRoot(map->rootLeaf.find(map->rootSize, {left, right}));
+        else
+            treeFind(left, right);
     }
 
     void treeFind(TKey left, TKey right);
@@ -601,21 +598,7 @@ private:
 
     iterator(IntervalMap& map) : const_iterator(map) {}
 
-    void insert(TKey left, TKey right, const TValue& value, Allocator& alloc) {
-        auto& map = *this->map;
-        auto& path = this->path;
-
-        if (this->isFlat()) {
-            ASSERT(map.rootSize == Leaf::Capacity);
-
-            auto offset = map.switchToBranch(path.leafOffset(), alloc);
-            path.replaceRoot(&map.rootBranch, map.rootSize, offset);
-        }
-
-        treeInsert(left, right, value, alloc);
-    }
-
-    void treeInsert(TKey left, TKey right, const TValue& value, Allocator& alloc);
+    void insert(TKey left, TKey right, const TValue& value, Allocator& alloc);
     void updateParentBounds(uint32_t level, const IntervalMapDetails::interval<TKey>& key);
     void recomputeBounds(uint32_t level);
     bool insertNode(uint32_t level, IntervalMapDetails::NodeRef node,
@@ -665,8 +648,7 @@ IntervalMapDetails::IndexPair IntervalMap<TKey, TValue>::modifyRoot(TNode& rootN
     // Split the root branch node into two new nodes.
     constexpr uint32_t NumNodes = 2;
     uint32_t sizes[NumNodes];
-    IndexPair newOffset = distribute(NumNodes, rootSize, Leaf::Capacity, sizes, position,
-                                     /* grow */ true);
+    IndexPair newOffset = distribute(NumNodes, rootSize, Leaf::Capacity, sizes, position);
 
     // Construct new nodes.
     uint32_t pos = 0;
@@ -745,12 +727,21 @@ void IntervalMap<TKey, TValue>::const_iterator::treeFind(TKey left, TKey right) 
 }
 
 template<typename TKey, typename TValue>
-void IntervalMap<TKey, TValue>::iterator::treeInsert(TKey left, TKey right, const TValue& value,
-                                                     Allocator& alloc) {
+void IntervalMap<TKey, TValue>::iterator::insert(TKey left, TKey right, const TValue& value,
+                                                 Allocator& alloc) {
     using namespace IntervalMapDetails;
 
-    interval<TKey> ival{left, right};
+    auto& map = *this->map;
     auto& path = this->path;
+
+    if (this->isFlat()) {
+        ASSERT(map.rootSize == Leaf::Capacity);
+
+        auto offset = map.switchToBranch(path.leafOffset(), alloc);
+        path.replaceRoot(&map.rootBranch, map.rootSize, offset);
+    }
+
+    interval<TKey> ival{left, right};
     if (!path.valid())
         path.legalizeForInsert(this->map->height);
 
@@ -795,12 +786,13 @@ void IntervalMap<TKey, TValue>::iterator::recomputeBounds(uint32_t level) {
 template<typename TKey, typename TValue>
 template<typename TNode>
 bool IntervalMap<TKey, TValue>::iterator::overflow(uint32_t level, Allocator& alloc) {
+    ASSERT(level > 0);
     using namespace IntervalMapDetails;
 
     auto& path = this->path;
     uint32_t offset = path.offset(level);
     uint32_t numElems = 0;
-    uint32_t nodeIndex = 0;
+    uint32_t numNodes = 0;
     TNode* nodes[4];
     uint32_t curSizes[4];
 
@@ -809,39 +801,38 @@ bool IntervalMap<TKey, TValue>::iterator::overflow(uint32_t level, Allocator& al
     if (leftSib) {
         numElems = curSizes[0] = leftSib.size();
         offset += numElems;
-        nodes[nodeIndex++] = &leftSib.get<TNode>();
+        nodes[numNodes++] = &leftSib.get<TNode>();
     }
 
     // Handle the current node.
-    numElems += curSizes[nodeIndex] = path.size(level);
-    nodes[nodeIndex++] = &path.node<TNode>(level);
+    numElems += curSizes[numNodes] = path.size(level);
+    nodes[numNodes++] = &path.node<TNode>(level);
 
     // Handle right sibling, if it exists.
     NodeRef rightSib = path.getRightSibling(level);
     if (rightSib) {
-        numElems += curSizes[nodeIndex] = rightSib.size();
-        nodes[nodeIndex++] = &rightSib.get<TNode>();
+        numElems += curSizes[numNodes] = rightSib.size();
+        nodes[numNodes++] = &rightSib.get<TNode>();
     }
 
     // Check if we need to allocate a new node.
     uint32_t newNode = 0;
-    if (numElems + 1 > nodeIndex * TNode::Capacity) {
+    if (numElems + 1 > numNodes * TNode::Capacity) {
         // Insert new node at the penultimate position, or after a single node if only one.
-        newNode = nodeIndex == 1 ? 1 : nodeIndex - 1;
-        curSizes[nodeIndex] = curSizes[newNode];
-        nodes[nodeIndex] = nodes[newNode];
+        newNode = numNodes == 1 ? 1 : numNodes - 1;
+        curSizes[numNodes] = curSizes[newNode];
+        nodes[numNodes] = nodes[newNode];
         curSizes[newNode] = 0;
         nodes[newNode] = alloc.emplace<TNode>();
-        nodeIndex++;
+        numNodes++;
     }
 
     // Redistribute elements among the nodes.
     uint32_t newSizes[4];
-    IndexPair newOffset = distribute(nodeIndex, numElems, TNode::Capacity, newSizes, offset,
-                                     /* grow */ true);
+    IndexPair newOffset = distribute(numNodes, numElems, TNode::Capacity, newSizes, offset);
 
     // Move elements right.
-    for (uint32_t n = nodeIndex - 1; n; --n) {
+    for (uint32_t n = numNodes - 1; n; --n) {
         if (curSizes[n] == newSizes[n])
             continue;
 
@@ -858,11 +849,11 @@ bool IntervalMap<TKey, TValue>::iterator::overflow(uint32_t level, Allocator& al
     }
 
     // Move elements left.
-    for (uint32_t n = 0; n < nodeIndex - 1; n++) {
+    for (uint32_t n = 0; n < numNodes - 1; n++) {
         if (curSizes[n] == newSizes[n])
             continue;
 
-        for (uint32_t m = n + 1; m < nodeIndex; m++) {
+        for (uint32_t m = n + 1; m < numNodes; m++) {
             int delta = nodes[m]->adjustFromLeftSib(curSizes[m], *nodes[n], curSizes[n],
                                                     curSizes[n] - newSizes[n]);
             curSizes[m] += delta;
@@ -895,7 +886,7 @@ bool IntervalMap<TKey, TValue>::iterator::overflow(uint32_t level, Allocator& al
             recomputeBounds(level);
         }
 
-        if (pos + 1 == nodeIndex)
+        if (pos + 1 == numNodes)
             break;
 
         path.moveRight(level);

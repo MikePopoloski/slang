@@ -65,9 +65,7 @@ void Path::moveRight(uint32_t level) {
 }
 
 NodeRef Path::getLeftSibling(uint32_t level) const {
-    // Root has no siblings.
-    if (level == 0)
-        return NodeRef();
+    ASSERT(level > 0);
 
     // Go up until we can go left.
     uint32_t l = level - 1;
@@ -87,9 +85,7 @@ NodeRef Path::getLeftSibling(uint32_t level) const {
 }
 
 NodeRef Path::getRightSibling(uint32_t level) const {
-    // Root has no siblings.
-    if (level == 0)
-        return NodeRef();
+    ASSERT(level > 0);
 
     // Go up until we can go right.
     uint32_t l = level - 1;
@@ -109,15 +105,14 @@ NodeRef Path::getRightSibling(uint32_t level) const {
 }
 
 IndexPair distribute(uint32_t numNodes, uint32_t numElements, uint32_t capacity, uint32_t* newSizes,
-                     uint32_t position, bool grow) {
-    ASSERT(numElements + grow <= numNodes * capacity);
+                     uint32_t position) {
+    ASSERT(numElements + 1 <= numNodes * capacity);
     ASSERT(position <= numElements);
-    if (!numNodes)
-        return {};
+    ASSERT(numNodes > 0);
 
     // left-leaning even distribution
-    const uint32_t perNode = (numElements + grow) / numNodes;
-    const uint32_t extra = (numElements + grow) % numNodes;
+    const uint32_t perNode = (numElements + 1) / numNodes;
+    const uint32_t extra = (numElements + 1) % numNodes;
     IndexPair posPair(numNodes, 0);
     uint32_t sum = 0;
     for (uint32_t n = 0; n != numNodes; ++n) {
@@ -126,13 +121,11 @@ IndexPair distribute(uint32_t numNodes, uint32_t numElements, uint32_t capacity,
             posPair = {n, position - (sum - newSizes[n])};
     }
 
-    // Subtract the grow element that was added.
-    ASSERT(sum == numElements + grow);
-    if (grow) {
-        ASSERT(posPair.first < numNodes);
-        ASSERT(newSizes[posPair.first]);
-        --newSizes[posPair.first];
-    }
+    // Subtract the new element that was added.
+    ASSERT(sum == numElements + 1);
+    ASSERT(posPair.first < numNodes);
+    ASSERT(newSizes[posPair.first]);
+    --newSizes[posPair.first];
 
     return posPair;
 }
