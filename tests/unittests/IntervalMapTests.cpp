@@ -5,6 +5,7 @@
 
 #include "Test.h"
 #include <fmt/format.h>
+#include <random>
 
 #include "slang/util/IntervalMap.h"
 
@@ -73,4 +74,42 @@ TEST_CASE("IntervalMap -- branching inserts") {
     }
 
     CHECK(!map.empty());
+    CHECK(map.getBounds() == std::pair{10, 9995});
+
+    auto it = map.begin();
+    for (uint32_t i = 1; i < 1000; i++) {
+        CHECK(it.valid());
+        CHECK(it.left() == 10 * i);
+        CHECK(it.right() == 10 * i + 5);
+        CHECK(*it == i);
+        it++;
+    }
+
+    CHECK(!it.valid());
+    CHECK(it == map.end());
+
+    for (uint32_t i = 999; i; --i) {
+        --it;
+        CHECK(it.valid());
+        CHECK(it.left() == 10 * i);
+        CHECK(it.right() == 10 * i + 5);
+        CHECK(*it == i);
+    }
+    CHECK(it == map.begin());
+
+    // Insert more intervals in the middle.
+    for (int32_t i = 0; i < 100; i++)
+        map.insert(11 * i, 11 * i + i, i, alloc);
+
+    // Insert a bunch of psuedo-random intervals.
+    std::mt19937 mt;
+    std::uniform_int_distribution dist;
+    using PT = std::uniform_int_distribution<int>::param_type;
+    for (int32_t i = 0; i < 1000; i++) {
+        int32_t left = dist(mt, PT{1, 10000});
+        int32_t right = dist(mt, PT{left, 10000});
+        map.insert(left, right, i, alloc);
+    }
+
+    map.verify();
 }

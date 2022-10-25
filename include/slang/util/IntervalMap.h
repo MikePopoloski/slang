@@ -31,12 +31,9 @@ struct interval {
         left = std::min(left, rhs.left);
         right = std::max(right, rhs.right);
     }
-};
 
-template<typename T>
-bool operator<(const interval<T>& a, const interval<T>& b) {
-    return a.left < b.left || (a.left == b.left && a.right < b.right);
-}
+    bool operator==(const interval<T>& rhs) { return left == rhs.left && right == rhs.right; }
+};
 
 using IndexPair = std::pair<uint32_t, uint32_t>;
 
@@ -158,16 +155,6 @@ struct NodeRef {
 
     explicit operator bool() const { return pip.getOpaqueValue(); }
 
-    bool operator==(const NodeRef& rhs) const {
-        if (pip == rhs.pip)
-            return true;
-
-        ASSERT(pip.getPointer() != rhs.pip.getPointer());
-        return false;
-    }
-
-    bool operator!=(const NodeRef& rhs) const { return !(*this == rhs); }
-
 private:
     PointerIntPair<void*, Log2CacheLine, Log2CacheLine> pip;
 };
@@ -176,26 +163,12 @@ private:
 // on the derived type of the node itself.
 template<typename TKey, typename TDerived>
 struct NodeImpl {
-    uint32_t findFrom(uint32_t i, uint32_t size, const interval<TKey>& key) const {
+    uint32_t find(uint32_t size, const interval<TKey>& key) const {
         auto& self = *static_cast<const TDerived*>(this);
-        ASSERT(i <= size && size <= TDerived::Capacity);
-        ASSERT(i == 0 || self.keyAt(i - 1) < key);
-        while (i != size && self.keyAt(i) < key)
+        ASSERT(size <= TDerived::Capacity);
+        uint32_t i = 0;
+        while (i != size && self.keyAt(i).left < key.left)
             i++;
-        return i;
-    }
-
-    // Same as findFrom except that we don't need the size because we know it's
-    // safe to call this on this particular branch and we'll always find a slot
-    // before hitting the end of the child array.
-    uint32_t safeFind(uint32_t i, const interval<TKey>& key) const {
-        auto& self = *static_cast<const TDerived*>(this);
-        ASSERT(i < TDerived::Capacity);
-        ASSERT(i == 0 || self.keyAt(i - 1) < key);
-        while (self.keyAt(i) < key)
-            i++;
-
-        ASSERT(i < TDerived::Capacity);
         return i;
     }
 
@@ -408,10 +381,11 @@ public:
         if (!isFlat() || rootSize == Leaf::Capacity) {
             iterator it(*this);
             it.setToFind(left, right);
-            return it.insert(left, right, value, alloc);
+            it.insert(left, right, value, alloc);
+            return;
         }
 
-        uint32_t i = rootLeaf.findFrom(0, rootSize, {left, right});
+        uint32_t i = rootLeaf.find(rootSize, {left, right});
         rootSize = rootLeaf.insertFrom(i, rootSize, {left, right}, value);
     }
 
@@ -447,11 +421,18 @@ public:
         return {ival.left, ival.right};
     }
 
+    void verify() const {
+        TKey lastKey = std::numeric_limits<TKey>::min();
+        verify(rootBranch, rootSize, 0, lastKey);
+    }
+
 private:
     friend class iterator;
     friend class const_iterator;
 
     bool isFlat() const { return height == 0; }
+
+    void verify(const Branch& branch, uint32_t size, uint32_t depth, TKey& lastKey) const;
 
     template<typename TNode, bool SwitchToBranch>
     IntervalMapDetails::IndexPair modifyRoot(TNode& rootNode, uint32_t position, Allocator& alloc);
@@ -528,8 +509,7 @@ public:
     }
 
     const_iterator& operator--() {
-        ASSERT(valid());
-        if (path.leafOffset())
+        if (path.leafOffset() && (valid() || isFlat()))
             --path.leafOffset();
         else
             path.moveLeft(map->height);
@@ -571,7 +551,7 @@ protected:
         if (!isFlat())
             treeFind(left, right);
         else
-            setRoot(map->rootLeaf.findFrom(0, map->rootSize, {left, right}));
+            setRoot(map->rootLeaf.find(map->rootSize, {left, right}));
     }
 
     void treeFind(TKey left, TKey right);
@@ -637,6 +617,7 @@ private:
 
     void treeInsert(TKey left, TKey right, const TValue& value, Allocator& alloc);
     void updateParentBounds(uint32_t level, const IntervalMapDetails::interval<TKey>& key);
+    void recomputeBounds(uint32_t level);
     bool insertNode(uint32_t level, IntervalMapDetails::NodeRef node,
                     const IntervalMapDetails::interval<TKey>& key, Allocator& alloc);
 
@@ -652,8 +633,8 @@ uint32_t LeafNode<TKey, TValue, Capacity>::insertFrom(uint32_t i, uint32_t size,
                                                       const TValue& value) {
     ASSERT(i <= size && size <= Capacity);
     ASSERT(key.left <= key.right);
-    ASSERT(i == 0 || keyAt(i - 1) < key);
-    ASSERT(i == size || !(keyAt(i) < key));
+    ASSERT(i == 0 || keyAt(i - 1).left < key.left);
+    ASSERT(i == size || !(keyAt(i).left < key.left));
 
     // If we're at capacity we can't insert another element.
     if (i == Capacity)
@@ -716,20 +697,50 @@ IntervalMapDetails::IndexPair IntervalMap<TKey, TValue>::modifyRoot(TNode& rootN
 }
 
 template<typename TKey, typename TValue>
+void IntervalMap<TKey, TValue>::verify(const Branch& branch, uint32_t size, uint32_t depth,
+                                       TKey& lastKey) const {
+    for (uint32_t i = 0; i < size; i++) {
+        auto child = branch.childAt(i);
+        auto key = branch.keyAt(i);
+
+        ASSERT(key.left >= lastKey);
+        lastKey = key.left;
+
+        if (depth == height - 1) {
+            auto bounds = child.get<Leaf>().getBounds(child.size());
+            ASSERT(bounds == key);
+        }
+        else {
+            auto& childBranch = child.get<Branch>();
+            auto bounds = childBranch.getBounds(child.size());
+            ASSERT(bounds == key);
+
+            verify(childBranch, child.size(), depth + 1, lastKey);
+        }
+    }
+}
+
+template<typename TKey, typename TValue>
 void IntervalMap<TKey, TValue>::const_iterator::treeFind(TKey left, TKey right) {
     using namespace IntervalMapDetails;
 
     interval<TKey> ival{left, right};
-    setRoot(map->rootBranch.findFrom(0, map->rootSize, ival));
+    uint32_t offset = map->rootBranch.find(map->rootSize, ival);
+    if (offset)
+        offset--;
+    setRoot(offset);
+
     if (valid()) {
         auto child = path.childAt(path.height());
         for (uint32_t i = map->height - path.height() - 1; i > 0; i--) {
-            uint32_t offset = child.get<Branch>().safeFind(0, ival);
+            uint32_t offset = child.get<Branch>().find(child.size(), ival);
+            if (offset)
+                offset--;
             path.push(child, offset);
             child = child.childAt(offset);
         }
 
-        path.push(child, child.get<Leaf>().safeFind(0, ival));
+        path.push(child, child.get<Leaf>().find(child.size(), ival));
     }
 }
 
@@ -764,6 +775,20 @@ void IntervalMap<TKey, TValue>::iterator::updateParentBounds(
     while (level) {
         --level;
         path.node<Branch>(level).keyAt(path.offset(level)).unionWith(key);
+    }
+}
+
+template<typename TKey, typename TValue>
+void IntervalMap<TKey, TValue>::iterator::recomputeBounds(uint32_t level) {
+    auto& path = this->path;
+    while (level) {
+        --level;
+        auto& branch = path.node<Branch>(level);
+        auto offset = path.offset(level);
+        auto child = branch.childAt(offset);
+        auto bounds = (level == path.height() - 1) ? child.get<Leaf>().getBounds(child.size())
+                                                   : child.get<Branch>().getBounds(child.size());
+        branch.keyAt(offset) = bounds;
     }
 }
 
@@ -857,9 +882,9 @@ bool IntervalMap<TKey, TValue>::iterator::overflow(uint32_t level, Allocator& al
     bool split = false;
     uint32_t pos = 0;
     while (true) {
-        auto ival = nodes[pos]->keyAt(newSizes[pos] - 1);
         if (newNode && pos == newNode) {
             // Actually insert the new node that we created earlier.
+            auto ival = nodes[pos]->getBounds(newSizes[pos]);
             split = insertNode(level, NodeRef(nodes[pos], newSizes[pos]), ival, alloc);
             if (split)
                 level++;
@@ -867,7 +892,7 @@ bool IntervalMap<TKey, TValue>::iterator::overflow(uint32_t level, Allocator& al
         else {
             // Otherwise just update the size and bounds.
             path.setSize(level, newSizes[pos]);
-            updateParentBounds(level, ival);
+            recomputeBounds(level);
         }
 
         if (pos + 1 == nodeIndex)
@@ -927,7 +952,7 @@ bool IntervalMap<TKey, TValue>::iterator::insertNode(uint32_t level,
             level++;
     }
 
-    // Actualy insert into the branch node.
+    // Actually insert into the branch node.
     path.node<Branch>(level).insert(path.offset(level), path.size(level), node, key);
     path.setSize(level, path.size(level) + 1);
     updateParentBounds(level, key);
