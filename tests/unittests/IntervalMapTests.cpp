@@ -21,6 +21,7 @@ TEST_CASE("IntervalMap -- empty map") {
 
     CHECK(std::cbegin(map) == map.begin());
     CHECK(std::cend(map) == map.end());
+    map.verify();
 }
 
 TEST_CASE("IntervalMap -- small num elems in root leaf") {
@@ -36,30 +37,27 @@ TEST_CASE("IntervalMap -- small num elems in root leaf") {
 
     auto it = map.begin();
     REQUIRE(it != map.end());
-    CHECK(it.left() == 1);
-    CHECK(it.right() == 10);
+    CHECK(it.bounds() == std::pair{1, 10});
     CHECK(*it == 1);
 
     ++it;
-    CHECK(it.left() == 2);
-    CHECK(it.right() == 12);
+    CHECK(it.bounds() == std::pair{2, 12});
 
     it++;
-    CHECK(it.left() == 3);
-    CHECK(it.right() == 6);
+    CHECK(it.bounds() == std::pair{3, 6});
 
     it++;
-    CHECK(it.left() == 3);
-    CHECK(it.right() == 7);
+    CHECK(it.bounds() == std::pair{3, 7});
 
     --it;
-    CHECK(it.right() == 6);
+    CHECK(it.bounds() == std::pair{3, 6});
 
     it--;
-    CHECK(it.left() == 2);
+    CHECK(it.bounds() == std::pair{2, 12});
     CHECK(*it == 3);
 
     CHECK(map.getBounds() == std::pair{1, 42});
+    map.verify();
 }
 
 TEST_CASE("IntervalMap -- branching inserts") {
@@ -77,10 +75,9 @@ TEST_CASE("IntervalMap -- branching inserts") {
     CHECK(map.getBounds() == std::pair{10, 9995});
 
     auto it = map.begin();
-    for (uint32_t i = 1; i < 1000; i++) {
+    for (int32_t i = 1; i < 1000; i++) {
         CHECK(it.valid());
-        CHECK(it.left() == 10 * i);
-        CHECK(it.right() == 10 * i + 5);
+        CHECK(it.bounds() == std::pair{10 * i, 10 * i + 5});
         CHECK(*it == i);
         it++;
     }
@@ -88,11 +85,10 @@ TEST_CASE("IntervalMap -- branching inserts") {
     CHECK(!it.valid());
     CHECK(it == map.end());
 
-    for (uint32_t i = 999; i; --i) {
+    for (int32_t i = 999; i; --i) {
         --it;
         CHECK(it.valid());
-        CHECK(it.left() == 10 * i);
-        CHECK(it.right() == 10 * i + 5);
+        CHECK(it.bounds() == std::pair{10 * i, 10 * i + 5});
         CHECK(*it == i);
     }
     CHECK(it == map.begin());
@@ -112,4 +108,31 @@ TEST_CASE("IntervalMap -- branching inserts") {
     }
 
     map.verify();
+}
+
+TEST_CASE("IntervalMap -- simple overlap lookup") {
+    IntervalMap<int32_t, int32_t> map;
+    BumpAllocator ba;
+    IntervalMap<int32_t, int32_t>::Allocator alloc(ba);
+
+    map.insert(1, 10, 1, alloc);
+    map.insert(3, 7, 2, alloc);
+    map.insert(2, 12, 3, alloc);
+    map.insert(32, 42, 4, alloc);
+    map.insert(3, 6, 5, alloc);
+
+    auto it = map.find(7, 20);
+    CHECK(it.valid());
+    CHECK(it.bounds() == std::pair{1, 10});
+    CHECK(*it == 1);
+
+    it++;
+    CHECK(it.valid());
+    CHECK(it.bounds() == std::pair{2, 12});
+
+    ++it;
+    CHECK(it.bounds() == std::pair{3, 7});
+
+    ++it;
+    CHECK(it == map.end());
 }

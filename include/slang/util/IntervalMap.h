@@ -164,12 +164,31 @@ private:
 template<typename TKey, typename TDerived>
 struct NodeImpl {
     uint32_t find(uint32_t size, const interval<TKey>& key) const {
-        auto& self = *static_cast<const TDerived*>(this);
         ASSERT(size <= TDerived::Capacity);
+        auto& self = *static_cast<const TDerived*>(this);
         uint32_t i = 0;
         while (i != size && self.keyAt(i).left < key.left)
             i++;
         return i;
+    }
+
+    uint32_t findFirstOverlap(uint32_t i, uint32_t size, const interval<TKey>& key) const {
+        ASSERT(i <= size);
+        ASSERT(size <= TDerived::Capacity);
+        auto& self = *static_cast<const TDerived*>(this);
+
+        for (; i < size; i++) {
+            // Our left values are ordered, so if our right is before the
+            // current left then there's no way anything here overlaps.
+            auto curr = self.keyAt(i);
+            if (curr.left > key.right)
+                break;
+
+            if (curr.right >= key.left)
+                return i;
+        }
+
+        return size;
     }
 
     interval<TKey> getBounds(uint32_t size) const {
@@ -291,6 +310,18 @@ struct Path {
         ++path[level].offset;
     }
 
+    bool operator==(const Path& rhs) const {
+        if (!valid())
+            return !rhs.valid();
+
+        if (leafOffset() != rhs.leafOffset())
+            return false;
+
+        return path.back().node == rhs.path.back().node;
+    }
+
+    bool operator!=(const Path& rhs) const { return !(*this == rhs); }
+
 private:
     struct Entry {
         void* node;
@@ -410,7 +441,11 @@ public:
         return i;
     }
 
-    overlap_iterator find(TKey left, TKey right) const;
+    overlap_iterator find(TKey left, TKey right) const {
+        overlap_iterator i(*this, left, right);
+        i.setToBegin();
+        return i;
+    }
 
     std::pair<TKey, TKey> getBounds() const {
         ASSERT(!empty());
@@ -419,6 +454,9 @@ public:
     }
 
     void verify() const {
+        if (isFlat())
+            return;
+
         TKey lastKey = std::numeric_limits<TKey>::min();
         verify(rootBranch, rootSize, 0, lastKey);
     }
@@ -426,6 +464,7 @@ public:
 private:
     friend class iterator;
     friend class const_iterator;
+    friend class overlap_iterator;
 
     bool isFlat() const { return height == 0; }
 
@@ -462,14 +501,10 @@ public:
 
     const_iterator() = default;
 
-    TKey left() const {
+    std::pair<TKey, TKey> bounds() const {
         ASSERT(valid());
-        return path.leaf<Leaf>().keyAt(path.leafOffset()).left;
-    }
-
-    TKey right() const {
-        ASSERT(valid());
-        return path.leaf<Leaf>().keyAt(path.leafOffset()).right;
+        auto ival = path.leaf<Leaf>().keyAt(path.leafOffset());
+        return {ival.left, ival.right};
     }
 
     bool valid() const { return path.valid(); }
@@ -479,18 +514,10 @@ public:
         return path.leaf<Leaf>().valueAt(path.leafOffset());
     }
 
-    bool operator==(const const_iterator& rhs) const {
-        ASSERT(map == rhs.map);
-        if (!valid())
-            return !rhs.valid();
-
-        if (path.leafOffset() != rhs.path.leafOffset())
-            return false;
-
-        return &path.template leaf<Leaf>() == &rhs.path.template leaf<Leaf>();
-    }
-
+    bool operator==(const const_iterator& rhs) const { return path == rhs.path; }
     bool operator!=(const const_iterator& rhs) const { return !(*this == rhs); }
+    bool operator==(const overlap_iterator& rhs) const { return path == rhs.path; }
+    bool operator!=(const overlap_iterator& rhs) const { return !(*this == rhs); }
 
     const_iterator& operator++() {
         ASSERT(valid());
@@ -606,6 +633,87 @@ private:
 
     template<typename TNode>
     bool overflow(uint32_t level, Allocator& alloc);
+};
+
+template<typename TKey, typename TValue>
+class IntervalMap<TKey, TValue>::overlap_iterator {
+public:
+    using iterator_category = std::forward_iterator_tag;
+    using difference_type = std::ptrdiff_t;
+    using value_type = const TValue;
+    using pointer = value_type*;
+    using reference = value_type&;
+
+    overlap_iterator() = default;
+
+    bool valid() const { return path.valid(); }
+
+    std::pair<TKey, TKey> bounds() const {
+        ASSERT(valid());
+        auto ival = path.leaf<Leaf>().keyAt(path.leafOffset());
+        return {ival.left, ival.right};
+    }
+
+    const TValue& operator*() const {
+        ASSERT(valid());
+        return path.leaf<Leaf>().valueAt(path.leafOffset());
+    }
+
+    overlap_iterator& operator++() {
+        ASSERT(valid());
+
+        uint32_t offset = path.leafOffset() + 1;
+        offset = path.leaf<Leaf>().findFirstOverlap(offset, path.leafSize(), searchKey);
+
+        path.leafOffset() = offset;
+        if (offset == path.leafSize() && !isFlat()) {
+            // TODO:
+        }
+
+        return *this;
+    }
+
+    overlap_iterator operator++(int) {
+        overlap_iterator tmp(*this);
+        ++(*this);
+        return tmp;
+    }
+
+    bool operator==(const overlap_iterator& rhs) const { return path == rhs.path; }
+    bool operator!=(const overlap_iterator& rhs) const { return !(*this == rhs); }
+    bool operator==(const const_iterator& rhs) const { return path == rhs.path; }
+    bool operator!=(const const_iterator& rhs) const { return !(*this == rhs); }
+
+protected:
+    friend class IntervalMap;
+
+    explicit overlap_iterator(const IntervalMap& map, TKey left, TKey right) :
+        map(const_cast<IntervalMap*>(&map)), searchKey({left, right}) {}
+
+    bool isFlat() const {
+        ASSERT(map);
+        return map->isFlat();
+    }
+
+    void setRoot(uint32_t offset) {
+        if (isFlat())
+            path.setRoot(&map->rootLeaf, map->rootSize, offset);
+        else
+            path.setRoot(&map->rootBranch, map->rootSize, offset);
+    }
+
+    void setToBegin() {
+        if (isFlat()) {
+            setRoot(map->rootLeaf.findFirstOverlap(0, map->rootSize, searchKey));
+        }
+        else {
+            // TODO:
+        }
+    }
+
+    IntervalMap* map = nullptr;
+    IntervalMapDetails::interval<TKey> searchKey{};
+    IntervalMapDetails::Path path;
 };
 
 namespace IntervalMapDetails {
