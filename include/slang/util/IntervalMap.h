@@ -294,6 +294,7 @@ struct Path {
     NodeRef getRightSibling(uint32_t level) const;
 
     void push(NodeRef node, uint32_t offset) { path.emplace_back(node, offset); }
+    void pop() { path.pop_back(); }
 
     // Resets the cached information about the node at the given level after it's
     // been modified by some other operation.
@@ -417,6 +418,10 @@ public:
         }
     }
 
+    void insert(const std::pair<TKey, TKey>& key, const TValue& value, Allocator& alloc) {
+        insert(key.first, key.second, value, alloc);
+    }
+
     iterator begin() {
         iterator i(*this);
         i.setToBegin();
@@ -445,6 +450,10 @@ public:
         overlap_iterator i(*this, left, right);
         i.setToBegin();
         return i;
+    }
+
+    overlap_iterator find(const std::pair<TKey, TKey>& key) const {
+        return find(key.first, key.second);
     }
 
     std::pair<TKey, TKey> getBounds() const {
@@ -666,9 +675,8 @@ public:
         offset = path.leaf<Leaf>().findFirstOverlap(offset, path.leafSize(), searchKey);
 
         path.leafOffset() = offset;
-        if (offset == path.leafSize() && !isFlat()) {
-            // TODO:
-        }
+        if (offset == path.leafSize() && !isFlat())
+            nextOverlap();
 
         return *this;
     }
@@ -707,9 +715,13 @@ protected:
             setRoot(map->rootLeaf.findFirstOverlap(0, map->rootSize, searchKey));
         }
         else {
-            // TODO:
+            setRoot(map->rootBranch.findFirstOverlap(0, map->rootSize, searchKey));
+            treeFind();
         }
     }
+
+    void treeFind();
+    void nextOverlap();
 
     IntervalMap* map = nullptr;
     IntervalMapDetails::interval<TKey> searchKey{};
@@ -1058,6 +1070,46 @@ bool IntervalMap<TKey, TValue>::iterator::insertNode(uint32_t level,
 
     path.reset(level + 1);
     return split;
+}
+
+template<typename TKey, typename TValue>
+void IntervalMap<TKey, TValue>::overlap_iterator::treeFind() {
+    if (!valid())
+        return;
+
+    auto child = path.childAt(path.height());
+    for (uint32_t i = map->height - path.height() - 1; i > 0; i--) {
+        uint32_t offset = child.get<Branch>().findFirstOverlap(0, child.size(), searchKey);
+        path.push(child, offset);
+        child = child.childAt(offset);
+    }
+
+    path.push(child, child.get<Leaf>().findFirstOverlap(0, child.size(), searchKey));
+}
+
+template<typename TKey, typename TValue>
+void IntervalMap<TKey, TValue>::overlap_iterator::nextOverlap() {
+    ASSERT(path.leafOffset() == path.leafSize());
+    ASSERT(valid());
+
+    // Pop up a level and try to move forward. Keep going until we
+    // find a new branch that overlaps our target key.
+    uint32_t l = path.height();
+    while (path.height()) {
+        path.pop();
+        --l;
+
+        uint32_t& offset = path.leafOffset();
+        uint32_t size = path.leafSize();
+        if (offset < size - 1) {
+            offset = path.node<Branch>(l).findFirstOverlap(offset + 1, size, searchKey);
+            if (offset != size)
+                break;
+        }
+    }
+
+    // Descend back down to the next overlapping leaf node from our current position.
+    treeFind();
 }
 
 } // namespace slang
