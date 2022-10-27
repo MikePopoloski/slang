@@ -87,7 +87,11 @@ void TypePrinter::visit(const EnumType& type, string_view overrideName) {
             buffer->append(overrideName);
     }
     else {
-        buffer->append("enum{");
+        buffer->append("enum");
+        if (options.fullEnumType) {
+            buffer->append(" " + type.baseType.toString());
+        }
+        buffer->append("{");
 
         bool first = true;
         for (const auto& member : type.values()) {

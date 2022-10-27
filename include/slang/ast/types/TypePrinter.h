@@ -26,6 +26,7 @@ struct SLANG_EXPORT TypePrintingOptions {
     bool elideScopeNames = false;
     bool printAKA = false;
     bool skipScopedTypeNames = false;
+    bool fullEnumType = false;
 
     enum AnonymousTypeStyle { SystemName, FriendlyName } anonymousTypeStyle = SystemName;
 };
