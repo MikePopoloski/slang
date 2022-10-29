@@ -49,7 +49,7 @@ jobs:
     - name: Run tests
       run: |
         cd build/${{ matrix.preset }}
-        ctest --output-on-failure
+        ctest --output-on-failure --no-tests=error
 
   coverage:
     runs-on: ubuntu-22.04
@@ -67,7 +67,7 @@ jobs:
       run: cmake --build build/ci-coverage -j8
     - name: Run tests
       working-directory: build/ci-coverage
-      run: ctest --output-on-failure
+      run: ctest --output-on-failure --no-tests=error
     - name: Process coverage info
       run: cmake --build build/ci-coverage -t coverage
     - name: Submit to codecov.io
@@ -89,4 +89,4 @@ jobs:
       run: cmake --build build --config Release -j8
     - name: Run tests
       working-directory: build
-      run: ctest --output-on-failure -C Release
+      run: ctest --output-on-failure -C Release --no-tests=error
