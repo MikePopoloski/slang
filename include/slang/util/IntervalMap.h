@@ -100,13 +100,13 @@ struct NodeBase {
             // Copy from sibling.
             uint32_t count = std::min(std::min(uint32_t(toAdd), sibSize), Capacity - size);
             sib.transferToRightSib(sibSize, *this, size, count);
-            return count;
+            return int(count);
         }
         else {
             // Copy to sibling.
             uint32_t count = std::min(std::min(uint32_t(-toAdd), size), Capacity - sibSize);
             transferToLeftSib(size, sib, sibSize, count);
-            return -count;
+            return int(-count);
         }
     }
 };
@@ -835,7 +835,7 @@ void IntervalMap<TKey, TValue>::const_iterator::treeFind(TKey left, TKey right) 
     if (valid()) {
         auto child = path.childAt(path.height());
         for (uint32_t i = map->height - path.height() - 1; i > 0; i--) {
-            uint32_t offset = child.get<Branch>().find(child.size(), ival);
+            offset = child.get<Branch>().find(child.size(), ival);
             if (offset)
                 offset--;
             path.push(child, offset);
@@ -961,8 +961,8 @@ bool IntervalMap<TKey, TValue>::iterator::overflow(uint32_t level, Allocator& al
         for (int m = int(n - 1); m != -1; --m) {
             int delta = nodes[n]->adjustFromLeftSib(curSizes[n], *nodes[m], curSizes[m],
                                                     newSizes[n] - curSizes[n]);
-            curSizes[m] -= delta;
-            curSizes[n] += delta;
+            curSizes[m] = uint32_t(int(curSizes[m]) - delta);
+            curSizes[n] = uint32_t(int(curSizes[n]) + delta);
 
             // If the current node was exhausted we can bail out.
             if (curSizes[n] >= newSizes[n])
@@ -978,8 +978,8 @@ bool IntervalMap<TKey, TValue>::iterator::overflow(uint32_t level, Allocator& al
         for (uint32_t m = n + 1; m < numNodes; m++) {
             int delta = nodes[m]->adjustFromLeftSib(curSizes[m], *nodes[n], curSizes[n],
                                                     curSizes[n] - newSizes[n]);
-            curSizes[m] += delta;
-            curSizes[n] -= delta;
+            curSizes[m] = uint32_t(int(curSizes[m]) + delta);
+            curSizes[n] = uint32_t(int(curSizes[n]) - delta);
 
             // If the current node was exhausted we can bail out.
             if (curSizes[n] >= newSizes[n])

@@ -31,13 +31,13 @@ public:
     TInt getInt() const { return TInt((value >> IntShift) & IntMask); }
 
     void setPointer(TPointer ptr) {
-        intptr_t ptrWord = reinterpret_cast<intptr_t>(ptr);
+        uintptr_t ptrWord = reinterpret_cast<uintptr_t>(ptr);
         ASSERT((ptrWord & ~PointerMask) == 0);
         value = ptrWord | (value & ~PointerMask);
     }
 
     void setInt(TInt intVal) {
-        intptr_t intWord = static_cast<intptr_t>(intVal);
+        uintptr_t intWord = static_cast<uintptr_t>(intVal);
         ASSERT((intWord & ~IntMask) == 0);
         value = (value & ~ShiftedIntMask) | (intWord << IntShift);
     }
@@ -48,7 +48,7 @@ public:
         setInt(intVal);
     }
 
-    intptr_t getOpaqueValue() const { return value; }
+    uintptr_t getOpaqueValue() const { return value; }
 
     bool operator==(const PointerIntPair& rhs) const { return value == rhs.value; }
     bool operator!=(const PointerIntPair& rhs) const { return value != rhs.value; }
@@ -58,7 +58,7 @@ public:
     bool operator>=(const PointerIntPair& rhs) const { return value >= rhs.value; }
 
 private:
-    intptr_t value = 0;
+    uintptr_t value = 0;
 };
 
 } // namespace slang
