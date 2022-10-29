@@ -63,7 +63,7 @@ add_custom_command(
     ${CMAKE_CURRENT_BINARY_DIR}/unittests/data)
 
 add_test(NAME unittests COMMAND unittests)
-set_tests_properties(unittests PROPERTIES TIMEOUT 30)
+set_tests_properties(unittests PROPERTIES TIMEOUT 60)
 
 add_test(NAME regression_delayed_reg
          COMMAND slang::driver
