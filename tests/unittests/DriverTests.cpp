@@ -170,7 +170,7 @@ SV_COV_STATEMENT 22
 SV_COV_STOP 1
 SV_COV_TOGGLE 23
 __slang__ 1
-__slang_major__ 1
+__slang_major__ 2
 __slang_minor__ 0
 )");
 }
