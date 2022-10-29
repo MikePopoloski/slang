@@ -5,6 +5,20 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
+### Language Support
+*
+
+### General Features
+*
+
+### Improvements
+*
+
+### Fixes
+*
+
+
+## [v2.0] - 2022-10-29
 ### Highlights
 This release focuses on making slang much more usable as a library. There's been a large amount of refactoring
 and reorganizing to make usage more straightforward. The CMake build was rewritten, and documentation showing how to
