@@ -237,7 +237,7 @@ struct BranchNode : public NodeBase<NodeRef, interval<TKey>, Capacity>,
 };
 
 // Represents a position in the b+ tree and a path to get there from the root.
-struct Path {
+struct SLANG_EXPORT Path {
     Path() = default;
 
     bool valid() const { return !path.empty() && path.front().offset < path.front().size; }
@@ -352,8 +352,8 @@ private:
 //   sum(newSizes[0..idx-1]) <= Position
 //   sum(newSizes[0..idx])   >= Position
 //
-IndexPair distribute(uint32_t numNodes, uint32_t numElements, uint32_t capacity, uint32_t* newSizes,
-                     uint32_t position);
+SLANG_EXPORT IndexPair distribute(uint32_t numNodes, uint32_t numElements, uint32_t capacity,
+                                  uint32_t* newSizes, uint32_t position);
 
 } // namespace IntervalMapDetails
 
@@ -774,7 +774,7 @@ IntervalMapDetails::IndexPair IntervalMap<TKey, TValue>::modifyRoot(TNode& rootN
     uint32_t pos = 0;
     NodeRef nodes[NumNodes];
     for (uint32_t i = 0; i < NumNodes; i++) {
-        auto newNode = alloc.emplace<TNode>();
+        auto newNode = alloc.template emplace<TNode>();
         uint32_t size = sizes[i];
 
         newNode->copy(rootNode, pos, 0, size);
@@ -809,11 +809,11 @@ void IntervalMap<TKey, TValue>::verify(const Branch& branch, uint32_t size, uint
         lastKey = key.left;
 
         if (depth == height - 1) {
-            auto bounds = child.get<Leaf>().getBounds(child.size());
+            auto bounds = child.template get<Leaf>().getBounds(child.size());
             ASSERT(bounds == key);
         }
         else {
-            auto& childBranch = child.get<Branch>();
+            auto& childBranch = child.template get<Branch>();
             auto bounds = childBranch.getBounds(child.size());
             ASSERT(bounds == key);
 
@@ -866,12 +866,13 @@ void IntervalMap<TKey, TValue>::iterator::insert(TKey left, TKey right, const TV
         path.legalizeForInsert(this->map->height);
 
     uint32_t size = path.leafSize();
-    size = path.leaf<Leaf>().insertFrom(path.leafOffset(), size, ival, value);
+    size = path.template leaf<Leaf>().insertFrom(path.leafOffset(), size, ival, value);
 
     if (size > Leaf::Capacity) {
         // If the new element didn't fit, overflow the node and try again.
         overflow<Leaf>(path.height(), alloc);
-        size = path.leaf<Leaf>().insertFrom(path.leafOffset(), path.leafSize(), ival, value);
+        size = path.template leaf<Leaf>().insertFrom(path.leafOffset(), path.leafSize(), ival,
+                                                     value);
     }
 
     // Update path to match the newly inserted element.
@@ -885,7 +886,7 @@ void IntervalMap<TKey, TValue>::iterator::updateParentBounds(
     auto& path = this->path;
     while (level) {
         --level;
-        path.node<Branch>(level).keyAt(path.offset(level)).unionWith(key);
+        path.template node<Branch>(level).keyAt(path.offset(level)).unionWith(key);
     }
 }
 
@@ -894,11 +895,12 @@ void IntervalMap<TKey, TValue>::iterator::recomputeBounds(uint32_t level) {
     auto& path = this->path;
     while (level) {
         --level;
-        auto& branch = path.node<Branch>(level);
+        auto& branch = path.template node<Branch>(level);
         auto offset = path.offset(level);
         auto child = branch.childAt(offset);
-        auto bounds = (level == path.height() - 1) ? child.get<Leaf>().getBounds(child.size())
-                                                   : child.get<Branch>().getBounds(child.size());
+        auto bounds = (level == path.height() - 1)
+                          ? child.template get<Leaf>().getBounds(child.size())
+                          : child.template get<Branch>().getBounds(child.size());
         branch.keyAt(offset) = bounds;
     }
 }
@@ -926,7 +928,7 @@ bool IntervalMap<TKey, TValue>::iterator::overflow(uint32_t level, Allocator& al
 
     // Handle the current node.
     numElems += curSizes[numNodes] = path.size(level);
-    nodes[numNodes++] = &path.node<TNode>(level);
+    nodes[numNodes++] = &path.template node<TNode>(level);
 
     // Handle right sibling, if it exists.
     NodeRef rightSib = path.getRightSibling(level);
@@ -943,7 +945,7 @@ bool IntervalMap<TKey, TValue>::iterator::overflow(uint32_t level, Allocator& al
         curSizes[numNodes] = curSizes[newNode];
         nodes[numNodes] = nodes[newNode];
         curSizes[newNode] = 0;
-        nodes[newNode] = alloc.emplace<TNode>();
+        nodes[newNode] = alloc.template emplace<TNode>();
         numNodes++;
     }
 
@@ -1064,7 +1066,7 @@ bool IntervalMap<TKey, TValue>::iterator::insertNode(uint32_t level,
     }
 
     // Actually insert into the branch node.
-    path.node<Branch>(level).insert(path.offset(level), path.size(level), node, key);
+    path.template node<Branch>(level).insert(path.offset(level), path.size(level), node, key);
     path.setSize(level, path.size(level) + 1);
     updateParentBounds(level, key);
 
