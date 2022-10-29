@@ -62,8 +62,6 @@ add_custom_command(
     ${CMAKE_CURRENT_SOURCE_DIR}/unittests/data
     ${CMAKE_CURRENT_BINARY_DIR}/unittests/data)
 
-include(CTest)
-
 add_test(NAME unittests COMMAND unittests)
 set_tests_properties(unittests PROPERTIES TIMEOUT 30)
 
