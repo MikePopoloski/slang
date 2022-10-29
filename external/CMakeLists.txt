@@ -57,6 +57,10 @@ if(SLANG_INCLUDE_INSTALL)
       ARCHIVE COMPONENT slang_Development
       PUBLIC_HEADER EXCLUDE_FROM_ALL
       PRIVATE_HEADER EXCLUDE_FROM_ALL)
+    install(
+      DIRECTORY ${fmt_SOURCE_DIR}/include/fmt
+      DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+      COMPONENT slang_Development)
   endif()
 
   install(TARGETS unordered_dense EXPORT slangTargets)
