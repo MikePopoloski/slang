@@ -603,6 +603,7 @@ module m;
         pulsestyle_ondetect out;
         if (opcode == 2'b10) (i2 => o1) = (5.6, 8.0);
         ( negedge clk => ( q[0] +: data ) ) = (20, 12);
+        ( negedge clk => ( q[0] : data ) ) = (20, 12);
         ifnone (i2 => o1) = 15.0, 15.0;
         (s *> q) = 1;
         (a, b, c *> q1, q2) = 10;
@@ -628,18 +629,29 @@ TEST_CASE("specify block parsing errors") {
 module m;
     specify
         $width(edge[0 1, 22, , 11] clr);
+        (a += b) = 1;
+        (a += > b) = 2;
+        (a b) = 2;
+        (posedge a => b) = 2;
+        (a, b => b, c) = 2;
     endspecify
 endmodule
 )";
 
     parseCompilationUnit(text);
 
-    REQUIRE(diagnostics.size() == 5);
+    REQUIRE(diagnostics.size() == 11);
     CHECK(diagnostics[0].code == diag::InvalidEdgeDescriptor);
     CHECK(diagnostics[1].code == diag::ExpectedToken);
     CHECK(diagnostics[2].code == diag::InvalidEdgeDescriptor);
     CHECK(diagnostics[3].code == diag::ExpectedEdgeDescriptor);
     CHECK(diagnostics[4].code == diag::InvalidEdgeDescriptor);
+    CHECK(diagnostics[5].code == diag::ExpectedPathOp);
+    CHECK(diagnostics[6].code == diag::ExpectedPathOp);
+    CHECK(diagnostics[7].code == diag::ExpectedPathOp);
+    CHECK(diagnostics[8].code == diag::UnexpectedEdgeKeyword);
+    CHECK(diagnostics[9].code == diag::MultipleParallelTerminals);
+    CHECK(diagnostics[10].code == diag::MultipleParallelTerminals);
 }
 
 TEST_CASE("Invalid package decls") {

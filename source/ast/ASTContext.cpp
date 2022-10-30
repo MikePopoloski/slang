@@ -109,7 +109,7 @@ void ASTContext::setAttributes(const Expression& expr,
 
 void ASTContext::addDriver(const ValueSymbol& symbol, const Expression& longestStaticPrefix,
                            bitmask<AssignFlags> assignFlags, EvalContext* customEvalContext) const {
-    if (flags.has(ASTFlags::UnrollableForLoop) || assignFlags.has(AssignFlags::ModportConn))
+    if (flags.has(ASTFlags::UnrollableForLoop) || assignFlags.has(AssignFlags::NotADriver))
         return;
 
     const Symbol* containingSym = getProceduralBlock();
@@ -244,11 +244,12 @@ std::optional<int32_t> ASTContext::evalInteger(const ExpressionSyntax& syntax,
     return evalInteger(Expression::bind(syntax, *this, extraFlags));
 }
 
-std::optional<int32_t> ASTContext::evalInteger(const Expression& expr) const {
+std::optional<int32_t> ASTContext::evalInteger(const Expression& expr,
+                                               bitmask<EvalFlags> extraFlags) const {
     if (!requireIntegral(expr))
         return std::nullopt;
 
-    ConstantValue cv = eval(expr);
+    ConstantValue cv = eval(expr, extraFlags);
     if (!requireIntegral(cv, expr.sourceRange))
         return std::nullopt;
 

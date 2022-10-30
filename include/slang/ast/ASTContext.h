@@ -322,7 +322,8 @@ public:
 
     std::optional<int32_t> evalInteger(const syntax::ExpressionSyntax& syntax,
                                        bitmask<ASTFlags> extraFlags = {}) const;
-    std::optional<int32_t> evalInteger(const Expression& expr) const;
+    std::optional<int32_t> evalInteger(const Expression& expr,
+                                       bitmask<EvalFlags> extraFlags = {}) const;
     EvaluatedDimension evalDimension(const syntax::VariableDimensionSyntax& syntax,
                                      bool requireRange, bool isPacked) const;
 

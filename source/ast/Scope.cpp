@@ -506,8 +506,10 @@ void Scope::addMembers(const SyntaxNode& syntax) {
             addMember(
                 MethodPrototypeSymbol::fromSyntax(*this, syntax.as<ExternInterfaceMethodSyntax>()));
             break;
-        case SyntaxKind::PulseStyleDeclaration:
         case SyntaxKind::PathDeclaration:
+            addMember(TimingPathSymbol::fromSyntax(*this, syntax.as<PathDeclarationSyntax>()));
+            break;
+        case SyntaxKind::PulseStyleDeclaration:
         case SyntaxKind::IfNonePathDeclaration:
         case SyntaxKind::ConditionalPathDeclaration:
         case SyntaxKind::SystemTimingCheck:

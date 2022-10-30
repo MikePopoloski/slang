@@ -193,6 +193,7 @@ decltype(auto) Symbol::visit(TVisitor&& visitor, Args&&... args) const {
         SYMBOL(CoverCross);
         SYMBOL(CoverCrossBody);
         SYMBOL(CoverageBin);
+        SYMBOL(TimingPath);
         TYPE(PredefinedIntegerType);
         TYPE(ScalarType);
         TYPE(FloatingType);

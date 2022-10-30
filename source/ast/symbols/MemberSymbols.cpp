@@ -203,11 +203,10 @@ ModportPortSymbol& ModportPortSymbol::fromSyntax(const ASTContext& context,
                 // unreachable
                 break;
             case ArgumentDirection::Out:
-                expr.requireLValue(checkCtx, loc, AssignFlags::ModportConn);
+                expr.requireLValue(checkCtx, loc, AssignFlags::NotADriver);
                 break;
             case ArgumentDirection::InOut:
-                expr.requireLValue(checkCtx, loc,
-                                   AssignFlags::ModportConn | AssignFlags::InOutPort);
+                expr.requireLValue(checkCtx, loc, AssignFlags::NotADriver | AssignFlags::InOutPort);
                 break;
             case ArgumentDirection::Ref:
                 if (!expr.canConnectToRefArg(/* isConstRef */ false))
@@ -250,11 +249,11 @@ ModportPortSymbol& ModportPortSymbol::fromSyntax(const ASTContext& parentContext
         case ArgumentDirection::In:
             break;
         case ArgumentDirection::Out:
-            expr.requireLValue(context, result->location, AssignFlags::ModportConn);
+            expr.requireLValue(context, result->location, AssignFlags::NotADriver);
             break;
         case ArgumentDirection::InOut:
             expr.requireLValue(context, result->location,
-                               AssignFlags::ModportConn | AssignFlags::InOutPort);
+                               AssignFlags::NotADriver | AssignFlags::InOutPort);
             break;
         case ArgumentDirection::Ref:
             if (!expr.canConnectToRefArg(/* isConstRef */ false))
@@ -1701,6 +1700,134 @@ void RandSeqProductionSymbol::serializeTo(ASTSerializer& serializer) const {
         serializer.endObject();
     }
     serializer.endArray();
+}
+
+TimingPathSymbol::TimingPathSymbol(SourceLocation loc, ConnectionKind connectionKind,
+                                   Polarity polarity, Polarity edgePolarity,
+                                   EdgeKind edgeIdentifier) :
+    Symbol(SymbolKind::TimingPath, ""sv, loc),
+    connectionKind(connectionKind), polarity(polarity), edgePolarity(edgePolarity),
+    edgeIdentifier(edgeIdentifier) {
+}
+
+TimingPathSymbol& TimingPathSymbol::fromSyntax(const Scope& parent,
+                                               const PathDeclarationSyntax& syntax) {
+    Polarity polarity;
+    switch (syntax.desc->polarityOperator.kind) {
+        case TokenKind::Plus:
+        case TokenKind::PlusEqual:
+            polarity = Polarity::Positive;
+            break;
+        case TokenKind::Minus:
+        case TokenKind::MinusEqual:
+            polarity = Polarity::Negative;
+            break;
+        default:
+            polarity = Polarity::Unknown;
+            break;
+    }
+
+    auto connectionKind = syntax.desc->pathOperator.kind == TokenKind::StarArrow
+                              ? ConnectionKind::Full
+                              : ConnectionKind::Parallel;
+
+    auto edgeIdentifier = SemanticFacts::getEdgeKind(syntax.desc->edgeIdentifier.kind);
+
+    auto edgePolarity = Polarity::Unknown;
+    if (syntax.desc->suffix->kind == SyntaxKind::EdgeSensitivePathSuffix) {
+        auto& esps = syntax.desc->suffix->as<EdgeSensitivePathSuffixSyntax>();
+        switch (esps.polarityOperator.kind) {
+            case TokenKind::Plus:
+            case TokenKind::PlusColon:
+                edgePolarity = Polarity::Positive;
+                break;
+            case TokenKind::Minus:
+            case TokenKind::MinusColon:
+                edgePolarity = Polarity::Negative;
+                break;
+            default:
+                break;
+        }
+    }
+
+    auto& comp = parent.getCompilation();
+    auto result = comp.emplace<TimingPathSymbol>(syntax.getFirstToken().location(), connectionKind,
+                                                 polarity, edgePolarity, edgeIdentifier);
+    result->setSyntax(syntax);
+    return *result;
+}
+
+void TimingPathSymbol::resolve() const {
+    isResolved = true;
+
+    auto syntaxPtr = getSyntax();
+    auto parent = getParentScope();
+    ASSERT(syntaxPtr && parent);
+
+    auto& comp = parent->getCompilation();
+    ASTContext context(*parent, LookupLocation::after(*this), ASTFlags::NonProcedural);
+
+    auto bindTerminals = [&](const SeparatedSyntaxList<NameSyntax>& syntaxList) {
+        SmallVector<const Expression*> results;
+        for (auto exprSyntax : syntaxList) {
+            auto expr = &Expression::bind(*exprSyntax, context);
+            results.push_back(expr);
+
+            if (expr->requireLValue(context, expr->sourceRange.start(), AssignFlags::NotADriver)) {
+                switch (expr->kind) {
+                    case ExpressionKind::ElementSelect:
+                        expr = &expr->as<ElementSelectExpression>().value();
+                        break;
+                    case ExpressionKind::RangeSelect:
+                        expr = &expr->as<RangeSelectExpression>().value();
+                        break;
+                    default:
+                        break;
+                }
+
+                if (expr->kind != ExpressionKind::NamedValue) {
+                    auto code = (expr->kind == ExpressionKind::ElementSelect ||
+                                 expr->kind == ExpressionKind::RangeSelect)
+                                    ? diag::SpecifyPathMultiDim
+                                    : diag::InvalidSpecifyPath;
+                    context.addDiag(code, exprSyntax->sourceRange());
+                }
+                else {
+                    // TODO: validate the symbol
+                    // auto& symbol = expr->as<NamedValueExpression>().symbol;
+                }
+            }
+        }
+        return results.copy(comp);
+    };
+
+    auto& syntax = syntaxPtr->as<PathDeclarationSyntax>();
+    inputs = bindTerminals(syntax.desc->inputs);
+
+    if (syntax.desc->suffix->kind == SyntaxKind::EdgeSensitivePathSuffix) {
+        auto& esps = syntax.desc->suffix->as<EdgeSensitivePathSuffixSyntax>();
+        outputs = bindTerminals(esps.outputs);
+
+        // This expression is apparently allowed to be anything the user wants.
+        edgeSourceExpr = &Expression::bind(*esps.expr, context);
+    }
+    else {
+        outputs = bindTerminals(syntax.desc->suffix->as<SimplePathSuffixSyntax>().outputs);
+    }
+
+    // Bind all delay values.
+    SmallVector<const Expression*> delayBuf;
+    for (auto delaySyntax : syntax.delays) {
+        auto& expr = Expression::bind(*delaySyntax, context);
+        delayBuf.push_back(&expr);
+        context.evalInteger(expr, EvalFlags::SpecparamsAllowed);
+    }
+
+    delays = delayBuf.copy(comp);
+}
+
+void TimingPathSymbol::serializeTo(ASTSerializer&) const {
+    // TODO:
 }
 
 } // namespace slang::ast

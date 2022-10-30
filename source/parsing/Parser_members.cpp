@@ -2735,7 +2735,7 @@ SpecparamDeclarationSyntax& Parser::parseSpecparam(AttrList attr) {
 span<TokenOrSyntax> Parser::parsePathTerminals() {
     SmallVector<TokenOrSyntax, 4> results;
     while (true) {
-        results.push_back(&parseName());
+        results.push_back(&parseName(NameOptions::NoClassScope));
         if (!peek(TokenKind::Comma))
             break;
 
@@ -2756,6 +2756,15 @@ PathDeclarationSyntax& Parser::parsePathDeclaration() {
         }
     };
 
+    auto checkTerminals = [&](span<TokenOrSyntax> terminals, bool isFull) {
+        if (!isFull && terminals.size() > 2) {
+            Token first = terminals[2].node()->getFirstToken();
+            Token last = terminals.back().node()->getLastToken();
+            addDiag(diag::MultipleParallelTerminals,
+                    SourceRange{first.location(), last.location() + last.rawText().length()});
+        }
+    };
+
     auto openParen = expect(TokenKind::OpenParenthesis);
     auto edge = parseEdgeKeyword();
     auto inputs = parsePathTerminals();
@@ -2765,6 +2774,7 @@ PathDeclarationSyntax& Parser::parsePathDeclaration() {
     // but of course the lexer tokenizes it as '+=' and '>' so we need to
     // work around that here.
     Token op;
+    bool isFull = false;
     if (!polarity && (peek(TokenKind::PlusEqual) || peek(TokenKind::MinusEqual))) {
         polarity = consume();
         op = consumeIf(TokenKind::GreaterThan);
@@ -2778,8 +2788,11 @@ PathDeclarationSyntax& Parser::parsePathDeclaration() {
     }
     else {
         switch (peek().kind) {
-            case TokenKind::EqualsArrow:
             case TokenKind::StarArrow:
+                isFull = true;
+                op = consume();
+                break;
+            case TokenKind::EqualsArrow:
                 op = consume();
                 break;
             default:
@@ -2788,6 +2801,8 @@ PathDeclarationSyntax& Parser::parsePathDeclaration() {
                 break;
         }
     }
+
+    checkTerminals(inputs, isFull);
 
     PathSuffixSyntax* suffix;
     if (peek(TokenKind::OpenParenthesis)) {
@@ -2808,10 +2823,17 @@ PathDeclarationSyntax& Parser::parsePathDeclaration() {
         auto suffixCloseParen = expect(TokenKind::CloseParenthesis);
         suffix = &factory.edgeSensitivePathSuffix(suffixOpenParen, outputs, polarity2, colon, expr,
                                                   suffixCloseParen);
+
+        checkTerminals(outputs, isFull);
     }
     else {
         auto outputs = parsePathTerminals();
         suffix = &factory.simplePathSuffix(outputs);
+
+        if (edge)
+            addDiag(diag::UnexpectedEdgeKeyword, edge.range());
+
+        checkTerminals(outputs, isFull);
     }
 
     auto closeParen = expect(TokenKind::CloseParenthesis);

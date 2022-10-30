@@ -125,10 +125,10 @@ enum class SLANG_EXPORT AssignFlags {
     /// being connected to an array argument.
     SlicedPort = 1 << 8,
 
-    /// The assignment is the connection between a modport port and a symbol within the interface.
-    ModportConn = 1 << 9
+    /// The assignment should not be considered a driver.
+    NotADriver = 1 << 9
 };
-BITMASK(AssignFlags, ModportConn)
+BITMASK(AssignFlags, NotADriver)
 
 class SLANG_EXPORT SemanticFacts {
 public:

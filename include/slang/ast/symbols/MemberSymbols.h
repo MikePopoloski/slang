@@ -531,4 +531,58 @@ private:
     mutable std::optional<span<const Rule>> rules;
 };
 
+class SLANG_EXPORT TimingPathSymbol : public Symbol {
+public:
+    enum class ConnectionKind { Full, Parallel };
+    enum class Polarity { Unknown, Positive, Negative };
+
+    ConnectionKind connectionKind;
+    Polarity polarity;
+    Polarity edgePolarity;
+    EdgeKind edgeIdentifier;
+
+    TimingPathSymbol(SourceLocation loc, ConnectionKind connectionKind, Polarity polarity,
+                     Polarity edgePolarity, EdgeKind edgeIdentifier);
+
+    const Expression* getEdgeSourceExpr() const {
+        if (!isResolved)
+            resolve();
+        return edgeSourceExpr;
+    }
+
+    span<const Expression* const> getInputs() const {
+        if (!isResolved)
+            resolve();
+        return inputs;
+    }
+
+    span<const Expression* const> getOutputs() const {
+        if (!isResolved)
+            resolve();
+        return outputs;
+    }
+
+    span<const Expression* const> getDelays() const {
+        if (!isResolved)
+            resolve();
+        return delays;
+    }
+
+    void serializeTo(ASTSerializer& serializer) const;
+
+    static TimingPathSymbol& fromSyntax(const Scope& parent,
+                                        const syntax::PathDeclarationSyntax& syntax);
+
+    static bool isKind(SymbolKind kind) { return kind == SymbolKind::TimingPath; }
+
+private:
+    void resolve() const;
+
+    mutable bool isResolved = false;
+    mutable const Expression* edgeSourceExpr = nullptr;
+    mutable span<const Expression* const> inputs;
+    mutable span<const Expression* const> outputs;
+    mutable span<const Expression* const> delays;
+};
+
 } // namespace slang::ast
