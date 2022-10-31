@@ -1757,6 +1757,64 @@ TimingPathSymbol& TimingPathSymbol::fromSyntax(const Scope& parent,
     return *result;
 }
 
+static void checkPathTerminal(const ValueSymbol& terminal, const Symbol& specifyParent,
+                              ASTContext& context, bool isSource, SourceRange sourceRange) {
+    // Type must be integral.
+    auto& type = terminal.getType();
+    if (!type.isIntegral()) {
+        if (!type.isError())
+            context.addDiag(diag::InvalidSpecifyType, sourceRange) << terminal.name << type;
+        return;
+    }
+
+    auto reportErr = [&] {
+        auto code = isSource ? diag::InvalidSpecifySource : diag::InvalidSpecifyDest;
+        auto& diag = context.addDiag(code, sourceRange) << terminal.name;
+        diag.addNote(diag::NoteDeclarationHere, terminal.location);
+    };
+
+    // Inputs must be nets (or modport ports) and outputs must
+    // be nets or variables (or modport ports).
+    if (terminal.kind != SymbolKind::Net && terminal.kind != SymbolKind::ModportPort &&
+        (terminal.kind != SymbolKind::Variable || isSource)) {
+        reportErr();
+        return;
+    }
+
+    if (terminal.kind == SymbolKind::ModportPort) {
+        // Check that the modport port has the correct direction.
+        auto dir = terminal.as<ModportPortSymbol>().direction;
+        if (dir != ArgumentDirection::InOut && ((isSource && dir != ArgumentDirection::In) ||
+                                                (!isSource && dir != ArgumentDirection::Out))) {
+            reportErr();
+        }
+        return;
+    }
+
+    auto terminalParentScope = terminal.getParentScope();
+    ASSERT(terminalParentScope);
+
+    auto& terminalParent = terminalParentScope->asSymbol();
+    if (terminalParent.kind == SymbolKind::InstanceBody &&
+        terminalParent.as<InstanceBodySymbol>().getDefinition().definitionKind ==
+            DefinitionKind::Interface) {
+        // If the signal is part of an interface then the only way we could have accessed
+        // it is through an interface port, in which case the direction is "inout" and
+        // therefore fine no matter whether this is an input or output terminal.
+        return;
+    }
+
+    // If we get here then the terminal must be a member of the module containing
+    // our parent specify block.
+    if (&terminalParent != &specifyParent) {
+        context.addDiag(diag::InvalidSpecifyPath, sourceRange);
+        return;
+    }
+
+    // TODO: check that the terminal is connected to a module port and that
+    // the direction is correct.
+}
+
 void TimingPathSymbol::resolve() const {
     isResolved = true;
 
@@ -1764,55 +1822,60 @@ void TimingPathSymbol::resolve() const {
     auto parent = getParentScope();
     ASSERT(syntaxPtr && parent);
 
+    auto parentParent = parent->asSymbol().getParentScope();
+    ASSERT(parentParent);
+
     auto& comp = parent->getCompilation();
     ASTContext context(*parent, LookupLocation::after(*this), ASTFlags::NonProcedural);
 
-    auto bindTerminals = [&](const SeparatedSyntaxList<NameSyntax>& syntaxList) {
+    auto bindTerminals = [&](const SeparatedSyntaxList<NameSyntax>& syntaxList, bool isSource) {
         SmallVector<const Expression*> results;
         for (auto exprSyntax : syntaxList) {
             auto expr = &Expression::bind(*exprSyntax, context);
+            if (expr->bad())
+                continue;
+
             results.push_back(expr);
 
-            if (expr->requireLValue(context, expr->sourceRange.start(), AssignFlags::NotADriver)) {
-                switch (expr->kind) {
-                    case ExpressionKind::ElementSelect:
-                        expr = &expr->as<ElementSelectExpression>().value();
-                        break;
-                    case ExpressionKind::RangeSelect:
-                        expr = &expr->as<RangeSelectExpression>().value();
-                        break;
-                    default:
-                        break;
-                }
+            switch (expr->kind) {
+                case ExpressionKind::ElementSelect:
+                    expr = &expr->as<ElementSelectExpression>().value();
+                    break;
+                case ExpressionKind::RangeSelect:
+                    expr = &expr->as<RangeSelectExpression>().value();
+                    break;
+                default:
+                    break;
+            }
 
-                if (expr->kind != ExpressionKind::NamedValue) {
-                    auto code = (expr->kind == ExpressionKind::ElementSelect ||
-                                 expr->kind == ExpressionKind::RangeSelect)
-                                    ? diag::SpecifyPathMultiDim
-                                    : diag::InvalidSpecifyPath;
-                    context.addDiag(code, exprSyntax->sourceRange());
-                }
-                else {
-                    // TODO: validate the symbol
-                    // auto& symbol = expr->as<NamedValueExpression>().symbol;
-                }
+            if (expr->kind != ExpressionKind::NamedValue) {
+                auto code = (expr->kind == ExpressionKind::ElementSelect ||
+                             expr->kind == ExpressionKind::RangeSelect)
+                                ? diag::SpecifyPathMultiDim
+                                : diag::InvalidSpecifyPath;
+                context.addDiag(code, exprSyntax->sourceRange());
+            }
+            else {
+                auto& symbol = expr->as<NamedValueExpression>().symbol;
+                checkPathTerminal(symbol, parentParent->asSymbol(), context, isSource,
+                                  expr->sourceRange);
             }
         }
         return results.copy(comp);
     };
 
     auto& syntax = syntaxPtr->as<PathDeclarationSyntax>();
-    inputs = bindTerminals(syntax.desc->inputs);
+    inputs = bindTerminals(syntax.desc->inputs, true);
 
     if (syntax.desc->suffix->kind == SyntaxKind::EdgeSensitivePathSuffix) {
         auto& esps = syntax.desc->suffix->as<EdgeSensitivePathSuffixSyntax>();
-        outputs = bindTerminals(esps.outputs);
+        outputs = bindTerminals(esps.outputs, false);
 
         // This expression is apparently allowed to be anything the user wants.
         edgeSourceExpr = &Expression::bind(*esps.expr, context);
     }
     else {
-        outputs = bindTerminals(syntax.desc->suffix->as<SimplePathSuffixSyntax>().outputs);
+        outputs = bindTerminals(syntax.desc->suffix->as<SimplePathSuffixSyntax>().outputs, false);
     }
 
     // Bind all delay values.

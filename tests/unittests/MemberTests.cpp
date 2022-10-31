@@ -2939,3 +2939,53 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Specify path errors") {
+    auto tree = SyntaxTree::fromText(R"(
+interface I;
+    int i;
+    modport m(input i);
+endinterface
+
+int k;
+
+module m(input [4:0] a, output [4:0] b, I.m foo, I bar);
+    localparam int c = 1;
+    struct packed { logic a; logic b; } d;
+    logic [1:0][1:0] e;
+    real f;
+    int g;
+
+    specify
+        (a +*> c) = 1;
+        (a[0+:1] *> b[0]) = 1;
+        (d.a *> b) = 1;
+        (e[0][1] *> b) = 1;
+        (f *> b) = 1;
+        (g *> b) = 1;
+        (a *> foo.i) = 1;
+        (a *> bar.i) = 1;
+        (a *> k) = 1;
+    endspecify
+endmodule
+
+module n;
+    I foo();
+    logic [4:0] a,b;
+    m m1(a, b, foo, foo);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 7);
+    CHECK(diags[0].code == diag::InvalidSpecifyDest);
+    CHECK(diags[1].code == diag::InvalidSpecifyPath);
+    CHECK(diags[2].code == diag::SpecifyPathMultiDim);
+    CHECK(diags[3].code == diag::InvalidSpecifyType);
+    CHECK(diags[4].code == diag::InvalidSpecifySource);
+    CHECK(diags[5].code == diag::InvalidSpecifyDest);
+    CHECK(diags[6].code == diag::InvalidSpecifyPath);
+}

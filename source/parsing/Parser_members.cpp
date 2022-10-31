@@ -2861,6 +2861,14 @@ PathDeclarationSyntax& Parser::parsePathDeclaration() {
         delays = buffer.copy(alloc);
     }
 
+    if (delays.size() > 0 && delays.size() != 1 && delays.size() != 3 && delays.size() != 5 &&
+        delays.size() != 11 && delays.size() != 23) {
+        auto& lastDelay = delays.back();
+        auto range = delays.back().isNode() ? lastDelay.node()->sourceRange()
+                                            : lastDelay.token().range();
+        addDiag(diag::WrongSpecifyDelayCount, range);
+    }
+
     return factory.pathDeclaration(nullptr, desc, equals, valueOpenParen, delays, valueCloseParen,
                                    semi);
 }
