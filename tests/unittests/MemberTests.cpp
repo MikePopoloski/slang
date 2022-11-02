@@ -2949,7 +2949,7 @@ endinterface
 
 int k;
 
-module m(input [4:0] a, output [4:0] b, I.m foo, I bar);
+module m(input [4:0] a, output [4:0] b, output [5:0] l, I.m foo, I bar);
     localparam int c = 1;
     struct packed { logic a; logic b; } d;
     logic [1:0][1:0] e;
@@ -2966,13 +2966,15 @@ module m(input [4:0] a, output [4:0] b, I.m foo, I bar);
         (a *> foo.i) = 1;
         (a *> bar.i) = 1;
         (a *> k) = 1;
+        (a => l) = 1;
     endspecify
 endmodule
 
 module n;
-    I foo();
+    I foo(), bar();
     logic [4:0] a,b;
-    m m1(a, b, foo, foo);
+    logic [5:0] l;
+    m m1(.*);
 endmodule
 )");
 
@@ -2980,7 +2982,7 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 7);
+    REQUIRE(diags.size() == 8);
     CHECK(diags[0].code == diag::InvalidSpecifyDest);
     CHECK(diags[1].code == diag::InvalidSpecifyPath);
     CHECK(diags[2].code == diag::SpecifyPathMultiDim);
@@ -2988,4 +2990,5 @@ endmodule
     CHECK(diags[4].code == diag::InvalidSpecifySource);
     CHECK(diags[5].code == diag::InvalidSpecifyDest);
     CHECK(diags[6].code == diag::InvalidSpecifyPath);
+    CHECK(diags[7].code == diag::ParallelPathWidth);
 }

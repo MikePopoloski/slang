@@ -1757,14 +1757,14 @@ TimingPathSymbol& TimingPathSymbol::fromSyntax(const Scope& parent,
     return *result;
 }
 
-static void checkPathTerminal(const ValueSymbol& terminal, const Symbol& specifyParent,
+static bool checkPathTerminal(const ValueSymbol& terminal, const Symbol& specifyParent,
                               ASTContext& context, bool isSource, SourceRange sourceRange) {
     // Type must be integral.
     auto& type = terminal.getType();
     if (!type.isIntegral()) {
         if (!type.isError())
             context.addDiag(diag::InvalidSpecifyType, sourceRange) << terminal.name << type;
-        return;
+        return false;
     }
 
     auto reportErr = [&] {
@@ -1778,7 +1778,7 @@ static void checkPathTerminal(const ValueSymbol& terminal, const Symbol& specify
     if (terminal.kind != SymbolKind::Net && terminal.kind != SymbolKind::ModportPort &&
         (terminal.kind != SymbolKind::Variable || isSource)) {
         reportErr();
-        return;
+        return false;
     }
 
     if (terminal.kind == SymbolKind::ModportPort) {
@@ -1788,7 +1788,7 @@ static void checkPathTerminal(const ValueSymbol& terminal, const Symbol& specify
                                                 (!isSource && dir != ArgumentDirection::Out))) {
             reportErr();
         }
-        return;
+        return false;
     }
 
     auto terminalParentScope = terminal.getParentScope();
@@ -1801,18 +1801,19 @@ static void checkPathTerminal(const ValueSymbol& terminal, const Symbol& specify
         // If the signal is part of an interface then the only way we could have accessed
         // it is through an interface port, in which case the direction is "inout" and
         // therefore fine no matter whether this is an input or output terminal.
-        return;
+        return true;
     }
 
     // If we get here then the terminal must be a member of the module containing
     // our parent specify block.
     if (&terminalParent != &specifyParent) {
         context.addDiag(diag::InvalidSpecifyPath, sourceRange);
-        return;
+        return false;
     }
 
     // TODO: check that the terminal is connected to a module port and that
     // the direction is correct.
+    return true;
 }
 
 void TimingPathSymbol::resolve() const {
@@ -1835,8 +1836,6 @@ void TimingPathSymbol::resolve() const {
             if (expr->bad())
                 continue;
 
-            results.push_back(expr);
-
             switch (expr->kind) {
                 case ExpressionKind::ElementSelect:
                     expr = &expr->as<ElementSelectExpression>().value();
@@ -1857,8 +1856,10 @@ void TimingPathSymbol::resolve() const {
             }
             else {
                 auto& symbol = expr->as<NamedValueExpression>().symbol;
-                checkPathTerminal(symbol, parentParent->asSymbol(), context, isSource,
-                                  expr->sourceRange);
+                if (checkPathTerminal(symbol, parentParent->asSymbol(), context, isSource,
+                                      expr->sourceRange)) {
+                    results.push_back(expr);
+                }
             }
         }
         return results.copy(comp);
@@ -1876,6 +1877,17 @@ void TimingPathSymbol::resolve() const {
     }
     else {
         outputs = bindTerminals(syntax.desc->suffix->as<SimplePathSuffixSyntax>().outputs, false);
+    }
+
+    // Verify that input and output sizes match for parallel connections.
+    // Parallel connections only allow one input and one output.
+    if (connectionKind == ConnectionKind::Parallel && inputs.size() == 1 && outputs.size() == 1) {
+        if (inputs[0]->type->getBitWidth() != outputs[0]->type->getBitWidth()) {
+            auto& diag = context.addDiag(diag::ParallelPathWidth,
+                                         syntax.desc->pathOperator.range());
+            diag << inputs[0]->sourceRange << outputs[0]->sourceRange;
+            diag << *inputs[0]->type << *outputs[0]->type;
+        }
     }
 
     // Bind all delay values.

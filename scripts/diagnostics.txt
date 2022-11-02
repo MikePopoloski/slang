@@ -433,6 +433,7 @@ error SpecifyPathMultiDim "specify path references can only have a single select
 error InvalidSpecifyType "specify path terminal '{}' has non-integral type {}"
 error InvalidSpecifySource "specify path source '{}' must be an 'input' or 'inout' net or modport port"
 error InvalidSpecifyDest "specify path destination '{}' must be an 'output' or 'inout' net, variable, or modport port"
+error ParallelPathWidth "parallel specify path source type {} has different width than destination type {}"
 error FatalTask "$fatal encountered{}"
 error ErrorTask "$error encountered{}"
 error StaticAssert "static assertion failed{}"
