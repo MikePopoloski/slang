@@ -1930,8 +1930,47 @@ void TimingPathSymbol::resolve() const {
     delays = delayBuf.copy(comp);
 }
 
-void TimingPathSymbol::serializeTo(ASTSerializer&) const {
-    // TODO:
+static string_view toString(TimingPathSymbol::Polarity polarity) {
+    switch (polarity) {
+        case TimingPathSymbol::Polarity::Unknown:
+            return "Unknown"sv;
+        case TimingPathSymbol::Polarity::Positive:
+            return "Positive"sv;
+        case TimingPathSymbol::Polarity::Negative:
+            return "Negative"sv;
+        default:
+            ASSUME_UNREACHABLE;
+    }
+}
+
+void TimingPathSymbol::serializeTo(ASTSerializer& serializer) const {
+    serializer.write("connectionKind",
+                     connectionKind == ConnectionKind::Full ? "Full"sv : "Parallel"sv);
+    serializer.write("polarity", toString(polarity));
+    serializer.write("edgePolarity", toString(edgePolarity));
+    serializer.write("edgeIdentifier", toString(edgeIdentifier));
+    serializer.write("isStateDependent", isStateDependent);
+
+    if (auto expr = getEdgeSourceExpr())
+        serializer.write("edgeSourceExpr", *expr);
+
+    if (auto expr = getConditionExpr())
+        serializer.write("conditionExpr", *expr);
+
+    serializer.startArray("inputs");
+    for (auto expr : getInputs())
+        serializer.serialize(*expr);
+    serializer.endArray();
+
+    serializer.startArray("outputs");
+    for (auto expr : getOutputs())
+        serializer.serialize(*expr);
+    serializer.endArray();
+
+    serializer.startArray("delays");
+    for (auto expr : getDelays())
+        serializer.serialize(*expr);
+    serializer.endArray();
 }
 
 } // namespace slang::ast

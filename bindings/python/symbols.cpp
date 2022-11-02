@@ -545,6 +545,27 @@ void registerSymbols(py::module_& m) {
         .def_readonly("codeBlock", &RandSeqProductionSymbol::Rule::codeBlock)
         .def_readonly("isRandJoin", &RandSeqProductionSymbol::Rule::isRandJoin);
 
+    py::class_<TimingPathSymbol, Symbol> timingPath(m, "TimingPathSymbol");
+    timingPath.def_readonly("connectionKind", &TimingPathSymbol::connectionKind)
+        .def_readonly("polarity", &TimingPathSymbol::polarity)
+        .def_readonly("edgePolarity", &TimingPathSymbol::edgePolarity)
+        .def_readonly("edgeIdentifier", &TimingPathSymbol::edgeIdentifier)
+        .def_readonly("isStateDependent", &TimingPathSymbol::isStateDependent)
+        .def_property_readonly("edgeSourceExpr", &TimingPathSymbol::getEdgeSourceExpr)
+        .def_property_readonly("conditionExpr", &TimingPathSymbol::getConditionExpr)
+        .def_property_readonly("inputs", &TimingPathSymbol::getInputs)
+        .def_property_readonly("outputs", &TimingPathSymbol::getOutputs)
+        .def_property_readonly("delays", &TimingPathSymbol::getDelays);
+
+    py::enum_<TimingPathSymbol::ConnectionKind>(timingPath, "ConnectionKind")
+        .value("Full", TimingPathSymbol::ConnectionKind::Full)
+        .value("Parallel", TimingPathSymbol::ConnectionKind::Parallel);
+
+    py::enum_<TimingPathSymbol::Polarity>(timingPath, "Polarity")
+        .value("Unknown", TimingPathSymbol::Polarity::Unknown)
+        .value("Positive", TimingPathSymbol::Polarity::Positive)
+        .value("Negative", TimingPathSymbol::Polarity::Negative);
+
     py::class_<CoverageOptionSetter>(m, "CoverageOptionSetter")
         .def_property_readonly("isTypeOption", &CoverageOptionSetter::isTypeOption)
         .def_property_readonly("name", &CoverageOptionSetter::getName)

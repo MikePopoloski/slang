@@ -155,8 +155,8 @@ void registerAST(py::module_& m) {
         .def("tryEval", &ASTContext::tryEval)
         .def("evalInteger", py::overload_cast<const ExpressionSyntax&, bitmask<ASTFlags>>(
                                 &ASTContext::evalInteger, py::const_))
-        .def("evalInteger",
-             py::overload_cast<const Expression&>(&ASTContext::evalInteger, py::const_))
+        .def("evalInteger", py::overload_cast<const Expression&, bitmask<EvalFlags>>(
+                                &ASTContext::evalInteger, py::const_))
         .def("evalDimension", &ASTContext::evalDimension)
         .def("evalPackedDimension", py::overload_cast<const VariableDimensionSyntax&>(
                                         &ASTContext::evalPackedDimension, py::const_))
