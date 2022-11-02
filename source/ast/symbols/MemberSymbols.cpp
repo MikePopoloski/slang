@@ -1757,6 +1757,22 @@ TimingPathSymbol& TimingPathSymbol::fromSyntax(const Scope& parent,
     return *result;
 }
 
+TimingPathSymbol& TimingPathSymbol::fromSyntax(const Scope& parent,
+                                               const IfNonePathDeclarationSyntax& syntax) {
+    auto& result = fromSyntax(parent, *syntax.path);
+    result.setSyntax(syntax);
+    result.isStateDependent = true;
+    return result;
+}
+
+TimingPathSymbol& TimingPathSymbol::fromSyntax(const Scope& parent,
+                                               const ConditionalPathDeclarationSyntax& syntax) {
+    auto& result = fromSyntax(parent, *syntax.path);
+    result.setSyntax(syntax);
+    result.isStateDependent = true;
+    return result;
+}
+
 static bool checkPathTerminal(const ValueSymbol& terminal, const Symbol& specifyParent,
                               ASTContext& context, bool isSource, SourceRange sourceRange) {
     // Type must be integral.
@@ -1865,6 +1881,18 @@ void TimingPathSymbol::resolve() const {
         return results.copy(comp);
     };
 
+    if (syntaxPtr->kind == SyntaxKind::IfNonePathDeclaration) {
+        syntaxPtr = syntaxPtr->as<IfNonePathDeclarationSyntax>().path;
+    }
+    else if (syntaxPtr->kind == SyntaxKind::ConditionalPathDeclaration) {
+        auto& conditional = syntaxPtr->as<ConditionalPathDeclarationSyntax>();
+        syntaxPtr = conditional.path;
+
+        // TODO: add other requirements for predicate
+        conditionExpr = &Expression::bind(*conditional.predicate, context);
+        context.requireBooleanConvertible(*conditionExpr);
+    }
+
     auto& syntax = syntaxPtr->as<PathDeclarationSyntax>();
     inputs = bindTerminals(syntax.desc->inputs, true);
 
@@ -1893,9 +1921,10 @@ void TimingPathSymbol::resolve() const {
     // Bind all delay values.
     SmallVector<const Expression*> delayBuf;
     for (auto delaySyntax : syntax.delays) {
+        // TODO: check the type
         auto& expr = Expression::bind(*delaySyntax, context);
         delayBuf.push_back(&expr);
-        context.evalInteger(expr, EvalFlags::SpecparamsAllowed);
+        context.eval(expr, EvalFlags::SpecparamsAllowed);
     }
 
     delays = delayBuf.copy(comp);

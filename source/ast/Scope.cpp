@@ -509,9 +509,15 @@ void Scope::addMembers(const SyntaxNode& syntax) {
         case SyntaxKind::PathDeclaration:
             addMember(TimingPathSymbol::fromSyntax(*this, syntax.as<PathDeclarationSyntax>()));
             break;
-        case SyntaxKind::PulseStyleDeclaration:
         case SyntaxKind::IfNonePathDeclaration:
+            addMember(
+                TimingPathSymbol::fromSyntax(*this, syntax.as<IfNonePathDeclarationSyntax>()));
+            break;
         case SyntaxKind::ConditionalPathDeclaration:
+            addMember(
+                TimingPathSymbol::fromSyntax(*this, syntax.as<ConditionalPathDeclarationSyntax>()));
+            break;
+        case SyntaxKind::PulseStyleDeclaration:
         case SyntaxKind::SystemTimingCheck:
         case SyntaxKind::ConfigDeclaration:
             // TODO: these aren't supported yet but we can compile everything else successfully

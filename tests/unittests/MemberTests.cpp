@@ -2933,6 +2933,36 @@ module o(input C, output Q);
                     t0x, tx1, t1x, tx0, txz, tzx) ;
     endspecify
 endmodule
+
+module XORgate (a, b, out);
+    input a, b;
+    output out;
+
+    xor x1 (out, a, b);
+
+    specify
+        specparam noninvrise = 1, noninvfall = 2;
+        specparam invertrise = 3, invertfall = 4;
+        if (a) (b => out) = (invertrise, invertfall);
+        if (b) (a => out) = (invertrise, invertfall);
+        if (~a)(b => out) = (noninvrise, noninvfall);
+        if (~b)(a => out) = (noninvrise, noninvfall);
+        ifnone (b => out) = (1, 0);
+    endspecify
+endmodule
+
+module ALU (o1, i1, i2, opcode);
+    input [7:0] i1, i2;
+    input [2:1] opcode;
+    output [7:0] o1;
+
+    specify
+        if (opcode == 2'b00) (i1,i2 *> o1) = (25.0, 25.0);
+        if (opcode == 2'b01) (i1 => o1) = (5.6, 8.0);
+        if (opcode == 2'b10) (i2 => o1) = (5.6, 8.0);
+        (opcode *> o1) = (6.1, 6.5);
+    endspecify
+endmodule
 )");
 
     Compilation compilation;

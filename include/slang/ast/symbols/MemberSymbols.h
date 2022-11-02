@@ -540,6 +540,7 @@ public:
     Polarity polarity;
     Polarity edgePolarity;
     EdgeKind edgeIdentifier;
+    bool isStateDependent = false;
 
     TimingPathSymbol(SourceLocation loc, ConnectionKind connectionKind, Polarity polarity,
                      Polarity edgePolarity, EdgeKind edgeIdentifier);
@@ -548,6 +549,12 @@ public:
         if (!isResolved)
             resolve();
         return edgeSourceExpr;
+    }
+
+    const Expression* getConditionExpr() const {
+        if (!isResolved)
+            resolve();
+        return conditionExpr;
     }
 
     span<const Expression* const> getInputs() const {
@@ -573,6 +580,12 @@ public:
     static TimingPathSymbol& fromSyntax(const Scope& parent,
                                         const syntax::PathDeclarationSyntax& syntax);
 
+    static TimingPathSymbol& fromSyntax(const Scope& parent,
+                                        const syntax::ConditionalPathDeclarationSyntax& syntax);
+
+    static TimingPathSymbol& fromSyntax(const Scope& parent,
+                                        const syntax::IfNonePathDeclarationSyntax& syntax);
+
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::TimingPath; }
 
 private:
@@ -580,6 +593,7 @@ private:
 
     mutable bool isResolved = false;
     mutable const Expression* edgeSourceExpr = nullptr;
+    mutable const Expression* conditionExpr = nullptr;
     mutable span<const Expression* const> inputs;
     mutable span<const Expression* const> outputs;
     mutable span<const Expression* const> delays;
