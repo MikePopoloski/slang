@@ -27,11 +27,17 @@ if((SLANG_INCLUDE_PYLIB OR BUILD_SHARED_LIBS) AND NOT fmt_FOUND)
   set_target_properties(fmt PROPERTIES POSITION_INDEPENDENT_CODE ON)
 endif()
 
+set(find_pkg_args "")
+if(${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.24.0")
+  set(find_pkg_args "FIND_PACKAGE_ARGS" "2.0.0")
+endif()
+
 FetchContent_Declare(
   unordered_dense
   GIT_REPOSITORY https://github.com/martinus/unordered_dense.git
   GIT_TAG v2.0.0
-  GIT_SHALLOW ON)
+  GIT_SHALLOW ON
+  ${find_pkg_args})
 FetchContent_MakeAvailable(unordered_dense)
 
 if(SLANG_INCLUDE_INSTALL)
@@ -44,10 +50,12 @@ if(SLANG_INCLUDE_INSTALL)
           ${PROJECT_SOURCE_DIR}/external/span.hpp
     DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
     COMPONENT slang_Development)
-  install(
-    DIRECTORY ${unordered_dense_SOURCE_DIR}/include/ankerl
-    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
-    COMPONENT slang_Development)
+  if(NOT unordered_dense_FOUND)
+    install(
+      DIRECTORY ${unordered_dense_SOURCE_DIR}/include/ankerl
+      DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+      COMPONENT slang_Development)
+  endif()
 
   if(NOT fmt_FOUND)
     install(
@@ -59,5 +67,7 @@ if(SLANG_INCLUDE_INSTALL)
       PRIVATE_HEADER EXCLUDE_FROM_ALL)
   endif()
 
-  install(TARGETS unordered_dense EXPORT slangTargets)
+  if(NOT unordered_dense_FOUND)
+    install(TARGETS unordered_dense EXPORT slangTargets)
+  endif()
 endif()
