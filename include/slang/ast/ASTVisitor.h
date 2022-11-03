@@ -27,6 +27,7 @@
 #include "slang/ast/symbols/MemberSymbols.h"
 #include "slang/ast/symbols/ParameterSymbols.h"
 #include "slang/ast/symbols/PortSymbols.h"
+#include "slang/ast/symbols/SpecifySymbols.h"
 #include "slang/ast/symbols/SubroutineSymbols.h"
 #include "slang/ast/symbols/VariableSymbols.h"
 #include "slang/ast/types/AllTypes.h"

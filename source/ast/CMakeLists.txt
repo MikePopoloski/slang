@@ -34,6 +34,7 @@ target_sources(
           symbols/ParameterBuilder.cpp
           symbols/ParameterSymbols.cpp
           symbols/PortSymbols.cpp
+          symbols/SPecifySymbols.cpp
           symbols/SubroutineSymbols.cpp
           symbols/SymbolBuilders.cpp
           symbols/ValueSymbol.cpp
