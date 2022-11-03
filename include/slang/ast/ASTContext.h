@@ -157,9 +157,12 @@ enum class SLANG_EXPORT ASTFlags : uint64_t {
     UnrollableForLoop = 1ull << 34,
 
     /// AST creation is for a range expression inside a streaming concatenation operator.
-    StreamingWithRange = 1ull << 35
+    StreamingWithRange = 1ull << 35,
+
+    /// AST creation is happening inside a specify block.
+    SpecifyBlock = 1ull << 36
 };
-BITMASK(ASTFlags, StreamingWithRange)
+BITMASK(ASTFlags, SpecifyBlock)
 
 // clang-format off
 #define DK(x) \

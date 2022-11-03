@@ -281,7 +281,8 @@ void TimingPathSymbol::resolve() const {
     ASSERT(parentParent);
 
     auto& comp = parent->getCompilation();
-    ASTContext context(*parent, LookupLocation::after(*this), ASTFlags::NonProcedural);
+    ASTContext context(*parent, LookupLocation::after(*this),
+                       ASTFlags::NonProcedural | ASTFlags::SpecifyBlock);
 
     auto bindTerminals = [&](const SeparatedSyntaxList<NameSyntax>& syntaxList, bool isSource) {
         SmallVector<const Expression*> results;
@@ -369,7 +370,7 @@ void TimingPathSymbol::resolve() const {
             }
 
             delayBuf.push_back(&expr);
-            context.eval(expr, EvalFlags::SpecparamsAllowed);
+            context.eval(expr);
         }
     }
 

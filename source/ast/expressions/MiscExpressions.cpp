@@ -72,11 +72,15 @@ Expression& ValueExpressionBase::fromSymbol(const ASTContext& context, const Sym
         if (!symbol.as<ConstraintBlockSymbol>().isStatic)
             Lookup::ensureAccessible(symbol, context, sourceRange);
     }
-    else if (symbol.kind == SymbolKind::Parameter &&
-             !context.flags.has(ASTFlags::AllowUnboundedLiteral) &&
-             symbol.as<ParameterSymbol>().getValue(sourceRange).isUnbounded()) {
-        context.addDiag(diag::UnboundedNotAllowed, sourceRange);
-        return badExpr(comp, nullptr);
+    else if (symbol.kind == SymbolKind::Parameter) {
+        if (!context.flags.has(ASTFlags::AllowUnboundedLiteral) &&
+            symbol.as<ParameterSymbol>().getValue(sourceRange).isUnbounded()) {
+            context.addDiag(diag::UnboundedNotAllowed, sourceRange);
+            return badExpr(comp, nullptr);
+        }
+
+        if (context.flags.has(ASTFlags::SpecifyBlock))
+            context.addDiag(diag::SpecifyBlockParam, sourceRange);
     }
     else if (symbol.kind == SymbolKind::Net &&
              symbol.as<NetSymbol>().netType.netKind == NetType::Interconnect &&

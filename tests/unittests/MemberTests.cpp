@@ -3021,19 +3021,20 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 14);
+    REQUIRE(diags.size() == 15);
     CHECK(diags[0].code == diag::InvalidSpecifyDest);
-    CHECK(diags[1].code == diag::InvalidSpecifyPath);
-    CHECK(diags[2].code == diag::SpecifyPathMultiDim);
-    CHECK(diags[3].code == diag::InvalidSpecifyType);
-    CHECK(diags[4].code == diag::InvalidSpecifySource);
-    CHECK(diags[5].code == diag::InvalidSpecifyDest);
-    CHECK(diags[6].code == diag::InvalidSpecifyPath);
-    CHECK(diags[7].code == diag::ParallelPathWidth);
-    CHECK(diags[8].code == diag::DelayNotNumeric);
-    CHECK(diags[9].code == diag::SpecifyPathBadReference);
-    CHECK(diags[10].code == diag::SpecifyPathConditionExpr);
+    CHECK(diags[1].code == diag::SpecifyBlockParam);
+    CHECK(diags[2].code == diag::InvalidSpecifyPath);
+    CHECK(diags[3].code == diag::SpecifyPathMultiDim);
+    CHECK(diags[4].code == diag::InvalidSpecifyType);
+    CHECK(diags[5].code == diag::InvalidSpecifySource);
+    CHECK(diags[6].code == diag::InvalidSpecifyDest);
+    CHECK(diags[7].code == diag::InvalidSpecifyPath);
+    CHECK(diags[8].code == diag::ParallelPathWidth);
+    CHECK(diags[9].code == diag::DelayNotNumeric);
+    CHECK(diags[10].code == diag::SpecifyPathBadReference);
     CHECK(diags[11].code == diag::SpecifyPathConditionExpr);
     CHECK(diags[12].code == diag::SpecifyPathConditionExpr);
     CHECK(diags[13].code == diag::SpecifyPathConditionExpr);
+    CHECK(diags[14].code == diag::SpecifyPathConditionExpr);
 }

@@ -218,14 +218,22 @@ bool ASTContext::requireValidBitWidth(bitwidth_t width, SourceRange range) const
 }
 
 ConstantValue ASTContext::eval(const Expression& expr, bitmask<EvalFlags> extraFlags) const {
-    EvalContext ctx(getCompilation(), extraFlags | EvalFlags::CacheResults);
+    extraFlags |= EvalFlags::CacheResults;
+    if (flags.has(ASTFlags::SpecifyBlock))
+        extraFlags |= EvalFlags::SpecparamsAllowed;
+
+    EvalContext ctx(getCompilation(), extraFlags);
     ConstantValue result = expr.eval(ctx);
     ctx.reportDiags(*this);
     return result;
 }
 
 ConstantValue ASTContext::tryEval(const Expression& expr) const {
-    EvalContext ctx(getCompilation(), EvalFlags::CacheResults);
+    bitmask<EvalFlags> extraFlags = EvalFlags::CacheResults;
+    if (flags.has(ASTFlags::SpecifyBlock))
+        extraFlags |= EvalFlags::SpecparamsAllowed;
+
+    EvalContext ctx(getCompilation(), extraFlags);
     return expr.eval(ctx);
 }
 

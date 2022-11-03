@@ -745,3 +745,15 @@ be decoded and skipped in its entirety, which may or may not result in a valid d
 asdfasdf
 `pragma protect end_protected
 ```
+
+-Wspecify-param
+The LRM disallows using parameters inside of specify blocks. Most tools allow this with
+a warning so slang makes it a warning as well.
+```
+module m(input [1:0] a, output [1:0] b);
+    parameter p = 1;
+    specify
+        (a[p] => b[0]) = 1;
+    endspecify
+endmodule
+```

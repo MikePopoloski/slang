@@ -108,7 +108,8 @@ void registerAST(py::module_& m) {
         .value("ProceduralForceRelease", ASTFlags::ProceduralForceRelease)
         .value("AllowInterconnect", ASTFlags::AllowInterconnect)
         .value("UnrollableForLoop", ASTFlags::UnrollableForLoop)
-        .value("StreamingWithRange", ASTFlags::StreamingWithRange);
+        .value("StreamingWithRange", ASTFlags::StreamingWithRange)
+        .value("SpecifyBlock", ASTFlags::SpecifyBlock);
 
     py::class_<EvaluatedDimension>(m, "EvaluatedDimension")
         .def_readonly("kind", &EvaluatedDimension::kind)
