@@ -25,6 +25,7 @@
 #include "slang/diagnostics/DeclarationsDiags.h"
 #include "slang/diagnostics/ExpressionsDiags.h"
 #include "slang/diagnostics/LookupDiags.h"
+#include "slang/diagnostics/StatementsDiags.h"
 #include "slang/diagnostics/TypesDiags.h"
 #include "slang/syntax/AllSyntax.h"
 #include "slang/util/StackContainer.h"
@@ -1832,6 +1833,106 @@ static bool checkPathTerminal(const ValueSymbol& terminal, const Symbol& specify
     return true;
 }
 
+// Only a subset of expressions are allowed to be used in specify path conditions.
+struct SpecifyConditionVisitor {
+    const ASTContext& context;
+    const Scope* specifyParentScope;
+    bool hasError = false;
+
+    SpecifyConditionVisitor(const ASTContext& context, const Scope* specifyParentScope) :
+        context(context), specifyParentScope(specifyParentScope) {}
+
+    template<typename T>
+    void visit(const T& expr) {
+        if constexpr (std::is_base_of_v<Expression, T>) {
+            switch (expr.kind) {
+                case ExpressionKind::NamedValue:
+                    if (auto sym = expr.getSymbolReference()) {
+                        // Specparams are always allowed.
+                        if (sym->kind == SymbolKind::Specparam || hasError)
+                            break;
+
+                        // Other references must be locally defined nets or variables.
+                        if ((sym->kind != SymbolKind::Net && sym->kind != SymbolKind::Variable) ||
+                            sym->getParentScope() != specifyParentScope) {
+                            auto& diag = context.addDiag(diag::SpecifyPathBadReference,
+                                                         expr.sourceRange);
+                            diag << sym->name;
+                            diag.addNote(diag::NoteDeclarationHere, sym->location);
+                            hasError = true;
+                        }
+                    }
+                    break;
+                case ExpressionKind::ElementSelect:
+                case ExpressionKind::RangeSelect:
+                case ExpressionKind::Call:
+                case ExpressionKind::MinTypMax:
+                case ExpressionKind::Concatenation:
+                case ExpressionKind::Replication:
+                case ExpressionKind::ConditionalOp:
+                case ExpressionKind::UnaryOp:
+                case ExpressionKind::BinaryOp:
+                case ExpressionKind::Conversion:
+                    if constexpr (is_detected_v<ASTDetectors::visitExprs_t, T,
+                                                SpecifyConditionVisitor>)
+                        expr.visitExprs(*this);
+
+                    if (expr.kind == ExpressionKind::UnaryOp) {
+                        switch (expr.template as<UnaryExpression>().op) {
+                            case UnaryOperator::BitwiseNot:
+                            case UnaryOperator::BitwiseAnd:
+                            case UnaryOperator::BitwiseOr:
+                            case UnaryOperator::BitwiseXor:
+                            case UnaryOperator::BitwiseNand:
+                            case UnaryOperator::BitwiseNor:
+                            case UnaryOperator::BitwiseXnor:
+                            case UnaryOperator::LogicalNot:
+                                break;
+                            default:
+                                reportError(expr.sourceRange);
+                        }
+                    }
+                    else if (expr.kind == ExpressionKind::BinaryOp) {
+                        switch (expr.template as<BinaryExpression>().op) {
+                            case BinaryOperator::BinaryAnd:
+                            case BinaryOperator::BinaryOr:
+                            case BinaryOperator::BinaryXor:
+                            case BinaryOperator::BinaryXnor:
+                            case BinaryOperator::Equality:
+                            case BinaryOperator::Inequality:
+                            case BinaryOperator::LogicalAnd:
+                            case BinaryOperator::LogicalOr:
+                                break;
+                            default:
+                                reportError(expr.sourceRange);
+                        }
+                    }
+                    else if (expr.kind == ExpressionKind::Conversion) {
+                        if (!expr.template as<ConversionExpression>().isImplicit())
+                            reportError(expr.sourceRange);
+                    }
+                    break;
+                case ExpressionKind::IntegerLiteral:
+                case ExpressionKind::RealLiteral:
+                    break;
+                default:
+                    reportError(expr.sourceRange);
+                    break;
+            }
+        }
+    }
+
+    void reportError(SourceRange sourceRange) {
+        if (!hasError) {
+            context.addDiag(diag::SpecifyPathConditionExpr, sourceRange);
+            hasError = true;
+        }
+    }
+
+    void visitInvalid(const Expression&) {}
+    void visitInvalid(const AssertionExpr&) {}
+};
+
 void TimingPathSymbol::resolve() const {
     isResolved = true;
 
@@ -1888,9 +1989,11 @@ void TimingPathSymbol::resolve() const {
         auto& conditional = syntaxPtr->as<ConditionalPathDeclarationSyntax>();
         syntaxPtr = conditional.path;
 
-        // TODO: add other requirements for predicate
         conditionExpr = &Expression::bind(*conditional.predicate, context);
-        context.requireBooleanConvertible(*conditionExpr);
+        if (context.requireBooleanConvertible(*conditionExpr)) {
+            SpecifyConditionVisitor visitor(context, parentParent);
+            conditionExpr->visit(visitor);
+        }
     }
 
     auto& syntax = syntaxPtr->as<PathDeclarationSyntax>();
@@ -1921,10 +2024,16 @@ void TimingPathSymbol::resolve() const {
     // Bind all delay values.
     SmallVector<const Expression*> delayBuf;
     for (auto delaySyntax : syntax.delays) {
-        // TODO: check the type
         auto& expr = Expression::bind(*delaySyntax, context);
-        delayBuf.push_back(&expr);
-        context.eval(expr, EvalFlags::SpecparamsAllowed);
+        if (!expr.bad()) {
+            if (!expr.type->isNumeric()) {
+                context.addDiag(diag::DelayNotNumeric, expr.sourceRange) << *expr.type;
+                continue;
+            }
+
+            delayBuf.push_back(&expr);
+            context.eval(expr, EvalFlags::SpecparamsAllowed);
+        }
     }
 
     delays = delayBuf.copy(comp);

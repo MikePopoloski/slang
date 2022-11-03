@@ -635,13 +635,14 @@ module m;
         (posedge a => b) = 2;
         (a, b => b, c) = 2;
         (a => b) = (1, 2, 3, 4);
+        ifnone (a => (b : 1)) = 2;
     endspecify
 endmodule
 )";
 
     parseCompilationUnit(text);
 
-    REQUIRE(diagnostics.size() == 12);
+    REQUIRE(diagnostics.size() == 13);
     CHECK(diagnostics[0].code == diag::InvalidEdgeDescriptor);
     CHECK(diagnostics[1].code == diag::ExpectedToken);
     CHECK(diagnostics[2].code == diag::InvalidEdgeDescriptor);
@@ -654,6 +655,7 @@ endmodule
     CHECK(diagnostics[9].code == diag::MultipleParallelTerminals);
     CHECK(diagnostics[10].code == diag::MultipleParallelTerminals);
     CHECK(diagnostics[11].code == diag::WrongSpecifyDelayCount);
+    CHECK(diagnostics[12].code == diag::IfNoneEdgeSensitive);
 }
 
 TEST_CASE("Invalid package decls") {

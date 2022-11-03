@@ -3003,7 +3003,13 @@ MemberSyntax* Parser::parseSpecifyItem() {
             return &parsePathDeclaration();
         case TokenKind::IfNoneKeyword: {
             auto keyword = consume();
-            return &factory.ifNonePathDeclaration(nullptr, keyword, parsePathDeclaration());
+            auto& path = parsePathDeclaration();
+            if (path.desc->suffix->kind == SyntaxKind::EdgeSensitivePathSuffix) {
+                addDiag(diag::IfNoneEdgeSensitive, keyword.range())
+                    << path.desc->suffix->sourceRange();
+            }
+
+            return &factory.ifNonePathDeclaration(nullptr, keyword, path);
         }
         case TokenKind::IfKeyword: {
             auto keyword = consume();

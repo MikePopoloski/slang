@@ -2957,9 +2957,10 @@ module ALU (o1, i1, i2, opcode);
     output [7:0] o1;
 
     specify
+        specparam s1 = 2;
         if (opcode == 2'b00) (i1,i2 *> o1) = (25.0, 25.0);
         if (opcode == 2'b01) (i1 => o1) = (5.6, 8.0);
-        if (opcode == 2'b10) (i2 => o1) = (5.6, 8.0);
+        if (opcode == s1) (i2 => o1) = (5.6, 8.0);
         (opcode *> o1) = (6.1, 6.5);
     endspecify
 endmodule
@@ -2985,6 +2986,7 @@ module m(input [4:0] a, output [4:0] b, output [5:0] l, I.m foo, I bar);
     logic [1:0][1:0] e;
     real f;
     int g;
+    event ev;
 
     specify
         (a +*> c) = 1;
@@ -2997,6 +2999,13 @@ module m(input [4:0] a, output [4:0] b, output [5:0] l, I.m foo, I bar);
         (a *> bar.i) = 1;
         (a *> k) = 1;
         (a => l) = 1;
+        (a => b) = ev;
+
+        if (k < 2) (a => b) = 1;
+        if (1 < 2) (a => b) = 1;
+        if (int'(g) == 1) (a => b) = 1;
+        if (+g == 1) (a => b) = 1;
+        if (g inside { 1, 2 }) (a => b) = 1;
     endspecify
 endmodule
 
@@ -3012,7 +3021,7 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 8);
+    REQUIRE(diags.size() == 14);
     CHECK(diags[0].code == diag::InvalidSpecifyDest);
     CHECK(diags[1].code == diag::InvalidSpecifyPath);
     CHECK(diags[2].code == diag::SpecifyPathMultiDim);
@@ -3021,4 +3030,10 @@ endmodule
     CHECK(diags[5].code == diag::InvalidSpecifyDest);
     CHECK(diags[6].code == diag::InvalidSpecifyPath);
     CHECK(diags[7].code == diag::ParallelPathWidth);
+    CHECK(diags[8].code == diag::DelayNotNumeric);
+    CHECK(diags[9].code == diag::SpecifyPathBadReference);
+    CHECK(diags[10].code == diag::SpecifyPathConditionExpr);
+    CHECK(diags[11].code == diag::SpecifyPathConditionExpr);
+    CHECK(diags[12].code == diag::SpecifyPathConditionExpr);
+    CHECK(diags[13].code == diag::SpecifyPathConditionExpr);
 }
