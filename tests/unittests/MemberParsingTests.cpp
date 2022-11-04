@@ -658,6 +658,39 @@ endmodule
     CHECK(diagnostics[12].code == diag::IfNoneEdgeSensitive);
 }
 
+TEST_CASE("PATHPULSE$ specparams") {
+    auto& text = R"(
+module m;
+    specify
+        specparam PATHPULSE$ = (1:2:3, 4:5:6);
+        specparam PATHPULSE$a$b = (1:2:3, 4:5:6);
+    endspecify
+endmodule
+)";
+
+    parseCompilationUnit(text);
+    CHECK_DIAGNOSTICS_EMPTY;
+}
+
+TEST_CASE("PATHPULSE$ specparam errors") {
+    auto& text = R"(
+module m;
+    specparam PATHPULSE$ = (1:2:3, 4:5:6);
+    specify
+        specparam PATHPULSE$a$b = 1;
+        specparam a = (1:2:3, 4:5:6);
+    endspecify
+endmodule
+)";
+
+    parseCompilationUnit(text);
+
+    REQUIRE(diagnostics.size() == 3);
+    CHECK(diagnostics[0].code == diag::PulseControlSpecifyParent);
+    CHECK(diagnostics[1].code == diag::PulseControlTwoValues);
+    CHECK(diagnostics[2].code == diag::PulseControlPATHPULSE);
+}
+
 TEST_CASE("Invalid package decls") {
     auto& text = R"(
 package p1 import p::*;;

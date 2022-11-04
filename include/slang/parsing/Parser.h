@@ -329,8 +329,8 @@ private:
     syntax::UdpPortDeclSyntax& parseUdpPortDecl();
     syntax::UdpBodySyntax& parseUdpBody();
     syntax::UdpEntrySyntax& parseUdpEntry();
-    syntax::SpecparamDeclaratorSyntax& parseSpecparamDeclarator();
-    syntax::SpecparamDeclarationSyntax& parseSpecparam(AttrList attributes);
+    syntax::SpecparamDeclaratorSyntax& parseSpecparamDeclarator(syntax::SyntaxKind parentKind);
+    syntax::SpecparamDeclarationSyntax& parseSpecparam(AttrList attributes, syntax::SyntaxKind parentKind);
     syntax::MemberSyntax* parseSpecifyItem();
     syntax::SpecifyBlockSyntax& parseSpecifyBlock(AttrList attributes);
     syntax::NetAliasSyntax& parseNetAlias(AttrList attributes);

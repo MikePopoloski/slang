@@ -342,7 +342,7 @@ void SpecparamSymbol::fromSyntax(const Scope& scope, const SpecparamDeclarationS
         auto param = scope.getCompilation().emplace<SpecparamSymbol>(decl->name.valueText(), loc);
         param->setSyntax(*decl);
         param->setDeclaredType(*syntax.type);
-        param->setInitializerSyntax(*decl->value, decl->equals.location());
+        param->setInitializerSyntax(*decl->value1, decl->equals.location());
         param->setAttributes(scope, syntax.attributes);
         results.push_back(param);
     }

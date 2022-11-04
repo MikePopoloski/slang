@@ -1548,7 +1548,11 @@ NamedBlockClause? endBlockName
 SpecparamDeclarator
 token name
 token equals
-Expression value
+token openParen
+Expression value1
+token comma
+Expression? value2
+token closeParen
 
 SpecparamDeclaration base=Member
 token keyword

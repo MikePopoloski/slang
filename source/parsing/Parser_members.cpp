@@ -8,6 +8,7 @@
 #include "slang/diagnostics/ParserDiags.h"
 #include "slang/parsing/Parser.h"
 #include "slang/parsing/Preprocessor.h"
+#include "slang/util/String.h"
 
 namespace slang::parsing {
 
@@ -151,7 +152,7 @@ MemberSyntax* Parser::parseMember(SyntaxKind parentKind, bool& anyLocalModules) 
         case TokenKind::BindKeyword:
             return &parseBindDirective(attributes);
         case TokenKind::SpecParamKeyword:
-            return &parseSpecparam(attributes);
+            return &parseSpecparam(attributes, parentKind);
         case TokenKind::AliasKeyword:
             return &parseNetAlias(attributes);
         case TokenKind::SpecifyKeyword:
@@ -2704,15 +2705,44 @@ UdpDeclarationSyntax& Parser::parseUdpDeclaration(AttrList attr) {
     return factory.udpDeclaration(attr, primitive, name, portList, body, endprim, endBlockName);
 }
 
-SpecparamDeclaratorSyntax& Parser::parseSpecparamDeclarator() {
+SpecparamDeclaratorSyntax& Parser::parseSpecparamDeclarator(SyntaxKind parentKind) {
     auto name = expect(TokenKind::Identifier);
     auto equals = expect(TokenKind::Equals);
-    auto& expr = parseMinTypMaxExpression();
+    auto openParen = consumeIf(TokenKind::OpenParenthesis);
+    auto& expr1 = parseMinTypMaxExpression();
 
-    return factory.specparamDeclarator(name, equals, expr);
+    const bool isPathPulse = startsWith(name.valueText(), "PATHPULSE$"sv);
+
+    Token comma;
+    ExpressionSyntax* expr2 = nullptr;
+    if (openParen && peek(TokenKind::Comma)) {
+        comma = consume();
+        expr2 = &parseMinTypMaxExpression();
+    }
+
+    Token closeParen;
+    if (openParen)
+        closeParen = expect(TokenKind::CloseParenthesis);
+
+    if (!name.isMissing()) {
+        if (isPathPulse) {
+            if (parentKind != SyntaxKind::SpecifyBlock)
+                addDiag(diag::PulseControlSpecifyParent, name.range());
+            else if (!expr2)
+                addDiag(diag::PulseControlTwoValues, expr1.sourceRange()) << name.range();
+        }
+        else if (expr2) {
+            auto last = expr2->getLastToken();
+            SourceRange range(expr1.getFirstToken().location(),
+                              last.location() + last.rawText().length());
+            addDiag(diag::PulseControlPATHPULSE, name.range()) << range;
+        }
+    }
+
+    return factory.specparamDeclarator(name, equals, openParen, expr1, comma, expr2, closeParen);
 }
 
-SpecparamDeclarationSyntax& Parser::parseSpecparam(AttrList attr) {
+SpecparamDeclarationSyntax& Parser::parseSpecparam(AttrList attr, SyntaxKind parentKind) {
     auto keyword = consume();
 
     auto dim = parseDimension();
@@ -2726,8 +2756,9 @@ SpecparamDeclarationSyntax& Parser::parseSpecparam(AttrList attr) {
     SmallVector<TokenOrSyntax, 4> buffer;
     parseList<isIdentifierOrComma, isNotIdOrComma>(buffer, TokenKind::Semicolon, TokenKind::Comma,
                                                    semi, RequireItems::True,
-                                                   diag::ExpectedDeclarator,
-                                                   [this] { return &parseSpecparamDeclarator(); });
+                                                   diag::ExpectedDeclarator, [this, parentKind] {
+                                                       return &parseSpecparamDeclarator(parentKind);
+                                                   });
 
     return factory.specparamDeclaration(attr, keyword, type, buffer.copy(alloc), semi);
 }
@@ -2989,7 +3020,7 @@ SystemTimingCheckSyntax& Parser::parseSystemTimingCheck() {
 MemberSyntax* Parser::parseSpecifyItem() {
     switch (peek().kind) {
         case TokenKind::SpecParamKeyword:
-            return &parseSpecparam({});
+            return &parseSpecparam({}, SyntaxKind::SpecifyBlock);
         case TokenKind::PulseStyleOnDetectKeyword:
         case TokenKind::PulseStyleOnEventKeyword:
         case TokenKind::ShowCancelledKeyword:
