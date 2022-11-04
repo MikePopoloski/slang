@@ -3006,6 +3006,8 @@ module m(input [4:0] a, output [4:0] b, output [5:0] l, I.m foo, I bar);
         if (int'(g) == 1) (a => b) = 1;
         if (+g == 1) (a => b) = 1;
         if (g inside { 1, 2 }) (a => b) = 1;
+
+        (b => a) = 1;
     endspecify
 endmodule
 
@@ -3021,7 +3023,7 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 15);
+    REQUIRE(diags.size() == 17);
     CHECK(diags[0].code == diag::InvalidSpecifyDest);
     CHECK(diags[1].code == diag::SpecifyBlockParam);
     CHECK(diags[2].code == diag::InvalidSpecifyPath);
@@ -3037,4 +3039,6 @@ endmodule
     CHECK(diags[12].code == diag::SpecifyPathConditionExpr);
     CHECK(diags[13].code == diag::SpecifyPathConditionExpr);
     CHECK(diags[14].code == diag::SpecifyPathConditionExpr);
+    CHECK(diags[15].code == diag::InvalidSpecifySource);
+    CHECK(diags[16].code == diag::InvalidSpecifyDest);
 }

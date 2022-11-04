@@ -141,8 +141,9 @@ static bool checkPathTerminal(const ValueSymbol& terminal, const Symbol& specify
         if (dir != ArgumentDirection::InOut && ((isSource && dir != ArgumentDirection::In) ||
                                                 (!isSource && dir != ArgumentDirection::Out))) {
             reportErr();
+            return false;
         }
-        return false;
+        return true;
     }
 
     auto terminalParentScope = terminal.getParentScope();
@@ -165,9 +166,19 @@ static bool checkPathTerminal(const ValueSymbol& terminal, const Symbol& specify
         return false;
     }
 
-    // TODO: check that the terminal is connected to a module port and that
+    // Check that the terminal is connected to a module port and that
     // the direction is correct.
-    return true;
+    for (auto portRef = terminal.getFirstPortBackref(); portRef;
+         portRef = portRef->getNextBackreference()) {
+        auto dir = portRef->port->direction;
+        if (dir == ArgumentDirection::InOut || (isSource && dir == ArgumentDirection::In) ||
+            (!isSource && dir == ArgumentDirection::Out)) {
+            return true;
+        }
+    }
+
+    reportErr();
+    return false;
 }
 
 // Only a subset of expressions are allowed to be used in specify path conditions.
