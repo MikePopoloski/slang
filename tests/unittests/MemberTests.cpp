@@ -396,6 +396,10 @@ endmodule
                 "lifetime": "Automatic",
                 "visibility": "Public"
               }
+            ],
+            "isAbstract": false,
+            "isInterface": false,
+            "implements": [
             ]
           },
           {
@@ -410,6 +414,98 @@ endmodule
           }
         ],
         "definition": "test_enum"
+      },
+      "connections": [
+      ]
+    }
+  ]
+})");
+}
+
+TEST_CASE("JSON dump -- attributes") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    wire dog, cat;
+    (* special *) assign dog = (* dummy *) cat;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    JsonWriter writer;
+    writer.setPrettyPrint(true);
+
+    ASTSerializer serializer(compilation, writer);
+    serializer.setIncludeAddresses(false);
+    serializer.serialize(compilation.getRoot());
+
+    std::string result = "\n"s + std::string(writer.view());
+    CHECK(result == R"(
+{
+  "name": "$root",
+  "kind": "Root",
+  "members": [
+    {
+      "name": "",
+      "kind": "CompilationUnit"
+    },
+    {
+      "name": "m",
+      "kind": "Instance",
+      "body": {
+        "name": "m",
+        "kind": "InstanceBody",
+        "members": [
+          {
+            "name": "dog",
+            "kind": "Net",
+            "type": "logic",
+            "netType": {
+              "name": "wire",
+              "kind": "NetType",
+              "type": "logic"
+            }
+          },
+          {
+            "name": "cat",
+            "kind": "Net",
+            "type": "logic",
+            "netType": {
+              "name": "wire",
+              "kind": "NetType",
+              "type": "logic"
+            }
+          },
+          {
+            "name": "",
+            "kind": "ContinuousAssign",
+            "attributes": [
+              {
+                "name": "special",
+                "kind": "Attribute",
+                "value": "1'b1"
+              }
+            ],
+            "assignment": {
+              "kind": "Assignment",
+              "type": "logic",
+              "left": {
+                "kind": "NamedValue",
+                "type": "logic",
+                "symbol": "dog"
+              },
+              "right": {
+                "kind": "NamedValue",
+                "type": "logic",
+                "symbol": "cat"
+              },
+              "isNonBlocking": false
+            }
+          }
+        ],
+        "definition": "m"
       },
       "connections": [
       ]

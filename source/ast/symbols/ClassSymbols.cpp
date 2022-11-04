@@ -562,7 +562,8 @@ void ClassType::handleImplements(const ImplementsClauseSyntax& implementsClause,
                                  const ASTContext& context,
                                  function_ref<void(const Symbol&)> insertCB) const {
     auto& comp = context.getCompilation();
-    SmallVector<const Type*> ifaces;
+    SmallVector<const Type*> declaredIfacesBuf;
+    SmallVector<const Type*> implementsIfacesBuf;
     SmallSet<const Symbol*, 4> seenIfaces;
 
     if (isInterface) {
@@ -649,7 +650,8 @@ void ClassType::handleImplements(const ImplementsClauseSyntax& implementsClause,
                 insertCB(*wrapper);
             }
 
-            findIfaces(*iface, ifaces, seenIfaces);
+            declaredIfacesBuf.push_back(iface);
+            findIfaces(*iface, implementsIfacesBuf, seenIfaces);
         }
     }
     else {
@@ -699,18 +701,31 @@ void ClassType::handleImplements(const ImplementsClauseSyntax& implementsClause,
                                                           /* allowDerivedReturn */ false);
             }
 
-            findIfaces(*iface, ifaces, seenIfaces);
+            declaredIfacesBuf.push_back(iface);
+            findIfaces(*iface, implementsIfacesBuf, seenIfaces);
         }
     }
 
-    implementsIfaces = ifaces.copy(comp);
+    declaredIfaces = declaredIfacesBuf.copy(comp);
+    implementsIfaces = implementsIfacesBuf.copy(comp);
 }
 
 void ClassType::serializeTo(ASTSerializer& serializer) const {
+    serializer.write("isAbstract", isAbstract);
+    serializer.write("isInterface", isInterface);
     if (firstForward)
         serializer.write("forward", *firstForward);
     if (genericClass)
         serializer.writeLink("genericClass", *genericClass);
+    if (auto base = getBaseClass())
+        serializer.write("baseClass", *base);
+    if (auto expr = getBaseConstructorCall())
+        serializer.write("baseConstructorCall", *expr);
+
+    serializer.startArray("implements");
+    for (auto type : getDeclaredInterfaces())
+        serializer.serialize(*type);
+    serializer.endArray();
 }
 
 const Symbol& GenericClassDefSymbol::fromSyntax(const Scope& scope,

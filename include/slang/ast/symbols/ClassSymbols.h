@@ -71,6 +71,16 @@ public:
         return implementsIfaces;
     }
 
+    /// Gets the list of interface classes that this class implements, as declared
+    /// in the class type declaration (i.e. it does not include any parent interfaces
+    /// inherited from the ones in the declaration).
+    /// If this class is itself an interface class, this is instead the list of
+    /// interface classes that it extends from, if any.
+    span<const Type* const> getDeclaredInterfaces() const {
+        ensureElaborated();
+        return declaredIfaces;
+    }
+
     /// If this class has a base class with a constructor, gets the expression used to
     /// invoke that method. Otherwise returns nullptr.
     const Expression* getBaseConstructorCall() const;
@@ -108,6 +118,7 @@ private:
     mutable std::optional<const Expression*> baseConstructorCall;
     mutable const ForwardingTypedefSymbol* firstForward = nullptr;
     mutable span<const Type* const> implementsIfaces;
+    mutable span<const Type* const> declaredIfaces;
     SymbolIndex headerIndex;
 };
 

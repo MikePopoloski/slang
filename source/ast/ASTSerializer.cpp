@@ -177,6 +177,14 @@ void ASTSerializer::visit(const T& elem, bool inMembersArray) {
         write("kind", toString(elem.kind));
         write("type", *elem.type);
 
+        auto attributes = compilation.getAttributes(elem);
+        if (!attributes.empty()) {
+            startArray("attributes");
+            for (auto attr : attributes)
+                serialize(*attr);
+            endArray();
+        }
+
         if constexpr (!std::is_same_v<Expression, T>) {
             elem.serializeTo(*this);
         }
@@ -191,6 +199,14 @@ void ASTSerializer::visit(const T& elem, bool inMembersArray) {
     else if constexpr (std::is_base_of_v<Statement, T>) {
         writer.startObject();
         write("kind", toString(elem.kind));
+
+        auto attributes = compilation.getAttributes(elem);
+        if (!attributes.empty()) {
+            startArray("attributes");
+            for (auto attr : attributes)
+                serialize(*attr);
+            endArray();
+        }
 
         if constexpr (!std::is_same_v<Statement, T>) {
             elem.serializeTo(*this);
@@ -235,15 +251,12 @@ void ASTSerializer::visit(const T& elem, bool inMembersArray) {
         if (includeAddrs)
             write("addr", uintptr_t(&elem));
 
-        auto scope = elem.getParentScope();
-        if (scope) {
-            auto attributes = scope->getCompilation().getAttributes(elem);
-            if (!attributes.empty()) {
-                startArray("attributes");
-                for (auto attr : attributes)
-                    serialize(*attr);
-                endArray();
-            }
+        auto attributes = compilation.getAttributes(elem);
+        if (!attributes.empty()) {
+            startArray("attributes");
+            for (auto attr : attributes)
+                serialize(*attr);
+            endArray();
         }
 
         if constexpr (std::is_base_of_v<ValueSymbol, T>) {
