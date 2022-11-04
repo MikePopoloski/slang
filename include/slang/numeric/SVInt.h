@@ -296,14 +296,15 @@ public:
     static SVInt createFillZ(bitwidth_t bitWidth, bool isSigned);
 
     [[nodiscard]] size_t hash() const;
-    void writeTo(SmallVectorBase<char>& buffer, LiteralBase base, bitwidth_t
-        abbreviateThresholdBits = DefaultStringAbbreviationThresholdBits) const;
+    void writeTo(SmallVectorBase<char>& buffer, LiteralBase base,
+                 bitwidth_t abbreviateThresholdBits = DefaultStringAbbreviationThresholdBits) const;
     void writeTo(SmallVectorBase<char>& buffer, LiteralBase base, bool includeBase,
                  bitwidth_t abbreviateThresholdBits = MAX_BITS) const;
-    std::string toString(bitwidth_t abbreviateThresholdBits =
-            DefaultStringAbbreviationThresholdBits, bool exactUnknowns = false) const;
+    std::string toString(
+        bitwidth_t abbreviateThresholdBits = DefaultStringAbbreviationThresholdBits,
+        bool exactUnknowns = false) const;
     std::string toString(LiteralBase base, bitwidth_t abbreviateThresholdBits =
-            DefaultStringAbbreviationThresholdBits) const;
+                                               DefaultStringAbbreviationThresholdBits) const;
     std::string toString(LiteralBase base, bool includeBase,
                          bitwidth_t abbreviateThresholdBits = MAX_BITS) const;
 
