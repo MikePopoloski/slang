@@ -104,9 +104,14 @@ private:
 /// Represents a specify parameter.
 class SLANG_EXPORT SpecparamSymbol : public ValueSymbol {
 public:
+    bool isPathPulse = false;
+
     SpecparamSymbol(string_view name, SourceLocation loc);
 
     const ConstantValue& getValue(SourceRange referencingRange = {}) const;
+
+    const ConstantValue& getPulseRejectLimit() const;
+    const ConstantValue& getPulseErrorLimit() const;
 
     static void fromSyntax(const Scope& scope, const syntax::SpecparamDeclarationSyntax& syntax,
                            SmallVectorBase<const SpecparamSymbol*>& results);
@@ -116,7 +121,8 @@ public:
     void serializeTo(ASTSerializer& serializer) const;
 
 private:
-    mutable const ConstantValue* value = nullptr;
+    mutable const ConstantValue* value1 = nullptr;
+    mutable const ConstantValue* value2 = nullptr;
     mutable bool evaluating = false;
 };
 

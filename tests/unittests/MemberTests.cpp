@@ -3138,3 +3138,21 @@ endmodule
     CHECK(diags[15].code == diag::InvalidSpecifySource);
     CHECK(diags[16].code == diag::InvalidSpecifyDest);
 }
+
+TEST_CASE("Pathpulse specparams") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    specify
+        specparam PATHPULSE$ = (1, 2);
+        specparam l = PATHPULSE$;
+    endspecify
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::PathPulseInExpr);
+}

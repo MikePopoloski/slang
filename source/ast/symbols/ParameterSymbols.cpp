@@ -304,7 +304,7 @@ SpecparamSymbol::SpecparamSymbol(string_view name, SourceLocation loc) :
 }
 
 const ConstantValue& SpecparamSymbol::getValue(SourceRange referencingRange) const {
-    if (!value) {
+    if (!value1) {
         // If no value has been explicitly set, try to set it
         // from our initializer.
         auto init = getInitializer();
@@ -325,14 +325,41 @@ const ConstantValue& SpecparamSymbol::getValue(SourceRange referencingRange) con
             evaluating = true;
             auto guard = ScopeGuard([this] { evaluating = false; });
 
-            value = scope->getCompilation().allocConstant(
-                ctx.eval(*init, EvalFlags::SpecparamsAllowed));
+            auto& comp = scope->getCompilation();
+            value1 = comp.allocConstant(ctx.eval(*init, EvalFlags::SpecparamsAllowed));
+
+            // Specparams can also be a "PATHPULSE$" which has two values to bind.
+            auto syntax = getSyntax();
+            ASSERT(syntax);
+
+            auto& decl = syntax->as<SpecparamDeclaratorSyntax>();
+            if (auto exprSyntax = decl.value2) {
+                auto& expr2 = Expression::bindRValue(getType(), *exprSyntax, decl.equals.location(),
+                                                     ctx);
+                value2 = comp.allocConstant(ctx.eval(expr2, EvalFlags::SpecparamsAllowed));
+            }
+            else {
+                value2 = &ConstantValue::Invalid;
+            }
         }
         else {
-            value = &ConstantValue::Invalid;
+            value1 = &ConstantValue::Invalid;
+            value2 = &ConstantValue::Invalid;
         }
     }
-    return *value;
+    return *value1;
+}
+
+const ConstantValue& SpecparamSymbol::getPulseRejectLimit() const {
+    ASSERT(isPathPulse);
+    getValue();
+    return *value1;
+}
+
+const ConstantValue& SpecparamSymbol::getPulseErrorLimit() const {
+    ASSERT(isPathPulse);
+    getValue();
+    return *value2;
 }
 
 void SpecparamSymbol::fromSyntax(const Scope& scope, const SpecparamDeclarationSyntax& syntax,
@@ -345,11 +372,21 @@ void SpecparamSymbol::fromSyntax(const Scope& scope, const SpecparamDeclarationS
         param->setInitializerSyntax(*decl->value1, decl->equals.location());
         param->setAttributes(scope, syntax.attributes);
         results.push_back(param);
+
+        if (decl->value2)
+            param->isPathPulse = true;
     }
 }
 
 void SpecparamSymbol::serializeTo(ASTSerializer& serializer) const {
-    serializer.write("value", getValue());
+    serializer.write("isPathPulse", isPathPulse);
+    if (isPathPulse) {
+        serializer.write("rejectLimit", getPulseRejectLimit());
+        serializer.write("errorLimit", getPulseErrorLimit());
+    }
+    else {
+        serializer.write("value", getValue());
+    }
 }
 
 } // namespace slang::ast

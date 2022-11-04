@@ -614,6 +614,7 @@ error PatternStructTooFew "structure pattern has too few members for target type
 error PatternStructTooMany "structure pattern has too many members for target type {}"
 error SpecifyPathConditionExpr "expression is not valid in a state-dependent path condition"
 error SpecifyPathBadReference "cannot refer to '{}' in state-dependent path condition expression; only locally defined nets and variables are allowed"
+error PathPulseInExpr "PATHPULSE$ specparams cannot be used in expressions"
 warning ignored-slice IgnoredSlice "slice size ignored for left-to-right streaming operator"
 warning unsized-concat UnsizedInConcat "unsized integer in concat; using a width of {}"
 warning width-expand WidthExpand "implicit conversion expands from {} to {} bits"

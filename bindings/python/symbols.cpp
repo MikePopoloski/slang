@@ -219,8 +219,15 @@ void registerSymbols(py::module_& m) {
         .def_property_readonly("value", [](const DefParamSymbol& self) { return self.getValue(); });
 
     py::class_<SpecparamSymbol, ValueSymbol>(m, "SpecparamSymbol")
-        .def_property_readonly("value",
-                               [](const SpecparamSymbol& self) { return self.getValue(); });
+        .def_readonly("isPathPulse", &SpecparamSymbol::isPathPulse)
+        .def_property_readonly("value", [](const SpecparamSymbol& self) { return self.getValue(); })
+        .def_property_readonly("pulseRejectLimit",
+                               [](const SpecparamSymbol& self) {
+                                   return self.getPulseRejectLimit();
+                               })
+        .def_property_readonly("pulseErrorLimit", [](const SpecparamSymbol& self) {
+            return self.getPulseErrorLimit();
+        });
 
     py::enum_<VariableFlags>(m, "VariableFlags")
         .value("None", VariableFlags::None)

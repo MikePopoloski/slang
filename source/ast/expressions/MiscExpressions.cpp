@@ -93,6 +93,10 @@ Expression& ValueExpressionBase::fromSymbol(const ASTContext& context, const Sym
         context.addDiag(diag::ClockVarOutputRead, sourceRange) << symbol.name;
         return badExpr(comp, nullptr);
     }
+    else if (symbol.kind == SymbolKind::Specparam && symbol.as<SpecparamSymbol>().isPathPulse) {
+        context.addDiag(diag::PathPulseInExpr, sourceRange);
+        return badExpr(comp, nullptr);
+    }
 
     if (!symbol.isValue()) {
         if ((symbol.kind == SymbolKind::ClockingBlock &&
