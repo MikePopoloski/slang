@@ -19,6 +19,7 @@
 
 void registerSymbols(py::module_& m) {
     EXPOSE_ENUM(m, SymbolKind);
+    EXPOSE_ENUM(m, PulseStyleKind);
 
     py::enum_<LookupFlags>(m, "LookupFlags")
         .value("None", LookupFlags::None)
@@ -572,6 +573,10 @@ void registerSymbols(py::module_& m) {
         .value("Unknown", TimingPathSymbol::Polarity::Unknown)
         .value("Positive", TimingPathSymbol::Polarity::Positive)
         .value("Negative", TimingPathSymbol::Polarity::Negative);
+
+    py::class_<PulseStyleSymbol, Symbol>(m, "PulseStyleSymbol")
+        .def_readonly("pulseStyleKind", &PulseStyleSymbol::pulseStyleKind)
+        .def_property_readonly("terminals", &PulseStyleSymbol::getTerminals);
 
     py::class_<CoverageOptionSetter>(m, "CoverageOptionSetter")
         .def_property_readonly("isTypeOption", &CoverageOptionSetter::isTypeOption)

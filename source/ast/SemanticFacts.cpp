@@ -97,6 +97,16 @@ ElabSystemTaskKind SemanticFacts::getElabSystemTaskKind(Token token) {
         return ElabSystemTaskKind::StaticAssert;
     ASSUME_UNREACHABLE;
 }
+
+PulseStyleKind SemanticFacts::getPulseStyleKind(TokenKind kind) {
+    switch (kind) {
+        case TokenKind::PulseStyleOnEventKeyword: return PulseStyleKind::OnEvent;
+        case TokenKind::PulseStyleOnDetectKeyword: return PulseStyleKind::OnDetect;
+        case TokenKind::ShowCancelledKeyword: return PulseStyleKind::ShowCancelled;
+        case TokenKind::NoShowCancelledKeyword: return PulseStyleKind::NoShowCancelled;
+        default: ASSUME_UNREACHABLE;
+    }
+}
 // clang-format on
 
 string_view SemanticFacts::getProcedureKindStr(ProceduralBlockKind kind) {

@@ -3156,3 +3156,23 @@ endmodule
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::PathPulseInExpr);
 }
+
+TEST_CASE("Specify pulsestyle directives") {
+    auto tree = SyntaxTree::fromText(R"(
+module m(input a, output b);
+    specify
+        pulsestyle_onevent a, b, b;
+        pulsestyle_ondetect b;
+        showcancelled b;
+        noshowcancelled b, b;
+    endspecify
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::InvalidSpecifyDest);
+}

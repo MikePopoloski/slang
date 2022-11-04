@@ -94,4 +94,30 @@ private:
     mutable span<const Expression* const> delays;
 };
 
+class SLANG_EXPORT PulseStyleSymbol : public Symbol {
+public:
+    PulseStyleKind pulseStyleKind;
+
+    PulseStyleSymbol(SourceLocation loc, PulseStyleKind pulseStyleKind);
+
+    span<const Expression* const> getTerminals() const {
+        if (!isResolved)
+            resolve();
+        return terminals;
+    }
+
+    void serializeTo(ASTSerializer& serializer) const;
+
+    static PulseStyleSymbol& fromSyntax(const Scope& parent,
+                                        const syntax::PulseStyleDeclarationSyntax& syntax);
+
+    static bool isKind(SymbolKind kind) { return kind == SymbolKind::PulseStyle; }
+
+private:
+    void resolve() const;
+
+    mutable bool isResolved = false;
+    mutable span<const Expression* const> terminals;
+};
+
 } // namespace slang::ast

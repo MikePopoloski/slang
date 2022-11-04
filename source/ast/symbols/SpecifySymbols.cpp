@@ -181,6 +181,43 @@ static bool checkPathTerminal(const ValueSymbol& terminal, const Symbol& specify
     return false;
 }
 
+static span<const Expression* const> bindTerminals(
+    const SeparatedSyntaxList<NameSyntax>& syntaxList, bool isSource, const Symbol& parentParent,
+    ASTContext& context) {
+
+    SmallVector<const Expression*> results;
+    for (auto exprSyntax : syntaxList) {
+        auto expr = &Expression::bind(*exprSyntax, context);
+        if (expr->bad())
+            continue;
+
+        switch (expr->kind) {
+            case ExpressionKind::ElementSelect:
+                expr = &expr->as<ElementSelectExpression>().value();
+                break;
+            case ExpressionKind::RangeSelect:
+                expr = &expr->as<RangeSelectExpression>().value();
+                break;
+            default:
+                break;
+        }
+
+        if (expr->kind != ExpressionKind::NamedValue) {
+            auto code = (expr->kind == ExpressionKind::ElementSelect ||
+                         expr->kind == ExpressionKind::RangeSelect)
+                            ? diag::SpecifyPathMultiDim
+                            : diag::InvalidSpecifyPath;
+            context.addDiag(code, exprSyntax->sourceRange());
+        }
+        else {
+            auto& symbol = expr->as<NamedValueExpression>().symbol;
+            if (checkPathTerminal(symbol, parentParent, context, isSource, expr->sourceRange))
+                results.push_back(expr);
+        }
+    }
+    return results.copy(context.getCompilation());
+}
+
 // Only a subset of expressions are allowed to be used in specify path conditions.
 struct SpecifyConditionVisitor {
     const ASTContext& context;
@@ -295,42 +332,6 @@ void TimingPathSymbol::resolve() const {
     ASTContext context(*parent, LookupLocation::after(*this),
                        ASTFlags::NonProcedural | ASTFlags::SpecifyBlock);
 
-    auto bindTerminals = [&](const SeparatedSyntaxList<NameSyntax>& syntaxList, bool isSource) {
-        SmallVector<const Expression*> results;
-        for (auto exprSyntax : syntaxList) {
-            auto expr = &Expression::bind(*exprSyntax, context);
-            if (expr->bad())
-                continue;
-
-            switch (expr->kind) {
-                case ExpressionKind::ElementSelect:
-                    expr = &expr->as<ElementSelectExpression>().value();
-                    break;
-                case ExpressionKind::RangeSelect:
-                    expr = &expr->as<RangeSelectExpression>().value();
-                    break;
-                default:
-                    break;
-            }
-
-            if (expr->kind != ExpressionKind::NamedValue) {
-                auto code = (expr->kind == ExpressionKind::ElementSelect ||
-                             expr->kind == ExpressionKind::RangeSelect)
-                                ? diag::SpecifyPathMultiDim
-                                : diag::InvalidSpecifyPath;
-                context.addDiag(code, exprSyntax->sourceRange());
-            }
-            else {
-                auto& symbol = expr->as<NamedValueExpression>().symbol;
-                if (checkPathTerminal(symbol, parentParent->asSymbol(), context, isSource,
-                                      expr->sourceRange)) {
-                    results.push_back(expr);
-                }
-            }
-        }
-        return results.copy(comp);
-    };
-
     if (syntaxPtr->kind == SyntaxKind::IfNonePathDeclaration) {
         syntaxPtr = syntaxPtr->as<IfNonePathDeclarationSyntax>().path;
     }
@@ -346,17 +347,18 @@ void TimingPathSymbol::resolve() const {
     }
 
     auto& syntax = syntaxPtr->as<PathDeclarationSyntax>();
-    inputs = bindTerminals(syntax.desc->inputs, true);
+    inputs = bindTerminals(syntax.desc->inputs, true, parentParent->asSymbol(), context);
 
     if (syntax.desc->suffix->kind == SyntaxKind::EdgeSensitivePathSuffix) {
         auto& esps = syntax.desc->suffix->as<EdgeSensitivePathSuffixSyntax>();
-        outputs = bindTerminals(esps.outputs, false);
+        outputs = bindTerminals(esps.outputs, false, parentParent->asSymbol(), context);
 
         // This expression is apparently allowed to be anything the user wants.
         edgeSourceExpr = &Expression::bind(*esps.expr, context);
     }
     else {
-        outputs = bindTerminals(syntax.desc->suffix->as<SimplePathSuffixSyntax>().outputs, false);
+        outputs = bindTerminals(syntax.desc->suffix->as<SimplePathSuffixSyntax>().outputs, false,
+                                parentParent->asSymbol(), context);
     }
 
     // Verify that input and output sizes match for parallel connections.
@@ -429,6 +431,41 @@ void TimingPathSymbol::serializeTo(ASTSerializer& serializer) const {
     for (auto expr : getDelays())
         serializer.serialize(*expr);
     serializer.endArray();
+}
+
+PulseStyleSymbol::PulseStyleSymbol(SourceLocation loc, PulseStyleKind pulseStyleKind) :
+    Symbol(SymbolKind::PulseStyle, ""sv, loc), pulseStyleKind(pulseStyleKind) {
+}
+
+PulseStyleSymbol& PulseStyleSymbol::fromSyntax(const Scope& parent,
+                                               const PulseStyleDeclarationSyntax& syntax) {
+    auto pulseStyleKind = SemanticFacts::getPulseStyleKind(syntax.keyword.kind);
+
+    auto& comp = parent.getCompilation();
+    auto result = comp.emplace<PulseStyleSymbol>(syntax.getFirstToken().location(), pulseStyleKind);
+    result->setSyntax(syntax);
+    return *result;
+}
+
+void PulseStyleSymbol::resolve() const {
+    isResolved = true;
+
+    auto syntaxPtr = getSyntax();
+    auto parent = getParentScope();
+    ASSERT(syntaxPtr && parent);
+
+    auto parentParent = parent->asSymbol().getParentScope();
+    ASSERT(parentParent);
+
+    ASTContext context(*parent, LookupLocation::after(*this),
+                       ASTFlags::NonProcedural | ASTFlags::SpecifyBlock);
+
+    auto& syntax = syntaxPtr->as<PulseStyleDeclarationSyntax>();
+    terminals = bindTerminals(syntax.inputs, false, parentParent->asSymbol(), context);
+}
+
+void PulseStyleSymbol::serializeTo(ASTSerializer& serializer) const {
+    serializer.write("pulseStyleKind", toString(pulseStyleKind));
 }
 
 } // namespace slang::ast

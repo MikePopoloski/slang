@@ -1324,7 +1324,7 @@ struct PortBackrefVisitor {
         if constexpr (std::is_base_of_v<Expression, T>) {
             switch (expr.kind) {
                 case ExpressionKind::NamedValue:
-                    expr.as<NamedValueExpression>().symbol.addPortBackref(port);
+                    expr.template as<NamedValueExpression>().symbol.addPortBackref(port);
                     break;
                 default:
                     if constexpr (is_detected_v<ASTDetectors::visitExprs_t, T,

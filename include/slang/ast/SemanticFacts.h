@@ -90,6 +90,10 @@ ENUM(PrimitivePortDirection, DIRECTION)
 ENUM(DriverKind, DRIVER)
 #undef DRIVER
 
+#define PSK(x) x(OnEvent) x(OnDetect) x(ShowCancelled) x(NoShowCancelled)
+ENUM(PulseStyleKind, PSK)
+#undef PSK
+
 /// A set of flags that control how assignments are checked.
 enum class SLANG_EXPORT AssignFlags {
     /// No special assignment behavior specified.
@@ -149,6 +153,8 @@ public:
     static StatementBlockKind getStatementBlockKind(const syntax::BlockStatementSyntax& syntax);
 
     static ElabSystemTaskKind getElabSystemTaskKind(parsing::Token token);
+
+    static PulseStyleKind getPulseStyleKind(parsing::TokenKind kind);
 
     static string_view getProcedureKindStr(ProceduralBlockKind kind);
 
