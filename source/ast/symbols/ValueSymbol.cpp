@@ -469,4 +469,12 @@ void ValueSymbol::addDriverImpl(const Scope& scope, const Driver& driver) const 
     }
 }
 
+void ValueSymbol::addPortBackref(const PortSymbol& port) const {
+    auto scope = getParentScope();
+    ASSERT(scope);
+
+    auto& comp = scope->getCompilation();
+    firstPortBackref = comp.emplace<PortBackref>(port, firstPortBackref);
+}
+
 } // namespace slang::ast

@@ -15,6 +15,7 @@ namespace slang::ast {
 
 class Compilation;
 class EvalContext;
+class PortSymbol;
 class ProceduralBlockSymbol;
 
 /// A base class for symbols that represent a value (for example a variable or a parameter).
@@ -116,6 +117,21 @@ public:
 
     const Driver* getFirstDriver() const { return firstDriver; }
 
+    class PortBackref {
+    public:
+        not_null<const PortSymbol*> port;
+
+        PortBackref(const PortSymbol& port, const PortBackref* next) : port(&port), next(next) {}
+
+        const PortBackref* getNextBackreference() const { return next; }
+
+    private:
+        const PortBackref* next;
+    };
+
+    void addPortBackref(const PortSymbol& port) const;
+    const PortBackref* getFirstPortBackref() const { return firstPortBackref; }
+
 protected:
     ValueSymbol(SymbolKind kind, string_view name, SourceLocation location,
                 bitmask<DeclaredTypeFlags> flags = DeclaredTypeFlags::None);
@@ -125,6 +141,7 @@ private:
 
     DeclaredType declaredType;
     mutable const Driver* firstDriver = nullptr;
+    mutable const PortBackref* firstPortBackref = nullptr;
 };
 
 } // namespace slang::ast

@@ -1046,8 +1046,24 @@ void Scope::elaborate() const {
         }
     }
 
-    // Issue an error if port I/Os were declared but the module doesn't have a port list.
-    if (!usedPorts) {
+    if (usedPorts) {
+        // Now that all members are known, force port types to resolve so that
+        // back references to internal variables and nets are known.
+        for (auto port : asSymbol().as<InstanceBodySymbol>().portList) {
+            switch (port->kind) {
+                case SymbolKind::Port:
+                    port->as<PortSymbol>().getType();
+                    break;
+                case SymbolKind::MultiPort:
+                    port->as<MultiPortSymbol>().getType();
+                    break;
+                default:
+                    break;
+            }
+        }
+    }
+    else {
+        // Issue an error if port I/Os were declared but the module doesn't have a port list.
         for (auto [syntax, symbol] : deferredData.getPortDeclarations()) {
             auto& declarators = syntax->kind == SyntaxKind::PortDeclaration
                                     ? syntax->as<PortDeclarationSyntax>().declarators

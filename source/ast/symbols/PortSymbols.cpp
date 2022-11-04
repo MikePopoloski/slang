@@ -8,6 +8,7 @@
 #include "slang/ast/symbols/PortSymbols.h"
 
 #include "slang/ast/ASTSerializer.h"
+#include "slang/ast/ASTVisitor.h"
 #include "slang/ast/Compilation.h"
 #include "slang/ast/Definition.h"
 #include "slang/ast/expressions/AssignmentExpressions.h"
@@ -1313,6 +1314,32 @@ private:
     bool unnamedRefError = false;
 };
 
+struct PortBackrefVisitor {
+    const PortSymbol& port;
+
+    PortBackrefVisitor(const PortSymbol& port) : port(port) {}
+
+    template<typename T>
+    void visit(const T& expr) {
+        if constexpr (std::is_base_of_v<Expression, T>) {
+            switch (expr.kind) {
+                case ExpressionKind::NamedValue:
+                    expr.as<NamedValueExpression>().symbol.addPortBackref(port);
+                    break;
+                default:
+                    if constexpr (is_detected_v<ASTDetectors::visitExprs_t, T,
+                                                PortBackrefVisitor>) {
+                        expr.visitExprs(*this);
+                    }
+                    break;
+            }
+        }
+    }
+
+    void visitInvalid(const Expression&) {}
+    void visitInvalid(const AssertionExpr&) {}
+};
+
 } // end anonymous namespace
 
 PortSymbol::PortSymbol(string_view name, SourceLocation loc, bool isAnsiPort) :
@@ -1350,6 +1377,7 @@ const Type& PortSymbol::getType() const {
             }
         }
 
+        internalSymbol->as<ValueSymbol>().addPortBackref(*this);
         if (direction == ArgumentDirection::In || direction == ArgumentDirection::InOut) {
             // Ensure that this driver gets registered with the internal symbol.
             auto flags = direction == ArgumentDirection::In ? AssignFlags::InputPort
@@ -1399,6 +1427,9 @@ const Type& PortSymbol::getType() const {
             checkSymbolConnection(*internalExpr, checkDir, context, location,
                                   direction == ArgumentDirection::In ? AssignFlags::InputPort
                                                                      : AssignFlags::None);
+
+            PortBackrefVisitor visitor(*this);
+            internalExpr->visit(visitor);
         }
     }
 
