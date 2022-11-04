@@ -40,7 +40,7 @@ std::string ConstantValue::toString(bitwidth_t abbreviateThresholdBits, bool exa
                 FormatBuffer buffer;
                 buffer.append(useAssignmentPatterns ? "'{"sv : "["sv);
                 for (auto& element : arg) {
-                    buffer.append(element.toString(abbreviateThresholdBits));
+                    buffer.append(element.toString(abbreviateThresholdBits, exactUnknowns, useAssignmentPatterns));
                     buffer.append(",");
                 }
 
@@ -55,12 +55,12 @@ std::string ConstantValue::toString(bitwidth_t abbreviateThresholdBits, bool exa
                 FormatBuffer buffer;
                 buffer.append(useAssignmentPatterns ? "'{"sv : "["sv);
                 for (auto& [key, val] : *arg)
-                    buffer.format("{}:{},", key.toString(abbreviateThresholdBits),
-                                  val.toString(abbreviateThresholdBits));
+                    buffer.format("{}:{},", key.toString(abbreviateThresholdBits, exactUnknowns, useAssignmentPatterns),
+                                  val.toString(abbreviateThresholdBits, exactUnknowns, useAssignmentPatterns));
 
                 if (arg->defaultValue)
-                    buffer.format("default:{}",
-                                  arg->defaultValue.toString(abbreviateThresholdBits));
+                    buffer.format("default:{}", arg->defaultValue.toString(abbreviateThresholdBits,
+                                                                           exactUnknowns, useAssignmentPatterns));
                 else if (!arg->empty())
                     buffer.pop_back();
 
@@ -71,7 +71,7 @@ std::string ConstantValue::toString(bitwidth_t abbreviateThresholdBits, bool exa
                 FormatBuffer buffer;
                 buffer.append(useAssignmentPatterns ? "'{"sv : "["sv);
                 for (auto& element : *arg) {
-                    buffer.append(element.toString(abbreviateThresholdBits));
+                    buffer.append(element.toString(abbreviateThresholdBits, exactUnknowns, useAssignmentPatterns));
                     buffer.append(",");
                 }
 
@@ -84,7 +84,8 @@ std::string ConstantValue::toString(bitwidth_t abbreviateThresholdBits, bool exa
                 if (!arg->activeMember)
                     return "(unset)"s;
 
-                return fmt::format("({}) {}", *arg->activeMember, arg->value.toString(abbreviateThresholdBits));
+                return fmt::format("({}) {}", *arg->activeMember,
+                                   arg->value.toString(abbreviateThresholdBits, exactUnknowns, useAssignmentPatterns));
             }
             else {
                 static_assert(always_false<T>::value, "Missing case");
