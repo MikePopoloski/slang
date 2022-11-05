@@ -637,25 +637,26 @@ std::ostream& operator<<(std::ostream& os, const SVInt& rhs) {
     return os;
 }
 
-std::string SVInt::toString() const {
+std::string SVInt::toString(bitwidth_t abbreviateThresholdBits, bool exactUnknowns) const {
     // guess the base to use
     LiteralBase base;
-    if (bitWidth < 8 || (unknownFlag && bitWidth <= 64))
+    // unknown bits require binary base for lossless representation
+    if (bitWidth < 8 || (unknownFlag && exactUnknowns) || (unknownFlag && bitWidth <= 64))
         base = LiteralBase::Binary;
     else if (bitWidth <= 32 || signFlag)
         base = LiteralBase::Decimal;
     else
         base = LiteralBase::Hex;
 
-    return toString(base);
+    return toString(base, abbreviateThresholdBits);
 }
 
-std::string SVInt::toString(LiteralBase base) const {
+std::string SVInt::toString(LiteralBase base, bitwidth_t abbreviateThresholdBits) const {
     // Append the base unless we're a signed 32-bit base 10 integer.
     bool includeBase = base != LiteralBase::Decimal || bitWidth != 32 || !signFlag || unknownFlag;
 
     SmallVector<char> buffer;
-    writeTo(buffer, base, includeBase, DefaultStringAbbreviationThresholdBits);
+    writeTo(buffer, base, includeBase, abbreviateThresholdBits);
     return std::string(buffer.begin(), buffer.end());
 }
 
@@ -666,10 +667,11 @@ std::string SVInt::toString(LiteralBase base, bool includeBase,
     return std::string(buffer.begin(), buffer.end());
 }
 
-void SVInt::writeTo(SmallVectorBase<char>& buffer, LiteralBase base) const {
+void SVInt::writeTo(SmallVectorBase<char>& buffer, LiteralBase base,
+                    bitwidth_t abbreviateThresholdBits) const {
     // Append the base unless we're a signed 32-bit base 10 integer.
     bool includeBase = base != LiteralBase::Decimal || bitWidth != 32 || !signFlag || unknownFlag;
-    writeTo(buffer, base, includeBase);
+    writeTo(buffer, base, includeBase, abbreviateThresholdBits);
 }
 
 void SVInt::writeTo(SmallVectorBase<char>& buffer, LiteralBase base, bool includeBase,

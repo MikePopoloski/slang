@@ -19,14 +19,15 @@ struct always_false : std::false_type {};
 
 const ConstantValue ConstantValue::Invalid;
 
-std::string ConstantValue::toString() const {
+std::string ConstantValue::toString(bitwidth_t abbreviateThresholdBits, bool exactUnknowns,
+                                    bool useAssignmentPatterns) const {
     return std::visit(
-        [](auto&& arg) {
+        [abbreviateThresholdBits, exactUnknowns, useAssignmentPatterns](auto&& arg) {
             using T = std::decay_t<decltype(arg)>;
             if constexpr (std::is_same_v<T, std::monostate>)
                 return "<unset>"s;
             else if constexpr (std::is_same_v<T, SVInt>)
-                return arg.toString();
+                return arg.toString(abbreviateThresholdBits, exactUnknowns);
             else if constexpr (std::is_same_v<T, real_t>)
                 return fmt::format("{}", double(arg));
             else if constexpr (std::is_same_v<T, shortreal_t>)
@@ -37,51 +38,61 @@ std::string ConstantValue::toString() const {
                 return "$"s;
             else if constexpr (std::is_same_v<T, Elements>) {
                 FormatBuffer buffer;
-                buffer.append("[");
+                buffer.append(useAssignmentPatterns ? "'{"sv : "["sv);
                 for (auto& element : arg) {
-                    buffer.append(element.toString());
+                    buffer.append(element.toString(abbreviateThresholdBits, exactUnknowns,
+                                                   useAssignmentPatterns));
                     buffer.append(",");
                 }
 
                 if (!arg.empty())
                     buffer.pop_back();
-                buffer.append("]");
+                buffer.append(useAssignmentPatterns ? "}"sv : "]"sv);
                 return buffer.str();
             }
             else if constexpr (std::is_same_v<T, std::string>)
                 return fmt::format("\"{}\"", arg);
             else if constexpr (std::is_same_v<T, Map>) {
                 FormatBuffer buffer;
-                buffer.append("[");
+                buffer.append(useAssignmentPatterns ? "'{"sv : "["sv);
                 for (auto& [key, val] : *arg)
-                    buffer.format("{}:{},", key.toString(), val.toString());
+                    buffer.format("{}:{},",
+                                  key.toString(abbreviateThresholdBits, exactUnknowns,
+                                               useAssignmentPatterns),
+                                  val.toString(abbreviateThresholdBits, exactUnknowns,
+                                               useAssignmentPatterns));
 
                 if (arg->defaultValue)
-                    buffer.format("default:{}", arg->defaultValue.toString());
+                    buffer.format("default:{}",
+                                  arg->defaultValue.toString(abbreviateThresholdBits, exactUnknowns,
+                                                             useAssignmentPatterns));
                 else if (!arg->empty())
                     buffer.pop_back();
 
-                buffer.append("]");
+                buffer.append(useAssignmentPatterns ? "}"sv : "]"sv);
                 return buffer.str();
             }
             else if constexpr (std::is_same_v<T, Queue>) {
                 FormatBuffer buffer;
-                buffer.append("[");
+                buffer.append(useAssignmentPatterns ? "'{"sv : "["sv);
                 for (auto& element : *arg) {
-                    buffer.append(element.toString());
+                    buffer.append(element.toString(abbreviateThresholdBits, exactUnknowns,
+                                                   useAssignmentPatterns));
                     buffer.append(",");
                 }
 
                 if (!arg->empty())
                     buffer.pop_back();
-                buffer.append("]");
+                buffer.append(useAssignmentPatterns ? "}"sv : "]"sv);
                 return buffer.str();
             }
             else if constexpr (std::is_same_v<T, Union>) {
                 if (!arg->activeMember)
                     return "(unset)"s;
 
-                return fmt::format("({}) {}", *arg->activeMember, arg->value.toString());
+                return fmt::format("({}) {}", *arg->activeMember,
+                                   arg->value.toString(abbreviateThresholdBits, exactUnknowns,
+                                                       useAssignmentPatterns));
             }
             else {
                 static_assert(always_false<T>::value, "Missing case");
