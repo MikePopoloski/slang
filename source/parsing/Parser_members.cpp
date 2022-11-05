@@ -2895,8 +2895,8 @@ PathDeclarationSyntax& Parser::parsePathDeclaration() {
     if (delays.size() > 0 && delays.size() != 1 && delays.size() != 3 && delays.size() != 5 &&
         delays.size() != 11 && delays.size() != 23) {
         auto& lastDelay = delays.back();
-        auto range = delays.back().isNode() ? lastDelay.node()->sourceRange()
-                                            : lastDelay.token().range();
+        auto range = lastDelay.isNode() ? lastDelay.node()->sourceRange()
+                                        : lastDelay.token().range();
         addDiag(diag::WrongSpecifyDelayCount, range);
     }
 
@@ -2987,6 +2987,14 @@ TimingCheckArgSyntax& Parser::parseTimingCheckArg() {
                 [this] { return &parseEdgeDescriptor(); });
 
             control = &factory.edgeControlSpecifier(openBracket, list, closeBracket);
+
+            // List is allowed to have up to 6 specifiers (plus 5 commas)
+            if (list.size() > 11) {
+                auto& lastDesc = list[11];
+                auto range = lastDesc.isNode() ? lastDesc.node()->sourceRange()
+                                               : lastDesc.token().range();
+                addDiag(diag::TooManyEdgeDescriptors, range);
+            }
         }
 
         auto& terminal = parseName();

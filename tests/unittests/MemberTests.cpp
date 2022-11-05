@@ -3191,12 +3191,12 @@ module m(input a, clk, data, output b);
         $setuphold(posedge clk, data, tSU, tHLD, notify, 1:2:3, bar, dclk, ddata);
         $recovery(posedge clk, data, 42);
         $removal(posedge clk, data, 42, );
-        $recrem(posedge clk, data, tSU, tHLD, notify, 1:2:3, bar, dclk, ddata);
+        $recrem(posedge clk, data, tSU, tHLD, notify, 1:2:3, bar, dclk);
         $recrem(posedge clk, data, tSU, tHLD, notify, 1:2:3, bar, w[0], ddata);
         $skew(posedge clk, data, 42);
         $timeskew(posedge clk, negedge data, 42, , 1, 0:1:0);
         $fullskew(posedge clk, negedge data, 42, 32, , 1, 0:1:0);
-        $period(edge [01, x1, 10] clk, 42, notify);
+        $period(edge [01, x1, 1Z] clk, 42, notify);
         $width(posedge clk, 42, 52);
         $nochange(posedge clk, negedge data, -1, -2);
     endspecify
@@ -3204,9 +3204,64 @@ module m(input a, clk, data, output b);
     wire x = dclk;
     wire y = ~ddata;
 endmodule
+
+`default_nettype none
+module n(input wire clk, data, output reg b);
+    logic dclk, ddata;
+    specify
+        $recrem(posedge clk, data, 1, 2, , , , dclk, );
+    endspecify
+endmodule
 )");
 
     Compilation compilation;
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("System timing check errors") {
+    auto tree = SyntaxTree::fromText(R"(
+module m(input a, output b);
+    reg notify;
+    enum { ABC } abc;
+    specify
+        $foobar(1, 2, 3);
+        $setup(posedge a);
+        $setup(posedge a, negedge a, 123, notify, 123);
+        $setup(posedge a, , 123, notify);
+        $setup(posedge a, negedge a, negedge a, notify);
+        $setup(posedge a, negedge a, 1:2:3, notify);
+        $setup(posedge a, negedge a, notify, notify);
+        $setup(posedge a, negedge a, 1, notify[0]);
+        $setup(posedge a, negedge a, 1, ABC);
+        $setup(posedge a &&& 3.14, negedge a, 1);
+        $setup(edge [1xx] a &&& notify, negedge a, 1);
+        $setuphold(notify, negedge a, 1, 2, , , , asdf);
+        $setup(posedge a, a, -12);
+        $width(a, 1);
+        $width(edge a, 1, , notify);
+    endspecify
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 15);
+    CHECK(diags[0].code == diag::UnknownSystemTimingCheck);
+    CHECK(diags[1].code == diag::TooFewArguments);
+    CHECK(diags[2].code == diag::TooManyArguments);
+    CHECK(diags[3].code == diag::EmptyArgNotAllowed);
+    CHECK(diags[4].code == diag::TimingCheckEventNotAllowed);
+    CHECK(diags[5].code == diag::MinTypMaxNotAllowed);
+    CHECK(diags[6].code == diag::ConstEvalNonConstVariable);
+    CHECK(diags[7].code == diag::InvalidTimingCheckNotifierArg);
+    CHECK(diags[8].code == diag::BadAssignment);
+    CHECK(diags[9].code == diag::ExprMustBeIntegral);
+    CHECK(diags[10].code == diag::InvalidEdgeDescriptor);
+    CHECK(diags[11].code == diag::InvalidSpecifySource);
+    CHECK(diags[12].code == diag::ValueMustBePositive);
+    CHECK(diags[13].code == diag::TimingCheckEventEdgeRequired);
+    CHECK(diags[14].code == diag::EmptyArgNotAllowed);
 }

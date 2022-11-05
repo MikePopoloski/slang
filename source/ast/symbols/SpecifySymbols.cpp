@@ -539,7 +539,11 @@ struct SystemTimingCheckArgDef {
         RemainFlag,
         Offset
     } kind;
+
+    bool requirePositive = false;
     int signalRef = -1;
+    bool requireEdge = false;
+    bool allowEmpty = true;
 };
 
 struct SystemTimingCheckDef {
@@ -551,13 +555,15 @@ struct SystemTimingCheckDef {
 static flat_hash_map<string_view, SystemTimingCheckDef> createTimingCheckDefs() {
     using Arg = SystemTimingCheckArgDef;
 
-    SystemTimingCheckDef setup{SystemTimingCheckKind::Setup,
-                               3,
-                               {{Arg::Event}, {Arg::Event}, {Arg::Limit}, {Arg::Notifier}}};
+    SystemTimingCheckDef setup{
+        SystemTimingCheckKind::Setup,
+        3,
+        {{Arg::Event}, {Arg::Event}, {Arg::Limit, /* requirePositive */ true}, {Arg::Notifier}}};
 
-    SystemTimingCheckDef hold{SystemTimingCheckKind::Hold,
-                              3,
-                              {{Arg::Event}, {Arg::Event}, {Arg::Limit}, {Arg::Notifier}}};
+    SystemTimingCheckDef hold{
+        SystemTimingCheckKind::Hold,
+        3,
+        {{Arg::Event}, {Arg::Event}, {Arg::Limit, /* requirePositive */ true}, {Arg::Notifier}}};
 
     SystemTimingCheckDef setupHold{SystemTimingCheckKind::SetupHold,
                                    4,
@@ -568,16 +574,18 @@ static flat_hash_map<string_view, SystemTimingCheckDef> createTimingCheckDefs() 
                                     {Arg::Notifier},
                                     {Arg::Condition},
                                     {Arg::Condition},
-                                    {Arg::DelayedRef, 0},
-                                    {Arg::DelayedRef, 1}}};
+                                    {Arg::DelayedRef, /* requirePositive */ false, 0},
+                                    {Arg::DelayedRef, /* requirePositive */ false, 1}}};
 
-    SystemTimingCheckDef recovery{SystemTimingCheckKind::Recovery,
-                                  3,
-                                  {{Arg::Event}, {Arg::Event}, {Arg::Limit}, {Arg::Notifier}}};
+    SystemTimingCheckDef recovery{
+        SystemTimingCheckKind::Recovery,
+        3,
+        {{Arg::Event}, {Arg::Event}, {Arg::Limit, /* requirePositive */ true}, {Arg::Notifier}}};
 
-    SystemTimingCheckDef removal{SystemTimingCheckKind::Removal,
-                                 3,
-                                 {{Arg::Event}, {Arg::Event}, {Arg::Limit}, {Arg::Notifier}}};
+    SystemTimingCheckDef removal{
+        SystemTimingCheckKind::Removal,
+        3,
+        {{Arg::Event}, {Arg::Event}, {Arg::Limit, /* requirePositive */ true}, {Arg::Notifier}}};
 
     SystemTimingCheckDef recRem{SystemTimingCheckKind::RecRem,
                                 4,
@@ -588,18 +596,19 @@ static flat_hash_map<string_view, SystemTimingCheckDef> createTimingCheckDefs() 
                                  {Arg::Notifier},
                                  {Arg::Condition},
                                  {Arg::Condition},
-                                 {Arg::DelayedRef, 0},
-                                 {Arg::DelayedRef, 1}}};
+                                 {Arg::DelayedRef, /* requirePositive */ false, 0},
+                                 {Arg::DelayedRef, /* requirePositive */ false, 1}}};
 
-    SystemTimingCheckDef skew{SystemTimingCheckKind::Skew,
-                              3,
-                              {{Arg::Event}, {Arg::Event}, {Arg::Limit}, {Arg::Notifier}}};
+    SystemTimingCheckDef skew{
+        SystemTimingCheckKind::Skew,
+        3,
+        {{Arg::Event}, {Arg::Event}, {Arg::Limit, /* requirePositive */ true}, {Arg::Notifier}}};
 
     SystemTimingCheckDef timeSkew{SystemTimingCheckKind::TimeSkew,
                                   3,
                                   {{Arg::Event},
                                    {Arg::Event},
-                                   {Arg::Limit},
+                                   {Arg::Limit, /* requirePositive */ true},
                                    {Arg::Notifier},
                                    {Arg::EventFlag},
                                    {Arg::RemainFlag}}};
@@ -608,19 +617,25 @@ static flat_hash_map<string_view, SystemTimingCheckDef> createTimingCheckDefs() 
                                   4,
                                   {{Arg::Event},
                                    {Arg::Event},
-                                   {Arg::Limit},
-                                   {Arg::Limit},
+                                   {Arg::Limit, /* requirePositive */ true},
+                                   {Arg::Limit, /* requirePositive */ true},
                                    {Arg::Notifier},
                                    {Arg::EventFlag},
                                    {Arg::RemainFlag}}};
 
     SystemTimingCheckDef period{SystemTimingCheckKind::Period,
                                 2,
-                                {{Arg::Event}, {Arg::Limit}, {Arg::Notifier}}};
+                                {{Arg::Event, false, -1, /* requireEdge */ true},
+                                 {Arg::Limit, /* requirePositive */ true},
+                                 {Arg::Notifier}}};
 
     SystemTimingCheckDef width{SystemTimingCheckKind::Width,
-                               3,
-                               {{Arg::Event}, {Arg::Limit}, {Arg::Limit}, {Arg::Notifier}}};
+                               2,
+                               {{Arg::Event, false, -1, /* requireEdge */ true},
+                                {Arg::Limit, /* requirePositive */ true},
+                                {Arg::Limit, /* requirePositive */ true, -1, false,
+                                 /* allowEmpty */ false},
+                                {Arg::Notifier}}};
 
     SystemTimingCheckDef noChange{
         SystemTimingCheckKind::NoChange,
@@ -700,15 +715,15 @@ void SystemTimingCheckSymbol::resolve() const {
 
     SmallVector<Arg> argBuf;
     for (size_t i = 0; i < actualArgs.size(); i++) {
+        auto& formal = formalArgs[i];
         auto& actual = *actualArgs[i];
         if (actual.kind == SyntaxKind::EmptyTimingCheckArg) {
-            if (i < def->minArgs)
+            if (i < def->minArgs || !formal.allowEmpty)
                 context.addDiag(diag::EmptyArgNotAllowed, actualArgs[i]->sourceRange());
             argBuf.emplace_back();
             continue;
         }
 
-        auto& formal = formalArgs[i];
         if (actual.kind == SyntaxKind::TimingCheckEventArg &&
             formal.kind != SystemTimingCheckArgDef::Event) {
             context.addDiag(diag::TimingCheckEventNotAllowed, actual.sourceRange());
@@ -725,7 +740,10 @@ void SystemTimingCheckSymbol::resolve() const {
                 if (expr.kind == ExpressionKind::MinTypMax)
                     context.addDiag(diag::MinTypMaxNotAllowed, expr.sourceRange);
 
-                context.evalInteger(expr);
+                auto val = context.evalInteger(expr);
+                if (formal.requirePositive)
+                    context.requirePositive(val, expr.sourceRange);
+
                 argBuf.emplace_back(expr);
                 break;
             }
@@ -804,6 +822,13 @@ void SystemTimingCheckSymbol::resolve() const {
                     }
 
                     argBuf.emplace_back(*expr, condition, edge, edgeDescriptors.copy(comp));
+                }
+
+                if (formal.requireEdge && argBuf.back().expr &&
+                    argBuf.back().edge == EdgeKind::None) {
+                    context.addDiag(diag::TimingCheckEventEdgeRequired,
+                                    argBuf.back().expr->sourceRange)
+                        << syntax.name.valueText();
                 }
                 break;
             case SystemTimingCheckArgDef::DelayedRef: {
