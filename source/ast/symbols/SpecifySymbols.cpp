@@ -111,7 +111,7 @@ TimingPathSymbol& TimingPathSymbol::fromSyntax(const Scope& parent,
     return result;
 }
 
-static bool checkPathTerminal(const ValueSymbol& terminal, const Symbol& specifyParent,
+static bool checkPathTerminal(const ValueSymbol& terminal, const Scope* specifyParent,
                               ASTContext& context, bool isSource, SourceRange sourceRange) {
     // Type must be integral.
     auto& type = terminal.getType();
@@ -161,7 +161,8 @@ static bool checkPathTerminal(const ValueSymbol& terminal, const Symbol& specify
 
     // If we get here then the terminal must be a member of the module containing
     // our parent specify block.
-    if (&terminalParent != &specifyParent) {
+    ASSERT(specifyParent);
+    if (&terminalParent != &specifyParent->asSymbol()) {
         context.addDiag(diag::InvalidSpecifyPath, sourceRange);
         return false;
     }
@@ -181,39 +182,48 @@ static bool checkPathTerminal(const ValueSymbol& terminal, const Symbol& specify
     return false;
 }
 
+static const Expression* bindTerminal(const ExpressionSyntax& syntax, bool isSource,
+                                      const Scope* parentParent, ASTContext& context) {
+    auto expr = &Expression::bind(syntax, context);
+    if (expr->bad())
+        return nullptr;
+
+    switch (expr->kind) {
+        case ExpressionKind::ElementSelect:
+            expr = &expr->as<ElementSelectExpression>().value();
+            break;
+        case ExpressionKind::RangeSelect:
+            expr = &expr->as<RangeSelectExpression>().value();
+            break;
+        default:
+            break;
+    }
+
+    if (expr->kind != ExpressionKind::NamedValue) {
+        auto code = (expr->kind == ExpressionKind::ElementSelect ||
+                     expr->kind == ExpressionKind::RangeSelect)
+                        ? diag::SpecifyPathMultiDim
+                        : diag::InvalidSpecifyPath;
+        context.addDiag(code, syntax.sourceRange());
+    }
+    else {
+        auto& symbol = expr->as<NamedValueExpression>().symbol;
+        if (checkPathTerminal(symbol, parentParent, context, isSource, expr->sourceRange))
+            return expr;
+    }
+
+    return nullptr;
+}
+
 static span<const Expression* const> bindTerminals(
-    const SeparatedSyntaxList<NameSyntax>& syntaxList, bool isSource, const Symbol& parentParent,
+    const SeparatedSyntaxList<NameSyntax>& syntaxList, bool isSource, const Scope* parentParent,
     ASTContext& context) {
 
     SmallVector<const Expression*> results;
     for (auto exprSyntax : syntaxList) {
-        auto expr = &Expression::bind(*exprSyntax, context);
-        if (expr->bad())
-            continue;
-
-        switch (expr->kind) {
-            case ExpressionKind::ElementSelect:
-                expr = &expr->as<ElementSelectExpression>().value();
-                break;
-            case ExpressionKind::RangeSelect:
-                expr = &expr->as<RangeSelectExpression>().value();
-                break;
-            default:
-                break;
-        }
-
-        if (expr->kind != ExpressionKind::NamedValue) {
-            auto code = (expr->kind == ExpressionKind::ElementSelect ||
-                         expr->kind == ExpressionKind::RangeSelect)
-                            ? diag::SpecifyPathMultiDim
-                            : diag::InvalidSpecifyPath;
-            context.addDiag(code, exprSyntax->sourceRange());
-        }
-        else {
-            auto& symbol = expr->as<NamedValueExpression>().symbol;
-            if (checkPathTerminal(symbol, parentParent, context, isSource, expr->sourceRange))
-                results.push_back(expr);
-        }
+        auto expr = bindTerminal(*exprSyntax, isSource, parentParent, context);
+        if (expr)
+            results.push_back(expr);
     }
     return results.copy(context.getCompilation());
 }
@@ -326,8 +336,6 @@ void TimingPathSymbol::resolve() const {
     ASSERT(syntaxPtr && parent);
 
     auto parentParent = parent->asSymbol().getParentScope();
-    ASSERT(parentParent);
-
     auto& comp = parent->getCompilation();
     ASTContext context(*parent, LookupLocation::after(*this),
                        ASTFlags::NonProcedural | ASTFlags::SpecifyBlock);
@@ -347,18 +355,18 @@ void TimingPathSymbol::resolve() const {
     }
 
     auto& syntax = syntaxPtr->as<PathDeclarationSyntax>();
-    inputs = bindTerminals(syntax.desc->inputs, true, parentParent->asSymbol(), context);
+    inputs = bindTerminals(syntax.desc->inputs, true, parentParent, context);
 
     if (syntax.desc->suffix->kind == SyntaxKind::EdgeSensitivePathSuffix) {
         auto& esps = syntax.desc->suffix->as<EdgeSensitivePathSuffixSyntax>();
-        outputs = bindTerminals(esps.outputs, false, parentParent->asSymbol(), context);
+        outputs = bindTerminals(esps.outputs, false, parentParent, context);
 
         // This expression is apparently allowed to be anything the user wants.
         edgeSourceExpr = &Expression::bind(*esps.expr, context);
     }
     else {
         outputs = bindTerminals(syntax.desc->suffix->as<SimplePathSuffixSyntax>().outputs, false,
-                                parentParent->asSymbol(), context);
+                                parentParent, context);
     }
 
     // Verify that input and output sizes match for parallel connections.
@@ -455,17 +463,291 @@ void PulseStyleSymbol::resolve() const {
     ASSERT(syntaxPtr && parent);
 
     auto parentParent = parent->asSymbol().getParentScope();
-    ASSERT(parentParent);
-
     ASTContext context(*parent, LookupLocation::after(*this),
                        ASTFlags::NonProcedural | ASTFlags::SpecifyBlock);
 
     auto& syntax = syntaxPtr->as<PulseStyleDeclarationSyntax>();
-    terminals = bindTerminals(syntax.inputs, false, parentParent->asSymbol(), context);
+    terminals = bindTerminals(syntax.inputs, false, parentParent, context);
 }
 
 void PulseStyleSymbol::serializeTo(ASTSerializer& serializer) const {
     serializer.write("pulseStyleKind", toString(pulseStyleKind));
+}
+
+struct SystemTimingCheckArgDef {
+    enum ArgKind {
+        Event,
+        Limit,
+        Notifier,
+        Condition,
+        DelayedRef,
+        EventFlag,
+        RemainFlag,
+        Offset
+    } kind;
+};
+
+struct SystemTimingCheckDef {
+    SystemTimingCheckKind kind;
+    size_t minArgs;
+    std::vector<SystemTimingCheckArgDef> args;
+};
+
+static flat_hash_map<string_view, SystemTimingCheckDef> createTimingCheckDefs() {
+    using Arg = SystemTimingCheckArgDef;
+
+    SystemTimingCheckDef setup{SystemTimingCheckKind::Setup,
+                               3,
+                               {{Arg::Event}, {Arg::Event}, {Arg::Limit}, {Arg::Notifier}}};
+
+    SystemTimingCheckDef hold{SystemTimingCheckKind::Hold,
+                              3,
+                              {{Arg::Event}, {Arg::Event}, {Arg::Limit}, {Arg::Notifier}}};
+
+    SystemTimingCheckDef setupHold{SystemTimingCheckKind::SetupHold,
+                                   4,
+                                   {{Arg::Event},
+                                    {Arg::Event},
+                                    {Arg::Limit},
+                                    {Arg::Limit},
+                                    {Arg::Notifier},
+                                    {Arg::Condition},
+                                    {Arg::Condition},
+                                    {Arg::DelayedRef},
+                                    {Arg::DelayedRef}}};
+
+    SystemTimingCheckDef recovery{SystemTimingCheckKind::Recovery,
+                                  3,
+                                  {{Arg::Event}, {Arg::Event}, {Arg::Limit}, {Arg::Notifier}}};
+
+    SystemTimingCheckDef removal{SystemTimingCheckKind::Removal,
+                                 3,
+                                 {{Arg::Event}, {Arg::Event}, {Arg::Limit}, {Arg::Notifier}}};
+
+    SystemTimingCheckDef recRem{SystemTimingCheckKind::RecRem,
+                                4,
+                                {{Arg::Event},
+                                 {Arg::Event},
+                                 {Arg::Limit},
+                                 {Arg::Limit},
+                                 {Arg::Notifier},
+                                 {Arg::Condition},
+                                 {Arg::Condition},
+                                 {Arg::DelayedRef},
+                                 {Arg::DelayedRef}}};
+
+    SystemTimingCheckDef skew{SystemTimingCheckKind::Skew,
+                              3,
+                              {{Arg::Event}, {Arg::Event}, {Arg::Limit}, {Arg::Notifier}}};
+
+    SystemTimingCheckDef timeSkew{SystemTimingCheckKind::TimeSkew,
+                                  3,
+                                  {{Arg::Event},
+                                   {Arg::Event},
+                                   {Arg::Limit},
+                                   {Arg::Notifier},
+                                   {Arg::EventFlag},
+                                   {Arg::RemainFlag}}};
+
+    SystemTimingCheckDef fullSkew{SystemTimingCheckKind::FullSkew,
+                                  4,
+                                  {{Arg::Event},
+                                   {Arg::Event},
+                                   {Arg::Limit},
+                                   {Arg::Limit},
+                                   {Arg::Notifier},
+                                   {Arg::EventFlag},
+                                   {Arg::RemainFlag}}};
+
+    SystemTimingCheckDef period{SystemTimingCheckKind::Period,
+                                2,
+                                {{Arg::Event}, {Arg::Limit}, {Arg::Notifier}}};
+
+    SystemTimingCheckDef width{SystemTimingCheckKind::Width,
+                               3,
+                               {{Arg::Event}, {Arg::Limit}, {Arg::Limit}, {Arg::Notifier}}};
+
+    SystemTimingCheckDef noChange{
+        SystemTimingCheckKind::NoChange,
+        4,
+        {{Arg::Event}, {Arg::Event}, {Arg::Offset}, {Arg::Offset}, {Arg::Notifier}}};
+
+    return {{"$setup"sv, std::move(setup)},         {"$hold"sv, std::move(hold)},
+            {"$setuphold"sv, std::move(setupHold)}, {"$recovery"sv, std::move(recovery)},
+            {"$removal"sv, std::move(removal)},     {"$recrem"sv, std::move(recRem)},
+            {"$skew"sv, std::move(skew)},           {"$timeskew"sv, std::move(timeSkew)},
+            {"$fullskew"sv, std::move(fullSkew)},   {"$period"sv, std::move(period)},
+            {"$width"sv, std::move(width)},         {"$nochange"sv, std::move(noChange)}};
+}
+
+static const flat_hash_map<string_view, SystemTimingCheckDef> SystemTimingCheckDefs =
+    createTimingCheckDefs();
+
+SystemTimingCheckSymbol::SystemTimingCheckSymbol(SourceLocation loc,
+                                                 const SystemTimingCheckDef* def) :
+    Symbol(SymbolKind::SystemTimingCheck, ""sv, loc),
+    def(def) {
+    timingCheckKind = def ? def->kind : SystemTimingCheckKind::Unknown;
+}
+
+SystemTimingCheckSymbol& SystemTimingCheckSymbol::fromSyntax(
+    const Scope& parent, const SystemTimingCheckSyntax& syntax) {
+
+    const SystemTimingCheckDef* def;
+    if (auto it = SystemTimingCheckDefs.find(syntax.name.valueText());
+        it != SystemTimingCheckDefs.end()) {
+        def = &it->second;
+    }
+    else {
+        parent.addDiag(diag::UnknownSystemTimingCheck, syntax.name.range())
+            << syntax.name.valueText();
+        def = nullptr;
+    }
+
+    auto& comp = parent.getCompilation();
+    auto result = comp.emplace<SystemTimingCheckSymbol>(syntax.getFirstToken().location(), def);
+    result->setSyntax(syntax);
+    return *result;
+}
+
+void SystemTimingCheckSymbol::resolve() const {
+    isResolved = true;
+    if (!def)
+        return;
+
+    auto syntaxPtr = getSyntax();
+    auto parent = getParentScope();
+    ASSERT(syntaxPtr && parent);
+
+    auto parentParent = parent->asSymbol().getParentScope();
+    ASTContext context(*parent, LookupLocation::after(*this),
+                       ASTFlags::NonProcedural | ASTFlags::SpecifyBlock);
+
+    auto& syntax = syntaxPtr->as<SystemTimingCheckSyntax>();
+    auto& actualArgs = syntax.args;
+    auto& formalArgs = def->args;
+
+    if (actualArgs.size() < def->minArgs) {
+        auto& diag = context.addDiag(diag::TooFewArguments, syntax.sourceRange());
+        diag << syntax.name.valueText();
+        diag << def->minArgs << actualArgs.size();
+        return;
+    }
+
+    if (actualArgs.size() > formalArgs.size()) {
+        auto& diag = context.addDiag(diag::TooManyArguments, syntax.sourceRange());
+        diag << syntax.name.valueText();
+        diag << formalArgs.size();
+        diag << actualArgs.size();
+        return;
+    }
+
+    SmallVector<Arg> argBuf;
+    for (size_t i = 0; i < actualArgs.size(); i++) {
+        auto& actual = *actualArgs[i];
+        if (actual.kind == SyntaxKind::EmptyTimingCheckArg) {
+            if (i < def->minArgs)
+                context.addDiag(diag::EmptyArgNotAllowed, actualArgs[i]->sourceRange());
+            argBuf.emplace_back();
+            continue;
+        }
+
+        auto& formal = formalArgs[i];
+        if (actual.kind == SyntaxKind::TimingCheckEventArg &&
+            formal.kind != SystemTimingCheckArgDef::Event) {
+            context.addDiag(diag::TimingCheckEventNotAllowed, actual.sourceRange());
+            argBuf.emplace_back();
+            continue;
+        }
+
+        switch (formal.kind) {
+            case SystemTimingCheckArgDef::Limit:
+            case SystemTimingCheckArgDef::EventFlag: {
+                // Constant integral expression, can't be min:typ:max
+                auto& expr = Expression::bind(*actual.as<ExpressionTimingCheckArgSyntax>().expr,
+                                              context);
+                if (expr.kind == ExpressionKind::MinTypMax)
+                    context.addDiag(diag::MinTypMaxNotAllowed, expr.sourceRange);
+
+                context.evalInteger(expr);
+                argBuf.emplace_back(expr);
+                break;
+            }
+            case SystemTimingCheckArgDef::Condition: {
+                // Non-constant integral expression, can be min:typ:max
+                auto& expr = Expression::bind(*actual.as<ExpressionTimingCheckArgSyntax>().expr,
+                                              context);
+                context.requireIntegral(expr);
+                argBuf.emplace_back(expr);
+                break;
+            }
+            case SystemTimingCheckArgDef::RemainFlag:
+            case SystemTimingCheckArgDef::Offset: {
+                // Constant integral expression, can be min:typ:max
+                auto& expr = Expression::bind(*actual.as<ExpressionTimingCheckArgSyntax>().expr,
+                                              context);
+                context.evalInteger(expr);
+                argBuf.emplace_back(expr);
+                break;
+            }
+            case SystemTimingCheckArgDef::Notifier: {
+                // Needs to be a simple identifier, referencing an integral lvalue
+                auto& exprSyntax = *actual.as<ExpressionTimingCheckArgSyntax>().expr;
+                if (exprSyntax.kind != SyntaxKind::IdentifierName) {
+                    context.addDiag(diag::InvalidTimingCheckNotifierArg, actual.sourceRange());
+                    argBuf.emplace_back();
+                    break;
+                }
+
+                auto& expr = Expression::bind(exprSyntax, context);
+                if (context.requireIntegral(expr)) {
+                    ASTContext nonContinuous = context;
+                    nonContinuous.flags &= ~ASTFlags::NonProcedural;
+                    expr.requireLValue(nonContinuous);
+                }
+
+                argBuf.emplace_back(expr);
+                break;
+            }
+            case SystemTimingCheckArgDef::Event:
+                if (actual.kind == SyntaxKind::ExpressionTimingCheckArg) {
+                    auto expr = bindTerminal(*actual.as<ExpressionTimingCheckArgSyntax>().expr,
+                                             /* isSource */ true, parentParent, context);
+                    if (!expr)
+                        argBuf.emplace_back();
+                    else
+                        argBuf.emplace_back(*expr);
+                }
+                else {
+                    auto& eventArg = actual.as<TimingCheckEventArgSyntax>();
+                    auto expr = bindTerminal(*eventArg.terminal,
+                                             /* isSource */ true, parentParent, context);
+
+                    const Expression* condition = nullptr;
+                    if (eventArg.condition) {
+                        condition = &Expression::bind(*eventArg.condition->expr, context);
+                        context.requireIntegral(*condition);
+                    }
+
+                    auto edge = SemanticFacts::getEdgeKind(eventArg.edge.kind);
+
+                    // TODO: edge descriptors
+                    argBuf.emplace_back(*expr, condition, edge, span<const EdgeDescriptor>{});
+                }
+                break;
+            case SystemTimingCheckArgDef::DelayedRef:
+                // TODO: implement
+                break;
+            default:
+                ASSUME_UNREACHABLE;
+        }
+    }
+
+    args = argBuf.copy(context.getCompilation());
+}
+
+void SystemTimingCheckSymbol::serializeTo(ASTSerializer& serializer) const {
+    serializer.write("timingCheckKind", toString(timingCheckKind));
 }
 
 } // namespace slang::ast

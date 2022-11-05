@@ -3176,3 +3176,32 @@ endmodule
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::InvalidSpecifyDest);
 }
+
+TEST_CASE("System timing checks") {
+    auto tree = SyntaxTree::fromText(R"(
+module m(input a, clk, data, output b);
+    reg notify;
+    wire bar;
+
+    specify
+        specparam tSU = 1, tHLD = 3:4:5;
+        $setup(posedge clk, data, 42);
+        $hold(posedge clk, data, 42, );
+        $setuphold(posedge clk, data, tSU, tHLD, notify, 1:2:3, bar);
+        $recovery(posedge clk, data, 42);
+        $removal(posedge clk, data, 42, );
+        $recrem(posedge clk, data, tSU, tHLD, notify, 1:2:3, bar, 1:2:3, bar);
+        $skew(posedge clk, data, 42);
+        $timeskew(posedge clk, negedge data, 42, , 1, 0:1:0);
+        $fullskew(posedge clk, negedge data, 42, 32, , 1, 0:1:0);
+        $period(posedge clk, 42, notify);
+        $width(posedge clk, 42, 52);
+        $nochange(posedge clk, negedge data, -1, -2);
+    endspecify
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}

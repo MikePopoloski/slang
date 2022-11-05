@@ -1622,25 +1622,18 @@ token openBracket
 separated_list<EdgeDescriptor> descriptors
 token closeBracket
 
-TimingCheckCondition
+TimingCheckEventCondition
 token tripleAnd
 Expression expr
 
-TimingCheckEvent base=TimingCheckArg
+TimingCheckEventArg base=TimingCheckArg
 token edge
 EdgeControlSpecifier? controlSpecifier
-Name terminal
-TimingCheckCondition? condition
-
-DelayedTerminalArg base=TimingCheckArg
-token terminal
-token openBracket
-Expression expr
-token closeBracket
+Expression terminal
+TimingCheckEventCondition? condition
 
 ExpressionTimingCheckArg base=TimingCheckArg
 Expression expr
-TimingCheckCondition? condition
 
 SystemTimingCheck base=Member
 token name

@@ -120,4 +120,72 @@ private:
     mutable span<const Expression* const> terminals;
 };
 
+// clang-format off
+#define STCK(x) \
+    x(Unknown) \
+    x(Setup) \
+    x(Hold) \
+    x(SetupHold) \
+    x(Recovery) \
+    x(Removal) \
+    x(RecRem) \
+    x(Skew) \
+    x(TimeSkew) \
+    x(FullSkew) \
+    x(Period) \
+    x(Width) \
+    x(NoChange)
+// clang-format on
+
+ENUM(SystemTimingCheckKind, STCK)
+#undef STCK
+
+struct SystemTimingCheckDef;
+
+class SLANG_EXPORT SystemTimingCheckSymbol : public Symbol {
+public:
+    struct EdgeDescriptor {
+        char from;
+        char to;
+    };
+
+    struct Arg {
+        const Expression* expr = nullptr;
+        const Expression* condition = nullptr;
+        EdgeKind edge = EdgeKind::None;
+        span<const EdgeDescriptor> edgeDescriptors;
+
+        Arg() = default;
+        Arg(const Expression& expr) : expr(&expr) {}
+        Arg(const Expression& expr, const Expression* condition, EdgeKind edge,
+            span<const EdgeDescriptor> edgeDescriptors) :
+            expr(&expr),
+            condition(condition), edge(edge), edgeDescriptors(edgeDescriptors) {}
+    };
+
+    SystemTimingCheckKind timingCheckKind;
+
+    SystemTimingCheckSymbol(SourceLocation loc, const SystemTimingCheckDef* def);
+
+    span<const Arg> getArguments() const {
+        if (!isResolved)
+            resolve();
+        return args;
+    }
+
+    void serializeTo(ASTSerializer& serializer) const;
+
+    static SystemTimingCheckSymbol& fromSyntax(const Scope& parent,
+                                               const syntax::SystemTimingCheckSyntax& syntax);
+
+    static bool isKind(SymbolKind kind) { return kind == SymbolKind::SystemTimingCheck; }
+
+private:
+    void resolve() const;
+
+    mutable bool isResolved = false;
+    mutable span<const Arg> args;
+    const SystemTimingCheckDef* def;
+};
+
 } // namespace slang::ast

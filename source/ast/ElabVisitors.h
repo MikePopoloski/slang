@@ -343,6 +343,13 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
         symbol.getTerminals();
     }
 
+    void handle(const SystemTimingCheckSymbol& symbol) {
+        if (!handleDefault(symbol))
+            return;
+
+        symbol.getArguments();
+    }
+
     void finalize() {
         // Once everything has been visited, go back over and check things that might
         // have been influenced by visiting later symbols. Unfortunately visiting

@@ -2959,24 +2959,20 @@ EdgeDescriptorSyntax& Parser::parseEdgeDescriptor() {
 }
 
 TimingCheckArgSyntax& Parser::parseTimingCheckArg() {
-    if (peek(TokenKind::Comma))
+    if (peek(TokenKind::Comma) || peek(TokenKind::CloseParenthesis))
         return factory.emptyTimingCheckArg(placeholderToken());
 
-    if (peek(TokenKind::Identifier) && peek(1).kind == TokenKind::OpenBracket) {
-        auto terminal = consume();
-        auto openBracket = consume();
-        auto& expr = parseMinTypMaxExpression();
-        return factory.delayedTerminalArg(terminal, openBracket, expr,
-                                          expect(TokenKind::CloseBracket));
-    }
-
-    auto parseCondition = [&]() -> TimingCheckConditionSyntax* {
+    auto parseCondition = [&]() -> TimingCheckEventConditionSyntax* {
         if (!peek(TokenKind::TripleAnd))
             return nullptr;
 
+        // The syntax in the BNF for condition expressions is nonsensical,
+        // and there is some discussion in the Mantis tracker about how it's
+        // a holdover from Verilog-XL and should likely be replaced with just
+        // a plain old expression, so that's what we're doing here.
         auto tripleAnd = consume();
         auto& expr = parseExpression();
-        return &factory.timingCheckCondition(tripleAnd, expr);
+        return &factory.timingCheckEventCondition(tripleAnd, expr);
     };
 
     auto edge = parseEdgeKeyword();
@@ -2995,12 +2991,16 @@ TimingCheckArgSyntax& Parser::parseTimingCheckArg() {
 
         auto& terminal = parseName();
         auto cond = parseCondition();
-        return factory.timingCheckEvent(edge, control, terminal, cond);
+        return factory.timingCheckEventArg(edge, control, terminal, cond);
     }
 
     auto& expr = parseMinTypMaxExpression();
     auto cond = parseCondition();
-    return factory.expressionTimingCheckArg(expr, cond);
+    if (cond)
+        return factory.timingCheckEventArg(Token(), nullptr, expr, cond);
+
+    else
+        return factory.expressionTimingCheckArg(expr);
 }
 
 SystemTimingCheckSyntax& Parser::parseSystemTimingCheck() {

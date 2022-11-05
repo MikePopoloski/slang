@@ -113,7 +113,8 @@ enum class RandMode;
     x(CoverCrossBody) \
     x(CoverageBin) \
     x(TimingPath) \
-    x(PulseStyle)
+    x(PulseStyle) \
+    x(SystemTimingCheck)
 // clang-format on
 
 ENUM(SymbolKind, SYMBOLKIND)

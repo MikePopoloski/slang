@@ -523,6 +523,9 @@ void Scope::addMembers(const SyntaxNode& syntax) {
                 PulseStyleSymbol::fromSyntax(*this, syntax.as<PulseStyleDeclarationSyntax>()));
             break;
         case SyntaxKind::SystemTimingCheck:
+            addMember(
+                SystemTimingCheckSymbol::fromSyntax(*this, syntax.as<SystemTimingCheckSyntax>()));
+            break;
         case SyntaxKind::ConfigDeclaration:
             // TODO: these aren't supported yet but we can compile everything else successfully
             // without them so warn instead of erroring.
