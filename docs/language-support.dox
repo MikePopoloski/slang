@@ -467,14 +467,14 @@ IEEE 1800-2017 SystemVerilog Language Reference Manual (LRM).
 
 {{w:15%}} LRM | Feature | {{w:15%}} Supported
 --- | ------- | ---------
-{{m-danger}}  31.2 | Overview | no
-{{m-danger}}  31.3 | Timing checks using a stability window | no
-{{m-danger}}  31.4 | Timing checks for clock and control signals | no
-{{m-danger}}  31.5 | Edge-control specifiers | no
-{{m-danger}}  31.6 | Notifiers: user-defined responses to timing violations | no
-{{m-danger}}  31.7 | Enabling timing checks with conditioned events | no
-{{m-danger}}  31.8 | Vector signals in timing checks | no
-{{m-danger}}  31.9 | Negative timing checks | no
+{{m-success}} 31.2 | Overview | v3.0
+{{m-success}} 31.3 | Timing checks using a stability window | v3.0
+{{m-success}} 31.4 | Timing checks for clock and control signals | v3.0
+{{m-success}} 31.5 | Edge-control specifiers | v3.0
+{{m-success}} 31.6 | Notifiers: user-defined responses to timing violations | v3.0
+{{m-success}} 31.7 | Enabling timing checks with conditioned events | v3.0
+{{m-success}} 31.8 | Vector signals in timing checks | v3.0
+{{m-success}} 31.9 | Negative timing checks | v3.0
 
 ## 32. Backannotation using the standard delay format
 
