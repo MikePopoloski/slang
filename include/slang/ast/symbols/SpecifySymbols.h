@@ -19,7 +19,9 @@ class SLANG_EXPORT SpecifyBlockSymbol : public Symbol, public Scope {
 public:
     SpecifyBlockSymbol(Compilation& compilation, SourceLocation loc);
 
-    static SpecifyBlockSymbol& fromSyntax(Scope& scope, const syntax::SpecifyBlockSyntax& syntax);
+    static SpecifyBlockSymbol& fromSyntax(const Scope& scope,
+                                          const syntax::SpecifyBlockSyntax& syntax,
+                                          SmallVector<const Symbol*>& implicitSymbols);
 
     void serializeTo(ASTSerializer&) const {}
 

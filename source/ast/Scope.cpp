@@ -260,6 +260,7 @@ void Scope::addMembers(const SyntaxNode& syntax) {
         case SyntaxKind::ClockingItem:
         case SyntaxKind::DefaultClockingReference:
         case SyntaxKind::DefaultDisableDeclaration:
+        case SyntaxKind::SpecifyBlock:
             addDeferredMembers(syntax);
             break;
         case SyntaxKind::PortDeclaration:
@@ -468,9 +469,6 @@ void Scope::addMembers(const SyntaxNode& syntax) {
                 addMember(*param);
             break;
         }
-        case SyntaxKind::SpecifyBlock:
-            addMember(SpecifyBlockSymbol::fromSyntax(*this, syntax.as<SpecifyBlockSyntax>()));
-            break;
         case SyntaxKind::SequenceDeclaration:
             addMember(SequenceSymbol::fromSyntax(*this, syntax.as<SequenceDeclarationSyntax>()));
             break;
@@ -1035,6 +1033,16 @@ void Scope::elaborate() const {
                 // These have to wait until we've seen all instantiations.
                 hasNestedDefs = true;
                 break;
+            case SyntaxKind::SpecifyBlock: {
+                SmallVector<const Symbol*> implicitSymbols;
+                auto& specify = SpecifyBlockSymbol::fromSyntax(*this,
+                                                               member.node.as<SpecifyBlockSyntax>(),
+                                                               implicitSymbols);
+
+                std::initializer_list members{&specify};
+                insertMembersAndNets(members, implicitSymbols, symbol);
+                break;
+            }
             default:
                 ASSUME_UNREACHABLE;
         }
@@ -1480,6 +1488,8 @@ static size_t countMembers(const SyntaxNode& syntax) {
         case SyntaxKind::ModuleDeclaration:
         case SyntaxKind::ProgramDeclaration:
             return 1;
+        case SyntaxKind::SpecifyBlock:
+            return 2;
         default:
             ASSUME_UNREACHABLE;
     }

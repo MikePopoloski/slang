@@ -19,11 +19,57 @@ namespace slang::ast {
 using namespace parsing;
 using namespace syntax;
 
+static void createImplicitNets(const SystemTimingCheckSymbol& timingCheck, const Scope& scope,
+                               SmallVector<const Symbol*>& results,
+                               SmallSet<string_view, 8>& implicitNetNames) {
+    if (timingCheck.timingCheckKind != SystemTimingCheckKind::SetupHold &&
+        timingCheck.timingCheckKind != SystemTimingCheckKind::RecRem) {
+        return;
+    }
+
+    auto& netType = scope.getDefaultNetType();
+
+    // If no default nettype is set, we don't create implicit nets.
+    if (netType.isError())
+        return;
+
+    auto syntaxPtr = timingCheck.getSyntax();
+    ASSERT(syntaxPtr);
+
+    auto& syntax = syntaxPtr->as<SystemTimingCheckSyntax>();
+    auto& actualArgs = syntax.args;
+
+    ASTContext context(scope, LookupLocation::max);
+    SmallVector<Token, 8> implicitNets;
+
+    for (size_t i = 7; i <= 8; i++) {
+        if (actualArgs.size() <= i)
+            break;
+
+        if (actualArgs[i]->kind == SyntaxKind::ExpressionTimingCheckArg) {
+            auto& exprSyntax = *actualArgs[i]->as<ExpressionTimingCheckArgSyntax>().expr;
+            if (exprSyntax.kind == SyntaxKind::IdentifierName)
+                Expression::findPotentiallyImplicitNets(exprSyntax, context, implicitNets);
+        }
+    }
+
+    for (Token t : implicitNets) {
+        if (implicitNetNames.emplace(t.valueText()).second) {
+            auto& comp = context.getCompilation();
+            auto net = comp.emplace<NetSymbol>(t.valueText(), t.location(), netType);
+            net->setType(comp.getLogicType());
+            results.push_back(net);
+        }
+    }
+}
+
 SpecifyBlockSymbol::SpecifyBlockSymbol(Compilation& compilation, SourceLocation loc) :
     Symbol(SymbolKind::SpecifyBlock, "", loc), Scope(compilation, this) {
 }
 
-SpecifyBlockSymbol& SpecifyBlockSymbol::fromSyntax(Scope& scope, const SpecifyBlockSyntax& syntax) {
+SpecifyBlockSymbol& SpecifyBlockSymbol::fromSyntax(const Scope& scope,
+                                                   const SpecifyBlockSyntax& syntax,
+                                                   SmallVector<const Symbol*>& implicitSymbols) {
     auto& comp = scope.getCompilation();
     auto result = comp.emplace<SpecifyBlockSymbol>(comp, syntax.specify.location());
     result->setSyntax(syntax);
@@ -31,10 +77,18 @@ SpecifyBlockSymbol& SpecifyBlockSymbol::fromSyntax(Scope& scope, const SpecifyBl
     for (auto member : syntax.items)
         result->addMembers(*member);
 
-    // specparams inside specify blocks get visibility in the parent scope as well.
+    SmallSet<string_view, 8> implicitNetNames;
+
     for (auto member = result->getFirstMember(); member; member = member->getNextSibling()) {
-        if (member->kind == SymbolKind::Specparam)
-            scope.addMember(*comp.emplace<TransparentMemberSymbol>(*member));
+        if (member->kind == SymbolKind::Specparam) {
+            // specparams inside specify blocks get visibility in the parent scope as well.
+            implicitSymbols.push_back(comp.emplace<TransparentMemberSymbol>(*member));
+        }
+        else if (member->kind == SymbolKind::SystemTimingCheck) {
+            // some system timing checks can create implicit nets
+            createImplicitNets(member->as<SystemTimingCheckSymbol>(), scope, implicitSymbols,
+                               implicitNetNames);
+        }
     }
 
     return *result;
@@ -485,6 +539,7 @@ struct SystemTimingCheckArgDef {
         RemainFlag,
         Offset
     } kind;
+    int signalRef = -1;
 };
 
 struct SystemTimingCheckDef {
@@ -513,8 +568,8 @@ static flat_hash_map<string_view, SystemTimingCheckDef> createTimingCheckDefs() 
                                     {Arg::Notifier},
                                     {Arg::Condition},
                                     {Arg::Condition},
-                                    {Arg::DelayedRef},
-                                    {Arg::DelayedRef}}};
+                                    {Arg::DelayedRef, 0},
+                                    {Arg::DelayedRef, 1}}};
 
     SystemTimingCheckDef recovery{SystemTimingCheckKind::Recovery,
                                   3,
@@ -533,8 +588,8 @@ static flat_hash_map<string_view, SystemTimingCheckDef> createTimingCheckDefs() 
                                  {Arg::Notifier},
                                  {Arg::Condition},
                                  {Arg::Condition},
-                                 {Arg::DelayedRef},
-                                 {Arg::DelayedRef}}};
+                                 {Arg::DelayedRef, 0},
+                                 {Arg::DelayedRef, 1}}};
 
     SystemTimingCheckDef skew{SystemTimingCheckKind::Skew,
                               3,
@@ -620,6 +675,7 @@ void SystemTimingCheckSymbol::resolve() const {
     ASSERT(syntaxPtr && parent);
 
     auto parentParent = parent->asSymbol().getParentScope();
+    auto& comp = parent->getCompilation();
     ASTContext context(*parent, LookupLocation::after(*this),
                        ASTFlags::NonProcedural | ASTFlags::SpecifyBlock);
 
@@ -699,13 +755,12 @@ void SystemTimingCheckSymbol::resolve() const {
                     break;
                 }
 
-                auto& expr = Expression::bind(exprSyntax, context);
-                if (context.requireIntegral(expr)) {
-                    ASTContext nonContinuous = context;
-                    nonContinuous.flags &= ~ASTFlags::NonProcedural;
-                    expr.requireLValue(nonContinuous);
-                }
+                ASTContext nonContinuous = context;
+                nonContinuous.flags &= ~ASTFlags::NonProcedural;
 
+                auto& expr = Expression::bindLValue(exprSyntax, comp.getLogicType(),
+                                                    exprSyntax.getFirstToken().location(),
+                                                    nonContinuous, /* isInout */ false);
                 argBuf.emplace_back(expr);
                 break;
             }
@@ -731,19 +786,48 @@ void SystemTimingCheckSymbol::resolve() const {
 
                     auto edge = SemanticFacts::getEdgeKind(eventArg.edge.kind);
 
-                    // TODO: edge descriptors
-                    argBuf.emplace_back(*expr, condition, edge, span<const EdgeDescriptor>{});
+                    SmallVector<EdgeDescriptor> edgeDescriptors;
+                    if (eventArg.controlSpecifier) {
+                        for (auto descSyntax : eventArg.controlSpecifier->descriptors) {
+                            auto t1 = descSyntax->t1.rawText();
+                            auto t2 = descSyntax->t2.rawText();
+                            if (t1.length() + t2.length() != 2)
+                                continue;
+
+                            char edges[2] = {};
+                            memcpy(edges, t1.data(), t1.length());
+                            if (!t2.empty())
+                                memcpy(edges + t1.length(), t2.data(), t2.length());
+
+                            edgeDescriptors.push_back({edges[0], edges[1]});
+                        }
+                    }
+
+                    argBuf.emplace_back(*expr, condition, edge, edgeDescriptors.copy(comp));
                 }
                 break;
-            case SystemTimingCheckArgDef::DelayedRef:
-                // TODO: implement
+            case SystemTimingCheckArgDef::DelayedRef: {
+                ASSERT(formal.signalRef >= 0);
+                auto signalExpr = argBuf[formal.signalRef].expr;
+                if (!signalExpr) {
+                    argBuf.emplace_back();
+                    break;
+                }
+
+                // Integral lvalue, can create implicit nets (handled in SpecifyBlock factory).
+                auto& exprSyntax = *actual.as<ExpressionTimingCheckArgSyntax>().expr;
+                auto& expr = Expression::bindLValue(exprSyntax, *signalExpr->type,
+                                                    exprSyntax.getFirstToken().location(), context,
+                                                    /* isInout */ false);
+                argBuf.emplace_back(expr);
                 break;
+            }
             default:
                 ASSUME_UNREACHABLE;
         }
     }
 
-    args = argBuf.copy(context.getCompilation());
+    args = argBuf.copy(comp);
 }
 
 void SystemTimingCheckSymbol::serializeTo(ASTSerializer& serializer) const {

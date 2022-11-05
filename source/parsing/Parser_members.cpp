@@ -2922,7 +2922,7 @@ EdgeDescriptorSyntax& Parser::parseEdgeDescriptor() {
     }
 
     auto t1Raw = t1.rawText();
-    auto t2Raw = t2.valid() ? t2.rawText() : ""sv;
+    auto t2Raw = t2.rawText();
 
     SourceRange range = t1.range();
     if (t2)
