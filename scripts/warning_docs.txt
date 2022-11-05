@@ -587,9 +587,6 @@ endmodule
 -Wunknown-warning-option
 <ignored>
 
--Wnot-supported
-<ignored>
-
 -Wreversed-range
 An open range with constant bounds is reversed (i.e. has a larger left-hand side compared to its right).
 Such a range will behave as if it's empty and therefore never be selected.

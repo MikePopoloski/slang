@@ -524,11 +524,6 @@ void Scope::addMembers(const SyntaxNode& syntax) {
             addMember(
                 SystemTimingCheckSymbol::fromSyntax(*this, syntax.as<SystemTimingCheckSyntax>()));
             break;
-        case SyntaxKind::ConfigDeclaration:
-            // TODO: these aren't supported yet but we can compile everything else successfully
-            // without them so warn instead of erroring.
-            addDiag(diag::WarnNotYetSupported, syntax.sourceRange());
-            break;
         case SyntaxKind::NetAlias:
         case SyntaxKind::CheckerInstantiation:
         case SyntaxKind::CheckerDeclaration:
@@ -536,6 +531,7 @@ void Scope::addMembers(const SyntaxNode& syntax) {
         case SyntaxKind::ExternModuleDecl:
         case SyntaxKind::ExternUdpDecl:
         case SyntaxKind::WildcardPortList:
+        case SyntaxKind::ConfigDeclaration:
             addDiag(diag::NotYetSupported, syntax.sourceRange());
             break;
         default:

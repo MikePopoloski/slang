@@ -14,7 +14,6 @@ note NoteDrivenHere "driven here"
 note NoteOriginalAssign "original assignment here"
 note NoteFromHere2 "from '{}' and '{}'"
 error AttributesNotAllowed "attributes are not allowed here"
-warning not-supported WarnNotYetSupported "language feature not yet supported"
 
 subsystem Lexer
 error NonPrintableChar "non-printable control character in source text"
@@ -937,7 +936,7 @@ warning unknown-warning-option UnknownWarningOption "unknown warning option '{}'
 // The default group is the set of warnings that are enabled by default.
 
 group default = { real-underflow real-overflow vector-overflow int-overflow unconnected-port
-                  unconnected-unnamed-port redef-macro not-supported unknown-pragma unknown-warning-option
+                  unconnected-unnamed-port redef-macro unknown-pragma unknown-warning-option
                   extra-pragma-args expected-diag-arg unknown-diag-arg pragma-diag-level explicit-static
                   static-skipped elem-not-found dynarray-index dynarray-range queue-range empty-queue
                   unknown-escape-code missing-top warning-task unsized-concat finish-num implicit-conv
