@@ -146,10 +146,7 @@ struct SystemTimingCheckDef;
 
 class SLANG_EXPORT SystemTimingCheckSymbol : public Symbol {
 public:
-    struct EdgeDescriptor {
-        char from;
-        char to;
-    };
+    using EdgeDescriptor = std::array<char, 2>;
 
     struct Arg {
         const Expression* expr = nullptr;

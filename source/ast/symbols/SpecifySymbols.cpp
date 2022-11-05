@@ -812,12 +812,12 @@ void SystemTimingCheckSymbol::resolve() const {
                             if (t1.length() + t2.length() != 2)
                                 continue;
 
-                            char edges[2] = {};
-                            memcpy(edges, t1.data(), t1.length());
+                            EdgeDescriptor desc;
+                            memcpy(desc.data(), t1.data(), t1.length());
                             if (!t2.empty())
-                                memcpy(edges + t1.length(), t2.data(), t2.length());
+                                memcpy(desc.data() + t1.length(), t2.data(), t2.length());
 
-                            edgeDescriptors.push_back({edges[0], edges[1]});
+                            edgeDescriptors.push_back(desc);
                         }
                     }
 
@@ -857,6 +857,27 @@ void SystemTimingCheckSymbol::resolve() const {
 
 void SystemTimingCheckSymbol::serializeTo(ASTSerializer& serializer) const {
     serializer.write("timingCheckKind", toString(timingCheckKind));
+
+    serializer.startArray("arguments");
+    for (auto& arg : getArguments()) {
+        serializer.startObject();
+        if (arg.expr)
+            serializer.write("expr", *arg.expr);
+        if (arg.condition)
+            serializer.write("condition", *arg.condition);
+        if (arg.edge != EdgeKind::None)
+            serializer.write("edge", toString(arg.edge));
+
+        if (!arg.edgeDescriptors.empty()) {
+            serializer.startArray("edgeDescriptors");
+            for (auto& desc : arg.edgeDescriptors)
+                serializer.serialize(string_view(desc.data(), desc.size()));
+            serializer.endArray();
+        }
+
+        serializer.endObject();
+    }
+    serializer.endArray();
 }
 
 } // namespace slang::ast

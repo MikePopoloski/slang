@@ -20,6 +20,7 @@
 void registerSymbols(py::module_& m) {
     EXPOSE_ENUM(m, SymbolKind);
     EXPOSE_ENUM(m, PulseStyleKind);
+    EXPOSE_ENUM(m, SystemTimingCheckKind);
 
     py::enum_<LookupFlags>(m, "LookupFlags")
         .value("None", LookupFlags::None)
@@ -577,6 +578,16 @@ void registerSymbols(py::module_& m) {
     py::class_<PulseStyleSymbol, Symbol>(m, "PulseStyleSymbol")
         .def_readonly("pulseStyleKind", &PulseStyleSymbol::pulseStyleKind)
         .def_property_readonly("terminals", &PulseStyleSymbol::getTerminals);
+
+    py::class_<SystemTimingCheckSymbol, Symbol> timingCheck(m, "SystemTimingCheckSymbol");
+    timingCheck.def_readonly("timingCheckKind", &SystemTimingCheckSymbol::timingCheckKind)
+        .def_property_readonly("arguments", &SystemTimingCheckSymbol::getArguments);
+
+    py::class_<SystemTimingCheckSymbol::Arg>(timingCheck, "Arg")
+        .def_readonly("expr", &SystemTimingCheckSymbol::Arg::expr)
+        .def_readonly("condition", &SystemTimingCheckSymbol::Arg::condition)
+        .def_readonly("edge", &SystemTimingCheckSymbol::Arg::edge)
+        .def_readonly("edgeDescriptors", &SystemTimingCheckSymbol::Arg::edgeDescriptors);
 
     py::class_<CoverageOptionSetter>(m, "CoverageOptionSetter")
         .def_property_readonly("isTypeOption", &CoverageOptionSetter::isTypeOption)
