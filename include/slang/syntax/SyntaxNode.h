@@ -97,6 +97,12 @@ public:
     /// Gets the number of (direct) children underneath this node in the tree.
     size_t getChildCount() const; // Note: implemented in AllSyntax.cpp
 
+    /// Returns true if this syntax node is "equivalent" to the other provided
+    /// syntax node. Equivalence here is determined by the entire subtrees having
+    /// the same kinds of syntax nodes in the same order and all leaf tokens
+    /// having the same kinds and value text.
+    bool isEquivalentTo(const SyntaxNode& other) const;
+
     /// Reinterprets this node as being of type T. In debug this will assert
     /// that the dynamic kind is appropriate for the specified static type.
     template<typename T>

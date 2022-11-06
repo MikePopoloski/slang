@@ -125,6 +125,7 @@ void registerSyntax(py::module_& m) {
         .def_readonly("kind", &SyntaxNode::kind)
         .def("getFirstToken", &SyntaxNode::getFirstToken)
         .def("getLastToken", &SyntaxNode::getLastToken)
+        .def("isEquivalentTo", &SyntaxNode::isEquivalentTo)
         .def_property_readonly("sourceRange", &SyntaxNode::sourceRange)
         .def("__getitem__",
              [](const SyntaxNode& self, size_t i) -> py::object {

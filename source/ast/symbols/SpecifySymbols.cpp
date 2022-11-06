@@ -94,10 +94,10 @@ SpecifyBlockSymbol& SpecifyBlockSymbol::fromSyntax(const Scope& scope,
     return *result;
 }
 
-bool SpecifyBlockSymbol::checkPathTerminal(const ValueSymbol& terminal, const Scope& specifyParent,
-                                           bool isSource, SourceRange sourceRange) {
+bool SpecifyBlockSymbol::checkPathTerminal(const ValueSymbol& terminal, const Type& type,
+                                           const Scope& specifyParent, bool isSource,
+                                           SourceRange sourceRange) {
     // Type must be integral.
-    auto& type = terminal.getType();
     if (!type.isIntegral()) {
         if (!type.isError())
             specifyParent.addDiag(diag::InvalidSpecifyType, sourceRange) << terminal.name << type;
@@ -241,28 +241,30 @@ static const Expression* bindTerminal(const ExpressionSyntax& syntax, bool isSou
     if (expr->bad())
         return nullptr;
 
+    const Expression* valueExpr;
     switch (expr->kind) {
         case ExpressionKind::ElementSelect:
-            expr = &expr->as<ElementSelectExpression>().value();
+            valueExpr = &expr->as<ElementSelectExpression>().value();
             break;
         case ExpressionKind::RangeSelect:
-            expr = &expr->as<RangeSelectExpression>().value();
+            valueExpr = &expr->as<RangeSelectExpression>().value();
             break;
         default:
+            valueExpr = expr;
             break;
     }
 
-    if (expr->kind != ExpressionKind::NamedValue) {
-        auto code = (expr->kind == ExpressionKind::ElementSelect ||
-                     expr->kind == ExpressionKind::RangeSelect)
+    if (valueExpr->kind != ExpressionKind::NamedValue) {
+        auto code = (valueExpr->kind == ExpressionKind::ElementSelect ||
+                     valueExpr->kind == ExpressionKind::RangeSelect)
                         ? diag::SpecifyPathMultiDim
                         : diag::InvalidSpecifyPath;
         context.addDiag(code, syntax.sourceRange());
     }
     else {
-        auto& symbol = expr->as<NamedValueExpression>().symbol;
-        if (SpecifyBlockSymbol::checkPathTerminal(symbol, *parentParent, isSource,
-                                                  expr->sourceRange)) {
+        auto& symbol = valueExpr->as<NamedValueExpression>().symbol;
+        if (SpecifyBlockSymbol::checkPathTerminal(symbol, *expr->type, *parentParent, isSource,
+                                                  valueExpr->sourceRange)) {
             return expr;
         }
     }
@@ -453,6 +455,120 @@ void TimingPathSymbol::resolve() const {
     delays = delayBuf.copy(comp);
 }
 
+void TimingPathSymbol::checkDuplicatePaths(TimingPathMap& timingPathMap) const {
+    auto parent = getParentScope();
+    ASSERT(parent);
+
+    EvalContext evalCtx(parent->getCompilation(), EvalFlags::CacheResults);
+
+    auto terminalOverlaps = [&](const Symbol& ourTerminal,
+                                const std::optional<ConstantRange>& ourRange,
+                                const Expression& otherExpr, bool& identicalRanges) {
+        if (otherExpr.getSymbolReference() != &ourTerminal)
+            return false;
+
+        auto otherRange = otherExpr.evalSelector(evalCtx);
+        identicalRanges = ourRange == otherRange;
+        return !ourRange || !otherRange || ourRange->overlaps(*otherRange);
+    };
+
+    auto checkDup = [&](const TimingPathSymbol& otherPath, bool identicalRanges,
+                        const Expression& inputExpr, const Expression& outputExpr,
+                        const Expression& otherInputExpr, const Expression& otherOutputExpr) {
+        // If these are literally the same path then it's not a dup, it's just ourselves.
+        if (&inputExpr == &otherInputExpr && &outputExpr == &otherOutputExpr)
+            return;
+
+        // We've determined that our path and the `otherPath` have overlapping
+        // source and dest terminals. If ranges are identical then we may not
+        // have a dup, so check further.
+        if (identicalRanges) {
+            // If the paths have unique edges then they aren't dups.
+            if (edgeIdentifier != otherPath.edgeIdentifier)
+                return;
+
+            // If one is conditional and the other is not, it's not a dup
+            // unless the conditional one is also an ifnone condition.
+            auto cond = getConditionExpr();
+            auto otherCond = otherPath.getConditionExpr();
+            if (isStateDependent != otherPath.isStateDependent) {
+                if (cond || otherCond)
+                    return;
+            }
+            else if (isStateDependent && otherPath.isStateDependent) {
+                // If one is ifnone and the other is not, then not a dup.
+                if ((!cond || !otherCond) && (cond || otherCond))
+                    return;
+
+                // If both are ifnone then there's a dup, otherwise check further.
+                if (cond && otherCond) {
+                    // If the condition makes this unique then it's not a dup.
+                    // The LRM doesn't specify what it means for the condition expression
+                    // to be unique; we check here at the syntactical level rather than
+                    // the AST level.
+                    auto lsyntax = cond->syntax;
+                    auto rsyntax = otherCond->syntax;
+                    if (lsyntax && rsyntax && !lsyntax->isEquivalentTo(*rsyntax))
+                        return;
+                }
+            }
+        }
+
+        // Otherwise we've definitely found a dup, so issue a diagnostic.
+        auto& diag = parent->addDiag(diag::DupTimingPath, inputExpr.sourceRange)
+                     << outputExpr.sourceRange;
+        diag.addNote(diag::NotePreviousDefinition, otherInputExpr.sourceRange)
+            << otherOutputExpr.sourceRange;
+    };
+
+    for (auto outputExpr : getOutputs()) {
+        if (auto output = outputExpr->getSymbolReference()) {
+            // Find all paths that map to this output.
+            auto& inputMap = timingPathMap[output];
+            auto outputRange = outputExpr->evalSelector(evalCtx);
+
+            for (auto inputExpr : getInputs()) {
+                if (auto input = inputExpr->getSymbolReference()) {
+                    // Find all paths that also map to this input.
+                    auto& vec = inputMap[input];
+                    auto inputRange = inputExpr->evalSelector(evalCtx);
+
+                    // Look at each existing path and determine whether it's a duplicate.
+                    bool alreadyAdded = false;
+                    for (auto path : vec) {
+                        for (auto otherOutputExpr : path->getOutputs()) {
+                            // Only a dup if the output terminals overlap.
+                            bool outputRangeIdentical;
+                            if (terminalOverlaps(*output, outputRange, *otherOutputExpr,
+                                                 outputRangeIdentical)) {
+                                for (auto otherInputExpr : path->getInputs()) {
+                                    // Only a dup if the input terminals overlap.
+                                    bool inputRangeIdentical;
+                                    if (terminalOverlaps(*input, inputRange, *otherInputExpr,
+                                                         inputRangeIdentical)) {
+                                        checkDup(*path, outputRangeIdentical && inputRangeIdentical,
+                                                 *inputExpr, *outputExpr, *otherInputExpr,
+                                                 *otherOutputExpr);
+                                    }
+                                }
+                            }
+                        }
+
+                        // It's possible that *this* path can already be in the list,
+                        // since you can have a declaration like this:
+                        // (a[0], a[1] *> b) = 1
+                        if (path == this)
+                            alreadyAdded = true;
+                    }
+
+                    if (!alreadyAdded)
+                        vec.push_back(this);
+                }
+            }
+        }
+    }
+}
+
 static string_view toString(TimingPathSymbol::Polarity polarity) {
     switch (polarity) {
         case TimingPathSymbol::Polarity::Unknown:
@@ -523,6 +639,11 @@ void PulseStyleSymbol::resolve() const {
 
     auto& syntax = syntaxPtr->as<PulseStyleDeclarationSyntax>();
     terminals = bindTerminals(syntax.inputs, false, parentParent, context);
+}
+
+void PulseStyleSymbol::checkPreviouslyUsed(TimingPathMap&) const {
+    // TODO: actually check
+    getTerminals();
 }
 
 void PulseStyleSymbol::serializeTo(ASTSerializer& serializer) const {

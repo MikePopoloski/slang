@@ -454,7 +454,8 @@ const Symbol* SpecparamSymbol::resolvePathTerminal(string_view terminalName, con
         return nullptr;
     }
 
-    if (!SpecifyBlockSymbol::checkPathTerminal(symbol->as<ValueSymbol>(), *parentParent, isSource,
+    auto& value = symbol->as<ValueSymbol>();
+    if (!SpecifyBlockSymbol::checkPathTerminal(value, value.getType(), *parentParent, isSource,
                                                sourceRange)) {
         return nullptr;
     }

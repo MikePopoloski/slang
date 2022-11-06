@@ -754,3 +754,15 @@ module m(input [1:0] a, output [1:0] b);
     endspecify
 endmodule
 ```
+
+-Wdup-timing-path
+More than one specify timing path was given for a particular pair of input and output
+terminals in a module.
+```
+module m(input a, output b);
+    specify
+        (a => b) = 1;
+        (a => b) = 2;
+    endspecify
+endmodule
+```

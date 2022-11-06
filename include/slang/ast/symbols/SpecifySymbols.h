@@ -14,6 +14,7 @@
 namespace slang::ast {
 
 class Expression;
+class TimingPathSymbol;
 class ValueSymbol;
 
 class SLANG_EXPORT SpecifyBlockSymbol : public Symbol, public Scope {
@@ -24,13 +25,18 @@ public:
                                           const syntax::SpecifyBlockSyntax& syntax,
                                           SmallVector<const Symbol*>& implicitSymbols);
 
-    static bool checkPathTerminal(const ValueSymbol& terminal, const Scope& specifyParent,
-                                  bool isSource, SourceRange sourceRange);
+    static bool checkPathTerminal(const ValueSymbol& terminal, const Type& type,
+                                  const Scope& specifyParent, bool isSource,
+                                  SourceRange sourceRange);
 
     void serializeTo(ASTSerializer&) const {}
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::SpecifyBlock; }
 };
+
+using TimingPathMap =
+    flat_hash_map<const Symbol*,
+                  flat_hash_map<const Symbol*, std::vector<const TimingPathSymbol*>>>;
 
 class SLANG_EXPORT TimingPathSymbol : public Symbol {
 public:
@@ -76,6 +82,8 @@ public:
         return delays;
     }
 
+    void checkDuplicatePaths(TimingPathMap& timingPathMap) const;
+
     void serializeTo(ASTSerializer& serializer) const;
 
     static TimingPathSymbol& fromSyntax(const Scope& parent,
@@ -111,6 +119,8 @@ public:
             resolve();
         return terminals;
     }
+
+    void checkPreviouslyUsed(TimingPathMap& timingPathMap) const;
 
     void serializeTo(ASTSerializer& serializer) const;
 

@@ -289,35 +289,6 @@ SubroutineSymbol& SubroutineSymbol::fromSyntax(Compilation& compilation,
     return *result;
 }
 
-static bool isSameExpr(const SyntaxNode& l, const SyntaxNode& r) {
-    size_t childCount = l.getChildCount();
-    if (l.kind != r.kind || childCount != r.getChildCount())
-        return false;
-
-    for (size_t i = 0; i < childCount; i++) {
-        auto ln = l.childNode(i);
-        auto rn = r.childNode(i);
-        if (bool(ln) != bool(rn))
-            return false;
-
-        if (ln) {
-            if (!isSameExpr(*ln, *rn))
-                return false;
-        }
-        else {
-            Token lt = l.childToken(i);
-            Token rt = r.childToken(i);
-
-            if (!lt)
-                return !rt;
-
-            if (lt.kind != rt.kind || lt.valueText() != rt.valueText())
-                return false;
-        }
-    }
-    return true;
-}
-
 SubroutineSymbol& SubroutineSymbol::createOutOfBlock(Compilation& compilation,
                                                      const FunctionDeclarationSyntax& syntax,
                                                      const MethodPrototypeSymbol& prototype,
@@ -388,7 +359,7 @@ SubroutineSymbol& SubroutineSymbol::createOutOfBlock(Compilation& compilation,
             }
             else if (de->syntax && pe->syntax) {
                 // Check for "syntactically identical" expressions.
-                if (!isSameExpr(*de->syntax, *pe->syntax)) {
+                if (!de->syntax->isEquivalentTo(*pe->syntax)) {
                     auto& diag = parent.addDiag(diag::MethodArgDefaultMismatch, de->sourceRange);
                     diag << da->name;
                     diag.addNote(diag::NoteDeclarationHere, pa->location) << pe->sourceRange;

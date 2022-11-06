@@ -333,14 +333,14 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
         if (!handleDefault(symbol))
             return;
 
-        symbol.getInputs();
+        symbol.checkDuplicatePaths(timingPathMap);
     }
 
     void handle(const PulseStyleSymbol& symbol) {
         if (!handleDefault(symbol))
             return;
 
-        symbol.getTerminals();
+        symbol.checkPreviouslyUsed(timingPathMap);
     }
 
     void handle(const SystemTimingCheckSymbol& symbol) {
@@ -393,15 +393,16 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
 
     Compilation& compilation;
     const size_t& numErrors;
+    uint32_t errorLimit;
+    bool hierarchyProblem = false;
     flat_hash_map<const Definition*, size_t> instanceCount;
     flat_hash_set<const InstanceBodySymbol*> activeInstanceBodies;
     flat_hash_set<const Definition*> usedIfacePorts;
-    uint32_t errorLimit;
     SmallVector<const GenericClassDefSymbol*> genericClasses;
     SmallVector<const SubroutineSymbol*> dpiImports;
     SmallVector<const MethodPrototypeSymbol*> externIfaceProtos;
     SmallVector<std::pair<const InterfacePortSymbol*, const ModportSymbol*>> modportsWithExports;
-    bool hierarchyProblem = false;
+    TimingPathMap timingPathMap;
 };
 
 // This visitor is for finding all bind directives in the hierarchy.

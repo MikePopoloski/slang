@@ -2989,36 +2989,36 @@ endmodule
 
 TEST_CASE("Specify path descriptions") {
     auto tree = SyntaxTree::fromText(R"(
-module m(input a, C, output b, Q);
+module m(input a, [8:0] C, output b, Q);
     specify
         (a +*> b) = 1;
 
-        (C => Q) = 20;
-        (C => Q) = 10:14:20;
+        (C[0] => Q) = 20;
+        (C[1] => Q) = 10:14:20;
 
         // two expressions specify rise and fall delays
         specparam tPLH1 = 12, tPHL1 = 25;
         specparam tPLH2 = 12:16:22, tPHL2 = 16:22:25;
-        (C => Q) = ( tPLH1, tPHL1 ) ;
-        (C => Q) = ( tPLH2, tPHL2 ) ;
+        (C[2] => Q) = ( tPLH1, tPHL1 ) ;
+        (C[3] => Q) = ( tPLH2, tPHL2 ) ;
     endspecify
 endmodule
 
-module n(input C, output Q);
+module n(input [7:4] C, output Q);
     specify
         // three expressions specify rise, fall, and z transition delays
         specparam tPLH1 = 12, tPHL1 = 22, tPz1 = 34;
         specparam tPLH2 = 12:14:30, tPHL2 = 16:22:40, tPz2 = 22:30:34;
-        (C -=> (Q+:1)) = (tPLH1, tPHL1, tPz1);
-        (C => (Q-:1)) = (tPLH2, tPHL2, tPz2);
+        (C[4] -=> (Q+:1)) = (tPLH1, tPHL1, tPz1);
+        (C[5] => (Q-:1)) = (tPLH2, tPHL2, tPz2);
 
         // six expressions specify transitions to/from 0, 1, and z
         specparam t01 = 12, t10 = 16, t0z = 13,
                   tz1 = 10, t1z = 14, tz0 = 34 ;
-        (C => Q) = ( t01, t10, t0z, tz1, t1z, tz0) ;
+        (C[6] => Q) = ( t01, t10, t0z, tz1, t1z, tz0) ;
         specparam T01 = 12:14:24, T10 = 16:18:20, T0z = 13:16:30 ;
         specparam Tz1 = 10:12:16, T1z = 14:23:36, Tz0 = 15:19:34 ;
-        (C => Q) = ( T01, T10, T0z, Tz1, T1z, Tz0) ;
+        (C[7] => Q) = ( T01, T10, T0z, Tz1, T1z, Tz0) ;
     endspecify
 endmodule
 
@@ -3078,7 +3078,7 @@ endinterface
 
 int k;
 
-module m(input [4:0] a, output [4:0] b, output [5:0] l, I.m foo, I bar);
+module m(input [4:0] a, output [4:0] b, z[6], output [5:0] l, I.m foo, I bar);
     localparam int c = 1;
     struct packed { logic a; logic b; } d;
     logic [1:0][1:0] e;
@@ -3097,13 +3097,13 @@ module m(input [4:0] a, output [4:0] b, output [5:0] l, I.m foo, I bar);
         (a *> bar.i) = 1;
         (a *> k) = 1;
         (a => l) = 1;
-        (a => b) = ev;
+        (a => z[0]) = ev;
 
-        if (k < 2) (a => b) = 1;
-        if (1 < 2) (a => b) = 1;
-        if (int'(g) == 1) (a => b) = 1;
-        if (+g == 1) (a => b) = 1;
-        if (g inside { 1, 2 }) (a => b) = 1;
+        if (k < 2) (a => z[1]) = 1;
+        if (1 < 2) (a => z[2]) = 1;
+        if (int'(g) == 1) (a => z[3]) = 1;
+        if (+g == 1) (a => z[4]) = 1;
+        if (g inside { 1, 2 }) (a => z[5]) = 1;
 
         (b => a) = 1;
     endspecify
@@ -3111,7 +3111,7 @@ endmodule
 
 module n;
     I foo(), bar();
-    logic [4:0] a,b;
+    logic [4:0] a,b,z[6];
     logic [5:0] l;
     m m1(.*);
 endmodule
@@ -3280,4 +3280,55 @@ endmodule
     CHECK(diags[12].code == diag::ValueMustBePositive);
     CHECK(diags[13].code == diag::TimingCheckEventEdgeRequired);
     CHECK(diags[14].code == diag::EmptyArgNotAllowed);
+}
+
+TEST_CASE("Specify path dup warnings") {
+    auto tree = SyntaxTree::fromText(R"(
+module m(input a, clk, reset, [3:0] c, output b, out, [3:0] q, d);
+    logic data;
+    specify
+        (a => b) = 1;
+    endspecify
+
+    specify
+        (a => b) = 1;
+        (c[1:0], c[2], c[3], c[0] *> d[1:0]) = 1;
+        (c *> d, d) = 1;
+
+        // These are not dups
+        (posedge clk => (q[0] : data)) = (10, 5);
+        (negedge clk => (q[0] : data)) = (20, 12);
+
+        // Also not dups
+        if (reset)
+            (posedge clk => (q[1] : data)) = (15, 8);
+        if (!reset)
+            (posedge clk => (q[1] : data)) = (6, 2);
+        if (reset && clk)
+            (posedge clk => (q[1] : data)) = (15, 8);
+
+        // This is a dup because of the select range
+        if (~reset && ~clk)
+            (negedge clk *> (q[2:1] : data)) = (6, 2);
+
+        if (a) (a => out) = (2,2);
+        if (b) (a => out) = (2,2);
+        ifnone (a => out) = (1,1);
+        ifnone (a => out) = (1,1);
+        (a => out) = (1,1);
+    endspecify
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 6);
+    CHECK(diags[0].code == diag::DupTimingPath);
+    CHECK(diags[1].code == diag::DupTimingPath);
+    CHECK(diags[2].code == diag::DupTimingPath);
+    CHECK(diags[3].code == diag::DupTimingPath);
+    CHECK(diags[4].code == diag::DupTimingPath);
+    CHECK(diags[5].code == diag::DupTimingPath);
 }
