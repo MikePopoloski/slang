@@ -532,11 +532,30 @@ bool Parser::isSequenceRepetition() {
 ExpressionSyntax& Parser::parsePostfixExpression(ExpressionSyntax& lhs,
                                                  bitmask<ExpressionOptions> options) {
     ExpressionSyntax* expr = &lhs;
+
+    auto isLiteral = [&] {
+        switch (expr->kind) {
+            case SyntaxKind::NullLiteralExpression:
+            case SyntaxKind::WildcardLiteralExpression:
+            case SyntaxKind::StringLiteralExpression:
+            case SyntaxKind::RealLiteralExpression:
+            case SyntaxKind::TimeLiteralExpression:
+            case SyntaxKind::IntegerLiteralExpression:
+            case SyntaxKind::UnbasedUnsizedLiteralExpression:
+            case SyntaxKind::IntegerVectorExpression:
+                return true;
+            default:
+                return false;
+        }
+    };
+
     while (true) {
         switch (peek().kind) {
             case TokenKind::OpenBracket:
-                if (options.has(ExpressionOptions::SequenceExpr) && isSequenceRepetition())
+                if (isLiteral() ||
+                    (options.has(ExpressionOptions::SequenceExpr) && isSequenceRepetition())) {
                     return *expr;
+                }
 
                 expr = &factory.elementSelectExpression(*expr, parseElementSelect());
                 break;
@@ -547,6 +566,9 @@ ExpressionSyntax& Parser::parsePostfixExpression(ExpressionSyntax& lhs,
                 break;
             }
             case TokenKind::OpenParenthesis: {
+                if (isLiteral())
+                    return *expr;
+
                 auto& args = parseArgumentList();
                 expr = &factory.invocationExpression(*expr, nullptr, &args);
                 break;

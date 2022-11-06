@@ -857,3 +857,28 @@ endmodule
     parseCompilationUnit(text);
     CHECK_DIAGNOSTICS_EMPTY;
 }
+
+TEST_CASE("Parsing select of a literal error") {
+    auto tree = SyntaxTree::fromText(R"(
+class C;
+    rand int unsigned a;
+    constraint test_c {
+        a dist {
+            1      :/ 9
+            [2:10] :/ 1
+        };
+    }
+endclass
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& msg = compilation.getAllDiagnostics();
+    std::string result = "\n" + report(msg);
+    CHECK(result == R"(
+source:6:24: error: expected ','
+            1      :/ 9
+                       ^
+)");
+}

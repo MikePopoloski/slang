@@ -228,14 +228,6 @@ TEST_CASE("Integer operators") {
     EVAL("5'b11001 ==? {1'b1 / 1'b0, 4'b1001}", 1);
     EVAL("({1'b1 / 1'b0, 4'b1001} ==? 5'b11001) === 'x", 1);
 
-    // Bit selects
-    EVAL("3'd7[2]", 1);
-    EVAL("5'd25[3:0]", 9);
-    EVAL("5'd25[3:1]", 4);
-    EVAL("65'h1ffffffffffffffff[64:62]", "3'b111"_si);
-    EVAL("5'd25[0 +: 4]", 9);
-    EVAL("5'd25[3 -: 4]", 9);
-
 #undef EVAL
     NO_SESSION_ERRORS;
 }

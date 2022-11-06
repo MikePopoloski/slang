@@ -279,7 +279,7 @@ TEST_CASE("Diag range within macro arg") {
 
 module m;
     int i;
-    int j = `PASS(i + 1, ());
+    int j = `PASS(i + , null);
 endmodule
 )");
 
@@ -289,12 +289,12 @@ endmodule
     auto& diagnostics = compilation.getAllDiagnostics();
     std::string result = "\n" + report(diagnostics);
     CHECK(result == R"(
-source:6:26: error: expression is not callable
-    int j = `PASS(i + 1, ());
-                      ~  ^
-source:2:31: note: expanded from macro 'PASS'
+source:6:21: error: invalid operands to binary expression ('int' and 'null')
+    int j = `PASS(i + , null);
+                  ~ ^   ~~~~
+source:2:26: note: expanded from macro 'PASS'
 `define PASS(asdf, barr) asdf barr
-                         ~~~~ ^
+                         ^~~~ ~~~~
 )");
 }
 
@@ -349,9 +349,9 @@ endmodule
     CHECK(result == R"(
 in file included from source:5:
 in file included from fake-include1.svh:2:
-fake-include2.svh:2:7: error: expression is not callable
+fake-include2.svh:2:6: error: expected ';'
 i + 1 ()
-    ~ ^
+     ^
 )");
 }
 
