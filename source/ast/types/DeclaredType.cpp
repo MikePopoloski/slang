@@ -453,6 +453,13 @@ T DeclaredType::getASTContext() const {
     const Scope* scope = parent.getParentScope();
     ASSERT(scope);
 
+    // Specparams inside of specify blocks have additional constraints so we
+    // need to set the AST flag for them.
+    if (parent.kind == SymbolKind::Specparam &&
+        scope->asSymbol().kind == SymbolKind::SpecifyBlock) {
+        astFlags |= ASTFlags::SpecifyBlock;
+    }
+
     // If this type/initializer has been overridden by a parameter override,
     // we should use the instantiation scope and not the parameter's scope
     // when resolving.

@@ -1703,6 +1703,7 @@ module m;
 
     specify
         specparam s4 = 2:3:4;
+        specparam s5 = j;
     endspecify
 
     int k = s4;
@@ -1713,8 +1714,9 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 1);
+    REQUIRE(diags.size() == 2);
     CHECK(diags[0].code == diag::SpecparamInConstant);
+    CHECK(diags[1].code == diag::SpecifyBlockParam);
 }
 
 TEST_CASE("user-defined primitives") {
