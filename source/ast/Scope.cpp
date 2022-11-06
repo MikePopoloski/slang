@@ -1035,7 +1035,7 @@ void Scope::elaborate() const {
                                                                member.node.as<SpecifyBlockSyntax>(),
                                                                implicitSymbols);
 
-                std::initializer_list members{&specify};
+                auto members = {&specify};
                 insertMembersAndNets(members, implicitSymbols, symbol);
                 break;
             }
