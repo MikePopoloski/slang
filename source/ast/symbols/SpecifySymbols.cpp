@@ -641,9 +641,34 @@ void PulseStyleSymbol::resolve() const {
     terminals = bindTerminals(syntax.inputs, false, parentParent, context);
 }
 
-void PulseStyleSymbol::checkPreviouslyUsed(TimingPathMap&) const {
-    // TODO: actually check
-    getTerminals();
+void PulseStyleSymbol::checkPreviouslyUsed(const TimingPathMap& timingPathMap) const {
+    auto parent = getParentScope();
+    auto syntax = getSyntax();
+    ASSERT(parent && syntax);
+
+    for (auto terminal : getTerminals()) {
+        if (auto symbol = terminal->getSymbolReference()) {
+            if (auto it = timingPathMap.find(symbol); it != timingPathMap.end()) {
+                if (!it->second.empty() && !it->second.begin()->second.empty()) {
+                    SourceRange pathRange;
+                    auto first = it->second.begin()->second.front();
+                    for (auto outputExpr : first->getOutputs()) {
+                        if (outputExpr->getSymbolReference() == symbol) {
+                            pathRange = outputExpr->sourceRange;
+                            break;
+                        }
+                    }
+
+                    ASSERT(pathRange != SourceRange());
+
+                    auto& diag = parent->addDiag(diag::InvalidPulseStyle, terminal->sourceRange);
+                    diag << syntax->as<PulseStyleDeclarationSyntax>().keyword.valueText();
+                    diag << symbol->name;
+                    diag.addNote(diag::NoteDeclarationHere, pathRange);
+                }
+            }
+        }
+    }
 }
 
 void PulseStyleSymbol::serializeTo(ASTSerializer& serializer) const {

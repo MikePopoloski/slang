@@ -120,7 +120,7 @@ public:
         return terminals;
     }
 
-    void checkPreviouslyUsed(TimingPathMap& timingPathMap) const;
+    void checkPreviouslyUsed(const TimingPathMap& timingPathMap) const;
 
     void serializeTo(ASTSerializer& serializer) const;
 

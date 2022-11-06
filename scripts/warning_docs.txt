@@ -766,3 +766,15 @@ module m(input a, output b);
     endspecify
 endmodule
 ```
+
+-Winvalid-pulsestyle
+A `pulsestyle` or `showcancelled` declaration targets an output terminal that has
+previously been used in a timing path declaration, which is not allowed according to the LRM.
+```
+module m(input a, output b);
+    specify
+        (a => b) = 1;
+        pulsestyle_ondetect b;
+    endspecify
+endmodule
+```

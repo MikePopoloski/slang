@@ -3332,3 +3332,22 @@ endmodule
     CHECK(diags[4].code == diag::DupTimingPath);
     CHECK(diags[5].code == diag::DupTimingPath);
 }
+
+TEST_CASE("Invalid pulse style warning") {
+    auto tree = SyntaxTree::fromText(R"(
+module m(input a, output b, c);
+    specify
+        (a => b) = 1;
+        pulsestyle_ondetect b, c;
+        (a => c) = 1;
+    endspecify
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::InvalidPulseStyle);
+}
