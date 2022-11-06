@@ -86,6 +86,7 @@ add_library(
 
 add_subdirectory(ast)
 
+set(SLANG_SHARED_LIB_NAME slang)
 add_library(slang::slang ALIAS slang_slang)
 set_target_properties(
   slang_slang
@@ -93,8 +94,8 @@ set_target_properties(
              VISIBILITY_INLINES_HIDDEN YES
              VERSION ${PROJECT_VERSION}
              SOVERSION ${PROJECT_VERSION_MAJOR}
-             EXPORT_NAME slang
-             OUTPUT_NAME slang)
+             EXPORT_NAME ${SLANG_SHARED_LIB_NAME}
+             OUTPUT_NAME ${SLANG_SHARED_LIB_NAME})
 
 # Compile options
 target_compile_options(slang_slang PRIVATE ${SLANG_WARN_FLAGS})
