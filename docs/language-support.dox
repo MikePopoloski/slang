@@ -395,7 +395,7 @@ IEEE 1800-2017 SystemVerilog Language Reference Manual (LRM).
 {{m-success}} 25.5 | Modports | v0.6
 {{m-success}} 25.5.4 | Modport expressions | v2.0
 {{m-success}} 25.5.5 | Clocking blocks and modports | v2.0
-{{m-danger}}  25.6 | Interfaces and specify blocks | no
+{{m-success}} 25.6 | Interfaces and specify blocks | v3.0
 {{m-success}} 25.7 | Tasks and functions in interfaces | v2.0
 {{m-success}} 25.8 | Parameterized interfaces | v0.2
 {{m-warning}} 25.9 | Virtual interfaces | partial
@@ -457,11 +457,11 @@ IEEE 1800-2017 SystemVerilog Language Reference Manual (LRM).
 
 {{w:15%}} LRM | Feature | {{w:15%}} Supported
 --- | ------- | ---------
-{{m-danger}}  30.3 | Specify block declaration | no
-{{m-danger}}  30.4 | Module path declarations | no
-{{m-danger}}  30.5 | Assigning delays to module paths | no
+{{m-success}} 30.3 | Specify block declaration | v3.0
+{{m-success}} 30.4 | Module path declarations | v3.0
+{{m-success}} 30.5 | Assigning delays to module paths | v3.0
 {{m-dim}}     30.6 | Mixing module path delays and distributed delays | N/A
-{{m-danger}}  30.7 | Detailed control of pulse filtering behavior | no
+{{m-success}} 30.7 | Detailed control of pulse filtering behavior | v3.0
 
 ## 31. Timing checks
 
