@@ -113,6 +113,18 @@ public:
     const ConstantValue& getPulseRejectLimit() const;
     const ConstantValue& getPulseErrorLimit() const;
 
+    const Symbol* getPathSource() const {
+        if (!pathPulseResolved)
+            resolvePathPulse();
+        return pathSource;
+    }
+
+    const Symbol* getPathDest() const {
+        if (!pathPulseResolved)
+            resolvePathPulse();
+        return pathDest;
+    }
+
     static void fromSyntax(const Scope& scope, const syntax::SpecparamDeclarationSyntax& syntax,
                            SmallVectorBase<const SpecparamSymbol*>& results);
 
@@ -121,9 +133,16 @@ public:
     void serializeTo(ASTSerializer& serializer) const;
 
 private:
+    void resolvePathPulse() const;
+    const Symbol* resolvePathTerminal(string_view terminalName, const Scope& parent,
+                                      SourceLocation loc, bool isSource) const;
+
     mutable const ConstantValue* value1 = nullptr;
     mutable const ConstantValue* value2 = nullptr;
+    mutable const Symbol* pathSource = nullptr;
+    mutable const Symbol* pathDest = nullptr;
     mutable bool evaluating = false;
+    mutable bool pathPulseResolved = false;
 };
 
 } // namespace slang::ast

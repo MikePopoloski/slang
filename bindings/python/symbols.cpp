@@ -227,9 +227,12 @@ void registerSymbols(py::module_& m) {
                                [](const SpecparamSymbol& self) {
                                    return self.getPulseRejectLimit();
                                })
-        .def_property_readonly("pulseErrorLimit", [](const SpecparamSymbol& self) {
-            return self.getPulseErrorLimit();
-        });
+        .def_property_readonly("pulseErrorLimit",
+                               [](const SpecparamSymbol& self) {
+                                   return self.getPulseErrorLimit();
+                               })
+        .def_property_readonly("pathSource", &SpecparamSymbol::getPathSource)
+        .def_property_readonly("pathDest", &SpecparamSymbol::getPathDest);
 
     py::enum_<VariableFlags>(m, "VariableFlags")
         .value("None", VariableFlags::None)

@@ -10,10 +10,12 @@
 #include "slang/ast/ASTSerializer.h"
 #include "slang/ast/Compilation.h"
 #include "slang/ast/Expression.h"
+#include "slang/ast/symbols/SpecifySymbols.h"
 #include "slang/ast/types/AllTypes.h"
 #include "slang/diagnostics/ConstEvalDiags.h"
 #include "slang/diagnostics/DeclarationsDiags.h"
 #include "slang/syntax/AllSyntax.h"
+#include "slang/util/String.h"
 
 namespace slang::ast {
 
@@ -383,10 +385,84 @@ void SpecparamSymbol::serializeTo(ASTSerializer& serializer) const {
     if (isPathPulse) {
         serializer.write("rejectLimit", getPulseRejectLimit());
         serializer.write("errorLimit", getPulseErrorLimit());
+        if (auto symbol = getPathSource())
+            serializer.writeLink("pathSource", *symbol);
+        if (auto symbol = getPathDest())
+            serializer.writeLink("pathDest", *symbol);
     }
     else {
         serializer.write("value", getValue());
     }
+}
+
+void SpecparamSymbol::resolvePathPulse() const {
+    pathPulseResolved = true;
+    if (!isPathPulse)
+        return;
+
+    auto parent = getParentScope();
+    ASSERT(parent);
+
+    auto parentParent = parent->asSymbol().getParentScope();
+    ASSERT(parentParent);
+
+    auto prefix = "PATHPULSE$"sv;
+    if (startsWith(name, prefix) && parent->asSymbol().kind == SymbolKind::SpecifyBlock) {
+        auto path = name.substr(prefix.length());
+        if (!path.empty()) {
+            auto loc = location + prefix.length();
+            auto nameError = [&] {
+                parent->addDiag(diag::PathPulseInvalidPathName,
+                                SourceRange{loc, loc + path.length()})
+                    << path;
+            };
+
+            auto index = path.find('$');
+            if (index == string_view::npos) {
+                nameError();
+                return;
+            }
+
+            auto source = path.substr(0, index);
+            auto dest = path.substr(index + 1);
+            if (source.empty() || dest.empty()) {
+                nameError();
+                return;
+            }
+
+            pathSource = resolvePathTerminal(source, *parent, loc,
+                                             /* isSource */ true);
+            pathDest = resolvePathTerminal(dest, *parent, loc + source.length(),
+                                           /* isSource */ false);
+        }
+    }
+}
+
+const Symbol* SpecparamSymbol::resolvePathTerminal(string_view terminalName, const Scope& parent,
+                                                   SourceLocation loc, bool isSource) const {
+    auto parentParent = parent.asSymbol().getParentScope();
+    ASSERT(parentParent);
+
+    SourceRange sourceRange{loc, loc + terminalName.length()};
+    auto symbol = Lookup::unqualifiedAt(*parentParent, terminalName,
+                                        LookupLocation::after(parent.asSymbol()), sourceRange,
+                                        LookupFlags::NoParentScope);
+    if (!symbol)
+        return nullptr;
+
+    if (!symbol->isValue()) {
+        auto code = isSource ? diag::InvalidSpecifySource : diag::InvalidSpecifyDest;
+        auto& diag = parent.addDiag(code, sourceRange) << terminalName;
+        diag.addNote(diag::NoteDeclarationHere, symbol->location);
+        return nullptr;
+    }
+
+    if (!SpecifyBlockSymbol::checkPathTerminal(symbol->as<ValueSymbol>(), *parentParent, isSource,
+                                               sourceRange)) {
+        return nullptr;
+    }
+
+    return symbol;
 }
 
 } // namespace slang::ast

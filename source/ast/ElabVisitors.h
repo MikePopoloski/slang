@@ -350,6 +350,13 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
         symbol.getArguments();
     }
 
+    void handle(const SpecparamSymbol& symbol) {
+        if (!handleDefault(symbol))
+            return;
+
+        symbol.getPathSource();
+    }
+
     void finalize() {
         // Once everything has been visited, go back over and check things that might
         // have been influenced by visiting later symbols. Unfortunately visiting

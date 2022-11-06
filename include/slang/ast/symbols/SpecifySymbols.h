@@ -14,6 +14,7 @@
 namespace slang::ast {
 
 class Expression;
+class ValueSymbol;
 
 class SLANG_EXPORT SpecifyBlockSymbol : public Symbol, public Scope {
 public:
@@ -22,6 +23,9 @@ public:
     static SpecifyBlockSymbol& fromSyntax(const Scope& scope,
                                           const syntax::SpecifyBlockSyntax& syntax,
                                           SmallVector<const Symbol*>& implicitSymbols);
+
+    static bool checkPathTerminal(const ValueSymbol& terminal, const Scope& specifyParent,
+                                  bool isSource, SourceRange sourceRange);
 
     void serializeTo(ASTSerializer&) const {}
 

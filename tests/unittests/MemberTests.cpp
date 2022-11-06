@@ -3143,10 +3143,18 @@ endmodule
 
 TEST_CASE("Pathpulse specparams") {
     auto tree = SyntaxTree::fromText(R"(
-module m;
+module m(input foo, output bar);
+    typedef int blah;
     specify
         specparam PATHPULSE$ = (1, 2);
         specparam l = PATHPULSE$;
+        specparam PATHPULSE$foo$bar = (1, 2);
+        specparam PATHPULSE$foo$baz = (1, 2);
+        specparam PATHPULSE$foo$foo = (1, 2);
+        specparam PATHPULSE$foo$blah = (1, 2);
+        specparam PATHPULSE$asdf = (1, 2);
+        specparam PATHPULSE$foo$ = (1, 2);
+        specparam PATHPULSE$$bar = (1, 2);
     endspecify
 endmodule
 )");
@@ -3155,8 +3163,14 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 1);
+    REQUIRE(diags.size() == 7);
     CHECK(diags[0].code == diag::PathPulseInExpr);
+    CHECK(diags[1].code == diag::TypoIdentifier);
+    CHECK(diags[2].code == diag::InvalidSpecifyDest);
+    CHECK(diags[3].code == diag::InvalidSpecifyDest);
+    CHECK(diags[4].code == diag::PathPulseInvalidPathName);
+    CHECK(diags[5].code == diag::PathPulseInvalidPathName);
+    CHECK(diags[6].code == diag::PathPulseInvalidPathName);
 }
 
 TEST_CASE("Specify pulsestyle directives") {

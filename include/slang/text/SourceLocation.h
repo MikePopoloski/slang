@@ -130,6 +130,18 @@ public:
         return SourceLocation(buffer(), size_t((T)charOffset - delta));
     }
 
+    template<typename T, typename = std::enable_if_t<std::is_integral_v<T>>>
+    SourceLocation& operator+=(T delta) {
+        charOffset = size_t((T)charOffset + delta);
+        return *this;
+    }
+
+    template<typename T, typename = std::enable_if_t<std::is_integral_v<T>>>
+    SourceLocation& operator-=(T delta) {
+        charOffset = size_t((T)charOffset - delta);
+        return *this;
+    }
+
     ptrdiff_t operator-(SourceLocation loc) const {
         ASSERT(loc.buffer() == buffer());
         return (ptrdiff_t)charOffset - (ptrdiff_t)loc.charOffset;

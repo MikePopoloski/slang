@@ -94,6 +94,76 @@ SpecifyBlockSymbol& SpecifyBlockSymbol::fromSyntax(const Scope& scope,
     return *result;
 }
 
+bool SpecifyBlockSymbol::checkPathTerminal(const ValueSymbol& terminal, const Scope& specifyParent,
+                                           bool isSource, SourceRange sourceRange) {
+    // Type must be integral.
+    auto& type = terminal.getType();
+    if (!type.isIntegral()) {
+        if (!type.isError())
+            specifyParent.addDiag(diag::InvalidSpecifyType, sourceRange) << terminal.name << type;
+        return false;
+    }
+
+    auto reportErr = [&] {
+        auto code = isSource ? diag::InvalidSpecifySource : diag::InvalidSpecifyDest;
+        auto& diag = specifyParent.addDiag(code, sourceRange) << terminal.name;
+        diag.addNote(diag::NoteDeclarationHere, terminal.location);
+    };
+
+    // Inputs must be nets (or modport ports) and outputs must
+    // be nets or variables (or modport ports).
+    if (terminal.kind != SymbolKind::Net && terminal.kind != SymbolKind::ModportPort &&
+        (terminal.kind != SymbolKind::Variable || isSource)) {
+        reportErr();
+        return false;
+    }
+
+    if (terminal.kind == SymbolKind::ModportPort) {
+        // Check that the modport port has the correct direction.
+        auto dir = terminal.as<ModportPortSymbol>().direction;
+        if (dir != ArgumentDirection::InOut && ((isSource && dir != ArgumentDirection::In) ||
+                                                (!isSource && dir != ArgumentDirection::Out))) {
+            reportErr();
+            return false;
+        }
+        return true;
+    }
+
+    auto terminalParentScope = terminal.getParentScope();
+    ASSERT(terminalParentScope);
+
+    auto& terminalParent = terminalParentScope->asSymbol();
+    if (terminalParent.kind == SymbolKind::InstanceBody &&
+        terminalParent.as<InstanceBodySymbol>().getDefinition().definitionKind ==
+            DefinitionKind::Interface) {
+        // If the signal is part of an interface then the only way we could have accessed
+        // it is through an interface port, in which case the direction is "inout" and
+        // therefore fine no matter whether this is an input or output terminal.
+        return true;
+    }
+
+    // If we get here then the terminal must be a member of the module containing
+    // our parent specify block.
+    if (&terminalParent != &specifyParent.asSymbol()) {
+        specifyParent.addDiag(diag::InvalidSpecifyPath, sourceRange);
+        return false;
+    }
+
+    // Check that the terminal is connected to a module port and that
+    // the direction is correct.
+    for (auto portRef = terminal.getFirstPortBackref(); portRef;
+         portRef = portRef->getNextBackreference()) {
+        auto dir = portRef->port->direction;
+        if (dir == ArgumentDirection::InOut || (isSource && dir == ArgumentDirection::In) ||
+            (!isSource && dir == ArgumentDirection::Out)) {
+            return true;
+        }
+    }
+
+    reportErr();
+    return false;
+}
+
 TimingPathSymbol::TimingPathSymbol(SourceLocation loc, ConnectionKind connectionKind,
                                    Polarity polarity, Polarity edgePolarity,
                                    EdgeKind edgeIdentifier) :
@@ -165,77 +235,6 @@ TimingPathSymbol& TimingPathSymbol::fromSyntax(const Scope& parent,
     return result;
 }
 
-static bool checkPathTerminal(const ValueSymbol& terminal, const Scope* specifyParent,
-                              ASTContext& context, bool isSource, SourceRange sourceRange) {
-    // Type must be integral.
-    auto& type = terminal.getType();
-    if (!type.isIntegral()) {
-        if (!type.isError())
-            context.addDiag(diag::InvalidSpecifyType, sourceRange) << terminal.name << type;
-        return false;
-    }
-
-    auto reportErr = [&] {
-        auto code = isSource ? diag::InvalidSpecifySource : diag::InvalidSpecifyDest;
-        auto& diag = context.addDiag(code, sourceRange) << terminal.name;
-        diag.addNote(diag::NoteDeclarationHere, terminal.location);
-    };
-
-    // Inputs must be nets (or modport ports) and outputs must
-    // be nets or variables (or modport ports).
-    if (terminal.kind != SymbolKind::Net && terminal.kind != SymbolKind::ModportPort &&
-        (terminal.kind != SymbolKind::Variable || isSource)) {
-        reportErr();
-        return false;
-    }
-
-    if (terminal.kind == SymbolKind::ModportPort) {
-        // Check that the modport port has the correct direction.
-        auto dir = terminal.as<ModportPortSymbol>().direction;
-        if (dir != ArgumentDirection::InOut && ((isSource && dir != ArgumentDirection::In) ||
-                                                (!isSource && dir != ArgumentDirection::Out))) {
-            reportErr();
-            return false;
-        }
-        return true;
-    }
-
-    auto terminalParentScope = terminal.getParentScope();
-    ASSERT(terminalParentScope);
-
-    auto& terminalParent = terminalParentScope->asSymbol();
-    if (terminalParent.kind == SymbolKind::InstanceBody &&
-        terminalParent.as<InstanceBodySymbol>().getDefinition().definitionKind ==
-            DefinitionKind::Interface) {
-        // If the signal is part of an interface then the only way we could have accessed
-        // it is through an interface port, in which case the direction is "inout" and
-        // therefore fine no matter whether this is an input or output terminal.
-        return true;
-    }
-
-    // If we get here then the terminal must be a member of the module containing
-    // our parent specify block.
-    ASSERT(specifyParent);
-    if (&terminalParent != &specifyParent->asSymbol()) {
-        context.addDiag(diag::InvalidSpecifyPath, sourceRange);
-        return false;
-    }
-
-    // Check that the terminal is connected to a module port and that
-    // the direction is correct.
-    for (auto portRef = terminal.getFirstPortBackref(); portRef;
-         portRef = portRef->getNextBackreference()) {
-        auto dir = portRef->port->direction;
-        if (dir == ArgumentDirection::InOut || (isSource && dir == ArgumentDirection::In) ||
-            (!isSource && dir == ArgumentDirection::Out)) {
-            return true;
-        }
-    }
-
-    reportErr();
-    return false;
-}
-
 static const Expression* bindTerminal(const ExpressionSyntax& syntax, bool isSource,
                                       const Scope* parentParent, ASTContext& context) {
     auto expr = &Expression::bind(syntax, context);
@@ -262,8 +261,10 @@ static const Expression* bindTerminal(const ExpressionSyntax& syntax, bool isSou
     }
     else {
         auto& symbol = expr->as<NamedValueExpression>().symbol;
-        if (checkPathTerminal(symbol, parentParent, context, isSource, expr->sourceRange))
+        if (SpecifyBlockSymbol::checkPathTerminal(symbol, *parentParent, isSource,
+                                                  expr->sourceRange)) {
             return expr;
+        }
     }
 
     return nullptr;
