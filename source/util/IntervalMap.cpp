@@ -7,9 +7,7 @@
 //------------------------------------------------------------------------------
 #include "slang/util/IntervalMap.h"
 
-namespace slang {
-
-namespace IntervalMapDetails {
+namespace slang::IntervalMapDetails {
 
 void Path::replaceRoot(void* node, uint32_t size, IndexPair offset) {
     ASSERT(!path.empty());
@@ -130,6 +128,4 @@ IndexPair distribute(uint32_t numNodes, uint32_t numElements, uint32_t capacity,
     return posPair;
 }
 
-} // namespace IntervalMapDetails
-
-} // namespace slang
+} // namespace slang::IntervalMapDetails

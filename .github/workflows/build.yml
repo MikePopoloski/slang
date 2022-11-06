@@ -37,9 +37,9 @@ jobs:
       if: matrix.os == 'ubuntu-22.04'
       run: |
         wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
-        sudo add-apt-repository "deb http://apt.llvm.org/jammy/ llvm-toolchain-jammy-14 main"
+        sudo add-apt-repository "deb http://apt.llvm.org/jammy/ llvm-toolchain-jammy-15 main"
         sudo apt-get update
-        sudo apt-get install -y g++-12 g++-9 clang++-14 clang-tidy-14
+        sudo apt-get install -y g++-12 g++-9 clang++-15 clang-tidy-15
     - uses: ilammy/msvc-dev-cmd@v1
       if: matrix.os == 'windows-latest'
     - name: Configure

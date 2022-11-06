@@ -403,9 +403,6 @@ void SpecparamSymbol::resolvePathPulse() const {
     auto parent = getParentScope();
     ASSERT(parent);
 
-    auto parentParent = parent->asSymbol().getParentScope();
-    ASSERT(parentParent);
-
     auto prefix = "PATHPULSE$"sv;
     if (startsWith(name, prefix) && parent->asSymbol().kind == SymbolKind::SpecifyBlock) {
         auto path = name.substr(prefix.length());

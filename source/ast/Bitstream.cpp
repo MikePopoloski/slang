@@ -185,6 +185,9 @@ bool Bitstream::dynamicSizesMatch(const T1& destination, const T2& source) {
     else
         remaining = destFillFixedSize - sourceFixedSize;
 
+    if (sourceMultiplier == 0 && destFillMultiplier == 0)
+        return remaining == 0;
+
     return remaining % std::gcd(sourceMultiplier, destFillMultiplier) == 0;
 }
 
@@ -211,7 +214,8 @@ static size_t bitstreamCastRemainingSize(const T& destination, size_t srcSize) {
     // Calculate remaining size to dynamically fill.
     auto [destFillMultiplier,
           destFillFixedSize] = dynamicBitstreamSize(destination, BitstreamSizeMode::DestFill);
-    if (srcSize < destFillFixedSize || (srcSize - destFillFixedSize) % destFillMultiplier != 0) {
+    if (srcSize < destFillFixedSize ||
+        (destFillMultiplier > 0 && (srcSize - destFillFixedSize) % destFillMultiplier != 0)) {
         if (destEmptyMultiplier > 0 && (srcSize - destEmptyFixedSize) % destEmptyMultiplier == 0)
             return 0; // only for "with" range
         return srcSize + 1;
