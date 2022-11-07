@@ -1785,3 +1785,20 @@ endmodule
     p = &m.body.lookupName<ParameterSymbol>("n2.P");
     CHECK(p->getValue().integer() == 0x5678);
 }
+
+TEST_CASE("Top level program") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+endmodule
+
+program p(input i);
+endprogram
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    REQUIRE(compilation.getRoot().topInstances.size() == 2);
+    CHECK(compilation.getRoot().topInstances[1]->name == "p");
+}

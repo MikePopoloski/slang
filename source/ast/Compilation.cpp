@@ -283,65 +283,67 @@ const RootSymbol& Compilation::getRoot(bool skipDefParamResolution) {
         return true;
     };
 
-    // Find top level modules that form the root of the design. Iterate the definitions
-    // map before instantiating any top level modules, since that can cause changes
-    // to the definition map itself.
+    // Find top level modules (and programs) that form the root of the design.
+    // Iterate the definitions map before instantiating any top level modules,
+    // since that can cause changes to the definition map itself.
     SmallVector<const Definition*> topDefs;
     if (options.topModules.empty()) {
-        for (auto& [key, definition] : definitionMap) {
+        for (auto& [key, def] : definitionMap) {
             // Ignore definitions that are not top level. Top level definitions are:
-            // - Always modules
+            // - Modules and programs
             // - Not nested
             // - Have no non-defaulted parameters
             // - Not instantiated anywhere
             if (std::get<1>(key) != root.get() ||
-                globalInstantiations.find(definition->name) != globalInstantiations.end()) {
+                globalInstantiations.find(def->name) != globalInstantiations.end()) {
                 continue;
             }
 
-            // Library modules are never automatically instantiated in any capacity.
-            if (!definition->syntaxTree || !definition->syntaxTree->isLibrary) {
-                if (definition->definitionKind == DefinitionKind::Module) {
-                    if (isValidTop(*definition)) {
-                        // This module can be automatically instantiated.
-                        topDefs.push_back(definition.get());
+            // Library definitions are never automatically instantiated in any capacity.
+            if (!def->syntaxTree || !def->syntaxTree->isLibrary) {
+                if (def->definitionKind == DefinitionKind::Module ||
+                    def->definitionKind == DefinitionKind::Program) {
+                    if (isValidTop(*def)) {
+                        // This definition can be automatically instantiated.
+                        topDefs.push_back(def.get());
                         continue;
                     }
                 }
             }
 
             // Otherwise this definition is unreferenced and not automatically instantiated.
-            unreferencedDefs.push_back(definition.get());
+            unreferencedDefs.push_back(def.get());
         }
     }
     else {
         // If the list of top modules has already been provided we just need to
         // find and instantiate them.
         auto& tm = options.topModules;
-        for (auto& [key, definition] : definitionMap) {
+        for (auto& [key, def] : definitionMap) {
             if (std::get<1>(key) != root.get())
                 continue;
 
-            if (definition->definitionKind == DefinitionKind::Module) {
-                if (auto it = tm.find(definition->name); it != tm.end()) {
+            if (def->definitionKind == DefinitionKind::Module ||
+                def->definitionKind == DefinitionKind::Program) {
+                if (auto it = tm.find(def->name); it != tm.end()) {
                     // Remove from the top modules set so that we know we visited it.
                     tm.erase(it);
 
                     // Make sure this is actually valid as a top-level module.
-                    if (isValidTop(*definition)) {
-                        topDefs.push_back(definition.get());
+                    if (isValidTop(*def)) {
+                        topDefs.push_back(def.get());
                         continue;
                     }
 
                     // Otherwise, issue an error because the user asked us to instantiate this.
-                    definition->scope.addDiag(diag::InvalidTopModule, SourceLocation::NoLocation)
-                        << definition->name;
+                    def->scope.addDiag(diag::InvalidTopModule, SourceLocation::NoLocation)
+                        << def->name;
                 }
             }
 
             // Otherwise this definition might be unreferenced and not automatically instantiated.
-            if (globalInstantiations.find(definition->name) == globalInstantiations.end())
-                unreferencedDefs.push_back(definition.get());
+            if (globalInstantiations.find(def->name) == globalInstantiations.end())
+                unreferencedDefs.push_back(def.get());
         }
 
         // If any top modules were not found, issue an error.
