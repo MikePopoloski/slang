@@ -90,7 +90,7 @@ const ModuleDeclarationSyntax& parseModule(const std::string& text) {
     preprocessor.pushSource(text);
 
     Parser parser(preprocessor);
-    return parser.parseModule();
+    return parser.parseModule().as<ModuleDeclarationSyntax>();
 }
 
 const ClassDeclarationSyntax& parseClass(const std::string& text) {

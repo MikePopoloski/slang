@@ -140,7 +140,7 @@ public:
     /// source stream is currently looking at one of these.
     syntax::ExpressionSyntax& parseExpression();
     syntax::StatementSyntax& parseStatement(bool allowEmpty = true, bool allowSuperNew = false);
-    syntax::ModuleDeclarationSyntax& parseModule();
+    syntax::MemberSyntax& parseModule();
     syntax::ClassDeclarationSyntax& parseClass();
     syntax::MemberSyntax* parseSingleMember(syntax::SyntaxKind parentKind);
     syntax::NameSyntax& parseName();
@@ -236,7 +236,8 @@ private:
     syntax::MemberSyntax* parseMember(syntax::SyntaxKind parentKind, bool& anyLocalModules);
     syntax::ModuleHeaderSyntax& parseModuleHeader();
     syntax::ParameterPortListSyntax* parseParameterPortList();
-    syntax::ModuleDeclarationSyntax& parseModule(AttrList attributes, syntax::SyntaxKind parentKind, bool& anyLocalModules);
+    syntax::MemberSyntax& parseModule(AttrList attributes, syntax::SyntaxKind parentKind, bool& anyLocalModules);
+    syntax::AnonymousProgramSyntax& parseAnonymousProgram(AttrList attributes);
     syntax::MemberSyntax& parseModportSubroutinePortList(AttrList attributes);
     syntax::MemberSyntax& parseModportPort();
     syntax::ModportItemSyntax& parseModportItem();

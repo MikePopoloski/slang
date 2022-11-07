@@ -1148,6 +1148,12 @@ NamedBlockClause? blockName
 kindmap<ModuleDeclaration>
 ModuleDeclaration InterfaceDeclaration ProgramDeclaration PackageDeclaration
 
+AnonymousProgram base=Member
+token keyword
+token semi
+list<Member> members
+token endkeyword
+
 // ----- MEMBERS -----
 
 EmptyMember base=Member

@@ -1821,3 +1821,28 @@ endmodule
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::IllegalReferenceToProgramItem);
 }
+
+TEST_CASE("Anonymous programs") {
+    auto tree = SyntaxTree::fromText(R"(
+package p;
+    program;
+        int i;
+        function int foo; return 0; endfunction
+    endprogram
+endpackage
+
+program;
+    class C; endclass
+endprogram
+
+module m;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::NotAllowedInAnonymousProgram);
+}

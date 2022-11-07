@@ -28,13 +28,16 @@ CompilationUnitSyntax& Parser::parseCompilationUnit() {
     }
 }
 
-ModuleDeclarationSyntax& Parser::parseModule() {
+MemberSyntax& Parser::parseModule() {
     bool anyLocalModules = false;
     return parseModule(parseAttributes(), SyntaxKind::CompilationUnit, anyLocalModules);
 }
 
-ModuleDeclarationSyntax& Parser::parseModule(AttrList attributes, SyntaxKind parentKind,
-                                             bool& anyLocalModules) {
+MemberSyntax& Parser::parseModule(AttrList attributes, SyntaxKind parentKind,
+                                  bool& anyLocalModules) {
+    if (peek(TokenKind::ProgramKeyword) && peek(1).kind == TokenKind::Semicolon)
+        return parseAnonymousProgram(attributes);
+
     // Tell the preprocessor that we're inside a design element for the duration of this function.
     auto& pp = getPP();
     pp.pushDesignElementStack();
@@ -79,6 +82,25 @@ ModuleDeclarationSyntax& Parser::parseModule(AttrList attributes, SyntaxKind par
 
     meta.nodeMap[&result] = node;
     return result;
+}
+
+AnonymousProgramSyntax& Parser::parseAnonymousProgram(AttrList attributes) {
+    auto& pp = getPP();
+    pp.pushDesignElementStack();
+
+    auto keyword = consume();
+    auto semi = expect(TokenKind::Semicolon);
+
+    Token endkeyword;
+    auto members = parseMemberList<MemberSyntax>(
+        TokenKind::EndProgramKeyword, endkeyword, SyntaxKind::AnonymousProgram,
+        [this](SyntaxKind parentKind, bool& anyLocalModules) {
+            return parseMember(parentKind, anyLocalModules);
+        });
+
+    pp.popDesignElementStack();
+
+    return factory.anonymousProgram(attributes, keyword, semi, members, endkeyword);
 }
 
 ClassDeclarationSyntax& Parser::parseClass() {
@@ -3296,6 +3318,10 @@ void Parser::checkMemberAllowed(const SyntaxNode& member, SyntaxKind parentKind)
         case SyntaxKind::ProgramDeclaration:
             if (!isAllowedInProgram(member.kind))
                 error(diag::NotAllowedInProgram);
+            return;
+        case SyntaxKind::AnonymousProgram:
+            if (!isAllowedInAnonymousProgram(member.kind))
+                error(diag::NotAllowedInAnonymousProgram);
             return;
         case SyntaxKind::PackageDeclaration:
             if (!isAllowedInPackage(member.kind))

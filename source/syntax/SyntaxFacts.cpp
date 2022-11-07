@@ -1371,11 +1371,24 @@ bool SyntaxFacts::isAllowedInProgram(SyntaxKind kind) {
     }
 }
 
+bool SyntaxFacts::isAllowedInAnonymousProgram(SyntaxKind kind) {
+    switch (kind) {
+        case SyntaxKind::TaskDeclaration:
+        case SyntaxKind::FunctionDeclaration:
+        case SyntaxKind::ClassDeclaration:
+        case SyntaxKind::CovergroupDeclaration:
+            return true;
+        default:
+            return false;
+    }
+}
+
 bool SyntaxFacts::isAllowedInPackage(SyntaxKind kind) {
     switch (kind) {
         case SyntaxKind::TimeUnitsDeclaration:
         case SyntaxKind::PackageExportDeclaration:
         case SyntaxKind::PackageExportAllDeclaration:
+        case SyntaxKind::AnonymousProgram:
             return true;
         default:
             return isModuleOrPackageDecl(kind);

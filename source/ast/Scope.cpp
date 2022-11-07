@@ -524,6 +524,9 @@ void Scope::addMembers(const SyntaxNode& syntax) {
             addMember(
                 SystemTimingCheckSymbol::fromSyntax(*this, syntax.as<SystemTimingCheckSyntax>()));
             break;
+        case SyntaxKind::AnonymousProgram:
+            // TODO:
+            break;
         case SyntaxKind::NetAlias:
         case SyntaxKind::CheckerInstantiation:
         case SyntaxKind::CheckerDeclaration:

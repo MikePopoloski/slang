@@ -305,6 +305,9 @@ public:
     /// @return true if the given syntax node is allowed within a program definition.
     static bool isAllowedInProgram(SyntaxKind kind);
 
+    /// @return true if the given syntax node is allowed within an anonymous program definition.
+    static bool isAllowedInAnonymousProgram(SyntaxKind kind);
+
     /// @return true if the given syntax node is allowed within a package definition.
     static bool isAllowedInPackage(SyntaxKind kind);
 
