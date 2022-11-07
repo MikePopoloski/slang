@@ -364,8 +364,19 @@ bool lookupDownward(span<const NamePlusLoc> nameParts, NameComponents name,
                 return false;
         }
 
-        if (symbol->kind == SymbolKind::Instance)
-            symbol = &symbol->as<InstanceSymbol>().body;
+        if (symbol->kind == SymbolKind::Instance) {
+            auto& body = symbol->as<InstanceSymbol>().body;
+            symbol = &body;
+
+            // If we're descending into a program instance, verify that
+            // the original scope for the lookup is also within a program.
+            if (body.getDefinition().definitionKind == DefinitionKind::Program) {
+                if (auto scopeDef = context.scope->asSymbol().getDeclaringDefinition();
+                    !scopeDef || scopeDef->definitionKind != DefinitionKind::Program) {
+                    result.addDiag(*context.scope, diag::IllegalReferenceToProgramItem, name.range);
+                }
+            }
+        }
 
         // If there is a modport name restricting our lookup, translate to that
         // modport's scope now.

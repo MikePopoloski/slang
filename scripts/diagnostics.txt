@@ -814,6 +814,7 @@ error BadInstanceArrayRange "cannot select range of [{}:{}] from instance array 
 error InstanceArrayEndianMismatch "endianness of selection [{}:{}] must match declared array range of [{}:{}]"
 error IfaceImportExportTarget "could not find target for {} of '{}'"
 error UnexpectedNameToken "unexpected use of '{}' keyword"
+error IllegalReferenceToProgramItem "cannot reference program item from outside of a program"
 warning dup-import DuplicateImport "duplicate import declaration is redundant"
 warning duplicate-definition DuplicateDefinition "duplicate definition of '{}'"
 

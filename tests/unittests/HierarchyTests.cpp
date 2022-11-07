@@ -1802,3 +1802,22 @@ endprogram
     REQUIRE(compilation.getRoot().topInstances.size() == 2);
     CHECK(compilation.getRoot().topInstances[1]->name == "p");
 }
+
+TEST_CASE("Accessing program objects from modules is disallowed") {
+    auto tree = SyntaxTree::fromText(R"(
+program p(input i);
+    wire j = i;
+endprogram
+
+module m;
+    wire k = p.j;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::IllegalReferenceToProgramItem);
+}
