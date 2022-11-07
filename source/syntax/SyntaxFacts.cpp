@@ -1377,6 +1377,7 @@ bool SyntaxFacts::isAllowedInAnonymousProgram(SyntaxKind kind) {
         case SyntaxKind::FunctionDeclaration:
         case SyntaxKind::ClassDeclaration:
         case SyntaxKind::CovergroupDeclaration:
+        case SyntaxKind::EmptyMember:
             return true;
         default:
             return false;

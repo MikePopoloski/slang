@@ -197,6 +197,7 @@ decltype(auto) Symbol::visit(TVisitor&& visitor, Args&&... args) const {
         SYMBOL(TimingPath);
         SYMBOL(PulseStyle);
         SYMBOL(SystemTimingCheck);
+        SYMBOL(AnonymousProgram);
         TYPE(PredefinedIntegerType);
         TYPE(ScalarType);
         TYPE(FloatingType);

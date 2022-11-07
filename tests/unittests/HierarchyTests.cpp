@@ -1829,6 +1829,8 @@ package p;
         int i;
         function int foo; return 0; endfunction
     endprogram
+
+    real foo;
 endpackage
 
 program;
@@ -1843,6 +1845,7 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 1);
+    REQUIRE(diags.size() == 2);
     CHECK(diags[0].code == diag::NotAllowedInAnonymousProgram);
+    CHECK(diags[1].code == diag::Redefinition);
 }

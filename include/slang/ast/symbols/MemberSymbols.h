@@ -520,4 +520,16 @@ private:
     mutable std::optional<span<const Rule>> rules;
 };
 
+class SLANG_EXPORT AnonymousProgramSymbol : public Symbol, public Scope {
+public:
+    AnonymousProgramSymbol(Compilation& compilation, SourceLocation loc);
+
+    static AnonymousProgramSymbol& fromSyntax(Scope& scope,
+                                              const syntax::AnonymousProgramSyntax& syntax);
+
+    void serializeTo(ASTSerializer&) const {}
+
+    static bool isKind(SymbolKind kind) { return kind == SymbolKind::AnonymousProgram; }
+};
+
 } // namespace slang::ast

@@ -431,6 +431,7 @@ void registerSymbols(py::module_& m) {
     py::class_<EmptyMemberSymbol, Symbol>(m, "EmptyMemberSymbol");
     py::class_<GenvarSymbol, Symbol>(m, "GenvarSymbol");
     py::class_<SpecifyBlockSymbol, Symbol, Scope>(m, "SpecifyBlockSymbol");
+    py::class_<AnonymousProgramSymbol, Symbol, Scope>(m, "AnonymousProgramSymbol");
 
     py::class_<TransparentMemberSymbol, Symbol>(m, "TransparentMemberSymbol")
         .def_property_readonly("wrapped",

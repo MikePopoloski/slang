@@ -1681,4 +1681,24 @@ void RandSeqProductionSymbol::serializeTo(ASTSerializer& serializer) const {
     serializer.endArray();
 }
 
+AnonymousProgramSymbol::AnonymousProgramSymbol(Compilation& compilation, SourceLocation loc) :
+    Symbol(SymbolKind::AnonymousProgram, "", loc), Scope(compilation, this) {
+}
+
+AnonymousProgramSymbol& AnonymousProgramSymbol::fromSyntax(Scope& scope,
+                                                           const AnonymousProgramSyntax& syntax) {
+    auto& comp = scope.getCompilation();
+    auto result = comp.emplace<AnonymousProgramSymbol>(comp, syntax.keyword.location());
+    result->setSyntax(syntax);
+
+    for (auto member : syntax.members)
+        result->addMembers(*member);
+
+    // All members also get hoisted into the parent scope.
+    for (auto member = result->getFirstMember(); member; member = member->getNextSibling())
+        scope.addMember(*comp.emplace<TransparentMemberSymbol>(*member));
+
+    return *result;
+}
+
 } // namespace slang::ast
