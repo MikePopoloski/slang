@@ -1828,16 +1828,42 @@ package p;
     program;
         int i;
         function int foo; return 0; endfunction
+        function int bar; return 0; endfunction
     endprogram
 
     real foo;
 endpackage
 
 program;
-    class C; endclass
+    class C;
+        extern function new(int r);
+    endclass
+
+    function C::new(int r);
+        q.foo = p::bar();
+    endfunction
+endprogram
+
+program q;
+    int foo;
+    C c = new(3);
 endprogram
 
 module m;
+    if (1) begin
+        C c = new(3);
+        int j = p::bar();
+    end
+
+    import p::*;
+    int j = bar();
+endmodule
+
+module n;
+    import p::bar;
+    int j = bar();
+
+    $unit::C c = new(3);
 endmodule
 )");
 
@@ -1845,7 +1871,12 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 2);
+    REQUIRE(diags.size() == 7);
     CHECK(diags[0].code == diag::NotAllowedInAnonymousProgram);
     CHECK(diags[1].code == diag::Redefinition);
+    CHECK(diags[2].code == diag::IllegalReferenceToProgramItem);
+    CHECK(diags[3].code == diag::IllegalReferenceToProgramItem);
+    CHECK(diags[4].code == diag::IllegalReferenceToProgramItem);
+    CHECK(diags[5].code == diag::IllegalReferenceToProgramItem);
+    CHECK(diags[6].code == diag::IllegalReferenceToProgramItem);
 }

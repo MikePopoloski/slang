@@ -294,7 +294,8 @@ private:
 
     static void unqualifiedImpl(const Scope& scope, string_view name, LookupLocation location,
                                 std::optional<SourceRange> sourceRange, bitmask<LookupFlags> flags,
-                                SymbolIndex outOfBlockIndex, LookupResult& result);
+                                SymbolIndex outOfBlockIndex, LookupResult& result,
+                                const Scope& originalScope);
 
     static void qualified(const syntax::ScopedNameSyntax& syntax, const ASTContext& context,
                           bitmask<LookupFlags> flags, LookupResult& result);

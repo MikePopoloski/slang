@@ -233,6 +233,25 @@ const Symbol* getVirtualInterfaceTarget(const Type& type, const ASTContext& cont
     return &vit.iface;
 }
 
+bool isInProgram(const Symbol& symbol) {
+    auto curr = &symbol;
+    while (true) {
+        if (curr->kind == SymbolKind::AnonymousProgram)
+            return true;
+
+        if (curr->kind == SymbolKind::InstanceBody) {
+            return curr->as<InstanceBodySymbol>().getDefinition().definitionKind ==
+                   DefinitionKind::Program;
+        }
+
+        auto scope = curr->getParentScope();
+        if (!scope)
+            return false;
+
+        curr = &scope->asSymbol();
+    }
+}
+
 // Returns true if the lookup was ok, or if it failed in a way that allows us to continue
 // looking up in other ways. Returns false if the entire lookup has failed and should be
 // aborted.
@@ -370,11 +389,11 @@ bool lookupDownward(span<const NamePlusLoc> nameParts, NameComponents name,
 
             // If we're descending into a program instance, verify that
             // the original scope for the lookup is also within a program.
-            if (body.getDefinition().definitionKind == DefinitionKind::Program) {
-                if (auto scopeDef = context.scope->asSymbol().getDeclaringDefinition();
-                    !scopeDef || scopeDef->definitionKind != DefinitionKind::Program) {
-                    result.addDiag(*context.scope, diag::IllegalReferenceToProgramItem, name.range);
-                }
+            if (body.getDefinition().definitionKind == DefinitionKind::Program &&
+                !isInProgram(context.scope->asSymbol())) {
+                SourceRange errorRange{name.range.start(),
+                                       (nameParts.rend() - 1)->name.range.end()};
+                result.addDiag(*context.scope, diag::IllegalReferenceToProgramItem, errorRange);
             }
         }
 
@@ -714,12 +733,16 @@ bool resolveColonNames(SmallVectorBase<NamePlusLoc>& nameParts, int colonParts,
             symbol = &symbol->as<Type>().getCanonicalType();
 
         const Symbol* savedSymbol = symbol;
-        if (symbol->kind == SymbolKind::Package)
+        if (symbol->kind == SymbolKind::Package) {
             symbol = symbol->as<PackageSymbol>().findForImport(name.text);
-        else if (symbol->kind == SymbolKind::CovergroupType)
+            result.wasImported = true;
+        }
+        else if (symbol->kind == SymbolKind::CovergroupType) {
             symbol = symbol->as<CovergroupType>().body.find(name.text);
-        else
+        }
+        else {
             symbol = symbol->as<Scope>().find(name.text);
+        }
 
         if (!symbol) {
             DiagCode code = diag::UnknownClassMember;
@@ -775,6 +798,28 @@ void unwrapResult(const Scope& scope, std::optional<SourceRange> range, LookupRe
 
         if (!result.found && range)
             result.addDiag(scope, diag::NoDefaultSpecialization, *range) << genericClass.name;
+    }
+
+    // If the symbol was imported from a package, check if it is actually
+    // declared within an anonymous program within that package and if so,
+    // check whether we're allowed to reference it from our source scope.
+    if (result.wasImported && range) {
+        auto parent = result.found->getParentScope();
+        while (parent) {
+            auto& parentSym = parent->asSymbol();
+            if (parentSym.kind == SymbolKind::Package)
+                break;
+
+            if (parentSym.kind == SymbolKind::AnonymousProgram) {
+                if (!isInProgram(scope.asSymbol())) {
+                    auto& diag = result.addDiag(scope, diag::IllegalReferenceToProgramItem, *range);
+                    diag.addNote(diag::NoteDeclarationHere, result.found->location);
+                }
+                break;
+            }
+
+            parent = parentSym.getParentScope();
+        }
     }
 }
 
@@ -914,7 +959,7 @@ void Lookup::name(const NameSyntax& syntax, const ASTContext& context, bitmask<L
         return;
 
     // Perform the lookup.
-    unqualifiedImpl(scope, name.text, context.getLocation(), name.range, flags, {}, result);
+    unqualifiedImpl(scope, name.text, context.getLocation(), name.range, flags, {}, result, scope);
     if (!result.found && !result.hasError())
         reportUndeclared(scope, name.text, name.range, flags, false, result);
 
@@ -953,7 +998,7 @@ const Symbol* Lookup::unqualified(const Scope& scope, string_view name,
         return nullptr;
 
     LookupResult result;
-    unqualifiedImpl(scope, name, LookupLocation::max, std::nullopt, flags, {}, result);
+    unqualifiedImpl(scope, name, LookupLocation::max, std::nullopt, flags, {}, result, scope);
     ASSERT(result.selectors.empty());
     unwrapResult(scope, std::nullopt, result, /* unwrapGenericClasses */ false);
 
@@ -966,7 +1011,7 @@ const Symbol* Lookup::unqualifiedAt(const Scope& scope, string_view name, Lookup
         return nullptr;
 
     LookupResult result;
-    unqualifiedImpl(scope, name, location, sourceRange, flags, {}, result);
+    unqualifiedImpl(scope, name, location, sourceRange, flags, {}, result, scope);
     ASSERT(result.selectors.empty());
     unwrapResult(scope, sourceRange, result, /* unwrapGenericClasses */ false);
 
@@ -1471,7 +1516,8 @@ bool Lookup::findAssertionLocalVar(const ASTContext& context, const NameSyntax& 
 
 void Lookup::unqualifiedImpl(const Scope& scope, string_view name, LookupLocation location,
                              std::optional<SourceRange> sourceRange, bitmask<LookupFlags> flags,
-                             SymbolIndex outOfBlockIndex, LookupResult& result) {
+                             SymbolIndex outOfBlockIndex, LookupResult& result,
+                             const Scope& originalScope) {
     auto reportRecursiveError = [&](const Symbol& symbol) {
         if (sourceRange) {
             auto& diag = result.addDiag(scope, diag::RecursiveDefinition, *sourceRange);
@@ -1553,8 +1599,21 @@ void Lookup::unqualifiedImpl(const Scope& scope, string_view name, LookupLocatio
 
         if (locationGood) {
             // Unwrap the symbol if it's hidden behind an import or hoisted enum member.
-            while (symbol->kind == SymbolKind::TransparentMember)
-                symbol = &symbol->as<TransparentMemberSymbol>().wrapped;
+            if (symbol->kind == SymbolKind::TransparentMember) {
+                do {
+                    symbol = &symbol->as<TransparentMemberSymbol>().wrapped;
+                } while (symbol->kind == SymbolKind::TransparentMember);
+
+                // Special case check for a lookup finding hoisted members of an anonymous
+                // program. For these we need to verify that the original lookup location is
+                // also in a program.
+                if (symbol->getParentScope()->asSymbol().kind == SymbolKind::AnonymousProgram &&
+                    !isInProgram(originalScope.asSymbol()) && sourceRange) {
+                    auto& diag = result.addDiag(scope, diag::IllegalReferenceToProgramItem,
+                                                *sourceRange);
+                    diag.addNote(diag::NoteDeclarationHere, symbol->location);
+                }
+            }
 
             switch (symbol->kind) {
                 case SymbolKind::ExplicitImport:
@@ -1701,7 +1760,7 @@ void Lookup::unqualifiedImpl(const Scope& scope, string_view name, LookupLocatio
     }
 
     return unqualifiedImpl(*location.getScope(), name, location, sourceRange, flags,
-                           outOfBlockIndex, result);
+                           outOfBlockIndex, result, originalScope);
 }
 
 void Lookup::qualified(const ScopedNameSyntax& syntax, const ASTContext& context,
@@ -1749,7 +1808,8 @@ void Lookup::qualified(const ScopedNameSyntax& syntax, const ASTContext& context
         case SyntaxKind::IdentifierSelectName:
         case SyntaxKind::ClassName:
             // Start by trying to find the first name segment using normal unqualified lookup
-            unqualifiedImpl(scope, name, context.getLocation(), first.range, flags, {}, result);
+            unqualifiedImpl(scope, name, context.getLocation(), first.range, flags, {}, result,
+                            scope);
             break;
         case SyntaxKind::UnitScope: {
             // Walk upward to find the compilation unit scope.
@@ -1762,7 +1822,8 @@ void Lookup::qualified(const ScopedNameSyntax& syntax, const ASTContext& context
             do {
                 auto& symbol = current->asSymbol();
                 if (symbol.kind == SymbolKind::CompilationUnit) {
-                    unqualifiedImpl(*current, name, location, first.range, flags, {}, result);
+                    unqualifiedImpl(*current, name, location, first.range, flags, {}, result,
+                                    scope);
                     break;
                 }
 
