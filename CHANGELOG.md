@@ -6,7 +6,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 ### Language Support
-*
+* Added support for specify module timing paths
+* Added support for specify pulsestyle and showcancelled directives
+* Added support for `PATHPULSE$` specparams
+* Added support for system timing checks
+* Added support for program namespacing rules
+* Added support for anonymous programs
 
 ### General Features
 *
@@ -15,7 +20,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 *
 
 ### Fixes
-*
+* Parameters used inside specify blocks will now issue an appropriate warning
+* Fixed an issue where parser erroneously allowed selects of integer literal expressions
+* Top-level programs are now automatically instantiated, just like top-level modules
 
 
 ## [v2.0] - 2022-10-29

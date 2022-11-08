@@ -380,11 +380,11 @@ IEEE 1800-2017 SystemVerilog Language Reference Manual (LRM).
 
 {{w:15%}} LRM | Feature | {{w:15%}} Supported
 --- | ------- | ---------
-{{m-warning}} 24.3 | The program construct | partial
+{{m-success}} 24.3 | The program construct | v3.0
 {{m-dim}}     24.4 | Eliminating testbench races | N/A
-{{m-danger}}  24.5 | Blocking tasks in cycle/event mode | no
-{{m-danger}}  24.6 | Programwide space and anonymous programs | no
-{{m-danger}}  24.7 | Program control tasks | no
+{{m-success}} 24.5 | Blocking tasks in cycle/event mode | v3.0
+{{m-success}} 24.6 | Programwide space and anonymous programs | v3.0
+{{m-success}} 24.7 | Program control tasks | v0.2
 
 ## 25. Interfaces
 
