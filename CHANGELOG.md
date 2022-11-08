@@ -21,7 +21,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ### Fixes
 * Parameters used inside specify blocks will now issue an appropriate warning
-* Fixed an issue where parser erroneously allowed selects of integer literal expressions
+* Fixed an issue where the parser erroneously allowed selects of integer literal expressions
 * Top-level programs are now automatically instantiated, just like top-level modules
 
 
