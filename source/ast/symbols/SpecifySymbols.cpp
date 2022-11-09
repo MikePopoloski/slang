@@ -988,7 +988,7 @@ void SystemTimingCheckSymbol::resolve() const {
                 }
                 break;
             case SystemTimingCheckArgDef::DelayedRef: {
-                ASSERT(formal.signalRef >= 0 && formal.signalRef < i);
+                ASSERT(formal.signalRef >= 0 && formal.signalRef < int(i));
                 auto signalExpr = argBuf[size_t(formal.signalRef)].expr;
                 if (!signalExpr) {
                     argBuf.emplace_back();
