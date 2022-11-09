@@ -779,7 +779,7 @@ static flat_hash_map<string_view, SystemTimingCheckDef> createTimingCheckDefs() 
     SystemTimingCheckDef noChange{
         SystemTimingCheckKind::NoChange,
         4,
-        {{Arg::Event}, {Arg::Event}, {Arg::Limit}, {Arg::Limit}, {Arg::Notifier}}};
+        {Arg::controlledEvent(), {Arg::Event}, {Arg::Limit}, {Arg::Limit}, {Arg::Notifier}}};
 
     return {{"$setup"sv, std::move(setup)},         {"$hold"sv, std::move(hold)},
             {"$setuphold"sv, std::move(setupHold)}, {"$recovery"sv, std::move(recovery)},
@@ -956,11 +956,18 @@ void SystemTimingCheckSymbol::resolve() const {
                     argBuf.emplace_back(*expr, condition, edge, edgeDescriptors.copy(comp));
                 }
 
-                if (formal.requireEdge && argBuf.back().expr &&
-                    argBuf.back().edge == EdgeKind::None) {
-                    context.addDiag(diag::TimingCheckEventEdgeRequired,
-                                    argBuf.back().expr->sourceRange)
-                        << syntax.name.valueText();
+                if (formal.requireEdge && argBuf.back().expr) {
+                    auto edge = argBuf.back().edge;
+                    if (edge == EdgeKind::None) {
+                        context.addDiag(diag::TimingCheckEventEdgeRequired,
+                                        argBuf.back().expr->sourceRange)
+                            << syntax.name.valueText();
+                    }
+                    else if (def->kind == SystemTimingCheckKind::NoChange &&
+                             edge == EdgeKind::BothEdges) {
+                        context.addDiag(diag::NoChangeEdgeRequired,
+                                        actual.as<TimingCheckEventArgSyntax>().edge.range());
+                    }
                 }
                 break;
             case SystemTimingCheckArgDef::DelayedRef: {

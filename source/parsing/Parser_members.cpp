@@ -3017,6 +3017,11 @@ TimingCheckArgSyntax& Parser::parseTimingCheckArg() {
                                                : lastDesc.token().range();
                 addDiag(diag::TooManyEdgeDescriptors, range);
             }
+
+            if (edge.kind != TokenKind::EdgeKeyword) {
+                addDiag(diag::EdgeDescWrongKeyword, edge.range())
+                    << edge.valueText() << control->sourceRange();
+            }
         }
 
         auto& terminal = parseName();

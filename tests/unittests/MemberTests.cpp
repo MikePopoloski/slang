@@ -3257,6 +3257,7 @@ module m(input a, output b);
         $setuphold(notify, negedge a, 1, 2, , , , asdf);
         $setup(posedge a, a, -12.14);
         $width(a, 1);
+        $nochange(edge [1x] a, a, 1, 2);
     endspecify
 endmodule
 )");
@@ -3265,7 +3266,7 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 13);
+    REQUIRE(diags.size() == 14);
     CHECK(diags[0].code == diag::UnknownSystemTimingCheck);
     CHECK(diags[1].code == diag::TooFewArguments);
     CHECK(diags[2].code == diag::TooManyArguments);
@@ -3279,6 +3280,7 @@ endmodule
     CHECK(diags[10].code == diag::InvalidSpecifySource);
     CHECK(diags[11].code == diag::NegativeTimingLimit);
     CHECK(diags[12].code == diag::TimingCheckEventEdgeRequired);
+    CHECK(diags[13].code == diag::NoChangeEdgeRequired);
 }
 
 TEST_CASE("Specify path dup warnings") {

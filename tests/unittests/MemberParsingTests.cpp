@@ -637,13 +637,14 @@ module m;
         (a => b) = (1, 2, 3, 4);
         ifnone (a => (b : 1)) = 2;
         $width(edge[01, 10, 0x, 1x, x0, x1, z0, 1Z] clr);
+        $width(posedge [01, 10, 0x] clr);
     endspecify
 endmodule
 )";
 
     parseCompilationUnit(text);
 
-    REQUIRE(diagnostics.size() == 14);
+    REQUIRE(diagnostics.size() == 15);
     CHECK(diagnostics[0].code == diag::InvalidEdgeDescriptor);
     CHECK(diagnostics[1].code == diag::ExpectedToken);
     CHECK(diagnostics[2].code == diag::InvalidEdgeDescriptor);
@@ -658,6 +659,7 @@ endmodule
     CHECK(diagnostics[11].code == diag::WrongSpecifyDelayCount);
     CHECK(diagnostics[12].code == diag::IfNoneEdgeSensitive);
     CHECK(diagnostics[13].code == diag::TooManyEdgeDescriptors);
+    CHECK(diagnostics[14].code == diag::EdgeDescWrongKeyword);
 }
 
 TEST_CASE("PATHPULSE$ specparams") {
