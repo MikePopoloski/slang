@@ -96,7 +96,7 @@ SpecifyBlockSymbol& SpecifyBlockSymbol::fromSyntax(const Scope& scope,
 
 bool SpecifyBlockSymbol::checkPathTerminal(const ValueSymbol& terminal, const Type& type,
                                            const Scope& specifyParent, bool isSource,
-                                           SourceRange sourceRange) {
+                                           bool allowAnyNet, SourceRange sourceRange) {
     // Type must be integral.
     if (!type.isIntegral()) {
         if (!type.isError())
@@ -148,6 +148,10 @@ bool SpecifyBlockSymbol::checkPathTerminal(const ValueSymbol& terminal, const Ty
         specifyParent.addDiag(diag::InvalidSpecifyPath, sourceRange);
         return false;
     }
+
+    // If allowAnyNet then it's fine to just have a non-port net here.
+    if (allowAnyNet && terminal.kind == SymbolKind::Net)
+        return true;
 
     // Check that the terminal is connected to a module port and that
     // the direction is correct.
@@ -236,7 +240,8 @@ TimingPathSymbol& TimingPathSymbol::fromSyntax(const Scope& parent,
 }
 
 static const Expression* bindTerminal(const ExpressionSyntax& syntax, bool isSource,
-                                      const Scope* parentParent, ASTContext& context) {
+                                      bool allowAnyNet, const Scope* parentParent,
+                                      ASTContext& context) {
     auto expr = &Expression::bind(syntax, context);
     if (expr->bad())
         return nullptr;
@@ -264,7 +269,7 @@ static const Expression* bindTerminal(const ExpressionSyntax& syntax, bool isSou
     else {
         auto& symbol = valueExpr->as<NamedValueExpression>().symbol;
         if (SpecifyBlockSymbol::checkPathTerminal(symbol, *expr->type, *parentParent, isSource,
-                                                  valueExpr->sourceRange)) {
+                                                  allowAnyNet, valueExpr->sourceRange)) {
             return expr;
         }
     }
@@ -278,7 +283,8 @@ static span<const Expression* const> bindTerminals(
 
     SmallVector<const Expression*> results;
     for (auto exprSyntax : syntaxList) {
-        auto expr = bindTerminal(*exprSyntax, isSource, parentParent, context);
+        auto expr = bindTerminal(*exprSyntax, isSource, /* allowAnyNet */ false, parentParent,
+                                 context);
         if (expr)
             results.push_back(expr);
     }
@@ -676,21 +682,17 @@ void PulseStyleSymbol::serializeTo(ASTSerializer& serializer) const {
 }
 
 struct SystemTimingCheckArgDef {
-    enum ArgKind {
-        Event,
-        Limit,
-        Notifier,
-        Condition,
-        DelayedRef,
-        EventFlag,
-        RemainFlag,
-        Offset
-    } kind;
+    enum ArgKind { Event, Notifier, DelayedRef, Limit, Condition } kind;
 
     bool requirePositive = false;
     int signalRef = -1;
     bool requireEdge = false;
-    bool allowEmpty = true;
+
+    static SystemTimingCheckArgDef limit(bool requirePositive) { return {Limit, requirePositive}; }
+    static SystemTimingCheckArgDef delayedRef(int index) { return {DelayedRef, false, index}; }
+    static SystemTimingCheckArgDef controlledEvent() {
+        return {Event, false, -1, /* requireEdge */ true};
+    }
 };
 
 struct SystemTimingCheckDef {
@@ -702,92 +704,82 @@ struct SystemTimingCheckDef {
 static flat_hash_map<string_view, SystemTimingCheckDef> createTimingCheckDefs() {
     using Arg = SystemTimingCheckArgDef;
 
-    SystemTimingCheckDef setup{
-        SystemTimingCheckKind::Setup,
-        3,
-        {{Arg::Event}, {Arg::Event}, {Arg::Limit, /* requirePositive */ true}, {Arg::Notifier}}};
+    SystemTimingCheckDef setup{SystemTimingCheckKind::Setup,
+                               3,
+                               {{Arg::Event}, {Arg::Event}, Arg::limit(true), {Arg::Notifier}}};
 
-    SystemTimingCheckDef hold{
-        SystemTimingCheckKind::Hold,
-        3,
-        {{Arg::Event}, {Arg::Event}, {Arg::Limit, /* requirePositive */ true}, {Arg::Notifier}}};
+    SystemTimingCheckDef hold{SystemTimingCheckKind::Hold,
+                              3,
+                              {{Arg::Event}, {Arg::Event}, Arg::limit(true), {Arg::Notifier}}};
 
     SystemTimingCheckDef setupHold{SystemTimingCheckKind::SetupHold,
                                    4,
                                    {{Arg::Event},
                                     {Arg::Event},
-                                    {Arg::Limit},
-                                    {Arg::Limit},
+                                    Arg::limit(false),
+                                    Arg::limit(false),
                                     {Arg::Notifier},
                                     {Arg::Condition},
                                     {Arg::Condition},
-                                    {Arg::DelayedRef, /* requirePositive */ false, 0},
-                                    {Arg::DelayedRef, /* requirePositive */ false, 1}}};
+                                    Arg::delayedRef(0),
+                                    Arg::delayedRef(1)}};
 
-    SystemTimingCheckDef recovery{
-        SystemTimingCheckKind::Recovery,
-        3,
-        {{Arg::Event}, {Arg::Event}, {Arg::Limit, /* requirePositive */ true}, {Arg::Notifier}}};
+    SystemTimingCheckDef recovery{SystemTimingCheckKind::Recovery,
+                                  3,
+                                  {{Arg::Event}, {Arg::Event}, Arg::limit(true), {Arg::Notifier}}};
 
-    SystemTimingCheckDef removal{
-        SystemTimingCheckKind::Removal,
-        3,
-        {{Arg::Event}, {Arg::Event}, {Arg::Limit, /* requirePositive */ true}, {Arg::Notifier}}};
+    SystemTimingCheckDef removal{SystemTimingCheckKind::Removal,
+                                 3,
+                                 {{Arg::Event}, {Arg::Event}, Arg::limit(true), {Arg::Notifier}}};
 
     SystemTimingCheckDef recRem{SystemTimingCheckKind::RecRem,
                                 4,
                                 {{Arg::Event},
                                  {Arg::Event},
-                                 {Arg::Limit},
-                                 {Arg::Limit},
+                                 Arg::limit(false),
+                                 Arg::limit(false),
                                  {Arg::Notifier},
                                  {Arg::Condition},
                                  {Arg::Condition},
-                                 {Arg::DelayedRef, /* requirePositive */ false, 0},
-                                 {Arg::DelayedRef, /* requirePositive */ false, 1}}};
+                                 Arg::delayedRef(0),
+                                 Arg::delayedRef(1)}};
 
-    SystemTimingCheckDef skew{
-        SystemTimingCheckKind::Skew,
-        3,
-        {{Arg::Event}, {Arg::Event}, {Arg::Limit, /* requirePositive */ true}, {Arg::Notifier}}};
+    SystemTimingCheckDef skew{SystemTimingCheckKind::Skew,
+                              3,
+                              {{Arg::Event}, {Arg::Event}, Arg::limit(true), {Arg::Notifier}}};
 
     SystemTimingCheckDef timeSkew{SystemTimingCheckKind::TimeSkew,
                                   3,
                                   {{Arg::Event},
                                    {Arg::Event},
-                                   {Arg::Limit, /* requirePositive */ true},
+                                   Arg::limit(true),
                                    {Arg::Notifier},
-                                   {Arg::EventFlag},
-                                   {Arg::RemainFlag}}};
+                                   {Arg::Limit},
+                                   {Arg::Limit}}};
 
     SystemTimingCheckDef fullSkew{SystemTimingCheckKind::FullSkew,
                                   4,
                                   {{Arg::Event},
                                    {Arg::Event},
-                                   {Arg::Limit, /* requirePositive */ true},
-                                   {Arg::Limit, /* requirePositive */ true},
+                                   Arg::limit(true),
+                                   Arg::limit(true),
                                    {Arg::Notifier},
-                                   {Arg::EventFlag},
-                                   {Arg::RemainFlag}}};
+                                   {Arg::Limit},
+                                   {Arg::Limit}}};
 
     SystemTimingCheckDef period{SystemTimingCheckKind::Period,
                                 2,
-                                {{Arg::Event, false, -1, /* requireEdge */ true},
-                                 {Arg::Limit, /* requirePositive */ true},
-                                 {Arg::Notifier}}};
+                                {Arg::controlledEvent(), Arg::limit(true), {Arg::Notifier}}};
 
-    SystemTimingCheckDef width{SystemTimingCheckKind::Width,
-                               2,
-                               {{Arg::Event, false, -1, /* requireEdge */ true},
-                                {Arg::Limit, /* requirePositive */ true},
-                                {Arg::Limit, /* requirePositive */ true, -1, false,
-                                 /* allowEmpty */ false},
-                                {Arg::Notifier}}};
+    SystemTimingCheckDef width{
+        SystemTimingCheckKind::Width,
+        2,
+        {Arg::controlledEvent(), Arg::limit(true), Arg::limit(true), {Arg::Notifier}}};
 
     SystemTimingCheckDef noChange{
         SystemTimingCheckKind::NoChange,
         4,
-        {{Arg::Event}, {Arg::Event}, {Arg::Offset}, {Arg::Offset}, {Arg::Notifier}}};
+        {{Arg::Event}, {Arg::Event}, {Arg::Limit}, {Arg::Limit}, {Arg::Notifier}}};
 
     return {{"$setup"sv, std::move(setup)},         {"$hold"sv, std::move(hold)},
             {"$setuphold"sv, std::move(setupHold)}, {"$recovery"sv, std::move(recovery)},
@@ -865,7 +857,7 @@ void SystemTimingCheckSymbol::resolve() const {
         auto& formal = formalArgs[i];
         auto& actual = *actualArgs[i];
         if (actual.kind == SyntaxKind::EmptyTimingCheckArg) {
-            if (i < def->minArgs || !formal.allowEmpty)
+            if (i < def->minArgs)
                 context.addDiag(diag::EmptyArgNotAllowed, actualArgs[i]->sourceRange());
             argBuf.emplace_back();
             continue;
@@ -879,35 +871,26 @@ void SystemTimingCheckSymbol::resolve() const {
         }
 
         switch (formal.kind) {
-            case SystemTimingCheckArgDef::Limit:
-            case SystemTimingCheckArgDef::EventFlag: {
-                // Constant integral expression, can't be min:typ:max
+            case SystemTimingCheckArgDef::Limit: {
                 auto& expr = Expression::bind(*actual.as<ExpressionTimingCheckArgSyntax>().expr,
                                               context);
-                if (expr.kind == ExpressionKind::MinTypMax)
-                    context.addDiag(diag::MinTypMaxNotAllowed, expr.sourceRange);
-
-                auto val = context.evalInteger(expr);
-                if (formal.requirePositive)
-                    context.requirePositive(val, expr.sourceRange);
-
                 argBuf.emplace_back(expr);
+
+                auto val = context.eval(expr);
+                if (val && formal.requirePositive) {
+                    if ((val.isInteger() && val.integer().isSigned() &&
+                         val.integer().isNegative()) ||
+                        (val.isReal() && val.real() < 0.0) ||
+                        (val.isShortReal() && val.shortReal() < 0.0f)) {
+                        context.addDiag(diag::NegativeTimingLimit, expr.sourceRange) << val;
+                    }
+                }
                 break;
             }
             case SystemTimingCheckArgDef::Condition: {
-                // Non-constant integral expression, can be min:typ:max
                 auto& expr = Expression::bind(*actual.as<ExpressionTimingCheckArgSyntax>().expr,
                                               context);
-                context.requireIntegral(expr);
-                argBuf.emplace_back(expr);
-                break;
-            }
-            case SystemTimingCheckArgDef::RemainFlag:
-            case SystemTimingCheckArgDef::Offset: {
-                // Constant integral expression, can be min:typ:max
-                auto& expr = Expression::bind(*actual.as<ExpressionTimingCheckArgSyntax>().expr,
-                                              context);
-                context.evalInteger(expr);
+                context.requireBooleanConvertible(expr);
                 argBuf.emplace_back(expr);
                 break;
             }
@@ -932,7 +915,8 @@ void SystemTimingCheckSymbol::resolve() const {
             case SystemTimingCheckArgDef::Event:
                 if (actual.kind == SyntaxKind::ExpressionTimingCheckArg) {
                     auto expr = bindTerminal(*actual.as<ExpressionTimingCheckArgSyntax>().expr,
-                                             /* isSource */ true, parentParent, context);
+                                             /* isSource */ true, /* allowAnyNet */ true,
+                                             parentParent, context);
                     if (!expr)
                         argBuf.emplace_back();
                     else
@@ -941,12 +925,13 @@ void SystemTimingCheckSymbol::resolve() const {
                 else {
                     auto& eventArg = actual.as<TimingCheckEventArgSyntax>();
                     auto expr = bindTerminal(*eventArg.terminal,
-                                             /* isSource */ true, parentParent, context);
+                                             /* isSource */ true, /* allowAnyNet */ true,
+                                             parentParent, context);
 
                     const Expression* condition = nullptr;
                     if (eventArg.condition) {
                         condition = &Expression::bind(*eventArg.condition->expr, context);
-                        context.requireIntegral(*condition);
+                        context.requireBooleanConvertible(*condition);
                     }
 
                     auto edge = SemanticFacts::getEdgeKind(eventArg.edge.kind);
@@ -979,14 +964,13 @@ void SystemTimingCheckSymbol::resolve() const {
                 }
                 break;
             case SystemTimingCheckArgDef::DelayedRef: {
-                ASSERT(formal.signalRef >= 0);
+                ASSERT(formal.signalRef >= 0 && formal.signalRef < i);
                 auto signalExpr = argBuf[size_t(formal.signalRef)].expr;
                 if (!signalExpr) {
                     argBuf.emplace_back();
                     break;
                 }
 
-                // Integral lvalue, can create implicit nets (handled in SpecifyBlock factory).
                 auto& exprSyntax = *actual.as<ExpressionTimingCheckArgSyntax>().expr;
                 auto& expr = Expression::bindLValue(exprSyntax, *signalExpr->type,
                                                     exprSyntax.getFirstToken().location(), context,

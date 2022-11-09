@@ -456,7 +456,7 @@ const Symbol* SpecparamSymbol::resolvePathTerminal(string_view terminalName, con
 
     auto& value = symbol->as<ValueSymbol>();
     if (!SpecifyBlockSymbol::checkPathTerminal(value, value.getType(), *parentParent, isSource,
-                                               sourceRange)) {
+                                               /* allowAnyNet */ false, sourceRange)) {
         return nullptr;
     }
 

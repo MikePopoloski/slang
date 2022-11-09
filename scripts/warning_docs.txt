@@ -778,3 +778,13 @@ module m(input a, output b);
     endspecify
 endmodule
 ```
+
+-Wnegative-timing-limit
+A system timing check parameter that should be positive has a negative value.
+```
+module m(input a, b);
+    specify
+        $setup(posedge a, b, -1);
+    endspecify
+endmodule
+```

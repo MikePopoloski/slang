@@ -26,7 +26,7 @@ public:
                                           SmallVector<const Symbol*>& implicitSymbols);
 
     static bool checkPathTerminal(const ValueSymbol& terminal, const Type& type,
-                                  const Scope& specifyParent, bool isSource,
+                                  const Scope& specifyParent, bool isSource, bool allowAnyNet,
                                   SourceRange sourceRange);
 
     void serializeTo(ASTSerializer&) const {}

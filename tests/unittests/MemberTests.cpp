@@ -3240,6 +3240,8 @@ TEST_CASE("System timing check errors") {
 module m(input a, output b);
     reg notify;
     enum { ABC } abc;
+    int d[];
+
     specify
         $foobar(1, 2, 3);
         $setup(posedge a);
@@ -3250,12 +3252,11 @@ module m(input a, output b);
         $setup(posedge a, negedge a, notify, notify);
         $setup(posedge a, negedge a, 1, notify[0]);
         $setup(posedge a, negedge a, 1, ABC);
-        $setup(posedge a &&& 3.14, negedge a, 1);
+        $setup(posedge a &&& d, negedge a, 1);
         $setup(edge [1xx] a &&& notify, negedge a, 1);
         $setuphold(notify, negedge a, 1, 2, , , , asdf);
-        $setup(posedge a, a, -12);
+        $setup(posedge a, a, -12.14);
         $width(a, 1);
-        $width(edge a, 1, , notify);
     endspecify
 endmodule
 )");
@@ -3264,22 +3265,20 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 15);
+    REQUIRE(diags.size() == 13);
     CHECK(diags[0].code == diag::UnknownSystemTimingCheck);
     CHECK(diags[1].code == diag::TooFewArguments);
     CHECK(diags[2].code == diag::TooManyArguments);
     CHECK(diags[3].code == diag::EmptyArgNotAllowed);
     CHECK(diags[4].code == diag::TimingCheckEventNotAllowed);
-    CHECK(diags[5].code == diag::MinTypMaxNotAllowed);
-    CHECK(diags[6].code == diag::ConstEvalNonConstVariable);
-    CHECK(diags[7].code == diag::InvalidTimingCheckNotifierArg);
-    CHECK(diags[8].code == diag::BadAssignment);
-    CHECK(diags[9].code == diag::ExprMustBeIntegral);
-    CHECK(diags[10].code == diag::InvalidEdgeDescriptor);
-    CHECK(diags[11].code == diag::InvalidSpecifySource);
-    CHECK(diags[12].code == diag::ValueMustBePositive);
-    CHECK(diags[13].code == diag::TimingCheckEventEdgeRequired);
-    CHECK(diags[14].code == diag::EmptyArgNotAllowed);
+    CHECK(diags[5].code == diag::ConstEvalNonConstVariable);
+    CHECK(diags[6].code == diag::InvalidTimingCheckNotifierArg);
+    CHECK(diags[7].code == diag::BadAssignment);
+    CHECK(diags[8].code == diag::NotBooleanConvertible);
+    CHECK(diags[9].code == diag::InvalidEdgeDescriptor);
+    CHECK(diags[10].code == diag::InvalidSpecifySource);
+    CHECK(diags[11].code == diag::NegativeTimingLimit);
+    CHECK(diags[12].code == diag::TimingCheckEventEdgeRequired);
 }
 
 TEST_CASE("Specify path dup warnings") {

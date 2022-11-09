@@ -623,7 +623,6 @@ error PatternStructTooMany "structure pattern has too many members for target ty
 error SpecifyPathConditionExpr "expression is not valid in a state-dependent path condition"
 error SpecifyPathBadReference "cannot refer to '{}' in state-dependent path condition expression; only locally defined nets and variables are allowed"
 error PathPulseInExpr "PATHPULSE$ specparams cannot be used in expressions"
-error MinTypMaxNotAllowed "min:typ:max expression not allowed here"
 warning ignored-slice IgnoredSlice "slice size ignored for left-to-right streaming operator"
 warning unsized-concat UnsizedInConcat "unsized integer in concat; using a width of {}"
 warning width-expand WidthExpand "implicit conversion expands from {} to {} bits"
@@ -637,6 +636,7 @@ warning index-oob IndexOOB "cannot refer to element {} of {}"
 warning range-oob RangeOOB "cannot select range of [{}:{}] from {}"
 warning range-width-oob RangeWidthOOB "cannot select range of {} elements from {}"
 warning specify-param SpecifyBlockParam "parameters cannot be used in specify blocks"
+warning negative-timing-limit NegativeTimingLimit "timing check limit value '{}' should not be negative"
 
 subsystem Statements
 error ReturnNotInSubroutine "return statement is only valid inside task and function blocks"
@@ -951,7 +951,8 @@ group default = { real-underflow real-overflow vector-overflow int-overflow unco
                   unknown-protect-keyword expected-protect-keyword nested-protect-begin extra-protect-end
                   protect-arglist unknown-protect-encoding unknown-protect-option invalid-pragma-number
                   invalid-pragma-viewport duplicate-definition protect-encoding-bytes invalid-encoding-byte
-                  raw-protect-eof protected-envelope specify-param dup-timing-path invalid-pulsestyle }
+                  raw-protect-eof protected-envelope specify-param dup-timing-path invalid-pulsestyle
+                  negative-timing-limit }
 
 group extra = { empty-member empty-stmt dup-import pointless-void-cast case-gen-none case-gen-dup
                 unused-result format-real ignored-slice task-ignored width-trunc dup-attr event-const
