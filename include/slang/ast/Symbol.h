@@ -203,8 +203,25 @@ public:
     }
 
     template<typename T>
+    decltype(auto) as_if() {
+        if constexpr (std::is_same_v<T, Scope>) {
+            return scopeOrNull();
+        }
+        else {
+            if (!T::isKind(kind))
+                return nullptr;
+            return static_cast<T*>(this);
+        }
+    }
+
+    template<typename T>
     const T& as() const {
         return const_cast<Symbol*>(this)->as<T>();
+    }
+
+    template<typename T>
+    const T* as_if() const {
+        return const_cast<Symbol*>(this)->as_if<T>();
     }
 
     /// Gets the index of the symbol within its parent scope, which can be used

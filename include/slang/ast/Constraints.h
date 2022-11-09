@@ -58,6 +58,20 @@ public:
         return *static_cast<const T*>(this);
     }
 
+    template<typename T>
+    T* as_if() {
+        if (!T::isKind(kind))
+            return nullptr;
+        return static_cast<T*>(this);
+    }
+
+    template<typename T>
+    const T* as_if() const {
+        if (!T::isKind(kind))
+            return nullptr;
+        return static_cast<const T*>(this);
+    }
+
     template<typename TVisitor, typename... Args>
     decltype(auto) visit(TVisitor& visitor, Args&&... args) const;
 
