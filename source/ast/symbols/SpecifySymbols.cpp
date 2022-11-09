@@ -19,49 +19,10 @@ namespace slang::ast {
 using namespace parsing;
 using namespace syntax;
 
-static void createImplicitNets(const SystemTimingCheckSymbol& timingCheck, const Scope& scope,
+static void createImplicitNets(const SystemTimingCheckSymbol& timingCheck,
+                               const SystemTimingCheckDef* def, const Scope& scope,
                                SmallVector<const Symbol*>& results,
-                               SmallSet<string_view, 8>& implicitNetNames) {
-    if (timingCheck.timingCheckKind != SystemTimingCheckKind::SetupHold &&
-        timingCheck.timingCheckKind != SystemTimingCheckKind::RecRem) {
-        return;
-    }
-
-    auto& netType = scope.getDefaultNetType();
-
-    // If no default nettype is set, we don't create implicit nets.
-    if (netType.isError())
-        return;
-
-    auto syntaxPtr = timingCheck.getSyntax();
-    ASSERT(syntaxPtr);
-
-    auto& syntax = syntaxPtr->as<SystemTimingCheckSyntax>();
-    auto& actualArgs = syntax.args;
-
-    ASTContext context(scope, LookupLocation::max);
-    SmallVector<Token, 8> implicitNets;
-
-    for (size_t i = 7; i <= 8; i++) {
-        if (actualArgs.size() <= i)
-            break;
-
-        if (actualArgs[i]->kind == SyntaxKind::ExpressionTimingCheckArg) {
-            auto& exprSyntax = *actualArgs[i]->as<ExpressionTimingCheckArgSyntax>().expr;
-            if (exprSyntax.kind == SyntaxKind::IdentifierName)
-                Expression::findPotentiallyImplicitNets(exprSyntax, context, implicitNets);
-        }
-    }
-
-    for (Token t : implicitNets) {
-        if (implicitNetNames.emplace(t.valueText()).second) {
-            auto& comp = context.getCompilation();
-            auto net = comp.emplace<NetSymbol>(t.valueText(), t.location(), netType);
-            net->setType(comp.getLogicType());
-            results.push_back(net);
-        }
-    }
-}
+                               SmallSet<string_view, 8>& implicitNetNames);
 
 SpecifyBlockSymbol::SpecifyBlockSymbol(Compilation& compilation, SourceLocation loc) :
     Symbol(SymbolKind::SpecifyBlock, "", loc), Scope(compilation, this) {
@@ -86,7 +47,8 @@ SpecifyBlockSymbol& SpecifyBlockSymbol::fromSyntax(const Scope& scope,
         }
         else if (member->kind == SymbolKind::SystemTimingCheck) {
             // some system timing checks can create implicit nets
-            createImplicitNets(member->as<SystemTimingCheckSymbol>(), scope, implicitSymbols,
+            auto& timingCheck = member->as<SystemTimingCheckSymbol>();
+            createImplicitNets(timingCheck, timingCheck.def, scope, implicitSymbols,
                                implicitNetNames);
         }
     }
@@ -791,6 +753,61 @@ static flat_hash_map<string_view, SystemTimingCheckDef> createTimingCheckDefs() 
 
 static const flat_hash_map<string_view, SystemTimingCheckDef> SystemTimingCheckDefs =
     createTimingCheckDefs();
+
+static void createImplicitNets(const SystemTimingCheckSymbol& timingCheck,
+                               const SystemTimingCheckDef* def, const Scope& scope,
+                               SmallVector<const Symbol*>& results,
+                               SmallSet<string_view, 8>& implicitNetNames) {
+    // If no default nettype is set, we don't create implicit nets.
+    auto& netType = scope.getDefaultNetType();
+    if (netType.isError() || !def)
+        return;
+
+    auto syntaxPtr = timingCheck.getSyntax();
+    ASSERT(syntaxPtr);
+
+    auto& syntax = syntaxPtr->as<SystemTimingCheckSyntax>();
+    auto& actualArgs = syntax.args;
+    auto& formalArgs = def->args;
+
+    ASTContext context(scope, LookupLocation::max);
+    SmallVector<Token> implicitNets;
+    using Arg = SystemTimingCheckArgDef;
+
+    for (size_t i = 0; i < actualArgs.size(); i++) {
+        if (i >= formalArgs.size())
+            break;
+
+        auto& formal = formalArgs[i];
+        auto& actual = *actualArgs[i];
+
+        if (formal.kind == Arg::Event || formal.kind == Arg::Condition ||
+            formal.kind == Arg::DelayedRef) {
+            if (actual.kind == SyntaxKind::ExpressionTimingCheckArg) {
+                Expression::findPotentiallyImplicitNets(
+                    *actual.as<ExpressionTimingCheckArgSyntax>().expr, context, implicitNets);
+            }
+            else if (actual.kind == SyntaxKind::TimingCheckEventArg) {
+                auto& eventArg = actual.as<TimingCheckEventArgSyntax>();
+                Expression::findPotentiallyImplicitNets(*eventArg.terminal, context, implicitNets);
+
+                if (eventArg.condition) {
+                    Expression::findPotentiallyImplicitNets(*eventArg.condition->expr, context,
+                                                            implicitNets);
+                }
+            }
+        }
+    }
+
+    for (Token t : implicitNets) {
+        if (implicitNetNames.emplace(t.valueText()).second) {
+            auto& comp = context.getCompilation();
+            auto net = comp.emplace<NetSymbol>(t.valueText(), t.location(), netType);
+            net->setType(comp.getLogicType());
+            results.push_back(net);
+        }
+    }
+}
 
 SystemTimingCheckSymbol::SystemTimingCheckSymbol(SourceLocation loc,
                                                  const SystemTimingCheckDef* def) :

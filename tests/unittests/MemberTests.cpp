@@ -3283,6 +3283,21 @@ endmodule
     CHECK(diags[13].code == diag::NoChangeEdgeRequired);
 }
 
+TEST_CASE("System timing check implicit nets") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    specify
+        $setup(a &&& b, c, 1);
+        $setuphold(a, b, 1, 2, , d, e);
+    endspecify
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
 TEST_CASE("Specify path dup warnings") {
     auto tree = SyntaxTree::fromText(R"(
 module m(input a, clk, reset, [3:0] c, output b, out, [3:0] q, d);

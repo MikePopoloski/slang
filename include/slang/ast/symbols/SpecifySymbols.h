@@ -194,6 +194,8 @@ public:
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::SystemTimingCheck; }
 
 private:
+    friend class SpecifyBlockSymbol;
+
     void resolve() const;
 
     mutable bool isResolved = false;
