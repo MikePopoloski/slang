@@ -119,6 +119,22 @@ public:
         return *static_cast<const T*>(this);
     }
 
+    // Reinterprets this node as being of type T, if it is not belong type T, return nullptr
+    template<typename T>
+    T* as_if() {
+        if (!T::isKind(kind))
+            return nullptr;
+        return static_cast<T*>(this);
+    }
+
+    // Reinterprets this node as being of type T, if it is not belong type T, return nullptr
+    template<typename T>
+    const T* as_if() const {
+        if (!T::isKind(kind))
+            return nullptr;
+        return static_cast<const T*>(this);
+    }
+
     /// Applies a visitor object to this node by dispatching based on the
     /// dynamic kind. The given @a args are forwarded to the visitor.
     template<typename TVisitor, typename... Args>
