@@ -2654,3 +2654,27 @@ endmodule
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::ConstraintNotInClass);
 }
+
+TEST_CASE("Multiple assign to static class members") {
+    auto tree = SyntaxTree::fromText(R"(
+class C;
+    static int foo;
+endclass
+
+function C bar;
+endfunction
+
+module m;
+    C c = new;
+    assign c.foo = 1;
+    assign bar().foo = 1;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::MultipleContAssigns);
+}

@@ -941,8 +941,8 @@ Expression& MemberAccessExpression::fromSelector(
                 return badExpr(compilation, &expr);
             }
 
-            return *compilation.emplace<MemberAccessExpression>(prop.getType(), expr, prop, 0u,
-                                                                range);
+            return *compilation.emplace<MemberAccessExpression>(prop.getType(), expr, prop,
+                                                                std::nullopt, range);
         }
         case SymbolKind::Subroutine: {
             Lookup::ensureVisible(*member, context, selector.nameRange);
@@ -962,7 +962,7 @@ Expression& MemberAccessExpression::fromSelector(
             if (errorIfNotProcedural())
                 return badExpr(compilation, &expr);
             return *compilation.emplace<MemberAccessExpression>(compilation.getVoidType(), expr,
-                                                                *member, 0u, range);
+                                                                *member, std::nullopt, range);
         }
         case SymbolKind::EnumValue:
             // The thing being selected from doesn't actually matter, since the
@@ -973,7 +973,7 @@ Expression& MemberAccessExpression::fromSelector(
             if (member->isValue()) {
                 auto& value = member->as<ValueSymbol>();
                 return *compilation.emplace<MemberAccessExpression>(value.getType(), expr, value,
-                                                                    0u, range);
+                                                                    std::nullopt, range);
             }
 
             auto& diag = context.addDiag(diag::InvalidClassAccess, selector.dotLocation);
@@ -1150,13 +1150,15 @@ ConstantValue MemberAccessExpression::evalImpl(EvalContext& context) const {
     if (!cv)
         return nullptr;
 
+    ASSERT(offset.has_value());
+
     auto& valueType = value().type->getCanonicalType();
     if (valueType.isUnpackedStruct()) {
-        return cv.elements()[offset];
+        return cv.elements()[*offset];
     }
     else if (valueType.isUnpackedUnion()) {
         auto& unionVal = cv.unionVal();
-        if (unionVal->activeMember == offset)
+        if (unionVal->activeMember == *offset)
             return unionVal->value;
 
         if (valueType.isTaggedUnion()) {
@@ -1185,14 +1187,14 @@ ConstantValue MemberAccessExpression::evalImpl(EvalContext& context) const {
     }
     else if (valueType.isPackedUnion()) {
         auto& cvi = cv.integer();
-        if (!checkPackedUnionTag(valueType, cvi, offset, context, sourceRange, member.name)) {
+        if (!checkPackedUnionTag(valueType, cvi, *offset, context, sourceRange, member.name)) {
             return nullptr;
         }
 
         return cvi.slice(int32_t(type->getBitWidth() - 1), 0);
     }
     else {
-        int32_t io = (int32_t)offset;
+        int32_t io = (int32_t)*offset;
         int32_t width = (int32_t)type->getBitWidth();
         return cv.integer().slice(width + io - 1, io);
     }
@@ -1203,7 +1205,9 @@ LValue MemberAccessExpression::evalLValueImpl(EvalContext& context) const {
     if (!lval)
         return nullptr;
 
-    int32_t io = (int32_t)offset;
+    ASSERT(offset.has_value());
+
+    int32_t io = (int32_t)*offset;
     auto& valueType = value().type->getCanonicalType();
     if (valueType.isUnpackedStruct()) {
         lval.addIndex(io, nullptr);
@@ -1213,7 +1217,7 @@ LValue MemberAccessExpression::evalLValueImpl(EvalContext& context) const {
             auto target = lval.resolve();
             ASSERT(target);
 
-            if (target->unionVal()->activeMember != offset) {
+            if (target->unionVal()->activeMember != *offset) {
                 context.addDiag(diag::ConstEvalTaggedUnion, sourceRange) << member.name;
                 return nullptr;
             }
@@ -1222,7 +1226,7 @@ LValue MemberAccessExpression::evalLValueImpl(EvalContext& context) const {
     }
     else if (valueType.isPackedUnion()) {
         auto cv = lval.load();
-        if (!checkPackedUnionTag(valueType, cv.integer(), offset, context, sourceRange,
+        if (!checkPackedUnionTag(valueType, cv.integer(), *offset, context, sourceRange,
                                  member.name)) {
             return nullptr;
         }
@@ -1238,22 +1242,25 @@ LValue MemberAccessExpression::evalLValueImpl(EvalContext& context) const {
     return lval;
 }
 
-ConstantRange MemberAccessExpression::getSelectRange() const {
-    int32_t io = (int32_t)offset;
+std::optional<ConstantRange> MemberAccessExpression::getSelectRange() const {
+    if (!offset)
+        return std::nullopt;
+
+    int32_t io = (int32_t)*offset;
     auto& valueType = value().type->getCanonicalType();
     if (valueType.isUnpackedStruct()) {
-        return {io, io};
+        return ConstantRange{io, io};
     }
     else if (valueType.isUnpackedUnion()) {
-        return {0, 0};
+        return ConstantRange{0, 0};
     }
     else if (valueType.isPackedUnion()) {
         int32_t width = (int32_t)type->getBitWidth();
-        return {width - 1, 0};
+        return ConstantRange{width - 1, 0};
     }
     else {
         int32_t width = (int32_t)type->getBitWidth();
-        return {width + io - 1, io};
+        return ConstantRange{width + io - 1, io};
     }
 }
 
@@ -1278,52 +1285,48 @@ bool MemberAccessExpression::requireLValueImpl(const ASTContext& context, Source
                                                bitmask<AssignFlags> flags,
                                                const Expression* longestStaticPrefix,
                                                EvalContext* customEvalContext) const {
-    // If this is a selection of a class member, assignability depends only on the selected
-    // member and not on the class handle itself. Otherwise, the opposite is true.
-    auto& valueType = *value().type;
-    if (!valueType.isClass()) {
-        if (VariableSymbol::isKind(member.kind) &&
-            member.as<VariableSymbol>().flags.has(VariableFlags::ImmutableCoverageOption) &&
-            !isWithinCovergroup(member, *context.scope)) {
-            context.addDiag(diag::CoverOptionImmutable, location) << member.name;
-            return false;
+    // If this is a selection of a class or covergroup member, assignability depends only
+    // on the selected member and not on the handle itself. Otherwise, the opposite is true.
+    auto& valueType = value().type->getCanonicalType();
+    if (valueType.isClass() || valueType.isCovergroup() || valueType.isVoid()) {
+        if (VariableSymbol::isKind(member.kind)) {
+            if (!longestStaticPrefix)
+                longestStaticPrefix = this;
+
+            auto& var = member.as<VariableSymbol>();
+            context.addDriver(var, *longestStaticPrefix, flags, customEvalContext);
+
+            return ValueExpressionBase::checkVariableAssignment(context,
+                                                                member.as<VariableSymbol>(), flags,
+                                                                location, sourceRange);
         }
 
-        if (auto sym = value().getSymbolReference(); sym && sym->kind == SymbolKind::Net) {
-            auto& net = sym->as<NetSymbol>();
-            if (net.netType.netKind == NetType::UserDefined)
-                context.addDiag(diag::UserDefPartialDriver, sourceRange) << net.name;
-        }
+        if (!location)
+            location = sourceRange.start();
 
-        if (!longestStaticPrefix)
-            longestStaticPrefix = this;
-
-        return value().requireLValue(context, location, flags, longestStaticPrefix,
-                                     customEvalContext);
+        auto& diag = context.addDiag(diag::ExpressionNotAssignable, location);
+        diag.addNote(diag::NoteDeclarationHere, member.location);
+        diag << sourceRange;
+        return false;
     }
 
-    if (VariableSymbol::isKind(member.kind)) {
-        if (!longestStaticPrefix)
-            longestStaticPrefix = this;
-
-        auto& var = member.as<VariableSymbol>();
-        context.addDriver(var, *longestStaticPrefix, flags, customEvalContext);
-
-        return ValueExpressionBase::checkVariableAssignment(context, var, flags, location,
-                                                            sourceRange);
+    if (VariableSymbol::isKind(member.kind) &&
+        member.as<VariableSymbol>().flags.has(VariableFlags::ImmutableCoverageOption) &&
+        !isWithinCovergroup(member, *context.scope)) {
+        context.addDiag(diag::CoverOptionImmutable, location) << member.name;
+        return false;
     }
 
-    // TODO: modport assignability checks
-    if (member.kind == SymbolKind::ModportPort)
-        return true;
+    if (auto sym = value().getSymbolReference(); sym && sym->kind == SymbolKind::Net) {
+        auto& net = sym->as<NetSymbol>();
+        if (net.netType.netKind == NetType::UserDefined)
+            context.addDiag(diag::UserDefPartialDriver, sourceRange) << net.name;
+    }
 
-    if (!location)
-        location = sourceRange.start();
+    if (!longestStaticPrefix)
+        longestStaticPrefix = this;
 
-    auto& diag = context.addDiag(diag::ExpressionNotAssignable, location);
-    diag.addNote(diag::NoteDeclarationHere, member.location);
-    diag << sourceRange;
-    return false;
+    return value().requireLValue(context, location, flags, longestStaticPrefix, customEvalContext);
 }
 
 void MemberAccessExpression::serializeTo(ASTSerializer& serializer) const {

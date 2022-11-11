@@ -118,10 +118,10 @@ private:
 class SLANG_EXPORT MemberAccessExpression : public Expression {
 public:
     const Symbol& member;
-    uint32_t offset;
+    std::optional<uint32_t> offset;
 
     MemberAccessExpression(const Type& type, Expression& value, const Symbol& member,
-                           uint32_t offset, SourceRange sourceRange) :
+                           std::optional<uint32_t> offset, SourceRange sourceRange) :
         Expression(ExpressionKind::MemberAccess, type, sourceRange),
         member(member), offset(offset), value_(&value) {}
 
@@ -134,7 +134,7 @@ public:
                            bitmask<AssignFlags> flags, const Expression* longestStaticPrefix,
                            EvalContext* customEvalContext) const;
 
-    ConstantRange getSelectRange() const;
+    std::optional<ConstantRange> getSelectRange() const;
 
     void serializeTo(ASTSerializer& serializer) const;
 

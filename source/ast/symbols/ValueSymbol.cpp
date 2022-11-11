@@ -75,10 +75,17 @@ ValueSymbol::Driver& ValueSymbol::Driver::create(EvalContext& evalContext, Drive
                 path.push_back({expr});
                 expr = &expr->as<RangeSelectExpression>().value();
                 break;
-            case ExpressionKind::MemberAccess:
-                path.push_back({expr});
-                expr = &expr->as<MemberAccessExpression>().value();
+            case ExpressionKind::MemberAccess: {
+                auto& access = expr->as<MemberAccessExpression>();
+                if (access.offset) {
+                    path.push_back({expr});
+                    expr = &access.value();
+                }
+                else {
+                    expr = nullptr;
+                }
                 break;
+            }
             default:
                 ASSUME_UNREACHABLE;
         }
