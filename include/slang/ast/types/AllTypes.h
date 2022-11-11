@@ -14,6 +14,7 @@
 
 namespace slang::ast {
 
+class FieldSymbol;
 class InstanceSymbol;
 class ModportSymbol;
 
@@ -224,6 +225,7 @@ public:
 /// Represents an unpacked structure of members.
 class SLANG_EXPORT UnpackedStructType : public Type, public Scope {
 public:
+    span<const FieldSymbol* const> fields;
     int systemId;
 
     UnpackedStructType(Compilation& compilation, SourceLocation loc, const ASTContext& context);
@@ -256,6 +258,7 @@ public:
 /// Represents an unpacked union of members.
 class SLANG_EXPORT UnpackedUnionType : public Type, public Scope {
 public:
+    span<const FieldSymbol* const> fields;
     int systemId;
     bool isTagged;
 

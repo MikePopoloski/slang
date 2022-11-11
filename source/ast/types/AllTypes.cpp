@@ -796,10 +796,10 @@ const Type& UnpackedStructType::fromSyntax(const ASTContext& context,
                                            const StructUnionTypeSyntax& syntax) {
     ASSERT(!syntax.packed);
 
-    uint32_t fieldIndex = 0;
     auto& comp = context.getCompilation();
     auto result = comp.emplace<UnpackedStructType>(comp, syntax.keyword.location(), context);
 
+    SmallVector<const FieldSymbol*> fields;
     for (auto member : syntax.members) {
         RandMode randMode = RandMode::None;
         switch (member->randomQualifier.kind) {
@@ -815,7 +815,7 @@ const Type& UnpackedStructType::fromSyntax(const ASTContext& context,
 
         for (auto decl : member->declarators) {
             auto field = comp.emplace<FieldSymbol>(decl->name.valueText(), decl->name.location(),
-                                                   fieldIndex);
+                                                   (uint32_t)fields.size());
             field->setDeclaredType(*member->type);
             field->setFromDeclarator(*decl);
             field->setAttributes(*context.scope, member->attributes);
@@ -825,15 +825,16 @@ const Type& UnpackedStructType::fromSyntax(const ASTContext& context,
                 field->getDeclaredType()->addFlags(DeclaredTypeFlags::Rand);
 
             result->addMember(*field);
-            fieldIndex++;
+            fields.push_back(field);
         }
     }
 
-    for (auto& field : result->membersOfType<FieldSymbol>()) {
+    result->fields = fields.copy(comp);
+    for (auto field : result->fields) {
         // Force resolution of the type right away, otherwise nothing
         // is required to force it later.
-        field.getType();
-        field.getInitializer();
+        field->getType();
+        field->getInitializer();
     }
 
     result->setSyntax(syntax);
@@ -967,28 +968,30 @@ const Type& UnpackedUnionType::fromSyntax(const ASTContext& context,
     auto result = comp.emplace<UnpackedUnionType>(comp, isTagged, syntax.keyword.location(),
                                                   context);
 
-    uint32_t fieldIndex = 0;
+    SmallVector<const FieldSymbol*> fields;
     for (auto member : syntax.members) {
         for (auto decl : member->declarators) {
             auto field = comp.emplace<FieldSymbol>(decl->name.valueText(), decl->name.location(),
-                                                   fieldIndex++);
+                                                   (uint32_t)fields.size());
             field->setDeclaredType(*member->type);
             field->setFromDeclarator(*decl);
             field->setAttributes(*context.scope, member->attributes);
             result->addMember(*field);
+            fields.push_back(field);
         }
     }
 
-    for (auto& field : result->membersOfType<FieldSymbol>()) {
-        auto& varType = field.getType();
+    result->fields = fields.copy(comp);
+    for (auto field : result->fields) {
+        auto& varType = field->getType();
         if (!isTagged && (varType.isCHandle() || varType.isDynamicallySizedArray()))
-            context.addDiag(diag::InvalidUnionMember, field.location) << varType;
+            context.addDiag(diag::InvalidUnionMember, field->location) << varType;
         else if (varType.isVirtualInterface())
-            context.addDiag(diag::VirtualInterfaceUnionMember, field.location);
+            context.addDiag(diag::VirtualInterfaceUnionMember, field->location);
 
         // Force resolution of the initializer right away, otherwise nothing
         // is required to force it later.
-        field.getInitializer();
+        field->getInitializer();
     }
 
     result->setSyntax(syntax);
