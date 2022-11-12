@@ -24,6 +24,8 @@ public:
     TIterator begin() const { return m_begin; }
     TIterator end() const { return m_end; }
 
+    bool empty() const { return begin() == end(); }
+
     /// Computes the number of elements in the range via std::distance.
     /// Not necessarily very efficient.
     auto size() const { return std::distance(begin(), end()); }

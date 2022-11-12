@@ -106,7 +106,7 @@ struct NodeBase {
             // Copy to sibling.
             uint32_t count = std::min(std::min(uint32_t(-toAdd), size), Capacity - sibSize);
             transferToLeftSib(size, sib, sibSize, count);
-            return int(-count);
+            return -int(count);
         }
     }
 };
@@ -1105,13 +1105,19 @@ void IntervalMap<TKey, TValue>::overlap_iterator::nextOverlap() {
         uint32_t size = path.leafSize();
         if (offset < size - 1) {
             offset = path.node<Branch>(l).findFirstOverlap(offset + 1, size, searchKey);
-            if (offset != size)
-                break;
+            if (offset != size) {
+                // Descend back down to the next overlapping leaf node from our current position.
+                treeFind();
+                return;
+            }
         }
     }
 
-    // Descend back down to the next overlapping leaf node from our current position.
-    treeFind();
+    // If we hit this point we ran out places to look. We should be right
+    // before the last node in the root branch so bump our offset by one
+    // to make the path point to the end of the tree.
+    ASSERT(path.height() == 0);
+    path.leafOffset()++;
 }
 
 } // namespace slang
