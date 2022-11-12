@@ -107,8 +107,8 @@ size_t Type::bitstreamWidth() const {
         return width;
 
     // TODO: check for overflow
-    if (isUnpackedArray()) {
-        auto& ct = getCanonicalType();
+    auto& ct = getCanonicalType();
+    if (ct.isUnpackedArray()) {
         if (ct.kind != SymbolKind::FixedSizeUnpackedArrayType)
             return 0;
 
@@ -116,26 +116,26 @@ size_t Type::bitstreamWidth() const {
         return fsa.elementType.bitstreamWidth() * fsa.range.width();
     }
 
-    if (isUnpackedStruct()) {
-        auto& us = getCanonicalType().as<UnpackedStructType>();
+    if (ct.isUnpackedStruct()) {
+        auto& us = ct.as<UnpackedStructType>();
         for (const auto& field : us.membersOfType<FieldSymbol>())
             width += field.getType().bitstreamWidth();
     }
 
-    if (isUnpackedUnion()) {
+    if (ct.isUnpackedUnion()) {
         // Unpacked unions are not bitstream types but we support
         // getting a bit width out of them anyway.
-        auto& us = getCanonicalType().as<UnpackedUnionType>();
+        auto& us = ct.as<UnpackedUnionType>();
         for (const auto& field : us.membersOfType<FieldSymbol>())
             width = std::max(width, field.getType().bitstreamWidth());
     }
 
-    if (isClass()) {
-        auto& ct = getCanonicalType().as<ClassType>();
-        if (ct.isInterface)
+    if (ct.isClass()) {
+        auto& classType = ct.as<ClassType>();
+        if (classType.isInterface)
             return 0;
 
-        for (auto& prop : ct.membersOfType<ClassPropertySymbol>())
+        for (auto& prop : classType.membersOfType<ClassPropertySymbol>())
             width += prop.getType().bitstreamWidth();
     }
 
@@ -251,17 +251,18 @@ bool Type::isStruct() const {
 }
 
 bool Type::isBitstreamType(bool destination) const {
-    if (isIntegral() || isString())
+    auto& ct = getCanonicalType();
+    if (ct.isIntegral() || ct.isString())
         return true;
 
-    if (isUnpackedArray()) {
-        if (destination && getCanonicalType().kind == SymbolKind::AssociativeArrayType)
+    if (ct.isUnpackedArray()) {
+        if (destination && ct.kind == SymbolKind::AssociativeArrayType)
             return false;
-        return getArrayElementType()->isBitstreamType(destination);
+        return ct.getArrayElementType()->isBitstreamType(destination);
     }
 
-    if (isUnpackedStruct()) {
-        auto& us = getCanonicalType().as<UnpackedStructType>();
+    if (ct.isUnpackedStruct()) {
+        auto& us = ct.as<UnpackedStructType>();
         for (auto& field : us.membersOfType<FieldSymbol>()) {
             if (!field.getType().isBitstreamType(destination))
                 return false;
@@ -269,15 +270,15 @@ bool Type::isBitstreamType(bool destination) const {
         return true;
     }
 
-    if (isClass()) {
+    if (ct.isClass()) {
         if (destination)
             return false;
 
-        auto& ct = getCanonicalType().as<ClassType>();
-        if (ct.isInterface)
+        auto& classType = ct.as<ClassType>();
+        if (classType.isInterface)
             return false;
 
-        for (auto& prop : ct.membersOfType<ClassPropertySymbol>()) {
+        for (auto& prop : classType.membersOfType<ClassPropertySymbol>()) {
             if (!prop.getType().isBitstreamType(destination))
                 return false;
         }
@@ -288,19 +289,19 @@ bool Type::isBitstreamType(bool destination) const {
 }
 
 bool Type::isFixedSize() const {
-    if (isIntegral() || isFloating())
+    auto& ct = getCanonicalType();
+    if (ct.isIntegral() || ct.isFloating())
         return true;
 
-    if (isUnpackedArray()) {
-        const auto& ct = getCanonicalType();
+    if (ct.isUnpackedArray()) {
         if (ct.kind != SymbolKind::FixedSizeUnpackedArrayType)
             return false;
 
         return ct.as<FixedSizeUnpackedArrayType>().elementType.isFixedSize();
     }
 
-    if (isUnpackedStruct()) {
-        auto& us = getCanonicalType().as<UnpackedStructType>();
+    if (ct.isUnpackedStruct()) {
+        auto& us = ct.as<UnpackedStructType>();
         for (auto& field : us.membersOfType<FieldSymbol>()) {
             if (!field.getType().isFixedSize())
                 return false;
@@ -308,8 +309,8 @@ bool Type::isFixedSize() const {
         return true;
     }
 
-    if (isUnpackedUnion()) {
-        auto& us = getCanonicalType().as<UnpackedUnionType>();
+    if (ct.isUnpackedUnion()) {
+        auto& us = ct.as<UnpackedUnionType>();
         for (auto& field : us.membersOfType<FieldSymbol>()) {
             if (!field.getType().isFixedSize())
                 return false;
@@ -317,12 +318,12 @@ bool Type::isFixedSize() const {
         return true;
     }
 
-    if (isClass()) {
-        auto& ct = getCanonicalType().as<ClassType>();
-        if (ct.isInterface)
+    if (ct.isClass()) {
+        auto& classType = ct.as<ClassType>();
+        if (classType.isInterface)
             return false;
 
-        for (auto& prop : ct.membersOfType<ClassPropertySymbol>()) {
+        for (auto& prop : classType.membersOfType<ClassPropertySymbol>()) {
             if (!prop.getType().isFixedSize())
                 return false;
         }
