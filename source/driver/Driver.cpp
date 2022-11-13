@@ -378,6 +378,8 @@ bool Driver::processOptions() {
     Diagnostics optionDiags = diagEngine.setWarningOptions(options.warningOptions);
     if (options.ignoreUnknownModules == true)
         diagEngine.setSeverity(diag::UnknownModule, DiagnosticSeverity::Ignored);
+    if (options.onlyLint == true)
+        diagEngine.setSeverity(diag::UnknownPackage, DiagnosticSeverity::Ignored);
     if (options.allowUseBeforeDeclare == true)
         diagEngine.setSeverity(diag::UsedBeforeDeclared, DiagnosticSeverity::Ignored);
 
