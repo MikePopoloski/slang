@@ -828,7 +828,8 @@ static const AssertionExpr* bindUnknownPortConn(const ASTContext& context,
                         if (symbol->kind == SymbolKind::Modport ||
                             symbol->kind == SymbolKind::InterfacePort ||
                             symbol->kind == SymbolKind::Instance ||
-                            symbol->kind == SymbolKind::InstanceArray) {
+                            symbol->kind == SymbolKind::InstanceArray ||
+                            symbol->kind == SymbolKind::UnknownModule) {
                             auto& comp = context.getCompilation();
                             auto hre = comp.emplace<HierarchicalReferenceExpression>(
                                 *symbol, comp.getVoidType(), syntax.sourceRange());

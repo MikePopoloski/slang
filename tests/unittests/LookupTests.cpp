@@ -1563,6 +1563,23 @@ endmodule
     NO_COMPILATION_ERRORS;
 }
 
+TEST_CASE("Interface param with unknown module") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    an_interface #() u_an_interface ();
+    some_module #() u_an_instance( .the_inteface (u_an_interface) );
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::UnknownModule);
+    CHECK(diags[1].code == diag::UnknownModule);
+}
+
 TEST_CASE("Lookup with unused selectors") {
     auto tree = SyntaxTree::fromText(R"(
 interface I;
