@@ -517,41 +517,42 @@ bool InstanceSymbol::isInterface() const {
 }
 
 const PortConnection* InstanceSymbol::getPortConnection(const PortSymbol& port) const {
-    resolvePortConnections();
+    if (!connectionMap)
+        resolvePortConnections();
 
-    auto it = connections->find(reinterpret_cast<uintptr_t>(&port));
-    if (it == connections->end())
+    auto it = connectionMap->find(reinterpret_cast<uintptr_t>(&port));
+    if (it == connectionMap->end())
         return nullptr;
 
     return reinterpret_cast<const PortConnection*>(it->second);
 }
 
 const PortConnection* InstanceSymbol::getPortConnection(const MultiPortSymbol& port) const {
-    resolvePortConnections();
+    if (!connectionMap)
+        resolvePortConnections();
 
-    auto it = connections->find(reinterpret_cast<uintptr_t>(&port));
-    if (it == connections->end())
+    auto it = connectionMap->find(reinterpret_cast<uintptr_t>(&port));
+    if (it == connectionMap->end())
         return nullptr;
 
     return reinterpret_cast<const PortConnection*>(it->second);
 }
 
 const PortConnection* InstanceSymbol::getPortConnection(const InterfacePortSymbol& port) const {
-    resolvePortConnections();
+    if (!connectionMap)
+        resolvePortConnections();
 
-    auto it = connections->find(reinterpret_cast<uintptr_t>(&port));
-    if (it == connections->end())
+    auto it = connectionMap->find(reinterpret_cast<uintptr_t>(&port));
+    if (it == connectionMap->end())
         return nullptr;
 
     return reinterpret_cast<const PortConnection*>(it->second);
 }
 
-void InstanceSymbol::forEachPortConnection(function_ref<void(const PortConnection&)> cb) const {
-    resolvePortConnections();
-    for (auto& [k, v] : *connections) {
-        auto conn = reinterpret_cast<const PortConnection*>(v);
-        cb(*conn);
-    }
+span<const PortConnection* const> InstanceSymbol::getPortConnections() const {
+    if (!connectionMap)
+        resolvePortConnections();
+    return connections;
 }
 
 void InstanceSymbol::resolvePortConnections() const {
@@ -573,31 +574,41 @@ void InstanceSymbol::resolvePortConnections() const {
     // provided to `iface`. In the code, this translates to a reetrant call to this
     // function; the first time we call getPortList() on the body will call back in here.
     auto portList = body.getPortList();
-    if (connections)
+    if (connectionMap)
         return;
 
     auto scope = getParentScope();
     ASSERT(scope);
 
-    connections = scope->getCompilation().allocPointerMap();
+    auto& comp = scope->getCompilation();
+    connectionMap = comp.allocPointerMap();
 
     auto syntax = getSyntax();
     if (!syntax)
         return;
 
+    SmallVector<const PortConnection*> conns;
     PortConnection::makeConnections(*this, portList,
-                                    syntax->as<HierarchicalInstanceSyntax>().connections,
-                                    *connections);
+                                    syntax->as<HierarchicalInstanceSyntax>().connections, conns);
+
+    auto portIt = portList.begin();
+    for (auto conn : conns) {
+        ASSERT(portIt != portList.end());
+        connectionMap->emplace(reinterpret_cast<uintptr_t>(*portIt++),
+                               reinterpret_cast<uintptr_t>(conn));
+    }
+
+    ASSERT(portIt == portList.end());
+    connections = conns.copy(comp);
 }
 
 void InstanceSymbol::serializeTo(ASTSerializer& serializer) const {
     serializer.write("body", body);
 
-    resolvePortConnections();
     serializer.startArray("connections");
-    for (auto& [_, connPtr] : *connections) {
+    for (auto conn : getPortConnections()) {
         serializer.startObject();
-        reinterpret_cast<const PortConnection*>(connPtr)->serializeTo(serializer);
+        conn->serializeTo(serializer);
         serializer.endObject();
     }
     serializer.endArray();

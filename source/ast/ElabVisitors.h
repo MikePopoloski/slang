@@ -247,12 +247,12 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
         for (auto attr : compilation.getAttributes(symbol))
             attr->getValue();
 
-        symbol.forEachPortConnection([&](auto& conn) {
-            conn.getExpression();
-            conn.checkSimulatedNetTypes();
-            for (auto attr : compilation.getAttributes(conn))
+        for (auto conn : symbol.getPortConnections()) {
+            conn->getExpression();
+            conn->checkSimulatedNetTypes();
+            for (auto attr : compilation.getAttributes(*conn))
                 attr->getValue();
-        });
+        };
 
         // Detect infinite recursion, which happens if we see this exact
         // instance body somewhere higher up in the stack.

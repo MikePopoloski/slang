@@ -175,7 +175,7 @@ public:
     static void makeConnections(
         const InstanceSymbol& instance, span<const Symbol* const> ports,
         const syntax::SeparatedSyntaxList<syntax::PortConnectionSyntax>& portConnections,
-        PointerMap& results);
+        SmallVector<const PortConnection*>& results);
 
 private:
     const Symbol* connectedSymbol = nullptr;

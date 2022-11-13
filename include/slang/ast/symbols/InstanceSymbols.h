@@ -64,8 +64,7 @@ public:
     const PortConnection* getPortConnection(const PortSymbol& port) const;
     const PortConnection* getPortConnection(const MultiPortSymbol& port) const;
     const PortConnection* getPortConnection(const InterfacePortSymbol& port) const;
-
-    void forEachPortConnection(function_ref<void(const PortConnection&)> cb) const;
+    span<const PortConnection* const> getPortConnections() const;
 
     void serializeTo(ASTSerializer& serializer) const;
 
@@ -104,7 +103,8 @@ public:
 private:
     void resolvePortConnections() const;
 
-    mutable PointerMap* connections = nullptr;
+    mutable PointerMap* connectionMap = nullptr;
+    mutable span<const PortConnection* const> connections;
 };
 
 class SLANG_EXPORT InstanceBodySymbol : public Symbol, public Scope {

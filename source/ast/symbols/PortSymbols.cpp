@@ -2052,7 +2052,8 @@ void PortConnection::checkSimulatedNetTypes() const {
 
 void PortConnection::makeConnections(
     const InstanceSymbol& instance, span<const Symbol* const> ports,
-    const SeparatedSyntaxList<PortConnectionSyntax>& portConnections, PointerMap& results) {
+    const SeparatedSyntaxList<PortConnectionSyntax>& portConnections,
+    SmallVector<const PortConnection*>& results) {
 
     PortConnectionBuilder builder(instance, portConnections);
     for (auto portBase : ports) {
@@ -2060,22 +2061,19 @@ void PortConnection::makeConnections(
             auto& port = portBase->as<PortSymbol>();
             auto conn = builder.getConnection(port);
             ASSERT(conn);
-
-            results.emplace(reinterpret_cast<uintptr_t>(&port), reinterpret_cast<uintptr_t>(conn));
+            results.push_back(conn);
         }
         else if (portBase->kind == SymbolKind::MultiPort) {
             auto& port = portBase->as<MultiPortSymbol>();
             auto conn = builder.getConnection(port);
             ASSERT(conn);
-
-            results.emplace(reinterpret_cast<uintptr_t>(&port), reinterpret_cast<uintptr_t>(conn));
+            results.push_back(conn);
         }
         else {
             auto& port = portBase->as<InterfacePortSymbol>();
             auto conn = builder.getIfaceConnection(port);
             ASSERT(conn);
-
-            results.emplace(reinterpret_cast<uintptr_t>(&port), reinterpret_cast<uintptr_t>(conn));
+            results.push_back(conn);
         }
     }
 

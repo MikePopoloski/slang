@@ -365,6 +365,7 @@ void registerSymbols(py::module_& m) {
         .def_property_readonly("definition", &InstanceSymbol::getDefinition)
         .def_property_readonly("isModule", &InstanceSymbol::isModule)
         .def_property_readonly("isInterface", &InstanceSymbol::isInterface)
+        .def_property_readonly("portConnections", &InstanceSymbol::getPortConnections)
         .def_property_readonly("body", [](const InstanceSymbol& self) { return &self.body; })
         .def("getPortConnection",
              py::overload_cast<const PortSymbol&>(&InstanceSymbol::getPortConnection, py::const_),

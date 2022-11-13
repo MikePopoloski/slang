@@ -364,10 +364,10 @@ decltype(auto) Expression::visit(TVisitor&& visitor, Args&&... args) {
 
 template<typename TVisitor>
 void InstanceSymbol::visitExprs(TVisitor&& visitor) const {
-    forEachPortConnection([&](auto& conn) {
-        if (auto expr = conn.getExpression())
+    for (auto conn : getPortConnections()) {
+        if (auto expr = conn->getExpression())
             expr->visit(visitor);
-    });
+    };
 }
 
 template<typename TVisitor, typename... Args>
