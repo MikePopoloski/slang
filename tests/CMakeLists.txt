@@ -45,7 +45,10 @@ add_executable(
   unittests/TypeTests.cpp
   unittests/VisitorTests.cpp)
 
-target_link_libraries(unittests PRIVATE slang::slang Catch2::Catch2 fmt::fmt)
+target_link_libraries(
+  unittests
+  PRIVATE slang::slang Catch2::Catch2 fmt::fmt
+  PUBLIC ${SLANG_LIBRARIES})
 target_compile_definitions(unittests PRIVATE UNITTESTS)
 
 if(SLANG_CI_BUILD)
