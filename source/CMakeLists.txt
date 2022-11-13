@@ -86,7 +86,6 @@ add_library(
 
 add_subdirectory(ast)
 
-set(SLANG_SHARED_LIB_NAME slang)
 add_library(slang::slang ALIAS slang_slang)
 set_target_properties(
   slang_slang
@@ -94,8 +93,8 @@ set_target_properties(
              VISIBILITY_INLINES_HIDDEN YES
              VERSION ${PROJECT_VERSION}
              SOVERSION ${PROJECT_VERSION_MAJOR}
-             EXPORT_NAME ${SLANG_SHARED_LIB_NAME}
-             OUTPUT_NAME ${SLANG_SHARED_LIB_NAME})
+             EXPORT_NAME ${SLANG_LIB_NAME}
+             OUTPUT_NAME ${SLANG_LIB_NAME})
 
 # Compile options
 target_compile_options(slang_slang PRIVATE ${SLANG_WARN_FLAGS})
@@ -113,9 +112,10 @@ target_include_directories(
 
 # Link libraries
 find_package(Threads)
-target_link_libraries(slang_slang PRIVATE ${CMAKE_THREAD_LIBS_INIT})
-target_link_libraries(slang_slang PRIVATE fmt::fmt)
-target_link_libraries(slang_slang PUBLIC unordered_dense::unordered_dense)
+target_link_libraries(
+  slang_slang
+  PRIVATE fmt::fmt ${CMAKE_THREAD_LIBS_INIT} ${SLANG_LIBRARIES}
+  PUBLIC unordered_dense::unordered_dense)
 
 # If building the Python library we'll end up with a shared lib no matter what,
 # so make sure we always build with PIC.
