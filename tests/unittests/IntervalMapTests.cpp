@@ -150,4 +150,8 @@ TEST_CASE("IntervalMap -- branching inserts") {
     std::sort(actualOverlaps.begin(), actualOverlaps.end(), sorter);
 
     CHECK(expectedOverlap == actualOverlaps);
+
+    // Make sure find() within the tree that doesn't actually overlap works correctly.
+    auto oit = map.find(1, 3);
+    CHECK(oit == map.end());
 }

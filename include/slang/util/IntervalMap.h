@@ -720,6 +720,8 @@ protected:
         }
     }
 
+    void setToEnd() { setRoot(map->rootSize); }
+
     void treeFind();
     void nextOverlap();
 
@@ -1081,12 +1083,25 @@ void IntervalMap<TKey, TValue>::overlap_iterator::treeFind() {
 
     auto child = path.childAt(path.height());
     for (uint32_t i = map->height - path.height() - 1; i > 0; i--) {
-        uint32_t offset = child.template get<Branch>().findFirstOverlap(0, child.size(), searchKey);
+        uint32_t size = child.size();
+        uint32_t offset = child.template get<Branch>().findFirstOverlap(0, size, searchKey);
+        if (offset == size) {
+            setToEnd();
+            return;
+        }
+
         path.push(child, offset);
         child = child.childAt(offset);
     }
 
-    path.push(child, child.template get<Leaf>().findFirstOverlap(0, child.size(), searchKey));
+    uint32_t size = child.size();
+    uint32_t offset = child.template get<Leaf>().findFirstOverlap(0, size, searchKey);
+    if (offset == size) {
+        setToEnd();
+        return;
+    }
+
+    path.push(child, offset);
 }
 
 template<typename TKey, typename TValue>
