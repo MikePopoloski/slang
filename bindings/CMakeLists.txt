@@ -16,6 +16,13 @@ FetchContent_Declare(
   ${find_pkg_args})
 FetchContent_MakeAvailable(pybind11)
 
+if(pybind11_FOUND)
+  message(STATUS "Using system pybind11 library: ${pybind11_VERSION}")
+  message(STATUS "Using system pybind11 include: ${pybind11_INCLUDE_DIRS}")
+else()
+  message(STATUS "Using remote pybind11 library")
+endif()
+
 # Generate bindings for syntax node types
 add_custom_command(
   COMMAND ${Python_EXECUTABLE} ${SCRIPTS_DIR}/syntax_gen.py --dir
