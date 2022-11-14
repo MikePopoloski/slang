@@ -46,7 +46,8 @@ const PackageSymbol& createStdPackage(Compilation&);
 namespace slang::ast {
 
 Compilation::Compilation(const Bag& options) :
-    options(options.getOrDefault<CompilationOptions>()), tempDiag({}, {}) {
+    options(options.getOrDefault<CompilationOptions>()), driverMapAllocator(*this),
+    tempDiag({}, {}) {
 
     // Construct all built-in types.
     bitType = emplace<ScalarType>(ScalarType::Bit);

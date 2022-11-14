@@ -87,7 +87,7 @@ ENUM(PrimitivePortDirection, DIRECTION)
 #undef DIRECTION
 
 #define DRIVER(x) x(Procedural) x(Continuous) x(Other)
-ENUM(DriverKind, DRIVER)
+ENUM_SIZED(DriverKind, uint8_t, DRIVER)
 #undef DRIVER
 
 #define PSK(x) x(OnEvent) x(OnDetect) x(ShowCancelled) x(NoShowCancelled)
@@ -95,7 +95,7 @@ ENUM(PulseStyleKind, PSK)
 #undef PSK
 
 /// A set of flags that control how assignments are checked.
-enum class SLANG_EXPORT AssignFlags {
+enum class SLANG_EXPORT AssignFlags : uint16_t {
     /// No special assignment behavior specified.
     None = 0,
 

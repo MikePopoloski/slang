@@ -17,6 +17,7 @@
 #include "slang/syntax/SyntaxNode.h"
 #include "slang/util/Bag.h"
 #include "slang/util/BumpAllocator.h"
+#include "slang/util/IntervalMap.h"
 #include "slang/util/SafeIndexedVector.h"
 
 namespace slang::syntax {
@@ -43,6 +44,9 @@ class RootSymbol;
 class Statement;
 class SubroutineSymbol;
 class SystemSubroutine;
+class ValueDriver;
+
+using DriverIntervalMap = IntervalMap<uint32_t, const ValueDriver*>;
 
 enum class IntegralFlags : uint8_t;
 enum class UnconnectedDrive;
@@ -420,6 +424,8 @@ public:
         return genericClassAllocator.emplace(std::forward<Args>(args)...);
     }
 
+    DriverIntervalMap::Allocator& getDriverMapAllocator() { return driverMapAllocator; }
+
     const syntax::ImplicitTypeSyntax& createEmptyTypeSyntax(SourceLocation loc);
 
     /// Forces the given symbol and all children underneath it in the hierarchy to
@@ -462,6 +468,7 @@ private:
     TypedBumpAllocator<PointerMap> pointerMapAllocator;
     TypedBumpAllocator<ConstantValue> constantAllocator;
     TypedBumpAllocator<GenericClassDefSymbol> genericClassAllocator;
+    DriverIntervalMap::Allocator driverMapAllocator;
 
     // A table to look up scalar types based on combinations of the three flags: signed, fourstate,
     // reg. Two of the entries are not valid and will be nullptr (!fourstate & reg).

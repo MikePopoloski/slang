@@ -119,7 +119,7 @@ void ASTContext::addDriver(const ValueSymbol& symbol, const Expression& longestS
     if (!containingSym)
         containingSym = &scope->asSymbol();
 
-    symbol.addDriver(getDriverKind(), longestStaticPrefix, *containingSym, assignFlags, {},
+    symbol.addDriver(getDriverKind(), longestStaticPrefix, *containingSym, assignFlags,
                      customEvalContext);
 }
 

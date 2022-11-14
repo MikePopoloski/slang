@@ -301,7 +301,7 @@ bool CallExpression::bindArgs(const ArgumentListSyntax* argSyntax,
 }
 
 static void addSubroutineDrivers(const Symbol& procedure, const SubroutineSymbol& sub,
-                                 SourceRange range);
+                                 const Expression& callExpr);
 
 Expression& CallExpression::fromArgs(Compilation& compilation, const Subroutine& subroutine,
                                      const Expression* thisClass,
@@ -338,7 +338,7 @@ Expression& CallExpression::fromArgs(Compilation& compilation, const Subroutine&
     // particular procedure to detect multiple driver violations.
     if (!thisClass) {
         if (auto proc = context.getProceduralBlock(); proc && proc->isSingleDriverBlock())
-            addSubroutineDrivers(*proc, symbol, range);
+            addSubroutineDrivers(*proc, symbol, *result);
     }
 
     return *result;
@@ -805,20 +805,20 @@ class DriverVisitor : public ASTVisitor<DriverVisitor, true, true> {
 public:
     const Symbol& procedure;
     const SubroutineSymbol& sub;
-    SourceRange range;
+    const Expression& callExpr;
     SmallSet<const ValueSymbol*, 8> visitedValues;
     SmallSet<const SubroutineSymbol*, 4>& visitedSubs;
 
     DriverVisitor(const Symbol& procedure, SmallSet<const SubroutineSymbol*, 4>& visitedSubs,
-                  const SubroutineSymbol& sub, SourceRange range) :
+                  const SubroutineSymbol& sub, const Expression& callExpr) :
         procedure(procedure),
-        sub(sub), range(range), visitedSubs(visitedSubs) {}
+        sub(sub), callExpr(callExpr), visitedSubs(visitedSubs) {}
 
     void handle(const CallExpression& expr) {
         if (!expr.isSystemCall() && !expr.thisClass()) {
             auto& subroutine = *std::get<0>(expr.subroutine);
             if (visitedSubs.emplace(&subroutine).second) {
-                DriverVisitor visitor(procedure, visitedSubs, subroutine, range);
+                DriverVisitor visitor(procedure, visitedSubs, subroutine, callExpr);
                 subroutine.getBody().visit(visitor);
             }
         }
@@ -830,24 +830,19 @@ public:
 
         // If the target symbol is driven by the subroutine we're inspecting,
         // add another driver for the procedure we're originally called from.
-        auto driver = expr.symbol.getFirstDriver();
-        while (driver) {
-            if (driver->containingSymbol == &sub && !driver->hasError) {
-                expr.symbol.addDriver(DriverKind::Procedural, *driver, procedure,
-                                      AssignFlags::SubFromProcedure, range);
-            }
-
-            driver = driver->getNextDriver();
+        for (auto& driver : expr.symbol.drivers()) {
+            if (driver.containingSymbol == &sub)
+                expr.symbol.addDriver(DriverKind::Procedural, driver, procedure, callExpr);
         }
     }
 };
 
 static void addSubroutineDrivers(const Symbol& procedure, const SubroutineSymbol& sub,
-                                 SourceRange range) {
+                                 const Expression& callExpr) {
     SmallSet<const SubroutineSymbol*, 4> visitedSubs;
     visitedSubs.emplace(&sub);
 
-    DriverVisitor visitor(procedure, visitedSubs, sub, range);
+    DriverVisitor visitor(procedure, visitedSubs, sub, callExpr);
     sub.getBody().visit(visitor);
 }
 
