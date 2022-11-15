@@ -154,8 +154,8 @@ static bool isValidForNet(const Type& type) {
         return isValidForNet(ct.as<FixedSizeUnpackedArrayType>().elementType);
 
     if (ct.isUnpackedStruct()) {
-        for (auto& field : ct.as<UnpackedStructType>().membersOfType<FieldSymbol>()) {
-            if (!isValidForNet(field.getType()))
+        for (auto field : ct.as<UnpackedStructType>().fields) {
+            if (!isValidForNet(field->getType()))
                 return false;
         }
         return true;
@@ -173,16 +173,16 @@ static bool isValidForUserDefinedNet(const Type& type) {
         return isValidForUserDefinedNet(ct.as<FixedSizeUnpackedArrayType>().elementType);
 
     if (ct.isUnpackedStruct()) {
-        for (auto& field : ct.as<UnpackedStructType>().membersOfType<FieldSymbol>()) {
-            if (!isValidForUserDefinedNet(field.getType()))
+        for (auto field : ct.as<UnpackedStructType>().fields) {
+            if (!isValidForUserDefinedNet(field->getType()))
                 return false;
         }
         return true;
     }
 
     if (ct.isUnpackedUnion()) {
-        for (auto& field : ct.as<UnpackedUnionType>().membersOfType<FieldSymbol>()) {
-            if (!isValidForUserDefinedNet(field.getType()))
+        for (auto field : ct.as<UnpackedUnionType>().fields) {
+            if (!isValidForUserDefinedNet(field->getType()))
                 return false;
         }
         return true;

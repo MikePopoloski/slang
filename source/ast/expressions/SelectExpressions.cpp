@@ -1027,10 +1027,9 @@ public:
         curr.type = &startType;
 
         if (curr.type->isUnpackedStruct()) {
-            auto range =
-                curr.type->getCanonicalType().as<UnpackedStructType>().membersOfType<FieldSymbol>();
-            curr.fieldIt = range.begin();
-            curr.fieldEnd = range.end();
+            auto fields = curr.type->getCanonicalType().as<UnpackedStructType>().fields;
+            curr.fieldIt = fields.begin();
+            curr.fieldEnd = fields.end();
             prepNext();
         }
     }
@@ -1047,7 +1046,7 @@ public:
             return curr.val;
         }
 
-        if (!curr.fieldIt->getType().isEquivalent(targetType))
+        if (!(*curr.fieldIt)->getType().isEquivalent(targetType))
             return nullptr;
 
         auto result = &curr.val->at(curr.valIndex);
@@ -1071,23 +1070,22 @@ private:
             prepNext();
         }
         else {
-            auto& type = curr.fieldIt->getType();
+            auto& type = (*curr.fieldIt)->getType();
             if (type.isUnpackedStruct()) {
                 stack.emplace_back(curr);
 
-                auto range =
-                    type.getCanonicalType().as<UnpackedStructType>().membersOfType<FieldSymbol>();
+                auto fields = type.getCanonicalType().as<UnpackedStructType>().fields;
                 curr.type = &type;
                 curr.val = &curr.val->at(curr.valIndex);
-                curr.fieldIt = range.begin();
-                curr.fieldEnd = range.end();
+                curr.fieldIt = fields.begin();
+                curr.fieldEnd = fields.end();
                 curr.valIndex = 0;
                 prepNext();
             }
         }
     }
 
-    using FieldIt = Scope::specific_symbol_iterator<FieldSymbol>;
+    using FieldIt = span<const FieldSymbol* const>::const_iterator;
 
     struct State {
         const ConstantValue* val = nullptr;
@@ -1112,8 +1110,8 @@ static bool translateUnionMembers(ConstantValue& result, const Type& targetType,
     // reach a non-struct member that can be assigned a value.
     if (targetType.isUnpackedStruct()) {
         size_t i = 0;
-        for (auto& member : targetType.as<UnpackedStructType>().membersOfType<FieldSymbol>()) {
-            if (!translateUnionMembers(result.at(i++), member.getType().getCanonicalType(), rsmi)) {
+        for (auto field : targetType.as<UnpackedStructType>().fields) {
+            if (!translateUnionMembers(result.at(i++), field->getType().getCanonicalType(), rsmi)) {
                 return false;
             }
         }

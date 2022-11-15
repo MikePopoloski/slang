@@ -102,12 +102,12 @@ bitwidth_t Type::getBitWidth() const {
 }
 
 size_t Type::bitstreamWidth() const {
-    size_t width = getBitWidth();
+    auto& ct = getCanonicalType();
+    size_t width = ct.getBitWidth();
     if (width > 0)
         return width;
 
     // TODO: check for overflow
-    auto& ct = getCanonicalType();
     if (ct.isUnpackedArray()) {
         if (ct.kind != SymbolKind::FixedSizeUnpackedArrayType)
             return 0;
@@ -118,16 +118,18 @@ size_t Type::bitstreamWidth() const {
 
     if (ct.isUnpackedStruct()) {
         auto& us = ct.as<UnpackedStructType>();
-        for (const auto& field : us.membersOfType<FieldSymbol>())
-            width += field.getType().bitstreamWidth();
+        for (auto field : us.fields)
+            width += field->getType().bitstreamWidth();
+        return width;
     }
 
     if (ct.isUnpackedUnion()) {
         // Unpacked unions are not bitstream types but we support
         // getting a bit width out of them anyway.
         auto& us = ct.as<UnpackedUnionType>();
-        for (const auto& field : us.membersOfType<FieldSymbol>())
-            width = std::max(width, field.getType().bitstreamWidth());
+        for (auto field : us.fields)
+            width = std::max(width, field->getType().bitstreamWidth());
+        return width;
     }
 
     if (ct.isClass()) {
@@ -137,9 +139,10 @@ size_t Type::bitstreamWidth() const {
 
         for (auto& prop : classType.membersOfType<ClassPropertySymbol>())
             width += prop.getType().bitstreamWidth();
+        return width;
     }
 
-    return width;
+    return 0;
 }
 
 bool Type::isSigned() const {
@@ -158,16 +161,16 @@ bool Type::isFourState() const {
     switch (ct.kind) {
         case SymbolKind::UnpackedStructType: {
             auto& us = ct.as<UnpackedStructType>();
-            for (auto& field : us.membersOfType<FieldSymbol>()) {
-                if (field.getType().isFourState())
+            for (auto field : us.fields) {
+                if (field->getType().isFourState())
                     return true;
             }
             return false;
         }
         case SymbolKind::UnpackedUnionType: {
             auto& us = ct.as<UnpackedUnionType>();
-            for (auto& field : us.membersOfType<FieldSymbol>()) {
-                if (field.getType().isFourState())
+            for (auto field : us.fields) {
+                if (field->getType().isFourState())
                     return true;
             }
             return false;
@@ -263,8 +266,8 @@ bool Type::isBitstreamType(bool destination) const {
 
     if (ct.isUnpackedStruct()) {
         auto& us = ct.as<UnpackedStructType>();
-        for (auto& field : us.membersOfType<FieldSymbol>()) {
-            if (!field.getType().isBitstreamType(destination))
+        for (auto field : us.fields) {
+            if (!field->getType().isBitstreamType(destination))
                 return false;
         }
         return true;
@@ -302,8 +305,8 @@ bool Type::isFixedSize() const {
 
     if (ct.isUnpackedStruct()) {
         auto& us = ct.as<UnpackedStructType>();
-        for (auto& field : us.membersOfType<FieldSymbol>()) {
-            if (!field.getType().isFixedSize())
+        for (auto field : us.fields) {
+            if (!field->getType().isFixedSize())
                 return false;
         }
         return true;
@@ -311,8 +314,8 @@ bool Type::isFixedSize() const {
 
     if (ct.isUnpackedUnion()) {
         auto& us = ct.as<UnpackedUnionType>();
-        for (auto& field : us.membersOfType<FieldSymbol>()) {
-            if (!field.getType().isFixedSize())
+        for (auto field : us.fields) {
+            if (!field->getType().isFixedSize())
                 return false;
         }
         return true;
@@ -773,8 +776,8 @@ bool Type::isValidForDPIArg() const {
         return ct.as<FixedSizeUnpackedArrayType>().elementType.isValidForDPIArg();
 
     if (ct.isUnpackedStruct()) {
-        for (auto& field : ct.as<UnpackedStructType>().membersOfType<FieldSymbol>()) {
-            if (!field.getType().isValidForDPIArg())
+        for (auto field : ct.as<UnpackedStructType>().fields) {
+            if (!field->getType().isValidForDPIArg())
                 return false;
         }
         return true;

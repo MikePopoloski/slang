@@ -54,8 +54,8 @@ public:
         return *canonical;
     }
 
-    /// Gets the total width of the type in bits. Returns zero if the type does not have a
-    /// statically known size.
+    /// Gets the declared width of the numeric type in bits. Returns zero if the type is not
+    /// numeric (i.e. integral or floating).
     bitwidth_t getBitWidth() const;
 
     /// Gets $bits of the type. Returns zero if the type does not have a statically known size.

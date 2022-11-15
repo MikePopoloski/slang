@@ -786,8 +786,8 @@ UnpackedStructType::UnpackedStructType(Compilation& compilation, SourceLocation 
 
 ConstantValue UnpackedStructType::getDefaultValueImpl() const {
     std::vector<ConstantValue> elements;
-    for (auto& field : membersOfType<FieldSymbol>())
-        elements.emplace_back(field.getType().getDefaultValue());
+    for (auto field : fields)
+        elements.emplace_back(field->getType().getDefaultValue());
 
     return elements;
 }
@@ -944,13 +944,11 @@ UnpackedUnionType::UnpackedUnionType(Compilation& compilation, bool isTagged, So
 }
 
 ConstantValue UnpackedUnionType::getDefaultValueImpl() const {
-    auto range = membersOfType<FieldSymbol>();
-    auto it = range.begin();
-    if (it == range.end())
+    if (fields.empty())
         return nullptr;
 
     SVUnion u;
-    u.value = it->getType().getDefaultValue();
+    u.value = fields[0]->getType().getDefaultValue();
 
     // Tagged unions start out with no active member.
     if (!isTagged)

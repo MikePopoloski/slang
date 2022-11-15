@@ -71,8 +71,8 @@ static std::pair<size_t, size_t> dynamicBitstreamSize(const Type& type, Bitstrea
     }
     else if (type.isUnpackedStruct()) {
         auto& us = type.getCanonicalType().as<UnpackedStructType>();
-        for (auto& field : us.membersOfType<FieldSymbol>()) {
-            auto [multiplierElem, fixedSizeElem] = dynamicBitstreamSize(field.getType(), mode);
+        for (auto field : us.fields) {
+            auto [multiplierElem, fixedSizeElem] = dynamicBitstreamSize(field->getType(), mode);
             if (mode == BitstreamSizeMode::DestFill && multiplierElem > 0) {
                 // dynamically sized field filled and rest should be empty
                 mode = BitstreamSizeMode::DestEmpty;
@@ -402,8 +402,8 @@ static ConstantValue unpackBitstream(const Type& type, PackIterator& iter,
     if (type.isUnpackedStruct()) {
         SmallVector<ConstantValue> buffer;
         auto& ct = type.getCanonicalType();
-        for (auto& field : ct.as<UnpackedStructType>().membersOfType<FieldSymbol>())
-            buffer.emplace_back(unpackBitstream(field.getType(), iter, iterEnd, bit, dynamicSize));
+        for (auto field : ct.as<UnpackedStructType>().fields)
+            buffer.emplace_back(unpackBitstream(field->getType(), iter, iterEnd, bit, dynamicSize));
 
         return constContainer(ct, buffer);
     }
