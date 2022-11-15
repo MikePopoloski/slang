@@ -2858,3 +2858,27 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Proc subroutine multiple driver tracking") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    logic [9:0] a;
+    always_comb begin
+        for (int i = 0; i < $size(a); i++)
+            a[i] = 0;
+        baz();
+        baz();
+    end
+
+    task baz;
+        a[0] = 1;
+    endtask
+endmodule
+)");
+
+    // This tests a crash due to invalidating iterators while
+    // iterating the variable's driver map.
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
