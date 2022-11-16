@@ -846,7 +846,7 @@ void CoverCrossSymbol::addBody(const syntax::CoverCrossSyntax& syntax, const Sco
 
     StructBuilder valType(*body, LookupLocation::min);
     for (auto item : targets)
-        valType.addField(item->name, item->declaredType);
+        valType.addField(item->name, item->declaredType.getType());
 
     auto valType_t = comp.emplace<TypeAliasType>("CrossValType", location);
     valType_t->targetType.setType(valType.type);

@@ -107,17 +107,7 @@ void StructBuilder::addField(string_view name, const Type& fieldType,
 
     currFieldIndex++;
     currBitOffset += fieldType.getSelectableWidth();
-}
-
-void StructBuilder::addField(string_view name, const DeclaredType& typeLink,
-                             bitmask<VariableFlags> flags) {
-    auto field = compilation.emplace<FieldSymbol>(name, NL, currBitOffset, currFieldIndex);
-    field->flags = flags;
-    field->getDeclaredType()->setLink(typeLink);
-    type.addMember(*field);
-
-    currFieldIndex++;
-    currBitOffset += typeLink.getType().getSelectableWidth();
+    type.selectableWidth = currBitOffset;
 }
 
 } // namespace slang::ast

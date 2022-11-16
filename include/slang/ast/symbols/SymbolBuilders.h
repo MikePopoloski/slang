@@ -80,10 +80,6 @@ public:
     void addField(string_view name, const Type& fieldType,
                   bitmask<VariableFlags> flags = VariableFlags::None);
 
-    /// Adds a field to the struct, linking its type to the given declared type.
-    void addField(string_view name, const DeclaredType& typeLink,
-                  bitmask<VariableFlags> flags = VariableFlags::None);
-
 private:
     uint32_t currBitOffset = 0;
     uint32_t currFieldIndex = 0;

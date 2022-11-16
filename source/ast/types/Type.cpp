@@ -147,34 +147,17 @@ size_t Type::bitstreamWidth() const {
 
 uint32_t Type::getSelectableWidth() const {
     auto& ct = getCanonicalType();
-    uint32_t width = ct.getBitWidth();
-    if (width > 0)
-        return width;
-
-    // TODO: check for overflow
-    if (ct.isUnpackedArray()) {
-        if (ct.kind != SymbolKind::FixedSizeUnpackedArrayType)
-            return 1;
-
-        auto& fsa = ct.as<FixedSizeUnpackedArrayType>();
-        return fsa.elementType.getSelectableWidth() * fsa.range.width();
+    switch (ct.kind) {
+        case SymbolKind::FixedSizeUnpackedArrayType:
+            return ct.as<FixedSizeUnpackedArrayType>().selectableWidth;
+        case SymbolKind::UnpackedStructType:
+            return ct.as<UnpackedStructType>().selectableWidth;
+        case SymbolKind::UnpackedUnionType:
+            return ct.as<UnpackedUnionType>().selectableWidth;
+        default:
+            uint32_t width = ct.getBitWidth();
+            return width > 0 ? width : 1;
     }
-
-    if (ct.isUnpackedStruct()) {
-        auto& us = ct.as<UnpackedStructType>();
-        for (auto field : us.fields)
-            width += field->getType().getSelectableWidth();
-        return width;
-    }
-
-    if (ct.isUnpackedUnion()) {
-        auto& us = ct.as<UnpackedUnionType>();
-        for (auto field : us.fields)
-            width = std::max(width, field->getType().getSelectableWidth());
-        return width;
-    }
-
-    return 1;
 }
 
 bool Type::isSigned() const {

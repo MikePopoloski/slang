@@ -157,6 +157,7 @@ class SLANG_EXPORT FixedSizeUnpackedArrayType : public Type {
 public:
     const Type& elementType;
     ConstantRange range;
+    uint32_t selectableWidth;
 
     FixedSizeUnpackedArrayType(const Type& elementType, ConstantRange range);
 
@@ -226,6 +227,7 @@ public:
 class SLANG_EXPORT UnpackedStructType : public Type, public Scope {
 public:
     span<const FieldSymbol* const> fields;
+    uint32_t selectableWidth = 0;
     int systemId;
 
     UnpackedStructType(Compilation& compilation, SourceLocation loc, const ASTContext& context);
@@ -259,6 +261,7 @@ public:
 class SLANG_EXPORT UnpackedUnionType : public Type, public Scope {
 public:
     span<const FieldSymbol* const> fields;
+    uint32_t selectableWidth = 0;
     int systemId;
     bool isTagged;
 

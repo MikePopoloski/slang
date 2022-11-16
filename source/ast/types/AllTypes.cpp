@@ -644,6 +644,9 @@ FixedSizeUnpackedArrayType::FixedSizeUnpackedArrayType(const Type& elementType,
                                                        ConstantRange range) :
     Type(SymbolKind::FixedSizeUnpackedArrayType, "", SourceLocation()),
     elementType(elementType), range(range) {
+
+    // TODO: overflow
+    selectableWidth = elementType.getSelectableWidth() * range.width();
 }
 
 const Type& FixedSizeUnpackedArrayType::fromDims(Compilation& compilation, const Type& elementType,
@@ -833,6 +836,7 @@ const Type& UnpackedStructType::fromSyntax(const ASTContext& context,
         }
     }
 
+    result->selectableWidth = bitOffset;
     result->fields = fields.copy(comp);
     for (auto field : result->fields) {
         // Force resolution of the initializer right away, otherwise nothing
@@ -980,6 +984,9 @@ const Type& UnpackedUnionType::fromSyntax(const ASTContext& context,
             field->setAttributes(*context.scope, member->attributes);
             result->addMember(*field);
             fields.push_back(field);
+
+            result->selectableWidth = std::max(result->selectableWidth,
+                                               field->getType().getSelectableWidth());
         }
     }
 
