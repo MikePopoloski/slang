@@ -1,6 +1,6 @@
 //------------------------------------------------------------------------------
 //! @file PointerIntPair.h
-//! @brief Space optimize pointer + int pair type
+//! @brief Space optimized pointer + int pair type
 //
 // SPDX-FileCopyrightText: Michael Popoloski
 // SPDX-License-Identifier: MIT
@@ -11,6 +11,9 @@
 
 namespace slang {
 
+/// A data structure that operates as a pair of a pointer and an integer,
+/// which fits in the space of one full sized pointer by exploiting unused
+/// bits in the pointer representation.
 template<typename TPointer, uint32_t IntBits, uint32_t LowBitsAvailable, typename TInt = uint32_t>
 class PointerIntPair {
     enum : uintptr_t {

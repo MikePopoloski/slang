@@ -27,7 +27,7 @@ TEST_CASE("IntervalMap -- empty map") {
 TEST_CASE("IntervalMap -- small num elems in root leaf") {
     IntervalMap<int32_t, int32_t> map;
     BumpAllocator ba;
-    IntervalMap<int32_t, int32_t>::Allocator alloc(ba);
+    IntervalMap<int32_t, int32_t>::allocator_type alloc(ba);
 
     map.insert(1, 10, 1, alloc);
     map.insert(3, 7, 2, alloc);
@@ -78,7 +78,7 @@ TEST_CASE("IntervalMap -- small num elems in root leaf") {
 TEST_CASE("IntervalMap -- branching inserts") {
     IntervalMap<int32_t, int32_t> map;
     BumpAllocator ba;
-    IntervalMap<int32_t, int32_t>::Allocator alloc(ba);
+    IntervalMap<int32_t, int32_t>::allocator_type alloc(ba);
 
     using Int32 = std::tuple<int32_t, int32_t, int32_t>;
     std::vector<Int32> expectedOverlap;

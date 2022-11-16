@@ -11,11 +11,19 @@
 
 namespace slang {
 
+/// @brief A simple pool allocator built on top of a bump allocator.
+///
+/// The pool contains objects of type T, or objects of some type
+/// derived from type T.
 template<typename T, size_t Size = sizeof(T), size_t Align = alignof(T)>
 class PoolAllocator {
 public:
+    /// Constructs a new instance of PoolAllocator.
     explicit PoolAllocator(BumpAllocator& alloc) : alloc(alloc) {}
 
+    /// Allocates and constructs a new object of type TSubClass,
+    /// reusing pooled memory if any is available and requesting more from
+    /// the underlying BumpAllocator if not.
     template<typename TSubClass, typename... Args>
     TSubClass* emplace(Args&&... args) {
         static_assert(sizeof(TSubClass) <= Size);
@@ -26,11 +34,16 @@ public:
         return new (mem) TSubClass(std::forward<Args>(args)...);
     }
 
+    /// Allocates and constructs a new object of type T,
+    /// reusing pooled memory if any is available and requesting more from
+    /// the underlying BumpAllocator if not.
     template<typename... Args>
     T* emplace(Args&&... args) {
         return emplace<T>(std::forward<Args>(args)...);
     }
 
+    /// Destroys the given object and returns its memory to the pool to be
+    /// reused by future allocations.
     template<typename TSubClass>
     void destroy(TSubClass* elem) {
         static_assert(Size >= sizeof(FreeNode));

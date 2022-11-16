@@ -167,30 +167,31 @@ void registerSymbols(py::module_& m) {
         .def_readonly("topInstances", &RootSymbol::topInstances)
         .def_readonly("compilationUnits", &RootSymbol::compilationUnits);
 
-    py::class_<ValueSymbol, Symbol> valueSymbol(m, "ValueSymbol");
-    valueSymbol.def_property_readonly("type", &ValueSymbol::getType)
+    py::class_<ValueSymbol, Symbol>(m, "ValueSymbol")
+        .def_property_readonly("type", &ValueSymbol::getType)
         .def_property_readonly("initializer", &ValueSymbol::getInitializer)
-        .def_property_readonly("firstDriver", &ValueSymbol::getFirstDriver);
+        .def(
+            "__iter__",
+            [](const ValueSymbol& self) {
+                auto drivers = self.drivers();
+                return py::make_iterator(drivers.begin(), drivers.end());
+            },
+            py::keep_alive<0, 1>());
 
-    py::class_<ValueSymbol::Driver>(valueSymbol, "Driver")
-        .def_readonly("containingSymbol", &ValueSymbol::Driver::containingSymbol)
-        .def_readonly("sourceRange", &ValueSymbol::Driver::sourceRange)
-        .def_readonly("numPrefixEntries", &ValueSymbol::Driver::numPrefixEntries)
-        .def_readonly("kind", &ValueSymbol::Driver::kind)
-        .def_readonly("hasOriginalRange", &ValueSymbol::Driver::hasOriginalRange)
-        .def_readonly("hasError", &ValueSymbol::Driver::hasError)
-        .def_property_readonly("nextDriver", &ValueSymbol::Driver::getNextDriver)
-        .def_property_readonly("prefix", &ValueSymbol::Driver::getPrefix)
-        .def_property_readonly("originalRange", &ValueSymbol::Driver::getOriginalRange)
-        .def_property_readonly("isInputPort", &ValueSymbol::Driver::isInputPort)
-        .def_property_readonly("isUnidirectionalPort", &ValueSymbol::Driver::isUnidirectionalPort)
-        .def_property_readonly("isClockVar", &ValueSymbol::Driver::isClockVar)
-        .def_property_readonly("isLocalVarFormalArg", &ValueSymbol::Driver::isLocalVarFormalArg)
-        .def_property_readonly("isInSingleDriverProcedure",
-                               &ValueSymbol::Driver::isInSingleDriverProcedure)
-        .def_property_readonly("isInSubroutine", &ValueSymbol::Driver::isInSubroutine)
-        .def_property_readonly("isInInitialBlock", &ValueSymbol::Driver::isInInitialBlock)
-        .def("overlaps", &ValueSymbol::Driver::overlaps);
+    py::class_<ValueDriver>(m, "ValueDriver")
+        .def_readonly("prefixExpression", &ValueDriver::prefixExpression)
+        .def_readonly("containingSymbol", &ValueDriver::containingSymbol)
+        .def_readonly("procCallExpression", &ValueDriver::procCallExpression)
+        .def_readonly("kind", &ValueDriver::kind)
+        .def_readonly("flags", &ValueDriver::flags)
+        .def_property_readonly("sourceRange", &ValueDriver::getSourceRange)
+        .def_property_readonly("isInputPort", &ValueDriver::isInputPort)
+        .def_property_readonly("isUnidirectionalPort", &ValueDriver::isUnidirectionalPort)
+        .def_property_readonly("isClockVar", &ValueDriver::isClockVar)
+        .def_property_readonly("isLocalVarFormalArg", &ValueDriver::isLocalVarFormalArg)
+        .def_property_readonly("isInSingleDriverProcedure", &ValueDriver::isInSingleDriverProcedure)
+        .def_property_readonly("isInSubroutine", &ValueDriver::isInSubroutine)
+        .def_property_readonly("isInInitialBlock", &ValueDriver::isInInitialBlock);
 
     py::class_<EnumValueSymbol, ValueSymbol>(m, "EnumValueSymbol")
         .def_property_readonly("value",
@@ -249,7 +250,8 @@ void registerSymbols(py::module_& m) {
         .def_readonly("direction", &FormalArgumentSymbol::direction);
 
     py::class_<FieldSymbol, VariableSymbol>(m, "FieldSymbol")
-        .def_readonly("offset", &FieldSymbol::offset)
+        .def_readonly("bitOffset", &FieldSymbol::bitOffset)
+        .def_readonly("fieldIndex", &FieldSymbol::fieldIndex)
         .def_readonly("randMode", &FieldSymbol::randMode);
 
     py::class_<NetSymbol, ValueSymbol> netSymbol(m, "NetSymbol");

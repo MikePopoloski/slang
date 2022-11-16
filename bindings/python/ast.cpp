@@ -419,7 +419,6 @@ void registerAST(py::module_& m) {
         .def_property_readonly("right", &RangeSelectExpression::right);
 
     py::class_<MemberAccessExpression, Expression>(m, "MemberAccessExpression")
-        .def_readonly("offset", &MemberAccessExpression::offset)
         .def_property_readonly("value", py::overload_cast<>(&MemberAccessExpression::value))
         .def_property_readonly("member",
                                [](const MemberAccessExpression& self) { return &self.member; });

@@ -424,16 +424,17 @@ std::optional<std::pair<uint32_t, uint32_t>> ValueDriver::getBounds(
             return std::nullopt;
 
         auto range = *elemRange;
+        ASSERT(range.left >= 0 && range.right >= 0);
+
         if (type->kind == SymbolKind::FixedSizeUnpackedArrayType) {
             // Unpacked arrays need their selection adjusted since they
             // return a simple index instead of a bit offset.
             uint32_t elemWidth = elem.type->getSelectableWidth();
-            result.first += range.lower() * elemWidth;
+            result.first += (uint32_t)range.lower() * elemWidth;
             result.second = result.first + elemWidth - 1;
         }
         else {
-            ASSERT(range.left >= 0 && range.right >= 0);
-            result.first += range.lower();
+            result.first += (uint32_t)range.lower();
             result.second = result.first + range.width() - 1;
         }
 

@@ -103,32 +103,59 @@ private:
     mutable const PortBackref* firstPortBackref = nullptr;
 };
 
+/// Represents an expression that drives a value by assigning
+/// to some range of its type.
 class SLANG_EXPORT ValueDriver {
 public:
+    /// The expression that drives the value.
     not_null<const Expression*> prefixExpression;
+
+    /// The symbol that contains the driver expression.
     not_null<const Symbol*> containingSymbol;
+
+    /// If the driver is implied inside a procedure by a subroutine,
+    /// this is the call expression for that subroutine.
     const Expression* procCallExpression = nullptr;
+
+    /// Flags that control how the driver operates.
     bitmask<AssignFlags> flags;
+
+    /// The kind of driver (procedural or continuous).
     DriverKind kind;
 
+    /// Constructs a new ValueDriver instance.
     ValueDriver(DriverKind kind, const Expression& longestStaticPrefix,
                 const Symbol& containingSymbol, bitmask<AssignFlags> flags) :
         prefixExpression(&longestStaticPrefix),
         containingSymbol(&containingSymbol), flags(flags), kind(kind) {}
 
+    /// Indicates whether the driver is for an input port.
     bool isInputPort() const { return flags.has(AssignFlags::InputPort); }
+
+    /// Indicates whether the driver is for a unidirectional port (i.e. not an inout or ref port).
     bool isUnidirectionalPort() const {
         return flags.has(AssignFlags::InputPort | AssignFlags::OutputPort);
     }
+
+    /// Indicates whether the driver is for a clocking variable.
     bool isClockVar() const { return flags.has(AssignFlags::ClockVar); }
+
+    /// Indicates whether the driver is for an assertion local variable formal argument.
     bool isLocalVarFormalArg() const { return flags.has(AssignFlags::AssertionLocalVarFormalArg); }
 
+    /// Indicates whether the driver is inside a single-driver procedure (such as always_comb).
     bool isInSingleDriverProcedure() const;
+
+    /// Indicates whether the driver is inside a subroutine.
     bool isInSubroutine() const;
+
+    /// Indicates whether the driver is inside an initial block.
     bool isInInitialBlock() const;
 
+    /// Gets the source range describing the driver as written in the source code.
     SourceRange getSourceRange() const;
 
+    /// Computes bounds for a driver given its longest static prefix expression.
     static std::optional<std::pair<uint32_t, uint32_t>> getBounds(
         const Expression& prefixExpression, EvalContext& evalContext, const Type& rootType);
 };

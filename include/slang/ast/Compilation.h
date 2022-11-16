@@ -424,7 +424,7 @@ public:
         return genericClassAllocator.emplace(std::forward<Args>(args)...);
     }
 
-    DriverIntervalMap::Allocator& getDriverMapAllocator() { return driverMapAllocator; }
+    DriverIntervalMap::allocator_type& getDriverMapAllocator() { return driverMapAllocator; }
 
     const syntax::ImplicitTypeSyntax& createEmptyTypeSyntax(SourceLocation loc);
 
@@ -468,7 +468,7 @@ private:
     TypedBumpAllocator<PointerMap> pointerMapAllocator;
     TypedBumpAllocator<ConstantValue> constantAllocator;
     TypedBumpAllocator<GenericClassDefSymbol> genericClassAllocator;
-    DriverIntervalMap::Allocator driverMapAllocator;
+    DriverIntervalMap::allocator_type driverMapAllocator;
 
     // A table to look up scalar types based on combinations of the three flags: signed, fourstate,
     // reg. Two of the entries are not valid and will be nullptr (!fourstate & reg).

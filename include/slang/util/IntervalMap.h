@@ -357,6 +357,27 @@ SLANG_EXPORT IndexPair distribute(uint32_t numNodes, uint32_t numElements, uint3
 
 } // namespace IntervalMapDetails
 
+/// @brief A data structure that maps from intervals (closed ranges) to values.
+///
+/// The first N intervals will be stored inline with the object itself,
+/// so no allocations will occur until that space is exhausted. Once it is,
+/// the map switches to a B+ tree representation with very small overhead for
+/// small key and value objects.
+///
+/// Overlapping and duplicate intervals are allowed.
+///
+/// New branches of the B+ tree are allocated via a provided PoolAllocator
+/// instance. This allocator is not stored in the map itself, but instead
+/// provided on each insert call. This trades off convenience to save
+/// space in the map object.
+///
+/// The memory reserved by the map from the PoolAllocator is not returned
+/// in its destructor (IntervalMap has a trivial destructor). This is so
+/// it can be used in types that themselves require a trivial destructor.
+/// The tradeoff is that the reserved memory is not returnable to the pool
+/// once the map is destroyed, and you must dispose of the PoolAllocator
+/// itself to free up the memory.
+///
 template<typename TKey, typename TValue>
 class IntervalMap {
     enum {
@@ -387,7 +408,12 @@ class IntervalMap {
     using Branch = IntervalMapDetails::BranchNode<TKey, BranchSize>;
 
 public:
-    using Allocator = PoolAllocator<char, AllocBytes, CacheLineBytes>;
+    using key_type = TKey;
+    using value_type = TValue;
+    using size_type = size_t;
+    using difference_type = ptrdiff_t;
+    using allocator_type = PoolAllocator<char, AllocBytes, CacheLineBytes>;
+
     class iterator;
     class const_iterator;
     class overlap_iterator;
@@ -404,9 +430,13 @@ public:
     /// Not copyable.
     IntervalMap& operator=(const IntervalMap&) = delete;
 
+    /// Indicates whether the map is empty.
     bool empty() const { return rootSize == 0; }
 
-    void insert(TKey left, TKey right, const TValue& value, Allocator& alloc) {
+    /// @brief Inserts a new interval and value pair into the map.
+    ///
+    /// Insertion complexity is O(log n)
+    void insert(TKey left, TKey right, const TValue& value, allocator_type& alloc) {
         if (isFlat() && rootSize != Leaf::Capacity) {
             uint32_t i = rootLeaf.find(rootSize, {left, right});
             rootSize = rootLeaf.insertFrom(i, rootSize, {left, right}, value);
@@ -418,50 +448,74 @@ public:
         }
     }
 
-    void insert(const std::pair<TKey, TKey>& key, const TValue& value, Allocator& alloc) {
+    /// @brief Inserts a new interval and value pair into the map.
+    ///
+    /// Insertion complexity is O(log n)
+    void insert(const std::pair<TKey, TKey>& key, const TValue& value, allocator_type& alloc) {
         insert(key.first, key.second, value, alloc);
     }
 
+    /// Returns an iterator at the start of the map.
     iterator begin() {
         iterator i(*this);
         i.setToBegin();
         return i;
     }
 
+    /// Returns an iterator at the start of the map.
     const_iterator begin() const {
         const_iterator i(*this);
         i.setToBegin();
         return i;
     }
 
+    /// Returns an iterator at the end of the map.
     iterator end() {
         iterator i(*this);
         i.setToEnd();
         return i;
     }
 
+    /// Returns an iterator at the end of the map.
     const_iterator end() const {
         const_iterator i(*this);
         i.setToEnd();
         return i;
     }
 
+    /// @brief Finds all intervals that overlap the given interval.
+    ///
+    /// The returned iterator can be used to traverse all of the
+    /// overlapping intervals.
+    ///
+    /// The complexity is O(log n + m) where n is the number of intervals
+    /// in the map and m is the number of overlapping intervals found.
     overlap_iterator find(TKey left, TKey right) const {
         overlap_iterator i(*this, left, right);
         i.setToBegin();
         return i;
     }
 
+    /// @brief Finds all intervals that overlap the given interval.
+    ///
+    /// The returned iterator can be used to traverse all of the
+    /// overlapping intervals.
+    ///
+    /// The complexity is O(log n + m) where n is the number of intervals
+    /// in the map and m is the number of overlapping intervals found.
     overlap_iterator find(const std::pair<TKey, TKey>& key) const {
         return find(key.first, key.second);
     }
 
+    /// Gets an interval encompassing the entire set of items in the map.
     std::pair<TKey, TKey> getBounds() const {
         ASSERT(!empty());
         auto ival = isFlat() ? rootLeaf.getBounds(rootSize) : rootBranch.getBounds(rootSize);
         return {ival.left, ival.right};
     }
 
+    /// Verifies the internal state of the map, ASSERTing if it's not valid.
+    /// This is only intended for use with unit tests.
     void verify() const {
         if (isFlat())
             return;
@@ -480,13 +534,14 @@ private:
     void verify(const Branch& branch, uint32_t size, uint32_t depth, TKey& lastKey) const;
 
     template<typename TNode, bool SwitchToBranch>
-    IntervalMapDetails::IndexPair modifyRoot(TNode& rootNode, uint32_t position, Allocator& alloc);
+    IntervalMapDetails::IndexPair modifyRoot(TNode& rootNode, uint32_t position,
+                                             allocator_type& alloc);
 
-    IntervalMapDetails::IndexPair switchToBranch(uint32_t position, Allocator& alloc) {
+    IntervalMapDetails::IndexPair switchToBranch(uint32_t position, allocator_type& alloc) {
         return modifyRoot<Leaf, true>(rootLeaf, position, alloc);
     }
 
-    IntervalMapDetails::IndexPair splitRoot(uint32_t position, Allocator& alloc) {
+    IntervalMapDetails::IndexPair splitRoot(uint32_t position, allocator_type& alloc) {
         return modifyRoot<Branch, false>(rootBranch, position, alloc);
     }
 
@@ -634,14 +689,14 @@ private:
 
     iterator(IntervalMap& map) : const_iterator(map) {}
 
-    void insert(TKey left, TKey right, const TValue& value, Allocator& alloc);
+    void insert(TKey left, TKey right, const TValue& value, allocator_type& alloc);
     void updateParentBounds(uint32_t level, const IntervalMapDetails::interval<TKey>& key);
     void recomputeBounds(uint32_t level);
     bool insertNode(uint32_t level, IntervalMapDetails::NodeRef node,
-                    const IntervalMapDetails::interval<TKey>& key, Allocator& alloc);
+                    const IntervalMapDetails::interval<TKey>& key, allocator_type& alloc);
 
     template<typename TNode>
-    bool overflow(uint32_t level, Allocator& alloc);
+    bool overflow(uint32_t level, allocator_type& alloc);
 };
 
 template<typename TKey, typename TValue>
@@ -764,7 +819,7 @@ template<typename TKey, typename TValue>
 template<typename TNode, bool SwitchToBranch>
 IntervalMapDetails::IndexPair IntervalMap<TKey, TValue>::modifyRoot(TNode& rootNode,
                                                                     uint32_t position,
-                                                                    Allocator& alloc) {
+                                                                    allocator_type& alloc) {
     using namespace IntervalMapDetails;
 
     // Split the root branch node into two new nodes.
@@ -850,7 +905,7 @@ void IntervalMap<TKey, TValue>::const_iterator::treeFind(TKey left, TKey right) 
 
 template<typename TKey, typename TValue>
 void IntervalMap<TKey, TValue>::iterator::insert(TKey left, TKey right, const TValue& value,
-                                                 Allocator& alloc) {
+                                                 allocator_type& alloc) {
     using namespace IntervalMapDetails;
 
     auto& map = *this->map;
@@ -909,7 +964,7 @@ void IntervalMap<TKey, TValue>::iterator::recomputeBounds(uint32_t level) {
 
 template<typename TKey, typename TValue>
 template<typename TNode>
-bool IntervalMap<TKey, TValue>::iterator::overflow(uint32_t level, Allocator& alloc) {
+bool IntervalMap<TKey, TValue>::iterator::overflow(uint32_t level, allocator_type& alloc) {
     ASSERT(level > 0);
     using namespace IntervalMapDetails;
 
@@ -962,7 +1017,7 @@ bool IntervalMap<TKey, TValue>::iterator::overflow(uint32_t level, Allocator& al
 
         for (int m = int(n - 1); m != -1; --m) {
             int delta = nodes[n]->adjustFromLeftSib(curSizes[n], *nodes[m], curSizes[m],
-                                                    newSizes[n] - curSizes[n]);
+                                                    int(newSizes[n]) - int(curSizes[n]));
             curSizes[m] = uint32_t(int(curSizes[m]) - delta);
             curSizes[n] = uint32_t(int(curSizes[n]) + delta);
 
@@ -979,7 +1034,7 @@ bool IntervalMap<TKey, TValue>::iterator::overflow(uint32_t level, Allocator& al
 
         for (uint32_t m = n + 1; m < numNodes; m++) {
             int delta = nodes[m]->adjustFromLeftSib(curSizes[m], *nodes[n], curSizes[n],
-                                                    curSizes[n] - newSizes[n]);
+                                                    int(curSizes[n]) - int(newSizes[n]));
             curSizes[m] = uint32_t(int(curSizes[m]) + delta);
             curSizes[n] = uint32_t(int(curSizes[n]) - delta);
 
@@ -1031,7 +1086,7 @@ template<typename TKey, typename TValue>
 bool IntervalMap<TKey, TValue>::iterator::insertNode(uint32_t level,
                                                      IntervalMapDetails::NodeRef node,
                                                      const IntervalMapDetails::interval<TKey>& key,
-                                                     Allocator& alloc) {
+                                                     allocator_type& alloc) {
     ASSERT(level > 0);
 
     bool split = false;

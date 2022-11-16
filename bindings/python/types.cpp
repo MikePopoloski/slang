@@ -23,6 +23,7 @@ void registerTypes(py::module_& m) {
         .def_property_readonly("canonicalType", &Type::getCanonicalType)
         .def_property_readonly("bitWidth", &Type::getBitWidth)
         .def_property_readonly("bitstreamWidth", &Type::bitstreamWidth)
+        .def_property_readonly("selectableWidth", &Type::getSelectableWidth)
         .def_property_readonly("isSigned", &Type::isSigned)
         .def_property_readonly("isFourState", &Type::isFourState)
         .def_property_readonly("isAggregate", &Type::isAggregate)
