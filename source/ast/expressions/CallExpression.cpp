@@ -830,16 +830,19 @@ public:
 
         // If the target symbol is driven by the subroutine we're inspecting,
         // add another driver for the procedure we're originally called from.
-        SmallVector<const ValueDriver*> drivers;
-        for (auto& driver : expr.symbol.drivers()) {
-            if (driver.containingSymbol == &sub)
-                drivers.push_back(&driver);
+        SmallVector<std::pair<std::pair<uint32_t, uint32_t>, const ValueDriver*>> drivers;
+        auto range = expr.symbol.drivers();
+        for (auto it = range.begin(); it != range.end(); ++it) {
+            if ((*it)->containingSymbol == &sub)
+                drivers.push_back({it.bounds(), *it});
         }
 
         // This needs to be a separate loop to avoid mutating the driver map
         // while iterating over it.
-        for (auto driver : drivers)
-            expr.symbol.addDriver(DriverKind::Procedural, *driver, procedure, callExpr);
+        for (auto [bounds, driver] : drivers) {
+            expr.symbol.addDriver(DriverKind::Procedural, bounds, *driver->prefixExpression,
+                                  procedure, callExpr);
+        }
     }
 };
 

@@ -63,40 +63,17 @@ public:
 
     static bool isKind(SymbolKind kind);
 
-    class driver_iterator
-        : public iterator_facade<driver_iterator, std::forward_iterator_tag, const ValueDriver> {
-    public:
-        driver_iterator() = default;
-        driver_iterator(DriverIntervalMap::const_iterator it) : it(it) {}
-
-        bool operator==(const driver_iterator& other) const { return it == other.it; }
-
-        const ValueDriver& operator*() const { return **it; }
-        const ValueDriver& operator*() { return **it; }
-
-        driver_iterator& operator++() {
-            ++it;
-            return *this;
-        }
-
-        driver_iterator operator++(int) {
-            driver_iterator tmp = *this;
-            ++(*this);
-            return tmp;
-        }
-
-    private:
-        DriverIntervalMap::const_iterator it;
-    };
-
     void addDriver(DriverKind kind, const Expression& longestStaticPrefix,
                    const Symbol& containingSymbol, bitmask<AssignFlags> flags,
                    EvalContext* customEvalContext = nullptr) const;
 
-    void addDriver(DriverKind kind, const ValueDriver& prefixFrom, const Symbol& containingSymbol,
+    void addDriver(DriverKind kind, std::pair<uint32_t, uint32_t> bounds,
+                   const Expression& longestStaticPrefix, const Symbol& containingSymbol,
                    const Expression& procCallExpression) const;
 
-    iterator_range<driver_iterator> drivers() const { return {driverMap.begin(), driverMap.end()}; }
+    iterator_range<DriverIntervalMap::const_iterator> drivers() const {
+        return {driverMap.begin(), driverMap.end()};
+    }
 
     class PortBackref {
     public:
@@ -118,7 +95,8 @@ protected:
                 bitmask<DeclaredTypeFlags> flags = DeclaredTypeFlags::None);
 
 private:
-    void addDriverImpl(const Scope& scope, const ValueDriver& driver) const;
+    void addDriverImpl(const Scope& scope, std::pair<uint32_t, uint32_t> bounds,
+                       const ValueDriver& driver) const;
 
     DeclaredType declaredType;
     mutable DriverIntervalMap driverMap;
@@ -129,9 +107,14 @@ class ValueDriver {
 public:
     not_null<const Expression*> prefixExpression;
     not_null<const Symbol*> containingSymbol;
-    uint32_t numPrefixEntries;
+    const Expression* procCallExpression = nullptr;
     bitmask<AssignFlags> flags;
     DriverKind kind;
+
+    ValueDriver(DriverKind kind, const Expression& longestStaticPrefix,
+                const Symbol& containingSymbol, bitmask<AssignFlags> flags) :
+        prefixExpression(&longestStaticPrefix),
+        containingSymbol(&containingSymbol), flags(flags), kind(kind) {}
 
     bool isInputPort() const { return flags.has(AssignFlags::InputPort); }
     bool isUnidirectionalPort() const {
@@ -144,26 +127,10 @@ public:
     bool isInSubroutine() const;
     bool isInInitialBlock() const;
 
-    span<const ConstantRange> getPrefixRanges() const;
-    const Expression* getProcCallExpression() const;
     SourceRange getSourceRange() const;
-    std::pair<uint32_t, uint32_t> getBounds(const Type& rootType) const;
 
-    static ValueDriver* create(EvalContext& evalContext, DriverKind kind,
-                               const Expression& longestStaticPrefix,
-                               const Symbol& containingSymbol, bitmask<AssignFlags> flags);
-
-    static ValueDriver* create(Compilation& compilation, DriverKind kind,
-                               const ValueDriver& prefixFrom, const Symbol& containingSymbol,
-                               const Expression& procCallExpression);
-
-private:
-    ValueDriver(DriverKind kind, const Expression& longestStaticPrefix,
-                const Symbol& containingSymbol, uint32_t numPrefixEntries,
-                bitmask<AssignFlags> flags) :
-        prefixExpression(&longestStaticPrefix),
-        containingSymbol(&containingSymbol), numPrefixEntries(numPrefixEntries), flags(flags),
-        kind(kind) {}
+    static std::optional<std::pair<uint32_t, uint32_t>> getBounds(
+        const Expression& prefixExpression, EvalContext& evalContext, const Type& rootType);
 };
 
 } // namespace slang::ast

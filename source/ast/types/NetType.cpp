@@ -87,9 +87,11 @@ static void validateResolver(const NetType& netType, const SubroutineSymbol& res
     }
 
     resolver.getBody();
-    if (!args[0]->drivers().empty()) {
+
+    auto driverRange = args[0]->drivers();
+    if (!driverRange.empty()) {
         auto& diag = context.addDiag(diag::NTResolveArgModify,
-                                     args[0]->drivers().begin()->getSourceRange());
+                                     (*driverRange.begin())->getSourceRange());
         diag << netType.name << args[0]->name;
         diag.addNote(diag::NoteReferencedHere, range);
     }

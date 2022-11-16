@@ -1243,23 +1243,9 @@ std::optional<ConstantRange> MemberAccessExpression::getSelectRange() const {
         return std::nullopt;
 
     auto& field = member.as<FieldSymbol>();
-    auto& valueType = value().type->getCanonicalType();
-    if (valueType.isUnpackedStruct()) {
-        int32_t io = (int32_t)field.bitOffset;
-        return ConstantRange{io, io + (int32_t)type->getSelectableWidth()};
-    }
-    else if (valueType.isUnpackedUnion()) {
-        return ConstantRange{0, (int32_t)type->getSelectableWidth()};
-    }
-    else if (valueType.isPackedUnion()) {
-        int32_t width = (int32_t)type->getBitWidth();
-        return ConstantRange{width - 1, 0};
-    }
-    else {
-        int32_t io = (int32_t)field.bitOffset;
-        int32_t width = (int32_t)type->getBitWidth();
-        return ConstantRange{width + io - 1, io};
-    }
+    int32_t io = (int32_t)field.bitOffset;
+    int32_t width = (int32_t)type->getSelectableWidth();
+    return ConstantRange{width + io - 1, io};
 }
 
 static bool isWithinCovergroup(const Symbol& field, const Scope& usageScope) {

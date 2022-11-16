@@ -1554,63 +1554,61 @@ endmodule
     NO_COMPILATION_ERRORS;
 }
 
-// TODO: reenable
-// TEST_CASE("Unrollable for loop drivers") {
-//    auto tree = SyntaxTree::fromText(R"(
-// module m;
-//    int foo[10];
-//    initial
-//        for (int i = 1; i < 10; i += 2) begin : baz
-//            foo[i] = 2;
-//        end
-//
-//    for (genvar i = 0; i < 10; i += 2) begin
-//        always_comb foo[i] = 1;
-//    end
-//
-//    always_comb foo[1] = 1; // error
-//
-//    struct { int foo; int bar; } baz[3][2];
-//    initial begin
-//        while (1) begin
-//            for (int i = 0; i < 3; i++) begin
-//                for (int j = 0; j < 2; j++) begin
-//                    forever begin
-//                        if (i != 2 || j != 1)
-//                            #1 baz[i][j].foo = 1;
-//                    end
-//                end
-//            end
-//        end
-//    end
-//    for (genvar i = 0; i < 3; i++) begin
-//        always_comb baz[i][0].bar = 3;
-//    end
-//
-//    always_comb baz[1][1].foo = 4; // error
-//    always_comb baz[1][1].bar = 4;
-//    always_comb baz[2][1].foo = 3;
-//
-//    struct { int foo; int bar; } arr[2147483647];
-//    initial begin
-//        for (int i = 0; i < 2147483647; i++) begin
-//            arr[i].foo = 1;
-//        end
-//    end
-//    always_comb arr[0].bar = 2;
-// endmodule
-//)");
-//
-//    Compilation compilation;
-//    compilation.addSyntaxTree(tree);
-//    NO_COMPILATION_ERRORS;
-//
-//    auto& diags = compilation.getAllDiagnostics();
-//    REQUIRE(diags.size() == 3);
-//    CHECK(diags[0].code == diag::MultipleAlwaysAssigns);
-//    CHECK(diags[1].code == diag::MultipleAlwaysAssigns);
-//    CHECK(diags[2].code == diag::MultipleAlwaysAssigns);
-//}
+TEST_CASE("Unrollable for loop drivers") {
+    auto tree = SyntaxTree::fromText(R"(
+ module m;
+    int foo[10];
+    initial
+        for (int i = 1; i < 10; i += 2) begin : baz
+            foo[i] = 2;
+        end
+
+    for (genvar i = 0; i < 10; i += 2) begin
+        always_comb foo[i] = 1;
+    end
+
+    always_comb foo[1] = 1; // error
+
+    struct { int foo; int bar; } baz[3][2];
+    initial begin
+        while (1) begin
+            for (int i = 0; i < 3; i++) begin
+                for (int j = 0; j < 2; j++) begin
+                    forever begin
+                        if (i != 2 || j != 1)
+                            #1 baz[i][j].foo = 1;
+                    end
+                end
+            end
+        end
+    end
+    for (genvar i = 0; i < 3; i++) begin
+        always_comb baz[i][0].bar = 3;
+    end
+
+    always_comb baz[1][1].foo = 4; // error
+    always_comb baz[1][1].bar = 4;
+    always_comb baz[2][1].foo = 3;
+
+    struct { int foo; int bar; } arr[2147483647];
+    initial begin
+        for (int i = 0; i < 2147483647; i++) begin
+            arr[i].foo = 1;
+        end
+    end
+    always_comb arr[0].bar = 2;
+ endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 3);
+    CHECK(diags[0].code == diag::MultipleAlwaysAssigns);
+    CHECK(diags[1].code == diag::MultipleAlwaysAssigns);
+    CHECK(diags[2].code == diag::MultipleAlwaysAssigns);
+}
 
 TEST_CASE("Unrollable for loop drivers -- strict checking") {
     auto tree = SyntaxTree::fromText(R"(

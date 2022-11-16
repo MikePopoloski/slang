@@ -193,39 +193,40 @@ static bool handleOverlap(const Scope& scope, string_view name, const ValueDrive
 
 void ValueSymbol::addDriver(DriverKind driverKind, const Expression& longestStaticPrefix,
                             const Symbol& containingSymbol, bitmask<AssignFlags> flags,
-                            EvalContext* customEvalContext) const {
+                            EvalContext* evalContext) const {
     auto scope = getParentScope();
     ASSERT(scope);
 
     auto& comp = scope->getCompilation();
     EvalContext localEvalCtx(comp);
+    if (!evalContext)
+        evalContext = &localEvalCtx;
 
-    auto driver = ValueDriver::create(customEvalContext ? *customEvalContext : localEvalCtx,
-                                      driverKind, longestStaticPrefix, containingSymbol, flags);
-    if (!driver)
+    auto bounds = ValueDriver::getBounds(longestStaticPrefix, *evalContext, getType());
+    if (!bounds)
         return;
 
-    addDriverImpl(*scope, *driver);
+    auto driver = comp.emplace<ValueDriver>(driverKind, longestStaticPrefix, containingSymbol,
+                                            flags);
+    addDriverImpl(*scope, *bounds, *driver);
 }
 
-void ValueSymbol::addDriver(DriverKind driverKind, const ValueDriver& copyFrom,
-                            const Symbol& containingSymbol,
+void ValueSymbol::addDriver(DriverKind driverKind, std::pair<uint32_t, uint32_t> bounds,
+                            const Expression& longestStaticPrefix, const Symbol& containingSymbol,
                             const Expression& procCallExpression) const {
     auto scope = getParentScope();
     ASSERT(scope);
 
     auto& comp = scope->getCompilation();
-    auto driver = ValueDriver::create(comp, driverKind, copyFrom, containingSymbol,
-                                      procCallExpression);
-    ASSERT(driver);
+    auto driver = comp.emplace<ValueDriver>(driverKind, longestStaticPrefix, containingSymbol,
+                                            AssignFlags::SubFromProcedure);
+    driver->procCallExpression = &procCallExpression;
 
-    addDriverImpl(*scope, *driver);
+    addDriverImpl(*scope, bounds, *driver);
 }
 
-void ValueSymbol::addDriverImpl(const Scope& scope, const ValueDriver& driver) const {
-    auto& ourType = getType();
-    auto bounds = driver.getBounds(ourType);
-
+void ValueSymbol::addDriverImpl(const Scope& scope, std::pair<uint32_t, uint32_t> bounds,
+                                const ValueDriver& driver) const {
     auto& comp = scope.getCompilation();
     if (driverMap.empty()) {
         // The first time we add a driver, check whether there is also an
@@ -234,13 +235,11 @@ void ValueSymbol::addDriverImpl(const Scope& scope, const ValueDriver& driver) c
             auto& valExpr = *comp.emplace<NamedValueExpression>(
                 *this, SourceRange{location, location + name.length()});
 
-            EvalContext evalCtx(comp);
-            auto initDriver = ValueDriver::create(evalCtx, driverKind, valExpr, scope.asSymbol(),
-                                                  AssignFlags::None);
-            ASSERT(initDriver);
+            std::pair<uint32_t, uint32_t> initBounds{0, getType().getSelectableWidth() - 1};
+            auto initDriver = comp.emplace<ValueDriver>(driverKind, valExpr, scope.asSymbol(),
+                                                        AssignFlags::None);
 
-            driverMap.insert(initDriver->getBounds(ourType), initDriver,
-                             comp.getDriverMapAllocator());
+            driverMap.insert(initBounds, initDriver, comp.getDriverMapAllocator());
         };
 
         switch (kind) {
@@ -388,59 +387,6 @@ static void visitPrefixExpressions(const Expression& longestStaticPrefix, TCallb
     } while (expr);
 }
 
-ValueDriver* ValueDriver::create(EvalContext& evalContext, DriverKind kind,
-                                 const Expression& longestStaticPrefix,
-                                 const Symbol& containingSymbol, bitmask<AssignFlags> flags) {
-    SmallVector<const Expression*> path;
-    visitPrefixExpressions(longestStaticPrefix,
-                           [&](const Expression& expr) { path.push_back(&expr); });
-
-    size_t allocSize = sizeof(ValueDriver) + sizeof(ConstantRange) * path.size();
-
-    auto& comp = evalContext.compilation;
-    auto mem = comp.allocate(allocSize, alignof(ValueDriver));
-    auto result = new (mem)
-        ValueDriver(kind, longestStaticPrefix, containingSymbol, (uint32_t)path.size(), flags);
-
-    auto prefixMem = reinterpret_cast<ConstantRange*>(mem + sizeof(ValueDriver));
-
-    for (size_t i = path.size(); i > 0; i--) {
-        auto& elem = *path[i - 1];
-        auto elemRange = elem.evalSelector(evalContext);
-        if (!elemRange)
-            return nullptr;
-
-        *prefixMem = *elemRange;
-        prefixMem++;
-    }
-
-    return result;
-}
-
-ValueDriver* ValueDriver::create(Compilation& comp, DriverKind kind, const ValueDriver& prefixFrom,
-                                 const Symbol& containingSymbol,
-                                 const Expression& procCallExpression) {
-    auto prefixRanges = prefixFrom.getPrefixRanges();
-    size_t allocSize = sizeof(ValueDriver) + sizeof(const Expression*) +
-                       sizeof(ConstantRange) * prefixRanges.size();
-
-    auto mem = comp.allocate(allocSize, alignof(ValueDriver));
-    auto result = new (mem)
-        ValueDriver(kind, *prefixFrom.prefixExpression, containingSymbol,
-                    (uint32_t)prefixRanges.size(), AssignFlags::SubFromProcedure);
-
-    auto prefixMem = reinterpret_cast<ConstantRange*>(mem + sizeof(ValueDriver));
-    if (!prefixRanges.empty()) {
-        memcpy(prefixMem, prefixRanges.data(), sizeof(ConstantRange) * prefixRanges.size());
-        prefixMem += prefixRanges.size();
-    }
-
-    // Store the pointer to the call expression at the end of our memory range.
-    *reinterpret_cast<const Expression**>(prefixMem) = &procCallExpression;
-
-    return result;
-}
-
 bool ValueDriver::isInSingleDriverProcedure() const {
     return containingSymbol->kind == SymbolKind::ProceduralBlock &&
            containingSymbol->as<ProceduralBlockSymbol>().isSingleDriverBlock();
@@ -456,84 +402,46 @@ bool ValueDriver::isInInitialBlock() const {
                ProceduralBlockKind::Initial;
 }
 
-span<const ConstantRange> ValueDriver::getPrefixRanges() const {
-    return {reinterpret_cast<const ConstantRange*>(this + 1), numPrefixEntries};
-}
-
 SourceRange ValueDriver::getSourceRange() const {
-    if (auto procCall = getProcCallExpression())
-        return procCall->sourceRange;
+    if (procCallExpression)
+        return procCallExpression->sourceRange;
     return prefixExpression->sourceRange;
 }
 
-const Expression* ValueDriver::getProcCallExpression() const {
-    if (!flags.has(AssignFlags::SubFromProcedure))
-        return nullptr;
+std::optional<std::pair<uint32_t, uint32_t>> ValueDriver::getBounds(
+    const Expression& prefixExpression, EvalContext& evalContext, const Type& rootType) {
 
-    auto prefixMem = reinterpret_cast<const ConstantRange*>(this + 1);
-    prefixMem += numPrefixEntries;
-    return *reinterpret_cast<const Expression* const*>(prefixMem);
-}
-
-std::pair<uint32_t, uint32_t> ValueDriver::getBounds(const Type& rootType) const {
     auto type = &rootType.getCanonicalType();
-    auto ranges = getPrefixRanges();
-    auto rangeIt = ranges.begin();
-    std::pair<uint32_t, uint32_t> result{0, 1};
+    std::pair<uint32_t, uint32_t> result{0, type->getSelectableWidth() - 1};
 
-    auto updateWidth = [&](uint32_t width) {
-        // Scale the current bounds by the width of this dimension.
-        // TODO: handle overflow (complicated)
-        ASSERT(width);
-        result.first *= width;
-        result.second *= width;
-    };
+    SmallVector<const Expression*> path;
+    visitPrefixExpressions(prefixExpression,
+                           [&](const Expression& expr) { path.push_back(&expr); });
 
-    auto applyRange = [&] {
-        auto range = *rangeIt;
-        ASSERT(range.left >= 0 && range.right >= 0);
-        result.first += range.lower();
-        result.second = result.first + range.width() - 1;
-    };
+    for (size_t i = path.size(); i > 0; i--) {
+        auto& elem = *path[i - 1];
+        auto elemRange = elem.evalSelector(evalContext);
+        if (!elemRange)
+            return std::nullopt;
 
-    while (true) {
-        // Figure out the bounds of this type (either the array bounds or
-        // the number of elements for a struct).
-        switch (type->kind) {
-            case SymbolKind::FixedSizeUnpackedArrayType: {
-                auto& arrayType = type->as<FixedSizeUnpackedArrayType>();
-                updateWidth(arrayType.range.width());
-                type = &arrayType.elementType;
-
-                if (rangeIt != ranges.end()) {
-                    applyRange();
-                    rangeIt++;
-                }
-                break;
-            }
-            case SymbolKind::UnpackedStructType: {
-                return result;
-            }
-            case SymbolKind::UnpackedUnionType: {
-                // A write to any member of the union is a write to the whole thing.
-                return result;
-            }
-            default: {
-                // We don't have any more scaling to do, so apply any
-                // selectors we have left and return.
-                if (type->isIntegral()) {
-                    updateWidth(type->getBitWidth());
-                }
-                else {
-                    ASSERT(rangeIt == ranges.end());
-                }
-
-                for (auto end = ranges.end(); rangeIt != end; rangeIt++)
-                    applyRange();
-                return result;
-            }
+        auto range = *elemRange;
+        if (type->kind == SymbolKind::FixedSizeUnpackedArrayType) {
+            // Unpacked arrays need their selection adjusted since they
+            // return a simple index instead of a bit offset.
+            uint32_t elemWidth = elem.type->getSelectableWidth();
+            result.first += range.lower() * elemWidth;
+            result.second = result.first + elemWidth - 1;
         }
+        else {
+            ASSERT(range.left >= 0 && range.right >= 0);
+            result.first += range.lower();
+            result.second = result.first + range.width() - 1;
+        }
+
+        type = &elem.type->getCanonicalType();
     }
+
+    return result;
 }
 
 } // namespace slang::ast
