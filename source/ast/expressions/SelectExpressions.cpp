@@ -931,7 +931,7 @@ Expression& MemberAccessExpression::fromSelector(
         case SymbolKind::Field: {
             auto& field = member->as<FieldSymbol>();
             return *compilation.emplace<MemberAccessExpression>(field.getType(), expr, field,
-                                                                field.offset, range);
+                                                                range);
         }
         case SymbolKind::ClassProperty: {
             Lookup::ensureVisible(*member, context, selector.nameRange);
@@ -941,8 +941,7 @@ Expression& MemberAccessExpression::fromSelector(
                 return badExpr(compilation, &expr);
             }
 
-            return *compilation.emplace<MemberAccessExpression>(prop.getType(), expr, prop,
-                                                                std::nullopt, range);
+            return *compilation.emplace<MemberAccessExpression>(prop.getType(), expr, prop, range);
         }
         case SymbolKind::Subroutine: {
             Lookup::ensureVisible(*member, context, selector.nameRange);
@@ -962,7 +961,7 @@ Expression& MemberAccessExpression::fromSelector(
             if (errorIfNotProcedural())
                 return badExpr(compilation, &expr);
             return *compilation.emplace<MemberAccessExpression>(compilation.getVoidType(), expr,
-                                                                *member, std::nullopt, range);
+                                                                *member, range);
         }
         case SymbolKind::EnumValue:
             // The thing being selected from doesn't actually matter, since the
@@ -973,7 +972,7 @@ Expression& MemberAccessExpression::fromSelector(
             if (member->isValue()) {
                 auto& value = member->as<ValueSymbol>();
                 return *compilation.emplace<MemberAccessExpression>(value.getType(), expr, value,
-                                                                    std::nullopt, range);
+                                                                    range);
             }
 
             auto& diag = context.addDiag(diag::InvalidClassAccess, selector.dotLocation);
@@ -1148,15 +1147,14 @@ ConstantValue MemberAccessExpression::evalImpl(EvalContext& context) const {
     if (!cv)
         return nullptr;
 
-    ASSERT(offset.has_value());
-
+    auto& field = member.as<FieldSymbol>();
     auto& valueType = value().type->getCanonicalType();
     if (valueType.isUnpackedStruct()) {
-        return cv.elements()[*offset];
+        return cv.elements()[field.fieldIndex];
     }
     else if (valueType.isUnpackedUnion()) {
         auto& unionVal = cv.unionVal();
-        if (unionVal->activeMember == *offset)
+        if (unionVal->activeMember == field.fieldIndex)
             return unionVal->value;
 
         if (valueType.isTaggedUnion()) {
@@ -1185,14 +1183,15 @@ ConstantValue MemberAccessExpression::evalImpl(EvalContext& context) const {
     }
     else if (valueType.isPackedUnion()) {
         auto& cvi = cv.integer();
-        if (!checkPackedUnionTag(valueType, cvi, *offset, context, sourceRange, member.name)) {
+        if (!checkPackedUnionTag(valueType, cvi, field.fieldIndex, context, sourceRange,
+                                 member.name)) {
             return nullptr;
         }
 
         return cvi.slice(int32_t(type->getBitWidth() - 1), 0);
     }
     else {
-        int32_t io = (int32_t)*offset;
+        int32_t io = (int32_t)field.bitOffset;
         int32_t width = (int32_t)type->getBitWidth();
         return cv.integer().slice(width + io - 1, io);
     }
@@ -1203,28 +1202,26 @@ LValue MemberAccessExpression::evalLValueImpl(EvalContext& context) const {
     if (!lval)
         return nullptr;
 
-    ASSERT(offset.has_value());
-
-    int32_t io = (int32_t)*offset;
+    auto& field = member.as<FieldSymbol>();
     auto& valueType = value().type->getCanonicalType();
     if (valueType.isUnpackedStruct()) {
-        lval.addIndex(io, nullptr);
+        lval.addIndex((int32_t)field.fieldIndex, nullptr);
     }
     else if (valueType.isUnpackedUnion()) {
         if (valueType.isTaggedUnion()) {
             auto target = lval.resolve();
             ASSERT(target);
 
-            if (target->unionVal()->activeMember != *offset) {
+            if (target->unionVal()->activeMember != field.fieldIndex) {
                 context.addDiag(diag::ConstEvalTaggedUnion, sourceRange) << member.name;
                 return nullptr;
             }
         }
-        lval.addIndex(io, type->getDefaultValue());
+        lval.addIndex((int32_t)field.fieldIndex, type->getDefaultValue());
     }
     else if (valueType.isPackedUnion()) {
         auto cv = lval.load();
-        if (!checkPackedUnionTag(valueType, cv.integer(), *offset, context, sourceRange,
+        if (!checkPackedUnionTag(valueType, cv.integer(), field.fieldIndex, context, sourceRange,
                                  member.name)) {
             return nullptr;
         }
@@ -1233,6 +1230,7 @@ LValue MemberAccessExpression::evalLValueImpl(EvalContext& context) const {
         lval.addBitSlice({width - 1, 0});
     }
     else {
+        int32_t io = (int32_t)field.bitOffset;
         int32_t width = (int32_t)type->getBitWidth();
         lval.addBitSlice({width + io - 1, io});
     }
@@ -1241,22 +1239,24 @@ LValue MemberAccessExpression::evalLValueImpl(EvalContext& context) const {
 }
 
 std::optional<ConstantRange> MemberAccessExpression::getSelectRange() const {
-    if (!offset)
+    if (member.kind != SymbolKind::Field)
         return std::nullopt;
 
-    int32_t io = (int32_t)*offset;
+    auto& field = member.as<FieldSymbol>();
     auto& valueType = value().type->getCanonicalType();
     if (valueType.isUnpackedStruct()) {
-        return ConstantRange{io, io};
+        int32_t io = (int32_t)field.bitOffset;
+        return ConstantRange{io, io + (int32_t)type->getSelectableWidth()};
     }
     else if (valueType.isUnpackedUnion()) {
-        return ConstantRange{0, 0};
+        return ConstantRange{0, (int32_t)type->getSelectableWidth()};
     }
     else if (valueType.isPackedUnion()) {
         int32_t width = (int32_t)type->getBitWidth();
         return ConstantRange{width - 1, 0};
     }
     else {
+        int32_t io = (int32_t)field.bitOffset;
         int32_t width = (int32_t)type->getBitWidth();
         return ConstantRange{width + io - 1, io};
     }

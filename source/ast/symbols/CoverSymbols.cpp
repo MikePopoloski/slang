@@ -805,8 +805,8 @@ CoverCrossSymbol::CoverCrossSymbol(Compilation& comp, string_view name, SourceLo
     addBuiltInMethods(*this, false);
 }
 
-void CoverCrossSymbol::fromSyntax(const Scope& scope, const CoverCrossSyntax& syntax,
-                                  SmallVectorBase<const Symbol*>& results) {
+CoverCrossSymbol& CoverCrossSymbol::fromSyntax(const Scope& scope, const CoverCrossSyntax& syntax,
+                                               SmallVectorBase<const Symbol*>& implicitMembers) {
     string_view name;
     SourceLocation loc;
     if (syntax.label) {
@@ -828,7 +828,7 @@ void CoverCrossSymbol::fromSyntax(const Scope& scope, const CoverCrossSyntax& sy
             // that will be initialized with this expression.
             auto& newPoint = CoverpointSymbol::fromImplicit(scope, *item);
             targets.push_back(&newPoint);
-            results.push_back(&newPoint);
+            implicitMembers.push_back(&newPoint);
         }
     }
 
@@ -836,34 +836,37 @@ void CoverCrossSymbol::fromSyntax(const Scope& scope, const CoverCrossSyntax& sy
     auto result = comp.emplace<CoverCrossSymbol>(comp, name, loc, targets.copy(comp));
     result->setSyntax(syntax);
     result->setAttributes(scope, syntax.attributes);
+    return *result;
+}
 
-    auto body = comp.emplace<CoverCrossBodySymbol>(comp, loc);
-    result->addMember(*body);
+void CoverCrossSymbol::addBody(const syntax::CoverCrossSyntax& syntax, const Scope& scope) {
+    auto& comp = scope.getCompilation();
+    auto body = comp.emplace<CoverCrossBodySymbol>(comp, location);
+    addMember(*body);
 
     StructBuilder valType(*body, LookupLocation::min);
     for (auto item : targets)
         valType.addField(item->name, item->declaredType);
 
-    auto valType_t = comp.emplace<TypeAliasType>("CrossValType", loc);
+    auto valType_t = comp.emplace<TypeAliasType>("CrossValType", location);
     valType_t->targetType.setType(valType.type);
     body->addMember(*valType_t);
 
     auto queueType = comp.emplace<QueueType>(*valType_t, 0u);
-    auto queueType_t = comp.emplace<TypeAliasType>("CrossQueueType", loc);
+    auto queueType_t = comp.emplace<TypeAliasType>("CrossQueueType", location);
     queueType_t->targetType.setType(*queueType);
     body->addMember(*queueType_t);
     body->crossQueueType = queueType_t;
 
-    OptionBuilder options(*result);
+    OptionBuilder optionBuilder(*this);
     for (auto member : syntax.members) {
         if (member->kind == SyntaxKind::CoverageOption)
-            options.add(member->as<CoverageOptionSyntax>());
+            optionBuilder.add(member->as<CoverageOptionSyntax>());
         else
             body->addMembers(*member);
     }
 
-    result->options = options.get();
-    results.push_back(result);
+    options = optionBuilder.get();
 }
 
 const Expression* CoverCrossSymbol::getIffExpr() const {

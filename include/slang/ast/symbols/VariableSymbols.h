@@ -102,15 +102,21 @@ private:
 /// Represents a field member of a struct or union.
 class SLANG_EXPORT FieldSymbol : public VariableSymbol {
 public:
-    /// The offset of the field within its parent structure or union. If the parent type is
-    /// packed, this is an offset in bits. Otherwise it's an index into the list of fields.
-    uint32_t offset;
+    /// The offset of the field within its parent structure or union, in bits.
+    /// For unpacked types this offset is in "selectable bits" which is how overlapping
+    /// drivers to a given field are expressed, but don't necessarily correspond to
+    /// how many bits would be used if the entire type were serialized.
+    uint32_t bitOffset;
+
+    /// The index of the field within its parent structure.
+    uint32_t fieldIndex;
 
     /// If this field was marked with random qualifier, the mode indicated by that qualifier.
     RandMode randMode = RandMode::None;
 
-    FieldSymbol(string_view name, SourceLocation loc, uint32_t offset) :
-        VariableSymbol(SymbolKind::Field, name, loc, VariableLifetime::Automatic), offset(offset) {}
+    FieldSymbol(string_view name, SourceLocation loc, uint32_t bitOffset, uint32_t fieldIndex) :
+        VariableSymbol(SymbolKind::Field, name, loc, VariableLifetime::Automatic),
+        bitOffset(bitOffset), fieldIndex(fieldIndex) {}
 
     void serializeTo(ASTSerializer& serializer) const;
 

@@ -221,7 +221,8 @@ void FormalArgumentSymbol::serializeTo(ASTSerializer& serializer) const {
 
 void FieldSymbol::serializeTo(ASTSerializer& serializer) const {
     VariableSymbol::serializeTo(serializer);
-    serializer.write("offset", offset);
+    serializer.write("bitOffset", bitOffset);
+    serializer.write("fieldIndex", fieldIndex);
 }
 
 NetSymbol::NetSymbol(string_view name, SourceLocation loc, const NetType& netType) :

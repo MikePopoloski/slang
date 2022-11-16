@@ -260,7 +260,7 @@ ConstantValue TaggedPattern::evalImpl(EvalContext& context, const ConstantValue&
 
     // Check if the union's active member matches the one in our pattern.
     auto& unionVal = value.unionVal();
-    if (unionVal->activeMember != member.offset)
+    if (unionVal->activeMember != member.fieldIndex)
         return SVInt(1, 0, false);
 
     if (valuePattern)
@@ -358,7 +358,7 @@ ConstantValue StructurePattern::evalImpl(EvalContext& context, const ConstantVal
     if (value.isUnpacked()) {
         auto elems = value.elements();
         for (auto& fp : patterns) {
-            auto cv = fp.pattern->eval(context, elems[fp.field->offset], conditionKind);
+            auto cv = fp.pattern->eval(context, elems[fp.field->fieldIndex], conditionKind);
             if (!cv.isTrue())
                 return cv;
         }
@@ -366,7 +366,7 @@ ConstantValue StructurePattern::evalImpl(EvalContext& context, const ConstantVal
     else {
         auto& cvi = value.integer();
         for (auto& fp : patterns) {
-            int32_t io = (int32_t)fp.field->offset;
+            int32_t io = (int32_t)fp.field->bitOffset;
             int32_t width = (int32_t)fp.field->getType().getBitWidth();
 
             auto cv = fp.pattern->eval(context, cvi.slice(width + io - 1, io), conditionKind);

@@ -118,12 +118,11 @@ private:
 class SLANG_EXPORT MemberAccessExpression : public Expression {
 public:
     const Symbol& member;
-    std::optional<uint32_t> offset;
 
     MemberAccessExpression(const Type& type, Expression& value, const Symbol& member,
-                           std::optional<uint32_t> offset, SourceRange sourceRange) :
+                           SourceRange sourceRange) :
         Expression(ExpressionKind::MemberAccess, type, sourceRange),
-        member(member), offset(offset), value_(&value) {}
+        member(member), value_(&value) {}
 
     const Expression& value() const { return *value_; }
     Expression& value() { return *value_; }

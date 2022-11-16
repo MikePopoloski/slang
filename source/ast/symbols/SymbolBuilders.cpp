@@ -100,20 +100,24 @@ StructBuilder::StructBuilder(const Scope& scope, LookupLocation lookupLocation) 
 
 void StructBuilder::addField(string_view name, const Type& fieldType,
                              bitmask<VariableFlags> flags) {
-    auto field = compilation.emplace<FieldSymbol>(name, NL, currFieldIndex);
+    auto field = compilation.emplace<FieldSymbol>(name, NL, currBitOffset, currFieldIndex);
     field->flags = flags;
     field->setType(fieldType);
     type.addMember(*field);
+
     currFieldIndex++;
+    currBitOffset += fieldType.getSelectableWidth();
 }
 
 void StructBuilder::addField(string_view name, const DeclaredType& typeLink,
                              bitmask<VariableFlags> flags) {
-    auto field = compilation.emplace<FieldSymbol>(name, NL, currFieldIndex);
+    auto field = compilation.emplace<FieldSymbol>(name, NL, currBitOffset, currFieldIndex);
     field->flags = flags;
     field->getDeclaredType()->setLink(typeLink);
     type.addMember(*field);
+
     currFieldIndex++;
+    currBitOffset += typeLink.getType().getSelectableWidth();
 }
 
 } // namespace slang::ast

@@ -732,7 +732,7 @@ const Type& PackedStructType::fromSyntax(Compilation& comp, const StructUnionTyp
 
         for (auto decl : member->declarators) {
             auto field = comp.emplace<FieldSymbol>(decl->name.valueText(), decl->name.location(),
-                                                   0u);
+                                                   0u, (uint32_t)members.size());
             field->setType(type);
             field->setSyntax(*decl);
             field->setAttributes(*context.scope, member->attributes);
@@ -766,7 +766,7 @@ const Type& PackedStructType::fromSyntax(Compilation& comp, const StructUnionTyp
     // offsets in the right order now.
     bitwidth_t offset = 0;
     for (auto member : make_reverse_range(members)) {
-        member->offset = offset;
+        member->bitOffset = offset;
         offset += member->getType().getBitWidth();
     }
 
@@ -799,6 +799,8 @@ const Type& UnpackedStructType::fromSyntax(const ASTContext& context,
     auto& comp = context.getCompilation();
     auto result = comp.emplace<UnpackedStructType>(comp, syntax.keyword.location(), context);
 
+    // TODO: overflow
+    uint32_t bitOffset = 0;
     SmallVector<const FieldSymbol*> fields;
     for (auto member : syntax.members) {
         RandMode randMode = RandMode::None;
@@ -815,7 +817,7 @@ const Type& UnpackedStructType::fromSyntax(const ASTContext& context,
 
         for (auto decl : member->declarators) {
             auto field = comp.emplace<FieldSymbol>(decl->name.valueText(), decl->name.location(),
-                                                   (uint32_t)fields.size());
+                                                   bitOffset, (uint32_t)fields.size());
             field->setDeclaredType(*member->type);
             field->setFromDeclarator(*decl);
             field->setAttributes(*context.scope, member->attributes);
@@ -826,14 +828,15 @@ const Type& UnpackedStructType::fromSyntax(const ASTContext& context,
 
             result->addMember(*field);
             fields.push_back(field);
+
+            bitOffset += field->getType().getSelectableWidth();
         }
     }
 
     result->fields = fields.copy(comp);
     for (auto field : result->fields) {
-        // Force resolution of the type right away, otherwise nothing
+        // Force resolution of the initializer right away, otherwise nothing
         // is required to force it later.
-        field->getType();
         field->getInitializer();
     }
 
@@ -882,7 +885,8 @@ const Type& PackedUnionType::fromSyntax(Compilation& comp, const StructUnionType
 
         for (auto decl : member->declarators) {
             auto name = decl->name;
-            auto field = comp.emplace<FieldSymbol>(name.valueText(), name.location(), fieldIndex++);
+            auto field = comp.emplace<FieldSymbol>(name.valueText(), name.location(), 0u,
+                                                   fieldIndex++);
             field->setType(type);
             field->setSyntax(*decl);
             field->setAttributes(*context.scope, member->attributes);
@@ -970,7 +974,7 @@ const Type& UnpackedUnionType::fromSyntax(const ASTContext& context,
     for (auto member : syntax.members) {
         for (auto decl : member->declarators) {
             auto field = comp.emplace<FieldSymbol>(decl->name.valueText(), decl->name.location(),
-                                                   (uint32_t)fields.size());
+                                                   0u, (uint32_t)fields.size());
             field->setDeclaredType(*member->type);
             field->setFromDeclarator(*decl);
             field->setAttributes(*context.scope, member->attributes);

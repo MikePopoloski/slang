@@ -208,8 +208,8 @@ public:
     CoverCrossSymbol(Compilation& compilation, string_view name, SourceLocation loc,
                      span<const CoverpointSymbol* const> targets);
 
-    static void fromSyntax(const Scope& scope, const syntax::CoverCrossSyntax& syntax,
-                           SmallVectorBase<const Symbol*>& results);
+    static CoverCrossSymbol& fromSyntax(const Scope& scope, const syntax::CoverCrossSyntax& syntax,
+                                        SmallVectorBase<const Symbol*>& implicitMembers);
 
     const Expression* getIffExpr() const;
 
@@ -227,6 +227,10 @@ public:
     }
 
 private:
+    friend class Scope;
+
+    void addBody(const syntax::CoverCrossSyntax& syntax, const Scope& scope);
+
     mutable std::optional<const Expression*> iffExpr;
 };
 

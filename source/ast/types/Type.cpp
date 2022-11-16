@@ -145,6 +145,38 @@ size_t Type::bitstreamWidth() const {
     return 0;
 }
 
+uint32_t Type::getSelectableWidth() const {
+    auto& ct = getCanonicalType();
+    uint32_t width = ct.getBitWidth();
+    if (width > 0)
+        return width;
+
+    // TODO: check for overflow
+    if (ct.isUnpackedArray()) {
+        if (ct.kind != SymbolKind::FixedSizeUnpackedArrayType)
+            return 1;
+
+        auto& fsa = ct.as<FixedSizeUnpackedArrayType>();
+        return fsa.elementType.getSelectableWidth() * fsa.range.width();
+    }
+
+    if (ct.isUnpackedStruct()) {
+        auto& us = ct.as<UnpackedStructType>();
+        for (auto field : us.fields)
+            width += field->getType().getSelectableWidth();
+        return width;
+    }
+
+    if (ct.isUnpackedUnion()) {
+        auto& us = ct.as<UnpackedUnionType>();
+        for (auto field : us.fields)
+            width = std::max(width, field->getType().getSelectableWidth());
+        return width;
+    }
+
+    return 1;
+}
+
 bool Type::isSigned() const {
     const Type& ct = getCanonicalType();
     return ct.isIntegral() && ct.as<IntegralType>().isSigned;

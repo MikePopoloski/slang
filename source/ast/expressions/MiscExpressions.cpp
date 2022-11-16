@@ -1350,7 +1350,7 @@ ConstantValue TaggedUnionExpression::evalImpl(EvalContext& context) const {
     auto& ct = type->getCanonicalType();
     if (ct.isUnpackedUnion()) {
         SVUnion u;
-        u.activeMember = field.offset;
+        u.activeMember = field.fieldIndex;
         u.value = std::move(initVal);
         return u;
     }
@@ -1366,7 +1366,7 @@ ConstantValue TaggedUnionExpression::evalImpl(EvalContext& context) const {
         // Any bits in between are undefined.
         bitwidth_t bits = resultInt.getBitWidth();
         resultInt.set(int32_t(bits - 1), int32_t(bits - tagBits),
-                      SVInt(tagBits, field.offset, false));
+                      SVInt(tagBits, field.fieldIndex, false));
 
         if (initVal) {
             auto& valInt = initVal.integer();

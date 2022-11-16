@@ -85,6 +85,7 @@ public:
                   bitmask<VariableFlags> flags = VariableFlags::None);
 
 private:
+    uint32_t currBitOffset = 0;
     uint32_t currFieldIndex = 0;
 };
 

@@ -261,6 +261,7 @@ void Scope::addMembers(const SyntaxNode& syntax) {
         case SyntaxKind::DefaultClockingReference:
         case SyntaxKind::DefaultDisableDeclaration:
         case SyntaxKind::SpecifyBlock:
+        case SyntaxKind::CoverCross:
             addDeferredMembers(syntax);
             break;
         case SyntaxKind::PortDeclaration:
@@ -494,13 +495,6 @@ void Scope::addMembers(const SyntaxNode& syntax) {
         case SyntaxKind::BinsSelection:
             addMember(CoverageBinSymbol::fromSyntax(*this, syntax.as<BinsSelectionSyntax>()));
             break;
-        case SyntaxKind::CoverCross: {
-            SmallVector<const Symbol*> symbols;
-            CoverCrossSymbol::fromSyntax(*this, syntax.as<CoverCrossSyntax>(), symbols);
-            for (auto sym : symbols)
-                addMember(*sym);
-            break;
-        }
         case SyntaxKind::ExternInterfaceMethod:
             addMember(
                 MethodPrototypeSymbol::fromSyntax(*this, syntax.as<ExternInterfaceMethodSyntax>()));
@@ -1043,6 +1037,16 @@ void Scope::elaborate() const {
                 insertMembersAndNets(members, implicitSymbols, symbol);
                 break;
             }
+            case SyntaxKind::CoverCross: {
+                SmallVector<const Symbol*> implicitMembers;
+                auto& cross = CoverCrossSymbol::fromSyntax(*this,
+                                                           member.node.as<CoverCrossSyntax>(),
+                                                           implicitMembers);
+                auto members = {&cross};
+                insertMembersAndNets(members, implicitMembers, symbol);
+                cross.addBody(member.node.as<CoverCrossSyntax>(), *this);
+                break;
+            }
             default:
                 ASSUME_UNREACHABLE;
         }
@@ -1489,6 +1493,7 @@ static size_t countMembers(const SyntaxNode& syntax) {
         case SyntaxKind::ProgramDeclaration:
             return 1;
         case SyntaxKind::SpecifyBlock:
+        case SyntaxKind::CoverCross:
             return 2;
         default:
             ASSUME_UNREACHABLE;

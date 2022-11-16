@@ -373,7 +373,7 @@ static void visitPrefixExpressions(const Expression& longestStaticPrefix, TCallb
                 break;
             case ExpressionKind::MemberAccess: {
                 auto& access = expr->as<MemberAccessExpression>();
-                if (access.offset) {
+                if (access.member.kind == SymbolKind::Field) {
                     callback(*expr);
                     expr = &access.value();
                 }
