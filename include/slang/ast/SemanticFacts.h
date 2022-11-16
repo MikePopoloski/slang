@@ -116,21 +116,18 @@ enum class SLANG_EXPORT AssignFlags : uint16_t {
     /// The assignment is for an inout port of a module / interface / program.
     InOutPort = 1 << 4,
 
-    /// This assignment is being discovered via a subroutine call from a procedure.
-    SubFromProcedure = 1 << 5,
-
     /// The assignment is from a clocking block signal.
-    ClockVar = 1 << 6,
+    ClockVar = 1 << 5,
 
     /// The assignment is from an assertion instance's local variable formal argument.
-    AssertionLocalVarFormalArg = 1 << 7,
+    AssertionLocalVarFormalArg = 1 << 6,
 
     /// The assignment is for an output port that was sliced due to an array of instances
     /// being connected to an array argument.
-    SlicedPort = 1 << 8,
+    SlicedPort = 1 << 7,
 
     /// The assignment should not be considered a driver.
-    NotADriver = 1 << 9
+    NotADriver = 1 << 8
 };
 BITMASK(AssignFlags, NotADriver)
 

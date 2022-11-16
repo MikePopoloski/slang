@@ -158,9 +158,8 @@ static bool handleOverlap(const Scope& scope, string_view name, const ValueDrive
         diag << name << SemanticFacts::getProcedureKindStr(procKind);
         addAssignedHereNote(diag);
 
-        if (driver.flags.has(AssignFlags::SubFromProcedure) ||
-            curr.flags.has(AssignFlags::SubFromProcedure)) {
-            SourceRange extraRange = driver.flags.has(AssignFlags::SubFromProcedure)
+        if (driver.procCallExpression || curr.procCallExpression) {
+            SourceRange extraRange = driver.procCallExpression
                                          ? driver.prefixExpression->sourceRange
                                          : curr.prefixExpression->sourceRange;
 
@@ -219,7 +218,7 @@ void ValueSymbol::addDriver(DriverKind driverKind, std::pair<uint32_t, uint32_t>
 
     auto& comp = scope->getCompilation();
     auto driver = comp.emplace<ValueDriver>(driverKind, longestStaticPrefix, containingSymbol,
-                                            AssignFlags::SubFromProcedure);
+                                            AssignFlags::None);
     driver->procCallExpression = &procCallExpression;
 
     addDriverImpl(*scope, bounds, *driver);

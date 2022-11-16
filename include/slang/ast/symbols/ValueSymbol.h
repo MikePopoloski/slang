@@ -103,7 +103,7 @@ private:
     mutable const PortBackref* firstPortBackref = nullptr;
 };
 
-class ValueDriver {
+class SLANG_EXPORT ValueDriver {
 public:
     not_null<const Expression*> prefixExpression;
     not_null<const Symbol*> containingSymbol;
