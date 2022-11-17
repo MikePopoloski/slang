@@ -598,9 +598,17 @@ public:
         Base::operator=(rhs);
         return *this;
     }
+    SmallVector& operator=(const SmallVector& rhs) {
+        Base::operator=(rhs);
+        return *this;
+    }
 
     /// Move assignment from another vector.
     SmallVector& operator=(Base&& rhs) {
+        Base::operator=(std::move(rhs));
+        return *this;
+    }
+    SmallVector& operator=(SmallVector&& rhs) {
         Base::operator=(std::move(rhs));
         return *this;
     }

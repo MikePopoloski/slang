@@ -32,6 +32,10 @@ struct interval {
         right = std::max(right, rhs.right);
     }
 
+    bool overlapsOrAdjacent(const interval<T>& rhs) const {
+        return (right + 1 >= rhs.left) && (rhs.right + 1 >= left);
+    }
+
     bool operator==(const interval<T>& rhs) { return left == rhs.left && right == rhs.right; }
 };
 
@@ -191,6 +195,38 @@ struct NodeImpl {
         return size;
     }
 
+    uint32_t findUnionLeft(uint32_t i, uint32_t size, const interval<TKey>& key) const {
+        ASSERT(i <= size);
+        ASSERT(size <= TDerived::Capacity);
+        auto& self = *static_cast<const TDerived*>(this);
+
+        for (; i < size; i++) {
+            // If we've found where we would insert this key as a new interval
+            // based on its left value, stop and return that.
+            auto curr = self.keyAt(i);
+            if (curr.left >= key.left)
+                return i;
+
+            // Otherwise, if we've found an overlap, return it.
+            if (curr.right + 1 >= key.left)
+                return i;
+        }
+
+        return size;
+    }
+
+    bool canUnionRight(uint32_t i, uint32_t size, const interval<TKey>& key) const {
+        ASSERT(i <= size);
+        ASSERT(size <= TDerived::Capacity);
+        auto& self = *static_cast<const TDerived*>(this);
+
+        // This function is called under the assumption that we've already done
+        // a findUnionLeft and so all further keys have left values (and therefore
+        // also right values) >= our search key left. Therefore we only need to check
+        // one thing, which is whether the very next item overlaps or not.
+        return i < size && self.keyAt(i).left <= key.right + 1;
+    }
+
     interval<TKey> getBounds(uint32_t size) const {
         ASSERT(size);
         auto& self = *static_cast<const TDerived*>(this);
@@ -209,6 +245,8 @@ template<typename TKey, typename TValue, uint32_t Capacity>
 struct LeafNode : public NodeBase<interval<TKey>, TValue, Capacity>,
                   public NodeImpl<TKey, LeafNode<TKey, TValue, Capacity>> {
     const interval<TKey>& keyAt(uint32_t i) const { return this->first[i]; }
+    interval<TKey>& keyAt(uint32_t i) { return this->first[i]; }
+
     const TValue& valueAt(uint32_t i) const { return this->second[i]; }
     TValue& valueAt(uint32_t i) { return this->second[i]; }
 
@@ -349,8 +387,8 @@ private:
 //   newSizes[i] <= capacity
 //
 // The returned index is the node where position will go, so:
-//   sum(newSizes[0..idx-1]) <= Position
-//   sum(newSizes[0..idx])   >= Position
+//   sum(newSizes[0..idx-1]) <= position
+//   sum(newSizes[0..idx])   >= position
 //
 SLANG_EXPORT IndexPair distribute(uint32_t numNodes, uint32_t numElements, uint32_t capacity,
                                   uint32_t* newSizes, uint32_t position);
@@ -455,32 +493,61 @@ public:
         insert(key.first, key.second, value, alloc);
     }
 
+    /// @brief Inserts a new interval and value pair into the map, combining it
+    /// with any intervals that already exist in the map that are adjacent to or
+    /// overlap with the new one.
+    ///
+    /// Note that it in the case of combining intervals, the old value associated
+    /// with the interval will be kept and the new one ignored. It is assumed that
+    /// if you are using this method you don't care much about the values.
+    ///
+    /// Complexity is O(log n + m) where n is the number of intervals
+    /// in the map and m is the number of intervals found to union with.
+    void unionWith(TKey left, TKey right, const TValue& value, allocator_type& alloc) {
+        overlap_iterator it(*this, left, right);
+        it.unionWith(value, alloc);
+    }
+
+    /// @brief Inserts a new interval and value pair into the map, combining it
+    /// with any intervals that already exist in the map that are adjacent to or
+    /// overlap with the new one and share the same value.
+    ///
+    /// Note that it in the case of combining intervals, the old value associated
+    /// with the interval will be kept and the new one ignored. It is assumed that
+    /// if you are using this method you don't care much about the values.
+    ///
+    /// Complexity is O(log n + m) where n is the number of intervals
+    /// in the map and m is the number of intervals found to union with.
+    void unionWith(const std::pair<TKey, TKey>& key, const TValue& value, allocator_type& alloc) {
+        unionWith(key.first, key.second, value, alloc);
+    }
+
     /// Returns an iterator at the start of the map.
     iterator begin() {
-        iterator i(*this);
-        i.setToBegin();
-        return i;
+        iterator it(*this);
+        it.setToBegin();
+        return it;
     }
 
     /// Returns an iterator at the start of the map.
     const_iterator begin() const {
-        const_iterator i(*this);
-        i.setToBegin();
-        return i;
+        const_iterator it(*this);
+        it.setToBegin();
+        return it;
     }
 
     /// Returns an iterator at the end of the map.
     iterator end() {
-        iterator i(*this);
-        i.setToEnd();
-        return i;
+        iterator it(*this);
+        it.setToEnd();
+        return it;
     }
 
     /// Returns an iterator at the end of the map.
     const_iterator end() const {
-        const_iterator i(*this);
-        i.setToEnd();
-        return i;
+        const_iterator it(*this);
+        it.setToEnd();
+        return it;
     }
 
     /// @brief Finds all intervals that overlap the given interval.
@@ -491,9 +558,9 @@ public:
     /// The complexity is O(log n + m) where n is the number of intervals
     /// in the map and m is the number of overlapping intervals found.
     overlap_iterator find(TKey left, TKey right) const {
-        overlap_iterator i(*this, left, right);
-        i.setToBegin();
-        return i;
+        overlap_iterator it(*this, left, right);
+        it.setToBegin();
+        return it;
     }
 
     /// @brief Finds all intervals that overlap the given interval.
@@ -543,6 +610,12 @@ private:
 
     IntervalMapDetails::IndexPair splitRoot(uint32_t position, allocator_type& alloc) {
         return modifyRoot<Branch, false>(rootBranch, position, alloc);
+    }
+
+    void switchToLeaf() {
+        rootBranch.~Branch();
+        height = 0;
+        new (&rootLeaf) Leaf();
     }
 
     union {
@@ -690,17 +763,19 @@ private:
     iterator(IntervalMap& map) : const_iterator(map) {}
 
     void insert(TKey left, TKey right, const TValue& value, allocator_type& alloc);
+    bool erase(allocator_type& alloc, bool shouldRecomputeBounds);
     void updateParentBounds(uint32_t level, const IntervalMapDetails::interval<TKey>& key);
     void recomputeBounds(uint32_t level);
     bool insertNode(uint32_t level, IntervalMapDetails::NodeRef node,
                     const IntervalMapDetails::interval<TKey>& key, allocator_type& alloc);
+    void eraseNode(uint32_t level, allocator_type& alloc);
 
     template<typename TNode>
     bool overflow(uint32_t level, allocator_type& alloc);
 };
 
 template<typename TKey, typename TValue>
-class IntervalMap<TKey, TValue>::overlap_iterator {
+class IntervalMap<TKey, TValue>::overlap_iterator : iterator {
 public:
     using iterator_category = std::forward_iterator_tag;
     using difference_type = std::ptrdiff_t;
@@ -710,27 +785,22 @@ public:
 
     overlap_iterator() = default;
 
-    bool valid() const { return path.valid(); }
-
-    std::pair<TKey, TKey> bounds() const {
-        ASSERT(valid());
-        auto ival = path.leaf<Leaf>().keyAt(path.leafOffset());
-        return {ival.left, ival.right};
-    }
+    using iterator::bounds;
+    using iterator::valid;
 
     const TValue& operator*() const {
         ASSERT(valid());
-        return path.leaf<Leaf>().valueAt(path.leafOffset());
+        return this->path.leaf<Leaf>().valueAt(this->path.leafOffset());
     }
 
     overlap_iterator& operator++() {
         ASSERT(valid());
 
-        uint32_t offset = path.leafOffset() + 1;
-        offset = path.leaf<Leaf>().findFirstOverlap(offset, path.leafSize(), searchKey);
+        uint32_t offset = this->path.leafOffset() + 1;
+        offset = this->path.leaf<Leaf>().findFirstOverlap(offset, this->path.leafSize(), searchKey);
 
-        path.leafOffset() = offset;
-        if (offset == path.leafSize() && !isFlat())
+        this->path.leafOffset() = offset;
+        if (offset == this->path.leafSize() && !this->isFlat())
             nextOverlap();
 
         return *this;
@@ -742,47 +812,35 @@ public:
         return tmp;
     }
 
-    bool operator==(const overlap_iterator& rhs) const { return path == rhs.path; }
+    bool operator==(const overlap_iterator& rhs) const { return this->path == rhs.path; }
     bool operator!=(const overlap_iterator& rhs) const { return !(*this == rhs); }
-    bool operator==(const const_iterator& rhs) const { return path == rhs.path; }
+    bool operator==(const const_iterator& rhs) const { return this->path == rhs.path; }
     bool operator!=(const const_iterator& rhs) const { return !(*this == rhs); }
 
 protected:
     friend class IntervalMap;
 
-    explicit overlap_iterator(const IntervalMap& map, TKey left, TKey right) :
-        map(const_cast<IntervalMap*>(&map)), searchKey({left, right}) {}
-
-    bool isFlat() const {
-        ASSERT(map);
-        return map->isFlat();
-    }
-
-    void setRoot(uint32_t offset) {
-        if (isFlat())
-            path.setRoot(&map->rootLeaf, map->rootSize, offset);
-        else
-            path.setRoot(&map->rootBranch, map->rootSize, offset);
-    }
+    overlap_iterator(const IntervalMap& map, TKey left, TKey right) :
+        iterator(const_cast<IntervalMap&>(map)), searchKey({left, right}) {}
 
     void setToBegin() {
-        if (isFlat()) {
-            setRoot(map->rootLeaf.findFirstOverlap(0, map->rootSize, searchKey));
+        if (this->isFlat()) {
+            this->setRoot(this->map->rootLeaf.findFirstOverlap(0, this->map->rootSize, searchKey));
         }
         else {
-            setRoot(map->rootBranch.findFirstOverlap(0, map->rootSize, searchKey));
+            this->setRoot(
+                this->map->rootBranch.findFirstOverlap(0, this->map->rootSize, searchKey));
             treeFind();
         }
     }
 
-    void setToEnd() { setRoot(map->rootSize); }
+    void unionWith(const TValue& value, allocator_type& alloc);
 
     void treeFind();
+    void treeFindUnion();
     void nextOverlap();
 
-    IntervalMap* map = nullptr;
-    IntervalMapDetails::interval<TKey> searchKey{};
-    IntervalMapDetails::Path path;
+    IntervalMapDetails::interval<TKey> searchKey;
 };
 
 namespace IntervalMapDetails {
@@ -911,14 +969,21 @@ void IntervalMap<TKey, TValue>::iterator::insert(TKey left, TKey right, const TV
     auto& map = *this->map;
     auto& path = this->path;
 
+    interval<TKey> ival{left, right};
     if (this->isFlat()) {
-        ASSERT(map.rootSize == Leaf::Capacity);
+        // Try simple root leaf insert first.
+        uint32_t size = map.rootLeaf.insertFrom(path.leafOffset(), map.rootSize, ival, value);
+        if (size <= Leaf::Capacity) {
+            map.rootSize = size;
+            path.setSize(0, size);
+            return;
+        }
 
+        // Root is full, we need to branch.
         auto offset = map.switchToBranch(path.leafOffset(), alloc);
         path.replaceRoot(&map.rootBranch, map.rootSize, offset);
     }
 
-    interval<TKey> ival{left, right};
     if (!path.valid())
         path.legalizeForInsert(this->map->height);
 
@@ -935,6 +1000,38 @@ void IntervalMap<TKey, TValue>::iterator::insert(TKey left, TKey right, const TV
     // Update path to match the newly inserted element.
     path.setSize(path.height(), size);
     updateParentBounds(path.height(), ival);
+}
+
+template<typename TKey, typename TValue>
+bool IntervalMap<TKey, TValue>::iterator::erase(allocator_type& alloc, bool shouldRecomputeBounds) {
+    auto& map = *this->map;
+    auto& path = this->path;
+    ASSERT(this->valid());
+
+    uint32_t offset = path.leafOffset();
+    if (this->isFlat()) {
+        map.rootLeaf.erase(offset, offset + 1, map.rootSize);
+        path.setSize(0, --map.rootSize);
+        return false;
+    }
+
+    // Nodes are not allowed to become empty, so erase the node itself
+    // if that were to be the case.
+    auto& node = path.leaf<Leaf>();
+    if (path.leafSize() == 1) {
+        alloc.destroy(&node);
+        eraseNode(map.height, alloc);
+        return true;
+    }
+
+    // Otherwise just erase the current entry.
+    node.erase(offset, offset + 1, path.leafSize());
+    path.setSize(map.height, path.leafSize() - 1);
+
+    if (shouldRecomputeBounds)
+        recomputeBounds(map.height);
+
+    return false;
 }
 
 template<typename TKey, typename TValue>
@@ -1132,16 +1229,56 @@ bool IntervalMap<TKey, TValue>::iterator::insertNode(uint32_t level,
 }
 
 template<typename TKey, typename TValue>
+void IntervalMap<TKey, TValue>::iterator::eraseNode(uint32_t level, allocator_type& alloc) {
+    ASSERT(level > 0);
+    auto& map = *this->map;
+    auto& path = this->path;
+
+    if (--level == 0) {
+        uint32_t offset = path.offset(0);
+        map.rootBranch.erase(offset, offset + 1, map.rootSize);
+        path.setSize(0, --map.rootSize);
+        if (map.empty()) {
+            map.switchToLeaf();
+            this->setRoot(0);
+            return;
+        }
+    }
+    else {
+        auto& parent = path.node<Branch>(level);
+        if (path.size(level) == 1) {
+            // Branch node became empty, remove it recursively.
+            alloc.destroy(&parent);
+            eraseNode(level, alloc);
+        }
+        else {
+            // N.B. see note about updating parent bounds in erase()
+            uint32_t offset = path.offset(level);
+            uint32_t size = path.size(level);
+            parent.erase(offset, offset + 1, size);
+            path.setSize(level, size - 1);
+            recomputeBounds(level);
+        }
+    }
+
+    if (path.valid()) {
+        path.reset(level + 1);
+        path.offset(level + 1) = 0;
+    }
+}
+
+template<typename TKey, typename TValue>
 void IntervalMap<TKey, TValue>::overlap_iterator::treeFind() {
     if (!valid())
         return;
 
+    auto& path = this->path;
     auto child = path.childAt(path.height());
-    for (uint32_t i = map->height - path.height() - 1; i > 0; i--) {
+    for (uint32_t i = this->map->height - path.height() - 1; i > 0; i--) {
         uint32_t size = child.size();
         uint32_t offset = child.template get<Branch>().findFirstOverlap(0, size, searchKey);
         if (offset == size) {
-            setToEnd();
+            this->setToEnd();
             return;
         }
 
@@ -1152,7 +1289,36 @@ void IntervalMap<TKey, TValue>::overlap_iterator::treeFind() {
     uint32_t size = child.size();
     uint32_t offset = child.template get<Leaf>().findFirstOverlap(0, size, searchKey);
     if (offset == size) {
-        setToEnd();
+        this->setToEnd();
+        return;
+    }
+
+    path.push(child, offset);
+}
+
+template<typename TKey, typename TValue>
+void IntervalMap<TKey, TValue>::overlap_iterator::treeFindUnion() {
+    if (!valid())
+        return;
+
+    auto& path = this->path;
+    auto child = path.childAt(path.height());
+    for (uint32_t i = this->map->height - path.height() - 1; i > 0; i--) {
+        uint32_t size = child.size();
+        uint32_t offset = child.template get<Branch>().findUnionLeft(0, size, searchKey);
+        if (offset == size) {
+            this->setToEnd();
+            return;
+        }
+
+        path.push(child, offset);
+        child = child.childAt(offset);
+    }
+
+    uint32_t size = child.size();
+    uint32_t offset = child.template get<Leaf>().findUnionLeft(0, size, searchKey);
+    if (offset == size) {
+        this->setToEnd();
         return;
     }
 
@@ -1161,6 +1327,7 @@ void IntervalMap<TKey, TValue>::overlap_iterator::treeFind() {
 
 template<typename TKey, typename TValue>
 void IntervalMap<TKey, TValue>::overlap_iterator::nextOverlap() {
+    auto& path = this->path;
     ASSERT(path.leafOffset() == path.leafSize());
     ASSERT(valid());
 
@@ -1188,6 +1355,92 @@ void IntervalMap<TKey, TValue>::overlap_iterator::nextOverlap() {
     // to make the path point to the end of the tree.
     ASSERT(path.height() == 0);
     path.leafOffset()++;
+}
+
+template<typename TKey, typename TValue>
+void IntervalMap<TKey, TValue>::overlap_iterator::unionWith(const TValue& value,
+                                                            allocator_type& alloc) {
+    using namespace IntervalMapDetails;
+
+    auto& map = *this->map;
+    auto& path = this->path;
+    if (this->isFlat()) {
+        this->setRoot(map.rootLeaf.findUnionLeft(0, map.rootSize, searchKey));
+    }
+    else {
+        this->setRoot(map.rootBranch.findUnionLeft(0, map.rootSize, searchKey));
+        treeFindUnion();
+    }
+
+    // The iterator now points to one of the following:
+    // - The first existing interval that overlaps (or is adjacent to) the search key
+    // - The correct place to insert the search key as a new interval
+    // - The end of the map (also the correct place to insert)
+    if (!valid()) {
+        // We're at the end of the map so just insert and we're done.
+        this->insert(searchKey.left, searchKey.right, value, alloc);
+        return;
+    }
+
+    auto updateCurrKey = [&](interval<TKey> newKey) {
+        // Expand the current entry to match our new item.
+        interval<TKey>& currKey = path.leaf<Leaf>().keyAt(path.leafOffset());
+        currKey.unionWith(newKey);
+        searchKey = currKey;
+    };
+
+    if (!path.leaf<Leaf>().keyAt(path.leafOffset()).overlapsOrAdjacent(searchKey)) {
+        this->insert(searchKey.left, searchKey.right, value, alloc);
+    }
+    else {
+        // Otherwise expand the current entry to match our new item.
+        updateCurrKey(searchKey);
+        this->updateParentBounds(path.height(), searchKey);
+    }
+
+    // Our new interval is inserted or updated. Continue forward and
+    // merge all later intervals that overlap with this one.
+    while (true) {
+        auto& leaf = path.leaf<Leaf>();
+        uint32_t offset = path.leafOffset() + 1;
+        if (leaf.canUnionRight(offset, path.leafSize(), searchKey)) {
+            // This does not change our parent bounds so no need to update.
+            updateCurrKey(leaf.keyAt(offset));
+
+            path.leafOffset() = offset;
+            bool modifiedPath = this->erase(alloc, false);
+            ASSERT(!modifiedPath);
+
+            path.leafOffset()--;
+        }
+        else if (offset == path.leafSize() && !this->isFlat()) {
+            // Copy our iterator and advance to the next node to see if we can merge
+            // with it. This intentionally slices the object since we don't need the
+            // wider overlapped_iterator here.
+            iterator nextIt = *this;
+            nextIt.path.moveRight(map.height);
+            if (!nextIt.valid() ||
+                !nextIt.path.leaf<Leaf>().canUnionRight(0, nextIt.path.leafSize(), searchKey)) {
+                // Nope, we're done.
+                return;
+            }
+
+            // Merge and erase the next elem.
+            updateCurrKey(nextIt.path.leaf<Leaf>().keyAt(0));
+            this->updateParentBounds(path.height(), searchKey);
+
+            if (nextIt.erase(alloc, true)) {
+                // The erase operation deleted nodes so our path is invalid.
+                // Get back to a good state by copying from the nextIt's path
+                // and then moving back left.
+                path = nextIt.path;
+                path.moveLeft(map.height);
+            }
+        }
+        else {
+            return;
+        }
+    }
 }
 
 } // namespace slang

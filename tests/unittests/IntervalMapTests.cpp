@@ -155,3 +155,75 @@ TEST_CASE("IntervalMap -- branching inserts") {
     auto oit = map.find(1, 3);
     CHECK(oit == map.end());
 }
+
+TEST_CASE("IntervalMap -- unioning intervals") {
+    IntervalMap<int32_t, int32_t> map;
+    BumpAllocator ba;
+    IntervalMap<int32_t, int32_t>::allocator_type alloc(ba);
+
+    map.unionWith({20, 30}, 1, alloc);
+    map.unionWith({10, 15}, 1, alloc);
+    map.unionWith({1, 2}, 1, alloc);
+    map.unionWith({90, 102}, 1, alloc);
+    CHECK(std::distance(map.begin(), map.end()) == 4);
+
+    map.unionWith({3, 19}, 1, alloc);
+    CHECK(std::distance(map.begin(), map.end()) == 2);
+
+    map.unionWith({3, 8}, 1, alloc);
+    map.unionWith({3, 7}, 1, alloc);
+    CHECK(std::distance(map.begin(), map.end()) == 2);
+
+    map.insert({4, 39}, 1, alloc);
+    map.insert({4, 39}, 1, alloc);
+    map.insert({4, 39}, 1, alloc);
+    map.insert({1, 30}, 1, alloc);
+    CHECK(std::distance(map.begin(), map.end()) == 6);
+
+    map.unionWith({0, 1}, 1, alloc);
+    CHECK(std::distance(map.begin(), map.end()) == 2);
+
+    for (int i = 0; i < 16; i++)
+        map.unionWith({45 + 10 * i, 50 + 10 * i}, 1, alloc);
+    CHECK(std::distance(map.begin(), map.end()) == 16);
+
+    map.unionWith({41, 42}, 1, alloc);
+    map.unionWith({201, 250}, 1, alloc);
+    map.unionWith({260, 300}, 1, alloc);
+    CHECK(std::distance(map.begin(), map.end()) == 18);
+
+    map.unionWith({122, 123}, 1, alloc);
+    map.verify();
+
+    // This will trigger an erase of a full branch node and collapse back to root
+    map.unionWith({119, 400}, 1, alloc);
+    map.verify();
+    CHECK(std::distance(map.begin(), map.end()) == 9);
+
+    for (int i = 0; i < 100; i++)
+        map.unionWith({450 + 100 * i, 500 + 100 * i}, 1, alloc);
+
+    // Union the whole map down to one element.
+    map.unionWith({1, 11000}, 1, alloc);
+    CHECK(std::distance(map.begin(), map.end()) == 1);
+    map.verify();
+}
+
+TEST_CASE("IntervalMap -- pseudorandom union testing") {
+    IntervalMap<int32_t, int32_t> map;
+    BumpAllocator ba;
+    IntervalMap<int32_t, int32_t>::allocator_type alloc(ba);
+
+    // Insert a bunch of psuedo-random intervals.
+    std::mt19937 mt;
+    std::uniform_int_distribution dist;
+    using PT = std::uniform_int_distribution<int>::param_type;
+    for (int32_t i = 0; i < 1000; i++) {
+        int32_t left = dist(mt, PT{1, 1000});
+        int32_t right = left + 2;
+        map.unionWith(left, right, 1, alloc);
+        map.verify();
+    }
+
+    CHECK(std::distance(map.begin(), map.end()) == 34);
+}
