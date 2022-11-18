@@ -47,6 +47,7 @@ class SystemSubroutine;
 class ValueDriver;
 
 using DriverIntervalMap = IntervalMap<uint32_t, const ValueDriver*>;
+using UnrollIntervalMap = IntervalMap<uint32_t, std::monostate>;
 
 enum class IntegralFlags : uint8_t;
 enum class UnconnectedDrive;
@@ -425,6 +426,9 @@ public:
     }
 
     DriverIntervalMap::allocator_type& getDriverMapAllocator() { return driverMapAllocator; }
+    UnrollIntervalMap::allocator_type& getUnrollIntervalMapAllocator() {
+        return unrollIntervalMapAllocator;
+    }
 
     const syntax::ImplicitTypeSyntax& createEmptyTypeSyntax(SourceLocation loc);
 
@@ -469,6 +473,7 @@ private:
     TypedBumpAllocator<ConstantValue> constantAllocator;
     TypedBumpAllocator<GenericClassDefSymbol> genericClassAllocator;
     DriverIntervalMap::allocator_type driverMapAllocator;
+    UnrollIntervalMap::allocator_type unrollIntervalMapAllocator;
 
     // A table to look up scalar types based on combinations of the three flags: signed, fourstate,
     // reg. Two of the entries are not valid and will be nullptr (!fourstate & reg).

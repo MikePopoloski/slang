@@ -18,6 +18,16 @@
 
 namespace slang::ast {
 
+void EvalContext::reset() {
+    steps = 0;
+    disableTarget = nullptr;
+    queueTarget = nullptr;
+    stack.clear();
+    lvalStack.clear();
+    diags.clear();
+    disableRange = {};
+}
+
 ConstantValue* EvalContext::createLocal(const ValueSymbol* symbol, ConstantValue value) {
     ASSERT(!stack.empty());
     ConstantValue& result = stack.back().temporaries[symbol];

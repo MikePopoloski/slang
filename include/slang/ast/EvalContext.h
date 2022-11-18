@@ -74,6 +74,9 @@ public:
     explicit EvalContext(Compilation& compilation, bitmask<EvalFlags> flags = {}) :
         compilation(compilation), flags(flags) {}
 
+    /// Resets the evaluation context back to an initial constructed state.
+    void reset();
+
     /// Creates storage for a local variable in the current frame.
     ConstantValue* createLocal(const ValueSymbol* symbol, ConstantValue value = nullptr);
 

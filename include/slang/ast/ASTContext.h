@@ -307,6 +307,8 @@ public:
     void addDriver(const ValueSymbol& symbol, const Expression& longestStaticPrefix,
                    bitmask<AssignFlags> assignFlags, EvalContext* customEvalContext) const;
 
+    const Symbol& getContainingSymbol() const;
+
     Diagnostic& addDiag(DiagCode code, SourceLocation location) const;
     Diagnostic& addDiag(DiagCode code, SourceRange sourceRange) const;
 

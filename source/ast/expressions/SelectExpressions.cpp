@@ -392,6 +392,21 @@ bool ElementSelectExpression::requireLValueImpl(const ASTContext& context, Sourc
                                customEvalContext);
 }
 
+void ElementSelectExpression::getLongestStaticPrefixesImpl(
+    SmallVector<std::pair<const ValueSymbol*, const Expression*>>& results,
+    EvalContext& evalContext, const Expression* longestStaticPrefix) const {
+
+    if (isConstantSelect(evalContext)) {
+        if (!longestStaticPrefix)
+            longestStaticPrefix = this;
+    }
+    else {
+        longestStaticPrefix = nullptr;
+    }
+
+    value().getLongestStaticPrefixes(results, evalContext, longestStaticPrefix);
+}
+
 void ElementSelectExpression::serializeTo(ASTSerializer& serializer) const {
     serializer.write("value", value());
     serializer.write("selector", selector());
@@ -779,6 +794,21 @@ bool RangeSelectExpression::requireLValueImpl(const ASTContext& context, SourceL
                                               EvalContext* customEvalContext) const {
     return requireLValueHelper(*this, context, location, flags, longestStaticPrefix,
                                customEvalContext);
+}
+
+void RangeSelectExpression::getLongestStaticPrefixesImpl(
+    SmallVector<std::pair<const ValueSymbol*, const Expression*>>& results,
+    EvalContext& evalContext, const Expression* longestStaticPrefix) const {
+
+    if (isConstantSelect(evalContext)) {
+        if (!longestStaticPrefix)
+            longestStaticPrefix = this;
+    }
+    else {
+        longestStaticPrefix = nullptr;
+    }
+
+    value().getLongestStaticPrefixes(results, evalContext, longestStaticPrefix);
 }
 
 void RangeSelectExpression::serializeTo(ASTSerializer& serializer) const {
@@ -1311,6 +1341,15 @@ bool MemberAccessExpression::requireLValueImpl(const ASTContext& context, Source
         longestStaticPrefix = this;
 
     return value().requireLValue(context, location, flags, longestStaticPrefix, customEvalContext);
+}
+
+void MemberAccessExpression::getLongestStaticPrefixesImpl(
+    SmallVector<std::pair<const ValueSymbol*, const Expression*>>& results,
+    EvalContext& evalContext, const Expression* longestStaticPrefix) const {
+
+    if (!longestStaticPrefix)
+        longestStaticPrefix = this;
+    return value().getLongestStaticPrefixes(results, evalContext, longestStaticPrefix);
 }
 
 void MemberAccessExpression::serializeTo(ASTSerializer& serializer) const {

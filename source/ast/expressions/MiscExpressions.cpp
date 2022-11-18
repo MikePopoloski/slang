@@ -185,6 +185,15 @@ bool ValueExpressionBase::requireLValueImpl(const ASTContext& context, SourceLoc
     return true;
 }
 
+void ValueExpressionBase::getLongestStaticPrefixesImpl(
+    SmallVector<std::pair<const ValueSymbol*, const Expression*>>& results,
+    const Expression* longestStaticPrefix) const {
+
+    if (!longestStaticPrefix)
+        longestStaticPrefix = this;
+    results.push_back({&symbol, longestStaticPrefix});
+}
+
 bool ValueExpressionBase::checkVariableAssignment(const ASTContext& context,
                                                   const VariableSymbol& var,
                                                   bitmask<AssignFlags> flags,

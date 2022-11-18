@@ -71,6 +71,8 @@ public:
                    const Expression& longestStaticPrefix, const Symbol& containingSymbol,
                    const Expression& procCallExpression) const;
 
+    void addDriver(std::pair<uint32_t, uint32_t> bounds, const ValueDriver& driver) const;
+
     iterator_range<DriverIntervalMap::const_iterator> drivers() const {
         return {driverMap.begin(), driverMap.end()};
     }
@@ -95,9 +97,6 @@ protected:
                 bitmask<DeclaredTypeFlags> flags = DeclaredTypeFlags::None);
 
 private:
-    void addDriverImpl(const Scope& scope, std::pair<uint32_t, uint32_t> bounds,
-                       const ValueDriver& driver) const;
-
     DeclaredType declaredType;
     mutable DriverIntervalMap driverMap;
     mutable const PortBackref* firstPortBackref = nullptr;

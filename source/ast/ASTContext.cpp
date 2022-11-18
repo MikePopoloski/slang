@@ -112,6 +112,11 @@ void ASTContext::addDriver(const ValueSymbol& symbol, const Expression& longestS
     if (flags.has(ASTFlags::UnrollableForLoop) || assignFlags.has(AssignFlags::NotADriver))
         return;
 
+    symbol.addDriver(getDriverKind(), longestStaticPrefix, getContainingSymbol(), assignFlags,
+                     customEvalContext);
+}
+
+const Symbol& ASTContext::getContainingSymbol() const {
     const Symbol* containingSym = getProceduralBlock();
     if (!containingSym)
         containingSym = getContainingSubroutine();
@@ -119,8 +124,7 @@ void ASTContext::addDriver(const ValueSymbol& symbol, const Expression& longestS
     if (!containingSym)
         containingSym = &scope->asSymbol();
 
-    symbol.addDriver(getDriverKind(), longestStaticPrefix, *containingSym, assignFlags,
-                     customEvalContext);
+    return *containingSym;
 }
 
 Diagnostic& ASTContext::addDiag(DiagCode code, SourceLocation location) const {

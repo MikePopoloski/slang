@@ -207,7 +207,7 @@ void ValueSymbol::addDriver(DriverKind driverKind, const Expression& longestStat
 
     auto driver = comp.emplace<ValueDriver>(driverKind, longestStaticPrefix, containingSymbol,
                                             flags);
-    addDriverImpl(*scope, *bounds, *driver);
+    addDriver(*bounds, *driver);
 }
 
 void ValueSymbol::addDriver(DriverKind driverKind, std::pair<uint32_t, uint32_t> bounds,
@@ -221,12 +221,15 @@ void ValueSymbol::addDriver(DriverKind driverKind, std::pair<uint32_t, uint32_t>
                                             AssignFlags::None);
     driver->procCallExpression = &procCallExpression;
 
-    addDriverImpl(*scope, bounds, *driver);
+    addDriver(bounds, *driver);
 }
 
-void ValueSymbol::addDriverImpl(const Scope& scope, std::pair<uint32_t, uint32_t> bounds,
-                                const ValueDriver& driver) const {
-    auto& comp = scope.getCompilation();
+void ValueSymbol::addDriver(std::pair<uint32_t, uint32_t> bounds, const ValueDriver& driver) const {
+    auto scope = getParentScope();
+    ASSERT(scope);
+
+    auto& comp = scope->getCompilation();
+
     if (driverMap.empty()) {
         // The first time we add a driver, check whether there is also an
         // initializer expression that should count as a driver as well.
@@ -235,7 +238,7 @@ void ValueSymbol::addDriverImpl(const Scope& scope, std::pair<uint32_t, uint32_t
                 *this, SourceRange{location, location + name.length()});
 
             std::pair<uint32_t, uint32_t> initBounds{0, getType().getSelectableWidth() - 1};
-            auto initDriver = comp.emplace<ValueDriver>(driverKind, valExpr, scope.asSymbol(),
+            auto initDriver = comp.emplace<ValueDriver>(driverKind, valExpr, scope->asSymbol(),
                                                         AssignFlags::None);
 
             driverMap.insert(initBounds, initDriver, comp.getDriverMapAllocator());
@@ -330,7 +333,7 @@ void ValueSymbol::addDriverImpl(const Scope& scope, std::pair<uint32_t, uint32_t
         }
 
         if (isProblem) {
-            if (!handleOverlap(scope, name, *curr, driver, isNet, isUWire, isSingleDriverUDNT,
+            if (!handleOverlap(*scope, name, *curr, driver, isNet, isUWire, isSingleDriverUDNT,
                                netType)) {
                 break;
             }

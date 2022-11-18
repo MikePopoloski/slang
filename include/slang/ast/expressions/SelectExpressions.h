@@ -35,6 +35,10 @@ public:
                            bitmask<AssignFlags> flags, const Expression* longestStaticPrefix,
                            EvalContext* customEvalContext) const;
 
+    void getLongestStaticPrefixesImpl(
+        SmallVector<std::pair<const ValueSymbol*, const Expression*>>& results,
+        EvalContext& evalContext, const Expression* longestStaticPrefix) const;
+
     std::optional<ConstantRange> evalIndex(EvalContext& context, const ConstantValue& val,
                                            ConstantValue& associativeIndex, bool& softFail) const;
 
@@ -86,6 +90,10 @@ public:
                            bitmask<AssignFlags> flags, const Expression* longestStaticPrefix,
                            EvalContext* customEvalContext) const;
 
+    void getLongestStaticPrefixesImpl(
+        SmallVector<std::pair<const ValueSymbol*, const Expression*>>& results,
+        EvalContext& evalContext, const Expression* longestStaticPrefix) const;
+
     std::optional<ConstantRange> evalRange(EvalContext& context, const ConstantValue& val) const;
 
     void serializeTo(ASTSerializer& serializer) const;
@@ -132,6 +140,10 @@ public:
     bool requireLValueImpl(const ASTContext& context, SourceLocation location,
                            bitmask<AssignFlags> flags, const Expression* longestStaticPrefix,
                            EvalContext* customEvalContext) const;
+
+    void getLongestStaticPrefixesImpl(
+        SmallVector<std::pair<const ValueSymbol*, const Expression*>>& results,
+        EvalContext& evalContext, const Expression* longestStaticPrefix) const;
 
     std::optional<ConstantRange> getSelectRange() const;
 

@@ -468,8 +468,37 @@ public:
     /// Not copyable.
     IntervalMap& operator=(const IntervalMap&) = delete;
 
+    /// Move constructor.
+    IntervalMap(IntervalMap&& other) noexcept { *this = std::move(other); }
+
+    /// Move assignment operator.
+    IntervalMap& operator=(IntervalMap&& other) noexcept {
+        if (isFlat())
+            rootLeaf.~Leaf();
+        else
+            rootBranch.~Branch();
+
+        height = other.height;
+        rootSize = other.rootSize;
+
+        if (other.isFlat()) {
+            rootLeaf = std::move(other.rootLeaf);
+        }
+        else {
+            rootBranch = std::move(other.rootBranch);
+            other.rootBranch.~Branch();
+            other.height = 0;
+            new (&other.rootLeaf) Leaf();
+        }
+
+        return *this;
+    }
+
     /// Indicates whether the map is empty.
     bool empty() const { return rootSize == 0; }
+
+    /// Clears the map and returns all allocated memory, if any, to the provided allocator.
+    void clear(allocator_type& alloc);
 
     /// @brief Inserts a new interval and value pair into the map.
     ///
@@ -872,6 +901,37 @@ uint32_t LeafNode<TKey, TValue, Capacity>::insertFrom(uint32_t i, uint32_t size,
 }
 
 } // namespace IntervalMapDetails
+
+template<typename TKey, typename TValue>
+void IntervalMap<TKey, TValue>::clear(allocator_type& alloc) {
+    using namespace IntervalMapDetails;
+    if (!isFlat()) {
+        // Collect level 0 nodes from the root.
+        SmallVector<NodeRef> refs, nextRefs;
+        for (uint32_t i = 0; i < rootSize; i++)
+            refs.push_back(rootBranch.childAt(i));
+
+        // Visit all branch nodes.
+        for (uint32_t h = height - 1; h > 0; h--) {
+            for (size_t i = 0, e = refs.size(); i != e; i++) {
+                for (size_t j = 0, s = refs[i].size(); j != s; j++)
+                    nextRefs.push_back(refs[i].childAt(uint32_t(j)));
+
+                alloc.destroy(&refs[i].get<Branch>());
+            }
+
+            refs.clear();
+            refs.swap(nextRefs);
+        }
+
+        // Visit all leaf nodes.
+        for (size_t i = 0, e = refs.size(); i != e; i++)
+            alloc.destroy(&refs[i].get<Leaf>());
+
+        switchToLeaf();
+    }
+    rootSize = 0;
+}
 
 template<typename TKey, typename TValue>
 template<typename TNode, bool SwitchToBranch>

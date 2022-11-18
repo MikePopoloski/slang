@@ -1390,10 +1390,21 @@ void PatternCaseStatement::serializeTo(ASTSerializer& serializer) const {
 class UnrollVisitor : public ASTVisitor<UnrollVisitor, true, false> {
 public:
     bool anyErrors = false;
+    bool setupMode = true;
 
     explicit UnrollVisitor(const ASTContext& astCtx) :
-        astCtx(astCtx.resetFlags({})), evalCtx(astCtx.getCompilation()) {
+        evalCtx(astCtx.getCompilation()), astCtx(astCtx), comp(astCtx.getCompilation()) {
         evalCtx.pushEmptyFrame();
+    }
+
+    static void run(const ASTContext& astCtx, const ForLoopStatement& loop) {
+        UnrollVisitor visitor(astCtx);
+        visitor.visit(loop);
+
+        if (std::any_of(visitor.driverMap.begin(), visitor.driverMap.end(),
+                        [](auto& item) { return !item.second.empty(); })) {
+            visitor.runForReal(loop);
+        }
     }
 
     void handle(const ForLoopStatement& loop) {
@@ -1425,6 +1436,13 @@ public:
             }
 
             localPtrs.push_back(evalCtx.createLocal(var, std::move(cv)));
+        }
+
+        // In setup mode we just do a single pass with our loop vars
+        // defined to build the initial map of assignments.
+        if (setupMode) {
+            loop.body.visit(*this);
+            return;
         }
 
         SmallVector<ConstantValue, 16> values;
@@ -1470,6 +1488,11 @@ public:
                 stmt.ifFalse->visit(*this);
         };
 
+        if (setupMode) {
+            fallback();
+            return;
+        }
+
         for (auto& cond : stmt.conditions) {
             if (cond.pattern || !step()) {
                 fallback();
@@ -1494,10 +1517,27 @@ public:
 
     void handle(const ExpressionStatement& stmt) {
         step();
-        if (stmt.expr.kind == ExpressionKind::Assignment) {
-            auto& assign = stmt.expr.as<AssignmentExpression>();
-            auto flags = assign.isNonBlocking() ? AssignFlags::NonBlocking : AssignFlags::None;
-            anyErrors |= !assign.left().requireLValue(astCtx, {}, flags, nullptr, &evalCtx);
+        if (stmt.expr.kind != ExpressionKind::Assignment)
+            return;
+
+        auto& assign = stmt.expr.as<AssignmentExpression>();
+        auto& driverState = driverMap[&assign];
+
+        if (setupMode) {
+            SmallVector<std::pair<const ValueSymbol*, const Expression*>> prefixes;
+            assign.left().getLongestStaticPrefixes(prefixes, evalCtx);
+
+            for (auto [symbol, expr] : prefixes)
+                driverState.emplace_back(*expr, *symbol);
+        }
+        else {
+            for (auto& state : driverState) {
+                auto bounds = ValueDriver::getBounds(*state.longestStaticPrefix, evalCtx,
+                                                     *state.rootType);
+                if (bounds) {
+                    state.intervals.unionWith(*bounds, {}, comp.getUnrollIntervalMapAllocator());
+                }
+            }
         }
     }
 
@@ -1510,8 +1550,44 @@ private:
         return true;
     }
 
-    ASTContext astCtx;
+    void runForReal(const ForLoopStatement& loop) {
+        // Revisit the loop with setupMode turned off.
+        anyErrors = false;
+        setupMode = false;
+        evalCtx.reset();
+        evalCtx.pushEmptyFrame();
+        visit(loop);
+
+        // Find our finished driver interval maps and apply them.
+        auto& containingSym = astCtx.getContainingSymbol();
+        for (auto& [expr, stateVec] : driverMap) {
+            for (auto& state : stateVec) {
+                auto driver = comp.emplace<ValueDriver>(DriverKind::Procedural,
+                                                        *state.longestStaticPrefix, containingSym,
+                                                        AssignFlags::None);
+
+                for (auto it = state.intervals.begin(); it != state.intervals.end(); ++it)
+                    state.symbol->addDriver(it.bounds(), *driver);
+
+                state.intervals.clear(comp.getUnrollIntervalMapAllocator());
+            }
+        }
+    }
+
     EvalContext evalCtx;
+    const ASTContext& astCtx;
+    Compilation& comp;
+
+    struct PerAssignDriverState {
+        not_null<const Expression*> longestStaticPrefix;
+        not_null<const ValueSymbol*> symbol;
+        not_null<const Type*> rootType;
+        IntervalMap<uint32_t, std::monostate> intervals;
+
+        PerAssignDriverState(const Expression& expr, const ValueSymbol& symbol) :
+            longestStaticPrefix(&expr), symbol(&symbol), rootType(&symbol.getType()) {}
+    };
+    flat_hash_map<const AssignmentExpression*, SmallVector<PerAssignDriverState>> driverMap;
 };
 
 Statement& ForLoopStatement::fromSyntax(Compilation& compilation,
@@ -1592,10 +1668,8 @@ Statement& ForLoopStatement::fromSyntax(Compilation& compilation,
 
     // If this is the top-level unrollable for loop, attempt the unrolling now.
     // If not top-level, just pop up the stack and let the parent loop handle us.
-    if (wasFirst && !compilation.getOptions().strictDriverChecking) {
-        UnrollVisitor visitor(context);
-        visitor.visit(*result);
-    }
+    if (wasFirst && !compilation.getOptions().strictDriverChecking)
+        UnrollVisitor::run(context, *result);
 
     return *result;
 }

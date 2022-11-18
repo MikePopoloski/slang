@@ -450,6 +450,59 @@ bool Expression::requireLValue(const ASTContext& context, SourceLocation locatio
     return false;
 }
 
+void Expression::getLongestStaticPrefixes(
+    SmallVector<std::pair<const ValueSymbol*, const Expression*>>& results,
+    EvalContext& evalContext, const Expression* longestStaticPrefix) const {
+
+    switch (kind) {
+        case ExpressionKind::NamedValue:
+        case ExpressionKind::HierarchicalValue: {
+            auto& ve = as<ValueExpressionBase>();
+            ve.getLongestStaticPrefixesImpl(results, longestStaticPrefix);
+            break;
+        }
+        case ExpressionKind::ElementSelect: {
+            auto& select = as<ElementSelectExpression>();
+            select.getLongestStaticPrefixesImpl(results, evalContext, longestStaticPrefix);
+            break;
+        }
+        case ExpressionKind::RangeSelect: {
+            auto& select = as<RangeSelectExpression>();
+            select.getLongestStaticPrefixesImpl(results, evalContext, longestStaticPrefix);
+            break;
+        }
+        case ExpressionKind::MemberAccess: {
+            auto& access = as<MemberAccessExpression>();
+            access.getLongestStaticPrefixesImpl(results, evalContext, longestStaticPrefix);
+            break;
+        }
+        case ExpressionKind::Concatenation: {
+            auto& concat = as<ConcatenationExpression>();
+            if (concat.type->isIntegral()) {
+                for (auto op : concat.operands())
+                    op->getLongestStaticPrefixes(results, evalContext, nullptr);
+            }
+            break;
+        }
+        case ExpressionKind::Streaming: {
+            ASSERT(!longestStaticPrefix);
+            auto& stream = as<StreamingConcatenationExpression>();
+            for (auto& op : stream.streams())
+                op.operand->getLongestStaticPrefixes(results, evalContext, nullptr);
+            break;
+        }
+        case ExpressionKind::Conversion: {
+            auto& conv = as<ConversionExpression>();
+            if (conv.isImplicit())
+                conv.operand().getLongestStaticPrefixes(results, evalContext, longestStaticPrefix);
+            break;
+        }
+        case ExpressionKind::Invalid:
+        default:
+            break;
+    }
+}
+
 bool Expression::canConnectToRefArg(bool isConstRef, bool allowConstClassHandle) const {
     auto sym = getSymbolReference(/* allowPacked */ false);
     if (!sym || !VariableSymbol::isKind(sym->kind))

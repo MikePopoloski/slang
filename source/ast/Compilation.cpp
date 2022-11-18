@@ -47,7 +47,7 @@ namespace slang::ast {
 
 Compilation::Compilation(const Bag& options) :
     options(options.getOrDefault<CompilationOptions>()), driverMapAllocator(*this),
-    tempDiag({}, {}) {
+    unrollIntervalMapAllocator(*this), tempDiag({}, {}) {
 
     // Construct all built-in types.
     bitType = emplace<ScalarType>(ScalarType::Bit);

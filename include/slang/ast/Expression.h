@@ -18,6 +18,7 @@ namespace slang::ast {
 class ASTSerializer;
 class InstanceSymbolBase;
 class Type;
+class ValueSymbol;
 
 // clang-format off
 #define EXPRESSION(x) \
@@ -263,6 +264,15 @@ public:
                        bitmask<AssignFlags> flags = {},
                        const Expression* longestStaticPrefix = nullptr,
                        EvalContext* customEvalContext = nullptr) const;
+
+    /// If this expression is a valid lvalue, returns the part(s) of it that
+    /// constitutes the "longest static prefix" for purposes of determining
+    /// duplicate assignments / drivers to a portion of a value, for each
+    /// such lvalue (usually one unless there is an lvalue concatenation).
+    /// If there are no lvalues the vector will not have any entries added to it.
+    void getLongestStaticPrefixes(
+        SmallVector<std::pair<const ValueSymbol*, const Expression*>>& results,
+        EvalContext& evalContext, const Expression* longestStaticPrefix = nullptr) const;
 
     /// Checks whether this kind of expression can be connected to a ref argument
     /// for a subroutine or module port.
