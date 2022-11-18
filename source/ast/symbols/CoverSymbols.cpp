@@ -197,8 +197,9 @@ CovergroupType::CovergroupType(Compilation& compilation, string_view name, Sourc
     Scope(compilation, this), body(body) {
 }
 
-const Symbol& CovergroupType::fromSyntax(const Scope& scope,
-                                         const CovergroupDeclarationSyntax& syntax) {
+const CovergroupType& CovergroupType::fromSyntax(const Scope& scope,
+                                                 const CovergroupDeclarationSyntax& syntax,
+                                                 const Symbol*& classProperty) {
     // If we're inside a class, this covergroup is actually anonymous and the name
     // is used to implicitly declare a property of the covergroup type.
     bool inClass = scope.asSymbol().kind == SymbolKind::ClassType;
@@ -268,7 +269,7 @@ const Symbol& CovergroupType::fromSyntax(const Scope& scope,
                                                      Visibility::Public);
         var->setType(*result);
         var->flags |= VariableFlags::Const;
-        return *var;
+        classProperty = var;
     }
 
     return *result;

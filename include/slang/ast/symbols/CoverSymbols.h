@@ -62,8 +62,9 @@ public:
     CovergroupType(Compilation& compilation, string_view name, SourceLocation loc,
                    const CovergroupBodySymbol& body);
 
-    static const Symbol& fromSyntax(const Scope& scope,
-                                    const syntax::CovergroupDeclarationSyntax& syntax);
+    static const CovergroupType& fromSyntax(const Scope& scope,
+                                            const syntax::CovergroupDeclarationSyntax& syntax,
+                                            const Symbol*& classProperty);
 
     const TimingControl* getCoverageEvent() const;
     ConstantValue getDefaultValueImpl() const;

@@ -483,9 +483,14 @@ void Scope::addMembers(const SyntaxNode& syntax) {
         case SyntaxKind::LetDeclaration:
             addMember(LetDeclSymbol::fromSyntax(*this, syntax.as<LetDeclarationSyntax>()));
             break;
-        case SyntaxKind::CovergroupDeclaration:
-            addMember(CovergroupType::fromSyntax(*this, syntax.as<CovergroupDeclarationSyntax>()));
+        case SyntaxKind::CovergroupDeclaration: {
+            const Symbol* classProperty = nullptr;
+            addMember(CovergroupType::fromSyntax(*this, syntax.as<CovergroupDeclarationSyntax>(),
+                                                 classProperty));
+            if (classProperty)
+                addMember(*classProperty);
             break;
+        }
         case SyntaxKind::Coverpoint:
             addMember(CoverpointSymbol::fromSyntax(*this, syntax.as<CoverpointSyntax>()));
             break;

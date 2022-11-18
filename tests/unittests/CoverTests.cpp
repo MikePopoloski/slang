@@ -160,6 +160,31 @@ endmodule
     CHECK(diags[7].code == diag::CoverCrossItems);
 }
 
+TEST_CASE("Coverpoints and cover cross name lookup") {
+    auto tree = SyntaxTree::fromText(R"(
+typedef int baz;
+class C;
+    baz foo;
+    covergroup cg;
+        bar: coverpoint foo;
+        bax: coverpoint asdfasdf;
+        cross foo, bar;
+    endgroup
+endclass
+
+module m;
+    C c = new;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::UndeclaredIdentifier);
+}
+
 TEST_CASE("Coverage options") {
     auto tree = SyntaxTree::fromText(R"(
 module m;
