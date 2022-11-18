@@ -75,6 +75,14 @@ TEST_CASE("IntervalMap -- small num elems in root leaf") {
     CHECK(oit == map.end());
 }
 
+// This is a poor man's uniform_int_distribution since the results of
+// the standard lib type are not portable :(
+template<typename TGenerator>
+static int getUniformInt(TGenerator& gen, int min, int max) {
+    int range = max - min + 1;
+    return (gen() % range) + min;
+}
+
 TEST_CASE("IntervalMap -- branching inserts") {
     IntervalMap<int32_t, int32_t> map;
     BumpAllocator ba;
@@ -125,11 +133,9 @@ TEST_CASE("IntervalMap -- branching inserts") {
 
     // Insert a bunch of psuedo-random intervals.
     std::mt19937 mt;
-    std::uniform_int_distribution dist;
-    using PT = std::uniform_int_distribution<int>::param_type;
     for (int32_t i = 0; i < 1000; i++) {
-        int32_t left = dist(mt, PT{1, 10000});
-        int32_t right = dist(mt, PT{left, 10000});
+        int32_t left = getUniformInt(mt, 1, 10000);
+        int32_t right = getUniformInt(mt, left, 10000);
         insert(left, right, i);
     }
 
@@ -154,6 +160,9 @@ TEST_CASE("IntervalMap -- branching inserts") {
     // Make sure find() within the tree that doesn't actually overlap works correctly.
     auto oit = map.find(1, 3);
     CHECK(oit == map.end());
+
+    map.clear(alloc);
+    CHECK(map.empty());
 }
 
 TEST_CASE("IntervalMap -- unioning intervals") {
@@ -216,10 +225,8 @@ TEST_CASE("IntervalMap -- pseudorandom union testing") {
 
     // Insert a bunch of psuedo-random intervals.
     std::mt19937 mt;
-    std::uniform_int_distribution dist;
-    using PT = std::uniform_int_distribution<int>::param_type;
     for (int32_t i = 0; i < 1000; i++) {
-        int32_t left = dist(mt, PT{1, 1000});
+        int32_t left = getUniformInt(mt, 1, 1000);
         int32_t right = left + 2;
         map.unionWith(left, right, 1, alloc);
         map.verify();
