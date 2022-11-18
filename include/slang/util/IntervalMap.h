@@ -819,14 +819,15 @@ public:
 
     const TValue& operator*() const {
         ASSERT(valid());
-        return this->path.leaf<Leaf>().valueAt(this->path.leafOffset());
+        return this->path.template leaf<Leaf>().valueAt(this->path.leafOffset());
     }
 
     overlap_iterator& operator++() {
         ASSERT(valid());
 
         uint32_t offset = this->path.leafOffset() + 1;
-        offset = this->path.leaf<Leaf>().findFirstOverlap(offset, this->path.leafSize(), searchKey);
+        offset = this->path.template leaf<Leaf>().findFirstOverlap(offset, this->path.leafSize(),
+                                                                   searchKey);
 
         this->path.leafOffset() = offset;
         if (offset == this->path.leafSize() && !this->isFlat())
@@ -1077,7 +1078,7 @@ bool IntervalMap<TKey, TValue>::iterator::erase(allocator_type& alloc, bool shou
 
     // Nodes are not allowed to become empty, so erase the node itself
     // if that were to be the case.
-    auto& node = path.leaf<Leaf>();
+    auto& node = path.template leaf<Leaf>();
     if (path.leafSize() == 1) {
         alloc.destroy(&node);
         eraseNode(map.height, alloc);
@@ -1305,7 +1306,7 @@ void IntervalMap<TKey, TValue>::iterator::eraseNode(uint32_t level, allocator_ty
         }
     }
     else {
-        auto& parent = path.node<Branch>(level);
+        auto& parent = path.template node<Branch>(level);
         if (path.size(level) == 1) {
             // Branch node became empty, remove it recursively.
             alloc.destroy(&parent);
@@ -1401,7 +1402,7 @@ void IntervalMap<TKey, TValue>::overlap_iterator::nextOverlap() {
         uint32_t& offset = path.leafOffset();
         uint32_t size = path.leafSize();
         if (offset < size - 1) {
-            offset = path.node<Branch>(l).findFirstOverlap(offset + 1, size, searchKey);
+            offset = path.template node<Branch>(l).findFirstOverlap(offset + 1, size, searchKey);
             if (offset != size) {
                 // Descend back down to the next overlapping leaf node from our current position.
                 treeFind();
@@ -1444,12 +1445,12 @@ void IntervalMap<TKey, TValue>::overlap_iterator::unionWith(const TValue& value,
 
     auto updateCurrKey = [&](interval<TKey> newKey) {
         // Expand the current entry to match our new item.
-        interval<TKey>& currKey = path.leaf<Leaf>().keyAt(path.leafOffset());
+        interval<TKey>& currKey = path.template leaf<Leaf>().keyAt(path.leafOffset());
         currKey.unionWith(newKey);
         searchKey = currKey;
     };
 
-    if (!path.leaf<Leaf>().keyAt(path.leafOffset()).overlapsOrAdjacent(searchKey)) {
+    if (!path.template leaf<Leaf>().keyAt(path.leafOffset()).overlapsOrAdjacent(searchKey)) {
         this->insert(searchKey.left, searchKey.right, value, alloc);
     }
     else {
@@ -1461,7 +1462,7 @@ void IntervalMap<TKey, TValue>::overlap_iterator::unionWith(const TValue& value,
     // Our new interval is inserted or updated. Continue forward and
     // merge all later intervals that overlap with this one.
     while (true) {
-        auto& leaf = path.leaf<Leaf>();
+        auto& leaf = path.template leaf<Leaf>();
         uint32_t offset = path.leafOffset() + 1;
         if (leaf.canUnionRight(offset, path.leafSize(), searchKey)) {
             // This does not change our parent bounds so no need to update.
@@ -1479,14 +1480,14 @@ void IntervalMap<TKey, TValue>::overlap_iterator::unionWith(const TValue& value,
             // wider overlapped_iterator here.
             iterator nextIt = *this;
             nextIt.path.moveRight(map.height);
-            if (!nextIt.valid() ||
-                !nextIt.path.leaf<Leaf>().canUnionRight(0, nextIt.path.leafSize(), searchKey)) {
+            if (!nextIt.valid() || !nextIt.path.template leaf<Leaf>().canUnionRight(
+                                       0, nextIt.path.leafSize(), searchKey)) {
                 // Nope, we're done.
                 return;
             }
 
             // Merge and erase the next elem.
-            updateCurrKey(nextIt.path.leaf<Leaf>().keyAt(0));
+            updateCurrKey(nextIt.path.template leaf<Leaf>().keyAt(0));
             this->updateParentBounds(path.height(), searchKey);
 
             if (nextIt.erase(alloc, true)) {
