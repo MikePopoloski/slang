@@ -108,12 +108,11 @@ void ASTContext::setAttributes(const Expression& expr,
 }
 
 void ASTContext::addDriver(const ValueSymbol& symbol, const Expression& longestStaticPrefix,
-                           bitmask<AssignFlags> assignFlags, EvalContext* customEvalContext) const {
+                           bitmask<AssignFlags> assignFlags) const {
     if (flags.has(ASTFlags::UnrollableForLoop) || assignFlags.has(AssignFlags::NotADriver))
         return;
 
-    symbol.addDriver(getDriverKind(), longestStaticPrefix, getContainingSymbol(), assignFlags,
-                     customEvalContext);
+    symbol.addDriver(getDriverKind(), longestStaticPrefix, getContainingSymbol(), assignFlags);
 }
 
 const Symbol& ASTContext::getContainingSymbol() const {

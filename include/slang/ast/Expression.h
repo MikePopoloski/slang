@@ -262,8 +262,7 @@ public:
     /// will be registered with the various symbols involved.
     bool requireLValue(const ASTContext& context, SourceLocation location = {},
                        bitmask<AssignFlags> flags = {},
-                       const Expression* longestStaticPrefix = nullptr,
-                       EvalContext* customEvalContext = nullptr) const;
+                       const Expression* longestStaticPrefix = nullptr) const;
 
     /// If this expression is a valid lvalue, returns the part(s) of it that
     /// constitutes the "longest static prefix" for purposes of determining

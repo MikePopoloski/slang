@@ -379,29 +379,25 @@ std::optional<ConstantRange> Expression::evalSelector(EvalContext& context) cons
 }
 
 bool Expression::requireLValue(const ASTContext& context, SourceLocation location,
-                               bitmask<AssignFlags> flags, const Expression* longestStaticPrefix,
-                               EvalContext* customEvalContext) const {
+                               bitmask<AssignFlags> flags,
+                               const Expression* longestStaticPrefix) const {
     switch (kind) {
         case ExpressionKind::NamedValue:
         case ExpressionKind::HierarchicalValue: {
             auto& ve = as<ValueExpressionBase>();
-            return ve.requireLValueImpl(context, location, flags, longestStaticPrefix,
-                                        customEvalContext);
+            return ve.requireLValueImpl(context, location, flags, longestStaticPrefix);
         }
         case ExpressionKind::ElementSelect: {
             auto& select = as<ElementSelectExpression>();
-            return select.requireLValueImpl(context, location, flags, longestStaticPrefix,
-                                            customEvalContext);
+            return select.requireLValueImpl(context, location, flags, longestStaticPrefix);
         }
         case ExpressionKind::RangeSelect: {
             auto& select = as<RangeSelectExpression>();
-            return select.requireLValueImpl(context, location, flags, longestStaticPrefix,
-                                            customEvalContext);
+            return select.requireLValueImpl(context, location, flags, longestStaticPrefix);
         }
         case ExpressionKind::MemberAccess: {
             auto& access = as<MemberAccessExpression>();
-            return access.requireLValueImpl(context, location, flags, longestStaticPrefix,
-                                            customEvalContext);
+            return access.requireLValueImpl(context, location, flags, longestStaticPrefix);
         }
         case ExpressionKind::Concatenation: {
             auto& concat = as<ConcatenationExpression>();
@@ -410,8 +406,7 @@ bool Expression::requireLValue(const ASTContext& context, SourceLocation locatio
 
             ASSERT(!longestStaticPrefix || flags.has(AssignFlags::SlicedPort));
             for (auto op : concat.operands()) {
-                if (!op->requireLValue(context, location, flags | AssignFlags::InConcat, nullptr,
-                                       customEvalContext)) {
+                if (!op->requireLValue(context, location, flags | AssignFlags::InConcat)) {
                     return false;
                 }
             }
@@ -422,7 +417,7 @@ bool Expression::requireLValue(const ASTContext& context, SourceLocation locatio
             auto& stream = as<StreamingConcatenationExpression>();
             for (auto& op : stream.streams()) {
                 if (!op.operand->requireLValue(context, location, flags | AssignFlags::InConcat,
-                                               longestStaticPrefix, customEvalContext)) {
+                                               longestStaticPrefix)) {
                     return false;
                 }
             }
@@ -431,8 +426,7 @@ bool Expression::requireLValue(const ASTContext& context, SourceLocation locatio
         case ExpressionKind::Conversion: {
             auto& conv = as<ConversionExpression>();
             if (conv.isImplicit()) {
-                return conv.operand().requireLValue(context, location, flags, longestStaticPrefix,
-                                                    customEvalContext);
+                return conv.operand().requireLValue(context, location, flags, longestStaticPrefix);
             }
             break;
         }

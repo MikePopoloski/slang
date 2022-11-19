@@ -64,8 +64,7 @@ public:
     static bool isKind(SymbolKind kind);
 
     void addDriver(DriverKind kind, const Expression& longestStaticPrefix,
-                   const Symbol& containingSymbol, bitmask<AssignFlags> flags,
-                   EvalContext* customEvalContext = nullptr) const;
+                   const Symbol& containingSymbol, bitmask<AssignFlags> flags) const;
 
     void addDriver(DriverKind kind, std::pair<uint32_t, uint32_t> bounds,
                    const Expression& longestStaticPrefix, const Symbol& containingSymbol,

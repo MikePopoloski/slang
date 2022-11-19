@@ -305,7 +305,7 @@ public:
                        span<const syntax::AttributeInstanceSyntax* const> syntax) const;
 
     void addDriver(const ValueSymbol& symbol, const Expression& longestStaticPrefix,
-                   bitmask<AssignFlags> assignFlags, EvalContext* customEvalContext) const;
+                   bitmask<AssignFlags> assignFlags) const;
 
     const Symbol& getContainingSymbol() const;
 

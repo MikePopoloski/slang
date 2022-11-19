@@ -128,8 +128,7 @@ Expression& ValueExpressionBase::fromSymbol(const ASTContext& context, const Sym
 
 bool ValueExpressionBase::requireLValueImpl(const ASTContext& context, SourceLocation location,
                                             bitmask<AssignFlags> flags,
-                                            const Expression* longestStaticPrefix,
-                                            EvalContext* customEvalContext) const {
+                                            const Expression* longestStaticPrefix) const {
     if (!location)
         location = sourceRange.start();
 
@@ -180,7 +179,7 @@ bool ValueExpressionBase::requireLValueImpl(const ASTContext& context, SourceLoc
 
     if (!longestStaticPrefix)
         longestStaticPrefix = this;
-    context.addDriver(symbol, *longestStaticPrefix, flags, customEvalContext);
+    context.addDriver(symbol, *longestStaticPrefix, flags);
 
     return true;
 }

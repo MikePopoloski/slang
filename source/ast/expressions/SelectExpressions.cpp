@@ -75,8 +75,7 @@ static void checkForVectoredSelect(const Expression& value, SourceRange range,
 
 template<typename T>
 bool requireLValueHelper(const T& expr, const ASTContext& context, SourceLocation location,
-                         bitmask<AssignFlags> flags, const Expression* longestStaticPrefix,
-                         EvalContext* customEvalContext) {
+                         bitmask<AssignFlags> flags, const Expression* longestStaticPrefix) {
     auto& val = expr.value();
     if (val.kind == ExpressionKind::Concatenation || val.kind == ExpressionKind::Streaming) {
         // Selects of concatenations are not allowed to be lvalues.
@@ -113,12 +112,8 @@ bool requireLValueHelper(const T& expr, const ASTContext& context, SourceLocatio
             longestStaticPrefix = &expr;
     }
     else {
-        EvalContext localEvalCtx(context.getCompilation(), EvalFlags::CacheResults);
-        EvalContext* evalCtxPtr = customEvalContext;
-        if (!evalCtxPtr)
-            evalCtxPtr = &localEvalCtx;
-
-        if (expr.isConstantSelect(*evalCtxPtr)) {
+        EvalContext evalCtx(context.getCompilation(), EvalFlags::CacheResults);
+        if (expr.isConstantSelect(evalCtx)) {
             if (!longestStaticPrefix)
                 longestStaticPrefix = &expr;
         }
@@ -127,7 +122,7 @@ bool requireLValueHelper(const T& expr, const ASTContext& context, SourceLocatio
         }
     }
 
-    return val.requireLValue(context, location, flags, longestStaticPrefix, customEvalContext);
+    return val.requireLValue(context, location, flags, longestStaticPrefix);
 }
 
 Expression& ElementSelectExpression::fromSyntax(Compilation& compilation, Expression& value,
@@ -386,10 +381,8 @@ std::optional<ConstantRange> ElementSelectExpression::evalIndex(EvalContext& con
 
 bool ElementSelectExpression::requireLValueImpl(const ASTContext& context, SourceLocation location,
                                                 bitmask<AssignFlags> flags,
-                                                const Expression* longestStaticPrefix,
-                                                EvalContext* customEvalContext) const {
-    return requireLValueHelper(*this, context, location, flags, longestStaticPrefix,
-                               customEvalContext);
+                                                const Expression* longestStaticPrefix) const {
+    return requireLValueHelper(*this, context, location, flags, longestStaticPrefix);
 }
 
 void ElementSelectExpression::getLongestStaticPrefixesImpl(
@@ -790,10 +783,8 @@ std::optional<ConstantRange> RangeSelectExpression::evalRange(EvalContext& conte
 
 bool RangeSelectExpression::requireLValueImpl(const ASTContext& context, SourceLocation location,
                                               bitmask<AssignFlags> flags,
-                                              const Expression* longestStaticPrefix,
-                                              EvalContext* customEvalContext) const {
-    return requireLValueHelper(*this, context, location, flags, longestStaticPrefix,
-                               customEvalContext);
+                                              const Expression* longestStaticPrefix) const {
+    return requireLValueHelper(*this, context, location, flags, longestStaticPrefix);
 }
 
 void RangeSelectExpression::getLongestStaticPrefixesImpl(
@@ -1297,8 +1288,7 @@ static bool isWithinCovergroup(const Symbol& field, const Scope& usageScope) {
 
 bool MemberAccessExpression::requireLValueImpl(const ASTContext& context, SourceLocation location,
                                                bitmask<AssignFlags> flags,
-                                               const Expression* longestStaticPrefix,
-                                               EvalContext* customEvalContext) const {
+                                               const Expression* longestStaticPrefix) const {
     // If this is a selection of a class or covergroup member, assignability depends only
     // on the selected member and not on the handle itself. Otherwise, the opposite is true.
     auto& valueType = value().type->getCanonicalType();
@@ -1308,7 +1298,7 @@ bool MemberAccessExpression::requireLValueImpl(const ASTContext& context, Source
                 longestStaticPrefix = this;
 
             auto& var = member.as<VariableSymbol>();
-            context.addDriver(var, *longestStaticPrefix, flags, customEvalContext);
+            context.addDriver(var, *longestStaticPrefix, flags);
 
             return ValueExpressionBase::checkVariableAssignment(context,
                                                                 member.as<VariableSymbol>(), flags,
@@ -1340,7 +1330,7 @@ bool MemberAccessExpression::requireLValueImpl(const ASTContext& context, Source
     if (!longestStaticPrefix)
         longestStaticPrefix = this;
 
-    return value().requireLValue(context, location, flags, longestStaticPrefix, customEvalContext);
+    return value().requireLValue(context, location, flags, longestStaticPrefix);
 }
 
 void MemberAccessExpression::getLongestStaticPrefixesImpl(

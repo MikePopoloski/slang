@@ -191,17 +191,14 @@ static bool handleOverlap(const Scope& scope, string_view name, const ValueDrive
 }
 
 void ValueSymbol::addDriver(DriverKind driverKind, const Expression& longestStaticPrefix,
-                            const Symbol& containingSymbol, bitmask<AssignFlags> flags,
-                            EvalContext* evalContext) const {
+                            const Symbol& containingSymbol, bitmask<AssignFlags> flags) const {
     auto scope = getParentScope();
     ASSERT(scope);
 
     auto& comp = scope->getCompilation();
-    EvalContext localEvalCtx(comp);
-    if (!evalContext)
-        evalContext = &localEvalCtx;
+    EvalContext evalCtx(comp);
 
-    auto bounds = ValueDriver::getBounds(longestStaticPrefix, *evalContext, getType());
+    auto bounds = ValueDriver::getBounds(longestStaticPrefix, evalCtx, getType());
     if (!bounds)
         return;
 
