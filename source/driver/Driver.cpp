@@ -8,7 +8,11 @@
 //------------------------------------------------------------------------------
 #include "slang/driver/Driver.h"
 
+#include <array>
+#include <cstring>
 #include <fmt/color.h>
+#include <functional>
+#include <random>
 
 #include "slang/ast/symbols/CompilationUnitSymbols.h"
 #include "slang/ast/symbols/InstanceSymbols.h"
@@ -389,7 +393,29 @@ bool Driver::processOptions() {
     return true;
 }
 
-bool Driver::runPreprocessor(bool includeComments, bool includeDirectives) {
+template<typename T = std::mt19937>
+auto randomGenerator() -> T {
+    auto constexpr seedBytes = sizeof(typename T::result_type) * T::state_size;
+    auto constexpr seedLen = seedBytes / sizeof(std::seed_seq::result_type);
+    auto seed = std::array<std::seed_seq::result_type, seedLen>();
+    auto dev = std::random_device();
+    std::generate_n(begin(seed), seedLen, std::ref(dev));
+    auto seedSeq = std::seed_seq(begin(seed), end(seed));
+    return T{seedSeq};
+}
+
+auto generateRandomAlphanumericString(std::size_t len = 16) -> std::string {
+    static constexpr auto chars = "0123456789"
+                                  "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+                                  "abcdefghijklmnopqrstuvwxyz";
+    thread_local auto rng = randomGenerator<>();
+    auto dist = std::uniform_int_distribution{{}, std::strlen(chars) - 1};
+    auto result = std::string(len, '\0');
+    std::generate_n(begin(result), len, [&]() { return chars[dist(rng)]; });
+    return result;
+}
+
+bool Driver::runPreprocessor(bool includeComments, bool includeDirectives, bool fuzzIds) {
     BumpAllocator alloc;
     Diagnostics diagnostics;
     Preprocessor preprocessor(sourceManager, alloc, diagnostics, createOptionBag());
@@ -401,8 +427,26 @@ bool Driver::runPreprocessor(bool includeComments, bool includeDirectives) {
     output.setIncludeComments(includeComments);
     output.setIncludeDirectives(includeDirectives);
 
+    std::unordered_map<std::string, std::string> translations;
+
     while (true) {
         Token token = preprocessor.next();
+        if (fuzzIds && token.kind == TokenKind::Identifier) {
+            std::string name = std::string(token.valueText());
+            auto translation = translations.find(name);
+            if (translation == translations.end()) {
+                auto new_name = generateRandomAlphanumericString();
+                auto ret = translations.insert({name, new_name});
+                if (!ret.second) {
+                    OS::printE(fmt::format(
+                        "Could not insert translation {} --> {} to the translations map", name,
+                        new_name));
+                    return false;
+                }
+                translation = ret.first;
+            }
+            token = token.withRawText(alloc, translation->second);
+        }
         output.print(token);
         if (token.kind == TokenKind::EndOfFile)
             break;
