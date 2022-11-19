@@ -676,6 +676,15 @@ ConstantValue DynamicArrayType::getDefaultValueImpl() const {
     return std::vector<ConstantValue>();
 }
 
+DPIOpenArrayType::DPIOpenArrayType(const Type& elementType, bool isPacked) :
+    Type(SymbolKind::DPIOpenArrayType, "", SourceLocation()), elementType(elementType),
+    isPacked(isPacked) {
+}
+
+ConstantValue DPIOpenArrayType::getDefaultValueImpl() const {
+    return nullptr;
+}
+
 AssociativeArrayType::AssociativeArrayType(const Type& elementType, const Type* indexType) :
     Type(SymbolKind::AssociativeArrayType, "", SourceLocation()), elementType(elementType),
     indexType(indexType) {

@@ -283,6 +283,8 @@ EvaluatedDimension ASTContext::evalDimension(const VariableDimensionSyntax& synt
     EvaluatedDimension result;
     if (!syntax.specifier) {
         result.kind = DimensionKind::Dynamic;
+        /*result.kind = flags.has(ASTFlags::DPIArg) ? DimensionKind::DPIOpenArray
+                                                  : DimensionKind::Dynamic;*/
     }
     else {
         switch (syntax.specifier->kind) {
@@ -309,8 +311,10 @@ EvaluatedDimension ASTContext::evalDimension(const VariableDimensionSyntax& synt
         }
     }
 
-    if (requireRange && !result.isRange() && result.kind != DimensionKind::Unknown)
+    if (requireRange && !result.isRange() && result.kind != DimensionKind::Unknown &&
+        result.kind != DimensionKind::DPIOpenArray) {
         addDiag(diag::DimensionRequiresConstRange, syntax.sourceRange());
+    }
 
     return result;
 }

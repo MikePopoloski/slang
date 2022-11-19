@@ -181,6 +181,20 @@ public:
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::DynamicArrayType; }
 };
 
+/// A special case for DPI imports that have "open array" typed arguments.
+/// It's not otherwise possible to declare a variable with this type.
+class SLANG_EXPORT DPIOpenArrayType : public Type {
+public:
+    const Type& elementType;
+    bool isPacked;
+
+    DPIOpenArrayType(const Type& elementType, bool isPacked);
+
+    ConstantValue getDefaultValueImpl() const;
+
+    static bool isKind(SymbolKind kind) { return kind == SymbolKind::DPIOpenArrayType; }
+};
+
 /// Represents an unpacked array that provides associative lookup.
 class SLANG_EXPORT AssociativeArrayType : public Type {
 public:

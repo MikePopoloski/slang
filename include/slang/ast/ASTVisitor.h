@@ -205,6 +205,7 @@ decltype(auto) Symbol::visit(TVisitor&& visitor, Args&&... args) const {
         TYPE(PackedArrayType);
         TYPE(FixedSizeUnpackedArrayType);
         TYPE(DynamicArrayType);
+        TYPE(DPIOpenArrayType);
         TYPE(AssociativeArrayType);
         TYPE(QueueType);
         TYPE(PackedStructType);

@@ -160,9 +160,12 @@ enum class SLANG_EXPORT ASTFlags : uint64_t {
     StreamingWithRange = 1ull << 35,
 
     /// AST creation is happening inside a specify block.
-    SpecifyBlock = 1ull << 36
+    SpecifyBlock = 1ull << 36,
+
+    /// AST creation is for a DPI argument type.
+    DPIArg = 1ull << 37
 };
-BITMASK(ASTFlags, SpecifyBlock)
+BITMASK(ASTFlags, DPIArg)
 
 // clang-format off
 #define DK(x) \
@@ -171,7 +174,8 @@ BITMASK(ASTFlags, SpecifyBlock)
     x(AbbreviatedRange) \
     x(Dynamic) \
     x(Associative) \
-    x(Queue)
+    x(Queue) \
+    x(DPIOpenArray)
 // clang-format on
 ENUM(DimensionKind, DK)
 #undef DK

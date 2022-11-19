@@ -212,6 +212,16 @@ void TypePrinter::visit(const DynamicArrayType& type, string_view) {
     }
 }
 
+void TypePrinter::visit(const DPIOpenArrayType& type, string_view) {
+    if (options.anonymousTypeStyle == TypePrintingOptions::FriendlyName) {
+        buffer->append("DPI open array of ");
+        type.elementType.visit(*this, ""sv);
+    }
+    else {
+        printUnpackedArray(type);
+    }
+}
+
 void TypePrinter::visit(const AssociativeArrayType& type, string_view) {
     if (options.anonymousTypeStyle == TypePrintingOptions::FriendlyName) {
         buffer->append("associative array [");
@@ -404,6 +414,7 @@ void TypePrinter::printUnpackedArrayDim(const Type& type) {
             break;
         }
         case SymbolKind::DynamicArrayType:
+        case SymbolKind::DPIOpenArrayType:
             buffer->append("[]");
             break;
         case SymbolKind::AssociativeArrayType: {

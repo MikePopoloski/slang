@@ -36,6 +36,7 @@ enum class RandMode;
     x(PackedArrayType) \
     x(FixedSizeUnpackedArrayType) \
     x(DynamicArrayType) \
+    x(DPIOpenArrayType) \
     x(AssociativeArrayType) \
     x(QueueType) \
     x(PackedStructType) \

@@ -449,6 +449,8 @@ T DeclaredType::getASTContext() const {
         astFlags |= ASTFlags::AllowCoverageSampleFormal;
     if (flags.has(DeclaredTypeFlags::UserDefinedNetType))
         astFlags |= ASTFlags::AllowNetType;
+    if (flags.has(DeclaredTypeFlags::DPIArg))
+        astFlags |= ASTFlags::DPIArg;
 
     const Scope* scope = parent.getParentScope();
     ASSERT(scope);

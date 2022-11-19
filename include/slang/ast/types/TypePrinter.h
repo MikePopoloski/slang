@@ -52,6 +52,7 @@ public:
     void visit(const PackedUnionType& type, string_view overrideName);
     void visit(const FixedSizeUnpackedArrayType& type, string_view overrideName);
     void visit(const DynamicArrayType& type, string_view overrideName);
+    void visit(const DPIOpenArrayType& type, string_view overrideName);
     void visit(const AssociativeArrayType& type, string_view overrideName);
     void visit(const QueueType& type, string_view overrideName);
     void visit(const UnpackedStructType& type, string_view overrideName);

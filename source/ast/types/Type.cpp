@@ -249,6 +249,7 @@ bool Type::isArray() const {
         case SymbolKind::PackedArrayType:
         case SymbolKind::FixedSizeUnpackedArrayType:
         case SymbolKind::DynamicArrayType:
+        case SymbolKind::DPIOpenArrayType:
         case SymbolKind::AssociativeArrayType:
         case SymbolKind::QueueType:
             return true;
@@ -384,6 +385,8 @@ bool Type::isUnpackedArray() const {
         case SymbolKind::AssociativeArrayType:
         case SymbolKind::QueueType:
             return true;
+        case SymbolKind::DPIOpenArrayType:
+            return !getCanonicalType().as<DPIOpenArrayType>().isPacked;
         default:
             return false;
     }
@@ -729,6 +732,8 @@ const Type* Type::getArrayElementType() const {
             return &t.as<FixedSizeUnpackedArrayType>().elementType;
         case SymbolKind::DynamicArrayType:
             return &t.as<DynamicArrayType>().elementType;
+        case SymbolKind::DPIOpenArrayType:
+            return &t.as<DPIOpenArrayType>().elementType;
         case SymbolKind::AssociativeArrayType:
             return &t.as<AssociativeArrayType>().elementType;
         case SymbolKind::QueueType:
@@ -856,6 +861,10 @@ size_t Type::hash() const {
     else if (ct.kind == SymbolKind::DynamicArrayType) {
         auto& dat = ct.as<DynamicArrayType>();
         hash_combine(h, dat.elementType.hash());
+    }
+    else if (ct.kind == SymbolKind::DPIOpenArrayType) {
+        auto& dat = ct.as<DPIOpenArrayType>();
+        hash_combine(h, dat.isPacked, dat.elementType.hash());
     }
     else if (ct.kind == SymbolKind::AssociativeArrayType) {
         auto& aat = ct.as<AssociativeArrayType>();
@@ -1053,6 +1062,7 @@ bool Type::isKind(SymbolKind kind) {
         case SymbolKind::PackedArrayType:
         case SymbolKind::FixedSizeUnpackedArrayType:
         case SymbolKind::DynamicArrayType:
+        case SymbolKind::DPIOpenArrayType:
         case SymbolKind::AssociativeArrayType:
         case SymbolKind::QueueType:
         case SymbolKind::PackedStructType:
