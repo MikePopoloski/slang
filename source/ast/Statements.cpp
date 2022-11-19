@@ -1558,18 +1558,29 @@ private:
         evalCtx.pushEmptyFrame();
         visit(loop);
 
-        // Find our finished driver interval maps and apply them.
-        auto& containingSym = astCtx.getContainingSymbol();
-        for (auto& [expr, stateVec] : driverMap) {
-            for (auto& state : stateVec) {
-                auto driver = comp.emplace<ValueDriver>(DriverKind::Procedural,
-                                                        *state.longestStaticPrefix, containingSym,
-                                                        AssignFlags::None);
+        if (anyErrors) {
+            // We can't correctly apply our collected intervals if there are errors,
+            // so just visit each assignment expression like normal to make sure
+            // errors get issued.
+            for (auto& [expr, stateVec] : driverMap) {
+                auto flags = expr->isNonBlocking() ? AssignFlags::NonBlocking : AssignFlags::None;
+                expr->left().requireLValue(astCtx, {}, flags);
+            }
+        }
+        else {
+            // Find our finished driver interval maps and apply them.
+            auto& containingSym = astCtx.getContainingSymbol();
+            for (auto& [expr, stateVec] : driverMap) {
+                for (auto& state : stateVec) {
+                    auto driver = comp.emplace<ValueDriver>(DriverKind::Procedural,
+                                                            *state.longestStaticPrefix,
+                                                            containingSym, AssignFlags::None);
 
-                for (auto it = state.intervals.begin(); it != state.intervals.end(); ++it)
-                    state.symbol->addDriver(it.bounds(), *driver);
+                    for (auto it = state.intervals.begin(); it != state.intervals.end(); ++it)
+                        state.symbol->addDriver(it.bounds(), *driver);
 
-                state.intervals.clear(comp.getUnrollIntervalMapAllocator());
+                    state.intervals.clear(comp.getUnrollIntervalMapAllocator());
+                }
             }
         }
     }

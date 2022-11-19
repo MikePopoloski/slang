@@ -1604,12 +1604,10 @@ TEST_CASE("Unrollable for loop drivers") {
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 2);
+    REQUIRE(diags.size() == 3);
     CHECK(diags[0].code == diag::MultipleAlwaysAssigns);
     CHECK(diags[1].code == diag::MultipleAlwaysAssigns);
-
-    // TODO: fix the handling of loops with too many steps and reenable
-    // CHECK(diags[2].code == diag::MultipleAlwaysAssigns);
+    CHECK(diags[2].code == diag::MultipleAlwaysAssigns);
 }
 
 TEST_CASE("Unrollable for loop drivers -- strict checking") {
