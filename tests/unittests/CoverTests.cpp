@@ -244,6 +244,24 @@ endmodule
     CHECK(diags[7].code == diag::CoverOptionImmutable);
 }
 
+TEST_CASE("Coverage options inside class") {
+    auto tree = SyntaxTree::fromText(R"(
+class txn;
+    covergroup cg_txn;
+        option.comment = "txn cov description";
+    endgroup
+
+    function new();
+        cg_txn = new();
+    endfunction
+endclass
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
 TEST_CASE("Coverpoint bins") {
     auto tree = SyntaxTree::fromText(R"(
 module m;

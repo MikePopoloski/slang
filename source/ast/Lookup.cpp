@@ -1341,7 +1341,7 @@ bool Lookup::ensureAccessible(const Symbol& symbol, const ASTContext& context,
     }
 
     auto [parent, inStatic] = getContainingClass(*context.scope);
-    if (parent && !isAccessibleFrom(symbol, *parent)) {
+    if (parent && !isAccessibleFrom(symbol, *parent) && !withinCovergroup(symbol, *context.scope)) {
         if (sourceRange) {
             auto& diag = context.addDiag(diag::NestedNonStaticClassProperty, *sourceRange);
             diag << symbol.name << parent->name;
