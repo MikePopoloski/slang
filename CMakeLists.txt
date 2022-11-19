@@ -70,7 +70,7 @@ option(SLANG_FUZZ_TARGET "Enables changes to make binaries easier to fuzz test"
 option(BUILD_SHARED_LIBS "Generate shared libraries instead of static" OFF)
 
 set(SLANG_LIB_NAME
-    "slang"
+    "svlang"
     CACHE STRING "Default output library name")
 
 set(SLANG_CLANG_TIDY
@@ -191,16 +191,16 @@ else()
     LINK_LIBRARIES c++fs)
 endif()
 
-if(STD_FS_NEEDS_STDCXXFS)
-  set(STD_FS_LIB stdc++fs)
-elseif(STD_FS_NEEDS_CXXFS)
-  set(STD_FS_LIB c++fs)
-elseif(STD_FS_NO_LIB_NEEDED)
-  message(WARNING "Unknown C++17 compiler - not passing -lstdc++fs")
+if(NOT STD_FS_NO_LIB_NEEDED)
+  if(STD_FS_NEEDS_STDCXXFS)
+    set(STD_FS_LIB stdc++fs)
+  elseif(STD_FS_NEEDS_CXXFS)
+    set(STD_FS_LIB c++fs)
+  endif()
 endif()
 # ==== (end of test for stdc++fs)
 
-if(NOT "${STD_FS_LIB}")
+if(NOT "${STD_FS_LIB}" STREQUAL "")
   message(STATUS "Linking with: ${STD_FS_LIB}")
   list(APPEND SLANG_LIBRARIES ${STD_FS_LIB})
 endif()
