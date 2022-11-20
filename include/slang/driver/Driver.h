@@ -263,10 +263,14 @@ public:
     /// Any errors encountered will be printed to stderr.
     /// @param includeComments If true, comments will be included in the output.
     /// @param includeDirectives If true, preprocessor directives will be included in the output.
-    /// @param obfuscateIds If true, identifiers will be randomized.
+    /// @param obfuscateIds If true, identifiers will be obfuscated by replacing them with
+    ///                     randomized alphanumeric strings.
+    /// @param useFixedObfuscationSeed If true, obfuscated identifiers will be generated with
+    ///                                a fixed randomization seed, meaning they will be the
+    ///                                same every time the program is run. Used for testing.
     /// @returns true on success and false if errors were encountered.
     [[nodiscard]] bool runPreprocessor(bool includeComments, bool includeDirectives,
-                                       bool obfuscateIds);
+                                       bool obfuscateIds, bool useFixedObfuscationSeed = false);
 
     /// Prints all macros from all loaded buffers to stdout.
     void reportMacros();

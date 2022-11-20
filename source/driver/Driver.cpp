@@ -8,12 +8,7 @@
 //------------------------------------------------------------------------------
 #include "slang/driver/Driver.h"
 
-#include <array>
-#include <cstring>
 #include <fmt/color.h>
-#include <functional>
-#include <random>
-#include <unordered_map>
 
 #include "slang/ast/symbols/CompilationUnitSymbols.h"
 #include "slang/ast/symbols/InstanceSymbols.h"
@@ -27,6 +22,7 @@
 #include "slang/parsing/Preprocessor.h"
 #include "slang/syntax/SyntaxPrinter.h"
 #include "slang/syntax/SyntaxTree.h"
+#include "slang/util/Random.h"
 
 namespace slang::driver {
 
@@ -394,29 +390,19 @@ bool Driver::processOptions() {
     return true;
 }
 
-template<typename T = std::mt19937>
-auto randomGenerator() -> T {
-    auto constexpr seedBytes = sizeof(typename T::result_type) * T::state_size;
-    auto constexpr seedLen = seedBytes / sizeof(std::seed_seq::result_type);
-    auto seed = std::array<std::seed_seq::result_type, seedLen>();
-    auto dev = std::random_device();
-    std::generate_n(begin(seed), seedLen, std::ref(dev));
-    auto seedSeq = std::seed_seq(begin(seed), end(seed));
-    return T{seedSeq};
-}
-
-auto generateRandomAlphanumericString(std::size_t len = 16) -> std::string {
+template<typename TGenerator>
+static std::string generateRandomAlphanumericString(TGenerator& gen, size_t len) {
     static constexpr auto chars = "0123456789"
                                   "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-                                  "abcdefghijklmnopqrstuvwxyz";
-    thread_local auto rng = randomGenerator<>();
-    auto dist = std::uniform_int_distribution{{}, std::strlen(chars) - 1};
+                                  "abcdefghijklmnopqrstuvwxyz"sv;
     auto result = std::string(len, '\0');
-    std::generate_n(begin(result), len, [&]() { return chars[dist(rng)]; });
+    std::generate_n(begin(result), len,
+                    [&] { return chars[getUniformIntDist(gen, size_t(0), chars.size() - 1)]; });
     return result;
 }
 
-bool Driver::runPreprocessor(bool includeComments, bool includeDirectives, bool obfuscateIds) {
+bool Driver::runPreprocessor(bool includeComments, bool includeDirectives, bool obfuscateIds,
+                             bool useFixedObfuscationSeed) {
     BumpAllocator alloc;
     Diagnostics diagnostics;
     Preprocessor preprocessor(sourceManager, alloc, diagnostics, createOptionBag());
@@ -428,20 +414,28 @@ bool Driver::runPreprocessor(bool includeComments, bool includeDirectives, bool 
     output.setIncludeComments(includeComments);
     output.setIncludeDirectives(includeDirectives);
 
-    std::unordered_map<std::string, std::string> translations;
+    std::optional<std::mt19937> rng;
+    flat_hash_map<std::string, std::string> obfuscationMap;
+
+    if (obfuscateIds) {
+        if (useFixedObfuscationSeed)
+            rng.emplace();
+        else
+            rng = createRandomGenerator<std::mt19937>();
+    }
 
     while (true) {
         Token token = preprocessor.next();
         if (obfuscateIds && token.kind == TokenKind::Identifier) {
-            std::string name = std::string(token.valueText());
-            auto translation = translations.find(name);
-            if (translation == translations.end()) {
-                auto new_name = generateRandomAlphanumericString();
-                auto ret = translations.insert({name, new_name});
-                translation = ret.first;
+            auto name = std::string(token.valueText());
+            auto translation = obfuscationMap.find(name);
+            if (translation == obfuscationMap.end()) {
+                auto newName = generateRandomAlphanumericString(*rng, 16);
+                translation = obfuscationMap.emplace(name, newName).first;
             }
             token = token.withRawText(alloc, translation->second);
         }
+
         output.print(token);
         if (token.kind == TokenKind::EndOfFile)
             break;

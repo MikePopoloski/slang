@@ -8,6 +8,7 @@
 #include <random>
 
 #include "slang/util/IntervalMap.h"
+#include "slang/util/Random.h"
 
 TEST_CASE("IntervalMap -- empty map") {
     struct Foo {};
@@ -75,14 +76,6 @@ TEST_CASE("IntervalMap -- small num elems in root leaf") {
     CHECK(oit == map.end());
 }
 
-// This is a poor man's uniform_int_distribution since the results of
-// the standard lib type are not portable :(
-template<typename TGenerator>
-static int getUniformInt(TGenerator& gen, int min, int max) {
-    int range = max - min + 1;
-    return (gen() % range) + min;
-}
-
 TEST_CASE("IntervalMap -- branching inserts") {
     IntervalMap<int32_t, int32_t> map;
     BumpAllocator ba;
@@ -134,8 +127,8 @@ TEST_CASE("IntervalMap -- branching inserts") {
     // Insert a bunch of psuedo-random intervals.
     std::mt19937 mt;
     for (int32_t i = 0; i < 1000; i++) {
-        int32_t left = getUniformInt(mt, 1, 10000);
-        int32_t right = getUniformInt(mt, left, 10000);
+        int32_t left = getUniformIntDist(mt, 1, 10000);
+        int32_t right = getUniformIntDist(mt, left, 10000);
         insert(left, right, i);
     }
 
@@ -226,7 +219,7 @@ TEST_CASE("IntervalMap -- pseudorandom union testing") {
     // Insert a bunch of psuedo-random intervals.
     std::mt19937 mt;
     for (int32_t i = 0; i < 1000; i++) {
-        int32_t left = getUniformInt(mt, 1, 1000);
+        int32_t left = getUniformIntDist(mt, 1, 1000);
         int32_t right = left + 2;
         map.unionWith(left, right, 1, alloc);
         map.verify();

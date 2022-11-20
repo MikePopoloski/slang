@@ -124,6 +124,31 @@ TEST_CASE("Driver file preprocess") {
                            "\n"));
 }
 
+TEST_CASE("Driver file preprocess -- obfuscation") {
+    auto guard = OS::captureOutput();
+
+    Driver driver;
+    driver.addStandardArgs();
+
+    auto filePath = findTestDir() + "test.sv";
+    const char* argv[] = {"testfoo", filePath.c_str()};
+    CHECK(driver.parseCommandLine(2, argv));
+    CHECK(driver.processOptions());
+    CHECK(driver.runPreprocessor(true, false, true, true));
+
+    auto output = OS::capturedStdout;
+    output = std::regex_replace(output, std::regex("\r\n"), "\n");
+
+    CHECK(startsWith(output, "\nmodule ykyD0R1TWLDra6jk;\n"
+                             "    // hello\n"
+                             "    string N65udx39eEabGtIV = "));
+
+    CHECK(endsWith(output, ";\n"
+                           "    begin end\n"
+                           "endmodule\n"
+                           "\n"));
+}
+
 TEST_CASE("Driver file preprocess with error") {
     auto guard = OS::captureOutput();
 
