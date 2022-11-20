@@ -109,7 +109,7 @@ TEST_CASE("Driver file preprocess") {
     const char* argv[] = {"testfoo", filePath.c_str()};
     CHECK(driver.parseCommandLine(2, argv));
     CHECK(driver.processOptions());
-    CHECK(driver.runPreprocessor(true, false));
+    CHECK(driver.runPreprocessor(true, false, false));
 
     auto output = OS::capturedStdout;
     output = std::regex_replace(output, std::regex("\r\n"), "\n");
@@ -134,7 +134,7 @@ TEST_CASE("Driver file preprocess with error") {
     const char* argv[] = {"testfoo", filePath.c_str()};
     CHECK(driver.parseCommandLine(2, argv));
     CHECK(driver.processOptions());
-    CHECK(!driver.runPreprocessor(true, false));
+    CHECK(!driver.runPreprocessor(true, false, false));
     CHECK(stderrContains("unknown macro"));
 }
 
