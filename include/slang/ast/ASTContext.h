@@ -336,12 +336,9 @@ public:
     EvaluatedDimension evalDimension(const syntax::VariableDimensionSyntax& syntax,
                                      bool requireRange, bool isPacked) const;
 
-    std::optional<ConstantRange> evalPackedDimension(
-        const syntax::VariableDimensionSyntax& syntax) const;
-    std::optional<ConstantRange> evalPackedDimension(
-        const syntax::ElementSelectSyntax& syntax) const;
-    std::optional<ConstantRange> evalUnpackedDimension(
-        const syntax::VariableDimensionSyntax& syntax) const;
+    EvaluatedDimension evalPackedDimension(const syntax::VariableDimensionSyntax& syntax) const;
+    EvaluatedDimension evalPackedDimension(const syntax::ElementSelectSyntax& syntax) const;
+    EvaluatedDimension evalUnpackedDimension(const syntax::VariableDimensionSyntax& syntax) const;
 
     /// Subroutine argument expressions are parsed as property expressions, since we don't know
     /// up front whether they will be used to instantiate a property or a sequence or are actually

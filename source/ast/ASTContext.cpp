@@ -282,9 +282,8 @@ EvaluatedDimension ASTContext::evalDimension(const VariableDimensionSyntax& synt
                                              bool requireRange, bool isPacked) const {
     EvaluatedDimension result;
     if (!syntax.specifier) {
-        result.kind = DimensionKind::Dynamic;
-        /*result.kind = flags.has(ASTFlags::DPIArg) ? DimensionKind::DPIOpenArray
-                                                  : DimensionKind::Dynamic;*/
+        result.kind = flags.has(ASTFlags::DPIArg) ? DimensionKind::DPIOpenArray
+                                                  : DimensionKind::Dynamic;
     }
     else {
         switch (syntax.specifier->kind) {
@@ -319,38 +318,28 @@ EvaluatedDimension ASTContext::evalDimension(const VariableDimensionSyntax& synt
     return result;
 }
 
-std::optional<ConstantRange> ASTContext::evalPackedDimension(
-    const VariableDimensionSyntax& syntax) const {
-    EvaluatedDimension result = evalDimension(syntax, /* requireRange */ true, /* isPacked */ true);
-    if (!result.isRange())
-        return std::nullopt;
-
-    return result.range;
+EvaluatedDimension ASTContext::evalPackedDimension(const VariableDimensionSyntax& syntax) const {
+    return evalDimension(syntax, /* requireRange */ true, /* isPacked */ true);
 }
 
-std::optional<ConstantRange> ASTContext::evalPackedDimension(
-    const ElementSelectSyntax& syntax) const {
+EvaluatedDimension ASTContext::evalPackedDimension(const ElementSelectSyntax& syntax) const {
     EvaluatedDimension result;
-    if (syntax.selector)
+    if (syntax.selector) {
         evalRangeDimension(*syntax.selector, /* isPacked */ true, result);
+    }
+    else if (flags.has(ASTFlags::DPIArg)) {
+        result.kind = DimensionKind::DPIOpenArray;
+        return result;
+    }
 
     if (!syntax.selector || result.kind == DimensionKind::Associative)
         addDiag(diag::DimensionRequiresConstRange, syntax.sourceRange());
 
-    if (!result.isRange())
-        return std::nullopt;
-
-    return result.range;
+    return result;
 }
 
-std::optional<ConstantRange> ASTContext::evalUnpackedDimension(
-    const VariableDimensionSyntax& syntax) const {
-    EvaluatedDimension result = evalDimension(syntax, /* requireRange */ true,
-                                              /* isPacked */ false);
-    if (!result.isRange())
-        return std::nullopt;
-
-    return result.range;
+EvaluatedDimension ASTContext::evalUnpackedDimension(const VariableDimensionSyntax& syntax) const {
+    return evalDimension(syntax, /* requireRange */ true, /* isPacked */ false);
 }
 
 const ExpressionSyntax* ASTContext::requireSimpleExpr(const PropertyExprSyntax& initialExpr) const {

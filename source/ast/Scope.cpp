@@ -825,7 +825,7 @@ void Scope::elaborate() const {
         auto dt = pair.second->getDeclaredType();
 
         const Type* type = &dt->getType();
-        while (type->isPackedArray())
+        while (type->isArray())
             type = type->getArrayElementType();
 
         if (type->kind == SymbolKind::EnumType) {

@@ -365,7 +365,7 @@ void DeclaredType::mergePortTypes(
 
                 auto dim = isPacked ? context.evalPackedDimension(**it)
                                     : context.evalUnpackedDimension(**it);
-                if (!dim || destType->getFixedRange() != *dim) {
+                if (!dim.isRange() || destType->getFixedRange() != dim.range) {
                     errorDims(**it);
                     return;
                 }

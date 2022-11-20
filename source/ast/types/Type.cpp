@@ -789,8 +789,10 @@ bool Type::isValidForDPIReturn() const {
 
 bool Type::isValidForDPIArg() const {
     auto& ct = getCanonicalType();
-    if (ct.isIntegral() || ct.isFloating() || ct.isString() || ct.isCHandle() || ct.isVoid())
+    if (ct.isIntegral() || ct.isFloating() || ct.isString() || ct.isCHandle() || ct.isVoid() ||
+        ct.kind == SymbolKind::DPIOpenArrayType) {
         return true;
+    }
 
     if (ct.kind == SymbolKind::FixedSizeUnpackedArrayType)
         return ct.as<FixedSizeUnpackedArrayType>().elementType.isValidForDPIArg();
@@ -1038,6 +1040,9 @@ const Type& Type::fromSyntax(Compilation& compilation, const Type& elementType,
             case DimensionKind::Dynamic:
                 next = compilation.emplace<DynamicArrayType>(*result);
                 break;
+            case DimensionKind::DPIOpenArray:
+                next = compilation.emplace<DPIOpenArrayType>(*result, /* isPacked */ false);
+                break;
             case DimensionKind::Associative:
                 next = compilation.emplace<AssociativeArrayType>(*result, dim.associativeType);
                 break;
@@ -1133,10 +1138,11 @@ const Type& Type::fromLookupResult(Compilation& compilation, const LookupResult&
         // TODO: handle dotted selectors
         auto selectSyntax = std::get<const ElementSelectSyntax*>(result.selectors[count - i - 1]);
         auto dim = context.evalPackedDimension(*selectSyntax);
-        if (!dim)
+        if (!dim.isRange())
             return compilation.getErrorType();
 
-        finalType = &PackedArrayType::fromSyntax(*context.scope, *finalType, *dim, *selectSyntax);
+        finalType = &PackedArrayType::fromSyntax(*context.scope, *finalType, dim.range,
+                                                 *selectSyntax);
     }
 
     return *finalType;

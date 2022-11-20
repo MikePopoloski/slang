@@ -102,10 +102,16 @@ const Type& createPackedDims(const ASTContext& context, const Type* type,
     for (size_t i = 0; i < count; i++) {
         auto& dimSyntax = *dimensions[count - i - 1];
         auto dim = context.evalPackedDimension(dimSyntax);
-        if (!dim)
-            return context.getCompilation().getErrorType();
-
-        type = &PackedArrayType::fromSyntax(*context.scope, *type, *dim, dimSyntax);
+        if (!dim.isRange()) {
+            auto& comp = context.getCompilation();
+            if (dim.kind == DimensionKind::DPIOpenArray)
+                type = comp.emplace<DPIOpenArrayType>(*type, /* isPacked */ true);
+            else
+                return comp.getErrorType();
+        }
+        else {
+            type = &PackedArrayType::fromSyntax(*context.scope, *type, dim.range, dimSyntax);
+        }
     }
 
     return *type;
@@ -165,10 +171,10 @@ const Type& IntegralType::fromSyntax(Compilation& compilation, SyntaxKind intege
     SmallVector<std::pair<ConstantRange, const SyntaxNode*>, 4> dims;
     for (auto dimSyntax : dimensions) {
         auto dim = context.evalPackedDimension(*dimSyntax);
-        if (!dim)
+        if (!dim.isRange())
             return compilation.getErrorType();
 
-        dims.emplace_back(*dim, dimSyntax);
+        dims.emplace_back(dim.range, dimSyntax);
     }
 
     if (dims.empty())
@@ -450,14 +456,14 @@ const Type& EnumType::fromSyntax(Compilation& compilation, const EnumTypeSyntax&
                 return compilation.getErrorType();
             }
 
-            auto range = context.evalUnpackedDimension(*member->dimensions[0]);
-            if (!range)
+            auto dim = context.evalUnpackedDimension(*member->dimensions[0]);
+            if (!dim.isRange())
                 return compilation.getErrorType();
 
             // Range must be positive.
-            if (!context.requirePositive(std::optional(range->left),
+            if (!context.requirePositive(std::optional(dim.range.left),
                                          member->dimensions[0]->sourceRange()) ||
-                !context.requirePositive(std::optional(range->right),
+                !context.requirePositive(std::optional(dim.range.right),
                                          member->dimensions[0]->sourceRange())) {
                 return compilation.getErrorType();
             }
@@ -467,7 +473,7 @@ const Type& EnumType::fromSyntax(Compilation& compilation, const EnumTypeSyntax&
 
             // Set up the first element using the initializer. All other elements (if there are any)
             // don't get the initializer.
-            int32_t index = range->left;
+            int32_t index = dim.range.left;
             {
                 auto& ev = EnumValueSymbol::fromSyntax(compilation, *member, *resultType, index);
                 resultType->addMember(ev);
@@ -478,8 +484,8 @@ const Type& EnumType::fromSyntax(Compilation& compilation, const EnumTypeSyntax&
                     inferValue(ev, member->sourceRange());
             }
 
-            bool down = range->isLittleEndian();
-            while (index != range->right) {
+            bool down = dim.range.isLittleEndian();
+            while (index != dim.range.right) {
                 index = down ? index - 1 : index + 1;
 
                 auto& ev = EnumValueSymbol::fromSyntax(compilation, *member, *resultType, index);
@@ -529,19 +535,19 @@ void EnumType::createDefaultMembers(const ASTContext& context, const EnumTypeSyn
             members.push_back(ev);
         }
         else {
-            auto dims = member->dimensions[0];
-            auto range = context.evalUnpackedDimension(*dims);
-            if (!range)
+            auto dimList = member->dimensions[0];
+            auto dim = context.evalUnpackedDimension(*dimList);
+            if (!dim.isRange())
                 continue;
 
-            SourceRange dimRange = dims->sourceRange();
-            if (!context.requirePositive(std::optional(range->left), dimRange) ||
-                !context.requirePositive(std::optional(range->right), dimRange)) {
+            SourceRange dimRange = dimList->sourceRange();
+            if (!context.requirePositive(std::optional(dim.range.left), dimRange) ||
+                !context.requirePositive(std::optional(dim.range.right), dimRange)) {
                 continue;
             }
 
-            int32_t low = range->lower();
-            for (uint32_t i = 0; i < range->width(); i++) {
+            int32_t low = dim.range.lower();
+            for (uint32_t i = 0; i < dim.range.width(); i++) {
                 int32_t index = int32_t(i) + low;
                 auto ev = comp.emplace<EnumValueSymbol>(getEnumValueName(comp, name, index), loc);
                 ev->setType(comp.getErrorType());

@@ -1771,3 +1771,18 @@ endmodule
     CHECK(diags[3].code == diag::Redefinition);
     CHECK(diags[4].code == diag::Redefinition);
 }
+
+TEST_CASE("DPI import open array types") {
+    auto tree = SyntaxTree::fromText(R"(
+import "DPI-C" function void f1(logic[]);
+import "DPI-C" function void f2(enum logic {A,B} [] a);
+import "DPI-C" function void f3(logic a[]);
+
+module m;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}

@@ -195,6 +195,11 @@ void registerTypes(py::module_& m) {
         .def_property_readonly("elementType",
                                [](const DynamicArrayType& self) { return &self.elementType; });
 
+    py::class_<DPIOpenArrayType, Type>(m, "DPIOpenArrayType")
+        .def_readonly("isPacked", &DPIOpenArrayType::isPacked)
+        .def_property_readonly("elementType",
+                               [](const DPIOpenArrayType& self) { return &self.elementType; });
+
     py::class_<AssociativeArrayType, Type>(m, "AssociativeArrayType")
         .def_property_readonly("elementType",
                                [](const AssociativeArrayType& self) { return &self.elementType; })
