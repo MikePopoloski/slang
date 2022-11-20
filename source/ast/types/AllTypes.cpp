@@ -102,16 +102,7 @@ const Type& createPackedDims(const ASTContext& context, const Type* type,
     for (size_t i = 0; i < count; i++) {
         auto& dimSyntax = *dimensions[count - i - 1];
         auto dim = context.evalPackedDimension(dimSyntax);
-        if (!dim.isRange()) {
-            auto& comp = context.getCompilation();
-            if (dim.kind == DimensionKind::DPIOpenArray)
-                type = comp.emplace<DPIOpenArrayType>(*type, /* isPacked */ true);
-            else
-                return comp.getErrorType();
-        }
-        else {
-            type = &PackedArrayType::fromSyntax(*context.scope, *type, dim.range, dimSyntax);
-        }
+        type = &PackedArrayType::fromSyntax(*context.scope, *type, dim, dimSyntax);
     }
 
     return *type;
@@ -168,13 +159,10 @@ const Type& IntegralType::fromSyntax(Compilation& compilation, SyntaxKind intege
                                      span<const VariableDimensionSyntax* const> dimensions,
                                      bool isSigned, const ASTContext& context) {
     // This is a simple integral vector (possibly of just one element).
-    SmallVector<std::pair<ConstantRange, const SyntaxNode*>, 4> dims;
+    SmallVector<std::pair<EvaluatedDimension, const SyntaxNode*>, 4> dims;
     for (auto dimSyntax : dimensions) {
         auto dim = context.evalPackedDimension(*dimSyntax);
-        if (!dim.isRange())
-            return compilation.getErrorType();
-
-        dims.emplace_back(dim.range, dimSyntax);
+        dims.emplace_back(dim, dimSyntax);
     }
 
     if (dims.empty())
@@ -188,10 +176,13 @@ const Type& IntegralType::fromSyntax(Compilation& compilation, SyntaxKind intege
     if (integerKind != SyntaxKind::BitType)
         flags |= IntegralFlags::FourState;
 
-    if (dims.size() == 1 && dims[0].first.right == 0 && dims[0].first.left >= 0) {
-        // if we have the common case of only one dimension and lsb == 0
-        // then we can use the shared representation
-        return compilation.getType(dims[0].first.width(), flags);
+    if (dims.size() == 1 && dims[0].first.isRange()) {
+        auto range = dims[0].first.range;
+        if (range.right == 0 && range.left >= 0) {
+            // if we have the common case of only one dimension and lsb == 0
+            // then we can use the shared representation
+            return compilation.getType(range.width(), flags);
+        }
     }
 
     const Type* result = &compilation.getScalarType(flags);
@@ -623,16 +614,35 @@ PackedArrayType::PackedArrayType(const Type& elementType, ConstantRange range) :
 }
 
 const Type& PackedArrayType::fromSyntax(const Scope& scope, const Type& elementType,
-                                        ConstantRange range, const SyntaxNode& syntax) {
+                                        const EvaluatedDimension& dimension,
+                                        const SyntaxNode& syntax) {
+    auto& comp = scope.getCompilation();
     if (elementType.isError())
         return elementType;
 
-    auto& comp = scope.getCompilation();
     if (!elementType.isIntegral()) {
-        scope.addDiag(diag::PackedArrayNotIntegral, syntax.sourceRange()) << elementType;
+        if (elementType.getCanonicalType().kind == SymbolKind::DPIOpenArrayType)
+            scope.addDiag(diag::MultiplePackedOpenArrays, syntax.sourceRange());
+        else
+            scope.addDiag(diag::PackedArrayNotIntegral, syntax.sourceRange()) << elementType;
         return comp.getErrorType();
     }
 
+    if (!dimension.isRange()) {
+        if (dimension.kind == DimensionKind::DPIOpenArray) {
+            if (elementType.isPackedArray()) {
+                scope.addDiag(diag::MultiplePackedOpenArrays, syntax.sourceRange());
+                return comp.getErrorType();
+            }
+
+            auto result = comp.emplace<DPIOpenArrayType>(elementType, /* isPacked */ true);
+            result->setSyntax(syntax);
+            return *result;
+        }
+        return comp.getErrorType();
+    }
+
+    auto range = dimension.range;
     auto width = checkedMulU32(elementType.getBitWidth(), range.width());
     if (!width || width > (uint32_t)SVInt::MAX_BITS) {
         uint64_t fullWidth = uint64_t(elementType.getBitWidth()) * range.width();

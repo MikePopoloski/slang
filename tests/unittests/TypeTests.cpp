@@ -1774,15 +1774,64 @@ endmodule
 
 TEST_CASE("DPI import open array types") {
     auto tree = SyntaxTree::fromText(R"(
+typedef int baz;
+
 import "DPI-C" function void f1(logic[]);
 import "DPI-C" function void f2(enum logic {A,B} [] a);
 import "DPI-C" function void f3(logic a[]);
+import "DPI-C" function void f4(baz [] a[][3][]);
 
 module m;
+    logic [3:0] a;
+    logic b[2][1:-1][4];
+    initial begin
+        f1(a);
+        f2(a);
+        f3(b[0][-1]);
+        f4(b);
+    end
 endmodule
 )");
 
     Compilation compilation;
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("DPI import open array errors") {
+    auto tree = SyntaxTree::fromText(R"(
+typedef string baz;
+
+import "DPI-C" function void f1(baz[] a);
+import "DPI-C" function void f2(bit[][1:3]);
+import "DPI-C" function void f3(bit[3:0][]);
+import "DPI-C" function void f4(bit[] a [][2][]);
+import "DPI-C" function void f5(event a [][2][]);
+
+module m;
+    string a;
+    int b[1][2][3];
+    bit c[4][5][6];
+    bit d[4];
+    initial begin
+        f4(a);
+        f4(b);
+        f4(c);
+        f4(d);
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 7);
+    CHECK(diags[0].code == diag::PackedArrayNotIntegral);
+    CHECK(diags[1].code == diag::MultiplePackedOpenArrays);
+    CHECK(diags[2].code == diag::MultiplePackedOpenArrays);
+    CHECK(diags[3].code == diag::InvalidDPIArgType);
+    CHECK(diags[4].code == diag::BadAssignment);
+    CHECK(diags[5].code == diag::BadAssignment);
+    CHECK(diags[6].code == diag::BadAssignment);
 }

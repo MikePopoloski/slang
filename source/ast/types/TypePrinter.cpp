@@ -214,8 +214,14 @@ void TypePrinter::visit(const DynamicArrayType& type, string_view) {
 
 void TypePrinter::visit(const DPIOpenArrayType& type, string_view) {
     if (options.anonymousTypeStyle == TypePrintingOptions::FriendlyName) {
-        buffer->append("DPI open array of ");
-        type.elementType.visit(*this, ""sv);
+        if (type.isPacked) {
+            type.elementType.visit(*this, ""sv);
+            buffer->append("[]");
+        }
+        else {
+            buffer->append("unpacked array [] of ");
+            type.elementType.visit(*this, ""sv);
+        }
     }
     else {
         printUnpackedArray(type);

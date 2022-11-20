@@ -17,6 +17,7 @@ namespace slang::ast {
 class FieldSymbol;
 class InstanceSymbol;
 class ModportSymbol;
+struct EvaluatedDimension;
 
 /// A base class for integral types, which include all scalar types, predefined integer types,
 /// packed arrays, packed structures, packed unions, and enum types.
@@ -145,7 +146,8 @@ public:
 
     PackedArrayType(const Type& elementType, ConstantRange range);
 
-    static const Type& fromSyntax(const Scope& scope, const Type& elementType, ConstantRange range,
+    static const Type& fromSyntax(const Scope& scope, const Type& elementType,
+                                  const EvaluatedDimension& dimension,
                                   const syntax::SyntaxNode& syntax);
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::PackedArrayType; }

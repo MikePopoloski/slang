@@ -385,8 +385,6 @@ bool Type::isUnpackedArray() const {
         case SymbolKind::AssociativeArrayType:
         case SymbolKind::QueueType:
             return true;
-        case SymbolKind::DPIOpenArrayType:
-            return !getCanonicalType().as<DPIOpenArrayType>().isPacked;
         default:
             return false;
     }
@@ -553,6 +551,19 @@ bool Type::isEquivalent(const Type& rhs) const {
     // The 'untyped' type is equivalent with everything.
     if (l->isUntypedType() || r->isUntypedType())
         return true;
+
+    // Special case for DPI open arrays, which can only be declared for arguments
+    // of DPI import functions. Arrays of any width can be converted to them,
+    // which we will implement here even though it's not strictly "equivalent".
+    if (l->kind == SymbolKind::DPIOpenArrayType) {
+        // Any integral type converts to a packed DPI open array.
+        if (l->as<DPIOpenArrayType>().isPacked)
+            return r->isIntegral();
+
+        // Unpacked open arrays match fixed size unpacked arrays of any width.
+        if (r->kind == SymbolKind::FixedSizeUnpackedArrayType)
+            return l->getArrayElementType()->isEquivalent(*r->getArrayElementType());
+    }
 
     return false;
 }
@@ -789,13 +800,13 @@ bool Type::isValidForDPIReturn() const {
 
 bool Type::isValidForDPIArg() const {
     auto& ct = getCanonicalType();
-    if (ct.isIntegral() || ct.isFloating() || ct.isString() || ct.isCHandle() || ct.isVoid() ||
-        ct.kind == SymbolKind::DPIOpenArrayType) {
+    if (ct.isIntegral() || ct.isFloating() || ct.isString() || ct.isCHandle() || ct.isVoid())
         return true;
-    }
 
-    if (ct.kind == SymbolKind::FixedSizeUnpackedArrayType)
-        return ct.as<FixedSizeUnpackedArrayType>().elementType.isValidForDPIArg();
+    if (ct.kind == SymbolKind::FixedSizeUnpackedArrayType ||
+        ct.kind == SymbolKind::DPIOpenArrayType) {
+        return ct.getArrayElementType()->isValidForDPIArg();
+    }
 
     if (ct.isUnpackedStruct()) {
         for (auto field : ct.as<UnpackedStructType>().fields) {
@@ -1138,11 +1149,7 @@ const Type& Type::fromLookupResult(Compilation& compilation, const LookupResult&
         // TODO: handle dotted selectors
         auto selectSyntax = std::get<const ElementSelectSyntax*>(result.selectors[count - i - 1]);
         auto dim = context.evalPackedDimension(*selectSyntax);
-        if (!dim.isRange())
-            return compilation.getErrorType();
-
-        finalType = &PackedArrayType::fromSyntax(*context.scope, *finalType, dim.range,
-                                                 *selectSyntax);
+        finalType = &PackedArrayType::fromSyntax(*context.scope, *finalType, dim, *selectSyntax);
     }
 
     return *finalType;
