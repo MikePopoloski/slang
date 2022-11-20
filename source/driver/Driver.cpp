@@ -13,6 +13,7 @@
 #include <fmt/color.h>
 #include <functional>
 #include <random>
+#include <unordered_map>
 
 #include "slang/ast/symbols/CompilationUnitSymbols.h"
 #include "slang/ast/symbols/InstanceSymbols.h"
@@ -415,7 +416,7 @@ auto generateRandomAlphanumericString(std::size_t len = 16) -> std::string {
     return result;
 }
 
-bool Driver::runPreprocessor(bool includeComments, bool includeDirectives, bool fuzzIds) {
+bool Driver::runPreprocessor(bool includeComments, bool includeDirectives, bool obfuscateIds) {
     BumpAllocator alloc;
     Diagnostics diagnostics;
     Preprocessor preprocessor(sourceManager, alloc, diagnostics, createOptionBag());
@@ -431,18 +432,12 @@ bool Driver::runPreprocessor(bool includeComments, bool includeDirectives, bool 
 
     while (true) {
         Token token = preprocessor.next();
-        if (fuzzIds && token.kind == TokenKind::Identifier) {
+        if (obfuscateIds && token.kind == TokenKind::Identifier) {
             std::string name = std::string(token.valueText());
             auto translation = translations.find(name);
             if (translation == translations.end()) {
                 auto new_name = generateRandomAlphanumericString();
                 auto ret = translations.insert({name, new_name});
-                if (!ret.second) {
-                    OS::printE(fmt::format(
-                        "Could not insert translation {} --> {} to the translations map", name,
-                        new_name));
-                    return false;
-                }
                 translation = ret.first;
             }
             token = token.withRawText(alloc, translation->second);

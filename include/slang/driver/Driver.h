@@ -263,9 +263,9 @@ public:
     /// Any errors encountered will be printed to stderr.
     /// @param includeComments If true, comments will be included in the output.
     /// @param includeDirectives If true, preprocessor directives will be included in the output.
-    /// @param fuzzIds If true, identifiers will be randomized.
+    /// @param obfuscateIds If true, identifiers will be randomized.
     /// @returns true on success and false if errors were encountered.
-    [[nodiscard]] bool runPreprocessor(bool includeComments, bool includeDirectives, bool fuzzIds);
+    [[nodiscard]] bool runPreprocessor(bool includeComments, bool includeDirectives, bool obfuscateIds);
 
     /// Prints all macros from all loaded buffers to stdout.
     void reportMacros();

@@ -71,13 +71,13 @@ int driverMain(int argc, TArgs argv) try {
 
     std::optional<bool> includeComments;
     std::optional<bool> includeDirectives;
-    std::optional<bool> fuzzIds;
+    std::optional<bool> obfuscateIds;
     driver.cmdLine.add("--comments", includeComments,
                        "Include comments in preprocessed output (with -E)");
     driver.cmdLine.add("--directives", includeDirectives,
                        "Include compiler directives in preprocessed output (with -E)");
-    driver.cmdLine.add("--fuzz-ids", fuzzIds,
-                       "Randomize all identifiers in  preprocessed output (with -E)");
+    driver.cmdLine.add("--obfuscate-ids", obfuscateIds,
+                       "Randomize all identifiers in preprocessed output (with -E)");
 
     std::optional<std::string> astJsonFile;
     driver.cmdLine.add(
@@ -131,7 +131,7 @@ int driverMain(int argc, TArgs argv) try {
     try {
         if (onlyPreprocess == true) {
             ok = driver.runPreprocessor(includeComments == true, includeDirectives == true,
-                                        fuzzIds == true);
+                                        obfuscateIds == true);
         }
         else if (onlyMacros == true) {
             driver.reportMacros();
