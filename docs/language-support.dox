@@ -517,7 +517,7 @@ IEEE 1800-2017 SystemVerilog Language Reference Manual (LRM).
 {{m-dim}}     35.3 | Two layers of DPI | N/A
 {{m-success}} 35.4 | Global namespace of imported and exported functions | v0.6
 {{m-success}} 35.5 | Imported tasks and functions | v0.6
-{{m-danger}}  35.5.6.1 | Open arrays | no
+{{m-success}}  35.5.6.1 | Open arrays | v3.0
 {{m-success}} 35.6 | Calling imported functions | v0.6
 {{m-success}} 35.7 | Exported functions | v0.6
 {{m-success}} 35.8 | Exported tasks | v0.6

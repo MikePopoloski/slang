@@ -12,17 +12,21 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * Added support for system timing checks
 * Added support for program namespacing rules
 * Added support for anonymous programs
+* Added support for DPI open array typed arguments
 
 ### General Features
-*
+* New option `--obfuscate-ids` when used with `--preprocess` will replace all identifiers in the output with obfuscated alphanumeric strings (thanks to @Sustrak)
 
 ### Improvements
-*
+* The default library name for slang has been changed to "libsvlang" to avoid clashing with an existing "S-lang" package on most Linux systems. The library name is now configureable via CMake.
+* Errors about unknown package names are now ignored in lint-only mode
+* Drastically improved the performance of overlapping driver checking and driver loop unrolling. For large projects this may reduce compile times by as much as 80-90%.
 
 ### Fixes
 * Parameters used inside specify blocks will now issue an appropriate warning
 * Fixed an issue where the parser erroneously allowed selects of integer literal expressions
 * Top-level programs are now automatically instantiated, just like top-level modules
+* Implicit covergroups declared inside classes were previously not being checked for correctness
 
 
 ## [v2.0] - 2022-10-29
