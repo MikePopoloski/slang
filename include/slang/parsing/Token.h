@@ -87,13 +87,9 @@ public:
     Trivia(TriviaKind kind, span<Token const> tokens);
     Trivia(TriviaKind kind, syntax::SyntaxNode* syntax);
 
-    bool valid() const {
-        return kind != TriviaKind::Unknown;
-    }
+    bool valid() const { return kind != TriviaKind::Unknown; }
 
-    explicit operator bool() const {
-        return valid();
-    }
+    explicit operator bool() const { return valid(); }
 
     /// If the trivia is raw source text, creates a new trivia with the specified location
     /// (instead of implicitly offset from the parent token). If this trivia is for a
