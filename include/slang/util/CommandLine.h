@@ -283,19 +283,13 @@ public:
     bool parse(span<const string_view> args, ParseOptions options = {});
 
     /// Gets the name of the program, parsed out of the first item on the command line.
-    string_view getProgramName() const {
-        return programName;
-    }
+    string_view getProgramName() const { return programName; }
 
     /// Manually set the program name for later use in help text.
-    void setProgramName(string_view name) {
-        programName = name;
-    }
+    void setProgramName(string_view name) { programName = name; }
 
     /// Gets the set of errors that were encountered when parsing command line options.
-    span<const std::string> getErrors() const {
-        return errors;
-    }
+    span<const std::string> getErrors() const { return errors; }
 
     /// Gets a string representing program help text, based on registered flags.
     /// @a overview text is a human friendly description of what the program does.

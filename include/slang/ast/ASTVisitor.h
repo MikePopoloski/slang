@@ -97,20 +97,13 @@ public:
         }
     }
 
-    void visitInvalid(const Expression&) {
-    }
-    void visitInvalid(const Statement&) {
-    }
-    void visitInvalid(const TimingControl&) {
-    }
-    void visitInvalid(const Constraint&) {
-    }
-    void visitInvalid(const AssertionExpr&) {
-    }
-    void visitInvalid(const BinsSelectExpr&) {
-    }
-    void visitInvalid(const Pattern&) {
-    }
+    void visitInvalid(const Expression&) {}
+    void visitInvalid(const Statement&) {}
+    void visitInvalid(const TimingControl&) {}
+    void visitInvalid(const Constraint&) {}
+    void visitInvalid(const AssertionExpr&) {}
+    void visitInvalid(const BinsSelectExpr&) {}
+    void visitInvalid(const Pattern&) {}
 
 #undef DERIVED
 };
