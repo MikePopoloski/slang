@@ -39,7 +39,7 @@ endif()
 
 set(find_pkg_args "")
 if(${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.24.0")
-  set(find_pkg_args "FIND_PACKAGE_ARGS" "2.0.0")
+  set(find_pkg_args "FIND_PACKAGE_ARGS" "2.0.1")
 endif()
 
 FetchContent_Declare(
