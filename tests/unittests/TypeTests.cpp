@@ -1784,11 +1784,13 @@ import "DPI-C" function void f4(baz [] a[][3][]);
 module m;
     logic [3:0] a;
     logic b[2][1:-1][4];
+    logic [2:0] c[][3][];
     initial begin
         f1(a);
         f2(a);
         f3(b[0][-1]);
         f4(b);
+        f4(c);
     end
 endmodule
 )");

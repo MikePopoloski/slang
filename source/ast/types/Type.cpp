@@ -561,8 +561,10 @@ bool Type::isEquivalent(const Type& rhs) const {
             return r->isIntegral();
 
         // Unpacked open arrays match fixed size unpacked arrays of any width.
-        if (r->kind == SymbolKind::FixedSizeUnpackedArrayType)
+        if (r->kind == SymbolKind::FixedSizeUnpackedArrayType ||
+            r->kind == SymbolKind::DynamicArrayType) {
             return l->getArrayElementType()->isEquivalent(*r->getArrayElementType());
+        }
     }
 
     return false;
