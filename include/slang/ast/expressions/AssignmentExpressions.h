@@ -335,11 +335,13 @@ class SLANG_EXPORT ReplicatedAssignmentPatternExpression : public AssignmentPatt
 public:
     ReplicatedAssignmentPatternExpression(const Type& type, const Expression& count,
                                           span<const Expression* const> elements,
+                                          span<const Expression* const> oriElements,
                                           SourceRange sourceRange) :
         AssignmentPatternExpressionBase(ExpressionKind::ReplicatedAssignmentPattern, type, elements,
                                         sourceRange),
-        count_(&count) {}
+        count_(&count), oriElements_(oriElements) {}
 
+    span<const Expression* const> oriElements() const { return oriElements_; }
     const Expression& count() const { return *count_; }
 
     void serializeTo(ASTSerializer& serializer) const;
@@ -376,6 +378,7 @@ private:
                                            const ASTContext& context, size_t& count);
 
     const Expression* count_;
+    span<const Expression* const> oriElements_;
 };
 
 } // namespace slang::ast

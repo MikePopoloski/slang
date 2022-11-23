@@ -1882,9 +1882,10 @@ Expression& ReplicatedAssignmentPatternExpression::forStruct(
         }
     }
 
-    auto result = comp.emplace<ReplicatedAssignmentPatternExpression>(type, countExpr,
-                                                                      elems.copy(comp),
-                                                                      sourceRange);
+    auto elemsCopy = elems.copy(comp);
+    auto originElems = elemsCopy.first(syntax.items.size());
+    auto result = comp.emplace<ReplicatedAssignmentPatternExpression>(type, countExpr, elemsCopy,
+                                                                      originElems, sourceRange);
     if (bad)
         return badExpr(comp, result);
 
@@ -1904,8 +1905,9 @@ Expression& ReplicatedAssignmentPatternExpression::forFixedArray(
     auto elems = bindExpressionList(type, elementType, count, numElements, syntax.items, context,
                                     sourceRange, bad);
 
+    auto originElems = elems.first(syntax.items.size());
     auto result = comp.emplace<ReplicatedAssignmentPatternExpression>(type, countExpr, elems,
-                                                                      sourceRange);
+                                                                      originElems, sourceRange);
     if (bad)
         return badExpr(comp, result);
 
@@ -1925,8 +1927,9 @@ Expression& ReplicatedAssignmentPatternExpression::forDynamicArray(
     auto elems = bindExpressionList(type, elementType, count, 0, syntax.items, context, sourceRange,
                                     bad);
 
+    auto originElems = elems.first(syntax.items.size());
     auto result = comp.emplace<ReplicatedAssignmentPatternExpression>(type, countExpr, elems,
-                                                                      sourceRange);
+                                                                      originElems, sourceRange);
     if (bad)
         return badExpr(comp, result);
 
