@@ -482,7 +482,8 @@ ASTContext ASTContext::resetFlags(bitmask<ASTFlags> addedFlags) const {
     static constexpr bitmask<ASTFlags> NonSticky =
         ASTFlags::InsideConcatenation | ASTFlags::AllowDataType | ASTFlags::AssignmentAllowed |
         ASTFlags::StreamingAllowed | ASTFlags::TopLevelStatement | ASTFlags::AllowUnboundedLiteral |
-        ASTFlags::AllowTypeReferences | ASTFlags::AllowClockingBlock | ASTFlags::UnrollableForLoop;
+        ASTFlags::AllowTypeReferences | ASTFlags::AllowClockingBlock | ASTFlags::UnrollableForLoop |
+        ASTFlags::AssertionDefaultArg;
 
     ASTContext result(*this);
     result.flags &= ~NonSticky;

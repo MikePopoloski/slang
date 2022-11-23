@@ -802,6 +802,7 @@ Expression& AssertionInstanceExpression::fromLookup(const Symbol& symbol,
             expr = formal->defaultValueSyntax;
             defValCtx.emplace(*symbolScope, LookupLocation::after(*formal));
             defValCtx->assertionInstance = &instance;
+            defValCtx->flags |= ASTFlags::AssertionDefaultArg;
             argCtx = &defValCtx.value();
         };
 
@@ -988,6 +989,7 @@ Expression& AssertionInstanceExpression::makeDefault(const Symbol& symbol) {
         else {
             ASTContext ctx(*symbolScope, LookupLocation::after(*formal));
             ctx.assertionInstance = &instance;
+            ctx.flags |= ASTFlags::AssertionDefaultArg;
 
             auto expr = formal->defaultValueSyntax;
             instance.argumentMap.emplace(formal, std::make_tuple(expr, ctx));
@@ -1084,7 +1086,7 @@ Expression& AssertionInstanceExpression::bindPort(const Symbol& symbol, SourceRa
     auto [seqExpr, regExpr] = decomposePropExpr(*propExpr);
 
     // Inherit any AST flags that are specific to this argument's instantiation.
-    argCtx.flags = instanceCtx.flags;
+    argCtx.flags |= instanceCtx.flags;
 
     ASTContext::AssertionInstanceDetails details;
     details.argExpansionLoc = range.start();

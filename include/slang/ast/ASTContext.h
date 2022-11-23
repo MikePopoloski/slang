@@ -163,7 +163,10 @@ enum class SLANG_EXPORT ASTFlags : uint64_t {
     SpecifyBlock = 1ull << 36,
 
     /// AST creation is for a DPI argument type.
-    DPIArg = 1ull << 37
+    DPIArg = 1ull << 37,
+
+    /// AST creation is for an assertion instance's default argument.
+    AssertionDefaultArg = 1ull << 38
 };
 BITMASK(ASTFlags, DPIArg)
 

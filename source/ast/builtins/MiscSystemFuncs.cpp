@@ -226,6 +226,35 @@ public:
     }
 };
 
+class InferredValueFunction : public SystemSubroutine {
+public:
+    InferredValueFunction(const std::string& name, bool isClockFunc) :
+        SystemSubroutine(name, SubroutineKind::Function), isClockFunc(isClockFunc) {}
+
+    const Type& checkArguments(const ASTContext& context, const Args& args, SourceRange range,
+                               const Expression*) const final {
+        auto& comp = context.getCompilation();
+        if (!checkArgCount(context, false, args, range, 0, 0))
+            return comp.getErrorType();
+
+        if (!context.flags.has(ASTFlags::AssertionDefaultArg)) {
+            context.addDiag(diag::InferredValDefArg, range) << name;
+            return comp.getErrorType();
+        }
+
+        return isClockFunc ? comp.getType(SyntaxKind::EventType) : comp.getLogicType();
+    }
+
+    ConstantValue eval(EvalContext& context, const Args&, SourceRange range,
+                       const CallExpression::SystemCallInfo&) const final {
+        notConst(context, range);
+        return nullptr;
+    }
+
+private:
+    bool isClockFunc;
+};
+
 struct SequenceMethodExprVisitor {
     const ASTContext& context;
     std::string name;
@@ -356,6 +385,9 @@ void registerMiscSystemFuncs(Compilation& c) {
 
     c.addSystemSubroutine(std::make_unique<SFormatFunction>("$sformatf", false));
     c.addSystemSubroutine(std::make_unique<SFormatFunction>("$psprintf", true));
+
+    c.addSystemSubroutine(std::make_unique<InferredValueFunction>("$inferred_clock", true));
+    c.addSystemSubroutine(std::make_unique<InferredValueFunction>("$inferred_disable", false));
 
     c.addSystemMethod(SymbolKind::ClassType, std::make_unique<ClassRandomizeFunction>());
     c.addSystemMethod(SymbolKind::SequenceType, std::make_unique<SequenceMethod>("triggered"));

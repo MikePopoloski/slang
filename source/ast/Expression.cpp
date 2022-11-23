@@ -183,7 +183,7 @@ const InvalidExpression InvalidExpression::Instance(nullptr, ErrorType::Instance
 
 const Expression& Expression::bind(const ExpressionSyntax& syntax, const ASTContext& context,
                                    bitmask<ASTFlags> extraFlags) {
-    return selfDetermined(context.getCompilation(), syntax, context, extraFlags);
+    return selfDetermined(context.getCompilation(), syntax, context, context.flags | extraFlags);
 }
 
 const Expression& Expression::bindLValue(const ExpressionSyntax& lhs, const Type& rhs,
