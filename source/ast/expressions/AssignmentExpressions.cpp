@@ -1166,14 +1166,27 @@ Expression& Expression::bindAssignmentPattern(Compilation& comp,
 }
 
 ConstantValue AssignmentPatternExpressionBase::evalImpl(EvalContext& context) const {
+    size_t replCount = 1;
+    if (kind == ExpressionKind::ReplicatedAssignmentPattern) {
+        auto countVal = as<ReplicatedAssignmentPatternExpression>()
+                            .count()
+                            .eval(context)
+                            .integer()
+                            .as<int32_t>();
+        ASSERT(countVal >= 0);
+        replCount = size_t(*countVal);
+    }
+
     if (type->isIntegral()) {
         SmallVector<SVInt> values;
-        for (auto elem : elements()) {
-            ConstantValue v = elem->eval(context);
-            if (!v)
-                return nullptr;
+        for (size_t i = 0; i < replCount; i++) {
+            for (auto elem : elements()) {
+                ConstantValue v = elem->eval(context);
+                if (!v)
+                    return nullptr;
 
-            values.push_back(v.integer());
+                values.push_back(v.integer());
+            }
         }
 
         return SVInt::concat(values);
@@ -1205,10 +1218,12 @@ ConstantValue AssignmentPatternExpressionBase::evalImpl(EvalContext& context) co
     else if (type->isQueue()) {
         SVQueue result;
         result.maxBound = type->getCanonicalType().as<QueueType>().maxBound;
-        for (auto elem : elements()) {
-            result.emplace_back(elem->eval(context));
-            if (result.back().bad())
-                return nullptr;
+        for (size_t i = 0; i < replCount; i++) {
+            for (auto elem : elements()) {
+                result.emplace_back(elem->eval(context));
+                if (result.back().bad())
+                    return nullptr;
+            }
         }
 
         result.resizeToBound();
@@ -1216,10 +1231,12 @@ ConstantValue AssignmentPatternExpressionBase::evalImpl(EvalContext& context) co
     }
     else {
         std::vector<ConstantValue> values;
-        for (auto elem : elements()) {
-            values.emplace_back(elem->eval(context));
-            if (values.back().bad())
-                return nullptr;
+        for (size_t i = 0; i < replCount; i++) {
+            for (auto elem : elements()) {
+                values.emplace_back(elem->eval(context));
+                if (values.back().bad())
+                    return nullptr;
+            }
         }
 
         return values;
@@ -1273,16 +1290,15 @@ static span<const Expression* const> bindExpressionList(
     SourceRange sourceRange, bool& bad) {
 
     SmallVector<const Expression*> elems;
-    for (size_t i = 0; i < replCount; i++) {
-        for (auto item : items) {
-            auto& expr = Expression::bindRValue(elementType, *item,
-                                                item->getFirstToken().location(), context);
-            elems.push_back(&expr);
-            bad |= expr.bad();
-        }
+    for (auto item : items) {
+        auto& expr = Expression::bindRValue(elementType, *item, item->getFirstToken().location(),
+                                            context);
+        elems.push_back(&expr);
+        bad |= expr.bad();
     }
 
-    if (!bad && expectedCount && expectedCount != elems.size()) {
+    // TODO: overflow
+    if (!bad && expectedCount && expectedCount != elems.size() * replCount) {
         auto& diag = context.addDiag(diag::WrongNumberAssignmentPatterns, sourceRange);
         diag << patternType << expectedCount << elems.size();
         bad = true;
@@ -1864,6 +1880,7 @@ Expression& ReplicatedAssignmentPatternExpression::forStruct(
     for (auto& field : structScope.membersOfType<FieldSymbol>())
         types.push_back(&field.getType());
 
+    // TODO: overflow
     if (types.size() != syntax.items.size() * count) {
         auto& diag = context.addDiag(diag::WrongNumberAssignmentPatterns, sourceRange);
         diag << type << types.size() << syntax.items.size() * count;
@@ -1873,13 +1890,11 @@ Expression& ReplicatedAssignmentPatternExpression::forStruct(
     bool bad = false;
     size_t index = 0;
     SmallVector<const Expression*> elems;
-    for (size_t i = 0; i < count; i++) {
-        for (auto item : syntax.items) {
-            auto& expr = Expression::bindRValue(*types[index++], *item,
-                                                item->getFirstToken().location(), context);
-            elems.push_back(&expr);
-            bad |= expr.bad();
-        }
+    for (auto item : syntax.items) {
+        auto& expr = Expression::bindRValue(*types[index++], *item,
+                                            item->getFirstToken().location(), context);
+        elems.push_back(&expr);
+        bad |= expr.bad();
     }
 
     auto result = comp.emplace<ReplicatedAssignmentPatternExpression>(type, countExpr,

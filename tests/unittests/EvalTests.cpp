@@ -2311,6 +2311,12 @@ struct {
                                             "[[[1,1],64'h2,6'b10,32'd2,[[3.14],[3.14]]],"
                                             "[[1,1],64'h2,6'b10,32'd2,[[3.14],[3.14]]]]]");
 
+    session.eval("int q[$] = '{3{5}};");
+    CHECK(session.eval("q").toString() == "[5,5,5]");
+
+    session.eval("logic [11:0] r = '{12{4'd3}};");
+    CHECK(session.eval("r").integer() == 4095);
+
     NO_SESSION_ERRORS;
 }
 
