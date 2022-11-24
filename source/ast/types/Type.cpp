@@ -555,7 +555,10 @@ bool Type::isEquivalent(const Type& rhs) const {
     // Special case for DPI open arrays, which can only be declared for arguments
     // of DPI import functions. Arrays of any width can be converted to them,
     // which we will implement here even though it's not strictly "equivalent".
-    if (l->kind == SymbolKind::DPIOpenArrayType) {
+    if (l->kind == SymbolKind::DPIOpenArrayType || r->kind == SymbolKind::DPIOpenArrayType) {
+        if (l->kind != SymbolKind::DPIOpenArrayType)
+            std::swap(l, r);
+
         // Any integral type converts to a packed DPI open array.
         if (l->as<DPIOpenArrayType>().isPacked)
             return r->isIntegral();

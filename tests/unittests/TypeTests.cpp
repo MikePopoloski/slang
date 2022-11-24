@@ -1780,6 +1780,7 @@ import "DPI-C" function void f1(logic[]);
 import "DPI-C" function void f2(enum logic {A,B} [] a);
 import "DPI-C" function void f3(logic a[]);
 import "DPI-C" function void f4(baz [] a[][3][]);
+import "DPI-C" function void f5(output baz [] a[][3][]);
 
 module m;
     logic [3:0] a;
@@ -1791,6 +1792,8 @@ module m;
         f3(b[0][-1]);
         f4(b);
         f4(c);
+        f5(b);
+        f5(c);
     end
 endmodule
 )");
