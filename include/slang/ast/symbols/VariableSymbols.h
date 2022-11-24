@@ -132,6 +132,8 @@ public:
     NetSymbol(string_view name, SourceLocation loc, const NetType& netType);
 
     const TimingControl* getDelay() const;
+    std::optional<ChargeStrength> getChargeStrength() const;
+    std::pair<std::optional<DriveStrength>, std::optional<DriveStrength>> getDriveStrength() const;
 
     /// If the net has an initializer, checks it for correctness and issues a
     /// diagnostic if there are problems. Currently this only checks that the

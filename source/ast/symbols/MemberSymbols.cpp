@@ -513,8 +513,28 @@ const TimingControl* ContinuousAssignSymbol::getDelay() const {
     return *delay;
 }
 
+std::pair<std::optional<DriveStrength>, std::optional<DriveStrength>> ContinuousAssignSymbol::
+    getDriveStrength() const {
+    auto syntax = getSyntax();
+    if (syntax && syntax->parent) {
+        auto& cas = syntax->parent->as<ContinuousAssignSyntax>();
+        if (cas.strength)
+            return SemanticFacts::getDriveStrength(*cas.strength);
+    }
+    return {};
+}
+
 void ContinuousAssignSymbol::serializeTo(ASTSerializer& serializer) const {
     serializer.write("assignment", getAssignment());
+
+    if (auto delayCtrl = getDelay())
+        serializer.write("delay", *delayCtrl);
+
+    auto [ds0, ds1] = getDriveStrength();
+    if (ds0)
+        serializer.write("driveStrength0", toString(*ds0));
+    if (ds1)
+        serializer.write("driveStrength1", toString(*ds1));
 }
 
 GenvarSymbol::GenvarSymbol(string_view name, SourceLocation loc) :

@@ -54,6 +54,7 @@ ENUM_SIZED(DiagSubsystem, uint16_t, DS)
     x(Error) \
     x(Fatal)
 ENUM(DiagnosticSeverity, DS)
+#undef DS
 // clang-format on
 
 /// @brief A compact code that represents a diagnostic.

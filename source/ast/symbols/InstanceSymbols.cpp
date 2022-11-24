@@ -1218,6 +1218,18 @@ const TimingControl* PrimitiveInstanceSymbol::getDelay() const {
     return nullptr;
 }
 
+std::pair<std::optional<DriveStrength>, std::optional<DriveStrength>> PrimitiveInstanceSymbol::
+    getDriveStrength() const {
+
+    auto syntax = getSyntax();
+    if (syntax && syntax->parent && syntax->parent->kind == SyntaxKind::PrimitiveInstantiation) {
+        auto& pis = syntax->parent->as<PrimitiveInstantiationSyntax>();
+        if (pis.strength)
+            return SemanticFacts::getDriveStrength(*pis.strength);
+    }
+    return {};
+}
+
 void PrimitiveInstanceSymbol::serializeTo(ASTSerializer& serializer) const {
     serializer.writeLink("primitiveType", primitiveType);
 
@@ -1228,6 +1240,12 @@ void PrimitiveInstanceSymbol::serializeTo(ASTSerializer& serializer) const {
 
     if (auto delayCtrl = getDelay())
         serializer.write("delay", *delayCtrl);
+
+    auto [ds0, ds1] = getDriveStrength();
+    if (ds0)
+        serializer.write("driveStrength0", toString(*ds0));
+    if (ds1)
+        serializer.write("driveStrength1", toString(*ds1));
 }
 
 } // namespace slang::ast

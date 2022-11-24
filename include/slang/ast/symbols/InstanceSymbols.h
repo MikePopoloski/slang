@@ -244,6 +244,7 @@ public:
 
     span<const Expression* const> getPortConnections() const;
     const TimingControl* getDelay() const;
+    std::pair<std::optional<DriveStrength>, std::optional<DriveStrength>> getDriveStrength() const;
 
     static void fromSyntax(const PrimitiveSymbol& primitive,
                            const syntax::HierarchyInstantiationSyntax& syntax,

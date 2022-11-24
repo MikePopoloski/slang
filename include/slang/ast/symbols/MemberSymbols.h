@@ -168,6 +168,7 @@ public:
 
     const Expression& getAssignment() const;
     const TimingControl* getDelay() const;
+    std::pair<std::optional<DriveStrength>, std::optional<DriveStrength>> getDriveStrength() const;
 
     void serializeTo(ASTSerializer& serializer) const;
 

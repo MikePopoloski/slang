@@ -94,6 +94,14 @@ ENUM_SIZED(DriverKind, uint8_t, DRIVER)
 ENUM(PulseStyleKind, PSK)
 #undef PSK
 
+#define CS(x) x(Small) x(Medium) x(Large)
+ENUM(ChargeStrength, CS)
+#undef CS
+
+#define DS(x) x(Supply) x(Strong) x(Pull) x(Weak) x(HighZ)
+ENUM(DriveStrength, DS)
+#undef DS
+
 /// A set of flags that control how assignments are checked.
 enum class SLANG_EXPORT AssignFlags : uint16_t {
     /// No special assignment behavior specified.
@@ -153,7 +161,12 @@ public:
 
     static PulseStyleKind getPulseStyleKind(parsing::TokenKind kind);
 
+    static ChargeStrength getChargeStrength(parsing::TokenKind kind);
+
     static string_view getProcedureKindStr(ProceduralBlockKind kind);
+
+    static std::pair<std::optional<DriveStrength>, std::optional<DriveStrength>> getDriveStrength(
+        const syntax::NetStrengthSyntax& syntax);
 
     static void populateTimeScale(TimeScale& timeScale, const Scope& scope,
                                   const syntax::TimeUnitsDeclarationSyntax& syntax,

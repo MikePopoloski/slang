@@ -12,6 +12,7 @@
 #include "slang/diagnostics/DeclarationsDiags.h"
 #include "slang/diagnostics/PreprocessorDiags.h"
 #include "slang/syntax/AllSyntax.h"
+#include "slang/syntax/SyntaxFacts.h"
 
 namespace slang::ast {
 
@@ -107,6 +108,15 @@ PulseStyleKind SemanticFacts::getPulseStyleKind(TokenKind kind) {
         default: ASSUME_UNREACHABLE;
     }
 }
+
+ChargeStrength SemanticFacts::getChargeStrength(TokenKind kind) {
+    switch (kind) {
+        case TokenKind::SmallKeyword: return ChargeStrength::Small;
+        case TokenKind::MediumKeyword: return ChargeStrength::Medium;
+        case TokenKind::LargeKeyword: return ChargeStrength::Large;
+        default: ASSUME_UNREACHABLE;
+    }
+}
 // clang-format on
 
 string_view SemanticFacts::getProcedureKindStr(ProceduralBlockKind kind) {
@@ -125,6 +135,53 @@ string_view SemanticFacts::getProcedureKindStr(ProceduralBlockKind kind) {
             return "always_ff"sv;
     }
     ASSUME_UNREACHABLE;
+}
+
+static DriveStrength getDriveStrengthVal(TokenKind kind) {
+    switch (kind) {
+        case TokenKind::Supply0Keyword:
+        case TokenKind::Supply1Keyword:
+            return DriveStrength::Supply;
+        case TokenKind::Strong0Keyword:
+        case TokenKind::Strong1Keyword:
+            return DriveStrength::Strong;
+        case TokenKind::Weak0Keyword:
+        case TokenKind::Weak1Keyword:
+            return DriveStrength::Weak;
+        case TokenKind::Pull0Keyword:
+        case TokenKind::Pull1Keyword:
+            return DriveStrength::Pull;
+        case TokenKind::HighZ0Keyword:
+        case TokenKind::HighZ1Keyword:
+            return DriveStrength::HighZ;
+        default:
+            ASSUME_UNREACHABLE;
+    }
+}
+
+std::pair<std::optional<DriveStrength>, std::optional<DriveStrength>> SemanticFacts::
+    getDriveStrength(const syntax::NetStrengthSyntax& syntax) {
+
+    if (syntax.kind == SyntaxKind::DriveStrength) {
+        auto& ds = syntax.as<DriveStrengthSyntax>();
+        auto val0 = getDriveStrengthVal(ds.strength0.kind);
+        auto val1 = getDriveStrengthVal(ds.strength1.kind);
+        if (SyntaxFacts::isStrength0(ds.strength1.kind))
+            std::swap(val0, val1);
+
+        return {val0, val1};
+    }
+    else if (syntax.kind == SyntaxKind::PullStrength) {
+        auto kind = syntax.as<PullStrengthSyntax>().strength.kind;
+        auto val = getDriveStrengthVal(kind);
+        if (SyntaxFacts::isStrength0(kind))
+            return {val, {}};
+        else
+            return {{}, val};
+    }
+    else {
+        return {{}, {}};
+    }
 }
 
 StatementBlockKind SemanticFacts::getStatementBlockKind(const BlockStatementSyntax& syntax) {

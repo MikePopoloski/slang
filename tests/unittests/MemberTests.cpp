@@ -3367,3 +3367,35 @@ endmodule
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::InvalidPulseStyle);
 }
+
+TEST_CASE("Charge and drive strength API access") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    assign (supply1, weak0) foo = 1;
+    pullup (strong1) p1 (a);
+    trireg (small) b;
+    wire (highz0, pull1) c = 0;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    auto& m = compilation.getRoot().topInstances[0]->body;
+
+    auto ds = m.membersOfType<ContinuousAssignSymbol>()[0]->getDriveStrength();
+    CHECK(ds.first == DriveStrength::Weak);
+    CHECK(ds.second == DriveStrength::Supply);
+
+    ds = m.find<PrimitiveInstanceSymbol>("p1").getDriveStrength();
+    CHECK(!ds.first);
+    CHECK(ds.second == DriveStrength::Strong);
+
+    ds = m.find<NetSymbol>("c").getDriveStrength();
+    CHECK(ds.first == DriveStrength::HighZ);
+    CHECK(ds.second == DriveStrength::Pull);
+
+    auto cs = m.find<NetSymbol>("b").getChargeStrength();
+    CHECK(cs == ChargeStrength::Small);
+}

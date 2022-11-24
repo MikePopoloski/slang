@@ -257,7 +257,9 @@ void registerSymbols(py::module_& m) {
     py::class_<NetSymbol, ValueSymbol> netSymbol(m, "NetSymbol");
     netSymbol.def_readonly("expansionHint", &NetSymbol::expansionHint)
         .def_property_readonly("netType", [](const NetSymbol& self) { return &self.netType; })
-        .def_property_readonly("delay", &NetSymbol::getDelay);
+        .def_property_readonly("delay", &NetSymbol::getDelay)
+        .def_property_readonly("chargeStrength", &NetSymbol::getChargeStrength)
+        .def_property_readonly("driveStrength", &NetSymbol::getDriveStrength);
 
     py::enum_<NetSymbol::ExpansionHint>(netSymbol, "ExpansionHint")
         .value("None", NetSymbol::None)
@@ -408,7 +410,8 @@ void registerSymbols(py::module_& m) {
                                    return &self.primitiveType;
                                })
         .def_property_readonly("portConnections", &PrimitiveInstanceSymbol::getPortConnections)
-        .def_property_readonly("delay", &PrimitiveInstanceSymbol::getDelay);
+        .def_property_readonly("delay", &PrimitiveInstanceSymbol::getDelay)
+        .def_property_readonly("driveStrength", &PrimitiveInstanceSymbol::getDriveStrength);
 
     py::class_<StatementBlockSymbol, Symbol, Scope>(m, "StatementBlockSymbol")
         .def_readonly("blockKind", &StatementBlockSymbol::blockKind)
@@ -465,7 +468,8 @@ void registerSymbols(py::module_& m) {
 
     py::class_<ContinuousAssignSymbol, Symbol>(m, "ContinuousAssignSymbol")
         .def_property_readonly("assignment", &ContinuousAssignSymbol::getAssignment)
-        .def_property_readonly("delay", &ContinuousAssignSymbol::getDelay);
+        .def_property_readonly("delay", &ContinuousAssignSymbol::getDelay)
+        .def_property_readonly("driveStrength", &ContinuousAssignSymbol::getDriveStrength);
 
     py::class_<ElabSystemTaskSymbol, Symbol>(m, "ElabSystemTaskSymbol")
         .def_readonly("taskKind", &ElabSystemTaskSymbol::taskKind)

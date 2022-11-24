@@ -322,6 +322,29 @@ const TimingControl* NetSymbol::getDelay() const {
     return nullptr;
 }
 
+std::optional<ChargeStrength> NetSymbol::getChargeStrength() const {
+    auto syntax = getSyntax();
+    if (syntax && syntax->parent && syntax->parent->kind == SyntaxKind::NetDeclaration) {
+        auto& netDecl = syntax->parent->as<NetDeclarationSyntax>();
+        if (netDecl.strength && netDecl.strength->kind == SyntaxKind::ChargeStrength) {
+            return SemanticFacts::getChargeStrength(
+                netDecl.strength->as<ChargeStrengthSyntax>().strength.kind);
+        }
+    }
+    return {};
+}
+
+std::pair<std::optional<DriveStrength>, std::optional<DriveStrength>> NetSymbol::getDriveStrength()
+    const {
+    auto syntax = getSyntax();
+    if (syntax && syntax->parent && syntax->parent->kind == SyntaxKind::NetDeclaration) {
+        auto& netDecl = syntax->parent->as<NetDeclarationSyntax>();
+        if (netDecl.strength)
+            return SemanticFacts::getDriveStrength(*netDecl.strength);
+    }
+    return {};
+}
+
 void NetSymbol::checkInitializer() const {
     // Disallow initializers inside packages. Enforcing this check requires knowing
     // about user-defined nettypes, which is why we can't just do it in the parser.
@@ -347,6 +370,15 @@ void NetSymbol::serializeTo(ASTSerializer& serializer) const {
 
     if (auto delayCtrl = getDelay())
         serializer.write("delay", *delayCtrl);
+
+    if (auto chargeStrength = getChargeStrength())
+        serializer.write("chargeStrength", toString(*chargeStrength));
+
+    auto [ds0, ds1] = getDriveStrength();
+    if (ds0)
+        serializer.write("driveStrength0", toString(*ds0));
+    if (ds1)
+        serializer.write("driveStrength1", toString(*ds1));
 }
 
 IteratorSymbol::IteratorSymbol(const Scope& scope, string_view name, SourceLocation loc,
