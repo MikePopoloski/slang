@@ -426,6 +426,17 @@ bool Driver::runPreprocessor(bool includeComments, bool includeDirectives, bool 
 
     while (true) {
         Token token = preprocessor.next();
+        if (token.kind == TokenKind::IntegerBase) {
+            // This is needed for the case where obfuscation is enabled,
+            // the digits of a vector literal may be lexed initially as
+            // an identifier and we don't have the parser here to fix things
+            // up for us.
+            do {
+                output.print(token);
+                token = preprocessor.next();
+            } while (SyntaxFacts::isPossibleVectorDigit(token.kind));
+        }
+
         if (obfuscateIds && token.kind == TokenKind::Identifier) {
             auto name = std::string(token.valueText());
             auto translation = obfuscationMap.find(name);

@@ -116,6 +116,7 @@ TEST_CASE("Driver file preprocess") {
 
     CHECK(startsWith(output, "\nmodule m;\n"
                              "    // hello\n"
+                             "    int i = 32'haa_bb??e;\n"
                              "    string s = "));
 
     CHECK(endsWith(output, ";\n"
@@ -141,7 +142,8 @@ TEST_CASE("Driver file preprocess -- obfuscation") {
 
     CHECK(startsWith(output, "\nmodule ykyD0R1TWLDra6jk;\n"
                              "    // hello\n"
-                             "    string N65udx39eEabGtIV = "));
+                             "    int N65udx39eEabGtIV = 32'haa_bb??e;\n"
+                             "    string TKs9hBr80Qx0xQD8 = "));
 
     CHECK(endsWith(output, ";\n"
                            "    begin end\n"
