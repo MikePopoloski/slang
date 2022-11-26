@@ -788,3 +788,69 @@ module m(input a, b);
     endspecify
 endmodule
 ```
+
+-Wunused-net
+A net is declared but never used.
+```
+module m;
+    wire w;
+endmodule
+```
+
+-Wunused-variable
+A variable is declared but never used.
+```
+module m;
+    int i;
+endmodule
+```
+
+-Wundriven-net
+A net is used but never has a value driven.
+```
+module m(output x);
+    wire w;
+    assign x = w;
+endmodule
+```
+
+-Wunassigned-variable
+A variable is used but never has a value assigned.
+```
+module m;
+    int i;
+    int j = i;
+endmodule
+```
+
+-Wunused-but-set-net
+A net has a value driven but is never referenced.
+```
+module m;
+    wire x;
+    assign x = 1;
+endmodule
+```
+
+-Wunused-but-set-variable
+A variable has a value assigned but is never referenced.
+```
+module m;
+    int i;
+    initial i = 42;
+endmodule
+```
+
+-Wunused-port
+An input port signal is never used internally to the module.
+```
+module m(input x);
+endmodule
+```
+
+-Wundriven-port
+An output port signal is never given a value.
+```
+module m(output x);
+endmodule
+```
