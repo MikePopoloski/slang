@@ -882,3 +882,18 @@ source:6:24: error: expected ','
                        ^
 )");
 }
+
+TEST_CASE("Event control parsing @( *)") {
+    auto& text = R"(
+module t(a,b,ou);
+	input a,b;
+	output ou;
+	reg a,b,ou;
+	always @( *) begin
+        ou <= a ^ b;
+	end
+endmodule
+)";
+    parseCompilationUnit(text);
+    CHECK_DIAGNOSTICS_EMPTY;
+}
