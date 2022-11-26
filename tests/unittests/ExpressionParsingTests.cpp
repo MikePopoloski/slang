@@ -887,8 +887,8 @@ TEST_CASE("Event control parsing @( *)") {
     auto& text = R"(
 module t(a,b,ou);
 	input a,b;
-	output ou;     
-	reg a,b,ou;        
+	output ou;
+	reg a,b,ou;
 	always @( *) begin
         ou <= a ^ b;
 	end
