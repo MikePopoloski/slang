@@ -1137,8 +1137,8 @@ TimingControlSyntax* Parser::parseTimingControl() {
 
                     // Special case since @(*) will be lexed as '@' '(' '*)'
                     if (peek(TokenKind::StarCloseParenthesis)) {
-                        auto startclosePara = consume();
-                        return &factory.implicitEventControl(at, openParen, startclosePara,
+                        auto starCloseParen = consume();
+                        return &factory.implicitEventControl(at, openParen, starCloseParen,
                                                              Token());
                     }
 
