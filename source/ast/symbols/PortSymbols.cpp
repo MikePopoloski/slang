@@ -1361,7 +1361,7 @@ const Type& PortSymbol::getType() const {
         type = &dt->getType();
 
         bitmask<ASTFlags> astFlags = ASTFlags::NonProcedural | ASTFlags::AllowInterconnect;
-        if (direction == ArgumentDirection::In || direction == ArgumentDirection::InOut)
+        if (direction != ArgumentDirection::Out)
             astFlags |= ASTFlags::LValue;
 
         ASTContext context(*scope, LookupLocation::before(*this), astFlags);

@@ -52,7 +52,8 @@ add_executable(
   unittests/SystemFuncTests.cpp
   unittests/Test.cpp
   unittests/TypeTests.cpp
-  unittests/VisitorTests.cpp)
+  unittests/VisitorTests.cpp
+  unittests/WarningTests.cpp)
 
 target_link_libraries(
   unittests

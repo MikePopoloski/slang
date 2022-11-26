@@ -556,4 +556,61 @@ struct DefParamVisitor : public ASTVisitor<DefParamVisitor, false, false> {
     const InstanceSymbol* hierarchyProblem = nullptr;
 };
 
+// This visitor runs post-elaboration and can be used to find and report on
+// things like unused code elements.
+struct PostElabVisitor : public ASTVisitor<PostElabVisitor, false, false> {
+    explicit PostElabVisitor(Compilation& compilation) : compilation(compilation) {}
+
+    void handle(const NetSymbol& symbol) {
+        checkUnused(symbol, diag::UnusedNet, diag::UndrivenNet, diag::UnusedButSetNet);
+    }
+
+    void handle(const VariableSymbol& symbol) {
+        if (!symbol.flags.has(VariableFlags::CompilerGenerated) &&
+            symbol.kind == SymbolKind::Variable) {
+            checkUnused(symbol, diag::UnusedVariable, diag::UnassignedVariable,
+                        diag::UnusedButSetVariable);
+        }
+    }
+
+private:
+    void checkUnused(const ValueSymbol& symbol, DiagCode unusedCode, DiagCode unsetCode,
+                     DiagCode unreadCode) {
+        auto syntax = symbol.getSyntax();
+        if (!syntax || symbol.name.empty())
+            return;
+
+        auto scope = symbol.getParentScope();
+        auto [rvalue, lvalue] = compilation.isReferenced(*syntax);
+
+        auto portRef = symbol.getFirstPortBackref();
+        if (portRef) {
+            // This is a variable or net connected internally to a port.
+            // If there is more than one port connection something unusually
+            // complicated is going on so don't try to diagnose warnings.
+            if (portRef->getNextBackreference())
+                return;
+
+            // Otherwise check and warn about the port being unused.
+            if (portRef->port->direction == ArgumentDirection::Out) {
+                if (!lvalue)
+                    scope->addDiag(diag::UndrivenPort, symbol.location) << symbol.name;
+            }
+            else if (!rvalue) {
+                scope->addDiag(diag::UnusedPort, symbol.location) << symbol.name;
+            }
+            return;
+        }
+
+        if (!rvalue && !lvalue)
+            scope->addDiag(unusedCode, symbol.location) << symbol.name;
+        else if (!rvalue)
+            scope->addDiag(unreadCode, symbol.location) << symbol.name;
+        else if (!lvalue && !symbol.getDeclaredType()->getInitializerSyntax())
+            scope->addDiag(unsetCode, symbol.location) << symbol.name;
+    }
+
+    Compilation& compilation;
+};
+
 } // namespace slang::ast

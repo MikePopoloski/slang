@@ -327,13 +327,24 @@ public:
     /// Notes that there is a default disable associated with the specified scope.
     void noteDefaultDisable(const Scope& scope, const Expression& expr);
 
-    /// Notes that the given symbol has a name conflict in its parent scope.
-    /// This will cause appropriate errors to be issued.
-    void noteNameConflict(const Symbol& symbol);
-
     /// Finds an applicable default disable expression for the given scope, or returns nullptr
     /// if no such declaration is in effect.
     const Expression* getDefaultDisable(const Scope& scope) const;
+
+    /// Notes that the given syntax node is "referenced" somewhere in the AST.
+    /// This is used to diagnose unused variables, nets, etc. The @a isLValue parameter
+    /// is used to tell whether a value is only assigned or whether it's also read somewhere.
+    void noteReference(const syntax::SyntaxNode& node, bool isLValue = false);
+
+    /// Checks whether the given syntax node has been referenced in the AST thus far.
+    /// The result is a pair, the first item of which is true if the node has been used
+    /// as a non-lvalue, and the second of which is true if the node has been used as an lvalue.
+    /// The second item is only relevant for nodes where it makes sense; e.g. variables and nets.
+    std::pair<bool, bool> isReferenced(const syntax::SyntaxNode& node) const;
+
+    /// Notes that the given symbol has a name conflict in its parent scope.
+    /// This will cause appropriate errors to be issued.
+    void noteNameConflict(const Symbol& symbol);
 
     /// A convenience method for parsing a name string and turning it into a set
     /// of syntax nodes. This is mostly for testing and API purposes; normal
@@ -498,6 +509,11 @@ private:
     // Sideband data for scopes that have wildcard imports. The list of imports
     // is stored here and queried during name lookups.
     SafeIndexedVector<Scope::ImportData, Scope::ImportDataIndex> importData;
+
+    // A map of syntax nodes that have been referenced in the AST.
+    // The value indicates whether the node has been used as an lvalue vs non-lvalue,
+    // for things like variables and nets.
+    flat_hash_map<const syntax::SyntaxNode*, std::pair<bool, bool>> referenceStatusMap;
 
     // The lookup table for top-level modules. The value is a pair, with the second
     // element being a boolean indicating whether there exists at least one nested

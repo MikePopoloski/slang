@@ -796,8 +796,11 @@ void unwrapResult(const Scope& scope, std::optional<SourceRange> range, LookupRe
         auto& genericClass = result.found->as<GenericClassDefSymbol>();
         result.found = genericClass.getDefaultSpecialization();
 
-        if (!result.found && range)
-            result.addDiag(scope, diag::NoDefaultSpecialization, *range) << genericClass.name;
+        if (!result.found) {
+            if (range)
+                result.addDiag(scope, diag::NoDefaultSpecialization, *range) << genericClass.name;
+            return;
+        }
     }
 
     // If the symbol was imported from a package, check if it is actually

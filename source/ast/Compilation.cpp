@@ -769,6 +769,22 @@ const Expression* Compilation::getDefaultDisable(const Scope& scope) const {
     }
 }
 
+void Compilation::noteReference(const SyntaxNode& node, bool isLValue) {
+    auto [it, inserted] = referenceStatusMap.emplace(&node, std::pair{!isLValue, isLValue});
+    if (!inserted) {
+        it->second.first |= !isLValue;
+        it->second.second |= isLValue;
+    }
+}
+
+std::pair<bool, bool> Compilation::isReferenced(const SyntaxNode& node) const {
+    auto it = referenceStatusMap.find(&node);
+    if (it == referenceStatusMap.end())
+        return {false, false};
+
+    return it->second;
+}
+
 const NameSyntax& Compilation::parseName(string_view name) {
     Diagnostics localDiags;
     auto& result = tryParseName(name, localDiags);
@@ -816,10 +832,10 @@ const Diagnostics& Compilation::getSemanticDiagnostics() {
 
     // If we haven't already done so, touch every symbol, scope, statement,
     // and expression tree so that we can be sure we have all the diagnostics.
-    DiagnosticVisitor visitor(*this, numErrors,
-                              options.errorLimit == 0 ? UINT32_MAX : options.errorLimit);
-    getRoot().visit(visitor);
-    visitor.finalize();
+    uint32_t errorLimit = options.errorLimit == 0 ? UINT32_MAX : options.errorLimit;
+    DiagnosticVisitor elabVisitor(*this, numErrors, errorLimit);
+    getRoot().visit(elabVisitor);
+    elabVisitor.finalize();
 
     // Note for the following checks here: anything that depends on a list
     // stored in the compilation object should think carefully about taking
@@ -828,8 +844,8 @@ const Diagnostics& Compilation::getSemanticDiagnostics() {
     // causing undefined behavior.
 
     // Check all DPI methods for correctness.
-    if (!dpiExports.empty() || !visitor.dpiImports.empty())
-        checkDPIMethods(visitor.dpiImports);
+    if (!dpiExports.empty() || !elabVisitor.dpiImports.empty())
+        checkDPIMethods(elabVisitor.dpiImports);
 
     // Check extern interface methods for correctness.
     if (!externInterfaceMethods.empty()) {
@@ -838,11 +854,11 @@ const Diagnostics& Compilation::getSemanticDiagnostics() {
             method->connectExternInterfacePrototype();
     }
 
-    if (!visitor.externIfaceProtos.empty())
-        checkExternIfaceMethods(visitor.externIfaceProtos);
+    if (!elabVisitor.externIfaceProtos.empty())
+        checkExternIfaceMethods(elabVisitor.externIfaceProtos);
 
-    if (!visitor.modportsWithExports.empty())
-        checkModportExports(visitor.modportsWithExports);
+    if (!elabVisitor.modportsWithExports.empty())
+        checkModportExports(elabVisitor.modportsWithExports);
 
     // Report any lingering name conflicts.
     if (!nameConflicts.empty()) {
@@ -914,10 +930,15 @@ const Diagnostics& Compilation::getSemanticDiagnostics() {
         // Report on unused definitions.
         for (auto def : unreferencedDefs) {
             // If this is an interface, it may have been referenced in a port.
-            if (visitor.usedIfacePorts.find(def) != visitor.usedIfacePorts.end())
+            if (elabVisitor.usedIfacePorts.find(def) != elabVisitor.usedIfacePorts.end())
                 continue;
 
             def->scope.addDiag(diag::UnusedDefinition, def->location) << def->getKindString();
+        }
+
+        if (!elabVisitor.hierarchyProblem && numErrors < errorLimit) {
+            PostElabVisitor postElabVisitor(*this);
+            getRoot().visit(postElabVisitor);
         }
     }
 
@@ -961,7 +982,8 @@ const Diagnostics& Compilation::getSemanticDiagnostics() {
 
         // If the diagnostic is present in all instances, don't bother
         // providing specific instantiation info.
-        if (found && visitor.instanceCount[&inst->as<InstanceSymbol>().getDefinition()] > count) {
+        if (found &&
+            elabVisitor.instanceCount[&inst->as<InstanceSymbol>().getDefinition()] > count) {
             Diagnostic diag = *found;
             diag.symbol = inst;
             diag.coalesceCount = count;

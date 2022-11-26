@@ -120,6 +120,9 @@ Expression& ValueExpressionBase::fromSymbol(const ASTContext& context, const Sym
         return badExpr(comp, nullptr);
     }
 
+    if (auto syntax = symbol.getSyntax())
+        comp.noteReference(*syntax, context.flags.has(ASTFlags::LValue));
+
     if (isHierarchical)
         return *comp.emplace<HierarchicalValueExpression>(value, sourceRange);
     else

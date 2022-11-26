@@ -968,45 +968,6 @@ endmodule
     CHECK(diags[2].code == diag::EmptyConcatNotAllowed);
 }
 
-TEST_CASE("Diagnose unused modules / interfaces") {
-    auto tree = SyntaxTree::fromText(R"(
-interface I;
-endinterface
-
-interface J;
-endinterface
-
-module bar (I i);
-endmodule
-
-module top;
-endmodule
-
-module top2({a[1:0], a[3:2]});
-    ref int a;
-endmodule
-
-module top3(ref int a);
-endmodule
-)");
-
-    CompilationOptions coptions;
-    coptions.suppressUnused = false;
-
-    Bag options;
-    options.set(coptions);
-
-    Compilation compilation(options);
-    compilation.addSyntaxTree(tree);
-
-    auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 4);
-    CHECK(diags[0].code == diag::UnusedDefinition);
-    CHECK(diags[1].code == diag::TopModuleIfacePort);
-    CHECK(diags[2].code == diag::TopModuleUnnamedRefPort);
-    CHECK(diags[3].code == diag::TopModuleRefPort);
-}
-
 TEST_CASE("Manually specify top modules") {
     auto tree = SyntaxTree::fromText(R"(
 module nottop;
