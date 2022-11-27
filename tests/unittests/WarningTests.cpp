@@ -86,3 +86,23 @@ endmodule
     CHECK(diags[9].code == diag::UnusedImplicitNet);
     CHECK(diags[10].code == diag::UnusedImplicitNet);
 }
+
+TEST_CASE("Unused nets and vars false positives regress") {
+    auto tree = SyntaxTree::fromText(R"(
+interface I(input clk);
+    modport m(input clk);
+endinterface
+
+module m;
+    wire clk = 1;
+    I i(clk);
+endmodule
+)");
+
+    CompilationOptions coptions;
+    coptions.suppressUnused = false;
+
+    Compilation compilation(coptions);
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}

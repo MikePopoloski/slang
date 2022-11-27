@@ -191,28 +191,26 @@ ModportPortSymbol& ModportPortSymbol::fromSyntax(const ASTContext& context,
 
     // Perform checking on the connected symbol to make sure it's allowed
     // given the modport's direction.
-    if (direction != ArgumentDirection::In) {
-        ASTContext checkCtx = context.resetFlags(ASTFlags::NonProcedural);
+    ASTContext checkCtx = context.resetFlags(ASTFlags::NonProcedural);
 
-        auto loc = result->location;
-        auto& expr = ValueExpressionBase::fromSymbol(checkCtx, *result->internalSymbol, false,
-                                                     {loc, loc + result->name.length()});
+    auto loc = result->location;
+    auto& expr = ValueExpressionBase::fromSymbol(checkCtx, *result->internalSymbol, false,
+                                                 {loc, loc + result->name.length()});
 
-        switch (direction) {
-            case ArgumentDirection::In:
-                // unreachable
-                break;
-            case ArgumentDirection::Out:
-                expr.requireLValue(checkCtx, loc, AssignFlags::NotADriver);
-                break;
-            case ArgumentDirection::InOut:
-                expr.requireLValue(checkCtx, loc, AssignFlags::NotADriver | AssignFlags::InOutPort);
-                break;
-            case ArgumentDirection::Ref:
-                if (!expr.canConnectToRefArg(/* isConstRef */ false))
-                    checkCtx.addDiag(diag::InvalidRefArg, loc) << expr.sourceRange;
-                break;
-        }
+    switch (direction) {
+        case ArgumentDirection::In:
+            // Nothing to check here.
+            break;
+        case ArgumentDirection::Out:
+            expr.requireLValue(checkCtx, loc, AssignFlags::NotADriver);
+            break;
+        case ArgumentDirection::InOut:
+            expr.requireLValue(checkCtx, loc, AssignFlags::NotADriver | AssignFlags::InOutPort);
+            break;
+        case ArgumentDirection::Ref:
+            if (!expr.canConnectToRefArg(/* isConstRef */ false))
+                checkCtx.addDiag(diag::InvalidRefArg, loc) << expr.sourceRange;
+            break;
     }
 
     return *result;
