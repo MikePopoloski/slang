@@ -412,15 +412,12 @@ void ContinuousAssignSymbol::fromSyntax(Compilation& compilation,
             // The expression here should always be an assignment expression unless
             // the program is already ill-formed (diagnosed by the parser).
             if (expr->kind == SyntaxKind::AssignmentExpression) {
-                SmallVector<Token, 8> implicitNetNames;
+                SmallVector<const IdentifierNameSyntax*> implicitNetNames;
                 Expression::findPotentiallyImplicitNets(*expr->as<BinaryExpressionSyntax>().left,
                                                         context, implicitNetNames);
 
-                for (Token t : implicitNetNames) {
-                    auto net = compilation.emplace<NetSymbol>(t.valueText(), t.location(), netType);
-                    net->setType(compilation.getLogicType());
-                    implicitNets.push_back(net);
-                }
+                for (auto ins : implicitNetNames)
+                    implicitNets.push_back(&NetSymbol::createImplicit(compilation, *ins, netType));
             }
         }
 

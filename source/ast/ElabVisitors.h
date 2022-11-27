@@ -562,7 +562,13 @@ struct PostElabVisitor : public ASTVisitor<PostElabVisitor, false, false> {
     explicit PostElabVisitor(Compilation& compilation) : compilation(compilation) {}
 
     void handle(const NetSymbol& symbol) {
-        checkUnused(symbol, diag::UnusedNet, diag::UndrivenNet, diag::UnusedButSetNet);
+        if (symbol.isImplicit) {
+            checkUnused(symbol, diag::UnusedImplicitNet, diag::UnusedImplicitNet,
+                        diag::UnusedImplicitNet);
+        }
+        else {
+            checkUnused(symbol, diag::UnusedNet, diag::UndrivenNet, diag::UnusedButSetNet);
+        }
     }
 
     void handle(const VariableSymbol& symbol) {

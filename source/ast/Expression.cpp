@@ -1206,10 +1206,12 @@ Expression* Expression::tryBindInterfaceRef(const ASTContext& context,
     return comp.emplace<HierarchicalReferenceExpression>(*symbol, targetType, syntax.sourceRange());
 }
 
-void Expression::findPotentiallyImplicitNets(const SyntaxNode& expr, const ASTContext& context,
-                                             SmallVectorBase<Token>& results) {
+void Expression::findPotentiallyImplicitNets(
+    const SyntaxNode& expr, const ASTContext& context,
+    SmallVectorBase<const IdentifierNameSyntax*>& results) {
+
     struct Visitor : public SyntaxVisitor<Visitor> {
-        Visitor(const ASTContext& context, SmallVectorBase<Token>& results) :
+        Visitor(const ASTContext& context, SmallVectorBase<const IdentifierNameSyntax*>& results) :
             context(context), results(results) {}
 
         void handle(const NameSyntax& nameSyntax) {
@@ -1221,11 +1223,11 @@ void Expression::findPotentiallyImplicitNets(const SyntaxNode& expr, const ASTCo
             Lookup::name(nameSyntax, ctx, LookupFlags::NoUndeclaredError, result);
 
             if (!result.found && !result.hasError())
-                results.push_back(nameSyntax.as<IdentifierNameSyntax>().identifier);
+                results.push_back(&nameSyntax.as<IdentifierNameSyntax>());
         }
 
         const ASTContext& context;
-        SmallVectorBase<Token>& results;
+        SmallVectorBase<const IdentifierNameSyntax*>& results;
     };
 
     Visitor visitor(context, results);

@@ -128,6 +128,7 @@ class SLANG_EXPORT NetSymbol : public ValueSymbol {
 public:
     const NetType& netType;
     enum ExpansionHint { None, Vectored, Scalared } expansionHint = None;
+    bool isImplicit = false;
 
     NetSymbol(string_view name, SourceLocation loc, const NetType& netType);
 
@@ -148,6 +149,10 @@ public:
     static void fromSyntax(const Scope& scope,
                            const syntax::UserDefinedNetDeclarationSyntax& syntax,
                            const Symbol* netTypeSym, SmallVectorBase<const NetSymbol*>& results);
+
+    static NetSymbol& createImplicit(Compilation& compilation,
+                                     const syntax::IdentifierNameSyntax& syntax,
+                                     const NetType& netType);
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::Net; }
 

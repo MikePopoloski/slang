@@ -285,6 +285,16 @@ void NetSymbol::fromSyntax(const Scope& scope, const UserDefinedNetDeclarationSy
     }
 }
 
+NetSymbol& NetSymbol::createImplicit(Compilation& compilation, const IdentifierNameSyntax& syntax,
+                                     const NetType& netType) {
+    auto t = syntax.identifier;
+    auto net = compilation.emplace<NetSymbol>(t.valueText(), t.location(), netType);
+    net->setType(compilation.getLogicType());
+    net->isImplicit = true;
+    net->setSyntax(syntax);
+    return *net;
+}
+
 const TimingControl* NetSymbol::getDelay() const {
     if (delay)
         return *delay;
@@ -356,6 +366,9 @@ void NetSymbol::checkInitializer() const {
 
 void NetSymbol::serializeTo(ASTSerializer& serializer) const {
     serializer.write("netType", netType);
+
+    if (isImplicit)
+        serializer.write("isImplicit", isImplicit);
 
     switch (expansionHint) {
         case Vectored:

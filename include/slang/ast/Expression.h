@@ -221,9 +221,9 @@ public:
     /// This method finds all unqualified name references in the given expression and attempts
     /// to look them up in the given context. If they can't be found, their name tokens are
     /// returned in the given @a results vector.
-    static void findPotentiallyImplicitNets(const syntax::SyntaxNode& expr,
-                                            const ASTContext& context,
-                                            SmallVectorBase<parsing::Token>& results);
+    static void findPotentiallyImplicitNets(
+        const syntax::SyntaxNode& expr, const ASTContext& context,
+        SmallVectorBase<const syntax::IdentifierNameSyntax*>& results);
 
     /// Converts an expression to be of the given type, following the rules for
     /// implicit conversions, array port slicing, etc.

@@ -797,6 +797,20 @@ module m;
 endmodule
 ```
 
+-Wunused-implicit-net
+An implicitly created net is not referenced elsewhere in the design.
+This is often a typo in the name and not intentional.
+```
+module m(output x);
+    assign x = 1;
+endmodule
+
+module n;
+    logic typo;
+    m m1(typa);
+endmodule
+```
+
 -Wunused-variable
 A variable is declared but never used.
 ```

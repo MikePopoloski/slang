@@ -62,6 +62,7 @@ module top;
     logic baz,bar;
     m #(1) m1(.*);
     m #(2) m2(bar, baz);
+    m #(3) m3(a, b);
 endmodule
 )");
 
@@ -72,7 +73,7 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 9);
+    REQUIRE(diags.size() == 11);
     CHECK(diags[0].code == diag::UnusedPort);
     CHECK(diags[1].code == diag::UndrivenPort);
     CHECK(diags[2].code == diag::UnusedButSetVariable);
@@ -82,4 +83,6 @@ endmodule
     CHECK(diags[6].code == diag::UndrivenNet);
     CHECK(diags[7].code == diag::UnusedNet);
     CHECK(diags[8].code == diag::UnusedButSetNet);
+    CHECK(diags[9].code == diag::UnusedImplicitNet);
+    CHECK(diags[10].code == diag::UnusedImplicitNet);
 }

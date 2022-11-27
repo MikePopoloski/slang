@@ -771,7 +771,7 @@ static void createImplicitNets(const SystemTimingCheckSymbol& timingCheck,
     auto& formalArgs = def->args;
 
     ASTContext context(scope, LookupLocation::max);
-    SmallVector<Token> implicitNets;
+    SmallVector<const IdentifierNameSyntax*> implicitNets;
     using Arg = SystemTimingCheckArgDef;
 
     for (size_t i = 0; i < actualArgs.size(); i++) {
@@ -799,13 +799,10 @@ static void createImplicitNets(const SystemTimingCheckSymbol& timingCheck,
         }
     }
 
-    for (Token t : implicitNets) {
-        if (implicitNetNames.emplace(t.valueText()).second) {
-            auto& comp = context.getCompilation();
-            auto net = comp.emplace<NetSymbol>(t.valueText(), t.location(), netType);
-            net->setType(comp.getLogicType());
-            results.push_back(net);
-        }
+    auto& comp = context.getCompilation();
+    for (auto ins : implicitNets) {
+        if (implicitNetNames.emplace(ins->identifier.valueText()).second)
+            results.push_back(&NetSymbol::createImplicit(comp, *ins, netType));
     }
 }
 

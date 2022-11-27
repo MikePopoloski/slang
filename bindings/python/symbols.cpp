@@ -256,6 +256,7 @@ void registerSymbols(py::module_& m) {
 
     py::class_<NetSymbol, ValueSymbol> netSymbol(m, "NetSymbol");
     netSymbol.def_readonly("expansionHint", &NetSymbol::expansionHint)
+        .def_readonly("isImplicit", &NetSymbol::isImplicit)
         .def_property_readonly("netType", [](const NetSymbol& self) { return &self.netType; })
         .def_property_readonly("delay", &NetSymbol::getDelay)
         .def_property_readonly("chargeStrength", &NetSymbol::getChargeStrength)

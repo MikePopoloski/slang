@@ -166,16 +166,13 @@ void createImplicitNets(const HierarchicalInstanceSyntax& instance, const ASTCon
         if (!expr)
             continue;
 
-        SmallVector<Token, 8> implicitNets;
+        SmallVector<const IdentifierNameSyntax*> implicitNets;
         Expression::findPotentiallyImplicitNets(*expr, context, implicitNets);
 
-        for (Token t : implicitNets) {
-            if (implicitNetNames.emplace(t.valueText()).second) {
-                auto& comp = context.getCompilation();
-                auto net = comp.emplace<NetSymbol>(t.valueText(), t.location(), netType);
-                net->setType(comp.getLogicType());
-                results.push_back(net);
-            }
+        auto& comp = context.getCompilation();
+        for (auto ins : implicitNets) {
+            if (implicitNetNames.emplace(ins->identifier.valueText()).second)
+                results.push_back(&NetSymbol::createImplicit(comp, *ins, netType));
         }
     }
 }
