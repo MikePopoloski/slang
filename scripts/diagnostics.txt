@@ -975,3 +975,6 @@ group pedantic = { empty-pattern implicit-net-port nonstandard-escape-code nonst
                    nonstandard-sys-func nonstandard-foreach nonstandard-dist }
 
 group conversion = { width-trunc width-expand implicit-conv }
+
+group unused = { unused-def unused-net unused-implicit-net unused-variable undriven-net unassigned-variable
+                 unused-but-set-net unused-but-set-variable unused-port undriven-port }
