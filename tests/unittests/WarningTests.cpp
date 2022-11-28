@@ -106,3 +106,24 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Unused function args") {
+    auto tree = SyntaxTree::fromText(R"(
+function foo(input x, output y);
+    y = 1;
+endfunction
+
+module m;
+endmodule
+)");
+
+    CompilationOptions coptions;
+    coptions.suppressUnused = false;
+
+    Compilation compilation(coptions);
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::UnusedArgument);
+}

@@ -868,3 +868,10 @@ An output port signal is never given a value.
 module m(output x);
 endmodule
 ```
+
+-Wunused-argument
+A task or function formal argument is not used in its body.
+```
+function foo(int x);
+endfunction
+```

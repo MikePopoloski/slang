@@ -572,16 +572,21 @@ struct PostElabVisitor : public ASTVisitor<PostElabVisitor, false, false> {
     }
 
     void handle(const VariableSymbol& symbol) {
-        if (!symbol.flags.has(VariableFlags::CompilerGenerated) &&
-            symbol.kind == SymbolKind::Variable) {
+        if (symbol.flags.has(VariableFlags::CompilerGenerated))
+            return;
+
+        if (symbol.kind == SymbolKind::Variable) {
             checkUnused(symbol, diag::UnusedVariable, diag::UnassignedVariable,
                         diag::UnusedButSetVariable);
+        }
+        else if (symbol.kind == SymbolKind::FormalArgument) {
+            checkUnused(symbol, diag::UnusedArgument, std::nullopt, std::nullopt);
         }
     }
 
 private:
-    void checkUnused(const ValueSymbol& symbol, DiagCode unusedCode, DiagCode unsetCode,
-                     DiagCode unreadCode) {
+    void checkUnused(const ValueSymbol& symbol, DiagCode unusedCode,
+                     std::optional<DiagCode> unsetCode, std::optional<DiagCode> unreadCode) {
         auto syntax = symbol.getSyntax();
         if (!syntax || symbol.name.empty())
             return;
@@ -610,10 +615,10 @@ private:
 
         if (!rvalue && !lvalue)
             scope->addDiag(unusedCode, symbol.location) << symbol.name;
-        else if (!rvalue)
-            scope->addDiag(unreadCode, symbol.location) << symbol.name;
-        else if (!lvalue && !symbol.getDeclaredType()->getInitializerSyntax())
-            scope->addDiag(unsetCode, symbol.location) << symbol.name;
+        else if (!rvalue && unreadCode)
+            scope->addDiag(*unreadCode, symbol.location) << symbol.name;
+        else if (!lvalue && !symbol.getDeclaredType()->getInitializerSyntax() && unsetCode)
+            scope->addDiag(*unsetCode, symbol.location) << symbol.name;
     }
 
     Compilation& compilation;
