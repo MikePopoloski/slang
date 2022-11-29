@@ -108,6 +108,10 @@ module n #(parameter int i)(input x, output y, output z);
     logic [i-1:0] a = 1;
     assign y = a[x];
 endmodule
+
+package p;
+    int i;
+endpackage
 )");
 
     CompilationOptions coptions;

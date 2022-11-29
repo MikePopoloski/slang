@@ -589,7 +589,7 @@ private:
         auto [rvalue, lvalue] = compilation.isReferenced(*syntax);
 
         auto addDiag = [&](DiagCode code) {
-            if (!scope->isUninstantiated())
+            if (!scope->isUninstantiated() && scope->asSymbol().kind != SymbolKind::Package)
                 scope->addDiag(code, symbol.location) << symbol.name;
         };
 
