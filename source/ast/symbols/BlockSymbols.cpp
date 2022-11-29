@@ -345,7 +345,7 @@ static void addBlockMembers(GenerateBlockSymbol& block, const SyntaxNode& syntax
 
 static void createCondGenBlock(Compilation& compilation, const SyntaxNode& syntax,
                                const ASTContext& context, uint32_t constructIndex,
-                               bool isInstantiated,
+                               bool isUninstantiated,
                                const SyntaxList<AttributeInstanceSyntax>& attributes,
                                SmallVectorBase<GenerateBlockSymbol*>& results) {
     // [27.5] If a generate block in a conditional generate construct consists of only one item
@@ -356,11 +356,11 @@ static void createCondGenBlock(Compilation& compilation, const SyntaxNode& synta
     switch (syntax.kind) {
         case SyntaxKind::IfGenerate:
             GenerateBlockSymbol::fromSyntax(compilation, syntax.as<IfGenerateSyntax>(), context,
-                                            constructIndex, isInstantiated, results);
+                                            constructIndex, isUninstantiated, results);
             return;
         case SyntaxKind::CaseGenerate:
             GenerateBlockSymbol::fromSyntax(compilation, syntax.as<CaseGenerateSyntax>(), context,
-                                            constructIndex, isInstantiated, results);
+                                            constructIndex, isUninstantiated, results);
             return;
         default:
             break;
@@ -370,38 +370,35 @@ static void createCondGenBlock(Compilation& compilation, const SyntaxNode& synta
     SourceLocation loc = syntax.getFirstToken().location();
 
     auto block = compilation.emplace<GenerateBlockSymbol>(compilation, name, loc, constructIndex,
-                                                          isInstantiated);
+                                                          isUninstantiated);
     block->setSyntax(syntax);
     block->setAttributes(*context.scope, attributes);
     results.push_back(block);
 
-    if (isInstantiated)
-        addBlockMembers(*block, syntax);
+    addBlockMembers(*block, syntax);
 }
 
 void GenerateBlockSymbol::fromSyntax(Compilation& compilation, const IfGenerateSyntax& syntax,
                                      const ASTContext& context, uint32_t constructIndex,
-                                     bool isInstantiated,
+                                     bool isUninstantiated,
                                      SmallVectorBase<GenerateBlockSymbol*>& results) {
     std::optional<bool> selector;
-    if (isInstantiated) {
-        auto& cond = Expression::bind(*syntax.condition, context);
-        ConstantValue cv = context.eval(cond);
-        if (cv && context.requireBooleanConvertible(cond))
-            selector = cv.isTrue();
-    }
+    auto& cond = Expression::bind(*syntax.condition, context);
+    ConstantValue cv = context.eval(cond);
+    if (cv && context.requireBooleanConvertible(cond) && !isUninstantiated)
+        selector = cv.isTrue();
 
     createCondGenBlock(compilation, *syntax.block, context, constructIndex,
-                       selector.has_value() && selector.value(), syntax.attributes, results);
+                       !selector.has_value() || !selector.value(), syntax.attributes, results);
     if (syntax.elseClause) {
         createCondGenBlock(compilation, *syntax.elseClause->clause, context, constructIndex,
-                           selector.has_value() && !selector.value(), syntax.attributes, results);
+                           !selector.has_value() || selector.value(), syntax.attributes, results);
     }
 }
 
 void GenerateBlockSymbol::fromSyntax(Compilation& compilation, const CaseGenerateSyntax& syntax,
                                      const ASTContext& context, uint32_t constructIndex,
-                                     bool isInstantiated,
+                                     bool isUninstantiated,
                                      SmallVectorBase<GenerateBlockSymbol*>& results) {
 
     SmallVector<const ExpressionSyntax*> expressions;
@@ -475,7 +472,7 @@ void GenerateBlockSymbol::fromSyntax(Compilation& compilation, const CaseGenerat
             // This is the first match for this entire case generate.
             found = true;
             matchRange = currentMatchRange;
-            createCondGenBlock(compilation, *sci.clause, context, constructIndex, isInstantiated,
+            createCondGenBlock(compilation, *sci.clause, context, constructIndex, isUninstantiated,
                                syntax.attributes, results);
         }
         else {
@@ -488,7 +485,7 @@ void GenerateBlockSymbol::fromSyntax(Compilation& compilation, const CaseGenerat
             }
 
             // This block is not taken, so create it as uninstantiated.
-            createCondGenBlock(compilation, *sci.clause, context, constructIndex, false,
+            createCondGenBlock(compilation, *sci.clause, context, constructIndex, true,
                                syntax.attributes, results);
         }
     }
@@ -496,7 +493,7 @@ void GenerateBlockSymbol::fromSyntax(Compilation& compilation, const CaseGenerat
     if (defBlock) {
         // Only instantiated if no other blocks were instantiated.
         createCondGenBlock(compilation, *defBlock, context, constructIndex,
-                           isInstantiated && !found, syntax.attributes, results);
+                           isUninstantiated || found, syntax.attributes, results);
     }
     else if (!found) {
         auto& diag = context.addDiag(diag::CaseGenerateNoBlock, condExpr->sourceRange);
@@ -514,7 +511,7 @@ GenerateBlockSymbol& GenerateBlockSymbol::fromSyntax(const Scope& scope,
 
     auto& comp = scope.getCompilation();
     auto block = comp.emplace<GenerateBlockSymbol>(comp, name, loc, constructIndex,
-                                                   /* isInstantiated */ true);
+                                                   scope.isUninstantiated());
     block->setSyntax(syntax);
     block->setAttributes(scope, syntax.attributes);
 
@@ -548,7 +545,7 @@ std::string GenerateBlockSymbol::getExternalName() const {
 
 void GenerateBlockSymbol::serializeTo(ASTSerializer& serializer) const {
     serializer.write("constructIndex", constructIndex);
-    serializer.write("isInstantiated", isInstantiated);
+    serializer.write("isUninstantiated", isUninstantiated);
 }
 
 static uint64_t getGenerateLoopCount(const Scope& parent) {
@@ -612,19 +609,18 @@ GenerateBlockArraySymbol& GenerateBlockArraySymbol::fromSyntax(Compilation& comp
     }
 
     SmallVector<const GenerateBlockSymbol*> entries;
-    auto createBlock = [&](ConstantValue value, bool isInstantiated) {
+    auto createBlock = [&](ConstantValue value, bool isUninstantiated) {
         // Spec: each generate block gets their own scope, with an implicit
         // localparam of the same name as the genvar.
         auto block = compilation.emplace<GenerateBlockSymbol>(compilation, "", loc, 1u,
-                                                              isInstantiated);
+                                                              isUninstantiated);
         auto implicitParam = compilation.emplace<ParameterSymbol>(
             genvar.valueText(), genvar.location(), true /* isLocal */, false /* isPort */);
 
         block->addMember(*implicitParam);
         block->setSyntax(*syntax.block);
 
-        if (isInstantiated)
-            addBlockMembers(*block, *syntax.block);
+        addBlockMembers(*block, *syntax.block);
 
         implicitParam->setType(compilation.getIntegerType());
         implicitParam->setValue(compilation, std::move(value), /* needsCoercion */ false);
@@ -715,13 +711,15 @@ GenerateBlockArraySymbol& GenerateBlockArraySymbol::fromSyntax(Compilation& comp
 
     // If the generate loop completed successfully, go through and create blocks.
     if (result->valid) {
+        bool isUninstantiated = context.scope->isUninstantiated();
         for (auto& index : indices)
-            createBlock(index, true);
+            createBlock(index, isUninstantiated);
     }
 
     result->entries = entries.copy(compilation);
-    if (entries.empty())
-        createBlock(SVInt(32, 0, true), false);
+    if (entries.empty()) {
+        createBlock(SVInt(32, 0, true), true);
+    }
     else {
         for (auto entry : entries)
             result->addMember(*entry);

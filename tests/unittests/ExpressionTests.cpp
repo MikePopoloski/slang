@@ -2188,8 +2188,8 @@ endmodule
     NO_COMPILATION_ERRORS;
 
     auto& root = compilation.getRoot();
-    CHECK(root.lookupName<GenerateBlockSymbol>("m.b1").isInstantiated);
-    CHECK(!root.lookupName<GenerateBlockSymbol>("m.b2").isInstantiated);
+    CHECK(!root.lookupName<GenerateBlockSymbol>("m.b1").isUninstantiated);
+    CHECK(root.lookupName<GenerateBlockSymbol>("m.b2").isUninstantiated);
 
     auto& c = root.lookupName<ParameterSymbol>("m.c");
     CHECK(c.getValue().integer() == 1);

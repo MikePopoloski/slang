@@ -239,8 +239,8 @@ endmodule
     Compilation compilation;
     auto& instance = evalModule(tree, compilation).body;
     auto& child = instance.memberAt<InstanceSymbol>(0).body;
-    CHECK(child.memberAt<GenerateBlockSymbol>(1).isInstantiated);
-    CHECK(!child.memberAt<GenerateBlockSymbol>(2).isInstantiated);
+    CHECK(!child.memberAt<GenerateBlockSymbol>(1).isUninstantiated);
+    CHECK(child.memberAt<GenerateBlockSymbol>(2).isUninstantiated);
 
     auto& leaf = child.memberAt<GenerateBlockSymbol>(1).memberAt<InstanceSymbol>(0).body;
     const auto& foo = leaf.find<ParameterSymbol>("foo");
@@ -502,7 +502,7 @@ endmodule
     NO_COMPILATION_ERRORS;
 
     auto& asdf = compilation.getRoot().lookupName<GenerateBlockSymbol>("test.m.asdf");
-    CHECK(asdf.isInstantiated);
+    CHECK(!asdf.isUninstantiated);
 }
 
 TEST_CASE("Name conflict bug") {
@@ -1337,6 +1337,10 @@ endmodule
 TEST_CASE("Invalid instance parents") {
     auto tree = SyntaxTree::fromText(R"(
 module m;
+endmodule
+
+module n;
+    I i();
 endmodule
 
 primitive foo(output a, input b);

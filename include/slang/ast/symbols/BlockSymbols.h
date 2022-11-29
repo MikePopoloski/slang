@@ -107,25 +107,26 @@ private:
 class SLANG_EXPORT GenerateBlockSymbol : public Symbol, public Scope {
 public:
     uint32_t constructIndex = 0;
-    bool isInstantiated = false;
+    bool isUninstantiated = false;
     const SVInt* arrayIndex = nullptr;
 
     GenerateBlockSymbol(Compilation& compilation, string_view name, SourceLocation loc,
-                        uint32_t constructIndex, bool isInstantiated) :
+                        uint32_t constructIndex, bool isUninstantiated) :
         Symbol(SymbolKind::GenerateBlock, name, loc),
-        Scope(compilation, this), constructIndex(constructIndex), isInstantiated(isInstantiated) {}
+        Scope(compilation, this), constructIndex(constructIndex),
+        isUninstantiated(isUninstantiated) {}
 
     std::string getExternalName() const;
 
     void serializeTo(ASTSerializer& serializer) const;
 
     static void fromSyntax(Compilation& compilation, const syntax::IfGenerateSyntax& syntax,
-                           const ASTContext& context, uint32_t constructIndex, bool isInstantiated,
-                           SmallVectorBase<GenerateBlockSymbol*>& results);
+                           const ASTContext& context, uint32_t constructIndex,
+                           bool isUninstantiated, SmallVectorBase<GenerateBlockSymbol*>& results);
 
     static void fromSyntax(Compilation& compilation, const syntax::CaseGenerateSyntax& syntax,
-                           const ASTContext& context, uint32_t constructIndex, bool isInstantiated,
-                           SmallVectorBase<GenerateBlockSymbol*>& results);
+                           const ASTContext& context, uint32_t constructIndex,
+                           bool isUninstantiated, SmallVectorBase<GenerateBlockSymbol*>& results);
 
     static GenerateBlockSymbol& fromSyntax(const Scope& scope,
                                            const syntax::GenerateBlockSyntax& syntax,

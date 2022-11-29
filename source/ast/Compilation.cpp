@@ -1030,8 +1030,9 @@ Diagnostic& Compilation::addDiag(Diagnostic diag) {
     auto isSuppressed = [](const Symbol* symbol) {
         while (symbol) {
             if (symbol->kind == SymbolKind::GenerateBlock &&
-                !symbol->as<GenerateBlockSymbol>().isInstantiated)
+                symbol->as<GenerateBlockSymbol>().isUninstantiated) {
                 return true;
+            }
 
             auto scope = symbol->getParentScope();
             symbol = scope ? &scope->asSymbol() : nullptr;

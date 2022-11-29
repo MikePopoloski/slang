@@ -93,9 +93,15 @@ interface I(input clk);
     modport m(input clk);
 endinterface
 
-module m;
+module m(output v);
     wire clk = 1;
     I i(clk);
+
+    int x;
+    if (0) begin
+        assign x = 1;
+        always @(posedge clk) v <= x;
+    end
 endmodule
 )");
 

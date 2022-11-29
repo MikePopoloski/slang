@@ -16,6 +16,7 @@
 #include "slang/ast/TimingControl.h"
 #include "slang/ast/expressions/AssertionExpr.h"
 #include "slang/ast/expressions/MiscExpressions.h"
+#include "slang/ast/symbols/BlockSymbols.h"
 #include "slang/ast/symbols/MemberSymbols.h"
 #include "slang/ast/symbols/ParameterSymbols.h"
 #include "slang/ast/symbols/PortSymbols.h"
@@ -280,24 +281,34 @@ void InstanceSymbol::fromSyntax(Compilation& compilation,
     TimeTraceScope timeScope("createInstances"sv,
                              [&] { return std::string(syntax.type.valueText()); });
 
-    // Find our parent instance.
+    // Find our parent instance, if there is one.
+    bool isUninstantiated = false;
+    const InstanceBodySymbol* parentInst = nullptr;
     const Scope* currScope = context.scope;
-    while (currScope && currScope->asSymbol().kind != SymbolKind::InstanceBody)
-        currScope = currScope->asSymbol().getParentScope();
+    do {
+        auto& sym = currScope->asSymbol();
+        if (sym.kind == SymbolKind::InstanceBody) {
+            parentInst = &sym.as<InstanceBodySymbol>();
+            isUninstantiated |= parentInst->isUninstantiated;
+            break;
+        }
+
+        if (sym.kind == SymbolKind::GenerateBlock)
+            isUninstantiated |= sym.as<GenerateBlockSymbol>().isUninstantiated;
+
+        currScope = sym.getParentScope();
+    } while (currScope);
 
     const Definition* owningDefinition = nullptr;
     const ParamOverrideNode* parentOverrideNode = nullptr;
-    bool isUninstantiated = false;
-    if (currScope) {
-        auto& instanceBody = currScope->asSymbol().as<InstanceBodySymbol>();
-        isUninstantiated = instanceBody.isUninstantiated;
-        owningDefinition = &instanceBody.getDefinition();
+    if (parentInst) {
+        owningDefinition = &parentInst->getDefinition();
 
         // In the uncommon case that our parent instance has a param override
         // node set, we need to go back and make sure we account for any
         // generate blocks that might actually be along the parent path for
         // the new instances we're creating.
-        if (instanceBody.paramOverrideNode)
+        if (parentInst->paramOverrideNode)
             parentOverrideNode = findParentOverrideNode(*context.scope);
     }
 
@@ -1064,17 +1075,8 @@ void PrimitiveInstanceSymbol::fromSyntax(const PrimitiveInstantiationSyntax& syn
                                 syntax.delay->getFirstToken().location() + 1);
             }
         }
-        else {
-            // Find our parent instance to see if it is uninstantiated.
-            const Scope* currScope = context.scope;
-            while (currScope && currScope->asSymbol().kind != SymbolKind::InstanceBody)
-                currScope = currScope->asSymbol().getParentScope();
-
-            bool isUninstantiated = currScope &&
-                                    currScope->asSymbol().as<InstanceBodySymbol>().isUninstantiated;
-
-            if (!isUninstantiated)
-                context.addDiag(diag::UnknownPrimitive, syntax.type.range()) << name;
+        else if (!context.scope->isUninstantiated()) {
+            context.addDiag(diag::UnknownPrimitive, syntax.type.range()) << name;
         }
 
         UnknownModuleSymbol::fromSyntax(comp, syntax, context, results, implicitNets);

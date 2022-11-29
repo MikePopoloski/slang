@@ -279,12 +279,6 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
         visit(symbol.body);
     }
 
-    void handle(const GenerateBlockSymbol& symbol) {
-        if (!symbol.isInstantiated)
-            return;
-        handleDefault(symbol);
-    }
-
     void handle(const SubroutineSymbol& symbol) {
         if (!handleDefault(symbol))
             return;
@@ -431,7 +425,7 @@ struct BindVisitor : public ASTVisitor<BindVisitor, false, false> {
     }
 
     void handle(const GenerateBlockSymbol& symbol) {
-        if (foundDirectives.size() == expected || !symbol.isInstantiated)
+        if (foundDirectives.size() == expected || symbol.isUninstantiated)
             return;
         visitDefault(symbol);
     }
@@ -480,7 +474,7 @@ struct DefParamVisitor : public ASTVisitor<DefParamVisitor, false, false> {
     }
 
     void handle(const InstanceSymbol& symbol) {
-        if (hierarchyProblem)
+        if (symbol.body.isUninstantiated || hierarchyProblem)
             return;
 
         // If we hit max depth we have a problem -- setting the hierarchyProblem
@@ -517,7 +511,7 @@ struct DefParamVisitor : public ASTVisitor<DefParamVisitor, false, false> {
     }
 
     void handle(const GenerateBlockSymbol& symbol) {
-        if (!symbol.isInstantiated || hierarchyProblem)
+        if (symbol.isUninstantiated || hierarchyProblem)
             return;
 
         if (generateDepth >= generateLevel && !inRecursiveInstance)

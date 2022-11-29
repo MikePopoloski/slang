@@ -425,7 +425,7 @@ void registerSymbols(py::module_& m) {
 
     py::class_<GenerateBlockSymbol, Symbol, Scope>(m, "GenerateBlockSymbol")
         .def_readonly("constructIndex", &GenerateBlockSymbol::constructIndex)
-        .def_readonly("isInstantiated", &GenerateBlockSymbol::isInstantiated)
+        .def_readonly("isUninstantiated", &GenerateBlockSymbol::isUninstantiated)
         .def_readonly("arrayIndex", &GenerateBlockSymbol::arrayIndex)
         .def_property_readonly("externalName", &GenerateBlockSymbol::getExternalName);
 

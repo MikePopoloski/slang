@@ -132,11 +132,17 @@ bool Scope::isUninstantiated() const {
     if (getCompilation().getOptions().lintMode)
         return true;
 
-    auto inst = getContainingInstance();
-    if (!inst)
-        return false;
+    auto currScope = this;
+    do {
+        auto& sym = currScope->asSymbol();
+        if (sym.kind == SymbolKind::InstanceBody)
+            return sym.as<InstanceBodySymbol>().isUninstantiated;
+        if (sym.kind == SymbolKind::GenerateBlock)
+            return sym.as<GenerateBlockSymbol>().isUninstantiated;
+        currScope = sym.getParentScope();
+    } while (currScope);
 
-    return inst->isUninstantiated;
+    return false;
 }
 
 Diagnostic& Scope::addDiag(DiagCode code, SourceLocation location) const {
@@ -709,8 +715,8 @@ void Scope::handleNameConflict(const Symbol& member, const Symbol*& existing,
         auto& gen1 = existing->as<GenerateBlockSymbol>();
         auto& gen2 = member.as<GenerateBlockSymbol>();
         if (gen1.constructIndex == gen2.constructIndex) {
-            ASSERT(!(gen1.isInstantiated && gen2.isInstantiated));
-            if (gen2.isInstantiated)
+            ASSERT(gen1.isUninstantiated || gen2.isUninstantiated);
+            if (gen1.isUninstantiated)
                 existing = &member;
             return;
         }
@@ -928,7 +934,8 @@ void Scope::elaborate() const {
             case SyntaxKind::IfGenerate: {
                 SmallVector<GenerateBlockSymbol*> blocks;
                 GenerateBlockSymbol::fromSyntax(compilation, member.node.as<IfGenerateSyntax>(),
-                                                context, constructIndex, true, blocks);
+                                                context, constructIndex, isUninstantiated(),
+                                                blocks);
                 constructIndex++;
                 insertMembers(blocks, symbol);
                 break;
@@ -936,7 +943,8 @@ void Scope::elaborate() const {
             case SyntaxKind::CaseGenerate: {
                 SmallVector<GenerateBlockSymbol*> blocks;
                 GenerateBlockSymbol::fromSyntax(compilation, member.node.as<CaseGenerateSyntax>(),
-                                                context, constructIndex, true, blocks);
+                                                context, constructIndex, isUninstantiated(),
+                                                blocks);
                 constructIndex++;
                 insertMembers(blocks, symbol);
                 break;

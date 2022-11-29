@@ -396,6 +396,12 @@ bool lookupDownward(span<const NamePlusLoc> nameParts, NameComponents name,
                 result.addDiag(*context.scope, diag::IllegalReferenceToProgramItem, errorRange);
             }
         }
+        else if (symbol->kind == SymbolKind::GenerateBlock &&
+                 symbol->as<GenerateBlockSymbol>().isUninstantiated) {
+            // Don't allow lookups into uninstantiated generate blocks, but do return
+            // true so that the lookup can continue elsewhere.
+            return true;
+        }
 
         // If there is a modport name restricting our lookup, translate to that
         // modport's scope now.
