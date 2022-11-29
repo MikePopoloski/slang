@@ -102,6 +102,9 @@ module m(output v);
         assign x = 1;
         always @(posedge clk) v <= x;
     end
+
+    int y = 1;
+    initial $dumpvars(m.y);
 endmodule
 
 module n #(parameter int i)(input x, output y, output z);
