@@ -588,6 +588,11 @@ private:
         auto scope = symbol.getParentScope();
         auto [rvalue, lvalue] = compilation.isReferenced(*syntax);
 
+        auto addDiag = [&](DiagCode code) {
+            if (!scope->isUninstantiated())
+                scope->addDiag(code, symbol.location) << symbol.name;
+        };
+
         auto portRef = symbol.getFirstPortBackref();
         if (portRef) {
             // This is a variable or net connected internally to a port.
@@ -599,20 +604,20 @@ private:
             // Otherwise check and warn about the port being unused.
             if (portRef->port->direction == ArgumentDirection::Out) {
                 if (!lvalue)
-                    scope->addDiag(diag::UndrivenPort, symbol.location) << symbol.name;
+                    addDiag(diag::UndrivenPort);
             }
             else if (!rvalue) {
-                scope->addDiag(diag::UnusedPort, symbol.location) << symbol.name;
+                addDiag(diag::UnusedPort);
             }
             return;
         }
 
         if (!rvalue && !lvalue)
-            scope->addDiag(unusedCode, symbol.location) << symbol.name;
+            addDiag(unusedCode);
         else if (!rvalue && unreadCode)
-            scope->addDiag(*unreadCode, symbol.location) << symbol.name;
+            addDiag(*unreadCode);
         else if (!lvalue && !symbol.getDeclaredType()->getInitializerSyntax() && unsetCode)
-            scope->addDiag(*unsetCode, symbol.location) << symbol.name;
+            addDiag(*unsetCode);
     }
 
     Compilation& compilation;

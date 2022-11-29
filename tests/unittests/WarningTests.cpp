@@ -104,7 +104,7 @@ module m(output v);
     end
 endmodule
 
-module n #(parameter int i)(input x, output y);
+module n #(parameter int i)(input x, output y, output z);
     logic [i-1:0] a = 1;
     assign y = a[x];
 endmodule
