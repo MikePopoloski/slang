@@ -897,7 +897,7 @@ const Diagnostics& Compilation::getSemanticDiagnostics() {
         }
     }
 
-    if (!options.suppressUnused) {
+    if (!options.scriptMode) {
         // Top level instances cannot have interface or ref ports.
         for (auto inst : getRoot().topInstances) {
             for (auto port : inst->body.getPortList()) {
@@ -926,7 +926,9 @@ const Diagnostics& Compilation::getSemanticDiagnostics() {
                 }
             }
         }
+    }
 
+    if (!options.suppressUnused) {
         // Report on unused definitions.
         for (auto def : unreferencedDefs) {
             // If this is an interface, it may have been referenced in a port.

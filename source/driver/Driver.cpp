@@ -671,6 +671,7 @@ Bag Driver::createOptionBag() const {
 
     CompilationOptions coptions;
     coptions.suppressUnused = false;
+    coptions.scriptMode = false;
     if (options.maxInstanceDepth.has_value())
         coptions.maxInstanceDepth = *options.maxInstanceDepth;
     if (options.maxGenerateSteps.has_value())

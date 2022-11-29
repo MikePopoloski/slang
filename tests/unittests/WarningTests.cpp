@@ -27,6 +27,7 @@ endmodule
 
     CompilationOptions coptions;
     coptions.suppressUnused = false;
+    coptions.scriptMode = false;
 
     Compilation compilation(coptions);
     compilation.addSyntaxTree(tree);

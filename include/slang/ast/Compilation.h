@@ -126,9 +126,13 @@ struct SLANG_EXPORT CompilationOptions {
     /// be caused by not having an elaborated design.
     bool lintMode = false;
 
-    /// If true, suppress warnings about unused code elements. This is intended
-    /// for tests; for end users, they can use warning flags to control output.
+    /// If true, suppress warnings about unused code elements.
     bool suppressUnused = true;
+
+    /// When in script mode, suppress some errors that are otherwise pretty
+    /// annoying when not in a batch context. For example, top-level modules
+    /// that have interface ports will cause an error if this is not set.
+    bool scriptMode = true;
 
     /// If non-empty, specifies the list of modules that should serve as the
     /// top modules in the design. If empty, this will be automatically determined
