@@ -938,7 +938,7 @@ const Diagnostics& Compilation::getSemanticDiagnostics() {
             def->scope.addDiag(diag::UnusedDefinition, def->location) << def->getKindString();
         }
 
-        if (!elabVisitor.hierarchyProblem && numErrors < errorLimit) {
+        if (!elabVisitor.hierarchyProblem && numErrors == 0) {
             PostElabVisitor postElabVisitor(*this);
             getRoot().visit(postElabVisitor);
         }

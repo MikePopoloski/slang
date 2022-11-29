@@ -33,12 +33,11 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 5);
+    REQUIRE(diags.size() == 4);
     CHECK(diags[0].code == diag::UnusedDefinition);
     CHECK(diags[1].code == diag::TopModuleIfacePort);
     CHECK(diags[2].code == diag::TopModuleUnnamedRefPort);
     CHECK(diags[3].code == diag::TopModuleRefPort);
-    CHECK(diags[4].code == diag::UnusedPort);
 }
 
 TEST_CASE("Unused nets and vars") {
