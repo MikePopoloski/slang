@@ -97,13 +97,18 @@ module m(output v);
     wire clk = 1;
     I i(clk);
 
-    int x;
+    int x,z;
     if (0) begin
         assign x = 1;
-        always @(posedge clk) v <= x;
+        always_ff @(posedge clk) v <= x;
+
+        assign z = 1;
+    end
+    else begin
+        assign z = 1;
     end
 
-    int y = 1;
+    int y = z;
     initial $dumpvars(m.y);
 endmodule
 

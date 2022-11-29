@@ -1679,8 +1679,10 @@ Statement& ForLoopStatement::fromSyntax(Compilation& compilation,
 
     // If this is the top-level unrollable for loop, attempt the unrolling now.
     // If not top-level, just pop up the stack and let the parent loop handle us.
-    if (wasFirst && !compilation.getOptions().strictDriverChecking)
+    if (wasFirst && !compilation.getOptions().strictDriverChecking &&
+        !context.scope->isUninstantiated()) {
         UnrollVisitor::run(context, *result);
+    }
 
     return *result;
 }

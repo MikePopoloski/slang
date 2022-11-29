@@ -440,7 +440,7 @@ void ClockVarSymbol::fromSyntax(const Scope& scope, const ClockingItemSyntax& sy
     ASSERT(parent);
 
     LookupLocation ll = LookupLocation::before(scope.asSymbol());
-    ASTContext context(*parent, ll);
+    ASTContext context(*parent, ll, ASTFlags::NonProcedural);
 
     ArgumentDirection dir = ArgumentDirection::In;
     ClockingSkew inputSkew, outputSkew;
@@ -501,8 +501,7 @@ void ClockVarSymbol::fromSyntax(const Scope& scope, const ClockingItemSyntax& sy
                     context, *sym, false, {arg->location, arg->location + arg->name.length()});
 
                 if (dir != ArgumentDirection::In) {
-                    sym->as<ValueSymbol>().addDriver(DriverKind::Continuous, valExpr,
-                                                     scope.asSymbol(), AssignFlags::ClockVar);
+                    context.addDriver(sym->as<ValueSymbol>(), valExpr, AssignFlags::ClockVar);
                 }
             }
             else {

@@ -112,6 +112,9 @@ void ASTContext::addDriver(const ValueSymbol& symbol, const Expression& longestS
     if (flags.has(ASTFlags::UnrollableForLoop) || assignFlags.has(AssignFlags::NotADriver))
         return;
 
+    if (scope->isUninstantiated())
+        return;
+
     symbol.addDriver(getDriverKind(), longestStaticPrefix, getContainingSymbol(), assignFlags);
 }
 

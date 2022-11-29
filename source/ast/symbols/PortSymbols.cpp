@@ -1386,8 +1386,7 @@ const Type& PortSymbol::getType() const {
                 internalExpr->requireLValue(context, {}, flags);
             }
             else {
-                internalSymbol->as<ValueSymbol>().addDriver(DriverKind::Continuous, valExpr,
-                                                            scope->asSymbol(), flags);
+                context.addDriver(internalSymbol->as<ValueSymbol>(), valExpr, flags);
             }
         }
     }
