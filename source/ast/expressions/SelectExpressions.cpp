@@ -42,10 +42,12 @@ static const Type& getIndexedType(Compilation& compilation, const ASTContext& co
         return compilation.getByteType();
     }
     else if (!ct.isIntegral()) {
-        auto code = isRangeSelect ? diag::BadSliceType : diag::BadIndexExpression;
-        auto& diag = context.addDiag(code, exprRange);
-        diag << valueRange;
-        diag << valueType;
+        if (!ct.isError()) {
+            auto code = isRangeSelect ? diag::BadSliceType : diag::BadIndexExpression;
+            auto& diag = context.addDiag(code, exprRange);
+            diag << valueRange;
+            diag << valueType;
+        }
         return compilation.getErrorType();
     }
     else if (ct.isScalar()) {
@@ -128,9 +130,6 @@ bool requireLValueHelper(const T& expr, const ASTContext& context, SourceLocatio
 Expression& ElementSelectExpression::fromSyntax(Compilation& compilation, Expression& value,
                                                 const ExpressionSyntax& syntax,
                                                 SourceRange fullRange, const ASTContext& context) {
-    if (value.bad())
-        return badExpr(compilation, nullptr);
-
     // Selects of vectored nets are disallowed.
     checkForVectoredSelect(value, fullRange, context);
 
@@ -149,7 +148,7 @@ Expression& ElementSelectExpression::fromSyntax(Compilation& compilation, Expres
 
     if (!selector) {
         bitmask<ASTFlags> flags;
-        if (valueType.isQueue())
+        if (valueType.isQueue() || valueType.isError())
             flags = ASTFlags::AllowUnboundedLiteral | ASTFlags::AllowUnboundedLiteralArithmetic;
 
         selector = &selfDetermined(compilation, syntax, context, flags);
@@ -159,7 +158,7 @@ Expression& ElementSelectExpression::fromSyntax(Compilation& compilation, Expres
 
     auto result = compilation.emplace<ElementSelectExpression>(resultType, value, *selector,
                                                                fullRange);
-    if (selector->bad() || result->bad())
+    if (value.bad() || selector->bad() || result->bad())
         return badExpr(compilation, result);
 
     // If the selector is constant, and the underlying type has a fixed range,
@@ -434,7 +433,7 @@ Expression& RangeSelectExpression::fromSyntax(Compilation& compilation, Expressi
     // Selection expressions don't need to be const if we're selecting from a queue.
     bitmask<ASTFlags> extraFlags;
     bool isQueue = value.type->isQueue();
-    if (isQueue)
+    if (isQueue || value.bad())
         extraFlags = ASTFlags::AllowUnboundedLiteral | ASTFlags::AllowUnboundedLiteralArithmetic;
 
     auto& left = bind(*syntax.left, context, extraFlags);
@@ -908,6 +907,8 @@ Expression& MemberAccessExpression::fromSelector(
             return CallExpression::fromSystemMethod(compilation, expr, selector, invocation,
                                                     withClause, context);
         }
+        case SymbolKind::ErrorType:
+            return badExpr(compilation, &expr);
         case SymbolKind::VoidType:
             if (auto sym = expr.getSymbolReference()) {
                 if (sym->kind == SymbolKind::Coverpoint) {

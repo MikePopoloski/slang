@@ -1804,8 +1804,19 @@ const Expression* ForeachLoopStatement::buildLoopDims(const ForeachLoopListSynta
     //    - A string
     auto& comp = context.getCompilation();
     auto& arrayRef = Expression::bind(*loopList.arrayName, context);
-    if (arrayRef.bad())
+    if (arrayRef.bad()) {
+        // Create placeholder iterator symbols to prevent downstream errors.
+        for (auto loopVar : loopList.loopVariables) {
+            if (loopVar->kind == SyntaxKind::IdentifierName) {
+                auto idName = loopVar->as<IdentifierNameSyntax>().identifier;
+                auto it = comp.emplace<IteratorSymbol>(idName.valueText(), idName.location(),
+                                                       comp.getErrorType(), comp.getErrorType());
+                it->nextTemp = std::exchange(context.firstTempVar, it);
+                dims.push_back({std::nullopt, it});
+            }
+        }
         return nullptr;
+    }
 
     const Type* type = arrayRef.type;
     auto arraySym = arrayRef.getSymbolReference();

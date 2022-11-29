@@ -1049,9 +1049,6 @@ Expression& Expression::bindLookupResult(Compilation& compilation, LookupResult&
 
     // Drill down into member accesses.
     for (size_t i = 0; i < result.selectors.size(); i++) {
-        if (expr->bad())
-            return *expr;
-
         auto& selector = result.selectors[i];
         auto memberSelect = std::get_if<LookupResult::MemberSelector>(&selector);
         if (memberSelect) {

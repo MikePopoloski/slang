@@ -428,10 +428,7 @@ Expression& AssignmentExpression::fromSyntax(Compilation& compilation,
         if (!pattern.type) {
             // In this case we have to bind the rhs first to determine the
             // correct type to use as the context for the lhs.
-            Expression* rhs = &selfDetermined(compilation, *rightExpr, context);
-            if (rhs->bad())
-                return badExpr(compilation, rhs);
-
+            auto rhs = &selfDetermined(compilation, *rightExpr, context);
             auto lhs = &create(compilation, *syntax.left, context, ASTFlags::LValue, rhs->type);
             selfDetermined(context, lhs);
 
@@ -847,8 +844,12 @@ Expression& NewArrayExpression::fromSyntax(Compilation& compilation,
                                            const Type* assignmentTarget) {
     if (!assignmentTarget ||
         assignmentTarget->getCanonicalType().kind != SymbolKind::DynamicArrayType) {
-        context.addDiag(diag::NewArrayTarget, syntax.sourceRange());
-        return badExpr(compilation, nullptr);
+
+        if (!assignmentTarget || !assignmentTarget->isError())
+            context.addDiag(diag::NewArrayTarget, syntax.sourceRange());
+
+        if (!assignmentTarget)
+            assignmentTarget = &compilation.getErrorType();
     }
 
     auto& sizeExpr = selfDetermined(compilation, *syntax.sizeExpr, context);

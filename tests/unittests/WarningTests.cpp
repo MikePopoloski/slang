@@ -103,6 +103,11 @@ module m(output v);
         always @(posedge clk) v <= x;
     end
 endmodule
+
+module n #(parameter int i)(input x, output y);
+    logic [i-1:0] a = 1;
+    assign y = a[x];
+endmodule
 )");
 
     CompilationOptions coptions;
@@ -110,7 +115,10 @@ endmodule
 
     Compilation compilation(coptions);
     compilation.addSyntaxTree(tree);
-    NO_COMPILATION_ERRORS;
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::UnusedDefinition);
 }
 
 TEST_CASE("Unused function args") {
