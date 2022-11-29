@@ -128,6 +128,64 @@ endpackage
     CHECK(diags[0].code == diag::UnusedDefinition);
 }
 
+TEST_CASE("'unused' warnings with clock vars") {
+    auto tree = SyntaxTree::fromText(R"(
+interface I;
+    logic clk;
+    logic a;
+
+    clocking cb @(posedge clk);
+        input a;
+    endclocking
+endinterface
+
+class TB;
+    virtual I intf;
+    task run();
+        @(intf.cb);
+        if (intf.cb.a) begin
+            $display("error!");
+        end
+    endtask
+endclass
+
+module M(
+    input logic clk,
+    output logic a
+);
+   always_ff @(posedge clk) begin
+       a <= 1'b1;
+   end
+endmodule
+
+module top;
+    logic a;
+    logic clk;
+    I i();
+
+    M m(.*);
+
+    assign i.clk = clk;
+    assign i.a = a;
+
+    initial begin
+        clk = 0;
+        forever begin
+            #1ns;
+            clk = ~clk;
+        end
+    end
+endmodule
+)");
+
+    CompilationOptions coptions;
+    coptions.suppressUnused = false;
+
+    Compilation compilation(coptions);
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
 TEST_CASE("Unused function args") {
     auto tree = SyntaxTree::fromText(R"(
 function foo(input x, output y);
