@@ -38,15 +38,17 @@ void registerAST(py::module_& m) {
     py::class_<EvalContext> evalCtx(m, "EvalContext");
     evalCtx.def(py::init<Compilation&, bitmask<EvalFlags>>())
         .def_readonly("flags", &EvalContext::flags)
-        .def("createLocal", &EvalContext::createLocal, byrefint)
-        .def("findLocal", &EvalContext::findLocal, byrefint)
-        .def("deleteLocal", &EvalContext::deleteLocal)
-        .def("pushFrame", &EvalContext::pushFrame)
+        .def("createLocal", &EvalContext::createLocal, byrefint, py::arg("symbol"),
+             py::arg("value") = nullptr)
+        .def("findLocal", &EvalContext::findLocal, byrefint, py::arg("symbol"))
+        .def("deleteLocal", &EvalContext::deleteLocal, py::arg("symbol"))
+        .def("pushFrame", &EvalContext::pushFrame, py::arg("subroutine"), py::arg("callLocation"),
+             py::arg("lookupLocation"))
         .def("pushEmptyFrame", &EvalContext::pushEmptyFrame)
         .def("popFrame", &EvalContext::popFrame)
-        .def("pushLValue", &EvalContext::pushLValue)
+        .def("pushLValue", &EvalContext::pushLValue, py::arg("lval"))
         .def("popLValue", &EvalContext::popLValue)
-        .def("step", &EvalContext::step)
+        .def("step", &EvalContext::step, py::arg("loc"))
         .def("setDisableTarget", &EvalContext::setDisableTarget)
         .def("dumpStack", &EvalContext::dumpStack)
         .def_property_readonly("topLValue", &EvalContext::getTopLValue)
@@ -69,7 +71,7 @@ void registerAST(py::module_& m) {
         .def("bad", &LValue::bad)
         .def("resolve", &LValue::resolve, byrefint)
         .def("load", &LValue::load)
-        .def("store", &LValue::store);
+        .def("store", &LValue::store, py::arg("value"));
 
     py::enum_<ASTFlags>(m, "ASTFlags")
         .value("None", ASTFlags::None)
@@ -134,47 +136,68 @@ void registerAST(py::module_& m) {
         .def_property_readonly("inAlwaysCombLatch", &ASTContext::inAlwaysCombLatch)
         .def("addDiag",
              py::overload_cast<DiagCode, SourceLocation>(&ASTContext::addDiag, py::const_),
-             byrefint)
+             byrefint, py::arg("code"), py::arg("location"))
         .def("addDiag", py::overload_cast<DiagCode, SourceRange>(&ASTContext::addDiag, py::const_),
-             byrefint)
+             byrefint, py::arg("code"), py::arg("sourceRange"))
         .def("requireIntegral",
-             py::overload_cast<const Expression&>(&ASTContext::requireIntegral, py::const_))
-        .def("requireIntegral", py::overload_cast<const ConstantValue&, SourceRange>(
-                                    &ASTContext::requireIntegral, py::const_))
-        .def("requireNoUnknowns", &ASTContext::requireNoUnknowns)
+             py::overload_cast<const Expression&>(&ASTContext::requireIntegral, py::const_),
+             py::arg("expr"))
+        .def("requireIntegral",
+             py::overload_cast<const ConstantValue&, SourceRange>(&ASTContext::requireIntegral,
+                                                                  py::const_),
+             py::arg("cv"), py::arg("range"))
+        .def("requireNoUnknowns", &ASTContext::requireNoUnknowns, py::arg("value"),
+             py::arg("range"))
         .def("requirePositive",
-             py::overload_cast<const SVInt&, SourceRange>(&ASTContext::requirePositive, py::const_))
-        .def("requirePositive", py::overload_cast<std::optional<int32_t>, SourceRange>(
-                                    &ASTContext::requirePositive, py::const_))
-        .def("requireGtZero", &ASTContext::requireGtZero)
-        .def("requireBooleanConvertible", &ASTContext::requireBooleanConvertible)
-        .def("requireValidBitWidth", py::overload_cast<bitwidth_t, SourceRange>(
-                                         &ASTContext::requireValidBitWidth, py::const_))
-        .def("requireValidBitWidth", py::overload_cast<const SVInt&, SourceRange>(
-                                         &ASTContext::requireValidBitWidth, py::const_))
-        .def("eval", &ASTContext::eval)
-        .def("tryEval", &ASTContext::tryEval)
-        .def("evalInteger", py::overload_cast<const ExpressionSyntax&, bitmask<ASTFlags>>(
-                                &ASTContext::evalInteger, py::const_))
-        .def("evalInteger", py::overload_cast<const Expression&, bitmask<EvalFlags>>(
-                                &ASTContext::evalInteger, py::const_))
-        .def("evalDimension", &ASTContext::evalDimension)
-        .def("evalPackedDimension", py::overload_cast<const VariableDimensionSyntax&>(
-                                        &ASTContext::evalPackedDimension, py::const_))
-        .def("evalPackedDimension", py::overload_cast<const ElementSelectSyntax&>(
-                                        &ASTContext::evalPackedDimension, py::const_))
-        .def("evalUnpackedDimension", &ASTContext::evalUnpackedDimension)
+             py::overload_cast<const SVInt&, SourceRange>(&ASTContext::requirePositive, py::const_),
+             py::arg("value"), py::arg("range"))
+        .def("requirePositive",
+             py::overload_cast<std::optional<int32_t>, SourceRange>(&ASTContext::requirePositive,
+                                                                    py::const_),
+             py::arg("value"), py::arg("range"))
+        .def("requireGtZero", &ASTContext::requireGtZero, py::arg("value"), py::arg("range"))
+        .def("requireBooleanConvertible", &ASTContext::requireBooleanConvertible, py::arg("expr"))
+        .def("requireValidBitWidth",
+             py::overload_cast<bitwidth_t, SourceRange>(&ASTContext::requireValidBitWidth,
+                                                        py::const_),
+             py::arg("width"), py::arg("range"))
+        .def("requireValidBitWidth",
+             py::overload_cast<const SVInt&, SourceRange>(&ASTContext::requireValidBitWidth,
+                                                          py::const_),
+             py::arg("value"), py::arg("range"))
+        .def("eval", &ASTContext::eval, py::arg("expr"),
+             py::arg("extraFlags") = bitmask<ASTFlags>{})
+        .def("tryEval", &ASTContext::tryEval, py::arg("expr"))
+        .def("evalInteger",
+             py::overload_cast<const ExpressionSyntax&, bitmask<ASTFlags>>(&ASTContext::evalInteger,
+                                                                           py::const_),
+             py::arg("syntax"), py::arg("extraFlags") = bitmask<ASTFlags>{})
+        .def("evalInteger",
+             py::overload_cast<const Expression&, bitmask<EvalFlags>>(&ASTContext::evalInteger,
+                                                                      py::const_),
+             py::arg("expr"), py::arg("extraFlags") = bitmask<ASTFlags>{})
+        .def("evalDimension", &ASTContext::evalDimension, py::arg("syntax"),
+             py::arg("requireRange"), py::arg("isPacked"))
+        .def("evalPackedDimension",
+             py::overload_cast<const VariableDimensionSyntax&>(&ASTContext::evalPackedDimension,
+                                                               py::const_),
+             py::arg("syntax"))
+        .def("evalPackedDimension",
+             py::overload_cast<const ElementSelectSyntax&>(&ASTContext::evalPackedDimension,
+                                                           py::const_),
+             py::arg("syntax"))
+        .def("evalUnpackedDimension", &ASTContext::evalUnpackedDimension, py::arg("syntax"))
         .def("requireSimpleExpr",
              py::overload_cast<const PropertyExprSyntax&>(&ASTContext::requireSimpleExpr,
                                                           py::const_),
-             byrefint)
+             byrefint, py::arg("expr"))
         .def("requireSimpleExpr",
              py::overload_cast<const PropertyExprSyntax&, DiagCode>(&ASTContext::requireSimpleExpr,
                                                                     py::const_),
-             byrefint)
-        .def("getRandMode", &ASTContext::getRandMode)
-        .def("addAssertionBacktrace", &ASTContext::addAssertionBacktrace)
-        .def("resetFlags", &ASTContext::resetFlags);
+             byrefint, py::arg("expr"), py::arg("code"))
+        .def("getRandMode", &ASTContext::getRandMode, py::arg("symbol"))
+        .def("addAssertionBacktrace", &ASTContext::addAssertionBacktrace, py::arg("diag"))
+        .def("resetFlags", &ASTContext::resetFlags, py::arg("addedFlags"));
 
     py::class_<Expression>(m, "Expression")
         .def_readonly("kind", &Expression::kind)
@@ -187,11 +210,13 @@ void registerAST(py::module_& m) {
         .def_property_readonly("isUnsizedInteger", &Expression::isUnsizedInteger)
         .def_property_readonly("effectiveWidth", &Expression::getEffectiveWidth)
         .def_property_readonly("hasHierarchicalReference", &Expression::hasHierarchicalReference)
-        .def("eval", &Expression::eval)
-        .def("evalLValue", &Expression::evalLValue)
-        .def("canConnectToRefArg", &Expression::canConnectToRefArg)
-        .def("isImplicitlyAssignableTo", &Expression::isImplicitlyAssignableTo)
-        .def("getSymbolReference", &Expression::getSymbolReference)
+        .def("eval", &Expression::eval, py::arg("context"))
+        .def("evalLValue", &Expression::evalLValue, py::arg("context"))
+        .def("canConnectToRefArg", &Expression::canConnectToRefArg, py::arg("isConstRef"),
+             py::arg("allowConstClassHandle") = false)
+        .def("isImplicitlyAssignableTo", &Expression::isImplicitlyAssignableTo,
+             py::arg("compilation"), py::arg("type"))
+        .def("getSymbolReference", &Expression::getSymbolReference, py::arg("allowPacked") = true)
         .def("__repr__", [](const Expression& self) {
             return fmt::format("Expression(ExpressionKind.{})", toString(self.kind));
         });
@@ -428,7 +453,7 @@ void registerAST(py::module_& m) {
         .def_readonly("syntax", &Statement::syntax)
         .def_readonly("sourceRange", &Statement::sourceRange)
         .def_property_readonly("bad", &Statement::bad)
-        .def("eval", &Statement::eval)
+        .def("eval", &Statement::eval, py::arg("context"))
         .def("__repr__", [](const Statement& self) {
             return fmt::format("Statement(StatementKind.{})", toString(self.kind));
         });
@@ -597,7 +622,7 @@ void registerAST(py::module_& m) {
         .def_readonly("syntax", &Pattern::syntax)
         .def_readonly("sourceRange", &Pattern::sourceRange)
         .def_property_readonly("bad", &Pattern::bad)
-        .def("eval", &Pattern::eval)
+        .def("eval", &Pattern::eval, py::arg("context"), py::arg("value"), py::arg("conditionKind"))
         .def("__repr__", [](const Pattern& self) {
             return fmt::format("Pattern(PatternKind.{})", toString(self.kind));
         });
