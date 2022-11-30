@@ -90,7 +90,9 @@ endmodule
 TEST_CASE("Unused nets and vars false positives regress") {
     auto tree = SyntaxTree::fromText(R"(
 interface I(input clk);
-    modport m(input clk);
+    logic baz;
+    modport m(input clk, baz);
+    modport n(output baz);
 endinterface
 
 module m(output v);

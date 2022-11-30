@@ -192,6 +192,8 @@ ModportPortSymbol& ModportPortSymbol::fromSyntax(const ASTContext& context,
     // Perform checking on the connected symbol to make sure it's allowed
     // given the modport's direction.
     ASTContext checkCtx = context.resetFlags(ASTFlags::NonProcedural);
+    if (direction != ArgumentDirection::In)
+        checkCtx.flags |= ASTFlags::LValue;
 
     auto loc = result->location;
     auto& expr = ValueExpressionBase::fromSymbol(checkCtx, *result->internalSymbol, false,
