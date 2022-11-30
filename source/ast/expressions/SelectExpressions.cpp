@@ -152,7 +152,7 @@ Expression& ElementSelectExpression::fromSyntax(Compilation& compilation, Expres
             flags = ASTFlags::AllowUnboundedLiteral | ASTFlags::AllowUnboundedLiteralArithmetic;
 
         selector = &selfDetermined(compilation, syntax, context, flags);
-        if (!selector->type->isUnbounded() && !context.requireIntegral(*selector))
+        if (!selector->type->isUnbounded() && !value.bad() && !context.requireIntegral(*selector))
             return badExpr(compilation, nullptr);
     }
 

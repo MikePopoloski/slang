@@ -2859,6 +2859,29 @@ endmodule
     NO_COMPILATION_ERRORS;
 }
 
+TEST_CASE("Index invalid expression regress GH #675") {
+    auto tree = SyntaxTree::fromText(R"(
+virtual class C #(type enum_t = int);
+    static function enum_t str2enum(string str);
+        static enum_t enum_type_map[string];
+        enum_t e;
+
+        if (enum_type_map.exists(str)) begin
+            e = enum_type_map[str];
+        end else begin
+            e = e.first();
+        end
+
+        return e;
+    endfunction
+endclass
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
 TEST_CASE("Proc subroutine multiple driver tracking") {
     auto tree = SyntaxTree::fromText(R"(
 module m;
