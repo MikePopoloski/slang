@@ -137,13 +137,20 @@ Expression& ElementSelectExpression::fromSyntax(Compilation& compilation, Expres
     const Type& resultType = getIndexedType(compilation, context, valueType, syntax.sourceRange(),
                                             value.sourceRange, false);
 
+    // The selector expression is never an lvalue, even if we are otherwise
+    // in an lvalue context.
+    ASTContext selectorCtx = context;
+    selectorCtx.flags &= ~ASTFlags::LValue;
+
     // If this is an associative array with a specific index target, we need to bind
     // as an rvalue to get the right conversion applied.
     const Expression* selector = nullptr;
     if (valueType.isAssociativeArray()) {
         auto indexType = valueType.getAssociativeIndexType();
-        if (indexType)
-            selector = &bindRValue(*indexType, syntax, syntax.getFirstToken().location(), context);
+        if (indexType) {
+            selector = &bindRValue(*indexType, syntax, syntax.getFirstToken().location(),
+                                   selectorCtx);
+        }
     }
 
     if (!selector) {
@@ -151,9 +158,11 @@ Expression& ElementSelectExpression::fromSyntax(Compilation& compilation, Expres
         if (valueType.isQueue() || valueType.isError())
             flags = ASTFlags::AllowUnboundedLiteral | ASTFlags::AllowUnboundedLiteralArithmetic;
 
-        selector = &selfDetermined(compilation, syntax, context, flags);
-        if (!selector->type->isUnbounded() && !value.bad() && !context.requireIntegral(*selector))
+        selector = &selfDetermined(compilation, syntax, selectorCtx, flags);
+        if (!selector->type->isUnbounded() && !value.bad() &&
+            !selectorCtx.requireIntegral(*selector)) {
             return badExpr(compilation, nullptr);
+        }
     }
 
     auto result = compilation.emplace<ElementSelectExpression>(resultType, value, *selector,
@@ -436,8 +445,13 @@ Expression& RangeSelectExpression::fromSyntax(Compilation& compilation, Expressi
     if (isQueue || value.bad())
         extraFlags = ASTFlags::AllowUnboundedLiteral | ASTFlags::AllowUnboundedLiteralArithmetic;
 
-    auto& left = bind(*syntax.left, context, extraFlags);
-    auto& right = bind(*syntax.right, context, extraFlags);
+    // The selector expressions are never lvalues, even if we are otherwise
+    // in an lvalue context.
+    ASTContext selectorCtx = context;
+    selectorCtx.flags &= ~ASTFlags::LValue;
+
+    auto& left = bind(*syntax.left, selectorCtx, extraFlags);
+    auto& right = bind(*syntax.right, selectorCtx, extraFlags);
 
     auto result = compilation.emplace<RangeSelectExpression>(selectionKind,
                                                              compilation.getErrorType(), value,
