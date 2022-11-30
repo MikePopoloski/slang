@@ -299,6 +299,13 @@ void InstanceSymbol::fromSyntax(Compilation& compilation,
         currScope = sym.getParentScope();
     } while (currScope);
 
+    // If this instance is not instantiated then we'll just fill in a placeholder
+    // and move on. This is likely inside an untaken generate branch.
+    if (isUninstantiated) {
+        UnknownModuleSymbol::fromSyntax(compilation, syntax, context, results, implicitNets);
+        return;
+    }
+
     const Definition* owningDefinition = nullptr;
     const ParamOverrideNode* parentOverrideNode = nullptr;
     if (parentInst) {
@@ -323,11 +330,7 @@ void InstanceSymbol::fromSyntax(Compilation& compilation,
             }
         }
         else {
-            if (!isUninstantiated) {
-                context.addDiag(diag::UnknownModule, syntax.type.range())
-                    << syntax.type.valueText();
-            }
-
+            context.addDiag(diag::UnknownModule, syntax.type.range()) << syntax.type.valueText();
             UnknownModuleSymbol::fromSyntax(compilation, syntax, context, results, implicitNets);
         }
         return;
@@ -349,7 +352,6 @@ void InstanceSymbol::fromSyntax(Compilation& compilation,
     auto& netType = context.scope->getDefaultNetType();
 
     ParameterBuilder paramBuilder(*context.scope, definition->name, definition->parameters);
-    paramBuilder.setForceInvalidValues(isUninstantiated);
     if (syntax.parameters)
         paramBuilder.setAssignments(*syntax.parameters);
 
@@ -357,7 +359,7 @@ void InstanceSymbol::fromSyntax(Compilation& compilation,
     // which lets us evaluate all parameter assignments for this instance in a batch.
     if (!parentOverrideNode) {
         InstanceBuilder builder(context, *definition, paramBuilder, syntax.attributes,
-                                isUninstantiated);
+                                /* isUninstantiated */ false);
 
         for (auto instanceSyntax : syntax.instances) {
             createImplicitNets(*instanceSyntax, context, netType, implicitNetNames, implicitNets);
@@ -379,7 +381,7 @@ void InstanceSymbol::fromSyntax(Compilation& compilation,
             }
 
             InstanceBuilder builder(context, *definition, paramBuilder, syntax.attributes,
-                                    isUninstantiated);
+                                    /* isUninstantiated */ false);
 
             createImplicitNets(*instanceSyntax, context, netType, implicitNetNames, implicitNets);
             results.push_back(builder.create(*instanceSyntax));

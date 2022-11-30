@@ -1845,3 +1845,24 @@ endmodule
     CHECK(diags[5].code == diag::IllegalReferenceToProgramItem);
     CHECK(diags[6].code == diag::IllegalReferenceToProgramItem);
 }
+
+TEST_CASE("Untaken generate block instantiation") {
+    auto tree = SyntaxTree::fromText(R"(
+module m #(parameter int i);
+    $static_assert(i < 10);
+endmodule
+
+module n;
+    if (1) begin
+        m #(4) m1();
+    end
+    else begin
+        m #(20) m1();
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
