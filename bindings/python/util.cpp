@@ -26,22 +26,23 @@ void registerUtil(py::module_& m) {
     py::class_<Bag>(m, "Bag")
         .def(py::init<>())
         .def(py::init([](py::list list) {
-            Bag result;
-            for (auto item : list) {
-                auto type = py::type::of(item);
-                if (type.is(py::type::of<LexerOptions>()))
-                    result.set(item.cast<LexerOptions>());
-                else if (type.is(py::type::of<PreprocessorOptions>()))
-                    result.set(item.cast<PreprocessorOptions>());
-                else if (type.is(py::type::of<ParserOptions>()))
-                    result.set(item.cast<ParserOptions>());
-                else if (type.is(py::type::of<CompilationOptions>()))
-                    result.set(item.cast<CompilationOptions>());
-                else
-                    throw py::type_error();
-            }
-            return result;
-        }))
+                 Bag result;
+                 for (auto item : list) {
+                     auto type = py::type::of(item);
+                     if (type.is(py::type::of<LexerOptions>()))
+                         result.set(item.cast<LexerOptions>());
+                     else if (type.is(py::type::of<PreprocessorOptions>()))
+                         result.set(item.cast<PreprocessorOptions>());
+                     else if (type.is(py::type::of<ParserOptions>()))
+                         result.set(item.cast<ParserOptions>());
+                     else if (type.is(py::type::of<CompilationOptions>()))
+                         result.set(item.cast<CompilationOptions>());
+                     else
+                         throw py::type_error();
+                 }
+                 return result;
+             }),
+             "list"_a)
         .def_property("lexerOptions", &Bag::get<LexerOptions>,
                       py::overload_cast<const LexerOptions&>(&Bag::set<LexerOptions>))
         .def_property("preprocessorOptions", &Bag::get<PreprocessorOptions>,
@@ -68,7 +69,7 @@ void registerUtil(py::module_& m) {
 
     py::class_<SourceLocation>(m, "SourceLocation")
         .def(py::init<>())
-        .def(py::init<BufferID, size_t>())
+        .def(py::init<BufferID, size_t>(), "buffer"_a, "offset"_a)
         .def_property_readonly("buffer", &SourceLocation::buffer)
         .def_property_readonly("offset", &SourceLocation::offset)
         .def_readonly_static("NoLocation", &SourceLocation::NoLocation)
@@ -86,7 +87,7 @@ void registerUtil(py::module_& m) {
 
     py::class_<SourceRange>(m, "SourceRange")
         .def(py::init<>())
-        .def(py::init<SourceLocation, SourceLocation>())
+        .def(py::init<SourceLocation, SourceLocation>(), "startLoc"_a, "endLoc"_a)
         .def_property_readonly("start", &SourceRange::start)
         .def_property_readonly("end", &SourceRange::end)
         .def(py::self == py::self)
@@ -151,7 +152,7 @@ void registerUtil(py::module_& m) {
 
     py::class_<DiagCode>(m, "DiagCode")
         .def(py::init<>())
-        .def(py::init<DiagSubsystem, uint16_t>())
+        .def(py::init<DiagSubsystem, uint16_t>(), "subsystem"_a, "code"_a)
         .def("getCode", &DiagCode::getCode)
         .def("getSubsystem", &DiagCode::getSubsystem)
         .def(py::self == py::self)
@@ -169,7 +170,7 @@ void registerUtil(py::module_& m) {
     }
 
     py::class_<Diagnostic>(m, "Diagnostic")
-        .def(py::init<DiagCode, SourceLocation>())
+        .def(py::init<DiagCode, SourceLocation>(), "code"_a, "location"_a)
         .def_readonly("code", &Diagnostic::code)
         .def_readonly("location", &Diagnostic::location)
         .def_readonly("symbol", &Diagnostic::symbol)
@@ -202,14 +203,14 @@ void registerUtil(py::module_& m) {
             py::keep_alive<0, 1>());
 
     py::class_<DiagGroup>(m, "DiagGroup")
-        .def(py::init<const std::string&, const std::vector<DiagCode>&>())
+        .def(py::init<const std::string&, const std::vector<DiagCode>&>(), "name"_a, "diags"_a)
         .def("getName", &DiagGroup::getName)
         .def("getDiags", &DiagGroup::getDiags)
         .def("__repr__",
              [](const DiagGroup& self) { return fmt::format("DiagGroup({})", self.getName()); });
 
     py::class_<DiagnosticEngine>(m, "DiagnosticEngine")
-        .def(py::init<const SourceManager&>())
+        .def(py::init<const SourceManager&>(), "sourceManager"_a)
         .def("addClient", &DiagnosticEngine::addClient, py::arg("client"))
         .def("clearClients", &DiagnosticEngine::clearClients)
         .def("issue", &DiagnosticEngine::issue, py::arg("diagnostic"))

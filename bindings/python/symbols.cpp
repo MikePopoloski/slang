@@ -37,7 +37,7 @@ void registerSymbols(py::module_& m) {
 
     py::class_<LookupLocation>(m, "LookupLocation")
         .def(py::init<>())
-        .def(py::init<const Scope*, uint32_t>())
+        .def(py::init<const Scope*, uint32_t>(), "scope"_a, "index"_a)
         .def_property_readonly("scope", &LookupLocation::getScope)
         .def_property_readonly("index", &LookupLocation::getIndex)
         .def_static("before", &LookupLocation::before)

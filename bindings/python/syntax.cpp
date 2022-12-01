@@ -20,7 +20,7 @@ void registerSyntax(py::module_& m) {
 
     py::class_<Trivia>(m, "Trivia")
         .def(py::init<>())
-        .def(py::init<TriviaKind, string_view>())
+        .def(py::init<TriviaKind, string_view>(), "kind"_a, "rawText"_a)
         .def_readonly("kind", &Trivia::kind)
         .def("getExplicitLocation", &Trivia::getExplicitLocation)
         .def("syntax", &Trivia::syntax, byrefint)
@@ -32,19 +32,27 @@ void registerSyntax(py::module_& m) {
 
     py::class_<Token>(m, "Token")
         .def(py::init<>())
-        .def(py::init<BumpAllocator&, TokenKind, span<Trivia const>, string_view, SourceLocation>())
+        .def(py::init<BumpAllocator&, TokenKind, span<Trivia const>, string_view, SourceLocation>(),
+             "alloc"_a, "kind"_a, "trivia"_a, "rawText"_a, "location"_a)
         .def(py::init<BumpAllocator&, TokenKind, span<Trivia const>, string_view, SourceLocation,
-                      string_view>())
+                      string_view>(),
+             "alloc"_a, "kind"_a, "trivia"_a, "rawText"_a, "location"_a, "strText"_a)
         .def(py::init<BumpAllocator&, TokenKind, span<Trivia const>, string_view, SourceLocation,
-                      SyntaxKind>())
+                      SyntaxKind>(),
+             "alloc"_a, "kind"_a, "trivia"_a, "rawText"_a, "location"_a, "directive"_a)
         .def(py::init<BumpAllocator&, TokenKind, span<Trivia const>, string_view, SourceLocation,
-                      logic_t>())
+                      logic_t>(),
+             "alloc"_a, "kind"_a, "trivia"_a, "rawText"_a, "location"_a, "bit"_a)
         .def(py::init<BumpAllocator&, TokenKind, span<Trivia const>, string_view, SourceLocation,
-                      const SVInt&>())
+                      const SVInt&>(),
+             "alloc"_a, "kind"_a, "trivia"_a, "rawText"_a, "location"_a, "value"_a)
         .def(py::init<BumpAllocator&, TokenKind, span<Trivia const>, string_view, SourceLocation,
-                      double, bool, std::optional<TimeUnit>>())
+                      double, bool, std::optional<TimeUnit>>(),
+             "alloc"_a, "kind"_a, "trivia"_a, "rawText"_a, "location"_a, "value"_a, "outOfRange"_a,
+             "timeUnit"_a)
         .def(py::init<BumpAllocator&, TokenKind, span<Trivia const>, string_view, SourceLocation,
-                      LiteralBase, bool>())
+                      LiteralBase, bool>(),
+             "alloc"_a, "kind"_a, "trivia"_a, "rawText"_a, "location"_a, "base"_a, "isSigned"_a)
         .def_readonly("kind", &Token::kind)
         .def_property_readonly("isMissing", &Token::isMissing)
         .def_property_readonly("range", &Token::range)
@@ -199,7 +207,7 @@ void registerSyntax(py::module_& m) {
 
     py::class_<SyntaxPrinter>(m, "SyntaxPrinter")
         .def(py::init<>())
-        .def(py::init<const SourceManager&>())
+        .def(py::init<const SourceManager&>(), "sourceManager"_a)
         .def("print", py::overload_cast<Trivia>(&SyntaxPrinter::print), byrefint, py::arg("trivia"))
         .def("print", py::overload_cast<Token>(&SyntaxPrinter::print), byrefint, py::arg("token"))
         .def("print", py::overload_cast<const SyntaxNode&>(&SyntaxPrinter::print), byrefint,

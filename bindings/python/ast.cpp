@@ -36,7 +36,9 @@ void registerAST(py::module_& m) {
         .value("AllowUnboundedPlaceholder", EvalFlags::AllowUnboundedPlaceholder);
 
     py::class_<EvalContext> evalCtx(m, "EvalContext");
-    evalCtx.def(py::init<Compilation&, bitmask<EvalFlags>>())
+    evalCtx
+        .def(py::init<Compilation&, bitmask<EvalFlags>>(), py::arg("compilation"),
+             py::arg("flags") = bitmask<EvalFlags>{})
         .def_readonly("flags", &EvalContext::flags)
         .def("createLocal", &EvalContext::createLocal, byrefint, py::arg("symbol"),
              py::arg("value") = nullptr)

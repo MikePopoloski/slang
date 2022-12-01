@@ -88,7 +88,7 @@ void registerCompilation(py::module_& m) {
 
     py::class_<Compilation>(m, "Compilation")
         .def(py::init<>())
-        .def(py::init<const Bag&>())
+        .def(py::init<const Bag&>(), py::arg("options"))
         .def_property_readonly("options", &Compilation::getOptions)
         .def_property_readonly("isFinalized", &Compilation::isFinalized)
         .def_property_readonly("sourceManager", &Compilation::getSourceManager)
@@ -213,7 +213,8 @@ void registerCompilation(py::module_& m) {
     };
 
     py::class_<SystemSubroutine, PySystemSubroutine> systemSub(m, "SystemSubroutine");
-    systemSub.def(py::init_alias<const std::string&, SubroutineKind>())
+    systemSub
+        .def(py::init_alias<const std::string&, SubroutineKind>(), py::arg("name"), py::arg("kind"))
         .def_readwrite("name", &SystemSubroutine::name)
         .def_readwrite("kind", &SystemSubroutine::kind)
         .def_readwrite("hasOutputArgs", &SystemSubroutine::hasOutputArgs)
@@ -261,7 +262,9 @@ void registerCompilation(py::module_& m) {
     py::class_<SimpleSystemSubroutine, SystemSubroutine, PySimpleSystemSubroutine>(
         m, "SimpleSystemSubroutine")
         .def(py::init_alias<const std::string&, SubroutineKind, size_t,
-                            const std::vector<const Type*>&, const Type&, bool, bool>());
+                            const std::vector<const Type*>&, const Type&, bool, bool>(),
+             "name"_a, "kind"_a, "requiredArgs"_a, "argTypes"_a, "returnType"_a, "isMethod"_a,
+             "isFirstArgLValue"_a = false);
 
     py::class_<NonConstantFunction, SimpleSystemSubroutine>(m, "NonConstantFunction")
         .def(py::init<const std::string&, const Type&, size_t, const std::vector<const Type*>&,
