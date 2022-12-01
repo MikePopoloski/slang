@@ -75,8 +75,8 @@ static py::int_ PyIntFromSVInt(const SVInt& value) {
 
 void registerNumeric(py::module_& m) {
     EXPOSE_ENUM(m, LiteralBase);
-    m.def("literalBaseFromChar", &literalBaseFromChar, py::arg("base"), py::arg("result"));
-    m.def("clog2", py::overload_cast<const SVInt&>(&clog2), py::arg("value"));
+    m.def("literalBaseFromChar", &literalBaseFromChar, "base"_a, "result"_a);
+    m.def("clog2", py::overload_cast<const SVInt&>(&clog2), "value"_a);
 
     py::class_<logic_t>(m, "logic_t")
         .def(py::init<>())
@@ -119,7 +119,7 @@ void registerNumeric(py::module_& m) {
         .def("isNegative", &SVInt::isNegative)
         .def("isOdd", &SVInt::isOdd)
         .def("isEven", &SVInt::isEven)
-        .def("setSigned", &SVInt::setSigned, py::arg("isSigned"))
+        .def("setSigned", &SVInt::setSigned, "isSigned"_a)
         .def("setAllOnes", &SVInt::setAllOnes)
         .def("setAllZeros", &SVInt::setAllZeros)
         .def("setAllX", &SVInt::setAllX)
@@ -128,12 +128,11 @@ void registerNumeric(py::module_& m) {
         .def("shrinkToFit", &SVInt::shrinkToFit)
         .def("toString",
              py::overload_cast<LiteralBase, bool, bitwidth_t>(&SVInt::toString, py::const_),
-             py::arg("base"), py::arg("includeBase"),
-             py::arg("abbreviateThresholdBits") = SVInt::MAX_BITS)
-        .def("shl", py::overload_cast<const SVInt&>(&SVInt::shl, py::const_), py::arg("rhs"))
-        .def("ashr", py::overload_cast<const SVInt&>(&SVInt::ashr, py::const_), py::arg("rhs"))
-        .def("lshr", py::overload_cast<const SVInt&>(&SVInt::lshr, py::const_), py::arg("rhs"))
-        .def("replicate", &SVInt::replicate, py::arg("times"))
+             "base"_a, "includeBase"_a, "abbreviateThresholdBits"_a = SVInt::MAX_BITS)
+        .def("shl", py::overload_cast<const SVInt&>(&SVInt::shl, py::const_), "rhs"_a)
+        .def("ashr", py::overload_cast<const SVInt&>(&SVInt::ashr, py::const_), "rhs"_a)
+        .def("lshr", py::overload_cast<const SVInt&>(&SVInt::lshr, py::const_), "rhs"_a)
+        .def("replicate", &SVInt::replicate, "times"_a)
         .def("reductionOr", &SVInt::reductionOr)
         .def("reductionAnd", &SVInt::reductionAnd)
         .def("reductionXor", &SVInt::reductionXor)
@@ -145,17 +144,17 @@ void registerNumeric(py::module_& m) {
         .def("countZeros", &SVInt::countZeros)
         .def("countXs", &SVInt::countXs)
         .def("countZs", &SVInt::countZs)
-        .def("slice", &SVInt::slice, py::arg("msb"), py::arg("lsb"))
-        .def("set", &SVInt::set, py::arg("msb"), py::arg("lsb"), py::arg("value"))
-        .def("sext", &SVInt::sext, py::arg("bits"))
-        .def("isSignExtendedFrom", &SVInt::isSignExtendedFrom, py::arg("msb"))
-        .def("signExtendFrom", &SVInt::signExtendFrom, py::arg("msb"))
-        .def("zext", &SVInt::zext, py::arg("bits"))
-        .def("extend", &SVInt::extend, py::arg("bits"), py::arg("isSigned"))
-        .def("trunc", &SVInt::trunc, py::arg("bits"))
-        .def("resize", &SVInt::resize, py::arg("bits"))
+        .def("slice", &SVInt::slice, "msb"_a, "lsb"_a)
+        .def("set", &SVInt::set, "msb"_a, "lsb"_a, "value"_a)
+        .def("sext", &SVInt::sext, "bits"_a)
+        .def("isSignExtendedFrom", &SVInt::isSignExtendedFrom, "msb"_a)
+        .def("signExtendFrom", &SVInt::signExtendFrom, "msb"_a)
+        .def("zext", &SVInt::zext, "bits"_a)
+        .def("extend", &SVInt::extend, "bits"_a, "isSigned"_a)
+        .def("trunc", &SVInt::trunc, "bits"_a)
+        .def("resize", &SVInt::resize, "bits"_a)
         .def("reverse", &SVInt::reverse)
-        .def("xnor", &SVInt::xnor, py::arg("rhs"))
+        .def("xnor", &SVInt::xnor, "rhs"_a)
         .def(-py::self)
         .def(py::self += py::self)
         .def(py::self -= py::self)
@@ -227,8 +226,8 @@ void registerNumeric(py::module_& m) {
     py::implicitly_convertible<double, SVInt>();
 
     EXPOSE_ENUM(m, TimeUnit);
-    m.def("suffixToTimeUnit", &suffixToTimeUnit, py::arg("timeSuffix"), py::arg("unit"));
-    m.def("timeUnitToSuffix", &timeUnitToSuffix, py::arg("unit"));
+    m.def("suffixToTimeUnit", &suffixToTimeUnit, "timeSuffix"_a, "unit"_a);
+    m.def("timeUnitToSuffix", &timeUnitToSuffix, "unit"_a);
 
     py::enum_<TimeScaleMagnitude>(m, "TimeScaleMagnitude")
         .value("One", TimeScaleMagnitude::One)
@@ -251,7 +250,7 @@ void registerNumeric(py::module_& m) {
         .def(py::init<TimeScaleValue, TimeScaleValue>(), "base"_a, "precision"_a)
         .def_readwrite("base", &TimeScale::base)
         .def_readwrite("precision", &TimeScale::precision)
-        .def("apply", &TimeScale::apply, py::arg("value"), py::arg("unit"))
+        .def("apply", &TimeScale::apply, "value"_a, "unit"_a)
         .def(py::self == py::self)
         .def(py::self != py::self)
         .def("__repr__", [](const TimeScale& self) { return self.toString(); });
@@ -275,20 +274,18 @@ void registerNumeric(py::module_& m) {
         .def("isFalse", &ConstantValue::isFalse)
         .def("hasUnknown", &ConstantValue::hasUnknown)
         .def("bitstreamWidth", &ConstantValue::bitstreamWidth)
-        .def("getSlice", &ConstantValue::getSlice, py::arg("upper"), py::arg("lower"),
-             py::arg("defaultValue"))
+        .def("getSlice", &ConstantValue::getSlice, "upper"_a, "lower"_a, "defaultValue"_a)
         .def("empty", &ConstantValue::empty)
         .def("size", &ConstantValue::size)
         .def("convertToInt", py::overload_cast<>(&ConstantValue::convertToInt, py::const_))
         .def("convertToInt",
              py::overload_cast<bitwidth_t, bool, bool>(&ConstantValue::convertToInt, py::const_),
-             py::arg("width"), py::arg("isSigned"), py::arg("isFourState"))
+             "width"_a, "isSigned"_a, "isFourState"_a)
         .def("convertToReal", &ConstantValue::convertToReal)
         .def("convertToShortReal", &ConstantValue::convertToShortReal)
         .def("convertToStr", &ConstantValue::convertToStr)
-        .def("convertToByteArray", &ConstantValue::convertToByteArray, py::arg("size"),
-             py::arg("isSigned"))
-        .def("convertToByteQueue", &ConstantValue::convertToByteQueue, py::arg("isSigned"))
+        .def("convertToByteArray", &ConstantValue::convertToByteArray, "size"_a, "isSigned"_a)
+        .def("convertToByteQueue", &ConstantValue::convertToByteQueue, "isSigned"_a)
         .def(hash(py::self))
         .def(py::self == py::self)
         .def(py::self != py::self)

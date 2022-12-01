@@ -133,7 +133,7 @@ void registerSyntax(py::module_& m) {
         .def_readonly("kind", &SyntaxNode::kind)
         .def("getFirstToken", &SyntaxNode::getFirstToken)
         .def("getLastToken", &SyntaxNode::getLastToken)
-        .def("isEquivalentTo", &SyntaxNode::isEquivalentTo, py::arg("other"))
+        .def("isEquivalentTo", &SyntaxNode::isEquivalentTo, "other"_a)
         .def_property_readonly("sourceRange", &SyntaxNode::sourceRange)
         .def("__getitem__",
              [](const SyntaxNode& self, size_t i) -> py::object {
@@ -209,21 +209,20 @@ void registerSyntax(py::module_& m) {
     py::class_<SyntaxPrinter>(m, "SyntaxPrinter")
         .def(py::init<>())
         .def(py::init<const SourceManager&>(), "sourceManager"_a)
-        .def("print", py::overload_cast<Trivia>(&SyntaxPrinter::print), byrefint, py::arg("trivia"))
-        .def("print", py::overload_cast<Token>(&SyntaxPrinter::print), byrefint, py::arg("token"))
+        .def("print", py::overload_cast<Trivia>(&SyntaxPrinter::print), byrefint, "trivia"_a)
+        .def("print", py::overload_cast<Token>(&SyntaxPrinter::print), byrefint, "token"_a)
         .def("print", py::overload_cast<const SyntaxNode&>(&SyntaxPrinter::print), byrefint,
-             py::arg("node"))
+             "node"_a)
         .def("print", py::overload_cast<const SyntaxTree&>(&SyntaxPrinter::print), byrefint,
-             py::arg("tree"))
-        .def("setIncludeTrivia", &SyntaxPrinter::setIncludeTrivia, byrefint, py::arg("include"))
-        .def("setIncludeMissing", &SyntaxPrinter::setIncludeMissing, byrefint, py::arg("include"))
-        .def("setIncludeSkipped", &SyntaxPrinter::setIncludeSkipped, byrefint, py::arg("include"))
-        .def("setIncludeDirectives", &SyntaxPrinter::setIncludeDirectives, byrefint,
-             py::arg("include"))
+             "tree"_a)
+        .def("setIncludeTrivia", &SyntaxPrinter::setIncludeTrivia, byrefint, "include"_a)
+        .def("setIncludeMissing", &SyntaxPrinter::setIncludeMissing, byrefint, "include"_a)
+        .def("setIncludeSkipped", &SyntaxPrinter::setIncludeSkipped, byrefint, "include"_a)
+        .def("setIncludeDirectives", &SyntaxPrinter::setIncludeDirectives, byrefint, "include"_a)
         .def("setIncludePreprocessed", &SyntaxPrinter::setIncludePreprocessed, byrefint,
-             py::arg("include"))
-        .def("setIncludeComments", &SyntaxPrinter::setIncludeComments, byrefint, py::arg("include"))
-        .def("setSquashNewlines", &SyntaxPrinter::setSquashNewlines, byrefint, py::arg("include"))
+             "include"_a)
+        .def("setIncludeComments", &SyntaxPrinter::setIncludeComments, byrefint, "include"_a)
+        .def("setSquashNewlines", &SyntaxPrinter::setSquashNewlines, byrefint, "include"_a)
         .def("str", &SyntaxPrinter::str)
         .def_static("printFile", &SyntaxPrinter::printFile, "tree"_a);
 }

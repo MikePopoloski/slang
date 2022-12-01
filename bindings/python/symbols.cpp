@@ -60,9 +60,9 @@ void registerSymbols(py::module_& m) {
         .def_property_readonly("diagnostics", &LookupResult::getDiagnostics)
         .def_property_readonly("hasError", &LookupResult::hasError)
         .def("clear", &LookupResult::clear)
-        .def("copyFrom", &LookupResult::copyFrom, py::arg("other"))
-        .def("reportDiags", &LookupResult::reportDiags, py::arg("context"))
-        .def("errorIfSelectors", &LookupResult::errorIfSelectors, py::arg("context"));
+        .def("copyFrom", &LookupResult::copyFrom, "other"_a)
+        .def("reportDiags", &LookupResult::reportDiags, "context"_a)
+        .def("errorIfSelectors", &LookupResult::errorIfSelectors, "context"_a);
 
     py::class_<LookupResult::MemberSelector>(lookupResult, "MemberSelector")
         .def_readonly("name", &LookupResult::MemberSelector::name)
@@ -75,7 +75,7 @@ void registerSymbols(py::module_& m) {
                     "flags"_a = LookupFlags::None)
         .def_static("unqualifiedAt", &Lookup::unqualifiedAt, byrefint, "scope"_a, "name"_a,
                     "location"_a, "sourceRange"_a, "flags"_a = LookupFlags::None)
-        .def_static("findClass", &Lookup::findClass, byrefint, "name"_a, "context",
+        .def_static("findClass", &Lookup::findClass, byrefint, "name"_a, "context"_a,
                     "requireInterfaceClass"_a = std::optional<DiagCode>{})
         .def_static("getContainingClass", &Lookup::getContainingClass, byrefint, "scope"_a)
         .def_static("getVisibility", &Lookup::getVisibility, "symbol"_a)
@@ -117,11 +117,9 @@ void registerSymbols(py::module_& m) {
                                    return str;
                                })
         .def("isDeclaredBefore",
-             py::overload_cast<const Symbol&>(&Symbol::isDeclaredBefore, py::const_),
-             py::arg("target"))
+             py::overload_cast<const Symbol&>(&Symbol::isDeclaredBefore, py::const_), "target"_a)
         .def("isDeclaredBefore",
-             py::overload_cast<LookupLocation>(&Symbol::isDeclaredBefore, py::const_),
-             py::arg("location"))
+             py::overload_cast<LookupLocation>(&Symbol::isDeclaredBefore, py::const_), "location"_a)
         .def("__repr__", [](const Symbol& self) {
             return fmt::format("Symbol(SymbolKind.{}, \"{}\")", toString(self.kind), self.name);
         });
@@ -171,7 +169,7 @@ void registerSymbols(py::module_& m) {
         .def_readonly("defaultLifetime", &PackageSymbol::defaultLifetime)
         .def_readonly("exportDecls", &PackageSymbol::exportDecls)
         .def_readonly("hasExportAll", &PackageSymbol::hasExportAll)
-        .def("findForImport", &PackageSymbol::findForImport, byrefint, py::arg("name"));
+        .def("findForImport", &PackageSymbol::findForImport, byrefint, "name"_a);
 
     py::class_<RootSymbol, Symbol, Scope>(m, "RootSymbol")
         .def_readonly("topInstances", &RootSymbol::topInstances)
@@ -384,15 +382,15 @@ void registerSymbols(py::module_& m) {
         .def_property_readonly("body", [](const InstanceSymbol& self) { return &self.body; })
         .def("getPortConnection",
              py::overload_cast<const PortSymbol&>(&InstanceSymbol::getPortConnection, py::const_),
-             byrefint, py::arg("port"))
+             byrefint, "port"_a)
         .def("getPortConnection",
              py::overload_cast<const MultiPortSymbol&>(&InstanceSymbol::getPortConnection,
                                                        py::const_),
-             byrefint, py::arg("port"))
+             byrefint, "port"_a)
         .def("getPortConnection",
              py::overload_cast<const InterfacePortSymbol&>(&InstanceSymbol::getPortConnection,
                                                            py::const_),
-             byrefint, py::arg("port"));
+             byrefint, "port"_a);
 
     py::class_<InstanceBodySymbol, Symbol, Scope>(m, "InstanceBodySymbol")
         .def_readonly("parentInstance", &InstanceBodySymbol::parentInstance)
@@ -400,8 +398,8 @@ void registerSymbols(py::module_& m) {
         .def_readonly("isUninstantiated", &InstanceBodySymbol::isUninstantiated)
         .def_property_readonly("portList", &InstanceBodySymbol::getPortList)
         .def_property_readonly("definition", &InstanceBodySymbol::getDefinition)
-        .def("findPort", &InstanceBodySymbol::findPort, byrefint, py::arg("portName"))
-        .def("hasSameType", &InstanceBodySymbol::hasSameType, py::arg("other"));
+        .def("findPort", &InstanceBodySymbol::findPort, byrefint, "portName"_a)
+        .def("hasSameType", &InstanceBodySymbol::hasSameType, "other"_a);
 
     py::class_<InstanceArraySymbol, Symbol, Scope>(m, "InstanceArraySymbol")
         .def_readonly("elements", &InstanceArraySymbol::elements)
