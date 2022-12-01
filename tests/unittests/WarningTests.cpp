@@ -147,6 +147,31 @@ endmodule
     CHECK(diags[0].code == diag::UnusedDefinition);
 }
 
+TEST_CASE("Ref args are considered used") {
+    auto tree = SyntaxTree::fromText(R"(
+class C;
+    function void f1(ref bit [3:0] a);
+        a = 4'hF;
+    endfunction
+
+    function int unsigned f2();
+        bit [3:0] a;
+        f1(a);
+    endfunction
+endclass
+
+module top;
+endmodule
+)");
+
+    CompilationOptions coptions;
+    coptions.suppressUnused = false;
+
+    Compilation compilation(coptions);
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
 TEST_CASE("'unused' warnings with clock vars") {
     auto tree = SyntaxTree::fromText(R"(
 interface I;
