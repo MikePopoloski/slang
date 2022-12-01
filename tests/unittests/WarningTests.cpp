@@ -250,3 +250,26 @@ endmodule
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::UnusedArgument);
 }
+
+TEST_CASE("System function args count as outputs") {
+    auto tree = SyntaxTree::fromText(R"(
+class C;
+    function bit f();
+        bit a;
+        int rc = std::randomize(a);
+        assert(rc);
+        return a;
+    endfunction
+endclass
+
+module m;
+endmodule
+)");
+
+    CompilationOptions coptions;
+    coptions.suppressUnused = false;
+
+    Compilation compilation(coptions);
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}

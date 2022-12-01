@@ -165,6 +165,11 @@ public:
         withClauseMode = WithClauseMode::Randomize;
     }
 
+    const Expression& bindArgument(size_t, const ASTContext& context,
+                                   const ExpressionSyntax& syntax, const Args&) const final {
+        return Expression::bind(syntax, context, ASTFlags::LValue);
+    }
+
     const Type& checkArguments(const ASTContext& context, const Args& args, SourceRange range,
                                const Expression*) const final {
         auto& comp = context.getCompilation();
@@ -184,6 +189,8 @@ public:
                 context.addDiag(diag::InvalidRandType, arg->sourceRange)
                     << dt->getType() << "rand"sv;
             }
+
+            arg->requireLValue(context);
         }
 
         return comp.getIntType();
