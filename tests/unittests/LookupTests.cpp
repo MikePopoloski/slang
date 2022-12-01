@@ -1860,3 +1860,31 @@ endmodule
     CHECK(diags[4].code == diag::UnexpectedNameToken);
     CHECK(diags[5].code == diag::NewKeywordQualified);
 }
+
+TEST_CASE("Port / attribute lookup location regress GH #676") {
+    auto tree = SyntaxTree::fromText(R"(
+interface I;
+endinterface
+
+module m (
+    clk,
+    ram,
+    iface
+);
+parameter S = "no_rw_check";
+
+input logic clk;
+
+(* ramstyle = S *)
+output reg [31:0] ram [15:0];
+
+(* ramstyle = S *)
+I iface;
+
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}

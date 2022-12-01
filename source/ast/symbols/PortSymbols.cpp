@@ -367,7 +367,8 @@ public:
                                                                 PortInfo{*decl, port.attributes});
 
                         if (inserted) {
-                            handleIODecl(*port.header, it->second, insertionPoint);
+                            it->second.insertionPoint = insertionPoint;
+                            handleIODecl(*port.header, it->second);
                         }
                         else {
                             auto& diag = scope.addDiag(diag::Redefinition, name.location());
@@ -395,6 +396,7 @@ public:
                             auto& info = it->second;
                             info.isIface = true;
                             info.ifaceDef = def;
+                            info.insertionPoint = insertionPoint;
 
                             if (decl->initializer) {
                                 scope.addDiag(diag::DisallowedPortDefault,
@@ -473,6 +475,7 @@ private:
         not_null<const DeclaratorSyntax*> syntax;
         span<const AttributeInstanceSyntax* const> attrs;
         const Symbol* internalSymbol = nullptr;
+        const Symbol* insertionPoint = nullptr;
         const Definition* ifaceDef = nullptr;
         string_view modport;
         ArgumentDirection direction = ArgumentDirection::In;
@@ -484,8 +487,7 @@ private:
     };
     SmallMap<string_view, PortInfo, 8> portInfos;
 
-    void handleIODecl(const PortHeaderSyntax& header, PortInfo& info,
-                      const Symbol* insertionPoint) {
+    void handleIODecl(const PortHeaderSyntax& header, PortInfo& info) {
         auto& decl = *info.syntax;
         auto name = decl.name.valueText();
         auto declLoc = decl.name.location();
@@ -509,14 +511,14 @@ private:
                         if (result && result->kind == SymbolKind::NetType) {
                             auto net = comp.emplace<NetSymbol>(name, declLoc,
                                                                result->as<NetType>());
-                            setInternalSymbol(*net, decl, nullptr, info, insertionPoint);
+                            setInternalSymbol(*net, decl, nullptr, info);
                             break;
                         }
                     }
 
                     auto variable = comp.emplace<VariableSymbol>(name, declLoc,
                                                                  VariableLifetime::Static);
-                    setInternalSymbol(*variable, decl, varHeader.dataType, info, insertionPoint);
+                    setInternalSymbol(*variable, decl, varHeader.dataType, info);
                 }
                 else if (auto symbol = scope.find(name);
                          symbol && (symbol->kind == SymbolKind::Variable ||
@@ -529,8 +531,9 @@ private:
 
                     // If the I/O declaration is located prior to the symbol, we should update
                     // its index so that lookups in between will resolve correctly.
-                    uint32_t ioIndex = insertionPoint ? uint32_t(insertionPoint->getIndex()) + 1
-                                                      : 1;
+                    uint32_t ioIndex = info.insertionPoint
+                                           ? uint32_t(info.insertionPoint->getIndex()) + 1
+                                           : 1;
                     if (uint32_t(symbol->getIndex()) > ioIndex) {
                         val.getDeclaredType()->setOverrideIndex(symbol->getIndex());
                         val.setIndex(SymbolIndex(ioIndex));
@@ -543,7 +546,7 @@ private:
                     // No symbol and no data type defaults to a basic net.
                     auto net = comp.emplace<NetSymbol>(name, declLoc,
                                                        getDefaultNetType(scope, declLoc));
-                    setInternalSymbol(*net, decl, varHeader.dataType, info, insertionPoint);
+                    setInternalSymbol(*net, decl, varHeader.dataType, info);
                 }
 
                 if (info.direction == ArgumentDirection::InOut &&
@@ -559,7 +562,7 @@ private:
                 // Create a new symbol to represent this port internally to the instance.
                 auto net = comp.emplace<NetSymbol>(name, declLoc,
                                                    comp.getNetType(netHeader.netType.kind));
-                setInternalSymbol(*net, decl, netHeader.dataType, info, insertionPoint);
+                setInternalSymbol(*net, decl, netHeader.dataType, info);
                 break;
             }
             case SyntaxKind::InterfacePortHeader: {
@@ -593,11 +596,10 @@ private:
     }
 
     void setInternalSymbol(ValueSymbol& symbol, const DeclaratorSyntax& decl,
-                           const DataTypeSyntax* dataType, PortInfo& info,
-                           const Symbol* insertionPoint) {
+                           const DataTypeSyntax* dataType, PortInfo& info) {
         symbol.setSyntax(decl);
         symbol.setAttributes(scope, info.attrs);
-        implicitMembers.emplace_back(&symbol, insertionPoint);
+        implicitMembers.emplace_back(&symbol, info.insertionPoint);
         info.internalSymbol = &symbol;
 
         if (dataType)
@@ -605,8 +607,8 @@ private:
         else if (!decl.dimensions.empty())
             symbol.getDeclaredType()->setDimensionSyntax(decl.dimensions);
 
-        if (insertionPoint)
-            symbol.getDeclaredType()->setOverrideIndex(insertionPoint->getIndex());
+        if (info.insertionPoint)
+            symbol.getDeclaredType()->setOverrideIndex(info.insertionPoint->getIndex());
     }
 
     Symbol& createPort(string_view externalName, SourceLocation externalLoc,
@@ -642,9 +644,16 @@ private:
 
             auto port = comp.emplace<InterfacePortSymbol>(externalName, loc);
             port->setSyntax(*info.syntax);
-            port->setAttributes(scope, info.attrs);
             port->interfaceDef = info.ifaceDef;
             port->modport = info.modport;
+
+            if (info.insertionPoint) {
+                comp.setAttributes(
+                    *port, AttributeSymbol::fromSyntax(
+                               info.attrs, scope,
+                               LookupLocation(&scope, (uint32_t)info.insertionPoint->getIndex())));
+            }
+
             return *port;
         }
 
@@ -655,7 +664,6 @@ private:
         ASSERT(info.internalSymbol);
         port->direction = info.direction;
         port->internalSymbol = info.internalSymbol;
-        port->setAttributes(scope, info.attrs);
 
         if (auto init = info.syntax->initializer)
             port->setInitializerSyntax(*init->expr, init->equals.location());
