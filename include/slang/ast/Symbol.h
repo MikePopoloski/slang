@@ -210,7 +210,7 @@ public:
         }
         else {
             if (!T::isKind(kind))
-                return nullptr;
+                return static_cast<T*>(nullptr);
             return static_cast<T*>(this);
         }
     }
