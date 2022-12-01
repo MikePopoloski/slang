@@ -40,8 +40,8 @@ void registerSymbols(py::module_& m) {
         .def(py::init<const Scope*, uint32_t>(), "scope"_a, "index"_a)
         .def_property_readonly("scope", &LookupLocation::getScope)
         .def_property_readonly("index", &LookupLocation::getIndex)
-        .def_static("before", &LookupLocation::before)
-        .def_static("after", &LookupLocation::after)
+        .def_static("before", &LookupLocation::before, "symbol"_a)
+        .def_static("after", &LookupLocation::after, "symbol"_a)
         .def_readonly_static("max", &LookupLocation::max)
         .def_readonly_static("min", &LookupLocation::min)
         .def(py::self == py::self)
@@ -70,19 +70,27 @@ void registerSymbols(py::module_& m) {
         .def_readonly("nameRange", &LookupResult::MemberSelector::nameRange);
 
     py::class_<Lookup>(m, "Lookup")
-        .def_static("name", &Lookup::name)
-        .def_static("unqualified", &Lookup::unqualified, byrefint)
-        .def_static("unqualifiedAt", &Lookup::unqualifiedAt, byrefint)
-        .def_static("findClass", &Lookup::findClass, byrefint)
-        .def_static("getContainingClass", &Lookup::getContainingClass, byrefint)
-        .def_static("getVisibility", &Lookup::getVisibility)
-        .def_static("isVisibleFrom", &Lookup::isVisibleFrom)
-        .def_static("isAccessibleFrom", &Lookup::isAccessibleFrom)
-        .def_static("ensureVisible", &Lookup::ensureVisible)
-        .def_static("ensureAccessible", &Lookup::ensureAccessible)
-        .def_static("findTempVar", &Lookup::findTempVar)
-        .def_static("withinClassRandomize", &Lookup::withinClassRandomize)
-        .def_static("findAssertionLocalVar", &Lookup::findAssertionLocalVar);
+        .def_static("name", &Lookup::name, "syntax"_a, "context"_a, "flags"_a, "result"_a)
+        .def_static("unqualified", &Lookup::unqualified, byrefint, "scope"_a, "name"_a,
+                    "flags"_a = LookupFlags::None)
+        .def_static("unqualifiedAt", &Lookup::unqualifiedAt, byrefint, "scope"_a, "name"_a,
+                    "location"_a, "sourceRange"_a, "flags"_a = LookupFlags::None)
+        .def_static("findClass", &Lookup::findClass, byrefint, "name"_a, "context",
+                    "requireInterfaceClass"_a = std::optional<DiagCode>{})
+        .def_static("getContainingClass", &Lookup::getContainingClass, byrefint, "scope"_a)
+        .def_static("getVisibility", &Lookup::getVisibility, "symbol"_a)
+        .def_static("isVisibleFrom", &Lookup::isVisibleFrom, "symbol"_a, "scope"_a)
+        .def_static("isAccessibleFrom", &Lookup::isAccessibleFrom, "target"_a, "sourceScope"_a)
+        .def_static("ensureVisible", &Lookup::ensureVisible, "symbol"_a, "context"_a,
+                    "sourceRange"_a)
+        .def_static("ensureAccessible", &Lookup::ensureAccessible, "symbol"_a, "context"_a,
+                    "sourceRange"_a)
+        .def_static("findTempVar", &Lookup::findTempVar, "scope"_a, "symbol"_a, "name"_a,
+                    "result"_a)
+        .def_static("withinClassRandomize", &Lookup::withinClassRandomize, "context"_a, "syntax"_a,
+                    "flags"_a, "result"_a)
+        .def_static("findAssertionLocalVar", &Lookup::findAssertionLocalVar, "context"_a, "name"_a,
+                    "result"_a);
 
     py::class_<Symbol>(m, "Symbol")
         .def_readonly("kind", &Symbol::kind)

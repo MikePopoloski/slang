@@ -106,14 +106,15 @@ void registerNumeric(py::module_& m) {
         .def_property_readonly("isSigned", &SVInt::isSigned)
         .def_property_readonly("hasUnknown", &SVInt::hasUnknown)
         .def_property_readonly("bitWidth", &SVInt::getBitWidth)
-        .def_static("createFillX", &SVInt::createFillX)
-        .def_static("createFillZ", &SVInt::createFillZ)
-        .def_static("fromDigits", &SVInt::fromDigits)
-        .def_static("fromDouble", &SVInt::fromDouble)
-        .def_static("fromFloat", &SVInt::fromFloat)
-        .def_static("conditional", &SVInt::conditional)
-        .def_static("logicalImpl", &SVInt::logicalImpl)
-        .def_static("logicalEquiv", &SVInt::logicalEquiv)
+        .def_static("createFillX", &SVInt::createFillX, "bitWidth"_a, "isSigned"_a)
+        .def_static("createFillZ", &SVInt::createFillZ, "bitWidth"_a, "isSigned"_a)
+        .def_static("fromDigits", &SVInt::fromDigits, "bits"_a, "base"_a, "isSigned"_a,
+                    "anyUnknown"_a, "digits"_a)
+        .def_static("fromDouble", &SVInt::fromDouble, "bits"_a, "value"_a, "isSigned"_a)
+        .def_static("fromFloat", &SVInt::fromFloat, "bits"_a, "value"_a, "isSigned"_a)
+        .def_static("conditional", &SVInt::conditional, "condition"_a, "lhs"_a, "rhs"_a)
+        .def_static("logicalImpl", &SVInt::logicalImpl, "lhs"_a, "rhs"_a)
+        .def_static("logicalEquiv", &SVInt::logicalEquiv, "lhs"_a, "rhs"_a)
         .def_static("concat", &SVInt::concat)
         .def("isNegative", &SVInt::isNegative)
         .def("isOdd", &SVInt::isOdd)
@@ -240,7 +241,7 @@ void registerNumeric(py::module_& m) {
         .def(py::init<string_view>(), "str"_a)
         .def_readwrite("unit", &TimeScaleValue::unit)
         .def_readwrite("magnitude", &TimeScaleValue::magnitude)
-        .def_static("fromLiteral", &TimeScaleValue::fromLiteral)
+        .def_static("fromLiteral", &TimeScaleValue::fromLiteral, "value"_a, "unit"_a)
         .def(py::self == py::self)
         .def(py::self != py::self)
         .def("__repr__", [](const TimeScaleValue& self) { return self.toString(); });
@@ -333,8 +334,9 @@ void registerNumeric(py::module_& m) {
     py::class_<ConstantRange>(m, "ConstantRange")
         .def(py::init<>())
         .def(py::init([](int left, int right) {
-            return ConstantRange{left, right};
-        }), "left"_a, "right"_a)
+                 return ConstantRange{left, right};
+             }),
+             "left"_a, "right"_a)
         .def_readwrite("left", &ConstantRange::left)
         .def_readwrite("right", &ConstantRange::right)
         .def_property_readonly("width", &ConstantRange::width)

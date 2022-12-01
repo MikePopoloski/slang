@@ -76,7 +76,7 @@ void registerTypes(py::module_& m) {
         .def("implements", &Type::implements, py::arg("rhs"))
         .def("isValidForRand", &Type::isValidForRand, py::arg("rhs"))
         .def("coerceValue", &Type::coerceValue, py::arg("rhs"))
-        .def_static("getCommonBase", &Type::getCommonBase)
+        .def_static("getCommonBase", &Type::getCommonBase, "left"_a, "right"_a)
         .def_property_readonly("integralFlags", &Type::getIntegralFlags)
         .def_property_readonly("defaultValue", &Type::getDefaultValue)
         .def_property_readonly("fixedRange", &Type::getFixedRange)
@@ -95,7 +95,8 @@ void registerTypes(py::module_& m) {
         .def_property_readonly("resolutionFunction", &NetType::getResolutionFunction)
         .def_property_readonly("isError", &NetType::isError)
         .def_property_readonly("isBuiltIn", &NetType::isBuiltIn)
-        .def_static("getSimulatedNetType", &NetType::getSimulatedNetType);
+        .def_static("getSimulatedNetType", &NetType::getSimulatedNetType, "internal"_a,
+                    "external"_a, "shouldWarn"_a);
 
     py::enum_<NetType::NetKind>(netType, "NetKind")
         .value("Unknown", NetType::Unknown)
