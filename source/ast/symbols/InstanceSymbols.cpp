@@ -837,6 +837,7 @@ static const AssertionExpr* bindUnknownPortConn(const ASTContext& context,
         if (node->kind == SyntaxKind::SimpleSequenceExpr) {
             auto& simpSeq = node->as<SimpleSequenceExprSyntax>();
             if (!simpSeq.repetition) {
+                auto& comp = context.getCompilation();
                 const ExpressionSyntax* expr = simpSeq.expr;
                 while (expr->kind == SyntaxKind::ParenthesizedExpression)
                     expr = expr->as<ParenthesizedExpressionSyntax>().expression;
@@ -851,13 +852,15 @@ static const AssertionExpr* bindUnknownPortConn(const ASTContext& context,
                             symbol->kind == SymbolKind::Instance ||
                             symbol->kind == SymbolKind::InstanceArray ||
                             symbol->kind == SymbolKind::UnknownModule) {
-                            auto& comp = context.getCompilation();
                             auto hre = comp.emplace<HierarchicalReferenceExpression>(
                                 *symbol, comp.getVoidType(), syntax.sourceRange());
                             return comp.emplace<SimpleAssertionExpr>(*hre, std::nullopt);
                         }
                     }
                 }
+
+                return comp.emplace<SimpleAssertionExpr>(Expression::bind(*expr, context),
+                                                         std::nullopt);
             }
         }
     }

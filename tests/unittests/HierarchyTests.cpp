@@ -1852,6 +1852,13 @@ module m #(parameter int i);
     $static_assert(i < 10);
 endmodule
 
+module p #(parameter int i)(input logic foo []);
+    q q1(foo);
+endmodule
+
+module q(logic foo []);
+endmodule
+
 module n;
     if (1) begin
         m #(4) m1();
