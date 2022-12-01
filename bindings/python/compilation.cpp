@@ -92,28 +92,31 @@ void registerCompilation(py::module_& m) {
         .def_property_readonly("options", &Compilation::getOptions)
         .def_property_readonly("isFinalized", &Compilation::isFinalized)
         .def_property_readonly("sourceManager", &Compilation::getSourceManager)
-        .def("addSyntaxTree", &Compilation::addSyntaxTree)
+        .def("addSyntaxTree", &Compilation::addSyntaxTree, py::arg("tree"))
         .def("getSyntaxTrees", &Compilation::getSyntaxTrees)
         .def("getRoot", py::overload_cast<>(&Compilation::getRoot), byrefint)
         .def("addSystemSubroutine",
              py::overload_cast<const SystemSubroutine&>(&Compilation::addSystemSubroutine),
-             py::keep_alive<1, 2>())
+             py::keep_alive<1, 2>(), py::arg("subroutine"))
         .def("addSystemMethod",
              py::overload_cast<SymbolKind, const SystemSubroutine&>(&Compilation::addSystemMethod),
-             py::keep_alive<1, 3>())
-        .def("getSystemSubroutine", &Compilation::getSystemSubroutine, byrefint)
-        .def("getSystemMethod", &Compilation::getSystemMethod, byrefint)
-        .def("parseName", &Compilation::parseName, byrefint)
-        .def("tryParseName", &Compilation::tryParseName, byrefint)
+             py::keep_alive<1, 3>(), py::arg("typeKind"), py::arg("method"))
+        .def("getSystemSubroutine", &Compilation::getSystemSubroutine, byrefint, py::arg("name"))
+        .def("getSystemMethod", &Compilation::getSystemMethod, byrefint, py::arg("typeKind"),
+             py::arg("name"))
+        .def("parseName", &Compilation::parseName, byrefint, py::arg("name"))
+        .def("tryParseName", &Compilation::tryParseName, byrefint, py::arg("name"),
+             py::arg("diags"))
         .def("createScriptScope", &Compilation::createScriptScope, byrefint)
         .def("getParseDiagnostics", &Compilation::getParseDiagnostics, byrefint)
         .def("getSemanticDiagnostics", &Compilation::getSemanticDiagnostics, byrefint)
         .def("getAllDiagnostics", &Compilation::getAllDiagnostics, byrefint)
-        .def("addDiagnostics", &Compilation::addDiagnostics)
+        .def("addDiagnostics", &Compilation::addDiagnostics, py::arg("diagnostics"))
         .def_property("defaultTimeScale", &Compilation::getDefaultTimeScale,
                       &Compilation::setDefaultTimeScale)
-        .def("getType", py::overload_cast<SyntaxKind>(&Compilation::getType, py::const_), byrefint)
-        .def("getNetType", &Compilation::getNetType, byrefint)
+        .def("getType", py::overload_cast<SyntaxKind>(&Compilation::getType, py::const_), byrefint,
+             py::arg("kind"))
+        .def("getNetType", &Compilation::getNetType, byrefint, py::arg("kind"))
         .def_property_readonly("bitType", &Compilation::getBitType)
         .def_property_readonly("logicType", &Compilation::getLogicType)
         .def_property_readonly("intType", &Compilation::getIntType)
@@ -133,9 +136,9 @@ void registerCompilation(py::module_& m) {
     py::class_<ScriptSession>(m, "ScriptSession")
         .def(py::init<>())
         .def_readonly("compilation", &ScriptSession::compilation)
-        .def("eval", &ScriptSession::eval)
-        .def("evalExpression", &ScriptSession::evalExpression)
-        .def("evalStatement", &ScriptSession::evalStatement)
+        .def("eval", &ScriptSession::eval, py::arg("text"))
+        .def("evalExpression", &ScriptSession::evalExpression, py::arg("expr"))
+        .def("evalStatement", &ScriptSession::evalStatement, py::arg("expr"))
         .def("getDiagnostics", &ScriptSession::getDiagnostics);
 
     py::class_<Driver>(m, "Driver")
@@ -146,18 +149,24 @@ void registerCompilation(py::module_& m) {
         .def_readonly("buffers", &Driver::buffers)
         .def_readonly("syntaxTrees", &Driver::syntaxTrees)
         .def("addStandardArgs", &Driver::addStandardArgs)
-        .def("parseCommandLine",
-             [](Driver& self, string_view arg) { return self.parseCommandLine(arg); })
-        .def("readSource", &Driver::readSource)
-        .def("processCommandFile", &Driver::processCommandFile)
+        .def(
+            "parseCommandLine",
+            [](Driver& self, string_view arg) { return self.parseCommandLine(arg); },
+            py::arg("arg"))
+        .def("readSource", &Driver::readSource, py::arg("fileName"))
+        .def("processCommandFile", &Driver::processCommandFile, py::arg("fileName"),
+             py::arg("makeRelative"))
         .def("processOptions", &Driver::processOptions)
-        .def("runPreprocessor", &Driver::runPreprocessor)
+        .def("runPreprocessor", &Driver::runPreprocessor, py::arg("includeComments"),
+             py::arg("includeDirectives"), py::arg("obfuscateIds"),
+             py::arg("useFixedObfuscationSeed") = false)
         .def("reportMacros", &Driver::reportMacros)
         .def("parseAllSources", &Driver::parseAllSources)
         .def("createOptionBag", &Driver::createOptionBag)
         .def("createCompilation", &Driver::createCompilation)
         .def("reportParseDiags", &Driver::reportParseDiags)
-        .def("reportCompilation", &Driver::reportCompilation);
+        .def("reportCompilation", &Driver::reportCompilation, py::arg("compilation"),
+             py::arg("quiet"));
 
     class PySystemSubroutine : public SystemSubroutine {
     public:
@@ -209,17 +218,24 @@ void registerCompilation(py::module_& m) {
         .def_readwrite("kind", &SystemSubroutine::kind)
         .def_readwrite("hasOutputArgs", &SystemSubroutine::hasOutputArgs)
         .def_readwrite("withClauseMode", &SystemSubroutine::withClauseMode)
-        .def("allowEmptyArgument", &SystemSubroutine::allowEmptyArgument)
-        .def("allowClockingArgument", &SystemSubroutine::allowClockingArgument)
-        .def("bindArgument", &SystemSubroutine::bindArgument)
-        .def("checkArguments", &SystemSubroutine::checkArguments)
-        .def("eval", &SystemSubroutine::eval)
-        .def("badArg", &SystemSubroutinePublicist::badArg)
-        .def("checkArgCount", &SystemSubroutinePublicist::checkArgCount)
+        .def("allowEmptyArgument", &SystemSubroutine::allowEmptyArgument, py::arg("argIndex"))
+        .def("allowClockingArgument", &SystemSubroutine::allowClockingArgument, py::arg("argIndex"))
+        .def("bindArgument", &SystemSubroutine::bindArgument, py::arg("argIndex"),
+             py::arg("context"), py::arg("syntax"), py::arg("previousArgs"))
+        .def("checkArguments", &SystemSubroutine::checkArguments, py::arg("context"),
+             py::arg("args"), py::arg("range"), py::arg("iterOrThis"))
+        .def("eval", &SystemSubroutine::eval, py::arg("context"), py::arg("args"), py::arg("range"),
+             py::arg("callInfo"))
+        .def("badArg", &SystemSubroutinePublicist::badArg, py::arg("context"), py::arg("arg"))
+        .def("checkArgCount", &SystemSubroutinePublicist::checkArgCount, py::arg("context"),
+             py::arg("isMethod"), py::arg("args"), py::arg("callRange"), py::arg("min"),
+             py::arg("max"))
         .def("kindStr", &SystemSubroutinePublicist::kindStr)
-        .def("noHierarchical", &SystemSubroutinePublicist::noHierarchical)
-        .def("notConst", &SystemSubroutinePublicist::notConst)
-        .def("unevaluatedContext", &SystemSubroutinePublicist::unevaluatedContext)
+        .def("noHierarchical", &SystemSubroutinePublicist::noHierarchical, py::arg("context"),
+             py::arg("expr"))
+        .def("notConst", &SystemSubroutinePublicist::notConst, py::arg("context"), py::arg("range"))
+        .def_static("unevaluatedContext", &SystemSubroutinePublicist::unevaluatedContext,
+                    py::arg("sourceContext"))
         .def("__repr__", [](const SystemSubroutine& self) { return self.name; });
 
     py::enum_<SystemSubroutine::WithClauseMode>(systemSub, "WithClauseMode")
