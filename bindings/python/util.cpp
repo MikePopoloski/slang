@@ -100,27 +100,28 @@ void registerUtil(py::module_& m) {
 
     py::class_<SourceManager>(m, "SourceManager")
         .def(py::init<>())
-        .def("makeAbsolutePath", &SourceManager::makeAbsolutePath)
-        .def("addSystemDirectory", &SourceManager::addSystemDirectory)
-        .def("addUserDirectory", &SourceManager::addUserDirectory)
-        .def("getLineNumber", &SourceManager::getLineNumber)
-        .def("getFileName", &SourceManager::getFileName)
-        .def("getRawFileName", &SourceManager::getRawFileName)
-        .def("getColumnNumber", &SourceManager::getColumnNumber)
-        .def("getIncludedFrom", &SourceManager::getIncludedFrom)
-        .def("getMacroName", &SourceManager::getMacroName)
-        .def("isFileLoc", &SourceManager::isFileLoc)
-        .def("isMacroLoc", &SourceManager::isMacroLoc)
-        .def("isMacroArgLoc", &SourceManager::isMacroArgLoc)
-        .def("isIncludedFileLoc", &SourceManager::isIncludedFileLoc)
-        .def("isPreprocessedLoc", &SourceManager::isPreprocessedLoc)
-        .def("isBeforeInCompilationUnit", &SourceManager::isBeforeInCompilationUnit)
-        .def("getExpansionLoc", &SourceManager::getExpansionLoc)
-        .def("getExpansionRange", &SourceManager::getExpansionRange)
-        .def("getOriginalLoc", &SourceManager::getOriginalLoc)
-        .def("getFullyOriginalLoc", &SourceManager::getFullyOriginalLoc)
-        .def("getFullyExpandedLoc", &SourceManager::getFullyExpandedLoc)
-        .def("getSourceText", &SourceManager::getSourceText)
+        .def("makeAbsolutePath", &SourceManager::makeAbsolutePath, py::arg("path"))
+        .def("addSystemDirectory", &SourceManager::addSystemDirectory, py::arg("path"))
+        .def("addUserDirectory", &SourceManager::addUserDirectory, py::arg("path"))
+        .def("getLineNumber", &SourceManager::getLineNumber, py::arg("location"))
+        .def("getFileName", &SourceManager::getFileName, py::arg("location"))
+        .def("getRawFileName", &SourceManager::getRawFileName, py::arg("buffer"))
+        .def("getColumnNumber", &SourceManager::getColumnNumber, py::arg("location"))
+        .def("getIncludedFrom", &SourceManager::getIncludedFrom, py::arg("buffer"))
+        .def("getMacroName", &SourceManager::getMacroName, py::arg("location"))
+        .def("isFileLoc", &SourceManager::isFileLoc, py::arg("location"))
+        .def("isMacroLoc", &SourceManager::isMacroLoc, py::arg("location"))
+        .def("isMacroArgLoc", &SourceManager::isMacroArgLoc, py::arg("location"))
+        .def("isIncludedFileLoc", &SourceManager::isIncludedFileLoc, py::arg("location"))
+        .def("isPreprocessedLoc", &SourceManager::isPreprocessedLoc, py::arg("location"))
+        .def("isBeforeInCompilationUnit", &SourceManager::isBeforeInCompilationUnit,
+             py::arg("left"), py::arg("right"))
+        .def("getExpansionLoc", &SourceManager::getExpansionLoc, py::arg("location"))
+        .def("getExpansionRange", &SourceManager::getExpansionRange, py::arg("location"))
+        .def("getOriginalLoc", &SourceManager::getOriginalLoc, py::arg("location"))
+        .def("getFullyOriginalLoc", &SourceManager::getFullyOriginalLoc, py::arg("location"))
+        .def("getFullyExpandedLoc", &SourceManager::getFullyExpandedLoc, py::arg("location"))
+        .def("getSourceText", &SourceManager::getSourceText, py::arg("buffer"))
         .def("assignText",
              py::overload_cast<string_view, SourceLocation>(&SourceManager::assignText), "text"_a,
              "includedFrom"_a = SourceLocation())
@@ -128,12 +129,15 @@ void registerUtil(py::module_& m) {
              py::overload_cast<string_view, string_view, SourceLocation>(
                  &SourceManager::assignText),
              "path"_a, "text"_a, "includedFrom"_a = SourceLocation())
-        .def("readSource", &SourceManager::readSource)
-        .def("readHeader", &SourceManager::readHeader)
-        .def("isCached", &SourceManager::isCached)
-        .def("setDisableProximatePaths", &SourceManager::setDisableProximatePaths)
-        .def("addLineDirective", &SourceManager::addLineDirective)
-        .def("addDiagnosticDirective", &SourceManager::addDiagnosticDirective)
+        .def("readSource", &SourceManager::readSource, py::arg("path"))
+        .def("readHeader", &SourceManager::readHeader, py::arg("path"), py::arg("includedFrom"),
+             py::arg("isSystemPath"))
+        .def("isCached", &SourceManager::isCached, py::arg("path"))
+        .def("setDisableProximatePaths", &SourceManager::setDisableProximatePaths, py::arg("set"))
+        .def("addLineDirective", &SourceManager::addLineDirective, py::arg("location"),
+             py::arg("lineNum"), py::arg("name"), py::arg("level"))
+        .def("addDiagnosticDirective", &SourceManager::addDiagnosticDirective, py::arg("location"),
+             py::arg("name"), py::arg("severity"))
         .def("getAllBuffers", &SourceManager::getAllBuffers);
 
     py::class_<VersionInfo>(m, "VersionInfo")
@@ -175,13 +179,15 @@ void registerUtil(py::module_& m) {
 
     py::class_<Diagnostics>(m, "Diagnostics")
         .def(py::init<>())
-        .def("add", py::overload_cast<DiagCode, SourceLocation>(&Diagnostics::add), byrefint)
-        .def("add", py::overload_cast<DiagCode, SourceRange>(&Diagnostics::add), byrefint)
+        .def("add", py::overload_cast<DiagCode, SourceLocation>(&Diagnostics::add), byrefint,
+             py::arg("code"), py::arg("location"))
+        .def("add", py::overload_cast<DiagCode, SourceRange>(&Diagnostics::add), byrefint,
+             py::arg("code"), py::arg("range"))
         .def("add", py::overload_cast<const Symbol&, DiagCode, SourceLocation>(&Diagnostics::add),
-             byrefint)
+             byrefint, py::arg("source"), py::arg("code"), py::arg("location"))
         .def("add", py::overload_cast<const Symbol&, DiagCode, SourceRange>(&Diagnostics::add),
-             byrefint)
-        .def("sort", &Diagnostics::sort)
+             byrefint, py::arg("source"), py::arg("code"), py::arg("range"))
+        .def("sort", &Diagnostics::sort, py::arg("sourceManager"))
         .def("__len__", [](const Diagnostics& self) { return self.size(); })
         .def("__getitem__",
              [](const Diagnostics& s, size_t i) {
@@ -204,40 +210,46 @@ void registerUtil(py::module_& m) {
 
     py::class_<DiagnosticEngine>(m, "DiagnosticEngine")
         .def(py::init<const SourceManager&>())
-        .def("addClient", &DiagnosticEngine::addClient)
+        .def("addClient", &DiagnosticEngine::addClient, py::arg("client"))
         .def("clearClients", &DiagnosticEngine::clearClients)
-        .def("issue", &DiagnosticEngine::issue)
+        .def("issue", &DiagnosticEngine::issue, py::arg("diagnostic"))
         .def_property_readonly("sourceManager", &DiagnosticEngine::getSourceManager)
         .def_property_readonly("numErrors", &DiagnosticEngine::getNumErrors)
         .def_property_readonly("numWarnings", &DiagnosticEngine::getNumWarnings)
         .def("clearCounts", &DiagnosticEngine::clearCounts)
-        .def("setErrorLimit", &DiagnosticEngine::setErrorLimit)
-        .def("setIgnoreAllWarnings", &DiagnosticEngine::setIgnoreAllWarnings)
-        .def("setIgnoreAllNotes", &DiagnosticEngine::setIgnoreAllNotes)
-        .def("setWarningsAsErrors", &DiagnosticEngine::setWarningsAsErrors)
-        .def("setErrorsAsFatal", &DiagnosticEngine::setErrorsAsFatal)
-        .def("setFatalsAsErrors", &DiagnosticEngine::setFatalsAsErrors)
+        .def("setErrorLimit", &DiagnosticEngine::setErrorLimit, py::arg("limit"))
+        .def("setIgnoreAllWarnings", &DiagnosticEngine::setIgnoreAllWarnings, py::arg("set"))
+        .def("setIgnoreAllNotes", &DiagnosticEngine::setIgnoreAllNotes, py::arg("set"))
+        .def("setWarningsAsErrors", &DiagnosticEngine::setWarningsAsErrors, py::arg("set"))
+        .def("setErrorsAsFatal", &DiagnosticEngine::setErrorsAsFatal, py::arg("set"))
+        .def("setFatalsAsErrors", &DiagnosticEngine::setFatalsAsErrors, py::arg("set"))
         .def("setSeverity",
-             py::overload_cast<DiagCode, DiagnosticSeverity>(&DiagnosticEngine::setSeverity))
-        .def("setSeverity", py::overload_cast<const DiagGroup&, DiagnosticSeverity>(
-                                &DiagnosticEngine::setSeverity))
-        .def("getSeverity", &DiagnosticEngine::getSeverity)
-        .def("setMessage", &DiagnosticEngine::setMessage)
-        .def("getMessage", &DiagnosticEngine::getMessage)
-        .def("getOptionName", &DiagnosticEngine::getOptionName)
-        .def("findFromOptionName", &DiagnosticEngine::findFromOptionName)
-        .def("findDiagGroup", &DiagnosticEngine::findDiagGroup, byrefint)
+             py::overload_cast<DiagCode, DiagnosticSeverity>(&DiagnosticEngine::setSeverity),
+             py::arg("code"), py::arg("severity"))
+        .def("setSeverity",
+             py::overload_cast<const DiagGroup&, DiagnosticSeverity>(
+                 &DiagnosticEngine::setSeverity),
+             py::arg("group"), py::arg("severity"))
+        .def("getSeverity", &DiagnosticEngine::getSeverity, py::arg("code"), py::arg("location"))
+        .def("setMessage", &DiagnosticEngine::setMessage, py::arg("code"), py::arg("message"))
+        .def("getMessage", &DiagnosticEngine::getMessage, py::arg("code"))
+        .def("getOptionName", &DiagnosticEngine::getOptionName, py::arg("code"))
+        .def("findFromOptionName", &DiagnosticEngine::findFromOptionName, py::arg("optionName"))
+        .def("findDiagGroup", &DiagnosticEngine::findDiagGroup, byrefint, py::arg("name"))
         .def("clearMappings", py::overload_cast<>(&DiagnosticEngine::clearMappings))
         .def("clearMappings",
-             py::overload_cast<DiagnosticSeverity>(&DiagnosticEngine::clearMappings))
-        .def("formatMessage", &DiagnosticEngine::formatMessage)
+             py::overload_cast<DiagnosticSeverity>(&DiagnosticEngine::clearMappings),
+             py::arg("severity"))
+        .def("formatMessage", &DiagnosticEngine::formatMessage, py::arg("diag"))
         .def("setDefaultWarnings", &DiagnosticEngine::setDefaultWarnings)
-        .def("setWarningOptions", &DiagnosticEngine::setWarningOptions)
+        .def("setWarningOptions", &DiagnosticEngine::setWarningOptions, py::arg("options"))
         .def("setMappingsFromPragmas",
              py::overload_cast<>(&DiagnosticEngine::setMappingsFromPragmas))
         .def("setMappingsFromPragmas",
-             py::overload_cast<BufferID>(&DiagnosticEngine::setMappingsFromPragmas))
-        .def_static("reportAll", &DiagnosticEngine::reportAll);
+             py::overload_cast<BufferID>(&DiagnosticEngine::setMappingsFromPragmas),
+             py::arg("buffer"))
+        .def_static("reportAll", &DiagnosticEngine::reportAll, py::arg("sourceManager"),
+                    py::arg("diag"));
 
     py::class_<ReportedDiagnostic>(m, "ReportedDiagnostic")
         .def_property_readonly("originalDiagnostic",
@@ -252,21 +264,21 @@ void registerUtil(py::module_& m) {
         .def_readonly("shouldShowIncludeStack", &ReportedDiagnostic::shouldShowIncludeStack);
 
     py::class_<DiagnosticClient, std::shared_ptr<DiagnosticClient>>(m, "DiagnosticClient")
-        .def("report", &DiagnosticClient::report)
-        .def("setEngine", &DiagnosticClient::setEngine);
+        .def("report", &DiagnosticClient::report, py::arg("diagnostic"))
+        .def("setEngine", &DiagnosticClient::setEngine, py::arg("engine"));
 
     py::class_<TextDiagnosticClient, DiagnosticClient, std::shared_ptr<TextDiagnosticClient>>(
         m, "TextDiagnosticClient")
         .def(py::init<>())
-        .def("showColors", &TextDiagnosticClient::showColors)
-        .def("showColumn", &TextDiagnosticClient::showColumn)
-        .def("showLocation", &TextDiagnosticClient::showLocation)
-        .def("showSourceLine", &TextDiagnosticClient::showSourceLine)
-        .def("showOptionName", &TextDiagnosticClient::showOptionName)
-        .def("showIncludeStack", &TextDiagnosticClient::showIncludeStack)
-        .def("showMacroExpansion", &TextDiagnosticClient::showMacroExpansion)
-        .def("showHierarchyInstance", &TextDiagnosticClient::showHierarchyInstance)
-        .def("report", &TextDiagnosticClient::report)
+        .def("showColors", &TextDiagnosticClient::showColors, py::arg("show"))
+        .def("showColumn", &TextDiagnosticClient::showColumn, py::arg("show"))
+        .def("showLocation", &TextDiagnosticClient::showLocation, py::arg("show"))
+        .def("showSourceLine", &TextDiagnosticClient::showSourceLine, py::arg("show"))
+        .def("showOptionName", &TextDiagnosticClient::showOptionName, py::arg("show"))
+        .def("showIncludeStack", &TextDiagnosticClient::showIncludeStack, py::arg("show"))
+        .def("showMacroExpansion", &TextDiagnosticClient::showMacroExpansion, py::arg("show"))
+        .def("showHierarchyInstance", &TextDiagnosticClient::showHierarchyInstance, py::arg("show"))
+        .def("report", &TextDiagnosticClient::report, py::arg("diag"))
         .def("clear", &TextDiagnosticClient::clear)
         .def("getString", &TextDiagnosticClient::getString);
 }
