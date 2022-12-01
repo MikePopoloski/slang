@@ -88,32 +88,33 @@ void registerCompilation(py::module_& m) {
 
     py::class_<Compilation>(m, "Compilation")
         .def(py::init<>())
-        .def(py::init<const Bag&>())
+        .def(py::init<const Bag&>(), "options"_a)
         .def_property_readonly("options", &Compilation::getOptions)
         .def_property_readonly("isFinalized", &Compilation::isFinalized)
         .def_property_readonly("sourceManager", &Compilation::getSourceManager)
-        .def("addSyntaxTree", &Compilation::addSyntaxTree)
+        .def("addSyntaxTree", &Compilation::addSyntaxTree, "tree"_a)
         .def("getSyntaxTrees", &Compilation::getSyntaxTrees)
         .def("getRoot", py::overload_cast<>(&Compilation::getRoot), byrefint)
         .def("addSystemSubroutine",
              py::overload_cast<const SystemSubroutine&>(&Compilation::addSystemSubroutine),
-             py::keep_alive<1, 2>())
+             py::keep_alive<1, 2>(), "subroutine"_a)
         .def("addSystemMethod",
              py::overload_cast<SymbolKind, const SystemSubroutine&>(&Compilation::addSystemMethod),
-             py::keep_alive<1, 3>())
-        .def("getSystemSubroutine", &Compilation::getSystemSubroutine, byrefint)
-        .def("getSystemMethod", &Compilation::getSystemMethod, byrefint)
-        .def("parseName", &Compilation::parseName, byrefint)
-        .def("tryParseName", &Compilation::tryParseName, byrefint)
+             py::keep_alive<1, 3>(), "typeKind"_a, "method"_a)
+        .def("getSystemSubroutine", &Compilation::getSystemSubroutine, byrefint, "name"_a)
+        .def("getSystemMethod", &Compilation::getSystemMethod, byrefint, "typeKind"_a, "name"_a)
+        .def("parseName", &Compilation::parseName, byrefint, "name"_a)
+        .def("tryParseName", &Compilation::tryParseName, byrefint, "name"_a, "diags"_a)
         .def("createScriptScope", &Compilation::createScriptScope, byrefint)
         .def("getParseDiagnostics", &Compilation::getParseDiagnostics, byrefint)
         .def("getSemanticDiagnostics", &Compilation::getSemanticDiagnostics, byrefint)
         .def("getAllDiagnostics", &Compilation::getAllDiagnostics, byrefint)
-        .def("addDiagnostics", &Compilation::addDiagnostics)
+        .def("addDiagnostics", &Compilation::addDiagnostics, "diagnostics"_a)
         .def_property("defaultTimeScale", &Compilation::getDefaultTimeScale,
                       &Compilation::setDefaultTimeScale)
-        .def("getType", py::overload_cast<SyntaxKind>(&Compilation::getType, py::const_), byrefint)
-        .def("getNetType", &Compilation::getNetType, byrefint)
+        .def("getType", py::overload_cast<SyntaxKind>(&Compilation::getType, py::const_), byrefint,
+             "kind"_a)
+        .def("getNetType", &Compilation::getNetType, byrefint, "kind"_a)
         .def_property_readonly("bitType", &Compilation::getBitType)
         .def_property_readonly("logicType", &Compilation::getLogicType)
         .def_property_readonly("intType", &Compilation::getIntType)
@@ -133,9 +134,9 @@ void registerCompilation(py::module_& m) {
     py::class_<ScriptSession>(m, "ScriptSession")
         .def(py::init<>())
         .def_readonly("compilation", &ScriptSession::compilation)
-        .def("eval", &ScriptSession::eval)
-        .def("evalExpression", &ScriptSession::evalExpression)
-        .def("evalStatement", &ScriptSession::evalStatement)
+        .def("eval", &ScriptSession::eval, "text"_a)
+        .def("evalExpression", &ScriptSession::evalExpression, "expr"_a)
+        .def("evalStatement", &ScriptSession::evalStatement, "expr"_a)
         .def("getDiagnostics", &ScriptSession::getDiagnostics);
 
     py::class_<Driver>(m, "Driver")
@@ -146,18 +147,20 @@ void registerCompilation(py::module_& m) {
         .def_readonly("buffers", &Driver::buffers)
         .def_readonly("syntaxTrees", &Driver::syntaxTrees)
         .def("addStandardArgs", &Driver::addStandardArgs)
-        .def("parseCommandLine",
-             [](Driver& self, string_view arg) { return self.parseCommandLine(arg); })
-        .def("readSource", &Driver::readSource)
-        .def("processCommandFile", &Driver::processCommandFile)
+        .def(
+            "parseCommandLine",
+            [](Driver& self, string_view arg) { return self.parseCommandLine(arg); }, "arg"_a)
+        .def("readSource", &Driver::readSource, "fileName"_a)
+        .def("processCommandFile", &Driver::processCommandFile, "fileName"_a, "makeRelative"_a)
         .def("processOptions", &Driver::processOptions)
-        .def("runPreprocessor", &Driver::runPreprocessor)
+        .def("runPreprocessor", &Driver::runPreprocessor, "includeComments"_a,
+             "includeDirectives"_a, "obfuscateIds"_a, "useFixedObfuscationSeed"_a = false)
         .def("reportMacros", &Driver::reportMacros)
         .def("parseAllSources", &Driver::parseAllSources)
         .def("createOptionBag", &Driver::createOptionBag)
         .def("createCompilation", &Driver::createCompilation)
         .def("reportParseDiags", &Driver::reportParseDiags)
-        .def("reportCompilation", &Driver::reportCompilation);
+        .def("reportCompilation", &Driver::reportCompilation, "compilation"_a, "quiet"_a);
 
     class PySystemSubroutine : public SystemSubroutine {
     public:
@@ -204,22 +207,26 @@ void registerCompilation(py::module_& m) {
     };
 
     py::class_<SystemSubroutine, PySystemSubroutine> systemSub(m, "SystemSubroutine");
-    systemSub.def(py::init_alias<const std::string&, SubroutineKind>())
+    systemSub.def(py::init_alias<const std::string&, SubroutineKind>(), "name"_a, "kind"_a)
         .def_readwrite("name", &SystemSubroutine::name)
         .def_readwrite("kind", &SystemSubroutine::kind)
         .def_readwrite("hasOutputArgs", &SystemSubroutine::hasOutputArgs)
         .def_readwrite("withClauseMode", &SystemSubroutine::withClauseMode)
-        .def("allowEmptyArgument", &SystemSubroutine::allowEmptyArgument)
-        .def("allowClockingArgument", &SystemSubroutine::allowClockingArgument)
-        .def("bindArgument", &SystemSubroutine::bindArgument)
-        .def("checkArguments", &SystemSubroutine::checkArguments)
-        .def("eval", &SystemSubroutine::eval)
-        .def("badArg", &SystemSubroutinePublicist::badArg)
-        .def("checkArgCount", &SystemSubroutinePublicist::checkArgCount)
+        .def("allowEmptyArgument", &SystemSubroutine::allowEmptyArgument, "argIndex"_a)
+        .def("allowClockingArgument", &SystemSubroutine::allowClockingArgument, "argIndex"_a)
+        .def("bindArgument", &SystemSubroutine::bindArgument, "argIndex"_a, "context"_a, "syntax"_a,
+             "previousArgs"_a)
+        .def("checkArguments", &SystemSubroutine::checkArguments, "context"_a, "args"_a, "range"_a,
+             "iterOrThis"_a)
+        .def("eval", &SystemSubroutine::eval, "context"_a, "args"_a, "range"_a, "callInfo"_a)
+        .def("badArg", &SystemSubroutinePublicist::badArg, "context"_a, "arg"_a)
+        .def("checkArgCount", &SystemSubroutinePublicist::checkArgCount, "context"_a, "isMethod"_a,
+             "args"_a, "callRange"_a, "min"_a, "max"_a)
         .def("kindStr", &SystemSubroutinePublicist::kindStr)
-        .def("noHierarchical", &SystemSubroutinePublicist::noHierarchical)
-        .def("notConst", &SystemSubroutinePublicist::notConst)
-        .def("unevaluatedContext", &SystemSubroutinePublicist::unevaluatedContext)
+        .def("noHierarchical", &SystemSubroutinePublicist::noHierarchical, "context"_a, "expr"_a)
+        .def("notConst", &SystemSubroutinePublicist::notConst, "context"_a, "range"_a)
+        .def_static("unevaluatedContext", &SystemSubroutinePublicist::unevaluatedContext,
+                    "sourceContext"_a)
         .def("__repr__", [](const SystemSubroutine& self) { return self.name; });
 
     py::enum_<SystemSubroutine::WithClauseMode>(systemSub, "WithClauseMode")
@@ -245,7 +252,9 @@ void registerCompilation(py::module_& m) {
     py::class_<SimpleSystemSubroutine, SystemSubroutine, PySimpleSystemSubroutine>(
         m, "SimpleSystemSubroutine")
         .def(py::init_alias<const std::string&, SubroutineKind, size_t,
-                            const std::vector<const Type*>&, const Type&, bool, bool>());
+                            const std::vector<const Type*>&, const Type&, bool, bool>(),
+             "name"_a, "kind"_a, "requiredArgs"_a, "argTypes"_a, "returnType"_a, "isMethod"_a,
+             "isFirstArgLValue"_a = false);
 
     py::class_<NonConstantFunction, SimpleSystemSubroutine>(m, "NonConstantFunction")
         .def(py::init<const std::string&, const Type&, size_t, const std::vector<const Type*>&,

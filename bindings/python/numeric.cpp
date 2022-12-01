@@ -75,12 +75,12 @@ static py::int_ PyIntFromSVInt(const SVInt& value) {
 
 void registerNumeric(py::module_& m) {
     EXPOSE_ENUM(m, LiteralBase);
-    m.def("literalBaseFromChar", &literalBaseFromChar);
-    m.def("clog2", py::overload_cast<const SVInt&>(&clog2));
+    m.def("literalBaseFromChar", &literalBaseFromChar, "base"_a, "result"_a);
+    m.def("clog2", py::overload_cast<const SVInt&>(&clog2), "value"_a);
 
     py::class_<logic_t>(m, "logic_t")
         .def(py::init<>())
-        .def(py::init<uint8_t>())
+        .def(py::init<uint8_t>(), "value"_a)
         .def_readwrite("value", &logic_t::value)
         .def_property_readonly("isUnknown", &logic_t::isUnknown)
         .def_readonly_static("x", &logic_t::x)
@@ -97,28 +97,29 @@ void registerNumeric(py::module_& m) {
 
     py::class_<SVInt>(m, "SVInt")
         .def(py::init<>())
-        .def(py::init<logic_t>())
-        .def(py::init<bitwidth_t, uint64_t, bool>())
-        .def(py::init<bitwidth_t, span<const byte>, bool>())
-        .def(py::init([](string_view str) { return SVInt::fromString(str); }))
-        .def(py::init(&SVIntFromFloat))
-        .def(py::init(&SVIntFromPyInt))
+        .def(py::init<logic_t>(), "bit"_a)
+        .def(py::init<bitwidth_t, uint64_t, bool>(), "bits"_a, "value"_a, "isSigned"_a)
+        .def(py::init<bitwidth_t, span<const byte>, bool>(), "bits"_a, "bytes"_a, "isSigned"_a)
+        .def(py::init([](string_view str) { return SVInt::fromString(str); }), "str"_a)
+        .def(py::init(&SVIntFromFloat), "value"_a)
+        .def(py::init(&SVIntFromPyInt), "value"_a)
         .def_property_readonly("isSigned", &SVInt::isSigned)
         .def_property_readonly("hasUnknown", &SVInt::hasUnknown)
         .def_property_readonly("bitWidth", &SVInt::getBitWidth)
-        .def_static("createFillX", &SVInt::createFillX)
-        .def_static("createFillZ", &SVInt::createFillZ)
-        .def_static("fromDigits", &SVInt::fromDigits)
-        .def_static("fromDouble", &SVInt::fromDouble)
-        .def_static("fromFloat", &SVInt::fromFloat)
-        .def_static("conditional", &SVInt::conditional)
-        .def_static("logicalImpl", &SVInt::logicalImpl)
-        .def_static("logicalEquiv", &SVInt::logicalEquiv)
+        .def_static("createFillX", &SVInt::createFillX, "bitWidth"_a, "isSigned"_a)
+        .def_static("createFillZ", &SVInt::createFillZ, "bitWidth"_a, "isSigned"_a)
+        .def_static("fromDigits", &SVInt::fromDigits, "bits"_a, "base"_a, "isSigned"_a,
+                    "anyUnknown"_a, "digits"_a)
+        .def_static("fromDouble", &SVInt::fromDouble, "bits"_a, "value"_a, "isSigned"_a)
+        .def_static("fromFloat", &SVInt::fromFloat, "bits"_a, "value"_a, "isSigned"_a)
+        .def_static("conditional", &SVInt::conditional, "condition"_a, "lhs"_a, "rhs"_a)
+        .def_static("logicalImpl", &SVInt::logicalImpl, "lhs"_a, "rhs"_a)
+        .def_static("logicalEquiv", &SVInt::logicalEquiv, "lhs"_a, "rhs"_a)
         .def_static("concat", &SVInt::concat)
         .def("isNegative", &SVInt::isNegative)
         .def("isOdd", &SVInt::isOdd)
         .def("isEven", &SVInt::isEven)
-        .def("setSigned", &SVInt::setSigned)
+        .def("setSigned", &SVInt::setSigned, "isSigned"_a)
         .def("setAllOnes", &SVInt::setAllOnes)
         .def("setAllZeros", &SVInt::setAllZeros)
         .def("setAllX", &SVInt::setAllX)
@@ -126,11 +127,12 @@ void registerNumeric(py::module_& m) {
         .def("flattenUnknowns", &SVInt::flattenUnknowns)
         .def("shrinkToFit", &SVInt::shrinkToFit)
         .def("toString",
-             py::overload_cast<LiteralBase, bool, bitwidth_t>(&SVInt::toString, py::const_))
-        .def("shl", py::overload_cast<const SVInt&>(&SVInt::shl, py::const_))
-        .def("ashr", py::overload_cast<const SVInt&>(&SVInt::ashr, py::const_))
-        .def("lshr", py::overload_cast<const SVInt&>(&SVInt::lshr, py::const_))
-        .def("replicate", &SVInt::replicate)
+             py::overload_cast<LiteralBase, bool, bitwidth_t>(&SVInt::toString, py::const_),
+             "base"_a, "includeBase"_a, "abbreviateThresholdBits"_a = SVInt::MAX_BITS)
+        .def("shl", py::overload_cast<const SVInt&>(&SVInt::shl, py::const_), "rhs"_a)
+        .def("ashr", py::overload_cast<const SVInt&>(&SVInt::ashr, py::const_), "rhs"_a)
+        .def("lshr", py::overload_cast<const SVInt&>(&SVInt::lshr, py::const_), "rhs"_a)
+        .def("replicate", &SVInt::replicate, "times"_a)
         .def("reductionOr", &SVInt::reductionOr)
         .def("reductionAnd", &SVInt::reductionAnd)
         .def("reductionXor", &SVInt::reductionXor)
@@ -142,17 +144,17 @@ void registerNumeric(py::module_& m) {
         .def("countZeros", &SVInt::countZeros)
         .def("countXs", &SVInt::countXs)
         .def("countZs", &SVInt::countZs)
-        .def("slice", &SVInt::slice)
-        .def("set", &SVInt::set)
-        .def("sext", &SVInt::sext)
-        .def("isSignExtendedFrom", &SVInt::isSignExtendedFrom)
-        .def("signExtendFrom", &SVInt::signExtendFrom)
-        .def("zext", &SVInt::zext)
-        .def("extend", &SVInt::extend)
-        .def("trunc", &SVInt::trunc)
-        .def("resize", &SVInt::resize)
+        .def("slice", &SVInt::slice, "msb"_a, "lsb"_a)
+        .def("set", &SVInt::set, "msb"_a, "lsb"_a, "value"_a)
+        .def("sext", &SVInt::sext, "bits"_a)
+        .def("isSignExtendedFrom", &SVInt::isSignExtendedFrom, "msb"_a)
+        .def("signExtendFrom", &SVInt::signExtendFrom, "msb"_a)
+        .def("zext", &SVInt::zext, "bits"_a)
+        .def("extend", &SVInt::extend, "bits"_a, "isSigned"_a)
+        .def("trunc", &SVInt::trunc, "bits"_a)
+        .def("resize", &SVInt::resize, "bits"_a)
         .def("reverse", &SVInt::reverse)
-        .def("xnor", &SVInt::xnor)
+        .def("xnor", &SVInt::xnor, "rhs"_a)
         .def(-py::self)
         .def(py::self += py::self)
         .def(py::self -= py::self)
@@ -224,8 +226,8 @@ void registerNumeric(py::module_& m) {
     py::implicitly_convertible<double, SVInt>();
 
     EXPOSE_ENUM(m, TimeUnit);
-    m.def("suffixToTimeUnit", &suffixToTimeUnit);
-    m.def("timeUnitToSuffix", &timeUnitToSuffix);
+    m.def("suffixToTimeUnit", &suffixToTimeUnit, "timeSuffix"_a, "unit"_a);
+    m.def("timeUnitToSuffix", &timeUnitToSuffix, "unit"_a);
 
     py::enum_<TimeScaleMagnitude>(m, "TimeScaleMagnitude")
         .value("One", TimeScaleMagnitude::One)
@@ -234,21 +236,21 @@ void registerNumeric(py::module_& m) {
 
     py::class_<TimeScaleValue>(m, "TimeScaleValue")
         .def(py::init<>())
-        .def(py::init<TimeUnit, TimeScaleMagnitude>())
-        .def(py::init<string_view>())
+        .def(py::init<TimeUnit, TimeScaleMagnitude>(), "unit"_a, "magnitude"_a)
+        .def(py::init<string_view>(), "str"_a)
         .def_readwrite("unit", &TimeScaleValue::unit)
         .def_readwrite("magnitude", &TimeScaleValue::magnitude)
-        .def_static("fromLiteral", &TimeScaleValue::fromLiteral)
+        .def_static("fromLiteral", &TimeScaleValue::fromLiteral, "value"_a, "unit"_a)
         .def(py::self == py::self)
         .def(py::self != py::self)
         .def("__repr__", [](const TimeScaleValue& self) { return self.toString(); });
 
     py::class_<TimeScale>(m, "TimeScale")
         .def(py::init<>())
-        .def(py::init<TimeScaleValue, TimeScaleValue>())
+        .def(py::init<TimeScaleValue, TimeScaleValue>(), "base"_a, "precision"_a)
         .def_readwrite("base", &TimeScale::base)
         .def_readwrite("precision", &TimeScale::precision)
-        .def("apply", &TimeScale::apply)
+        .def("apply", &TimeScale::apply, "value"_a, "unit"_a)
         .def(py::self == py::self)
         .def(py::self != py::self)
         .def("__repr__", [](const TimeScale& self) { return self.toString(); });
@@ -263,26 +265,27 @@ void registerNumeric(py::module_& m) {
 
     py::class_<ConstantValue>(m, "ConstantValue")
         .def(py::init<>())
-        .def(py::init<const SVInt&>())
-        .def(py::init<const std::string&>())
-        .def(py::init([](int i) { return ConstantValue(SVInt(i)); }))
-        .def(py::init([](double d) { return ConstantValue(real_t(d)); }))
+        .def(py::init<const SVInt&>(), "integer"_a)
+        .def(py::init<const std::string&>(), "str"_a)
+        .def(py::init([](int i) { return ConstantValue(SVInt(i)); }), "value"_a)
+        .def(py::init([](double d) { return ConstantValue(real_t(d)); }), "value"_a)
         .def("isContainer", &ConstantValue::isContainer)
         .def("isTrue", &ConstantValue::isTrue)
         .def("isFalse", &ConstantValue::isFalse)
         .def("hasUnknown", &ConstantValue::hasUnknown)
         .def("bitstreamWidth", &ConstantValue::bitstreamWidth)
-        .def("getSlice", &ConstantValue::getSlice)
+        .def("getSlice", &ConstantValue::getSlice, "upper"_a, "lower"_a, "defaultValue"_a)
         .def("empty", &ConstantValue::empty)
         .def("size", &ConstantValue::size)
         .def("convertToInt", py::overload_cast<>(&ConstantValue::convertToInt, py::const_))
         .def("convertToInt",
-             py::overload_cast<bitwidth_t, bool, bool>(&ConstantValue::convertToInt, py::const_))
+             py::overload_cast<bitwidth_t, bool, bool>(&ConstantValue::convertToInt, py::const_),
+             "width"_a, "isSigned"_a, "isFourState"_a)
         .def("convertToReal", &ConstantValue::convertToReal)
         .def("convertToShortReal", &ConstantValue::convertToShortReal)
         .def("convertToStr", &ConstantValue::convertToStr)
-        .def("convertToByteArray", &ConstantValue::convertToByteArray)
-        .def("convertToByteQueue", &ConstantValue::convertToByteQueue)
+        .def("convertToByteArray", &ConstantValue::convertToByteArray, "size"_a, "isSigned"_a)
+        .def("convertToByteQueue", &ConstantValue::convertToByteQueue, "isSigned"_a)
         .def(hash(py::self))
         .def(py::self == py::self)
         .def(py::self != py::self)
@@ -328,8 +331,9 @@ void registerNumeric(py::module_& m) {
     py::class_<ConstantRange>(m, "ConstantRange")
         .def(py::init<>())
         .def(py::init([](int left, int right) {
-            return ConstantRange{left, right};
-        }))
+                 return ConstantRange{left, right};
+             }),
+             "left"_a, "right"_a)
         .def_readwrite("left", &ConstantRange::left)
         .def_readwrite("right", &ConstantRange::right)
         .def_property_readonly("width", &ConstantRange::width)

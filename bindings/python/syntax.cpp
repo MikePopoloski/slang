@@ -20,7 +20,7 @@ void registerSyntax(py::module_& m) {
 
     py::class_<Trivia>(m, "Trivia")
         .def(py::init<>())
-        .def(py::init<TriviaKind, string_view>())
+        .def(py::init<TriviaKind, string_view>(), "kind"_a, "rawText"_a)
         .def_readonly("kind", &Trivia::kind)
         .def("getExplicitLocation", &Trivia::getExplicitLocation)
         .def("syntax", &Trivia::syntax, byrefint)
@@ -32,19 +32,27 @@ void registerSyntax(py::module_& m) {
 
     py::class_<Token>(m, "Token")
         .def(py::init<>())
-        .def(py::init<BumpAllocator&, TokenKind, span<Trivia const>, string_view, SourceLocation>())
+        .def(py::init<BumpAllocator&, TokenKind, span<Trivia const>, string_view, SourceLocation>(),
+             "alloc"_a, "kind"_a, "trivia"_a, "rawText"_a, "location"_a)
         .def(py::init<BumpAllocator&, TokenKind, span<Trivia const>, string_view, SourceLocation,
-                      string_view>())
+                      string_view>(),
+             "alloc"_a, "kind"_a, "trivia"_a, "rawText"_a, "location"_a, "strText"_a)
         .def(py::init<BumpAllocator&, TokenKind, span<Trivia const>, string_view, SourceLocation,
-                      SyntaxKind>())
+                      SyntaxKind>(),
+             "alloc"_a, "kind"_a, "trivia"_a, "rawText"_a, "location"_a, "directive"_a)
         .def(py::init<BumpAllocator&, TokenKind, span<Trivia const>, string_view, SourceLocation,
-                      logic_t>())
+                      logic_t>(),
+             "alloc"_a, "kind"_a, "trivia"_a, "rawText"_a, "location"_a, "bit"_a)
         .def(py::init<BumpAllocator&, TokenKind, span<Trivia const>, string_view, SourceLocation,
-                      const SVInt&>())
+                      const SVInt&>(),
+             "alloc"_a, "kind"_a, "trivia"_a, "rawText"_a, "location"_a, "value"_a)
         .def(py::init<BumpAllocator&, TokenKind, span<Trivia const>, string_view, SourceLocation,
-                      double, bool, std::optional<TimeUnit>>())
+                      double, bool, std::optional<TimeUnit>>(),
+             "alloc"_a, "kind"_a, "trivia"_a, "rawText"_a, "location"_a, "value"_a, "outOfRange"_a,
+             "timeUnit"_a)
         .def(py::init<BumpAllocator&, TokenKind, span<Trivia const>, string_view, SourceLocation,
-                      LiteralBase, bool>())
+                      LiteralBase, bool>(),
+             "alloc"_a, "kind"_a, "trivia"_a, "rawText"_a, "location"_a, "base"_a, "isSigned"_a)
         .def_readonly("kind", &Token::kind)
         .def_property_readonly("isMissing", &Token::isMissing)
         .def_property_readonly("range", &Token::range)
@@ -125,7 +133,7 @@ void registerSyntax(py::module_& m) {
         .def_readonly("kind", &SyntaxNode::kind)
         .def("getFirstToken", &SyntaxNode::getFirstToken)
         .def("getLastToken", &SyntaxNode::getLastToken)
-        .def("isEquivalentTo", &SyntaxNode::isEquivalentTo)
+        .def("isEquivalentTo", &SyntaxNode::isEquivalentTo, "other"_a)
         .def_property_readonly("sourceRange", &SyntaxNode::sourceRange)
         .def("__getitem__",
              [](const SyntaxNode& self, size_t i) -> py::object {
@@ -152,12 +160,13 @@ void registerSyntax(py::module_& m) {
 
     py::class_<SyntaxTree, std::shared_ptr<SyntaxTree>>(m, "SyntaxTree")
         .def_readonly("isLibrary", &SyntaxTree::isLibrary)
-        .def_static("fromFile", py::overload_cast<string_view>(&SyntaxTree::fromFile))
+        .def_static("fromFile", py::overload_cast<string_view>(&SyntaxTree::fromFile), "path"_a)
         .def_static("fromFile",
                     py::overload_cast<string_view, SourceManager&, const Bag&>(
                         &SyntaxTree::fromFile),
                     "path"_a, "sourceManager"_a, "options"_a = Bag())
-        .def_static("fromFiles", py::overload_cast<span<const string_view>>(&SyntaxTree::fromFiles))
+        .def_static("fromFiles", py::overload_cast<span<const string_view>>(&SyntaxTree::fromFiles),
+                    "paths"_a)
         .def_static("fromFiles",
                     py::overload_cast<span<const string_view>, SourceManager&, const Bag&>(
                         &SyntaxTree::fromFiles),
@@ -199,18 +208,21 @@ void registerSyntax(py::module_& m) {
 
     py::class_<SyntaxPrinter>(m, "SyntaxPrinter")
         .def(py::init<>())
-        .def(py::init<const SourceManager&>())
-        .def("print", py::overload_cast<Trivia>(&SyntaxPrinter::print), byrefint)
-        .def("print", py::overload_cast<Token>(&SyntaxPrinter::print), byrefint)
-        .def("print", py::overload_cast<const SyntaxNode&>(&SyntaxPrinter::print), byrefint)
-        .def("print", py::overload_cast<const SyntaxTree&>(&SyntaxPrinter::print), byrefint)
-        .def("setIncludeTrivia", &SyntaxPrinter::setIncludeTrivia, byrefint)
-        .def("setIncludeMissing", &SyntaxPrinter::setIncludeMissing, byrefint)
-        .def("setIncludeSkipped", &SyntaxPrinter::setIncludeSkipped, byrefint)
-        .def("setIncludeDirectives", &SyntaxPrinter::setIncludeDirectives, byrefint)
-        .def("setIncludePreprocessed", &SyntaxPrinter::setIncludePreprocessed, byrefint)
-        .def("setIncludeComments", &SyntaxPrinter::setIncludeComments, byrefint)
-        .def("setSquashNewlines", &SyntaxPrinter::setSquashNewlines, byrefint)
+        .def(py::init<const SourceManager&>(), "sourceManager"_a)
+        .def("print", py::overload_cast<Trivia>(&SyntaxPrinter::print), byrefint, "trivia"_a)
+        .def("print", py::overload_cast<Token>(&SyntaxPrinter::print), byrefint, "token"_a)
+        .def("print", py::overload_cast<const SyntaxNode&>(&SyntaxPrinter::print), byrefint,
+             "node"_a)
+        .def("print", py::overload_cast<const SyntaxTree&>(&SyntaxPrinter::print), byrefint,
+             "tree"_a)
+        .def("setIncludeTrivia", &SyntaxPrinter::setIncludeTrivia, byrefint, "include"_a)
+        .def("setIncludeMissing", &SyntaxPrinter::setIncludeMissing, byrefint, "include"_a)
+        .def("setIncludeSkipped", &SyntaxPrinter::setIncludeSkipped, byrefint, "include"_a)
+        .def("setIncludeDirectives", &SyntaxPrinter::setIncludeDirectives, byrefint, "include"_a)
+        .def("setIncludePreprocessed", &SyntaxPrinter::setIncludePreprocessed, byrefint,
+             "include"_a)
+        .def("setIncludeComments", &SyntaxPrinter::setIncludeComments, byrefint, "include"_a)
+        .def("setSquashNewlines", &SyntaxPrinter::setSquashNewlines, byrefint, "include"_a)
         .def("str", &SyntaxPrinter::str)
-        .def_static("printFile", &SyntaxPrinter::printFile);
+        .def_static("printFile", &SyntaxPrinter::printFile, "tree"_a);
 }

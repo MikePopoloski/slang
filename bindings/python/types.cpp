@@ -67,16 +67,16 @@ void registerTypes(py::module_& m) {
         .def_property_readonly("isVirtualInterface", &Type::isVirtualInterface)
         .def_property_readonly("isAlias", &Type::isAlias)
         .def_property_readonly("isError", &Type::isError)
-        .def("isMatching", &Type::isMatching)
-        .def("isEquivalent", &Type::isEquivalent)
-        .def("isAssignmentCompatible", &Type::isAssignmentCompatible)
-        .def("isCastCompatible", &Type::isCastCompatible)
-        .def("isBitstreamCastable", &Type::isBitstreamCastable)
-        .def("isDerivedFrom", &Type::isDerivedFrom)
-        .def("implements", &Type::implements)
-        .def("isValidForRand", &Type::isValidForRand)
-        .def("coerceValue", &Type::coerceValue)
-        .def_static("getCommonBase", &Type::getCommonBase)
+        .def("isMatching", &Type::isMatching, "rhs"_a)
+        .def("isEquivalent", &Type::isEquivalent, "rhs"_a)
+        .def("isAssignmentCompatible", &Type::isAssignmentCompatible, "rhs"_a)
+        .def("isCastCompatible", &Type::isCastCompatible, "rhs"_a)
+        .def("isBitstreamCastable", &Type::isBitstreamCastable, "rhs"_a)
+        .def("isDerivedFrom", &Type::isDerivedFrom, "rhs"_a)
+        .def("implements", &Type::implements, "rhs"_a)
+        .def("isValidForRand", &Type::isValidForRand, "rhs"_a)
+        .def("coerceValue", &Type::coerceValue, "rhs"_a)
+        .def_static("getCommonBase", &Type::getCommonBase, "left"_a, "right"_a)
         .def_property_readonly("integralFlags", &Type::getIntegralFlags)
         .def_property_readonly("defaultValue", &Type::getDefaultValue)
         .def_property_readonly("fixedRange", &Type::getFixedRange)
@@ -95,7 +95,8 @@ void registerTypes(py::module_& m) {
         .def_property_readonly("resolutionFunction", &NetType::getResolutionFunction)
         .def_property_readonly("isError", &NetType::isError)
         .def_property_readonly("isBuiltIn", &NetType::isBuiltIn)
-        .def_static("getSimulatedNetType", &NetType::getSimulatedNetType);
+        .def_static("getSimulatedNetType", &NetType::getSimulatedNetType, "internal"_a,
+                    "external"_a, "shouldWarn"_a);
 
     py::enum_<NetType::NetKind>(netType, "NetKind")
         .value("Unknown", NetType::Unknown)
@@ -131,7 +132,7 @@ void registerTypes(py::module_& m) {
     py::class_<TypePrinter>(m, "TypePrinter")
         .def(py::init<>())
         .def_readwrite("options", &TypePrinter::options)
-        .def("append", &TypePrinter::append)
+        .def("append", &TypePrinter::append, "type"_a)
         .def("clear", &TypePrinter::clear)
         .def("toString", &TypePrinter::toString);
 

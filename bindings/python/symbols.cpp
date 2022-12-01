@@ -37,11 +37,11 @@ void registerSymbols(py::module_& m) {
 
     py::class_<LookupLocation>(m, "LookupLocation")
         .def(py::init<>())
-        .def(py::init<const Scope*, uint32_t>())
+        .def(py::init<const Scope*, uint32_t>(), "scope"_a, "index"_a)
         .def_property_readonly("scope", &LookupLocation::getScope)
         .def_property_readonly("index", &LookupLocation::getIndex)
-        .def_static("before", &LookupLocation::before)
-        .def_static("after", &LookupLocation::after)
+        .def_static("before", &LookupLocation::before, "symbol"_a)
+        .def_static("after", &LookupLocation::after, "symbol"_a)
         .def_readonly_static("max", &LookupLocation::max)
         .def_readonly_static("min", &LookupLocation::min)
         .def(py::self == py::self)
@@ -60,9 +60,9 @@ void registerSymbols(py::module_& m) {
         .def_property_readonly("diagnostics", &LookupResult::getDiagnostics)
         .def_property_readonly("hasError", &LookupResult::hasError)
         .def("clear", &LookupResult::clear)
-        .def("copyFrom", &LookupResult::copyFrom)
-        .def("reportDiags", &LookupResult::reportDiags)
-        .def("errorIfSelectors", &LookupResult::errorIfSelectors);
+        .def("copyFrom", &LookupResult::copyFrom, "other"_a)
+        .def("reportDiags", &LookupResult::reportDiags, "context"_a)
+        .def("errorIfSelectors", &LookupResult::errorIfSelectors, "context"_a);
 
     py::class_<LookupResult::MemberSelector>(lookupResult, "MemberSelector")
         .def_readonly("name", &LookupResult::MemberSelector::name)
@@ -70,19 +70,27 @@ void registerSymbols(py::module_& m) {
         .def_readonly("nameRange", &LookupResult::MemberSelector::nameRange);
 
     py::class_<Lookup>(m, "Lookup")
-        .def_static("name", &Lookup::name)
-        .def_static("unqualified", &Lookup::unqualified, byrefint)
-        .def_static("unqualifiedAt", &Lookup::unqualifiedAt, byrefint)
-        .def_static("findClass", &Lookup::findClass, byrefint)
-        .def_static("getContainingClass", &Lookup::getContainingClass, byrefint)
-        .def_static("getVisibility", &Lookup::getVisibility)
-        .def_static("isVisibleFrom", &Lookup::isVisibleFrom)
-        .def_static("isAccessibleFrom", &Lookup::isAccessibleFrom)
-        .def_static("ensureVisible", &Lookup::ensureVisible)
-        .def_static("ensureAccessible", &Lookup::ensureAccessible)
-        .def_static("findTempVar", &Lookup::findTempVar)
-        .def_static("withinClassRandomize", &Lookup::withinClassRandomize)
-        .def_static("findAssertionLocalVar", &Lookup::findAssertionLocalVar);
+        .def_static("name", &Lookup::name, "syntax"_a, "context"_a, "flags"_a, "result"_a)
+        .def_static("unqualified", &Lookup::unqualified, byrefint, "scope"_a, "name"_a,
+                    "flags"_a = LookupFlags::None)
+        .def_static("unqualifiedAt", &Lookup::unqualifiedAt, byrefint, "scope"_a, "name"_a,
+                    "location"_a, "sourceRange"_a, "flags"_a = LookupFlags::None)
+        .def_static("findClass", &Lookup::findClass, byrefint, "name"_a, "context"_a,
+                    "requireInterfaceClass"_a = std::optional<DiagCode>{})
+        .def_static("getContainingClass", &Lookup::getContainingClass, byrefint, "scope"_a)
+        .def_static("getVisibility", &Lookup::getVisibility, "symbol"_a)
+        .def_static("isVisibleFrom", &Lookup::isVisibleFrom, "symbol"_a, "scope"_a)
+        .def_static("isAccessibleFrom", &Lookup::isAccessibleFrom, "target"_a, "sourceScope"_a)
+        .def_static("ensureVisible", &Lookup::ensureVisible, "symbol"_a, "context"_a,
+                    "sourceRange"_a)
+        .def_static("ensureAccessible", &Lookup::ensureAccessible, "symbol"_a, "context"_a,
+                    "sourceRange"_a)
+        .def_static("findTempVar", &Lookup::findTempVar, "scope"_a, "symbol"_a, "name"_a,
+                    "result"_a)
+        .def_static("withinClassRandomize", &Lookup::withinClassRandomize, "context"_a, "syntax"_a,
+                    "flags"_a, "result"_a)
+        .def_static("findAssertionLocalVar", &Lookup::findAssertionLocalVar, "context"_a, "name"_a,
+                    "result"_a);
 
     py::class_<Symbol>(m, "Symbol")
         .def_readonly("kind", &Symbol::kind)
@@ -109,9 +117,9 @@ void registerSymbols(py::module_& m) {
                                    return str;
                                })
         .def("isDeclaredBefore",
-             py::overload_cast<const Symbol&>(&Symbol::isDeclaredBefore, py::const_))
+             py::overload_cast<const Symbol&>(&Symbol::isDeclaredBefore, py::const_), "target"_a)
         .def("isDeclaredBefore",
-             py::overload_cast<LookupLocation>(&Symbol::isDeclaredBefore, py::const_))
+             py::overload_cast<LookupLocation>(&Symbol::isDeclaredBefore, py::const_), "location"_a)
         .def("__repr__", [](const Symbol& self) {
             return fmt::format("Symbol(SymbolKind.{}, \"{}\")", toString(self.kind), self.name);
         });
@@ -161,7 +169,7 @@ void registerSymbols(py::module_& m) {
         .def_readonly("defaultLifetime", &PackageSymbol::defaultLifetime)
         .def_readonly("exportDecls", &PackageSymbol::exportDecls)
         .def_readonly("hasExportAll", &PackageSymbol::hasExportAll)
-        .def("findForImport", &PackageSymbol::findForImport, byrefint);
+        .def("findForImport", &PackageSymbol::findForImport, byrefint, "name"_a);
 
     py::class_<RootSymbol, Symbol, Scope>(m, "RootSymbol")
         .def_readonly("topInstances", &RootSymbol::topInstances)
@@ -374,15 +382,15 @@ void registerSymbols(py::module_& m) {
         .def_property_readonly("body", [](const InstanceSymbol& self) { return &self.body; })
         .def("getPortConnection",
              py::overload_cast<const PortSymbol&>(&InstanceSymbol::getPortConnection, py::const_),
-             byrefint)
+             byrefint, "port"_a)
         .def("getPortConnection",
              py::overload_cast<const MultiPortSymbol&>(&InstanceSymbol::getPortConnection,
                                                        py::const_),
-             byrefint)
+             byrefint, "port"_a)
         .def("getPortConnection",
              py::overload_cast<const InterfacePortSymbol&>(&InstanceSymbol::getPortConnection,
                                                            py::const_),
-             byrefint);
+             byrefint, "port"_a);
 
     py::class_<InstanceBodySymbol, Symbol, Scope>(m, "InstanceBodySymbol")
         .def_readonly("parentInstance", &InstanceBodySymbol::parentInstance)
@@ -390,8 +398,8 @@ void registerSymbols(py::module_& m) {
         .def_readonly("isUninstantiated", &InstanceBodySymbol::isUninstantiated)
         .def_property_readonly("portList", &InstanceBodySymbol::getPortList)
         .def_property_readonly("definition", &InstanceBodySymbol::getDefinition)
-        .def("findPort", &InstanceBodySymbol::findPort, byrefint)
-        .def("hasSameType", &InstanceBodySymbol::hasSameType);
+        .def("findPort", &InstanceBodySymbol::findPort, byrefint, "portName"_a)
+        .def("hasSameType", &InstanceBodySymbol::hasSameType, "other"_a);
 
     py::class_<InstanceArraySymbol, Symbol, Scope>(m, "InstanceArraySymbol")
         .def_readonly("elements", &InstanceArraySymbol::elements)
