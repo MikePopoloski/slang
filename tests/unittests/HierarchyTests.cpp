@@ -1873,3 +1873,29 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Uninstantiated virtual interface param regress GH #679") {
+    auto tree = SyntaxTree::fromText(R"(
+interface I;
+endinterface
+
+package P;
+    class C #(type T = int);
+        static function void add(string name, T t);
+        endfunction
+    endclass
+endpackage
+
+module M #(parameter int foo);
+    I i();
+
+    function void connect_if();
+        P::C #(virtual I)::add ("intf", i);
+    endfunction
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}

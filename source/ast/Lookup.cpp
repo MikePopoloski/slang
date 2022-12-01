@@ -1981,6 +1981,7 @@ void Lookup::reportUndeclared(const Scope& initialScope, string_view name, Sourc
                     case SymbolKind::InstanceArray:
                     case SymbolKind::Sequence:
                     case SymbolKind::Property:
+                    case SymbolKind::UnknownModule:
                         break;
                     case SymbolKind::Instance:
                         if (!s->as<InstanceSymbol>().isInterface())

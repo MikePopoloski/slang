@@ -1245,8 +1245,9 @@ private:
 
         if (child->kind != SymbolKind::Instance || !child->as<InstanceSymbol>().isInterface()) {
             // If this is a variable with an errored type, an error is already emitted.
-            if (child->kind != SymbolKind::Variable ||
-                !child->as<VariableSymbol>().getType().isError()) {
+            if (child->kind != SymbolKind::UnknownModule &&
+                (child->kind != SymbolKind::Variable ||
+                 !child->as<VariableSymbol>().getType().isError())) {
                 auto& diag = scope.addDiag(diag::NotAnInterface, range) << symbol->name;
                 diag.addNote(diag::NoteDeclarationHere, symbol->location);
             }
