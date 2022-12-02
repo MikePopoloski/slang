@@ -238,6 +238,52 @@ endmodule
     NO_COMPILATION_ERRORS;
 }
 
+TEST_CASE("'unassigned' warnings with clockvar outputs") {
+    auto tree = SyntaxTree::fromText(R"(
+interface I;
+    logic clk;
+    logic a;
+
+    clocking cb_driver @(posedge clk);
+        output a;
+    endclocking
+endinterface
+
+class C;
+    virtual I i;
+    task drive();
+        @(i.cb_driver);
+        i.cb_driver.a <= 1'b0;
+    endtask
+
+    logic q = i.a;
+endclass
+
+module top;
+   I i();
+   C c;
+   initial begin
+       i.clk = 0;
+       forever begin
+           #1ns i.clk = ~i.clk;
+       end
+   end
+   initial begin
+       c = new();
+       c.i = i;
+       c.drive();
+   end
+endmodule
+)");
+
+    CompilationOptions coptions;
+    coptions.suppressUnused = false;
+
+    Compilation compilation(coptions);
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
 TEST_CASE("Unused function args") {
     auto tree = SyntaxTree::fromText(R"(
 function foo(input x, output y);

@@ -460,6 +460,9 @@ void ClockVarSymbol::fromSyntax(const Scope& scope, const ClockingItemSyntax& sy
         }
     }
 
+    if (dir == ArgumentDirection::Out || dir == ArgumentDirection::InOut)
+        context = context.resetFlags(ASTFlags::LValue);
+
     for (auto decl : syntax.decls) {
         auto name = decl->name;
         auto arg = comp.emplace<ClockVarSymbol>(name.valueText(), name.location(), dir, inputSkew,
@@ -472,11 +475,7 @@ void ClockVarSymbol::fromSyntax(const Scope& scope, const ClockingItemSyntax& sy
         // Otherwise we need to lookup the signal in our parent scope and
         // take the type from that.
         if (decl->value) {
-            bitmask<ASTFlags> astFlags = ASTFlags::NonProcedural;
-            if (dir == ArgumentDirection::Out || dir == ArgumentDirection::InOut)
-                astFlags |= ASTFlags::LValue;
-
-            auto& expr = Expression::bind(*decl->value->expr, context, astFlags);
+            auto& expr = Expression::bind(*decl->value->expr, context);
             arg->setType(*expr.type);
             arg->setInitializer(expr);
 
@@ -500,9 +499,8 @@ void ClockVarSymbol::fromSyntax(const Scope& scope, const ClockingItemSyntax& sy
                 auto& valExpr = ValueExpressionBase::fromSymbol(
                     context, *sym, false, {arg->location, arg->location + arg->name.length()});
 
-                if (dir != ArgumentDirection::In) {
+                if (dir != ArgumentDirection::In)
                     context.addDriver(sym->as<ValueSymbol>(), valExpr, AssignFlags::ClockVar);
-                }
             }
             else {
                 arg->getDeclaredType()->setType(comp.getErrorType());
