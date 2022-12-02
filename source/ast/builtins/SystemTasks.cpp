@@ -220,13 +220,17 @@ public:
 
     bool allowEmptyArgument(size_t index) const final { return index != 0; }
 
+    const Expression& bindArgument(size_t argIndex, const ASTContext& context,
+                                   const ExpressionSyntax& syntax, const Args&) const final {
+        if (argIndex == 0)
+            return Expression::bindLValue(syntax, context);
+        return Expression::bind(syntax, context);
+    }
+
     const Type& checkArguments(const ASTContext& context, const Args& args, SourceRange range,
                                const Expression*) const final {
         auto& comp = context.getCompilation();
         if (!checkArgCount(context, false, args, range, 1, INT32_MAX))
-            return comp.getErrorType();
-
-        if (!args[0]->requireLValue(context))
             return comp.getErrorType();
 
         const Type& ft = *args[0]->type;
@@ -248,13 +252,17 @@ public:
         hasOutputArgs = true;
     }
 
+    const Expression& bindArgument(size_t argIndex, const ASTContext& context,
+                                   const ExpressionSyntax& syntax, const Args&) const final {
+        if (argIndex == 0)
+            return Expression::bindLValue(syntax, context);
+        return Expression::bind(syntax, context);
+    }
+
     const Type& checkArguments(const ASTContext& context, const Args& args, SourceRange range,
                                const Expression*) const final {
         auto& comp = context.getCompilation();
         if (!checkArgCount(context, false, args, range, 2, INT32_MAX))
-            return comp.getErrorType();
-
-        if (!args[0]->requireLValue(context))
             return comp.getErrorType();
 
         for (size_t i = 0; i < 2; i++) {
@@ -279,13 +287,17 @@ public:
         hasOutputArgs = isInput;
     }
 
+    const Expression& bindArgument(size_t argIndex, const ASTContext& context,
+                                   const ExpressionSyntax& syntax, const Args&) const final {
+        if (isInput && argIndex == 1)
+            return Expression::bindLValue(syntax, context);
+        return Expression::bind(syntax, context);
+    }
+
     const Type& checkArguments(const ASTContext& context, const Args& args, SourceRange range,
                                const Expression*) const final {
         auto& comp = context.getCompilation();
         if (!checkArgCount(context, false, args, range, 2, 4))
-            return comp.getErrorType();
-
-        if (isInput && !args[1]->requireLValue(context))
             return comp.getErrorType();
 
         if (!args[0]->type->canBeStringLike())
@@ -474,6 +486,13 @@ class CastTask : public SystemTaskBase {
 public:
     explicit CastTask(const std::string& name) : SystemTaskBase(name) { hasOutputArgs = true; }
 
+    const Expression& bindArgument(size_t argIndex, const ASTContext& context,
+                                   const ExpressionSyntax& syntax, const Args&) const final {
+        if (argIndex == 0)
+            return Expression::bindLValue(syntax, context);
+        return Expression::bind(syntax, context);
+    }
+
     const Type& checkArguments(const ASTContext& context, const Args& args, SourceRange range,
                                const Expression*) const final {
         auto& comp = context.getCompilation();
@@ -489,9 +508,6 @@ public:
             context.addDiag(diag::CastArgSingular, args[1]->sourceRange) << *args[1]->type;
             return comp.getErrorType();
         }
-
-        if (!args[0]->requireLValue(context))
-            return comp.getErrorType();
 
         return comp.getIntType();
     }
@@ -553,6 +569,14 @@ public:
         hasOutputArgs = outputArgs > 0;
     }
 
+    const Expression& bindArgument(size_t argIndex, const ASTContext& context,
+                                   const ExpressionSyntax& syntax, const Args&) const final {
+        size_t totalArgs = inputArgs + outputArgs;
+        if (argIndex >= inputArgs && argIndex < totalArgs)
+            return Expression::bindLValue(syntax, context);
+        return Expression::bind(syntax, context);
+    }
+
     const Type& checkArguments(const ASTContext& context, const Args& args, SourceRange range,
                                const Expression*) const final {
         auto& comp = context.getCompilation();
@@ -560,17 +584,9 @@ public:
         if (!checkArgCount(context, false, args, range, totalArgs, totalArgs))
             return comp.getErrorType();
 
-        for (size_t i = 0; i < inputArgs; i++) {
+        for (size_t i = 0; i < totalArgs; i++) {
             if (!args[i]->type->isIntegral())
                 return badArg(context, *args[i]);
-        }
-
-        for (size_t i = inputArgs; i < totalArgs; i++) {
-            if (!args[i]->type->isIntegral())
-                return badArg(context, *args[i]);
-
-            if (!args[i]->requireLValue(context))
-                return comp.getErrorType();
         }
 
         return kind == SubroutineKind::Function ? comp.getIntType() : comp.getVoidType();

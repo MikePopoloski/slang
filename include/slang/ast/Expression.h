@@ -156,6 +156,10 @@ public:
                                         SourceLocation location, const ASTContext& context,
                                         bool isInout);
 
+    /// Binds an lvalue that is not a typical assignment-like context. For example, the
+    /// output argument of certain system tasks that accept almost any type.
+    static const Expression& bindLValue(const ExpressionSyntax& syntax, const ASTContext& context);
+
     /// Binds the right hand side of an assignment-like expression from the given syntax nodes.
     static const Expression& bindRValue(const Type& lhs, const ExpressionSyntax& rhs,
                                         SourceLocation location, const ASTContext& context,

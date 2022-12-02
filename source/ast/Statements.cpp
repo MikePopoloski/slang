@@ -2720,17 +2720,13 @@ void ProceduralAssignStatement::serializeTo(ASTSerializer& serializer) const {
 Statement& ProceduralDeassignStatement::fromSyntax(Compilation& compilation,
                                                    const ProceduralDeassignStatementSyntax& syntax,
                                                    const ASTContext& context) {
-    auto ctx = context.resetFlags(ASTFlags::NonProcedural | ASTFlags::ProceduralForceRelease |
-                                  ASTFlags::LValue);
-    auto& lvalue = Expression::bind(*syntax.variable, ctx);
+    auto ctx = context.resetFlags(ASTFlags::NonProcedural | ASTFlags::ProceduralForceRelease);
+    auto& lvalue = Expression::bindLValue(*syntax.variable, ctx);
 
     bool isRelease = syntax.keyword.kind == TokenKind::ReleaseKeyword;
     auto result = compilation.emplace<ProceduralDeassignStatement>(lvalue, isRelease,
                                                                    syntax.sourceRange());
     if (lvalue.bad())
-        return badStmt(compilation, result);
-
-    if (!lvalue.requireLValue(ctx))
         return badStmt(compilation, result);
 
     if (isRelease) {

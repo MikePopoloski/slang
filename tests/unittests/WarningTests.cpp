@@ -263,6 +263,10 @@ class C;
 endclass
 
 module m;
+    int i;
+    initial begin
+        $cast(i, i);
+    end
 endmodule
 )");
 

@@ -227,6 +227,14 @@ const Expression& Expression::bindLValue(const ExpressionSyntax& lhs, const Type
                                                 context.resetFlags(ASTFlags::OutputArg));
 }
 
+const Expression& Expression::bindLValue(const ExpressionSyntax& syntax,
+                                         const ASTContext& context) {
+    auto& expr = bind(syntax, context, ASTFlags::LValue);
+    if (!expr.requireLValue(context))
+        return badExpr(context.getCompilation(), &expr);
+    return expr;
+}
+
 const Expression& Expression::bindRValue(const Type& lhs, const ExpressionSyntax& rhs,
                                          SourceLocation location, const ASTContext& context,
                                          bitmask<ASTFlags> extraFlags) {

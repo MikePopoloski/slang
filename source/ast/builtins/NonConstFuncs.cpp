@@ -19,6 +19,13 @@ class FErrorFunc : public SystemSubroutine {
 public:
     FErrorFunc() : SystemSubroutine("$ferror", SubroutineKind::Function) { hasOutputArgs = true; }
 
+    const Expression& bindArgument(size_t argIndex, const ASTContext& context,
+                                   const ExpressionSyntax& syntax, const Args&) const final {
+        if (argIndex == 1)
+            return Expression::bindLValue(syntax, context);
+        return Expression::bind(syntax, context);
+    }
+
     const Type& checkArguments(const ASTContext& context, const Args& args, SourceRange range,
                                const Expression*) const final {
         auto& comp = context.getCompilation();
@@ -27,9 +34,6 @@ public:
 
         if (!args[0]->type->isIntegral())
             return badArg(context, *args[0]);
-
-        if (!args[1]->requireLValue(context))
-            return comp.getErrorType();
 
         const Type& ft = *args[1]->type;
         if (!ft.canBeStringLike()) {
@@ -51,13 +55,17 @@ class FGetsFunc : public SystemSubroutine {
 public:
     FGetsFunc() : SystemSubroutine("$fgets", SubroutineKind::Function) { hasOutputArgs = true; }
 
+    const Expression& bindArgument(size_t argIndex, const ASTContext& context,
+                                   const ExpressionSyntax& syntax, const Args&) const final {
+        if (argIndex == 0)
+            return Expression::bindLValue(syntax, context);
+        return Expression::bind(syntax, context);
+    }
+
     const Type& checkArguments(const ASTContext& context, const Args& args, SourceRange range,
                                const Expression*) const final {
         auto& comp = context.getCompilation();
         if (!checkArgCount(context, false, args, range, 2, 2))
-            return comp.getErrorType();
-
-        if (!args[0]->requireLValue(context))
             return comp.getErrorType();
 
         const Type& ft = *args[0]->type;
@@ -133,13 +141,17 @@ public:
 
     bool allowEmptyArgument(size_t argIndex) const final { return argIndex == 2; }
 
+    const Expression& bindArgument(size_t argIndex, const ASTContext& context,
+                                   const ExpressionSyntax& syntax, const Args&) const final {
+        if (argIndex == 0)
+            return Expression::bindLValue(syntax, context);
+        return Expression::bind(syntax, context);
+    }
+
     const Type& checkArguments(const ASTContext& context, const Args& args, SourceRange range,
                                const Expression*) const final {
         auto& comp = context.getCompilation();
         if (!checkArgCount(context, false, args, range, 2, 4))
-            return comp.getErrorType();
-
-        if (!args[0]->requireLValue(context))
             return comp.getErrorType();
 
         // First argument is integral or an unpacked array.
@@ -208,6 +220,13 @@ public:
         hasOutputArgs = true;
     }
 
+    const Expression& bindArgument(size_t argIndex, const ASTContext& context,
+                                   const ExpressionSyntax& syntax, const Args&) const final {
+        if (argIndex == 0)
+            return Expression::bindLValue(syntax, context);
+        return Expression::bind(syntax, context);
+    }
+
     const Type& checkArguments(const ASTContext& context, const Args& args, SourceRange range,
                                const Expression*) const final {
         auto& comp = context.getCompilation();
@@ -218,9 +237,6 @@ public:
             if (!args[i]->type->isIntegral())
                 return badArg(context, *args[i]);
         }
-
-        if (!args[0]->requireLValue(context))
-            return comp.getErrorType();
 
         return comp.getIntType();
     }

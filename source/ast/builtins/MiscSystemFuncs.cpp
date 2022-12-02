@@ -71,6 +71,13 @@ public:
         hasOutputArgs = true;
     }
 
+    const Expression& bindArgument(size_t argIndex, const ASTContext& context,
+                                   const ExpressionSyntax& syntax, const Args&) const final {
+        if (argIndex == 1)
+            return Expression::bindLValue(syntax, context);
+        return Expression::bind(syntax, context);
+    }
+
     const Type& checkArguments(const ASTContext& context, const Args& args, SourceRange range,
                                const Expression*) const final {
         auto& comp = context.getCompilation();
@@ -82,9 +89,6 @@ public:
             context.addDiag(diag::InvalidStringArg, args[0]->sourceRange) << ft;
             return comp.getErrorType();
         }
-
-        if (!args[1]->requireLValue(context))
-            return comp.getErrorType();
 
         // TODO: if the first argument is known at compile time, do more specific
         // checking of the second argument.
@@ -167,7 +171,7 @@ public:
 
     const Expression& bindArgument(size_t, const ASTContext& context,
                                    const ExpressionSyntax& syntax, const Args&) const final {
-        return Expression::bind(syntax, context, ASTFlags::LValue);
+        return Expression::bindLValue(syntax, context);
     }
 
     const Type& checkArguments(const ASTContext& context, const Args& args, SourceRange range,
@@ -189,8 +193,6 @@ public:
                 context.addDiag(diag::InvalidRandType, arg->sourceRange)
                     << dt->getType() << "rand"sv;
             }
-
-            arg->requireLValue(context);
         }
 
         return comp.getIntType();
