@@ -128,7 +128,8 @@ void registerNumeric(py::module_& m) {
         .def("shrinkToFit", &SVInt::shrinkToFit)
         .def("toString",
              py::overload_cast<LiteralBase, bool, bitwidth_t>(&SVInt::toString, py::const_),
-             "base"_a, "includeBase"_a, "abbreviateThresholdBits"_a = SVInt::MAX_BITS)
+             "base"_a, "includeBase"_a,
+             "abbreviateThresholdBits"_a = static_cast<bitwidth_t>(SVInt::MAX_BITS))
         .def("shl", py::overload_cast<const SVInt&>(&SVInt::shl, py::const_), "rhs"_a)
         .def("ashr", py::overload_cast<const SVInt&>(&SVInt::ashr, py::const_), "rhs"_a)
         .def("lshr", py::overload_cast<const SVInt&>(&SVInt::lshr, py::const_), "rhs"_a)
