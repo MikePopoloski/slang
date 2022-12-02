@@ -2590,7 +2590,7 @@ void WaitOrderStatement::serializeTo(ASTSerializer& serializer) const {
 Statement& EventTriggerStatement::fromSyntax(Compilation& compilation,
                                              const EventTriggerStatementSyntax& syntax,
                                              const ASTContext& context, StatementContext& stmtCtx) {
-    auto& target = Expression::bind(*syntax.name, context);
+    auto& target = Expression::bindLValue(*syntax.name, context);
     if (target.bad())
         return badStmt(compilation, nullptr);
 

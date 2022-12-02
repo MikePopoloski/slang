@@ -112,6 +112,14 @@ module m(output v);
 
     int y = z;
     initial $dumpvars(m.y);
+
+    event e[4];
+    initial begin
+       for (int i = 0; i < 4; i++) begin
+           ->e[i];
+       end
+       @ e[0] begin end
+    end
 endmodule
 
 module n #(parameter int i)(input x, output y, output z);
