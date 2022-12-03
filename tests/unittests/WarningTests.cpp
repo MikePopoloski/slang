@@ -142,6 +142,17 @@ module q(
        lhs[lhs_lsb +: 2] = rhs[rhs_lsb +: 2];
    end
 endmodule
+
+class C;
+    extern function int foo(int a);
+    virtual function bar(int b); endfunction
+endclass
+
+function int C::foo(int a);
+    return a;
+endfunction
+
+import "DPI-C" function void dpi_func(int i);
 )");
 
     CompilationOptions coptions;

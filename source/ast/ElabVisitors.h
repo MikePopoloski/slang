@@ -565,6 +565,21 @@ struct PostElabVisitor : public ASTVisitor<PostElabVisitor, false, false> {
         }
     }
 
+    void handle(const MethodPrototypeSymbol&) {
+        // Ignore method prototype arguments, they're not unused.
+    }
+
+    void handle(const SubroutineSymbol& symbol) {
+        if (symbol.flags.has(MethodFlags::Virtual | MethodFlags::Pure |
+                             MethodFlags::InterfaceExtern | MethodFlags::DPIImport |
+                             MethodFlags::Randomize) ||
+            symbol.isVirtual()) {
+            return;
+        }
+
+        visitDefault(symbol);
+    }
+
     void handle(const VariableSymbol& symbol) {
         if (symbol.flags.has(VariableFlags::CompilerGenerated))
             return;
