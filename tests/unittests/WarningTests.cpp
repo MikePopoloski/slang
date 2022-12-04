@@ -120,6 +120,14 @@ module m(output v);
        end
        @ e[0] begin end
     end
+
+    initial begin
+        int b[$];
+        static int q = 1;
+        string s1;
+        s1.itoa(q);
+        b.push_back(1);
+    end
 endmodule
 
 module n #(parameter int i)(input x, output y, output z);
@@ -145,7 +153,10 @@ endmodule
 
 class C;
     extern function int foo(int a);
-    virtual function bar(int b); endfunction
+    virtual function bar(int b);
+        int c[$];
+        c.push_back(1);
+    endfunction
 endclass
 
 function int C::foo(int a);

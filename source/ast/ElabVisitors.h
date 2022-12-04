@@ -570,10 +570,8 @@ struct PostElabVisitor : public ASTVisitor<PostElabVisitor, false, false> {
     }
 
     void handle(const SubroutineSymbol& symbol) {
-        if (symbol.flags.has(MethodFlags::Virtual | MethodFlags::Pure |
-                             MethodFlags::InterfaceExtern | MethodFlags::DPIImport |
-                             MethodFlags::Randomize) ||
-            symbol.isVirtual()) {
+        if (symbol.flags.has(MethodFlags::Pure | MethodFlags::InterfaceExtern |
+                             MethodFlags::DPIImport | MethodFlags::Randomize)) {
             return;
         }
 
@@ -589,7 +587,14 @@ struct PostElabVisitor : public ASTVisitor<PostElabVisitor, false, false> {
                         diag::UnusedButSetVariable);
         }
         else if (symbol.kind == SymbolKind::FormalArgument) {
-            checkUnused(symbol, diag::UnusedArgument, std::nullopt, std::nullopt);
+            auto parent = symbol.getParentScope();
+            ASSERT(parent);
+
+            if (parent->asSymbol().kind == SymbolKind::Subroutine) {
+                auto& sub = parent->asSymbol().as<SubroutineSymbol>();
+                if (!sub.isVirtual())
+                    checkUnused(symbol, diag::UnusedArgument, std::nullopt, std::nullopt);
+            }
         }
     }
 

@@ -52,6 +52,8 @@ protected:
                        SourceRange callRange, size_t min, size_t max) const;
 
     static ASTContext unevaluatedContext(const ASTContext& sourceContext);
+
+    static bool registerLValue(const Expression& expr, const ASTContext& context);
 };
 
 /// An implementation of the SystemSubroutine interface that has

@@ -67,6 +67,20 @@ ASTContext SystemSubroutine::unevaluatedContext(const ASTContext& sourceContext)
     return result;
 }
 
+// Wrapper around Expression::requireLValue that also registers the
+// target symbol as being assigned.
+bool SystemSubroutine::registerLValue(const Expression& expr, const ASTContext& context) {
+    if (!expr.requireLValue(context))
+        return false;
+
+    if (auto sym = expr.getSymbolReference()) {
+        if (auto syntax = sym->getSyntax())
+            context.getCompilation().noteReference(*syntax, /* isLValue */ true);
+    }
+
+    return true;
+}
+
 const Type& SystemSubroutine::badArg(const ASTContext& context, const Expression& arg) const {
     context.addDiag(diag::BadSystemSubroutineArg, arg.sourceRange) << *arg.type << kindStr();
     return context.getCompilation().getErrorType();
@@ -106,7 +120,7 @@ const Type& SimpleSystemSubroutine::checkArguments(const ASTContext& context, co
     if (!checkArgCount(context, isMethod, args, range, requiredArgs, argTypes.size()))
         return comp.getErrorType();
 
-    if (isFirstArgLValue && !args.empty() && !args[0]->requireLValue(context))
+    if (isFirstArgLValue && !args.empty() && !registerLValue(*args[0], context))
         return comp.getErrorType();
 
     return *returnType;
