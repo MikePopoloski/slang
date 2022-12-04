@@ -53,7 +53,10 @@ enum class ExpressionOptions {
     BinsSelectContext = 1 << 6,
 
     /// "dist" expressions are allowed in this context.
-    AllowDist = 1 << 7
+    AllowDist = 1 << 7,
+
+    /// Translate to implicit call expression
+    AllowImplicitCall = 1 << 8
 };
 BITMASK(ExpressionOptions, AllowDist)
 

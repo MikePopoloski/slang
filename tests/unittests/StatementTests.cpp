@@ -1909,3 +1909,17 @@ endmodule
     CHECK(diags[7].code == diag::UnknownMember);
     CHECK(diags[8].code == diag::PatternTaggedType);
 }
+
+TEST_CASE("Implicit call invoke") {
+    auto tree = SyntaxTree::fromText(R"(
+class m;
+    function integer func;
+        return func;
+    endfunction
+endclass
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}

@@ -153,7 +153,8 @@ StatementSyntax& Parser::parseStatement(bool allowEmpty, bool allowSuperNew) {
 
     // everything else should be some kind of expression
     if (isPossibleExpression(peek().kind)) {
-        bitmask<ExpressionOptions> options = ExpressionOptions::ProceduralAssignmentContext;
+        bitmask<ExpressionOptions> options = ExpressionOptions::ProceduralAssignmentContext |
+                                             ExpressionOptions::AllowImplicitCall;
         if (allowSuperNew)
             options |= ExpressionOptions::AllowSuperNewCall;
 

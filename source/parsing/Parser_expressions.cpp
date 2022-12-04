@@ -621,6 +621,13 @@ ExpressionSyntax& Parser::parsePostfixExpression(ExpressionSyntax& lhs,
                 expr = &parseArrayOrRandomizeMethod(*expr);
                 break;
 
+            case TokenKind::Semicolon:
+                // Special case, may translate the expression to implicit call
+                if (options.has(ExpressionOptions::AllowImplicitCall) &&
+                    expr->kind == SyntaxKind::IdentifierName)
+                    expr = &factory.invocationExpression(*expr, nullptr, nullptr /* &args*/);
+                return *expr;
+
                 // NOTE: If you add a case here, check whether it needs to be added to
                 // isBinaryOrPostfixExpression as well.
             default:
