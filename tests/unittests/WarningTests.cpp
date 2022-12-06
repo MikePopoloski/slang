@@ -394,3 +394,19 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Exclude 'unused' warnings based on attributes, underscore name") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    int _;
+    (* maybe_unused *) int foo;
+endmodule
+)");
+
+    CompilationOptions coptions;
+    coptions.suppressUnused = false;
+
+    Compilation compilation(coptions);
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}

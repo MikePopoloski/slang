@@ -609,8 +609,10 @@ private:
         auto [rvalue, lvalue] = compilation.isReferenced(*syntax);
 
         auto addDiag = [&](DiagCode code) {
-            if (!scope->isUninstantiated() && scope->asSymbol().kind != SymbolKind::Package)
+            if (!scope->isUninstantiated() && scope->asSymbol().kind != SymbolKind::Package &&
+                symbol.name != "_"sv && !hasUnusedAttrib(symbol)) {
                 scope->addDiag(code, symbol.location) << symbol.name;
+            }
         };
 
         auto portRef = symbol.getFirstPortBackref();
@@ -638,6 +640,14 @@ private:
             addDiag(*unreadCode);
         else if (!lvalue && !symbol.getDeclaredType()->getInitializerSyntax() && unsetCode)
             addDiag(*unsetCode);
+    }
+
+    bool hasUnusedAttrib(const Symbol& symbol) {
+        for (auto attr : compilation.getAttributes(symbol)) {
+            if (attr->name == "unused"sv || attr->name == "maybe_unused"sv)
+                return attr->getValue().isTrue();
+        }
+        return false;
     }
 
     Compilation& compilation;
