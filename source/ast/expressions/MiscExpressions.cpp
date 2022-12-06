@@ -129,6 +129,9 @@ Expression& ValueExpressionBase::fromSymbol(const ASTContext& context, const Sym
         }
 
         comp.noteReference(*syntax, isLValue);
+
+        if (isLValue && context.flags.has(ASTFlags::LAndRValue))
+            comp.noteReference(*syntax, /* isLValue */ false);
     }
 
     if (isHierarchical)

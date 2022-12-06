@@ -164,6 +164,18 @@ function int C::foo(int a);
 endfunction
 
 import "DPI-C" function void dpi_func(int i);
+
+class D;
+    int s1[$];
+    int s2[int];
+    function void f();
+        int i = 0;
+        foreach (s2[j]) begin
+            int k = j * 4;
+            s1[i++] = k;
+        end
+    endfunction
+endclass
 )");
 
     CompilationOptions coptions;

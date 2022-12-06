@@ -304,7 +304,7 @@ Expression& UnaryExpression::fromSyntax(Compilation& compilation,
     auto op = getUnaryOperator(syntax.kind);
     bitmask<ASTFlags> extraFlags;
     if (isLValueOp(op))
-        extraFlags = ASTFlags::LValue;
+        extraFlags = ASTFlags::LValue | ASTFlags::LAndRValue;
 
     Expression& operand = create(compilation, *syntax.operand, context, extraFlags);
     const Type* type = operand.type;
@@ -386,7 +386,8 @@ Expression& UnaryExpression::fromSyntax(Compilation& compilation,
                                         const ASTContext& context) {
     // This method is only ever called for postincrement and postdecrement operators, so
     // the operand must be an lvalue.
-    Expression& operand = create(compilation, *syntax.operand, context, ASTFlags::LValue);
+    Expression& operand = create(compilation, *syntax.operand, context,
+                                 ASTFlags::LValue | ASTFlags::LAndRValue);
     const Type* type = operand.type;
 
     Expression* result = compilation.emplace<UnaryExpression>(getUnaryOperator(syntax.kind), *type,

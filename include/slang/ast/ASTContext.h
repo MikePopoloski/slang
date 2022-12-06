@@ -166,9 +166,14 @@ enum class SLANG_EXPORT ASTFlags : uint64_t {
     DPIArg = 1ull << 37,
 
     /// AST creation is for an assertion instance's default argument.
-    AssertionDefaultArg = 1ull << 38
+    AssertionDefaultArg = 1ull << 38,
+
+    /// AST creation is for an lvalue that also counts as an rvalue. Only valid
+    /// when combined with the LValue flag -- used for things like the pre & post
+    /// increment and decrement operators.
+    LAndRValue = 1ull << 39
 };
-BITMASK(ASTFlags, DPIArg)
+BITMASK(ASTFlags, LAndRValue)
 
 // clang-format off
 #define DK(x) \
