@@ -33,7 +33,7 @@ using namespace syntax;
 
 Expression& ValueExpressionBase::fromSymbol(const ASTContext& context, const Symbol& symbol,
                                             bool isHierarchical, SourceRange sourceRange,
-                                            bool constraintAllowed) {
+                                            bool constraintAllowed, bool isDottedAccess) {
     // Automatic variables have additional restrictions.
     Compilation& comp = context.getCompilation();
     if (VariableSymbol::isKind(symbol.kind) &&
@@ -120,8 +120,16 @@ Expression& ValueExpressionBase::fromSymbol(const ASTContext& context, const Sym
         return badExpr(comp, nullptr);
     }
 
-    if (auto syntax = symbol.getSyntax())
-        comp.noteReference(*syntax, context.flags.has(ASTFlags::LValue));
+    if (auto syntax = symbol.getSyntax()) {
+        bool isLValue = context.flags.has(ASTFlags::LValue);
+        if (isDottedAccess) {
+            auto& type = value.getType();
+            if (type.isClass() || type.isCovergroup())
+                isLValue = false;
+        }
+
+        comp.noteReference(*syntax, isLValue);
+    }
 
     if (isHierarchical)
         return *comp.emplace<HierarchicalValueExpression>(value, sourceRange);

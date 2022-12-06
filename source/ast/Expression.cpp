@@ -1048,15 +1048,21 @@ Expression& Expression::bindLookupResult(Compilation& compilation, LookupResult&
         case SymbolKind::ConstraintBlock: {
             // If there are selectors then this is ok -- either they will be valid because
             // they're accessing a built-in method or they will issue an error.
-            bool constraintAllowed = !result.selectors.empty();
+            const bool constraintAllowed = !result.selectors.empty();
             expr = &ValueExpressionBase::fromSymbol(context, *symbol, result.isHierarchical,
                                                     sourceRange, constraintAllowed);
             break;
         }
-        default:
+        default: {
+            const bool isDottedAccess =
+                context.flags.has(ASTFlags::LValue) && !result.selectors.empty() &&
+                std::get_if<LookupResult::MemberSelector>(&result.selectors[0]) != nullptr;
+
             expr = &ValueExpressionBase::fromSymbol(context, *symbol, result.isHierarchical,
-                                                    sourceRange);
+                                                    sourceRange, /* constraintAllowed */ false,
+                                                    isDottedAccess);
             break;
+        }
     }
 
     // Drill down into member accesses.

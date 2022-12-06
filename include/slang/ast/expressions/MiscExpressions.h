@@ -32,7 +32,7 @@ public:
 
     static Expression& fromSymbol(const ASTContext& context, const Symbol& symbol,
                                   bool isHierarchical, SourceRange sourceRange,
-                                  bool constraintAllowed = false);
+                                  bool constraintAllowed = false, bool isDottedAccess = false);
 
     static bool checkVariableAssignment(const ASTContext& context, const VariableSymbol& var,
                                         bitmask<AssignFlags> flags, SourceLocation assignLoc,

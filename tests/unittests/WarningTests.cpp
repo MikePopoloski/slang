@@ -353,3 +353,32 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Class handle access 'unused' warnings") {
+    auto tree = SyntaxTree::fromText(R"(
+class A;
+    int i;
+endclass
+
+class C;
+    task t1(A a);
+        a.i = 3;
+    endtask
+
+    task t2(A a);
+        A a1 = a;
+        a1.i = 3;
+    endtask
+endclass
+
+module m;
+endmodule
+)");
+
+    CompilationOptions coptions;
+    coptions.suppressUnused = false;
+
+    Compilation compilation(coptions);
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
