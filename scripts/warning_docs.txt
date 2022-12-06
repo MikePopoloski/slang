@@ -875,3 +875,10 @@ A task or function formal argument is not used in its body.
 function foo(int x);
 endfunction
 ```
+
+-Wunused-parameter
+A parameter's value is never used.
+```
+module m #(parameter p = 1);
+endmodule
+```

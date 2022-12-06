@@ -598,6 +598,10 @@ struct PostElabVisitor : public ASTVisitor<PostElabVisitor, false, false> {
         }
     }
 
+    void handle(const ParameterSymbol& symbol) {
+        checkUnused(symbol, diag::UnusedParameter, {}, diag::UnusedParameter);
+    }
+
 private:
     void checkUnused(const ValueSymbol& symbol, DiagCode unusedCode,
                      std::optional<DiagCode> unsetCode, std::optional<DiagCode> unreadCode) {
