@@ -130,7 +130,7 @@ module m(output v);
     end
 endmodule
 
-module n #(parameter int i)(input x, output y, output z);
+(* unused *) module n #(parameter int i)(input x, output y, output z);
     logic [i-1:0] a = 1;
     assign y = a[x];
 endmodule
@@ -183,10 +183,7 @@ endclass
 
     Compilation compilation(coptions);
     compilation.addSyntaxTree(tree);
-
-    auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 1);
-    CHECK(diags[0].code == diag::UnusedDefinition);
+    NO_COMPILATION_ERRORS;
 }
 
 TEST_CASE("Ref args are considered used") {

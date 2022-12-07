@@ -940,7 +940,16 @@ const Diagnostics& Compilation::getSemanticDiagnostics() {
             if (elabVisitor.usedIfacePorts.find(def) != elabVisitor.usedIfacePorts.end())
                 continue;
 
-            def->scope.addDiag(diag::UnusedDefinition, def->location) << def->getKindString();
+            auto hasUnusedAttrib = [&] {
+                for (auto attr : def->attributes) {
+                    if (attr->name == "unused"sv || attr->name == "maybe_unused"sv)
+                        return attr->getValue().isTrue();
+                }
+                return false;
+            };
+
+            if (!def->name.empty() && def->name != "_"sv && !hasUnusedAttrib())
+                def->scope.addDiag(diag::UnusedDefinition, def->location) << def->getKindString();
         }
 
         if (!elabVisitor.hierarchyProblem && numErrors == 0) {
