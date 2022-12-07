@@ -144,6 +144,7 @@ const ParameterSymbolBase& ParameterBuilder::createParam(const Definition::Param
     if (decl.isTypeParam) {
         auto param = comp.emplace<TypeParameterSymbol>(decl.name, decl.location, decl.isLocalParam,
                                                        decl.isPortParam);
+        param->setAttributes(scope, decl.attributes);
 
         auto& tt = param->targetType;
         if (newInitializer) {
@@ -205,6 +206,7 @@ const ParameterSymbolBase& ParameterBuilder::createParam(const Definition::Param
     else {
         auto param = comp.emplace<ParameterSymbol>(decl.name, decl.location, decl.isLocalParam,
                                                    decl.isPortParam);
+        param->setAttributes(scope, decl.attributes);
 
         auto& declType = *param->getDeclaredType();
         if (newInitializer)
@@ -260,16 +262,18 @@ const ParameterSymbolBase& ParameterBuilder::createParam(const Definition::Param
 }
 
 void ParameterBuilder::createDecls(const Scope& scope, const ParameterDeclarationBaseSyntax& syntax,
-                                   bool isLocal, bool isPort, SmallVectorBase<Decl>& results) {
+                                   bool isLocal, bool isPort,
+                                   span<const AttributeInstanceSyntax* const> attributes,
+                                   SmallVectorBase<Decl>& results) {
     if (syntax.kind == SyntaxKind::ParameterDeclaration) {
         auto& paramSyntax = syntax.as<ParameterDeclarationSyntax>();
         for (auto decl : paramSyntax.declarators)
-            results.emplace_back(scope, paramSyntax, *decl, isLocal, isPort);
+            results.emplace_back(scope, paramSyntax, *decl, isLocal, isPort, attributes);
     }
     else {
         auto& paramSyntax = syntax.as<TypeParameterDeclarationSyntax>();
         for (auto decl : paramSyntax.declarators)
-            results.emplace_back(scope, paramSyntax, *decl, isLocal, isPort);
+            results.emplace_back(scope, paramSyntax, *decl, isLocal, isPort, attributes);
     }
 }
 
@@ -284,7 +288,7 @@ void ParameterBuilder::createDecls(const Scope& scope, const ParameterPortListSy
             lastLocal = declaration->keyword.kind == parsing::TokenKind::LocalParamKeyword;
         }
 
-        createDecls(scope, *declaration, lastLocal, /* isPort */ true, results);
+        createDecls(scope, *declaration, lastLocal, /* isPort */ true, {}, results);
     }
 }
 

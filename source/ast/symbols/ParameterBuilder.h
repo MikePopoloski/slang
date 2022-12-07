@@ -43,7 +43,9 @@ public:
 
     static void createDecls(const Scope& scope,
                             const syntax::ParameterDeclarationBaseSyntax& syntax, bool isLocal,
-                            bool isPort, SmallVectorBase<Decl>& results);
+                            bool isPort,
+                            span<const syntax::AttributeInstanceSyntax* const> attributes,
+                            SmallVectorBase<Decl>& results);
     static void createDecls(const Scope& scope, const syntax::ParameterPortListSyntax& syntax,
                             SmallVectorBase<Decl>& results);
 

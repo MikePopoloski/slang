@@ -46,15 +46,18 @@ public:
 
         string_view name;
         SourceLocation location;
+        span<const syntax::AttributeInstanceSyntax* const> attributes;
         bool isTypeParam;
         bool isLocalParam;
         bool isPortParam;
         bool hasSyntax;
 
         ParameterDecl(const Scope& scope, const syntax::ParameterDeclarationSyntax& syntax,
-                      const syntax::DeclaratorSyntax& decl, bool isLocal, bool isPort);
+                      const syntax::DeclaratorSyntax& decl, bool isLocal, bool isPort,
+                      span<const syntax::AttributeInstanceSyntax* const> attributes);
         ParameterDecl(const Scope& scope, const syntax::TypeParameterDeclarationSyntax& syntax,
-                      const syntax::TypeAssignmentSyntax& decl, bool isLocal, bool isPort);
+                      const syntax::TypeAssignmentSyntax& decl, bool isLocal, bool isPort,
+                      span<const syntax::AttributeInstanceSyntax* const> attributes);
         ParameterDecl(string_view name, SourceLocation location, const Type& givenType,
                       bool isLocal, bool isPort, const Expression* givenInitializer);
         ParameterDecl(string_view name, SourceLocation location, bool isLocal, bool isPort,
