@@ -557,11 +557,11 @@ struct PostElabVisitor : public ASTVisitor<PostElabVisitor, false, false> {
 
     void handle(const NetSymbol& symbol) {
         if (symbol.isImplicit) {
-            checkUnused(symbol, diag::UnusedImplicitNet, diag::UnusedImplicitNet,
-                        diag::UnusedImplicitNet);
+            checkValueUnused(symbol, diag::UnusedImplicitNet, diag::UnusedImplicitNet,
+                             diag::UnusedImplicitNet);
         }
         else {
-            checkUnused(symbol, diag::UnusedNet, diag::UndrivenNet, diag::UnusedButSetNet);
+            checkValueUnused(symbol, diag::UnusedNet, diag::UndrivenNet, diag::UnusedButSetNet);
         }
     }
 
@@ -583,8 +583,8 @@ struct PostElabVisitor : public ASTVisitor<PostElabVisitor, false, false> {
             return;
 
         if (symbol.kind == SymbolKind::Variable) {
-            checkUnused(symbol, diag::UnusedVariable, diag::UnassignedVariable,
-                        diag::UnusedButSetVariable);
+            checkValueUnused(symbol, diag::UnusedVariable, diag::UnassignedVariable,
+                             diag::UnusedButSetVariable);
         }
         else if (symbol.kind == SymbolKind::FormalArgument) {
             auto parent = symbol.getParentScope();
@@ -593,31 +593,29 @@ struct PostElabVisitor : public ASTVisitor<PostElabVisitor, false, false> {
             if (parent->asSymbol().kind == SymbolKind::Subroutine) {
                 auto& sub = parent->asSymbol().as<SubroutineSymbol>();
                 if (!sub.isVirtual())
-                    checkUnused(symbol, diag::UnusedArgument, std::nullopt, std::nullopt);
+                    checkValueUnused(symbol, diag::UnusedArgument, std::nullopt, std::nullopt);
             }
         }
     }
 
     void handle(const ParameterSymbol& symbol) {
-        checkUnused(symbol, diag::UnusedParameter, {}, diag::UnusedParameter);
+        checkValueUnused(symbol, diag::UnusedParameter, {}, diag::UnusedParameter);
     }
 
+    void handle(const TypeParameterSymbol& symbol) {
+        checkUnused(symbol, diag::UnusedTypeParameter);
+    }
+
+    void handle(const TypeAliasType& symbol) { checkUnused(symbol, diag::UnusedTypedef); }
+
 private:
-    void checkUnused(const ValueSymbol& symbol, DiagCode unusedCode,
-                     std::optional<DiagCode> unsetCode, std::optional<DiagCode> unreadCode) {
+    void checkValueUnused(const ValueSymbol& symbol, DiagCode unusedCode,
+                          std::optional<DiagCode> unsetCode, std::optional<DiagCode> unreadCode) {
         auto syntax = symbol.getSyntax();
         if (!syntax || symbol.name.empty())
             return;
 
-        auto scope = symbol.getParentScope();
         auto [rvalue, lvalue] = compilation.isReferenced(*syntax);
-
-        auto addDiag = [&](DiagCode code) {
-            if (!scope->isUninstantiated() && scope->asSymbol().kind != SymbolKind::Package &&
-                symbol.name != "_"sv && !hasUnusedAttrib(symbol)) {
-                scope->addDiag(code, symbol.location) << symbol.name;
-            }
-        };
 
         auto portRef = symbol.getFirstPortBackref();
         if (portRef) {
@@ -630,20 +628,30 @@ private:
             // Otherwise check and warn about the port being unused.
             if (portRef->port->direction == ArgumentDirection::Out) {
                 if (!lvalue)
-                    addDiag(diag::UndrivenPort);
+                    addDiag(symbol, diag::UndrivenPort);
             }
             else if (!rvalue) {
-                addDiag(diag::UnusedPort);
+                addDiag(symbol, diag::UnusedPort);
             }
             return;
         }
 
         if (!rvalue && !lvalue)
-            addDiag(unusedCode);
+            addDiag(symbol, unusedCode);
         else if (!rvalue && unreadCode)
-            addDiag(*unreadCode);
+            addDiag(symbol, *unreadCode);
         else if (!lvalue && !symbol.getDeclaredType()->getInitializerSyntax() && unsetCode)
-            addDiag(*unsetCode);
+            addDiag(symbol, *unsetCode);
+    }
+
+    void checkUnused(const Symbol& symbol, DiagCode code) {
+        auto syntax = symbol.getSyntax();
+        if (!syntax || symbol.name.empty())
+            return;
+
+        auto [used, _] = compilation.isReferenced(*syntax);
+        if (!used)
+            addDiag(symbol, code);
     }
 
     bool hasUnusedAttrib(const Symbol& symbol) {
@@ -652,6 +660,14 @@ private:
                 return attr->getValue().isTrue();
         }
         return false;
+    }
+
+    void addDiag(const Symbol& symbol, DiagCode code) {
+        auto scope = symbol.getParentScope();
+        if (!scope->isUninstantiated() && scope->asSymbol().kind != SymbolKind::Package &&
+            symbol.name != "_"sv && !hasUnusedAttrib(symbol)) {
+            scope->addDiag(code, symbol.location) << symbol.name;
+        }
     }
 
     Compilation& compilation;

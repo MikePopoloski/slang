@@ -340,6 +340,11 @@ public:
     /// is used to tell whether a value is only assigned or whether it's also read somewhere.
     void noteReference(const syntax::SyntaxNode& node, bool isLValue = false);
 
+    /// Notes that the given symbol is "referenced" somewhere in the AST.
+    /// This is used to diagnose unused variables, nets, etc. The @a isLValue parameter
+    /// is used to tell whether a value is only assigned or whether it's also read somewhere.
+    void noteReference(const Symbol& symbol, bool isLValue = false);
+
     /// Checks whether the given syntax node has been referenced in the AST thus far.
     /// The result is a pair, the first item of which is true if the node has been used
     /// as a non-lvalue, and the second of which is true if the node has been used as an lvalue.

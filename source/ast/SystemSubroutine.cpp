@@ -73,10 +73,8 @@ bool SystemSubroutine::registerLValue(const Expression& expr, const ASTContext& 
     if (!expr.requireLValue(context))
         return false;
 
-    if (auto sym = expr.getSymbolReference()) {
-        if (auto syntax = sym->getSyntax())
-            context.getCompilation().noteReference(*syntax, /* isLValue */ true);
-    }
+    if (auto sym = expr.getSymbolReference())
+        context.getCompilation().noteReference(*sym, /* isLValue */ true);
 
     return true;
 }

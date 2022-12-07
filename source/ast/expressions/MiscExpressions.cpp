@@ -513,8 +513,7 @@ Expression& HierarchicalReferenceExpression::fromSyntax(Compilation& compilation
     if (!symbol)
         return badExpr(compilation, nullptr);
 
-    if (auto symSyntax = symbol->getSyntax())
-        compilation.noteReference(*symSyntax, context.flags.has(ASTFlags::LValue));
+    compilation.noteReference(*symbol, context.flags.has(ASTFlags::LValue));
 
     return *compilation.emplace<HierarchicalReferenceExpression>(*symbol, compilation.getVoidType(),
                                                                  syntax.sourceRange());

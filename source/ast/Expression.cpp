@@ -288,10 +288,8 @@ const Expression& Expression::bindRefArg(const Type& lhs, bool isConstRef,
         // so the net effect of this call is to get a driver registered for
         // us without duplicating the logic for determining longest static prefix.
         expr.requireLValue(context);
-        if (auto sym = expr.getSymbolReference()) {
-            if (auto syntax = sym->getSyntax())
-                comp.noteReference(*syntax, /* isLValue */ true);
-        }
+        if (auto sym = expr.getSymbolReference())
+            comp.noteReference(*sym, /* isLValue */ true);
     }
 
     return expr;

@@ -413,7 +413,38 @@ endmodule
 
 TEST_CASE("Unused parameters") {
     auto tree = SyntaxTree::fromText(R"(
-module m #(parameter p = 1);
+module m #(parameter p = 1, q = 2, parameter type t = int, u = real);
+    (* unused *) u r = 3.14;
+    (* unused *) int i = q;
+endmodule
+)");
+
+    CompilationOptions coptions;
+    coptions.suppressUnused = false;
+
+    Compilation compilation(coptions);
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::UnusedParameter);
+    CHECK(diags[1].code == diag::UnusedTypeParameter);
+}
+
+TEST_CASE("Unused typedefs") {
+    auto tree = SyntaxTree::fromText(R"(
+class C;
+    parameter p = 1;
+endclass
+
+module m;
+    typedef struct { int a, b; } asdf;
+    typedef enum { A, B } foo;
+
+    (* unused *) foo f = A;
+
+    typedef C D;
+    (* unused *) parameter p = D::p;
 endmodule
 )");
 
@@ -425,5 +456,5 @@ endmodule
 
     auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 1);
-    CHECK(diags[0].code == diag::UnusedParameter);
+    CHECK(diags[0].code == diag::UnusedTypedef);
 }

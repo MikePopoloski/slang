@@ -882,3 +882,18 @@ A parameter's value is never used.
 module m #(parameter p = 1);
 endmodule
 ```
+
+-Wunused-type-parameter
+A type parameter is never used.
+```
+module m #(parameter type t = int);
+endmodule
+```
+
+-Wunused-typedef
+A typedef is never used.
+```
+module m;
+    typedef struct { int a; } foo_t;
+endmodule
+```

@@ -178,8 +178,10 @@ struct NamePlusLoc {
     SyntaxKind kind;
 };
 
-const Symbol* unwrapTypeParam(const Symbol* symbol) {
+const Symbol* unwrapTypeParam(const Scope& scope, const Symbol* symbol) {
     if (symbol->kind == SymbolKind::TypeParameter) {
+        scope.getCompilation().noteReference(*symbol);
+
         auto result = &symbol->as<TypeParameterSymbol>().targetType.getType();
         if (result->isError())
             return nullptr;
@@ -351,7 +353,7 @@ bool lookupDownward(span<const NamePlusLoc> nameParts, NameComponents name,
             if (symbol->kind == SymbolKind::UnknownModule)
                 return false;
 
-            symbol = unwrapTypeParam(symbol);
+            symbol = unwrapTypeParam(*context.scope, symbol);
             if (!symbol)
                 return false;
 
@@ -623,7 +625,7 @@ bool resolveColonNames(SmallVectorBase<NamePlusLoc>& nameParts, int colonParts,
     // Unwrap the symbol if it's a type parameter, and bail early if it's an error type.
     const Symbol* symbol = std::exchange(result.found, nullptr);
     if (symbol) {
-        symbol = unwrapTypeParam(symbol);
+        symbol = unwrapTypeParam(*context.scope, symbol);
         if (!symbol)
             return false;
     }
@@ -710,7 +712,7 @@ bool resolveColonNames(SmallVectorBase<NamePlusLoc>& nameParts, int colonParts,
         }
 
         auto& part = nameParts.back();
-        symbol = unwrapTypeParam(symbol);
+        symbol = unwrapTypeParam(*context.scope, symbol);
         if (!symbol)
             return false;
 
@@ -735,8 +737,12 @@ bool resolveColonNames(SmallVectorBase<NamePlusLoc>& nameParts, int colonParts,
         if (name.text.empty())
             return false;
 
-        if (symbol->isType())
+        if (symbol->isType()) {
+            if (symbol->kind == SymbolKind::TypeAlias)
+                context.getCompilation().noteReference(*symbol);
+
             symbol = &symbol->as<Type>().getCanonicalType();
+        }
 
         const Symbol* savedSymbol = symbol;
         if (symbol->kind == SymbolKind::Package) {
@@ -792,8 +798,13 @@ void unwrapResult(const Scope& scope, std::optional<SourceRange> range, LookupRe
 
     // Unwrap type parameters into their target type alias.
     if (result.found->kind == SymbolKind::TypeParameter) {
+        scope.getCompilation().noteReference(*result.found);
+
         result.found = &result.found->as<TypeParameterSymbol>().getTypeAlias();
         result.fromTypeParam = true;
+    }
+    else if (result.found->kind == SymbolKind::TypeAlias) {
+        scope.getCompilation().noteReference(*result.found);
     }
 
     // If the found symbol is a generic class, unwrap into

@@ -777,6 +777,11 @@ void Compilation::noteReference(const SyntaxNode& node, bool isLValue) {
     }
 }
 
+void Compilation::noteReference(const Symbol& symbol, bool isLValue) {
+    if (auto syntax = symbol.getSyntax())
+        noteReference(*syntax, isLValue);
+}
+
 std::pair<bool, bool> Compilation::isReferenced(const SyntaxNode& node) const {
     auto it = referenceStatusMap.find(&node);
     if (it == referenceStatusMap.end())
