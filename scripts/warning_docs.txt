@@ -567,16 +567,6 @@ function string func;
 endfunction
 ```
 
--Wunused-def
-A module, interface, or program definition is unused in the design.
-```
-module m #(parameter int i);
-endmodule
-
-module top;
-endmodule
-```
-
 -Wmissing-top
 No valid top-level modules exist in the design. No top has been instantiated.
 ```
@@ -789,8 +779,24 @@ module m(input a, b);
 endmodule
 ```
 
+-Wunused-def
+A module, interface, or program definition is unused in the design.
+\n\n
+A definition with name '_' will never warn. Attributes `(* unused *)` or `(* maybe_unused *)`
+may be applied to suppress this warning for a particular definition.
+```
+module m #(parameter int i);
+endmodule
+
+module top;
+endmodule
+```
+
 -Wunused-net
 A net is declared but never used.
+\n\n
+A net with name '_' will never warn. Attributes `(* unused *)` or `(* maybe_unused *)`
+may be applied to suppress this warning for a particular net.
 ```
 module m;
     wire w;
@@ -800,6 +806,8 @@ endmodule
 -Wunused-implicit-net
 An implicitly created net is not referenced elsewhere in the design.
 This is often a typo in the name and not intentional.
+\n\n
+A net with name '_' will never warn.
 ```
 module m(output x);
     assign x = 1;
@@ -813,6 +821,9 @@ endmodule
 
 -Wunused-variable
 A variable is declared but never used.
+\n\n
+A variable with name '_' will never warn. Attributes `(* unused *)` or `(* maybe_unused *)`
+may be applied to suppress this warning for a particular variable.
 ```
 module m;
     int i;
@@ -821,6 +832,9 @@ endmodule
 
 -Wundriven-net
 A net is used but never has a value driven.
+\n\n
+A net with name '_' will never warn. Attributes `(* unused *)` or `(* maybe_unused *)`
+may be applied to suppress this warning for a particular net.
 ```
 module m(output x);
     wire w;
@@ -830,6 +844,9 @@ endmodule
 
 -Wunassigned-variable
 A variable is used but never has a value assigned.
+\n\n
+A variable with name '_' will never warn. Attributes `(* unused *)` or `(* maybe_unused *)`
+may be applied to suppress this warning for a particular variable.
 ```
 module m;
     int i;
@@ -839,6 +856,9 @@ endmodule
 
 -Wunused-but-set-net
 A net has a value driven but is never referenced.
+\n\n
+A net with name '_' will never warn. Attributes `(* unused *)` or `(* maybe_unused *)`
+may be applied to suppress this warning for a particular net.
 ```
 module m;
     wire x;
@@ -848,6 +868,9 @@ endmodule
 
 -Wunused-but-set-variable
 A variable has a value assigned but is never referenced.
+\n\n
+A variable with name '_' will never warn. Attributes `(* unused *)` or `(* maybe_unused *)`
+may be applied to suppress this warning for a particular variable.
 ```
 module m;
     int i;
@@ -857,6 +880,9 @@ endmodule
 
 -Wunused-port
 An input port signal is never used internally to the module.
+\n\n
+A port with name '_' will never warn. Attributes `(* unused *)` or `(* maybe_unused *)`
+may be applied to suppress this warning for a particular port.
 ```
 module m(input x);
 endmodule
@@ -864,6 +890,9 @@ endmodule
 
 -Wundriven-port
 An output port signal is never given a value.
+\n\n
+A port with name '_' will never warn. Attributes `(* unused *)` or `(* maybe_unused *)`
+may be applied to suppress this warning for a particular port.
 ```
 module m(output x);
 endmodule
@@ -871,6 +900,9 @@ endmodule
 
 -Wunused-argument
 A task or function formal argument is not used in its body.
+\n\n
+An argument with name '_' will never warn. Attributes `(* unused *)` or `(* maybe_unused *)`
+may be applied to suppress this warning for a particular argument.
 ```
 function foo(int x);
 endfunction
@@ -878,6 +910,9 @@ endfunction
 
 -Wunused-parameter
 A parameter's value is never used.
+\n\n
+A parameter with name '_' will never warn. Attributes `(* unused *)` or `(* maybe_unused *)`
+may be applied to suppress this warning for a particular parameter.
 ```
 module m #(parameter p = 1);
 endmodule
@@ -885,6 +920,9 @@ endmodule
 
 -Wunused-type-parameter
 A type parameter is never used.
+\n\n
+A parameter with name '_' will never warn. Attributes `(* unused *)` or `(* maybe_unused *)`
+may be applied to suppress this warning for a particular parameter.
 ```
 module m #(parameter type t = int);
 endmodule
@@ -892,6 +930,9 @@ endmodule
 
 -Wunused-typedef
 A typedef is never used.
+\n\n
+A typedef with name '_' will never warn. Attributes `(* unused *)` or `(* maybe_unused *)`
+may be applied to suppress this warning for a particular typedef.
 ```
 module m;
     typedef struct { int a; } foo_t;
