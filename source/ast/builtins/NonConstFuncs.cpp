@@ -95,6 +95,13 @@ public:
         hasOutputArgs = true;
     }
 
+    const Expression& bindArgument(size_t argIndex, const ASTContext& context,
+                                   const ExpressionSyntax& syntax, const Args&) const final {
+        if (argIndex >= 2)
+            return Expression::bindLValue(syntax, context);
+        return Expression::bind(syntax, context);
+    }
+
     const Type& checkArguments(const ASTContext& context, const Args& args, SourceRange range,
                                const Expression*) const final {
         auto& comp = context.getCompilation();
@@ -119,9 +126,7 @@ public:
             return comp.getErrorType();
         }
 
-        // Rest of the args can be anything. It would be nice to add some compile-time
-        // checking of the format string here in the future.
-
+        // TODO: add some compile-time checking of the format string here
         return comp.getIntegerType();
     }
 

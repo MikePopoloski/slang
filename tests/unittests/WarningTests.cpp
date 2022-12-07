@@ -349,9 +349,14 @@ endclass
 
 module m;
     int i;
+    string a,s = "a 3";
+    int b;
     initial begin
         $cast(i, i);
+        void'($sscanf(s, "%s %d", a, b));
     end
+
+    (* unused *) int q = b + a.len;
 endmodule
 )");
 
