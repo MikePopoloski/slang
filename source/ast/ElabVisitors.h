@@ -606,7 +606,34 @@ struct PostElabVisitor : public ASTVisitor<PostElabVisitor, false, false> {
         checkUnused(symbol, diag::UnusedTypeParameter);
     }
 
-    void handle(const TypeAliasType& symbol) { checkUnused(symbol, diag::UnusedTypedef); }
+    void handle(const TypeAliasType& symbol) {
+        auto syntax = symbol.getSyntax();
+        if (!syntax || symbol.name.empty())
+            return;
+
+        {
+            auto [used, _] = compilation.isReferenced(*syntax);
+            if (used)
+                return;
+        }
+
+        // If this is a typedef for an enum declaration, count usage
+        // of any of the enum values as a usage of the typedef itself
+        // (since there's no good way otherwise to introduce enum values
+        // without the typedef).
+        auto& targetType = symbol.targetType.getType();
+        if (targetType.kind == SymbolKind::EnumType) {
+            for (auto& val : targetType.as<EnumType>().values()) {
+                if (auto valSyntax = val.getSyntax()) {
+                    auto [valUsed, _] = compilation.isReferenced(*valSyntax);
+                    if (valUsed)
+                        return;
+                }
+            }
+        }
+
+        addDiag(symbol, diag::UnusedTypedef);
+    }
 
 private:
     void checkValueUnused(const ValueSymbol& symbol, DiagCode unusedCode,

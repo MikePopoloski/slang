@@ -442,6 +442,10 @@ module m;
 
     typedef C D;
     (* unused *) parameter p = D::p;
+
+    typedef enum { E, F } bar;
+
+    (* unused *) parameter q = E;
 endmodule
 )");
 
