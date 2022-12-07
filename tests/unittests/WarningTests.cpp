@@ -397,6 +397,47 @@ endmodule
     NO_COMPILATION_ERRORS;
 }
 
+TEST_CASE("Virtual interface handle access 'unused' warnings") {
+    auto tree = SyntaxTree::fromText(R"(
+interface I;
+    logic clk;
+endinterface
+
+class C;
+    event sys_clk;
+
+    virtual I i;
+    function virtual I get_intf();
+        return i;
+    endfunction
+
+    task t();
+        virtual I intf = get_intf();
+        @(intf.clk);
+        ->sys_clk;
+    endtask
+endclass
+
+module top;
+    I intf();
+    initial begin
+        intf.clk = 0;
+        forever begin
+            #1ns;
+            intf.clk = ~intf.clk;
+        end
+    end
+endmodule
+)");
+
+    CompilationOptions coptions;
+    coptions.suppressUnused = false;
+
+    Compilation compilation(coptions);
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
 TEST_CASE("Exclude 'unused' warnings based on attributes, underscore name") {
     auto tree = SyntaxTree::fromText(R"(
 module m;

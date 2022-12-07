@@ -299,6 +299,7 @@ bool lookupDownward(span<const NamePlusLoc> nameParts, NameComponents name,
                     // the target interface and continue the hierarchical lookup.
                     auto& type = symbol->as<ValueSymbol>().getType();
                     if (type.isVirtualInterface()) {
+                        context.getCompilation().noteReference(*symbol);
                         symbol = getVirtualInterfaceTarget(type, context, name.range);
                         return false;
                     }
