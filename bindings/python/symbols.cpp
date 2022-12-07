@@ -406,12 +406,12 @@ void registerSymbols(py::module_& m) {
         .def_readonly("range", &InstanceArraySymbol::range)
         .def_property_readonly("arrayName", &InstanceArraySymbol::getArrayName);
 
-    py::class_<UnknownModuleSymbol, Symbol>(m, "UnknownModuleSymbol")
-        .def_readonly("moduleName", &UnknownModuleSymbol::moduleName)
-        .def_readonly("paramExpressions", &UnknownModuleSymbol::paramExpressions)
-        .def_property_readonly("portConnections", &UnknownModuleSymbol::getPortConnections)
-        .def_property_readonly("portNames", &UnknownModuleSymbol::getPortNames)
-        .def_property_readonly("isChecker", &UnknownModuleSymbol::isChecker);
+    py::class_<UninstantiatedDefSymbol, Symbol>(m, "UninstantiatedDefSymbol")
+        .def_readonly("definitionName", &UninstantiatedDefSymbol::definitionName)
+        .def_readonly("paramExpressions", &UninstantiatedDefSymbol::paramExpressions)
+        .def_property_readonly("portConnections", &UninstantiatedDefSymbol::getPortConnections)
+        .def_property_readonly("portNames", &UninstantiatedDefSymbol::getPortNames)
+        .def_property_readonly("isChecker", &UninstantiatedDefSymbol::isChecker);
 
     py::class_<PrimitiveInstanceSymbol, InstanceSymbolBase>(m, "PrimitiveInstanceSymbol")
         .def_property_readonly("primitiveType",

@@ -349,9 +349,9 @@ bool lookupDownward(span<const NamePlusLoc> nameParts, NameComponents name,
         }
 
         if ((!symbol->isScope() && symbol->kind != SymbolKind::Instance) || symbol->isType()) {
-            // If we found an unknown module, exit silently. An appropriate error was
+            // If we found an uninstantiated def, exit silently. An appropriate error was
             // already issued, so no need to pile on.
-            if (symbol->kind == SymbolKind::UnknownModule)
+            if (symbol->kind == SymbolKind::UninstantiatedDef)
                 return false;
 
             symbol = unwrapTypeParam(*context.scope, symbol);
@@ -1993,7 +1993,7 @@ void Lookup::reportUndeclared(const Scope& initialScope, string_view name, Sourc
                     case SymbolKind::InstanceArray:
                     case SymbolKind::Sequence:
                     case SymbolKind::Property:
-                    case SymbolKind::UnknownModule:
+                    case SymbolKind::UninstantiatedDef:
                         break;
                     case SymbolKind::Instance:
                         if (!s->as<InstanceSymbol>().isInterface())

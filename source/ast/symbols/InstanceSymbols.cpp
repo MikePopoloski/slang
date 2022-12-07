@@ -302,7 +302,7 @@ void InstanceSymbol::fromSyntax(Compilation& compilation,
     // If this instance is not instantiated then we'll just fill in a placeholder
     // and move on. This is likely inside an untaken generate branch.
     if (isUninstantiated) {
-        UnknownModuleSymbol::fromSyntax(compilation, syntax, context, results, implicitNets);
+        UninstantiatedDefSymbol::fromSyntax(compilation, syntax, context, results, implicitNets);
         return;
     }
 
@@ -331,7 +331,8 @@ void InstanceSymbol::fromSyntax(Compilation& compilation,
         }
         else {
             context.addDiag(diag::UnknownModule, syntax.type.range()) << syntax.type.valueText();
-            UnknownModuleSymbol::fromSyntax(compilation, syntax, context, results, implicitNets);
+            UninstantiatedDefSymbol::fromSyntax(compilation, syntax, context, results,
+                                                implicitNets);
         }
         return;
     }
@@ -772,29 +773,29 @@ void InstanceArraySymbol::serializeTo(ASTSerializer& serializer) const {
 }
 
 template<typename TSyntax>
-static void createUnknownModules(Compilation& compilation, const TSyntax& syntax,
-                                 string_view moduleName, const ASTContext& context,
-                                 span<const Expression* const> params,
-                                 SmallVectorBase<const Symbol*>& results,
-                                 SmallVectorBase<const Symbol*>& implicitNets) {
+static void createUninstantiatedDefs(Compilation& compilation, const TSyntax& syntax,
+                                     string_view moduleName, const ASTContext& context,
+                                     span<const Expression* const> params,
+                                     SmallVectorBase<const Symbol*>& results,
+                                     SmallVectorBase<const Symbol*>& implicitNets) {
     SmallSet<string_view, 8> implicitNetNames;
     auto& netType = context.scope->getDefaultNetType();
     for (auto instanceSyntax : syntax.instances) {
         createImplicitNets(*instanceSyntax, context, netType, implicitNetNames, implicitNets);
 
         auto [name, loc] = getNameLoc(*instanceSyntax);
-        auto sym = compilation.emplace<UnknownModuleSymbol>(name, loc, moduleName, params);
+        auto sym = compilation.emplace<UninstantiatedDefSymbol>(name, loc, moduleName, params);
         sym->setSyntax(*instanceSyntax);
         sym->setAttributes(*context.scope, syntax.attributes);
         results.push_back(sym);
     }
 }
 
-void UnknownModuleSymbol::fromSyntax(Compilation& compilation,
-                                     const HierarchyInstantiationSyntax& syntax,
-                                     const ASTContext& parentContext,
-                                     SmallVectorBase<const Symbol*>& results,
-                                     SmallVectorBase<const Symbol*>& implicitNets) {
+void UninstantiatedDefSymbol::fromSyntax(Compilation& compilation,
+                                         const HierarchyInstantiationSyntax& syntax,
+                                         const ASTContext& parentContext,
+                                         SmallVectorBase<const Symbol*>& results,
+                                         SmallVectorBase<const Symbol*>& implicitNets) {
     SmallVector<const Expression*> params;
     ASTContext context = parentContext.resetFlags(ASTFlags::NonProcedural);
 
@@ -812,18 +813,18 @@ void UnknownModuleSymbol::fromSyntax(Compilation& compilation,
     }
 
     auto paramSpan = params.copy(compilation);
-    createUnknownModules(compilation, syntax, syntax.type.valueText(), context, paramSpan, results,
-                         implicitNets);
+    createUninstantiatedDefs(compilation, syntax, syntax.type.valueText(), context, paramSpan,
+                             results, implicitNets);
 }
 
-void UnknownModuleSymbol::fromSyntax(Compilation& compilation,
-                                     const PrimitiveInstantiationSyntax& syntax,
-                                     const ASTContext& parentContext,
-                                     SmallVectorBase<const Symbol*>& results,
-                                     SmallVectorBase<const Symbol*>& implicitNets) {
+void UninstantiatedDefSymbol::fromSyntax(Compilation& compilation,
+                                         const PrimitiveInstantiationSyntax& syntax,
+                                         const ASTContext& parentContext,
+                                         SmallVectorBase<const Symbol*>& results,
+                                         SmallVectorBase<const Symbol*>& implicitNets) {
     ASTContext context = parentContext.resetFlags(ASTFlags::NonProcedural);
-    createUnknownModules(compilation, syntax, syntax.type.valueText(), context, {}, results,
-                         implicitNets);
+    createUninstantiatedDefs(compilation, syntax, syntax.type.valueText(), context, {}, results,
+                             implicitNets);
 }
 
 static const AssertionExpr* bindUnknownPortConn(const ASTContext& context,
@@ -851,7 +852,7 @@ static const AssertionExpr* bindUnknownPortConn(const ASTContext& context,
                             symbol->kind == SymbolKind::InterfacePort ||
                             symbol->kind == SymbolKind::Instance ||
                             symbol->kind == SymbolKind::InstanceArray ||
-                            symbol->kind == SymbolKind::UnknownModule) {
+                            symbol->kind == SymbolKind::UninstantiatedDef) {
                             auto hre = comp.emplace<HierarchicalReferenceExpression>(
                                 *symbol, comp.getVoidType(), syntax.sourceRange());
                             return comp.emplace<SimpleAssertionExpr>(*hre, std::nullopt);
@@ -868,7 +869,7 @@ static const AssertionExpr* bindUnknownPortConn(const ASTContext& context,
     return &AssertionExpr::bind(syntax, context);
 }
 
-span<const AssertionExpr* const> UnknownModuleSymbol::getPortConnections() const {
+span<const AssertionExpr* const> UninstantiatedDefSymbol::getPortConnections() const {
     if (!ports) {
         auto syntax = getSyntax();
         auto scope = getParentScope();
@@ -908,20 +909,20 @@ span<const AssertionExpr* const> UnknownModuleSymbol::getPortConnections() const
     return *ports;
 }
 
-span<string_view const> UnknownModuleSymbol::getPortNames() const {
+span<string_view const> UninstantiatedDefSymbol::getPortNames() const {
     if (!ports)
         getPortConnections();
     return portNames;
 }
 
-bool UnknownModuleSymbol::isChecker() const {
+bool UninstantiatedDefSymbol::isChecker() const {
     if (!ports)
         getPortConnections();
     return mustBeChecker;
 }
 
-void UnknownModuleSymbol::serializeTo(ASTSerializer& serializer) const {
-    serializer.write("moduleName", moduleName);
+void UninstantiatedDefSymbol::serializeTo(ASTSerializer& serializer) const {
+    serializer.write("definitionName", definitionName);
 
     serializer.startArray("parameters");
     for (auto expr : paramExpressions)
@@ -1084,7 +1085,7 @@ void PrimitiveInstanceSymbol::fromSyntax(const PrimitiveInstantiationSyntax& syn
             context.addDiag(diag::UnknownPrimitive, syntax.type.range()) << name;
         }
 
-        UnknownModuleSymbol::fromSyntax(comp, syntax, context, results, implicitNets);
+        UninstantiatedDefSymbol::fromSyntax(comp, syntax, context, results, implicitNets);
         return;
     }
 

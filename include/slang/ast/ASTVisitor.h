@@ -164,7 +164,7 @@ decltype(auto) Symbol::visit(TVisitor&& visitor, Args&&... args) const {
         SYMBOL(ElabSystemTask);
         SYMBOL(GenericClassDef);
         SYMBOL(MethodPrototype);
-        SYMBOL(UnknownModule);
+        SYMBOL(UninstantiatedDef);
         SYMBOL(Iterator);
         SYMBOL(PatternVar);
         SYMBOL(ConstraintBlock);

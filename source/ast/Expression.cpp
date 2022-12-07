@@ -1193,7 +1193,7 @@ Expression* Expression::tryBindInterfaceRef(const ASTContext& context,
         result.reportDiags(context);
         result.errorIfSelectors(context);
     }
-    else if (symbol->kind == SymbolKind::UnknownModule) {
+    else if (symbol->kind == SymbolKind::UninstantiatedDef) {
         return comp.emplace<HierarchicalReferenceExpression>(*symbol, targetType,
                                                              syntax.sourceRange());
     }

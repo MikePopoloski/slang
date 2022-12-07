@@ -208,7 +208,7 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
         symbol.getConstraints();
     }
 
-    void handle(const UnknownModuleSymbol& symbol) {
+    void handle(const UninstantiatedDefSymbol& symbol) {
         if (!handleDefault(symbol))
             return;
 

@@ -651,7 +651,7 @@ void SubroutineSymbol::connectExternInterfacePrototype() const {
         }
     }
     else {
-        if (symbol->kind != SymbolKind::UnknownModule)
+        if (symbol->kind != SymbolKind::UninstantiatedDef)
             scope->addDiag(diag::NotAnInterfaceOrPort, nameToken.range()) << ifaceName;
         return;
     }

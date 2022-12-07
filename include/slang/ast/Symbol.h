@@ -90,7 +90,7 @@ enum class RandMode;
     x(ElabSystemTask) \
     x(GenericClassDef) \
     x(MethodPrototype) \
-    x(UnknownModule) \
+    x(UninstantiatedDef) \
     x(Iterator) \
     x(PatternVar) \
     x(ConstraintBlock) \

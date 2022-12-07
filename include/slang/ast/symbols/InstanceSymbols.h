@@ -181,23 +181,23 @@ public:
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::InstanceArray; }
 };
 
-/// Represents an instance of some unknown module (or interface / program).
-/// This is a placeholder in the AST so that we don't record further errors
-/// after the initial one about the unknown module itself.
-class SLANG_EXPORT UnknownModuleSymbol : public Symbol {
+/// Represents an instance of a definition (module / interface / program / checker)
+/// that is not actually instantiated in the design. This is a placeholder
+/// in the AST to record this instance and capture its port expressions.
+class SLANG_EXPORT UninstantiatedDefSymbol : public Symbol {
 public:
-    /// The name of the unknown module being instantiated.
-    string_view moduleName;
+    /// The name of the definition.
+    string_view definitionName;
 
     /// The self-determined expressions that are assigned to the parameters
     /// in the instantiation. These aren't necessarily correctly typed
     /// since we can't know the destination type of each parameter.
     span<const Expression* const> paramExpressions;
 
-    UnknownModuleSymbol(string_view name, SourceLocation loc, string_view moduleName,
-                        span<const Expression* const> params) :
-        Symbol(SymbolKind::UnknownModule, name, loc),
-        moduleName(moduleName), paramExpressions(params) {}
+    UninstantiatedDefSymbol(string_view name, SourceLocation loc, string_view definitionName,
+                            span<const Expression* const> params) :
+        Symbol(SymbolKind::UninstantiatedDef, name, loc),
+        definitionName(definitionName), paramExpressions(params) {}
 
     /// Gets the self-determined expressions that are assigned to the ports
     /// in the instantiation. These aren't necessarily correctly typed
@@ -225,7 +225,7 @@ public:
 
     void serializeTo(ASTSerializer& serializer) const;
 
-    static bool isKind(SymbolKind kind) { return kind == SymbolKind::UnknownModule; }
+    static bool isKind(SymbolKind kind) { return kind == SymbolKind::UninstantiatedDef; }
 
 private:
     mutable std::optional<span<const AssertionExpr* const>> ports;
