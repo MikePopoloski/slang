@@ -66,8 +66,9 @@ const PackageSymbol* ExplicitImportSymbol::package() const {
 
 static const PackageSymbol* findPackage(string_view packageName, const Scope& lookupScope,
                                         SourceLocation errorLoc) {
-    auto package = lookupScope.getCompilation().getPackage(packageName);
-    if (!package && !packageName.empty())
+    auto& comp = lookupScope.getCompilation();
+    auto package = comp.getPackage(packageName);
+    if (!package && !packageName.empty() && !comp.getOptions().lintMode)
         lookupScope.addDiag(diag::UnknownPackage, errorLoc) << packageName;
     return package;
 }

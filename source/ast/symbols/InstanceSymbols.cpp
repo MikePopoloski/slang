@@ -330,7 +330,10 @@ void InstanceSymbol::fromSyntax(Compilation& compilation,
             }
         }
         else {
-            context.addDiag(diag::UnknownModule, syntax.type.range()) << syntax.type.valueText();
+            if (!compilation.getOptions().ignoreUnknownModules) {
+                context.addDiag(diag::UnknownModule, syntax.type.range())
+                    << syntax.type.valueText();
+            }
             UninstantiatedDefSymbol::fromSyntax(compilation, syntax, context, results,
                                                 implicitNets);
         }

@@ -113,6 +113,10 @@ struct SLANG_EXPORT CompilationOptions {
     /// If true, allow all integral types to convert implicitly to enum types.
     bool relaxEnumConversions = false;
 
+    /// If true, allow symbols to be referenced before they're declared,
+    /// even if that would otherwise be an error in SystemVerilog.
+    bool allowUseBeforeDeclare = false;
+
     /// Signals driven by an always_comb are normally not allowed to be driven
     /// by any other process. Setting this option allows initial blocks to
     /// also drive such signals.
@@ -128,6 +132,10 @@ struct SLANG_EXPORT CompilationOptions {
 
     /// If true, suppress warnings about unused code elements.
     bool suppressUnused = true;
+
+    /// If true, don't issue an error when encountering an instantiation
+    /// for an unknown definition.
+    bool ignoreUnknownModules = false;
 
     /// When in script mode, suppress some errors that are otherwise pretty
     /// annoying when not in a batch context. For example, top-level modules
