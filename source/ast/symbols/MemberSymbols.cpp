@@ -96,7 +96,7 @@ const Symbol* ExplicitImportSymbol::importedSymbol() const {
                     loc = syntax->as<PackageImportItemSyntax>().item.location();
 
                 auto& diag = scope->addDiag(diag::UnknownPackageMember, loc);
-                diag << importName << name;
+                diag << importName << packageName;
             }
         }
         else {
