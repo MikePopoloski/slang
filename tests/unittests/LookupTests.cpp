@@ -1888,3 +1888,25 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Used-before-declared opt-in corner case of self-referential symbol") {
+    auto tree = SyntaxTree::fromText(R"(
+parameter int i = 1;
+
+module m;
+    parameter int i = i;
+endmodule
+
+int foo;
+covergroup cg;
+    foo: coverpoint foo;
+endgroup
+)");
+
+    CompilationOptions options;
+    options.allowUseBeforeDeclare = true;
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}

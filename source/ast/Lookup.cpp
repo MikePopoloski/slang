@@ -1556,69 +1556,73 @@ void Lookup::unqualifiedImpl(const Scope& scope, string_view name, LookupLocatio
         // declared before use). Callables and block names can be referenced anywhere in the
         // scope, so the location doesn't matter for them.
         symbol = it->second;
-        bool locationGood = true;
-        if (!flags.has(LookupFlags::AllowDeclaredAfter)) {
-            locationGood = LookupLocation::before(*symbol) < location;
-            if (!locationGood) {
-                // A type alias can have forward definitions, so check those locations as well.
-                // The forward decls form a linked list that are always ordered by location,
-                // so we only need to check the first one.
-                const ForwardingTypedefSymbol* forward = nullptr;
-                switch (symbol->kind) {
-                    case SymbolKind::TypeAlias:
-                        forward = symbol->as<TypeAliasType>().getFirstForwardDecl();
-                        break;
-                    case SymbolKind::ClassType:
-                        forward = symbol->as<ClassType>().getFirstForwardDecl();
-                        break;
-                    case SymbolKind::GenericClassDef:
-                        forward = symbol->as<GenericClassDefSymbol>().getFirstForwardDecl();
-                        break;
-                    case SymbolKind::Subroutine: {
-                        // Subroutines can be referenced before they are declared if they
-                        // are tasks or return void (tasks are always set to have a void
-                        // return type internally so we only need one check here).
-                        //
-                        // It's important to check that we're not in the middle of evaluating
-                        // the return type before we try to access that return type or
-                        // we'll hard fail.
-                        auto& sub = symbol->as<SubroutineSymbol>();
-                        if (sub.declaredReturnType.isEvaluating()) {
-                            reportRecursiveError(*symbol);
-                            return;
-                        }
-
-                        locationGood = sub.getReturnType().isVoid();
-                        break;
+        bool locationGood = LookupLocation::before(*symbol) < location;
+        if (!locationGood) {
+            // A type alias can have forward definitions, so check those locations as well.
+            // The forward decls form a linked list that are always ordered by location,
+            // so we only need to check the first one.
+            const ForwardingTypedefSymbol* forward = nullptr;
+            switch (symbol->kind) {
+                case SymbolKind::TypeAlias:
+                    forward = symbol->as<TypeAliasType>().getFirstForwardDecl();
+                    break;
+                case SymbolKind::ClassType:
+                    forward = symbol->as<ClassType>().getFirstForwardDecl();
+                    break;
+                case SymbolKind::GenericClassDef:
+                    forward = symbol->as<GenericClassDefSymbol>().getFirstForwardDecl();
+                    break;
+                case SymbolKind::Subroutine: {
+                    // Subroutines can be referenced before they are declared if they
+                    // are tasks or return void (tasks are always set to have a void
+                    // return type internally so we only need one check here).
+                    //
+                    // It's important to check that we're not in the middle of evaluating
+                    // the return type before we try to access that return type or
+                    // we'll hard fail.
+                    auto& sub = symbol->as<SubroutineSymbol>();
+                    if (sub.declaredReturnType.isEvaluating()) {
+                        reportRecursiveError(*symbol);
+                        return;
                     }
-                    case SymbolKind::MethodPrototype: {
-                        // Same as above.
-                        auto& sub = symbol->as<MethodPrototypeSymbol>();
-                        if (sub.declaredReturnType.isEvaluating()) {
-                            reportRecursiveError(*symbol);
-                            return;
-                        }
 
-                        locationGood = sub.getReturnType().isVoid();
-                        break;
+                    locationGood = sub.getReturnType().isVoid();
+                    break;
+                }
+                case SymbolKind::MethodPrototype: {
+                    // Same as above.
+                    auto& sub = symbol->as<MethodPrototypeSymbol>();
+                    if (sub.declaredReturnType.isEvaluating()) {
+                        reportRecursiveError(*symbol);
+                        return;
                     }
-                    case SymbolKind::Sequence:
-                    case SymbolKind::Property:
-                        // Sequences and properties can always be referenced before declaration.
-                        locationGood = true;
-                        break;
-                    default:
-                        break;
-                }
 
-                if (forward) {
-                    locationGood = LookupLocation::before(*forward) < location;
-                    result.fromForwardTypedef = true;
+                    locationGood = sub.getReturnType().isVoid();
+                    break;
                 }
+                case SymbolKind::Sequence:
+                case SymbolKind::Property:
+                    // Sequences and properties can always be referenced before declaration.
+                    locationGood = true;
+                    break;
+                case SymbolKind::Parameter:
+                case SymbolKind::Specparam:
+                case SymbolKind::EnumValue:
+                    // Constants can never be looked up before their declaration,
+                    // to avoid problems with recursive constant evaluation.
+                    flags &= ~LookupFlags::AllowDeclaredAfter;
+                    break;
+                default:
+                    break;
+            }
+
+            if (forward) {
+                locationGood = LookupLocation::before(*forward) < location;
+                result.fromForwardTypedef = true;
             }
         }
 
-        if (locationGood) {
+        if (locationGood || flags.has(LookupFlags::AllowDeclaredAfter)) {
             // Unwrap the symbol if it's hidden behind an import or hoisted enum member.
             if (symbol->kind == SymbolKind::TransparentMember) {
                 do {
@@ -1662,13 +1666,26 @@ void Lookup::unqualifiedImpl(const Scope& scope, string_view name, LookupLocatio
             // evaluated. This can only happen with a mutually recursive definition of something
             // like a parameter and a function, so detect and report the error here to avoid a
             // stack overflow.
+            bool done = true;
             if (result.found) {
                 auto declaredType = result.found->getDeclaredType();
-                if (declaredType && declaredType->isEvaluating())
-                    reportRecursiveError(*result.found);
+                if (declaredType && declaredType->isEvaluating()) {
+                    if (locationGood) {
+                        reportRecursiveError(*result.found);
+                    }
+                    else {
+                        // We overrode the location checking via a flag and
+                        // it's probably biting us now by causing us to find
+                        // our own symbol when we otherwise shouldn't.
+                        // Work around this by just pretending we didn't find anything.
+                        done = false;
+                        result.clear();
+                    }
+                }
             }
 
-            return;
+            if (done)
+                return;
         }
     }
 
