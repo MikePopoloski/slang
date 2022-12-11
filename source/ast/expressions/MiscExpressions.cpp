@@ -109,7 +109,8 @@ Expression& ValueExpressionBase::fromSymbol(const ASTContext& context, const Sym
                                                                   sourceRange);
         }
 
-        context.addDiag(diag::NotAValue, sourceRange) << symbol.name;
+        auto& diag = context.addDiag(diag::NotAValue, sourceRange) << symbol.name;
+        diag.addNote(diag::NoteDeclarationHere, symbol.location);
         return badExpr(comp, nullptr);
     }
 

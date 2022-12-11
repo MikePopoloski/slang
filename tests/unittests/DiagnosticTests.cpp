@@ -549,7 +549,7 @@ source:3:24: warning: unknown character escape sequence '\🍌' [-Wunknown-escap
 source:4:42: error: UTF-8 sequence in source text; SystemVerilog identifiers must be ASCII
     int         /* // 꿽꿽꿽꿽꿽꿽꿽 */          갑곯꿽 = "꿽꿽꿽"; // 꿽꿽꿽꿽꿽꿽꿽
                                                  ^
-source:4:42: error: expected declarator
+source:4:42: error: expected a declaration name
     int         /* // 꿽꿽꿽꿽꿽꿽꿽 */          갑곯꿽 = "꿽꿽꿽"; // 꿽꿽꿽꿽꿽꿽꿽
                                                  ^
 )";
