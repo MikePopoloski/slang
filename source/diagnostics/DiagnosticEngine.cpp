@@ -438,6 +438,10 @@ Diagnostics DiagnosticEngine::setWarningOptions(span<const std::string> options)
             setIgnoreAllWarnings(true);
         }
         else if (arg == "error") {
+            for (auto it = severityTable.begin(); it != severityTable.end(); it++) {
+                if (it->second == DiagnosticSeverity::Warning)
+                    it->second = DiagnosticSeverity::Error;
+            }
             setWarningsAsErrors(true);
         }
         else if (startsWith(arg, "error=")) {
