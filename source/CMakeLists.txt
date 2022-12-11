@@ -93,7 +93,7 @@ set_target_properties(
              VISIBILITY_INLINES_HIDDEN YES
              VERSION ${PROJECT_VERSION}
              SOVERSION ${PROJECT_VERSION_MAJOR}
-             EXPORT_NAME ${SLANG_LIB_NAME}
+             EXPORT_NAME slang
              OUTPUT_NAME ${SLANG_LIB_NAME})
 
 # Compile options
