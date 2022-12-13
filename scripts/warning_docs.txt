@@ -949,4 +949,3 @@ reg [1:0]r;
 initial
   force r[0] = 1'b0;
 ```
-
