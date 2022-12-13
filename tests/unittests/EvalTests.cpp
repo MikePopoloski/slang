@@ -135,6 +135,38 @@ endfunction
     auto elseValue = session.eval("foo(2)");
     CHECK(elseValue.integer() == 5);
     NO_SESSION_ERRORS;
+
+    SECTION("None if match") {
+        ScriptSession session;
+        session.eval(R"(
+function logic [15:0] foo(int a);
+    unique if (a == 3)
+        return 4;
+    else if (a < 4)
+        return 5;
+endfunction
+)");
+        auto value = session.eval("foo(10)");
+        auto diags = session.getDiagnostics();
+        REQUIRE(diags.size() == 1);
+        CHECK(diags[0].code == diag::ConstEvalNoIfItemsMatched);
+    }
+
+    SECTION("Not unique if match") {
+        ScriptSession session;
+        session.eval(R"(
+function logic [15:0] foo(int a);
+    unique if (a == 3)
+        return 4;
+    else if (a < 4)
+        return 5;
+endfunction
+)");
+        auto value = session.eval("foo(3)");
+        auto diags = session.getDiagnostics();
+        REQUIRE(diags.size() == 1);
+        CHECK(diags[0].code == diag::ConstEvalIfItemsNotUnique);
+    }
 }
 
 TEST_CASE("Eval for loop") {

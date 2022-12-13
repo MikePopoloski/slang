@@ -69,13 +69,13 @@ ENUM(StatementKind, STATEMENT)
 ENUM(CaseStatementCondition, CASE_CONDITION)
 #undef CASE_CONDITION
 
-#define CASE_CHECK(x) \
+#define UNIQUE_PRIORITY(x) \
     x(None) \
     x(Unique) \
     x(Unique0) \
     x(Priority)
-ENUM(CaseStatementCheck, CASE_CHECK)
-#undef CASE_CHECK
+ENUM(UniquePriority, UNIQUE_PRIORITY)
+#undef UNIQUE_PRIORITY
 // clang-format on
 
 enum class StatementFlags {
@@ -425,13 +425,15 @@ public:
     };
 
     span<const Condition> conditions;
+    UniquePriority check;
     const Statement& ifTrue;
     const Statement* ifFalse;
 
-    ConditionalStatement(span<const Condition> conditions, const Statement& ifTrue,
-                         const Statement* ifFalse, SourceRange sourceRange) :
+    ConditionalStatement(span<const Condition> conditions, UniquePriority check,
+                         const Statement& ifTrue, const Statement* ifFalse,
+                         SourceRange sourceRange) :
         Statement(StatementKind::Conditional, sourceRange),
-        conditions(conditions), ifTrue(ifTrue), ifFalse(ifFalse) {}
+        conditions(conditions), check(check), ifTrue(ifTrue), ifFalse(ifFalse) {}
 
     EvalResult evalImpl(EvalContext& context) const;
 
@@ -468,10 +470,10 @@ public:
     span<ItemGroup const> items;
     const Statement* defaultCase = nullptr;
     CaseStatementCondition condition;
-    CaseStatementCheck check;
+    UniquePriority check;
 
-    CaseStatement(CaseStatementCondition condition, CaseStatementCheck check,
-                  const Expression& expr, span<ItemGroup const> items, const Statement* defaultCase,
+    CaseStatement(CaseStatementCondition condition, UniquePriority check, const Expression& expr,
+                  span<ItemGroup const> items, const Statement* defaultCase,
                   SourceRange sourceRange) :
         Statement(StatementKind::Case, sourceRange),
         expr(expr), items(items), defaultCase(defaultCase), condition(condition), check(check) {}
@@ -516,9 +518,9 @@ public:
     span<ItemGroup const> items;
     const Statement* defaultCase = nullptr;
     CaseStatementCondition condition;
-    CaseStatementCheck check;
+    UniquePriority check;
 
-    PatternCaseStatement(CaseStatementCondition condition, CaseStatementCheck check,
+    PatternCaseStatement(CaseStatementCondition condition, UniquePriority check,
                          const Expression& expr, span<ItemGroup const> items,
                          const Statement* defaultCase, SourceRange sourceRange) :
         Statement(StatementKind::PatternCase, sourceRange),

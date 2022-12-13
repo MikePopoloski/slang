@@ -17,7 +17,7 @@ void registerAST(py::module_& m) {
     EXPOSE_ENUM(m, ConversionKind);
     EXPOSE_ENUM(m, StatementKind);
     EXPOSE_ENUM(m, CaseStatementCondition);
-    EXPOSE_ENUM(m, CaseStatementCheck);
+    EXPOSE_ENUM(m, UniquePriority);
     EXPOSE_ENUM(m, PatternKind);
     EXPOSE_ENUM(m, TimingControlKind);
     EXPOSE_ENUM(m, ConstraintKind);
