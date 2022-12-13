@@ -505,3 +505,32 @@ endmodule
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::UnusedTypedef);
 }
+
+TEST_CASE("Covergroups and class handles are 'used' if constructed") {
+    auto tree = SyntaxTree::fromText(R"(
+interface I;
+    logic a = 1;
+    covergroup cg;
+        a: coverpoint a;
+    endgroup
+
+    cg cov = new();
+endinterface
+
+class C;
+    function new; $display("Hello!"); endfunction
+endclass
+
+module m;
+    I i();
+    C c1 = new;
+endmodule
+)");
+
+    CompilationOptions coptions;
+    coptions.suppressUnused = false;
+
+    Compilation compilation(coptions);
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}

@@ -583,6 +583,17 @@ struct PostElabVisitor : public ASTVisitor<PostElabVisitor, false, false> {
             return;
 
         if (symbol.kind == SymbolKind::Variable) {
+            // Class handles and covergroups are considered used if they are
+            // constructed, since construction can have side effects.
+            auto& type = symbol.getType();
+            if (type.isClass() || type.isCovergroup()) {
+                if (auto init = symbol.getDeclaredType()->getInitializer();
+                    init && (init->kind == ExpressionKind::NewClass ||
+                             init->kind == ExpressionKind::NewCovergroup)) {
+                    return;
+                }
+            }
+
             checkValueUnused(symbol, diag::UnusedVariable, diag::UnassignedVariable,
                              diag::UnusedButSetVariable);
         }
