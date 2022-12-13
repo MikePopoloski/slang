@@ -1910,3 +1910,25 @@ endgroup
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Exception for accessing incomplete forward typedef") {
+    auto tree = SyntaxTree::fromText(R"(
+typedef C;
+function void foo;
+    C::T::bar();
+endfunction
+
+class D;
+    static function void bar;
+    endfunction
+endclass
+
+class C;
+    typedef D T;
+endclass
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}

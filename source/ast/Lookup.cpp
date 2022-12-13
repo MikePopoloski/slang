@@ -772,19 +772,17 @@ bool resolveColonNames(SmallVectorBase<NamePlusLoc>& nameParts, int colonParts,
         }
 
         nameParts.pop_back();
-
-        // The initial symbol found cannot be resolved via a forward typedef (i.e. "incomplete")
-        // unless this is within a typedef declaration.
-        if (result.fromForwardTypedef && !flags.has(LookupFlags::TypedefTarget) &&
-            symbol->isType()) {
-
-            result.fromForwardTypedef = false;
-            result.addDiag(*context.scope, diag::ScopeIncompleteTypedef, name.range);
-        }
     }
 
     if (!validateSymbol())
         return false;
+
+    // The initial symbol found cannot be resolved via a forward typedef (i.e. "incomplete")
+    // unless this is within a typedef declaration.
+    if (result.fromForwardTypedef && !flags.has(LookupFlags::TypedefTarget) && symbol->isType()) {
+        result.fromForwardTypedef = false;
+        result.addDiag(*context.scope, diag::ScopeIncompleteTypedef, name.range);
+    }
 
     result.found = symbol;
     return lookupDownward(nameParts, name, context, result);
