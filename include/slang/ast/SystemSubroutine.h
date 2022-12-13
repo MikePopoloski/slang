@@ -34,6 +34,7 @@ public:
     virtual const Expression& bindArgument(size_t argIndex, const ASTContext& context,
                                            const syntax::ExpressionSyntax& syntax,
                                            const Args& previousArgs) const;
+    virtual std::optional<bitwidth_t> getEffectiveWidth() const { return {}; }
     virtual const Type& checkArguments(const ASTContext& context, const Args& args,
                                        SourceRange range, const Expression* iterOrThis) const = 0;
     virtual ConstantValue eval(EvalContext& context, const Args& args, SourceRange range,

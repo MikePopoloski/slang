@@ -173,6 +173,10 @@ ConstantValue UnbasedUnsizedIntegerLiteral::evalImpl(EvalContext&) const {
     return getValue();
 }
 
+std::optional<bitwidth_t> UnbasedUnsizedIntegerLiteral::getEffectiveWidthImpl() const {
+    return 1;
+}
+
 void UnbasedUnsizedIntegerLiteral::serializeTo(ASTSerializer& serializer) const {
     serializer.write("value", getValue());
 }

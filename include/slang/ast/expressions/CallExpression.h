@@ -59,6 +59,7 @@ public:
     SubroutineKind getSubroutineKind() const;
 
     ConstantValue evalImpl(EvalContext& context) const;
+    std::optional<bitwidth_t> getEffectiveWidthImpl() const;
 
     void serializeTo(ASTSerializer& serializer) const;
 

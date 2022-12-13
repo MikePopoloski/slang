@@ -493,6 +493,9 @@ public:
         return Expression::bind(syntax, context);
     }
 
+    // Return type is 'int' but the actual value is always either 0 or 1
+    std::optional<bitwidth_t> getEffectiveWidth() const final { return 1; }
+
     const Type& checkArguments(const ASTContext& context, const Args& args, SourceRange range,
                                const Expression*) const final {
         auto& comp = context.getCompilation();

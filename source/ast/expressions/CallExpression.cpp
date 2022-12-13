@@ -684,6 +684,15 @@ ConstantValue CallExpression::evalImpl(EvalContext& context) const {
     return result;
 }
 
+std::optional<bitwidth_t> CallExpression::getEffectiveWidthImpl() const {
+    if (isSystemCall()) {
+        auto& callInfo = std::get<1>(subroutine);
+        if (auto result = callInfo.subroutine->getEffectiveWidth())
+            return result;
+    }
+    return type->getBitWidth();
+}
+
 bool CallExpression::checkConstant(EvalContext& context, const SubroutineSymbol& subroutine,
                                    SourceRange range) {
     if (context.flags.has(EvalFlags::IsScript))
