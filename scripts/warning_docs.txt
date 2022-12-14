@@ -938,3 +938,14 @@ module m;
     typedef struct { int a; } foo_t;
 endmodule
 ```
+
+-Wbad-procedural-force
+According to the Verilog/SystemVerilog standard, it is illegal to procedurally force a
+bit-select or range select of a variable (you can do that with a net, or with a plain
+variable). It is an error by default, but can be turned into a warning, to support code
+compatibility with commercial tools that accept this illegal code.
+```
+reg [1:0]r;
+initial
+  force r[0] = 1'b0;
+```
