@@ -890,20 +890,20 @@ void VariableDeclStatement::serializeTo(ASTSerializer& serializer) const {
     serializer.writeLink("symbol", symbol);
 }
 
-static UniquePriority getCheck(TokenKind kind) {
-    UniquePriority check;
+static UniquePriorityCheck getUniquePriority(TokenKind kind) {
+    UniquePriorityCheck check;
     switch (kind) {
         case TokenKind::Unknown:
-            check = UniquePriority::None;
+            check = UniquePriorityCheck::None;
             break;
         case TokenKind::UniqueKeyword:
-            check = UniquePriority::Unique;
+            check = UniquePriorityCheck::Unique;
             break;
         case TokenKind::Unique0Keyword:
-            check = UniquePriority::Unique0;
+            check = UniquePriorityCheck::Unique0;
             break;
         case TokenKind::PriorityKeyword:
-            check = UniquePriority::Priority;
+            check = UniquePriorityCheck::Priority;
             break;
         default:
             ASSUME_UNREACHABLE;
@@ -969,41 +969,45 @@ Statement& ConditionalStatement::fromSyntax(Compilation& comp,
                                    context.resetFlags(elseFlags), stmtCtx);
     }
 
-    auto result = comp.emplace<ConditionalStatement>(conditions.copy(comp),
-                                                     getCheck(syntax.uniqueOrPriority.kind), ifTrue,
-                                                     ifFalse, syntax.sourceRange());
+    auto result = comp.emplace<ConditionalStatement>(
+        conditions.copy(comp), getUniquePriority(syntax.uniqueOrPriority.kind), ifTrue, ifFalse,
+        syntax.sourceRange());
+
     if (bad || conditions.empty() || ifTrue.bad() || (ifFalse && ifFalse->bad()))
         return badStmt(comp, result);
 
     return *result;
 }
 
-struct FlattenConditionalStatement {
+struct EvalConditionalVisitor {
     EvalContext& context;
     SmallVector<const Statement*> items;
+    bool bad = false;
 
-    FlattenConditionalStatement(EvalContext& context) : context(context), items() {}
+    EvalConditionalVisitor(EvalContext& context) : context(context), items() {}
 
     void visit(const ConditionalStatement& stmt) {
         bool matched = true;
         for (auto& cond : stmt.conditions) {
             auto result = cond.expr->eval(context);
-            if (result.bad())
-                matched = false;
+            bad |= result.bad();
 
-            if (cond.pattern)
+            if (cond.pattern) {
                 result = cond.pattern->eval(context, result, CaseStatementCondition::Normal);
+                bad |= result.bad();
+            }
 
-            if (!result.isTrue())
+            if (!result.isTrue()) {
                 matched = false;
+                break;
+            }
         }
 
         if (matched)
             stmt.ifTrue.visit(*this);
 
         if (stmt.ifFalse) {
-            if ((!matched && !ConditionalStatement::isKind(stmt.ifFalse->kind)) ||
-                ConditionalStatement::isKind(stmt.ifFalse->kind))
+            if (ConditionalStatement::isKind(stmt.ifFalse->kind) || !matched)
                 stmt.ifFalse->visit(*this);
         }
     }
@@ -1014,23 +1018,27 @@ struct FlattenConditionalStatement {
 };
 
 ER ConditionalStatement::evalImpl(EvalContext& context) const {
-    FlattenConditionalStatement visitor(context);
+    EvalConditionalVisitor visitor(context);
     this->visit(visitor);
+    if (visitor.bad)
+        return ER::Fail;
+
     if (visitor.items.empty()) {
-        if (check == UniquePriority::Priority || check == UniquePriority::Unique) {
+        if (check == UniquePriorityCheck::Priority || check == UniquePriorityCheck::Unique) {
             auto& diag = context.addDiag(diag::ConstEvalNoIfItemsMatched,
                                          conditions.back().expr->sourceRange);
-            diag << (check == UniquePriority::Priority ? "priority"sv : "unique"sv);
+            diag << (check == UniquePriorityCheck::Priority ? "priority"sv : "unique"sv);
         }
         return ER::Success;
     }
-    bool unique = check == UniquePriority::Unique || check == UniquePriority::Unique0;
-    auto size = visitor.items.size();
-    if (unique && size > 1) {
+
+    bool unique = check == UniquePriorityCheck::Unique || check == UniquePriorityCheck::Unique0;
+    if (unique && visitor.items.size() > 1) {
         auto& diag = context.addDiag(diag::ConstEvalIfItemsNotUnique,
                                      visitor.items[1]->sourceRange);
         diag.addNote(diag::NotePreviousMatch, visitor.items[0]->sourceRange);
     }
+
     return visitor.items[0]->eval(context);
 }
 
@@ -1044,6 +1052,7 @@ void ConditionalStatement::serializeTo(ASTSerializer& serializer) const {
         serializer.endObject();
     }
     serializer.endArray();
+    serializer.write("check", toString(check));
 
     serializer.write("ifTrue", ifTrue);
     if (ifFalse)
@@ -1118,7 +1127,7 @@ Statement& CaseStatement::fromSyntax(Compilation& compilation, const CaseStateme
                                                   expressions, bound);
 
     auto condition = getCondition(syntax.caseKeyword.kind);
-    auto check = getCheck(syntax.uniqueOrPriority.kind);
+    auto check = getUniquePriority(syntax.uniqueOrPriority.kind);
 
     if (isInside && condition != CaseStatementCondition::Normal) {
         context.addDiag(diag::CaseInsideKeyword, syntax.matchesOrInside.range())
@@ -1205,7 +1214,7 @@ ER CaseStatement::evalImpl(EvalContext& context) const {
 
     const Statement* matchedStmt = nullptr;
     SourceRange matchRange;
-    bool unique = check == UniquePriority::Unique || check == UniquePriority::Unique0;
+    bool unique = check == UniquePriorityCheck::Unique || check == UniquePriorityCheck::Unique0;
 
     for (auto& group : items) {
         for (auto item : group.expressions) {
@@ -1258,9 +1267,9 @@ ER CaseStatement::evalImpl(EvalContext& context) const {
     if (matchedStmt)
         return matchedStmt->eval(context);
 
-    if (check == UniquePriority::Priority || check == UniquePriority::Unique) {
+    if (check == UniquePriorityCheck::Priority || check == UniquePriorityCheck::Unique) {
         auto& diag = context.addDiag(diag::ConstEvalNoCaseItemsMatched, expr.sourceRange);
-        diag << (check == UniquePriority::Priority ? "priority"sv : "unique"sv);
+        diag << (check == UniquePriorityCheck::Priority ? "priority"sv : "unique"sv);
         diag << cv;
     }
 
@@ -1340,7 +1349,7 @@ Statement& PatternCaseStatement::fromSyntax(Compilation& compilation,
     }
 
     auto condition = getCondition(syntax.caseKeyword.kind);
-    auto check = getCheck(syntax.uniqueOrPriority.kind);
+    auto check = getUniquePriority(syntax.uniqueOrPriority.kind);
     auto result = compilation.emplace<PatternCaseStatement>(condition, check, expr,
                                                             items.copy(compilation), defStmt,
                                                             syntax.sourceRange());
@@ -1388,7 +1397,7 @@ ER PatternCaseStatement::evalImpl(EvalContext& context) const {
         matchedStmt = item.stmt;
         matchRange = item.pattern->sourceRange;
 
-        if (check != UniquePriority::Unique && check != UniquePriority::Unique0)
+        if (check != UniquePriorityCheck::Unique && check != UniquePriorityCheck::Unique0)
             break;
     }
 
@@ -1398,9 +1407,9 @@ ER PatternCaseStatement::evalImpl(EvalContext& context) const {
     if (matchedStmt)
         return matchedStmt->eval(context);
 
-    if (check == UniquePriority::Priority || check == UniquePriority::Unique) {
+    if (check == UniquePriorityCheck::Priority || check == UniquePriorityCheck::Unique) {
         auto& diag = context.addDiag(diag::ConstEvalNoCaseItemsMatched, expr.sourceRange);
-        diag << (check == UniquePriority::Priority ? "priority"sv : "unique"sv);
+        diag << (check == UniquePriorityCheck::Priority ? "priority"sv : "unique"sv);
         diag << cv;
     }
 

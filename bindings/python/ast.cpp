@@ -17,7 +17,7 @@ void registerAST(py::module_& m) {
     EXPOSE_ENUM(m, ConversionKind);
     EXPOSE_ENUM(m, StatementKind);
     EXPOSE_ENUM(m, CaseStatementCondition);
-    EXPOSE_ENUM(m, UniquePriority);
+    EXPOSE_ENUM(m, UniquePriorityCheck);
     EXPOSE_ENUM(m, PatternKind);
     EXPOSE_ENUM(m, TimingControlKind);
     EXPOSE_ENUM(m, ConstraintKind);
@@ -493,6 +493,7 @@ void registerAST(py::module_& m) {
 
     py::class_<ConditionalStatement, Statement> condStmt(m, "ConditionalStatement");
     condStmt.def_readonly("conditions", &ConditionalStatement::conditions)
+        .def_readonly("check", &ConditionalStatement::check)
         .def_readonly("ifFalse", &ConditionalStatement::ifFalse)
         .def_property_readonly("ifTrue",
                                [](const ConditionalStatement& self) { return &self.ifTrue; });
