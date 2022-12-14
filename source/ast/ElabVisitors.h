@@ -646,6 +646,12 @@ struct PostElabVisitor : public ASTVisitor<PostElabVisitor, false, false> {
         addDiag(symbol, diag::UnusedTypedef);
     }
 
+    void handle(const GenvarSymbol& symbol) { checkUnused(symbol, diag::UnusedGenvar); }
+
+    void handle(const SequenceSymbol& symbol) { checkAssertionDeclUnused(symbol, "sequence"sv); }
+    void handle(const PropertySymbol& symbol) { checkAssertionDeclUnused(symbol, "property"sv); }
+    void handle(const LetDeclSymbol& symbol) { checkAssertionDeclUnused(symbol, "let"sv); }
+
 private:
     void checkValueUnused(const ValueSymbol& symbol, DiagCode unusedCode,
                           std::optional<DiagCode> unsetCode, std::optional<DiagCode> unreadCode) {
@@ -692,6 +698,18 @@ private:
             addDiag(symbol, code);
     }
 
+    void checkAssertionDeclUnused(const Symbol& symbol, string_view kind) {
+        auto syntax = symbol.getSyntax();
+        if (!syntax || symbol.name.empty())
+            return;
+
+        auto [used, _] = compilation.isReferenced(*syntax);
+        if (!used && shouldWarn(symbol)) {
+            symbol.getParentScope()->addDiag(diag::UnusedAssertionDecl, symbol.location)
+                << kind << symbol.name;
+        }
+    }
+
     bool hasUnusedAttrib(const Symbol& symbol) {
         for (auto attr : compilation.getAttributes(symbol)) {
             if (attr->name == "unused"sv || attr->name == "maybe_unused"sv)
@@ -700,12 +718,15 @@ private:
         return false;
     }
 
-    void addDiag(const Symbol& symbol, DiagCode code) {
+    bool shouldWarn(const Symbol& symbol) {
         auto scope = symbol.getParentScope();
-        if (!scope->isUninstantiated() && scope->asSymbol().kind != SymbolKind::Package &&
-            symbol.name != "_"sv && !hasUnusedAttrib(symbol)) {
-            scope->addDiag(code, symbol.location) << symbol.name;
-        }
+        return !scope->isUninstantiated() && scope->asSymbol().kind != SymbolKind::Package &&
+               symbol.name != "_"sv && !hasUnusedAttrib(symbol);
+    }
+
+    void addDiag(const Symbol& symbol, DiagCode code) {
+        if (shouldWarn(symbol))
+            symbol.getParentScope()->addDiag(code, symbol.location) << symbol.name;
     }
 
     Compilation& compilation;

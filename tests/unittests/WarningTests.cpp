@@ -534,3 +534,53 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Unused genvars") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    genvar g;
+    genvar h;
+    for (g = 0; g < 3; g++) begin end
+endmodule
+)");
+
+    CompilationOptions coptions;
+    coptions.suppressUnused = false;
+
+    Compilation compilation(coptions);
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::UnusedGenvar);
+}
+
+TEST_CASE("Unused assertion decls") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    sequence s1; 1; endsequence
+    property p1; 1; endproperty
+    let l1 = 1;
+
+    sequence s2; 1; endsequence
+    property p2; 1; endproperty
+    let l2 = 1;
+
+    assert property (s2);
+    assert property (p2);
+    (* unused *) int i = l2();
+endmodule
+)");
+
+    CompilationOptions coptions;
+    coptions.suppressUnused = false;
+
+    Compilation compilation(coptions);
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 3);
+    CHECK(diags[0].code == diag::UnusedAssertionDecl);
+    CHECK(diags[1].code == diag::UnusedAssertionDecl);
+    CHECK(diags[2].code == diag::UnusedAssertionDecl);
+}

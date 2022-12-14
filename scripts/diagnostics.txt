@@ -949,6 +949,8 @@ warning unused-argument UnusedArgument "unused formal argument '{}'"
 warning unused-parameter UnusedParameter "unused parameter '{}'"
 warning unused-type-parameter UnusedTypeParameter "unused type parameter '{}'"
 warning unused-typedef UnusedTypedef "unused typedef '{}'"
+warning unused-genvar UnusedGenvar "unused genvar '{}'"
+warning unused-assertion-decl UnusedAssertionDecl "unused {} '{}'"
 warning missing-top NoTopModules "no top-level modules found in design"
 
 subsystem Meta
@@ -984,4 +986,4 @@ group conversion = { width-trunc width-expand implicit-conv }
 
 group unused = { unused-def unused-net unused-implicit-net unused-variable undriven-net unassigned-variable
                  unused-but-set-net unused-but-set-variable unused-port undriven-port unused-argument
-                 unused-parameter unused-type-parameter unused-typedef }
+                 unused-parameter unused-type-parameter unused-typedef unused-genvar unused-assertion-decl }

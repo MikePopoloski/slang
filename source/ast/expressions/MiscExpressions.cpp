@@ -730,6 +730,7 @@ Expression& AssertionInstanceExpression::fromLookup(const Symbol& symbol,
     const Scope* symbolScope;
     span<const AssertionPortSymbol* const> formalPorts;
 
+    comp.noteReference(symbol);
     switch (symbol.kind) {
         case SymbolKind::Sequence: {
             auto& seq = symbol.as<SequenceSymbol>();

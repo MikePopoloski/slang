@@ -606,6 +606,8 @@ GenerateBlockArraySymbol& GenerateBlockArraySymbol::fromSyntax(Compilation& comp
             diag.addNote(diag::NoteDeclarationHere, symbol->location);
             return *result;
         }
+
+        compilation.noteReference(*symbol);
     }
 
     SmallVector<const GenerateBlockSymbol*> entries;

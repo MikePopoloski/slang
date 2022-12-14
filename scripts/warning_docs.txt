@@ -939,13 +939,39 @@ module m;
 endmodule
 ```
 
+-Wunused-genvar
+A genvar is never used.
+\n\n
+A genvar with name '_' will never warn. Attributes `(* unused *)` or `(* maybe_unused *)`
+may be applied to suppress this warning for a particular genvar.
+```
+module m;
+    genvar g;
+endmodule
+```
+
+-Wunused-assertion-decl
+An assertion declaration (sequence, property, or let) is never used.
+\n\n
+A declaration with name '_' will never warn. Attributes `(* unused *)` or `(* maybe_unused *)`
+may be applied to suppress this warning for a particular declaration.
+```
+module m;
+    sequence s;
+        1;
+    endsequence
+endmodule
+```
+
 -Wbad-procedural-force
 According to the Verilog/SystemVerilog standard, it is illegal to procedurally force a
 bit-select or range select of a variable (you can do that with a net, or with a plain
 variable). It is an error by default, but can be turned into a warning, to support code
 compatibility with commercial tools that accept this illegal code.
 ```
-reg [1:0]r;
-initial
-  force r[0] = 1'b0;
+module m;
+    reg [1:0]r;
+    initial
+        force r[0] = 1'b0;
+endmodule
 ```
