@@ -11,6 +11,7 @@
 #include "slang/ast/Compilation.h"
 #include "slang/ast/types/Type.h"
 #include "slang/diagnostics/ExpressionsDiags.h"
+#include "slang/diagnostics/TypesDiags.h"
 #include "slang/syntax/AllSyntax.h"
 
 namespace slang::ast {
@@ -225,7 +226,7 @@ StringLiteral::StringLiteral(const Type& type, string_view value, string_view ra
     value(value), rawValue(rawValue), intStorage(&intVal) {
 }
 
-Expression& StringLiteral::fromSyntax(Compilation& compilation,
+Expression& StringLiteral::fromSyntax(const ASTContext& context,
                                       const LiteralExpressionSyntax& syntax) {
     ASSERT(syntax.kind == SyntaxKind::StringLiteralExpression);
 
@@ -233,14 +234,19 @@ Expression& StringLiteral::fromSyntax(Compilation& compilation,
     bitwidth_t width;
     ConstantValue* intVal;
 
+    auto& comp = context.getCompilation();
     if (value.empty()) {
         // [11.10.3] says that empty string literals take on a value of "\0" (8 zero bits).
         width = 8;
-        intVal = compilation.allocConstant(SVInt(8, 0, false));
+        intVal = comp.allocConstant(SVInt(8, 0, false));
     }
     else {
-        // TODO: check overflow handling
-        width = bitwidth_t(value.size()) * 8;
+        width = bitwidth_t(value.size() * 8);
+        if (width > (uint32_t)SVInt::MAX_BITS) {
+            context.addDiag(diag::PackedTypeTooLarge, syntax.sourceRange())
+                << width << (uint32_t)SVInt::MAX_BITS;
+            return badExpr(comp, nullptr);
+        }
 
         // String literals represented as integers put the first character on the
         // left, which translates to the msb, so we have to reverse the string.
@@ -248,12 +254,12 @@ Expression& StringLiteral::fromSyntax(Compilation& compilation,
         for (char c : make_reverse_range(value))
             bytes.push_back((byte)c);
 
-        intVal = compilation.allocConstant(SVInt(width, bytes, false));
+        intVal = comp.allocConstant(SVInt(width, bytes, false));
     }
 
-    auto& type = compilation.getType(width, IntegralFlags::Unsigned);
-    return *compilation.emplace<StringLiteral>(type, value, syntax.literal.rawText(), *intVal,
-                                               syntax.sourceRange());
+    auto& type = comp.getType(width, IntegralFlags::Unsigned);
+    return *comp.emplace<StringLiteral>(type, value, syntax.literal.rawText(), *intVal,
+                                        syntax.sourceRange());
 }
 
 const ConstantValue& StringLiteral::getIntValue() const {

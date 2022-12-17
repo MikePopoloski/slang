@@ -671,7 +671,7 @@ Expression& Expression::create(Compilation& compilation, const ExpressionSyntax&
             result = &UnboundedLiteral::fromSyntax(context, syntax.as<LiteralExpressionSyntax>());
             break;
         case SyntaxKind::StringLiteralExpression:
-            result = &StringLiteral::fromSyntax(compilation, syntax.as<LiteralExpressionSyntax>());
+            result = &StringLiteral::fromSyntax(context, syntax.as<LiteralExpressionSyntax>());
             break;
         case SyntaxKind::RealLiteralExpression:
             result = &RealLiteral::fromSyntax(compilation, syntax.as<LiteralExpressionSyntax>());

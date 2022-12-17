@@ -2041,3 +2041,23 @@ endmodule
     CHECK(diags[4].code == diag::RangeOOB);
     CHECK(diags[5].code == diag::ObjectTooLarge);
 }
+
+TEST_CASE("Giant string literal overflow") {
+    std::string source = R"(
+module m;
+    parameter p = ")";
+
+    source += std::string(2100000, 'A');
+    source += R"(";
+endmodule
+)";
+
+    auto tree = SyntaxTree::fromText(source);
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::PackedTypeTooLarge);
+}

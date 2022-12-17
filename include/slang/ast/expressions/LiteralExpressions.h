@@ -155,7 +155,7 @@ public:
 
     void serializeTo(ASTSerializer& serializer) const;
 
-    static Expression& fromSyntax(Compilation& compilation,
+    static Expression& fromSyntax(const ASTContext& context,
                                   const syntax::LiteralExpressionSyntax& syntax);
 
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::StringLiteral; }
