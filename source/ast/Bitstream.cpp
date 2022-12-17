@@ -10,6 +10,7 @@
 #include "../text/FormatBuffer.h"
 #include <numeric>
 
+#include "slang/ast/Compilation.h"
 #include "slang/ast/expressions/SelectExpressions.h"
 #include "slang/ast/symbols/ClassSymbols.h"
 #include "slang/ast/symbols/VariableSymbols.h"
@@ -866,6 +867,18 @@ ConstantValue Bitstream::resizeToRange(ConstantValue&& value, ConstantRange rang
     }
 
     return std::move(value);
+}
+
+ConstantValue Bitstream::convertToBitVector(ConstantValue&& value, SourceRange sourceRange,
+                                            EvalContext& context) {
+    if (value.bad() || value.isInteger())
+        return value;
+
+    // TODO: worry about width overflow?
+    size_t width = value.bitstreamWidth();
+    auto& type = context.compilation.getType(bitwidth_t(width),
+                                             IntegralFlags::FourState | IntegralFlags::Unsigned);
+    return evaluateCast(type, std::move(value), sourceRange, context, /* isImplicit */ true);
 }
 
 } // namespace slang::ast

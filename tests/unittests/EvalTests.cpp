@@ -1591,6 +1591,11 @@ TEST_CASE("Bit vector functions") {
     CHECK(session.eval("$isunknown(14'b101010101)").integer() == 0);
     CHECK(session.eval("$isunknown(14'b101z10101)").integer() == 1);
 
+    session.eval("struct { int i; logic j[]; } foo = '{42, '{'x, 1, 0}};");
+    CHECK(session.eval("$countbits(foo, '1, 'x)").integer() == 5);
+    CHECK(session.eval("$countones(foo)").integer() == 4);
+    CHECK(session.eval("$isunknown(foo)").integer() == 1);
+
     NO_SESSION_ERRORS;
 }
 

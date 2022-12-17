@@ -5,6 +5,7 @@
 // SPDX-FileCopyrightText: Michael Popoloski
 // SPDX-License-Identifier: MIT
 //------------------------------------------------------------------------------
+#include "slang/ast/Bitstream.h"
 #include "slang/ast/Compilation.h"
 #include "slang/ast/SystemSubroutine.h"
 #include "slang/diagnostics/SysFuncsDiags.h"
@@ -60,14 +61,11 @@ public:
         return comp.getIntType();
     }
 
-    ConstantValue eval(EvalContext& context, const Args& args, SourceRange,
+    ConstantValue eval(EvalContext& context, const Args& args, SourceRange range,
                        const CallExpression::SystemCallInfo&) const final {
-        ConstantValue value = args[0]->eval(context);
+        auto value = Bitstream::convertToBitVector(args[0]->eval(context), range, context);
         if (!value)
             return nullptr;
-
-        // TODO: should support any bitstream type...
-        const SVInt& iv = value.integer();
 
         // Figure out which bit values we're checking -- the caller can
         // pass any number of arguments; we always take the LSB and compare
@@ -76,6 +74,7 @@ public:
         // This array tracks which bit values we've already counted: 0, 1, X, or Z
         bool seen[4]{};
         uint64_t count = 0;
+        const SVInt& iv = value.integer();
 
         for (auto arg : args.subspan(1)) {
             ConstantValue v = arg->eval(context);
@@ -129,15 +128,13 @@ public:
         return comp.getIntType();
     }
 
-    ConstantValue eval(EvalContext& context, const Args& args, SourceRange,
+    ConstantValue eval(EvalContext& context, const Args& args, SourceRange range,
                        const CallExpression::SystemCallInfo&) const final {
-        ConstantValue value = args[0]->eval(context);
+        auto value = Bitstream::convertToBitVector(args[0]->eval(context), range, context);
         if (!value)
             return nullptr;
 
-        // TODO: should support any bitstream type...
         const SVInt& iv = value.integer();
-
         uint64_t count = iv.countOnes();
         return SVInt(32, count, true);
     }
@@ -162,15 +159,13 @@ public:
         return comp.getBitType();
     }
 
-    ConstantValue eval(EvalContext& context, const Args& args, SourceRange,
+    ConstantValue eval(EvalContext& context, const Args& args, SourceRange range,
                        const CallExpression::SystemCallInfo&) const final {
-        ConstantValue value = args[0]->eval(context);
+        auto value = Bitstream::convertToBitVector(args[0]->eval(context), range, context);
         if (!value)
             return nullptr;
 
-        // TODO: should support any bitstream type...
         const SVInt& iv = value.integer();
-
         switch (kind) {
             case OneHot:
                 return SVInt(1, uint64_t(iv.countOnes() == 1), false);

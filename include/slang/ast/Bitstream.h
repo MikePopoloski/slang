@@ -50,6 +50,10 @@ public:
     static ConstantValue resizeToRange(ConstantValue&& value, ConstantRange range,
                                        ConstantValue defaultValue, bool keepArray = false);
 
+    /// Converts a bitstream value into a corresponding bit vector of the same width.
+    static ConstantValue convertToBitVector(ConstantValue&& value, SourceRange sourceRange,
+                                            EvalContext& context);
+
 private:
     Bitstream() = default;
 };
