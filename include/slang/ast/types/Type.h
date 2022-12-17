@@ -298,6 +298,12 @@ public:
     /// Returns true if the type is valid for use in sequence expressions.
     bool isValidForSequence() const;
 
+    /// Returns true if the type is valid for use in a port.
+    bool isValidForPort(const Type** foundInvalid) const;
+
+    /// Returns true if the type is valid for use in a union.
+    bool isValidForUnion(bool isTagged, const Type** foundInvalid) const;
+
     /// Coerces the given constant into one that is appropriate for this type.
     ConstantValue coerceValue(const ConstantValue& value) const;
 

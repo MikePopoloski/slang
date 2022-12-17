@@ -191,6 +191,24 @@ static bool isValidForUserDefinedNet(const Type& type) {
     return false;
 }
 
+static bool isValidForIfaceVar(const Type& type) {
+    auto& ct = type.getCanonicalType();
+    if (ct.isVirtualInterface())
+        return false;
+
+    if (ct.isUnpackedArray())
+        return isValidForIfaceVar(*ct.getArrayElementType());
+
+    if (ct.isUnpackedStruct()) {
+        for (auto field : ct.as<UnpackedStructType>().fields) {
+            if (!isValidForIfaceVar(field->getType()))
+                return false;
+        }
+    }
+
+    return true;
+}
+
 void DeclaredType::checkType(const ASTContext& context) const {
     uint32_t masked = (flags & DeclaredTypeFlags::NeedsTypeCheck).bits();
     ASSERT(countPopulation64(masked) == 1);
@@ -247,6 +265,10 @@ void DeclaredType::checkType(const ASTContext& context) const {
         case uint32_t(DeclaredTypeFlags::CoverageType):
             if (!type->isIntegral())
                 context.addDiag(diag::NonIntegralCoverageExpr, parent.location) << *type;
+            break;
+        case uint32_t(DeclaredTypeFlags::InterfaceVariable):
+            if (!isValidForIfaceVar(*type))
+                context.addDiag(diag::VirtualInterfaceIfaceMember, parent.location);
             break;
         default:
             ASSUME_UNREACHABLE;

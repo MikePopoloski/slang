@@ -88,12 +88,15 @@ enum class SLANG_EXPORT DeclaredTypeFlags {
     /// The type is for an interconnect net, which has special rules.
     InterconnectNet = 1 << 15,
 
+    /// The type is for a variable declaration inside an interface.
+    InterfaceVariable = 1 << 16,
+
     /// A mask of flags that indicate additional type rules are needed to
     /// be checked after the type itself is resolved.
     NeedsTypeCheck = NetType | UserDefinedNetType | FormalArgMergeVar | Rand | DPIReturnType |
-                     DPIArg | RequireSequenceType | CoverageType
+                     DPIArg | RequireSequenceType | CoverageType | InterfaceVariable
 };
-BITMASK(DeclaredTypeFlags, CoverageType)
+BITMASK(DeclaredTypeFlags, InterfaceVariable)
 
 /// Ties together various syntax nodes that declare the type of some parent symbol
 /// along with the logic necessary to resolve that type. Optionally includes an

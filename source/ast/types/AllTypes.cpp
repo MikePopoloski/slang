@@ -1017,11 +1017,17 @@ const Type& UnpackedUnionType::fromSyntax(const ASTContext& context,
 
     result->fields = fields.copy(comp);
     for (auto field : result->fields) {
+        const Type* errorType;
         auto& varType = field->getType();
-        if (!isTagged && (varType.isCHandle() || varType.isDynamicallySizedArray()))
-            context.addDiag(diag::InvalidUnionMember, field->location) << varType;
-        else if (varType.isVirtualInterface())
-            context.addDiag(diag::VirtualInterfaceUnionMember, field->location);
+        if (!varType.isValidForUnion(isTagged, &errorType)) {
+            if (errorType->isVirtualInterface()) {
+                context.addDiag(diag::VirtualInterfaceUnionMember, field->location);
+            }
+            else {
+                ASSERT(!isTagged);
+                context.addDiag(diag::InvalidUnionMember, field->location) << varType;
+            }
+        }
 
         // Force resolution of the initializer right away, otherwise nothing
         // is required to force it later.

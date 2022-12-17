@@ -1364,8 +1364,13 @@ const Type& PortSymbol::getType() const {
         }
     }
 
-    if (type->isCHandle())
-        scope->addDiag(diag::InvalidPortType, location) << *type;
+    const Type* errorType;
+    if (!type->isValidForPort(&errorType)) {
+        if (errorType == type)
+            scope->addDiag(diag::InvalidPortType, location) << *type;
+        else
+            scope->addDiag(diag::InvalidPortSubType, location) << *type << *errorType;
+    }
 
     return *type;
 }

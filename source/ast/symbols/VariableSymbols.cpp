@@ -79,6 +79,11 @@ void VariableSymbol::fromSyntax(Compilation& compilation, const DataDeclarationS
     if (!hasExplicitLifetime)
         lifetime = getDefaultLifetime(scope);
 
+    const bool isInIface =
+        scope.asSymbol().kind == SymbolKind::InstanceBody &&
+        scope.asSymbol().as<InstanceBodySymbol>().getDefinition().definitionKind ==
+            DefinitionKind::Interface;
+
     for (auto declarator : syntax.declarators) {
         auto variable = compilation.emplace<VariableSymbol>(declarator->name.valueText(),
                                                             declarator->name.location(), *lifetime);
@@ -89,6 +94,9 @@ void VariableSymbol::fromSyntax(Compilation& compilation, const DataDeclarationS
 
         if (isConst)
             variable->flags |= VariableFlags::Const;
+
+        if (isInIface)
+            variable->getDeclaredType()->addFlags(DeclaredTypeFlags::InterfaceVariable);
 
         // If this is a static variable in a procedural context and it has an initializer,
         // the spec requires that the static keyword must be explicitly provided.

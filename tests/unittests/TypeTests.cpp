@@ -1986,3 +1986,34 @@ endmodule
     CHECK(diags[9].code == diag::BadAssignment);
     CHECK(diags[10].code == diag::BadAssignment);
 }
+
+TEST_CASE("Virtual interface type restrictions") {
+    auto tree = SyntaxTree::fromText(R"(
+interface I;
+endinterface
+
+interface J;
+  virtual I i;
+endinterface
+
+union { struct { virtual I i; } foo; } asdf;
+
+module m(input struct { virtual I i; } foo);
+  J j();
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 7);
+    CHECK(diags[0].code == diag::PackedArrayNotIntegral);
+    CHECK(diags[1].code == diag::MultiplePackedOpenArrays);
+    CHECK(diags[2].code == diag::MultiplePackedOpenArrays);
+    CHECK(diags[3].code == diag::InvalidDPIArgType);
+    CHECK(diags[4].code == diag::BadAssignment);
+    CHECK(diags[5].code == diag::BadAssignment);
+    CHECK(diags[6].code == diag::BadAssignment);
+}

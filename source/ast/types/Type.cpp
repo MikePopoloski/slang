@@ -851,6 +851,47 @@ bool Type::isValidForSequence() const {
     return ct.isIntegral() || ct.isString() || ct.isFloating();
 }
 
+bool Type::isValidForPort(const Type** foundInvalid) const {
+    auto& ct = getCanonicalType();
+    if (ct.isUnpackedArray())
+        return ct.getArrayElementType()->isValidForPort(foundInvalid);
+
+    if (ct.isUnpackedStruct()) {
+        for (auto field : ct.as<UnpackedStructType>().fields) {
+            if (!field->getType().isValidForPort(foundInvalid))
+                return false;
+        }
+    }
+
+    if (ct.isCHandle() || ct.isVirtualInterface()) {
+        *foundInvalid = &ct;
+        return false;
+    }
+
+    return true;
+}
+
+bool Type::isValidForUnion(bool isTagged, const Type** foundInvalid) const {
+    auto& ct = getCanonicalType();
+    if (ct.isVirtualInterface() ||
+        (!isTagged && (ct.isCHandle() || ct.isDynamicallySizedArray()))) {
+        *foundInvalid = &ct;
+        return false;
+    }
+
+    if (ct.isUnpackedArray())
+        return ct.getArrayElementType()->isValidForUnion(isTagged, foundInvalid);
+
+    if (ct.isUnpackedStruct()) {
+        for (auto field : ct.as<UnpackedStructType>().fields) {
+            if (!field->getType().isValidForUnion(isTagged, foundInvalid))
+                return false;
+        }
+    }
+
+    return true;
+}
+
 ConstantValue Type::coerceValue(const ConstantValue& value) const {
     if (isIntegral())
         return value.convertToInt(getBitWidth(), isSigned(), isFourState());
