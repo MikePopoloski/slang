@@ -2005,15 +2005,10 @@ endmodule
 
     Compilation compilation;
     compilation.addSyntaxTree(tree);
-    NO_COMPILATION_ERRORS;
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 7);
-    CHECK(diags[0].code == diag::PackedArrayNotIntegral);
-    CHECK(diags[1].code == diag::MultiplePackedOpenArrays);
-    CHECK(diags[2].code == diag::MultiplePackedOpenArrays);
-    CHECK(diags[3].code == diag::InvalidDPIArgType);
-    CHECK(diags[4].code == diag::BadAssignment);
-    CHECK(diags[5].code == diag::BadAssignment);
-    CHECK(diags[6].code == diag::BadAssignment);
+    REQUIRE(diags.size() == 3);
+    CHECK(diags[0].code == diag::VirtualInterfaceIfaceMember);
+    CHECK(diags[1].code == diag::VirtualInterfaceUnionMember);
+    CHECK(diags[2].code == diag::InvalidPortSubType);
 }

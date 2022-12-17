@@ -1085,7 +1085,7 @@ const Type& VirtualInterfaceType::fromSyntax(const ASTContext& context,
         }
     }
 
-    return *comp.emplace<VirtualInterfaceType>(iface, modport, loc);
+    return *comp.emplace<VirtualInterfaceType>(iface, modport, /* isRealIface */ false, loc);
 }
 
 ConstantValue VirtualInterfaceType::getDefaultValueImpl() const {

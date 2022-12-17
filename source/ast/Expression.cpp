@@ -1252,6 +1252,7 @@ Expression* Expression::tryBindInterfaceRef(const ASTContext& context,
     ASSERT(iface->parentInstance);
     auto sourceRange = syntax.sourceRange();
     const Type* type = comp.emplace<VirtualInterfaceType>(*iface->parentInstance, modport,
+                                                          /* isRealIface */ true,
                                                           sourceRange.start());
     if (!dims.empty())
         type = &FixedSizeUnpackedArrayType::fromDims(comp, *type, dims);

@@ -401,11 +401,12 @@ class SLANG_EXPORT VirtualInterfaceType : public Type {
 public:
     const InstanceSymbol& iface;
     const ModportSymbol* modport;
+    bool isRealIface;
 
     VirtualInterfaceType(const InstanceSymbol& iface, const ModportSymbol* modport,
-                         SourceLocation loc) :
+                         bool isRealIface, SourceLocation loc) :
         Type(SymbolKind::VirtualInterfaceType, "", loc),
-        iface(iface), modport(modport) {}
+        iface(iface), modport(modport), isRealIface(isRealIface) {}
 
     ConstantValue getDefaultValueImpl() const;
 

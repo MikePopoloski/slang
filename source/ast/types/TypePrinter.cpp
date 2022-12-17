@@ -351,6 +351,12 @@ void TypePrinter::visit(const CovergroupType& type, string_view) {
 }
 
 void TypePrinter::visit(const VirtualInterfaceType& type, string_view) {
+    if (options.anonymousTypeStyle == TypePrintingOptions::FriendlyName) {
+        if (!type.isRealIface)
+            buffer->append("virtual ");
+        buffer->append("interface ");
+    }
+
     buffer->append(type.iface.getDefinition().name);
 
     auto params = type.iface.body.parameters;
