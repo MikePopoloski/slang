@@ -1001,15 +1001,17 @@ Expression& Expression::bindLookupResult(Compilation& compilation, LookupResult&
         return *expr;
     }
 
-    // Recursive function call
+    // If we've found a function's return value variable and have parentheses for
+    // a call expression, translate that symbol to be the subroutine itself to
+    // allow for recursive function calls.
     if (invocation && symbol->kind == SymbolKind::Variable && result.selectors.empty()) {
-        // TODO: check nested scopes?
-        auto scope = symbol->getParentScope();
-        if (scope && scope->asSymbol().kind == SymbolKind::Subroutine &&
-            scope->asSymbol().as<SubroutineSymbol>().returnValVar == symbol) {
-            ASSERT(scope->asSymbol().as<SubroutineSymbol>().subroutineKind ==
-                   SubroutineKind::Function);
-            symbol = &scope->asSymbol();
+        if (auto scope = symbol->getParentScope()) {
+            auto& sym = scope->asSymbol();
+            if (sym.kind == SymbolKind::Subroutine &&
+                sym.as<SubroutineSymbol>().returnValVar == symbol) {
+                ASSERT(sym.as<SubroutineSymbol>().subroutineKind == SubroutineKind::Function);
+                symbol = &sym;
+            }
         }
     }
 
