@@ -164,10 +164,15 @@ public:
     ConstantRange range;
     uint32_t selectableWidth;
 
-    FixedSizeUnpackedArrayType(const Type& elementType, ConstantRange range);
+    FixedSizeUnpackedArrayType(const Type& elementType, ConstantRange range,
+                               uint32_t selectableWidth);
 
-    static const Type& fromDims(Compilation& compilation, const Type& elementType,
-                                span<const ConstantRange> dimensions);
+    static const Type& fromDims(const Scope& scope, const Type& elementType,
+                                span<const ConstantRange> dimensions,
+                                syntax::DeferredSourceRange sourceRange);
+
+    static const Type& fromDim(const Scope& scope, const Type& elementType, ConstantRange dim,
+                               syntax::DeferredSourceRange sourceRange);
 
     ConstantValue getDefaultValueImpl() const;
 

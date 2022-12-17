@@ -585,8 +585,8 @@ Expression& RangeSelectExpression::fromSyntax(Compilation& compilation, Expressi
         // At this point, all expressions are good, ranges have been validated and
         // we know the final width of the selection, so pick the result type and we're done.
         if (valueType.isUnpackedArray()) {
-            result->type = compilation.emplace<FixedSizeUnpackedArrayType>(elementType,
-                                                                           selectionRange);
+            result->type = &FixedSizeUnpackedArrayType::fromDim(*context.scope, elementType,
+                                                                selectionRange, errorRange);
         }
         else {
             result->type = &PackedArrayType::fromDim(*context.scope, elementType, selectionRange,
@@ -619,7 +619,8 @@ Expression& RangeSelectExpression::fromSyntax(Compilation& compilation, Expressi
             selectionRange.right = *rv - 1;
         }
 
-        result->type = compilation.emplace<FixedSizeUnpackedArrayType>(elementType, selectionRange);
+        result->type = &FixedSizeUnpackedArrayType::fromDim(*context.scope, elementType,
+                                                            selectionRange, errorRange);
     }
 
     return *result;
@@ -651,7 +652,8 @@ Expression& RangeSelectExpression::fromConstant(Compilation& compilation, Expres
     ASSERT(valueType.hasFixedRange());
 
     if (valueType.isUnpackedArray()) {
-        result->type = compilation.emplace<FixedSizeUnpackedArrayType>(elementType, range);
+        result->type = &FixedSizeUnpackedArrayType::fromDim(*context.scope, elementType, range,
+                                                            result->sourceRange);
     }
     else {
         result->type = &PackedArrayType::fromDim(*context.scope, elementType, range,

@@ -718,8 +718,12 @@ static bool unpackConcatenation(const StreamingConcatenationExpression& lhs, Pac
                     rvalue = unpackBitstream(*elemType, iter, iterEnd, bitOffset, dynamicSize);
                 }
                 else {
-                    rvalue = unpackBitstream(FixedSizeUnpackedArrayType(*elemType, with), iter,
-                                             iterEnd, bitOffset, dynamicSize);
+                    // We already checked for overflow earlier so it's fine to create this
+                    // temporary array result type as-is.
+                    FixedSizeUnpackedArrayType rvalueType(
+                        *elemType, with, elemType->getSelectableWidth() * with.width());
+
+                    rvalue = unpackBitstream(rvalueType, iter, iterEnd, bitOffset, dynamicSize);
                 }
             }
             else {

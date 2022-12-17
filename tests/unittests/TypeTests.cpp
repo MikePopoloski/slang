@@ -2017,8 +2017,11 @@ TEST_CASE("Max object size tests") {
     auto tree = SyntaxTree::fromText(R"(
 module m;
     logic [7:0] foo;
+    logic bar[];
+    int baz[999999999];
     initial begin
         $display(foo[2147483647:-2147483647]);
+        $display(bar[-2147483647:2147483647]);
     end
 endmodule
 )");
@@ -2027,7 +2030,9 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 2);
-    CHECK(diags[0].code == diag::PackedArrayTooLarge);
-    CHECK(diags[1].code == diag::RangeOOB);
+    REQUIRE(diags.size() == 4);
+    CHECK(diags[0].code == diag::ObjectTooLarge);
+    CHECK(diags[1].code == diag::PackedArrayTooLarge);
+    CHECK(diags[2].code == diag::RangeOOB);
+    CHECK(diags[3].code == diag::ObjectTooLarge);
 }

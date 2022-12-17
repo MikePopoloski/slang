@@ -647,6 +647,9 @@ const Type& PackedArrayType::fromSyntax(const Scope& scope, const Type& elementT
 
 const Type& PackedArrayType::fromDim(const Scope& scope, const Type& elementType, ConstantRange dim,
                                      DeferredSourceRange sourceRange) {
+    if (elementType.isError())
+        return elementType;
+
     auto& comp = scope.getCompilation();
     auto width = checkedMulU32(elementType.getBitWidth(), dim.width());
     if (!width || width > (uint32_t)SVInt::MAX_BITS) {
@@ -663,26 +666,40 @@ const Type& PackedArrayType::fromDim(const Scope& scope, const Type& elementType
     return *result;
 }
 
-FixedSizeUnpackedArrayType::FixedSizeUnpackedArrayType(const Type& elementType,
-                                                       ConstantRange range) :
+FixedSizeUnpackedArrayType::FixedSizeUnpackedArrayType(const Type& elementType, ConstantRange range,
+                                                       uint32_t selectableWidth) :
     Type(SymbolKind::FixedSizeUnpackedArrayType, "", SourceLocation()),
-    elementType(elementType), range(range) {
-
-    // TODO: overflow
-    selectableWidth = elementType.getSelectableWidth() * range.width();
+    elementType(elementType), range(range), selectableWidth(selectableWidth) {
 }
 
-const Type& FixedSizeUnpackedArrayType::fromDims(Compilation& compilation, const Type& elementType,
-                                                 span<const ConstantRange> dimensions) {
+const Type& FixedSizeUnpackedArrayType::fromDims(const Scope& scope, const Type& elementType,
+                                                 span<const ConstantRange> dimensions,
+                                                 DeferredSourceRange sourceRange) {
+    const Type* result = &elementType;
+    size_t count = dimensions.size();
+    for (size_t i = 0; i < count; i++)
+        result = &fromDim(scope, *result, dimensions[count - i - 1], sourceRange);
+
+    return *result;
+}
+
+const Type& FixedSizeUnpackedArrayType::fromDim(const Scope& scope, const Type& elementType,
+                                                ConstantRange dim,
+                                                DeferredSourceRange sourceRange) {
     if (elementType.isError())
         return elementType;
 
-    const Type* result = &elementType;
-    size_t count = dimensions.size();
-    for (size_t i = 0; i < count; i++) {
-        result = compilation.emplace<FixedSizeUnpackedArrayType>(*result,
-                                                                 dimensions[count - i - 1]);
+    auto& comp = scope.getCompilation();
+    auto width = checkedMulU32(elementType.getSelectableWidth(), dim.width());
+    if (!width || width > uint32_t(INT32_MAX)) {
+        uint64_t fullWidth = uint64_t(elementType.getSelectableWidth()) * dim.width();
+        scope.addDiag(diag::ObjectTooLarge, sourceRange.get()) << fullWidth << INT32_MAX;
+        return comp.getErrorType();
     }
+
+    auto result = comp.emplace<FixedSizeUnpackedArrayType>(elementType, dim, *width);
+    if (auto syntax = sourceRange.syntax())
+        result->setSyntax(*syntax);
 
     return *result;
 }

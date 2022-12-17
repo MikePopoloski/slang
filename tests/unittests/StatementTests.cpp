@@ -1590,7 +1590,7 @@ TEST_CASE("Unrollable for loop drivers") {
     always_comb baz[1][1].bar = 4;
     always_comb baz[2][1].foo = 3;
 
-    struct { int foo; int bar; } arr[2147483647];
+    struct { int foo; int bar; } arr[21474836];
     initial begin
         for (int i = 0; i < 2147483647; i++) begin
             arr[i].foo = 1;

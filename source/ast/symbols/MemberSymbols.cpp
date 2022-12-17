@@ -1598,7 +1598,7 @@ void RandSeqProductionSymbol::createRuleVariables(const RsRuleSyntax& syntax, co
         else {
             ConstantRange range{1, int32_t(count)};
             var->setType(
-                FixedSizeUnpackedArrayType::fromDims(comp, symbol->getReturnType(), {&range, 1}));
+                FixedSizeUnpackedArrayType::fromDim(scope, symbol->getReturnType(), range, syntax));
         }
 
         results.push_back(var);

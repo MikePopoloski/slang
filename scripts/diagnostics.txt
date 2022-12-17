@@ -746,6 +746,7 @@ error InvalidAssociativeIndexType "index type cannot be or contain floating poin
 error PackedArrayNotIntegral "packed array elements must be of integral type (not {})"
 error PackedArrayTooLarge "packed array of {} bits is too large; maximum width is {} bits"
 error ArrayDimTooLarge "array dimension of {} is too large; maximum number of elements is {}"
+error ObjectTooLarge "object size of {} bits exceeds implementation limit of {} bits"
 error InvalidUnionMember "untagged unions cannot have members of type {}"
 error VirtualInterfaceUnionMember "virtual interfaces cannot be used as members of unions"
 error InvalidArrayElemType "cannot declare an array with elements of type {}"

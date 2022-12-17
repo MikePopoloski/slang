@@ -1255,7 +1255,7 @@ Expression* Expression::tryBindInterfaceRef(const ASTContext& context,
                                                           /* isRealIface */ true,
                                                           sourceRange.start());
     if (!dims.empty())
-        type = &FixedSizeUnpackedArrayType::fromDims(comp, *type, dims);
+        type = &FixedSizeUnpackedArrayType::fromDims(*context.scope, *type, dims, sourceRange);
 
     return comp.emplace<HierarchicalReferenceExpression>(*origSymbol, *type, sourceRange);
 }

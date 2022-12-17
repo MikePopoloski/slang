@@ -174,6 +174,9 @@ public:
 
     bool operator!=(const SourceRange& rhs) const { return !(*this == rhs); }
 
+    /// A range that is reserved to represent "no location" at all.
+    static const SourceRange NoLocation;
+
 private:
     SourceLocation startLoc;
     SourceLocation endLoc;

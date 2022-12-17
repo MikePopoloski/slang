@@ -152,8 +152,10 @@ Expression* Expression::tryConnectPortArray(const ASTContext& context, const Typ
         // all of the instance dims and whatever is left should match
         // the actual port type to connect.
         if (!unpackedDims.empty()) {
-            if (!portType.isEquivalent(
-                    FixedSizeUnpackedArrayType::fromDims(comp, *ct, unpackedDims))) {
+            auto& unpackedType = FixedSizeUnpackedArrayType::fromDims(*context.scope, *ct,
+                                                                      unpackedDims,
+                                                                      expr.sourceRange);
+            if (!portType.isEquivalent(unpackedType)) {
                 return bad();
             }
 

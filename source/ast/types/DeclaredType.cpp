@@ -362,8 +362,8 @@ void DeclaredType::mergePortTypes(
             else {
                 // Put the unpacked dimensions back on the type now that it
                 // has been made signed.
-                destType = &FixedSizeUnpackedArrayType::fromDims(context.getCompilation(),
-                                                                 *sourceType, destDims);
+                destType = &FixedSizeUnpackedArrayType::fromDims(*context.scope, *sourceType,
+                                                                 destDims, SourceRange::NoLocation);
             }
         }
         else if (!shouldBeSigned && sourceType->isSigned()) {

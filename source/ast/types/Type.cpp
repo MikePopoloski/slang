@@ -1084,7 +1084,7 @@ const Type& Type::fromSyntax(Compilation& compilation, const DataTypeSyntax& nod
 const Type& Type::fromSyntax(Compilation& compilation, const Type& elementType,
                              const SyntaxList<VariableDimensionSyntax>& dimensions,
                              const ASTContext& context) {
-    if (elementType.isError() || dimensions.empty())
+    if (dimensions.empty())
         return elementType;
 
     switch (elementType.getCanonicalType().kind) {
@@ -1104,33 +1104,45 @@ const Type& Type::fromSyntax(Compilation& compilation, const Type& elementType,
     const Type* result = &elementType;
     size_t count = dimensions.size();
     for (size_t i = 0; i < count; i++) {
+        if (result->isError())
+            return *result;
+
         auto& syntax = *dimensions[count - i - 1];
         auto dim = context.evalDimension(syntax, /* requireRange */ false, /* isPacked */ false);
 
-        Type* next = nullptr;
         switch (dim.kind) {
             case DimensionKind::Unknown:
                 return compilation.getErrorType();
             case DimensionKind::Range:
             case DimensionKind::AbbreviatedRange:
-                next = compilation.emplace<FixedSizeUnpackedArrayType>(*result, dim.range);
+                result = &FixedSizeUnpackedArrayType::fromDim(*context.scope, *result, dim.range,
+                                                              syntax);
                 break;
-            case DimensionKind::Dynamic:
-                next = compilation.emplace<DynamicArrayType>(*result);
+            case DimensionKind::Dynamic: {
+                auto next = compilation.emplace<DynamicArrayType>(*result);
+                next->setSyntax(syntax);
+                result = next;
                 break;
-            case DimensionKind::DPIOpenArray:
-                next = compilation.emplace<DPIOpenArrayType>(*result, /* isPacked */ false);
+            }
+            case DimensionKind::DPIOpenArray: {
+                auto next = compilation.emplace<DPIOpenArrayType>(*result, /* isPacked */ false);
+                next->setSyntax(syntax);
+                result = next;
                 break;
-            case DimensionKind::Associative:
-                next = compilation.emplace<AssociativeArrayType>(*result, dim.associativeType);
+            }
+            case DimensionKind::Associative: {
+                auto next = compilation.emplace<AssociativeArrayType>(*result, dim.associativeType);
+                next->setSyntax(syntax);
+                result = next;
                 break;
-            case DimensionKind::Queue:
-                next = compilation.emplace<QueueType>(*result, dim.queueMaxSize);
+            }
+            case DimensionKind::Queue: {
+                auto next = compilation.emplace<QueueType>(*result, dim.queueMaxSize);
+                next->setSyntax(syntax);
+                result = next;
                 break;
+            }
         }
-
-        next->setSyntax(syntax);
-        result = next;
     }
 
     return *result;
