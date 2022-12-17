@@ -152,6 +152,9 @@ ExpressionSyntax& Parser::parseBinaryExpression(ExpressionSyntax* left,
             auto attributes = parseAttributes();
             auto& rightOperand = parseSubExpression(options, newPrecedence);
             left = &factory.binaryExpression(opKind, *left, opToken, attributes, rightOperand);
+
+            if (!attributes.empty() && isAssignmentOperator(opKind))
+                errorIfAttributes(attributes);
         }
     }
 

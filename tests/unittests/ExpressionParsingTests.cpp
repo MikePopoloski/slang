@@ -897,3 +897,15 @@ endmodule
     parseCompilationUnit(text);
     CHECK_DIAGNOSTICS_EMPTY;
 }
+
+TEST_CASE("Attributes disallowed on assignment operators") {
+    auto& text = R"(
+module m (input a, b, output c);
+    assign c = (* foo *) a + (* foo *) b;
+endmodule
+)";
+    parseCompilationUnit(text);
+
+    REQUIRE(diagnostics.size() == 1);
+    CHECK(diagnostics[0].code == diag::AttributesNotAllowed);
+}

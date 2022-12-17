@@ -323,6 +323,9 @@ public:
     /// @return true if the given token kind is a drive strength for value '1'.
     static bool isStrength1(TokenKind kind);
 
+    /// @return true if the given syntax kind is an assignment operator.
+    static bool isAssignmentOperator(SyntaxKind kind);
+
     /// @return a string representing the name of the given data type, if it has a simple name.
     static string_view getSimpleTypeName(const DataTypeSyntax& syntax);
 

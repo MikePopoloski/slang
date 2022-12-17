@@ -426,7 +426,7 @@ TEST_CASE("JSON dump -- attributes") {
     auto tree = SyntaxTree::fromText(R"(
 module m;
     wire dog, cat;
-    (* special *) assign dog = (* dummy *) cat;
+    (* special *) assign dog = cat;
 endmodule
 )");
 

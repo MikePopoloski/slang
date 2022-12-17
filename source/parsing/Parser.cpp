@@ -1420,8 +1420,12 @@ bool Parser::scanAttributes(uint32_t& index) {
 }
 
 void Parser::errorIfAttributes(AttrList attributes) {
-    if (!attributes.empty())
-        addDiag(diag::AttributesNotAllowed, peek().location());
+    if (!attributes.empty()) {
+        auto last = attributes.back()->getLastToken();
+        SourceRange range{attributes.front()->getFirstToken().location(),
+                          last.location() + last.rawText().length()};
+        addDiag(diag::AttributesNotAllowed, range);
+    }
 }
 
 void Parser::checkBlockNames(string_view begin, string_view end, SourceLocation loc) {
