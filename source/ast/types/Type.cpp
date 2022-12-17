@@ -498,7 +498,10 @@ bool Type::isMatching(const Type& rhs) const {
         if (!lv.iface.body.hasSameType(rv.iface.body))
             return false;
 
-        return lv.modport == rv.modport;
+        if (lv.modport)
+            return rv.modport && lv.modport->name == rv.modport->name;
+        else
+            return !rv.modport;
     }
 
     return false;
@@ -633,7 +636,10 @@ bool Type::isAssignmentCompatible(const Type& rhs) const {
 
         // A virtual interface with no modport selected may be assigned to a
         // virtual interface with a modport selected.
-        return (lv.modport == rv.modport) || (lv.modport && !rv.modport);
+        if (!rv.modport)
+            return true;
+
+        return lv.modport && lv.modport->name == rv.modport->name;
     }
 
     // Null can be assigned to handles.

@@ -424,8 +424,17 @@ bool lookupDownward(span<const NamePlusLoc> nameParts, NameComponents name,
         }
 
         // If there is a modport name restricting our lookup, translate to that
-        // modport's scope now.
-        if (!modportName.empty()) {
+        // modport's scope now. It's possible we're already looking at the modport
+        // here, if the interface port symbol was explicitly connected to a modport
+        // instead of an instance. In that case we don't have to translate anything.
+        //
+        // Also check if we're looking at an array of instances -- it's possible to hit
+        // this in an invalid lookup scenario and we want to make sure we fall through
+        // to the normal scope lookup below in order to issue an error. For example:
+        //    module (I.mod i[3]);
+        //        virtual I.mod j = i.blah;
+        //    endmodule
+        if (!modportName.empty() && symbol->kind == SymbolKind::InstanceBody) {
             symbol = symbol->as<Scope>().find(modportName);
             if (!symbol)
                 return false;

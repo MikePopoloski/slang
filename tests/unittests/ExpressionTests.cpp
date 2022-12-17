@@ -1831,7 +1831,6 @@ module m;
         end
 
         a = f;
-        a = f.m;
         b = f;
         b = f.m;
         a.i = 1;

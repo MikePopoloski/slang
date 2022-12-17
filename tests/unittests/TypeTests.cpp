@@ -1840,3 +1840,139 @@ endmodule
     CHECK(diags[5].code == diag::BadAssignment);
     CHECK(diags[6].code == diag::BadAssignment);
 }
+
+TEST_CASE("Virtual interface examples from 25.9") {
+    auto tree = SyntaxTree::fromText(R"(
+interface SBus;
+    logic req, grant;
+    logic [7:0] addr, data;
+endinterface
+
+class SBusTransactor;
+    virtual SBus bus;
+
+    function new( virtual SBus s );
+        bus = s;
+    endfunction
+
+    task request();
+        bus.req <= 1'b1;
+    endtask
+
+    task wait_for_bus();
+        @(posedge bus.grant);
+    endtask
+endclass
+
+module devA( SBus s ); endmodule
+module devB( SBus s ); endmodule
+
+module top;
+    SBus s[1:4] ();
+    devA a1( s[1] );
+    devB b1( s[2] );
+    devA a2( s[3] );
+    devB b2( s[4] );
+
+    initial begin
+        SBusTransactor t[1:4];
+        t[1] = new( s[1] );
+        t[2] = new( s[2] );
+        t[3] = new( s[3] );
+        t[4] = new( s[4] );
+    end
+endmodule
+
+interface PBus #(parameter WIDTH=8);
+    logic req, grant;
+    logic [WIDTH-1:0] addr, data;
+    modport phy(input addr, ref data);
+endinterface
+
+module top2;
+    PBus #(16) p16();
+    PBus #(32) p32();
+    virtual PBus v8;
+    virtual PBus #(35) v35;
+    virtual PBus #(16) v16;
+    virtual PBus #(16).phy v16_phy;
+    virtual PBus #(32) v32;
+    virtual PBus #(32).phy v32_phy;
+    initial begin
+        v16 = p16;
+        v32 = p32;
+        v16 = p32; // illegal – parameter values don't match
+        v16 = v32; // illegal – parameter values don't match
+        v16_phy = v16;
+        v16 = v16_phy; // illegal assignment from selected modport to
+                       // no selected modport
+        v32_phy = p32;
+        v32 = p32.phy; // illegal assignment from selected modport to
+                       // no selected modport
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 4);
+    CHECK(diags[0].code == diag::BadAssignment);
+    CHECK(diags[1].code == diag::BadAssignment);
+    CHECK(diags[2].code == diag::BadAssignment);
+    CHECK(diags[3].code == diag::BadAssignment);
+}
+
+TEST_CASE("Virtual interface connected to interface port") {
+    auto tree = SyntaxTree::fromText(R"(
+interface I;
+    int i;
+    modport m(input i);
+endinterface
+
+module m(I.m a[3][4], I.m b, I c, I d);
+    virtual I i = a;
+    virtual I j = a[0][1]; // TODO: should error
+    virtual I.m k = a[0][1];
+    virtual I.m l = a.foo;
+    virtual I.m n = a[0];
+
+    virtual I o = b; // TODO: should error
+    virtual I.m p = b;
+
+    virtual I q = b.m;
+    virtual I.m r = b.m;
+
+    virtual I s = c;
+    virtual I.m t = c;
+
+    virtual I u = c.m;
+    virtual I.m v = c.m;
+
+    virtual I w = d;
+    virtual I.m x = d;
+
+    virtual I y = d.m;
+    virtual I.m z = d.m;
+endmodule
+
+module top;
+    I i [3][4]();
+    m m1(i, i[0][0], i[0][0], i[0][0].m);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 7);
+    CHECK(diags[0].code == diag::NotAValue);
+    CHECK(diags[1].code == diag::CouldNotResolveHierarchicalPath);
+    CHECK(diags[2].code == diag::NotAValue);
+    CHECK(diags[3].code == diag::BadAssignment);
+    CHECK(diags[4].code == diag::BadAssignment);
+    CHECK(diags[5].code == diag::BadAssignment);
+    CHECK(diags[6].code == diag::BadAssignment);
+}

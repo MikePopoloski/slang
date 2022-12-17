@@ -1164,9 +1164,11 @@ Expression* Expression::tryBindInterfaceRef(const ASTContext& context,
 
     auto& comp = context.getCompilation();
     auto symbol = result.found;
+    string_view modportName; // TODO: use modport name
+
     if (symbol->kind == SymbolKind::InterfacePort) {
         auto& ifacePort = symbol->as<InterfacePortSymbol>();
-        string_view modportName = ifacePort.modport;
+        modportName = ifacePort.modport;
 
         symbol = ifacePort.getConnection();
         if (symbol && !result.selectors.empty()) {
@@ -1175,9 +1177,7 @@ Expression* Expression::tryBindInterfaceRef(const ASTContext& context,
                 selectors.push_back(std::get<0>(sel));
 
             symbol = Lookup::selectChild(*symbol, selectors, context, result);
-            if (symbol && !modportName.empty()) {
-                // TODO: find modport
-            }
+            result.selectors.clear();
         }
 
         if (!symbol) {
@@ -1185,44 +1185,50 @@ Expression* Expression::tryBindInterfaceRef(const ASTContext& context,
             // creation, but if we hit this case here we found the iface and simply failed
             // to connect it, likely because we're in an uninstantiated context. Return
             // a badExpr here to silence any follow on errors that might otherwise result.
+            result.reportDiags(context);
             return &badExpr(comp, nullptr);
         }
+    }
 
-        result.reportDiags(context);
-    }
-    else if ((symbol->kind == SymbolKind::Instance && symbol->as<InstanceSymbol>().isInterface()) ||
-             symbol->kind == SymbolKind::Modport) {
-        result.reportDiags(context);
-        result.errorIfSelectors(context);
-    }
-    else if (symbol->kind == SymbolKind::UninstantiatedDef) {
+    if (symbol->kind == SymbolKind::UninstantiatedDef) {
         return comp.emplace<HierarchicalReferenceExpression>(*symbol, targetType,
                                                              syntax.sourceRange());
     }
-    else {
+
+    // TODO: add support for arrays of instances
+    if (symbol->kind != SymbolKind::Instance && /* symbol->kind != SymbolKind::InstanceArray && */
+        symbol->kind != SymbolKind::Modport) {
+        // Return nullptr to let the parent try normal expression binding.
         return nullptr;
     }
+
+    result.reportDiags(context);
+    result.errorIfSelectors(context);
 
     const InstanceBodySymbol* iface = nullptr;
     const ModportSymbol* modport = nullptr;
     if (symbol->kind == SymbolKind::Modport) {
         modport = &symbol->as<ModportSymbol>();
-        iface = &modport->getParentScope()->asSymbol().as<InstanceBodySymbol>();
+        iface = &symbol->getParentScope()->asSymbol().as<InstanceBodySymbol>();
     }
     else {
         iface = &symbol->as<InstanceSymbol>().body;
     }
 
     // Now make sure the interface or modport we found matches the target type.
+    auto sourceRange = syntax.sourceRange();
     auto& vit = targetType.getCanonicalType().as<VirtualInterfaceType>();
-    if (&vit.iface != iface->parentInstance) {
-        // TODO: error
-    }
-    else if (modport && vit.modport != modport) {
-        // TODO: error
+    const bool modportMatches = !modport || (vit.modport && vit.modport->name == modport->name);
+    if (!iface->hasSameType(vit.iface.body) || !modportMatches) {
+        // Create a fake virtual interface type for the rhs of this connection
+        // to pass along to the diagnostic formatter.
+        ASSERT(iface->parentInstance);
+        auto rhsVit = comp.emplace<VirtualInterfaceType>(*iface->parentInstance, modport,
+                                                         sourceRange.start());
+        context.addDiag(diag::BadAssignment, sourceRange) << *rhsVit << vit;
     }
 
-    return comp.emplace<HierarchicalReferenceExpression>(*symbol, targetType, syntax.sourceRange());
+    return comp.emplace<HierarchicalReferenceExpression>(*symbol, targetType, sourceRange);
 }
 
 void Expression::findPotentiallyImplicitNets(
