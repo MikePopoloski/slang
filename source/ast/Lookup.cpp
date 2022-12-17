@@ -298,6 +298,7 @@ bool lookupDownward(span<const NamePlusLoc> nameParts, NameComponents name,
         if (!checkClassParams(name))
             return false;
 
+        bool isVirtualIface = false;
         auto isValueLike = [&](const Symbol*& symbol) {
             switch (symbol->kind) {
                 case SymbolKind::ConstraintBlock:
@@ -316,6 +317,7 @@ bool lookupDownward(span<const NamePlusLoc> nameParts, NameComponents name,
                     // the target interface and continue the hierarchical lookup.
                     auto& type = symbol->as<ValueSymbol>().getType();
                     if (type.isVirtualInterface()) {
+                        isVirtualIface = true;
                         context.getCompilation().noteReference(*symbol);
                         symbol = getVirtualInterfaceTarget(type, context, name.range);
                         return false;
@@ -352,7 +354,7 @@ bool lookupDownward(span<const NamePlusLoc> nameParts, NameComponents name,
         if (it == nameParts.rbegin()) {
             result.isHierarchical = symbol->kind != SymbolKind::InterfacePort &&
                                     symbol->kind != SymbolKind::Package &&
-                                    symbol->kind != SymbolKind::CompilationUnit;
+                                    symbol->kind != SymbolKind::CompilationUnit && !isVirtualIface;
         }
 
         string_view modportName;

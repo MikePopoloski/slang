@@ -1957,3 +1957,26 @@ endmodule
     CHECK(diags[1].code == diag::CompilationUnitFromPackage);
     CHECK(diags[2].code == diag::HierarchicalFromPackage);
 }
+
+TEST_CASE("Virtual interface access is not necessarily hierarchical") {
+    auto tree = SyntaxTree::fromText(R"(
+interface Bus;
+    logic clk;
+endinterface
+
+package P;
+    class BFM;
+        virtual Bus intf;
+        task drive_txn();
+            forever begin
+                @(posedge intf.clk);
+            end
+        endtask
+    endclass
+endpackage
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
