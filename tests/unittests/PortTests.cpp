@@ -1656,3 +1656,29 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Interface array port with modport selector passthrough") {
+    auto tree = SyntaxTree::fromText(R"(
+interface I;
+    logic i;
+    modport m(input i);
+endinterface
+
+module top;
+    I i();
+
+    m m1(i.m);
+endmodule
+
+module m (I.m p1);
+    n n1(.p1);
+endmodule
+
+module n (I.m p1);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}

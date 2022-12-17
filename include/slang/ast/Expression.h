@@ -187,6 +187,12 @@ public:
                                           const syntax::ElementSelectSyntax& syntax,
                                           const ASTContext& context);
 
+    /// Tries to bind an interface reference into an expression for an interface port
+    /// or a virtual interface assignment.
+    /// Returns nullptr if unable to do so.
+    static Expression* tryBindInterfaceRef(const ASTContext& context,
+                                           const ExpressionSyntax& syntax, bool isInterfacePort);
+
     /// Specialized method for creating all of the expressions in a set membership check.
     /// This is used for case statements and the 'inside' operator.
     ///
@@ -375,9 +381,6 @@ protected:
 
     static Expression* tryConnectPortArray(const ASTContext& context, const Type& type,
                                            Expression& expr, const InstanceSymbolBase& instance);
-
-    static Expression* tryBindInterfaceRef(const ASTContext& context,
-                                           const ExpressionSyntax& syntax);
 
     static Expression& badExpr(Compilation& compilation, const Expression* expr);
 

@@ -1099,42 +1099,7 @@ private:
         if (!expr)
             return emptyConnection(port);
 
-        while (expr->kind == SyntaxKind::ParenthesizedExpression)
-            expr = expr->as<ParenthesizedExpressionSyntax>().expression;
-
-        if (!NameSyntax::isKind(expr->kind)) {
-            scope.addDiag(diag::InterfacePortInvalidExpression, expr->sourceRange()) << port.name;
-            return emptyConnection(port);
-        }
-
-        LookupResult result;
-        Lookup::name(expr->as<NameSyntax>(), context, LookupFlags::None, result);
-        result.reportDiags(context);
-
-        // If we found the interface but it's actually a port, unwrap to the target connection.
-        const Symbol* symbol = result.found;
-        string_view modport;
-        if (symbol && symbol->kind == SymbolKind::InterfacePort) {
-            auto& ifacePort = symbol->as<InterfacePortSymbol>();
-            modport = ifacePort.modport;
-
-            symbol = ifacePort.getConnection();
-            if (symbol && !result.selectors.empty()) {
-                SmallVector<const ElementSelectSyntax*> selectors;
-                for (auto& sel : result.selectors)
-                    selectors.push_back(std::get<0>(sel));
-
-                symbol = Lookup::selectChild(*symbol, selectors, context, result);
-            }
-        }
-        else {
-            result.errorIfSelectors(context);
-        }
-
-        const Symbol* conn = nullptr;
-        if (symbol)
-            conn = getInterface(port, symbol, modport, expr->sourceRange());
-
+        auto conn = getInterfaceConn(context, port, *expr);
         return createConnection(port, conn, attributes);
     }
 
@@ -1146,13 +1111,14 @@ private:
             return emptyConnection(port);
         }
 
-        if (!symbol->isDeclaredBefore(lookupLocation).value_or(true)) {
-            auto& diag = scope.addDiag(diag::UsedBeforeDeclared, range);
-            diag << port.name;
-            diag.addNote(diag::NoteDeclarationHere, symbol->location);
-        }
+        // This is a bit inefficient but it simplifies the implementation to just
+        // wrap the name up in a fake expression and defer to the normal expression
+        // handling connection path.
+        Token id(comp, TokenKind::Identifier, {}, port.name, range.start());
+        auto idName = comp.emplace<IdentifierNameSyntax>(id);
 
-        auto conn = getInterface(port, symbol, {}, range);
+        ASTContext context(scope, lookupLocation, ASTFlags::NonProcedural);
+        auto conn = getInterfaceConn(context, port, *idName);
         return createConnection(port, conn, attributes);
     }
 
@@ -1168,101 +1134,54 @@ private:
         return true;
     }
 
-    const Symbol* getInterface(const InterfacePortSymbol& port, const Symbol* symbol,
-                               string_view providedModport, SourceRange range) {
+    const Symbol* getInterfaceConn(ASTContext& context, const InterfacePortSymbol& port,
+                                   const ExpressionSyntax& syntax) {
         ASSERT(!port.isInvalid());
 
         auto portDims = port.getDeclaredRange();
         if (!portDims)
             return nullptr;
 
-        ASSERT(port.isGeneric || port.interfaceDef);
-        auto checkConnection = [&](const Definition& connDef, string_view connModport) {
-            if (&connDef != port.interfaceDef && !port.isGeneric) {
-                std::string path;
-                connDef.getHierarchicalPath(path);
+        auto expr = Expression::tryBindInterfaceRef(context, syntax,
+                                                    /* isInterfacePort */ true);
+        if (!expr || expr->bad())
+            return nullptr;
 
-                auto& diag = scope.addDiag(diag::InterfacePortTypeMismatch, range);
-                diag << path << port.interfaceDef->name;
-                diag.addNote(diag::NoteDeclarationHere, port.location);
-                return false;
-            }
-
-            // Modport must match the specified requirement, if we have one.
-            if (!connModport.empty() && !port.modport.empty() && connModport != port.modport) {
-                auto& diag = scope.addDiag(diag::ModportConnMismatch, range);
-                diag << connDef.name << connModport;
-                diag << (port.isGeneric ? "interface"sv : port.interfaceDef->name);
-                diag << port.modport;
-                return false;
-            }
-
-            return true;
-        };
-
-        // The user can explicitly connect a modport symbol.
-        if (symbol->kind == SymbolKind::Modport) {
-            // Interface that owns the modport must match our expected interface.
-            auto connDef = symbol->getDeclaringDefinition();
-            ASSERT(connDef && providedModport.empty());
-            if (!checkConnection(*connDef, symbol->name))
-                return nullptr;
-
-            // Make sure the port doesn't require an array.
-            if (!portDims->empty()) {
-                auto& diag = scope.addDiag(diag::PortConnDimensionsMismatch, range) << port.name;
-                diag.addNote(diag::NoteDeclarationHere, port.location);
-                return nullptr;
-            }
-
-            // Everything checks out. Connect to the modport.
-            return symbol;
-        }
-
-        // If the symbol is another port, unwrap it now.
-        if (symbol->kind == SymbolKind::InterfacePort) {
-            // Should be impossible to already have a modport specified here.
-            ASSERT(providedModport.empty());
-
-            auto& ifacePort = symbol->as<InterfacePortSymbol>();
-            providedModport = ifacePort.modport;
-            symbol = ifacePort.getConnection();
-            if (!symbol)
-                return nullptr;
-        }
-
-        // Make sure the thing we're connecting to is an interface or array of interfaces.
+        // Pull out the expression type, which should always be a virtual interface or
+        // array of such types, and decompose into dims and interface info.
         SmallVector<ConstantRange, 4> dims;
-        const Symbol* child = symbol;
-        while (child->kind == SymbolKind::InstanceArray) {
-            auto& array = child->as<InstanceArraySymbol>();
-            if (array.elements.empty())
-                return nullptr;
-
-            dims.push_back(array.range);
-            child = array.elements[0];
+        auto type = expr->type;
+        while (type->isUnpackedArray()) {
+            dims.push_back(type->getFixedRange());
+            type = type->getArrayElementType();
         }
 
-        if (child->kind != SymbolKind::Instance || !child->as<InstanceSymbol>().isInterface()) {
-            // If this is a variable with an errored type, an error is already emitted.
-            if (child->kind != SymbolKind::UninstantiatedDef &&
-                (child->kind != SymbolKind::Variable ||
-                 !child->as<VariableSymbol>().getType().isError())) {
+        auto& vit = type->as<VirtualInterfaceType>();
+        auto& connDef = vit.iface.getDefinition();
 
-                // TODO: does symbol always have a name here?
-                auto& diag = scope.addDiag(diag::NotAnInterface, range) << symbol->name;
-                diag.addNote(diag::NoteDeclarationHere, symbol->location);
-            }
+        ASSERT(port.isGeneric || port.interfaceDef);
+        if (&connDef != port.interfaceDef && !port.isGeneric) {
+            std::string path;
+            connDef.getHierarchicalPath(path);
+
+            auto& diag = context.addDiag(diag::InterfacePortTypeMismatch, syntax.sourceRange());
+            diag << path << port.interfaceDef->name;
+            diag.addNote(diag::NoteDeclarationHere, port.location);
             return nullptr;
         }
 
-        auto& connDef = child->as<InstanceSymbol>().getDefinition();
-        if (!checkConnection(connDef, providedModport))
+        // Modport must match the specified requirement, if we have one.
+        if (vit.modport && !port.modport.empty() && vit.modport->name != port.modport) {
+            auto& diag = context.addDiag(diag::ModportConnMismatch, syntax.sourceRange());
+            diag << connDef.name << vit.modport->name;
+            diag << (port.isGeneric ? "interface"sv : port.interfaceDef->name);
+            diag << port.modport;
             return nullptr;
+        }
 
-        if (port.isGeneric && !port.modport.empty() && providedModport.empty()) {
+        if (port.isGeneric && !port.modport.empty() && !vit.modport) {
             if (auto it = connDef.modports.find(port.modport); it == connDef.modports.end()) {
-                auto& diag = scope.addDiag(diag::NotAModport, range);
+                auto& diag = context.addDiag(diag::NotAModport, syntax.sourceRange());
                 diag << port.modport;
                 diag << connDef.name;
                 diag.addNote(diag::NoteReferencedHere, port.location);
@@ -1270,7 +1189,8 @@ private:
             }
         }
 
-        // If the dimensions match exactly what the port is expecting make the connection.
+        // Make the connection if the dimensions match exactly what the port is expecting.
+        const Symbol* symbol = expr->as<HierarchicalReferenceExpression>().symbol;
         if (areDimSizesEqual(*portDims, dims))
             return symbol;
 
@@ -1304,7 +1224,8 @@ private:
             return symbol;
         }
 
-        auto& diag = scope.addDiag(diag::PortConnDimensionsMismatch, range) << port.name;
+        auto& diag = scope.addDiag(diag::PortConnDimensionsMismatch, syntax.sourceRange())
+                     << port.name;
         diag.addNote(diag::NoteDeclarationHere, port.location);
         return nullptr;
     }

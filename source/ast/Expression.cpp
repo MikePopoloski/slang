@@ -242,7 +242,7 @@ const Expression& Expression::bindRValue(const Type& lhs, const ExpressionSyntax
 
     ASTContext ctx = context.resetFlags(extraFlags);
     if (lhs.isVirtualInterfaceOrArray()) {
-        if (auto ref = tryBindInterfaceRef(ctx, rhs))
+        if (auto ref = tryBindInterfaceRef(ctx, rhs, /* isInterfacePort */ false))
             return convertAssignment(ctx, lhs, *ref, location);
     }
 
@@ -1148,18 +1148,24 @@ Expression& Expression::bindSelector(Compilation& compilation, Expression& value
 }
 
 Expression* Expression::tryBindInterfaceRef(const ASTContext& context,
-                                            const ExpressionSyntax& syntax) {
+                                            const ExpressionSyntax& syntax, bool isInterfacePort) {
     const ExpressionSyntax* expr = &syntax;
     while (expr->kind == SyntaxKind::ParenthesizedExpression)
         expr = expr->as<ParenthesizedExpressionSyntax>().expression;
 
-    if (!NameSyntax::isKind(expr->kind))
+    if (!NameSyntax::isKind(expr->kind)) {
+        if (isInterfacePort)
+            context.addDiag(diag::InterfacePortInvalidExpression, expr->sourceRange());
         return nullptr;
+    }
 
     LookupResult result;
     Lookup::name(expr->as<NameSyntax>(), context, LookupFlags::None, result);
-    if (!result.found)
+    if (!result.found) {
+        if (isInterfacePort)
+            result.reportDiags(context);
         return nullptr;
+    }
 
     auto& comp = context.getCompilation();
     auto symbol = result.found;
@@ -1200,12 +1206,22 @@ Expression* Expression::tryBindInterfaceRef(const ASTContext& context,
         symbol = array.elements[0];
     }
 
-    if (symbol->kind == SymbolKind::UninstantiatedDef) {
-        return comp.emplace<HierarchicalReferenceExpression>(*origSymbol, comp.getErrorType(),
-                                                             syntax.sourceRange());
-    }
+    if (symbol->kind != SymbolKind::Modport &&
+        (symbol->kind != SymbolKind::Instance || !symbol->as<InstanceSymbol>().isInterface())) {
+        // If this is a variable with an errored type, an error is already emitted.
+        if (symbol->kind == SymbolKind::UninstantiatedDef ||
+            (symbol->kind == SymbolKind::Variable &&
+             symbol->as<VariableSymbol>().getType().isError())) {
+            return comp.emplace<HierarchicalReferenceExpression>(*origSymbol, comp.getErrorType(),
+                                                                 syntax.sourceRange());
+        }
 
-    if (symbol->kind != SymbolKind::Instance && symbol->kind != SymbolKind::Modport) {
+        if (isInterfacePort && !origSymbol->name.empty()) {
+            auto& diag = context.addDiag(diag::NotAnInterface, syntax.sourceRange())
+                         << origSymbol->name;
+            diag.addNote(diag::NoteDeclarationHere, origSymbol->location);
+        }
+
         // Return nullptr to let the parent try normal expression binding.
         return nullptr;
     }
