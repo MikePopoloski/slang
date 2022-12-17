@@ -190,9 +190,9 @@ Expression* Expression::tryConnectPortArray(const ASTContext& context, const Typ
     for (auto& dim : instanceDims)
         numInstances *= dim.width();
 
-    // TODO: check overflow handling
     bitwidth_t portWidth = portType.getBitWidth();
-    if (numInstances * portWidth != ct->getBitWidth())
+    auto instPortWidth = checkedMulU32(numInstances, portWidth);
+    if (!instPortWidth || *instPortWidth != ct->getBitWidth())
         return bad();
 
     // Convert the port expression to a simple bit vector so that we can select
@@ -200,7 +200,7 @@ Expression* Expression::tryConnectPortArray(const ASTContext& context, const Typ
     // range of the packed array so a multidimensional wouldn't work correctly
     // without this conversion.
     result = &ConversionExpression::makeImplicit(
-        context, comp.getType(numInstances * portWidth, result->type->getIntegralFlags()),
+        context, comp.getType(*instPortWidth, result->type->getIntegralFlags()),
         ConversionKind::Implicit, *result, result->sourceRange.start());
 
     // We have enough bits to assign each port on each instance, so now we just need
@@ -1301,7 +1301,6 @@ static span<const Expression* const> bindExpressionList(
         bad |= expr.bad();
     }
 
-    // TODO: overflow
     if (!bad && expectedCount && expectedCount != elems.size() * replCount) {
         auto& diag = context.addDiag(diag::WrongNumberAssignmentPatterns, sourceRange);
         diag << patternType << expectedCount << elems.size();
@@ -1884,7 +1883,6 @@ Expression& ReplicatedAssignmentPatternExpression::forStruct(
     for (auto& field : structScope.membersOfType<FieldSymbol>())
         types.push_back(&field.getType());
 
-    // TODO: overflow
     if (types.size() != syntax.items.size() * count) {
         auto& diag = context.addDiag(diag::WrongNumberAssignmentPatterns, sourceRange);
         diag << type << types.size() << syntax.items.size() * count;

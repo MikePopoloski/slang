@@ -429,7 +429,6 @@ std::optional<std::pair<uint32_t, uint32_t>> ValueDriver::getBounds(
         if (type->kind == SymbolKind::FixedSizeUnpackedArrayType) {
             // Unpacked arrays need their selection adjusted since they
             // return a simple index instead of a bit offset.
-            // TODO: overflow
             uint32_t elemWidth = elem.type->getSelectableWidth();
             result.first += (uint32_t)range.lower() * elemWidth;
             result.second = result.first + elemWidth - 1;

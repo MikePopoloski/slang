@@ -1602,7 +1602,7 @@ Expression& ReplicationExpression::fromSyntax(Compilation& compilation,
     }
 
     if (*count == 0) {
-        if ((context.flags & ASTFlags::InsideConcatenation) == 0) {
+        if (!context.flags.has(ASTFlags::InsideConcatenation)) {
             context.addDiag(diag::ReplicationZeroOutsideConcat, left.sourceRange);
             return badExpr(compilation, result);
         }
@@ -1621,7 +1621,6 @@ Expression& ReplicationExpression::fromSyntax(Compilation& compilation,
         return *result;
     }
 
-    // TODO: check overflow handling
     auto width = context.requireValidBitWidth(
         SVInt(32, uint64_t(*count), true) * right->type->getBitWidth(), syntax.sourceRange());
     if (!width)
