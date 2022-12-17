@@ -377,7 +377,7 @@ protected:
                                            Expression& expr, const InstanceSymbolBase& instance);
 
     static Expression* tryBindInterfaceRef(const ASTContext& context,
-                                           const ExpressionSyntax& syntax, const Type& targetType);
+                                           const ExpressionSyntax& syntax);
 
     static Expression& badExpr(Compilation& compilation, const Expression* expr);
 

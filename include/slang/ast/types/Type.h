@@ -215,6 +215,10 @@ public:
         return getCanonicalType().kind == SymbolKind::VirtualInterfaceType;
     }
 
+    /// Indicates whether this is an array of virtual interface types.
+    /// A plain virtual interface type will also return true.
+    bool isVirtualInterfaceOrArray() const;
+
     /// Indicates whether this is a type alias.
     /// Note that unlike other methods, this one does not unwrap to the canonical type.
     bool isAlias() const { return kind == SymbolKind::TypeAlias; }

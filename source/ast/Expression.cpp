@@ -241,9 +241,9 @@ const Expression& Expression::bindRValue(const Type& lhs, const ExpressionSyntax
     Compilation& comp = context.getCompilation();
 
     ASTContext ctx = context.resetFlags(extraFlags);
-    if (lhs.isVirtualInterface()) {
-        if (auto ref = tryBindInterfaceRef(ctx, rhs, lhs))
-            return *ref;
+    if (lhs.isVirtualInterfaceOrArray()) {
+        if (auto ref = tryBindInterfaceRef(ctx, rhs))
+            return convertAssignment(ctx, lhs, *ref, location);
     }
 
     auto instance = context.getInstance();
@@ -1148,8 +1148,7 @@ Expression& Expression::bindSelector(Compilation& compilation, Expression& value
 }
 
 Expression* Expression::tryBindInterfaceRef(const ASTContext& context,
-                                            const ExpressionSyntax& syntax,
-                                            const Type& targetType) {
+                                            const ExpressionSyntax& syntax) {
     const ExpressionSyntax* expr = &syntax;
     while (expr->kind == SyntaxKind::ParenthesizedExpression)
         expr = expr->as<ParenthesizedExpressionSyntax>().expression;
@@ -1164,7 +1163,7 @@ Expression* Expression::tryBindInterfaceRef(const ASTContext& context,
 
     auto& comp = context.getCompilation();
     auto symbol = result.found;
-    string_view modportName; // TODO: use modport name
+    string_view modportName;
 
     if (symbol->kind == SymbolKind::InterfacePort) {
         auto& ifacePort = symbol->as<InterfacePortSymbol>();
@@ -1190,14 +1189,23 @@ Expression* Expression::tryBindInterfaceRef(const ASTContext& context,
         }
     }
 
+    SmallVector<ConstantRange, 4> dims;
+    auto origSymbol = symbol;
+    while (symbol->kind == SymbolKind::InstanceArray) {
+        auto& array = symbol->as<InstanceArraySymbol>();
+        if (array.elements.empty())
+            return &badExpr(comp, nullptr);
+
+        dims.push_back(array.range);
+        symbol = array.elements[0];
+    }
+
     if (symbol->kind == SymbolKind::UninstantiatedDef) {
-        return comp.emplace<HierarchicalReferenceExpression>(*symbol, targetType,
+        return comp.emplace<HierarchicalReferenceExpression>(*origSymbol, comp.getErrorType(),
                                                              syntax.sourceRange());
     }
 
-    // TODO: add support for arrays of instances
-    if (symbol->kind != SymbolKind::Instance && /* symbol->kind != SymbolKind::InstanceArray && */
-        symbol->kind != SymbolKind::Modport) {
+    if (symbol->kind != SymbolKind::Instance && symbol->kind != SymbolKind::Modport) {
         // Return nullptr to let the parent try normal expression binding.
         return nullptr;
     }
@@ -1207,28 +1215,32 @@ Expression* Expression::tryBindInterfaceRef(const ASTContext& context,
 
     const InstanceBodySymbol* iface = nullptr;
     const ModportSymbol* modport = nullptr;
+
     if (symbol->kind == SymbolKind::Modport) {
         modport = &symbol->as<ModportSymbol>();
         iface = &symbol->getParentScope()->asSymbol().as<InstanceBodySymbol>();
     }
     else {
         iface = &symbol->as<InstanceSymbol>().body;
+        if (!modportName.empty()) {
+            auto sym = iface->find(modportName);
+            if (!sym || sym->kind != SymbolKind::Modport)
+                return &badExpr(comp, nullptr);
+
+            modport = &sym->as<ModportSymbol>();
+        }
     }
 
     // Now make sure the interface or modport we found matches the target type.
+    // Fabricate a virtual interface type for the rhs that we can use for matching.
+    ASSERT(iface->parentInstance);
     auto sourceRange = syntax.sourceRange();
-    auto& vit = targetType.getCanonicalType().as<VirtualInterfaceType>();
-    const bool modportMatches = !modport || (vit.modport && vit.modport->name == modport->name);
-    if (!iface->hasSameType(vit.iface.body) || !modportMatches) {
-        // Create a fake virtual interface type for the rhs of this connection
-        // to pass along to the diagnostic formatter.
-        ASSERT(iface->parentInstance);
-        auto rhsVit = comp.emplace<VirtualInterfaceType>(*iface->parentInstance, modport,
-                                                         sourceRange.start());
-        context.addDiag(diag::BadAssignment, sourceRange) << *rhsVit << vit;
-    }
+    const Type* type = comp.emplace<VirtualInterfaceType>(*iface->parentInstance, modport,
+                                                          sourceRange.start());
+    if (!dims.empty())
+        type = &FixedSizeUnpackedArrayType::fromDims(comp, *type, dims);
 
-    return comp.emplace<HierarchicalReferenceExpression>(*symbol, targetType, sourceRange);
+    return comp.emplace<HierarchicalReferenceExpression>(*origSymbol, *type, sourceRange);
 }
 
 void Expression::findPotentiallyImplicitNets(

@@ -1933,12 +1933,18 @@ endinterface
 
 module m(I.m a[3][4], I.m b, I c, I d);
     virtual I i = a;
-    virtual I j = a[0][1]; // TODO: should error
+    virtual I.m ii = a;
+
+    virtual I arr1[3][4] = a;
+    virtual I.m arr2[3][4] = a;
+    virtual I.m arr3[][4] = a;
+
+    virtual I j = a[0][1];
     virtual I.m k = a[0][1];
     virtual I.m l = a.foo;
     virtual I.m n = a[0];
 
-    virtual I o = b; // TODO: should error
+    virtual I o = b;
     virtual I.m p = b;
 
     virtual I q = b.m;
@@ -1967,12 +1973,16 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 7);
-    CHECK(diags[0].code == diag::NotAValue);
-    CHECK(diags[1].code == diag::CouldNotResolveHierarchicalPath);
-    CHECK(diags[2].code == diag::NotAValue);
+    REQUIRE(diags.size() == 11);
+    CHECK(diags[0].code == diag::BadAssignment);
+    CHECK(diags[1].code == diag::BadAssignment);
+    CHECK(diags[2].code == diag::BadAssignment);
     CHECK(diags[3].code == diag::BadAssignment);
-    CHECK(diags[4].code == diag::BadAssignment);
+    CHECK(diags[4].code == diag::CouldNotResolveHierarchicalPath);
     CHECK(diags[5].code == diag::BadAssignment);
     CHECK(diags[6].code == diag::BadAssignment);
+    CHECK(diags[7].code == diag::BadAssignment);
+    CHECK(diags[8].code == diag::BadAssignment);
+    CHECK(diags[9].code == diag::BadAssignment);
+    CHECK(diags[10].code == diag::BadAssignment);
 }

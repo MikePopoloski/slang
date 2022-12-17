@@ -114,7 +114,6 @@ public:
 
 /// Adapts a hierarchical symbol reference for use in an expression tree. This is for cases
 /// like the $printtimescale system function that require a module name to be passed.
-/// Note that the type of this expression is always void.
 class SLANG_EXPORT HierarchicalReferenceExpression : public Expression {
 public:
     not_null<const Symbol*> symbol;

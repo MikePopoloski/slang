@@ -1248,6 +1248,8 @@ private:
             if (child->kind != SymbolKind::UninstantiatedDef &&
                 (child->kind != SymbolKind::Variable ||
                  !child->as<VariableSymbol>().getType().isError())) {
+
+                // TODO: does symbol always have a name here?
                 auto& diag = scope.addDiag(diag::NotAnInterface, range) << symbol->name;
                 diag.addNote(diag::NoteDeclarationHere, symbol->location);
             }

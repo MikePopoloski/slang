@@ -401,6 +401,21 @@ bool Type::isDynamicallySizedArray() const {
     }
 }
 
+bool Type::isVirtualInterfaceOrArray() const {
+    auto ct = &getCanonicalType();
+    while (true) {
+        switch (ct->kind) {
+            case SymbolKind::FixedSizeUnpackedArrayType:
+            case SymbolKind::DynamicArrayType:
+            case SymbolKind::QueueType:
+                ct = &ct->getArrayElementType()->getCanonicalType();
+                break;
+            default:
+                return ct->isVirtualInterface();
+        }
+    }
+}
+
 bool Type::isTaggedUnion() const {
     auto& ct = getCanonicalType();
     switch (ct.kind) {
@@ -604,7 +619,7 @@ bool Type::isAssignmentCompatible(const Type& rhs) const {
         // matter is if the source (rhs) is dynamically sized, which can't be checked
         // until runtime.
         if (l->kind == r->kind && l->kind == SymbolKind::FixedSizeUnpackedArrayType)
-            return false; // !isEquivalent implies unequal widths or non-eqivalent elements
+            return false; // !isEquivalent implies unequal widths or non-equivalent elements
         return l->getArrayElementType()->isEquivalent(*r->getArrayElementType());
     }
 
