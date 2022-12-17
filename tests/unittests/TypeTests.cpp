@@ -961,7 +961,7 @@ endmodule
 
     auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 3);
-    CHECK(diags[0].code == diag::PackedArrayTooLarge);
+    CHECK(diags[0].code == diag::PackedTypeTooLarge);
     CHECK(diags[1].code == diag::PackedArrayNotIntegral);
     CHECK(diags[2].code == diag::PackedDimsRequireFullRange);
 }
@@ -1007,7 +1007,7 @@ endmodule
 
     auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 2);
-    CHECK(diags[0].code == diag::PackedArrayTooLarge);
+    CHECK(diags[0].code == diag::PackedTypeTooLarge);
     CHECK(diags[1].code == diag::ArrayDimTooLarge);
 }
 
@@ -2019,6 +2019,9 @@ module m;
     logic [7:0] foo;
     logic bar[];
     int baz[999999999];
+    struct { logic a[2147483647]; logic b[2147483647]; } biz;
+    struct packed { logic [16777214:0] a; logic [16777214:0] b; } boz;
+
     initial begin
         $display(foo[2147483647:-2147483647]);
         $display(bar[-2147483647:2147483647]);
@@ -2030,9 +2033,11 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 4);
+    REQUIRE(diags.size() == 6);
     CHECK(diags[0].code == diag::ObjectTooLarge);
-    CHECK(diags[1].code == diag::PackedArrayTooLarge);
-    CHECK(diags[2].code == diag::RangeOOB);
-    CHECK(diags[3].code == diag::ObjectTooLarge);
+    CHECK(diags[1].code == diag::ObjectTooLarge);
+    CHECK(diags[2].code == diag::PackedTypeTooLarge);
+    CHECK(diags[3].code == diag::PackedTypeTooLarge);
+    CHECK(diags[4].code == diag::RangeOOB);
+    CHECK(diags[5].code == diag::ObjectTooLarge);
 }

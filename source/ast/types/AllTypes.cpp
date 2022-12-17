@@ -654,7 +654,7 @@ const Type& PackedArrayType::fromDim(const Scope& scope, const Type& elementType
     auto width = checkedMulU32(elementType.getBitWidth(), dim.width());
     if (!width || width > (uint32_t)SVInt::MAX_BITS) {
         uint64_t fullWidth = uint64_t(elementType.getBitWidth()) * dim.width();
-        scope.addDiag(diag::PackedArrayTooLarge, sourceRange.get())
+        scope.addDiag(diag::PackedTypeTooLarge, sourceRange.get())
             << fullWidth << (uint32_t)SVInt::MAX_BITS;
         return comp.getErrorType();
     }
@@ -802,6 +802,11 @@ const Type& PackedStructType::fromSyntax(Compilation& comp, const StructUnionTyp
             }
 
             structType->bitWidth += type.getBitWidth();
+            if (!issuedError && structType->bitWidth > (uint32_t)SVInt::MAX_BITS) {
+                context.addDiag(diag::PackedTypeTooLarge, syntax.sourceRange())
+                    << structType->bitWidth << (uint32_t)SVInt::MAX_BITS;
+                return comp.getErrorType();
+            }
 
             if (decl->initializer) {
                 auto& diag = context.addDiag(diag::PackedMemberHasInitializer,
@@ -851,7 +856,6 @@ const Type& UnpackedStructType::fromSyntax(const ASTContext& context,
     auto& comp = context.getCompilation();
     auto result = comp.emplace<UnpackedStructType>(comp, syntax.keyword.location(), context);
 
-    // TODO: overflow
     uint32_t bitOffset = 0;
     SmallVector<const FieldSymbol*> fields;
     for (auto member : syntax.members) {
@@ -882,6 +886,11 @@ const Type& UnpackedStructType::fromSyntax(const ASTContext& context,
             fields.push_back(field);
 
             bitOffset += field->getType().getSelectableWidth();
+            if (bitOffset > uint32_t(INT32_MAX)) {
+                context.addDiag(diag::ObjectTooLarge, syntax.sourceRange())
+                    << bitOffset << INT32_MAX;
+                return comp.getErrorType();
+            }
         }
     }
 

@@ -468,7 +468,7 @@ void ASTContext::evalRangeDimension(const SelectorSyntax& syntax, bool isPacked,
             result.kind = DimensionKind::Unknown;
         }
         else if (isPacked && result.range.width() > SVInt::MAX_BITS) {
-            addDiag(diag::PackedArrayTooLarge, syntax.sourceRange())
+            addDiag(diag::PackedTypeTooLarge, syntax.sourceRange())
                 << result.range.width() << (int)SVInt::MAX_BITS;
             result.kind = DimensionKind::Unknown;
         }
