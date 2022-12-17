@@ -819,6 +819,8 @@ error InstanceArrayEndianMismatch "endianness of selection [{}:{}] must match de
 error IfaceImportExportTarget "could not find target for {} of '{}'"
 error UnexpectedNameToken "unexpected use of '{}' keyword"
 error IllegalReferenceToProgramItem "cannot reference program item from outside of a program"
+error HierarchicalFromPackage "cannot use hierarchical reference from within a package"
+error CompilationUnitFromPackage "cannot reference compilation unit item from within a package"
 warning dup-import DuplicateImport "duplicate import declaration is redundant"
 warning duplicate-definition DuplicateDefinition "duplicate definition of '{}'"
 

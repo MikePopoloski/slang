@@ -254,6 +254,23 @@ bool isInProgram(const Symbol& symbol) {
     }
 }
 
+bool isInPackage(const Symbol& symbol) {
+    auto curr = &symbol;
+    while (true) {
+        if (curr->kind == SymbolKind::Package)
+            return true;
+
+        if (curr->kind == SymbolKind::InstanceBody)
+            return false;
+
+        auto scope = curr->getParentScope();
+        if (!scope)
+            return false;
+
+        curr = &scope->asSymbol();
+    }
+}
+
 // Returns true if the lookup was ok, or if it failed in a way that allows us to continue
 // looking up in other ways. Returns false if the entire lookup has failed and should be
 // aborted.
@@ -819,10 +836,13 @@ void unwrapResult(const Scope& scope, std::optional<SourceRange> range, LookupRe
         }
     }
 
-    // If the symbol was imported from a package, check if it is actually
-    // declared within an anonymous program within that package and if so,
-    // check whether we're allowed to reference it from our source scope.
-    if (result.wasImported && range) {
+    if (!range)
+        return;
+
+    if (result.wasImported) {
+        // If the symbol was imported from a package, check if it is actually
+        // declared within an anonymous program within that package and if so,
+        // check whether we're allowed to reference it from our source scope.
         auto parent = result.found->getParentScope();
         while (parent) {
             auto& parentSym = parent->asSymbol();
@@ -838,6 +858,19 @@ void unwrapResult(const Scope& scope, std::optional<SourceRange> range, LookupRe
             }
 
             parent = parentSym.getParentScope();
+        }
+    }
+    else if (result.isHierarchical) {
+        // Hierarchical references are not allowed from within packages.
+        if (isInPackage(scope.asSymbol()))
+            result.addDiag(scope, diag::HierarchicalFromPackage, *range);
+    }
+    else if (auto parent = result.found->getParentScope();
+             parent && parent->asSymbol().kind == SymbolKind::CompilationUnit) {
+        // Compilation unit items are not allowed to be referenced from a package.
+        if (isInPackage(scope.asSymbol())) {
+            auto& diag = result.addDiag(scope, diag::CompilationUnitFromPackage, *range);
+            diag.addNote(diag::NoteDeclarationHere, result.found->location);
         }
     }
 }

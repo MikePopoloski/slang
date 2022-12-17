@@ -1932,3 +1932,28 @@ endclass
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Package cannot refer to $unit or have hierarchical ref") {
+    auto tree = SyntaxTree::fromText(R"(
+int i;
+
+package p;
+    int j = i;
+    int k = $unit::i;
+    int l = m.l;
+endpackage
+
+module m;
+    int l;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 3);
+    CHECK(diags[0].code == diag::CompilationUnitFromPackage);
+    CHECK(diags[1].code == diag::CompilationUnitFromPackage);
+    CHECK(diags[2].code == diag::HierarchicalFromPackage);
+}
