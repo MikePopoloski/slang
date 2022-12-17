@@ -144,11 +144,14 @@ public:
     const Type& elementType;
     ConstantRange range;
 
-    PackedArrayType(const Type& elementType, ConstantRange range);
+    PackedArrayType(const Type& elementType, ConstantRange range, bitwidth_t fullWidth);
 
     static const Type& fromSyntax(const Scope& scope, const Type& elementType,
                                   const EvaluatedDimension& dimension,
                                   const syntax::SyntaxNode& syntax);
+
+    static const Type& fromDim(const Scope& scope, const Type& elementType, ConstantRange dim,
+                               syntax::DeferredSourceRange sourceRange);
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::PackedArrayType; }
 };

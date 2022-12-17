@@ -606,10 +606,10 @@ void EnumValueSymbol::serializeTo(ASTSerializer& serializer) const {
     serializer.write("value", getValue());
 }
 
-PackedArrayType::PackedArrayType(const Type& elementType, ConstantRange range) :
-    IntegralType(SymbolKind::PackedArrayType, "", SourceLocation(),
-                 elementType.getBitWidth() * range.width(), elementType.isSigned(),
-                 elementType.isFourState()),
+PackedArrayType::PackedArrayType(const Type& elementType, ConstantRange range,
+                                 bitwidth_t fullWidth) :
+    IntegralType(SymbolKind::PackedArrayType, "", SourceLocation(), fullWidth,
+                 elementType.isSigned(), elementType.isFourState()),
     elementType(elementType), range(range) {
 }
 
@@ -642,17 +642,24 @@ const Type& PackedArrayType::fromSyntax(const Scope& scope, const Type& elementT
         return comp.getErrorType();
     }
 
-    auto range = dimension.range;
-    auto width = checkedMulU32(elementType.getBitWidth(), range.width());
+    return fromDim(scope, elementType, dimension.range, syntax);
+}
+
+const Type& PackedArrayType::fromDim(const Scope& scope, const Type& elementType, ConstantRange dim,
+                                     DeferredSourceRange sourceRange) {
+    auto& comp = scope.getCompilation();
+    auto width = checkedMulU32(elementType.getBitWidth(), dim.width());
     if (!width || width > (uint32_t)SVInt::MAX_BITS) {
-        uint64_t fullWidth = uint64_t(elementType.getBitWidth()) * range.width();
-        scope.addDiag(diag::PackedArrayTooLarge, syntax.sourceRange())
+        uint64_t fullWidth = uint64_t(elementType.getBitWidth()) * dim.width();
+        scope.addDiag(diag::PackedArrayTooLarge, sourceRange.get())
             << fullWidth << (uint32_t)SVInt::MAX_BITS;
         return comp.getErrorType();
     }
 
-    auto result = comp.emplace<PackedArrayType>(elementType, range);
-    result->setSyntax(syntax);
+    auto result = comp.emplace<PackedArrayType>(elementType, dim, bitwidth_t(*width));
+    if (auto syntax = sourceRange.syntax())
+        result->setSyntax(*syntax);
+
     return *result;
 }
 

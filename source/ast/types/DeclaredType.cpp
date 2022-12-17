@@ -292,10 +292,14 @@ static const Type* makeSigned(Compilation& compilation, const Type& type) {
     if (dims.size() == 1)
         return &compilation.getType(type.getBitWidth(), flags);
 
+    // Rebuild the array with the new element type.
     curr = &compilation.getScalarType(flags);
     size_t count = dims.size();
-    for (size_t i = 0; i < count; i++)
-        curr = compilation.emplace<PackedArrayType>(*curr, dims[count - i - 1]);
+    for (size_t i = 0; i < count; i++) {
+        // There's no worry about size overflow here because we started with a valid type.
+        ConstantRange dim = dims[count - i - 1];
+        curr = compilation.emplace<PackedArrayType>(*curr, dim, curr->getBitWidth() * dim.width());
+    }
 
     return curr;
 }

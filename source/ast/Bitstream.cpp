@@ -110,6 +110,7 @@ static std::pair<size_t, size_t> dynamicBitstreamSize(
                   fixedSizeElem] = dynamicBitstreamSize(*operand.type->getArrayElementType(), mode);
             ASSERT(!multiplierElem);
             if (stream.constantWithWidth) {
+                // TODO: overflow
                 auto rw = *stream.constantWithWidth;
                 multiplierStream = multiplierElem * rw;
                 fixedSizeStream = fixedSizeElem * rw;
@@ -360,6 +361,7 @@ static ConstantValue unpackBitstream(const Type& type, PackIterator& iter,
         if (!bit && iter != iterEnd && (*iter)->isString() && (*iter)->str().length() == width)
             return std::move(**iter);
 
+        // TODO: overflow
         return ConstantValue(concatPacked(width * CHAR_BIT, false)).convertToStr();
     }
 
@@ -704,6 +706,7 @@ static bool unpackConcatenation(const StreamingConcatenationExpression& lhs, Pac
                 ASSERT(elemType);
 
                 if (dynamicSize > 0 && !stream.constantWithWidth) {
+                    // TODO: overflow
                     auto withSize = elemType->bitstreamWidth() * with.width();
                     if (withSize >= dynamicSize)
                         dynamicSize = 0;

@@ -2012,3 +2012,22 @@ endmodule
     CHECK(diags[1].code == diag::VirtualInterfaceUnionMember);
     CHECK(diags[2].code == diag::InvalidPortSubType);
 }
+
+TEST_CASE("Max object size tests") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    logic [7:0] foo;
+    initial begin
+        $display(foo[2147483647:-2147483647]);
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::PackedArrayTooLarge);
+    CHECK(diags[1].code == diag::RangeOOB);
+}

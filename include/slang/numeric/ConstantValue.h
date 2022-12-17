@@ -289,8 +289,9 @@ struct SLANG_EXPORT ConstantRange {
     /// Gets the width of the range, regardless of the order in which
     /// the bounds are specified.
     bitwidth_t width() const {
-        int32_t diff = left - right;
-        return bitwidth_t(diff < 0 ? -diff : diff) + 1;
+        auto ul = uint32_t(left);
+        auto ur = uint32_t(right);
+        return bitwidth_t(left > right ? ul - ur : ur - ul) + 1;
     }
 
     /// Gets the lower bound of the range, regardless of the order in which

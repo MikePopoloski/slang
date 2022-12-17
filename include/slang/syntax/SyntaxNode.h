@@ -13,8 +13,8 @@
 #include "slang/parsing/Token.h"
 #include "slang/syntax/SyntaxKind.h"
 #include "slang/util/Iterator.h"
+#include "slang/util/PointerIntPair.h"
 #include "slang/util/SmallVector.h"
-#include "slang/util/Util.h"
 
 namespace slang::syntax {
 
@@ -170,6 +170,33 @@ template<typename T, typename = std::enable_if_t<std::is_base_of_v<SyntaxNode, T
 T* deepClone(const T& node, BumpAllocator& alloc) {
     return static_cast<T*>(deepClone(static_cast<const SyntaxNode&>(node), alloc));
 }
+
+/// Represents a source range or a way to get one by materializing
+/// it from a syntax node. This exists to avoid computing the source
+/// range of a node unless it's actually needed.
+class DeferredSourceRange {
+public:
+    DeferredSourceRange(SourceRange range) : range(range), node(nullptr, true) {}
+    DeferredSourceRange(const SyntaxNode& node) : node(&node, false) {}
+    DeferredSourceRange(const SyntaxNode& node, SourceRange range) :
+        range(range), node(&node, true) {}
+
+    SourceRange get() const {
+        if (!node.getInt()) {
+            auto ptr = node.getPointer();
+            ASSERT(ptr);
+            range = ptr->sourceRange();
+            node.setInt(true);
+        }
+        return range;
+    }
+
+    const SyntaxNode* syntax() const { return node.getPointer(); }
+
+private:
+    mutable SourceRange range;
+    mutable PointerIntPair<const SyntaxNode*, 1, 1, bool> node;
+};
 
 /// A base class for syntax nodes that represent a list of items.
 class SLANG_EXPORT SyntaxListBase : public SyntaxNode {

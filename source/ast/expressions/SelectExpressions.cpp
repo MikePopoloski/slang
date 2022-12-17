@@ -589,7 +589,8 @@ Expression& RangeSelectExpression::fromSyntax(Compilation& compilation, Expressi
                                                                            selectionRange);
         }
         else {
-            result->type = compilation.emplace<PackedArrayType>(elementType, selectionRange);
+            result->type = &PackedArrayType::fromDim(*context.scope, elementType, selectionRange,
+                                                     errorRange);
         }
     }
     else {
@@ -649,10 +650,13 @@ Expression& RangeSelectExpression::fromConstant(Compilation& compilation, Expres
     ASSERT(range.isLittleEndian() == valueType.getFixedRange().isLittleEndian());
     ASSERT(valueType.hasFixedRange());
 
-    if (valueType.isUnpackedArray())
+    if (valueType.isUnpackedArray()) {
         result->type = compilation.emplace<FixedSizeUnpackedArrayType>(elementType, range);
-    else
-        result->type = compilation.emplace<PackedArrayType>(elementType, range);
+    }
+    else {
+        result->type = &PackedArrayType::fromDim(*context.scope, elementType, range,
+                                                 result->sourceRange);
+    }
 
     return *result;
 }

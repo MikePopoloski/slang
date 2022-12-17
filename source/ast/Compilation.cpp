@@ -1117,8 +1117,8 @@ const Type& Compilation::getType(bitwidth_t width, bitmask<IntegralFlags> flags)
     if (it != vectorTypeCache.end())
         return *it->second;
 
-    auto type = emplace<PackedArrayType>(getScalarType(flags),
-                                         ConstantRange{int32_t(width - 1), 0});
+    auto type = emplace<PackedArrayType>(getScalarType(flags), ConstantRange{int32_t(width - 1), 0},
+                                         width);
     vectorTypeCache.emplace_hint(it, key, type);
     return *type;
 }

@@ -188,6 +188,7 @@ Expression* Expression::tryConnectPortArray(const ASTContext& context, const Typ
     for (auto& dim : instanceDims)
         numInstances *= dim.width();
 
+    // TODO: check overflow handling
     bitwidth_t portWidth = portType.getBitWidth();
     if (numInstances * portWidth != ct->getBitWidth())
         return bad();

@@ -1258,6 +1258,7 @@ Expression& ConcatenationExpression::fromSyntax(Compilation& compilation,
             return badExpr(compilation, nullptr);
         }
 
+        // TODO: check overflow handling
         bool bad = false;
         bool anyDynamic = false;
         size_t totalElems = 0;
@@ -1620,6 +1621,7 @@ Expression& ReplicationExpression::fromSyntax(Compilation& compilation,
         return *result;
     }
 
+    // TODO: check overflow handling
     auto width = context.requireValidBitWidth(
         SVInt(32, uint64_t(*count), true) * right->type->getBitWidth(), syntax.sourceRange());
     if (!width)
@@ -1861,6 +1863,7 @@ size_t StreamingConcatenationExpression::bitstreamWidth() const {
             width += operand.as<StreamingConcatenationExpression>().bitstreamWidth();
         }
         else if (stream.withExpr) {
+            // TODO: overflow
             size_t count = stream.constantWithWidth.value_or(1);
             width += count * operand.type->getArrayElementType()->bitstreamWidth();
         }

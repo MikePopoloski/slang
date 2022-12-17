@@ -239,6 +239,7 @@ Expression& StringLiteral::fromSyntax(Compilation& compilation,
         intVal = compilation.allocConstant(SVInt(8, 0, false));
     }
     else {
+        // TODO: check overflow handling
         width = bitwidth_t(value.size()) * 8;
 
         // String literals represented as integers put the first character on the
