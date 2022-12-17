@@ -1941,6 +1941,14 @@ package p;
     int j = i;
     int k = $unit::i;
     int l = m.l;
+
+    function foo;
+        static int n = bar.n;
+    endfunction
+
+    function bar;
+        int n;
+    endfunction
 endpackage
 
 module m;

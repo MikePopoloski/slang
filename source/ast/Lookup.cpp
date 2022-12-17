@@ -254,18 +254,18 @@ bool isInProgram(const Symbol& symbol) {
     }
 }
 
-bool isInPackage(const Symbol& symbol) {
+const Symbol* getContainingPackage(const Symbol& symbol) {
     auto curr = &symbol;
     while (true) {
         if (curr->kind == SymbolKind::Package)
-            return true;
+            return curr;
 
         if (curr->kind == SymbolKind::InstanceBody)
-            return false;
+            return nullptr;
 
         auto scope = curr->getParentScope();
         if (!scope)
-            return false;
+            return nullptr;
 
         curr = &scope->asSymbol();
     }
@@ -872,14 +872,16 @@ void unwrapResult(const Scope& scope, std::optional<SourceRange> range, LookupRe
         }
     }
     else if (result.isHierarchical) {
-        // Hierarchical references are not allowed from within packages.
-        if (isInPackage(scope.asSymbol()))
+        // Hierarchical references are not allowed from within packages
+        // unless the target symbol is also within the same package.
+        auto pkg = getContainingPackage(scope.asSymbol());
+        if (pkg && getContainingPackage(*result.found) != pkg)
             result.addDiag(scope, diag::HierarchicalFromPackage, *range);
     }
     else if (auto parent = result.found->getParentScope();
              parent && parent->asSymbol().kind == SymbolKind::CompilationUnit) {
         // Compilation unit items are not allowed to be referenced from a package.
-        if (isInPackage(scope.asSymbol())) {
+        if (getContainingPackage(scope.asSymbol())) {
             auto& diag = result.addDiag(scope, diag::CompilationUnitFromPackage, *range);
             diag.addNote(diag::NoteDeclarationHere, result.found->location);
         }
