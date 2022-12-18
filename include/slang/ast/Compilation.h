@@ -490,6 +490,8 @@ private:
     void checkModportExports(
         span<const std::pair<const InterfacePortSymbol*, const ModportSymbol*>> modports);
     void resolveDefParamsAndBinds();
+    void resolveBindTargets(const syntax::BindDirectiveSyntax& syntax, const Scope& scope,
+                            SmallVector<const Symbol*>& targets);
 
     // Stored options object.
     CompilationOptions options;

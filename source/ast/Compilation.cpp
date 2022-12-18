@@ -851,6 +851,14 @@ const Diagnostics& Compilation::getSemanticDiagnostics() {
     if (!elabVisitor.modportsWithExports.empty())
         checkModportExports(elabVisitor.modportsWithExports);
 
+    // Double check any bind directives for correctness. These were already
+    // resolve prior to full elaboration but their diagnostics were not
+    // issued so we need to check again.
+    for (auto [directive, scope] : bindDirectives) {
+        SmallVector<const Symbol*> unused;
+        resolveBindTargets(*directive, *scope, unused);
+    }
+
     // Report any lingering name conflicts.
     if (!nameConflicts.empty()) {
         auto conflicts = nameConflicts;
@@ -1399,49 +1407,65 @@ void Compilation::checkModportExports(
     }
 }
 
-static std::string resolveBindTarget(const BindDirectiveSyntax& syntax, const Scope& scope) {
+void Compilation::resolveBindTargets(const BindDirectiveSyntax& syntax, const Scope& scope,
+                                     SmallVector<const Symbol*>& targets) {
+    auto checkValidTarget = [&](const Symbol& symbol, const SyntaxNode& nameSyntax) {
+        if (symbol.kind == SymbolKind::Instance) {
+            auto defKind = symbol.as<InstanceSymbol>().getDefinition().definitionKind;
+            if (defKind == DefinitionKind::Module || defKind == DefinitionKind::Interface)
+                return true;
+        }
+
+        auto& diag = scope.addDiag(diag::InvalidBindTarget, nameSyntax.sourceRange());
+        diag << symbol.name;
+        diag.addNote(diag::NoteDeclarationHere, symbol.location);
+        return false;
+    };
+
     // If an instance list is given, then the target name must be a definition name.
     // Otherwise, the target name can be either an instance name or a definition name,
     // preferencing the instance if found.
     ASTContext context(scope, LookupLocation::max);
-    if (syntax.targetInstances) {
-        /*comp.noteBindDirective(syntax, nullptr);
+    bitmask<LookupFlags> flags = LookupFlags::ForceHierarchical |
+                                 LookupFlags::DisallowWildcardImport | LookupFlags::NoSelectors;
 
+    if (syntax.targetInstances) {
         // TODO: The parser checks for an invalid target name here.
         if (syntax.target->kind != SyntaxKind::IdentifierName)
             return;
 
         Token name = syntax.target->as<IdentifierNameSyntax>().identifier;
-        targetDef = comp.getDefinition(name.valueText(), scope);
+        auto targetDef = getDefinition(name.valueText(), scope);
         if (!targetDef) {
             scope.addDiag(diag::UnknownModule, name.range()) << name.valueText();
             return;
         }
 
-        // TODO: check that def is not a program here
-
         for (auto inst : syntax.targetInstances->targets) {
             LookupResult result;
-            Lookup::name(*inst, context, LookupFlags::None, result);
+            Lookup::name(*inst, context, flags, result);
             result.reportDiags(context);
 
             if (result.found) {
-                // TODO: check valid target
-                // TODO: check that instance is of targetDef
-                if (!createInstances(result.found->as<InstanceSymbol>().body))
-                    return;
+                if (checkValidTarget(*result.found, *inst)) {
+                    if (&result.found->as<InstanceSymbol>().getDefinition() != targetDef) {
+                        auto& diag = scope.addDiag(diag::WrongBindTargetDef, inst->sourceRange());
+                        diag << result.found->name << targetDef->name;
+                        diag << syntax.target->sourceRange();
+                        diag.addNote(diag::NoteDeclarationHere, result.found->location);
+                    }
+                    targets.push_back(result.found);
+                }
             }
-        }*/
+        }
     }
     else {
         LookupResult result;
-        Lookup::name(*syntax.target, context, LookupFlags::None, result);
+        Lookup::name(*syntax.target, context, flags, result);
 
         if (result.found) {
-            // TODO: check valid target
-            std::string path;
-            result.found->getHierarchicalPath(path);
-            return path;
+            if (checkValidTarget(*result.found, *syntax.target))
+                targets.push_back(result.found);
         }
         else {
             // If we didn't find the name as an instance, try as a definition.
@@ -1459,8 +1483,6 @@ static std::string resolveBindTarget(const BindDirectiveSyntax& syntax, const Sc
             // }
         }
     }
-
-    return {};
 }
 
 void Compilation::resolveDefParamsAndBinds() {
@@ -1536,9 +1558,14 @@ void Compilation::resolveDefParamsAndBinds() {
 
         binds.clear();
         for (auto [syntax, scope] : c.bindDirectives) {
-            auto path = resolveBindTarget(*syntax, *scope);
-            if (!path.empty())
+            SmallVector<const Symbol*> targets;
+            c.resolveBindTargets(*syntax, *scope, targets);
+
+            for (auto target : targets) {
+                std::string path;
+                target->getHierarchicalPath(path);
                 binds.emplace_back(BindEntry{std::move(path), syntax});
+            }
         }
     };
 

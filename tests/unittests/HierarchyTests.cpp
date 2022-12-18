@@ -1899,3 +1899,34 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Bind directive errors") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+endmodule
+
+module n;
+endmodule
+
+module top;
+    if (1) begin: asdf
+    end
+
+    m m1();
+
+    bind top.asdf m m1();
+    bind m: top.asdf, top.m1 n n1();
+    bind n: top.m1 n n1();
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 4);
+    CHECK(diags[0].code == diag::InvalidBindTarget);
+    CHECK(diags[1].code == diag::InvalidBindTarget);
+    CHECK(diags[2].code == diag::WrongBindTargetDef);
+    CHECK(diags[3].code == diag::Redefinition);
+}
