@@ -1117,31 +1117,6 @@ endmodule
     NO_COMPILATION_ERRORS;
 }
 
-TEST_CASE("Bind directives") {
-    auto tree = SyntaxTree::fromText(R"(
-module foo #(parameter int bar) (input a);
-    logic b;
-endmodule
-
-module n #(parameter int f);
-    logic thing;
-endmodule
-
-module m;
-    localparam int j = 42;
-    n #(j + 5) n1();
-
-    initial m.n1.foo2.b <= 1;
-
-    bind m.n1 foo #(f * 2) foo1(thing), foo2(thing);
-endmodule
-)");
-
-    Compilation compilation;
-    compilation.addSyntaxTree(tree);
-    NO_COMPILATION_ERRORS;
-}
-
 TEST_CASE("Upward name by definition name -- design tree") {
     auto tree = SyntaxTree::fromText(R"(
 module B();
@@ -1900,6 +1875,36 @@ endmodule
     NO_COMPILATION_ERRORS;
 }
 
+TEST_CASE("Bind directives") {
+    auto tree = SyntaxTree::fromText(R"(
+module baz(input q);
+endmodule
+
+module foo #(parameter int bar) (input a);
+    logic b;
+endmodule
+
+module n #(parameter int f);
+    logic thing;
+endmodule
+
+module m;
+    localparam int j = 42;
+    n #(j + 5) n1();
+
+    initial m.n1.foo2.b <= 1;
+
+    bind m.n1 foo #(f * 2) foo1(thing), foo2(thing);
+
+    bind foo baz bz(.q(b));
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
 TEST_CASE("Bind directive errors") {
     auto tree = SyntaxTree::fromText(R"(
 module m;
@@ -1917,6 +1922,8 @@ module top;
     bind top.asdf m m1();
     bind m: top.asdf, top.m1 n n1();
     bind n: top.m1 n n1();
+    bind q: top.m1 n n2();
+    bind foobar n n3();
 endmodule
 )");
 
@@ -1924,9 +1931,11 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 4);
+    REQUIRE(diags.size() == 6);
     CHECK(diags[0].code == diag::InvalidBindTarget);
     CHECK(diags[1].code == diag::InvalidBindTarget);
     CHECK(diags[2].code == diag::WrongBindTargetDef);
     CHECK(diags[3].code == diag::Redefinition);
+    CHECK(diags[4].code == diag::UnknownModule);
+    CHECK(diags[5].code == diag::UndeclaredIdentifier);
 }

@@ -491,7 +491,7 @@ private:
         span<const std::pair<const InterfacePortSymbol*, const ModportSymbol*>> modports);
     void resolveDefParamsAndBinds();
     void resolveBindTargets(const syntax::BindDirectiveSyntax& syntax, const Scope& scope,
-                            SmallVector<const Symbol*>& targets);
+                            SmallVector<const Symbol*>& instTargets, const Definition** defTarget);
 
     // Stored options object.
     CompilationOptions options;
@@ -536,7 +536,7 @@ private:
     // The lookup table for top-level modules. The value is a pair, with the second
     // element being a boolean indicating whether there exists at least one nested
     // module with the given name (requiring a more involved lookup).
-    flat_hash_map<string_view, std::pair<const Definition*, bool>> topDefinitions;
+    flat_hash_map<string_view, std::pair<Definition*, bool>> topDefinitions;
 
     // A cache of vector types, keyed on various properties such as bit width.
     flat_hash_map<uint32_t, const Type*> vectorTypeCache;
@@ -582,6 +582,11 @@ private:
     // This is used to collapse duplicate diagnostics across instantiations into a single report.
     using DiagMap = flat_hash_map<std::tuple<DiagCode, SourceLocation>, std::vector<Diagnostic>>;
     DiagMap diagMap;
+
+    // A map of packages to the set of names that are candidates for being
+    // exported from those packages.
+    flat_hash_map<const PackageSymbol*, flat_hash_map<string_view, const Symbol*>>
+        packageExportCandidateMap;
 
     // A map from class name + decl name + scope to out-of-block declarations. These get
     // registered when we find the initial declaration and later get used when we see
@@ -640,11 +645,6 @@ private:
 
     // A list of bind directives we've encountered during elaboration.
     std::vector<std::pair<const syntax::BindDirectiveSyntax*, const Scope*>> bindDirectives;
-
-    // A map of packages to the set of names that are candidates for being
-    // exported from those packages.
-    flat_hash_map<const PackageSymbol*, flat_hash_map<string_view, const Symbol*>>
-        packageExportCandidateMap;
 
     // A list of extern interface method implementations for later elaboration.
     std::vector<const SubroutineSymbol*> externInterfaceMethods;

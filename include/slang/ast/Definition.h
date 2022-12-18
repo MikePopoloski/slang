@@ -79,6 +79,7 @@ public:
     SmallVector<ParameterDecl, 8> parameters;
     flat_hash_set<string_view> modports;
     span<const AttributeSymbol* const> attributes;
+    std::vector<const syntax::BindDirectiveSyntax*> bindDirectives;
     const syntax::SyntaxTree* syntaxTree;
     bool hasNonAnsiPorts;
 

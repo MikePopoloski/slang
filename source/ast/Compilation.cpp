@@ -855,8 +855,9 @@ const Diagnostics& Compilation::getSemanticDiagnostics() {
     // resolve prior to full elaboration but their diagnostics were not
     // issued so we need to check again.
     for (auto [directive, scope] : bindDirectives) {
-        SmallVector<const Symbol*> unused;
-        resolveBindTargets(*directive, *scope, unused);
+        SmallVector<const Symbol*> instTargets;
+        const Definition* defTarget = nullptr;
+        resolveBindTargets(*directive, *scope, instTargets, &defTarget);
     }
 
     // Report any lingering name conflicts.
@@ -1408,7 +1409,8 @@ void Compilation::checkModportExports(
 }
 
 void Compilation::resolveBindTargets(const BindDirectiveSyntax& syntax, const Scope& scope,
-                                     SmallVector<const Symbol*>& targets) {
+                                     SmallVector<const Symbol*>& instTargets,
+                                     const Definition** defTarget) {
     auto checkValidTarget = [&](const Symbol& symbol, const SyntaxNode& nameSyntax) {
         if (symbol.kind == SymbolKind::Instance) {
             auto defKind = symbol.as<InstanceSymbol>().getDefinition().definitionKind;
@@ -1454,7 +1456,7 @@ void Compilation::resolveBindTargets(const BindDirectiveSyntax& syntax, const Sc
                         diag << syntax.target->sourceRange();
                         diag.addNote(diag::NoteDeclarationHere, result.found->location);
                     }
-                    targets.push_back(result.found);
+                    instTargets.push_back(result.found);
                 }
             }
         }
@@ -1465,22 +1467,20 @@ void Compilation::resolveBindTargets(const BindDirectiveSyntax& syntax, const Sc
 
         if (result.found) {
             if (checkValidTarget(*result.found, *syntax.target))
-                targets.push_back(result.found);
+                instTargets.push_back(result.found);
         }
         else {
             // If we didn't find the name as an instance, try as a definition.
-            // if (syntax.target->kind == SyntaxKind::IdentifierName) {
-            //    Token name = syntax.target->as<IdentifierNameSyntax>().identifier;
-            //    targetDef = comp.getDefinition(name.valueText(), scope);
-            //}
+            if (syntax.target->kind == SyntaxKind::IdentifierName) {
+                Token name = syntax.target->as<IdentifierNameSyntax>().identifier;
+                if (auto def = getDefinition(name.valueText(), scope)) {
+                    *defTarget = def;
+                    return;
+                }
+            }
 
-            // comp.noteBindDirective(syntax, targetDef);
-
-            //// If no name and no definition, report an error.
-            // if (!targetDef) {
-            //     result.reportDiags(context);
-            //     return;
-            // }
+            // If no name and no definition, report an error.
+            result.reportDiags(context);
         }
     }
 }
@@ -1498,6 +1498,7 @@ void Compilation::resolveDefParamsAndBinds() {
     struct BindEntry {
         std::string path;
         const BindDirectiveSyntax* syntax = nullptr;
+        bool isDefinition = false;
     };
     SmallVector<BindEntry> binds;
 
@@ -1518,18 +1519,25 @@ void Compilation::resolveDefParamsAndBinds() {
         }
 
         for (auto& entry : binds) {
-            ParamOverrideNode* node = &c.paramOverrides;
-            std::string curr = entry.path;
-            while (true) {
-                size_t idx = curr.find('.');
-                if (idx == curr.npos) {
-                    node = &node->childNodes[curr];
-                    node->binds.push_back(entry.syntax);
-                    break;
-                }
+            if (entry.isDefinition) {
+                auto it = c.topDefinitions.find(entry.path);
+                ASSERT(it != c.topDefinitions.end());
+                it->second.first->bindDirectives.push_back(entry.syntax);
+            }
+            else {
+                ParamOverrideNode* node = &c.paramOverrides;
+                std::string curr = entry.path;
+                while (true) {
+                    size_t idx = curr.find('.');
+                    if (idx == curr.npos) {
+                        node = &node->childNodes[curr];
+                        node->binds.push_back(entry.syntax);
+                        break;
+                    }
 
-                node = &node->childNodes[curr.substr(0, idx)];
-                curr = curr.substr(idx + 1);
+                    node = &node->childNodes[curr.substr(0, idx)];
+                    curr = curr.substr(idx + 1);
+                }
             }
         }
     };
@@ -1558,13 +1566,19 @@ void Compilation::resolveDefParamsAndBinds() {
 
         binds.clear();
         for (auto [syntax, scope] : c.bindDirectives) {
-            SmallVector<const Symbol*> targets;
-            c.resolveBindTargets(*syntax, *scope, targets);
+            SmallVector<const Symbol*> instTargets;
+            const Definition* defTarget = nullptr;
+            c.resolveBindTargets(*syntax, *scope, instTargets, &defTarget);
 
-            for (auto target : targets) {
+            for (auto target : instTargets) {
                 std::string path;
                 target->getHierarchicalPath(path);
-                binds.emplace_back(BindEntry{std::move(path), syntax});
+                binds.emplace_back(BindEntry{std::move(path), syntax, /* isDefinition */ false});
+            }
+
+            if (defTarget) {
+                binds.emplace_back(
+                    BindEntry{std::string(defTarget->name), syntax, /* isDefinition */ true});
             }
         }
     };
