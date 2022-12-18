@@ -262,7 +262,6 @@ void Scope::addMembers(const SyntaxNode& syntax) {
         case SyntaxKind::GenerateBlock:
         case SyntaxKind::ContinuousAssign:
         case SyntaxKind::ModportDeclaration:
-        case SyntaxKind::BindDirective:
         case SyntaxKind::ClockingItem:
         case SyntaxKind::DefaultClockingReference:
         case SyntaxKind::DefaultDisableDeclaration:
@@ -451,6 +450,9 @@ void Scope::addMembers(const SyntaxNode& syntax) {
             break;
         case SyntaxKind::DPIExport:
             compilation.noteDPIExportDirective(syntax.as<DPIExportSyntax>(), *this);
+            break;
+        case SyntaxKind::BindDirective:
+            compilation.noteBindDirective(syntax.as<BindDirectiveSyntax>(), *this);
             break;
         case SyntaxKind::ConstraintDeclaration:
             if (auto sym = ConstraintBlockSymbol::fromSyntax(
@@ -998,9 +1000,6 @@ void Scope::elaborate() const {
                 insertMembers(results, symbol);
                 break;
             }
-            case SyntaxKind::BindDirective:
-                InstanceSymbol::fromBindDirective(*this, member.node.as<BindDirectiveSyntax>());
-                break;
             case SyntaxKind::ClockingItem: {
                 SmallVector<const ClockVarSymbol*> vars;
                 ClockVarSymbol::fromSyntax(*this, member.node.as<ClockingItemSyntax>(), vars);
@@ -1058,6 +1057,18 @@ void Scope::elaborate() const {
                 auto members = {&cross};
                 insertMembersAndNets(members, implicitMembers, symbol);
                 cross.addBody(member.node.as<CoverCrossSyntax>(), *this);
+                break;
+            }
+            case SyntaxKind::BindDirective: {
+                // We only find a bind directive in our deferred members list if that
+                // directive is *targeting* this scope, so we should go ahead and
+                // create the instances here.
+                SmallVector<const Symbol*> instances;
+                SmallVector<const Symbol*> implicitNets;
+                InstanceSymbol::fromSyntax(compilation,
+                                           *member.node.as<BindDirectiveSyntax>().instantiation,
+                                           context, instances, implicitNets);
+                insertMembersAndNets(instances, implicitNets, symbol);
                 break;
             }
             default:
@@ -1480,6 +1491,8 @@ static size_t countMembers(const SyntaxNode& syntax) {
             return syntax.as<HierarchyInstantiationSyntax>().instances.size() + 1;
         case SyntaxKind::PrimitiveInstantiation:
             return syntax.as<PrimitiveInstantiationSyntax>().instances.size() + 1;
+        case SyntaxKind::BindDirective:
+            return syntax.as<BindDirectiveSyntax>().instantiation->instances.size() + 1;
         case SyntaxKind::ContinuousAssign:
             return syntax.as<ContinuousAssignSyntax>().assignments.size() + 1;
         case SyntaxKind::AnsiPortList:
@@ -1499,7 +1512,6 @@ static size_t countMembers(const SyntaxNode& syntax) {
             return countGenMembers(syntax);
         case SyntaxKind::LoopGenerate:
         case SyntaxKind::GenerateBlock:
-        case SyntaxKind::BindDirective:
         case SyntaxKind::DefaultClockingReference:
         case SyntaxKind::DefaultDisableDeclaration:
         case SyntaxKind::ModuleDeclaration:

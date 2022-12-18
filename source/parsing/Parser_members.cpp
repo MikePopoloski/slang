@@ -1311,9 +1311,8 @@ DefParamSyntax& Parser::parseDefParam(AttrList attributes) {
         buffer, TokenKind::Semicolon, TokenKind::Comma, semi, RequireItems::True,
         diag::ExpectedVariableAssignment, [this] { return &parseDefParamAssignment(); });
 
-    auto& result = factory.defParam(attributes, defparam, buffer.copy(alloc), semi);
-    meta.defparams.push_back(&result);
-    return result;
+    meta.hasDefparams = true;
+    return factory.defParam(attributes, defparam, buffer.copy(alloc), semi);
 }
 
 static bool isValidOption(const ExpressionSyntax& expr) {
@@ -2556,11 +2555,10 @@ BindDirectiveSyntax& Parser::parseBindDirective(AttrList attr) {
         targetInstances = &factory.bindTargetList(colon, names.copy(alloc));
     }
 
-    auto& instantiation = parseHierarchyInstantiation({});
-    auto& result = factory.bindDirective(attr, keyword, target, targetInstances, instantiation);
+    meta.hasBindDirectives = true;
 
-    meta.bindDirectives.push_back(&result);
-    return result;
+    auto& instantiation = parseHierarchyInstantiation({});
+    return factory.bindDirective(attr, keyword, target, targetInstances, instantiation);
 }
 
 UdpPortDeclSyntax& Parser::parseUdpPortDecl() {

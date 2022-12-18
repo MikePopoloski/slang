@@ -160,6 +160,9 @@ struct ParamOverrideNode {
 
     /// A map of child scopes that also contain overrides.
     flat_hash_map<std::string, ParamOverrideNode> childNodes;
+
+    /// A list of bind directives to apply in this scope.
+    std::vector<const syntax::BindDirectiveSyntax*> binds;
 };
 
 /// A centralized location for creating and caching symbols. This includes
@@ -290,13 +293,9 @@ public:
     const Symbol* findPackageExportCandidate(const PackageSymbol& packageScope,
                                              string_view name) const;
 
-    /// Notes the presence of a bind directive. The compilation uses this to decide
-    /// when it has done enough traversal of the hierarchy to have seen all bind directives.
-    /// If @a targetDef is non-null, the bind directive applies to all instances of the
-    /// given definition, which needs special handling.
-    /// @returns true if this is the first time this directive has been encountered,
-    /// and false if it's already been elaborated (thus constituting an error).
-    bool noteBindDirective(const syntax::BindDirectiveSyntax& syntax, const Definition* targetDef);
+    /// Notes the presence of a bind directive. These can be later checked during
+    /// scope elaboration to include the newly bound instances.
+    void noteBindDirective(const syntax::BindDirectiveSyntax& syntax, const Scope& scope);
 
     /// Notes the presence of a DPI export directive. These will be checked for correctness
     /// but are otherwise unused by SystemVerilog code.
@@ -484,13 +483,13 @@ private:
 
     Diagnostic& addDiag(Diagnostic diag);
 
-    const RootSymbol& getRoot(bool skipDefParamResolution);
+    const RootSymbol& getRoot(bool skipDefParamsAndBinds);
     void parseParamOverrides(flat_hash_map<string_view, const ConstantValue*>& results);
     void checkDPIMethods(span<const SubroutineSymbol* const> dpiImports);
     void checkExternIfaceMethods(span<const MethodPrototypeSymbol* const> protos);
     void checkModportExports(
         span<const std::pair<const InterfacePortSymbol*, const ModportSymbol*>> modports);
-    void resolveDefParams(size_t numDefParams);
+    void resolveDefParamsAndBinds();
 
     // Stored options object.
     CompilationOptions options;
@@ -629,15 +628,6 @@ private:
     // with escaped identifiers used by user code.
     flat_hash_map<string_view, const PrimitiveSymbol*> gateMap;
 
-    // A map from definitions to bind directives that will create
-    // instances within those definitions.
-    flat_hash_map<const Definition*, std::vector<const syntax::BindDirectiveSyntax*>>
-        bindDirectivesByDef;
-
-    // A set tracking all bind directives we've encountered during elaboration,
-    // which is used to know when we've seen them all and can stop doing early scanning.
-    flat_hash_set<const syntax::BindDirectiveSyntax*> seenBindDirectives;
-
     // A tree of parameter overrides to apply when elaborating.
     // Note that instances store pointers into this tree so it must not be
     // modified after elaboration begins.
@@ -645,6 +635,9 @@ private:
 
     // A list of DPI export directives we've encountered during elaboration.
     std::vector<std::pair<const syntax::DPIExportSyntax*, const Scope*>> dpiExports;
+
+    // A list of bind directives we've encountered during elaboration.
+    std::vector<std::pair<const syntax::BindDirectiveSyntax*, const Scope*>> bindDirectives;
 
     // A map of packages to the set of names that are candidates for being
     // exported from those packages.

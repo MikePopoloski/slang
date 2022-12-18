@@ -77,10 +77,6 @@ public:
                                 const syntax::DataDeclarationSyntax& syntax,
                                 const ASTContext& context, SmallVectorBase<const Symbol*>& results);
 
-    /// Creates one or more instances and binds them into a target scoped, based on the
-    /// provided syntax directive.
-    static void fromBindDirective(const Scope& scope, const syntax::BindDirectiveSyntax& syntax);
-
     /// Creates a default-instantiated instance of the given definition. All parameters must
     /// have defaults specified.
     static InstanceSymbol& createDefault(Compilation& compilation, const Definition& definition,

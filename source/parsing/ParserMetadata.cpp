@@ -41,12 +41,12 @@ public:
     }
 
     void handle(const BindDirectiveSyntax& syntax) {
-        meta.bindDirectives.push_back(&syntax);
+        meta.hasBindDirectives = true;
         visitDefault(syntax);
     }
 
     void handle(const DefParamSyntax& syntax) {
-        meta.defparams.push_back(&syntax);
+        meta.hasDefparams = true;
         visitDefault(syntax);
     }
 

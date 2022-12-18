@@ -399,57 +399,6 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
     TimingPathMap timingPathMap;
 };
 
-// This visitor is for finding all bind directives in the hierarchy.
-struct BindVisitor : public ASTVisitor<BindVisitor, false, false> {
-    BindVisitor(const flat_hash_set<const BindDirectiveSyntax*>& foundDirectives, size_t expected) :
-        foundDirectives(foundDirectives), expected(expected) {}
-
-    void handle(const RootSymbol& symbol) { visitDefault(symbol); }
-
-    void handle(const CompilationUnitSymbol& symbol) {
-        if (foundDirectives.size() == expected)
-            return;
-        visitDefault(symbol);
-    }
-
-    void handle(const InstanceSymbol& symbol) {
-        if (foundDirectives.size() == expected)
-            return;
-
-        if (!visitedInstances.emplace(&symbol.body).second) {
-            errored = true;
-            return;
-        }
-
-        visitDefault(symbol.body);
-    }
-
-    void handle(const GenerateBlockSymbol& symbol) {
-        if (foundDirectives.size() == expected || symbol.isUninstantiated)
-            return;
-        visitDefault(symbol);
-    }
-
-    void handle(const GenerateBlockArraySymbol& symbol) {
-        if (foundDirectives.size() == expected)
-            return;
-
-        auto members = symbol.members();
-        if (members.begin() == members.end())
-            return;
-
-        visit(*members.begin());
-    }
-
-    template<typename T>
-    void handle(const T&) {}
-
-    const flat_hash_set<const BindDirectiveSyntax*>& foundDirectives;
-    flat_hash_set<const InstanceBodySymbol*> visitedInstances;
-    size_t expected;
-    bool errored = false;
-};
-
 // This visitor is for finding all defparam directives in the hierarchy.
 // We're given a target generate "level" to reach, where the level is a measure
 // of how deep the design is in terms of nested generate blocks. Once we reach
@@ -461,6 +410,10 @@ struct BindVisitor : public ASTVisitor<BindVisitor, false, false> {
 // Since defparams are disallowed from modifying parameters above them across generate
 // blocks, an infinitely recursive module instantiation can't be stopped by a deeper
 // defparam evaluation.
+//
+// This visitor also implicitly serves to discover bind directives. They are registered
+// with the compilation by Scope::addMembers and then get processed after we finish
+// visiting the tree.
 struct DefParamVisitor : public ASTVisitor<DefParamVisitor, false, false> {
     DefParamVisitor(size_t maxInstanceDepth, size_t generateLevel) :
         maxInstanceDepth(maxInstanceDepth), generateLevel(generateLevel) {}
@@ -478,7 +431,7 @@ struct DefParamVisitor : public ASTVisitor<DefParamVisitor, false, false> {
             return;
 
         // If we hit max depth we have a problem -- setting the hierarchyProblem
-        // member will cause other functions to early out so that we completely
+        // member will cause other functions to early out so that we complete
         // this visitation as quickly as possible.
         if (instanceDepth > maxInstanceDepth) {
             hierarchyProblem = &symbol;

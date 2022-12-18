@@ -248,10 +248,10 @@ span<const CompilationUnitSymbol* const> Compilation::getCompilationUnits() cons
 }
 
 const RootSymbol& Compilation::getRoot() {
-    return getRoot(/* skipDefParamResolution */ false);
+    return getRoot(/* skipDefParamsAndBinds */ false);
 }
 
-const RootSymbol& Compilation::getRoot(bool skipDefParamResolution) {
+const RootSymbol& Compilation::getRoot(bool skipDefParamsAndBinds) {
     if (finalized)
         return *root;
 
@@ -261,15 +261,17 @@ const RootSymbol& Compilation::getRoot(bool skipDefParamResolution) {
 
     // If there are defparams we need to fully resolve their values up front before
     // we start elaborating any instances.
-    size_t numDefParams = 0, numBinds = 0;
+    bool anyDefParamsOrBinds = false;
     for (auto& tree : syntaxTrees) {
         auto& meta = tree->getMetadata();
-        numDefParams += meta.defparams.size();
-        numBinds += meta.bindDirectives.size();
+        if (meta.hasDefparams || meta.hasBindDirectives) {
+            anyDefParamsOrBinds = true;
+            break;
+        }
     }
 
-    if (!skipDefParamResolution && numDefParams)
-        resolveDefParams(numDefParams);
+    if (!skipDefParamsAndBinds && anyDefParamsOrBinds)
+        resolveDefParamsAndBinds();
 
     ASSERT(!finalizing);
     finalizing = true;
@@ -395,15 +397,6 @@ const RootSymbol& Compilation::getRoot(bool skipDefParamResolution) {
     root->compilationUnits = compilationUnits;
     finalizing = false;
     finalized = true;
-
-    // If there are any bind directives in the design, we need to opportunistically
-    // traverse the hierarchy now to find them (because they can modify the hierarchy and
-    // accessing other nodes / expressions might not be valid without those bound
-    // instances present).
-    if (numBinds) {
-        BindVisitor visitor(seenBindDirectives, numBinds);
-        root->visit(visitor);
-    }
 
     return *root;
 }
@@ -629,15 +622,8 @@ const Symbol* Compilation::findPackageExportCandidate(const PackageSymbol& packa
     return nullptr;
 }
 
-bool Compilation::noteBindDirective(const BindDirectiveSyntax& syntax,
-                                    const Definition* targetDef) {
-    if (!seenBindDirectives.emplace(&syntax).second)
-        return false;
-
-    if (targetDef)
-        bindDirectivesByDef[targetDef].push_back(&syntax);
-
-    return true;
+void Compilation::noteBindDirective(const BindDirectiveSyntax& syntax, const Scope& scope) {
+    bindDirectives.emplace_back(&syntax, &scope);
 }
 
 void Compilation::noteDPIExportDirective(const DPIExportSyntax& syntax, const Scope& scope) {
@@ -1413,8 +1399,72 @@ void Compilation::checkModportExports(
     }
 }
 
-void Compilation::resolveDefParams(size_t) {
-    TimeTraceScope timeScope("resolveDefParams"sv, ""sv);
+static std::string resolveBindTarget(const BindDirectiveSyntax& syntax, const Scope& scope) {
+    // If an instance list is given, then the target name must be a definition name.
+    // Otherwise, the target name can be either an instance name or a definition name,
+    // preferencing the instance if found.
+    ASTContext context(scope, LookupLocation::max);
+    if (syntax.targetInstances) {
+        /*comp.noteBindDirective(syntax, nullptr);
+
+        // TODO: The parser checks for an invalid target name here.
+        if (syntax.target->kind != SyntaxKind::IdentifierName)
+            return;
+
+        Token name = syntax.target->as<IdentifierNameSyntax>().identifier;
+        targetDef = comp.getDefinition(name.valueText(), scope);
+        if (!targetDef) {
+            scope.addDiag(diag::UnknownModule, name.range()) << name.valueText();
+            return;
+        }
+
+        // TODO: check that def is not a program here
+
+        for (auto inst : syntax.targetInstances->targets) {
+            LookupResult result;
+            Lookup::name(*inst, context, LookupFlags::None, result);
+            result.reportDiags(context);
+
+            if (result.found) {
+                // TODO: check valid target
+                // TODO: check that instance is of targetDef
+                if (!createInstances(result.found->as<InstanceSymbol>().body))
+                    return;
+            }
+        }*/
+    }
+    else {
+        LookupResult result;
+        Lookup::name(*syntax.target, context, LookupFlags::None, result);
+
+        if (result.found) {
+            // TODO: check valid target
+            std::string path;
+            result.found->getHierarchicalPath(path);
+            return path;
+        }
+        else {
+            // If we didn't find the name as an instance, try as a definition.
+            // if (syntax.target->kind == SyntaxKind::IdentifierName) {
+            //    Token name = syntax.target->as<IdentifierNameSyntax>().identifier;
+            //    targetDef = comp.getDefinition(name.valueText(), scope);
+            //}
+
+            // comp.noteBindDirective(syntax, targetDef);
+
+            //// If no name and no definition, report an error.
+            // if (!targetDef) {
+            //     result.reportDiags(context);
+            //     return;
+            // }
+        }
+    }
+
+    return {};
+}
+
+void Compilation::resolveDefParamsAndBinds() {
+    TimeTraceScope timeScope("resolveDefParamsAndBinds"sv, ""sv);
 
     struct OverrideEntry {
         std::string path;
@@ -1423,7 +1473,13 @@ void Compilation::resolveDefParams(size_t) {
     };
     SmallVector<OverrideEntry, 4> overrides;
 
-    auto copyOverrides = [&](Compilation& c) {
+    struct BindEntry {
+        std::string path;
+        const BindDirectiveSyntax* syntax = nullptr;
+    };
+    SmallVector<BindEntry> binds;
+
+    auto copyStateInto = [&](Compilation& c) {
         for (auto& entry : overrides) {
             ParamOverrideNode* node = &c.paramOverrides;
             std::string curr = entry.path;
@@ -1438,27 +1494,51 @@ void Compilation::resolveDefParams(size_t) {
                 curr = curr.substr(idx + 1);
             }
         }
+
+        for (auto& entry : binds) {
+            ParamOverrideNode* node = &c.paramOverrides;
+            std::string curr = entry.path;
+            while (true) {
+                size_t idx = curr.find('.');
+                if (idx == curr.npos) {
+                    node = &node->childNodes[curr];
+                    node->binds.push_back(entry.syntax);
+                    break;
+                }
+
+                node = &node->childNodes[curr.substr(0, idx)];
+                curr = curr.substr(idx + 1);
+            }
+        }
     };
 
-    auto createClone = [&](Compilation& c) {
+    auto cloneInto = [&](Compilation& c) {
         c.options = options;
         for (auto& tree : syntaxTrees)
             c.addSyntaxTree(tree);
 
-        copyOverrides(c);
+        copyStateInto(c);
     };
 
-    auto saveDefparams = [&](DefParamVisitor& visitor) {
+    auto saveState = [&](DefParamVisitor& visitor, Compilation& c) {
         overrides.clear();
         for (auto defparam : visitor.found) {
             auto target = defparam->getTarget();
-            if (!target)
+            if (!target) {
                 overrides.emplace_back();
+            }
             else {
                 std::string path;
                 target->getHierarchicalPath(path);
                 overrides.push_back({std::move(path), target->getSyntax(), defparam->getValue()});
             }
+        }
+
+        binds.clear();
+        for (auto [syntax, scope] : c.bindDirectives) {
+            auto path = resolveBindTarget(*syntax, *scope);
+            if (!path.empty())
+                binds.emplace_back(BindEntry{std::move(path), syntax});
         }
     };
 
@@ -1479,6 +1559,7 @@ void Compilation::resolveDefParams(size_t) {
     // is each successive set of nested generate blocks.
     size_t generateLevel = 0;
     size_t numBlocksSeen = 0;
+    size_t numBindsSeen = 0;
     while (true) {
         // Traverse the design and find all defparams and their values.
         // defparam resolution happens in a cloned compilation unit because we will be
@@ -1486,13 +1567,20 @@ void Compilation::resolveDefParams(size_t) {
         // hierarchy that gets instantiated. Cloning lets us do that in an isolated context
         // and throw that work away once we know the final parameter values.
         Compilation initialClone;
-        createClone(initialClone);
+        cloneInto(initialClone);
 
         DefParamVisitor initialVisitor(options.maxInstanceDepth, generateLevel);
-        initialClone.getRoot(/* skipDefParamResolution */ true).visit(initialVisitor);
-        saveDefparams(initialVisitor);
+        initialClone.getRoot(/* skipDefParamsAndBinds */ true).visit(initialVisitor);
+        saveState(initialVisitor, initialClone);
         if (checkProblem(initialVisitor))
             return;
+
+        // If we have found more binds, do another visit to let them be applied
+        // and potentially add blocks and defparams to our set for this level.
+        if (initialClone.bindDirectives.size() > numBindsSeen) {
+            numBindsSeen = initialClone.bindDirectives.size();
+            continue;
+        }
 
         // defparams can change the value of parameters, further affecting the value of
         // other defparams elsewhere in the design. This means we need to iterate,
@@ -1501,10 +1589,10 @@ void Compilation::resolveDefParams(size_t) {
         bool allSame = true;
         for (uint32_t i = 0; i < options.maxDefParamSteps; i++) {
             Compilation c;
-            createClone(c);
+            cloneInto(c);
 
             DefParamVisitor v(options.maxInstanceDepth, generateLevel);
-            c.getRoot(/* skipDefParamResolution */ true).visit(v);
+            c.getRoot(/* skipDefParamsAndBinds */ true).visit(v);
             if (checkProblem(v))
                 return;
 
@@ -1548,7 +1636,7 @@ void Compilation::resolveDefParams(size_t) {
             if (allSame)
                 break;
 
-            saveDefparams(v);
+            saveState(v, c);
         }
 
         // If we gave up due to a potential infinite loop, continue exiting.
@@ -1564,7 +1652,7 @@ void Compilation::resolveDefParams(size_t) {
     }
 
     // We have our final overrides; copy them into the main compilation unit.
-    copyOverrides(*this);
+    copyStateInto(*this);
 }
 
 } // namespace slang::ast

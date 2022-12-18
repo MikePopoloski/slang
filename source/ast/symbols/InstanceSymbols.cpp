@@ -428,96 +428,6 @@ void InstanceSymbol::fromFixupSyntax(Compilation& comp, const Definition& defini
     ASSERT(implicitNets.empty());
 }
 
-void InstanceSymbol::fromBindDirective(const Scope& scope, const BindDirectiveSyntax& syntax) {
-    auto& comp = scope.getCompilation();
-    const Definition* targetDef = nullptr;
-
-    // TODO: check results of noteBindDirective
-
-    auto createInstances = [&](const Scope& targetScope) {
-        SmallVector<const Symbol*> instances;
-        SmallVector<const Symbol*> implicitNets;
-        ASTContext ctx(targetScope, LookupLocation::max);
-        fromSyntax(comp, *syntax.instantiation, ctx, instances, implicitNets);
-
-        // If instances is an empty array, an error must have occurred and we should
-        // not attempt creating more instances later.
-        if (instances.empty())
-            return false;
-
-        // The nature of bind directives makes this const_cast necessary; we maintain the
-        // outward invariant of a scope having all its members by making the Compilation
-        // object search through all instances and find bind directives up front before
-        // handing off access to any nodes.
-        Scope& newScope = const_cast<Scope&>(targetScope);
-        for (auto net : implicitNets)
-            newScope.addMember(*net);
-        for (auto inst : instances)
-            newScope.addMember(*inst);
-
-        return true;
-    };
-
-    // If an instance list is given, then the target name must be a definition name.
-    // Otherwise, the target name can be either an instance name or a definition name,
-    // preferencing the instance if found.
-    ASTContext context(scope, LookupLocation::max);
-    if (syntax.targetInstances) {
-        comp.noteBindDirective(syntax, nullptr);
-
-        // TODO: The parser checks for an invalid target name here.
-        if (syntax.target->kind != SyntaxKind::IdentifierName)
-            return;
-
-        Token name = syntax.target->as<IdentifierNameSyntax>().identifier;
-        targetDef = comp.getDefinition(name.valueText(), scope);
-        if (!targetDef) {
-            scope.addDiag(diag::UnknownModule, name.range()) << name.valueText();
-            return;
-        }
-
-        // TODO: check that def is not a program here
-
-        for (auto inst : syntax.targetInstances->targets) {
-            LookupResult result;
-            Lookup::name(*inst, context, LookupFlags::None, result);
-            result.reportDiags(context);
-
-            if (result.found) {
-                // TODO: check valid target
-                // TODO: check that instance is of targetDef
-                if (!createInstances(result.found->as<InstanceSymbol>().body))
-                    return;
-            }
-        }
-    }
-    else {
-        LookupResult result;
-        Lookup::name(*syntax.target, context, LookupFlags::None, result);
-
-        if (result.found) {
-            // TODO: check valid target
-            comp.noteBindDirective(syntax, nullptr);
-            createInstances(result.found->as<InstanceSymbol>().body);
-        }
-        else {
-            // If we didn't find the name as an instance, try as a definition.
-            if (syntax.target->kind == SyntaxKind::IdentifierName) {
-                Token name = syntax.target->as<IdentifierNameSyntax>().identifier;
-                targetDef = comp.getDefinition(name.valueText(), scope);
-            }
-
-            comp.noteBindDirective(syntax, targetDef);
-
-            // If no name and no definition, report an error.
-            if (!targetDef) {
-                result.reportDiags(context);
-                return;
-            }
-        }
-    }
-}
-
 const Definition& InstanceSymbol::getDefinition() const {
     return body.getDefinition();
 }
@@ -656,9 +566,11 @@ InstanceBodySymbol& InstanceBodySymbol::fromDefinition(Compilation& comp,
                                                        SourceLocation instanceLoc,
                                                        ParameterBuilder& paramBuilder,
                                                        bool isUninstantiated) {
-    auto& declSyntax = definition.syntax;
-    auto result = comp.emplace<InstanceBodySymbol>(comp, definition, paramBuilder.getOverrides(),
+    auto overrideNode = paramBuilder.getOverrides();
+    auto result = comp.emplace<InstanceBodySymbol>(comp, definition, overrideNode,
                                                    isUninstantiated);
+
+    auto& declSyntax = definition.syntax;
     result->setSyntax(declSyntax);
 
     // Package imports from the header always come first.
@@ -710,6 +622,13 @@ InstanceBodySymbol& InstanceBodySymbol::fromDefinition(Compilation& comp,
                     createParam(*declarator);
             }
         }
+    }
+
+    // If there are any bind directives targeting this instance,
+    // add them to the end of the scope now.
+    if (overrideNode) {
+        for (auto bindSyntax : overrideNode->binds)
+            result->addDeferredMembers(*bindSyntax);
     }
 
     result->parameters = params.copy(comp);

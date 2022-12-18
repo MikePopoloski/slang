@@ -41,18 +41,18 @@ struct SLANG_EXPORT ParserMetadata {
     /// A list of all package import declarations parsed.
     std::vector<const syntax::PackageImportDeclarationSyntax*> packageImports;
 
-    /// A list of all defparams parsed.
-    std::vector<const syntax::DefParamSyntax*> defparams;
-
     /// A list of all class declarations parsed.
     std::vector<const syntax::ClassDeclarationSyntax*> classDecls;
-
-    /// A list of all bind directives parsed.
-    std::vector<const syntax::BindDirectiveSyntax*> bindDirectives;
 
     /// The EOF token, if one has already been consumed by the parser.
     /// Otherwise an empty token.
     Token eofToken;
+
+    /// Indicates whether the parse tree has any defparam directives.
+    bool hasDefparams = false;
+
+    /// Indicates whether the parse tree has any bind directives.
+    bool hasBindDirectives = false;
 
     /// Constructs a new set of parser metadata by walking the provided syntax tree.
     static ParserMetadata fromSyntax(const syntax::SyntaxNode& root);

@@ -225,6 +225,8 @@ protected:
     /// Add a preconstructed wildcard import to this scope.
     void addWildcardImport(const WildcardImportSymbol& item);
 
+    void addDeferredMembers(const syntax::SyntaxNode& syntax);
+
 private:
     friend class Compilation;
 
@@ -288,7 +290,6 @@ private:
     void checkImportConflict(const Symbol& member, const Symbol& existing) const;
     void addWildcardImport(const syntax::PackageImportItemSyntax& item,
                            span<const syntax::AttributeInstanceSyntax* const> attributes);
-    void addDeferredMembers(const syntax::SyntaxNode& syntax);
     void tryFixupInstances(const syntax::DataDeclarationSyntax& syntax, const ASTContext& context,
                            SmallVectorBase<const Symbol*>& results) const;
 
