@@ -280,8 +280,10 @@ const RootSymbol& Compilation::getRoot(bool skipDefParamsAndBinds) {
     auto isValidTop = [&](auto& definition) {
         // All parameters must have defaults.
         for (auto& param : definition.parameters) {
-            if (!param.hasDefault() && cliOverrides.find(param.name) == cliOverrides.end())
+            if (!param.hasDefault() &&
+                (param.isTypeParam || cliOverrides.find(param.name) == cliOverrides.end())) {
                 return false;
+            }
         }
         return true;
     };
@@ -364,9 +366,15 @@ const RootSymbol& Compilation::getRoot(bool skipDefParamsAndBinds) {
     // each top-level instance.
     if (!cliOverrides.empty()) {
         for (auto def : topDefs) {
-            auto& node = hierarchyOverrides.childNodes[std::string(def->name)];
-            for (auto [name, value] : cliOverrides)
-                node.overrides.emplace(std::string(name), *value);
+            for (auto& param : def->parameters) {
+                if (!param.isTypeParam && param.hasSyntax) {
+                    auto it = cliOverrides.find(param.name);
+                    if (it != cliOverrides.end()) {
+                        hierarchyOverrides.childNodes[def->syntax].overrides.emplace(
+                            param.valueDecl, *it->second);
+                    }
+                }
+            }
         }
     }
 
@@ -374,7 +382,7 @@ const RootSymbol& Compilation::getRoot(bool skipDefParamsAndBinds) {
     for (auto def : topDefs) {
         const HierarchyOverrideNode* hierarchyOverrideNode = nullptr;
         if (!hierarchyOverrides.childNodes.empty()) {
-            if (auto it = hierarchyOverrides.childNodes.find(std::string(def->name));
+            if (auto it = hierarchyOverrides.childNodes.find(def->syntax);
                 it != hierarchyOverrides.childNodes.end()) {
                 hierarchyOverrideNode = &it->second;
             }
@@ -433,10 +441,8 @@ const Definition* Compilation::getDefinition(string_view lookupName, const Scope
 }
 
 const Definition* Compilation::getDefinition(const ModuleDeclarationSyntax& syntax) const {
-    for (auto& [key, def] : definitionMap) {
-        if (&def->syntax == &syntax)
-            return def.get();
-    }
+    if (auto it = definitionFromSyntax.find(&syntax); it != definitionFromSyntax.end())
+        return it->second;
     return nullptr;
 }
 
@@ -465,6 +471,8 @@ void Compilation::createDefinition(const Scope& scope, LookupLocation location,
         reportRedefinition(scope, *def, *it->second, diag::DuplicateDefinition);
 
     const auto& result = (definitionMap[key] = std::move(def));
+    definitionFromSyntax[&syntax] = result.get();
+
     if (targetScope == root.get()) {
         topDefinitions[result->name].first = result.get();
         if (auto primIt = udpMap.find(result->name); primIt != udpMap.end())
@@ -1489,55 +1497,42 @@ void Compilation::resolveDefParamsAndBinds() {
     TimeTraceScope timeScope("resolveDefParamsAndBinds"sv, ""sv);
 
     struct OverrideEntry {
-        std::string path;
-        const SyntaxNode* node = nullptr;
+        InstancePath path;
+        const SyntaxNode* syntax = nullptr;
         ConstantValue value;
+        std::string pathStr; // TODO: should be able to avoid storing the stringified path here
     };
     SmallVector<OverrideEntry, 4> overrides;
 
     struct BindEntry {
-        std::string path;
+        InstancePath path;
         const BindDirectiveSyntax* syntax = nullptr;
-        bool isDefinition = false;
+        const ModuleDeclarationSyntax* definitionTarget = nullptr;
     };
     SmallVector<BindEntry> binds;
 
+    auto getNodeFor = [](const InstancePath& path, Compilation& c) {
+        HierarchyOverrideNode* node = &c.hierarchyOverrides;
+        for (auto& entry : path.entries)
+            node = &node->childNodes[entry];
+        return node;
+    };
+
     auto copyStateInto = [&](Compilation& c) {
         for (auto& entry : overrides) {
-            HierarchyOverrideNode* node = &c.hierarchyOverrides;
-            std::string curr = entry.path;
-            while (true) {
-                size_t idx = curr.find('.');
-                if (idx == curr.npos) {
-                    node->overrides[curr] = entry.value;
-                    break;
-                }
-
-                node = &node->childNodes[curr.substr(0, idx)];
-                curr = curr.substr(idx + 1);
-            }
+            auto node = getNodeFor(entry.path, c);
+            node->overrides[entry.syntax] = entry.value;
         }
 
         for (auto& entry : binds) {
-            if (entry.isDefinition) {
-                auto it = c.topDefinitions.find(entry.path);
-                ASSERT(it != c.topDefinitions.end());
-                it->second.first->bindDirectives.push_back(entry.syntax);
+            if (entry.definitionTarget) {
+                auto it = c.definitionFromSyntax.find(entry.definitionTarget);
+                ASSERT(it != c.definitionFromSyntax.end());
+                it->second->bindDirectives.push_back(entry.syntax);
             }
             else {
-                HierarchyOverrideNode* node = &c.hierarchyOverrides;
-                std::string curr = entry.path;
-                while (true) {
-                    size_t idx = curr.find('.');
-                    if (idx == curr.npos) {
-                        node = &node->childNodes[curr];
-                        node->binds.push_back(entry.syntax);
-                        break;
-                    }
-
-                    node = &node->childNodes[curr.substr(0, idx)];
-                    curr = curr.substr(idx + 1);
-                }
+                auto node = getNodeFor(entry.path, c);
+                node->binds.push_back(entry.syntax);
             }
         }
     };
@@ -1560,7 +1555,9 @@ void Compilation::resolveDefParamsAndBinds() {
             else {
                 std::string path;
                 target->getHierarchicalPath(path);
-                overrides.push_back({std::move(path), target->getSyntax(), defparam->getValue()});
+
+                overrides.push_back({InstancePath(*target), target->getSyntax(),
+                                     defparam->getValue(), std::move(path)});
             }
         }
 
@@ -1570,16 +1567,11 @@ void Compilation::resolveDefParamsAndBinds() {
             const Definition* defTarget = nullptr;
             c.resolveBindTargets(*syntax, *scope, instTargets, &defTarget);
 
-            for (auto target : instTargets) {
-                std::string path;
-                target->getHierarchicalPath(path);
-                binds.emplace_back(BindEntry{std::move(path), syntax, /* isDefinition */ false});
-            }
+            for (auto target : instTargets)
+                binds.emplace_back(BindEntry{InstancePath(*target), syntax});
 
-            if (defTarget) {
-                binds.emplace_back(
-                    BindEntry{std::string(defTarget->name), syntax, /* isDefinition */ true});
-            }
+            if (defTarget)
+                binds.emplace_back(BindEntry{{}, syntax, &defTarget->syntax});
         }
     };
 
@@ -1656,12 +1648,12 @@ void Compilation::resolveDefParamsAndBinds() {
                 };
 
                 auto& prevEntry = overrides[j];
-                if (prevEntry.node && targetNode && prevEntry.node != targetNode) {
+                if (prevEntry.syntax && targetNode && prevEntry.syntax != targetNode) {
                     std::string path;
                     target->getHierarchicalPath(path);
 
                     auto& diag = root->addDiag(diag::DefParamTargetChange, getRange());
-                    diag << prevEntry.path;
+                    diag << prevEntry.pathStr;
                     diag << path;
                     return;
                 }

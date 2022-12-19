@@ -236,9 +236,9 @@ const ParameterSymbolBase& ParameterBuilder::createParam(const Definition::Param
         newScope.addMember(*param);
 
         // If there is an override node, see if this parameter is in it.
-        if (overrideNode) {
+        if (auto paramSyntax = param->getSyntax(); overrideNode && paramSyntax) {
             auto& map = overrideNode->overrides;
-            if (auto it = map.find(std::string(decl.name)); it != map.end()) {
+            if (auto it = map.find(paramSyntax); it != map.end()) {
                 param->setValue(comp, it->second, /* needsCoercion */ true);
                 return *param;
             }

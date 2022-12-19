@@ -9,6 +9,7 @@
 
 #include <memory>
 
+#include "slang/ast/InstancePath.h"
 #include "slang/ast/Scope.h"
 #include "slang/ast/Symbol.h"
 #include "slang/diagnostics/Diagnostics.h"
@@ -159,10 +160,10 @@ struct SLANG_EXPORT CompilationOptions {
 /// specified overrides.
 struct HierarchyOverrideNode {
     /// A map of parameters in the current scope to override.
-    flat_hash_map<std::string, ConstantValue> overrides;
+    flat_hash_map<const syntax::SyntaxNode*, ConstantValue> overrides;
 
     /// A map of child scopes that also contain overrides.
-    flat_hash_map<std::string, HierarchyOverrideNode> childNodes;
+    flat_hash_map<InstancePath::Entry, HierarchyOverrideNode> childNodes;
 
     /// A list of bind directives to apply in this scope.
     std::vector<const syntax::BindDirectiveSyntax*> binds;
@@ -637,6 +638,10 @@ private:
     // map because they are distinguished by keyword names that may otherwise collide
     // with escaped identifiers used by user code.
     flat_hash_map<string_view, const PrimitiveSymbol*> gateMap;
+
+    // A map from syntax node to the definition it represents. Used much less frequently
+    // than other ways of looking up definitions which is why it's lower down here.
+    flat_hash_map<const syntax::ModuleDeclarationSyntax*, Definition*> definitionFromSyntax;
 
     // A tree of overrides to apply when elaborating.
     // Note that instances store pointers into this tree so it must not be

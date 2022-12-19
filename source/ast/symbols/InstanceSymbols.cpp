@@ -137,6 +137,8 @@ private:
         auto result = compilation.emplace<InstanceArraySymbol>(compilation, nameToken.valueText(),
                                                                nameToken.location(),
                                                                elements.copy(compilation), range);
+        result->setSyntax(syntax);
+
         for (auto element : elements)
             result->addMember(*element);
 
@@ -267,7 +269,10 @@ static const HierarchyOverrideNode* findParentOverrideNode(const Scope& scope) {
     if (!node)
         return nullptr;
 
-    auto it = node->childNodes.find(std::string(sym.name));
+    auto syntax = sym.getSyntax();
+    ASSERT(syntax);
+
+    auto it = node->childNodes.find(*syntax);
     if (it == node->childNodes.end())
         return nullptr;
 
@@ -377,7 +382,7 @@ void InstanceSymbol::fromSyntax(Compilation& compilation,
             if (instanceSyntax->decl) {
                 auto instName = instanceSyntax->decl->name.valueText();
                 if (!instName.empty()) {
-                    if (auto it = parentOverrideNode->childNodes.find(std::string(instName));
+                    if (auto it = parentOverrideNode->childNodes.find(*instanceSyntax);
                         it != parentOverrideNode->childNodes.end()) {
                         paramBuilder.setOverrides(&it->second);
                     }

@@ -53,6 +53,7 @@ target_sources(
           EvalContext.cpp
           Expression.cpp
           FormatHelpers.cpp
+          InstancePath.cpp
           Lookup.cpp
           LValue.cpp
           Patterns.cpp
