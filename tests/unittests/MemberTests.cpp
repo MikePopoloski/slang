@@ -2305,7 +2305,7 @@ endmodule
 TEST_CASE("Hierarchical path strings") {
     auto tree = SyntaxTree::fromText(R"(
 module top;
-    m m1 [4][2:0][3:4] ();
+    m m1 [4][6:1][3:4] ();
 endmodule
 
 module m;

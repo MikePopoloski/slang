@@ -133,10 +133,7 @@ static void getHierarchicalPathImpl(const Symbol& symbol, FormatBuffer& buffer) 
 
             for (size_t i = 0; i < instanceDims.size(); i++) {
                 auto dim = instanceDims[i];
-                auto idx = arrayPath[i];
-
-                if (!dim.isLittleEndian())
-                    idx = dim.upper() - idx;
+                auto idx = dim.translateIndex(arrayPath[i]);
                 idx += dim.lower();
 
                 buffer.format("[{}]", idx);
