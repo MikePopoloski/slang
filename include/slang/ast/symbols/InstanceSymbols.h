@@ -28,7 +28,7 @@ class PortConnection;
 class PortSymbol;
 class PrimitiveSymbol;
 class TimingControl;
-struct ParamOverrideNode;
+struct HierarchyOverrideNode;
 
 /// Common functionality for module, interface, program, and primitive instances.
 class SLANG_EXPORT InstanceSymbolBase : public Symbol {
@@ -80,7 +80,7 @@ public:
     /// Creates a default-instantiated instance of the given definition. All parameters must
     /// have defaults specified.
     static InstanceSymbol& createDefault(Compilation& compilation, const Definition& definition,
-                                         const ParamOverrideNode* paramOverrideNode);
+                                         const HierarchyOverrideNode* hierarchyOverrideNode);
 
     /// Creates a placeholder instance for a virtual interface type declaration.
     static InstanceSymbol& createVirtual(
@@ -108,9 +108,9 @@ public:
     /// The parent instance for which this is the body.
     const InstanceSymbol* parentInstance = nullptr;
 
-    /// A pointer into the parameter override tree, if this instance or any
-    /// child instances have parameter overrides that need to be applied.
-    const ParamOverrideNode* paramOverrideNode = nullptr;
+    /// A pointer into the hierarchy override tree, if this instance or any
+    /// child instances have overrides that need to be applied.
+    const HierarchyOverrideNode* hierarchyOverrideNode = nullptr;
 
     /// A copy of all port parameter symbols used to construct the instance body.
     span<const ParameterSymbolBase* const> parameters;
@@ -122,7 +122,7 @@ public:
     bool isUninstantiated = false;
 
     InstanceBodySymbol(Compilation& compilation, const Definition& definition,
-                       const ParamOverrideNode* paramOverrideNode, bool isUninstantiated);
+                       const HierarchyOverrideNode* hierarchyOverrideNode, bool isUninstantiated);
 
     span<const Symbol* const> getPortList() const {
         ensureElaborated();
@@ -137,7 +137,7 @@ public:
 
     static InstanceBodySymbol& fromDefinition(Compilation& compilation,
                                               const Definition& definition, bool isUninstantiated,
-                                              const ParamOverrideNode* paramOverrideNode);
+                                              const HierarchyOverrideNode* hierarchyOverrideNode);
 
     static InstanceBodySymbol& fromDefinition(Compilation& compilation,
                                               const Definition& definition,

@@ -364,7 +364,7 @@ const RootSymbol& Compilation::getRoot(bool skipDefParamsAndBinds) {
     // each top-level instance.
     if (!cliOverrides.empty()) {
         for (auto def : topDefs) {
-            auto& node = paramOverrides.childNodes[std::string(def->name)];
+            auto& node = hierarchyOverrides.childNodes[std::string(def->name)];
             for (auto [name, value] : cliOverrides)
                 node.overrides.emplace(std::string(name), *value);
         }
@@ -372,15 +372,15 @@ const RootSymbol& Compilation::getRoot(bool skipDefParamsAndBinds) {
 
     SmallVector<const InstanceSymbol*> topList;
     for (auto def : topDefs) {
-        const ParamOverrideNode* paramOverrideNode = nullptr;
-        if (!paramOverrides.childNodes.empty()) {
-            if (auto it = paramOverrides.childNodes.find(std::string(def->name));
-                it != paramOverrides.childNodes.end()) {
-                paramOverrideNode = &it->second;
+        const HierarchyOverrideNode* hierarchyOverrideNode = nullptr;
+        if (!hierarchyOverrides.childNodes.empty()) {
+            if (auto it = hierarchyOverrides.childNodes.find(std::string(def->name));
+                it != hierarchyOverrides.childNodes.end()) {
+                hierarchyOverrideNode = &it->second;
             }
         }
 
-        auto& instance = InstanceSymbol::createDefault(*this, *def, paramOverrideNode);
+        auto& instance = InstanceSymbol::createDefault(*this, *def, hierarchyOverrideNode);
         root->addMember(instance);
         topList.push_back(&instance);
     }
@@ -1504,7 +1504,7 @@ void Compilation::resolveDefParamsAndBinds() {
 
     auto copyStateInto = [&](Compilation& c) {
         for (auto& entry : overrides) {
-            ParamOverrideNode* node = &c.paramOverrides;
+            HierarchyOverrideNode* node = &c.hierarchyOverrides;
             std::string curr = entry.path;
             while (true) {
                 size_t idx = curr.find('.');
@@ -1525,7 +1525,7 @@ void Compilation::resolveDefParamsAndBinds() {
                 it->second.first->bindDirectives.push_back(entry.syntax);
             }
             else {
-                ParamOverrideNode* node = &c.paramOverrides;
+                HierarchyOverrideNode* node = &c.hierarchyOverrides;
                 std::string curr = entry.path;
                 while (true) {
                     size_t idx = curr.find('.');

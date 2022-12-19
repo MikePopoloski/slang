@@ -152,14 +152,17 @@ struct SLANG_EXPORT CompilationOptions {
     std::vector<std::string> paramOverrides;
 };
 
-/// A node in a tree representing specific parameters to override. These are
-/// assembled from defparam values and command-line specified overrides.
-struct ParamOverrideNode {
+/// A node in a tree representing an instance in the design
+/// hierarchy where parameters should be overriden and/or
+/// bind directives should be applied. These are assembled
+/// from defparam values, bind directives, and command-line
+/// specified overrides.
+struct HierarchyOverrideNode {
     /// A map of parameters in the current scope to override.
     flat_hash_map<std::string, ConstantValue> overrides;
 
     /// A map of child scopes that also contain overrides.
-    flat_hash_map<std::string, ParamOverrideNode> childNodes;
+    flat_hash_map<std::string, HierarchyOverrideNode> childNodes;
 
     /// A list of bind directives to apply in this scope.
     std::vector<const syntax::BindDirectiveSyntax*> binds;
@@ -635,10 +638,10 @@ private:
     // with escaped identifiers used by user code.
     flat_hash_map<string_view, const PrimitiveSymbol*> gateMap;
 
-    // A tree of parameter overrides to apply when elaborating.
+    // A tree of overrides to apply when elaborating.
     // Note that instances store pointers into this tree so it must not be
     // modified after elaboration begins.
-    ParamOverrideNode paramOverrides;
+    HierarchyOverrideNode hierarchyOverrides;
 
     // A list of DPI export directives we've encountered during elaboration.
     std::vector<std::pair<const syntax::DPIExportSyntax*, const Scope*>> dpiExports;

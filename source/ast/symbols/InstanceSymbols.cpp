@@ -220,11 +220,11 @@ InstanceSymbol::InstanceSymbol(Compilation& compilation, string_view name, Sourc
 
 InstanceSymbol& InstanceSymbol::createDefault(Compilation& compilation,
                                               const Definition& definition,
-                                              const ParamOverrideNode* paramOverrideNode) {
+                                              const HierarchyOverrideNode* hierarchyOverrideNode) {
     return *compilation.emplace<InstanceSymbol>(
         definition.name, definition.location,
         InstanceBodySymbol::fromDefinition(compilation, definition,
-                                           /* isUninstantiated */ false, paramOverrideNode));
+                                           /* isUninstantiated */ false, hierarchyOverrideNode));
 }
 
 InstanceSymbol& InstanceSymbol::createVirtual(
@@ -257,10 +257,10 @@ InstanceSymbol& InstanceSymbol::createInvalid(Compilation& compilation,
                                            /* isUninstantiated */ true, nullptr));
 }
 
-static const ParamOverrideNode* findParentOverrideNode(const Scope& scope) {
+static const HierarchyOverrideNode* findParentOverrideNode(const Scope& scope) {
     auto& sym = scope.asSymbol();
     if (sym.kind == SymbolKind::InstanceBody)
-        return sym.as<InstanceBodySymbol>().paramOverrideNode;
+        return sym.as<InstanceBodySymbol>().hierarchyOverrideNode;
 
     // Guaranteed to have a parent here since we never get called otherwise.
     auto node = findParentOverrideNode(*sym.getParentScope());
@@ -307,15 +307,15 @@ void InstanceSymbol::fromSyntax(Compilation& compilation,
     }
 
     const Definition* owningDefinition = nullptr;
-    const ParamOverrideNode* parentOverrideNode = nullptr;
+    const HierarchyOverrideNode* parentOverrideNode = nullptr;
     if (parentInst) {
         owningDefinition = &parentInst->getDefinition();
 
-        // In the uncommon case that our parent instance has a param override
+        // In the uncommon case that our parent instance has an override
         // node set, we need to go back and make sure we account for any
         // generate blocks that might actually be along the parent path for
         // the new instances we're creating.
-        if (parentInst->paramOverrideNode)
+        if (parentInst->hierarchyOverrideNode)
             parentOverrideNode = findParentOverrideNode(*context.scope);
     }
 
@@ -539,23 +539,22 @@ void InstanceSymbol::serializeTo(ASTSerializer& serializer) const {
 }
 
 InstanceBodySymbol::InstanceBodySymbol(Compilation& compilation, const Definition& definition,
-                                       const ParamOverrideNode* paramOverrideNode,
+                                       const HierarchyOverrideNode* hierarchyOverrideNode,
                                        bool isUninstantiated) :
     Symbol(SymbolKind::InstanceBody, definition.name, definition.location),
-    Scope(compilation, this), paramOverrideNode(paramOverrideNode),
+    Scope(compilation, this), hierarchyOverrideNode(hierarchyOverrideNode),
     isUninstantiated(isUninstantiated), definition(definition) {
     setParent(definition.scope, definition.indexInScope);
 }
 
-InstanceBodySymbol& InstanceBodySymbol::fromDefinition(Compilation& compilation,
-                                                       const Definition& definition,
-                                                       bool isUninstantiated,
-                                                       const ParamOverrideNode* paramOverrideNode) {
+InstanceBodySymbol& InstanceBodySymbol::fromDefinition(
+    Compilation& compilation, const Definition& definition, bool isUninstantiated,
+    const HierarchyOverrideNode* hierarchyOverrideNode) {
 
     ParameterBuilder paramBuilder(definition.scope, definition.name, definition.parameters);
     paramBuilder.setForceInvalidValues(isUninstantiated);
-    if (paramOverrideNode)
-        paramBuilder.setOverrides(paramOverrideNode);
+    if (hierarchyOverrideNode)
+        paramBuilder.setOverrides(hierarchyOverrideNode);
 
     return fromDefinition(compilation, definition, definition.location, paramBuilder,
                           isUninstantiated);
