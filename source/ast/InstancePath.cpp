@@ -65,7 +65,7 @@ void InstancePath::buildPath(const Symbol& symbol) {
 
             for (size_t i = 0; i < instanceDims.size(); i++) {
                 auto dim = instanceDims[i];
-                entries.push_back(dim.translateIndex(arrayPath[i]));
+                entries.push_back((uint32_t)dim.translateIndex(arrayPath[i]));
             }
             return;
         }
