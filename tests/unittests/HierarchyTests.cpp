@@ -1939,3 +1939,76 @@ endmodule
     CHECK(diags[4].code == diag::UnknownModule);
     CHECK(diags[5].code == diag::UndeclaredIdentifier);
 }
+
+TEST_CASE("Param overrides within generates, arrays") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    parameter int foo = 0;
+    if (foo == 12) begin
+        $info("Hello");
+    end
+endmodule
+
+module top;
+    m m1[8:1][2:5]();
+    defparam m1[2][3].foo = 12;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::InfoTask);
+}
+
+TEST_CASE("More bind examples") {
+    auto tree = SyntaxTree::fromText(R"(
+module Top();
+    Child child1();
+    Child child2();
+    bind Child Sub #(1)instFoo();
+endmodule
+
+module Child();
+endmodule
+
+module Sub();
+    parameter P = 0;
+endmodule
+
+module Top2();
+    Child child1();
+    Child child2();
+    bind Top2.child1 Sub #(1)inst();
+    bind Top2.child2 Sub #(2)inst();
+endmodule
+
+module unit;
+endmodule
+
+module dut;
+    for (genvar i = 0; i < 16; i++) begin: units
+        unit unit();
+    end
+endmodule
+
+interface tb;
+    wire w;
+endinterface
+
+module top;
+    dut dut();
+    for (genvar i = 0; i < 16; i++) begin
+        bind dut.units[i].unit tb tb();
+    end
+
+    assign dut.units[2].unit.tb.w = 1;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}

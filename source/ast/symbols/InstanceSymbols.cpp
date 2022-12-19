@@ -54,22 +54,30 @@ std::pair<string_view, SourceLocation> getNameLoc(const HierarchicalInstanceSynt
 class InstanceBuilder {
 public:
     InstanceBuilder(const ASTContext& context, const Definition& definition,
-                    ParameterBuilder& paramBuilder,
-                    span<const AttributeInstanceSyntax* const> attributes, bool isUninstantiated) :
+                    ParameterBuilder& paramBuilder, const HierarchyOverrideNode* parentOverrideNode,
+                    span<const AttributeInstanceSyntax* const> attributes) :
         compilation(context.getCompilation()),
         context(context), definition(definition), paramBuilder(paramBuilder),
-        attributes(attributes), isUninstantiated(isUninstantiated) {}
+        parentOverrideNode(parentOverrideNode), attributes(attributes) {}
 
     Symbol* create(const HierarchicalInstanceSyntax& syntax) {
         path.clear();
 
         if (!syntax.decl) {
             context.addDiag(diag::InstanceNameRequired, syntax.sourceRange());
-            return createInstance(syntax);
+            return createInstance(syntax, nullptr);
+        }
+
+        const HierarchyOverrideNode* overrideNode = nullptr;
+        if (parentOverrideNode) {
+            if (auto it = parentOverrideNode->childNodes.find(syntax);
+                it != parentOverrideNode->childNodes.end()) {
+                overrideNode = &it->second;
+            }
         }
 
         auto dims = syntax.decl->dimensions;
-        return recurse(syntax, dims.begin(), dims.end());
+        return recurse(syntax, overrideNode, dims.begin(), dims.end());
     }
 
 private:
@@ -80,13 +88,15 @@ private:
     const Definition& definition;
     SmallVector<int32_t> path;
     ParameterBuilder& paramBuilder;
+    const HierarchyOverrideNode* parentOverrideNode;
     span<const AttributeInstanceSyntax* const> attributes;
-    bool isUninstantiated = false;
 
-    Symbol* createInstance(const HierarchicalInstanceSyntax& syntax) {
+    Symbol* createInstance(const HierarchicalInstanceSyntax& syntax,
+                           const HierarchyOverrideNode* overrideNode) {
+        paramBuilder.setOverrides(overrideNode);
         auto [name, loc] = getNameLoc(syntax);
         auto inst = compilation.emplace<InstanceSymbol>(compilation, name, loc, definition,
-                                                        paramBuilder, isUninstantiated);
+                                                        paramBuilder, /* isUninstantiated */ false);
 
         inst->arrayPath = path.copy(compilation);
         inst->setSyntax(syntax);
@@ -94,9 +104,10 @@ private:
         return inst;
     }
 
-    Symbol* recurse(const HierarchicalInstanceSyntax& syntax, DimIterator it, DimIterator end) {
+    Symbol* recurse(const HierarchicalInstanceSyntax& syntax,
+                    const HierarchyOverrideNode* overrideNode, DimIterator it, DimIterator end) {
         if (it == end)
-            return createInstance(syntax);
+            return createInstance(syntax, overrideNode);
 
         ASSERT(syntax.decl);
         auto nameToken = syntax.decl->name;
@@ -125,9 +136,16 @@ private:
         }
 
         SmallVector<const Symbol*> elements;
-        for (int32_t i = range.lower(); i <= range.upper(); i++) {
-            path.push_back(i);
-            auto symbol = recurse(syntax, it, end);
+        for (uint32_t i = 0; i < range.width(); i++) {
+            const HierarchyOverrideNode* childOverrides = nullptr;
+            if (overrideNode) {
+                auto nodeIt = overrideNode->childNodes.find(i);
+                if (nodeIt != overrideNode->childNodes.end())
+                    childOverrides = &nodeIt->second;
+            }
+
+            path.push_back(range.lower() + int32_t(i));
+            auto symbol = recurse(syntax, childOverrides, it, end);
             path.pop_back();
 
             symbol->name = "";
@@ -264,10 +282,22 @@ static const HierarchyOverrideNode* findParentOverrideNode(const Scope& scope) {
     if (sym.kind == SymbolKind::InstanceBody)
         return sym.as<InstanceBodySymbol>().hierarchyOverrideNode;
 
-    // Guaranteed to have a parent here since we never get called otherwise.
-    auto node = findParentOverrideNode(*sym.getParentScope());
+    auto parentScope = sym.getParentScope();
+    ASSERT(parentScope);
+
+    auto node = findParentOverrideNode(*parentScope);
     if (!node)
         return nullptr;
+
+    if (sym.kind == SymbolKind::GenerateBlock &&
+        parentScope->asSymbol().kind == SymbolKind::GenerateBlockArray) {
+
+        auto it = node->childNodes.find(sym.as<GenerateBlockSymbol>().constructIndex);
+        if (it == node->childNodes.end())
+            return nullptr;
+
+        return &it->second;
+    }
 
     auto syntax = sym.getSyntax();
     ASSERT(syntax);
@@ -364,37 +394,12 @@ void InstanceSymbol::fromSyntax(Compilation& compilation,
     if (syntax.parameters)
         paramBuilder.setAssignments(*syntax.parameters);
 
-    // The common case is that our parent doesn't have a parameter override node,
-    // which lets us evaluate all parameter assignments for this instance in a batch.
-    if (!parentOverrideNode) {
-        InstanceBuilder builder(context, *definition, paramBuilder, syntax.attributes,
-                                /* isUninstantiated */ false);
+    InstanceBuilder builder(context, *definition, paramBuilder, parentOverrideNode,
+                            syntax.attributes);
 
-        for (auto instanceSyntax : syntax.instances) {
-            createImplicitNets(*instanceSyntax, context, netType, implicitNetNames, implicitNets);
-            results.push_back(builder.create(*instanceSyntax));
-        }
-    }
-    else {
-        // Otherwise we need to evaluate parameters separately for each child.
-        for (auto instanceSyntax : syntax.instances) {
-            paramBuilder.setOverrides(nullptr);
-            if (instanceSyntax->decl) {
-                auto instName = instanceSyntax->decl->name.valueText();
-                if (!instName.empty()) {
-                    if (auto it = parentOverrideNode->childNodes.find(*instanceSyntax);
-                        it != parentOverrideNode->childNodes.end()) {
-                        paramBuilder.setOverrides(&it->second);
-                    }
-                }
-            }
-
-            InstanceBuilder builder(context, *definition, paramBuilder, syntax.attributes,
-                                    /* isUninstantiated */ false);
-
-            createImplicitNets(*instanceSyntax, context, netType, implicitNetNames, implicitNets);
-            results.push_back(builder.create(*instanceSyntax));
-        }
+    for (auto instanceSyntax : syntax.instances) {
+        createImplicitNets(*instanceSyntax, context, netType, implicitNetNames, implicitNets);
+        results.push_back(builder.create(*instanceSyntax));
     }
 }
 
