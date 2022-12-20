@@ -310,14 +310,14 @@ const RootSymbol& Compilation::getRoot(bool skipDefParamsAndBinds) {
                     def->definitionKind == DefinitionKind::Program) {
                     if (isValidTop(*def)) {
                         // This definition can be automatically instantiated.
-                        topDefs.push_back(def.get());
+                        topDefs.push_back(def);
                         continue;
                     }
                 }
             }
 
             // Otherwise this definition is unreferenced and not automatically instantiated.
-            unreferencedDefs.push_back(def.get());
+            unreferencedDefs.push_back(def);
         }
     }
     else {
@@ -336,7 +336,7 @@ const RootSymbol& Compilation::getRoot(bool skipDefParamsAndBinds) {
 
                     // Make sure this is actually valid as a top-level module.
                     if (isValidTop(*def)) {
-                        topDefs.push_back(def.get());
+                        topDefs.push_back(def);
                         continue;
                     }
 
@@ -348,7 +348,7 @@ const RootSymbol& Compilation::getRoot(bool skipDefParamsAndBinds) {
 
             // Otherwise this definition might be unreferenced and not automatically instantiated.
             if (globalInstantiations.find(def->name) == globalInstantiations.end())
-                unreferencedDefs.push_back(def.get());
+                unreferencedDefs.push_back(def);
         }
 
         // If any top modules were not found, issue an error.
@@ -432,7 +432,7 @@ const Definition* Compilation::getDefinition(string_view lookupName, const Scope
     do {
         auto it = definitionMap.find(std::make_tuple(lookupName, searchScope));
         if (it != definitionMap.end())
-            return it->second.get();
+            return it->second;
 
         searchScope = searchScope->asSymbol().getParentScope();
     } while (searchScope);
@@ -441,8 +441,18 @@ const Definition* Compilation::getDefinition(string_view lookupName, const Scope
 }
 
 const Definition* Compilation::getDefinition(const ModuleDeclarationSyntax& syntax) const {
-    if (auto it = definitionFromSyntax.find(&syntax); it != definitionFromSyntax.end())
-        return it->second;
+    if (auto it = definitionFromSyntax.find(&syntax); it != definitionFromSyntax.end()) {
+        // If this definition is no longer referenced by the definitionsMap
+        // it probably got booted by an (illegal) duplicate definition.
+        // We don't want to return anything in that case.
+        auto def = it->second;
+        auto targetScope = def->scope.asSymbol().kind == SymbolKind::CompilationUnit ? root.get()
+                                                                                     : &def->scope;
+
+        auto dmIt = definitionMap.find(std::make_tuple(def->name, targetScope));
+        if (dmIt != definitionMap.end() && dmIt->second == def)
+            return def;
+    }
     return nullptr;
 }
 
@@ -459,9 +469,12 @@ static void reportRedefinition(const Scope& scope, const T& newSym, const U& old
 void Compilation::createDefinition(const Scope& scope, LookupLocation location,
                                    const ModuleDeclarationSyntax& syntax) {
     auto& metadata = definitionMetadata[&syntax];
-    auto def = std::make_unique<Definition>(scope, location, syntax, *metadata.defaultNetType,
-                                            metadata.unconnectedDrive, metadata.timeScale,
-                                            metadata.tree);
+    auto def = definitionMemory
+                   .emplace_back(std::make_unique<Definition>(scope, location, syntax,
+                                                              *metadata.defaultNetType,
+                                                              metadata.unconnectedDrive,
+                                                              metadata.timeScale, metadata.tree))
+                   .get();
 
     // Record that the given scope contains this definition. If the scope is a compilation unit, add
     // it to the root scope instead so that lookups from other compilation units will find it.
@@ -470,17 +483,17 @@ void Compilation::createDefinition(const Scope& scope, LookupLocation location,
     if (auto it = definitionMap.find(key); it != definitionMap.end())
         reportRedefinition(scope, *def, *it->second, diag::DuplicateDefinition);
 
-    const auto& result = (definitionMap[key] = std::move(def));
-    definitionFromSyntax[&syntax] = result.get();
+    definitionMap[key] = def;
+    definitionFromSyntax[&syntax] = def;
 
     if (targetScope == root.get()) {
-        topDefinitions[result->name].first = result.get();
-        if (auto primIt = udpMap.find(result->name); primIt != udpMap.end())
-            reportRedefinition(scope, *result, *primIt->second);
+        topDefinitions[def->name].first = def;
+        if (auto primIt = udpMap.find(def->name); primIt != udpMap.end())
+            reportRedefinition(scope, *def, *primIt->second);
     }
     else {
         // Record the fact that we have nested modules with this given name.
-        topDefinitions[result->name].second = true;
+        topDefinitions[def->name].second = true;
     }
 }
 

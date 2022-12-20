@@ -580,7 +580,10 @@ private:
 
     // The name map for all module, interface, and program definitions.
     // The key is a combination of definition name + the scope in which it was declared.
-    flat_hash_map<std::tuple<string_view, const Scope*>, std::unique_ptr<Definition>> definitionMap;
+    flat_hash_map<std::tuple<string_view, const Scope*>, Definition*> definitionMap;
+
+    // A list of all created definitions, as storage for their memory.
+    std::vector<std::unique_ptr<Definition>> definitionMemory;
 
     // A map from diag code + location to the diagnostics that have occurred at that location.
     // This is used to collapse duplicate diagnostics across instantiations into a single report.
