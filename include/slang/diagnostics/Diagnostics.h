@@ -94,7 +94,9 @@ public:
     constexpr bool operator!=(DiagCode other) const { return !(*this == other); }
 
     /// Less-than comparison.
-    constexpr bool operator<(DiagCode other) const { return code < other.code; }
+    constexpr bool operator<(DiagCode other) const {
+        return subsystem < other.subsystem || (subsystem == other.subsystem && code < other.code);
+    }
 
     /// @brief A list of all "known" DiagCodes.
     ///

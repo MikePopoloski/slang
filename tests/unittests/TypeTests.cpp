@@ -2037,8 +2037,8 @@ endmodule
     CHECK(diags[0].code == diag::ObjectTooLarge);
     CHECK(diags[1].code == diag::ObjectTooLarge);
     CHECK(diags[2].code == diag::PackedTypeTooLarge);
-    CHECK(diags[3].code == diag::PackedTypeTooLarge);
-    CHECK(diags[4].code == diag::RangeOOB);
+    CHECK(diags[3].code == diag::RangeOOB);
+    CHECK(diags[4].code == diag::PackedTypeTooLarge);
     CHECK(diags[5].code == diag::ObjectTooLarge);
 }
 

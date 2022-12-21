@@ -1186,8 +1186,8 @@ endmodule
     CHECK(diags[2].code == diag::UnpackedConcatSize);
     CHECK(diags[3].code == diag::EmptyAssignmentPattern);
     CHECK(diags[4].code == diag::WrongNumberAssignmentPatterns);
-    CHECK(diags[5].code == diag::AssignmentPatternAssociativeType);
-    CHECK(diags[6].code == diag::EmptyAssignmentPattern);
+    CHECK(diags[5].code == diag::EmptyAssignmentPattern);
+    CHECK(diags[6].code == diag::AssignmentPatternAssociativeType);
     CHECK(diags[7].code == diag::EmptyAssignmentPattern);
     CHECK(diags[8].code == diag::WrongNumberAssignmentPatterns);
     CHECK(diags[9].code == diag::EmptyAssignmentPattern);

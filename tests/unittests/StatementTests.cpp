@@ -859,8 +859,8 @@ endmodule
     auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 4);
     CHECK(diags[0].code == diag::VoidCastFuncCall);
-    CHECK(diags[1].code == diag::BadCastType);
-    CHECK(diags[2].code == diag::VoidNotAllowed);
+    CHECK(diags[1].code == diag::VoidNotAllowed);
+    CHECK(diags[2].code == diag::BadCastType);
     CHECK(diags[3].code == diag::PointlessVoidCast);
 }
 

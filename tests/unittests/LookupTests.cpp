@@ -723,12 +723,12 @@ source:4:22: error: invalid access token; '.' should be '::'
 source:4:23: error: use of undeclared identifier 'foo'
     always_comb $unit.foo;
                       ^~~
-source:5:22: error: could not resolve hierarchical path name 'bar'
-    always_comb $root::bar;
-                     ^ ~~~
 source:5:22: error: invalid access token; '::' should be '.'
     always_comb $root::bar;
                      ^
+source:5:22: error: could not resolve hierarchical path name 'bar'
+    always_comb $root::bar;
+                     ^ ~~~
 source:6:17: error: use of undeclared identifier 'foo'
     always_comb foo.asdf::blah;
                 ^~~
