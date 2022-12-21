@@ -55,7 +55,7 @@ public:
 
     InstanceSymbol(Compilation& compilation, string_view name, SourceLocation loc,
                    const Definition& definition, ParameterBuilder& paramBuilder,
-                   bool isUninstantiated);
+                   bool isUninstantiated, bool isFromBind);
 
     const Definition& getDefinition() const;
     bool isModule() const;
@@ -71,7 +71,7 @@ public:
     static void fromSyntax(Compilation& compilation,
                            const syntax::HierarchyInstantiationSyntax& syntax,
                            const ASTContext& context, SmallVectorBase<const Symbol*>& results,
-                           SmallVectorBase<const Symbol*>& implicitNets);
+                           SmallVectorBase<const Symbol*>& implicitNets, bool isFromBind);
 
     static void fromFixupSyntax(Compilation& compilation, const Definition& definition,
                                 const syntax::DataDeclarationSyntax& syntax,
@@ -121,8 +121,13 @@ public:
     /// in the user's code.
     bool isUninstantiated = false;
 
+    /// Indicates whether this instance was created from a bind directive
+    /// instead of a typical instantiation.
+    bool isFromBind = false;
+
     InstanceBodySymbol(Compilation& compilation, const Definition& definition,
-                       const HierarchyOverrideNode* hierarchyOverrideNode, bool isUninstantiated);
+                       const HierarchyOverrideNode* hierarchyOverrideNode, bool isUninstantiated,
+                       bool isFromBind);
 
     span<const Symbol* const> getPortList() const {
         ensureElaborated();
@@ -142,8 +147,8 @@ public:
     static InstanceBodySymbol& fromDefinition(Compilation& compilation,
                                               const Definition& definition,
                                               SourceLocation instanceLoc,
-                                              ParameterBuilder& paramBuilder,
-                                              bool isUninstantiated);
+                                              ParameterBuilder& paramBuilder, bool isUninstantiated,
+                                              bool isFromBind);
 
     void serializeTo(ASTSerializer& serializer) const;
 

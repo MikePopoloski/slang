@@ -1922,7 +1922,7 @@ module m;
 
     bind m.n1 foo #(f * 2) foo1(thing), foo2(thing);
 
-    bind foo baz bz(.q(b));
+    bind n baz bz(.q(b));
 endmodule
 )");
 
@@ -1939,17 +1939,29 @@ endmodule
 module n;
 endmodule
 
+interface I;
+endinterface
+
+primitive prim(output a, input b);
+    table 0 : 0;
+    endtable
+endprimitive
+
 module top;
     if (1) begin: asdf
     end
 
     m m1();
+    n n1();
+    I i1();
 
     bind top.asdf m m1();
     bind m: top.asdf, top.m1 n n1();
     bind n: top.m1 n n1();
     bind q: top.m1 n n2();
     bind foobar n n3();
+    bind n1 prim p(a, b);
+    bind i1 n n1();
 endmodule
 )");
 
@@ -1957,13 +1969,41 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 6);
+    REQUIRE(diags.size() == 8);
     CHECK(diags[0].code == diag::InvalidBindTarget);
     CHECK(diags[1].code == diag::InvalidBindTarget);
     CHECK(diags[2].code == diag::WrongBindTargetDef);
     CHECK(diags[3].code == diag::Redefinition);
     CHECK(diags[4].code == diag::UnknownModule);
     CHECK(diags[5].code == diag::UndeclaredIdentifier);
+    CHECK(diags[6].code == diag::BindTargetPrimitive);
+    CHECK(diags[7].code == diag::InvalidInstanceForParent);
+}
+
+TEST_CASE("Bind underneath another bind") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+endmodule
+
+module n;
+    m m1();
+endmodule
+
+module o;
+endmodule
+
+module top;
+    bind top n n1();
+    bind top.n1.m1 o o1();
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::BindUnderBind);
 }
 
 TEST_CASE("Param overrides within generates, arrays") {

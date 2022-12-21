@@ -921,7 +921,7 @@ void Scope::elaborate() const {
                 SmallVector<const Symbol*> implicitNets;
                 InstanceSymbol::fromSyntax(compilation,
                                            member.node.as<HierarchyInstantiationSyntax>(), context,
-                                           instances, implicitNets);
+                                           instances, implicitNets, /* isFromBind */ false);
                 insertMembersAndNets(instances, implicitNets, symbol);
                 break;
             }
@@ -1067,7 +1067,7 @@ void Scope::elaborate() const {
                 SmallVector<const Symbol*> implicitNets;
                 InstanceSymbol::fromSyntax(compilation,
                                            *member.node.as<BindDirectiveSyntax>().instantiation,
-                                           context, instances, implicitNets);
+                                           context, instances, implicitNets, /* isFromBind */ true);
                 insertMembersAndNets(instances, implicitNets, symbol);
                 break;
             }

@@ -55,10 +55,10 @@ class InstanceBuilder {
 public:
     InstanceBuilder(const ASTContext& context, const Definition& definition,
                     ParameterBuilder& paramBuilder, const HierarchyOverrideNode* parentOverrideNode,
-                    span<const AttributeInstanceSyntax* const> attributes) :
+                    span<const AttributeInstanceSyntax* const> attributes, bool isFromBind) :
         compilation(context.getCompilation()),
         context(context), definition(definition), paramBuilder(paramBuilder),
-        parentOverrideNode(parentOverrideNode), attributes(attributes) {}
+        parentOverrideNode(parentOverrideNode), attributes(attributes), isFromBind(isFromBind) {}
 
     Symbol* create(const HierarchicalInstanceSyntax& syntax) {
         path.clear();
@@ -90,13 +90,15 @@ private:
     ParameterBuilder& paramBuilder;
     const HierarchyOverrideNode* parentOverrideNode;
     span<const AttributeInstanceSyntax* const> attributes;
+    bool isFromBind;
 
     Symbol* createInstance(const HierarchicalInstanceSyntax& syntax,
                            const HierarchyOverrideNode* overrideNode) {
         paramBuilder.setOverrides(overrideNode);
         auto [name, loc] = getNameLoc(syntax);
         auto inst = compilation.emplace<InstanceSymbol>(compilation, name, loc, definition,
-                                                        paramBuilder, /* isUninstantiated */ false);
+                                                        paramBuilder, /* isUninstantiated */ false,
+                                                        isFromBind);
 
         inst->arrayPath = path.copy(compilation);
         inst->setSyntax(syntax);
@@ -232,10 +234,10 @@ InstanceSymbol::InstanceSymbol(string_view name, SourceLocation loc, InstanceBod
 
 InstanceSymbol::InstanceSymbol(Compilation& compilation, string_view name, SourceLocation loc,
                                const Definition& definition, ParameterBuilder& paramBuilder,
-                               bool isUninstantiated) :
+                               bool isUninstantiated, bool isFromBind) :
     InstanceSymbol(name, loc,
                    InstanceBodySymbol::fromDefinition(compilation, definition, loc, paramBuilder,
-                                                      isUninstantiated)) {
+                                                      isUninstantiated, isFromBind)) {
 }
 
 InstanceSymbol& InstanceSymbol::createDefault(Compilation& compilation,
@@ -259,7 +261,8 @@ InstanceSymbol& InstanceSymbol::createVirtual(
     auto& comp = context.getCompilation();
     auto& result = *comp.emplace<InstanceSymbol>(comp, definition.name, loc, definition,
                                                  paramBuilder,
-                                                 /* isUninstantiated */ false);
+                                                 /* isUninstantiated */ false,
+                                                 /* isFromBind */ false);
 
     // Set the parent pointer so that traversing upwards still works to find
     // the instantiation scope. This "virtual" instance never actually gets
@@ -312,7 +315,7 @@ static const HierarchyOverrideNode* findParentOverrideNode(const Scope& scope) {
 void InstanceSymbol::fromSyntax(Compilation& compilation,
                                 const HierarchyInstantiationSyntax& syntax,
                                 const ASTContext& context, SmallVectorBase<const Symbol*>& results,
-                                SmallVectorBase<const Symbol*>& implicitNets) {
+                                SmallVectorBase<const Symbol*>& implicitNets, bool isFromBind) {
     TimeTraceScope timeScope("createInstances"sv,
                              [&] { return std::string(syntax.type.valueText()); });
 
@@ -359,9 +362,14 @@ void InstanceSymbol::fromSyntax(Compilation& compilation,
         // This might actually be a user-defined primitive instantiation.
         if (auto prim = compilation.getPrimitive(syntax.type.valueText())) {
             PrimitiveInstanceSymbol::fromSyntax(*prim, syntax, context, results, implicitNets);
-            if (!results.empty() &&
-                (!owningDefinition || owningDefinition->definitionKind != DefinitionKind::Module)) {
-                context.addDiag(diag::InvalidPrimInstanceForParent, syntax.type.range());
+            if (!results.empty()) {
+                if (!owningDefinition ||
+                    owningDefinition->definitionKind != DefinitionKind::Module) {
+                    context.addDiag(diag::InvalidPrimInstanceForParent, syntax.type.range());
+                }
+                else if (isFromBind) {
+                    context.addDiag(diag::BindTargetPrimitive, syntax.type.range());
+                }
             }
         }
         else {
@@ -387,6 +395,17 @@ void InstanceSymbol::fromSyntax(Compilation& compilation,
         }
     }
 
+    if (parentInst && parentInst->isFromBind) {
+        if (isFromBind) {
+            context.addDiag(diag::BindUnderBind, syntax.type.range());
+            return;
+        }
+
+        // If our parent is from a bind statement, pass down the flag
+        // so that we prevent further binds below us too.
+        isFromBind = true;
+    }
+
     SmallSet<string_view, 8> implicitNetNames;
     auto& netType = context.scope->getDefaultNetType();
 
@@ -395,7 +414,7 @@ void InstanceSymbol::fromSyntax(Compilation& compilation,
         paramBuilder.setAssignments(*syntax.parameters);
 
     InstanceBuilder builder(context, *definition, paramBuilder, parentOverrideNode,
-                            syntax.attributes);
+                            syntax.attributes, isFromBind);
 
     for (auto instanceSyntax : syntax.instances) {
         createImplicitNets(*instanceSyntax, context, netType, implicitNetNames, implicitNets);
@@ -434,7 +453,7 @@ void InstanceSymbol::fromFixupSyntax(Compilation& comp, const Definition& defini
         instances.copy(comp), syntax.semi);
 
     SmallVector<const Symbol*> implicitNets;
-    fromSyntax(comp, *instantiation, context, results, implicitNets);
+    fromSyntax(comp, *instantiation, context, results, implicitNets, /* isFromBind */ false);
     ASSERT(implicitNets.empty());
 }
 
@@ -550,10 +569,10 @@ void InstanceSymbol::serializeTo(ASTSerializer& serializer) const {
 
 InstanceBodySymbol::InstanceBodySymbol(Compilation& compilation, const Definition& definition,
                                        const HierarchyOverrideNode* hierarchyOverrideNode,
-                                       bool isUninstantiated) :
+                                       bool isUninstantiated, bool isFromBind) :
     Symbol(SymbolKind::InstanceBody, definition.name, definition.location),
     Scope(compilation, this), hierarchyOverrideNode(hierarchyOverrideNode),
-    isUninstantiated(isUninstantiated), definition(definition) {
+    isUninstantiated(isUninstantiated), isFromBind(isFromBind), definition(definition) {
     setParent(definition.scope, definition.indexInScope);
 }
 
@@ -567,17 +586,17 @@ InstanceBodySymbol& InstanceBodySymbol::fromDefinition(
         paramBuilder.setOverrides(hierarchyOverrideNode);
 
     return fromDefinition(compilation, definition, definition.location, paramBuilder,
-                          isUninstantiated);
+                          isUninstantiated, /* isFromBind */ false);
 }
 
 InstanceBodySymbol& InstanceBodySymbol::fromDefinition(Compilation& comp,
                                                        const Definition& definition,
                                                        SourceLocation instanceLoc,
                                                        ParameterBuilder& paramBuilder,
-                                                       bool isUninstantiated) {
+                                                       bool isUninstantiated, bool isFromBind) {
     auto overrideNode = paramBuilder.getOverrides();
-    auto result = comp.emplace<InstanceBodySymbol>(comp, definition, overrideNode,
-                                                   isUninstantiated);
+    auto result = comp.emplace<InstanceBodySymbol>(comp, definition, overrideNode, isUninstantiated,
+                                                   isFromBind);
 
     auto& declSyntax = definition.syntax;
     result->setSyntax(declSyntax);

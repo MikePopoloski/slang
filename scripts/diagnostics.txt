@@ -449,6 +449,8 @@ error NoChangeEdgeRequired "trigger for first argument to '$nochange' must be po
 error PathPulseInvalidPathName "PATHPULSE$ path '{}' must be of the form 'source$dest'"
 error VirtualInterfaceIfaceMember "virtual interfaces cannot be used as the type for interface items"
 error DefparamBadHierarchy "defparam in a hierarchy in or under a generate block or an array of instances cannot change a parameter value outside that hierarchy"
+error BindTargetPrimitive "cannot bind a primitive"
+error BindUnderBind "cannot bind an instance underneath the scope of another bind instance"
 error FatalTask "$fatal encountered{}"
 error ErrorTask "$error encountered{}"
 error StaticAssert "static assertion failed{}"
