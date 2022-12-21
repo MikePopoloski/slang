@@ -348,9 +348,11 @@ bool lookupDownward(span<const NamePlusLoc> nameParts, NameComponents name,
             break;
         }
 
-        // This is a hierarchical lookup unless it's the first component in the path and the
-        // current scope is either an interface port or a package.
-        result.isHierarchical = true;
+        // This is a hierarchical lookup if we previously decided it was hierarchical, or:
+        // - This is not a clocking block access
+        // - This is not a virtual interface access
+        // - This is not a direct interface port, package, or $unit reference
+        result.isHierarchical |= symbol->kind != SymbolKind::ClockingBlock;
         if (it == nameParts.rbegin()) {
             result.isHierarchical = symbol->kind != SymbolKind::InterfacePort &&
                                     symbol->kind != SymbolKind::Package &&
