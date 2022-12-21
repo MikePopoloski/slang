@@ -317,20 +317,23 @@ void ProceduralBlockSymbol::serializeTo(ASTSerializer& serializer) const {
     serializer.write("body", getBody());
 }
 
-static string_view getGenerateBlockName(const SyntaxNode& node) {
-    if (node.kind != SyntaxKind::GenerateBlock)
-        return "";
+static std::pair<string_view, SourceLocation> getGenerateBlockName(const SyntaxNode& node) {
+    if (node.kind == SyntaxKind::GenerateBlock) {
+        // Try to find a name for this block. Generate blocks allow the name to be specified twice
+        // (for no good reason) so check both locations.
+        const GenerateBlockSyntax& block = node.as<GenerateBlockSyntax>();
+        if (block.label) {
+            auto token = block.label->name;
+            return {token.valueText(), token.location()};
+        }
 
-    // Try to find a name for this block. Generate blocks allow the name to be specified twice
-    // (for no good reason) so check both locations.
-    const GenerateBlockSyntax& block = node.as<GenerateBlockSyntax>();
-    if (block.label)
-        return block.label->name.valueText();
+        if (block.beginName) {
+            auto token = block.beginName->name;
+            return {token.valueText(), token.location()};
+        }
+    }
 
-    if (block.beginName)
-        return block.beginName->name.valueText();
-
-    return "";
+    return {""sv, node.getFirstToken().location()};
 }
 
 static void addBlockMembers(GenerateBlockSymbol& block, const SyntaxNode& syntax) {
@@ -366,8 +369,7 @@ static void createCondGenBlock(Compilation& compilation, const SyntaxNode& synta
             break;
     }
 
-    string_view name = getGenerateBlockName(syntax);
-    SourceLocation loc = syntax.getFirstToken().location();
+    auto [name, loc] = getGenerateBlockName(syntax);
 
     auto block = compilation.emplace<GenerateBlockSymbol>(compilation, name, loc, constructIndex,
                                                           isUninstantiated);
@@ -506,9 +508,7 @@ GenerateBlockSymbol& GenerateBlockSymbol::fromSyntax(const Scope& scope,
                                                      uint32_t constructIndex) {
     // This overload is only called for the illegal case of a generate block
     // without a condition attached.
-    string_view name = getGenerateBlockName(syntax);
-    SourceLocation loc = syntax.getFirstToken().location();
-
+    auto [name, loc] = getGenerateBlockName(syntax);
     auto& comp = scope.getCompilation();
     auto block = comp.emplace<GenerateBlockSymbol>(comp, name, loc, constructIndex,
                                                    scope.isUninstantiated());
@@ -575,8 +575,7 @@ GenerateBlockArraySymbol& GenerateBlockArraySymbol::fromSyntax(Compilation& comp
                                                                SymbolIndex scopeIndex,
                                                                const ASTContext& context,
                                                                uint32_t constructIndex) {
-    string_view name = getGenerateBlockName(*syntax.block);
-    SourceLocation loc = syntax.block->getFirstToken().location();
+    auto [name, loc] = getGenerateBlockName(*syntax.block);
     auto result = compilation.emplace<GenerateBlockArraySymbol>(compilation, name, loc,
                                                                 constructIndex);
     result->setSyntax(syntax);
@@ -611,7 +610,7 @@ GenerateBlockArraySymbol& GenerateBlockArraySymbol::fromSyntax(Compilation& comp
     }
 
     SmallVector<const GenerateBlockSymbol*> entries;
-    auto createBlock = [&](ConstantValue value, bool isUninstantiated) {
+    auto createBlock = [&, loc = loc](ConstantValue value, bool isUninstantiated) {
         // Spec: each generate block gets their own scope, with an implicit
         // localparam of the same name as the genvar.
         auto block = compilation.emplace<GenerateBlockSymbol>(compilation, "", loc,

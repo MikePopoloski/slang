@@ -991,9 +991,9 @@ source:77:19: error: no member named 'bar' in 'type_t'
 source:79:20: error: hierarchical scope 'array1' is not indexable
     wire n = array1[0].foo;     // no upward because indexing fails
                    ^~~
-source:54:12: note: declared here
+source:54:20: note: declared here
     if (1) begin : array1
-           ^
+                   ^
 source:81:21: error: hierarchical index 3 is out of scope's declared range
     wire p = array3[3].foo;     // no upward because indexing fails
                     ^
