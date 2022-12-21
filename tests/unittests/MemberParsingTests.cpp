@@ -1094,3 +1094,16 @@ endmodule
     REQUIRE(attributes.size() == 1);
     CHECK(attributes[0]->specs[0]->name.valueText() == "myattrib");
 }
+
+TEST_CASE("Bind directive invalid name") {
+    auto& text = R"(
+module m;
+    bind asdf.bar: foo.bar, asdf.bar m m1();
+endmodule
+)";
+
+    parseCompilationUnit(text);
+
+    REQUIRE(diagnostics.size() == 1);
+    CHECK(diagnostics[0].code == diag::BindDirectiveInvalidName);
+}

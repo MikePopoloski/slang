@@ -2541,6 +2541,9 @@ BindDirectiveSyntax& Parser::parseBindDirective(AttrList attr) {
 
     BindTargetListSyntax* targetInstances = nullptr;
     if (peek(TokenKind::Colon)) {
+        if (target.kind != SyntaxKind::IdentifierName)
+            addDiag(diag::BindDirectiveInvalidName, target.sourceRange());
+
         auto colon = consume();
 
         SmallVector<TokenOrSyntax, 4> names;

@@ -262,6 +262,7 @@ error PulseControlPATHPULSE "pulse control specparam names must start with 'PATH
 error PulseControlTwoValues "pulse control specparams must be assigned two values (reject limit and error limit)"
 error TooManyEdgeDescriptors "cannot have more than six pairs of edge transitions in list"
 error EdgeDescWrongKeyword "edge descriptor list cannot be used after '{}'"
+error BindDirectiveInvalidName "bind target name must be a simple module or interface identifier when a list of instances is provided"
 warning nonstandard-generate NonStandardGenBlock "standalone generate block without loop or condition is not allowed in SystemVerilog"
 warning empty-pattern EmptyAssignmentPattern "empty assignment patterns are disallowed by SystemVerilog"
 warning nonstandard-foreach NonstandardForeach "non-standard foreach loop variable list"

@@ -1453,7 +1453,6 @@ void Compilation::resolveBindTargets(const BindDirectiveSyntax& syntax, const Sc
                                  LookupFlags::DisallowWildcardImport | LookupFlags::NoSelectors;
 
     if (syntax.targetInstances) {
-        // TODO: The parser checks for an invalid target name here.
         if (syntax.target->kind != SyntaxKind::IdentifierName)
             return;
 
