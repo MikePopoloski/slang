@@ -447,6 +447,7 @@ error TimingCheckEventEdgeRequired "'{}' event argument requires an edge trigger
 error NoChangeEdgeRequired "trigger for first argument to '$nochange' must be posedge or negedge only"
 error PathPulseInvalidPathName "PATHPULSE$ path '{}' must be of the form 'source$dest'"
 error VirtualInterfaceIfaceMember "virtual interfaces cannot be used as the type for interface items"
+error DefparamBadHierarchy "defparam in a hierarchy in or under a generate block or an array of instances cannot change a parameter value outside that hierarchy"
 error FatalTask "$fatal encountered{}"
 error ErrorTask "$error encountered{}"
 error StaticAssert "static assertion failed{}"

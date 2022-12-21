@@ -10,6 +10,7 @@
 #include "slang/ast/ASTSerializer.h"
 #include "slang/ast/Compilation.h"
 #include "slang/ast/Expression.h"
+#include "slang/ast/symbols/InstanceSymbols.h"
 #include "slang/ast/symbols/SpecifySymbols.h"
 #include "slang/ast/types/AllTypes.h"
 #include "slang/diagnostics/ConstEvalDiags.h"
@@ -235,6 +236,41 @@ const ConstantValue& DefParamSymbol::getValue() const {
     return *v;
 }
 
+static bool checkDefparamHierarchy(const Symbol& target, const Scope& defparamScope) {
+    // defparams are not allowed to extend upward through a generate block or instance
+    // array and affect a param outside of that hierarchy. To check this, build the parent
+    // chain for the target and then walk the defparam's parent chain and see if we pass one
+    // of the disallowed nodes before we hit a common ancestor.
+    SmallSet<const Scope*, 4> targetChain;
+    auto scope = target.getParentScope();
+    while (scope) {
+        targetChain.emplace(scope);
+
+        auto& sym = scope->asSymbol();
+        if (sym.kind == SymbolKind::InstanceBody)
+            scope = sym.as<InstanceBodySymbol>().parentInstance->getParentScope();
+        else
+            scope = sym.getParentScope();
+    }
+
+    scope = &defparamScope;
+    do {
+        if (targetChain.find(scope) != targetChain.end())
+            return true;
+
+        auto& sym = scope->asSymbol();
+        if (sym.kind == SymbolKind::InstanceArray || sym.kind == SymbolKind::GenerateBlock)
+            return false;
+
+        if (sym.kind == SymbolKind::InstanceBody)
+            scope = sym.as<InstanceBodySymbol>().parentInstance->getParentScope();
+        else
+            scope = sym.getParentScope();
+    } while (scope);
+
+    return true;
+}
+
 void DefParamSymbol::resolve() const {
     auto syntax = getSyntax();
     auto scope = getParentScope();
@@ -268,6 +304,12 @@ void DefParamSymbol::resolve() const {
     auto& param = target->as<ParameterSymbol>();
     if (param.isLocalParam()) {
         context.addDiag(diag::DefParamLocal, assignment.name->sourceRange()) << param.name;
+        makeInvalid();
+        return;
+    }
+
+    if (!checkDefparamHierarchy(*target, *scope)) {
+        context.addDiag(diag::DefparamBadHierarchy, assignment.name->sourceRange());
         makeInvalid();
         return;
     }

@@ -1247,6 +1247,32 @@ endmodule
     CHECK(diags[0].code == diag::DefParamTargetChange);
 }
 
+TEST_CASE("defparam target outside allowed hierarchy") {
+    auto tree = SyntaxTree::fromText(R"(
+module flop(input a, b, output c);
+    parameter xyz = 0;
+endmodule
+
+module m(input [7:0] in, in1, output [7:0] out1);
+    genvar i;
+    generate
+        for (i = 0; i < 8; i = i + 1) begin : somename
+            flop my_flop(in[i], in1[i], out1[i]);
+            if (i != 7)
+                defparam somename[i+1].my_flop.xyz = i;
+        end
+    endgenerate
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::DefparamBadHierarchy);
+}
+
 TEST_CASE("defparam with cached target") {
     auto tree = SyntaxTree::fromText(R"(
 module dut;
