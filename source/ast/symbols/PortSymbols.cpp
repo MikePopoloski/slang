@@ -1190,7 +1190,7 @@ private:
         }
 
         // Make the connection if the dimensions match exactly what the port is expecting.
-        const Symbol* symbol = expr->as<HierarchicalReferenceExpression>().symbol;
+        const Symbol* symbol = expr->as<ArbitrarySymbolExpression>().symbol;
         if (areDimSizesEqual(*portDims, dims))
             return symbol;
 

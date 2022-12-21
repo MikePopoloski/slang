@@ -47,7 +47,7 @@ class ValueSymbol;
     x(Conversion) \
     x(DataType) \
     x(TypeReference) \
-    x(HierarchicalReference) \
+    x(ArbitrarySymbol) \
     x(LValueReference) \
     x(SimpleAssignmentPattern) \
     x(StructuredAssignmentPattern) \

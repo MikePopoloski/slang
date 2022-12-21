@@ -335,8 +335,8 @@ void registerAST(py::module_& m) {
             return &self.targetType;
         });
 
-    py::class_<HierarchicalReferenceExpression, Expression>(m, "HierarchicalReferenceExpression")
-        .def_readonly("symbol", &HierarchicalReferenceExpression::symbol);
+    py::class_<ArbitrarySymbolExpression, Expression>(m, "ArbitrarySymbolExpression")
+        .def_readonly("symbol", &ArbitrarySymbolExpression::symbol);
 
     py::class_<ClockingEventExpression, Expression>(m, "ClockingEventExpression")
         .def_property_readonly("timingControl", [](const ClockingEventExpression& self) {

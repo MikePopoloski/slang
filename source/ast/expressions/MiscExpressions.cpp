@@ -105,8 +105,8 @@ Expression& ValueExpressionBase::fromSymbol(const ASTContext& context, const Sym
             (symbol.kind == SymbolKind::Coverpoint &&
              context.flags.has(ASTFlags::AllowCoverpoint))) {
             // Special case for event expressions and constraint block built-in methods.
-            return *comp.emplace<HierarchicalReferenceExpression>(symbol, comp.getVoidType(),
-                                                                  sourceRange);
+            return *comp.emplace<ArbitrarySymbolExpression>(symbol, comp.getVoidType(),
+                                                            sourceRange);
         }
 
         auto& diag = context.addDiag(diag::NotAValue, sourceRange) << symbol.name;
@@ -500,10 +500,10 @@ void TypeReferenceExpression::serializeTo(ASTSerializer& serializer) const {
     serializer.write("targetType", targetType);
 }
 
-Expression& HierarchicalReferenceExpression::fromSyntax(Compilation& compilation,
-                                                        const NameSyntax& syntax,
-                                                        const ASTContext& context,
-                                                        bitmask<LookupFlags> extraLookupFlags) {
+Expression& ArbitrarySymbolExpression::fromSyntax(Compilation& compilation,
+                                                  const NameSyntax& syntax,
+                                                  const ASTContext& context,
+                                                  bitmask<LookupFlags> extraLookupFlags) {
     LookupResult result;
     Lookup::name(syntax, context,
                  LookupFlags::ForceHierarchical | LookupFlags::NoSelectors | extraLookupFlags,
@@ -516,11 +516,11 @@ Expression& HierarchicalReferenceExpression::fromSyntax(Compilation& compilation
 
     compilation.noteReference(*symbol, context.flags.has(ASTFlags::LValue));
 
-    return *compilation.emplace<HierarchicalReferenceExpression>(*symbol, compilation.getVoidType(),
-                                                                 syntax.sourceRange());
+    return *compilation.emplace<ArbitrarySymbolExpression>(*symbol, compilation.getVoidType(),
+                                                           syntax.sourceRange());
 }
 
-void HierarchicalReferenceExpression::serializeTo(ASTSerializer& serializer) const {
+void ArbitrarySymbolExpression::serializeTo(ASTSerializer& serializer) const {
     if (symbol)
         serializer.writeLink("symbol", *symbol);
 }

@@ -352,8 +352,7 @@ public:
                 return *comp.emplace<InvalidExpression>(nullptr, comp.getErrorType());
             }
 
-            return HierarchicalReferenceExpression::fromSyntax(comp, syntax.as<NameSyntax>(),
-                                                               context);
+            return ArbitrarySymbolExpression::fromSyntax(comp, syntax.as<NameSyntax>(), context);
         }
 
         return SystemTaskBase::bindArgument(argIndex, context, syntax, args);
@@ -366,7 +365,7 @@ public:
             return comp.getErrorType();
 
         if (args.size() > 0) {
-            auto& sym = *args[0]->as<HierarchicalReferenceExpression>().symbol;
+            auto& sym = *args[0]->as<ArbitrarySymbolExpression>().symbol;
             if (sym.kind != SymbolKind::Instance || !sym.as<InstanceSymbol>().isModule()) {
                 if (!context.scope->isUninstantiated())
                     context.addDiag(diag::ExpectedModuleName, args[0]->sourceRange);
@@ -391,11 +390,11 @@ public:
                 return *comp.emplace<InvalidExpression>(nullptr, comp.getErrorType());
             }
 
-            auto& ref = HierarchicalReferenceExpression::fromSyntax(comp, syntax.as<NameSyntax>(),
-                                                                    context);
+            auto& ref = ArbitrarySymbolExpression::fromSyntax(comp, syntax.as<NameSyntax>(),
+                                                              context);
 
-            if (ref.kind == ExpressionKind::HierarchicalReference) {
-                auto& sym = *ref.as<HierarchicalReferenceExpression>().symbol;
+            if (ref.kind == ExpressionKind::ArbitrarySymbol) {
+                auto& sym = *ref.as<ArbitrarySymbolExpression>().symbol;
                 if (sym.kind != SymbolKind::Variable && sym.kind != SymbolKind::Net &&
                     (sym.kind != SymbolKind::Instance || !sym.as<InstanceSymbol>().isModule())) {
                     if (!context.scope->isUninstantiated())
@@ -438,8 +437,8 @@ public:
     const Expression& bindArgument(size_t argIndex, const ASTContext& context,
                                    const ExpressionSyntax& syntax, const Args& args) const final {
         if (NameSyntax::isKind(syntax.kind)) {
-            return HierarchicalReferenceExpression::fromSyntax(context.getCompilation(),
-                                                               syntax.as<NameSyntax>(), context);
+            return ArbitrarySymbolExpression::fromSyntax(context.getCompilation(),
+                                                         syntax.as<NameSyntax>(), context);
         }
 
         return SystemTaskBase::bindArgument(argIndex, context, syntax, args);
@@ -455,8 +454,8 @@ public:
             if (args[i]->kind == ExpressionKind::EmptyArgument)
                 continue;
 
-            if (args[i]->kind == ExpressionKind::HierarchicalReference) {
-                auto& sym = *args[i]->as<HierarchicalReferenceExpression>().symbol;
+            if (args[i]->kind == ExpressionKind::ArbitrarySymbol) {
+                auto& sym = *args[i]->as<ArbitrarySymbolExpression>().symbol;
                 if (i == args.size() - 1 && sym.isValue()) {
                     // Last arg can be a string-like value; all others must be module names.
                     auto& type = sym.as<ValueSymbol>().getType();
@@ -528,8 +527,8 @@ public:
             return SystemTaskBase::bindArgument(argIndex, context, syntax, args);
         }
 
-        return HierarchicalReferenceExpression::fromSyntax(context.getCompilation(),
-                                                           syntax.as<NameSyntax>(), context);
+        return ArbitrarySymbolExpression::fromSyntax(context.getCompilation(),
+                                                     syntax.as<NameSyntax>(), context);
     }
 
     const Type& checkArguments(const ASTContext& context, const Args& args, SourceRange range,
@@ -547,8 +546,8 @@ public:
                     return badArg(context, *args[i]);
             }
             else {
-                if (args[i]->kind != ExpressionKind::HierarchicalReference ||
-                    !args[i]->as<HierarchicalReferenceExpression>().symbol->isScope()) {
+                if (args[i]->kind != ExpressionKind::ArbitrarySymbol ||
+                    !args[i]->as<ArbitrarySymbolExpression>().symbol->isScope()) {
                     if (!context.scope->isUninstantiated())
                         context.addDiag(diag::ExpectedScopeOrAssert, args[i]->sourceRange);
                     return comp.getErrorType();
@@ -619,11 +618,11 @@ public:
                 return *comp.emplace<InvalidExpression>(nullptr, comp.getErrorType());
             }
 
-            auto& ref = HierarchicalReferenceExpression::fromSyntax(comp, syntax.as<NameSyntax>(),
-                                                                    context);
+            auto& ref = ArbitrarySymbolExpression::fromSyntax(comp, syntax.as<NameSyntax>(),
+                                                              context);
 
-            if (ref.kind == ExpressionKind::HierarchicalReference) {
-                auto& sym = *ref.as<HierarchicalReferenceExpression>().symbol;
+            if (ref.kind == ExpressionKind::ArbitrarySymbol) {
+                auto& sym = *ref.as<ArbitrarySymbolExpression>().symbol;
                 if (sym.kind != SymbolKind::Instance || !sym.as<InstanceSymbol>().isModule()) {
                     if (!context.scope->isUninstantiated())
                         context.addDiag(diag::ExpectedModuleInstance, ref.sourceRange);

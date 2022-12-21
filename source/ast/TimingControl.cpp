@@ -313,7 +313,7 @@ TimingControl& SignalEventControl::fromExpr(Compilation& compilation, EdgeKind e
     if (expr.bad())
         return badCtrl(compilation, result);
 
-    // Note: `expr` here can be a void-typed HierarchicalReferenceExpression if it's
+    // Note: `expr` here can be a void-typed ArbitrarySymbolExpression if it's
     // referring to a clocking block.
     auto symRef = expr.getSymbolReference();
     bool isClocking = (symRef && symRef->kind == SymbolKind::ClockingBlock) ||

@@ -562,8 +562,8 @@ const Symbol* Expression::getSymbolReference(bool allowPacked) const {
             }
             return nullptr;
         }
-        case ExpressionKind::HierarchicalReference:
-            return as<HierarchicalReferenceExpression>().symbol;
+        case ExpressionKind::ArbitrarySymbol:
+            return as<ArbitrarySymbolExpression>().symbol;
         case ExpressionKind::Conversion: {
             auto& conv = as<ConversionExpression>();
             if (conv.isImplicit())
@@ -1212,8 +1212,8 @@ Expression* Expression::tryBindInterfaceRef(const ASTContext& context,
         if (symbol->kind == SymbolKind::UninstantiatedDef ||
             (symbol->kind == SymbolKind::Variable &&
              symbol->as<VariableSymbol>().getType().isError())) {
-            return comp.emplace<HierarchicalReferenceExpression>(*origSymbol, comp.getErrorType(),
-                                                                 syntax.sourceRange());
+            return comp.emplace<ArbitrarySymbolExpression>(*origSymbol, comp.getErrorType(),
+                                                           syntax.sourceRange());
         }
 
         if (isInterfacePort && !origSymbol->name.empty()) {
@@ -1257,7 +1257,7 @@ Expression* Expression::tryBindInterfaceRef(const ASTContext& context,
     if (!dims.empty())
         type = &FixedSizeUnpackedArrayType::fromDims(*context.scope, *type, dims, sourceRange);
 
-    return comp.emplace<HierarchicalReferenceExpression>(*origSymbol, *type, sourceRange);
+    return comp.emplace<ArbitrarySymbolExpression>(*origSymbol, *type, sourceRange);
 }
 
 void Expression::findPotentiallyImplicitNets(

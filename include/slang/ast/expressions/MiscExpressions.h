@@ -112,16 +112,16 @@ public:
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::TypeReference; }
 };
 
-/// Adapts a hierarchical symbol reference for use in an expression tree. This is for cases
+/// Adapts an arbitrary symbol reference for use in an expression tree. This is for cases
 /// like the $printtimescale system function that require a module name to be passed.
-class SLANG_EXPORT HierarchicalReferenceExpression : public Expression {
+/// This is not a NamedValueExpression because the symbol in question is not a value
+/// and is not normally usable in an expression.
+class SLANG_EXPORT ArbitrarySymbolExpression : public Expression {
 public:
     not_null<const Symbol*> symbol;
 
-    HierarchicalReferenceExpression(const Symbol& symbol, const Type& type,
-                                    SourceRange sourceRange) :
-        Expression(ExpressionKind::HierarchicalReference, type, sourceRange),
-        symbol(&symbol) {}
+    ArbitrarySymbolExpression(const Symbol& symbol, const Type& type, SourceRange sourceRange) :
+        Expression(ExpressionKind::ArbitrarySymbol, type, sourceRange), symbol(&symbol) {}
 
     ConstantValue evalImpl(EvalContext&) const { return nullptr; }
 
@@ -131,9 +131,7 @@ public:
                                   const ASTContext& context,
                                   bitmask<LookupFlags> extraLookupFlags = {});
 
-    static bool isKind(ExpressionKind kind) {
-        return kind == ExpressionKind::HierarchicalReference;
-    }
+    static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::ArbitrarySymbol; }
 };
 
 /// A placeholder expression that is generated to take the place of one side of

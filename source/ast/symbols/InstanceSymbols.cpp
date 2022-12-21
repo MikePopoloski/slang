@@ -787,7 +787,7 @@ static const AssertionExpr* bindUnknownPortConn(const ASTContext& context,
                             symbol->kind == SymbolKind::Instance ||
                             symbol->kind == SymbolKind::InstanceArray ||
                             symbol->kind == SymbolKind::UninstantiatedDef) {
-                            auto hre = comp.emplace<HierarchicalReferenceExpression>(
+                            auto hre = comp.emplace<ArbitrarySymbolExpression>(
                                 *symbol, comp.getVoidType(), syntax.sourceRange());
                             return comp.emplace<SimpleAssertionExpr>(*hre, std::nullopt);
                         }

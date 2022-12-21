@@ -35,9 +35,9 @@ public:
             return SystemSubroutine::bindArgument(argIndex, context, syntax, args);
 
         if (argIndex == nameOrHierIndex && NameSyntax::isKind(syntax.kind)) {
-            return HierarchicalReferenceExpression::fromSyntax(context.getCompilation(),
-                                                               syntax.as<NameSyntax>(), context,
-                                                               LookupFlags::AllowRoot);
+            return ArbitrarySymbolExpression::fromSyntax(context.getCompilation(),
+                                                         syntax.as<NameSyntax>(), context,
+                                                         LookupFlags::AllowRoot);
         }
 
         return Expression::bindArgument(*argTypes[argIndex], ArgumentDirection::In, syntax,
@@ -51,8 +51,8 @@ public:
             return comp.getErrorType();
 
         auto arg = args[nameOrHierIndex];
-        if (arg->kind == ExpressionKind::HierarchicalReference) {
-            auto& sym = *arg->as<HierarchicalReferenceExpression>().symbol;
+        if (arg->kind == ExpressionKind::ArbitrarySymbol) {
+            auto& sym = *arg->as<ArbitrarySymbolExpression>().symbol;
             if (sym.isValue()) {
                 auto& type = sym.as<ValueSymbol>().getType();
                 if (!type.isString()) {
