@@ -294,11 +294,11 @@ bool lookupDownward(span<const NamePlusLoc> nameParts, NameComponents name,
     };
 
     // Loop through each dotted name component and try to find it in the preceeding scope.
+    bool isVirtualIface = false;
     for (auto it = nameParts.rbegin(); it != nameParts.rend(); it++) {
         if (!checkClassParams(name))
             return false;
 
-        bool isVirtualIface = false;
         auto isValueLike = [&](const Symbol*& symbol) {
             switch (symbol->kind) {
                 case SymbolKind::ConstraintBlock:
@@ -350,13 +350,15 @@ bool lookupDownward(span<const NamePlusLoc> nameParts, NameComponents name,
 
         // This is a hierarchical lookup if we previously decided it was hierarchical, or:
         // - This is not a clocking block access
-        // - This is not a virtual interface access
+        // - This is not a virtual interface access (or descended from one)
         // - This is not a direct interface port, package, or $unit reference
-        result.isHierarchical |= symbol->kind != SymbolKind::ClockingBlock;
+        const bool isCBOrVirtualIface = symbol->kind == SymbolKind::ClockingBlock || isVirtualIface;
+        result.isHierarchical |= !isCBOrVirtualIface;
         if (it == nameParts.rbegin()) {
             result.isHierarchical = symbol->kind != SymbolKind::InterfacePort &&
                                     symbol->kind != SymbolKind::Package &&
-                                    symbol->kind != SymbolKind::CompilationUnit && !isVirtualIface;
+                                    symbol->kind != SymbolKind::CompilationUnit &&
+                                    !isCBOrVirtualIface;
         }
 
         string_view modportName;

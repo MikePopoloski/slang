@@ -1968,12 +1968,18 @@ endmodule
 
 TEST_CASE("Virtual interface access is not necessarily hierarchical") {
     auto tree = SyntaxTree::fromText(R"(
+interface Blah;
+    int i;
+endinterface
+
 interface Bus;
     logic clk;
     logic a;
     clocking cb @(posedge clk);
         output a;
     endclocking
+
+    Blah blah();
 endinterface
 
 package P;
@@ -1983,6 +1989,7 @@ package P;
             forever begin
                 @(intf.cb);
                 intf.cb.a <= 1'b1;
+                intf.blah.i = 1;
             end
         endtask
     endclass
