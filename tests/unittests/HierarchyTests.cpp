@@ -1273,6 +1273,30 @@ endmodule
     CHECK(diags[0].code == diag::DefparamBadHierarchy);
 }
 
+TEST_CASE("defparam target outside bind hierarchy") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    defparam n1.p = 2;
+endmodule
+
+module n;
+    parameter p = 1;
+endmodule
+
+module top;
+    bind top m m1();
+    n n1();
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::DefparamBadHierarchy);
+}
+
 TEST_CASE("defparam with cached target") {
     auto tree = SyntaxTree::fromText(R"(
 module dut;

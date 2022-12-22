@@ -253,19 +253,35 @@ static bool checkDefparamHierarchy(const Symbol& target, const Scope& defparamSc
             scope = sym.getParentScope();
     }
 
+    bool isInsideBind = false;
     scope = &defparamScope;
     do {
-        if (targetChain.find(scope) != targetChain.end())
+        if (auto it = targetChain.find(scope); it != targetChain.end()) {
+            // If the defparam is inside a bind instantiation we need
+            // to check whether our common ancestor also is.
+            if (isInsideBind) {
+                auto inst = (*it)->getContainingInstance();
+                if (!inst || !inst->isFromBind)
+                    return false;
+            }
+
             return true;
+        }
 
         auto& sym = scope->asSymbol();
         if (sym.kind == SymbolKind::InstanceArray || sym.kind == SymbolKind::GenerateBlock)
             return false;
 
-        if (sym.kind == SymbolKind::InstanceBody)
-            scope = sym.as<InstanceBodySymbol>().parentInstance->getParentScope();
-        else
+        if (sym.kind == SymbolKind::InstanceBody) {
+            auto& body = sym.as<InstanceBodySymbol>();
+            ASSERT(body.parentInstance);
+            scope = body.parentInstance->getParentScope();
+
+            isInsideBind |= body.isFromBind;
+        }
+        else {
             scope = sym.getParentScope();
+        }
     } while (scope);
 
     return true;
