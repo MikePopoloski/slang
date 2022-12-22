@@ -2078,3 +2078,60 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Complex binds and defparams example") {
+    auto tree = SyntaxTree::fromText(R"(
+module n;
+endmodule
+
+module o;
+    parameter bar = 0;
+    p #(bar) p1();
+endmodule
+
+module p #(parameter bar);
+    if (bar == 1) begin
+        bind top q q1();
+    end
+
+    defparam o.bar = 1;
+endmodule
+
+module q;
+    wire w;
+    $info("Hello");
+endmodule
+
+module r;
+    parameter p = 0;
+    if (p == 1) begin
+        $info("World");
+    end
+endmodule
+
+module top;
+    parameter a = 0;
+    if (a == 1) begin: foo
+        n n1();
+    end
+
+    defparam top.a = 1;
+    bind top.foo.n1 o o1();
+
+    assign q1.w = 1;
+
+    if (1) begin
+        r r1();
+        defparam r1.p = 1;
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::InfoTask);
+    CHECK(diags[1].code == diag::InfoTask);
+}
