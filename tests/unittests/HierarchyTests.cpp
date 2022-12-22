@@ -2127,9 +2127,14 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 2);
-    CHECK(diags[0].code == diag::BindTypeParamMismatch);
-    CHECK(diags[1].code == diag::BindTypeParamNotFound);
+    CHECK("\n" + report(diags) == R"(
+source:16:21: error: bind type parameter 't' resolves to 'top.asdf' in source scope but 'm.asdf' in target scope
+    bind top.m1 n #(asdf, bar, baz) n1();
+                    ^~~~
+source:16:27: error: bind type parameter 'u' resolves to 'bar' which cannot be found in source scope
+    bind top.m1 n #(asdf, bar, baz) n1();
+                          ^~~
+)");
 }
 
 TEST_CASE("Complex binds and defparams example") {

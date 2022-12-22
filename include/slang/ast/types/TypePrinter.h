@@ -98,6 +98,7 @@ public:
 private:
     TypePrinter printer;
     flat_hash_set<const Type*> seenTypes;
+    flat_hash_set<const Type*> typesToDisambiguate;
 };
 
 } // namespace slang::ast

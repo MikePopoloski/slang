@@ -41,10 +41,14 @@ void TypePrinter::append(const Type& type) {
     if (options.addSingleQuotes)
         buffer->append("'");
 
-    if (options.printAKA && type.kind == SymbolKind::TypeAlias)
+    if (options.printAKA && type.kind == SymbolKind::TypeAlias) {
+        if (!options.elideScopeNames)
+            buffer->append(getLexicalPath(type.getParentScope()));
         buffer->append(type.name);
-    else
+    }
+    else {
         type.visit(*this, ""sv);
+    }
 
     if (options.addSingleQuotes)
         buffer->append("'");
@@ -491,16 +495,30 @@ TypeArgFormatter::TypeArgFormatter() {
     printer.options.anonymousTypeStyle = TypePrintingOptions::FriendlyName;
 }
 
-void TypeArgFormatter::startMessage(const Diagnostic&) {
+void TypeArgFormatter::startMessage(const Diagnostic& diag) {
     seenTypes.clear();
+    typesToDisambiguate.clear();
 
-    // TODO: build a list of used types so we can disambiguate if necessary
+    SmallMap<string_view, const Type*, 4> typeNames;
+    for (auto& arg : diag.args) {
+        if (auto typePtr = std::any_cast<const Type*>(std::get_if<std::any>(&arg))) {
+            auto& type = **typePtr;
+            if (type.isAlias()) {
+                auto [it, inserted] = typeNames.emplace(type.name, &type);
+                if (!inserted) {
+                    typesToDisambiguate.insert(&type);
+                    typesToDisambiguate.insert(it->second);
+                }
+            }
+        }
+    }
 }
 
 std::string TypeArgFormatter::format(const std::any& arg) {
     const Type& type = *std::any_cast<const Type*>(arg);
     bool unique = seenTypes.insert(&type).second;
     printer.options.printAKA = unique;
+    printer.options.elideScopeNames = !type.isAlias() || !typesToDisambiguate.count(&type);
 
     printer.clear();
     printer.append(type);
