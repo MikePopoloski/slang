@@ -48,6 +48,7 @@ public:
     void setValue(Compilation& compilation, ConstantValue value, bool needsCoercion);
 
     bool isImplicitString(SourceRange referencingRange) const;
+    bool isOverridden() const;
 
     void serializeTo(ASTSerializer& serializer) const;
 
@@ -71,6 +72,7 @@ public:
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::TypeParameter; }
 
     const Type& getTypeAlias() const;
+    bool isOverridden() const;
 
     void serializeTo(ASTSerializer& serializer) const;
 

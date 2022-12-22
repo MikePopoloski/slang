@@ -191,6 +191,9 @@ public:
         flags |= toAdd;
     }
 
+    /// Gets the flags associated with this declared type.
+    bitmask<DeclaredTypeFlags> getFlags() const { return flags; }
+
     /// Perform a merge of implicit port information; this facilitates the non-ascii
     /// port system permitted by Verilog, where port I/O declarations are separate
     /// from the actual symbol declaration but may still carry some type info.

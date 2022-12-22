@@ -659,8 +659,11 @@ InstanceBodySymbol& InstanceBodySymbol::fromDefinition(Compilation& comp,
             result->addDeferredMembers(*bindSyntax);
     }
 
-    for (auto bindSyntax : definition.bindDirectives)
-        result->addDeferredMembers(*bindSyntax);
+    if (!definition.bindDirectives.empty()) {
+        for (auto bindSyntax : definition.bindDirectives)
+            result->addDeferredMembers(*bindSyntax);
+        comp.noteInstanceWithDefBind(*result);
+    }
 
     result->parameters = params.copy(comp);
     return *result;

@@ -647,6 +647,11 @@ void Compilation::noteBindDirective(const BindDirectiveSyntax& syntax, const Sco
     bindDirectives.emplace_back(&syntax, &scope);
 }
 
+void Compilation::noteInstanceWithDefBind(const Symbol& instance) {
+    auto& def = instance.as<InstanceBodySymbol>().getDefinition();
+    instancesWithDefBinds[&def].push_back(&instance);
+}
+
 void Compilation::noteDPIExportDirective(const DPIExportSyntax& syntax, const Scope& scope) {
     dpiExports.emplace_back(&syntax, &scope);
 }
@@ -879,6 +884,7 @@ const Diagnostics& Compilation::getSemanticDiagnostics() {
         SmallVector<const Symbol*> instTargets;
         const Definition* defTarget = nullptr;
         resolveBindTargets(*directive, *scope, instTargets, &defTarget);
+        checkBindTargetParams(*directive, *scope, instTargets, defTarget);
     }
 
     // Report any lingering name conflicts.
@@ -1501,6 +1507,62 @@ void Compilation::resolveBindTargets(const BindDirectiveSyntax& syntax, const Sc
 
             // If no name and no definition, report an error.
             result.reportDiags(context);
+        }
+    }
+}
+
+void Compilation::checkBindTargetParams(const syntax::BindDirectiveSyntax& syntax,
+                                        const Scope& scope, span<const Symbol* const> instTargets,
+                                        const Definition* defTarget) {
+    // This method checks the following rule from the LRM:
+    //    User-defined type names that are used to override type parameters must be
+    //    visible and matching in both the scope containing the bind statement and in
+    //    the target scope.
+    auto doCheck = [&](const InstanceBodySymbol& container) {
+        for (auto instSyntax : syntax.instantiation->instances) {
+            if (!instSyntax->decl)
+                continue;
+
+            auto sym = container.find(instSyntax->decl->name.valueText());
+            if (!sym || sym->kind != SymbolKind::Instance || sym->getSyntax() != instSyntax)
+                continue;
+
+            auto& inst = sym->as<InstanceSymbol>();
+            for (auto param : inst.body.parameters) {
+                if (param->symbol.kind == SymbolKind::TypeParameter) {
+                    auto& typeParam = param->symbol.as<TypeParameterSymbol>();
+                    auto& type = typeParam.targetType.getType();
+                    if (typeParam.isOverridden() && type.isAlias() && !type.name.empty()) {
+                        // This is the case we need to check; the resolved type is
+                        // a named type alias, so we need to also resolve it in the bind
+                        // directive scope and make sure they match.
+                        auto result = Lookup::unqualified(scope, type.name, LookupFlags::Type);
+                        if (!result || !result->isType()) {
+                            auto ts = typeParam.getDeclaredType()->getTypeSyntax();
+                            ASSERT(ts);
+                            scope.addDiag(diag::BindTypeParamNotFound, ts->sourceRange())
+                                << typeParam.name << type;
+                        }
+                        else if (!result->as<Type>().isMatching(type)) {
+                            auto ts = typeParam.getDeclaredType()->getTypeSyntax();
+                            ASSERT(ts);
+                            scope.addDiag(diag::BindTypeParamMismatch, ts->sourceRange())
+                                << typeParam.name << result->as<Type>() << type;
+                        }
+                    }
+                }
+            }
+        }
+    };
+
+    for (auto target : instTargets)
+        doCheck(target->as<InstanceSymbol>().body);
+
+    if (defTarget) {
+        auto it = instancesWithDefBinds.find(defTarget);
+        if (it != instancesWithDefBinds.end()) {
+            for (auto target : it->second)
+                doCheck(target->as<InstanceBodySymbol>());
         }
     }
 }

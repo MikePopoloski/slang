@@ -301,6 +301,10 @@ public:
     /// scope elaboration to include the newly bound instances.
     void noteBindDirective(const syntax::BindDirectiveSyntax& syntax, const Scope& scope);
 
+    /// Notes an instance that contains a bind directive targeting a global definition.
+    /// These are later checked for correctness of type params.
+    void noteInstanceWithDefBind(const Symbol& instance);
+
     /// Notes the presence of a DPI export directive. These will be checked for correctness
     /// but are otherwise unused by SystemVerilog code.
     void noteDPIExportDirective(const syntax::DPIExportSyntax& syntax, const Scope& scope);
@@ -496,6 +500,8 @@ private:
     void resolveDefParamsAndBinds();
     void resolveBindTargets(const syntax::BindDirectiveSyntax& syntax, const Scope& scope,
                             SmallVector<const Symbol*>& instTargets, const Definition** defTarget);
+    void checkBindTargetParams(const syntax::BindDirectiveSyntax& syntax, const Scope& scope,
+                               span<const Symbol* const> instTargets, const Definition* defTarget);
 
     // Stored options object.
     CompilationOptions options;
@@ -671,6 +677,10 @@ private:
 
     // A map of scopes to default disable declarations.
     flat_hash_map<const Scope*, const Expression*> defaultDisableMap;
+
+    // A set of instances that have global definition-based bind directives applied.
+    // This is pretty rare and only used for checking of type params.
+    flat_hash_map<const Definition*, std::vector<const Symbol*>> instancesWithDefBinds;
 
     // Storage for system subroutine instances.
     std::vector<std::unique_ptr<SystemSubroutine>> subroutineStorage;

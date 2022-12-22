@@ -2103,6 +2103,35 @@ endmodule
     NO_COMPILATION_ERRORS;
 }
 
+TEST_CASE("Binds with invalid type params") {
+    auto tree = SyntaxTree::fromText(R"(
+typedef enum { A, B } baz;
+
+module m;
+    typedef struct { real r; } asdf;
+    typedef struct { int a; } bar;
+endmodule
+
+module n #(parameter type t, parameter type u, parameter type v);
+endmodule
+
+module top;
+    m m1();
+
+    typedef struct { int a; } asdf;
+    bind top.m1 n #(asdf, bar, baz) n1();
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::BindTypeParamMismatch);
+    CHECK(diags[1].code == diag::BindTypeParamNotFound);
+}
+
 TEST_CASE("Complex binds and defparams example") {
     auto tree = SyntaxTree::fromText(R"(
 module n;

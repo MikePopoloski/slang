@@ -212,15 +212,15 @@ void registerSymbols(py::module_& m) {
         .def_property_readonly("hasDefault", &ParameterSymbolBase::hasDefault);
 
     py::class_<ParameterSymbol, ValueSymbol, ParameterSymbolBase>(m, "ParameterSymbol")
-        .def_property_readonly("value",
-                               [](const ParameterSymbol& self) { return self.getValue(); });
+        .def_property_readonly("value", [](const ParameterSymbol& self) { return self.getValue(); })
+        .def_property_readonly("isOverridden", &ParameterSymbol::isOverridden);
 
     py::class_<TypeParameterSymbol, Symbol, ParameterSymbolBase>(m, "TypeParameterSymbol")
         .def_property_readonly("targetType",
                                [](const TypeParameterSymbol& self) { return &self.targetType; })
-        .def_property_readonly("typeAlias", [](const TypeParameterSymbol& self) {
-            return &self.getTypeAlias();
-        });
+        .def_property_readonly("typeAlias",
+                               [](const TypeParameterSymbol& self) { return &self.getTypeAlias(); })
+        .def_property_readonly("isOverridden", &TypeParameterSymbol::isOverridden);
 
     py::class_<DefParamSymbol, Symbol>(m, "DefParamSymbol")
         .def_property_readonly("target",

@@ -137,6 +137,10 @@ bool ParameterSymbol::isImplicitString(SourceRange referencingRange) const {
     return fromStringLit || value->bad();
 }
 
+bool ParameterSymbol::isOverridden() const {
+    return getDeclaredType()->getFlags().has(DeclaredTypeFlags::InitializerOverridden);
+}
+
 void ParameterSymbol::setValue(Compilation& compilation, ConstantValue newValue,
                                bool newNeedsCoercion) {
     value = compilation.allocConstant(std::move(newValue));
@@ -198,6 +202,10 @@ const Type& TypeParameterSymbol::getTypeAlias() const {
 
     typeAlias = alias;
     return *typeAlias;
+}
+
+bool TypeParameterSymbol::isOverridden() const {
+    return getDeclaredType()->getFlags().has(DeclaredTypeFlags::TypeOverridden);
 }
 
 void TypeParameterSymbol::serializeTo(ASTSerializer& serializer) const {
