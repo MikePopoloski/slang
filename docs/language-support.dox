@@ -373,8 +373,8 @@ IEEE 1800-2017 SystemVerilog Language Reference Manual (LRM).
 {{m-success}} 23.8 | Upwards name referencing | v0.7
 {{m-success}} 23.9 | Scope rules | v0.2
 {{m-success}} 23.10 | Overriding module parameters | v0.2
-{{m-warning}} 23.10.1 | defparam statement | partial
-{{m-warning}} 23.11 | Binding auxiliary code to scopes or instances | partial
+{{m-success}} 23.10.1 | defparam statement | v3.0
+{{m-success}} 23.11 | Binding auxiliary code to scopes or instances | v3.0
 
 ## 24. Programs
 
