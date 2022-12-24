@@ -1359,6 +1359,31 @@ endmodule
     CHECK(diags[0].code == diag::MaxInstanceDepthExceeded);
 }
 
+TEST_CASE("Multiple defparams for one target") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    parameter p = 1;
+endmodule
+
+module n;
+    defparam m1.p = 3;
+endmodule
+
+module top;
+    m m1();
+    n n1();
+    defparam m1.p = 2;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::DuplicateDefparam);
+}
+
 TEST_CASE("Invalid instance parents") {
     auto tree = SyntaxTree::fromText(R"(
 module m;

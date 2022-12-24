@@ -975,3 +975,22 @@ module m;
         force r[0] = 1'b0;
 endmodule
 ```
+
+-Wduplicate-defparam
+More than one defparam targets the same parameter. The LRM specifies that this is undefined
+behavior. slang takes the value from the first defparam it sees and ignores the rest.
+```
+module m;
+    parameter p = 1;
+endmodule
+
+module n;
+    defparam m1.p = 3;
+endmodule
+
+module top;
+    m m1();
+    n n1();
+    defparam m1.p = 2;
+endmodule
+```

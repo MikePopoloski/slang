@@ -965,6 +965,7 @@ warning unused-typedef UnusedTypedef "unused typedef '{}'"
 warning unused-genvar UnusedGenvar "unused genvar '{}'"
 warning unused-assertion-decl UnusedAssertionDecl "unused {} '{}'"
 warning missing-top NoTopModules "no top-level modules found in design"
+warning duplicate-defparam DuplicateDefparam "parameter already has a defparam override applied; ignoring this one"
 
 subsystem Meta
 error TooManyErrors "too many errors emitted, stopping now [--error-limit=]"
@@ -986,7 +987,7 @@ group default = { real-underflow real-overflow vector-overflow int-overflow unco
                   protect-arglist unknown-protect-encoding unknown-protect-option invalid-pragma-number
                   invalid-pragma-viewport duplicate-definition protect-encoding-bytes invalid-encoding-byte
                   raw-protect-eof protected-envelope specify-param dup-timing-path invalid-pulsestyle
-                  negative-timing-limit bad-procedural-force }
+                  negative-timing-limit bad-procedural-force duplicate-defparam }
 
 group extra = { empty-member empty-stmt dup-import pointless-void-cast case-gen-none case-gen-dup
                 unused-result format-real ignored-slice task-ignored width-trunc dup-attr event-const

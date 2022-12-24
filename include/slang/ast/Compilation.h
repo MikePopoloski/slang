@@ -160,7 +160,11 @@ struct SLANG_EXPORT CompilationOptions {
 /// specified overrides.
 struct HierarchyOverrideNode {
     /// A map of parameters in the current scope to override.
-    flat_hash_map<const syntax::SyntaxNode*, ConstantValue> overrides;
+    /// The key is the syntax node representing the parameter and the value is a pair,
+    /// the first element of which is the value to set the parameter to and the second
+    /// is the source defparam doing the overriding, if any (can be null).
+    flat_hash_map<const syntax::SyntaxNode*, std::pair<ConstantValue, const syntax::SyntaxNode*>>
+        overrides;
 
     /// A map of child scopes that also contain overrides.
     flat_hash_map<InstancePath::Entry, HierarchyOverrideNode> childNodes;

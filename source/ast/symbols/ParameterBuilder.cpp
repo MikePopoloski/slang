@@ -239,7 +239,7 @@ const ParameterSymbolBase& ParameterBuilder::createParam(const Definition::Param
         if (auto paramSyntax = param->getSyntax(); overrideNode && paramSyntax) {
             auto& map = overrideNode->overrides;
             if (auto it = map.find(paramSyntax); it != map.end()) {
-                param->setValue(comp, it->second, /* needsCoercion */ true);
+                param->setValue(comp, it->second.first, /* needsCoercion */ true);
                 return *param;
             }
         }
