@@ -14,6 +14,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * Added support for anonymous programs
 * Added support for DPI open array typed arguments
 * Added support for `$inferred_clock` and `$inferred_disable`
+* Finished full support for bind directives
+* Finished full support for defparams
 
 ### General Features
 * New option `--obfuscate-ids` when used with `--preprocess` will replace all identifiers in the output with obfuscated alphanumeric strings (thanks to @Sustrak)
@@ -25,6 +27,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * Drastically improved the performance of overlapping driver checking and driver loop unrolling. For large projects this may reduce compile times by as much as 80-90%.
 * Net charge strength and drive strength have been added to the AST
 * Added human-friendly names for function arguments in Python bindings (thanks to @Kuree)
+* Conditional statements in constant functions now implement unique/priority semantics (thanks to @HungMingWu)
+* Procedural force/release of bit selects or part selects is an error according to the LRM; this error can now be downgraded to a warning for compatibility with other tools (thanks to @udif)
+* When printing type names in diagnostics, if more than one type shares the same simple name, they will now be disambiguated with their full path
 
 ### Fixes
 * Parameters used inside specify blocks will now issue an appropriate warning
@@ -34,6 +39,13 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * Fixed parser handling of spacing within `always@( *)` statements being misinterpreted as a closing attribute token (thanks to @godblesszhouzhou)
 * Fixed a bug in the lookup location used for non-ansi port symbol attribute expressions
 * Fixed `-Werror` to actually work
+* Tweaked handling of unbased unsized literals to reduce false-positive width warnings
+* Changed scoped access to incomplete forward typedefs to be allowed as long as the final name in the chain is not a type (matches behavior of other tools)
+* The parser now correctly disallows attributes on assignment operators
+* References to compilation unit items from within packages is now correctly disallowed
+* Hierarchical references from packages to items outside that package are now correctly disallowed
+* Bit-vector system functions (such as `$countbits`) can now be used with bitstream types (as opposed to just integral types)
+* Max size limits for packed and unpacked arrays and structs are now strictly enforced
 
 
 ## [v2.0] - 2022-10-29
