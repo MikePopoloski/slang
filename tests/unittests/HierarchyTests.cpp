@@ -1297,6 +1297,37 @@ endmodule
     CHECK(diags[0].code == diag::DefparamBadHierarchy);
 }
 
+TEST_CASE("defparam with instance array ports") {
+    auto tree = SyntaxTree::fromText(R"(
+interface I;
+endinterface
+
+module n(I i);
+  defparam top.p = 1;
+endmodule
+
+module m;
+  I i[4]();
+  n n1(i[1]);
+endmodule
+
+module top;
+  if (1) begin: foo
+    I i();
+  end
+  m m1();
+  parameter p = 2;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::DefparamBadHierarchy);
+}
+
 TEST_CASE("defparam with cached target") {
     auto tree = SyntaxTree::fromText(R"(
 module dut;

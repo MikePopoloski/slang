@@ -11,6 +11,7 @@
 #include "slang/ast/Compilation.h"
 #include "slang/ast/Expression.h"
 #include "slang/ast/symbols/InstanceSymbols.h"
+#include "slang/ast/symbols/PortSymbols.h"
 #include "slang/ast/symbols/SpecifySymbols.h"
 #include "slang/ast/types/AllTypes.h"
 #include "slang/diagnostics/ConstEvalDiags.h"
@@ -244,7 +245,7 @@ const ConstantValue& DefParamSymbol::getValue() const {
     return *v;
 }
 
-static bool checkDefparamHierarchy(const Symbol& target, const Scope& defparamScope) {
+static const Symbol* checkDefparamHierarchy(const Symbol& target, const Scope& defparamScope) {
     // defparams are not allowed to extend upward through a generate block or instance
     // array and affect a param outside of that hierarchy. To check this, build the parent
     // chain for the target and then walk the defparam's parent chain and see if we pass one
@@ -270,29 +271,53 @@ static bool checkDefparamHierarchy(const Symbol& target, const Scope& defparamSc
             if (isInsideBind) {
                 auto inst = (*it)->getContainingInstance();
                 if (!inst || !inst->isFromBind)
-                    return false;
+                    return &scope->asSymbol();
             }
 
-            return true;
+            return nullptr;
         }
 
         auto& sym = scope->asSymbol();
         if (sym.kind == SymbolKind::InstanceArray || sym.kind == SymbolKind::GenerateBlock)
-            return false;
+            return &sym;
 
-        if (sym.kind == SymbolKind::InstanceBody) {
-            auto& body = sym.as<InstanceBodySymbol>();
-            ASSERT(body.parentInstance);
-            scope = body.parentInstance->getParentScope();
-
-            isInsideBind |= body.isFromBind;
-        }
-        else {
+        if (sym.kind != SymbolKind::InstanceBody) {
             scope = sym.getParentScope();
+            continue;
+        }
+
+        auto& body = sym.as<InstanceBodySymbol>();
+        ASSERT(body.parentInstance);
+        scope = body.parentInstance->getParentScope();
+
+        isInsideBind |= body.isFromBind;
+
+        // We are also disallowed from having defparams inside an instance that has interface
+        // ports that connect to an array from extending outside that hierarchy.
+        for (auto conn : body.parentInstance->getPortConnections()) {
+            if (auto connSym = conn->getIfaceInstance()) {
+                if (connSym->kind == SymbolKind::Modport) {
+                    auto parent = connSym->getParentScope();
+                    ASSERT(parent);
+                    connSym = &parent->asSymbol();
+                }
+
+                if (connSym->kind == SymbolKind::InstanceBody) {
+                    auto& connBody = connSym->as<InstanceBodySymbol>();
+                    ASSERT(connBody.parentInstance);
+                    connSym = connBody.parentInstance;
+                }
+
+                if (connSym->kind == SymbolKind::InstanceArray ||
+                    (connSym->getParentScope() &&
+                     connSym->getParentScope()->asSymbol().kind == SymbolKind::InstanceArray)) {
+                    return body.parentInstance;
+                }
+            }
         }
     } while (scope);
 
-    return true;
+    return nullptr;
 }
 
 void DefParamSymbol::resolve() const {
@@ -332,8 +357,10 @@ void DefParamSymbol::resolve() const {
         return;
     }
 
-    if (!checkDefparamHierarchy(*target, *scope)) {
-        context.addDiag(diag::DefparamBadHierarchy, assignment.name->sourceRange());
+    if (auto invalidParent = checkDefparamHierarchy(*target, *scope)) {
+        auto& diag = context.addDiag(diag::DefparamBadHierarchy, assignment.name->sourceRange());
+        diag.addNote(diag::NoteCommonAncestor, invalidParent->location);
+
         makeInvalid();
         return;
     }
