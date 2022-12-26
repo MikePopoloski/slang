@@ -150,6 +150,9 @@ public:
     /// Indicates whether the driver is inside an initial block.
     bool isInInitialBlock() const;
 
+    /// Indicates whether the driver is inside an always_ff block.
+    bool isInAlwaysFFBlock() const;
+
     /// Gets the source range describing the driver as written in the source code.
     SourceRange getSourceRange() const;
 
