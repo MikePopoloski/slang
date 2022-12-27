@@ -1,0 +1,93 @@
+#include "ASTHelperVisitors.h"
+#include "TidyFactory.h"
+
+#include "slang/diagnostics/AllDiags.h"
+#include "slang/syntax/AllSyntax.h"
+
+using namespace slang;
+using namespace slang::ast;
+
+namespace only_assigned_on_reset {
+struct AlwaysFFVisitor : public ASTVisitor<AlwaysFFVisitor, true, true> {
+    explicit AlwaysFFVisitor(std::string_view name) : name(name){};
+
+    void handle(const ConditionalStatement& statement) {
+        // Early return, if there's no else clause on the conditional statement
+        if (!statement.ifFalse) {
+            return;
+        }
+
+        // Collect all the identifiers in the conditions
+        CollectIdentifiers collectIdentifiersVisitor;
+        for (const auto& condition : statement.conditions) {
+            condition.expr->visit(collectIdentifiersVisitor);
+        }
+
+        // Check if one of the identifiers is a reset
+        const auto isReset = std::any_of(collectIdentifiersVisitor.identifiers.begin(),
+                                         collectIdentifiersVisitor.identifiers.end(), [](auto id) {
+                                             return id.find("reset") != std::string_view::npos ||
+                                                    id.find("rst") != std::string_view::npos;
+                                         });
+
+        if (isReset) {
+            LookupLhsIdentifier visitor(name);
+            statement.ifTrue.visit(visitor);
+            if (visitor.found()) {
+                visitor.reset();
+                statement.ifFalse->visit(visitor);
+                if (!visitor.found()) {
+                    correctlyAssignedOnIfReset = true;
+                }
+            }
+        }
+    }
+
+    void handle(const AssignmentExpression& expression) {
+        if (LookupLhsIdentifier::hasIdentifier(name, expression)) {
+            assignedOutsideIfReset = true;
+        }
+    }
+
+    bool hasError() { return correctlyAssignedOnIfReset && !assignedOutsideIfReset; }
+
+    std::string_view name;
+    bool correctlyAssignedOnIfReset = false;
+    bool assignedOutsideIfReset = false;
+};
+
+struct MainVisitor : public ASTVisitor<MainVisitor, true, false> {
+    explicit MainVisitor(Diagnostics& diagnostics) : diags(diagnostics) {}
+    Diagnostics& diags;
+
+    void handle(const VariableSymbol& symbol) {
+        if (symbol.drivers().empty())
+            return;
+
+        auto firstDriver = *symbol.drivers().begin();
+        if (firstDriver && firstDriver->isInAlwaysFFBlock()) {
+            AlwaysFFVisitor visitor(symbol.name);
+            firstDriver->containingSymbol->visit(visitor);
+            if (visitor.hasError()) {
+                diags.add(diag::OnlyAssignedOnReset, symbol.location) << symbol.name;
+            }
+        }
+    }
+};
+} // namespace only_assigned_on_reset
+
+using namespace only_assigned_on_reset;
+class OnlyAssignedOnReset : public TidyCheck {
+public:
+    bool check(const RootSymbol& root) override {
+        MainVisitor visitor(diagnostics);
+        root.visit(visitor);
+        if (!diagnostics.empty())
+            return false;
+        return true;
+    }
+
+    std::string_view name() const override { return "OnlyAssignedOnReset"; }
+};
+
+REGISTER(OnlyAssignedOnReset, OnlyAssignedOnReset)

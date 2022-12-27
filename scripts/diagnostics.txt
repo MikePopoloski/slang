@@ -972,6 +972,9 @@ subsystem Meta
 error TooManyErrors "too many errors emitted, stopping now [--error-limit=]"
 warning unknown-warning-option UnknownWarningOption "unknown warning option '{}'"
 
+subsystem Tidy
+warning only-assigned-on-reset OnlyAssignedOnReset "register '{}' is only assigned on reset"
+warning register-not-assigned-on-reset RegisterNotAssignedOnReset "register '{}' has no value on reset, but the always_ff block has the reset signal on the sensitivity list. Consider moving the register to an always_ff that has no reset or set a value on reset"
 
 // Following are groups of diagnostics, to make it easy to control them from the command line.
 // The default group is the set of warnings that are enabled by default.
