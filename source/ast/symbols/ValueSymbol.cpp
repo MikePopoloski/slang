@@ -404,7 +404,7 @@ bool ValueDriver::isInInitialBlock() const {
 bool ValueDriver::isInAlwaysFFBlock() const {
     return containingSymbol->kind == SymbolKind::ProceduralBlock &&
            containingSymbol->as<ProceduralBlockSymbol>().procedureKind ==
-           ProceduralBlockKind::AlwaysFF;
+               ProceduralBlockKind::AlwaysFF;
 }
 
 SourceRange ValueDriver::getSourceRange() const {
