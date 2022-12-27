@@ -143,8 +143,8 @@ Definition::Definition(const Scope& scope, LookupLocation lookupLocation,
         }
     }
 
-    SemanticFacts::populateTimeScale(timeScale, scope, directiveTimeScale, unitsRange.has_value(),
-                                     precisionRange.has_value());
+    SemanticFacts::populateTimeScale(timeScale, scope, directiveTimeScale, unitsRange,
+                                     precisionRange);
 }
 
 string_view Definition::getKindString() const {

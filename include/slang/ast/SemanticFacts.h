@@ -174,8 +174,9 @@ public:
                                   std::optional<SourceRange>& precisionRange, bool isFirst);
 
     static void populateTimeScale(TimeScale& timeScale, const Scope& scope,
-                                  std::optional<TimeScale> directiveTimeScale, bool hasBase,
-                                  bool hasPrecision);
+                                  std::optional<TimeScale> directiveTimeScale,
+                                  std::optional<SourceRange> unitsRange,
+                                  std::optional<SourceRange> precisionRange);
 
     static bool isAllowedInModport(SymbolKind kind);
 

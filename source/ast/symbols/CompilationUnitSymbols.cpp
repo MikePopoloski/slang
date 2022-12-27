@@ -95,8 +95,8 @@ PackageSymbol& PackageSymbol::fromSyntax(const Scope& scope, const ModuleDeclara
 
     result->exportDecls = exportDecls.copy(comp);
 
-    SemanticFacts::populateTimeScale(result->timeScale, scope, directiveTimeScale,
-                                     unitsRange.has_value(), precisionRange.has_value());
+    SemanticFacts::populateTimeScale(result->timeScale, scope, directiveTimeScale, unitsRange,
+                                     precisionRange);
     return *result;
 }
 

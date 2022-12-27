@@ -676,6 +676,14 @@ endmodule
 module o;
     timeunit 20ns;
 endmodule
+
+module p;
+    timeunit 10ns / 100ns;
+endmodule
+
+module q;
+    timeunit 1fs;
+endmodule
 )");
 
     Compilation compilation;
@@ -687,6 +695,8 @@ endmodule
     CHECK((it++)->code == diag::TimeScaleFirstInScope);
     CHECK((it++)->code == diag::MismatchedTimeScales);
     CHECK((it++)->code == diag::InvalidTimeScaleSpecifier);
+    CHECK((it++)->code == diag::InvalidTimeScalePrecision);
+    CHECK((it++)->code == diag::InvalidInferredTimeScale);
     CHECK(it == diags.end());
 }
 
