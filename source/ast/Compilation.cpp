@@ -138,9 +138,6 @@ Compilation::Compilation(const Bag& options) :
     registerScalar(signedLogicType);
     registerScalar(signedRegType);
 
-    defaultTimeScale.base = {TimeUnit::Nanoseconds, TimeScaleMagnitude::One};
-    defaultTimeScale.precision = {TimeUnit::Nanoseconds, TimeScaleMagnitude::One};
-
     root = std::make_unique<RootSymbol>(*this);
 
     // Register all system tasks, functions, and methods.
@@ -490,6 +487,8 @@ void Compilation::createDefinition(const Scope& scope, LookupLocation location,
         topDefinitions[def->name].first = def;
         if (auto primIt = udpMap.find(def->name); primIt != udpMap.end())
             reportRedefinition(scope, *def, *primIt->second);
+
+        checkElemTimeScale(def->timeScale, syntax.header->name.range());
     }
     else {
         // Record the fact that we have nested modules with this given name.
@@ -516,6 +515,8 @@ const PackageSymbol& Compilation::createPackage(const Scope& scope,
         diag << package.name;
         diag.addNote(diag::NotePreviousDefinition, it->second->location);
     }
+
+    checkElemTimeScale(package.timeScale, syntax.header->name.range());
 
     return package;
 }
@@ -1432,6 +1433,27 @@ void Compilation::checkModportExports(
                 }
             }
         }
+    }
+}
+
+void Compilation::checkElemTimeScale(std::optional<TimeScale> timeScale, SourceRange sourceRange) {
+    if (timeScale) {
+        if (anyElemsWithTimescales)
+            return;
+
+        anyElemsWithTimescales = true;
+        for (auto& def : definitionMemory)
+            checkElemTimeScale(def->timeScale, def->syntax.header->name.range());
+
+        for (auto [name, package] : packageMap) {
+            if (auto syntax = package->getSyntax()) {
+                checkElemTimeScale(package->timeScale,
+                                   syntax->as<ModuleDeclarationSyntax>().header->name.range());
+            }
+        }
+    }
+    else if (anyElemsWithTimescales) {
+        root->addDiag(diag::MissingTimeScale, sourceRange);
     }
 }
 

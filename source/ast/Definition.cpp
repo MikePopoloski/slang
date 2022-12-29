@@ -122,7 +122,10 @@ Definition::Definition(const Scope& scope, LookupLocation lookupLocation,
 
     for (auto member : syntax.members) {
         if (member->kind == SyntaxKind::TimeUnitsDeclaration) {
-            SemanticFacts::populateTimeScale(timeScale, scope,
+            if (!timeScale)
+                timeScale.emplace();
+
+            SemanticFacts::populateTimeScale(*timeScale, scope,
                                              member->as<TimeUnitsDeclarationSyntax>(), unitsRange,
                                              precisionRange, first);
             continue;

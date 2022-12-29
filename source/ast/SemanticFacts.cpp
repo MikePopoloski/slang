@@ -251,7 +251,7 @@ void SemanticFacts::populateTimeScale(TimeScale& timeScale, const Scope& scope,
     }
 }
 
-void SemanticFacts::populateTimeScale(TimeScale& timeScale, const Scope& scope,
+void SemanticFacts::populateTimeScale(std::optional<TimeScale>& timeScale, const Scope& scope,
                                       std::optional<TimeScale> directiveTimeScale,
                                       std::optional<SourceRange> unitsRange,
                                       std::optional<SourceRange> precisionRange) {
@@ -270,15 +270,30 @@ void SemanticFacts::populateTimeScale(TimeScale& timeScale, const Scope& scope,
     if (!ts)
         ts = scope.getTimeScale();
 
-    if (!unitsRange)
-        timeScale.base = ts->base;
-    if (!precisionRange)
-        timeScale.precision = ts->precision;
+    if (!ts) {
+        // If the scope didn't have any portion of the timescale set yet,
+        // then we'll just let it remain nullopt so clients know that we
+        // are using the default. Otherwise we should use the built-in
+        // default for the unset portion.
+        if (!timeScale)
+            return;
 
-    if ((unitsRange || precisionRange) && timeScale.precision > timeScale.base) {
+        // Defaults to 1ns/1ns
+        ts.emplace();
+    }
+    else if (!timeScale) {
+        timeScale.emplace();
+    }
+
+    if (!unitsRange)
+        timeScale->base = ts->base;
+    if (!precisionRange)
+        timeScale->precision = ts->precision;
+
+    if ((unitsRange || precisionRange) && timeScale->precision > timeScale->base) {
         auto range = precisionRange ? *precisionRange : *unitsRange;
         auto& diag = scope.addDiag(diag::InvalidInferredTimeScale, range);
-        diag << timeScale.toString();
+        diag << timeScale->toString();
     }
 }
 

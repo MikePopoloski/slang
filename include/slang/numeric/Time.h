@@ -36,7 +36,7 @@ enum class SLANG_EXPORT TimeScaleMagnitude : uint8_t { One = 1, Ten = 10, Hundre
 
 /// A combination of a unit and magnitude for a time scale value.
 struct SLANG_EXPORT TimeScaleValue {
-    TimeUnit unit = TimeUnit::Seconds;
+    TimeUnit unit = TimeUnit::Nanoseconds;
     TimeScaleMagnitude magnitude = TimeScaleMagnitude::One;
 
     TimeScaleValue() = default;

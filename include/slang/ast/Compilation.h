@@ -414,7 +414,7 @@ public:
     void setDefaultTimeScale(TimeScale timeScale) { defaultTimeScale = timeScale; }
 
     /// Gets the default time scale to use when none is specified in the source code.
-    TimeScale getDefaultTimeScale() const { return defaultTimeScale; }
+    std::optional<TimeScale> getDefaultTimeScale() const { return defaultTimeScale; }
 
     const Type& getType(syntax::SyntaxKind kind) const;
     const Type& getType(const syntax::DataTypeSyntax& node, const ASTContext& context,
@@ -501,6 +501,7 @@ private:
     void checkExternIfaceMethods(span<const MethodPrototypeSymbol* const> protos);
     void checkModportExports(
         span<const std::pair<const InterfacePortSymbol*, const ModportSymbol*>> modports);
+    void checkElemTimeScale(std::optional<TimeScale> timeScale, SourceRange sourceRange);
     void resolveDefParamsAndBinds();
     void resolveBindTargets(const syntax::BindDirectiveSyntax& syntax, const Scope& scope,
                             SmallVector<const Symbol*>& instTargets, const Definition** defTarget);
@@ -617,9 +618,10 @@ private:
     std::unique_ptr<RootSymbol> root;
     const SourceManager* sourceManager = nullptr;
     size_t numErrors = 0; // total number of errors inserted into the diagMap
-    TimeScale defaultTimeScale;
+    std::optional<TimeScale> defaultTimeScale;
     bool finalized = false;
     bool finalizing = false; // to prevent reentrant calls to getRoot()
+    bool anyElemsWithTimescales = false;
     uint32_t typoCorrections = 0;
     int nextEnumSystemId = 1;
     int nextStructSystemId = 1;

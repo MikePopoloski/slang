@@ -700,6 +700,29 @@ endmodule
     CHECK(it == diags.end());
 }
 
+TEST_CASE("Timescale missing on some elems") {
+    auto tree = SyntaxTree::fromText(R"(
+package p;
+endpackage
+
+module m;
+endmodule
+
+module top;
+    timeunit 1ns;
+    m m1();
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::MissingTimeScale);
+    CHECK(diags[1].code == diag::MissingTimeScale);
+}
+
 TEST_CASE("Port decl in ANSI module") {
     auto tree = SyntaxTree::fromText(R"(
 module m(input logic a);

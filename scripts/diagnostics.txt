@@ -950,6 +950,7 @@ error InvalidBindTarget "'{}' is not a valid bind target; only modules and inter
 error WrongBindTargetDef "bind target '{}' is not an instance of '{}'"
 error BindTypeParamNotFound "bind type parameter '{}' resolves to {} which cannot be found in source scope"
 error BindTypeParamMismatch "bind type parameter '{}' resolves to {} in source scope but {} in target scope"
+error MissingTimeScale "design element does not have a time scale defined but others in the design do"
 warning unused-def UnusedDefinition "{} definition is unused"
 warning unused-net UnusedNet "unused net '{}'"
 warning unused-implicit-net UnusedImplicitNet "implicit net '{}' is unused elsewhere"

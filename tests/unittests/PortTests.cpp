@@ -1627,6 +1627,7 @@ endmodule : cmp
 )");
 
     Compilation compilation;
+    compilation.setDefaultTimeScale({});
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
