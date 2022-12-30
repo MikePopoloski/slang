@@ -784,6 +784,7 @@ TEST_CASE("TimeScale stringify") {
     CHECK(!TimeScale::fromString("1 ns /  ").has_value());
     CHECK(!TimeScale::fromString("1 ns / 1bb").has_value());
     CHECK(!TimeScale::fromString("1 ns / 1ns fff").has_value());
+    CHECK(!TimeScale::fromString("10ns/10ms").has_value());
 
     CHECK(!TimeScaleValue::fromString("1 nssss").has_value());
 

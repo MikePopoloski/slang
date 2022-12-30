@@ -137,6 +137,10 @@ public:
         /// of (min:typ:max) expressions is valid for this compilation.
         std::optional<std::string> minTypMax;
 
+        /// A string that indicates the default time scale to use for
+        /// any design elements that don't specify one explicitly.
+        std::optional<std::string> timeScale;
+
         /// If true, allow various to be referenced before they are declared.
         std::optional<bool> allowUseBeforeDeclare;
 

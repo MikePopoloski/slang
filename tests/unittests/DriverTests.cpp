@@ -62,6 +62,18 @@ TEST_CASE("Driver invalid timing") {
     CHECK(stderrContains("invalid value for timing option"));
 }
 
+TEST_CASE("Driver invalid timescale") {
+    auto guard = OS::captureOutput();
+
+    Driver driver;
+    driver.addStandardArgs();
+
+    const char* argv[] = {"testfoo", "--timescale=\"foo\""};
+    CHECK(driver.parseCommandLine(2, argv));
+    CHECK(!driver.processOptions());
+    CHECK(stderrContains("invalid value for time scale option"));
+}
+
 TEST_CASE("Driver invalid include dirs") {
     auto guard = OS::captureOutput();
 
@@ -292,6 +304,7 @@ TEST_CASE("Driver setting a bunch of compilation options") {
         args += " --ignore-unknown-modules --relax-enum-conversions --allow-hierarchical-const";
         args += " --allow-dup-initial-drivers --strict-driver-checking --lint-only";
         args += " --color-diagnostics=false";
+        args += " --timescale=10ns/10ps";
 
         CHECK(driver.parseCommandLine(args));
         CHECK(driver.processOptions());

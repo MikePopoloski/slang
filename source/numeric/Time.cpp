@@ -151,6 +151,10 @@ std::optional<TimeScale> TimeScale::fromString(string_view str) {
     if (!precision || idx != str.length())
         return {};
 
+    // Precision can't be a larger unit of time than the base.
+    if (*precision > *base)
+        return {};
+
     return TimeScale(*base, *precision);
 }
 

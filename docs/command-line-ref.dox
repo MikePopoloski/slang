@@ -235,6 +235,12 @@ Currently only 'vcs' is supported as a value.
 Select which expressions in min:typ:max triplets should be processed as part of
 the compilation. By default this will be the "typical", or middle expression.
 
+`--timescale <base>/<precision>`
+
+Specifies a default time scale to use for design elements that don't explicitly
+provide one. If this option is not set, there is no default and an error will be
+issued if not all elements have a time scale specified. Example: `--timescale=1ns/1ns`
+
 `-G <name>=<value>`
 
 Override all parameters with the given name in top-level modules to the provided value.
