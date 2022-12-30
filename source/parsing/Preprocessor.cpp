@@ -741,11 +741,15 @@ bool Preprocessor::expectTimeScaleSpecifier(Token& token, TimeScaleValue& value)
         // to be a space between the integer and suffix portions of the time.
         token = consume();
 
-        TimeUnit unit;
         auto suffix = peek();
-        if (suffix.kind != TokenKind::Identifier || !suffix.isOnSameLine() ||
-            !suffixToTimeUnit(suffix.rawText(), unit)) {
+        if (suffix.kind != TokenKind::Identifier || !suffix.isOnSameLine()) {
+            addDiag(diag::ExpectedTimeLiteral, token.range());
+            return false;
+        }
 
+        size_t lengthConsumed;
+        auto unit = suffixToTimeUnit(suffix.rawText(), lengthConsumed);
+        if (!unit || lengthConsumed != suffix.rawText().length()) {
             addDiag(diag::ExpectedTimeLiteral, token.range());
             return false;
         }

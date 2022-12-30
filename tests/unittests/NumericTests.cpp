@@ -746,26 +746,56 @@ TEST_CASE("Time scaling") {
     static constexpr double ep = std::numeric_limits<double>::epsilon() * 10;
 #define AP(v) Approx(v).epsilon(ep)
 
-    TimeScale scale("100ns", "1ps");
+    auto tv = [](string_view str) { return TimeScaleValue::fromString(str).value(); };
+    auto ts = [](string_view str) { return TimeScale::fromString(str).value(); };
+
+    TimeScale scale = ts("100ns / 1ps");
     CHECK(scale.apply(234.0567891, TimeUnit::Nanoseconds) == AP(2.34057));
     CHECK(scale.apply(234.0567891, TimeUnit::Picoseconds) == AP(0.00234));
     CHECK(scale.apply(234.0567891, TimeUnit::Seconds) == AP(2.340567891e9));
 
-    scale.base = "10ps";
+    scale.base = tv("10ps");
     CHECK(scale.apply(234.0567891, TimeUnit::Nanoseconds) == AP(23405.7));
     CHECK(scale.apply(234.0567891, TimeUnit::Picoseconds) == AP(23.4));
     CHECK(scale.apply(234.0567891, TimeUnit::Seconds) == AP(2.340567891e13));
 
-    scale.base = "1ms";
+    scale.base = tv("1ms");
     CHECK(scale.apply(234.0567891, TimeUnit::Nanoseconds) == AP(0.000234057));
     CHECK(scale.apply(234.0567891, TimeUnit::Picoseconds) == AP(2.34e-7));
     CHECK(scale.apply(234.0567891, TimeUnit::Seconds) == AP(234056.7891));
 
-    scale.base = "1ns";
-    scale.precision = "1ns";
+    scale.base = tv("1ns");
+    scale.precision = tv("1ns");
     CHECK(scale.apply(234.0567891, TimeUnit::Nanoseconds) == AP(234));
     CHECK(scale.apply(234.0567891, TimeUnit::Picoseconds) == AP(0));
     CHECK(scale.apply(234.0567891, TimeUnit::Seconds) == AP(234056789100));
+}
+
+TEST_CASE("TimeScale stringify") {
+    CHECK(!TimeScale::fromString("").has_value());
+    CHECK(!TimeScale::fromString("foo").has_value());
+    CHECK(!TimeScale::fromString("3.4 ps").has_value());
+    CHECK(!TimeScale::fromString("3    ps").has_value());
+    CHECK(!TimeScale::fromString("3").has_value());
+    CHECK(!TimeScale::fromString("3    ds").has_value());
+    CHECK(!TimeScale::fromString("3    pd").has_value());
+    CHECK(!TimeScale::fromString("1 ns").has_value());
+    CHECK(!TimeScale::fromString("1 ns d 1 ns").has_value());
+    CHECK(!TimeScale::fromString("1 ns /  ").has_value());
+    CHECK(!TimeScale::fromString("1 ns / 1bb").has_value());
+    CHECK(!TimeScale::fromString("1 ns / 1ns fff").has_value());
+
+    CHECK(!TimeScaleValue::fromString("1 nssss").has_value());
+
+    std::ostringstream ss;
+    ss << *TimeScaleValue::fromString("1ns") << *TimeScale::fromString("1ns/1ps");
+    CHECK(ss.str() == "1ns1ns / 1ps");
+
+    CHECK(TimeScaleValue::fromString("100s")->toString() == "100s");
+    CHECK(TimeScale::fromString("10   ms    /   10    us")->toString() == "10ms / 10us");
+
+    size_t length;
+    CHECK(!suffixToTimeUnit("", length).has_value());
 }
 
 TEST_CASE("SVInt operator crash regression GH #469") {
