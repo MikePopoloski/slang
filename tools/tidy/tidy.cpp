@@ -1,3 +1,10 @@
+//------------------------------------------------------------------------------
+//! @file tidy.h
+//! @brief The slang linter
+//
+// SPDX-FileCopyrightText: Michael Popoloski
+// SPDX-License-Identifier: MIT
+//------------------------------------------------------------------------------
 #include "fmt/color.h"
 #include "fmt/format.h"
 #include "include/TidyFactory.h"

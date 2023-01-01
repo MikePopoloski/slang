@@ -1,3 +1,10 @@
+//------------------------------------------------------------------------------
+//! @file OnlyAssignedOnResetTest.h
+//! @brief Test for the OnlyAssignedOnReset check
+//
+// SPDX-FileCopyrightText: Michael Popoloski
+// SPDX-License-Identifier: MIT
+//------------------------------------------------------------------------------
 #include "../synthesis/OnlyAssignedOnReset.cpp"
 #include "Test.h"
 

@@ -1,3 +1,7 @@
+# ~~~
+# SPDX-FileCopyrightText: Michael Popoloski
+# SPDX-License-Identifier: MIT
+# ~~~
 add_executable(slang_tidy tidy.cpp synthesis/OnlyAssignedOnReset.cpp
                           synthesis/RegisterHasNoReset.cpp)
 add_executable(slang::tidy ALIAS slang_tidy)

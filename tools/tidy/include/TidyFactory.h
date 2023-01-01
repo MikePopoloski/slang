@@ -1,3 +1,10 @@
+//------------------------------------------------------------------------------
+//! @file TidyFactory.h
+//! @brief Factory object for slang-tidy
+//
+// SPDX-FileCopyrightText: Michael Popoloski
+// SPDX-License-Identifier: MIT
+//------------------------------------------------------------------------------
 #pragma once
 
 #include <functional>

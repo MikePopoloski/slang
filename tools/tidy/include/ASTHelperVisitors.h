@@ -1,3 +1,10 @@
+//------------------------------------------------------------------------------
+//! @file ASTHelperVisitors.h
+//! @brief Reusable AST visitors
+//
+// SPDX-FileCopyrightText: Michael Popoloski
+// SPDX-License-Identifier: MIT
+//------------------------------------------------------------------------------
 #pragma once
 
 #include "slang/ast/ASTVisitor.h"

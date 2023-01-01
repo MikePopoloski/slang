@@ -1,3 +1,10 @@
+//------------------------------------------------------------------------------
+//! @file RegisterHasNoResetTest.h
+//! @brief Test for the RegisterHasNoReset check
+//
+// SPDX-FileCopyrightText: Michael Popoloski
+// SPDX-License-Identifier: MIT
+//------------------------------------------------------------------------------
 #include "../synthesis/RegisterHasNoReset.cpp"
 #include "Test.h"
 
