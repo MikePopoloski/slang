@@ -18,7 +18,7 @@ class InstanceSymbol;
 /// The root of a single compilation unit.
 class SLANG_EXPORT CompilationUnitSymbol : public Symbol, public Scope {
 public:
-    TimeScale timeScale;
+    std::optional<TimeScale> timeScale;
 
     explicit CompilationUnitSymbol(Compilation& compilation);
 
@@ -39,7 +39,7 @@ private:
 class SLANG_EXPORT PackageSymbol : public Symbol, public Scope {
 public:
     const NetType& defaultNetType;
-    TimeScale timeScale;
+    std::optional<TimeScale> timeScale;
     VariableLifetime defaultLifetime;
     span<const syntax::PackageImportItemSyntax* const> exportDecls;
     bool hasExportAll = false;

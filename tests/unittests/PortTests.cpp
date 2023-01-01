@@ -1626,7 +1626,10 @@ module cmp
 endmodule : cmp
 )");
 
-    Compilation compilation;
+    CompilationOptions options;
+    options.defaultTimeScale = TimeScale();
+
+    Compilation compilation(options);
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }

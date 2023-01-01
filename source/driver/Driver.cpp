@@ -113,6 +113,9 @@ void Driver::addStandardArgs() {
                 "Attempt to increase compatibility with the specified tool", "vcs");
     cmdLine.add("-T,--timing", options.minTypMax,
                 "Select which value to consider in min:typ:max expressions", "min|typ|max");
+    cmdLine.add("--timescale", options.timeScale,
+                "Default time scale to use for design elements that don't specify one explicitly",
+                "<base>/<precision>");
     cmdLine.add("--allow-use-before-declare", options.allowUseBeforeDeclare,
                 "Don't issue an error for use of names before their declarations.");
     cmdLine.add("--ignore-unknown-modules", options.ignoreUnknownModules,
@@ -309,6 +312,12 @@ bool Driver::processOptions() {
     if (options.librariesInheritMacros == true && !options.singleUnit.value_or(false)) {
         OS::printE(fg(diagClient->errorColor), "error: ");
         OS::printE("--single-unit must be set when --libraries-inherit-macros is used");
+        return false;
+    }
+
+    if (options.timeScale.has_value() && !TimeScale::fromString(*options.timeScale)) {
+        OS::printE(fg(diagClient->errorColor), "error: ");
+        OS::printE(fmt::format("invalid value for time scale option: '{}'", *options.timeScale));
         return false;
     }
 
@@ -716,6 +725,9 @@ Bag Driver::createOptionBag() const {
         else if (options.minTypMax == "max")
             coptions.minTypMax = MinTypMax::Max;
     }
+
+    if (options.timeScale.has_value())
+        coptions.defaultTimeScale = TimeScale::fromString(*options.timeScale);
 
     Bag bag;
     bag.set(ppoptions);

@@ -27,8 +27,9 @@ ENUM_SIZED(TimeUnit, uint8_t, TU)
 #undef TU
 // clang-format on
 
-bool suffixToTimeUnit(string_view timeSuffix, TimeUnit& unit);
-string_view timeUnitToSuffix(TimeUnit unit);
+SLANG_EXPORT std::optional<TimeUnit> suffixToTimeUnit(string_view timeSuffix,
+                                                      size_t& lengthConsumed);
+SLANG_EXPORT string_view timeUnitToSuffix(TimeUnit unit);
 
 /// As allowed by SystemVerilog, time scales can be expressed
 /// in one of only a few magnitudes.
@@ -36,20 +37,17 @@ enum class SLANG_EXPORT TimeScaleMagnitude : uint8_t { One = 1, Ten = 10, Hundre
 
 /// A combination of a unit and magnitude for a time scale value.
 struct SLANG_EXPORT TimeScaleValue {
-    TimeUnit unit = TimeUnit::Seconds;
+    TimeUnit unit = TimeUnit::Nanoseconds;
     TimeScaleMagnitude magnitude = TimeScaleMagnitude::One;
 
     TimeScaleValue() = default;
     TimeScaleValue(TimeUnit unit, TimeScaleMagnitude magnitude) :
         unit(unit), magnitude(magnitude) {}
-    TimeScaleValue(string_view str);
-
-    template<size_t N>
-    TimeScaleValue(const char (&str)[N]) : TimeScaleValue(string_view(str)) {}
 
     std::string toString() const;
 
     static std::optional<TimeScaleValue> fromLiteral(double value, TimeUnit unit);
+    static std::optional<TimeScaleValue> fromString(string_view str);
 
     bool operator>(const TimeScaleValue& rhs) const;
     bool operator==(const TimeScaleValue& rhs) const;
@@ -70,6 +68,8 @@ struct SLANG_EXPORT TimeScale {
     double apply(double value, TimeUnit unit) const;
 
     std::string toString() const;
+
+    static std::optional<TimeScale> fromString(string_view str);
 
     bool operator==(const TimeScale& rhs) const;
     bool operator!=(const TimeScale& rhs) const { return !(*this == rhs); }

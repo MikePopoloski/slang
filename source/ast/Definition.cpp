@@ -122,7 +122,10 @@ Definition::Definition(const Scope& scope, LookupLocation lookupLocation,
 
     for (auto member : syntax.members) {
         if (member->kind == SyntaxKind::TimeUnitsDeclaration) {
-            SemanticFacts::populateTimeScale(timeScale, scope,
+            if (!timeScale)
+                timeScale.emplace();
+
+            SemanticFacts::populateTimeScale(*timeScale, scope,
                                              member->as<TimeUnitsDeclarationSyntax>(), unitsRange,
                                              precisionRange, first);
             continue;
@@ -143,8 +146,8 @@ Definition::Definition(const Scope& scope, LookupLocation lookupLocation,
         }
     }
 
-    SemanticFacts::populateTimeScale(timeScale, scope, directiveTimeScale, unitsRange.has_value(),
-                                     precisionRange.has_value());
+    SemanticFacts::populateTimeScale(timeScale, scope, directiveTimeScale, unitsRange,
+                                     precisionRange);
 }
 
 string_view Definition::getKindString() const {

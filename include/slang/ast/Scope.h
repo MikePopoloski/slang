@@ -55,7 +55,7 @@ public:
     const NetType& getDefaultNetType() const;
 
     /// Gets the time scale for delay values expressed within this scope.
-    TimeScale getTimeScale() const;
+    std::optional<TimeScale> getTimeScale() const;
 
     /// Returns true if this scope represents a procedural context; that is,
     /// a procedural block, or a task/function scope.

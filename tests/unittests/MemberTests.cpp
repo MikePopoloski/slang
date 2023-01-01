@@ -652,13 +652,12 @@ endpackage
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 
-    CHECK(compilation.getDefinition("m", compilation.getRoot())->timeScale ==
-          TimeScale("10ns", "10ps"));
-    CHECK(compilation.getDefinition("n", compilation.getRoot())->timeScale ==
-          TimeScale("10us", "1ns"));
-    CHECK(compilation.getDefinition("o", compilation.getRoot())->timeScale ==
-          TimeScale("100s", "10fs"));
-    CHECK(compilation.getPackage("p")->getTimeScale() == TimeScale("100s", "1ps"));
+    auto ts = [](string_view str) { return TimeScale::fromString(str).value(); };
+
+    CHECK(compilation.getDefinition("m", compilation.getRoot())->timeScale == ts("10ns/10ps"));
+    CHECK(compilation.getDefinition("n", compilation.getRoot())->timeScale == ts("10us/1ns"));
+    CHECK(compilation.getDefinition("o", compilation.getRoot())->timeScale == ts("100s/10fs"));
+    CHECK(compilation.getPackage("p")->getTimeScale() == ts("100s/1ps"));
 }
 
 TEST_CASE("Time units error cases") {
@@ -676,6 +675,14 @@ endmodule
 module o;
     timeunit 20ns;
 endmodule
+
+module p;
+    timeunit 10ns / 100ns;
+endmodule
+
+module q;
+    timeunit 1fs;
+endmodule
 )");
 
     Compilation compilation;
@@ -687,7 +694,32 @@ endmodule
     CHECK((it++)->code == diag::TimeScaleFirstInScope);
     CHECK((it++)->code == diag::MismatchedTimeScales);
     CHECK((it++)->code == diag::InvalidTimeScaleSpecifier);
+    CHECK((it++)->code == diag::InvalidTimeScalePrecision);
+    CHECK((it++)->code == diag::InvalidInferredTimeScale);
     CHECK(it == diags.end());
+}
+
+TEST_CASE("Timescale missing on some elems") {
+    auto tree = SyntaxTree::fromText(R"(
+package p;
+endpackage
+
+module m;
+endmodule
+
+module top;
+    timeunit 1ns;
+    m m1();
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::MissingTimeScale);
+    CHECK(diags[1].code == diag::MissingTimeScale);
 }
 
 TEST_CASE("Port decl in ANSI module") {

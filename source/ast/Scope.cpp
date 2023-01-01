@@ -84,7 +84,7 @@ const NetType& Scope::getDefaultNetType() const {
     return getCompilation().getNetType(TokenKind::Unknown);
 }
 
-TimeScale Scope::getTimeScale() const {
+std::optional<TimeScale> Scope::getTimeScale() const {
     const Scope* current = this;
     do {
         auto& sym = current->asSymbol();
@@ -93,11 +93,10 @@ TimeScale Scope::getTimeScale() const {
                 return sym.as<CompilationUnitSymbol>().timeScale;
             case SymbolKind::Package:
                 return sym.as<PackageSymbol>().timeScale;
+            case SymbolKind::InstanceBody:
+                return sym.as<InstanceBodySymbol>().getDefinition().timeScale;
             default:
-                if (sym.kind == SymbolKind::InstanceBody)
-                    return sym.as<InstanceBodySymbol>().getDefinition().timeScale;
-                else
-                    current = sym.getParentScope();
+                current = sym.getParentScope();
                 break;
         }
     } while (current);

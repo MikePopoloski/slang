@@ -11,16 +11,38 @@
 #include <ostream>
 
 #include "slang/util/String.h"
-#include "slang/util/StringTable.h"
 
 namespace slang {
 
-const static StringTable<TimeUnit> strToUnit = {
-    {"s", TimeUnit::Seconds},      {"ms", TimeUnit::Milliseconds}, {"us", TimeUnit::Microseconds},
-    {"ns", TimeUnit::Nanoseconds}, {"ps", TimeUnit::Picoseconds},  {"fs", TimeUnit::Femtoseconds}};
+std::optional<TimeUnit> suffixToTimeUnit(string_view timeSuffix, size_t& lengthConsumed) {
+    if (timeSuffix.empty())
+        return {};
 
-bool suffixToTimeUnit(string_view timeSuffix, TimeUnit& unit) {
-    return strToUnit.lookup(timeSuffix, unit);
+    auto checkRet = [&](TimeUnit unit) -> std::optional<TimeUnit> {
+        if (timeSuffix.length() < 2 || timeSuffix[1] != 's')
+            return std::nullopt;
+
+        lengthConsumed = 2;
+        return unit;
+    };
+
+    switch (timeSuffix[0]) {
+        case 's':
+            lengthConsumed = 1;
+            return TimeUnit::Seconds;
+        case 'm':
+            return checkRet(TimeUnit::Milliseconds);
+        case 'u':
+            return checkRet(TimeUnit::Microseconds);
+        case 'n':
+            return checkRet(TimeUnit::Nanoseconds);
+        case 'p':
+            return checkRet(TimeUnit::Picoseconds);
+        case 'f':
+            return checkRet(TimeUnit::Femtoseconds);
+        default:
+            return {};
+    }
 }
 
 string_view timeUnitToSuffix(TimeUnit unit) {
@@ -41,26 +63,6 @@ string_view timeUnitToSuffix(TimeUnit unit) {
     ASSUME_UNREACHABLE;
 }
 
-TimeScaleValue::TimeScaleValue(string_view str) {
-    size_t idx;
-    auto i = strToInt(str, &idx);
-    if (!i)
-        throw std::invalid_argument("Not a valid timescale magnitude");
-
-    while (idx < str.size() && str[idx] == ' ')
-        idx++;
-
-    TimeUnit u;
-    if (idx >= str.size() || !suffixToTimeUnit(str.substr(idx), u))
-        throw std::invalid_argument("Time value suffix is missing or invalid");
-
-    auto tv = fromLiteral(double(*i), u);
-    if (!tv)
-        throw std::invalid_argument("Invalid time scale value");
-
-    *this = *tv;
-}
-
 std::optional<TimeScaleValue> TimeScaleValue::fromLiteral(double value, TimeUnit unit) {
     if (value == 1)
         return TimeScaleValue(unit, TimeScaleMagnitude::One);
@@ -70,6 +72,36 @@ std::optional<TimeScaleValue> TimeScaleValue::fromLiteral(double value, TimeUnit
         return TimeScaleValue(unit, TimeScaleMagnitude::Hundred);
 
     return std::nullopt;
+}
+
+static std::optional<TimeScaleValue> parseValue(string_view str, size_t& lengthConsumed) {
+    size_t idx;
+    auto i = strToInt(str, &idx);
+    if (!i)
+        return {};
+
+    while (idx < str.size() && str[idx] == ' ')
+        idx++;
+
+    if (idx >= str.size())
+        return {};
+
+    size_t unitConsumed;
+    auto unit = suffixToTimeUnit(str.substr(idx), unitConsumed);
+    if (!unit)
+        return {};
+
+    lengthConsumed = idx + unitConsumed;
+    return TimeScaleValue::fromLiteral(double(*i), *unit);
+}
+
+std::optional<TimeScaleValue> TimeScaleValue::fromString(string_view str) {
+    size_t lengthConsumed;
+    auto result = parseValue(str, lengthConsumed);
+    if (!result || lengthConsumed != str.size())
+        return {};
+
+    return result;
 }
 
 std::string TimeScaleValue::toString() const {
@@ -93,6 +125,37 @@ bool TimeScaleValue::operator==(const TimeScaleValue& rhs) const {
 
 std::ostream& operator<<(std::ostream& os, const TimeScaleValue& tv) {
     return os << tv.toString();
+}
+
+std::optional<TimeScale> TimeScale::fromString(string_view str) {
+    size_t idx;
+    auto base = parseValue(str, idx);
+    if (!base)
+        return {};
+
+    while (idx < str.size() && str[idx] == ' ')
+        idx++;
+
+    if (idx >= str.size() || str[idx] != '/')
+        return {};
+
+    do {
+        idx++;
+    } while (idx < str.size() && str[idx] == ' ');
+
+    if (idx >= str.size())
+        return {};
+
+    str = str.substr(idx);
+    auto precision = parseValue(str, idx);
+    if (!precision || idx != str.length())
+        return {};
+
+    // Precision can't be a larger unit of time than the base.
+    if (*precision > *base)
+        return {};
+
+    return TimeScale(*base, *precision);
 }
 
 double TimeScale::apply(double value, TimeUnit unit) const {

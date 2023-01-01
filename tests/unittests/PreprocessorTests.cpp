@@ -1286,6 +1286,9 @@ TEST_CASE("timescale directive") {
 
     lexTimeScale("`timescale 1.2fs / 1fs");
     CHECK(!diagnostics.empty());
+
+    lexTimeScale("`timescale 1");
+    CHECK(!diagnostics.empty());
 }
 
 TokenKind lexDefaultNetType(string_view text) {

@@ -75,7 +75,7 @@ public:
     DefinitionKind definitionKind;
     VariableLifetime defaultLifetime;
     UnconnectedDrive unconnectedDrive;
-    TimeScale timeScale;
+    std::optional<TimeScale> timeScale;
     SmallVector<ParameterDecl, 8> parameters;
     flat_hash_set<string_view> modports;
     span<const AttributeSymbol* const> attributes;

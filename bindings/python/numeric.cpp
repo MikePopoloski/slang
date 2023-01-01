@@ -227,8 +227,6 @@ void registerNumeric(py::module_& m) {
     py::implicitly_convertible<double, SVInt>();
 
     EXPOSE_ENUM(m, TimeUnit);
-    m.def("suffixToTimeUnit", &suffixToTimeUnit, "timeSuffix"_a, "unit"_a);
-    m.def("timeUnitToSuffix", &timeUnitToSuffix, "unit"_a);
 
     py::enum_<TimeScaleMagnitude>(m, "TimeScaleMagnitude")
         .value("One", TimeScaleMagnitude::One)
@@ -238,10 +236,10 @@ void registerNumeric(py::module_& m) {
     py::class_<TimeScaleValue>(m, "TimeScaleValue")
         .def(py::init<>())
         .def(py::init<TimeUnit, TimeScaleMagnitude>(), "unit"_a, "magnitude"_a)
-        .def(py::init<string_view>(), "str"_a)
         .def_readwrite("unit", &TimeScaleValue::unit)
         .def_readwrite("magnitude", &TimeScaleValue::magnitude)
         .def_static("fromLiteral", &TimeScaleValue::fromLiteral, "value"_a, "unit"_a)
+        .def_static("fromString", &TimeScaleValue::fromString, "str"_a)
         .def(py::self == py::self)
         .def(py::self != py::self)
         .def("__repr__", [](const TimeScaleValue& self) { return self.toString(); });
@@ -252,6 +250,7 @@ void registerNumeric(py::module_& m) {
         .def_readwrite("base", &TimeScale::base)
         .def_readwrite("precision", &TimeScale::precision)
         .def("apply", &TimeScale::apply, "value"_a, "unit"_a)
+        .def_static("fromString", &TimeScale::fromString, "str"_a)
         .def(py::self == py::self)
         .def(py::self != py::self)
         .def("__repr__", [](const TimeScale& self) { return self.toString(); });

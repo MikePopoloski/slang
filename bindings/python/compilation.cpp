@@ -74,15 +74,20 @@ void registerCompilation(py::module_& m) {
         .def_readwrite("maxConstexprSteps", &CompilationOptions::maxConstexprSteps)
         .def_readwrite("maxConstexprBacktrace", &CompilationOptions::maxConstexprBacktrace)
         .def_readwrite("maxDefParamSteps", &CompilationOptions::maxDefParamSteps)
+        .def_readwrite("maxInstanceArray", &CompilationOptions::maxInstanceArray)
         .def_readwrite("errorLimit", &CompilationOptions::errorLimit)
         .def_readwrite("typoCorrectionLimit", &CompilationOptions::typoCorrectionLimit)
         .def_readwrite("minTypMax", &CompilationOptions::minTypMax)
         .def_readwrite("allowHierarchicalConst", &CompilationOptions::allowHierarchicalConst)
         .def_readwrite("relaxEnumConversions", &CompilationOptions::relaxEnumConversions)
+        .def_readwrite("allowUseBeforeDeclare", &CompilationOptions::allowUseBeforeDeclare)
         .def_readwrite("allowDupInitialDrivers", &CompilationOptions::allowDupInitialDrivers)
         .def_readwrite("strictDriverChecking", &CompilationOptions::strictDriverChecking)
         .def_readwrite("lintMode", &CompilationOptions::lintMode)
         .def_readwrite("suppressUnused", &CompilationOptions::suppressUnused)
+        .def_readwrite("ignoreUnknownModules", &CompilationOptions::ignoreUnknownModules)
+        .def_readwrite("scriptMode", &CompilationOptions::scriptMode)
+        .def_readwrite("defaultTimeScale", &CompilationOptions::defaultTimeScale)
         .def_readwrite("topModules", &CompilationOptions::topModules)
         .def_readwrite("paramOverrides", &CompilationOptions::paramOverrides);
 
@@ -110,11 +115,10 @@ void registerCompilation(py::module_& m) {
         .def("getSemanticDiagnostics", &Compilation::getSemanticDiagnostics, byrefint)
         .def("getAllDiagnostics", &Compilation::getAllDiagnostics, byrefint)
         .def("addDiagnostics", &Compilation::addDiagnostics, "diagnostics"_a)
-        .def_property("defaultTimeScale", &Compilation::getDefaultTimeScale,
-                      &Compilation::setDefaultTimeScale)
         .def("getType", py::overload_cast<SyntaxKind>(&Compilation::getType, py::const_), byrefint,
              "kind"_a)
         .def("getNetType", &Compilation::getNetType, byrefint, "kind"_a)
+        .def_property_readonly("defaultTimeScale", &Compilation::getDefaultTimeScale)
         .def_property_readonly("bitType", &Compilation::getBitType)
         .def_property_readonly("logicType", &Compilation::getLogicType)
         .def_property_readonly("intType", &Compilation::getIntType)

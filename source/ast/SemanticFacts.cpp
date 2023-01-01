@@ -251,15 +251,16 @@ void SemanticFacts::populateTimeScale(TimeScale& timeScale, const Scope& scope,
     }
 }
 
-void SemanticFacts::populateTimeScale(TimeScale& timeScale, const Scope& scope,
-                                      std::optional<TimeScale> directiveTimeScale, bool hasBase,
-                                      bool hasPrecision) {
+void SemanticFacts::populateTimeScale(std::optional<TimeScale>& timeScale, const Scope& scope,
+                                      std::optional<TimeScale> directiveTimeScale,
+                                      std::optional<SourceRange> unitsRange,
+                                      std::optional<SourceRange> precisionRange) {
     // If no time unit was set, infer one based on the following rules:
     // - If the scope is nested (inside another definition), inherit from that definition.
     // - Otherwise use a `timescale directive if there is one.
     // - Otherwise, look for a time unit in the compilation scope.
     // - Finally use the compilation default.
-    if (hasBase && hasPrecision)
+    if (unitsRange && precisionRange)
         return;
 
     std::optional<TimeScale> ts;
@@ -269,12 +270,31 @@ void SemanticFacts::populateTimeScale(TimeScale& timeScale, const Scope& scope,
     if (!ts)
         ts = scope.getTimeScale();
 
-    if (!hasBase)
-        timeScale.base = ts->base;
-    if (!hasPrecision)
-        timeScale.precision = ts->precision;
+    if (!ts) {
+        // If the scope didn't have any portion of the timescale set yet,
+        // then we'll just let it remain nullopt so clients know that we
+        // are using the default. Otherwise we should use the built-in
+        // default for the unset portion.
+        if (!timeScale)
+            return;
 
-    // TODO: error if inferred timescale is invalid (because precision > units)
+        // Defaults to 1ns/1ns
+        ts.emplace();
+    }
+    else if (!timeScale) {
+        timeScale.emplace();
+    }
+
+    if (!unitsRange)
+        timeScale->base = ts->base;
+    if (!precisionRange)
+        timeScale->precision = ts->precision;
+
+    if ((unitsRange || precisionRange) && timeScale->precision > timeScale->base) {
+        auto range = precisionRange ? *precisionRange : *unitsRange;
+        auto& diag = scope.addDiag(diag::InvalidInferredTimeScale, range);
+        diag << timeScale->toString();
+    }
 }
 
 bool SemanticFacts::isAllowedInModport(SymbolKind kind) {
