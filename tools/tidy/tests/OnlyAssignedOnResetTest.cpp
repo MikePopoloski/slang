@@ -140,7 +140,6 @@ module top;
         end
         else if (push) begin
             for (int i = 0; i <= 4; i++) begin
-                // if (ptr == i) fifo[i] <= data;
             end
         end
     end
@@ -209,7 +208,6 @@ module top;
             data.c <= 1'b0;
         end
         else begin
-            // data.a <= 1'b1;
         end
     end
 endmodule
