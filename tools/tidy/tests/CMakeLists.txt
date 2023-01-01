@@ -15,9 +15,4 @@ target_compile_definitions(tidy_unittests PRIVATE UNITTESTS)
 target_include_directories(tidy_unittests PRIVATE ../include ../../../include
                                                   ../../../tests/unittests)
 
-if(CI_BUILD)
-  message("Running CI build")
-  target_compile_definitions(tidy_unittests PRIVATE CI_BUILD)
-endif()
-
 add_test(NAME tidy_unittests COMMAND tidy_unittests)
