@@ -13,4 +13,8 @@ target_link_libraries(
 target_include_directories(slang_tidy PRIVATE include ../../include)
 set_target_properties(slang_tidy PROPERTIES OUTPUT_NAME "slang-tidy")
 
+if(SLANG_INCLUDE_INSTALL)
+    install(TARGETS slang_tidy RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+endif()
+
 add_subdirectory(tests)
