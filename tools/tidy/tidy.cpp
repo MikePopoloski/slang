@@ -37,10 +37,9 @@ int main(int argc, char** argv) {
     }
 
     if (showVersion) {
-        OS::print(
-            fmt::format("slang-tidy version {}.{}.{}+{}\nCompiled with slang version {}.{}.{}+{}\n",
-                        0, 1, 0, 0, VersionInfo::getMajor(), VersionInfo::getMinor(),
-                        VersionInfo::getPatch(), VersionInfo::getHash()));
+        OS::print(fmt::format("slang-tidy version {}.{}.{}+{}\n", VersionInfo::getMajor(),
+                              VersionInfo::getMinor(), VersionInfo::getPatch(),
+                              VersionInfo::getHash()));
         return 0;
     }
 
