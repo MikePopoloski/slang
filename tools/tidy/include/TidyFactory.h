@@ -11,6 +11,7 @@
 #include <memory>
 #include <stdexcept>
 #include <string>
+#include <unordered_map>
 
 #include "slang/ast/symbols/CompilationUnitSymbols.h"
 
