@@ -209,8 +209,8 @@ public:
     static bool isKind(AssertionExprKind kind) { return kind == AssertionExprKind::Simple; }
 
     template<typename TVisitor>
-    void visitExprs(TVisitor&& visitor) const {
-        expr.visit(visitor);
+    decltype(auto) visitExprs(TVisitor&& visitor) const {
+        return expr.visit(visitor);
     }
 };
 
@@ -300,8 +300,8 @@ public:
     static bool isKind(AssertionExprKind kind) { return kind == AssertionExprKind::Unary; }
 
     template<typename TVisitor>
-    void visitExprs(TVisitor&& visitor) const {
-        expr.visit(visitor);
+    decltype(auto) visitExprs(TVisitor&& visitor) const {
+        return expr.visit(visitor);
     }
 };
 
@@ -416,8 +416,8 @@ public:
     static bool isKind(AssertionExprKind kind) { return kind == AssertionExprKind::StrongWeak; }
 
     template<typename TVisitor>
-    void visitExprs(TVisitor&& visitor) const {
-        expr.visit(visitor);
+    decltype(auto) visitExprs(TVisitor&& visitor) const {
+        return expr.visit(visitor);
     }
 };
 

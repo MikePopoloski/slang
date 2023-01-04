@@ -132,8 +132,8 @@ public:
     static bool isKind(ConstraintKind kind) { return kind == ConstraintKind::Expression; }
 
     template<typename TVisitor>
-    void visitExprs(TVisitor&& visitor) const {
-        expr.visit(visitor);
+    decltype(auto) visitExprs(TVisitor&& visitor) const {
+        return expr.visit(visitor);
     }
 };
 
@@ -226,8 +226,8 @@ public:
     static bool isKind(ConstraintKind kind) { return kind == ConstraintKind::DisableSoft; }
 
     template<typename TVisitor>
-    void visitExprs(TVisitor&& visitor) const {
-        target.visit(visitor);
+    decltype(auto) visitExprs(TVisitor&& visitor) const {
+        return target.visit(visitor);
     }
 };
 

@@ -149,8 +149,8 @@ public:
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::Subroutine; }
 
     template<typename TVisitor>
-    void visitStmts(TVisitor&& visitor) const {
-        getBody().visit(visitor);
+    decltype(auto) visitStmts(TVisitor&& visitor) const {
+        return getBody().visit(visitor);
     }
 
 private:

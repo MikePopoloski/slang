@@ -118,8 +118,8 @@ public:
     void serializeTo(ASTSerializer& serializer) const;
 
     template<typename TVisitor>
-    void visitExprs(TVisitor&& visitor) const {
-        expr.visit(visitor);
+    decltype(auto) visitExprs(TVisitor&& visitor) const {
+        return expr.visit(visitor);
     }
 };
 
@@ -284,8 +284,8 @@ public:
     void serializeTo(ASTSerializer& serializer) const;
 
     template<typename TVisitor>
-    void visitExprs(TVisitor&& visitor) const {
-        expr.visit(visitor);
+    decltype(auto) visitExprs(TVisitor&& visitor) const {
+        return expr.visit(visitor);
     }
 };
 

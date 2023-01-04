@@ -44,8 +44,8 @@ public:
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::UnaryOp; }
 
     template<typename TVisitor>
-    void visitExprs(TVisitor&& visitor) const {
-        operand().visit(visitor);
+    decltype(auto) visitExprs(TVisitor&& visitor) const {
+        return operand().visit(visitor);
     }
 
 private:
