@@ -322,8 +322,8 @@ public:
     static bool isKind(StatementKind kind) { return kind == StatementKind::Block; }
 
     template<typename TVisitor>
-    void visitStmts(TVisitor&& visitor) const {
-        body.visit(visitor);
+    decltype(auto) visitStmts(TVisitor&& visitor) const {
+        return body.visit(visitor);
     }
 };
 
@@ -589,8 +589,8 @@ public:
     }
 
     template<typename TVisitor>
-    void visitStmts(TVisitor&& visitor) const {
-        body.visit(visitor);
+    decltype(auto) visitStmts(TVisitor&& visitor) const {
+        return body.visit(visitor);
     }
 };
 
@@ -613,13 +613,13 @@ public:
     static bool isKind(StatementKind kind) { return kind == StatementKind::RepeatLoop; }
 
     template<typename TVisitor>
-    void visitExprs(TVisitor&& visitor) const {
-        count.visit(visitor);
+    decltype(auto) visitExprs(TVisitor&& visitor) const {
+        return count.visit(visitor);
     }
 
     template<typename TVisitor>
-    void visitStmts(TVisitor&& visitor) const {
-        body.visit(visitor);
+    decltype(auto) visitStmts(TVisitor&& visitor) const {
+        return body.visit(visitor);
     }
 };
 
@@ -659,13 +659,13 @@ public:
     static bool isKind(StatementKind kind) { return kind == StatementKind::ForeachLoop; }
 
     template<typename TVisitor>
-    void visitExprs(TVisitor&& visitor) const {
-        arrayRef.visit(visitor);
+    decltype(auto) visitExprs(TVisitor&& visitor) const {
+        return arrayRef.visit(visitor);
     }
 
     template<typename TVisitor>
-    void visitStmts(TVisitor&& visitor) const {
-        body.visit(visitor);
+    decltype(auto) visitStmts(TVisitor&& visitor) const {
+        return body.visit(visitor);
     }
 
 private:
@@ -692,13 +692,13 @@ public:
     static bool isKind(StatementKind kind) { return kind == StatementKind::WhileLoop; }
 
     template<typename TVisitor>
-    void visitExprs(TVisitor&& visitor) const {
-        cond.visit(visitor);
+    decltype(auto) visitExprs(TVisitor&& visitor) const {
+        return cond.visit(visitor);
     }
 
     template<typename TVisitor>
-    void visitStmts(TVisitor&& visitor) const {
-        body.visit(visitor);
+    decltype(auto) visitStmts(TVisitor&& visitor) const {
+        return body.visit(visitor);
     }
 };
 
@@ -721,13 +721,13 @@ public:
     static bool isKind(StatementKind kind) { return kind == StatementKind::DoWhileLoop; }
 
     template<typename TVisitor>
-    void visitExprs(TVisitor&& visitor) const {
-        cond.visit(visitor);
+    decltype(auto) visitExprs(TVisitor&& visitor) const {
+        return cond.visit(visitor);
     }
 
     template<typename TVisitor>
-    void visitStmts(TVisitor&& visitor) const {
-        body.visit(visitor);
+    decltype(auto) visitStmts(TVisitor&& visitor) const {
+        return body.visit(visitor);
     }
 };
 
@@ -749,8 +749,8 @@ public:
     static bool isKind(StatementKind kind) { return kind == StatementKind::ForeverLoop; }
 
     template<typename TVisitor>
-    void visitStmts(TVisitor&& visitor) const {
-        body.visit(visitor);
+    decltype(auto) visitStmts(TVisitor&& visitor) const {
+        return body.visit(visitor);
     }
 };
 
@@ -776,8 +776,8 @@ public:
     static bool isKind(StatementKind kind) { return kind == StatementKind::ExpressionStatement; }
 
     template<typename TVisitor>
-    void visitExprs(TVisitor&& visitor) const {
-        expr.visit(visitor);
+    decltype(auto) visitExprs(TVisitor&& visitor) const {
+        return expr.visit(visitor);
     }
 };
 
@@ -800,13 +800,13 @@ public:
     static bool isKind(StatementKind kind) { return kind == StatementKind::Timed; }
 
     template<typename TVisitor>
-    void visitExprs(TVisitor&& visitor) const {
-        timing.visit(visitor);
+    decltype(auto) visitExprs(TVisitor&& visitor) const {
+        return timing.visit(visitor);
     }
 
     template<typename TVisitor>
-    void visitStmts(TVisitor&& visitor) const {
-        stmt.visit(visitor);
+    decltype(auto) visitStmts(TVisitor&& visitor) const {
+        return stmt.visit(visitor);
     }
 };
 
@@ -837,8 +837,8 @@ public:
     static bool isKind(StatementKind kind) { return kind == StatementKind::ImmediateAssertion; }
 
     template<typename TVisitor>
-    void visitExprs(TVisitor&& visitor) const {
-        cond.visit(visitor);
+    decltype(auto) visitExprs(TVisitor&& visitor) const {
+        return cond.visit(visitor);
     }
 
     template<typename TVisitor>
@@ -875,8 +875,8 @@ public:
     static bool isKind(StatementKind kind) { return kind == StatementKind::ConcurrentAssertion; }
 
     template<typename TVisitor>
-    void visitExprs(TVisitor&& visitor) const {
-        propertySpec.visit(visitor);
+    decltype(auto) visitExprs(TVisitor&& visitor) const {
+        return propertySpec.visit(visitor);
     }
 
     template<typename TVisitor>
@@ -922,13 +922,13 @@ public:
     static bool isKind(StatementKind kind) { return kind == StatementKind::Wait; }
 
     template<typename TVisitor>
-    void visitExprs(TVisitor&& visitor) const {
-        cond.visit(visitor);
+    decltype(auto) visitExprs(TVisitor&& visitor) const {
+        return cond.visit(visitor);
     }
 
     template<typename TVisitor>
-    void visitStmts(TVisitor&& visitor) const {
-        stmt.visit(visitor);
+    decltype(auto) visitStmts(TVisitor&& visitor) const {
+        return stmt.visit(visitor);
     }
 };
 
@@ -1032,8 +1032,8 @@ public:
     static bool isKind(StatementKind kind) { return kind == StatementKind::ProceduralAssign; }
 
     template<typename TVisitor>
-    void visitExprs(TVisitor&& visitor) const {
-        assignment.visit(visitor);
+    decltype(auto) visitExprs(TVisitor&& visitor) const {
+        return assignment.visit(visitor);
     }
 };
 
@@ -1057,8 +1057,8 @@ public:
     static bool isKind(StatementKind kind) { return kind == StatementKind::ProceduralDeassign; }
 
     template<typename TVisitor>
-    void visitExprs(TVisitor&& visitor) const {
-        lvalue.visit(visitor);
+    decltype(auto) visitExprs(TVisitor&& visitor) const {
+        return lvalue.visit(visitor);
     }
 };
 

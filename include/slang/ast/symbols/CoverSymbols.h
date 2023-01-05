@@ -28,8 +28,8 @@ public:
     void serializeTo(ASTSerializer& serializer) const;
 
     template<typename TVisitor>
-    void visitExprs(TVisitor&& visitor) const {
-        getExpression().visit(visitor);
+    decltype(auto) visitExprs(TVisitor&& visitor) const {
+        return getExpression().visit(visitor);
     }
 
 private:
@@ -350,8 +350,8 @@ public:
     static bool isKind(BinsSelectExprKind kind) { return kind == BinsSelectExprKind::Unary; }
 
     template<typename TVisitor>
-    void visitExprs(TVisitor&& visitor) const {
-        expr.visit(visitor);
+    decltype(auto) visitExprs(TVisitor&& visitor) const {
+        return expr.visit(visitor);
     }
 };
 

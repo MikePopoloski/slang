@@ -184,8 +184,8 @@ public:
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::ClockingEvent; }
 
     template<typename TVisitor>
-    void visitExprs(TVisitor&& visitor) const {
-        timingControl.visit(visitor);
+    decltype(auto) visitExprs(TVisitor&& visitor) const {
+        return timingControl.visit(visitor);
     }
 };
 
@@ -265,10 +265,10 @@ public:
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::MinTypMax; }
 
     template<typename TVisitor>
-    void visitExprs(TVisitor&& visitor) const {
+    decltype(auto) visitExprs(TVisitor&& visitor) const {
         // This only visits the selected expression... you could imagine
         // wanting to visit all three instead though.
-        selected().visit(visitor);
+        return selected().visit(visitor);
     }
 
 private:
@@ -297,8 +297,8 @@ public:
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::CopyClass; }
 
     template<typename TVisitor>
-    void visitExprs(TVisitor&& visitor) const {
-        sourceExpr().visit(visitor);
+    decltype(auto) visitExprs(TVisitor&& visitor) const {
+        return sourceExpr().visit(visitor);
     }
 
 private:

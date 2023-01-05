@@ -179,8 +179,8 @@ public:
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::ContinuousAssign; }
 
     template<typename TVisitor>
-    void visitExprs(TVisitor&& visitor) const {
-        getAssignment().visit(visitor);
+    decltype(auto) visitExprs(TVisitor&& visitor) const {
+        return getAssignment().visit(visitor);
     }
 
 private:
