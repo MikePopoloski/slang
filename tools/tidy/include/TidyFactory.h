@@ -40,7 +40,7 @@ public:
 
     static std::unique_ptr<TidyCheck> create(const std::string& name) {
         if (items().find(name) == items().end())
-            throw std::runtime_error(name + "has not been registered");
+            throw std::runtime_error(name + " has not been registered");
         return items()[name]();
     }
 

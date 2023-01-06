@@ -5,8 +5,9 @@
 // SPDX-FileCopyrightText: Michael Popoloski
 // SPDX-License-Identifier: MIT
 //------------------------------------------------------------------------------
-#include "../synthesis/OnlyAssignedOnReset.cpp"
 #include "Test.h"
+
+#include "TidyFactory.h"
 
 TEST_CASE("OnlyAssignedOnReset: Only assigned on reset") {
     auto tree = SyntaxTree::fromText(R"(
@@ -31,8 +32,8 @@ endmodule
     compilation.getAllDiagnostics();
     auto& root = compilation.getRoot();
 
-    OnlyAssignedOnReset visitor;
-    bool result = visitor.check(root);
+    auto visitor = Registry::create("OnlyAssignedOnReset");
+    bool result = visitor->check(root);
     CHECK(result == false);
 }
 
@@ -59,8 +60,8 @@ endmodule
     compilation.getAllDiagnostics();
     auto& root = compilation.getRoot();
 
-    OnlyAssignedOnReset visitor;
-    bool result = visitor.check(root);
+    auto visitor = Registry::create("OnlyAssignedOnReset");
+    bool result = visitor->check(root);
     CHECK(result == true);
 }
 
@@ -88,8 +89,8 @@ endmodule
     compilation.getAllDiagnostics();
     auto& root = compilation.getRoot();
 
-    OnlyAssignedOnReset visitor;
-    bool result = visitor.check(root);
+    auto visitor = Registry::create("OnlyAssignedOnReset");
+    bool result = visitor->check(root);
     CHECK(result == true);
 }
 
@@ -120,8 +121,8 @@ endmodule
     compilation.getAllDiagnostics();
     auto& root = compilation.getRoot();
 
-    OnlyAssignedOnReset visitor;
-    bool result = visitor.check(root);
+    auto visitor = Registry::create("OnlyAssignedOnReset");
+    bool result = visitor->check(root);
     CHECK(result == true);
 }
 
@@ -151,8 +152,8 @@ endmodule
     compilation.getAllDiagnostics();
     auto& root = compilation.getRoot();
 
-    OnlyAssignedOnReset visitor;
-    bool result = visitor.check(root);
+    auto visitor = Registry::create("OnlyAssignedOnReset");
+    bool result = visitor->check(root);
     CHECK(result == false);
 }
 
@@ -185,8 +186,8 @@ endmodule
     compilation.getAllDiagnostics();
     auto& root = compilation.getRoot();
 
-    OnlyAssignedOnReset visitor;
-    bool result = visitor.check(root);
+    auto visitor = Registry::create("OnlyAssignedOnReset");
+    bool result = visitor->check(root);
     CHECK(result == true);
 }
 
@@ -218,7 +219,7 @@ endmodule
     compilation.getAllDiagnostics();
     auto& root = compilation.getRoot();
 
-    OnlyAssignedOnReset visitor;
-    bool result = visitor.check(root);
+    auto visitor = Registry::create("OnlyAssignedOnReset");
+    bool result = visitor->check(root);
     CHECK(result == false);
 }

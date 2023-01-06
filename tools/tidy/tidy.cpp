@@ -63,14 +63,13 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-    Registry checkRegistry;
     DiagnosticEngine diagEngine(*compilation->getSourceManager());
     auto textDiagClient = std::make_shared<TextDiagnosticClient>();
     textDiagClient->showColors(true);
     diagEngine.addClient(textDiagClient);
 
-    for (const auto& check_name : checkRegistry.get_registered()) {
-        const auto check = checkRegistry.create(check_name);
+    for (const auto& check_name : Registry::get_registered()) {
+        const auto check = Registry::create(check_name);
         OS::print(fmt::format("slang-tidy: [{}]", check->name()));
         auto checkOk = check->check(compilation->getRoot());
         if (!checkOk) {

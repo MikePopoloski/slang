@@ -49,7 +49,7 @@ struct LookupLhsIdentifier : public slang::ast::ASTVisitor<LookupLhsIdentifier, 
     }
 
     // Retrieves whether the identifier has been found
-    [[nodiscard]] inline bool found() { return _found; }
+    [[nodiscard]] bool found() const { return _found; }
 
     // Resets the state of the visitor, so it can be used again without having to create a new one
     void reset() { _found = false; }

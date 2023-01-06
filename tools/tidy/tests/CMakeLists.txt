@@ -26,8 +26,12 @@ endif()
 
 add_executable(
   tidy_unittests
-  ../../../tests/unittests/main.cpp ../../../tests/unittests/Test.cpp
-  OnlyAssignedOnResetTest.cpp RegisterHasNoResetTest.cpp)
+  ../../../tests/unittests/main.cpp
+  ../../../tests/unittests/Test.cpp
+  ../synthesis/OnlyAssignedOnReset.cpp
+  OnlyAssignedOnResetTest.cpp
+  ../synthesis/RegisterHasNoReset.cpp
+  RegisterHasNoResetTest.cpp)
 
 target_link_libraries(
   tidy_unittests
