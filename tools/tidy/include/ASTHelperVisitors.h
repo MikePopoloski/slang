@@ -22,7 +22,6 @@ struct CollectIdentifiers : public slang::ast::ASTVisitor<CollectIdentifiers, fa
 
 /// ASTVisitor that will try to find the provided name in the LHS of an assignment
 struct LookupLhsIdentifier : public slang::ast::ASTVisitor<LookupLhsIdentifier, true, true> {
-    LookupLhsIdentifier() = delete;
     explicit LookupLhsIdentifier(const std::string_view& name) : name(name) {}
 
     void handle(const slang::ast::AssignmentExpression& expression) {
