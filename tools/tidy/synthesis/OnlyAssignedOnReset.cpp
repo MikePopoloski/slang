@@ -86,6 +86,8 @@ struct MainVisitor : public ASTVisitor<MainVisitor, true, false> {
 using namespace only_assigned_on_reset;
 class OnlyAssignedOnReset : public TidyCheck {
 public:
+    explicit OnlyAssignedOnReset(TidyKind kind) : TidyCheck(kind) {}
+
     bool check(const RootSymbol& root) override {
         MainVisitor visitor(diagnostics);
         root.visit(visitor);
@@ -103,4 +105,4 @@ public:
     std::string_view name() const override { return "OnlyAssignedOnReset"; }
 };
 
-REGISTER(OnlyAssignedOnReset, OnlyAssignedOnReset)
+REGISTER(OnlyAssignedOnReset, OnlyAssignedOnReset, TidyKind::Synthesis)

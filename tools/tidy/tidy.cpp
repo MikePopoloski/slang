@@ -8,6 +8,7 @@
 #include "fmt/color.h"
 #include "fmt/format.h"
 #include "include/TidyFactory.h"
+#include <unordered_set>
 
 #include "slang/diagnostics/TextDiagnosticClient.h"
 #include "slang/driver/Driver.h"
@@ -26,6 +27,10 @@ int main(int argc, char** argv) {
     driver.cmdLine.add("-h,--help", showHelp, "Display available options");
     driver.cmdLine.add("--version", showVersion, "Display version information and exit");
     driver.cmdLine.add("-q,--quiet", quiet, "Suppress non-essential output");
+
+    std::optional<bool> disableSynthesisChecks;
+    driver.cmdLine.add("--disable-synthesis-checks", disableSynthesisChecks,
+                       "Disables the synthesis checks");
 
     if (!driver.parseCommandLine(argc, argv))
         return 1;
@@ -63,6 +68,10 @@ int main(int argc, char** argv) {
         return 1;
     }
 
+    std::unordered_set<slang::TidyKind> disabledChecks;
+    if (disableSynthesisChecks)
+        disabledChecks.insert(TidyKind::Synthesis);
+
     DiagnosticEngine diagEngine(*compilation->getSourceManager());
     auto textDiagClient = std::make_shared<TextDiagnosticClient>();
     textDiagClient->showColors(true);
@@ -75,6 +84,14 @@ int main(int argc, char** argv) {
         diagEngine.setMessage(check->diagCode(), check->diagString());
         diagEngine.setSeverity(check->diagCode(), check->diagSeverity());
 
+        if (disabledChecks.count(check->getKind())) {
+            if (!quiet)
+                OS::print(fmt::emphasis::bold | fmt::fg(fmt::color::yellow), " CHECK DISABLED\n");
+            else
+                OS::print("\n");
+            continue;
+        }
+
         auto checkOk = check->check(compilation->getRoot());
         if (!checkOk) {
             OS::print("\n");
@@ -85,7 +102,7 @@ int main(int argc, char** argv) {
             textDiagClient->clear();
         }
         else {
-            OS::print(fmt::emphasis::bold | fmt::fg(fmt::color::green), " OK");
+            OS::print(fmt::emphasis::bold | fmt::fg(fmt::color::green), " OK\n");
         }
     }
 

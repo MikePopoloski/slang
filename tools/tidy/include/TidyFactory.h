@@ -14,9 +14,20 @@
 #include <unordered_map>
 
 #include "slang/ast/symbols/CompilationUnitSymbols.h"
+#include "slang/util/Util.h"
+
+namespace slang {
+// clang-format off
+    #define KIND(x) \
+        x(Synthesis)
+    ENUM(TidyKind, KIND)
+    #undef KIND
+// clang-format on
+} // namespace slang
 
 class TidyCheck {
 public:
+    explicit TidyCheck(slang::TidyKind kind) : kind(kind) {}
     virtual ~TidyCheck() = default;
 
     [[nodiscard]] virtual bool check(const slang::ast::RootSymbol& root) = 0;
@@ -28,9 +39,11 @@ public:
     virtual std::string diagString() const = 0;
 
     [[nodiscard]] virtual const slang::Diagnostics& getDiagnostics() const { return diagnostics; }
+    [[nodiscard]] virtual const slang::TidyKind getKind() const { return kind; }
 
 protected:
     slang::Diagnostics diagnostics;
+    slang::TidyKind kind;
 };
 
 class Registry {
@@ -63,5 +76,6 @@ private:
     }
 };
 
-#define REGISTER(name, class_name) \
-    static auto name##_entry = Registry::add(#name, [] { return std::make_unique<class_name>(); });
+#define REGISTER(name, class_name, kind)            \
+    static auto name##_entry = Registry::add(#name, \
+                                             [] { return std::make_unique<class_name>(kind); });

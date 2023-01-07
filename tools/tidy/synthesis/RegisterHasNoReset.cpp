@@ -86,6 +86,8 @@ struct MainVisitor : public ASTVisitor<MainVisitor, true, true> {
 using namespace register_has_no_reset;
 class RegisterHasNoReset : public TidyCheck {
 public:
+    explicit RegisterHasNoReset(TidyKind kind) : TidyCheck(kind) {}
+
     bool check(const RootSymbol& root) override {
         MainVisitor visitor(diagnostics);
         root.visit(visitor);
@@ -107,4 +109,4 @@ public:
     std::string_view name() const override { return "RegisterHasNoReset"; }
 };
 
-REGISTER(RegisterHasNoReset, RegisterHasNoReset)
+REGISTER(RegisterHasNoReset, RegisterHasNoReset, TidyKind::Synthesis)
