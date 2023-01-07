@@ -71,6 +71,10 @@ int main(int argc, char** argv) {
     for (const auto& check_name : Registry::get_registered()) {
         const auto check = Registry::create(check_name);
         OS::print(fmt::format("slang-tidy: [{}]", check->name()));
+
+        diagEngine.setMessage(check->diagCode(), check->diagString());
+        diagEngine.setSeverity(check->diagCode(), check->diagSeverity());
+
         auto checkOk = check->check(compilation->getRoot());
         if (!checkOk) {
             OS::print("\n");

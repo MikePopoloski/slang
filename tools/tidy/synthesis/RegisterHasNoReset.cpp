@@ -7,8 +7,8 @@
 //------------------------------------------------------------------------------
 #include "ASTHelperVisitors.h"
 #include "TidyFactory.h"
+#include "TidyDiags.h"
 
-#include "slang/diagnostics/AllDiags.h"
 #include "slang/syntax/AllSyntax.h"
 
 using namespace slang;
@@ -93,6 +93,17 @@ public:
             return false;
         return true;
     }
+
+    DiagCode diagCode() const override { return diag::RegisterNotAssignedOnReset; }
+
+    std::string diagString() const override {
+        return "register '{}' has no value on reset, but the always_ff block has the reset signal "
+               "on the sensitivity list. Consider moving the register to an always_ff that has no "
+               "reset or set a value on reset";
+    }
+
+    DiagnosticSeverity diagSeverity() const override { return DiagnosticSeverity::Warning; }
+
     std::string_view name() const override { return "RegisterHasNoReset"; }
 };
 

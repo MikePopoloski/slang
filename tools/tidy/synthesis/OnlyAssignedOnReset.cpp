@@ -6,9 +6,9 @@
 // SPDX-License-Identifier: MIT
 //------------------------------------------------------------------------------
 #include "ASTHelperVisitors.h"
+#include "TidyDiags.h"
 #include "TidyFactory.h"
 
-#include "slang/diagnostics/AllDiags.h"
 #include "slang/syntax/AllSyntax.h"
 
 using namespace slang;
@@ -93,6 +93,12 @@ public:
             return false;
         return true;
     }
+
+    DiagCode diagCode() const override { return diag::OnlyAssignedOnReset; }
+
+    std::string diagString() const override { return "register '{}' is only assigned on reset"; }
+
+    DiagnosticSeverity diagSeverity() const override { return DiagnosticSeverity::Warning; }
 
     std::string_view name() const override { return "OnlyAssignedOnReset"; }
 };

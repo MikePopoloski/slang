@@ -20,7 +20,12 @@ public:
     virtual ~TidyCheck() = default;
 
     [[nodiscard]] virtual bool check(const slang::ast::RootSymbol& root) = 0;
+
     virtual std::string_view name() const = 0;
+
+    virtual slang::DiagCode diagCode() const = 0;
+    virtual slang::DiagnosticSeverity diagSeverity() const = 0;
+    virtual std::string diagString() const = 0;
 
     [[nodiscard]] virtual const slang::Diagnostics& getDiagnostics() const { return diagnostics; }
 

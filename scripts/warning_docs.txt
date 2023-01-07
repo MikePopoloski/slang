@@ -994,38 +994,3 @@ module top;
     defparam m1.p = 2;
 endmodule
 ```
--Wonly-assigned-on-reset
-A register is only assigned while the logic is on reset.
-```
-module m;
-    logic clk;
-    logic rst_n;
-    logic r;
-
-    always_ff @(posedge clk or negedge rst_n) begin
-        if (~rst_n) begin
-            r <= '0;
-        end else begin
-            // r is not assigned when logic is not in reset
-        end
-    end
-endmodule
-```
--Wregister-not-assigned-on-reset
-A register has no assignment on reset, but the sensitivity list on the always_ff it is placed on has the reset signal on it.
-This can cause issues in synthesis tools, and it is better to put those registers in a separate always_ff that has no reset.
-```
-module m;
-    logic clk;
-    logic rst_n;
-    logic r;
-
-    always_ff @(posedge clk or negedge rst_n) begin
-        if (~rst_n) begin
-            // r is not assigned when logic is on reset
-        end else begin
-            r <= 1'b1;
-        end
-    end
-endmodule
-```
