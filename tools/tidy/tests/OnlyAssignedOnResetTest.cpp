@@ -6,7 +6,6 @@
 // SPDX-License-Identifier: MIT
 //------------------------------------------------------------------------------
 #include "Test.h"
-
 #include "TidyFactory.h"
 
 TEST_CASE("OnlyAssignedOnReset: Only assigned on reset") {

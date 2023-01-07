@@ -6,8 +6,8 @@
 // SPDX-License-Identifier: MIT
 //------------------------------------------------------------------------------
 #include "ASTHelperVisitors.h"
-#include "TidyFactory.h"
 #include "TidyDiags.h"
+#include "TidyFactory.h"
 
 #include "slang/syntax/AllSyntax.h"
 

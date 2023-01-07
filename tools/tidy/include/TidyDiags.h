@@ -14,4 +14,4 @@ namespace slang::diag {
 inline constexpr DiagCode OnlyAssignedOnReset(DiagSubsystem::Tidy, 0);
 inline constexpr DiagCode RegisterNotAssignedOnReset(DiagSubsystem::Tidy, 1);
 
-}
+} // namespace slang::diag

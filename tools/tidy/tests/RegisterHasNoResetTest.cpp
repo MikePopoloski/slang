@@ -6,7 +6,6 @@
 // SPDX-License-Identifier: MIT
 //------------------------------------------------------------------------------
 #include "Test.h"
-
 #include "TidyFactory.h"
 
 TEST_CASE("RegisterHasNoReset: Register not assigned on reset") {
