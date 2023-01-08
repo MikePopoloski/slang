@@ -8,6 +8,7 @@
 #include "ASTHelperVisitors.h"
 #include "TidyDiags.h"
 #include "TidyFactory.h"
+#include "fmt/color.h"
 
 #include "slang/syntax/AllSyntax.h"
 
@@ -107,6 +108,36 @@ public:
     DiagnosticSeverity diagSeverity() const override { return DiagnosticSeverity::Warning; }
 
     std::string_view name() const override { return "RegisterHasNoReset"; }
+
+    std::string description() const override {
+        return "A register in an always_ff, which contains the reset signal on its sensitivity "
+               "list, which\ndo not have a value when the design is on reset. This will cause "
+               "errors with "
+               "synthesis\ntools since they will use an incorrect register cell.\n\n" +
+               fmt::format(fmt::emphasis::italic,
+                           "module m (logic clk, logic reset);\n"
+                           "    logic r;\n"
+                           "    always_ff @(posedge clk or negedge reset) begin\n"
+                           "                               ^^^^^^^^^^^^^------\\\n"
+                           "                                                  \\\n"
+                           "        r <= 1'b1;                                \\\n"
+                           "        ^~~~Register r do not have a value when reset\n"
+                           "    end\n"
+                           "endmodule\n\n") +
+               "Instead the always_ff should be written like this:\n\n" +
+               fmt::format(fmt::emphasis::italic, "module m (logic clk, logic reset);\n"
+                                                  "    logic r;\n"
+                                                  "    always_ff @(posedge clk) begin\n"
+                                                  "        r <= 1'b1;\n"
+                                                  "    end\n"
+                                                  "endmodule\n");
+    }
+
+    string_view shortDescription() const override {
+        return "A register in an always_ff, which contains the reset signal on its sensitivity "
+               "list,\n"
+               "which do not have a value when the design is on reset."sv;
+    }
 };
 
 REGISTER(RegisterHasNoReset, RegisterHasNoReset, TidyKind::Synthesis)

@@ -8,6 +8,7 @@
 #include "ASTHelperVisitors.h"
 #include "TidyDiags.h"
 #include "TidyFactory.h"
+#include "fmt/color.h"
 
 #include "slang/syntax/AllSyntax.h"
 
@@ -103,6 +104,26 @@ public:
     DiagnosticSeverity diagSeverity() const override { return DiagnosticSeverity::Warning; }
 
     std::string_view name() const override { return "OnlyAssignedOnReset"; }
+
+    std::string description() const override {
+        return "A register in an always_ff only have value while the design is on reset.\n\n" +
+               fmt::format(fmt::emphasis::italic,
+                           "module m (logic clk, logic reset);\n"
+                           "    logic r;\n"
+                           "    always_ff @(posedge clk or negedge reset) begin\n"
+                           "        if (~reset) begin\n"
+                           "            r <= 1'b0;\n"
+                           "        end\n"
+                           "        begin\n"
+                           "            ~~r do not have a value when design is not in reset\n"
+                           "        end\n"
+                           "    end\n"
+                           "endmodule\n");
+    }
+
+    string_view shortDescription() const override {
+        return "A register in an always_ff only have value while the design is on reset."sv;
+    }
 };
 
 REGISTER(OnlyAssignedOnReset, OnlyAssignedOnReset, TidyKind::Synthesis)

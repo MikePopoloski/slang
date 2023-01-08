@@ -28,6 +28,13 @@ int main(int argc, char** argv) {
     driver.cmdLine.add("--version", showVersion, "Display version information and exit");
     driver.cmdLine.add("-q,--quiet", quiet, "Suppress non-essential output");
 
+    std::optional<bool> printDescriptions;
+    std::optional<bool> printShortDescriptions;
+    driver.cmdLine.add("--print-descriptions", printDescriptions,
+                       "Displays the description of each check and exits");
+    driver.cmdLine.add("--print-short-descriptions", printShortDescriptions,
+                       "Displays the short description of each check and exits");
+
     std::optional<bool> disableSynthesisChecks;
     driver.cmdLine.add("--disable-synthesis-checks", disableSynthesisChecks,
                        "Disables the synthesis checks");
@@ -49,6 +56,35 @@ int main(int argc, char** argv) {
         OS::print(fmt::format("slang-tidy version {}.{}.{}+{}\n", VersionInfo::getMajor(),
                               VersionInfo::getMinor(), VersionInfo::getPatch(),
                               VersionInfo::getHash()));
+        return 0;
+    }
+
+    std::unordered_set<slang::TidyKind> disabledChecks;
+    if (disableSynthesisChecks)
+        disabledChecks.insert(TidyKind::Synthesis);
+
+    auto filter_func = [&](const Registry::RegistryItem& item) {
+        if (disabledChecks.count(item.second.kind))
+            return false;
+        if (onlySynthesisChecks)
+            return item.second.kind == slang::TidyKind::Synthesis;
+        return true;
+    };
+
+    if (printDescriptions || printShortDescriptions) {
+        bool first = true;
+        for (const auto& check_name : Registry::get_registered(filter_func)) {
+            const auto check = Registry::create(check_name);
+            if (first)
+                first = false;
+            else
+                OS::print("\n");
+            OS::print(fmt::format(fmt::emphasis::bold, "[{}]\n", check->name()));
+            if (printDescriptions)
+                OS::print(fmt::format("{}", check->description()));
+            else
+                OS::print(fmt::format("{}\n", check->shortDescription()));
+        }
         return 0;
     }
 
@@ -77,21 +113,9 @@ int main(int argc, char** argv) {
     textDiagClient->showColors(true);
     diagEngine.addClient(textDiagClient);
 
-    std::unordered_set<slang::TidyKind> disabledChecks;
-    if (disableSynthesisChecks)
-        disabledChecks.insert(TidyKind::Synthesis);
-
-    auto filter_func = [&](const Registry::RegistryItem& item){
-        if (disabledChecks.count(item.second.kind))
-            return false;
-        if (onlySynthesisChecks)
-            return item.second.kind == slang::TidyKind::Synthesis;
-        return true;
-    };
-
     for (const auto& check_name : Registry::get_registered(filter_func)) {
         const auto check = Registry::create(check_name);
-        OS::print(fmt::format("slang-tidy: [{}]", check->name()));
+        OS::print(fmt::format("[{}]", check->name()));
 
         diagEngine.setMessage(check->diagCode(), check->diagString());
         diagEngine.setSeverity(check->diagCode(), check->diagSeverity());
