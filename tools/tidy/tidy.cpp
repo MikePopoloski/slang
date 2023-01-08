@@ -36,8 +36,11 @@ int main(int argc, char** argv) {
                        "Displays the short description of each check and exits");
 
     std::optional<bool> disableSynthesisChecks;
+    std::vector<std::string> disabledCheckNames;
     driver.cmdLine.add("--disable-synthesis-checks", disableSynthesisChecks,
                        "Disables the synthesis checks");
+    driver.cmdLine.add("--disable-checks", disabledCheckNames,
+                       "Names of checks that will be disabled");
 
     std::optional<bool> onlySynthesisChecks;
     driver.cmdLine.add("--only-synthesis-checks", onlySynthesisChecks,
@@ -59,12 +62,15 @@ int main(int argc, char** argv) {
         return 0;
     }
 
-    std::unordered_set<slang::TidyKind> disabledChecks;
+    std::unordered_set<slang::TidyKind> disabledCheckKinds;
     if (disableSynthesisChecks)
-        disabledChecks.insert(TidyKind::Synthesis);
+        disabledCheckKinds.insert(TidyKind::Synthesis);
 
     auto filter_func = [&](const Registry::RegistryItem& item) {
-        if (disabledChecks.count(item.second.kind))
+        if (std::find(disabledCheckNames.begin(), disabledCheckNames.end(), item.first) !=
+            disabledCheckNames.end())
+            return false;
+        if (disabledCheckKinds.count(item.second.kind))
             return false;
         if (onlySynthesisChecks)
             return item.second.kind == slang::TidyKind::Synthesis;
