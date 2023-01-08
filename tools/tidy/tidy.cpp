@@ -113,6 +113,8 @@ int main(int argc, char** argv) {
     textDiagClient->showColors(true);
     diagEngine.addClient(textDiagClient);
 
+    int ret_code = 0;
+
     for (const auto& check_name : Registry::get_registered(filter_func)) {
         const auto check = Registry::create(check_name);
         OS::print(fmt::format("[{}]", check->name()));
@@ -122,7 +124,8 @@ int main(int argc, char** argv) {
 
         auto checkOk = check->check(compilation->getRoot());
         if (!checkOk) {
-            OS::print("\n");
+            ret_code = 5;
+            OS::print(fmt::emphasis::bold | fmt::fg(fmt::color::red), " FAIL\n");
             const auto& diags = check->getDiagnostics();
             for (const auto& diag : diags)
                 diagEngine.issue(diag);
@@ -130,9 +133,9 @@ int main(int argc, char** argv) {
             textDiagClient->clear();
         }
         else {
-            OS::print(fmt::emphasis::bold | fmt::fg(fmt::color::green), " OK\n");
+            OS::print(fmt::emphasis::bold | fmt::fg(fmt::color::green), " PASS\n");
         }
     }
 
-    return 0;
+    return ret_code;
 }
