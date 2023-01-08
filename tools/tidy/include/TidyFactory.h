@@ -49,23 +49,39 @@ protected:
 class Registry {
 public:
     using RegistryFunction = std::function<std::unique_ptr<TidyCheck>()>;
-    using RegistryMap = std::unordered_map<std::string, RegistryFunction>;
+    struct RegistryValue {
+        slang::TidyKind kind;
+        RegistryFunction creator;
+    };
+    using RegistryKey = std::string;
+    using RegistryItem = std::pair<RegistryKey, RegistryValue>;
+    using RegistryMap = std::unordered_map<RegistryKey, RegistryValue>;
 
-    static bool add(const std::string& name, const RegistryFunction& func) {
-        items()[name] = func;
+    static bool add(const std::string& name, const slang::TidyKind& kind,
+                    const RegistryFunction& func) {
+        items()[name] = {kind, func};
         return true;
     }
 
     static std::unique_ptr<TidyCheck> create(const std::string& name) {
         if (items().find(name) == items().end())
             throw std::runtime_error(name + " has not been registered");
-        return items()[name]();
+        return items()[name].creator();
     }
 
     static std::vector<std::string> get_registered() {
         std::vector<std::string> ret;
         for (const auto& item : items())
             ret.push_back(item.first);
+        return ret;
+    }
+
+    template<typename F>
+    static std::vector<std::string> get_registered(F&& function) {
+        std::vector<std::string> ret;
+        for (const auto& item : items())
+            if (function(item))
+                ret.push_back(item.first);
         return ret;
     }
 
@@ -76,6 +92,6 @@ private:
     }
 };
 
-#define REGISTER(name, class_name, kind)            \
-    static auto name##_entry = Registry::add(#name, \
+#define REGISTER(name, class_name, kind)                  \
+    static auto name##_entry = Registry::add(#name, kind, \
                                              [] { return std::make_unique<class_name>(kind); });

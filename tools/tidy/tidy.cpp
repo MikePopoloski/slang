@@ -32,6 +32,10 @@ int main(int argc, char** argv) {
     driver.cmdLine.add("--disable-synthesis-checks", disableSynthesisChecks,
                        "Disables the synthesis checks");
 
+    std::optional<bool> onlySynthesisChecks;
+    driver.cmdLine.add("--only-synthesis-checks", onlySynthesisChecks,
+                       "Disables the synthesis checks");
+
     if (!driver.parseCommandLine(argc, argv))
         return 1;
 
@@ -68,29 +72,29 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-    std::unordered_set<slang::TidyKind> disabledChecks;
-    if (disableSynthesisChecks)
-        disabledChecks.insert(TidyKind::Synthesis);
-
     DiagnosticEngine diagEngine(*compilation->getSourceManager());
     auto textDiagClient = std::make_shared<TextDiagnosticClient>();
     textDiagClient->showColors(true);
     diagEngine.addClient(textDiagClient);
 
-    for (const auto& check_name : Registry::get_registered()) {
+    std::unordered_set<slang::TidyKind> disabledChecks;
+    if (disableSynthesisChecks)
+        disabledChecks.insert(TidyKind::Synthesis);
+
+    auto filter_func = [&](const Registry::RegistryItem& item){
+        if (disabledChecks.count(item.second.kind))
+            return false;
+        if (onlySynthesisChecks)
+            return item.second.kind == slang::TidyKind::Synthesis;
+        return true;
+    };
+
+    for (const auto& check_name : Registry::get_registered(filter_func)) {
         const auto check = Registry::create(check_name);
         OS::print(fmt::format("slang-tidy: [{}]", check->name()));
 
         diagEngine.setMessage(check->diagCode(), check->diagString());
         diagEngine.setSeverity(check->diagCode(), check->diagSeverity());
-
-        if (disabledChecks.count(check->getKind())) {
-            if (!quiet)
-                OS::print(fmt::emphasis::bold | fmt::fg(fmt::color::yellow), " CHECK DISABLED\n");
-            else
-                OS::print("\n");
-            continue;
-        }
 
         auto checkOk = check->check(compilation->getRoot());
         if (!checkOk) {
