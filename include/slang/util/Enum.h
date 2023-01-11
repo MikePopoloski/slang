@@ -29,9 +29,8 @@
         static constexpr auto vals = {elements(UTIL_ENUM_ELEMENT)};                             \
         static constexpr auto getValues() {                                                     \
             std::array<name, vals.size()> result{};                                             \
-            size_t i = 0;                                                                       \
-            for (auto val : vals)                                                               \
-                result[i++] = name(val);                                                        \
+            for (size_t i = 0; i < vals.size(); i++)                                            \
+                result[i] = name(i);                                                            \
             return result;                                                                      \
         }                                                                                       \
                                                                                                 \
