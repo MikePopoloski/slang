@@ -62,13 +62,22 @@ int main(int argc, char** argv) {
         return 0;
     }
 
+    if (!disabledCheckNames.empty()) {
+        auto allRegisteredChecks = Registry::get_registered();
+        for (const auto& name : disabledCheckNames) {
+            if (!std::count(allRegisteredChecks.begin(), allRegisteredChecks.end(), name)) {
+                slang::OS::printE(fmt::format("the check {} provided in --disable-check do not exist\n", name));
+                return 6;
+            }
+        }
+    }
+
     std::unordered_set<slang::TidyKind> disabledCheckKinds;
     if (disableSynthesisChecks)
         disabledCheckKinds.insert(TidyKind::Synthesis);
 
     auto filter_func = [&](const Registry::RegistryItem& item) {
-        if (std::find(disabledCheckNames.begin(), disabledCheckNames.end(), item.first) !=
-            disabledCheckNames.end())
+        if (std::count(disabledCheckNames.begin(), disabledCheckNames.end(), item.first))
             return false;
         if (disabledCheckKinds.count(item.second.kind))
             return false;
