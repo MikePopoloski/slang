@@ -74,7 +74,8 @@ int main(int argc, char** argv) {
         auto allRegisteredChecks = Registry::get_registered();
         for (const auto& name : disabledCheckNames) {
             if (!std::count(allRegisteredChecks.begin(), allRegisteredChecks.end(), name)) {
-                slang::OS::printE(fmt::format("the check {} provided in --disable-check do not exist\n", name));
+                slang::OS::printE(
+                    fmt::format("the check {} provided in --disable-check do not exist\n", name));
                 return 6;
             }
         }
