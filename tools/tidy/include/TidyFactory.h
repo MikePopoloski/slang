@@ -25,32 +25,17 @@ namespace slang {
 // clang-format on
 } // namespace slang
 
-class TidyCheck {
-public:
-    explicit TidyCheck(slang::TidyKind kind) : kind(kind) {}
-    virtual ~TidyCheck() = default;
-
-    [[nodiscard]] virtual bool check(const slang::ast::RootSymbol& root) = 0;
-
-    virtual std::string_view name() const = 0;
-    virtual std::string description() const = 0;
-    virtual std::string_view shortDescription() const = 0;
-
-    virtual slang::DiagCode diagCode() const = 0;
-    virtual slang::DiagnosticSeverity diagSeverity() const = 0;
-    virtual std::string diagString() const = 0;
-
-    [[nodiscard]] virtual const slang::Diagnostics& getDiagnostics() const { return diagnostics; }
-    [[nodiscard]] virtual const slang::TidyKind getKind() const { return kind; }
-
-protected:
-    slang::Diagnostics diagnostics;
-    slang::TidyKind kind;
-};
+class TidyCheck;
 
 class Registry {
 public:
-    using RegistryFunction = std::function<std::unique_ptr<TidyCheck>()>;
+    struct RegistryCheckConfig {
+        std::string_view clk_name;
+        std::string_view reset_name;
+        bool resetIsActiveHigh;
+    };
+
+    using RegistryFunction = std::function<std::unique_ptr<TidyCheck>(const RegistryCheckConfig&)>;
     struct RegistryValue {
         slang::TidyKind kind;
         RegistryFunction creator;
@@ -68,7 +53,7 @@ public:
     static std::unique_ptr<TidyCheck> create(const std::string& name) {
         if (items().find(name) == items().end())
             throw std::runtime_error(name + " has not been registered");
-        return items()[name].creator();
+        return items()[name].creator(config());
     }
 
     static std::vector<std::string> get_registered() {
@@ -87,13 +72,54 @@ public:
         return ret;
     }
 
+    static void set_check_config_clock_name(const std::string_view& name) {
+        config().clk_name = name;
+    }
+    static void set_check_config_reset_name(const std::string_view& name) {
+        config().reset_name = name;
+    }
+    static void set_check_config_reset_active_high(bool activeHigh) {
+        config().resetIsActiveHigh = activeHigh;
+    }
+
 private:
     static RegistryMap& items() {
         static RegistryMap map;
         return map;
     }
+
+    static RegistryCheckConfig& config() {
+        static RegistryCheckConfig config{"clk_i", "rst_ni", false};
+        return config;
+    }
 };
 
-#define REGISTER(name, class_name, kind)                  \
-    static auto name##_entry = Registry::add(#name, kind, \
-                                             [] { return std::make_unique<class_name>(kind); });
+class TidyCheck {
+public:
+    explicit TidyCheck(Registry::RegistryCheckConfig config, slang::TidyKind kind) :
+        config(config), kind(kind) {}
+    virtual ~TidyCheck() = default;
+
+    [[nodiscard]] virtual bool check(const slang::ast::RootSymbol& root) = 0;
+
+    virtual std::string_view name() const = 0;
+    virtual std::string description() const = 0;
+    virtual std::string_view shortDescription() const = 0;
+
+    virtual slang::DiagCode diagCode() const = 0;
+    virtual slang::DiagnosticSeverity diagSeverity() const = 0;
+    virtual std::string diagString() const = 0;
+
+    [[nodiscard]] virtual const slang::Diagnostics& getDiagnostics() const { return diagnostics; }
+    [[nodiscard]] virtual const slang::TidyKind getKind() const { return kind; }
+
+protected:
+    slang::Diagnostics diagnostics;
+    slang::TidyKind kind;
+    Registry::RegistryCheckConfig config;
+};
+
+#define REGISTER(name, class_name, kind)                                    \
+    static auto name##_entry = Registry::add(#name, kind, [](auto config) { \
+        return std::make_unique<class_name>(config, kind);                  \
+    });

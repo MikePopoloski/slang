@@ -46,6 +46,14 @@ int main(int argc, char** argv) {
     driver.cmdLine.add("--only-synthesis-checks", onlySynthesisChecks,
                        "Disables the synthesis checks");
 
+    std::optional<std::string> clockName;
+    std::optional<std::string> resetName;
+    std::optional<bool> resetActiveHigh;
+    driver.cmdLine.add("--clock-name", clockName, "Name of the design clock signal");
+    driver.cmdLine.add("--reset-name", resetName, "Name of the design reset signal");
+    driver.cmdLine.add("--reset-active-high", resetActiveHigh,
+                       "Indicates that the reset is active high. By default reset is active low");
+
     if (!driver.parseCommandLine(argc, argv))
         return 1;
 
@@ -129,6 +137,13 @@ int main(int argc, char** argv) {
     diagEngine.addClient(textDiagClient);
 
     int ret_code = 0;
+
+    if (clockName)
+        Registry::set_check_config_clock_name(clockName.value());
+    if (resetName)
+        Registry::set_check_config_reset_name(resetName.value());
+    if (resetActiveHigh)
+        Registry::set_check_config_reset_active_high(true);
 
     for (const auto& check_name : Registry::get_registered(filter_func)) {
         const auto check = Registry::create(check_name);

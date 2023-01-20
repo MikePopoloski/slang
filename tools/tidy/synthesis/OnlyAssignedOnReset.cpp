@@ -87,7 +87,8 @@ struct MainVisitor : public ASTVisitor<MainVisitor, true, false> {
 using namespace only_assigned_on_reset;
 class OnlyAssignedOnReset : public TidyCheck {
 public:
-    explicit OnlyAssignedOnReset(TidyKind kind) : TidyCheck(kind) {}
+    explicit OnlyAssignedOnReset(Registry::RegistryCheckConfig config, TidyKind kind) :
+        TidyCheck(config, kind) {}
 
     bool check(const RootSymbol& root) override {
         MainVisitor visitor(diagnostics);
