@@ -17,7 +17,8 @@ using namespace slang::ast;
 
 namespace register_has_no_reset {
 struct AlwaysFFVisitor : public ASTVisitor<AlwaysFFVisitor, true, true> {
-    explicit AlwaysFFVisitor(std::string_view name) : name(name){};
+    explicit AlwaysFFVisitor(const std::string_view name, const std::string_view resetName) :
+        name(name), resetName(resetName){};
 
     void handle(const ConditionalStatement& statement) {
         // Early return, if there's no else clause on the conditional statement
@@ -33,9 +34,9 @@ struct AlwaysFFVisitor : public ASTVisitor<AlwaysFFVisitor, true, true> {
 
         // Check if one of the identifiers is a reset
         const auto isReset = std::any_of(collectIdentifiersVisitor.identifiers.begin(),
-                                         collectIdentifiersVisitor.identifiers.end(), [](auto id) {
-                                             return id.find("reset") != std::string_view::npos ||
-                                                    id.find("rst") != std::string_view::npos;
+                                         collectIdentifiersVisitor.identifiers.end(),
+                                         [this](auto id) {
+                                             return id.find(resetName) != std::string_view::npos;
                                          });
 
         if (isReset) {
@@ -59,14 +60,18 @@ struct AlwaysFFVisitor : public ASTVisitor<AlwaysFFVisitor, true, true> {
 
     bool hasError() { return correctlyAssignedOnIfReset && !assignedOutsideIfReset; }
 
-    std::string_view name;
+    const std::string_view name;
+    const std::string_view resetName;
     bool correctlyAssignedOnIfReset = false;
     bool assignedOutsideIfReset = false;
 };
 
 struct MainVisitor : public ASTVisitor<MainVisitor, true, true> {
-    explicit MainVisitor(Diagnostics& diagnostics) : diags(diagnostics) {}
+    explicit MainVisitor(Diagnostics& diagnostics, const Registry::RegistryCheckConfig& config) :
+        diags(diagnostics), config(config) {}
+
     Diagnostics& diags;
+    const Registry::RegistryCheckConfig& config;
 
     void handle(const VariableSymbol& symbol) {
         if (symbol.drivers().empty())
@@ -74,7 +79,7 @@ struct MainVisitor : public ASTVisitor<MainVisitor, true, true> {
 
         auto firstDriver = *symbol.drivers().begin();
         if (firstDriver && firstDriver->isInAlwaysFFBlock()) {
-            AlwaysFFVisitor visitor(symbol.name);
+            AlwaysFFVisitor visitor(symbol.name, config.resetName);
             firstDriver->containingSymbol->visit(visitor);
             if (visitor.hasError()) {
                 diags.add(diag::RegisterNotAssignedOnReset, symbol.location) << symbol.name;
@@ -85,13 +90,14 @@ struct MainVisitor : public ASTVisitor<MainVisitor, true, true> {
 } // namespace register_has_no_reset
 
 using namespace register_has_no_reset;
+
 class RegisterHasNoReset : public TidyCheck {
 public:
-    explicit RegisterHasNoReset(Registry::RegistryCheckConfig config, TidyKind kind) :
+    explicit RegisterHasNoReset(const Registry::RegistryCheckConfig& config, TidyKind kind) :
         TidyCheck(config, kind) {}
 
     bool check(const RootSymbol& root) override {
-        MainVisitor visitor(diagnostics);
+        MainVisitor visitor(diagnostics, config);
         root.visit(visitor);
         if (!diagnostics.empty())
             return false;

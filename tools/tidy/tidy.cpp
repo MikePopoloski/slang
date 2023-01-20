@@ -139,6 +139,7 @@ int main(int argc, char** argv) {
 
     int ret_code = 0;
 
+    Registry::initialize_default_check_config();
     if (clockName)
         Registry::set_check_config_clock_name(clockName.value());
     if (resetName)

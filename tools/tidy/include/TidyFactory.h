@@ -30,8 +30,8 @@ class TidyCheck;
 class Registry {
 public:
     struct RegistryCheckConfig {
-        std::string_view clk_name;
-        std::string_view reset_name;
+        std::string clkName;
+        std::string resetName;
         bool resetIsActiveHigh;
     };
 
@@ -72,11 +72,17 @@ public:
         return ret;
     }
 
+    static void initialize_default_check_config() {
+        config().clkName = "clk_i";
+        config().resetName = "rst_ni";
+        config().resetIsActiveHigh = true;
+    }
+
     static void set_check_config_clock_name(const std::string_view& name) {
-        config().clk_name = name;
+        config().clkName = name;
     }
     static void set_check_config_reset_name(const std::string_view& name) {
-        config().reset_name = name;
+        config().resetName = name;
     }
     static void set_check_config_reset_active_high(bool activeHigh) {
         config().resetIsActiveHigh = activeHigh;
@@ -89,14 +95,14 @@ private:
     }
 
     static RegistryCheckConfig& config() {
-        static RegistryCheckConfig config{"clk_i", "rst_ni", false};
+        static RegistryCheckConfig config;
         return config;
     }
 };
 
 class TidyCheck {
 public:
-    explicit TidyCheck(Registry::RegistryCheckConfig config, slang::TidyKind kind) :
+    explicit TidyCheck(const Registry::RegistryCheckConfig& config, slang::TidyKind kind) :
         config(config), kind(kind) {}
     virtual ~TidyCheck() = default;
 
@@ -116,10 +122,10 @@ public:
 protected:
     slang::Diagnostics diagnostics;
     slang::TidyKind kind;
-    Registry::RegistryCheckConfig config;
+    const Registry::RegistryCheckConfig& config;
 };
 
-#define REGISTER(name, class_name, kind)                                    \
-    static auto name##_entry = Registry::add(#name, kind, [](auto config) { \
-        return std::make_unique<class_name>(config, kind);                  \
+#define REGISTER(name, class_name, kind)                                           \
+    static auto name##_entry = Registry::add(#name, kind, [](const auto& config) { \
+        return std::make_unique<class_name>(config, kind);                         \
     });
