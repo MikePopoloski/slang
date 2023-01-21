@@ -27,7 +27,7 @@ namespace slang::ast {
     x(SolveBefore) \
     x(Foreach)
 ENUM(ConstraintKind, CONSTRAINT)
-#undef CONTROL
+#undef CONSTRAINT
 // clang-format on
 
 class ASTContext;

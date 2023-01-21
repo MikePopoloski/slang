@@ -41,7 +41,8 @@ class Symbol;
     x(SysFuncs) \
     x(ConstEval) \
     x(Compilation) \
-    x(Meta)
+    x(Meta)   \
+    x(Tidy)
 ENUM_SIZED(DiagSubsystem, uint16_t, DS)
 #undef DS
 
