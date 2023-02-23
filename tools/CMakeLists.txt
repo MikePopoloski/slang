@@ -33,4 +33,5 @@ if(SLANG_INCLUDE_INSTALL)
   install(TARGETS slang_driver RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 endif()
 
+add_subdirectory(netlist)
 add_subdirectory(tidy)
