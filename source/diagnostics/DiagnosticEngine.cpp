@@ -128,6 +128,10 @@ void DiagnosticEngine::clearMappings(DiagnosticSeverity severity) {
     }
 }
 
+void DiagnosticEngine::addIgnorePath(const std::filesystem::path& path) {
+    ignoreWarnPrefixes.emplace_back(path);
+}
+
 // Checks that all of the given ranges are in the same macro argument expansion as `loc`
 static bool checkMacroArgRanges(const DiagnosticEngine& engine, SourceLocation loc,
                                 span<const SourceRange> ranges) {
@@ -163,9 +167,7 @@ void DiagnosticEngine::issue(const Diagnostic& diagnostic) {
         case DiagnosticSeverity::Ignored:
             return;
         case DiagnosticSeverity::Note:
-            break;
         case DiagnosticSeverity::Warning:
-            numWarnings++;
             break;
         case DiagnosticSeverity::Error:
         case DiagnosticSeverity::Fatal:
@@ -180,10 +182,14 @@ void DiagnosticEngine::issue(const Diagnostic& diagnostic) {
             break;
     }
 
-    issueImpl(diagnostic, severity);
+    if (!issueImpl(diagnostic, severity))
+        return;
+
+    if (severity == DiagnosticSeverity::Warning)
+        numWarnings++;
 }
 
-void DiagnosticEngine::issueImpl(const Diagnostic& diagnostic, DiagnosticSeverity severity) {
+bool DiagnosticEngine::issueImpl(const Diagnostic& diagnostic, DiagnosticSeverity severity) {
     // Walk out until we find a location for this diagnostic that isn't inside a macro.
     SmallVector<SourceLocation, 8> expansionLocs;
     SourceLocation loc = diagnostic.location;
@@ -207,6 +213,18 @@ void DiagnosticEngine::issueImpl(const Diagnostic& diagnostic, DiagnosticSeverit
         }
 
         showIncludeStack = reportedIncludeStack.emplace(loc.buffer()).second;
+
+        if (!ignoreWarnPrefixes.empty() &&
+            getDefaultSeverity(diagnostic.code) == DiagnosticSeverity::Warning) {
+
+            auto& path = sourceManager.getFullPath(loc.buffer());
+            for (auto& prefix : ignoreWarnPrefixes) {
+                auto [_, mismatchIt] = std::mismatch(path.begin(), path.end(), prefix.begin(),
+                                                     prefix.end());
+                if (mismatchIt == prefix.end())
+                    return false;
+            }
+        }
     }
 
     std::string message = formatMessage(diagnostic);
@@ -228,6 +246,8 @@ void DiagnosticEngine::issueImpl(const Diagnostic& diagnostic, DiagnosticSeverit
         if (note.location != SourceLocation::NoLocation || note.code == diag::NoteFromHere2)
             issue(note);
     }
+
+    return true;
 }
 
 std::string DiagnosticEngine::formatMessage(const Diagnostic& diag) const {

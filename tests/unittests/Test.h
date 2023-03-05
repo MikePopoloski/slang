@@ -16,6 +16,8 @@
 #include "slang/diagnostics/AllDiags.h"
 #include "slang/syntax/SyntaxTree.h"
 
+namespace fs = std::filesystem;
+
 namespace slang {
 
 extern BumpAllocator alloc;

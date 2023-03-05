@@ -25,6 +25,8 @@
 #include "slang/syntax/SyntaxTree.h"
 #include "slang/util/Random.h"
 
+namespace fs = std::filesystem;
+
 namespace slang::driver {
 
 using namespace ast;
@@ -164,6 +166,9 @@ void Driver::addStandardArgs() {
                 "Limit on the number of errors that will be printed. Setting this to zero will "
                 "disable the limit.",
                 "<limit>");
+    cmdLine.add("--suppress-warnings", options.suppressWarningsPaths,
+                "One or more paths in which to suppress warnings", "<filename>",
+                /* isFileName */ true);
 
     // File lists
     cmdLine.add("--single-unit", options.singleUnit,
@@ -391,6 +396,9 @@ bool Driver::processOptions() {
         diagEngine.setSeverity(diag::RangeOOB, DiagnosticSeverity::Error);
         diagEngine.setSeverity(diag::RangeWidthOOB, DiagnosticSeverity::Error);
     }
+
+    for (const std::string& path : options.suppressWarningsPaths)
+        diagEngine.addIgnorePath(fs::canonical(widen(path)));
 
     Diagnostics optionDiags = diagEngine.setWarningOptions(options.warningOptions);
     for (auto& diag : optionDiags)

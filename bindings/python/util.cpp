@@ -107,6 +107,7 @@ void registerUtil(py::module_& m) {
         .def("getLineNumber", &SourceManager::getLineNumber, "location"_a)
         .def("getFileName", &SourceManager::getFileName, "location"_a)
         .def("getRawFileName", &SourceManager::getRawFileName, "buffer"_a)
+        .def("getFullPath", &SourceManager::getFullPath, "buffer"_a)
         .def("getColumnNumber", &SourceManager::getColumnNumber, "location"_a)
         .def("getIncludedFrom", &SourceManager::getIncludedFrom, "buffer"_a)
         .def("getMacroName", &SourceManager::getMacroName, "location"_a)

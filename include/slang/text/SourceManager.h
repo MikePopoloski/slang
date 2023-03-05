@@ -20,8 +20,6 @@
 #include "slang/util/Hash.h"
 #include "slang/util/Util.h"
 
-namespace fs = std::filesystem;
-
 namespace slang {
 
 enum class DiagnosticSeverity;
@@ -57,6 +55,11 @@ public:
     /// Gets the source file name for a given source buffer, not taking
     /// into account any `line directives that may be in the file.
     string_view getRawFileName(BufferID buffer) const;
+
+    /// Gets the full path to the given source buffer. This does not take
+    /// into account any `line directives. If the buffer is not a file buffer,
+    /// returns an empty string.
+    const std::filesystem::path& getFullPath(BufferID buffer) const;
 
     /// Gets the column line number for a given source location.
     /// @a location must be a file location.
@@ -132,13 +135,13 @@ public:
                               SourceLocation includedFrom = SourceLocation());
 
     /// Read in a source file from disk.
-    SourceBuffer readSource(const fs::path& path);
+    SourceBuffer readSource(const std::filesystem::path& path);
 
     /// Read in a header file from disk.
     SourceBuffer readHeader(string_view path, SourceLocation includedFrom, bool isSystemPath);
 
     /// Returns true if the given file path is already loaded and cached in the source manager.
-    bool isCached(const fs::path& path) const;
+    bool isCached(const std::filesystem::path& path) const;
 
     /// Sets whether filenames should be made "proximate" to the current directory
     /// for diagnostic reporting purposes. This is on by default but can be
@@ -203,13 +206,16 @@ private:
 
     // Stores actual file contents and metadata; only one per loaded file
     struct FileData {
-        const std::string name;          // name of the file
-        const std::vector<char> mem;     // file contents
-        std::vector<size_t> lineOffsets; // cache of compute line offsets
-        const fs::path* const directory; // directory in which the file exists
+        const std::string name;                       // name of the file
+        const std::vector<char> mem;                  // file contents
+        std::vector<size_t> lineOffsets;              // cache of compute line offsets
+        const std::filesystem::path* const directory; // directory in which the file exists
+        const std::filesystem::path fullPath;         // full path to the file
 
-        FileData(const fs::path* directory, std::string name, std::vector<char>&& data) :
-            name(std::move(name)), mem(std::move(data)), directory(directory) {}
+        FileData(const std::filesystem::path* directory, std::string name, std::vector<char>&& data,
+                 std::filesystem::path fullPath) :
+            name(std::move(name)),
+            mem(std::move(data)), directory(directory), fullPath(std::move(fullPath)) {}
     };
 
     // Stores a pointer to file data along with information about where we included it.
@@ -261,11 +267,11 @@ private:
     flat_hash_map<std::string, std::unique_ptr<FileData>> lookupCache;
 
     // directories for system and user includes
-    std::vector<fs::path> systemDirectories;
-    std::vector<fs::path> userDirectories;
+    std::vector<std::filesystem::path> systemDirectories;
+    std::vector<std::filesystem::path> userDirectories;
 
     // uniquified backing memory for directories
-    std::set<fs::path> directories;
+    std::set<std::filesystem::path> directories;
 
     // map from buffer to diagnostic directive lists
     flat_hash_map<BufferID, std::vector<DiagnosticDirectiveInfo>> diagDirectives;
@@ -278,9 +284,9 @@ private:
     SourceBuffer createBufferEntry(FileData* fd, SourceLocation includedFrom,
                                    std::unique_lock<std::shared_mutex>& lock);
 
-    SourceBuffer openCached(const fs::path& fullPath, SourceLocation includedFrom);
-    SourceBuffer cacheBuffer(const fs::path& path, SourceLocation includedFrom,
-                             std::vector<char>&& buffer);
+    SourceBuffer openCached(const std::filesystem::path& fullPath, SourceLocation includedFrom);
+    SourceBuffer cacheBuffer(std::filesystem::path&& path, std::string&& pathStr,
+                             SourceLocation includedFrom, std::vector<char>&& buffer);
 
     // Get raw line number of a file location, ignoring any line directives
     size_t getRawLineNumber(SourceLocation location) const;

@@ -208,6 +208,9 @@ public:
         /// A list of warning options that will be passed to the DiagnosticEngine.
         std::vector<std::string> warningOptions;
 
+        /// A list of paths in which to suppress warnings.
+        std::vector<std::string> suppressWarningsPaths;
+
         /// @}
         /// @name File lists
         /// @{
