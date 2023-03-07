@@ -11,6 +11,7 @@
 #include <unordered_set>
 #include <fstream>
 #include <iostream>
+#include <vector>
 
 #include "slang/ast/ASTSerializer.h"
 #include "slang/ast/ASTVisitor.h"
@@ -23,72 +24,11 @@
 #include "slang/util/TimeTrace.h"
 #include "slang/util/Version.h"
 
+#include "DirectedGraph.h"
+
 using namespace slang;
 using namespace slang::ast;
 using namespace slang::driver;
-
-// Directed graph ADT based on LLVM's
-// https://llvm.org/doxygen/DirectedGraph_8h_source.html
-
-template<class NodeType, class EdgeType>
-class DirectedEdge {
-  DirectedEdge() = delete;
-  explicit Edge(NodeType &targetNode) : targetNode(targetNode) {}
-private:
-  NodeType &targetNode;
-};
-
-template<class NodeType, class EdgeType>
-class Node {
-public:
-  using EdgeListType = std::vector<EdgeType*>;
-  using iterator = typename EdgeListType::iterator;
-  using const_iterator = typename EdgeListType::const_iterator;
-
-  Node() = default;
-  Node(Edge &edge) : edges() { edges.push_back(edge); }
-
-  const_iterator begin() const { return edges.begin(); }
-  const_iterator end() const { return edges.end(); }
-  iterator begin() { return edges.begin(); }
-  iterator end() { return edges.end(); }
-
-  bool addEdge(EdgeType &edge) { return edges.insert(&e); }
-  void removeEdge(EdgeType &edge) { edges.remove(&edge); }
-  void clearEdges() { edges.clear(); }
-
-private:
-  std::vector<EdgeType*> edges;
-};
-
-template<class NodeType, class EdgeType>
-class DirectedGraph {
-private:
-  using NodeListType = std::vector<NodeType*>;
-  using EdgeListType = std::vector<EdgeType*>;
-public:
-  using iterator = typename NodeListType::iterator;
-  using const_iterator = typename NodeListType::const_iterator;
-  using DirectedGraphType = DirectedGraph<NodeType, EdgeType>;
-
-  DirectedGraph() = default;
-
-  // Find a given node.
-  const_iterator findNode(const NodeType &nodeToFind) const {
-    return std::find_if(nodes, [&node](const NodeType *node) { return *node == nodeToFind; });
-  }
-
-  void addNode(NodeType &node) {
-  }
-
-  void addEdge(NodeType &source, NodeType &destination) {
-  }
-  
-  size_t size() { return nodes.size(); }
-
-private:
-  NodeListType nodes;
-};
 
 class VariableReferenceVisitor : public ASTVisitor<VariableReferenceVisitor, false, true> {
   EvalContext &evalCtx;
