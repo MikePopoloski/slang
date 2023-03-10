@@ -1738,25 +1738,29 @@ const Expression* PortConnection::getExpression() const {
 
             if (!e->type->isEquivalent(*type)) {
                 auto& comp = context.getCompilation();
-                if (!parentInstance.arrayPath.empty() && direction != ArgumentDirection::Ref) {
-                    if (direction == ArgumentDirection::In) {
-                        e = &Expression::convertAssignment(context, *type, *e,
-                                                           implicitNameRange.start());
-                    }
-                    else {
-                        auto rhs = comp.emplace<EmptyArgumentExpression>(*type, implicitNameRange);
-                        Expression::convertAssignment(context, *e->type, *rhs,
-                                                      implicitNameRange.start(), &e, &assignFlags);
-                    }
+                if (direction == ArgumentDirection::In) {
+                    e = &Expression::convertAssignment(context, *type, *e,
+                                                       implicitNameRange.start());
                 }
-                else if (!e->bad() && !type->isError()) {
+                else if (direction != ArgumentDirection::Ref) {
+                    auto rhs = comp.emplace<EmptyArgumentExpression>(*type, implicitNameRange);
+                    Expression::convertAssignment(context, *e->type, *rhs,
+                                                  implicitNameRange.start(), &e, &assignFlags);
+                }
+
+                // We should warn for this case unless convertAssignment already issued an error,
+                // or if we're in an instance array unwrapping case.
+                if ((parentInstance.arrayPath.empty() || direction == ArgumentDirection::Ref) &&
+                    !e->bad() && !type->isError()) {
                     auto& diag = context.addDiag(diag::ImplicitNamedPortTypeMismatch,
                                                  implicitNameRange);
                     diag << port.name;
                     diag << *type;
                     diag << *e->type;
 
-                    e = comp.emplace<InvalidExpression>(e, comp.getErrorType());
+                    // There's no way to represent this expression for the ref case.
+                    if (direction == ArgumentDirection::Ref)
+                        e = comp.emplace<InvalidExpression>(e, comp.getErrorType());
                 }
             }
 

@@ -320,7 +320,6 @@ error TimeScaleFirstInScope "time scale declaration must come before all other i
 error GenvarDuplicate "loop generation value {} repeats more than once"
 error GenvarUnknownBits "value of {} is invalid for loop generation value"
 error ImplicitNamedPortNotFound "could not find connection for implicit named port '{}'"
-error ImplicitNamedPortTypeMismatch "implicit named port '{}' of type {} connects to value of inequivalent type {}"
 error MaxGenerateStepsExceeded "generate loop hit maximum step limit; possible infinite loop?"
 error MixingSubroutinePortKinds "port declarations not allowed when subroutine defines a formal argument list"
 error UnpackedArrayParamType "unpacked array parameter requires explicit data type"
@@ -475,6 +474,7 @@ warning net-inconsistent NetInconsistent "net type '{}' of connection is inconsi
 warning net-inconsistent NetRangeInconsistent "net type '{}' of connection bits [{}:{}] is inconsistent with net type '{}' of corresponding port range"
 warning dup-timing-path DupTimingPath "duplicate timing path"
 warning invalid-pulsestyle InvalidPulseStyle "invalid use of {} for '{}' since it has previously appeared in a path declaration"
+warning implicit-port-type-mismatch ImplicitNamedPortTypeMismatch "implicit named port '{}' of type {} connects to value of inequivalent type {}"
 
 subsystem Expressions
 error BadUnaryExpression "invalid operand type {} to unary expression"
@@ -989,7 +989,7 @@ group default = { real-underflow real-overflow vector-overflow int-overflow unco
                   protect-arglist unknown-protect-encoding unknown-protect-option invalid-pragma-number
                   invalid-pragma-viewport duplicate-definition protect-encoding-bytes invalid-encoding-byte
                   raw-protect-eof protected-envelope specify-param dup-timing-path invalid-pulsestyle
-                  negative-timing-limit bad-procedural-force duplicate-defparam }
+                  negative-timing-limit bad-procedural-force duplicate-defparam implicit-port-type-mismatch }
 
 group extra = { empty-member empty-stmt dup-import pointless-void-cast case-gen-none case-gen-dup
                 unused-result format-real ignored-slice task-ignored width-trunc dup-attr event-const

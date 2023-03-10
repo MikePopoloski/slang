@@ -994,3 +994,18 @@ module top;
     defparam m1.p = 2;
 endmodule
 ```
+
+-Wimplicit-port-type-mismatch
+An implicit named port connection is made between two inequivalent types. Unlike with a normal
+port connection, where the type of the connection undergoes implicit conversion, the LRM specifies
+that this case is an error. slang makes this an error by default but it can be turned into a warning,
+to support code compatibility with commercial tools.
+```
+module m(logic p);
+endmodule
+
+module n;
+    int p;
+    m m1(.p);
+endmodule
+```
