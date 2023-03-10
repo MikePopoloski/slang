@@ -30,6 +30,18 @@ using namespace slang;
 using namespace slang::ast;
 using namespace slang::driver;
 
+class NetlistNode;
+class NetlistEdge;
+using Netlist = DirectedGraph<NetlistNode, NetlistEdge>;
+
+struct NetlistNode : public Node<NetlistNode, NetlistEdge> {
+  NetlistNode() = default;
+};
+
+struct NetlistEdge : public DirectedEdge<NetlistNode, NetlistEdge> {
+  NetlistEdge(NetlistNode &targetNode) : DirectedEdge(targetNode) {}
+};
+
 class VariableReferenceVisitor : public ASTVisitor<VariableReferenceVisitor, false, true> {
   EvalContext &evalCtx;
   std::vector<const Expression*> selectors;
@@ -86,8 +98,8 @@ class UnrollVisitor : public ASTVisitor<UnrollVisitor, true, false> {
 public:
   bool anyErrors = false;
 
-  explicit UnrollVisitor(Compilation &compilation) :
-    evalCtx(compilation) {
+  explicit UnrollVisitor(Compilation &compilation, Netlist &netlist) :
+    netlist(netlist), evalCtx(compilation) {
     evalCtx.pushEmptyFrame();
   }
 
@@ -236,6 +248,7 @@ private:
     return true;
   }
 
+  Netlist &netlist;
   EvalContext evalCtx;
 };
 
@@ -336,9 +349,9 @@ int main(int argc, char** argv) {
     return 0;
   }
 
-  UnrollVisitor visitor(*compilation);
+  Netlist netlist;
+  UnrollVisitor visitor(*compilation, netlist);
   compilation->getRoot().visit(visitor);
 
   return 0;
-    return 0;
 }
