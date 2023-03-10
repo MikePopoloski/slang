@@ -11,6 +11,7 @@
 #include <unordered_set>
 #include <fstream>
 #include <iostream>
+#include <utility>
 #include <vector>
 
 #include "slang/ast/ASTSerializer.h"
@@ -23,6 +24,7 @@
 #include "slang/text/Json.h"
 #include "slang/util/TimeTrace.h"
 #include "slang/util/Version.h"
+#include "slang/util/Util.h"
 
 #include "DirectedGraph.h"
 
@@ -34,45 +36,101 @@ class NetlistNode;
 class NetlistEdge;
 using Netlist = DirectedGraph<NetlistNode, NetlistEdge>;
 
-struct NetlistNode : public Node<NetlistNode, NetlistEdge> {
-  NetlistNode() = default;
+enum class VariableSelectorKind {
+  ElementSelect,
+  RangeSelect,
+  MemberAccess
 };
 
-struct NetlistEdge : public DirectedEdge<NetlistNode, NetlistEdge> {
+struct VariableSelectorBase {
+  VariableSelectorKind kind;
+  explicit VariableSelectorBase(VariableSelectorKind kind) : kind(kind) {}
+};
+
+/// A variable selector representing an element selector.
+struct VariableElementSelect : public VariableSelectorBase {
+  ConstantValue index;
+  VariableElementSelect(ConstantValue index) :
+    VariableSelectorBase(VariableSelectorKind::ElementSelect), index(std::move(index)) {}
+  std::string toString() const {
+    return fmt::format("[%s]", index.toString());
+  }
+};
+
+/// A variable selector representing a range selector.
+struct VariableRangeSelect : public VariableSelectorBase {
+  ConstantValue leftIndex, rightIndex;
+  VariableRangeSelect(ConstantValue leftIndex, ConstantValue rightIndex) :
+    VariableSelectorBase(VariableSelectorKind::RangeSelect),
+    leftIndex(std::move(leftIndex)), rightIndex(std::move(rightIndex)) {}
+  std::string toString() const {
+    return fmt::format("[%s:%s]", leftIndex.toString(), rightIndex.toString());
+  }
+};
+
+/// A variable selector representing member access of a structure.
+struct VariableMemberAccess : public VariableSelectorBase {
+  string_view name;
+  VariableMemberAccess(string_view name) :
+    VariableSelectorBase(VariableSelectorKind::MemberAccess), name(name) {}
+  std::string toString() const {
+    return fmt::format(".%s", name);
+  }
+};
+
+/// A class representing a node in the netlist, corresponding to the appearance
+/// of a variable symbol, with zero or more selectors applied.
+class NetlistNode : public Node<NetlistNode, NetlistEdge> {
+public:
+  NetlistNode() = default;
+  void addElementSelect(const ConstantValue &index) {
+    selectors.emplace_back(std::make_unique<VariableElementSelect>(index));
+  }
+  void addRangeSelect(const ConstantValue &leftIndex, const ConstantValue &rightIndex) {
+    selectors.emplace_back(std::make_unique<VariableRangeSelect>(leftIndex, rightIndex));
+  }
+  void addMemberAccess(string_view name) {
+    selectors.emplace_back(std::make_unique<VariableMemberAccess>(name));
+  }
+  void setName(string_view name) { name = name; }
+private:
+  string_view name;
+  std::vector<std::unique_ptr<VariableSelectorBase>> selectors;
+};
+
+class NetlistEdge : public DirectedEdge<NetlistNode, NetlistEdge> {
+public:
   NetlistEdge(NetlistNode &targetNode) : DirectedEdge(targetNode) {}
 };
 
 class VariableReferenceVisitor : public ASTVisitor<VariableReferenceVisitor, false, true> {
-  EvalContext &evalCtx;
-  std::vector<const Expression*> selectors;
-
 public:
-  explicit VariableReferenceVisitor(EvalContext &evalCtx) : evalCtx(evalCtx) {}
+  explicit VariableReferenceVisitor(Netlist &netlist, EvalContext &evalCtx) :
+    netlist(netlist), evalCtx(evalCtx) {}
 
   void handle(const AssignmentExpression &expr) {
     std::cout << "AssignmentExpression non-blocking " << expr.isNonBlocking() << "\n";
     expr.left().visit(*this);
     expr.right().visit(*this);
+    // Add an edge...
   }
 
   void handle(const NamedValueExpression &expr) {
-    std::cout << "NamedValueExpression " << expr.symbol.name << "\n";
+    auto &node = netlist.addNode();
+    node.setName(expr.symbol.name);
     for (auto *selector : selectors) {
       if (selector->kind == ExpressionKind::ElementSelect) {
         auto index = selector->as<ElementSelectExpression>().selector().eval(evalCtx);
-        std::cout << "ElementSelectExpression " << index.toString() << "\n";
+        node.addElementSelect(index);
       }
       else if (selector->kind == ExpressionKind::RangeSelect) {
         auto &rangeSelectExpr = selector->as<RangeSelectExpression>();
         auto leftIndex = rangeSelectExpr.left().eval(evalCtx);
         auto rightIndex = rangeSelectExpr.right().eval(evalCtx);
-        std::cout << "RangeSelectExpression "
-                  << leftIndex.toString() << ":"
-                  << rightIndex.toString() << "\n";
+        node.addRangeSelect(leftIndex, rightIndex);
       }
       else if (selector->kind == ExpressionKind::MemberAccess) {
-        std::cout << "MemberAccessExpression "
-                  << selector->as<MemberAccessExpression>().member.name << "\n";
+        node.addMemberAccess(selector->as<MemberAccessExpression>().member.name);
       }
     }
     selectors.clear();
@@ -92,6 +150,11 @@ public:
     selectors.push_back(&expr);
     expr.value().visit(*this);
   }
+
+private:
+  Netlist &netlist;
+  EvalContext &evalCtx;
+  std::vector<const Expression*> selectors;
 };
 
 class UnrollVisitor : public ASTVisitor<UnrollVisitor, true, false> {
@@ -108,7 +171,7 @@ public:
     for (auto *portConnection : symbol.getPortConnections()) {
       std::cout << "Port " << portConnection->port.name << " connects to:\n";
       if (portConnection->getExpression()) {
-        VariableReferenceVisitor visitor(evalCtx);
+        VariableReferenceVisitor visitor(netlist, evalCtx);
         portConnection->getExpression()->visit(visitor);
       }
     }
@@ -235,7 +298,7 @@ public:
   void handle(const ExpressionStatement& stmt) {
     std::cout << "ExpressionStatement\n";
     step();
-    VariableReferenceVisitor visitor(evalCtx);
+    VariableReferenceVisitor visitor(netlist, evalCtx);
     stmt.visit(visitor);
   }
 
