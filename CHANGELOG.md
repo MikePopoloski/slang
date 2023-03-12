@@ -20,6 +20,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 ### General Features
 * New option `--obfuscate-ids` when used with `--preprocess` will replace all identifiers in the output with obfuscated alphanumeric strings (thanks to @Sustrak)
 * Added a group of new warnings to report on unused code elements; see [-Wunused](https://sv-lang.com/warning-ref.html#unused)
+* A new (currently experimental) tool, `slang-tidy`, has been added as a place to collect more in-depth or project-specific static analysis rules (thanks to @Sustrak).
+* New option `--suppress-warnings` allows suppressing warnings from one or more file paths, intended to allow easily hiding warnings from 3rd party code
 
 ### Improvements
 * The default library name for slang has been changed to "libsvlang" to avoid clashing with an existing "S-lang" package on most Linux systems. The library name is now configureable via CMake.
@@ -29,7 +31,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * Added human-friendly names for function arguments in Python bindings (thanks to @Kuree)
 * Conditional statements in constant functions now implement unique/priority semantics (thanks to @HungMingWu)
 * Procedural force/release of bit selects or part selects is an error according to the LRM; this error can now be downgraded to a warning for compatibility with other tools (thanks to @udif)
+* Implicit named port connections with inequivalent types are disallowed by the LRM; this error can now be downgraded to a warning for compatibility with other tools
 * When printing type names in diagnostics, if more than one type shares the same simple name, they will now be disambiguated with their full path
+* A new `--timescale` option allows setting a default time scale for design elements. If this option is not set, there is no default and an error will be
+issued if not all elements have a time scale specified (as required by the LRM).
 
 ### Fixes
 * Parameters used inside specify blocks will now issue an appropriate warning
@@ -46,6 +51,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * Hierarchical references from packages to items outside that package are now correctly disallowed
 * Bit-vector system functions (such as `$countbits`) can now be used with bitstream types (as opposed to just integral types)
 * Max size limits for packed and unpacked arrays and structs are now strictly enforced
+* Invalid inferred time scales will now issue an appropriate error
 
 
 ## [v2.0] - 2022-10-29
