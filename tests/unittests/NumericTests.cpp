@@ -342,6 +342,14 @@ TEST_CASE("Arithmetic") {
     CHECK(v8 == 2);
 
     CHECK_THAT(-SVInt(logic_t::z), exactlyEquals(SVInt(logic_t::x)));
+
+    SVInt v9 = "193'hFFFF_FFFF_FFFF_FFFF_FFFF_FFFF_FFFF_FFFF_FFFF_FFFF_FFFF_FFFF"_si;
+    v9++;
+    CHECK(v9 == "193'h1_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000"_si);
+
+    SVInt v10 = "193'h1_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000"_si;
+    v10--;
+    CHECK(v10 == "193'hFFFF_FFFF_FFFF_FFFF_FFFF_FFFF_FFFF_FFFF_FFFF_FFFF_FFFF_FFFF"_si);
 }
 
 void testDiv(const SVInt& a, const SVInt& b, const SVInt& c) {
