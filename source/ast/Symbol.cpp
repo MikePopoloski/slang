@@ -7,8 +7,6 @@
 //------------------------------------------------------------------------------
 #include "slang/ast/Symbol.h"
 
-#include "../text/FormatBuffer.h"
-
 #include "slang/ast/ASTVisitor.h"
 #include "slang/ast/Compilation.h"
 #include "slang/ast/Definition.h"
@@ -16,6 +14,7 @@
 #include "slang/ast/symbols/MemberSymbols.h"
 #include "slang/ast/types/Type.h"
 #include "slang/syntax/AllSyntax.h"
+#include "slang/text/FormatBuffer.h"
 #include "slang/text/SourceManager.h"
 #include "slang/util/StackContainer.h"
 

@@ -25,6 +25,7 @@
 #include "slang/util/TimeTrace.h"
 #include "slang/util/Version.h"
 #include "slang/util/Util.h"
+#include "slang/text/FormatBuffer.h"
 
 #include "DirectedGraph.h"
 
@@ -93,6 +94,7 @@ public:
     selectors.emplace_back(std::make_unique<VariableMemberAccess>(name));
   }
   void setName(string_view name) { name = name; }
+  string_view getName() { return name; }
 private:
   string_view name;
   std::vector<std::unique_ptr<VariableSelectorBase>> selectors;
@@ -337,6 +339,18 @@ void printJson(Compilation& compilation, const std::string& fileName,
     writeToFile(fileName, writer.view());
 }
 
+void printDOT(const Netlist &netlist, const std::string &fileName) {
+  slang::FormatBuffer buffer;
+  buffer.append("digraph {\n");
+  for (auto &node : netlist) {
+    for (auto &edge : node->getEdges()) {
+      buffer.format("  {} -> {}", node->getName(), edge->getTargetNode());
+    }
+  }
+  buffer.append("}\n");
+  writeToFile(fileName, buffer.str());
+}
+
 template<typename Stream, typename String>
 void writeToFile(Stream& os, string_view fileName, String contents) {
     os.write(contents.data(), contents.size());
@@ -377,6 +391,11 @@ int main(int argc, char** argv) {
                      "When dumping AST to JSON, include only the scopes specified by the "
                      "given hierarchical paths",
                      "<path>");
+
+  std::optional<std::string> netlistDotFile;
+  driver.cmdLine.add("--netlist-dot", netlistDotFile,
+                     "Dump the netlist in DOT format to the specified file, or '-' for stdout", "<file>",
+                     /* isFileName */ true);
 
   if (!driver.parseCommandLine(argc, argv)) {
     return 1;

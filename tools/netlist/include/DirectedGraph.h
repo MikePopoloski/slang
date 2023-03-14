@@ -168,6 +168,11 @@ public:
 
   DirectedGraph() = default;
 
+  const_iterator begin() const { return nodes.begin(); }
+  const_iterator end() const { return nodes.end(); }
+  iterator begin() { return nodes.begin(); }
+  iterator end() { return nodes.end(); }
+
   node_descriptor findNode(const NodeType &nodeToFind) const {
     auto it = std::find_if(nodes.begin(), nodes.end(),
                            [&nodeToFind](const std::unique_ptr<NodeType> &node) {
