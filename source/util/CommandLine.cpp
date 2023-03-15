@@ -674,7 +674,7 @@ bool CommandLine::Option::expectsValue() const {
 
 std::string CommandLine::Option::set(string_view name, string_view value, bool ignoreDup) {
     std::string pathMem;
-    if (isFileName && !value.empty()) {
+    if (isFileName && !value.empty() && value != "-") {
         std::error_code ec;
         fs::path path = fs::weakly_canonical(fs::u8path(value), ec);
         if (!ec) {

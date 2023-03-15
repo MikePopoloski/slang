@@ -112,21 +112,20 @@ public:
   NetlistEdge(NetlistNode &targetNode) : DirectedEdge(targetNode) {}
 };
 
+/// An AST visitor to identify variable references with selectors in
+/// expressions only.
 class VariableReferenceVisitor : public ASTVisitor<VariableReferenceVisitor, false, true> {
 public:
-  explicit VariableReferenceVisitor(Netlist &netlist, EvalContext &evalCtx) :
-    netlist(netlist), evalCtx(evalCtx) {}
-
-  void handle(const AssignmentExpression &expr) {
-    std::cout << "AssignmentExpression non-blocking " << expr.isNonBlocking() << "\n";
-    expr.left().visit(*this);
-    expr.right().visit(*this);
-    // Add an edge...
-  }
+  explicit VariableReferenceVisitor(Netlist &netlist,
+                                    std::vector<NetlistNode*> &visitList,
+                                    EvalContext &evalCtx) :
+    netlist(netlist), visitList(visitList), evalCtx(evalCtx) {}
 
   void handle(const NamedValueExpression &expr) {
     auto &node = netlist.addNode();
+    visitList.push_back(&node);
     node.setName(expr.symbol.name);
+    //std::cout<<"Got node "<<node.getName()<<"\n";
     for (auto *selector : selectors) {
       if (selector->kind == ExpressionKind::ElementSelect) {
         auto index = selector->as<ElementSelectExpression>().selector().eval(evalCtx);
@@ -162,8 +161,43 @@ public:
 
 private:
   Netlist &netlist;
+  std::vector<NetlistNode*> &visitList;
   EvalContext &evalCtx;
   std::vector<const Expression*> selectors;
+};
+
+/// An AST visitor to create dependencies between occurrances of variables
+/// appearing on the left and right hand sides of assignment statements.
+class AssignmentVisitor : public ASTVisitor<AssignmentVisitor, false, true> {
+public:
+  explicit AssignmentVisitor(Netlist &netlist, EvalContext &evalCtx) :
+    netlist(netlist), evalCtx(evalCtx) {}
+
+  void handle(const AssignmentExpression &expr) {
+    std::cout << "AssignmentExpression non-blocking " << expr.isNonBlocking() << "\n";
+    // Collect variable references on the left and right hand sides of the
+    // assignment.
+    std::vector<NetlistNode*> visitListLHS, visitListRHS;
+    {
+      VariableReferenceVisitor visitor(netlist, visitListLHS, evalCtx);
+      expr.left().visit(visitor);
+    }
+    {
+      VariableReferenceVisitor visitor(netlist, visitListRHS, evalCtx);
+      expr.right().visit(visitor);
+    }
+    // Add edges RHS -> LHS...
+    for (auto *leftNode : visitListLHS) {
+      for (auto *rightNode : visitListRHS) {
+        netlist.addEdge(*leftNode, *rightNode);
+        //std::cout<<"add edge "<<rightNode->getName()<< " to " <<leftNode->getName()<<"\n";
+      }
+    }
+  }
+
+private:
+  Netlist &netlist;
+  EvalContext &evalCtx;
 };
 
 class UnrollVisitor : public ASTVisitor<UnrollVisitor, true, false> {
@@ -179,10 +213,10 @@ public:
     std::cout << "InstanceSymbol " << symbol.name << "\n";
     for (auto *portConnection : symbol.getPortConnections()) {
       std::cout << "Port " << portConnection->port.name << " connects to:\n";
-      if (portConnection->getExpression()) {
-        VariableReferenceVisitor visitor(netlist, evalCtx);
-        portConnection->getExpression()->visit(visitor);
-      }
+      //if (portConnection->getExpression()) {
+        //VariableReferenceVisitor visitor(netlist, evalCtx);
+        //portConnection->getExpression()->visit(visitor);
+      //}
     }
     symbol.body.visit(*this);
   }
@@ -199,7 +233,7 @@ public:
   }
 
   void handle(const ForLoopStatement& loop) {
-    std::cout << "Unroll ForLoopStatement\n";
+//    std::cout << "Unroll ForLoopStatement\n";
 
     // Conditions this loop cannot be unrolled.
     if (loop.loopVars.empty() || !loop.stopExpr || loop.steps.empty() || anyErrors) {
@@ -273,7 +307,7 @@ public:
   }
 
   void handle(const ConditionalStatement& stmt) {
-    std::cout << "ConditionalStatement\n";
+//    std::cout << "ConditionalStatement\n";
     // Evaluate the condition; if not constant visit both sides,
     // otherwise visit only the side that matches the condition.
     auto fallback = [&] {
@@ -305,10 +339,15 @@ public:
   }
 
   void handle(const ExpressionStatement& stmt) {
-    std::cout << "ExpressionStatement\n";
+//    std::cout << "ExpressionStatement\n";
     step();
-    VariableReferenceVisitor visitor(netlist, evalCtx);
+    AssignmentVisitor visitor(netlist, evalCtx);
     stmt.visit(visitor);
+  }
+
+  void handle(const ContinuousAssignSymbol &symbol) {
+    AssignmentVisitor visitor(netlist, evalCtx);
+    symbol.visit(visitor);
   }
 
 private:
@@ -352,7 +391,7 @@ void printDOT(const Netlist &netlist, const std::string &fileName) {
   }
   for (auto &node : netlist) {
     for (auto &edge : node->getEdges()) {
-      buffer.format("  N{} -> N{}\n", node->getName(), edge->getTargetNode().getName());
+      buffer.format("  N{} -> N{}\n", node->ID, edge->getTargetNode().ID);
     }
   }
   buffer.append("}\n");
@@ -369,7 +408,6 @@ void writeToFile(Stream& os, string_view fileName, String contents) {
 }
 
 void writeToFile(string_view fileName, string_view contents) {
-  std::cout<<"filename "<<fileName<<"\n";
   if (fileName == "-") {
     writeToFile(std::cout, "stdout", contents);
   } else {
@@ -446,7 +484,8 @@ int main(int argc, char** argv) {
     Netlist netlist;
     UnrollVisitor visitor(*compilation, netlist);
     compilation->getRoot().visit(visitor);
-    std::cout << "Netlist has " << netlist.size() << " nodes\n";
+    std::cout << fmt::format("Netlist has {} nodes and {} edges\n",
+                             netlist.numNodes(), netlist.numEdges());
 
     if (netlistDotFile) {
       printDOT(netlist, *netlistDotFile);

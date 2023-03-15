@@ -294,7 +294,16 @@ public:
   }
 
   /// Return the size of the graph.
-  size_t size() const { return nodes.size(); }
+  size_t numNodes() const { return nodes.size(); }
+
+  /// Return the number of edges in the graph.
+  size_t numEdges() const {
+    size_t count = 0;
+    for (auto &node : nodes) {
+      count += node->outDegree();
+    }
+    return count;
+  }
 
 private:
   NodeListType nodes;

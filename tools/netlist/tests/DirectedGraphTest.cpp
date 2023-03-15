@@ -25,13 +25,15 @@ TEST_CASE("Test basic connectivity") {
   auto &n1 = graph.addNode();
   auto &n2 = graph.addNode();
   auto &n3 = graph.addNode();
-  CHECK(graph.size() == 4);
+  CHECK(graph.numNodes() == 4);
+  CHECK(graph.numEdges() == 0);
   auto &e0 = graph.addEdge(n0, n1);
   auto &e1 = graph.addEdge(n0, n2);
   auto &e2 = graph.addEdge(n0, n3);
   auto &e3 = graph.addEdge(n1, n2);
   auto &e4 = graph.addEdge(n1, n3);
   auto &e5 = graph.addEdge(n2, n3);
+  CHECK(graph.numEdges() == 6);
   // Edge target nodes.
   CHECK(e0.getTargetNode() == n1);
   CHECK(e1.getTargetNode() == n2);
@@ -56,11 +58,12 @@ TEST_CASE("Test removing nodes") {
   auto &n0 = graph.addNode();
   auto &n1 = graph.addNode();
   auto &n2 = graph.addNode();
-  CHECK(graph.size() == 3);
   // Create a ring of n0, n1, n2
   graph.addEdge(n0, n1);
   graph.addEdge(n1, n2);
   graph.addEdge(n2, n0);
+  CHECK(graph.numNodes() == 3);
+  CHECK(graph.numEdges() == 3);
   // Remove n0
   CHECK(graph.removeNode(n0));
   CHECK(graph.inDegree(n1) == 0);
@@ -73,7 +76,7 @@ TEST_CASE("Test removing nodes") {
   CHECK(graph.outDegree(n2) == 0);
   // Remove n2
   CHECK(graph.removeNode(n2));
-  CHECK(graph.size() == 0);
+  CHECK(graph.numNodes() == 0);
 }
 
 TEST_CASE("Test removing edges") {
@@ -81,11 +84,12 @@ TEST_CASE("Test removing edges") {
   auto &n0 = graph.addNode();
   auto &n1 = graph.addNode();
   auto &n2 = graph.addNode();
-  CHECK(graph.size() == 3);
   // Create a ring of n0 -e0- n1 -e1- n2 -e2-
   graph.addEdge(n0, n1); // e0
   graph.addEdge(n1, n2); // e1
   graph.addEdge(n2, n0); // e2
+  CHECK(graph.numNodes() == 3);
+  CHECK(graph.numEdges() == 3);
   // Remove e0.
   CHECK(graph.removeEdge(n0, n1));
   CHECK(graph.outDegree(n0) == 0);
