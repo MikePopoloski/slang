@@ -83,7 +83,7 @@ struct VariableMemberAccess : public VariableSelectorBase {
 /// of a variable symbol, with zero or more selectors applied.
 class NetlistNode : public Node<NetlistNode, NetlistEdge> {
 public:
-  NetlistNode() = default;
+  NetlistNode() : ID(++nextID) {};
   void addElementSelect(const ConstantValue &index) {
     selectors.emplace_back(std::make_unique<VariableElementSelect>(index));
   }
@@ -93,12 +93,19 @@ public:
   void addMemberAccess(string_view name) {
     selectors.emplace_back(std::make_unique<VariableMemberAccess>(name));
   }
-  void setName(string_view name) { name = name; }
-  string_view getName() { return name; }
-private:
+  void setName(string_view newName) { name = newName; }
+  string_view getName() const { return name; }
+
+public:
+  size_t ID;
   string_view name;
+
+private:
+  static size_t nextID;
   std::vector<std::unique_ptr<VariableSelectorBase>> selectors;
 };
+
+size_t NetlistNode::nextID = 0;
 
 class NetlistEdge : public DirectedEdge<NetlistNode, NetlistEdge> {
 public:
@@ -323,19 +330,17 @@ void printJson(Compilation& compilation, const std::string& fileName,
                const std::vector<std::string>& scopes) {
     JsonWriter writer;
     writer.setPrettyPrint(true);
-
     ASTSerializer serializer(compilation, writer);
     if (scopes.empty()) {
-        serializer.serialize(compilation.getRoot());
-    }
-    else {
-        for (auto& scopeName : scopes) {
-            auto sym = compilation.getRoot().lookupName(scopeName);
-            if (sym)
-                serializer.serialize(*sym);
+      serializer.serialize(compilation.getRoot());
+    } else {
+      for (auto& scopeName : scopes) {
+        auto sym = compilation.getRoot().lookupName(scopeName);
+        if (sym) {
+          serializer.serialize(*sym);
         }
+      }
     }
-
     writeToFile(fileName, writer.view());
 }
 
@@ -343,30 +348,34 @@ void printDOT(const Netlist &netlist, const std::string &fileName) {
   slang::FormatBuffer buffer;
   buffer.append("digraph {\n");
   for (auto &node : netlist) {
+    buffer.format("  N{} [label=\"{}\",shape=circle]\n", node->ID, node->getName());
+  }
+  for (auto &node : netlist) {
     for (auto &edge : node->getEdges()) {
-      buffer.format("  {} -> {}", node->getName(), edge->getTargetNode());
+      buffer.format("  N{} -> N{}\n", node->getName(), edge->getTargetNode().getName());
     }
   }
   buffer.append("}\n");
-  writeToFile(fileName, buffer.str());
+  writeToFile(fileName, string_view(buffer.data()));
 }
 
 template<typename Stream, typename String>
 void writeToFile(Stream& os, string_view fileName, String contents) {
-    os.write(contents.data(), contents.size());
-    os.flush();
-    if (!os)
-        throw std::runtime_error(fmt::format("Unable to write AST to '{}'", fileName));
+  os.write(contents.data(), contents.size());
+  os.flush();
+  if (!os) {
+    throw std::runtime_error(fmt::format("Unable to write AST to '{}'", fileName));
+  }
 }
 
 void writeToFile(string_view fileName, string_view contents) {
-    if (fileName == "-") {
-        writeToFile(std::cout, "stdout", contents);
-    }
-    else {
-        std::ofstream file{std::string(fileName)};
-        writeToFile(file, fileName, contents);
-    }
+  std::cout<<"filename "<<fileName<<"\n";
+  if (fileName == "-") {
+    writeToFile(std::cout, "stdout", contents);
+  } else {
+    std::ofstream file{std::string(fileName)};
+    writeToFile(file, fileName, contents);
+  }
 }
 
 int main(int argc, char** argv) {
@@ -417,23 +426,37 @@ int main(int argc, char** argv) {
     return 2;
   }
 
-  bool ok = driver.parseAllSources();
+  try {
 
-  auto compilation = driver.createCompilation();
-  ok &= driver.reportCompilation(*compilation, quiet == true);
+    bool ok = driver.parseAllSources();
 
-  if (!ok) {
-    return ok;
+    auto compilation = driver.createCompilation();
+    ok &= driver.reportCompilation(*compilation, quiet == true);
+
+    if (!ok) {
+      return ok;
+    }
+
+    if (astJsonFile) {
+      printJson(*compilation, *astJsonFile, astJsonScopes);
+      return 0;
+    }
+
+    // Create the netlist by traversing the AST.
+    Netlist netlist;
+    UnrollVisitor visitor(*compilation, netlist);
+    compilation->getRoot().visit(visitor);
+    std::cout << "Netlist has " << netlist.size() << " nodes\n";
+
+    if (netlistDotFile) {
+      printDOT(netlist, *netlistDotFile);
+      return 0;
+    }
+
+  } catch (const std::exception& e) {
+    OS::printE(fmt::format("{}\n", e.what()));
+    return 3;
   }
-
-  if (astJsonFile) {
-    printJson(*compilation, *astJsonFile, astJsonScopes);
-    return 0;
-  }
-
-  Netlist netlist;
-  UnrollVisitor visitor(*compilation, netlist);
-  compilation->getRoot().visit(visitor);
 
   return 0;
 }
