@@ -93,12 +93,11 @@ public:
   void addMemberAccess(string_view name) {
     selectors.emplace_back(std::make_unique<VariableMemberAccess>(name));
   }
-  void setName(string_view newName) { name = newName; }
-  string_view getName() const { return name; }
+  string_view getName() const { return symbol->name; }
 
 public:
   size_t ID;
-  string_view name;
+  const Symbol *symbol;
 
 private:
   static size_t nextID;
@@ -124,8 +123,7 @@ public:
   void handle(const NamedValueExpression &expr) {
     auto &node = netlist.addNode();
     visitList.push_back(&node);
-    node.setName(expr.symbol.name);
-    //std::cout<<"Got node "<<node.getName()<<"\n";
+    node.symbol = &(expr.symbol);
     for (auto *selector : selectors) {
       if (selector->kind == ExpressionKind::ElementSelect) {
         auto index = selector->as<ElementSelectExpression>().selector().eval(evalCtx);
@@ -230,6 +228,13 @@ public:
 
   void handle(const PortSymbol &symbol) {
     std::cout << "PortSymbol " << symbol.name << "\n";
+    auto &node = netlist.addNode();
+    node.symbol = &symbol;
+  }
+
+  void handle(const ContinuousAssignSymbol &symbol) {
+    AssignmentVisitor visitor(netlist, evalCtx);
+    symbol.visit(visitor);
   }
 
   void handle(const ForLoopStatement& loop) {
@@ -343,11 +348,6 @@ public:
     step();
     AssignmentVisitor visitor(netlist, evalCtx);
     stmt.visit(visitor);
-  }
-
-  void handle(const ContinuousAssignSymbol &symbol) {
-    AssignmentVisitor visitor(netlist, evalCtx);
-    symbol.visit(visitor);
   }
 
 private:
