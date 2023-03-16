@@ -217,6 +217,8 @@ static bool addOne(uint64_t* dst, uint64_t* src, uint32_t len, uint64_t value) {
 
         if (!carry)
             break;
+
+        value = 0;
     }
     return carry;
 }
@@ -231,6 +233,8 @@ static bool subOne(uint64_t* dst, uint64_t* src, uint32_t len, uint64_t value) {
 
         if (!borrow)
             break;
+
+        value = 0;
     }
     return borrow;
 }

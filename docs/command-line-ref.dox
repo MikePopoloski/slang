@@ -307,6 +307,11 @@ Show or hide macro expansion backtraces in diagnostic output. The default is to 
 
 Show or hide hierarchy locations in diagnostic output. The default is to show.
 
+`--suppress-warnings`
+
+One or more paths in which to suppress warnings. Use this if you want to generally turn on warnings
+for your project and have it build cleanly but have some files which you can't modify for some reason.
+
 `--error-limit`
 
 Set a limit on the number of errors that will be printed. Setting this to zero will

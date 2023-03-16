@@ -13,7 +13,11 @@
 #include "slang/util/StackContainer.h"
 #include "slang/util/String.h"
 
+namespace fs = std::filesystem;
+
 namespace slang {
+
+static const fs::path emptyPath;
 
 SourceManager::SourceManager() {
     // add a dummy entry to the start of the directory list so that our file IDs line up
@@ -100,6 +104,16 @@ string_view SourceManager::getRawFileName(BufferID buffer) const {
         return "";
     else
         return info->data->name;
+}
+
+const fs::path& SourceManager::getFullPath(BufferID buffer) const {
+    auto info = getFileInfo(buffer);
+
+    // LOCKING: not required, immutable after creation
+    if (!info || !info->data)
+        return emptyPath;
+    else
+        return info->data->fullPath;
 }
 
 SourceLocation SourceManager::getIncludedFrom(BufferID buffer) const {
@@ -309,21 +323,22 @@ SourceBuffer SourceManager::assignText(string_view path, string_view text,
     return assignBuffer(path, std::move(buffer), includedFrom);
 }
 
-SourceBuffer SourceManager::assignBuffer(string_view pathStr, std::vector<char>&& buffer,
+SourceBuffer SourceManager::assignBuffer(string_view bufferPath, std::vector<char>&& buffer,
                                          SourceLocation includedFrom) {
 
     // first see if we have this file cached
-    fs::path path(widen(pathStr));
+    fs::path path(widen(bufferPath));
+    auto pathStr = path.u8string();
     {
         std::shared_lock lock(mut);
-        auto it = lookupCache.find(path.u8string());
+        auto it = lookupCache.find(pathStr);
         if (it != lookupCache.end()) {
             throw std::runtime_error(
                 "Buffer with the given path has already been assigned to the source manager");
         }
     }
 
-    return cacheBuffer(path, includedFrom, std::move(buffer));
+    return cacheBuffer(std::move(path), std::move(pathStr), includedFrom, std::move(buffer));
 }
 
 SourceBuffer SourceManager::readSource(const fs::path& path) {
@@ -495,9 +510,10 @@ SourceBuffer SourceManager::openCached(const fs::path& fullPath, SourceLocation 
     }
 
     // first see if we have this file cached
+    std::string pathStr = absPath.u8string();
     {
         std::unique_lock lock(mut);
-        auto it = lookupCache.find(absPath.u8string());
+        auto it = lookupCache.find(pathStr);
         if (it != lookupCache.end()) {
             FileData* fd = it->second.get();
             if (!fd)
@@ -510,15 +526,15 @@ SourceBuffer SourceManager::openCached(const fs::path& fullPath, SourceLocation 
     std::vector<char> buffer;
     if (!OS::readFile(absPath, buffer)) {
         std::unique_lock lock(mut);
-        lookupCache.emplace(absPath.u8string(), nullptr);
+        lookupCache.emplace(pathStr, nullptr);
         return SourceBuffer();
     }
 
-    return cacheBuffer(absPath, includedFrom, std::move(buffer));
+    return cacheBuffer(std::move(absPath), std::move(pathStr), includedFrom, std::move(buffer));
 }
 
-SourceBuffer SourceManager::cacheBuffer(const fs::path& path, SourceLocation includedFrom,
-                                        std::vector<char>&& buffer) {
+SourceBuffer SourceManager::cacheBuffer(fs::path&& path, std::string&& pathStr,
+                                        SourceLocation includedFrom, std::vector<char>&& buffer) {
     std::string name;
     if (!disableProximatePaths) {
         std::error_code ec;
@@ -532,10 +548,11 @@ SourceBuffer SourceManager::cacheBuffer(const fs::path& path, SourceLocation inc
 
     std::unique_lock lock(mut);
 
-    auto fd = std::make_unique<FileData>(&*directories.insert(path.parent_path()).first,
-                                         std::move(name), std::move(buffer));
+    auto directory = &*directories.insert(path.parent_path()).first;
+    auto fd = std::make_unique<FileData>(directory, std::move(name), std::move(buffer),
+                                         std::move(path));
 
-    auto [it, inserted] = lookupCache.emplace(path.u8string(), std::move(fd));
+    auto [it, inserted] = lookupCache.emplace(pathStr, std::move(fd));
     ASSERT(inserted);
 
     FileData* fdPtr = it->second.get();

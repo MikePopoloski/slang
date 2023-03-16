@@ -1282,7 +1282,7 @@ endmodule
     CHECK(!m1.getPortConnection(m1_i)->getIfaceInstance());
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 14);
+    REQUIRE(diags.size() == 15);
     CHECK(diags[0].code == diag::PortTypeNotInterfaceOrData);
     CHECK(diags[1].code == diag::TooManyPortConnections);
     CHECK(diags[2].code == diag::ImplicitNamedPortNotFound);
@@ -1295,8 +1295,9 @@ endmodule
     CHECK(diags[9].code == diag::UndeclaredIdentifier);
     CHECK(diags[10].code == diag::PortConnDimensionsMismatch);
     CHECK(diags[11].code == diag::ImplicitNamedPortTypeMismatch);
-    CHECK(diags[12].code == diag::UnconnectedUnnamedPort);
-    CHECK(diags[13].code == diag::PortDoesNotExist);
+    CHECK(diags[12].code == diag::WidthExpand);
+    CHECK(diags[13].code == diag::UnconnectedUnnamedPort);
+    CHECK(diags[14].code == diag::PortDoesNotExist);
 }
 
 TEST_CASE("Inconsistent port collapsing") {

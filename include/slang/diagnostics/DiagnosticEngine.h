@@ -7,6 +7,7 @@
 //------------------------------------------------------------------------------
 #pragma once
 
+#include <filesystem>
 #include <memory>
 #include <string>
 #include <typeindex>
@@ -142,6 +143,10 @@ public:
     /// severity type.
     void clearMappings(DiagnosticSeverity severity);
 
+    /// Adds a path prefix for which all warnings will be supressed. This applies to
+    /// all natural warnings, regardless of whether they've been upgraded to an error.
+    void addIgnorePath(const std::filesystem::path& path);
+
     /// Sets a custom formatter function for the given type. This is used to
     /// provide formatting for diagnostic arguments of a custom type.
     template<typename ForType>
@@ -207,7 +212,7 @@ private:
 
     std::optional<DiagnosticSeverity> findMappedSeverity(DiagCode code,
                                                          SourceLocation location) const;
-    void issueImpl(const Diagnostic& diagnostic, DiagnosticSeverity severity);
+    bool issueImpl(const Diagnostic& diagnostic, DiagnosticSeverity severity);
 
     template<typename TDirective>
     void setMappingsFromPragmasImpl(BufferID buffer, span<const TDirective> directives,
@@ -215,32 +220,6 @@ private:
 
     // The source manager used to resolve locations into file names.
     const SourceManager& sourceManager;
-
-    // A global mapping from diagnostic to a configured severity it should have.
-    flat_hash_map<DiagCode, DiagnosticSeverity> severityTable;
-
-    // A global mapping from diagnostic to the message it should display.
-    flat_hash_map<DiagCode, std::string> messageTable;
-
-    // A set of buffers for which we have reported an include stack,
-    // so that we don't do it more than once.
-    flat_hash_set<BufferID> reportedIncludeStack;
-
-    // A map from diagnostic -> source file -> list of in-source diagnostic mappings.
-    // These correspond to `pragma diagnostic entries in the source code.
-    flat_hash_map<DiagCode, flat_hash_map<BufferID, std::vector<DiagnosticMapping>>> diagMappings;
-
-    // A list of all registered clients that receive issued diagnostics.
-    std::vector<std::shared_ptr<DiagnosticClient>> clients;
-
-    // A map from typeid to a formatter for that type. Used to register custom
-    // formatters for subsystem-specific types.
-    using FormatterMap = flat_hash_map<std::type_index, std::shared_ptr<DiagArgFormatter>>;
-    mutable FormatterMap formatters;
-
-    // A set of default formatters that will be assigned to each new DiagnosticEngine instance
-    // that gets created. These can later be overridden on a per-instance basis.
-    static FormatterMap defaultFormatters;
 
     // Tracking for the number of errors and warnings we've issued.
     int numErrors = 0;
@@ -257,6 +236,35 @@ private:
     // Tracking for whether we've already issued an error for going over
     // the configured error limit (we only want to do that once).
     bool issuedOverLimitErr = false;
+
+    // A global mapping from diagnostic to a configured severity it should have.
+    flat_hash_map<DiagCode, DiagnosticSeverity> severityTable;
+
+    // A global mapping from diagnostic to the message it should display.
+    flat_hash_map<DiagCode, std::string> messageTable;
+
+    // A set of buffers for which we have reported an include stack,
+    // so that we don't do it more than once.
+    flat_hash_set<BufferID> reportedIncludeStack;
+
+    // A map from diagnostic -> source file -> list of in-source diagnostic mappings.
+    // These correspond to `pragma diagnostic entries in the source code.
+    flat_hash_map<DiagCode, flat_hash_map<BufferID, std::vector<DiagnosticMapping>>> diagMappings;
+
+    // A list of path prefixes to use to suppress warnings.
+    std::vector<std::filesystem::path> ignoreWarnPrefixes;
+
+    // A list of all registered clients that receive issued diagnostics.
+    std::vector<std::shared_ptr<DiagnosticClient>> clients;
+
+    // A map from typeid to a formatter for that type. Used to register custom
+    // formatters for subsystem-specific types.
+    using FormatterMap = flat_hash_map<std::type_index, std::shared_ptr<DiagArgFormatter>>;
+    mutable FormatterMap formatters;
+
+    // A set of default formatters that will be assigned to each new DiagnosticEngine instance
+    // that gets created. These can later be overridden on a per-instance basis.
+    static FormatterMap defaultFormatters;
 };
 
 } // namespace slang

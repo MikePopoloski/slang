@@ -11,10 +11,13 @@
 
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_templated.hpp>
+#include <filesystem>
 
 #include "slang/ast/Compilation.h"
 #include "slang/diagnostics/AllDiags.h"
 #include "slang/syntax/SyntaxTree.h"
+
+namespace fs = std::filesystem;
 
 namespace slang {
 

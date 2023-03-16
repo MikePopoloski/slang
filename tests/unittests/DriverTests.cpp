@@ -432,3 +432,22 @@ TEST_CASE("Driver flag --exclude-ext (multiple use)") {
     CHECK(driver.parseCommandLine(sizeof(argv) / sizeof(argv[0]), argv));
     CHECK(driver.processOptions());
 }
+
+TEST_CASE("Driver suppress warnings by path") {
+    auto guard = OS::captureOutput();
+
+    Driver driver;
+    driver.addStandardArgs();
+
+    auto testDir = findTestDir();
+    auto args = fmt::format("testfoo \"{0}test5.sv\" -Weverything --suppress-warnings \"{0}\"",
+                            testDir);
+    CHECK(driver.parseCommandLine(args));
+    CHECK(driver.processOptions());
+    CHECK(driver.parseAllSources());
+
+    auto compilation = driver.createCompilation();
+    CHECK(driver.reportCompilation(*compilation, false));
+    CHECK(stdoutContains("Build succeeded"));
+    CHECK(stdoutContains("0 errors, 0 warnings"));
+}
