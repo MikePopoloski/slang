@@ -52,6 +52,7 @@ issued if not all elements have a time scale specified (as required by the LRM).
 * Bit-vector system functions (such as `$countbits`) can now be used with bitstream types (as opposed to just integral types)
 * Max size limits for packed and unpacked arrays and structs are now strictly enforced
 * Invalid inferred time scales will now issue an appropriate error
+* Fixed a bug in arithmetic of large constants at compile time (thanks to @adream307)
 
 
 ## [v2.0] - 2022-10-29
