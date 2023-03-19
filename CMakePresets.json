@@ -177,7 +177,7 @@
       }
     },
     {
-      "name": "gcc-9-release",
+      "name": "gcc-10-release",
       "displayName": "GCC Release",
       "inherits": [
         "linux-base",
@@ -185,7 +185,7 @@
       ],
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release",
-        "CMAKE_CXX_COMPILER": "g++-9"
+        "CMAKE_CXX_COMPILER": "g++-10"
       }
     },
     {
