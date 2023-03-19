@@ -6,6 +6,19 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 ### Language Support
+
+### General Features
+
+### Improvements
+
+### Fixes
+
+
+## [v3.0] - 2023-03-18
+### Highlights
+As of this release slang passes 100% of the tests at https://github.com/chipsalliance/sv-tests (the only tool able to do so).
+
+### Language Support
 * Added support for specify module timing paths
 * Added support for specify pulsestyle and showcancelled directives
 * Added support for `PATHPULSE$` specparams
