@@ -114,7 +114,7 @@ target_include_directories(
 find_package(Threads)
 target_link_libraries(
   slang_slang
-  PRIVATE fmt::fmt ${CMAKE_THREAD_LIBS_INIT} ${SLANG_LIBRARIES}
+  PRIVATE fmt::fmt ${CMAKE_THREAD_LIBS_INIT}
   PUBLIC unordered_dense::unordered_dense)
 
 # If building the Python library we'll end up with a shared lib no matter what,

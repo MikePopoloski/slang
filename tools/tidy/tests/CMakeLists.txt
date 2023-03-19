@@ -30,10 +30,8 @@ add_executable(
   ../synthesis/OnlyAssignedOnReset.cpp OnlyAssignedOnResetTest.cpp
   ../synthesis/RegisterHasNoReset.cpp RegisterHasNoResetTest.cpp)
 
-target_link_libraries(
-  tidy_unittests
-  PRIVATE slang::slang Catch2::Catch2 fmt::fmt
-  PUBLIC ${SLANG_LIBRARIES})
+target_link_libraries(tidy_unittests PRIVATE slang::slang Catch2::Catch2
+                                             fmt::fmt)
 target_compile_definitions(tidy_unittests PRIVATE UNITTESTS)
 target_include_directories(tidy_unittests PRIVATE ../include ../../../include
                                                   ../../../tests/unittests)
