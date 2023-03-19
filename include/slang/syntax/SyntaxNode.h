@@ -236,11 +236,6 @@ public:
     SyntaxList(span<T*> elements) :
         SyntaxListBase(SyntaxKind::SyntaxList, elements.size()), span<T*>(elements) {}
 
-    // TODO: this is here to work around a bug in GCC 9
-    operator span<const T* const>() const {
-        return span<const T* const>(this->data(), this->size());
-    }
-
 private:
     TokenOrSyntax getChild(size_t index) final { return (*this)[index]; }
     ConstTokenOrSyntax getChild(size_t index) const final { return (*this)[index]; }
