@@ -5,8 +5,7 @@
 
 The slang source code tries to follow a number of conventions:
 - The codebase is kept up to date with new versions of C++. Currently that means
-C++17, but it will be switching to C++20 as soon as it is available across the
-three major compiler vendors (GCC, Clang, MSVC)
+C++20.
 - All code is compiled at the highest warning levels and checked by static
 analysis.
 - clang-format enforces stylistic conventions

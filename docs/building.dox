@@ -16,13 +16,13 @@ git clone https://github.com/MikePopoloski/slang.git
 slang requires the following dependencies in order to build:
 - [python 3](https://www.python.org/)
 - [CMake](https://cmake.org/) (3.15 or later)
-- C++17 compatible compiler
+- C++20 compatible compiler
     - GCC 10 is the minimum supported version
     - clang 10 is the minimum supported version
     - MSVC support is tested only against the most recent update of VS 2022
     - Other compilers (including earlier versions of the ones listed above) may or may not work.
       Note that AppleClang has its own versioning scheme -- you generally need a newer AppleClang
-      to get full C++17 support, and Apple ties Xcode updates to OS versions so you may be forced
+      to get full C++20 support, and Apple ties Xcode updates to OS versions so you may be forced
       to update your OS.
 
 @section building-start Quick Start
