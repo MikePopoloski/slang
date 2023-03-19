@@ -39,13 +39,13 @@ endif()
 
 set(find_pkg_args "")
 if(${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.24.0")
-  set(find_pkg_args "FIND_PACKAGE_ARGS" "2.0.1")
+  set(find_pkg_args "FIND_PACKAGE_ARGS" "3.0.0")
 endif()
 
 FetchContent_Declare(
   unordered_dense
   GIT_REPOSITORY https://github.com/martinus/unordered_dense.git
-  GIT_TAG v2.0.0
+  GIT_TAG v3.1.1
   GIT_SHALLOW ON
   ${find_pkg_args})
 FetchContent_MakeAvailable(unordered_dense)
