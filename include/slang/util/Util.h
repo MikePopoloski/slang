@@ -10,7 +10,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
-#include <span.hpp>
+#include <span>
 #include <string_view>
 #include <utility>
 
@@ -23,7 +23,7 @@ using namespace std::literals;
 
 namespace slang {
 
-using nonstd::span;
+using std::span;
 using string_view = std::string_view;
 using byte = std::byte;
 using int16_t = std::int16_t;
