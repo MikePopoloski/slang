@@ -7,6 +7,7 @@
 //------------------------------------------------------------------------------
 #pragma once
 
+#include <filesystem>
 #include <optional>
 
 #include "slang/util/SmallVector.h"
@@ -72,6 +73,10 @@ inline bool endsWith(string_view str, string_view suffix) {
     return str.size() >= suffix.size() &&
            str.compare(str.size() - suffix.size(), suffix.size(), suffix) == 0;
 };
+
+/// C++20 is dumb and provides no way to get a std::string with the UTF-8
+/// contents of a fs::path, so we have to use this method to copy the chars :(
+std::string getU8Str(const std::filesystem::path& path);
 
 #if defined(_MSC_VER)
 

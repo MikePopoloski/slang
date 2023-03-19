@@ -8,6 +8,7 @@
 #pragma once
 
 #include <iosfwd>
+#include <memory>
 #include <string>
 
 #include "slang/util/Function.h"

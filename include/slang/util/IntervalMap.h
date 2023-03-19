@@ -36,7 +36,7 @@ struct interval {
         return (right + 1 >= rhs.left) && (rhs.right + 1 >= left);
     }
 
-    bool operator==(const interval<T>& rhs) { return left == rhs.left && right == rhs.right; }
+    bool operator==(const interval<T>& rhs) const { return left == rhs.left && right == rhs.right; }
 };
 
 using IndexPair = std::pair<uint32_t, uint32_t>;

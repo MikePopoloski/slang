@@ -1126,7 +1126,7 @@ private:
         }
     }
 
-    using FieldIt = span<const FieldSymbol* const>::const_iterator;
+    using FieldIt = span<const FieldSymbol* const>::iterator;
 
     struct State {
         const ConstantValue* val = nullptr;

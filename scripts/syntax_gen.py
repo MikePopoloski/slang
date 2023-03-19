@@ -922,6 +922,7 @@ def generateTokenKinds(ourdir, builddir):
 //------------------------------------------------------------------------------
 #pragma once
 
+#include <array>
 #include <ostream>
 
 #include "slang/util/Util.h"

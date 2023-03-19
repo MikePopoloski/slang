@@ -7,6 +7,7 @@
 //------------------------------------------------------------------------------
 #include "slang/text/CharInfo.h"
 
+#include <algorithm>
 #include <cctype>
 
 #include "slang/util/Util.h"

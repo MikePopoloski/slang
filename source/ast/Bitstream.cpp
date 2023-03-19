@@ -247,9 +247,9 @@ static ConstantValue constContainer(const Type& type, span<ConstantValue> elems)
         case SymbolKind::FixedSizeUnpackedArrayType:
         case SymbolKind::DynamicArrayType:
         case SymbolKind::UnpackedStructType:
-            return ConstantValue::Elements(elems.cbegin(), elems.cend());
+            return ConstantValue::Elements(elems.begin(), elems.end());
         case SymbolKind::QueueType: {
-            SVQueue result(elems.cbegin(), elems.cend());
+            SVQueue result(elems.begin(), elems.end());
             result.maxBound = ct.as<QueueType>().maxBound;
             result.resizeToBound();
             return result;
@@ -858,7 +858,7 @@ ConstantValue Bitstream::resizeToRange(ConstantValue&& value, ConstantRange rang
             const auto old = value.elements();
             ConstantValue::Elements sliceValue;
             sliceValue.reserve(range.width());
-            sliceValue.insert(sliceValue.end(), old.cbegin() + lower, old.cbegin() + upper);
+            sliceValue.insert(sliceValue.end(), old.begin() + lower, old.begin() + upper);
             sliceValue.insert(sliceValue.end(), more, defaultValue);
             ASSERT(sliceValue.size() == range.width());
             return sliceValue;

@@ -26,7 +26,7 @@ SourceManager::SourceManager() {
 }
 
 std::string SourceManager::makeAbsolutePath(string_view path) const {
-    return fs::canonical(widen(path)).u8string();
+    return getU8Str(fs::canonical(widen(path)));
 }
 
 void SourceManager::addSystemDirectory(string_view path) {
@@ -328,7 +328,7 @@ SourceBuffer SourceManager::assignBuffer(string_view bufferPath, std::vector<cha
 
     // first see if we have this file cached
     fs::path path(widen(bufferPath));
-    auto pathStr = path.u8string();
+    auto pathStr = getU8Str(path);
     {
         std::shared_lock lock(mut);
         auto it = lookupCache.find(pathStr);
@@ -411,7 +411,7 @@ void SourceManager::addLineDirective(SourceLocation location, size_t lineNum, st
     else
         full = fs::path(widen(info->data->name)).replace_filename(linePath);
 
-    info->lineDirectives.emplace_back(full.u8string(), sourceLineNum, lineNum, level);
+    info->lineDirectives.emplace_back(getU8Str(full), sourceLineNum, lineNum, level);
 }
 
 void SourceManager::addDiagnosticDirective(SourceLocation location, string_view name,
@@ -493,7 +493,7 @@ bool SourceManager::isCached(const fs::path& path) const {
     }
 
     std::shared_lock lock(mut);
-    auto it = lookupCache.find(absPath.u8string());
+    auto it = lookupCache.find(getU8Str(absPath));
     return it != lookupCache.end();
 }
 
@@ -510,7 +510,7 @@ SourceBuffer SourceManager::openCached(const fs::path& fullPath, SourceLocation 
     }
 
     // first see if we have this file cached
-    std::string pathStr = absPath.u8string();
+    std::string pathStr = getU8Str(absPath);
     {
         std::unique_lock lock(mut);
         auto it = lookupCache.find(pathStr);
@@ -538,13 +538,13 @@ SourceBuffer SourceManager::cacheBuffer(fs::path&& path, std::string&& pathStr,
     std::string name;
     if (!disableProximatePaths) {
         std::error_code ec;
-        name = fs::proximate(path, ec).u8string();
+        name = getU8Str(fs::proximate(path, ec));
         if (ec)
             name = {};
     }
 
     if (name.empty())
-        name = path.filename().u8string();
+        name = getU8Str(path.filename());
 
     std::unique_lock lock(mut);
 

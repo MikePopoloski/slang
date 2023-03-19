@@ -530,7 +530,7 @@ source:11:5: warning: extra ';' has no effect [-Wempty-member]
 }
 
 TEST_CASE("Diagnostics with Unicode and tabs in source snippet") {
-    auto tree = SyntaxTree::fromText(u8R"(
+    auto tree = SyntaxTree::fromText(R"(
 module m;
     string s = "literal\🍌";
     int 	/* // 꿽꿽꿽꿽꿽꿽꿽 */		갑곯꿽 = "꿽꿽꿽"; // 꿽꿽꿽꿽꿽꿽꿽

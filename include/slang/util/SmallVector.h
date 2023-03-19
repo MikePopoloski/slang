@@ -7,8 +7,10 @@
 //------------------------------------------------------------------------------
 #pragma once
 
+#include <algorithm>
 #include <cstdlib>
 #include <cstring>
+#include <memory>
 #include <new>
 
 #include "slang/util/BumpAllocator.h"

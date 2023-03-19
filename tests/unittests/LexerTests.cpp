@@ -22,7 +22,7 @@ TEST_CASE("Invalid chars") {
 }
 
 TEST_CASE("UTF8 chars") {
-    auto& text = u8"\U0001f34c";
+    auto& text = "\U0001f34c";
     Token token = lexToken(text);
 
     CHECK(token.kind == TokenKind::Unknown);
@@ -178,7 +178,7 @@ TEST_CASE("Block comment (embedded null)") {
 }
 
 TEST_CASE("Block comment (UTF8 text)") {
-    const char text[] = u8"/* foo 的氣墊船 */";
+    const char text[] = "/* foo 的氣墊船 */";
     auto str = std::string(text, text + sizeof(text) - 1);
     Token token = lexToken(string_view(str));
 

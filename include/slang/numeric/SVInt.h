@@ -7,6 +7,7 @@
 //-----------------------------------------------------------------------------
 #pragma once
 
+#include <array>
 #include <iosfwd>
 
 #include "slang/numeric/MathUtils.h"

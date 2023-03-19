@@ -344,7 +344,8 @@ public:
 
     /// @return the elements of nodes in the list
     [[nodiscard]] span<const ConstTokenOrSyntax> elems() const {
-        return span<const ConstTokenOrSyntax>(elements.data(), elements.size());
+        return span<const ConstTokenOrSyntax>(static_cast<ConstTokenOrSyntax*>(elements.data()),
+                                              elements.size());
     }
 
     /// @return the elements of nodes in the list

@@ -350,7 +350,7 @@ bool CommandLine::parse(span<const string_view> args, ParseOptions options) {
         if (args.empty())
             throw std::runtime_error("Expected at least one argument");
 
-        programName = fs::path(fs::u8path(args[0])).filename().u8string();
+        programName = getU8Str(fs::path(widen(args[0])).filename());
         args = args.subspan(1);
     }
 
@@ -676,9 +676,9 @@ std::string CommandLine::Option::set(string_view name, string_view value, bool i
     std::string pathMem;
     if (isFileName && !value.empty()) {
         std::error_code ec;
-        fs::path path = fs::weakly_canonical(fs::u8path(value), ec);
+        fs::path path = fs::weakly_canonical(fs::path(widen(value)), ec);
         if (!ec) {
-            pathMem = path.u8string();
+            pathMem = getU8Str(path);
             value = pathMem;
         }
     }

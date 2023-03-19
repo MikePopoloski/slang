@@ -123,6 +123,11 @@ int editDistance(string_view left, string_view right, bool allowReplacements, in
     return row[n];
 }
 
+std::string getU8Str(const std::filesystem::path& path) {
+    auto u8str = path.u8string();
+    return {u8str.begin(), u8str.end()};
+}
+
 #if defined(_MSC_VER)
 
 std::wstring widen(string_view str) {
