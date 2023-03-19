@@ -95,8 +95,8 @@ Token Lexer::concatenateTokens(BumpAllocator& alloc, Token left, Token right) {
     return token.clone(alloc, trivia, token.rawText(), location);
 }
 
-Token Lexer::stringify(BumpAllocator& alloc, SourceLocation location, span<Trivia const> trivia,
-                       Token* begin, Token* end) {
+Token Lexer::stringify(BumpAllocator& alloc, SourceLocation location,
+                       std::span<Trivia const> trivia, Token* begin, Token* end) {
     SmallVector<char> text;
     text.push_back('"');
 

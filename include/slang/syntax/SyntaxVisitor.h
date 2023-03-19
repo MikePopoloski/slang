@@ -176,11 +176,11 @@ protected:
     }
 
     Token makeToken(parsing::TokenKind kind, string_view text,
-                    span<const parsing::Trivia> trivia = {}) {
+                    std::span<const parsing::Trivia> trivia = {}) {
         return Token(alloc, kind, trivia, text, SourceLocation::NoLocation);
     }
 
-    Token makeId(string_view text, span<const parsing::Trivia> trivia = {}) {
+    Token makeId(string_view text, std::span<const parsing::Trivia> trivia = {}) {
         return makeToken(parsing::TokenKind::Identifier, text, trivia);
     }
 

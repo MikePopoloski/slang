@@ -59,8 +59,8 @@ void InstancePath::buildPath(const Symbol& symbol) {
             SmallVector<ConstantRange, 8> instanceDimVec;
             inst.getArrayDimensions(instanceDimVec);
 
-            span<const ConstantRange> instanceDims = instanceDimVec;
-            span<const int32_t> arrayPath = inst.arrayPath;
+            std::span<const ConstantRange> instanceDims = instanceDimVec;
+            std::span<const int32_t> arrayPath = inst.arrayPath;
             ASSERT(instanceDims.size() == arrayPath.size());
 
             for (size_t i = 0; i < instanceDims.size(); i++) {

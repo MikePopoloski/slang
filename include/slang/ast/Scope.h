@@ -207,7 +207,7 @@ public:
 
     const SymbolMap& getUnelaboratedNameMap() const { return *nameMap; }
 
-    span<const WildcardImportSymbol* const> getWildcardImports() const;
+    std::span<const WildcardImportSymbol* const> getWildcardImports() const;
 
 protected:
     Scope(Compilation& compilation_, const Symbol* thisSym_);
@@ -242,16 +242,17 @@ private:
     class DeferredMemberData {
     public:
         void addMember(Symbol* symbol);
-        span<Symbol* const> getMembers() const;
+        std::span<Symbol* const> getMembers() const;
 
         void registerTransparentType(const Symbol* insertion, const Symbol& parent);
-        span<std::pair<const Symbol*, const Symbol*> const> getTransparentTypes() const;
+        std::span<std::pair<const Symbol*, const Symbol*> const> getTransparentTypes() const;
 
         void addForwardingTypedef(const ForwardingTypedefSymbol& symbol);
-        span<const ForwardingTypedefSymbol* const> getForwardingTypedefs() const;
+        std::span<const ForwardingTypedefSymbol* const> getForwardingTypedefs() const;
 
         void addPortDeclaration(const syntax::SyntaxNode& syntax, const Symbol* insertion);
-        span<std::pair<const syntax::SyntaxNode*, const Symbol*> const> getPortDeclarations() const;
+        std::span<std::pair<const syntax::SyntaxNode*, const Symbol*> const> getPortDeclarations()
+            const;
 
     private:
         // A list of deferred member symbols.
@@ -285,11 +286,11 @@ private:
     bool handleDataDeclaration(const syntax::DataDeclarationSyntax& syntax);
     void handleUserDefinedNet(const syntax::UserDefinedNetDeclarationSyntax& syntax);
     void handleNestedDefinition(const syntax::ModuleDeclarationSyntax& syntax) const;
-    void handleExportedMethods(span<Symbol* const> deferredMembers) const;
+    void handleExportedMethods(std::span<Symbol* const> deferredMembers) const;
     void reportNameConflict(const Symbol& member, const Symbol& existing) const;
     void checkImportConflict(const Symbol& member, const Symbol& existing) const;
     void addWildcardImport(const syntax::PackageImportItemSyntax& item,
-                           span<const syntax::AttributeInstanceSyntax* const> attributes);
+                           std::span<const syntax::AttributeInstanceSyntax* const> attributes);
     void tryFixupInstances(const syntax::DataDeclarationSyntax& syntax, const ASTContext& context,
                            SmallVectorBase<const Symbol*>& results) const;
 

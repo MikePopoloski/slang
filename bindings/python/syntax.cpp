@@ -32,26 +32,27 @@ void registerSyntax(py::module_& m) {
 
     py::class_<Token>(m, "Token")
         .def(py::init<>())
-        .def(py::init<BumpAllocator&, TokenKind, span<Trivia const>, string_view, SourceLocation>(),
+        .def(py::init<BumpAllocator&, TokenKind, std::span<Trivia const>, string_view,
+                      SourceLocation>(),
              "alloc"_a, "kind"_a, "trivia"_a, "rawText"_a, "location"_a)
-        .def(py::init<BumpAllocator&, TokenKind, span<Trivia const>, string_view, SourceLocation,
-                      string_view>(),
+        .def(py::init<BumpAllocator&, TokenKind, std::span<Trivia const>, string_view,
+                      SourceLocation, string_view>(),
              "alloc"_a, "kind"_a, "trivia"_a, "rawText"_a, "location"_a, "strText"_a)
-        .def(py::init<BumpAllocator&, TokenKind, span<Trivia const>, string_view, SourceLocation,
-                      SyntaxKind>(),
+        .def(py::init<BumpAllocator&, TokenKind, std::span<Trivia const>, string_view,
+                      SourceLocation, SyntaxKind>(),
              "alloc"_a, "kind"_a, "trivia"_a, "rawText"_a, "location"_a, "directive"_a)
-        .def(py::init<BumpAllocator&, TokenKind, span<Trivia const>, string_view, SourceLocation,
-                      logic_t>(),
+        .def(py::init<BumpAllocator&, TokenKind, std::span<Trivia const>, string_view,
+                      SourceLocation, logic_t>(),
              "alloc"_a, "kind"_a, "trivia"_a, "rawText"_a, "location"_a, "bit"_a)
-        .def(py::init<BumpAllocator&, TokenKind, span<Trivia const>, string_view, SourceLocation,
-                      const SVInt&>(),
+        .def(py::init<BumpAllocator&, TokenKind, std::span<Trivia const>, string_view,
+                      SourceLocation, const SVInt&>(),
              "alloc"_a, "kind"_a, "trivia"_a, "rawText"_a, "location"_a, "value"_a)
-        .def(py::init<BumpAllocator&, TokenKind, span<Trivia const>, string_view, SourceLocation,
-                      double, bool, std::optional<TimeUnit>>(),
+        .def(py::init<BumpAllocator&, TokenKind, std::span<Trivia const>, string_view,
+                      SourceLocation, double, bool, std::optional<TimeUnit>>(),
              "alloc"_a, "kind"_a, "trivia"_a, "rawText"_a, "location"_a, "value"_a, "outOfRange"_a,
              "timeUnit"_a)
-        .def(py::init<BumpAllocator&, TokenKind, span<Trivia const>, string_view, SourceLocation,
-                      LiteralBase, bool>(),
+        .def(py::init<BumpAllocator&, TokenKind, std::span<Trivia const>, string_view,
+                      SourceLocation, LiteralBase, bool>(),
              "alloc"_a, "kind"_a, "trivia"_a, "rawText"_a, "location"_a, "base"_a, "isSigned"_a)
         .def_readonly("kind", &Token::kind)
         .def_property_readonly("isMissing", &Token::isMissing)
@@ -165,10 +166,11 @@ void registerSyntax(py::module_& m) {
                     py::overload_cast<string_view, SourceManager&, const Bag&>(
                         &SyntaxTree::fromFile),
                     "path"_a, "sourceManager"_a, "options"_a = Bag())
-        .def_static("fromFiles", py::overload_cast<span<const string_view>>(&SyntaxTree::fromFiles),
+        .def_static("fromFiles",
+                    py::overload_cast<std::span<const string_view>>(&SyntaxTree::fromFiles),
                     "paths"_a)
         .def_static("fromFiles",
-                    py::overload_cast<span<const string_view>, SourceManager&, const Bag&>(
+                    py::overload_cast<std::span<const string_view>, SourceManager&, const Bag&>(
                         &SyntaxTree::fromFiles),
                     "paths"_a, "sourceManager"_a, "options"_a = Bag())
         .def_static("fromText",

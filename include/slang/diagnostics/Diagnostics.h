@@ -102,7 +102,7 @@ public:
     /// @brief A list of all "known" DiagCodes.
     ///
     /// Known codes are ones baked into the library by the diagnostic_gen.py tool.
-    static const span<const DiagCode> KnownCodes;
+    static const std::span<const DiagCode> KnownCodes;
 
 private:
     DiagSubsystem subsystem;
@@ -202,7 +202,7 @@ public:
         name(name), diags(diags) {}
 
     string_view getName() const { return name; }
-    span<const DiagCode> getDiags() const { return diags; }
+    std::span<const DiagCode> getDiags() const { return diags; }
 
 private:
     std::string name;

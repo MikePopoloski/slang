@@ -217,7 +217,8 @@ public:
     static ElabSystemTaskSymbol& fromSyntax(Compilation& compilation,
                                             const syntax::ElabSystemTaskSyntax& syntax);
 
-    static string_view createMessage(const ASTContext& context, span<const Expression* const> args);
+    static string_view createMessage(const ASTContext& context,
+                                     std::span<const Expression* const> args);
 
     static void reportStaticAssert(const Scope& scope, SourceLocation loc, string_view message,
                                    const Expression* condition);
@@ -243,7 +244,7 @@ public:
 
 class SLANG_EXPORT PrimitiveSymbol : public Symbol, public Scope {
 public:
-    span<const PrimitivePortSymbol* const> ports;
+    std::span<const PrimitivePortSymbol* const> ports;
     const ConstantValue* initVal = nullptr;
     bool isSequential = false;
     enum PrimitiveKind { UserDefined, Fixed, NInput, NOutput } primitiveKind;
@@ -284,7 +285,7 @@ public:
 /// Represents a named sequence object.
 class SLANG_EXPORT SequenceSymbol : public Symbol, public Scope {
 public:
-    span<const AssertionPortSymbol* const> ports;
+    std::span<const AssertionPortSymbol* const> ports;
 
     SequenceSymbol(Compilation& compilation, string_view name, SourceLocation loc);
 
@@ -301,7 +302,7 @@ public:
 /// Represents a named property object.
 class SLANG_EXPORT PropertySymbol : public Symbol, public Scope {
 public:
-    span<const AssertionPortSymbol* const> ports;
+    std::span<const AssertionPortSymbol* const> ports;
 
     PropertySymbol(Compilation& compilation, string_view name, SourceLocation loc);
 
@@ -318,7 +319,7 @@ public:
 /// Represents a let declaration.
 class SLANG_EXPORT LetDeclSymbol : public Symbol, public Scope {
 public:
-    span<const AssertionPortSymbol* const> ports;
+    std::span<const AssertionPortSymbol* const> ports;
     not_null<const syntax::ExpressionSyntax*> exprSyntax;
 
     LetDeclSymbol(Compilation& compilation, const syntax::ExpressionSyntax& exprSyntax,
@@ -370,9 +371,9 @@ public:
 
     struct ProdItem : public ProdBase {
         const RandSeqProductionSymbol* target;
-        span<const Expression* const> args;
+        std::span<const Expression* const> args;
 
-        ProdItem(const RandSeqProductionSymbol* target, span<const Expression* const> args) :
+        ProdItem(const RandSeqProductionSymbol* target, std::span<const Expression* const> args) :
             ProdBase(ProdKind::Item), target(target), args(args) {}
 
         template<typename TVisitor>
@@ -407,16 +408,16 @@ public:
     };
 
     struct CaseItem {
-        span<const Expression* const> expressions;
+        std::span<const Expression* const> expressions;
         ProdItem item;
     };
 
     struct CaseProd : public ProdBase {
         not_null<const Expression*> expr;
-        span<const CaseItem> items;
+        std::span<const CaseItem> items;
         std::optional<ProdItem> defaultItem;
 
-        CaseProd(const Expression& expr, span<const CaseItem> items,
+        CaseProd(const Expression& expr, std::span<const CaseItem> items,
                  std::optional<ProdItem> defaultItem) :
             ProdBase(ProdKind::Case),
             expr(&expr), items(items), defaultItem(defaultItem) {}
@@ -424,13 +425,13 @@ public:
 
     struct Rule {
         not_null<const StatementBlockSymbol*> ruleBlock;
-        span<const ProdBase* const> prods;
+        std::span<const ProdBase* const> prods;
         const Expression* weightExpr;
         const Expression* randJoinExpr;
         std::optional<CodeBlockProd> codeBlock;
         bool isRandJoin;
 
-        Rule(const StatementBlockSymbol& ruleBlock, span<const ProdBase* const> prods,
+        Rule(const StatementBlockSymbol& ruleBlock, std::span<const ProdBase* const> prods,
              const Expression* weightExpr, const Expression* randJoinExpr,
              std::optional<CodeBlockProd> codeBlock, bool isRandJoin) :
             ruleBlock(&ruleBlock),
@@ -439,11 +440,11 @@ public:
     };
 
     DeclaredType declaredReturnType;
-    span<const FormalArgumentSymbol* const> arguments;
+    std::span<const FormalArgumentSymbol* const> arguments;
 
     RandSeqProductionSymbol(Compilation& compilation, string_view name, SourceLocation loc);
 
-    span<const Rule> getRules() const;
+    std::span<const Rule> getRules() const;
     const Type& getReturnType() const { return declaredReturnType.getType(); }
 
     void serializeTo(ASTSerializer& serializer) const;
@@ -518,7 +519,7 @@ private:
     static const CaseProd& createCaseProd(const syntax::RsCaseSyntax& syntax,
                                           const ASTContext& context);
 
-    mutable std::optional<span<const Rule>> rules;
+    mutable std::optional<std::span<const Rule>> rules;
 };
 
 class SLANG_EXPORT AnonymousProgramSymbol : public Symbol, public Scope {

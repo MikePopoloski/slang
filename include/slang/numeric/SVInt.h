@@ -195,7 +195,7 @@ public:
     }
 
     /// Construct from numeric data already in memory as a range of bytes.
-    SVInt(bitwidth_t bits, span<const byte> bytes, bool isSigned) :
+    SVInt(bitwidth_t bits, std::span<const byte> bytes, bool isSigned) :
         SVIntStorage(bits, isSigned, false) {
         ASSERT(bits > 0 && bits <= MAX_BITS);
         initSlowCase(bytes);
@@ -506,7 +506,7 @@ public:
 
     /// Construct from an array of digits.
     static SVInt fromDigits(bitwidth_t bits, LiteralBase base, bool isSigned, bool anyUnknown,
-                            span<logic_t const> digits);
+                            std::span<logic_t const> digits);
 
     /// Construct from a floating point value.
     static SVInt fromDouble(bitwidth_t bits, double value, bool isSigned);
@@ -523,7 +523,7 @@ public:
     static logic_t logicalEquiv(const SVInt& lhs, const SVInt& rhs);
 
     /// Concatenates one or more integers into one output integer.
-    static SVInt concat(span<SVInt const> operands);
+    static SVInt concat(std::span<SVInt const> operands);
 
     /// Stream formatting operator. Guesses a nice base to use and writes the string representation
     /// into the stream.
@@ -570,7 +570,7 @@ private:
     // Initialization routines for various cases.
     void initSlowCase(logic_t bit);
     void initSlowCase(uint64_t value);
-    void initSlowCase(span<const byte> bytes);
+    void initSlowCase(std::span<const byte> bytes);
     void initSlowCase(const SVIntStorage& other);
 
     uint64_t* getRawData() { return isSingleWord() ? &val : pVal; }
@@ -601,10 +601,10 @@ private:
     static constexpr uint32_t whichBit(bitwidth_t bitIndex) { return bitIndex % BITS_PER_WORD; }
     static constexpr uint64_t maskBit(bitwidth_t bitIndex) { return 1ULL << whichBit(bitIndex); }
 
-    static SVInt fromDecimalDigits(bitwidth_t bits, bool isSigned, span<logic_t const> digits);
+    static SVInt fromDecimalDigits(bitwidth_t bits, bool isSigned, std::span<logic_t const> digits);
 
     static SVInt fromPow2Digits(bitwidth_t bits, bool isSigned, bool anyUnknown, uint32_t radix,
-                                uint32_t shift, span<logic_t const> digits);
+                                uint32_t shift, std::span<logic_t const> digits);
 
     // Split an integer's data into 32-bit words.
     static void splitWords(const SVInt& value, uint32_t* dest, uint32_t numWords);

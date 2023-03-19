@@ -241,7 +241,7 @@ static std::string formatWidth(const T& bitstream, BitstreamSizeMode mode) {
     return buffer.str();
 }
 
-static ConstantValue constContainer(const Type& type, span<ConstantValue> elems) {
+static ConstantValue constContainer(const Type& type, std::span<ConstantValue> elems) {
     auto& ct = type.getCanonicalType();
     switch (ct.kind) {
         case SymbolKind::FixedSizeUnpackedArrayType:

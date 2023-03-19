@@ -59,7 +59,7 @@ std::string reportGlobalDiags() {
 }
 
 std::string to_string(const Diagnostic& diag) {
-    return DiagnosticEngine::reportAll(getSourceManager(), span(&diag, 1));
+    return DiagnosticEngine::reportAll(getSourceManager(), std::span(&diag, 1));
 }
 
 Token lexToken(string_view text) {

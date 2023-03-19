@@ -225,7 +225,7 @@ public:
                                           bool requireIntegral, bool unwrapUnpacked,
                                           bool allowTypeReferences, bool allowOpenRange,
                                           const ExpressionSyntax& valueExpr,
-                                          span<const ExpressionSyntax* const> expressions,
+                                          std::span<const ExpressionSyntax* const> expressions,
                                           SmallVectorBase<const Expression*>& results);
 
     /// This method finds all unqualified name references in the given expression and attempts

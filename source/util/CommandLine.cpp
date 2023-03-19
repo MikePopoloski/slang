@@ -342,7 +342,7 @@ std::string CommandLine::expandVar(const char*& ptr, const char* end) {
     }
 }
 
-bool CommandLine::parse(span<const string_view> args, ParseOptions options) {
+bool CommandLine::parse(std::span<const string_view> args, ParseOptions options) {
     if (optionMap.empty())
         throw std::runtime_error("No options defined");
 

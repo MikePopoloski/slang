@@ -72,7 +72,7 @@ public:
         const syntax::PortListSyntax& syntax, const Scope& scope,
         SmallVectorBase<const Symbol*>& results,
         SmallVectorBase<std::pair<Symbol*, const Symbol*>>& implicitMembers,
-        span<std::pair<const syntax::SyntaxNode*, const Symbol*> const> portDeclarations);
+        std::span<std::pair<const syntax::SyntaxNode*, const Symbol*> const> portDeclarations);
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::Port; }
 
@@ -91,7 +91,7 @@ private:
 /// with varying directions.
 class SLANG_EXPORT MultiPortSymbol : public Symbol {
 public:
-    span<const PortSymbol* const> ports;
+    std::span<const PortSymbol* const> ports;
 
     /// The direction of data flowing across the various ports. This is the most
     /// restrictive aggregated direction out of all the ports. You need to check
@@ -102,7 +102,7 @@ public:
     /// so that generic code can work on both types.
     bool isNullPort = false;
 
-    MultiPortSymbol(string_view name, SourceLocation loc, span<const PortSymbol* const> ports,
+    MultiPortSymbol(string_view name, SourceLocation loc, std::span<const PortSymbol* const> ports,
                     ArgumentDirection direction);
 
     const Type& getType() const;
@@ -135,7 +135,7 @@ public:
 
     /// Gets the set of dimensions for specifying interface arrays.
     /// Returns nullopt if an error occurs evaluating the dimensions.
-    std::optional<span<const ConstantRange>> getDeclaredRange() const;
+    std::optional<std::span<const ConstantRange>> getDeclaredRange() const;
 
     /// Gets the interface instance that this port connects to.
     const Symbol* getConnection() const;
@@ -149,7 +149,7 @@ public:
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::InterfacePort; }
 
 private:
-    mutable std::optional<span<const ConstantRange>> range;
+    mutable std::optional<std::span<const ConstantRange>> range;
 };
 
 class SLANG_EXPORT PortConnection {
@@ -173,7 +173,7 @@ public:
     void serializeTo(ASTSerializer& serializer) const;
 
     static void makeConnections(
-        const InstanceSymbol& instance, span<const Symbol* const> ports,
+        const InstanceSymbol& instance, std::span<const Symbol* const> ports,
         const syntax::SeparatedSyntaxList<syntax::PortConnectionSyntax>& portConnections,
         SmallVector<const PortConnection*>& results);
 

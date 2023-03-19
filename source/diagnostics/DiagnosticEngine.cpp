@@ -23,7 +23,7 @@ namespace slang {
 string_view getDefaultMessage(DiagCode code);
 DiagnosticSeverity getDefaultSeverity(DiagCode code);
 string_view getDefaultOptionName(DiagCode code);
-span<const DiagCode> findDiagsFromOptionName(string_view name);
+std::span<const DiagCode> findDiagsFromOptionName(string_view name);
 const DiagGroup* findDefaultDiagGroup(string_view name);
 
 DiagnosticEngine::FormatterMap DiagnosticEngine::defaultFormatters;
@@ -106,7 +106,7 @@ string_view DiagnosticEngine::getOptionName(DiagCode code) const {
     return getDefaultOptionName(code);
 }
 
-span<const DiagCode> DiagnosticEngine::findFromOptionName(string_view optionName) const {
+std::span<const DiagCode> DiagnosticEngine::findFromOptionName(string_view optionName) const {
     return findDiagsFromOptionName(optionName);
 }
 
@@ -134,7 +134,7 @@ void DiagnosticEngine::addIgnorePath(const std::filesystem::path& path) {
 
 // Checks that all of the given ranges are in the same macro argument expansion as `loc`
 static bool checkMacroArgRanges(const DiagnosticEngine& engine, SourceLocation loc,
-                                span<const SourceRange> ranges) {
+                                std::span<const SourceRange> ranges) {
     const SourceManager& sm = engine.getSourceManager();
     if (!sm.isMacroArgLoc(loc))
         return false;
@@ -230,7 +230,7 @@ bool DiagnosticEngine::issueImpl(const Diagnostic& diagnostic, DiagnosticSeverit
     std::string message = formatMessage(diagnostic);
 
     ReportedDiagnostic report(diagnostic);
-    report.expansionLocs = span<SourceLocation>(expansionLocs).subspan(ignoreUntil);
+    report.expansionLocs = std::span<SourceLocation>(expansionLocs).subspan(ignoreUntil);
     report.ranges = diagnostic.ranges;
     report.location = loc;
     report.severity = severity;
@@ -328,7 +328,7 @@ static void getCommonMacroArgExpansions(const SourceManager& sm, SourceLocation 
 // same buffer as `contextLoc`, taking into account macros and macro arguments.
 static SourceLocation getMatchingMacroLoc(const SourceManager& sm, SourceLocation loc,
                                           SourceLocation contextLoc, bool isStart,
-                                          span<const BufferID> commonArgs) {
+                                          std::span<const BufferID> commonArgs) {
     if (loc.buffer() == contextLoc.buffer())
         return loc;
 
@@ -364,7 +364,7 @@ static SourceLocation getMatchingMacroLoc(const SourceManager& sm, SourceLocatio
     return getMatchingMacroLoc(sm, argLoc, contextLoc, isStart, commonArgs);
 }
 
-void DiagnosticEngine::mapSourceRanges(SourceLocation loc, span<const SourceRange> ranges,
+void DiagnosticEngine::mapSourceRanges(SourceLocation loc, std::span<const SourceRange> ranges,
                                        SmallVectorBase<SourceRange>& mapped,
                                        bool mapOriginalLocations) const {
     const SourceManager& sm = sourceManager;
@@ -413,7 +413,7 @@ void DiagnosticEngine::mapSourceRanges(SourceLocation loc, span<const SourceRang
 }
 
 std::string DiagnosticEngine::reportAll(const SourceManager& sourceManager,
-                                        span<const Diagnostic> diags) {
+                                        std::span<const Diagnostic> diags) {
     DiagnosticEngine engine(sourceManager);
 
     auto client = std::make_shared<TextDiagnosticClient>();
@@ -430,7 +430,7 @@ void DiagnosticEngine::setDefaultWarnings() {
     setSeverity(*findDiagGroup("default"sv), DiagnosticSeverity::Warning);
 }
 
-Diagnostics DiagnosticEngine::setWarningOptions(span<const std::string> options) {
+Diagnostics DiagnosticEngine::setWarningOptions(std::span<const std::string> options) {
     Diagnostics diags;
     auto findAndSet = [&](string_view name, DiagnosticSeverity severity, const char* errorPrefix) {
         if (auto group = findDiagGroup(name)) {
@@ -483,7 +483,7 @@ Diagnostics DiagnosticEngine::setWarningOptions(span<const std::string> options)
 
 template<typename TDirective>
 void DiagnosticEngine::setMappingsFromPragmasImpl(BufferID buffer,
-                                                  span<const TDirective> directives,
+                                                  std::span<const TDirective> directives,
                                                   Diagnostics& diags) {
 
     // Store the state of diagnostics each time the user pushes,

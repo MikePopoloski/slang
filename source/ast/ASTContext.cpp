@@ -85,7 +85,7 @@ void ASTContext::setProceduralBlock(const ProceduralBlockSymbol& block) {
 }
 
 void ASTContext::setAttributes(const Statement& stmt,
-                               span<const AttributeInstanceSyntax* const> syntax) const {
+                               std::span<const AttributeInstanceSyntax* const> syntax) const {
     if (syntax.empty())
         return;
 
@@ -94,7 +94,7 @@ void ASTContext::setAttributes(const Statement& stmt,
 }
 
 void ASTContext::setAttributes(const Expression& expr,
-                               span<const AttributeInstanceSyntax* const> syntax) const {
+                               std::span<const AttributeInstanceSyntax* const> syntax) const {
     if (syntax.empty())
         return;
 

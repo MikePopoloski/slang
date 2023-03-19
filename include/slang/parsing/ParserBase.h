@@ -36,7 +36,7 @@ protected:
     Token consumeIf(TokenKind kind);
     Token expect(TokenKind kind);
     void skipToken(std::optional<DiagCode> diagCode);
-    void pushTokens(span<const Token> tokens);
+    void pushTokens(std::span<const Token> tokens);
 
     Token missingToken(TokenKind kind, SourceLocation location);
     Token placeholderToken();
@@ -79,7 +79,7 @@ protected:
 
         void addNew();
         void moveToNext();
-        void insertHead(span<const Token> tokens);
+        void insertHead(std::span<const Token> tokens);
     };
 
     BumpAllocator& alloc;
@@ -110,13 +110,13 @@ protected:
     /// with bookend tokens in a way that robustly handles bad tokens.
     template<bool (*IsExpected)(TokenKind), bool (*IsEnd)(TokenKind), typename TParserFunc>
     void parseList(TokenKind openKind, TokenKind closeKind, TokenKind separatorKind,
-                   Token& openToken, span<syntax::TokenOrSyntax>& list, Token& closeToken,
+                   Token& openToken, std::span<syntax::TokenOrSyntax>& list, Token& closeToken,
                    RequireItems requireItems, DiagCode code, TParserFunc&& parseItem,
                    AllowEmpty allowEmpty = {}) {
         openToken = expect(openKind);
         if (openToken.isMissing()) {
             closeToken = missingToken(closeKind, openToken.location());
-            list = span<syntax::TokenOrSyntax>();
+            list = std::span<syntax::TokenOrSyntax>();
             return;
         }
 

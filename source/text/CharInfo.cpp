@@ -28,11 +28,11 @@ bool operator<(UnicodeCharRange range, uint32_t value) {
 }
 
 struct UnicodeCharSet {
-    explicit UnicodeCharSet(span<const UnicodeCharRange> ranges) : ranges(ranges) {}
+    explicit UnicodeCharSet(std::span<const UnicodeCharRange> ranges) : ranges(ranges) {}
 
     bool contains(uint32_t c) const { return std::binary_search(ranges.begin(), ranges.end(), c); }
 
-    const span<const UnicodeCharRange> ranges;
+    const std::span<const UnicodeCharRange> ranges;
 };
 
 bool isPrintableUnicode(uint32_t c) {

@@ -46,7 +46,7 @@ public:
 
         string_view name;
         SourceLocation location;
-        span<const syntax::AttributeInstanceSyntax* const> attributes;
+        std::span<const syntax::AttributeInstanceSyntax* const> attributes;
         bool isTypeParam;
         bool isLocalParam;
         bool isPortParam;
@@ -54,10 +54,10 @@ public:
 
         ParameterDecl(const Scope& scope, const syntax::ParameterDeclarationSyntax& syntax,
                       const syntax::DeclaratorSyntax& decl, bool isLocal, bool isPort,
-                      span<const syntax::AttributeInstanceSyntax* const> attributes);
+                      std::span<const syntax::AttributeInstanceSyntax* const> attributes);
         ParameterDecl(const Scope& scope, const syntax::TypeParameterDeclarationSyntax& syntax,
                       const syntax::TypeAssignmentSyntax& decl, bool isLocal, bool isPort,
-                      span<const syntax::AttributeInstanceSyntax* const> attributes);
+                      std::span<const syntax::AttributeInstanceSyntax* const> attributes);
         ParameterDecl(string_view name, SourceLocation location, const Type& givenType,
                       bool isLocal, bool isPort, const Expression* givenInitializer);
         ParameterDecl(string_view name, SourceLocation location, bool isLocal, bool isPort,
@@ -78,7 +78,7 @@ public:
     std::optional<TimeScale> timeScale;
     SmallVector<ParameterDecl, 8> parameters;
     flat_hash_set<string_view> modports;
-    span<const AttributeSymbol* const> attributes;
+    std::span<const AttributeSymbol* const> attributes;
     std::vector<const syntax::BindDirectiveSyntax*> bindDirectives;
     const syntax::SyntaxTree* syntaxTree;
     bool hasNonAnsiPorts;

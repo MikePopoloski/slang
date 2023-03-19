@@ -616,7 +616,7 @@ string_view ElabSystemTaskSymbol::getMessage() const {
             return empty();
     }
 
-    span<const Expression* const> argSpan = args;
+    std::span<const Expression* const> argSpan = args;
     if (!argSpan.empty()) {
         if (taskKind == ElabSystemTaskKind::Fatal) {
             // If this is a $fatal task, check the finish number. We don't use this
@@ -641,7 +641,7 @@ string_view ElabSystemTaskSymbol::getMessage() const {
 }
 
 string_view ElabSystemTaskSymbol::createMessage(const ASTContext& context,
-                                                span<const Expression* const> args) {
+                                                std::span<const Expression* const> args) {
     // Check all arguments.
     if (!FmtHelpers::checkDisplayArgs(context, args))
         return ""sv;
@@ -1333,7 +1333,7 @@ RandSeqProductionSymbol& RandSeqProductionSymbol::fromSyntax(Compilation& compil
     return *result;
 }
 
-span<const RandSeqProductionSymbol::Rule> RandSeqProductionSymbol::getRules() const {
+std::span<const RandSeqProductionSymbol::Rule> RandSeqProductionSymbol::getRules() const {
     if (!rules) {
         auto syntax = getSyntax();
         ASSERT(syntax);

@@ -297,7 +297,7 @@ struct SourceSnippet {
     std::string highlightLine;
 };
 
-void TextDiagnosticClient::formatDiag(SourceLocation loc, span<const SourceRange> ranges,
+void TextDiagnosticClient::formatDiag(SourceLocation loc, std::span<const SourceRange> ranges,
                                       DiagnosticSeverity severity, string_view message,
                                       string_view optionName) {
     constexpr size_t MaxLineLengthToPrint = 4096;

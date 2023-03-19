@@ -125,7 +125,7 @@ namespace {
 struct NameComponents {
     string_view text;
     SourceRange range;
-    span<const ElementSelectSyntax* const> selectors;
+    std::span<const ElementSelectSyntax* const> selectors;
     const ParameterValueAssignmentSyntax* paramAssignments = nullptr;
 
     NameComponents() = default;
@@ -274,7 +274,7 @@ const Symbol* getContainingPackage(const Symbol& symbol) {
 // Returns true if the lookup was ok, or if it failed in a way that allows us to continue
 // looking up in other ways. Returns false if the entire lookup has failed and should be
 // aborted.
-bool lookupDownward(span<const NamePlusLoc> nameParts, NameComponents name,
+bool lookupDownward(std::span<const NamePlusLoc> nameParts, NameComponents name,
                     const ASTContext& context, LookupResult& result) {
     const Symbol* symbol = std::exchange(result.found, nullptr);
     ASSERT(symbol);
@@ -520,7 +520,7 @@ bool lookupDownward(span<const NamePlusLoc> nameParts, NameComponents name,
 // Returns true if the lookup was ok, or if it failed in a way that allows us to continue
 // looking up in other ways. Returns false if the entire lookup has failed and should be
 // aborted.
-bool lookupUpward(span<const NamePlusLoc> nameParts, const NameComponents& name,
+bool lookupUpward(std::span<const NamePlusLoc> nameParts, const NameComponents& name,
                   const ASTContext& context, LookupResult& result) {
     // Upward lookups can match either a scope name, or a module definition name (on any of the
     // instances). Imports are not considered.
@@ -1197,7 +1197,7 @@ static const Symbol* selectChildRange(const InstanceArraySymbol& array,
 }
 
 const Symbol* Lookup::selectChild(const Symbol& initialSymbol,
-                                  span<const ElementSelectSyntax* const> selectors,
+                                  std::span<const ElementSelectSyntax* const> selectors,
                                   const ASTContext& context, LookupResult& result) {
     const Symbol* symbol = &initialSymbol;
     for (const ElementSelectSyntax* syntax : selectors) {
@@ -1249,7 +1249,7 @@ const Symbol* Lookup::selectChild(const Symbol& initialSymbol,
 }
 
 void Lookup::selectChild(const Type& virtualInterface, SourceRange range,
-                         span<LookupResult::Selector> selectors, const ASTContext& context,
+                         std::span<LookupResult::Selector> selectors, const ASTContext& context,
                          LookupResult& result) {
     NameComponents unused;
     SmallVector<NamePlusLoc, 4> nameParts;

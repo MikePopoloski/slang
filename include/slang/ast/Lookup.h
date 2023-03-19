@@ -220,14 +220,14 @@ public:
     /// Applies the given @a selectors to the @a symbol and returns the selected child.
     /// If any errors occur, diagnostics are issued to @a result and nullptr is returned.
     static const Symbol* selectChild(const Symbol& symbol,
-                                     span<const syntax::ElementSelectSyntax* const> selectors,
+                                     std::span<const syntax::ElementSelectSyntax* const> selectors,
                                      const ASTContext& context, LookupResult& result);
 
     /// Applies the given @a selectors to the @a virtualInterface type and returns the
     /// selected child in @result -- if any errors occur, diagnostics are issued to
     /// the result object and nullptr is returned.
     static void selectChild(const Type& virtualInterface, SourceRange range,
-                            span<LookupResult::Selector> selectors, const ASTContext& context,
+                            std::span<LookupResult::Selector> selectors, const ASTContext& context,
                             LookupResult& result);
 
     /// Searches for a class with the given @a name within @a context -- if no symbol is

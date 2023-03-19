@@ -436,7 +436,7 @@ void SourceManager::addDiagnosticDirective(SourceLocation location, string_view 
     }
 }
 
-span<const SourceManager::DiagnosticDirectiveInfo> SourceManager::getDiagnosticDirectives(
+std::span<const SourceManager::DiagnosticDirectiveInfo> SourceManager::getDiagnosticDirectives(
     BufferID buffer) const {
     if (auto it = diagDirectives.find(buffer); it != diagDirectives.end())
         return it->second;

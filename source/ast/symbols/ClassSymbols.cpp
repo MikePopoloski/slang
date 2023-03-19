@@ -875,8 +875,8 @@ void GenericClassDefSymbol::serializeTo(ASTSerializer& serializer) const {
 }
 
 GenericClassDefSymbol::SpecializationKey::SpecializationKey(
-    const GenericClassDefSymbol& def, span<const ConstantValue* const> paramValues,
-    span<const Type* const> typeParams) :
+    const GenericClassDefSymbol& def, std::span<const ConstantValue* const> paramValues,
+    std::span<const Type* const> typeParams) :
     definition(&def),
     paramValues(paramValues), typeParams(typeParams) {
 

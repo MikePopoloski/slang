@@ -65,8 +65,8 @@ public:
     /// Converts a range of tokens into a string literal; used for macro stringification.
     /// The @a location and @a trivia parameters are used in the newly created token.
     /// The range of tokens to stringify is given by @a begin and @a end.
-    static Token stringify(BumpAllocator& alloc, SourceLocation location, span<Trivia const> trivia,
-                           Token* begin, Token* end);
+    static Token stringify(BumpAllocator& alloc, SourceLocation location,
+                           std::span<Trivia const> trivia, Token* begin, Token* end);
 
     /// Converts a range of tokens into a block comment; used for macro expansion.
     /// The range of tokens to commentify is given by @a begin and @a end.

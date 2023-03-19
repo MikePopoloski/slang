@@ -60,8 +60,8 @@ void AttributeSymbol::serializeTo(ASTSerializer& serializer) const {
 }
 
 template<typename TFunc>
-static span<const AttributeSymbol* const> createAttributes(
-    span<const AttributeInstanceSyntax* const> syntax, const Scope& scope, TFunc&& factory) {
+static std::span<const AttributeSymbol* const> createAttributes(
+    std::span<const AttributeInstanceSyntax* const> syntax, const Scope& scope, TFunc&& factory) {
 
     SmallMap<string_view, size_t, 4> nameMap;
     SmallVector<const AttributeSymbol*> attrs;
@@ -99,8 +99,9 @@ static span<const AttributeSymbol* const> createAttributes(
     return attrs.copy(comp);
 }
 
-span<const AttributeSymbol* const> AttributeSymbol::fromSyntax(
-    span<const AttributeInstanceSyntax* const> syntax, const Scope& scope, const Symbol& symbol) {
+std::span<const AttributeSymbol* const> AttributeSymbol::fromSyntax(
+    std::span<const AttributeInstanceSyntax* const> syntax, const Scope& scope,
+    const Symbol& symbol) {
 
     if (syntax.empty())
         return {};
@@ -111,8 +112,8 @@ span<const AttributeSymbol* const> AttributeSymbol::fromSyntax(
         });
 }
 
-span<const AttributeSymbol* const> AttributeSymbol::fromSyntax(
-    span<const AttributeInstanceSyntax* const> syntax, const Scope& scope,
+std::span<const AttributeSymbol* const> AttributeSymbol::fromSyntax(
+    std::span<const AttributeInstanceSyntax* const> syntax, const Scope& scope,
     LookupLocation lookupLocation) {
 
     if (syntax.empty())

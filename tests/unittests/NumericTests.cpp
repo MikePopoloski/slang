@@ -137,10 +137,10 @@ TEST_CASE("Construction") {
 
     // Create from memory pointer.
     uint64_t mem1 = 0x234907862346ff;
-    CHECK(SVInt(61, span((byte*)&mem1, 8), false).as<uint64_t>() == mem1);
+    CHECK(SVInt(61, std::span((byte*)&mem1, 8), false).as<uint64_t>() == mem1);
 
     char mem2[128] = "asdfkljhaw4rkjb234890uKLJNSDF  K@#*)U?:hjn";
-    CHECK(SVInt(128 * 8, span((byte*)mem2, 128), false).slice(263, 256).as<char>() == '@');
+    CHECK(SVInt(128 * 8, std::span((byte*)mem2, 128), false).slice(263, 256).as<char>() == '@');
 
     // Regression test for shrinkToFit with value of 0
     auto value13 = "27'd0"_si;

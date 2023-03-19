@@ -185,7 +185,7 @@ public:
     /// Gets the diagnostic directives associated with the given buffer, if any.
     /// Note that the returned span is not safe to store; the underlying data can
     /// be mutated by a call to @a addDiagnosticDirective and invalidate the span.
-    span<const DiagnosticDirectiveInfo> getDiagnosticDirectives(BufferID buffer) const;
+    std::span<const DiagnosticDirectiveInfo> getDiagnosticDirectives(BufferID buffer) const;
 
     /// Returns a list of buffers (files and macros) that have been created in the
     /// source manager.

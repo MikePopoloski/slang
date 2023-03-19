@@ -421,7 +421,7 @@ ForeachLoopListSyntax& Parser::parseForeachLoopVariables() {
     if (arrayName.kind == SyntaxKind::IdentifierSelectName)
         addDiag(diag::NonstandardForeach, arrayName.sourceRange());
 
-    span<TokenOrSyntax> list;
+    std::span<TokenOrSyntax> list;
     Token openBracket;
     Token closeBracket;
     parseList<isIdentifierOrComma, isEndOfBracketedList>(
@@ -634,7 +634,7 @@ NamedBlockClauseSyntax* Parser::parseNamedBlockClause() {
     return nullptr;
 }
 
-span<SyntaxNode*> Parser::parseBlockItems(TokenKind endKind, Token& end, bool inConstructor) {
+std::span<SyntaxNode*> Parser::parseBlockItems(TokenKind endKind, Token& end, bool inConstructor) {
     SmallVector<SyntaxNode*, 16> buffer;
     auto kind = peek().kind;
     bool errored = false;

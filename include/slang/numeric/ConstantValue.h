@@ -119,8 +119,8 @@ public:
     real_t real() const { return std::get<real_t>(value); }
     shortreal_t shortReal() const { return std::get<shortreal_t>(value); }
 
-    span<ConstantValue> elements() { return std::get<Elements>(value); }
-    span<ConstantValue const> elements() const { return std::get<Elements>(value); }
+    std::span<ConstantValue> elements() { return std::get<Elements>(value); }
+    std::span<ConstantValue const> elements() const { return std::get<Elements>(value); }
 
     std::string& str() & { return std::get<std::string>(value); }
     const std::string& str() const& { return std::get<std::string>(value); }

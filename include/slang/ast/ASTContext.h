@@ -235,7 +235,7 @@ public:
         /// A list of names to which class-scoped lookups are restricted.
         /// If empty, the lookup is unrestricted and all names are first
         /// tried in class-scope.
-        span<const string_view> nameRestrictions;
+        std::span<const string_view> nameRestrictions;
 
         /// A set of variables for a scope randomize call that should be
         /// treated as a rand variable.
@@ -311,10 +311,10 @@ public:
     void clearInstanceAndProc() { instanceOrProc = nullptr; }
 
     void setAttributes(const Statement& stmt,
-                       span<const syntax::AttributeInstanceSyntax* const> syntax) const;
+                       std::span<const syntax::AttributeInstanceSyntax* const> syntax) const;
 
     void setAttributes(const Expression& expr,
-                       span<const syntax::AttributeInstanceSyntax* const> syntax) const;
+                       std::span<const syntax::AttributeInstanceSyntax* const> syntax) const;
 
     void addDriver(const ValueSymbol& symbol, const Expression& longestStaticPrefix,
                    bitmask<AssignFlags> assignFlags) const;

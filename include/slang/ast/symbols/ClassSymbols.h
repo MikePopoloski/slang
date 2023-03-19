@@ -66,7 +66,7 @@ public:
     ///
     /// Note that this list is flattened from the full set of all interfaces implemented
     /// by any base classes or interface class parents, up the inheritance hierarchy.
-    span<const Type* const> getImplementedInterfaces() const {
+    std::span<const Type* const> getImplementedInterfaces() const {
         ensureElaborated();
         return implementsIfaces;
     }
@@ -76,7 +76,7 @@ public:
     /// inherited from the ones in the declaration).
     /// If this class is itself an interface class, this is instead the list of
     /// interface classes that it extends from, if any.
-    span<const Type* const> getDeclaredInterfaces() const {
+    std::span<const Type* const> getDeclaredInterfaces() const {
         ensureElaborated();
         return declaredIfaces;
     }
@@ -117,8 +117,8 @@ private:
     mutable const Symbol* baseConstructor = nullptr;
     mutable std::optional<const Expression*> baseConstructorCall;
     mutable const ForwardingTypedefSymbol* firstForward = nullptr;
-    mutable span<const Type* const> implementsIfaces;
-    mutable span<const Type* const> declaredIfaces;
+    mutable std::span<const Type* const> implementsIfaces;
+    mutable std::span<const Type* const> declaredIfaces;
     SymbolIndex headerIndex;
 };
 
@@ -176,8 +176,8 @@ private:
     class SpecializationKey {
     public:
         SpecializationKey(const GenericClassDefSymbol& def,
-                          span<const ConstantValue* const> paramValues,
-                          span<const Type* const> typeParams);
+                          std::span<const ConstantValue* const> paramValues,
+                          std::span<const Type* const> typeParams);
 
         size_t hash() const { return savedHash; }
 
@@ -186,8 +186,8 @@ private:
 
     private:
         const GenericClassDefSymbol* definition;
-        span<const ConstantValue* const> paramValues;
-        span<const Type* const> typeParams;
+        std::span<const ConstantValue* const> paramValues;
+        std::span<const Type* const> typeParams;
         size_t savedHash;
     };
 

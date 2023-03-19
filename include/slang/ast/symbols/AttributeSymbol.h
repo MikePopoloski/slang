@@ -28,12 +28,12 @@ public:
 
     void serializeTo(ASTSerializer& serializer) const;
 
-    static span<const AttributeSymbol* const> fromSyntax(
-        span<const syntax::AttributeInstanceSyntax* const> syntax, const Scope& scope,
+    static std::span<const AttributeSymbol* const> fromSyntax(
+        std::span<const syntax::AttributeInstanceSyntax* const> syntax, const Scope& scope,
         const Symbol& symbol);
 
-    static span<const AttributeSymbol* const> fromSyntax(
-        span<const syntax::AttributeInstanceSyntax* const> syntax, const Scope& scope,
+    static std::span<const AttributeSymbol* const> fromSyntax(
+        std::span<const syntax::AttributeInstanceSyntax* const> syntax, const Scope& scope,
         LookupLocation lookupLocation);
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::Attribute; }

@@ -1074,7 +1074,7 @@ Expression& Expression::bindLookupResult(Compilation& compilation, LookupResult&
             // all the selectors together, as this may constitute a hierarchical reference.
             if (expr->type->isVirtualInterface()) {
                 LookupResult nextResult;
-                span<LookupResult::Selector> selectors = result.selectors;
+                std::span<LookupResult::Selector> selectors = result.selectors;
                 Lookup::selectChild(*expr->type, expr->sourceRange, selectors.subspan(i), context,
                                     nextResult);
 

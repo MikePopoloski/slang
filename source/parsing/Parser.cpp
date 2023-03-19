@@ -143,7 +143,7 @@ ParameterPortListSyntax* Parser::parseParameterPortList() {
 
     Token openParen;
     Token closeParen;
-    span<TokenOrSyntax> parameters;
+    std::span<TokenOrSyntax> parameters;
     parseList<isPossibleParameter, isEndOfParameterList>(
         TokenKind::OpenParenthesis, TokenKind::CloseParenthesis, TokenKind::Comma, openParen,
         parameters, closeParen, RequireItems::False, diag::ExpectedParameterPort,
@@ -165,7 +165,7 @@ PortReferenceSyntax& Parser::parsePortReference() {
 PortExpressionSyntax& Parser::parsePortExpression() {
     if (peek(TokenKind::OpenBrace)) {
         Token openBrace, closeBrace;
-        span<TokenOrSyntax> items;
+        std::span<TokenOrSyntax> items;
 
         parseList<isIdentifierOrComma, isEndOfBracedList>(
             TokenKind::OpenBrace, TokenKind::CloseBrace, TokenKind::Comma, openBrace, items,
@@ -389,7 +389,7 @@ VariableDimensionSyntax* Parser::parseDimension() {
     return &factory.variableDimension(openBracket, specifier, closeBracket);
 }
 
-span<VariableDimensionSyntax*> Parser::parseDimensionList() {
+std::span<VariableDimensionSyntax*> Parser::parseDimensionList() {
     SmallVector<VariableDimensionSyntax*> buffer;
     while (true) {
         auto dim = parseDimension();
@@ -498,7 +498,7 @@ EnumTypeSyntax& Parser::parseEnum() {
     auto openBrace = expect(TokenKind::OpenBrace);
 
     Token closeBrace;
-    span<TokenOrSyntax> declarators;
+    std::span<TokenOrSyntax> declarators;
     if (openBrace.isMissing())
         closeBrace = missingToken(TokenKind::CloseBrace, openBrace.location());
     else
@@ -894,8 +894,8 @@ DeclaratorSyntax& Parser::parseDeclarator(bool allowMinTypMax, bool requireIniti
 }
 
 template<bool (*IsEnd)(TokenKind)>
-span<TokenOrSyntax> Parser::parseDeclarators(TokenKind endKind, Token& end, bool allowMinTypMax,
-                                             bool requireInitializers) {
+std::span<TokenOrSyntax> Parser::parseDeclarators(TokenKind endKind, Token& end,
+                                                  bool allowMinTypMax, bool requireInitializers) {
     SmallVector<TokenOrSyntax, 4> buffer;
     parseList<isIdentifierOrComma, IsEnd>(buffer, endKind, TokenKind::Comma, end,
                                           RequireItems::True, diag::ExpectedDeclarator,
@@ -907,8 +907,8 @@ span<TokenOrSyntax> Parser::parseDeclarators(TokenKind endKind, Token& end, bool
     return buffer.copy(alloc);
 }
 
-span<TokenOrSyntax> Parser::parseDeclarators(Token& semi, bool allowMinTypMax,
-                                             bool requireInitializers) {
+std::span<TokenOrSyntax> Parser::parseDeclarators(Token& semi, bool allowMinTypMax,
+                                                  bool requireInitializers) {
     return parseDeclarators<isNotIdOrComma>(TokenKind::Semicolon, semi, allowMinTypMax,
                                             requireInitializers);
 }
@@ -918,7 +918,7 @@ Parser::AttrList Parser::parseAttributes() {
     while (peek(TokenKind::OpenParenthesisStar)) {
         Token openParen;
         Token closeParen;
-        span<TokenOrSyntax> list;
+        std::span<TokenOrSyntax> list;
 
         parseList<isIdentifierOrComma, isEndOfAttribute>(
             TokenKind::OpenParenthesisStar, TokenKind::StarCloseParenthesis, TokenKind::Comma,
@@ -1009,7 +1009,7 @@ ParameterDeclarationBaseSyntax& Parser::parseParameterDecl(Token keyword, Token*
 
         // If the semi pointer is given, we should parse a list of decls.
         // Otherwise we're in a parameter port list and should just parse one.
-        span<TokenOrSyntax> decls;
+        std::span<TokenOrSyntax> decls;
         if (semi)
             decls = parseDeclarators(*semi, /* allowMinTypMax */ true);
         else {

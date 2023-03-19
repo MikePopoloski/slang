@@ -274,7 +274,7 @@ const Statement& ProceduralBlockSymbol::getBody() const {
 ProceduralBlockSymbol& ProceduralBlockSymbol::createProceduralBlock(
     const Scope& scope, ProceduralBlockKind kind, SourceLocation location,
     const MemberSyntax& syntax, const StatementSyntax& stmtSyntax,
-    span<const StatementBlockSymbol* const>& additionalBlocks) {
+    std::span<const StatementBlockSymbol* const>& additionalBlocks) {
 
     auto& comp = scope.getCompilation();
     auto result = comp.emplace<ProceduralBlockSymbol>(location, kind);
@@ -290,7 +290,7 @@ ProceduralBlockSymbol& ProceduralBlockSymbol::createProceduralBlock(
 
 ProceduralBlockSymbol& ProceduralBlockSymbol::fromSyntax(
     const Scope& scope, const ProceduralBlockSyntax& syntax,
-    span<const StatementBlockSymbol* const>& additionalBlocks) {
+    std::span<const StatementBlockSymbol* const>& additionalBlocks) {
     return createProceduralBlock(scope, SemanticFacts::getProceduralBlockKind(syntax.kind),
                                  syntax.keyword.location(), syntax, *syntax.statement,
                                  additionalBlocks);
@@ -298,7 +298,7 @@ ProceduralBlockSymbol& ProceduralBlockSymbol::fromSyntax(
 
 ProceduralBlockSymbol& ProceduralBlockSymbol::fromSyntax(
     const Scope& scope, const ImmediateAssertionMemberSyntax& syntax,
-    span<const StatementBlockSymbol* const>& additionalBlocks) {
+    std::span<const StatementBlockSymbol* const>& additionalBlocks) {
     return createProceduralBlock(scope, ProceduralBlockKind::Always,
                                  syntax.getFirstToken().location(), syntax, *syntax.statement,
                                  additionalBlocks);
@@ -306,7 +306,7 @@ ProceduralBlockSymbol& ProceduralBlockSymbol::fromSyntax(
 
 ProceduralBlockSymbol& ProceduralBlockSymbol::fromSyntax(
     const Scope& scope, const ConcurrentAssertionMemberSyntax& syntax,
-    span<const StatementBlockSymbol* const>& additionalBlocks) {
+    std::span<const StatementBlockSymbol* const>& additionalBlocks) {
     return createProceduralBlock(scope, ProceduralBlockKind::Always,
                                  syntax.getFirstToken().location(), syntax, *syntax.statement,
                                  additionalBlocks);

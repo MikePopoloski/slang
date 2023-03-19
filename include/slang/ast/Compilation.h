@@ -195,7 +195,7 @@ public:
     void addSyntaxTree(std::shared_ptr<syntax::SyntaxTree> tree);
 
     /// Gets the set of syntax trees that have been added to the compilation.
-    span<const std::shared_ptr<syntax::SyntaxTree>> getSyntaxTrees() const;
+    std::span<const std::shared_ptr<syntax::SyntaxTree>> getSyntaxTrees() const;
 
     /// Gets the compilation unit for the given syntax node. The compilation unit must have
     /// already been added to the compilation previously via a call to @a addSyntaxTree
@@ -203,7 +203,7 @@ public:
         const syntax::CompilationUnitSyntax& syntax) const;
 
     /// Gets the set of compilation units that have been added to the compilation.
-    span<const CompilationUnitSymbol* const> getCompilationUnits() const;
+    std::span<const CompilationUnitSymbol* const> getCompilationUnits() const;
 
     /// Gets the root of the design. The first time you call this method all top-level
     /// instances will be elaborated and the compilation finalized. After that you can
@@ -272,28 +272,29 @@ public:
     const SystemSubroutine* getSystemMethod(SymbolKind typeKind, string_view name) const;
 
     /// Sets the attributes associated with the given symbol.
-    void setAttributes(const Symbol& symbol, span<const AttributeSymbol* const> attributes);
+    void setAttributes(const Symbol& symbol, std::span<const AttributeSymbol* const> attributes);
 
     /// Sets the attributes associated with the given statement.
-    void setAttributes(const Statement& stmt, span<const AttributeSymbol* const> attributes);
+    void setAttributes(const Statement& stmt, std::span<const AttributeSymbol* const> attributes);
 
     /// Sets the attributes associated with the given expression.
-    void setAttributes(const Expression& expr, span<const AttributeSymbol* const> attributes);
+    void setAttributes(const Expression& expr, std::span<const AttributeSymbol* const> attributes);
 
     /// Sets the attributes associated with the given port connection.
-    void setAttributes(const PortConnection& conn, span<const AttributeSymbol* const> attributes);
+    void setAttributes(const PortConnection& conn,
+                       std::span<const AttributeSymbol* const> attributes);
 
     /// Gets the attributes associated with the given symbol.
-    span<const AttributeSymbol* const> getAttributes(const Symbol& symbol) const;
+    std::span<const AttributeSymbol* const> getAttributes(const Symbol& symbol) const;
 
     /// Gets the attributes associated with the given statement.
-    span<const AttributeSymbol* const> getAttributes(const Statement& stmt) const;
+    std::span<const AttributeSymbol* const> getAttributes(const Statement& stmt) const;
 
     /// Gets the attributes associated with the given expression.
-    span<const AttributeSymbol* const> getAttributes(const Expression& expr) const;
+    std::span<const AttributeSymbol* const> getAttributes(const Expression& expr) const;
 
     /// Gets the attributes associated with the given port connection.
-    span<const AttributeSymbol* const> getAttributes(const PortConnection& conn) const;
+    std::span<const AttributeSymbol* const> getAttributes(const PortConnection& conn) const;
 
     /// Notes that the given symbol was imported into the current scope via a package import,
     /// and further that the current scope is within a package declaration. These symbols are
@@ -487,27 +488,28 @@ private:
     // These functions are called by Scopes to create and track various members.
     Scope::DeferredMemberData& getOrAddDeferredData(Scope::DeferredMemberIndex& index);
     void trackImport(Scope::ImportDataIndex& index, const WildcardImportSymbol& import);
-    span<const WildcardImportSymbol*> queryImports(Scope::ImportDataIndex index);
+    std::span<const WildcardImportSymbol*> queryImports(Scope::ImportDataIndex index);
 
     bool doTypoCorrection() const { return typoCorrections < options.typoCorrectionLimit; }
     void didTypoCorrection() { typoCorrections++; }
 
-    span<const AttributeSymbol* const> getAttributes(const void* ptr) const;
+    std::span<const AttributeSymbol* const> getAttributes(const void* ptr) const;
 
     Diagnostic& addDiag(Diagnostic diag);
 
     const RootSymbol& getRoot(bool skipDefParamsAndBinds);
     void parseParamOverrides(flat_hash_map<string_view, const ConstantValue*>& results);
-    void checkDPIMethods(span<const SubroutineSymbol* const> dpiImports);
-    void checkExternIfaceMethods(span<const MethodPrototypeSymbol* const> protos);
+    void checkDPIMethods(std::span<const SubroutineSymbol* const> dpiImports);
+    void checkExternIfaceMethods(std::span<const MethodPrototypeSymbol* const> protos);
     void checkModportExports(
-        span<const std::pair<const InterfacePortSymbol*, const ModportSymbol*>> modports);
+        std::span<const std::pair<const InterfacePortSymbol*, const ModportSymbol*>> modports);
     void checkElemTimeScale(std::optional<TimeScale> timeScale, SourceRange sourceRange);
     void resolveDefParamsAndBinds();
     void resolveBindTargets(const syntax::BindDirectiveSyntax& syntax, const Scope& scope,
                             SmallVector<const Symbol*>& instTargets, const Definition** defTarget);
     void checkBindTargetParams(const syntax::BindDirectiveSyntax& syntax, const Scope& scope,
-                               span<const Symbol* const> instTargets, const Definition* defTarget);
+                               std::span<const Symbol* const> instTargets,
+                               const Definition* defTarget);
 
     // Stored options object.
     CompilationOptions options;
@@ -574,7 +576,7 @@ private:
     flat_hash_map<std::tuple<string_view, SymbolKind>, const SystemSubroutine*> methodMap;
 
     // Map from pointers (to symbols, statements, expressions) to their associated attributes.
-    flat_hash_map<const void*, span<const AttributeSymbol* const>> attributeMap;
+    flat_hash_map<const void*, std::span<const AttributeSymbol* const>> attributeMap;
 
     // A set of all instantiated names in the design; used for determining whether a given
     // module has ever been instantiated to know whether it should be considered top-level.

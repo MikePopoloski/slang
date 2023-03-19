@@ -86,7 +86,7 @@ Trivia::Trivia(TriviaKind kind, string_view rawText) :
     rawText{rawText.data(), (uint32_t)rawText.size()}, kind(kind) {
 }
 
-Trivia::Trivia(TriviaKind kind, span<Token const> tokens) :
+Trivia::Trivia(TriviaKind kind, std::span<Token const> tokens) :
     tokens{tokens.data(), (uint32_t)tokens.size()}, kind(kind) {
 }
 
@@ -147,7 +147,7 @@ string_view Trivia::getRawText() const {
     }
 }
 
-span<Token const> Trivia::getSkippedTokens() const {
+std::span<Token const> Trivia::getSkippedTokens() const {
     if (kind != TriviaKind::SkippedTokens)
         return {};
     return {tokens.ptr, tokens.len};
@@ -185,34 +185,34 @@ Token::Token() :
     kind(TokenKind::Unknown), missing(false), triviaCountSmall(0), reserved(0), numFlags() {
 }
 
-Token::Token(BumpAllocator& alloc, TokenKind kind, span<Trivia const> trivia, string_view rawText,
-             SourceLocation location) {
+Token::Token(BumpAllocator& alloc, TokenKind kind, std::span<Trivia const> trivia,
+             string_view rawText, SourceLocation location) {
     init(alloc, kind, trivia, rawText, location);
 }
 
-Token::Token(BumpAllocator& alloc, TokenKind kind, span<Trivia const> trivia, string_view rawText,
-             SourceLocation location, string_view strText) {
+Token::Token(BumpAllocator& alloc, TokenKind kind, std::span<Trivia const> trivia,
+             string_view rawText, SourceLocation location, string_view strText) {
     ASSERT(kind == TokenKind::StringLiteral || kind == TokenKind::IncludeFileName);
     init(alloc, kind, trivia, rawText, location);
     info->stringText() = strText;
 }
 
-Token::Token(BumpAllocator& alloc, TokenKind kind, span<Trivia const> trivia, string_view rawText,
-             SourceLocation location, SyntaxKind directive) {
+Token::Token(BumpAllocator& alloc, TokenKind kind, std::span<Trivia const> trivia,
+             string_view rawText, SourceLocation location, SyntaxKind directive) {
     ASSERT(kind == TokenKind::Directive || kind == TokenKind::MacroUsage);
     init(alloc, kind, trivia, rawText, location);
     info->directiveKind() = directive;
 }
 
-Token::Token(BumpAllocator& alloc, TokenKind kind, span<Trivia const> trivia, string_view rawText,
-             SourceLocation location, logic_t bit) {
+Token::Token(BumpAllocator& alloc, TokenKind kind, std::span<Trivia const> trivia,
+             string_view rawText, SourceLocation location, logic_t bit) {
     ASSERT(kind == TokenKind::UnbasedUnsizedLiteral);
     init(alloc, kind, trivia, rawText, location);
     info->bit() = bit;
 }
 
-Token::Token(BumpAllocator& alloc, TokenKind kind, span<Trivia const> trivia, string_view rawText,
-             SourceLocation location, const SVInt& value) {
+Token::Token(BumpAllocator& alloc, TokenKind kind, std::span<Trivia const> trivia,
+             string_view rawText, SourceLocation location, const SVInt& value) {
     ASSERT(kind == TokenKind::IntegerLiteral);
     init(alloc, kind, trivia, rawText, location);
 
@@ -228,8 +228,8 @@ Token::Token(BumpAllocator& alloc, TokenKind kind, span<Trivia const> trivia, st
     info->integer() = storage;
 }
 
-Token::Token(BumpAllocator& alloc, TokenKind kind, span<Trivia const> trivia, string_view rawText,
-             SourceLocation location, double value, bool outOfRange,
+Token::Token(BumpAllocator& alloc, TokenKind kind, std::span<Trivia const> trivia,
+             string_view rawText, SourceLocation location, double value, bool outOfRange,
              std::optional<TimeUnit> timeUnit) {
     ASSERT(kind == TokenKind::RealLiteral || kind == TokenKind::TimeLiteral);
     init(alloc, kind, trivia, rawText, location);
@@ -240,8 +240,8 @@ Token::Token(BumpAllocator& alloc, TokenKind kind, span<Trivia const> trivia, st
         numFlags.set(*timeUnit);
 }
 
-Token::Token(BumpAllocator& alloc, TokenKind kind, span<Trivia const> trivia, string_view rawText,
-             SourceLocation location, LiteralBase base, bool isSigned) {
+Token::Token(BumpAllocator& alloc, TokenKind kind, std::span<Trivia const> trivia,
+             string_view rawText, SourceLocation location, LiteralBase base, bool isSigned) {
     init(alloc, kind, trivia, rawText, location);
     numFlags.set(base, isSigned);
 }
@@ -304,7 +304,7 @@ SourceLocation Token::location() const {
     return info->location;
 }
 
-span<Trivia const> Token::trivia() const {
+std::span<Trivia const> Token::trivia() const {
     if (triviaCountSmall == 0)
         return {};
 
@@ -377,7 +377,7 @@ bool Token::isOnSameLine() const {
     return true;
 }
 
-Token Token::withTrivia(BumpAllocator& alloc, span<Trivia const> trivia) const {
+Token Token::withTrivia(BumpAllocator& alloc, std::span<Trivia const> trivia) const {
     return clone(alloc, trivia, rawText(), location());
 }
 
@@ -389,7 +389,7 @@ Token Token::withRawText(BumpAllocator& alloc, string_view rawText) const {
     return clone(alloc, trivia(), rawText, location());
 }
 
-Token Token::clone(BumpAllocator& alloc, span<Trivia const> trivia, string_view rawText,
+Token Token::clone(BumpAllocator& alloc, std::span<Trivia const> trivia, string_view rawText,
                    SourceLocation location) const {
     Token result(alloc, kind, trivia, rawText, location);
     result.missing = missing;
@@ -413,7 +413,7 @@ Token Token::deepClone(BumpAllocator& alloc) const {
     return clone(alloc, triviaBuffer.copy(alloc), rawText(), location());
 }
 
-void Token::init(BumpAllocator& alloc, TokenKind kind_, span<Trivia const> trivia,
+void Token::init(BumpAllocator& alloc, TokenKind kind_, std::span<Trivia const> trivia,
                  string_view rawText, SourceLocation location) {
     kind = kind_;
     missing = false;

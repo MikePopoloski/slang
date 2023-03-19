@@ -318,7 +318,7 @@ ExpressionSyntax& Parser::parseInsideExpression(ExpressionSyntax& expr) {
 OpenRangeListSyntax& Parser::parseOpenRangeList() {
     Token openBrace;
     Token closeBrace;
-    span<TokenOrSyntax> list;
+    std::span<TokenOrSyntax> list;
 
     parseList<isPossibleOpenRangeElement, isEndOfBracedList>(
         TokenKind::OpenBrace, TokenKind::CloseBrace, TokenKind::Comma, openBrace, list, closeBrace,
@@ -368,7 +368,7 @@ StreamingConcatenationExpressionSyntax& Parser::parseStreamConcatenation(Token o
 
     Token openBraceInner;
     Token closeBraceInner;
-    span<TokenOrSyntax> list;
+    std::span<TokenOrSyntax> list;
 
     parseList<isPossibleExpressionOrComma, isEndOfBracedList>(
         TokenKind::OpenBrace, TokenKind::CloseBrace, TokenKind::Comma, openBraceInner, list,
@@ -404,7 +404,7 @@ AssignmentPatternExpressionSyntax& Parser::parseAssignmentPatternExpression(Data
         // This is an empty pattern -- we'll just warn and continue on.
         addDiag(diag::EmptyAssignmentPattern, openBrace.location());
 
-        auto pattern = &factory.simpleAssignmentPattern(openBrace, span<TokenOrSyntax>{},
+        auto pattern = &factory.simpleAssignmentPattern(openBrace, std::span<TokenOrSyntax>{},
                                                         consume());
         return factory.assignmentPatternExpression(type, *pattern);
     }
@@ -826,7 +826,7 @@ ParameterValueAssignmentSyntax* Parser::parseParameterValueAssignment() {
 
     Token openParen;
     Token closeParen;
-    span<TokenOrSyntax> list;
+    std::span<TokenOrSyntax> list;
     parseList<isPossibleParamAssignment, isEndOfParenList>(
         TokenKind::OpenParenthesis, TokenKind::CloseParenthesis, TokenKind::Comma, openParen, list,
         closeParen, RequireItems::False, diag::ExpectedArgument,
@@ -854,7 +854,7 @@ ParamAssignmentSyntax& Parser::parseParamValue() {
 ArgumentListSyntax& Parser::parseArgumentList() {
     Token openParen;
     Token closeParen;
-    span<TokenOrSyntax> list;
+    std::span<TokenOrSyntax> list;
 
     parseList<isPossibleArgument, isEndOfParenList>(
         TokenKind::OpenParenthesis, TokenKind::CloseParenthesis, TokenKind::Comma, openParen, list,
@@ -1181,7 +1181,7 @@ ExpressionSyntax& Parser::parseArrayOrRandomizeMethod(ExpressionSyntax& expr) {
     ParenExpressionListSyntax* args = nullptr;
     if (peek(TokenKind::OpenParenthesis)) {
         Token openParen, closeParen;
-        span<TokenOrSyntax> items;
+        std::span<TokenOrSyntax> items;
         parseList<isPossibleExpressionOrComma, isEndOfParenList>(
             TokenKind::OpenParenthesis, TokenKind::CloseParenthesis, TokenKind::Comma, openParen,
             items, closeParen, RequireItems::False, diag::ExpectedExpression,
@@ -1316,7 +1316,7 @@ SequenceMatchListSyntax* Parser::parseSequenceMatchList(Token& closeParen) {
     }
 
     Token comma;
-    span<TokenOrSyntax> list;
+    std::span<TokenOrSyntax> list;
     parseList<isPossibleArgument, isEndOfParenList>(TokenKind::Comma, TokenKind::CloseParenthesis,
                                                     TokenKind::Comma, comma, list, closeParen,
                                                     RequireItems::True, diag::ExpectedExpression,

@@ -206,7 +206,7 @@ ConstantValue ConstantValue::getSlice(int32_t upper, int32_t lower,
         return integer().slice(upper, lower);
 
     if (isUnpacked()) {
-        span<const ConstantValue> elems = elements();
+        std::span<const ConstantValue> elems = elements();
         std::vector<ConstantValue> result{size_t(upper - lower + 1)};
         ConstantValue* dest = result.data();
 

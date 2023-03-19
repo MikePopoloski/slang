@@ -186,9 +186,9 @@ public:
         not_null<const Pattern*> pattern;
     };
 
-    span<const FieldPattern> patterns;
+    std::span<const FieldPattern> patterns;
 
-    StructurePattern(span<const FieldPattern> patterns, SourceRange sourceRange) :
+    StructurePattern(std::span<const FieldPattern> patterns, SourceRange sourceRange) :
         Pattern(PatternKind::Structure, sourceRange), patterns(patterns) {}
 
     static Pattern& fromSyntax(const syntax::StructurePatternSyntax& syntax, const Type& targetType,

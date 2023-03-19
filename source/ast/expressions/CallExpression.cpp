@@ -196,7 +196,7 @@ static bool checkOutputArgs(const ASTContext& context, bool hasOutputArgs, Sourc
 }
 
 bool CallExpression::bindArgs(const ArgumentListSyntax* argSyntax,
-                              span<const FormalArgumentSymbol* const> formalArgs,
+                              std::span<const FormalArgumentSymbol* const> formalArgs,
                               string_view symbolName, SourceRange range, const ASTContext& context,
                               SmallVectorBase<const Expression*>& boundArgs) {
     SmallVector<const SyntaxNode*> orderedArgs;
@@ -658,7 +658,7 @@ ConstantValue CallExpression::evalImpl(EvalContext& context) const {
     if (!context.pushFrame(symbol, sourceRange.start(), lookupLocation))
         return nullptr;
 
-    span<const FormalArgumentSymbol* const> formals = symbol.getArguments();
+    std::span<const FormalArgumentSymbol* const> formals = symbol.getArguments();
     for (size_t i = 0; i < formals.size(); i++)
         context.createLocal(formals[i], args[i]);
 

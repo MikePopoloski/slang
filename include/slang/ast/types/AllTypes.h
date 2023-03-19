@@ -42,9 +42,10 @@ public:
     static const Type& fromSyntax(Compilation& compilation, const syntax::IntegerTypeSyntax& syntax,
                                   const ASTContext& context);
 
-    static const Type& fromSyntax(Compilation& compilation, syntax::SyntaxKind integerKind,
-                                  span<const syntax::VariableDimensionSyntax* const> dimensions,
-                                  bool isSigned, const ASTContext& context);
+    static const Type& fromSyntax(
+        Compilation& compilation, syntax::SyntaxKind integerKind,
+        std::span<const syntax::VariableDimensionSyntax* const> dimensions, bool isSigned,
+        const ASTContext& context);
 
     ConstantValue getDefaultValueImpl() const;
 
@@ -168,7 +169,7 @@ public:
                                uint32_t selectableWidth);
 
     static const Type& fromDims(const Scope& scope, const Type& elementType,
-                                span<const ConstantRange> dimensions,
+                                std::span<const ConstantRange> dimensions,
                                 syntax::DeferredSourceRange sourceRange);
 
     static const Type& fromDim(const Scope& scope, const Type& elementType, ConstantRange dim,
@@ -250,7 +251,7 @@ public:
 /// Represents an unpacked structure of members.
 class SLANG_EXPORT UnpackedStructType : public Type, public Scope {
 public:
-    span<const FieldSymbol* const> fields;
+    std::span<const FieldSymbol* const> fields;
     uint32_t selectableWidth = 0;
     int systemId;
 
@@ -284,7 +285,7 @@ public:
 /// Represents an unpacked union of members.
 class SLANG_EXPORT UnpackedUnionType : public Type, public Scope {
 public:
-    span<const FieldSymbol* const> fields;
+    std::span<const FieldSymbol* const> fields;
     uint32_t selectableWidth = 0;
     int systemId;
     bool isTagged;

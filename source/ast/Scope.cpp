@@ -321,7 +321,7 @@ void Scope::addMembers(const SyntaxNode& syntax) {
         case SyntaxKind::AlwaysFFBlock:
         case SyntaxKind::InitialBlock:
         case SyntaxKind::FinalBlock: {
-            span<const StatementBlockSymbol* const> additional;
+            std::span<const StatementBlockSymbol* const> additional;
             auto& block = ProceduralBlockSymbol::fromSyntax(*this,
                                                             syntax.as<ProceduralBlockSyntax>(),
                                                             additional);
@@ -332,7 +332,7 @@ void Scope::addMembers(const SyntaxNode& syntax) {
             break;
         }
         case SyntaxKind::ConcurrentAssertionMember: {
-            span<const StatementBlockSymbol* const> additional;
+            std::span<const StatementBlockSymbol* const> additional;
             auto& block = ProceduralBlockSymbol::fromSyntax(
                 *this, syntax.as<ConcurrentAssertionMemberSyntax>(), additional);
 
@@ -342,7 +342,7 @@ void Scope::addMembers(const SyntaxNode& syntax) {
             break;
         }
         case SyntaxKind::ImmediateAssertionMember: {
-            span<const StatementBlockSymbol* const> additional;
+            std::span<const StatementBlockSymbol* const> additional;
             auto& block = ProceduralBlockSymbol::fromSyntax(
                 *this, syntax.as<ImmediateAssertionMemberSyntax>(), additional);
 
@@ -584,7 +584,7 @@ const Symbol* Scope::lookupName(string_view name, LookupLocation location,
     return result.found;
 }
 
-span<const WildcardImportSymbol* const> Scope::getWildcardImports() const {
+std::span<const WildcardImportSymbol* const> Scope::getWildcardImports() const {
     return compilation.queryImports(importDataIndex);
 }
 
@@ -1315,7 +1315,7 @@ void Scope::handleNestedDefinition(const ModuleDeclarationSyntax& syntax) const 
     insertMember(&inst, lastMember, /* isElaborating */ true, /* incrementIndex */ true);
 }
 
-void Scope::handleExportedMethods(span<Symbol* const> deferredMembers) const {
+void Scope::handleExportedMethods(std::span<Symbol* const> deferredMembers) const {
     SmallSet<string_view, 4> waitingForImport;
     SmallMap<string_view, const ModportSubroutinePortSyntax*, 4> foundImports;
 
@@ -1387,7 +1387,7 @@ void Scope::handleExportedMethods(span<Symbol* const> deferredMembers) const {
 }
 
 void Scope::addWildcardImport(const PackageImportItemSyntax& item,
-                              span<const AttributeInstanceSyntax* const> attributes) {
+                              std::span<const AttributeInstanceSyntax* const> attributes) {
     // Check for redundant import statements.
     for (auto import : compilation.queryImports(importDataIndex)) {
         if (import->packageName == item.package.valueText()) {
@@ -1416,7 +1416,7 @@ void Scope::DeferredMemberData::addMember(Symbol* symbol) {
     members.emplace_back(symbol);
 }
 
-span<Symbol* const> Scope::DeferredMemberData::getMembers() const {
+std::span<Symbol* const> Scope::DeferredMemberData::getMembers() const {
     return members;
 }
 
@@ -1425,8 +1425,8 @@ void Scope::DeferredMemberData::registerTransparentType(const Symbol* insertion,
     transparentTypes.emplace_back(insertion, &parent);
 }
 
-span<std::pair<const Symbol*, const Symbol*> const> Scope::DeferredMemberData::getTransparentTypes()
-    const {
+std::span<std::pair<const Symbol*, const Symbol*> const> Scope::DeferredMemberData::
+    getTransparentTypes() const {
     return transparentTypes;
 }
 
@@ -1434,7 +1434,7 @@ void Scope::DeferredMemberData::addForwardingTypedef(const ForwardingTypedefSymb
     forwardingTypedefs.push_back(&symbol);
 }
 
-span<const ForwardingTypedefSymbol* const> Scope::DeferredMemberData::getForwardingTypedefs()
+std::span<const ForwardingTypedefSymbol* const> Scope::DeferredMemberData::getForwardingTypedefs()
     const {
     return forwardingTypedefs;
 }
@@ -1444,7 +1444,7 @@ void Scope::DeferredMemberData::addPortDeclaration(const SyntaxNode& syntax,
     portDecls.emplace_back(&syntax, insertion);
 }
 
-span<std::pair<const SyntaxNode*, const Symbol*> const> Scope::DeferredMemberData::
+std::span<std::pair<const SyntaxNode*, const Symbol*> const> Scope::DeferredMemberData::
     getPortDeclarations() const {
     return portDecls;
 }

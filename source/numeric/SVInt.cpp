@@ -185,7 +185,7 @@ SVInt SVInt::fromString(string_view str) {
 }
 
 SVInt SVInt::fromDigits(bitwidth_t bits, LiteralBase base, bool isSigned, bool anyUnknown,
-                        span<logic_t const> digits) {
+                        std::span<logic_t const> digits) {
     if (digits.empty())
         throw std::invalid_argument("No digits provided");
 
@@ -253,7 +253,7 @@ SVInt SVInt::fromDigits(bitwidth_t bits, LiteralBase base, bool isSigned, bool a
     return fromPow2Digits(bits, isSigned, anyUnknown, radix, shift, digits);
 }
 
-SVInt SVInt::fromDecimalDigits(bitwidth_t bits, bool isSigned, span<logic_t const> digits) {
+SVInt SVInt::fromDecimalDigits(bitwidth_t bits, bool isSigned, std::span<logic_t const> digits) {
     SVInt result = allocZeroed(bits, isSigned, false);
 
     constexpr int charsPerWord = 18; // 18 decimal digits can fit in a 64-bit word
@@ -307,7 +307,7 @@ SVInt SVInt::fromDecimalDigits(bitwidth_t bits, bool isSigned, span<logic_t cons
 }
 
 SVInt SVInt::fromPow2Digits(bitwidth_t bits, bool isSigned, bool anyUnknown, uint32_t radix,
-                            uint32_t shift, span<logic_t const> digits) {
+                            uint32_t shift, std::span<logic_t const> digits) {
 
     SVInt result = allocZeroed(bits, isSigned, anyUnknown);
 
@@ -625,7 +625,7 @@ SVInt SVInt::replicate(const SVInt& times) const {
     SmallVector<SVInt> buffer(n, UninitializedTag());
     for (size_t i = 0; i < n; ++i)
         buffer.push_back(*this);
-    return concat(span<SVInt const>(buffer.begin(), buffer.end()));
+    return concat(std::span<SVInt const>(buffer.begin(), buffer.end()));
 }
 
 size_t SVInt::hash() const {
@@ -1730,7 +1730,7 @@ SVInt SVInt::conditional(const SVInt& condition, const SVInt& lhs, const SVInt& 
     return result;
 }
 
-SVInt SVInt::concat(span<SVInt const> operands) {
+SVInt SVInt::concat(std::span<SVInt const> operands) {
     // 0 operand concatenations can be valid inside of larger concatenations.
     if (operands.size() == 0)
         return SVInt::Zero;
@@ -1804,7 +1804,7 @@ void SVInt::initSlowCase(uint64_t value) {
     }
 }
 
-void SVInt::initSlowCase(span<const byte> bytes) {
+void SVInt::initSlowCase(std::span<const byte> bytes) {
     if (isSingleWord()) {
         val = 0;
         memcpy(&val, bytes.data(), std::min<size_t>(WORD_SIZE, bytes.size()));

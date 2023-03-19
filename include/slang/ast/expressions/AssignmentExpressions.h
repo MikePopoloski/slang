@@ -190,9 +190,9 @@ private:
 /// Represents a `new` expression that creates a covergroup instance.
 class SLANG_EXPORT NewCovergroupExpression : public Expression {
 public:
-    span<const Expression* const> arguments;
+    std::span<const Expression* const> arguments;
 
-    NewCovergroupExpression(const Type& type, span<const Expression* const> arguments,
+    NewCovergroupExpression(const Type& type, std::span<const Expression* const> arguments,
                             SourceRange sourceRange) :
         Expression(ExpressionKind::NewCovergroup, type, sourceRange),
         arguments(arguments) {}
@@ -217,7 +217,7 @@ public:
 /// Base class for assignment pattern expressions.
 class SLANG_EXPORT AssignmentPatternExpressionBase : public Expression {
 public:
-    span<const Expression* const> elements() const { return elements_; }
+    std::span<const Expression* const> elements() const { return elements_; }
 
     ConstantValue evalImpl(EvalContext& context) const;
 
@@ -231,19 +231,19 @@ public:
 
 protected:
     AssignmentPatternExpressionBase(ExpressionKind kind, const Type& type,
-                                    span<const Expression* const> elements,
+                                    std::span<const Expression* const> elements,
                                     SourceRange sourceRange) :
         Expression(kind, type, sourceRange),
         elements_(elements) {}
 
 private:
-    span<const Expression* const> elements_;
+    std::span<const Expression* const> elements_;
 };
 
 /// Represents an assignment pattern expression.
 class SLANG_EXPORT SimpleAssignmentPatternExpression : public AssignmentPatternExpressionBase {
 public:
-    SimpleAssignmentPatternExpression(const Type& type, span<const Expression* const> elements,
+    SimpleAssignmentPatternExpression(const Type& type, std::span<const Expression* const> elements,
                                       SourceRange sourceRange) :
         AssignmentPatternExpressionBase(ExpressionKind::SimpleAssignmentPattern, type, elements,
                                         sourceRange) {}
@@ -287,16 +287,17 @@ public:
         not_null<const Expression*> expr;
     };
 
-    span<const MemberSetter> memberSetters;
-    span<const TypeSetter> typeSetters;
-    span<const IndexSetter> indexSetters;
+    std::span<const MemberSetter> memberSetters;
+    std::span<const TypeSetter> typeSetters;
+    std::span<const IndexSetter> indexSetters;
     const Expression* defaultSetter;
 
-    StructuredAssignmentPatternExpression(const Type& type, span<const MemberSetter> memberSetters,
-                                          span<const TypeSetter> typeSetters,
-                                          span<const IndexSetter> indexSetters,
+    StructuredAssignmentPatternExpression(const Type& type,
+                                          std::span<const MemberSetter> memberSetters,
+                                          std::span<const TypeSetter> typeSetters,
+                                          std::span<const IndexSetter> indexSetters,
                                           const Expression* defaultSetter,
-                                          span<const Expression* const> elements,
+                                          std::span<const Expression* const> elements,
                                           SourceRange sourceRange) :
         AssignmentPatternExpressionBase(ExpressionKind::StructuredAssignmentPattern, type, elements,
                                         sourceRange),
@@ -334,7 +335,7 @@ public:
 class SLANG_EXPORT ReplicatedAssignmentPatternExpression : public AssignmentPatternExpressionBase {
 public:
     ReplicatedAssignmentPatternExpression(const Type& type, const Expression& count,
-                                          span<const Expression* const> elements,
+                                          std::span<const Expression* const> elements,
                                           SourceRange sourceRange) :
         AssignmentPatternExpressionBase(ExpressionKind::ReplicatedAssignmentPattern, type, elements,
                                         sourceRange),

@@ -197,8 +197,9 @@ public:
     /// Perform a merge of implicit port information; this facilitates the non-ascii
     /// port system permitted by Verilog, where port I/O declarations are separate
     /// from the actual symbol declaration but may still carry some type info.
-    void mergeImplicitPort(const syntax::ImplicitTypeSyntax& implicit, SourceLocation location,
-                           span<const syntax::VariableDimensionSyntax* const> unpackedDimensions);
+    void mergeImplicitPort(
+        const syntax::ImplicitTypeSyntax& implicit, SourceLocation location,
+        std::span<const syntax::VariableDimensionSyntax* const> unpackedDimensions);
 
     /// Resolves the initializer using the given AST context, which could
     /// differ from the AST context that is used for type resolution.
@@ -214,7 +215,7 @@ private:
     void mergePortTypes(
         const ASTContext& context, const ValueSymbol& sourceSymbol,
         const syntax::ImplicitTypeSyntax& implicit, SourceLocation location,
-        span<const syntax::VariableDimensionSyntax* const> unpackedDimensions) const;
+        std::span<const syntax::VariableDimensionSyntax* const> unpackedDimensions) const;
 
     template<bool IsInitializer,
              typename T = ASTContext> // templated to avoid having to include ASTContext.h

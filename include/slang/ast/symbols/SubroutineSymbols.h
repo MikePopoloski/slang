@@ -73,7 +73,7 @@ class MethodPrototypeSymbol;
 /// Represents a subroutine (task or function).
 class SLANG_EXPORT SubroutineSymbol : public Symbol, public Scope {
 public:
-    using ArgList = span<const FormalArgumentSymbol* const>;
+    using ArgList = std::span<const FormalArgumentSymbol* const>;
 
     DeclaredType declaredReturnType;
     VariableLifetime defaultLifetime;
@@ -156,7 +156,7 @@ public:
 private:
     void addThisVar(const Type& type);
 
-    span<const StatementBlockSymbol* const> blocks;
+    std::span<const StatementBlockSymbol* const> blocks;
     mutable const Statement* stmt = nullptr;
     ArgList arguments;
     mutable const SubroutineSymbol* overrides = nullptr;
@@ -176,7 +176,7 @@ public:
                           SubroutineKind subroutineKind, Visibility visibility,
                           bitmask<MethodFlags> flags);
 
-    span<const FormalArgumentSymbol* const> getArguments() const { return arguments; }
+    std::span<const FormalArgumentSymbol* const> getArguments() const { return arguments; }
     const Type& getReturnType() const { return declaredReturnType.getType(); }
     const SubroutineSymbol* getSubroutine() const;
 
@@ -230,7 +230,7 @@ private:
     static MethodPrototypeSymbol& createExternIfaceMethod(const Scope& scope,
                                                           const TSyntax& syntax);
 
-    span<const FormalArgumentSymbol* const> arguments;
+    std::span<const FormalArgumentSymbol* const> arguments;
     mutable std::optional<const SubroutineSymbol*> subroutine;
     mutable const Symbol* overrides = nullptr;
     mutable bool needsMatchCheck = false;

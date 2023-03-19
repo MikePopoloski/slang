@@ -20,7 +20,7 @@ namespace slang::ast {
 using namespace syntax;
 
 ParameterBuilder::ParameterBuilder(const Scope& scope, string_view definitionName,
-                                   span<const Decl> parameterDecls) :
+                                   std::span<const Decl> parameterDecls) :
     scope(scope),
     definitionName(definitionName), parameterDecls(parameterDecls) {
 }
@@ -263,7 +263,7 @@ const ParameterSymbolBase& ParameterBuilder::createParam(const Definition::Param
 
 void ParameterBuilder::createDecls(const Scope& scope, const ParameterDeclarationBaseSyntax& syntax,
                                    bool isLocal, bool isPort,
-                                   span<const AttributeInstanceSyntax* const> attributes,
+                                   std::span<const AttributeInstanceSyntax* const> attributes,
                                    SmallVectorBase<Decl>& results) {
     if (syntax.kind == SyntaxKind::ParameterDeclaration) {
         auto& paramSyntax = syntax.as<ParameterDeclarationSyntax>();

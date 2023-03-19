@@ -43,7 +43,9 @@ public:
         }
     }
 
-    span<const CoverageOptionSetter> get() const { return options.copy(scope.getCompilation()); }
+    std::span<const CoverageOptionSetter> get() const {
+        return options.copy(scope.getCompilation());
+    }
 
 private:
     const Scope& scope;
@@ -345,13 +347,13 @@ const BinsSelectExpr* CoverageBinSymbol::getCrossSelectExpr() const {
     return selectExpr;
 }
 
-span<const Expression* const> CoverageBinSymbol::getValues() const {
+std::span<const Expression* const> CoverageBinSymbol::getValues() const {
     if (!isResolved)
         resolve();
     return values;
 }
 
-span<const CoverageBinSymbol::TransSet> CoverageBinSymbol::getTransList() const {
+std::span<const CoverageBinSymbol::TransSet> CoverageBinSymbol::getTransList() const {
     if (!isResolved)
         resolve();
     return transList;
@@ -782,7 +784,7 @@ void CoverpointSymbol::serializeTo(ASTSerializer& serializer) const {
 }
 
 CoverCrossSymbol::CoverCrossSymbol(Compilation& comp, string_view name, SourceLocation loc,
-                                   span<const CoverpointSymbol* const> targets) :
+                                   std::span<const CoverpointSymbol* const> targets) :
     Symbol(SymbolKind::CoverCross, name, loc),
     Scope(comp, this), targets(targets) {
 

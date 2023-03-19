@@ -41,7 +41,7 @@ public:
     const NetType& defaultNetType;
     std::optional<TimeScale> timeScale;
     VariableLifetime defaultLifetime;
-    span<const syntax::PackageImportItemSyntax* const> exportDecls;
+    std::span<const syntax::PackageImportItemSyntax* const> exportDecls;
     bool hasExportAll = false;
 
     PackageSymbol(Compilation& compilation, string_view name, SourceLocation loc,
@@ -71,8 +71,8 @@ private:
 /// Represents the entirety of a design, along with all contained compilation units.
 class SLANG_EXPORT RootSymbol : public Symbol, public Scope {
 public:
-    span<const InstanceSymbol* const> topInstances;
-    span<const CompilationUnitSymbol* const> compilationUnits;
+    std::span<const InstanceSymbol* const> topInstances;
+    std::span<const CompilationUnitSymbol* const> compilationUnits;
 
     explicit RootSymbol(Compilation& compilation) :
         Symbol(SymbolKind::Root, "$root", SourceLocation()), Scope(compilation, this) {}

@@ -62,7 +62,7 @@ class SLANG_EXPORT Preprocessor {
 public:
     Preprocessor(SourceManager& sourceManager, BumpAllocator& alloc, Diagnostics& diagnostics,
                  const Bag& options = {},
-                 span<const syntax::DefineDirectiveSyntax* const> inheritedMacros = {});
+                 std::span<const syntax::DefineDirectiveSyntax* const> inheritedMacros = {});
 
     /// Gets the next token in the stream, after applying preprocessor rules.
     Token next();
@@ -275,9 +275,9 @@ private:
     bool expandMacro(MacroDef macro, MacroExpansion& expansion,
                      syntax::MacroActualArgumentListSyntax* actualArgs);
     bool expandIntrinsic(MacroIntrinsic intrinsic, MacroExpansion& expansion);
-    bool expandReplacementList(span<Token const>& tokens,
+    bool expandReplacementList(std::span<Token const>& tokens,
                                SmallSet<const syntax::DefineDirectiveSyntax*, 8>& alreadyExpanded);
-    bool applyMacroOps(span<Token const> tokens, SmallVectorBase<Token>& dest);
+    bool applyMacroOps(std::span<Token const> tokens, SmallVectorBase<Token>& dest);
     void createBuiltInMacro(string_view name, int value, string_view valueStr = {});
 
     static bool isSameMacro(const syntax::DefineDirectiveSyntax& left,
@@ -320,7 +320,7 @@ private:
 
         // Set a buffer to use first, in order, before looking at an underlying preprocessor
         // stream for macro argument lists.
-        void setBuffer(span<Token const> newBuffer);
+        void setBuffer(std::span<Token const> newBuffer);
 
         // Pull tokens one at a time from a previously set buffer. Note that this won't pull
         // from the underlying preprocessor stream; its purpose is to allow stepping through
@@ -336,7 +336,7 @@ private:
 
         syntax::MacroActualArgumentSyntax* parseActualArgument();
         syntax::MacroFormalArgumentSyntax* parseFormalArgument();
-        span<Token> parseTokenList(bool allowNewlines);
+        std::span<Token> parseTokenList(bool allowNewlines);
 
         Token peek();
         Token consume();
@@ -344,7 +344,7 @@ private:
         bool peek(TokenKind kind) { return peek().kind == kind; }
 
         Preprocessor& pp;
-        span<Token const> buffer;
+        std::span<Token const> buffer;
         uint32_t currentIndex = 0;
     };
 

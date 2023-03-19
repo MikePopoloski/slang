@@ -17,7 +17,7 @@
 
 namespace slang::ast {
 
-using Args = span<const Expression* const>;
+using Args = std::span<const Expression* const>;
 
 static bool isValidForRaw(const Type& type) {
     if (type.isIntegral())
@@ -213,7 +213,7 @@ static bool formatSpecialArg(char spec, const Scope& scope, std::string& result)
 
 std::optional<std::string> FmtHelpers::formatArgs(string_view formatString, SourceLocation loc,
                                                   const Scope& scope, EvalContext& context,
-                                                  const span<const Expression* const>& args,
+                                                  const std::span<const Expression* const>& args,
                                                   bool isStringLiteral) {
     auto getRange = [&](size_t offset, size_t len) {
         // If this is not a string literal, we can't meaningfully get an offset.
@@ -310,8 +310,8 @@ static char getDefaultSpecifier(const Expression& expr, LiteralBase defaultBase)
     return 'p';
 }
 
-std::optional<std::string> FmtHelpers::formatDisplay(const Scope& scope, EvalContext& context,
-                                                     const span<const Expression* const>& args) {
+std::optional<std::string> FmtHelpers::formatDisplay(
+    const Scope& scope, EvalContext& context, const std::span<const Expression* const>& args) {
     std::string result;
     auto argIt = args.begin();
     while (argIt != args.end()) {

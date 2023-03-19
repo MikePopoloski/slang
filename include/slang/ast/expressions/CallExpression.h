@@ -25,7 +25,7 @@ public:
 
     struct RandomizeCallInfo {
         const Constraint* inlineConstraints = nullptr;
-        span<const string_view> constraintRestrictions;
+        std::span<const string_view> constraintRestrictions;
     };
 
     struct SystemCallInfo {
@@ -40,7 +40,7 @@ public:
     Subroutine subroutine;
 
     CallExpression(const Subroutine& subroutine, const Type& returnType,
-                   const Expression* thisClass, span<const Expression*> arguments,
+                   const Expression* thisClass, std::span<const Expression*> arguments,
                    LookupLocation lookupLocation, SourceRange sourceRange) :
         Expression(ExpressionKind::Call, returnType, sourceRange),
         subroutine(subroutine), thisClass_(thisClass), arguments_(arguments),
@@ -50,8 +50,8 @@ public:
     /// class handle on which the method is being invoked. Otherwise returns nullptr.
     const Expression* thisClass() const { return thisClass_; }
 
-    span<const Expression* const> arguments() const { return arguments_; }
-    span<const Expression*> arguments() { return arguments_; }
+    std::span<const Expression* const> arguments() const { return arguments_; }
+    std::span<const Expression*> arguments() { return arguments_; }
 
     bool isSystemCall() const { return subroutine.index() == 1; }
 
@@ -98,8 +98,8 @@ public:
         const ASTContext& context);
 
     static bool bindArgs(const syntax::ArgumentListSyntax* argSyntax,
-                         span<const FormalArgumentSymbol* const> formalArgs, string_view symbolName,
-                         SourceRange range, const ASTContext& context,
+                         std::span<const FormalArgumentSymbol* const> formalArgs,
+                         string_view symbolName, SourceRange range, const ASTContext& context,
                          SmallVectorBase<const Expression*>& boundArgs);
 
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::Call; }
@@ -142,7 +142,7 @@ private:
                               SourceRange range);
 
     const Expression* thisClass_;
-    span<const Expression*> arguments_;
+    std::span<const Expression*> arguments_;
     LookupLocation lookupLocation;
 };
 

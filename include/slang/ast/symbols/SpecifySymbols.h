@@ -64,19 +64,19 @@ public:
         return conditionExpr;
     }
 
-    span<const Expression* const> getInputs() const {
+    std::span<const Expression* const> getInputs() const {
         if (!isResolved)
             resolve();
         return inputs;
     }
 
-    span<const Expression* const> getOutputs() const {
+    std::span<const Expression* const> getOutputs() const {
         if (!isResolved)
             resolve();
         return outputs;
     }
 
-    span<const Expression* const> getDelays() const {
+    std::span<const Expression* const> getDelays() const {
         if (!isResolved)
             resolve();
         return delays;
@@ -103,9 +103,9 @@ private:
     mutable bool isResolved = false;
     mutable const Expression* edgeSourceExpr = nullptr;
     mutable const Expression* conditionExpr = nullptr;
-    mutable span<const Expression* const> inputs;
-    mutable span<const Expression* const> outputs;
-    mutable span<const Expression* const> delays;
+    mutable std::span<const Expression* const> inputs;
+    mutable std::span<const Expression* const> outputs;
+    mutable std::span<const Expression* const> delays;
 };
 
 class SLANG_EXPORT PulseStyleSymbol : public Symbol {
@@ -114,7 +114,7 @@ public:
 
     PulseStyleSymbol(SourceLocation loc, PulseStyleKind pulseStyleKind);
 
-    span<const Expression* const> getTerminals() const {
+    std::span<const Expression* const> getTerminals() const {
         if (!isResolved)
             resolve();
         return terminals;
@@ -133,7 +133,7 @@ private:
     void resolve() const;
 
     mutable bool isResolved = false;
-    mutable span<const Expression* const> terminals;
+    mutable std::span<const Expression* const> terminals;
 };
 
 // clang-format off
@@ -166,12 +166,12 @@ public:
         const Expression* expr = nullptr;
         const Expression* condition = nullptr;
         EdgeKind edge = EdgeKind::None;
-        span<const EdgeDescriptor> edgeDescriptors;
+        std::span<const EdgeDescriptor> edgeDescriptors;
 
         Arg() = default;
         Arg(const Expression& expr) : expr(&expr) {}
         Arg(const Expression& expr, const Expression* condition, EdgeKind edge,
-            span<const EdgeDescriptor> edgeDescriptors) :
+            std::span<const EdgeDescriptor> edgeDescriptors) :
             expr(&expr),
             condition(condition), edge(edge), edgeDescriptors(edgeDescriptors) {}
     };
@@ -180,7 +180,7 @@ public:
 
     SystemTimingCheckSymbol(SourceLocation loc, const SystemTimingCheckDef* def);
 
-    span<const Arg> getArguments() const {
+    std::span<const Arg> getArguments() const {
         if (!isResolved)
             resolve();
         return args;
@@ -199,7 +199,7 @@ private:
     void resolve() const;
 
     mutable bool isResolved = false;
-    mutable span<const Arg> args;
+    mutable std::span<const Arg> args;
     const SystemTimingCheckDef* def;
 };
 

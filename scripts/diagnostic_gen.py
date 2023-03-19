@@ -231,7 +231,7 @@ string_view getDefaultOptionName(DiagCode code) {
     return ""sv;
 }
 
-span<const DiagCode> findDiagsFromOptionName(string_view name) {
+std::span<const DiagCode> findDiagsFromOptionName(string_view name) {
     if (auto it = optionMap.find(name); it != optionMap.end())
         return it->second;
     return {};

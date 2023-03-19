@@ -395,8 +395,9 @@ SubroutineSymbol& SubroutineSymbol::createOutOfBlock(Compilation& compilation,
     return *result;
 }
 
-static span<const FormalArgumentSymbol* const> cloneArguments(
-    Compilation& compilation, Scope& newParent, span<const FormalArgumentSymbol* const> source) {
+static std::span<const FormalArgumentSymbol* const> cloneArguments(
+    Compilation& compilation, Scope& newParent,
+    std::span<const FormalArgumentSymbol* const> source) {
 
     SmallVector<const FormalArgumentSymbol*> arguments(source.size(), UninitializedTag());
     for (auto arg : source) {

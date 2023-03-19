@@ -156,7 +156,7 @@ bool IntegralType::isDeclaredReg() const {
 }
 
 const Type& IntegralType::fromSyntax(Compilation& compilation, SyntaxKind integerKind,
-                                     span<const VariableDimensionSyntax* const> dimensions,
+                                     std::span<const VariableDimensionSyntax* const> dimensions,
                                      bool isSigned, const ASTContext& context) {
     // This is a simple integral vector (possibly of just one element).
     SmallVector<std::pair<EvaluatedDimension, const SyntaxNode*>, 4> dims;
@@ -673,7 +673,7 @@ FixedSizeUnpackedArrayType::FixedSizeUnpackedArrayType(const Type& elementType, 
 }
 
 const Type& FixedSizeUnpackedArrayType::fromDims(const Scope& scope, const Type& elementType,
-                                                 span<const ConstantRange> dimensions,
+                                                 std::span<const ConstantRange> dimensions,
                                                  DeferredSourceRange sourceRange) {
     const Type* result = &elementType;
     size_t count = dimensions.size();

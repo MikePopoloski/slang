@@ -20,7 +20,7 @@ class SLANG_EXPORT SystemSubroutine {
 public:
     virtual ~SystemSubroutine() = default;
 
-    using Args = span<const Expression* const>;
+    using Args = std::span<const Expression* const>;
 
     std::string name;
     SubroutineKind kind;

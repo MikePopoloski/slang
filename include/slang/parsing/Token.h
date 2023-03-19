@@ -84,7 +84,7 @@ public:
 
     Trivia();
     Trivia(TriviaKind kind, string_view rawText);
-    Trivia(TriviaKind kind, span<Token const> tokens);
+    Trivia(TriviaKind kind, std::span<Token const> tokens);
     Trivia(TriviaKind kind, syntax::SyntaxNode* syntax);
 
     bool valid() const { return kind != TriviaKind::Unknown; }
@@ -109,7 +109,7 @@ public:
 
     /// If the trivia represents skipped tokens, returns the list of tokens that were
     /// skipped. Otherwise returns an empty span.
-    span<Token const> getSkippedTokens() const;
+    std::span<Token const> getSkippedTokens() const;
 
     Trivia clone(BumpAllocator& alloc) const;
 };
@@ -130,19 +130,19 @@ public:
     TokenKind kind;
 
     Token();
-    Token(BumpAllocator& alloc, TokenKind kind, span<Trivia const> trivia, string_view rawText,
+    Token(BumpAllocator& alloc, TokenKind kind, std::span<Trivia const> trivia, string_view rawText,
           SourceLocation location);
-    Token(BumpAllocator& alloc, TokenKind kind, span<Trivia const> trivia, string_view rawText,
+    Token(BumpAllocator& alloc, TokenKind kind, std::span<Trivia const> trivia, string_view rawText,
           SourceLocation location, string_view strText);
-    Token(BumpAllocator& alloc, TokenKind kind, span<Trivia const> trivia, string_view rawText,
+    Token(BumpAllocator& alloc, TokenKind kind, std::span<Trivia const> trivia, string_view rawText,
           SourceLocation location, syntax::SyntaxKind directive);
-    Token(BumpAllocator& alloc, TokenKind kind, span<Trivia const> trivia, string_view rawText,
+    Token(BumpAllocator& alloc, TokenKind kind, std::span<Trivia const> trivia, string_view rawText,
           SourceLocation location, logic_t bit);
-    Token(BumpAllocator& alloc, TokenKind kind, span<Trivia const> trivia, string_view rawText,
+    Token(BumpAllocator& alloc, TokenKind kind, std::span<Trivia const> trivia, string_view rawText,
           SourceLocation location, const SVInt& value);
-    Token(BumpAllocator& alloc, TokenKind kind, span<Trivia const> trivia, string_view rawText,
+    Token(BumpAllocator& alloc, TokenKind kind, std::span<Trivia const> trivia, string_view rawText,
           SourceLocation location, double value, bool outOfRange, std::optional<TimeUnit> timeUnit);
-    Token(BumpAllocator& alloc, TokenKind kind, span<Trivia const> trivia, string_view rawText,
+    Token(BumpAllocator& alloc, TokenKind kind, std::span<Trivia const> trivia, string_view rawText,
           SourceLocation location, LiteralBase base, bool isSigned);
 
     /// A missing token was expected and inserted by the parser at a given point.
@@ -150,7 +150,7 @@ public:
 
     SourceRange range() const;
     SourceLocation location() const;
-    span<Trivia const> trivia() const;
+    std::span<Trivia const> trivia() const;
 
     /// Value text is the "nice" lexed version of certain tokens;
     /// for example, in string literals, escape sequences are converted appropriately.
@@ -181,11 +181,11 @@ public:
     bool operator!=(const Token& other) const { return !(*this == other); }
 
     /// Modification methods to make it easier to deal with immutable tokens.
-    [[nodiscard]] Token withTrivia(BumpAllocator& alloc, span<Trivia const> trivia) const;
+    [[nodiscard]] Token withTrivia(BumpAllocator& alloc, std::span<Trivia const> trivia) const;
     [[nodiscard]] Token withLocation(BumpAllocator& alloc, SourceLocation location) const;
     [[nodiscard]] Token withRawText(BumpAllocator& alloc, string_view rawText) const;
-    [[nodiscard]] Token clone(BumpAllocator& alloc, span<Trivia const> trivia, string_view rawText,
-                              SourceLocation location) const;
+    [[nodiscard]] Token clone(BumpAllocator& alloc, std::span<Trivia const> trivia,
+                              string_view rawText, SourceLocation location) const;
     [[nodiscard]] Token deepClone(BumpAllocator& alloc) const;
 
     static Token createMissing(BumpAllocator& alloc, TokenKind kind, SourceLocation location);
@@ -195,8 +195,8 @@ public:
 private:
     struct Info;
 
-    void init(BumpAllocator& alloc, TokenKind kind, span<Trivia const> trivia, string_view rawText,
-              SourceLocation location);
+    void init(BumpAllocator& alloc, TokenKind kind, std::span<Trivia const> trivia,
+              string_view rawText, SourceLocation location);
 
     // Some data is stored directly in the token here because we have 6 bytes of padding that
     // would otherwise go unused. The rest is stored in the info block.

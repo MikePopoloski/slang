@@ -33,7 +33,7 @@ struct HierarchyOverrideNode;
 /// Common functionality for module, interface, program, and primitive instances.
 class SLANG_EXPORT InstanceSymbolBase : public Symbol {
 public:
-    span<const int32_t> arrayPath;
+    std::span<const int32_t> arrayPath;
 
     /// If this instance is part of an array, walk upward to find the array's name.
     /// Otherwise returns the name of the instance itself.
@@ -64,7 +64,7 @@ public:
     const PortConnection* getPortConnection(const PortSymbol& port) const;
     const PortConnection* getPortConnection(const MultiPortSymbol& port) const;
     const PortConnection* getPortConnection(const InterfacePortSymbol& port) const;
-    span<const PortConnection* const> getPortConnections() const;
+    std::span<const PortConnection* const> getPortConnections() const;
 
     void serializeTo(ASTSerializer& serializer) const;
 
@@ -100,7 +100,7 @@ private:
     void resolvePortConnections() const;
 
     mutable PointerMap* connectionMap = nullptr;
-    mutable span<const PortConnection* const> connections;
+    mutable std::span<const PortConnection* const> connections;
 };
 
 class SLANG_EXPORT InstanceBodySymbol : public Symbol, public Scope {
@@ -113,7 +113,7 @@ public:
     const HierarchyOverrideNode* hierarchyOverrideNode = nullptr;
 
     /// A copy of all port parameter symbols used to construct the instance body.
-    span<const ParameterSymbolBase* const> parameters;
+    std::span<const ParameterSymbolBase* const> parameters;
 
     /// Indicates whether the module isn't actually instantiated in the design.
     /// This might be because it was created with invalid parameters simply to
@@ -129,7 +129,7 @@ public:
                        const HierarchyOverrideNode* hierarchyOverrideNode, bool isUninstantiated,
                        bool isFromBind);
 
-    span<const Symbol* const> getPortList() const {
+    std::span<const Symbol* const> getPortList() const {
         ensureElaborated();
         return portList;
     }
@@ -157,19 +157,19 @@ public:
 private:
     friend class Scope;
 
-    void setPorts(span<const Symbol* const> ports) const { portList = ports; }
+    void setPorts(std::span<const Symbol* const> ports) const { portList = ports; }
 
     const Definition& definition;
-    mutable span<const Symbol* const> portList;
+    mutable std::span<const Symbol* const> portList;
 };
 
 class SLANG_EXPORT InstanceArraySymbol : public Symbol, public Scope {
 public:
-    span<const Symbol* const> elements;
+    std::span<const Symbol* const> elements;
     ConstantRange range;
 
     InstanceArraySymbol(Compilation& compilation, string_view name, SourceLocation loc,
-                        span<const Symbol* const> elements, ConstantRange range) :
+                        std::span<const Symbol* const> elements, ConstantRange range) :
         Symbol(SymbolKind::InstanceArray, name, loc),
         Scope(compilation, this), elements(elements), range(range) {}
 
@@ -193,22 +193,22 @@ public:
     /// The self-determined expressions that are assigned to the parameters
     /// in the instantiation. These aren't necessarily correctly typed
     /// since we can't know the destination type of each parameter.
-    span<const Expression* const> paramExpressions;
+    std::span<const Expression* const> paramExpressions;
 
     UninstantiatedDefSymbol(string_view name, SourceLocation loc, string_view definitionName,
-                            span<const Expression* const> params) :
+                            std::span<const Expression* const> params) :
         Symbol(SymbolKind::UninstantiatedDef, name, loc),
         definitionName(definitionName), paramExpressions(params) {}
 
     /// Gets the self-determined expressions that are assigned to the ports
     /// in the instantiation. These aren't necessarily correctly typed
     /// since we can't know the destination type of each port.
-    span<const AssertionExpr* const> getPortConnections() const;
+    std::span<const AssertionExpr* const> getPortConnections() const;
 
     /// The names of the ports that were connected in the instance. If the names
     /// are not known, because ordered connection syntax was used, the associated
     /// port name will be the empty string.
-    span<string_view const> getPortNames() const;
+    std::span<string_view const> getPortNames() const;
 
     /// Returns true if we've determined this must be a checker instance
     /// based on the syntax used to instantiate it.
@@ -229,8 +229,8 @@ public:
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::UninstantiatedDef; }
 
 private:
-    mutable std::optional<span<const AssertionExpr* const>> ports;
-    mutable span<string_view const> portNames;
+    mutable std::optional<std::span<const AssertionExpr* const>> ports;
+    mutable std::span<string_view const> portNames;
     mutable bool mustBeChecker = false;
 };
 
@@ -243,7 +243,7 @@ public:
         InstanceSymbolBase(SymbolKind::PrimitiveInstance, name, loc),
         primitiveType(primitiveType) {}
 
-    span<const Expression* const> getPortConnections() const;
+    std::span<const Expression* const> getPortConnections() const;
     const TimingControl* getDelay() const;
     std::pair<std::optional<DriveStrength>, std::optional<DriveStrength>> getDriveStrength() const;
 
@@ -261,7 +261,7 @@ public:
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::PrimitiveInstance; }
 
 private:
-    mutable std::optional<span<const Expression* const>> ports;
+    mutable std::optional<std::span<const Expression* const>> ports;
     mutable std::optional<const TimingControl*> delay;
 };
 

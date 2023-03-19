@@ -565,7 +565,7 @@ static void findBlocks(const Scope& scope, const StatementSyntax& syntax,
     }
 }
 
-span<const StatementBlockSymbol* const> Statement::createAndAddBlockItems(
+std::span<const StatementBlockSymbol* const> Statement::createAndAddBlockItems(
     Scope& scope, const SyntaxList<SyntaxNode>& items) {
 
     SmallVector<const StatementBlockSymbol*> buffer;
@@ -606,15 +606,14 @@ span<const StatementBlockSymbol* const> Statement::createAndAddBlockItems(
     return blocks;
 }
 
-span<const StatementBlockSymbol* const> Statement::createBlockItems(const Scope& scope,
-                                                                    const StatementSyntax& syntax,
-                                                                    bool labelHandled) {
+std::span<const StatementBlockSymbol* const> Statement::createBlockItems(
+    const Scope& scope, const StatementSyntax& syntax, bool labelHandled) {
     SmallVector<const StatementBlockSymbol*> buffer;
     findBlocks(scope, syntax, buffer, labelHandled);
     return buffer.copy(scope.getCompilation());
 }
 
-span<const StatementBlockSymbol* const> Statement::createAndAddBlockItems(
+std::span<const StatementBlockSymbol* const> Statement::createAndAddBlockItems(
     Scope& scope, const StatementSyntax& syntax, bool labelHandled) {
 
     auto blocks = createBlockItems(scope, syntax, labelHandled);
@@ -643,7 +642,7 @@ void StatementList::serializeTo(ASTSerializer& serializer) const {
 }
 
 Statement& StatementList::makeEmpty(Compilation& compilation) {
-    return *compilation.emplace<StatementList>(span<const Statement* const>(),
+    return *compilation.emplace<StatementList>(std::span<const Statement* const>(),
                                                SourceRange(SourceLocation::NoLocation,
                                                            SourceLocation::NoLocation));
 }
@@ -2005,7 +2004,7 @@ ER ForeachLoopStatement::evalImpl(EvalContext& context) const {
 }
 
 ER ForeachLoopStatement::evalRecursive(EvalContext& context, const ConstantValue& cv,
-                                       span<const LoopDim> currDims) const {
+                                       std::span<const LoopDim> currDims) const {
     // If there is no loop var just skip this index.
     auto& dim = currDims[0];
     if (!dim.loopVar) {
@@ -2059,7 +2058,7 @@ ER ForeachLoopStatement::evalRecursive(EvalContext& context, const ConstantValue
         }
     }
     else {
-        span<const ConstantValue> elements;
+        std::span<const ConstantValue> elements;
         if (cv.isUnpacked())
             elements = cv.elements();
 

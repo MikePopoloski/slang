@@ -188,7 +188,7 @@ public:
     RandMode getRandMode() const;
 
     void setAttributes(const Scope& scope,
-                       span<const syntax::AttributeInstanceSyntax* const> syntax);
+                       std::span<const syntax::AttributeInstanceSyntax* const> syntax);
 
     template<typename T>
     decltype(auto) as() {

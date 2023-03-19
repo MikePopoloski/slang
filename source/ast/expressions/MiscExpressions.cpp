@@ -728,7 +728,7 @@ Expression& AssertionInstanceExpression::fromLookup(const Symbol& symbol,
     auto& comp = context.getCompilation();
     const Type* type;
     const Scope* symbolScope;
-    span<const AssertionPortSymbol* const> formalPorts;
+    std::span<const AssertionPortSymbol* const> formalPorts;
 
     comp.noteReference(symbol);
     switch (symbol.kind) {
@@ -964,7 +964,7 @@ Expression& AssertionInstanceExpression::makeDefault(const Symbol& symbol) {
     auto& comp = context.getCompilation();
     const Type* type;
     const Scope* symbolScope;
-    span<const AssertionPortSymbol* const> formalPorts;
+    std::span<const AssertionPortSymbol* const> formalPorts;
 
     switch (symbol.kind) {
         case SymbolKind::Sequence: {

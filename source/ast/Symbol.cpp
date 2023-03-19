@@ -127,8 +127,8 @@ static void getHierarchicalPathImpl(const Symbol& symbol, FormatBuffer& buffer) 
             SmallVector<ConstantRange, 8> instanceDimVec;
             inst.getArrayDimensions(instanceDimVec);
 
-            span<const ConstantRange> instanceDims = instanceDimVec;
-            span<const int32_t> arrayPath = inst.arrayPath;
+            std::span<const ConstantRange> instanceDims = instanceDimVec;
+            std::span<const int32_t> arrayPath = inst.arrayPath;
             ASSERT(instanceDims.size() == arrayPath.size());
 
             for (size_t i = 0; i < instanceDims.size(); i++) {
@@ -242,7 +242,8 @@ RandMode Symbol::getRandMode() const {
     }
 }
 
-void Symbol::setAttributes(const Scope& scope, span<const AttributeInstanceSyntax* const> syntax) {
+void Symbol::setAttributes(const Scope& scope,
+                           std::span<const AttributeInstanceSyntax* const> syntax) {
     if (syntax.empty())
         return;
 

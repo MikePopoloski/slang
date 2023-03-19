@@ -239,7 +239,7 @@ static const Expression* bindTerminal(const ExpressionSyntax& syntax, bool isSou
     return nullptr;
 }
 
-static span<const Expression* const> bindTerminals(
+static std::span<const Expression* const> bindTerminals(
     const SeparatedSyntaxList<NameSyntax>& syntaxList, bool isSource, const Scope* parentParent,
     ASTContext& context) {
 

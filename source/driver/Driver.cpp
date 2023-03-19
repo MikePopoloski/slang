@@ -537,7 +537,7 @@ bool Driver::parseAllSources() {
         }
     }
 
-    span<const DefineDirectiveSyntax* const> inheritedMacros;
+    std::span<const DefineDirectiveSyntax* const> inheritedMacros;
     if (options.librariesInheritMacros == true)
         inheritedMacros = syntaxTrees.back()->getDefinedMacros();
 

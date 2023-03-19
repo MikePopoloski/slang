@@ -236,11 +236,11 @@ void Compilation::addSyntaxTree(std::shared_ptr<SyntaxTree> tree) {
     cachedParseDiagnostics.reset();
 }
 
-span<const std::shared_ptr<SyntaxTree>> Compilation::getSyntaxTrees() const {
+std::span<const std::shared_ptr<SyntaxTree>> Compilation::getSyntaxTrees() const {
     return syntaxTrees;
 }
 
-span<const CompilationUnitSymbol* const> Compilation::getCompilationUnits() const {
+std::span<const CompilationUnitSymbol* const> Compilation::getCompilationUnits() const {
     return compilationUnits;
 }
 
@@ -586,42 +586,43 @@ const SystemSubroutine* Compilation::getSystemMethod(SymbolKind typeKind, string
 }
 
 void Compilation::setAttributes(const Symbol& symbol,
-                                span<const AttributeSymbol* const> attributes) {
+                                std::span<const AttributeSymbol* const> attributes) {
     attributeMap[&symbol] = attributes;
 }
 
 void Compilation::setAttributes(const Statement& stmt,
-                                span<const AttributeSymbol* const> attributes) {
+                                std::span<const AttributeSymbol* const> attributes) {
     attributeMap[&stmt] = attributes;
 }
 
 void Compilation::setAttributes(const Expression& expr,
-                                span<const AttributeSymbol* const> attributes) {
+                                std::span<const AttributeSymbol* const> attributes) {
     attributeMap[&expr] = attributes;
 }
 
 void Compilation::setAttributes(const PortConnection& conn,
-                                span<const AttributeSymbol* const> attributes) {
+                                std::span<const AttributeSymbol* const> attributes) {
     attributeMap[&conn] = attributes;
 }
 
-span<const AttributeSymbol* const> Compilation::getAttributes(const Symbol& symbol) const {
+std::span<const AttributeSymbol* const> Compilation::getAttributes(const Symbol& symbol) const {
     return getAttributes(static_cast<const void*>(&symbol));
 }
 
-span<const AttributeSymbol* const> Compilation::getAttributes(const Statement& stmt) const {
+std::span<const AttributeSymbol* const> Compilation::getAttributes(const Statement& stmt) const {
     return getAttributes(static_cast<const void*>(&stmt));
 }
 
-span<const AttributeSymbol* const> Compilation::getAttributes(const Expression& expr) const {
+std::span<const AttributeSymbol* const> Compilation::getAttributes(const Expression& expr) const {
     return getAttributes(static_cast<const void*>(&expr));
 }
 
-span<const AttributeSymbol* const> Compilation::getAttributes(const PortConnection& conn) const {
+std::span<const AttributeSymbol* const> Compilation::getAttributes(
+    const PortConnection& conn) const {
     return getAttributes(static_cast<const void*>(&conn));
 }
 
-span<const AttributeSymbol* const> Compilation::getAttributes(const void* ptr) const {
+std::span<const AttributeSymbol* const> Compilation::getAttributes(const void* ptr) const {
     auto it = attributeMap.find(ptr);
     if (it == attributeMap.end())
         return {};
@@ -1187,7 +1188,7 @@ void Compilation::trackImport(Scope::ImportDataIndex& index, const WildcardImpor
         index = importData.add({&import});
 }
 
-span<const WildcardImportSymbol*> Compilation::queryImports(Scope::ImportDataIndex index) {
+std::span<const WildcardImportSymbol*> Compilation::queryImports(Scope::ImportDataIndex index) {
     if (index == Scope::ImportDataIndex::Invalid)
         return {};
     return importData[index];
@@ -1251,7 +1252,7 @@ static bool checkSignaturesMatch(const SubroutineSymbol& a, const SubroutineSymb
     return true;
 }
 
-void Compilation::checkDPIMethods(span<const SubroutineSymbol* const> dpiImports) {
+void Compilation::checkDPIMethods(std::span<const SubroutineSymbol* const> dpiImports) {
     auto getCId = [&](const Scope& scope, Token cid, Token name) {
         string_view text = cid ? cid.valueText() : name.valueText();
         if (!text.empty()) {
@@ -1389,7 +1390,7 @@ void Compilation::checkDPIMethods(span<const SubroutineSymbol* const> dpiImports
     }
 }
 
-void Compilation::checkExternIfaceMethods(span<const MethodPrototypeSymbol* const> protos) {
+void Compilation::checkExternIfaceMethods(std::span<const MethodPrototypeSymbol* const> protos) {
     for (auto proto : protos) {
         if (!proto->getFirstExternImpl() && !proto->flags.has(MethodFlags::ForkJoin)) {
             auto scope = proto->getParentScope();
@@ -1407,7 +1408,7 @@ void Compilation::checkExternIfaceMethods(span<const MethodPrototypeSymbol* cons
 }
 
 void Compilation::checkModportExports(
-    span<const std::pair<const InterfacePortSymbol*, const ModportSymbol*>> modports) {
+    std::span<const std::pair<const InterfacePortSymbol*, const ModportSymbol*>> modports) {
 
     for (auto [port, modport] : modports) {
         auto def = port->getDeclaringDefinition();
@@ -1534,7 +1535,8 @@ void Compilation::resolveBindTargets(const BindDirectiveSyntax& syntax, const Sc
 }
 
 void Compilation::checkBindTargetParams(const syntax::BindDirectiveSyntax& syntax,
-                                        const Scope& scope, span<const Symbol* const> instTargets,
+                                        const Scope& scope,
+                                        std::span<const Symbol* const> instTargets,
                                         const Definition* defTarget) {
     // This method checks the following rule from the LRM:
     //    User-defined type names that are used to override type parameters must be

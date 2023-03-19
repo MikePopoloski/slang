@@ -96,9 +96,9 @@ public:
 /// Represents a list of constraints.
 class SLANG_EXPORT ConstraintList : public Constraint {
 public:
-    span<const Constraint* const> list;
+    std::span<const Constraint* const> list;
 
-    explicit ConstraintList(span<const Constraint* const> list) :
+    explicit ConstraintList(std::span<const Constraint* const> list) :
         Constraint(ConstraintKind::List), list(list) {}
 
     static Constraint& fromSyntax(const syntax::ConstraintBlockSyntax& syntax,
@@ -191,9 +191,9 @@ public:
 /// Represents a constraint that enforces uniqueness of variables.
 class SLANG_EXPORT UniquenessConstraint : public Constraint {
 public:
-    span<const Expression* const> items;
+    std::span<const Expression* const> items;
 
-    explicit UniquenessConstraint(span<const Expression* const> items) :
+    explicit UniquenessConstraint(std::span<const Expression* const> items) :
         Constraint(ConstraintKind::Uniqueness), items(items) {}
 
     static Constraint& fromSyntax(const syntax::UniquenessConstraintSyntax& syntax,
@@ -234,11 +234,11 @@ public:
 /// Represents a constraint that enforces ordering of solving variables.
 class SLANG_EXPORT SolveBeforeConstraint : public Constraint {
 public:
-    span<const Expression* const> solve;
-    span<const Expression* const> before;
+    std::span<const Expression* const> solve;
+    std::span<const Expression* const> before;
 
-    SolveBeforeConstraint(span<const Expression* const> solve,
-                          span<const Expression* const> before) :
+    SolveBeforeConstraint(std::span<const Expression* const> solve,
+                          std::span<const Expression* const> before) :
         Constraint(ConstraintKind::SolveBefore),
         solve(solve), before(before) {}
 
@@ -262,11 +262,12 @@ public:
 class SLANG_EXPORT ForeachConstraint : public Constraint {
 public:
     const Expression& arrayRef;
-    span<const ForeachLoopStatement::LoopDim> loopDims;
+    std::span<const ForeachLoopStatement::LoopDim> loopDims;
     const Constraint& body;
 
     ForeachConstraint(const Expression& arrayRef,
-                      span<const ForeachLoopStatement::LoopDim> loopDims, const Constraint& body) :
+                      std::span<const ForeachLoopStatement::LoopDim> loopDims,
+                      const Constraint& body) :
         Constraint(ConstraintKind::Foreach),
         arrayRef(arrayRef), loopDims(loopDims), body(body) {}
 

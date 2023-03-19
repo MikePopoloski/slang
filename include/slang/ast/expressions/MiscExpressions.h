@@ -197,8 +197,8 @@ public:
 
     const Symbol& symbol;
     const AssertionExpr& body;
-    span<std::tuple<const Symbol*, ActualArg> const> arguments;
-    span<const Symbol* const> localVars;
+    std::span<std::tuple<const Symbol*, ActualArg> const> arguments;
+    std::span<const Symbol* const> localVars;
     bool isRecursiveProperty;
 
     AssertionInstanceExpression(const Type& type, const Symbol& symbol, const AssertionExpr& body,
@@ -320,13 +320,13 @@ public:
         std::optional<DistWeight> weight;
     };
 
-    DistExpression(const Type& type, const Expression& left, span<DistItem> items,
+    DistExpression(const Type& type, const Expression& left, std::span<DistItem> items,
                    SourceRange sourceRange) :
         Expression(ExpressionKind::Dist, type, sourceRange),
         left_(&left), items_(items) {}
 
     const Expression& left() const { return *left_; }
-    span<DistItem const> items() const { return items_; }
+    std::span<DistItem const> items() const { return items_; }
 
     ConstantValue evalImpl(EvalContext&) const { return nullptr; }
 
@@ -349,7 +349,7 @@ public:
 
 private:
     const Expression* left_;
-    span<DistItem> items_;
+    std::span<DistItem> items_;
 };
 
 /// Represents a tagged union member setter expression.

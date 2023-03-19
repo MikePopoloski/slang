@@ -222,9 +222,9 @@ public:
         not_null<const AssertionExpr*> sequence;
     };
 
-    span<const Element> elements;
+    std::span<const Element> elements;
 
-    explicit SequenceConcatExpr(span<const Element> elements) :
+    explicit SequenceConcatExpr(std::span<const Element> elements) :
         AssertionExpr(AssertionExprKind::SequenceConcat), elements(elements) {}
 
     bool admitsEmptyImpl() const;
@@ -249,10 +249,10 @@ class SLANG_EXPORT SequenceWithMatchExpr : public AssertionExpr {
 public:
     const AssertionExpr& expr;
     std::optional<SequenceRepetition> repetition;
-    span<const Expression* const> matchItems;
+    std::span<const Expression* const> matchItems;
 
     SequenceWithMatchExpr(const AssertionExpr& expr, std::optional<SequenceRepetition> repetition,
-                          span<const Expression* const> matchItems) :
+                          std::span<const Expression* const> matchItems) :
         AssertionExpr(AssertionExprKind::SequenceWithMatch),
         expr(expr), repetition(repetition), matchItems(matchItems) {}
 
@@ -341,10 +341,12 @@ public:
 class SLANG_EXPORT FirstMatchAssertionExpr : public AssertionExpr {
 public:
     const AssertionExpr& seq;
-    span<const Expression* const> matchItems;
+    std::span<const Expression* const> matchItems;
 
-    FirstMatchAssertionExpr(const AssertionExpr& seq, span<const Expression* const> matchItems) :
-        AssertionExpr(AssertionExprKind::FirstMatch), seq(seq), matchItems(matchItems) {}
+    FirstMatchAssertionExpr(const AssertionExpr& seq,
+                            std::span<const Expression* const> matchItems) :
+        AssertionExpr(AssertionExprKind::FirstMatch),
+        seq(seq), matchItems(matchItems) {}
 
     bool admitsEmptyImpl() const;
 
@@ -484,15 +486,15 @@ public:
 class SLANG_EXPORT CaseAssertionExpr : public AssertionExpr {
 public:
     struct ItemGroup {
-        span<const Expression* const> expressions;
+        std::span<const Expression* const> expressions;
         not_null<const AssertionExpr*> body;
     };
 
     const Expression& expr;
-    span<const ItemGroup> items;
+    std::span<const ItemGroup> items;
     const AssertionExpr* defaultCase = nullptr;
 
-    CaseAssertionExpr(const Expression& expr, span<const ItemGroup> items,
+    CaseAssertionExpr(const Expression& expr, std::span<const ItemGroup> items,
                       const AssertionExpr* defaultCase) :
         AssertionExpr(AssertionExprKind::Case),
         expr(expr), items(items), defaultCase(defaultCase) {}
