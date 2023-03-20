@@ -73,13 +73,13 @@ constexpr std::tuple<bool, std::span<T>> loadSpanFromBuffer(handle) {
 template<typename T>
 struct is_span : std::false_type {};
 template<typename T>
-struct is_std::span<std::span<T>> : std::true_type {};
+struct is_span<std::span<T>> : std::true_type {};
 
 template<typename T>
 struct type_caster<std::span<T>> {
 public:
     using value_type = typename std::remove_cv<T>::type;
-    static_assert(!is_std::span<value_type>::value, "Nested spans are not supported.");
+    static_assert(!is_span<value_type>::value, "Nested spans are not supported.");
 
     type_caster() = default;
     // Copy and Move operations must ensure the span points to the copied or
