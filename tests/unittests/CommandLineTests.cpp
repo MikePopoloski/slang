@@ -36,7 +36,7 @@ TEST_CASE("Test CommandLine -- basic") {
     cmdLine.add("-m,+multi", multi, "SDF");
     cmdLine.add(
         "--count",
-        [&](string_view) {
+        [&](std::string_view) {
             someCounter++;
             return "";
         },
@@ -233,7 +233,7 @@ TEST_CASE("Test CommandLine -- programmer errors") {
     cmdLine.setPositional(vals, "vals");
     CHECK_THROWS(cmdLine.setPositional(vals, "vals2"));
 
-    CHECK_THROWS(cmdLine.parse(string_view()));
+    CHECK_THROWS(cmdLine.parse(std::string_view()));
 }
 
 TEST_CASE("Test CommandLine -- user errors") {

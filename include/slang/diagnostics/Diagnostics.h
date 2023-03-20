@@ -110,7 +110,7 @@ private:
 };
 
 SLANG_EXPORT std::ostream& operator<<(std::ostream& os, DiagCode code);
-SLANG_EXPORT string_view toString(DiagCode code);
+SLANG_EXPORT std::string_view toString(DiagCode code);
 
 /// Wraps up a reported diagnostic along with location in source and any arguments.
 class SLANG_EXPORT Diagnostic {
@@ -151,7 +151,7 @@ public:
 
     /// Adds an argument to the diagnostic.
     Diagnostic& operator<<(const std::string& arg);
-    Diagnostic& operator<<(string_view arg);
+    Diagnostic& operator<<(std::string_view arg);
     Diagnostic& operator<<(SourceRange arg);
     Diagnostic& operator<<(const ConstantValue& arg);
     Diagnostic& operator<<(char arg);
@@ -201,7 +201,7 @@ public:
     explicit DiagGroup(const std::string& name, const std::vector<DiagCode>& diags) :
         name(name), diags(diags) {}
 
-    string_view getName() const { return name; }
+    std::string_view getName() const { return name; }
     std::span<const DiagCode> getDiags() const { return diags; }
 
 private:

@@ -108,7 +108,7 @@ std::string TextDiagnosticClient::getString() const {
     return buffer->str();
 }
 
-static bool printableTextForNextChar(string_view sourceLine, size_t& index, uint32_t tabStop,
+static bool printableTextForNextChar(std::string_view sourceLine, size_t& index, uint32_t tabStop,
                                      SmallVectorBase<char>& out, size_t& columnWidth) {
     ASSERT(index < sourceLine.size());
 
@@ -184,7 +184,7 @@ static bool printableTextForNextChar(string_view sourceLine, size_t& index, uint
 }
 
 struct SourceSnippet {
-    SourceSnippet(string_view sourceLine, uint32_t tabStop) {
+    SourceSnippet(std::string_view sourceLine, uint32_t tabStop) {
         ASSERT(!sourceLine.empty());
 
         byteToColumn.resize(sourceLine.size() + 1);
@@ -219,7 +219,7 @@ struct SourceSnippet {
     }
 
     void highlightRange(SourceRange range, SourceLocation caretLoc, size_t col,
-                        string_view sourceLine) {
+                        std::string_view sourceLine) {
         // Trim the range so that it only falls on the same line as the cursor
         size_t start = range.start().offset();
         size_t end = range.end().offset();
@@ -275,7 +275,7 @@ struct SourceSnippet {
         }
         else {
             size_t index = 0;
-            string_view view = snippetLine;
+            std::string_view view = snippetLine;
             for (auto [start, count] : invalidRanges) {
                 ASSERT(start >= index);
                 out.append(view.substr(index, start - index));
@@ -298,8 +298,8 @@ struct SourceSnippet {
 };
 
 void TextDiagnosticClient::formatDiag(SourceLocation loc, std::span<const SourceRange> ranges,
-                                      DiagnosticSeverity severity, string_view message,
-                                      string_view optionName) {
+                                      DiagnosticSeverity severity, std::string_view message,
+                                      std::string_view optionName) {
     constexpr size_t MaxLineLengthToPrint = 4096;
 
     size_t col = 0;
@@ -331,7 +331,7 @@ void TextDiagnosticClient::formatDiag(SourceLocation loc, std::span<const Source
         buffer->format(" [-W{}]", optionName);
 
     if (hasLocation && includeSource) {
-        string_view line = getSourceLine(loc, col);
+        std::string_view line = getSourceLine(loc, col);
         if (!line.empty() && line.length() < MaxLineLengthToPrint) {
             // We might want to make the tab width configurable at some point,
             // but for now hardcode it to 8 to match the default on basically

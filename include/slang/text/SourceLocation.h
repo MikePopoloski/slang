@@ -22,7 +22,7 @@ class SourceManager;
 /// the expansion location and original definition location.
 struct SLANG_EXPORT BufferID {
     BufferID() = default;
-    constexpr BufferID(uint32_t value, string_view name) :
+    constexpr BufferID(uint32_t value, std::string_view name) :
 #ifdef DEBUG
         name(name),
 #endif
@@ -52,7 +52,7 @@ struct SLANG_EXPORT BufferID {
     static BufferID getPlaceholder() { return BufferID(UINT32_MAX, ""sv); }
 
 #ifdef DEBUG
-    string_view name;
+    std::string_view name;
 #endif
 
 private:
@@ -140,7 +140,7 @@ public:
     bool operator>=(const SourceLocation& rhs) const { return !(*this < rhs); }
 
 #ifdef DEBUG
-    string_view bufferName;
+    std::string_view bufferName;
 #endif
 
     /// A location that is reserved to represent "no location" at all.
@@ -187,7 +187,7 @@ private:
 /// encodes its include stack.
 struct SLANG_EXPORT SourceBuffer {
     /// A view into the text comprising the buffer.
-    string_view data;
+    std::string_view data;
 
     /// The ID assigned to the buffer.
     BufferID id;

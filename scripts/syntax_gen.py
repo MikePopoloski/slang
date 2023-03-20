@@ -507,7 +507,7 @@ std::ostream& operator<<(std::ostream& os, SyntaxKind kind) {
     return os;
 }
 
-string_view toString(SyntaxKind kind) {
+std::string_view toString(SyntaxKind kind) {
     switch (kind) {
         case SyntaxKind::Unknown: return "Unknown";
         case SyntaxKind::SyntaxList: return "SyntaxList";
@@ -661,7 +661,7 @@ enum class SLANG_EXPORT SyntaxKind {
         """}};
 
 SLANG_EXPORT std::ostream& operator<<(std::ostream& os, SyntaxKind kind);
-SLANG_EXPORT string_view toString(SyntaxKind kind);
+SLANG_EXPORT std::string_view toString(SyntaxKind kind);
 
 class SLANG_EXPORT SyntaxKind_traits {{
 public:
@@ -848,7 +848,7 @@ def writekinddecl(outf, name, basetype, kinds):
         """}};
 
 SLANG_EXPORT std::ostream& operator<<(std::ostream& os, {} kind);
-SLANG_EXPORT string_view toString({} kind);
+SLANG_EXPORT std::string_view toString({} kind);
 
 class SLANG_EXPORT {}_traits {{
 public:
@@ -868,7 +868,7 @@ def writekindimpls(outf, name, kinds):
     return os;
 }}
 
-string_view toString({} kind) {{
+std::string_view toString({} kind) {{
     switch (kind) {{
 """.format(
             name, name

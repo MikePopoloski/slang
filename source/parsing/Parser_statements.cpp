@@ -999,7 +999,8 @@ StatementSyntax& Parser::parseCheckerStatement(NamedLabelSyntax* label, AttrList
     return factory.checkerInstanceStatement(label, attributes, instance);
 }
 
-void Parser::checkEmptyBody(const SyntaxNode& syntax, Token prevToken, string_view syntaxName) {
+void Parser::checkEmptyBody(const SyntaxNode& syntax, Token prevToken,
+                            std::string_view syntaxName) {
     if (syntax.kind != SyntaxKind::EmptyStatement || prevToken.isMissing())
         return;
 

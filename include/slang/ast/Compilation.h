@@ -150,7 +150,7 @@ struct SLANG_EXPORT CompilationOptions {
     /// If non-empty, specifies the list of modules that should serve as the
     /// top modules in the design. If empty, this will be automatically determined
     /// based on which modules are unreferenced elsewhere.
-    flat_hash_set<string_view> topModules;
+    flat_hash_set<std::string_view> topModules;
 
     /// A list of parameters to override, of the form &lt;name>=&lt;value> -- note that
     /// for now at least this only applies to parameters in top-level modules.
@@ -217,7 +217,7 @@ public:
     /// Gets the definition with the given name, or null if there is no such definition.
     /// This takes into account the given scope so that nested definitions are found
     /// before more global ones.
-    const Definition* getDefinition(string_view name, const Scope& scope) const;
+    const Definition* getDefinition(std::string_view name, const Scope& scope) const;
 
     /// Gets the definition for the given syntax node, or nullptr if it does not exist.
     const Definition* getDefinition(const syntax::ModuleDeclarationSyntax& syntax) const;
@@ -227,7 +227,7 @@ public:
                           const syntax::ModuleDeclarationSyntax& syntax);
 
     /// Gets the package with the give name, or null if there is no such package.
-    const PackageSymbol* getPackage(string_view name) const;
+    const PackageSymbol* getPackage(std::string_view name) const;
 
     /// Gets the built-in 'std' package.
     const PackageSymbol& getStdPackage() const { return *stdPkg; }
@@ -237,7 +237,7 @@ public:
                                        const syntax::ModuleDeclarationSyntax& syntax);
 
     /// Gets the primitive with the given name, or null if there is no such primitive.
-    const PrimitiveSymbol* getPrimitive(string_view name) const;
+    const PrimitiveSymbol* getPrimitive(std::string_view name) const;
 
     /// Creates a new primitive in the given scope based on the given syntax.
     const PrimitiveSymbol& createPrimitive(const Scope& scope,
@@ -247,7 +247,7 @@ public:
     void addGateType(const PrimitiveSymbol& primitive);
 
     /// Gets the built-in gate type with the given name, or null if there is no such gate.
-    const PrimitiveSymbol* getGateType(string_view name) const;
+    const PrimitiveSymbol* getGateType(std::string_view name) const;
 
     /// Registers a system subroutine handler, which can be accessed by compiled code.
     void addSystemSubroutine(std::unique_ptr<SystemSubroutine> subroutine);
@@ -265,11 +265,11 @@ public:
 
     /// Gets a system subroutine with the given name, or null if there is no such subroutine
     /// registered.
-    const SystemSubroutine* getSystemSubroutine(string_view name) const;
+    const SystemSubroutine* getSystemSubroutine(std::string_view name) const;
 
     /// Gets a system method for the specified type with the given name, or null if there is no such
     /// method registered.
-    const SystemSubroutine* getSystemMethod(SymbolKind typeKind, string_view name) const;
+    const SystemSubroutine* getSystemMethod(SymbolKind typeKind, std::string_view name) const;
 
     /// Sets the attributes associated with the given symbol.
     void setAttributes(const Symbol& symbol, std::span<const AttributeSymbol* const> attributes);
@@ -304,7 +304,7 @@ public:
     /// Tries to find a symbol that can be exported from the given package to satisfy an import
     /// of a given name from that package. Returns nullptr if no such symbol can be found.
     const Symbol* findPackageExportCandidate(const PackageSymbol& packageScope,
-                                             string_view name) const;
+                                             std::string_view name) const;
 
     /// Notes the presence of a bind directive. These can be later checked during
     /// scope elaboration to include the newly bound instances.
@@ -328,7 +328,7 @@ public:
     /// index in the defining scope, along with a pointer that should be set to true if
     /// the resulting decl is considered "used". If not found, the syntax pointer will be null.
     std::tuple<const syntax::SyntaxNode*, SymbolIndex, bool*> findOutOfBlockDecl(
-        const Scope& scope, string_view className, string_view declName) const;
+        const Scope& scope, std::string_view className, std::string_view declName) const;
 
     /// Tracks the existence of an extern interface method implementation. These are later
     /// elaborated by the compilation to hook up connections to their interface prototypes.
@@ -383,12 +383,12 @@ public:
     /// of syntax nodes. This is mostly for testing and API purposes; normal
     /// compilation never does this.
     /// Throws an exception if there are errors parsing the name.
-    const syntax::NameSyntax& parseName(string_view name);
+    const syntax::NameSyntax& parseName(std::string_view name);
 
     /// A convenience method for parsing a name string and turning it into a set
     /// of syntax nodes. This is mostly for testing and API purposes. Errors are
     /// added to the provided diagnostics bag.
-    const syntax::NameSyntax& tryParseName(string_view name, Diagnostics& diags);
+    const syntax::NameSyntax& tryParseName(std::string_view name, Diagnostics& diags);
 
     /// Creates a new compilation unit within the design that can be modified dynamically,
     /// which is useful in runtime scripting scenarios. Note that this call will succeed
@@ -498,7 +498,7 @@ private:
     Diagnostic& addDiag(Diagnostic diag);
 
     const RootSymbol& getRoot(bool skipDefParamsAndBinds);
-    void parseParamOverrides(flat_hash_map<string_view, const ConstantValue*>& results);
+    void parseParamOverrides(flat_hash_map<std::string_view, const ConstantValue*>& results);
     void checkDPIMethods(std::span<const SubroutineSymbol* const> dpiImports);
     void checkExternIfaceMethods(std::span<const MethodPrototypeSymbol* const> protos);
     void checkModportExports(
@@ -554,7 +554,7 @@ private:
     // The lookup table for top-level modules. The value is a pair, with the second
     // element being a boolean indicating whether there exists at least one nested
     // module with the given name (requiring a more involved lookup).
-    flat_hash_map<string_view, std::pair<Definition*, bool>> topDefinitions;
+    flat_hash_map<std::string_view, std::pair<Definition*, bool>> topDefinitions;
 
     // A cache of vector types, keyed on various properties such as bit width.
     flat_hash_map<uint32_t, const Type*> vectorTypeCache;
@@ -567,20 +567,20 @@ private:
 
     // The name map for packages. Note that packages have their own namespace,
     // which is why they can't share the definitions name table.
-    flat_hash_map<string_view, const PackageSymbol*> packageMap;
+    flat_hash_map<std::string_view, const PackageSymbol*> packageMap;
 
     // The name map for system subroutines.
-    flat_hash_map<string_view, const SystemSubroutine*> subroutineMap;
+    flat_hash_map<std::string_view, const SystemSubroutine*> subroutineMap;
 
     // The name map for system methods.
-    flat_hash_map<std::tuple<string_view, SymbolKind>, const SystemSubroutine*> methodMap;
+    flat_hash_map<std::tuple<std::string_view, SymbolKind>, const SystemSubroutine*> methodMap;
 
     // Map from pointers (to symbols, statements, expressions) to their associated attributes.
     flat_hash_map<const void*, std::span<const AttributeSymbol* const>> attributeMap;
 
     // A set of all instantiated names in the design; used for determining whether a given
     // module has ever been instantiated to know whether it should be considered top-level.
-    flat_hash_set<string_view> globalInstantiations;
+    flat_hash_set<std::string_view> globalInstantiations;
 
     struct DefinitionMetadata {
         const syntax::SyntaxTree* tree = nullptr;
@@ -594,7 +594,7 @@ private:
 
     // The name map for all module, interface, and program definitions.
     // The key is a combination of definition name + the scope in which it was declared.
-    flat_hash_map<std::tuple<string_view, const Scope*>, Definition*> definitionMap;
+    flat_hash_map<std::tuple<std::string_view, const Scope*>, Definition*> definitionMap;
 
     // A list of all created definitions, as storage for their memory.
     std::vector<std::unique_ptr<Definition>> definitionMemory;
@@ -606,7 +606,7 @@ private:
 
     // A map of packages to the set of names that are candidates for being
     // exported from those packages.
-    flat_hash_map<const PackageSymbol*, flat_hash_map<string_view, const Symbol*>>
+    flat_hash_map<const PackageSymbol*, flat_hash_map<std::string_view, const Symbol*>>
         packageExportCandidateMap;
 
     // A map from class name + decl name + scope to out-of-block declarations. These get
@@ -614,7 +614,7 @@ private:
     // the class prototype. The value also includes a boolean indicating whether anything
     // has used this declaration -- an error is issued if it's never used.
     mutable flat_hash_map<
-        std::tuple<string_view, string_view, const Scope*>,
+        std::tuple<std::string_view, std::string_view, const Scope*>,
         std::tuple<const syntax::SyntaxNode*, const syntax::ScopedNameSyntax*, SymbolIndex, bool>>
         outOfBlockDecls;
 
@@ -649,12 +649,12 @@ private:
     std::vector<const Definition*> unreferencedDefs;
 
     // The name map for user-defined primitive definitions.
-    flat_hash_map<string_view, const PrimitiveSymbol*> udpMap;
+    flat_hash_map<std::string_view, const PrimitiveSymbol*> udpMap;
 
     // The name map for built-in primitive definitions. These are stored in a separate
     // map because they are distinguished by keyword names that may otherwise collide
     // with escaped identifiers used by user code.
-    flat_hash_map<string_view, const PrimitiveSymbol*> gateMap;
+    flat_hash_map<std::string_view, const PrimitiveSymbol*> gateMap;
 
     // A map from syntax node to the definition it represents. Used much less frequently
     // than other ways of looking up definitions which is why it's lower down here.

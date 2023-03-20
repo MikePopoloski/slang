@@ -549,7 +549,7 @@ void Scope::addMembers(const SyntaxNode& syntax) {
     }
 }
 
-const Symbol* Scope::find(string_view name) const {
+const Symbol* Scope::find(std::string_view name) const {
     // Just do a simple lookup and return the result if we have one.
     ensureElaborated();
     auto it = nameMap->find(name);
@@ -575,7 +575,7 @@ const Symbol* Scope::find(string_view name) const {
     }
 }
 
-const Symbol* Scope::lookupName(string_view name, LookupLocation location,
+const Symbol* Scope::lookupName(std::string_view name, LookupLocation location,
                                 bitmask<LookupFlags> flags) const {
     LookupResult result;
     ASTContext context(*this, location);
@@ -1144,7 +1144,7 @@ void Scope::elaborate() const {
         }
     }
 
-    SmallSet<string_view, 4> observedForwardDecls;
+    SmallSet<std::string_view, 4> observedForwardDecls;
     for (auto symbol : deferredData.getForwardingTypedefs()) {
         // Ignore duplicate entries.
         if (symbol->name.empty() || !observedForwardDecls.emplace(symbol->name).second)
@@ -1180,7 +1180,7 @@ void Scope::elaborate() const {
         TimeTrace::endTrace();
 }
 
-static string_view getIdentifierName(const NamedTypeSyntax& syntax) {
+static std::string_view getIdentifierName(const NamedTypeSyntax& syntax) {
     if (syntax.name->kind == SyntaxKind::IdentifierName)
         return syntax.name->as<IdentifierNameSyntax>().identifier.valueText();
 
@@ -1192,7 +1192,7 @@ static string_view getIdentifierName(const NamedTypeSyntax& syntax) {
 
 bool Scope::handleDataDeclaration(const DataDeclarationSyntax& syntax) {
     auto& namedType = syntax.type->as<NamedTypeSyntax>();
-    string_view name = getIdentifierName(namedType);
+    std::string_view name = getIdentifierName(namedType);
     if (name.empty())
         return false;
 
@@ -1252,7 +1252,7 @@ bool Scope::handleDataDeclaration(const DataDeclarationSyntax& syntax) {
 void Scope::tryFixupInstances(const DataDeclarationSyntax& syntax, const ASTContext& context,
                               SmallVectorBase<const Symbol*>& results) const {
     auto& namedType = syntax.type->as<NamedTypeSyntax>();
-    string_view name = getIdentifierName(namedType);
+    std::string_view name = getIdentifierName(namedType);
     auto def = compilation.getDefinition(name, *this);
     if (!def)
         return;
@@ -1316,8 +1316,8 @@ void Scope::handleNestedDefinition(const ModuleDeclarationSyntax& syntax) const 
 }
 
 void Scope::handleExportedMethods(std::span<Symbol* const> deferredMembers) const {
-    SmallSet<string_view, 4> waitingForImport;
-    SmallMap<string_view, const ModportSubroutinePortSyntax*, 4> foundImports;
+    SmallSet<std::string_view, 4> waitingForImport;
+    SmallMap<std::string_view, const ModportSubroutinePortSyntax*, 4> foundImports;
 
     auto create = [&](const ModportSubroutinePortSyntax& syntax) {
         auto& symbol = MethodPrototypeSymbol::implicitExtern(*this, syntax);

@@ -37,8 +37,8 @@ using namespace slang::ast;
 using namespace slang::parsing;
 using namespace slang::syntax;
 
-std::pair<string_view, SourceLocation> getNameLoc(const HierarchicalInstanceSyntax& syntax) {
-    string_view name;
+std::pair<std::string_view, SourceLocation> getNameLoc(const HierarchicalInstanceSyntax& syntax) {
+    std::string_view name;
     SourceLocation loc;
     if (syntax.decl) {
         name = syntax.decl->name.valueText();
@@ -167,7 +167,7 @@ private:
 };
 
 void createImplicitNets(const HierarchicalInstanceSyntax& instance, const ASTContext& context,
-                        const NetType& netType, SmallSet<string_view, 8>& implicitNetNames,
+                        const NetType& netType, SmallSet<std::string_view, 8>& implicitNetNames,
                         SmallVectorBase<const Symbol*>& results) {
     // If no default nettype is set, we don't create implicit nets.
     if (netType.isError())
@@ -213,7 +213,7 @@ void getInstanceArrayDimensions(const InstanceArraySymbol& array,
 
 namespace slang::ast {
 
-string_view InstanceSymbolBase::getArrayName() const {
+std::string_view InstanceSymbolBase::getArrayName() const {
     auto scope = getParentScope();
     if (scope && scope->asSymbol().kind == SymbolKind::InstanceArray)
         return scope->asSymbol().as<InstanceArraySymbol>().getArrayName();
@@ -227,12 +227,14 @@ void InstanceSymbolBase::getArrayDimensions(SmallVectorBase<ConstantRange>& dime
         getInstanceArrayDimensions(scope->asSymbol().as<InstanceArraySymbol>(), dimensions);
 }
 
-InstanceSymbol::InstanceSymbol(string_view name, SourceLocation loc, InstanceBodySymbol& body) :
-    InstanceSymbolBase(SymbolKind::Instance, name, loc), body(body) {
+InstanceSymbol::InstanceSymbol(std::string_view name, SourceLocation loc,
+                               InstanceBodySymbol& body) :
+    InstanceSymbolBase(SymbolKind::Instance, name, loc),
+    body(body) {
     body.parentInstance = this;
 }
 
-InstanceSymbol::InstanceSymbol(Compilation& compilation, string_view name, SourceLocation loc,
+InstanceSymbol::InstanceSymbol(Compilation& compilation, std::string_view name, SourceLocation loc,
                                const Definition& definition, ParameterBuilder& paramBuilder,
                                bool isUninstantiated, bool isFromBind) :
     InstanceSymbol(name, loc,
@@ -406,7 +408,7 @@ void InstanceSymbol::fromSyntax(Compilation& compilation,
         isFromBind = true;
     }
 
-    SmallSet<string_view, 8> implicitNetNames;
+    SmallSet<std::string_view, 8> implicitNetNames;
     auto& netType = context.scope->getDefaultNetType();
 
     ParameterBuilder paramBuilder(*context.scope, definition->name, definition->parameters);
@@ -669,7 +671,7 @@ InstanceBodySymbol& InstanceBodySymbol::fromDefinition(Compilation& comp,
     return *result;
 }
 
-const Symbol* InstanceBodySymbol::findPort(string_view portName) const {
+const Symbol* InstanceBodySymbol::findPort(std::string_view portName) const {
     for (auto port : getPortList()) {
         if (port->name == portName)
             return port;
@@ -716,7 +718,7 @@ void InstanceBodySymbol::serializeTo(ASTSerializer& serializer) const {
     serializer.write("definition", definition.name);
 }
 
-string_view InstanceArraySymbol::getArrayName() const {
+std::string_view InstanceArraySymbol::getArrayName() const {
     auto scope = getParentScope();
     if (scope && scope->asSymbol().kind == SymbolKind::InstanceArray)
         return scope->asSymbol().as<InstanceArraySymbol>().getArrayName();
@@ -730,11 +732,11 @@ void InstanceArraySymbol::serializeTo(ASTSerializer& serializer) const {
 
 template<typename TSyntax>
 static void createUninstantiatedDefs(Compilation& compilation, const TSyntax& syntax,
-                                     string_view moduleName, const ASTContext& context,
+                                     std::string_view moduleName, const ASTContext& context,
                                      std::span<const Expression* const> params,
                                      SmallVectorBase<const Symbol*>& results,
                                      SmallVectorBase<const Symbol*>& implicitNets) {
-    SmallSet<string_view, 8> implicitNetNames;
+    SmallSet<std::string_view, 8> implicitNetNames;
     auto& netType = context.scope->getDefaultNetType();
     for (auto instanceSyntax : syntax.instances) {
         createImplicitNets(*instanceSyntax, context, netType, implicitNetNames, implicitNets);
@@ -835,7 +837,7 @@ std::span<const AssertionExpr* const> UninstantiatedDefSymbol::getPortConnection
         ASTContext context(*scope, LookupLocation::after(*this));
 
         SmallVector<const AssertionExpr*> results;
-        SmallVector<string_view, 8> names;
+        SmallVector<std::string_view, 8> names;
         for (auto port : syntax->as<HierarchicalInstanceSyntax>().connections) {
             if (port->kind == SyntaxKind::OrderedPortConnection) {
                 names.push_back(""sv);
@@ -865,7 +867,7 @@ std::span<const AssertionExpr* const> UninstantiatedDefSymbol::getPortConnection
     return *ports;
 }
 
-std::span<string_view const> UninstantiatedDefSymbol::getPortNames() const {
+std::span<std::string_view const> UninstantiatedDefSymbol::getPortNames() const {
     if (!ports)
         getPortConnections();
     return portNames;
@@ -982,7 +984,7 @@ template<typename TSyntax>
 void createPrimitives(const PrimitiveSymbol& primitive, const TSyntax& syntax,
                       const ASTContext& context, SmallVectorBase<const Symbol*>& results,
                       SmallVectorBase<const Symbol*>& implicitNets) {
-    SmallSet<string_view, 8> implicitNetNames;
+    SmallSet<std::string_view, 8> implicitNetNames;
     SmallVector<int32_t> path;
 
     auto& comp = context.getCompilation();

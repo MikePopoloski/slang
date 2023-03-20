@@ -80,7 +80,8 @@ private:
     static SymbolPathCB defaultSymbolPathCB;
 
     void formatDiag(SourceLocation loc, std::span<const SourceRange> ranges,
-                    DiagnosticSeverity severity, string_view message, string_view optionName);
+                    DiagnosticSeverity severity, std::string_view message,
+                    std::string_view optionName);
 };
 
 } // namespace slang

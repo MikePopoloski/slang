@@ -56,13 +56,13 @@ TEST_CASE("Class handle expression types") {
 
     auto& scope = compilation.createScriptScope();
     auto declare = [&](const std::string& source) {
-        auto tree = SyntaxTree::fromText(string_view(source));
+        auto tree = SyntaxTree::fromText(std::string_view(source));
         scope.getCompilation().addSyntaxTree(tree);
         scope.addMembers(tree->root());
     };
 
     auto typeof = [&](const std::string& source) {
-        auto tree = SyntaxTree::fromText(string_view(source));
+        auto tree = SyntaxTree::fromText(std::string_view(source));
         ASTContext context(scope, LookupLocation::max);
         return Expression::bind(tree->root().as<ExpressionSyntax>(), context).type->toString();
     };

@@ -119,7 +119,7 @@ ChargeStrength SemanticFacts::getChargeStrength(TokenKind kind) {
 }
 // clang-format on
 
-string_view SemanticFacts::getProcedureKindStr(ProceduralBlockKind kind) {
+std::string_view SemanticFacts::getProcedureKindStr(ProceduralBlockKind kind) {
     switch (kind) {
         case ProceduralBlockKind::Initial:
             return "initial"sv;

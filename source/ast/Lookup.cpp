@@ -123,7 +123,7 @@ void LookupResult::errorIfSelectors(const ASTContext& context) const {
 namespace {
 
 struct NameComponents {
-    string_view text;
+    std::string_view text;
     SourceRange range;
     std::span<const ElementSelectSyntax* const> selectors;
     const ParameterValueAssignmentSyntax* paramAssignments = nullptr;
@@ -361,7 +361,7 @@ bool lookupDownward(std::span<const NamePlusLoc> nameParts, NameComponents name,
                                     !isCBOrVirtualIface;
         }
 
-        string_view modportName;
+        std::string_view modportName;
         if (symbol->kind == SymbolKind::InterfacePort) {
             auto& ifacePort = symbol->as<InterfacePortSymbol>();
             symbol = ifacePort.getConnection();
@@ -1061,7 +1061,7 @@ void Lookup::name(const NameSyntax& syntax, const ASTContext& context, bitmask<L
     }
 }
 
-const Symbol* Lookup::unqualified(const Scope& scope, string_view name,
+const Symbol* Lookup::unqualified(const Scope& scope, std::string_view name,
                                   bitmask<LookupFlags> flags) {
     if (name.empty())
         return nullptr;
@@ -1074,8 +1074,9 @@ const Symbol* Lookup::unqualified(const Scope& scope, string_view name,
     return result.found;
 }
 
-const Symbol* Lookup::unqualifiedAt(const Scope& scope, string_view name, LookupLocation location,
-                                    SourceRange sourceRange, bitmask<LookupFlags> flags) {
+const Symbol* Lookup::unqualifiedAt(const Scope& scope, std::string_view name,
+                                    LookupLocation location, SourceRange sourceRange,
+                                    bitmask<LookupFlags> flags) {
     if (name.empty())
         return nullptr;
 
@@ -1583,7 +1584,7 @@ bool Lookup::findAssertionLocalVar(const ASTContext& context, const NameSyntax& 
     return lookupDownward(nameParts, name, context, result);
 }
 
-void Lookup::unqualifiedImpl(const Scope& scope, string_view name, LookupLocation location,
+void Lookup::unqualifiedImpl(const Scope& scope, std::string_view name, LookupLocation location,
                              std::optional<SourceRange> sourceRange, bitmask<LookupFlags> flags,
                              SymbolIndex outOfBlockIndex, LookupResult& result,
                              const Scope& originalScope) {
@@ -2009,7 +2010,7 @@ void Lookup::qualified(const ScopedNameSyntax& syntax, const ASTContext& context
     }
 }
 
-void Lookup::reportUndeclared(const Scope& initialScope, string_view name, SourceRange range,
+void Lookup::reportUndeclared(const Scope& initialScope, std::string_view name, SourceRange range,
                               bitmask<LookupFlags> flags, bool isHierarchical,
                               LookupResult& result) {
     // If the caller doesn't want an error, don't give him one.

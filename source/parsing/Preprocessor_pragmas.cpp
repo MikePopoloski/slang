@@ -141,7 +141,7 @@ void Preprocessor::handleExponentSplit(Token token, size_t offset) {
 
 void Preprocessor::applyPragma(const PragmaDirectiveSyntax& pragma,
                                SmallVectorBase<Token>& skippedTokens) {
-    string_view name = pragma.name.valueText();
+    std::string_view name = pragma.name.valueText();
     if (name == "protect") {
         applyProtectPragma(pragma, skippedTokens);
         return;
@@ -212,7 +212,7 @@ void Preprocessor::applyResetPragma(const PragmaDirectiveSyntax& pragma) {
         if (arg->kind == SyntaxKind::SimplePragmaExpression) {
             auto& simple = arg->as<SimplePragmaExpressionSyntax>();
             if (simple.value.kind == TokenKind::Identifier) {
-                string_view name = simple.value.rawText();
+                std::string_view name = simple.value.rawText();
                 if (!name.empty() && name != "protect" && name != "once" && name != "diagnostic")
                     addDiag(diag::UnknownPragma, simple.value.range()) << name;
 
@@ -251,7 +251,7 @@ void Preprocessor::applyDiagnosticPragma(const PragmaDirectiveSyntax& pragma) {
     for (auto arg : pragma.args) {
         if (arg->kind == SyntaxKind::SimplePragmaExpression) {
             auto& simple = arg->as<SimplePragmaExpressionSyntax>();
-            string_view action = simple.value.rawText();
+            std::string_view action = simple.value.rawText();
             if (simple.value.kind == TokenKind::Identifier && action == "push") {
                 sourceManager.addDiagnosticDirective(simple.value.location(), "__push__",
                                                      DiagnosticSeverity::Ignored);
@@ -268,7 +268,7 @@ void Preprocessor::applyDiagnosticPragma(const PragmaDirectiveSyntax& pragma) {
             auto& nvp = arg->as<NameValuePragmaExpressionSyntax>();
 
             DiagnosticSeverity severity;
-            string_view text = nvp.name.valueText();
+            std::string_view text = nvp.name.valueText();
             if (text == "ignore")
                 severity = DiagnosticSeverity::Ignored;
             else if (text == "warn")
@@ -551,7 +551,7 @@ void Preprocessor::handleProtectViewport(Token keyword, const PragmaExpressionSy
         return;
     }
 
-    auto checkOption = [&](size_t index, string_view name) {
+    auto checkOption = [&](size_t index, std::string_view name) {
         auto syntax = args->as<ParenPragmaExpressionSyntax>().values[index];
         if (syntax->kind != SyntaxKind::NameValuePragmaExpression) {
             addDiag(diag::InvalidPragmaViewport, syntax->sourceRange());

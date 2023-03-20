@@ -49,7 +49,7 @@ public:
     /// Returns true if the pattern had an error and is therefore invalid.
     bool bad() const { return kind == PatternKind::Invalid; }
 
-    using VarMap = SmallMap<string_view, const PatternVarSymbol*, 4>;
+    using VarMap = SmallMap<std::string_view, const PatternVarSymbol*, 4>;
 
     static Pattern& bind(const syntax::PatternSyntax& syntax, const Type& targetType,
                          VarMap& varMap, ASTContext& context);

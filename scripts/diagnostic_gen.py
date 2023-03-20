@@ -154,7 +154,7 @@ def createsource(path, diags, groups):
 
 namespace slang {
 
-static const flat_hash_map<DiagCode, std::tuple<string_view, string_view, DiagnosticSeverity, string_view>> data = {
+static const flat_hash_map<DiagCode, std::tuple<std::string_view, std::string_view, DiagnosticSeverity, std::string_view>> data = {
 """
 
     for _, v in sorted(diags.items()):
@@ -165,7 +165,7 @@ static const flat_hash_map<DiagCode, std::tuple<string_view, string_view, Diagno
 
     output += """};
 
-static const flat_hash_map<string_view, std::vector<DiagCode>> optionMap = {
+static const flat_hash_map<std::string_view, std::vector<DiagCode>> optionMap = {
 """
 
     optionMap = {}
@@ -187,7 +187,7 @@ static const flat_hash_map<string_view, std::vector<DiagCode>> optionMap = {
 
     output += """};
 
-static const flat_hash_map<string_view, DiagGroup> groupMap = {
+static const flat_hash_map<std::string_view, DiagGroup> groupMap = {
 """
 
     for g in sorted(groups):
@@ -207,13 +207,13 @@ std::ostream& operator<<(std::ostream& os, DiagCode code) {
     return os;
 }
 
-string_view toString(DiagCode code) {
+std::string_view toString(DiagCode code) {
     if (auto it = data.find(code); it != data.end())
         return std::get<0>(it->second);
     return "<user-diag>"sv;
 }
 
-string_view getDefaultMessage(DiagCode code) {
+std::string_view getDefaultMessage(DiagCode code) {
     if (auto it = data.find(code); it != data.end())
         return std::get<1>(it->second);
     return ""sv;
@@ -225,19 +225,19 @@ DiagnosticSeverity getDefaultSeverity(DiagCode code) {
     return DiagnosticSeverity::Ignored;
 }
 
-string_view getDefaultOptionName(DiagCode code) {
+std::string_view getDefaultOptionName(DiagCode code) {
     if (auto it = data.find(code); it != data.end())
         return std::get<3>(it->second);
     return ""sv;
 }
 
-std::span<const DiagCode> findDiagsFromOptionName(string_view name) {
+std::span<const DiagCode> findDiagsFromOptionName(std::string_view name) {
     if (auto it = optionMap.find(name); it != optionMap.end())
         return it->second;
     return {};
 }
 
-const DiagGroup* findDefaultDiagGroup(string_view name) {
+const DiagGroup* findDefaultDiagGroup(std::string_view name) {
     if (auto it = groupMap.find(name); it != groupMap.end())
         return &it->second;
     return nullptr;

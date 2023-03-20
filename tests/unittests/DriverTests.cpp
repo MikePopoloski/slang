@@ -9,11 +9,11 @@
 
 using namespace slang::driver;
 
-static bool stdoutContains(string_view text) {
+static bool stdoutContains(std::string_view text) {
     return OS::capturedStdout.find(text) != std::string::npos;
 }
 
-static bool stderrContains(string_view text) {
+static bool stderrContains(std::string_view text) {
     return OS::capturedStderr.find(text) != std::string::npos;
 }
 
@@ -404,7 +404,7 @@ TEST_CASE("Driver command files are processed strictly in order") {
     CHECK(driver.parseCommandLine(args));
     CHECK(driver.processOptions());
 
-    std::vector<string_view> fileNames;
+    std::vector<std::string_view> fileNames;
     for (auto buffer : driver.buffers) {
         auto name = driver.sourceManager.getRawFileName(buffer.id);
         if (auto idx = name.find_last_of("/\\"); idx != name.npos)

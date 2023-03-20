@@ -1428,7 +1428,7 @@ void Parser::errorIfAttributes(AttrList attributes) {
     }
 }
 
-void Parser::checkBlockNames(string_view begin, string_view end, SourceLocation loc) {
+void Parser::checkBlockNames(std::string_view begin, std::string_view end, SourceLocation loc) {
     if (begin.empty() || end.empty())
         return;
 

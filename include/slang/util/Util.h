@@ -23,7 +23,6 @@ using namespace std::literals;
 
 namespace slang {
 
-using string_view = std::string_view;
 using byte = std::byte;
 using int16_t = std::int16_t;
 using int32_t = std::int32_t;
@@ -33,7 +32,6 @@ using intptr_t = std::intptr_t;
 using nullptr_t = std::nullptr_t;
 using ptrdiff_t = std::ptrdiff_t;
 using size_t = std::size_t;
-using string_view = std::string_view;
 using uint16_t = std::uint16_t;
 using uint32_t = std::uint32_t;
 using uint64_t = std::uint64_t;

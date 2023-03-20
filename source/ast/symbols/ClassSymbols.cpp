@@ -29,7 +29,7 @@ namespace slang::ast {
 using namespace parsing;
 using namespace syntax;
 
-ClassPropertySymbol::ClassPropertySymbol(string_view name, SourceLocation loc,
+ClassPropertySymbol::ClassPropertySymbol(std::string_view name, SourceLocation loc,
                                          VariableLifetime lifetime, Visibility visibility) :
     VariableSymbol(SymbolKind::ClassProperty, name, loc, lifetime),
     visibility(visibility) {
@@ -137,7 +137,7 @@ void ClassType::checkForwardDecls() const {
     }
 }
 
-ClassType::ClassType(Compilation& compilation, string_view name, SourceLocation loc) :
+ClassType::ClassType(Compilation& compilation, std::string_view name, SourceLocation loc) :
     Type(SymbolKind::ClassType, name, loc), Scope(compilation, this) {
 }
 
@@ -188,7 +188,7 @@ void ClassType::populate(const Scope& scope, const ClassDeclarationSyntax& synta
     };
 
     auto& scopeNameMap = getUnelaboratedNameMap();
-    auto makeFunc = [&](string_view funcName, const Type& returnType, bool allowOverride,
+    auto makeFunc = [&](std::string_view funcName, const Type& returnType, bool allowOverride,
                         bitmask<MethodFlags> extraFlags = MethodFlags::None,
                         SubroutineKind subroutineKind =
                             SubroutineKind::Function) -> std::optional<MethodBuilder> {
@@ -928,8 +928,10 @@ bool GenericClassDefSymbol::SpecializationKey::operator==(const SpecializationKe
     return true;
 }
 
-ConstraintBlockSymbol::ConstraintBlockSymbol(Compilation& c, string_view name, SourceLocation loc) :
-    Symbol(SymbolKind::ConstraintBlock, name, loc), Scope(c, this) {
+ConstraintBlockSymbol::ConstraintBlockSymbol(Compilation& c, std::string_view name,
+                                             SourceLocation loc) :
+    Symbol(SymbolKind::ConstraintBlock, name, loc),
+    Scope(c, this) {
 }
 
 ConstraintBlockSymbol* ConstraintBlockSymbol::fromSyntax(

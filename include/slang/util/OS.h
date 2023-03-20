@@ -45,16 +45,16 @@ public:
     static bool readFile(const std::filesystem::path& path, std::vector<char>& buffer);
 
     /// Prints text to stdout.
-    static void print(string_view text);
+    static void print(std::string_view text);
 
     /// Prints colored formatted text to stdout.
-    static void print(const fmt::text_style& style, string_view text);
+    static void print(const fmt::text_style& style, std::string_view text);
 
     /// Prints formatted text to stderr.
-    static void printE(string_view text);
+    static void printE(std::string_view text);
 
     /// Prints colored formatted text to stderr.
-    static void printE(const fmt::text_style& style, string_view text);
+    static void printE(const fmt::text_style& style, std::string_view text);
 
     static std::string getEnv(const std::string& name);
 

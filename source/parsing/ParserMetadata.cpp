@@ -51,7 +51,7 @@ public:
     }
 
     void handle(const HierarchyInstantiationSyntax& syntax) {
-        string_view name = syntax.type.valueText();
+        std::string_view name = syntax.type.valueText();
         if (!name.empty() && syntax.type.kind == TokenKind::Identifier) {
             bool found = false;
             for (auto& set : moduleDeclStack) {
@@ -133,7 +133,7 @@ public:
     }
 
 private:
-    SmallVector<flat_hash_set<string_view>, 4> moduleDeclStack;
+    SmallVector<flat_hash_set<std::string_view>, 4> moduleDeclStack;
     TokenKind defaultNetType = TokenKind::Unknown;
     TokenKind unconnectedDrive = TokenKind::Unknown;
     std::optional<TimeScale> timeScale;

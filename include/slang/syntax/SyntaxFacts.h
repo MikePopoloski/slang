@@ -327,7 +327,7 @@ public:
     static bool isAssignmentOperator(SyntaxKind kind);
 
     /// @return a string representing the name of the given data type, if it has a simple name.
-    static string_view getSimpleTypeName(const DataTypeSyntax& syntax);
+    static std::string_view getSimpleTypeName(const DataTypeSyntax& syntax);
 
 protected:
     SyntaxFacts() = default;

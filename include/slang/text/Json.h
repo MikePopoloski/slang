@@ -37,7 +37,7 @@ public:
     /// @return a view of the emitted JSON text so far.
     /// @note the returned view is not guaranteed to remain valid once
     /// additional writes are performed.
-    string_view view() const;
+    std::string_view view() const;
 
     /// Begins a new JSON object. It's expected that you will write zero or
     /// more properties and then end the object.
@@ -57,10 +57,10 @@ public:
 
     /// Writes an object property with the given name. It's expected that you
     /// will immediately write some kind of value for the property.
-    void writeProperty(string_view name);
+    void writeProperty(std::string_view name);
 
     /// Writes an array or property string value.
-    void writeValue(string_view value);
+    void writeValue(std::string_view value);
 
     /// Writes an array or property signed integer value.
     void writeValue(int64_t value);
@@ -77,7 +77,7 @@ public:
 private:
     void endValue();
     size_t findLastComma() const;
-    void writeQuoted(string_view str);
+    void writeQuoted(std::string_view str);
 
     std::unique_ptr<FormatBuffer> buffer;
 

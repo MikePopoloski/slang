@@ -86,7 +86,7 @@ static void getHierarchicalPathImpl(const Symbol& symbol, FormatBuffer& buffer) 
         scope = current->getParentScope();
     }
 
-    string_view separator;
+    std::string_view separator;
     if (scope) {
         auto& parent = scope->asSymbol();
         if (parent.kind != SymbolKind::Root && parent.kind != SymbolKind::CompilationUnit) {
@@ -101,7 +101,7 @@ static void getHierarchicalPathImpl(const Symbol& symbol, FormatBuffer& buffer) 
         }
     }
 
-    auto addName = [&](string_view text) {
+    auto addName = [&](std::string_view text) {
         if (!separator.empty())
             buffer.append(separator);
         buffer.append(text);

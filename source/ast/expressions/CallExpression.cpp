@@ -197,7 +197,8 @@ static bool checkOutputArgs(const ASTContext& context, bool hasOutputArgs, Sourc
 
 bool CallExpression::bindArgs(const ArgumentListSyntax* argSyntax,
                               std::span<const FormalArgumentSymbol* const> formalArgs,
-                              string_view symbolName, SourceRange range, const ASTContext& context,
+                              std::string_view symbolName, SourceRange range,
+                              const ASTContext& context,
                               SmallVectorBase<const Expression*>& boundArgs) {
     SmallVector<const SyntaxNode*> orderedArgs;
     NamedArgMap namedArgs;
@@ -407,7 +408,7 @@ static const Expression* bindIteratorExpr(Compilation& compilation,
     // be the name of the iterator symbol. Otherwise, we need to automatically
     // generate an iterator symbol named 'item'.
     SourceLocation iteratorLoc = SourceLocation::NoLocation;
-    string_view iteratorName;
+    std::string_view iteratorName;
     if (invocation && invocation->arguments) {
         auto actualArgs = invocation->arguments->parameters;
         if (actualArgs.size() == 1 && actualArgs[0]->kind == SyntaxKind::OrderedArgument) {
@@ -515,7 +516,7 @@ Expression& CallExpression::createSystemCall(
                         return badExpr(compilation, nullptr);
                     }
 
-                    SmallVector<string_view> names;
+                    SmallVector<std::string_view> names;
                     for (auto expr : withClause->args->expressions) {
                         if (expr->kind != SyntaxKind::IdentifierName) {
                             argContext.addDiag(diag::ExpectedIdentifier, expr->sourceRange());
@@ -749,7 +750,7 @@ std::pair<const Expression*, const ValueSymbol*> CallExpression::SystemCallInfo:
     return {itInfo->iterExpr, itInfo->iterVar};
 }
 
-string_view CallExpression::getSubroutineName() const {
+std::string_view CallExpression::getSubroutineName() const {
     if (subroutine.index() == 1) {
         auto& callInfo = std::get<1>(subroutine);
         return callInfo.subroutine->name;

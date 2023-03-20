@@ -1170,7 +1170,7 @@ static bool translateUnionMembers(ConstantValue& result, const Type& targetType,
 
 static bool checkPackedUnionTag(const Type& valueType, const SVInt& val, uint32_t expectedTag,
                                 EvalContext& context, SourceRange sourceRange,
-                                string_view memberName) {
+                                std::string_view memberName) {
     uint32_t tagBits = valueType.as<PackedUnionType>().tagBits;
     if (tagBits) {
         bitwidth_t bits = val.getBitWidth();

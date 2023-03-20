@@ -24,7 +24,7 @@ public:
 
     /// Append raw text to the buffer.
     /// @return a reference to this object, to allow chaining additional method calls.
-    SyntaxPrinter& append(string_view text);
+    SyntaxPrinter& append(std::string_view text);
 
     /// Print the provided @a trivia to the internal buffer.
     /// @return a reference to this object, to allow chaining additional method calls.

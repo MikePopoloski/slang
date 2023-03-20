@@ -25,7 +25,7 @@ public:
 
     struct RandomizeCallInfo {
         const Constraint* inlineConstraints = nullptr;
-        std::span<const string_view> constraintRestrictions;
+        std::span<const std::string_view> constraintRestrictions;
     };
 
     struct SystemCallInfo {
@@ -55,7 +55,7 @@ public:
 
     bool isSystemCall() const { return subroutine.index() == 1; }
 
-    string_view getSubroutineName() const;
+    std::string_view getSubroutineName() const;
     SubroutineKind getSubroutineKind() const;
 
     ConstantValue evalImpl(EvalContext& context) const;
@@ -99,7 +99,7 @@ public:
 
     static bool bindArgs(const syntax::ArgumentListSyntax* argSyntax,
                          std::span<const FormalArgumentSymbol* const> formalArgs,
-                         string_view symbolName, SourceRange range, const ASTContext& context,
+                         std::string_view symbolName, SourceRange range, const ASTContext& context,
                          SmallVectorBase<const Expression*>& boundArgs);
 
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::Call; }

@@ -14,7 +14,7 @@
 
 namespace slang {
 
-std::optional<TimeUnit> suffixToTimeUnit(string_view timeSuffix, size_t& lengthConsumed) {
+std::optional<TimeUnit> suffixToTimeUnit(std::string_view timeSuffix, size_t& lengthConsumed) {
     if (timeSuffix.empty())
         return {};
 
@@ -45,7 +45,7 @@ std::optional<TimeUnit> suffixToTimeUnit(string_view timeSuffix, size_t& lengthC
     }
 }
 
-string_view timeUnitToSuffix(TimeUnit unit) {
+std::string_view timeUnitToSuffix(TimeUnit unit) {
     switch (unit) {
         case TimeUnit::Seconds:
             return "s";
@@ -74,7 +74,7 @@ std::optional<TimeScaleValue> TimeScaleValue::fromLiteral(double value, TimeUnit
     return std::nullopt;
 }
 
-static std::optional<TimeScaleValue> parseValue(string_view str, size_t& lengthConsumed) {
+static std::optional<TimeScaleValue> parseValue(std::string_view str, size_t& lengthConsumed) {
     size_t idx;
     auto i = strToInt(str, &idx);
     if (!i)
@@ -95,7 +95,7 @@ static std::optional<TimeScaleValue> parseValue(string_view str, size_t& lengthC
     return TimeScaleValue::fromLiteral(double(*i), *unit);
 }
 
-std::optional<TimeScaleValue> TimeScaleValue::fromString(string_view str) {
+std::optional<TimeScaleValue> TimeScaleValue::fromString(std::string_view str) {
     size_t lengthConsumed;
     auto result = parseValue(str, lengthConsumed);
     if (!result || lengthConsumed != str.size())
@@ -127,7 +127,7 @@ std::ostream& operator<<(std::ostream& os, const TimeScaleValue& tv) {
     return os << tv.toString();
 }
 
-std::optional<TimeScale> TimeScale::fromString(string_view str) {
+std::optional<TimeScale> TimeScale::fromString(std::string_view str) {
     size_t idx;
     auto base = parseValue(str, idx);
     if (!base)

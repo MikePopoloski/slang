@@ -20,7 +20,7 @@ using namespace syntax;
 using LF = LexerFacts;
 
 Preprocessor::MacroDef Preprocessor::findMacro(Token directive) {
-    string_view name = directive.valueText().substr(1);
+    std::string_view name = directive.valueText().substr(1);
     if (!name.empty() && name[0] == '\\')
         name = name.substr(1);
 
@@ -30,14 +30,14 @@ Preprocessor::MacroDef Preprocessor::findMacro(Token directive) {
     return it->second;
 }
 
-void Preprocessor::createBuiltInMacro(string_view name, int value, string_view valueStr) {
+void Preprocessor::createBuiltInMacro(std::string_view name, int value, std::string_view valueStr) {
 #define NL SourceLocation::NoLocation
 
     if (valueStr.empty()) {
         auto str = std::to_string(value);
         auto ptr = (char*)alloc.allocate(str.length(), 1);
         memcpy(ptr, str.data(), str.length());
-        valueStr = string_view(ptr, str.length());
+        valueStr = std::string_view(ptr, str.length());
     }
 
     Token directive(alloc, TokenKind::Directive, {}, valueStr, NL, SyntaxKind::DefineDirective);
@@ -329,7 +329,7 @@ bool Preprocessor::expandMacro(MacroDef macro, MacroExpansion& expansion,
     if (body.empty())
         return true;
 
-    string_view macroName = directive->name.valueText();
+    std::string_view macroName = directive->name.valueText();
 
     if (!directive->formalArguments) {
         // each macro expansion gets its own location entry
@@ -358,7 +358,7 @@ bool Preprocessor::expandMacro(MacroDef macro, MacroExpansion& expansion,
         using std::span<const Token>::operator=;
         bool isExpanded = false;
     };
-    SmallMap<string_view, ArgTokens, 8> argumentMap;
+    SmallMap<std::string_view, ArgTokens, 8> argumentMap;
 
     for (size_t i = 0; i < formalList.size(); i++) {
         auto formal = formalList[i];
@@ -409,7 +409,7 @@ bool Preprocessor::expandMacro(MacroDef macro, MacroExpansion& expansion,
             return append(token);
         }
 
-        string_view text = token.valueText();
+        std::string_view text = token.valueText();
         if (token.kind == TokenKind::Directive && !text.empty()) {
             if (token.directiveKind() != SyntaxKind::MacroUsage) {
                 // If this is the start of a `define directive, note that fact because
@@ -671,12 +671,12 @@ bool Preprocessor::expandIntrinsic(MacroIntrinsic intrinsic, MacroExpansion& exp
     SmallVector<char> text;
     switch (intrinsic) {
         case MacroIntrinsic::File: {
-            string_view fileName = sourceManager.getFileName(loc);
+            std::string_view fileName = sourceManager.getFileName(loc);
             text.push_back('"');
             text.append(fileName);
             text.push_back('"');
 
-            string_view rawText = toStringView(text.copy(alloc));
+            std::string_view rawText = toStringView(text.copy(alloc));
             Token token(alloc, TokenKind::StringLiteral, {}, rawText, loc, fileName);
             expansion.append(token, loc);
             break;
@@ -685,7 +685,7 @@ bool Preprocessor::expandIntrinsic(MacroIntrinsic intrinsic, MacroExpansion& exp
             size_t lineNum = sourceManager.getLineNumber(loc);
             uintToStr(text, static_cast<uint64_t>(lineNum));
 
-            string_view rawText = toStringView(text.copy(alloc));
+            std::string_view rawText = toStringView(text.copy(alloc));
             Token token(alloc, TokenKind::IntegerLiteral, {}, rawText, loc, lineNum);
             expansion.append(token, loc);
             break;

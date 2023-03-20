@@ -17,7 +17,7 @@ using namespace slang::ast;
 
 namespace only_assigned_on_reset {
 struct AlwaysFFVisitor : public ASTVisitor<AlwaysFFVisitor, true, true> {
-    explicit AlwaysFFVisitor(const string_view name, const string_view resetName) :
+    explicit AlwaysFFVisitor(const std::string_view name, const std::string_view resetName) :
         name(name), resetName(resetName){};
 
     void handle(const ConditionalStatement& statement) {
@@ -127,7 +127,7 @@ public:
                            "endmodule\n");
     }
 
-    string_view shortDescription() const override {
+    std::string_view shortDescription() const override {
         return "A register in an always_ff only have value while the design is on reset."sv;
     }
 };

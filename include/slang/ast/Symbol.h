@@ -135,7 +135,7 @@ public:
 
     /// The name of the symbol; if the symbol does not have a name,
     /// this will be an empty string.
-    string_view name;
+    std::string_view name;
 
     /// The declared location of the symbol in the source code, or an empty location
     /// if it was not explicitly declared in the source text. This is mainly used
@@ -241,7 +241,7 @@ public:
     decltype(auto) visit(TVisitor&& visitor, Args&&... args) const;
 
 protected:
-    Symbol(SymbolKind kind, string_view name, SourceLocation location) :
+    Symbol(SymbolKind kind, std::string_view name, SourceLocation location) :
         kind(kind), name(name), location(location) {}
 
     void setParent(const Scope& scope) { parentScope = &scope; }

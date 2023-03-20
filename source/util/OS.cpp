@@ -109,14 +109,14 @@ bool OS::readFile(const fs::path& path, std::vector<char>& buffer) {
     return true;
 }
 
-void OS::print(string_view text) {
+void OS::print(std::string_view text) {
     if (capturingOutput)
         capturedStdout += text;
     else
         fmt::detail::print(stdout, fmt::detail::to_string_view(text));
 }
 
-void OS::print(const fmt::text_style& style, string_view text) {
+void OS::print(const fmt::text_style& style, std::string_view text) {
     if (capturingOutput)
         capturedStdout += text;
     else if (showColorsStdout)
@@ -125,14 +125,14 @@ void OS::print(const fmt::text_style& style, string_view text) {
         fmt::detail::print(stdout, fmt::detail::to_string_view(text));
 }
 
-void OS::printE(string_view text) {
+void OS::printE(std::string_view text) {
     if (capturingOutput)
         capturedStderr += text;
     else
         fmt::detail::print(stderr, fmt::detail::to_string_view(text));
 }
 
-void OS::printE(const fmt::text_style& style, string_view text) {
+void OS::printE(const fmt::text_style& style, std::string_view text) {
     if (capturingOutput)
         capturedStderr += text;
     else if (showColorsStderr)

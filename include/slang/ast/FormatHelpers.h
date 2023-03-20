@@ -26,7 +26,7 @@ public:
     static bool checkSFormatArgs(const ASTContext& context,
                                  const std::span<const Expression* const>& args);
 
-    static std::optional<std::string> formatArgs(string_view formatString, SourceLocation loc,
+    static std::optional<std::string> formatArgs(std::string_view formatString, SourceLocation loc,
                                                  const Scope& scope, EvalContext& context,
                                                  const std::span<const Expression* const>& args,
                                                  bool isStringLiteral);

@@ -140,7 +140,7 @@ public:
                                                   "endmodule\n");
     }
 
-    string_view shortDescription() const override {
+    std::string_view shortDescription() const override {
         return "A register in an always_ff, which contains the reset signal on its sensitivity "
                "list,\n"
                "which do not have a value when the design is on reset."sv;

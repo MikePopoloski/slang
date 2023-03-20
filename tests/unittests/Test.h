@@ -79,8 +79,8 @@ std::string report(const Diagnostics& diags);
 std::string reportGlobalDiags();
 std::string to_string(const Diagnostic& diag);
 
-Token lexToken(string_view text);
-Token lexRawToken(string_view text);
+Token lexToken(std::string_view text);
+Token lexRawToken(std::string_view text);
 
 const ModuleDeclarationSyntax& parseModule(const std::string& text);
 const ClassDeclarationSyntax& parseClass(const std::string& text);

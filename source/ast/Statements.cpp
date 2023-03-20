@@ -1903,7 +1903,7 @@ const Expression* ForeachLoopStatement::buildLoopDims(const ForeachLoopListSynta
         }
 
         auto& idName = loopVar->as<IdentifierNameSyntax>();
-        string_view name = idName.identifier.valueText();
+        std::string_view name = idName.identifier.valueText();
 
         // If we previously had skipped dimensions this one can't be dynamically
         // sized (there would be no way to reach it during iteration).

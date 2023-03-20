@@ -502,7 +502,7 @@ public:
 
     /// Constructs from a string (in SystemVerilog syntax). This is mostly for convenience;
     /// any errors will assert instead of being handled gracefully.
-    static SVInt fromString(string_view str);
+    static SVInt fromString(std::string_view str);
 
     /// Construct from an array of digits.
     static SVInt fromDigits(bitwidth_t bits, LiteralBase base, bool isSigned, bool anyUnknown,
@@ -690,7 +690,7 @@ inline SLANG_EXPORT uint32_t clog2(const SVInt& v) {
 inline namespace literals {
 
 inline SVInt operator""_si(const char* str, size_t size) {
-    return SVInt::fromString(string_view(str, size));
+    return SVInt::fromString(std::string_view(str, size));
 }
 
 } // namespace literals

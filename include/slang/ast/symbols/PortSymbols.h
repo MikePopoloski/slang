@@ -43,7 +43,7 @@ public:
     /// false if it was declared using the non-ansi syntax.
     bool isAnsiPort = false;
 
-    PortSymbol(string_view name, SourceLocation loc, bool isAnsiPort);
+    PortSymbol(std::string_view name, SourceLocation loc, bool isAnsiPort);
 
     const Type& getType() const;
     void setType(const Type& newType) { type = &newType; }
@@ -102,8 +102,8 @@ public:
     /// so that generic code can work on both types.
     bool isNullPort = false;
 
-    MultiPortSymbol(string_view name, SourceLocation loc, std::span<const PortSymbol* const> ports,
-                    ArgumentDirection direction);
+    MultiPortSymbol(std::string_view name, SourceLocation loc,
+                    std::span<const PortSymbol* const> ports, ArgumentDirection direction);
 
     const Type& getType() const;
 
@@ -127,7 +127,7 @@ public:
     const Definition* interfaceDef = nullptr;
 
     /// If non-empty, the name of the modport that restricts which interface signals are accessible.
-    string_view modport;
+    std::string_view modport;
 
     /// Set to true if this is a generic interface port, which allows connections
     /// to any interface type. If true, @a interfaceDef will be nullptr.
@@ -140,7 +140,7 @@ public:
     /// Gets the interface instance that this port connects to.
     const Symbol* getConnection() const;
 
-    InterfacePortSymbol(string_view name, SourceLocation loc) :
+    InterfacePortSymbol(std::string_view name, SourceLocation loc) :
         Symbol(SymbolKind::InterfacePort, name, loc) {}
 
     bool isInvalid() const { return !interfaceDef && !isGeneric; }

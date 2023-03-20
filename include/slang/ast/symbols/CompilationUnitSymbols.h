@@ -44,13 +44,13 @@ public:
     std::span<const syntax::PackageImportItemSyntax* const> exportDecls;
     bool hasExportAll = false;
 
-    PackageSymbol(Compilation& compilation, string_view name, SourceLocation loc,
+    PackageSymbol(Compilation& compilation, std::string_view name, SourceLocation loc,
                   const NetType& defaultNetType, VariableLifetime defaultLifetime);
 
     /// Searches for a symbol by name, in the context of importing from the package.
     /// This is similar to a call to find() but also includes symbols that have been
     /// exported from the package.
-    const Symbol* findForImport(string_view name) const;
+    const Symbol* findForImport(std::string_view name) const;
 
     /// Notes that the given symbol was imported into this package from some other package.
     void noteImport(const Symbol& symbol) const;

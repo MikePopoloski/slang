@@ -52,7 +52,7 @@ void Driver::addStandardArgs() {
                 "<ext>");
     cmdLine.add(
         "--exclude-ext",
-        [this](string_view value) {
+        [this](std::string_view value) {
             options.excludeExts.emplace(std::string(value));
             return "";
         },
@@ -72,13 +72,13 @@ void Driver::addStandardArgs() {
 
     // Legacy vendor commands support
     cmdLine.add(
-        "--cmd-ignore", [this](string_view value) { return cmdLine.addIgnoreCommand(value); },
+        "--cmd-ignore", [this](std::string_view value) { return cmdLine.addIgnoreCommand(value); },
         "Define rule to ignore vendor command <vendor_cmd> with its following <N> parameters.\n"
         "A command of the form +xyz will also match any vendor command of the form +xyz+abc,\n"
         "as +abc is the command's argument, and doesn't need to be matched.",
         "<vendor_cmd>,<N>");
     cmdLine.add(
-        "--cmd-rename", [this](string_view value) { return cmdLine.addRenameCommand(value); },
+        "--cmd-rename", [this](std::string_view value) { return cmdLine.addRenameCommand(value); },
         "Define rule to rename vendor command <vendor_cmd> into existing <slang_cmd>",
         "<vendor_cmd>,<slang_cmd>");
     cmdLine.add("--ignore-directive", options.ignoreDirectives,
@@ -180,9 +180,10 @@ void Driver::addStandardArgs() {
                 "<filename>", /* isFileName */ true);
 
     cmdLine.setPositional(
-        [this](string_view fileName) {
+        [this](std::string_view fileName) {
             if (!options.excludeExts.empty()) {
-                if (size_t extIndex = fileName.find_last_of('.'); extIndex != string_view::npos) {
+                if (size_t extIndex = fileName.find_last_of('.');
+                    extIndex != std::string_view::npos) {
                     if (options.excludeExts.count(std::string(fileName.substr(extIndex + 1))))
                         return "";
                 }
@@ -199,7 +200,7 @@ void Driver::addStandardArgs() {
 
     cmdLine.add(
         "-f",
-        [this](string_view fileName) {
+        [this](std::string_view fileName) {
             if (!processCommandFile(fileName, /* makeRelative */ false))
                 anyFailedLoads = true;
             return "";
@@ -210,7 +211,7 @@ void Driver::addStandardArgs() {
 
     cmdLine.add(
         "-F",
-        [this](string_view fileName) {
+        [this](std::string_view fileName) {
             if (!processCommandFile(fileName, /* makeRelative */ true))
                 anyFailedLoads = true;
             return "";
@@ -220,7 +221,7 @@ void Driver::addStandardArgs() {
         "<filename>", /* isFileName */ true);
 }
 
-[[nodiscard]] bool Driver::parseCommandLine(string_view argList) {
+[[nodiscard]] bool Driver::parseCommandLine(std::string_view argList) {
     if (!cmdLine.parse(argList)) {
         for (auto& err : cmdLine.getErrors())
             OS::printE(fmt::format("{}\n", err));
@@ -229,7 +230,7 @@ void Driver::addStandardArgs() {
     return !anyFailedLoads;
 }
 
-SourceBuffer Driver::readSource(string_view fileName) {
+SourceBuffer Driver::readSource(std::string_view fileName) {
     SourceBuffer buffer = sourceManager.readSource(widen(fileName));
     if (!buffer) {
         OS::printE(fg(diagClient->errorColor), "error: ");
@@ -238,7 +239,7 @@ SourceBuffer Driver::readSource(string_view fileName) {
     return buffer;
 }
 
-bool Driver::processCommandFile(string_view fileName, bool makeRelative) {
+bool Driver::processCommandFile(std::string_view fileName, bool makeRelative) {
     std::error_code ec;
     fs::path path = fs::canonical(widen(fileName), ec);
     std::vector<char> buffer;
@@ -263,7 +264,7 @@ bool Driver::processCommandFile(string_view fileName, bool makeRelative) {
     ASSERT(!buffer.empty());
     buffer.pop_back();
 
-    string_view argStr(buffer.data(), buffer.size());
+    std::string_view argStr(buffer.data(), buffer.size());
     bool result = cmdLine.parse(argStr, parseOpts);
 
     if (makeRelative)
@@ -331,7 +332,7 @@ bool Driver::processOptions() {
 
     for (const std::string& dir : options.includeDirs) {
         try {
-            sourceManager.addUserDirectory(string_view(dir));
+            sourceManager.addUserDirectory(std::string_view(dir));
         }
         catch (const std::exception&) {
             OS::printE(fg(diagClient->warningColor), "warning: ");
@@ -341,7 +342,7 @@ bool Driver::processOptions() {
 
     for (const std::string& dir : options.includeSystemDirs) {
         try {
-            sourceManager.addSystemDirectory(string_view(dir));
+            sourceManager.addSystemDirectory(std::string_view(dir));
         }
         catch (const std::exception&) {
             OS::printE(fg(diagClient->warningColor), "warning: ");
@@ -560,7 +561,7 @@ bool Driver::parseAllSources() {
         for (auto& dir : options.libDirs)
             directories.emplace_back(widen(dir));
 
-        flat_hash_set<string_view> uniqueExtensions;
+        flat_hash_set<std::string_view> uniqueExtensions;
         uniqueExtensions.emplace(".v"sv);
         uniqueExtensions.emplace(".sv"sv);
         for (auto& ext : options.libExts)
@@ -572,25 +573,25 @@ bool Driver::parseAllSources() {
 
         // If library directories are specified, see if we have any unknown instantiations
         // or package names for which we should search for additional source files to load.
-        flat_hash_set<string_view> knownNames;
+        flat_hash_set<std::string_view> knownNames;
         auto addKnownNames = [&](const std::shared_ptr<SyntaxTree>& tree) {
             auto& meta = tree->getMetadata();
             for (auto& [n, _] : meta.nodeMap) {
                 auto decl = &n->as<ModuleDeclarationSyntax>();
-                string_view name = decl->header->name.valueText();
+                std::string_view name = decl->header->name.valueText();
                 if (!name.empty())
                     knownNames.emplace(name);
             }
 
             for (auto classDecl : meta.classDecls) {
-                string_view name = classDecl->name.valueText();
+                std::string_view name = classDecl->name.valueText();
                 if (!name.empty())
                     knownNames.emplace(name);
             }
         };
 
         auto findMissingNames = [&](const std::shared_ptr<SyntaxTree>& tree,
-                                    flat_hash_set<string_view>& missing) {
+                                    flat_hash_set<std::string_view>& missing) {
             auto& meta = tree->getMetadata();
             for (auto name : meta.globalInstances) {
                 if (knownNames.find(name) == knownNames.end())
@@ -598,14 +599,14 @@ bool Driver::parseAllSources() {
             }
 
             for (auto idName : meta.classPackageNames) {
-                string_view name = idName->identifier.valueText();
+                std::string_view name = idName->identifier.valueText();
                 if (!name.empty() && knownNames.find(name) == knownNames.end())
                     missing.emplace(name);
             }
 
             for (auto importDecl : meta.packageImports) {
                 for (auto importItem : importDecl->items) {
-                    string_view name = importItem->package.valueText();
+                    std::string_view name = importItem->package.valueText();
                     if (!name.empty() && knownNames.find(name) == knownNames.end())
                         missing.emplace(name);
                 }
@@ -615,12 +616,12 @@ bool Driver::parseAllSources() {
         for (auto& tree : syntaxTrees)
             addKnownNames(tree);
 
-        flat_hash_set<string_view> missingNames;
+        flat_hash_set<std::string_view> missingNames;
         for (auto& tree : syntaxTrees)
             findMissingNames(tree, missingNames);
 
         // Keep loading new files as long as we are making forward progress.
-        flat_hash_set<string_view> nextMissingNames;
+        flat_hash_set<std::string_view> nextMissingNames;
         while (true) {
             for (auto name : missingNames) {
                 SourceBuffer buffer;

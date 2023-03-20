@@ -163,7 +163,7 @@ public:
 
     static ChargeStrength getChargeStrength(parsing::TokenKind kind);
 
-    static string_view getProcedureKindStr(ProceduralBlockKind kind);
+    static std::string_view getProcedureKindStr(ProceduralBlockKind kind);
 
     static std::pair<std::optional<DriveStrength>, std::optional<DriveStrength>> getDriveStrength(
         const syntax::NetStrengthSyntax& syntax);

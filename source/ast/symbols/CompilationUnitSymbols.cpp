@@ -53,7 +53,7 @@ void CompilationUnitSymbol::addMembers(const SyntaxNode& syntax) {
     }
 }
 
-PackageSymbol::PackageSymbol(Compilation& compilation, string_view name, SourceLocation loc,
+PackageSymbol::PackageSymbol(Compilation& compilation, std::string_view name, SourceLocation loc,
                              const NetType& defaultNetType, VariableLifetime defaultLifetime) :
     Symbol(SymbolKind::Package, name, loc),
     Scope(compilation, this), defaultNetType(defaultNetType), defaultLifetime(defaultLifetime) {
@@ -106,7 +106,7 @@ PackageSymbol& PackageSymbol::fromSyntax(const Scope& scope, const ModuleDeclara
     return *result;
 }
 
-const Symbol* PackageSymbol::findForImport(string_view lookupName) const {
+const Symbol* PackageSymbol::findForImport(std::string_view lookupName) const {
     auto sym = find(lookupName);
     if (sym)
         return sym;

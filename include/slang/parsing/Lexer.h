@@ -79,7 +79,7 @@ public:
                             KeywordVersion keywordVersion, SmallVectorBase<Token>& results);
 
 private:
-    Lexer(BufferID bufferId, string_view source, const char* startPtr, BumpAllocator& alloc,
+    Lexer(BufferID bufferId, std::string_view source, const char* startPtr, BumpAllocator& alloc,
           Diagnostics& diagnostics, LexerOptions options);
 
     Token lexToken(KeywordVersion keywordVersion);
@@ -121,7 +121,7 @@ private:
     bool reallyAtEnd() const { return sourceBuffer >= sourceEnd - 1; }
 
     uint32_t lexemeLength() const { return (uint32_t)(sourceBuffer - marker); }
-    string_view lexeme() const { return string_view(marker, lexemeLength()); }
+    std::string_view lexeme() const { return std::string_view(marker, lexemeLength()); }
 
     bool consume(char c) {
         if (peek() == c) {

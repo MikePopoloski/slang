@@ -432,7 +432,7 @@ private:
     void handleExponentSplit(Token token, size_t offset);
 
     // Report errors for incorrectly specified block names.
-    void checkBlockNames(string_view begin, string_view end, SourceLocation loc);
+    void checkBlockNames(std::string_view begin, std::string_view end, SourceLocation loc);
     void checkBlockNames(Token nameToken, const syntax::NamedBlockClauseSyntax* endBlock);
     void checkBlockNames(const syntax::NamedBlockClauseSyntax* beginBlock,
                          const syntax::NamedBlockClauseSyntax* endBlock,
@@ -442,7 +442,8 @@ private:
     void checkMemberAllowed(const syntax::SyntaxNode& member, syntax::SyntaxKind parentKind);
 
     // Report warnings for misleading empty loop / conditional bodies.
-    void checkEmptyBody(const syntax::SyntaxNode& syntax, Token prevToken, string_view syntaxName);
+    void checkEmptyBody(const syntax::SyntaxNode& syntax, Token prevToken,
+                        std::string_view syntaxName);
 
     // ---- Member variables ----
 
@@ -462,7 +463,7 @@ private:
     // A stack of names of modules declared locally within the given scope.
     // This is used to detect and ignore instantiations of local modules when
     // trying to find the set of globally instantiated modules.
-    SmallVector<flat_hash_set<string_view>, 4> moduleDeclStack;
+    SmallVector<flat_hash_set<std::string_view>, 4> moduleDeclStack;
 
     // The current depth of recursion in the parser.
     size_t recursionDepth = 0;

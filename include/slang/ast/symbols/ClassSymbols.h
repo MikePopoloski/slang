@@ -27,7 +27,7 @@ public:
     Visibility visibility;
     RandMode randMode = RandMode::None;
 
-    ClassPropertySymbol(string_view name, SourceLocation loc, VariableLifetime lifetime,
+    ClassPropertySymbol(std::string_view name, SourceLocation loc, VariableLifetime lifetime,
                         Visibility visibility);
 
     void serializeTo(ASTSerializer& serializer) const;
@@ -52,7 +52,7 @@ public:
     /// Set to true if the class is an interface class.
     bool isInterface = false;
 
-    ClassType(Compilation& compilation, string_view name, SourceLocation loc);
+    ClassType(Compilation& compilation, std::string_view name, SourceLocation loc);
 
     /// If this class derives from a base class, returns that type. Otherwise returns null.
     const Type* getBaseClass() const {
@@ -130,9 +130,9 @@ public:
     /// Set to true if the generic class is an interface class.
     bool isInterface = false;
 
-    GenericClassDefSymbol(string_view name, SourceLocation loc) :
+    GenericClassDefSymbol(std::string_view name, SourceLocation loc) :
         Symbol(SymbolKind::GenericClassDef, name, loc) {}
-    GenericClassDefSymbol(string_view name, SourceLocation loc,
+    GenericClassDefSymbol(std::string_view name, SourceLocation loc,
                           function_ref<void(Compilation&, ClassType&)> specializeFunc) :
         Symbol(SymbolKind::GenericClassDef, name, loc),
         specializeFunc{specializeFunc} {}
@@ -267,7 +267,7 @@ public:
     /// required to be overridden in derived classes.
     bool isPure = false;
 
-    ConstraintBlockSymbol(Compilation& compilation, string_view name, SourceLocation loc);
+    ConstraintBlockSymbol(Compilation& compilation, std::string_view name, SourceLocation loc);
 
     const Constraint& getConstraints() const;
     SymbolIndex getOutOfBlockIndex() const { return outOfBlockIndex; }

@@ -42,7 +42,7 @@ struct FormatOptions {
 ///                describing the problem and the location in the string where the error occurred.
 /// @return true if parsing was successful, and false if an error occurred.
 bool parse(
-    string_view formatString, function_ref<void(string_view text)> onText,
+    std::string_view formatString, function_ref<void(std::string_view text)> onText,
     function_ref<void(char specifier, size_t offset, size_t len, const FormatOptions& options)>
         onArg,
     function_ref<void(DiagCode code, size_t offset, size_t len, std::optional<char> specifier)>

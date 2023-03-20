@@ -55,7 +55,7 @@ Diagnostic& Diagnostic::operator<<(const std::string& arg) {
     return *this;
 }
 
-Diagnostic& Diagnostic::operator<<(string_view arg) {
+Diagnostic& Diagnostic::operator<<(std::string_view arg) {
     ASSERT(!arg.empty());
     args.emplace_back(std::string(arg));
     return *this;

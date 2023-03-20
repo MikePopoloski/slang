@@ -400,7 +400,7 @@ protected:
     decltype(auto) visitExpression(TExpression* expr, TVisitor&& visitor, Args&&... args) const;
 
     using NamedArgMap =
-        SmallMap<string_view, std::pair<const syntax::NamedArgumentSyntax*, bool>, 8>;
+        SmallMap<std::string_view, std::pair<const syntax::NamedArgumentSyntax*, bool>, 8>;
     static bool collectArgs(const ASTContext& context, const syntax::ArgumentListSyntax& syntax,
                             SmallVectorBase<const syntax::SyntaxNode*>& orderedArgs,
                             NamedArgMap& namedArgs);

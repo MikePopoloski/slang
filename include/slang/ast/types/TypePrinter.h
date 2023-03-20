@@ -43,38 +43,38 @@ public:
 
     std::string toString() const;
 
-    void visit(const ScalarType& type, string_view overrideName);
-    void visit(const PredefinedIntegerType& type, string_view overrideName);
-    void visit(const FloatingType& type, string_view overrideName);
-    void visit(const EnumType& type, string_view overrideName);
-    void visit(const PackedArrayType& type, string_view overrideName);
-    void visit(const PackedStructType& type, string_view overrideName);
-    void visit(const PackedUnionType& type, string_view overrideName);
-    void visit(const FixedSizeUnpackedArrayType& type, string_view overrideName);
-    void visit(const DynamicArrayType& type, string_view overrideName);
-    void visit(const DPIOpenArrayType& type, string_view overrideName);
-    void visit(const AssociativeArrayType& type, string_view overrideName);
-    void visit(const QueueType& type, string_view overrideName);
-    void visit(const UnpackedStructType& type, string_view overrideName);
-    void visit(const UnpackedUnionType& type, string_view overrideName);
-    void visit(const VoidType& type, string_view overrideName);
-    void visit(const NullType& type, string_view overrideName);
-    void visit(const CHandleType& type, string_view overrideName);
-    void visit(const StringType& type, string_view overrideName);
-    void visit(const EventType& type, string_view overrideName);
-    void visit(const UnboundedType& type, string_view overrideName);
-    void visit(const TypeRefType& type, string_view overrideName);
-    void visit(const UntypedType& type, string_view overrideName);
-    void visit(const SequenceType& type, string_view overrideName);
-    void visit(const PropertyType& type, string_view overrideName);
-    void visit(const VirtualInterfaceType& type, string_view overrideName);
-    void visit(const ClassType& type, string_view overrideName);
-    void visit(const CovergroupType& type, string_view overrideName);
-    void visit(const TypeAliasType& type, string_view overrideName);
-    void visit(const ErrorType& type, string_view overrideName);
+    void visit(const ScalarType& type, std::string_view overrideName);
+    void visit(const PredefinedIntegerType& type, std::string_view overrideName);
+    void visit(const FloatingType& type, std::string_view overrideName);
+    void visit(const EnumType& type, std::string_view overrideName);
+    void visit(const PackedArrayType& type, std::string_view overrideName);
+    void visit(const PackedStructType& type, std::string_view overrideName);
+    void visit(const PackedUnionType& type, std::string_view overrideName);
+    void visit(const FixedSizeUnpackedArrayType& type, std::string_view overrideName);
+    void visit(const DynamicArrayType& type, std::string_view overrideName);
+    void visit(const DPIOpenArrayType& type, std::string_view overrideName);
+    void visit(const AssociativeArrayType& type, std::string_view overrideName);
+    void visit(const QueueType& type, std::string_view overrideName);
+    void visit(const UnpackedStructType& type, std::string_view overrideName);
+    void visit(const UnpackedUnionType& type, std::string_view overrideName);
+    void visit(const VoidType& type, std::string_view overrideName);
+    void visit(const NullType& type, std::string_view overrideName);
+    void visit(const CHandleType& type, std::string_view overrideName);
+    void visit(const StringType& type, std::string_view overrideName);
+    void visit(const EventType& type, std::string_view overrideName);
+    void visit(const UnboundedType& type, std::string_view overrideName);
+    void visit(const TypeRefType& type, std::string_view overrideName);
+    void visit(const UntypedType& type, std::string_view overrideName);
+    void visit(const SequenceType& type, std::string_view overrideName);
+    void visit(const PropertyType& type, std::string_view overrideName);
+    void visit(const VirtualInterfaceType& type, std::string_view overrideName);
+    void visit(const ClassType& type, std::string_view overrideName);
+    void visit(const CovergroupType& type, std::string_view overrideName);
+    void visit(const TypeAliasType& type, std::string_view overrideName);
+    void visit(const ErrorType& type, std::string_view overrideName);
 
     template<typename T>
-    void visit(const T&, string_view) {}
+    void visit(const T&, std::string_view) {}
 
 private:
     void appendMembers(const Scope& scope);

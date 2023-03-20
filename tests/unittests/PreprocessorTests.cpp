@@ -25,7 +25,7 @@ void trimTrailingWhitespace(std::string& str) {
     }
 }
 
-std::string preprocess(string_view text, const Bag& options = {}) {
+std::string preprocess(std::string_view text, const Bag& options = {}) {
     diagnostics.clear();
 
     Preprocessor preprocessor(getSourceManager(), alloc, diagnostics, options);
@@ -123,7 +123,7 @@ TEST_CASE("Include directive errors") {
 }
 
 void testDirective(SyntaxKind kind) {
-    string_view text = LexerFacts::getDirectiveText(kind);
+    std::string_view text = LexerFacts::getDirectiveText(kind);
 
     diagnostics.clear();
     auto buffer = getSourceManager().assignText(text);
@@ -1236,7 +1236,7 @@ TEST_CASE("begin_keywords (nested)") {
     CHECK_DIAGNOSTICS_EMPTY;
 }
 
-std::optional<TimeScale> lexTimeScale(string_view text) {
+std::optional<TimeScale> lexTimeScale(std::string_view text) {
     diagnostics.clear();
 
     Preprocessor preprocessor(getSourceManager(), alloc, diagnostics);
@@ -1291,7 +1291,7 @@ TEST_CASE("timescale directive") {
     CHECK(!diagnostics.empty());
 }
 
-TokenKind lexDefaultNetType(string_view text) {
+TokenKind lexDefaultNetType(std::string_view text) {
     diagnostics.clear();
 
     Preprocessor preprocessor(getSourceManager(), alloc, diagnostics);
@@ -1322,7 +1322,7 @@ TEST_CASE("default_nettype directive") {
     CHECK(!diagnostics.empty());
 }
 
-TokenKind lexUnconnectedDrive(string_view text) {
+TokenKind lexUnconnectedDrive(std::string_view text) {
     diagnostics.clear();
 
     Preprocessor preprocessor(getSourceManager(), alloc, diagnostics);
@@ -1881,7 +1881,7 @@ module m;
 endmodule
 )";
 
-    string_view expected = R"a(
+    std::string_view expected = R"a(
 module m;
     parameter foo = "bar";
     if (!(foo == "bar")) $error("asdf '%s'", "foo == \"bar\"");

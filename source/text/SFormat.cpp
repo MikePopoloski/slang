@@ -20,14 +20,14 @@ namespace slang::SFormat {
 
 static std::optional<uint32_t> parseUInt(const char*& ptr, const char* end) {
     size_t pos;
-    auto result = strToUInt(string_view(ptr, size_t(end - ptr)), &pos);
+    auto result = strToUInt(std::string_view(ptr, size_t(end - ptr)), &pos);
     if (result)
         ptr += pos;
 
     return result;
 }
 
-bool parse(string_view str, function_ref<void(string_view)> onText,
+bool parse(std::string_view str, function_ref<void(std::string_view)> onText,
            function_ref<void(char, size_t, size_t, const FormatOptions&)> onArg,
            function_ref<void(DiagCode, size_t, size_t, std::optional<char>)> onError) {
     SmallVector<char> text;

@@ -2391,7 +2391,7 @@ HierarchyInstantiationSyntax& Parser::parseHierarchyInstantiation(AttrList attri
 
     // If this is an instantiation of a global module/interface/program,
     // keep track of it in our instantiatedModules set.
-    string_view name = type.valueText();
+    std::string_view name = type.valueText();
     if (!name.empty() && type.kind == TokenKind::Identifier) {
         bool found = false;
         for (auto& set : moduleDeclStack) {

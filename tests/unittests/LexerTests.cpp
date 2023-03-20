@@ -57,7 +57,7 @@ TEST_CASE("Unicode BOMs") {
 TEST_CASE("Embedded null") {
     const char text[] = "\0\0";
     auto str = std::string(text, text + sizeof(text) - 1);
-    Token token = lexToken(string_view(str));
+    Token token = lexToken(std::string_view(str));
 
     CHECK(token.kind == TokenKind::Unknown);
     CHECK(token.toString() == str.substr(0, str.length() - 1));
@@ -68,7 +68,7 @@ TEST_CASE("Embedded null") {
 TEST_CASE("Embedded null (string literal)") {
     const char text[] = "\"\0\"\0";
     auto str = std::string(text, text + sizeof(text) - 1);
-    Token token = lexToken(string_view(str));
+    Token token = lexToken(std::string_view(str));
 
     CHECK(token.kind == TokenKind::StringLiteral);
     CHECK(token.toString() == str.substr(0, str.length() - 1));
@@ -103,7 +103,7 @@ TEST_CASE("Line Comment (directive continuation)") {
 TEST_CASE("Line Comment (embedded null)") {
     const char text[] = "// foo \0 bar";
     auto str = std::string(text, text + sizeof(text) - 1);
-    Token token = lexToken(string_view(str));
+    Token token = lexToken(std::string_view(str));
 
     CHECK(token.kind == TokenKind::EndOfFile);
     CHECK(token.toString() == str);
@@ -116,7 +116,7 @@ TEST_CASE("Line Comment (embedded null)") {
 TEST_CASE("Line Comment (UTF8)") {
     const char text[] = "// foo 的氣墊船\u00F7\n";
     auto str = std::string(text, text + sizeof(text) - 1);
-    Token token = lexToken(string_view(str));
+    Token token = lexToken(std::string_view(str));
 
     CHECK(token.kind == TokenKind::EndOfFile);
     CHECK(token.toString() == str);
@@ -167,7 +167,7 @@ TEST_CASE("Block Comment (unterminated)") {
 TEST_CASE("Block comment (embedded null)") {
     const char text[] = "/* foo\0 */";
     auto str = std::string(text, text + sizeof(text) - 1);
-    Token token = lexToken(string_view(str));
+    Token token = lexToken(std::string_view(str));
 
     CHECK(token.kind == TokenKind::EndOfFile);
     CHECK(token.toString() == str);
@@ -180,7 +180,7 @@ TEST_CASE("Block comment (embedded null)") {
 TEST_CASE("Block comment (UTF8 text)") {
     const char text[] = "/* foo 的氣墊船 */";
     auto str = std::string(text, text + sizeof(text) - 1);
-    Token token = lexToken(string_view(str));
+    Token token = lexToken(std::string_view(str));
 
     CHECK(token.kind == TokenKind::EndOfFile);
     CHECK(token.toString() == str);
@@ -477,7 +477,7 @@ TEST_CASE("Integer literal") {
 }
 
 void checkVectorBase(const std::string& s, LiteralBase base, bool isSigned) {
-    Token token = lexToken(string_view(s));
+    Token token = lexToken(std::string_view(s));
 
     CHECK(token.kind == TokenKind::IntegerBase);
     CHECK(token.toString() == s);
@@ -498,7 +498,7 @@ TEST_CASE("Vector bases") {
 }
 
 TEST_CASE("Vector base (bad)") {
-    Token token = lexToken(string_view("'sf"));
+    Token token = lexToken(std::string_view("'sf"));
 
     CHECK(token.kind == TokenKind::IntegerBase);
     CHECK(token.numericFlags().base() == LiteralBase::Decimal);
@@ -624,7 +624,7 @@ TEST_CASE("Real literal (bad exponent)") {
 
 TEST_CASE("Real literal (digit overflow)") {
     std::string text = std::string(400, '9') + ".0";
-    Token token = lexToken(string_view(text));
+    Token token = lexToken(std::string_view(text));
 
     CHECK(token.kind == TokenKind::RealLiteral);
     CHECK(token.toString() == text);
@@ -644,7 +644,7 @@ TEST_CASE("Integer literal (not an exponent)") {
 }
 
 void checkTimeLiteral(const std::string& s, TimeUnit flagCheck, double num) {
-    Token token = lexToken(string_view(s));
+    Token token = lexToken(std::string_view(s));
 
     CHECK(token.kind == TokenKind::TimeLiteral);
     CHECK(token.toString() == s);
@@ -742,7 +742,7 @@ TEST_CASE("Too many errors") {
     options.maxErrors = 9;
 
     diagnostics.clear();
-    auto buffer = getSourceManager().assignText(string_view(buf.data(), buf.size()));
+    auto buffer = getSourceManager().assignText(std::string_view(buf.data(), buf.size()));
     Lexer lexer(buffer, alloc, diagnostics, options);
 
     for (size_t i = 0; i < buf.size() - 1; i++)
@@ -1016,7 +1016,7 @@ TEST_CASE("All Keywords") {
 }
 
 void testPunctuation(TokenKind kind) {
-    string_view text = LF::getTokenKindText(kind);
+    std::string_view text = LF::getTokenKindText(kind);
     Token token = lexToken(text);
 
     CHECK(token.kind == kind);
@@ -1110,7 +1110,7 @@ TEST_CASE("All Punctuation") {
 }
 
 void testDirectivePunctuation(TokenKind kind) {
-    string_view text = LF::getTokenKindText(kind);
+    std::string_view text = LF::getTokenKindText(kind);
 
     diagnostics.clear();
     auto buffer = getSourceManager().assignText(text);

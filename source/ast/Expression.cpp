@@ -1169,7 +1169,7 @@ Expression* Expression::tryBindInterfaceRef(const ASTContext& context,
 
     auto& comp = context.getCompilation();
     auto symbol = result.found;
-    string_view modportName;
+    std::string_view modportName;
 
     if (symbol->kind == SymbolKind::InterfacePort) {
         auto& ifacePort = symbol->as<InterfacePortSymbol>();

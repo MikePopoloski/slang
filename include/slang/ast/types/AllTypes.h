@@ -52,7 +52,7 @@ public:
     static bool isKind(SymbolKind kind);
 
 protected:
-    IntegralType(SymbolKind kind, string_view name, SourceLocation loc, bitwidth_t bitWidth,
+    IntegralType(SymbolKind kind, std::string_view name, SourceLocation loc, bitwidth_t bitWidth,
                  bool isSigned, bool isFourState);
 };
 
@@ -120,7 +120,7 @@ public:
 /// Represents an enumerated value / member.
 class SLANG_EXPORT EnumValueSymbol : public ValueSymbol {
 public:
-    EnumValueSymbol(string_view name, SourceLocation loc);
+    EnumValueSymbol(std::string_view name, SourceLocation loc);
 
     const ConstantValue& getValue(SourceRange referencingRange = {}) const;
     void setValue(ConstantValue value);
@@ -437,8 +437,10 @@ public:
     ForwardTypedefCategory category;
     std::optional<Visibility> visibility;
 
-    ForwardingTypedefSymbol(string_view name, SourceLocation loc, ForwardTypedefCategory category) :
-        Symbol(SymbolKind::ForwardingTypedef, name, loc), category(category) {}
+    ForwardingTypedefSymbol(std::string_view name, SourceLocation loc,
+                            ForwardTypedefCategory category) :
+        Symbol(SymbolKind::ForwardingTypedef, name, loc),
+        category(category) {}
 
     static ForwardingTypedefSymbol& fromSyntax(
         const Scope& scope, const syntax::ForwardTypedefDeclarationSyntax& syntax);
@@ -469,7 +471,7 @@ public:
     DeclaredType targetType;
     Visibility visibility = Visibility::Public;
 
-    TypeAliasType(string_view name, SourceLocation loc);
+    TypeAliasType(std::string_view name, SourceLocation loc);
 
     static TypeAliasType& fromSyntax(const Scope& scope,
                                      const syntax::TypedefDeclarationSyntax& syntax);

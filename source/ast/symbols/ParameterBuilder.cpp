@@ -19,7 +19,7 @@ namespace slang::ast {
 
 using namespace syntax;
 
-ParameterBuilder::ParameterBuilder(const Scope& scope, string_view definitionName,
+ParameterBuilder::ParameterBuilder(const Scope& scope, std::string_view definitionName,
                                    std::span<const Decl> parameterDecls) :
     scope(scope),
     definitionName(definitionName), parameterDecls(parameterDecls) {
@@ -32,7 +32,7 @@ void ParameterBuilder::setAssignments(const ParameterValueAssignmentSyntax& synt
     bool hasParamAssignments = false;
     bool orderedAssignments = true;
     SmallVector<const OrderedParamAssignmentSyntax*> orderedParams;
-    SmallMap<string_view, std::pair<const NamedParamAssignmentSyntax*, bool>, 8> namedParams;
+    SmallMap<std::string_view, std::pair<const NamedParamAssignmentSyntax*, bool>, 8> namedParams;
 
     for (auto paramBase : syntax.parameters) {
         bool isOrdered = paramBase->kind == SyntaxKind::OrderedParamAssignment;

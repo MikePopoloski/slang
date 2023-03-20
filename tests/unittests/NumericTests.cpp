@@ -185,7 +185,7 @@ TEST_CASE("logic_t operators") {
 }
 
 void checkRoundTrip(std::string str, LiteralBase base) {
-    SVInt sv = SVInt::fromString(string_view(str));
+    SVInt sv = SVInt::fromString(std::string_view(str));
     str.erase(std::remove(str.begin(), str.end(), '_'), str.end());
     CHECK(sv.toString(base) == str);
 }
@@ -754,8 +754,8 @@ TEST_CASE("Time scaling") {
     static constexpr double ep = std::numeric_limits<double>::epsilon() * 10;
 #define AP(v) Approx(v).epsilon(ep)
 
-    auto tv = [](string_view str) { return TimeScaleValue::fromString(str).value(); };
-    auto ts = [](string_view str) { return TimeScale::fromString(str).value(); };
+    auto tv = [](std::string_view str) { return TimeScaleValue::fromString(str).value(); };
+    auto ts = [](std::string_view str) { return TimeScale::fromString(str).value(); };
 
     TimeScale scale = ts("100ns / 1ps");
     CHECK(scale.apply(234.0567891, TimeUnit::Nanoseconds) == AP(2.34057));

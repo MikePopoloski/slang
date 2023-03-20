@@ -37,7 +37,7 @@ public:
 
     /// If this instance is part of an array, walk upward to find the array's name.
     /// Otherwise returns the name of the instance itself.
-    string_view getArrayName() const;
+    std::string_view getArrayName() const;
 
     /// Gets the set of dimensions describing the instance array that contains this instance.
     /// If this instance is not part of an array, does not add any dimensions to the given list.
@@ -51,9 +51,9 @@ class SLANG_EXPORT InstanceSymbol : public InstanceSymbolBase {
 public:
     const InstanceBodySymbol& body;
 
-    InstanceSymbol(string_view name, SourceLocation loc, InstanceBodySymbol& body);
+    InstanceSymbol(std::string_view name, SourceLocation loc, InstanceBodySymbol& body);
 
-    InstanceSymbol(Compilation& compilation, string_view name, SourceLocation loc,
+    InstanceSymbol(Compilation& compilation, std::string_view name, SourceLocation loc,
                    const Definition& definition, ParameterBuilder& paramBuilder,
                    bool isUninstantiated, bool isFromBind);
 
@@ -134,7 +134,7 @@ public:
         return portList;
     }
 
-    const Symbol* findPort(string_view name) const;
+    const Symbol* findPort(std::string_view name) const;
 
     const Definition& getDefinition() const { return definition; }
 
@@ -168,14 +168,14 @@ public:
     std::span<const Symbol* const> elements;
     ConstantRange range;
 
-    InstanceArraySymbol(Compilation& compilation, string_view name, SourceLocation loc,
+    InstanceArraySymbol(Compilation& compilation, std::string_view name, SourceLocation loc,
                         std::span<const Symbol* const> elements, ConstantRange range) :
         Symbol(SymbolKind::InstanceArray, name, loc),
         Scope(compilation, this), elements(elements), range(range) {}
 
     /// If this array is part of a multidimensional array, walk upward to find
     /// the root array's name. Otherwise returns the name of this symbol itself.
-    string_view getArrayName() const;
+    std::string_view getArrayName() const;
 
     void serializeTo(ASTSerializer& serializer) const;
 
@@ -188,14 +188,15 @@ public:
 class SLANG_EXPORT UninstantiatedDefSymbol : public Symbol {
 public:
     /// The name of the definition.
-    string_view definitionName;
+    std::string_view definitionName;
 
     /// The self-determined expressions that are assigned to the parameters
     /// in the instantiation. These aren't necessarily correctly typed
     /// since we can't know the destination type of each parameter.
     std::span<const Expression* const> paramExpressions;
 
-    UninstantiatedDefSymbol(string_view name, SourceLocation loc, string_view definitionName,
+    UninstantiatedDefSymbol(std::string_view name, SourceLocation loc,
+                            std::string_view definitionName,
                             std::span<const Expression* const> params) :
         Symbol(SymbolKind::UninstantiatedDef, name, loc),
         definitionName(definitionName), paramExpressions(params) {}
@@ -208,7 +209,7 @@ public:
     /// The names of the ports that were connected in the instance. If the names
     /// are not known, because ordered connection syntax was used, the associated
     /// port name will be the empty string.
-    std::span<string_view const> getPortNames() const;
+    std::span<std::string_view const> getPortNames() const;
 
     /// Returns true if we've determined this must be a checker instance
     /// based on the syntax used to instantiate it.
@@ -230,7 +231,7 @@ public:
 
 private:
     mutable std::optional<std::span<const AssertionExpr* const>> ports;
-    mutable std::span<string_view const> portNames;
+    mutable std::span<std::string_view const> portNames;
     mutable bool mustBeChecker = false;
 };
 
@@ -238,7 +239,7 @@ class SLANG_EXPORT PrimitiveInstanceSymbol : public InstanceSymbolBase {
 public:
     const PrimitiveSymbol& primitiveType;
 
-    PrimitiveInstanceSymbol(string_view name, SourceLocation loc,
+    PrimitiveInstanceSymbol(std::string_view name, SourceLocation loc,
                             const PrimitiveSymbol& primitiveType) :
         InstanceSymbolBase(SymbolKind::PrimitiveInstance, name, loc),
         primitiveType(primitiveType) {}

@@ -129,11 +129,12 @@ VariableSymbol& VariableSymbol::fromSyntax(Compilation& compilation,
     return *var;
 }
 
-VariableSymbol::VariableSymbol(string_view name, SourceLocation loc, VariableLifetime lifetime) :
+VariableSymbol::VariableSymbol(std::string_view name, SourceLocation loc,
+                               VariableLifetime lifetime) :
     VariableSymbol(SymbolKind::Variable, name, loc, lifetime) {
 }
 
-VariableSymbol::VariableSymbol(SymbolKind childKind, string_view name, SourceLocation loc,
+VariableSymbol::VariableSymbol(SymbolKind childKind, std::string_view name, SourceLocation loc,
                                VariableLifetime lifetime) :
     ValueSymbol(childKind, name, loc),
     lifetime(lifetime) {
@@ -159,7 +160,7 @@ void VariableSymbol::serializeTo(ASTSerializer& serializer) const {
     }
 }
 
-FormalArgumentSymbol::FormalArgumentSymbol(string_view name, SourceLocation loc,
+FormalArgumentSymbol::FormalArgumentSymbol(std::string_view name, SourceLocation loc,
                                            ArgumentDirection direction, VariableLifetime lifetime) :
     VariableSymbol(SymbolKind::FormalArgument, name, loc, lifetime),
     direction(direction) {
@@ -233,7 +234,7 @@ void FieldSymbol::serializeTo(ASTSerializer& serializer) const {
     serializer.write("fieldIndex", fieldIndex);
 }
 
-NetSymbol::NetSymbol(string_view name, SourceLocation loc, const NetType& netType) :
+NetSymbol::NetSymbol(std::string_view name, SourceLocation loc, const NetType& netType) :
     ValueSymbol(SymbolKind::Net, name, loc, DeclaredTypeFlags::NetType), netType(netType) {
 
     auto dt = getDeclaredType();
@@ -402,7 +403,7 @@ void NetSymbol::serializeTo(ASTSerializer& serializer) const {
         serializer.write("driveStrength1", toString(*ds1));
 }
 
-IteratorSymbol::IteratorSymbol(const Scope& scope, string_view name, SourceLocation loc,
+IteratorSymbol::IteratorSymbol(const Scope& scope, std::string_view name, SourceLocation loc,
                                const Type& arrayType) :
     TempVarSymbol(SymbolKind::Iterator, name, loc, VariableLifetime::Automatic),
     arrayType(arrayType) {
@@ -417,7 +418,7 @@ IteratorSymbol::IteratorSymbol(const Scope& scope, string_view name, SourceLocat
     setType(*elemType);
 }
 
-IteratorSymbol::IteratorSymbol(string_view name, SourceLocation loc, const Type& arrayType,
+IteratorSymbol::IteratorSymbol(std::string_view name, SourceLocation loc, const Type& arrayType,
                                const Type& indexType) :
     TempVarSymbol(SymbolKind::Iterator, name, loc, VariableLifetime::Automatic),
     arrayType(arrayType) {
@@ -426,15 +427,16 @@ IteratorSymbol::IteratorSymbol(string_view name, SourceLocation loc, const Type&
     setType(indexType);
 }
 
-PatternVarSymbol::PatternVarSymbol(string_view name, SourceLocation loc, const Type& type) :
+PatternVarSymbol::PatternVarSymbol(std::string_view name, SourceLocation loc, const Type& type) :
     TempVarSymbol(SymbolKind::PatternVar, name, loc, VariableLifetime::Automatic) {
 
     flags |= VariableFlags::Const;
     setType(type);
 }
 
-ClockVarSymbol::ClockVarSymbol(string_view name, SourceLocation loc, ArgumentDirection direction,
-                               ClockingSkew inputSkew, ClockingSkew outputSkew) :
+ClockVarSymbol::ClockVarSymbol(std::string_view name, SourceLocation loc,
+                               ArgumentDirection direction, ClockingSkew inputSkew,
+                               ClockingSkew outputSkew) :
     VariableSymbol(SymbolKind::ClockVar, name, loc, VariableLifetime::Static),
     direction(direction), inputSkew(inputSkew), outputSkew(outputSkew) {
 }
@@ -537,7 +539,7 @@ void ClockVarSymbol::serializeTo(ASTSerializer& serializer) const {
     }
 }
 
-LocalAssertionVarSymbol::LocalAssertionVarSymbol(string_view name, SourceLocation loc) :
+LocalAssertionVarSymbol::LocalAssertionVarSymbol(std::string_view name, SourceLocation loc) :
     VariableSymbol(SymbolKind::LocalAssertionVar, name, loc, VariableLifetime::Automatic) {
     getDeclaredType()->addFlags(DeclaredTypeFlags::RequireSequenceType);
 }

@@ -69,7 +69,7 @@ std::ostream& operator<<(std::ostream& os, const logic_t& rhs) {
     return os;
 }
 
-SVInt SVInt::fromString(string_view str) {
+SVInt SVInt::fromString(std::string_view str) {
     if (str.empty())
         throw std::invalid_argument("String is empty");
 

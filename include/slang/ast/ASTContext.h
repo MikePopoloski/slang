@@ -235,7 +235,7 @@ public:
         /// A list of names to which class-scoped lookups are restricted.
         /// If empty, the lookup is unrestricted and all names are first
         /// tried in class-scope.
-        std::span<const string_view> nameRestrictions;
+        std::span<const std::string_view> nameRestrictions;
 
         /// A set of variables for a scope randomize call that should be
         /// treated as a rand variable.
@@ -268,7 +268,7 @@ public:
         /// A map of local variables declared in the assertion item.
         /// These don't exist in any scope because their types can depend
         /// on the expanded arguments.
-        flat_hash_map<string_view, const Symbol*> localVars;
+        flat_hash_map<std::string_view, const Symbol*> localVars;
 
         /// If an argument to a sequence or property is being expanded, this
         /// member contains the source location where the argument was referenced.

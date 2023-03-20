@@ -23,7 +23,7 @@ public:
 
     ScriptSession();
 
-    ConstantValue eval(string_view text);
+    ConstantValue eval(std::string_view text);
     ConstantValue evalExpression(const syntax::ExpressionSyntax& expr);
     void evalStatement(const syntax::StatementSyntax& expr);
 

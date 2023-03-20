@@ -27,7 +27,7 @@ struct SLANG_EXPORT ReportedDiagnostic {
     std::span<const SourceLocation> expansionLocs;
     std::span<const SourceRange> ranges;
     SourceLocation location;
-    string_view formattedMessage;
+    std::string_view formattedMessage;
     DiagnosticSeverity severity = DiagnosticSeverity::Ignored;
     bool shouldShowIncludeStack = false;
 
@@ -122,18 +122,18 @@ public:
     void setMessage(DiagCode code, const std::string& message);
 
     /// Gets the message currently mapped for the given diagnostic.
-    string_view getMessage(DiagCode code) const;
+    std::string_view getMessage(DiagCode code) const;
 
     /// Gets the option string that can be used to refer to a particular diagnostic.
     /// If the diagnostic has no option string provided, this returns an empty string.
-    string_view getOptionName(DiagCode code) const;
+    std::string_view getOptionName(DiagCode code) const;
 
     /// Finds a diagnostic given an option name. If no matching diagnostic is found,
     /// returns an empty diagnostic code.
-    std::span<const DiagCode> findFromOptionName(string_view optionName) const;
+    std::span<const DiagCode> findFromOptionName(std::string_view optionName) const;
 
     /// Finds the diagnostic group with the given name, if it exists. Otherwise returns nullptr.
-    const DiagGroup* findDiagGroup(string_view name) const;
+    const DiagGroup* findDiagGroup(std::string_view name) const;
 
     /// Clears out all custom mappings for diagnostics, reverting built-ins back to
     /// their defaults and removing all user-specified diagnostics.

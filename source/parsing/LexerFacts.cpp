@@ -623,14 +623,14 @@ bool LexerFacts::isKeyword(TokenKind kind) {
     }
 }
 
-TokenKind LexerFacts::getSystemKeywordKind(string_view text) {
+TokenKind LexerFacts::getSystemKeywordKind(std::string_view text) {
     TokenKind kind;
     if (systemIdentifierKeywords.lookup(text, kind))
         return kind;
     return TokenKind::Unknown;
 }
 
-SyntaxKind LexerFacts::getDirectiveKind(string_view directive) {
+SyntaxKind LexerFacts::getDirectiveKind(std::string_view directive) {
     SyntaxKind kind;
     if (directiveTable.lookup(directive, kind))
         return kind;
@@ -641,7 +641,7 @@ KeywordVersion LexerFacts::getDefaultKeywordVersion() {
     return KeywordVersion::v1800_2017;
 }
 
-std::optional<KeywordVersion> LexerFacts::getKeywordVersion(string_view text) {
+std::optional<KeywordVersion> LexerFacts::getKeywordVersion(std::string_view text) {
     KeywordVersion version;
     if (keywordVersionTable.lookup(text, version))
         return version;
@@ -653,7 +653,7 @@ const StringTable<TokenKind>* LexerFacts::getKeywordTable(KeywordVersion version
 }
 
 // clang-format off
-string_view LexerFacts::getDirectiveText(SyntaxKind kind) {
+std::string_view LexerFacts::getDirectiveText(SyntaxKind kind) {
     switch (kind) {
         case SyntaxKind::BeginKeywordsDirective: return "`begin_keywords";
         case SyntaxKind::CellDefineDirective: return "`celldefine";
@@ -679,7 +679,7 @@ string_view LexerFacts::getDirectiveText(SyntaxKind kind) {
     }
 }
 
-string_view LexerFacts::getTokenKindText(TokenKind kind) {
+std::string_view LexerFacts::getTokenKindText(TokenKind kind) {
     switch (kind) {
         // punctuation
         case TokenKind::Apostrophe: return "'";

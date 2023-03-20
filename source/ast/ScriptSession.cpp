@@ -30,7 +30,7 @@ ScriptSession::ScriptSession() :
     evalContext.pushEmptyFrame();
 }
 
-ConstantValue ScriptSession::eval(string_view text) {
+ConstantValue ScriptSession::eval(std::string_view text) {
     syntaxTrees.emplace_back(SyntaxTree::fromText(text));
 
     const auto& node = syntaxTrees.back()->root();

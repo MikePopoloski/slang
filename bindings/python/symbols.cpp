@@ -133,10 +133,11 @@ void registerSymbols(py::module_& m) {
         .def_property_readonly("isUninstantiated", &Scope::isUninstantiated)
         .def_property_readonly("containingInstance", &Scope::getContainingInstance)
         .def(
-            "find", [](const Scope& self, string_view arg) { return self.find(arg); }, byrefint)
+            "find", [](const Scope& self, std::string_view arg) { return self.find(arg); },
+            byrefint)
         .def(
             "lookupName",
-            [](const Scope& self, string_view arg, LookupLocation location,
+            [](const Scope& self, std::string_view arg, LookupLocation location,
                bitmask<LookupFlags> flags) { return self.lookupName(arg, location, flags); },
             "name"_a, "location"_a = LookupLocation::max, "flags"_a = LookupFlags::None, byrefint)
         .def("__getitem__",

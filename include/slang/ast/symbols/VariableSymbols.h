@@ -42,7 +42,7 @@ public:
     VariableLifetime lifetime;
     bitmask<VariableFlags> flags;
 
-    VariableSymbol(string_view name, SourceLocation loc, VariableLifetime lifetime);
+    VariableSymbol(std::string_view name, SourceLocation loc, VariableLifetime lifetime);
 
     void serializeTo(ASTSerializer& serializer) const;
 
@@ -73,7 +73,7 @@ public:
     }
 
 protected:
-    VariableSymbol(SymbolKind childKind, string_view name, SourceLocation loc,
+    VariableSymbol(SymbolKind childKind, std::string_view name, SourceLocation loc,
                    VariableLifetime lifetime);
 };
 
@@ -82,7 +82,7 @@ class SLANG_EXPORT FormalArgumentSymbol : public VariableSymbol {
 public:
     ArgumentDirection direction = ArgumentDirection::In;
 
-    FormalArgumentSymbol(string_view name, SourceLocation loc, ArgumentDirection direction,
+    FormalArgumentSymbol(std::string_view name, SourceLocation loc, ArgumentDirection direction,
                          VariableLifetime lifetime);
 
     bool mergeVariable(const VariableSymbol& variable);
@@ -114,7 +114,8 @@ public:
     /// If this field was marked with random qualifier, the mode indicated by that qualifier.
     RandMode randMode = RandMode::None;
 
-    FieldSymbol(string_view name, SourceLocation loc, uint32_t bitOffset, uint32_t fieldIndex) :
+    FieldSymbol(std::string_view name, SourceLocation loc, uint32_t bitOffset,
+                uint32_t fieldIndex) :
         VariableSymbol(SymbolKind::Field, name, loc, VariableLifetime::Automatic),
         bitOffset(bitOffset), fieldIndex(fieldIndex) {}
 
@@ -130,7 +131,7 @@ public:
     enum ExpansionHint { None, Vectored, Scalared } expansionHint = None;
     bool isImplicit = false;
 
-    NetSymbol(string_view name, SourceLocation loc, const NetType& netType);
+    NetSymbol(std::string_view name, SourceLocation loc, const NetType& netType);
 
     const TimingControl* getDelay() const;
     std::optional<ChargeStrength> getChargeStrength() const;
@@ -182,7 +183,7 @@ public:
     }
 
 protected:
-    TempVarSymbol(SymbolKind childKind, string_view name, SourceLocation loc,
+    TempVarSymbol(SymbolKind childKind, std::string_view name, SourceLocation loc,
                   VariableLifetime lifetime) :
         VariableSymbol(childKind, name, loc, lifetime) {}
 };
@@ -193,8 +194,9 @@ public:
     /// The type of the array that this iterator traverses.
     const Type& arrayType;
 
-    IteratorSymbol(const Scope& scope, string_view name, SourceLocation loc, const Type& arrayType);
-    IteratorSymbol(string_view name, SourceLocation loc, const Type& arrayType,
+    IteratorSymbol(const Scope& scope, std::string_view name, SourceLocation loc,
+                   const Type& arrayType);
+    IteratorSymbol(std::string_view name, SourceLocation loc, const Type& arrayType,
                    const Type& indexType);
 
     void serializeTo(ASTSerializer&) const {}
@@ -205,7 +207,7 @@ public:
 /// Represents a pattern variable materialized for a pattern matching expression.
 class SLANG_EXPORT PatternVarSymbol : public TempVarSymbol {
 public:
-    PatternVarSymbol(string_view name, SourceLocation loc, const Type& type);
+    PatternVarSymbol(std::string_view name, SourceLocation loc, const Type& type);
 
     void serializeTo(ASTSerializer&) const {}
 
@@ -219,7 +221,7 @@ public:
     ClockingSkew inputSkew;
     ClockingSkew outputSkew;
 
-    ClockVarSymbol(string_view name, SourceLocation loc, ArgumentDirection direction,
+    ClockVarSymbol(std::string_view name, SourceLocation loc, ArgumentDirection direction,
                    ClockingSkew inputSkew, ClockingSkew outputSkew);
 
     static void fromSyntax(const Scope& scope, const syntax::ClockingItemSyntax& syntax,
@@ -234,7 +236,7 @@ public:
 /// such as a sequence or property.
 class SLANG_EXPORT LocalAssertionVarSymbol : public VariableSymbol {
 public:
-    LocalAssertionVarSymbol(string_view name, SourceLocation loc);
+    LocalAssertionVarSymbol(std::string_view name, SourceLocation loc);
 
     static void fromSyntax(const Scope& scope, const syntax::LocalVariableDeclarationSyntax& syntax,
                            SmallVectorBase<const LocalAssertionVarSymbol*>& results);

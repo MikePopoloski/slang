@@ -32,7 +32,7 @@ struct SLANG_EXPORT ParserMetadata {
     /// A set of names of all instantiations of global modules/interfaces/programs.
     /// This can be used to determine which modules should be considered as top-level
     /// roots of the design.
-    flat_hash_set<string_view> globalInstances;
+    flat_hash_set<std::string_view> globalInstances;
 
     /// A list of all names parsed that could represent a package or class name,
     /// since they are simple names that appear on the left-hand side of a double colon.

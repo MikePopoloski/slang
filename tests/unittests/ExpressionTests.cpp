@@ -17,7 +17,7 @@
 
 SVInt testParameter(const std::string& text, uint32_t index = 0) {
     const auto& fullText = "module Top; " + text + " endmodule";
-    auto tree = SyntaxTree::fromText(string_view(fullText));
+    auto tree = SyntaxTree::fromText(std::string_view(fullText));
 
     Compilation compilation;
     compilation.addSyntaxTree(tree);
@@ -193,13 +193,13 @@ TEST_CASE("Expression types") {
     auto& scope = compilation.createScriptScope();
 
     auto declare = [&](const std::string& source) {
-        auto tree = SyntaxTree::fromText(string_view(source));
+        auto tree = SyntaxTree::fromText(std::string_view(source));
         scope.getCompilation().addSyntaxTree(tree);
         scope.addMembers(tree->root());
     };
 
     auto typeof = [&](const std::string& source) {
-        auto tree = SyntaxTree::fromText(string_view(source));
+        auto tree = SyntaxTree::fromText(std::string_view(source));
         ASTContext context(scope, LookupLocation::max);
         return Expression::bind(tree->root().as<ExpressionSyntax>(), context).type->toString();
     };
@@ -1297,7 +1297,7 @@ endmodule
 
 std::string testStringLiteralsToByteArray(const std::string& text) {
     const auto& fullText = "module Top; " + text + " endmodule";
-    auto tree = SyntaxTree::fromText(string_view(fullText));
+    auto tree = SyntaxTree::fromText(std::string_view(fullText));
 
     Compilation compilation;
     compilation.addSyntaxTree(tree);
@@ -1357,7 +1357,7 @@ endmodule
 
 auto testBitstream(const std::string& text, DiagCode code = DiagCode()) {
     const auto& fullText = "module Top; " + text + " endmodule";
-    auto tree = SyntaxTree::fromText(string_view(fullText));
+    auto tree = SyntaxTree::fromText(std::string_view(fullText));
 
     Compilation compilation;
     compilation.addSyntaxTree(tree);

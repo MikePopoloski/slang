@@ -47,45 +47,45 @@ public:
     void serialize(std::string_view value);
 
     void startArray();
-    void startArray(string_view name);
+    void startArray(std::string_view name);
     void endArray();
     void startObject();
     void endObject();
-    void writeProperty(string_view name);
+    void writeProperty(std::string_view name);
 
-    void write(string_view name, string_view value);
-    void write(string_view name, int64_t value);
-    void write(string_view name, uint64_t value);
-    void write(string_view name, double value);
-    void write(string_view name, bool value);
-    void write(string_view name, const std::string& value);
-    void write(string_view name, const Symbol& value);
-    void write(string_view name, const ConstantValue& value);
-    void write(string_view name, const Expression& value);
-    void write(string_view name, const Statement& value);
-    void write(string_view name, const TimingControl& value);
-    void write(string_view name, const Constraint& value);
-    void write(string_view name, const AssertionExpr& value);
-    void write(string_view name, const BinsSelectExpr& value);
-    void write(string_view name, const Pattern& value);
+    void write(std::string_view name, std::string_view value);
+    void write(std::string_view name, int64_t value);
+    void write(std::string_view name, uint64_t value);
+    void write(std::string_view name, double value);
+    void write(std::string_view name, bool value);
+    void write(std::string_view name, const std::string& value);
+    void write(std::string_view name, const Symbol& value);
+    void write(std::string_view name, const ConstantValue& value);
+    void write(std::string_view name, const Expression& value);
+    void write(std::string_view name, const Statement& value);
+    void write(std::string_view name, const TimingControl& value);
+    void write(std::string_view name, const Constraint& value);
+    void write(std::string_view name, const AssertionExpr& value);
+    void write(std::string_view name, const BinsSelectExpr& value);
+    void write(std::string_view name, const Pattern& value);
 
-    void writeLink(string_view name, const Symbol& value);
+    void writeLink(std::string_view name, const Symbol& value);
 
     template<typename T, std::enable_if_t<std::is_integral_v<T> && std::is_signed_v<T>, int> = 0>
-    void write(string_view name, T value) {
+    void write(std::string_view name, T value) {
         write(name, int64_t(value));
     }
 
     template<typename T, std::enable_if_t<std::is_integral_v<T> && std::is_unsigned_v<T>, int> = 0>
-    void write(string_view name, T value) {
+    void write(std::string_view name, T value) {
         write(name, uint64_t(value));
     }
 
     template<typename T, std::enable_if_t<std::is_pointer_v<T>, int> = 0>
-    void write(string_view name, T value) = delete;
+    void write(std::string_view name, T value) = delete;
 
     template<typename T>
-    void write(string_view name, not_null<T> value) = delete;
+    void write(std::string_view name, not_null<T> value) = delete;
 
 private:
     friend Symbol;

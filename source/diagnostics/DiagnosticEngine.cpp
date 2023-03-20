@@ -20,11 +20,11 @@
 namespace slang {
 
 // These are defined in the generated DiagCode.cpp file.
-string_view getDefaultMessage(DiagCode code);
+std::string_view getDefaultMessage(DiagCode code);
 DiagnosticSeverity getDefaultSeverity(DiagCode code);
-string_view getDefaultOptionName(DiagCode code);
-std::span<const DiagCode> findDiagsFromOptionName(string_view name);
-const DiagGroup* findDefaultDiagGroup(string_view name);
+std::string_view getDefaultOptionName(DiagCode code);
+std::span<const DiagCode> findDiagsFromOptionName(std::string_view name);
+const DiagGroup* findDefaultDiagGroup(std::string_view name);
 
 DiagnosticEngine::FormatterMap DiagnosticEngine::defaultFormatters;
 
@@ -96,21 +96,21 @@ void DiagnosticEngine::setMessage(DiagCode code, const std::string& message) {
     messageTable[code] = message;
 }
 
-string_view DiagnosticEngine::getMessage(DiagCode code) const {
+std::string_view DiagnosticEngine::getMessage(DiagCode code) const {
     if (auto it = messageTable.find(code); it != messageTable.end())
         return it->second;
     return getDefaultMessage(code);
 }
 
-string_view DiagnosticEngine::getOptionName(DiagCode code) const {
+std::string_view DiagnosticEngine::getOptionName(DiagCode code) const {
     return getDefaultOptionName(code);
 }
 
-std::span<const DiagCode> DiagnosticEngine::findFromOptionName(string_view optionName) const {
+std::span<const DiagCode> DiagnosticEngine::findFromOptionName(std::string_view optionName) const {
     return findDiagsFromOptionName(optionName);
 }
 
-const DiagGroup* DiagnosticEngine::findDiagGroup(string_view name) const {
+const DiagGroup* DiagnosticEngine::findDiagGroup(std::string_view name) const {
     return findDefaultDiagGroup(name);
 }
 
@@ -432,7 +432,8 @@ void DiagnosticEngine::setDefaultWarnings() {
 
 Diagnostics DiagnosticEngine::setWarningOptions(std::span<const std::string> options) {
     Diagnostics diags;
-    auto findAndSet = [&](string_view name, DiagnosticSeverity severity, const char* errorPrefix) {
+    auto findAndSet = [&](std::string_view name, DiagnosticSeverity severity,
+                          const char* errorPrefix) {
         if (auto group = findDiagGroup(name)) {
             setSeverity(*group, severity);
         }

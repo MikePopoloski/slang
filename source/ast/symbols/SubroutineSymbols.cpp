@@ -755,7 +755,7 @@ void SubroutineSymbol::addThisVar(const Type& type) {
     addMember(*thisVar);
 }
 
-MethodPrototypeSymbol::MethodPrototypeSymbol(Compilation& compilation, string_view name,
+MethodPrototypeSymbol::MethodPrototypeSymbol(Compilation& compilation, std::string_view name,
                                              SourceLocation loc, SubroutineKind subroutineKind,
                                              Visibility visibility, bitmask<MethodFlags> flags) :
     Symbol(SymbolKind::MethodPrototype, name, loc),

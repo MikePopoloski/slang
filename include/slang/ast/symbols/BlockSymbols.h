@@ -20,7 +20,7 @@ public:
     StatementBlockKind blockKind;
     VariableLifetime defaultLifetime;
 
-    StatementBlockSymbol(Compilation& compilation, string_view name, SourceLocation loc,
+    StatementBlockSymbol(Compilation& compilation, std::string_view name, SourceLocation loc,
                          StatementBlockKind blockKind, VariableLifetime defaultLifetime) :
         Symbol(SymbolKind::StatementBlock, name, loc),
         Scope(compilation, this), blockKind(blockKind), defaultLifetime(defaultLifetime) {}
@@ -110,7 +110,7 @@ public:
     bool isUninstantiated = false;
     const SVInt* arrayIndex = nullptr;
 
-    GenerateBlockSymbol(Compilation& compilation, string_view name, SourceLocation loc,
+    GenerateBlockSymbol(Compilation& compilation, std::string_view name, SourceLocation loc,
                         uint32_t constructIndex, bool isUninstantiated) :
         Symbol(SymbolKind::GenerateBlock, name, loc),
         Scope(compilation, this), constructIndex(constructIndex),
@@ -142,7 +142,7 @@ public:
     uint32_t constructIndex;
     bool valid = false;
 
-    GenerateBlockArraySymbol(Compilation& compilation, string_view name, SourceLocation loc,
+    GenerateBlockArraySymbol(Compilation& compilation, std::string_view name, SourceLocation loc,
                              uint32_t constructIndex) :
         Symbol(SymbolKind::GenerateBlockArray, name, loc),
         Scope(compilation, this), constructIndex(constructIndex) {}

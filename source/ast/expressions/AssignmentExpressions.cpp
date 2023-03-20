@@ -83,7 +83,7 @@ Expression* Expression::tryConnectPortArray(const ASTContext& context, const Typ
         auto& diag = context.addDiag(diag::PortConnArrayMismatch, expr.sourceRange);
         diag << *expr.type << portType;
 
-        string_view name = instance.getArrayName();
+        std::string_view name = instance.getArrayName();
         if (name.empty())
             diag << "<unknown>"sv;
         else {

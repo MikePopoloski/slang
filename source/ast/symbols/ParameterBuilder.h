@@ -25,7 +25,7 @@ class ParameterBuilder {
 public:
     using Decl = Definition::ParameterDecl;
 
-    ParameterBuilder(const Scope& scope, string_view definitionName,
+    ParameterBuilder(const Scope& scope, std::string_view definitionName,
                      std::span<const Decl> parameterDecls);
 
     bool hasErrors() const { return anyErrors; }
@@ -51,9 +51,9 @@ public:
 
 private:
     const Scope& scope;
-    string_view definitionName;
+    std::string_view definitionName;
     std::span<const Decl> parameterDecls;
-    SmallMap<string_view, const syntax::ExpressionSyntax*, 8> assignments;
+    SmallMap<std::string_view, const syntax::ExpressionSyntax*, 8> assignments;
     const ASTContext* instanceContext = nullptr;
     const HierarchyOverrideNode* overrideNode = nullptr;
     bool forceInvalidValues = false;

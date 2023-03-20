@@ -85,7 +85,7 @@ public:
     const VariableSymbol* returnValVar = nullptr;
     const VariableSymbol* thisVar = nullptr;
 
-    SubroutineSymbol(Compilation& compilation, string_view name, SourceLocation loc,
+    SubroutineSymbol(Compilation& compilation, std::string_view name, SourceLocation loc,
                      VariableLifetime defaultLifetime, SubroutineKind subroutineKind) :
         Symbol(SymbolKind::Subroutine, name, loc),
         Scope(compilation, this), declaredReturnType(*this), defaultLifetime(defaultLifetime),
@@ -172,7 +172,7 @@ public:
     Visibility visibility;
     bitmask<MethodFlags> flags;
 
-    MethodPrototypeSymbol(Compilation& compilation, string_view name, SourceLocation loc,
+    MethodPrototypeSymbol(Compilation& compilation, std::string_view name, SourceLocation loc,
                           SubroutineKind subroutineKind, Visibility visibility,
                           bitmask<MethodFlags> flags);
 

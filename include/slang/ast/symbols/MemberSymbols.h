@@ -56,13 +56,14 @@ public:
 /// Represents an explicit import from a package.
 class SLANG_EXPORT ExplicitImportSymbol : public Symbol {
 public:
-    string_view packageName;
-    string_view importName;
+    std::string_view packageName;
+    std::string_view importName;
     bool isFromExport = false;
 
-    ExplicitImportSymbol(string_view packageName, string_view importName, SourceLocation location) :
-        Symbol(SymbolKind::ExplicitImport, importName, location), packageName(packageName),
-        importName(importName) {}
+    ExplicitImportSymbol(std::string_view packageName, std::string_view importName,
+                         SourceLocation location) :
+        Symbol(SymbolKind::ExplicitImport, importName, location),
+        packageName(packageName), importName(importName) {}
 
     const PackageSymbol* package() const;
     const Symbol* importedSymbol() const;
@@ -83,10 +84,10 @@ private:
 /// resolve names via wildcard.
 class SLANG_EXPORT WildcardImportSymbol : public Symbol {
 public:
-    string_view packageName;
+    std::string_view packageName;
     bool isFromExport = false;
 
-    WildcardImportSymbol(string_view packageName, SourceLocation location) :
+    WildcardImportSymbol(std::string_view packageName, SourceLocation location) :
         Symbol(SymbolKind::WildcardImport, "", location), packageName(packageName) {}
 
     void setPackage(const PackageSymbol& package);
@@ -115,7 +116,7 @@ public:
     /// to members internal to the instance.
     const Expression* explicitConnection = nullptr;
 
-    ModportPortSymbol(string_view name, SourceLocation loc, ArgumentDirection direction);
+    ModportPortSymbol(std::string_view name, SourceLocation loc, ArgumentDirection direction);
 
     void serializeTo(ASTSerializer& serializer) const;
 
@@ -134,7 +135,7 @@ public:
     /// The target clocking block of the modport.
     const Symbol* target = nullptr;
 
-    ModportClockingSymbol(string_view name, SourceLocation loc);
+    ModportClockingSymbol(std::string_view name, SourceLocation loc);
 
     void serializeTo(ASTSerializer& serializer) const;
 
@@ -149,7 +150,7 @@ class SLANG_EXPORT ModportSymbol : public Symbol, public Scope {
 public:
     bool hasExports = false;
 
-    ModportSymbol(Compilation& compilation, string_view name, SourceLocation loc);
+    ModportSymbol(Compilation& compilation, std::string_view name, SourceLocation loc);
 
     void serializeTo(ASTSerializer&) const {}
 
@@ -191,7 +192,7 @@ private:
 /// Represents a genvar declaration.
 class SLANG_EXPORT GenvarSymbol : public Symbol {
 public:
-    GenvarSymbol(string_view name, SourceLocation loc);
+    GenvarSymbol(std::string_view name, SourceLocation loc);
 
     void serializeTo(ASTSerializer&) const {}
 
@@ -208,7 +209,7 @@ public:
 
     ElabSystemTaskSymbol(ElabSystemTaskKind taskKind, SourceLocation loc);
 
-    string_view getMessage() const;
+    std::string_view getMessage() const;
     const Expression* getAssertCondition() const;
     void issueDiagnostic() const;
 
@@ -217,16 +218,16 @@ public:
     static ElabSystemTaskSymbol& fromSyntax(Compilation& compilation,
                                             const syntax::ElabSystemTaskSyntax& syntax);
 
-    static string_view createMessage(const ASTContext& context,
-                                     std::span<const Expression* const> args);
+    static std::string_view createMessage(const ASTContext& context,
+                                          std::span<const Expression* const> args);
 
-    static void reportStaticAssert(const Scope& scope, SourceLocation loc, string_view message,
+    static void reportStaticAssert(const Scope& scope, SourceLocation loc, std::string_view message,
                                    const Expression* condition);
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::ElabSystemTask; }
 
 private:
-    mutable std::optional<string_view> message;
+    mutable std::optional<std::string_view> message;
     mutable const Expression* assertCondition = nullptr;
 };
 
@@ -234,7 +235,7 @@ class SLANG_EXPORT PrimitivePortSymbol : public ValueSymbol {
 public:
     PrimitivePortDirection direction;
 
-    PrimitivePortSymbol(Compilation& compilation, string_view name, SourceLocation loc,
+    PrimitivePortSymbol(Compilation& compilation, std::string_view name, SourceLocation loc,
                         PrimitivePortDirection direction);
 
     void serializeTo(ASTSerializer& serializer) const;
@@ -249,7 +250,7 @@ public:
     bool isSequential = false;
     enum PrimitiveKind { UserDefined, Fixed, NInput, NOutput } primitiveKind;
 
-    PrimitiveSymbol(Compilation& compilation, string_view name, SourceLocation loc,
+    PrimitiveSymbol(Compilation& compilation, std::string_view name, SourceLocation loc,
                     PrimitiveKind primitiveKind) :
         Symbol(SymbolKind::Primitive, name, loc),
         Scope(compilation, this), primitiveKind(primitiveKind) {}
@@ -270,7 +271,7 @@ public:
     const syntax::PropertyExprSyntax* defaultValueSyntax = nullptr;
     std::optional<ArgumentDirection> localVarDirection;
 
-    AssertionPortSymbol(string_view name, SourceLocation loc);
+    AssertionPortSymbol(std::string_view name, SourceLocation loc);
 
     bool isLocalVar() const { return localVarDirection.has_value(); }
 
@@ -287,7 +288,7 @@ class SLANG_EXPORT SequenceSymbol : public Symbol, public Scope {
 public:
     std::span<const AssertionPortSymbol* const> ports;
 
-    SequenceSymbol(Compilation& compilation, string_view name, SourceLocation loc);
+    SequenceSymbol(Compilation& compilation, std::string_view name, SourceLocation loc);
 
     static SequenceSymbol& fromSyntax(const Scope& scope,
                                       const syntax::SequenceDeclarationSyntax& syntax);
@@ -304,7 +305,7 @@ class SLANG_EXPORT PropertySymbol : public Symbol, public Scope {
 public:
     std::span<const AssertionPortSymbol* const> ports;
 
-    PropertySymbol(Compilation& compilation, string_view name, SourceLocation loc);
+    PropertySymbol(Compilation& compilation, std::string_view name, SourceLocation loc);
 
     static PropertySymbol& fromSyntax(const Scope& scope,
                                       const syntax::PropertyDeclarationSyntax& syntax);
@@ -323,7 +324,7 @@ public:
     not_null<const syntax::ExpressionSyntax*> exprSyntax;
 
     LetDeclSymbol(Compilation& compilation, const syntax::ExpressionSyntax& exprSyntax,
-                  string_view name, SourceLocation loc);
+                  std::string_view name, SourceLocation loc);
 
     static LetDeclSymbol& fromSyntax(const Scope& scope,
                                      const syntax::LetDeclarationSyntax& syntax);
@@ -338,7 +339,7 @@ public:
 /// Represents a clocking block.
 class SLANG_EXPORT ClockingBlockSymbol : public Symbol, public Scope {
 public:
-    ClockingBlockSymbol(Compilation& compilation, string_view name, SourceLocation loc);
+    ClockingBlockSymbol(Compilation& compilation, std::string_view name, SourceLocation loc);
 
     const TimingControl& getEvent() const;
     ClockingSkew getDefaultInputSkew() const;
@@ -442,7 +443,7 @@ public:
     DeclaredType declaredReturnType;
     std::span<const FormalArgumentSymbol* const> arguments;
 
-    RandSeqProductionSymbol(Compilation& compilation, string_view name, SourceLocation loc);
+    RandSeqProductionSymbol(Compilation& compilation, std::string_view name, SourceLocation loc);
 
     std::span<const Rule> getRules() const;
     const Type& getReturnType() const { return declaredReturnType.getType(); }
@@ -452,7 +453,8 @@ public:
     static RandSeqProductionSymbol& fromSyntax(Compilation& compilation,
                                                const syntax::ProductionSyntax& syntax);
 
-    static const RandSeqProductionSymbol* findProduction(string_view name, SourceRange nameRange,
+    static const RandSeqProductionSymbol* findProduction(std::string_view name,
+                                                         SourceRange nameRange,
                                                          const ASTContext& context);
 
     static void createRuleVariables(const syntax::RsRuleSyntax& syntax, const Scope& scope,

@@ -92,7 +92,7 @@ public:
     const PortBackref* getFirstPortBackref() const { return firstPortBackref; }
 
 protected:
-    ValueSymbol(SymbolKind kind, string_view name, SourceLocation location,
+    ValueSymbol(SymbolKind kind, std::string_view name, SourceLocation location,
                 bitmask<DeclaredTypeFlags> flags = DeclaredTypeFlags::None);
 
 private:

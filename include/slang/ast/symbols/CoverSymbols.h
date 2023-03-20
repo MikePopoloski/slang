@@ -22,7 +22,7 @@ public:
     CoverageOptionSetter(const Scope& scope, const syntax::CoverageOptionSyntax& syntax);
 
     bool isTypeOption() const;
-    string_view getName() const;
+    std::string_view getName() const;
     const Expression& getExpression() const;
 
     void serializeTo(ASTSerializer& serializer) const;
@@ -59,7 +59,7 @@ public:
     std::span<const FormalArgumentSymbol* const> sampleArguments;
     const CovergroupBodySymbol& body;
 
-    CovergroupType(Compilation& compilation, string_view name, SourceLocation loc,
+    CovergroupType(Compilation& compilation, std::string_view name, SourceLocation loc,
                    const CovergroupBodySymbol& body);
 
     static const CovergroupType& fromSyntax(const Scope& scope,
@@ -113,7 +113,7 @@ public:
     bool isDefault = false;
     bool isDefaultSequence = false;
 
-    CoverageBinSymbol(string_view name, SourceLocation loc) :
+    CoverageBinSymbol(std::string_view name, SourceLocation loc) :
         Symbol(SymbolKind::CoverageBin, name, loc) {}
 
     const Expression* getIffExpr() const;
@@ -154,7 +154,7 @@ public:
     DeclaredType declaredType;
     std::span<const CoverageOptionSetter> options;
 
-    CoverpointSymbol(Compilation& compilation, string_view name, SourceLocation loc);
+    CoverpointSymbol(Compilation& compilation, std::string_view name, SourceLocation loc);
 
     static CoverpointSymbol& fromSyntax(const Scope& scope, const syntax::CoverpointSyntax& syntax);
     static CoverpointSymbol& fromImplicit(const Scope& scope,
@@ -206,7 +206,7 @@ public:
     std::span<const CoverpointSymbol* const> targets;
     std::span<const CoverageOptionSetter> options;
 
-    CoverCrossSymbol(Compilation& compilation, string_view name, SourceLocation loc,
+    CoverCrossSymbol(Compilation& compilation, std::string_view name, SourceLocation loc,
                      std::span<const CoverpointSymbol* const> targets);
 
     static CoverCrossSymbol& fromSyntax(const Scope& scope, const syntax::CoverCrossSyntax& syntax,

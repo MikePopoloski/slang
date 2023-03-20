@@ -16,13 +16,13 @@ namespace slang::ast {
 
 class SLANG_EXPORT AttributeSymbol : public Symbol {
 public:
-    AttributeSymbol(string_view name, SourceLocation loc, const Symbol& symbol,
+    AttributeSymbol(std::string_view name, SourceLocation loc, const Symbol& symbol,
                     const syntax::ExpressionSyntax& expr);
 
-    AttributeSymbol(string_view name, SourceLocation loc, const Scope& scope,
+    AttributeSymbol(std::string_view name, SourceLocation loc, const Scope& scope,
                     LookupLocation lookupLocation, const syntax::ExpressionSyntax& expr);
 
-    AttributeSymbol(string_view name, SourceLocation loc, const ConstantValue& value);
+    AttributeSymbol(std::string_view name, SourceLocation loc, const ConstantValue& value);
 
     const ConstantValue& getValue() const;
 

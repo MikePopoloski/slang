@@ -20,7 +20,7 @@ void registerSyntax(py::module_& m) {
 
     py::class_<Trivia>(m, "Trivia")
         .def(py::init<>())
-        .def(py::init<TriviaKind, string_view>(), "kind"_a, "rawText"_a)
+        .def(py::init<TriviaKind, std::string_view>(), "kind"_a, "rawText"_a)
         .def_readonly("kind", &Trivia::kind)
         .def("getExplicitLocation", &Trivia::getExplicitLocation)
         .def("syntax", &Trivia::syntax, byrefint)
@@ -32,26 +32,26 @@ void registerSyntax(py::module_& m) {
 
     py::class_<Token>(m, "Token")
         .def(py::init<>())
-        .def(py::init<BumpAllocator&, TokenKind, std::span<Trivia const>, string_view,
+        .def(py::init<BumpAllocator&, TokenKind, std::span<Trivia const>, std::string_view,
                       SourceLocation>(),
              "alloc"_a, "kind"_a, "trivia"_a, "rawText"_a, "location"_a)
-        .def(py::init<BumpAllocator&, TokenKind, std::span<Trivia const>, string_view,
-                      SourceLocation, string_view>(),
+        .def(py::init<BumpAllocator&, TokenKind, std::span<Trivia const>, std::string_view,
+                      SourceLocation, std::string_view>(),
              "alloc"_a, "kind"_a, "trivia"_a, "rawText"_a, "location"_a, "strText"_a)
-        .def(py::init<BumpAllocator&, TokenKind, std::span<Trivia const>, string_view,
+        .def(py::init<BumpAllocator&, TokenKind, std::span<Trivia const>, std::string_view,
                       SourceLocation, SyntaxKind>(),
              "alloc"_a, "kind"_a, "trivia"_a, "rawText"_a, "location"_a, "directive"_a)
-        .def(py::init<BumpAllocator&, TokenKind, std::span<Trivia const>, string_view,
+        .def(py::init<BumpAllocator&, TokenKind, std::span<Trivia const>, std::string_view,
                       SourceLocation, logic_t>(),
              "alloc"_a, "kind"_a, "trivia"_a, "rawText"_a, "location"_a, "bit"_a)
-        .def(py::init<BumpAllocator&, TokenKind, std::span<Trivia const>, string_view,
+        .def(py::init<BumpAllocator&, TokenKind, std::span<Trivia const>, std::string_view,
                       SourceLocation, const SVInt&>(),
              "alloc"_a, "kind"_a, "trivia"_a, "rawText"_a, "location"_a, "value"_a)
-        .def(py::init<BumpAllocator&, TokenKind, std::span<Trivia const>, string_view,
+        .def(py::init<BumpAllocator&, TokenKind, std::span<Trivia const>, std::string_view,
                       SourceLocation, double, bool, std::optional<TimeUnit>>(),
              "alloc"_a, "kind"_a, "trivia"_a, "rawText"_a, "location"_a, "value"_a, "outOfRange"_a,
              "timeUnit"_a)
-        .def(py::init<BumpAllocator&, TokenKind, std::span<Trivia const>, string_view,
+        .def(py::init<BumpAllocator&, TokenKind, std::span<Trivia const>, std::string_view,
                       SourceLocation, LiteralBase, bool>(),
              "alloc"_a, "kind"_a, "trivia"_a, "rawText"_a, "location"_a, "base"_a, "isSigned"_a)
         .def_readonly("kind", &Token::kind)
@@ -161,26 +161,29 @@ void registerSyntax(py::module_& m) {
 
     py::class_<SyntaxTree, std::shared_ptr<SyntaxTree>>(m, "SyntaxTree")
         .def_readonly("isLibrary", &SyntaxTree::isLibrary)
-        .def_static("fromFile", py::overload_cast<string_view>(&SyntaxTree::fromFile), "path"_a)
+        .def_static("fromFile", py::overload_cast<std::string_view>(&SyntaxTree::fromFile),
+                    "path"_a)
         .def_static("fromFile",
-                    py::overload_cast<string_view, SourceManager&, const Bag&>(
+                    py::overload_cast<std::string_view, SourceManager&, const Bag&>(
                         &SyntaxTree::fromFile),
                     "path"_a, "sourceManager"_a, "options"_a = Bag())
         .def_static("fromFiles",
-                    py::overload_cast<std::span<const string_view>>(&SyntaxTree::fromFiles),
+                    py::overload_cast<std::span<const std::string_view>>(&SyntaxTree::fromFiles),
                     "paths"_a)
-        .def_static("fromFiles",
-                    py::overload_cast<std::span<const string_view>, SourceManager&, const Bag&>(
-                        &SyntaxTree::fromFiles),
-                    "paths"_a, "sourceManager"_a, "options"_a = Bag())
-        .def_static("fromText",
-                    py::overload_cast<string_view, string_view, string_view>(&SyntaxTree::fromText),
-                    "text"_a, "name"_a = "source", "path"_a = "")
         .def_static(
-            "fromText",
-            py::overload_cast<string_view, SourceManager&, string_view, string_view, const Bag&>(
-                &SyntaxTree::fromText),
-            "text"_a, "sourceManager"_a, "name"_a = "source", "path"_a = "", "options"_a = Bag())
+            "fromFiles",
+            py::overload_cast<std::span<const std::string_view>, SourceManager&, const Bag&>(
+                &SyntaxTree::fromFiles),
+            "paths"_a, "sourceManager"_a, "options"_a = Bag())
+        .def_static("fromText",
+                    py::overload_cast<std::string_view, std::string_view, std::string_view>(
+                        &SyntaxTree::fromText),
+                    "text"_a, "name"_a = "source", "path"_a = "")
+        .def_static("fromText",
+                    py::overload_cast<std::string_view, SourceManager&, std::string_view,
+                                      std::string_view, const Bag&>(&SyntaxTree::fromText),
+                    "text"_a, "sourceManager"_a, "name"_a = "source", "path"_a = "",
+                    "options"_a = Bag())
         .def_static("fromFileInMemory", &SyntaxTree::fromFileInMemory, "text"_a, "sourceManager"_a,
                     "name"_a = "source", "path"_a = "", "options"_a = Bag())
         .def_static("fromBuffer", &SyntaxTree::fromBuffer, "buffer"_a, "sourceManager"_a,

@@ -35,12 +35,12 @@ public:
     /// Starts tracing a section.
     /// @param name the name of the section
     /// @param detail extra details to include in the trace about the section
-    static void beginTrace(string_view name, string_view detail);
+    static void beginTrace(std::string_view name, std::string_view detail);
 
     /// Starts tracing a section.
     /// @param name the name of the section
     /// @param detail extra details to include in the trace about the section
-    static void beginTrace(string_view name, function_ref<std::string()> detail);
+    static void beginTrace(std::string_view name, function_ref<std::string()> detail);
 
     /// Ends tracing a section previously started by @a beginTrace
     static void endTrace();
@@ -58,12 +58,12 @@ private:
 /// the overhead is a single branch.
 class SLANG_EXPORT TimeTraceScope {
 public:
-    TimeTraceScope(string_view name, string_view detail) {
+    TimeTraceScope(std::string_view name, std::string_view detail) {
         if (TimeTrace::isEnabled())
             TimeTrace::beginTrace(name, detail);
     }
 
-    TimeTraceScope(string_view name, function_ref<std::string()> detail) {
+    TimeTraceScope(std::string_view name, function_ref<std::string()> detail) {
         if (TimeTrace::isEnabled())
             TimeTrace::beginTrace(name, detail);
     }

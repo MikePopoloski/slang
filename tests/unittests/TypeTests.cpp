@@ -67,7 +67,7 @@ endmodule
     NO_COMPILATION_ERRORS;
 
     auto& top = compilation.getRoot().find<InstanceSymbol>("Top").body;
-    auto get = [&](string_view name) {
+    auto get = [&](std::string_view name) {
         return top.find<EnumValueSymbol>(name).getValue().integer();
     };
 
@@ -614,13 +614,13 @@ TEST_CASE("Type matching") {
     auto& scope = compilation.createScriptScope();
 
     auto declare = [&](const std::string& source) {
-        auto tree = SyntaxTree::fromText(string_view(source));
+        auto tree = SyntaxTree::fromText(std::string_view(source));
         savedTrees.push_back(tree);
         scope.addMembers(tree->root());
     };
 
     auto typeof = [&](const std::string& source) {
-        auto tree = SyntaxTree::fromText(string_view(source));
+        auto tree = SyntaxTree::fromText(std::string_view(source));
         ASTContext context(scope, LookupLocation::max);
         return Expression::bind(tree->root().as<ExpressionSyntax>(), context).type;
     };
@@ -741,13 +741,13 @@ TEST_CASE("Type equivalence") {
     auto& scope = compilation.createScriptScope();
 
     auto declare = [&](const std::string& source) {
-        auto tree = SyntaxTree::fromText(string_view(source));
+        auto tree = SyntaxTree::fromText(std::string_view(source));
         savedTrees.push_back(tree);
         scope.addMembers(tree->root());
     };
 
     auto typeof = [&](const std::string& source) {
-        auto tree = SyntaxTree::fromText(string_view(source));
+        auto tree = SyntaxTree::fromText(std::string_view(source));
         ASTContext context(scope, LookupLocation::max);
         return Expression::bind(tree->root().as<ExpressionSyntax>(), context).type;
     };
@@ -810,13 +810,13 @@ TEST_CASE("Assignment compatibility") {
     auto& scope = compilation.createScriptScope();
 
     auto declare = [&](const std::string& source) {
-        auto tree = SyntaxTree::fromText(string_view(source));
+        auto tree = SyntaxTree::fromText(std::string_view(source));
         savedTrees.push_back(tree);
         scope.addMembers(tree->root());
     };
 
     auto typeof = [&](const std::string& source) {
-        auto tree = SyntaxTree::fromText(string_view(source));
+        auto tree = SyntaxTree::fromText(std::string_view(source));
         ASTContext context(scope, LookupLocation::max);
         return Expression::bind(tree->root().as<ExpressionSyntax>(), context).type;
     };

@@ -331,7 +331,7 @@ public:
     static bool isKind(SymbolKind kind);
 
 protected:
-    Type(SymbolKind kind, string_view name, SourceLocation loc) :
+    Type(SymbolKind kind, std::string_view name, SourceLocation loc) :
         Symbol(kind, name, loc), canonical(this) {}
 
     static const Type& getPredefinedType(Compilation& compilation, syntax::SyntaxKind kind,
