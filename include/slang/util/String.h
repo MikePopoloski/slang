@@ -65,15 +65,6 @@ void strToLower(std::string& str);
 int editDistance(std::string_view left, std::string_view right, bool allowReplacements = true,
                  int maxDistance = 0);
 
-// TODO: remove once we have C++20
-inline bool startsWith(std::string_view str, std::string_view prefix) {
-    return str.size() >= prefix.size() && str.compare(0, prefix.size(), prefix) == 0;
-};
-inline bool endsWith(std::string_view str, std::string_view suffix) {
-    return str.size() >= suffix.size() &&
-           str.compare(str.size() - suffix.size(), suffix.size(), suffix) == 0;
-};
-
 /// C++20 is dumb and provides no way to get a std::string with the UTF-8
 /// contents of a fs::path, so we have to use this method to copy the chars :(
 std::string getU8Str(const std::filesystem::path& path);

@@ -498,7 +498,7 @@ void SpecparamSymbol::resolvePathPulse() const {
     ASSERT(parent);
 
     auto prefix = "PATHPULSE$"sv;
-    if (startsWith(name, prefix) && parent->asSymbol().kind == SymbolKind::SpecifyBlock) {
+    if (name.starts_with(prefix) && parent->asSymbol().kind == SymbolKind::SpecifyBlock) {
         auto path = name.substr(prefix.length());
         if (!path.empty()) {
             auto loc = location + prefix.length();

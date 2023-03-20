@@ -2734,7 +2734,7 @@ SpecparamDeclaratorSyntax& Parser::parseSpecparamDeclarator(SyntaxKind parentKin
     auto openParen = consumeIf(TokenKind::OpenParenthesis);
     auto& expr1 = parseMinTypMaxExpression();
 
-    const bool isPathPulse = startsWith(name.valueText(), "PATHPULSE$"sv);
+    const bool isPathPulse = name.valueText().starts_with("PATHPULSE$"sv);
 
     Token comma;
     ExpressionSyntax* expr2 = nullptr;

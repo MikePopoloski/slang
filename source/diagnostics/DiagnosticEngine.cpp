@@ -465,13 +465,13 @@ Diagnostics DiagnosticEngine::setWarningOptions(std::span<const std::string> opt
             }
             setWarningsAsErrors(true);
         }
-        else if (startsWith(arg, "error=")) {
+        else if (arg.starts_with("error=")) {
             findAndSet(arg.substr(6), DiagnosticSeverity::Error, "-Werror=");
         }
-        else if (startsWith(arg, "no-error=")) {
+        else if (arg.starts_with("no-error=")) {
             findAndSet(arg.substr(9), DiagnosticSeverity::Warning, "-Wno-error=");
         }
-        else if (startsWith(arg, "no-")) {
+        else if (arg.starts_with("no-")) {
             findAndSet(arg.substr(3), DiagnosticSeverity::Ignored, "-Wno-");
         }
         else {
@@ -520,7 +520,7 @@ void DiagnosticEngine::setMappingsFromPragmasImpl(BufferID buffer,
             mappingStack.pop_back();
         }
         else {
-            if (startsWith(name, "-W"sv))
+            if (name.starts_with("-W"sv))
                 name = name.substr(2);
 
             if (auto group = findDiagGroup(name)) {

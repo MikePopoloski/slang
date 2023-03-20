@@ -556,7 +556,6 @@ void CommandLine::handlePlusArg(std::string_view arg, ParseOptions options, bool
         arg = arg.substr(0, idx);
     }
 
-    // TODO: change once we have heterogeneous lookup from C++20
     auto it = optionMap.find(std::string(arg));
     if (it == optionMap.end()) {
         hadUnknowns = true;
@@ -604,7 +603,6 @@ CommandLine::Option* CommandLine::findOption(std::string_view arg, std::string_v
         arg = arg.substr(0, equalsIndex);
     }
 
-    // TODO: change once we have heterogeneous lookup from C++20
     auto it = optionMap.find(std::string(arg));
     if (it == optionMap.end())
         return nullptr;
