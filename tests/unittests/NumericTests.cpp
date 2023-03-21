@@ -607,8 +607,6 @@ TEST_CASE("SVInt misc functions") {
     CHECK(clog2("900'd982134098123403498298103"_si) == 80);
     CHECK(clog2(SVInt::Zero) == 0);
 
-    CHECK(slang::countLeadingZeros32(0) == 32);
-
     CHECK_THAT("11'bx101011x01z"_si.sext(15), exactlyEquals("15'bxxxxx101011x01z"_si));
 
     CHECK_THAT((SVInt::One || logic_t::x), exactlyEquals(logic_t(1)));

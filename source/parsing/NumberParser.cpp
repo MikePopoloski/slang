@@ -238,7 +238,7 @@ Token NumberParser::finishValue(Token firstToken, bool singleToken) {
 
         // If the leading digit is unknown however, allow any size.
         if (!digits[0].isUnknown())
-            bits += clog2(digits[0].value + 1);
+            bits += std::bit_width(digits[0].value);
 
         if (bits > sizeBits) {
             if (sizeBits == 0) {

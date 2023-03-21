@@ -1911,14 +1911,14 @@ bitwidth_t SVInt::countLeadingZerosSlowCase() const {
     uint32_t i = getNumWords();
     uint64_t part = pVal[i - 1] & mask;
     if (part)
-        return slang::countLeadingZeros64(part) - (BITS_PER_WORD - bitsInMsw);
+        return std::countl_zero(part) - (BITS_PER_WORD - bitsInMsw);
 
     bitwidth_t count = bitsInMsw;
     for (--i; i > 0; --i) {
         if (pVal[i - 1] == 0)
             count += BITS_PER_WORD;
         else {
-            count += slang::countLeadingZeros64(pVal[i - 1]);
+            count += std::countl_zero(pVal[i - 1]);
             break;
         }
     }
@@ -1934,13 +1934,13 @@ bitwidth_t SVInt::countLeadingOnesSlowCase() const {
         shift = BITS_PER_WORD - bitsInMsw;
 
     int i = int(getNumWords() - 1);
-    bitwidth_t count = slang::countLeadingOnes64(pVal[i] << shift);
+    bitwidth_t count = std::countl_one(pVal[i] << shift);
     if (count == bitsInMsw) {
         for (i--; i >= 0; i--) {
             if (pVal[i] == UINT64_MAX)
                 count += BITS_PER_WORD;
             else {
-                count += slang::countLeadingOnes64(pVal[i]);
+                count += std::countl_one(pVal[i]);
                 break;
             }
         }
@@ -1951,17 +1951,17 @@ bitwidth_t SVInt::countLeadingOnesSlowCase() const {
 
 bitwidth_t SVInt::countOnes() const {
     if (isSingleWord())
-        return slang::countPopulation64(val);
+        return std::popcount(val);
 
     bitwidth_t count = 0;
     if (!unknownFlag) {
         for (uint32_t i = 0; i < getNumWords(); i++)
-            count += slang::countPopulation64(pVal[i]);
+            count += std::popcount(pVal[i]);
     }
     else {
         uint32_t words = getNumWords(bitWidth, false);
         for (uint32_t i = 0; i < words; i++)
-            count += slang::countPopulation64(pVal[i] & ~pVal[i + words]);
+            count += std::popcount(pVal[i] & ~pVal[i + words]);
     }
 
     return count;
@@ -1969,17 +1969,17 @@ bitwidth_t SVInt::countOnes() const {
 
 bitwidth_t SVInt::countZeros() const {
     if (isSingleWord())
-        return bitWidth - slang::countPopulation64(val);
+        return bitWidth - std::popcount(val);
 
     bitwidth_t count = 0;
     if (!unknownFlag) {
         for (uint32_t i = 0; i < getNumWords(); i++)
-            count += slang::countPopulation64(~pVal[i]);
+            count += std::popcount(~pVal[i]);
     }
     else {
         uint32_t words = getNumWords(bitWidth, false);
         for (uint32_t i = 0; i < words; i++)
-            count += slang::countPopulation64(~pVal[i] & ~pVal[i + words]);
+            count += std::popcount(~pVal[i] & ~pVal[i + words]);
     }
 
     uint32_t wordBits = bitWidth % BITS_PER_WORD;
@@ -1996,7 +1996,7 @@ bitwidth_t SVInt::countXs() const {
     bitwidth_t count = 0;
     uint32_t words = getNumWords(bitWidth, false);
     for (uint32_t i = 0; i < words; i++)
-        count += slang::countPopulation64(~pVal[i] & pVal[i + words]);
+        count += std::popcount(~pVal[i] & pVal[i + words]);
 
     return count;
 }
@@ -2008,7 +2008,7 @@ bitwidth_t SVInt::countZs() const {
     bitwidth_t count = 0;
     uint32_t words = getNumWords(bitWidth, false);
     for (uint32_t i = 0; i < words; i++)
-        count += slang::countPopulation64(pVal[i] & pVal[i + words]);
+        count += std::popcount(pVal[i] & pVal[i + words]);
 
     return count;
 }

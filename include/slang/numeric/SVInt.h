@@ -8,6 +8,7 @@
 #pragma once
 
 #include <array>
+#include <bit>
 #include <iosfwd>
 
 #include "slang/numeric/MathUtils.h"
@@ -167,12 +168,15 @@ public:
         if constexpr (IsSignedHelper<T>::type::value) {
             signFlag = true;
             if (value < 0)
-                bitWidth = bitwidth_t(64 - slang::countLeadingOnes64(val) + 1);
+                bitWidth = bitwidth_t(64 - std::countl_one(val) + 1);
             else
-                bitWidth = bitwidth_t(64 - slang::countLeadingZeros64(val) + 1);
+                bitWidth = bitwidth_t(64 - std::countl_zero(val) + 1);
+        }
+        else if constexpr (std::is_same_v<T, bool>) {
+            bitWidth = 1;
         }
         else {
-            bitWidth = clog2(value + 1);
+            bitWidth = std::bit_width(value);
             if (bitWidth == 0) {
                 if (value == 0)
                     bitWidth = 1;
@@ -353,7 +357,7 @@ public:
     /// unknown values, so make sure you know what you're doing with it.
     bitwidth_t countLeadingZeros() const {
         if (isSingleWord())
-            return slang::countLeadingZeros64(val) - (BITS_PER_WORD - bitWidth);
+            return std::countl_zero(val) - (BITS_PER_WORD - bitWidth);
         return countLeadingZerosSlowCase();
     }
 
@@ -361,7 +365,7 @@ public:
     /// unknown values, so make sure you know what you're doing with it.
     bitwidth_t countLeadingOnes() const {
         if (isSingleWord())
-            return slang::countLeadingOnes64(val << (BITS_PER_WORD - bitWidth));
+            return std::countl_one(val << (BITS_PER_WORD - bitWidth));
         return countLeadingOnesSlowCase();
     }
 

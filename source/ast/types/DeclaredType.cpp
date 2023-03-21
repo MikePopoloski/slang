@@ -211,7 +211,7 @@ static bool isValidForIfaceVar(const Type& type) {
 
 void DeclaredType::checkType(const ASTContext& context) const {
     uint32_t masked = (flags & DeclaredTypeFlags::NeedsTypeCheck).bits();
-    ASSERT(countPopulation64(masked) == 1);
+    ASSERT(std::popcount(masked) == 1);
 
     switch (masked) {
         case uint32_t(DeclaredTypeFlags::NetType): {
