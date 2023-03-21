@@ -175,15 +175,20 @@ public:
         else if constexpr (std::is_same_v<T, bool>) {
             bitWidth = 1;
         }
+        else if constexpr (std::is_enum_v<T>) {
+            bitWidth = std::bit_width<std::underlying_type_t<T>>(value);
+        }
         else {
             bitWidth = std::bit_width(value);
-            if (bitWidth == 0) {
-                if (value == 0)
-                    bitWidth = 1;
-                else
-                    bitWidth = 64;
-            }
         }
+
+        if (bitWidth == 0) {
+            if (value == 0)
+                bitWidth = 1;
+            else
+                bitWidth = 64;
+        }
+
         clearUnusedBits();
     }
 
