@@ -1951,7 +1951,7 @@ bitwidth_t SVInt::countLeadingOnesSlowCase() const {
 
 bitwidth_t SVInt::countOnes() const {
     if (isSingleWord())
-        return std::popcount(val);
+        return (bitwidth_t)std::popcount(val);
 
     bitwidth_t count = 0;
     if (!unknownFlag) {
