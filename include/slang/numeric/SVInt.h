@@ -362,7 +362,7 @@ public:
     /// unknown values, so make sure you know what you're doing with it.
     bitwidth_t countLeadingZeros() const {
         if (isSingleWord())
-            return bitwidth_t(std::countl_zero(val) - (BITS_PER_WORD - bitWidth));
+            return bitwidth_t(std::countl_zero(val)) - (BITS_PER_WORD - bitWidth);
         return countLeadingZerosSlowCase();
     }
 
