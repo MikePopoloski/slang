@@ -406,7 +406,7 @@ static void knuthDiv(uint32_t* u, uint32_t* v, uint32_t* q, uint32_t* r, uint32_
     // and v so that its high bits are shifted to the top of v's range without
     // overflow. Note that this can require an extra word in u so that u must
     // be of length m+n+1.
-    uint32_t shift = std::countl_zero(v[n - 1]);
+    uint32_t shift = (uint32_t)std::countl_zero(v[n - 1]);
     uint32_t v_carry = 0;
     uint32_t u_carry = 0;
     if (shift) {

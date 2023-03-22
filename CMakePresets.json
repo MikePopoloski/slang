@@ -230,7 +230,8 @@
       "name": "macos-release",
       "displayName": "macOS Release",
       "inherits": [
-        "macos-base"
+        "macos-base",
+        "clang-flags"
       ],
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release"
