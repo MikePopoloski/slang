@@ -176,10 +176,10 @@ public:
             bitWidth = 1;
         }
         else if constexpr (std::is_enum_v<T>) {
-            bitWidth = std::bit_width<std::underlying_type_t<T>>(value);
+            bitWidth = (bitwidth_t)std::bit_width<std::underlying_type_t<T>>(value);
         }
         else {
-            bitWidth = std::bit_width(value);
+            bitWidth = (bitwidth_t)std::bit_width(value);
         }
 
         if (bitWidth == 0) {
