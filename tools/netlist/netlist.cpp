@@ -71,8 +71,8 @@ struct VariableRangeSelect : public VariableSelectorBase {
 
 /// A variable selector representing member access of a structure.
 struct VariableMemberAccess : public VariableSelectorBase {
-  string_view name;
-  VariableMemberAccess(string_view name) :
+  std::string_view name;
+  VariableMemberAccess(std::string_view name) :
     VariableSelectorBase(VariableSelectorKind::MemberAccess), name(name) {}
   std::string toString() const {
     return fmt::format(".%s", name);
@@ -90,10 +90,10 @@ public:
   void addRangeSelect(const ConstantValue &leftIndex, const ConstantValue &rightIndex) {
     selectors.emplace_back(std::make_unique<VariableRangeSelect>(leftIndex, rightIndex));
   }
-  void addMemberAccess(string_view name) {
+  void addMemberAccess(std::string_view name) {
     selectors.emplace_back(std::make_unique<VariableMemberAccess>(name));
   }
-  string_view getName() const { return symbol->name; }
+  std::string_view getName() const { return symbol->name; }
 
 public:
   size_t ID;
@@ -363,7 +363,7 @@ private:
   EvalContext evalCtx;
 };
 
-void writeToFile(string_view fileName, string_view contents);
+void writeToFile(std::string_view fileName, std::string_view contents);
 
 void printJson(Compilation& compilation, const std::string& fileName,
                const std::vector<std::string>& scopes) {
@@ -395,11 +395,11 @@ void printDOT(const Netlist &netlist, const std::string &fileName) {
     }
   }
   buffer.append("}\n");
-  writeToFile(fileName, string_view(buffer.data()));
+  writeToFile(fileName, std::string_view(buffer.data()));
 }
 
 template<typename Stream, typename String>
-void writeToFile(Stream& os, string_view fileName, String contents) {
+void writeToFile(Stream& os, std::string_view fileName, String contents) {
   os.write(contents.data(), contents.size());
   os.flush();
   if (!os) {
@@ -407,7 +407,7 @@ void writeToFile(Stream& os, string_view fileName, String contents) {
   }
 }
 
-void writeToFile(string_view fileName, string_view contents) {
+void writeToFile(std::string_view fileName, std::string_view contents) {
   if (fileName == "-") {
     writeToFile(std::cout, "stdout", contents);
   } else {

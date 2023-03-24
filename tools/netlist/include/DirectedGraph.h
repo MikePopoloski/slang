@@ -75,7 +75,11 @@ public:
   }
 
   /// Static polymorphism: delegate implementation (via isEqualTo) to the
-  /// derived class.
+  /// derived class. Add friend operator to resolve ambiguity between operand
+  /// ordering with C++20.
+  friend bool operator==(NodeType const &A, NodeType const& B) noexcept {
+    return A.getDerived().isEqualTo(B);
+  }
   bool operator==(const NodeType &N) const { return getDerived().isEqualTo(N); }
   bool operator!=(const NodeType &N) const { return !operator==(N); }
 
@@ -176,7 +180,7 @@ public:
   node_descriptor findNode(const NodeType &nodeToFind) const {
     auto it = std::find_if(nodes.begin(), nodes.end(),
                            [&nodeToFind](const std::unique_ptr<NodeType> &node) {
-                             return *node == nodeToFind;
+                             return const_cast<const NodeType&>(*node) == nodeToFind;
                            });
     if (it == nodes.end()) {
       return null_node;
